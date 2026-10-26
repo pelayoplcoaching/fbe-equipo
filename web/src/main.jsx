@@ -6,8 +6,9 @@ import { aplicarTema } from './ui/ajustes.js';
 aplicarTema();
 import { crearApi } from './datos/api.js';
 import { crearCola } from './datos/cola.js';
+import { instalarRegistro } from './registro-errores.js';
 
-/* global __DEMO__ */
+/* global __DEMO__, __APP_VERSION__ */
 // Android/Chrome avisa de que la app se puede instalar: se guarda para ofrecer el botón «Instalar»
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__fbeInstalar = e; });
 
@@ -24,6 +25,8 @@ async function arrancar() {
   }
   await backend.iniciar();
   const api = crearApi(backend);
+  // Los errores que se escapen se apuntan en la base (Cuenta → Errores de la app); en la demo, no
+  instalarRegistro((d) => api.registrarError(d), String(__APP_VERSION__));
   const cola = crearCola(api);
   render(<App backend={backend} api={api} cola={cola} />, document.getElementById('app'));
 

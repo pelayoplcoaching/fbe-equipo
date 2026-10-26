@@ -913,5 +913,24 @@ console.log('\nCardio (v0.17)');
     'por semana: suma lo hecho (también en sesiones de fuerza con cardio al final y las de cardio antiguas solo con duración); una sesión de fuerza sin cardio no cuenta, ni lo pendiente, ni lo de fuera del rango');
 }
 
+console.log('\nRegistro de errores: qué se apunta (v0.21)');
+{
+  const { instalarRegistro, reportarError } = await import('../web/src/registro-errores.js');
+  const llegan = [];
+  instalarRegistro((d) => llegan.push(d), '0.21');
+  reportarError(new TypeError('x is undefined'), 'carga');
+  reportarError(new TypeError('x is undefined'), 'carga');
+  reportarError(new TypeError('Failed to fetch'), 'carga');
+  reportarError(Object.assign(new Error('Sin conexión'), { sinConexion: true }), 'carga');
+  reportarError({ name: 'AbortError', message: 'aborted' }, 'carga');
+  reportarError(new Error('ResizeObserver loop limit exceeded'), 'error');
+  for (let i = 0; i < 30; i++) reportarError(new Error(`otro ${i}`), 'error');
+  await new Promise((r) => setTimeout(r, 20));
+  check(llegan[0]?.mensaje === 'x is undefined' && llegan[0].version === '0.21' && llegan[0].pantalla.startsWith('carga') && /TypeError/.test(llegan[0].detalle || ''),
+    'un error de verdad se apunta con su mensaje, la pantalla, la pila y la versión');
+  check(!llegan.some((d) => /Failed to fetch|Sin conexión|aborted|ResizeObserver/.test(d.mensaje)), 'los de red, sin conexión, cancelados o ruido del navegador, no');
+  check(llegan.filter((d) => d.mensaje === 'x is undefined').length === 1 && llegan.length === 15, 'cada uno una vez por sesión, y como mucho 15');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

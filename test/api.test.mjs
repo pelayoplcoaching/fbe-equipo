@@ -735,6 +735,17 @@ console.log('\nFoto de perfil y nombre (v0.19)');
   await api.cambiarFoto(null);
 }
 
+console.log('\nRegistro de errores (v0.21)');
+{
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.registrarError({ mensaje: 'TypeError: falla algo', pantalla: 'carga #hoy', version: '0.21' });
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const errs = await api.erroresApp();
+  check(errs.length === 1 && errs[0].quien === ana.nombre && errs[0].pantalla === 'carga #hoy', 'un error de Ana le llega al coach con su nombre y la pantalla');
+  await api.borrarErroresApp();
+  check((await api.erroresApp()).length === 0, 'y los puede borrar');
+}
+
 console.log('\nCoach: verificación en dos pasos');
 await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
 const factor = await b.auth.mfa.inscribir('Móvil');

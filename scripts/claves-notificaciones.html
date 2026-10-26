@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claves de notificaciones · FBE Equipo</title>
+<!--
+  Genera, en TU navegador y sin conexión, lo que necesitan las notificaciones al móvil de FBE Equipo:
+  el par de claves VAPID y el secreto de la tarea programada. Es lo mismo que «npm run claves-push», sin
+  instalar nada. Nada sale de esta página: no hay servidor ni se envía nada. Ábrela con doble clic.
+-->
+<style>
+  :root { --bg: #f1f0f6; --hoja: #fff; --tinta: #1c1a29; --tinta-2: #4a475c; --linea: #dcd9e6; --morado: #5438d8; --aviso: #8f4a00; --aviso-suave: #fff2e0; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0f0e15; --hoja: #1b1925; --tinta: #f1f0f6; --tinta-2: #b9b6c9; --linea: #2f2c3d; --morado: #a898ff; --aviso: #ffbf75; --aviso-suave: #2b2216; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--tinta); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 32px max(16px, env(safe-area-inset-left)); }
+  main { max-width: 720px; margin: 0 auto; display: grid; gap: 18px; }
+  h1 { margin: 0; font-size: 26px; }
+  p { margin: 0; color: var(--tinta-2); }
+  .tarjeta { background: var(--hoja); border: 1px solid var(--linea); border-radius: 14px; padding: 16px; display: grid; gap: 8px; }
+  .nombre { font-weight: 700; font-family: ui-monospace, Consolas, monospace; font-size: 15px; }
+  .etq { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 999px; justify-self: start; }
+  .publica { background: #e5f4e4; color: #1d5b1a; }
+  .secreta { background: var(--aviso-suave); color: var(--aviso); }
+  .valor { font-family: ui-monospace, Consolas, monospace; font-size: 14px; word-break: break-all; background: var(--bg); border-radius: 8px; padding: 10px; user-select: all; }
+  .fila { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; font-weight: 600; border-radius: 10px; padding: 10px 16px; border: 1px solid var(--linea); background: var(--hoja); color: var(--tinta); cursor: pointer; }
+  button.primario { background: var(--morado); border-color: var(--morado); color: #fff; }
+  @media (prefers-color-scheme: dark) { button.primario { color: #0f0e15; } }
+  .ok { font-size: 14px; color: var(--tinta-2); }
+  .aviso { border-left: 4px solid var(--aviso); }
+  ol { margin: 0; padding-left: 20px; color: var(--tinta-2); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Claves de las notificaciones</h1>
+  <p>Se generan aquí, en tu navegador, y no salen de esta página. Genera una sola vez, copia cada valor donde te indique y guárdalos en tu gestor de contraseñas.</p>
+
+  <div class="tarjeta aviso">
+    <strong>Las dos marcadas como «secreta» no se comparten con nadie (tampoco con Claude).</strong>
+    <p>Solo van en Supabase → Edge Functions → Secrets (y el secreto de la tarea, también en Vault). La pública sí puedes compartirla: va dentro de la app.</p>
+  </div>
+
+  <div class="fila">
+    <button class="primario" id="generar" type="button">Generar claves</button>
+    <span class="ok" id="estado" role="status"></span>
+  </div>
+
+  <div id="resultado" hidden style="display:grid;gap:12px">
+    <div class="tarjeta">
+      <span class="etq publica">Pública · también para la app</span>
+      <span class="nombre">VAPID_PUBLICA</span>
+      <div class="valor" id="v-publica"></div>
+      <div class="fila"><button type="button" data-copiar="v-publica">Copiar</button></div>
+    </div>
+    <div class="tarjeta">
+      <span class="etq secreta">Secreta</span>
+      <span class="nombre">VAPID_PRIVADA</span>
+      <div class="valor" id="v-privada"></div>
+      <div class="fila"><button type="button" data-copiar="v-privada">Copiar</button></div>
+    </div>
+    <div class="tarjeta">
+      <span class="etq secreta">Secreta · también en Vault como fbe_notificaciones_secreto</span>
+      <span class="nombre">AVISOS_SECRETO</span>
+      <div class="valor" id="v-secreto"></div>
+      <div class="fila"><button type="button" data-copiar="v-secreto">Copiar</button></div>
+    </div>
+    <div class="tarjeta">
+      <span class="etq publica">No es secreta</span>
+      <span class="nombre">AVISOS_CONTACTO</span>
+      <div class="valor" id="v-contacto">mailto:pelayoplcoaching@gmail.com</div>
+      <span class="nombre">APP_URL</span>
+      <div class="valor" id="v-app">https://atletas.fuerzabasadaenevidencia.com,https://pelayoplcoaching.github.io</div>
+    </div>
+    <ol>
+      <li>Supabase → <strong>Edge Functions → Secrets</strong>: añade los cinco con esos nombres exactos.</li>
+      <li>Supabase → <strong>Integrations → Vault → Add new secret</strong>: <code>fbe_notificaciones_secreto</code> = el mismo AVISOS_SECRETO.</li>
+      <li>Manda a Claude solo la <strong>VAPID_PUBLICA</strong>.</li>
+      <li>Guarda los valores en tu gestor de contraseñas y cierra esta página.</li>
+    </ol>
+  </div>
+</main>
+<script>
+  const b64url = (bytes) => { let s = ''; for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  const deB64url = (t) => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((t.length + 3) % 4)), (c) => c.charCodeAt(0));
+  const estado = document.getElementById('estado');
+  document.getElementById('generar').addEventListener('click', async () => {
+    try {
+      if (!window.crypto?.subtle) throw new Error('Este navegador no deja generar claves aquí. Ábrela con Chrome, Edge o Safari.');
+      const par = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+      const jwk = await crypto.subtle.exportKey('jwk', par.privateKey);
+      const x = deB64url(jwk.x), y = deB64url(jwk.y);
+      const pub = new Uint8Array(65); pub[0] = 4; pub.set(x, 1); pub.set(y, 33);
+      document.getElementById('v-publica').textContent = b64url(pub);
+      document.getElementById('v-privada').textContent = jwk.d;
+      document.getElementById('v-secreto').textContent = b64url(crypto.getRandomValues(new Uint8Array(24)));
+      document.getElementById('resultado').hidden = false;
+      document.getElementById('generar').disabled = true;
+      estado.textContent = 'Listas. Si recargas la página se pierden: cópialas antes.';
+    } catch (e) { estado.textContent = e.message; }
+  });
+  document.addEventListener('click', async (e) => {
+    const id = e.target?.dataset?.copiar;
+    if (!id) return;
+    const el = document.getElementById(id);
+    try { await navigator.clipboard.writeText(el.textContent); e.target.textContent = 'Copiado'; }
+    catch { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); e.target.textContent = 'Seleccionado: Ctrl+C'; }
+    setTimeout(() => { e.target.textContent = 'Copiar'; }, 2000);
+  });
+</script>
+</body>
+</html>

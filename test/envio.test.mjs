@@ -432,5 +432,25 @@ console.log('\nDe principio a fin, con la base real');
   await db.close();
 }
 
+console.log('\nLa función en un solo archivo (para el panel de Supabase)');
+{
+  const { readFileSync, writeFileSync, mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { generarFuncionPanel } = await import('../scripts/funcion-panel.mjs');
+  const panel = readFileSync(new URL('../supabase/enviar-notificaciones-panel.ts', import.meta.url), 'utf8');
+  check(panel === await generarFuncionPanel(), 'supabase/enviar-notificaciones-panel.ts está al día con el código de la función (si no, «npm run funcion-panel»)');
+  // Se carga como lo haría Supabase (Deno.serve) y responde igual que la función por partes
+  let manejador = null;
+  globalThis.Deno = { serve: (h) => { manejador = h; }, env: { toObject: () => ({ SUPABASE_URL: 'https://ref.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'clave-de-servicio', VAPID_PUBLICA: 'x', VAPID_PRIVADA: 'y', AVISOS_SECRETO: 'secreto-de-prueba-123', APP_URL: 'https://atletas.fbe.test' }) } };
+  const dir = mkdtempSync(join(tmpdir(), 'fbe-panel-'));
+  writeFileSync(join(dir, 'funcion.mjs'), panel);
+  await import(join(dir, 'funcion.mjs'));
+  const r1 = manejador && await manejador(new Request('https://ref.supabase.co/functions/v1/enviar-notificaciones', { method: 'POST', body: '{}' }));
+  const r2 = manejador && await manejador(new Request('https://ref.supabase.co/functions/v1/enviar-notificaciones', { method: 'OPTIONS', headers: { Origin: 'https://atletas.fbe.test' } }));
+  check(r1?.status === 401 && r2?.status === 204, 'el archivo único arranca con Deno.serve y responde: sin secreto, no autorizado; la app, permitida');
+  delete globalThis.Deno;
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

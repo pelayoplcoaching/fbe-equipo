@@ -134,6 +134,25 @@ export function crearApi(backend) {
       if (!n || n.length > 60) throw new Error('Escribe un nombre (hasta 60 letras).');
       return (await b.update('perfiles', { nombre: n }, { eq: { id: uid() } }))[0] || null;
     },
+    // Registro de errores (v0.21): lo apunta la base a nombre de quien tiene la sesión; en la demo, nada
+    async registrarError({ mensaje, pantalla = null, detalle = null, version = null, navegador = null }) {
+      if (b.modo === 'demo' || !uid()) return;
+      await b.rpc('registrar_error', { p_mensaje: mensaje, p_pantalla: pantalla, p_detalle: detalle, p_version: version, p_navegador: navegador });
+    },
+    // Los errores de los últimos días, con el nombre de quien los tuvo (solo el coach)
+    async erroresApp({ limite = 200 } = {}) {
+      const [errores, perfiles, atletas] = await Promise.all([
+        b.select('errores_app', { order: [['creado_en', 'desc']], limit: limite }),
+        b.select('perfiles', { cols: 'id,nombre,rol' }).catch(() => []),
+        b.select('atletas', { cols: 'perfil_id,nombre' }).catch(() => []),
+      ]);
+      const P = porId(perfiles);
+      const nombreDe = (id) => atletas.find((a) => a.perfil_id === id)?.nombre || (P[id]?.rol === 'coach' ? 'Tú' : P[id]?.nombre) || 'Alguien';
+      return errores.map((e) => ({ ...e, quien: nombreDe(e.perfil_id) }));
+    },
+    async borrarErroresApp() {
+      return b.delete('errores_app', { gte: { creado_en: '2000-01-01' } });
+    },
     // La foto del coach, para el chat del atleta (la base solo deja ver eso del perfil del coach)
     async fotoCoach() {
       return (await b.rpc('foto_coach', {}).catch(() => null)) || null;

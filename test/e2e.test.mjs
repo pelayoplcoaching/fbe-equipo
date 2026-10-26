@@ -1066,6 +1066,8 @@ try {
   await p.getByRole('heading', { name: 'Espacio de vídeos y fotos' }).waitFor();
   check((await p.locator('.espacio-fila').first().textContent()).includes('Ana López'), 'en Cuenta ve el espacio que ocupa cada atleta');
   check(await p.locator('.espacio-fila', { hasText: 'Ana López' }).locator('.avatar.con-foto').count() === 1, 'con la foto de Ana');
+  check(await p.getByRole('heading', { name: 'Errores de la app' }).count() === 1 && (await p.locator('.seccion', { hasText: 'Errores de la app' }).textContent()).includes('En la demo no se apuntan'),
+    'v0.21: en Cuenta, el apartado de errores de la app (en la demo, vacío)');
   await p.locator('li', { hasText: 'El nombre que ven tus atletas' }).getByRole('button', { name: 'Cambiar' }).click();
   await p.getByLabel('Tu nombre').fill('Pelayo Fernández');
   await p.getByRole('button', { name: 'Guardar' }).click();
@@ -1125,6 +1127,22 @@ try {
 }
 
 check(errores.length === 0, errores.length ? `sin errores: ${errores.join(' || ')}` : 'sin errores de consola, desbordes ni controles sin nombre');
+
+// v0.21: la página que genera las claves de las notificaciones (se abre con doble clic, sin servidor)
+console.log('\nClaves de las notificaciones (scripts/claves-notificaciones.html)');
+try {
+  const pc = await (await navegador.newContext()).newPage();
+  await pc.goto(new URL('../scripts/claves-notificaciones.html', import.meta.url).href);
+  await pc.getByRole('button', { name: 'Generar claves' }).click();
+  await pc.locator('#v-publica').filter({ hasText: /./ }).waitFor();
+  const publica = await pc.locator('#v-publica').textContent(), privada = await pc.locator('#v-privada').textContent(), secreto = await pc.locator('#v-secreto').textContent();
+  const { comprobarVapid } = await import('../supabase/functions/enviar-notificaciones/webpush.js');
+  let pareja = true;
+  try { await comprobarVapid({ publica, privada }); } catch { pareja = false; }
+  check(pareja && secreto.length >= 32 && await pc.getByRole('button', { name: 'Generar claves' }).isDisabled(),
+    'abierta como archivo, genera un par VAPID válido (la función lo acepta) y un secreto; no deja generar dos veces');
+  await pc.context().close();
+} catch (e) { fallos++; console.log('  ✗ la página de claves no funciona:', e.message.split('\n')[0]); }
 await navegador.close();
 srv.close();
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

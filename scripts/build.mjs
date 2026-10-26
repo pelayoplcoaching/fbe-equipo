@@ -23,7 +23,7 @@ const comun = {
   jsx: 'automatic',
   jsxImportSource: 'preact',
   loader: { '.json': 'json' },
-  define: { __DEMO__: demo ? 'true' : 'false' },
+  define: { __DEMO__: demo ? 'true' : 'false', __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(join(raiz, 'package.json'), 'utf8')).version) },
   // La demo privada lleva tu biblioteca real (vídeos y técnica) si está en tu ordenador; la web pública, solo nombres
   plugins: demo && existsSync(join(raiz, 'web/src/datos/biblioteca-fbe.json')) ? [{
     name: 'biblioteca-real',

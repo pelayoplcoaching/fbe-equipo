@@ -1259,6 +1259,43 @@ console.log('\nVarios objetivos en el cuestionario (migración 016)');
   await sin15.close();
 }
 
+console.log('\nRegistro de errores (migración 017)');
+{
+  await como(ana);
+  await q(`select registrar_error($1, $2, $3, $4, $5)`, ['TypeError: x is undefined', '#hoy', 'at Hoy (app.js:1:2)', '0.21', 'Mozilla/5.0 (iPhone)']);
+  await q(`select registrar_error($1, $2, $3, $4, $5)`, ['x'.repeat(900), 'p'.repeat(100), 'd'.repeat(3000), 'v'.repeat(80), 'n'.repeat(500)]);
+  check(await falla(`select * from errores_app`) || (await q(`select * from errores_app`)).length === 0, 'Ana apunta sus errores, pero no puede leerlos (ni los de nadie)');
+  check(await falla(`insert into errores_app (perfil_id, mensaje) values ($1, 'falso')`, [luis]) && await falla(`insert into errores_app (mensaje) values ('directo')`),
+    'tampoco escribir la tabla directamente (ni a nombre de otro): solo con registrar_error');
+  await anon();
+  check(await falla(`select registrar_error('sin sesión')`), 'sin sesión, nada');
+  await como(pelayo, 'aal2');
+  const vistos = await q(`select perfil_id, mensaje, pantalla, version, char_length(mensaje) lm, char_length(detalle) ld, char_length(navegador) ln from errores_app order by creado_en`);
+  check(vistos.length === 2 && vistos.every((e) => e.perfil_id === ana) && vistos[0].pantalla === '#hoy' && vistos[1].lm === 500 && vistos[1].ld === 2000 && vistos[1].ln === 300,
+    'el coach los ve, a nombre de Ana, con lo largo recortado');
+  await como(ana);
+  for (let i = 0; i < 40; i++) await q(`select registrar_error($1)`, [`en bucle ${i}`]);
+  await su();
+  check((await q(`select count(*)::int n from errores_app where perfil_id = $1`, [ana]))[0].n === 30, 'si algo falla en bucle, como mucho 30 por hora');
+  await q(`update errores_app set creado_en = now() - interval '61 days' where mensaje = 'en bucle 0'`);
+  await como(luis);
+  await q(`select registrar_error('otro')`);
+  await su();
+  check((await q(`select count(*)::int n from errores_app where mensaje = 'en bucle 0'`))[0].n === 0, 'lo de hace más de 60 días se borra solo');
+  await como(pelayo, 'aal2');
+  await q(`delete from errores_app`);
+  await su();
+  check((await q(`select count(*)::int n from errores_app`))[0].n === 0, 'el coach los borra');
+  const sin16 = new PGlite();
+  await sin16.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin16.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '016')) await sin16.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let errSin16 = null;
+  try { await sin16.exec(readFileSync(new URL('../supabase/migraciones/017_registro_errores.sql', import.meta.url), 'utf8')); } catch (e) { errSin16 = e.message; }
+  check(/Antes de la 017 hace falta la 016/.test(errSin16 || ''), 'la 017 no se aplica sin la 016');
+  await sin16.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

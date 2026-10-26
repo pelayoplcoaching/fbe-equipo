@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { AjustesDispositivo } from '../Ajustes.jsx';
 import { SeccionNotificaciones } from '../Notificaciones.jsx';
-import { useApp, useCarga, Icono, Hoja, Cargando, HojaExportar, copiar, Avatar } from '../comunes.jsx';
+import { useApp, useCarga, Icono, Hoja, Cargando, HojaExportar, copiar, Avatar, cuando } from '../comunes.jsx';
 import { num } from '../../logica/calculos.js';
 import { BandaDemo } from '../App.jsx';
 import { hoyISO } from '../../logica/fechas.js';
@@ -26,6 +26,7 @@ export function Cuenta() {
       <SeccionNotificaciones coach />
       <AjustesDispositivo coach />
       <Espacio />
+      <ErroresApp />
       <section class="seccion">
         <h2>Copia de seguridad</h2>
         <div class="panel panel-pad pila-s">
@@ -36,7 +37,7 @@ export function Cuenta() {
           }}><Icono n="descargar" /> {preparando ? 'Preparando…' : 'Descargar copia completa'}</button>
         </div>
       </section>
-      <p class="mini terciario">FBE Equipo, versión 0.20.</p>
+      <p class="mini terciario">FBE Equipo, versión 0.21.</p>
       {copia && <HojaExportar titulo="Copia completa" nombre={`fbe-atletas-copia-${hoyISO()}.json`} contenido={copia} tipo="application/json" alCerrar={() => setCopia(null)} />}
     </div>
   );
@@ -163,6 +164,44 @@ function Espacio() {
               <div class="espacio-fila" key={x.atleta.id}><Avatar nombre={x.atleta.nombre} foto={x.atleta.foto} clase="peq" /><span>{x.atleta.nombre} <span class="mini terciario">({x.n} {x.n === 1 ? 'archivo' : 'archivos'})</span></span><strong class="num">{fmtTam(x.bytes)}</strong></div>
             ))}
             <p class="mini terciario">Un vídeo de una serie (30–40 s) pesa 30–60 MB. El plan gratuito de Supabase da 1 GB; el Pro, 100 GB y después 0,021 $ por GB al mes. Nada se borra solo: si hace falta sitio, borra vídeos antiguos desde el diario de cada atleta.</p>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// Errores de la app (v0.21): lo que ha fallado en los móviles de tus atletas (y en el tuyo), para arreglarlo
+// sin esperar a que te lo cuenten. «Copiar» lo deja listo para pegárselo a Claude.
+function ErroresApp() {
+  const { api, aviso, modo } = useApp();
+  const [abierto, setAbierto] = useState(false);
+  const lista = useCarga(() => (modo === 'demo' ? Promise.resolve([]) : api.erroresApp().catch(() => [])), []);
+  const errores = lista.datos || [];
+  const texto = () => errores.slice(0, 50).map((e) => `${new Date(e.creado_en).toLocaleString('es-ES')} · ${e.quien} · ${e.version || '?'} · ${e.pantalla || ''}\n${e.mensaje}${e.detalle ? `\n${e.detalle.split('\n').slice(0, 4).join('\n')}` : ''}\n${e.navegador || ''}`).join('\n\n');
+  return (
+    <section class="seccion">
+      <h2>Errores de la app</h2>
+      <div class="panel panel-pad pila-s">
+        <div class="separa">
+          <span class="peq secundario">{lista.cargando && !lista.datos ? 'Cargando…' : modo === 'demo' ? 'En la demo no se apuntan.' : errores.length ? `${errores.length} en los últimos 60 días` : 'Ninguno en los últimos 60 días.'}</span>
+          {errores.length > 0 && <button class="btn btn-peq" onClick={() => setAbierto(!abierto)} aria-expanded={abierto ? 'true' : 'false'}>{abierto ? 'Ocultar' : 'Ver'}</button>}
+        </div>
+        <p class="mini terciario">Cuando algo falla en el móvil de alguien, la app lo apunta aquí sola (sin nada de lo que estaba escribiendo). Si ves alguno, cópialo y pégaselo a Claude.</p>
+        {abierto && errores.length > 0 && (
+          <>
+            <ul class="lista errores-app">
+              {errores.slice(0, 30).map((e) => (
+                <li key={e.id} class="panel-pad pila-xs">
+                  <span class="mini terciario">{cuando(e.creado_en)} · {e.quien}{e.pantalla ? ` · ${e.pantalla}` : ''}{e.version ? ` · v${e.version}` : ''}</span>
+                  <span class="peq">{e.mensaje}</span>
+                </li>
+              ))}
+            </ul>
+            <div class="fila-acciones" style="justify-content:flex-start">
+              <button class="btn btn-peq" onClick={async () => aviso((await copiar(texto())) ? 'Copiados: pégaselos a Claude' : 'No se ha podido copiar')}><Icono n="copiar" /> Copiar para Claude</button>
+              <button class="btn btn-peq plano" onClick={async () => { try { await api.borrarErroresApp(); lista.recargar(true); aviso('Errores borrados'); } catch (err) { aviso(err.message, 'error'); } }}>Borrar todos</button>
+            </div>
           </>
         )}
       </div>

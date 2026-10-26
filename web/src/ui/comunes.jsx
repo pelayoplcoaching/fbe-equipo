@@ -1,4 +1,5 @@
 import { createContext } from 'preact';
+import { reportarError } from '../registro-errores.js';
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { num, leerNumero } from '../logica/calculos.js';
 import { LOBO } from './marca-lobo.js';
@@ -415,6 +416,7 @@ export function useCarga(fn, deps = []) {
       const datos = await fn();
       if (vivo.current && n === ultima.current) setEstado({ datos, error: null, cargando: false });
     } catch (error) {
+      reportarError(error, 'carga');
       if (vivo.current && n === ultima.current) setEstado((e) => ({ ...e, error, cargando: false }));
     }
   }, deps);
