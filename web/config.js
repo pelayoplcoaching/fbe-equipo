@@ -7,7 +7,7 @@ window.FBE_CONFIG = {
   supabaseAnonKey: 'sb_publishable_4-PR21v5Jh_Jc-U32ovRLQ_WpNlMOAN',
   // Notificaciones al móvil: la clave pública VAPID que da «npm run claves-push» (también pública por diseño).
   // Vacía, la app no ofrece activarlas. La privada va solo en los secretos de Supabase.
-  vapidPublica: '',
+  vapidPublica: 'BJZBCsC0FTqAW-Z71Xw43sd-3GpHa5ig9D-5k5vCDOZoLRVMM3FvBke8cLZK0n8w0uhdC8cxKitYyzCRTQswLlY',
   // true si configuras el email (RESEND_API_KEY y AVISOS_REMITENTE en la función): la app ofrece recibirlas por email
   notificacionesEmail: false,
 };
