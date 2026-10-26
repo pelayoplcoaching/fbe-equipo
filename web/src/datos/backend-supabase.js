@@ -163,7 +163,8 @@ export function crearBackendSupabase({ url, anonKey }) {
           // Quita intentos anteriores que se quedaron sin verificar
           const previos = await factoresMfa();
           for (const f of previos.filter((x) => x.estado !== 'verified')) await sb.auth.mfa.unenroll({ factorId: f.id });
-          const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: `${nombre} (${new Date().toISOString().slice(0, 10)})` });
+          // issuer: el nombre que sale en la app de códigos (sin él, Supabase lo saca de la Site URL)
+          const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', issuer: 'FBE Equipo', friendlyName: `${nombre} (${new Date().toISOString().slice(0, 10)})` });
           if (error) throw traducir(error);
           return { id: data.id, qr: data.totp.qr_code, secreto: data.totp.secret };
         },
