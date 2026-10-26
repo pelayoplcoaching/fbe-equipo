@@ -19,7 +19,8 @@ concurrency:
 
 jobs:
   pruebas:
-    runs-on: ubuntu-latest
+    # Imagen fija: «ubuntu-latest» pasa a Ubuntu 26 desde octubre de 2026 y puede cambiar la ruta de Chrome o las fuentes
+    runs-on: ubuntu-24.04
     env:
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       CHROME_PATH: /usr/bin/google-chrome
@@ -35,7 +36,14 @@ jobs:
       - name: Empaquetar
         run: npm run build
       - name: Prueba de punta a punta en Chrome
-        run: npm run e2e
+        shell: bash
+        # Si falla, las últimas líneas salen como anotación en el resumen de la ejecución (sin abrir el registro completo)
+        run: |
+          set -o pipefail
+          npm run e2e 2>&1 | tee e2e.log || {
+            echo "::error title=Prueba de punta a punta::$(grep -v '  ✓' e2e.log | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g')"
+            exit 1
+          }
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:
