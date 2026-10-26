@@ -539,6 +539,10 @@ console.log('\nCuestionario inicial y check-in a medida (v0.13)');
     'lo rellena paso a paso: cada paso guarda lo suyo sin borrar lo anterior');
   check(hecho.resultado === 'valorar_antes_vigoroso' && !!hecho.completado_en && (await api.primerosPasos(ana.id)).cuestionario,
     'al terminar, la base pone la recomendación (con diabetes y ya entrenando: valoración antes de la intensidad vigorosa)');
+  const multi = await api.guardarCuestionario(ana.id, { objetivos: ['perder_grasa', 'fuerza'] });
+  check(multi.objetivos.join() === 'perder_grasa,fuerza' && multi.objetivo === 'perder_grasa' && multi.objetivo_detalle === 'Una dominada',
+    'v0.20: marca varios objetivos (el primero, el principal) sin tocar lo demás');
+  await api.guardarCuestionario(ana.id, { objetivos: ['fuerza'] });
   await b.update('cuestionarios', { revisado_en: new Date().toISOString() }, { eq: { id: hecho.id } });
   check((await api.cuestionario(ana.id)).revisado_en === null, 'Ana no puede darlo por revisado');
   await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');

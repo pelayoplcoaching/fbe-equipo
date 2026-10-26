@@ -101,7 +101,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
             <li class="panel-pad separa"><span>Cerrar sesión en este dispositivo</span><button class="btn btn-peq" onClick={salir}><Icono n="salir" /> Salir</button></li>
           </ul>
         </div>
-        <p class="mini terciario">FBE Equipo, versión 0.19. Hola, {perfil?.nombre || atleta.nombre}.</p>
+        <p class="mini terciario">FBE Equipo, versión 0.20. Hola, {perfil?.nombre || atleta.nombre}.</p>
       </section>
 
       {verPrivacidad && <Hoja titulo="Política de privacidad" alCerrar={() => setVerPrivacidad(false)}><TextoPrivacidad /><p class="peq secundario">{TEXTO_CONSENTIMIENTO_SALUD}</p></Hoja>}

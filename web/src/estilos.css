@@ -514,6 +514,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 /* Molestias: chips de zona; al marcar una, aparece su intensidad */
 .zonas { display: flex; flex-wrap: wrap; gap: 8px; }
+.objetivo-principal { margin-left: 8px; vertical-align: middle; }
 .zonas button { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--linea); background: var(--hoja); font-weight: 600; font-size: 14.5px; color: var(--tinta-2); }
 .zonas button[aria-pressed="true"] { border-color: var(--aviso); background: var(--aviso-suave); color: var(--tinta); }
 .zona-intensidad { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 10px; align-items: center; }

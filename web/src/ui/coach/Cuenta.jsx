@@ -36,7 +36,7 @@ export function Cuenta() {
           }}><Icono n="descargar" /> {preparando ? 'Preparando…' : 'Descargar copia completa'}</button>
         </div>
       </section>
-      <p class="mini terciario">FBE Equipo, versión 0.19.</p>
+      <p class="mini terciario">FBE Equipo, versión 0.20.</p>
       {copia && <HojaExportar titulo="Copia completa" nombre={`fbe-atletas-copia-${hoyISO()}.json`} contenido={copia} tipo="application/json" alCerrar={() => setCopia(null)} />}
     </div>
   );

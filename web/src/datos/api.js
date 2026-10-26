@@ -570,7 +570,14 @@ export function crearApi(backend) {
     async guardarCuestionario(atletaId, datos, { completar = false } = {}) {
       const fila = { atleta_id: atletaId, ...limpiarCuestionario(datos) };
       if (completar) fila.completado_en = new Date().toISOString();
-      return (await b.upsert('cuestionarios', [fila], 'atleta_id'))[0];
+      try {
+        return (await b.upsert('cuestionarios', [fila], 'atleta_id'))[0];
+      } catch (e) {
+        // Una base sin la migración 016 aún no tiene «objetivos»: se guarda el principal, como antes
+        if (!('objetivos' in fila) || !/objetivos/.test(String(e?.message || ''))) throw e;
+        const { objetivos, ...sinLista } = fila;
+        return (await b.upsert('cuestionarios', [sinLista], 'atleta_id'))[0];
+      }
     },
     // El coach le pide que lo rellene (o que lo actualice): le llega un aviso y lo ve en Hoy
     async pedirCuestionario(atletaId) {

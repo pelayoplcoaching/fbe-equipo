@@ -1,7 +1,7 @@
 // Coach: el cuestionario inicial del atleta (en Datos) y su check-in a medida (en Seguimiento)
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, Segmentos, Grafica } from '../comunes.jsx';
-import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, RESULTADO_COACH, nombre, resumenCuestionario, conSalud } from '../../logica/cuestionario.js';
+import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, RESULTADO_COACH, nombre, resumenCuestionario, conSalud, objetivosDe, textoObjetivos } from '../../logica/cuestionario.js';
 import { APARTADOS_CHECKIN, TIPOS_PREGUNTA, serieRespuestas } from '../../logica/preguntas.js';
 import { fechaCuando, pendiente } from '../atleta/Cuestionario.jsx';
 
@@ -110,7 +110,7 @@ export function ParaProgramar({ atleta }) {
 
 function DatosCuestionario({ d }) {
   const filas = [
-    ['Objetivo', d.objetivo && nombre(OBJETIVOS, d.objetivo), d.objetivo_detalle],
+    [objetivosDe(d).length > 1 ? 'Objetivos' : 'Objetivo', textoObjetivos(d) || null, objetivosDe(d).length > 1 ? `Principal: ${nombre(OBJETIVOS, objetivosDe(d)[0]).toLowerCase()}${d.objetivo_detalle ? `. ${d.objetivo_detalle}` : ''}` : d.objetivo_detalle],
     ['Experiencia en fuerza', d.experiencia && nombre(EXPERIENCIA, d.experiencia)],
     ['Disponibilidad', d.dias_semana && `${d.dias_semana} ${d.dias_semana === 1 ? 'día' : 'días'} a la semana${d.minutos_sesion ? `, ${d.minutos_sesion} min por sesión` : ''}`],
     ['Dónde entrena', d.lugar && nombre(LUGARES, d.lugar)],

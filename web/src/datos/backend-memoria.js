@@ -44,7 +44,7 @@ const DEFECTOS = {
   registros_nutricion: () => ({ kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, fibra_g: null, completo: true, cumplido: null, nota: null, actualizado_en: ahora() }),
   preferencias_notificaciones: () => ({ desactivados: ['sesion_hecha'], hora_manana: '08:30:00', hora_tarde: '21:00:00', dia_checkin: 7, silencio_desde: '22:30:00', silencio_hasta: '08:00:00', email: false, actualizado_en: ahora() }),
   suscripciones_push: () => ({ dispositivo: null, creada_en: ahora(), usada_en: null, fallos: 0, ultimo_error: null }),
-  cuestionarios: () => ({ objetivo: null, objetivo_detalle: null, experiencia: null, dias_semana: null, minutos_sesion: null, lugar: null, material: [],
+  cuestionarios: () => ({ objetivo: null, objetivos: null, objetivo_detalle: null, experiencia: null, dias_semana: null, minutos_sesion: null, lugar: null, material: [],
     otros_deportes: null, activo: null, enfermedad: null, enfermedad_detalle: null, sintomas: null, otras: null, medicacion_detalle: null,
     lesiones: null, alergias: null, resultado: null, completado_en: null, pedido_en: null, revisado_en: null, creado_en: ahora(), actualizado_en: ahora() }),
   preguntas_checkin: () => ({ atleta_id: null, tipo: 'escala', unidad: null, ayuda: null, etiqueta_min: null, etiqueta_max: null, orden: 0, activa: true, creado_en: ahora() }),
@@ -215,8 +215,23 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   // recomendación la pone la base; la revisión y la petición, solo el coach y con la hora de la base; si cambia
   // lo de salud, vuelve a estar por revisar; la fecha de completado, la de ahora (y no la cambia el coach)
   const SALUD_CUESTIONARIO = ['activo', 'enfermedad', 'enfermedad_detalle', 'sintomas', 'otras', 'medicacion_detalle', 'lesiones', 'alergias'];
+  // Como la migración 016: «objetivos» y «objetivo» (el principal) siempre de acuerdo
+  function armonizarObjetivos(nueva, antes) {
+    const igual = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    if (Array.isArray(nueva.objetivos) && !nueva.objetivos.length) nueva.objetivos = null;
+    if (!antes || !igual(nueva.objetivos, antes.objetivos)) {
+      if (nueva.objetivos != null) { nueva.objetivos = [...new Set(nueva.objetivos)]; nueva.objetivo = nueva.objetivos[0]; }
+      else if (antes && nueva.objetivo === antes.objetivo) nueva.objetivo = null;
+      else nueva.objetivos = nueva.objetivo == null ? null : [nueva.objetivo];
+    } else if (nueva.objetivo !== antes.objetivo) {
+      const previos = antes.objetivos || [];
+      nueva.objetivos = nueva.objetivo == null ? null
+        : previos.includes(nueva.objetivo) ? [nueva.objetivo, ...previos.filter((o) => o !== nueva.objetivo)] : [nueva.objetivo, ...previos.slice(1)];
+    }
+  }
   function prepararCuestionario(nueva, antes) {
     if (antes && nueva.atleta_id !== antes.atleta_id) throw new Error('Un cuestionario no se puede pasar a otro atleta');
+    armonizarObjetivos(nueva, antes);
     const igual = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
     const pide = SALUD_CUESTIONARIO.some((k) => nueva[k] != null && !igual(nueva[k], antes?.[k]));
     if (pide && !consentimientoDe(nueva.atleta_id)) throw new Error('Para responder lo de salud hace falta el consentimiento de datos de salud del atleta');
@@ -361,7 +376,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const lesiones = f.lesiones == null || (Array.isArray(f.lesiones) && f.lesiones.length <= 10 && f.lesiones.every((l) => l && typeof l === 'object' && !Array.isArray(l)
         && Object.keys(l).every((k) => ['zona', 'limita', 'nota'].includes(k)) && ZONAS.includes(l.zona) && [0, 1, 2].includes(l.limita)
         && (l.nota == null || (typeof l.nota === 'string' && l.nota.length <= 200 && textoVisible(l.nota)))));
-      return en(f.objetivo, ['fuerza', 'musculo', 'perder_grasa', 'salud', 'rendimiento', 'otro']) && txt(f.objetivo_detalle, 600)
+      const OBJ = ['fuerza', 'musculo', 'perder_grasa', 'salud', 'rendimiento', 'otro'];
+      return en(f.objetivo, OBJ) && (f.objetivos == null || (Array.isArray(f.objetivos) && f.objetivos.length >= 1 && f.objetivos.length <= 6 && f.objetivos.every((o) => OBJ.includes(o)) && f.objetivo === f.objetivos[0])) && txt(f.objetivo_detalle, 600)
         && en(f.experiencia, ['ninguna', 'menos_1', '1_3', '3_5', 'mas_5']) && (f.dias_semana == null || (Number.isInteger(f.dias_semana) && f.dias_semana >= 1 && f.dias_semana <= 7))
         && (f.minutos_sesion == null || (Number.isInteger(f.minutos_sesion) && f.minutos_sesion >= 15 && f.minutos_sesion <= 240))
         && en(f.lugar, ['gimnasio', 'gimnasio_basico', 'casa', 'aire_libre']) && Array.isArray(f.material)

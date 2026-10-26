@@ -2,11 +2,11 @@
 // previo al ejercicio de la ACSM, 2015) y lesiones. Cada paso se guarda al pasar al siguiente.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, Segmentos, cuando } from '../comunes.jsx';
-import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, MINUTOS, MENSAJE_ATLETA, conSalud, pendiente } from '../../logica/cuestionario.js';
+import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, MINUTOS, MENSAJE_ATLETA, conSalud, pendiente, objetivosDe } from '../../logica/cuestionario.js';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 
 const PASOS = [
-  ['objetivo', 'Tu objetivo', ['objetivo', 'objetivo_detalle']],
+  ['objetivo', 'Tus objetivos', ['objetivos', 'objetivo_detalle']],
   ['tiempo', 'Experiencia y tiempo', ['experiencia', 'dias_semana', 'minutos_sesion', 'otros_deportes']],
   ['lugar', 'Dónde y con qué', ['lugar', 'material']],
   ['salud', 'Tu salud', ['activo', 'enfermedad', 'enfermedad_detalle', 'sintomas', 'otras', 'medicacion_detalle']],
@@ -51,7 +51,7 @@ function Marcar({ id, opciones, valor, alCambiar }) {
 export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, alGuardar }) {
   const { api, atleta } = useApp();
   const [paso, setPaso] = useState(0);
-  const [f, setF] = useState(() => ({ material: [], ...(inicial || {}) }));
+  const [f, setF] = useState(() => ({ material: [], ...(inicial || {}), objetivos: objetivosDe(inicial) }));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [final, setFinal] = useState(null);
@@ -64,7 +64,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
   const ultimo = paso === PASOS.length - 1;
 
   function falta() {
-    if (clave === 'objetivo' && !f.objetivo) return 'Elige tu objetivo principal.';
+    if (clave === 'objetivo' && !f.objetivos?.length) return 'Elige al menos un objetivo.';
     if (clave === 'tiempo' && (!f.experiencia || !f.dias_semana || !f.minutos_sesion)) return 'Dinos tu experiencia, cuántos días puedes entrenar y cuánto tiempo.';
     if (clave === 'lugar' && !f.lugar) return 'Elige dónde vas a entrenar.';
     if (clave === 'salud' && salud && (f.activo == null || f.enfermedad == null || f.sintomas == null || f.otras == null)) return 'Responde las cuatro preguntas. Si no te pasa nada de una lista, marca «Ninguna de estas».';
@@ -119,8 +119,20 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
 
         {clave === 'objetivo' && (
           <>
-            <div class="campo"><span class="etq" id="cu-obj">¿Qué quieres conseguir sobre todo?</span>
-              <Opciones etiqueta="Objetivo principal" opciones={OBJETIVOS} valor={f.objetivo ?? null} alCambiar={set('objetivo')} /></div>
+            <div class="campo"><span class="etq" id="cu-obj">¿Qué quieres conseguir?</span>
+              <div class="opciones" role="group" aria-labelledby="cu-obj">
+                {OBJETIVOS.map(([v, t]) => {
+                  const lista = f.objetivos || [];
+                  const i = lista.indexOf(v);
+                  return (
+                    <button type="button" key={v} aria-pressed={i >= 0 ? 'true' : 'false'}
+                      onClick={() => set('objetivos')(i >= 0 ? lista.filter((x) => x !== v) : [...lista, v])}>
+                      {t}{i === 0 && lista.length > 1 && <span class="chip morado mini objetivo-principal">Principal</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <span class="ayuda">Marca todos los que quieras. El primero que marques es el principal.</span></div>
             <div class="campo"><label for="cu-obj-det">Cuéntalo con tus palabras (si quieres)</label>
               <textarea id="cu-obj-det" class="area" maxLength={600} value={f.objetivo_detalle || ''} onInput={(e) => set('objetivo_detalle')(e.currentTarget.value)}
                 placeholder="Una marca, una fecha, una prueba, cómo te quieres sentir…" /></div>

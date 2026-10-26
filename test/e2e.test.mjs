@@ -889,7 +889,12 @@ try {
   await hojaCu.getByText('Paso 1 de 5').waitFor();
   check(await hojaCu.getByRole('button', { name: 'Ganar fuerza' }).getAttribute('aria-pressed') === 'true', 'Ana abre su cuestionario desde Perfil, con lo que ya contestó');
   await revisar('cuestionario-objetivo');
-  await hojaCu.getByRole('button', { name: 'Ganar músculo' }).click();
+  check(await hojaCu.getByRole('button', { name: /Perder grasa/ }).getAttribute('aria-pressed') === 'true' && await hojaCu.locator('.objetivo-principal').count() === 1,
+    'v0.20: tiene marcados sus dos objetivos (fuerza, el principal, y perder grasa)');
+  await hojaCu.getByRole('button', { name: /Ganar fuerza/ }).click();
+  await hojaCu.getByRole('button', { name: /Ganar músculo/ }).click();
+  check(await hojaCu.locator('[aria-pressed="true"]', { hasText: 'Perder grasa' }).locator('.objetivo-principal').count() === 1,
+    'quita uno y añade otro: el principal pasa a ser el primero que queda (perder grasa)');
   for (let i = 0; i < 3; i++) { await hojaCu.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(150); }
   await hojaCu.getByText('Paso 4 de 5').waitFor();
   await revisar('cuestionario-salud');
@@ -938,7 +943,7 @@ try {
   await revisar('su-checkin');
   await p.getByRole('tab', { name: 'Datos' }).click();
   await p.locator('.cuestionario-coach .datos-cuest').waitFor();
-  check((await p.locator('.cuestionario-coach').textContent()).includes('Ganar músculo'), 'en Datos ve su cuestionario actualizado');
+  check((await p.locator('.cuestionario-coach').textContent()).includes('Perder grasa y ganar músculo'), 'en Datos ve su cuestionario actualizado (con sus dos objetivos)');
   await revisar('cuestionario-coach');
   await p.locator('.cuestionario-coach').getByRole('button', { name: 'Pedir que lo actualice' }).click();
   await p.locator('.toast', { hasText: 'Le has pedido a Ana que lo actualice' }).waitFor();

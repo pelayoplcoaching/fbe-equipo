@@ -1,7 +1,7 @@
 // Lógica pura: fechas, 1RM estimado, propuestas de series, avisos del coach y la cola sin conexión.
 import { lunesDe, sumarDias, diasEntre, hace, rangoSemana } from '../web/src/logica/fechas.js';
 import { conDefecto, preferenciasValidas, claveServidor, normalizarB64url, describirDispositivo, soportePush, esIos, momentoNotificacion, PREFERENCIAS_DEFECTO, TIPOS_ATLETA, TIPOS_COACH } from '../web/src/logica/notificaciones.js';
-import { resultadoCribado, avisoCuestionario, resumenCuestionario, limpiarCuestionario, pasosHechos, MENSAJE_ATLETA, RESULTADO_COACH, SINTOMAS, OTRAS } from '../web/src/logica/cuestionario.js';
+import { resultadoCribado, avisoCuestionario, resumenCuestionario, limpiarCuestionario, pasosHechos, MENSAJE_ATLETA, RESULTADO_COACH, SINTOMAS, OTRAS, objetivosDe, textoObjetivos } from '../web/src/logica/cuestionario.js';
 import { pregunta, preguntasDe, respuestaValida, limpiarRespuestas, respuestasNoValidas, textoRespuesta, serieRespuestas } from '../web/src/logica/preguntas.js';
 import { grados, dibujoValido, limpiarDibujo, rectImagen, describirDibujo } from '../web/src/logica/dibujo.js';
 import { tuDia, resumenDia } from '../web/src/logica/dia.js';
@@ -798,6 +798,15 @@ console.log('\nCuestionario inicial');
     'avisa de lo que hay que revisar, sin decir en el panel qué enfermedad o medicación es');
   check(resumenCuestionario({ objetivo: 'fuerza', dias_semana: 4, minutos_sesion: 60, lugar: 'casa' }) === 'Ganar fuerza, 4 días × 60 min, en casa' && resumenCuestionario({ dias_semana: 1 }) === '1 día',
     'resumen de una línea para la ficha');
+  check(objetivosDe({ objetivo: 'fuerza' }).join() === 'fuerza' && objetivosDe({ objetivo: 'fuerza', objetivos: ['fuerza', 'perder_grasa'] }).join() === 'fuerza,perder_grasa' && objetivosDe(null).length === 0,
+    'v0.20: sus objetivos, también en un cuestionario de antes (solo «objetivo»)');
+  check(textoObjetivos({ objetivos: ['fuerza', 'perder_grasa', 'salud'] }) === 'Ganar fuerza, perder grasa y salud y bienestar'
+    && resumenCuestionario({ objetivo: 'fuerza', objetivos: ['fuerza', 'perder_grasa'], dias_semana: 3 }) === 'Ganar fuerza y perder grasa, 3 días',
+    'y en una línea: «Ganar fuerza y perder grasa»');
+  const lo = limpiarCuestionario({ objetivos: ['perder_grasa', 'fuerza', 'perder_grasa', 'magia'] });
+  check(lo.objetivos.join() === 'perder_grasa,fuerza' && lo.objetivo === 'perder_grasa' && limpiarCuestionario({ objetivos: [] }).objetivos === null,
+    'al guardar varios: sin repetidos ni valores raros, y el primero como principal');
+  check(pasosHechos({ objetivos: ['salud'] }).objetivo && !pasosHechos({ objetivos: null }).objetivo, 'el paso del objetivo cuenta con la lista');
   const l = limpiarCuestionario({ objetivo: '', objetivo_detalle: '  Quiero\n  una dominada ', dias_semana: '4', enfermedad: false, enfermedad_detalle: 'nada', otras: ['medicacion', 'medicacion'],
     medicacion_detalle: ' Enalapril ', material: ['barra', 'barra', 'banco'], lesiones: [{ zona: 'rodilla', limita: '5', nota: '  ' }, { limita: 1 }] });
   check(l.objetivo === null && l.objetivo_detalle === 'Quiero una dominada' && l.dias_semana === 4 && l.enfermedad_detalle === null && l.otras.join() === 'medicacion'

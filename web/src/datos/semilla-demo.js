@@ -433,9 +433,9 @@ export function semillaDemo(hoy = hoyISO()) {
   // v0.13: cuestionario inicial. Ana lo rellenó al empezar (revisado); Rubén lo ha actualizado hace dos días con
   // una medicación nueva (el panel avisa de que hay algo de salud por revisar); Carlos aún no lo tiene.
   const cuestionario = (atleta, f) => db.cuestionarios.push({ id: uuid(), atleta_id: atleta.id, objetivo_detalle: null, otros_deportes: null, enfermedad_detalle: null,
-    medicacion_detalle: null, alergias: null, pedido_en: null, revisado_en: null, creado_en: f.completado_en, actualizado_en: f.completado_en, ...f });
+    medicacion_detalle: null, alergias: null, pedido_en: null, revisado_en: null, creado_en: f.completado_en, actualizado_en: f.completado_en, ...f, objetivos: f.objetivos || (f.objetivo ? [f.objetivo] : null) });
   const alta = (a) => `${a.fecha_alta}T19:30:00.000Z`;
-  cuestionario(ana, { objetivo: 'fuerza', objetivo_detalle: 'Ganar fuerza y bajar unos 3 kg sin perder músculo. Me gustaría llegar a hacer una dominada.', experiencia: '1_3',
+  cuestionario(ana, { objetivo: 'fuerza', objetivos: ['fuerza', 'perder_grasa'], objetivo_detalle: 'Ganar fuerza y bajar unos 3 kg sin perder músculo. Me gustaría llegar a hacer una dominada.', experiencia: '1_3',
     dias_semana: 3, minutos_sesion: 75, lugar: 'gimnasio', material: ['barra', 'rack', 'banco', 'mancuernas', 'poleas', 'maquinas', 'dominadas', 'cardio'], otros_deportes: 'Pádel los domingos',
     activo: true, enfermedad: false, sintomas: [], otras: [], lesiones: [{ zona: 'hombro', limita: 1, nota: 'El derecho, con el press por encima de la cabeza' }],
     resultado: 'sin_valoracion', completado_en: alta(ana), revisado_en: `${sumarDias(ana.fecha_alta, 1)}T10:00:00.000Z` });

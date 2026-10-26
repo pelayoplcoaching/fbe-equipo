@@ -67,11 +67,18 @@ export const RESULTADO_COACH = {
   parar_y_valorar: ['Síntomas: que pare y lo valore su médico', 'alerta'],
 };
 
+// Sus objetivos (v0.20: puede marcar varios; el primero es el principal). Los cuestionarios de antes solo tienen uno
+export const objetivosDe = (c) => (c?.objetivos?.length ? c.objetivos : c?.objetivo ? [c.objetivo] : []);
+export const textoObjetivos = (c) => {
+  const n = objetivosDe(c).map((o, i) => { const t = nombre(OBJETIVOS, o); return i ? t.charAt(0).toLowerCase() + t.slice(1) : t; });
+  return n.length > 1 ? `${n.slice(0, -1).join(', ')} y ${n.at(-1)}` : n[0] || '';
+};
+
 // Qué pasos tiene hechos (para la hoja y los primeros pasos)
 export function pasosHechos(c) {
   if (!c) return { objetivo: false, tiempo: false, lugar: false, salud: false, lesiones: false };
   return {
-    objetivo: !!c.objetivo,
+    objetivo: objetivosDe(c).length > 0,
     tiempo: !!(c.experiencia && c.dias_semana && c.minutos_sesion),
     lugar: !!c.lugar,
     salud: c.activo != null && c.enfermedad != null && c.sintomas != null,
@@ -97,7 +104,7 @@ export function avisoCuestionario(c) {
 // Resumen de una línea para la ficha: «Ganar fuerza, 4 días × 60 min, gimnasio completo»
 export function resumenCuestionario(c) {
   if (!c) return '';
-  const partes = [c.objetivo && nombre(OBJETIVOS, c.objetivo),
+  const partes = [textoObjetivos(c),
     c.dias_semana && `${c.dias_semana} ${c.dias_semana === 1 ? 'día' : 'días'}${c.minutos_sesion ? ` × ${c.minutos_sesion} min` : ''}`,
     c.lugar && nombre(LUGARES, c.lugar)].filter(Boolean);
   return partes.map((x, i) => (i ? x.charAt(0).toLowerCase() + x.slice(1) : x)).join(', ');
@@ -114,7 +121,12 @@ export const SIN_SALUD = { activo: null, enfermedad: null, enfermedad_detalle: n
 export function limpiarCuestionario(d) {
   const t = (v, max) => { const s = String(v ?? '').replace(/\s+/g, ' ').trim(); return s ? s.slice(0, max) : null; };
   const out = {};
-  if ('objetivo' in d) out.objetivo = d.objetivo || null;
+  if ('objetivos' in d) {
+    const validos = OBJETIVOS.map(([v]) => v);
+    const lista = [...new Set((d.objetivos || []).filter((o) => validos.includes(o)))];
+    out.objetivos = lista.length ? lista : null;
+    out.objetivo = lista[0] || null;
+  } else if ('objetivo' in d) out.objetivo = d.objetivo || null;
   if ('objetivo_detalle' in d) out.objetivo_detalle = t(d.objetivo_detalle, 600);
   if ('experiencia' in d) out.experiencia = d.experiencia || null;
   if ('dias_semana' in d) out.dias_semana = d.dias_semana ? Number(d.dias_semana) : null;

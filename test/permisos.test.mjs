@@ -1212,6 +1212,53 @@ console.log('\nFoto de perfil (migración 015)');
   await sin14.close();
 }
 
+console.log('\nVarios objetivos en el cuestionario (migración 016)');
+{
+  await su();
+  const [at] = await q(`insert into atletas (nombre) values ('Prueba 016') returning id`);
+  const obj = async () => (await q(`select objetivo, objetivos from cuestionarios where atleta_id = $1`, [at.id]))[0];
+  await q(`insert into cuestionarios (atleta_id, objetivos) values ($1, array['perder_grasa', 'fuerza', 'perder_grasa'])`, [at.id]);
+  let o = await obj();
+  check(JSON.stringify(o.objetivos) === '["perder_grasa","fuerza"]' && o.objetivo === 'perder_grasa', 'guarda varios objetivos sin repetir, en su orden, y el primero queda como principal');
+  await q(`update cuestionarios set objetivo = 'fuerza' where atleta_id = $1`, [at.id]);
+  o = await obj();
+  check(JSON.stringify(o.objetivos) === '["fuerza","perder_grasa"]', 'si una versión anterior de la app cambia solo el principal (uno de la lista), pasa delante');
+  await q(`update cuestionarios set objetivo = 'salud' where atleta_id = $1`, [at.id]);
+  o = await obj();
+  check(JSON.stringify(o.objetivos) === '["salud","perder_grasa"]' && o.objetivo === 'salud', 'y si es uno nuevo, sustituye al principal y mantiene el resto');
+  check(await falla(`update cuestionarios set objetivos = array['fuerza', 'magia'] where atleta_id = $1`, [at.id])
+    && await falla(`update cuestionarios set objetivos = array['fuerza','musculo','perder_grasa','salud','rendimiento','otro','fuerza2'] where atleta_id = $1`, [at.id]),
+    'solo objetivos conocidos (como mucho los seis)');
+  await q(`update cuestionarios set objetivos = '{}' where atleta_id = $1`, [at.id]);
+  o = await obj();
+  check(o.objetivos === null && o.objetivo === null, 'vaciar la lista deja el cuestionario sin objetivo');
+  await q(`delete from cuestionarios where atleta_id = $1`, [at.id]);
+  await q(`insert into cuestionarios (atleta_id, objetivo) values ($1, 'musculo')`, [at.id]);
+  o = await obj();
+  check(JSON.stringify(o.objetivos) === '["musculo"]', 'uno guardado a la antigua (solo «objetivo») queda también como lista de uno');
+  await q(`delete from atletas where id = $1`, [at.id]);
+  await como(ana);
+  const previo = (await q(`select objetivos from cuestionarios where atleta_id = $1`, [aAna.id]))[0];
+  if (previo) {
+    const [r] = await q(`update cuestionarios set objetivos = array['musculo', 'fuerza'] where atleta_id = $1 returning objetivo, objetivos`, [aAna.id]);
+    check(r.objetivo === 'musculo' && r.objetivos.length === 2, 'Ana marca varios objetivos en su cuestionario');
+    await q(`update cuestionarios set objetivos = $2 where atleta_id = $1`, [aAna.id, previo.objetivos]);
+  } else {
+    const [r] = await q(`insert into cuestionarios (atleta_id, objetivos) values ($1, array['musculo', 'fuerza']) returning objetivo, objetivos`, [aAna.id]);
+    check(r.objetivo === 'musculo' && r.objetivos.length === 2, 'Ana marca varios objetivos en su cuestionario');
+    await su(); await q(`delete from cuestionarios where atleta_id = $1`, [aAna.id]);
+  }
+  await su();
+  const sin15 = new PGlite();
+  await sin15.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin15.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '015')) await sin15.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let errSin15 = null;
+  try { await sin15.exec(readFileSync(new URL('../supabase/migraciones/016_objetivos_multiples.sql', import.meta.url), 'utf8')); } catch (e) { errSin15 = e.message; }
+  check(/Antes de la 016 hace falta la 015/.test(errSin15 || ''), 'la 016 no se aplica sin la 015');
+  await sin15.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);
