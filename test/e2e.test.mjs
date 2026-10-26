@@ -18,6 +18,8 @@ const navegador = await chromium.launch({ executablePath: CHROME, args: ['--use-
 const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES', bypassCSP: true });
 await ctx.grantPermissions(['clipboard-read', 'clipboard-write', 'camera']);
 const p = await ctx.newPage();
+// Cuenta con espera: en una máquina lenta (GitHub) la lista puede tardar un poco en pintarse tras un clic
+const hay = async (loc, n, ms = 6000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await loc.count() === n) return true; await new Promise((r) => setTimeout(r, 100)); } return (await loc.count()) === n; };
 const errores = [];
 p.on('pageerror', (e) => errores.push(e.message));
 p.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); });
@@ -987,10 +989,12 @@ try {
   await p.locator('.hero-dia').waitFor();
   await p.locator('.tab', { hasText: 'Progreso' }).click();
   await p.getByRole('heading', { name: 'Tu diario' }).waitFor();
+  // El título sale antes que la cuadrícula: esperar a que estén todos (en una máquina lenta tarda)
+  await p.locator('.diario-item').nth(5).waitFor().catch(() => {});
   const enDiario = await p.locator('.diario-item').count();
-  check(enDiario >= 6 && await p.locator('.diario-item.destacado').count() === 1 && await p.locator('.diario-item', { hasText: 'Sentadilla' }).count() === 2, `su diario tiene ${enDiario} vídeos y fotos, uno destacado; la foto del chat no está`);
+  check(enDiario >= 6 && await hay(p.locator('.diario-item.destacado'), 1) && await hay(p.locator('.diario-item', { hasText: 'Sentadilla' }), 2), `su diario tiene ${enDiario} vídeos y fotos, uno destacado; la foto del chat no está`);
   await p.locator('.diario .selector-chips').getByRole('button', { name: 'Destacados' }).click();
-  check(await p.locator('.diario-item').count() === 1, 'el filtro Destacados deja solo ese');
+  check(await hay(p.locator('.diario-item'), 1), 'el filtro Destacados deja solo ese');
   await p.locator('.diario .selector-chips').getByRole('button', { name: 'Todo' }).click();
   await p.locator('.diario-item', { hasText: 'Press banca' }).click();
   const detalle = p.getByRole('dialog', { name: /Press banca/ });
@@ -999,7 +1003,7 @@ try {
   await detalle.getByRole('button', { name: 'Destacado' }).waitFor();
   await revisar('diario-detalle');
   await detalle.getByRole('button', { name: 'Cerrar' }).click();
-  check(await p.locator('.diario-item.destacado').count() === 2, 'destaca otro desde su ficha');
+  check(await hay(p.locator('.diario-item.destacado'), 2), 'destaca otro desde su ficha');
   await p.getByRole('button', { name: 'Subir vídeo' }).click();
   await p.getByRole('dialog', { name: 'Subir un vídeo' }).waitFor();
   await revisar('diario-subir');
@@ -1043,8 +1047,8 @@ try {
   check(true, 'y en su ficha, la pestaña Mensajes es el mismo chat');
   await p.getByRole('tab', { name: 'Vídeos y fotos' }).click();
   await p.getByRole('heading', { name: 'Su diario' }).waitFor();
-  await p.locator('.diario-item').nth(enDiario - 1).waitFor();
-  check(await p.locator('.diario-item').count() === enDiario && await p.locator('.diario-item.destacado').count() === 2, 'y Vídeos y fotos es su diario, con lo destacado');
+  await p.locator('.diario-item').nth(Math.max(0, enDiario - 1)).waitFor();
+  check(await hay(p.locator('.diario-item'), enDiario) && await hay(p.locator('.diario-item.destacado'), 2), 'y Vídeos y fotos es su diario, con lo destacado');
   await revisar('diario-coach');
   await abrirPestana(p, 'Cuenta');
   await p.getByRole('heading', { name: 'Espacio de vídeos y fotos' }).waitFor();
