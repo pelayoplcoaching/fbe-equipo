@@ -15,7 +15,7 @@ const uuid = () => (globalThis.crypto?.randomUUID ? crypto.randomUUID()
 export const CODIGO_MFA_DEMO = '123456';
 
 const DEFECTOS = {
-  perfiles: () => ({ rol: 'atleta', creado_en: ahora(), exige_2fa: false }),
+  perfiles: () => ({ rol: 'atleta', creado_en: ahora(), exige_2fa: false, foto: null }),
   atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null }),
   invitaciones: () => ({ creada_en: ahora(), usada_en: null }),
   consentimientos: () => ({ aceptado_en: ahora(), revocado_en: null }),
@@ -290,6 +290,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const FOCOS_BLOQUE = ['tecnica', 'volumen', 'intensidad', 'adaptacion', 'descarga', 'mixto'];
   const FOCOS_SEMANA = ['tecnica', 'volumen', 'intensidad', 'adaptacion', 'descarga', 'evaluacion', 'peaking'];
   const CHECKS = {
+    // Como la migración 015: la foto de perfil, una imagen pequeña en base64
+    perfiles: (f) => f.foto == null || (String(f.foto).length <= 80000 && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(String(f.foto))),
     sesion_ejercicios: (f) => {
       const series = n(f.series), rmin = n(f.reps_min), rmax = n(f.reps_max);
       return series !== null && entero(series) && entre(series, 1, 20) && entero(rmin) && entre(rmin, 0, 1e6) && entero(rmax) && entre(rmax, 0, 1e6)
@@ -617,6 +619,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     async rpc(nombre, args) {
       const uid = sesion?.user.id;
       const perfil = tabla('perfiles').find((p) => p.id === uid);
+      if (nombre === 'foto_coach') return uid ? tabla('perfiles').filter((p) => p.rol === 'coach').sort((a, b) => String(a.creado_en).localeCompare(String(b.creado_en)))[0]?.foto || null : null;
       if (nombre === 'crear_invitacion') {
         if (perfil?.rol !== 'coach') throw new Error('Solo el coach puede crear invitaciones');
         const atleta = tabla('atletas').find((a) => a.id === args.p_atleta && !a.perfil_id);

@@ -69,6 +69,8 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
 const REVISION = { sesion: ['sesiones', 'revisada_en'], checkin: ['checkins', 'revisado_en'], archivo: ['archivos', 'revisado_en'] };
 
 export const LIMITE_ARCHIVO_MB = 200;
+// Foto de perfil: tamaño máximo del texto base64 (como la base, perfiles_foto_valida)
+export const FOTO_MAX = 80000;
 
 export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
@@ -118,6 +120,23 @@ export function crearApi(backend) {
       const id = uid();
       if (!id) return null;
       return (await b.select('perfiles', { eq: { id } }))[0] || null;
+    },
+    // Foto de perfil propia (v0.19): una imagen ya recortada y comprimida (data:image/jpeg;base64,…) o null para quitarla
+    async cambiarFoto(foto) {
+      if (foto != null && (typeof foto !== 'string' || foto.length > FOTO_MAX || !/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(foto))) {
+        throw new Error('La foto no es válida. Prueba con otra (JPEG o PNG).');
+      }
+      return (await b.update('perfiles', { foto: foto || null }, { eq: { id: uid() } }))[0] || null;
+    },
+    // El nombre propio (el coach: el que ven sus atletas en el chat y en las notificaciones)
+    async cambiarNombre(nombre) {
+      const n = String(nombre || '').trim().replace(/\s+/g, ' ');
+      if (!n || n.length > 60) throw new Error('Escribe un nombre (hasta 60 letras).');
+      return (await b.update('perfiles', { nombre: n }, { eq: { id: uid() } }))[0] || null;
+    },
+    // La foto del coach, para el chat del atleta (la base solo deja ver eso del perfil del coach)
+    async fotoCoach() {
+      return (await b.rpc('foto_coach', {}).catch(() => null)) || null;
     },
     async miAtleta() {
       const id = uid();
@@ -1120,8 +1139,13 @@ export function crearApi(backend) {
     },
 
     // ------------------------------------------------------------ coach: atletas
+    // Los atletas, con su foto de perfil (si la han puesto; la foto está en su perfil, no en la ficha)
     async atletas() {
-      return b.select('atletas', { order: [['nombre', 'asc']] });
+      const atletas = await b.select('atletas', { order: [['nombre', 'asc']] });
+      const ids = unicos(atletas.map((a) => a.perfil_id).filter(Boolean));
+      if (!ids.length) return atletas;
+      const perfiles = porId(await b.select('perfiles', { in: { id: ids }, cols: 'id,foto' }).catch(() => []));
+      return atletas.map((a) => ({ ...a, foto: (a.perfil_id && perfiles[a.perfil_id]?.foto) || null }));
     },
     async resumenes(hoy = hoyISO()) {
       const atletas = await api.atletas();
@@ -1230,7 +1254,9 @@ export function crearApi(backend) {
       return b.rpc('crear_invitacion', { p_atleta: atletaId });
     },
     async ficha(atletaId) {
-      const [atleta] = await b.select('atletas', { eq: { id: atletaId } });
+      const [ficha] = await b.select('atletas', { eq: { id: atletaId } });
+      const fotoDe = ficha?.perfil_id ? (await b.select('perfiles', { eq: { id: ficha.perfil_id }, cols: 'id,foto' }).catch(() => []))[0]?.foto || null : null;
+      const atleta = ficha ? { ...ficha, foto: fotoDe } : ficha;
       const [checkins, pesos, molestias, notas] = await Promise.all([
         b.select('checkins', { eq: { atleta_id: atletaId }, order: [['semana_inicio', 'desc']], limit: 26 }),
         b.select('pesos', { eq: { atleta_id: atletaId }, order: [['fecha', 'asc']] }),

@@ -707,6 +707,30 @@ console.log('\nChat y diario (v0.18)');
   await api.borrarArchivo(tecnica);
 }
 
+console.log('\nFoto de perfil y nombre (v0.19)');
+{
+  const jpg = 'data:image/jpeg;base64,' + '/9j/'.repeat(300);
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const p = await api.cambiarFoto(jpg);
+  check(p.foto === jpg && (await api.perfil()).foto === jpg, 'Ana guarda su foto de perfil');
+  check(await lanza(() => api.cambiarFoto('data:image/png;base64,AAAA')) && await lanza(() => api.cambiarFoto('data:image/jpeg;base64,' + 'A'.repeat(80001))), 'la app no manda una foto que la base rechazaría');
+  check((await api.fotoCoach()) === null, 'su coach aún no tiene foto: el chat enseña el lobo');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const n = await api.cambiarNombre('  Pelayo   Fernández ');
+  check(n.nombre === 'Pelayo Fernández' && await lanza(() => api.cambiarNombre('   ')), 'el coach cambia su nombre (el que ven los atletas); vacío, no');
+  await api.cambiarFoto(jpg);
+  const lista = await api.atletas();
+  check(lista.find((a) => a.id === ana.id)?.foto === jpg && lista.filter((a) => a.id !== ana.id).every((a) => a.foto === null), 'la lista de atletas trae la foto de Ana (y nada en los que no tienen)');
+  check((await api.resumenes()).find((r) => r.atleta_id === ana.id)?.foto === jpg, 'y el panel también');
+  check((await api.ficha(ana.id)).atleta.foto === jpg, 'y su ficha');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.fotoCoach()) === jpg, 'Ana ve la foto de su coach');
+  await api.cambiarFoto(null);
+  check((await api.perfil()).foto === null, 'y puede quitar la suya');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.cambiarFoto(null);
+}
+
 console.log('\nCoach: verificación en dos pasos');
 await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
 const factor = await b.auth.mfa.inscribir('Móvil');

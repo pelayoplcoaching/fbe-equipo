@@ -1176,6 +1176,42 @@ try { await sin13.exec(readFileSync(new URL('../supabase/migraciones/014_mensaje
 check(/Antes de la 014 hace falta la 013/.test(errSin13 || ''), 'la 014 no se aplica sin la 013');
 await sin13.close();
 
+console.log('\nFoto de perfil (migración 015)');
+{
+  const jpg = 'data:image/jpeg;base64,' + 'QUJD'.repeat(500);
+  await como(ana);
+  const [conFoto] = await q(`update perfiles set foto = $1 where id = $2 returning foto`, [jpg, ana]);
+  check(conFoto?.foto === jpg, 'Ana pone su foto de perfil');
+  check(await falla(`update perfiles set foto = $1 where id = $2`, ['data:image/png;base64,QUJD', ana])
+    && await falla(`update perfiles set foto = $1 where id = $2`, ['data:image/jpeg;base64,' + 'A'.repeat(80001), ana])
+    && await falla(`update perfiles set foto = $1 where id = $2`, ['https://ejemplo.com/foto.jpg', ana])
+    && await falla(`update perfiles set foto = $1 where id = $2`, ['data:image/jpeg;base64,QUJD"><script>', ana]),
+    'solo una imagen JPEG o WebP en base64, de menos de 80.000 caracteres (ni otra cosa, ni un enlace, ni código)');
+  check((await q(`update perfiles set foto = $1 where id = $2 returning id`, [jpg, luis])).length === 0
+    && (await q(`select foto from perfiles where id = $1`, [luis])).length === 0, 'no puede poner ni ver la foto de Luis');
+  check(await falla(`update perfiles set rol = 'coach', foto = null where id = $1`, [ana]), 'y cambiar la foto no abre la puerta a cambiarse el rol');
+  check((await q(`select foto_coach() f`))[0].f === null, 'sin foto del coach, foto_coach() da null');
+  await como(pelayo, 'aal2');
+  const fotoCoach = 'data:image/webp;base64,' + 'UklG'.repeat(100);
+  await q(`update perfiles set foto = $1 where id = $2`, [fotoCoach, pelayo]);
+  check((await q(`select foto from perfiles where id = $1`, [ana]))[0].foto === jpg, 'el coach ve la foto de Ana');
+  await como(ana);
+  check((await q(`select foto_coach() f`))[0].f === fotoCoach, 'Ana ve la foto de su coach con foto_coach()');
+  check((await q(`select id from perfiles where rol = 'coach'`)).length === 0, 'pero no el resto del perfil del coach');
+  await anon();
+  check(await falla(`select foto_coach()`), 'sin sesión, nada');
+  await su();
+  await q(`update perfiles set foto = null where id in ($1, $2)`, [ana, pelayo]);
+  const sin14 = new PGlite();
+  await sin14.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin14.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '014')) await sin14.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let errSin14 = null;
+  try { await sin14.exec(readFileSync(new URL('../supabase/migraciones/015_foto_perfil.sql', import.meta.url), 'utf8')); } catch (e) { errSin14 = e.message; }
+  check(/Antes de la 015 hace falta la 014/.test(errSin14 || ''), 'la 015 no se aplica sin la 014');
+  await sin14.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

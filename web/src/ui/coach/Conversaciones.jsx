@@ -27,11 +27,11 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
       <div class="contenido coach chat-pagina">
         <header class="cabecera cabecera-chat">
           <button class="btn btn-icono plano" onClick={() => { setAbierta(null); lista.recargar(true); alCambiar?.(); }} aria-label="Volver a mensajes"><Icono n="atras" /></button>
-          <Avatar nombre={abierta.nombre} />
+          <Avatar nombre={abierta.nombre} foto={abierta.foto} />
           <div class="titulo"><h1>{abierta.nombre}</h1><div class="sub">{abierta.objetivo || ''}</div></div>
           <button class="btn btn-peq" onClick={() => abrirAtleta(abierta.id, 'programa')}>Ficha</button>
         </header>
-        <Chat atletaId={abierta.id} nombreAtleta={abierta.nombre} alCambiar={() => { lista.recargar(true); alCambiar?.(); }} alLeer={() => { lista.recargar(true); alCambiar?.(); }}
+        <Chat atletaId={abierta.id} nombreAtleta={abierta.nombre} fotoOtro={abierta.foto} alCambiar={() => { lista.recargar(true); alCambiar?.(); }} alLeer={() => { lista.recargar(true); alCambiar?.(); }}
           irContexto={(ctx) => abrirAtleta(abierta.id, ctx.tipo === 'sesion' ? 'registro' : ctx.tipo === 'checkin' ? 'seguimiento' : 'videos')} />
       </div>
     );
@@ -57,7 +57,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
             {filas.map(({ atleta, ultimo, sinLeer: n }) => (
               <li key={atleta.id}>
                 <button class={`conversacion ${n ? 'sin-leer' : ''}`} onClick={() => setAbierta(atleta)}>
-                  <Avatar nombre={atleta.nombre} clase="grande" />
+                  <Avatar nombre={atleta.nombre} foto={atleta.foto} clase="grande" />
                   <span class="conv-texto">
                     <span class="conv-cab"><strong>{atleta.nombre}</strong>{ultimo && <span class="mini terciario">{cuando(ultimo.creado_en)}</span>}</span>
                     <span class="conv-ultimo">{ultimo ? <>{ultimo.autor === 'coach' ? <span class="terciario">Tú: </span> : null}{ultimo.archivo_id && (ultimo.texto === 'Foto' || ultimo.texto === 'Vídeo') ? <><Icono n="camara" /> {ultimo.texto}</> : ultimo.texto}</> : <span class="terciario">Sin mensajes todavía</span>}</span>

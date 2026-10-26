@@ -4,8 +4,11 @@ const ARCHIVOS = __ARCHIVOS__;
 const CACHE = `fbe-atletas-${VERSION}`;
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
+  // La versión nueva se descarga y espera: la app ofrece «Actualizar» (o se activa sola al abrirla de cero)
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARCHIVOS.map((u) => new Request(u, { cache: 'reload' })))));
 });
+
+self.addEventListener('message', (e) => { if (e.data === 'activar') self.skipWaiting(); });
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('fbe-atletas-') && k !== CACHE).map((k) => caches.delete(k))))

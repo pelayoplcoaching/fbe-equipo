@@ -35,7 +35,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
     <div class="contenido coach">
       <header class="cabecera">
         <button class="btn btn-icono plano" onClick={alVolver} aria-label="Volver a atletas"><Icono n="atras" /></button>
-        {a && <Avatar nombre={a.nombre} />}
+        {a && <Avatar nombre={a.nombre} foto={a.foto} />}
         <div class="titulo">
           <h1>{a?.nombre || 'Atleta'}</h1>
           <div class="sub">{a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : '')}</div>
@@ -51,7 +51,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           {pest === 'mensajes' && (
             <section class="seccion chat-en-ficha">
               <h2 class="sr">Mensajes</h2>
-              <Chat atletaId={a.id} nombreAtleta={a.nombre} alCambiar={alCambiar} irContexto={(ctx) => setPest(ctx.tipo === 'sesion' ? 'registro' : ctx.tipo === 'checkin' ? 'seguimiento' : 'videos')} />
+              <Chat atletaId={a.id} nombreAtleta={a.nombre} fotoOtro={a.foto} alCambiar={alCambiar} irContexto={(ctx) => setPest(ctx.tipo === 'sesion' ? 'registro' : ctx.tipo === 'checkin' ? 'seguimiento' : 'videos')} />
             </section>
           )}
           {pest === 'actividad' && <Actividad atleta={a} irA={setPest} />}

@@ -985,8 +985,15 @@ try {
   await p.getByRole('button', { name: 'Tu perfil' }).click();
   await p.getByRole('heading', { name: 'Tu asesoría' }).waitFor();
   check(true, 'Perfil se abre desde el avatar de arriba (ya no está en la barra del móvil)');
+  // Foto de perfil (v0.19): cualquier imagen; el móvil la recorta en cuadrado y la comprime
+  await p.locator('input[type=file][aria-label="Foto de perfil nueva"]').setInputFiles(new URL('../web/iconos/icono-512.png', import.meta.url).pathname);
+  await p.locator('.cabecera .avatar.con-foto img').waitFor();
+  const fotoAna = await p.locator('.cabecera .avatar.con-foto img').getAttribute('src');
+  check(/^data:image\/jpeg;base64,/.test(fotoAna) && fotoAna.length < 80000, `pone su foto de perfil: recortada y comprimida en el móvil (${Math.round(fotoAna.length / 1024)} KB)`);
+  await revisar('perfil-foto');
   await p.getByRole('button', { name: 'Volver a Hoy' }).click();
   await p.locator('.hero-dia').waitFor();
+  check(await p.locator('.btn-avatar .avatar.con-foto').count() === 1, 'y sale en el botón de arriba de Hoy');
   await p.locator('.tab', { hasText: 'Progreso' }).click();
   await p.getByRole('heading', { name: 'Tu diario' }).waitFor();
   // El título sale antes que la cuadrícula: esperar a que estén todos (en una máquina lenta tarda)
@@ -1053,6 +1060,16 @@ try {
   await abrirPestana(p, 'Cuenta');
   await p.getByRole('heading', { name: 'Espacio de vídeos y fotos' }).waitFor();
   check((await p.locator('.espacio-fila').first().textContent()).includes('Ana López'), 'en Cuenta ve el espacio que ocupa cada atleta');
+  check(await p.locator('.espacio-fila', { hasText: 'Ana López' }).locator('.avatar.con-foto').count() === 1, 'con la foto de Ana');
+  await p.locator('li', { hasText: 'El nombre que ven tus atletas' }).getByRole('button', { name: 'Cambiar' }).click();
+  await p.getByLabel('Tu nombre').fill('Pelayo Fernández');
+  await p.getByRole('button', { name: 'Guardar' }).click();
+  await p.locator('.cabecera h1', { hasText: 'Pelayo Fernández' }).waitFor();
+  check(true, 'el coach cambia el nombre que ven sus atletas');
+  await p.locator('input[type=file][aria-label="Foto de perfil nueva"]').setInputFiles(new URL('../web/iconos/icono-192.png', import.meta.url).pathname);
+  await p.locator('.cabecera .avatar.con-foto img').waitFor();
+  check(true, 'y pone su foto');
+  await revisar('cuenta-foto');
   await p.locator('.tab', { hasText: 'Atletas' }).click();
   await p.locator('.tarjeta-atleta', { hasText: 'Carlos Vera' }).first().click();
   await p.getByRole('tab', { name: 'Programa' }).click();

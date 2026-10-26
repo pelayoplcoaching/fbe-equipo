@@ -793,6 +793,7 @@ export function resumenAtleta(d, hoy = hoyISO()) {
   return {
     atleta_id: atleta.id,
     nombre: atleta.nombre,
+    foto: atleta.foto || null,
     estado: atleta.estado,
     bloque: bloque ? { id: bloque.id, numero: bloque.numero, nombre: bloque.nombre, foco: bloque.foco } : null,
     semana: semana ? { id: semana.id, numero: semana.numero, foco: semana.foco, total: semanas.length } : null,

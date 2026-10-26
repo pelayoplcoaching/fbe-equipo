@@ -28,7 +28,27 @@ async function arrancar() {
   render(<App backend={backend} api={api} cola={cola} />, document.getElementById('app'));
 
   if (!__DEMO__ && 'serviceWorker' in navigator && location.protocol === 'https:') {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    // Versiones nuevas (v0.19): la nueva se instala en segundo plano y espera. Al abrir la app de cero ya se carga
+    // la última (la página va primero a la red), así que la que espera se activa sin más. Con la app abierta (lo
+    // normal en el móvil: días sin cerrarla), se comprueba al volver a ella y cada media hora, y se ofrece
+    // «Actualizar» (AvisoVersion, en App.jsx).
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      const ofrecer = (sw) => { window.__fbeVersionNueva = sw; window.dispatchEvent(new CustomEvent('fbe-version', { detail: sw })); };
+      const vigilar = (sw) => sw?.addEventListener('statechange', () => { if (sw.state === 'installed' && navigator.serviceWorker.controller) ofrecer(sw); });
+      if (reg.waiting && navigator.serviceWorker.controller) reg.waiting.postMessage('activar');
+      vigilar(reg.installing);
+      reg.addEventListener('updatefound', () => vigilar(reg.installing));
+      const comprobar = () => { reg.update().catch(() => {}); };
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') comprobar(); });
+      setInterval(comprobar, 30 * 60 * 1000);
+    }).catch(() => {});
+    // Solo se recarga si lo ha pedido la persona («Actualizar»); el primer arranque también cambia de control
+    let recargando = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (recargando || !window.__fbeActualizando) return;
+      recargando = true;
+      location.reload();
+    });
     // Lo que manda el service worker: «abrir» (se tocó una notificación con la app ya abierta) o «notificacion»
     // (ha llegado una con la app a la vista)
     navigator.serviceWorker.addEventListener('message', (e) => {

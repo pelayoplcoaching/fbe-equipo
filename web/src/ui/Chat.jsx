@@ -9,7 +9,7 @@ import { hoyISO, sumarDias, fmtConDia, aISO } from '../logica/fechas.js';
 // Lo que viene de una sesión, un check-in o un vídeo lleva su etiqueta, que abre ese sitio; lo que se escribe
 // aquí es un mensaje general. Fotos y vídeos se envían con el clip; un vídeo puede ir al diario (de técnica).
 // yo: 'coach' o 'atleta'. irContexto({tipo, id}): abrir la sesión, el check-in o el archivo.
-export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coach', irContexto, alLeer, alCambiar }) {
+export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coach', fotoOtro = null, irContexto, alLeer, alCambiar }) {
   const { api, perfil, aviso, modo } = useApp();
   const yo = perfil?.rol === 'coach' ? 'coach' : 'atleta';
   const conv = useCarga(() => api.conversacion(atletaId), [atletaId]);
@@ -127,7 +127,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
       <div class="chat-lista" ref={lista}>
         {conv.cargando && !conv.datos ? <Cargando texto="Cargando los mensajes" /> : !mensajes.length ? (
           <div class="chat-vacio">
-            <Avatar nombre={otro} clase="grande" />
+            <Avatar nombre={otro} foto={fotoOtro} clase="grande" />
             <p><strong>{yo === 'coach' ? `Tu conversación con ${primerNombre}` : `Tu conversación con ${nombreCoach}`}</strong></p>
             <p class="peq secundario">{yo === 'coach'
               ? 'Para lo que no es de una sesión concreta. Lo que escribas aquí le llega al momento; lo de sus sesiones, check-ins y vídeos también sale en este hilo con su etiqueta.'

@@ -62,7 +62,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
         <h1 class="sr">Hoy</h1>
         <div class="titulo"><Marca /></div>
         <span class="sub">{fmtConDia(hoyISO())}</span>
-        <button class="btn-avatar" onClick={() => irA('perfil')} aria-label="Tu perfil"><Avatar nombre={atleta.nombre} /></button>
+        <button class="btn-avatar" onClick={() => irA('perfil')} aria-label="Tu perfil"><Avatar nombre={atleta.nombre} foto={perfil?.foto} /></button>
       </header>
       <BandaDemo />
       <BandaConexion />

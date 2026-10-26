@@ -99,7 +99,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
 function Cabecera({ atleta, tipo, cuando: c, abrirAtleta, pestana }) {
   return (
     <div class="separa revisar-cab">
-      <button class="btn-texto nombre-atleta" onClick={() => abrirAtleta(atleta.id, pestana)}><Avatar nombre={atleta.nombre} clase="peq" />{atleta.nombre}</button>
+      <button class="btn-texto nombre-atleta" onClick={() => abrirAtleta(atleta.id, pestana)}><Avatar nombre={atleta.nombre} foto={atleta.foto} clase="peq" />{atleta.nombre}</button>
       <span class="mini terciario">{tipo}{c ? `, ${c}` : ''}</span>
     </div>
   );

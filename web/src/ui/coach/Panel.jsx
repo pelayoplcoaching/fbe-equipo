@@ -44,7 +44,7 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
           {alBuscar && <button class="btn btn-icono solo-estrecho" onClick={alBuscar} aria-label="Buscar"><Icono n="buscar" /></button>}
           <button class="btn" onClick={() => setAvisos(true)} aria-label="Avisos para tus atletas"><Icono n="altavoz" /><span class="solo-ancho">Avisos</span></button>
           <button class="btn btn-primario" onClick={() => setNuevo(true)}><Icono n="mas" /><span class="solo-ancho">Añadir atleta</span><span class="sr">Añadir atleta</span></button>
-          {abrirCuenta && <button class="btn-avatar solo-estrecho" onClick={abrirCuenta} aria-label="Tu cuenta"><Avatar nombre={perfil?.nombre || 'Coach'} /></button>}
+          {abrirCuenta && <button class="btn-avatar solo-estrecho" onClick={abrirCuenta} aria-label="Tu cuenta"><Avatar foto={perfil?.foto} nombre={perfil?.nombre || 'Coach'} /></button>}
         </div>
       </header>
       <BandaDemo />
@@ -70,7 +70,7 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
                 <tbody>
                   {vista.map((r) => (
                     <tr key={r.atleta_id} onClick={() => abrir(r.atleta_id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id); }}>
-                      <td><div class="nombre"><Avatar nombre={r.nombre} /><span>{r.nombre}</span></div><Alertas r={r} pendientes={pendientes[r.atleta_id]} /></td>
+                      <td><div class="nombre"><Avatar nombre={r.nombre} foto={r.foto} /><span>{r.nombre}</span></div><Alertas r={r} pendientes={pendientes[r.atleta_id]} /></td>
                       <td class="num-c">{r.semana ? <>S{r.semana.numero}/{r.semana.total}<div class="mini terciario">{r.semana.foco ? NOMBRE_FOCO[r.semana.foco] : r.bloque?.nombre}</div></> : '—'}</td>
                       <td><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /></td>
                       <td class="num-c">{r.peso ? <>{num(r.peso.kg)} kg{r.peso.ritmo ? <div class="mini terciario">{signo(r.peso.ritmo.kgSemana, 2)}/sem</div> : r.peso.cambio != null && <div class="mini terciario">{signo(r.peso.cambio)}</div>}</> : '—'}</td>
@@ -88,7 +88,7 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
             {vista.map((r) => (
               <button class="tarjeta-atleta" key={r.atleta_id} onClick={() => abrir(r.atleta_id)}>
                 <div class="cab">
-                  <Avatar nombre={r.nombre} />
+                  <Avatar nombre={r.nombre} foto={r.foto} />
                   <span><strong>{r.nombre}</strong>{r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
                   {r.semana && <span class="peq secundario num">S{r.semana.numero}/{r.semana.total}</span>}
                 </div>

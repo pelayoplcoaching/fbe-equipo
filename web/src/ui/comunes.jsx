@@ -122,11 +122,17 @@ export function iniciales(nombre) {
   if (!partes.length) return '?';
   return (partes[0][0] + (partes.length > 1 ? partes[partes.length - 1][0] : '')).toUpperCase();
 }
-export function Avatar({ nombre, clase = '', lleno = false }) {
+// Con foto de perfil (v0.19), la foto; sin ella, las iniciales en el color de su nombre
+export function Avatar({ nombre, clase = '', lleno = false, foto = null }) {
   let h = 0;
   for (const ch of String(nombre || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const n = (h % 6) + 1;
-  return <span class={`avatar ${clase} ${lleno ? 'lleno' : ''}`} style={{ '--av': `var(--av-${n})` }} aria-hidden="true">{iniciales(nombre)}</span>;
+  const conFoto = typeof foto === 'string' && foto.startsWith('data:image/');
+  return (
+    <span class={`avatar ${clase} ${lleno && !conFoto ? 'lleno' : ''} ${conFoto ? 'con-foto' : ''}`} style={{ '--av': `var(--av-${n})` }} aria-hidden="true">
+      {conFoto ? <img src={foto} alt="" /> : iniciales(nombre)}
+    </span>
+  );
 }
 
 export function Disco({ prioridad, titulo }) {

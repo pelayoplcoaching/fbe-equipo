@@ -5,6 +5,7 @@ import { useApp, useCarga, Icono, Hoja, Cargando, HojaExportar, copiar, Avatar }
 import { num } from '../../logica/calculos.js';
 import { BandaDemo } from '../App.jsx';
 import { hoyISO } from '../../logica/fechas.js';
+import { FilaFoto, FilaNombre } from '../FotoPerfil.jsx';
 
 export function Cuenta() {
   const { perfil, backend, salir, api, aviso } = useApp();
@@ -12,11 +13,12 @@ export function Cuenta() {
   const [preparando, setPreparando] = useState(false);
   return (
     <div class="contenido coach">
-      <header class="cabecera"><Avatar nombre={perfil?.nombre || 'Coach'} clase="grande" lleno /><div class="titulo"><h1>{perfil?.nombre || 'Cuenta'}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div></header>
+      <header class="cabecera"><Avatar nombre={perfil?.nombre || 'Coach'} foto={perfil?.foto} clase="grande" lleno /><div class="titulo"><h1>{perfil?.nombre || 'Cuenta'}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div></header>
       <BandaDemo />
       <div class="panel">
         <ul class="lista">
-          <li class="panel-pad separa"><span>{perfil?.nombre || 'Coach'}</span><span class="chip morado">Coach</span></li>
+          <FilaNombre />
+          <FilaFoto nombre={perfil?.nombre || 'Coach'} coach />
           <li class="panel-pad separa"><span>Cerrar sesión en este dispositivo</span><button class="btn btn-peq" onClick={salir}><Icono n="salir" /> Salir</button></li>
         </ul>
       </div>
@@ -34,7 +36,7 @@ export function Cuenta() {
           }}><Icono n="descargar" /> {preparando ? 'Preparando…' : 'Descargar copia completa'}</button>
         </div>
       </section>
-      <p class="mini terciario">FBE Equipo, versión 0.18.</p>
+      <p class="mini terciario">FBE Equipo, versión 0.19.</p>
       {copia && <HojaExportar titulo="Copia completa" nombre={`fbe-atletas-copia-${hoyISO()}.json`} contenido={copia} tipo="application/json" alCerrar={() => setCopia(null)} />}
     </div>
   );
@@ -158,7 +160,7 @@ function Espacio() {
               <select class="selector" style="width:auto;min-height:36px;padding:4px 8px" aria-label="Plan de Supabase" value={plan} onChange={(e) => cambiarPlan(Number(e.currentTarget.value))}><option value={1}>Plan gratuito (1 GB)</option><option value={100}>Plan Pro (100 GB)</option></select></div>
             <div class="espacio-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(pct)} aria-label="Espacio usado"><span class={pct > 85 ? 'lleno' : ''} style={{ width: `${Math.max(1, pct)}%` }} /></div>
             {d.lista.filter((x) => x.bytes > 0).slice(0, 8).map((x) => (
-              <div class="espacio-fila" key={x.atleta.id}><Avatar nombre={x.atleta.nombre} clase="peq" /><span>{x.atleta.nombre} <span class="mini terciario">({x.n} {x.n === 1 ? 'archivo' : 'archivos'})</span></span><strong class="num">{fmtTam(x.bytes)}</strong></div>
+              <div class="espacio-fila" key={x.atleta.id}><Avatar nombre={x.atleta.nombre} foto={x.atleta.foto} clase="peq" /><span>{x.atleta.nombre} <span class="mini terciario">({x.n} {x.n === 1 ? 'archivo' : 'archivos'})</span></span><strong class="num">{fmtTam(x.bytes)}</strong></div>
             ))}
             <p class="mini terciario">Un vídeo de una serie (30–40 s) pesa 30–60 MB. El plan gratuito de Supabase da 1 GB; el Pro, 100 GB y después 0,021 $ por GB al mes. Nada se borra solo: si hace falta sitio, borra vídeos antiguos desde el diario de cada atleta.</p>
           </>

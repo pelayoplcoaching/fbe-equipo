@@ -8,6 +8,7 @@ import { TextoPrivacidad } from '../Acceso.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { CATEGORIAS_RECURSO } from '../../logica/calculos.js';
 import { FilaCuestionario } from './Cuestionario.jsx';
+import { FilaFoto } from '../FotoPerfil.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -27,7 +28,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
     <div class="contenido">
       <header class="cabecera">
         <button class="btn btn-icono plano solo-estrecho" onClick={() => irA?.('hoy')} aria-label="Volver a Hoy"><Icono n="atras" /></button>
-        <Avatar nombre={atleta.nombre} clase="grande" lleno /><div class="titulo"><h1>{atleta.nombre}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div>
+        <Avatar nombre={atleta.nombre} foto={perfil?.foto} clase="grande" lleno /><div class="titulo"><h1>{atleta.nombre}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div>
       </header>
       <BandaDemo />
 
@@ -35,6 +36,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         <h2>Tu asesoría</h2>
         <div class="panel">
           <ul class="lista">
+            <FilaFoto nombre={atleta.nombre} />
             {atleta.objetivo && <li class="panel-pad"><div class="peq terciario">Objetivo</div><div>{atleta.objetivo}</div></li>}
             {p?.bloque && <li class="panel-pad"><div class="peq terciario">Bloque actual</div><div>Bloque {p.bloque.numero}: {p.bloque.nombre}</div></li>}
             <FilaCuestionario salud={salud} recargarConsentimientos={recargarConsentimientos} />
@@ -99,7 +101,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
             <li class="panel-pad separa"><span>Cerrar sesión en este dispositivo</span><button class="btn btn-peq" onClick={salir}><Icono n="salir" /> Salir</button></li>
           </ul>
         </div>
-        <p class="mini terciario">FBE Equipo, versión 0.18. Hola, {perfil?.nombre || atleta.nombre}.</p>
+        <p class="mini terciario">FBE Equipo, versión 0.19. Hola, {perfil?.nombre || atleta.nombre}.</p>
       </section>
 
       {verPrivacidad && <Hoja titulo="Política de privacidad" alCerrar={() => setVerPrivacidad(false)}><TextoPrivacidad /><p class="peq secundario">{TEXTO_CONSENTIMIENTO_SALUD}</p></Hoja>}

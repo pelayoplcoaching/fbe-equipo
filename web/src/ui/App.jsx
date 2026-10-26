@@ -114,6 +114,8 @@ export function App({ backend, api, cola }) {
     modo: backend.modo,
     perfil: estado.perfil, atleta: estado.atleta, codigoFallido: estado.codigoFallido,
     recargar: () => resolver(true),
+    // Tras cambiar la foto o el nombre: el perfil nuevo, sin recargar toda la cuenta
+    fijarPerfil: (p) => setEstado((e) => ({ ...e, perfil: p })),
     // Al cerrar sesión, este móvil deja de recibir las notificaciones de esa cuenta
     salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); await backend.auth.salir(); resolver(true); },
     reiniciarDemo: () => { backend.reiniciar?.(); ultimoUid.current = undefined; resolver(true); },
@@ -145,9 +147,37 @@ export function App({ backend, api, cola }) {
   return (
     <Ctx.Provider value={ctx}>
       {estado.fase === 'coach' || estado.fase === 'atleta' ? vista : <main>{vista}</main>}
+      <AvisoVersion />
       {toast && <div class={`toast ${toast.tipo === 'error' || toast.tipo === 'record' ? toast.tipo : ''}`} role="status" key={toast.id}>{toast.tipo === 'record' && <Icono n="trofeo" />}{toast.texto}
         {toast.accion && <button class="toast-accion" onClick={() => { const a = toast.accion; setToast(null); a.fn(); }}>{toast.accion.texto}</button>}</div>}
     </Ctx.Provider>
+  );
+}
+
+// Versión nueva publicada (v0.19): con la app abierta, el service worker la descarga en segundo plano y aquí se
+// ofrece «Actualizar»; al tocarlo, la nueva toma el control y la página se recarga (lo pendiente sin conexión
+// sigue guardado en el móvil). Al abrir la app de cero ya arranca con la última versión, sin aviso.
+function AvisoVersion() {
+  const [nueva, setNueva] = useState(() => (typeof window !== 'undefined' && window.__fbeVersionNueva) || null);
+  const [actualizando, setActualizando] = useState(false);
+  useEffect(() => {
+    const llega = (e) => setNueva(e.detail || window.__fbeVersionNueva || null);
+    window.addEventListener('fbe-version', llega);
+    return () => window.removeEventListener('fbe-version', llega);
+  }, []);
+  if (!nueva) return null;
+  return (
+    <div class="aviso-version" role="status">
+      <span>Hay una versión nueva de FBE Equipo.</span>
+      <button class="btn btn-peq btn-primario" disabled={actualizando} onClick={() => {
+        setActualizando(true);
+        window.__fbeActualizando = true;
+        try { nueva.postMessage('activar'); } catch { location.reload(); }
+        // Por si el navegador no avisa del cambio: recargar igualmente
+        setTimeout(() => location.reload(), 4000);
+      }}>{actualizando ? 'Actualizando…' : 'Actualizar'}</button>
+      {!actualizando && <button class="btn btn-icono plano aviso-version-cerrar" aria-label="Ahora no" onClick={() => setNueva(null)}><Icono n="cerrar" /></button>}
+    </div>
   );
 }
 

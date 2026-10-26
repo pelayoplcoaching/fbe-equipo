@@ -339,6 +339,15 @@ check((await api.atletas()).length === 4, 'con el código 123456, sí');
 await b.auth.mfa.quitar(f.id);
 await b.auth.entrar('ana@fbe.demo', 'demo');
 
+console.log('\nFoto de perfil en la demo (v0.19)');
+{
+  const jpg = 'data:image/jpeg;base64,' + '/9j/'.repeat(50);
+  const p = await api.cambiarFoto(jpg);
+  check(p.foto === jpg && await lanza(() => b.update('perfiles', { foto: 'data:image/png;base64,AAAA' }, { eq: { id: p.id } })), 'la demo guarda la foto y rechaza lo mismo que la base');
+  check((await api.atletas()).some((a) => a.foto === jpg) || (await api.perfil()).foto === jpg, 'y la foto sale donde toca');
+  await api.cambiarFoto(null);
+}
+
 console.log('\nActivación con código en la demo');
 await b.auth.salir();
 await b.auth.registrar('marta@correo.test', 'una-contraseña-larga', 'Marta');
