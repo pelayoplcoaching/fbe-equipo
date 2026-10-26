@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-demo/
+test/e2e-fallo.png
+.DS_Store
+# Documentación legal privada (DPA, contratos): nunca al repositorio
+docs/legal/
+# Tu biblioteca de ejercicios (técnica y vídeos): contenido propio, se queda en tu ordenador.
+# Se aplica a Supabase una vez con supabase/seed_ejercicios.sql.
+data/
+supabase/seed_ejercicios.sql
+web/src/datos/biblioteca-fbe.json
+# Las claves de las notificaciones que escribe «npm run claves-push»: van a Supabase y se borran
+supabase/.env.notificaciones

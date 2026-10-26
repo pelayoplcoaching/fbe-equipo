@@ -1,0 +1,28 @@
+{
+  "name": "fbe-atletas",
+  "version": "0.18.0",
+  "description": "App de atletas de FBE Coaching",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "demo": "node scripts/build.mjs --demo",
+    "test": "node test/logica.test.mjs && node test/permisos.test.mjs && node test/api.test.mjs && node test/demo.test.mjs && node test/envio.test.mjs",
+    "e2e": "node test/e2e.test.mjs",
+    "biblioteca": "node scripts/biblioteca.mjs",
+    "instalador": "node scripts/instalador.mjs",
+    "claves-push": "node scripts/claves-push.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@supabase/supabase-js": "^2.118.0",
+    "preact": "^10.29.8"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
+    "axe-core": "^4.10.2",
+    "esbuild": "^0.28.2",
+    "http_ece": "^1.2.1",
+    "playwright": "^1.63.0"
+  },
+  "private": true,
+  "type": "module"
+}
