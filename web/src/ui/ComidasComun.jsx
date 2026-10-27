@@ -3,9 +3,9 @@
 // día, con los totales frente a su plan, copiar semanas y la lista de la compra). Sustituye a las bases de datos
 // de Desayuno, Comida, Merienda y Cena y al «Planificador semanal» de Notion.
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar } from './comunes.jsx';
+import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos } from './comunes.jsx';
 import { BarraMacro, COLOR_MACRO } from './NutricionComun.jsx';
-import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra } from '../logica/comidas.js';
+import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, valeParaDia, textoVariante, tomasDelDia, paraElDia } from '../logica/comidas.js';
 import { planVigente, objetivoDelDia, fmtKcal } from '../logica/nutricion.js';
 import { hoyISO, lunesDe, sumarDias, fmtConDia, rangoSemana } from '../logica/fechas.js';
 import { LETRAS_DIA } from '../logica/plan.js';
@@ -22,7 +22,7 @@ export function FotoReceta({ receta, grande = false, src = null }) {
 }
 
 // Una receta del recetario, en tarjeta: foto, nombre y sus macros (ya con el factor del atleta)
-export function TarjetaReceta({ a, alAbrir, mostrarFactor = false }) {
+export function TarjetaReceta({ a, alAbrir, mostrarFactor = false, opcional = null }) {
   const r = a.receta;
   const m = macrosDe(r, a.factor);
   return (
@@ -33,6 +33,7 @@ export function TarjetaReceta({ a, alAbrir, mostrarFactor = false }) {
         <span class="mini secundario num">{textoMacros(m, true) || 'Sin macros'}</span>
         <span class="fila-chips">
           {mostrarFactor && Number(a.factor) !== 1 && <span class="chip morado num">×{num(a.factor, 2)}</span>}
+          {textoVariante(a.variante, opcional) && <span class="chip">{textoVariante(a.variante, opcional)}</span>}
           {r.minutos ? <span class="chip"><Icono n="reloj" />{r.minutos} min</span> : null}
           {a.cambio_pedido_en && <span class="chip aviso">Pide cambio</span>}
         </span>
@@ -43,17 +44,27 @@ export function TarjetaReceta({ a, alAbrir, mostrarFactor = false }) {
 
 // El recetario de un atleta, por toma (sus comidas del día y las tomas en las que tenga recetas)
 export function VistaRecetario({ recetario, alAbrir, esCoach = false, vacio = null }) {
-  const tomas = ordenarTomas([...recetario.tomas, ...recetario.conRecetas]);
+  const op = recetario.opcional;
+  // Con una comida opcional y recetas para cada tipo de día, se puede ver solo lo de un tipo de día (v0.27)
+  const conVariantes = !!op && recetario.asignaciones.some((a) => a.variante);
+  const [tipo, setTipo] = usePreferencia(`fbe-recetario-dia-${esCoach ? 'coach' : 'atleta'}`, 'todos');
+  const filtro = conVariantes && tipo !== 'todos' ? tipo : null;
+  const tomas = tomasDelDia(ordenarTomas([...recetario.tomas, ...recetario.conRecetas]), op, filtro === 'sin');
   if (!recetario.asignaciones.length) return vacio;
   return (
     <div class="pila">
+      {conVariantes && (
+        <Segmentos etiqueta="Qué días" clase="segmentos-dia" valor={filtro || 'todos'} alCambiar={(v) => setTipo(v || 'todos')}
+          opciones={[['todos', 'Todas'], ['con', `Con ${NOMBRE_TOMA[op].toLowerCase()}`], ['sin', `Sin ${NOMBRE_TOMA[op].toLowerCase()}`]]} />
+      )}
       {tomas.map((t) => {
-        const xs = recetario.porToma[t] || [];
+        // (el atleta sin comida opcional no ve las versiones «sin» que hayan quedado; tú sí, para corregirlas)
+        const xs = filtro ? paraElDia(recetario.porToma[t] || [], filtro === 'sin') : !op && !esCoach ? paraElDia(recetario.porToma[t] || [], false) : recetario.porToma[t] || [];
         return (
           <section class="seccion" key={t} aria-labelledby={`toma-${t}`}>
             <div class="seccion-cab"><h2 id={`toma-${t}`}>{NOMBRE_TOMA[t]}</h2><span class="mini terciario">{xs.length === 1 ? '1 opción' : `${xs.length} opciones`}{!recetario.tomas.includes(t) ? ' · no está entre sus comidas' : ''}</span></div>
             {xs.length ? (
-              <div class="rejilla-recetas">{xs.map((a) => <TarjetaReceta key={a.id} a={a} alAbrir={alAbrir} mostrarFactor={esCoach} />)}</div>
+              <div class="rejilla-recetas">{xs.map((a) => <TarjetaReceta key={a.id} a={a} alAbrir={alAbrir} mostrarFactor={esCoach} opcional={op} />)}</div>
             ) : <p class="peq terciario">{esCoach ? 'Sin recetas para esta comida.' : `Tu coach aún no te ha puesto opciones para ${NOMBRE_TOMA[t].toLowerCase()}.`}</p>}
           </section>
         );
@@ -64,7 +75,7 @@ export function VistaRecetario({ recetario, alAbrir, esCoach = false, vacio = nu
 
 // Una receta entera: foto, macros, ingredientes (para las raciones que elijas) y preparación. El atleta la puede
 // añadir al menú, marcarla como favorita o pedir que se la cambien.
-export function HojaReceta({ a, esCoach = false, alCerrar, alCambiar, alAnadir = null }) {
+export function HojaReceta({ a, esCoach = false, opcional = null, alCerrar, alCambiar, alAnadir = null }) {
   const { api, aviso } = useApp();
   const completa = useCarga(() => api.receta(a.receta.id).catch(() => null), [a.receta.id]);
   const r = completa.datos || a.receta;
@@ -81,6 +92,7 @@ export function HojaReceta({ a, esCoach = false, alCerrar, alCambiar, alAnadir =
         <FotoReceta receta={r} grande />
         <div class="fila-chips">
           <span class="chip morado">{NOMBRE_TOMA[a.toma]}</span>
+          {textoVariante(a.variante, opcional) && <span class="chip morado">{textoVariante(a.variante, opcional)}</span>}
           {r.minutos ? <span class="chip"><Icono n="reloj" />{r.minutos} min</span> : null}
           {(r.etiquetas || []).map((e) => <span class="chip" key={e}>{e}</span>)}
           {esCoach && Number(a.factor) !== 1 && <span class="chip morado num">×{num(a.factor, 2)} las cantidades</span>}
@@ -217,14 +229,18 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
   const [lunes, setLunes] = useState(lunesDe(hoy));
   const [dia, setDia] = useState(hoy);
   const menu = useCarga(() => api.menuSemana(atletaId, lunes), [atletaId, lunes]);
+  const op = recetario.opcional;
+  const diasSin = useCarga(() => (op ? api.diasSin(atletaId, lunes) : Promise.resolve([])), [atletaId, lunes, op]);
   const [hoja, setHoja] = useState(null); // { tipo: 'anadir', toma } | { tipo: 'entrada', e } | 'compra' | 'copiar' | 'receta'
   const [ocupado, una] = useUnaVez();
   const entradas = menu.datos || [];
   const porDia = menuPorDia(entradas, lunes);
   const delDia = porDia[dia] || {};
-  const tomas = ordenarTomas([...recetario.tomas, ...Object.keys(delDia)]);
+  const sin = !!op && (diasSin.datos || []).includes(dia);
+  const tomas = tomasDelDia(ordenarTomas([...recetario.tomas, ...Object.keys(delDia)]), op, sin, Object.keys(delDia));
   const plan = planVigente(planes, dia);
-  const recargar = () => menu.recargar(true);
+  const recargar = () => { menu.recargar(true); diasSin.recargar(true); };
+  const cambiarSin = () => una(async () => { try { await api.marcarDiaSin(atletaId, dia, !sin); diasSin.recargar(true); } catch (err) { aviso(err.message, 'error'); } });
   const cambiarSemana = (l) => { setLunes(l); setDia(l === lunesDe(hoy) ? hoy : l); };
   const marcar = (e) => una(async () => { try { await api.cambiarMenu(e, { hecho: !e.hecho }); recargar(); } catch (err) { aviso(err.message, 'error'); } });
   return (
@@ -238,6 +254,11 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
             <div class="separa"><h2 id="menu-dia" class="h-panel">{dia === hoy ? 'Hoy' : mayus(fmtConDia(dia))}</h2>
               {!plan && Object.keys(delDia).length > 0 && <span class="mini terciario num">{totalesDia(Object.values(delDia).flat()).kcal ? `${fmtKcal(totalesDia(Object.values(delDia).flat()).kcal)} kcal` : ''}</span>}</div>
             <TotalesDia entradas={Object.values(delDia).flat()} plan={plan} />
+            {op && (
+              <label class="interruptor-fila interruptor-dia"><span class="peq">{dia === hoy ? 'Hoy' : 'Este día'} sin {NOMBRE_TOMA[op].toLowerCase()}</span>
+                <input type="checkbox" role="switch" class="interruptor" checked={sin} disabled={ocupado || diasSin.cargando} onChange={cambiarSin} /></label>
+            )}
+            {sin && <span class="mini terciario">{(delDia[op] || []).length ? `Tienes algo apuntado en ${NOMBRE_TOMA[op].toLowerCase()}: quítalo si al final no la haces. ` : ''}Al añadir, te enseñamos las recetas para los días sin {NOMBRE_TOMA[op].toLowerCase()}.</span>}
           </div>
           <ul class="lista tomas-dia">
             {tomas.map((t) => (
@@ -265,7 +286,7 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
         <button class="btn plano" onClick={() => setHoja('copiar')}><Icono n="copiar" /> Copiar o vaciar</button>
         {alCambiarComidas && <button class="btn plano" onClick={alCambiarComidas}><Icono n="ajustes" /> {recetario.tomas.length} comidas al día</button>}
       </div>
-      {hoja?.tipo === 'anadir' && <HojaAnadir atletaId={atletaId} fecha={dia} toma={hoja.toma} recetario={recetario} alCerrar={() => setHoja(null)} alGuardado={recargar} />}
+      {hoja?.tipo === 'anadir' && <HojaAnadir atletaId={atletaId} fecha={dia} toma={hoja.toma} recetario={recetario} sin={sin} alCerrar={() => setHoja(null)} alGuardado={recargar} />}
       {hoja?.tipo === 'entrada' && <HojaEntrada e={hoja.e} recetario={recetario} esCoach={esCoach} alCerrar={() => setHoja(null)} alCambiar={recargar} />}
       {hoja === 'compra' && <HojaCompra entradas={entradas} recetario={recetario} lunes={lunes} alCerrar={() => setHoja(null)} />}
       {hoja === 'copiar' && <HojaCopiar atletaId={atletaId} lunes={lunes} entradas={entradas} alCerrar={() => setHoja(null)} alCambiar={recargar} />}
@@ -274,12 +295,14 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
 }
 
 // Añadir a una toma: una receta de su recetario (primero las de esa comida) o lo que escriba
-function HojaAnadir({ atletaId, fecha, toma, recetario, alCerrar, alGuardado }) {
+function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, alGuardado }) {
   const { api, aviso } = useApp();
-  const propias = recetario.porToma[toma] || [];
+  // Solo las que valen para ese día (con o sin su comida opcional), si las hay de los dos tipos (v0.27)
+  const delDia = (xs) => paraElDia(xs, !!recetario.opcional && sin);
+  const propias = delDia(recetario.porToma[toma] || []);
   const vistas = new Set(propias.map((a) => a.receta_id));
   const otras = [];
-  for (const t of CLAVES_TOMA) for (const a of recetario.porToma[t] || []) if (!vistas.has(a.receta_id)) { vistas.add(a.receta_id); otras.push(a); }
+  for (const t of CLAVES_TOMA) for (const a of delDia(recetario.porToma[t] || [])) if (!vistas.has(a.receta_id)) { vistas.add(a.receta_id); otras.push(a); }
   const [elegida, setElegida] = useState(null);
   const [raciones, setRaciones] = useState(1);
   const [texto, setTexto] = useState('');
@@ -299,6 +322,7 @@ function HojaAnadir({ atletaId, fecha, toma, recetario, alCerrar, alGuardado }) 
   );
   return (
     <Hoja titulo={`${NOMBRE_TOMA[toma]}, ${fmtConDia(fecha)}`} alCerrar={alCerrar}>
+      {recetario.opcional && recetario.asignaciones.some((a) => a.variante) && <p class="mini terciario">{sin ? `Día sin ${NOMBRE_TOMA[recetario.opcional].toLowerCase()}: las opciones un poco más grandes.` : `Día con ${NOMBRE_TOMA[recetario.opcional].toLowerCase()}.`}</p>}
       {propias.length > 0 && <><h3 class="etq">De tu recetario para {NOMBRE_TOMA[toma].toLowerCase()}</h3><div class="panel"><ul class="lista">{propias.map(fila)}</ul></div></>}
       {otras.length > 0 && <><h3 class="etq">{propias.length ? 'Otras de tu recetario' : 'De tu recetario'}</h3><div class="panel"><ul class="lista">{otras.map(fila)}</ul></div></>}
       {elegida && (
@@ -332,7 +356,7 @@ function HojaEntrada({ e, recetario, esCoach, alCerrar, alCambiar }) {
   const asignacion = e.receta_id ? recetario.asignaciones.find((a) => a.receta_id === e.receta_id) : null;
   const a = asignacion ? { ...asignacion, receta: recetario.recetas.find((r) => r.id === e.receta_id) } : null;
   const hacer = (fn, texto) => una(async () => { try { await fn(); aviso(texto); alCambiar(); alCerrar(); } catch (err) { aviso(err.message, 'error'); } });
-  if (ver && a?.receta) return <HojaReceta a={a} esCoach={esCoach} alCerrar={() => setVer(false)} />;
+  if (ver && a?.receta) return <HojaReceta a={a} esCoach={esCoach} opcional={recetario.opcional} alCerrar={() => setVer(false)} />;
   return (
     <Hoja titulo={e.texto} alCerrar={alCerrar}>
       <p class="peq secundario">{NOMBRE_TOMA[e.toma]}, {fmtConDia(e.fecha)}{e.kcal != null ? ` · ${textoMacros(cambiarMacros(e, raciones), true)}` : ''}</p>
@@ -418,9 +442,11 @@ function HojaCopiar({ atletaId, lunes, entradas, alCerrar, alCambiar }) {
 }
 
 // Cuántas comidas hace al día (y cuáles)
-export function HojaTusComidas({ atletaId, tomas, esCoach = false, alCerrar, alGuardado }) {
+export function HojaTusComidas({ atletaId, tomas, opcional = null, esCoach = false, alCerrar, alGuardado }) {
   const { api, aviso } = useApp();
   const [elegidas, setElegidas] = useState(tomas);
+  const [op, setOp] = useState(opcional);
+  const opValida = op && elegidas.includes(op) && elegidas.length >= 2 ? op : null;
   const [ocupado, una] = useUnaVez();
   const alternar = (t) => setElegidas(elegidas.includes(t) ? elegidas.filter((x) => x !== t) : ordenarTomas([...elegidas, t]));
   return (
@@ -431,8 +457,16 @@ export function HojaTusComidas({ atletaId, tomas, esCoach = false, alCerrar, alG
           <label class="casilla" key={t}><input type="checkbox" checked={elegidas.includes(t)} onChange={() => alternar(t)} /><span>{nombre}</span></label>
         ))}
       </div>
+      {esCoach && elegidas.length >= 2 && (
+        <div class="campo"><label for="comida-opcional">Comida que algunos días no hace</label>
+          <select id="comida-opcional" class="selector" value={opValida || ''} onChange={(e) => setOp(e.currentTarget.value || null)}>
+            <option value="">Ninguna (hace todas cada día)</option>
+            {elegidas.map((t) => <option key={t} value={t}>{NOMBRE_TOMA[t]}</option>)}
+          </select>
+          <span class="ayuda">Como los planes con y sin merienda: él marca en su semana los días que no la hace y, en cada receta de su recetario, eliges para qué días es.</span></div>
+      )}
       <button class="btn btn-primario btn-grande" disabled={ocupado || !elegidas.length} onClick={() => una(async () => {
-        try { await api.guardarComidas(atletaId, elegidas); aviso(`${elegidas.length} comidas al día`); alGuardado(); alCerrar(); } catch (e) { aviso(e.message, 'error'); }
+        try { await api.guardarComidas(atletaId, elegidas, esCoach && (opValida || opcional) ? opValida : undefined); aviso(`${elegidas.length} comidas al día`); alGuardado(); alCerrar(); } catch (e) { aviso(e.message, 'error'); }
       })}>Guardar ({elegidas.length} al día)</button>
     </Hoja>
   );

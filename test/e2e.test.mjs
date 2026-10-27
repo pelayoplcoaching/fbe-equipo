@@ -1335,6 +1335,33 @@ try {
   check((await hojaCompra.textContent()).includes('300 g de calabaza'), 'y la lista de la compra ya trae sus ingredientes');
   await revisar('lucia-compra');
   await hojaCompra.getByRole('button', { name: 'Cerrar' }).click();
+
+  console.log('\nDías sin merienda (v0.27)');
+  const interruptor = p.getByRole('switch', { name: 'Hoy sin merienda' });
+  await interruptor.waitFor();
+  await revisar('sin-merienda-antes');
+  await interruptor.click();
+  await p.locator('.mini', { hasText: 'te enseñamos las recetas para los días sin merienda' }).waitFor();
+  check(await interruptor.isChecked(), 'Lucía marca que hoy no merienda');
+  await p.getByRole('button', { name: 'Añadir a comida' }).click();
+  const hojaSin = p.getByRole('dialog', { name: /^Comida, / });
+  await hojaSin.waitFor();
+  const curris = await hojaSin.getByRole('button', { name: /Pollo al curry/ }).allTextContents();
+  check((await hojaSin.textContent()).includes('Día sin merienda') && curris.length === 1 && /656|656,3|656 kcal|kcal/.test(curris[0]),
+    `al añadir la comida, las opciones de los días sin merienda (el curry, una vez y en grande: «${(curris[0] || '').slice(0, 60)}»)`);
+  await revisar('sin-merienda-anadir');
+  await hojaSin.getByRole('button', { name: 'Cerrar' }).click();
+  await interruptor.click();
+  await p.locator('.mini', { hasText: 'te enseñamos las recetas para los días sin merienda' }).waitFor({ state: 'detached' });
+  check(!(await interruptor.isChecked()), 'y lo desmarca');
+  await p.getByRole('tab', { name: 'Tus recetas' }).click();
+  const filtroDia = p.getByRole('group', { name: 'Qué días' });
+  await filtroDia.waitFor();
+  await filtroDia.getByRole('button', { name: 'Sin merienda' }).click();
+  check(await p.getByRole('heading', { name: 'Merienda', exact: true }).count() === 0 && await p.locator('.tarjeta-receta', { hasText: 'Días sin merienda' }).count() === 3,
+    'en sus recetas puede ver solo las de los días sin merienda (sin la merienda)');
+  await revisar('sin-merienda-recetas');
+  await filtroDia.getByRole('button', { name: 'Todas' }).click();
 } catch (e) {
   fallos++;
   console.log('  ✗ el flujo se ha interrumpido:', e.message.split('\n').slice(0, 12).join('\n      '));

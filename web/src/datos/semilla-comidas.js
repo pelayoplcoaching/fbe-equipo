@@ -46,7 +46,7 @@ export const RECETAS_DEMO = [
 // db: la base de la demo; ctx: { hoy, uuid, usuario, ahoraISO, ana }
 export function sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana }) {
   const lunesHoy = lunesDe(hoy);
-  Object.assign(db, { recetas: [], recetas_atleta: [], comidas_atleta: [], menu_comidas: [] });
+  Object.assign(db, { recetas: [], recetas_atleta: [], comidas_atleta: [], menu_comidas: [], menu_dias: [] });
   const R = {};
   for (const { clave, ...r } of RECETAS_DEMO) {
     const f = FOTOS_RECETAS[clave] || {};
@@ -61,14 +61,15 @@ export function sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana }) {
     notion_url: null, progresion_auto: true, volumen_objetivo: null, nutricion: true, entrenamiento: false, nivel: null, creado_en: ahoraISO };
   db.atletas.push(lucia);
   for (const tipo of ['privacidad', 'datos_salud']) db.consentimientos.push({ id: uuid(), perfil_id: perfil, tipo, version: '2026-10', aceptado_en: ahoraISO, revocado_en: null });
-  db.comidas_atleta.push({ atleta_id: lucia.id, tomas: ['desayuno', 'comida', 'merienda', 'cena'], actualizado_en: ahoraISO });
+  // (algunos días no merienda: la merienda es su comida opcional, v0.27)
+  db.comidas_atleta.push({ atleta_id: lucia.id, tomas: ['desayuno', 'comida', 'merienda', 'cena'], opcional: 'merienda', actualizado_en: ahoraISO });
   db.planes_nutricion.push({ id: uuid(), atleta_id: lucia.id, desde: sumarDias(lunesHoy, -28), modo: 'macros', fase: 'perder', ritmo_pct: -0.5, kcal: 1750, proteina_g: 115, carbos_g: 200, grasa_g: 55, fibra_g: 25,
     kcal_descanso: null, carbos_descanso_g: null, grasa_descanso_g: null, motivo: null, creado_en: ahoraISO,
     pautas: 'Elige cada día una opción de tu recetario para cada comida: todas cuadran con tu plan.\nSi un día comes fuera, apúntalo en el menú como texto y sigue con normalidad.\nAgua como bebida habitual.' });
   // Pesos de las últimas semanas (bajando despacio)
   for (let d = 34; d >= 0; d -= 2) db.pesos.push({ id: uuid(), atleta_id: lucia.id, fecha: sumarDias(hoy, -d), kg: Math.round((71.4 - 0.06 * (34 - d) + ((d * 7) % 5 - 2) * 0.12) * 10) / 10, notas: null });
   const asignar = (atleta, clave, toma, extra = {}) => {
-    const a = { id: uuid(), atleta_id: atleta.id, receta_id: R[clave].id, toma, factor: 1, orden: 0, nota: null, favorita: false, cambio_pedido_en: null, cambio_nota: null, creada_en: ahoraISO, ...extra };
+    const a = { id: uuid(), atleta_id: atleta.id, receta_id: R[clave].id, toma, factor: 1, orden: 0, nota: null, favorita: false, cambio_pedido_en: null, cambio_nota: null, variante: null, creada_en: ahoraISO, ...extra };
     db.recetas_atleta.push(a);
     return a;
   };
@@ -77,6 +78,10 @@ export function sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana }) {
     asignar(lucia, 'curry', 'comida', { nota: 'Haz las dos raciones el domingo: una para el lunes y otra para el miércoles.' }), asignar(lucia, 'lentejas', 'comida'), asignar(lucia, 'garbanzos', 'comida'),
     asignar(lucia, 'yogur', 'merienda'), asignar(lucia, 'bocadillo', 'merienda', { factor: 0.75, cambio_pedido_en: new Date(Date.now() - 5 * 3600e3).toISOString(), cambio_nota: 'El atún entre semana me cansa: ¿algo con pavo o queso fresco?' }),
     asignar(lucia, 'salmon', 'cena'), asignar(lucia, 'tortilla', 'cena', { favorita: true }), asignar(lucia, 'curry', 'cena'),
+    // Los días sin merienda, comida y cena algo más grandes (v0.27)
+    asignar(lucia, 'curry', 'comida', { variante: 'sin', factor: 1.25, orden: 10, nota: 'Los días sin merienda, un cuarto más.' }),
+    asignar(lucia, 'garbanzos', 'comida', { variante: 'sin', factor: 1.25, orden: 11 }),
+    asignar(lucia, 'salmon', 'cena', { variante: 'sin', factor: 1.25, orden: 10 }),
   ];
   const deLucia = (clave, toma) => recLucia.find((a) => a.receta_id === R[clave].id && a.toma === toma);
   // Su menú: lo de esta semana hasta mañana (lo de antes de hoy, comido), y la semana pasada entera
@@ -99,6 +104,8 @@ export function sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana }) {
       });
     }
   }
+  // Los domingos no merienda
+  for (const semana of [-7, 0]) db.menu_dias.push({ atleta_id: lucia.id, fecha: sumarDias(lunesHoy, semana + 6), creado_en: ahoraISO });
   // Lo que ha apuntado de nutrición (los totales de su menú), los días que ya pasaron
   const porDia = {};
   for (const e of db.menu_comidas.filter((x) => x.atleta_id === lucia.id && x.fecha < hoy)) (porDia[e.fecha] ||= []).push(e);

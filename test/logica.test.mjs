@@ -9,7 +9,7 @@ import { progresarPauta, opcionesDe } from '../web/src/logica/progresion.js';
 import { sumarMeses, finPeriodo, importePeriodo, siguientePeriodo, resumenCobros, cobradoEnMes, fmtEuros, leerEuros } from '../web/src/logica/cobros.js';
 import { modoCarga, columnasEditor, pesoAnterior, conNutricion, textoServicio, NIVELES } from '../web/src/logica/nivel.js';
 import { cardioValido, cardioHechoValido, limpiarCardio, limpiarCardioHecho, textoCardio, textoCardioHecho, ritmo, palabrasEsfuerzo, cardioPorSemana, cardioHechoDe } from '../web/src/logica/cardio.js';
-import { leerIngrediente, leerIngredientes, escalarCantidad, textoIngrediente, ingredientesATexto, limpiarReceta, avisoMacros, macrosDe, textoMacros, recetarioPorToma, entradaMenu, cambiarRaciones, totalesDia, menuPorDia, copiarMenu, listaCompra, textoListaCompra, tomasDe, ordenarTomas, TOMAS_DEFECTO } from '../web/src/logica/comidas.js';
+import { valeParaDia, textoVariante, tomasDelDia, paraElDia, leerIngrediente, leerIngredientes, escalarCantidad, textoIngrediente, ingredientesATexto, limpiarReceta, avisoMacros, macrosDe, textoMacros, recetarioPorToma, entradaMenu, cambiarRaciones, totalesDia, menuPorDia, copiarMenu, listaCompra, textoListaCompra, tomasDe, ordenarTomas, TOMAS_DEFECTO } from '../web/src/logica/comidas.js';
 import { conEntrenamiento, servicioDe, CAMPOS_SERVICIO } from '../web/src/logica/nivel.js';
 import { e1rm, e1rmPorSemana, seriesPorGrupo, pauta, propuestaSerie, semanaActual, resumenAtleta, num, signo, mmss } from '../web/src/logica/calculos.js';
 
@@ -1072,6 +1072,13 @@ console.log('\nComidas: recetas, recetario y menú (v0.26)');
   check(listaCompra([{ receta_id: 'r2', raciones: 1 }], [{ id: 'r2', nombre: 'X', raciones: 4, ingredientes: [{ nombre: 'Cebolla', cantidad: 1 }, { nombre: 'Ajo', cantidad: 2, unidad: 'diente' }, { nombre: 'Aceite', cantidad: 2, unidad: 'cda' }] }], []).items.map((i) => i.cantidad).join() === '0.5,1,1', 'media cebolla y medio diente se compran enteros; las cucharadas no');
   check(/☐ 270 g de avena/.test(textoListaCompra(lc)) && /Sin receta:\n☐ Comida fuera/.test(textoListaCompra(lc)), 'y en texto, para copiarla');
 
+  check(valeParaDia({ variante: null }, true) && valeParaDia({ variante: 'sin' }, true) && !valeParaDia({ variante: 'con' }, true) && valeParaDia({ variante: 'con' }, false) && !valeParaDia({ variante: 'sin' }, false)
+    && textoVariante('sin', 'merienda') === 'Días sin merienda' && textoVariante('con', null) === null
+    && tomasDelDia(['desayuno', 'comida', 'merienda', 'cena'], 'merienda', true).join() === 'desayuno,comida,cena'
+    && tomasDelDia(['desayuno', 'merienda'], 'merienda', true, ['merienda']).length === 2 && tomasDelDia(['desayuno', 'merienda'], 'merienda', false).length === 2
+    && paraElDia([{ receta_id: 'c', toma: 'comida', variante: null }, { receta_id: 'c', toma: 'comida', variante: 'sin' }, { receta_id: 'l', toma: 'comida', variante: null }], true).map((a) => a.receta_id + (a.variante || '')).join() === 'csin,l'
+    && paraElDia([{ receta_id: 'c', toma: 'comida', variante: null }, { receta_id: 'c', toma: 'comida', variante: 'sin' }], false).length === 1,
+    'días sin merienda: qué recetas valen ese día (la versión del día, no las dos) y qué comidas se ven (la merienda, solo si ya tenía algo apuntado)');
   check(conEntrenamiento({}) && !conEntrenamiento({ entrenamiento: false }) && servicioDe({ entrenamiento: false }) === 'nutricion' && servicioDe({ nutricion: false }) === 'entrenamiento' && servicioDe({}) === 'completo'
     && igual(CAMPOS_SERVICIO.nutricion, { entrenamiento: false, nutricion: true }) && textoServicio({ entrenamiento: false }) === 'Solo nutrición', 'servicio: entrenamiento, completo o solo nutrición');
   const solo = resumenAtleta({ atleta: { id: 'l', nombre: 'Lucía', estado: 'activo', entrenamiento: false }, bloque: null, cambiosReceta: 2, diasNutricion: 5 }, '2026-11-04');

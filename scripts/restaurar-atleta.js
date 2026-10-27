@@ -16,12 +16,12 @@
   const ORDEN = ['atletas', 'consentimientos', 'ejercicios', 'recetas', 'bloques', 'semanas', 'sesiones', 'sesion_ejercicios', 'series',
     'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'notas_ejercicio', 'avisos', 'recursos',
     'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'comentarios', 'cobros_atletas', 'pagos',
-    'recetas_atleta', 'comidas_atleta', 'menu_comidas'];
-  // Una fila por atleta, sin «id» propio (su clave es atleta_id)
-  const SIN_ID = ['cobros_atletas', 'comidas_atleta'];
+    'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias'];
+  // Sin «id» propio: van por atleta (una fila por atleta, o por atleta y día en menu_dias)
+  const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias'];
   const CON_ATLETA = ['bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
     'notas_ejercicio', 'avisos', 'recursos', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion',
-    'cuestionarios', 'preguntas_checkin', 'comentarios', 'cobros_atletas', 'pagos', 'recetas_atleta', 'comidas_atleta', 'menu_comidas'];
+    'cuestionarios', 'preguntas_checkin', 'comentarios', 'cobros_atletas', 'pagos', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias'];
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const COLUMNA = /^[a-z_][a-z0-9_]*$/;
 
@@ -123,7 +123,11 @@
     // Comprobación: si está, si tiene su cuenta y cuántas filas de la copia están ahora en la base
     const total = tablas.reduce((t, n) => t + filas[n].length, 0);
     const clave = (n) => (SIN_ID.includes(n) ? 'atleta_id' : 'id'); // lo acordado y sus comidas del día van por atleta, sin id propio
-    const presentes = tablas.map((n) => `(select count(*) from public.${n} where ${clave(n)} = any('{${filas[n].map((f) => f[clave(n)]).filter((x) => UUID.test(String(x))).join(',')}}'::uuid[]))`).join('\n     + ');
+    const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+    const presentes = tablas.map((n) => (n === 'menu_dias'
+      // (sus días van por atleta y fecha: solo los de la copia, no los que se hayan marcado después)
+      ? `(select count(*) from public.menu_dias where (atleta_id, fecha) in (${filas[n].filter((f) => UUID.test(String(f.atleta_id)) && FECHA.test(String(f.fecha))).map((f) => `('${f.atleta_id}'::uuid, '${f.fecha}'::date)`).join(', ') || `(null::uuid, null::date)`}))`
+      : `(select count(*) from public.${n} where ${clave(n)} = any('{${filas[n].map((f) => f[clave(n)]).filter((x) => UUID.test(String(x))).join(',')}}'::uuid[]))`)).join('\n     + ');
     partes.push(`-- Comprobación: recuperado = 1; con_cuenta = true (si es false, dale un código nuevo desde su ficha);\n-- si filas_en_la_base es menor que filas_en_la_copia, algo ya estaba con otro id y se ha dejado como está\nselect (select count(*) from public.atletas where id = '${atleta.id}') as recuperado,\n  (select perfil_id is not null from public.atletas where id = '${atleta.id}') as con_cuenta,\n  ${total} as filas_en_la_copia,\n  ${presentes || '0'} as filas_en_la_base;`);
     return { sql: partes.join('\n'), resumen, nombre: atleta.nombre || '' };
   }

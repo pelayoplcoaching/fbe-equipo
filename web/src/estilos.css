@@ -1939,3 +1939,7 @@ button.entrada-texto:hover > span:first-child { text-decoration: underline; text
 .pestanas-sub button { border: 1px solid var(--linea); border-radius: 999px; padding: 6px 14px; margin: 0; }
 .pestanas-sub button[aria-selected="true"] { background: var(--morado-suave); border-color: transparent; color: var(--morado); }
 .segmentos-servicio button { white-space: normal; }
+
+/* Días sin una comida (v0.27) */
+.interruptor-dia { padding-top: 4px; border-top: 1px solid var(--linea); margin-top: 4px; }
+.segmentos-dia { max-width: 520px; }

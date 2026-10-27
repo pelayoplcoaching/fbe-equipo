@@ -42,7 +42,7 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
           )} />
         )}
       </div>
-      {receta && <HojaReceta a={receta} alCerrar={() => setReceta(null)} alCambiar={() => { recetario.recargar(true); setReceta(null); }}
+      {receta && <HojaReceta a={receta} opcional={r?.opcional} alCerrar={() => setReceta(null)} alCambiar={() => { recetario.recargar(true); setReceta(null); }}
         alAnadir={salud ? (a, raciones) => { setReceta(null); setAnadir({ a, raciones }); } : null} />}
       {anadir && r && <HojaElegirDia a={anadir.a} raciones={anadir.raciones} tomas={r.tomas} alCerrar={() => setAnadir(null)} alGuardado={() => setVista('menu')} />}
       {comidas && r && <HojaTusComidas atletaId={atleta.id} tomas={r.tomas} alCerrar={() => setComidas(false)} alGuardado={() => recetario.recargar(true)} />}

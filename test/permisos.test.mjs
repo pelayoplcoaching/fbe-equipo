@@ -1537,6 +1537,61 @@ console.log('\nRecetas, recetario y menú; solo nutrición (migración 022)');
   await sin21.close();
 }
 
+console.log('\nDías sin una comida (migración 023)');
+{
+  await como(pelayo, 'aal2');
+  const [rx] = await q(`insert into recetas (nombre, tomas) values ('Pasta 023', '{comida}') returning id`);
+  await q(`update comidas_atleta set tomas = '{desayuno,comida,merienda,cena}', opcional = 'merienda' where atleta_id = $1`, [aAna.id]);
+  check((await q(`select opcional from comidas_atleta where atleta_id = $1`, [aAna.id]))[0].opcional === 'merienda', 'el coach marca la merienda como la comida que algunos días no hace');
+  await q(`update comidas_atleta set opcional = 'recena' where atleta_id = $1`, [aAna.id]);
+  check((await q(`select opcional from comidas_atleta where atleta_id = $1`, [aAna.id]))[0].opcional === null, 'una que no está entre sus comidas no vale (se queda sin opcional)');
+  await q(`update comidas_atleta set opcional = 'merienda' where atleta_id = $1`, [aAna.id]);
+  await como(ana);
+  await q(`update comidas_atleta set opcional = null, tomas = '{desayuno,comida,merienda,cena}' where atleta_id = $1`, [aAna.id]);
+  check((await q(`select opcional from comidas_atleta where atleta_id = $1`, [aAna.id]))[0].opcional === 'merienda', 'el atleta no cambia cuál es la opcional');
+  await q(`update comidas_atleta set tomas = '{desayuno,comida,cena}' where atleta_id = $1`, [aAna.id]);
+  check((await q(`select opcional from comidas_atleta where atleta_id = $1`, [aAna.id]))[0].opcional === null, 'pero si deja de merendar, ya no hay comida opcional');
+  await como(pelayo, 'aal2');
+  await q(`update comidas_atleta set tomas = '{desayuno,comida,merienda,cena}', opcional = 'merienda' where atleta_id = $1`, [aAna.id]);
+  // La misma receta, una vez para cada tipo de día
+  const [v1] = await q(`insert into recetas_atleta (atleta_id, receta_id, toma) values ($1, $2, 'comida') returning id`, [aAna.id, rx.id]);
+  const [v2] = await q(`insert into recetas_atleta (atleta_id, receta_id, toma, factor, variante) values ($1, $2, 'comida', 1.25, 'sin') returning id`, [aAna.id, rx.id]);
+  check(!!v1 && !!v2 && await falla(`insert into recetas_atleta (atleta_id, receta_id, toma, variante) values ($1, $2, 'comida', 'sin')`, [aAna.id, rx.id])
+    && await falla(`insert into recetas_atleta (atleta_id, receta_id, toma) values ($1, $2, 'comida')`, [aAna.id, rx.id]) && await falla(`insert into recetas_atleta (atleta_id, receta_id, toma, variante) values ($1, $2, 'cena', 'a veces')`, [aAna.id, rx.id]),
+    'la misma receta puede ir en una comida para los días con merienda y para los días sin ella, una vez cada una');
+  await como(ana);
+  check(await falla(`update recetas_atleta set variante = null where id = $1`, [v2.id]) && (await q(`select count(*)::int n from recetas_atleta where receta_id = $1`, [rx.id]))[0].n === 2, 'el atleta ve las dos, pero no cambia para qué días es cada una');
+  // Sus días sin merienda
+  const lunes23 = (await q(`select (current_date - (extract(isodow from current_date)::int - 1))::text d`))[0].d;
+  await q(`insert into menu_dias (atleta_id, fecha) values ($1, $2::date + 6)`, [aAna.id, lunes23]);
+  check((await q(`select count(*)::int n from menu_dias`))[0].n === 1 && await falla(`insert into menu_dias (atleta_id, fecha) values ($1, $2::date + 6)`, [aAna.id, lunes23])
+    && await falla(`insert into menu_dias (atleta_id, fecha) values ($1, $2)`, [aLuis.id, lunes23]) && await falla(`update menu_dias set fecha = fecha + 1`), 'Ana marca un día sin merienda (una vez; no en el menú de otro, y no se cambia: se quita y se pone)');
+  await como(luis);
+  check((await q(`select count(*)::int n from menu_dias`))[0].n === 0, 'Luis no ve los días de Ana');
+  await su();
+  await q(`update consentimientos set revocado_en = now() where perfil_id = $1 and tipo = 'datos_salud'`, [ana]);
+  await como(ana);
+  check(await falla(`insert into menu_dias (atleta_id, fecha) values ($1, $2::date + 5)`, [aAna.id, lunes23]), 'sin el consentimiento de salud, no');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into menu_dias (atleta_id, fecha) values ($1, $2::date + 5)`, [aAna.id, lunes23]), 'ni el coach');
+  await su();
+  await q(`update consentimientos set revocado_en = null where perfil_id = $1 and tipo = 'datos_salud'`, [ana]);
+  await como(ana);
+  await q(`delete from menu_dias where atleta_id = $1`, [aAna.id]);
+  check((await q(`select count(*)::int n from menu_dias`))[0].n === 0, 'y lo quita cuando quiere');
+  await anon();
+  check(await falla(`select * from menu_dias`), 'sin sesión, nada');
+  await su();
+  const sin22 = new PGlite();
+  await sin22.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin22.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '022')) await sin22.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let err23 = null;
+  try { await sin22.exec(readFileSync(new URL('../supabase/migraciones/023_dia_sin_toma.sql', import.meta.url), 'utf8')); } catch (e) { err23 = e.message; }
+  check(/Antes de la 023 hace falta la 022/.test(err23 || ''), 'la 023 no se aplica sin la 022');
+  await sin22.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

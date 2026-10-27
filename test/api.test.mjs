@@ -907,6 +907,32 @@ console.log('\nRecetas, recetario y menú; solo nutrición (v0.26)');
   await api.borrarReceta(dup.id);
   await api.borrarReceta(otra.id);
 
+  // v0.27: días sin merienda
+  await api.guardarComidas(ana.id, ['desayuno', 'comida', 'merienda', 'cena'], 'merienda');
+  const asigSin = await api.asignarReceta(ana.id, curry.id, 'comida', { factor: 1.25, variante: 'sin' });
+  let recV = await api.recetario(ana.id);
+  check(recV.opcional === 'merienda' && asigSin.length === 1 && recV.porToma.comida.filter((a) => a.receta_id === curry.id).length === 2
+    && (await api.asignarReceta(ana.id, curry.id, 'comida', { variante: 'sin' })).length === 0,
+    'el coach marca la merienda como opcional y pone el curry también para los días sin merienda (×1,25), una sola vez');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const lunesV = sumarDias(lunes, 14);
+  await api.marcarDiaSin(ana.id, sumarDias(lunesV, 6), true);
+  await api.marcarDiaSin(ana.id, sumarDias(lunesV, 6), true);
+  check((await api.diasSin(ana.id, lunesV)).join() === sumarDias(lunesV, 6), 'Ana marca el domingo sin merienda (dos veces no duplica)');
+  await api.guardarComidas(ana.id, ['desayuno', 'comida', 'merienda', 'cena']);
+  check((await api.recetario(ana.id)).opcional === 'merienda', 'al guardar sus comidas, la opcional se queda como la puso su coach');
+  await api.apuntarMenu(ana.id, { fecha: sumarDias(lunesV, 6), toma: 'comida', asignacion: { ...recV.porToma.comida.find((a) => a.variante === 'sin'), receta: curry } });
+  await api.copiarMenuSemana(ana.id, lunesV, sumarDias(lunesV, 7));
+  check((await api.diasSin(ana.id, sumarDias(lunesV, 7))).join() === sumarDias(lunesV, 13), 'copiar la semana copia también sus días sin merienda');
+  await api.vaciarMenuSemana(ana.id, sumarDias(lunesV, 7));
+  check((await api.diasSin(ana.id, sumarDias(lunesV, 7))).length === 0, 'y vaciarla los quita');
+  await api.marcarDiaSin(ana.id, sumarDias(lunesV, 6), false);
+  check((await api.diasSin(ana.id, lunesV)).length === 0, 'y lo desmarca');
+  await api.vaciarMenuSemana(ana.id, lunesV);
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  for (const a of (await api.recetario(ana.id)).asignaciones.filter((x) => x.variante)) await api.quitarReceta(a.id);
+  await api.guardarComidas(ana.id, ['desayuno', 'comida', 'merienda', 'cena'], null);
+
   // Solo nutrición
   const lucia = await api.crearAtleta({ nombre: 'Lucía Solo Nutrición', entrenamiento: false });
   check(lucia.entrenamiento === false && lucia.nutricion === true, 'da de alta a quien solo le lleva la nutrición');

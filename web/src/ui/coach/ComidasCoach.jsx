@@ -2,7 +2,7 @@
 // (ficha → Nutrición). Una receta se escribe una vez y se asigna a quien quieras, en las comidas que quieras y
 // con un factor (×1,5 = una vez y media las cantidades y los macros), en vez de copiar bases de datos en Notion.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, Pestanas, usePreferencia, cuando } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, Pestanas, usePreferencia, cuando, Segmentos } from '../comunes.jsx';
 import { recortarImagen } from '../FotoPerfil.jsx';
 import { NutricionCoach } from './NutricionCoach.jsx';
 import { FotoReceta, VistaRecetario, HojaReceta, MenuSemana, HojaTusComidas } from '../ComidasComun.jsx';
@@ -45,7 +45,7 @@ function RecetarioCoach({ atleta }) {
   return (
     <div class="pila">
       <div class="panel panel-pad separa" style="flex-wrap:wrap">
-        <span class="peq" style="flex:1;min-width:200px"><strong>{r.tomas.length} comidas al día:</strong> {r.tomas.map((t) => NOMBRE_TOMA[t]).join(', ')}{r.eligio ? '' : <span class="terciario"> (las de siempre: aún no las ha elegido)</span>}</span>
+        <span class="peq" style="flex:1;min-width:200px"><strong>{r.tomas.length} comidas al día:</strong> {r.tomas.map((t) => NOMBRE_TOMA[t]).join(', ')}{r.eligio ? '' : <span class="terciario"> (las de siempre: aún no las ha elegido)</span>}{r.opcional ? <span class="terciario">. Algunos días, sin {NOMBRE_TOMA[r.opcional].toLowerCase()}</span> : ''}</span>
         <span class="fila-envolver">
           <button class="btn btn-peq plano" onClick={() => setHoja('comidas')}>Cambiar</button>
           <button class="btn btn-peq btn-primario" onClick={() => setHoja('anadir')}><Icono n="mas" /> Añadir recetas</button>
@@ -75,17 +75,30 @@ function RecetarioCoach({ atleta }) {
         </Vacio></div>
       )} />
       {hoja === 'anadir' && <HojaAsignar atleta={atleta} recetario={r} alCerrar={() => setHoja(null)} alGuardado={recargar} />}
-      {hoja === 'comidas' && <HojaTusComidas atletaId={atleta.id} tomas={r.tomas} esCoach alCerrar={() => setHoja(null)} alGuardado={recargar} />}
-      {hoja?.editar && <HojaAsignacion a={hoja.editar} alCerrar={() => setHoja(null)} alCambiar={recargar} verReceta={() => setHoja({ ver: hoja.editar })} />}
-      {hoja?.ver && <HojaReceta a={hoja.ver} esCoach alCerrar={() => setHoja(null)} />}
+      {hoja === 'comidas' && <HojaTusComidas atletaId={atleta.id} tomas={r.tomas} opcional={r.opcional} esCoach alCerrar={() => setHoja(null)} alGuardado={recargar} />}
+      {hoja?.editar && <HojaAsignacion a={hoja.editar} opcional={r.opcional} alCerrar={() => setHoja(null)} alCambiar={recargar} verReceta={() => setHoja({ ver: hoja.editar })} />}
+      {hoja?.ver && <HojaReceta a={hoja.ver} esCoach opcional={r.opcional} alCerrar={() => setHoja(null)} />}
+    </div>
+  );
+}
+
+// Para qué días es una receta de su recetario, si algunos días no hace una comida (v0.27)
+function SelectorVariante({ opcional, valor, alCambiar }) {
+  const n = opcional ? NOMBRE_TOMA[opcional].toLowerCase() : 'la comida opcional';
+  return (
+    <div class="pila-xs"><span class="peq">Para qué días</span>
+      <Segmentos etiqueta="Para qué días" clase="segmentos-dia" valor={valor || 'todos'} alCambiar={(v) => alCambiar(v && v !== 'todos' ? v : null)}
+        opciones={[['todos', 'Todos'], ['con', `Con ${n}`], ['sin', `Sin ${n}`]]} />
+      <span class="ayuda">{valor === 'sin' ? `Solo le sale los días que marca sin ${n} (suelen ser algo más grandes).` : valor === 'con' ? `Solo le sale los días con ${n}.` : 'Le sale todos los días.'}</span>
     </div>
   );
 }
 
 // Una receta en su recetario: el factor, tu nota, en qué comida va; quitarla
-function HojaAsignacion({ a, alCerrar, alCambiar, verReceta }) {
+function HojaAsignacion({ a, opcional = null, alCerrar, alCambiar, verReceta }) {
   const { api, aviso } = useApp();
   const [factor, setFactor] = useState(Number(a.factor));
+  const [variante, setVariante] = useState(a.variante || null);
   const [nota, setNota] = useState(a.nota || '');
   const [ocupado, una] = useUnaVez();
   const hacer = (fn, texto) => una(async () => { try { await fn(); aviso(texto); alCambiar(); alCerrar(); } catch (e) { aviso(e.message, 'error'); } });
@@ -98,7 +111,9 @@ function HojaAsignacion({ a, alCerrar, alCambiar, verReceta }) {
         <span class="ayuda">×1 es la receta tal cual; ×1,5, una vez y media los ingredientes y los macros.</span></div>
       <div class="campo"><label for="asig-nota">Nota para él <span class="terciario">(opcional)</span></label>
         <input id="asig-nota" class="entrada" maxLength={300} value={nota} onInput={(e) => setNota(e.currentTarget.value)} placeholder="Si no tienes pan, 40 g de avena" /></div>
-      <button class="btn btn-primario btn-grande" disabled={ocupado} onClick={() => hacer(async () => { await api.cambiarAsignacion(a.id, { factor, nota }); if (a.cambio_pedido_en) await api.resolverCambioReceta(a.id); }, a.cambio_pedido_en ? 'Ajustada y resuelta' : 'Guardado')}>Guardar{a.cambio_pedido_en ? ' y dar por resuelta' : ''}</button>
+      {(opcional || a.variante) && <SelectorVariante opcional={opcional} valor={variante} alCambiar={setVariante} />}
+      {!opcional && a.variante && <p class="mini terciario">Ya no tiene comida opcional: déjala para «Todos» o quítala.</p>}
+      <button class="btn btn-primario btn-grande" disabled={ocupado} onClick={() => hacer(async () => { await api.cambiarAsignacion(a.id, opcional || a.variante ? { factor, nota, variante } : { factor, nota }); if (a.cambio_pedido_en) await api.resolverCambioReceta(a.id); }, a.cambio_pedido_en ? 'Ajustada y resuelta' : 'Guardado')}>Guardar{a.cambio_pedido_en ? ' y dar por resuelta' : ''}</button>
       <div class="fila-envolver">
         <button class="btn plano" onClick={verReceta}><Icono n="receta" /> Ver cómo la ve</button>
         <button class="btn btn-peligro" disabled={ocupado} onClick={() => hacer(() => api.quitarReceta(a.id), 'Quitada de su recetario')}><Icono n="basura" /> Quitar de su recetario</button>
@@ -115,6 +130,7 @@ function HojaAsignar({ atleta, recetario, alCerrar, alGuardado }) {
   const [elegidas, setElegidas] = useState([]);
   const [toma, setToma] = useState(null); // null = la primera toma de cada receta que encaje con sus comidas
   const [factor, setFactor] = useState(1);
+  const [variante, setVariante] = useState(null);
   const [nueva, setNueva] = useState(false);
   const [ocupado, una] = useUnaVez();
   const ya = new Set(recetario.asignaciones.map((a) => `${a.receta_id}|${a.toma}`));
@@ -124,8 +140,9 @@ function HojaAsignar({ atleta, recetario, alCerrar, alGuardado }) {
   const alternar = (id) => setElegidas(elegidas.includes(id) ? elegidas.filter((x) => x !== id) : [...elegidas, id]);
   const guardar = () => una(async () => {
     try {
-      for (const id of elegidas) await api.asignarReceta(atleta.id, id, tomaDe(todas.find((r) => r.id === id)), { factor });
-      aviso(elegidas.length === 1 ? 'Receta añadida' : `${elegidas.length} recetas añadidas`); alGuardado(); alCerrar();
+      let n = 0;
+      for (const id of elegidas) n += (await api.asignarReceta(atleta.id, id, tomaDe(todas.find((r) => r.id === id)), { factor, variante: recetario.opcional ? variante : null })).length;
+      aviso(!n ? 'Ya las tenía (no ha cambiado nada)' : n === 1 ? 'Receta añadida' : `${n} recetas añadidas`); alGuardado(); alCerrar();
     } catch (e) { aviso(e.message, 'error'); }
   });
   if (nueva) return <EditarReceta receta={{}} alCerrar={(r) => { setNueva(false); if (r?.id) { lista.recargar(true); setElegidas([...elegidas, r.id]); } }} />;
@@ -162,6 +179,7 @@ function HojaAsignar({ atleta, recetario, alCerrar, alGuardado }) {
               {TOMAS.map(([t, n]) => <option key={t} value={t}>{n}</option>)}
             </select></div>
           <div class="separa"><span class="peq">Factor</span><div style="max-width:150px"><Paso valor={factor} paso={0.25} min={0.25} max={5} dec={2} etiqueta="factor" alCambiar={(v) => v && setFactor(v)} /></div></div>
+          {recetario.opcional && <SelectorVariante opcional={recetario.opcional} valor={variante} alCambiar={setVariante} />}
           <button class="btn btn-primario" disabled={ocupado} onClick={guardar}>Añadir {elegidas.length === 1 ? 'la receta' : `las ${elegidas.length} recetas`}</button>
         </div>
       )}

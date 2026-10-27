@@ -42,6 +42,14 @@ const falta022 = (e) => {
   }
   throw e;
 };
+// Días sin una comida (v0.27) sin la migración 023
+const falta023 = (e) => {
+  const m = e?.message || '';
+  if (/\b(menu_dias|opcional|variante)\b/.test(m) && /schema cache|does not exist|no existe|column|columna/i.test(m)) {
+    throw new Error(`Para los días sin una comida («hoy sin merienda») falta ejecutar la migración 023 en Supabase (supabase/migraciones/023_dia_sin_toma.sql). Detalle: ${m}`);
+  }
+  throw e;
+};
 const falta018 = (e) => {
   if (/\b(nivel|nutricion)\b/.test(e?.message || '') && /column|columna|schema cache/i.test(e?.message || '')) {
     throw new Error('Para elegir servicio y nivel falta ejecutar la migración 018 en Supabase (supabase/migraciones/018_servicio_y_nivel.sql).');
@@ -93,9 +101,9 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
   'archivos', 'comentarios', 'recursos', 'notas_ejercicio', 'respuestas_guardadas', 'avisos', 'habitos', 'registros_habito',
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
-  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas'];
+  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias'];
 // Las que puede no tener aún una base (cobros, 020; comidas, 022): sin ellas, la copia sale igual
-const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas'];
+const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias'];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
 
@@ -562,29 +570,37 @@ export function crearApi(backend) {
       const porToma = recetarioPorToma(asignaciones, recetas);
       // Tomas con recetas que no están entre sus comidas (p. ej. le asignaste una merienda y él quitó la merienda)
       const conRecetas = ordenarTomas(Object.keys(porToma));
-      return { tomas, eligio: !!comidas[0], conRecetas, porToma, asignaciones, recetas, cambios: asignaciones.filter((a) => a.cambio_pedido_en).length };
+      // La comida que algunos días no hace (v0.27), si sigue entre sus comidas
+      const opcional = comidas[0]?.opcional && tomas.includes(comidas[0].opcional) && tomas.length >= 2 ? comidas[0].opcional : null;
+      return { tomas, opcional, eligio: !!comidas[0], conRecetas, porToma, asignaciones, recetas, cambios: asignaciones.filter((a) => a.cambio_pedido_en).length };
     },
-    // Cuántas comidas hace al día (las elige el atleta o el coach)
-    async guardarComidas(atletaId, tomas) {
+    // Cuántas comidas hace al día (las elige el atleta o el coach). opcional (solo el coach; undefined = no se
+    // toca): la que algunos días no hace
+    async guardarComidas(atletaId, tomas, opcional) {
       const xs = ordenarTomas(tomas);
       if (!xs.length) throw new Error('Elige al menos una comida.');
-      return (await b.upsert('comidas_atleta', [{ atleta_id: atletaId, tomas: xs }], 'atleta_id').catch(falta022))[0];
+      const fila = { atleta_id: atletaId, tomas: xs };
+      if (opcional !== undefined) fila.opcional = opcional && xs.includes(opcional) && xs.length >= 2 ? opcional : null;
+      return (await b.upsert('comidas_atleta', [fila], 'atleta_id').catch(falta022).catch(falta023))[0];
     },
     // Coach: poner una receta en su recetario (en una o varias tomas). Si ya la tiene en esa toma, se deja como
     // está (su factor y tu nota no se pierden: se cambian desde la asignación)
-    async asignarReceta(atletaId, recetaId, tomas, { factor = 1, nota = null } = {}) {
+    async asignarReceta(atletaId, recetaId, tomas, { factor = 1, nota = null, variante = null } = {}) {
       const lista = Array.isArray(tomas) ? tomas : [tomas];
       if (!lista.length) throw new Error('Elige en qué comida va.');
-      const ya = new Set((await b.select('recetas_atleta', { eq: { atleta_id: atletaId, receta_id: recetaId }, cols: 'toma' }).catch(falta022)).map((x) => x.toma));
-      const filas = lista.filter((toma) => !ya.has(toma)).map((toma) => ({ atleta_id: atletaId, receta_id: recetaId, toma, factor: Number(factor) || 1, nota: nota?.trim() || null }));
+      // (para el mismo tipo de día: con días sin una comida, puede estar una vez para cada tipo)
+      const ya = new Set((await b.select('recetas_atleta', { eq: { atleta_id: atletaId, receta_id: recetaId } }).catch(falta022))
+        .filter((x) => (x.variante || null) === (variante || null)).map((x) => x.toma));
+      const filas = lista.filter((toma) => !ya.has(toma)).map((toma) => ({ atleta_id: atletaId, receta_id: recetaId, toma, factor: Number(factor) || 1, nota: nota?.trim() || null,
+        ...(variante ? { variante } : {}) }));
       if (!filas.length) return [];
-      return b.insert('recetas_atleta', filas).catch(falta022);
+      return b.insert('recetas_atleta', filas).catch(falta022).catch(falta023);
     },
     async cambiarAsignacion(id, cambios) {
       const c = {};
-      for (const k of ['factor', 'nota', 'orden', 'toma']) if (k in cambios) c[k] = cambios[k] === '' ? null : cambios[k];
+      for (const k of ['factor', 'nota', 'orden', 'toma', 'variante']) if (k in cambios) c[k] = cambios[k] === '' ? null : cambios[k];
       if ('nota' in c && typeof c.nota === 'string') c.nota = c.nota.trim() || null;
-      return (await b.update('recetas_atleta', c, { eq: { id } }))[0];
+      return (await b.update('recetas_atleta', c, { eq: { id } }).catch(falta023))[0];
     },
     async quitarReceta(asignacionId) {
       return b.delete('recetas_atleta', { eq: { id: asignacionId } });
@@ -604,6 +620,16 @@ export function crearApi(backend) {
     // El menú de una semana (de lunes a domingo)
     async menuSemana(atletaId, lunes) {
       return b.select('menu_comidas', { eq: { atleta_id: atletaId }, gte: { fecha: lunes }, lte: { fecha: sumarDias(lunes, 6) }, order: [['fecha', 'asc'], ['orden', 'asc']] }).catch(falta022);
+    },
+    // Los días de una semana en que no hace su comida opcional (v0.27): ['2026-11-03', …]. Sin la 023, ninguno
+    async diasSin(atletaId, lunes) {
+      return (await b.select('menu_dias', { eq: { atleta_id: atletaId }, gte: { fecha: lunes }, lte: { fecha: sumarDias(lunes, 6) }, cols: 'fecha' })
+        .catch((e) => { if (/menu_dias/.test(e?.message || '') && /schema cache|does not exist|no existe/i.test(e?.message || '')) return []; throw e; })).map((x) => x.fecha);
+    },
+    async marcarDiaSin(atletaId, fecha, sin) {
+      // (insert y no upsert: el atleta no tiene permiso de cambiar filas, solo de crearlas y borrarlas)
+      if (sin) return (await b.insert('menu_dias', [{ atleta_id: atletaId, fecha }]).catch((e) => { if (/duplicate|23505|ya existe/i.test(`${e?.message} ${e?.code}`)) return [{ atleta_id: atletaId, fecha }]; return falta023(e); }))[0];
+      return b.delete('menu_dias', { eq: { atleta_id: atletaId, fecha } });
     },
     // Apuntar en el menú una receta del recetario ({ asignacion }) o un texto ({ texto, macros })
     async apuntarMenu(atletaId, datos) {
@@ -631,11 +657,17 @@ export function crearApi(backend) {
       const filas = copiarMenu(origen, lunesOrigen, lunesDestino)
         .filter((f) => !yaEsta.has(`${f.fecha}|${f.toma}|${f.texto}`))
         .map((f) => ({ ...f, receta_id: f.receta_id && enRecetario.has(f.receta_id) ? f.receta_id : null, atleta_id: atletaId }));
+      // Y los días sin su comida opcional, igual
+      const [sinO, sinD] = await Promise.all([api.diasSin(atletaId, lunesOrigen), api.diasSin(atletaId, lunesDestino)]);
+      const dias = sinO.map((f) => sumarDias(lunesDestino, diasEntre(lunesOrigen, f))).filter((f) => !sinD.includes(f));
+      for (const fecha of dias) await api.marcarDiaSin(atletaId, fecha, true); // uno a uno: si alguno ya estaba, los demás se copian igual
       if (!filas.length) return [];
       return b.insert('menu_comidas', filas);
     },
     // Vaciar una semana del menú
     async vaciarMenuSemana(atletaId, lunes) {
+      await b.delete('menu_dias', { eq: { atleta_id: atletaId }, gte: { fecha: lunes }, lte: { fecha: sumarDias(lunes, 6) } })
+        .catch((e) => { if (!(/menu_dias/.test(e?.message || '') && /schema cache|does not exist|no existe/i.test(e?.message || ''))) throw e; });
       return b.delete('menu_comidas', { eq: { atleta_id: atletaId }, gte: { fecha: lunes }, lte: { fecha: sumarDias(lunes, 6) } });
     },
 
@@ -1308,7 +1340,7 @@ export function crearApi(backend) {
       out.suscripciones_push = perfilId ? (await b.select('suscripciones_push', { eq: { usuario_id: perfilId } }))
         .map(({ id, dispositivo, creada_en, usada_en }) => ({ id, dispositivo, creada_en, usada_en })) : [];
       // Comidas (v0.26): sus comidas del día, su recetario (con las recetas) y su menú
-      for (const t of ['comidas_atleta', 'recetas_atleta', 'menu_comidas']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      for (const t of ['comidas_atleta', 'recetas_atleta', 'menu_comidas', 'menu_dias']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       out.recetas = out.recetas_atleta.length ? await b.select('recetas', { in: { id: unicos(out.recetas_atleta.map((x) => x.receta_id)) } }).catch(() => []) : [];
       out.semanas = await b.select('semanas', { in: { bloque_id: out.bloques.map((x) => x.id) } });
       out.sesiones = await b.select('sesiones', { in: { semana_id: out.semanas.map((s) => s.id) } });

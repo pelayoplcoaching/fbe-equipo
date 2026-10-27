@@ -266,3 +266,20 @@ export function textoListaCompra({ items, libres }, titulo = 'Lista de la compra
 // El lunes de la semana que se ve en el menú (la actual, o la siguiente desde el sábado si la actual está vacía,
 // lo decide la pantalla); aquí solo el de un día
 export const lunesMenu = (iso) => lunesDe(iso);
+
+// ------------------------------------------------------------ días sin una comida (v0.27)
+// Algunos atletas se saltan una comida algunos días (los planes A y B de Notion: con y sin merienda) y las
+// demás son algo más grandes. Cada receta de su recetario puede ser para los días con esa comida ('con'), para
+// los días sin ella ('sin') o para todos (nada).
+export const valeParaDia = (a, sin) => !a?.variante || a.variante === (sin ? 'sin' : 'con');
+// «Días sin merienda»
+export const textoVariante = (variante, opcional) => (variante && opcional ? `Días ${variante === 'sin' ? 'sin' : 'con'} ${NOMBRE_TOMA[opcional].toLowerCase()}` : null);
+// Las comidas de un día: sin la opcional si ese día no la hace (salvo que ya tenga algo apuntado en ella)
+export const tomasDelDia = (tomas, opcional, sin, conAlgo = []) => (sin && opcional ? tomas.filter((t) => t !== opcional || conAlgo.includes(t)) : tomas);
+// Las recetas de una comida que valen un día: las de ese tipo de día y las de todos; si una receta está en las
+// dos (para todos y, más grande, para los días sin merienda), solo la de ese día
+export function paraElDia(asignaciones = [], sin) {
+  const xs = asignaciones.filter((a) => valeParaDia(a, sin));
+  const especificas = new Set(xs.filter((a) => a.variante).map((a) => `${a.receta_id}|${a.toma}`));
+  return xs.filter((a) => a.variante || !especificas.has(`${a.receta_id}|${a.toma}`));
+}

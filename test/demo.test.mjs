@@ -374,6 +374,11 @@ await api.copiarMenuSemana(luciaD.id, lunesL, sumarDias(lunesDe(hoyISO()), 7));
 const trasUna = (await api.menuSemana(luciaD.id, sumarDias(lunesDe(hoyISO()), 7))).length;
 await api.copiarMenuSemana(luciaD.id, lunesL, sumarDias(lunesDe(hoyISO()), 7));
 check(trasUna > antesL && (await api.menuSemana(luciaD.id, sumarDias(lunesDe(hoyISO()), 7))).length === trasUna, 'copiar su semana dos veces no duplica');
+const recLD = await api.recetario(luciaD.id);
+check(recLD.opcional === 'merienda' && recLD.asignaciones.filter((a) => a.variante === 'sin').length === 3 && (await api.diasSin(luciaD.id, lunesL)).includes(sumarDias(lunesL, 6)),
+  'Lucía no merienda algunos días: la demo trae sus recetas para esos días y el domingo marcado');
+await api.guardarComidas(luciaD.id, recLD.tomas, null);
+check((await api.recetario(luciaD.id)).opcional === 'merienda' && await lanza(() => api.cambiarAsignacion(recLD.asignaciones.find((a) => a.variante).id, { variante: null })), 'y, como en la base, no cambia cuál es la opcional ni para qué días es cada receta');
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 const marta = (await api.atletas()).find((a) => a.nombre === 'Marta Gil');
 check(await lanza(() => api.apuntarMenu(marta.id, { fecha: hoyISO(), toma: 'comida', texto: 'Algo' })), 'sin su consentimiento de salud, ni el coach le apunta el menú (como en la base)');
