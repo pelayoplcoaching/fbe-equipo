@@ -23,8 +23,12 @@ const agrupar = (filas, col) => filas.reduce((m, f) => ((m[f[col]] ||= []).push(
 const unicos = (xs) => [...new Set(xs.filter((x) => x != null))];
 // Servicio y nivel (v0.22) sin la migración 018 en la base: un aviso que diga qué falta, no el error técnico
 const falta020 = (e) => {
-  if (/\b(pagos|cobros_atletas)\b/.test(e?.message || '') && /relation|relaci\u00f3n|schema cache|does not exist|no existe/i.test(e?.message || '')) {
-    throw new Error('Para el control de cobros falta ejecutar la migración 020 en Supabase (supabase/migraciones/020_cobros.sql).');
+  const m = e?.message || '';
+  if (/\b(pagos|cobros_atletas)\b/.test(m) && /schema cache|does not exist|no existe/i.test(m)) {
+    throw new Error(`Para el control de cobros falta ejecutar la migración 020 en Supabase (supabase/migraciones/020_cobros.sql). Detalle: ${m}`);
+  }
+  if (/\b(pagos|cobros_atletas)\b/.test(m) && /permission denied|permiso denegado/i.test(m)) {
+    throw new Error(`La base no deja leer los cobros (permisos de la migración 020). Detalle: ${m}`);
   }
   throw e;
 };
