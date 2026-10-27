@@ -127,7 +127,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
       <div class="chat-lista" ref={lista}>
         {conv.cargando && !conv.datos ? <Cargando texto="Cargando los mensajes" /> : !mensajes.length ? (
           <div class="chat-vacio">
-            <Avatar nombre={otro} foto={fotoOtro} clase="grande" />
+            <Avatar nombre={otro} foto={fotoOtro} clase="grande" ampliable />
             <p><strong>{yo === 'coach' ? `Tu conversación con ${primerNombre}` : `Tu conversación con ${nombreCoach}`}</strong></p>
             <p class="peq secundario">{yo === 'coach'
               ? 'Para lo que no es de una sesión concreta. Lo que escribas aquí le llega al momento; lo de sus sesiones, check-ins y vídeos también sale en este hilo con su etiqueta.'

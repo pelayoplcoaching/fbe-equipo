@@ -1,10 +1,10 @@
 // Foto de perfil (v0.19): la elige cada uno (atleta o coach) desde su Perfil o Cuenta. El móvil la recorta en
-// cuadrado, la reduce a 256 px y la comprime (JPEG) antes de guardarla en su perfil: pesa unos 15-30 KB.
+// cuadrado, la reduce a 384 px (256 hasta la v0.25) y la comprime (JPEG) antes de guardarla en su perfil: pesa unos 15-30 KB.
 import { useRef, useState } from 'preact/hooks';
 import { useApp, Icono, Avatar } from './comunes.jsx';
 import { FOTO_MAX } from '../datos/api.js';
 
-const LADO = 256;
+const LADO = 384; // v0.25: más grande para poder ampliarla (antes 256; cabe igual en el límite de la base)
 
 // Lee una imagen (JPEG, PNG, HEIC convertido por el móvil, WebP…) y la deja en un cuadrado de 256 px, centrado
 export async function recortarFoto(archivo, { lado = LADO, max = FOTO_MAX } = {}) {
@@ -27,7 +27,7 @@ export async function recortarFoto(archivo, { lado = LADO, max = FOTO_MAX } = {}
     ctx.fillRect(0, 0, lado, lado);
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, (w - c) / 2, (h - c) / 2, c, c, 0, 0, lado, lado);
-    for (const q of [0.85, 0.75, 0.6, 0.45]) {
+    for (const q of [0.85, 0.78, 0.7, 0.6, 0.5, 0.4]) {
       const datos = lienzo.toDataURL('image/jpeg', q);
       if (datos.startsWith('data:image/jpeg;base64,') && datos.length <= max) return datos;
     }
@@ -63,7 +63,7 @@ export function FilaFoto({ nombre, coach = false }) {
   return (
     <li class="panel-pad separa fila-foto">
       <div class="fila-foto-izq">
-        <Avatar nombre={nombre} foto={foto} />
+        <Avatar nombre={nombre} foto={foto} ampliable />
         <div><div>Foto de perfil</div><div class="peq terciario">{foto ? (coach ? 'La ven tus atletas' : 'La ve tu coach') : 'Ahora, tus iniciales'}</div></div>
       </div>
       <div class="fila-acciones">

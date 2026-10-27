@@ -996,6 +996,15 @@ try {
   const fotoAna = await p.locator('.cabecera .avatar.con-foto img').getAttribute('src');
   check(/^data:image\/jpeg;base64,/.test(fotoAna) && fotoAna.length < 80000, `pone su foto de perfil: recortada y comprimida en el móvil (${Math.round(fotoAna.length / 1024)} KB)`);
   await revisar('perfil-foto');
+  // v0.25: tocar la foto la abre en grande (guardada a 384 px)
+  await p.locator('.cabecera').getByRole('button', { name: /Ver en grande la foto/ }).click();
+  const hojaFoto = p.locator('.foto-ampliada');
+  await hojaFoto.waitFor();
+  const ancho = await hojaFoto.evaluate((img) => img.naturalWidth);
+  check(ancho === 384, `tocar su foto la abre en grande (${ancho} px)`);
+  await revisar('foto-ampliada');
+  await p.keyboard.press('Escape');
+  await hojaFoto.waitFor({ state: 'detached' });
   await p.getByRole('button', { name: 'Volver a Hoy' }).click();
   await p.locator('.hero-dia').waitFor();
   check(await p.locator('.btn-avatar .avatar.con-foto').count() === 1, 'y sale en el botón de arriba de Hoy');

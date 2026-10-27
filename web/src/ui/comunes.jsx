@@ -124,15 +124,28 @@ export function iniciales(nombre) {
   return (partes[0][0] + (partes.length > 1 ? partes[partes.length - 1][0] : '')).toUpperCase();
 }
 // Con foto de perfil (v0.19), la foto; sin ella, las iniciales en el color de su nombre
-export function Avatar({ nombre, clase = '', lleno = false, foto = null }) {
+// ampliable: con foto, tocarla la abre en grande (v0.25). No usarlo dentro de otro botón.
+export function Avatar({ nombre, clase = '', lleno = false, foto = null, ampliable = false }) {
+  const [grande, setGrande] = useState(false);
   let h = 0;
   for (const ch of String(nombre || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const n = (h % 6) + 1;
   const conFoto = typeof foto === 'string' && foto.startsWith('data:image/');
-  return (
+  const circulo = (
     <span class={`avatar ${clase} ${lleno && !conFoto ? 'lleno' : ''} ${conFoto ? 'con-foto' : ''}`} style={{ '--av': `var(--av-${n})` }} aria-hidden="true">
       {conFoto ? <img src={foto} alt="" /> : iniciales(nombre)}
     </span>
+  );
+  if (!ampliable || !conFoto) return circulo;
+  return (
+    <>
+      <button type="button" class="avatar-ampliable" onClick={() => setGrande(true)} aria-label={`Ver en grande la foto de ${nombre || 'perfil'}`}>{circulo}</button>
+      {grande && (
+        <Hoja titulo={nombre || 'Foto de perfil'} alCerrar={() => setGrande(false)}>
+          <img class="foto-ampliada" src={foto} alt={`Foto de perfil de ${nombre || ''}`} />
+        </Hoja>
+      )}
+    </>
   );
 }
 

@@ -17,7 +17,7 @@ export function Mensajes({ abrirSesion, irA, releer }) {
   return (
     <div class="contenido chat-pagina">
       <header class="cabecera cabecera-chat">
-        {fotoCoach.datos ? <Avatar nombre="Tu coach" foto={fotoCoach.datos} clase="avatar-coach" /> : <img class="avatar-coach" src={LOBO} alt="" width="40" height="40" aria-hidden="true" />}
+        {fotoCoach.datos ? <Avatar nombre="Tu coach" foto={fotoCoach.datos} clase="avatar-coach" ampliable /> : <img class="avatar-coach" src={LOBO} alt="" width="40" height="40" aria-hidden="true" />}
         <div class="titulo"><h1>Tu coach</h1><div class="sub">Te contesta aquí; también te llega al móvil</div></div>
       </header>
       <Chat atletaId={atleta.id} nombreAtleta={atleta.nombre} nombreCoach="tu coach" fotoOtro={fotoCoach.datos} irContexto={irContexto} alLeer={() => { releer?.(); setN((x) => x + 1); }} alCambiar={() => releer?.()} />

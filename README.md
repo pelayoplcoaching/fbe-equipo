@@ -12,6 +12,7 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 - **En Perfil → Tu asesoría**, siempre que haya cobros: «Tus pagos» con cómo va.
 - **En tu panel de atletas**, una columna **Pagos** (en el móvil, una línea en cada tarjeta) con cómo va cada uno: al día y hasta cuándo, pendiente o retrasado y lo que debe; sin entrar en Cobros. Solo sale si tienes algún cobro apuntado.
 - En tu ficha, Cobros te recuerda qué ve él. El texto de privacidad lo dice también.
+- **Foto de perfil en grande**: tocar la foto (la tuya o la del atleta) en Perfil, Cuenta, la ficha, el chat y Mensajes la abre en grande. Las fotos nuevas se guardan a 384 px (antes 256) para que se vean nítidas; caben igual en el límite de la base.
 - Pruebas: 426 de permisos (+6), 273 de la capa de datos (+1), 120 de la demo (+2) y 212 de extremo a extremo (+4).
 
 **Novedades de la v0.24: control de cobros, privado del coach**

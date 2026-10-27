@@ -39,7 +39,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
     <div class="contenido coach">
       <header class="cabecera">
         <button class="btn btn-icono plano" onClick={alVolver} aria-label="Volver a atletas"><Icono n="atras" /></button>
-        {a && <Avatar nombre={a.nombre} foto={a.foto} />}
+        {a && <Avatar nombre={a.nombre} foto={a.foto} ampliable />}
         <div class="titulo">
           <h1>{a?.nombre || 'Atleta'}</h1>
           <div class="sub">{a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : '')}</div>

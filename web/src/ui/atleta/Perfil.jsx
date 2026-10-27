@@ -29,7 +29,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
     <div class="contenido">
       <header class="cabecera">
         <button class="btn btn-icono plano solo-estrecho" onClick={() => irA?.('hoy')} aria-label="Volver a Hoy"><Icono n="atras" /></button>
-        <Avatar nombre={atleta.nombre} foto={perfil?.foto} clase="grande" lleno /><div class="titulo"><h1>{atleta.nombre}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div>
+        <Avatar nombre={atleta.nombre} foto={perfil?.foto} clase="grande" lleno ampliable /><div class="titulo"><h1>{atleta.nombre}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div>
       </header>
       <BandaDemo />
 

@@ -27,7 +27,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
       <div class="contenido coach chat-pagina">
         <header class="cabecera cabecera-chat">
           <button class="btn btn-icono plano" onClick={() => { setAbierta(null); lista.recargar(true); alCambiar?.(); }} aria-label="Volver a mensajes"><Icono n="atras" /></button>
-          <Avatar nombre={abierta.nombre} foto={abierta.foto} />
+          <Avatar nombre={abierta.nombre} foto={abierta.foto} ampliable />
           <div class="titulo"><h1>{abierta.nombre}</h1><div class="sub">{abierta.objetivo || ''}</div></div>
           <button class="btn btn-peq" onClick={() => abrirAtleta(abierta.id, 'programa')}>Ficha</button>
         </header>
