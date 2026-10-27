@@ -73,7 +73,7 @@ function NuevaPlantilla({ alCerrar }) {
           <div class="campo"><label for="np-sem">Semanas</label><Paso id="np-sem" valor={semanas} paso={1} min={1} max={16} dec={0} etiqueta="semanas" alCambiar={(v) => setSemanas(v || 1)} /></div>
           <div class="campo"><label for="np-ses">Sesiones por semana</label><Paso id="np-ses" valor={sesiones} paso={1} min={1} max={7} dec={0} etiqueta="sesiones" alCambiar={(v) => setSesiones(v || 1)} /></div>
         </div>
-        <p class="peq secundario">Se crea la primera semana con sus sesiones vacías. Rellénala y usa «Duplicar con progresión» para el resto.</p>
+        <p class="peq secundario">Se crea la primera semana con sus sesiones vacías. Rellénala y usa «Preparar las siguientes» para el resto (de una en una o el mes de golpe).</p>
         <button class="btn btn-primario btn-grande">Crear plantilla</button>
       </form>
     </Hoja>

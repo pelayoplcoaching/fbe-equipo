@@ -54,7 +54,7 @@ await api.activarBloque(bloque.id, ana.id);
 const s2 = await api.copiarSemana(s1.id, { bloque_id: bloque.id, numero: 5, fecha_inicio: sumarDias(lunes, 28), progresion: { kg: 2.5, reps: 0, rir: -1 } });
 const cs2 = await api.bloqueCompleto(bloque.id);
 const pautaCopia = cs2.pautas[cs2.sesiones[s2.id][0].id][0];
-check(Number(pautaCopia.carga_sugerida_kg) === 62.5 && Number(pautaCopia.rir_objetivo) === 1, 'copiar semana con progresión (+2,5 kg, −1 RIR)');
+check(Number(pautaCopia.carga_sugerida_kg) === 62.5 && Number(pautaCopia.rir_objetivo) === 2, 'copiar semana con progresión (+2,5 kg; lo que sube de kilos no sube además el esfuerzo: RIR igual)');
 await api.borrar('semanas', s2.id);
 
 const plantilla = await api.copiarBloque(bloque.id, { nombre: 'Torso-pierna 2 días' });
@@ -746,6 +746,34 @@ console.log('\nRegistro de errores (v0.21)');
   check((await api.erroresApp()).length === 0, 'y los puede borrar');
 }
 
+console.log('\nPreparar el mes de golpe (v0.23)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const pl = await api.copiarBloque((await api.plantillas())[0].id, { nombre: 'Prueba mes' });
+  const c = await api.bloqueCompleto(pl.id);
+  const w1 = c.semanas.sort((x, y) => x.numero - y.numero)[0];
+  const ses1 = c.sesiones[w1.id] || [];
+  const p1 = (c.pautas[ses1[0]?.id] || [])[0];
+  if (p1) await b.sql(`update sesion_ejercicios set carga_sugerida_kg = 60, rpe_objetivo = null where id = $1`, [p1.id]);
+  const nuevas = await api.prepararSemanas(w1.id, { n: 3, kg: 'salto', rpe: 0.5, descargaUltima: true });
+  check(nuevas.length === 3 && nuevas.every((w) => w.programacion !== 'programada'), 'tres semanas nuevas, en borrador');
+  const c2 = await api.bloqueCompleto(pl.id);
+  const cargaEn = (w) => { const s0 = (c2.sesiones[w.id] || []).find((x) => x.orden === ses1[0].orden); return (c2.pautas[s0?.id] || []).find((x) => x.orden === p1.orden)?.carga_sugerida_kg; };
+  const kgs = nuevas.map((w) => Number(cargaEn(w)));
+  const ultima = c2.semanas.find((w) => w.id === nuevas[2].id);
+  check(kgs[0] > 60 && kgs[1] > kgs[0] && kgs[2] < kgs[1] && ultima.foco === 'descarga', `cada una sale de la anterior y la última es de descarga (60 → ${kgs.join(' → ')} kg)`);
+  // Una semana vacía que ya era de descarga (y publicada por error): se rellena como descarga y en borrador
+  const ult = c2.semanas.find((w) => w.id === nuevas[2].id);
+  const [vacia] = await b.sql(`insert into semanas (bloque_id, numero, foco, programacion) values ($1, $2, 'descarga', 'programada') returning id`, [pl.id, ult.numero + 1]);
+  await b.sql(`update semanas set foco = null where id = $1`, [ult.id]);
+  const [rellena] = await api.prepararSemanas(ult.id, { n: 1, kg: 'salto', rpe: 0.5 });
+  const c3 = await api.bloqueCompleto(pl.id);
+  const wR = c3.semanas.find((w) => w.id === rellena.id);
+  const kgR = (() => { const s0 = (c3.sesiones[wR.id] || []).find((x) => x.orden === ses1[0].orden); return Number((c3.pautas[s0?.id] || []).find((x) => x.orden === p1.orden)?.carga_sugerida_kg); })();
+  check(rellena.id === vacia.id && wR.programacion !== 'programada' && wR.foco === 'descarga' && kgR < kgs[2], `una semana vacía que ya era de descarga se rellena como descarga y en borrador (${kgs[2]} → ${kgR} kg)`);
+  await api.borrar('bloques', pl.id);
+}
+
 console.log('\nServicio y nivel (v0.22)');
 {
   await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
@@ -795,9 +823,50 @@ const suelto = await api.subirArchivo(ana.id, new Blob(['otro'], { type: 'video/
 await b.delete('archivos', { eq: { id: suelto.id } });
 await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
 check((await b.sql(`select count(*)::int n from storage.objects`))[0].n === 2, 'un archivo que la atleta borró solo de la tabla sigue en su carpeta');
+// v0.23: antes de borrarla, la copia completa (para recuperarla después)
+const copiaAntes = JSON.parse(JSON.stringify(await api.copiaCompleta()));
+const TABLAS_ANA = ['bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'notas_ejercicio', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'comentarios'];
+const cuenta = async () => Object.fromEntries(await Promise.all(TABLAS_ANA.map(async (t) => [t, (await b.sql(`select count(*)::int n from ${t} where atleta_id = $1`, [ana.id]))[0].n])));
+const antes = await cuenta();
 await api.borrarAtleta(ana.id);
+const notisAntes = (await b.sql(`select count(*)::int n from notificaciones`))[0].n;
 check((await b.sql(`select count(*)::int n from storage.objects`))[0].n === 0, 'el borrado completo vacía su carpeta de Storage, también lo que no estaba registrado');
 check((await api.atletas()).length === 0, 'y su ficha con todo lo demás');
+
+console.log('\nRecuperar una atleta borrada desde la copia completa (v0.23)');
+{
+  await import('../scripts/restaurar-atleta.js'); // script clásico (la página lo carga con <script src>): deja FBERestaurar
+  const R = globalThis.FBERestaurar;
+  check(R.atletasDe(copiaAntes).some((x) => x.id === ana.id && x.nombre === ana.nombre), 'la página lee la copia y ofrece a sus atletas');
+  const { sql, resumen } = R.generarSql(copiaAntes, ana.id);
+  check(resumen.series > 0 && resumen.sesion_ejercicios > 0 && /^begin;$/m.test(sql) && /^commit;$/m.test(sql), `el SQL va en una transacción (${resumen.series} series, ${resumen.bloques} bloques, ${resumen.comentarios} mensajes)`);
+  await b.guion(sql);
+  const despues = await cuenta();
+  const iguales = TABLAS_ANA.filter((t) => despues[t] !== antes[t]);
+  check(iguales.length === 0, iguales.length ? `difieren: ${iguales.map((t) => `${t} ${antes[t]}→${despues[t]}`).join(', ')}` : 'vuelve todo lo suyo, tabla a tabla, tal y como estaba');
+  check((await b.sql(`select count(*)::int n from notificaciones`))[0].n === notisAntes, 'sin mandar notificaciones de cosas antiguas');
+  const disp = await b.sql(`select count(*)::int n from pg_trigger t join pg_class c on c.oid = t.tgrelid where c.relnamespace = 'public'::regnamespace and not t.tgisinternal and t.tgenabled = 'D'`);
+  check(disp[0].n === 0, 'y con los disparadores de la app activos de nuevo');
+  const [vuelta] = await b.sql(`select perfil_id from atletas where id = $1`, [ana.id]);
+  check(vuelta?.perfil_id === copiaAntes.atletas.find((x) => x.id === ana.id).perfil_id, 'con su cuenta: Ana puede volver a entrar');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.miAtleta())?.id === ana.id && (await api.historial(ana.id)).length > 0, 'y ve su historial');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await b.guion(sql);
+  check(JSON.stringify(await cuenta()) === JSON.stringify(antes), 'repetirlo no duplica nada');
+  // Algo suyo borrado y vuelto a crear con otro id: lo de la copia no entra, pero el resto sí y no falla a medias
+  const [w] = await b.sql(`select w.id, w.bloque_id, w.numero, w.fecha_inicio from semanas w join bloques k on k.id = w.bloque_id where k.atleta_id = $1 order by w.numero limit 1`, [ana.id]);
+  const seriesAntes = (await b.sql(`select count(*)::int n from series where atleta_id = $1`, [ana.id]))[0].n;
+  await b.sql(`delete from semanas where id = $1`, [w.id]);
+  await b.sql(`insert into semanas (bloque_id, numero, fecha_inicio) values ($1, $2, $3)`, [w.bloque_id, w.numero, w.fecha_inicio]);
+  await b.sql(`delete from pesos where atleta_id = $1`, [ana.id]);
+  const res = await b.guion(sql);
+  const comp = res[res.length - 1].rows[0];
+  check((await b.sql(`select count(*)::int n from pesos where atleta_id = $1`, [ana.id]))[0].n === antes.pesos && Number(comp.filas_en_la_base) < Number(comp.filas_en_la_copia) && comp.recuperado == 1 && comp.con_cuenta === true,
+    `con una semana vuelta a crear, recupera lo demás (sus pesos) sin fallar y lo dice: ${comp.filas_en_la_base} de ${comp.filas_en_la_copia} filas`);
+  check((await b.sql(`select count(*)::int n from series where atleta_id = $1`, [ana.id]))[0].n <= seriesAntes, 'y no mete series sueltas de la semana que ya no está');
+  check((() => { try { R.atletasDe({ atletas: copiaAntes.atletas }); return false; } catch (e) { return /copia completa/.test(e.message); } })(), 'solo acepta la copia completa del coach (la descarga de un atleta, no)');
+}
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

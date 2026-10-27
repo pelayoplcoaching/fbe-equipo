@@ -1180,6 +1180,20 @@ try {
   check((await p.locator('.aviso-nivel').textContent()).includes('Nivel intermedio') && await p.locator('.tabla-pauta input.fuera-nivel').count() > 0,
     'el de Ana (intermedia) avisa de cómo pautarle y atenúa las casillas que su nivel no usa');
   await revisar('nivel-editor');
+
+  console.log('\nPreparar el mes de golpe (v0.23)');
+  const pestanasAntes = await p.locator('.semanas-tabs button').count();
+  await p.getByRole('button', { name: 'Preparar las siguientes' }).click();
+  const hojaMes = p.getByRole('dialog', { name: /^Preparar desde la semana/ });
+  await hojaMes.waitFor();
+  await hojaMes.getByRole('group', { name: 'Cuántas semanas' }).getByRole('button', { name: '3 (el mes)' }).click();
+  await hojaMes.getByLabel(/de descarga/).check();
+  const ejemplo = await hojaMes.locator('.lista-ejemplo').textContent();
+  check(/kg[^→]* → [\d,]+ kg[^→]* → [\d,]+ kg[^→]* → [\d,]+ kg[^→]*\(descarga\)/.test(ejemplo) && /RPE|RIR/.test(ejemplo), `enseña cómo quedaría cada semana antes de crearlas («${ejemplo.slice(0, 80)}…»)`);
+  await revisar('preparar-mes');
+  await hojaMes.getByRole('button', { name: 'Preparar 3 semanas' }).click();
+  await p.locator('.toast', { hasText: /preparadas, en borrador/ }).waitFor();
+  check(await hay(p.locator('.semanas-tabs button'), pestanasAntes + 3), `crea las tres semanas en borrador, de un golpe (${pestanasAntes} → ${await p.locator('.semanas-tabs button').count()} semanas)`);
 } catch (e) {
   fallos++;
   console.log('  ✗ el flujo se ha interrumpido:', e.message.split('\n').slice(0, 12).join('\n      '));
@@ -1203,6 +1217,26 @@ try {
     'abierta como archivo, genera un par VAPID válido (la función lo acepta) y un secreto; no deja generar dos veces');
   await pc.context().close();
 } catch (e) { fallos++; console.log('  ✗ la página de claves no funciona:', e.message.split('\n')[0]); }
+
+console.log('\nRecuperar un atleta (scripts/restaurar-atleta.html)');
+try {
+  const pr = await (await navegador.newContext()).newPage();
+  const erroresR = [];
+  pr.on('pageerror', (e) => erroresR.push(e.message));
+  await pr.goto(new URL('../scripts/restaurar-atleta.html', import.meta.url).href);
+  const id = '5b0f7a5e-1d2c-4c3b-9a8f-0e1d2c3b4a59', bloque = '6c1f8b6f-2e3d-4d4c-8b9a-1f2e3d4c5b6a';
+  const copia = { exportado_en: '2026-10-27T10:00:00Z', version: 2, perfiles: [], atletas: [{ id, nombre: 'Lucía Prueba', estado: 'activo', perfil_id: null }, { id: '7d2a9c70-3f4e-4e5d-9cab-2a3f4e5d6c7b', nombre: 'Otra', estado: 'activo', perfil_id: null }],
+    bloques: [{ id: bloque, atleta_id: id, numero: 1, nombre: 'Base' }], semanas: [], series: [], comentarios: [] };
+  await pr.locator('#archivo').setInputFiles({ name: 'copia.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(copia)) });
+  await pr.locator('#atleta').selectOption({ label: 'Lucía Prueba' });
+  const sql = await pr.locator('#sql').inputValue();
+  check(sql.startsWith('-- FBE Equipo: recuperar a «Lucía Prueba»') && sql.includes('insert into public.bloques') && sql.includes(bloque) && !sql.includes('Otra') && erroresR.length === 0
+    && (await pr.locator('#resumen').textContent()).includes('1 bloque'),
+    'abierta como archivo, lee la copia, deja elegir el atleta y genera su SQL (solo lo suyo)');
+  await pr.locator('#archivo').setInputFiles({ name: 'mal.json', mimeType: 'application/json', buffer: Buffer.from('no es json') });
+  check(await pr.locator('#estado-archivo', { hasText: 'No se puede leer' }).waitFor({ timeout: 5000 }).then(() => true, () => false) && await pr.locator('#paso-sql').isHidden(), 'con un archivo que no es la copia, lo dice (y no deja SQL a medias)');
+  await pr.context().close();
+} catch (e) { fallos++; console.log('  ✗ la página de recuperar no funciona:', e.message.split('\n')[0]); }
 await navegador.close();
 srv.close();
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

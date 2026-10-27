@@ -1339,6 +1339,34 @@ console.log('\nServicio y nivel del atleta (migración 018)');
   await sin17.close();
 }
 
+console.log('\nTablas nuevas cerradas por defecto (migración 019)');
+{
+  await su();
+  await q(`create table public.prueba_019 (id int primary key, x text)`);
+  await q(`create sequence public.prueba_019_seq`);
+  await q(`create function public.prueba_019_f() returns int language sql as 'select 1'`);
+  const g = await q(`select grantee, privilege_type from information_schema.role_table_grants where table_schema = 'public' and table_name = 'prueba_019' and grantee in ('anon', 'authenticated')`);
+  check(g.length === 0, 'una tabla nueva nace sin permisos para anon ni para las cuentas de la app (aunque se olvide su permiso, nadie la lee)');
+  const seq = await q(`select has_sequence_privilege('anon', 'public.prueba_019_seq', 'usage') a, has_sequence_privilege('authenticated', 'public.prueba_019_seq', 'usage') u`);
+  const fn = await q(`select has_function_privilege('anon', 'public.prueba_019_f()', 'execute') a`);
+  check(!seq[0].a && !seq[0].u && !fn[0].a, 'tampoco sus secuencias, y sus funciones no las ejecuta nadie sin sesión');
+  for (const x of ['table public.prueba_019', 'sequence public.prueba_019_seq', 'function public.prueba_019_f()']) await q(`drop ${x}`);
+  const anonTablas = await q(`select count(*)::int n from information_schema.role_table_grants where table_schema = 'public' and grantee = 'anon'`);
+  const sinRls = await q(`select count(*)::int n from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r' and not relrowsecurity`);
+  check(anonTablas[0].n === 0 && sinRls[0].n === 0, 'sin sesión no se toca ninguna tabla, y todas las tablas tienen permisos por fila');
+  const vistas = await q(`select count(*)::int n from information_schema.role_table_grants g join pg_class c on c.relname = g.table_name and c.relnamespace = 'public'::regnamespace
+    where g.table_schema = 'public' and c.relkind = 'v' and g.grantee in ('anon', 'authenticated') and g.privilege_type <> 'SELECT'`);
+  check(vistas[0].n === 0, 'las vistas solo se leen');
+  const sin18 = new PGlite();
+  await sin18.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin18.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '018')) await sin18.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let errSin18 = null;
+  try { await sin18.exec(readFileSync(new URL('../supabase/migraciones/019_tablas_cerradas.sql', import.meta.url), 'utf8')); } catch (e) { errSin18 = e.message; }
+  check(/Antes de la 019 hace falta la 018/.test(errSin18 || ''), 'la 019 no se aplica sin la 018');
+  await sin18.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

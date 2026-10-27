@@ -5,6 +5,7 @@ import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { progresoObjetivo, mejorReciente } from '../logica/objetivos.js';
 import { resumenHabito, cumplimientoHabitos } from '../logica/habitos.js';
+import { progresarPauta, opcionesDe } from '../logica/progresion.js';
 import { planVigente, planSiguiente, objetivoDelDia, semanaNutricion, gastoAdaptativo, gastoPorSemanas, ajusteNutricion, avisosNutricion } from '../logica/nutricion.js';
 import { conDefecto, preferenciasValidas } from '../logica/notificaciones.js';
 import { limpiarCuestionario, avisoCuestionario, SIN_SALUD } from '../logica/cuestionario.js';
@@ -1147,7 +1148,8 @@ export function crearApi(backend) {
         consentimientos: perfilId ? await b.select('consentimientos', { eq: { perfil_id: perfilId } }) : [],
         atletas: atleta ? [atleta] : [],
       };
-      for (const t of ['bloques', 'series', 'pesos', 'checkins', 'molestias', 'medidas', 'marcas', 'objetivos', 'comentarios', 'archivos', 'notas_ejercicio', 'avisos', 'recursos', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios']) {
+      // notas_coach: solo las ve el coach (si exporta el atleta, salen vacías)
+      for (const t of ['bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'comentarios', 'archivos', 'notas_ejercicio', 'avisos', 'recursos', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios']) {
         out[t] = await b.select(t, { eq: { atleta_id: atletaId } });
       }
       // Las preguntas que le hace su coach (también las de todos y las archivadas), para entender sus respuestas
@@ -1422,23 +1424,28 @@ export function crearApi(backend) {
       let nueva;
       if (destinoId) {
         [nueva] = await b.select('semanas', { eq: { id: destinoId } });
-        if (!nueva.foco && origen.foco) [nueva] = await b.update('semanas', { foco: origen.foco }, { eq: { id: destinoId } });
+        // Se rellena en borrador (aunque estuviera publicada vacía) y conserva su foco; si ya era de descarga, se
+        // prepara como descarga
+        const cambios = { ...(!nueva.foco && origen.foco ? { foco: origen.foco } : {}), ...(nueva.programacion === 'programada' ? { programacion: 'en_programacion' } : {}) };
+        if (Object.keys(cambios).length) [nueva] = await b.update('semanas', cambios, { eq: { id: destinoId } });
       } else {
         [nueva] = await b.insert('semanas', [{ bloque_id, numero, foco: focoSemana(origen.foco), fecha_inicio, nota_coach: conNota ? origen.nota_coach ?? null : null, programacion }]);
       }
       const sesiones = await b.select('sesiones', { eq: { semana_id: semanaId }, order: [['orden', 'asc']] });
-      const { kg = 0, reps = 0, rir = 0 } = progresion;
+      const opciones = opcionesDe(progresion);
+      const descarga = !!progresion.descarga || (!!destinoId && nueva.foco === 'descarga');
+      if (descarga) [nueva] = await b.update('semanas', { foco: 'descarga' }, { eq: { id: nueva.id } });
+      // El nombre de cada ejercicio, para el salto de carga (barra, mancuernas, máquina)
+      const todas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, cols: 'ejercicio_id' }) : [];
+      const ids = unicos(todas.map((x) => x.ejercicio_id));
+      const nombres = ids.length ? Object.fromEntries((await b.select('ejercicios', { in: { id: ids }, cols: 'id,nombre' })).map((e) => [e.id, e.nombre])) : {};
       for (const s of sesiones) {
         const [copiaSesion] = await b.insert('sesiones', [{ semana_id: nueva.id, orden: s.orden, nombre: s.nombre, tipo: s.tipo, intencion: s.intencion, dinamica: s.dinamica, cardio: s.cardio ?? null }]);
         const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: s.id }, order: [['orden', 'asc']] });
         if (!pautas.length) continue;
         await b.insert('sesion_ejercicios', pautas.map((p) => {
-          const f = Object.fromEntries(CAMPOS_SE.map((c) => [c, p[c] ?? null]));
+          const f = progresarPauta(Object.fromEntries(CAMPOS_SE.map((c) => [c, p[c] ?? null])), opciones, { nombre: nombres[p.ejercicio_id] || '', descarga });
           f.sesion_id = copiaSesion.id;
-          if (f.carga_sugerida_kg != null && kg) f.carga_sugerida_kg = Math.max(0, Number(f.carga_sugerida_kg) + Number(kg));
-          if (f.reps_min != null && reps) f.reps_min = Math.max(0, f.reps_min + Number(reps));
-          if (f.reps_max != null && reps) f.reps_max = Math.max(0, f.reps_max + Number(reps));
-          if (f.rir_objetivo != null && rir) f.rir_objetivo = Math.max(0, Number(f.rir_objetivo) + Number(rir));
           return f;
         }));
       }
@@ -1459,6 +1466,19 @@ export function crearApi(backend) {
         bloque_id: origen.bloque_id, numero, progresion,
         fecha_inicio: ultima.fecha_inicio ? sumarDias(ultima.fecha_inicio, 7) : null,
       });
+    },
+    // Preparar varias semanas de un golpe (el mes): cada una sale de la anterior con su progresión, en borrador.
+    // opciones: { n: 1-4, kg, rpe, rir, reps, descargaUltima }. Devuelve las semanas nuevas, en orden.
+    async prepararSemanas(semanaId, { n = 1, descargaUltima = false, ...progresion } = {}) {
+      const total = Math.max(1, Math.min(4, Math.round(Number(n) || 1)));
+      const nuevas = [];
+      let origen = semanaId;
+      for (let i = 1; i <= total; i++) {
+        const nueva = await api.duplicarSemana(origen, { ...progresion, descarga: descargaUltima && i === total });
+        nuevas.push(nueva);
+        origen = nueva.id;
+      }
+      return nuevas;
     },
     async publicarSemana(semanaId, publicar = true) {
       return (await b.update('semanas', { programacion: publicar ? 'programada' : 'en_programacion' }, { eq: { id: semanaId } }))[0];

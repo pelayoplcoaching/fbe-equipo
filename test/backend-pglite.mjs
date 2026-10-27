@@ -170,5 +170,7 @@ export function crearBackendPglite(db) {
     }),
     // Para preparar datos en las pruebas sin pasar por permisos
     async sql(q, p = []) { return enCola(async () => { await db.exec('reset role;'); return (await db.query(q, p)).rows; }); },
+    // Un guion entero (varias sentencias), como el SQL Editor de Supabase
+    async guion(q) { return enCola(async () => { await db.exec('reset role;'); return db.exec(q); }); },
   };
 }

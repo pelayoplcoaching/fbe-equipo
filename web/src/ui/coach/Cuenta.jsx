@@ -30,7 +30,7 @@ export function Cuenta() {
       <section class="seccion">
         <h2>Copia de seguridad</h2>
         <div class="panel panel-pad pila-s">
-          <p class="peq secundario">Supabase guarda copias diarias durante 7 días. Además, descarga una copia completa una vez al mes y guárdala tú (sin subirla a ningún sitio compartido: lleva datos de salud).</p>
+          <p class="peq secundario">Supabase guarda copias diarias de toda la base durante 7 días, pero recuperar una deshace también lo de los demás. Descarga esta copia una vez por semana y guárdala tú (sin subirla a ningún sitio compartido: lleva datos de salud): con ella se recupera a un solo atleta (scripts/restaurar-atleta.html).</p>
           <button class="btn" style="justify-self:start" disabled={preparando} onClick={async () => {
             setPreparando(true);
             try { setCopia(JSON.stringify(await api.copiaCompleta(), null, 1)); } catch (e) { aviso(e.message, 'error'); } finally { setPreparando(false); }

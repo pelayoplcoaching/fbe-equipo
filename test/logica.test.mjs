@@ -5,6 +5,7 @@ import { resultadoCribado, avisoCuestionario, resumenCuestionario, limpiarCuesti
 import { pregunta, preguntasDe, respuestaValida, limpiarRespuestas, respuestasNoValidas, textoRespuesta, serieRespuestas } from '../web/src/logica/preguntas.js';
 import { grados, dibujoValido, limpiarDibujo, rectImagen, describirDibujo } from '../web/src/logica/dibujo.js';
 import { tuDia, resumenDia } from '../web/src/logica/dia.js';
+import { progresarPauta, opcionesDe } from '../web/src/logica/progresion.js';
 import { modoCarga, columnasEditor, pesoAnterior, conNutricion, textoServicio, NIVELES } from '../web/src/logica/nivel.js';
 import { cardioValido, cardioHechoValido, limpiarCardio, limpiarCardioHecho, textoCardio, textoCardioHecho, ritmo, palabrasEsfuerzo, cardioPorSemana, cardioHechoDe } from '../web/src/logica/cardio.js';
 import { e1rm, e1rmPorSemana, seriesPorGrupo, pauta, propuestaSerie, semanaActual, resumenAtleta, num, signo, mmss } from '../web/src/logica/calculos.js';
@@ -953,6 +954,33 @@ console.log('\nNivel y servicio (v0.22)');
     'el peso anterior es el de esa misma serie (sin peso, nada; series de más, el de la última que hizo)');
   check(conNutricion({}) && conNutricion({ nutricion: true }) && !conNutricion({ nutricion: false }) && conNutricion(null) && textoServicio({ nutricion: false }) === 'Solo entrenamiento',
     'con nutrición salvo que el coach diga lo contrario (una base sin la 018 sigue como siempre)');
+}
+
+console.log('\nPreparar las semanas siguientes (v0.23)');
+{
+  const banca = { carga_sugerida_kg: 60, series: 3, reps_min: 6, reps_max: 8, rpe_objetivo: null, rir_objetivo: 2, backoff_pct: null };
+  const curl = { carga_sugerida_kg: 12, series: 3, reps_min: 10, reps_max: 12, rpe_objetivo: null, rir_objetivo: null };
+  const remo = { carga_sugerida_kg: null, series: 3, reps_min: 10, reps_max: 12, rpe_objetivo: 9.5, rir_objetivo: null };
+  const def = { kg: 'salto', rpe: 0.5, rir: 0, reps: 0 };
+  check(progresarPauta(banca, def, { nombre: 'Press banca' }).carga_sugerida_kg === 62.5 && progresarPauta(curl, def, { nombre: 'Curl con mancuernas' }).carga_sugerida_kg === 14
+    && progresarPauta({ ...curl, carga_sugerida_kg: 70 }, def, { nombre: 'Prensa' }).carga_sugerida_kg === 75, 'un salto por semana según el ejercicio: barra +2,5, mancuernas +2, máquina pesada +5');
+  check(progresarPauta(remo, def).rpe_objetivo === 10 && progresarPauta({ ...remo, rpe_objetivo: 10 }, def).rpe_objetivo === 10 && progresarPauta(remo, def).carga_sugerida_kg === null,
+    'el RPE sube medio punto sin pasar de 10, y donde no hay kilos no aparecen');
+  check(progresarPauta(banca, { kg: 'igual', rpe: 0, rir: -1, reps: 1 }).carga_sugerida_kg === 60 && progresarPauta(banca, { kg: 'igual', rir: -1, reps: 1 }).rir_objetivo === 1
+    && progresarPauta(banca, { kg: 'igual', reps: 1 }).reps_max === 9 && progresarPauta({ ...banca, rir_objetivo: 0 }, { kg: 'igual', rir: -1 }).rir_objetivo === 0, 'kilos iguales, RIR y repeticiones a mano (el RIR no baja de 0)');
+  const d = progresarPauta(banca, def, { nombre: 'Press banca', descarga: true });
+  check(d.carga_sugerida_kg === 55 && d.series === 2 && d.rir_objetivo === 3 && d.reps_max === 8, 'descarga: un 10 % menos de kilos al salto del ejercicio (60 → 55), una serie menos y RIR 1 más');
+  const d2 = progresarPauta({ ...remo, series: 1, rpe_objetivo: 5.5 }, def, { descarga: true });
+  const d3 = progresarPauta({ ...banca, series: 2, backoff_pct: 10 }, def, { nombre: 'Press banca', descarga: true });
+  check(d2.series === 1 && d2.rpe_objetivo === 5 && d3.series === 2, 'nunca menos de una serie (dos con top + back-off) ni RPE por debajo de 5');
+  const mixto = { carga_sugerida_kg: 60, series: 3, rpe_objetivo: 7, rir_objetivo: null };
+  const m1 = progresarPauta(mixto, def, { nombre: 'Press banca' });
+  check(m1.carga_sugerida_kg === 62.5 && m1.rpe_objetivo === 7 && progresarPauta(mixto, { ...def, kg: 'igual' }).rpe_objetivo === 7.5, 'lo que sube de kilos no sube además el RPE (60 kg @7 → 62,5 kg @7); con los kilos iguales, sí');
+  const ligera = (kg, nombre) => progresarPauta({ carga_sugerida_kg: kg, series: 3 }, def, { nombre, descarga: true }).carga_sugerida_kg;
+  check(ligera(2, 'Elevaciones laterales con mancuernas') === 2 && ligera(4, 'Curl con mancuernas') === 3.5 && ligera(2.5, 'Face pull en polea') === 2.5 && ligera(100, 'Sentadilla') === 90,
+    'la descarga nunca deja una carga ligera a 0 ni la baja más de un 20 % (2 → 2, 4 → 3,5; 100 → 90)');
+  check(progresarPauta({ rpe_objetivo: 4, series: 3 }, def, { descarga: true }).rpe_objetivo === 4, 'ni sube un RPE que ya era bajo');
+  check(progresarPauta(banca, opcionesDe({ kg: 2.5 })).carga_sugerida_kg === 62.5 && progresarPauta(banca, opcionesDe({})).carga_sugerida_kg === 60, 'lo de antes («Duplicar» con kilos fijos) sigue igual');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

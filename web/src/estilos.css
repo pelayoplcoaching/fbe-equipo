@@ -1846,3 +1846,6 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .tabla-pauta input.fuera-nivel::placeholder { color: var(--tinta-3); text-align: center; }
 .segmentos.segmentos-nivel { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 560px) { .segmentos.segmentos-nivel { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* v0.23: ejemplo de cómo quedan las semanas preparadas */
+.lista-ejemplo { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+.lista-ejemplo strong { color: var(--tinta); font-weight: 650; }

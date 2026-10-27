@@ -5,6 +5,7 @@ import { rangoSemana, lunesDe, fmtCorta, fmtConDia } from '../../logica/fechas.j
 import { sugerirCargas } from '../../logica/sugerencias.js';
 import { leerTempo, explicarTempo } from '../../logica/tempo.js';
 import { NOMBRE_NIVEL, AYUDA_NIVEL, modoCarga, columnasEditor } from '../../logica/nivel.js';
+import { progresarPauta } from '../../logica/progresion.js';
 import { MODALIDADES, limpiarCardio, textoCardio, palabrasEsfuerzo } from '../../logica/cardio.js';
 
 const DESCANSOS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
@@ -147,7 +148,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
                   if (!['activo', 'ajustado'].includes(bloque.estado)) { setPublicarEn(semana); return; }
                   estructura(() => api.publicarSemana(semana.id, true), `Semana ${semana.numero} publicada`);
                 }}><Icono n="enviar" /> Publicar al atleta</button>)}
-              <button class="btn btn-peq" onClick={() => setDuplicar(true)}><Icono n="duplicar" /> Duplicar con progresión</button>
+              <button class="btn btn-peq" onClick={() => setDuplicar(true)}><Icono n="duplicar" /> Preparar las siguientes</button>
               {conDatos && <button class="btn btn-peq" onClick={() => setSugerir(true)}><Icono n="rayo" /> Cargas sugeridas</button>}
               <button class="btn btn-peq btn-icono btn-peligro" aria-label={`Borrar semana ${semana.numero}`} onClick={() => setConfirmarBorrado({ tipo: 'semana', id: semana.id })}><Icono n="basura" /></button>
             </div>
@@ -198,10 +199,13 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
             setVersion((v) => v + 1);
           }} />
       )}
-      {duplicar && semana && <Duplicar semana={semana} alCerrar={() => setDuplicar(false)} alHacer={async (prog) => {
+      {duplicar && semana && <Duplicar semana={semana} pautas={sesiones.flatMap((x) => d.pautas[x.id] || [])} ejercicios={ejercicios} alCerrar={() => setDuplicar(false)} alHacer={async (prog) => {
         setDuplicar(false);
-        const nueva = await estructura(() => api.duplicarSemana(semana.id, prog));
-        if (nueva) { setSemanaId(nueva.id); aviso(`Semana ${semana.numero} copiada en la semana ${nueva.numero}, en borrador`); }
+        const nuevas = await estructura(() => api.prepararSemanas(semana.id, prog));
+        if (nuevas?.length) {
+          setSemanaId(nuevas[0].id);
+          aviso(nuevas.length === 1 ? `Semana ${nuevas[0].numero} preparada, en borrador` : `Semanas ${nuevas.map((w) => w.numero).join(', ')} preparadas, en borrador: revísalas y publícalas`);
+        }
       }} />}
       {elegir && <ElegirEjercicio biblioteca={biblioteca} alCerrar={() => setElegir(null)} alElegir={async (ej) => {
         const { sesionId, pautaId } = elegir;
@@ -484,17 +488,64 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura,
   );
 }
 
-function Duplicar({ semana, alCerrar, alHacer }) {
-  const [kg, setKg] = useState(2.5);
-  const [reps, setReps] = useState(0);
+// Preparar las semanas siguientes (una o el mes de golpe): cada una sale de la anterior con su progresión.
+// Enseña solo los controles de lo que tiene la semana (kg, RPE, RIR) y cómo quedaría un ejercicio de cada tipo.
+function Duplicar({ semana, pautas = [], ejercicios = {}, alCerrar, alHacer }) {
+  const conKg = pautas.filter((p) => p.carga_sugerida_kg != null);
+  const [n, setN] = useState(1);
+  const cuantos = (k) => `${k} ${k === 1 ? 'ejercicio' : 'ejercicios'}`;
+  const [modoKg, setModoKg] = useState('salto');
+  const [kgFijo, setKgFijo] = useState(2.5);
+  // El esfuerzo solo cambia en lo que no sube de kilos
+  const subeKg = (p) => p.carga_sugerida_kg != null && (modoKg === 'salto' || (modoKg === 'fijo' && !!kgFijo));
+  const conRpe = pautas.filter((p) => p.rpe_objetivo != null && !subeKg(p));
+  const conRir = pautas.filter((p) => p.rir_objetivo != null && !subeKg(p));
+  const [rpe, setRpe] = useState(pautas.some((p) => p.rpe_objetivo != null && p.carga_sugerida_kg == null) ? 0.5 : 0);
   const [rir, setRir] = useState(0);
+  const [reps, setReps] = useState(0);
+  const [descarga, setDescarga] = useState(false);
+  const opciones = { kg: modoKg === 'fijo' ? kgFijo : modoKg, rpe, rir, reps };
+  // Cómo quedaría, semana a semana, un ejercicio con kg y uno con RPE (o RIR)
+  const ejemplo = (p, texto) => {
+    if (!p) return null;
+    const nombre = ejercicios[p.ejercicio_id]?.nombre || 'Ejercicio';
+    const pasos = [];
+    let x = p;
+    for (let i = 1; i <= n; i++) { x = progresarPauta(x, opciones, { nombre, descarga: descarga && i === n }); pasos.push(texto(x)); }
+    return <li key={p.id}><strong>{nombre}</strong>: {texto(p)} → {pasos.join(' → ')}{descarga ? ' (descarga)' : ''}</li>;
+  };
+  const kgTxt = (x) => `${num(x.carga_sugerida_kg, 2)} kg${x.rpe_objetivo != null ? ` @${num(x.rpe_objetivo)}` : x.rir_objetivo != null ? ` RIR ${num(x.rir_objetivo)}` : ''}`;
+  const esfTxt = (x) => (x.rpe_objetivo != null ? `RPE ${num(x.rpe_objetivo)}` : `RIR ${num(x.rir_objetivo)}`);
+  const conEsfuerzo = conRpe.find((p) => p.carga_sugerida_kg == null) || conRpe[0] || conRir.find((p) => p.carga_sugerida_kg == null) || conRir[0];
   return (
-    <Hoja titulo={`Duplicar semana ${semana.numero}`} alCerrar={alCerrar}>
-      <p class="secundario">Crea la semana siguiente como borrador, con la misma estructura y estos cambios en la prescripción:</p>
-      <div class="campo"><label for="dup-kg">Carga sugerida (kg a sumar)</label><Paso id="dup-kg" valor={kg} paso={2.5} min={-20} max={20} dec={2} etiqueta="kilos a sumar" alCambiar={(v) => setKg(v ?? 0)} /><span class="ayuda">Solo en los ejercicios que tienen carga sugerida.</span></div>
+    <Hoja titulo={`Preparar desde la semana ${semana.numero}`} alCerrar={alCerrar}>
+      <p class="secundario">Crea las semanas siguientes en borrador, cada una a partir de la anterior con estos cambios. Rellena las semanas vacías que vienen detrás (una que ya sea de descarga se prepara como descarga); si la siguiente ya tiene sesiones, se añaden al final del bloque.</p>
+      <div class="campo"><span class="etq">Cuántas semanas</span><Segmentos etiqueta="Cuántas semanas" valor={n} alCambiar={(v) => v && setN(v)} opciones={[[1, '1'], [2, '2'], [3, '3 (el mes)'], [4, '4']]} /></div>
+      {conKg.length > 0 && (
+        <div class="campo"><span class="etq">Kilos ({cuantos(conKg.length)} con carga)</span>
+          <Segmentos etiqueta="Kilos" valor={modoKg} alCambiar={(v) => v && setModoKg(v)} opciones={[['salto', 'Un salto por semana', '2,5 kg en barra, 2 kg en mancuernas, 2,5 o 5 kg en máquinas'], ['igual', 'Igual'], ['fijo', 'Otra cantidad']]} />
+          {modoKg === 'fijo' && <Paso id="dup-kg" valor={kgFijo} paso={0.5} min={-20} max={20} dec={2} etiqueta="kilos a sumar cada semana" alCambiar={(v) => setKgFijo(v ?? 0)} />}
+          <span class="ayuda">{modoKg === 'salto' ? 'El salto de cada ejercicio: 2,5 kg en barra, 2 kg en mancuernas, 2,5 o 5 kg en máquinas y poleas. Su RPE o RIR se queda igual.' : modoKg === 'fijo' ? 'Los mismos kilos en todos, cada semana. Su RPE o RIR se queda igual.' : 'Los kilos se quedan como están.'}</span></div>
+      )}
+      {conRpe.length > 0 && (
+        <div class="campo"><span class="etq">RPE objetivo ({cuantos(conRpe.length)} a RPE)</span>
+          <Segmentos etiqueta="RPE objetivo" valor={rpe} alCambiar={(v) => setRpe(v ?? 0)} opciones={[[0, 'Igual'], [0.5, '+0,5 por semana'], [1, '+1 por semana']]} />
+          <span class="ayuda">Nunca pasa de 10.</span></div>
+      )}
+      {conRir.length > 0 && (
+        <div class="campo"><span class="etq">RIR objetivo ({cuantos(conRir.length)} a RIR)</span>
+          <Segmentos etiqueta="RIR" valor={rir} alCambiar={(v) => setRir(v ?? 0)} opciones={[[-1, '−1 (más duro)'], [0, 'Igual'], [1, '+1 (más suave)']]} /></div>
+      )}
       <div class="campo"><span class="etq">Repeticiones</span><Segmentos etiqueta="Repeticiones" valor={reps} alCambiar={(v) => setReps(v ?? 0)} opciones={[[-2, '−2'], [-1, '−1'], [0, 'Igual'], [1, '+1'], [2, '+2']]} /></div>
-      <div class="campo"><span class="etq">RIR objetivo</span><Segmentos etiqueta="RIR" valor={rir} alCambiar={(v) => setRir(v ?? 0)} opciones={[[-1, '−1 (más duro)'], [0, 'Igual'], [1, '+1 (más suave)']]} /></div>
-      <button class="btn btn-primario btn-grande" onClick={() => alHacer({ kg, reps, rir })}><Icono n="duplicar" /> Duplicar</button>
+      <label class="casilla"><input type="checkbox" checked={descarga} onChange={(e) => setDescarga(e.currentTarget.checked)} />
+        <span>{n === 1 ? 'Que sea de descarga' : `La última (la ${n}.ª), de descarga`}<br /><span class="peq terciario">Sobre la semana anterior: un 10 % menos de kilos, una serie menos por ejercicio, RPE objetivo 1 punto menos y RIR 1 más. Las repeticiones, igual.</span></span></label>
+      {(conKg.length > 0 || conEsfuerzo) && (
+        <div class="pila-xs">
+          <span class="peq">Así quedaría</span>
+          <ul class="lista-ejemplo peq secundario">{ejemplo(conKg[0], kgTxt)}{conEsfuerzo && conEsfuerzo !== conKg[0] && ejemplo(conEsfuerzo, esfTxt)}</ul>
+        </div>
+      )}
+      <button class="btn btn-primario btn-grande" onClick={() => alHacer({ n, ...opciones, descargaUltima: descarga })}><Icono n="duplicar" /> {n === 1 ? 'Preparar la semana siguiente' : `Preparar ${n} semanas`}</button>
     </Hoja>
   );
 }
