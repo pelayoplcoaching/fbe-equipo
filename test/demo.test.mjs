@@ -354,5 +354,11 @@ await b.auth.registrar('marta@correo.test', 'una-contraseña-larga', 'Marta');
 check((await api.canjearCodigo('fbe marta 7k3pq')) !== null, 'Marta canjea su código');
 check((await api.miAtleta()).nombre === 'Marta Gil', 'queda vinculada a su ficha');
 
+// v0.25: cómo va con sus pagos (Carlos, retrasado; el coach no tiene)
+await b.auth.entrar('carlos@fbe.demo', 'demo');
+const cobroCarlos = await api.miCobro();
+check(cobroCarlos?.estado === 'retrasado' && cobroCarlos.debe === 190, 'en la demo, Carlos ve que tiene un pago retrasado (190 €), como en la base');
+check((await api.cobrosAtleta((await api.miAtleta()).id)).pagos.length === 0, 'y no ve la lista de sus cobros');
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

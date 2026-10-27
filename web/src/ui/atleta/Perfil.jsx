@@ -8,6 +8,7 @@ import { TextoPrivacidad } from '../Acceso.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { CATEGORIAS_RECURSO } from '../../logica/calculos.js';
 import { FilaCuestionario } from './Cuestionario.jsx';
+import { FilaCobro } from './Cobro.jsx';
 import { FilaFoto } from '../FotoPerfil.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
@@ -40,6 +41,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
             {atleta.objetivo && <li class="panel-pad"><div class="peq terciario">Objetivo</div><div>{atleta.objetivo}</div></li>}
             {p?.bloque && <li class="panel-pad"><div class="peq terciario">Bloque actual</div><div>Bloque {p.bloque.numero}: {p.bloque.nombre}</div></li>}
             <FilaCuestionario salud={salud} recargarConsentimientos={recargarConsentimientos} />
+            <FilaCobro />
             <li class="panel-pad separa">
               <div><div>Mensajes con tu coach</div><div class="peq terciario">Para lo que no es de una sesión concreta</div></div>
               <button class="btn btn-peq" onClick={() => irA?.('mensajes')}><Icono n="mensaje" /> Abrir</button>

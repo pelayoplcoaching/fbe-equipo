@@ -1335,6 +1335,14 @@ export function crearApi(backend) {
         cuestionario: cuestionario?.completado_en ? 'hecho' : cuestionario?.pedido_en ? 'pedido' : 'no',
       };
     },
+    // El atleta: solo cómo va con sus pagos (v0.25, migración 021). Sin cobros apuntados (o sin la 021), null
+    async miCobro() {
+      const r = await b.rpc('mi_cobro', {}).catch(() => null);
+      const f = Array.isArray(r) ? r[0] : r;
+      if (!f || !f.estado) return null;
+      const dia = (x) => (x == null ? null : typeof x === 'string' ? x.slice(0, 10) : x.toISOString?.().slice(0, 10) ?? null);
+      return { pagadoHasta: dia(f.pagado_hasta), debe: Number(f.debe) || 0, debeDesde: dia(f.debe_desde), estado: f.estado };
+    },
     // ------------------------------------------------------------ coach: cobros (v0.24, solo el coach)
     async cobrosAtleta(atletaId) {
       const [acuerdo, pagos] = await Promise.all([

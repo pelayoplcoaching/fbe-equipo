@@ -166,6 +166,9 @@ export function crearBackendPglite(db) {
     rpc: (nombre, args = {}) => como(async () => {
       const params = Object.values(args);
       const named = Object.keys(args).map((k, i) => `${id(k)} => $${i + 1}`).join(', ');
+      // Las que devuelven una tabla (returns table / setof), como PostgREST: una lista de filas
+      const conjunto = (await db.query(`select bool_or(proretset) s from pg_proc where proname = $1 and pronamespace = 'public'::regnamespace`, [nombre])).rows[0]?.s;
+      if (conjunto) return (await db.query(`select * from public.${id(nombre)}(${named})`, params)).rows;
       return (await db.query(`select public.${id(nombre)}(${named}) as r`, params)).rows[0].r;
     }),
     // Para preparar datos en las pruebas sin pasar por permisos

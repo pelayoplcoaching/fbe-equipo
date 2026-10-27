@@ -30,7 +30,7 @@ export function CobrosAtleta({ atleta }) {
   };
   return (
     <div class="pila cobros">
-      <p class="peq secundario cobros-privado"><Icono n="candado" /> Solo lo ves tú: {atleta.nombre.split(' ')[0]} no ve nada de esto en su app.</p>
+      <p class="peq secundario cobros-privado"><Icono n="candado" /> {atleta.nombre.split(' ')[0]} solo ve cómo va (hasta cuándo tiene pagado y si debe algo), en Hoy y en su perfil; nunca el precio, las notas ni esta lista.</p>
       <section class="panel panel-pad pila-s" aria-labelledby="cobros-resumen">
         <div class="separa">
           <h2 id="cobros-resumen" class="h-panel">Cómo va</h2>

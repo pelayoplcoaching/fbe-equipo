@@ -767,6 +767,8 @@ console.log('\nControl de cobros (v0.24)');
   const deAna = await api.cobrosAtleta(ana.id).catch(() => ({ acuerdo: null, pagos: [] }));
   check(!deAna.acuerdo && deAna.pagos.length === 0 && !('pagos' in (await api.exportar(ana.id))), 'Ana no los ve: ni en la app ni en su descarga de datos');
   check(await lanza(() => api.guardarPago({ atleta_id: ana.id, periodo_desde: '2026-11-01', periodo_hasta: '2026-11-30', importe: 0, estado: 'pagado' })), 'ni puede apuntarse un pago');
+  const mio = await api.miCobro();
+  check(mio && mio.pagadoHasta === '2027-01-19' && mio.debe === 0 && Object.keys(mio).join() === 'pagadoHasta,debe,debeDesde,estado', `solo ve cómo va (v0.25): pagado hasta ${mio?.pagadoHasta}, ${mio?.estado}`);
   await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
   await api.borrarPago(p1.id);
   check((await api.cobrosAtleta(ana.id)).pagos.length === 1, 'el coach borra un cobro apuntado por error');

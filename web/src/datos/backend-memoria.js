@@ -3,6 +3,7 @@
 // triggers que cambian lo que ve la app (autor de los comentarios, revisiones pendientes…).
 import { hoyISO, sumarDias as sumar, diasEntre as diasEntreIso } from '../logica/fechas.js';
 import { textoVisible } from '../logica/texto.js';
+import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
@@ -655,6 +656,15 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     async rpc(nombre, args) {
       const uid = sesion?.user.id;
       const perfil = tabla('perfiles').find((p) => p.id === uid);
+      // Migración 021: el resumen de los pagos del atleta con la sesión abierta (solo eso)
+      if (nombre === 'mi_cobro') {
+        const yo = tabla('atletas').find((a) => a.perfil_id === uid);
+        const pagos = yo ? tabla('pagos').filter((x) => x.atleta_id === yo.id) : [];
+        if (!pagos.length) return [];
+        const r = resumenCobros(pagos, hoyISO());
+        const debeDesde = pagos.filter((x) => x.estado !== 'pagado' && x.periodo_desde <= hoyISO()).map((x) => x.periodo_desde).sort()[0] || null;
+        return [{ pagado_hasta: r.pagadoHasta, debe: r.debe, debe_desde: debeDesde, estado: r.estado === 'sin_datos' ? 'al_dia' : r.estado }];
+      }
       if (nombre === 'foto_coach') return uid ? tabla('perfiles').filter((p) => p.rol === 'coach').sort((a, b) => String(a.creado_en).localeCompare(String(b.creado_en)))[0]?.foto || null : null;
       if (nombre === 'crear_invitacion') {
         if (perfil?.rol !== 'coach') throw new Error('Solo el coach puede crear invitaciones');

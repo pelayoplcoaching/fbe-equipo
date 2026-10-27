@@ -17,6 +17,7 @@ import { HabitosHoy } from './Habitos.jsx';
 import { TarjetaNotificaciones } from '../Notificaciones.jsx';
 import { NutricionHoy } from './Nutricion.jsx';
 import { conNutricion } from '../../logica/nivel.js';
+import { AvisoCobro } from './Cobro.jsx';
 import { HojaCuestionario, TarjetaCuestionario, pendiente } from './Cuestionario.jsx';
 import { TarjetaCardio } from './Sesion.jsx';
 import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '../../logica/cardio.js';
@@ -68,6 +69,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       <BandaDemo />
       <BandaConexion />
       <ErrorCaja error={error} reintentar={recargar} />
+      {atleta.estado !== 'baja' && <AvisoCobro irA={irA} />}
       {atleta.estado === 'baja' && (
         <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>
       )}

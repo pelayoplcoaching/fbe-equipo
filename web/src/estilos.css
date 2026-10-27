@@ -1868,3 +1868,12 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .fila-boton:hover { background: var(--hoja-2); }
 .fila-boton > .mini { grid-column: 1; }
 .fila-boton > .chip { grid-row: 1 / span 2; grid-column: 2; }
+/* v0.25: el atleta ve cómo va con sus pagos (en Hoy, solo si hay algo que hacer) */
+.aviso-cobro { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 14px; border-radius: var(--r-s); font-size: 14.5px; color: var(--tinta); background: var(--hoja-2); border-left: 4px solid var(--tinta-3); }
+.aviso-cobro > svg { width: 20px; height: 20px; margin-top: 1px; }
+.aviso-cobro.aviso { background: var(--aviso-suave); border-left-color: var(--aviso); }
+.aviso-cobro.aviso > svg { color: var(--aviso); }
+.aviso-cobro.alerta { background: var(--alerta-suave); border-left-color: var(--alerta); }
+.aviso-cobro.alerta > svg { color: var(--alerta); }
+.aviso-cobro.info { background: var(--morado-suave); border-left-color: var(--morado); }
+.aviso-cobro.info > svg { color: var(--morado); }

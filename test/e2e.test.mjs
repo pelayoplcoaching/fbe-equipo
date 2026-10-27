@@ -1128,6 +1128,14 @@ try {
   await p.waitForTimeout(400);
   check(await p.getByRole('heading', { name: 'Alimentación' }).count() === 0, 'ni el check-in le pregunta por su alimentación');
   await p.locator('.tab', { hasText: 'Hoy' }).click();
+  // v0.25: el atleta ve cómo va con sus pagos (Carlos tiene uno retrasado)
+  const avisoCobro = p.locator('.aviso-cobro');
+  await avisoCobro.waitFor();
+  const txtCobro = await avisoCobro.textContent();
+  check(/retrasado/.test(txtCobro) && txtCobro.includes('190 €') && (await avisoCobro.getAttribute('class')).includes('alerta'), `al entrar, Carlos ve arriba que tiene un pago retrasado y cuánto («${txtCobro.slice(0, 60)}…»)`);
+  await revisar('cobro-atleta');
+  await avisoCobro.getByRole('button', { name: 'Ahora no' }).click();
+  check(await hay(p.locator('.aviso-cobro'), 0), '«Ahora no» lo esconde hasta mañana');
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
   await p.getByRole('button', { name: /Ana López/ }).click();
   await p.locator('nav.tabs').waitFor();
@@ -1153,6 +1161,14 @@ try {
   check(/la última vez, [\d,]+ kg/.test(etiqueta), `y el lector de pantalla también lo lee («${etiqueta}»)`);
   await revisar('nivel-atleta');
   await p.getByRole('button', { name: 'Volver' }).first().click().catch(() => {});
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  check(await p.locator('.aviso-cobro').count() === 0, 'Ana va al día: en Hoy no le sale nada de pagos');
+  await abrirPestana(p, 'Perfil');
+  const filaPagos = p.locator('li', { hasText: 'Tus pagos' });
+  await filaPagos.waitFor();
+  check((await filaPagos.textContent()).includes('Pagado hasta') && (await filaPagos.textContent()).includes('Al día') && !(await p.locator('.contenido').textContent()).includes('Performance'),
+    'en su perfil ve «Tus pagos: al día, pagado hasta…», sin el precio ni el servicio');
+  await p.locator('.tab', { hasText: 'Hoy' }).click().catch(async () => { await p.evaluate(() => { location.hash = '#hoy'; }); });
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
   await p.getByRole('button', { name: /Pelayo/ }).click();
@@ -1202,8 +1218,8 @@ try {
   await p.getByRole('tab', { name: 'Cobros' }).click();
   await p.locator('.cobros-privado').waitFor();
   const filasAntes = await p.locator('.cobro').count();
-  check(filasAntes === 3 && (await p.locator('.cobros-cifras').first().textContent()).includes('225 €') && (await p.locator('.cobros-privado').textContent()).includes('no ve nada'),
-    'en la ficha de Ana, sus cobros (3 trimestres), lo que paga por periodo (225 €) y el recordatorio de que ella no lo ve');
+  check(filasAntes === 3 && (await p.locator('.cobros-cifras').first().textContent()).includes('225 €') && (await p.locator('.cobros-privado').textContent()).includes('solo ve cómo va'),
+    'en la ficha de Ana, sus cobros (3 trimestres), lo que paga por periodo (225 €) y el recordatorio de lo que ella ve (solo cómo va)');
   await revisar('cobros-ficha');
   await p.getByRole('button', { name: 'Apuntar cobro' }).click();
   const hojaPago = p.getByRole('dialog', { name: 'Apuntar cobro' });

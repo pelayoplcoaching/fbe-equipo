@@ -1402,6 +1402,32 @@ console.log('\nControl de cobros, privado del coach (migración 020)');
   const sinId = (await q(`select c.relname t from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'v')
     and not exists (select 1 from pg_attribute a where a.attrelid = c.oid and a.attname = 'id' and not a.attisdropped)`)).map((x) => x.t).filter((t) => !t.startsWith('v_') && t !== 'fbe_migraciones' && t !== 'errores_app');
   check(sinId.every((t) => CLAVE_TABLA[t]), `las tablas sin «id» (${sinId.join(', ')}) tienen su clave para paginar en la app`);
+  // Migración 021: el atleta ve solo el resumen (mi_cobro), calculado en la base
+  await como(ana);
+  const [c0] = await q(`select * from mi_cobro()`);
+  check(c0 && c0.pagado_hasta && Number(c0.debe) === 0 && ['al_dia', 'vence_pronto', 'vencido'].includes(c0.estado) && Object.keys(c0).join() === 'pagado_hasta,debe,debe_desde,estado',
+    `Ana ve cómo va (pagado hasta ${c0?.pagado_hasta?.toISOString?.().slice(0, 10) ?? c0?.pagado_hasta}, ${c0?.estado}), solo eso: ni precio, ni notas, ni la lista de cobros`);
+  await como(pelayo, 'aal2');
+  await q(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe, estado) values ($1, current_date - 40, current_date - 10, 95, 'retrasado'), ($1, current_date - 9, current_date + 20, 95, 'pendiente'), ($1, current_date + 21, current_date + 50, 95, 'pendiente')`, [aAna.id]);
+  await como(ana);
+  const [c1] = await q(`select * from mi_cobro()`);
+  check(c1.estado === 'retrasado' && Number(c1.debe) === 190, `con un periodo retrasado y otro pendiente ya empezados: debe 190 € (los que aún no han empezado no cuentan) y sale retrasado`);
+  await como(luis);
+  check((await q(`select * from mi_cobro()`)).length === 0, 'sin cobros apuntados, nada (la app no enseña nada)');
+  await como(pelayo, 'aal2');
+  check((await q(`select * from mi_cobro()`)).length === 0, 'el coach no tiene «mi cobro»');
+  await q(`delete from pagos where atleta_id = $1 and importe = 95`, [aAna.id]);
+  await anon();
+  check(await falla(`select * from mi_cobro()`), 'sin sesión, nada');
+  await su();
+  const sin20 = new PGlite();
+  await sin20.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin20.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '020')) await sin20.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let errSin20 = null;
+  try { await sin20.exec(readFileSync(new URL('../supabase/migraciones/021_mi_cobro.sql', import.meta.url), 'utf8')); } catch (e) { errSin20 = e.message; }
+  check(/Antes de la 021 hace falta la 020/.test(errSin20 || ''), 'la 021 no se aplica sin la 020');
+  await sin20.close();
   const sin19 = new PGlite();
   await sin19.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
   await sin19.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
