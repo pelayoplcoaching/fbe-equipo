@@ -3,6 +3,7 @@ import { useUnaVez, Pestanas, Siluetas, useApp, useCarga, Icono, Cargando, Hoja,
 import { BandaDemo } from '../App.jsx';
 import { GRUPOS, NOMBRE_GRUPO, TIPOS_EJERCICIO, CATEGORIAS_RECURSO, NOMBRE_CATEGORIA } from '../../logica/calculos.js';
 import { FAQ } from '../../datos/faq.js';
+import { RecetasBiblioteca } from './ComidasCoach.jsx';
 
 const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -12,12 +13,12 @@ export function Biblioteca({ peticion = null } = {}) {
   return (
     <div class="contenido coach">
       <header class="cabecera">
-        <div class="titulo"><h1>Biblioteca</h1><div class="sub">{vista === 'ejercicios' ? 'Ejercicios, técnica y alternativas' : 'Guías, enlaces y preguntas frecuentes para tus atletas'}</div></div>
+        <div class="titulo"><h1>Biblioteca</h1><div class="sub">{vista === 'ejercicios' ? 'Ejercicios, técnica y alternativas' : vista === 'recetas' ? 'Tus recetas, con su foto, macros e ingredientes' : 'Guías, enlaces y preguntas frecuentes para tus atletas'}</div></div>
       </header>
       <BandaDemo />
-      <Pestanas opciones={[['ejercicios', 'Ejercicios'], ['recursos', 'Recursos']]} valor={vista} alCambiar={setVista} etiqueta="Biblioteca" idBase="bib" />
+      <Pestanas opciones={[['ejercicios', 'Ejercicios'], ['recetas', 'Recetas'], ['recursos', 'Recursos']]} valor={vista} alCambiar={setVista} etiqueta="Biblioteca" idBase="bib" />
       <div class="pestana-panel" role="tabpanel" id="bib-panel" aria-labelledby={`bib-${vista}`} key={vista}>
-        {vista === 'ejercicios' ? <Ejercicios peticion={peticion} /> : <Recursos />}
+        {vista === 'ejercicios' ? <Ejercicios peticion={peticion} /> : vista === 'recetas' ? <RecetasBiblioteca /> : <Recursos />}
       </div>
     </div>
   );

@@ -9,6 +9,8 @@ import { progresarPauta, opcionesDe } from '../web/src/logica/progresion.js';
 import { sumarMeses, finPeriodo, importePeriodo, siguientePeriodo, resumenCobros, cobradoEnMes, fmtEuros, leerEuros } from '../web/src/logica/cobros.js';
 import { modoCarga, columnasEditor, pesoAnterior, conNutricion, textoServicio, NIVELES } from '../web/src/logica/nivel.js';
 import { cardioValido, cardioHechoValido, limpiarCardio, limpiarCardioHecho, textoCardio, textoCardioHecho, ritmo, palabrasEsfuerzo, cardioPorSemana, cardioHechoDe } from '../web/src/logica/cardio.js';
+import { leerIngrediente, leerIngredientes, escalarCantidad, textoIngrediente, ingredientesATexto, limpiarReceta, avisoMacros, macrosDe, textoMacros, recetarioPorToma, entradaMenu, cambiarRaciones, totalesDia, menuPorDia, copiarMenu, listaCompra, textoListaCompra, tomasDe, ordenarTomas, TOMAS_DEFECTO } from '../web/src/logica/comidas.js';
+import { conEntrenamiento, servicioDe, CAMPOS_SERVICIO } from '../web/src/logica/nivel.js';
 import { e1rm, e1rmPorSemana, seriesPorGrupo, pauta, propuestaSerie, semanaActual, resumenAtleta, num, signo, mmss } from '../web/src/logica/calculos.js';
 
 let ok = 0, fallos = 0;
@@ -344,6 +346,10 @@ console.log('\nBúsqueda rápida del coach');
   check(!construirResultados(datos2, 'ana').some((x) => x.titulo === 'Carlos Vera'), '«ana» no encuentra a quien entrena «por semana»');
   check(construirResultados(datos2, 'semana').some((x) => x.titulo === 'Carlos Vera'), 'pero su objetivo sí cuenta para buscarlo');
   check(construirResultados(datos, 'bea').some((x) => x.titulo === 'Bea Antigua'), 'buscando, también aparece quien está de baja');
+  const datos3 = { ...datos, atletas: [...datos.atletas, { id: 'f', nombre: 'Lucía Ferrer', estado: 'activo', entrenamiento: false }] };
+  const lr = construirResultados(datos3, 'lucia regis');
+  check(lr[0]?.titulo === 'Lucía Prueba: Registro' && !lr.some((x) => x.titulo === 'Lucía Ferrer: Registro'), 'a quien solo lleva la nutrición no le propone pestañas de entrenamiento');
+  check(construirResultados(datos3, 'ferrer')[0]?.destino.pestana === 'nutricion', 'y su ficha se abre en Nutrición');
   const pb = construirResultados(datos, 'press');
   check(pb.filter((x) => x.grupo === 'Ejercicios').length === 2, '«press» encuentra los dos press de la biblioteca');
   check(construirResultados(datos, 'triceps').some((x) => x.titulo === 'Press banca'), 'un ejercicio también se encuentra por sus músculos');
@@ -1008,6 +1014,70 @@ console.log('\nControl de cobros (v0.24)');
   check(leerEuros('1.308') === 1308 && leerEuros('1.250,50') === 1250.5 && leerEuros('74,5') === 74.5 && leerEuros('74.50') === 74.5 && leerEuros('2.988 €') === 2988
     && leerEuros('') === null && Number.isNaN(leerEuros('doce')) && Number.isNaN(leerEuros('1,2,3')), 'euros a la española: «1.308» son mil trescientos ocho, no 1,31');
   check(cobradoEnMes(pagos, '2026-07') === 225 && cobradoEnMes(pagos, '2026-10') === 0 && fmtEuros(225) === '225 €' && fmtEuros(74.5) === '74,50 €', 'lo cobrado en un mes, por fecha de pago, en euros');
+}
+
+console.log('\nComidas: recetas, recetario y menú (v0.26)');
+{
+  const I = (l) => JSON.stringify(leerIngrediente(l));
+  check(I('60 g de copos de avena') === JSON.stringify({ nombre: 'Copos de avena', cantidad: 60, unidad: 'g' }) && I('2 huevos') === JSON.stringify({ nombre: 'Huevos', cantidad: 2, unidad: 'ud' })
+    && I('200ml leche desnatada') === JSON.stringify({ nombre: 'Leche desnatada', cantidad: 200, unidad: 'ml' }) && I('- 30 gr de nueces') === JSON.stringify({ nombre: 'Nueces', cantidad: 30, unidad: 'g' }),
+    'ingredientes escritos como en Notion: «60 g de avena», «2 huevos», «200ml leche», «- 30 gr de nueces»');
+  check(I('Avena 60 g') === JSON.stringify({ nombre: 'Avena', cantidad: 60, unidad: 'g' }) && I('½ aguacate') === JSON.stringify({ nombre: 'Aguacate', cantidad: 0.5, unidad: 'ud' })
+    && I('1/2 cebolla') === JSON.stringify({ nombre: 'Cebolla', cantidad: 0.5, unidad: 'ud' }) && I('Sal al gusto') === JSON.stringify({ nombre: 'Sal al gusto' }) && leerIngrediente('  ') === null,
+    'también con la cantidad detrás, fracciones y sin cantidad («sal al gusto»); una línea vacía no es nada');
+  check(leerIngredientes('60 g avena\n\n2 huevos;1 cda aceite').length === 3 && leerIngredientes(Array(50).fill('1 huevo').join('\n')).length === 40, 'varias líneas (o con punto y coma), hasta 40');
+  check(escalarCantidad(60, 'g', 1.5) === 90 && escalarCantidad(33, 'g', 1.5) === 50 && escalarCantidad(12, 'g', 1.25) === 15 && escalarCantidad(2, 'ud', 1.25) === 2.5 && escalarCantidad(0.5, 'ud', 0.5) === 0.25,
+    'al escalar, gramos de 5 en 5 (de 1 en 1 por debajo de 50) y unidades de media en media');
+  check(textoIngrediente({ nombre: 'Copos de avena', cantidad: 60, unidad: 'g' }, 1.5) === '90 g de copos de avena' && textoIngrediente({ nombre: 'Huevos', cantidad: 2, unidad: 'ud' }) === '2 huevos'
+    && textoIngrediente({ nombre: 'Pan', cantidad: 2, unidad: 'rebanada' }) === '2 rebanadas de pan' && textoIngrediente({ nombre: 'Aceite', cantidad: 1, unidad: 'cda' }) === '1 cda. de aceite' && textoIngrediente({ nombre: 'Sal al gusto' }) === 'Sal al gusto',
+    'el ingrediente en palabras, escalado y con el plural de la unidad');
+  const xs = leerIngredientes('60 g de avena\n2 huevos\nSal');
+  check(igual(leerIngredientes(ingredientesATexto(xs)), xs), 'pasar los ingredientes a texto y volver a leerlos da lo mismo (para editar la receta)');
+
+  const { fila, error } = limpiarReceta({ nombre: '  Porridge ', tomas: ['cena', 'desayuno', 'otra'], raciones: '2', kcal: '505', proteina_g: '38,5', carbos_g: 72, grasa_g: '', ingredientes: '50 g avena\n1 plátano', preparacion: '  ', minutos: '8', etiquetas: ['Rápida', 'Rápida', ' '] });
+  check(!error && fila.nombre === 'Porridge' && igual(fila.tomas, ['desayuno', 'cena']) && fila.raciones === 2 && fila.kcal === 505 && fila.proteina_g === 38.5 && fila.grasa_g === null
+    && fila.ingredientes.length === 2 && fila.preparacion === null && fila.minutos === 8 && igual(fila.etiquetas, ['Rápida']), 'la receta del formulario, limpia: tomas en su orden y sin inventadas, coma decimal, sin vacíos ni repetidas');
+  check(limpiarReceta({ nombre: ' ' }).error && limpiarReceta({ nombre: 'X', raciones: 30 }).error && limpiarReceta({ nombre: 'X', kcal: 'mucho' }).error && limpiarReceta({ nombre: 'X', kcal: 9000 }).error
+    && limpiarReceta({ nombre: 'X', minutos: 900 }).error && limpiarReceta({ nombre: 'X'.repeat(81) }).error, 'sin nombre, con raciones, kcal o minutos imposibles: dice qué falta');
+  check(avisoMacros({ kcal: 450, proteina_g: 30, carbos_g: 60, grasa_g: 10 }) === null && /450 kcal/.test(avisoMacros({ kcal: 600, proteina_g: 30, carbos_g: 60, grasa_g: 10 })) && avisoMacros({ kcal: 600 }) === null,
+    'avisa si las kcal no cuadran con los macros (4/4/9, más de un 10 %); sin macros, nada');
+  const rec = { id: 'r1', nombre: 'Avena', raciones: 2, kcal: 450, proteina_g: 30, carbos_g: 60, grasa_g: 10, ingredientes: [{ nombre: 'Avena', cantidad: 120, unidad: 'g' }, { nombre: 'Huevos', cantidad: 2, unidad: 'ud' }, { nombre: 'Sal' }] };
+  check(igual(macrosDe(rec, 1.5, 2), { kcal: 1350, proteina_g: 90, carbos_g: 180, grasa_g: 30 }) && macrosDe({ kcal: null }, 2).kcal === null && textoMacros(macrosDe(rec), true) === '450 kcal · P 30 · H 60 · G 10',
+    'los macros de una ración con el factor del atleta y las raciones');
+
+  const asign = [{ id: 'a1', receta_id: 'r1', toma: 'desayuno', factor: 1, orden: 1, favorita: false }, { id: 'a2', receta_id: 'r2', toma: 'desayuno', factor: 1, orden: 2, favorita: true }, { id: 'a3', receta_id: 'x', toma: 'cena', factor: 1, orden: 0 }];
+  const porToma = recetarioPorToma(asign, [rec, { ...rec, id: 'r2', nombre: 'Tostadas' }]);
+  check(porToma.desayuno.map((a) => a.id).join() === 'a2,a1' && !porToma.cena && porToma.desayuno[0].receta.nombre === 'Tostadas', 'el recetario por toma: favoritas primero; una receta que ya no existe no sale');
+  check(igual(tomasDe(null), TOMAS_DEFECTO) && igual(tomasDe({ tomas: ['cena', 'desayuno'] }), ['desayuno', 'cena']) && igual(ordenarTomas(['recena', 'comida', 'nada']), ['comida', 'recena']), 'sus comidas del día: las cuatro de siempre si no ha elegido; siempre en orden');
+
+  const e1 = entradaMenu({ fecha: '2026-11-02', toma: 'desayuno', asignacion: { factor: 1.5, receta: rec }, raciones: 1 });
+  check(e1.receta_id === 'r1' && e1.texto === 'Avena' && e1.kcal === 675 && e1.hecho === false, 'en el menú, una receta del recetario lleva sus macros ya con el factor');
+  const e2 = entradaMenu({ fecha: '2026-11-02', toma: 'comida', texto: '  Comida fuera ', macros: { kcal: 800, proteina_g: '' } });
+  check(e2.receta_id === null && e2.texto === 'Comida fuera' && e2.kcal === 800 && e2.proteina_g === null && entradaMenu({ fecha: 'x', toma: 'comida', texto: '  ' }) === null, 'o lo que escriba (con las kcal si las sabe); vacío, nada');
+  check(igual(cambiarRaciones({ raciones: 1, kcal: 400, proteina_g: 30, carbos_g: null, grasa_g: 10 }, 1.5), { raciones: 1.5, kcal: 600, proteina_g: 45, carbos_g: null, grasa_g: 15 }) && cambiarRaciones({ raciones: 1, kcal: 1 }, 99).raciones === 10,
+    'cambiar las raciones cambia sus macros en proporción (como mucho 10)');
+  const menu = [{ ...e1, id: 'm1', hecho: true, orden: 0 }, { ...e2, id: 'm2', orden: 0 }, { ...e2, id: 'm3', fecha: '2026-11-08', kcal: null, orden: 0 }, { ...e2, id: 'm4', fecha: '2026-11-09', orden: 0 }];
+  const t = totalesDia(menu.filter((e) => e.fecha === '2026-11-02'));
+  check(t.kcal === 1475 && t.conDatos === 2 && t.total === 2 && totalesDia(menu.filter((e) => e.fecha === '2026-11-02'), true).kcal === 675, 'los totales del día (y solo lo comido)');
+  const pd = menuPorDia(menu, '2026-11-02');
+  check(Object.keys(pd).length === 7 && pd['2026-11-02'].desayuno.length === 1 && pd['2026-11-08'].comida.length === 1 && !pd['2026-11-09'], 'el menú de la semana por día y toma (lo de otra semana no entra)');
+  const cop = copiarMenu(menu, '2026-11-02', '2026-11-09');
+  check(cop.length === 3 && cop.every((x) => !x.hecho && !x.id) && cop[0].fecha === '2026-11-09' && cop[2].fecha === '2026-11-15', 'copiar una semana: las mismas comidas 7 días después, sin «hecho»');
+  const lc = listaCompra([{ receta_id: 'r1', raciones: 1, texto: 'Avena' }, { receta_id: 'r1', raciones: 2, texto: 'Avena' }, { receta_id: null, texto: 'Comida fuera' }, { receta_id: null, texto: 'Comida fuera' }], [rec], [{ receta_id: 'r1', factor: 1.5 }]);
+  const avena = lc.items.find((i) => i.nombre === 'Avena');
+  check(avena.cantidad === 270 && lc.items.find((i) => i.nombre === 'Huevos').cantidad === 5 && lc.items.find((i) => i.nombre === 'Sal').cantidad === null && igual(lc.libres, ['Comida fuera']),
+    'la lista de la compra suma los ingredientes (× factor × raciones ÷ raciones de la receta; lo que va por piezas, hacia arriba); lo escrito a mano va aparte, una vez');
+  check(listaCompra([{ receta_id: 'r2', raciones: 1 }], [{ id: 'r2', nombre: 'X', raciones: 4, ingredientes: [{ nombre: 'Cebolla', cantidad: 1 }, { nombre: 'Ajo', cantidad: 2, unidad: 'diente' }, { nombre: 'Aceite', cantidad: 2, unidad: 'cda' }] }], []).items.map((i) => i.cantidad).join() === '0.5,1,1', 'media cebolla y medio diente se compran enteros; las cucharadas no');
+  check(/☐ 270 g de avena/.test(textoListaCompra(lc)) && /Sin receta:\n☐ Comida fuera/.test(textoListaCompra(lc)), 'y en texto, para copiarla');
+
+  check(conEntrenamiento({}) && !conEntrenamiento({ entrenamiento: false }) && servicioDe({ entrenamiento: false }) === 'nutricion' && servicioDe({ nutricion: false }) === 'entrenamiento' && servicioDe({}) === 'completo'
+    && igual(CAMPOS_SERVICIO.nutricion, { entrenamiento: false, nutricion: true }) && textoServicio({ entrenamiento: false }) === 'Solo nutrición', 'servicio: entrenamiento, completo o solo nutrición');
+  const solo = resumenAtleta({ atleta: { id: 'l', nombre: 'Lucía', estado: 'activo', entrenamiento: false }, bloque: null, cambiosReceta: 2, diasNutricion: 5 }, '2026-11-04');
+  check(!solo.alertas.some((a) => ['sin_bloque', 'sin_entrenar', 'publicar', 'programar'].includes(a.tipo)) && solo.alertas.some((a) => a.tipo === 'receta' && /2 recetas/.test(a.texto)) && solo.servicio === 'nutricion' && solo.diasNutricion === 5,
+    'a quien solo le llevas la nutrición, ningún aviso de entrenamiento (sí el de las recetas que pide cambiar)');
+  check(resumenAtleta({ atleta: { id: 'x', nombre: 'X', estado: 'activo' }, bloque: null }, '2026-11-04').alertas.some((a) => a.tipo === 'sin_bloque'), 'a los demás, como siempre');
+  const dia = tuDia({ menu: { total: 4, hechas: 1 } });
+  check(dia.some((x) => x.id === 'menu' && x.estado === 'luego' && /1 de 4/.test(x.detalle)) && tuDia({ menu: { total: 2, hechas: 2 } }).find((x) => x.id === 'menu').estado === 'hecho' && !tuDia({}).some((x) => x.id === 'menu'), '«Tu día» con su menú de hoy');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

@@ -7,7 +7,12 @@ import { FOTO_MAX } from '../datos/api.js';
 const LADO = 384; // v0.25: más grande para poder ampliarla (antes 256; cabe igual en el límite de la base)
 
 // Lee una imagen (JPEG, PNG, HEIC convertido por el móvil, WebP…) y la deja en un cuadrado de 256 px, centrado
-export async function recortarFoto(archivo, { lado = LADO, max = FOTO_MAX } = {}) {
+export function recortarFoto(archivo, { lado = LADO, max = FOTO_MAX } = {}) {
+  return recortarImagen(archivo, { ancho: lado, alto: lado, max });
+}
+
+// Lo mismo con otra proporción (v0.26: las fotos de las recetas, 4:3), recortada al centro
+export async function recortarImagen(archivo, { ancho = LADO, alto = LADO, max = FOTO_MAX } = {}) {
   if (!archivo || !/^image\//.test(archivo.type || '')) throw new Error('Elige una imagen (una foto de tu galería o de la cámara).');
   const url = URL.createObjectURL(archivo);
   try {
@@ -19,14 +24,16 @@ export async function recortarFoto(archivo, { lado = LADO, max = FOTO_MAX } = {}
     });
     const w = img.naturalWidth, h = img.naturalHeight;
     if (!w || !h) throw new Error('No se ha podido abrir esa imagen. Prueba con otra.');
-    const c = Math.min(w, h);
+    // El trozo más grande del original con la proporción pedida, centrado
+    const prop = ancho / alto;
+    const cw = Math.min(w, h * prop), ch = cw / prop;
     const lienzo = document.createElement('canvas');
-    lienzo.width = lado; lienzo.height = lado;
+    lienzo.width = ancho; lienzo.height = alto;
     const ctx = lienzo.getContext('2d');
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, lado, lado);
+    ctx.fillRect(0, 0, ancho, alto);
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, (w - c) / 2, (h - c) / 2, c, c, 0, 0, lado, lado);
+    ctx.drawImage(img, (w - cw) / 2, (h - ch) / 2, cw, ch, 0, 0, ancho, alto);
     for (const q of [0.85, 0.78, 0.7, 0.6, 0.5, 0.4]) {
       const datos = lienzo.toDataURL('image/jpeg', q);
       if (datos.startsWith('data:image/jpeg;base64,') && datos.length <= max) return datos;

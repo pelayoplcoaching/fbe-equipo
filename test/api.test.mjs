@@ -828,6 +828,94 @@ console.log('\nServicio y nivel (v0.22)');
   for (const x of [nuevo, normal]) await api.borrarAtleta(x.id);
 }
 
+console.log('\nRecetas, recetario y menú; solo nutrición (v0.26)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const porridge = await api.guardarReceta({ nombre: 'Porridge de avena', tomas: ['desayuno'], raciones: 1, kcal: '505', proteina_g: 38, carbos_g: 72, grasa_g: 7, ingredientes: '50 g de copos de avena\n200 ml de leche\n1 plátano\nCanela al gusto', preparacion: 'Calienta la leche con la avena.' });
+  const curry = await api.guardarReceta({ nombre: 'Pollo al curry', tomas: ['comida', 'cena'], raciones: 2, kcal: 525, proteina_g: 42, carbos_g: 62, grasa_g: 12, ingredientes: '300 g de pollo\n140 g de arroz' });
+  check(porridge.ingredientes.length === 4 && porridge.ingredientes[0].cantidad === 50 && porridge.kcal == 505, 'el coach crea una receta pegando los ingredientes como texto (uno por línea)');
+  check(await lanza(() => api.guardarReceta({ nombre: '' })), 'sin nombre no se guarda');
+  await api.asignarReceta(ana.id, porridge.id, 'desayuno', { factor: 1.5, nota: 'Si entrenas por la mañana, el plátano después' });
+  await api.asignarReceta(ana.id, curry.id, ['comida', 'cena']);
+  await api.asignarReceta(ana.id, curry.id, 'comida', { factor: 1.25 });
+  await api.asignarReceta(ana.id, porridge.id, 'desayuno');
+  let rec0 = await api.recetario(ana.id);
+  check(rec0.porToma.comida[0].factor == 1 && rec0.porToma.desayuno[0].factor == 1.5 && /plátano/.test(rec0.porToma.desayuno[0].nota || ''),
+    'asignarla otra vez en una toma donde ya la tiene no la toca (ni su factor ni tu nota)');
+  await api.cambiarAsignacion(rec0.porToma.comida[0].id, { factor: 1.25 });
+  const lista = await api.recetas();
+  check(lista.find((r) => r.id === curry.id)?.atletas === 1 && !('foto' in lista[0]), 'su biblioteca de recetas, sin la foto grande, con a cuántos atletas se la ha puesto');
+  let rec = await api.recetario(ana.id);
+  check(rec.porToma.desayuno?.[0].factor == 1.5 && rec.porToma.comida?.[0].factor == 1.25 && rec.porToma.cena?.length === 1 && rec.asignaciones.length === 3, 'en su recetario por toma (sin duplicar); el factor se cambia en la asignación');
+  check(rec.tomas.join() === 'desayuno,comida,merienda,cena' && rec.eligio === false, 'sin elegir sus comidas, las cuatro de siempre');
+
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  rec = await api.recetario(ana.id);
+  check(rec.recetas.length === 2 && rec.porToma.desayuno[0].receta.nombre === 'Porridge de avena', 'Ana ve su recetario con las recetas');
+  await api.guardarComidas(ana.id, ['cena', 'desayuno', 'comida']);
+  rec = await api.recetario(ana.id);
+  check(rec.tomas.join() === 'desayuno,comida,cena' && rec.eligio, 'elige que hace tres comidas al día');
+  const aDes = rec.porToma.desayuno[0];
+  const e1 = await api.apuntarMenu(ana.id, { fecha: lunes, toma: 'desayuno', asignacion: aDes, raciones: 1 });
+  check(Number(e1.kcal) === 757.5 && e1.texto === 'Porridge de avena', 'añade el porridge al lunes: con sus kcal ya con su factor (505 × 1,5)');
+  await api.apuntarMenu(ana.id, { fecha: lunes, toma: 'comida', asignacion: rec.porToma.comida[0], raciones: 2 });
+  await api.apuntarMenu(ana.id, { fecha: sumarDias(lunes, 1), toma: 'cena', texto: 'Cena fuera', macros: { kcal: 800 } });
+  const otra = await (async () => { await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach'); const r = await api.guardarReceta({ nombre: 'No es suya', tomas: ['cena'] }); await b.auth.entrar('ana@test', 'contraseña-ana-1'); return r; })();
+  check(await lanza(() => api.apuntarMenu(ana.id, { fecha: lunes, toma: 'cena', asignacion: { receta: otra, factor: 1 } })), 'una receta que no está en su recetario no entra en su menú');
+  let menu = await api.menuSemana(ana.id, lunes);
+  check(menu.length === 3, 'su menú de la semana');
+  const comida = menu.find((x) => x.toma === 'comida');
+  const cambiada = await api.cambiarMenu(comida, { raciones: 1 });
+  check(Number(cambiada.kcal) === Math.round(525 * 1.25 * 10) / 10 && Number(cambiada.raciones) === 1, 'cambiar las raciones recalcula sus kcal');
+  await api.cambiarMenu(e1, { hecho: true });
+  const copiadas = await api.copiarMenuSemana(ana.id, lunes, sumarDias(lunes, 7));
+  check(copiadas.length === 3 && copiadas.every((x) => !x.hecho) && (await api.menuSemana(ana.id, sumarDias(lunes, 7))).length === 3, 'repite el menú la semana siguiente (sin marcar como comido)');
+  check((await api.copiarMenuSemana(ana.id, lunes, sumarDias(lunes, 7))).length === 0 && (await api.menuSemana(ana.id, sumarDias(lunes, 7))).length === 3, 'copiarla dos veces no duplica nada');
+  await api.vaciarMenuSemana(ana.id, sumarDias(lunes, 7));
+  check((await api.menuSemana(ana.id, sumarDias(lunes, 7))).length === 0, 'y la vacía');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const deCurry = (await api.recetario(ana.id)).asignaciones.filter((a) => a.receta_id === curry.id);
+  for (const a of deCurry) await api.quitarReceta(a.id);
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const sinCurry = await api.copiarMenuSemana(ana.id, lunes, sumarDias(lunes, 7));
+  check(sinCurry.length === 3 && sinCurry.find((x) => x.texto === 'Pollo al curry').receta_id === null && sinCurry.find((x) => x.toma === 'desayuno').receta_id === porridge.id,
+    'si su coach le ha quitado una receta, la semana se copia igual (esa, como texto)');
+  await api.vaciarMenuSemana(ana.id, sumarDias(lunes, 7));
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.asignarReceta(ana.id, curry.id, 'comida', { factor: 1.25 });
+  await api.asignarReceta(ana.id, curry.id, 'cena');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const dia = await api.tuDia(ana.id, { salud: true, hoy: lunes });
+  check(dia.some((x) => x.id === 'menu'), '«Tu día» del lunes le recuerda su menú');
+  await api.pedirCambioReceta(aDes.id, 'Sin plátano, por favor');
+  check(await lanza(() => api.cambiarAsignacion(aDes.id, { factor: 3 })), 'no puede cambiarse el factor');
+  await api.recetaFavorita(aDes.id, true);
+
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const bandeja = await api.bandeja();
+  check(bandeja.recetas.length === 1 && bandeja.recetas[0].receta.nombre === 'Porridge de avena' && bandeja.recetas[0].cambio_nota === 'Sin plátano, por favor' && bandeja.porAtleta[ana.id] >= 1,
+    'en Revisar le sale la receta que Ana pide cambiar, con su nota');
+  check((await api.resumenes()).find((r) => r.atleta_id === ana.id).alertas.some((a) => a.tipo === 'receta'), 'y en el panel');
+  await api.resolverCambioReceta(aDes.id);
+  check((await api.bandeja()).recetas.length === 0 && (await api.recetario(ana.id)).porToma.desayuno[0].favorita === true, 'la da por resuelta (su favorita sigue)');
+  const exp = await api.exportar(ana.id);
+  check(exp.menu_comidas.length === 3 && exp.recetas_atleta.length === 3 && exp.recetas.length === 2 && exp.comidas_atleta.length === 1, 'su descarga de datos lleva su menú, su recetario (con las recetas) y sus comidas');
+  const copia = await api.copiaCompleta();
+  check(copia.recetas.length >= 3 && copia.menu_comidas.length === 3, 'y la copia completa, todo');
+  const dup = await api.duplicarReceta(curry.id);
+  check(dup.nombre === 'Pollo al curry (copia)' && dup.ingredientes.length === 2, 'duplicar una receta (para cambiarle algo a alguien sin tocar la original)');
+  await api.borrarReceta(dup.id);
+  await api.borrarReceta(otra.id);
+
+  // Solo nutrición
+  const lucia = await api.crearAtleta({ nombre: 'Lucía Solo Nutrición', entrenamiento: false });
+  check(lucia.entrenamiento === false && lucia.nutricion === true, 'da de alta a quien solo le lleva la nutrición');
+  check(await lanza(() => api.actualizarAtleta(lucia.id, { nutricion: false })), 'y no se puede quedar sin nada');
+  const rL = (await api.resumenes()).find((r) => r.atleta_id === lucia.id);
+  check(rL.servicio === 'nutricion' && !rL.alertas.some((a) => ['sin_bloque', 'sin_entrenar', 'publicar'].includes(a.tipo)), 'en el panel, sin avisos de entrenamiento');
+  await api.borrarAtleta(lucia.id);
+}
+
 console.log('\nCoach: verificación en dos pasos');
 await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
 const factor = await b.auth.mfa.inscribir('Móvil');
@@ -855,7 +943,7 @@ await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
 check((await b.sql(`select count(*)::int n from storage.objects`))[0].n === 2, 'un archivo que la atleta borró solo de la tabla sigue en su carpeta');
 // v0.23: antes de borrarla, la copia completa (para recuperarla después)
 const copiaAntes = JSON.parse(JSON.stringify(await api.copiaCompleta()));
-const TABLAS_ANA = ['pagos', 'cobros_atletas', 'bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'notas_ejercicio', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'comentarios'];
+const TABLAS_ANA = ['pagos', 'cobros_atletas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'notas_ejercicio', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'comentarios'];
 const cuenta = async () => Object.fromEntries(await Promise.all(TABLAS_ANA.map(async (t) => [t, (await b.sql(`select count(*)::int n from ${t} where atleta_id = $1`, [ana.id]))[0].n])));
 const antes = await cuenta();
 await api.borrarAtleta(ana.id);

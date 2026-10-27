@@ -2,7 +2,7 @@
 import { crearBackendMemoria } from '../web/src/datos/backend-memoria.js';
 import { semillaDemo } from '../web/src/datos/semilla-demo.js';
 import { crearApi } from '../web/src/datos/api.js';
-import { hoyISO, lunesDe } from '../web/src/logica/fechas.js';
+import { hoyISO, lunesDe, sumarDias } from '../web/src/logica/fechas.js';
 
 let ok = 0, fallos = 0;
 const lanza = async (fn) => { try { await fn(); return false; } catch { return true; } };
@@ -17,7 +17,9 @@ console.log('Coach en la demo');
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 check((await api.perfil()).rol === 'coach', 'entra como coach');
 const res = await api.resumenes();
-check(res.length === 4, '4 atletas en el panel');
+check(res.length === 5, '5 atletas en el panel (con Lucía, solo nutrición)');
+check(res.find((r) => r.nombre === 'Lucía Ferrer')?.servicio === 'nutricion' && !res.find((r) => r.nombre === 'Lucía Ferrer').alertas.some((a) => ['sin_bloque', 'sin_entrenar', 'publicar'].includes(a.tipo)), 'Lucía, solo nutrición: sin avisos de entrenamiento');
+check(res.find((r) => r.nombre === 'Lucía Ferrer').alertas.some((a) => a.tipo === 'receta'), 'Lucía pide cambiar una receta (aviso en el panel)');
 for (const r of res) console.log('    ', r.nombre.padEnd(14), r.semana ? `S${r.semana.numero}/${r.semana.total}` : '—', `${r.sesiones.completadas}/${r.sesiones.total}`, r.peso ? `${r.peso.kg} (${r.peso.cambio})` : '', '|', r.alertas.map((a) => a.texto).join(' · '));
 check(res.find((r) => r.nombre === 'Carlos Vera').alertas.some((a) => a.tipo === 'sin_entrenar'), 'Carlos aparece sin entrenar');
 check(res.find((r) => r.nombre === 'Rubén Martín').alertas.some((a) => a.tipo === 'molestia'), 'Rubén aparece con molestia moderada');
@@ -335,7 +337,7 @@ await b.auth.mfa.verificar(f.id, '123456');
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 check((await api.atletas()).length === 0 && (await b.auth.mfa.nivel()).siguiente === 'aal2', 'sin el segundo paso, el coach no ve datos');
 await b.auth.mfa.verificar(f.id, '123456');
-check((await api.atletas()).length === 4, 'con el código 123456, sí');
+check((await api.atletas()).length === 5, 'con el código 123456, sí');
 await b.auth.mfa.quitar(f.id);
 await b.auth.entrar('ana@fbe.demo', 'demo');
 
@@ -359,6 +361,22 @@ await b.auth.entrar('carlos@fbe.demo', 'demo');
 const cobroCarlos = await api.miCobro();
 check(cobroCarlos?.estado === 'retrasado' && cobroCarlos.debe === 190, 'en la demo, Carlos ve que tiene un pago retrasado (190 €), como en la base');
 check((await api.cobrosAtleta((await api.miAtleta()).id)).pagos.length === 0, 'y no ve la lista de sus cobros');
+
+// v0.26: la demo aplica las reglas de la 022
+await b.auth.entrar('lucia@fbe.demo', 'demo');
+const luciaD = await api.miAtleta();
+check(await lanza(() => api.guardarReceta({ nombre: 'Mía', tomas: ['cena'] })), 'en la demo, Lucía no puede crear recetas, como en la base');
+const recL = await api.recetario(luciaD.id);
+check(recL.asignaciones.length > 5 && await lanza(() => api.cambiarAsignacion(recL.asignaciones[0].id, { factor: 3 })), 've su recetario, pero no se cambia el factor');
+const lunesL = lunesDe(hoyISO());
+const antesL = (await api.menuSemana(luciaD.id, sumarDias(lunesDe(hoyISO()), 7))).length;
+await api.copiarMenuSemana(luciaD.id, lunesL, sumarDias(lunesDe(hoyISO()), 7));
+const trasUna = (await api.menuSemana(luciaD.id, sumarDias(lunesDe(hoyISO()), 7))).length;
+await api.copiarMenuSemana(luciaD.id, lunesL, sumarDias(lunesDe(hoyISO()), 7));
+check(trasUna > antesL && (await api.menuSemana(luciaD.id, sumarDias(lunesDe(hoyISO()), 7))).length === trasUna, 'copiar su semana dos veces no duplica');
+await b.auth.entrar('pelayo@fbe.demo', 'demo');
+const marta = (await api.atletas()).find((a) => a.nombre === 'Marta Gil');
+check(await lanza(() => api.apuntarMenu(marta.id, { fecha: hoyISO(), toma: 'comida', texto: 'Algo' })), 'sin su consentimiento de salud, ni el coach le apunta el menú (como en la base)');
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

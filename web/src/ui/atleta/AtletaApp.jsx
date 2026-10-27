@@ -7,24 +7,31 @@ import { Semana } from './Semana.jsx';
 import { Checkin } from './Checkin.jsx';
 import { Progreso } from './Progreso.jsx';
 import { Perfil } from './Perfil.jsx';
+import { Comidas } from './Comidas.jsx';
+import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { hoyISO, semanaCheckin, diaDeCheckin } from '../../logica/fechas.js';
 
-// Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app)
-const TABS = [
-  ['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], ['checkin', 'Check-in', 'checkin'],
+// Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
+// Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento.
+const TODAS = [
+  ['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], ['comidas', 'Comidas', 'receta'], ['checkin', 'Check-in', 'checkin'],
   ['progreso', 'Progreso', 'progreso'], ['mensajes', 'Mensajes', 'mensaje'], ['perfil', 'Perfil', 'perfil'],
 ];
+export const pestanasAtleta = (atleta) => TODAS.filter(([t]) => (t !== 'semana' || conEntrenamiento(atleta)) && (t !== 'comidas' || conNutricion(atleta)));
 
-function tabInicial() {
+function tabInicial(tabs) {
   const h = (typeof location !== 'undefined' ? location.hash : '').slice(1);
-  return TABS.some(([t]) => t === h) ? h : 'hoy';
+  return tabs.some(([t]) => t === h) ? h : 'hoy';
 }
 
 export function AtletaApp() {
   const { api, atleta } = useApp();
-  const [tab, setTab] = useState(tabInicial);
+  const TABS = pestanasAtleta(atleta);
+  const [tab, setTab] = useState(() => tabInicial(TABS));
+  // Si el coach cambia su servicio con la app abierta y la pestaña ya no está, a Hoy
+  useEffect(() => { if (!TABS.some(([t]) => t === tab)) setTab('hoy'); }, [atleta.entrenamiento, atleta.nutricion]);
   const [sesionId, setSesionId] = useState(null);
   const consentimientos = useCarga(() => api.consentimientos(), []);
   // Si la app se queda abierta de un día para otro (o se vuelve a ella por la mañana), todo se recalcula con el día nuevo
@@ -56,7 +63,8 @@ export function AtletaApp() {
   const salud = activos.some((c) => c.tipo === 'datos_salud');
   const checkinPendiente = salud && checkinSemana.datos && !checkinSemana.datos.checkin && diaDeCheckin();
 
-  const abrirSesion = (id) => { setSesionId(id); window.scrollTo(0, 0); };
+  // A quien solo lleva la nutrición no se le abren sesiones (una respuesta antigua en una sesión se lee en Mensajes)
+  const abrirSesion = (id) => { if (!conEntrenamiento(atleta)) { setTab('mensajes'); return; } setSesionId(id); window.scrollTo(0, 0); };
   const cerrarSesion = () => { setSesionId(null); programa.recargar(true); noLeidos.recargar(true); };
   const releer = () => noLeidos.recargar(true);
 
@@ -75,6 +83,7 @@ export function AtletaApp() {
           <main key={`${tab}:${dia}`} class="vista">
             {tab === 'hoy' && <Hoy {...compartido} />}
             {tab === 'semana' && <Semana {...compartido} />}
+            {tab === 'comidas' && <Comidas {...compartido} />}
             {tab === 'checkin' && <Checkin {...compartido} />}
             {tab === 'progreso' && <Progreso {...compartido} />}
             {tab === 'mensajes' && <Mensajes {...compartido} />}

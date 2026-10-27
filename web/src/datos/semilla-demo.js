@@ -4,6 +4,7 @@ import { hoyISO, lunesDe, sumarDias } from '../logica/fechas.js';
 import { BIBLIOTECA_BASE } from './biblioteca-base.js';
 import { FAQ } from './faq.js';
 import { RESPUESTAS_EJEMPLO } from './respuestas.js';
+import { sembrarComidas } from './semilla-comidas.js';
 
 const uuid = () => crypto.randomUUID();
 
@@ -539,5 +540,7 @@ export function semillaDemo(hoy = hoyISO()) {
   db.preferencias_notificaciones.push({ usuario_id: ana.perfil_id, desactivados: [], hora_manana: '08:30:00', hora_tarde: '21:00:00', dia_checkin: 7, silencio_desde: '22:30:00', silencio_hasta: '08:00:00', email: false, actualizado_en: ahoraISO });
   FAQ.forEach(([titulo, descripcion], i) => db.recursos.push({ id: uuid(), atleta_id: null, categoria: 'faq', titulo, descripcion, url: null, orden: i + 1, creado_en: ahoraISO }));
   db.recursos.push({ id: uuid(), atleta_id: null, categoria: 'entrenamiento', titulo: 'Calentamiento general (5 minutos)', descripcion: '2 min de bici o remo suave, 10 sentadillas sin peso, 10 puentes de glúteo, 10 rotaciones de hombro con banda y 5 zancadas por pierna.', url: null, orden: 1, creado_en: ahoraISO });
+  // v0.26: recetas, Lucía (solo nutrición) y el menú de la semana (al final: no cambia lo aleatorio de lo anterior)
+  sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana });
   return db;
 }

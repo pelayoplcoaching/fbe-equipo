@@ -1438,6 +1438,105 @@ console.log('\nControl de cobros, privado del coach (migración 020)');
   await sin19.close();
 }
 
+console.log('\nRecetas, recetario y menú; solo nutrición (migración 022)');
+{
+  await su();
+  await q(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await q(`insert into consentimientos (perfil_id, tipo, version) select $1, 'datos_salud', '2026-10' where not exists (select 1 from consentimientos where perfil_id = $1 and tipo = 'datos_salud' and revocado_en is null)`, [ana]);
+  await como(pelayo, 'aal2');
+  const [r1] = await q(`insert into recetas (nombre, tomas, raciones, kcal, proteina_g, ingredientes) values ('Porridge', '{desayuno}', 1, 505, 38, '[{"nombre":"Avena","cantidad":50,"unidad":"g"},{"nombre":"Canela"}]') returning id, creada_en`);
+  const [r2] = await q(`insert into recetas (nombre, tomas) values ('Lentejas', '{comida}') returning id`);
+  const [r3] = await q(`insert into recetas (nombre, tomas) values ('Solo de Luis', '{cena}') returning id`);
+  check(await falla(`insert into recetas (nombre, tomas) values ('X', '{brunch}')`) && await falla(`insert into recetas (nombre, ingredientes) values ('X', '[{"nombre":"Avena","cantidad":-5}]')`)
+    && await falla(`insert into recetas (nombre, raciones) values ('X', 0)`) && await falla(`insert into recetas (nombre, foto) values ('X', 'data:image/svg+xml;base64,AAAA')`) && await falla(`insert into recetas (nombre) values ('   ')`)
+    && await falla(`insert into recetas (nombre, etiquetas) values ('X', array[''])`), 'recetas con sentido: tomas conocidas, ingredientes bien formados, raciones, foto JPEG/WebP, nombre visible, etiquetas');
+  const [a1] = await q(`insert into recetas_atleta (atleta_id, receta_id, toma, factor) values ($1, $2, 'desayuno', 1.5) returning id`, [aAna.id, r1.id]);
+  await q(`insert into recetas_atleta (atleta_id, receta_id, toma) values ($1, $2, 'cena')`, [aLuis.id, r3.id]);
+  check(await falla(`insert into recetas_atleta (atleta_id, receta_id, toma) values ($1, $2, 'desayuno')`, [aAna.id, r1.id]) && await falla(`insert into recetas_atleta (atleta_id, receta_id, toma, factor) values ($1, $2, 'comida', 9)`, [aAna.id, r2.id]),
+    'una receta va una vez por toma en el recetario de cada atleta, con un factor razonable');
+  await como(ana);
+  const vistas = (await q(`select nombre from recetas order by nombre`)).map((x) => x.nombre);
+  check(vistas.join() === 'Porridge', `Ana solo ve las recetas de su recetario (${vistas.join(', ')}), no las demás ni las de Luis`);
+  check((await q(`select count(*)::int n from recetas_atleta`))[0].n === 1, 'y solo su recetario');
+  check(await falla(`insert into recetas (nombre) values ('Mía')`) && (await q(`update recetas set nombre = 'Cambiada' where id = $1 returning id`, [r1.id]).catch(() => [])).length === 0
+    && await falla(`insert into recetas_atleta (atleta_id, receta_id, toma) values ($1, $2, 'comida')`, [aAna.id, r2.id]), 'no puede crear ni cambiar recetas, ni ponerse recetas');
+  check(await falla(`update recetas_atleta set factor = 3 where id = $1`, [a1.id]) && await falla(`update recetas_atleta set nota = 'me la pongo yo' where id = $1`, [a1.id]),
+    'ni tocar su factor o la nota del coach');
+  const [pedido] = await q(`update recetas_atleta set favorita = true, cambio_pedido_en = '2000-01-01', cambio_nota = 'Sin canela, por favor' returning favorita, cambio_pedido_en, cambio_nota`);
+  check(pedido.favorita && new Date(pedido.cambio_pedido_en).getFullYear() > 2020 && pedido.cambio_nota === 'Sin canela, por favor', 'sí puede marcarla como favorita y pedir que se la cambien (la fecha la pone la base)');
+  await como(pelayo, 'aal2');
+  const [res] = await q(`update recetas_atleta set cambio_pedido_en = null where id = $1 returning cambio_nota`, [a1.id]);
+  check(res.cambio_nota === null, 'el coach la da por resuelta (y la nota se va con la petición)');
+  // Comidas del día
+  await como(ana);
+  await q(`insert into comidas_atleta (atleta_id, tomas) values ($1, '{desayuno,comida,cena}')`, [aAna.id]);
+  check(await falla(`insert into comidas_atleta (atleta_id, tomas) values ($1, '{cena}')`, [aLuis.id]) && await falla(`update comidas_atleta set tomas = '{cena,cena}'`) && await falla(`update comidas_atleta set tomas = '{}'`),
+    'elige sus comidas del día (no las de otro; sin repetir y al menos una)');
+  // Menú: dato de salud, solo recetas de su recetario o texto
+  const [m1] = await q(`insert into menu_comidas (atleta_id, fecha, toma, receta_id, texto, kcal) values ($1, current_date, 'desayuno', $2, 'Porridge', 757.5) returning id`, [aAna.id, r1.id]);
+  await q(`insert into menu_comidas (atleta_id, fecha, toma, texto) values ($1, current_date, 'comida', 'Comida fuera')`, [aAna.id]);
+  check(await falla(`insert into menu_comidas (atleta_id, fecha, toma, receta_id, texto) values ($1, current_date, 'comida', $2, 'Lentejas')`, [aAna.id, r2.id]), 'en su menú solo entran recetas de su recetario (o lo que escriba)');
+  check(await falla(`insert into menu_comidas (atleta_id, fecha, toma, texto) values ($1, current_date, 'cena', 'Ajena')`, [aLuis.id]) && await falla(`insert into menu_comidas (atleta_id, fecha, toma, texto, raciones) values ($1, current_date, 'cena', 'X', 50)`, [aAna.id])
+    && await falla(`update menu_comidas set atleta_id = $1 where id = $2`, [aLuis.id, m1.id]), 'ni en el de otro, ni raciones imposibles, ni pasar una comida a otro atleta');
+  check((await q(`update menu_comidas set hecho = true where id = $1 returning hecho`, [m1.id]))[0]?.hecho === true, 'marca lo que se ha comido');
+  await como(luis);
+  check((await q(`select count(*)::int n from menu_comidas`))[0].n === 0 && (await q(`select count(*)::int n from comidas_atleta`))[0].n === 0, 'Luis no ve el menú ni las comidas de Ana');
+  await su();
+  await q(`update consentimientos set revocado_en = now() where perfil_id = $1 and tipo = 'datos_salud' and revocado_en is null`, [ana]);
+  await como(ana);
+  check(await falla(`insert into menu_comidas (atleta_id, fecha, toma, texto) values ($1, current_date, 'cena', 'Sin permiso')`, [aAna.id]), 'sin su consentimiento de datos de salud, no se apunta en el menú');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into menu_comidas (atleta_id, fecha, toma, texto) values ($1, current_date, 'cena', 'Del coach')`, [aAna.id]), 'tampoco el coach por él');
+  await su();
+  await q(`insert into consentimientos (perfil_id, tipo, version) values ($1, 'datos_salud', '2026-10')`, [ana]);
+  await q(`update atletas set estado = 'baja' where id = $1`, [aAna.id]);
+  await como(ana);
+  check(await falla(`insert into menu_comidas (atleta_id, fecha, toma, texto) values ($1, current_date, 'cena', 'De baja')`, [aAna.id]) && await falla(`update recetas_atleta set favorita = false`), 'de baja, ni el menú ni su recetario');
+  await su();
+  await q(`update atletas set estado = 'activo' where id = $1`, [aAna.id]);
+  // Borrar la receta: sale de los recetarios y en el menú se queda el nombre
+  await como(pelayo, 'aal2');
+  await q(`delete from recetas where id = $1`, [r1.id]);
+  const [m1b] = await q(`select receta_id, texto from menu_comidas where id = $1`, [m1.id]);
+  check(m1b.receta_id === null && m1b.texto === 'Porridge' && (await q(`select count(*)::int n from recetas_atleta where receta_id = $1`, [r1.id]))[0].n === 0, 'borrar una receta la quita de los recetarios; en el menú se queda su nombre');
+  // Solo nutrición: siempre se lleva al menos una cosa
+  check(await falla(`update atletas set entrenamiento = false, nutricion = false where id = $1`, [aLuis.id]), 'un atleta siempre tiene entrenamiento, nutrición o las dos');
+  await q(`update atletas set entrenamiento = false where id = $1`, [aLuis.id]);
+  check((await q(`select entrenamiento from atletas where id = $1`, [aLuis.id]))[0].entrenamiento === false, 'solo nutrición');
+  const vie4 = await dia(11);
+  await su();
+  await q(`insert into sesiones (semana_id, orden, nombre, dia_previsto) values ($1, 7, 'Pierna C', $2::date)`, [w2L.id, vie4]);
+  await servidor();
+  await q(`select crear_recordatorios(${enMadrid(vie4, '08:45')})`);
+  check((await notis(`clave = $1 and usuario_id = $2`, [`recordatorio_sesion:${vie4}`, luis])).length === 0, 'a quien solo lleva la nutrición no le llega «Hoy toca…» aunque conserve sesiones planificadas');
+  await como(pelayo, 'aal2');
+  await q(`update atletas set entrenamiento = true where id = $1`, [aLuis.id]);
+  await servidor();
+  await q(`select crear_recordatorios(${enMadrid(vie4, '08:50')})`);
+  check((await notis(`clave = $1 and usuario_id = $2`, [`recordatorio_sesion:${vie4}`, luis])).length === 1, 'y con el entrenamiento otra vez, sí');
+  await como(pelayo, 'aal2');
+  await como(luis);
+  check(await falla(`update atletas set entrenamiento = false where id = $1`, [aLuis.id]) || (await q(`select entrenamiento from atletas where id = $1`, [aLuis.id]))[0].entrenamiento === true, 'el atleta no cambia su servicio');
+  await anon();
+  check(await falla(`select * from recetas`) && await falla(`select * from menu_comidas`) && await falla(`select * from recetas_atleta`) && await falla(`select * from comidas_atleta`), 'sin sesión, nada');
+  await su();
+  const [aTmp] = await q(`insert into atletas (nombre) values ('Temporal 22') returning id`);
+  await q(`insert into recetas_atleta (atleta_id, receta_id, toma) values ($1, $2, 'comida')`, [aTmp.id, r2.id]);
+  await q(`insert into comidas_atleta (atleta_id) values ($1)`, [aTmp.id]);
+  await q(`insert into menu_comidas (atleta_id, fecha, toma, texto) values ($1, current_date, 'comida', 'X')`, [aTmp.id]);
+  await q(`delete from atletas where id = $1`, [aTmp.id]);
+  check((await q(`select (select count(*) from recetas_atleta where atleta_id = $1) + (select count(*) from comidas_atleta where atleta_id = $1) + (select count(*) from menu_comidas where atleta_id = $1) n`, [aTmp.id]))[0].n == 0, 'se borra todo con el atleta');
+  await su();
+  const sin21 = new PGlite();
+  await sin21.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin21.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '021')) await sin21.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let err = null;
+  try { await sin21.exec(readFileSync(new URL('../supabase/migraciones/022_comidas.sql', import.meta.url), 'utf8')); } catch (e) { err = e.message; }
+  check(/Antes de la 022 hace falta la 021/.test(err || ''), 'la 022 no se aplica sin la 021');
+  await sin21.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

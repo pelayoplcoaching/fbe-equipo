@@ -80,6 +80,9 @@ export const P = {
   // v0.12: notificaciones
   campana: 'M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 20.5a2.2 2.2 0 0 0 4 0M12 3v2',
   nutricion: 'M13 18.5a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM13 15.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 4v4.5a1.5 1.5 0 0 0 3 0V4M4.5 9v11M21.5 4c-1.2.8-1.8 2.6-1.8 4.3V12h1.8v8',
+  receta: 'M4 11h16v4.5A4.5 4.5 0 0 1 15.5 20h-7A4.5 4.5 0 0 1 4 15.5zM2.5 11h19M9 7.5c0-1.2 1-1.8 1-3M13 7.5c0-1.2 1-1.8 1-3',
+  estrella: 'M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z',
+  carrito: 'M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.2M9.5 20h.01M17 20h.01',
 };
 
 // Anillo de la semana: un segmento por sesión programada; los hechos, en morado

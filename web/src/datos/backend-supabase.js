@@ -1,7 +1,7 @@
 // Backend de producción: Supabase (Auth + PostgREST). Los permisos los impone la base de datos (RLS).
 
 // Tablas cuya clave no es «id» (para ordenar al paginar)
-export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', preferencias_notificaciones: 'usuario_id' };
+export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id' };
 import { createClient } from '@supabase/supabase-js';
 
 const MENSAJES = {
@@ -68,7 +68,8 @@ export function crearBackendSupabase({ url, anonKey }) {
     }
     if (Object.values(f.in || {}).some((v) => v.length === 0)) return [];
     // Supabase devuelve como mucho 1000 filas por consulta: se pagina hasta tenerlas todas (o hasta el límite pedido)
-    const PAGINA = 1000;
+    // (f.pagina: menos filas por vez en tablas con fotos grandes, como las recetas)
+    const PAGINA = Math.min(1000, f.pagina || 1000);
     const tope = f.limit || Infinity;
     const orden = [...(f.order || [])];
     // Para paginar hace falta un orden estable: la clave de la tabla (casi todas, «id»; las que van por persona, no)

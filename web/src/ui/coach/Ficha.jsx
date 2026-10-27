@@ -18,13 +18,16 @@ import { VerArchivo } from '../Archivos.jsx';
 import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, etiquetasSuperserie, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO } from '../../logica/calculos.js';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, rangoSemana, aISO } from '../../logica/fechas.js';
 import { HabitosCoach } from './HabitosCoach.jsx';
-import { NutricionCoach } from './NutricionCoach.jsx';
 import { CuestionarioCoach, CheckinAMedida, ParaProgramar, LoQueUsa } from './CuestionarioCoach.jsx';
 import { respuestasDe } from '../../logica/preguntas.js';
-import { NIVELES, NOMBRE_NIVEL, AYUDA_NIVEL, conNutricion } from '../../logica/nivel.js';
+import { NIVELES, NOMBRE_NIVEL, AYUDA_NIVEL, conNutricion, conEntrenamiento, SERVICIOS, servicioDe, CAMPOS_SERVICIO } from '../../logica/nivel.js';
+import { NutricionFicha } from './ComidasCoach.jsx';
 import { CobrosAtleta } from './Cobros.jsx';
 
+// Las de entrenamiento, fuera a quien solo le llevas la nutrición (v0.26); Nutrición, a quien solo el entrenamiento
+const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
 const PESTANAS = [['programa', 'Programa'], ['mensajes', 'Mensajes'], ['actividad', 'Actividad'], ['registro', 'Registro'], ['seguimiento', 'Seguimiento'], ['nutricion', 'Nutrición'], ['videos', 'Vídeos y fotos'], ['objetivos', 'Objetivos'], ['notas', 'Notas'], ['cobros', 'Cobros'], ['datos', 'Datos']];
+export const pestanasFicha = (a) => PESTANAS.filter(([k]) => (conNutricion(a) || k !== 'nutricion') && (conEntrenamiento(a) || !DE_ENTRENAMIENTO.includes(k)));
 
 export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambiar }) {
   const { api } = useApp();
@@ -33,7 +36,12 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
   const [invitar, setInvitar] = useState(false);
   const a = ficha.datos?.atleta;
   // Abierta en Nutrición (desde la búsqueda) a quien solo le llevas el entrenamiento: a Datos, donde se cambia
-  useEffect(() => { if (a && !conNutricion(a) && pest === 'nutricion') setPest('datos'); }, [a?.nutricion, pest]);
+  // A quien solo le llevas la nutrición, lo de entrenamiento lleva a Nutrición
+  useEffect(() => {
+    if (!a) return;
+    if (!conNutricion(a) && pest === 'nutricion') setPest('datos');
+    else if (!conEntrenamiento(a) && DE_ENTRENAMIENTO.includes(pest)) setPest('nutricion');
+  }, [a?.nutricion, a?.entrenamiento, pest]);
 
   return (
     <div class="contenido coach">
@@ -43,13 +51,13 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
         <div class="titulo">
           <h1>{a?.nombre || 'Atleta'}</h1>
           <div class="sub">{a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : '')}</div>
-          {a && (a.nivel || !conNutricion(a)) && <div class="mini terciario">{[a.nivel && `Nivel ${NOMBRE_NIVEL[a.nivel].toLowerCase()}`, !conNutricion(a) && 'Solo entrenamiento'].filter(Boolean).join(' · ')}</div>}
+          {a && (a.nivel || servicioDe(a) !== 'completo') && <div class="mini terciario">{[conEntrenamiento(a) && a.nivel && `Nivel ${NOMBRE_NIVEL[a.nivel].toLowerCase()}`, servicioDe(a) !== 'completo' && Object.fromEntries(SERVICIOS)[servicioDe(a)]].filter(Boolean).join(' · ')}</div>}
         </div>
         {/* Sin cuenta vinculada (aunque se haya cambiado su estado a mano), siempre se le puede dar un código */}
         {a && !a.perfil_id && a.estado !== 'baja' && <button class="btn btn-primario btn-peq" onClick={() => setInvitar(true)}><Icono n="enviar" /> Código</button>}
       </header>
       <ErrorCaja error={ficha.error} reintentar={ficha.recargar} />
-      <Pestanas opciones={a && !conNutricion(a) ? PESTANAS.filter(([k]) => k !== 'nutricion') : PESTANAS} valor={pest} alCambiar={setPest} etiqueta="Secciones de la ficha" />
+      <Pestanas opciones={a ? pestanasFicha(a) : PESTANAS} valor={pest} alCambiar={setPest} etiqueta="Secciones de la ficha" />
       {!a ? <Siluetas forma="tarjetas" n={3} texto="Cargando la ficha" /> : (
         <div class="pestana-panel" role="tabpanel" id="pest-panel" aria-labelledby={`pest-${pest}`} key={pest}>
           {pest === 'programa' && <Programa atleta={a} />}
@@ -62,7 +70,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           {pest === 'actividad' && <Actividad atleta={a} irA={setPest} />}
           {pest === 'registro' && <Registro atleta={a} alCambiar={alCambiar} />}
           {pest === 'seguimiento' && <Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} />}
-          {pest === 'nutricion' && (conNutricion(a) ? <NutricionCoach atleta={a} /> : <SinNutricion irADatos={() => setPest('datos')} />)}
+          {pest === 'nutricion' && (conNutricion(a) ? <NutricionFicha atleta={a} /> : <SinNutricion irADatos={() => setPest('datos')} />)}
           {pest === 'videos' && <Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} />}
           {pest === 'objetivos' && <Objetivos atleta={a} />}
           {pest === 'cobros' && <CobrosAtleta atleta={a} />}
@@ -350,11 +358,11 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
   const recargar = () => { checkins.recargar(true); alCambiar?.(); };
   return (
     <div class="pila">
-      <CumplimientoYBloques atletaId={atleta.id} />
+      {conEntrenamiento(atleta) && <CumplimientoYBloques atletaId={atleta.id} />}
       <HabitosCoach atleta={atleta} />
-      <VistaProgreso key={versionVol} atletaId={atleta.id} esCoach />
-      <CargaEntreno atletaId={atleta.id} />
-      <VolumenObjetivo atleta={atleta} alGuardar={() => { setVersionVol((v) => v + 1); recargarFicha?.(); }} />
+      <VistaProgreso key={versionVol} atletaId={atleta.id} esCoach entrenamiento={conEntrenamiento(atleta)} />
+      {conEntrenamiento(atleta) && <CargaEntreno atletaId={atleta.id} />}
+      {conEntrenamiento(atleta) && <VolumenObjetivo atleta={atleta} alGuardar={() => { setVersionVol((v) => v + 1); recargarFicha?.(); }} />}
       <CheckinAMedida atleta={atleta} preguntas={preguntas} checkins={lista} recargarFicha={recargarFicha} />
       <section class="seccion">
         <h2>Check-ins</h2>
@@ -535,23 +543,34 @@ function ServicioYNivel({ atleta, recargar }) {
     setOcupado(true);
     try { await api.actualizarAtleta(atleta.id, cambios); aviso(texto); recargar(); } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
   };
-  const nut = conNutricion(atleta);
+  const servicio = servicioDe(atleta);
+  const TEXTO_CAMBIO = { entrenamiento: 'Solo entrenamiento: ya no ve nada de nutrición', completo: 'Ahora ve entrenamiento y nutrición', nutricion: 'Solo nutrición: ya no ve nada de entrenamiento' };
+  const AYUDA = {
+    entrenamiento: 'No ve nada de nutrición ni le llegan recordatorios de apuntarla. Lo que tuviera se guarda por si vuelves a llevársela.',
+    completo: 'Ve su entrenamiento y, en Comidas y en Hoy, su plan de nutrición, sus recetas y su menú.',
+    nutricion: 'No ve nada de entrenamiento (ni Semana, ni sesiones, ni fuerza): su Hoy es su menú, su nutrición, sus hábitos y su peso. Lo que tuviera de entrenamiento se guarda.',
+  };
   return (
     <section class="panel panel-pad pila servicio-nivel" aria-labelledby="servicio-nivel" aria-busy={ocupado ? 'true' : 'false'}>
       <h2 id="servicio-nivel" class="h-panel">Lo que le llevas</h2>
       <div class="pila-s">
         <span class="peq">Servicio</span>
-        <Segmentos etiqueta="Servicio" valor={nut ? 'completo' : 'entrenamiento'}
-          opciones={[['entrenamiento', 'Solo entrenamiento'], ['completo', 'Entrenamiento y nutrición']]}
-          alCambiar={(v) => v && v !== (nut ? 'completo' : 'entrenamiento') && guardar({ nutricion: v === 'completo' }, v === 'completo' ? 'Ahora ve su nutrición' : 'Ya no ve nada de nutrición')} />
-        <span class="mini terciario">{nut ? 'Ve su plan de nutrición en Hoy y en Progreso (cuando le pongas uno).' : 'No ve nada de nutrición ni le llegan recordatorios de apuntarla. Lo que tuviera se guarda por si vuelves a llevársela.'}</span>
+        <Segmentos etiqueta="Servicio" clase="segmentos-servicio" valor={servicio} opciones={SERVICIOS}
+          alCambiar={(v) => {
+            if (!v || v === servicio) return;
+            // Sin la migración 022 la columna «entrenamiento» no existe: solo se manda si cambia
+            const campos = { ...CAMPOS_SERVICIO[v] };
+            if (campos.entrenamiento && atleta.entrenamiento === undefined) delete campos.entrenamiento;
+            guardar(campos, TEXTO_CAMBIO[v]);
+          }} />
+        <span class="mini terciario">{AYUDA[servicio]}</span>
       </div>
-      <div class="pila-s">
+      {conEntrenamiento(atleta) && <div class="pila-s">
         <span class="peq">Nivel</span>
         <Segmentos etiqueta="Nivel" clase="segmentos-nivel" valor={atleta.nivel || null} opciones={NIVELES}
           alCambiar={(v) => guardar({ nivel: v }, v ? `Nivel ${NOMBRE_NIVEL[v].toLowerCase()}` : 'Sin nivel')} />
         <span class="mini terciario">{atleta.nivel ? `${AYUDA_NIVEL[atleta.nivel]}. Donde no le pongas carga, verá en cada serie su peso de la última vez. Él no ve su nivel.` : 'Sin nivel, el editor te enseña todas las columnas (RIR, RPE y kg). Toca uno para que la tabla se adapte a cómo le programas.'}</span>
-      </div>
+      </div>}
     </section>
   );
 }

@@ -19,7 +19,13 @@ export const NOMBRE_NIVEL = Object.fromEntries(NIVELES.map(([v, t]) => [v, t]));
 export const AYUDA_NIVEL = Object.fromEntries(NIVELES.map(([v, , a]) => [v, a]));
 
 export const conNutricion = (atleta) => atleta?.nutricion !== false;
-export const textoServicio = (atleta) => (conNutricion(atleta) ? 'Entrenamiento y nutrición' : 'Solo entrenamiento');
+// v0.26 (migración 022): «entrenamiento» en false = solo le llevas la nutrición
+export const conEntrenamiento = (atleta) => atleta?.entrenamiento !== false;
+export const SERVICIOS = [['entrenamiento', 'Solo entrenamiento'], ['completo', 'Entrenamiento y nutrición'], ['nutricion', 'Solo nutrición']];
+export const servicioDe = (atleta) => (!conEntrenamiento(atleta) ? 'nutricion' : conNutricion(atleta) ? 'completo' : 'entrenamiento');
+// Lo que se guarda en la ficha para cada servicio
+export const CAMPOS_SERVICIO = { entrenamiento: { entrenamiento: true, nutricion: false }, completo: { entrenamiento: true, nutricion: true }, nutricion: { entrenamiento: false, nutricion: true } };
+export const textoServicio = (atleta) => Object.fromEntries(SERVICIOS)[servicioDe(atleta)];
 
 // ¿Cómo se pauta la carga de este ejercicio? 'kg' | 'rpe' | null (sin nivel: libre)
 export function modoCarga(nivel, prioridad) {

@@ -17,7 +17,7 @@ export const CODIGO_MFA_DEMO = '123456';
 
 const DEFECTOS = {
   perfiles: () => ({ rol: 'atleta', creado_en: ahora(), exige_2fa: false, foto: null }),
-  atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null, nutricion: true, nivel: null }),
+  atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null, nutricion: true, entrenamiento: true, nivel: null }),
   invitaciones: () => ({ creada_en: ahora(), usada_en: null }),
   consentimientos: () => ({ aceptado_en: ahora(), revocado_en: null }),
   ejercicios: () => ({ grupos_musculares: [], activo: true, variante: null, video_url: null, instrucciones: null, errores: null, alternativas: [], tipo: [], rango_reps: null, creado_en: ahora() }),
@@ -50,6 +50,11 @@ const DEFECTOS = {
     lesiones: null, alergias: null, resultado: null, completado_en: null, pedido_en: null, revisado_en: null, creado_en: ahora(), actualizado_en: ahora() }),
   cobros_atletas: () => ({ servicio: null, precio_mes: null, ciclo: 'mensual', desde: null, nota: null, actualizado_en: ahora() }),
   pagos: () => ({ estado: 'pendiente', fecha_pago: null, metodo: null, nota: null, creado_en: ahora() }),
+  // Migración 022: recetas, recetario de cada atleta, sus comidas del día y su menú
+  recetas: () => ({ tomas: [], raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, ingredientes: [], preparacion: null, minutos: null, etiquetas: [], foto: null, foto_mini: null, creada_en: ahora(), actualizada_en: ahora() }),
+  recetas_atleta: () => ({ factor: 1, orden: 0, nota: null, favorita: false, cambio_pedido_en: null, cambio_nota: null, creada_en: ahora() }),
+  comidas_atleta: () => ({ tomas: ['desayuno', 'comida', 'merienda', 'cena'], actualizado_en: ahora() }),
+  menu_comidas: () => ({ receta_id: null, raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, hecho: false, orden: 0, creado_en: ahora() }),
   preguntas_checkin: () => ({ atleta_id: null, tipo: 'escala', unidad: null, ayuda: null, etiqueta_min: null, etiqueta_max: null, orden: 0, activa: true, creado_en: ahora() }),
 };
 
@@ -60,7 +65,8 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id']],
+    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id']],
+  recetas: [['recetas_atleta', 'receta_id']],
   habitos: [['registros_habito', 'habito_id']],
   bloques: [['semanas', 'bloque_id']],
   semanas: [['sesiones', 'semana_id']],
@@ -68,7 +74,7 @@ const CASCADA = {
   sesion_ejercicios: [['series', 'sesion_ejercicio_id']],
 };
 // Al borrar estas filas, los comentarios se quedan sin el enlace (on delete set null)
-const ANULAR = { checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id']], ejercicios: [['objetivos', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
+const ANULAR = { recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id']], ejercicios: [['objetivos', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
 
 const cumple = (fila, f = {}) => {
   for (const [k, v] of Object.entries(f.eq || {})) if ((fila[k] ?? null) !== v) return false;
@@ -82,6 +88,8 @@ const cumple = (fila, f = {}) => {
 };
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
+// Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
+const SIN_ID = ['cobros_atletas', 'comidas_atleta'];
 
 function guardarLocal(clave, valor) {
   try { localStorage.setItem(clave, JSON.stringify(valor)); } catch { /* sin almacenamiento: la demo vive en memoria */ }
@@ -109,7 +117,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const buscar = (t, id) => tabla(t).find((x) => x.id === id);
   const miPerfil = () => tabla('perfiles').find((p) => p.id === sesion?.user.id);
   const deBaja = () => !esCoach() && tabla('atletas').some((a) => a.perfil_id === sesion?.user.id && a.estado === 'baja');
-  const ESCRIBE_ATLETA = ['series', 'pesos', 'checkins', 'molestias', 'medidas', 'marcas', 'comentarios', 'archivos', 'sesiones', 'notas_ejercicio', 'registros_habito', 'registros_nutricion', 'cuestionarios'];
+  const ESCRIBE_ATLETA = ['series', 'pesos', 'checkins', 'molestias', 'medidas', 'marcas', 'comentarios', 'archivos', 'sesiones', 'notas_ejercicio', 'registros_habito', 'registros_nutricion', 'cuestionarios', 'menu_comidas', 'comidas_atleta', 'recetas_atleta'];
   const comprobarAlta = (t) => {
     if (ESCRIBE_ATLETA.includes(t) && deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
   };
@@ -146,6 +154,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'sesiones') comprobarDiaPrevisto(f);
     if (t === 'cuestionarios') prepararCuestionario(f, null);
     if (t === 'checkins') validarRespuestas(f, null);
+    // Como la 022: el menú es dato de salud (con su consentimiento, lo escriba quien lo escriba) y el atleta solo
+    // apunta recetas de su recetario (o texto libre)
+    if (t === 'menu_comidas') comprobarMenu(f, null);
   }
   function despuesDeInsertar(t, f) {
     if (t === 'comentarios' && f.autor === 'coach') {
@@ -158,6 +169,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     const c = { ...cambios };
     if (t !== 'comentarios') comprobarAlta(t);
     if (t === 'notas_ejercicio') c.actualizado_en = ahora();
+    if (t === 'recetas') { c.actualizada_en = ahora(); delete c.creada_en; }
+    // Como la 022: de su recetario, el atleta solo cambia la favorita y la petición de cambio (la fecha la pone la base)
+    if (t === 'recetas_atleta' && !esCoach()) {
+      if (Object.keys(c).some((k) => !['favorita', 'cambio_pedido_en', 'cambio_nota'].includes(k))) throw new Error('Solo el coach puede cambiar tu recetario: pídele el cambio');
+      if ('cambio_pedido_en' in c) c.cambio_pedido_en = c.cambio_pedido_en ? ahora() : null; // por fila, ver update
+    }
+    if (t === 'recetas_atleta' && 'cambio_pedido_en' in c && c.cambio_pedido_en == null) c.cambio_nota = null;
     if (t === 'perfiles' && c.exige_2fa === false && miPerfil()?.exige_2fa && sesion?.aal !== 'aal2') {
       throw new Error('Para desactivar la verificación en dos pasos tienes que haber entrado con ella');
     }
@@ -210,6 +228,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       throw new Error('Para apuntar la nutrición hace falta el consentimiento de datos de salud del atleta');
     }
     if (!esCoach() && f.fecha > sumar(hoyISO(), 1)) throw new Error('No se puede apuntar un día que aún no ha llegado');
+  }
+  function comprobarMenu(nueva, antes) {
+    if (!consentimientoDe(nueva.atleta_id)) throw new Error('Para organizar el menú hace falta el consentimiento de datos de salud del atleta');
+    if (nueva.receta_id && !esCoach() && (!antes || nueva.receta_id !== antes.receta_id)
+      && !tabla('recetas_atleta').some((a) => a.atleta_id === nueva.atleta_id && a.receta_id === nueva.receta_id)) throw new Error('Esa receta no está en tu recetario');
   }
   const consentimientoDe = (atletaId) => {
     const atleta = buscar('atletas', atletaId);
@@ -310,7 +333,20 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const FOCOS_SEMANA = ['tecnica', 'volumen', 'intensidad', 'adaptacion', 'descarga', 'evaluacion', 'peaking'];
   const esFecha = (f) => typeof f === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f);
   const textoCorto = (v, max) => v == null || (String(v).length >= 1 && String(v).length <= max && textoVisible(v));
+  const TOMAS = ['desayuno', 'media_manana', 'comida', 'merienda', 'cena', 'recena'];
+  const FOTO_OK = (v, max) => v == null || (String(v).length <= max && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(String(v)));
   const CHECKS = {
+    // Migración 022: recetas, recetario, comidas del día y menú
+    recetas: (f) => textoCorto(f.nombre, 80) && f.nombre != null && Array.isArray(f.tomas) && f.tomas.length <= 6 && f.tomas.every((t) => TOMAS.includes(t))
+      && Number.isInteger(n(f.raciones)) && entre(n(f.raciones), 1, 20) && entre(n(f.kcal), 0, 5000) && entre(n(f.proteina_g), 0, 500) && entre(n(f.carbos_g), 0, 800) && entre(n(f.grasa_g), 0, 400)
+      && Array.isArray(f.ingredientes) && f.ingredientes.length <= 40 && f.ingredientes.every((i) => i && typeof i === 'object' && Object.keys(i).every((k) => ['nombre', 'cantidad', 'unidad'].includes(k)) && textoCorto(i.nombre, 80) && i.nombre != null
+        && (i.cantidad == null || (typeof i.cantidad === 'number' && i.cantidad > 0 && i.cantidad <= 100000)) && (i.unidad == null || textoCorto(i.unidad, 16)))
+      && textoCorto(f.preparacion, 4000) && (f.minutos == null || entre(n(f.minutos), 0, 600)) && Array.isArray(f.etiquetas) && f.etiquetas.length <= 8 && f.etiquetas.every((e) => textoCorto(e, 24) && e != null)
+      && FOTO_OK(f.foto, 250000) && FOTO_OK(f.foto_mini, 40000),
+    recetas_atleta: (f) => TOMAS.includes(f.toma) && entre(Number(f.factor), 0.25, 5) && entre(n(f.orden), 0, 999) && textoCorto(f.nota, 300) && (f.cambio_nota == null || (f.cambio_pedido_en != null && textoCorto(f.cambio_nota, 300))),
+    comidas_atleta: (f) => Array.isArray(f.tomas) && f.tomas.length >= 1 && f.tomas.length <= 6 && f.tomas.every((t) => TOMAS.includes(t)) && new Set(f.tomas).size === f.tomas.length,
+    menu_comidas: (f) => fechaValida(f.fecha) && TOMAS.includes(f.toma) && textoCorto(f.texto, 120) && f.texto != null && entre(Number(f.raciones), 0.25, 10)
+      && entre(n(f.kcal), 0, 15000) && entre(n(f.proteina_g), 0, 1500) && entre(n(f.carbos_g), 0, 2500) && entre(n(f.grasa_g), 0, 1000) && entre(n(f.orden), 0, 99),
     // Migración 020: cobros
     cobros_atletas: (f) => ['mensual', 'trimestral', 'semestral', 'anual'].includes(f.ciclo) && (f.precio_mes == null || entre(Number(f.precio_mes), 0, 10000))
       && textoCorto(f.servicio, 60) && textoCorto(f.nota, 500),
@@ -407,7 +443,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         && (f.etiqueta_max == null || (f.tipo === 'escala' && txt(f.etiqueta_max, 30))) && Number.isInteger(f.orden) && f.orden >= 0 && f.orden <= 99;
     },
     atletas: (f) => (f.checkin_apartados == null || (Array.isArray(f.checkin_apartados) && f.checkin_apartados.every((x) => ['peso', 'descanso', 'molestias', 'alimentacion', 'medidas', 'reloj'].includes(x))))
-      && (f.nivel == null || ['novato', 'novato_intermedio', 'intermedio', 'avanzado'].includes(f.nivel)) && (f.nutricion === undefined || typeof f.nutricion === 'boolean'),
+      && (f.nivel == null || ['novato', 'novato_intermedio', 'intermedio', 'avanzado'].includes(f.nivel)) && (f.nutricion === undefined || typeof f.nutricion === 'boolean')
+      && (f.entrenamiento === undefined || typeof f.entrenamiento === 'boolean') && (f.entrenamiento !== false || f.nutricion !== false),
     registros_nutricion: (f) => fechaValida(f.fecha) && unDecimal(f.proteina_g) && unDecimal(f.carbos_g) && unDecimal(f.grasa_g) && unDecimal(f.fibra_g)
       && entre(n(f.kcal), 0, 15000) && entero(n(f.kcal)) && entre(n(f.proteina_g), 0, 1500) && entre(n(f.carbos_g), 0, 2500) && entre(n(f.grasa_g), 0, 1000)
       && entre(n(f.fibra_g), 0, 300) && (f.cumplido == null || [0, 1, 2].includes(Number(f.cumplido))) && (f.nota == null || (String(f.nota).length <= 280 && textoVisible(f.nota)))
@@ -426,10 +463,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
   }
 
-  const soloCoach = (t) => { if (['cobros_atletas', 'pagos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   function insertar(t, fila) {
     soloCoach(t);
-    const nueva = { ...(t === 'cobros_atletas' ? {} : { id: uuid() }), ...(DEFECTOS[t]?.() || {}), ...copia(fila) };
+    if (t === 'recetas_atleta' && !esCoach()) throw new Error('new row violates row-level security policy');
+    const nueva = { ...(SIN_ID.includes(t) ? {} : { id: uuid() }), ...(DEFECTOS[t]?.() || {}), ...copia(fila) };
     antesDeInsertar(t, nueva);
     if (t === 'objetivos') comprobarMarca(nueva);
     comprobarChecks(t, nueva);
@@ -445,6 +483,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (adj.length) db.comentarios = tabla('comentarios').filter((c) => !adj.includes(c.archivo_id));
     }
     for (const [hija, col] of CASCADA[t] || []) {
+      // Las que no tienen «id» (una fila por atleta) se borran por su columna
+      if (SIN_ID.includes(hija)) { db[hija] = tabla(hija).filter((x) => !ids.includes(x[col])); continue; }
       const idsHijas = tabla(hija).filter((x) => ids.includes(x[col])).map((x) => x.id);
       if (idsHijas.length) borrarCascada(hija, idsHijas);
     }
@@ -590,10 +630,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async update(t, cambios, f) {
-      if (['cobros_atletas', 'pagos'].includes(t) && !esCoach()) return [];
+      if (['cobros_atletas', 'pagos', 'recetas'].includes(t) && !esCoach()) return [];
       const res = [];
       const c = antesDeActualizar(t, cambios);
       const filas = tabla(t).filter((fila) => cumple(fila, f));
+      const porFilaFecha = new Map();
       if (t === 'sesiones' && 'preparacion' in c) for (const fila of filas) comprobarPreparacion(fila, c.preparacion);
       if (t === 'sesiones' && 'dia_previsto' in c) for (const fila of filas) comprobarDiaPrevisto({ ...fila, ...c });
       // Como la migración 008: si el coach mueve una semana, el plan del atleta se mueve con ella
@@ -607,6 +648,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         }
       }
       if (t === 'habitos') for (const fila of filas) protegerHabito(fila, c);
+      if (t === 'menu_comidas') for (const fila of filas) comprobarMenu({ ...fila, ...c }, fila);
+      if (t === 'recetas_atleta' && !esCoach() && c.cambio_pedido_en) {
+        // Como la 022: la fecha de la petición solo cambia al pedirla o al cambiar la nota
+        for (const fila of filas) if (fila.cambio_pedido_en && ('cambio_nota' in c ? c.cambio_nota : fila.cambio_nota) === fila.cambio_nota) porFilaFecha.set(fila, fila.cambio_pedido_en);
+      }
       if ((t === 'planes_nutricion' || t === 'registros_nutricion') && 'atleta_id' in c && filas.some((fila) => fila.atleta_id !== c.atleta_id)) throw new Error('No se puede pasar a otro atleta');
       if (t === 'registros_nutricion') for (const fila of filas) prepararRegistroNutricion({ ...fila, ...c });
       if (t === 'objetivos') for (const fila of filas) comprobarMarca({ ...fila, ...copia(c) });
@@ -620,7 +666,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (porFila.has(fila)) { Object.assign(fila, porFila.get(fila)); res.push(fila); continue; }
         // Como la migración 008: si la sesión cambia de semana, su día previsto se quita (salvo que venga uno nuevo)
         if (t === 'sesiones' && 'semana_id' in c && c.semana_id !== fila.semana_id && !('dia_previsto' in c)) fila.dia_previsto = null;
-        Object.assign(fila, copia(c)); if (t === 'objetivos') comprobarMarca(fila); res.push(fila);
+        Object.assign(fila, copia(c)); if (porFilaFecha.has(fila)) fila.cambio_pedido_en = porFilaFecha.get(fila);
+        if (t === 'objetivos') comprobarMarca(fila); res.push(fila);
       }
       persistirYa();
       return copia(res);
@@ -647,7 +694,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async delete(t, f) {
-      if (['cobros_atletas', 'pagos'].includes(t) && !esCoach()) return [];
+      if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta'].includes(t) && !esCoach()) return [];
+      if (SIN_ID.includes(t)) { db[t] = tabla(t).filter((x) => !cumple(x, f)); persistirYa(); return; }
       const ids = tabla(t).filter((x) => cumple(x, f)).map((x) => x.id);
       if (t === 'preguntas_checkin' && ids.some(conRespuestas)) throw new Error('Esta pregunta ya tiene respuestas: archívala para no perderlas');
       borrarCascada(t, ids);

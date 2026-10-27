@@ -16,7 +16,8 @@ import { PlanSemana } from './Plan.jsx';
 import { HabitosHoy } from './Habitos.jsx';
 import { TarjetaNotificaciones } from '../Notificaciones.jsx';
 import { NutricionHoy } from './Nutricion.jsx';
-import { conNutricion } from '../../logica/nivel.js';
+import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
+import { MenuHoy } from './Comidas.jsx';
 import { AvisoCobro } from './Cobro.jsx';
 import { HojaCuestionario, TarjetaCuestionario, pendiente } from './Cuestionario.jsx';
 import { TarjetaCardio } from './Sesion.jsx';
@@ -28,6 +29,8 @@ export { duracionEstimada };
 export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos, releer, recargarConsentimientos }) {
   const { api, atleta, perfil } = useApp();
   const { datos: p, cargando, error, recargar } = programa;
+  // Solo nutrición (v0.26): sin nada de entrenamiento
+  const entrena = conEntrenamiento(atleta);
   // Atleta nuevo: bienvenida (una vez) y primeros pasos hasta completarlos u ocultarlos
   const hechos = useCarga(() => api.primerosPasos(atleta.id).catch(() => null), [atleta.id, p, checkinSemana.datos]);
   // Cuestionario inicial: un paso de los primeros pasos y, si el coach lo pide, una tarjeta
@@ -45,7 +48,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
     { id: 'cuestionario', texto: 'Rellena tu cuestionario inicial', hecho: hechos.datos.cuestionario, etiqueta: 'Empezar', accion: () => setVerCuestionario(true) },
     { id: 'instalar', texto: 'Ponla en tu pantalla de inicio', hecho: esApp || instalada, etiqueta: 'Ya la tengo', accion: () => setInstalada(true),
       ayuda: ios ? 'En Safari, toca Compartir y luego «Añadir a pantalla de inicio».' : 'En Chrome, toca el menú ⋮ y luego «Instalar aplicación».' },
-    { id: 'sesion', texto: 'Haz tu primera sesión', hecho: hechos.datos.sesion, etiqueta: 'Empezar', accion: siguienteId ? () => abrirSesion(siguienteId) : null },
+    ...(entrena ? [{ id: 'sesion', texto: 'Haz tu primera sesión', hecho: hechos.datos.sesion, etiqueta: 'Empezar', accion: siguienteId ? () => abrirSesion(siguienteId) : null }] : []),
     ...(salud ? [
       { id: 'peso', texto: 'Apunta tu peso', hecho: hechos.datos.peso, etiqueta: 'Apuntar', accion: () => { const el = document.querySelector('.peso-hoy button'); el?.scrollIntoView({ block: 'center' }); el?.click(); } },
       { id: 'checkin', texto: 'Envía tu primer check-in', hecho: hechos.datos.checkin, etiqueta: 'Ir', accion: () => irA('checkin') },
@@ -55,7 +58,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
   // Solo para quien acaba de llegar (su primer mes): a quien ya lleva tiempo no se le enseña
   const nuevo = !atleta.fecha_alta || diasEntre(atleta.fecha_alta, hoyISO()) <= 30;
   const verPasos = pasos && nuevo && !pasosOcultos && pasos.some((x) => !x.hecho);
-  const verBienvenida = hechos.datos && !hechos.datos.sesion && !bienvenidaVista;
+  const verBienvenida = hechos.datos && (!entrena || !hechos.datos.sesion) && !bienvenidaVista;
 
   return (
     <>
@@ -74,8 +77,18 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
         <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>
       )}
       {verPasos ? <PrimerosPasos pasos={pasos} alOcultar={() => setPasosOcultos(true)} /> : <AvisoInstalar />}
-      {(verPasos || (!p && !cargando)) && <AvisosCoach />}
-      {cargando && !p ? <Siluetas forma="hoy" texto="Cargando tu programa" /> : p && (
+      {(verPasos || (!p && !cargando) || !entrena) && <AvisosCoach />}
+      {!entrena ? (
+        <ContenidoNutricion irA={irA} checkinSemana={checkinSemana} salud={salud} recargarConsentimientos={recargarConsentimientos}
+          entre={(
+            <>
+              {!verPasos && atleta.estado !== 'baja' && <TuDia p={null} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} />}
+              {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
+              {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
+              {!verPasos && <TarjetaNotificaciones />}
+            </>
+          )} />
+      ) : cargando && !p ? <Siluetas forma="hoy" texto="Cargando tu programa" /> : p && (
         <Contenido p={p} atleta={atleta} abrirSesion={abrirSesion} irA={irA} checkinSemana={checkinSemana} salud={salud} noLeidos={noLeidos} recargar={() => recargar(true)}
           entre={(
             <>
@@ -99,10 +112,10 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
 }
 
 // «Tu día»: lo que toca hoy, en una lista corta. Tocar una fila lleva a esa parte de la pantalla (o abre la sesión).
-const ICONO_DIA = { sesion: 'hoy', habitos: 'llama', nutricion: 'nutricion', peso: 'bascula', checkin: 'checkin', cuestionario: 'pregunta' };
+const ICONO_DIA = { sesion: 'hoy', habitos: 'llama', nutricion: 'nutricion', menu: 'receta', peso: 'bascula', checkin: 'checkin', cuestionario: 'pregunta' };
 function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, version }) {
   const { api, atleta } = useApp();
-  const dia = useCarga(() => api.tuDia(atleta.id, { programa: p, checkin: checkinSemana.datos, salud, nutricion: conNutricion(atleta) }).catch(() => null), [atleta.id, p, checkinSemana.datos, salud, version]);
+  const dia = useCarga(() => api.tuDia(atleta.id, { programa: p, checkin: checkinSemana.datos, salud, nutricion: conNutricion(atleta), entrenamiento: conEntrenamiento(atleta) }).catch(() => null), [atleta.id, p, checkinSemana.datos, salud, version]);
   // Tras apuntar algo en cualquier parte de la pantalla (un hábito, la nutrición, el peso), la lista se pone al día
   const recargarRef = useRef(null);
   recargarRef.current = dia.recargar;
@@ -123,6 +136,7 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
     else if (x.accion === 'nutricion') bajarA('.seccion-nutricion');
     else if (x.accion === 'peso') { const el = document.querySelector('.peso-hoy button'); el?.scrollIntoView({ block: 'center' }); if (!items.find((y) => y.id === 'peso' && y.estado === 'hecho')) el?.click(); }
     else if (x.accion === 'checkin') irA('checkin');
+    else if (x.accion === 'comidas') irA('comidas');
     else if (x.accion === 'cuestionario') abrirCuestionario();
   };
   return (
@@ -240,6 +254,27 @@ function AvisoInstalar() {
   );
 }
 
+// Hoy de quien solo lleva la nutrición (v0.26): su menú de hoy, su nutrición, hábitos y peso
+function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos, entre = null }) {
+  const { api, atleta } = useApp();
+  const checkinHecho = !!checkinSemana.datos?.checkin;
+  return (
+    <>
+      <MenuHoy irA={irA} salud={salud} darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }} />
+      {entre}
+      {salud && <NutricionHoy />}
+      {salud && <HabitosHoy />}
+      {salud && <PesoHoy irA={irA} />}
+      {salud && !checkinHecho && diaDeCheckin() && (
+        <button class="nota-coach" style="border:0;text-align:left;cursor:pointer" onClick={() => irA('checkin')}>
+          <Icono n="checkin" /><div><strong>Check-in semanal pendiente.</strong> Un minuto: peso, sueño, energía y cómo vas.</div>
+        </button>
+      )}
+      {atleta.notion_url && <a class="btn btn-ancho plano" href={atleta.notion_url} target="_blank" rel="noopener">Abrir mi página de Notion</a>}
+    </>
+  );
+}
+
 function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos, recargar, entre = null }) {
   const { api } = useApp();
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id, p]);
@@ -261,6 +296,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           </Vacio>
           {atleta.notion_url && <div class="panel-pad"><a class="btn btn-ancho" href={atleta.notion_url} target="_blank" rel="noopener">Abrir mi página de Notion</a></div>}
         </div>
+        {salud && conNutricion(atleta) && <MenuHoy irA={irA} salud={salud} compacto />}
         {salud && conNutricion(atleta) && <NutricionHoy />}
       </>
     );
@@ -349,6 +385,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         </Hoja>
       )}
 
+      {salud && conNutricion(atleta) && <MenuHoy irA={irA} salud={salud} compacto />}
       {salud && conNutricion(atleta) && <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />}
 
       {salud && <HabitosHoy />}

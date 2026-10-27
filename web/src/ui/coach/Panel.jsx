@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { HojaAvisos } from '../Avisos.jsx';
 import { useUnaVez, Siluetas, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos } from '../comunes.jsx';
-import { NIVELES, AYUDA_NIVEL } from '../../logica/nivel.js';
+import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO } from '../../logica/nivel.js';
 import { BandaDemo } from '../App.jsx';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
 import { hace, fmtCorta } from '../../logica/fechas.js';
@@ -76,8 +76,14 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
                     <tr key={r.atleta_id} onClick={() => abrir(r.atleta_id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id); }}>
                       <td><div class="nombre"><Avatar nombre={r.nombre} foto={r.foto} /><span>{r.nombre}</span></div><Alertas r={r} pendientes={pendientes[r.atleta_id]} /></td>
                       {conCobros && <td><CobroPanel c={r.cobro} /></td>}
-                      <td class="num-c">{r.semana ? <>S{r.semana.numero}/{r.semana.total}<div class="mini terciario">{r.semana.foco ? NOMBRE_FOCO[r.semana.foco] : r.bloque?.nombre}</div></> : '—'}</td>
-                      <td><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /></td>
+                      {r.servicio === 'nutricion' ? (
+                        <td colSpan={2}><span class="chip morado">Solo nutrición</span>{r.diasNutricion != null && <div class="mini terciario">{r.diasNutricion}/7 días apuntados</div>}</td>
+                      ) : (
+                        <>
+                          <td class="num-c">{r.semana ? <>S{r.semana.numero}/{r.semana.total}<div class="mini terciario">{r.semana.foco ? NOMBRE_FOCO[r.semana.foco] : r.bloque?.nombre}</div></> : '—'}</td>
+                          <td><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /></td>
+                        </>
+                      )}
                       <td class="num-c">{r.peso ? <>{num(r.peso.kg)} kg{r.peso.ritmo ? <div class="mini terciario">{signo(r.peso.ritmo.kgSemana, 2)}/sem</div> : r.peso.cambio != null && <div class="mini terciario">{signo(r.peso.cambio)}</div>}</> : '—'}</td>
                       <td class="num-c">{sueno(r.checkin?.horas_sueno)}</td>
                       <td>{r.checkin?.motivacion ? ESCALAS.motivacion[r.checkin.motivacion - 1] : '—'}</td>
@@ -94,15 +100,17 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
               <button class="tarjeta-atleta" key={r.atleta_id} onClick={() => abrir(r.atleta_id)}>
                 <div class="cab">
                   <Avatar nombre={r.nombre} foto={r.foto} />
-                  <span><strong>{r.nombre}</strong>{r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
+                  <span><strong>{r.nombre}</strong>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
                   {r.semana && <span class="peq secundario num">S{r.semana.numero}/{r.semana.total}</span>}
                 </div>
                 <Alertas r={r} pendientes={pendientes[r.atleta_id]} />
                 {r.estado === 'activo' && (
                   <div class="datos">
-                    <div><div class="k">Sesiones</div><div class="v"><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} corto /></div></div>
+                    {r.servicio === 'nutricion'
+                      ? <div><div class="k">Nutrición</div><div class="v">{r.diasNutricion != null ? `${r.diasNutricion}/7 días` : '—'}</div></div>
+                      : <div><div class="k">Sesiones</div><div class="v"><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} corto /></div></div>}
                     <div><div class="k">Peso</div><div class="v">{r.peso ? `${num(r.peso.kg)}${r.peso.ritmo ? ` (${signo(r.peso.ritmo.kgSemana, 2)}/sem)` : r.peso.cambio != null ? ` (${signo(r.peso.cambio)})` : ''}` : '—'}</div></div>
-                    <div><div class="k">Último registro</div><div class="v">{r.ultimaSerie ? hace(r.ultimaSerie) : '—'}</div></div>
+                    {r.servicio !== 'nutricion' && <div><div class="k">Último registro</div><div class="v">{r.ultimaSerie ? hace(r.ultimaSerie) : '—'}</div></div>}
                   </div>
                 )}
                 {r.cobro && <div class="cobro-tarjeta"><span class="k">Pagos</span><CobroPanel c={r.cobro} enLinea /></div>}
@@ -133,7 +141,7 @@ function CobroPanel({ c, enLinea = false }) {
 
 function NuevoAtleta({ alCerrar }) {
   const { api } = useApp();
-  const [f, setF] = useState({ nombre: '', email: '', objetivo: '', notion_url: '', nutricion: true, nivel: null });
+  const [f, setF] = useState({ nombre: '', email: '', objetivo: '', notion_url: '', servicio: 'completo', nivel: null });
   const [error, setError] = useState(null);
   const [creado, setCreado] = useState(null);
   const [ocupado, una] = useUnaVez();
@@ -145,7 +153,7 @@ function NuevoAtleta({ alCerrar }) {
         e.preventDefault();
         una(async () => {
           try {
-            const a = await api.crearAtleta({ nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null, nutricion: f.nutricion, nivel: f.nivel });
+            const a = await api.crearAtleta({ nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null, ...CAMPOS_SERVICIO[f.servicio], nivel: f.servicio === 'nutricion' ? null : f.nivel });
             setCreado(a);
           } catch (err) { setError(err.message); }
         });
@@ -154,11 +162,11 @@ function NuevoAtleta({ alCerrar }) {
         <div class="campo"><label for="na-nombre">Nombre y apellidos</label><input id="na-nombre" class="entrada" required value={f.nombre} onInput={cambiar('nombre')} /></div>
         <div class="campo"><label for="na-email">Email</label><input id="na-email" class="entrada" type="email" value={f.email} onInput={cambiar('email')} /><span class="ayuda">Solo para tu referencia; el atleta crea su cuenta con el email que quiera.</span></div>
         <div class="campo"><span class="etq">Servicio</span>
-          <Segmentos etiqueta="Servicio" valor={f.nutricion ? 'completo' : 'entrenamiento'} opciones={[['entrenamiento', 'Solo entrenamiento'], ['completo', 'Entrenamiento y nutrición']]}
-            alCambiar={(v) => v && setF({ ...f, nutricion: v === 'completo' })} /></div>
-        <div class="campo"><span class="etq">Nivel</span>
+          <Segmentos etiqueta="Servicio" clase="segmentos-servicio" valor={f.servicio} opciones={SERVICIOS}
+            alCambiar={(v) => v && setF({ ...f, servicio: v })} /></div>
+        {f.servicio !== 'nutricion' && <div class="campo"><span class="etq">Nivel</span>
           <Segmentos etiqueta="Nivel" clase="segmentos-nivel" valor={f.nivel} opciones={NIVELES} alCambiar={(v) => setF({ ...f, nivel: v })} />
-          <span class="ayuda">{f.nivel ? AYUDA_NIVEL[f.nivel] : 'Decide cómo pautas la carga en el editor. Puedes elegirlo después, en Datos.'}</span></div>
+          <span class="ayuda">{f.nivel ? AYUDA_NIVEL[f.nivel] : 'Decide cómo pautas la carga en el editor. Puedes elegirlo después, en Datos.'}</span></div>}
         <div class="campo"><label for="na-obj">Objetivo</label><input id="na-obj" class="entrada" value={f.objetivo} onInput={cambiar('objetivo')} placeholder="Ganar fuerza y bajar 3 kg" /></div>
         <div class="campo"><label for="na-notion">Su página de Notion</label><input id="na-notion" class="entrada" type="url" value={f.notion_url} onInput={cambiar('notion_url')} placeholder="https://notion.so/…" /><span class="ayuda">La verá en su perfil para la alimentación y los recursos hasta que pasen a la app.</span></div>
         <button class="btn btn-primario btn-grande" disabled={ocupado}>{ocupado ? 'Creando…' : 'Crear y generar código'}</button>

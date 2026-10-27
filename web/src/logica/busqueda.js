@@ -1,4 +1,5 @@
 import { NOMBRE_GRUPO } from './calculos.js';
+import { conEntrenamiento, conNutricion } from './nivel.js';
 
 // Búsqueda rápida del coach: qué proponer para lo que escribe. Sin tildes ni mayúsculas, por principio
 // de palabra (todas las escritas tienen que empezar alguna palabra: «ana» encuentra a Ana López, no «semana»). Si una palabra nombra una pestaña de la ficha («ana seguimiento»),
@@ -8,6 +9,9 @@ export const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\
 const palabras = (t) => normal(t).split(/[^a-z0-9]+/).filter(Boolean);
 const casaCon = (fichas, texto) => { const ws = palabras(texto); return fichas.every((f) => ws.some((w) => w.startsWith(f))); };
 const PESTANAS = [['programa', 'Programa'], ['mensajes', 'Mensajes'], ['actividad', 'Actividad'], ['registro', 'Registro'], ['seguimiento', 'Seguimiento'], ['nutricion', 'Nutrición'], ['videos', 'Vídeos y fotos'], ['objetivos', 'Objetivos'], ['notas', 'Notas'], ['datos', 'Datos']];
+// Las pestañas que tiene la ficha de cada atleta según lo que le llevas (a quien solo lleva la nutrición, nada de entrenamiento)
+const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
+export const pestanasDe = (a) => PESTANAS.filter(([k]) => (conNutricion(a) || k !== 'nutricion') && (conEntrenamiento(a) || !DE_ENTRENAMIENTO.includes(k)));
 const ESTADO = { invitado: 'Pendiente de activar', activo: 'Activo', pausado: 'En pausa', baja: 'De baja' };
 
 export function construirResultados(datos, q) {
@@ -25,11 +29,13 @@ export function construirResultados(datos, q) {
   const antes = (nombre) => (restoFichas[0] && normal(nombre).split(/\s+/).some((w) => w.startsWith(restoFichas[0])) ? 0 : 1);
   const deAtleta = atletas.filter((a) => casaCon(restoFichas, `${a.nombre} ${a.email || ''} ${a.objetivo || ''}`))
     .sort((x, y) => antes(x.nombre) - antes(y.nombre));
-  const atletasItems = [];
+  const conPestana = [], fichasAtleta = [];
   for (const a of fichas.length ? deAtleta : atletas.filter((x) => x.estado !== 'baja')) {
-    if (pestanaPedida && restoFichas.length) atletasItems.push({ id: `a-${a.id}-${pestanaPedida[0]}`, titulo: `${a.nombre}: ${pestanaPedida[1]}`, detalle: 'Abrir la pestaña', icono: 'atletas', destino: { tab: 'atletas', atletaId: a.id, pestana: pestanaPedida[0] } });
-    atletasItems.push({ id: `a-${a.id}`, titulo: a.nombre, detalle: [ESTADO[a.estado], a.objetivo].filter(Boolean).join('. '), icono: 'atletas', destino: { tab: 'atletas', atletaId: a.id, pestana: 'programa' } });
+    if (pestanaPedida && restoFichas.length && pestanasDe(a).some(([k]) => k === pestanaPedida[0])) conPestana.push({ id: `a-${a.id}-${pestanaPedida[0]}`, titulo: `${a.nombre}: ${pestanaPedida[1]}`, detalle: 'Abrir la pestaña', icono: 'atletas', destino: { tab: 'atletas', atletaId: a.id, pestana: pestanaPedida[0] } });
+    fichasAtleta.push({ id: `a-${a.id}`, titulo: a.nombre, detalle: [ESTADO[a.estado], a.objetivo].filter(Boolean).join('. '), icono: 'atletas', destino: { tab: 'atletas', atletaId: a.id, pestana: conEntrenamiento(a) ? 'programa' : 'nutricion' } });
   }
+  // Si se nombra una pestaña, primero los que la tienen
+  const atletasItems = [...conPestana, ...fichasAtleta];
   poner('Atletas', atletasItems, fichas.length ? 8 : 5);
 
   const acciones = [

@@ -7,6 +7,7 @@ import { Hilo } from '../Hilo.jsx';
 import { VerArchivo } from '../Archivos.jsx';
 import { ESCALAS, NOMBRE_ZONA, num } from '../../logica/calculos.js';
 import { fmtConDia, rangoSemana } from '../../logica/fechas.js';
+import { NOMBRE_TOMA } from '../../logica/comidas.js';
 
 // «Deshacer» en el aviso: vuelve a dejarlo pendiente
 const deshacer = (api, tipo, id, recargar) => ({ texto: 'Deshacer', fn: async () => { await api.marcarRevisado(tipo, id, false); recargar(); } });
@@ -48,7 +49,7 @@ function useAtajos(caja, n) {
   return i;
 }
 
-const FILTROS = [['todo', 'Todo'], ['mensajes', 'Mensajes'], ['sesiones', 'Sesiones'], ['checkins', 'Check-ins'], ['videos', 'Vídeos']];
+const FILTROS = [['todo', 'Todo'], ['mensajes', 'Mensajes'], ['sesiones', 'Sesiones'], ['checkins', 'Check-ins'], ['videos', 'Vídeos'], ['recetas', 'Recetas']];
 
 // Bandeja del coach: todo lo que espera tu respuesta, de todos los atletas, en un sitio
 export function Revisar({ bandeja, abrirAtleta }) {
@@ -67,7 +68,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
     if (!h) { h = { clave, ultimo: c, n: 0 }; hilos.push(h); }
     h.n++;
   }
-  const cuentas = { mensajes: hilos.length, sesiones: d?.sesiones.length || 0, checkins: d?.checkins.length || 0, videos: d?.archivos.length || 0 };
+  const cuentas = { mensajes: hilos.length, sesiones: d?.sesiones.length || 0, checkins: d?.checkins.length || 0, videos: d?.archivos.length || 0, recetas: d?.recetas?.length || 0 };
   const ver = (k) => filtro === 'todo' || filtro === k;
 
   return (
@@ -88,6 +89,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
           {ver('sesiones') && d.sesiones.map((s) => <TarjetaSesion key={s.id} s={s} recargar={recargar} abrirAtleta={abrirAtleta} />)}
           {ver('checkins') && d.checkins.map((c) => <TarjetaCheckin key={c.id} c={c} recargar={recargar} abrirAtleta={abrirAtleta} />)}
           {ver('videos') && d.archivos.map((a) => <TarjetaVideo key={a.id} a={a} recargar={recargar} abrirAtleta={abrirAtleta} />)}
+          {ver('recetas') && (d.recetas || []).map((r) => <TarjetaCambioReceta key={r.id} r={r} recargar={recargar} abrirAtleta={abrirAtleta} />)}
         </div>
       )}
       <p class="mini terciario">Comentar algo lo da por revisado. Las sesiones y los check-ins de más de 4 semanas salen de la bandeja solos.</p>
@@ -190,6 +192,23 @@ function TarjetaVideo({ a, recargar, abrirAtleta }) {
       {a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}
       {abierto && <><VerArchivo archivo={a} /><Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} alCambiar={recargar} placeholder="Qué corregir, qué está bien…" /></>}
       <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} etiquetaComentar="Ver y comentar" />
+    </article>
+  );
+}
+
+// Una receta que el atleta pide cambiar (v0.26): se ajusta en su ficha (Nutrición → Recetario) o se da por resuelta
+function TarjetaCambioReceta({ r, recargar, abrirAtleta }) {
+  const { api, aviso } = useApp();
+  const resolver = async () => { try { await api.resolverCambioReceta(r.id); aviso('Petición resuelta'); recargar(); } catch (e) { aviso(e.message, 'error'); } };
+  return (
+    <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar">
+      <Cabecera atleta={r.atleta} tipo={`Pide cambiar una receta (${NOMBRE_TOMA[r.toma]?.toLowerCase() || r.toma})`} cuando={cuando(r.cambio_pedido_en)} abrirAtleta={abrirAtleta} pestana="nutricion" />
+      <p class="peq"><strong>{r.receta.nombre}</strong></p>
+      {r.cambio_nota && <p class="cita">«{r.cambio_nota}»</p>}
+      <div class="fila-envolver">
+        <button class="btn btn-peq" onClick={() => abrirAtleta(r.atleta.id, 'nutricion')}><Icono n="receta" /> Ir a su recetario</button>
+        <button class="btn btn-peq revisar-hecho" onClick={resolver}><Icono n="hecho" /> Resuelto</button>
+      </div>
     </article>
   );
 }

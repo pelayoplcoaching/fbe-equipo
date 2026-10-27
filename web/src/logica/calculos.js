@@ -728,8 +728,10 @@ export function resumenAtleta(d, hoy = hoyISO()) {
   if (atleta.estado === 'invitado') {
     alertas.push({ tipo: 'invitado', nivel: 'info', texto: 'Aún no ha activado su cuenta' });
   }
+  // Solo nutrición (v0.26): nada de avisos de entrenamiento
+  const entrena = atleta.entrenamiento !== false;
   if (atleta.estado === 'activo') {
-    if (!bloque) alertas.push({ tipo: 'sin_bloque', nivel: 'aviso', texto: 'Sin bloque activo' });
+    if (entrena && !bloque) alertas.push({ tipo: 'sin_bloque', nivel: 'aviso', texto: 'Sin bloque activo' });
 
     const diasSinEntrenar = d.ultimaSerie ? diasEntre(d.ultimaSerie, hoy) : null;
     // Días desde que empezó el bloque (negativo si aún no ha empezado): un bloque que empieza el lunes
@@ -737,7 +739,7 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     const diasBloque = bloque?.fecha_inicio ? diasEntre(bloque.fecha_inicio, hoy) : null;
     const empezado = diasBloque === null || diasBloque >= 0;
     const parado = diasBloque === null ? diasSinEntrenar : Math.min(diasSinEntrenar ?? Infinity, diasBloque);
-    if (bloque && empezado && (parado === null || parado >= 5)) {
+    if (entrena && bloque && empezado && (parado === null || parado >= 5)) {
       alertas.push({
         tipo: 'sin_entrenar', nivel: 'aviso',
         texto: diasSinEntrenar === null ? 'Todavía no ha registrado ninguna serie' : `${diasSinEntrenar} días sin registrar series`,
@@ -754,10 +756,10 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     if (!tieneReciente) alertas.push({ tipo: 'sin_checkin', nivel: 'info', texto: 'Sin check-in la semana pasada' });
 
     // Carga de la semana pasada muy por encima o por debajo de su media (descriptivo: es para mirarlo, no un diagnóstico)
-    const cc = d.sesionesRecientes ? cambioCarga(cargaSemanal(d.sesionesRecientes, hoy, 6)) : null;
+    const cc = entrena && d.sesionesRecientes ? cambioCarga(cargaSemanal(d.sesionesRecientes, hoy, 6)) : null;
     if (cc && cc.ratio >= 1.5) alertas.push({ tipo: 'carga', nivel: 'info', texto: `Carga de la semana pasada: ${num(cc.ratio)} veces su media` });
     // Cumplimiento de las 4 últimas semanas acabadas
-    const cu = d.cumplimiento;
+    const cu = entrena ? d.cumplimiento : null;
     if (cu && cu.series.pautadas >= 12 && cu.series.pct < 80) alertas.push({ tipo: 'cumplimiento', nivel: 'aviso', texto: `Solo el ${cu.series.pct} % de lo pautado (4 sem.)` });
     if (cu && cu.esfuerzo.conEsfuerzo >= 20 && cu.esfuerzo.pctEncima >= 40) alertas.push({ tipo: 'esfuerzo', nivel: 'info', texto: `Se pasa del RPE en el ${cu.esfuerzo.pctEncima} % de las series` });
     // Hábitos de la última semana (solo los que llevan al menos una semana puestos)
@@ -766,15 +768,17 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     for (const x of d.nutricion || []) alertas.push({ tipo: x.tipo, nivel: 'info', texto: x.texto });
     // Cuestionario: lo de salud que aún no ha revisado
     if (d.cuestionario) alertas.push({ tipo: d.cuestionario.tipo, nivel: d.cuestionario.nivel, texto: d.cuestionario.texto });
+    // Recetas que pide cambiar (v0.26)
+    if (d.cambiosReceta) alertas.push({ tipo: 'receta', nivel: 'aviso', texto: d.cambiosReceta === 1 ? 'Pide cambiar una receta' : `Pide cambiar ${d.cambiosReceta} recetas` });
     // Bloque en marcha sin ninguna semana publicada: el atleta abre la app y no ve nada
-    if (bloque && empezado && !semana) {
+    if (entrena && bloque && empezado && !semana) {
       const borrador = semanas.filter((s) => s.programacion !== 'programada').sort((a, b) => a.numero - b.numero)[0];
       alertas.push({
         tipo: 'publicar', nivel: 'aviso',
         texto: borrador ? `Publica la semana ${borrador.numero}: aún no ve nada` : 'El bloque no tiene semanas',
       });
     }
-    if (bloque && semana) {
+    if (entrena && bloque && semana) {
       const ultimaProgramada = semanas.filter((s) => s.programacion === 'programada').sort((a, b) => b.numero - a.numero)[0];
       const esUltimaDelBloque = semana.numero === Math.max(...semanas.map((s) => s.numero));
       const diasDentro = semana.fecha_inicio ? diasEntre(semana.fecha_inicio, hoy) : 0;
@@ -795,6 +799,8 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     nombre: atleta.nombre,
     foto: atleta.foto || null,
     estado: atleta.estado,
+    servicio: !entrena ? 'nutricion' : atleta.nutricion === false ? 'entrenamiento' : 'completo',
+    diasNutricion: d.diasNutricion ?? null,
     bloque: bloque ? { id: bloque.id, numero: bloque.numero, nombre: bloque.nombre, foco: bloque.foco } : null,
     semana: semana ? { id: semana.id, numero: semana.numero, foco: semana.foco, total: semanas.length } : null,
     sesiones: { completadas, total: sesiones.length },

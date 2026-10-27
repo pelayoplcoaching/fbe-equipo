@@ -1887,3 +1887,55 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .avatar-ampliable { padding: 0; border: 0; background: none; border-radius: 50%; cursor: zoom-in; flex: none; line-height: 0; }
 .avatar-ampliable:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
 .foto-ampliada { display: block; width: min(100%, 420px); aspect-ratio: 1; object-fit: cover; margin: 0 auto; border-radius: var(--r); background: var(--hoja-2); }
+
+/* ---------- Comidas (v0.26): recetas, recetario y menú de la semana ---------- */
+.receta-foto { display: block; width: 72px; aspect-ratio: 4 / 3; max-width: 100%; object-fit: cover; border-radius: var(--r-xs); background: var(--hoja-2); flex: none; }
+.receta-foto.vacia { display: grid; place-items: center; color: var(--tinta-3); box-shadow: inset 0 0 0 1px var(--linea); }
+.receta-foto.vacia svg { width: 26px; height: 26px; }
+.receta-foto.grande { width: 100%; border-radius: var(--r-s); }
+.receta-foto.grande.vacia svg { width: 44px; height: 44px; }
+.rejilla-recetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 10px; }
+.tarjeta-receta { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px; text-align: left; background: var(--hoja); border: 0; border-radius: var(--r-s); box-shadow: var(--sombra); color: var(--tinta); }
+.tarjeta-receta:hover { background: var(--hoja-2); }
+.tarjeta-receta .receta-foto { width: 88px; }
+.tarjeta-receta-texto { min-width: 0; }
+.tarjeta-receta .nombre { font-weight: 680; line-height: 1.25; display: inline-flex; gap: 6px; align-items: flex-start; }
+.fila-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.fila-chips:empty { display: none; }
+.fila-chips .chip { min-height: 22px; font-size: 12px; padding: 1px 8px; }
+svg.favorita, .favorita { color: var(--disco-amarillo); fill: currentColor; flex: none; width: 16px; height: 16px; }
+.receta-detalle .receta-foto.grande { max-height: 320px; }
+.cifras-receta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.cifras-receta > span { display: grid; gap: 2px; padding: 8px 10px; border-radius: var(--r-xs); background: var(--hoja-2); border-top: 3px solid var(--c, var(--morado)); }
+.cifras-receta b { font-size: 18px; font-weight: 760; }
+.ingredientes { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.ingredientes li::marker { color: var(--morado); }
+.nav-semana { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; text-align: center; gap: 4px; }
+.dias-menu .punto-dia { font-size: 11px; font-weight: 720; }
+.dias-menu .cumple .punto-dia { color: var(--sobre-disco); }
+.totales-menu { gap: 8px; }
+.tomas-dia > li { padding: 10px 16px 12px; display: grid; gap: 6px; }
+.toma-cab .etq { margin: 0; }
+.entrada-menu { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: center; }
+.entrada-texto { display: grid; gap: 1px; text-align: left; background: none; border: 0; padding: 4px 0; color: var(--tinta); font-size: 15px; min-width: 0; }
+button.entrada-texto:hover > span:first-child { text-decoration: underline; text-decoration-color: var(--linea); }
+.entrada-menu.hecha .entrada-texto > span:first-child { color: var(--tinta-2); }
+.casilla-redonda { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--tinta-3); background: var(--hoja); display: grid; place-items: center; padding: 0; color: var(--sobre-disco); flex: none; }
+.casilla-redonda[aria-pressed="true"], .casilla-redonda.marcada { background: var(--ok); border-color: var(--ok); }
+.casilla-redonda svg { width: 15px; height: 15px; stroke-width: 3; }
+.opcion-receta { grid-template-columns: auto minmax(0, 1fr) auto; }
+.opcion-receta .receta-foto { width: 56px; }
+.opcion-receta.elegida { background: var(--morado-suave); }
+.opcion-receta .nombre { display: inline-flex; gap: 6px; align-items: flex-start; }
+.sticky-abajo { position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -6px 18px -10px rgba(0, 0, 0, .35), var(--sombra); }
+.lista-compra { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.menu-hoy-vacio { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; color: var(--tinta); }
+.menu-hoy-vacio > svg:first-child { width: 32px; height: 32px; color: var(--morado); }
+.menu-hoy-vacio > svg:last-child { width: 18px; height: 18px; color: var(--tinta-3); }
+.foto-receta-editar { display: grid; gap: 8px; }
+.foto-receta-editar .receta-foto.grande { max-height: 240px; }
+.lista-alta { max-height: min(52vh, 460px); overflow-y: auto; }
+.pestanas-sub { border-bottom: 0; gap: 6px; }
+.pestanas-sub button { border: 1px solid var(--linea); border-radius: 999px; padding: 6px 14px; margin: 0; }
+.pestanas-sub button[aria-selected="true"] { background: var(--morado-suave); border-color: transparent; color: var(--morado); }
+.segmentos-servicio button { white-space: normal; }

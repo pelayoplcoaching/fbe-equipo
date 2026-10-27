@@ -4,6 +4,7 @@ import { hoyISO, diaDeCheckin, sumarDias as sumar } from './fechas.js';
 import { queToca, diaPrevistoValido } from './plan.js';
 
 // d: { semana, sesiones, pesoHoy (bool|null = no aplica), habitos ([resumenHabito] | null), nutricion ({ plan, hoy } | null),
+//      menu ({ total, hechas } | null),
 //      checkin ({ hecho, pendiente } | null), cuestionario ({ pendiente } | null) }
 // Devuelve [{ id, texto, detalle, estado: 'hecho' | 'toca' | 'luego' | 'descanso', accion }]
 export function tuDia(d, hoy = hoyISO()) {
@@ -34,6 +35,12 @@ export function tuDia(d, hoy = hoyISO()) {
     const sinContar = d.nutricion.plan.modo === 'sin_contar';
     const apuntado = !!d.nutricion.hoy;
     out.push({ id: 'nutricion', texto: 'Nutrición', detalle: apuntado ? (d.nutricion.hoy.completo === false ? 'Apuntada a medias' : 'Apuntada') : sinContar ? '¿Has seguido el plan hoy?' : 'Apunta lo que has comido', estado: apuntado ? 'hecho' : 'luego', accion: 'nutricion' });
+  }
+
+  // Su menú de hoy (v0.26): lo que ha organizado en Comidas
+  if (d.menu?.total) {
+    const todo = d.menu.hechas >= d.menu.total;
+    out.push({ id: 'menu', texto: 'Tu menú de hoy', detalle: todo ? 'Todo comido' : `${d.menu.hechas} de ${d.menu.total} comidas hechas`, estado: todo ? 'hecho' : 'luego', accion: 'comidas' });
   }
 
   if (d.pesoHoy != null) {

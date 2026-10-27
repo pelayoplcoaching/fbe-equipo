@@ -15,6 +15,7 @@ import { dibujoValido } from '../logica/dibujo.js';
 import { tuDia } from '../logica/dia.js';
 import { cardioHechoValido, cardioPorSemana, textoCardioHecho, NOMBRE_MODALIDAD } from '../logica/cardio.js';
 import { pendiente as cuestionarioPendiente } from '../logica/cuestionario.js';
+import { limpiarReceta, recetarioPorToma, tomasDe, ordenarTomas, entradaMenu, copiarMenu, cambiarRaciones } from '../logica/comidas.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 
@@ -29,6 +30,15 @@ const falta020 = (e) => {
   }
   if (/\b(pagos|cobros_atletas)\b/.test(m) && /permission denied|permiso denegado/i.test(m)) {
     throw new Error(`La base no deja leer los cobros (permisos de la migración 020). Detalle: ${m}`);
+  }
+  throw e;
+};
+// Comidas (v0.26) sin la migración 022 en la base
+const TABLAS_022 = /\b(recetas|recetas_atleta|comidas_atleta|menu_comidas|entrenamiento)\b/;
+const falta022 = (e) => {
+  const m = e?.message || '';
+  if (TABLAS_022.test(m) && /schema cache|does not exist|no existe|column|columna/i.test(m)) {
+    throw new Error(`Para las recetas, el menú y el servicio «solo nutrición» falta ejecutar la migración 022 en Supabase (supabase/migraciones/022_comidas.sql). Detalle: ${m}`);
   }
   throw e;
 };
@@ -82,7 +92,12 @@ const CAMPOS_SE = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'series',
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
   'archivos', 'comentarios', 'recursos', 'notas_ejercicio', 'respuestas_guardadas', 'avisos', 'habitos', 'registros_habito',
-  'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos'];
+  'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
+  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas'];
+// Las que puede no tener aún una base (cobros, 020; comidas, 022): sin ellas, la copia sale igual
+const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas'];
+// Las recetas sin la foto grande (para las listas: la miniatura basta)
+const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
 
 // Qué columna marca la revisión del coach en cada cosa revisable
 const REVISION = { sesion: ['sesiones', 'revisada_en'], checkin: ['checkins', 'revisado_en'], archivo: ['archivos', 'revisado_en'] };
@@ -506,6 +521,124 @@ export function crearApi(backend) {
       };
     },
 
+    // ------------------------------------------------------------ comidas (v0.26, migración 022)
+    // Tu recetario (coach): todas las recetas, sin la foto grande, y a cuántos atletas tiene asignada cada una
+    async recetas() {
+      const [recetas, asignadas] = await Promise.all([
+        b.select('recetas', { cols: COLS_RECETA, order: [['nombre', 'asc']] }).catch(falta022),
+        b.select('recetas_atleta', { cols: 'id,receta_id,atleta_id,toma' }).catch(() => []),
+      ]);
+      const A = agrupar(asignadas, 'receta_id');
+      return recetas.map((r) => ({ ...r, atletas: unicos((A[r.id] || []).map((x) => x.atleta_id)).length }));
+    },
+    // Una receta con su foto grande
+    async receta(id) {
+      return (await b.select('recetas', { eq: { id } }).catch(falta022))[0] || null;
+    },
+    async guardarReceta(datos, id = null) {
+      const { fila, error } = limpiarReceta(datos);
+      if (error) throw new Error(error);
+      if (id) return (await b.update('recetas', fila, { eq: { id } }).catch(falta022))[0];
+      return (await b.insert('recetas', [fila]).catch(falta022))[0];
+    },
+    async borrarReceta(id) {
+      return b.delete('recetas', { eq: { id } });
+    },
+    // Copia de una receta (para cambiarle algo a un atleta sin tocar la original)
+    async duplicarReceta(id) {
+      const r = await api.receta(id);
+      if (!r) throw new Error('No se encuentra la receta.');
+      const { id: _i, creada_en: _c, actualizada_en: _a, ...resto } = r;
+      return (await b.insert('recetas', [{ ...resto, nombre: `${r.nombre} (copia)`.slice(0, 80) }]))[0];
+    },
+    // El recetario de un atleta (lo ve él y su coach): sus comidas del día, sus asignaciones y las recetas, por toma
+    async recetario(atletaId) {
+      const [asignaciones, comidas] = await Promise.all([
+        b.select('recetas_atleta', { eq: { atleta_id: atletaId }, order: [['orden', 'asc']] }).catch(falta022),
+        b.select('comidas_atleta', { eq: { atleta_id: atletaId } }).catch(() => []),
+      ]);
+      const recetas = asignaciones.length ? await b.select('recetas', { in: { id: unicos(asignaciones.map((a) => a.receta_id)) }, cols: COLS_RECETA }) : [];
+      const tomas = tomasDe(comidas[0]);
+      const porToma = recetarioPorToma(asignaciones, recetas);
+      // Tomas con recetas que no están entre sus comidas (p. ej. le asignaste una merienda y él quitó la merienda)
+      const conRecetas = ordenarTomas(Object.keys(porToma));
+      return { tomas, eligio: !!comidas[0], conRecetas, porToma, asignaciones, recetas, cambios: asignaciones.filter((a) => a.cambio_pedido_en).length };
+    },
+    // Cuántas comidas hace al día (las elige el atleta o el coach)
+    async guardarComidas(atletaId, tomas) {
+      const xs = ordenarTomas(tomas);
+      if (!xs.length) throw new Error('Elige al menos una comida.');
+      return (await b.upsert('comidas_atleta', [{ atleta_id: atletaId, tomas: xs }], 'atleta_id').catch(falta022))[0];
+    },
+    // Coach: poner una receta en su recetario (en una o varias tomas). Si ya la tiene en esa toma, se deja como
+    // está (su factor y tu nota no se pierden: se cambian desde la asignación)
+    async asignarReceta(atletaId, recetaId, tomas, { factor = 1, nota = null } = {}) {
+      const lista = Array.isArray(tomas) ? tomas : [tomas];
+      if (!lista.length) throw new Error('Elige en qué comida va.');
+      const ya = new Set((await b.select('recetas_atleta', { eq: { atleta_id: atletaId, receta_id: recetaId }, cols: 'toma' }).catch(falta022)).map((x) => x.toma));
+      const filas = lista.filter((toma) => !ya.has(toma)).map((toma) => ({ atleta_id: atletaId, receta_id: recetaId, toma, factor: Number(factor) || 1, nota: nota?.trim() || null }));
+      if (!filas.length) return [];
+      return b.insert('recetas_atleta', filas).catch(falta022);
+    },
+    async cambiarAsignacion(id, cambios) {
+      const c = {};
+      for (const k of ['factor', 'nota', 'orden', 'toma']) if (k in cambios) c[k] = cambios[k] === '' ? null : cambios[k];
+      if ('nota' in c && typeof c.nota === 'string') c.nota = c.nota.trim() || null;
+      return (await b.update('recetas_atleta', c, { eq: { id } }))[0];
+    },
+    async quitarReceta(asignacionId) {
+      return b.delete('recetas_atleta', { eq: { id: asignacionId } });
+    },
+    // Atleta: favorita, y pedir (o retirar) que se la cambien
+    async recetaFavorita(asignacionId, favorita) {
+      return (await b.update('recetas_atleta', { favorita: !!favorita }, { eq: { id: asignacionId } }))[0];
+    },
+    async pedirCambioReceta(asignacionId, nota = null) {
+      const t = nota == null ? null : String(nota).trim().slice(0, 300) || null;
+      return (await b.update('recetas_atleta', nota === false ? { cambio_pedido_en: null, cambio_nota: null } : { cambio_pedido_en: new Date().toISOString(), cambio_nota: t }, { eq: { id: asignacionId } }))[0];
+    },
+    // Coach: dar por resuelta la petición
+    async resolverCambioReceta(asignacionId) {
+      return (await b.update('recetas_atleta', { cambio_pedido_en: null, cambio_nota: null }, { eq: { id: asignacionId } }))[0];
+    },
+    // El menú de una semana (de lunes a domingo)
+    async menuSemana(atletaId, lunes) {
+      return b.select('menu_comidas', { eq: { atleta_id: atletaId }, gte: { fecha: lunes }, lte: { fecha: sumarDias(lunes, 6) }, order: [['fecha', 'asc'], ['orden', 'asc']] }).catch(falta022);
+    },
+    // Apuntar en el menú una receta del recetario ({ asignacion }) o un texto ({ texto, macros })
+    async apuntarMenu(atletaId, datos) {
+      const fila = entradaMenu(datos);
+      if (!fila) throw new Error('Escribe qué vas a comer.');
+      return (await b.insert('menu_comidas', [{ ...fila, atleta_id: atletaId }]).catch(falta022))[0];
+    },
+    async cambiarMenu(entrada, cambios) {
+      const c = { ...cambios };
+      if ('raciones' in c) Object.assign(c, cambiarRaciones(entrada, c.raciones));
+      if ('texto' in c) { c.texto = String(c.texto || '').trim().slice(0, 120); if (!c.texto) throw new Error('Escribe qué vas a comer.'); }
+      return (await b.update('menu_comidas', c, { eq: { id: entrada.id } }))[0];
+    },
+    async borrarMenu(id) {
+      return b.delete('menu_comidas', { eq: { id } });
+    },
+    // Copiar el menú de una semana a otra (lo que ya hubiera en la de destino se queda)
+    async copiarMenuSemana(atletaId, lunesOrigen, lunesDestino) {
+      const [origen, destino, asignadas] = await Promise.all([api.menuSemana(atletaId, lunesOrigen), api.menuSemana(atletaId, lunesDestino),
+        b.select('recetas_atleta', { eq: { atleta_id: atletaId }, cols: 'receta_id' }).catch(falta022)]);
+      // Una receta que ya no está en su recetario se copia como texto (la base no deja ponerla); lo que ya está
+      // en la semana de destino no se duplica (al darle dos veces, por ejemplo)
+      const enRecetario = new Set(asignadas.map((x) => x.receta_id));
+      const yaEsta = new Set(destino.map((e) => `${e.fecha}|${e.toma}|${e.texto}`));
+      const filas = copiarMenu(origen, lunesOrigen, lunesDestino)
+        .filter((f) => !yaEsta.has(`${f.fecha}|${f.toma}|${f.texto}`))
+        .map((f) => ({ ...f, receta_id: f.receta_id && enRecetario.has(f.receta_id) ? f.receta_id : null, atleta_id: atletaId }));
+      if (!filas.length) return [];
+      return b.insert('menu_comidas', filas);
+    },
+    // Vaciar una semana del menú
+    async vaciarMenuSemana(atletaId, lunes) {
+      return b.delete('menu_comidas', { eq: { atleta_id: atletaId }, gte: { fecha: lunes }, lte: { fecha: sumarDias(lunes, 6) } });
+    },
+
     // ------------------------------------------------------------ plan de la semana
     // El día que el atleta piensa hacer una sesión (null = sin día). Pasa por la cola si no hay conexión.
     async planificarSesion(sesionId, dia) {
@@ -718,8 +851,8 @@ export function crearApi(backend) {
 
     // «Tu día»: lo que le toca hoy en una lista (sesión, hábitos, nutrición, peso, check-in, cuestionario). El programa
     // y el check-in de la semana ya los tiene la pantalla; el resto se consulta aquí (solo lo que aplica).
-    async tuDia(atletaId, { programa = null, checkin = null, salud = true, nutricion: conNut = true, hoy = hoyISO() } = {}) {
-      const semana = programa?.actual || null;
+    async tuDia(atletaId, { programa = null, checkin = null, salud = true, nutricion: conNut = true, entrenamiento = true, hoy = hoyISO() } = {}) {
+      const semana = entrenamiento ? programa?.actual || null : null;
       const sesiones = semana ? programa.sesiones[semana.id] || [] : null;
       const [pesos, habitos, nutricion, cuestionario] = await Promise.all([
         salud ? b.select('pesos', { eq: { atleta_id: atletaId, fecha: hoy }, cols: 'id', limit: 1 }).catch(() => null) : null,
@@ -732,7 +865,10 @@ export function crearApi(backend) {
         }).catch(() => null) : null,
         api.cuestionario(atletaId).catch(() => null),
       ]);
+      // Su menú de hoy (v0.26), si lo ha organizado
+      const menuHoy = salud && conNut ? await b.select('menu_comidas', { eq: { atleta_id: atletaId, fecha: hoy }, cols: 'id,hecho' }).catch(() => []) : [];
       return tuDia({
+        menu: menuHoy.length ? { total: menuHoy.length, hechas: menuHoy.filter((x) => x.hecho).length } : null,
         semana, sesiones,
         pesoHoy: salud && pesos ? pesos.length > 0 : null,
         habitos: salud ? habitos : null,
@@ -1171,6 +1307,9 @@ export function crearApi(backend) {
       out.notificaciones = perfilId ? await b.select('notificaciones', { eq: { usuario_id: perfilId } }) : [];
       out.suscripciones_push = perfilId ? (await b.select('suscripciones_push', { eq: { usuario_id: perfilId } }))
         .map(({ id, dispositivo, creada_en, usada_en }) => ({ id, dispositivo, creada_en, usada_en })) : [];
+      // Comidas (v0.26): sus comidas del día, su recetario (con las recetas) y su menú
+      for (const t of ['comidas_atleta', 'recetas_atleta', 'menu_comidas']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      out.recetas = out.recetas_atleta.length ? await b.select('recetas', { in: { id: unicos(out.recetas_atleta.map((x) => x.receta_id)) } }).catch(() => []) : [];
       out.semanas = await b.select('semanas', { in: { bloque_id: out.bloques.map((x) => x.id) } });
       out.sesiones = await b.select('sesiones', { in: { semana_id: out.semanas.map((s) => s.id) } });
       out.sesion_ejercicios = await b.select('sesion_ejercicios', { in: { sesion_id: out.sesiones.map((s) => s.id) } });
@@ -1183,7 +1322,10 @@ export function crearApi(backend) {
     async copiaCompleta() {
       const out = { exportado_en: new Date().toISOString(), version: 2 };
       // (los cobros, si la base aún no tiene la migración 020, vacíos: la copia no se queda a medias)
-      for (const t of TABLAS_COPIA) out[t] = await b.select(t, {}).catch((e) => { if (['cobros_atletas', 'pagos'].includes(t)) return []; throw e; });
+      // Solo si la tabla no existe: cualquier otro fallo (un corte, un tiempo de espera) para la copia, para que
+      // nunca parezca completa sin estarlo
+      const noExiste = (e) => /schema cache|does not exist|no existe|PGRST205|42P01/i.test(`${e?.message || ''} ${e?.code || ''}`);
+      for (const t of TABLAS_COPIA) out[t] = await b.select(t, t === 'recetas' ? { pagina: 50 } : {}).catch((e) => { if (TABLAS_OPCIONALES.includes(t) && noExiste(e)) return []; throw e; });
       return out;
     },
 
@@ -1251,6 +1393,9 @@ export function crearApi(backend) {
         b.select('registros_nutricion', { in: { atleta_id: ids }, gte: { fecha: sumarDias(hoy, -7) }, cols: 'atleta_id,fecha' }).catch(() => []),
       ]);
       const PN = agrupar(planesN, 'atleta_id'), RN = agrupar(regsN, 'atleta_id');
+      // Recetas que piden cambiar (v0.26; sin la migración 022, ninguna)
+      const cambiosR = await b.select('recetas_atleta', { in: { atleta_id: ids }, nonulo: ['cambio_pedido_en'], cols: 'atleta_id' }).catch(() => []);
+      const CR = agrupar(cambiosR, 'atleta_id');
       // Cuestionarios con algo de salud que revisar
       const cuestionarios = await b.select('cuestionarios', { in: { atleta_id: ids }, cols: 'atleta_id,resultado,otras,completado_en,revisado_en' }).catch(() => []);
       const Q = Object.fromEntries(cuestionarios.map((c) => [c.atleta_id, c]));
@@ -1275,6 +1420,8 @@ export function crearApi(backend) {
           habitos: cumplimientoHabitos(habitosPorAtleta[a.id] || [], regsPorHabito, hoy),
           nutricion: a.nutricion === false ? [] : avisosNutricion({ planes: PN[a.id] || [], registros: RN[a.id] || [], ritmoReal: ritmoPeso(tendenciaPeso(P[a.id] || [])) }, hoy),
           cuestionario: avisoCuestionario(Q[a.id]),
+          cambiosReceta: (CR[a.id] || []).length,
+          diasNutricion: a.nutricion === false ? null : unicos((RN[a.id] || []).filter((x) => x.fecha > sumarDias(hoy, -7) && x.fecha <= hoy).map((x) => x.fecha)).length,
         }, hoy);
       });
       // Cobros (v0.25, solo el coach; sin la migración 020, sin columna): cómo va cada uno, para verlo en el panel
@@ -1285,13 +1432,14 @@ export function crearApi(backend) {
       }
       return res.sort((x, y) => x.prioridad - y.prioridad || x.nombre.localeCompare(y.nombre, 'es'));
     },
-    async crearAtleta({ nombre, email = null, objetivo = null, notion_url = null, nivel = null, nutricion = true }) {
-      // nivel y nutricion (v0.22) solo si la base ya tiene la migración 018 o son distintos de lo de siempre
-      const fila = { nombre, email, objetivo, notion_url, ...(nivel ? { nivel } : {}), ...(nutricion === false ? { nutricion: false } : {}) };
-      return (await b.insert('atletas', [fila]).catch(falta018))[0];
+    async crearAtleta({ nombre, email = null, objetivo = null, notion_url = null, nivel = null, nutricion = true, entrenamiento = true }) {
+      // nivel y nutricion (v0.22) y entrenamiento (v0.26) solo si son distintos de lo de siempre (así una base sin
+      // la migración 018 o la 022 sigue dando de alta)
+      const fila = { nombre, email, objetivo, notion_url, ...(nivel ? { nivel } : {}), ...(nutricion === false ? { nutricion: false } : {}), ...(entrenamiento === false ? { entrenamiento: false } : {}) };
+      return (await b.insert('atletas', [fila]).catch(falta018).catch(falta022))[0];
     },
     async actualizarAtleta(id, cambios) {
-      return (await b.update('atletas', cambios, { eq: { id } }).catch(falta018))[0];
+      return (await b.update('atletas', cambios, { eq: { id } }).catch(falta018).catch(falta022))[0];
     },
     // Borra al atleta con todo lo suyo, también sus vídeos y fotos de Storage
     // Borrado completo: todo lo que haya en su carpeta de Storage (registrado o no) y después su ficha,
@@ -1441,13 +1589,20 @@ export function crearApi(backend) {
           respuestasLeidas: respuestasDe(c, preguntas) })).filter((c) => c.atleta),
         comentarios: comentarios.map((c) => ({ ...c, atleta: A[c.atleta_id] || null, sesion: c.sesion_id ? todasSesiones[c.sesion_id] || null : null })).filter((c) => c.atleta),
         archivos: archivos.map((a) => ({ ...a, atleta: A[a.atleta_id] || null })).filter((a) => a.atleta),
+        recetas: [],
       };
+      // Recetas que un atleta pide cambiar (v0.26; sin la migración 022, ninguna)
+      const cambios = await b.select('recetas_atleta', { nonulo: ['cambio_pedido_en'], order: [['cambio_pedido_en', 'desc']] }).catch(() => []);
+      if (cambios.length) {
+        const R = porId(await b.select('recetas', { in: { id: unicos(cambios.map((c) => c.receta_id)) }, cols: 'id,nombre,foto_mini' }));
+        items.recetas = cambios.map((c) => ({ ...c, receta: R[c.receta_id] || null, atleta: A[c.atleta_id] || null })).filter((c) => c.atleta && c.receta);
+      }
       // Los mensajes cuentan por conversación (como se ven en Revisar), no uno a uno
       const hilo = (c) => c.sesion_id || c.checkin_id || c.archivo_id || `general-${c.atleta_id}`;
       const unicosHilos = [...new Map(items.comentarios.map((c) => [hilo(c), c])).values()];
       const porAtleta = {};
-      for (const lista of [items.sesiones, items.checkins, unicosHilos, items.archivos]) for (const x of lista) porAtleta[x.atleta.id] = (porAtleta[x.atleta.id] || 0) + 1;
-      return { ...items, total: items.sesiones.length + items.checkins.length + unicosHilos.length + items.archivos.length, porAtleta };
+      for (const lista of [items.sesiones, items.checkins, unicosHilos, items.archivos, items.recetas]) for (const x of lista) porAtleta[x.atleta.id] = (porAtleta[x.atleta.id] || 0) + 1;
+      return { ...items, total: items.sesiones.length + items.checkins.length + unicosHilos.length + items.archivos.length + items.recetas.length, porAtleta };
     },
     async marcarRevisado(tipo, id, revisado = true) {
       const [tabla, col] = REVISION[tipo];

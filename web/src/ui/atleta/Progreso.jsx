@@ -9,7 +9,7 @@ import { HistoriaSemana, rangoLargo } from './TuSemana.jsx';
 import { VerArchivo, CompararVideos } from '../Archivos.jsx';
 import { Diario } from '../Diario.jsx';
 import { NutricionProgreso } from './Nutricion.jsx';
-import { conNutricion } from '../../logica/nivel.js';
+import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { HabitosMes } from './Habitos.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { num, signo, GRUPOS, MEDIDAS, e1rm, rangoVolumen, estadoVolumen, tendenciaPeso, ritmoPeso } from '../../logica/calculos.js';
@@ -17,7 +17,8 @@ import { fmtCorta, hoyISO, diasEntre, desdeISO, fmtConDia } from '../../logica/f
 
 
 // Contenido de progreso, reutilizado en la ficha del atleta del panel del coach
-export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaDada = null }) {
+// entrenamiento: false a quien solo le llevas la nutrición (v0.26): sin fuerza, series, constancia ni cardio
+export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaDada = null, entrenamiento = true }) {
   const { api } = useApp();
   const { datos, cargando, error, recargar } = useCarga(() => api.progreso(atletaId), [atletaId]);
   const objetivos = useCarga(() => api.objetivos(atletaId).catch(() => []), [atletaId]);
@@ -95,6 +96,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
         </section>
       )}
 
+      {entrenamiento && (<>
       <section class="seccion">
         <h2>Fuerza (1RM estimado)</h2>
         {!ejercicios.length ? <div class="panel"><Vacio icono="progreso" titulo="Sin datos todavía">Cuando registres series, aquí verás tu 1RM estimado semana a semana.</Vacio></div> : (
@@ -184,6 +186,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
           </div>
         </section>
       )}
+      </>)}
       {historial && <HistorialEjercicio atletaId={atletaId} ejercicio={historial} alCerrar={() => setHistorial(null)} />}
     </>
   );
@@ -421,17 +424,19 @@ function Cifras({ constancia, semanas }) {
 
 export function Progreso({ programa, salud }) {
   const { api, atleta } = useApp();
-  const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id]);
-  const semanas = useCarga(() => api.resumenesSemanales(atleta.id, 4).catch(() => []), [atleta.id]);
+  const entrena = conEntrenamiento(atleta);
+  const constancia = useCarga(() => (entrena ? api.constancia(atleta.id).catch(() => null) : Promise.resolve(null)), [atleta.id, entrena]);
+  const semanas = useCarga(() => (entrena ? api.resumenesSemanales(atleta.id, 4).catch(() => []) : Promise.resolve([])), [atleta.id, entrena]);
   return (
     <div class="contenido">
       <header class="cabecera"><div class="titulo"><h1>Tu progreso</h1></div></header>
-      <Pista id="progreso" icono="progreso">Todo lo de aquí sale solo de lo que apuntas en cada sesión y en el check-in. No tienes que rellenar nada: entra de vez en cuando a ver cómo vas.</Pista>
-      <Cifras constancia={constancia} semanas={semanas} />
-      <TusSemanas salud={salud} lista={semanas} />
-      <TusBloques salud={salud} />
-      <Logros salud={salud} />
-      <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} />
+      {entrena ? <Pista id="progreso" icono="progreso">Todo lo de aquí sale solo de lo que apuntas en cada sesión y en el check-in. No tienes que rellenar nada: entra de vez en cuando a ver cómo vas.</Pista>
+        : <Pista id="progreso-nutricion" icono="progreso">Aquí ves tu peso, tus medidas y tu nutrición: sale de lo que apuntas en Hoy y en el check-in.</Pista>}
+      {entrena && <Cifras constancia={constancia} semanas={semanas} />}
+      {entrena && <TusSemanas salud={salud} lista={semanas} />}
+      {entrena && <TusBloques salud={salud} />}
+      {entrena && <Logros salud={salud} />}
+      <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} entrenamiento={entrena} />
       {salud && <HabitosMes />}
       {salud && conNutricion(atleta) && <NutricionProgreso />}
       <Diario atletaId={atleta.id} nombreAtleta={atleta.nombre} salud={salud} />
