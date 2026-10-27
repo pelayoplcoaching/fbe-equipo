@@ -1397,6 +1397,11 @@ console.log('\nControl de cobros, privado del coach (migración 020)');
   await q(`insert into cobros_atletas (atleta_id, precio_mes) values ($1, 49)`, [aTmp.id]);
   await q(`delete from atletas where id = $1`, [aTmp.id]);
   check((await q(`select count(*)::int n from pagos where atleta_id = $1`, [aTmp.id]))[0].n === 0 && (await q(`select count(*)::int n from cobros_atletas where atleta_id = $1`, [aTmp.id]))[0].n === 0, 'se borran con el atleta');
+  // La app pagina ordenando por la clave de cada tabla: las que no tienen «id» tienen que estar en CLAVE_TABLA
+  const { CLAVE_TABLA } = await import('../web/src/datos/backend-supabase.js');
+  const sinId = (await q(`select c.relname t from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'v')
+    and not exists (select 1 from pg_attribute a where a.attrelid = c.oid and a.attname = 'id' and not a.attisdropped)`)).map((x) => x.t).filter((t) => !t.startsWith('v_') && t !== 'fbe_migraciones' && t !== 'errores_app');
+  check(sinId.every((t) => CLAVE_TABLA[t]), `las tablas sin «id» (${sinId.join(', ')}) tienen su clave para paginar en la app`);
   const sin19 = new PGlite();
   await sin19.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
   await sin19.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));

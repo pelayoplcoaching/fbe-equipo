@@ -1,4 +1,7 @@
 // Backend de producción: Supabase (Auth + PostgREST). Los permisos los impone la base de datos (RLS).
+
+// Tablas cuya clave no es «id» (para ordenar al paginar)
+export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', preferencias_notificaciones: 'usuario_id' };
 import { createClient } from '@supabase/supabase-js';
 
 const MENSAJES = {
@@ -68,7 +71,9 @@ export function crearBackendSupabase({ url, anonKey }) {
     const PAGINA = 1000;
     const tope = f.limit || Infinity;
     const orden = [...(f.order || [])];
-    if (tope > PAGINA && !orden.some(([c]) => c === 'id')) orden.push(['id', 'asc']);
+    // Para paginar hace falta un orden estable: la clave de la tabla (casi todas, «id»; las que van por persona, no)
+    const clave = CLAVE_TABLA[tabla] || 'id';
+    if (tope > PAGINA && !orden.some(([c]) => c === clave)) orden.push([clave, 'asc']);
     const filas = [];
     for (let desde = 0; desde < tope; desde += PAGINA) {
       let q = aplicarFiltro(sb.from(tabla).select(f.cols || '*'), f);
