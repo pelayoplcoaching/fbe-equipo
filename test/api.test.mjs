@@ -746,6 +746,30 @@ console.log('\nRegistro de errores (v0.21)');
   check((await api.erroresApp()).length === 0, 'y los puede borrar');
 }
 
+console.log('\nServicio y nivel (v0.22)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const nuevo = await api.crearAtleta({ nombre: 'Prueba Nivel', nivel: 'avanzado', nutricion: false });
+  check(nuevo.nivel === 'avanzado' && nuevo.nutricion === false, 'al darlo de alta, el coach elige su nivel y que solo le lleva el entrenamiento');
+  const normal = await api.crearAtleta({ nombre: 'Prueba Normal' });
+  check(normal.nivel === null && normal.nutricion === true, 'sin elegir nada, como siempre: con nutrición y sin nivel');
+  await api.actualizarAtleta(ana.id, { nutricion: false, nivel: 'intermedio' });
+  const resAna = (await api.resumenes()).find((r) => r.atleta_id === ana.id);
+  check(resAna && !(resAna.alertas || []).some((x) => /nutric|kcal|comid/i.test(x.texto || '')), 'a quien no le lleva la nutrición, el panel no le avisa de nada de nutrición');
+  check((await api.funcionesAtleta(ana.id)).conNutricion === false, 'y en «lo que le pide la app» sabe que no se la lleva (el plan sigue guardado)');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const yo = await api.miAtleta();
+  check(yo.nutricion === false && yo.nivel === 'intermedio', 'Ana lee su ficha (la app oculta su nutrición)');
+  const dia = await api.tuDia(ana.id, { salud: true, nutricion: false });
+  check(!dia.some((x) => x.id === 'nutricion'), 'y en «Tu día» no aparece la nutrición');
+  await api.actualizarAtleta(ana.id, { nutricion: true, nivel: 'novato' }).catch(() => null);
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const trasIntento = (await api.ficha(ana.id)).atleta;
+  check(trasIntento.nutricion === false && trasIntento.nivel === 'intermedio', 'y no puede cambiarse ni el servicio ni el nivel');
+  await api.actualizarAtleta(ana.id, { nutricion: true, nivel: null });
+  for (const x of [nuevo, normal]) await api.borrarAtleta(x.id);
+}
+
 console.log('\nCoach: verificación en dos pasos');
 await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
 const factor = await b.auth.mfa.inscribir('Móvil');

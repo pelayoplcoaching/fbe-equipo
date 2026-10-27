@@ -19,6 +19,13 @@ export const VERSION_CONSENTIMIENTO = '2026-10';
 const porId = (filas) => Object.fromEntries(filas.map((f) => [f.id, f]));
 const agrupar = (filas, col) => filas.reduce((m, f) => ((m[f[col]] ||= []).push(f), m), {});
 const unicos = (xs) => [...new Set(xs.filter((x) => x != null))];
+// Servicio y nivel (v0.22) sin la migración 018 en la base: un aviso que diga qué falta, no el error técnico
+const falta018 = (e) => {
+  if (/\b(nivel|nutricion)\b/.test(e?.message || '') && /column|columna|schema cache/i.test(e?.message || '')) {
+    throw new Error('Para elegir servicio y nivel falta ejecutar la migración 018 en Supabase (supabase/migraciones/018_servicio_y_nivel.sql).');
+  }
+  throw e;
+};
 // Día local (en España, no en UTC) de una marca de tiempo; una fecha sin hora se deja tal cual
 const fechaDe = (iso) => {
   if (!iso) return null;
@@ -501,10 +508,11 @@ export function crearApi(backend) {
         b.select('molestias', { eq: { atleta_id: atletaId, semana_inicio: lunes } }),
         b.select('pesos', { eq: { atleta_id: atletaId }, order: [['fecha', 'desc']], limit: 2 }),
         b.select('medidas', { eq: { atleta_id: atletaId }, order: [['fecha', 'desc']], limit: 2 }),
-        b.select('atletas', { eq: { id: atletaId }, cols: 'id,checkin_apartados' }).then((x) => x[0] || null).catch(() => null),
+        // Toda la fila (sin nombrar columnas: así funciona también sin la migración 018)
+        b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null).catch(() => null),
         api.preguntasCheckin(atletaId).catch(() => []),
       ]);
-      return { checkin: checkin || null, molestias, pesos, medidas, apartados: atleta?.checkin_apartados ?? null, preguntas };
+      return { checkin: checkin || null, molestias, pesos, medidas, apartados: atleta?.checkin_apartados ?? null, nutricion: atleta?.nutricion !== false, preguntas };
     },
     async guardarCheckin(atletaId, lunes, datos, molestias = {}, pesoKg = null) {
       const campos = ['horas_sueno', 'energia', 'recuperacion', 'motivacion', 'fc_reposo', 'hrv', 'adherencia_desayuno',
@@ -698,13 +706,13 @@ export function crearApi(backend) {
 
     // «Tu día»: lo que le toca hoy en una lista (sesión, hábitos, nutrición, peso, check-in, cuestionario). El programa
     // y el check-in de la semana ya los tiene la pantalla; el resto se consulta aquí (solo lo que aplica).
-    async tuDia(atletaId, { programa = null, checkin = null, salud = true, hoy = hoyISO() } = {}) {
+    async tuDia(atletaId, { programa = null, checkin = null, salud = true, nutricion: conNut = true, hoy = hoyISO() } = {}) {
       const semana = programa?.actual || null;
       const sesiones = semana ? programa.sesiones[semana.id] || [] : null;
       const [pesos, habitos, nutricion, cuestionario] = await Promise.all([
         salud ? b.select('pesos', { eq: { atleta_id: atletaId, fecha: hoy }, cols: 'id', limit: 1 }).catch(() => null) : null,
         salud ? api.resumenHabitos(atletaId, hoy).catch(() => []) : [],
-        salud ? api.planesNutricion(atletaId).then(async (planes) => {
+        salud && conNut ? api.planesNutricion(atletaId).then(async (planes) => {
           const plan = planVigente(planes, hoy);
           if (!plan) return null;
           const [r] = await api.registrosNutricion(atletaId, hoy, hoy);
@@ -1250,17 +1258,19 @@ export function crearApi(backend) {
           sesionesRecientes: R[a.id] || [],
           cumplimiento: cumple,
           habitos: cumplimientoHabitos(habitosPorAtleta[a.id] || [], regsPorHabito, hoy),
-          nutricion: avisosNutricion({ planes: PN[a.id] || [], registros: RN[a.id] || [], ritmoReal: ritmoPeso(tendenciaPeso(P[a.id] || [])) }, hoy),
+          nutricion: a.nutricion === false ? [] : avisosNutricion({ planes: PN[a.id] || [], registros: RN[a.id] || [], ritmoReal: ritmoPeso(tendenciaPeso(P[a.id] || [])) }, hoy),
           cuestionario: avisoCuestionario(Q[a.id]),
         }, hoy);
       });
       return res.sort((x, y) => x.prioridad - y.prioridad || x.nombre.localeCompare(y.nombre, 'es'));
     },
-    async crearAtleta({ nombre, email = null, objetivo = null, notion_url = null }) {
-      return (await b.insert('atletas', [{ nombre, email, objetivo, notion_url }]))[0];
+    async crearAtleta({ nombre, email = null, objetivo = null, notion_url = null, nivel = null, nutricion = true }) {
+      // nivel y nutricion (v0.22) solo si la base ya tiene la migración 018 o son distintos de lo de siempre
+      const fila = { nombre, email, objetivo, notion_url, ...(nivel ? { nivel } : {}), ...(nutricion === false ? { nutricion: false } : {}) };
+      return (await b.insert('atletas', [fila]).catch(falta018))[0];
     },
     async actualizarAtleta(id, cambios) {
-      return (await b.update('atletas', cambios, { eq: { id } }))[0];
+      return (await b.update('atletas', cambios, { eq: { id } }).catch(falta018))[0];
     },
     // Borra al atleta con todo lo suyo, también sus vídeos y fotos de Storage
     // Borrado completo: todo lo que haya en su carpeta de Storage (registrado o no) y después su ficha,
@@ -1298,12 +1308,13 @@ export function crearApi(backend) {
         api.planesNutricion(atletaId).catch(() => []),
         api.preguntasCheckin(atletaId).catch(() => []),
         api.cuestionario(atletaId).catch(() => null),
-        b.select('atletas', { eq: { id: atletaId }, cols: 'checkin_apartados' }).then((x) => x[0]).catch(() => null),
+        b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0]).catch(() => null),
       ]);
       const hoy = hoyISO();
       return {
         habitos: habitos.length,
         nutricion: planVigente(planes, hoy)?.modo || null,
+        conNutricion: atleta?.nutricion !== false,
         preguntas: preguntas.length,
         apartados: atleta?.checkin_apartados ?? null,
         cuestionario: cuestionario?.completado_en ? 'hecho' : cuestionario?.pedido_en ? 'pedido' : 'no',

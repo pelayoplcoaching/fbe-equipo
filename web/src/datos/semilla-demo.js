@@ -240,12 +240,31 @@ export function semillaDemo(hoy = hoyISO()) {
     factor: 0.95, peso0: 84.1, tendencia: -0.05, semanaActual: 3, semanasBloque: 4, programadasHasta: 3,
     dias: DIAS_TORSO_PIERNA, hechasEstaSemana: 2, molestias: [['zona_lumbar', 2]], nombreBloque: 'Adaptación', foco: 'adaptacion',
   });
-  atletaConBloque({
+  const carlos = atletaConBloque({
     nombre: 'Carlos Vera', email: 'carlos@fbe.demo', objetivo: 'Recomposición con 2 días por semana',
     factor: 0.85, peso0: 78.0, tendencia: 0.08, semanaActual: 5, semanasBloque: 8, programadasHasta: 6,
     dias: DIAS_FULL_BODY, hechasEstaSemana: 0, diasSinEntrenar: 13, sinCheckinUltima: true, nombreBloque: 'Recomposición', foco: 'volumen',
     cardio: { nombre: 'Rodaje suave', pauta: { modalidad: 'carrera', minutos: 30, esfuerzo: 5, nota: 'Llano y a ritmo de poder hablar. Si no te apetece correr, andar rápido vale.' } },
   });
+
+  // v0.22: nivel y servicio. Rubén es novato (todo con kg) y Ana intermedia: desde esta semana, kg en los de
+  // prioridad alta y RPE objetivo en el resto (sin carga: ve su peso anterior en cada serie). Carlos es avanzado
+  // (todo a RPE) y solo le llevas el entrenamiento.
+  ruben.nivel = 'novato';
+  ana.nivel = 'intermedio';
+  Object.assign(carlos, { nivel: 'avanzado', nutricion: false });
+  const aRpe = (atleta, desdeLunes, soloNoPrincipales) => {
+    const bloques = new Set(db.bloques.filter((x) => x.atleta_id === atleta.id).map((x) => x.id));
+    const semanas = new Set(db.semanas.filter((w) => bloques.has(w.bloque_id) && w.fecha_inicio >= desdeLunes).map((w) => w.id));
+    const sesiones = new Set(db.sesiones.filter((x) => semanas.has(x.semana_id)).map((x) => x.id));
+    for (const p of db.sesion_ejercicios) {
+      if (!sesiones.has(p.sesion_id) || (soloNoPrincipales && p.prioridad === 'alta')) continue;
+      p.carga_sugerida_kg = null;
+      if (p.rir_objetivo == null && p.rpe_objetivo == null) p.rpe_objetivo = p.prioridad === 'alta' ? 8 : 8.5;
+    }
+  };
+  aRpe(ana, lunesHoy, true);
+  aRpe(carlos, lunesHoy, false);
 
   // Atleta invitada que aún no ha activado su cuenta (código para probar la activación)
   const marta = { id: uuid(), perfil_id: null, nombre: 'Marta Gil', email: 'marta@fbe.demo', estado: 'invitado', fecha_alta: hoy, objetivo: 'Volver a entrenar tras el embarazo', notion_url: null, creado_en: ahoraISO };
@@ -418,7 +437,7 @@ export function semillaDemo(hoy = hoyISO()) {
     const pl = fecha >= planAna.desde ? planAna : db.planes_nutricion.find((x) => x.atleta_id === ana.id && x.desde < planAna.desde);
     const entreno = entrenaAna.has(fecha);
     const objetivo = entreno ? pl.kcal : pl.kcal_descanso;
-    const kcal = Math.round((objetivo - 40 + (r2() - 0.5) * 300) / 5) * 5;
+    const kcal = Math.round((objetivo - 110 + (r2() - 0.5) * 300) / 5) * 5;  // come algo menos de lo previsto: la app propone ajustar cualquier día
     const prot = Math.round(pl.proteina_g * (0.88 + r2() * 0.24));
     const grasa = Math.round(pl.grasa_g * (0.85 + r2() * 0.35));
     db.registros_nutricion.push({ id: uuid(), atleta_id: ana.id, fecha, kcal, proteina_g: prot, grasa_g: grasa, carbos_g: Math.max(0, Math.round((kcal - 4 * prot - 9 * grasa) / 4)), fibra_g: Math.round(18 + r2() * 12),

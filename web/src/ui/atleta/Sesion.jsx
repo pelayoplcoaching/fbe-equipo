@@ -17,6 +17,7 @@ import { Preparacion, ConsejoDia } from './Preparacion.jsx';
 import { consejoPreparacion } from '../../logica/preparacion.js';
 import { pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION } from '../../logica/calculos.js';
 import { fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
+import { pesoAnterior } from '../../logica/nivel.js';
 import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
@@ -352,7 +353,9 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   const [extra, setExtra] = useState(0);
   const filas = Math.max(e.series, ...Object.keys(hechas).map(Number), 0) + extra;
   const activa = Array.from({ length: filas }, (_, i) => i + 1).find((k) => !hechas[k]);
-  const { ej, sugerencia, barra, conAproximacion, kgTrabajo, propuesta, top } = prepararEjercicio(e, actual, ultimas, foco, progresionAuto);
+  const { ej, prescripcion, sugerencia, barra, conAproximacion, kgTrabajo, propuesta, top } = prepararEjercicio(e, actual, ultimas, foco, progresionAuto);
+  // Sin carga pautada (a RPE): en cada serie, su peso de la última vez como referencia
+  const conAnterior = prescripcion.carga_sugerida_kg == null;
   const tipoDe = (k) => (!top || k > e.series ? null : k === 1 ? 'top' : 'backoff');
   const kgBackoff = top ? propuesta(2, hechas)?.kg : null;
   const tempo = tempoDe(e);
@@ -398,6 +401,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
             return (
               <Fragment key={k}>
                 <FilaSerie numero={k} hecha={hechas[k]} propuesta={prop} activa={k === activa} barra={barra} record={hechas[k] ? records[`${e.id}-${k}`] : null}
+                  anterior={conAnterior ? pesoAnterior(ultimas, k) : null}
                   pendiente={enCola[`${e.id}-${k}`]} nombre={ej.nombre} tipo={tipoDe(k)}
                   guardar={(v) => guardar(k, v)} quitar={() => quitar(k)} />
                 {k === 1 && top && n < e.series && (
@@ -481,7 +485,8 @@ function Cambiar({ e, actual, alCerrar, alElegir }) {
 
 // Una serie: kilos y repeticiones con lo propuesto como pista gris (lo pautado o lo de la vez anterior).
 // Al marcarla con los campos vacíos se usa la pista, como en un cuaderno.
-function FilaSerie({ numero, hecha, propuesta, activa, pendiente, guardar, quitar, nombre, barra, record, tipo = null }) {
+// anterior: el peso de esta serie la última vez, en un recuadro pequeño (solo si el coach no ha pautado carga)
+function FilaSerie({ numero, hecha, propuesta, activa, pendiente, guardar, quitar, nombre, barra, record, tipo = null, anterior = null }) {
   const { aviso } = useApp();
   const fmt = (v, d) => (v == null ? '' : num(v, d));
   const [kg, setKg] = useState(hecha ? fmt(hecha.kg, 2) : '');
@@ -519,9 +524,12 @@ function FilaSerie({ numero, hecha, propuesta, activa, pendiente, guardar, quita
       <div class={`serie ${hecha ? 'hecha' : ''} ${activa ? 'activa' : ''} ${recien ? 'recien' : ''} ${tipo ? `serie-${tipo}` : ''}`} role="group"
         aria-label={`${nombre}, serie ${numero}${tipo === 'top' ? ' (top)' : tipo === 'backoff' ? ' (back-off)' : ''}`}>
         <span class="n" title={tipo === 'top' ? 'Serie top' : tipo === 'backoff' ? 'Back-off' : undefined}>{tipo === 'top' ? 'T' : tipo === 'backoff' ? 'B' : numero}</span>
-        <input class="celda" inputMode="decimal" enterKeyHint="next" aria-label={`Kilos de la serie ${numero}`} value={kg}
-          placeholder={fmt(propuesta.kg, 2) || '–'} onInput={(e) => setKg(e.currentTarget.value)}
-          onChange={(e) => confirmar(e.currentTarget.value, reps, rpe)} onFocus={(e) => e.currentTarget.select()} />
+        <span class="celda-kg">
+          <input class="celda" inputMode="decimal" enterKeyHint="next" aria-label={`Kilos de la serie ${numero}${anterior != null ? ` (la última vez, ${num(anterior, 2)} kg)` : ''}`} value={kg}
+            placeholder={fmt(propuesta.kg, 2) || '–'} onInput={(e) => setKg(e.currentTarget.value)}
+            onChange={(e) => confirmar(e.currentTarget.value, reps, rpe)} onFocus={(e) => e.currentTarget.select()} />
+          {anterior != null && <span class="peso-anterior" aria-hidden="true" title="Tu peso de la última vez en esta serie"><small>ant.</small> {num(anterior, 2)}</span>}
+        </span>
         <input class="celda" inputMode="numeric" enterKeyHint="done" aria-label={`Repeticiones de la serie ${numero}`} value={reps}
           placeholder={fmt(propuesta.reps, 0) || '–'} onInput={(e) => setReps(e.currentTarget.value)}
           onChange={(e) => confirmar(kg, e.currentTarget.value, rpe)} onFocus={(e) => e.currentTarget.select()} />

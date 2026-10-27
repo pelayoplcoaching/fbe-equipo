@@ -108,6 +108,24 @@ export function App({ backend, api, cola }) {
   // Con la sesión dentro, si este móvil tiene las notificaciones activadas, la base se queda con su suscripción al día
   const dentro = estado.fase === 'atleta' || estado.fase === 'coach';
   useEffect(() => { if (dentro) sincronizarPush(api, backend.modo); }, [dentro, ultimoUid.current]);
+  // La ficha del atleta (servicio, estado…) la cambia el coach: se vuelve a leer al volver a la app y cada media
+  // hora, para que, por ejemplo, la nutrición aparezca o desaparezca sin tener que cerrar la app (v0.22)
+  useEffect(() => {
+    if (!atletaId) return undefined;
+    const releer = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const nueva = await api.miAtleta().catch(() => null);
+      if (!nueva || nueva.id !== atletaId) return;
+      setEstado((e) => {
+        if (e.fase !== 'atleta' || e.atleta?.id !== nueva.id) return e;
+        const cambia = ['nutricion', 'nivel', 'estado', 'nombre', 'checkin_apartados'].some((k) => JSON.stringify(e.atleta[k]) !== JSON.stringify(nueva[k]));
+        return cambia ? { ...e, atleta: { ...e.atleta, ...nueva } } : e;
+      });
+    };
+    document.addEventListener('visibilitychange', releer);
+    const t = setInterval(releer, 30 * 60 * 1000);
+    return () => { document.removeEventListener('visibilitychange', releer); clearInterval(t); };
+  }, [atletaId]);
 
   const ctx = {
     api, backend, cola, aviso, enLinea, pendientes,

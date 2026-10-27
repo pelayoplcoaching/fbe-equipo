@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Cargando } from './comunes.jsx';
 import { Interruptor } from './Ajustes.jsx';
+import { conNutricion } from '../logica/nivel.js';
 import { TIPOS_ATLETA, TIPOS_COACH, DIAS_CHECKIN, ESTADO_NOTIFICACION, RECORDATORIOS, momentoNotificacion } from '../logica/notificaciones.js';
 import { estadoPush, activarPush, desactivarPush, suscripcionActual, conEmail } from '../datos/push.js';
 
@@ -15,10 +16,13 @@ const textoEstado = (coach) => ({
   bloqueado: 'Las has bloqueado para esta web. Permítelas en los ajustes del navegador (el candado junto a la dirección) o del móvil, y vuelve aquí.',
 });
 
+// Los tipos que puede elegir: a quien solo le llevas el entrenamiento, sin el de nutrición
+const tiposDe = (coach, atleta) => (coach ? TIPOS_COACH : TIPOS_ATLETA.filter(([t]) => t !== 'nutricion' || conNutricion(atleta)));
+
 // «Respuestas, semana y 3 recordatorios»
-function resumenTipos(p, coach) {
+function resumenTipos(p, coach, atleta = null) {
   if (!p) return '';
-  const tipos = (coach ? TIPOS_COACH : TIPOS_ATLETA).filter(([t]) => !p.desactivados.includes(t));
+  const tipos = tiposDe(coach, atleta).filter(([t]) => !p.desactivados.includes(t));
   if (!tipos.length) return 'Ninguna activada';
   const avisos = tipos.filter(([t]) => !RECORDATORIOS.includes(t)).map(([, n]) => n.split(' ')[0].toLowerCase());
   const rec = tipos.filter(([t]) => RECORDATORIOS.includes(t)).length;
@@ -28,7 +32,7 @@ function resumenTipos(p, coach) {
 }
 
 export function SeccionNotificaciones({ coach = false }) {
-  const { api, modo } = useApp();
+  const { api, modo, atleta } = useApp();
   const [abierta, setAbierta] = useState(false);
   const [aqui, setAqui] = useState(null);
   const prefs = useCarga(() => api.preferenciasNotificaciones(), [abierta]);
@@ -44,7 +48,7 @@ export function SeccionNotificaciones({ coach = false }) {
       <div class="panel">
         <ul class="lista">
           <li class="panel-pad separa">
-            <div><div>{titulo}</div><div class="peq terciario">{resumenTipos(local || prefs.datos, coach)}</div></div>
+            <div><div>{titulo}</div><div class="peq terciario">{resumenTipos(local || prefs.datos, coach, atleta)}</div></div>
             <button class="btn btn-peq" onClick={() => setAbierta(true)}><Icono n="campana" /> {estado === 'ok' && aqui === false ? 'Activar' : 'Ajustes'}</button>
           </li>
         </ul>
@@ -71,7 +75,7 @@ function Hora({ id, valor, min, max, alCambiar }) {
 }
 
 export function HojaNotificaciones({ coach = false, alCerrar, alCambiar }) {
-  const { api, aviso, modo } = useApp();
+  const { api, aviso, modo, atleta } = useApp();
   const [estado, setEstado] = useState(() => estadoPush(modo));
   const prefs = useCarga(() => api.preferenciasNotificaciones(), []);
   const subs = useCarga(() => api.suscripcionesPush(), []);
@@ -135,8 +139,9 @@ export function HojaNotificaciones({ coach = false, alCerrar, alCambiar }) {
     try { await api.quitarDispositivo(s.id); subs.recargar(true); aviso('Quitado: ya no le llegarán'); } catch (e) { aviso(e.message, 'error'); }
   }
 
-  const tipos = coach ? TIPOS_COACH : TIPOS_ATLETA;
-  const tarde = quiere('habitos') || quiere('nutricion') || quiere('checkin');
+  const tipos = tiposDe(coach, atleta);
+  const conNut = coach || conNutricion(atleta);
+  const tarde = quiere('habitos') || (conNut && quiere('nutricion')) || quiere('checkin');
   return (
     <Hoja titulo="Notificaciones" alCerrar={alCerrar}>
       <div class="pila">
@@ -175,7 +180,7 @@ export function HojaNotificaciones({ coach = false, alCerrar, alCambiar }) {
                       <Hora id="nt-manana" valor={p.hora_manana} min="05:00" max="12:00" alCambiar={(v) => guardar({ hora_manana: v })} /></li>
                   )}
                   {tarde && (
-                    <li class="panel-pad separa"><label for="nt-tarde">{quiere('habitos') || quiere('nutricion') ? 'Hábitos y nutrición, a las' : 'Check-in, a las'}</label>
+                    <li class="panel-pad separa"><label for="nt-tarde">{quiere('habitos') || (conNut && quiere('nutricion')) ? (conNut ? 'Hábitos y nutrición, a las' : 'Hábitos, a las') : 'Check-in, a las'}</label>
                       <Hora id="nt-tarde" valor={p.hora_tarde} min="12:00" max="23:30" alCambiar={(v) => guardar({ hora_tarde: v })} /></li>
                   )}
                   {quiere('checkin') && (

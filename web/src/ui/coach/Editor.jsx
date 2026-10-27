@@ -4,6 +4,7 @@ import { FOCOS, INTENCIONES, PRIORIDADES, NOMBRE_GRUPO, GRUPOS, TIPOS_SESION, LE
 import { rangoSemana, lunesDe, fmtCorta, fmtConDia } from '../../logica/fechas.js';
 import { sugerirCargas } from '../../logica/sugerencias.js';
 import { leerTempo, explicarTempo } from '../../logica/tempo.js';
+import { NOMBRE_NIVEL, AYUDA_NIVEL, modoCarga, columnasEditor } from '../../logica/nivel.js';
 import { MODALIDADES, limpiarCardio, textoCardio, palabrasEsfuerzo } from '../../logica/cardio.js';
 
 const DESCANSOS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
@@ -13,7 +14,7 @@ const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/
 const nulo = (v) => (v === '' || v === undefined ? null : v);
 
 // Editor de un bloque (de un atleta o plantilla): semanas, sesiones y prescripción, con guardado al salir de cada campo.
-export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBloque, volumenObjetivo = null }) {
+export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBloque, volumenObjetivo = null, nivel = null }) {
   const { api, aviso } = useApp();
   const carga = useCarga(() => api.bloqueCompleto(bloqueId), [bloqueId]);
   const biblioteca = useCarga(() => api.biblioteca(), []);
@@ -48,7 +49,10 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   // La semana anterior del bloque y si tiene algo registrado (para las cargas sugeridas)
   const anterior = semana ? d.semanas.find((w) => w.numero === semana.numero - 1) : null;
   const sesionesAnt = anterior ? d.sesiones[anterior.id] || [] : [];
-  const conDatos = !bloque.es_plantilla && sesionesAnt.some((x) => (d.pautas[x.id] || []).some((p) => (d.series[p.id] || []).length));
+  // Con nivel, las cargas sugeridas son para lo que se pauta con kg (los de RPE los carga el atleta, salvo que les pongas kg)
+  const conKg = (p) => bloque.es_plantilla || modoCarga(nivel, p.prioridad) !== 'rpe' || p.carga_sugerida_kg != null;
+  const conDatos = !bloque.es_plantilla && sesionesAnt.some((x) => (d.pautas[x.id] || []).some((p) => (d.series[p.id] || []).length))
+    && sesiones.some((x) => (d.pautas[x.id] || []).some(conKg));
 
   // Guarda un campo y lo refleja en local sin recargar (los inputs no pierden el foco)
   async function guardar(tabla, id, cambios) {
@@ -168,9 +172,13 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       )}
 
       {semana && <VolumenSemana pautas={sesiones.flatMap((s) => d.pautas[s.id] || [])} ejercicios={ejercicios} objetivo={bloque.es_plantilla ? null : volumenObjetivo} />}
+      {semana && nivel && !bloque.es_plantilla && (
+        <p class="peq secundario aviso-nivel"><Icono n="diana" /><span><strong>Nivel {NOMBRE_NIVEL[nivel].toLowerCase()}:</strong> {AYUDA_NIVEL[nivel].charAt(0).toLowerCase() + AYUDA_NIVEL[nivel].slice(1)}.
+          {nivel !== 'novato' && ' Donde no pongas kg, el atleta ve en cada serie su peso de la última vez.'} Lo cambias en Datos.</span></p>
+      )}
 
       {semana && sesiones.map((s) => (
-        <EditorSesion key={`${s.id}-${version}`} sesion={s} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios}
+        <EditorSesion key={`${s.id}-${version}`} sesion={s} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel}
           guardar={guardar} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
           borrar={() => setConfirmarBorrado({ tipo: 'sesion', id: s.id, nombre: s.nombre })} />
       ))}
@@ -178,7 +186,8 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
 
       {sugerir && semana && anterior && (
         <CargasSugeridas filas={sugerirCargas({
-          ahora: sesiones.flatMap((x) => d.pautas[x.id] || []), antes: sesionesAnt.flatMap((x) => d.pautas[x.id] || []),
+          // Con nivel, solo los ejercicios que se pautan con kg (los de RPE los carga el atleta)
+          ahora: sesiones.flatMap((x) => d.pautas[x.id] || []).filter(conKg), antes: sesionesAnt.flatMap((x) => d.pautas[x.id] || []),
           series: d.series, sesionesAhora: sesiones, sesionesAntes: sesionesAnt,
           nombres: Object.fromEntries(Object.values(ejercicios).map((e) => [e.id, e.nombre])), foco: semana.foco,
         })} sesiones={sesiones} semana={semana} anterior={anterior} alCerrar={() => setSugerir(false)}
@@ -373,7 +382,7 @@ function parchear(d, tabla, id, cambios) {
   return d;
 }
 
-function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura, elegir, borrar }) {
+function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura, elegir, borrar, nivel = null }) {
   const { api } = useApp();
   const numero = (pautaId, campo, dec = false) => (e) => {
     const t = e.currentTarget.value.replace(',', '.').trim();
@@ -382,6 +391,13 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura,
     guardar('sesion_ejercicios', pautaId, { [campo]: v });
   };
   const hechas = pautas.reduce((t, p) => t + (series[p.id]?.length || 0), 0);
+  // Con nivel, solo las columnas que se usan; en cada fila, la que no toca por su prioridad queda atenuada
+  const col = columnasEditor(nivel, pautas);
+  const fuera = (p, campo) => {
+    const m = modoCarga(nivel, p.prioridad);
+    return m && p[campo] == null && (campo === 'carga_sugerida_kg' ? m === 'rpe' : m === 'kg');
+  };
+  const titulo = (p, campo) => (fuera(p, campo) ? (campo === 'carga_sugerida_kg' ? 'A RPE: la carga la elige el atleta (verá su peso anterior)' : 'Con kg pautados: el RPE lo rellena el atleta') : undefined);
   const [conCardio, setConCardio] = useState(false); // «Añadir cardio al final» en una sesión que no es de cardio
   const etiquetas = etiquetasSuperserie(pautas);
   const sueltas = pautas.filter((p) => p.superserie && !etiquetas[p.id]);
@@ -408,7 +424,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura,
           <table class="tabla-pauta">
             <thead><tr>
               <th style="width:168px">Prioridad</th><th style="width:74px" title="Misma letra en ejercicios seguidos: se alternan y se descansa al acabar la ronda">Súper.</th><th class="col-ejercicio">Ejercicio</th><th style="width:64px">Series</th><th style="width:66px">Reps mín.</th><th style="width:66px">Reps máx.</th>
-              <th style="width:58px">RIR</th><th style="width:58px">RPE</th><th style="width:76px">Kg</th><th style="width:88px">Descanso</th><th style="width:110px"><span class="sr">Acciones</span></th>
+              {col.rir && <th style="width:58px">RIR</th>}{col.rpe && <th style="width:58px">RPE</th>}{col.kg && <th style="width:76px">Kg</th>}<th style="width:88px">Descanso</th><th style="width:110px"><span class="sr">Acciones</span></th>
             </tr></thead>
             <tbody>
               {pautas.map((p, i) => (
@@ -445,9 +461,9 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura,
                   }} /></td>
                   <td><input class="n" inputMode="numeric" aria-label="Repeticiones mínimas" defaultValue={p.reps_min ?? ''} onChange={numero(p.id, 'reps_min')} /></td>
                   <td><input class="n" inputMode="numeric" aria-label="Repeticiones máximas" defaultValue={p.reps_max ?? ''} onChange={numero(p.id, 'reps_max')} /></td>
-                  <td><input class="n" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>
-                  <td><input class="n" inputMode="decimal" aria-label="RPE objetivo" defaultValue={p.rpe_objetivo == null ? '' : num(p.rpe_objetivo, 1)} onChange={numero(p.id, 'rpe_objetivo', true)} /></td>
-                  <td><input class="n" inputMode="decimal" aria-label="Carga sugerida en kg" defaultValue={p.carga_sugerida_kg == null ? '' : num(p.carga_sugerida_kg, 2)} onChange={numero(p.id, 'carga_sugerida_kg', true)} /></td>
+                  {col.rir && <td><input class="n" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
+                  {col.rpe && <td><input class={`n ${fuera(p, 'rpe_objetivo') ? 'fuera-nivel' : ''}`} inputMode="decimal" aria-label="RPE objetivo" title={titulo(p, 'rpe_objetivo')} placeholder={fuera(p, 'rpe_objetivo') ? '·' : ''} defaultValue={p.rpe_objetivo == null ? '' : num(p.rpe_objetivo, 1)} onChange={numero(p.id, 'rpe_objetivo', true)} /></td>}
+                  {col.kg && <td><input class={`n ${fuera(p, 'carga_sugerida_kg') ? 'fuera-nivel' : ''}`} inputMode="decimal" aria-label="Carga sugerida en kg" title={titulo(p, 'carga_sugerida_kg')} placeholder={fuera(p, 'carga_sugerida_kg') ? '·' : ''} defaultValue={p.carga_sugerida_kg == null ? '' : num(p.carga_sugerida_kg, 2)} onChange={numero(p.id, 'carga_sugerida_kg', true)} /></td>}
                   <td><select aria-label="Descanso" value={p.descanso_seg ?? ''} onChange={(e) => guardar('sesion_ejercicios', p.id, { descanso_seg: e.currentTarget.value === '' ? null : Number(e.currentTarget.value) })}>
                     <option value="">—</option>{DESCANSOS.map((s) => <option key={s} value={s}>{s ? mmss(s) : 'Sin descanso'}</option>)}
                   </select></td>

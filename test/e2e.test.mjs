@@ -1120,6 +1120,66 @@ try {
   await p.getByRole('heading', { name: 'Cardio' }).waitFor();
   check((await p.locator('.cardio-totales').textContent()).includes('Esta semana: 34 min'), 'en Progreso, la gráfica de cardio ya suma los 34 minutos de esta semana');
   await revisar('cardio-progreso');
+
+  console.log('\nNivel y servicio (v0.22)');
+  check(await p.locator('.seccion-nutricion').count() === 0 && !(await p.locator('.contenido').textContent()).includes('Nutrición'), 'a Carlos solo le llevas el entrenamiento: en su Progreso no hay nada de nutrición');
+  await p.locator('.tab', { hasText: 'Check-in' }).click();
+  await p.getByRole('heading', { name: 'Descanso y energía' }).or(p.getByRole('heading', { level: 1 })).first().waitFor();
+  await p.waitForTimeout(400);
+  check(await p.getByRole('heading', { name: 'Alimentación' }).count() === 0, 'ni el check-in le pregunta por su alimentación');
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
+  await p.getByRole('button', { name: /Ana López/ }).click();
+  await p.locator('nav.tabs').waitFor();
+  for (let i = 0; i < 3; i++) { const d = p.locator('[role=dialog]').first(); if (!(await d.isVisible().catch(() => false))) break; const b2 = d.getByRole('button', { name: /^Seguir$|^Cerrar$|Ver mis logros/ }).first(); if (await b2.isVisible().catch(() => false)) await b2.click(); else await p.keyboard.press('Escape'); await p.waitForTimeout(200); }
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.getByRole('button', { name: /^(Empezar|Continuar) sesión$/ }).first().click();
+  await p.locator('.ejercicio').first().waitFor();
+  // Uno a uno (al abrir un ejercicio se puede cerrar otro)
+  const conAnterior = [];
+  for (let i = 0; i < await p.locator('.ejercicio').count(); i++) {
+    const ej = p.locator('.ejercicio').nth(i);
+    if (await ej.locator('.ejercicio-cab').getAttribute('aria-expanded') !== 'true') await ej.locator('.ejercicio-cab').click();
+    await ej.locator('.serie').first().waitFor();
+    conAnterior.push(await ej.locator('.peso-anterior').count() > 0);
+  }
+  check(conAnterior.some(Boolean) && conAnterior.some((x) => !x), `Ana es intermedia: en los ejercicios a RPE ve su peso anterior en cada serie y en los principales, la carga pautada (${conAnterior.filter(Boolean).length} de ${conAnterior.length} con peso anterior)`);
+  const conPeso = p.locator('.ejercicio').nth(conAnterior.indexOf(true));
+  if (await conPeso.locator('.ejercicio-cab').getAttribute('aria-expanded') !== 'true') await conPeso.locator('.ejercicio-cab').click();
+  const etiqueta = await conPeso.locator('.serie input.celda').first().getAttribute('aria-label');
+  check(/la última vez, [\d,]+ kg/.test(etiqueta), `y el lector de pantalla también lo lee («${etiqueta}»)`);
+  await revisar('nivel-atleta');
+  await p.getByRole('button', { name: 'Volver' }).first().click().catch(() => {});
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
+  await p.getByRole('button', { name: /Pelayo/ }).click();
+  const codigo2fa3 = p.getByLabel('Código', { exact: true });
+  await Promise.race([codigo2fa3.waitFor(), p.getByRole('heading', { name: 'Atletas' }).waitFor()]);
+  if (await codigo2fa3.isVisible().catch(() => false)) { await codigo2fa3.fill('123456'); await p.getByRole('button', { name: 'Entrar' }).click(); }
+  await p.getByRole('heading', { name: 'Atletas' }).waitFor();
+  await p.locator('.tarjeta-atleta', { hasText: 'Carlos Vera' }).first().click();
+  await p.getByRole('tab', { name: 'Programa' }).waitFor();
+  await p.locator('.cabecera', { hasText: 'Solo entrenamiento' }).waitFor({ timeout: 8000 }).catch(() => {});
+  check(await p.getByRole('tab', { name: 'Nutrición' }).count() === 0 && (await p.locator('.cabecera').textContent()).includes('Solo entrenamiento'), 'en la ficha de Carlos no está la pestaña Nutrición y arriba pone «Nivel avanzado · Solo entrenamiento»');
+  await p.getByRole('tab', { name: 'Datos' }).click();
+  const sn = p.locator('.servicio-nivel');
+  await sn.waitFor();
+  check(await sn.getByRole('button', { name: 'Avanzado' }).getAttribute('aria-pressed') === 'true' && await sn.getByRole('button', { name: 'Solo entrenamiento' }).getAttribute('aria-pressed') === 'true', 'en Datos, «Lo que le llevas»: solo entrenamiento y nivel avanzado');
+  await revisar('nivel-datos');
+  await sn.getByRole('button', { name: 'Entrenamiento y nutrición' }).click();
+  await p.getByRole('tab', { name: 'Nutrición' }).waitFor();
+  check(true, 'al llevarle también la nutrición, aparece su pestaña');
+  await p.locator('.servicio-nivel').getByRole('button', { name: 'Solo entrenamiento' }).click();
+  await p.locator('.toast', { hasText: 'Ya no ve nada de nutrición' }).waitFor();
+  await p.getByRole('tab', { name: 'Programa' }).click();
+  await p.locator('.aviso-nivel').waitFor();
+  check(await p.locator('.tabla-pauta th', { hasText: /^Kg$/ }).count() === 0 && await p.locator('.tabla-pauta th', { hasText: /^RPE$/ }).count() > 0, 'su editor, a RPE: sin la columna de kg');
+  await p.getByRole('button', { name: 'Volver a atletas' }).click();
+  await p.locator('.tarjeta-atleta', { hasText: 'Ana López' }).first().click();
+  await p.locator('.aviso-nivel').waitFor();
+  check((await p.locator('.aviso-nivel').textContent()).includes('Nivel intermedio') && await p.locator('.tabla-pauta input.fuera-nivel').count() > 0,
+    'el de Ana (intermedia) avisa de cómo pautarle y atenúa las casillas que su nivel no usa');
+  await revisar('nivel-editor');
 } catch (e) {
   fallos++;
   console.log('  ✗ el flujo se ha interrumpido:', e.message.split('\n').slice(0, 12).join('\n      '));

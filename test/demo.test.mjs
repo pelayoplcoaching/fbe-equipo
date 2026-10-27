@@ -26,7 +26,7 @@ check((await api.plantillas()).length === 2, '2 plantillas');
 const bandeja = await api.bandeja();
 check(bandeja.comentarios.length === 1 && bandeja.comentarios[0].atleta.nombre === 'Rubén Martín', 'bandeja: el comentario de Rubén sin leer');
 check(bandeja.sesiones.length >= 3 && bandeja.checkins.length >= 2, `bandeja: ${bandeja.sesiones.length} sesiones y ${bandeja.checkins.length} check-ins por revisar`);
-check((await api.recursos()).filter((r) => r.categoria === 'faq').length === 14, 'las 14 preguntas frecuentes de la app (también cómo escribir al coach y cómo apuntar el cardio)');
+check((await api.recursos()).filter((r) => r.categoria === 'faq').length === 15, 'las 15 preguntas frecuentes de la app (también cómo escribir al coach, cómo apuntar el cardio y el peso anterior)');
 
 console.log('\nAtleta en la demo');
 await b.auth.entrar('ana@fbe.demo', 'demo');

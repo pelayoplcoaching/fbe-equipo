@@ -1117,7 +1117,7 @@ kbd { font: 600 11px/1 var(--f); font-variant-numeric: tabular-nums; padding: 3p
 .cargas-sug { border: 1px solid var(--linea); border-radius: 12px; max-height: 60vh; overflow-y: auto; }
 .carga-sug { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; }
 .carga-sug input { width: 20px; height: 20px; accent-color: var(--morado); }
-.carga-sug.sin { opacity: .7; }
+.carga-sug.sin strong { color: var(--tinta-2); font-weight: 600; }
 .carga-sug-kg { display: grid; justify-items: end; gap: 2px; white-space: nowrap; }
 .carga-sug-kg b { font-size: 16px; }
 .ok-t { color: var(--ok); }
@@ -1827,3 +1827,21 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .espacio-barra span.lleno { background: var(--aviso); }
 .espacio-fila { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; font-size: 14.5px; }
 .espacio-fila + .espacio-fila { border-top: 1px solid var(--linea); }
+
+/* v0.22: nivel y servicio. Peso anterior en la celda de kilos (como en el cuaderno: un recuadro pequeño
+   sobre el borde, para que no tape la cifra), aviso del nivel en el editor y celdas que el nivel no usa */
+.celda-kg { position: relative; display: block; min-width: 0; }
+.peso-anterior {
+  position: absolute; top: -8px; right: 5px; z-index: 1; pointer-events: none;
+  font-size: 11px; line-height: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
+  padding: 0 5px; border-radius: 6px; border: 1px solid var(--linea); background: var(--hoja); color: var(--tinta-2);
+}
+.peso-anterior small { font-size: 10px; font-weight: 600; color: var(--tinta-3); }
+.serie.hecha .peso-anterior { opacity: .7; }
+.enfoque-anterior { font-size: 14px; color: var(--tinta-2); text-align: center; }
+.enfoque-anterior b { color: var(--tinta); }
+.aviso-nivel { display: flex; gap: 8px; align-items: flex-start; }
+.aviso-nivel svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--morado); }
+.tabla-pauta input.fuera-nivel { background: transparent; border-style: dashed; color: var(--tinta-3); }
+.tabla-pauta input.fuera-nivel::placeholder { color: var(--tinta-3); text-align: center; }
+.servicio-nivel .segmentos { flex-wrap: wrap; }

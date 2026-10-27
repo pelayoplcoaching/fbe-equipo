@@ -16,6 +16,7 @@ import { PlanSemana } from './Plan.jsx';
 import { HabitosHoy } from './Habitos.jsx';
 import { TarjetaNotificaciones } from '../Notificaciones.jsx';
 import { NutricionHoy } from './Nutricion.jsx';
+import { conNutricion } from '../../logica/nivel.js';
 import { HojaCuestionario, TarjetaCuestionario, pendiente } from './Cuestionario.jsx';
 import { TarjetaCardio } from './Sesion.jsx';
 import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '../../logica/cardio.js';
@@ -99,7 +100,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
 const ICONO_DIA = { sesion: 'hoy', habitos: 'llama', nutricion: 'nutricion', peso: 'bascula', checkin: 'checkin', cuestionario: 'pregunta' };
 function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, version }) {
   const { api, atleta } = useApp();
-  const dia = useCarga(() => api.tuDia(atleta.id, { programa: p, checkin: checkinSemana.datos, salud }).catch(() => null), [atleta.id, p, checkinSemana.datos, salud, version]);
+  const dia = useCarga(() => api.tuDia(atleta.id, { programa: p, checkin: checkinSemana.datos, salud, nutricion: conNutricion(atleta) }).catch(() => null), [atleta.id, p, checkinSemana.datos, salud, version]);
   // Tras apuntar algo en cualquier parte de la pantalla (un hábito, la nutrición, el peso), la lista se pone al día
   const recargarRef = useRef(null);
   recargarRef.current = dia.recargar;
@@ -258,7 +259,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           </Vacio>
           {atleta.notion_url && <div class="panel-pad"><a class="btn btn-ancho" href={atleta.notion_url} target="_blank" rel="noopener">Abrir mi página de Notion</a></div>}
         </div>
-        {salud && <NutricionHoy />}
+        {salud && conNutricion(atleta) && <NutricionHoy />}
       </>
     );
   }
@@ -346,7 +347,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         </Hoja>
       )}
 
-      {salud && <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />}
+      {salud && conNutricion(atleta) && <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />}
 
       {salud && <HabitosHoy />}
 

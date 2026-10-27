@@ -5,6 +5,7 @@ import { resultadoCribado, avisoCuestionario, resumenCuestionario, limpiarCuesti
 import { pregunta, preguntasDe, respuestaValida, limpiarRespuestas, respuestasNoValidas, textoRespuesta, serieRespuestas } from '../web/src/logica/preguntas.js';
 import { grados, dibujoValido, limpiarDibujo, rectImagen, describirDibujo } from '../web/src/logica/dibujo.js';
 import { tuDia, resumenDia } from '../web/src/logica/dia.js';
+import { modoCarga, columnasEditor, pesoAnterior, conNutricion, textoServicio, NIVELES } from '../web/src/logica/nivel.js';
 import { cardioValido, cardioHechoValido, limpiarCardio, limpiarCardioHecho, textoCardio, textoCardioHecho, ritmo, palabrasEsfuerzo, cardioPorSemana, cardioHechoDe } from '../web/src/logica/cardio.js';
 import { e1rm, e1rmPorSemana, seriesPorGrupo, pauta, propuestaSerie, semanaActual, resumenAtleta, num, signo, mmss } from '../web/src/logica/calculos.js';
 
@@ -865,8 +866,8 @@ console.log('\nTu día');
   const ses = [{ id: 's1', nombre: 'Torso A', completada: true, fecha_realizada: '2026-10-19', dia_previsto: '2026-10-19' }, { id: 's2', nombre: 'Pierna A', completada: false, dia_previsto: '2026-10-21' }, { id: 's3', nombre: 'Torso B', completada: false, dia_previsto: '2026-10-23' }];
   const hab = (cumple, dias = 7) => ({ habito: { nombre: 'Pasos', dias_semana: dias }, cumpleHoy: cumple, semana: { llega: false } });
   const d1 = tuDia({ semana, sesiones: ses, pesoHoy: false, habitos: [hab(true), hab(false)], nutricion: { plan: { modo: 'macros' }, hoy: null }, checkin: { hecho: false, pendiente: true }, cuestionario: { pendiente: true } }, hoy);
-  check(d1.map((x) => `${x.id}:${x.estado}`).join() === 'cuestionario:toca,sesion:toca,habitos:toca,nutricion:luego,peso:luego' + (new Date().getDay() % 5 === 0 || [5, 6, 0, 1].includes(new Date().getDay()) ? ',checkin:toca' : ''),
-    'lo que toca hoy, en orden: cuestionario pedido, la sesión de hoy, hábitos a medias; nutrición y peso para luego');
+  check(d1.map((x) => `${x.id}:${x.estado}`).join() === 'cuestionario:toca,sesion:toca,habitos:toca,nutricion:luego,peso:luego,checkin:toca',
+    'lo que toca hoy, en orden: cuestionario pedido, la sesión de hoy, hábitos a medias; nutrición y peso para luego; el check-in pendiente');
   check(d1.find((x) => x.id === 'sesion').texto === 'Pierna A' && d1.find((x) => x.id === 'sesion').detalle === 'Hoy toca entrenar' && d1.find((x) => x.id === 'habitos').detalle === '1 de 2 hechos hoy', 'con sus textos');
   const d2 = tuDia({ semana, sesiones: ses.map((s) => (s.id === 's2' ? { ...s, completada: true, fecha_realizada: hoy } : s)), pesoHoy: true, habitos: [hab(true)], nutricion: { plan: { modo: 'sin_contar' }, hoy: { completo: true } }, checkin: null, cuestionario: null }, hoy);
   check(d2.every((x) => x.estado === 'hecho') && resumenDia(d2).todo && d2[0].detalle === 'Sesión hecha', 'con todo hecho, todo en verde y «Todo hecho»');
@@ -930,6 +931,25 @@ console.log('\nRegistro de errores: qué se apunta (v0.21)');
     'un error de verdad se apunta con su mensaje, la pantalla, la pila y la versión');
   check(!llegan.some((d) => /Failed to fetch|Sin conexión|aborted|ResizeObserver/.test(d.mensaje)), 'los de red, sin conexión, cancelados o ruido del navegador, no');
   check(llegan.filter((d) => d.mensaje === 'x is undefined').length === 1 && llegan.length === 15, 'cada uno una vez por sesión, y como mucho 15');
+}
+
+console.log('\nNivel y servicio (v0.22)');
+{
+  check(modoCarga('novato', 'baja') === 'kg' && modoCarga('intermedio', 'alta') === 'kg' && modoCarga('intermedio', 'media') === 'rpe' && modoCarga('intermedio', 'muy_baja') === 'rpe'
+    && modoCarga('avanzado', 'alta') === 'rpe' && modoCarga(null, 'alta') === null && NIVELES.length === 3,
+    'novato con kg en todo; intermedio con kg solo en los de prioridad alta; avanzado a RPE; sin nivel, libre');
+  const pautas = [{ prioridad: 'alta', carga_sugerida_kg: 60 }, { prioridad: 'media', rpe_objetivo: 8 }];
+  check(JSON.stringify(columnasEditor(null, pautas)) === '{"rir":true,"rpe":true,"kg":true}', 'sin nivel, el editor enseña todas las columnas');
+  check(JSON.stringify(columnasEditor('intermedio', pautas)) === '{"rir":false,"rpe":true,"kg":true}' && JSON.stringify(columnasEditor('novato', [{ prioridad: 'media' }])) === '{"rir":false,"rpe":false,"kg":true}'
+    && JSON.stringify(columnasEditor('avanzado', [{ prioridad: 'alta' }])) === '{"rir":false,"rpe":true,"kg":false}', 'con nivel, solo las columnas que usa');
+  check(columnasEditor('novato', [{ prioridad: 'media', rpe_objetivo: 8, rir_objetivo: 2 }]).rpe && columnasEditor('novato', [{ prioridad: 'media', rir_objetivo: 2 }]).rir
+    && columnasEditor('avanzado', [{ prioridad: 'alta', carga_sugerida_kg: 50 }]).kg, 'pero nunca esconde una columna con algo puesto');
+  const ultimas = { series: [{ numero: 1, kg: 60, reps: 8 }, { numero: 2, kg: '62.5', reps: 8 }, { numero: 3, kg: 0, reps: 10 }] };
+  check(pesoAnterior(ultimas, 1) === 60 && pesoAnterior(ultimas, 2) === 62.5 && pesoAnterior(ultimas, 3) === null && pesoAnterior(ultimas, 5) === null && pesoAnterior({ series: ultimas.series.slice(0, 2) }, 4) === 62.5
+    && pesoAnterior(null, 1) === null && pesoAnterior({ series: [{ numero: 2, kg: 40 }] }, 1) === null,
+    'el peso anterior es el de esa misma serie (sin peso, nada; series de más, el de la última que hizo)');
+  check(conNutricion({}) && conNutricion({ nutricion: true }) && !conNutricion({ nutricion: false }) && conNutricion(null) && textoServicio({ nutricion: false }) === 'Solo entrenamiento',
+    'con nutrición salvo que el coach diga lo contrario (una base sin la 018 sigue como siempre)');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

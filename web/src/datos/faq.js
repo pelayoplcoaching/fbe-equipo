@@ -5,6 +5,8 @@ export const FAQ = [
     'Marcan la prioridad de cada ejercicio, con los colores de los discos de competición. Rojo: obligatorio. Azul: muy importante. Amarillo: accesorio. Verde: prescindible; si vas justo de tiempo, es el que puedes saltarte.'],
   ['¿Qué son el RPE y el RIR?',
     'Son dos formas de medir el esfuerzo de una serie. El RIR son las repeticiones que te quedaban en recámara al terminar. El RPE va del 1 al 10, y 10 es no poder hacer ni una más. Equivalen así: RPE 8 es dejar unas 2 en recámara (RIR 2) y RPE 9, una (RIR 1).'],
+  ['¿Qué es el número pequeño encima de los kilos?',
+    'Es el peso que moviste en esa misma serie la última vez que hiciste el ejercicio («ant. 30» son 30 kg). Sale cuando tu coach te pauta el esfuerzo (RPE o RIR) en lugar de la carga: tú eliges los kilos para llegar a ese esfuerzo, y ese número te sirve de referencia.'],
   ['La máquina está ocupada, ¿qué hago?',
     'Abre el ejercicio y toca «Cambiar». Verás las alternativas equivalentes que acepta tu coach. Lo que registres queda a nombre de la alternativa, así tu historial y tus marcas no se mezclan, y tu coach ve el cambio.'],
   ['No tengo cobertura en el gimnasio',

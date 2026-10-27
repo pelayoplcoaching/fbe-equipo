@@ -932,6 +932,23 @@ check((await notis(`clave = $1 and usuario_id = $2`, [`recordatorio_tarde:${mar3
 await como(pelayo, 'aal2');
 await q(`update atletas set estado = 'activo' where id = $1`, [aLuis.id]);
 check((await notis(`usuario_id = $1 and clave like 'recordatorio%'`, [ana])).length === 0, 'ni los de hábitos, nutrición o check-in a quien no ha dado el consentimiento de salud');
+// Migración 018: con «solo entrenamiento», sin recordatorios de nutrición (los hábitos, igual)
+await como(luis);
+await q(`update preferencias_notificaciones set desactivados = '{habitos}'`);
+await como(pelayo, 'aal2');
+await q(`update atletas set nutricion = false where id = $1`, [aLuis.id]);
+const mie3 = await dia(16);
+await servidor();
+await q(`select crear_recordatorios(${enMadrid(mie3, '21:15')})`);
+check((await notis(`clave = $1 and usuario_id = $2`, [`recordatorio_tarde:${mie3}`, luis])).length === 0, 'a quien solo le llevas el entrenamiento no le llega «¿Apuntas lo que has comido hoy?» (migración 018)');
+await como(pelayo, 'aal2');
+await q(`update atletas set nutricion = true where id = $1`, [aLuis.id]);
+const jue3 = await dia(17);
+await servidor();
+await q(`select crear_recordatorios(${enMadrid(jue3, '21:15')})`);
+check((await notis(`clave = $1 and usuario_id = $2 and tipo = 'nutricion'`, [`recordatorio_tarde:${jue3}`, luis])).length === 1, 'y al volver a llevarle la nutrición, vuelve a llegarle');
+await como(luis);
+await q(`update preferencias_notificaciones set desactivados = '{}'`);
 // =====================================================================
 // Migración 011
 // =====================================================================
@@ -1294,6 +1311,31 @@ console.log('\nRegistro de errores (migración 017)');
   try { await sin16.exec(readFileSync(new URL('../supabase/migraciones/017_registro_errores.sql', import.meta.url), 'utf8')); } catch (e) { errSin16 = e.message; }
   check(/Antes de la 017 hace falta la 016/.test(errSin16 || ''), 'la 017 no se aplica sin la 016');
   await sin16.close();
+}
+
+console.log('\nServicio y nivel del atleta (migración 018)');
+{
+  await su();
+  const [d0] = await q(`select nutricion, nivel from atletas where id = $1`, [aAna.id]);
+  check(d0.nutricion === true && d0.nivel === null, 'de entrada: con nutrición y sin nivel (todo como hasta ahora)');
+  await como(pelayo, 'aal2');
+  check((await q(`update atletas set nivel = 'intermedio', nutricion = false where id = $1 returning nivel`, [aAna.id]))[0].nivel === 'intermedio', 'el coach elige su nivel y su servicio');
+  check(await falla(`update atletas set nivel = 'experto' where id = $1`, [aAna.id]), 'solo novato, intermedio o avanzado');
+  await como(ana);
+  check((await q(`select nivel, nutricion from atletas`))[0]?.nutricion === false, 'el atleta lee su ficha (la app oculta la nutrición)…');
+  const cambia = await q(`update atletas set nutricion = true, nivel = 'avanzado' returning id`).catch(() => []);
+  await su();
+  const [d1] = await q(`select nutricion, nivel from atletas where id = $1`, [aAna.id]);
+  check(cambia.length === 0 && d1.nutricion === false && d1.nivel === 'intermedio', '…pero no puede cambiarse ni el servicio ni el nivel');
+  await q(`update atletas set nivel = null, nutricion = true where id = $1`, [aAna.id]);
+  const sin17 = new PGlite();
+  await sin17.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin17.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '017')) await sin17.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let errSin17 = null;
+  try { await sin17.exec(readFileSync(new URL('../supabase/migraciones/018_servicio_y_nivel.sql', import.meta.url), 'utf8')); } catch (e) { errSin17 = e.message; }
+  check(/Antes de la 018 hace falta la 017/.test(errSin17 || ''), 'la 018 no se aplica sin la 017');
+  await sin17.close();
 }
 
 console.log('\nLa verificación en dos pasos falla cerrada');

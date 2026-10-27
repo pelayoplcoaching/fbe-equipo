@@ -9,6 +9,7 @@ import { HistoriaSemana, rangoLargo } from './TuSemana.jsx';
 import { VerArchivo, CompararVideos } from '../Archivos.jsx';
 import { Diario } from '../Diario.jsx';
 import { NutricionProgreso } from './Nutricion.jsx';
+import { conNutricion } from '../../logica/nivel.js';
 import { HabitosMes } from './Habitos.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { num, signo, GRUPOS, MEDIDAS, e1rm, rangoVolumen, estadoVolumen, tendenciaPeso, ritmoPeso } from '../../logica/calculos.js';
@@ -432,7 +433,7 @@ export function Progreso({ programa, salud }) {
       <Logros salud={salud} />
       <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} />
       {salud && <HabitosMes />}
-      {salud && <NutricionProgreso />}
+      {salud && conNutricion(atleta) && <NutricionProgreso />}
       <Diario atletaId={atleta.id} nombreAtleta={atleta.nombre} salud={salud} />
     </div>
   );

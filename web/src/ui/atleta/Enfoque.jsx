@@ -5,6 +5,7 @@ import { pauta, num, mmss, textoSerie, incrementoCarga, trasSerie, duracionEstim
 import { fmtCorta } from '../../logica/fechas.js';
 import { aNumero, problemaSerie, prepararEjercicio, NotaFijada, Temporizador, useAhora, prepararAudio } from './sesion-comun.jsx';
 import { Metronomo } from './Metronomo.jsx';
+import { pesoAnterior } from '../../logica/nivel.js';
 import { tempoDe } from '../../logica/tempo.js';
 
 const RPE_ENFOQUE = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10];
@@ -163,6 +164,9 @@ export function Enfoque({
               <input inputMode="decimal" aria-label="Kilos" value={kg} placeholder={fmtKg(prop?.kg) || '0'} onInput={(ev) => setKg(ev.currentTarget.value)} onFocus={(ev) => ev.currentTarget.select()} />
               <button type="button" onClick={() => sumarKg(paso)} aria-label={`Añadir ${num(paso, 2)} kilos`}><Icono n="mas" /></button>
             </div>
+            {info.prescripcion.carga_sugerida_kg == null && pesoAnterior(ultimas, numero) != null && (
+              <div class="enfoque-anterior">La última vez, en esta serie: <b class="num">{num(pesoAnterior(ultimas, numero), 2)} kg</b></div>
+            )}
             {info.barra && (aNumero(kg) ?? prop?.kg) > 20 && <div class="enfoque-discos"><Placas kg={aNumero(kg) ?? prop?.kg} /></div>}
             <div class="paso-grande">
               <span class="etq">Repeticiones</span>

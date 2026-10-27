@@ -71,10 +71,10 @@ export function LoQueUsa({ atleta }) {
   const filas = [
     ['Cuestionario inicial', d.cuestionario === 'hecho' ? 'Hecho' : d.cuestionario === 'pedido' ? 'Pedido, sin rellenar' : 'Sin pedir', 'datos'],
     ['Hábitos diarios', d.habitos ? `${d.habitos} ${d.habitos === 1 ? 'activo' : 'activos'}` : 'Ninguno', 'seguimiento'],
-    ['Plan de nutrición', d.nutricion ? ({ macros: 'Kcal y macros', kcal_proteina: 'Kcal y proteína', sin_contar: 'Sin contar' })[d.nutricion] : 'Sin plan', 'nutricion'],
+    ['Plan de nutrición', atleta.nutricion === false ? 'No se la llevas (no la ve)' : d.nutricion ? ({ macros: 'Kcal y macros', kcal_proteina: 'Kcal y proteína', sin_contar: 'Sin contar' })[d.nutricion] : 'Sin plan', 'nutricion'],
     ['Check-in', `${d.apartados ? `${d.apartados.length} de ${APARTADOS_CHECKIN.length} apartados` : 'Todos los apartados'}${d.preguntas ? ` y ${d.preguntas} ${d.preguntas === 1 ? 'pregunta tuya' : 'preguntas tuyas'}` : ''}`, 'seguimiento'],
   ];
-  const carga = (d.habitos > 3 ? 1 : 0) + (d.nutricion && d.nutricion !== 'sin_contar' ? 1 : 0) + (d.preguntas > 3 ? 1 : 0) + (!d.apartados ? 1 : 0);
+  const carga = (d.habitos > 3 ? 1 : 0) + (atleta.nutricion !== false && d.nutricion && d.nutricion !== 'sin_contar' ? 1 : 0) + (d.preguntas > 3 ? 1 : 0) + (!d.apartados ? 1 : 0);
   return (
     <section class="panel" aria-labelledby="lo-que-usa">
       <div class="panel-pad pila-xs">

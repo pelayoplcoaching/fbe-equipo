@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { HojaAvisos } from '../Avisos.jsx';
-import { useUnaVez, Siluetas, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar } from '../comunes.jsx';
+import { useUnaVez, Siluetas, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos } from '../comunes.jsx';
+import { NIVELES, AYUDA_NIVEL } from '../../logica/nivel.js';
 import { BandaDemo } from '../App.jsx';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
 import { hace } from '../../logica/fechas.js';
@@ -113,7 +114,7 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
 
 function NuevoAtleta({ alCerrar }) {
   const { api } = useApp();
-  const [f, setF] = useState({ nombre: '', email: '', objetivo: '', notion_url: '' });
+  const [f, setF] = useState({ nombre: '', email: '', objetivo: '', notion_url: '', nutricion: true, nivel: null });
   const [error, setError] = useState(null);
   const [creado, setCreado] = useState(null);
   const [ocupado, una] = useUnaVez();
@@ -125,7 +126,7 @@ function NuevoAtleta({ alCerrar }) {
         e.preventDefault();
         una(async () => {
           try {
-            const a = await api.crearAtleta({ nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null });
+            const a = await api.crearAtleta({ nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null, nutricion: f.nutricion, nivel: f.nivel });
             setCreado(a);
           } catch (err) { setError(err.message); }
         });
@@ -133,6 +134,12 @@ function NuevoAtleta({ alCerrar }) {
         {error && <div class="error" role="alert">{error}</div>}
         <div class="campo"><label for="na-nombre">Nombre y apellidos</label><input id="na-nombre" class="entrada" required value={f.nombre} onInput={cambiar('nombre')} /></div>
         <div class="campo"><label for="na-email">Email</label><input id="na-email" class="entrada" type="email" value={f.email} onInput={cambiar('email')} /><span class="ayuda">Solo para tu referencia; el atleta crea su cuenta con el email que quiera.</span></div>
+        <div class="campo"><span class="etq">Servicio</span>
+          <Segmentos etiqueta="Servicio" valor={f.nutricion ? 'completo' : 'entrenamiento'} opciones={[['entrenamiento', 'Solo entrenamiento'], ['completo', 'Entrenamiento y nutrición']]}
+            alCambiar={(v) => v && setF({ ...f, nutricion: v === 'completo' })} /></div>
+        <div class="campo"><span class="etq">Nivel</span>
+          <Segmentos etiqueta="Nivel" valor={f.nivel} opciones={NIVELES} alCambiar={(v) => setF({ ...f, nivel: v })} />
+          <span class="ayuda">{f.nivel ? AYUDA_NIVEL[f.nivel] : 'Decide cómo pautas la carga en el editor. Puedes elegirlo después, en Datos.'}</span></div>
         <div class="campo"><label for="na-obj">Objetivo</label><input id="na-obj" class="entrada" value={f.objetivo} onInput={cambiar('objetivo')} placeholder="Ganar fuerza y bajar 3 kg" /></div>
         <div class="campo"><label for="na-notion">Su página de Notion</label><input id="na-notion" class="entrada" type="url" value={f.notion_url} onInput={cambiar('notion_url')} placeholder="https://notion.so/…" /><span class="ayuda">La verá en su perfil para la alimentación y los recursos hasta que pasen a la app.</span></div>
         <button class="btn btn-primario btn-grande" disabled={ocupado}>{ocupado ? 'Creando…' : 'Crear y generar código'}</button>

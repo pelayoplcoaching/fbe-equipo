@@ -4,6 +4,7 @@ import { Hilo } from '../Hilo.jsx';
 import { ESCALAS, HORAS_SUENO, ZONAS, MEDIDAS, num, signo } from '../../logica/calculos.js';
 import { semanaCheckin, hoyISO, lunesDe, sumarDias, rangoSemana, fmtCorta, diasEntre } from '../../logica/fechas.js';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
+import { conNutricion } from '../../logica/nivel.js';
 import { pregunta, limpiarRespuestas, respuestasNoValidas } from '../../logica/preguntas.js';
 
 const escala = (frases) => frases.map((f, i) => [i + 1, String(i + 1), f]);
@@ -65,7 +66,9 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   // Lo que le pregunta su coach (sin elegir nada, todo)
-  const ver = (k) => pregunta({ checkin_apartados: datos.datos?.apartados ?? null }, k);
+  // A quien solo le lleva el entrenamiento, nada de alimentación (aunque el apartado esté elegido)
+  const conNut = conNutricion(atleta) && datos.datos?.nutricion !== false;
+  const ver = (k) => (k !== 'alimentacion' || conNut) && pregunta({ checkin_apartados: datos.datos?.apartados ?? null }, k);
 
   useEffect(() => {
     if (!datos.datos) return;
@@ -83,7 +86,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
     setPasosHabito(null);
     setKcalNutricion(null);
     // Si apunta lo que come, la media de kcal de esa semana ya está hecha (solo los días completos)
-    if (!c.calorias_media && salud && ver('reloj')) {
+    if (!c.calorias_media && salud && ver('reloj') && conNut) {
       (async () => {
         try {
           // Solo días acabados (hoy no) y completos (ni marcados como a medias ni con muy pocas kcal)

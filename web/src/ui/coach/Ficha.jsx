@@ -21,6 +21,7 @@ import { HabitosCoach } from './HabitosCoach.jsx';
 import { NutricionCoach } from './NutricionCoach.jsx';
 import { CuestionarioCoach, CheckinAMedida, ParaProgramar, LoQueUsa } from './CuestionarioCoach.jsx';
 import { respuestasDe } from '../../logica/preguntas.js';
+import { NIVELES, NOMBRE_NIVEL, AYUDA_NIVEL, conNutricion } from '../../logica/nivel.js';
 
 const PESTANAS = [['programa', 'Programa'], ['mensajes', 'Mensajes'], ['actividad', 'Actividad'], ['registro', 'Registro'], ['seguimiento', 'Seguimiento'], ['nutricion', 'Nutrición'], ['videos', 'Vídeos y fotos'], ['objetivos', 'Objetivos'], ['notas', 'Notas'], ['datos', 'Datos']];
 
@@ -30,6 +31,8 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
   const [pest, setPest] = useState(pestanaInicial);
   const [invitar, setInvitar] = useState(false);
   const a = ficha.datos?.atleta;
+  // Abierta en Nutrición (desde la búsqueda) a quien solo le llevas el entrenamiento: a Datos, donde se cambia
+  useEffect(() => { if (a && !conNutricion(a) && pest === 'nutricion') setPest('datos'); }, [a?.nutricion, pest]);
 
   return (
     <div class="contenido coach">
@@ -39,12 +42,13 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
         <div class="titulo">
           <h1>{a?.nombre || 'Atleta'}</h1>
           <div class="sub">{a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : '')}</div>
+          {a && (a.nivel || !conNutricion(a)) && <div class="mini terciario">{[a.nivel && `Nivel ${NOMBRE_NIVEL[a.nivel].toLowerCase()}`, !conNutricion(a) && 'Solo entrenamiento'].filter(Boolean).join(' · ')}</div>}
         </div>
         {/* Sin cuenta vinculada (aunque se haya cambiado su estado a mano), siempre se le puede dar un código */}
         {a && !a.perfil_id && a.estado !== 'baja' && <button class="btn btn-primario btn-peq" onClick={() => setInvitar(true)}><Icono n="enviar" /> Código</button>}
       </header>
       <ErrorCaja error={ficha.error} reintentar={ficha.recargar} />
-      <Pestanas opciones={PESTANAS} valor={pest} alCambiar={setPest} etiqueta="Secciones de la ficha" />
+      <Pestanas opciones={a && !conNutricion(a) ? PESTANAS.filter(([k]) => k !== 'nutricion') : PESTANAS} valor={pest} alCambiar={setPest} etiqueta="Secciones de la ficha" />
       {!a ? <Siluetas forma="tarjetas" n={3} texto="Cargando la ficha" /> : (
         <div class="pestana-panel" role="tabpanel" id="pest-panel" aria-labelledby={`pest-${pest}`} key={pest}>
           {pest === 'programa' && <Programa atleta={a} />}
@@ -57,7 +61,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           {pest === 'actividad' && <Actividad atleta={a} irA={setPest} />}
           {pest === 'registro' && <Registro atleta={a} alCambiar={alCambiar} />}
           {pest === 'seguimiento' && <Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} />}
-          {pest === 'nutricion' && <NutricionCoach atleta={a} />}
+          {pest === 'nutricion' && (conNutricion(a) ? <NutricionCoach atleta={a} /> : <SinNutricion irADatos={() => setPest('datos')} />)}
           {pest === 'videos' && <Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} />}
           {pest === 'objetivos' && <Objetivos atleta={a} />}
           {pest === 'notas' && <Notas atleta={a} notas={ficha.datos.notas} recargar={() => ficha.recargar(true)} />}
@@ -98,7 +102,7 @@ function Programa({ atleta }) {
         <div class="panel"><Vacio icono="plantillas" titulo="Sin bloques todavía" accion={<button class="btn btn-primario" onClick={() => setNuevo(true)}>Crear su primer bloque</button>}>
           Crea un bloque desde una plantilla o desde cero. El atleta verá las semanas que publiques.
         </Vacio></div>
-      ) : bloqueId && <EditorBloque key={bloqueId} bloqueId={bloqueId} volumenObjetivo={atleta.volumen_objetivo} alBorrar={() => { setBloqueId(null); bloques.recargar(true); }} alCambiarBloque={() => bloques.recargar(true)} />}
+      ) : bloqueId && <EditorBloque key={bloqueId} bloqueId={bloqueId} volumenObjetivo={atleta.volumen_objetivo} nivel={atleta.nivel || null} alBorrar={() => { setBloqueId(null); bloques.recargar(true); }} alCambiarBloque={() => bloques.recargar(true)} />}
       {nuevo && <NuevoBloque atleta={atleta} bloques={lista} alCerrar={(id) => { setNuevo(false); if (id) { setBloqueId(id); bloques.recargar(true); } }} />}
     </div>
   );
@@ -520,6 +524,44 @@ function Notas({ atleta, notas, recargar }) {
   );
 }
 
+// Lo que le llevas (solo entrenamiento o también nutrición) y su nivel, que decide cómo pautas en el editor.
+// Se guarda al tocar; el atleta no ve su nivel, solo su tabla.
+function ServicioYNivel({ atleta, recargar }) {
+  const { api, aviso } = useApp();
+  const [ocupado, setOcupado] = useState(false);
+  const guardar = async (cambios, texto) => {
+    setOcupado(true);
+    try { await api.actualizarAtleta(atleta.id, cambios); aviso(texto); recargar(); } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
+  };
+  const nut = conNutricion(atleta);
+  return (
+    <section class="panel panel-pad pila servicio-nivel" aria-labelledby="servicio-nivel" aria-busy={ocupado ? 'true' : 'false'}>
+      <h2 id="servicio-nivel" class="h-panel">Lo que le llevas</h2>
+      <div class="pila-s">
+        <span class="peq">Servicio</span>
+        <Segmentos etiqueta="Servicio" valor={nut ? 'completo' : 'entrenamiento'}
+          opciones={[['entrenamiento', 'Solo entrenamiento'], ['completo', 'Entrenamiento y nutrición']]}
+          alCambiar={(v) => v && v !== (nut ? 'completo' : 'entrenamiento') && guardar({ nutricion: v === 'completo' }, v === 'completo' ? 'Ahora ve su nutrición' : 'Ya no ve nada de nutrición')} />
+        <span class="mini terciario">{nut ? 'Ve su plan de nutrición en Hoy y en Progreso (cuando le pongas uno).' : 'No ve nada de nutrición ni le llegan recordatorios de apuntarla. Lo que tuviera se guarda por si vuelves a llevársela.'}</span>
+      </div>
+      <div class="pila-s">
+        <span class="peq">Nivel</span>
+        <Segmentos etiqueta="Nivel" valor={atleta.nivel || null} opciones={NIVELES}
+          alCambiar={(v) => guardar({ nivel: v }, v ? `Nivel ${NOMBRE_NIVEL[v].toLowerCase()}` : 'Sin nivel')} />
+        <span class="mini terciario">{atleta.nivel ? `${AYUDA_NIVEL[atleta.nivel]}. Donde no le pongas carga, verá en cada serie su peso de la última vez. Él no ve su nivel.` : 'Sin nivel, el editor te enseña todas las columnas (RIR, RPE y kg). Toca uno para que la tabla se adapte a cómo le programas.'}</span>
+      </div>
+    </section>
+  );
+}
+
+function SinNutricion({ irADatos }) {
+  return (
+    <div class="panel"><Vacio icono="nutricion" titulo="Solo le llevas el entrenamiento" accion={<button class="btn" onClick={irADatos}>Cambiarlo en Datos</button>}>
+      No ve nada de nutrición en su app. Si empiezas a llevársela, cámbialo en Datos.
+    </Vacio></div>
+  );
+}
+
 function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
   const { api, aviso } = useApp();
   const [f, setF] = useState({ nombre: atleta.nombre, email: atleta.email || '', objetivo: atleta.objetivo || '', notion_url: atleta.notion_url || '', estado: atleta.estado, progresion_auto: atleta.progresion_auto !== false });
@@ -531,6 +573,7 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
   const base = atleta.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
   return (
     <div class="pila">
+      <ServicioYNivel atleta={atleta} recargar={recargar} />
       <CuestionarioCoach atleta={atleta} alCambiar={alCambiar} />
       <LoQueUsa atleta={atleta} />
       <form class="panel panel-pad pila" onSubmit={async (e) => {
