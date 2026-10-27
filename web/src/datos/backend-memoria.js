@@ -394,7 +394,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         && (f.etiqueta_max == null || (f.tipo === 'escala' && txt(f.etiqueta_max, 30))) && Number.isInteger(f.orden) && f.orden >= 0 && f.orden <= 99;
     },
     atletas: (f) => (f.checkin_apartados == null || (Array.isArray(f.checkin_apartados) && f.checkin_apartados.every((x) => ['peso', 'descanso', 'molestias', 'alimentacion', 'medidas', 'reloj'].includes(x))))
-      && (f.nivel == null || ['novato', 'intermedio', 'avanzado'].includes(f.nivel)) && (f.nutricion === undefined || typeof f.nutricion === 'boolean'),
+      && (f.nivel == null || ['novato', 'novato_intermedio', 'intermedio', 'avanzado'].includes(f.nivel)) && (f.nutricion === undefined || typeof f.nutricion === 'boolean'),
     registros_nutricion: (f) => fechaValida(f.fecha) && unDecimal(f.proteina_g) && unDecimal(f.carbos_g) && unDecimal(f.grasa_g) && unDecimal(f.fibra_g)
       && entre(n(f.kcal), 0, 15000) && entero(n(f.kcal)) && entre(n(f.proteina_g), 0, 1500) && entre(n(f.carbos_g), 0, 2500) && entre(n(f.grasa_g), 0, 1000)
       && entre(n(f.fibra_g), 0, 300) && (f.cumplido == null || [0, 1, 2].includes(Number(f.cumplido))) && (f.nota == null || (String(f.nota).length <= 280 && textoVisible(f.nota)))

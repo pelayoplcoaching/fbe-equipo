@@ -1,7 +1,9 @@
 // Servicio y nivel de cada atleta (v0.22, migración 018).
 // · Servicio: «nutricion» en false = solo le llevas el entrenamiento: la app no le enseña nada de nutrición.
 // · Nivel: cómo pauta el coach la carga de cada ejercicio, según su prioridad (alta, «Obligatorio» en el editor = principal):
-//     novato      → kg en todos (el atleta rellena reps y RPE);
+//     novato             → kg en todos (el atleta rellena reps y RPE);
+//     novato_intermedio  → kg en los obligatorios y los muy importantes (multiarticulares complementarios), RPE en
+//                          accesorios y prescindibles;
 //     intermedio  → kg en los principales y RPE objetivo en el resto (sin carga);
 //     avanzado    → RPE objetivo en todos (el atleta elige la carga).
 //   Sin nivel, el editor enseña todas las columnas, como siempre. El atleta no ve su nivel: ve su tabla.
@@ -9,6 +11,7 @@
 
 export const NIVELES = [
   ['novato', 'Novato', 'Pautas kg en todos los ejercicios; el atleta rellena reps y RPE'],
+  ['novato_intermedio', 'Novato/intermedio', 'Kg en los «Obligatorio» y «Muy importante» (los multiarticulares complementarios) y RPE objetivo en accesorios y prescindibles'],
   ['intermedio', 'Intermedio', 'Kg en los principales (los «Obligatorio») y RPE objetivo en el resto'],
   ['avanzado', 'Avanzado', 'RPE objetivo en todos; el atleta elige la carga'],
 ];
@@ -21,6 +24,7 @@ export const textoServicio = (atleta) => (conNutricion(atleta) ? 'Entrenamiento 
 // ¿Cómo se pauta la carga de este ejercicio? 'kg' | 'rpe' | null (sin nivel: libre)
 export function modoCarga(nivel, prioridad) {
   if (nivel === 'novato') return 'kg';
+  if (nivel === 'novato_intermedio') return prioridad === 'alta' || prioridad === 'media' ? 'kg' : 'rpe';
   if (nivel === 'intermedio') return prioridad === 'alta' ? 'kg' : 'rpe';
   if (nivel === 'avanzado') return 'rpe';
   return null;

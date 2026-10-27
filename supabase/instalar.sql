@@ -4457,8 +4457,8 @@ insert into public.fbe_migraciones (numero) values (17)
 -- 1. Servicio: a unos atletas les llevas solo el entrenamiento y a otros también la nutrición. Con
 --    «nutricion» en false, el atleta no ve nada de nutrición en la app y no recibe recordatorios de apuntarla.
 --    No se borra nada: si vuelves a activarla, todo sigue ahí.
--- 2. Nivel (novato, intermedio, avanzado): decide cómo pautas en el editor (kg o RPE objetivo según la
---    prioridad de cada ejercicio). Sin nivel, el editor enseña todas las columnas, como hasta ahora.
+-- 2. Nivel (novato, novato/intermedio, intermedio, avanzado): decide cómo pautas en el editor (kg o RPE
+--    objetivo según la prioridad de cada ejercicio). Sin nivel, el editor enseña todas las columnas, como hasta ahora.
 --    El atleta no ve su nivel.
 -- Solo el coach cambia estos datos (el atleta solo puede leer su ficha).
 --
@@ -4492,7 +4492,7 @@ alter table public.atletas add column if not exists nutricion boolean not null d
 alter table public.atletas add column if not exists nivel text;
 alter table public.atletas drop constraint if exists atletas_nivel_valido;
 alter table public.atletas add constraint atletas_nivel_valido
-  check (nivel is null or nivel in ('novato', 'intermedio', 'avanzado'));
+  check (nivel is null or nivel in ('novato', 'novato_intermedio', 'intermedio', 'avanzado'));
 
 -- ---------------------------------------------------------------------
 -- 2. Recordatorios: la nutrición solo a quien se la llevas (lo demás, igual que en la 010)

@@ -936,8 +936,11 @@ console.log('\nRegistro de errores: qué se apunta (v0.21)');
 console.log('\nNivel y servicio (v0.22)');
 {
   check(modoCarga('novato', 'baja') === 'kg' && modoCarga('intermedio', 'alta') === 'kg' && modoCarga('intermedio', 'media') === 'rpe' && modoCarga('intermedio', 'muy_baja') === 'rpe'
-    && modoCarga('avanzado', 'alta') === 'rpe' && modoCarga(null, 'alta') === null && NIVELES.length === 3,
+    && modoCarga('avanzado', 'alta') === 'rpe' && modoCarga(null, 'alta') === null && NIVELES.length === 4,
     'novato con kg en todo; intermedio con kg solo en los de prioridad alta; avanzado a RPE; sin nivel, libre');
+  check(modoCarga('novato_intermedio', 'alta') === 'kg' && modoCarga('novato_intermedio', 'media') === 'kg' && modoCarga('novato_intermedio', 'baja') === 'rpe' && modoCarga('novato_intermedio', 'muy_baja') === 'rpe'
+    && NIVELES.map(([v]) => v).join() === 'novato,novato_intermedio,intermedio,avanzado',
+    'novato/intermedio: kg en los obligatorios y los muy importantes (multiarticulares complementarios), RPE en accesorios y prescindibles; los cuatro niveles en orden');
   const pautas = [{ prioridad: 'alta', carga_sugerida_kg: 60 }, { prioridad: 'media', rpe_objetivo: 8 }];
   check(JSON.stringify(columnasEditor(null, pautas)) === '{"rir":true,"rpe":true,"kg":true}', 'sin nivel, el editor enseña todas las columnas');
   check(JSON.stringify(columnasEditor('intermedio', pautas)) === '{"rir":false,"rpe":true,"kg":true}' && JSON.stringify(columnasEditor('novato', [{ prioridad: 'media' }])) === '{"rir":false,"rpe":false,"kg":true}'

@@ -546,7 +546,7 @@ function ServicioYNivel({ atleta, recargar }) {
       </div>
       <div class="pila-s">
         <span class="peq">Nivel</span>
-        <Segmentos etiqueta="Nivel" valor={atleta.nivel || null} opciones={NIVELES}
+        <Segmentos etiqueta="Nivel" clase="segmentos-nivel" valor={atleta.nivel || null} opciones={NIVELES}
           alCambiar={(v) => guardar({ nivel: v }, v ? `Nivel ${NOMBRE_NIVEL[v].toLowerCase()}` : 'Sin nivel')} />
         <span class="mini terciario">{atleta.nivel ? `${AYUDA_NIVEL[atleta.nivel]}. Donde no le pongas carga, verá en cada serie su peso de la última vez. Él no ve su nivel.` : 'Sin nivel, el editor te enseña todas las columnas (RIR, RPE y kg). Toca uno para que la tabla se adapte a cómo le programas.'}</span>
       </div>

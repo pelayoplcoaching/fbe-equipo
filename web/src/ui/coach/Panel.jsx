@@ -138,7 +138,7 @@ function NuevoAtleta({ alCerrar }) {
           <Segmentos etiqueta="Servicio" valor={f.nutricion ? 'completo' : 'entrenamiento'} opciones={[['entrenamiento', 'Solo entrenamiento'], ['completo', 'Entrenamiento y nutrición']]}
             alCambiar={(v) => v && setF({ ...f, nutricion: v === 'completo' })} /></div>
         <div class="campo"><span class="etq">Nivel</span>
-          <Segmentos etiqueta="Nivel" valor={f.nivel} opciones={NIVELES} alCambiar={(v) => setF({ ...f, nivel: v })} />
+          <Segmentos etiqueta="Nivel" clase="segmentos-nivel" valor={f.nivel} opciones={NIVELES} alCambiar={(v) => setF({ ...f, nivel: v })} />
           <span class="ayuda">{f.nivel ? AYUDA_NIVEL[f.nivel] : 'Decide cómo pautas la carga en el editor. Puedes elegirlo después, en Datos.'}</span></div>
         <div class="campo"><label for="na-obj">Objetivo</label><input id="na-obj" class="entrada" value={f.objetivo} onInput={cambiar('objetivo')} placeholder="Ganar fuerza y bajar 3 kg" /></div>
         <div class="campo"><label for="na-notion">Su página de Notion</label><input id="na-notion" class="entrada" type="url" value={f.notion_url} onInput={cambiar('notion_url')} placeholder="https://notion.so/…" /><span class="ayuda">La verá en su perfil para la alimentación y los recursos hasta que pasen a la app.</span></div>
