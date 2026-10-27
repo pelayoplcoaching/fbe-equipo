@@ -81,7 +81,7 @@ const DIAS_FULL_BODY = [
 
 export function semillaDemo(hoy = hoyISO()) {
   const r = prng(20261024);
-  const db = { auth_users: [], perfiles: [], atletas: [], invitaciones: [], consentimientos: [], ejercicios: [], bloques: [], semanas: [], sesiones: [], sesion_ejercicios: [], series: [], pesos: [], checkins: [], molestias: [], notas_coach: [], medidas: [], marcas: [], objetivos: [], archivos: [], comentarios: [], recursos: [], notas_ejercicio: [], respuestas_guardadas: [], avisos: [], habitos: [], registros_habito: [], planes_nutricion: [], registros_nutricion: [], preferencias_notificaciones: [], suscripciones_push: [], notificaciones: [], cuestionarios: [], preguntas_checkin: [] };
+  const db = { auth_users: [], perfiles: [], atletas: [], invitaciones: [], consentimientos: [], ejercicios: [], bloques: [], semanas: [], sesiones: [], sesion_ejercicios: [], series: [], pesos: [], checkins: [], molestias: [], notas_coach: [], medidas: [], marcas: [], objetivos: [], archivos: [], comentarios: [], recursos: [], notas_ejercicio: [], respuestas_guardadas: [], avisos: [], habitos: [], registros_habito: [], planes_nutricion: [], registros_nutricion: [], preferencias_notificaciones: [], suscripciones_push: [], notificaciones: [], cuestionarios: [], preguntas_checkin: [], cobros_atletas: [], pagos: [] };
   const ahoraISO = new Date().toISOString();
   const lunesHoy = lunesDe(hoy);
 
@@ -265,6 +265,23 @@ export function semillaDemo(hoy = hoyISO()) {
   };
   aRpe(ana, lunesHoy, true);
   aRpe(carlos, lunesHoy, false);
+
+  // v0.24: cobros (solo los ve el coach). Ana paga por trimestres y está al día; Rubén, al mes, con este mes
+  // pendiente; Carlos, al mes, con el anterior retrasado.
+  const mesDe = (iso, n) => { const [a, m, d] = iso.split('-').map(Number); const t = a * 12 + m - 1 + n; const ult = new Date(Date.UTC(Math.floor(t / 12), (t % 12) + 1, 0)).getUTCDate(); return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}-${String(Math.min(d, ult)).padStart(2, '0')}`; };
+  const cobro = (atleta, acuerdo, periodos) => {
+    db.cobros_atletas.push({ atleta_id: atleta.id, nota: null, actualizado_en: ahoraISO, ...acuerdo });
+    for (const [desde, estado, pagadoDias = 2, metodo = 'transferencia'] of periodos) {
+      const meses = { mensual: 1, trimestral: 3 }[acuerdo.ciclo];
+      db.pagos.push({ id: uuid(), atleta_id: atleta.id, periodo_desde: desde, periodo_hasta: sumarDias(mesDe(desde, meses), -1), importe: acuerdo.precio_mes * meses,
+        estado, fecha_pago: estado === 'pagado' ? sumarDias(desde, pagadoDias) : null, metodo: estado === 'pagado' ? metodo : null, nota: null, creado_en: ahoraISO });
+    }
+  };
+  const inicioMes = `${hoy.slice(0, 8)}01`;
+  const altaAna = mesDe(sumarDias(hoy, -20), -6);
+  cobro(ana, { servicio: 'Performance', precio_mes: 75, ciclo: 'trimestral', desde: altaAna }, [[altaAna, 'pagado'], [mesDe(altaAna, 3), 'pagado', 1], [mesDe(altaAna, 6), 'pagado', 0]]);
+  cobro(ruben, { servicio: 'Essential', precio_mes: 49, ciclo: 'mensual', desde: mesDe(inicioMes, -3) }, [[mesDe(inicioMes, -3), 'pagado', 3, 'efectivo'], [mesDe(inicioMes, -2), 'pagado', 1, 'efectivo'], [mesDe(inicioMes, -1), 'pagado', 4, 'efectivo'], [inicioMes, 'pendiente']]);
+  cobro(carlos, { servicio: 'Complete', precio_mes: 95, ciclo: 'mensual', desde: mesDe(inicioMes, -4), nota: 'Precio de antes de la subida' }, [[mesDe(inicioMes, -4), 'pagado'], [mesDe(inicioMes, -3), 'pagado'], [mesDe(inicioMes, -2), 'pagado'], [mesDe(inicioMes, -1), 'retrasado'], [inicioMes, 'pendiente']]);
 
   // Atleta invitada que aún no ha activado su cuenta (código para probar la activación)
   const marta = { id: uuid(), perfil_id: null, nombre: 'Marta Gil', email: 'marta@fbe.demo', estado: 'invitado', fecha_alta: hoy, objetivo: 'Volver a entrenar tras el embarazo', notion_url: null, creado_en: ahoraISO };

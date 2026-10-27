@@ -6,6 +6,7 @@ import { pregunta, preguntasDe, respuestaValida, limpiarRespuestas, respuestasNo
 import { grados, dibujoValido, limpiarDibujo, rectImagen, describirDibujo } from '../web/src/logica/dibujo.js';
 import { tuDia, resumenDia } from '../web/src/logica/dia.js';
 import { progresarPauta, opcionesDe } from '../web/src/logica/progresion.js';
+import { sumarMeses, finPeriodo, importePeriodo, siguientePeriodo, resumenCobros, cobradoEnMes, fmtEuros, leerEuros } from '../web/src/logica/cobros.js';
 import { modoCarga, columnasEditor, pesoAnterior, conNutricion, textoServicio, NIVELES } from '../web/src/logica/nivel.js';
 import { cardioValido, cardioHechoValido, limpiarCardio, limpiarCardioHecho, textoCardio, textoCardioHecho, ritmo, palabrasEsfuerzo, cardioPorSemana, cardioHechoDe } from '../web/src/logica/cardio.js';
 import { e1rm, e1rmPorSemana, seriesPorGrupo, pauta, propuestaSerie, semanaActual, resumenAtleta, num, signo, mmss } from '../web/src/logica/calculos.js';
@@ -981,6 +982,32 @@ console.log('\nPreparar las semanas siguientes (v0.23)');
     'la descarga nunca deja una carga ligera a 0 ni la baja más de un 20 % (2 → 2, 4 → 3,5; 100 → 90)');
   check(progresarPauta({ rpe_objetivo: 4, series: 3 }, def, { descarga: true }).rpe_objetivo === 4, 'ni sube un RPE que ya era bajo');
   check(progresarPauta(banca, opcionesDe({ kg: 2.5 })).carga_sugerida_kg === 62.5 && progresarPauta(banca, opcionesDe({})).carga_sugerida_kg === 60, 'lo de antes («Duplicar» con kilos fijos) sigue igual');
+}
+
+console.log('\nControl de cobros (v0.24)');
+{
+  check(sumarMeses('2026-01-31', 1) === '2026-02-28' && sumarMeses('2026-11-15', 3) === '2027-02-15' && sumarMeses('2026-03-31', -1) === '2026-02-28', 'sumar meses, con los meses cortos');
+  check(finPeriodo('2026-07-20', 'trimestral') === '2026-10-19' && finPeriodo('2026-11-01', 'mensual') === '2026-11-30' && finPeriodo('2026-01-01', 'anual') === '2026-12-31',
+    'el periodo acaba el día antes del mismo día del siguiente (20 jul trimestral → 19 oct)');
+  check(importePeriodo({ precio_mes: 75, ciclo: 'trimestral' }) === 225 && importePeriodo({ precio_mes: 49.5, ciclo: 'mensual' }) === 49.5 && importePeriodo(null) === null, 'lo que toca cobrar: precio al mes × meses del periodo');
+  const pagos = [{ periodo_desde: '2026-07-20', periodo_hasta: '2026-10-19', importe: 225, estado: 'pagado', fecha_pago: '2026-07-21' }, { periodo_desde: '2026-10-20', periodo_hasta: '2027-01-19', importe: 225, estado: 'pendiente' }];
+  const s1 = siguientePeriodo(pagos, { ciclo: 'trimestral', precio_mes: 75 });
+  check(s1.desde === '2027-01-20' && s1.hasta === '2027-04-19' && s1.importe === 225 && siguientePeriodo([], { desde: '2026-11-03', ciclo: 'mensual' }).hasta === '2026-12-02', 'el siguiente cobro empieza justo después del último (o cuando empezó a pagar)');
+  const r1 = resumenCobros(pagos, '2026-10-27');
+  check(r1.pagadoHasta === '2026-10-19' && r1.debe === 225 && r1.estado === 'pendiente', 'pagado hasta el 19 oct y debe 225 € (el periodo ya ha empezado)');
+  check(resumenCobros(pagos, '2026-10-15').estado === 'vence_pronto' && resumenCobros(pagos, '2026-10-15').debe === 0 && resumenCobros(pagos.slice(0, 1), '2026-10-25').estado === 'vencido'
+    && resumenCobros([{ ...pagos[1], estado: 'retrasado' }], '2026-11-01').estado === 'retrasado' && resumenCobros([], '2026-11-01').estado === 'sin_datos' && resumenCobros(pagos, '2026-08-01').estado === 'al_dia',
+    'cada estado: vence esta semana, periodo acabado sin el siguiente, retrasado, sin cobros, al día');
+  const a31 = { desde: '2026-01-31', ciclo: 'mensual', precio_mes: 50 };
+  const s31 = siguientePeriodo([{ periodo_desde: '2026-01-31', periodo_hasta: '2026-02-27', estado: 'pagado' }, { periodo_desde: '2026-02-28', periodo_hasta: '2026-03-30', estado: 'pagado' }], a31);
+  check(s31.desde === '2026-03-31' && s31.hasta === '2026-04-29' && siguientePeriodo([{ periodo_desde: '2026-11-30', periodo_hasta: '2027-02-27' }], { desde: '2026-11-30', ciclo: 'trimestral' }).desde === '2027-02-28'
+    && siguientePeriodo([{ periodo_desde: '2026-11-30', periodo_hasta: '2027-02-27' }, { periodo_desde: '2027-02-28', periodo_hasta: '2027-05-29' }], { desde: '2026-11-30', ciclo: 'trimestral' }).desde === '2027-05-30',
+    'los periodos cuentan siempre desde el día en que empezó a pagar (un 31 no se queda en 28: 31 ene → 28 feb → 31 mar)');
+  check(resumenCobros([{ periodo_desde: '2026-12-01', periodo_hasta: '2026-12-31', importe: 49, estado: 'pendiente' }], '2026-11-20').estado === 'primer_cobro'
+    && resumenCobros(pagos, '2026-10-13').estado === 'vence_pronto' && resumenCobros(pagos, '2026-10-12').estado === 'al_dia', 'un atleta nuevo con su primer cobro por llegar no sale «al día»; «vence esta semana» son 7 días');
+  check(leerEuros('1.308') === 1308 && leerEuros('1.250,50') === 1250.5 && leerEuros('74,5') === 74.5 && leerEuros('74.50') === 74.5 && leerEuros('2.988 €') === 2988
+    && leerEuros('') === null && Number.isNaN(leerEuros('doce')) && Number.isNaN(leerEuros('1,2,3')), 'euros a la española: «1.308» son mil trescientos ocho, no 1,31');
+  check(cobradoEnMes(pagos, '2026-07') === 225 && cobradoEnMes(pagos, '2026-10') === 0 && fmtEuros(225) === '225 €' && fmtEuros(74.5) === '74,50 €', 'lo cobrado en un mes, por fecha de pago, en euros');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

@@ -1849,3 +1849,22 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 /* v0.23: ejemplo de cómo quedan las semanas preparadas */
 .lista-ejemplo { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
 .lista-ejemplo strong { color: var(--tinta); font-weight: 650; }
+/* v0.24: control de cobros (solo el coach) */
+.cobros-privado { display: flex; gap: 8px; align-items: center; }
+.cobros-privado svg { width: 16px; height: 16px; flex: none; color: var(--tinta-3); }
+.cobros-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.cobros-cifras dt { font-size: 12.5px; color: var(--tinta-3); font-weight: 600; }
+.cobros-cifras dd { margin: 2px 0 0; font-size: 18px; font-weight: 720; color: var(--tinta); min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .cobros-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cobros-cifras dd { font-size: 16px; } }
+.cobro + .cobro { border-top: 1px solid var(--linea); }
+.cobro-abrir { width: 100%; display: grid; gap: 4px; text-align: left; border: 0; background: transparent; color: var(--tinta); font: inherit; cursor: pointer; border-radius: var(--r-s); }
+.cobro-abrir:hover { background: var(--hoja-2); }
+.cobro-acciones { padding: 0 16px 14px; }
+.cobro-cab { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.cobro-periodo { font-weight: 650; flex: 1 1 auto; min-width: 0; }
+.cobro-importe { font-weight: 720; }
+.cobros-atencion { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.fila-boton { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; text-align: left; padding: 10px 8px; border: 0; border-radius: var(--r-xs); background: transparent; color: var(--tinta); font: inherit; cursor: pointer; }
+.fila-boton:hover { background: var(--hoja-2); }
+.fila-boton > .mini { grid-column: 1; }
+.fila-boton > .chip { grid-row: 1 / span 2; grid-column: 2; }

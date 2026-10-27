@@ -6,6 +6,7 @@ import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { progresoObjetivo, mejorReciente } from '../logica/objetivos.js';
 import { resumenHabito, cumplimientoHabitos } from '../logica/habitos.js';
 import { progresarPauta, opcionesDe } from '../logica/progresion.js';
+import { resumenCobros, cobradoEnMes, sumarMeses } from '../logica/cobros.js';
 import { planVigente, planSiguiente, objetivoDelDia, semanaNutricion, gastoAdaptativo, gastoPorSemanas, ajusteNutricion, avisosNutricion } from '../logica/nutricion.js';
 import { conDefecto, preferenciasValidas } from '../logica/notificaciones.js';
 import { limpiarCuestionario, avisoCuestionario, SIN_SALUD } from '../logica/cuestionario.js';
@@ -21,6 +22,12 @@ const porId = (filas) => Object.fromEntries(filas.map((f) => [f.id, f]));
 const agrupar = (filas, col) => filas.reduce((m, f) => ((m[f[col]] ||= []).push(f), m), {});
 const unicos = (xs) => [...new Set(xs.filter((x) => x != null))];
 // Servicio y nivel (v0.22) sin la migración 018 en la base: un aviso que diga qué falta, no el error técnico
+const falta020 = (e) => {
+  if (/\b(pagos|cobros_atletas)\b/.test(e?.message || '') && /relation|relaci\u00f3n|schema cache|does not exist|no existe/i.test(e?.message || '')) {
+    throw new Error('Para el control de cobros falta ejecutar la migración 020 en Supabase (supabase/migraciones/020_cobros.sql).');
+  }
+  throw e;
+};
 const falta018 = (e) => {
   if (/\b(nivel|nutricion)\b/.test(e?.message || '') && /column|columna|schema cache/i.test(e?.message || '')) {
     throw new Error('Para elegir servicio y nivel falta ejecutar la migración 018 en Supabase (supabase/migraciones/018_servicio_y_nivel.sql).');
@@ -71,7 +78,7 @@ const CAMPOS_SE = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'series',
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
   'archivos', 'comentarios', 'recursos', 'notas_ejercicio', 'respuestas_guardadas', 'avisos', 'habitos', 'registros_habito',
-  'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin'];
+  'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos'];
 
 // Qué columna marca la revisión del coach en cada cosa revisable
 const REVISION = { sesion: ['sesiones', 'revisada_en'], checkin: ['checkins', 'revisado_en'], archivo: ['archivos', 'revisado_en'] };
@@ -1149,6 +1156,7 @@ export function crearApi(backend) {
         atletas: atleta ? [atleta] : [],
       };
       // notas_coach: solo las ve el coach (si exporta el atleta, salen vacías)
+      // Los cobros no van aquí (es el archivo que se le da al atleta): están en la copia completa del coach
       for (const t of ['bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'comentarios', 'archivos', 'notas_ejercicio', 'avisos', 'recursos', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios']) {
         out[t] = await b.select(t, { eq: { atleta_id: atletaId } });
       }
@@ -1170,7 +1178,8 @@ export function crearApi(backend) {
     // Copia de todo (coach): para guardarla tú una vez al mes, además de las copias de Supabase
     async copiaCompleta() {
       const out = { exportado_en: new Date().toISOString(), version: 2 };
-      for (const t of TABLAS_COPIA) out[t] = await b.select(t, {});
+      // (los cobros, si la base aún no tiene la migración 020, vacíos: la copia no se queda a medias)
+      for (const t of TABLAS_COPIA) out[t] = await b.select(t, {}).catch((e) => { if (['cobros_atletas', 'pagos'].includes(t)) return []; throw e; });
       return out;
     },
 
@@ -1321,6 +1330,48 @@ export function crearApi(backend) {
         apartados: atleta?.checkin_apartados ?? null,
         cuestionario: cuestionario?.completado_en ? 'hecho' : cuestionario?.pedido_en ? 'pedido' : 'no',
       };
+    },
+    // ------------------------------------------------------------ coach: cobros (v0.24, solo el coach)
+    async cobrosAtleta(atletaId) {
+      const [acuerdo, pagos] = await Promise.all([
+        b.select('cobros_atletas', { eq: { atleta_id: atletaId } }).then((x) => x[0] || null),
+        b.select('pagos', { eq: { atleta_id: atletaId }, order: [['periodo_desde', 'desc']] }),
+      ]).catch(falta020);
+      return { acuerdo, pagos };
+    },
+    async guardarAcuerdoCobro(atletaId, campos) {
+      const fila = { atleta_id: atletaId, servicio: campos.servicio?.trim() || null, precio_mes: campos.precio_mes ?? null, ciclo: campos.ciclo || 'mensual',
+        desde: campos.desde || null, nota: campos.nota?.trim() || null, actualizado_en: new Date().toISOString() };
+      return (await b.upsert('cobros_atletas', [fila], 'atleta_id').catch(falta020))[0];
+    },
+    async guardarPago(fila) {
+      const limpio = {
+        atleta_id: fila.atleta_id, periodo_desde: fila.periodo_desde, periodo_hasta: fila.periodo_hasta, importe: Number(fila.importe),
+        estado: fila.estado || 'pendiente', fecha_pago: fila.estado === 'pagado' ? fila.fecha_pago || hoyISO() : null,
+        metodo: fila.metodo || null, nota: fila.nota?.trim() || null,
+      };
+      if (fila.id) return (await b.update('pagos', limpio, { eq: { id: fila.id } }).catch(falta020))[0];
+      return (await b.insert('pagos', [limpio]).catch(falta020))[0];
+    },
+    async marcarPagado(id, { fecha_pago = hoyISO(), metodo = null } = {}) {
+      return (await b.update('pagos', { estado: 'pagado', fecha_pago, ...(metodo ? { metodo } : {}) }, { eq: { id } }))[0];
+    },
+    async borrarPago(id) {
+      return b.delete('pagos', { eq: { id } });
+    },
+    // Todos los atletas de un vistazo (Cuenta → Cobros): cómo va cada uno y lo cobrado este mes
+    async cobrosTodos(hoy = hoyISO()) {
+      const [atletas, acuerdos, pagos] = await Promise.all([
+        b.select('atletas', { cols: 'id,nombre,estado', order: [['nombre', 'asc']] }),
+        b.select('cobros_atletas', {}),
+        b.select('pagos', {}), // pocos: todos (una deuda vieja o un pago atrasado de hace un año también cuentan)
+      ]).catch(falta020);
+      const A = Object.fromEntries(acuerdos.map((x) => [x.atleta_id, x]));
+      const P = agrupar(pagos, 'atleta_id');
+      // Los de baja, solo si aún deben algo
+      const filas = atletas.filter((a) => A[a.id] || P[a.id]?.length).map((a) => ({ atleta: a, acuerdo: A[a.id] || null, ...resumenCobros(P[a.id] || [], hoy) }))
+        .filter((x) => x.atleta.estado !== 'baja' || x.debe > 0);
+      return { filas, cobradoMes: cobradoEnMes(pagos, hoy.slice(0, 7)), cobradoMesAnterior: cobradoEnMes(pagos, sumarMeses(`${hoy.slice(0, 7)}-01`, -1).slice(0, 7)) };
     },
     async crearNota(atletaId, texto) {
       return (await b.insert('notas_coach', [{ atleta_id: atletaId, texto }]))[0];

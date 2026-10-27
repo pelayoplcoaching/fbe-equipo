@@ -1367,6 +1367,46 @@ console.log('\nTablas nuevas cerradas por defecto (migración 019)');
   await sin18.close();
 }
 
+console.log('\nControl de cobros, privado del coach (migración 020)');
+{
+  await como(pelayo, 'aal2');
+  await q(`insert into cobros_atletas (atleta_id, servicio, precio_mes, ciclo, desde) values ($1, 'Performance', 75, 'trimestral', '2026-07-20')`, [aAna.id]);
+  const [pg] = await q(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe, estado, fecha_pago, metodo) values ($1, '2026-10-20', '2027-01-19', 225, 'pagado', '2026-10-21', 'transferencia') returning id`, [aAna.id]);
+  await q(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe) values ($1, '2027-01-20', '2027-04-19', 225)`, [aAna.id]);
+  check((await q(`select count(*)::int n from pagos where atleta_id = $1`, [aAna.id]))[0].n === 2, 'el coach apunta lo acordado con Ana y sus cobros');
+  check(await falla(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe, estado, fecha_pago) values ($1, '2026-11-01', '2026-11-30', 50, 'pendiente', '2026-11-02')`, [aAna.id])
+    && await falla(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe) values ($1, '2026-11-30', '2026-11-01', 50)`, [aAna.id])
+    && await falla(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe, metodo) values ($1, '2026-11-01', '2026-11-30', 50, 'cripto')`, [aAna.id])
+    && await falla(`insert into cobros_atletas (atleta_id, ciclo) values ($1, 'semanal')`, [aLuis.id]),
+    'con sentido: fecha de pago solo si está pagado, periodo en orden, métodos y ciclos conocidos');
+  await como(ana);
+  check((await q(`select count(*)::int n from pagos`))[0].n === 0 && (await q(`select count(*)::int n from cobros_atletas`))[0].n === 0, 'Ana no ve sus cobros ni lo acordado (ni preguntando a la base)');
+  check(await falla(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe, estado, fecha_pago) values ($1, '2026-11-01', '2026-11-30', 0, 'pagado', '2026-11-01')`, [aAna.id])
+    && (await q(`update pagos set estado = 'pagado' where id = $1 returning id`, [pg.id]).catch(() => [])).length === 0, 'ni puede apuntarse ni cambiarse un pago');
+  await anon();
+  check(await falla(`select * from pagos`) && await falla(`select * from cobros_atletas`), 'sin sesión, nada');
+  await como(pelayo, 'aal1');
+  await su();
+  const mfa = (await q(`select count(*)::int n from auth.mfa_factors where user_id = $1 and status = 'verified'`, [pelayo]))[0].n;
+  await como(pelayo, 'aal1');
+  const vistosAal1 = (await q(`select count(*)::int n from pagos`))[0].n;
+  check(mfa === 0 || vistosAal1 === 0, 'con la verificación en dos pasos activada, sin el segundo paso tampoco los ve el coach');
+  await su();
+  const [aTmp] = await q(`insert into atletas (nombre) values ('Temporal') returning id`);
+  await q(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe) values ($1, '2026-11-01', '2026-11-30', 49)`, [aTmp.id]);
+  await q(`insert into cobros_atletas (atleta_id, precio_mes) values ($1, 49)`, [aTmp.id]);
+  await q(`delete from atletas where id = $1`, [aTmp.id]);
+  check((await q(`select count(*)::int n from pagos where atleta_id = $1`, [aTmp.id]))[0].n === 0 && (await q(`select count(*)::int n from cobros_atletas where atleta_id = $1`, [aTmp.id]))[0].n === 0, 'se borran con el atleta');
+  const sin19 = new PGlite();
+  await sin19.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin19.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '019')) await sin19.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let errSin19 = null;
+  try { await sin19.exec(readFileSync(new URL('../supabase/migraciones/020_cobros.sql', import.meta.url), 'utf8')); } catch (e) { errSin19 = e.message; }
+  check(/Antes de la 020 hace falta la 019/.test(errSin19 || ''), 'la 020 no se aplica sin la 019');
+  await sin19.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

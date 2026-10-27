@@ -746,6 +746,32 @@ console.log('\nRegistro de errores (v0.21)');
   check((await api.erroresApp()).length === 0, 'y los puede borrar');
 }
 
+console.log('\nControl de cobros (v0.24)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.guardarAcuerdoCobro(ana.id, { servicio: 'Performance', precio_mes: 75, ciclo: 'trimestral', desde: '2026-07-20', nota: 'Descuento de amiga' });
+  const p1 = await api.guardarPago({ atleta_id: ana.id, periodo_desde: '2026-07-20', periodo_hasta: '2026-10-19', importe: 225, estado: 'pagado', fecha_pago: '2026-07-21', metodo: 'transferencia' });
+  const p2 = await api.guardarPago({ atleta_id: ana.id, periodo_desde: '2026-10-20', periodo_hasta: '2027-01-19', importe: 225, estado: 'pendiente', fecha_pago: '2026-10-20' });
+  const c = await api.cobrosAtleta(ana.id);
+  check(c.acuerdo.precio_mes == 75 && c.acuerdo.ciclo === 'trimestral' && c.pagos.length === 2 && c.pagos[0].id === p2.id && p2.fecha_pago === null, 'el coach guarda lo acordado y apunta cobros (un pendiente no lleva fecha de pago)');
+  await api.marcarPagado(p2.id, { metodo: 'bizum' });
+  const p2b = (await api.cobrosAtleta(ana.id)).pagos.find((x) => x.id === p2.id);
+  check(p2b.estado === 'pagado' && p2b.fecha_pago === hoyISO() && p2b.metodo === 'bizum', '«Marcar pagado hoy» con su método');
+  await api.guardarAcuerdoCobro(ana.id, { precio_mes: 89, ciclo: 'trimestral' });
+  check(Number((await api.cobrosAtleta(ana.id)).pagos.find((x) => x.id === p1.id).importe) === 225, 'si cambias el precio, lo ya apuntado no cambia');
+  const todos = await api.cobrosTodos();
+  check(todos.filas.some((x) => x.atleta.id === ana.id && x.pagadoHasta === '2027-01-19') && typeof todos.cobradoMes === 'number', 'en Cuenta, todos de un vistazo (Ana, pagado hasta el 19 ene)');
+  const exp = await api.exportar(ana.id);
+  check(!('pagos' in exp) && !('cobros_atletas' in exp) && (await api.copiaCompleta()).pagos.length >= 2, 'van en la copia completa, pero no en la descarga de un atleta (es la que se le da a él)');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const deAna = await api.cobrosAtleta(ana.id).catch(() => ({ acuerdo: null, pagos: [] }));
+  check(!deAna.acuerdo && deAna.pagos.length === 0 && !('pagos' in (await api.exportar(ana.id))), 'Ana no los ve: ni en la app ni en su descarga de datos');
+  check(await lanza(() => api.guardarPago({ atleta_id: ana.id, periodo_desde: '2026-11-01', periodo_hasta: '2026-11-30', importe: 0, estado: 'pagado' })), 'ni puede apuntarse un pago');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.borrarPago(p1.id);
+  check((await api.cobrosAtleta(ana.id)).pagos.length === 1, 'el coach borra un cobro apuntado por error');
+}
+
 console.log('\nPreparar el mes de golpe (v0.23)');
 {
   await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
@@ -825,7 +851,7 @@ await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
 check((await b.sql(`select count(*)::int n from storage.objects`))[0].n === 2, 'un archivo que la atleta borró solo de la tabla sigue en su carpeta');
 // v0.23: antes de borrarla, la copia completa (para recuperarla después)
 const copiaAntes = JSON.parse(JSON.stringify(await api.copiaCompleta()));
-const TABLAS_ANA = ['bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'notas_ejercicio', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'comentarios'];
+const TABLAS_ANA = ['pagos', 'cobros_atletas', 'bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'notas_ejercicio', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'comentarios'];
 const cuenta = async () => Object.fromEntries(await Promise.all(TABLAS_ANA.map(async (t) => [t, (await b.sql(`select count(*)::int n from ${t} where atleta_id = $1`, [ana.id]))[0].n])));
 const antes = await cuenta();
 await api.borrarAtleta(ana.id);

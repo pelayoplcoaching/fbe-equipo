@@ -47,6 +47,8 @@ const DEFECTOS = {
   cuestionarios: () => ({ objetivo: null, objetivos: null, objetivo_detalle: null, experiencia: null, dias_semana: null, minutos_sesion: null, lugar: null, material: [],
     otros_deportes: null, activo: null, enfermedad: null, enfermedad_detalle: null, sintomas: null, otras: null, medicacion_detalle: null,
     lesiones: null, alergias: null, resultado: null, completado_en: null, pedido_en: null, revisado_en: null, creado_en: ahora(), actualizado_en: ahora() }),
+  cobros_atletas: () => ({ servicio: null, precio_mes: null, ciclo: 'mensual', desde: null, nota: null, actualizado_en: ahora() }),
+  pagos: () => ({ estado: 'pendiente', fecha_pago: null, metodo: null, nota: null, creado_en: ahora() }),
   preguntas_checkin: () => ({ atleta_id: null, tipo: 'escala', unidad: null, ayuda: null, etiqueta_min: null, etiqueta_max: null, orden: 0, activa: true, creado_en: ahora() }),
 };
 
@@ -56,7 +58,8 @@ const CASCADA = {
     ['checkins', 'atleta_id'], ['molestias', 'atleta_id'], ['notas_coach', 'atleta_id'], ['medidas', 'atleta_id'],
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
-    ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id']],
+    ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id']],
   habitos: [['registros_habito', 'habito_id']],
   bloques: [['semanas', 'bloque_id']],
   semanas: [['sesiones', 'semana_id']],
@@ -304,7 +307,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const fechaValida = (f) => typeof f === 'string' && f >= '2020-01-01' && f < '2100-01-01';
   const FOCOS_BLOQUE = ['tecnica', 'volumen', 'intensidad', 'adaptacion', 'descarga', 'mixto'];
   const FOCOS_SEMANA = ['tecnica', 'volumen', 'intensidad', 'adaptacion', 'descarga', 'evaluacion', 'peaking'];
+  const esFecha = (f) => typeof f === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f);
+  const textoCorto = (v, max) => v == null || (String(v).length >= 1 && String(v).length <= max && textoVisible(v));
   const CHECKS = {
+    // Migración 020: cobros
+    cobros_atletas: (f) => ['mensual', 'trimestral', 'semestral', 'anual'].includes(f.ciclo) && (f.precio_mes == null || entre(Number(f.precio_mes), 0, 10000))
+      && textoCorto(f.servicio, 60) && textoCorto(f.nota, 500),
+    pagos: (f) => esFecha(f.periodo_desde) && esFecha(f.periodo_hasta) && f.periodo_hasta >= f.periodo_desde && diasEntreIso(f.periodo_desde, f.periodo_hasta) <= 400
+      && entre(Number(f.importe), 0, 100000) && ['pendiente', 'retrasado', 'pagado'].includes(f.estado)
+      && (f.metodo == null || ['transferencia', 'efectivo', 'bizum', 'tarjeta', 'otro'].includes(f.metodo))
+      && (f.fecha_pago == null || (f.estado === 'pagado' && esFecha(f.fecha_pago))) && textoCorto(f.nota, 300),
     // Como la migración 015: la foto de perfil, una imagen pequeña en base64
     perfiles: (f) => f.foto == null || (String(f.foto).length <= 80000 && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(String(f.foto))),
     sesion_ejercicios: (f) => {
@@ -413,8 +425,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
   }
 
+  const soloCoach = (t) => { if (['cobros_atletas', 'pagos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   function insertar(t, fila) {
-    const nueva = { id: uuid(), ...(DEFECTOS[t]?.() || {}), ...copia(fila) };
+    soloCoach(t);
+    const nueva = { ...(t === 'cobros_atletas' ? {} : { id: uuid() }), ...(DEFECTOS[t]?.() || {}), ...copia(fila) };
     antesDeInsertar(t, nueva);
     if (t === 'objetivos') comprobarMarca(nueva);
     comprobarChecks(t, nueva);
@@ -553,6 +567,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // En la demo, el coach con la verificación activada y sin el segundo paso no ve nada (como en Supabase)
       const u = usuario();
       if (esCoach() && sesion?.aal !== 'aal2' && (miPerfil()?.exige_2fa || (u?.mfa || []).some((x) => x.estado === 'verified')) && !['perfiles'].includes(t)) return [];
+      // Los cobros solo los ve el coach (migración 020)
+      if (['cobros_atletas', 'pagos'].includes(t) && !esCoach()) return [];
       let filas = tabla(t).filter((x) => cumple(x, f));
       for (const [col, dir] of [...(f.order || [])].reverse()) {
         filas = filas.sort((a, b2) => {
@@ -573,6 +589,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async update(t, cambios, f) {
+      if (['cobros_atletas', 'pagos'].includes(t) && !esCoach()) return [];
       const res = [];
       const c = antesDeActualizar(t, cambios);
       const filas = tabla(t).filter((fila) => cumple(fila, f));
@@ -608,6 +625,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async upsert(t, filas, onConflict) {
+      soloCoach(t);
       const cols = onConflict.split(',').map((c) => c.trim());
       const lista = Array.isArray(filas) ? filas : [filas];
       const res = lista.map((f) => {
@@ -628,6 +646,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async delete(t, f) {
+      if (['cobros_atletas', 'pagos'].includes(t) && !esCoach()) return [];
       const ids = tabla(t).filter((x) => cumple(x, f)).map((x) => x.id);
       if (t === 'preguntas_checkin' && ids.some(conRespuestas)) throw new Error('Esta pregunta ya tiene respuestas: archívala para no perderlas');
       borrarCascada(t, ids);

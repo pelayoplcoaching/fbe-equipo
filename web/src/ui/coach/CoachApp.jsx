@@ -92,7 +92,7 @@ export function CoachApp() {
       {tab === 'mensajes' && <Conversaciones abrirAtleta={abrirAtleta} alCambiar={() => { bandeja.recargar(true); sinLeer.recargar(true); }} peticion={pide('mensajes')} />}
       {tab === 'plantillas' && <Plantillas peticion={pide('plantillas')} />}
       {tab === 'biblioteca' && <Biblioteca peticion={pide('biblioteca')} />}
-      {tab === 'cuenta' && <Cuenta />}
+      {tab === 'cuenta' && <Cuenta abrirAtleta={abrirAtleta} />}
       </main>
     </div>
     {buscar && <Buscador alCerrar={cerrarBuscar} ir={ir} />}

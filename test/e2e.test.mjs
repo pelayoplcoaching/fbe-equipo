@@ -1194,6 +1194,36 @@ try {
   await hojaMes.getByRole('button', { name: 'Preparar 3 semanas' }).click();
   await p.locator('.toast', { hasText: /preparadas, en borrador/ }).waitFor();
   check(await hay(p.locator('.semanas-tabs button'), pestanasAntes + 3), `crea las tres semanas en borrador, de un golpe (${pestanasAntes} → ${await p.locator('.semanas-tabs button').count()} semanas)`);
+
+  console.log('\nControl de cobros (v0.24)');
+  await p.getByRole('tab', { name: 'Cobros' }).click();
+  await p.locator('.cobros-privado').waitFor();
+  const filasAntes = await p.locator('.cobro').count();
+  check(filasAntes === 3 && (await p.locator('.cobros-cifras').first().textContent()).includes('225 €') && (await p.locator('.cobros-privado').textContent()).includes('no ve nada'),
+    'en la ficha de Ana, sus cobros (3 trimestres), lo que paga por periodo (225 €) y el recordatorio de que ella no lo ve');
+  await revisar('cobros-ficha');
+  await p.getByRole('button', { name: 'Apuntar cobro' }).click();
+  const hojaPago = p.getByRole('dialog', { name: 'Apuntar cobro' });
+  await hojaPago.waitFor();
+  const desde = await hojaPago.getByLabel('Periodo desde').inputValue(), hasta = await hojaPago.getByLabel('Hasta').inputValue();
+  check(desde > '2020' && hasta > desde && (await hojaPago.getByLabel('Importe (€)').inputValue()) === '225', `el siguiente trimestre viene relleno (${desde} a ${hasta}, 225 €)`);
+  await hojaPago.getByRole('group', { name: 'Estado' }).getByRole('button', { name: 'Pendiente' }).click();
+  await revisar('cobros-apuntar');
+  await hojaPago.getByRole('button', { name: 'Apuntar cobro' }).click();
+  await p.locator('.toast', { hasText: 'Cobro apuntado' }).waitFor();
+  check(await hay(p.locator('.cobro'), filasAntes + 1) && await p.getByRole('button', { name: 'Marcar pagado hoy' }).count() === 1, 'se apunta como pendiente y se puede marcar pagado en un toque');
+  await p.getByRole('button', { name: 'Marcar pagado hoy' }).click();
+  await p.locator('.toast', { hasText: 'Marcado como pagado hoy' }).waitFor();
+  await p.getByRole('button', { name: 'Volver a atletas' }).click();
+  await abrirPestana(p, 'Cuenta');
+  const secCobros = p.locator('section[aria-labelledby="cobros-todos"]');
+  await secCobros.waitFor();
+  check((await secCobros.textContent()).includes('Carlos Vera') && (await secCobros.textContent()).includes('Retrasado') && (await secCobros.textContent()).includes('Cobrado este mes'),
+    'en Cuenta, lo cobrado este mes y quién necesita algo (Carlos, retrasado)');
+  await revisar('cobros-cuenta');
+  await secCobros.getByRole('button', { name: /Carlos Vera/ }).click();
+  await p.getByRole('tab', { name: 'Cobros', selected: true }).waitFor();
+  check(true, 'tocarlo abre su ficha en Cobros');
 } catch (e) {
   fallos++;
   console.log('  ✗ el flujo se ha interrumpido:', e.message.split('\n').slice(0, 12).join('\n      '));

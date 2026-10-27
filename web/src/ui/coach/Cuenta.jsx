@@ -5,9 +5,11 @@ import { useApp, useCarga, Icono, Hoja, Cargando, HojaExportar, copiar, Avatar, 
 import { num } from '../../logica/calculos.js';
 import { BandaDemo } from '../App.jsx';
 import { hoyISO } from '../../logica/fechas.js';
+import { CobrosTodos } from './Cobros.jsx';
+/* global __APP_VERSION__ */
 import { FilaFoto, FilaNombre } from '../FotoPerfil.jsx';
 
-export function Cuenta() {
+export function Cuenta({ abrirAtleta } = {}) {
   const { perfil, backend, salir, api, aviso } = useApp();
   const [copia, setCopia] = useState(null);
   const [preparando, setPreparando] = useState(false);
@@ -25,6 +27,7 @@ export function Cuenta() {
       {backend.auth.mfa && <DosPasos />}
       <SeccionNotificaciones coach />
       <AjustesDispositivo coach />
+      <CobrosTodos abrirAtleta={abrirAtleta} />
       <Espacio />
       <ErroresApp />
       <section class="seccion">
@@ -37,7 +40,7 @@ export function Cuenta() {
           }}><Icono n="descargar" /> {preparando ? 'Preparando…' : 'Descargar copia completa'}</button>
         </div>
       </section>
-      <p class="mini terciario">FBE Equipo, versión 0.21.</p>
+      <p class="mini terciario">FBE Equipo, versión {String(__APP_VERSION__)}.</p>
       {copia && <HojaExportar titulo="Copia completa" nombre={`fbe-atletas-copia-${hoyISO()}.json`} contenido={copia} tipo="application/json" alCerrar={() => setCopia(null)} />}
     </div>
   );
