@@ -47,7 +47,9 @@ export function leerIngrediente(linea) {
   if (m) {
     const cantidad = fraccion(m[1]);
     const u = m[2] ? UNIDAD.get(normal(m[2].replace(/\.$/, ''))) : null;
-    const nombre = (u || !m[2] ? m[3] : `${m[2]} ${m[3]}`).replace(/^de\s+/i, '').trim();
+    // Sin unidad («3 tortillas de trigo»), el nombre es todo lo que va tras el número, con su «de»
+    const tras = t.match(new RegExp(`^${NUM}\\s*(.+)$`, 'i'))?.[2] || '';
+    const nombre = (u || !m[2] ? m[3] : tras).replace(/^de\s+/i, '').trim();
     if (cantidad > 0 && nombre) return limpiarIngrediente({ nombre: mayuscula(nombre), cantidad, unidad: u || (m[2] ? null : 'ud') });
   }
   // «Avena 60 g» o «Avena (60 g)»
