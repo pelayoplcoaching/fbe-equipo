@@ -1877,3 +1877,9 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .aviso-cobro.alerta > svg { color: var(--alerta); }
 .aviso-cobro.info { background: var(--morado-suave); border-left-color: var(--morado); }
 .aviso-cobro.info > svg { color: var(--morado); }
+/* v0.25: pagos en el panel de atletas */
+.cobro-panel { display: grid; gap: 3px; justify-items: start; }
+.cobro-panel .mini { white-space: nowrap; }
+.cobro-panel.en-linea { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.cobro-tarjeta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--linea); }
+.cobro-tarjeta .k { font-size: 12px; color: var(--tinta-3); font-weight: 600; }

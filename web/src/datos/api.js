@@ -1277,6 +1277,12 @@ export function crearApi(backend) {
           cuestionario: avisoCuestionario(Q[a.id]),
         }, hoy);
       });
+      // Cobros (v0.25, solo el coach; sin la migración 020, sin columna): cómo va cada uno, para verlo en el panel
+      const pagosTodos = await b.select('pagos', { in: { atleta_id: ids } }).catch(() => null);
+      if (pagosTodos) {
+        const PG = agrupar(pagosTodos, 'atleta_id');
+        for (const r of res) r.cobro = PG[r.atleta_id]?.length ? resumenCobros(PG[r.atleta_id], hoy) : null;
+      }
       return res.sort((x, y) => x.prioridad - y.prioridad || x.nombre.localeCompare(y.nombre, 'es'));
     },
     async crearAtleta({ nombre, email = null, objetivo = null, notion_url = null, nivel = null, nutricion = true }) {

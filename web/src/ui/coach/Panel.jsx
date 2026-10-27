@@ -4,7 +4,8 @@ import { useUnaVez, Siluetas, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja
 import { NIVELES, AYUDA_NIVEL } from '../../logica/nivel.js';
 import { BandaDemo } from '../App.jsx';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
-import { hace } from '../../logica/fechas.js';
+import { hace, fmtCorta } from '../../logica/fechas.js';
+import { fmtEuros } from '../../logica/cobros.js';
 
 function Pips({ hechas, total }) {
   if (!total) return <span class="terciario">—</span>;
@@ -35,7 +36,9 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
   const atencion = lista.filter((r) => r.alertas.some((a) => a.nivel !== 'info'));
   const invitados = lista.filter((r) => r.estado === 'invitado');
   const deBaja = lista.filter((r) => r.estado === 'baja');
+  // Columna de pagos solo si hay alguno apuntado (v0.25)
   const vista = filtro === 'atencion' ? atencion : filtro === 'invitados' ? invitados : filtro === 'baja' ? deBaja : lista.filter((r) => r.estado !== 'baja');
+  const conCobros = lista.some((r) => r.cobro);
 
   return (
     <div class="contenido coach">
@@ -67,11 +70,12 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
           <div class="panel solo-ancho">
             <div class="tabla-env">
               <table class="atletas-tabla">
-                <thead><tr><th>Atleta</th><th>Semana</th><th>Sesiones</th><th>Peso</th><th>Sueño</th><th>Motivación</th><th>Molestias</th><th>Último registro</th></tr></thead>
+                <thead><tr><th>Atleta</th>{conCobros && <th>Pagos</th>}<th>Semana</th><th>Sesiones</th><th>Peso</th><th>Sueño</th><th>Motivación</th><th>Molestias</th><th>Último registro</th></tr></thead>
                 <tbody>
                   {vista.map((r) => (
                     <tr key={r.atleta_id} onClick={() => abrir(r.atleta_id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id); }}>
                       <td><div class="nombre"><Avatar nombre={r.nombre} foto={r.foto} /><span>{r.nombre}</span></div><Alertas r={r} pendientes={pendientes[r.atleta_id]} /></td>
+                      {conCobros && <td><CobroPanel c={r.cobro} /></td>}
                       <td class="num-c">{r.semana ? <>S{r.semana.numero}/{r.semana.total}<div class="mini terciario">{r.semana.foco ? NOMBRE_FOCO[r.semana.foco] : r.bloque?.nombre}</div></> : '—'}</td>
                       <td><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /></td>
                       <td class="num-c">{r.peso ? <>{num(r.peso.kg)} kg{r.peso.ritmo ? <div class="mini terciario">{signo(r.peso.ritmo.kgSemana, 2)}/sem</div> : r.peso.cambio != null && <div class="mini terciario">{signo(r.peso.cambio)}</div>}</> : '—'}</td>
@@ -101,6 +105,7 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
                     <div><div class="k">Último registro</div><div class="v">{r.ultimaSerie ? hace(r.ultimaSerie) : '—'}</div></div>
                   </div>
                 )}
+                {r.cobro && <div class="cobro-tarjeta"><span class="k">Pagos</span><CobroPanel c={r.cobro} enLinea /></div>}
               </button>
             ))}
           </div>
@@ -109,6 +114,20 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
       {avisos && <HojaAvisos alCerrar={() => setAvisos(false)} />}
       {nuevo && <NuevoAtleta alCerrar={(id) => { setNuevo(false); res.recargar(true); if (id) abrir(id); }} />}
     </div>
+  );
+}
+
+// Cómo va con los pagos, en una línea (los mismos estados que en Cobros)
+const CLASE_COBRO = { al_dia: 'ok', vence_pronto: 'aviso', pendiente: 'aviso', primer_cobro: 'aviso', vencido: 'aviso', retrasado: 'alerta' };
+const CORTO_COBRO = { al_dia: 'Al día', vence_pronto: 'Vence pronto', pendiente: 'Pendiente', primer_cobro: 'Primer cobro', vencido: 'Sin renovar', retrasado: 'Retrasado' };
+function CobroPanel({ c, enLinea = false }) {
+  if (!c || c.estado === 'sin_datos') return <span class="terciario">—</span>;
+  const detalle = c.debe > 0 ? `Debe ${fmtEuros(c.debe)}` : c.pagadoHasta ? `Hasta el ${fmtCorta(c.pagadoHasta)}` : '';
+  return (
+    <span class={`cobro-panel ${enLinea ? 'en-linea' : ''}`}>
+      <span class={`chip ${CLASE_COBRO[c.estado] || 'info'}`}>{CORTO_COBRO[c.estado] || '—'}</span>
+      {detalle && <span class="mini terciario num">{detalle}</span>}
+    </span>
   );
 }
 

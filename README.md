@@ -10,6 +10,7 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 - **Solo el resumen** (migración 021, `mi_cobro()`, calculado en la base con las mismas reglas que tu ficha): hasta cuándo tiene pagado, lo que queda pendiente de periodos ya empezados y desde cuándo, y una etiqueta. Nunca el precio acordado, las notas, los métodos ni la lista de cobros: las tablas siguen siendo solo tuyas. Sin cobros apuntados (amigos, gratuitos), no ve nada.
 - **En Hoy, arriba, solo si hay algo que hacer**: «Tienes un pago pendiente» o «retrasado» (con el importe y desde cuándo), «Tu periodo de asesoría ha acabado» o «Tu periodo acaba pronto», con «Escribir a mi coach» y «Ahora no» (hasta mañana, o hasta que cambie lo que debe). Al día, nada.
 - **En Perfil → Tu asesoría**, siempre que haya cobros: «Tus pagos» con cómo va.
+- **En tu panel de atletas**, una columna **Pagos** (en el móvil, una línea en cada tarjeta) con cómo va cada uno: al día y hasta cuándo, pendiente o retrasado y lo que debe; sin entrar en Cobros. Solo sale si tienes algún cobro apuntado.
 - En tu ficha, Cobros te recuerda qué ve él. El texto de privacidad lo dice también.
 - Pruebas: 426 de permisos (+6), 273 de la capa de datos (+1), 120 de la demo (+2) y 212 de extremo a extremo (+4).
 

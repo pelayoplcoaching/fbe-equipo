@@ -759,6 +759,8 @@ console.log('\nControl de cobros (v0.24)');
   check(p2b.estado === 'pagado' && p2b.fecha_pago === hoyISO() && p2b.metodo === 'bizum', '«Marcar pagado hoy» con su método');
   await api.guardarAcuerdoCobro(ana.id, { precio_mes: 89, ciclo: 'trimestral' });
   check(Number((await api.cobrosAtleta(ana.id)).pagos.find((x) => x.id === p1.id).importe) === 225, 'si cambias el precio, lo ya apuntado no cambia');
+  const enPanel = (await api.resumenes()).find((r) => r.atleta_id === ana.id);
+  check(enPanel?.cobro?.pagadoHasta === '2027-01-19' && enPanel.cobro.estado === 'al_dia', 'en el panel de atletas, cómo va cada uno con los pagos');
   const todos = await api.cobrosTodos();
   check(todos.filas.some((x) => x.atleta.id === ana.id && x.pagadoHasta === '2027-01-19') && typeof todos.cobradoMes === 'number', 'en Cuenta, todos de un vistazo (Ana, pagado hasta el 19 ene)');
   const exp = await api.exportar(ana.id);

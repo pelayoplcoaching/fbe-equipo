@@ -1176,6 +1176,8 @@ try {
   await Promise.race([codigo2fa3.waitFor(), p.getByRole('heading', { name: 'Atletas' }).waitFor()]);
   if (await codigo2fa3.isVisible().catch(() => false)) { await codigo2fa3.fill('123456'); await p.getByRole('button', { name: 'Entrar' }).click(); }
   await p.getByRole('heading', { name: 'Atletas' }).waitFor();
+  const tarjetaCarlos = p.locator('.tarjeta-atleta', { hasText: 'Carlos Vera' }).first();
+  check((await tarjetaCarlos.locator('.cobro-tarjeta').textContent()).includes('Retrasado') && (await tarjetaCarlos.locator('.cobro-tarjeta').textContent()).includes('Debe 190'), 'en el panel, cada atleta con cómo va de pagos (Carlos: retrasado, debe 190 €)');
   await p.locator('.tarjeta-atleta', { hasText: 'Carlos Vera' }).first().click();
   await p.getByRole('tab', { name: 'Programa' }).waitFor();
   await p.locator('.cabecera', { hasText: 'Solo entrenamiento' }).waitFor({ timeout: 8000 }).catch(() => {});
