@@ -1139,8 +1139,11 @@ try {
   const conAnterior = [];
   for (let i = 0; i < await p.locator('.ejercicio').count(); i++) {
     const ej = p.locator('.ejercicio').nth(i);
-    if (await ej.locator('.ejercicio-cab').getAttribute('aria-expanded') !== 'true') await ej.locator('.ejercicio-cab').click();
-    await ej.locator('.serie').first().waitFor();
+    // (en una máquina lenta, el clic puede llegar antes de que el ejercicio esté listo: se reintenta)
+    for (let intento = 0; intento < 3; intento++) {
+      if (await ej.locator('.ejercicio-cab').getAttribute('aria-expanded') !== 'true') await ej.locator('.ejercicio-cab').click();
+      if (await ej.locator('.serie').first().waitFor({ timeout: 6000 }).then(() => true, () => false)) break;
+    }
     conAnterior.push(await ej.locator('.peso-anterior').count() > 0);
   }
   check(conAnterior.some(Boolean) && conAnterior.some((x) => !x), `Ana es intermedia: en los ejercicios a RPE ve su peso anterior en cada serie y en los principales, la carga pautada (${conAnterior.filter(Boolean).length} de ${conAnterior.length} con peso anterior)`);
