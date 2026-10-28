@@ -1178,14 +1178,18 @@ try {
   check((await filaPagos.textContent()).includes('Pagado hasta') && (await filaPagos.textContent()).includes('Al día') && !(await p.locator('.contenido').textContent()).includes('Performance'),
     'en su perfil ve «Tus pagos: al día, pagado hasta…», sin el precio ni el servicio');
   // v0.27.1: el aviso del descanso con los sonidos de FBE Timer (a Guti se le oía muy bajo)
-  await p.evaluate(() => { window.__sonado = []; HTMLMediaElement.prototype.play = function () { window.__sonado.push(this.src.slice(0, 22)); return Promise.resolve(); }; });
+  // (lo que suena: la duración de cada sonido que arranca; cada uno dura distinto)
+  await p.evaluate(() => { window.__sonado = []; const ini = AudioBufferSourceNode.prototype.start; AudioBufferSourceNode.prototype.start = function (...x) { window.__sonado.push(Math.round((this.buffer?.duration || 0) * 100)); return ini.apply(this, x); }; });
   const queSuena = p.getByLabel('Qué suena');
   await queSuena.scrollIntoViewIfNeeded();
   await queSuena.selectOption('boxeo');
-  await p.waitForTimeout(300);
-  check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).sonidoDescanso) === 'boxeo' && (await p.evaluate(() => window.__sonado.some((x) => x.startsWith('data:audio/mpeg'))))
+  await p.waitForFunction(() => window.__sonado.length >= 1, null, { timeout: 5000 }).catch(() => {});
+  await queSuena.selectOption('silbato');
+  await p.waitForFunction(() => window.__sonado.length >= 2, null, { timeout: 5000 }).catch(() => {});
+  const sonados = await p.evaluate(() => window.__sonado);
+  check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).sonidoDescanso) === 'silbato' && sonados.length >= 2 && sonados[0] > 0 && sonados[0] !== sonados[1]
     && await p.getByRole('switch', { name: /Pitidos en los 3 últimos segundos/ }).isChecked() && await p.getByLabel('Volumen').count() === 1,
-    'en Ajustes elige el sonido del descanso (los de FBE Timer), lo oye al elegirlo, y tiene volumen y pitidos en los 3 últimos segundos');
+    `en Ajustes elige el sonido del descanso (los de FBE Timer) y oye el que elige, no el de antes (duraciones ${sonados.join(' y ')} cs); tiene volumen y pitidos en los 3 últimos segundos`);
   await revisar('ajustes-sonido');
   await p.locator('.tab', { hasText: 'Hoy' }).click().catch(async () => { await p.evaluate(() => { location.hash = '#hoy'; }); });
   await p.locator('.tab', { hasText: 'Hoy' }).click();

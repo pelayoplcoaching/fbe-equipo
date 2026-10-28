@@ -35,14 +35,14 @@ export function AjustesDispositivo({ coach = false }) {
                 <li class="panel-pad pila-s">
                   <label for="aj-sonido-descanso">Qué suena</label>
                   <div class="fila-envolver">
-                    <select id="aj-sonido-descanso" class="selector" style="flex:1;min-width:180px" value={a.sonidoDescanso} onChange={(e) => { const v = e.currentTarget.value; cambiar('sonidoDescanso', v); prepararAudio(); setTimeout(() => pitar(v), 60); }}>
+                    <select id="aj-sonido-descanso" class="selector" style="flex:1;min-width:180px" value={a.sonidoDescanso} onChange={(e) => { const v = e.currentTarget.value; cambiar('sonidoDescanso', v); prepararAudio(); pitar(v); }}>
                       {SONIDOS_DESCANSO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
                     </select>
-                    <button class="btn btn-peq" onClick={() => { prepararAudio(); setTimeout(() => pitar(), 60); }}><Icono n="altavoz" /> Probar</button>
+                    <button class="btn btn-peq" onClick={() => { prepararAudio(); pitar(); }}><Icono n="altavoz" /> Probar</button>
                   </div>
                   <label for="aj-volumen" class="separa"><span>Volumen</span><span class="peq terciario num">{Math.round((Number(a.volumen) || 1) * 100)} %</span></label>
                   <input id="aj-volumen" type="range" min="0.1" max="1" step="0.1" value={a.volumen} onChange={(e) => cambiar('volumen', Number(e.currentTarget.value))} />
-                  <span class="peq terciario">Los mismos sonidos que FBE Timer. Suenan con el volumen multimedia del móvil (en iPhone, el de los botones laterales manda).</span>
+                  <span class="peq terciario">Los mismos sonidos que FBE Timer. Si se oye bajo, sube también el volumen del móvil.</span>
                 </li>
               )}
               {a.sonido && <Interruptor id="aj-cuenta" texto="Pitidos en los 3 últimos segundos" ayuda="Para saber que el descanso se acaba sin mirar el móvil" valor={a.cuentaAtras} alCambiar={(v) => cambiar('cuentaAtras', v)} />}
