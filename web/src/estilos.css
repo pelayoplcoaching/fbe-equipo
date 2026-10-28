@@ -1550,6 +1550,15 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .chip-dibujo .btn-texto { padding: 0 2px; min-height: 0; }
 
 /* ---------- v0.15: «Tu día» y pistas ---------- */
+.tu-dia-hecho { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: center; border-top: 1px solid var(--linea); }
+.tu-dia-hecho .dia-marca { background: var(--ok-suave); color: var(--ok); }
+.tu-dia-hecho + .lista { border-top: 1px solid var(--linea); }
+.peso-cargando { display: block; min-height: 36px; }
+.peso-estado { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: center; }
+.peso-marca { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--hoja-2); color: var(--tinta-2); }
+.peso-marca svg { width: 20px; height: 20px; }
+.peso-estado.ok .peso-marca { background: var(--ok-suave); color: var(--ok); }
+.peso-estado.aviso .peso-marca { background: var(--aviso-suave, var(--hoja-2)); color: var(--aviso, var(--tinta)); }
 .tu-dia .lista > li + li { border-top: 1px solid var(--linea); }
 .fila-dia { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; width: 100%; padding: 10px 16px; border: 0; background: none; text-align: left; font: inherit; color: var(--tinta); min-height: 56px; font-weight: 600; }
 .fila-dia .mini { font-weight: 500; }

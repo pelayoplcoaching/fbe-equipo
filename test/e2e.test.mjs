@@ -405,8 +405,8 @@ try {
   await p.locator('#peso-hoy').fill('70,4');
   await p.locator('#peso-hoy').blur();
   await p.getByRole('button', { name: 'Guardar', exact: true }).click();
-  await p.locator('.peso-hoy .chip', { hasText: 'Hoy 70,4' }).waitFor();
-  check(true, 'apunta su peso de hoy en un toque');
+  await p.locator('.peso-hoy .chip', { hasText: 'Apuntado' }).waitFor();
+  check(!/\d/.test(await p.locator('.peso-hoy').textContent()), 'apunta su peso de hoy en un toque; en Hoy, sin la cifra (a Guti no le gustaba verla siempre)');
 
   console.log('\nAtleta: check-in');
   await p.locator('.tab', { hasText: 'Check-in' }).click();
@@ -1201,6 +1201,22 @@ try {
     'aunque el navegador no deje guardar, «Probar» toca el elegido (y lo dice: «Suena: Tono motivador»)');
   check((await p.locator('.contenido').textContent()).includes('FBE Equipo, versión'), 'y en sus ajustes se ve qué versión tiene');
   await revisar('ajustes-sonido');
+  // v0.27.4: el peso en Hoy, sin la cifra de serie; quien la quiera, la enciende en Ajustes
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  const pesoAna = p.locator('.peso-hoy');
+  await pesoAna.waitFor();
+  await pesoAna.locator('.peso-estado').waitFor();
+  const textoPesoAna = await pesoAna.textContent();
+  check(await pesoAna.locator('.peso-estado').count() === 1 && !/\d/.test(textoPesoAna), `en Hoy, Ana ve cómo va su peso sin números («${textoPesoAna.trim()}»)`);
+  await abrirPestana(p, 'Perfil');
+  const kilos = p.getByRole('switch', { name: /Ver los kilos en Hoy/ });
+  await kilos.scrollIntoViewIfNeeded();
+  await kilos.click();
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await pesoAna.locator('.cifra').waitFor();
+  check((await pesoAna.textContent()).includes('kg de tendencia'), 'y con «Ver los kilos en Hoy», vuelve la cifra de su tendencia');
+  await abrirPestana(p, 'Perfil');
+  await kilos.click();
   await p.locator('.tab', { hasText: 'Hoy' }).click().catch(async () => { await p.evaluate(() => { location.hash = '#hoy'; }); });
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();

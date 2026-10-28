@@ -6,6 +6,8 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 
 ## Qué hay construido (v0.27)
 
+**v0.27.4:** en Hoy, «Tu día» con todo hecho se recoge en una línea («Todo hecho por hoy», con «Ver lo de hoy» para desplegarla) en vez de quedarse la lista entera tachada hasta el día siguiente. «Tu peso» ya no enseña los kilos de serie: dice cómo va respecto al ritmo de su plan de nutrición (el que eligió el coach o, sin él, el típico de su fase): «Vas hacia tu objetivo», «Estable estas semanas», «Bajas rápido: coméntalo con tu coach»…, sin cifras; tampoco el resumen de la semana. Quien quiera verlos, los enciende en Perfil → En este móvil → «Ver los kilos en Hoy». La gráfica sigue en Progreso.
+
 **v0.27.3:** al elegir un sonido (o «Probar»), suena el que se ve elegido y lo dice («Suena: Campana de boxeo»); si el navegador no deja guardar los ajustes, lo elegido vale igual mientras la app está abierta (antes volvía al de serie). En Perfil → En este móvil se ve la versión de la app.
 
 **v0.27.2:** en iPhone sonaba siempre el pitido de antes al elegir otro sonido (Safari no deja que un audio arranque si no es en el mismo toque). Ahora los sonidos van por Web Audio, como el pitido: suena el elegido, el volumen funciona también en iPhone y, con la sesión de audio en «playback», se oye aunque el móvil esté en silencio.

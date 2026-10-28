@@ -3,6 +3,7 @@ import { Icono, Anillo } from '../comunes.jsx';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { num, signo, textoSerie, NOMBRE_GRUPO } from '../../logica/calculos.js';
 import { desdeISO } from '../../logica/fechas.js';
+import { ajuste } from '../ajustes.js';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 export function rangoLargo(lunes, domingo) {
@@ -81,8 +82,10 @@ export function HistoriaSemana({ resumen, salud, alCerrar }) {
     ...(salud && r.peso ? [{ id: 'peso', render: () => (
       <>
         <span class="historia-etq">Tu peso (tendencia)</span>
-        <p class="historia-cifra num">{num(r.peso.despues)}<small>kg</small></p>
-        <span class="historia-chip num">{signo(r.peso.cambio, 2)} kg esta semana</span>
+        {ajuste('pesoCifra') ? <>
+          <p class="historia-cifra num">{num(r.peso.despues)}<small>kg</small></p>
+          <span class="historia-chip num">{signo(r.peso.cambio, 2)} kg esta semana</span>
+        </> : <p class="historia-cifra">{Math.abs(r.peso.cambio) < 0.1 ? 'Estable' : r.peso.cambio < 0 ? 'Bajando' : 'Subiendo'}</p>}
         <p class="historia-texto">La tendencia suaviza lo que sube y baja de un día a otro con el agua y la sal.</p>
       </>
     ) }] : []),

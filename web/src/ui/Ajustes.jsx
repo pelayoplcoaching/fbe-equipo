@@ -53,6 +53,7 @@ export function AjustesDispositivo({ coach = false }) {
               {a.sonido && <Interruptor id="aj-cuenta" texto="Pitidos en los 3 últimos segundos" ayuda="Para saber que el descanso se acaba sin mirar el móvil" valor={a.cuentaAtras} alCambiar={(v) => cambiar('cuentaAtras', v)} />}
               <Interruptor id="aj-vibracion" texto="Vibración" ayuda="En los móviles que la permiten" valor={a.vibracion} alCambiar={(v) => cambiar('vibracion', v)} />
               <Interruptor id="aj-pantalla" texto="Pantalla encendida durante la sesión" ayuda="Para no tener que desbloquear el móvil entre series" valor={a.pantalla} alCambiar={(v) => cambiar('pantalla', v)} />
+              <Interruptor id="aj-peso-cifra" texto="Ver los kilos en Hoy" ayuda="Y en el resumen de tu semana. De serie, te dice cómo va tu peso respecto a tu objetivo, sin la cifra; la gráfica sigue en Progreso" valor={a.pesoCifra} alCambiar={(v) => cambiar('pesoCifra', v)} />
               <li class="panel-pad separa">
                 <span class="peq secundario">¿Se oye y vibra bien?</span>
                 <button class="btn btn-peq" onClick={() => probar()}>Probar el aviso</button>

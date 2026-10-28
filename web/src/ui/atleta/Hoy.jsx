@@ -9,7 +9,7 @@ import { Bienvenida, PrimerosPasos } from './Bienvenida.jsx';
 import { AvisoLogros } from '../Logros.jsx';
 import { AvisosCoach } from '../Avisos.jsx';
 import { InformeBloque, TarjetaBloque } from '../InformeBloque.jsx';
-import { pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, num, signo } from '../../logica/calculos.js';
+import { pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
 import { diaDeCheckin, fmtConDia, hoyISO, desdeISO, rangoSemana, diasEntre, sumarDias } from '../../logica/fechas.js';
 import { queToca, diaPrevistoValido, cuandoDia } from '../../logica/plan.js';
 import { PlanSemana } from './Plan.jsx';
@@ -18,6 +18,8 @@ import { TarjetaNotificaciones } from '../Notificaciones.jsx';
 import { NutricionHoy } from './Nutricion.jsx';
 import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { MenuHoy } from './Comidas.jsx';
+import { planVigente } from '../../logica/nutricion.js';
+import { ajuste } from '../ajustes.js';
 import { AvisoCobro } from './Cobro.jsx';
 import { HojaCuestionario, TarjetaCuestionario, pendiente } from './Cuestionario.jsx';
 import { TarjetaCardio } from './Sesion.jsx';
@@ -119,6 +121,8 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
   // Tras apuntar algo en cualquier parte de la pantalla (un hábito, la nutrición, el peso), la lista se pone al día
   const recargarRef = useRef(null);
   recargarRef.current = dia.recargar;
+  // Con todo hecho, la lista se recoge en una línea (antes se quedaba entera, tachada, hasta el día siguiente)
+  const [verHecho, setVerHecho] = useState(false);
   useEffect(() => {
     let t = null;
     const alCambiar = () => { clearTimeout(t); t = setTimeout(() => recargarRef.current?.(true), 700); };
@@ -143,9 +147,16 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
     <section class="panel tu-dia" aria-label="Tu día">
       <div class="panel-pad separa">
         <strong>Tu día</strong>
-        {r && <span class="tu-dia-cuenta"><AnilloDia hechas={r.hechas} total={r.total} /><span class={`peq num ${r.todo ? 'texto-ok' : 'secundario'}`}>{r.todo ? 'Todo hecho' : `${r.hechas} de ${r.total}`}</span></span>}
+        {r && <span class="tu-dia-cuenta"><AnilloDia hechas={r.hechas} total={r.total} />{!r.todo && <span class="peq num secundario">{`${r.hechas} de ${r.total}`}</span>}</span>}
       </div>
-      <ul class="lista">
+      {r?.todo && (
+        <div class="panel-pad tu-dia-hecho">
+          <span class="dia-marca" aria-hidden="true"><Icono n="hecho" /></span>
+          <span class="pila-xs"><strong>Todo hecho por hoy</strong><span class="mini terciario">Mañana tendrás tu lista nueva.</span></span>
+          <button class="btn-texto" aria-expanded={verHecho} onClick={() => setVerHecho(!verHecho)}>{verHecho ? 'Ocultar' : 'Ver lo de hoy'}</button>
+        </div>
+      )}
+      {(!r?.todo || verHecho) && <ul class="lista">
         {items.map((x) => (
           <li key={x.id}>
             <button class={`fila-dia ${x.estado}`} onClick={() => ir(x)}>
@@ -157,7 +168,7 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
             </button>
           </li>
         ))}
-      </ul>
+      </ul>}
       <Pista id="tu-dia">Esta lista es lo que te toca hoy. Lo demás de esta pantalla es detalle: puedes mirarlo o no.</Pista>
     </section>
   );
@@ -437,23 +448,35 @@ function SemanaPasada({ salud }) {
 function PesoHoy({ irA }) {
   const { api, atleta, aviso } = useApp();
   const pesos = useCarga(() => api.pesos(atleta.id, 60).catch(() => []), [atleta.id]);
+  const nutri = conNutricion(atleta);
+  const planes = useCarga(() => (nutri ? api.planesNutricion(atleta.id).catch(() => []) : Promise.resolve([])), [atleta.id, nutri]);
   const [abierto, setAbierto] = useState(false);
+  // La cifra, solo para quien la quiere ver (Ajustes): de serie, cómo va respecto a su objetivo, sin números
+  const conCifra = !!ajuste('pesoCifra');
   const serie = tendenciaPeso(pesos.datos || []);
   const ult = serie[serie.length - 1];
   const hoy = hoyISO();
   const deHoy = ult?.fecha === hoy ? ult : null;
   const ritmo = ritmoPeso(serie);
+  const e = estadoPeso(ritmo, planVigente(planes.datos || [], hoy), ult ? diasEntre(ult.fecha, hoy) : 0);
   return (
     <section class="seccion">
       <div class="seccion-cab"><h2>Tu peso</h2>{serie.length > 1 && <button class="btn-texto" onClick={() => irA('progreso')}>Ver la gráfica</button>}</div>
       <div class="panel panel-pad peso-hoy">
-        {ult ? (
-          <div class="pila-xs">
-            <div class="cifra"><span class="v num">{num(ult.tendencia)}</span><span class="u">kg de tendencia</span></div>
-            <span class="ritmo">{ritmo ? <>{signo(ritmo.kgSemana, 2)} kg por semana ({signo(ritmo.pctSemana)} %)</> : deHoy ? `Hoy, ${num(deHoy.kg)} kg` : `Último: ${num(ult.kg)} kg`}</span>
-          </div>
-        ) : <p class="peq secundario">Pésate por la mañana, en ayunas, y apúntalo aquí. Con unos días verás tu tendencia, que es lo que importa.</p>}
-        {deHoy ? <button class="chip ok" onClick={() => setAbierto(true)} aria-label={`Hoy ${num(deHoy.kg)} kilos. Cambiarlo`}><Icono n="hecho" />Hoy {num(deHoy.kg)}</button>
+        {pesos.datos == null || planes.datos == null ? <span class="peso-cargando" aria-hidden="true" />
+          : !ult ? <p class="peq secundario">Pésate por la mañana, en ayunas, y apúntalo aquí. Con unos días verás tu tendencia, que es lo que importa.</p>
+          : conCifra ? (
+            <div class="pila-xs">
+              <div class="cifra"><span class="v num">{num(ult.tendencia)}</span><span class="u">kg de tendencia</span></div>
+              <span class="ritmo">{ritmo ? <>{signo(ritmo.kgSemana, 2)} kg por semana ({signo(ritmo.pctSemana)} %)</> : deHoy ? `Hoy, ${num(deHoy.kg)} kg` : `Último: ${num(ult.kg)} kg`}</span>
+            </div>
+          ) : (
+            <div class={`peso-estado ${e.tono}`}>
+              <span class="peso-marca" aria-hidden="true"><Icono n={e.tono === 'ok' ? 'diana' : e.tono === 'aviso' ? 'alerta' : 'progreso'} /></span>
+              <span class="pila-xs"><strong>{e.titulo}</strong><span class="mini secundario">{e.detalle}</span></span>
+            </div>
+          )}
+        {deHoy ? <button class="chip ok" onClick={() => setAbierto(true)} aria-label={conCifra ? `Hoy ${num(deHoy.kg)} kilos. Cambiarlo` : 'Peso de hoy apuntado. Cambiarlo'}><Icono n="hecho" />{conCifra ? `Hoy ${num(deHoy.kg)}` : 'Apuntado'}</button>
           : <button class="btn btn-peq btn-primario" onClick={() => setAbierto(true)}><Icono n="bascula" /> Apuntar el de hoy</button>}
       </div>
       {abierto && (

@@ -174,6 +174,21 @@ check(C.ritmoPeso(C.tendenciaPeso([{ fecha: '2026-10-01', kg: 70 }, { fecha: '20
 const conHueco = C.tendenciaPeso([{ fecha: '2026-10-01', kg: 70 }, { fecha: '2026-10-15', kg: 68 }]);
 check(conHueco[1].tendencia < 69 && conHueco[1].tendencia > 68, 'tras días sin pesarse, el peso nuevo cuenta más');
 
+console.log('\nPeso: cómo va, sin cifras');
+const ep = (pct, fase, ritmo_pct) => C.estadoPeso(pct == null ? null : { kgSemana: pct * 0.7, pctSemana: pct, dias: 21 }, fase ? { fase, ritmo_pct } : null);
+check(ep(null).sentido === null && ep(null).tono === 'neutro', 'sin una semana de pesos, todavía no dice hacia dónde va');
+check(ep(-0.5, 'perder').tono === 'ok' && ep(-0.5, 'perder').titulo === 'Vas hacia tu objetivo', 'perdiendo grasa y bajando: va hacia su objetivo');
+check(ep(-1.1, 'perder', -1).tono === 'ok', 'si el coach pautó un −1 % a la semana, bajar eso es ir bien (no «bajas rápido»)');
+check(ep(-1.4, 'perder', -0.5).tono === 'aviso' && ep(-1.4, 'perder', -0.5).titulo === 'Bajas rápido', 'bajar un 1 % o más fuera de lo pautado: que lo comente con su coach');
+check(ep(0.4, 'perder').tono === 'neutro' && ep(0.4, 'perder').sentido === 'sube', 'si sube un poco perdiendo grasa, sin alarmas: lo ven en el check-in');
+check(ep(1.5, 'perder').tono === 'aviso' && ep(-1.5, 'mantener').tono === 'aviso', 'moverse rápido en el sentido contrario también avisa');
+check(ep(0.1, 'mantener').tono === 'ok' && ep(0.1, 'mantener').sentido === 'estable', 'manteniendo, quedarse estable es ir bien');
+check(ep(-0.25, 'recomposicion', -0.25).tono === 'ok', 'en recomposición a −0,25 %, bajar eso es ir bien');
+check(ep(0.3, 'ganar').tono === 'ok' && ep(0.8, 'ganar', 0.25).tono === 'neutro' && ep(1.2, 'ganar', 0.25).tono === 'aviso', 'ganando: subir lo pautado va bien; algo más, a verlo; mucho más, a comentarlo');
+check(ep(-0.5).tono === 'neutro' && ep(-0.5).titulo === 'Tu tendencia baja', 'sin plan de nutrición, solo describe la tendencia');
+check(C.estadoPeso({ kgSemana: -0.3, pctSemana: -0.5, dias: 21 }, { fase: 'perder' }, 14).titulo === 'Hace días que no te pesas', 'si hace más de 10 días del último peso, no presume de tendencia');
+check(['perder', 'mantener', 'ganar', 'recomposicion', null].every((f) => [-1.5, -0.5, 0, 0.5, 1].every((x) => !/\d/.test(ep(x, f).titulo + ep(x, f).detalle))), 'nunca enseña una cifra');
+
 console.log('\nResumen semanal');
 const serieS = (id, fecha, kg, reps, rpe, ej = 'banca', grupos = ['pectoral', 'triceps']) => ({ id, fecha, sesion_id: fecha, ejercicio_id: ej, ejercicio: ej === 'banca' ? 'Press banca' : 'Remo', grupos, kg, reps, rpe, registrada_en: `${fecha}T18:00:00Z` });
 const dSem = {

@@ -374,6 +374,38 @@ export function ritmoPeso(serie, dias = 21) {
   return { kgSemana, pctSemana: Math.round((kgSemana / actual) * 1000) / 10, dias: diasEntre(tramo[0].fecha, fin) };
 }
 
+// Cómo va el peso, sin cifras (para Hoy): la tendencia de las últimas semanas (ritmo, de ritmoPeso) frente a
+// lo que busca su plan de nutrición: el ritmo que eligió el coach (ritmo_pct, % del peso por semana) o, sin él,
+// uno típico de su fase. En camino: a ±0,25 %/semana de lo buscado. Aviso (que lo hable con su coach): moverse
+// un 1 %/semana o más fuera de lo buscado, en cualquier sentido. Por debajo de un 0,15 %/semana cuenta como
+// estable. diasSinPesar: días desde el último peso (si pasan de 10, la tendencia ya no dice mucho).
+// Devuelve { titulo, detalle, tono: 'ok' | 'aviso' | 'neutro', sentido: 'baja' | 'estable' | 'sube' | null }.
+const RITMO_TIPICO = { perder: -0.5, ganar: 0.25, mantener: 0, recomposicion: 0 };
+export function estadoPeso(ritmo, plan = null, diasSinPesar = 0) {
+  if (diasSinPesar > 10) return { titulo: 'Hace días que no te pesas', detalle: 'Con unos pesos más verás cómo va tu tendencia', tono: 'neutro', sentido: null };
+  if (!ritmo) return { titulo: 'Tu tendencia, en unos días', detalle: 'Con una semana de pesos verás hacia dónde va', tono: 'neutro', sentido: null };
+  const pct = Number(ritmo.pctSemana) || 0;
+  const sentido = Math.abs(pct) < 0.15 ? 'estable' : pct < 0 ? 'baja' : 'sube';
+  const fase = plan?.fase || null;
+  const elegido = plan?.ritmo_pct;
+  const busca = elegido != null && elegido !== '' && Number.isFinite(Number(elegido)) ? Number(elegido) : RITMO_TIPICO[fase];
+  if (busca == null) {
+    return { titulo: sentido === 'estable' ? 'Tu tendencia se mantiene' : sentido === 'baja' ? 'Tu tendencia baja' : 'Tu tendencia sube', detalle: 'En las últimas semanas', tono: 'neutro', sentido };
+  }
+  const desvio = pct - busca;
+  if (Math.abs(desvio) <= 0.25) {
+    return { titulo: 'Vas hacia tu objetivo', detalle: sentido === 'estable' ? 'Tu tendencia se mantiene, como buscamos' : sentido === 'baja' ? 'Tu tendencia baja, como buscamos' : 'Tu tendencia sube, como buscamos', tono: 'ok', sentido };
+  }
+  const verbo = sentido === 'baja' ? 'Bajas' : 'Subes';
+  if (Math.abs(pct) >= 1 && sentido !== 'estable') {
+    return { titulo: `${verbo} rápido`, detalle: 'Coméntalo con tu coach para ajustar tu plan', tono: 'aviso', sentido };
+  }
+  if (sentido === 'estable') return { titulo: 'Estable estas semanas', detalle: 'A veces tarda en moverse: sigue con lo tuyo y lo vemos en el check-in', tono: 'neutro', sentido };
+  const mismoSentido = Math.sign(pct) === Math.sign(busca);
+  return { titulo: sentido === 'baja' ? 'Tu tendencia baja' : 'Tu tendencia sube',
+    detalle: mismoSentido ? (Math.abs(pct) > Math.abs(busca) ? 'Algo más rápido de lo previsto: lo vemos en el check-in' : 'Algo más despacio de lo previsto: lo vemos en el check-in') : 'Lo vemos en el check-in', tono: 'neutro', sentido };
+}
+
 // ---------- carga de entrenamiento (RPE de la sesión × minutos; Foster y cols., 2001) ----------
 // sesiones: [{ completada, fecha_realizada, rpe_sesion, duracion_min }]. Devuelve las últimas `semanas`
 // (de lunes a domingo, hasta la actual) con su carga en unidades arbitrarias (UA).
