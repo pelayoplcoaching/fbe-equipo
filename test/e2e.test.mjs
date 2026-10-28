@@ -1179,7 +1179,7 @@ try {
     'en su perfil ve «Tus pagos: al día, pagado hasta…», sin el precio ni el servicio');
   // v0.27.1: el aviso del descanso con los sonidos de FBE Timer (a Guti se le oía muy bajo)
   // (lo que suena: la duración de cada sonido que arranca; cada uno dura distinto)
-  await p.evaluate(() => { window.__sonado = []; const ini = AudioBufferSourceNode.prototype.start; AudioBufferSourceNode.prototype.start = function (...x) { window.__sonado.push(Math.round((this.buffer?.duration || 0) * 100)); return ini.apply(this, x); }; });
+  await p.evaluate(() => { if (!navigator.audioSession) Object.defineProperty(navigator, 'audioSession', { value: { type: 'auto' }, configurable: true }); window.__sonado = []; const ini = AudioBufferSourceNode.prototype.start; AudioBufferSourceNode.prototype.start = function (...x) { window.__sonado.push(Math.round((this.buffer?.duration || 0) * 100)); return ini.apply(this, x); }; });
   const queSuena = p.getByLabel('Qué suena');
   await queSuena.scrollIntoViewIfNeeded();
   await queSuena.selectOption('boxeo');
@@ -1190,6 +1190,7 @@ try {
   check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).sonidoDescanso) === 'silbato' && sonados.length >= 2 && sonados[0] > 0 && sonados[0] !== sonados[1]
     && await p.getByRole('switch', { name: /Pitidos en los 3 últimos segundos/ }).isChecked() && await p.getByLabel('Volumen').count() === 1,
     `en Ajustes elige el sonido del descanso (los de FBE Timer) y oye el que elige, no el de antes (duraciones ${sonados.join(' y ')} cs); tiene volumen y pitidos en los 3 últimos segundos`);
+  check(await p.evaluate(() => navigator.audioSession.type) === 'ambient', 'la sesión de audio se mezcla con la música del móvil («ambient»): no corta Spotify al entrar a entrenar');
   // Un navegador que no deja guardar: «Probar» toca el que se ve elegido, no el de serie
   await p.evaluate(() => { Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); }; window.__sonado = []; });
   await queSuena.selectOption('motivador');

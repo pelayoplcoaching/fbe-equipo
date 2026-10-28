@@ -13,8 +13,9 @@ export const COLOR_DISCO = { alta: 'var(--disco-rojo)', media: 'var(--disco-azul
 // Los sonidos son los de FBE Timer (v0.27.1, a petición de los atletas: el pitido de antes se oía muy bajo).
 // Van por Web Audio, como el pitido: en iPhone un <audio> solo suena si arranca en el mismo toque, y el aviso
 // llega solo al acabar el descanso (o unos milisegundos después de tocar «Probar»). Así también funciona el
-// volumen en iPhone, y con audioSession «playback» suena aunque el móvil esté en silencio. «Pitido suave» es
-// el de antes.
+// volumen en iPhone. La sesión de audio va en «ambient» (v0.27.5): se mezcla con la música del atleta en vez de
+// cortarla (con «playback», en v0.27.2–0.27.4, iPhone paraba Spotify al entrar a entrenar); a cambio, con el
+// móvil en silencio no suena. «Pitido suave» es el de antes.
 export const SONIDOS_DESCANSO = [['tres-beeps', 'Tres beeps'], ['estadio', 'Beep estadio'], ['boxeo', 'Campana de boxeo'], ['silbato', 'Silbato'], ['motivador', 'Tono motivador'], ['suave', 'Pitido suave']];
 let audio = null;
 const buffers = {}; // sonido → Promise<AudioBuffer>
@@ -33,7 +34,7 @@ function cargar(k) {
   return buffers[k];
 }
 export function prepararAudio() {
-  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* solo Safari */ }
+  try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch { /* solo Safari */ }
   try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch { audio = null; }
   cargar(leerAjustes().sonidoDescanso);
 }
