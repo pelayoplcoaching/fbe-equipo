@@ -1190,6 +1190,16 @@ try {
   check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).sonidoDescanso) === 'silbato' && sonados.length >= 2 && sonados[0] > 0 && sonados[0] !== sonados[1]
     && await p.getByRole('switch', { name: /Pitidos en los 3 últimos segundos/ }).isChecked() && await p.getByLabel('Volumen').count() === 1,
     `en Ajustes elige el sonido del descanso (los de FBE Timer) y oye el que elige, no el de antes (duraciones ${sonados.join(' y ')} cs); tiene volumen y pitidos en los 3 últimos segundos`);
+  // Un navegador que no deja guardar: «Probar» toca el que se ve elegido, no el de serie
+  await p.evaluate(() => { Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); }; window.__sonado = []; });
+  await queSuena.selectOption('motivador');
+  await p.waitForFunction(() => window.__sonado.length >= 1, null, { timeout: 5000 }).catch(() => {});
+  await p.getByRole('button', { name: 'Probar', exact: true }).click();
+  await p.waitForFunction(() => window.__sonado.length >= 2, null, { timeout: 5000 }).catch(() => {});
+  const sinGuardar = await p.evaluate(() => window.__sonado);
+  check(sinGuardar.length >= 2 && sinGuardar[0] === sinGuardar[1] && sinGuardar[0] !== sonados[1] && await p.locator('.toast', { hasText: 'Suena: Tono motivador' }).count() >= 1,
+    'aunque el navegador no deje guardar, «Probar» toca el elegido (y lo dice: «Suena: Tono motivador»)');
+  check((await p.locator('.contenido').textContent()).includes('FBE Equipo, versión'), 'y en sus ajustes se ve qué versión tiene');
   await revisar('ajustes-sonido');
   await p.locator('.tab', { hasText: 'Hoy' }).click().catch(async () => { await p.evaluate(() => { location.hash = '#hoy'; }); });
   await p.locator('.tab', { hasText: 'Hoy' }).click();

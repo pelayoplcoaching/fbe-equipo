@@ -5,12 +5,20 @@ const CLAVE = 'fbe-ajustes';
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C' };
 
+// Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
+// igual mientras la app esté abierta (antes se volvía a los de serie: «elijo otro sonido y suena el de siempre»)
+let enMemoria = null;
 export function leerAjustes() {
-  try { return { ...AJUSTES_DEFECTO, ...JSON.parse(localStorage.getItem(CLAVE) || '{}') }; } catch { return { ...AJUSTES_DEFECTO }; }
+  try {
+    const guardado = localStorage.getItem(CLAVE);
+    if (guardado) return { ...AJUSTES_DEFECTO, ...JSON.parse(guardado), ...(enMemoria || {}) };
+  } catch { /* sin almacenamiento */ }
+  return { ...AJUSTES_DEFECTO, ...(enMemoria || {}) };
 }
 export const ajuste = (k) => leerAjustes()[k];
 
 export function guardarAjustes(a) {
+  enMemoria = { ...a };
   try { localStorage.setItem(CLAVE, JSON.stringify(a)); } catch { /* sin almacenamiento: vale para esta visita */ }
   aplicarTema(a.tema);
 }

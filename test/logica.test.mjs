@@ -313,6 +313,14 @@ check(!r4.enCola && enviadas.at(-1) === 3, 'con conexión se envía al momento')
   check(await c3.enviar({ tipo: 'serie', datos: { numero: 6, reps: 5 }, atletaId: 'a' }).then(() => false, () => true), 'sin sesión de atleta no se envía nada');
 }
 
+console.log('\nAjustes de este móvil');
+{
+  const { leerAjustes, guardarAjustes } = await import('../web/src/ui/ajustes.js');
+  check(leerAjustes().sonidoDescanso === 'tres-beeps' && leerAjustes().cuentaAtras === true, 'de serie: tres beeps y pitidos en los 3 últimos segundos');
+  guardarAjustes({ ...leerAjustes(), sonidoDescanso: 'boxeo' });
+  check(leerAjustes().sonidoDescanso === 'boxeo', 'si el navegador no deja guardar (aquí no hay almacenamiento), lo elegido vale igual mientras la app está abierta');
+}
+
 console.log('\nBúsqueda rápida del coach');
 {
   const { construirResultados } = await import('../web/src/logica/busqueda.js');

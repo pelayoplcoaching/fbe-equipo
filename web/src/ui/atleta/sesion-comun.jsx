@@ -50,7 +50,7 @@ function pitidoSuave(volumen = 1) {
   });
 }
 let sonando = null;
-// sonido: para «Probar» uno sin haberlo guardado
+// sonido: el que hay que tocar (al elegirlo o «Probar»); sin él, el de los ajustes
 export function pitar(sonido = null) {
   const a = leerAjustes();
   if (a.vibracion) try { navigator.vibrate?.([200, 100, 200, 100, 400]); } catch { /* */ }

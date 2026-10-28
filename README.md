@@ -6,6 +6,8 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 
 ## Qué hay construido (v0.27)
 
+**v0.27.3:** al elegir un sonido (o «Probar»), suena el que se ve elegido y lo dice («Suena: Campana de boxeo»); si el navegador no deja guardar los ajustes, lo elegido vale igual mientras la app está abierta (antes volvía al de serie). En Perfil → En este móvil se ve la versión de la app.
+
 **v0.27.2:** en iPhone sonaba siempre el pitido de antes al elegir otro sonido (Safari no deja que un audio arranque si no es en el mismo toque). Ahora los sonidos van por Web Audio, como el pitido: suena el elegido, el volumen funciona también en iPhone y, con la sesión de audio en «playback», se oye aunque el móvil esté en silencio.
 
 **v0.27.1: el aviso del descanso se oye** (lo pidió el primer atleta): los mismos sonidos que FBE Timer (tres beeps, beep estadio, campana de boxeo, silbato y tono motivador, o el pitido suave de antes), como audio normal del móvil, a elegir en Perfil → En este móvil con «Probar» y volumen; pitidos en los 3 últimos segundos (se pueden quitar); vibración más larga. Revisar dice «1 cosa espera tu respuesta». 228 pruebas de extremo a extremo (+1).
