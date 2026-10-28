@@ -1177,6 +1177,16 @@ try {
   await filaPagos.waitFor();
   check((await filaPagos.textContent()).includes('Pagado hasta') && (await filaPagos.textContent()).includes('Al día') && !(await p.locator('.contenido').textContent()).includes('Performance'),
     'en su perfil ve «Tus pagos: al día, pagado hasta…», sin el precio ni el servicio');
+  // v0.27.1: el aviso del descanso con los sonidos de FBE Timer (a Guti se le oía muy bajo)
+  await p.evaluate(() => { window.__sonado = []; HTMLMediaElement.prototype.play = function () { window.__sonado.push(this.src.slice(0, 22)); return Promise.resolve(); }; });
+  const queSuena = p.getByLabel('Qué suena');
+  await queSuena.scrollIntoViewIfNeeded();
+  await queSuena.selectOption('boxeo');
+  await p.waitForTimeout(300);
+  check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).sonidoDescanso) === 'boxeo' && (await p.evaluate(() => window.__sonado.some((x) => x.startsWith('data:audio/mpeg'))))
+    && await p.getByRole('switch', { name: /Pitidos en los 3 últimos segundos/ }).isChecked() && await p.getByLabel('Volumen').count() === 1,
+    'en Ajustes elige el sonido del descanso (los de FBE Timer), lo oye al elegirlo, y tiene volumen y pitidos en los 3 últimos segundos');
+  await revisar('ajustes-sonido');
   await p.locator('.tab', { hasText: 'Hoy' }).click().catch(async () => { await p.evaluate(() => { location.hash = '#hoy'; }); });
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();

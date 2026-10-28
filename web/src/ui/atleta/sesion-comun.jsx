@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { leerAjustes } from '../ajustes.js';
+import { SONIDOS } from '../../datos/sonidos-descanso.js';
 import { Icono } from '../comunes.jsx';
 import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, propuestaBackoff } from '../../logica/calculos.js';
 
@@ -9,23 +10,54 @@ export const RPES = ['', 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 export const COLOR_DISCO = { alta: 'var(--disco-rojo)', media: 'var(--disco-azul)', baja: 'var(--disco-amarillo)', muy_baja: 'var(--disco-verde)' };
 
 // ---------- sonido y vibración al acabar el descanso (el audio se activa con el primer toque) ----------
+// Los sonidos son los de FBE Timer (v0.27, a petición de los atletas: el pitido de antes se oía muy bajo).
+// Van como audio normal del móvil (con su volumen multimedia, y suenan aunque el iPhone esté en silencio);
+// «Pitido suave» es el de antes.
+export const SONIDOS_DESCANSO = [['tres-beeps', 'Tres beeps'], ['estadio', 'Beep estadio'], ['boxeo', 'Campana de boxeo'], ['silbato', 'Silbato'], ['motivador', 'Tono motivador'], ['suave', 'Pitido suave']];
 let audio = null;
+const elementos = {};
+function elemento(k) {
+  if (!SONIDOS[k] || typeof Audio === 'undefined') return null;
+  if (!elementos[k]) { elementos[k] = new Audio(SONIDOS[k]); elementos[k].preload = 'auto'; }
+  return elementos[k];
+}
 export function prepararAudio() {
   try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch { audio = null; }
+  // iPhone: un audio solo suena solo (al acabar el descanso) si antes se ha puesto en marcha con un toque
+  const el = elemento(leerAjustes().sonidoDescanso);
+  if (el && !el.dataset?.listo && !el.listo) {
+    try {
+      el.muted = true;
+      el.play().then(() => { el.pause(); el.currentTime = 0; el.muted = false; el.listo = true; }).catch(() => { el.muted = false; });
+    } catch { el.muted = false; }
+  }
 }
-export function pitar() {
-  const a = leerAjustes();
-  if (a.vibracion) try { navigator.vibrate?.([220, 120, 220]); } catch { /* */ }
-  if (!audio || !a.sonido) return;
+function pitidoSuave(volumen = 1) {
+  if (!audio) return;
   [0, 0.28].forEach((t) => {
     const o = audio.createOscillator(), g = audio.createGain();
     o.frequency.value = 880; o.type = 'sine';
     g.gain.setValueAtTime(0.0001, audio.currentTime + t);
-    g.gain.exponentialRampToValueAtTime(0.25, audio.currentTime + t + 0.02);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.01, 0.5 * volumen), audio.currentTime + t + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + t + 0.22);
     o.connect(g).connect(audio.destination);
     o.start(audio.currentTime + t); o.stop(audio.currentTime + t + 0.25);
   });
+}
+// sonido: para «Probar» uno sin haberlo guardado
+export function pitar(sonido = null) {
+  const a = leerAjustes();
+  if (a.vibracion) try { navigator.vibrate?.([200, 100, 200, 100, 400]); } catch { /* */ }
+  if (!a.sonido) return;
+  const volumen = Math.min(1, Math.max(0.1, Number(a.volumen) || 1));
+  const el = elemento(sonido || a.sonidoDescanso);
+  if (!el) { pitidoSuave(volumen); return; }
+  try {
+    el.volume = volumen;
+    el.currentTime = 0;
+    const p = el.play();
+    p?.catch?.(() => pitidoSuave(volumen));
+  } catch { pitidoSuave(volumen); }
 }
 
 // Un tono corto (para el metrónomo de tempo): respeta el ajuste de sonido
@@ -100,6 +132,16 @@ export function Temporizador({ fin, total, prioridad, texto, alCambiar, clase = 
     if (quedan <= 0 && !avisado.current) { avisado.current = true; pitar(); }
     if (quedan > 0) avisado.current = false;
   }, [quedan <= 0]);
+  // Como FBE Timer: un pitido corto en cada uno de los 3 últimos segundos
+  const segundo = Math.ceil(quedan);
+  const contado = useRef(null);
+  useEffect(() => {
+    if (segundo >= 1 && segundo <= 3 && contado.current !== segundo && leerAjustes().cuentaAtras) {
+      tono(660, 0.1, 0.35 * Math.min(1, Math.max(0.1, Number(leerAjustes().volumen) || 1)));
+      vibrarCorto(80);
+    }
+    contado.current = segundo;
+  }, [segundo]);
   useEffect(() => {
     if (quedan > 0) return undefined;
     const t = setTimeout(() => alCambiar(null), 6000);

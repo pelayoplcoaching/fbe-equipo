@@ -6,6 +6,8 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 
 ## Qué hay construido (v0.27)
 
+**v0.27.1: el aviso del descanso se oye** (lo pidió el primer atleta): los mismos sonidos que FBE Timer (tres beeps, beep estadio, campana de boxeo, silbato y tono motivador, o el pitido suave de antes), como audio normal del móvil, a elegir en Perfil → En este móvil con «Probar» y volumen; pitidos en los 3 últimos segundos (se pueden quitar); vibración más larga. Revisar dice «1 cosa espera tu respuesta». 228 pruebas de extremo a extremo (+1).
+
 **Novedades de la v0.27: días sin una comida («hoy sin merienda»)**
 - Como los planes A (con merienda) y B (sin merienda) de Notion (migración 023). En la ficha → Nutrición → Recetario → «Cambiar» eliges la **comida que algunos días no hace** (por ejemplo, la merienda); solo la cambia el coach.
 - En cada receta de su recetario eliges **para qué días es**: todos, con merienda o sin merienda. La misma receta puede ir dos veces en una comida, una para cada tipo de día y con su factor (×1 con merienda, ×1,25 sin ella), o puedes poner versiones distintas.

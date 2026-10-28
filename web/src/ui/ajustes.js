@@ -1,8 +1,8 @@
-// Ajustes de este dispositivo (se guardan en el propio navegador, no en la cuenta): tema, sonido,
-// vibración y pantalla encendida durante la sesión. Si el almacenamiento no está disponible, valen los de serie.
+// Ajustes de este dispositivo (se guardan en el propio navegador, no en la cuenta): tema, sonido (cuál, a qué
+// volumen y los pitidos de los 3 últimos segundos), vibración y pantalla encendida durante la sesión. Si el almacenamiento no está disponible, valen los de serie.
 
 const CLAVE = 'fbe-ajustes';
-export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, vibracion: true, pantalla: true };
+export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C' };
 
 export function leerAjustes() {

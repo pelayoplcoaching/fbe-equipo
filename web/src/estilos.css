@@ -1943,3 +1943,5 @@ button.entrada-texto:hover > span:first-child { text-decoration: underline; text
 /* Días sin una comida (v0.27) */
 .interruptor-dia { padding-top: 4px; border-top: 1px solid var(--linea); margin-top: 4px; }
 .segmentos-dia { max-width: 520px; }
+/* Volumen del aviso (v0.27.1) */
+input[type="range"] { accent-color: var(--morado); width: 100%; }

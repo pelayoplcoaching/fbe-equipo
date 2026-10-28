@@ -74,7 +74,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
   return (
     <div class="contenido coach">
       <header class="cabecera">
-        <div class="titulo"><h1>Revisar</h1><div class="sub">{d?.total ? `${d.total} cosas esperan tu respuesta` : 'Al día'}</div></div>
+        <div class="titulo"><h1>Revisar</h1><div class="sub">{d?.total ? (d.total === 1 ? '1 cosa espera tu respuesta' : `${d.total} cosas esperan tu respuesta`) : 'Al día'}</div></div>
       </header>
       <BandaDemo />
       <ErrorCaja error={bandeja.error} reintentar={recargar} />
