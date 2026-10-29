@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { ChipLlegada } from '../atleta/Preparacion.jsx';
-import { Siluetas, useApp, Icono, ErrorCaja, cuando, Avatar } from '../comunes.jsx';
+import { Siluetas, useApp, useCarga, Icono, ErrorCaja, cuando, Avatar, Hoja, usePreferencia } from '../comunes.jsx';
 import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
 import { BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
@@ -83,6 +83,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
           <button key={k} aria-pressed={filtro === k ? 'true' : 'false'} onClick={() => setFiltro(k)}>{t}{k !== 'todo' ? ` (${cuentas[k]})` : ''}</button>
         ))}
       </div>
+      {filtro === 'todo' && <VariantesPorRevisar abrirAtleta={abrirAtleta} />}
       {!d?.total ? <BandejaVacia /> : (
         <div class="rejilla-revisar" ref={caja}>
           {ver('mensajes') && hilos.map((h) => <TarjetaMensaje key={h.clave} h={h} recargar={recargar} abrirAtleta={abrirAtleta} />)}
@@ -95,6 +96,59 @@ export function Revisar({ bandeja, abrirAtleta }) {
       <p class="mini terciario">Comentar algo lo da por revisado. Las sesiones y los check-ins de más de 4 semanas salen de la bandeja solos.</p>
       {d?.total > 0 && <p class="mini terciario solo-ancho atajos">Con el teclado: <kbd>j</kbd> <kbd>k</kbd> para moverte, <kbd>r</kbd> responder, <kbd>e</kbd> revisado, <kbd>o</kbd> abrir su ficha.</p>}
     </div>
+  );
+}
+
+// Variantes de material que no cuadran (v0.30): en los bloques en marcha o por empezar, ejercicios cuya variante
+// nombra otro material («Press militar sentado con mancuernas», variante «En máquina»). Se arreglan en todo el bloque.
+// «Dejar así» se recuerda en este dispositivo.
+function VariantesPorRevisar({ abrirAtleta }) {
+  const { api, aviso } = useApp();
+  const lista = useCarga(() => api.variantesPorRevisar(), []);
+  const [ignoradas, setIgnoradas] = usePreferencia('fbe-variantes-ignoradas', []);
+  const [abierto, setAbierto] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  const pendientes = (lista.datos || []).filter((x) => !ignoradas.includes(x.clave));
+  if (!pendientes.length && !abierto) return null;
+  async function corregir(x, nuevo) {
+    if (ocupado) return;
+    setOcupado(true);
+    try {
+      const n = await api.corregirVariante({ bloqueId: x.bloque.id, ejercicioId: x.ejercicio.id, variante: x.variante, nuevoEjercicioId: nuevo?.id || null });
+      aviso(nuevo ? `${x.atleta.nombre}: cambiado a ${nuevo.nombre}${n > 1 ? ` en ${n} sesiones` : ''}` : `${x.atleta.nombre}: variante quitada`);
+      await lista.recargar(true);
+    } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
+  }
+  return (
+    <>
+      {pendientes.length > 0 && (
+        <div class="panel panel-pad aviso-variante" role="note">
+          <span><b>{pendientes.length === 1 ? '1 ejercicio tiene' : `${pendientes.length} ejercicios tienen`} una variante con otro material</b> (por ejemplo, con mancuernas pero «En máquina»). Cada material es un ejercicio aparte: sus kilos no se mezclan.</span>
+          <div class="aviso-variante-botones"><button type="button" class="btn btn-peq" onClick={() => setAbierto(true)}>Revisarlos</button></div>
+        </div>
+      )}
+      {abierto && (
+        <Hoja titulo="Variantes con otro material" alCerrar={() => setAbierto(false)}>
+          {!pendientes.length ? <p class="peq secundario">Ya no queda ninguno.</p> : (
+            <div class="lista-variantes">
+              {pendientes.map((x) => (
+                <div key={x.clave} class="fila-variante">
+                  <button type="button" class="btn-texto nombre-atleta" onClick={() => { setAbierto(false); abrirAtleta(x.atleta.id, 'programa'); }}><Avatar nombre={x.atleta.nombre} foto={x.atleta.foto} clase="peq" />{x.atleta.nombre}</button>
+                  <p class="peq"><b>{x.ejercicio.nombre}</b>, variante «{x.variante}»{x.sesion ? <span class="terciario"> ({x.sesion}{x.pautas > 1 ? `, ${x.pautas} veces en el bloque` : ''})</span> : null}</p>
+                  <p class="mini secundario">{x.revision.texto}</p>
+                  <div class="aviso-variante-botones">
+                    {x.revision.propuestas.map((e) => <button key={e.id} type="button" class="btn btn-peq" disabled={ocupado} onClick={() => corregir(x, e)}>Cambiar a {e.nombre}</button>)}
+                    <button type="button" class="btn btn-peq" disabled={ocupado} onClick={() => corregir(x, null)}>Quitar la variante</button>
+                    <button type="button" class="btn btn-peq btn-texto" onClick={() => setIgnoradas([...ignoradas, x.clave])}>Dejar así</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <p class="mini terciario">Se cambia en todas las semanas del bloque. Lo que el atleta ya ha registrado pasa al ejercicio nuevo, que es el que hizo de verdad.</p>
+        </Hoja>
+      )}
+    </>
   );
 }
 

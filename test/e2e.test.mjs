@@ -128,6 +128,18 @@ try {
   await p.getByLabel('Serie top y back-off').first().selectOption('10');
   await p.waitForFunction(() => document.querySelector('select.backoff')?.classList.contains('activo'));
   check(true, 'marca el press banca con serie top y back-off al −10 %');
+  // v0.30: una variante con otro material se avisa en el editor
+  const varLat = p.getByLabel('Variante').nth(4);
+  await varLat.fill('En polea');
+  await varLat.press('Tab');
+  const avisoVar = p.locator('.editor-sesion .aviso-variante').first();
+  await avisoVar.waitFor();
+  check((await avisoVar.textContent()).includes('dice polea, pero el ejercicio es con mancuernas') && await avisoVar.getByRole('button', { name: /^Cambiar a Elevaciones laterales en polea/ }).count() > 0,
+    'una variante con otro material («En polea» en unas elevaciones con mancuernas) se avisa y propone el ejercicio en polea');
+  await revisar('editor-variante');
+  await avisoVar.getByRole('button', { name: 'Quitar la variante' }).click();
+  await p.locator('.toast', { hasText: 'Variante quitada' }).waitFor();
+  check(await p.locator('.editor-sesion .aviso-variante').count() === 0 && (await p.getByLabel('Variante').nth(4).inputValue()) === '', 'y se puede quitar la variante (en todo el bloque)');
   await p.getByRole('button', { name: 'Publicar al atleta' }).click();
   const avisoActivo = p.getByRole('dialog', { name: 'Este bloque aún no es el activo' });
   await avisoActivo.waitFor();
@@ -358,10 +370,17 @@ try {
   const { VIDEO_EJEMPLO } = await import('../web/src/datos/video-demo.js');
   await primero.locator('input[type=file]').setInputFiles({ name: 'press.mp4', mimeType: 'video/mp4', buffer: Buffer.from(VIDEO_EJEMPLO.split(',')[1], 'base64') });
   await p.getByLabel('¿Qué quieres que mire?').fill('¿Bajo bien la barra?');
+  // v0.30: recortar antes de enviar (el vídeo de ejemplo dura 3 s: se deja del segundo 1 al final)
+  await p.locator('.recorte').waitFor();
   await revisar('subir-video');
-  await p.getByRole('button', { name: 'Enviar a tu coach' }).click();
-  await p.locator('.toast', { hasText: 'Vídeo enviado a tu coach' }).waitFor();
-  check(true, 'envía un vídeo de técnica de su serie');
+  check(await p.getByRole('button', { name: 'Enviar a tu coach' }).count() === 1, 'sin recortar, se envía tal cual (un vídeo ligero no se toca)');
+  await p.evaluate(() => { window.__grabado = 0; const ini = MediaRecorder.prototype.start; MediaRecorder.prototype.start = function (...x) { window.__grabado++; return ini.apply(this, x); }; });
+  await p.getByLabel(/Empieza en/).fill('1');
+  await p.locator('.hoja-dialogo .mini', { hasText: 'Se enviarán 2 s de vídeo' }).waitFor();
+  check(true, 'al mover el inicio, dice cuánto vídeo se enviará y cuánto pesará');
+  await p.getByRole('button', { name: 'Recortar y enviar' }).click();
+  await p.locator('.toast', { hasText: 'Vídeo enviado a tu coach' }).waitFor({ timeout: 20000 });
+  check(await p.evaluate(() => window.__grabado) === 1, 'recorta el vídeo en el móvil (del segundo 1 al 3) y lo envía');
   await p.getByRole('button', { name: 'Terminar sesión' }).click();
   await p.locator('.hoja-dialogo .segmentos button', { hasText: '8' }).click();
   await p.getByLabel('Nota para tu coach').fill('Me he notado fuerte en el press');
@@ -492,6 +511,19 @@ try {
   await msg.waitFor();
   check(true, 'la bandeja trae el comentario de Lucía');
   await revisar('revisar');
+  // v0.30: variantes con otro material (Rubén: press inclinado con mancuernas, variante «En máquina»)
+  await p.locator('.aviso-variante', { hasText: 'variante con otro material' }).waitFor();
+  await p.getByRole('button', { name: 'Revisarlos' }).click();
+  const hojaVar = p.getByRole('dialog', { name: 'Variantes con otro material' });
+  await hojaVar.waitFor();
+  const textoVar = await hojaVar.textContent();
+  check(textoVar.includes('Rubén Martín') && textoVar.includes('Press inclinado con mancuernas') && textoVar.includes('«En máquina»'), 'Revisar avisa de las variantes con otro material (las que venían de Notion)');
+  await revisar('variantes');
+  await hojaVar.getByRole('button', { name: 'Cambiar a Press inclinado en máquina' }).click();
+  await p.locator('.toast', { hasText: 'cambiado a Press inclinado en máquina' }).waitFor();
+  await hojaVar.getByText('Ya no queda ninguno').waitFor();
+  await hojaVar.getByRole('button', { name: 'Cerrar' }).click();
+  check(await p.locator('.aviso-variante').count() === 0, 'con un toque lo cambia en todo su bloque y el aviso se va');
   await msg.getByRole('button', { name: 'Responder' }).click();
   await msg.getByRole('button', { name: 'Respuestas guardadas' }).click();
   await p.locator('.respuesta-guardada').first().locator('button').first().click();
@@ -1102,7 +1134,7 @@ try {
   await revisar('diario-coach');
   await abrirPestana(p, 'Cuenta');
   await p.getByRole('heading', { name: 'Espacio de vídeos y fotos' }).waitFor();
-  check((await p.locator('.espacio-fila').first().textContent()).includes('Ana López'), 'en Cuenta ve el espacio que ocupa cada atleta');
+  check((await p.locator('.espacio-fila').allTextContents()).some((t) => t.includes('Ana López')), 'en Cuenta ve el espacio que ocupa cada atleta');
   check(await p.locator('.espacio-fila', { hasText: 'Ana López' }).locator('.avatar.con-foto').count() === 1, 'con la foto de Ana');
   check(await p.getByRole('heading', { name: 'Errores de la app' }).count() === 1 && (await p.locator('.seccion', { hasText: 'Errores de la app' }).textContent()).includes('En la demo no se apuntan'),
     'v0.21: en Cuenta, el apartado de errores de la app (en la demo, vacío)');

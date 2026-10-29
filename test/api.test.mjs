@@ -1064,5 +1064,45 @@ console.log('\nPauta serie a serie (v0.28)');
   await api.borrar('bloques', bl.id);
 }
 
+{
+  console.log('Variantes de material (v0.30)');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const maq = await api.crear('ejercicios', { nombre: 'Press militar en máquina/inverso', grupos_musculares: ['deltoides'] });
+  const manc = await api.crear('ejercicios', { nombre: 'Press militar sentado con mancuernas', grupos_musculares: ['deltoides'], alternativas: [maq.id] });
+  const bl = await api.nuevoBloque(ana.id, { nombre: 'Variantes', fecha_inicio: '2027-01-04', semanas: 2, sesionesPorSemana: 1 });
+  const c = await api.bloqueCompleto(bl.id);
+  const [w1, w2] = c.semanas;
+  const s1 = c.sesiones[w1.id][0];
+  const s2 = c.sesiones[w2.id]?.[0] || await api.nuevaSesion(w2.id);
+  await b.insert('sesion_ejercicios', [
+    { sesion_id: s1.id, ejercicio_id: manc.id, orden: 1, series: 3, variante: 'En máquina' },
+    { sesion_id: s2.id, ejercicio_id: manc.id, orden: 1, series: 3, variante: 'En máquina' },
+    { sesion_id: s2.id, ejercicio_id: manc.id, orden: 2, series: 3, variante: 'Mancuernas/Máquina' },
+    { sesion_id: s2.id, ejercicio_id: maq.id, orden: 3, series: 3, variante: 'Agarre neutro' },
+  ]);
+  let lista = (await api.variantesPorRevisar()).filter((x) => x.bloque.id === bl.id);
+  check(lista.length === 1 && lista[0].pautas === 2 && lista[0].atleta.id === ana.id && lista[0].revision.propuestas[0]?.id === maq.id,
+    'encuentra la variante con otro material (una vez por bloque) y propone el ejercicio de ese material; «Mancuernas/Máquina» es a elegir y no cuenta');
+  const n = await api.corregirVariante({ bloqueId: bl.id, ejercicioId: manc.id, variante: 'En máquina', nuevoEjercicioId: maq.id });
+  const filas = await b.select('sesion_ejercicios', { in: { sesion_id: [s1.id, s2.id] }, order: [['orden', 'asc']] });
+  check(n === 2 && filas.filter((f) => f.ejercicio_id === maq.id && f.variante === null).length === 2 && filas.some((f) => f.variante === 'Mancuernas/Máquina' && f.ejercicio_id === manc.id),
+    'la cambia en todas las semanas del bloque por el ejercicio que cuadra y sin la variante; lo demás no lo toca');
+  lista = (await api.variantesPorRevisar()).filter((x) => x.bloque.id === bl.id);
+  check(lista.length === 0, 'y deja de salir');
+  await b.insert('sesion_ejercicios', [{ sesion_id: s1.id, ejercicio_id: manc.id, orden: 5, series: 3, variante: 'En máquina Technogym de discos' }]);
+  await api.corregirVariante({ bloqueId: bl.id, ejercicioId: manc.id, variante: 'En máquina Technogym de discos', nuevoEjercicioId: maq.id });
+  const [t] = await b.select('sesion_ejercicios', { eq: { sesion_id: s1.id, orden: 5 } });
+  check(t.ejercicio_id === maq.id && t.variante === 'En máquina Technogym de discos', 'si la variante dice algo más que el material, se queda');
+  await b.insert('sesion_ejercicios', [{ sesion_id: s1.id, ejercicio_id: manc.id, orden: 6, series: 3, variante: 'Con barra' }]);
+  await api.corregirVariante({ bloqueId: bl.id, ejercicioId: manc.id, variante: 'Con barra' });
+  const [q] = await b.select('sesion_ejercicios', { eq: { sesion_id: s1.id, orden: 6 } });
+  check(q.ejercicio_id === manc.id && q.variante === null, '«Quitar la variante» deja el ejercicio y quita la variante');
+  await api.actualizar('bloques', bl.id, { estado: 'finalizado' });
+  await b.insert('sesion_ejercicios', [{ sesion_id: s1.id, ejercicio_id: manc.id, orden: 7, series: 3, variante: 'En máquina' }]);
+  check(await lanza(() => api.corregirVariante({ bloqueId: bl.id, ejercicioId: manc.id, variante: 'En máquina', nuevoEjercicioId: maq.id }))
+    && (await api.variantesPorRevisar()).every((x) => x.bloque.id !== bl.id), 'un bloque cerrado no se toca ni sale en la lista');
+  await api.borrar('bloques', bl.id);
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

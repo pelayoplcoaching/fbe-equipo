@@ -11,6 +11,7 @@ import { modoCarga, columnasEditor, pesoAnterior, conNutricion, textoServicio, N
 import { cardioValido, cardioHechoValido, limpiarCardio, limpiarCardioHecho, textoCardio, textoCardioHecho, ritmo, palabrasEsfuerzo, cardioPorSemana, cardioHechoDe } from '../web/src/logica/cardio.js';
 import { valeParaDia, textoVariante, tomasDelDia, paraElDia, leerIngrediente, leerIngredientes, escalarCantidad, textoIngrediente, ingredientesATexto, limpiarReceta, avisoMacros, macrosDe, textoMacros, recetarioPorToma, entradaMenu, cambiarRaciones, totalesDia, menuPorDia, copiarMenu, listaCompra, textoListaCompra, tomasDe, ordenarTomas, TOMAS_DEFECTO } from '../web/src/logica/comidas.js';
 import { conEntrenamiento, servicioDe, CAMPOS_SERVICIO } from '../web/src/logica/nivel.js';
+import { materialesDe, revisarVariante, varianteSinMaterial, equivalentes } from '../web/src/logica/variantes.js';
 import { e1rm, e1rmPorSemana, seriesPorGrupo, pauta, propuestaSerie, semanaActual, resumenAtleta, num, signo, mmss } from '../web/src/logica/calculos.js';
 
 let ok = 0, fallos = 0;
@@ -1130,6 +1131,43 @@ console.log('\nComidas: recetas, recetario y menú (v0.26)');
   check(resumenAtleta({ atleta: { id: 'x', nombre: 'X', estado: 'activo' }, bloque: null }, '2026-11-04').alertas.some((a) => a.tipo === 'sin_bloque'), 'a los demás, como siempre');
   const dia = tuDia({ menu: { total: 4, hechas: 1 } });
   check(dia.some((x) => x.id === 'menu' && x.estado === 'luego' && /1 de 4/.test(x.detalle)) && tuDia({ menu: { total: 2, hechas: 2 } }).find((x) => x.id === 'menu').estado === 'hecho' && !tuDia({}).some((x) => x.id === 'menu'), '«Tu día» con su menú de hoy');
+}
+
+{
+  console.log('Variantes de material (v0.30)');
+  const bib = [
+    { id: 'm1', nombre: 'Press militar sentado con mancuernas', alternativas: ['m2', 'm3'] },
+    { id: 'm2', nombre: 'Press militar en máquina/inverso', alternativas: [] },
+    { id: 'm3', nombre: 'Press militar con barra', alternativas: [] },
+    { id: 'p1', nombre: 'Press plano en máquina', alternativas: [] },
+    { id: 'r1', nombre: 'Remo con mancuerna a una mano', alternativas: [] },
+    { id: 'r2', nombre: 'Remo en máquina (miscelánea)', alternativas: [] },
+    { id: 'b1', nombre: 'Press banca', alternativas: [] },
+    { id: 'i1', nombre: 'Press inclinado con mancuernas', alternativas: [] },
+    { id: 'i2', nombre: 'Press inclinado en máquina', alternativas: [] },
+    { id: 'h1', nombre: 'Hip thrust', alternativas: [] },
+    { id: 'e1', nombre: 'Extensiones desde polea alta con barra V1/2/3', alternativas: [] },
+  ];
+  const E = Object.fromEntries(bib.map((e) => [e.id, e]));
+  check([...materialesDe('En máquina Technogym')].join() === 'maquina' && [...materialesDe('Mancuernas/Máquina')].sort().join() === 'mancuernas,maquina' && materialesDe('Pausa de 1 s').size === 0, 'reconoce el material que nombra un texto (sin tildes ni mayúsculas)');
+  const r = revisarVariante(E.m1, 'En máquina', bib);
+  check(r && r.propuestas.map((x) => x.id).join() === 'm2' && /dice m\u00e1quina, pero el ejercicio es con mancuernas/.test(r.texto), 'con mancuernas y variante «En máquina»: lo avisa y propone la alternativa en máquina');
+  check(revisarVariante(E.i1, 'En máquina', bib)?.propuestas.map((x) => x.id).join() === 'i2' && revisarVariante(E.r1, 'En máquina Technogym de discos', bib)?.propuestas.length === 0,
+    'sin alternativas apuntadas, propone el del mismo movimiento (press inclinado), no uno que solo comparte «remo»');
+  check(revisarVariante(E.m1, 'Mancuernas/Máquina', bib) === null && revisarVariante(E.m1, 'O en máquina', bib) === null, 'si la variante deja elegir, no avisa');
+  check(revisarVariante(E.h1, 'Con barra', bib) === null && revisarVariante(E.e1, 'Barra recta o cuerda', bib) === null && revisarVariante(E.m1, 'Sentado, con pausa', bib) === null, 'si el ejercicio no dice material, o la variante es del mismo, no avisa');
+  check(revisarVariante(E.b1, 'Con mancuernas', bib) !== null, 'el press banca es con barra aunque no lo diga');
+  const ej = (nombre) => ({ id: 'x', nombre, alternativas: [] });
+  check(revisarVariante(ej('Remo sentado en polea baja'), 'Con barra ancha', bib) === null && revisarVariante(ej('Sentadilla en multipower'), 'Barra alta', bib) === null,
+    'la barra de una polea (barra en V, recta) o de un multipower no es la barra libre');
+  check(revisarVariante(E.b1, 'Con gomas', bib) === null && revisarVariante(ej('Pájaros desde polea baja'), 'Band pull apart con goma elástica', bib) !== null,
+    'una goma con barra es resistencia añadida; en lugar de una polea, sí cambia el ejercicio');
+  check(revisarVariante(E.r1, 'Apoyado en banco, o en máquina', bib) === null && revisarVariante(E.b1, 'Con mancuernas o en máquina', bib) !== null && revisarVariante(E.m1, 'Sin máquina', bib) === null,
+    '«…, o en máquina» es una opción; «con mancuernas o en máquina» en un press banca no; «sin máquina» no nombra la máquina');
+  check(revisarVariante(ej('Remo con barra'), 'En máquina', [...bib, { id: 'r9', nombre: 'Remo en T en máquina', alternativas: [] }]).propuestas.length === 0,
+    'sin alternativas, no propone otro movimiento solo por compartir la primera palabra');
+  check(varianteSinMaterial('En máquina') === null && varianteSinMaterial('Con mancuernas o en máquina') === null && varianteSinMaterial('Máquina Technogym de discos') === 'Máquina Technogym de discos', 'al cambiar de ejercicio, la variante que solo decía el material se quita');
+  check(equivalentes(E.m2, bib).map((x) => x.id).join() === 'm1' && equivalentes(E.m1, bib).map((x) => x.nombre).join() === 'Press militar con barra,Press militar en máquina/inverso', 'equivalentes para el desplegable: sus alternativas y quien lo tiene como alternativa');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

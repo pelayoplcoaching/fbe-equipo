@@ -6,6 +6,7 @@ import { sugerirCargas } from '../../logica/sugerencias.js';
 import { leerTempo, explicarTempo } from '../../logica/tempo.js';
 import { NOMBRE_NIVEL, AYUDA_NIVEL, modoCarga, columnasEditor } from '../../logica/nivel.js';
 import { progresarPauta } from '../../logica/progresion.js';
+import { revisarVariante, equivalentes } from '../../logica/variantes.js';
 import { MODALIDADES, limpiarCardio, textoCardio, palabrasEsfuerzo } from '../../logica/cardio.js';
 
 const DESCANSOS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
@@ -206,6 +207,11 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       {semana && sesiones.map((s) => (
         <EditorSesion key={`${s.id}-${version}`} sesion={s} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}}
           guardar={guardar} guardarDetalle={guardarDetalle} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
+          corregirVariante={['finalizado', 'cancelado'].includes(bloque.estado) ? null : async (p, nuevo) => {
+            await estructura(() => api.corregirVariante({ bloqueId: bloque.id, ejercicioId: p.ejercicio_id, variante: p.variante, nuevoEjercicioId: nuevo?.id || null }),
+              nuevo ? `Cambiado a ${nuevo.nombre} en todas las semanas del bloque` : 'Variante quitada en todas las semanas del bloque');
+            setVersion((v) => v + 1); // los campos de texto (la variante) se vuelven a pintar con lo guardado
+          }}
           borrar={() => setConfirmarBorrado({ tipo: 'sesion', id: s.id, nombre: s.nombre })} />
       ))}
       {semana && <button class="btn btn-ancho" onClick={() => estructura(() => api.nuevaSesion(semana.id))}><Icono n="mas" /> Añadir sesión</button>}
@@ -455,8 +461,9 @@ function DetalleSeries({ pauta, hechas = [], alGuardar }) {
 // «25×10 @8», «12 reps @7» (sin kilos) o «25×10» (sin RPE)
 const textoSerieHecha = (x) => `${x.kg != null ? `${num(x.kg, 2)}×${x.reps ?? '–'}` : `${x.reps ?? '–'} reps`}${x.rpe != null ? ` @${num(x.rpe, 1)}` : ''}`;
 
-function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, nivel = null, ultimas = {} }) {
+function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {} }) {
   const { api } = useApp();
+  const lista = useMemo(() => Object.values(ejercicios), [ejercicios]);
   const numero = (pautaId, campo, dec = false) => (e) => {
     const t = e.currentTarget.value.replace(',', '.').trim();
     const v = t === '' ? null : dec ? Number(t) : parseInt(t, 10);
@@ -510,6 +517,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                     <option value="">—</option>{LETRAS_SUPERSERIE.map((l) => <option key={l} value={l}>{l}</option>)}
                   </select></td>
                   <td class="col-ejercicio"><button class="btn btn-peq btn-ejercicio" onClick={() => elegir(p.id)}>{ejercicios[p.ejercicio_id]?.nombre || 'Elegir ejercicio'}</button>
+                    <Equivalentes ejercicio={ejercicios[p.ejercicio_id]} lista={lista} alCambiar={(ej) => guardar('sesion_ejercicios', p.id, { ejercicio_id: ej.id })} />
                     <div class="variante-tempo">
                       <input class="variante" aria-label="Variante" placeholder="Variante: pausa, agarre…" defaultValue={p.variante || ''} onChange={(e) => guardar('sesion_ejercicios', p.id, { variante: nulo(e.currentTarget.value.trim()) })} />
                       <CampoTempo valor={p.tempo} alGuardar={(v) => guardar('sesion_ejercicios', p.id, { tempo: v })} />
@@ -527,6 +535,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                         {BACKOFFS.map((x) => <option key={x} value={String(x)}>Top + back-off −{num(x)} %</option>)}
                       </select>
                     </div>
+                    <AvisoVariante pauta={p} ejercicio={ejercicios[p.ejercicio_id]} lista={lista} corregir={corregirVariante} />
                     <NotaPauta valor={p.notas_coach} alGuardar={(v) => guardar('sesion_ejercicios', p.id, { notas_coach: v })} />
                     {tieneDetalle(p) && <DetalleSeries pauta={p} hechas={series[p.id] || []} alGuardar={(d) => guardarDetalle(p.id, d)} />}
                     {ultimas[p.ejercicio_id]?.series.length > 0 && <div class="mini registro-serie ultima-vez-coach" title="Lo que hizo la última vez antes de esta semana">
@@ -575,6 +584,35 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
 
 // Preparar las semanas siguientes (una o el mes de golpe): cada una sale de la anterior con su progresión.
 // Enseña solo los controles de lo que tiene la semana (kg, RPE, RIR) y cómo quedaría un ejercicio de cada tipo.
+// Cambiar el ejercicio por uno equivalente (sus alternativas de la biblioteca, normalmente el mismo movimiento con
+// otro material) sin abrir la biblioteca entera. Solo en esta semana, como «Elegir ejercicio».
+function Equivalentes({ ejercicio, lista, alCambiar }) {
+  const eqs = useMemo(() => equivalentes(ejercicio, lista), [ejercicio, lista]);
+  if (!ejercicio || !eqs.length) return null;
+  return (
+    <select class="equivalentes" aria-label={`Cambiar ${ejercicio.nombre} por un equivalente`} value=""
+      onChange={(e) => { const ej = eqs.find((x) => x.id === e.currentTarget.value); if (ej) alCambiar(ej); }}>
+      <option value="">Cambiar por equivalente…</option>
+      {eqs.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+    </select>
+  );
+}
+
+// La variante nombra un material que no es el del ejercicio (v0.30): se propone el ejercicio que cuadra, en todo el bloque
+function AvisoVariante({ pauta, ejercicio, lista, corregir }) {
+  const r = useMemo(() => revisarVariante(ejercicio, pauta.variante, lista), [ejercicio, pauta.variante, lista]);
+  if (!r || !corregir) return null; // en un bloque cerrado no se avisa (no se le cambia la historia)
+  return (
+    <div class="aviso-variante" role="note">
+      <span>{r.texto} Cada material es un ejercicio aparte (sus kilos no se mezclan).</span>
+      <div class="aviso-variante-botones">
+        {r.propuestas.map((e) => <button key={e.id} type="button" class="btn btn-peq" onClick={() => corregir(pauta, e)}>Cambiar a {e.nombre}</button>)}
+        <button type="button" class="btn btn-peq btn-texto" onClick={() => corregir(pauta, null)}>Quitar la variante</button>
+      </div>
+    </div>
+  );
+}
+
 function Duplicar({ semana, pautas = [], ejercicios = {}, alCerrar, alHacer }) {
   const conKg = pautas.filter((p) => p.carga_sugerida_kg != null);
   const [n, setN] = useState(1);

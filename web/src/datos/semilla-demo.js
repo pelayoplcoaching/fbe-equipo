@@ -241,6 +241,14 @@ export function semillaDemo(hoy = hoyISO()) {
     factor: 0.95, peso0: 84.1, tendencia: -0.05, semanaActual: 3, semanasBloque: 4, programadasHasta: 3,
     dias: DIAS_TORSO_PIERNA, hechasEstaSemana: 2, molestias: [['zona_lumbar', 2]], nombreBloque: 'Adaptación', foco: 'adaptacion',
   });
+  // Una variante con otro material, como las que venían de Notion (v0.30): la detectan Revisar y el editor
+  {
+    const pim = ej['Press inclinado con mancuernas']?.id;
+    const bloquesR = new Set(db.bloques.filter((x) => x.atleta_id === ruben.id).map((x) => x.id));
+    const semanasR = new Set(db.semanas.filter((w) => bloquesR.has(w.bloque_id)).map((w) => w.id));
+    const sesionesR = new Set(db.sesiones.filter((x) => semanasR.has(x.semana_id)).map((x) => x.id));
+    for (const p of db.sesion_ejercicios) if (p.ejercicio_id === pim && sesionesR.has(p.sesion_id)) p.variante = 'En máquina';
+  }
   const carlos = atletaConBloque({
     nombre: 'Carlos Vera', email: 'carlos@fbe.demo', objetivo: 'Recomposición con 2 días por semana',
     factor: 0.85, peso0: 78.0, tendencia: 0.08, semanaActual: 5, semanasBloque: 8, programadasHasta: 6,

@@ -15,6 +15,7 @@ import { dibujoValido } from '../logica/dibujo.js';
 import { tuDia } from '../logica/dia.js';
 import { cardioHechoValido, cardioPorSemana, textoCardioHecho, NOMBRE_MODALIDAD } from '../logica/cardio.js';
 import { pendiente as cuestionarioPendiente } from '../logica/cuestionario.js';
+import { revisarVariante, varianteSinMaterial } from '../logica/variantes.js';
 import { limpiarReceta, recetarioPorToma, tomasDe, ordenarTomas, entradaMenu, copiarMenu, cambiarRaciones } from '../logica/comidas.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
@@ -1713,6 +1714,54 @@ export function crearApi(backend) {
         movidas.push(x);
       }
       return movidas;
+    },
+
+    // Variantes de material (v0.30): los ejercicios de los bloques en marcha o por empezar cuya variante nombra un
+    // material distinto del ejercicio («Press militar sentado con mancuernas», variante «En máquina»). Uno por bloque,
+    // ejercicio y variante (se repite en cada semana), con las propuestas de la biblioteca.
+    async variantesPorRevisar() {
+      const [bloques, atletas, biblioteca] = await Promise.all([
+        b.select('bloques', { eq: { es_plantilla: false }, in: { estado: ['planificado', 'activo', 'ajustado'] } }),
+        api.atletas(),
+        api.biblioteca(),
+      ]);
+      const A = porId(atletas), E = porId(biblioteca);
+      const vivos = bloques.filter((x) => A[x.atleta_id] && A[x.atleta_id].estado !== 'baja');
+      if (!vivos.length) return [];
+      const semanas = await b.select('semanas', { in: { bloque_id: vivos.map((x) => x.id) } });
+      const sesiones = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) } }) : [];
+      const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, nonulo: ['variante'] }) : [];
+      const S = porId(sesiones), W = porId(semanas), B = porId(vivos);
+      const grupos = new Map();
+      for (const p of pautas) {
+        const ej = E[p.ejercicio_id];
+        const r = ej && revisarVariante(ej, p.variante, biblioteca);
+        if (!r) continue;
+        const bloque = B[W[S[p.sesion_id]?.semana_id]?.bloque_id];
+        if (!bloque) continue;
+        const clave = `${bloque.id}|${ej.id}|${p.variante}`;
+        if (!grupos.has(clave)) grupos.set(clave, { clave, atleta: A[bloque.atleta_id], bloque, ejercicio: ej, variante: p.variante, revision: r, pautas: 0, sesion: S[p.sesion_id]?.nombre || null });
+        grupos.get(clave).pautas++;
+      }
+      return [...grupos.values()].sort((x, y) => x.atleta.nombre.localeCompare(y.atleta.nombre, 'es') || x.ejercicio.nombre.localeCompare(y.ejercicio.nombre, 'es'));
+    },
+    // Cambia en todo el bloque (todas las semanas) el ejercicio con esa variante: por el ejercicio que cuadra (lo ya
+    // registrado pasa a él, que es el que se hizo) y la variante sin el material; o, sin ejercicio nuevo, quita la variante.
+    async corregirVariante({ bloqueId, ejercicioId, variante, nuevoEjercicioId = null }) {
+      // Un bloque cerrado es historia: no se le cambia nada de golpe
+      const [bloque] = await b.select('bloques', { eq: { id: bloqueId }, cols: 'id,estado' });
+      if (!bloque) throw new Error('No se encuentra el bloque.');
+      if (['finalizado', 'cancelado'].includes(bloque.estado)) throw new Error('Ese bloque ya está cerrado: cámbialo a mano si hace falta.');
+      const semanas = await b.select('semanas', { eq: { bloque_id: bloqueId }, cols: 'id' });
+      const sesiones = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) }, cols: 'id' }) : [];
+      const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, eq: { ejercicio_id: ejercicioId, variante }, cols: 'id' }) : [];
+      if (!pautas.length) return 0;
+      const cambios = nuevoEjercicioId ? { ejercicio_id: nuevoEjercicioId, variante: varianteSinMaterial(variante) } : { variante: null };
+      const ids = pautas.map((p) => p.id);
+      await b.update('sesion_ejercicios', cambios, { in: { id: ids } });
+      // Los vídeos de esas series pasan también al ejercicio nuevo (si no, en su diario saldrían con el viejo)
+      if (nuevoEjercicioId) await b.update('archivos', { ejercicio_id: nuevoEjercicioId }, { in: { sesion_ejercicio_id: ids }, eq: { ejercicio_id: ejercicioId } }).catch(() => {});
+      return pautas.length;
     },
 
     // Copia una semana (sesiones y prescripción) a un bloque, con progresión opcional.

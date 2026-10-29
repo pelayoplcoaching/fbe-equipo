@@ -1972,3 +1972,28 @@ button.entrada-texto:hover > span:first-child { text-decoration: underline; text
 .segmentos-dia { max-width: 520px; }
 /* Volumen del aviso (v0.27.1) */
 input[type="range"] { accent-color: var(--morado); width: 100%; }
+
+/* ---------- v0.30: variantes de material en el editor ---------- */
+.tabla-pauta .equivalentes { width: 100%; margin-top: 4px; min-height: 30px; border-radius: 8px; border: 1px dashed var(--linea); background: transparent; color: var(--tinta-2); font-size: 12.5px; padding: 0 6px; }
+.aviso-variante { display: grid; gap: 6px; margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--aviso-suave); color: var(--aviso); font-size: 12.5px; line-height: 1.35; white-space: normal; }
+.aviso-variante-botones { display: flex; flex-wrap: wrap; gap: 6px; }
+.aviso-variante .btn { font-size: 12.5px; min-height: 30px; }
+.lista-variantes { display: grid; gap: 10px; }
+.lista-variantes .fila-variante { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--linea); border-radius: 12px; background: var(--hoja); }
+.lista-variantes .fila-variante p { margin: 0; }
+
+/* ---------- v0.30: recortar el vídeo antes de enviarlo ---------- */
+.recorte { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--linea); border-radius: 12px; background: var(--hoja-2); }
+.recorte-titulo { display: grid; gap: 2px; }
+.recorte-barra { position: relative; height: 10px; border-radius: 5px; background: var(--linea); overflow: hidden; }
+.recorte-barra span { position: absolute; top: 0; bottom: 0; background: var(--morado); border-radius: 5px; }
+.recorte-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; }
+.recorte-fila label { grid-column: 1 / -1; font-size: 14px; color: var(--tinta-2); }
+.recorte-fila input[type=range] { width: 100%; min-height: 32px; accent-color: var(--morado); }
+.recorte-preparando { display: grid; gap: 10px; justify-items: center; text-align: center; }
+.recorte-vista { width: 100%; }
+.recorte-vista video { width: 100%; max-height: 46vh; object-fit: contain; background: #000; border-radius: 12px; }
+.recorte-progreso { width: 100%; height: 8px; border-radius: 4px; background: var(--linea); overflow: hidden; }
+.recorte-progreso span { display: block; height: 100%; background: var(--morado); transition: width .2s linear; }
+@media (prefers-reduced-motion: reduce) { .recorte-progreso span { transition: none; } }
+.medio.medio-recorte { max-height: 44vh; }
