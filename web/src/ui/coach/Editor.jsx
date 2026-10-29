@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos } from '../comunes.jsx';
 import { FOCOS, INTENCIONES, PRIORIDADES, NOMBRE_GRUPO, GRUPOS, TIPOS_SESION, LETRAS_SUPERSERIE, etiquetasSuperserie, seriesPautadasPorGrupo, rangoVolumen, estadoVolumen, num, mmss } from '../../logica/calculos.js';
-import { rangoSemana, lunesDe, fmtCorta, fmtConDia } from '../../logica/fechas.js';
+import { rangoSemana, lunesDe, fmtCorta, fmtConDia, sumarDias } from '../../logica/fechas.js';
 import { sugerirCargas } from '../../logica/sugerencias.js';
 import { leerTempo, explicarTempo } from '../../logica/tempo.js';
 import { NOMBRE_NIVEL, AYUDA_NIVEL, modoCarga, columnasEditor } from '../../logica/nivel.js';
@@ -40,6 +40,16 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   }, [carga.datos]);
 
   const ejercicios = useMemo(() => Object.fromEntries((biblioteca.datos || []).map((e) => [e.id, e])), [biblioteca.datos]);
+  // Lo que hizo el atleta la última vez en cada ejercicio de esta semana (antes de ella: en la semana anterior o en
+  // otro bloque), para pautar la siguiente con sus kilos y RPE a la vista
+  const atletaId = d && !d.bloque.es_plantilla ? d.bloque.atleta_id : null;
+  const sesionesSemana = d && semanaId ? d.sesiones[semanaId] || [] : [];
+  // Hasta el final de la semana que se mira (para no enseñar como «última vez» algo de semanas posteriores)
+  const fechaSemana = d && semanaId ? d.semanas.find((w) => w.id === semanaId)?.fecha_inicio : null;
+  const finSemana = fechaSemana ? `${sumarDias(fechaSemana, 7)}T00:00:00` : null;
+  const idsSemana = [...new Set(sesionesSemana.flatMap((x) => (d.pautas[x.id] || []).map((p) => p.ejercicio_id)))].filter(Boolean).sort();
+  const ultimas = useCarga(() => (atletaId && idsSemana.length ? api.ultimasPorEjercicio(atletaId, idsSemana, sesionesSemana.map((x) => x.id), finSemana).catch(() => ({})) : Promise.resolve({})),
+    [atletaId, semanaId, idsSemana.join(',')]);
 
   if (carga.cargando && !d) return <Siluetas forma="tarjetas" n={3} texto="Cargando el bloque" />;
   if (carga.error) return <ErrorCaja error={carga.error} reintentar={carga.recargar} />;
@@ -185,7 +195,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       )}
 
       {semana && sesiones.map((s) => (
-        <EditorSesion key={`${s.id}-${version}`} sesion={s} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel}
+        <EditorSesion key={`${s.id}-${version}`} sesion={s} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}}
           guardar={guardar} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
           borrar={() => setConfirmarBorrado({ tipo: 'sesion', id: s.id, nombre: s.nombre })} />
       ))}
@@ -393,7 +403,10 @@ function parchear(d, tabla, id, cambios) {
   return d;
 }
 
-function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura, elegir, borrar, nivel = null }) {
+// «25×10 @8», «12 reps @7» (sin kilos) o «25×10» (sin RPE)
+const textoSerieHecha = (x) => `${x.kg != null ? `${num(x.kg, 2)}×${x.reps ?? '–'}` : `${x.reps ?? '–'} reps`}${x.rpe != null ? ` @${num(x.rpe, 1)}` : ''}`;
+
+function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura, elegir, borrar, nivel = null, ultimas = {} }) {
   const { api } = useApp();
   const numero = (pautaId, campo, dec = false) => (e) => {
     const t = e.currentTarget.value.replace(',', '.').trim();
@@ -462,7 +475,9 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura,
                       </select>
                     </div>
                     <NotaPauta valor={p.notas_coach} alGuardar={(v) => guardar('sesion_ejercicios', p.id, { notas_coach: v })} />
-                    {series[p.id]?.length > 0 && <div class="mini terciario registro-serie" style="margin-top:3px">Hecho: {series[p.id].map((s) => `${num(s.kg, 2)}×${s.reps}`).join(', ')}</div>}</td>
+                    {ultimas[p.ejercicio_id]?.series.length > 0 && <div class="mini registro-serie ultima-vez" title="Lo que hizo la última vez antes de esta semana">
+                      <span class="terciario">Última vez{ultimas[p.ejercicio_id].fecha ? ` (${fmtCorta(ultimas[p.ejercicio_id].fecha)})` : ''}: </span>{ultimas[p.ejercicio_id].series.map(textoSerieHecha).join(' · ')}</div>}
+                    {series[p.id]?.length > 0 && <div class="mini registro-serie hecho-semana" style="margin-top:3px"><span class="terciario">Esta semana: </span>{[...series[p.id]].sort((a, c) => a.numero - c.numero).map(textoSerieHecha).join(' · ')}</div>}</td>
                   <td><input class="n" inputMode="numeric" aria-label="Series" key={`series-${p.series}`} defaultValue={p.series} onChange={(e) => {
                     // Con top + back-off hacen falta al menos dos series: con una sola, deja de serlo.
                     // La «key» lo vuelve a pintar si las series cambian desde fuera (elegir back-off las sube a 2)

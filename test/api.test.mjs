@@ -1030,5 +1030,18 @@ console.log('\nBorrar semanas de un bloque (v0.27.7)');
   check(nueva.numero === 2 && nueva.fecha_inicio === '2026-11-09', 'y la siguiente que se añade es la 2');
 }
 
+console.log('\nLa última vez de cada ejercicio, para el editor (v0.27.8)');
+{
+  const [x] = await b.sql(`select p.ejercicio_id from series s join sesion_ejercicios p on p.id = s.sesion_ejercicio_id where s.atleta_id = $1 and s.sustituto_id is null limit 1`, [ana.id]);
+  if (x) {
+    const todas = await api.ultimasPorEjercicio(ana.id, [x.ejercicio_id], null);
+    const ses = todas[x.ejercicio_id]?.sesion_id;
+    const sinEsa = await api.ultimasPorEjercicio(ana.id, [x.ejercicio_id], [ses]);
+    const antes = await api.ultimasPorEjercicio(ana.id, [x.ejercicio_id], [], '2000-01-01T00:00:00');
+    check(ses && sinEsa[x.ejercicio_id]?.sesion_id !== ses && !antes[x.ejercicio_id],
+      'excluye las sesiones que se le pasan (las de la semana que se mira) y lo registrado a partir de una fecha');
+  } else check(false, 'Ana tiene series para probar «la última vez»');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

@@ -333,13 +333,16 @@ export function crearApi(backend) {
 
     // Para cada ejercicio, las series de la última sesión anterior en que lo hizo (también como alternativa):
     // { ejercicio_id: { sesion_id, fecha, series, pauta } }. pauta es lo que tenía pautado aquella vez (si era el pautado).
-    async ultimasPorEjercicio(atletaId, ejercicioIds, excluirSesionId) {
+    // hasta (ISO, opcional): solo series registradas antes (el editor del coach mira «la última vez» antes de una semana)
+    async ultimasPorEjercicio(atletaId, ejercicioIds, excluirSesionId, hasta = null) {
       if (!ejercicioIds.length) return {};
       const res = {};
+      // excluirSesionId: una sesión o varias (el editor del coach quita las de la semana que está mirando)
+      const fuera = new Set([].concat(excluirSesionId || []));
       const repasar = (series, pautas) => {
         for (const s of series) {
           const p = pautas[s.sesion_ejercicio_id];
-          if (!p || p.sesion_id === excluirSesionId) continue;
+          if (!p || fuera.has(p.sesion_id) || (hasta && s.registrada_en >= hasta)) continue;
           const ef = s.sustituto_id || p.ejercicio_id;
           if (!ejercicioIds.includes(ef)) continue;
           const r = res[ef];

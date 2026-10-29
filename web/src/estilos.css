@@ -1849,6 +1849,8 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .serie.hecha .peso-anterior { opacity: .7; }
 .enfoque-anterior { font-size: 14px; color: var(--tinta-2); text-align: center; }
 .enfoque-anterior b { color: var(--tinta); }
+.ultima-vez { margin-top: 4px; font-variant-numeric: tabular-nums; color: var(--tinta-2); }
+.hecho-semana { color: var(--ok); font-variant-numeric: tabular-nums; }
 .aviso-semanas { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 .aviso-nivel { display: flex; gap: 8px; align-items: flex-start; }
 .aviso-nivel svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--morado); }

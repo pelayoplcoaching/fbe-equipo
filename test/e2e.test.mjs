@@ -1251,6 +1251,11 @@ try {
   check((await p.locator('.aviso-nivel').textContent()).includes('Nivel intermedio') && await p.locator('.tabla-pauta input.fuera-nivel').count() > 0,
     'el de Ana (intermedia) avisa de cómo pautarle y atenúa las casillas que su nivel no usa');
   await revisar('nivel-editor');
+  // v0.27.8: en el editor, lo que hizo la última vez en cada ejercicio (kilos, reps y RPE)
+  const ultimaVez = p.locator('.ultima-vez').first();
+  const hayUltima = await ultimaVez.waitFor({ timeout: 6000 }).then(() => true, () => false);
+  const textoUltima = hayUltima ? await ultimaVez.textContent() : '';
+  check(hayUltima && /Última vez/.test(textoUltima) && /\d+×\d+/.test(textoUltima) && /@\d/.test(textoUltima), `en el editor de Ana, cada ejercicio trae lo que hizo la última vez con su RPE («${textoUltima.trim().slice(0, 70)}»)`);
 
   console.log('\nPreparar el mes de golpe (v0.23)');
   const pestanasAntes = await p.locator('.semanas-tabs button').count();

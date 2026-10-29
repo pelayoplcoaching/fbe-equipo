@@ -6,6 +6,8 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 
 ## Qué hay construido (v0.27)
 
+**v0.27.8:** en el editor del programa, cada ejercicio trae lo que hizo el atleta la última vez antes de esa semana (en la semana anterior o en el bloque anterior), serie a serie con kilos, reps y RPE: «Última vez (28 oct): 25×10 @8 · 25×10 @9». En una semana ya hecha, además, «Esta semana: …» también con el RPE.
+
 **v0.27.7:** al borrar una semana de un bloque, las siguientes suben un puesto y una semana antes (antes, al borrar las semanas 1 a 3 de un bloque copiado, la que quedaba seguía siendo la «semana 4»). Si un bloque ya se quedó así, el editor avisa de que las semanas no van seguidas y ofrece «Renumerar desde la 1».
 
 **v0.27.6:** el lector de ingredientes entiende un paréntesis tras la unidad: «1 cda (10 ml) de salsa de soja» queda como 1 cda de «Salsa de soja (10 ml)» (antes el nombre empezaba por «(10 ml)»).
