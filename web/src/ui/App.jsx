@@ -3,6 +3,7 @@ import { Ctx, Cargando, Icono } from './comunes.jsx';
 import { Acceso, Vincular, NuevaPassword, SegundoPaso } from './Acceso.jsx';
 import { AtletaApp } from './atleta/AtletaApp.jsx';
 import { CoachApp } from './coach/CoachApp.jsx';
+import { quitarPortada } from './portada.js';
 import { desactivarPush, desactivarPushLocal, sincronizarPush } from '../datos/push.js';
 
 const CLAVE_ACTIVACION = 'fbe-activacion-pendiente';
@@ -138,6 +139,11 @@ export function App({ backend, api, cola }) {
     salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); await backend.auth.salir(); resolver(true); },
     reiniciarDemo: () => { backend.reiniciar?.(); ultimoUid.current = undefined; resolver(true); },
   };
+
+  // La portada de arranque se va cuando hay algo que enseñar: el acceso enseguida; la cuenta, con sus datos
+  useEffect(() => {
+    if (estado.fase !== 'cargando') quitarPortada({ esperarDatos: estado.fase === 'atleta' || estado.fase === 'coach' });
+  }, [estado.fase]);
 
   let vista;
   if (estado.fase === 'cargando') vista = <div class="acceso"><Cargando /></div>;

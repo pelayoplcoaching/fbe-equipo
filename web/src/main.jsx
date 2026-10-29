@@ -67,5 +67,6 @@ async function arrancar() {
 }
 
 arrancar().catch((e) => {
+  document.getElementById('portada')?.remove(); document.getElementById('tc-portada')?.remove();
   document.getElementById('app').innerHTML = `<div style="padding:24px;font-family:system-ui">No se ha podido iniciar la app: ${String(e.message || e).replace(/</g, '&lt;')}</div>`;
 });

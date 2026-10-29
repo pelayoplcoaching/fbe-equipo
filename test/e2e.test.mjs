@@ -61,8 +61,37 @@ async function revisar(paso) {
 }
 
 try {
+  // v0.29: portada del lobo mientras arranca (aquí sin JavaScript, para verla quieta) y que luego se va sola
+  {
+    const q = await ctx.newPage();
+    await q.route('**/app.js*', () => {});
+    await q.goto('http://localhost:4174/?demo', { waitUntil: 'commit' });
+    await q.waitForSelector('#portada svg path');
+    const portada = await q.evaluate(() => {
+      const el = document.getElementById('portada'); const r = el.getBoundingClientRect();
+      return { tapa: r.width >= innerWidth && r.height >= innerHeight, fondo: getComputedStyle(el).backgroundColor, nombre: el.textContent.includes('FBE Equipo'), rol: el.getAttribute('role'), color: document.querySelector('meta[name=theme-color]').content };
+    });
+    check(portada.tapa && portada.fondo === 'rgb(84, 56, 216)' && portada.nombre && portada.rol === 'status' && portada.color === '#5438D8', 'al abrir, la portada del lobo tapa la pantalla en morado mientras llega la app');
+    await q.close();
+    // Con el tema elegido a mano, la barra del sistema sigue en morado mientras está la portada
+    const q2 = await ctx.newPage();
+    await q2.addInitScript(() => {
+      try { localStorage.setItem('fbe-ajustes', JSON.stringify({ tema: 'oscuro' })); } catch { /* */ }
+      window.__tc = [];
+      new MutationObserver((ms) => { for (const m of ms) if (m.target.id === 'tc-portada') window.__tc.push(m.target.content); })
+        .observe(document, { subtree: true, attributes: true, attributeFilter: ['content'] });
+    });
+    await q2.goto('http://localhost:4174/?demo');
+    await q2.waitForFunction(() => !document.getElementById('portada'));
+    check((await q2.evaluate(() => window.__tc)).length === 0, 'con el tema oscuro elegido, la barra del sistema no pierde el morado de la portada');
+    await q2.evaluate(() => localStorage.removeItem('fbe-ajustes'));
+    await q2.close();
+  }
   await p.goto('http://localhost:4174/?demo');
   await p.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor();
+  await p.waitForFunction(() => !document.getElementById('portada') && !document.getElementById('tc-portada'));
+  check(true, 'la portada se va sola en cuanto se puede entrar');
+  check(JSON.parse(await (await fetch('http://localhost:4174/manifest.webmanifest')).text()).background_color === '#5438D8', 'el manifiesto arranca en el morado de la portada (Android la enlaza sin salto)');
   await revisar('acceso');
 
   console.log('Coach: alta, bloque y publicación');

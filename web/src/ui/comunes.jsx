@@ -3,6 +3,7 @@ import { reportarError } from '../registro-errores.js';
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { num, leerNumero } from '../logica/calculos.js';
 import { LOBO } from './marca-lobo.js';
+import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { fmtCorta, aISO, diasEntre, hoyISO } from '../logica/fechas.js';
 
 export const Ctx = createContext(null);
@@ -156,8 +157,17 @@ export function Disco({ prioridad, titulo }) {
   return <span class={`disco ${prioridad}`} title={titulo} aria-hidden={titulo ? undefined : 'true'} />;
 }
 
+// El lobo de FBE dentro de un aro que gira (v0.29): el indicador de carga de toda la app
+export function LoboCarga({ peq = false }) {
+  return (
+    <span class={`lobo-carga ${peq ? 'chico' : ''}`} aria-hidden="true">
+      <svg viewBox={LOBO_CAJA}><path fill-rule="evenodd" d={LOBO_D} /></svg>
+    </span>
+  );
+}
+
 export function Cargando({ texto = 'Cargando' }) {
-  return <div class="cargando" role="status"><div class="rueda" /><span class="sr">{texto}</span></div>;
+  return <div class="cargando" role="status"><LoboCarga /><span class="sr">{texto}</span></div>;
 }
 
 // Siluetas de carga: la forma de lo que va a aparecer, en gris, mientras llegan los datos.
@@ -219,7 +229,14 @@ export function Siluetas({ forma = 'lista', n = 5, texto = 'Cargando' }) {
   } else {
     cuerpo = <div class="panel">{Array.from({ length: n }, (_, i) => <FilaSilueta key={i} i={i} />)}</div>;
   }
-  return <div class={`siluetas sil-${forma}`} role="status" aria-live="polite"><span class="sr">{texto}</span><div class="sil-cuerpo" aria-hidden="true">{cuerpo}</div></div>;
+  // Al irse avisan a la portada de arranque, que espera a que la primera pantalla tenga sus datos
+  useEffect(() => () => window.dispatchEvent(new Event('fbe-siluetas-fuera')), []);
+  return (
+    <div class={`siluetas sil-${forma}`} role="status" aria-live="polite">
+      <div class="sil-marca"><LoboCarga peq /><span>{texto}</span></div>
+      <div class="sil-cuerpo" aria-hidden="true">{cuerpo}</div>
+    </div>
+  );
 }
 
 export function Vacio({ icono = 'semana', titulo, children, accion }) {

@@ -34,8 +34,8 @@ export function aplicarTema(tema = leerAjustes().tema) {
   else if (tema === 'oscuro') r.setAttribute('data-theme', 'dark');
   else if (temaPrevio) r.setAttribute('data-theme', temaPrevio);
   else r.removeAttribute('data-theme');
-  // Color de la barra del sistema en la app instalada
-  for (const m of document.querySelectorAll('meta[name="theme-color"]')) {
+  // Color de la barra del sistema en la app instalada (la de la portada de arranque se queda en morado hasta que se va)
+  for (const m of document.querySelectorAll('meta[name="theme-color"]:not(#tc-portada)')) {
     m.dataset.original ||= m.getAttribute('content');
     m.setAttribute('content', tema === 'sistema' ? m.dataset.original : COLOR[tema]);
   }

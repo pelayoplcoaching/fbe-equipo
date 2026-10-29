@@ -506,9 +506,15 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .vacio svg { width: 40px; height: 40px; color: var(--tinta-3); }
 .vacio h3, .vacio .vacio-titulo { color: var(--tinta); font-size: 18px; font-weight: 700; margin: 0; text-wrap: balance; }
 .cargando { display: grid; place-items: center; padding: 48px 0; color: var(--tinta-3); }
-.cargando .rueda { width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--linea); border-top-color: var(--morado); animation: girar .8s linear infinite; }
+/* v0.29: el lobo de FBE dentro de un aro que gira */
+.lobo-carga { position: relative; display: inline-grid; place-items: center; flex: none; width: 48px; height: 48px; color: var(--morado); }
+.lobo-carga::before { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2.5px solid var(--linea); border-top-color: var(--morado); animation: girar .9s linear infinite; }
+.lobo-carga svg { width: 25px; height: 29px; fill: currentColor; }
+.lobo-carga.chico { width: 30px; height: 30px; }
+.lobo-carga.chico::before { border-width: 2px; }
+.lobo-carga.chico svg { width: 15px; height: 17px; }
 @keyframes girar { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .cargando .rueda { animation-duration: 2.4s; } }
+@media (prefers-reduced-motion: reduce) { .lobo-carga::before { animation-duration: 2.4s; } }
 .rejilla-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
 .rejilla-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; }
 
@@ -1184,6 +1190,7 @@ kbd { font: 600 11px/1 var(--f); font-variant-numeric: tabular-nums; padding: 3p
 /* ---------- v0.9: siluetas de carga ---------- */
 .siluetas { animation: sil-aparece .25s ease-out .12s both; }
 .sil-cuerpo { display: grid; gap: 14px; }
+.sil-marca { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; color: var(--tinta-3); font-size: 14px; }
 .sil-filas .sil-cuerpo { gap: 0; }
 .sil-galeria .sil { aspect-ratio: 3 / 4; height: auto !important; }
 .sil { display: block; background: linear-gradient(90deg, var(--hoja-2) 0%, var(--linea) 45%, var(--hoja-2) 90%); background-size: 220% 100%; border-radius: 6px; animation: sil-brillo 1.4s ease-in-out infinite; }
