@@ -5,12 +5,14 @@ import * as esbuild from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
-import { estiloPortada, marcadoPortada, MORADO_PORTADA } from './portada.mjs';
+import { estiloPortada, marcadoPortada, FONDO_PORTADA } from './portada.mjs';
 
 const raiz = new URL('..', import.meta.url).pathname;
 const demo = process.argv.includes('--demo');
 const salida = join(raiz, demo ? 'dist-demo' : 'dist');
 const fuente = join(raiz, 'node_modules/@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2');
+// Cinzel (letras de inscripción): solo para el lema y la firma del estandarte de la portada
+const fuenteCinzel = join(raiz, 'node_modules/@fontsource-variable/cinzel/files/cinzel-latin-wght-normal.woff2');
 
 rmSync(salida, { recursive: true, force: true });
 mkdirSync(salida, { recursive: true });
@@ -55,7 +57,7 @@ if (demo) {
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Demo de la app de atletas de FBE Coaching con datos de ejemplo">
 <style>${fontFace(`data:font/woff2;base64,${fuente64}`)}${css}</style>
-${estiloPortada}
+${estiloPortada(`data:font/woff2;base64,${readFileSync(fuenteCinzel).toString('base64')}`)}
 ${marcadoPortada}
 <div id="app"></div>
 <script>window.FBE_CONFIG = {};</script>
@@ -69,6 +71,7 @@ ${marcadoPortada}
   for (const f of Object.keys(r.metafile.outputs)) if (/\.(js|css)$/.test(f)) soloAscii(readFileSync(f, 'utf8'), f);
   mkdirSync(join(salida, 'fonts'), { recursive: true });
   copyFileSync(fuente, join(salida, 'fonts/archivo-latin.woff2'));
+  copyFileSync(fuenteCinzel, join(salida, 'fonts/cinzel.woff2'));
   const cssRuta = join(salida, 'app.css');
   writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + readFileSync(cssRuta, 'utf8'));
 
@@ -77,7 +80,7 @@ ${marcadoPortada}
 
   writeFileSync(join(salida, 'manifest.webmanifest'), JSON.stringify({
     name: 'FBE Equipo', short_name: 'FBE Equipo', lang: 'es', start_url: './', scope: './', display: 'standalone',
-    background_color: MORADO_PORTADA, theme_color: MORADO_PORTADA, description: 'Tu programa de FBE Coaching y el registro de cada serie.',
+    background_color: FONDO_PORTADA, theme_color: '#5438D8', description: 'Tu programa de FBE Coaching y el registro de cada serie.',
     icons: [
       { src: 'icono-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
       { src: 'icono-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
@@ -93,7 +96,7 @@ ${marcadoPortada}
   const archivos = listar(salida).map((f) => relative(salida, f)).filter((f) => !f.endsWith('.map'));
   const version = createHash('sha256').update(archivos.filter((f) => f !== 'config.js').map((f) => readFileSync(join(salida, f))).join('')).digest('hex').slice(0, 10);
   writeFileSync(join(salida, 'index.html'), readFileSync(join(raiz, 'web/index.html'), 'utf8').replaceAll('__VERSION__', version)
-    .replace('<!--PORTADA-ESTILO-->', () => estiloPortada).replace('<!--PORTADA-->', () => marcadoPortada));
+    .replace('<!--PORTADA-ESTILO-->', () => estiloPortada('fonts/cinzel.woff2')).replace('<!--PORTADA-->', () => marcadoPortada));
   const precache = ['./', ...archivos.filter((f) => f !== 'index.html').map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
   writeFileSync(join(salida, 'sw.js'), aAscii(readFileSync(join(raiz, 'web/sw.js'), 'utf8').replace('__VERSION__', version).replace('__ARCHIVOS__', JSON.stringify(precache))));
   for (const f of ['sw.js', 'config.js']) soloAscii(readFileSync(join(salida, f), 'utf8'), f);
