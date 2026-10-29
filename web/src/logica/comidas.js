@@ -43,6 +43,9 @@ const fraccion = (t) => ({ '½': 0.5, '¼': 0.25, '¾': 0.75 }[t] ?? (t.includes
 export function leerIngrediente(linea) {
   let t = String(linea || '').replace(/^\s*[-\u2022*\u00b7\u2013]\s*/, '').trim();
   if (!t) return null;
+  // «1 cda (10 ml) de salsa de soja»: el paréntesis tras la unidad pasa al final del nombre
+  const par = t.match(new RegExp(`^(${NUM}\\s*([a-zA-ZñÑáéíóú]+)\\.?)\\s*(\\([^)]*\\))\\s+(.+)$`, 'i'));
+  if (par && UNIDAD.get(normal(par[3]))) t = `${par[1]} ${par[5]} ${par[4]}`;
   let m = t.match(new RegExp(`^${NUM}\\s*([a-zA-ZñÑáéíóú]+\\.?)?\\s+(?:de\\s+)?(.+)$`, 'i'));
   if (m) {
     const cantidad = fraccion(m[1]);

@@ -6,6 +6,8 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 
 ## Qué hay construido (v0.27)
 
+**v0.27.6:** el lector de ingredientes entiende un paréntesis tras la unidad: «1 cda (10 ml) de salsa de soja» queda como 1 cda de «Salsa de soja (10 ml)» (antes el nombre empezaba por «(10 ml)»).
+
 **v0.27.5:** en iPhone, entrar a entrenar cortaba la música (Spotify, etc.): la sesión de audio iba en «playback». Ahora va en «ambient»: los avisos suenan por encima de la música sin pararla. A cambio, con el móvil en silencio no suenan (vibra en los móviles que lo permiten).
 
 **v0.27.4:** en Hoy, «Tu día» con todo hecho se recoge en una línea («Todo hecho por hoy», con «Ver lo de hoy» para desplegarla) en vez de quedarse la lista entera tachada hasta el día siguiente. «Tu peso» ya no enseña los kilos de serie: dice cómo va respecto al ritmo de su plan de nutrición (el que eligió el coach o, sin él, el típico de su fase): «Vas hacia tu objetivo», «Estable estas semanas», «Bajas rápido: coméntalo con tu coach»…, sin cifras; tampoco el resumen de la semana. Quien quiera verlos, los enciende en Perfil → En este móvil → «Ver los kilos en Hoy». La gráfica sigue en Progreso.

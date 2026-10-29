@@ -1050,6 +1050,8 @@ console.log('\nComidas: recetas, recetario y menú (v0.26)');
     'también con la cantidad detrás, fracciones y sin cantidad («sal al gusto»); una línea vacía no es nada');
   check(leerIngrediente('3 tortillas de trigo integrales (120 g)').nombre === 'Tortillas de trigo integrales (120 g)' && leerIngrediente('1 gelatina de proteínas').nombre === 'Gelatina de proteínas'
     && leerIngrediente('1 huevo M (50 g)').nombre === 'Huevo M (50 g)', 'sin unidad, el «de» del nombre se queda («3 tortillas de trigo»)');
+  { const soja = leerIngrediente('1 cda (10 ml) de salsa de soja baja en sodio');
+    check(soja.nombre === 'Salsa de soja baja en sodio (10 ml)' && soja.cantidad === 1 && soja.unidad === 'cda', 'con un paréntesis tras la unidad («1 cda (10 ml) de salsa de soja»), el paréntesis pasa al final del nombre'); }
   check(leerIngredientes('60 g avena\n\n2 huevos;1 cda aceite').length === 3 && leerIngredientes(Array(50).fill('1 huevo').join('\n')).length === 40, 'varias líneas (o con punto y coma), hasta 40');
   check(escalarCantidad(60, 'g', 1.5) === 90 && escalarCantidad(33, 'g', 1.5) === 50 && escalarCantidad(12, 'g', 1.25) === 15 && escalarCantidad(2, 'ud', 1.25) === 2.5 && escalarCantidad(0.5, 'ud', 0.5) === 0.25,
     'al escalar, gramos de 5 en 5 (de 1 en 1 por debajo de 50) y unidades de media en media');
