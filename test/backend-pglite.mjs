@@ -58,7 +58,7 @@ export function crearBackendPglite(db) {
   }
 
   // Las columnas jsonb que guardan listas (como en Supabase, que manda JSON) van en JSON; el resto de listas son text[]
-  const JSONB = new Set(['lesiones', 'ingredientes']);
+  const JSONB = new Set(['lesiones', 'ingredientes', 'series_detalle']);
   const valor = (v, col) => (Array.isArray(v) ? (JSONB.has(col) ? JSON.stringify(v) : `{${v.map((x) => `"${String(x).replace(/"/g, '\\"')}"`).join(',')}}`) : v);
 
   async function insertarUna(t, fila, conflicto) {

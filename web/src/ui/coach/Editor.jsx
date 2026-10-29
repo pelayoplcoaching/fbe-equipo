@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos } from '../comunes.jsx';
-import { FOCOS, INTENCIONES, PRIORIDADES, NOMBRE_GRUPO, GRUPOS, TIPOS_SESION, LETRAS_SUPERSERIE, etiquetasSuperserie, seriesPautadasPorGrupo, rangoVolumen, estadoVolumen, num, mmss } from '../../logica/calculos.js';
+import { FOCOS, INTENCIONES, PRIORIDADES, NOMBRE_GRUPO, GRUPOS, TIPOS_SESION, LETRAS_SUPERSERIE, etiquetasSuperserie, seriesPautadasPorGrupo, rangoVolumen, estadoVolumen, num, mmss, tieneDetalle, detalleDesdePauta } from '../../logica/calculos.js';
 import { rangoSemana, lunesDe, fmtCorta, fmtConDia, sumarDias } from '../../logica/fechas.js';
 import { sugerirCargas } from '../../logica/sugerencias.js';
 import { leerTempo, explicarTempo } from '../../logica/tempo.js';
@@ -77,6 +77,15 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       // Si la base no lo acepta, los campos vuelven a lo que hay guardado (no se queda a la vista un valor que no vale)
       setEstado(''); aviso(e.message, 'error'); setVersion((v) => v + 1);
     }
+  }
+  // Pauta serie a serie: guarda el detalle (o lo quita) y el resumen que sale de él
+  async function guardarDetalle(id, detalle) {
+    setEstado('Guardando…');
+    try {
+      const cambios = await api.guardarDetalle(id, detalle);
+      setD((x) => parchear(x, 'sesion_ejercicios', id, cambios));
+      setEstado('Guardado');
+    } catch (e) { setEstado(''); aviso(e.message, 'error'); setVersion((v) => v + 1); }
   }
   // Cambios de estructura (semanas, sesiones, publicar…): uno cada vez; un doble toque no duplica nada
   const enCurso = useRef(false);
@@ -196,7 +205,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
 
       {semana && sesiones.map((s) => (
         <EditorSesion key={`${s.id}-${version}`} sesion={s} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}}
-          guardar={guardar} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
+          guardar={guardar} guardarDetalle={guardarDetalle} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
           borrar={() => setConfirmarBorrado({ tipo: 'sesion', id: s.id, nombre: s.nombre })} />
       ))}
       {semana && <button class="btn btn-ancho" onClick={() => estructura(() => api.nuevaSesion(semana.id))}><Icono n="mas" /> Añadir sesión</button>}
@@ -204,7 +213,8 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       {sugerir && semana && anterior && (
         <CargasSugeridas filas={sugerirCargas({
           // Con nivel, solo los ejercicios que se pautan con kg (los de RPE los carga el atleta)
-          ahora: sesiones.flatMap((x) => d.pautas[x.id] || []).filter(conKg), antes: sesionesAnt.flatMap((x) => d.pautas[x.id] || []),
+          // (las pautadas serie a serie llevan sus kilos en cada serie: no se proponen aquí)
+          ahora: sesiones.flatMap((x) => d.pautas[x.id] || []).filter((p) => conKg(p) && !tieneDetalle(p)), antes: sesionesAnt.flatMap((x) => d.pautas[x.id] || []),
           series: d.series, sesionesAhora: sesiones, sesionesAntes: sesionesAnt,
           nombres: Object.fromEntries(Object.values(ejercicios).map((e) => [e.id, e.nombre])), foco: semana.foco,
         })} sesiones={sesiones} semana={semana} anterior={anterior} alCerrar={() => setSugerir(false)}
@@ -403,10 +413,49 @@ function parchear(d, tabla, id, cambios) {
   return d;
 }
 
+// Pauta serie a serie: una fila por serie con sus reps, kilos y RPE (cada uno opcional); añadir o quitar series.
+// Cada cambio se guarda al salir del campo; el resumen de la fila (series, reps, kg, RPE) sale de aquí.
+function DetalleSeries({ pauta, hechas = [], alGuardar }) {
+  const d = pauta.series_detalle;
+  // Lo último escrito, aunque aún no haya vuelto de guardarse (dos cambios seguidos no se pisan)
+  const ultimo = useRef(d);
+  const pendientes = useRef(0);
+  useEffect(() => { if (!pendientes.current) ultimo.current = d; }, [d]);
+  const leer = (t) => { const x = String(t).replace(',', '.').trim(); return x === '' ? null : Number(x); };
+  const guardar = async (nuevo) => {
+    ultimo.current = nuevo; pendientes.current += 1;
+    // (si falla, el editor rehace la sesión y con ella esto, con lo que haya guardado)
+    try { await alGuardar(nuevo); } finally { pendientes.current -= 1; }
+  };
+  const cambiar = (i, campo, t) => {
+    const v = leer(t);
+    if (v != null && Number.isNaN(v)) return;
+    guardar(ultimo.current.map((x, k) => (k === i ? { ...x, [campo]: v } : x)));
+  };
+  const hecha = Object.fromEntries(hechas.map((x) => [x.numero, x]));
+  return (
+    <div class="detalle-series" role="group" aria-label="Series una a una">
+      <div class="detalle-cab" aria-hidden="true"><span /><span>Reps</span><span>Kg</span><span>RPE</span><span /></div>
+      {d.map((x, i) => (
+        // La clave cambia al añadir o quitar series (las filas se rehacen), no al escribir (no se pierde el foco)
+        <div class="detalle-fila" key={`${pauta.id}-${d.length}-${i}`}>
+          <span class="n mini">S{i + 1}</span>
+          <input class="n" inputMode="numeric" aria-label={`Repeticiones de la serie ${i + 1}`} defaultValue={x.reps ?? ''} onChange={(e) => cambiar(i, 'reps', e.currentTarget.value)} />
+          <input class="n" inputMode="decimal" aria-label={`Kilos de la serie ${i + 1}`} defaultValue={x.kg == null ? '' : num(x.kg, 2)} onChange={(e) => cambiar(i, 'kg', e.currentTarget.value)} />
+          <input class="n" inputMode="decimal" aria-label={`RPE de la serie ${i + 1}`} defaultValue={x.rpe == null ? '' : num(x.rpe, 1)} onChange={(e) => cambiar(i, 'rpe', e.currentTarget.value)} />
+          <button class="btn btn-icono plano" aria-label={`Quitar la serie ${i + 1}`} disabled={d.length <= 1} onClick={() => guardar(ultimo.current.filter((_, k) => k !== i))}><Icono n="cerrar" /></button>
+          {hecha[i + 1] && <span class="mini hecho-semana detalle-hecha">Hecho: {textoSerieHecha(hecha[i + 1])}</span>}
+        </div>
+      ))}
+      <button class="btn-texto mini" disabled={d.length >= 20} onClick={() => guardar([...ultimo.current, { ...ultimo.current[ultimo.current.length - 1] }])}><Icono n="mas" /> Serie</button>
+    </div>
+  );
+}
+
 // «25×10 @8», «12 reps @7» (sin kilos) o «25×10» (sin RPE)
 const textoSerieHecha = (x) => `${x.kg != null ? `${num(x.kg, 2)}×${x.reps ?? '–'}` : `${x.reps ?? '–'} reps`}${x.rpe != null ? ` @${num(x.rpe, 1)}` : ''}`;
 
-function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura, elegir, borrar, nivel = null, ultimas = {} }) {
+function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, nivel = null, ultimas = {} }) {
   const { api } = useApp();
   const numero = (pautaId, campo, dec = false) => (e) => {
     const t = e.currentTarget.value.replace(',', '.').trim();
@@ -465,19 +514,32 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura,
                       <input class="variante" aria-label="Variante" placeholder="Variante: pausa, agarre…" defaultValue={p.variante || ''} onChange={(e) => guardar('sesion_ejercicios', p.id, { variante: nulo(e.currentTarget.value.trim()) })} />
                       <CampoTempo valor={p.tempo} alGuardar={(v) => guardar('sesion_ejercicios', p.id, { tempo: v })} />
                       <select class={`backoff ${p.backoff_pct != null ? 'activo' : ''}`} aria-label="Serie top y back-off" title="La primera serie es la top; las demás, un % por debajo de lo que el atleta haga en ella (la app calcula la carga)"
-                        value={p.backoff_pct == null ? '' : String(Number(p.backoff_pct))}
-                        onChange={(e) => {
-                          const v = e.currentTarget.value === '' ? null : Number(e.currentTarget.value);
-                          guardar('sesion_ejercicios', p.id, v == null ? { backoff_pct: null } : { backoff_pct: v, series: Math.max(2, p.series || 0) });
+                        value={tieneDetalle(p) ? 'detalle' : p.backoff_pct == null ? '' : String(Number(p.backoff_pct))}
+                        onChange={async (e) => {
+                          const t = e.currentTarget.value;
+                          if (t === 'detalle') { await guardarDetalle(p.id, detalleDesdePauta(p)); return; }
+                          if (tieneDetalle(p)) await guardarDetalle(p.id, null);
+                          const v = t === '' ? null : Number(t);
+                          if (v != null || p.backoff_pct != null) guardar('sesion_ejercicios', p.id, v == null ? { backoff_pct: null } : { backoff_pct: v, series: Math.max(2, p.series || 0) });
                         }}>
                         <option value="">Series iguales</option>
+                        <option value="detalle">Serie a serie</option>
                         {BACKOFFS.map((x) => <option key={x} value={String(x)}>Top + back-off −{num(x)} %</option>)}
                       </select>
                     </div>
                     <NotaPauta valor={p.notas_coach} alGuardar={(v) => guardar('sesion_ejercicios', p.id, { notas_coach: v })} />
-                    {ultimas[p.ejercicio_id]?.series.length > 0 && <div class="mini registro-serie ultima-vez" title="Lo que hizo la última vez antes de esta semana">
+                    {tieneDetalle(p) && <DetalleSeries pauta={p} hechas={series[p.id] || []} alGuardar={(d) => guardarDetalle(p.id, d)} />}
+                    {ultimas[p.ejercicio_id]?.series.length > 0 && <div class="mini registro-serie ultima-vez-coach" title="Lo que hizo la última vez antes de esta semana">
                       <span class="terciario">Última vez{ultimas[p.ejercicio_id].fecha ? ` (${fmtCorta(ultimas[p.ejercicio_id].fecha)})` : ''}: </span>{ultimas[p.ejercicio_id].series.map(textoSerieHecha).join(' · ')}</div>}
                     {series[p.id]?.length > 0 && <div class="mini registro-serie hecho-semana" style="margin-top:3px"><span class="terciario">Esta semana: </span>{[...series[p.id]].sort((a, c) => a.numero - c.numero).map(textoSerieHecha).join(' · ')}</div>}</td>
+                  {tieneDetalle(p) ? <>
+                    <td class="resumen-detalle num" title="Serie a serie: cámbialo en las series de debajo">{p.series}</td>
+                    <td class="resumen-detalle num" title="Serie a serie: cámbialo en las series de debajo">{p.reps_min ?? '–'}</td>
+                    <td class="resumen-detalle num" title="Serie a serie: cámbialo en las series de debajo">{p.reps_max ?? '–'}</td>
+                    {col.rir && <td><input class="n" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
+                    {col.rpe && <td class="resumen-detalle num" title="El RPE de la última serie">{p.rpe_objetivo == null ? '–' : num(p.rpe_objetivo, 1)}</td>}
+                    {col.kg && <td class="resumen-detalle num" title="Los kilos de la mayoría de las series">{p.carga_sugerida_kg == null ? '–' : num(p.carga_sugerida_kg, 2)}</td>}
+                  </> : <>
                   <td><input class="n" inputMode="numeric" aria-label="Series" key={`series-${p.series}`} defaultValue={p.series} onChange={(e) => {
                     // Con top + back-off hacen falta al menos dos series: con una sola, deja de serlo.
                     // La «key» lo vuelve a pintar si las series cambian desde fuera (elegir back-off las sube a 2)
@@ -490,6 +552,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, estructura,
                   {col.rir && <td><input class="n" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
                   {col.rpe && <td><input class={`n ${fuera(p, 'rpe_objetivo') ? 'fuera-nivel' : ''}`} inputMode="decimal" aria-label="RPE objetivo" title={titulo(p, 'rpe_objetivo')} placeholder={fuera(p, 'rpe_objetivo') ? '·' : ''} defaultValue={p.rpe_objetivo == null ? '' : num(p.rpe_objetivo, 1)} onChange={numero(p.id, 'rpe_objetivo', true)} /></td>}
                   {col.kg && <td><input class={`n ${fuera(p, 'carga_sugerida_kg') ? 'fuera-nivel' : ''}`} inputMode="decimal" aria-label="Carga sugerida en kg" title={titulo(p, 'carga_sugerida_kg')} placeholder={fuera(p, 'carga_sugerida_kg') ? '·' : ''} defaultValue={p.carga_sugerida_kg == null ? '' : num(p.carga_sugerida_kg, 2)} onChange={numero(p.id, 'carga_sugerida_kg', true)} /></td>}
+                  </>}
                   <td><select aria-label="Descanso" value={p.descanso_seg ?? ''} onChange={(e) => guardar('sesion_ejercicios', p.id, { descanso_seg: e.currentTarget.value === '' ? null : Number(e.currentTarget.value) })}>
                     <option value="">—</option>{DESCANSOS.map((s) => <option key={s} value={s}>{s ? mmss(s) : 'Sin descanso'}</option>)}
                   </select></td>

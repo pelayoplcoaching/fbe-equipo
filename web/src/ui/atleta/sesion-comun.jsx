@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { leerAjustes } from '../ajustes.js';
 import { SONIDOS } from '../../datos/sonidos-descanso.js';
 import { Icono } from '../comunes.jsx';
-import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, propuestaBackoff } from '../../logica/calculos.js';
+import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, propuestaBackoff, tieneDetalle, objetivoSerie } from '../../logica/calculos.js';
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
 
@@ -186,8 +186,11 @@ export function Temporizador({ fin, total, prioridad, texto, alCambiar, clase = 
 export function prepararEjercicio(e, actual, ultimas, foco, progresionAuto) {
   const ej = actual || e.ejercicio;
   // Con una alternativa no vale la carga pautada para el original: se parte de lo que hizo con la alternativa
-  const prescripcion = actual ? { ...e, carga_sugerida_kg: null } : e;
-  const sugerencia = progresionAuto ? sugerenciaProgresion(prescripcion, ultimas?.series, { nombre: ej.nombre, foco, pautaAnterior: ultimas?.pauta }) : null;
+  // (y, pautado serie a serie, sin los kilos de cada serie: eran para el original)
+  const prescripcion = actual ? { ...e, carga_sugerida_kg: null, series_detalle: e.series_detalle ? e.series_detalle.map(({ kg, ...resto }) => resto) : e.series_detalle } : e;
+  // Pautado serie a serie: cada serie trae lo suyo del coach (sin sugerencia de la app, que es para series iguales)
+  const detalle = tieneDetalle(prescripcion);
+  const sugerencia = progresionAuto && !detalle ? sugerenciaProgresion(prescripcion, ultimas?.series, { nombre: ej.nombre, foco, pautaAnterior: ultimas?.pauta }) : null;
   const barra = esBarra(ej.nombre);
   const top = esTopBackoff(prescripcion);
   const deLaTop = propuestaSerie(prescripcion, ultimas?.series, 1, { sugerencia, pautaAnterior: ultimas?.pauta });
@@ -196,12 +199,19 @@ export function prepararEjercicio(e, actual, ultimas, foco, progresionAuto) {
     const bo = top ? propuestaBackoff(prescripcion, k, hechas, deLaTop, ej.nombre) : null;
     if (bo) return bo;
     const previa = hechas[k - 1];
+    const o = objetivoSerie(prescripcion, k);
+    if (o) {
+      // Lo de esa serie; lo que el coach no puso, como siempre (la anterior de hoy o su última vez)
+      const base = previa ? { kg: previa.kg, reps: previa.reps } : propuestaSerie(prescripcion, ultimas?.series, k, { pautaAnterior: ultimas?.pauta });
+      return { kg: o.kg ?? base.kg, reps: o.reps ?? base.reps, rpe: o.rpe ?? null, objetivo: o };
+    }
     return previa ? { kg: previa.kg, reps: previa.reps } : propuestaSerie(prescripcion, ultimas?.series, k, { sugerencia, pautaAnterior: ultimas?.pauta });
   };
   return {
-    ej, prescripcion, sugerencia, barra, top,
+    ej, prescripcion, sugerencia, barra, top, detalle,
     conAproximacion: barra || (ej.tipo || []).includes('basico'),
-    kgTrabajo: deLaTop.kg,
+    // Para la aproximación: la serie más pesada que le toca
+    kgTrabajo: detalle && prescripcion.series_detalle.some((x) => x.kg != null) ? Math.max(...prescripcion.series_detalle.map((x) => x.kg ?? 0)) : deLaTop.kg,
     propuesta,
   };
 }

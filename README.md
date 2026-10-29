@@ -6,6 +6,8 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 
 ## Qué hay construido (v0.27)
 
+**v0.28:** pauta serie a serie (migración 024, `sesion_ejercicios.series_detalle`). En el editor, el desplegable de cada ejercicio tiene «Series iguales», «Serie a serie» y «Top + back-off». Con «Serie a serie», cada serie lleva sus reps, sus kilos y su RPE (cada uno opcional), con «+ Serie» y quitar; el resumen de la fila (series, reps, kg, RPE) sale de ahí y lo usa todo lo demás (volumen, progreso, avisos). «Preparar las siguientes» progresa cada serie a su manera (y en descarga quita la última). El atleta ve en cada serie sus kilos y reps propuestos y el RPE objetivo («→ 8»); en el modo enfoque, «Serie 2 de 3: 10 × 22,5 kg @8». Sin la 024, la app avisa de que falta al intentar pautar serie a serie. También: el estilo de «Última vez» del editor ya no cambia el de la sesión del atleta.
+
 **v0.27.8:** en el editor del programa, cada ejercicio trae lo que hizo el atleta la última vez antes de esa semana (en la semana anterior o en el bloque anterior), serie a serie con kilos, reps y RPE: «Última vez (28 oct): 25×10 @8 · 25×10 @9». En una semana ya hecha, además, «Esta semana: …» también con el RPE.
 
 **v0.27.7:** al borrar una semana de un bloque, las siguientes suben un puesto y una semana antes (antes, al borrar las semanas 1 a 3 de un bloque copiado, la que quedaba seguía siendo la «semana 4»). Si un bloque ya se quedó así, el editor avisa de que las semanas no van seguidas y ofrece «Renumerar desde la 1».

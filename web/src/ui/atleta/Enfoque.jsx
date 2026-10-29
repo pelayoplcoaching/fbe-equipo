@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Disco, useApp } from '../comunes.jsx';
 import { Placas } from '../Herramientas.jsx';
-import { pauta, num, mmss, textoSerie, incrementoCarga, trasSerie, duracionEstimada, NOMBRE_PRIORIDAD } from '../../logica/calculos.js';
+import { pauta, num, mmss, textoSerie, incrementoCarga, trasSerie, duracionEstimada, NOMBRE_PRIORIDAD, textoObjetivo } from '../../logica/calculos.js';
 import { fmtCorta } from '../../logica/fechas.js';
 import { aNumero, problemaSerie, prepararEjercicio, NotaFijada, Temporizador, useAhora, prepararAudio } from './sesion-comun.jsx';
 import { Metronomo } from './Metronomo.jsx';
@@ -157,7 +157,8 @@ export function Enfoque({
           <>
             <div class="enfoque-serie-n">{previa ? `Corrigiendo la serie ${numero}` : numero > e.series ? `Serie ${numero} (de más)`
               : info.top && numero === 1 ? 'Serie top: las back-off saldrán de lo que hagas aquí'
-              : info.top ? `Back-off ${numero - 1} de ${e.series - 1}: ${num(e.backoff_pct)} % menos que tu top` : `Serie ${numero} de ${e.series}`}</div>
+              : info.top ? `Back-off ${numero - 1} de ${e.series - 1}: ${num(e.backoff_pct)} % menos que tu top` : `Serie ${numero} de ${e.series}`}
+              {!previa && prop?.objetivo && textoObjetivo(prop.objetivo) && <span class="enfoque-objetivo">: {textoObjetivo(prop.objetivo)}</span>}</div>
             <div class="paso-grande">
               <span class="etq">Kilos</span>
               <button type="button" onClick={() => sumarKg(-paso)} aria-label={`Quitar ${num(paso, 2)} kilos`}><Icono n="menos" /></button>

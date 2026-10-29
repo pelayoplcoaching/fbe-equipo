@@ -1,6 +1,6 @@
 // Funciones de la app sobre cualquier backend (Supabase o demo). Toda la lógica vive aquí, una sola vez.
 import { hoyISO, lunesDe, sumarDias, aISO, rangoSemana, diasEntre } from '../logica/fechas.js';
-import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjercicio, seriesACsv, mejoresMarcas, vitrina, racha, mapaCalor, cargaSemanal, cambioCarga, eventosRecord, resumenSemanal, num, tendenciaPeso, ritmoPeso } from '../logica/calculos.js';
+import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjercicio, seriesACsv, mejoresMarcas, vitrina, racha, mapaCalor, cargaSemanal, cambioCarga, eventosRecord, resumenSemanal, num, tendenciaPeso, ritmoPeso, limpiarDetalle, agregadosDetalle } from '../logica/calculos.js';
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { progresoObjetivo, mejorReciente } from '../logica/objetivos.js';
@@ -50,6 +50,13 @@ const falta023 = (e) => {
   }
   throw e;
 };
+const falta024 = (e) => {
+  const m = e?.message || '';
+  if (/series_detalle/.test(m) && /schema cache|does not exist|no existe|column|columna/i.test(m)) {
+    throw new Error(`Para pautar serie a serie falta ejecutar la migración 024 en Supabase (supabase/migraciones/024_series_detalle.sql). Detalle: ${m}`);
+  }
+  throw e;
+};
 const falta018 = (e) => {
   if (/\b(nivel|nutricion)\b/.test(e?.message || '') && /column|columna|schema cache/i.test(e?.message || '')) {
     throw new Error('Para elegir servicio y nivel falta ejecutar la migración 018 en Supabase (supabase/migraciones/018_servicio_y_nivel.sql).');
@@ -94,7 +101,7 @@ function bloqueActual(bloques) {
 
 // Campos que se copian al duplicar prescripción
 const CAMPOS_SE = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'series', 'reps_min', 'reps_max',
-  'rir_objetivo', 'rpe_objetivo', 'carga_sugerida_kg', 'descanso_seg', 'tempo', 'notas_coach', 'variante', 'backoff_pct'];
+  'rir_objetivo', 'rpe_objetivo', 'carga_sugerida_kg', 'descanso_seg', 'tempo', 'notas_coach', 'variante', 'backoff_pct', 'series_detalle'];
 
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
@@ -339,10 +346,11 @@ export function crearApi(backend) {
       const res = {};
       // excluirSesionId: una sesión o varias (el editor del coach quita las de la semana que está mirando)
       const fuera = new Set([].concat(excluirSesionId || []));
+      const tope = hasta ? new Date(hasta) : null; // «hasta» sin zona = hora local (lunes a las 0:00 en España)
       const repasar = (series, pautas) => {
         for (const s of series) {
           const p = pautas[s.sesion_ejercicio_id];
-          if (!p || fuera.has(p.sesion_id) || (hasta && s.registrada_en >= hasta)) continue;
+          if (!p || fuera.has(p.sesion_id) || (tope && new Date(s.registrada_en) >= tope)) continue;
           const ef = s.sustituto_id || p.ejercicio_id;
           if (!ejercicioIds.includes(ef)) continue;
           const r = res[ef];
@@ -1673,9 +1681,16 @@ export function crearApi(backend) {
     },
     async crear(tabla, fila) { return (await b.insert(tabla, [fila]))[0]; },
     async actualizar(tabla, id, cambios) { return (await b.update(tabla, cambios, { eq: { id } }))[0]; },
+    // Pauta serie a serie (migración 024): con detalle, el resumen de siempre sale de él; sin él (null), se deja el
+    // resumen como está y vuelven las series iguales. Devuelve los cambios guardados.
+    async guardarDetalle(pautaId, detalle) {
+      const d = detalle == null ? null : limpiarDetalle(detalle);
+      if (detalle != null && !d) throw new Error('Revisa las series: reps entre 0 y 1000, kilos entre 0 y 9999 y RPE entre 1 y 10.');
+      const cambios = d ? { series_detalle: d, ...agregadosDetalle(d), backoff_pct: null } : { series_detalle: null };
+      await b.update('sesion_ejercicios', cambios, { eq: { id: pautaId } }).catch(falta024);
+      return cambios;
+    },
     async borrar(tabla, id) { return b.delete(tabla, { eq: { id } }); },
-    // Borrar una semana de un bloque: las de después suben un puesto (la 4 pasa a ser la 3) y una semana antes,
-    // para que el bloque siga siendo seguido (antes, al borrar las 3 primeras, la que quedaba seguía siendo la «semana 4»)
     // Deja las semanas de un bloque seguidas desde la 1 (y, con fecha de inicio, una por semana desde ella)
     async renumerarSemanas(bloqueId) {
       const [bloque] = await b.select('bloques', { eq: { id: bloqueId } });
@@ -1685,6 +1700,8 @@ export function crearApi(backend) {
         if (cambios.numero !== w.numero || (cambios.fecha_inicio && cambios.fecha_inicio !== w.fecha_inicio)) await b.update('semanas', cambios, { eq: { id: w.id } });
       }
     },
+    // Borrar una semana de un bloque: las de después suben un puesto (la 4 pasa a ser la 3) y una semana antes,
+    // para que el bloque siga siendo seguido (antes, al borrar las 3 primeras, la que quedaba seguía siendo la «semana 4»)
     async borrarSemana(semanaId) {
       const [s] = await b.select('semanas', { eq: { id: semanaId } });
       await b.delete('semanas', { eq: { id: semanaId } });
@@ -1726,7 +1743,8 @@ export function crearApi(backend) {
         const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: s.id }, order: [['orden', 'asc']] });
         if (!pautas.length) continue;
         await b.insert('sesion_ejercicios', pautas.map((p) => {
-          const f = progresarPauta(Object.fromEntries(CAMPOS_SE.map((c) => [c, p[c] ?? null])), opciones, { nombre: nombres[p.ejercicio_id] || '', descarga });
+          // (series_detalle solo si la base lo tiene: sin la 024, la fila no trae la columna y no se manda)
+          const f = progresarPauta(Object.fromEntries(CAMPOS_SE.filter((c) => c !== 'series_detalle' || c in p).map((c) => [c, p[c] ?? null])), opciones, { nombre: nombres[p.ejercicio_id] || '', descarga });
           f.sesion_id = copiaSesion.id;
           return f;
         }));

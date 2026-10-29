@@ -371,6 +371,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
           {e.tempo && tempo && <span class="variante">Tempo {tempo.texto}</span>}
           <span class="pauta">
             <span class="num">{pa.series}</span>
+            {pa.detalle && <span>serie a serie</span>}
             {pa.esfuerzo && <span>{pa.esfuerzo}</span>}
             {pa.carga && !actual && <span class="num">{pa.carga}</span>}
             {pa.descanso && !etiqueta && <span>descanso {pa.descanso}</span>}
@@ -533,11 +534,11 @@ function FilaSerie({ numero, hecha, propuesta, activa, pendiente, guardar, quita
         <input class="celda" inputMode="numeric" enterKeyHint="done" aria-label={`Repeticiones de la serie ${numero}`} value={reps}
           placeholder={fmt(propuesta.reps, 0) || '–'} onInput={(e) => setReps(e.currentTarget.value)}
           onChange={(e) => confirmar(kg, e.currentTarget.value, rpe)} onFocus={(e) => e.currentTarget.select()} />
-        <select class="rpe" aria-label={`RPE de la serie ${numero}`} value={rpe} onChange={(e) => {
+        <select class={`rpe ${propuesta.rpe != null && rpe === '' ? 'rpe-objetivo' : ''}`} aria-label={`RPE de la serie ${numero}${propuesta.rpe != null ? ` (objetivo ${num(propuesta.rpe)})` : ''}`} value={rpe} onChange={(e) => {
           const v = e.currentTarget.value === '' ? '' : Number(e.currentTarget.value);
           setRpe(v); confirmar(kg, reps, v);
         }}>
-          {RPES.map((r) => <option key={r} value={r}>{r === '' ? 'RPE' : num(r)}</option>)}
+          {RPES.map((r) => <option key={r} value={r}>{r === '' ? (propuesta.rpe != null ? `→ ${num(propuesta.rpe)}` : 'RPE') : num(r)}</option>)}
         </select>
         <button class="hecho-btn" onClick={marcar} aria-pressed={hecha ? 'true' : 'false'}
           aria-label={hecha ? `Quitar la serie ${numero}` : `Marcar la serie ${numero} como hecha`}>

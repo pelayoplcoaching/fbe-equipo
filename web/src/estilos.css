@@ -1849,7 +1849,15 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .serie.hecha .peso-anterior { opacity: .7; }
 .enfoque-anterior { font-size: 14px; color: var(--tinta-2); text-align: center; }
 .enfoque-anterior b { color: var(--tinta); }
-.ultima-vez { margin-top: 4px; font-variant-numeric: tabular-nums; color: var(--tinta-2); }
+.rpe-objetivo { color: var(--morado); font-weight: 650; }
+.detalle-series { display: grid; gap: 4px; margin-top: 6px; padding: 8px; border-radius: var(--r-xs); background: var(--hoja-2); }
+.detalle-cab, .detalle-fila { display: grid; grid-template-columns: 28px 56px 68px 56px 32px; gap: 6px; align-items: center; }
+.detalle-cab { font-size: 11.5px; font-weight: 650; color: var(--tinta-3); }
+.detalle-fila .n.mini { font-weight: 700; color: var(--tinta-2); }
+.detalle-fila input.n { width: 100%; }
+.detalle-hecha { grid-column: 2 / -1; }
+.resumen-detalle { color: var(--tinta-3); text-align: center; }
+.ultima-vez-coach { margin-top: 4px; font-variant-numeric: tabular-nums; color: var(--tinta-2); }
 .hecho-semana { color: var(--ok); font-variant-numeric: tabular-nums; }
 .aviso-semanas { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 .aviso-nivel { display: flex; gap: 8px; align-items: flex-start; }

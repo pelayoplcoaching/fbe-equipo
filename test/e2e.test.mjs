@@ -1252,10 +1252,34 @@ try {
     'el de Ana (intermedia) avisa de cómo pautarle y atenúa las casillas que su nivel no usa');
   await revisar('nivel-editor');
   // v0.27.8: en el editor, lo que hizo la última vez en cada ejercicio (kilos, reps y RPE)
-  const ultimaVez = p.locator('.ultima-vez').first();
+  const ultimaVez = p.locator('.ultima-vez-coach').first();
   const hayUltima = await ultimaVez.waitFor({ timeout: 6000 }).then(() => true, () => false);
   const textoUltima = hayUltima ? await ultimaVez.textContent() : '';
   check(hayUltima && /Última vez/.test(textoUltima) && /\d+×\d+/.test(textoUltima) && /@\d/.test(textoUltima), `en el editor de Ana, cada ejercicio trae lo que hizo la última vez con su RPE («${textoUltima.trim().slice(0, 70)}»)`);
+
+  // v0.28: pautar serie a serie
+  const modo = p.locator('.tabla-pauta select[aria-label="Serie top y back-off"]').first();
+  const filaPauta = p.locator('.tabla-pauta tbody tr').first();
+  await modo.selectOption('detalle');
+  const det = filaPauta.locator('.detalle-series');
+  await det.waitFor();
+  const nDet = await det.locator('.detalle-fila').count();
+  await det.getByLabel('Repeticiones de la serie 1').fill('6');
+  await p.keyboard.press('Tab');
+  await p.keyboard.type('47');
+  await p.keyboard.press('Tab');
+  await p.waitForTimeout(500);
+  check(await det.getByLabel('Repeticiones de la serie 1').inputValue() === '6' && await det.getByLabel('Kilos de la serie 1').inputValue() === '47',
+    'se escribe serie a serie con el tabulador sin perder nada (reps y luego kilos)');
+  await det.getByRole('button', { name: 'Serie', exact: true }).click();
+  await det.locator('.detalle-fila').nth(nDet).waitFor();
+  const resumen = await filaPauta.locator('td.resumen-detalle').allTextContents();
+  check(nDet >= 1 && await det.locator('.detalle-fila').count() === nDet + 1 && resumen[0] === String(nDet + 1) && resumen[1] === '6',
+    `«Serie a serie»: una fila por serie con sus reps, kilos y RPE; añadir una serie y el resumen de la pauta se ajusta (${resumen.slice(0, 3).join(' · ')})`);
+  await revisar('serie-a-serie');
+  await modo.selectOption('');
+  await det.waitFor({ state: 'detached' });
+  check(await filaPauta.locator('td.resumen-detalle').count() === 0, 'y se vuelve a series iguales');
 
   console.log('\nPreparar el mes de golpe (v0.23)');
   const pestanasAntes = await p.locator('.semanas-tabs button').count();

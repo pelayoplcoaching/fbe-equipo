@@ -24,7 +24,7 @@ const DEFECTOS = {
   bloques: () => ({ es_plantilla: false, estado: 'planificado', atleta_id: null, numero: null, foco: null, objetivo: null, descripcion: null, fecha_inicio: null, fecha_fin: null, creado_en: ahora() }),
   semanas: () => ({ programacion: 'no_iniciada', foco: null, fecha_inicio: null, nota_coach: null }),
   sesiones: () => ({ tipo: 'fuerza', completada: false, intencion: null, dinamica: null, fecha_realizada: null, nota_atleta: null, duracion_min: null, rpe_sesion: null, revisada_en: null, preparacion: null, dia_previsto: null, cardio: null, cardio_hecho: null }),
-  sesion_ejercicios: () => ({ prioridad: 'media', superserie: null, reps_min: null, reps_max: null, rir_objetivo: null, rpe_objetivo: null, carga_sugerida_kg: null, descanso_seg: null, tempo: null, notas_coach: null, variante: null, backoff_pct: null }),
+  sesion_ejercicios: () => ({ prioridad: 'media', superserie: null, reps_min: null, reps_max: null, rir_objetivo: null, rpe_objetivo: null, carga_sugerida_kg: null, descanso_seg: null, tempo: null, notas_coach: null, variante: null, backoff_pct: null, series_detalle: null }),
   series: () => ({ registrada_en: ahora(), kg: null, reps: null, rpe: null, rir: null, nota: null, sustituto_id: null }),
   pesos: () => ({ fecha: hoyISO(), notas: null }),
   checkins: () => ({ creado_en: ahora(), revisado_en: null, respuestas: null }),
@@ -378,7 +378,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return series !== null && entero(series) && entre(series, 1, 20) && entero(rmin) && entre(rmin, 0, 1e6) && entero(rmax) && entre(rmax, 0, 1e6)
         && (rmin === null || rmax === null || rmin <= rmax) && entre(n(f.rir_objetivo), 0, 10) && entre(n(f.rpe_objetivo), 1, 10)
         && entre(n(f.carga_sugerida_kg), 0, 9999.99) && entero(n(f.descanso_seg)) && entre(n(f.descanso_seg), 0, 900)
-        && (n(f.backoff_pct) === null || (n(f.backoff_pct) >= 1 && n(f.backoff_pct) <= 50 && series >= 2));
+        && (n(f.backoff_pct) === null || (n(f.backoff_pct) >= 1 && n(f.backoff_pct) <= 50 && series >= 2))
+        // Como la migración 024: el detalle serie a serie, una por serie y sin top + back-off
+        && (f.series_detalle == null || (Array.isArray(f.series_detalle) && f.series_detalle.length === series && n(f.backoff_pct) === null
+          && f.series_detalle.every((x) => x && typeof x === 'object' && !Array.isArray(x) && Object.keys(x).every((k) => ['reps', 'kg', 'rpe'].includes(k))
+            && (x.reps == null || (typeof x.reps === 'number' && Number.isInteger(x.reps) && x.reps >= 0 && x.reps <= 1000))
+            && (x.kg == null || (typeof x.kg === 'number' && x.kg >= 0 && x.kg <= 9999.99))
+            && (x.rpe == null || (typeof x.rpe === 'number' && x.rpe >= 1 && x.rpe <= 10)))));
     },
     series: (f) => entero(n(f.numero)) && n(f.numero) >= 1 && entre(n(f.kg), 0, 9999.99) && entero(n(f.reps)) && entre(n(f.reps), 0, 1e6)
       && entre(n(f.rpe), 1, 10) && entre(n(f.rir), 0, 10),

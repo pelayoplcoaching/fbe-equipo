@@ -174,6 +174,17 @@ export function pauta(se) {
     ? `${se.reps_min}–${se.reps_max}`
     : se.reps_max ?? se.reps_min ?? '';
   const top = esTopBackoff(se);
+  if (tieneDetalle(se)) {
+    const repsTxt = se.series_detalle.map((x) => x.reps ?? '–');
+    const iguales = repsTxt.every((r) => r === repsTxt[0]);
+    return {
+      series: iguales ? `${se.series_detalle.length} × ${repsTxt[0]}` : `${se.series_detalle.length} series: ${repsTxt.join(' · ')}`,
+      top: false, detalle: true,
+      esfuerzo: se.rir_objetivo != null ? `RIR ${num(se.rir_objetivo)}` : null,
+      carga: null,
+      descanso: se.descanso_seg ? mmss(se.descanso_seg) : null,
+    };
+  }
   return {
     series: top ? `${reps === '' ? 'Top' : `1 × ${reps}`} + ${se.series - 1} × \u2212${num(se.backoff_pct)} %` : `${se.series} × ${reps}`.trim(),
     top,
@@ -181,6 +192,56 @@ export function pauta(se) {
     carga: se.carga_sugerida_kg != null ? `${num(se.carga_sugerida_kg, 2)} kg` : null,
     descanso: se.descanso_seg ? mmss(se.descanso_seg) : null,
   };
+}
+
+// ---------- pauta serie a serie (v0.28, migración 024) ----------
+// series_detalle: [{ reps, kg, rpe }, …], una por serie, cada campo opcional. Sin detalle (null), series iguales.
+const numeroOk = (v, min, max, entero = false) => {
+  if (v === '' || v == null) return null;
+  const x = Number(String(v).replace(',', '.'));
+  if (!Number.isFinite(x) || x < min || x > max || (entero && !Number.isInteger(x))) return undefined;
+  return Math.round(x * 100) / 100;
+};
+// Limpia un detalle (lo que escribe el coach): null si no vale o está vacío; si no, cada serie con lo que tenga
+export function limpiarDetalle(d) {
+  if (!Array.isArray(d) || !d.length || d.length > 20) return null;
+  const out = [];
+  for (const x of d) {
+    const reps = numeroOk(x?.reps, 0, 1000, true), kg = numeroOk(x?.kg, 0, 9999.99), rpe = numeroOk(x?.rpe, 1, 10);
+    if (reps === undefined || kg === undefined || rpe === undefined) return null;
+    out.push({ ...(reps != null ? { reps } : {}), ...(kg != null ? { kg } : {}), ...(rpe != null ? { rpe } : {}) });
+  }
+  return out;
+}
+export const tieneDetalle = (se) => Array.isArray(se?.series_detalle) && se.series_detalle.length > 0;
+// El resumen de siempre a partir del detalle (para volumen, progreso, avisos…): series, reps mín–máx,
+// los kilos de la mayoría de las series (o los de la primera, si todas cambian) y el RPE de la última
+export function agregadosDetalle(d) {
+  const reps = d.map((x) => x.reps).filter((x) => x != null), kgs = d.map((x) => x.kg).filter((x) => x != null);
+  const cuenta = new Map();
+  for (const k of kgs) cuenta.set(k, (cuenta.get(k) || 0) + 1);
+  const masRepetido = [...cuenta.entries()].sort((a, b) => b[1] - a[1])[0];
+  const rpes = d.map((x) => x.rpe).filter((x) => x != null);
+  return {
+    series: d.length,
+    reps_min: reps.length ? Math.min(...reps) : null,
+    reps_max: reps.length ? Math.max(...reps) : null,
+    carga_sugerida_kg: !kgs.length ? null : masRepetido[1] > 1 ? masRepetido[0] : kgs[0],
+    rpe_objetivo: rpes.length ? rpes[rpes.length - 1] : null,
+  };
+}
+// Para pasar a serie a serie: cada serie con lo de siempre (reps del tope del rango, kilos y RPE pautados)
+export function detalleDesdePauta(se) {
+  const reps = se.reps_max ?? se.reps_min ?? null;
+  return Array.from({ length: Math.max(1, Math.min(20, Number(se.series) || 1)) }, () => limpiarDetalle([{ reps, kg: se.carga_sugerida_kg, rpe: se.rpe_objetivo }])[0]);
+}
+// Lo pautado para la serie k (1, 2…), o null sin detalle
+export const objetivoSerie = (se, k) => (tieneDetalle(se) ? se.series_detalle[k - 1] || null : null);
+// En texto: «10 × 25 kg @8», «12 reps @7», «25 kg»
+export function textoObjetivo(o) {
+  if (!o) return '';
+  const base = o.kg != null ? `${o.reps != null ? `${o.reps} × ` : ''}${num(o.kg, 2)} kg` : o.reps != null ? `${o.reps} reps` : '';
+  return `${base}${o.rpe != null ? `${base ? ' ' : ''}@${num(o.rpe)}` : ''}`;
 }
 
 // ---------- superseries ----------

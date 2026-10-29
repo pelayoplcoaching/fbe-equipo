@@ -1043,5 +1043,26 @@ console.log('\nLa última vez de cada ejercicio, para el editor (v0.27.8)');
   } else check(false, 'Ana tiene series para probar «la última vez»');
 }
 
+console.log('\nPauta serie a serie (v0.28)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const bl = await api.nuevoBloque(ana.id, { nombre: 'Serie a serie', fecha_inicio: '2026-12-07', semanas: 1, sesionesPorSemana: 1 });
+  const c = await api.bloqueCompleto(bl.id);
+  const ses = c.sesiones[c.semanas[0].id][0];
+  const [pa] = await b.insert('sesion_ejercicios', [{ sesion_id: ses.id, ejercicio_id: press.id, orden: 1, series: 3, reps_min: 8, reps_max: 8, carga_sugerida_kg: 60 }]);
+  const cambios = await api.guardarDetalle(pa.id, [{ reps: 8, kg: 60, rpe: 7 }, { reps: 10, kg: '57,5', rpe: 8 }, { reps: 12, kg: 55, rpe: 9 }]);
+  const [g] = await b.select('sesion_ejercicios', { eq: { id: pa.id } });
+  check(g.series_detalle.length === 3 && g.series_detalle[1].kg === 57.5 && g.reps_min === 8 && g.reps_max === 12 && Number(g.carga_sugerida_kg) === 60 && Number(g.rpe_objetivo) === 9 && cambios.series === 3,
+    'el coach guarda cada serie y el resumen de la pauta sale de ella');
+  check(await lanza(() => api.guardarDetalle(pa.id, [{ reps: -1 }])), 'lo que no vale no se guarda (y lo dice)');
+  const [nueva] = await api.prepararSemanas(c.semanas[0].id, { n: 1, kg: 'salto', rpe: 0, rir: 0, reps: 0 });
+  const c2 = await api.bloqueCompleto(bl.id);
+  const p2 = c2.pautas[c2.sesiones[nueva.id][0].id][0];
+  check(JSON.stringify(p2.series_detalle.map((x) => x.kg)) === '[62.5,60,57.5]' && Number(p2.carga_sugerida_kg) === 62.5, '«Preparar las siguientes» sube cada serie a su manera');
+  await api.guardarDetalle(pa.id, null);
+  check((await b.select('sesion_ejercicios', { eq: { id: pa.id } }))[0].series_detalle === null, 'y se puede volver a series iguales');
+  await api.borrar('bloques', bl.id);
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

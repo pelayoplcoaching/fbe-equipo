@@ -1592,6 +1592,32 @@ console.log('\nDías sin una comida (migración 023)');
   await sin22.close();
 }
 
+console.log('\nPauta serie a serie (migración 024)');
+{
+  await como(pelayo, 'aal2');
+  const [se] = await q(`select se.id, se.series from sesion_ejercicios se join sesiones s on s.id = se.sesion_id where s.semana_id = $1 and se.backoff_pct is null order by s.orden, se.orden limit 1`, [wAna1.id]);
+  const det = JSON.stringify([{ reps: 8, kg: 25, rpe: 7 }, { reps: 10, kg: 22.5 }, { reps: 12, rpe: 9 }]);
+  check((await q(`update sesion_ejercicios set series = 3, series_detalle = $2::jsonb where id = $1 returning series_detalle`, [se.id, det]))[0].series_detalle.length === 3,
+    'el coach pauta cada serie con sus reps, kilos y RPE (cada uno opcional)');
+  check(await falla(`update sesion_ejercicios set series = 4 where id = $1`, [se.id])
+    && await falla(`update sesion_ejercicios set series_detalle = '[{"reps":8,"peso":25},{"reps":8},{"reps":8}]' where id = $1`, [se.id])
+    && await falla(`update sesion_ejercicios set series_detalle = '[{"reps":8.5},{"reps":8},{"reps":8}]' where id = $1`, [se.id])
+    && await falla(`update sesion_ejercicios set series_detalle = '[{"rpe":11},{"reps":8},{"reps":8}]' where id = $1`, [se.id])
+    && await falla(`update sesion_ejercicios set series_detalle = '[{"kg":"25"},{"reps":8},{"reps":8}]' where id = $1`, [se.id])
+    && await falla(`update sesion_ejercicios set backoff_pct = 10 where id = $1`, [se.id]),
+    'tantas como series, solo reps/kg/rpe con números válidos, y no a la vez que top + back-off');
+  const wDet = (await q(`select duplicar_semana($1) w`, [wAna1.id]))[0].w;
+  const copia = await q(`select se.series_detalle from sesion_ejercicios se join sesiones s on s.id = se.sesion_id where s.semana_id = $1 and se.series_detalle is not null`, [wDet]);
+  const wDet2 = (await q(`select duplicar_semana($1, 2.5) w`, [wAna1.id]))[0].w;
+  const copia2 = await q(`select se.series_detalle from sesion_ejercicios se join sesiones s on s.id = se.sesion_id where s.semana_id = $1 and se.series_detalle is not null`, [wDet2]);
+  check(copia.length === 1 && copia2.length === 0, 'duplicar la semana lo copia (y si suben los kilos, sin detalle, que dejaría de cuadrar)');
+  await q(`delete from semanas where id = any($1)`, [[wDet, wDet2]]);
+  await como(ana);
+  check((await q(`update sesion_ejercicios set series_detalle = null where id = $1 returning id`, [se.id])).length === 0 || await falla(`update sesion_ejercicios set series_detalle = null where id = $1`, [se.id]), 'el atleta no lo cambia');
+  await como(pelayo, 'aal2');
+  await q(`update sesion_ejercicios set series_detalle = null where id = $1`, [se.id]);
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

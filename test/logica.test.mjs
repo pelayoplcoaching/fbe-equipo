@@ -1013,6 +1013,24 @@ console.log('\nPreparar las semanas siguientes (v0.23)');
   check(progresarPauta(banca, opcionesDe({ kg: 2.5 })).carga_sugerida_kg === 62.5 && progresarPauta(banca, opcionesDe({})).carga_sugerida_kg === 60, 'lo de antes («Duplicar» con kilos fijos) sigue igual');
 }
 
+console.log('\nPauta serie a serie (v0.28)');
+{
+  const D = [{ reps: 8, kg: 25, rpe: 7 }, { reps: 10, kg: 22.5, rpe: 8 }, { reps: 12, kg: 22.5, rpe: 9 }];
+  check(JSON.stringify(C.limpiarDetalle([{ reps: '8', kg: '22,5', rpe: '' }, {}])) === '[{"reps":8,"kg":22.5},{}]' && C.limpiarDetalle([{ reps: 8.5 }]) === null
+    && C.limpiarDetalle([{ rpe: 11 }]) === null && C.limpiarDetalle([]) === null && C.limpiarDetalle(Array(21).fill({})) === null, 'el detalle se limpia (comas, vacíos) y lo que no vale no pasa');
+  const ag = C.agregadosDetalle(D);
+  check(ag.series === 3 && ag.reps_min === 8 && ag.reps_max === 12 && ag.carga_sugerida_kg === 22.5 && ag.rpe_objetivo === 9, 'el resumen: series, reps mín–máx, los kilos de la mayoría y el RPE de la última');
+  check(C.agregadosDetalle([{ kg: 30 }, { kg: 27.5 }]).carga_sugerida_kg === 30, 'si todas cambian de kilos, los de la primera');
+  check(JSON.stringify(C.detalleDesdePauta({ series: 2, reps_min: 8, reps_max: 10, carga_sugerida_kg: 30, rpe_objetivo: 8 })) === '[{"reps":10,"kg":30,"rpe":8},{"reps":10,"kg":30,"rpe":8}]', 'pasar a serie a serie parte de lo pautado');
+  const se = { series: 3, ...ag, series_detalle: D, rir_objetivo: null, backoff_pct: null };
+  check(pauta(se).series === '3 series: 8 · 10 · 12' && pauta(se).detalle && C.textoObjetivo(D[1]) === '10 × 22,5 kg @8' && C.textoObjetivo({ reps: 12 }) === '12 reps'
+    && JSON.stringify(C.objetivoSerie(se, 2)) === JSON.stringify(D[1]) && C.objetivoSerie({ series: 3 }, 1) === null, 'en texto, y lo de cada serie para el atleta');
+  const sube = progresarPauta(se, { kg: 'salto', rpe: 0, rir: 0, reps: 0 }, { nombre: 'Sentadilla barra alta' });
+  check(JSON.stringify(sube.series_detalle.map((x) => x.kg)) === '[27.5,25,25]' && sube.carga_sugerida_kg === 25 && sube.series_detalle[0].rpe === 7, 'preparar la siguiente: cada serie sube su salto (y su RPE se queda)');
+  const des = progresarPauta(se, {}, { nombre: 'Sentadilla barra alta', descarga: true });
+  check(des.series === 2 && des.series_detalle.length === 2 && des.series_detalle[0].kg === 22.5 && des.series_detalle[0].rpe === 6, 'en descarga, una serie menos y cada una más ligera');
+}
+
 console.log('\nControl de cobros (v0.24)');
 {
   check(sumarMeses('2026-01-31', 1) === '2026-02-28' && sumarMeses('2026-11-15', 3) === '2027-02-15' && sumarMeses('2026-03-31', -1) === '2026-02-28', 'sumar meses, con los meses cortos');
