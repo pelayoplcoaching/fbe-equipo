@@ -1012,5 +1012,23 @@ console.log('\nRecuperar una atleta borrada desde la copia completa (v0.23)');
   check((() => { try { R.atletasDe({ atletas: copiaAntes.atletas }); return false; } catch (e) { return /copia completa/.test(e.message); } })(), 'solo acepta la copia completa del coach (la descarga de un atleta, no)');
 }
 
+console.log('\nBorrar semanas de un bloque (v0.27.7)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const bl = await api.nuevoBloque(ana.id, { nombre: 'Mes de prueba', fecha_inicio: '2026-11-02', semanas: 4, sesionesPorSemana: 1 });
+  const ws = async () => (await api.bloqueCompleto(bl.id)).semanas.map((w) => [w.numero, w.fecha_inicio]);
+  const [w1, w2, w3, w4] = (await api.bloqueCompleto(bl.id)).semanas;
+  await api.borrarSemana(w1.id);
+  check(JSON.stringify(await ws()) === JSON.stringify([[1, '2026-11-02'], [2, '2026-11-09'], [3, '2026-11-16']]), 'al borrar la semana 1, las demás suben un puesto y una semana antes');
+  await api.borrarSemana(w2.id); await api.borrarSemana(w3.id);
+  const solo = (await api.bloqueCompleto(bl.id)).semanas;
+  check(solo.length === 1 && solo[0].id === w4.id && solo[0].numero === 1 && solo[0].fecha_inicio === '2026-11-02', 'borrando las 3 primeras, la que queda es la semana 1 y empieza con el bloque (antes seguía siendo la 4)');
+  await b.sql(`update semanas set numero = 4, fecha_inicio = '2026-11-23' where id = $1`, [w4.id]);
+  await api.renumerarSemanas(bl.id);
+  check(JSON.stringify(await ws()) === JSON.stringify([[1, '2026-11-02']]), '«Renumerar desde la 1» arregla un bloque que se quedó con la semana 4 sola');
+  const nueva = await api.nuevaSemana(bl.id);
+  check(nueva.numero === 2 && nueva.fecha_inicio === '2026-11-09', 'y la siguiente que se añade es la 2');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

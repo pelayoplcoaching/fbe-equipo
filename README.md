@@ -6,6 +6,8 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 
 ## Qué hay construido (v0.27)
 
+**v0.27.7:** al borrar una semana de un bloque, las siguientes suben un puesto y una semana antes (antes, al borrar las semanas 1 a 3 de un bloque copiado, la que quedaba seguía siendo la «semana 4»). Si un bloque ya se quedó así, el editor avisa de que las semanas no van seguidas y ofrece «Renumerar desde la 1».
+
 **v0.27.6:** el lector de ingredientes entiende un paréntesis tras la unidad: «1 cda (10 ml) de salsa de soja» queda como 1 cda de «Salsa de soja (10 ml)» (antes el nombre empezaba por «(10 ml)»).
 
 **v0.27.5:** en iPhone, entrar a entrenar cortaba la música (Spotify, etc.): la sesión de audio iba en «playback». Ahora va en «ambient»: los avisos suenan por encima de la música sin pararla. A cambio, con el móvil en silencio no suenan (vibra en los móviles que lo permiten).

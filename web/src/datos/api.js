@@ -1671,6 +1671,29 @@ export function crearApi(backend) {
     async crear(tabla, fila) { return (await b.insert(tabla, [fila]))[0]; },
     async actualizar(tabla, id, cambios) { return (await b.update(tabla, cambios, { eq: { id } }))[0]; },
     async borrar(tabla, id) { return b.delete(tabla, { eq: { id } }); },
+    // Borrar una semana de un bloque: las de después suben un puesto (la 4 pasa a ser la 3) y una semana antes,
+    // para que el bloque siga siendo seguido (antes, al borrar las 3 primeras, la que quedaba seguía siendo la «semana 4»)
+    // Deja las semanas de un bloque seguidas desde la 1 (y, con fecha de inicio, una por semana desde ella)
+    async renumerarSemanas(bloqueId) {
+      const [bloque] = await b.select('bloques', { eq: { id: bloqueId } });
+      const semanas = await b.select('semanas', { eq: { bloque_id: bloqueId }, order: [['numero', 'asc']] });
+      for (const [i, w] of semanas.entries()) {
+        const cambios = { numero: i + 1, ...(bloque?.fecha_inicio ? { fecha_inicio: sumarDias(bloque.fecha_inicio, 7 * i) } : {}) };
+        if (cambios.numero !== w.numero || (cambios.fecha_inicio && cambios.fecha_inicio !== w.fecha_inicio)) await b.update('semanas', cambios, { eq: { id: w.id } });
+      }
+    },
+    async borrarSemana(semanaId) {
+      const [s] = await b.select('semanas', { eq: { id: semanaId } });
+      await b.delete('semanas', { eq: { id: semanaId } });
+      if (!s) return [];
+      const despues = (await b.select('semanas', { eq: { bloque_id: s.bloque_id }, order: [['numero', 'asc']] })).filter((w) => w.numero > s.numero);
+      const movidas = [];
+      for (const w of despues) {
+        const [x] = await b.update('semanas', { numero: w.numero - 1, ...(w.fecha_inicio ? { fecha_inicio: sumarDias(w.fecha_inicio, -7) } : {}) }, { eq: { id: w.id } });
+        movidas.push(x);
+      }
+      return movidas;
+    },
 
     // Copia una semana (sesiones y prescripción) a un bloque, con progresión opcional.
     // conNota: al copiar un bloque entero (plantillas) la nota de cada semana va con ella; al duplicar una semana, no

@@ -127,6 +127,12 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
           <button onClick={async () => { const s = await estructura(() => api.nuevaSemana(bloque.id)); if (s) setSemanaId(s.id); }} aria-label="Añadir semana vacía"><Icono n="mas" width="18" height="18" /><span class="est">Vacía</span></button>
         </div>
       </div>
+      {d.semanas.some((s, i) => s.numero !== i + 1) && (
+        <div class="aviso-semanas separa">
+          <span class="peq secundario">Las semanas no van seguidas (empiezan en la {d.semanas[0].numero} o falta alguna).</span>
+          <button class="btn btn-peq" onClick={() => estructura(() => api.renumerarSemanas(bloque.id), bloque.fecha_inicio ? 'Semanas renumeradas desde la 1, una por semana desde el inicio del bloque' : 'Semanas renumeradas desde la 1')}>Renumerar desde la 1</button>
+        </div>
+      )}
 
       {semana && (
         <div class="panel panel-pad pila" key={semana.id}>
@@ -231,14 +237,15 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       {confirmarBorrado && (
         <Hoja titulo="¿Seguro?" alCerrar={() => setConfirmarBorrado(null)}>
           <p>{confirmarBorrado.tipo === 'bloque' ? `Se borrará ${bloque.es_plantilla ? 'la plantilla' : 'el bloque'} entero con todas sus semanas${bloque.es_plantilla ? '' : ' y las series registradas'}.`
-            : confirmarBorrado.tipo === 'semana' ? 'Se borrará la semana con sus sesiones y lo que se haya registrado en ella.'
+            : confirmarBorrado.tipo === 'semana' ? 'Se borrará la semana con sus sesiones y lo que se haya registrado en ella. Las siguientes suben un puesto (y una semana antes).'
               : `Se borrará la sesión «${confirmarBorrado.nombre}» y lo registrado en ella.`} No se puede deshacer.</p>
           <div class="fila-envolver">
             <button class="btn" onClick={() => setConfirmarBorrado(null)}>Cancelar</button>
             <button class="btn btn-peligro" onClick={async () => {
               const c = confirmarBorrado; setConfirmarBorrado(null);
               if (c.tipo === 'bloque') { await api.borrar('bloques', bloque.id); aviso('Borrado'); alBorrar?.(); }
-              else await estructura(() => api.borrar(c.tipo === 'semana' ? 'semanas' : 'sesiones', c.id), 'Borrado');
+              else if (c.tipo === 'semana') await estructura(() => api.borrarSemana(c.id), 'Semana borrada: las siguientes suben un puesto');
+              else await estructura(() => api.borrar('sesiones', c.id), 'Borrado');
             }}><Icono n="basura" /> Borrar</button>
           </div>
         </Hoja>
