@@ -8,6 +8,7 @@ import { NOMBRE_NIVEL, AYUDA_NIVEL, modoCarga, columnasEditor } from '../../logi
 import { progresarPauta } from '../../logica/progresion.js';
 import { revisarVariante, equivalentes } from '../../logica/variantes.js';
 import { MODALIDADES, limpiarCardio, textoCardio, palabrasEsfuerzo } from '../../logica/cardio.js';
+import { teclaEnRejilla } from '../rejilla.js';
 
 const DESCANSOS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
 const ESTADOS_BLOQUE = [['planificado', 'Planificado'], ['activo', 'Activo'], ['ajustado', 'Ajustado'], ['finalizado', 'Finalizado'], ['cancelado', 'Cancelado']];
@@ -444,11 +445,11 @@ function DetalleSeries({ pauta, hechas = [], alGuardar }) {
       <div class="detalle-cab" aria-hidden="true"><span /><span>Reps</span><span>Kg</span><span>RPE</span><span /></div>
       {d.map((x, i) => (
         // La clave cambia al añadir o quitar series (las filas se rehacen), no al escribir (no se pierde el foco)
-        <div class="detalle-fila" key={`${pauta.id}-${d.length}-${i}`}>
+        <div class="detalle-fila" data-fila key={`${pauta.id}-${d.length}-${i}`}>
           <span class="n mini">S{i + 1}</span>
-          <input class="n" inputMode="numeric" aria-label={`Repeticiones de la serie ${i + 1}`} defaultValue={x.reps ?? ''} onChange={(e) => cambiar(i, 'reps', e.currentTarget.value)} />
-          <input class="n" inputMode="decimal" aria-label={`Kilos de la serie ${i + 1}`} defaultValue={x.kg == null ? '' : num(x.kg, 2)} onChange={(e) => cambiar(i, 'kg', e.currentTarget.value)} />
-          <input class="n" inputMode="decimal" aria-label={`RPE de la serie ${i + 1}`} defaultValue={x.rpe == null ? '' : num(x.rpe, 1)} onChange={(e) => cambiar(i, 'rpe', e.currentTarget.value)} />
+          <input class="n" data-celda="reps" enterKeyHint="next" inputMode="numeric" aria-label={`Repeticiones de la serie ${i + 1}`} defaultValue={x.reps ?? ''} onChange={(e) => cambiar(i, 'reps', e.currentTarget.value)} />
+          <input class="n" data-celda="kg" enterKeyHint="next" inputMode="decimal" aria-label={`Kilos de la serie ${i + 1}`} defaultValue={x.kg == null ? '' : num(x.kg, 2)} onChange={(e) => cambiar(i, 'kg', e.currentTarget.value)} />
+          <input class="n" data-celda="rpe" enterKeyHint="next" inputMode="decimal" aria-label={`RPE de la serie ${i + 1}`} defaultValue={x.rpe == null ? '' : num(x.rpe, 1)} onChange={(e) => cambiar(i, 'rpe', e.currentTarget.value)} />
           <button class="btn btn-icono plano" aria-label={`Quitar la serie ${i + 1}`} disabled={d.length <= 1} onClick={() => guardar(ultimo.current.filter((_, k) => k !== i))}><Icono n="cerrar" /></button>
           {hecha[i + 1] && <span class="mini hecho-semana detalle-hecha">Hecho: {textoSerieHecha(hecha[i + 1])}</span>}
         </div>
@@ -482,7 +483,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
   const etiquetas = etiquetasSuperserie(pautas);
   const sueltas = pautas.filter((p) => p.superserie && !etiquetas[p.id]);
   return (
-    <section class="panel panel-pad editor-sesion" aria-label={sesion.nombre}>
+    <section class="panel panel-pad editor-sesion" aria-label={sesion.nombre} onKeyDown={teclaEnRejilla}>
       <div class="editor-sesion-cab">
         <input class="entrada" aria-label="Nombre de la sesión" style="font-weight:700" defaultValue={sesion.nombre} onChange={(e) => guardar('sesiones', sesion.id, { nombre: e.currentTarget.value.trim() || sesion.nombre })} />
         <select class="selector" aria-label="Tipo de sesión" value={sesion.tipo || 'fuerza'} onChange={(e) => guardar('sesiones', sesion.id, { tipo: e.currentTarget.value })}>
@@ -508,7 +509,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
             </tr></thead>
             <tbody>
               {pautas.map((p, i) => (
-                <tr key={p.id}>
+                <tr key={p.id} data-fila>
                   <td><span class="sel-prioridad"><Disco prioridad={p.prioridad} />
                     <select aria-label="Prioridad" value={p.prioridad} onChange={(e) => guardar('sesion_ejercicios', p.id, { prioridad: e.currentTarget.value })}>
                       {PRIORIDADES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
@@ -545,22 +546,22 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                     <td class="resumen-detalle num" title="Serie a serie: cámbialo en las series de debajo">{p.series}</td>
                     <td class="resumen-detalle num" title="Serie a serie: cámbialo en las series de debajo">{p.reps_min ?? '–'}</td>
                     <td class="resumen-detalle num" title="Serie a serie: cámbialo en las series de debajo">{p.reps_max ?? '–'}</td>
-                    {col.rir && <td><input class="n" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
+                    {col.rir && <td><input class="n" data-celda="rir" enterKeyHint="next" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
                     {col.rpe && <td class="resumen-detalle num" title="El RPE de la última serie">{p.rpe_objetivo == null ? '–' : num(p.rpe_objetivo, 1)}</td>}
                     {col.kg && <td class="resumen-detalle num" title="Los kilos de la mayoría de las series">{p.carga_sugerida_kg == null ? '–' : num(p.carga_sugerida_kg, 2)}</td>}
                   </> : <>
-                  <td><input class="n" inputMode="numeric" aria-label="Series" key={`series-${p.series}`} defaultValue={p.series} onChange={(e) => {
+                  <td><input class="n" data-celda="series" enterKeyHint="next" inputMode="numeric" aria-label="Series" key={`series-${p.series}`} defaultValue={p.series} onChange={(e) => {
                     // Con top + back-off hacen falta al menos dos series: con una sola, deja de serlo.
                     // La «key» lo vuelve a pintar si las series cambian desde fuera (elegir back-off las sube a 2)
                     const v = parseInt(e.currentTarget.value, 10);
                     if (!Number.isNaN(v) && v < 2 && p.backoff_pct != null) guardar('sesion_ejercicios', p.id, { series: v, backoff_pct: null });
                     else numero(p.id, 'series')(e);
                   }} /></td>
-                  <td><input class="n" inputMode="numeric" aria-label="Repeticiones mínimas" defaultValue={p.reps_min ?? ''} onChange={numero(p.id, 'reps_min')} /></td>
-                  <td><input class="n" inputMode="numeric" aria-label="Repeticiones máximas" defaultValue={p.reps_max ?? ''} onChange={numero(p.id, 'reps_max')} /></td>
-                  {col.rir && <td><input class="n" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
-                  {col.rpe && <td><input class={`n ${fuera(p, 'rpe_objetivo') ? 'fuera-nivel' : ''}`} inputMode="decimal" aria-label="RPE objetivo" title={titulo(p, 'rpe_objetivo')} placeholder={fuera(p, 'rpe_objetivo') ? '·' : ''} defaultValue={p.rpe_objetivo == null ? '' : num(p.rpe_objetivo, 1)} onChange={numero(p.id, 'rpe_objetivo', true)} /></td>}
-                  {col.kg && <td><input class={`n ${fuera(p, 'carga_sugerida_kg') ? 'fuera-nivel' : ''}`} inputMode="decimal" aria-label="Carga sugerida en kg" title={titulo(p, 'carga_sugerida_kg')} placeholder={fuera(p, 'carga_sugerida_kg') ? '·' : ''} defaultValue={p.carga_sugerida_kg == null ? '' : num(p.carga_sugerida_kg, 2)} onChange={numero(p.id, 'carga_sugerida_kg', true)} /></td>}
+                  <td><input class="n" data-celda="reps_min" enterKeyHint="next" inputMode="numeric" aria-label="Repeticiones mínimas" defaultValue={p.reps_min ?? ''} onChange={numero(p.id, 'reps_min')} /></td>
+                  <td><input class="n" data-celda="reps_max" enterKeyHint="next" inputMode="numeric" aria-label="Repeticiones máximas" defaultValue={p.reps_max ?? ''} onChange={numero(p.id, 'reps_max')} /></td>
+                  {col.rir && <td><input class="n" data-celda="rir" enterKeyHint="next" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
+                  {col.rpe && <td><input class={`n ${fuera(p, 'rpe_objetivo') ? 'fuera-nivel' : ''}`} data-celda="rpe" enterKeyHint="next" inputMode="decimal" aria-label="RPE objetivo" title={titulo(p, 'rpe_objetivo')} placeholder={fuera(p, 'rpe_objetivo') ? '·' : ''} defaultValue={p.rpe_objetivo == null ? '' : num(p.rpe_objetivo, 1)} onChange={numero(p.id, 'rpe_objetivo', true)} /></td>}
+                  {col.kg && <td><input class={`n ${fuera(p, 'carga_sugerida_kg') ? 'fuera-nivel' : ''}`} data-celda="kg" enterKeyHint="next" inputMode="decimal" aria-label="Carga sugerida en kg" title={titulo(p, 'carga_sugerida_kg')} placeholder={fuera(p, 'carga_sugerida_kg') ? '·' : ''} defaultValue={p.carga_sugerida_kg == null ? '' : num(p.carga_sugerida_kg, 2)} onChange={numero(p.id, 'carga_sugerida_kg', true)} /></td>}
                   </>}
                   <td><select aria-label="Descanso" value={p.descanso_seg ?? ''} onChange={(e) => guardar('sesion_ejercicios', p.id, { descanso_seg: e.currentTarget.value === '' ? null : Number(e.currentTarget.value) })}>
                     <option value="">—</option>{DESCANSOS.map((s) => <option key={s} value={s}>{s ? mmss(s) : 'Sin descanso'}</option>)}

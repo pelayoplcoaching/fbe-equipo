@@ -1359,6 +1359,23 @@ try {
   const resumen = await filaPauta.locator('td.resumen-detalle').allTextContents();
   check(nDet >= 1 && await det.locator('.detalle-fila').count() === nDet + 1 && resumen[0] === String(nDet + 1) && resumen[1] === '6',
     `«Serie a serie»: una fila por serie con sus reps, kilos y RPE; añadir una serie y el resumen de la pauta se ajusta (${resumen.slice(0, 3).join(' · ')})`);
+  // v0.34: como en una hoja de cálculo (Intro baja, flechas para moverse; lo que se escribe sustituye al número)
+  const enFoco = () => p.evaluate(() => document.activeElement?.getAttribute('aria-label'));
+  await det.getByLabel('Kilos de la serie 1').click();
+  await p.keyboard.press('Enter');
+  const trasIntro = await enFoco();
+  await p.keyboard.type('50');
+  await p.keyboard.press('ArrowUp');
+  const trasArriba = await enFoco();
+  await p.keyboard.press('ArrowRight');
+  const trasDerecha = await enFoco();
+  await p.keyboard.press('ArrowDown');
+  await p.keyboard.press('ArrowLeft');
+  const trasAbajoIzq = await enFoco();
+  await p.waitForTimeout(500);
+  check(trasIntro === 'Kilos de la serie 2' && trasArriba === 'Kilos de la serie 1' && trasDerecha === 'RPE de la serie 1' && trasAbajoIzq === 'Kilos de la serie 2'
+    && await det.getByLabel('Kilos de la serie 2').inputValue() === '50',
+    `Intro pasa a la serie de debajo y las flechas mueven entre casillas; lo escrito sustituye y se guarda (${[trasIntro, trasArriba, trasDerecha, trasAbajoIzq].join(' → ')})`);
   await revisar('serie-a-serie');
   await modo.selectOption('');
   await det.waitFor({ state: 'detached' });

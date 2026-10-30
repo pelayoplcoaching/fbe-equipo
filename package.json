@@ -1,6 +1,6 @@
 {
   "name": "fbe-atletas",
-  "version": "0.33.1",
+  "version": "0.34.0",
   "description": "App de atletas de FBE Coaching",
   "scripts": {
     "build": "node scripts/build.mjs",

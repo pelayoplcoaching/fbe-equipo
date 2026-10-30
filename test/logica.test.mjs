@@ -12,6 +12,7 @@ import { cardioValido, cardioHechoValido, limpiarCardio, limpiarCardioHecho, tex
 import { valeParaDia, textoVariante, tomasDelDia, paraElDia, leerIngrediente, leerIngredientes, escalarCantidad, textoIngrediente, ingredientesATexto, limpiarReceta, avisoMacros, macrosDe, textoMacros, recetarioPorToma, entradaMenu, cambiarRaciones, totalesDia, menuPorDia, copiarMenu, listaCompra, textoListaCompra, tomasDe, ordenarTomas, TOMAS_DEFECTO } from '../web/src/logica/comidas.js';
 import { conEntrenamiento, servicioDe, CAMPOS_SERVICIO } from '../web/src/logica/nivel.js';
 import { materialesDe, revisarVariante, varianteSinMaterial, equivalentes } from '../web/src/logica/variantes.js';
+import { destinoEnRejilla } from '../web/src/ui/rejilla.js';
 import { e1rm, e1rmPorSemana, seriesPorGrupo, pauta, propuestaSerie, semanaActual, resumenAtleta, num, signo, mmss } from '../web/src/logica/calculos.js';
 
 let ok = 0, fallos = 0;
@@ -1171,6 +1172,19 @@ console.log('\nComidas: recetas, recetario y menú (v0.26)');
     'sin alternativas, no propone otro movimiento solo por compartir la primera palabra');
   check(varianteSinMaterial('En máquina') === null && varianteSinMaterial('Con mancuernas o en máquina') === null && varianteSinMaterial('Máquina Technogym de discos') === 'Máquina Technogym de discos', 'al cambiar de ejercicio, la variante que solo decía el material se quita');
   check(equivalentes(E.m2, bib).map((x) => x.id).join() === 'm1' && equivalentes(E.m1, bib).map((x) => x.nombre).join() === 'Press militar con barra,Press militar en máquina/inverso', 'equivalentes para el desplegable: sus alternativas y quien lo tiene como alternativa');
+}
+
+console.log('\nMoverse por la programación con el teclado (v0.34)');
+{
+  // Una pauta de series iguales, una serie a serie de 3 series (con su fila de RIR) y otra de series iguales
+  const F = [['series', 'reps_min', 'reps_max', 'rpe', 'kg'], ['reps', 'kg', 'rpe'], ['reps', 'kg', 'rpe'], ['reps', 'kg', 'rpe'], ['rir'], ['series', 'reps_min', 'reps_max', 'kg']];
+  check(igual(destinoEnRejilla(F, { fila: 1, col: 1 }, 'abajo'), { fila: 2, col: 1 }), 'Intro o ↓ en los kilos de una serie: los kilos de la serie de debajo');
+  check(igual(destinoEnRejilla(F, { fila: 3, col: 1 }, 'abajo'), { fila: 5, col: 3 }), 'de la última serie, a los kilos del ejercicio siguiente (saltando la fila que no tiene kilos)');
+  check(igual(destinoEnRejilla(F, { fila: 1, col: 0 }, 'arriba'), { fila: 0, col: 1 }) && igual(destinoEnRejilla(F, { fila: 0, col: 2 }, 'abajo'), { fila: 1, col: 0 }),
+    'las reps de una serie se corresponden con las reps mín./máx. de una pauta de series iguales');
+  check(igual(destinoEnRejilla(F, { fila: 3, col: 2 }, 'abajo'), null) && igual(destinoEnRejilla(F, { fila: 0, col: 0 }, 'arriba'), null), 'si no hay casilla de esa columna más allá, no se mueve');
+  check(igual(destinoEnRejilla(F, { fila: 1, col: 1 }, 'derecha'), { fila: 1, col: 2 }) && igual(destinoEnRejilla(F, { fila: 1, col: 2 }, 'derecha'), null) && igual(destinoEnRejilla(F, { fila: 1, col: 0 }, 'izquierda'), null),
+    '← → van a la casilla de al lado dentro de la fila');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
