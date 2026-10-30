@@ -34,13 +34,22 @@ export function Preparacion({ inicial = null, alGuardar, alSaltar }) {
 }
 
 // El consejo del día, arriba de la sesión
-export function ConsejoDia({ consejo, alCambiar, alQuitar }) {
+// En un día flojo o malo, el atleta elige si hoy sube la carga o va con los pesos de la última vez (v0.32)
+export function ConsejoDia({ consejo, alCambiar, alQuitar, eleccion = null, alElegir }) {
   return (
     <div class={`consejo-dia ${consejo.nivel}`} role="status">
       <Icono n={consejo.nivel === 'bien' ? 'hecho' : 'alerta'} />
       <div class="pila-xs">
         <strong>{consejo.titulo}</strong>
         <span class="peq">{consejo.texto}</span>
+        {consejo.frenar && alElegir && (
+          <div class="pila-xs consejo-eleccion">
+            <span class="peq"><b>¿Con qué pesos vas hoy?</b></span>
+            <Segmentos etiqueta="Con qué pesos vas hoy" valor={eleccion === 'subir' ? 'subir' : 'igual'} alCambiar={alElegir}
+              opciones={[['igual', 'Los de la semana pasada'], ['subir', 'Subir como toque']]} />
+            <span class="mini secundario">{eleccion === 'subir' ? 'La app te propone la carga que toca, como cualquier día.' : 'La app te propone los pesos de la última vez, sin subir.'}</span>
+          </div>
+        )}
         <span class="fila" style="gap:16px">
           {alCambiar && <button class="btn-texto" onClick={alCambiar}>Cambiar cómo llego</button>}
           {alQuitar && <button class="btn-texto" onClick={alQuitar}>Borrarlo</button>}

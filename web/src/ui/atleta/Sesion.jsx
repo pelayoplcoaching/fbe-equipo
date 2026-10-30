@@ -14,7 +14,7 @@ import { leerIntervalos, textoIntervalos } from '../../logica/intervalos.js';
 import { tempoDe } from '../../logica/tempo.js';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { Preparacion, ConsejoDia } from './Preparacion.jsx';
-import { consejoPreparacion } from '../../logica/preparacion.js';
+import { consejoPreparacion, subeCarga } from '../../logica/preparacion.js';
 import { pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION } from '../../logica/calculos.js';
 import { fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { pesoAnterior } from '../../logica/nivel.js';
@@ -53,6 +53,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [prep, setPrep] = useState(undefined);
   const [prepSaltada, setPrepSaltada] = usePreferencia(`fbe-prep-saltada-${id}`, false);
   const [editandoPrep, setEditandoPrep] = useState(false);
+  // En un día flojo o malo, si sube la carga o va con los pesos de la última vez (lo elige el atleta; se recuerda en el móvil)
+  const [eleccionCarga, setEleccionCarga] = usePreferencia(`fbe-carga-dia-${id}`, null);
   useEffect(() => { if (det.datos && prep === undefined) setPrep(det.datos.sesion.preparacion || null); }, [det.datos]);
   async function guardarPrep(p) {
     setPrep(p); setEditandoPrep(false);
@@ -139,7 +141,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // En un día flojo o malo no se propone subir carga
   // Sin consentimiento de salud (p. ej. si lo retiró) lo guardado no se usa
   const consejo = salud ? consejoPreparacion(prep) : null;
-  const frenar = !!consejo?.frenar;
+  const frenar = !subeCarga(consejo, eleccionCarga);
   const preguntarPrep = salud && ejercicios.length > 0 && !sesion.completada && atleta.estado !== 'baja'
     && ((!prep && !prepSaltada && todas.length === 0) || editandoPrep);
   // El modo enfoque espera a que conteste (o salte) cómo llega
@@ -235,7 +237,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       )}
 
       {preguntarPrep ? <Preparacion inicial={prep} alGuardar={guardarPrep} alSaltar={editandoPrep ? () => setEditandoPrep(false) : () => setPrepSaltada(true)} />
-        : consejo && !sesion.completada && <ConsejoDia consejo={consejo} alCambiar={() => setEditandoPrep(true)} alQuitar={async () => { await guardarPrep(null); setPrepSaltada(true); }} />}
+        : consejo && !sesion.completada && <ConsejoDia consejo={consejo} eleccion={eleccionCarga} alElegir={(v) => { setEleccionCarga(v); aviso(v === 'subir' ? 'Hoy vas con la carga que toca' : 'Hoy vas con los pesos de la última vez'); }} alCambiar={() => setEditandoPrep(true)} alQuitar={async () => { await guardarPrep(null); setPrepSaltada(true); }} />}
 
       {delCoach && !sesion.completada && (
         <button class="tarjeta-intervalos" onClick={() => setIntervalos({ inicial: delCoach })}>

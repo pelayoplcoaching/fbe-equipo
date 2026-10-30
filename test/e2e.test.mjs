@@ -278,7 +278,12 @@ try {
   await revisar('preparacion');
   await prep.getByRole('group', { name: '¿Agujetas o molestias?' }).getByRole('button', { name: 'Ninguna', exact: true }).click();
   await p.locator('.consejo-dia.flojo').waitFor();
-  check((await p.locator('.consejo-dia').textContent()).includes('no te propondrá subir carga'), 'durmió mal: día flojo, y ese día no le propone subir carga');
+  const eleccion = p.getByRole('group', { name: 'Con qué pesos vas hoy' });
+  check(await eleccion.getByRole('button', { name: 'Los de la semana pasada' }).getAttribute('aria-pressed') === 'true', 'durmió mal: día flojo, y le pregunta con qué pesos va (sin elegir, los de la semana pasada)');
+  await eleccion.getByRole('button', { name: 'Subir como toque' }).click();
+  await p.locator('.toast', { hasText: 'Hoy vas con la carga que toca' }).waitFor();
+  check(await eleccion.getByRole('button', { name: 'Subir como toque' }).getAttribute('aria-pressed') === 'true' && (await p.locator('.consejo-dia').textContent()).includes('la carga que toca'), 'y puede elegir subir como cualquier día (lo decide el atleta)');
+  await revisar('preparacion-eleccion');
   const primero = p.locator('.ejercicio').first();
   await primero.getByLabel('Kilos de la serie 1').fill('42,5');
   await primero.getByLabel('Repeticiones de la serie 1').fill('6');
@@ -1199,6 +1204,9 @@ try {
   await p.waitForTimeout(400);
   check(await p.getByRole('heading', { name: 'Alimentación' }).count() === 0, 'ni el check-in le pregunta por su alimentación');
   await p.locator('.tab', { hasText: 'Hoy' }).click();
+  // Los discos nuevos pueden salir al volver a Hoy (según el día en que se pase la prueba): se cierran
+  await p.waitForTimeout(600);
+  for (let i = 0; i < 3; i++) { const d = p.locator('[role=dialog]').first(); if (!(await d.isVisible().catch(() => false))) break; const b2 = d.getByRole('button', { name: /^Seguir$|^Cerrar$/ }).first(); if (await b2.isVisible().catch(() => false)) await b2.click(); else await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
   // v0.25: el atleta ve cómo va con sus pagos (Carlos tiene uno retrasado)
   const avisoCobro = p.locator('.aviso-cobro');
   await avisoCobro.waitFor();
