@@ -383,7 +383,7 @@ try {
   await p.evaluate(() => { window.__grabado = 0; const ini = MediaRecorder.prototype.start; MediaRecorder.prototype.start = function (...x) { window.__grabado++; return ini.apply(this, x); }; });
   await p.getByLabel(/Empieza en/).fill('1');
   await p.locator('.hoja-dialogo .mini', { hasText: 'Se enviarán 2 s de vídeo' }).waitFor();
-  check(true, 'al mover el inicio, dice cuánto vídeo se enviará y cuánto pesará');
+  check(true, 'al mover el inicio, dice cuánto vídeo se enviará (y cuánto pesará, si pesa menos que el original)');
   await p.getByRole('button', { name: 'Recortar y enviar' }).click();
   await p.locator('.toast', { hasText: 'Vídeo enviado a tu coach' }).waitFor({ timeout: 20000 });
   check(await p.evaluate(() => window.__grabado) === 1, 'recorta el vídeo en el móvil (del segundo 1 al 3) y lo envía');

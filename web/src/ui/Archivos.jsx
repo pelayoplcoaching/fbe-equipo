@@ -147,7 +147,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
                 : <img class="medio" src={vista} alt="Vista previa de la foto" />)}
               <p class="mini terciario">
                 {aligerar && corte
-                  ? <>Se enviarán {duracionTexto(corte.fin - corte.inicio)} de vídeo, unos {mb(megasEstimados(corte.fin - corte.inicio) * MB)} MB (el original pesa {mb(archivo.size)} MB). </>
+                  ? <>Se enviarán {duracionTexto(corte.fin - corte.inicio)} de vídeo{megasEstimados(corte.fin - corte.inicio) * MB < archivo.size ? <>, unos {mb(megasEstimados(corte.fin - corte.inicio) * MB)} MB (el original pesa {mb(archivo.size)} MB)</> : null}. </>
                   : <>{archivo.name || 'Archivo'}, {mb(archivo.size)} MB. </>}
                 Se guarda en tu carpeta privada: solo lo veis tú y tu coach.
               </p>
