@@ -212,6 +212,22 @@ export function crearApi(backend) {
       if (!id) return null;
       return (await b.select('atletas', { eq: { perfil_id: id }, limit: 1 }))[0] || null;
     },
+    // Modo atleta del coach (v0.37): su propia ficha de atleta, vinculada a su cuenta (como la de un atleta a la suya),
+    // para programarse y entrenar con la app sin otra cuenta. Solo entrenamiento.
+    async crearAtletaPropio() {
+      const ya = await api.miAtleta();
+      if (ya) return ya;
+      const yo = await api.perfil();
+      if (yo?.rol !== 'coach') throw new Error('Solo el coach tiene modo atleta');
+      const fila = { nombre: yo.nombre || 'Yo', perfil_id: yo.id, estado: 'activo', nutricion: false };
+      const creada = (await b.insert('atletas', [fila]).catch(falta018).catch(falta022))[0];
+      // Sus datos son suyos: al crearla deja constancia de sus consentimientos (sin ellos, la base no guarda
+      // cómo llega a cada sesión: sueño, energía y molestias)
+      const tiene = new Set((await api.consentimientos()).filter((c) => !c.revocado_en).map((c) => c.tipo));
+      const faltan = ['privacidad', 'datos_salud'].filter((t) => !tiene.has(t));
+      if (faltan.length) await api.darConsentimientos(faltan);
+      return creada;
+    },
     async canjearCodigo(codigo) {
       return b.rpc('canjear_invitacion', { p_codigo: codigo });
     },
@@ -1396,8 +1412,11 @@ export function crearApi(backend) {
 
     // ------------------------------------------------------------ coach: atletas
     // Los atletas, con su foto de perfil (si la han puesto; la foto está en su perfil, no en la ficha)
+    // Los atletas del coach. Su propia ficha de atleta (modo atleta, v0.37: la vinculada a su cuenta) no sale en las
+    // listas: ni en Atletas ni en Revisar, Mensajes o Cobros
     async atletas() {
-      const atletas = await b.select('atletas', { order: [['nombre', 'asc']] });
+      const yo = uid();
+      const atletas = (await b.select('atletas', { order: [['nombre', 'asc']] })).filter((a) => !yo || a.perfil_id !== yo);
       const ids = unicos(atletas.map((a) => a.perfil_id).filter(Boolean));
       if (!ids.length) return atletas;
       const perfiles = porId(await b.select('perfiles', { in: { id: ids }, cols: 'id,foto' }).catch(() => []));
@@ -1593,7 +1612,7 @@ export function crearApi(backend) {
     // Todos los atletas de un vistazo (Cuenta → Cobros): cómo va cada uno y lo cobrado este mes
     async cobrosTodos(hoy = hoyISO()) {
       const [atletas, acuerdos, pagos] = await Promise.all([
-        b.select('atletas', { cols: 'id,nombre,estado', order: [['nombre', 'asc']] }),
+        b.select('atletas', { cols: 'id,nombre,estado,perfil_id', order: [['nombre', 'asc']] }).then((xs) => xs.filter((a) => a.perfil_id == null || a.perfil_id !== uid())),
         b.select('cobros_atletas', {}),
         b.select('pagos', {}), // pocos: todos (una deuda vieja o un pago atrasado de hace un año también cuentan)
       ]).catch(falta020);

@@ -1543,6 +1543,43 @@ try {
     'en sus recetas puede ver solo las de los días sin merienda (sin la merienda)');
   await revisar('sin-merienda-recetas');
   await filtroDia.getByRole('button', { name: 'Todas' }).click();
+
+  console.log('\nModo atleta del coach (v0.37)');
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.waitForTimeout(600);
+  for (let i = 0; i < 3; i++) { const d = p.locator('[role=dialog]').first(); if (!(await d.isVisible().catch(() => false))) break; await d.getByRole('button', { name: /^Seguir$|^Cerrar$/ }).first().click(); await p.waitForTimeout(400); }
+  await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
+  await p.getByRole('button', { name: /Pelayo/ }).click();
+  const codigo2fa5 = p.getByLabel('Código', { exact: true });
+  await Promise.race([codigo2fa5.waitFor(), p.getByRole('heading', { name: 'Atletas' }).waitFor()]);
+  if (await codigo2fa5.isVisible().catch(() => false)) { await codigo2fa5.fill('123456'); await p.getByRole('button', { name: 'Entrar' }).click(); }
+  await p.getByRole('heading', { name: 'Atletas' }).waitFor();
+  const nAtletas = await p.locator('.tarjeta-atleta').count();
+  await revisar('coach-con-modo-atleta');
+  await p.locator('.tab', { hasText: 'Modo atleta' }).click();
+  await p.getByRole('heading', { name: 'Modo atleta' }).waitFor();
+  await revisar('empezar-modo-atleta');
+  await p.getByRole('button', { name: 'Crear mi ficha y entrar' }).click();
+  const banda = p.locator('.banda-modo-atleta');
+  await banda.waitFor();
+  const tabsYo = (await p.locator('nav.tabs .tab').allTextContents()).map((t) => t.trim());
+  check(JSON.stringify(tabsYo) === JSON.stringify(['Hoy', 'Semana', 'Progreso', 'Entrenador']), `en su modo atleta solo hay entrenamiento: ${tabsYo.join(', ')}`);
+  check(await p.getByRole('button', { name: /check-in/i }).count() === 0 && await p.locator('.avatar-cabecera, .tab-perfil').count() === 0, 'sin check-in ni perfil');
+  await revisar('modo-atleta-hoy');
+  await banda.getByRole('button', { name: 'Programarlo' }).click();
+  await p.getByRole('tab', { name: 'Programa', selected: true }).waitFor();
+  check(await p.locator('.banda-modo-atleta').count() === 0, '«Programarlo» vuelve a la vista de coach y abre su ficha en Programa');
+  await p.getByRole('button', { name: 'Volver a atletas' }).click();
+  await p.getByRole('heading', { name: 'Atletas' }).waitFor();
+  check(await p.locator('.tarjeta-atleta').count() === nAtletas, 'su ficha no sale en la lista de atletas');
+  await p.locator('.tab', { hasText: 'Modo atleta' }).click();
+  await banda.waitFor();
+  check(true, 'con la ficha ya creada, la pestaña entra directamente');
+  await p.locator('.tab', { hasText: 'Semana' }).click();
+  await revisar('modo-atleta-semana');
+  await p.locator('.tab', { hasText: 'Entrenador' }).click();
+  await p.getByRole('heading', { name: 'Atletas' }).waitFor();
+  check(await p.locator('.banda-modo-atleta').count() === 0, '«Entrenador» vuelve a la vista de coach');
 } catch (e) {
   fallos++;
   console.log('  ✗ el flujo se ha interrumpido:', e.message.split('\n').slice(0, 12).join('\n      '));

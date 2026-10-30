@@ -21,6 +21,9 @@ const TODAS = [
   ['progreso', 'Progreso', 'progreso'], ['mensajes', 'Mensajes', 'mensaje'], ['perfil', 'Perfil', 'perfil'],
 ];
 export const pestanasAtleta = (atleta) => TODAS.filter(([t]) => (t !== 'semana' || conEntrenamiento(atleta)) && (t !== 'comidas' || conNutricion(atleta)));
+// Modo atleta del coach (v0.37): solo el entrenamiento (sin check-in, mensajes, perfil ni nutrición, que son cosas
+// entre atleta y coach), y una pestaña para volver a la vista de coach
+const PESTANAS_PROPIO = [['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], ['progreso', 'Progreso', 'progreso']];
 
 function tabInicial(tabs) {
   const h = (typeof location !== 'undefined' ? location.hash : '').slice(1);
@@ -28,10 +31,10 @@ function tabInicial(tabs) {
 }
 
 export function AtletaApp() {
-  const { api, atleta, aviso } = useApp();
+  const { api, atleta, aviso, propio, salirModoAtleta } = useApp();
   // Vídeos guardados en el móvil sin cobertura: se envían solos (en cualquier pestaña)
   const pendientesArchivos = usePendientesArchivos(api, atleta?.id, aviso);
-  const TABS = pestanasAtleta(atleta);
+  const TABS = propio ? PESTANAS_PROPIO : pestanasAtleta(atleta);
   const [tab, setTab] = useState(() => tabInicial(TABS));
   // Si el coach cambia su servicio con la app abierta y la pestaña ya no está, a Hoy
   useEffect(() => { if (!TABS.some(([t]) => t === tab)) setTab('hoy'); }, [atleta.entrenamiento, atleta.nutricion]);
@@ -41,8 +44,8 @@ export function AtletaApp() {
   const [dia, setDia] = useState(hoyISO);
   useCambioDeDia(setDia);
   const programa = useCarga(() => api.programa(atleta.id), [atleta.id, dia]);
-  const checkinSemana = useCarga(() => api.checkin(atleta.id, semanaCheckin(hoyISO())), [atleta.id, dia]);
-  const noLeidos = useCarga(() => api.noLeidos(atleta.id).catch(() => []), [atleta.id, dia]);
+  const checkinSemana = useCarga(() => (propio ? Promise.resolve(null) : api.checkin(atleta.id, semanaCheckin(hoyISO()))), [atleta.id, dia]);
+  const noLeidos = useCarga(() => (propio ? Promise.resolve([]) : api.noLeidos(atleta.id).catch(() => [])), [atleta.id, dia]);
 
   useEffect(() => {
     try { history.replaceState(null, '', `#${tab}`); } catch { /* */ }
@@ -60,7 +63,8 @@ export function AtletaApp() {
 
   if (consentimientos.cargando && !consentimientos.datos) return <div class="app"><div class="contenido"><Siluetas forma="hoy" /></div></div>;
   const activos = (consentimientos.datos || []).filter((c) => !c.revocado_en);
-  if (consentimientos.datos && !activos.some((c) => c.tipo === 'privacidad')) {
+  // El coach en su modo atleta no ve la pantalla de consentimientos: los dejó al crear su ficha
+  if (!propio && consentimientos.datos && !activos.some((c) => c.tipo === 'privacidad')) {
     return <Consentimiento alTerminar={() => consentimientos.recargar()} />;
   }
   const salud = activos.some((c) => c.tipo === 'datos_salud');
@@ -85,6 +89,7 @@ export function AtletaApp() {
         <>
           <main key={`${tab}:${dia}`} class="vista">
             <BandaPendientes pendientes={pendientesArchivos} />
+            {propio && <BandaModoAtleta />}
             {tab === 'hoy' && <Hoy {...compartido} />}
             {tab === 'semana' && <Semana {...compartido} />}
             {tab === 'comidas' && <Comidas {...compartido} />}
@@ -103,10 +108,29 @@ export function AtletaApp() {
                   {texto}
                 </button>
               ))}
+              {propio && (
+                <button class="tab" onClick={() => salirModoAtleta()}>
+                  <span class="tab-ico"><Icono n="atletas" /></span>Entrenador
+                </button>
+              )}
             </div>
           </nav>
         </>
       )}
+    </div>
+  );
+}
+
+// Arriba en el modo atleta del coach: qué es y cómo programarse o volver
+function BandaModoAtleta() {
+  const { atleta, salirModoAtleta } = useApp();
+  return (
+    <div class="banda-modo-atleta" role="note">
+      <span><Icono n="hoy" /> Modo atleta</span>
+      <span class="fila">
+        <button class="btn btn-peq" onClick={() => salirModoAtleta({ atletaId: atleta.id, pestana: 'programa' })}><Icono n="editar" /> Programarlo</button>
+        <button class="btn btn-peq" onClick={() => salirModoAtleta()} title="Volver a la vista de entrenador">Salir</button>
+      </span>
     </div>
   );
 }

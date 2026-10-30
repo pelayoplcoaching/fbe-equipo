@@ -29,7 +29,7 @@ import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '
 export { duracionEstimada };
 
 export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos, releer, recargarConsentimientos }) {
-  const { api, atleta, perfil } = useApp();
+  const { api, atleta, perfil, propio } = useApp();
   const { datos: p, cargando, error, recargar } = programa;
   // Solo nutrición (v0.26): sin nada de entrenamiento
   const entrena = conEntrenamiento(atleta);
@@ -59,8 +59,9 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
   ] : null;
   // Solo para quien acaba de llegar (su primer mes): a quien ya lleva tiempo no se le enseña
   const nuevo = !atleta.fecha_alta || diasEntre(atleta.fecha_alta, hoyISO()) <= 30;
-  const verPasos = pasos && nuevo && !pasosOcultos && pasos.some((x) => !x.hecho);
-  const verBienvenida = hechos.datos && (!entrena || !hechos.datos.sesion) && !bienvenidaVista;
+  // En el modo atleta del coach no hay bienvenida, primeros pasos, avisos, cuestionario ni respuestas: es él
+  const verPasos = !propio && pasos && nuevo && !pasosOcultos && pasos.some((x) => !x.hecho);
+  const verBienvenida = !propio && hechos.datos && (!entrena || !hechos.datos.sesion) && !bienvenidaVista;
 
   return (
     <>
@@ -69,17 +70,17 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
         <h1 class="sr">Hoy</h1>
         <div class="titulo"><Marca /></div>
         <span class="sub">{fmtConDia(hoyISO())}</span>
-        <button class="btn-avatar" onClick={() => irA('perfil')} aria-label="Tu perfil"><Avatar nombre={atleta.nombre} foto={perfil?.foto} /></button>
+        {!propio && <button class="btn-avatar" onClick={() => irA('perfil')} aria-label="Tu perfil"><Avatar nombre={atleta.nombre} foto={perfil?.foto} /></button>}
       </header>
       <BandaDemo />
       <BandaConexion />
       <ErrorCaja error={error} reintentar={recargar} />
-      {atleta.estado !== 'baja' && <AvisoCobro irA={irA} />}
+      {atleta.estado !== 'baja' && !propio && <AvisoCobro irA={irA} />}
       {atleta.estado === 'baja' && (
         <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>
       )}
-      {verPasos ? <PrimerosPasos pasos={pasos} alOcultar={() => setPasosOcultos(true)} /> : <AvisoInstalar />}
-      {(verPasos || (!p && !cargando) || !entrena) && <AvisosCoach />}
+      {verPasos ? <PrimerosPasos pasos={pasos} alOcultar={() => setPasosOcultos(true)} /> : !propio && <AvisoInstalar />}
+      {!propio && (verPasos || (!p && !cargando) || !entrena) && <AvisosCoach />}
       {!entrena ? (
         <ContenidoNutricion irA={irA} checkinSemana={checkinSemana} salud={salud} recargarConsentimientos={recargarConsentimientos}
           entre={(
@@ -94,11 +95,11 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
         <Contenido p={p} atleta={atleta} abrirSesion={abrirSesion} irA={irA} checkinSemana={checkinSemana} salud={salud} noLeidos={noLeidos} recargar={() => recargar(true)}
           entre={(
             <>
-              {!verPasos && <AvisosCoach />}
+              {!verPasos && !propio && <AvisosCoach />}
               {!verPasos && atleta.estado !== 'baja' && <TuDia p={p} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} />}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
               {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
-              {!verPasos && hechos.datos?.sesion && <TarjetaNotificaciones />}
+              {!verPasos && !propio && hechos.datos?.sesion && <TarjetaNotificaciones />}
             </>
           )} />
       )}
@@ -287,7 +288,7 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
 }
 
 function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos, recargar, entre = null }) {
-  const { api } = useApp();
+  const { api, propio } = useApp();
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id, p]);
   const [planAbierto, setPlanAbierto] = useState(false);
   // Detalle de la siguiente sesión (ejercicios, duración): lo usan la tarjeta del día y la lista de debajo
@@ -369,8 +370,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         ) : (
           <div class="pila-s">
             <p class="peq">Has hecho las {hechas} sesiones de esta semana.</p>
-            {salud && !checkinHecho && <div class="hero-acciones"><button class="btn btn-grande btn-hero" onClick={() => irA('checkin')}><Icono n="checkin" /> Hacer el check-in semanal</button></div>}
-            {checkinHecho && <p class="peq secundario">Check-in de la semana enviado. Tu coach prepara lo siguiente con lo que has registrado.</p>}
+            {salud && !propio && !checkinHecho && <div class="hero-acciones"><button class="btn btn-grande btn-hero" onClick={() => irA('checkin')}><Icono n="checkin" /> Hacer el check-in semanal</button></div>}
+            {checkinHecho && !propio && <p class="peq secundario">Check-in de la semana enviado. Tu coach prepara lo siguiente con lo que has registrado.</p>}
           </div>
         )}
         {sesiones.length > 0 && <ResumenSemana hechas={hechas} total={sesiones.length} racha={constancia.datos?.racha ?? null} />}
@@ -403,7 +404,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
 
       {salud && <PesoHoy irA={irA} />}
 
-      {salud && !checkinHecho && siguiente && diaDeCheckin() && (
+      {salud && !propio && !checkinHecho && siguiente && diaDeCheckin() && (
         <button class="nota-coach" style="border:0;text-align:left;cursor:pointer" onClick={() => irA('checkin')}>
           <Icono n="checkin" /><div><strong>Check-in semanal pendiente.</strong> Un minuto: peso, sueño, energía y molestias.</div>
         </button>

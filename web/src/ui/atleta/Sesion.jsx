@@ -21,7 +21,7 @@ import { pesoAnterior } from '../../logica/nivel.js';
 import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
-  const { api, atleta, cola, aviso } = useApp();
+  const { api, atleta, cola, aviso, propio } = useApp();
   const det = useCarga(() => api.sesion(id, atleta.id), [id]);
   // Mejores marcas hasta hoy (sin esta sesión): para avisar de un récord en cuanto se registra la serie
   const previas = useCarga(() => api.marcasPrevias(atleta.id, id).catch(() => null), [id]);
@@ -291,13 +291,15 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         <button class="btn btn-ancho" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir la sesión</button>
       )}
 
-      <section class="seccion">
-        <h2>Comentarios con tu coach</h2>
-        <div class="panel panel-pad">
-          <Hilo atletaId={atleta.id} sesionId={sesion.id} alLeer={alLeer}
-            vacio="¿Algo que contarle de esta sesión? Un cambio, una molestia, una duda. Tu coach te responde aquí." />
-        </div>
-      </section>
+      {!propio && (
+        <section class="seccion">
+          <h2>Comentarios con tu coach</h2>
+          <div class="panel panel-pad">
+            <Hilo atletaId={atleta.id} sesionId={sesion.id} alLeer={alLeer}
+              vacio="¿Algo que contarle de esta sesión? Un cambio, una molestia, una duda. Tu coach te responde aquí." />
+          </div>
+        </section>
+      )}
 
       {descanso && !verEnfoque && <Temporizador {...descanso} alCambiar={setDescanso} />}
       {compartir && <HojaCompartir datos={datosTarjeta(sesion, ejercicios, hechas, records, ejerciciosPorId, sesion.duracion_min)} alCerrar={() => setCompartir(false)} />}
@@ -347,7 +349,7 @@ function Cronometro({ inicio, minutos, hechas, total }) {
 }
 
 function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, alternar, guardar, quitar, cambiar, nota, guardarNota }) {
-  const { atleta } = useApp();
+  const { atleta, propio } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
   const [editandoNota, setEditandoNota] = useState(false);
   const pa = pauta(e);
@@ -427,7 +429,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
             {conAproximacion && kgTrabajo > 0 && <button class="btn-texto" onClick={() => setHoja('aproximacion')}><Icono n="llama" /> Aproximación</button>}
             {(ej.instrucciones || ej.errores) && <button class="btn-texto" onClick={() => setHoja('tecnica')}><Icono n="biblioteca" /> Técnica</button>}
             {ej.video_url && <a class="btn-texto" href={ej.video_url} target="_blank" rel="noopener"><Icono n="video" /> Tutorial</a>}
-            <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} />
+            {!propio && <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} />}
           </div>
         </div>
       )}
@@ -580,6 +582,7 @@ export function TarjetaCardio({ pauta, hecho, completada }) {
 
 // ---------- terminar ----------
 function Terminar({ sesion, semana, inicio, minutosSugeridos = null, conEjercicios = false, alCerrar, alGuardar }) {
+  const { propio } = useApp();
   const estimado = minutosSugeridos || (inicio ? Math.max(5, Math.round((Date.now() - inicio) / 60000) + 5) : sesion.cardio?.minutos || (sesion.tipo !== 'fuerza' ? 40 : null));
   const hoy = hoyISO();
   // Si la sesión es de otra semana (se apunta una que se hizo otro día), se pregunta el día
@@ -643,7 +646,7 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, conEjercici
         <Paso id="t-min" valor={min} paso={conCardio && !cardioAparte ? 1 : 5} max={conCardio && !cardioAparte ? 600 : 300} dec={0} etiqueta={conCardio && !cardioAparte ? 'minutos de cardio' : 'minutos de sesión'} alCambiar={setMin} />
       </div>
       <div class="campo">
-        <label for="t-nota">Nota para tu coach</label>
+        <label for="t-nota">{propio ? 'Nota' : 'Nota para tu coach'}</label>
         <textarea id="t-nota" class="area" placeholder="Cómo te has sentido, molestias, cambios que hayas hecho…" value={nota} onInput={(e) => setNota(e.currentTarget.value)} />
       </div>
       {error && <div class="error" role="alert">{error}</div>}

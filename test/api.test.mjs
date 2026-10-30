@@ -1127,5 +1127,28 @@ console.log('\nPauta serie a serie (v0.28)');
   check((await b.select('archivos', { eq: { ruta } })).length === 0, 'descartar un envío pendiente borra su registro');
 }
 
+
+console.log('Modo atleta del coach (v0.37)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check((await api.miAtleta()) == null, 'el coach no tiene ficha de atleta hasta que la crea');
+  const antes = (await api.atletas()).length;
+  const propio = await api.crearAtletaPropio();
+  check(propio.perfil_id === coachId && propio.nutricion === false, 'el coach crea su ficha vinculada a su cuenta, sin nutrición');
+  check((await api.crearAtletaPropio()).id === propio.id, 'crearla otra vez devuelve la misma');
+  check((await api.miAtleta())?.id === propio.id, 'miAtleta() devuelve su ficha');
+  const lista = await api.atletas();
+  check(lista.length === antes && !lista.some((a) => a.id === propio.id), 'su ficha no sale en la lista de atletas');
+  check(!(await api.cobrosTodos()).filas.some((f) => f.atleta.id === propio.id), 'ni en cobros');
+  const bp = await api.nuevoBloque(propio.id, { nombre: 'Mi fuerza', foco: 'adaptacion', fecha_inicio: lunes, semanas: 2, sesionesPorSemana: 2 });
+  check((await api.bloqueCompleto(bp.id)).semanas.length === 2, 'se programa un bloque como a cualquiera');
+  check((await api.programa(propio.id)) != null, 'y lo ve como su programa');
+  const cons = (await api.consentimientos()).map((c) => c.tipo).sort();
+  check(JSON.stringify(cons) === '["datos_salud","privacidad"]', 'al crear su ficha quedan sus consentimientos (una vez)');
+  const cp = await api.bloqueCompleto(bp.id); const sp = cp.sesiones[cp.semanas[0].id][0];
+  await api.guardarPreparacion(sp.id, { sueno: 2, energia: 3, molestias: 1 });
+  check((await api.sesion(sp.id, propio.id)).sesion.preparacion?.energia === 3, 'y se guarda cómo llega a su sesión (sueño, energía, molestias)');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

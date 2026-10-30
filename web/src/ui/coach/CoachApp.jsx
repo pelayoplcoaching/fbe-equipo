@@ -10,12 +10,15 @@ import { Buscador } from './Buscador.jsx';
 import { Conversaciones } from './Conversaciones.jsx';
 
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
-const TABS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['mensajes', 'Mensajes', 'mensaje'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['cuenta', 'Cuenta', 'perfil']];
+// Modo atleta (v0.37): el coach entrena con la app de atleta, con su propia ficha (solo entrenamiento)
+const TABS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['mensajes', 'Mensajes', 'mensaje'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
 
 export function CoachApp() {
-  const { api } = useApp();
-  const [tab, setTab] = useState(() => { const h = location.hash.slice(1); return TABS.some(([t]) => t === h) ? h : 'atletas'; });
-  const [ficha, setFicha] = useState(null); // { atletaId, pestana }
+  const { api, propioCoach, entrarModoAtleta, pedidoCoach, consumirPedidoCoach } = useApp();
+  // Al volver del modo atleta con «Programarlo», se abre su ficha en el Programa
+  const [tab, setTab] = useState(() => { if (pedidoCoach) return 'atletas'; const h = location.hash.slice(1); return TABS.some(([t]) => t === h) && h !== 'modo-atleta' ? h : 'atletas'; });
+  const [ficha, setFicha] = useState(() => (pedidoCoach ? { atletaId: pedidoCoach.atletaId, pestana: pedidoCoach.pestana || 'programa' } : null)); // { atletaId, pestana }
+  useEffect(() => { if (pedidoCoach) consumirPedidoCoach(); }, []);
   const bandeja = useCarga(() => api.bandeja(), []);
   const sinLeer = useCarga(() => api.mensajesSinLeer().catch(() => 0), []);
   useEffect(() => { try { history.replaceState(null, '', `#${tab}`); } catch { /* */ } window.scrollTo(0, 0); }, [tab, ficha?.atletaId]);
@@ -78,7 +81,11 @@ export function CoachApp() {
             <Icono n="buscar" /><span>Buscar</span><kbd>{mac ? '⌘' : 'Ctrl'} K</kbd>
           </button>
           {TABS.map(([id, texto, icono]) => (
-            <button key={id} class={`tab ${id === 'cuenta' ? 'tab-cuenta' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setFicha(null); setPeticion(null); }}>
+            <button key={id} class={`tab ${id === 'cuenta' ? 'tab-cuenta' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => {
+              // Con su ficha ya creada, la pestaña entra directamente en el modo atleta
+              if (id === 'modo-atleta' && propioCoach) { entrarModoAtleta(); return; }
+              setTab(id); setFicha(null); setPeticion(null);
+            }}>
               <span class="tab-ico"><Icono n={icono} />{id === 'revisar' && <Insignia n={total} etiqueta={`${total} por revisar`} />}{id === 'mensajes' && <Insignia n={sinLeer.datos || 0} etiqueta={`${sinLeer.datos || 0} mensajes sin leer`} />}</span>{texto}
             </button>
           ))}
@@ -93,9 +100,31 @@ export function CoachApp() {
       {tab === 'plantillas' && <Plantillas peticion={pide('plantillas')} />}
       {tab === 'biblioteca' && <Biblioteca peticion={pide('biblioteca')} />}
       {tab === 'cuenta' && <Cuenta abrirAtleta={abrirAtleta} />}
+      {tab === 'modo-atleta' && <EmpezarModoAtleta />}
       </main>
     </div>
     {buscar && <Buscador alCerrar={cerrarBuscar} ir={ir} />}
     </>
+  );
+}
+
+// La primera vez: crear su ficha de atleta (vinculada a su cuenta) y entrar
+function EmpezarModoAtleta() {
+  const { api, aviso, entrarModoAtleta } = useApp();
+  const [ocupado, setOcupado] = useState(false);
+  return (
+    <div class="contenido">
+      <header class="cabecera"><div class="titulo"><h1>Modo atleta</h1></div></header>
+      <section class="panel panel-pad pila">
+        <p>Entrena con la app como uno de tus atletas, sin otra cuenta: te programas desde aquí, como a cualquiera, y en el modo atleta ves y registras tu entrenamiento (Hoy, Semana y Progreso).</p>
+        <p class="peq secundario">Es solo entrenamiento: sin nutrición, check-in, mensajes, vídeos ni cobros. Tu ficha no sale en Atletas, Revisar, Mensajes ni Cobros. Para programarte, toca «Programarlo» arriba, en el modo atleta.</p>
+        <p class="peq secundario">Al crearla quedan anotados tus consentimientos de privacidad y de datos de salud (son tus propios datos), para que se guarde cómo llegas a cada sesión.</p>
+        <button class="btn btn-primario btn-grande" disabled={ocupado} onClick={async () => {
+          setOcupado(true);
+          try { const propio = await api.crearAtletaPropio(); entrarModoAtleta(propio); aviso('Tu ficha de atleta está lista'); }
+          catch (e) { aviso(e.message, 'error'); setOcupado(false); }
+        }}><Icono n="hoy" /> Crear mi ficha y entrar</button>
+      </section>
+    </div>
   );
 }

@@ -10,6 +10,10 @@ const CLAVE_ACTIVACION = 'fbe-activacion-pendiente';
 export function guardarActivacionPendiente(datos) { try { localStorage.setItem(CLAVE_ACTIVACION, JSON.stringify(datos)); } catch { /* */ } }
 function leerActivacionPendiente() { try { return JSON.parse(localStorage.getItem(CLAVE_ACTIVACION) || 'null'); } catch { return null; } }
 function borrarActivacionPendiente() { try { localStorage.removeItem(CLAVE_ACTIVACION); } catch { /* */ } }
+// Modo atleta del coach (v0.37): si lo dejó abierto, la app vuelve a él (en este dispositivo)
+const CLAVE_MODO_ATLETA = 'fbe-modo-atleta';
+const leerModoAtleta = () => { try { return localStorage.getItem(CLAVE_MODO_ATLETA) === '1'; } catch { return false; } };
+const guardarModoAtleta = (v) => { try { if (v) localStorage.setItem(CLAVE_MODO_ATLETA, '1'); else localStorage.removeItem(CLAVE_MODO_ATLETA); } catch { /* */ } };
 
 export function App({ backend, api, cola }) {
   const [estado, setEstado] = useState({ fase: 'cargando' });
@@ -17,6 +21,8 @@ export function App({ backend, api, cola }) {
   const [pendientes, setPendientes] = useState(cola.pendientes());
   const [enLinea, setEnLinea] = useState(typeof navigator === 'undefined' ? true : navigator.onLine !== false);
   const ultimoUid = useRef(undefined);
+  const [modoAtleta, setModoAtleta] = useState(leerModoAtleta);
+  const [pedidoCoach, setPedidoCoach] = useState(null); // al volver del modo atleta: abrir algo en la vista de coach
 
   // accion: { texto, fn } añade un botón al aviso (p. ej. «Deshacer»)
   const aviso = (texto, tipo = 'ok', accion = null) => setToast({ texto, tipo, accion, id: Date.now() });
@@ -57,7 +63,9 @@ export function App({ backend, api, cola }) {
         if (perfil.exige_2fa && nivel && nivel.actual !== 'aal2') { setEstado({ fase: 'sin-2fa', perfil }); return; }
         // Con dispositivos verificados, la base debe exigirlos siempre (por si se activó antes de la v0.3)
         if (nivel?.actual === 'aal2' && !perfil.exige_2fa) api.exigirDosPasos(true).catch(() => {});
-        setEstado({ fase: 'coach', perfil });
+        // Su propia ficha de atleta, si la tiene (modo atleta)
+        const propio = await api.miAtleta().catch(() => null);
+        setEstado({ fase: 'coach', perfil, propio });
         return;
       }
       let atleta = await api.miAtleta();
@@ -103,8 +111,10 @@ export function App({ backend, api, cola }) {
     window.addEventListener('offline', off);
     return () => { quitar(); quitarCola(); quitarRechazo(); window.removeEventListener('unhandledrejection', sinRecoger); window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
+  // El coach en modo atleta (v0.37): la app de atleta con su propia ficha
+  const enModoAtleta = estado.fase === 'coach' && modoAtleta && !!estado.propio;
   // La cola solo envía lo del atleta con la sesión abierta
-  const atletaId = estado.fase === 'atleta' ? estado.atleta?.id : null;
+  const atletaId = estado.fase === 'atleta' ? estado.atleta?.id : enModoAtleta ? estado.propio.id : null;
   useEffect(() => { cola.fijarAtleta(atletaId); }, [atletaId]);
   // Con la sesión dentro, si este móvil tiene las notificaciones activadas, la base se queda con su suscripción al día
   const dentro = estado.fase === 'atleta' || estado.fase === 'coach';
@@ -138,7 +148,17 @@ export function App({ backend, api, cola }) {
     // Al cerrar sesión, este móvil deja de recibir las notificaciones de esa cuenta
     salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); await backend.auth.salir(); resolver(true); },
     reiniciarDemo: () => { backend.reiniciar?.(); ultimoUid.current = undefined; resolver(true); },
+    // Modo atleta del coach (v0.37)
+    propioCoach: estado.fase === 'coach' ? estado.propio || null : null,
+    entrarModoAtleta: (propio = null) => {
+      if (propio) setEstado((e) => ({ ...e, propio }));
+      setModoAtleta(true); guardarModoAtleta(true); window.scrollTo(0, 0);
+    },
+    salirModoAtleta: (pedido = null) => { setPedidoCoach(pedido); setModoAtleta(false); guardarModoAtleta(false); },
+    pedidoCoach, consumirPedidoCoach: () => setPedidoCoach(null),
   };
+  // Dentro del modo atleta, para la app de atleta: su ficha es «el atleta» y propio = true
+  const ctxAtleta = enModoAtleta ? { ...ctx, atleta: estado.propio, propio: true } : ctx;
 
   // La portada de arranque se va cuando hay algo que enseñar: el acceso enseguida; la cuenta, con sus datos
   useEffect(() => {
@@ -158,7 +178,7 @@ export function App({ backend, api, cola }) {
       <button class="btn" onClick={ctx.salir}>Cerrar sesión</button>
     </div></div>
   );
-  else if (estado.fase === 'coach') vista = <CoachApp />;
+  else if (estado.fase === 'coach') vista = enModoAtleta ? <Ctx.Provider value={ctxAtleta}><AtletaApp key="modo-atleta" /></Ctx.Provider> : <CoachApp />;
   else if (estado.fase === 'atleta') vista = <AtletaApp />;
   else vista = (
     <div class="acceso"><div class="acceso-caja">

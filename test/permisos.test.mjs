@@ -1618,6 +1618,28 @@ console.log('\nPauta serie a serie (migración 024)');
   await q(`update sesion_ejercicios set series_detalle = null where id = $1`, [se.id]);
 }
 
+console.log('\nModo atleta del coach: su propia ficha, vinculada a su cuenta (v0.37, sin migración)');
+{
+  await como(pelayo, 'aal2');
+  const [yo] = await q(`insert into atletas (nombre, perfil_id, estado, nutricion) values ('Pelayo', $1, 'activo', false) returning id`, [pelayo]);
+  check((await q(`select mi_atleta_id() id, es_coach() c`))[0].id === yo.id && (await q(`select es_coach() c`))[0].c === true,
+    'el coach crea su ficha de atleta vinculada a su cuenta y sigue siendo coach');
+  const bYo = (await q(`select crear_bloque_desde_plantilla($1, $2, $3) b`, [pl.id, yo.id, lunes]))[0].b;
+  await q(`update bloques set estado = 'activo' where id = $1`, [bYo]);
+  await q(`update semanas set programacion = 'programada' where bloque_id = $1`, [bYo]);
+  const [seYo] = await q(`select se.id, s.id sesion from sesion_ejercicios se join sesiones s on s.id = se.sesion_id join semanas w on w.id = s.semana_id where w.bloque_id = $1 order by s.orden, se.orden limit 1`, [bYo]);
+  const [sYo] = await q(`insert into series (sesion_ejercicio_id, numero, kg, reps, rpe) values ($1, 1, 60, 8, 8) returning atleta_id`, [seYo.id]);
+  await q(`update sesiones set completada = true, fecha_realizada = current_date where id = $1`, [seYo.sesion]);
+  check(sYo.atleta_id === yo.id, 'en su modo atleta registra sus series (se apuntan a su ficha) y termina la sesión');
+  check((await notis(`tipo = 'sesion_hecha' and clave = $1`, ['sesion:' + seYo.sesion])).length === 0, 'terminar su propia sesión no le avisa a sí mismo');
+  await como(ana);
+  check((await q(`select id from series where atleta_id = $1`, [yo.id])).length === 0 && (await q(`select id from bloques where id = $1`, [bYo])).length === 0
+    && (await q(`select id from atletas where id = $1`, [yo.id])).length === 0, 'un atleta no ve nada del entrenamiento del coach');
+  await como(pelayo, 'aal2');
+  check(await falla(`select canjear_invitacion('FBE-AAAAA-AAAAA')`), 'y el coach sigue sin poder canjear códigos');
+  await q(`delete from atletas where id = $1`, [yo.id]);
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);
