@@ -1292,31 +1292,52 @@ export function crearApi(backend) {
       return { total: lista.reduce((t, x) => t + x.bytes, 0), archivos: archivos.length, lista };
     },
     // poster: miniatura (Blob JPEG) de un vídeo, generada en el móvil; duracion_seg: su duración
-    async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null }) {
-      if (archivo.size > LIMITE_ARCHIVO_MB * 1024 * 1024) throw new Error(`El archivo pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos) o recórtalo.`);
+    // alProgreso(0…1) de la subida; fecha: la del día en que se grabó (un vídeo que se queda pendiente sin cobertura
+    // y se envía al día siguiente conserva su día)
+    // La ruta de un archivo nuevo (se puede pedir antes para guardarla con un envío pendiente: reintentarlo usa la misma)
+    rutaArchivo(atletaId, archivo, { tipo, fecha = null } = {}) {
       const ext = String(archivo.name || '').split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5)
         || String(archivo.type || '').split('/')[1] || 'bin';
       const esImagen = /^image\//.test(archivo.type || '') || tipo === 'foto_progreso';
-      const ruta = `${atletaId}/${tipo === 'adjunto' ? (esImagen ? 'adjunto' : 'adjunto-video') : esImagen ? 'foto' : 'video'}-${hoyISO()}-${aleatorio()}.${ext}`;
+      const dia = fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) && fecha <= hoyISO() ? fecha : hoyISO();
+      return `${atletaId}/${tipo === 'adjunto' ? (esImagen ? 'adjunto' : 'adjunto-video') : esImagen ? 'foto' : 'video'}-${dia}-${aleatorio()}.${ext}`;
+    },
+    // alProgreso(0…1) de la subida; fecha: la del día en que se grabó (un vídeo que se queda pendiente sin cobertura
+    // y se envía al día siguiente conserva su día). ruta: la de un intento anterior (v0.33): reintentar es seguro,
+    // se reutiliza el registro si ya se hizo y, si el archivo llegó entero aunque no la respuesta, no se sube dos veces.
+    async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null, fecha = null, alProgreso = null, senal = null, ruta: rutaDada = null }) {
+      if (archivo.size > LIMITE_ARCHIVO_MB * 1024 * 1024) throw new Error(`El archivo pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos) o recórtalo.`);
+      const esImagen = /^image\//.test(archivo.type || '') || tipo === 'foto_progreso';
+      const ruta = rutaDada || api.rutaArchivo(atletaId, archivo, { tipo, fecha });
+      const dia = (/-(\d{4}-\d{2}-\d{2})-/.exec(ruta) || [])[1] || hoyISO();
       const poster_ruta = poster && !esImagen ? `${ruta}.jpg` : null;
       const dur = Number.isFinite(Number(duracion_seg)) && duracion_seg >= 0 ? Math.min(3600, Math.round(Number(duracion_seg))) : null;
       // Primero se registra (la base comprueba consentimiento, ruta y límite diario) y después se sube:
       // Storage solo acepta archivos ya registrados.
-      const [fila] = await b.insert('archivos', [{
-        atleta_id: atletaId, tipo, ruta, sesion_ejercicio_id, ejercicio_id, nota_atleta,
-        mime: archivo.type || null, bytes: archivo.size ?? null, fecha: hoyISO(),
-        ...(tipo === 'foto_progreso' && pose ? { pose } : {}),
-        ...(poster_ruta ? { poster_ruta } : {}), ...(dur != null ? { duracion_seg: dur } : {}),
-      }]);
+      let fila = rutaDada ? (await b.select('archivos', { eq: { ruta } }))[0] : null;
+      if (!fila) {
+        [fila] = await b.insert('archivos', [{
+          atleta_id: atletaId, tipo, ruta, sesion_ejercicio_id, ejercicio_id, nota_atleta,
+          mime: archivo.type || null, bytes: archivo.size ?? null, fecha: dia,
+          ...(tipo === 'foto_progreso' && pose ? { pose } : {}),
+          ...(poster_ruta ? { poster_ruta } : {}), ...(dur != null ? { duracion_seg: dur } : {}),
+        }]);
+      }
       try {
-        await b.storage.subir(ruta, archivo, archivo.type || 'application/octet-stream');
-        // La miniatura es un extra: si falla, el vídeo queda igualmente (la cuadrícula enseña el primer fotograma)
-        if (poster_ruta) await b.storage.subir(poster_ruta, poster, 'image/jpeg').catch(async () => { await b.update('archivos', { poster_ruta: null }, { eq: { id: fila.id } }).catch(() => {}); fila.poster_ruta = null; });
+        await b.storage.subir(ruta, archivo, archivo.type || 'application/octet-stream', { alProgreso, senal });
       } catch (e) {
-        await b.delete('archivos', { eq: { id: fila.id } }).catch(() => {});
+        // Sin cobertura, el registro se queda: el siguiente intento (con la misma ruta) lo reutiliza
+        if (!e?.sinConexion) await b.delete('archivos', { eq: { id: fila.id } }).catch(() => {});
+        e.ruta = ruta;
         throw e;
       }
+      // La miniatura es un extra: si falla, el vídeo queda igualmente (la cuadrícula enseña el primer fotograma)
+      if (poster_ruta) await b.storage.subir(poster_ruta, poster, 'image/jpeg').catch(async () => { await b.update('archivos', { poster_ruta: null }, { eq: { id: fila.id } }).catch(() => {}); fila.poster_ruta = null; });
       return fila;
+    },
+    // Un envío pendiente que se descarta: su registro (si llegó a hacerse) no debe quedar sin archivo
+    async descartarSubida(ruta) {
+      if (ruta) await b.delete('archivos', { eq: { ruta } }).catch(() => {});
     },
     async urlArchivo(ruta) { return b.storage.url(ruta); },
     async borrarArchivo(archivo) {

@@ -1104,5 +1104,28 @@ console.log('\nPauta serie a serie (v0.28)');
   await api.borrar('bloques', bl.id);
 }
 
+{
+  console.log('Subir sin cobertura y reintentar (v0.33)');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const f = new Blob(['vídeo largo'], { type: 'video/mp4' });
+  const ruta = api.rutaArchivo(ana.id, f, { tipo: 'video_tecnica', fecha: '2026-10-29' });
+  const original = b.storage.subir;
+  let llamadas = 0;
+  b.storage.subir = async (...x) => { llamadas++; if (llamadas === 1) { const e = new Error('Sin conexión.'); e.sinConexion = true; throw e; } return original.apply(b.storage, x); };
+  let err = null;
+  try { await api.subirArchivo(ana.id, f, { tipo: 'video_tecnica', ruta }); } catch (e) { err = e; }
+  const tras1 = await b.select('archivos', { eq: { ruta } });
+  check(err?.sinConexion && err.ruta === ruta && tras1.length === 1, 'sin cobertura, el registro se queda (con su ruta) para el siguiente intento');
+  const a = await api.subirArchivo(ana.id, f, { tipo: 'video_tecnica', ruta });
+  const tras2 = await b.select('archivos', { eq: { ruta } });
+  check(a.id === tras1[0].id && tras2.length === 1 && tras2[0].fecha === '2026-10-29', 'al reintentar con la misma ruta no se duplica, y conserva el día en que se grabó');
+  b.storage.subir = async () => { throw new Error('Permiso denegado'); };
+  const ruta2 = api.rutaArchivo(ana.id, f, { tipo: 'video_tecnica' });
+  check(await lanza(() => api.subirArchivo(ana.id, f, { tipo: 'video_tecnica', ruta: ruta2 })) && (await b.select('archivos', { eq: { ruta: ruta2 } })).length === 0, 'si el servidor lo rechaza (no es la cobertura), el registro se borra');
+  b.storage.subir = original;
+  await api.descartarSubida(ruta);
+  check((await b.select('archivos', { eq: { ruta } })).length === 0, 'descartar un envío pendiente borra su registro');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

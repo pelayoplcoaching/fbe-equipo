@@ -600,7 +600,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       },
     },
     storage: {
-      async subir(ruta, archivo) { ficheros.set(ruta, archivo); },
+      // Sin conexión (el navegador lo dice), como en el de verdad: así la demo enseña cómo un vídeo se queda guardado
+      // en el móvil y se envía solo al volver la cobertura
+      async subir(ruta, archivo, tipo, { alProgreso = null } = {}) {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) { const e = new Error('Sin conexión.'); e.sinConexion = true; throw e; }
+        ficheros.set(ruta, archivo); alProgreso?.(1);
+      },
       async url(ruta) {
         if (urls.has(ruta)) return urls.get(ruta);
         const f = ficheros.get(ruta);

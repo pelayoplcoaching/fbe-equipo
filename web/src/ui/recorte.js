@@ -54,8 +54,8 @@ export function prepararVideo(archivo) {
 
 // archivo: File/Blob del vídeo; inicio y fin en segundos. alProgreso(0…1). Devuelve un File nuevo.
 // senal: { aborted } para cancelar; preparado: lo de prepararVideo (si no, se crea aquí).
-// Si se sale de la app a medias, se para el vídeo o se atasca, se acaba con un error que lo dice (nunca se queda colgado).
-export async function recortarVideo(archivo, { inicio = 0, fin, alProgreso = () => {}, senal = null, contenedor = null, preparado = null } = {}) {
+// Si se atasca, se acaba con un error que lo dice (nunca se queda colgado); si se sale de la app, se pausa.
+export async function recortarVideo(archivo, { inicio = 0, fin, alProgreso = () => {}, senal = null, contenedor = null, preparado = null, alPausa = () => {} } = {}) {
   const tipo = tipoSalida();
   if (!tipo || !sePuedeRecortar()) throw new Error('Este navegador no puede recortar vídeos');
   const { video: v, url, listo } = preparado || prepararVideo(archivo);
@@ -64,12 +64,20 @@ export async function recortarVideo(archivo, { inicio = 0, fin, alProgreso = () 
     v.style.cssText = 'position:fixed;left:-10000px;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
     document.body.appendChild(v);
   }
-  const SALIDA = 'Has salido de la app mientras se preparaba el vídeo. Vuelve a enviarlo sin salir de la app.';
+  // Si se sale de la app (o el móvil para el vídeo: una llamada…), se pausa la grabación y sigue al volver (v0.33;
+  // antes se cancelaba). Si al volver el móvil no deja reanudar solo, alPausa(true) y senal.reanudar() con un toque.
   let recorder = null, flujo = null, cancelado = null, vigilar = null;
-  const alOcultar = () => { if (document.visibilityState === 'hidden') cancelado = new Error(SALIDA); };
-  document.addEventListener('visibilitychange', alOcultar);
+  let alOcultar = () => {};
+  const enVisibilidad = () => alOcultar();
+  document.addEventListener('visibilitychange', enVisibilidad);
+  // Lo que se hace con el vídeo quieto (leerlo, ir al inicio) espera a que la app esté a la vista
+  const aLaVista = () => (document.visibilityState !== 'hidden' ? Promise.resolve() : new Promise((r) => {
+    const f = () => { if (document.visibilityState !== 'hidden') { document.removeEventListener('visibilitychange', f); r(); } };
+    document.addEventListener('visibilitychange', f);
+  }));
   try {
     await listo;
+    await aLaVista();
     if (v.readyState < 1) await esperar(v, 'loadedmetadata');
     const dur = Number.isFinite(v.duration) ? v.duration : fin;
     const desde = Math.max(0, Math.min(inicio, dur));
@@ -80,6 +88,7 @@ export async function recortarVideo(archivo, { inicio = 0, fin, alProgreso = () 
     lienzo.width = w; lienzo.height = h;
     const ctx = lienzo.getContext('2d', { alpha: false });
     v.pause();
+    await aLaVista();
     v.currentTime = desde;
     await esperar(v, 'seeked');
     if (cancelado || senal?.aborted) throw cancelado || new Error('Cancelado');
@@ -91,21 +100,50 @@ export async function recortarVideo(archivo, { inicio = 0, fin, alProgreso = () 
     const parado = new Promise((ok) => { recorder.onstop = ok; });
     const pintar = () => { try { ctx.drawImage(v, 0, 0, w, h); } catch { /* */ } };
     await new Promise((ok, mal) => {
-      let acabado = false, ultimo = -1, quieto = Date.now();
+      // Empieza «en pausa»: arranca con reanudar() (ya, si la app se ve; si no, al volver a ella)
+      let acabado = false, ultimo = -1, quieto = Date.now(), pausado = true, arrancado = false, gen = 0, reanudando = null;
       const acabar = (err) => {
         if (acabado) return;
-        acabado = true; clearInterval(vigilar); v.removeEventListener('pause', alPausar);
+        acabado = true; gen++; clearInterval(vigilar); v.removeEventListener('pause', alPausar);
         v.pause(); err ? mal(err) : ok();
       };
+      const pausar = () => {
+        if (acabado || pausado) return;
+        pausado = true; gen++; // gen: el bucle de fotogramas de antes de la pausa ya no sigue
+        try { if (recorder.state === 'recording') recorder.pause(); } catch { /* */ }
+        v.pause(); alPausa(true);
+      };
+      const reanudar = () => {
+        if (acabado || !pausado) return Promise.resolve();
+        if (reanudando) return reanudando; // un toque en «Continuar» mientras ya se está reanudando
+        reanudando = v.play().then(() => {
+          if (acabado) return;
+          try {
+            if (!arrancado) { recorder.start(); arrancado = true; v.addEventListener('pause', alPausar); }
+            else if (recorder.state === 'paused') recorder.resume();
+            else if (recorder.state === 'inactive') { acabar(new Error('La grabación se ha cortado: vuelve a enviarlo')); return; }
+          } catch { acabar(new Error('No se ha podido seguir preparando el vídeo: vuelve a enviarlo')); return; }
+          pausado = false; quieto = Date.now(); gen++;
+          alPausa(false); paso(gen);
+        }, () => { if (!acabado) alPausa(true); /* sigue en pausa: hará falta tocar «Continuar» */ })
+          .finally(() => { reanudando = null; });
+        return reanudando;
+      };
+      if (senal) senal.reanudar = reanudar;
+      alOcultar = () => { if (document.visibilityState === 'hidden') pausar(); else if (pausado) reanudar(); };
       // Una pausa que no viene de aquí: el móvil ha parado el vídeo (se ha salido de la app, una llamada…)
-      const alPausar = () => { if (!acabado && v.currentTime < hasta - 0.05 && !v.ended) acabar(cancelado || new Error(SALIDA)); };
-      const paso = () => {
-        if (acabado) return;
+      const alPausar = () => {
+        if (acabado || pausado || v.ended || v.currentTime >= hasta - 0.05) return;
+        pausar();
+        if (document.visibilityState === 'visible') reanudar();
+      };
+      const paso = (g) => {
+        if (acabado || pausado || g !== gen) return;
         if (cancelado || senal?.aborted) { acabar(cancelado || new Error('Cancelado')); return; }
         pintar();
         alProgreso(Math.min(1, Math.max(0, (v.currentTime - desde) / (hasta - desde))));
         if (v.currentTime >= hasta - 0.01 || v.ended) { acabar(); return; }
-        if (typeof v.requestVideoFrameCallback === 'function') v.requestVideoFrameCallback(paso); else requestAnimationFrame(paso);
+        if (typeof v.requestVideoFrameCallback === 'function') v.requestVideoFrameCallback(() => paso(g)); else requestAnimationFrame(() => paso(g));
       };
       v.addEventListener('ended', () => acabar(), { once: true });
       v.addEventListener('error', () => acabar(new Error('Este vídeo no se puede leer en el navegador')), { once: true });
@@ -113,19 +151,14 @@ export async function recortarVideo(archivo, { inicio = 0, fin, alProgreso = () 
       vigilar = setInterval(() => {
         if (acabado) return;
         if (cancelado || senal?.aborted) { acabar(cancelado || new Error('Cancelado')); return; }
+        if (pausado) { quieto = Date.now(); return; }
         if (v.currentTime >= hasta - 0.01) { acabar(); return; }
         if (v.currentTime !== ultimo) { ultimo = v.currentTime; quieto = Date.now(); } else if (Date.now() - quieto > 4000) acabar(new Error('El vídeo se ha atascado al recortarlo'));
       }, 250);
       // La grabación empieza cuando el vídeo ya se mueve (si no, el principio sería un fotograma quieto)
-      v.play().then(() => {
-        if (acabado) return;
-        v.addEventListener('pause', alPausar);
-        recorder.start();
-        paso();
-      }, (e) => acabar(new Error(`No se ha podido reproducir el vídeo para recortarlo (${e?.name || 'error'})`)));
+      if (document.visibilityState !== 'hidden') reanudar();
     });
-    recorder.stop();
-    await parado;
+    if (recorder.state !== 'inactive') { recorder.stop(); await parado; }
     if (cancelado) throw cancelado;
     const base = tipo.split(';')[0];
     const blob = new Blob(trozos, { type: base });
@@ -138,6 +171,6 @@ export async function recortarVideo(archivo, { inicio = 0, fin, alProgreso = () 
     flujo?.getTracks().forEach((t) => t.stop());
     try { v.pause(); v.removeAttribute('src'); v.load(); v.remove(); } catch { /* */ }
     URL.revokeObjectURL(url);
-    document.removeEventListener('visibilitychange', alOcultar);
+    document.removeEventListener('visibilitychange', enVisibilidad);
   }
 }

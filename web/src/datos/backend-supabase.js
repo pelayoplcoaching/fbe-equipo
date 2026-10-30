@@ -3,6 +3,7 @@
 // Tablas cuya clave no es «id» (para ordenar al paginar)
 export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id', menu_dias: 'atleta_id,fecha' };
 import { createClient } from '@supabase/supabase-js';
+import { Upload } from 'tus-js-client';
 
 const MENSAJES = {
   '42501': 'No tienes permiso para hacer eso.',
@@ -33,8 +34,10 @@ function traducir(error) {
   const e = new Error(tamano ? 'El archivo supera el tamaño máximo permitido.' : propio ? error.message : MENSAJES[error.code] || error.message || 'Algo ha fallado.');
   e.codigo = error.code;
   const m = String(error.message || '');
+  // «The request timed out» / «The network connection was lost»: lo que dice el iPhone cuando la cobertura no da
+  // (solo si no trae código: un «statement timeout» de la base es un error de verdad, no la cobertura)
   e.sinConexion = (typeof navigator !== 'undefined' && navigator.onLine === false)
-    || /Failed to fetch|NetworkError|Load failed|fetch failed/i.test(m);
+    || (!error.code && /Failed to fetch|NetworkError|Load failed|fetch failed|timed out|connection was lost|network connection|ERR_NETWORK|ERR_INTERNET/i.test(m));
   if (e.sinConexion) e.message = 'Sin conexión.';
   return e;
 }
@@ -48,6 +51,48 @@ function aplicarFiltro(q, f = {}) {
   for (const k of f.nulo || []) q = q.is(k, null);
   for (const k of f.nonulo || []) q = q.not(k, 'is', null);
   return q;
+}
+
+const TROZO = 6 * 1024 * 1024;
+
+// Subida por trozos (TUS, el protocolo de subidas reanudables de Supabase Storage). Se exporta para probarla.
+export function subirPorTrozos({ endpoint, token, anonKey, ruta, archivo, tipo, alProgreso = null, senal = null, reintentos = [0, 1000, 3000, 5000, 10000, 15000, 20000, 30000, 30000, 60000, 60000] }) {
+  // token: el de la sesión o una función que lo da (se pide en cada trozo: una subida larga sobrevive a su renovación)
+  const pedirToken = typeof token === 'function' ? token : async () => token;
+  return new Promise((ok, mal) => {
+    const subida = new Upload(archivo, {
+      endpoint,
+      retryDelays: reintentos,
+      headers: { apikey: anonKey, 'x-upsert': 'false' },
+      onBeforeRequest: async (req) => { req.setHeader('authorization', `Bearer ${await pedirToken()}`); },
+      // Además de lo que reintenta TUS solo (sin respuesta, 5xx, 409, 423), un 401/403 por un token caducado
+      onShouldRetry: (err, intento) => {
+        const st = err?.originalResponse?.getStatus?.() || 0;
+        if (st === 401 || st === 403) return intento < 2;
+        return !st || st >= 500 || st === 409 || st === 423;
+      },
+      uploadDataDuringCreation: true,
+      // Cada intento va con su ruta (la registra la app justo antes): no se retoman subidas de otro intento
+      storeFingerprintForResuming: false,
+      chunkSize: TROZO, // Supabase pide trozos de 6 MB exactos
+      metadata: { bucketName: 'archivos', objectName: ruta, contentType: tipo || 'application/octet-stream', cacheControl: '3600' },
+      onProgress: (hecho, total) => alProgreso?.(total ? hecho / total : 0),
+      onSuccess: () => ok(),
+      onError: (err) => {
+        const st = err?.originalResponse?.getStatus?.() || 0;
+        let cuerpo = String(err?.originalResponse?.getBody?.() || '');
+        try { const j = JSON.parse(cuerpo); cuerpo = j.message || j.error || cuerpo; } catch { /* texto */ }
+        // Ya estaba subido entero (un intento anterior llegó aunque no su respuesta): vale
+        if (st === 409 && /already exists|duplicate/i.test(cuerpo)) { alProgreso?.(1); ok(); return; }
+        const e = traducir({ message: cuerpo || err?.message || String(err), statusCode: st || undefined });
+        // Sin respuesta, o el servidor no puede ahora (5xx, 423) tras todos los reintentos: se deja para luego
+        if (!st || st >= 500 || st === 423) { e.sinConexion = true; e.message = 'Sin conexión.'; }
+        mal(e);
+      },
+    });
+    if (senal) senal.abortar = () => { subida.abort(true).catch(() => {}); const e = new Error('Cancelado'); e.cancelado = true; mal(e); };
+    subida.start();
+  });
 }
 
 export function crearBackendSupabase({ url, anonKey }) {
@@ -188,9 +233,25 @@ export function crearBackendSupabase({ url, anonKey }) {
     },
     // Vídeos y fotos: bucket privado «archivos»; se ven con enlaces firmados que caducan en una hora
     storage: {
-      async subir(ruta, archivo, tipo) {
-        const { error } = await sb.storage.from('archivos').upload(ruta, archivo, { contentType: tipo, upsert: false, cacheControl: '3600' });
-        if (error) throw traducir(error);
+      // Lo pequeño (fotos), de una vez. Los vídeos (v0.33), por trozos de 6 MB con el protocolo TUS de Supabase: si la
+      // cobertura falla o el móvil suspende la app, se reintenta solo y sigue por el trozo en que iba (antes, una
+      // sola petición que el iPhone cortaba con «timed out» y había que empezar de cero). alProgreso(0…1).
+      async subir(ruta, archivo, tipo, { alProgreso = null, senal = null } = {}) {
+        if (!archivo || archivo.size <= TROZO) {
+          const { error } = await sb.storage.from('archivos').upload(ruta, archivo, { contentType: tipo, upsert: false, cacheControl: '3600' });
+          // Ya subido por un intento anterior (llegó el archivo, no la respuesta): vale
+          if (error && !(String(error.statusCode) === '409' || /already exists|duplicate/i.test(error.message || ''))) throw traducir(error);
+          alProgreso?.(1);
+          return;
+        }
+        const pedirToken = async () => {
+          const { data } = await sb.auth.getSession(); // la renueva si está a punto de caducar
+          const t = data?.session?.access_token;
+          if (!t) throw traducir({ message: 'not authenticated' });
+          return t;
+        };
+        await pedirToken();
+        await subirPorTrozos({ endpoint: `${url.replace(/\/$/, '')}/storage/v1/upload/resumable`, token: pedirToken, anonKey, ruta, archivo, tipo, alProgreso, senal });
       },
       async url(ruta, segundos = 3600) {
         const { data, error } = await sb.storage.from('archivos').createSignedUrl(ruta, segundos);

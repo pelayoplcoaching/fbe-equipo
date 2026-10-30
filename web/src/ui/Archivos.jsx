@@ -4,6 +4,8 @@ import { useApp, Icono, Hoja, Cargando } from './comunes.jsx';
 import { fmtCorta } from '../logica/fechas.js';
 import { LIMITE_ARCHIVO_MB } from '../datos/api.js';
 import { sePuedeRecortar, recortarVideo, prepararVideo, megasEstimados } from './recorte.js';
+import { guardarPendiente, quitarPendiente, conCerrojo } from '../datos/pendientes.js';
+import { hoyISO } from '../logica/fechas.js';
 
 // Botón que abre la cámara o la galería y envía el vídeo (o la foto) a la carpeta privada del atleta.
 // Vídeos (v0.30): antes de enviarlo se elige dónde empieza y acaba la serie, y el móvil lo recorta y lo aligera
@@ -22,8 +24,11 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   const [preparando, setPreparando] = useState(null); // progreso 0…1 mientras se recorta
   const [fallo, setFallo] = useState(null); // el recorte ha fallado: se ofrece enviarlo entero
   const [corte, setCorte] = useState(null); // { dur, inicio, fin }
+  const [subida, setSubida] = useState(null); // progreso de la subida (0…1)
+  const [enPausa, setEnPausa] = useState(false); // el recorte está en pausa (se salió de la app) y no siguió solo
   const contenedor = useRef(null);
   const cancelar = useRef(null);
+  const controlRecorte = useRef(null);
   const esVideo = tipo === 'video_tecnica';
   const recortable = esVideo && sePuedeRecortar();
 
@@ -45,10 +50,37 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   // Muy grande y sin poder recortarlo (aún no ha cargado, o este navegador no lo sabe leer): no se puede enviar
   const grandeSinRecorte = !!archivo && esVideo && !corte && archivo.size > LIMITE_ARCHIVO_MB * MB;
 
+  // Se guarda primero en el móvil (v0.33) y se sube desde ahí: si el móvil cierra la app a medias o no hay cobertura,
+  // no se pierde y se envía solo luego (con la misma ruta: reintentar no duplica). Si no se puede guardar, se sube igual.
   async function subir(f, duracion) {
-    // La miniatura y la duración del vídeo se sacan en el móvil antes de subirlo (si no se puede, se sube igual)
-    const cap = esVideo ? await capturarPoster(f).catch(() => null) : null;
-    const a = await api.subirArchivo(atletaId, f, { tipo, sesion_ejercicio_id: sesionEjercicioId, ejercicio_id: ejercicioId, nota_atleta: nota.trim() || null, poster: cap?.poster || null, duracion_seg: duracion ?? cap?.duracion ?? null });
+    const opciones = { tipo, sesion_ejercicio_id: sesionEjercicioId, ejercicio_id: ejercicioId, nota_atleta: nota.trim() || null, duracion_seg: duracion, fecha: hoyISO() };
+    opciones.ruta = api.rutaArchivo(atletaId, f, opciones);
+    const pid = esVideo ? await guardarPendiente({ atletaId, archivo: f, opciones }).catch(() => null) : null;
+    let a = null, error = null;
+    const r = await conCerrojo(pid || `hoja-${opciones.ruta}`, async () => {
+      try {
+        // La miniatura y la duración del vídeo se sacan en el móvil antes de subirlo (si no se puede, se sube igual)
+        const cap = esVideo ? await capturarPoster(f).catch(() => null) : null;
+        setSubida(0);
+        a = await api.subirArchivo(atletaId, f, { ...opciones, poster: cap?.poster || null, duracion_seg: duracion ?? cap?.duracion ?? null, alProgreso: setSubida });
+      } catch (e) { error = e; }
+    });
+    if (r === 'ocupado') { // ya lo está enviando la cola de pendientes: avisará al terminar
+      aviso('El vídeo se está enviando: te aviso al terminar');
+      setArchivo(null); setNota(''); setCorte(null); setFallo(null);
+      return;
+    }
+    if (error) {
+      // Sin cobertura: ya está guardado en el móvil y se enviará solo
+      if (error.sinConexion && !error.cancelado && pid) {
+        aviso(esVideo ? 'Sin cobertura: el vídeo queda guardado en tu móvil y se enviará solo' : 'Sin cobertura: la foto queda guardada en tu móvil y se enviará sola');
+        setArchivo(null); setNota(''); setCorte(null); setFallo(null);
+        return;
+      }
+      if (pid) await quitarPendiente(pid).catch(() => {});
+      throw error;
+    }
+    if (pid) await quitarPendiente(pid).catch(() => {});
     aviso(esVideo ? 'Vídeo enviado a tu coach' : 'Foto guardada');
     setArchivo(null); setNota(''); setCorte(null); setFallo(null);
     alSubir?.(a);
@@ -64,11 +96,16 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
         setPreparando(0); setFallo(null);
         const control = { aborted: false };
         cancelar.current = () => { control.aborted = true; };
+        controlRecorte.current = control;
+        // Pantalla encendida mientras se prepara (al salir de la app el móvil la suelta: se vuelve a pedir al volver)
         let bloqueo = null;
-        try { bloqueo = await navigator.wakeLock?.request('screen'); } catch { /* la pantalla puede apagarse: se avisa */ }
+        const pedirPantalla = async () => { try { bloqueo = await navigator.wakeLock?.request('screen'); } catch { /* puede apagarse: se pausa y sigue */ } };
+        const alVolver = () => { if (document.visibilityState === 'visible') pedirPantalla(); };
+        document.addEventListener('visibilitychange', alVolver);
+        await pedirPantalla();
         await new Promise((r) => requestAnimationFrame(() => r())); // que esté pintado el hueco donde se ve el vídeo
         try {
-          const nuevo = await recortarVideo(archivo, { inicio: corte.inicio, fin: corte.fin, alProgreso: setPreparando, senal: control, contenedor: contenedor.current, preparado });
+          const nuevo = await recortarVideo(archivo, { inicio: corte.inicio, fin: corte.fin, alProgreso: setPreparando, senal: control, contenedor: contenedor.current, preparado, alPausa: setEnPausa });
           // Si no se ha recortado y aligerado no gana nada, va el original (mejor calidad)
           if (recortado || nuevo.size < archivo.size * 0.9) { f = nuevo; duracion = corte.fin - corte.inicio; }
         } catch (err) {
@@ -76,12 +113,14 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
           setFallo(err.message || 'No se ha podido recortar');
           setPreparando(null);
           return;
-        } finally { bloqueo?.release?.().catch?.(() => {}); cancelar.current = null; }
+        } finally { document.removeEventListener('visibilitychange', alVolver); bloqueo?.release?.().catch?.(() => {}); cancelar.current = null; controlRecorte.current = null; setEnPausa(false); }
         setPreparando(null);
       }
       if (f.size > LIMITE_ARCHIVO_MB * MB) throw new Error(`Pesa más de ${LIMITE_ARCHIVO_MB} MB. Recórtalo para enviar solo la serie.`);
       await subir(f, duracion);
-    } catch (err) { aviso(err.message, 'error'); } finally { setSubiendo(false); setPreparando(null); }
+    } catch (err) {
+      aviso(err.sinConexion ? 'Sin cobertura y no se ha podido guardar en el móvil: inténtalo luego' : err.message, 'error');
+    } finally { setSubiendo(false); setPreparando(null); setSubida(null); }
   }
   const mb = (n) => (n < 104858 ? 'menos de 0,1' : (n / MB).toLocaleString('es-ES', { maximumFractionDigits: n < 10 * MB ? 1 : 0 }));
   const cerrar = () => { if (preparando != null) { cancelar.current?.(); return; } if (!subiendo) { setArchivo(null); setFallo(null); } };
@@ -95,8 +134,10 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
             <div class="recorte-preparando" role="status">
               <div ref={contenedor} class="recorte-vista" />
               <div class="recorte-progreso" aria-hidden="true"><span style={{ width: `${Math.round(preparando * 100)}%` }} /></div>
-              <p class="peq"><b>Preparando el vídeo… {Math.round(preparando * 100)} %</b></p>
-              <p class="mini terciario">Se queda solo con la serie y lo aligera para que suba rápido. No salgas de la app mientras tanto.</p>
+              <p class="peq"><b>{enPausa ? 'En pausa' : `Preparando el vídeo… ${Math.round(preparando * 100)} %`}</b></p>
+              {enPausa
+                ? <button type="button" class="btn btn-primario" onClick={() => controlRecorte.current?.reanudar?.()}>Continuar</button>
+                : <p class="mini terciario">Se queda solo con la serie y lo aligera para que suba rápido. Si sales de la app, se pausa y sigue al volver.</p>}
               <button type="button" class="btn btn-texto" onClick={() => cancelar.current?.()}>Cancelar</button>
             </div>
           ) : (
@@ -122,7 +163,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
                   placeholder={esVideo ? 'Por ejemplo: la profundidad, o si se me van las rodillas' : 'Frente, perfil, espalda…'} />
               </div>
               {grandeSinRecorte && sinVista && <div class="error" role="alert">Este vídeo no se puede recortar en este móvil y pesa más de {LIMITE_ARCHIVO_MB} MB. Grábalo de nuevo, solo la serie.</div>}
-              <button class="btn btn-primario btn-grande" disabled={subiendo || grandeSinRecorte} onClick={() => enviar()}>{subiendo ? 'Subiendo…' : grandeSinRecorte && !sinVista ? 'Cargando el vídeo…' : esVideo ? (recortado ? 'Recortar y enviar' : 'Enviar a tu coach') : 'Guardar foto'}</button>
+              <button class="btn btn-primario btn-grande" disabled={subiendo || grandeSinRecorte} onClick={() => enviar()}>{subiendo ? (subida != null && subida > 0 ? `Subiendo… ${Math.round(subida * 100)} %` : 'Subiendo…') : grandeSinRecorte && !sinVista ? 'Cargando el vídeo…' : esVideo ? (recortado ? 'Recortar y enviar' : 'Enviar a tu coach') : 'Guardar foto'}</button>
             </>
           )}
         </Hoja>

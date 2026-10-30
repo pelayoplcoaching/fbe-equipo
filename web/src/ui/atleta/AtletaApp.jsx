@@ -10,6 +10,7 @@ import { Perfil } from './Perfil.jsx';
 import { Comidas } from './Comidas.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
+import { usePendientesArchivos, BandaPendientes } from '../Pendientes.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { hoyISO, semanaCheckin, diaDeCheckin } from '../../logica/fechas.js';
 
@@ -27,7 +28,9 @@ function tabInicial(tabs) {
 }
 
 export function AtletaApp() {
-  const { api, atleta } = useApp();
+  const { api, atleta, aviso } = useApp();
+  // Vídeos guardados en el móvil sin cobertura: se envían solos (en cualquier pestaña)
+  const pendientesArchivos = usePendientesArchivos(api, atleta?.id, aviso);
   const TABS = pestanasAtleta(atleta);
   const [tab, setTab] = useState(() => tabInicial(TABS));
   // Si el coach cambia su servicio con la app abierta y la pestaña ya no está, a Hoy
@@ -78,9 +81,10 @@ export function AtletaApp() {
 
   return (
     <div class={`app ${sesionId ? 'en-sesion' : ''}`}>
-      {sesionId ? <main><Sesion id={sesionId} alCerrar={cerrarSesion} alLeer={releer} salud={salud} /></main> : (
+      {sesionId ? <main><BandaPendientes pendientes={pendientesArchivos} /><Sesion id={sesionId} alCerrar={cerrarSesion} alLeer={releer} salud={salud} /></main> : (
         <>
           <main key={`${tab}:${dia}`} class="vista">
+            <BandaPendientes pendientes={pendientesArchivos} />
             {tab === 'hoy' && <Hoy {...compartido} />}
             {tab === 'semana' && <Semana {...compartido} />}
             {tab === 'comidas' && <Comidas {...compartido} />}
