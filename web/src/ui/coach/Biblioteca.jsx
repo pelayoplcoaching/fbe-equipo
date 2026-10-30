@@ -102,7 +102,7 @@ function EditarEjercicio({ ejercicio, todos, porId, alCerrar }) {
         <div class="campo"><label for="ej-nombre">Nombre</label><input id="ej-nombre" class="entrada" required value={f.nombre} onInput={(e) => setF({ ...f, nombre: e.currentTarget.value })} /></div>
         <div class="campo">
           <span class="etq">Grupos musculares</span>
-          <span class="ayuda">El principal cuenta 1 serie; el resto, media. El primero que marques es el principal; lo cambias abajo.</span>
+          <span class="ayuda">El principal cuenta 1 serie; cada secundario, media. Marca de secundario solo un músculo que mueva su articulación con carga (el tríceps en un press), no uno que solo estabiliza (el glúteo en un remo).</span>
           <div class="fila-envolver">
             {GRUPOS.map(([g, n]) => {
               const i = f.grupos.indexOf(g);

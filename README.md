@@ -6,6 +6,8 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 
 ## Qué hay construido (v0.27)
 
+**v0.36:** secundarios de la biblioteca revisados para el recuento de series (`scripts/grupos-revisados.mjs`, que aplica `scripts/biblioteca.mjs`): un músculo cuenta media serie solo si mueve su articulación con carga (tríceps y deltoides en los presses; bíceps en las tracciones; bíceps y deltoides en los remos; glúteo en sentadillas y prensas; glúteo en las bisagras), no si solo estabiliza. El principal no cambia. En producción, con `grupos-musculares-revisados.sql` (fuera del repo), que no toca lo que el coach haya cambiado.
+
 **v0.35:** recuento de series por músculo a la vista: en el editor, «De dónde sale cada número» enseña qué ejercicios cuentan en cada músculo (enteros en su principal, × ½ en los secundarios). En Biblioteca, el músculo principal de un ejercicio se elige en un desplegable (antes era el primero que se marcaba: desmarcar y volver a marcar el pectoral de un press lo dejaba de secundario). `revisar-grupos-musculares.sql` (fuera del repo) devuelve el principal de la biblioteca FBE a los ejercicios que lo perdieron y enseña los que conviene mirar.
 
 **v0.34:** en el editor de la programación, el teclado funciona como en una hoja de cálculo: Intro pasa a la casilla de debajo (Mayús+Intro, a la de arriba), ↑ ↓ cambian de fila en la misma columna (de una serie a la siguiente, de un ejercicio al siguiente y de una sesión a otra) y ← → pasan a la casilla de al lado cuando el cursor está en el borde del número. Al llegar a una casilla se selecciona su número, así que lo que escribas lo sustituye; al salir se guarda. Sin cambios de diseño (en el móvil, la tecla Intro del teclado dice «Siguiente»).

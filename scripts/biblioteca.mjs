@@ -4,6 +4,7 @@
 //   - supabase/seed_ejercicios.sql            se pega en Supabase después de schema.sql y las migraciones
 // Uso: node scripts/biblioteca.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
+import { GRUPOS_REVISADOS } from './grupos-revisados.mjs';
 
 const origen = JSON.parse(readFileSync(new URL('../data/ejercicios_notion.json', import.meta.url), 'utf8'));
 const GRUPOS = new Set(['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'isquiotibiales', 'biceps', 'triceps', 'abdominales', 'gemelo']);
@@ -16,7 +17,8 @@ const ejercicios = origen.map((e) => {
   const instrucciones = [opciones ? `Opciones: ${opciones}` : null, limpia(e.instrucciones)].filter(Boolean).join('\n\n') || null;
   return {
     nombre: limpia(e.nombre),
-    grupos_musculares: (e.grupos_musculares || []).filter((g) => GRUPOS.has(g)),
+    // Secundarios revisados para el recuento de series (v0.36, ver grupos-revisados.mjs); el principal es el de Notion
+    grupos_musculares: (GRUPOS_REVISADOS[limpia(e.nombre)] || e.grupos_musculares || []).filter((g) => GRUPOS.has(g)),
     tipo: (e.tipo || []).filter((t) => TIPOS.has(t)),
     rango_reps: limpia(e.rango_reps),
     video_url: limpia(e.video_url),
