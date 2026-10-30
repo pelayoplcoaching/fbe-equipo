@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useUnaVez, Pestanas, Siluetas, useApp, useCarga, Icono, Cargando, Hoja, Vacio, usePreferencia } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
-import { GRUPOS, NOMBRE_GRUPO, TIPOS_EJERCICIO, CATEGORIAS_RECURSO, NOMBRE_CATEGORIA } from '../../logica/calculos.js';
+import { GRUPOS, NOMBRE_GRUPO, conPrincipal, TIPOS_EJERCICIO, CATEGORIAS_RECURSO, NOMBRE_CATEGORIA } from '../../logica/calculos.js';
 import { FAQ } from '../../datos/faq.js';
 import { RecetasBiblioteca } from './ComidasCoach.jsx';
 
@@ -102,13 +102,22 @@ function EditarEjercicio({ ejercicio, todos, porId, alCerrar }) {
         <div class="campo"><label for="ej-nombre">Nombre</label><input id="ej-nombre" class="entrada" required value={f.nombre} onInput={(e) => setF({ ...f, nombre: e.currentTarget.value })} /></div>
         <div class="campo">
           <span class="etq">Grupos musculares</span>
-          <span class="ayuda">El primero que marques es el principal (cuenta 1 serie); el resto cuentan media.</span>
+          <span class="ayuda">El principal cuenta 1 serie; el resto, media. El primero que marques es el principal; lo cambias abajo.</span>
           <div class="fila-envolver">
             {GRUPOS.map(([g, n]) => {
               const i = f.grupos.indexOf(g);
               return <button type="button" key={g} class={`chip ${i === 0 ? 'morado' : ''}`} style="min-height:36px;cursor:pointer" aria-pressed={i >= 0 ? 'true' : 'false'} onClick={() => alternar('grupos', g)}>{i >= 0 && <Icono n="hecho" />}{n}</button>;
             })}
           </div>
+          {f.grupos.length > 1 && (
+            <label class="fila" style="gap:8px;align-items:center;margin-top:6px">
+              <span class="peq">Principal:</span>
+              <select class="selector" aria-label="Grupo muscular principal" value={f.grupos[0]} onChange={(e) => setF({ ...f, grupos: conPrincipal(f.grupos, e.currentTarget.value) })}>
+                {f.grupos.map((g) => <option key={g} value={g}>{NOMBRE_GRUPO[g]}</option>)}
+              </select>
+              <span class="mini terciario">cuenta 1 serie; {f.grupos.slice(1).map((g) => NOMBRE_GRUPO[g]).join(', ')}, media</span>
+            </label>
+          )}
         </div>
         <div class="rejilla-campos">
           <div class="campo">

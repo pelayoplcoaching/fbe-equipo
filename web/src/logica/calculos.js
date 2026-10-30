@@ -122,6 +122,29 @@ export function seriesPautadasPorGrupo(pautas, ejerciciosPorId) {
   return cuenta;
 }
 
+// De dónde sale cada recuento (v0.35): por músculo, cada ejercicio con sus series y si cuentan enteras (es su
+// músculo principal) o a medias (secundario). { pectoral: [{ nombre, series, principal }], … }, de más a menos
+export function desglosePautadoPorGrupo(pautas, ejerciciosPorId) {
+  const por = {};
+  for (const p of pautas) {
+    const e = ejerciciosPorId[p.ejercicio_id];
+    const n = Number(p.series) || 0;
+    if (!e || !n) continue;
+    (e.grupos_musculares || []).forEach((g, i) => {
+      const lista = (por[g] ||= []);
+      const ya = lista.find((x) => x.id === e.id);
+      if (ya) ya.series += n; else lista.push({ id: e.id, nombre: e.nombre, series: n, principal: i === 0 });
+    });
+  }
+  for (const g of Object.keys(por)) por[g].sort((a, c) => (c.principal - a.principal) || (c.series - a.series) || a.nombre.localeCompare(c.nombre, 'es'));
+  return por;
+}
+// El principal de un ejercicio es su primer grupo: elegirlo lo pone el primero sin cambiar el orden de los demás
+export function conPrincipal(grupos, principal) {
+  const g = grupos || [];
+  return g.includes(principal) ? [principal, ...g.filter((x) => x !== principal)] : g;
+}
+
 export function seriesPorGrupo(series, lunes) {
   const fin = sumarDias(lunes, 6);
   const cuenta = {};

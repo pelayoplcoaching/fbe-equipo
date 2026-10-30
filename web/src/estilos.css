@@ -715,6 +715,9 @@ body:has(.temporizador) .toast { bottom: calc(190px + env(safe-area-inset-bottom
 .barra-fila.vol-alto .relleno { background: var(--aviso); }
 .barra-fila.vol-alto .v { color: var(--aviso); }
 .vol-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.vol-desglose summary { cursor: pointer; width: max-content; max-width: 100%; }
+.vol-desglose ul { margin: 6px 0 4px; padding-left: 18px; display: grid; gap: 3px; }
+.vol-desglose p { margin: 2px 0 0; }
 .vol-chip { display: inline-flex; gap: 6px; align-items: baseline; padding: 4px 10px; border-radius: 999px; font-size: 13px; background: var(--hoja-2); color: var(--tinta-2); }
 .vol-chip strong { color: var(--tinta); font-variant-numeric: tabular-nums; }
 .vol-chip.vol-dentro { background: var(--ok-suave); }

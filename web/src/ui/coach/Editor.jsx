@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos } from '../comunes.jsx';
-import { FOCOS, INTENCIONES, PRIORIDADES, NOMBRE_GRUPO, GRUPOS, TIPOS_SESION, LETRAS_SUPERSERIE, etiquetasSuperserie, seriesPautadasPorGrupo, rangoVolumen, estadoVolumen, num, mmss, tieneDetalle, detalleDesdePauta } from '../../logica/calculos.js';
+import { FOCOS, INTENCIONES, PRIORIDADES, NOMBRE_GRUPO, GRUPOS, TIPOS_SESION, LETRAS_SUPERSERIE, etiquetasSuperserie, seriesPautadasPorGrupo, desglosePautadoPorGrupo, rangoVolumen, estadoVolumen, num, mmss, tieneDetalle, detalleDesdePauta } from '../../logica/calculos.js';
 import { rangoSemana, lunesDe, fmtCorta, fmtConDia, sumarDias } from '../../logica/fechas.js';
 import { sugerirCargas } from '../../logica/sugerencias.js';
 import { leerTempo, explicarTempo } from '../../logica/tempo.js';
@@ -357,6 +357,7 @@ function CampoTempo({ valor, alGuardar }) {
 // Series pautadas por músculo en la semana que se edita, frente al rango objetivo del atleta
 function VolumenSemana({ pautas, ejercicios, objetivo }) {
   const cuenta = seriesPautadasPorGrupo(pautas, ejercicios);
+  const desglose = desglosePautadoPorGrupo(pautas, ejercicios);
   const grupos = GRUPOS.filter(([g]) => cuenta[g]);
   if (!grupos.length) return null;
   return (
@@ -373,6 +374,15 @@ function VolumenSemana({ pautas, ejercicios, objetivo }) {
           );
         })}
       </div>
+      <details class="vol-desglose">
+        <summary class="mini terciario">De dónde sale cada número</summary>
+        <ul class="mini">
+          {grupos.map(([g, n]) => (
+            <li key={g}><strong>{n} {num(cuenta[g])}:</strong> {desglose[g].map((x) => (x.principal ? `${x.nombre} ${num(x.series)}` : `${x.nombre} ${num(x.series)} × ½`)).join(' · ')}</li>
+          ))}
+        </ul>
+        <p class="mini terciario">Cada ejercicio cuenta entero en su músculo principal (el primero de sus grupos en la biblioteca) y a medias en los demás. Si uno cuenta donde no debe, cámbiale el principal en Biblioteca.</p>
+      </details>
     </div>
   );
 }

@@ -164,6 +164,14 @@ check(igual(C.limpiarObjetivo({ pectoral: [12, 18], espalda: [10, 20], biceps: [
 const pautasSem = [{ ejercicio_id: 'p', series: 4 }, { ejercicio_id: 'f', series: 3 }, { ejercicio_id: 'x', series: 2 }];
 const ejsSem = { p: { grupos_musculares: ['pectoral', 'triceps'] }, f: { grupos_musculares: ['triceps', 'pectoral'] } };
 check(igual(C.seriesPautadasPorGrupo(pautasSem, ejsSem), { pectoral: 5.5, triceps: 5 }), 'series pautadas por músculo en la semana');
+{
+  const ejs = { p: { id: 'p', nombre: 'Press inclinado', grupos_musculares: ['pectoral', 'deltoides', 'triceps'] }, m: { id: 'm', nombre: 'Press militar', grupos_musculares: ['deltoides', 'triceps'] } };
+  const d = C.desglosePautadoPorGrupo([{ ejercicio_id: 'p', series: 3 }, { ejercicio_id: 'm', series: 4 }, { ejercicio_id: 'p', series: 2 }], ejs);
+  check(igual(d.pectoral, [{ id: 'p', nombre: 'Press inclinado', series: 5, principal: true }]) && igual(d.deltoides.map((x) => [x.nombre, x.series, x.principal]), [['Press militar', 4, true], ['Press inclinado', 5, false]]),
+    'desglose (v0.35): de dónde sale cada número; un ejercicio en dos sesiones se suma; primero lo que cuenta entero');
+  check(igual(C.conPrincipal(['deltoides', 'triceps', 'pectoral'], 'pectoral'), ['pectoral', 'deltoides', 'triceps']) && igual(C.conPrincipal(['pectoral'], 'espalda'), ['pectoral']),
+    'elegir el principal lo pone el primero sin cambiar el orden del resto');
+}
 
 console.log('\nPeso: tendencia y ritmo');
 const pesosDiarios = Array.from({ length: 22 }, (_, i) => ({ fecha: sumarDias('2026-10-01', i), kg: 70 - i * 0.05 + (i % 2 ? 0.6 : -0.6) }));

@@ -710,6 +710,12 @@ try {
   await p.locator('.paleta-op', { hasText: 'Press banca' }).first().click();
   await p.locator('.hoja-dialogo').getByRole('textbox', { name: 'Nombre' }).waitFor();
   check((await p.locator('.hoja-dialogo').getByRole('textbox', { name: 'Nombre' }).inputValue()).startsWith('Press banca'), 'desde el móvil, la lupa lleva a un ejercicio de la biblioteca');
+  // v0.35: el principal se elige a la vista (cuenta 1 serie; el resto, media) y elegirlo no cambia el resto
+  const principal = p.locator('.hoja-dialogo').getByRole('combobox', { name: 'Grupo muscular principal' });
+  const antesPrincipal = await principal.inputValue();
+  await principal.selectOption('deltoides');
+  const chipMorado = await p.locator('.hoja-dialogo .chip.morado').first().textContent();
+  check(antesPrincipal === 'pectoral' && /Deltoides/.test(chipMorado), `en la ficha del ejercicio se elige el músculo principal (press banca: ${antesPrincipal} → deltoides)`);
   await p.keyboard.press('Escape');
   await p.locator('.hoja-dialogo').waitFor({ state: 'detached' }).catch(() => {});
   if (await p.locator('.hoja-dialogo').count()) await p.locator('.hoja-dialogo').getByRole('button', { name: /Cancelar|Cerrar/ }).first().click();
@@ -1380,6 +1386,11 @@ try {
   await modo.selectOption('');
   await det.waitFor({ state: 'detached' });
   check(await filaPauta.locator('td.resumen-detalle').count() === 0, 'y se vuelve a series iguales');
+  // v0.35: de dónde sale cada número del volumen semanal
+  await p.locator('.vol-desglose summary').first().click();
+  const desglose = await p.locator('.vol-desglose li').allTextContents();
+  check(desglose.length > 0 && desglose.some((t) => /× ½/.test(t)) && desglose.every((t) => /^\S.*\d.*:/.test(t)),
+    `el volumen por músculo enseña qué ejercicios cuentan y cuáles a medias («${(desglose[0] || '').slice(0, 70)}…»)`);
 
   console.log('\nPreparar el mes de golpe (v0.23)');
   const pestanasAntes = await p.locator('.semanas-tabs button').count();
