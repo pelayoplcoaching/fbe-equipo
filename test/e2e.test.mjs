@@ -66,13 +66,25 @@ try {
     const q = await ctx.newPage();
     await q.route('**/app.js*', () => {});
     await q.goto('http://localhost:4174/?demo', { waitUntil: 'commit' });
-    await q.waitForSelector('#portada svg path');
+    await q.waitForSelector('#portada .estandarte-pano');
+    // v0.38: el estandarte es la imagen de Pelayo (estandarte.webp), a toda la pantalla y ondeando
+    await q.waitForFunction(() => { const i = new Image(); i.src = 'estandarte.webp'; return i.complete && i.naturalWidth === 941; });
     const portada = await q.evaluate(() => {
       const el = document.getElementById('portada'); const r = el.getBoundingClientRect();
+      const e = el.querySelector('.estandarte').getBoundingClientRect();
+      const pano = getComputedStyle(el.querySelector('.estandarte-pano'));
       const t = el.textContent;
-      return { tapa: r.width >= innerWidth && r.height >= innerHeight, lema: t.includes('CONFIANZA') && t.includes('ESFUERZO') && t.includes('COMPROMISO'), firma: t.includes('by Pelayo Fern\u00e1ndez Cid\u00f3n') && t.includes('CEO de Fuerza Basada en Evidencia'), lobo: !!el.querySelector('svg.estandarte path[fill-rule]'), nombre: el.getAttribute('aria-label') === 'Abriendo FBE Equipo', rol: el.getAttribute('role'), color: document.querySelector('meta[name=theme-color]').content };
+      return {
+        tapa: r.width >= innerWidth && r.height >= innerHeight,
+        // tan alto como la pantalla (o casi todo su ancho), centrado
+        grande: (e.height >= innerHeight - 1 || e.width >= innerWidth - 1) && Math.abs(e.left + e.width / 2 - innerWidth / 2) < 2,
+        imagen: /estandarte\.webp/.test(pano.backgroundImage), ondea: pano.animationName === 'estandarte-ondea',
+        lema: /Confianza, esfuerzo, compromiso/.test(t), firma: t.includes('By Pelayo Fern\u00e1ndez Cid\u00f3n') && t.includes('CEO de Fuerza Basada en Evidencia'),
+        nombre: el.getAttribute('aria-label') === 'Abriendo FBE Equipo', rol: el.getAttribute('role'), color: document.querySelector('meta[name=theme-color]').content,
+      };
     });
-    check(portada.tapa && portada.lema && portada.firma && portada.lobo && portada.nombre && portada.rol === 'status' && portada.color === '#1E1548', 'al abrir, el estandarte del lobo (lema arriba, firma abajo) tapa la pantalla mientras llega la app');
+    check(portada.tapa && portada.grande && portada.imagen && portada.ondea && portada.lema && portada.firma && portada.nombre && portada.rol === 'status' && portada.color === '#1E1548',
+      `al abrir, el estandarte (la imagen) tapa toda la pantalla y ondea mientras llega la app ${JSON.stringify(portada)}`);
     await q.close();
     // Con el tema elegido a mano, la barra del sistema sigue en morado mientras está la portada
     const q2 = await ctx.newPage();

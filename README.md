@@ -6,6 +6,8 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 
 ## Qué hay construido (v0.27)
 
+**v0.38:** nueva portada de arranque: el estandarte de Pelayo (`web/iconos/estandarte.webp`, 941 × 1672, 186 KB) a toda la pantalla, con los bordes fundidos en un fondo de terciopelo del mismo morado, y ondeando como antes (se mece desde el asta con un leve pliegue). En producción va como archivo con `preload` (y en la caché del service worker); en la demo, incrustado. Ya no hace falta la letra Cinzel.
+
 **v0.37:** modo atleta del coach. Pestaña «Modo atleta» en la cuenta de entrenador: la primera vez crea su ficha de atleta vinculada a su propia cuenta (`api.crearAtletaPropio`, sin migración: `perfil_id` = su usuario, solo entrenamiento, y deja sus consentimientos para que se guarde cómo llega a cada sesión) y entra en una vista de atleta reducida (Hoy, Semana, Progreso y «Entrenador» para volver; sin nutrición, check-in, mensajes, vídeos, cobros ni perfil). «Programarlo» abre su ficha en Programa. Su ficha no sale en Atletas, Revisar, Mensajes, Buscador ni Cobros (`api.atletas()` y `cobrosTodos` la excluyen).
 
 **v0.36:** secundarios de la biblioteca revisados para el recuento de series (`scripts/grupos-revisados.mjs`, que aplica `scripts/biblioteca.mjs`): un músculo cuenta media serie solo si mueve su articulación con carga (tríceps y deltoides en los presses; bíceps en las tracciones; bíceps y deltoides en los remos; glúteo en sentadillas y prensas; glúteo en las bisagras), no si solo estabiliza. El principal no cambia. En producción, con `grupos-musculares-revisados.sql` (fuera del repo), que no toca lo que el coach haya cambiado.
