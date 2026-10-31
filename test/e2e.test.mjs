@@ -34,6 +34,17 @@ async function abrirPestana(p, t) {
   await p.evaluate((id) => { location.hash = `#${id}`; }, t === 'Perfil' ? 'perfil' : 'cuenta');
   await p.waitForTimeout(400);
 }
+// v0.39: lleva el descanso a cero (con −15) y comprueba que, al sonar, el temporizador y sus botones caben en pantalla
+async function temporizadorAlSonar(p) {
+  for (let i = 0; i < 40 && !(await p.locator('.temporizador.fin').count()); i++) { await p.getByRole('button', { name: 'Quitar 15 segundos' }).click(); await p.waitForTimeout(60); }
+  await p.waitForTimeout(500); // en pleno latido
+  return p.evaluate(() => {
+    const t = document.querySelector('.temporizador.fin'); if (!t) return { ok: false };
+    const r = t.getBoundingClientRect();
+    const fuera = [...t.querySelectorAll('button')].filter((b) => { const x = b.getBoundingClientRect(); return x.left < r.left - 1 || x.right > r.right + 1; }).map((b) => b.textContent);
+    return { ok: r.left >= 0 && r.right <= innerWidth && !fuera.length, izq: Math.round(r.left), der: Math.round(r.right), ancho: innerWidth, fuera };
+  });
+}
 async function revisar(paso) {
   // En emulación de móvil el navegador ensancha la página para que quepa lo que se sale: se compara con los 390 px reales
   const [ancho, vista] = await p.evaluate(() => [document.documentElement.scrollWidth, 390]);
@@ -449,7 +460,9 @@ try {
   await p.locator('.temporizador').waitFor();
   check((await p.locator('.temporizador .que').textContent()).includes('serie 2 de A1'), 'al cerrar la ronda, descanso y vuelta a A1');
   await revisar('superserie');
-  await p.getByRole('button', { name: 'Saltar' }).click();
+  const alSonarLista = await temporizadorAlSonar(p);
+  check(alSonarLista.ok, `al acabar el descanso, el temporizador (con su +15) cabe entero en la pantalla ${JSON.stringify(alSonarLista)}`);
+  await p.getByRole('button', { name: 'Cerrar' }).click();
   await a2.getByRole('button', { name: 'Quitar la serie 1' }).click();
   await a1.getByRole('button', { name: 'Quitar la serie 1' }).click();
 
@@ -466,6 +479,12 @@ try {
   // La sentadilla de la plantilla va con serie top y back-off
   check((await enf.locator('.enfoque-serie-n').textContent()).startsWith('Back-off 1 de 3'), 'marca la serie top y pasa a la primera back-off');
   await revisar('enfoque');
+  if (await enf.locator('.temporizador').count()) {
+    const alSonarEnf = await temporizadorAlSonar(p);
+    check(alSonarEnf.ok, `en el modo enfoque, al sonar, el temporizador no se va a un lado ${JSON.stringify(alSonarEnf)}`);
+    await revisar('enfoque-descanso-terminado');
+    await enf.getByRole('button', { name: 'Cerrar' }).click();
+  }
   await enf.getByRole('button', { name: 'Ejercicio siguiente' }).click();
   check((await enf.locator('.enfoque-donde').textContent()).startsWith('Ejercicio 2 de'), 'pasa al ejercicio siguiente');
   await enf.getByRole('button', { name: 'Metrónomo de tempo 3-1-1' }).click();
@@ -978,7 +997,7 @@ try {
   await p.keyboard.press('Escape');
   await hojaNoti.waitFor({ state: 'detached' });
   const resumenNoti = await p.getByRole('heading', { name: 'Notificaciones' }).locator('..').locator('.terciario').textContent();
-  check(/Respuestas, semana, avisos, peticiones y 3 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
+  check(/Respuestas, semana, avisos, peticiones, descansos y 3 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
 
   // v0.13: cuestionario inicial y check-in a medida
   console.log('\nCuestionario y check-in a medida');

@@ -6,7 +6,7 @@
 --   fbe_notificaciones_secreto el mismo AVISOS_SECRETO que tienen los secretos de la función
 -- (en Vault van cifrados y no quedan en el historial del SQL Editor ni en el texto de la tarea).
 --
--- Se puede repetir. Para pararlo: select cron.unschedule('fbe-notificaciones');
+-- Se puede repetir. Para pararlo: select cron.unschedule('fbe-notificaciones'); (y el de los descansos, 'fbe-descansos')
 -- =====================================================================
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
@@ -32,6 +32,15 @@ select cron.schedule('fbe-notificaciones', '* * * * *', $tarea$
     body := '{}'::jsonb,
     timeout_milliseconds := 30000);
 $tarea$);
+
+-- v0.39 (migración 025): el fin del descanso, cada 5 segundos. Solo llama a la función si hay algún descanso que
+-- ya toca (si no, no hace nada). Para pararlo: select cron.unschedule('fbe-descansos');
+do $$
+begin
+  if to_regprocedure('fbe_privado.disparar_descansos()') is not null then
+    perform cron.schedule('fbe-descansos', '5 seconds', 'select fbe_privado.disparar_descansos()');
+  end if;
+end $$;
 
 -- Para comprobar que va: las últimas ejecuciones y lo que respondió la función
 -- select status, return_message, start_time from cron.job_run_details order by start_time desc limit 5;

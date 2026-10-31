@@ -785,6 +785,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return email || tabla('suscripciones_push').some((x) => x.usuario_id === uid) ? 'ok' : 'sin_canal';
       }
       if (nombre === 'registrar_suscripcion_push' || nombre === 'actualizar_suscripcion_push') throw new Error('En la demo no se pueden activar las notificaciones');
+      if (nombre === 'programar_descanso') return 'sin_canal'; // en la demo no hay notificaciones
+      if (nombre === 'cancelar_descanso') return null;
       throw new Error(`Función no disponible en la demo: ${nombre}`);
     },
   };

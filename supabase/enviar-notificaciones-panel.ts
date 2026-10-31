@@ -114,7 +114,8 @@ async function enviarPush(sub, mensaje, vapid, { ttl = 86400, urgencia = "normal
 
 // supabase/functions/enviar-notificaciones/envio.js
 var RECORDATORIOS = /* @__PURE__ */ new Set(["sesion_hoy", "checkin", "habitos", "nutricion"]);
-var URGENTES = /* @__PURE__ */ new Set(["respuesta", "mensaje", "prueba", "sesion_hoy", "checkin", "habitos", "nutricion"]);
+var URGENTES = /* @__PURE__ */ new Set(["respuesta", "mensaje", "prueba", "sesion_hoy", "checkin", "habitos", "nutricion", "descanso"]);
+var DE_UNA_EN_UNA = /* @__PURE__ */ new Set([...RECORDATORIOS, "descanso"]);
 var ESPERA_MS = 1e4;
 var PLAZO_MS = 9e4;
 var json = (datos, estado, cabeceras) => new Response(JSON.stringify(datos), { status: estado, headers: { ...cabeceras, "Content-Type": "application/json" } });
@@ -203,7 +204,7 @@ async function enviarDeUsuario(notis, { env, f, vapid, conEmail, res, sinTiempo,
       res.reintentar.push({ id: n.id, error: "Sin tiempo en esta pasada", esperar: 0 });
       continue;
     }
-    const recordatorio = RECORDATORIOS.has(n.tipo);
+    const recordatorio = DE_UNA_EN_UNA.has(n.tipo);
     const mensaje = JSON.stringify({ id: n.id, titulo: n.titulo, cuerpo: n.cuerpo || "", url: n.url, etiqueta: recordatorio ? n.tipo : n.id, repetir: recordatorio });
     const ttl = Math.max(60, Math.min(2 * 86400, (new Date(n.caduca_en) - Date.now()) / 1e3));
     let llegada = false;

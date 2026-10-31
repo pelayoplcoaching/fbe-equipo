@@ -226,6 +226,12 @@ console.log('\nLo que encontraron las revisiones');
   const db8 = dbCon([noti('h1', 'u8', [urg.sub]), noti('h2', 'u8', [urg.sub], { tipo: 'semana', titulo: 'Tu semana ya está lista' }), noti('h3', 'u8', [urg.sub], { tipo: 'habitos', titulo: 'Te queda un hábito de hoy' })]);
   await enviarPendientes({ env: base, db: db8, recordatorios: false, fetch: async (url, op) => { vistos.push({ u: op.headers.Urgency, m: JSON.parse(urg.descifrar(op.body)) }); return new Response('', { status: 201 }); } });
   check(vistos[0].u === 'high' && vistos[1].u === 'normal' && vistos[2].m.repetir === true && !vistos[0].m.repetir, 'las respuestas y los recordatorios, con prioridad alta (llegan aunque el móvil ahorre batería); el recordatorio vuelve a sonar aunque siga el de ayer');
+  // v0.39: el fin del descanso, urgente y de uno en uno (el nuevo sustituye al anterior y vuelve a sonar)
+  const des = navegador(32); const vistosD = [];
+  const db9 = dbCon([noti('i1', 'u9', [des.sub], { tipo: 'descanso', titulo: '¡Vamos! Descanso terminado', cuerpo: 'Ahora: Serie 2 de press banca' })]);
+  await enviarPendientes({ env: base, db: db9, recordatorios: false, fetch: async (url, op) => { vistosD.push({ h: op.headers, m: JSON.parse(des.descifrar(op.body)) }); return new Response('', { status: 201 }); } });
+  check(vistosD[0]?.h.Urgency === 'high' && vistosD[0].h.Topic === 'descanso' && vistosD[0].m.etiqueta === 'descanso' && vistosD[0].m.repetir === true,
+    'el fin del descanso sale con prioridad alta y con su etiqueta: el de la serie siguiente sustituye al anterior y vuelve a sonar');
 }
 
 console.log('\nQuién puede llamarla');

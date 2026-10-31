@@ -1640,6 +1640,47 @@ console.log('\nModo atleta del coach: su propia ficha, vinculada a su cuenta (v0
   await q(`delete from atletas where id = $1`, [yo.id]);
 }
 
+console.log('\nAviso del fin del descanso con la app en segundo plano (migración 025)');
+{
+  await como(luis);
+  const fin = (seg) => new Date(Date.now() + seg * 1000).toISOString();
+  check((await q(`select programar_descanso($1, 'Serie 2 de press banca') r`, [fin(90)]))[0].r === 'ok', 'Luis (con su móvil activado) programa el aviso de su descanso');
+  let [d] = await notis(`usuario_id = $1 and clave = 'descanso'`, [luis]);
+  check(d && d.tipo === 'descanso' && d.estado === 'pendiente' && d.cuerpo === 'Ahora: Serie 2 de press banca'
+    && Math.abs(new Date(d.enviar_desde) - (Date.now() + 91000)) < 5000, 'sale un segundo después del final, con lo que toca después');
+  await como(luis);
+  await q(`select programar_descanso($1, 'Serie 2 de press banca')`, [fin(105)]);
+  const todas = await notis(`usuario_id = $1 and clave = 'descanso'`, [luis]);
+  check(todas.length === 1 && new Date(todas[0].enviar_desde) > new Date(d.enviar_desde), 'con +15 (o un descanso nuevo) se cambia la misma, no se apila otra');
+  await como(luis);
+  check(await falla(`select programar_descanso($1)`, [fin(3600)]) && await falla(`select programar_descanso($1)`, [fin(-120)]), 'solo para un descanso que acaba en los próximos 30 minutos');
+  await como(ana);
+  check((await q(`select programar_descanso($1) r`, [fin(60)]))[0].r === 'sin_canal', 'sin ningún móvil activado no se programa nada');
+  await q(`select cancelar_descanso()`);
+  check((await notis(`usuario_id = $1 and clave = 'descanso'`, [luis])).length === 1, 'anular el suyo no toca el de nadie');
+  await como(luis);
+  await q(`select cancelar_descanso()`);
+  check((await notis(`usuario_id = $1 and clave = 'descanso'`, [luis])).length === 0, 'si suena la app (o se salta el descanso), se anula');
+  await su();
+  await q(`insert into preferencias_notificaciones (usuario_id, desactivados) values ($1, '{descanso}') on conflict (usuario_id) do update set desactivados = array_append(preferencias_notificaciones.desactivados, 'descanso')`, [luis]);
+  await como(luis);
+  check((await q(`select programar_descanso($1) r`, [fin(60)]))[0].r === 'desactivado', 'quien lo desactiva en Notificaciones no lo recibe');
+  await su();
+  await q(`update preferencias_notificaciones set desactivados = array_remove(desactivados, 'descanso') where usuario_id = $1`, [luis]);
+  await como(luis);
+  await q(`select programar_descanso($1, 'Sentadilla')`, [fin(-2)]);
+  await servidor();
+  const lote = await q(`select * from notificaciones_por_enviar(100)`);
+  check(lote.some((n) => n.tipo === 'descanso' && n.usuario_id === luis), 'cuando ya toca, la función de envío la coge como las demás');
+  await su();
+  await q(`select fbe_privado.disparar_descansos()`);
+  check(true, 'el disparador de cada 5 s no falla sin Vault ni pg_net (aquí no están)');
+  await q(`delete from notificaciones where clave = 'descanso'`);
+  await db.exec('reset role');
+  check(await falla(`set role anon; select programar_descanso(now() + interval '1 minute')`), 'sin sesión no se puede');
+  await db.exec('reset role');
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

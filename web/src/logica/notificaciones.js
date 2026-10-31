@@ -13,6 +13,7 @@ export const TIPOS_ATLETA = [
   ['habitos', 'Hábitos', 'Por la tarde, los que te falten de hoy'],
   ['nutricion', 'Nutrición', 'Por la tarde, si aún no la has apuntado'],
   ['cuestionario', 'Peticiones de tu coach', 'Si te pide que rellenes o actualices tu cuestionario'],
+  ['descanso', 'Descansos terminados', 'Al acabar tu descanso, si no tienes la app delante (música, otra app, pantalla bloqueada)'],
 ];
 export const TIPOS_COACH = [
   ['mensaje', 'Mensajes de tus atletas', 'Cuando te escriben en una sesión, un check-in o un vídeo'],

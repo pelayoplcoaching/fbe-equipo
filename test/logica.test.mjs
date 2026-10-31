@@ -799,7 +799,7 @@ console.log('\nNotificaciones');
   check(!preferenciasValidas({ ...d, hora_manana: '13:00' }) && !preferenciasValidas({ ...d, hora_tarde: '23:45' }) && !preferenciasValidas({ ...d, silencio_hasta: null })
     && !preferenciasValidas({ ...d, silencio_desde: '08:00', silencio_hasta: '08:00' }) && !preferenciasValidas({ ...d, desactivados: ['spam'] }) && !preferenciasValidas({ ...d, dia_checkin: 8 }),
     'como la base: mañana de 5 a 12, tarde de 12 a 23:30, «no molestar» completo y distinto, tipos conocidos');
-  check(TIPOS_ATLETA.length === 8 && TIPOS_COACH.length === 5 && TIPOS_COACH.every(([t]) => !TIPOS_ATLETA.some(([a]) => a === t)), 'tipos del atleta y del coach, sin repetir');
+  check(TIPOS_ATLETA.length === 9 && TIPOS_COACH.length === 5 && TIPOS_COACH.every(([t]) => !TIPOS_ATLETA.some(([a]) => a === t)), 'tipos del atleta (con el fin del descanso, v0.39) y del coach, sin repetir');
   check(claveServidor('BFqg_w').length === 4 && claveServidor('BFqg_w')[0] === 4 && claveServidor('BFqg_w')[3] === 0xff, 'la clave VAPID en base64url pasa a bytes');
   check(normalizarB64url('ab+/cd==') === 'ab-_cd', 'las claves del navegador, en base64url sin relleno');
   check(describirDispositivo('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36') === 'Android · Chrome'

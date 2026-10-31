@@ -280,6 +280,14 @@ export function crearApi(backend) {
       if (r === 'ok') empujar(0);
       return r;
     },
+    // v0.39 (migración 025): el aviso al móvil del fin del descanso, por si la app no está delante cuando acaba.
+    // Nunca falla hacia fuera (sin la 025, en la demo o sin conexión, simplemente no hay aviso).
+    async programarDescanso(fin, despues = '') {
+      try { return await b.rpc('programar_descanso', { p_fin: new Date(fin).toISOString(), p_despues: String(despues || '').slice(0, 150) || null }); } catch { return null; }
+    },
+    async cancelarDescanso() {
+      try { await b.rpc('cancelar_descanso', {}); } catch { /* sin aviso que anular */ }
+    },
     async ultimasNotificaciones(n = 10) {
       return b.select('notificaciones', { eq: { usuario_id: uid() }, cols: 'id,tipo,titulo,cuerpo,creado_en,enviar_desde,estado,canal,enviada_en,error', order: [['creado_en', 'desc']], limit: n });
     },

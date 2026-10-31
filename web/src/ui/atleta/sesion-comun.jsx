@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { leerAjustes } from '../ajustes.js';
 import { SONIDOS } from '../../datos/sonidos-descanso.js';
-import { Icono } from '../comunes.jsx';
+import { Icono, useApp } from '../comunes.jsx';
 import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, propuestaBackoff, tieneDetalle, objetivoSerie } from '../../logica/calculos.js';
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
@@ -134,12 +134,32 @@ export function aNumero(t) {
 
 
 // ---------- temporizador de descanso: un disco que se vacía ----------
+// v0.39: con la app en segundo plano (Spotify o YouTube delante, la pantalla bloqueada), el iPhone la congela y no
+// puede sonar. Por eso, al empezar el descanso (y con cada +15 / −15), se programa un aviso al móvil para cuando
+// acabe (migración 025); si suena aquí, con la app delante, se anula, y también al saltarlo o cerrarlo. Si la app
+// vuelve tarde (el aviso ya sonó en el móvil), no suena otra vez.
+const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
 export function Temporizador({ fin, total, prioridad, texto, alCambiar, clase = '' }) {
+  const { api } = useApp() || {};
   const ahora = useAhora(250);
   const quedan = Math.max(0, (fin - ahora) / 1000);
   const avisado = useRef(false);
+  const programado = useRef(false);
   useEffect(() => {
-    if (quedan <= 0 && !avisado.current) { avisado.current = true; pitar(); }
+    if (!api?.programarDescanso || !conAvisoAlMovil() || fin <= Date.now()) return undefined;
+    // (un momento después: con varios +15 seguidos, solo el último)
+    const t = setTimeout(() => { programado.current = true; api.programarDescanso(fin, texto); }, 700);
+    return () => clearTimeout(t);
+  }, [fin]);
+  // Al quitarse el temporizador (saltar, cerrar, salir de la sesión), fuera el aviso
+  useEffect(() => () => { if (programado.current) api?.cancelarDescanso?.(); }, []);
+  useEffect(() => {
+    if (quedan <= 0 && !avisado.current) {
+      avisado.current = true;
+      const tarde = Date.now() - fin > 4000; // la app estaba congelada: ya avisó el móvil
+      if (document.visibilityState === 'visible' && programado.current) { programado.current = false; api?.cancelarDescanso?.(); }
+      if (!tarde) pitar();
+    }
     if (quedan > 0) avisado.current = false;
   }, [quedan <= 0]);
   // Como FBE Timer: un pitido corto en cada uno de los 3 últimos segundos
