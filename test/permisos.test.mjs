@@ -1681,6 +1681,21 @@ console.log('\nAviso del fin del descanso con la app en segundo plano (migració
   await db.exec('reset role');
 }
 
+console.log('\nEl peso, a diario o una vez a la semana (migración 026)');
+{
+  await su();
+  const [fa] = await q(`select id from atletas where perfil_id = $1`, [ana]);
+  await como(ana);
+  await q(`update atletas set peso_frecuencia = 'semanal' where perfil_id = $1`, [ana]);
+  await su();
+  check((await q(`select peso_frecuencia f from atletas where id = $1`, [fa.id]))[0].f === 'diario', 'el atleta no puede cambiar cómo se le pide el peso (lo decide el coach)');
+  await como(pelayo, 'aal2');
+  check(await falla(`update atletas set peso_frecuencia = 'mensual' where id = $1`, [fa.id]), 'solo «diario» o «semanal»');
+  await q(`update atletas set peso_frecuencia = 'semanal' where id = $1`, [fa.id]);
+  check((await q(`select peso_frecuencia f from atletas where id = $1`, [fa.id]))[0].f === 'semanal', 'el coach sí');
+  await q(`update atletas set peso_frecuencia = 'diario' where id = $1`, [fa.id]);
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

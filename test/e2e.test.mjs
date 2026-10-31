@@ -1057,6 +1057,10 @@ try {
   await p.locator('.toast', { hasText: 'Pregunta añadida al check-in de Ana' }).waitFor();
   check(await p.locator('.lista-preguntas li', { hasText: 'Horas de sueño entre semana' }).count() === 1
     && await p.locator('.graficas-preguntas .panel', { hasText: 'Estrés en el trabajo' }).count() === 1, 'el coach le añade una pregunta solo a Ana y ve la evolución de su estrés');
+  // v0.40: el peso, una vez a la semana (en el check-in) en vez de cada día en «Tu día»
+  await p.getByRole('group', { name: 'Su peso' }).getByRole('button', { name: 'Una vez a la semana' }).click();
+  await p.locator('.toast', { hasText: 'Su peso, una vez a la semana' }).waitFor();
+  check(await p.getByRole('group', { name: 'Su peso' }).getByRole('button', { name: 'Una vez a la semana', pressed: true }).count() === 1, 'el coach le pide el peso a Ana una vez a la semana, en el check-in');
   await revisar('su-checkin');
   await p.getByRole('tab', { name: 'Datos' }).click();
   await p.locator('.cuestionario-coach .datos-cuest').waitFor();
@@ -1070,6 +1074,9 @@ try {
   await p.locator('nav.tabs').waitFor();
   await p.locator('.tarjeta-cuestionario').waitFor();
   check((await p.locator('.tarjeta-cuestionario').textContent()).includes('Tu coach te pide que actualices tu cuestionario'), 'a Ana le aparece en Hoy que su coach le pide que lo actualice');
+  await p.locator('.tu-dia').waitFor();
+  check(await p.locator('.tu-dia .fila-dia', { hasText: 'Tu peso' }).count() === 0 && await p.locator('.tu-dia .fila-dia').count() > 0,
+    'y a Ana ya no le sale «Tu peso» como pendiente en «Tu día»');
   await p.locator('.tab', { hasText: 'Check-in' }).click();
   await p.getByRole('heading', { name: 'Preguntas de tu coach' }).waitFor();
   check(await p.getByLabel('Horas de sueño entre semana (h)').count() === 1 && await p.getByRole('button', { name: /Datos de reloj o app/ }).count() === 0,

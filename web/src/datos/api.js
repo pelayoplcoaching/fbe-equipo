@@ -58,6 +58,13 @@ const falta024 = (e) => {
   }
   throw e;
 };
+const falta026 = (e) => {
+  const m = e?.message || '';
+  if (/peso_frecuencia/.test(m) && /schema cache|does not exist|no existe|column|columna/i.test(m)) {
+    throw new Error(`Para pedir el peso una vez a la semana falta ejecutar la migración 026 en Supabase (supabase/migraciones/026_peso_semanal.sql). Detalle: ${m}`);
+  }
+  throw e;
+};
 const falta018 = (e) => {
   if (/\b(nivel|nutricion)\b/.test(e?.message || '') && /column|columna|schema cache/i.test(e?.message || '')) {
     throw new Error('Para elegir servicio y nivel falta ejecutar la migración 018 en Supabase (supabase/migraciones/018_servicio_y_nivel.sql).');
@@ -795,6 +802,11 @@ export function crearApi(backend) {
       if (p && p.activa === false) await comprobarCupoPreguntas(p.atleta_id ?? null);
       return (await b.update('preguntas_checkin', { activa: true }, { eq: { id } }))[0];
     },
+    // El peso: 'diario' (en «Tu día», de entrada) o 'semanal' (en el check-in). Migración 026.
+    async guardarFrecuenciaPeso(atletaId, frecuencia) {
+      if (!['diario', 'semanal'].includes(frecuencia)) throw new Error('El peso va a diario o una vez a la semana');
+      return (await b.update('atletas', { peso_frecuencia: frecuencia }, { eq: { id: atletaId } }).catch(falta026))[0];
+    },
     // Qué apartados del check-in se le preguntan (null o todos = todos)
     async guardarApartadosCheckin(atletaId, lista) {
       const validos = lista == null ? null : APARTADOS_CHECKIN.map(([k]) => k).filter((k) => lista.includes(k));
@@ -919,11 +931,12 @@ export function crearApi(backend) {
 
     // «Tu día»: lo que le toca hoy en una lista (sesión, hábitos, nutrición, peso, check-in, cuestionario). El programa
     // y el check-in de la semana ya los tiene la pantalla; el resto se consulta aquí (solo lo que aplica).
-    async tuDia(atletaId, { programa = null, checkin = null, salud = true, nutricion: conNut = true, entrenamiento = true, hoy = hoyISO() } = {}) {
+    // pesoDiario (v0.40, migración 026): con el peso semanal no sale «Tu peso» (se lo pide el check-in)
+    async tuDia(atletaId, { programa = null, checkin = null, salud = true, nutricion: conNut = true, entrenamiento = true, pesoDiario = true, hoy = hoyISO() } = {}) {
       const semana = entrenamiento ? programa?.actual || null : null;
       const sesiones = semana ? programa.sesiones[semana.id] || [] : null;
       const [pesos, habitos, nutricion, cuestionario] = await Promise.all([
-        salud ? b.select('pesos', { eq: { atleta_id: atletaId, fecha: hoy }, cols: 'id', limit: 1 }).catch(() => null) : null,
+        salud && pesoDiario ? b.select('pesos', { eq: { atleta_id: atletaId, fecha: hoy }, cols: 'id', limit: 1 }).catch(() => null) : null,
         salud ? api.resumenHabitos(atletaId, hoy).catch(() => []) : [],
         salud && conNut ? api.planesNutricion(atletaId).then(async (planes) => {
           const plan = planVigente(planes, hoy);

@@ -1150,5 +1150,19 @@ console.log('Modo atleta del coach (v0.37)');
   check((await api.sesion(sp.id, propio.id)).sesion.preparacion?.energia === 3, 'y se guarda cómo llega a su sesión (sueño, energía, molestias)');
 }
 
+console.log('Peso a diario o una vez a la semana (v0.40, migración 026)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [fichaAna] = await b.select('atletas', { eq: { id: ana.id } });
+  check(fichaAna.peso_frecuencia === 'diario', 'de entrada, el peso se pide a diario');
+  const conPeso = await api.tuDia(ana.id, { salud: true, pesoDiario: true });
+  check(conPeso.some((x) => x.id === 'peso'), 'a diario, «Tu peso» sale en «Tu día»');
+  check((await api.guardarFrecuenciaPeso(ana.id, 'semanal')).peso_frecuencia === 'semanal', 'el coach lo pasa a una vez a la semana');
+  const sinPeso = await api.tuDia(ana.id, { salud: true, pesoDiario: false });
+  check(!sinPeso.some((x) => x.id === 'peso'), 'y entonces no sale en «Tu día» (se lo pide el check-in)');
+  check(await lanza(() => api.guardarFrecuenciaPeso(ana.id, 'mensual')), 'solo a diario o una vez a la semana');
+  await api.guardarFrecuenciaPeso(ana.id, 'diario');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

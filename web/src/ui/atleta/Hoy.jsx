@@ -118,7 +118,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
 const ICONO_DIA = { sesion: 'hoy', habitos: 'llama', nutricion: 'nutricion', menu: 'receta', peso: 'bascula', checkin: 'checkin', cuestionario: 'pregunta' };
 function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, version }) {
   const { api, atleta } = useApp();
-  const dia = useCarga(() => api.tuDia(atleta.id, { programa: p, checkin: checkinSemana.datos, salud, nutricion: conNutricion(atleta), entrenamiento: conEntrenamiento(atleta) }).catch(() => null), [atleta.id, p, checkinSemana.datos, salud, version]);
+  const dia = useCarga(() => api.tuDia(atleta.id, { programa: p, checkin: checkinSemana.datos, salud, nutricion: conNutricion(atleta), entrenamiento: conEntrenamiento(atleta), pesoDiario: atleta.peso_frecuencia !== 'semanal' }).catch(() => null), [atleta.id, p, checkinSemana.datos, salud, version, atleta.peso_frecuencia]);
   // Tras apuntar algo en cualquier parte de la pantalla (un hábito, la nutrición, el peso), la lista se pone al día
   const recargarRef = useRef(null);
   recargarRef.current = dia.recargar;

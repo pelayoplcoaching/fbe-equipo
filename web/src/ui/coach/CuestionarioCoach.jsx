@@ -160,6 +160,7 @@ function DatosCuestionario({ d }) {
 export function CheckinAMedida({ atleta, preguntas, checkins, recargarFicha }) {
   const { api, aviso } = useApp();
   const [apartados, setApartados] = useState(atleta.checkin_apartados ?? null);
+  const [frecPeso, setFrecPeso] = useState(atleta.peso_frecuencia === 'semanal' ? 'semanal' : 'diario');
   const [editar, setEditar] = useState(null);
   const [verArchivadas, setVerArchivadas] = useState(false);
   const [quitando, setQuitando] = useState(null);
@@ -175,6 +176,17 @@ export function CheckinAMedida({ atleta, preguntas, checkins, recargarFicha }) {
     const previo = apartados;
     setApartados(nueva.length === claves.length ? null : claves.filter((x) => nueva.includes(x)));
     try { await api.guardarApartadosCheckin(atleta.id, nueva); recargarFicha?.(); } catch (e) { setApartados(previo); aviso(e.message, 'error'); }
+  }
+  async function cambiarFrecPeso(f) {
+    if (f === frecPeso) return;
+    const previo = frecPeso;
+    setFrecPeso(f);
+    try {
+      await api.guardarFrecuenciaPeso(atleta.id, f);
+      // Una vez a la semana: si el check-in no le pregunta el peso, se activa ese apartado
+      if (f === 'semanal' && !marcado('peso')) await alternar('peso'); else recargarFicha?.();
+      aviso(f === 'semanal' ? 'Su peso, una vez a la semana: en el check-in' : 'Su peso, a diario: en «Tu día»');
+    } catch (e) { setFrecPeso(previo); aviso(e.message, 'error'); }
   }
   async function quitar(p) {
     if (p.atleta_id == null && quitando !== p.id) { setQuitando(p.id); return; }
@@ -200,6 +212,17 @@ export function CheckinAMedida({ atleta, preguntas, checkins, recargarFicha }) {
             {APARTADOS_CHECKIN.map(([k, t]) => <button type="button" key={k} aria-pressed={marcado(k) ? 'true' : 'false'} onClick={() => alternar(k)}>{t}</button>)}
           </div>
           <span class="ayuda">Lo que quites deja de salirle en el check-in. El cuadro de notas para ti sale siempre.</span>
+        </div>
+        <div class="campo">
+          <span class="etq" id="ck-peso-frec">Su peso</span>
+          <div class="zonas elegir" role="group" aria-labelledby="ck-peso-frec">
+            <button type="button" aria-pressed={frecPeso === 'diario' ? 'true' : 'false'} onClick={() => cambiarFrecPeso('diario')}>A diario</button>
+            <button type="button" aria-pressed={frecPeso === 'semanal' ? 'true' : 'false'} onClick={() => cambiarFrecPeso('semanal')}>Una vez a la semana</button>
+          </div>
+          <span class="ayuda">{frecPeso === 'diario'
+            ? 'Cada mañana le sale «Tu peso» en «Tu día» (pendiente hasta que lo apunte): así ves su tendencia día a día.'
+            : marcado('peso') ? 'No le sale cada día en «Tu día»: se lo pide el check-in de la semana. Si quiere, puede apuntarlo otros días desde Hoy.'
+            : 'Ojo: así no se lo pide nadie. Marca Peso arriba para que se lo pida el check-in.'}</span>
         </div>
         <div class="campo">
           <span class="etq">Tus preguntas</span>
