@@ -1293,6 +1293,14 @@ export function crearApi(backend) {
       // Los adjuntos del chat no son vídeos de técnica ni fotos de progreso: solo salen si se piden
       return b.select('archivos', { eq, ...(tipo ? {} : { neq: { tipo: 'adjunto' } }), order: [['fecha', 'desc'], ['creado_en', 'desc']] });
     },
+    // v0.41: cuántos vídeos de técnica ha enviado el atleta de cada ejercicio de una sesión (el aviso «Vídeo enviado»)
+    async videosSesion(atletaId, seIds) {
+      if (!seIds.length) return {};
+      const filas = await b.select('archivos', { eq: { atleta_id: atletaId, tipo: 'video_tecnica' }, in: { sesion_ejercicio_id: seIds } });
+      const n = {};
+      for (const a of filas) n[a.sesion_ejercicio_id] = (n[a.sesion_ejercicio_id] || 0) + 1;
+      return n;
+    },
     // El diario de entrenamiento: vídeos y fotos (sin adjuntos) con lo que hace falta para la cuadrícula:
     // el ejercicio, si el coach ha contestado y cuántos comentarios tiene cada uno
     async diario(atletaId) {

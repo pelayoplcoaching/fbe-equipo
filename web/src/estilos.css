@@ -552,6 +552,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* Ejercicio en la sesión */
 .ejercicio-cab .cambiado { display: block; font-size: 13px; font-weight: 600; color: var(--aviso); margin-top: 2px; }
 .ejercicio-cab .variante { display: block; font-size: 13.5px; font-weight: 650; color: var(--morado); margin-top: 3px; }
+/* v0.41: el ejercicio ya tiene vídeo para el coach (o lo tiene guardado en el móvil, sin enviar) */
+.ejercicio-cab .video-aviso { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 650; color: var(--ok); margin-top: 4px; }
+.ejercicio-cab .video-aviso svg { width: 16px; height: 16px; flex: none; stroke-width: 2.2; }
+.ejercicio-cab .video-aviso.pendiente { color: var(--aviso); }
 .sugerencia { display: grid; grid-template-columns: 18px 1fr; gap: 8px; align-items: start; font-size: 13.5px; padding: 8px 10px; border-radius: 10px; background: var(--hoja-2); color: var(--tinta-2); }
 .sugerencia svg { width: 18px; height: 18px; margin-top: 1px; }
 .sugerencia.subir { background: var(--ok-suave); color: var(--tinta); }

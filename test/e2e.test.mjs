@@ -410,6 +410,9 @@ try {
   await p.getByRole('button', { name: 'Recortar y enviar' }).click();
   await p.locator('.toast', { hasText: 'Vídeo enviado a tu coach' }).waitFor({ timeout: 20000 });
   check(await p.evaluate(() => window.__grabado) === 1, 'recorta el vídeo en el móvil (del segundo 1 al 3) y lo envía');
+  // v0.41: el ejercicio dice que ya tiene vídeo (también plegado), y el botón pasa a «Enviar otro vídeo»
+  await primero.locator('.ejercicio-cab .video-aviso', { hasText: 'Vídeo enviado' }).waitFor();
+  check(await primero.getByRole('button', { name: 'Enviar otro vídeo' }).count() === 1, 'el ejercicio marca «Vídeo enviado» y ofrece enviar otro');
   // v0.33: sin cobertura, el vídeo se queda guardado en el móvil y se envía solo al volver la conexión
   await p.context().setOffline(true);
   await primero.locator('input[type=file]').setInputFiles({ name: 'press2.mp4', mimeType: 'video/mp4', buffer: Buffer.from(VIDEO_EJEMPLO.split(',')[1], 'base64') });
@@ -418,11 +421,15 @@ try {
   const bandaPend = p.locator('.banda-pendientes');
   await bandaPend.waitFor();
   check((await bandaPend.textContent()).includes('1 vídeo guardado en el móvil'), 'sin cobertura, el vídeo no se pierde: queda guardado en el móvil y lo dice');
+  await primero.locator('.video-aviso.pendiente', { hasText: 'Vídeo guardado en el móvil, sin enviar' }).waitFor();
+  check(true, 'el ejercicio avisa de que ese vídeo aún no ha salido del móvil');
   await revisar('video-pendiente');
   await p.context().setOffline(false);
   await p.locator('.toast', { hasText: 'Vídeo pendiente enviado' }).waitFor({ timeout: 15000 });
   await bandaPend.waitFor({ state: 'detached' });
   check(true, 'al volver la conexión, se envía solo');
+  await primero.locator('.ejercicio-cab .video-aviso:not(.pendiente)', { hasText: '2 vídeos enviados' }).waitFor();
+  check(true, 'y el aviso pasa solo a «2 vídeos enviados»');
   await p.getByRole('button', { name: 'Terminar sesión' }).click();
   await p.locator('.hoja-dialogo .segmentos button', { hasText: '8' }).click();
   await p.getByLabel('Nota para tu coach').fill('Me he notado fuerte en el press');

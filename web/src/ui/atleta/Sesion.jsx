@@ -4,6 +4,7 @@ import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Pa
 import { BandaConexion } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { SubirArchivo } from '../Archivos.jsx';
+import { EVENTO_PENDIENTES, listarPendientes } from '../../datos/pendientes.js';
 import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herramientas.jsx';
 import { HojaCompartir } from '../Compartir.jsx';
 import { RPES, prepararAudio, celebrar, usePantallaEncendida, useAhora, aNumero, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
@@ -49,6 +50,28 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [notas, setNotas] = useState({});
   usePantallaEncendida();
   useEffect(() => { if (det.datos?.notas) setNotas(det.datos.notas); }, [det.datos]);
+  // v0.41: vídeos de técnica de cada ejercicio, enviados y guardados en el móvil sin enviar (se recuentan al
+  // subir uno y cada vez que cambia la cola de pendientes: así el aviso pasa solo de «sin enviar» a «enviado»)
+  const [videos, setVideos] = useState({ enviados: {}, pendientes: {} }); // seId → número
+  const [recontarVideos, setRecontarVideos] = useState(0);
+  useEffect(() => {
+    if (!det.datos) return undefined;
+    const ids = det.datos.ejercicios.map((e) => e.id);
+    let vivo = true;
+    const contar = async () => {
+      const [enviados, guardados] = await Promise.all([api.videosSesion(atleta.id, ids).catch(() => null), listarPendientes(atleta.id)]);
+      if (!vivo) return;
+      const pendientes = {};
+      for (const g of guardados) {
+        const se = g.opciones?.sesion_ejercicio_id;
+        if (se && ids.includes(se)) pendientes[se] = (pendientes[se] || 0) + 1;
+      }
+      setVideos((v) => ({ enviados: enviados || v.enviados, pendientes }));
+    };
+    contar();
+    window.addEventListener(EVENTO_PENDIENTES, contar);
+    return () => { vivo = false; window.removeEventListener(EVENTO_PENDIENTES, contar); };
+  }, [det.datos, recontarVideos]);
   // «¿Cómo llegas hoy?»: lo contestado (se guarda en la sesión), si se saltó y si se está cambiando
   const [prep, setPrep] = useState(undefined);
   const [prepSaltada, setPrepSaltada] = usePreferencia(`fbe-prep-saltada-${id}`, false);
@@ -263,6 +286,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
             <Ejercicio key={e.id} e={e} actual={cambiado ? actual : null} ultimas={cambiado ? ultimas[actual.id] || null : e.ultimas}
               foco={semana?.foco} progresionAuto={progresionAuto && !cambiado && !frenar} etiqueta={etiquetas[e.id]} records={records}
               nota={notas[actual.id]} guardarNota={(t) => guardarNota(actual.id, t)}
+              videos={videos.enviados[e.id] || 0} videosPendientes={videos.pendientes[e.id] || 0} alSubirVideo={() => setRecontarVideos((n) => n + 1)}
               hechas={hechas[e.id] || {}} enCola={enCola} abierto={abiertos?.has(e.id)}
               alternar={() => alternar(e.id)} guardar={(n, v) => guardar(e, n, v)} quitar={(n) => quitar(e, n)}
               cambiar={(ej) => {
@@ -348,7 +372,7 @@ function Cronometro({ inicio, minutos, hechas, total }) {
   );
 }
 
-function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, alternar, guardar, quitar, cambiar, nota, guardarNota }) {
+function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo }) {
   const { atleta, propio } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
   const [editandoNota, setEditandoNota] = useState(false);
@@ -380,6 +404,9 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
             {pa.carga && !actual && <span class="num">{pa.carga}</span>}
             {pa.descanso && !etiqueta && <span>descanso {pa.descanso}</span>}
           </span>
+          {videosPendientes > 0
+            ? <span class="video-aviso pendiente"><Icono n="reloj" />{videosPendientes === 1 ? 'Vídeo guardado en el móvil, sin enviar' : `${videosPendientes} vídeos guardados en el móvil, sin enviar`}</span>
+            : videos > 0 && <span class="video-aviso"><Icono n="hecho" />{videos === 1 ? 'Vídeo enviado' : `${videos} vídeos enviados`}</span>}
         </span>
         <span class={`progreso-series ${n >= e.series ? 'hecho' : ''}`}>{n >= e.series ? <Icono n="hecho" width="22" height="22" titulo="Hecho" /> : `${n}/${e.series}`}</span>
       </button>
@@ -429,7 +456,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
             {conAproximacion && kgTrabajo > 0 && <button class="btn-texto" onClick={() => setHoja('aproximacion')}><Icono n="llama" /> Aproximación</button>}
             {(ej.instrucciones || ej.errores) && <button class="btn-texto" onClick={() => setHoja('tecnica')}><Icono n="biblioteca" /> Técnica</button>}
             {ej.video_url && <a class="btn-texto" href={ej.video_url} target="_blank" rel="noopener"><Icono n="video" /> Tutorial</a>}
-            {!propio && <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} />}
+            {!propio && <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} etiqueta={videos + videosPendientes > 0 ? 'Enviar otro vídeo' : undefined} alSubir={alSubirVideo} />}
           </div>
         </div>
       )}

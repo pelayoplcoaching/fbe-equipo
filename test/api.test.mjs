@@ -179,6 +179,7 @@ check(marcasAna.length === 1 && marcasAna[0].ejercicio === 'Press banca', 'apunt
 const video = await api.subirArchivo(ana.id, new Blob(['vídeo'], { type: 'video/mp4' }), { tipo: 'video_tecnica', sesion_ejercicio_id: ePress.id, nota_atleta: '¿Bajo bien?' });
 check(video.ruta.startsWith(`${ana.id}/video-`) && video.ruta.endsWith('.mp4'), 'sube un vídeo de técnica a su carpeta');
 check(/^pglite:\/\//.test(await api.urlArchivo(video.ruta)), 'puede verlo');
+check(JSON.stringify(await api.videosSesion(ana.id, [ePress.id])) === JSON.stringify({ [ePress.id]: 1 }) && JSON.stringify(await api.videosSesion(ana.id, [])) === '{}', 'cuenta los vídeos enviados de cada ejercicio de la sesión (v0.41)');
 
 await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
 let bandeja = await api.bandeja();
