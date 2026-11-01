@@ -1,5 +1,5 @@
 // Funciones de la app sobre cualquier backend (Supabase o demo). Toda la lógica vive aquí, una sola vez.
-import { hoyISO, lunesDe, sumarDias, aISO, rangoSemana, diasEntre } from '../logica/fechas.js';
+import { hoyISO, lunesDe, sumarDias, aISO, rangoSemana, diasEntre, fechaMadrid } from '../logica/fechas.js';
 import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjercicio, seriesACsv, mejoresMarcas, vitrina, racha, mapaCalor, cargaSemanal, cambioCarga, eventosRecord, resumenSemanal, num, tendenciaPeso, ritmoPeso, limpiarDetalle, agregadosDetalle } from '../logica/calculos.js';
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
@@ -1666,7 +1666,9 @@ export function crearApi(backend) {
       ]);
       const G = agrupar(progreso || [], 'reto_id');
       const T = Object.fromEntries((totales || []).map((x) => [x.reto_id, x.total]));
-      const desde = miembro?.creado_en ? fechaDe(miembro.creado_en) : null;
+      // (como la base: desde la última vez que entró o volvió, en Madrid)
+      const entrada = miembro?.entrado_en || miembro?.creado_en;
+      const desde = entrada ? fechaMadrid(new Date(entrada)) : null;
       const compartidos = new Set(logros.map((x) => x.reto_id).filter(Boolean));
       return retos.map((r) => {
         const filas = G[r.id] || [];
@@ -1791,12 +1793,17 @@ export function crearApi(backend) {
       // propio atleta, con comunidad_mis_datos() (también lo oculto y aunque haya salido); el coach, de las tablas.
       if (perfilId && perfilId === uid()) out.comunidad = await b.rpc('comunidad_mis_datos', {}).catch(() => null);
       else {
-        const [miembro, publicaciones, comentarios, reacciones, votos, animos_mandados] = await Promise.all(['comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos']
+        const [miembro, publicaciones, comentarios, reacciones, votos, animos] = await Promise.all(['comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos']
           .map((t) => b.select(t, { eq: { atleta_id: atletaId } }).catch(() => [])));
-        // (v0.47) sus votos y sus ánimos, los mandados y, de los recibidos, solo cuándo
+        // (v0.47) sus votos y sus ánimos, sin identificadores de otras personas: de los mandados y los recibidos, solo
+        // cuándo; de sus menciones, cuántas (su texto ya dice a quién nombró)
         const animos_recibidos = (await b.select('comunidad_animos', { eq: { para_atleta_id: atletaId }, cols: 'semana,creado_en' }).catch(() => []))
           .map(({ semana, creado_en }) => ({ semana, creado_en }));
-        out.comunidad = { miembro: miembro[0] || null, publicaciones, comentarios, reacciones, votos, animos_mandados, animos_recibidos };
+        const sinMenciones = (x) => ({ ...x, menciones: (x.menciones || []).length });
+        out.comunidad = {
+          miembro: miembro[0] || null, publicaciones: publicaciones.map(sinMenciones), comentarios: comentarios.map(sinMenciones), reacciones, votos,
+          animos_mandados: animos.map(({ semana, creado_en }) => ({ semana, creado_en })), animos_recibidos,
+        };
       }
       out.recetas = out.recetas_atleta.length ? await b.select('recetas', { in: { id: unicos(out.recetas_atleta.map((x) => x.receta_id)) } }).catch(() => []) : [];
       out.semanas = await b.select('semanas', { in: { bloque_id: out.bloques.map((x) => x.id) } });

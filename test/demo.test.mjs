@@ -510,13 +510,13 @@ console.log('\nLas mejoras de la comunidad en la demo (v0.47, como la 029)');
   const eqAntes = (await a2.retosComunidad()).find((r) => r.modo === 'equipo').total;
   await b2.auth.entrar('carlos@fbe.demo', 'demo');
   await a2.ajustesComunidad({ sinRanking: true });
-  check((await a2.perfilComunidad(a2.uid())).racha != null, 'Carlos sigue viendo su perfil completo');
+  check((await a2.perfilComunidad(a2.uid())).retos === 1, 'Carlos sigue viendo su perfil completo (su reto conseguido)');
   await b2.auth.entrar('ruben@fbe.demo', 'demo');
   const pfC2 = await a2.perfilComunidad(pid['Carlos V.']);
   check(pfC2.racha === null && pfC2.retos === null && !(pid['Carlos V.'] in (await a2.rachasComunidad())), 'sin ranking, Rubén no ve la racha ni los retos de Carlos');
   check((await a2.retosComunidad()).find((r) => r.modo === 'equipo').total <= eqAntes && (await a2.resumenSemanaComunidad()).miembros === 2, 'ni cuenta en el reto de equipo ni en el resumen de la semana');
   await b2.auth.entrar('pelayo@fbe.demo', 'demo');
-  check(pid['Carlos V.'] in (await a2.rachasComunidad()) && (await a2.perfilComunidad(pid['Carlos V.'])).racha != null, 'el coach sí');
+  check((await a2.perfilComunidad(pid['Carlos V.'])).retos === 1, 'el coach sí');
   check(await lanza(() => a2.votarEncuesta(enc.id, 0)), 'el coach no vota');
   await a2.animar(pid['Lucía F.']);
   // Salir: votos y ánimos, como las reacciones
@@ -531,9 +531,66 @@ console.log('\nLas mejoras de la comunidad en la demo (v0.47, como la 029)');
   await a2.salirComunidad({ borrar: true });
   await b2.auth.entrar('pelayo@fbe.demo', 'demo');
   const copia = await a2.copiaCompleta();
-  check(!copia.comunidad_votos.some((v) => v.autor_id === pid['Rubén M.']) && !copia.comunidad_animos.some((x) => x.de === pid['Rubén M.']) && copia.comunidad_animos.some((x) => x.para === pid['Rubén M.']),
-    'saliendo con «borrar», se borran sus votos y los ánimos que mandó');
+  check(!copia.comunidad_votos.some((v) => v.autor_id === pid['Rubén M.']) && !copia.comunidad_animos.some((x) => x.de === pid['Rubén M.'] || x.para === pid['Rubén M.']),
+    'saliendo con «borrar», se borran sus votos y sus ánimos (mandados y recibidos)');
   void coachId;
+}
+
+console.log('\nLo que encontró la revisión de seguridad de la 029, en la demo');
+{
+  const b3 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a3 = crearApi(b3);
+  const { fechaMadrid } = await import('../web/src/logica/fechas.js');
+  const hoyM = fechaMadrid();
+  await b3.auth.entrar('pelayo@fbe.demo', 'demo');
+  const pid = Object.fromEntries((await a3.miembrosComunidad()).map((m) => [m.nombre, m.perfil_id]));
+  const atl = Object.fromEntries((await a3.atletas()).map((a) => [a.nombre, a]));
+  const rHoy = await a3.guardarReto({ titulo: 'Hoy tres', desde: hoyM, hasta: hoyM, objetivo: 3 });
+  // M1: fechas imposibles y sesiones marcadas de golpe
+  await b3.auth.entrar('ruben@fbe.demo', 'demo');
+  const hechasAntes = Object.values((await a3.programa(atl['Rubén Martín'].id)).sesiones).flat().filter((x) => x.completada && x.fecha_realizada < sumarDias(hoyM, -3)).slice(0, 3);
+  let msg = '';
+  try { await a3.actualizar('sesiones', hechasAntes[0].id, { fecha_realizada: '2099-01-01' }); } catch (e) { msg = e.message; }
+  check(/no puede ser posterior a hoy/.test(msg), 'como en la base: el atleta no fecha una sesión después de mañana');
+  for (const x of hechasAntes) await a3.actualizar('sesiones', x.id, { fecha_realizada: hoyM });
+  const hoyTres = (await a3.retosComunidad()).find((r) => r.id === rHoy.id);
+  const yoHoy = hoyTres.progreso.find((x) => x.yo).hechas;
+  check(yoHoy === 2 && !hoyTres.conseguido, `tres sesiones fechadas hoy cuentan dos (${yoHoy})`);
+  await b3.auth.entrar('pelayo@fbe.demo', 'demo');
+  const totalAntes = (await a3.retosComunidad()).find((r) => r.modo === 'equipo').total;
+  const bloqueCarlos = (await b3.select('bloques', { eq: { atleta_id: atl['Carlos Vera'].id, es_plantilla: false } }))[0];
+  await a3.actualizar('bloques', bloqueCarlos.id, { estado: 'cancelado' });
+  check((await a3.retosComunidad()).find((r) => r.modo === 'equipo').total < totalAntes, 'las sesiones de un bloque cancelado no cuentan');
+  // L4: rachas solo desde 1; L6: el coach no anima con la comunidad cerrada
+  check(Object.values(await a3.rachasComunidad()).every((x) => x.racha >= 1) && !(pid['Lucía F.'] in (await a3.rachasComunidad())), 'las rachas, solo desde 1 (Lucía, sin racha, no sale)');
+  await a3.abrirComunidad(false);
+  check(await lanza(() => a3.animar(pid['Lucía F.'])), 'con la comunidad cerrada, el coach no anima');
+  await a3.abrirComunidad(true);
+  // L6: votar, como mucho 30 veces al día
+  const enc = (await a3.muro()).posts.find((x) => x.tipo === 'encuesta');
+  await b3.auth.entrar('lucia@fbe.demo', 'demo');
+  let tope = 0;
+  for (let i = 0; i < 32; i++) { try { await a3.votarEncuesta(enc.id, (i + 1) % 3); tope++; } catch { break; } }
+  check(tope === 30 && (await a3.votarEncuesta(enc.id, tope % 3)) === tope % 3, `votar o cambiar el voto, 30 veces al día (repetir el mismo no cuenta): ${tope}`);
+  // L6: los logros, desde la última vez que entró
+  await b3.auth.entrar('ruben@fbe.demo', 'demo');
+  check((await a3.logrosComunidad()).some((r) => r.titulo.startsWith('Semana de arranque')), 'Rubén tiene su logro por celebrar');
+  await a3.salirComunidad();
+  await a3.entrarComunidad('Rubén M.');
+  check(!(await a3.logrosComunidad()).some((r) => r.titulo.startsWith('Semana de arranque')), 'si sale y vuelve, el reto que acabó antes de volver ya no cuenta');
+  // L3: salir y borrar se lleva los ánimos recibidos; «mis datos» no da el identificador de quien ya no está
+  await b3.auth.entrar('lucia@fbe.demo', 'demo');
+  await a3.salirComunidad({ borrar: true });
+  await b3.auth.entrar('carlos@fbe.demo', 'demo');
+  const mios = (await a3.exportar((await a3.miAtleta()).id)).comunidad;
+  check(!mios.animos_mandados.some((x) => x.para === pid['Lucía F.']), 'Lucía sale y borra: también los ánimos que recibió');
+  await a3.animar(pid['Rubén M.']).catch(() => {});
+  await b3.auth.entrar('ruben@fbe.demo', 'demo');
+  await a3.salirComunidad();
+  await b3.auth.entrar('carlos@fbe.demo', 'demo');
+  const mios2 = (await a3.exportar((await a3.miAtleta()).id)).comunidad;
+  check(mios2.animos_mandados.some((x) => x.para_nombre === 'Alguien del equipo' && !('para' in x)) && mios2.comentarios.every((x) => typeof x.menciones === 'number'),
+    '«mis datos»: a quien ya no está, «Alguien del equipo» (sin identificador); de sus menciones, cuántas');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

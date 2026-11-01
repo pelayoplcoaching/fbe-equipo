@@ -2383,7 +2383,7 @@ console.log('\nLas mejoras de la comunidad (migración 029)');
   await como(ana); await q(`select comunidad_salir(true)`);
   await su();
   check(await n(`select count(*)::int n from comunidad_votos where autor_id = $1`, [ana]) === 0 && await n(`select count(*)::int n from comunidad_animos where de = $1`, [ana]) === 0
-    && await n(`select count(*)::int n from comunidad_animos where para = $1`, [ana]) === 1, 'saliendo con «borrar», se borran sus votos y los ánimos que mandó (los que recibió son de quien los mandó)');
+    && await n(`select count(*)::int n from comunidad_animos where para = $1`, [ana]) === 0, 'saliendo con «borrar», se borran sus votos y sus ánimos (los mandados y los recibidos)');
 
   // Ordenado para lo que sigue
   await q(`delete from comunidad_reportes`); await q(`delete from comunidad_posts`); await q(`delete from comunidad_miembros`); await q(`delete from comunidad_retos`);
@@ -2393,6 +2393,173 @@ console.log('\nLas mejoras de la comunidad (migración 029)');
   await q(`update sesiones set completada = false, fecha_realizada = null where semana_id in (select id from semanas where bloque_id = $1)`, [bLuis]);
   await q(`update sesiones set completada = true where id = any($1::uuid[])`, [previas]);
   for (const x of semanaAna) await q(`update sesiones set completada = $2, fecha_realizada = $3 where id = $1`, [x.id, x.completada, x.fecha_realizada]);
+}
+
+console.log('\nLo que encontró la revisión de seguridad de la 029');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  const { VERSION_COMUNIDAD: version, VERSION_NORMAS: normas } = await import('../web/src/datos/api.js');
+  await su();
+  const lunesM = (await q(`select ((now() at time zone 'Europe/Madrid')::date - (extract(isodow from (now() at time zone 'Europe/Madrid'))::integer - 1)) d`))[0].d;
+  // Lo que terminaron en pruebas anteriores, aparte mientras tanto (se deja como estaba al acabar)
+  const previas = await q(`select s.id, s.fecha_realizada from sesiones s join semanas w on w.id = s.semana_id join bloques b on b.id = w.bloque_id
+    where b.atleta_id = any($1::uuid[]) and s.completada`, [[aAna.id, aLuis.id]]);
+  await q(`update sesiones set completada = false where id = any($1::uuid[])`, [previas.map((x) => x.id)]);
+  await como(pelayo, 'aal2');
+  await q(`update comunidad_ajustes set activa = true`);
+  const semana = async (atleta, dias, num) => {
+    const bId = (await q(`select crear_bloque_desde_plantilla($1, $2, $3::date - $4::int) b`, [pl.id, atleta, lunesM, dias]))[0].b;
+    await q(`update bloques set numero = $2 where id = $1`, [bId, num]);
+    await q(`update semanas set programacion = 'programada' where bloque_id = $1`, [bId]);
+    return bId;
+  };
+  const bRev = [await semana(aAna.id, 7, 71), await semana(aAna.id, 14, 72), await semana(aAna.id, 21, 73), await semana(aLuis.id, 7, 74)];
+  const sesDe = async (b) => (await q(`select s.id from sesiones s join semanas w on w.id = s.semana_id where w.bloque_id = $1`, [b])).map((x) => x.id);
+  const sAna = [...await sesDe(bRev[0]), ...await sesDe(bRev[1]), ...await sesDe(bRev[2])];
+  const [reto3] = await q(`insert into comunidad_retos (titulo, desde, hasta, objetivo) values ('Tres', $1::date - 21, $1::date + 6, 3) returning id`, [lunesM]);
+  await como(ana); await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
+  await como(luis); await q(`select comunidad_unirme('Luis M.', $1, $2)`, [version, normas]);
+
+  // M1: fechas imposibles y actividad inflada
+  await como(ana);
+  check(await falla(`update sesiones set completada = true, fecha_realizada = '2099-01-01' where id = $1`, [sAna[0]])
+    && await falla(`update sesiones set completada = true, fecha_realizada = (now() at time zone 'Europe/Madrid')::date + 2 where id = $1`, [sAna[0]]),
+    'el atleta no fecha una sesión después de mañana (Madrid)');
+  let msg = '';
+  try { await q(`update sesiones set fecha_realizada = '2099-01-01' where id = $1`, [sAna[0]]); } catch (e) { msg = e.message; }
+  check(/no puede ser posterior a hoy/.test(msg), `con un mensaje claro («${msg.slice(0, 60)}…»)`);
+  check((await q(`update sesiones set completada = true, fecha_realizada = (now() at time zone 'Europe/Madrid')::date - 30 where id = $1 returning id`, [sAna[0]])).length === 1
+    && (await q(`update sesiones set fecha_realizada = (now() at time zone 'Europe/Madrid')::date + 1 where id = $1 returning id`, [sAna[0]])).length === 1,
+    'las fechas pasadas (una sesión de otra semana) siguen valiendo, y mañana (otra zona horaria) también');
+  // Las tres, marcadas hoy de golpe: cuentan dos
+  await q(`update sesiones set completada = true, fecha_realizada = (now() at time zone 'Europe/Madrid')::date where id = any($1::uuid[])`, [sAna]);
+  const hechas = async () => (await q(`select hechas from comunidad_retos_progreso() where reto_id = $1 and yo`, [reto3.id]))[0].hechas;
+  check(await hechas() === 2 && (await q(`select total from comunidad_retos_totales() where reto_id = $1`, [reto3.id]))[0].total === 2 && await falla(`select comunidad_compartir_logro($1)`, [reto3.id]),
+    'tres sesiones marcadas el mismo día cuentan dos (también en el progreso de la 027 y en los totales): sin logro');
+  check((await q(`select sesiones from comunidad_resumen_semana()`))[0].sesiones <= 2, 'ni inflan el resumen de la semana');
+  await q(`update sesiones set fecha_realizada = (now() at time zone 'Europe/Madrid')::date - 1 where id = $1`, [sAna[2]]);
+  check(await hechas() === 3, 'en días distintos, cuentan todas');
+  await como(pelayo, 'aal2');
+  await q(`update sesiones set fecha_realizada = '2099-01-01' where id = $1`, [sAna[2]]);
+  await como(ana);
+  check(await hechas() === 2, 'el coach sí puede poner cualquier fecha, pero una sesión del futuro no cuenta en nada');
+  await como(pelayo, 'aal2');
+  await q(`update sesiones set fecha_realizada = (now() at time zone 'Europe/Madrid')::date - 1 where id = $1`, [sAna[2]]);
+  await q(`update bloques set estado = 'cancelado' where id = $1`, [bRev[2]]);
+  await como(ana);
+  check(await hechas() === 2, 'las sesiones de un bloque cancelado no cuentan');
+  await como(pelayo, 'aal2'); await q(`update bloques set estado = 'activo' where id = $1`, [bRev[2]]);
+  await su(); await q(`update semanas set programacion = 'en_programacion' where bloque_id = $1`, [bRev[1]]);
+  await como(ana);
+  check(await hechas() === 2, 'ni las de una semana sin publicar');
+  await su(); await q(`update semanas set programacion = 'programada' where bloque_id = $1`, [bRev[1]]);
+
+  // M2, L1, L2: menciones
+  await su(); await q(`delete from notificaciones where tipo = 'comunidad'`); await q(`delete from comunidad_cupos`);
+  await como(ana);
+  const postsAna = [];
+  for (let i = 0; i < 5; i++) postsAna.push((await q(`insert into comunidad_posts (texto) values ('p' || $1::text) returning id`, [i]))[0].id);
+  await como(luis);
+  for (const id of postsAna) await q(`insert into comunidad_comentarios (post_id, texto, menciones) values ($1, '@Ana L.', $2)`, [id, [ana]]);
+  const mencionesA = async (where = '') => (await notis(`usuario_id = $1 and clave like 'comunidad_mencion:%' ${where}`, [ana])).length;
+  check(await mencionesA() === 1, 'cinco comentarios mencionando a Ana en la misma hora: una sola notificación');
+  await su();
+  for (let i = 0; i < 20; i++) await q(`insert into comunidad_cupos (perfil_id, tipo) values ($1, 'mencion')`, [luis]);
+  await como(luis);
+  const [cTope] = await q(`insert into comunidad_comentarios (post_id, texto, menciones) values ($1, '@Pelayo', $2) returning menciones`, [postsAna[0], [pelayo]]);
+  check(cTope.menciones.join() === pelayo && (await notis(`usuario_id = $1 and clave like 'comunidad_mencion:%'`, [pelayo])).length === 0,
+    'con 20 menciones avisadas hoy, la siguiente sigue en el texto pero no avisa');
+  await su(); await q(`delete from comunidad_cupos`);
+  await como(luis); await q(`insert into comunidad_comentarios (post_id, texto, menciones) values ($1, '@Pelayo', $2)`, [postsAna[1], [pelayo]]);
+  check((await notis(`usuario_id = $1 and clave like 'comunidad_mencion:%'`, [pelayo])).length === 1, 'sin el tope, avisa');
+  await su(); check(await n(`select count(*)::int n from comunidad_cupos where perfil_id = $1 and tipo = 'mencion'`, [luis]) === 1, 'y cuenta en su cupo de menciones');
+  // L1: borrar u ocultar el comentario (o su publicación) retira la mención pendiente
+  await q(`delete from notificaciones where tipo = 'comunidad'`);
+  await como(luis); const [c1] = await q(`insert into comunidad_comentarios (post_id, texto, menciones) values ($1, 'x @Ana L.', $2) returning id`, [postsAna[2], [ana]]);
+  check(await mencionesA(`and estado = 'pendiente'`) === 1, 'la mención avisa');
+  await como(pelayo, 'aal2'); await q(`select comunidad_moderar_comentario($1, true)`, [c1.id]);
+  check(await mencionesA(`and estado = 'pendiente'`) === 0, 'el coach oculta el comentario: la mención pendiente se retira');
+  await como(luis); const [c2] = await q(`insert into comunidad_comentarios (post_id, texto, menciones) values ($1, 'y @Ana L.', $2) returning id`, [postsAna[3], [ana]]);
+  check(await mencionesA(`and estado = 'pendiente'`) === 1, 'otra mención (la anterior se retiró: no cuenta para la hora)');
+  await q(`delete from comunidad_comentarios where id = $1`, [c2.id]);
+  check(await mencionesA(`and estado = 'pendiente'`) === 0, 'su autor borra el comentario: también se retira');
+  await como(luis); await q(`insert into comunidad_comentarios (post_id, texto, menciones) values ($1, 'otra @Ana L.', $2)`, [postsAna[4], [ana]]);
+  await como(pelayo, 'aal2'); await q(`select comunidad_moderar($1, null, true)`, [postsAna[4]]);
+  check(await mencionesA(`and estado = 'pendiente'`) === 0, 'y si el coach oculta la publicación, las de sus comentarios también');
+  // L2: no se avisa de una publicación que ya no se ve
+  await como(luis); const [pL] = await q(`insert into comunidad_posts (texto) values ('mía') returning id`);
+  await q(`select comunidad_salir(false)`);
+  await su(); await q(`delete from notificaciones where tipo = 'comunidad'`);
+  await como(pelayo, 'aal2'); await q(`insert into comunidad_comentarios (post_id, texto, menciones) values ($1, 'mira @Ana L.', $2)`, [pL.id, [ana]]);
+  check(await mencionesA() === 0, 'una mención en lo de alguien que ya ha salido no avisa (no se puede ver)');
+  await como(luis); await q(`select comunidad_unirme('Luis M.', $1, $2)`, [version, normas]);
+
+  // L3: ánimos al salir y borrar, y «mis datos»
+  await como(luis); await q(`select comunidad_animar($1)`, [ana]);
+  await como(ana); await q(`select comunidad_animar($1)`, [luis]);
+  await q(`select comunidad_salir(true)`);
+  await su();
+  check(await n(`select count(*)::int n from comunidad_animos where de = $1 or para = $1`, [ana]) === 0, 'salir y borrar se lleva sus ánimos, los mandados y los recibidos');
+  await como(ana); await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
+  await como(luis); await q(`select comunidad_animar($1)`, [ana]);
+  await como(ana); await q(`select comunidad_salir(false)`);
+  await como(luis);
+  let mios = (await q(`select comunidad_mis_datos() d`))[0].d;
+  const aAnaMio = mios.animos_mandados.find((x) => !('para' in x));
+  check(aAnaMio?.para_nombre === 'Alguien del equipo' && !JSON.stringify(mios.animos_mandados).includes(ana), 'en «mis datos», a quien ya no está se le llama «Alguien del equipo», sin su identificador');
+  check(mios.comentarios.every((x) => typeof x.menciones === 'number') && !JSON.stringify(mios.comentarios).includes(ana), 'y de sus menciones, cuántas (no a quién)');
+  await como(ana); await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
+
+  // L4: que no se pueda deducir quién no sale en el ranking
+  await como(ana);
+  check((await q(`select * from comunidad_rachas()`)).every((x) => x.racha >= 1), 'las rachas solo salen desde 1');
+  const deLuis = async () => JSON.stringify((({ racha, retos, retos_titulos }) => ({ racha, retos, retos_titulos }))((await q(`select * from comunidad_perfil($1)`, [luis]))[0]));
+  const sinRacha = await deLuis();
+  await como(luis); await q(`select comunidad_ajustar(null, true)`);
+  await como(ana);
+  check(sinRacha === await deLuis() && sinRacha === '{"racha":null,"retos":null,"retos_titulos":null}', 'el perfil sin racha ni retos sale igual que el de quien no sale en el ranking');
+  await como(luis); await q(`select comunidad_ajustar(null, false)`);
+
+  // L5: repetir la 027 con datos de la 029 se para sin tocar nada
+  await como(pelayo, 'aal2');
+  await q(`insert into comunidad_posts (tipo, texto, encuesta) values ('encuesta', '¿Sí?', '{"opciones":["Sí","No"]}')`);
+  await su();
+  await q(`delete from fbe_migraciones where numero > 27`);
+  let err027 = '';
+  try { await db.exec(readFileSync(new URL('../supabase/migraciones/027_comunidad.sql', import.meta.url), 'utf8')); } catch (e) { err027 = e.message; }
+  await q(`insert into fbe_migraciones (numero) values (28), (29) on conflict do nothing`);
+  check(/logros, encuestas o retos de equipo de la 029/.test(err027) && (await q(`select comunidad_version() v`))[0].v === version
+    && (await q(`select pg_get_constraintdef(oid) d from pg_constraint where conname = 'comunidad_posts_validos'`))[0].d.includes('encuesta'),
+    'repetir la 027 con logros, encuestas o retos de equipo se para antes de tocar nada');
+
+  // L6: los logros, desde la última vez que entró; el coach no anima con la comunidad cerrada; votar tiene cupo
+  const [rViejo] = await q(`insert into comunidad_retos (titulo, desde, hasta, objetivo) values ('Pasado', $1::date - 21, (now() at time zone 'Europe/Madrid')::date - 1, 1) returning id`, [lunesM]);
+  await q(`update comunidad_miembros set entrado_en = now() - interval '40 days' where perfil_id = $1`, [ana]);
+  const conseguido = async () => (await q(`select fbe_privado.comunidad_reto_conseguido($1, $2) c`, [rViejo.id, aAna.id]))[0].c;
+  check(await conseguido(), 'un reto que acabó ayer cuenta para quien ya estaba dentro');
+  const antes = (await q(`select entrado_en from comunidad_miembros where perfil_id = $1`, [ana]))[0].entrado_en;
+  await como(ana); await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
+  await su();
+  check(String((await q(`select entrado_en from comunidad_miembros where perfil_id = $1`, [ana]))[0].entrado_en) === String(antes) && await conseguido(), 'volver a aceptar estando dentro no cambia desde cuándo está');
+  await como(ana); await q(`select comunidad_salir(false)`); await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
+  await su();
+  check(!(await conseguido()), 'pero si sale y vuelve, ese reto ya no cuenta (cuentan desde que volvió)');
+  await como(pelayo, 'aal2'); await q(`update comunidad_ajustes set activa = false`);
+  check(await falla(`select comunidad_animar($1)`, [luis]), 'con la comunidad cerrada, el coach tampoco anima');
+  await q(`update comunidad_ajustes set activa = true`);
+  const [enc2] = await q(`insert into comunidad_posts (tipo, texto, encuesta) values ('encuesta', '¿A o B?', '{"opciones":["A","B"]}') returning id`);
+  await como(luis); await q(`select comunidad_votar($1, 0)`, [enc2.id]);
+  await su(); for (let i = 0; i < 30; i++) await q(`insert into comunidad_cupos (perfil_id, tipo) values ($1, 'voto')`, [luis]);
+  await como(luis);
+  check(await falla(`select comunidad_votar($1, 1)`, [enc2.id]) && (await q(`select comunidad_votar($1, 0) v`, [enc2.id]))[0].v === 0, 'votar o cambiar el voto, como mucho 30 veces al día (repetir el mismo no cuenta)');
+
+  // Ordenado para lo que sigue
+  await su();
+  await q(`delete from comunidad_reportes`); await q(`delete from comunidad_posts`); await q(`delete from comunidad_miembros`); await q(`delete from comunidad_retos`);
+  await q(`delete from comunidad_cupos`); await q(`delete from comunidad_animos`); await q(`delete from notificaciones where tipo = 'comunidad'`);
+  await q(`update comunidad_ajustes set activa = false`);
+  await q(`delete from bloques where id = any($1::uuid[])`, [bRev]);
+  for (const x of previas) await q(`update sesiones set completada = true, fecha_realizada = $2 where id = $1`, [x.id, x.fecha_realizada]);
 }
 
 console.log('\nLa verificación en dos pasos falla cerrada');

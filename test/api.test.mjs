@@ -1397,7 +1397,7 @@ console.log('\nLas mejoras de la comunidad (v0.47, migración 029)');
   const res = await api.resumenSemanaComunidad();
   check(res && Object.keys(res).sort().join() === 'miembros,records,retos,semana_completa,sesiones' && res.retos >= 2, `el resumen de la semana (${JSON.stringify(res)})`);
   const rachas = await api.rachasComunidad();
-  check(typeof rachas[aAna.perfil_id]?.racha === 'number' && rachas[aAna.perfil_id].yo, 'las rachas de cada uno');
+  check(Object.values(rachas).every((x) => x.racha >= 1), 'las rachas de cada uno (solo desde 1: sin racha no sale nadie)');
   const pf = await api.perfilComunidad(aLuis.perfil_id);
   check(pf?.nombre === 'Luis M.' && pf.posts.length >= 1 && pf.posts.length <= 5 && pf.animado === false && typeof pf.entrenos === 'number', 'el perfil de Luis, con sus últimas publicaciones');
   await api.animar(aLuis.perfil_id);
@@ -1417,6 +1417,42 @@ console.log('\nLas mejoras de la comunidad (v0.47, migración 029)');
   const copia = await api.copiaCompleta();
   check(Array.isArray(copia.comunidad_votos) && copia.comunidad_votos.length === 2 && copia.comunidad_animos.length === 1, 'la copia completa lleva los votos y los ánimos');
   await api.abrirComunidad(false);
+}
+
+console.log('\nLo que encontró la revisión de seguridad de la 029 (capa de datos)');
+{
+  const [aAna] = await b.sql(`select id, perfil_id from atletas where email = 'ana@test'`);
+  const [aLuis] = await b.sql(`select id, perfil_id from atletas where email = 'luis@test'`);
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.abrirComunidad(true);
+  // M1: una sesión con fecha del futuro no se guarda (con un mensaje claro)
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const prog = await api.programa(ana.id);
+  const una = Object.values(prog.sesiones).flat().find((x) => x.completada);
+  let msg = '';
+  try { await api.actualizar('sesiones', una.id, { fecha_realizada: '2099-01-01' }); } catch (e) { msg = e.message; }
+  check(/no puede ser posterior a hoy/.test(msg), 'una sesión fechada en el futuro no se guarda, y lo dice');
+  check(!!(await api.actualizar('sesiones', una.id, { fecha_realizada: sumarDias(hoy, -2) })), 'una fecha pasada, sí');
+  // L6: el miembro trae desde cuándo está dentro (la última vez que entró)
+  const m = await api.miembroComunidad();
+  check(!!m.entrado_en, 'el miembro trae entrado_en (desde la última vez que entró)');
+  // L6: votar, como mucho 30 veces al día
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const enc = await api.publicarEnComunidad({ encuesta: { pregunta: '¿Uno o dos?', opciones: ['Uno', 'Dos'] } });
+  await b.sql(`delete from comunidad_cupos where tipo = 'voto'`);
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  let tope = 0;
+  for (let i = 0; i < 32; i++) { try { await api.votarEncuesta(enc.id, i % 2); tope++; } catch (e) { msg = e.message; break; } }
+  check(tope === 30 && /30 veces/.test(msg), `votar o cambiar el voto, 30 veces al día como mucho (${tope})`);
+  // L6: el coach no anima con la comunidad cerrada
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.abrirComunidad(false);
+  check(await lanza(() => api.animar(aLuis.perfil_id)), 'con la comunidad cerrada, el coach no anima');
+  // L3: la descarga de un atleta que saca el coach, sin identificadores de otras personas
+  const exp = await api.exportar(aAna.id);
+  const txt = JSON.stringify(exp.comunidad);
+  check(!txt.includes(aLuis.perfil_id) && !txt.includes(aLuis.id) && exp.comunidad.animos_mandados.every((x) => Object.keys(x).sort().join() === 'creado_en,semana')
+    && exp.comunidad.publicaciones.every((x) => typeof x.menciones === 'number'), 'la descarga que saca el coach no lleva identificadores de otros atletas (ni a quién animó ni a quién mencionó)');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

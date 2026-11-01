@@ -563,7 +563,7 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   const lucia = db.atletas.find((a) => a.nombre === 'Lucía Ferrer');
   Object.assign(db, { comunidad_ajustes: [{ id: true, activa: true, actualizado_en: hace(60 * 24 * 6) }], comunidad_miembros: [], comunidad_posts: [], comunidad_comentarios: [], comunidad_reacciones: [], comunidad_reportes: [], comunidad_retos: [], comunidad_cupos: [], comunidad_votos: [], comunidad_animos: [] });
   // (entraron por primera vez hace semanas; aceptaron lo que se comparte ahora hace unos días)
-  const miembro = (a, nombre, dias, desde) => db.comunidad_miembros.push({ atleta_id: a.id, perfil_id: a.perfil_id, nombre, version: 'comunidad-2026-11-b', aceptado_en: hace(60 * 24 * dias), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, normas_version: VERSION_NORMAS, normas_leidas_en: hace(60 * 24 * dias), creado_en: hace(60 * 24 * desde) });
+  const miembro = (a, nombre, dias, desde) => db.comunidad_miembros.push({ atleta_id: a.id, perfil_id: a.perfil_id, nombre, version: 'comunidad-2026-11-b', aceptado_en: hace(60 * 24 * dias), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, normas_version: VERSION_NORMAS, normas_leidas_en: hace(60 * 24 * dias), creado_en: hace(60 * 24 * desde), entrado_en: hace(60 * 24 * desde) });
   miembro(ruben, 'Rubén M.', 6, 24);
   miembro(carlos, 'Carlos V.', 5, 40);
   if (lucia) miembro(lucia, 'Lucía F.', 4, 12);

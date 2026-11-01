@@ -1257,6 +1257,9 @@ console.log('\nLas mejoras de la comunidad (v0.47)');
   check(retoConseguido(reto, { hechas: 8, desde: '2026-10-15' }) && !retoConseguido(reto, { hechas: 7 }) && !retoConseguido(reto, { hechas: 9, desde: '2026-11-02' })
     && retoConseguido({ ...reto, modo: 'equipo' }, { hechas: 0, total: 8 }) && !retoConseguido({ ...reto, modo: 'equipo' }, { hechas: 20, total: 7 }), 'un reto conseguido, como la base (individual, de equipo; no el que acabó antes de entrar)');
   check(FILTROS_MURO.map(([k]) => k).join() === 'todo,entrenos,logros,avisos,mio', 'los filtros del muro');
+  const { fechaMadrid } = await import('../web/src/logica/fechas.js');
+  check(fechaMadrid(new Date('2026-11-01T23:30:00Z')) === '2026-11-02' && fechaMadrid(new Date('2026-07-01T21:59:00Z')) === '2026-07-01' && fechaMadrid(new Date('2026-07-01T22:01:00Z')) === '2026-07-02',
+    'el día en Madrid, como la base (invierno y verano), sea cual sea la zona del navegador');
 }
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

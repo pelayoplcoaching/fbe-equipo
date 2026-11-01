@@ -1037,10 +1037,11 @@ function HojaPerfilEquipo({ perfilId, alCerrar }) {
               {x.desde && <span class="peq secundario">En el equipo desde el {fmtCorta(aISO(new Date(x.desde)))}</span>}
             </div>
           </div>
+          {/* (sin racha ni retos no sale nada: igual que de quien no sale en el ranking, así no se deduce) */}
           {!x.coach && (
             <dl class="perfil-equipo-num">
-              {x.racha != null && <div><dt>Racha</dt><dd>{x.racha > 0 ? <><span aria-hidden="true">🔥 </span>{textoRacha(x.racha)}</> : 'Aún sin racha'}</dd></div>}
-              {x.retos != null && <div><dt>Retos conseguidos</dt><dd class="num">{x.retos}</dd></div>}
+              {x.racha > 0 && <div><dt>Racha</dt><dd><span aria-hidden="true">🔥 </span>{textoRacha(x.racha)}</dd></div>}
+              {x.retos > 0 && <div><dt>Retos conseguidos</dt><dd class="num">{x.retos}</dd></div>}
               <div><dt>Entrenos compartidos</dt><dd class="num">{x.entrenos}</dd></div>
             </dl>
           )}
@@ -1063,7 +1064,6 @@ function HojaPerfilEquipo({ perfilId, alCerrar }) {
               </ul>
             )}
           </section>
-          {x.racha == null && !x.coach && !x.yo && <p class="mini terciario">Su racha y sus retos no se ven: ha elegido no salir en el ranking.</p>}
         </div>
       )}
     </Hoja>

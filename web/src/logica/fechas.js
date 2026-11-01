@@ -15,6 +15,17 @@ export function hoyISO(ahora = new Date()) {
   return aISO(ahora);
 }
 
+// El día en Madrid (como la base: «now() at time zone 'Europe/Madrid'») de un instante (por defecto, ahora), sea cual
+// sea la zona del navegador. Para lo que la comunidad compara con la base (v0.47).
+export function fechaMadrid(instante = new Date()) {
+  const d = instante instanceof Date ? instante : new Date(instante);
+  try {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(d).map((x) => [x.type, x.value]));
+    return `${p.year}-${p.month}-${p.day}`;
+  } catch { return aISO(d); }
+}
+
 export function sumarDias(iso, n) {
   const d = desdeISO(iso);
   d.setDate(d.getDate() + n);

@@ -17,7 +17,7 @@ begin
   select max(numero) into v from public.fbe_migraciones;
   if v > 28 then
     raise exception 'Esta base ya tiene la migración %: repetir la 028 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
-      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 28;» y, después de ella, todas las siguientes en orden.';
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 28;» y, después de ella, todas las siguientes en orden, todo en la misma consulta del SQL Editor (una sola transacción).';
   end if;
   if not exists (select 1 from public.fbe_migraciones where numero = 27) then
     raise exception 'Antes de la 028 hace falta la 027: ejecútala primero (o usa supabase/instalar.sql en una base nueva).';

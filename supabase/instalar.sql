@@ -5799,10 +5799,20 @@ begin
   select max(numero) into v from public.fbe_migraciones;
   if v > 27 then
     raise exception 'Esta base ya tiene la migración %: repetir la 027 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
-      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 27;» y, después de ella, todas las siguientes en orden.';
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 27;» y, después de ella, todas las siguientes en orden, todo en la misma consulta del SQL Editor (una sola transacción).';
   end if;
   if not exists (select 1 from public.fbe_migraciones where numero = 26) then
     raise exception 'Antes de la 027 hace falta la 026: ejecútala primero (o usa supabase/instalar.sql en una base nueva).';
+  end if;
+  -- (v0.47) Con datos de la 029 (logros, encuestas, retos de equipo de más de 100 sesiones o avisos de ellos), las
+  -- reglas de la 027 no caben: repetirla se quedaría a medias. Se para antes de tocar nada.
+  if to_regclass('public.comunidad_posts') is not null then
+    if exists (select 1 from public.comunidad_posts x where x.tipo not in ('aviso', 'post', 'entreno'))
+       or exists (select 1 from public.comunidad_retos r where r.objetivo > 100)
+       or exists (select 1 from public.comunidad_reportes r where r.copia_tipo not in ('aviso', 'post', 'entreno', 'comentario')) then
+      raise exception 'Esta base tiene logros, encuestas o retos de equipo de la 029: repetir la 027 los dejaría fuera de sus reglas. No la repitas sola.'
+        using hint = 'Si de verdad hace falta: ejecuta la 027, la 028 y la 029 seguidas en la misma consulta del SQL Editor (una sola transacción), después de borrar esas publicaciones y retos, o restaura la copia.';
+    end if;
   end if;
 end $$;
 
@@ -6795,7 +6805,7 @@ begin
   select max(numero) into v from public.fbe_migraciones;
   if v > 28 then
     raise exception 'Esta base ya tiene la migración %: repetir la 028 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
-      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 28;» y, después de ella, todas las siguientes en orden.';
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 28;» y, después de ella, todas las siguientes en orden, todo en la misma consulta del SQL Editor (una sola transacción).';
   end if;
   if not exists (select 1 from public.fbe_migraciones where numero = 27) then
     raise exception 'Antes de la 028 hace falta la 027: ejecútala primero (o usa supabase/instalar.sql en una base nueva).';
@@ -6910,6 +6920,15 @@ insert into public.fbe_migraciones (numero) values (28)
 --     al día (comunidad_cupos), con su notificación («X te ha mandado ánimo 🙌»).
 --   · Votos y ánimos, como las reacciones: al salir dejan de verse (y se borran si lo pide) y van en
 --     comunidad_mis_datos() («Descargar mis datos»).
+-- Tras la revisión de seguridad de la v0.47:
+--   · Lo que cuenta en la comunidad (retos, logros, resumen, rachas y ranking) son solo sesiones terminadas de
+--     semanas publicadas de bloques no cancelados, con fecha de hasta hoy (Madrid) y como mucho 2 por día; y el
+--     atleta ya no puede fechar una sesión después de mañana (proteger_sesion).
+--   · Menciones: una notificación por autor y destinatario y hora, 20 al día por autor (comunidad_cupos), solo si
+--     la publicación se ve; se retiran al borrar u ocultar el comentario o la publicación.
+--   · Las rachas solo salen desde 1 y el perfil devuelve lo mismo sin racha que sin ranking (no se puede deducir).
+--   · Los logros cuentan desde la última vez que entró (comunidad_miembros.entrado_en); votar tiene cupo (30 al día);
+--     el coach no anima con la comunidad cerrada; salir y borrar se lleva también los ánimos recibidos.
 -- Nada de esto lee peso, medidas, nutrición, check-ins, molestias, vídeos ni mensajes con el coach.
 -- Se ejecuta en el SQL Editor después de la 028 (o con instalar.sql en una base nueva). Se puede repetir.
 -- =====================================================================
@@ -6920,7 +6939,7 @@ begin
   select max(numero) into v from public.fbe_migraciones;
   if v > 29 then
     raise exception 'Esta base ya tiene la migración %: repetir la 029 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
-      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 29;» y, después de ella, todas las siguientes en orden.';
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 29;» y, después de ella, todas las siguientes en orden, todo en la misma consulta del SQL Editor (una sola transacción).';
   end if;
   if not exists (select 1 from public.fbe_migraciones where numero = 28) then
     raise exception 'Antes de la 029 hace falta la 028: ejecútala primero (o usa supabase/instalar.sql en una base nueva).';
@@ -7039,9 +7058,16 @@ create index if not exists comunidad_animos_para_atleta_idx on public.comunidad_
 alter table public.comunidad_animos drop constraint if exists comunidad_animos_validos;
 alter table public.comunidad_animos add constraint comunidad_animos_validos check (de <> para and extract(isodow from semana) = 1);
 
--- Los ánimos también tienen su cupo diario
+-- Los ánimos, los votos y las notificaciones de las menciones también tienen su cupo diario
 alter table public.comunidad_cupos drop constraint if exists comunidad_cupos_tipo_check;
-alter table public.comunidad_cupos add constraint comunidad_cupos_tipo_check check (tipo in ('post', 'comentario', 'reporte', 'animo'));
+alter table public.comunidad_cupos add constraint comunidad_cupos_tipo_check check (tipo in ('post', 'comentario', 'reporte', 'animo', 'voto', 'mencion'));
+
+-- La última vez que entró (o volvió) en la comunidad: los logros cuentan desde ahí (creado_en es la primera). Los
+-- que ya estaban, desde su última aceptación (lo más prudente: no se sabe si salieron y volvieron).
+alter table public.comunidad_miembros add column if not exists entrado_en timestamptz;
+update public.comunidad_miembros set entrado_en = aceptado_en where entrado_en is null;
+alter table public.comunidad_miembros alter column entrado_en set default now();
+alter table public.comunidad_miembros alter column entrado_en set not null;
 
 -- ---------------------------------------------------------------------
 -- 3. Lo que calcula la base (internas: solo las usan las funciones de abajo)
@@ -7052,12 +7078,40 @@ language sql stable set search_path = '' as $$
   select (now() at time zone 'Europe/Madrid')::date - (extract(isodow from (now() at time zone 'Europe/Madrid'))::integer - 1)
 $$;
 
+-- Hoy, en Madrid
+create or replace function fbe_privado.comunidad_hoy() returns date
+language sql stable set search_path = '' as $$
+  select (now() at time zone 'Europe/Madrid')::date
+$$;
+
+-- Las sesiones que cuentan en la comunidad (retos, logros, resumen, rachas y ranking): terminadas, de semanas
+-- publicadas de bloques no cancelados, con su fecha de hasta hoy y como mucho 2 por día (si un día tiene más, las
+-- dos primeras de la semana más antigua). Así no se infla nada marcando de golpe lo que no se ha hecho.
+create or replace function fbe_privado.comunidad_sesiones_validas(p_atletas uuid[])
+returns table (atleta_id uuid, sesion_id uuid, semana_id uuid, fecha date)
+language sql stable security definer set search_path = '' as $$
+  select x.atleta_id, x.sesion_id, x.semana_id, x.fecha
+  from (
+    select b.atleta_id, s.id as sesion_id, s.semana_id, s.fecha_realizada as fecha,
+           row_number() over (partition by b.atleta_id, s.fecha_realizada order by w.fecha_inicio, s.orden, s.id) as n
+    from public.sesiones s
+    join public.semanas w on w.id = s.semana_id
+    join public.bloques b on b.id = w.bloque_id
+    where b.atleta_id = any (p_atletas) and not b.es_plantilla and b.estado <> 'cancelado' and w.programacion = 'programada'
+      and s.completada and s.fecha_realizada is not null and s.fecha_realizada <= fbe_privado.comunidad_hoy()
+  ) x
+  where x.n <= 2
+$$;
+
 -- Las semanas publicadas de cada atleta hasta esta (una por lunes: si dos bloques publican la misma, la del más
--- reciente, como en el ranking), con cuántas sesiones tiene y cuántas ha hecho. Sin sesiones, no sale.
+-- reciente, como en el ranking), con cuántas sesiones tiene y cuántas de ellas cuentan como hechas. Sin sesiones,
+-- no sale.
 create or replace function fbe_privado.comunidad_semanas_de(p_atletas uuid[])
 returns table (atleta_id uuid, lunes date, previstas integer, hechas integer)
 language sql stable security definer set search_path = '' as $$
-  with semana as (
+  with validas as (
+    select v.semana_id from fbe_privado.comunidad_sesiones_validas(p_atletas) v
+  ), semana as (
     select distinct on (b.atleta_id, l.lunes) b.atleta_id, l.lunes, w.id as semana_id
     from public.bloques b
     join public.semanas w on w.bloque_id = b.id and w.programacion = 'programada' and w.fecha_inicio is not null
@@ -7066,9 +7120,9 @@ language sql stable security definer set search_path = '' as $$
       and l.lunes <= fbe_privado.comunidad_lunes()
     order by b.atleta_id, l.lunes, b.fecha_inicio desc nulls last, b.numero desc nulls last
   )
-  select s.atleta_id, s.lunes, count(x.id)::integer, (count(x.id) filter (where x.completada))::integer
+  select s.atleta_id, s.lunes, count(x.id)::integer, (select count(*)::integer from validas v where v.semana_id = s.semana_id)
   from semana s join public.sesiones x on x.semana_id = s.semana_id
-  group by s.atleta_id, s.lunes
+  group by s.atleta_id, s.lunes, s.semana_id
 $$;
 
 -- La racha de cada uno: semanas seguidas con todo lo publicado hecho. Las semanas sin sesiones publicadas se
@@ -7090,13 +7144,10 @@ language sql stable security definer set search_path = '' as $$
   from unnest(p_atletas) as a(id)
 $$;
 
--- Sesiones terminadas de un atleta entre dos fechas (las dos incluidas), como en los retos de la 027
+-- Sesiones que cuentan de un atleta entre dos fechas (las dos incluidas)
 create or replace function fbe_privado.comunidad_hechas(p_atleta uuid, p_desde date, p_hasta date) returns integer
 language sql stable security definer set search_path = '' as $$
-  select count(*)::integer from public.sesiones s
-  join public.semanas w on w.id = s.semana_id
-  join public.bloques b on b.id = w.bloque_id
-  where b.atleta_id = p_atleta and not b.es_plantilla and s.completada and s.fecha_realizada between p_desde and p_hasta
+  select count(*)::integer from fbe_privado.comunidad_sesiones_validas(array[p_atleta]) v where v.fecha between p_desde and p_hasta
 $$;
 
 -- El total de un reto de equipo: las sesiones de los que están dentro, sin quien no sale en el ranking
@@ -7108,13 +7159,13 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- ¿Ha conseguido este reto? Individual: su objetivo; de equipo: el total del equipo. No cuenta un reto que ya
--- había acabado cuando entró por primera vez en la comunidad.
+-- había acabado la última vez que entró (o volvió) en la comunidad.
 create or replace function fbe_privado.comunidad_reto_conseguido(p_reto uuid, p_atleta uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
   select exists (
     select 1 from public.comunidad_retos r
     join public.comunidad_miembros m on m.atleta_id = p_atleta
-    where r.id = p_reto and r.hasta >= (m.creado_en at time zone 'Europe/Madrid')::date
+    where r.id = p_reto and r.hasta >= (m.entrado_en at time zone 'Europe/Madrid')::date
       and case when r.modo = 'equipo' then fbe_privado.comunidad_total_reto(r.id)
                else fbe_privado.comunidad_hechas(p_atleta, r.desde, r.hasta) end >= r.objetivo)
 $$;
@@ -7123,7 +7174,7 @@ $$;
 create or replace function fbe_privado.comunidad_gastar_cupo(p_tipo text) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
-  v_max integer := case p_tipo when 'post' then 20 when 'comentario' then 100 when 'animo' then 40 else 20 end;
+  v_max integer := case p_tipo when 'post' then 20 when 'comentario' then 100 when 'animo' then 40 when 'voto' then 30 else 20 end;
 begin
   if auth.uid() is null or public.es_coach() then return; end if;
   delete from public.comunidad_cupos c where c.perfil_id = auth.uid() and c.creado_en < now() - interval '2 days';
@@ -7131,6 +7182,7 @@ begin
     raise exception '%', case p_tipo when 'post' then 'Has publicado 20 veces en las últimas 24 horas: espera un poco'
                                      when 'comentario' then 'Has escrito 100 comentarios en las últimas 24 horas: espera un poco'
                                      when 'animo' then 'Has mandado 40 ánimos en las últimas 24 horas: mañana, más'
+                                     when 'voto' then 'Has votado 30 veces en las últimas 24 horas: mañana, más'
                                      else 'Has avisado 20 veces en las últimas 24 horas: escribe a tu coach' end using errcode = '54000';
   end if;
   insert into public.comunidad_cupos (perfil_id, tipo) values (auth.uid(), p_tipo);
@@ -7218,6 +7270,112 @@ create trigger comunidad_comentarios_ac_menciones before insert on public.comuni
   for each row execute function fbe_privado.comunidad_menciones_limpiar();
 
 -- ---------------------------------------------------------------------
+-- 4 bis. Lo que cuenta: fechas de las sesiones, entradas y el ranking y el progreso de la 027
+-- ---------------------------------------------------------------------
+-- El atleta solo cambia lo suyo de una sesión (013) y, desde la 029, no la fecha después de mañana (Madrid): una
+-- sesión hecha «en 2099» no cuenta en nada, pero así ni se intenta. Las fechas pasadas siguen valiendo (una sesión
+-- de otra semana que se hace más tarde, o más pronto). El coach y el SQL Editor, sin límite.
+create or replace function public.proteger_sesion() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if current_user in ('authenticated', 'anon') and not public.es_coach() then
+    if (new.id, new.semana_id, new.orden, new.nombre, new.tipo, new.intencion, new.dinamica, new.cardio)
+       is distinct from
+       (old.id, old.semana_id, old.orden, old.nombre, old.tipo, old.intencion, old.dinamica, old.cardio) then
+      raise exception 'Solo el coach puede cambiar la prescripción de la sesión' using errcode = '42501';
+    end if;
+    if new.fecha_realizada is distinct from old.fecha_realizada
+       and new.fecha_realizada > (now() at time zone 'Europe/Madrid')::date + 1 then
+      raise exception 'La fecha de la sesión no puede ser posterior a hoy: elige el día en que la hiciste' using errcode = '22023';
+    end if;
+    if (to_jsonb(new) - 'dia_previsto' - 'revisada_en') is distinct from (to_jsonb(old) - 'dia_previsto' - 'revisada_en') then
+      new.revisada_en := null;
+    else
+      new.revisada_en := old.revisada_en;
+    end if;
+  end if;
+  return new;
+end $$;
+
+-- Entrar (028) apunta además cuándo entró (o volvió, tras salir o ser readmitido) en entrado_en; aceptar el texto o
+-- las normas nuevas estando dentro no lo cambia
+create or replace function public.comunidad_unirme(p_nombre text, p_version text, p_normas text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := auth.uid();
+  a public.atletas;
+  v_nombre text := btrim(regexp_replace(coalesce(p_nombre, ''), '[[:space:][:cntrl:]]+', ' ', 'g'));
+  v_problema text;
+begin
+  if v_uid is null then raise exception 'Necesitas iniciar sesión' using errcode = '42501'; end if;
+  if exists (select 1 from public.perfiles p where p.id = v_uid and p.rol = 'coach') then
+    raise exception 'El coach está en la comunidad como coach, no como miembro' using errcode = '42501';
+  end if;
+  select * into a from public.atletas x where x.perfil_id = v_uid;
+  if not found then raise exception 'Solo los atletas del equipo pueden entrar' using errcode = '42501'; end if;
+  if a.estado = 'baja' then
+    raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada' using errcode = '42501';
+  end if;
+  if not public.comunidad_activa() then raise exception 'La comunidad no está abierta' using errcode = '42501'; end if;
+  if exists (select 1 from public.comunidad_miembros m where m.atleta_id = a.id and m.bloqueado) then
+    raise exception 'Tu coach te ha sacado de la comunidad: habla con él si quieres volver' using errcode = '42501';
+  end if;
+  if p_version is distinct from public.comunidad_version() then
+    raise exception 'El texto que aceptas no es el vigente: recarga la app y vuelve a intentarlo' using errcode = '22023';
+  end if;
+  if p_normas is distinct from public.comunidad_normas_version() then
+    raise exception 'Antes de entrar, lee las normas del equipo vigentes: recarga la app y vuelve a intentarlo' using errcode = '22023';
+  end if;
+  v_problema := fbe_privado.comunidad_problema_nombre(v_nombre, a.id);
+  if v_problema is not null then raise exception '%', v_problema using errcode = '22023'; end if;
+  insert into public.comunidad_miembros as m (atleta_id, perfil_id, nombre, version, aceptado_en, salido_en, nombre_cambiado_en, normas_version, normas_leidas_en, entrado_en)
+  values (a.id, v_uid, v_nombre, p_version, now(), null, null, p_normas, now(), now())
+  on conflict (atleta_id) do update
+    set perfil_id = excluded.perfil_id, nombre = excluded.nombre, version = excluded.version,
+        aceptado_en = now(), salido_en = null, nombre_cambiado_en = null,
+        normas_version = excluded.normas_version, normas_leidas_en = now(),
+        entrado_en = case when m.salido_en is not null then now() else m.entrado_en end;
+end $$;
+
+-- El progreso de los retos (027), con las sesiones que cuentan (misma forma que en la 027)
+create or replace function public.comunidad_retos_progreso()
+returns table (reto_id uuid, perfil_id uuid, nombre text, hechas integer, objetivo integer, yo boolean)
+language sql stable security definer set search_path = '' as $$
+  select r.id, d.perfil_id, d.nombre, fbe_privado.comunidad_hechas(d.atleta_id, r.desde, r.hasta), r.objetivo::integer, d.perfil_id = auth.uid()
+  from public.comunidad_retos r
+  cross join fbe_privado.comunidad_dentro d
+  where (public.es_coach() or public.comunidad_soy_miembro())
+    and (not d.sin_ranking or d.perfil_id = auth.uid())
+$$;
+
+-- El ranking de la semana (027), con las sesiones que cuentan (misma forma que en la 027)
+create or replace function public.comunidad_ranking()
+returns table (perfil_id uuid, nombre text, hechas integer, previstas integer, yo boolean)
+language sql stable security definer set search_path = '' as $$
+  with dentro as (
+    select d.atleta_id, d.perfil_id, d.nombre
+    from fbe_privado.comunidad_dentro d
+    where (public.es_coach() or public.comunidad_soy_miembro())
+      and (not d.sin_ranking or d.perfil_id = auth.uid())
+  ), semana as (
+    -- Una semana por atleta: si dos bloques publican la misma, la del más reciente
+    select distinct on (d.atleta_id) d.atleta_id, w.id as semana_id
+    from dentro d
+    join public.bloques b on b.atleta_id = d.atleta_id and not b.es_plantilla and b.estado <> 'cancelado'
+    join public.semanas w on w.bloque_id = b.id and w.programacion = 'programada' and w.fecha_inicio = fbe_privado.comunidad_lunes()
+    order by d.atleta_id, b.fecha_inicio desc nulls last, b.numero desc nulls last
+  ), validas as (
+    select v.semana_id from fbe_privado.comunidad_sesiones_validas(array(select d.atleta_id from dentro d)) v
+  )
+  select d.perfil_id, d.nombre,
+    (select count(*)::integer from validas v where v.semana_id = x.semana_id),
+    (select count(*)::integer from public.sesiones s where s.semana_id = x.semana_id),
+    d.perfil_id = auth.uid()
+  from dentro d join semana x on x.atleta_id = d.atleta_id
+  where exists (select 1 from public.sesiones s where s.semana_id = x.semana_id)
+$$;
+
+-- ---------------------------------------------------------------------
 -- 5. Quién ve qué en las tablas nuevas (lo de los demás, solo dentro; el coach, todo)
 -- ---------------------------------------------------------------------
 alter table public.comunidad_votos enable row level security;
@@ -7258,11 +7416,8 @@ language sql stable security definer set search_path = '' as $$
     where not d.sin_ranking and (public.es_coach() or public.comunidad_soy_miembro())
   )
   select
-    (select count(*)::integer from public.sesiones s
-       join public.semanas w on w.id = s.semana_id
-       join public.bloques b on b.id = w.bloque_id
-     where b.atleta_id in (select c.atleta_id from cuentan c) and not b.es_plantilla and s.completada
-       and s.fecha_realizada between (select l.d from lunes l) and (select l.d from lunes l) + 6),
+    (select count(*)::integer from fbe_privado.comunidad_sesiones_validas(array(select c.atleta_id from cuentan c)) v
+     where v.fecha between (select l.d from lunes l) and (select l.d from lunes l) + 6),
     (select count(*)::integer from fbe_privado.comunidad_semanas_de(array(select c.atleta_id from cuentan c)) x
      where x.lunes = (select l.d from lunes l) and x.hechas >= x.previstas),
     (select count(*)::integer from cuentan),
@@ -7275,7 +7430,8 @@ language sql stable security definer set search_path = '' as $$
   where public.es_coach() or public.comunidad_soy_miembro()
 $$;
 
--- Rachas de semanas completas. Quien no sale en el ranking solo se ve a sí mismo (el coach ve a todos).
+-- Rachas de semanas completas, solo las de 1 o más (así, que alguien no salga no dice si no tiene racha o si no
+-- sale en el ranking). Quien no sale en el ranking solo se ve a sí mismo (el coach ve a todos).
 create or replace function public.comunidad_rachas()
 returns table (perfil_id uuid, nombre text, racha integer, semana_completa boolean, yo boolean)
 language sql stable security definer set search_path = '' as $$
@@ -7287,11 +7443,13 @@ language sql stable security definer set search_path = '' as $$
   select d.perfil_id, d.nombre, r.racha, r.semana_completa, d.perfil_id = auth.uid()
   from dentro d
   join fbe_privado.comunidad_rachas_de(array(select x.atleta_id from dentro x)) r on r.atleta_id = d.atleta_id
+  where r.racha >= 1
 $$;
 
 -- El perfil de alguien del equipo: nombre, foto, desde cuándo está, racha, retos conseguidos (cuántos y cuáles) y
 -- entrenos compartidos. Solo de quien se ve (el coach o alguien de dentro) y para quien ve la comunidad. De quien
--- no sale en el ranking, sin racha ni retos (salvo para él mismo y el coach).
+-- no sale en el ranking, sin racha ni retos (salvo para él mismo y el coach); y, para que eso no se pueda deducir,
+-- sin racha ni retos conseguidos sale igual: null (nunca 0 ni una lista vacía).
 create or replace function public.comunidad_perfil(p_perfil uuid)
 returns table (perfil_id uuid, nombre text, foto text, coach boolean, desde timestamptz, racha integer, retos integer,
                retos_titulos text[], entrenos integer, yo boolean)
@@ -7316,9 +7474,9 @@ begin
   if v_atleta is null then return; end if;
   v_ver := public.es_coach() or not v_sin or p_perfil = auth.uid();
   return query select p_perfil, v_nombre, (select p.foto from public.perfiles p where p.id = p_perfil), false, v_desde,
-    case when v_ver then (select r.racha from fbe_privado.comunidad_rachas_de(array[v_atleta]) r) end,
-    case when v_ver then (select count(*)::integer from public.comunidad_retos r where fbe_privado.comunidad_reto_conseguido(r.id, v_atleta)) end,
-    case when v_ver then (select coalesce(array_agg(t.titulo order by t.hasta desc, t.titulo), '{}'::text[])
+    case when v_ver then (select nullif(r.racha, 0) from fbe_privado.comunidad_rachas_de(array[v_atleta]) r) end,
+    case when v_ver then (select nullif(count(*)::integer, 0) from public.comunidad_retos r where fbe_privado.comunidad_reto_conseguido(r.id, v_atleta)) end,
+    case when v_ver then (select array_agg(t.titulo order by t.hasta desc, t.titulo)
                           from (select r.titulo, r.hasta from public.comunidad_retos r where fbe_privado.comunidad_reto_conseguido(r.id, v_atleta)
                                 order by r.hasta desc, r.titulo limit 20) t) end,
     (select count(*)::integer from public.comunidad_posts x where x.autor_id = p_perfil and x.tipo = 'entreno' and (public.es_coach() or not x.oculta)),
@@ -7369,7 +7527,7 @@ begin
 end $$;
 
 -- Votar en una encuesta (que se ve): solo quien está dentro, una de sus opciones y antes del cierre. Votar otra
--- vez cambia el voto. Devuelve la opción.
+-- vez cambia el voto (30 veces al día como mucho). Devuelve la opción.
 create or replace function public.comunidad_votar(p_post uuid, p_opcion integer) returns integer
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -7386,6 +7544,11 @@ begin
   end if;
   v_cierre := (x.encuesta ->> 'cierre')::timestamptz;
   if v_cierre is not null and now() >= v_cierre then raise exception 'La encuesta ya está cerrada' using errcode = '22023'; end if;
+  -- Votar lo mismo otra vez no cambia nada (ni gasta cupo); votar o cambiar el voto, como mucho 30 veces al día
+  if exists (select 1 from public.comunidad_votos v where v.post_id = p_post and v.autor_id = auth.uid() and v.opcion = p_opcion) then
+    return p_opcion;
+  end if;
+  perform fbe_privado.comunidad_gastar_cupo('voto');
   insert into public.comunidad_votos (post_id, autor_id, atleta_id, opcion)
   values (p_post, auth.uid(), public.mi_atleta_id(), p_opcion)
   on conflict (post_id, autor_id) do update set opcion = excluded.opcion, creado_en = now();
@@ -7393,7 +7556,7 @@ begin
 end $$;
 
 -- Mandar ánimo a alguien de dentro (no a uno mismo; uno por persona y semana; como mucho 40 al día). También el
--- coach. Le llega una notificación sin más texto. Devuelve la semana (su lunes).
+-- coach, con la comunidad abierta. Le llega una notificación sin más texto. Devuelve la semana (su lunes).
 create or replace function public.comunidad_animar(p_perfil uuid) returns date
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -7401,8 +7564,8 @@ declare
   v_semana date := fbe_privado.comunidad_lunes();
   v_para_atleta uuid;
 begin
-  if v_uid is null or not (public.es_coach() or public.comunidad_soy_miembro()) then
-    raise exception 'Para animar tienes que estar en la comunidad' using errcode = '42501';
+  if v_uid is null or not public.comunidad_activa() or not (public.es_coach() or public.comunidad_soy_miembro()) then
+    raise exception 'Para animar tienes que estar en la comunidad (y abierta)' using errcode = '42501';
   end if;
   if p_perfil is null or p_perfil = v_uid then raise exception 'A ti no te puedes mandar ánimo (¡pero vas bien!)' using errcode = '22023'; end if;
   select d.atleta_id into v_para_atleta from fbe_privado.comunidad_dentro d where d.perfil_id = p_perfil;
@@ -7413,10 +7576,8 @@ begin
   perform fbe_privado.comunidad_gastar_cupo('animo');
   insert into public.comunidad_animos (de, para, atleta_id, para_atleta_id, semana)
   values (v_uid, p_perfil, case when public.es_coach() then null else public.mi_atleta_id() end, v_para_atleta, v_semana);
-  if public.comunidad_activa() then
-    perform fbe_privado.notificar_seguro(p_perfil, 'comunidad', fbe_privado.comunidad_nombre(v_uid) || ' te ha mandado ánimo 🙌',
-      'Míralo en Equipo.', '#equipo', 'comunidad_animo:' || v_uid || ':' || v_semana);
-  end if;
+  perform fbe_privado.notificar_seguro(p_perfil, 'comunidad', fbe_privado.comunidad_nombre(v_uid) || ' te ha mandado ánimo 🙌',
+    'Míralo en Equipo.', '#equipo', 'comunidad_animo:' || v_uid || ':' || v_semana);
   return v_semana;
 end $$;
 
@@ -7468,8 +7629,8 @@ begin
   return v_id;
 end $$;
 
--- Salir (027): con p_borrar, también se borran sus votos y los ánimos que ha mandado (como sus reacciones). Sin
--- borrar, dejan de verse (como todo lo suyo) y vuelven si entra otra vez.
+-- Salir (027): con p_borrar, también se borran sus votos y sus ánimos, los mandados y los recibidos (como sus
+-- reacciones). Sin borrar, dejan de verse (como todo lo suyo) y vuelven si entra otra vez.
 create or replace function public.comunidad_salir(p_borrar boolean default false) returns text[]
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -7484,24 +7645,31 @@ begin
       and not exists (select 1 from public.comunidad_reportes r where r.copia_foto = x.foto_ruta and r.resuelto_en is null);
     delete from public.comunidad_reacciones where autor_id = v_uid;
     delete from public.comunidad_votos where autor_id = v_uid;
-    delete from public.comunidad_animos where de = v_uid;
+    delete from public.comunidad_animos where de = v_uid or para = v_uid;
     delete from public.comunidad_comentarios where autor_id = v_uid;
     delete from public.comunidad_posts where autor_id = v_uid;
   end if;
   return v_fotos;
 end $$;
 
--- Todo lo suyo en la comunidad (027), también sus votos y sus ánimos (los mandados, a quién; los recibidos, solo
--- cuándo), para «Descargar mis datos»
+-- Todo lo suyo en la comunidad (027), también sus votos y sus ánimos (los mandados, a quién si sigue dentro —si no,
+-- «Alguien del equipo»—; los recibidos, solo cuándo), para «Descargar mis datos». De sus menciones, cuántas (no a
+-- quién: son identificadores de otras personas; su texto ya dice a quién nombró).
 create or replace function public.comunidad_mis_datos() returns jsonb
 language sql stable security definer set search_path = '' as $$
   select case when auth.uid() is null then null else jsonb_build_object(
     'miembro', (select to_jsonb(m) - 'perfil_id' from public.comunidad_miembros m where m.perfil_id = auth.uid()),
-    'publicaciones', coalesce((select jsonb_agg(to_jsonb(x) order by x.creado_en) from public.comunidad_posts x where x.autor_id = auth.uid()), '[]'::jsonb),
-    'comentarios', coalesce((select jsonb_agg(to_jsonb(c) order by c.creado_en) from public.comunidad_comentarios c where c.autor_id = auth.uid()), '[]'::jsonb),
+    'publicaciones', coalesce((select jsonb_agg((to_jsonb(x) - 'menciones') || jsonb_build_object('menciones', cardinality(x.menciones)) order by x.creado_en)
+                               from public.comunidad_posts x where x.autor_id = auth.uid()), '[]'::jsonb),
+    'comentarios', coalesce((select jsonb_agg((to_jsonb(c) - 'menciones') || jsonb_build_object('menciones', cardinality(c.menciones)) order by c.creado_en)
+                             from public.comunidad_comentarios c where c.autor_id = auth.uid()), '[]'::jsonb),
     'reacciones', coalesce((select jsonb_agg(to_jsonb(r) order by r.creado_en) from public.comunidad_reacciones r where r.autor_id = auth.uid()), '[]'::jsonb),
     'votos', coalesce((select jsonb_agg(to_jsonb(v) order by v.creado_en) from public.comunidad_votos v where v.autor_id = auth.uid()), '[]'::jsonb),
-    'animos_mandados', coalesce((select jsonb_agg(jsonb_build_object('para', a.para, 'para_nombre', fbe_privado.comunidad_nombre(a.para), 'semana', a.semana, 'creado_en', a.creado_en) order by a.creado_en)
+    'animos_mandados', coalesce((select jsonb_agg(
+                                   case when exists (select 1 from fbe_privado.comunidad_dentro d where d.perfil_id = a.para)
+                                        then jsonb_build_object('para', a.para, 'para_nombre', fbe_privado.comunidad_nombre(a.para), 'semana', a.semana, 'creado_en', a.creado_en)
+                                        else jsonb_build_object('para_nombre', 'Alguien del equipo', 'semana', a.semana, 'creado_en', a.creado_en) end
+                                   order by a.creado_en)
                                  from public.comunidad_animos a where a.de = auth.uid()), '[]'::jsonb),
     'animos_recibidos', coalesce((select jsonb_agg(jsonb_build_object('semana', a.semana, 'creado_en', a.creado_en) order by a.creado_en)
                                   from public.comunidad_animos a where a.para = auth.uid()), '[]'::jsonb),
@@ -7514,12 +7682,22 @@ $$;
 -- ---------------------------------------------------------------------
 -- 7. Notificaciones «comunidad» (como en la 027: sin el texto, con sus preferencias y su «no molestar»)
 -- ---------------------------------------------------------------------
--- A quien mencionan (si sigue dentro, o es el coach), una por publicación, autor y hora
+-- A quien mencionan (si sigue dentro, o es el coach), solo si la publicación se ve (no está oculta y su autor es el
+-- coach o sigue dentro). Una por autor y destinatario y hora, sea cual sea la publicación; y cada autor, como mucho
+-- 20 al día (comunidad_cupos; el coach no tiene): las de más siguen en el texto, pero no avisan. La clave lleva lo
+-- que la causa (la publicación o el comentario, sin guiones para que quepa) para retirarla si se borra o se oculta:
+-- comunidad_mencion:<publicación o comentario>:<autor>:<hora>.
 create or replace function fbe_privado.comunidad_al_mencionar() returns trigger
 language plpgsql security definer set search_path = '' set lock_timeout = '1s' as $$
 declare
   v_post uuid;
+  v_autor_post uuid;
+  v_objeto text;
+  v_autor text := replace(new.autor_id::text, '-', '');
+  v_hora text := to_char(now() at time zone 'Europe/Madrid', 'YYYYMMDDHH24');
+  v_coach boolean;
   v_quien text;
+  v_para uuid;
 begin
   if cardinality(new.menciones) = 0 or not public.comunidad_activa() then return null; end if;
   if tg_table_name = 'comunidad_comentarios' then
@@ -7528,14 +7706,31 @@ begin
   else
     v_post := new.id;
   end if;
-  if not exists (select 1 from public.comunidad_posts x where x.id = v_post and not x.oculta) then return null; end if;
+  v_objeto := replace(new.id::text, '-', '');
+  select x.autor_id into v_autor_post from public.comunidad_posts x where x.id = v_post and not x.oculta;
+  if v_autor_post is null then return null; end if;
+  if not exists (select 1 from public.perfiles p where p.id = v_autor_post and p.rol = 'coach')
+     and not exists (select 1 from fbe_privado.comunidad_dentro d where d.perfil_id = v_autor_post) then
+    return null;
+  end if;
+  v_coach := exists (select 1 from public.perfiles p where p.id = new.autor_id and p.rol = 'coach');
   v_quien := fbe_privado.comunidad_nombre(new.autor_id);
-  perform fbe_privado.notificar_seguro(m.x, 'comunidad', v_quien || ' te ha mencionado', 'Míralo en Equipo.', '#equipo',
-            'comunidad_mencion:' || v_post || ':' || new.autor_id || ':' || to_char(now() at time zone 'Europe/Madrid', 'YYYYMMDDHH24'))
-  from unnest(new.menciones) as m(x)
-  where m.x <> new.autor_id
-    and (exists (select 1 from public.perfiles p where p.id = m.x and p.rol = 'coach')
-         or exists (select 1 from fbe_privado.comunidad_dentro d where d.perfil_id = m.x));
+  foreach v_para in array new.menciones loop
+    continue when v_para = new.autor_id;
+    continue when not (exists (select 1 from public.perfiles p where p.id = v_para and p.rol = 'coach')
+                       or exists (select 1 from fbe_privado.comunidad_dentro d where d.perfil_id = v_para));
+    perform pg_advisory_xact_lock(hashtextextended('comunidad_mencion:' || new.autor_id || ':' || v_para, 0));
+    continue when exists (select 1 from public.notificaciones n
+                          where n.usuario_id = v_para and n.clave like 'comunidad_mencion:%:' || v_autor || ':' || v_hora);
+    if not v_coach and (select count(*) from public.comunidad_cupos c
+                        where c.perfil_id = new.autor_id and c.tipo = 'mencion' and c.creado_en > now() - interval '1 day') >= 20 then
+      exit;
+    end if;
+    if fbe_privado.notificar_seguro(v_para, 'comunidad', v_quien || ' te ha mencionado', 'Míralo en Equipo.', '#equipo',
+         'comunidad_mencion:' || v_objeto || ':' || v_autor || ':' || v_hora) and not v_coach then
+      insert into public.comunidad_cupos (perfil_id, tipo) values (new.autor_id, 'mencion');
+    end if;
+  end loop;
   return null;
 exception when others then
   raise warning 'FBE: notificación de una mención no creada: %', sqlerrm;
@@ -7547,6 +7742,22 @@ create trigger comunidad_posts_zz_mencionar after insert on public.comunidad_pos
 drop trigger if exists comunidad_comentarios_zz_mencionar on public.comunidad_comentarios;
 create trigger comunidad_comentarios_zz_mencionar after insert on public.comunidad_comentarios
   for each row execute function fbe_privado.comunidad_al_mencionar();
+
+-- Un comentario borrado u oculto antes de que salgan sus menciones ya no avisa
+create or replace function fbe_privado.comunidad_comentario_retirar() returns trigger
+language plpgsql security definer set search_path = '' set lock_timeout = '1s' as $$
+begin
+  if tg_op = 'UPDATE' and not (new.oculto and not old.oculto) then return null; end if;
+  delete from public.notificaciones n
+  where n.estado = 'pendiente' and n.clave like 'comunidad_mencion:' || replace(old.id::text, '-', '') || ':%';
+  return null;
+exception when others then
+  raise warning 'FBE: menciones del comentario % no retiradas: %', old.id, sqlerrm;
+  return null;
+end $$;
+drop trigger if exists comunidad_comentarios_zz_retirar on public.comunidad_comentarios;
+create trigger comunidad_comentarios_zz_retirar after delete or update of oculto on public.comunidad_comentarios
+  for each row execute function fbe_privado.comunidad_comentario_retirar();
 
 -- Aviso o encuesta del coach en el muro → a todos los que están dentro (027)
 create or replace function fbe_privado.comunidad_al_avisar() returns trigger
@@ -7566,14 +7777,18 @@ exception when others then
   return null;
 end $$;
 
--- Una publicación borrada u oculta antes de que salgan sus notificaciones (también las de sus menciones) ya no avisa
+-- Una publicación borrada u oculta antes de que salgan sus notificaciones (también las de sus menciones y las de
+-- los comentarios que tiene) ya no avisa
 create or replace function fbe_privado.comunidad_al_retirar() returns trigger
 language plpgsql security definer set search_path = '' set lock_timeout = '1s' as $$
 begin
   if tg_op = 'UPDATE' and not (new.oculta and not old.oculta) then return null; end if;
   delete from public.notificaciones n
   where n.estado = 'pendiente' and (n.clave like 'comunidad:' || old.id || ':%' or n.clave = 'comunidad_aviso:' || old.id
-                                    or n.clave like 'comunidad_mencion:' || old.id || ':%');
+                                    or n.clave like 'comunidad_mencion:' || replace(old.id::text, '-', '') || ':%'
+                                    or (n.clave like 'comunidad_mencion:%' and exists (
+                                          select 1 from public.comunidad_comentarios c
+                                          where c.post_id = old.id and n.clave like 'comunidad_mencion:' || replace(c.id::text, '-', '') || ':%')));
   return null;
 exception when others then
   raise warning 'FBE: notificaciones de la publicación % no retiradas: %', old.id, sqlerrm;
@@ -7586,7 +7801,7 @@ create or replace function fbe_privado.comunidad_retirar_suyas(p_perfil uuid) re
 language sql security definer set search_path = '' as $$
   delete from public.notificaciones n
   where n.tipo = 'comunidad' and n.url = '#equipo' and n.estado = 'pendiente'
-    and (n.clave like 'comunidad_animo:' || p_perfil || ':%' or n.clave like 'comunidad_mencion:%:' || p_perfil || ':%');
+    and (n.clave like 'comunidad_animo:' || p_perfil || ':%' or n.clave like 'comunidad_mencion:%:' || replace(p_perfil::text, '-', '') || ':%');
 $$;
 create or replace function fbe_privado.comunidad_al_dejar() returns trigger
 language plpgsql security definer set search_path = '' set lock_timeout = '1s' as $$

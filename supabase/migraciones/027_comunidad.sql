@@ -35,10 +35,20 @@ begin
   select max(numero) into v from public.fbe_migraciones;
   if v > 27 then
     raise exception 'Esta base ya tiene la migración %: repetir la 027 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
-      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 27;» y, después de ella, todas las siguientes en orden.';
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 27;» y, después de ella, todas las siguientes en orden, todo en la misma consulta del SQL Editor (una sola transacción).';
   end if;
   if not exists (select 1 from public.fbe_migraciones where numero = 26) then
     raise exception 'Antes de la 027 hace falta la 026: ejecútala primero (o usa supabase/instalar.sql en una base nueva).';
+  end if;
+  -- (v0.47) Con datos de la 029 (logros, encuestas, retos de equipo de más de 100 sesiones o avisos de ellos), las
+  -- reglas de la 027 no caben: repetirla se quedaría a medias. Se para antes de tocar nada.
+  if to_regclass('public.comunidad_posts') is not null then
+    if exists (select 1 from public.comunidad_posts x where x.tipo not in ('aviso', 'post', 'entreno'))
+       or exists (select 1 from public.comunidad_retos r where r.objetivo > 100)
+       or exists (select 1 from public.comunidad_reportes r where r.copia_tipo not in ('aviso', 'post', 'entreno', 'comentario')) then
+      raise exception 'Esta base tiene logros, encuestas o retos de equipo de la 029: repetir la 027 los dejaría fuera de sus reglas. No la repitas sola.'
+        using hint = 'Si de verdad hace falta: ejecuta la 027, la 028 y la 029 seguidas en la misma consulta del SQL Editor (una sola transacción), después de borrar esas publicaciones y retos, o restaura la copia.';
+    end if;
   end if;
 end $$;
 
