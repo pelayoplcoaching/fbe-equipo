@@ -2309,7 +2309,7 @@ try {
   await p.locator('.tarjeta-atleta', { hasText: 'Ana López' }).first().click();
   await p.getByRole('tab', { name: 'Seguimiento' }).click();
   await p.getByRole('heading', { name: 'Tareas', exact: true }).waitFor();
-  check((await p.getByRole('heading', { name: 'Tareas', exact: true }).locator('xpath=ancestor::section[1]').textContent()).includes('Fotos de progreso de este mes'), 'en Seguimiento, sus tareas (la de fotos de hoy)');
+  check(await hay(p.getByRole('heading', { name: 'Tareas', exact: true }).locator('xpath=ancestor::section[1]').getByText('Fotos de progreso de este mes'), 1, 10000), 'en Seguimiento, sus tareas (la de fotos de hoy)');
   await p.getByRole('button', { name: 'Poner una tarea' }).click();
   const hojaT = p.getByRole('dialog', { name: 'Una tarea para Ana' });
   await hojaT.getByRole('group', { name: 'Plantillas de tareas' }).waitFor();
