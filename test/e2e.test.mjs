@@ -1793,6 +1793,7 @@ try {
   await hojaAj.getByRole('button', { name: 'Cerrar' }).click();
   await p.getByRole('tab', { name: 'Ranking' }).click();
   await p.locator('.ranking .nota', { hasText: 'No sales en el ranking' }).waitFor();
+  await p.locator('.ranking .fila-progreso').first().waitFor(); // en una máquina lenta, la lista llega un momento después que la nota
   check(await p.locator('.ranking .fila-progreso.yo').count() === 0 && await p.locator('.ranking .fila-progreso').count() >= 1, 'con «No salir en el ranking», ya no sale (y ve su semana aparte)');
   // Salir: lo suyo deja de verse
   await p.getByRole('button', { name: 'Ajustes de la comunidad' }).click();
