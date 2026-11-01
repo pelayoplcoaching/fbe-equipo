@@ -6,6 +6,11 @@
 // pone al día la de la cuenta que la activó (si otra persona entra en este móvil, no se le activan solas, y
 // si alguien la quitó desde otro móvil, no vuelve).
 import { soportePush, esIos, claveServidor, normalizarB64url, describirDispositivo } from '../logica/notificaciones.js';
+import { reportarError } from '../registro-errores.js';
+
+// Al acabar de poner al día la suscripción al abrir la app (la hoja de Notificaciones se vuelve a leer)
+export const EVENTO_PUSH = 'fbe-push-sincronizado';
+const avisarHoja = () => { try { window.dispatchEvent(new Event(EVENTO_PUSH)); } catch { /* */ } };
 
 const ENDPOINT_VALIDO = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com)\/[!-~]+$/;
 const CLAVE_LOCAL = 'fbe-push-v1';
@@ -100,7 +105,14 @@ export async function desactivarPushLocal() {
 
 // Al abrir la app con la sesión dentro: si este navegador tiene las notificaciones de esta cuenta, la base se
 // queda con su suscripción al día (los navegadores la renuevan de vez en cuando, y si se cambiaron las claves
-// VAPID hay que rehacerla). Si se quitaron desde otro móvil, aquí también se quitan.
+// VAPID hay que rehacerla).
+// v0.45 (aviso de Guti: «se me desactivan cada vez que cierro la app», Android con la app instalada): al abrir ya
+// no se quita nunca la suscripción por una señal dudosa. Antes, si el navegador decía un momento que el permiso no
+// estaba dado, o si la base no encontraba la suscripción (p. ej. la había borrado el servidor por un fallo del
+// servicio de push), se daba de baja aquí y había que volver a activarlas a mano. Ahora: sin permiso, no se toca
+// nada (si de verdad se quitó, el servicio de push lo dirá al enviar y la base la borra); sin la suscripción en la
+// base, se vuelve a apuntar. Cada caso raro se apunta en Errores de la app para poder verlo.
+const rara = (mensaje) => reportarError(new Error(mensaje), 'push');
 export async function sincronizarPush(api, modo) {
   try {
     if (estadoPush(modo) !== 'ok') return;
@@ -111,22 +123,23 @@ export async function sincronizarPush(api, modo) {
       if (sub && marca) await desactivarPushLocal();
       return;
     }
-    if (Notification.permission !== 'granted') { await desactivarPushLocal(); return; }
+    if (Notification.permission !== 'granted') { rara(`push: al abrir, el permiso dice «${Notification.permission}» (no se toca la suscripción)`); return; }
     const clave = claveServidor(vapidPublica());
     if (sub && !mismaClave(sub.options?.applicationServerKey, clave)) {
       // Se cambiaron las claves: se rehace con las nuevas (con el permiso ya dado, no hace falta preguntar)
       await sub.unsubscribe().catch(() => {});
-      const reg = await registro();
-      sub = await suscribir(reg);
-      const d = datosDe(sub);
-      await api.registrarSuscripcion({ ...d, dispositivo: describirDispositivo(navigator.userAgent), vapid: vapidPublica() });
-      guardarMarca({ uid: marca.uid, endpoint: d.endpoint });
-      return;
+      sub = null;
     }
-    if (!sub) sub = await suscribir(await registro()); // el navegador la perdió: se rehace
+    if (!sub) { rara('push: al abrir, el navegador no tenía la suscripción: se rehace'); sub = await suscribir(await registro()); }
     const d = datosDe(sub);
     const sigue = await api.actualizarSuscripcion({ anterior: marca.endpoint, ...d, vapid: vapidPublica() });
-    if (!sigue) { await desactivarPushLocal(); return; }
+    if (!sigue) {
+      // La base ya no la tenía (la borró el servidor tras un fallo del servicio de push, o se quitó desde otro sitio):
+      // con el permiso dado y la marca de esta cuenta, se vuelve a apuntar
+      rara('push: al abrir, la base no tenía esta suscripción: se vuelve a apuntar');
+      await api.registrarSuscripcion({ ...d, dispositivo: describirDispositivo(navigator.userAgent), vapid: vapidPublica() });
+    }
     guardarMarca({ uid: marca.uid, endpoint: d.endpoint });
-  } catch { /* sin conexión o sin permiso para suscribirse sin tocar un botón: ya se hará la próxima vez */ }
+  } catch (e) { reportarError(e, 'push'); /* sin conexión o sin permiso para suscribirse sin tocar un botón: ya se hará la próxima vez */ }
+  finally { avisarHoja(); }
 }

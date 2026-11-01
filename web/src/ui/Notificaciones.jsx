@@ -6,7 +6,7 @@ import { useApp, useCarga, Icono, Hoja, Cargando } from './comunes.jsx';
 import { Interruptor } from './Ajustes.jsx';
 import { conNutricion } from '../logica/nivel.js';
 import { TIPOS_ATLETA, TIPOS_COACH, DIAS_CHECKIN, ESTADO_NOTIFICACION, RECORDATORIOS, momentoNotificacion } from '../logica/notificaciones.js';
-import { estadoPush, activarPush, desactivarPush, suscripcionActual, conEmail } from '../datos/push.js';
+import { estadoPush, activarPush, desactivarPush, suscripcionActual, conEmail, EVENTO_PUSH } from '../datos/push.js';
 
 const textoEstado = (coach) => ({
   demo: 'En la demo no se envían a ningún móvil: aquí ves cómo se eligen.',
@@ -89,6 +89,13 @@ export function HojaNotificaciones({ coach = false, equipo = false, alCerrar, al
   const [ocupado, setOcupado] = useState(false);
   useEffect(() => { if (prefs.datos) { pRef.current = prefs.datos; setP(prefs.datos); } }, [prefs.datos]);
   useEffect(() => { if (estado === 'ok') suscripcionActual().then((s) => setEsta(s?.endpoint || null)); }, [estado]);
+  // v0.45: si al abrir la app se estaba poniendo al día la suscripción, al acabar se vuelve a mirar (antes podía salir
+  // «desactivadas» un momento porque la base aún tenía la dirección de antes)
+  useEffect(() => {
+    const otraVez = () => { if (estadoPush(modo) === 'ok') suscripcionActual().then((s) => setEsta(s?.endpoint || null)); subs.recargar(true); };
+    window.addEventListener(EVENTO_PUSH, otraVez);
+    return () => window.removeEventListener(EVENTO_PUSH, otraVez);
+  }, []);
   const sabido = estado !== 'ok' || (esta !== undefined && !!subs.datos);
   const activadaAqui = !!esta && (subs.datos || []).some((s) => s.endpoint === esta);
   const disp = coach ? 'dispositivo' : 'móvil';

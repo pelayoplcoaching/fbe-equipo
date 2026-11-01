@@ -374,9 +374,18 @@ console.log('\nEn el navegador: activar, poner al día y quitar (push.js)');
   llamadas.length = 0;
   await sincronizarPush(api, 'supabase');
   check(llamadas.length === 1 && llamadas[0][0] === 'actualizar' && suscripcion, 'al abrir la app, la pone al día (sin crear otra)');
+  // v0.45 (aviso de Guti): si la base ya no la tiene (la borró el servidor tras un fallo del servicio de push), al abrir
+  // la app con el permiso dado se vuelve a apuntar sola, en vez de darla de baja aquí
   filas.clear();
+  llamadas.length = 0;
   await sincronizarPush(api, 'supabase');
-  check(!suscripcion && !almacen.size, 'si se quitó desde otro móvil, al abrir la app aquí también se quita (no vuelve sola)');
+  check(suscripcion && filas.size === 1 && llamadas.some(([n]) => n === 'registrar') && almacen.size === 1, 'si la base ya no tiene su suscripción, al abrir la app se vuelve a apuntar (no se desactivan solas)');
+  // Y si el navegador dice un momento que no hay permiso, no se toca nada
+  globalThis.Notification.permission = 'default';
+  llamadas.length = 0;
+  await sincronizarPush(api, 'supabase');
+  check(suscripcion && filas.size === 1 && !llamadas.length && almacen.size === 1, 'si al abrir el permiso sale «default» un momento, la suscripción se queda como estaba');
+  globalThis.Notification.permission = 'granted';
   await activarPush(api);
   uid = 'u-luis';
   llamadas.length = 0;
@@ -388,7 +397,8 @@ console.log('\nEn el navegador: activar, poner al día y quitar (push.js)');
   globalThis.FBE_CONFIG = { vapidPublica: vapid2.publica };
   llamadas.length = 0;
   await sincronizarPush(api, 'supabase');
-  check(suscripcion && suscripcion.endpoint !== antes && llamadas.some(([n, d]) => n === 'registrar' && d.vapid === vapid2.publica), 'si se cambian las claves VAPID, se rehace sola con las nuevas (el permiso ya estaba dado)');
+  check(suscripcion && suscripcion.endpoint !== antes && llamadas.some(([n, d]) => (n === 'registrar' || n === 'actualizar') && d.vapid === vapid2.publica)
+    && [...filas.keys()].includes(suscripcion.endpoint) && !filas.has(antes), 'si se cambian las claves VAPID, se rehace sola con las nuevas (el permiso ya estaba dado) y sustituye a la de antes');
   const marca = JSON.parse(almacen.get('fbe-push-v1'));
   suscripcion = null; // el navegador la ha perdido
   llamadas.length = 0;
