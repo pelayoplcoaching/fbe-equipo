@@ -351,7 +351,10 @@ console.log('\nEl service worker: compartir un vídeo a la app y la marca en el 
       skipWaiting: () => {}, location: { origin: 'https://atletas.fbe.test' },
       ...(conMarca ? { navigator: { setAppBadge: async (n) => { marcas.push(n); } } } : { navigator: {} }),
     };
-    const caches = { open: async () => ({ put: async (k, r) => { guardado.set(k, r); }, match: async (k) => guardado.get(k) }), keys: async () => [], delete: async () => true };
+    // Una caché por nombre (y sin caches.match global: así se ve que cada cosa mira solo en la suya)
+    const porNombre = new Map();
+    const caches = { open: async (n) => { if (!porNombre.has(n)) porNombre.set(n, new Map()); const m = porNombre.get(n); if (n === 'fbe-compartido') return { put: async (k, r) => { guardado.set(String(k), r); }, match: async (k) => guardado.get(String(k)), delete: async (k) => guardado.delete(String(k)) };
+      return { put: async (k, r) => { m.set(typeof k === 'string' ? k : k.url, r); }, match: async (k) => m.get(typeof k === 'string' ? k : k.url) }; }, keys: async () => [...porNombre.keys()], delete: async () => true };
     new Function('self', 'caches', codigo)(self, caches);
     const pedir = async (req) => {
       let respuesta = null;
@@ -359,16 +362,39 @@ console.log('\nEl service worker: compartir un vídeo a la app y la marca en el 
       return respuesta && await respuesta;
     };
     const push = async (datos) => { let pr; oyentes.push({ data: { json: () => JSON.parse(datos), text: () => datos }, waitUntil: (x) => { pr = x; } }); await pr; };
-    return { pedir, push, guardado, marcas };
+    return { pedir, push, guardado, marcas, caches };
   };
   const sw = crear({ conMarca: true });
   const fd = new FormData();
   fd.append('video', new File([new Uint8Array([1, 2, 3, 4])], 'sentadilla.mp4', { type: 'video/mp4' }));
   const r = await sw.pedir(new Request('https://atletas.fbe.test/app/compartir-video', { method: 'POST', body: fd }));
-  const guardado = sw.guardado.get('compartido/video');
+  const CLAVE = 'https://fbe-compartido.invalid/video';
+  const guardado = sw.guardado.get(CLAVE);
   check(r?.status === 303 && r.headers.get('location') === 'https://atletas.fbe.test/app/?compartido=1#hoy', 'compartir un vídeo desde la galería abre la app en Hoy (?compartido=1)');
-  check(!!guardado && guardado.headers.get('content-type') === 'video/mp4' && decodeURIComponent(guardado.headers.get('x-nombre')) === 'sentadilla.mp4' && (await guardado.arrayBuffer()).byteLength === 4,
-    'y el vídeo se queda guardado en el móvil (en su caché) para que la app lo recoja');
+  check(!!guardado && sw.guardado.size === 1 && guardado.headers.get('content-type') === 'video/mp4' && guardado.headers.get('x-content-type-options') === 'nosniff' && decodeURIComponent(guardado.headers.get('x-nombre')) === 'sentadilla.mp4' && (await guardado.arrayBuffer()).byteLength === 4,
+    'y el vídeo se queda guardado en el móvil (en su caché, con «nosniff» y bajo una dirección que no existe) para que la app lo recoja');
+  const { LIMITE_ARCHIVO_MB } = await import('../web/src/datos/api.js');
+  check(codigo.includes(`const LIMITE_MB = ${LIMITE_ARCHIVO_MB};`), `el límite del service worker es el de la app (${LIMITE_ARCHIVO_MB} MB)`);
+  const conFalso = (archivos) => ({ method: 'POST', url: 'https://atletas.fbe.test/app/compartir-video', formData: async () => ({ getAll: () => archivos }) });
+  const sw3 = crear({ conMarca: false });
+  const rGrande = await sw3.pedir(conFalso([{ type: 'video/mp4', size: (LIMITE_ARCHIVO_MB + 1) * 1024 * 1024, name: 'largo.mp4' }]));
+  const rAvi = await sw3.pedir(conFalso([{ type: 'video/x-msvideo', size: 1000, name: 'viejo.avi' }]));
+  const rHtml = await sw3.pedir(conFalso([{ type: 'text/html', size: 100, name: 'x.html' }]));
+  check([rGrande, rAvi, rHtml].every((x) => x.headers.get('location').includes('compartido=0')) && !sw3.guardado.size, 'solo MP4, MOV o WebM y de hasta ese tamaño: lo demás no se guarda');
+  const fdMov = new FormData();
+  fdMov.append('video', new File([new Uint8Array([9, 9])], 'clip.mov', { type: 'video/quicktime' }));
+  check((await sw3.pedir(new Request('https://atletas.fbe.test/app/compartir-video', { method: 'POST', body: fdMov })))?.headers.get('location').includes('compartido=1'), 'un MOV del iPhone pasado al Android, sí');
+  // Los archivos de la app salen solo de su caché, nunca de la de lo compartido
+  const appCache = await sw.caches.open('fbe-atletas-x');
+  await appCache.put('https://atletas.fbe.test/app/app.js', new Response('codigo'));
+  const rApp = await sw.pedir({ method: 'GET', url: 'https://atletas.fbe.test/app/app.js', mode: 'no-cors' });
+  const pedidos = [];
+  const fetchOriginal = globalThis.fetch;
+  globalThis.fetch = async (req) => { pedidos.push(typeof req === 'string' ? req : req.url); return new Response('de la red', { status: 404 }); };
+  const rOtra = await sw.pedir({ method: 'GET', url: CLAVE, mode: 'no-cors' });
+  const rRuta = await sw.pedir({ method: 'GET', url: 'https://atletas.fbe.test/app/compartido/video', mode: 'no-cors' });
+  globalThis.fetch = fetchOriginal;
+  check(await rApp.text() === 'codigo' && rOtra === null && (await rRuta.text()) === 'de la red', 'los archivos de la app salen de su caché; el vídeo compartido no se puede pedir desde ninguna dirección');
   const fd2 = new FormData();
   fd2.append('video', new File(['hola'], 'nota.txt', { type: 'text/plain' }));
   const sw2 = crear({ conMarca: false });

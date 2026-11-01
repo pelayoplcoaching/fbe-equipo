@@ -2069,6 +2069,28 @@ try {
   const hojaC = p.getByRole('dialog', { name: 'Comparar check-ins' });
   await hojaC.locator('.tabla-comparar').waitFor();
   check(await hojaC.locator('.tabla-comparar tr').count() >= 4 && (await hojaC.textContent()).includes('Peso'), 'compara dos check-ins lado a lado (con el peso de esas semanas)');
+  // A 390 px, ninguna palabra se parte por la mitad («Motivad / o»), tampoco en una respuesta larga
+  const partidas = async () => hojaC.evaluate((el) => {
+    const malas = [];
+    for (const celda of el.querySelectorAll('.tabla-comparar td, .tabla-comparar th')) {
+      const w = document.createTreeWalker(celda, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        const re = /\S+/g; let m;
+        while ((m = re.exec(n.data))) {
+          if (m[0].length > 14) continue; // (una palabra larguísima puede llevar guion)
+          const r = document.createRange(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length);
+          if (new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size > 1) malas.push(m[0]);
+        }
+      }
+    }
+    return malas;
+  });
+  await hojaC.getByLabel('Antes').selectOption({ index: 1 });
+  await hojaC.getByLabel('Después').selectOption({ index: 0 });
+  await hojaC.locator('.tabla-comparar td', { hasText: 'he dormido mejor' }).waitFor();
+  const rotas = await partidas();
+  check(rotas.length === 0, rotas.length ? `palabras partidas: ${rotas.join(', ')}` : 'ninguna palabra se parte por la mitad, tampoco en una respuesta larga');
   await revisar('comparar-checkins');
   await p.keyboard.press('Escape');
   await hojaC.waitFor({ state: 'detached' });
@@ -2277,26 +2299,28 @@ try {
   // Compartir un vídeo desde la galería (Android): el service worker lo deja en la caché y abre ?compartido=1
   await p.evaluate(async () => {
     const c = await caches.open('fbe-compartido');
-    await c.put('compartido/video', new Response(new Blob([new Uint8Array(2048)], { type: 'video/mp4' }), { headers: { 'content-type': 'video/mp4', 'x-nombre': 'sentadilla.mp4' } }));
+    await c.put('https://fbe-compartido.invalid/video', new Response(new Blob([new Uint8Array(2048)], { type: 'video/mp4' }), { headers: { 'content-type': 'video/mp4', 'x-content-type-options': 'nosniff', 'x-nombre': 'sentadilla.mp4' } }));
   });
   await p.goto('http://localhost:4174/?demo&compartido=1#hoy');
   const hojaV = p.getByRole('dialog', { name: 'Enviar el vídeo a tu coach' });
   await hojaV.waitFor();
   check((await hojaV.textContent()).includes('sentadilla.mp4') && !(await p.evaluate(() => location.search)).includes('compartido'), 'al compartir un vídeo a la app, Ana elige de qué ejercicio es (y la dirección queda limpia)');
+  check((await hojaV.textContent()).includes('Este vídeo te llega desde otra app: comprueba que es tuyo antes de enviarlo'), 'y la hoja dice que el vídeo llega de otra app');
+  check(!(await p.evaluate(async () => !!(await (await caches.open('fbe-compartido')).match('https://fbe-compartido.invalid/video')))), 'en cuanto la app lo coge, se borra del móvil');
   await hojaV.getByLabel('¿De qué ejercicio es?').selectOption({ index: 1 });
   await revisar('compartido');
   await hojaV.getByRole('button', { name: 'Descartarlo' }).click();
   await hojaV.waitFor({ state: 'detached' });
-  check(!(await p.evaluate(async () => !!(await (await caches.open('fbe-compartido')).match('compartido/video')))), 'descartarlo lo borra del móvil');
+  check(true, 'y se puede descartar');
   // El coach no recibe vídeos compartidos: se descarta con un aviso
   await p.evaluate(async () => {
     const c = await caches.open('fbe-compartido');
-    await c.put('compartido/video', new Response(new Blob([new Uint8Array(16)], { type: 'video/mp4' }), { headers: { 'content-type': 'video/mp4' } }));
+    await c.put('https://fbe-compartido.invalid/video', new Response(new Blob([new Uint8Array(16)], { type: 'video/mp4' }), { headers: { 'content-type': 'video/mp4' } }));
   });
   await entrarComo('Pelayo');
   await p.goto('http://localhost:4174/?demo&compartido=1#atletas');
   await p.locator('.toast', { hasText: /vídeo/ }).waitFor();
-  check(!(await p.evaluate(async () => !!(await (await caches.open('fbe-compartido')).match('compartido/video')))), 'si lo comparte el coach, se descarta con un aviso');
+  check(!(await p.evaluate(async () => !!(await (await caches.open('fbe-compartido')).match('https://fbe-compartido.invalid/video')))), 'si lo comparte el coach, se descarta con un aviso');
   // Los accesos directos del icono
   const man = JSON.parse(await (await fetch('http://localhost:4174/manifest.webmanifest')).text());
   check(man.shortcuts?.length === 4 && man.shortcuts[0].url.includes('accion=sesion') && man.share_target?.action === './compartir-video' && man.share_target.params.files[0].accept.includes('video/*'),

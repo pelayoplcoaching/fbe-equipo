@@ -2657,6 +2657,32 @@ console.log('\nTareas, mensajes programados, el bloque entero y las bajas (migra
   await como(ana);
   check(await falla(`update atletas set baja_en = null`) || (await q(`update atletas set baja_en = null returning id`)).length === 0, 'el atleta no toca su día de baja');
 
+  // Tras la revisión de seguridad: el vídeo de su ejercicio, un archivo para una sola tarea y el archivo borrado
+  await como(pelayo, 'aal2');
+  const [tVid2] = await q(`insert into tareas (atleta_id, tipo, titulo, ejercicio_id) values ($1, 'video', 'Otro vídeo del press', $2) returning id`, [aAna.id, press.id]);
+  const [tFoto2] = await q(`insert into tareas (atleta_id, tipo, titulo) values ($1, 'foto', 'Otra foto') returning id`, [aAna.id]);
+  await su();
+  const [vRemo] = await q(`insert into archivos (atleta_id, tipo, ruta, ejercicio_id) values ($1, 'video_tecnica', $2, $3) returning id`, [aAna.id, `${aAna.id}/tarea-remo.mp4`, remo.id]);
+  const [vPauta] = await q(`insert into archivos (atleta_id, tipo, ruta, sesion_ejercicio_id) values ($1, 'video_tecnica', $2, $3) returning id`, [aAna.id, `${aAna.id}/tarea-pauta.mp4`, seAna.id]);
+  await como(ana);
+  let msgV = '';
+  try { await q(`select tarea_completar($1, true, null, $2)`, [tVid2.id, vRemo.id]); } catch (e) { msgV = e.message; }
+  check(/otro ejercicio/.test(msgV) && msgV.includes('Press banca'), `la de un vídeo de un ejercicio, solo con un vídeo de ese ejercicio («${msgV.slice(0, 70)}…»)`);
+  check(await falla(`select tarea_completar($1, true, null, $2)`, [tVid2.id, vAna.id]) && await falla(`select tarea_completar($1, true, null, $2)`, [tFoto2.id, fAna.id]),
+    'un mismo vídeo o una misma foto no sirven para dos tareas');
+  check(!!(await q(`select tarea_completar($1, true, null, $2) h`, [tVid2.id, vPauta.id]))[0].h, 'vale el vídeo subido desde la pauta de ese ejercicio');
+  check((await q(`delete from archivos where id = $1 returning id`, [fAna.id])).length === 1, 'Ana borra la foto con que hizo una tarea');
+  const tF = (await q(`select hecha_en, archivo_id, respuesta from tareas where id = $1`, [tFoto.id]))[0];
+  check(tF.hecha_en === null && tF.archivo_id === null && tF.respuesta === null, 'y esa tarea, aún sin revisar, vuelve a pendiente');
+  await como(pelayo, 'aal2');
+  await q(`update tareas set revisada_en = now() where id = $1`, [tVid2.id]);
+  await como(ana);
+  await q(`delete from archivos where id = $1`, [vPauta.id]);
+  const tV2 = (await q(`select hecha_en, archivo_id from tareas where id = $1`, [tVid2.id]))[0];
+  check(tV2.hecha_en !== null && tV2.archivo_id === null, 'la ya revisada por el coach se queda hecha (sin el archivo)');
+  await su(); await q(`delete from archivos where id = $1`, [vRemo.id]);
+  check((await q(`select indexdef from pg_indexes where indexname = 'tareas_archivo_unico'`))[0]?.indexdef.includes('UNIQUE'), 'y la base no deja dos tareas con el mismo archivo ni aunque lleguen a la vez (índice único)');
+
   // Plantillas: solo el coach, como mucho 30
   await como(pelayo, 'aal2');
   await q(`insert into tareas_plantillas (tipo, titulo, orden) select 'texto', 'Plantilla ' || g, g from generate_series(1, 30) g`);
@@ -2675,6 +2701,14 @@ console.log('\nTareas, mensajes programados, el bloque entero y las bajas (migra
   await como(luis);
   check(await n(`select count(*)::int n from comentarios where id = $1`, [mP.id]) === 0 && (await q(`update comentarios set leido_en = now() where id = $1 returning id`, [mP.id])).length === 0,
     'Luis no lo ve (ni lo marca leído) antes de su hora');
+  check(await n(`select count(*)::int n from notificaciones where clave = $1`, ['comentario:' + mP.id]) === 0 && await n(`select count(*)::int n from notificaciones where estado = 'pendiente' and enviar_desde > now()`) === 0,
+    'ni su notificación pendiente (con su hora y su clave): en «Las últimas» y en su descarga no sale hasta que toca');
+  await su();
+  const [nCoachF] = await q(`insert into notificaciones (usuario_id, tipo, titulo, url, clave, enviar_desde, caduca_en) values ($1, 'mensaje', 'Prueba', '#revisar', 'prueba-futura', now() + interval '1 hour', now() + interval '1 day') returning id`, [pelayo]);
+  await como(pelayo, 'aal2');
+  check(await n(`select count(*)::int n from notificaciones where id = $1`, [nCoachF.id]) === 1, 'el coach sigue viendo las suyas pendientes, como antes');
+  await su(); await q(`delete from notificaciones where id = $1`, [nCoachF.id]);
+  await como(luis);
   check(await falla(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Yo también', now() + interval '1 hour')`, [aLuis.id]), 'el atleta no programa mensajes');
   await como(pelayo, 'aal2');
   check(await falla(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Lejos', now() + interval '91 days')`, [aLuis.id])
@@ -2692,6 +2726,7 @@ console.log('\nTareas, mensajes programados, el bloque entero y las bajas (migra
   await su(); await q(`update comentarios set enviar_en = now() - interval '1 minute', creado_en = now() - interval '1 minute' where id = $1`, [mP.id]);
   await como(luis);
   check(await n(`select count(*)::int n from comentarios where id = $1`, [mP.id]) === 1 && (await q(`update comentarios set leido_en = now() where id = $1 returning id`, [mP.id])).length === 1, 'llegada su hora, Luis lo ve y lo marca leído');
+  check(await n(`select count(*)::int n from notificaciones where clave = $1`, ['comentario:' + mP.id]) === 1, 'y también su notificación');
   await como(pelayo, 'aal2');
   check(await falla(`update comentarios set texto = 'Cambiado' where id = $1`, [mP.id]) && await falla(`update comentarios set enviar_en = now() + interval '1 day' where id = $1`, [mP.id]), 'ya salido, no se edita ni se reprograma');
   const [mB] = await q(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Lo cancelo', now() + interval '3 hours') returning id`, [aLuis.id]);
@@ -2711,7 +2746,17 @@ console.log('\nTareas, mensajes programados, el bloque entero y las bajas (migra
   await su(); await q(`update avisos set enviar_en = now() - interval '1 minute', desde = (now() at time zone 'Europe/Madrid')::date where id = $1`, [avP.id]);
   await como(luis);
   check(await n(`select count(*)::int n from avisos where id = $1`, [avP.id]) === 1, 'a su hora, lo ve');
-  await como(pelayo, 'aal2'); await q(`delete from avisos where id = $1`, [avP.id]);
+  await como(pelayo, 'aal2');
+  let msgAv = '';
+  try { await q(`update avisos set enviar_en = now() + interval '1 day' where id = $1`, [avP.id]); } catch (e) { msgAv = e.message; }
+  check(/ya ha salido/.test(msgAv), 'uno que ya ha salido no se puede volver a programar (no se esconde otra vez)');
+  const [avYa] = await q(`insert into avisos (texto) values ('Publicado hoy') returning id`);
+  const [avLuego] = await q(`insert into avisos (texto, desde) values ('Desde pasado mañana', (now() at time zone 'Europe/Madrid')::date + 2) returning id`);
+  check(await falla(`update avisos set enviar_en = now() + interval '2 hours' where id = $1`, [avYa.id])
+    && (await q(`update avisos set enviar_en = now() + interval '3 days' where id = $1 returning id`, [avLuego.id])).length === 1
+    && (await q(`update avisos set texto = 'Corregido' where id = $1 returning id`, [avP.id])).length === 1,
+    'tampoco uno publicado sin hora que ya se ve; uno que aún no ha empezado, sí; y el texto de uno salido se puede corregir');
+  await q(`delete from avisos where id = any($1::uuid[])`, [[avP.id, avYa.id, avLuego.id]]);
 
   // El bloque entero
   await como(pelayo, 'aal2');

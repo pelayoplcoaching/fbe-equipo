@@ -660,6 +660,36 @@ console.log('\nv0.48 en la demo: tareas, programados, dónde entrenas, tu bloque
   const cks = await b4.select('checkins', { eq: { atleta_id: ana.id }, order: [['semana_inicio', 'asc']] });
   const cmp = await a4.compararCheckins(ana.id, cks.at(-1).id, cks[0].id);
   check(cmp.antes.checkin.id === cks[0].id && cmp.filas.some((f) => f.clave === 'peso' && f.dif != null), 'comparar el primer y el último check-in de Ana, con su peso');
+
+  // Lo que encontró la revisión de seguridad de la v0.48, también en la demo
+  const b5 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a5 = crearApi(b5);
+  await b5.auth.entrar('pelayo@fbe.demo', 'demo');
+  const ana5 = (await a5.atletas()).find((x) => x.nombre === 'Ana López');
+  const ruben5 = (await a5.atletas()).find((x) => x.nombre === 'Rubén Martín');
+  const progAna = (await a5.conversacion(ana5.id)).find((c) => c.programado);
+  const avisoProg = (await a5.avisosCoach()).find((x) => x.programado);
+  const avisoYa = await a5.guardarAviso({ texto: 'Publicado ya' });
+  check(await lanza(() => a5.guardarAviso({ texto: 'Publicado ya', enviarEn: new Date(Date.now() + 864e5).toISOString() }, avisoYa.id)), 'un aviso que ya ha salido no se puede volver a programar (como la base)');
+  check(!!(await a5.guardarAviso({ texto: 'Más tarde', enviarEn: new Date(Date.now() + 2 * 864e5).toISOString() }, avisoProg.id)), 'uno que aún no ha salido, sí se cambia');
+  const [ejPress] = await b5.select('ejercicios', { eq: { nombre: 'Press banca' } });
+  const [ejRemo] = await b5.select('ejercicios', { eq: { nombre: 'Remo con barra' } });
+  const tV = await a5.ponerTarea(ana5.id, { tipo: 'video', titulo: 'Vídeo del press', ejercicio_id: ejPress.id, fecha: hoy });
+  const tV2 = await a5.ponerTarea(ana5.id, { tipo: 'video', titulo: 'Otro vídeo del press', ejercicio_id: ejPress.id, fecha: hoy });
+  await b5.auth.entrar('ana@fbe.demo', 'demo');
+  check((await b5.select('notificaciones', { eq: { usuario_id: (await a5.perfil()).id } })).every((x) => x.estado !== 'pendiente' || Date.parse(x.enviar_desde) <= Date.now())
+    && !(await b5.select('notificaciones', {})).some((x) => x.clave === `comentario:${progAna.id}`), 'Ana no ve la notificación pendiente del mensaje programado (ni su hora ni su clave)');
+  check((await b5.update('comentarios', { leido_en: new Date().toISOString() }, { eq: { id: progAna.id } })).length === 0, 'ni puede marcar leído un mensaje que aún no ha salido');
+  check((await b5.select('comentarios', { eq: { atleta_id: ruben5.id } })).length === 0, 'ni ve los mensajes de Rubén');
+  check((await b5.update('avisos', { texto: 'Cambiado por Ana' }, { eq: { id: avisoYa.id } })).length === 0
+    && (await b5.update('atletas', { estado: 'baja', baja_en: hoy }, { eq: { id: ana5.id } })).length === 0 && (await a5.miAtleta()).estado === 'activo', 'no cambia avisos ni su ficha (ni su estado ni su baja)');
+  const vRemo = await b5.insert('archivos', [{ atleta_id: ana5.id, tipo: 'video_tecnica', ruta: `${ana5.id}/remo.mp4`, ejercicio_id: ejRemo.id, fecha: hoy }]).then((r) => r[0]);
+  const vPress = await b5.insert('archivos', [{ atleta_id: ana5.id, tipo: 'video_tecnica', ruta: `${ana5.id}/press.mp4`, ejercicio_id: ejPress.id, fecha: hoy }]).then((r) => r[0]);
+  check(await lanza(() => a5.completarTarea(tV.id, { archivoId: vRemo.id })), 'la tarea de un vídeo del press no vale con un vídeo de remo');
+  await a5.completarTarea(tV.id, { archivoId: vPress.id });
+  check(await lanza(() => a5.completarTarea(tV2.id, { archivoId: vPress.id })), 'y un mismo vídeo no sirve para dos tareas');
+  await b5.delete('archivos', { eq: { id: vPress.id } });
+  check((await a5.tareas(ana5.id)).find((x) => x.id === tV.id).hecha_en === null, 'si borra el vídeo antes de que la revises, la tarea vuelve a pendiente');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

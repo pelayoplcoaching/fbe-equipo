@@ -16,8 +16,13 @@ self.addEventListener('activate', (e) => {
 });
 
 // v0.48: «Compartir → FBE Equipo» (Android): el vídeo llega aquí en un POST; se guarda en una caché aparte (solo en
-// este móvil, hasta que la app lo coge o lo descarta) y se abre la app, que lo ofrece como vídeo de técnica
+// este móvil, hasta que la app lo coge, y entonces se borra) y se abre la app, que lo ofrece como vídeo de técnica.
+// Solo MP4, MOV o WebM de hasta LIMITE_MB (como LIMITE_ARCHIVO_MB en api.js: una prueba comprueba que coinciden),
+// con «nosniff», y bajo una dirección que no existe (no se puede pedir desde ninguna página: nadie la sirve).
 const COMPARTIDO = 'fbe-compartido';
+const CLAVE_COMPARTIDO = 'https://fbe-compartido.invalid/video';
+const TIPOS_VIDEO = ['video/mp4', 'video/quicktime', 'video/webm'];
+const LIMITE_MB = 200;
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method === 'POST' && url.origin === self.location.origin && url.pathname.endsWith('/compartir-video')) {
@@ -25,10 +30,10 @@ self.addEventListener('fetch', (e) => {
       let ok = false;
       try {
         const datos = await e.request.formData();
-        const f = datos.getAll('video').find((x) => x && typeof x === 'object' && /^video\//.test(x.type || ''));
+        const f = datos.getAll('video').find((x) => x && typeof x === 'object' && TIPOS_VIDEO.includes(String(x.type || '').toLowerCase()) && x.size > 0 && x.size <= LIMITE_MB * 1024 * 1024);
         if (f) {
           const c = await caches.open(COMPARTIDO);
-          await c.put('compartido/video', new Response(f, { headers: { 'content-type': f.type, 'x-nombre': encodeURIComponent(String(f.name || 'video.mp4').slice(0, 120)) } }));
+          await c.put(CLAVE_COMPARTIDO, new Response(f, { headers: { 'content-type': String(f.type).toLowerCase(), 'x-content-type-options': 'nosniff', 'x-nombre': encodeURIComponent(String(f.name || 'video.mp4').slice(0, 120)) } }));
           ok = true;
         }
       } catch { ok = false; }
@@ -43,11 +48,11 @@ self.addEventListener('fetch', (e) => {
       const copia = r.clone();
       caches.open(CACHE).then((c) => c.put(e.request.mode === 'navigate' ? './' : e.request, copia));
       return r;
-    }).catch(() => caches.match(e.request.mode === 'navigate' ? './' : e.request)));
+    }).catch(() => caches.open(CACHE).then((c) => c.match(e.request.mode === 'navigate' ? './' : e.request))));
     return;
   }
-  // Lo demás (código, estilos, fuentes, iconos): de la caché si está
-  e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request)));
+  // Lo demás (código, estilos, fuentes, iconos): de la caché de la app si está (nunca de otra, como la de lo compartido)
+  e.respondWith(caches.open(CACHE).then((c) => c.match(e.request)).then((r) => r || fetch(e.request)));
 });
 
 // Notificaciones (Web Push). El servidor manda { id, titulo, cuerpo, url, etiqueta }, cifrado de extremo a

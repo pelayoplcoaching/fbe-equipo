@@ -7859,6 +7859,10 @@ insert into public.fbe_migraciones (numero) values (29)
 --   · El bloque entero para el atleta: bloque_semanas() da, de su bloque, el número y la fecha de cada semana y
 --     si está publicada (nada más de las que no lo están: ni foco, ni nota, ni sesiones).
 --   · atletas.baja_en: el día en que pasó a «baja» (lo pone la base), para el panel de negocio del coach.
+--   · Tras la revisión de seguridad: las notificaciones aún pendientes (con su hora futura y su clave) no las ve el
+--     atleta hasta que tocan; un aviso que ya ha salido no se puede volver a programar; una tarea de foto o vídeo
+--     vuelve a pendiente si se borra su archivo antes de que el coach la revise, la de un vídeo de un ejercicio solo
+--     vale con un vídeo de ese ejercicio y un mismo archivo no sirve para dos tareas.
 -- Se ejecuta en el SQL Editor después de la 029 (o con instalar.sql en una base nueva). Se puede repetir.
 -- =====================================================================
 
@@ -7894,7 +7898,9 @@ create table if not exists public.tareas (
 );
 create index if not exists tareas_atleta_idx on public.tareas (atleta_id, fecha);
 create index if not exists tareas_ejercicio_idx on public.tareas (ejercicio_id);
-create index if not exists tareas_archivo_idx on public.tareas (archivo_id);
+drop index if exists public.tareas_archivo_idx;
+-- Un mismo archivo no sirve para dos tareas
+create unique index if not exists tareas_archivo_unico on public.tareas (archivo_id) where archivo_id is not null;
 alter table public.tareas drop constraint if exists tareas_validas;
 alter table public.tareas add constraint tareas_validas check (
   tipo in ('foto', 'medida', 'video', 'texto')
@@ -7995,6 +8001,16 @@ begin
                    and a.tipo = case t.tipo when 'foto' then 'foto_progreso' else 'video_tecnica' end) then
       raise exception 'Para esta tarea hace falta %', case t.tipo when 'foto' then 'tu foto de progreso' else 'tu vídeo de técnica' end using errcode = '22023';
     end if;
+    -- La de un vídeo de un ejercicio, solo con un vídeo de ese ejercicio (el suyo o el de la pauta con que se subió)
+    if t.tipo = 'video' and t.ejercicio_id is not null and not exists (
+         select 1 from public.archivos a left join public.sesion_ejercicios se on se.id = a.sesion_ejercicio_id
+         where a.id = p_archivo and (a.ejercicio_id = t.ejercicio_id or se.ejercicio_id = t.ejercicio_id)) then
+      raise exception 'Ese vídeo es de otro ejercicio: para esta tarea hace falta uno de %',
+        coalesce((select e.nombre from public.ejercicios e where e.id = t.ejercicio_id), 'su ejercicio') using errcode = '22023';
+    end if;
+    if exists (select 1 from public.tareas k where k.archivo_id = p_archivo and k.id <> t.id) then
+      raise exception 'Esa foto o ese vídeo ya sirvió para otra tarea: haz uno nuevo' using errcode = '22023';
+    end if;
   elsif p_archivo is not null then
     raise exception 'Esta tarea no lleva foto ni vídeo' using errcode = '22023';
   end if;
@@ -8006,6 +8022,19 @@ begin
   update public.tareas set hecha_en = v_cuando, respuesta = v_resp, archivo_id = p_archivo where id = t.id;
   return v_cuando;
 end $$;
+
+-- Si se borra la foto o el vídeo con que se hizo una tarea que el coach aún no ha revisado, la tarea vuelve a
+-- pendiente (sin respuesta: la puede volver a hacer); si ya estaba revisada, se queda hecha (sin el archivo)
+create or replace function fbe_privado.al_borrar_archivo_tarea() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  update public.tareas set hecha_en = null, respuesta = null, archivo_id = null
+  where archivo_id = old.id and revisada_en is null;
+  return old;
+end $$;
+drop trigger if exists archivos_aa_tareas on public.archivos;
+create trigger archivos_aa_tareas before delete on public.archivos
+  for each row execute function fbe_privado.al_borrar_archivo_tarea();
 
 -- ---------------------------------------------------------------------
 -- 2. Mensajes programados (chat y avisos)
@@ -8156,6 +8185,12 @@ begin
       raise exception 'Un aviso se programa como mucho a 90 días vista' using errcode = '22023';
     end if;
     if new.enviar_en <= now() + interval '30 seconds' then new.enviar_en := null; end if;
+  end if;
+  -- Uno que ya ha salido (con su hora pasada, o sin hora y desde un día que ya ha llegado) no se vuelve a esconder
+  if tg_op = 'UPDATE' and new.enviar_en is not null and new.enviar_en is distinct from old.enviar_en
+     and ((old.enviar_en is not null and old.enviar_en <= now())
+          or (old.enviar_en is null and old.desde <= (now() at time zone 'Europe/Madrid')::date)) then
+    raise exception 'Este aviso ya ha salido: no se puede volver a programar (publica uno nuevo)' using errcode = '42501';
   end if;
   if new.enviar_en is not null then new.desde := (new.enviar_en at time zone 'Europe/Madrid')::date; end if;
   return new;
@@ -8308,6 +8343,14 @@ end $$;
 drop trigger if exists atletas_aa_fecha_baja on public.atletas;
 create trigger atletas_aa_fecha_baja before insert or update of estado, baja_en on public.atletas
   for each row execute function public.atleta_fecha_baja();
+
+-- ---------------------------------------------------------------------
+-- 5b. Las notificaciones que aún no tocan (la de un mensaje o un aviso programado, con su hora y su clave) no las ve
+--     el atleta hasta su hora: verlas antes adelantaría lo programado. El coach ve las suyas como hasta ahora.
+-- ---------------------------------------------------------------------
+drop policy if exists propias_ver on public.notificaciones;
+create policy propias_ver on public.notificaciones for select to authenticated
+  using (usuario_id = auth.uid() and (public.es_coach() or estado <> 'pendiente' or enviar_desde <= now()));
 
 -- ---------------------------------------------------------------------
 -- 6. Permisos (desde la 019, cada tabla nueva lleva los suyos a mano). Las tareas: el coach todo; el atleta, ver

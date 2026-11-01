@@ -165,8 +165,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     comunidad_votos: (x) => esCoach() || (soyMiembro() && autorVisible(x.autor_id) && postVisible(x.post_id)),
     comunidad_animos: (x) => esCoach() || (soyMiembro() && ((x.para === sesion?.user.id && autorVisible(x.de)) || (x.de === sesion?.user.id && autorVisible(x.para)))),
     // Como la 030: los mensajes y avisos programados no los ve el atleta hasta su hora; las tareas, el coach y su atleta
-    comentarios: (x) => esCoach() || !x.enviar_en || Date.parse(x.enviar_en) <= Date.now(),
-    avisos: (x) => esCoach() || !x.enviar_en || Date.parse(x.enviar_en) <= Date.now(),
+    // (y, como en la base, cada atleta solo ve sus mensajes y los avisos para todos o para él)
+    comentarios: (x) => esCoach() || (x.atleta_id === miAtletaId() && (!x.enviar_en || Date.parse(x.enviar_en) <= Date.now())),
+    avisos: (x) => esCoach() || ((x.atleta_id == null || x.atleta_id === miAtletaId()) && (!x.enviar_en || Date.parse(x.enviar_en) <= Date.now())),
+    // Las notificaciones, cada uno las suyas; el atleta, las pendientes solo cuando ya tocan (las de lo programado)
+    notificaciones: (x) => x.usuario_id === sesion?.user.id && (esCoach() || x.estado !== 'pendiente' || Date.parse(x.enviar_desde) <= Date.now()),
     tareas: (x) => esCoach() || x.atleta_id === miAtletaId(),
     tareas_plantillas: () => esCoach(),
   };
@@ -303,6 +306,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (f.enviar_en != null && (!antes || f.enviar_en !== antes.enviar_en)) {
       if (Date.parse(f.enviar_en) > Date.now() + 90 * 864e5) throw new Error('Un aviso se programa como mucho a 90 días vista');
       if (!(Date.parse(f.enviar_en) > Date.now() + 30000)) f.enviar_en = null;
+    }
+    // Uno que ya ha salido no se vuelve a esconder programándolo
+    if (antes && f.enviar_en != null && f.enviar_en !== antes.enviar_en
+        && ((antes.enviar_en && Date.parse(antes.enviar_en) <= Date.now()) || (!antes.enviar_en && antes.desde <= fMadrid()))) {
+      throw new Error('Este aviso ya ha salido: no se puede volver a programar (publica uno nuevo)');
     }
     if (f.enviar_en) f.desde = fMadrid(new Date(f.enviar_en));
   }
@@ -1212,8 +1220,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return copia(filas);
       }
       const res = [];
+      // Como la 030: los avisos y la ficha del atleta solo los cambia el coach (el atleta, ni su estado ni su baja)
+      if ((t === 'avisos' || t === 'atletas') && !esCoach()) return [];
       const c = antesDeActualizar(t, cambios);
-      const filas = tabla(t).filter((fila) => cumple(fila, f));
+      // Como en la base (RLS): nadie cambia lo que no ve (el atleta no marca leído un mensaje que aún no ha salido)
+      const filas = tabla(t).filter((fila) => cumple(fila, f) && (esCoach() || !VISIBLE[t] || VISIBLE[t](fila)));
       const porFilaFecha = new Map();
       if (t === 'sesiones' && 'preparacion' in c) for (const fila of filas) comprobarPreparacion(fila, c.preparacion);
       if (t === 'sesiones' && 'dia_previsto' in c) for (const fila of filas) comprobarDiaPrevisto({ ...fila, ...c });
@@ -1307,6 +1318,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (SIN_ID.includes(t)) { db[t] = tabla(t).filter((x) => !cumple(x, f)); persistirYa(); return; }
       const ids = tabla(t).filter((x) => cumple(x, f)).map((x) => x.id);
       if (t === 'preguntas_checkin' && ids.some(conRespuestas)) throw new Error('Esta pregunta ya tiene respuestas: archívala para no perderlas');
+      // Como la 030: si se borra el archivo con que se hizo una tarea aún sin revisar, la tarea vuelve a pendiente
+      if (t === 'archivos') for (const k of tabla('tareas')) if (ids.includes(k.archivo_id) && !k.revisada_en) Object.assign(k, { hecha_en: null, respuesta: null, archivo_id: null });
       borrarCascada(t, ids);
       persistirYa();
     },
@@ -1374,6 +1387,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (x.tipo === 'foto' || x.tipo === 'video') {
           const a = buscar('archivos', args.p_archivo);
           if (!a || a.atleta_id !== yo.id || a.tipo !== (x.tipo === 'foto' ? 'foto_progreso' : 'video_tecnica')) throw new Error(`Para esta tarea hace falta ${x.tipo === 'foto' ? 'tu foto de progreso' : 'tu vídeo de técnica'}`);
+          if (x.tipo === 'video' && x.ejercicio_id && a.ejercicio_id !== x.ejercicio_id && buscar('sesion_ejercicios', a.sesion_ejercicio_id)?.ejercicio_id !== x.ejercicio_id) {
+            throw new Error(`Ese vídeo es de otro ejercicio: para esta tarea hace falta uno de ${buscar('ejercicios', x.ejercicio_id)?.nombre || 'su ejercicio'}`);
+          }
+          if (tabla('tareas').some((k) => k.archivo_id === a.id && k.id !== x.id)) throw new Error('Esa foto o ese vídeo ya sirvió para otra tarea: haz uno nuevo');
         } else if (args.p_archivo) throw new Error('Esta tarea no lleva foto ni vídeo');
         if (x.tipo === 'medida' && !tabla('pesos').some((p) => p.atleta_id === yo.id && p.fecha >= x.fecha) && !tabla('medidas').some((m) => m.atleta_id === yo.id && m.fecha >= x.fecha)) throw new Error('Apunta antes tu peso o tus medidas');
         Object.assign(x, { hecha_en: x.hecha_en || ahora(), respuesta: resp, archivo_id: args.p_archivo || null });

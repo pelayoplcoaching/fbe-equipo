@@ -595,8 +595,12 @@ function sembrarV048(db, { hoy, hace, ana, ruben, carlos, ej, ahoraISO, mesDe, i
   // Un mensaje a Ana para mañana a las 8:00 (hora de Madrid) y un aviso para todos el lunes a las 8:00: el coach los
   // ve como programados; los atletas, todavía no
   const manana = instanteMadrid(sumarDias(hoy, 1), '08:00');
-  db.comentarios.push({ id: crypto.randomUUID(), atleta_id: ana.id, sesion_id: null, checkin_id: null, archivo_id: null, autor: 'coach', adjunto: false, dibujo: null,
+  const idProg = crypto.randomUUID();
+  db.comentarios.push({ id: idProg, atleta_id: ana.id, sesion_id: null, checkin_id: null, archivo_id: null, autor: 'coach', adjunto: false, dibujo: null,
     texto: 'Buenos días, Ana. Esta semana es la de descarga: los mismos ejercicios con algo menos de peso. Disfrútala.', creado_en: manana, enviar_en: manana, leido_en: null });
+  // Su notificación, en la cola para esa hora (como la base: Ana no la ve hasta que toca)
+  db.notificaciones.push({ id: crypto.randomUUID(), usuario_id: ana.perfil_id, tipo: 'respuesta', titulo: 'Pelayo te ha escrito', cuerpo: 'Mensaje nuevo', url: '#mensajes', clave: `comentario:${idProg}`,
+    creado_en: ahoraISO, enviar_desde: manana, caduca_en: new Date(Date.parse(manana) + 864e5).toISOString(), estado: 'pendiente', canal: null, intentos: 0, tomada_en: null, enviada_en: null, error: null });
   const lunesSig = sumarDias(lunesDe(hoy), 7);
   const avisoLunes = instanteMadrid(lunesSig, '08:00');
   db.avisos.push({ id: crypto.randomUUID(), texto: 'Esta semana estreno las tareas en la app: si te pongo una, te saldrá en «Tu día». Un toque y listo.', atleta_id: null,
@@ -614,6 +618,10 @@ function sembrarV048(db, { hoy, hace, ana, ruben, carlos, ej, ahoraISO, mesDe, i
         texto: 'Muy bien la sesión. En las dominadas, baja del todo antes de la siguiente repetición aunque salga una menos.', creado_en: cuando, enviar_en: null, leido_en: cuando });
     }
   }
+  // Las notas de sus dos últimos check-ins (para «Comparar dos»: respuestas largas que no parten palabras)
+  const cksAna = db.checkins.filter((c) => c.atleta_id === ana.id).sort((x, y) => (x.semana_inicio < y.semana_inicio ? 1 : -1));
+  if (cksAna[0]) cksAna[0].notas = cksAna[0].notas || 'Semana muy buena: he dormido mejor, me he sentido motivada y con energía casi todos los días, y el hombro, sin molestias.';
+  if (cksAna[1]) cksAna[1].notas = cksAna[1].notas || 'Cansada por el trabajo; me ha costado recuperar entre sesiones.';
   // Sergio se dio de baja hace dos meses (pagaba Essential al mes)
   const sergio = { id: crypto.randomUUID(), perfil_id: null, nombre: 'Sergio Ruiz', email: 'sergio@fbe.demo', estado: 'baja', fecha_alta: mesDe(inicioMes, -7), baja_en: sumarDias(mesDe(inicioMes, -2), 9),
     objetivo: 'Volver a entrenar después de una lesión de rodilla', notion_url: null, progresion_auto: true, volumen_objetivo: null, creado_en: ahoraISO, nutricion: false, entrenamiento: true };

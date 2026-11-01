@@ -27,15 +27,15 @@ export function CompararCheckins({ atleta, checkins, alCerrar }) {
         {a !== b && (d.cargando && !c ? <Cargando texto="Preparando la comparación" /> : c && (
           <>
             <div class="tabla-env">
-              <table class="tabla-simple tabla-comparar">
+              <table class="tabla-simple tabla-comparar" lang="es">
                 <caption class="sr">{`Check-in de ${rangoSemana(c.antes.checkin.semana_inicio)} frente al de ${rangoSemana(c.despues.checkin.semana_inicio)}`}</caption>
                 <thead><tr><th scope="col"><span class="sr">Dato</span></th><th scope="col">{rangoSemana(c.antes.checkin.semana_inicio)}</th><th scope="col">{rangoSemana(c.despues.checkin.semana_inicio)}</th></tr></thead>
                 <tbody>
                   {c.filas.map((f) => (
                     <tr key={f.clave}>
                       <th scope="row">{f.nombre}</th>
-                      <td class="num">{f.texto(f.a)}</td>
-                      <td class="num">{f.texto(f.b)}{f.difTexto && <span class={`dif ${f.dif === 0 ? '' : 'cambia'}`}>{f.difTexto}</span>}</td>
+                      <td class={typeof f.a === 'number' ? 'num' : ''}>{f.texto(f.a)}</td>
+                      <td class={typeof f.b === 'number' ? 'num' : ''}>{f.texto(f.b)}{f.difTexto && <span class={`dif ${f.dif === 0 ? '' : 'cambia'}`}>{f.difTexto}</span>}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -2307,8 +2307,12 @@ input[type="range"] { accent-color: var(--morado); width: 100%; }
 .historia-fin-2 { align-self: stretch; background: var(--hoja-2); color: var(--tinta); border: 1px solid var(--linea); }
 .historia-mes { touch-action: pan-y; }
 /* Comparar check-ins */
-.tabla-comparar th[scope="row"] { white-space: normal; font-size: 13px; color: var(--tinta-2); font-weight: 600; max-width: 40vw; }
-.tabla-comparar td { vertical-align: top; overflow-wrap: anywhere; }
+/* Las palabras enteras nunca se parten («Motivado», no «Motivad / o»): la columna del dato es estrecha y se reparte,
+   y todo corta solo entre palabras (sin guiones: «en-tre» tampoco); si algo no cupiera, la tabla se desliza */
+.tabla-comparar th, .tabla-comparar td { padding: 8px 6px; }
+.tabla-comparar th[scope="row"] { vertical-align: top; white-space: normal; font-size: 13px; color: var(--tinta-2); font-weight: 600; width: 28%; overflow-wrap: normal; word-break: normal; hyphens: manual; }
+.tabla-comparar thead th { white-space: normal; }
+.tabla-comparar td { vertical-align: top; overflow-wrap: normal; word-break: normal; hyphens: manual; }
 .tabla-comparar .dif { display: block; font-size: 12px; font-weight: 700; color: var(--tinta-3); }
 .tabla-comparar .dif.cambia { color: var(--morado); }
 .sin-foto { display: grid; place-items: center; width: 100%; aspect-ratio: 3 / 4; border-radius: 12px; background: var(--hoja-2); }

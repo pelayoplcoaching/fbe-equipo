@@ -7,8 +7,11 @@ import { queToca } from '../logica/plan.js';
 // en una caché aparte del móvil y abre la app con ?compartido=1; aquí se coge, se elige el ejercicio y se envía como
 // vídeo de técnica con el recorte y la subida de siempre (por trozos, y guardado en el móvil si no hay cobertura).
 // En iPhone una app web no puede recibir lo que se comparte: allí se sigue enviando desde la sesión o el diario.
+import { LIMITE_ARCHIVO_MB } from '../datos/api.js';
 const CACHE = 'fbe-compartido';
-const CLAVE = 'compartido/video';
+// Como en sw.js: una dirección que no existe (nadie puede pedirla) y solo MP4, MOV o WebM de hasta LIMITE_ARCHIVO_MB
+export const CLAVE_COMPARTIDO = 'https://fbe-compartido.invalid/video';
+const TIPOS_VIDEO = ['video/mp4', 'video/quicktime', 'video/webm'];
 export const pideCompartido = () => typeof location !== 'undefined' && new URLSearchParams(location.search).get('compartido') != null;
 // Quita de la dirección lo que solo servía para abrir la app (?compartido, ?accion), sin tocar lo demás (?demo)
 export function limpiarDireccion(claves = ['compartido', 'accion']) {
@@ -19,18 +22,24 @@ export function limpiarDireccion(claves = ['compartido', 'accion']) {
     if (cambia) history.replaceState(null, '', `${u.pathname}${u.search}${u.hash}`);
   } catch { /* */ }
 }
+// Lo coge una vez: en cuanto se lee, se borra del móvil (si no se envía, hay que volver a compartirlo)
 export async function leerCompartido() {
   if (typeof caches === 'undefined') return null;
   try {
-    const r = await (await caches.open(CACHE)).match(CLAVE);
+    const c = await caches.open(CACHE);
+    const r = await c.match(CLAVE_COMPARTIDO);
     if (!r) return null;
+    await c.delete(CLAVE_COMPARTIDO);
+    const tipo = String(r.headers.get('content-type') || '').toLowerCase();
     const blob = await r.blob();
-    const nombre = decodeURIComponent(r.headers.get('x-nombre') || 'video.mp4');
-    return new File([blob], nombre, { type: blob.type || r.headers.get('content-type') || 'video/mp4' });
+    if (!TIPOS_VIDEO.includes(tipo) || !blob.size || blob.size > LIMITE_ARCHIVO_MB * 1024 * 1024) return null;
+    let nombre = 'video.mp4';
+    try { nombre = decodeURIComponent(r.headers.get('x-nombre') || nombre).slice(0, 120); } catch { /* */ }
+    return new File([blob], nombre, { type: tipo });
   } catch { return null; }
 }
 export async function borrarCompartido() {
-  try { if (typeof caches !== 'undefined') await (await caches.open(CACHE)).delete(CLAVE); } catch { /* */ }
+  try { if (typeof caches !== 'undefined') await (await caches.open(CACHE)).delete(CLAVE_COMPARTIDO); } catch { /* */ }
 }
 
 // Atleta: lo que ha compartido, para enviarlo a su coach como vídeo de un ejercicio
@@ -70,6 +79,7 @@ export function RecibirCompartido({ programa }) {
   return (
     <Hoja titulo="Enviar el vídeo a tu coach" alCerrar={cerrar}>
       <div class="pila">
+        <p class="nota-coach"><Icono n="alerta" /><span>Este vídeo te llega desde otra app: comprueba que es tuyo antes de enviarlo.</span></p>
         <p class="peq secundario"><Icono n="video" /> {archivo.name || 'Vídeo'}, {(archivo.size / 1048576).toLocaleString('es-ES', { maximumFractionDigits: 1 })} MB. Antes de enviarlo podrás recortarlo para quedarte solo con la serie.</p>
         {opciones.cargando && !opciones.datos ? <Cargando texto="Cargando tus ejercicios" /> : (
           <div class="campo"><label for="compartido-ej">¿De qué ejercicio es?</label>
