@@ -192,10 +192,13 @@ export function Temporizador({ fin, total, prioridad, texto, alCambiar, clase = 
         <div class="cuenta num" role="timer" aria-label={quedan > 0 ? `Descanso: quedan ${Math.ceil(quedan)} segundos` : 'Descanso terminado'}>{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</div>
         <div class="que">{quedan > 0 ? `Después: ${texto}` : 'Descanso terminado'}</div>
       </div>
-      <div class="acciones">
-        <button onClick={() => ajustar(-15)} aria-label="Quitar 15 segundos">−15</button>
-        <button onClick={() => ajustar(15)} aria-label="Añadir 15 segundos">+15</button>
-        <button class="saltar" onClick={() => alCambiar(null)}>{quedan > 0 ? 'Saltar' : 'Cerrar'}</button>
+      <button class="saltar" onClick={() => alCambiar(null)}>{quedan > 0 ? 'Saltar' : 'Cerrar'}</button>
+      {/* v0.42: también ±1 minuto, para alargar el descanso por un imprevisto o acortarlo si hay prisa */}
+      <div class="ajustes">
+        <button onClick={() => ajustar(-60)} aria-label="Quitar 1 minuto">−1 min</button>
+        <button onClick={() => ajustar(-15)} aria-label="Quitar 15 segundos">−15 s</button>
+        <button onClick={() => ajustar(15)} aria-label="Añadir 15 segundos">+15 s</button>
+        <button onClick={() => ajustar(60)} aria-label="Añadir 1 minuto">+1 min</button>
       </div>
     </div>
   );

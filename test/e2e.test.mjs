@@ -314,6 +314,16 @@ try {
   await primero.getByRole('button', { name: 'Marcar la serie 1 como hecha' }).click();
   await p.locator('.temporizador').waitFor();
   check((await p.locator('.temporizador .cuenta').textContent()).startsWith('2:') || (await p.locator('.temporizador .cuenta').textContent()).startsWith('3:'), 'arranca el descanso pautado');
+  // v0.42: ±1 minuto además de ±15 s
+  const segs = async () => { const [m, s] = (await p.locator('.temporizador .cuenta').textContent()).split(':').map(Number); return m * 60 + s; };
+  const antes1 = await segs();
+  await p.getByRole('button', { name: 'Añadir 1 minuto' }).click();
+  const mas1 = await segs();
+  await p.getByRole('button', { name: 'Quitar 1 minuto' }).click();
+  const menos1 = await segs();
+  check(mas1 - antes1 >= 57 && mas1 - antes1 <= 61 && mas1 - menos1 >= 58 && mas1 - menos1 <= 61, `+1 min y −1 min alargan y acortan el descanso un minuto (${antes1} → ${mas1} → ${menos1} s)`);
+  const filaAjustes = await p.evaluate(() => { const bs = [...document.querySelectorAll('.temporizador .ajustes button')]; const r = document.querySelector('.temporizador').getBoundingClientRect(); return { n: bs.length, misma: new Set(bs.map((b) => Math.round(b.getBoundingClientRect().top))).size === 1, dentro: bs.every((b) => { const x = b.getBoundingClientRect(); return x.left >= r.left - 1 && x.right <= r.right + 1; }) }; });
+  check(filaAjustes.n === 4 && filaAjustes.misma && filaAjustes.dentro, `los cuatro ajustes caben en una fila dentro del temporizador ${JSON.stringify(filaAjustes)}`);
   await p.getByRole('button', { name: 'Añadir 15 segundos' }).click();
   await p.getByRole('button', { name: 'Saltar' }).click();
   check(await primero.getByLabel('Kilos de la serie 2').getAttribute('placeholder') === '37,5', 'la back-off propone un 10 % menos que lo que hizo en la top (42,5 → 37,5)');
@@ -468,7 +478,7 @@ try {
   check((await p.locator('.temporizador .que').textContent()).includes('serie 2 de A1'), 'al cerrar la ronda, descanso y vuelta a A1');
   await revisar('superserie');
   const alSonarLista = await temporizadorAlSonar(p);
-  check(alSonarLista.ok, `al acabar el descanso, el temporizador (con su +15) cabe entero en la pantalla ${JSON.stringify(alSonarLista)}`);
+  check(alSonarLista.ok, `al acabar el descanso, el temporizador (con sus ±15 s y ±1 min) cabe entero en la pantalla ${JSON.stringify(alSonarLista)}`);
   await p.getByRole('button', { name: 'Cerrar' }).click();
   await a2.getByRole('button', { name: 'Quitar la serie 1' }).click();
   await a1.getByRole('button', { name: 'Quitar la serie 1' }).click();
@@ -1566,6 +1576,11 @@ try {
   const interruptor = p.getByRole('switch', { name: 'Hoy sin merienda' });
   await interruptor.waitFor();
   await revisar('sin-merienda-antes');
+  // En la demo, Lucía no merienda los domingos: ese día ya viene marcado (se quita antes, para probar el gesto)
+  if (await interruptor.isChecked()) {
+    await interruptor.click();
+    await p.locator('.mini', { hasText: 'te enseñamos las recetas para los días sin merienda' }).waitFor({ state: 'detached' });
+  }
   await interruptor.click();
   await p.locator('.mini', { hasText: 'te enseñamos las recetas para los días sin merienda' }).waitFor();
   check(await interruptor.isChecked(), 'Lucía marca que hoy no merienda');

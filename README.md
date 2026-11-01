@@ -6,6 +6,8 @@ Plan, modelo de datos y fases: documento «App de atletas FBE — plan y modelo 
 
 ## Qué hay construido (v0.27)
 
+**v0.42:** el temporizador de descanso tiene también **−1 min** y **+1 min**, además de −15 s y +15 s (lo pidió Pelayo: alargar el descanso por un imprevisto o acortarlo si hay prisa). Los cuatro van en una fila debajo de la cuenta y «Saltar» pasa a la derecha. También en el modo enfoque, y el aviso al móvil se reprograma igual. Sin migración.
+
 **v0.41:** en la sesión, cada ejercicio dice si ya tiene vídeo para el coach: «✓ Vídeo enviado» (o «2 vídeos enviados») bajo su nombre, también con el ejercicio plegado, y el botón pasa a «Enviar otro vídeo». Si el vídeo se quedó guardado en el móvil por falta de cobertura, lo dice en naranja («Vídeo guardado en el móvil, sin enviar») y cambia solo a enviado cuando sale. Sin migración.
 
 **v0.40:** el peso, a diario o una vez a la semana, para cada atleta. En su ficha → Seguimiento → Su check-in, «Su peso»: **A diario** (de entrada, como hasta ahora: «Tu peso» le sale cada mañana en «Tu día», pendiente hasta que lo apunta) o **Una vez a la semana** (no le sale en «Tu día»; se lo pide el check-in, y si ese apartado estaba quitado se activa; puede apuntarlo otros días desde la tarjeta «Tu peso» de Hoy). Migración **026** (`atletas.peso_frecuencia`); sin ella, todo sigue a diario.
