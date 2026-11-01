@@ -1688,7 +1688,20 @@ try {
   check(textoEntrada.includes('Es voluntario') && textoEntrada.includes('Lo que nunca se comparte') && (await p.getByLabel('Tu nombre en el equipo').inputValue()) === 'Ana L.' && await p.locator('.post').count() === 0,
     'la primera vez explica qué se comparte y con quién, propone «Ana L.» y no enseña nada del muro');
   await revisar('equipo-entrar');
-  await p.getByRole('button', { name: 'Sí, quiero entrar' }).click();
+  // v0.44: las normas del equipo, antes de entrar
+  const botonEntrar = p.getByRole('button', { name: 'Sí, quiero entrar' });
+  check(await botonEntrar.isDisabled() && (await p.locator('#eq-falta-normas').textContent()).includes('lee antes las normas'), 'sin leer las normas, «Sí, quiero entrar» está desactivado y dice por qué');
+  await p.getByRole('button', { name: 'Leer las normas' }).click();
+  const hojaNormas = p.getByRole('dialog', { name: 'Normas del equipo' });
+  await hojaNormas.locator('.lista-normas li').first().waitFor();
+  check(await hojaNormas.locator('.lista-normas li').count() >= 8 && (await hojaNormas.textContent()).includes('Avisar al coach'), 'las normas, en una hoja');
+  await revisar('equipo-normas');
+  await hojaNormas.getByRole('button', { name: 'He leído las normas' }).click();
+  await hojaNormas.waitFor({ state: 'detached' });
+  await p.locator('.normas-leidas', { hasText: 'Normas leídas' }).waitFor();
+  check(!(await botonEntrar.isDisabled()), 'con «He leído las normas», marcadas (✓ Normas leídas) y ya puede entrar');
+  await revisar('equipo-entrar-normas');
+  await botonEntrar.click();
   await p.locator('.post').first().waitFor();
   check(await p.locator('.post').first().evaluate((x) => x.classList.contains('fijada') && x.textContent.includes('Aviso del coach')), 'con «Sí, quiero entrar», dentro: arriba el aviso fijado del coach');
   await revisar('equipo-muro');
@@ -1788,6 +1801,12 @@ try {
   await p.getByRole('button', { name: 'Ajustes de la comunidad' }).click();
   const hojaAj = p.getByRole('dialog', { name: 'Ajustes de la comunidad' });
   await revisar('equipo-ajustes');
+  await hojaAj.getByRole('button', { name: 'Normas del equipo' }).click();
+  const normasAj = p.getByRole('dialog', { name: 'Normas del equipo' });
+  await normasAj.locator('.lista-normas').waitFor();
+  check(await normasAj.getByRole('button', { name: 'He leído las normas' }).count() === 0, 'dentro, las normas se pueden leer cuando quiera desde los ajustes');
+  await normasAj.getByRole('button', { name: 'Cerrar' }).click();
+  await normasAj.waitFor({ state: 'detached' });
   await hojaAj.getByRole('switch', { name: /No salir en el ranking/ }).check();
   await p.locator('.toast', { hasText: 'Ya no sales en el ranking' }).waitFor();
   await hojaAj.getByRole('button', { name: 'Cerrar' }).click();
@@ -1818,6 +1837,11 @@ try {
   await p.locator('.post.fijada', { hasText: 'quedada en el gimnasio' }).waitFor();
   check((await p.locator('.post').first().textContent()).includes('quedada en el gimnasio'), 'el coach publica un aviso y lo fija arriba');
   await revisar('equipo-coach');
+  await p.getByRole('tab', { name: 'Normas' }).click();
+  await p.locator('.lista-normas').waitFor();
+  check(true, 'el coach tiene las normas en su vista del equipo');
+  await revisar('equipo-coach-normas');
+  await p.getByRole('tab', { name: 'Muro' }).click();
   await p.locator('.tab', { hasText: 'Revisar' }).click();
   await p.getByRole('button', { name: 'Equipo (1)' }).click();
   const rep = p.locator('.tarjeta-reporte');

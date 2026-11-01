@@ -5,6 +5,7 @@ import { BIBLIOTECA_BASE } from './biblioteca-base.js';
 import { FAQ } from './faq.js';
 import { RESPUESTAS_EJEMPLO } from './respuestas.js';
 import { sembrarComidas } from './semilla-comidas.js';
+import { VERSION_NORMAS } from './normas-comunidad.js';
 
 const uuid = () => crypto.randomUUID();
 
@@ -559,7 +560,7 @@ export function semillaDemo(hoy = hoyISO()) {
 function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   const lucia = db.atletas.find((a) => a.nombre === 'Lucía Ferrer');
   Object.assign(db, { comunidad_ajustes: [{ id: true, activa: true, actualizado_en: hace(60 * 24 * 6) }], comunidad_miembros: [], comunidad_posts: [], comunidad_comentarios: [], comunidad_reacciones: [], comunidad_reportes: [], comunidad_retos: [], comunidad_cupos: [] });
-  const miembro = (a, nombre, dias) => db.comunidad_miembros.push({ atleta_id: a.id, perfil_id: a.perfil_id, nombre, version: 'comunidad-2026-11', aceptado_en: hace(60 * 24 * dias), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, creado_en: hace(60 * 24 * dias) });
+  const miembro = (a, nombre, dias) => db.comunidad_miembros.push({ atleta_id: a.id, perfil_id: a.perfil_id, nombre, version: 'comunidad-2026-11', aceptado_en: hace(60 * 24 * dias), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, normas_version: VERSION_NORMAS, normas_leidas_en: hace(60 * 24 * dias), creado_en: hace(60 * 24 * dias) });
   miembro(ruben, 'Rubén M.', 6);
   miembro(carlos, 'Carlos V.', 5);
   if (lucia) miembro(lucia, 'Lucía F.', 4);

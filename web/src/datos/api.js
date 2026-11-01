@@ -17,11 +17,13 @@ import { cardioHechoValido, cardioPorSemana, textoCardioHecho, NOMBRE_MODALIDAD 
 import { pendiente as cuestionarioPendiente } from '../logica/cuestionario.js';
 import { revisarVariante, varianteSinMaterial } from '../logica/variantes.js';
 import { limpiarReceta, recetarioPorToma, tomasDe, ordenarTomas, entradaMenu, copiarMenu, cambiarRaciones } from '../logica/comidas.js';
+import { VERSION_NORMAS } from './normas-comunidad.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO } from '../logica/comunidad.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad (v0.43): como public.comunidad_version() de la migración 027
 export const VERSION_COMUNIDAD = 'comunidad-2026-11';
+export { VERSION_NORMAS };
 
 const porId = (filas) => Object.fromEntries(filas.map((f) => [f.id, f]));
 const agrupar = (filas, col) => filas.reduce((m, f) => ((m[f[col]] ||= []).push(f), m), {});
@@ -76,6 +78,8 @@ const falta027 = (e) => {
   }
   throw e;
 };
+// La función de entrar sin la migración 028 (sin el parámetro de las normas)
+const sinNormas = (e) => /comunidad_unirme/.test(`${e?.message || ''}`) && /p_normas|schema cache|does not exist|no existe|PGRST202/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta018 = (e) => {
   if (/\b(nivel|nutricion)\b/.test(e?.message || '') && /column|columna|schema cache/i.test(e?.message || '')) {
     throw new Error('Para elegir servicio y nivel falta ejecutar la migración 018 en Supabase (supabase/migraciones/018_servicio_y_nivel.sql).');
@@ -1435,9 +1439,19 @@ export function crearApi(backend) {
     async miembrosComunidad() {
       return b.select('comunidad_miembros', { order: [['nombre', 'asc']] }).catch(() => []);
     },
+    // Entrar (o volver, o aceptar lo nuevo) con el texto y las normas vigentes (v0.44). Sin la migración 028 en la
+    // base, la función aún no recibe las normas: se entra como en la v0.43 (la app las enseña igual antes de entrar)
     async entrarComunidad(nombre) {
-      await b.rpc('comunidad_unirme', { p_nombre: limpiarNombre(nombre), p_version: VERSION_COMUNIDAD }).catch(falta027);
+      const p = { p_nombre: limpiarNombre(nombre), p_version: VERSION_COMUNIDAD };
+      await b.rpc('comunidad_unirme', { ...p, p_normas: VERSION_NORMAS }).catch((e) => {
+        if (!sinNormas(e)) throw e;
+        return b.rpc('comunidad_unirme', p).catch(falta027);
+      });
       return api.miembroComunidad();
+    },
+    // ¿Le faltan por leer las normas vigentes? (sin la migración 028 no hay columna: entonces, no)
+    faltanNormas(miembro) {
+      return !!miembro && 'normas_version' in miembro && miembro.normas_version !== VERSION_NORMAS;
     },
     // Salir: lo suyo deja de verse; con borrar, además se borra (y sus fotos de Storage)
     async salirComunidad({ borrar = false } = {}) {

@@ -9,6 +9,7 @@ import { REACCIONES, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, nombreEquipo, nombreV
 import { fmtConDia, fmtCorta, hoyISO, sumarDias, lunesDe } from '../logica/fechas.js';
 import { num } from '../logica/calculos.js';
 import { VERSION_COMUNIDAD } from '../datos/api.js';
+import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
 
@@ -21,8 +22,12 @@ export function Equipo() {
   if (miembro.cargando && !miembro.datos) return <div class="contenido"><Siluetas forma="tarjetas" n={3} texto="Cargando el equipo" /></div>;
   const m = miembro.datos;
   if (m?.bloqueado) return <FueraDeLaComunidad />;
-  // Sin haber entrado, tras salir o si ha cambiado lo que se comparte (hay que volver a aceptarlo)
-  if (!m || m.salido_en || m.version !== VERSION_COMUNIDAD) return <EntrarComunidad antes={m} cambio={!!m && !m.salido_en} alEntrar={() => miembro.recargar(true)} />;
+  // Sin haber entrado, tras salir o si ha cambiado lo que se comparte o las normas (hay que volver a aceptarlo)
+  const dentroAntes = !!m && !m.salido_en;
+  if (!m || m.salido_en || m.version !== VERSION_COMUNIDAD || api.faltanNormas(m)) {
+    const cambio = !dentroAntes ? null : m.version !== VERSION_COMUNIDAD ? 'texto' : 'normas';
+    return <EntrarComunidad antes={m} cambio={cambio} alEntrar={() => miembro.recargar(true)} />;
+  }
   return (
     <div class="contenido equipo">
       <header class="cabecera">
@@ -70,13 +75,40 @@ function FueraDeLaComunidad() {
   );
 }
 
-function EntrarComunidad({ antes, cambio = false, alEntrar }) {
+// Las normas del equipo (v0.44), en una hoja. Con alLeer, abajo «He leído las normas» (la entrada); sin él, solo
+// para leerlas (los ajustes)
+export function HojaNormas({ alCerrar, alLeer = null }) {
+  return (
+    <Hoja titulo={NORMAS_COMUNIDAD.titulo} alCerrar={alCerrar}>
+      <div class="pila">
+        <ListaNormas />
+        {alLeer && <button class="btn btn-primario btn-grande" onClick={alLeer}><Icono n="hecho" /> He leído las normas</button>}
+      </div>
+    </Hoja>
+  );
+}
+export function ListaNormas() {
+  return (
+    <div class="pila normas">
+      <p>{NORMAS_COMUNIDAD.intro}</p>
+      <ol class="lista-normas">
+        {NORMAS_COMUNIDAD.puntos.map(([principal, detalle]) => <li key={principal}><strong>{principal}</strong> {detalle}</li>)}
+      </ol>
+      <p class="peq secundario">{NORMAS_COMUNIDAD.cierre}</p>
+    </div>
+  );
+}
+
+function EntrarComunidad({ antes, cambio = null, alEntrar }) {
   const { api, atleta, aviso } = useApp();
   const [nombre, setNombre] = useState(antes?.nombre || nombreEquipo(atleta?.nombre));
   const [ocupado, una] = useUnaVez();
   const [error, setError] = useState(null);
+  const [verNormas, setVerNormas] = useState(false);
+  const [leidas, setLeidas] = useState(false);
   const entrar = (e) => {
     e.preventDefault();
+    if (!leidas) { setError('Antes de entrar, lee las normas del equipo.'); return; }
     una(async () => {
       setError(null);
       try { await api.entrarComunidad(nombre); aviso('¡Ya estás en el equipo!'); alEntrar(); } catch (err) { setError(err.message); }
@@ -87,11 +119,20 @@ function EntrarComunidad({ antes, cambio = false, alEntrar }) {
       <header class="cabecera"><div class="titulo"><h1>Equipo</h1><div class="sub">Para animaros entre los atletas de FBE</div></div></header>
       <section class="panel panel-pad pila entrar-equipo">
         <Icono n="equipo" class="entrar-equipo-ico" />
-        <h2>{cambio ? 'Hemos cambiado lo que se comparte' : antes ? '¿Vuelves al equipo?' : 'Antes de entrar'}</h2>
-        {cambio && <p class="nota peq">Para seguir en el equipo, lee lo que se comparte ahora y acéptalo. Mientras tanto, lo tuyo no se ve.</p>}
+        <h2>{cambio === 'texto' ? 'Hemos cambiado lo que se comparte' : cambio === 'normas' ? 'Hemos actualizado las normas' : antes ? '¿Vuelves al equipo?' : 'Antes de entrar'}</h2>
+        {cambio === 'texto' && <p class="nota peq">Para seguir en el equipo, lee lo que se comparte ahora y acéptalo. Mientras tanto, lo tuyo no se ve.</p>}
+        {cambio === 'normas' && <p class="nota peq">Para seguir en el equipo, lee las normas y márcalas como leídas. Mientras tanto, lo tuyo no se ve.</p>}
         <p>Es voluntario. Dentro, los atletas de FBE que han entrado y tu coach os veis entre vosotros: os podéis animar, compartir un entreno y apuntaros a los retos.</p>
         <QueSeComparte />
         <p class="peq secundario">Puedes salir cuando quieras desde los ajustes del equipo: lo tuyo deja de verse para los demás.{antes ? ' Si vuelves, lo que dejaste vuelve a verse.' : ''}</p>
+        <div class="panel-pad normas-entrada pila-s">
+          <strong>{NORMAS_COMUNIDAD.titulo}</strong>
+          <p class="peq secundario">Respeto, nada de comentarios sobre el cuerpo de nadie, ni consejos de salud, ni sacar fuera lo del equipo. Léelas antes de entrar.</p>
+          <div class="separa">
+            {leidas ? <span class="normas-leidas"><Icono n="hecho" /> Normas leídas</span> : <span class="peq terciario">Sin leer</span>}
+            <button type="button" class="btn btn-peq" onClick={() => setVerNormas(true)}>{leidas ? 'Volver a leerlas' : 'Leer las normas'}</button>
+          </div>
+        </div>
         <form class="pila" onSubmit={entrar}>
           <div class="campo">
             <label for="eq-nombre">Tu nombre en el equipo</label>
@@ -99,9 +140,13 @@ function EntrarComunidad({ antes, cambio = false, alEntrar }) {
             <span class="ayuda">Es el que verán los demás (de 2 a 40 letras).</span>
           </div>
           {error && <div class="error" role="alert">{error}</div>}
-          <button class="btn btn-primario btn-grande" disabled={ocupado || !nombreValido(nombre)}>{cambio ? 'Sí, quiero seguir' : 'Sí, quiero entrar'}</button>
+          {!leidas && <p class="peq terciario" id="eq-falta-normas">Para entrar, lee antes las normas del equipo.</p>}
+          <button class="btn btn-primario btn-grande" disabled={ocupado || !leidas || !nombreValido(nombre)} aria-describedby={leidas ? undefined : 'eq-falta-normas'}>
+            {cambio ? 'Sí, quiero seguir' : 'Sí, quiero entrar'}
+          </button>
         </form>
       </section>
+      {verNormas && <HojaNormas alCerrar={() => setVerNormas(false)} alLeer={() => { setLeidas(true); setError(null); setVerNormas(false); }} />}
     </div>
   );
 }
@@ -507,11 +552,13 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
   const [nombre, setNombre] = useState(miembro.nombre);
   const [salir, setSalir] = useState(false);
   const [borrar, setBorrar] = useState(false);
+  const [normas, setNormas] = useState(false);
   const [ocupado, una] = useUnaVez();
   const hacer = (fn, texto, cerrar = false) => una(async () => {
     try { await fn(); aviso(texto); if (cerrar) alCerrar(); alCambiar(); } catch (e) { aviso(e.message, 'error'); }
   });
   return (
+    <>
     <Hoja titulo="Ajustes de la comunidad" alCerrar={alCerrar}>
       <div class="pila">
         <form class="pila-s" onSubmit={(e) => { e.preventDefault(); hacer(() => api.ajustesComunidad({ nombre }), 'Nombre guardado'); }}>
@@ -523,6 +570,7 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
             alCambiar={(v) => hacer(() => api.ajustesComunidad({ sinRanking: v }), v ? 'Ya no sales en el ranking' : 'Vuelves a salir en el ranking')} />
         </ul></div>
         <details class="pila-s que-se-comparte"><summary>Qué se comparte y con quién</summary><QueSeComparte /></details>
+        <button class="btn" style="justify-self:start" onClick={() => setNormas(true)}><Icono n="escudo" /> Normas del equipo</button>
         {!salir ? (
           <button class="btn btn-peligro" style="justify-self:start" onClick={() => setSalir(true)}><Icono n="salir" /> Salir de la comunidad</button>
         ) : (
@@ -537,6 +585,8 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
         )}
       </div>
     </Hoja>
+    {normas && <HojaNormas alCerrar={() => setNormas(false)} />}
+    </>
   );
 }
 

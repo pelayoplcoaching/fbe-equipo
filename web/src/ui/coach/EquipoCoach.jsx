@@ -3,10 +3,10 @@
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Pestanas, Avatar, Cargando } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
-import { Muro, Retos, Ranking } from '../Comunidad.jsx';
+import { Muro, Retos, Ranking, ListaNormas } from '../Comunidad.jsx';
 import { fmtCorta } from '../../logica/fechas.js';
 
-const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking'], ['miembros', 'Quién está']];
+const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking'], ['miembros', 'Quién está'], ['normas', 'Normas']];
 
 export function EquipoCoach() {
   const [vista, setVista] = useState('muro');
@@ -20,6 +20,12 @@ export function EquipoCoach() {
         {vista === 'retos' && <Retos coach />}
         {vista === 'ranking' && <Ranking />}
         {vista === 'miembros' && <Miembros />}
+        {vista === 'normas' && (
+          <div class="panel panel-pad pila">
+            <ListaNormas />
+            <p class="mini terciario">Cada atleta las lee y las marca como leídas antes de entrar. Si cambian (web/src/datos/normas-comunidad.js y su versión en la base), todos tendrán que volver a leerlas.</p>
+          </div>
+        )}
       </div>
     </div>
   );

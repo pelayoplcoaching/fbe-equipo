@@ -8,6 +8,7 @@ import { resultadoCribado } from '../logica/cuestionario.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido } from '../logica/cardio.js';
+import { VERSION_NORMAS } from './normas-comunidad.js';
 
 const ahora = () => new Date().toISOString();
 const uuid = () => (globalThis.crypto?.randomUUID ? crypto.randomUUID()
@@ -140,7 +141,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const VERSION_COMUNIDAD = 'comunidad-2026-11';
   const perfilDe = (id) => tabla('perfiles').find((p) => p.id === id);
   const comunidadActiva = () => !!tabla('comunidad_ajustes').find((x) => x.id === true)?.activa;
-  const miembroVisto = (m) => { const a = m && buscar('atletas', m.atleta_id); return !!a && !m.salido_en && !m.bloqueado && m.version === VERSION_COMUNIDAD && a.perfil_id === m.perfil_id && a.estado !== 'baja' && perfilDe(m.perfil_id)?.rol !== 'coach'; };
+  const miembroVisto = (m) => { const a = m && buscar('atletas', m.atleta_id); return !!a && !m.salido_en && !m.bloqueado && m.version === VERSION_COMUNIDAD && m.normas_version === VERSION_NORMAS && a.perfil_id === m.perfil_id && a.estado !== 'baja' && perfilDe(m.perfil_id)?.rol !== 'coach'; };
   const esMiembro = (pid) => miembroVisto(tabla('comunidad_miembros').find((x) => x.perfil_id === pid));
   const soyMiembro = () => !!sesion && comunidadActiva() && esMiembro(sesion.user.id);
   const veComunidad = () => esCoach() || soyMiembro();
@@ -645,11 +646,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const m = tabla('comunidad_miembros').find((x) => x.atleta_id === yo.id);
       if (m?.bloqueado) throw new Error('Tu coach te ha sacado de la comunidad: habla con él si quieres volver');
       if (args.p_version !== VERSION_COMUNIDAD) throw new Error('El texto que aceptas no es el vigente: recarga la app y vuelve a intentarlo');
+      // Como la 028: con las normas vigentes leídas
+      if (args.p_normas !== VERSION_NORMAS) throw new Error(args.p_normas === undefined ? 'Para entrar hay que leer antes las normas del equipo: actualiza la app y vuelve a intentarlo' : 'Antes de entrar, lee las normas del equipo vigentes: recarga la app y vuelve a intentarlo');
       const v = limpiarNombre(args.p_nombre);
       const problema = problemaNombre(v, yo.id);
       if (problema) throw new Error(problema);
-      if (m) Object.assign(m, { perfil_id: uid, nombre: v, version: args.p_version, aceptado_en: ahora(), salido_en: null, nombre_cambiado_en: null });
-      else tabla('comunidad_miembros').push({ atleta_id: yo.id, perfil_id: uid, nombre: v, version: args.p_version, aceptado_en: ahora(), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, creado_en: ahora() });
+      const normas = { normas_version: args.p_normas, normas_leidas_en: ahora() };
+      if (m) Object.assign(m, { perfil_id: uid, nombre: v, version: args.p_version, aceptado_en: ahora(), salido_en: null, nombre_cambiado_en: null, ...normas });
+      else tabla('comunidad_miembros').push({ atleta_id: yo.id, perfil_id: uid, nombre: v, version: args.p_version, aceptado_en: ahora(), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, creado_en: ahora(), ...normas });
       return null;
     }
     if (nombre === 'comunidad_salir') {

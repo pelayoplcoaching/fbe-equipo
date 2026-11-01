@@ -1189,7 +1189,21 @@ console.log('\nLa comunidad del equipo (v0.43, migración 027)');
   check((await api.miembroComunidad()) === null, 'Ana aún no ha entrado');
   check(await lanza(() => api.entrarComunidad('A')), 'el nombre, de 2 a 40 letras');
   const mA = await api.entrarComunidad('  Ana   L. ');
-  check(mA.nombre === 'Ana L.' && mA.version === 'comunidad-2026-11', 'Ana entra con su nombre y el texto que aceptó');
+  check(mA.nombre === 'Ana L.' && mA.version === 'comunidad-2026-11' && mA.normas_version === 'normas-2026-11' && !api.faltanNormas(mA), 'Ana entra con su nombre, el texto que aceptó y las normas leídas (v0.44)');
+  check(api.faltanNormas({ ...mA, normas_version: null }) && !api.faltanNormas((({ normas_version, ...r }) => r)(mA)), 'sin las normas vigentes le faltan por leer; sin la migración 028 (sin columna), no');
+  {
+    const llamadas = [];
+    const sin028 = crearApi({ ...b, rpc: async (nombre, args) => {
+      if (nombre === 'comunidad_unirme') {
+        llamadas.push(Object.keys(args).sort().join());
+        if ('p_normas' in args) throw new Error('function public.comunidad_unirme(p_nombre => unknown, p_normas => unknown, p_version => unknown) does not exist');
+        return null;
+      }
+      return b.rpc(nombre, args);
+    } });
+    await sin028.entrarComunidad('Ana L.');
+    check(llamadas.join(' | ') === 'p_nombre,p_normas,p_version | p_nombre,p_version', 'sin la migración 028, se entra como en la v0.43 (la función aún no recibe las normas)');
+  }
   let muro = await api.muro();
   check(muro.posts[0].id === aviso.id && muro.posts[0].autor.coach && muro.posts[0].autor.nombre === 'Pelayo Fernández', 've arriba el aviso del coach, con su nombre');
   const foto = new Blob(['jpeg de prueba'], { type: 'image/jpeg' });

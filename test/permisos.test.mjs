@@ -1700,6 +1700,7 @@ console.log('\nLa comunidad del equipo (migración 027)');
 {
   const n = async (sql, params = []) => (await q(sql, params))[0].n;
   const version = 'comunidad-2026-11';
+  const normas = 'normas-2026-11';
   await su();
   const lunesM = (await q(`select ((now() at time zone 'Europe/Madrid')::date - (extract(isodow from (now() at time zone 'Europe/Madrid'))::integer - 1)) d`))[0].d;
   // Una semana nueva para Ana y otra para Luis (la de esta semana, publicada): para el ranking y para compartir
@@ -1716,7 +1717,7 @@ console.log('\nLa comunidad del equipo (migración 027)');
   await como(ana);
   check((await q(`select activa from comunidad_ajustes`))[0]?.activa === false, 'de entrada la comunidad está cerrada (y cualquier cuenta puede saberlo)');
   check((await q(`update comunidad_ajustes set activa = true returning id`)).length === 0, 'un atleta no la abre');
-  check(await falla(`select comunidad_unirme('Ana L.', $1)`, [version]), 'cerrada, nadie puede entrar');
+  check(await falla(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]), 'cerrada, nadie puede entrar');
   await como(pelayo, 'aal2');
   await q(`update comunidad_ajustes set activa = true`);
   check((await q(`select activa from comunidad_ajustes`))[0].activa === true, 'el coach la abre (Cuenta → Comunidad)');
@@ -1731,17 +1732,17 @@ console.log('\nLa comunidad del equipo (migración 027)');
     && (await q(`select * from comunidad_personas()`)).length === 0 && (await q(`select * from comunidad_ranking()`)).length === 0
     && (await q(`select * from comunidad_retos_progreso()`)).length === 0, 'sin haber entrado, Ana no ve nada: ni el muro, ni quién está, ni retos ni ranking');
   await como(intruso);
-  check(await falla(`select comunidad_unirme('Intruso', $1)`, [version]), 'una cuenta sin ficha de atleta no puede entrar');
+  check(await falla(`select comunidad_unirme('Intruso', $1, $2)`, [version, normas]), 'una cuenta sin ficha de atleta no puede entrar');
   await como(ana);
-  check(await falla(`select comunidad_unirme('Ana L.', 'comunidad-2020-01')`), 'hay que aceptar el texto vigente');
-  check(await falla(`select comunidad_unirme('A', $1)`, [version]) && await falla(`select comunidad_unirme($1, $2)`, ['x'.repeat(41), version]), 'el nombre, de 2 a 40 letras');
+  check(await falla(`select comunidad_unirme('Ana L.', 'comunidad-2020-01', $1)`, [normas]), 'hay que aceptar el texto vigente');
+  check(await falla(`select comunidad_unirme('A', $1, $2)`, [version, normas]) && await falla(`select comunidad_unirme($1, $2, $3)`, ['x'.repeat(41), version, normas]), 'el nombre, de 2 a 40 letras');
   check(await falla(`insert into comunidad_miembros (atleta_id, perfil_id, nombre, version) values ($1, $2, 'Ana', $3)`, [aAna.id, ana, version]), 'entrar no se hace escribiendo en la tabla');
-  await q(`select comunidad_unirme('  Ana   L. ', $1)`, [version]);
+  await q(`select comunidad_unirme('  Ana   L. ', $1, $2)`, [version, normas]);
   const [mAna] = await q(`select * from comunidad_miembros`);
   check(mAna.nombre === 'Ana L.' && mAna.version === version && Math.abs(new Date(mAna.aceptado_en) - Date.now()) < 60000 && !mAna.salido_en, 'Ana entra con su nombre, el texto que aceptó y la hora de la base');
   check(await falla(`update comunidad_miembros set sin_ranking = true`), 'no cambia su fila a mano (con sus ajustes)');
   await como(luis);
-  await q(`select comunidad_unirme('Luis M.', $1)`, [version]);
+  await q(`select comunidad_unirme('Luis M.', $1, $2)`, [version, normas]);
   check(await n(`select count(*)::int n from comunidad_miembros`) === 1, 'cada uno solo ve su propia fila de miembro');
 
   // Dentro: el muro, quién está
@@ -1895,7 +1896,7 @@ console.log('\nLa comunidad del equipo (migración 027)');
     'para Luis desaparece todo lo de Ana: publicaciones, reacciones, su nombre y su sitio en el ranking');
   check((await q(`select name from storage.objects where name = $1`, [ruta])).length === 0, 'también su foto');
   await como(ana);
-  await q(`select comunidad_unirme('Ana L.', $1)`, [version]);
+  await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
   await como(luis);
   check(await n(`select count(*)::int n from comunidad_posts where autor_id = $1`, [ana]) === 4, 'si vuelve a entrar, lo suyo vuelve a verse');
 
@@ -1903,7 +1904,7 @@ console.log('\nLa comunidad del equipo (migración 027)');
   await como(pelayo, 'aal2');
   await q(`update atletas set estado = 'baja' where id = $1`, [aLuis.id]);
   await como(luis);
-  check(await n(`select count(*)::int n from comunidad_posts`) === 0 && await falla(`insert into comunidad_posts (texto) values ('De baja')`) && await falla(`select comunidad_unirme('Luis', $1)`, [version]),
+  check(await n(`select count(*)::int n from comunidad_posts`) === 0 && await falla(`insert into comunidad_posts (texto) values ('De baja')`) && await falla(`select comunidad_unirme('Luis', $1, $2)`, [version, normas]),
     'un atleta de baja deja de ver la comunidad al momento (ni publica ni puede volver a entrar)');
   await como(ana);
   check(!(await q(`select * from comunidad_personas()`)).some((x) => x.perfil_id === luis), 'y los demás dejan de verlo');
@@ -1929,7 +1930,7 @@ console.log('\nLa comunidad del equipo (migración 027)');
   await como(pelayo, 'aal2');
   check(await n(`select count(*)::int n from comunidad_posts`) >= 5 && await n(`select count(*)::int n from comunidad_miembros`) === 2, 'el coach lo ve todo (también lo oculto)');
   const [yo] = await q(`insert into atletas (nombre, perfil_id, estado, nutricion) values ('Pelayo', $1, 'activo', false) returning id`, [pelayo]);
-  check(await falla(`select comunidad_unirme('Pelayo', $1)`, [version]), 'su ficha de atleta (modo atleta) no entra como miembro');
+  check(await falla(`select comunidad_unirme('Pelayo', $1, $2)`, [version, normas]), 'su ficha de atleta (modo atleta) no entra como miembro');
   await q(`delete from atletas where id = $1`, [yo.id]);
   check(await falla(`insert into comunidad_posts (tipo, texto) values ('post', 'Como atleta')`), 'el coach publica avisos, no publicaciones de atleta');
   await q(`select comunidad_moderar($1, false, null)`, [aviso1.id]);
@@ -1959,10 +1960,11 @@ console.log('\nLo que encontró la revisión independiente de la 027');
 {
   const n = async (sql, params = []) => (await q(sql, params))[0].n;
   const version = 'comunidad-2026-11';
+  const normas = 'normas-2026-11';
   await como(pelayo, 'aal2');
   await q(`update comunidad_ajustes set activa = true`);
-  await como(ana); await q(`select comunidad_unirme('Ana L.', $1)`, [version]);
-  await como(luis); await q(`select comunidad_unirme('Luis M.', $1)`, [version]);
+  await como(ana); await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
+  await como(luis); await q(`select comunidad_unirme('Luis M.', $1, $2)`, [version, normas]);
 
   // F1: un aviso al coach sobrevive aunque su autor borre lo avisado (con una copia), y su foto también
   const fotoL = `${aLuis.id}/fotoluis0001.jpg`;
@@ -2016,7 +2018,7 @@ console.log('\nLo que encontró la revisión independiente de la 027');
     'con el texto aceptado antiguo, no está dentro (no ve nada)');
   await como(luis);
   check(!(await q(`select * from comunidad_personas()`)).some((x) => x.perfil_id === ana), 'ni los demás la ven');
-  await como(ana); await q(`select comunidad_unirme('Ana L.', $1)`, [version]);
+  await como(ana); await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
   check((await q(`select comunidad_soy_miembro() v`))[0].v === true, 'al aceptar el texto vigente, vuelve a estar dentro');
 
   // F4: el coach saca a alguien (y no le deja volver) y le vuelve a admitir
@@ -2026,9 +2028,9 @@ console.log('\nLo que encontró la revisión independiente de la 027');
   await como(ana);
   check(!(await q(`select * from comunidad_personas()`)).some((x) => x.perfil_id === luis), 'el coach saca a Luis: deja de verse');
   await como(luis);
-  check((await q(`select comunidad_soy_miembro() v`))[0].v === false && await falla(`select comunidad_unirme('Luis M.', $1)`, [version]), 'y Luis no puede volver a entrar');
+  check((await q(`select comunidad_soy_miembro() v`))[0].v === false && await falla(`select comunidad_unirme('Luis M.', $1, $2)`, [version, normas]), 'y Luis no puede volver a entrar');
   await como(pelayo, 'aal2'); await q(`select comunidad_expulsar($1, false)`, [aLuis.id]);
-  await como(luis); await q(`select comunidad_unirme('Luis M.', $1)`, [version]);
+  await como(luis); await q(`select comunidad_unirme('Luis M.', $1, $2)`, [version, normas]);
   check((await q(`select comunidad_soy_miembro() v`))[0].v === true, 'al readmitirle, puede volver a entrar él');
 
   // F5: los récords los decide la base (una sesión peor que la anterior no es récord)
@@ -2060,7 +2062,7 @@ console.log('\nLo que encontró la revisión independiente de la 027');
   const mios = (await q(`select comunidad_mis_datos() d`))[0].d;
   check(mios.miembro?.nombre === 'Ana L.' && mios.publicaciones.some((x) => x.id === pOculta.id && x.oculta) && Array.isArray(mios.comentarios) && Array.isArray(mios.avisos_al_coach)
     && mios.avisos_al_coach.every((r) => !('copia_texto' in r)), 'tras salir, «mis datos» le da todo lo suyo (también lo oculto), y de sus avisos solo lo que escribió');
-  await q(`select comunidad_unirme('Ana L.', $1)`, [version]);
+  await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
 
   // F7: las notificaciones del equipo pendientes no salen a quien ya no está dentro
   const pendientesLuis = async () => (await q(`select count(*)::int n from notificaciones where usuario_id = $1 and tipo = 'comunidad' and estado = 'pendiente'`, [luis]))[0].n;
@@ -2102,6 +2104,60 @@ console.log('\nLo que encontró la revisión independiente de la 027');
   await q(`delete from bloques where id = $1`, [bR]);
   await q(`delete from notificaciones where tipo = 'comunidad'`);
   await q(`update comunidad_ajustes set activa = false`);
+}
+
+console.log('\nLas normas del equipo (migración 028)');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  const { VERSION_NORMAS } = await import('../web/src/datos/normas-comunidad.js');
+  const { VERSION_COMUNIDAD } = await import('../web/src/datos/api.js');
+  await su();
+  check((await q(`select comunidad_normas_version() v`))[0].v === VERSION_NORMAS && (await q(`select comunidad_version() v`))[0].v === VERSION_COMUNIDAD,
+    'las versiones de las normas y del texto de entrada son las mismas en la base y en la app');
+  const version = VERSION_COMUNIDAD, normas = VERSION_NORMAS;
+  await como(pelayo, 'aal2');
+  await q(`update comunidad_ajustes set activa = true`);
+  await como(ana);
+  check(await falla(`select comunidad_unirme('Ana L.', $1)`, [version]), 'sin las normas (la función de antes), no se entra');
+  check(await falla(`select comunidad_unirme('Ana L.', $1, 'normas-2020-01')`, [version]) && await falla(`select comunidad_unirme('Ana L.', $1, null)`, [version]), 'ni con otras normas o sin ellas');
+  check(await falla(`update comunidad_miembros set normas_version = $1`, [normas]) || (await q(`update comunidad_miembros set normas_version = $1 returning atleta_id`, [normas])).length === 0, 'ni marcándolas a mano');
+  await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
+  const [mA] = await q(`select normas_version, normas_leidas_en from comunidad_miembros where perfil_id = $1`, [ana]);
+  check(mA.normas_version === normas && Math.abs(new Date(mA.normas_leidas_en) - Date.now()) < 60000, 'con las vigentes, entra: la base apunta qué normas leyó y cuándo');
+  await como(luis); await q(`select comunidad_unirme('Luis M.', $1, $2)`, [version, normas]);
+  check((await q(`select * from comunidad_personas()`)).some((x) => x.perfil_id === ana), 'Luis ve a Ana');
+  // Quien estaba dentro antes de la 028 (sin normas) tiene que leerlas una vez
+  await su(); await q(`update comunidad_miembros set normas_version = null, normas_leidas_en = null where perfil_id = $1`, [ana]);
+  await como(ana);
+  check((await q(`select comunidad_soy_miembro() v`))[0].v === false && await n(`select count(*)::int n from comunidad_posts`) === 0, 'quien entró sin normas (antes de la 028) no está dentro hasta leerlas');
+  await como(luis);
+  check(!(await q(`select * from comunidad_personas()`)).some((x) => x.perfil_id === ana), 'y los demás no la ven');
+  // Y al ejecutar la 028, sus notificaciones del equipo pendientes no salen
+  const [pL] = await q(`insert into comunidad_posts (texto) values ('De Luis') returning id`);
+  await su();
+  await q(`insert into preferencias_notificaciones (usuario_id, email) values ($1, true) on conflict (usuario_id) do update set email = true`, [ana]);
+  await q(`insert into notificaciones (usuario_id, tipo, titulo, cuerpo, url, clave, caduca_en) values ($1, 'comunidad', 'Algo', 'Míralo en Equipo.', '#equipo', 'prueba-normas', now() + interval '1 day')`, [ana]);
+  await db.exec(readFileSync(new URL('../supabase/migraciones/028_normas_comunidad.sql', import.meta.url), 'utf8'));
+  check((await q(`select count(*)::int n from notificaciones where clave = 'prueba-normas'`))[0].n === 0, 'al ejecutar la 028, las notificaciones del equipo pendientes de quien aún no ha leído las normas se retiran');
+  await como(ana); await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
+  check((await q(`select comunidad_soy_miembro() v`))[0].v === true, 'al leerlas, vuelve a estar dentro');
+  // Si cambian las normas, todos fuera hasta volver a leerlas
+  await su();
+  const sql028 = readFileSync(new URL('../supabase/migraciones/028_normas_comunidad.sql', import.meta.url), 'utf8');
+  const defVersion = sql028.match(/create or replace function public\.comunidad_normas_version\(\)[\s\S]*?\$\$;/)[0];
+  await db.exec(defVersion.replace(normas, 'normas-2099-01'));
+  await como(ana);
+  const fuera = (await q(`select comunidad_soy_miembro() v`))[0].v;
+  await como(luis);
+  const fueraL = (await q(`select comunidad_soy_miembro() v`))[0].v;
+  check(fuera === false && fueraL === false && await falla(`select comunidad_unirme('Luis M.', $1, $2)`, [version, normas]), 'si cambian las normas, nadie está dentro (ni entra con las de antes)');
+  await q(`select comunidad_unirme('Luis M.', $1, 'normas-2099-01')`, [version]);
+  check((await q(`select comunidad_soy_miembro() v`))[0].v === true, 'hasta que las vuelve a leer');
+  await su(); await db.exec(defVersion);
+  await como(luis); await q(`select comunidad_unirme('Luis M.', $1, $2)`, [version, normas]);
+  await su();
+  await q(`delete from comunidad_posts where id = $1`, [pL.id]); await q(`delete from comunidad_miembros`); await q(`delete from comunidad_cupos`);
+  await q(`delete from notificaciones where tipo = 'comunidad'`); await q(`update comunidad_ajustes set activa = false`);
 }
 
 console.log('\nLa verificación en dos pasos falla cerrada');

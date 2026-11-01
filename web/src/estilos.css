@@ -2097,3 +2097,9 @@ input[type="range"] { accent-color: var(--morado); width: 100%; }
 .que-se-comparte summary { cursor: pointer; font-weight: 650; color: var(--morado); min-height: 32px; }
 .tarjeta-reporte .ico-reporte { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--alerta-suave); color: var(--alerta); flex: none; }
 .tarjeta-reporte .ico-reporte svg { width: 18px; height: 18px; }
+/* v0.44: las normas del equipo */
+.lista-normas { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+.lista-normas li { padding-left: 2px; }
+.normas-entrada { background: var(--hoja-2); border-radius: var(--r-s); box-shadow: inset 0 0 0 1px var(--borde); }
+.normas-leidas { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; color: var(--ok); font-size: 14.5px; }
+.normas-leidas svg { width: 18px; height: 18px; }
