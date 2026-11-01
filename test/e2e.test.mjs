@@ -2057,7 +2057,7 @@ try {
   await p.getByRole('button', { name: 'Poner una tarea' }).click();
   const hojaT = p.getByRole('dialog', { name: 'Una tarea para Ana' });
   await hojaT.getByRole('group', { name: 'Plantillas de tareas' }).waitFor();
-  check(await hojaT.getByRole('group', { name: 'Plantillas de tareas' }).getByRole('button').count() === 3, 'con sus 3 plantillas a mano');
+  check(await hay(hojaT.getByRole('group', { name: 'Plantillas de tareas' }).getByRole('button'), 3), 'con sus 3 plantillas a mano');
   await hojaT.getByRole('button', { name: 'Texto', exact: true }).click();
   await hojaT.getByLabel('Título').fill('¿Cómo has dormido esta semana?');
   await revisar('tarea-nueva');
@@ -2119,7 +2119,7 @@ try {
   await p.locator('.toast', { hasText: 'Programado para el' }).waitFor();
   const nuevaP = p.locator('.burbuja.programada', { hasText: 'Mira este vídeo' });
   await nuevaP.waitFor();
-  check(await nuevaP.locator('.vista-youtube img').count() === 1 && (await nuevaP.locator('.vista-youtube img').getAttribute('src')).startsWith('https://i.ytimg.com/vi/gMgvBspQ9lk/'), 'programa un mensaje con un enlace de YouTube: sale con su miniatura');
+  check(await hay(nuevaP.locator('.vista-youtube img'), 1) && (await nuevaP.locator('.vista-youtube img').getAttribute('src')).startsWith('https://i.ytimg.com/vi/gMgvBspQ9lk/'), 'programa un mensaje con un enlace de YouTube: sale con su miniatura');
   await revisar('chat-programado');
 
   // Revisar → Tareas
@@ -2150,7 +2150,7 @@ try {
   const hojaN = p.getByRole('dialog', { name: 'Panel de negocio' });
   await hojaN.locator('.negocio-cifras').waitFor();
   const txtN = await hojaN.textContent();
-  check(/Atletas activos\s*4/.test(txtN) && /\d €/.test(txtN) && txtN.includes('Renuevan en 30 días') && await hojaN.locator('svg.grafica-negocio').count() === 2, 'el panel de negocio: activos, euros a la española, renovaciones y las dos gráficas de 12 meses');
+  check(/Atletas activos\s*4/.test(txtN) && /\d €/.test(txtN) && txtN.includes('Renuevan en 30 días') && await hay(hojaN.locator('svg.grafica-negocio'), 2), 'el panel de negocio: activos, euros a la española, renovaciones y las dos gráficas de 12 meses');
   await revisar('negocio');
   await hojaN.getByRole('switch', { name: /Ocultar importes/ }).check();
   await p.waitForTimeout(200);
@@ -2166,7 +2166,7 @@ try {
   await tuDia.waitFor();
   const filaT = tuDia.locator('.fila-dia', { hasText: '¿Cómo has dormido esta semana?' });
   await filaT.waitFor();
-  check(await tuDia.locator('.fila-dia', { hasText: 'Fotos de progreso de este mes' }).count() === 1, 'Ana tiene sus dos tareas de hoy en «Tu día»');
+  check(await hay(tuDia.locator('.fila-dia', { hasText: 'Fotos de progreso de este mes' }), 1), 'Ana tiene sus dos tareas de hoy en «Tu día»');
   await revisar('tu-dia-tareas');
   await filaT.click();
   const hojaTA = p.getByRole('dialog', { name: '¿Cómo has dormido esta semana?' });
@@ -2175,7 +2175,7 @@ try {
   await hojaTA.getByRole('button', { name: 'Marcar como hecha' }).click();
   await p.locator('.toast', { hasText: 'Tarea hecha' }).waitFor();
   await hojaTA.waitFor({ state: 'detached' });
-  check(await tuDia.locator('.fila-dia.hecho', { hasText: '¿Cómo has dormido esta semana?' }).count() === 1, 'la contesta y queda hecha');
+  check(await hay(tuDia.locator('.fila-dia.hecho', { hasText: '¿Cómo has dormido esta semana?' }), 1), 'la contesta y queda hecha');
 
   // Tu mes (historia) en Hoy
   const tarjetaMes = p.locator('.tarjeta-mes');
@@ -2201,7 +2201,7 @@ try {
   await cerrarDialogos();
   if (await historia.isVisible().catch(() => false)) await p.keyboard.press('Escape');
   await historia.waitFor({ state: 'detached' });
-  check(await p.locator('.tarjeta-mes').count() === 0, 'vista, la tarjeta ya no vuelve a salir en Hoy');
+  check(await hay(p.locator('.tarjeta-mes'), 0), 'vista, la tarjeta ya no vuelve a salir en Hoy');
 
   // Tu bloque entero
   await p.getByRole('button', { name: 'Tu bloque', exact: true }).click();
