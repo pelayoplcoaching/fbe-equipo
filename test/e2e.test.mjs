@@ -1014,7 +1014,7 @@ try {
   await p.keyboard.press('Escape');
   await hojaNoti.waitFor({ state: 'detached' });
   const resumenNoti = await p.getByRole('heading', { name: 'Notificaciones' }).locator('..').locator('.terciario').textContent();
-  check(/Respuestas, semana, avisos, peticiones, descansos, equipo y 3 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
+  check(/Respuestas, semana, avisos, peticiones, tareas, descansos, equipo y 3 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
 
   // v0.13: cuestionario inicial y check-in a medida
   console.log('\nCuestionario y check-in a medida');
@@ -2004,6 +2004,304 @@ try {
   await revisar('cuenta-comunidad');
   await entrarComo('Rubén Martín');
   check(await p.locator('.tab', { hasText: 'Equipo' }).count() === 0, 'con la comunidad cerrada, los atletas no ven la pestaña');
+  }
+
+  console.log('\nv0.48: tareas, programados, negocio, tu mes, tu bloque, dónde entrenas, voz y compartir un vídeo');
+  {
+  const cerrarDialogos = async () => {
+    for (let i = 0; i < 5; i++) {
+      const d = p.locator('[role=dialog]').first();
+      if (!(await d.isVisible().catch(() => false))) break;
+      let hecho = false;
+      for (const nombre of ['Seguir', 'Entendido', 'Cerrar']) {
+        const b2 = d.getByRole('button', { name: nombre, exact: true }).first();
+        if (await b2.isVisible().catch(() => false)) { await b2.click(); hecho = true; break; }
+      }
+      if (!hecho) await p.keyboard.press('Escape');
+      await p.waitForTimeout(250);
+    }
+  };
+  const entrarComo = async (nombre) => {
+    if (!(await p.getByRole('heading', { name: 'Entra en tu cuenta' }).isVisible().catch(() => false))) {
+      if (!(await p.getByRole('button', { name: 'Cambiar de cuenta' }).isVisible().catch(() => false))) {
+        const hoyT = p.locator('.tab', { hasText: 'Hoy' });
+        if (await hoyT.count()) await hoyT.first().click(); else await p.locator('.tab', { hasText: 'Atletas' }).click();
+        await p.waitForTimeout(800);
+        await cerrarDialogos();
+      }
+      await p.getByRole('button', { name: 'Cambiar de cuenta' }).first().click();
+    }
+    await p.getByRole('button', { name: new RegExp(nombre) }).first().click();
+    const cod = p.getByLabel('Código', { exact: true });
+    await Promise.race([cod.waitFor(), p.locator('nav.tabs').waitFor()]);
+    if (await cod.isVisible().catch(() => false)) { await cod.fill('123456'); await p.getByRole('button', { name: 'Entrar' }).click(); }
+    await p.locator('nav.tabs').waitFor();
+    await p.waitForTimeout(800);
+    await cerrarDialogos();
+  };
+  // Las miniaturas de YouTube (i.ytimg.com) no salen a internet en la prueba: una imagen de mentira
+  await p.route('https://i.ytimg.com/**', (r) => r.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64') }));
+  await entrarComo('Pelayo');
+  await p.locator('.tab', { hasText: 'Atletas' }).click();
+  await p.getByRole('button', { name: 'Reiniciar' }).first().click();
+  await p.getByRole('button', { name: 'Sí, reiniciar' }).click();
+  await p.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor();
+  await entrarComo('Pelayo');
+
+  // Coach: poner una tarea, comparar check-ins y sus meses
+  await p.locator('.tab', { hasText: 'Atletas' }).click();
+  await p.locator('.tarjeta-atleta', { hasText: 'Ana López' }).first().click();
+  await p.getByRole('tab', { name: 'Seguimiento' }).click();
+  await p.getByRole('heading', { name: 'Tareas', exact: true }).waitFor();
+  check((await p.getByRole('heading', { name: 'Tareas', exact: true }).locator('xpath=ancestor::section[1]').textContent()).includes('Fotos de progreso de este mes'), 'en Seguimiento, sus tareas (la de fotos de hoy)');
+  await p.getByRole('button', { name: 'Poner una tarea' }).click();
+  const hojaT = p.getByRole('dialog', { name: 'Una tarea para Ana' });
+  await hojaT.getByRole('group', { name: 'Plantillas de tareas' }).waitFor();
+  check(await hojaT.getByRole('group', { name: 'Plantillas de tareas' }).getByRole('button').count() === 3, 'con sus 3 plantillas a mano');
+  await hojaT.getByRole('button', { name: 'Texto', exact: true }).click();
+  await hojaT.getByLabel('Título').fill('¿Cómo has dormido esta semana?');
+  await revisar('tarea-nueva');
+  await hojaT.getByRole('button', { name: 'Poner la tarea' }).click();
+  await p.locator('.toast', { hasText: 'Tarea puesta' }).waitFor();
+  await hojaT.waitFor({ state: 'detached' });
+  check(true, 'el coach le pone una tarea de texto para hoy');
+  await p.getByRole('button', { name: 'Comparar dos' }).click();
+  const hojaC = p.getByRole('dialog', { name: 'Comparar check-ins' });
+  await hojaC.locator('.tabla-comparar').waitFor();
+  check(await hojaC.locator('.tabla-comparar tr').count() >= 4 && (await hojaC.textContent()).includes('Peso'), 'compara dos check-ins lado a lado (con el peso de esas semanas)');
+  await revisar('comparar-checkins');
+  await p.keyboard.press('Escape');
+  await hojaC.waitFor({ state: 'detached' });
+  await p.getByRole('heading', { name: 'Sus meses' }).waitFor();
+  check(true, 'y sus meses, en la ficha');
+  await revisar('ficha-seguimiento-v048');
+  // Su nota fijada, en el editor de su programa
+  await p.getByRole('tab', { name: 'Programa' }).click();
+  const conNota = p.locator('.nota-atleta-coach').first();
+  if (await conNota.isVisible({ timeout: 3000 }).catch(() => false)) check((await conNota.textContent()).includes('Su nota'), 'en el editor, la nota que se fijó ella en el ejercicio');
+  else {
+    await p.locator('.sesion-editor, .fila-sesion, .editor-sesion').first().click().catch(() => {});
+    check(await p.locator('.nota-atleta-coach').first().waitFor({ timeout: 5000 }).then(() => true).catch(() => false), 'en el editor, la nota que se fijó ella en el ejercicio');
+  }
+
+  // Chat: un mensaje programado (y un enlace de YouTube con su miniatura)
+  await p.getByRole('tab', { name: 'Mensajes' }).click();
+  await p.locator('.burbuja.programada').first().waitFor();
+  check((await p.locator('.burbuja.programada').first().textContent()).includes('Programado para el'), 'el coach ve el mensaje de mañana como «Programado para el …»');
+  await p.locator('.chat-area').fill('Mira este vídeo antes del lunes: https://youtu.be/gMgvBspQ9lk');
+  await p.getByRole('button', { name: 'Programar envío' }).click();
+  const hojaP = p.getByRole('dialog', { name: 'Programar el mensaje a Ana' });
+  await hojaP.getByRole('button', { name: 'Mañana, 8:00' }).click();
+  await revisar('programar-envio');
+  await hojaP.getByRole('button', { name: 'Programar', exact: true }).click();
+  await p.locator('.toast', { hasText: 'Programado para el' }).waitFor();
+  const nuevaP = p.locator('.burbuja.programada', { hasText: 'Mira este vídeo' });
+  await nuevaP.waitFor();
+  check(await nuevaP.locator('.vista-youtube img').count() === 1 && (await nuevaP.locator('.vista-youtube img').getAttribute('src')).startsWith('https://i.ytimg.com/vi/gMgvBspQ9lk/'), 'programa un mensaje con un enlace de YouTube: sale con su miniatura');
+  await revisar('chat-programado');
+
+  // Revisar → Tareas
+  await p.locator('.tab', { hasText: 'Revisar' }).click();
+  await p.getByRole('heading', { name: 'Revisar' }).waitFor();
+  await p.getByRole('button', { name: /^Tareas \(1\)/ }).click();
+  const tarjT = p.getByRole('article', { name: /Tarea de Ana López/ });
+  await tarjT.waitFor();
+  check((await tarjT.textContent()).includes('hotel'), 'en Revisar → Tareas, la que contestó Ana, con su respuesta');
+  await revisar('revisar-tareas');
+  await tarjT.getByRole('button', { name: 'Revisada' }).click();
+  await p.locator('.toast', { hasText: 'Tarea revisada' }).waitFor();
+  check(true, 'y la marca revisada (con «Deshacer»)');
+
+  // Avisos programados
+  await p.locator('.tab', { hasText: 'Atletas' }).click();
+  await p.getByRole('button', { name: 'Avisos para tus atletas' }).click();
+  const filaProg = p.locator('.aviso-fila', { hasText: 'estreno las tareas' });
+  await filaProg.waitFor();
+  check((await filaProg.textContent()).includes('Programado para el lun'), 'el aviso del lunes, «Programado para el lun …», que se puede cambiar');
+  await revisar('avisos-programados');
+  await p.keyboard.press('Escape');
+
+  // Cuenta → Negocio
+  await abrirPestana(p, 'Cuenta');
+  await p.getByRole('heading', { name: 'Negocio' }).waitFor();
+  await p.getByRole('button', { name: 'Abrir el panel de negocio' }).click();
+  const hojaN = p.getByRole('dialog', { name: 'Panel de negocio' });
+  await hojaN.locator('.negocio-cifras').waitFor();
+  const txtN = await hojaN.textContent();
+  check(/Atletas activos\s*4/.test(txtN) && /\d €/.test(txtN) && txtN.includes('Renuevan en 30 días') && await hojaN.locator('svg.grafica-negocio').count() === 2, 'el panel de negocio: activos, euros a la española, renovaciones y las dos gráficas de 12 meses');
+  await revisar('negocio');
+  await hojaN.getByRole('switch', { name: /Ocultar importes/ }).check();
+  await p.waitForTimeout(200);
+  check(!/\d €/.test(await hojaN.locator('.negocio-cifras').textContent()) && (await hojaN.textContent()).includes('•••'), '«Ocultar importes» tapa los euros');
+  await revisar('negocio-oculto');
+  await hojaN.getByRole('switch', { name: /Ocultar importes/ }).uncheck();
+  await p.keyboard.press('Escape');
+
+  // Ana: la tarea en «Tu día»
+  await entrarComo('Ana López');
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  const tuDia = p.locator('.tu-dia');
+  await tuDia.waitFor();
+  const filaT = tuDia.locator('.fila-dia', { hasText: '¿Cómo has dormido esta semana?' });
+  await filaT.waitFor();
+  check(await tuDia.locator('.fila-dia', { hasText: 'Fotos de progreso de este mes' }).count() === 1, 'Ana tiene sus dos tareas de hoy en «Tu día»');
+  await revisar('tu-dia-tareas');
+  await filaT.click();
+  const hojaTA = p.getByRole('dialog', { name: '¿Cómo has dormido esta semana?' });
+  await hojaTA.getByLabel('Tu respuesta (opcional)').fill('Mejor: unas 7 horas casi todos los días');
+  await revisar('tarea-atleta');
+  await hojaTA.getByRole('button', { name: 'Marcar como hecha' }).click();
+  await p.locator('.toast', { hasText: 'Tarea hecha' }).waitFor();
+  await hojaTA.waitFor({ state: 'detached' });
+  check(await tuDia.locator('.fila-dia.hecho', { hasText: '¿Cómo has dormido esta semana?' }).count() === 1, 'la contesta y queda hecha');
+
+  // Tu mes (historia) en Hoy
+  const tarjetaMes = p.locator('.tarjeta-mes');
+  await tarjetaMes.waitFor();
+  check(/^Tu [a-z]+$/.test(await tarjetaMes.getAttribute('aria-label')), `en Hoy, la tarjeta «${await tarjetaMes.getAttribute('aria-label')}»`);
+  await tarjetaMes.locator('.tarjeta-semana-abrir').click();
+  const historia = p.locator('.historia');
+  await historia.waitFor();
+  await revisar('tu-mes');
+  const pantallas = await historia.locator('.historia-barras > span').count();
+  for (let i = 0; i < pantallas - 1; i++) { await p.keyboard.press('ArrowRight'); await p.waitForTimeout(150); }
+  const fin = historia.locator('.historia-fin-botones').getByRole('button', { name: 'Compartir' });
+  check(pantallas >= 4 && await fin.isVisible(), `${pantallas} pantallas con las flechas; al final, compartir`);
+  await revisar('tu-mes-fin');
+  await fin.click();
+  const hojaComp = p.getByRole('dialog', { name: /Compartir/ }).last();
+  await hojaComp.waitFor();
+  await hojaComp.locator('p', { hasText: 'nada de peso' }).waitFor({ timeout: 8000 }).catch(() => {});
+  check((await hojaComp.textContent()).includes('nada de peso, medidas, nutrición, hábitos ni datos de salud'), 'la imagen para compartir dice lo que lleva (y que no lleva peso, medidas, nutrición ni salud)');
+  await revisar('tu-mes-compartir');
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(250);
+  await cerrarDialogos();
+  if (await historia.isVisible().catch(() => false)) await p.keyboard.press('Escape');
+  await historia.waitFor({ state: 'detached' });
+  check(await p.locator('.tarjeta-mes').count() === 0, 'vista, la tarjeta ya no vuelve a salir en Hoy');
+
+  // Tu bloque entero
+  await p.getByRole('button', { name: 'Tu bloque', exact: true }).click();
+  const hojaB = p.getByRole('dialog').filter({ has: p.locator('.bloque-semanas') });
+  await hojaB.locator('.bloque-semanas').waitFor();
+  check((await hojaB.textContent()).includes('Por publicar') && await hojaB.locator('svg').count() >= 1, 'tu bloque entero: las semanas que vienen «por publicar» y la carga pautada frente a la hecha');
+  await revisar('tu-bloque');
+  await p.keyboard.press('Escape');
+  await hojaB.waitFor({ state: 'detached' });
+
+  // Progreso → Tus meses
+  await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await p.getByRole('heading', { name: 'Tus meses' }).waitFor();
+  check(true, 'en Progreso, los meses pasados');
+  await revisar('progreso-meses');
+
+  // Entrenador por voz (la voz del móvil, de mentira)
+  await p.evaluate(() => {
+    window.__dichos = [];
+    const s = window.speechSynthesis;
+    s.speak = (u) => { if (u.text) window.__dichos.push(u.text); };
+    s.cancel = () => {};
+    s.getVoices = () => [];
+  });
+  await abrirPestana(p, 'Perfil');
+  const intVoz = p.getByRole('switch', { name: /Entrenador por voz/ });
+  await intVoz.waitFor();
+  check(!(await intVoz.isChecked()), 'el entrenador por voz viene apagado');
+  await intVoz.check();
+  await p.getByRole('button', { name: 'Probar la voz' }).click();
+  check((await p.evaluate(() => window.__dichos)).some((t) => t.startsWith('Serie 3 de sentadilla')), '«Probar la voz» lo dice');
+  await revisar('perfil-voz');
+
+  // La sesión: lo que te dijo tu coach, dónde entrenas y la voz en el descanso
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.waitForTimeout(600);
+  await cerrarDialogos();
+  await p.getByRole('button', { name: 'Empezar sesión' }).click({ force: true });
+  await p.locator('.ejercicio').first().waitFor();
+  const donde = p.locator('.donde-entrenas');
+  await donde.waitFor();
+  await donde.getByRole('button', { name: 'Casa', exact: true }).click();
+  await p.locator('.toast', { hasText: /cambiados? por tu material/ }).waitFor();
+  const cambiados = await p.locator('.ejercicio .cambiado', { hasText: 'Por tu material de casa' }).count();
+  check(cambiados >= 2 && await p.locator('.ejercicio .video-aviso', { hasText: 'Sin alternativa con tu material de casa' }).count() >= 1, `en casa: ${cambiados} ejercicios cambiados por las alternativas del coach; lo que no tiene, avisado`);
+  await revisar('donde-entrenas');
+  const cambiado = p.locator('.ejercicio', { has: p.locator('.cambiado', { hasText: 'Por tu material de casa' }) }).first();
+  await cambiado.locator('.ejercicio-cab').click();
+  await cambiado.locator('.cambio-lugar').getByRole('button', { name: 'Deshacer' }).click();
+  await p.locator('.toast', { hasText: 'Vuelve el ejercicio que pautó tu coach' }).waitFor();
+  check(await p.locator('.ejercicio .cambiado', { hasText: 'Por tu material de casa' }).count() === cambiados - 1, 'y cada cambio se deshace por separado');
+  const dom = p.locator('.ejercicio', { hasText: 'Dominadas pronas' }).first();
+  await dom.locator('.ejercicio-cab').click();
+  await dom.locator('.dijo-coach').waitFor();
+  check((await dom.locator('.dijo-coach').textContent()).includes('baja del todo'), '«Lo que te dijo tu coach» en las dominadas (de una sesión anterior)');
+  await revisar('dijo-coach');
+  const prim = p.locator('.ejercicio').first();
+  if ((await prim.locator('.ejercicio-cab').getAttribute('aria-expanded')) !== 'true') await prim.locator('.ejercicio-cab').click();
+  await prim.getByLabel('Kilos de la serie 1').fill('20');
+  await prim.getByLabel('Repeticiones de la serie 1').fill('10');
+  await prim.getByRole('button', { name: 'Marcar la serie 1 como hecha' }).click();
+  await p.locator('.temporizador').waitFor();
+  await temporizadorAlSonar(p);
+  await p.waitForFunction(() => window.__dichos.some((t) => /^Serie 2 de /.test(t)), null, { timeout: 4000 }).catch(() => {});
+  const dichos = await p.evaluate(() => window.__dichos);
+  check(dichos.some((t) => /^Serie 2 de .+: .+\.$/.test(t)), `al acabar el descanso, la voz dice la serie siguiente («${dichos.filter((t) => t.startsWith('Serie 2')).at(-1) || dichos.at(-1)}»)`);
+  const saltar = p.getByRole('button', { name: /Saltar|Cerrar/ }).first();
+  if (await p.locator('.temporizador').isVisible().catch(() => false)) await saltar.click().catch(() => {});
+  await intVoz.isVisible().catch(() => false);
+
+  // Oscuro y a 360 px
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.getByRole('button', { name: 'Volver' }).first().click().catch(() => {});
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.tu-dia').waitFor();
+  await p.waitForTimeout(800);
+  await cerrarDialogos();
+  const ancho360 = await p.evaluate(() => document.documentElement.scrollWidth);
+  check(ancho360 <= 360, `a 360 px y en oscuro, Hoy (con sus tareas) no se sale (${ancho360} px)`);
+  await revisar('hoy-360-oscuro');
+  await p.getByRole('button', { name: 'Tu bloque', exact: true }).click();
+  await p.locator('.bloque-semanas').waitFor();
+  const anchoB = await p.evaluate(() => document.documentElement.scrollWidth);
+  check(anchoB <= 360, `y tu bloque tampoco (${anchoB} px)`);
+  await revisar('tu-bloque-360-oscuro');
+  await p.keyboard.press('Escape');
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.emulateMedia({ colorScheme: 'light' });
+
+  // El acceso directo «Sesión de hoy» del icono (?accion=sesion) abre la sesión que toca
+  await p.goto('http://localhost:4174/?demo&accion=sesion#hoy');
+  await p.locator('.ejercicio').first().waitFor();
+  check(!(await p.evaluate(() => location.search)).includes('accion'), 'el acceso directo «Sesión de hoy» abre la sesión que toca (y limpia la dirección)');
+  // Compartir un vídeo desde la galería (Android): el service worker lo deja en la caché y abre ?compartido=1
+  await p.evaluate(async () => {
+    const c = await caches.open('fbe-compartido');
+    await c.put('compartido/video', new Response(new Blob([new Uint8Array(2048)], { type: 'video/mp4' }), { headers: { 'content-type': 'video/mp4', 'x-nombre': 'sentadilla.mp4' } }));
+  });
+  await p.goto('http://localhost:4174/?demo&compartido=1#hoy');
+  const hojaV = p.getByRole('dialog', { name: 'Enviar el vídeo a tu coach' });
+  await hojaV.waitFor();
+  check((await hojaV.textContent()).includes('sentadilla.mp4') && !(await p.evaluate(() => location.search)).includes('compartido'), 'al compartir un vídeo a la app, Ana elige de qué ejercicio es (y la dirección queda limpia)');
+  await hojaV.getByLabel('¿De qué ejercicio es?').selectOption({ index: 1 });
+  await revisar('compartido');
+  await hojaV.getByRole('button', { name: 'Descartarlo' }).click();
+  await hojaV.waitFor({ state: 'detached' });
+  check(!(await p.evaluate(async () => !!(await (await caches.open('fbe-compartido')).match('compartido/video')))), 'descartarlo lo borra del móvil');
+  // El coach no recibe vídeos compartidos: se descarta con un aviso
+  await p.evaluate(async () => {
+    const c = await caches.open('fbe-compartido');
+    await c.put('compartido/video', new Response(new Blob([new Uint8Array(16)], { type: 'video/mp4' }), { headers: { 'content-type': 'video/mp4' } }));
+  });
+  await entrarComo('Pelayo');
+  await p.goto('http://localhost:4174/?demo&compartido=1#atletas');
+  await p.locator('.toast', { hasText: /vídeo/ }).waitFor();
+  check(!(await p.evaluate(async () => !!(await (await caches.open('fbe-compartido')).match('compartido/video')))), 'si lo comparte el coach, se descarta con un aviso');
+  // Los accesos directos del icono
+  const man = JSON.parse(await (await fetch('http://localhost:4174/manifest.webmanifest')).text());
+  check(man.shortcuts?.length === 4 && man.shortcuts[0].url.includes('accion=sesion') && man.share_target?.action === './compartir-video' && man.share_target.params.files[0].accept.includes('video/*'),
+    'el manifiesto trae los accesos directos (sesión de hoy, check-in, mensajes, revisar) y recibe vídeos compartidos');
+  await p.unroute('https://i.ytimg.com/**');
   }
 } catch (e) {
   fallos++;

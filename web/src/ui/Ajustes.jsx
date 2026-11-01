@@ -3,6 +3,7 @@ import { useState } from 'preact/hooks';
 import { Segmentos, Icono, useApp } from './comunes.jsx';
 import { leerAjustes, guardarAjustes } from './ajustes.js';
 import { prepararAudio, pitar, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
+import { hayVoz, hablar } from './voz.js';
 
 const TEMAS = [['sistema', 'Sistema'], ['claro', 'Claro'], ['oscuro', 'Oscuro']];
 
@@ -51,6 +52,11 @@ export function AjustesDispositivo({ coach = false }) {
                 </li>
               )}
               {a.sonido && <Interruptor id="aj-cuenta" texto="Pitidos en los 3 últimos segundos" ayuda="Para saber que el descanso se acaba sin mirar el móvil" valor={a.cuentaAtras} alCambiar={(v) => cambiar('cuentaAtras', v)} />}
+              {/* v0.48: el entrenador por voz (Web Speech), apagado de entrada; donde el navegador no habla, desactivado */}
+              <Interruptor id="aj-voz" texto="Entrenador por voz" desactivado={!hayVoz()}
+                ayuda={hayVoz() ? 'Te dice la siguiente serie («Serie 3 de press banca: 80 kilos por 6»), los últimos segundos del descanso y la última serie. La música sigue sonando (baja un momento mientras habla).' : 'Este navegador no puede hablar: los avisos del descanso siguen con su sonido.'}
+                valor={!!a.voz && hayVoz()} alCambiar={(v) => { cambiar('voz', v); if (v) hablar('Serie 1 de press banca: 60 kilos por 8.', { forzar: true }); }} />
+              {a.voz && hayVoz() && <li class="panel-pad separa"><span class="peq secundario">¿Se oye bien?</span><button class="btn btn-peq" onClick={() => hablar('Serie 3 de sentadilla: 80 kilos por 6. Última serie.', { forzar: true })}><Icono n="altavoz" /> Probar la voz</button></li>}
               <Interruptor id="aj-vibracion" texto="Vibración" ayuda="En los móviles que la permiten" valor={a.vibracion} alCambiar={(v) => cambiar('vibracion', v)} />
               <Interruptor id="aj-pantalla" texto="Pantalla encendida durante la sesión" ayuda="Para no tener que desbloquear el móvil entre series" valor={a.pantalla} alCambiar={(v) => cambiar('pantalla', v)} />
               <Interruptor id="aj-peso-cifra" texto="Ver los kilos en Hoy" ayuda="Y en el resumen de tu semana. De serie, te dice cómo va tu peso respecto a tu objetivo, sin la cifra; la gráfica sigue en Progreso" valor={a.pesoCifra} alCambiar={(v) => cambiar('pesoCifra', v)} />

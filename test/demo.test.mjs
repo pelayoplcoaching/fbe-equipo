@@ -17,7 +17,7 @@ console.log('Coach en la demo');
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 check((await api.perfil()).rol === 'coach', 'entra como coach');
 const res = await api.resumenes();
-check(res.length === 5, '5 atletas en el panel (con Lucía, solo nutrición)');
+check(res.length === 6, '6 atletas en el panel (con Lucía, solo nutrición, y Sergio, de baja desde hace dos meses: v0.48)');
 check(res.find((r) => r.nombre === 'Lucía Ferrer')?.servicio === 'nutricion' && !res.find((r) => r.nombre === 'Lucía Ferrer').alertas.some((a) => ['sin_bloque', 'sin_entrenar', 'publicar'].includes(a.tipo)), 'Lucía, solo nutrición: sin avisos de entrenamiento');
 check(res.find((r) => r.nombre === 'Lucía Ferrer').alertas.some((a) => a.tipo === 'receta'), 'Lucía pide cambiar una receta (aviso en el panel)');
 for (const r of res) console.log('    ', r.nombre.padEnd(14), r.semana ? `S${r.semana.numero}/${r.semana.total}` : '—', `${r.sesiones.completadas}/${r.sesiones.total}`, r.peso ? `${r.peso.kg} (${r.peso.cambio})` : '', '|', r.alertas.map((a) => a.texto).join(' · '));
@@ -337,7 +337,7 @@ await b.auth.mfa.verificar(f.id, '123456');
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 check((await api.atletas()).length === 0 && (await b.auth.mfa.nivel()).siguiente === 'aal2', 'sin el segundo paso, el coach no ve datos');
 await b.auth.mfa.verificar(f.id, '123456');
-check((await api.atletas()).length === 5, 'con el código 123456, sí');
+check((await api.atletas()).length === 6, 'con el código 123456, sí');
 await b.auth.mfa.quitar(f.id);
 await b.auth.entrar('ana@fbe.demo', 'demo');
 
@@ -591,6 +591,75 @@ console.log('\nLo que encontró la revisión de seguridad de la 029, en la demo'
   const mios2 = (await a3.exportar((await a3.miAtleta()).id)).comunidad;
   check(mios2.animos_mandados.some((x) => x.para_nombre === 'Alguien del equipo' && !('para' in x)) && mios2.comentarios.every((x) => typeof x.menciones === 'number'),
     '«mis datos»: a quien ya no está, «Alguien del equipo» (sin identificador); de sus menciones, cuántas');
+}
+
+
+console.log('\nv0.48 en la demo: tareas, programados, dónde entrenas, tu bloque, tu mes y el negocio');
+{
+  const { adaptarSesion, PERFILES_DEFECTO } = await import('../web/src/logica/material.js');
+  const b4 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a4 = crearApi(b4);
+  const hoy = hoyISO();
+  await b4.auth.entrar('ana@fbe.demo', 'demo');
+  const ana = await a4.miAtleta();
+  const tareasAna = await a4.tareas(ana.id);
+  check(tareasAna.length === 2 && tareasAna.some((t) => t.tipo === 'foto' && !t.hecha_en) && tareasAna.some((t) => t.tipo === 'texto' && t.hecha_en && t.respuesta), 'Ana tiene una tarea de fotos para hoy y otra ya contestada');
+  const dia = await a4.tuDia(ana.id, { hoy });
+  check(dia.some((x) => x.accion === 'tarea' && x.estado === 'toca' && x.icono === 'camara'), 'la de fotos le sale en «Tu día»');
+  check(await lanza(() => b4.insert('tareas', [{ atleta_id: ana.id, tipo: 'texto', titulo: 'Me la pongo yo', fecha: hoy }])), 'no se pone tareas (como en la base)');
+  const foto = tareasAna.find((t) => t.tipo === 'foto');
+  check(await lanza(() => a4.completarTarea(foto.id)), 'la de fotos no se marca sin su foto');
+  const [fotoAna] = await b4.select('archivos', { eq: { atleta_id: ana.id, tipo: 'foto_progreso' }, limit: 1 });
+  check(!!fotoAna && !!(await a4.completarTarea(foto.id, { archivoId: fotoAna.id })), 'con una foto de progreso suya, sí');
+  check((await a4.completarTarea(foto.id, { hecha: false })) === null, 'y lo puede deshacer');
+  const det = await a4.sesion((await a4.programa(ana.id)).sesiones[(await a4.programa(ana.id)).actual.id].find((s) => !s.completada).id, ana.id);
+  const dom = det.ejercicios.find((e) => e.ejercicio.nombre === 'Dominadas pronas');
+  check(!!dom && det.coach[dom.ejercicio.id]?.lista[0]?.texto.includes('baja del todo'), '«Lo que te dijo tu coach» en las dominadas de su próxima sesión');
+  const adap = adaptarSesion(det.ejercicios, PERFILES_DEFECTO.casa);
+  check(Object.keys(adap.cambios).length >= 2 && adap.sinAlternativa.length >= 1, `en casa: ${Object.keys(adap.cambios).length} cambios por las alternativas del coach y ${adap.sinAlternativa.length} sin alternativa (se avisa)`);
+  check(!(await a4.conversacion(ana.id)).some((c) => c.enviar_en) && !(await a4.noLeidos(ana.id)).some((c) => c.enviar_en), 'el mensaje programado para mañana no lo ve aún');
+  check(!(await a4.avisos(ana.id, sumarDias(hoy, 8))).some((a) => a.enviar_en), 'ni el aviso programado para el lunes');
+  const tb = await a4.tuBloque(ana.id);
+  check(tb.semanas.some((w) => w.estado === 'actual') && tb.semanas.filter((w) => w.estado === 'por_publicar').length >= 1 && tb.semanas.filter((w) => w.estado === 'por_publicar').every((w) => !w.sesiones.length && !w.foco) && tb.principales.length >= 1,
+    'su bloque entero: las semanas hechas, la actual y las por publicar (sin nada dentro), con los obligatorios');
+  const mesPasado = (await import('../web/src/logica/mes.js')).mesAnterior();
+  const rm = await a4.resumenMes(ana.id, mesPasado);
+  check(!rm.vacio && rm.sesiones.hechas >= 4 && rm.records.length >= 1, `su mes pasado: ${rm.sesiones.hechas} sesiones de ${rm.sesiones.previstas} y ${rm.records.length} récords`);
+  check(await lanza(() => b4.rpc('bloque_semanas', { p_bloque: crypto.randomUUID() }).then((r) => { if (r.length) throw new Error('ajeno'); })) === false, 'del bloque de otro, nada');
+  check(await lanza(() => a4.enviarMensaje(ana.id, { texto: 'Programado', autor: 'atleta', enviarEn: new Date(Date.now() + 864e5).toISOString() })), 'el atleta no programa mensajes');
+
+  await b4.auth.entrar('ruben@fbe.demo', 'demo');
+  const ruben = await a4.miAtleta();
+  const tr = await a4.tareas(ruben.id);
+  const vid = tr.find((t) => t.tipo === 'video'), med = tr.find((t) => t.tipo === 'medida');
+  check(vid && vid.fecha < hoy && !vid.hecha_en && (await a4.tuDia(ruben.id, { hoy })).find((x) => x.tareaId === vid.id)?.detalle.startsWith('Vídeo de técnica. Desde'), 'Rubén tiene un vídeo atrasado (sin agobiar: «Desde …»)');
+  check(await lanza(() => a4.completarTarea(med.id)), 'la de medidas, para dentro de tres días, aún no');
+  check(await lanza(() => a4.completarTarea(tareasAna[0].id)), 'ni marca las de Ana');
+
+  await b4.auth.entrar('pelayo@fbe.demo', 'demo');
+  const conv = await a4.conversacion(ana.id);
+  check(conv.filter((c) => c.programado).length === 1 && (await a4.avisosCoach()).filter((a) => a.programado).length === 1, 'el coach ve el mensaje y el aviso programados');
+  const band = await a4.bandeja();
+  check(band.tareas.length === 1 && band.tareas[0].atleta.nombre.startsWith('Ana'), 'en Revisar, la tarea que contestó Ana');
+  check((await a4.plantillasTareas()).length === 3, '3 plantillas de tareas');
+  for (let i = 0; i < 27; i++) await a4.guardarPlantillaTarea({ tipo: 'texto', titulo: `P${i}` });
+  check(await lanza(() => a4.guardarPlantillaTarea({ tipo: 'texto', titulo: 'La 31' })), 'como mucho 30 plantillas (como en la base)');
+  const pn = await a4.panelNegocio();
+  check(pn.activos === 4 && pn.meses.length === 12 && pn.bajas12 === 1 && pn.cobrado12 > 0 && pn.renovaciones.length >= 1, `el panel de negocio: ${pn.activos} activos, ${pn.bajas12} baja (Sergio) y ${pn.renovaciones.length} renovaciones en 30 días`);
+  const carlos = (await a4.atletas()).find((a) => a.nombre === 'Carlos Vera');
+  await a4.actualizar('atletas', carlos.id, { estado: 'baja' });
+  check((await a4.atletas()).find((a) => a.id === carlos.id).baja_en === hoy, 'dar de baja apunta el día (como la base)');
+  await a4.actualizar('atletas', carlos.id, { estado: 'activo' });
+  check((await a4.atletas()).find((a) => a.id === carlos.id).baja_en === null, 'y volver de alta lo quita');
+  const prog = conv.find((c) => c.programado);
+  await a4.reprogramarMensaje(prog.id, { enviarEn: null });
+  await b4.auth.entrar('ana@fbe.demo', 'demo');
+  check((await a4.conversacion(ana.id)).some((c) => c.id === prog.id), '«Enviar ya»: Ana lo ve al momento');
+  await b4.auth.entrar('pelayo@fbe.demo', 'demo');
+  check(await lanza(() => a4.reprogramarMensaje(prog.id, { texto: 'Otra cosa' })), 'ya salido, no se cambia');
+  const cks = await b4.select('checkins', { eq: { atleta_id: ana.id }, order: [['semana_inicio', 'asc']] });
+  const cmp = await a4.compararCheckins(ana.id, cks.at(-1).id, cks[0].id);
+  check(cmp.antes.checkin.id === cks[0].id && cmp.filas.some((f) => f.clave === 'peso' && f.dif != null), 'comparar el primer y el último check-in de Ana, con su peso');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

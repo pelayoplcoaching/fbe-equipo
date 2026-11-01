@@ -8,6 +8,7 @@ import { VerArchivo } from '../Archivos.jsx';
 import { ESCALAS, NOMBRE_ZONA, num } from '../../logica/calculos.js';
 import { fmtConDia, rangoSemana } from '../../logica/fechas.js';
 import { NOMBRE_TOMA } from '../../logica/comidas.js';
+import { TarjetaTarea } from '../Tareas.jsx';
 
 // «Deshacer» en el aviso: vuelve a dejarlo pendiente
 const deshacer = (api, tipo, id, recargar) => ({ texto: 'Deshacer', fn: async () => { await api.marcarRevisado(tipo, id, false); recargar(); } });
@@ -49,7 +50,7 @@ function useAtajos(caja, n) {
   return i;
 }
 
-const FILTROS = [['todo', 'Todo'], ['mensajes', 'Mensajes'], ['sesiones', 'Sesiones'], ['checkins', 'Check-ins'], ['videos', 'Vídeos'], ['recetas', 'Recetas'], ['comunidad', 'Equipo']];
+const FILTROS = [['todo', 'Todo'], ['mensajes', 'Mensajes'], ['sesiones', 'Sesiones'], ['checkins', 'Check-ins'], ['videos', 'Vídeos'], ['tareas', 'Tareas'], ['recetas', 'Recetas'], ['comunidad', 'Equipo']];
 
 // Bandeja del coach: todo lo que espera tu respuesta, de todos los atletas, en un sitio
 export function Revisar({ bandeja, abrirAtleta }) {
@@ -68,7 +69,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
     if (!h) { h = { clave, ultimo: c, n: 0 }; hilos.push(h); }
     h.n++;
   }
-  const cuentas = { mensajes: hilos.length, sesiones: d?.sesiones.length || 0, checkins: d?.checkins.length || 0, videos: d?.archivos.length || 0, recetas: d?.recetas?.length || 0, comunidad: d?.comunidad?.length || 0 };
+  const cuentas = { mensajes: hilos.length, sesiones: d?.sesiones.length || 0, checkins: d?.checkins.length || 0, videos: d?.archivos.length || 0, recetas: d?.recetas?.length || 0, comunidad: d?.comunidad?.length || 0, tareas: d?.tareas?.length || 0 };
   const ver = (k) => filtro === 'todo' || filtro === k;
 
   return (
@@ -90,6 +91,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
           {ver('sesiones') && d.sesiones.map((s) => <TarjetaSesion key={s.id} s={s} recargar={recargar} abrirAtleta={abrirAtleta} />)}
           {ver('checkins') && d.checkins.map((c) => <TarjetaCheckin key={c.id} c={c} recargar={recargar} abrirAtleta={abrirAtleta} />)}
           {ver('videos') && d.archivos.map((a) => <TarjetaVideo key={a.id} a={a} recargar={recargar} abrirAtleta={abrirAtleta} />)}
+          {ver('tareas') && (d.tareas || []).map((t) => <TarjetaTarea key={t.id} t={t} recargar={recargar} abrirAtleta={abrirAtleta} />)}
           {ver('recetas') && (d.recetas || []).map((r) => <TarjetaCambioReceta key={r.id} r={r} recargar={recargar} abrirAtleta={abrirAtleta} />)}
           {ver('comunidad') && (d.comunidad || []).map((r) => <TarjetaReporte key={r.id} r={r} recargar={recargar} />)}
         </div>

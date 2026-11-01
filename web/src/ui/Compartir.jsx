@@ -104,7 +104,10 @@ export async function dibujarTarjeta(d) {
   x.fillStyle = C.linea; x.fillRect(M, y, W - 2 * M, 2);
   y += 70;
 
-  const limite = H - 190;
+  // v0.48 («Tu mes»): el calendario de constancia abajo, un punto por día (los entrenados, en morado)
+  const cal = Array.isArray(d.calendario) ? d.calendario : null;
+  const celda = 30, hueco = 12, altoCal = cal ? cal.length * (celda + hueco) + 40 : 0;
+  const limite = H - 190 - altoCal;
   // Récords
   if (d.records.length) {
     icono('trofeo', M + 18, y - 12, 36, C.morado);
@@ -137,6 +140,16 @@ export async function dibujarTarjeta(d) {
     if (mostradas < mejores.length) { letra(500, 30); x.fillStyle = C.tinta3; x.fillText(`y ${mejores.length - mostradas} más`, M, y); }
   }
 
+  if (cal) {
+    let cy = H - 170 - altoCal + 40;
+    letra(700, 30); x.fillStyle = C.tinta2; x.fillText('Tu constancia', M, cy - 16);
+    cal.forEach((semana, f) => semana.forEach((dia, c) => {
+      if (dia.fuera) return;
+      const cx = M + c * (celda + hueco) + celda / 2, yy = cy + f * (celda + hueco) + celda / 2;
+      x.fillStyle = dia.entrenado ? C.morado : C.linea;
+      x.beginPath(); x.arc(cx, yy, celda / 2, 0, Math.PI * 2); x.fill();
+    }));
+  }
   // Pie: los colores de los discos y la firma
   const anchoBarra = (W - 2 * M - 3 * 14) / 4;
   [C.rojo, C.azul, C.amarillo, C.verde].forEach((c, i) => {

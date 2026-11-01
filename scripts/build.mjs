@@ -86,6 +86,16 @@ ${marcadoPortada}
       { src: 'icono-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
       { src: 'icono.svg', sizes: 'any', type: 'image/svg+xml' },
     ],
+    // v0.48: accesos directos (mantener pulsado el icono) y «Compartir → FBE Equipo» un vídeo de la galería
+    // (Android con Chrome; el service worker lo recibe y la app lo ofrece como vídeo de técnica). En iPhone no hay
+    // ninguna de las dos cosas para una app web: no salen y no pasa nada.
+    shortcuts: [
+      { name: 'Empezar la sesión de hoy', short_name: 'Sesión de hoy', url: './?accion=sesion#hoy', icons: [{ src: 'icono-192.png', sizes: '192x192', type: 'image/png' }] },
+      { name: 'Check-in', short_name: 'Check-in', url: './#checkin', icons: [{ src: 'icono-192.png', sizes: '192x192', type: 'image/png' }] },
+      { name: 'Mensajes', short_name: 'Mensajes', url: './#mensajes', icons: [{ src: 'icono-192.png', sizes: '192x192', type: 'image/png' }] },
+      { name: 'Revisar (coach)', short_name: 'Revisar', url: './#revisar', icons: [{ src: 'icono-192.png', sizes: '192x192', type: 'image/png' }] },
+    ],
+    share_target: { action: './compartir-video', method: 'POST', enctype: 'multipart/form-data', params: { title: 'titulo', text: 'texto', files: [{ name: 'video', accept: ['video/*'] }] } },
   }, null, 2));
 
   // config.js y sw.js no pasan por esbuild: lo que no sea ASCII (tildes de los comentarios) se escribe como \\u…

@@ -13,6 +13,7 @@ export const TIPOS_ATLETA = [
   ['habitos', 'Hábitos', 'Por la tarde, los que te falten de hoy'],
   ['nutricion', 'Nutrición', 'Por la tarde, si aún no la has apuntado'],
   ['cuestionario', 'Peticiones de tu coach', 'Si te pide que rellenes o actualices tu cuestionario'],
+  ['tarea', 'Tareas de tu coach', 'Cuando te pone una (sin el texto: la ves en «Tu día»)'],
   ['descanso', 'Descansos terminados', 'Al acabar tu descanso, si no tienes la app delante (música, otra app, pantalla bloqueada)'],
   ['comunidad', 'Equipo', 'Reacciones y comentarios en lo que publicas, menciones, ánimos y los avisos y encuestas del coach en el muro'],
 ];
@@ -22,6 +23,7 @@ export const TIPOS_COACH = [
   ['video_recibido', 'Vídeos de técnica', 'Cuando alguien sube uno'],
   ['sesion_hecha', 'Sesiones terminadas', 'Una por sesión: pueden ser muchas al día'],
   ['cuestionario_recibido', 'Cuestionarios', 'Cuando alguien completa o actualiza el suyo'],
+  ['tarea_hecha', 'Tareas hechas', 'Cuando alguien hace una de las tareas que le pones'],
   ['comunidad', 'Equipo', 'Reacciones y comentarios en tus avisos del muro, menciones, y cuando alguien te avisa de algo'],
 ];
 export const RECORDATORIOS = ['sesion_hoy', 'checkin', 'habitos', 'nutricion'];

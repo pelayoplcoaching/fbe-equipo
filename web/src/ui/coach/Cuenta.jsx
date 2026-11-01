@@ -6,6 +6,7 @@ import { num } from '../../logica/calculos.js';
 import { BandaDemo } from '../App.jsx';
 import { hoyISO } from '../../logica/fechas.js';
 import { CobrosTodos } from './Cobros.jsx';
+import { SeccionNegocio } from './Negocio.jsx';
 /* global __APP_VERSION__ */
 import { FilaFoto, FilaNombre } from '../FotoPerfil.jsx';
 
@@ -29,6 +30,7 @@ export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
       <SeccionNotificaciones coach />
       <AjustesDispositivo coach />
       <CobrosTodos abrirAtleta={abrirAtleta} />
+      <SeccionNegocio abrirAtleta={abrirAtleta} />
       <Espacio />
       <ErroresApp />
       <section class="seccion">

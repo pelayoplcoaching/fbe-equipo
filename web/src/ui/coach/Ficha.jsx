@@ -23,6 +23,9 @@ import { respuestasDe } from '../../logica/preguntas.js';
 import { NIVELES, NOMBRE_NIVEL, AYUDA_NIVEL, conNutricion, conEntrenamiento, SERVICIOS, servicioDe, CAMPOS_SERVICIO } from '../../logica/nivel.js';
 import { NutricionFicha } from './ComidasCoach.jsx';
 import { CobrosAtleta } from './Cobros.jsx';
+import { TareasCoach } from '../Tareas.jsx';
+import { TusMeses } from '../atleta/TuMes.jsx';
+import { CompararCheckins } from './CompararCheckins.jsx';
 
 // Las de entrenamiento, fuera a quien solo le llevas la nutrición (v0.26); Nutrición, a quien solo el entrenamiento
 const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
@@ -356,8 +359,10 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
   const media = (c) => { const v = [c.adherencia_desayuno, c.adherencia_comida, c.adherencia_merienda, c.adherencia_cena].filter(Boolean); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   const porSemana = molestias.reduce((m, x) => ((m[x.semana_inicio] ||= []).push(x), m), {});
   const recargar = () => { checkins.recargar(true); alCambiar?.(); };
+  const [comparar, setComparar] = useState(false);
   return (
     <div class="pila">
+      <TareasCoach atleta={atleta} alCambiar={alCambiar} />
       {conEntrenamiento(atleta) && <CumplimientoYBloques atletaId={atleta.id} />}
       <HabitosCoach atleta={atleta} />
       <VistaProgreso key={versionVol} atletaId={atleta.id} esCoach entrenamiento={conEntrenamiento(atleta)} />
@@ -365,7 +370,10 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
       {conEntrenamiento(atleta) && <VolumenObjetivo atleta={atleta} alGuardar={() => { setVersionVol((v) => v + 1); recargarFicha?.(); }} />}
       <CheckinAMedida atleta={atleta} preguntas={preguntas} checkins={lista} recargarFicha={recargarFicha} />
       <section class="seccion">
-        <h2>Check-ins</h2>
+        <div class="seccion-cab">
+          <h2>Check-ins</h2>
+          {lista.length >= 2 && <button class="btn-texto" onClick={() => setComparar(true)}><Icono n="intercambiar" /> Comparar dos</button>}
+        </div>
         {!lista.length ? <div class="panel"><Vacio icono="checkin" titulo="Sin check-ins todavía" /></div> : (
           <div class="panel"><div class="tabla-env">
             <table class="tabla-simple tabla-clic">
@@ -399,6 +407,8 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
         )}
         <p class="mini terciario">Energía y recuperación de 1 (peor) a 5 (mejor). Molestias de 0 a 3. Toca una semana para comentarla.</p>
       </section>
+      {comparar && <CompararCheckins atleta={atleta} checkins={lista} alCerrar={() => setComparar(false)} />}
+      <TusMeses atleta={atleta} atletaId={atleta.id} esCoach />
       {abierto && (
         <Hoja titulo={`Check-in, ${rangoSemana(abierto.semana_inicio)}`} alCerrar={() => setAbierto(null)}>
           {respuestasAbierto.length > 0 && (

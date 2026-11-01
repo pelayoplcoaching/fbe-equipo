@@ -968,9 +968,18 @@ const suelto = await api.subirArchivo(ana.id, new Blob(['otro'], { type: 'video/
 await b.delete('archivos', { eq: { id: suelto.id } });
 await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
 check((await b.sql(`select count(*)::int n from storage.objects`))[0].n === 2, 'un archivo que la atleta borró solo de la tabla sigue en su carpeta');
+// v0.48: una tarea suya hecha (con su respuesta) y otra de vídeo, que también tienen que volver
+{
+  const tVid = await api.ponerTarea(ana.id, { tipo: 'video', titulo: 'Vídeo del press', ejercicio_id: press.id, fecha: hoy });
+  const tTxt = await api.ponerTarea(ana.id, { tipo: 'texto', titulo: '¿Qué tal?', fecha: hoy });
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.completarTarea(tTxt.id, { respuesta: 'Bien' });
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(!!tVid.id, 'antes de la copia, Ana tiene dos tareas (una hecha)');
+}
 // v0.23: antes de borrarla, la copia completa (para recuperarla después)
 const copiaAntes = JSON.parse(JSON.stringify(await api.copiaCompleta()));
-const TABLAS_ANA = ['pagos', 'cobros_atletas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'notas_ejercicio', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'comentarios'];
+const TABLAS_ANA = ['pagos', 'cobros_atletas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'notas_ejercicio', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'comentarios', 'tareas'];
 const cuenta = async () => Object.fromEntries(await Promise.all(TABLAS_ANA.map(async (t) => [t, (await b.sql(`select count(*)::int n from ${t} where atleta_id = $1`, [ana.id]))[0].n])));
 const antes = await cuenta();
 await api.borrarAtleta(ana.id);
@@ -1453,6 +1462,133 @@ console.log('\nLo que encontró la revisión de seguridad de la 029 (capa de dat
   const txt = JSON.stringify(exp.comunidad);
   check(!txt.includes(aLuis.perfil_id) && !txt.includes(aLuis.id) && exp.comunidad.animos_mandados.every((x) => Object.keys(x).sort().join() === 'creado_en,semana')
     && exp.comunidad.publicaciones.every((x) => typeof x.menciones === 'number'), 'la descarga que saca el coach no lleva identificadores de otros atletas (ni a quién animó ni a quién mencionó)');
+}
+
+
+console.log('\nTareas, mensajes programados, tu bloque, tu mes y el negocio (v0.48, migración 030)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [aAna] = await b.sql(`select id, perfil_id from atletas where email = 'ana@test'`);
+  const [aLuis] = await b.sql(`select id, perfil_id from atletas where email = 'luis@test'`);
+  await b.sql(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await b.sql(`delete from tareas`); // (las de la recuperación de Ana, más arriba)
+  // Sin la 030, lo dice
+  {
+    const sin030 = crearApi({ ...b, insert: async (t, filas) => { if (t === 'tareas') throw new Error('relation "public.tareas" does not exist'); return b.insert(t, filas); } });
+    let msg = '';
+    try { await sin030.ponerTarea(aAna.id, { tipo: 'texto', titulo: 'X', fecha: hoy }); } catch (e) { msg = e.message; }
+    check(/migración 030/.test(msg), 'sin la migración 030, poner una tarea dice que falta');
+  }
+  // Tareas
+  const tT = await api.ponerTarea(aAna.id, { tipo: 'texto', titulo: '  ¿Cómo va el hombro? ', fecha: hoy });
+  const tF = await api.ponerTarea(aAna.id, { tipo: 'foto', titulo: 'Foto de frente', fecha: sumarDias(hoy, 2) });
+  check(tT.titulo === '¿Cómo va el hombro?' && (await api.tareas(aAna.id)).length === 2, 'el coach pone tareas (limpias)');
+  check(await lanza(() => api.ponerTarea(aAna.id, { tipo: 'video', titulo: 'Vídeo', fecha: hoy })), 'una de vídeo, con su ejercicio');
+  await api.guardarPlantillaTarea({ tipo: 'texto', titulo: '¿Qué tal la semana?' });
+  check((await api.plantillasTareas()).length === 1, 'y guarda plantillas');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const dia = await api.tuDia(aAna.id, { hoy });
+  check(dia.some((x) => x.accion === 'tarea' && x.tareaId === tT.id && x.estado === 'toca') && !dia.some((x) => x.tareaId === tF.id), '«Tu día» trae la de hoy y no la de pasado mañana');
+  check(await lanza(() => api.completarTarea(tF.id)), 'la de otro día no se puede hacer aún');
+  check(await lanza(() => api.completarTarea(tT.id, { respuesta: 'x'.repeat(501) })), 'una respuesta larguísima, no');
+  await api.completarTarea(tT.id, { respuesta: 'Mejor, un 3' });
+  check((await api.tuDia(aAna.id, { hoy })).find((x) => x.tareaId === tT.id)?.estado === 'hecho', 'hecha, sale como hecha');
+  check(await lanza(() => api.plantillasTareas().then((p) => { if (p.length) throw new Error('ve plantillas'); })) === false && await lanza(() => api.borrarTarea(tT.id).then(async () => { if (!(await api.tareas(aAna.id)).length) throw new Error('borró'); })) === false,
+    'el atleta no ve las plantillas ni borra sus tareas');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const band = await api.bandeja(hoy);
+  const enBandeja = band.items?.tareas || band.tareas;
+  check(enBandeja?.length === 1 && enBandeja[0].respuesta === 'Mejor, un 3' && enBandeja[0].atleta.id === aAna.id, 'el coach la tiene en Revisar, con su respuesta');
+  await api.marcarRevisado('tarea', tT.id);
+  check(!((await api.bandeja(hoy)).items?.tareas || (await api.bandeja(hoy)).tareas).length, 'revisada, sale de Revisar');
+  const exp = await api.exportar(aAna.id);
+  check(exp.tareas.length === 2, 'sus tareas van en la descarga de sus datos');
+
+  // Mensajes programados
+  const manana = new Date(Date.now() + 864e5).toISOString();
+  check(await lanza(() => api.enviarMensaje(aAna.id, { texto: 'Hola', autor: 'coach', enviarEn: new Date(Date.now() - 1000).toISOString() }))
+    && await lanza(() => api.enviarMensaje(aAna.id, { texto: 'Hola', autor: 'coach', enviarEn: new Date(Date.now() + 100 * 864e5).toISOString() }))
+    && await lanza(() => api.enviarMensaje(aAna.id, { texto: '', autor: 'coach', enviarEn: manana })), 'programar: ni en el pasado, ni a más de 90 días, ni vacío');
+  const prog = await api.enviarMensaje(aAna.id, { texto: 'Mañana, descarga', autor: 'coach', enviarEn: manana });
+  const conv = await api.conversacion(aAna.id);
+  check(conv.find((c) => c.id === prog.id)?.programado === true, 'el coach lo ve en el chat como programado');
+  const cs = (await api.conversaciones()).find((x) => x.atleta.id === aAna.id);
+  check(cs.programados === 1 && cs.ultimo?.id !== prog.id, 'en la lista de conversaciones no es el último mensaje (se cuenta aparte)');
+  const otraHora = new Date(Date.now() + 2 * 864e5).toISOString();
+  const r = await api.reprogramarMensaje(prog.id, { texto: 'Pasado mañana, descarga', enviarEn: otraHora });
+  check(r.texto === 'Pasado mañana, descarga' && Date.parse(r.enviar_en) === Date.parse(otraHora), 'cambia el texto y la hora antes de que salga');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check(!(await api.conversacion(aAna.id)).some((c) => c.id === prog.id) && !(await api.noLeidos(aAna.id)).some((c) => c.id === prog.id), 'Ana no lo ve ni cuenta como sin leer');
+  check(!(await api.exportar(aAna.id)).comentarios.some((c) => c.id === prog.id), 'ni sale en su descarga');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(!(await api.exportar(aAna.id)).comentarios.some((c) => c.id === prog.id), 'tampoco en la que saca el coach para ella');
+  await api.reprogramarMensaje(prog.id, { enviarEn: null });
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.conversacion(aAna.id)).some((c) => c.id === prog.id && !c.programado), '«Enviar ya»: sale en ese momento');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(await lanza(() => api.reprogramarMensaje(prog.id, { texto: 'Otra cosa' })), 'ya salido, no se cambia');
+
+  // Avisos programados
+  const av = await api.guardarAviso({ texto: 'El lunes, nuevo bloque', enviarEn: manana });
+  check(av.enviar_en && (await api.avisosCoach()).find((a) => a.id === av.id)?.programado, 'un aviso programado; el coach lo ve como programado');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check(!(await api.avisos(aAna.id, sumarDias(hoy, 1))).some((a) => a.id === av.id), 'Ana no lo ve antes de su hora (aunque su móvil vaya adelantado)');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const av2 = await api.guardarAviso({ texto: 'El lunes, nuevo bloque' }, av.id);
+  check(av2.enviar_en === null, 'quitarle la hora lo publica ya');
+  await b.delete('avisos', { eq: { id: av.id } });
+
+  // Tu bloque entero
+  const [bAna] = await b.sql(`select b.id from bloques b where b.atleta_id = $1 and b.estado = 'activo' and not b.es_plantilla limit 1`, [aAna.id]);
+  if (bAna) {
+    const [w] = await b.sql(`select id from semanas where bloque_id = $1 order by numero desc limit 1`, [bAna.id]);
+    await b.sql(`update semanas set programacion = 'en_programacion' where id = $1`, [w.id]);
+    await b.auth.entrar('ana@test', 'contraseña-ana-1');
+    const tb = await api.tuBloque(aAna.id);
+    check(!!tb && tb.semanas.some((x) => x.estado === 'por_publicar' && !x.sesiones.length) && tb.semanas.length >= 2, 'tu bloque entero: las semanas por publicar salen, sin nada dentro');
+    await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+    await b.sql(`update semanas set programacion = 'programada' where id = $1`, [w.id]);
+  } else check(false, 'Ana tiene un bloque activo');
+
+  // Tu mes
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const mesActual = hoy.slice(0, 7);
+  const rm = await api.resumenMes(aAna.id, mesActual);
+  check(rm.mes === mesActual && typeof rm.sesiones.hechas === 'number' && Array.isArray(rm.records), 'el resumen de un mes, con sus sesiones y récords');
+  const sinSalud = await api.resumenMes(aAna.id, mesActual, { salud: false });
+  check(sinSalud.habitos === null && sinSalud.nutricion === null, 'sin consentimiento de salud, sin hábitos ni nutrición');
+  check(Array.isArray(await api.resumenesMensuales(aAna.id, { n: 3 })), 'y los últimos meses (los que tienen algo)');
+
+  // «Lo que te dijo tu coach»
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [se] = await b.sql(`select s.id sesion, se.ejercicio_id ej from sesiones s join sesion_ejercicios se on se.sesion_id = s.id join semanas w on w.id = s.semana_id join bloques bl on bl.id = w.bloque_id
+    join ejercicios e on e.id = se.ejercicio_id where bl.atleta_id = $1 and e.nombre = 'Press banca' and w.programacion = 'programada' limit 1`, [aAna.id]);
+  await api.comentar({ atletaId: aAna.id, sesionId: se.sesion, texto: 'En el press banca, junta escápulas', autor: 'coach' });
+  await api.enviarMensaje(aAna.id, { texto: 'Press banca: lo hablamos el lunes', autor: 'coach', enviarEn: manana });
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const dicho = await api.dichoPorCoach(aAna.id, [se.ej, sentadilla.id]);
+  check(dicho[se.ej]?.lista.some((x) => /junta escápulas/.test(x.texto)) && !dicho[sentadilla.id] && !JSON.stringify(dicho).includes('el lunes'), '«Lo que te dijo tu coach»: lo que nombra el ejercicio (no lo de otro, ni lo programado)');
+  check(Object.keys(await api.dichoPorCoach(aAna.id, [se.ej], se.sesion)).length === 0, 'sin repetir lo de la propia sesión');
+
+  // Comparar check-ins y el panel de negocio (coach)
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const cks = await b.sql(`select id from checkins where atleta_id = $1 order by semana_inicio limit 2`, [aAna.id]);
+  if (cks.length === 2) {
+    const c = await api.compararCheckins(aAna.id, cks[1].id, cks[0].id);
+    check(c.antes.checkin.id === cks[0].id && Array.isArray(c.filas), 'compara dos check-ins (en orden)');
+  } else {
+    await check(await lanza(() => api.compararCheckins(aAna.id, cks[0]?.id || 'x', 'y')), 'comparar con un check-in que no está, lo dice');
+  }
+  await b.sql(`update atletas set estado = 'baja' where id = $1`, [aLuis.id]);
+  const pn = await api.panelNegocio(hoy);
+  const esteMes = pn.meses.at(-1);
+  check(pn.meses.length === 12 && esteMes.mes === mesActual && esteMes.bajas >= 1 && pn.activos >= 1, 'el panel de negocio: 12 meses, con la baja de Luis en este mes (la base apunta el día)');
+  await b.sql(`update atletas set estado = 'activo' where id = $1`, [aLuis.id]);
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const pnA = await api.panelNegocio(hoy).catch(() => null);
+  check(!pnA || (pnA.activos === 0 && pnA.cobrado12 === 0), 'un atleta no saca nada del negocio');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await b.sql(`delete from tareas`); await b.sql(`delete from tareas_plantillas`);
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

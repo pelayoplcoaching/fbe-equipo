@@ -2,12 +2,15 @@ import { useEffect, useState } from 'preact/hooks';
 import { Siluetas, useApp, useCarga, Icono, Vacio, ErrorCaja, Pista } from '../comunes.jsx';
 import { DiaSesion } from './Hoy.jsx';
 import { PlanSemana } from './Plan.jsx';
+import { HojaBloque } from './TuBloque.jsx';
+import { TextoConEnlaces } from '../Enlaces.jsx';
 import { NOMBRE_FOCO, NOMBRE_GRUPO, NOMBRE_TIPO_SESION, num } from '../../logica/calculos.js';
 import { rangoSemana, desdeISO, fmtConDia, hoyISO, sumarDias } from '../../logica/fechas.js';
 
 export function Semana({ programa, abrirSesion, noLeidos = [] }) {
   const { datos: p, cargando, error, recargar } = programa;
   const [elegida, setElegida] = useState(null);
+  const [bloque, setBloque] = useState(false);
   useEffect(() => { if (p?.actual && !elegida) setElegida(p.actual.id); }, [p]);
 
   if (cargando && !p) return <div class="contenido"><Siluetas forma="lista" n={4} texto="Cargando tu programa" /></div>;
@@ -25,7 +28,9 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
           <h1>{p?.bloque ? `Bloque ${p.bloque.numero}: ${p.bloque.nombre}` : 'Tu programa'}</h1>
           {p?.bloque?.objetivo && <div class="sub">{p.bloque.objetivo}</div>}
         </div>
+        {p?.bloque && <button class="btn btn-peq" onClick={() => setBloque(true)}><Icono n="semana" /> Tu bloque entero</button>}
       </header>
+      {bloque && <HojaBloque alCerrar={() => setBloque(false)} abrirSesion={(id) => { setBloque(false); abrirSesion(id); }} />}
       <ErrorCaja error={error} reintentar={recargar} />
       {p?.semanas.length > 0 && <Pista id="semana" icono="semana">Aquí está tu bloque entero: cada semana con sus sesiones. Para entrenar, vuelve a Hoy y toca «Empezar»; aquí puedes ver lo que viene y lo que ya hiciste.</Pista>}
       {!p?.semanas.length ? (
@@ -50,7 +55,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
                 <h2>Semana {semana.numero}{semana.fecha_inicio ? `, ${rangoSemana(semana.fecha_inicio)}` : ''}</h2>
                 {semana.foco && <span class="chip morado">{NOMBRE_FOCO[semana.foco]}</span>}
               </div>
-              {semana.nota_coach && <div class="nota-coach"><Icono n="mensaje" /><div><strong>Tu coach: </strong>{semana.nota_coach}</div></div>}
+              {semana.nota_coach && <div class="nota-coach"><Icono n="mensaje" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>}
               {planificable && (
                 <div class="pila-s">
                   <h3 class="sub-seccion">Tu plan</h3>

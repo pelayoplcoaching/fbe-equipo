@@ -14,7 +14,9 @@ const MB = 1048576;
 const ALIGERAR_DESDE_MB = 12; // por debajo, si no se recorta, se envía tal cual
 const LIMITE_ELEGIR_MB = 2048; // un vídeo largo se puede elegir si luego se va a recortar en el móvil
 
-export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicioId = null, ejercicioId = null, titulo, etiqueta, clase = 'btn-texto', alSubir }) {
+// inicial (v0.48): un archivo que ya viene elegido (el que llega con «Compartir → FBE Equipo»): se abre directamente la
+// hoja (con su recorte) y, si se cierra sin enviarlo, alCancelar
+export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicioId = null, ejercicioId = null, titulo, etiqueta, clase = 'btn-texto', alSubir, inicial = null, alCancelar = null, alGuardarEnMovil = null }) {
   const { api, aviso } = useApp();
   const input = useRef(null);
   const [archivo, setArchivo] = useState(null);
@@ -35,6 +37,11 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   useEffect(() => () => { if (vista) URL.revokeObjectURL(vista); }, [vista]);
   useEffect(() => () => cancelar.current?.(), []); // si se va de la pantalla a medias, se para el recorte
   const [sinVista, setSinVista] = useState(false); // el navegador no sabe leer este vídeo: no se puede recortar
+  useEffect(() => {
+    if (!inicial) return;
+    setArchivo(inicial);
+    try { setVista(URL.createObjectURL(inicial)); } catch { setVista(null); }
+  }, [inicial]);
 
   function elegido(e) {
     const f = e.currentTarget.files?.[0];
@@ -75,6 +82,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
       if (error.sinConexion && !error.cancelado && pid) {
         aviso(esVideo ? 'Sin cobertura: el vídeo queda guardado en tu móvil y se enviará solo' : 'Sin cobertura: la foto queda guardada en tu móvil y se enviará sola');
         setArchivo(null); setNota(''); setCorte(null); setFallo(null);
+        alGuardarEnMovil?.();
         return;
       }
       if (pid) await quitarPendiente(pid).catch(() => {});
@@ -123,11 +131,11 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
     } finally { setSubiendo(false); setPreparando(null); setSubida(null); }
   }
   const mb = (n) => (n < 104858 ? 'menos de 0,1' : (n / MB).toLocaleString('es-ES', { maximumFractionDigits: n < 10 * MB ? 1 : 0 }));
-  const cerrar = () => { if (preparando != null) { cancelar.current?.(); return; } if (!subiendo) { setArchivo(null); setFallo(null); } };
+  const cerrar = () => { if (preparando != null) { cancelar.current?.(); return; } if (!subiendo) { setArchivo(null); setFallo(null); if (inicial) alCancelar?.(); } };
   return (
     <>
-      <button type="button" class={clase} onClick={() => input.current?.click()}><Icono n={esVideo ? 'camara' : 'imagen'} /> {etiqueta || (esVideo ? 'Vídeo para tu coach' : 'Añadir foto')}</button>
-      <input ref={input} type="file" accept={esVideo ? 'video/*' : 'image/*'} hidden onChange={elegido} aria-label={esVideo ? 'Elegir vídeo' : 'Elegir foto'} />
+      {!inicial && <button type="button" class={clase} onClick={() => input.current?.click()}><Icono n={esVideo ? 'camara' : 'imagen'} /> {etiqueta || (esVideo ? 'Vídeo para tu coach' : 'Añadir foto')}</button>}
+      {!inicial && <input ref={input} type="file" accept={esVideo ? 'video/*' : 'image/*'} hidden onChange={elegido} aria-label={esVideo ? 'Elegir vídeo' : 'Elegir foto'} />}
       {archivo && (
         <Hoja titulo={titulo || (esVideo ? 'Vídeo de técnica' : 'Foto de progreso')} alCerrar={cerrar}>
           {preparando != null ? (

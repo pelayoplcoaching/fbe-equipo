@@ -6,6 +6,7 @@ import { Siluetas, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Ico
 import { HistorialEjercicio } from '../Herramientas.jsx';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { HistoriaSemana, rangoLargo } from './TuSemana.jsx';
+import { TusMeses } from './TuMes.jsx';
 import { VerArchivo, CompararVideos } from '../Archivos.jsx';
 import { Diario } from '../Diario.jsx';
 import { NutricionProgreso } from './Nutricion.jsx';
@@ -434,6 +435,7 @@ export function Progreso({ programa, salud }) {
         : <Pista id="progreso-nutricion" icono="progreso">Aquí ves tu peso, tus medidas y tu nutrición: sale de lo que apuntas en Hoy y en el check-in.</Pista>}
       {entrena && <Cifras constancia={constancia} semanas={semanas} />}
       {entrena && <TusSemanas salud={salud} lista={semanas} />}
+      <TusMeses salud={salud} />
       {entrena && <TusBloques salud={salud} />}
       {entrena && <Logros salud={salud} />}
       <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} entrenamiento={entrena} />

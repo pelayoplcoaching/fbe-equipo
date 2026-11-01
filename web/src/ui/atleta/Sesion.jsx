@@ -21,6 +21,11 @@ import { pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, et
 import { fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { pesoAnterior } from '../../logica/nivel.js';
 import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
+import { DondeEntrenas } from './DondeEntrenas.jsx';
+import { adaptarSesion, textoAdaptacion } from '../../logica/material.js';
+import { fraseSerie } from '../../logica/voz.js';
+import { hablar } from '../voz.js';
+import { TextoConEnlaces } from '../Enlaces.jsx';
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { api, atleta, cola, aviso, propio } = useApp();
@@ -45,6 +50,10 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [seFoco, setSeFoco] = useState(null);
   // Ejercicio con el que se está haciendo cada pauta, si se cambió por una alternativa (se recuerda en el móvil)
   const [sustitutos, setSustitutos] = usePreferencia(`fbe-sustitutos-${id}`, {});
+  // v0.48: dónde entrena hoy (gimnasio, casa o viaje) y lo que se cambió por su material (para poder deshacerlo)
+  const [lugar, setLugar] = usePreferencia(`fbe-lugar-${id}`, 'gimnasio');
+  const [porLugar, setPorLugar] = usePreferencia(`fbe-lugar-cambios-${id}`, {});
+  const [sinAlternativa, setSinAlternativa] = usePreferencia(`fbe-lugar-sin-${id}`, []);
   // Ejercicios elegidos fuera de las alternativas (de la biblioteca) y su «última vez»
   const [extra, setExtra] = useState({ ejercicios: {}, ultimas: {} });
   // Notas fijadas del atleta por ejercicio (se cargan con la sesión y se guardan al momento)
@@ -195,8 +204,19 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       const r = trasSerie(ejercicios, cuenta, e.id);
       const sig = r.siguiente && ejercicios.find((x) => x.id === r.siguiente.id);
       const texto = !sig ? 'terminar la sesión' : sig.id === e.id || r.siguiente.numero > 1 ? `serie ${r.siguiente.numero} de ${nombreCon(sig)}` : nombreCon(sig);
-      if (r.descanso) setDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto });
-      else if (r.enRonda) { setDescanso(null); aviso(`Ahora ${nombreCon(sig)}, sin descanso`); }
+      // v0.48: lo que dirá el entrenador por voz al acabar el descanso («Serie 3 de press banca: 80 kilos por 6»)
+      let voz = '¡Sesión terminada! Buen trabajo.';
+      if (sig) {
+        try {
+          const a = actualDe(sig), cambiado = a.id !== sig.ejercicio.id;
+          const hSig = sig.id === e.id ? { ...hechas[e.id], [numero]: local } : (hechas[sig.id] || {});
+          const prop = prepararEjercicio(sig, cambiado ? a : null, cambiado ? ultimas[a.id] || null : sig.ultimas, semana?.foco, progresionAuto && !cambiado && !frenar).propuesta(r.siguiente.numero, hSig);
+          voz = fraseSerie({ numero: r.siguiente.numero, series: sig.series, nombre: a.nombre, kg: prop?.kg, reps: prop?.reps });
+        } catch { voz = `Ahora, ${texto}.`; }
+      }
+      if (r.descanso) setDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz });
+      else if (r.enRonda) { setDescanso(null); aviso(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); }
+      else hablar(voz);
       if (sig && sig.id !== e.id) {
         setAbiertos((a) => new Set([...a, sig.id]));
         if (r.enRonda) llevarA(sig.id);
@@ -224,6 +244,28 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   }
 
   const alternar = (eid) => setAbiertos((a) => { const n = new Set(a); n.has(eid) ? n.delete(eid) : n.add(eid); return n; });
+  // v0.48: «¿Dónde entrenas hoy?». Se deshace lo que puso el lugar anterior (si aún no tiene series) y, fuera del
+  // gimnasio, se cambia lo que no se puede hacer con ese material por la primera alternativa del coach que sí;
+  // lo que se cambió a mano, o ya tiene series, no se toca
+  function elegirLugar(nuevo, perfiles) {
+    const s = { ...sustitutos };
+    for (const [seId, ejId] of Object.entries(porLugar)) if (s[seId] === ejId && !Object.keys(hechas[seId] || {}).length) s[seId] = null;
+    let cambios = {}, sin = [];
+    if (nuevo !== 'gimnasio') {
+      const fijos = new Set(Object.entries(s).filter(([, v]) => v).map(([k]) => k));
+      const r = adaptarSesion(ejercicios.map((x) => ({ ...x, hechas: Object.values(hechas[x.id] || {}) })), perfiles?.[nuevo] || [], { fijos });
+      for (const [seId, alt] of Object.entries(r.cambios)) { s[seId] = alt.id; cambios[seId] = alt.id; if (!ejerciciosPorId[alt.id]) cargarExtra([alt.id], [alt]); }
+      sin = r.sinAlternativa;
+      aviso(textoAdaptacion(r, nuevo));
+    } else if (lugar !== 'gimnasio') aviso('En el gimnasio: la sesión tal y como la pautó tu coach');
+    setSustitutos(s); setPorLugar(cambios); setSinAlternativa(sin); setLugar(nuevo);
+  }
+  const deshacerLugar = (seId) => {
+    setSustitutos({ ...sustitutos, [seId]: null });
+    const { [seId]: _, ...resto } = porLugar;
+    setPorLugar(resto);
+    aviso('Vuelve el ejercicio que pautó tu coach');
+  };
   const ultimaHecha = todas.sort((a, b) => (a.registrada_en < b.registrada_en ? 1 : -1))[0];
   // Intervalos escritos por el coach en la sesión («8 × 30 s / 90 s», «EMOM 12»…)
   const delCoach = leerIntervalos(sesion.dinamica);
@@ -271,6 +313,10 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         </button>
       )}
       {cardioValido(sesion.cardio) && <TarjetaCardio pauta={sesion.cardio} hecho={sesion.cardio_hecho} completada={sesion.completada} />}
+      {!sesion.completada && ejercicios.length > 0 && atleta.estado !== 'baja' && (
+        <DondeEntrenas atletaId={atleta.id} lugar={lugar} alElegir={elegirLugar}
+          cambios={Object.fromEntries(Object.entries(porLugar).filter(([k, v]) => sustitutos[k] === v))} sinAlternativa={sinAlternativa} />
+      )}
       {!ejercicios.length && !cardioValido(sesion.cardio) && (
         <div class="panel panel-pad pila-s">
           <strong>{sesion.tipo === 'cardio' ? 'Sesión de cardio' : sesion.tipo === 'movilidad' ? 'Sesión de movilidad' : 'Sesión sin ejercicios'}</strong>
@@ -287,6 +333,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
             <Ejercicio key={e.id} e={e} actual={cambiado ? actual : null} ultimas={cambiado ? ultimas[actual.id] || null : e.ultimas}
               foco={semana?.foco} progresionAuto={progresionAuto && !cambiado && !frenar} etiqueta={etiquetas[e.id]} records={records}
               nota={notas[actual.id]} guardarNota={(t) => guardarNota(actual.id, t)}
+              coach={det.datos.coach?.[actual.id] || null}
+              lugar={porLugar[e.id] && sustitutos[e.id] === porLugar[e.id] ? lugar : null} deshacerLugar={() => deshacerLugar(e.id)}
+              sinMaterial={lugar !== 'gimnasio' && sinAlternativa.includes(e.id) && !cambiado ? lugar : null}
               videos={videos.enviados[e.id] || 0} videosPendientes={videos.pendientes[e.id] || 0} alSubirVideo={() => setRecontarVideos((n) => n + 1)}
               hechas={hechas[e.id] || {}} enCola={enCola} abierto={abiertos?.has(e.id)}
               alternar={() => alternar(e.id)} guardar={(n, v) => guardar(e, n, v)} quitar={(n) => quitar(e, n)}
@@ -373,7 +422,7 @@ function Cronometro({ inicio, minutos, hechas, total }) {
   );
 }
 
-function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo }) {
+function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null }) {
   const { atleta, propio } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
   const [editandoNota, setEditandoNota] = useState(false);
@@ -395,7 +444,8 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
         <Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} />
         <span>
           <span class="nombre">{etiqueta && <span class="ss-etq">{etiqueta}</span>}{ej.nombre}</span>
-          {actual && <span class="cambiado">En lugar de {e.ejercicio.nombre}</span>}
+          {actual && <span class="cambiado">{lugar ? `Por tu material ${lugar === 'viaje' ? 'de viaje' : 'de casa'}: en lugar de` : 'En lugar de'} {e.ejercicio.nombre}</span>}
+          {sinMaterial && <span class="video-aviso pendiente"><Icono n="alerta" />Sin alternativa con tu material {sinMaterial === 'viaje' ? 'de viaje' : 'de casa'}</span>}
           {e.variante && <span class="variante">{e.variante}</span>}
           {e.tempo && tempo && <span class="variante">Tempo {tempo.texto}</span>}
           <span class="pauta">
@@ -414,9 +464,12 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
       {abierto && (
         <div class="ejercicio-cuerpo">
           <NotaFijada nota={nota} alGuardar={guardarNota} editando={editandoNota} alEditar={setEditandoNota} />
+          {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}
+          {sinMaterial && <p class="cambio-lugar"><span>Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.</span></p>}
+          {coach?.lista?.length > 0 && <LoQueTeDijo coach={coach} nombre={ej.nombre} />}
           {(e.notas_coach || e.prioridad === 'muy_baja') && (
             <div class="ejercicio-extra">
-              {e.notas_coach && <p><strong>Nota: </strong>{e.notas_coach}</p>}
+              {e.notas_coach && <p><strong>Nota: </strong><TextoConEnlaces texto={e.notas_coach} como="span" /></p>}
               {e.prioridad === 'muy_baja' && <p>Si vas justo de tiempo, este es el que puedes saltarte.</p>}
             </div>
           )}
@@ -467,6 +520,29 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
       {hoja === 'tempo' && <Metronomo tempo={tempo} nombre={ej.nombre} reps={e.reps_max ?? e.reps_min ?? 8} alCerrar={() => setHoja(null)} />}
       {hoja === 'aproximacion' && <Aproximacion nombre={ej.nombre} kg={kgTrabajo} reps={e.reps_max ?? e.reps_min ?? 5} conBarra={barra} alCerrar={() => setHoja(null)} />}
     </article>
+  );
+}
+
+// «Lo que te dijo tu coach» (v0.48): sus últimos comentarios de este ejercicio (en tus vídeos o en sesiones
+// anteriores en que lo nombró)
+function LoQueTeDijo({ coach, nombre }) {
+  const [abierto, setAbierto] = useState(false);
+  const [x, ...resto] = coach.lista;
+  const corto = (t) => (t.length > 140 ? `${t.slice(0, 138)}…` : t);
+  return (
+    <div class="dijo-coach">
+      <span class="mini dijo-coach-cab"><Icono n="mensaje" /> Lo que te dijo tu coach <span class="terciario">· {x.donde}, {fmtCorta(x.fecha)}</span></span>
+      <p class="peq">«{corto(x.texto)}»</p>
+      {(resto.length > 0 || x.texto.length > 140 || coach.total > coach.lista.length) && <button class="btn-texto mini" onClick={() => setAbierto(true)}>Ver {coach.total > 1 ? `lo que te ha dicho (${coach.total})` : 'entero'}</button>}
+      {abierto && (
+        <Hoja titulo={`Tu coach sobre ${nombre}`} alCerrar={() => setAbierto(false)}>
+          <ul class="lista">
+            {coach.lista.map((c, i) => <li key={i} class="panel-pad pila-xs"><span class="mini terciario">{c.donde}, {fmtCorta(c.fecha)}</span><TextoConEnlaces texto={c.texto} clase="peq" /></li>)}
+          </ul>
+          {coach.total > coach.lista.length && <p class="mini terciario">Y {coach.total - coach.lista.length} más en tus mensajes.</p>}
+        </Hoja>
+      )}
+    </div>
   );
 }
 

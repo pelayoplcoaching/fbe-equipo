@@ -18,6 +18,13 @@ import { pendiente as cuestionarioPendiente } from '../logica/cuestionario.js';
 import { revisarVariante, varianteSinMaterial } from '../logica/variantes.js';
 import { limpiarReceta, recetarioPorToma, tomasDe, ordenarTomas, entradaMenu, copiarMenu, cambiarRaciones } from '../logica/comidas.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
+import { limpiarTarea, limpiarRespuesta } from '../logica/tareas.js';
+import { compararCheckins } from '../logica/comparar.js';
+import { vistaBloque } from '../logica/bloque.js';
+import { resumenMes, sumarMes, mesAnterior } from '../logica/mes.js';
+import { panelNegocio } from '../logica/negocio.js';
+import { normal as normalTexto } from '../logica/busqueda.js';
+import { palabrasMovimiento } from '../logica/variantes.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
@@ -89,6 +96,16 @@ const falta029 = (e) => {
   }
   throw e;
 };
+// Tareas, mensajes programados y el bloque entero (v0.48) sin la migración 030
+const falta030 = (e) => {
+  const m = e?.message || '';
+  if (/\b(tareas|tareas_plantillas|tarea_completar|enviar_en|bloque_semanas|baja_en)\b/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna|PGRST20/i.test(m)) {
+    throw new Error(`Para las tareas, los mensajes programados y el bloque entero falta ejecutar la migración 030 en Supabase (supabase/migraciones/030_tareas_y_programados.sql). Detalle: ${m}`);
+  }
+  throw e;
+};
+// ¿Un mensaje o un aviso programado que aún no ha salido?
+const programado = (x) => !!x?.enviar_en && Date.parse(x.enviar_en) > Date.now();
 // La función de entrar sin la migración 028 (sin el parámetro de las normas)
 const sinNormas = (e) => /comunidad_unirme/.test(`${e?.message || ''}`) && /p_normas|schema cache|does not exist|no existe|PGRST202/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta018 = (e) => {
@@ -149,14 +166,14 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
   'archivos', 'comentarios', 'recursos', 'notas_ejercicio', 'respuestas_guardadas', 'avisos', 'habitos', 'registros_habito',
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
-  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD];
-// Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027): sin ellas, la copia sale igual
-const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD];
+  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas'];
+// Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030): sin ellas, la copia sale igual
+const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas'];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
 
 // Qué columna marca la revisión del coach en cada cosa revisable
-const REVISION = { sesion: ['sesiones', 'revisada_en'], checkin: ['checkins', 'revisado_en'], archivo: ['archivos', 'revisado_en'] };
+const REVISION = { sesion: ['sesiones', 'revisada_en'], checkin: ['checkins', 'revisado_en'], archivo: ['archivos', 'revisado_en'], tarea: ['tareas', 'revisada_en'] };
 
 export const LIMITE_ARCHIVO_MB = 200;
 // Foto de perfil: tamaño máximo del texto base64 (como la base, perfiles_foto_valida)
@@ -176,8 +193,8 @@ export function crearApi(backend) {
     clearTimeout(temporizadorEnvio);
     temporizadorEnvio = setTimeout(() => { Promise.resolve().then(() => backend.funcion('enviar-notificaciones')).catch(() => {}); }, ms);
   };
-  const avisa = (m, t, c) => ((m === 'insert' || m === 'upsert') && ['comentarios', 'avisos', 'checkins', 'semanas', 'comunidad_posts', 'comunidad_comentarios'].includes(t))
-    || (m === 'rpc' && ['comunidad_reaccionar', 'comunidad_avisar_coach', 'comunidad_animar'].includes(t))
+  const avisa = (m, t, c) => ((m === 'insert' || m === 'upsert') && ['comentarios', 'avisos', 'checkins', 'semanas', 'comunidad_posts', 'comunidad_comentarios', 'tareas'].includes(t))
+    || (m === 'rpc' && ['comunidad_reaccionar', 'comunidad_avisar_coach', 'comunidad_animar', 'tarea_completar'].includes(t))
     || (m === 'update' && ((t === 'semanas' && c?.programacion === 'programada') || (t === 'sesiones' && c?.completada === true) || (t === 'avisos' && 'texto' in (c || {}))));
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc']) {
     const f = escribe(backend[m].bind(backend));
@@ -364,12 +381,15 @@ export function crearApi(backend) {
       const extra = extraIds.length ? porId(await b.select('ejercicios', { in: { id: extraIds } })) : {};
       const todos = { ...base, ...extra };
       const hechas = agrupar(hechasLista, 'sesion_ejercicio_id');
-      const [ultimas, notas] = await Promise.all([
+      const [ultimas, notas, coach] = await Promise.all([
         api.ultimasPorEjercicio(atletaId, unicos([...pautados.map((p) => p.ejercicio_id), ...extraIds]), sesionId),
         api.notasEjercicio(atletaId),
+        // v0.48: lo que le dijo el coach de cada ejercicio en vídeos y sesiones anteriores (si falla, la sesión sigue)
+        api.dichoPorCoach(atletaId, unicos([...pautados.map((p) => p.ejercicio_id), ...extraIds]), sesionId, todos).catch(() => ({})),
       ]);
       return {
         notas,
+        coach,
         sesion,
         semana: semana || null,
         progresionAuto: atleta?.progresion_auto !== false,
@@ -969,7 +989,7 @@ export function crearApi(backend) {
     async tuDia(atletaId, { programa = null, checkin = null, salud = true, nutricion: conNut = true, entrenamiento = true, pesoDiario = true, hoy = hoyISO() } = {}) {
       const semana = entrenamiento ? programa?.actual || null : null;
       const sesiones = semana ? programa.sesiones[semana.id] || [] : null;
-      const [pesos, habitos, nutricion, cuestionario] = await Promise.all([
+      const [pesos, habitos, nutricion, cuestionario, tareas] = await Promise.all([
         salud && pesoDiario ? b.select('pesos', { eq: { atleta_id: atletaId, fecha: hoy }, cols: 'id', limit: 1 }).catch(() => null) : null,
         salud ? api.resumenHabitos(atletaId, hoy).catch(() => []) : [],
         salud && conNut ? api.planesNutricion(atletaId).then(async (planes) => {
@@ -979,6 +999,7 @@ export function crearApi(backend) {
           return { plan, hoy: r || null };
         }).catch(() => null) : null,
         api.cuestionario(atletaId).catch(() => null),
+        api.tareas(atletaId),
       ]);
       // Su menú de hoy (v0.26), si lo ha organizado
       const menuHoy = salud && conNut ? await b.select('menu_comidas', { eq: { atleta_id: atletaId, fecha: hoy }, cols: 'id,hecho' }).catch(() => []) : [];
@@ -990,6 +1011,7 @@ export function crearApi(backend) {
         nutricion,
         checkin: salud && checkin !== null ? { hecho: !!checkin?.checkin, pendiente: !checkin?.checkin } : null,
         cuestionario: { pendiente: cuestionarioPendiente(cuestionario) },
+        tareas,
       }, hoy);
     },
     // Primeros pasos de un atleta nuevo: ¿ha hecho ya una sesión, apuntado su peso, enviado un check-in?
@@ -1104,7 +1126,23 @@ export function crearApi(backend) {
     },
     // Coach: todos sus avisos (la hoja separa los caducados, que se pueden borrar)
     async avisosCoach() {
-      return b.select('avisos', { order: [['desde', 'asc'], ['creado_en', 'asc']] });
+      return (await b.select('avisos', { order: [['desde', 'asc'], ['creado_en', 'asc']] })).map((a) => ({ ...a, programado: programado(a) }));
+    },
+    // Coach: publicar un aviso o cambiarlo; enviarEn (v0.48): a esa hora (desde ese día) y no antes
+    async guardarAviso({ texto, atleta_id = null, desde = hoyISO(), hasta = null, enviarEn = null }, id = null) {
+      const t = String(texto || '').trim();
+      if (!t || t.length > 600) throw new Error('El aviso, de 1 a 600 letras');
+      const fila = { texto: t, atleta_id: atleta_id || null, desde, hasta: hasta || null };
+      if (enviarEn) {
+        const cuando = Date.parse(enviarEn);
+        if (!Number.isFinite(cuando) || cuando <= Date.now() + 60000) throw new Error('Elige una hora que aún no haya pasado');
+        if (cuando > Date.now() + 90 * 864e5) throw new Error('Un aviso se programa como mucho a 90 días vista');
+        fila.enviar_en = new Date(cuando).toISOString();
+        fila.desde = fechaMadrid(new Date(cuando));
+        if (fila.hasta && fila.hasta < fila.desde) throw new Error('La fecha de fin es anterior a la de salida');
+      } else if (id) fila.enviar_en = null;
+      if (id) return (await b.update('avisos', fila, { eq: { id } }).catch(falta030))[0];
+      return (await b.insert('avisos', [fila]).catch(falta030))[0];
     },
     // «¿Cómo llegas hoy?» (datos de salud: la base exige el consentimiento)
     async guardarPreparacion(sesionId, preparacion) {
@@ -1275,7 +1313,7 @@ export function crearApi(backend) {
           : c.checkin_id ? { tipo: 'checkin', id: c.checkin_id, nombre: 'check-in' }
           : archivo ? { tipo: 'archivo', id: archivo.id, nombre: archivo.tipo === 'adjunto' ? null : /^video/.test(archivo.mime || '') || archivo.tipo === 'video_tecnica' ? 'vídeo' : 'foto' }
           : null;
-        return { ...c, contexto, archivo: conMedio ? archivo : null, archivoId: archivo?.id || null };
+        return { ...c, contexto, archivo: conMedio ? archivo : null, archivoId: archivo?.id || null, programado: programado(c) };
       });
     },
     // El coach: una conversación por atleta, con el último mensaje y cuántos tiene sin leer; las que tienen
@@ -1283,14 +1321,18 @@ export function crearApi(backend) {
     async conversaciones() {
       const [atletas, comentarios] = await Promise.all([
         api.atletas(),
-        b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id' }),
+        b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id,enviar_en' })
+          .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id' })),
       ]);
+      // (v0.48) El último mensaje es el último que ya ha salido; los programados se cuentan aparte
       const por = {};
       for (const c of comentarios) {
-        const x = (por[c.atleta_id] ||= { ultimo: c, sinLeer: 0 });
+        const x = (por[c.atleta_id] ||= { ultimo: null, sinLeer: 0, programados: 0 });
+        if (programado(c)) { x.programados++; continue; }
+        x.ultimo ||= c;
         if (c.autor === 'atleta' && !c.leido_en) x.sinLeer++;
       }
-      return atletas.filter((a) => a.estado !== 'baja' || por[a.id]).map((a) => ({ atleta: a, ultimo: por[a.id]?.ultimo || null, sinLeer: por[a.id]?.sinLeer || 0 }))
+      return atletas.filter((a) => a.estado !== 'baja' || por[a.id]).map((a) => ({ atleta: a, ultimo: por[a.id]?.ultimo || null, sinLeer: por[a.id]?.sinLeer || 0, programados: por[a.id]?.programados || 0 }))
         .sort((x, y) => (y.sinLeer > 0) - (x.sinLeer > 0) || String(y.ultimo?.creado_en || '').localeCompare(String(x.ultimo?.creado_en || '')) || x.atleta.nombre.localeCompare(y.atleta.nombre));
     },
     // Cuántos mensajes de atletas tiene el coach sin leer (la insignia de Mensajes)
@@ -1300,8 +1342,17 @@ export function crearApi(backend) {
     },
     // Enviar desde el chat: texto, o una foto o un vídeo con texto (adjunto). Si el vídeo es de técnica
     // (enDiario), se guarda como tal: entra en su diario y en tu bandeja de vídeos, con su propio hilo.
-    async enviarMensaje(atletaId, { texto = '', archivo = null, autor, enDiario = false, poster = null, duracion_seg = null }) {
+    // enviarEn (v0.48): un mensaje del coach programado para esa hora (solo texto); hasta entonces el atleta no lo ve
+    async enviarMensaje(atletaId, { texto = '', archivo = null, autor, enDiario = false, poster = null, duracion_seg = null, enviarEn = null }) {
       const t = String(texto || '').trim();
+      if (enviarEn) {
+        if (archivo) throw new Error('Los mensajes con foto o vídeo no se pueden programar');
+        if (!t) throw new Error('Escribe el mensaje');
+        const cuando = Date.parse(enviarEn);
+        if (!Number.isFinite(cuando) || cuando <= Date.now() + 60000) throw new Error('Elige una hora que aún no haya pasado');
+        if (cuando > Date.now() + 90 * 864e5) throw new Error('Un mensaje se programa como mucho a 90 días vista');
+        return (await b.insert('comentarios', [{ atleta_id: atletaId, sesion_id: null, checkin_id: null, archivo_id: null, texto: t, autor, enviar_en: new Date(cuando).toISOString() }]).catch(falta030))[0];
+      }
       if (!archivo) return api.comentar({ atletaId, texto: t, autor });
       const esVideo = /^video\//.test(archivo.type || '');
       const tipo = enDiario ? (esVideo ? 'video_tecnica' : 'foto_progreso') : 'adjunto';
@@ -1313,6 +1364,23 @@ export function crearApi(backend) {
         if (tipo === 'adjunto') await api.borrarArchivo(fila).catch(() => {});
         throw e;
       }
+    },
+    // Cambiar un mensaje programado antes de que salga (texto y hora); enviarEn null lo manda ya
+    async reprogramarMensaje(id, { texto, enviarEn = undefined } = {}) {
+      const c = {};
+      if (texto !== undefined) { const t = String(texto || '').trim(); if (!t) throw new Error('Escribe el mensaje'); c.texto = t; }
+      if (enviarEn !== undefined) {
+        if (enviarEn === null) c.enviar_en = null;
+        else {
+          const cuando = Date.parse(enviarEn);
+          if (!Number.isFinite(cuando) || cuando <= Date.now() + 60000) throw new Error('Elige una hora que aún no haya pasado');
+          if (cuando > Date.now() + 90 * 864e5) throw new Error('Un mensaje se programa como mucho a 90 días vista');
+          c.enviar_en = new Date(cuando).toISOString();
+        }
+      }
+      const r = (await b.update('comentarios', c, { eq: { id } }).catch(falta030))[0];
+      if (!r) throw new Error('Ese mensaje ya ha salido (o ya no está): no se puede cambiar');
+      return r;
     },
     // Borrar un mensaje propio (el coach, cualquiera); si llevaba un adjunto del chat, se va con él
     async borrarMensaje(c) {
@@ -1422,6 +1490,160 @@ export function crearApi(backend) {
     async borrarArchivo(archivo) {
       await b.delete('archivos', { eq: { id: archivo.id } });
       await b.storage.borrar([archivo.ruta, ...(archivo.poster_ruta ? [archivo.poster_ruta] : [])]).catch(() => {});
+    },
+
+    // ------------------------------------------------------------ v0.48: lo que le dijo el coach de cada ejercicio
+    // De vídeos de técnica de ese ejercicio y de los comentarios del coach en sesiones anteriores que lo nombran
+    // (en una sesión en que lo hizo). { ejercicio_id: { lista: [{ texto, fecha, donde, archivoId|sesionId }], total } }
+    async dichoPorCoach(atletaId, ejercicioIds, excluirSesionId = null, ejerciciosPorId = {}) {
+      if (!ejercicioIds?.length) return {};
+      const coment = await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, order: [['creado_en', 'desc']], limit: 300, cols: 'id,texto,creado_en,sesion_id,archivo_id,enviar_en' });
+      const delCoach = coment.filter((c) => !programado(c));
+      if (!delCoach.length) return {};
+      const arcIds = unicos(delCoach.map((c) => c.archivo_id));
+      const sesIds = unicos(delCoach.map((c) => c.sesion_id)).filter((id) => id !== excluirSesionId);
+      const [archivos, pautasSes, sesiones] = await Promise.all([
+        arcIds.length ? b.select('archivos', { in: { id: arcIds }, cols: 'id,tipo,ejercicio_id,sesion_ejercicio_id,fecha' }) : [],
+        sesIds.length ? b.select('sesion_ejercicios', { in: { sesion_id: sesIds }, cols: 'id,sesion_id,ejercicio_id' }) : [],
+        sesIds.length ? b.select('sesiones', { in: { id: sesIds }, cols: 'id,nombre,fecha_realizada' }) : [],
+      ]);
+      // El ejercicio de cada vídeo (el suyo o el de la pauta con que se subió)
+      const pautaVid = unicos(archivos.filter((a) => !a.ejercicio_id && a.sesion_ejercicio_id).map((a) => a.sesion_ejercicio_id));
+      const pv = pautaVid.length ? porId(await b.select('sesion_ejercicios', { in: { id: pautaVid }, cols: 'id,ejercicio_id' })) : {};
+      const A = porId(archivos), S = porId(sesiones), P = agrupar(pautasSes, 'sesion_id');
+      // Faltan nombres (solo se pasan los de la sesión): se piden
+      const sinNombre = ejercicioIds.filter((id) => !ejerciciosPorId[id]);
+      const nombres = { ...ejerciciosPorId, ...(sinNombre.length ? porId(await b.select('ejercicios', { in: { id: sinNombre }, cols: 'id,nombre' })) : {}) };
+      const out = {};
+      const poner = (ej, x) => { if (!ejercicioIds.includes(ej)) return; (out[ej] ||= { lista: [], total: 0 }).lista.push(x); };
+      for (const c of delCoach) {
+        if (c.archivo_id) {
+          const a = A[c.archivo_id];
+          if (!a || a.tipo !== 'video_tecnica') continue;
+          const ej = a.ejercicio_id || pv[a.sesion_ejercicio_id]?.ejercicio_id;
+          if (ej) poner(ej, { texto: c.texto, fecha: fechaDe(c.creado_en), donde: `En tu vídeo del ${a.fecha ? a.fecha.slice(8, 10).replace(/^0/, '') + ' ' + ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][Number(a.fecha.slice(5, 7)) - 1] : ''}`.trim(), archivoId: a.id });
+        } else if (c.sesion_id && S[c.sesion_id]) {
+          // Que lo nombre: el nombre entero o, si en esa sesión es el único que empieza así, su primera palabra
+          const texto = normalTexto(c.texto);
+          const enSesion = unicos((P[c.sesion_id] || []).map((p) => p.ejercicio_id));
+          for (const ej of enSesion) {
+            const nombre = nombres[ej]?.nombre;
+            if (!nombre) continue;
+            const pal = palabrasMovimiento(nombre);
+            const otros = enSesion.filter((x) => x !== ej).map((x) => palabrasMovimiento(nombres[x]?.nombre || ''));
+            const corto = pal[0] && pal[0].length >= 5 && !otros.some((o) => o[0] === pal[0]) ? pal[0] : pal.slice(0, 2).join(' ');
+            const n = normalTexto(nombre).replace(/\s*\(.*?\)\s*/g, ' ').trim();
+            if (texto.includes(n) || (corto && new RegExp(`(^|[^a-z0-9])${corto}`).test(texto))) {
+              poner(ej, { texto: c.texto, fecha: S[c.sesion_id].fecha_realizada || fechaDe(c.creado_en), donde: `En ${S[c.sesion_id].nombre}`, sesionId: c.sesion_id });
+            }
+          }
+        }
+      }
+      for (const x of Object.values(out)) { x.total = x.lista.length; x.lista = x.lista.slice(0, 3); }
+      return out;
+    },
+
+    // ------------------------------------------------------------ tareas puntuales (v0.48, migración 030)
+    // Las de un atleta, de la más reciente a la más antigua (sin la 030, ninguna)
+    async tareas(atletaId) {
+      return b.select('tareas', { eq: { atleta_id: atletaId }, order: [['fecha', 'desc'], ['creada_en', 'desc']], limit: 200 }).catch(() => []);
+    },
+    // El coach pone (o corrige) una tarea
+    async ponerTarea(atletaId, datos, id = null) {
+      const fila = limpiarTarea(datos);
+      if (id) return (await b.update('tareas', fila, { eq: { id } }).catch(falta030))[0];
+      return (await b.insert('tareas', [{ atleta_id: atletaId, ...fila }]).catch(falta030))[0];
+    },
+    async borrarTarea(id) { return b.delete('tareas', { eq: { id } }); },
+    // El atleta la marca hecha (con su respuesta, y la foto o el vídeo con que la hizo), o lo deshace
+    async completarTarea(id, { hecha = true, respuesta = null, archivoId = null } = {}) {
+      return b.rpc('tarea_completar', { p_tarea: id, p_hecha: !!hecha, p_respuesta: hecha ? limpiarRespuesta(respuesta) : null, p_archivo: hecha ? archivoId : null }).catch(falta030);
+    },
+    async plantillasTareas() {
+      return b.select('tareas_plantillas', { order: [['orden', 'asc'], ['creada_en', 'asc']] }).catch(() => []);
+    },
+    async guardarPlantillaTarea(datos) {
+      const { fecha, ...fila } = limpiarTarea({ ...datos, fecha: hoyISO() });
+      return (await b.insert('tareas_plantillas', [fila]).catch(falta030))[0];
+    },
+    async borrarPlantillaTarea(id) { return b.delete('tareas_plantillas', { eq: { id } }); },
+
+    // ------------------------------------------------------------ comparar dos check-ins (v0.48)
+    async compararCheckins(atletaId, idA, idB) {
+      const [checkins, pesos, medidas, molestias, preguntas, fotos] = await Promise.all([
+        b.select('checkins', { in: { id: [idA, idB] } }),
+        b.select('pesos', { eq: { atleta_id: atletaId }, order: [['fecha', 'asc']] }).catch(() => []),
+        b.select('medidas', { eq: { atleta_id: atletaId }, order: [['fecha', 'asc']] }).catch(() => []),
+        b.select('molestias', { eq: { atleta_id: atletaId } }).catch(() => []),
+        api.preguntasCheckin(atletaId, { archivadas: true }).catch(() => []),
+        b.select('archivos', { eq: { atleta_id: atletaId, tipo: 'foto_progreso' }, order: [['fecha', 'asc']] }).catch(() => []),
+      ]);
+      const a = checkins.find((c) => c.id === idA), c2 = checkins.find((c) => c.id === idB);
+      if (!a || !c2) throw new Error('No se encuentran esos check-ins');
+      return compararCheckins(a, c2, { pesos, medidas, molestias, preguntas: porId(preguntas), fotos });
+    },
+
+    // ------------------------------------------------------------ tu bloque entero (v0.48)
+    // El bloque actual con todas sus semanas: las publicadas con sus sesiones y las que no, solo «por publicar»
+    async tuBloque(atletaId, { bloqueId = null } = {}) {
+      const p = await api.programa(atletaId, { bloqueId });
+      if (!p.bloque) return null;
+      const todas = await b.rpc('bloque_semanas', { p_bloque: p.bloque.id }).catch(() => null);
+      const sesIds = Object.values(p.sesiones).flat().map((x) => x.id);
+      const pautas = sesIds.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesIds }, cols: 'id,sesion_id,ejercicio_id,prioridad,carga_sugerida_kg,series_detalle,series' }) : [];
+      const principales = pautas.filter((x) => x.prioridad === 'alta');
+      const [series, ejercicios] = await Promise.all([
+        principales.length ? b.select('series', { in: { sesion_ejercicio_id: principales.map((x) => x.id) }, cols: 'sesion_ejercicio_id,kg,reps,sustituto_id' }) : [],
+        principales.length ? b.select('ejercicios', { in: { id: unicos(principales.map((x) => x.ejercicio_id)) }, cols: 'id,nombre' }).then(porId) : {},
+      ]);
+      return vistaBloque({ bloque: p.bloque, todas: Array.isArray(todas) ? todas : null, semanas: p.semanas, sesiones: p.sesiones, pautas: principales, series, ejercicios });
+    },
+
+    // ------------------------------------------------------------ tu mes (v0.48)
+    // Lo que se necesita para resumir los meses, una sola vez
+    async datosMes(atletaId, { salud = true, nutricion: conNut = true, desde = null } = {}) {
+      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: COLS_BLOQUE });
+      const todas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, eq: { programacion: 'programada' } }) : [];
+      const semanas = semanasQueCuentan(todas, bloques);
+      const L = Object.fromEntries(semanas.map((w) => [w.id, w.fecha_inicio ? lunesDe(w.fecha_inicio) : null]));
+      const [sesiones, series, habitos, planes, registros] = await Promise.all([
+        semanas.length ? b.select('sesiones', { in: { semana_id: semanas.map((x) => x.id) } }) : [],
+        api.historial(atletaId),
+        salud ? b.select('habitos', { eq: { atleta_id: atletaId } }).catch(() => []) : [],
+        salud && conNut ? api.planesNutricion(atletaId).catch(() => []) : [],
+        salud && conNut ? b.select('registros_nutricion', { eq: { atleta_id: atletaId }, ...(desde ? { gte: { fecha: desde } } : {}) }).catch(() => []) : [],
+      ]);
+      const regsHab = habitos.length ? await b.select('registros_habito', { in: { habito_id: habitos.map((h) => h.id) }, ...(desde ? { gte: { fecha: desde } } : {}) }).catch(() => []) : [];
+      const RH = agrupar(regsHab, 'habito_id');
+      return {
+        series, sesiones: sesiones.map((x) => ({ ...x, semana_lunes: L[x.semana_id] })),
+        habitos: habitos.map((h) => ({ habito: h, registros: RH[h.id] || [] })),
+        nutricion: salud && conNut ? { planes, registros } : null,
+        entrenos: new Set(sesiones.filter((x) => x.completada && x.fecha_realizada).map((x) => x.fecha_realizada)),
+      };
+    },
+    async resumenMes(atletaId, mes = mesAnterior(), { salud = true, nutricion: conNut = true, entrenamiento = true } = {}) {
+      const d = await api.datosMes(atletaId, { salud, nutricion: conNut, desde: `${mes}-01` });
+      return resumenMes(d, mes, { salud, conNutricion: conNut, conEntrenamiento: entrenamiento });
+    },
+    // Los últimos meses acabados con algo (para Progreso y la ficha), del más reciente al más antiguo
+    async resumenesMensuales(atletaId, { n = 6, salud = true, nutricion: conNut = true, entrenamiento = true } = {}) {
+      const ultimo = mesAnterior();
+      const d = await api.datosMes(atletaId, { salud, nutricion: conNut, desde: `${sumarMes(ultimo, -(n - 1))}-01` });
+      return Array.from({ length: n }, (_, i) => resumenMes(d, sumarMes(ultimo, -i), { salud, conNutricion: conNut, conEntrenamiento: entrenamiento })).filter((r) => !r.vacio);
+    },
+
+    // ------------------------------------------------------------ panel de negocio (v0.48, solo el coach)
+    async panelNegocio(hoy = hoyISO()) {
+      const [atletas, acuerdos, pagos, resumenes] = await Promise.all([
+        api.atletas(),
+        b.select('cobros_atletas', {}).catch(falta020),
+        b.select('pagos', {}).catch(falta020),
+        api.resumenes(hoy).catch(() => []),
+      ]);
+      const activos = new Set(atletas.filter((a) => a.estado === 'activo').map((a) => a.id));
+      const constancia = resumenes.filter((r) => activos.has(r.atleta_id) && r.cumplimiento?.sesiones?.total > 0).map((r) => r.cumplimiento.sesiones.pct);
+      return panelNegocio({ atletas, acuerdos, pagos, constancia }, hoy);
     },
 
     // ------------------------------------------------------------ recursos
@@ -1780,6 +2002,10 @@ export function crearApi(backend) {
       for (const t of ['bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'comentarios', 'archivos', 'notas_ejercicio', 'avisos', 'recursos', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios']) {
         out[t] = await b.select(t, { eq: { atleta_id: atletaId } });
       }
+      // (v0.48) Los mensajes y avisos programados que aún no han salido no son suyos todavía; sus tareas, sí
+      out.comentarios = out.comentarios.filter((c) => !programado(c));
+      out.avisos = out.avisos.filter((a) => !programado(a));
+      out.tareas = await b.select('tareas', { eq: { atleta_id: atletaId } }).catch(() => []);
       // Las preguntas que le hace su coach (también las de todos y las archivadas), para entender sus respuestas
       out.preguntas_checkin = await api.preguntasCheckin(atletaId, { archivadas: true });
       // Las notificaciones solo las ve su dueño (si exporta el coach, salen vacías); de los móviles, sin sus claves
@@ -2101,12 +2327,21 @@ export function crearApi(backend) {
       }
       // Avisos de la comunidad (v0.43; sin la migración 027, ninguno)
       items.comunidad = await api.reportesComunidad().catch(() => []);
+      // Tareas hechas por revisar (v0.48; sin la migración 030, ninguna)
+      const tareas = await b.select('tareas', { nonulo: ['hecha_en'], nulo: ['revisada_en'], order: [['hecha_en', 'desc']] }).catch(() => []);
+      const ejT = unicos(tareas.map((t) => t.ejercicio_id));
+      const arT = unicos(tareas.map((t) => t.archivo_id));
+      const [EJ, AR] = await Promise.all([
+        ejT.length ? b.select('ejercicios', { in: { id: ejT }, cols: 'id,nombre' }).then(porId).catch(() => ({})) : {},
+        arT.length ? b.select('archivos', { in: { id: arT } }).then(porId).catch(() => ({})) : {},
+      ]);
+      items.tareas = tareas.map((t) => ({ ...t, atleta: A[t.atleta_id] || null, ejercicio: EJ[t.ejercicio_id] || null, archivo: AR[t.archivo_id] || null })).filter((t) => t.atleta);
       // Los mensajes cuentan por conversación (como se ven en Revisar), no uno a uno
       const hilo = (c) => c.sesion_id || c.checkin_id || c.archivo_id || `general-${c.atleta_id}`;
       const unicosHilos = [...new Map(items.comentarios.map((c) => [hilo(c), c])).values()];
       const porAtleta = {};
-      for (const lista of [items.sesiones, items.checkins, unicosHilos, items.archivos, items.recetas]) for (const x of lista) porAtleta[x.atleta.id] = (porAtleta[x.atleta.id] || 0) + 1;
-      return { ...items, total: items.sesiones.length + items.checkins.length + unicosHilos.length + items.archivos.length + items.recetas.length + items.comunidad.length, porAtleta };
+      for (const lista of [items.sesiones, items.checkins, unicosHilos, items.archivos, items.recetas, items.tareas]) for (const x of lista) porAtleta[x.atleta.id] = (porAtleta[x.atleta.id] || 0) + 1;
+      return { ...items, total: items.sesiones.length + items.checkins.length + unicosHilos.length + items.archivos.length + items.recetas.length + items.comunidad.length + items.tareas.length, porAtleta };
     },
     async marcarRevisado(tipo, id, revisado = true) {
       const [tabla, col] = REVISION[tipo];

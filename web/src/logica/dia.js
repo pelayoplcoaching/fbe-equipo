@@ -2,10 +2,11 @@
 // tiene muchas funciones, pero el atleta solo necesita saber qué hacer hoy y qué está hecho.
 import { hoyISO, diaDeCheckin, sumarDias as sumar } from './fechas.js';
 import { queToca, diaPrevistoValido } from './plan.js';
+import { tareasDelDia, cuandoTarea, ICONO_TAREA, NOMBRE_TIPO_TAREA } from './tareas.js';
 
 // d: { semana, sesiones, pesoHoy (bool|null = no aplica), habitos ([resumenHabito] | null), nutricion ({ plan, hoy } | null),
 //      menu ({ total, hechas } | null),
-//      checkin ({ hecho, pendiente } | null), cuestionario ({ pendiente } | null) }
+//      checkin ({ hecho, pendiente } | null), cuestionario ({ pendiente } | null), tareas ([tarea] | null: v0.48) }
 // Devuelve [{ id, texto, detalle, estado: 'hecho' | 'toca' | 'luego' | 'descanso', accion }]
 export function tuDia(d, hoy = hoyISO()) {
   const out = [];
@@ -22,6 +23,13 @@ export function tuDia(d, hoy = hoyISO()) {
       const atrasada = previsto && previsto < hoy;
       out.push({ id: 'sesion', texto: toca.siguiente.nombre, detalle: toca.hoy ? 'Hoy toca entrenar' : atrasada ? 'La tenías prevista: cuando puedas' : 'Tu siguiente sesión', estado: toca.hoy || atrasada || !previsto ? 'toca' : 'luego', accion: 'sesion', sesionId: toca.siguiente.id });
     } else out.push({ id: 'sesion', texto: 'Semana completada', detalle: 'Todas las sesiones hechas', estado: 'hecho', accion: 'semana' });
+  }
+
+  // Las tareas del coach (v0.48): las que ya tocan y no están hechas (las de días pasados, sin agobiar: «desde el
+  // lunes») y las hechas hoy
+  for (const t of tareasDelDia(d.tareas || [], hoy)) {
+    out.push({ id: `tarea-${t.id}`, texto: t.titulo, detalle: t.hecha_en ? 'Tarea hecha' : `${NOMBRE_TIPO_TAREA[t.tipo]}. ${cuandoTarea(t, hoy)}`,
+      estado: t.hecha_en ? 'hecho' : 'toca', accion: 'tarea', tareaId: t.id, icono: ICONO_TAREA[t.tipo] });
   }
 
   if (d.habitos?.length) {

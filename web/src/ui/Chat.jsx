@@ -3,7 +3,9 @@ import { useApp, useCarga, Icono, Cargando, Hoja, Avatar, cuando } from './comun
 import { Hilo, HojaRespuestas } from './Hilo.jsx';
 import { VerArchivo, capturarPoster } from './Archivos.jsx';
 import { LIMITE_ARCHIVO_MB } from '../datos/api.js';
-import { hoyISO, sumarDias, fmtConDia, aISO } from '../logica/fechas.js';
+import { hoyISO, sumarDias, fmtConDia, aISO, fmtProgramado } from '../logica/fechas.js';
+import { TextoConEnlaces } from './Enlaces.jsx';
+import { HojaProgramar } from './Programar.jsx';
 
 // El chat (v0.18): todos los mensajes con una persona en un solo hilo, como en WhatsApp pero sin más.
 // Lo que viene de una sesión, un check-in o un vídeo lleva su etiqueta, que abre ese sitio; lo que se escribe
@@ -19,6 +21,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const [guardadas, setGuardadas] = useState(false);
   const [abierto, setAbierto] = useState(null);      // archivo abierto a pantalla completa
   const [borrando, setBorrando] = useState(null);    // id del mensaje con el menú de borrar abierto
+  const [programar, setProgramar] = useState(null);  // v0.48: null | { nuevo: true } | mensaje programado a cambiar
   const lista = useRef(null);
   const area = useRef(null);
   const input = useRef(null);
@@ -96,6 +99,26 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     } catch (err) { aviso(err.message, 'error'); } finally { setEnviando(false); }
   }
 
+  // v0.48: el coach programa el mensaje para más tarde (solo texto)
+  async function enviarProgramado({ enviarEn }) {
+    const t = texto.trim();
+    try {
+      await api.enviarMensaje(atletaId, { texto: t, autor: yo, enviarEn });
+      setTexto(''); setProgramar(null);
+      if (area.current) area.current.style.height = 'auto';
+      aviso(`Programado para el ${fmtProgramado(enviarEn)}`);
+      await conv.recargar(true); alCambiar?.();
+    } catch (err) { aviso(err.message, 'error'); }
+  }
+  async function reprogramar(c, cambios) {
+    try {
+      await api.reprogramarMensaje(c.id, cambios);
+      setProgramar(null); setBorrando(null);
+      aviso(cambios.enviarEn ? `Ahora sale el ${fmtProgramado(cambios.enviarEn)}` : 'Enviado');
+      await conv.recargar(true); alCambiar?.();
+    } catch (err) { aviso(err.message, 'error'); }
+  }
+
   async function borrar(c) {
     try { await api.borrarMensaje(c); setBorrando(null); await conv.recargar(true); alCambiar?.(); }
     catch (err) { aviso(err.message, 'error'); }
@@ -140,24 +163,25 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
               const mio = c.autor === yo;
               const etq = etiqueta(c);
               return (
-                <article key={c.id} class={`burbuja ${mio ? 'mia' : 'suya'} ${c.archivo ? 'con-medio' : ''}`}>
+                <article key={c.id} class={`burbuja ${mio ? 'mia' : 'suya'} ${c.archivo ? 'con-medio' : ''} ${c.programado ? 'programada' : ''}`}>
                   {etq && (
                     <button type="button" class="burbuja-ctx" onClick={() => c.contexto.tipo === 'archivo' ? setAbierto(c) : irContexto?.(c.contexto)}>
                       <Icono n={c.contexto.tipo === 'sesion' ? 'hoy' : c.contexto.tipo === 'checkin' ? 'checkin' : 'video'} />{etq}
                     </button>
                   )}
                   {c.archivo && <MedioChat archivo={c.archivo} alAbrir={() => setAbierto(c)} />}
-                  {!esMarcador(c) && <p class="burbuja-texto">{c.texto}</p>}
+                  {!esMarcador(c) && <TextoConEnlaces texto={c.texto} clase="burbuja-texto" />}
                   <span class="burbuja-pie">
-                    {horaDe(c.creado_en)}
-                    {mio && <span class="visto" title={c.leido_en ? 'Visto' : 'Enviado'} aria-label={c.leido_en ? 'visto' : 'enviado'}>{c.leido_en ? '✓✓' : '✓'}</span>}
+                    {c.programado ? <span class="programado"><Icono n="reloj" />Programado para el {fmtProgramado(c.enviar_en)}</span> : horaDe(c.creado_en)}
+                    {mio && !c.programado && <span class="visto" title={c.leido_en ? 'Visto' : 'Enviado'} aria-label={c.leido_en ? 'visto' : 'enviado'}>{c.leido_en ? '✓✓' : '✓'}</span>}
                     {(mio || yo === 'coach') && (
                       <button type="button" class="burbuja-mas" aria-label="Opciones del mensaje" onClick={() => setBorrando(borrando === c.id ? null : c.id)}><Icono n="abajo" /></button>
                     )}
                   </span>
                   {borrando === c.id && (
                     <span class="burbuja-menu">
-                      <button type="button" class="btn btn-peq btn-peligro" onClick={() => borrar(c)}><Icono n="basura" /> Borrar</button>
+                      {c.programado && <button type="button" class="btn btn-peq" onClick={() => setProgramar(c)}><Icono n="editar" /> Cambiar</button>}
+                      <button type="button" class="btn btn-peq btn-peligro" onClick={() => borrar(c)}><Icono n="basura" /> {c.programado ? 'Cancelar el envío' : 'Borrar'}</button>
                       <button type="button" class="btn btn-peq plano" onClick={() => setBorrando(null)}>Cancelar</button>
                     </span>
                   )}
@@ -187,6 +211,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
             <input ref={input} type="file" accept="image/*,video/*" class="sr" tabIndex={-1} aria-label="Archivo para adjuntar" onChange={elegido} />
             <button type="button" class="btn btn-icono plano" aria-label="Adjuntar foto o vídeo" onClick={() => input.current?.click()}><Icono n="camara" /></button>
             {yo === 'coach' && <button type="button" class="btn btn-icono plano" aria-label="Respuestas guardadas" onClick={() => setGuardadas(true)}><Icono n="rayo" /></button>}
+            {yo === 'coach' && <button type="button" class="btn btn-icono plano" aria-label="Programar envío" title="Programar envío" disabled={!texto.trim() || !!adjunto} onClick={() => setProgramar({ nuevo: true })}><Icono n="reloj" /></button>}
             <textarea ref={area} class="area chat-area" rows={1} aria-label={yo === 'coach' ? `Escribir a ${primerNombre}` : 'Escribir a tu coach'}
               placeholder={adjunto ? 'Pie de foto (opcional)…' : yo === 'coach' ? `Escribe a ${primerNombre}…` : 'Escribe a tu coach…'} value={texto}
               onInput={(e) => { setTexto(e.currentTarget.value); e.currentTarget.style.height = 'auto'; e.currentTarget.style.height = `${Math.min(140, e.currentTarget.scrollHeight)}px`; }}
@@ -201,6 +226,12 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
           {abierto.archivo && <VerArchivo archivo={abierto.archivo} />}
           {abierto.archivo?.tipo !== 'adjunto' && <Hilo atletaId={atletaId} archivoId={abierto.archivoId} nombreAtleta={nombreAtleta} alCambiar={() => { conv.recargar(true); alCambiar?.(); }} vacio="Sin comentarios en este vídeo." />}
         </Hoja>
+      )}
+      {programar?.nuevo && <HojaProgramar titulo={`Programar el mensaje a ${primerNombre}`} alCerrar={() => setProgramar(null)} alGuardar={enviarProgramado} />}
+      {programar && !programar.nuevo && (
+        <HojaProgramar titulo="Cambiar el mensaje programado" inicial={programar.enviar_en} conTexto texto={programar.texto} boton="Guardar"
+          alCerrar={() => setProgramar(null)} alGuardar={({ enviarEn, texto: t }) => reprogramar(programar, { enviarEn, texto: t })}
+          alEnviarYa={({ texto: t }) => reprogramar(programar, { enviarEn: null, texto: t })} />
       )}
       {guardadas && (
         <HojaRespuestas nombre={primerNombre} texto={texto} alCerrar={() => setGuardadas(false)}

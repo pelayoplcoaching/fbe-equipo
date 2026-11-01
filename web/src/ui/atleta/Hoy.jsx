@@ -24,6 +24,10 @@ import { AvisoCobro } from './Cobro.jsx';
 import { HojaCuestionario, TarjetaCuestionario, pendiente } from './Cuestionario.jsx';
 import { TarjetaCardio } from './Sesion.jsx';
 import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '../../logica/cardio.js';
+import { HojaTarea } from '../Tareas.jsx';
+import { TarjetaMes } from './TuMes.jsx';
+import { HojaBloque } from './TuBloque.jsx';
+import { TextoConEnlaces } from '../Enlaces.jsx';
 
 // Minutos aproximados: cada serie ~40 s de trabajo más su descanso
 export { duracionEstimada };
@@ -85,7 +89,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
         <ContenidoNutricion irA={irA} checkinSemana={checkinSemana} salud={salud} recargarConsentimientos={recargarConsentimientos}
           entre={(
             <>
-              {!verPasos && atleta.estado !== 'baja' && <TuDia p={null} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} />}
+              {!verPasos && atleta.estado !== 'baja' && <TuDia p={null} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} />}
+              {!propio && <TarjetaMes salud={salud} />}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
               {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
               {!verPasos && <TarjetaNotificaciones />}
@@ -96,7 +101,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
           entre={(
             <>
               {!verPasos && !propio && <AvisosCoach />}
-              {!verPasos && atleta.estado !== 'baja' && <TuDia p={p} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} />}
+              {!verPasos && atleta.estado !== 'baja' && <TuDia p={p} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} />}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
               {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
               {!verPasos && !propio && hechos.datos?.sesion && <TarjetaNotificaciones />}
@@ -116,8 +121,10 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
 
 // «Tu día»: lo que toca hoy, en una lista corta. Tocar una fila lleva a esa parte de la pantalla (o abre la sesión).
 const ICONO_DIA = { sesion: 'hoy', habitos: 'llama', nutricion: 'nutricion', menu: 'receta', peso: 'bascula', checkin: 'checkin', cuestionario: 'pregunta' };
-function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, version }) {
+function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, version, recargarConsentimientos }) {
   const { api, atleta } = useApp();
+  // v0.48: la tarea del coach abierta
+  const [tarea, setTarea] = useState(null);
   const dia = useCarga(() => api.tuDia(atleta.id, { programa: p, checkin: checkinSemana.datos, salud, nutricion: conNutricion(atleta), entrenamiento: conEntrenamiento(atleta), pesoDiario: atleta.peso_frecuencia !== 'semanal' }).catch(() => null), [atleta.id, p, checkinSemana.datos, salud, version, atleta.peso_frecuencia]);
   // Tras apuntar algo en cualquier parte de la pantalla (un hábito, la nutrición, el peso), la lista se pone al día
   const recargarRef = useRef(null);
@@ -143,6 +150,7 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
     else if (x.accion === 'checkin') irA('checkin');
     else if (x.accion === 'comidas') irA('comidas');
     else if (x.accion === 'cuestionario') abrirCuestionario();
+    else if (x.accion === 'tarea') api.tareas(atleta.id).then((l) => setTarea(l.find((t) => t.id === x.tareaId) || null));
   };
   return (
     <section class="panel tu-dia" aria-label="Tu día">
@@ -161,7 +169,7 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
         {items.map((x) => (
           <li key={x.id}>
             <button class={`fila-dia ${x.estado}`} onClick={() => ir(x)}>
-              <span class="dia-marca" aria-hidden="true">{x.estado === 'hecho' ? <Icono n="hecho" /> : <Icono n={ICONO_DIA[x.id] || 'hoy'} />}</span>
+              <span class="dia-marca" aria-hidden="true">{x.estado === 'hecho' ? <Icono n="hecho" /> : <Icono n={x.icono || ICONO_DIA[x.id] || 'hoy'} />}</span>
               <span class="pila-xs"><span class={x.estado === 'hecho' ? 'tachado' : ''}>{x.texto}</span><span class="mini terciario">{x.detalle}</span></span>
               <span class="sr">{x.estado === 'hecho' ? 'hecho' : x.estado === 'toca' ? 'pendiente' : ''}</span>
               {x.estado === 'toca' && <span class="punto-dia" aria-hidden="true" />}
@@ -171,6 +179,8 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
         ))}
       </ul>}
       <Pista id="tu-dia">Esta lista es lo que te toca hoy. Lo demás de esta pantalla es detalle: puedes mirarlo o no.</Pista>
+      {tarea && <HojaTarea tarea={tarea} salud={salud} alCerrar={() => setTarea(null)} alCambiar={() => dia.recargar(true)}
+        darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }} />}
     </section>
   );
 }
@@ -291,6 +301,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const { api, propio } = useApp();
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id, p]);
   const [planAbierto, setPlanAbierto] = useState(false);
+  const [bloqueAbierto, setBloqueAbierto] = useState(false);
   // Detalle de la siguiente sesión (ejercicios, duración): lo usan la tarjeta del día y la lista de debajo
   const hoy = hoyISO();
   const semana = p.actual;
@@ -339,7 +350,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           {!descanso && !toca.hoy && previsto && <p class="peq secundario">{previsto > hoy ? `Prevista para ${cuandoDia(previsto, hoy)}.` : `La tenías prevista ${cuandoDia(previsto, hoy)}.`}</p>}
         </div>
         {semana.nota_coach && (
-          <div class="nota-coach"><Icono n="mensaje" /><div><strong>Tu coach: </strong>{semana.nota_coach}</div></div>
+          <div class="nota-coach"><Icono n="mensaje" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>
         )}
         {descanso ? (
           <div class="descanso-hoy">
@@ -378,6 +389,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       </section>
 
       {entre}
+      {!propio && <TarjetaMes salud={salud} />}
       <BloqueTerminado salud={salud} />
       <SemanaPasada salud={salud} />
       {!descanso && siguiente && <SiguienteSesion sesion={siguiente} ejercicios={ejercicios} cargando={det.cargando && !det.datos} />}
@@ -385,12 +397,16 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       <section class="seccion">
         <div class="seccion-cab">
           <h2>Esta semana</h2>
-          {enSemana && sesiones.some((s) => !s.completada) && <button class="btn-texto" onClick={() => setPlanAbierto(true)}><Icono n="calendario" /> {sesiones.some((s) => diaPrevistoValido(s, semana)) ? 'Tu plan' : 'Planificar'}</button>}
+          <span class="fila-envolver">
+            <button class="btn-texto" onClick={() => setBloqueAbierto(true)}><Icono n="semana" /> Tu bloque</button>
+            {enSemana && sesiones.some((s) => !s.completada) && <button class="btn-texto" onClick={() => setPlanAbierto(true)}><Icono n="calendario" /> {sesiones.some((s) => diaPrevistoValido(s, semana)) ? 'Tu plan' : 'Planificar'}</button>}
+          </span>
         </div>
         <div class="semana-dias">
           {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} actual={!descanso && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
         </div>
       </section>
+      {bloqueAbierto && <HojaBloque alCerrar={() => setBloqueAbierto(false)} abrirSesion={(id) => { setBloqueAbierto(false); abrirSesion(id); }} />}
       {planAbierto && (
         <Hoja titulo={`Tu plan, ${rangoSemana(semana.fecha_inicio)}`} alCerrar={() => setPlanAbierto(false)}>
           <PlanSemana semana={semana} sesiones={sesiones} alCambiar={recargar} compacto />

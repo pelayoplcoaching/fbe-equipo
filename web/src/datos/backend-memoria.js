@@ -9,6 +9,7 @@ import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido } from '../logica/cardio.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
+import { fechaMadrid as fMadrid } from '../logica/fechas.js';
 
 const ahora = () => new Date().toISOString();
 const uuid = () => (globalThis.crypto?.randomUUID ? crypto.randomUUID()
@@ -18,7 +19,7 @@ export const CODIGO_MFA_DEMO = '123456';
 
 const DEFECTOS = {
   perfiles: () => ({ rol: 'atleta', creado_en: ahora(), exige_2fa: false, foto: null }),
-  atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null, nutricion: true, entrenamiento: true, nivel: null, peso_frecuencia: 'diario' }),
+  atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null, nutricion: true, entrenamiento: true, nivel: null, peso_frecuencia: 'diario', baja_en: null }),
   invitaciones: () => ({ creada_en: ahora(), usada_en: null }),
   consentimientos: () => ({ aceptado_en: ahora(), revocado_en: null }),
   ejercicios: () => ({ grupos_musculares: [], activo: true, variante: null, video_url: null, instrucciones: null, errores: null, alternativas: [], tipo: [], rango_reps: null, creado_en: ahora() }),
@@ -35,11 +36,14 @@ const DEFECTOS = {
   marcas: () => ({ fecha: hoyISO(), reps: 1, tipo: 'test', notas: null }),
   objetivos: () => ({ progreso_pct: 0, estado: 'no_iniciado', descripcion: null, fecha_limite: null, ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, creado_en: ahora() }),
   archivos: () => ({ fecha: hoyISO(), sesion_ejercicio_id: null, ejercicio_id: null, comentario_coach: null, nota_atleta: null, mime: null, bytes: null, revisado_en: null, creado_en: ahora(), pose: null, poster_ruta: null, duracion_seg: null, destacado: false }),
-  comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false }),
+  comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null }),
   recursos: () => ({ atleta_id: null, categoria: 'general', descripcion: null, url: null, orden: 0, creado_en: ahora() }),
   notas_ejercicio: () => ({ actualizado_en: ahora() }),
   respuestas_guardadas: () => ({ orden: 0, creado_en: ahora() }),
-  avisos: () => ({ atleta_id: null, desde: hoyISO(), hasta: null, creado_en: ahora() }),
+  avisos: () => ({ atleta_id: null, desde: hoyISO(), hasta: null, creado_en: ahora(), enviar_en: null }),
+  // Migración 030: tareas puntuales y sus plantillas
+  tareas: () => ({ detalle: null, ejercicio_id: null, fecha: fMadrid(), hecha_en: null, respuesta: null, archivo_id: null, revisada_en: null, creada_en: ahora() }),
+  tareas_plantillas: () => ({ detalle: null, ejercicio_id: null, orden: 0, creada_en: ahora() }),
   habitos: () => ({ tipo: 'numero', objetivo: null, unidad: null, sentido: 'al_menos', dias_semana: 7, icono: 'libre', orden: 0, activo: true, creado_en: ahora() }),
   registros_habito: () => ({ actualizado_en: ahora() }),
   planes_nutricion: () => ({ modo: 'macros', fase: 'mantener', ritmo_pct: null, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, fibra_g: null, kcal_descanso: null, carbos_descanso_g: null, grasa_descanso_g: null, pautas: null, motivo: null, creado_en: ahora() }),
@@ -74,7 +78,7 @@ const CASCADA = {
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
     ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
-    ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id']],
+    ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'], ['tareas', 'atleta_id']],
   comunidad_posts: [['comunidad_comentarios', 'post_id'], ['comunidad_reacciones', 'post_id'], ['comunidad_votos', 'post_id']],
   recetas: [['recetas_atleta', 'receta_id']],
   habitos: [['registros_habito', 'habito_id']],
@@ -84,7 +88,7 @@ const CASCADA = {
   sesion_ejercicios: [['series', 'sesion_ejercicio_id']],
 };
 // Al borrar estas filas, los comentarios se quedan sin el enlace (on delete set null)
-const ANULAR = { comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id']], ejercicios: [['objetivos', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
+const ANULAR = { comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id']], ejercicios: [['objetivos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
 
 const cumple = (fila, f = {}) => {
   for (const [k, v] of Object.entries(f.eq || {})) if ((fila[k] ?? null) !== v) return false;
@@ -160,6 +164,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // Como la 029: los votos, como las reacciones; los ánimos, los que uno manda y los que recibe
     comunidad_votos: (x) => esCoach() || (soyMiembro() && autorVisible(x.autor_id) && postVisible(x.post_id)),
     comunidad_animos: (x) => esCoach() || (soyMiembro() && ((x.para === sesion?.user.id && autorVisible(x.de)) || (x.de === sesion?.user.id && autorVisible(x.para)))),
+    // Como la 030: los mensajes y avisos programados no los ve el atleta hasta su hora; las tareas, el coach y su atleta
+    comentarios: (x) => esCoach() || !x.enviar_en || Date.parse(x.enviar_en) <= Date.now(),
+    avisos: (x) => esCoach() || !x.enviar_en || Date.parse(x.enviar_en) <= Date.now(),
+    tareas: (x) => esCoach() || x.atleta_id === miAtletaId(),
+    tareas_plantillas: () => esCoach(),
   };
   const miAtletaId = () => tabla('atletas').find((a) => a.perfil_id === sesion?.user.id)?.id || null;
   const fotoVisible = (ruta) => esCoach() || (!!miAtletaId() && ruta.split('/')[0] === miAtletaId()) || tabla('comunidad_posts').some((x) => x.foto_ruta === ruta && postVisible(x.id));
@@ -243,6 +252,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
     if (t === 'comentarios') {
       f.autor = esCoach() ? 'coach' : 'atleta';
+      // Como la 030: programar, solo el coach y en el chat; como mucho a 90 días; uno para «ya mismo» sale ya
+      if (f.enviar_en != null) {
+        if (f.autor !== 'coach' || f.sesion_id || f.checkin_id || f.archivo_id) throw new Error('Solo los mensajes del coach en el chat se pueden programar');
+        if (Date.parse(f.enviar_en) > Date.now() + 90 * 864e5) throw new Error('Un mensaje se programa como mucho a 90 días vista');
+        if (!(Date.parse(f.enviar_en) > Date.now() + 30000)) f.enviar_en = null;
+      }
       if (f.sesion_id) f.atleta_id = atletaDeSesion(f.sesion_id);
       else if (f.checkin_id) f.atleta_id = buscar('checkins', f.checkin_id)?.atleta_id;
       else if (f.archivo_id) f.atleta_id = buscar('archivos', f.archivo_id)?.atleta_id;
@@ -250,8 +265,15 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // Como la 014: el adjunto lo fija la base según el tipo del archivo
       f.adjunto = !!f.archivo_id && buscar('archivos', f.archivo_id)?.tipo === 'adjunto';
       f.leido_en = null;
-      f.creado_en = ahora();
+      f.creado_en = f.enviar_en ? new Date(Date.parse(f.enviar_en)).toISOString() : ahora();
     }
+    if (t === 'avisos') prepararAviso(f, null);
+    if (t === 'tareas') f.creada_en = ahora();
+    if (t === 'tareas_plantillas') {
+      if (tabla('tareas_plantillas').length >= 30) throw new Error('Ya tienes 30 plantillas de tareas: borra alguna antes de guardar otra');
+      f.creada_en = ahora();
+    }
+    if (t === 'atletas') fechaBaja(f, null);
     if (!esCoach()) {
       if (t === 'checkins') f.revisado_en = null;
       if (t === 'archivos') { f.revisado_en = null; f.comentario_coach = null; }
@@ -275,6 +297,32 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
     // Como la 023: cuál es la comida opcional lo decide el coach
     if (t === 'comidas_atleta') { if (!esCoach()) f.opcional = null; normalizarOpcional(f); }
+  }
+  // Como la 030: un aviso con hora de salida empieza ese día (en Madrid); uno para «ya mismo» sale ya
+  function prepararAviso(f, antes) {
+    if (f.enviar_en != null && (!antes || f.enviar_en !== antes.enviar_en)) {
+      if (Date.parse(f.enviar_en) > Date.now() + 90 * 864e5) throw new Error('Un aviso se programa como mucho a 90 días vista');
+      if (!(Date.parse(f.enviar_en) > Date.now() + 30000)) f.enviar_en = null;
+    }
+    if (f.enviar_en) f.desde = fMadrid(new Date(f.enviar_en));
+  }
+  // Como la 030: el día de la baja lo pone la base al pasar a «baja» y se quita al volver
+  function fechaBaja(f, antes) {
+    if (f.estado !== 'baja') f.baja_en = null;
+    else if (!antes || antes.estado !== 'baja') f.baja_en = f.baja_en || fMadrid();
+    if (f.baja_en && (f.baja_en < '2020-01-01' || f.baja_en > fMadrid())) throw new Error('El día de la baja, entre 2020 y hoy');
+  }
+  // Como la 030 (comentario_preparar): de un mensaje programado que aún no ha salido, el coach cambia el texto y la
+  // hora (o lo manda ya); lo demás no se edita
+  function prepararComentario(m, antes) {
+    if (!(esCoach() && antes.autor === 'coach' && antes.enviar_en && Date.parse(antes.enviar_en) > Date.now())) {
+      if (m.texto !== antes.texto || (m.enviar_en ?? null) !== (antes.enviar_en ?? null)) throw new Error('Un comentario no se puede editar');
+      return;
+    }
+    if (m.enviar_en != null && Date.parse(m.enviar_en) > Date.now() + 90 * 864e5) throw new Error('Un mensaje se programa como mucho a 90 días vista');
+    if (m.enviar_en != null && !(Date.parse(m.enviar_en) > Date.now() + 30000)) m.enviar_en = null;
+    m.creado_en = m.enviar_en ? new Date(Date.parse(m.enviar_en)).toISOString() : ahora();
+    m.leido_en = null;
   }
   function despuesDeInsertar(t, f) {
     if (t === 'comentarios' && f.autor === 'coach') {
@@ -465,7 +513,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     && Array.isArray(e.opciones) && e.opciones.length >= 2 && e.opciones.length <= 4 && e.opciones.every((o) => typeof o === 'string' && textoCorto(o, 80) && o != null)
     && new Set(e.opciones.map((o) => o.trim().toLowerCase())).size === e.opciones.length && (e.cierre == null || typeof e.cierre === 'string');
   const FOTO_OK = (v, max) => v == null || (String(v).length <= max && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(String(v)));
+  // Como tareas_validas (030)
+  const tareaValida = (f) => ['foto', 'medida', 'video', 'texto'].includes(f.tipo) && textoCorto(f.titulo, 120) && f.titulo != null && textoCorto(f.detalle, 600)
+    && (f.ejercicio_id == null || f.tipo === 'video');
   const CHECKS = {
+    tareas: (f) => tareaValida(f) && fechaValida(f.fecha) && textoCorto(f.respuesta, 500) && (f.hecha_en != null || (f.respuesta == null && f.archivo_id == null && f.revisada_en == null)),
+    tareas_plantillas: (f) => tareaValida(f) && entre(n(f.orden), 0, 999),
     // Migración 027: la comunidad
     // (029: logros, encuestas y menciones)
     comunidad_posts: (f) => ['aviso', 'post', 'entreno', 'logro', 'encuesta'].includes(f.tipo) && textoCorto(f.texto, 2000) && (!['aviso', 'encuesta'].includes(f.tipo) || f.texto != null)
@@ -552,7 +605,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     preferencias_notificaciones: (f) => {
       const hora = (h) => /^\d\d:\d\d(:00)?$/.test(String(h ?? ''));
       const h5 = (h) => String(h).slice(0, 5);
-      const tipos = ['respuesta', 'semana', 'aviso', 'sesion_hoy', 'checkin', 'habitos', 'nutricion', 'cuestionario', 'mensaje', 'checkin_recibido', 'video_recibido', 'sesion_hecha', 'cuestionario_recibido', 'descanso', 'comunidad'];
+      const tipos = ['respuesta', 'semana', 'aviso', 'sesion_hoy', 'checkin', 'habitos', 'nutricion', 'cuestionario', 'mensaje', 'checkin_recibido', 'video_recibido', 'sesion_hecha', 'cuestionario_recibido', 'descanso', 'comunidad', 'tarea', 'tarea_hecha'];
       return Array.isArray(f.desactivados) && f.desactivados.every((t) => tipos.includes(t))
         && hora(f.hora_manana) && h5(f.hora_manana) >= '05:00' && h5(f.hora_manana) <= '12:00'
         && hora(f.hora_tarde) && h5(f.hora_tarde) >= '12:00' && h5(f.hora_tarde) <= '23:30'
@@ -609,7 +662,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
   }
 
-  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   function insertar(t, fila) {
     soloCoach(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
@@ -1192,8 +1245,19 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (t === 'objetivos') for (const fila of filas) comprobarMarca({ ...fila, ...copia(c) });
       if (t === 'preguntas_checkin') for (const fila of filas) protegerPregunta(fila, c);
       if (t === 'checkins' && 'respuestas' in c) for (const fila of filas) validarRespuestas({ ...fila, ...copia(c) }, fila);
-      // Cuestionarios: lo que pone el trigger depende de cada fila
       const porFila = new Map();
+      // Como la 030: tareas (no cambian de atleta; solo el coach), avisos programados, bajas y mensajes programados
+      if (t === 'tareas' || t === 'tareas_plantillas') { if (!esCoach()) return []; if ('atleta_id' in c && filas.some((fila) => fila.atleta_id !== c.atleta_id)) throw new Error('Una tarea no se puede pasar a otro atleta: ponle una nueva'); delete c.creada_en; }
+      if (t === 'avisos' || t === 'atletas' || t === 'comentarios') {
+        for (const fila of filas) {
+          const m = { ...fila, ...copia(c) };
+          if (t === 'avisos') prepararAviso(m, fila);
+          if (t === 'atletas' && ('estado' in c || 'baja_en' in c)) fechaBaja(m, fila);
+          if (t === 'comentarios' && ('texto' in c || 'enviar_en' in c)) prepararComentario(m, fila);
+          porFila.set(fila, m);
+        }
+      }
+      // Cuestionarios: lo que pone el trigger depende de cada fila
       if (t === 'cuestionarios') for (const fila of filas) { const m = { ...copia(fila), ...copia(c) }; prepararCuestionario(m, fila); porFila.set(fila, m); }
       for (const fila of filas) comprobarChecks(t, porFila.get(fila) || { ...fila, ...copia(c) });
       for (const fila of filas) {
@@ -1230,7 +1294,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async delete(t, f) {
-      if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta'].includes(t) && !esCoach()) return [];
+      if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'tareas', 'tareas_plantillas'].includes(t) && !esCoach()) return [];
       // Como la 027: cada uno borra lo suyo (que ve); el coach, cualquier publicación o comentario, sus retos y avisos
       if (t.startsWith('comunidad_')) {
         if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos'].includes(t)) return [];
@@ -1295,6 +1359,33 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'registrar_suscripcion_push' || nombre === 'actualizar_suscripcion_push') throw new Error('En la demo no se pueden activar las notificaciones');
       if (nombre === 'programar_descanso') return 'sin_canal'; // en la demo no hay notificaciones
       if (nombre === 'cancelar_descanso') return null;
+      // Migración 030: el atleta marca una tarea suya; las semanas de un bloque (sin nada de las no publicadas)
+      if (nombre === 'tarea_completar') {
+        const yo = tabla('atletas').find((a) => a.perfil_id === uid);
+        if (!uid || !yo) throw new Error('Solo el atleta de la tarea puede marcarla');
+        if (yo.estado === 'baja') throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        const x = tabla('tareas').find((k) => k.id === args.p_tarea && k.atleta_id === yo.id);
+        if (!x) throw new Error('Esa tarea ya no está');
+        if (x.revisada_en) throw new Error('Tu coach ya la ha revisado: si quieres cambiar algo, escríbele');
+        if (args.p_hecha === false) { Object.assign(x, { hecha_en: null, respuesta: null, archivo_id: null }); persistirYa(); return null; }
+        if (x.fecha > fMadrid()) throw new Error('Esta tarea es para otro día: podrás hacerla ese día');
+        const resp = String(args.p_respuesta || '').trim() || null;
+        if (resp && (resp.length > 500 || !textoVisible(resp))) throw new Error('La respuesta, hasta 500 letras');
+        if (x.tipo === 'foto' || x.tipo === 'video') {
+          const a = buscar('archivos', args.p_archivo);
+          if (!a || a.atleta_id !== yo.id || a.tipo !== (x.tipo === 'foto' ? 'foto_progreso' : 'video_tecnica')) throw new Error(`Para esta tarea hace falta ${x.tipo === 'foto' ? 'tu foto de progreso' : 'tu vídeo de técnica'}`);
+        } else if (args.p_archivo) throw new Error('Esta tarea no lleva foto ni vídeo');
+        if (x.tipo === 'medida' && !tabla('pesos').some((p) => p.atleta_id === yo.id && p.fecha >= x.fecha) && !tabla('medidas').some((m) => m.atleta_id === yo.id && m.fecha >= x.fecha)) throw new Error('Apunta antes tu peso o tus medidas');
+        Object.assign(x, { hecha_en: x.hecha_en || ahora(), respuesta: resp, archivo_id: args.p_archivo || null });
+        persistirYa();
+        return x.hecha_en;
+      }
+      if (nombre === 'bloque_semanas') {
+        const bl = buscar('bloques', args.p_bloque);
+        const mio = tabla('atletas').find((a) => a.perfil_id === uid)?.id;
+        if (!bl || bl.es_plantilla || !(esCoach() || (bl.atleta_id && bl.atleta_id === mio))) return [];
+        return tabla('semanas').filter((w) => w.bloque_id === bl.id).sort((a, b2) => a.numero - b2.numero).map((w) => ({ numero: w.numero, fecha_inicio: w.fecha_inicio, publicada: w.programacion === 'programada' }));
+      }
       // Migración 027: la comunidad del equipo
       if (nombre.startsWith('comunidad_')) {
         const r = rpcComunidad(nombre, args || {}, uid, perfil);

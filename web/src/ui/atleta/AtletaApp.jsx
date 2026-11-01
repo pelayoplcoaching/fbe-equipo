@@ -14,6 +14,10 @@ import { TextoPrivacidad } from '../Acceso.jsx';
 import { usePendientesArchivos, BandaPendientes } from '../Pendientes.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { hoyISO, semanaCheckin, diaDeCheckin } from '../../logica/fechas.js';
+import { RecibirCompartido, limpiarDireccion } from '../Compartido.jsx';
+import { ponerInsignia } from '../insignia-app.js';
+import { queToca } from '../../logica/plan.js';
+import { tareasDelDia } from '../../logica/tareas.js';
 
 // Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
 // Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento. Equipo (v0.43), solo con
@@ -82,6 +86,24 @@ export function AtletaApp() {
   const programa = useCarga(() => api.programa(atleta.id), [atleta.id, dia]);
   const checkinSemana = useCarga(() => (propio ? Promise.resolve(null) : api.checkin(atleta.id, semanaCheckin(hoyISO()))), [atleta.id, dia]);
   const noLeidos = useCarga(() => (propio ? Promise.resolve([]) : api.noLeidos(atleta.id).catch(() => [])), [atleta.id, dia]);
+  // v0.48: las tareas del coach que ya tocan (para el número del icono de la app)
+  const tareas = useCarga(() => (propio ? Promise.resolve([]) : api.tareas(atleta.id)), [atleta.id, dia, tab]);
+  useEffect(() => {
+    let t = null;
+    const al = () => { clearTimeout(t); t = setTimeout(() => tareas.recargar(true), 800); };
+    window.addEventListener('fbe-cambio', al);
+    return () => { clearTimeout(t); window.removeEventListener('fbe-cambio', al); };
+  }, []);
+  // v0.48: el acceso directo «Empezar la sesión de hoy» (?accion=sesion): en cuanto está el programa, a la sesión que toca
+  const accion = useRef(typeof location !== 'undefined' ? new URLSearchParams(location.search).get('accion') : null);
+  useEffect(() => {
+    if (accion.current !== 'sesion' || !programa.datos) return;
+    accion.current = null;
+    limpiarDireccion(['accion']);
+    const p = programa.datos;
+    const sig = p.actual ? queToca(p.sesiones[p.actual.id] || [], p.actual).siguiente : null;
+    if (sig && conEntrenamiento(atleta)) setSesionId(sig.id);
+  }, [programa.datos]);
 
   useEffect(() => {
     try { history.replaceState(null, '', `#${tab}`); } catch { /* */ }
@@ -114,6 +136,9 @@ export function AtletaApp() {
   // Los mensajes sueltos del coach cuentan en Mensajes; los de sesiones, check-ins y vídeos, en Hoy
   const mensajesSinLeer = (noLeidos.datos || []).filter((c) => api.esMensaje(c)).length;
   const respuestasSueltas = (noLeidos.datos || []).some((c) => !api.esMensaje(c));
+  // El número del icono (v0.48): lo sin leer de tu coach y lo que tienes pendiente (sus tareas y el check-in)
+  const pendientesTareas = tareasDelDia(tareas.datos || []).filter((t) => !t.hecha_en).length;
+  const insignia = (noLeidos.datos || []).length + pendientesTareas + (checkinPendiente ? 1 : 0);
   const compartido = {
     programa, salud, recargarConsentimientos: () => consentimientos.recargar(true), irA: setTab, abrirSesion, checkinSemana,
     noLeidos: noLeidos.datos || [], releer,
@@ -121,6 +146,8 @@ export function AtletaApp() {
 
   return (
     <div class={`app ${sesionId ? 'en-sesion' : ''}`}>
+      <InsigniaApp n={propio ? 0 : insignia} />
+      {!propio && <RecibirCompartido programa={programa} />}
       {sesionId ? <main><BandaPendientes pendientes={pendientesArchivos} /><Sesion id={sesionId} alCerrar={cerrarSesion} alLeer={releer} salud={salud} /></main> : (
         <>
           <main key={`${tab}:${dia}`} class="vista">
@@ -157,6 +184,12 @@ export function AtletaApp() {
       )}
     </div>
   );
+}
+
+// El número en el icono de la app (donde se puede): se pone al día con lo que hay
+function InsigniaApp({ n }) {
+  useEffect(() => { ponerInsignia(n); }, [n]);
+  return null;
 }
 
 // Arriba en el modo atleta del coach: qué es y cómo programarse o volver

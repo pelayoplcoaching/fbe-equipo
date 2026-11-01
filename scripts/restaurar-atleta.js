@@ -16,12 +16,12 @@
   const ORDEN = ['atletas', 'consentimientos', 'ejercicios', 'recetas', 'bloques', 'semanas', 'sesiones', 'sesion_ejercicios', 'series',
     'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'notas_ejercicio', 'avisos', 'recursos',
     'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'comentarios', 'cobros_atletas', 'pagos',
-    'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias'];
+    'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'tareas'];
   // Sin «id» propio: van por atleta (una fila por atleta, o por atleta y día en menu_dias)
   const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias'];
   const CON_ATLETA = ['bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
     'notas_ejercicio', 'avisos', 'recursos', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion',
-    'cuestionarios', 'preguntas_checkin', 'comentarios', 'cobros_atletas', 'pagos', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias'];
+    'cuestionarios', 'preguntas_checkin', 'comentarios', 'cobros_atletas', 'pagos', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'tareas'];
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const COLUMNA = /^[a-z_][a-z0-9_]*$/;
 
@@ -58,7 +58,7 @@
     out.comentarios = out.comentarios.filter((c) => (!c.sesion_id || sesiones.has(c.sesion_id)) && (!c.checkin_id || checkins.has(c.checkin_id)));
     // Los ejercicios a los que apunta (por si alguno se hubiera borrado de la biblioteca)
     const usados = new Set([...out.sesion_ejercicios.map((p) => p.ejercicio_id), ...out.series.map((s) => s.sustituto_id),
-      ...out.objetivos.map((o) => o.ejercicio_id), ...out.marcas.map((m) => m.ejercicio_id), ...out.notas_ejercicio.map((n) => n.ejercicio_id)].filter(Boolean));
+      ...out.objetivos.map((o) => o.ejercicio_id), ...out.marcas.map((m) => m.ejercicio_id), ...out.notas_ejercicio.map((n) => n.ejercicio_id), ...out.tareas.map((x) => x.ejercicio_id)].filter(Boolean));
     out.ejercicios = t('ejercicios').filter((e) => usados.has(e.id));
     // Las recetas de su recetario y de su menú (v0.26), por si alguna se hubiera borrado de tu recetario
     const recetas = new Set([...out.recetas_atleta.map((a) => a.receta_id), ...out.menu_comidas.map((m) => m.receta_id)].filter(Boolean));
@@ -66,6 +66,8 @@
     out.consentimientos = atleta.perfil_id ? t('consentimientos').filter((c) => c.perfil_id === atleta.perfil_id) : [];
     // Los vídeos y fotos no vuelven: sus mensajes, sin el adjunto (ni el dibujo, que solo va sobre un vídeo)
     out.comentarios = out.comentarios.map((c) => (c.archivo_id ? { ...c, archivo_id: null, dibujo: null } : c));
+    // (v0.48) Sus tareas vuelven; la foto o el vídeo con que hizo alguna, no (como los demás archivos)
+    out.tareas = out.tareas.map((x) => (x.archivo_id ? { ...x, archivo_id: null } : x));
     return out;
   }
 
@@ -79,6 +81,7 @@
     notas_ejercicio: [['ejercicio_id', 'ejercicios']], comentarios: [['sesion_id', 'sesiones', true], ['checkin_id', 'checkins', true]],
     consentimientos: [['perfil_id', 'perfiles']],
     recetas_atleta: [['receta_id', 'recetas']], menu_comidas: [['receta_id', 'recetas', true]],
+    tareas: [['ejercicio_id', 'ejercicios', true]],
   };
   const condicion = (n) => {
     const c = [...(CON_ATLETA.includes(n) ? [['atleta_id', 'atletas']] : []), ...(PADRES[n] || [])]

@@ -81,3 +81,34 @@ export function semanaCheckin(hoy = hoyISO()) {
 }
 // Días en los que se recuerda el check-in pendiente: de viernes a lunes
 export const diaDeCheckin = (fecha = new Date()) => [5, 6, 0, 1].includes(fecha.getDay());
+
+// ---------- hora de Madrid (v0.48: mensajes programados) ----------
+// El día y la hora en Madrid de un instante: { fecha: 'AAAA-MM-DD', hora: 'HH:MM' }
+export function partesMadrid(instante = new Date()) {
+  const d = instante instanceof Date ? instante : new Date(instante);
+  try {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(d).map((x) => [x.type, x.value]));
+    return { fecha: `${p.year}-${p.month}-${p.day}`, hora: `${p.hour === '24' ? '00' : p.hour}:${p.minute}` };
+  } catch { return { fecha: aISO(d), hora: `${pad(d.getHours())}:${pad(d.getMinutes())}` }; }
+}
+// El instante (ISO, en UTC) de un día y una hora de Madrid, sea cual sea la zona del móvil. En el cambio de hora,
+// una hora que no existe (las 2:30 del último domingo de marzo) pasa a la siguiente que sí.
+export function instanteMadrid(fecha, hora = '09:00') {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fecha || '')) || !/^\d{1,2}:\d{2}$/.test(String(hora || ''))) return null;
+  const [h, m] = hora.split(':').map(Number);
+  if (h > 23 || m > 59) return null;
+  const base = Date.UTC(...fecha.split('-').map((x, i) => Number(x) - (i === 1 ? 1 : 0)), h, m);
+  // Madrid va 1 o 2 horas por delante de UTC: se prueba y se corrige con lo que dice el reloj de Madrid
+  for (const desfase of [1, 2, 0]) {
+    const t = base - desfase * 3600000;
+    const p = partesMadrid(new Date(t));
+    if (p.fecha === fecha && p.hora === `${pad(h)}:${pad(m)}`) return new Date(t).toISOString();
+  }
+  return new Date(base - 3600000).toISOString();
+}
+// «lun 3 nov, 8:00» (en hora de Madrid)
+export function fmtProgramado(iso) {
+  const p = partesMadrid(iso);
+  return `${fmtConDia(p.fecha)}, ${p.hora.replace(/^0/, '')}`;
+}

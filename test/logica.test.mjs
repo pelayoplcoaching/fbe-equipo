@@ -802,8 +802,9 @@ console.log('\nNotificaciones');
   check(!preferenciasValidas({ ...d, hora_manana: '13:00' }) && !preferenciasValidas({ ...d, hora_tarde: '23:45' }) && !preferenciasValidas({ ...d, silencio_hasta: null })
     && !preferenciasValidas({ ...d, silencio_desde: '08:00', silencio_hasta: '08:00' }) && !preferenciasValidas({ ...d, desactivados: ['spam'] }) && !preferenciasValidas({ ...d, dia_checkin: 8 }),
     'como la base: mañana de 5 a 12, tarde de 12 a 23:30, «no molestar» completo y distinto, tipos conocidos');
-  check(TIPOS_ATLETA.length === 10 && TIPOS_COACH.length === 6 && TIPOS_COACH.every(([t]) => t === 'comunidad' || !TIPOS_ATLETA.some(([a]) => a === t)),
-    'tipos del atleta (con el fin del descanso, v0.39) y del coach, sin repetir (salvo «Equipo», v0.43, que tienen los dos)');
+  check(TIPOS_ATLETA.length === 11 && TIPOS_COACH.length === 7 && TIPOS_COACH.every(([t]) => t === 'comunidad' || !TIPOS_ATLETA.some(([a]) => a === t)),
+    'tipos del atleta (con el fin del descanso, v0.39, y las tareas, v0.48) y del coach (con las tareas hechas), sin repetir (salvo «Equipo», v0.43, que tienen los dos)');
+  check(preferenciasValidas({ ...d, desactivados: ['tarea', 'tarea_hecha'] }), 'quitar las de las tareas (v0.48) es una preferencia válida');
   check(preferenciasValidas({ ...d, desactivados: ['comunidad'] }), 'quitar las del equipo es una preferencia válida');
   check(claveServidor('BFqg_w').length === 4 && claveServidor('BFqg_w')[0] === 4 && claveServidor('BFqg_w')[3] === 0xff, 'la clave VAPID en base64url pasa a bytes');
   check(normalizarB64url('ab+/cd==') === 'ab-_cd', 'las claves del navegador, en base64url sin relleno');
@@ -1260,6 +1261,149 @@ console.log('\nLas mejoras de la comunidad (v0.47)');
   const { fechaMadrid } = await import('../web/src/logica/fechas.js');
   check(fechaMadrid(new Date('2026-11-01T23:30:00Z')) === '2026-11-02' && fechaMadrid(new Date('2026-07-01T21:59:00Z')) === '2026-07-01' && fechaMadrid(new Date('2026-07-01T22:01:00Z')) === '2026-07-02',
     'el día en Madrid, como la base (invierno y verano), sea cual sea la zona del navegador');
+}
+
+console.log('\nv0.48: tareas del coach');
+{
+  const { limpiarTarea, limpiarRespuesta, estadoTarea, cuandoTarea, tareasDelDia, resumenTareas, TIPOS_TAREA } = await import('../web/src/logica/tareas.js');
+  const hoy = '2026-11-04';
+  const lanza = (f) => { try { f(); return false; } catch { return true; } };
+  check(TIPOS_TAREA.map(([t]) => t).join() === 'foto,medida,video,texto', 'cuatro tipos: foto de progreso, peso o medidas, vídeo de técnica y texto (como la base)');
+  check(igual(limpiarTarea({ tipo: 'texto', titulo: '  ¿Qué  tal? ', detalle: '  ', fecha: hoy, ejercicio_id: 'x' }), { tipo: 'texto', titulo: '¿Qué tal?', detalle: null, ejercicio_id: null, fecha: hoy }),
+    'limpia el título, quita un detalle vacío y el ejercicio de lo que no es un vídeo');
+  check(lanza(() => limpiarTarea({ tipo: 'video', titulo: 'Vídeo', fecha: hoy })) && lanza(() => limpiarTarea({ tipo: 'nada', titulo: 'x', fecha: hoy }))
+    && lanza(() => limpiarTarea({ tipo: 'foto', titulo: '​ ', fecha: hoy })) && lanza(() => limpiarTarea({ tipo: 'foto', titulo: 'x'.repeat(121), fecha: hoy }))
+    && lanza(() => limpiarTarea({ tipo: 'foto', titulo: 'x', fecha: '2026-13' })), 'rechaza un vídeo sin ejercicio, un tipo inventado, un título invisible o largo y una fecha mal escrita');
+  check(limpiarRespuesta('  ') === null && limpiarRespuesta(' Bien ') === 'Bien' && lanza(() => limpiarRespuesta('x'.repeat(501))), 'la respuesta del atleta: vacía es ninguna; como mucho 500 letras');
+  const t = (fecha, extra = {}) => ({ id: fecha + (extra.id || ''), titulo: 'T', tipo: 'texto', fecha, hecha_en: null, creada_en: `${fecha}T08:00:00Z`, ...extra });
+  check(estadoTarea(t(hoy), hoy) === 'pendiente' && estadoTarea(t('2026-11-01'), hoy) === 'atrasada' && estadoTarea(t('2026-11-09'), hoy) === 'proxima'
+    && estadoTarea(t('2026-11-01', { hecha_en: '2026-11-02T10:00:00Z' }), hoy) === 'hecha', 'cada tarea, pendiente (hoy), atrasada, próxima o hecha');
+  check(cuandoTarea(t(hoy), hoy) === 'Para hoy' && cuandoTarea(t('2026-11-03'), hoy) === 'Desde ayer' && cuandoTarea(t('2026-11-02'), hoy) === 'Desde el lun'
+    && cuandoTarea(t('2026-10-20'), hoy) === 'Desde el 20 oct' && cuandoTarea(t('2026-11-06'), hoy).startsWith('Para el vie'), 'las atrasadas, sin agobiar: «Desde ayer», «Desde el lun», «Desde el 20 oct»');
+  const lista = [t('2026-11-06'), t(hoy), t('2026-11-01'), t('2026-10-30', { hecha_en: '2026-11-04T09:00:00Z' }), t('2026-10-29', { id: 'v', hecha_en: '2026-11-02T09:00:00Z' })];
+  check(igual(tareasDelDia(lista, hoy).map((x) => x.fecha), ['2026-11-01', hoy, '2026-10-30']), '«Tu día»: las que ya tocan (la más antigua primero) y las hechas hoy; ni las de otro día hechas ni las que aún no tocan');
+  const r = resumenTareas([...lista, t('2026-10-28', { id: 'r', hecha_en: '2026-10-29T09:00:00Z', revisada_en: '2026-10-29T10:00:00Z' })], hoy);
+  check(r.pendiente === 1 && r.atrasada === 1 && r.proxima === 1 && r.hecha === 3 && r.porRevisar === 2, 'el coach ve cuántas hay de cada y cuántas hechas faltan por revisar');
+  const dia = tuDia({ tareas: lista }, hoy);
+  check(dia.filter((x) => x.accion === 'tarea').length === 3 && dia.find((x) => x.id === `tarea-${hoy}`).estado === 'toca' && dia.find((x) => x.accion === 'tarea' && x.estado === 'hecho')?.detalle === 'Tarea hecha'
+    && dia.find((x) => x.id === 'tarea-2026-11-01').detalle === 'Texto. Desde el dom', 'salen en «Tu día» con su tipo y desde cuándo, las hechas hoy como hechas');
+}
+
+console.log('\nv0.48: ¿dónde entrenas hoy? (material de cada ejercicio)');
+{
+  const { materialNecesario, sePuedeCon, adaptarSesion, textoAdaptacion, PERFILES_DEFECTO } = await import('../web/src/logica/material.js');
+  const m = (n) => JSON.stringify(materialNecesario(n));
+  check(m('Press banca') === '[["barra","banco"]]' && m('Sentadilla barra alta') === '[["barra","rack"]]' && m('Press inclinado con mancuernas') === '[["mancuernas","banco"]]'
+    && m('Remo con barra') === '[["barra"]]' && m('Jalón al pecho prono') === '[["poleas"]]' && m('Leg curl tumbado') === '[["maquinas"]]', 'el material de cada ejercicio sale de su nombre (con su banco o su rack)');
+  check(m('Seal row con barra/mancuernas') === '[["mancuernas","banco"],["barra","banco"]]' && m('Remo al mentón en MP/con barra/en polea baja') === '[["multipower"],["poleas"],["barra"]]',
+    'si el nombre da a elegir, vale cualquiera');
+  check(m('Extensiones desde polea alta con barra V1/2/3') === '[["poleas"]]' && m('Dominadas pronas') === '[["dominadas"]]' && m('Ab wheel') === '[]' && m('Zancadas') === '[]'
+    && materialNecesario('Leg raises en banco declinado') === null, 'la barra de una polea no es la barra libre; sin material, nada; si no se sabe, null (no se toca)');
+  check(sePuedeCon('Press plano con mancuernas', PERFILES_DEFECTO.casa) && !sePuedeCon('Press banca', PERFILES_DEFECTO.casa) && sePuedeCon('Leg raises en banco declinado', []), 'se puede con el material de casa o no; lo que no se sabe, se deja');
+  const alt = (id, nombre) => ({ id, nombre, activo: true });
+  const ejs = [
+    { id: 'p1', ejercicio: alt('e1', 'Press banca'), alternativas: [alt('e2', 'Press plano en máquina'), alt('e3', 'Press plano con mancuernas')], hechas: [] },
+    { id: 'p2', ejercicio: alt('e4', 'Leg curl tumbado'), alternativas: [alt('e5', 'Leg curl sentado')], hechas: [] },
+    { id: 'p3', ejercicio: alt('e6', 'Curl martillo con mancuernas'), alternativas: [], hechas: [] },
+    { id: 'p4', ejercicio: alt('e7', 'Sentadilla barra alta'), alternativas: [alt('e8', 'Búlgara con mancuernas+apoyo')], hechas: [{ numero: 1 }] },
+    { id: 'p5', ejercicio: alt('e9', 'Remo con barra'), alternativas: [alt('e10', 'Remo con mancuerna a una mano')], hechas: [] },
+    { id: 'p6', ejercicio: alt('e11', 'Face pull'), alternativas: [{ ...alt('e12', 'Pájaros con mancuernas de pie apoyado en banco'), activo: false }], hechas: [] },
+  ];
+  const r = adaptarSesion(ejs, PERFILES_DEFECTO.casa, { fijos: new Set(['p5']) });
+  check(r.cambios.p1?.id === 'e3' && !r.cambios.p2 && r.sinAlternativa.includes('p2') && !r.cambios.p3 && !r.cambios.p4 && !r.cambios.p5 && r.sinAlternativa.includes('p6'),
+    'cambia por la primera alternativa del coach que se puede hacer; sin ninguna, se queda y se avisa; no toca lo que ya se puede, lo que tiene series ni lo cambiado a mano (ni usa alternativas desactivadas)');
+  check(textoAdaptacion(r, 'casa') === '1 ejercicio cambiado por tu material; 2 sin alternativa con tu material' && textoAdaptacion({ cambios: {}, sinAlternativa: [] }, 'viaje') === 'Todo se puede hacer con tu material de viaje', 'y lo dice en una línea');
+}
+
+console.log('\nv0.48: entrenador por voz, enlaces y hora de Madrid');
+{
+  const { fraseSerie, fraseCuenta, elegirVoz } = await import('../web/src/logica/voz.js');
+  check(fraseSerie({ numero: 3, series: 4, nombre: 'Press banca', kg: 80, reps: 6 }) === 'Serie 3 de press banca: 80 kilos por 6.'
+    && fraseSerie({ numero: 4, series: 4, nombre: 'Press banca', kg: 22.5, reps: 8 }) === 'Serie 4 de press banca: 22,5 kilos por 8. Última serie.'
+    && fraseSerie({ numero: 1, series: 3, nombre: 'Dominadas pronas', kg: null, reps: 6 }) === 'Serie 1 de dominadas pronas: 6 repeticiones.', 'la frase de la serie siguiente (con decimales a la española y «Última serie»)');
+  check(fraseCuenta(10) === 'Diez segundos' && fraseCuenta(2) === 'Dos' && fraseCuenta(5) === null, 'la cuenta de los últimos segundos');
+  check(elegirVoz([{ lang: 'en-US' }, { lang: 'es-MX' }, { lang: 'es-ES', name: 'x' }])?.lang === 'es-ES' && elegirVoz([{ lang: 'en-GB' }]) === null, 'la voz de España si la hay');
+  const { idYoutube, trozosConEnlaces, videosYoutube, miniaturaYoutube } = await import('../web/src/logica/enlaces.js');
+  check(idYoutube('https://www.youtube.com/watch?v=gMgvBspQ9lk') === 'gMgvBspQ9lk' && idYoutube('https://youtu.be/gMgvBspQ9lk?t=10') === 'gMgvBspQ9lk'
+    && idYoutube('https://m.youtube.com/shorts/gMgvBspQ9lk') === 'gMgvBspQ9lk' && idYoutube('https://youtube.com.evil.test/watch?v=gMgvBspQ9lk') === null
+    && idYoutube('javascript:alert(1)') === null && idYoutube('https://www.youtube.com/watch?v=corto') === null, 'el vídeo de YouTube de un enlace (watch, youtu.be, shorts); nada de otros sitios ni ids raros');
+  const tr = trozosConEnlaces('Mira esto: https://youtu.be/gMgvBspQ9lk. Y https://fbe.test/guia');
+  check(tr.length === 4 && tr[1].youtube === 'gMgvBspQ9lk' && tr[1].valor === 'https://youtu.be/gMgvBspQ9lk' && tr[2].valor === '. Y ' && tr[3].youtube === null && videosYoutube('https://youtu.be/gMgvBspQ9lk https://youtu.be/gMgvBspQ9lk').length === 1
+    && miniaturaYoutube('gMgvBspQ9lk') === 'https://i.ytimg.com/vi/gMgvBspQ9lk/mqdefault.jpg', 'el texto en trozos (sin la puntuación del final) y la miniatura de i.ytimg.com');
+  const { instanteMadrid, partesMadrid, fmtProgramado } = await import('../web/src/logica/fechas.js');
+  check(instanteMadrid('2026-11-02', '08:00') === '2026-11-02T07:00:00.000Z' && instanteMadrid('2026-07-02', '08:00') === '2026-07-02T06:00:00.000Z' && instanteMadrid('2026-11-02', '25:00') === null,
+    'el instante de un día y una hora de Madrid, en invierno y en verano');
+  check(partesMadrid('2026-11-02T07:00:00Z').hora === '08:00' && fmtProgramado('2026-11-02T07:00:00Z') === 'lun 2 nov, 8:00', '«lun 2 nov, 8:00»');
+}
+
+console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negocio');
+{
+  const { resumenMes, calendarioMes, datosCompartirMes, mesAnterior, nombreMes, ultimoDia, sumarMes } = await import('../web/src/logica/mes.js');
+  check(mesAnterior(new Date('2026-11-01T00:30:00+01:00')) === '2026-10' && mesAnterior(new Date('2026-10-31T23:30:00Z')) === '2026-10' && ultimoDia('2026-02') === '2026-02-28' && sumarMes('2026-01', -1) === '2025-12' && nombreMes('2026-10') === 'octubre',
+    'el mes que se resume es el anterior al de hoy en Madrid (el día 1 ya sale octubre)');
+  const s = (sem, i, fecha, completada = true, extra = {}) => ({ id: `${sem}-${i}`, semana_lunes: sem, completada, fecha_realizada: completada ? fecha : null, duracion_min: 60, ...extra });
+  const sesiones = [s('2026-09-28', 1, '2026-09-29'), s('2026-09-28', 2, '2026-10-01'), s('2026-10-05', 1, '2026-10-06'), s('2026-10-05', 2, '2026-10-08'),
+    s('2026-10-12', 1, '2026-10-13'), s('2026-10-12', 2, null, false), s('2026-10-26', 1, '2026-10-27', true, { cardio_hecho: { modalidad: 'carrera', minutos: 30, km: 5.2 } }), s('2026-10-26', 2, '2026-11-01')];
+  const serie = (fecha, kg, reps, sesion, ej = 'e1') => ({ fecha, kg, reps, rpe: 8, sesion_id: sesion, ejercicio_id: ej, ejercicio: 'Press', registrada_en: `${fecha}T18:00:00Z` });
+  const series = [serie('2026-09-22', 60, 5, 'x'), serie('2026-10-06', 62.5, 5, '2026-10-05-1'), serie('2026-10-06', 62.5, 5, '2026-10-05-1'), serie('2026-10-13', 65, 5, '2026-10-12-1'), serie('2026-11-01', 70, 5, '2026-10-26-2')];
+  const h = { id: 'h', nombre: 'Pasos', tipo: 'numero', objetivo: 8000, sentido: 'al_menos', dias_semana: 7, icono: 'pasos', creado_en: '2026-10-25T09:00:00Z' };
+  const reg = Array.from({ length: 7 }, (_, i) => ({ fecha: `2026-10-${25 + i}`, valor: i % 2 ? 9000 : 5000 }));
+  const nut = { planes: [{ desde: '2026-09-01', modo: 'sin_contar' }], registros: [{ fecha: '2026-10-10', cumplido: 2 }, { fecha: '2026-10-11', cumplido: 1 }, { fecha: '2026-11-01', cumplido: 2 }] };
+  const r = resumenMes({ series, sesiones, habitos: [{ habito: h, registros: reg }], nutricion: nut }, '2026-10');
+  check(r.sesiones.hechas === 5 && r.sesiones.previstas === 8 && r.dias === 5, `octubre: sesiones hechas en el mes (${r.sesiones.hechas}) frente a las previstas de sus semanas (${r.sesiones.previstas}: las semanas cuentan para el mes de su jueves) y días entrenados (${r.dias})`);
+  check(r.series === 3 && r.tonelaje === 62.5 * 10 + 65 * 5 && r.records.length === 2 && r.cardio.minutos === 30 && r.cardio.km === 5.2 && r.minutos === 300, 'series, tonelaje, récords del mes y el cardio (km y minutos)');
+  check(r.mejorRacha === 2 && r.semanasCompletas === 3, `la mejor racha de semanas completas del mes (${r.mejorRacha}) y cuántas completas (${r.semanasCompletas})`);
+  check(r.habitos?.media === Math.round((3 / 7) * 100) && r.nutricion?.dias === 2 && r.nutricion.bien === 1 && r.nutricion.cerca === 1, 'hábitos (desde que existe el hábito) y nutrición del mes, frente a su plan');
+  check(resumenMes({ series, sesiones, habitos: [{ habito: h, registros: reg }], nutricion: nut }, '2026-10', { salud: false }).habitos === null
+    && resumenMes({ series, sesiones, nutricion: nut }, '2026-10', { conNutricion: false }).nutricion === null && resumenMes({}, '2026-10').vacio, 'sin consentimiento de salud, sin hábitos ni nutrición; un mes sin nada, vacío');
+  const cal = calendarioMes('2026-10', r.diasEntrenados);
+  check(cal.length === 5 && cal[0][0].iso === '2026-09-28' && cal[0][0].fuera && cal[1][1].entrenado && cal.flat().filter((d) => d.entrenado).length === 5, 'el calendario del mes: semanas de lunes a domingo, con los días entrenados');
+  const img = datosCompartirMes(r);
+  check(!JSON.stringify(img).match(/habitos|nutricion|peso|medida|kcal/) && img.sesiones === 5 && img.records === 2 && img.calendario.length === 5, 'la imagen para compartir no lleva hábitos, nutrición, peso ni medidas');
+
+  const { vistaBloque } = await import('../web/src/logica/bloque.js');
+  const todas = [{ numero: 1, fecha_inicio: '2026-10-19', publicada: true }, { numero: 2, fecha_inicio: '2026-10-26', publicada: true }, { numero: 3, fecha_inicio: '2026-11-02', publicada: false }];
+  const semanas = [{ id: 'w1', numero: 1, fecha_inicio: '2026-10-19', foco: 'volumen' }, { id: 'w2', numero: 2, fecha_inicio: '2026-10-26', foco: 'descarga' }];
+  const ses = { w1: [{ id: 's1', nombre: 'A', completada: true, orden: 1 }, { id: 's2', nombre: 'B', completada: true, orden: 2 }], w2: [{ id: 's3', nombre: 'A', completada: true, orden: 1 }, { id: 's4', nombre: 'B', completada: false, orden: 2 }] };
+  const pautas = [{ id: 'p1', sesion_id: 's1', ejercicio_id: 'e1', prioridad: 'alta', carga_sugerida_kg: 60 }, { id: 'p3', sesion_id: 's3', ejercicio_id: 'e1', prioridad: 'alta', carga_sugerida_kg: 55, series_detalle: [{ kg: 57.5 }, { kg: 55 }] },
+    { id: 'px', sesion_id: 's2', ejercicio_id: 'e2', prioridad: 'media', carga_sugerida_kg: 20 }];
+  const v = vistaBloque({ bloque: { id: 'b' }, todas, semanas, sesiones: ses, pautas, series: [{ sesion_ejercicio_id: 'p1', kg: 60, reps: 5 }, { sesion_ejercicio_id: 'p1', kg: 62.5, reps: 3 }, { sesion_ejercicio_id: 'p3', kg: 80, reps: 5, sustituto_id: 'otro' }], ejercicios: { e1: { nombre: 'Press' } } }, '2026-10-29');
+  check(v.semanas.map((w) => w.estado).join() === 'hecha,actual,por_publicar' && v.semanas[2].sesiones.length === 0 && v.semanas[2].foco === null && v.semanas[1].descarga && v.hechas === 3 && v.total === 4 && v.porPublicar === 1,
+    'el bloque entero: hechas, la actual y las por publicar (sin nada de lo que llevan)');
+  check(v.principales.length === 1 && igual(v.principales[0].puntos, [{ numero: 1, pautado: 60, hecho: 62.5 }, { numero: 2, pautado: 57.5, hecho: null }]),
+    'de los obligatorios, lo pautado (también serie a serie) y lo hecho cada semana (lo hecho con otro ejercicio no cuenta)');
+
+  const { compararCheckins } = await import('../web/src/logica/comparar.js');
+  const c1 = { id: 'c1', semana_inicio: '2026-10-05', energia: 3, horas_sueno: '6-7', respuestas: { q: 2 }, notas: 'Cansada' };
+  const c2 = { id: 'c2', semana_inicio: '2026-10-26', energia: 4, horas_sueno: '7-8', respuestas: { q: 4 } };
+  const cmp = compararCheckins(c2, c1, {
+    pesos: [{ fecha: '2026-10-06', kg: 63.2 }, { fecha: '2026-10-27', kg: 62.4 }], medidas: [{ fecha: '2026-10-07', cintura_cm: 74.5 }, { fecha: '2026-11-02', cintura_cm: 73.4 }],
+    preguntas: { q: { id: 'q', texto: 'Estrés', tipo: 'escala', atleta_id: null, activa: true, orden: 0 } }, fotos: [{ id: 'f1', fecha: '2026-10-06', pose: 'frente' }, { id: 'f2', fecha: '2026-10-29', pose: 'frente' }],
+  });
+  const fila = (k) => cmp.filas.find((f) => f.clave === k);
+  check(cmp.antes.checkin.id === 'c1' && fila('peso').dif === -0.8 && fila('peso').difTexto === '−0,8 kg' && fila('cintura_cm').b === 73.4 && fila('energia').dif === 1 && fila('p-q').a === 2 && fila('p-q').b === 4,
+    'comparar dos check-ins: en orden, el peso y las medidas de esas semanas (o de 3 días alrededor) con su diferencia y cada respuesta');
+  check(cmp.antes.fotos[0].id === 'f1' && cmp.despues.fotos[0].id === 'f2' && fila('notas').a === 'Cansada' && !fila('pasos'), 'y las fotos de esos días; lo que no hay, no sale');
+
+  const { panelNegocio, euros, OCULTO } = await import('../web/src/logica/negocio.js');
+  const hoy = '2026-11-01';
+  const at = [{ id: 'a', nombre: 'Ana', estado: 'activo', fecha_alta: '2026-08-24' }, { id: 'b', nombre: 'Bea', estado: 'activo', fecha_alta: '2026-10-03', nutricion: false },
+    { id: 'c', nombre: 'Cris', estado: 'baja', fecha_alta: '2026-03-01', baja_en: '2026-09-10' }, { id: 'd', nombre: 'Dani', estado: 'baja', fecha_alta: '2025-01-01', baja_en: null }];
+  const acuerdos = [{ atleta_id: 'a', servicio: 'Performance', precio_mes: 75, ciclo: 'trimestral', desde: '2026-08-24' }, { atleta_id: 'b', servicio: 'Essential', precio_mes: 49, ciclo: 'mensual', desde: '2026-10-03' }];
+  const pagos = [{ atleta_id: 'a', periodo_desde: '2026-08-24', periodo_hasta: '2026-11-23', importe: 225, estado: 'pagado', fecha_pago: '2026-08-26' },
+    { atleta_id: 'b', periodo_desde: '2026-10-03', periodo_hasta: '2026-11-02', importe: 49, estado: 'pagado', fecha_pago: '2026-10-04' },
+    { atleta_id: 'b', periodo_desde: '2026-11-03', periodo_hasta: '2026-12-02', importe: 49, estado: 'pendiente', fecha_pago: null },
+    { atleta_id: 'c', periodo_desde: '2026-08-01', periodo_hasta: '2026-08-31', importe: 1308, estado: 'pagado', fecha_pago: '2026-08-02' }];
+  const n = panelNegocio({ atletas: at, acuerdos, pagos, constancia: [100, 75, 50] }, hoy);
+  const mes = (m) => n.meses.find((x) => x.mes === m);
+  check(n.activos === 2 && n.porServicio.map((x) => x.nombre).join() === 'Essential,Performance' && n.porTipo.some((t) => t.nombre === 'Solo entrenamiento' && t.n === 1) && n.mrr === 124,
+    'atletas activos por servicio y por lo que les llevas, y lo que pagan al mes');
+  check(n.meses.length === 12 && n.meses[11].mes === '2026-11' && mes('2026-08').cobrado === 1533 && mes('2026-08').previsto === 1533 && mes('2026-10').cobrado === 49 && mes('2026-11').previsto === 49 && n.cobrado12 === 1582,
+    'cobrado y previsto de los últimos 12 meses (por fecha de pago y por periodo)');
+  check(mes('2026-08').altas === 1 && mes('2026-10').altas === 1 && mes('2026-09').bajas === 1 && n.bajasSinFecha === 1, 'altas y bajas por mes (las bajas sin fecha, aparte)');
+  check(n.renovaciones.length === 2 && n.renovaciones[0].atleta.id === 'b' && n.renovaciones[0].apuntado && n.renovaciones[0].importe === 49 && n.renovaciones[1].atleta.id === 'a' && n.renovaciones[1].fecha === '2026-11-24' && n.renovaciones[1].importe === 225
+    && n.constanciaMedia === 75, 'lo que renueva en 30 días (el cobro apuntado o el final del periodo, con su importe) y la constancia media del equipo');
+  check(euros(1308) === '1.308 €' && euros(74.5) === '74,50 €' && euros(1308, true) === OCULTO, 'los euros a la española («1.308 €») o tapados');
 }
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

@@ -6,6 +6,7 @@ import { CoachApp } from './coach/CoachApp.jsx';
 import { quitarPortada } from './portada.js';
 import { desactivarPush, desactivarPushLocal, sincronizarPush } from '../datos/push.js';
 import { fichaCambiada } from '../logica/nivel.js';
+import { quitarInsignia } from './insignia-app.js';
 
 const CLAVE_ACTIVACION = 'fbe-activacion-pendiente';
 export function guardarActivacionPendiente(datos) { try { localStorage.setItem(CLAVE_ACTIVACION, JSON.stringify(datos)); } catch { /* */ } }
@@ -148,7 +149,7 @@ export function App({ backend, api, cola }) {
     // Tras cambiar la foto o el nombre: el perfil nuevo, sin recargar toda la cuenta
     fijarPerfil: (p) => setEstado((e) => ({ ...e, perfil: p })),
     // Al cerrar sesión, este móvil deja de recibir las notificaciones de esa cuenta
-    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); await backend.auth.salir(); resolver(true); },
+    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); await backend.auth.salir(); resolver(true); },
     reiniciarDemo: () => { backend.reiniciar?.(); ultimoUid.current = undefined; resolver(true); },
     // Modo atleta del coach (v0.37)
     propioCoach: estado.fase === 'coach' ? estado.propio || null : null,

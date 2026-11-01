@@ -4,7 +4,7 @@ import { fmtCorta, diasEntre } from '../logica/fechas.js';
 
 // Antes y después: dos fotos de progreso lado a lado o una encima de otra con un deslizador.
 // fotos: archivos de tipo foto_progreso (de más reciente a más antigua o al revés: se ordenan aquí)
-function useUrls(fotos) {
+export function useUrls(fotos) {
   const { api } = useApp();
   const [urls, setUrls] = useState({});
   useEffect(() => {

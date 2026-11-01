@@ -1,6 +1,8 @@
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Cargando, usePreferencia } from './comunes.jsx';
-import { hoyISO, desdeISO } from '../logica/fechas.js';
+import { hoyISO, desdeISO, instanteMadrid, fmtProgramado, sumarDias, fechaMadrid } from '../logica/fechas.js';
+import { TextoConEnlaces } from './Enlaces.jsx';
+import { HojaProgramar } from './Programar.jsx';
 
 const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const corta = (iso) => { const d = desdeISO(iso); return `${d.getDate()} ${MES[d.getMonth()]}`; };
@@ -23,7 +25,7 @@ export function AvisosCoach() {
           <Icono n="altavoz" />
           <div class="pila-xs">
             <span class="mini aviso-de">De tu coach{a.atleta_id ? ', para ti' : ''}</span>
-            <p>{a.texto}</p>
+            <TextoConEnlaces texto={a.texto} />
             {a.hasta && <span class="mini terciario">{textoVigencia(a)}</span>}
           </div>
           <button class="btn btn-icono plano" onClick={() => setCerrados([...cerrados, a.id].slice(-50))} aria-label="Ocultar el aviso"><Icono n="cerrar" /></button>
@@ -39,10 +41,14 @@ export function HojaAvisos({ alCerrar }) {
   const avisos = useCarga(() => api.avisosCoach(), []);
   const atletas = useCarga(() => api.atletas(), []);
   const hoy = hoyISO();
-  const [f, setF] = useState({ texto: '', para: '', desde: hoy, hasta: '' });
+  const [f, setF] = useState({ texto: '', para: '', desde: hoy, hasta: '', programar: false, dia: sumarDias(fechaMadrid(), 1), hora: '08:00' });
+  const [cambiar, setCambiar] = useState(null); // v0.48: un aviso programado a cambiar
   const [ocupado, setOcupado] = useState(false);
   const nombre = Object.fromEntries((atletas.datos || []).map((a) => [a.id, a.nombre]));
-  const valido = /[^\s\u200b\ufeff]/.test(f.texto) && f.desde && (!f.hasta || f.hasta >= f.desde);
+  const instante = f.programar ? instanteMadrid(f.dia, f.hora) : null;
+  const futuro = !f.programar || (!!instante && Date.parse(instante) > Date.now() + 60000);
+  const desdeReal = f.programar ? f.dia : f.desde;
+  const valido = /[^\s\u200b\ufeff]/.test(f.texto) && desdeReal && (!f.hasta || f.hasta >= desdeReal) && futuro;
   const [verCaducados, setVerCaducados] = useState(false);
   const todos = avisos.datos || [];
   const vigentes = todos.filter((a) => !a.hasta || a.hasta >= hoy);
@@ -52,9 +58,9 @@ export function HojaAvisos({ alCerrar }) {
     if (!valido) return;
     setOcupado(true);
     try {
-      await api.crear('avisos', { texto: f.texto.trim(), atleta_id: f.para || null, desde: f.desde, hasta: f.hasta || null });
-      aviso('Aviso publicado');
-      setF({ texto: '', para: '', desde: hoy, hasta: '' });
+      await api.guardarAviso({ texto: f.texto.trim(), atleta_id: f.para || null, desde: f.desde, hasta: f.hasta || null, enviarEn: instante });
+      aviso(instante ? `Aviso programado para el ${fmtProgramado(instante)}` : 'Aviso publicado');
+      setF({ ...f, texto: '', para: '', desde: hoy, hasta: '', programar: false });
       avisos.recargar(true);
     } catch (err) { aviso(err.message, 'error'); } finally { setOcupado(false); }
   }
@@ -69,8 +75,9 @@ export function HojaAvisos({ alCerrar }) {
           {vigentes.map((a) => (
             <li key={a.id} class="panel-pad aviso-fila">
               <div class="pila-xs">
-                <span class="mini terciario">{a.atleta_id ? `Para ${nombre[a.atleta_id] || 'un atleta'}` : 'Para todos'}. {a.desde > hoy ? 'Programado' : 'En vigor'}: {textoVigencia(a, hoy).toLowerCase()}</span>
+                <span class="mini terciario">{a.atleta_id ? `Para ${nombre[a.atleta_id] || 'un atleta'}` : 'Para todos'}. {a.programado ? `Programado para el ${fmtProgramado(a.enviar_en)}` : a.desde > hoy ? 'Programado' : 'En vigor'}{a.programado && !a.hasta ? '' : `: ${textoVigencia(a, hoy).toLowerCase()}`}</span>
                 <span>{a.texto}</span>
+                {a.programado && <button class="btn-texto mini" style="justify-self:start" onClick={() => setCambiar(a)}><Icono n="editar" /> Cambiar</button>}
               </div>
               <button class="btn btn-icono plano" onClick={() => quitar(a)} aria-label={`Quitar el aviso «${a.texto.slice(0, 40)}»`}><Icono n="basura" /></button>
             </li>
@@ -108,13 +115,25 @@ export function HojaAvisos({ alCerrar }) {
             {(atletas.datos || []).filter((a) => a.estado !== 'baja').map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
           </select>
         </div>
+        <label class="casilla"><input type="checkbox" checked={f.programar} onChange={(e) => setF({ ...f, programar: e.currentTarget.checked })} /><span>Programar el envío (a una hora concreta)</span></label>
         <div class="fila-campos">
-          <div class="campo"><label for="av-desde">Desde</label><input id="av-desde" class="entrada" type="date" required value={f.desde} onInput={(e) => setF({ ...f, desde: e.currentTarget.value })} /></div>
-          <div class="campo"><label for="av-hasta">Hasta (opcional)</label><input id="av-hasta" class="entrada" type="date" value={f.hasta} min={f.desde} onInput={(e) => setF({ ...f, hasta: e.currentTarget.value })} /></div>
+          {f.programar ? (
+            <>
+              <div class="campo"><label for="av-dia">Sale el</label><input id="av-dia" class="entrada" type="date" required min={fechaMadrid()} max={sumarDias(fechaMadrid(), 89)} value={f.dia} onInput={(e) => setF({ ...f, dia: e.currentTarget.value })} /></div>
+              <div class="campo"><label for="av-hora">A las</label><input id="av-hora" class="entrada" type="time" required step="300" value={f.hora} onInput={(e) => setF({ ...f, hora: e.currentTarget.value })} /></div>
+            </>
+          ) : <div class="campo"><label for="av-desde">Desde</label><input id="av-desde" class="entrada" type="date" required value={f.desde} onInput={(e) => setF({ ...f, desde: e.currentTarget.value })} /></div>}
+          <div class="campo"><label for="av-hasta">Hasta (opcional)</label><input id="av-hasta" class="entrada" type="date" value={f.hasta} min={desdeReal} onInput={(e) => setF({ ...f, hasta: e.currentTarget.value })} /></div>
         </div>
-        {f.hasta && f.hasta < f.desde && <span class="error-campo">La fecha de fin es anterior a la de inicio.</span>}
-        <button class="btn btn-primario btn-grande" disabled={!valido || ocupado}><Icono n="altavoz" /> Publicar aviso</button>
+        {f.programar && <span class={`peq ${futuro ? 'secundario' : 'error-campo'}`}>{futuro && instante ? `Saldrá el ${fmtProgramado(instante)} (hora de Madrid): hasta entonces no lo ven ni les llega nada.` : 'Esa hora ya ha pasado: elige una más adelante.'}</span>}
+        {f.hasta && f.hasta < desdeReal && <span class="error-campo">La fecha de fin es anterior a la de inicio.</span>}
+        <button class="btn btn-primario btn-grande" disabled={!valido || ocupado}><Icono n={f.programar ? 'reloj' : 'altavoz'} /> {f.programar ? 'Programar aviso' : 'Publicar aviso'}</button>
       </form>
+      {cambiar && (
+        <HojaProgramar titulo="Cambiar el aviso programado" inicial={cambiar.enviar_en} conTexto texto={cambiar.texto} boton="Guardar" alCerrar={() => setCambiar(null)}
+          alGuardar={async ({ enviarEn, texto }) => { try { await api.guardarAviso({ texto, atleta_id: cambiar.atleta_id, hasta: cambiar.hasta && cambiar.hasta >= fechaMadrid(new Date(enviarEn)) ? cambiar.hasta : null, enviarEn }, cambiar.id); aviso(`Ahora sale el ${fmtProgramado(enviarEn)}`); setCambiar(null); avisos.recargar(true); } catch (e) { aviso(e.message, 'error'); } }}
+          alEnviarYa={async ({ texto }) => { try { await api.guardarAviso({ texto, atleta_id: cambiar.atleta_id, desde: hoy, hasta: cambiar.hasta, enviarEn: null }, cambiar.id); aviso('Aviso publicado'); setCambiar(null); avisos.recargar(true); } catch (e) { aviso(e.message, 'error'); } }} />
+      )}
     </Hoja>
   );
 }

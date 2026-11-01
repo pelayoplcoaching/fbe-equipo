@@ -336,6 +336,52 @@ console.log('\nEl service worker (lo que pasa en el móvil)');
   check(abierta === 'https://atletas.fbe.test/app/#hoy', 'con la app cerrada, la abre ahí');
 }
 
+console.log('\nEl service worker: compartir un vídeo a la app y la marca en el icono (v0.48)');
+{
+  const { readFileSync } = await import('node:fs');
+  const codigo = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8').replace('__VERSION__', 'x').replace('__ARCHIVOS__', '[]');
+  const crear = ({ conMarca }) => {
+    const oyentes = {};
+    const guardado = new Map();
+    const marcas = [];
+    const self = {
+      addEventListener: (t, f) => { oyentes[t] = f; },
+      registration: { scope: 'https://atletas.fbe.test/app/', showNotification: async () => {} },
+      clients: { matchAll: async () => [], openWindow: async () => {}, claim: async () => {} },
+      skipWaiting: () => {}, location: { origin: 'https://atletas.fbe.test' },
+      ...(conMarca ? { navigator: { setAppBadge: async (n) => { marcas.push(n); } } } : { navigator: {} }),
+    };
+    const caches = { open: async () => ({ put: async (k, r) => { guardado.set(k, r); }, match: async (k) => guardado.get(k) }), keys: async () => [], delete: async () => true };
+    new Function('self', 'caches', codigo)(self, caches);
+    const pedir = async (req) => {
+      let respuesta = null;
+      oyentes.fetch({ request: req, respondWith: (p) => { respuesta = p; } });
+      return respuesta && await respuesta;
+    };
+    const push = async (datos) => { let pr; oyentes.push({ data: { json: () => JSON.parse(datos), text: () => datos }, waitUntil: (x) => { pr = x; } }); await pr; };
+    return { pedir, push, guardado, marcas };
+  };
+  const sw = crear({ conMarca: true });
+  const fd = new FormData();
+  fd.append('video', new File([new Uint8Array([1, 2, 3, 4])], 'sentadilla.mp4', { type: 'video/mp4' }));
+  const r = await sw.pedir(new Request('https://atletas.fbe.test/app/compartir-video', { method: 'POST', body: fd }));
+  const guardado = sw.guardado.get('compartido/video');
+  check(r?.status === 303 && r.headers.get('location') === 'https://atletas.fbe.test/app/?compartido=1#hoy', 'compartir un vídeo desde la galería abre la app en Hoy (?compartido=1)');
+  check(!!guardado && guardado.headers.get('content-type') === 'video/mp4' && decodeURIComponent(guardado.headers.get('x-nombre')) === 'sentadilla.mp4' && (await guardado.arrayBuffer()).byteLength === 4,
+    'y el vídeo se queda guardado en el móvil (en su caché) para que la app lo recoja');
+  const fd2 = new FormData();
+  fd2.append('video', new File(['hola'], 'nota.txt', { type: 'text/plain' }));
+  const sw2 = crear({ conMarca: false });
+  const r2 = await sw2.pedir(new Request('https://atletas.fbe.test/app/compartir-video', { method: 'POST', body: fd2 }));
+  check(r2?.headers.get('location').includes('compartido=0') && !sw2.guardado.size, 'lo que no es un vídeo no se guarda (la app dice que no ha llegado nada)');
+  check(await sw.pedir(new Request('https://otra.test/app/compartir-video', { method: 'POST', body: fd })) === null, 'un POST de otro sitio no lo atiende');
+  await sw.push(JSON.stringify({ titulo: 'Pelayo te ha puesto una tarea', url: '#hoy' }));
+  check(sw.marcas.length === 1, 'al llegar una notificación, marca el icono de la app (donde se puede)');
+  let fallo = null;
+  try { await sw2.push(JSON.stringify({ titulo: 'Sin marcas', url: '#hoy' })); } catch (e) { fallo = e; }
+  check(fallo === null, 'y donde no se puede (iOS, Firefox), sigue igual');
+}
+
 console.log('\nEn el navegador: activar, poner al día y quitar (push.js)');
 {
   // Un navegador de mentira, con lo justo de lo que usa push.js

@@ -3,6 +3,8 @@ import { leerAjustes } from '../ajustes.js';
 import { SONIDOS } from '../../datos/sonidos-descanso.js';
 import { Icono, useApp } from '../comunes.jsx';
 import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, propuestaBackoff, tieneDetalle, objetivoSerie } from '../../logica/calculos.js';
+import { hablar, prepararVoz } from '../voz.js';
+import { fraseCuenta } from '../../logica/voz.js';
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
 
@@ -37,6 +39,8 @@ export function prepararAudio() {
   try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch { /* solo Safari */ }
   try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch { audio = null; }
   cargar(leerAjustes().sonidoDescanso);
+  // v0.48: el entrenador por voz se «despierta» en el mismo toque (iPhone)
+  prepararVoz();
 }
 function pitidoSuave(volumen = 1) {
   if (!audio) return;
@@ -139,7 +143,7 @@ export function aNumero(t) {
 // acabe (migración 025); si suena aquí, con la app delante, se anula, y también al saltarlo o cerrarlo. Si la app
 // vuelve tarde (el aviso ya sonó en el móvil), no suena otra vez.
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
-export function Temporizador({ fin, total, prioridad, texto, alCambiar, clase = '' }) {
+export function Temporizador({ fin, total, prioridad, texto, voz = null, alCambiar, clase = '' }) {
   const { api } = useApp() || {};
   const ahora = useAhora(250);
   const quedan = Math.max(0, (fin - ahora) / 1000);
@@ -158,7 +162,11 @@ export function Temporizador({ fin, total, prioridad, texto, alCambiar, clase = 
       avisado.current = true;
       const tarde = Date.now() - fin > 4000; // la app estaba congelada: ya avisó el móvil
       if (document.visibilityState === 'visible' && programado.current) { programado.current = false; api?.cancelarDescanso?.(); }
-      if (!tarde) pitar();
+      if (!tarde) {
+        pitar();
+        // v0.48: con el entrenador por voz, lo que toca ahora («Serie 3 de press banca: 80 kilos por 6»)
+        if (leerAjustes().voz) setTimeout(() => hablar(voz || '¡Vamos!'), leerAjustes().sonido ? 900 : 0);
+      }
     }
     if (quedan > 0) avisado.current = false;
   }, [quedan <= 0]);
@@ -166,8 +174,13 @@ export function Temporizador({ fin, total, prioridad, texto, alCambiar, clase = 
   const segundo = Math.ceil(quedan);
   const contado = useRef(null);
   useEffect(() => {
-    if (segundo >= 1 && segundo <= 3 && contado.current !== segundo && leerAjustes().cuentaAtras) {
-      tono(660, 0.1, 0.35 * Math.min(1, Math.max(0.1, Number(leerAjustes().volumen) || 1)));
+    const a = leerAjustes();
+    // Con el entrenador por voz, la cuenta se dice (a los 10 y en los 3 últimos); si no, los pitidos de siempre
+    if (a.voz && contado.current !== segundo && fraseCuenta(segundo) && (segundo === 10 ? total > 20 : true)) {
+      hablar(fraseCuenta(segundo));
+      if (segundo <= 3) vibrarCorto(80);
+    } else if (segundo >= 1 && segundo <= 3 && contado.current !== segundo && a.cuentaAtras) {
+      tono(660, 0.1, 0.35 * Math.min(1, Math.max(0.1, Number(a.volumen) || 1)));
       vibrarCorto(80);
     }
     contado.current = segundo;
@@ -179,7 +192,7 @@ export function Temporizador({ fin, total, prioridad, texto, alCambiar, clase = 
   }, [quedan <= 0]);
   const R = 31, C = 2 * Math.PI * R;
   const frac = total ? Math.min(1, quedan / total) : 0;
-  const ajustar = (s) => alCambiar({ fin: Math.max(Date.now(), fin) + s * 1000, total: Math.max(total, (Math.max(Date.now(), fin) - Date.now()) / 1000 + s), prioridad, texto });
+  const ajustar = (s) => alCambiar({ fin: Math.max(Date.now(), fin) + s * 1000, total: Math.max(total, (Math.max(Date.now(), fin) - Date.now()) / 1000 + s), prioridad, texto, voz });
   return (
     <div class={`temporizador ${clase} ${quedan <= 0 ? 'fin' : ''}`} role="timer" aria-live="off">
       <svg class="disco-t" viewBox="0 0 76 76" aria-hidden="true">

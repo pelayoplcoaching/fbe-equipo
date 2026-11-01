@@ -1,6 +1,6 @@
 // Datos de la demo, relativos a la fecha de hoy para que siempre parezcan actuales.
 // Atletas y cifras ficticios. Contraseña de todas las cuentas demo: "demo".
-import { hoyISO, lunesDe, sumarDias } from '../logica/fechas.js';
+import { hoyISO, lunesDe, sumarDias, instanteMadrid } from '../logica/fechas.js';
 import { BIBLIOTECA_BASE } from './biblioteca-base.js';
 import { FAQ } from './faq.js';
 import { RESPUESTAS_EJEMPLO } from './respuestas.js';
@@ -552,7 +552,77 @@ export function semillaDemo(hoy = hoyISO()) {
   // v0.26: recetas, Lucía (solo nutrición) y el menú de la semana (al final: no cambia lo aleatorio de lo anterior)
   sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana });
   sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos });
+  sembrarV048(db, { hoy, hace, ana, ruben, carlos, ej, ahoraISO, mesDe, inicioMes });
   return db;
+}
+
+// v0.48 (al final: no cambia lo aleatorio de lo anterior): alternativas marcadas por el coach en la biblioteca de la
+// demo (para «¿Dónde entrenas hoy?»; la biblioteca real ya trae las suyas), tareas, plantillas, un mensaje y un aviso
+// programados y un atleta que se dio de baja hace dos meses (para el panel de negocio).
+function sembrarV048(db, { hoy, hace, ana, ruben, carlos, ej, ahoraISO, mesDe, inicioMes }) {
+  const ALTERNATIVAS = {
+    'Press banca': ['Press plano con mancuernas', 'Press plano en máquina'],
+    'Remo con barra': ['Remo con mancuerna a una mano', 'Remo en polea unilateral'],
+    'Press militar con barra': ['Press militar sentado con mancuernas', 'Press militar en máquina/inverso'],
+    'Jalón al pecho prono': ['Dominadas pronas', 'Remo con mancuerna a una mano'],
+    'Sentadilla barra alta': ['Sentadilla en multipower', 'Búlgara con mancuernas+apoyo'],
+    'Peso muerto rumano con barra RDL': ['Peso muerto rumano con mancuernas'],
+    'Peso muerto convencional': ['Peso muerto rumano con mancuernas'],
+    'Leg curl tumbado': ['Leg curl sentado'],
+    'Gemelo en máquina de pie': ['Sóleo sentado con mancuernas/en multipower'],
+    'Face pull': ['Pájaros con mancuernas de pie apoyado en banco'],
+    'Extensiones desde polea alta con cuerda': ['Press francés con mancuernas tumbado'],
+    'Remo gironda': ['Remo con mancuerna a una mano'],
+    'Hip thrust': ['Puente de glúteo'],
+    'Prensa (miscelánea)': ['Búlgara con mancuernas+apoyo'],
+  };
+  for (const [nombre, alts] of Object.entries(ALTERNATIVAS)) {
+    const e = ej[nombre];
+    if (e && !(e.alternativas || []).length) e.alternativas = alts.map((n) => ej[n]?.id).filter(Boolean);
+  }
+  const lucia = db.atletas.find((a) => a.nombre === 'Lucía Ferrer');
+  Object.assign(db, { tareas: [], tareas_plantillas: [] });
+  const tarea = (a, f, creada) => db.tareas.push({ id: crypto.randomUUID(), atleta_id: a.id, detalle: null, ejercicio_id: null, hecha_en: null, respuesta: null, archivo_id: null, revisada_en: null, creada_en: hace(creada), ...f });
+  tarea(ana, { tipo: 'foto', titulo: 'Fotos de progreso de este mes', detalle: 'Frente, perfil y espalda, con la misma luz que la última vez.', fecha: hoy }, 180);
+  tarea(ana, { tipo: 'texto', titulo: '¿Qué tal el viaje de trabajo?', detalle: 'Cuéntame en dos líneas cómo fueron las sesiones en el hotel.', fecha: sumarDias(hoy, -3),
+    hecha_en: hace(60 * 20), respuesta: 'Bien: hice Torso A y Pierna A en el hotel y la tercera con mancuernas, a 15 repeticiones.' }, 60 * 24 * 3);
+  if (ej['Sentadilla barra alta']) tarea(ruben, { tipo: 'video', titulo: 'Vídeo de tu sentadilla', detalle: 'La última serie, de lado y que se vea todo el cuerpo.', ejercicio_id: ej['Sentadilla barra alta'].id, fecha: sumarDias(hoy, -2) }, 60 * 24 * 2);
+  tarea(ruben, { tipo: 'medida', titulo: 'Peso y cintura', detalle: 'Por la mañana, en ayunas.', fecha: sumarDias(hoy, 3) }, 60 * 5);
+  if (lucia) tarea(lucia, { tipo: 'medida', titulo: 'Peso y cintura', detalle: 'Por la mañana, en ayunas. La cintura, a la altura del ombligo.', fecha: hoy }, 60 * 2);
+  [['foto', 'Fotos de progreso de este mes', 'Frente, perfil y espalda, con la misma luz que la última vez.'], ['medida', 'Peso y cintura', 'Por la mañana, en ayunas.'],
+    ['texto', '¿Qué tal la semana?', 'Cuéntame en dos líneas cómo vas: sueño, estrés y ganas.']]
+    .forEach(([tipo, titulo, detalle], i) => db.tareas_plantillas.push({ id: crypto.randomUUID(), tipo, titulo, detalle, ejercicio_id: null, orden: i, creada_en: ahoraISO }));
+  // Un mensaje a Ana para mañana a las 8:00 (hora de Madrid) y un aviso para todos el lunes a las 8:00: el coach los
+  // ve como programados; los atletas, todavía no
+  const manana = instanteMadrid(sumarDias(hoy, 1), '08:00');
+  db.comentarios.push({ id: crypto.randomUUID(), atleta_id: ana.id, sesion_id: null, checkin_id: null, archivo_id: null, autor: 'coach', adjunto: false, dibujo: null,
+    texto: 'Buenos días, Ana. Esta semana es la de descarga: los mismos ejercicios con algo menos de peso. Disfrútala.', creado_en: manana, enviar_en: manana, leido_en: null });
+  const lunesSig = sumarDias(lunesDe(hoy), 7);
+  const avisoLunes = instanteMadrid(lunesSig, '08:00');
+  db.avisos.push({ id: crypto.randomUUID(), texto: 'Esta semana estreno las tareas en la app: si te pongo una, te saldrá en «Tu día». Un toque y listo.', atleta_id: null,
+    desde: lunesSig, hasta: sumarDias(lunesSig, 6), creado_en: ahoraISO, enviar_en: avisoLunes });
+  // «Lo que te dijo tu coach»: en una sesión ya hecha de Ana, una corrección que nombra las dominadas (le sale en la
+  // siguiente que las lleve), ya leída
+  if (ej['Dominadas pronas']) {
+    const bloquesA = new Set(db.bloques.filter((x) => x.atleta_id === ana.id).map((x) => x.id));
+    const semanasA = new Set(db.semanas.filter((w) => bloquesA.has(w.bloque_id)).map((w) => w.id));
+    const conDominadas = new Set(db.sesion_ejercicios.filter((p) => p.ejercicio_id === ej['Dominadas pronas'].id).map((p) => p.sesion_id));
+    const hecha = db.sesiones.filter((x) => semanasA.has(x.semana_id) && x.completada && conDominadas.has(x.id)).sort((x, y) => (x.fecha_realizada < y.fecha_realizada ? 1 : -1))[0];
+    if (hecha) {
+      const cuando = `${hecha.fecha_realizada}T19:30:00.000Z`;
+      db.comentarios.push({ id: crypto.randomUUID(), atleta_id: ana.id, sesion_id: hecha.id, checkin_id: null, archivo_id: null, autor: 'coach', adjunto: false, dibujo: null,
+        texto: 'Muy bien la sesión. En las dominadas, baja del todo antes de la siguiente repetición aunque salga una menos.', creado_en: cuando, enviar_en: null, leido_en: cuando });
+    }
+  }
+  // Sergio se dio de baja hace dos meses (pagaba Essential al mes)
+  const sergio = { id: crypto.randomUUID(), perfil_id: null, nombre: 'Sergio Ruiz', email: 'sergio@fbe.demo', estado: 'baja', fecha_alta: mesDe(inicioMes, -7), baja_en: sumarDias(mesDe(inicioMes, -2), 9),
+    objetivo: 'Volver a entrenar después de una lesión de rodilla', notion_url: null, progresion_auto: true, volumen_objetivo: null, creado_en: ahoraISO, nutricion: false, entrenamiento: true };
+  db.atletas.push(sergio);
+  db.cobros_atletas.push({ atleta_id: sergio.id, servicio: 'Essential', precio_mes: 49, ciclo: 'mensual', desde: sergio.fecha_alta, nota: null, actualizado_en: ahoraISO });
+  for (let k = -7; k <= -3; k++) {
+    const desde = mesDe(inicioMes, k);
+    db.pagos.push({ id: crypto.randomUUID(), atleta_id: sergio.id, periodo_desde: desde, periodo_hasta: sumarDias(mesDe(desde, 1), -1), importe: 49, estado: 'pagado', fecha_pago: sumarDias(desde, 2), metodo: 'bizum', nota: null, creado_en: ahoraISO });
+  }
 }
 
 // v0.43: la comunidad del equipo, abierta, con Rubén, Carlos y Lucía dentro (Ana aún no: así se ve la entrada).

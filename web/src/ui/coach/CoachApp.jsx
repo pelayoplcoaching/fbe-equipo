@@ -9,6 +9,8 @@ import { Cuenta } from './Cuenta.jsx';
 import { Buscador } from './Buscador.jsx';
 import { Conversaciones } from './Conversaciones.jsx';
 import { EquipoCoach } from './EquipoCoach.jsx';
+import { pideCompartido, borrarCompartido, limpiarDireccion } from '../Compartido.jsx';
+import { ponerInsignia } from '../insignia-app.js';
 
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
 // Modo atleta (v0.37): el coach entrena con la app de atleta, con su propia ficha (solo entrenamiento)
@@ -30,6 +32,16 @@ export function CoachApp() {
   useEffect(() => { if (pedidoCoach) consumirPedidoCoach(); }, []);
   const bandeja = useCarga(() => api.bandeja(), []);
   const sinLeer = useCarga(() => api.mensajesSinLeer().catch(() => 0), []);
+  // v0.48: el número del icono de la app (lo que espera tu respuesta y los mensajes sin leer)
+  useEffect(() => { if (bandeja.datos) ponerInsignia((bandeja.datos.total || 0) + (sinLeer.datos || 0)); }, [bandeja.datos, sinLeer.datos]);
+  // «Compartir → FBE Equipo» es para tus atletas: desde la cuenta del coach no se envía nada (y se borra del móvil)
+  const { aviso } = useApp();
+  useEffect(() => {
+    if (!pideCompartido()) return;
+    limpiarDireccion(['compartido', 'accion']);
+    borrarCompartido();
+    aviso('Compartir un vídeo con FBE Equipo es para tus atletas: desde tu cuenta no se envía nada.');
+  }, []);
   useEffect(() => { try { history.replaceState(null, '', `#${tab}`); } catch { /* */ } window.scrollTo(0, 0); }, [tab, ficha?.atletaId]);
   // La bandeja se refresca al cambiar de sección (no al montar: ya se carga sola)
   const montado = useRef(false);

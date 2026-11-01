@@ -2141,6 +2141,8 @@ console.log('\nLas normas del equipo (migración 028)');
   await q(`delete from fbe_migraciones where numero > 28`);
   await db.exec(readFileSync(new URL('../supabase/migraciones/028_normas_comunidad.sql', import.meta.url), 'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migraciones/029_comunidad_mejoras.sql', import.meta.url), 'utf8'));
+  // (y las que vengan después, en orden)
+  for (const m of migraciones().filter((x) => x > '029')) await db.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
   check((await q(`select count(*)::int n from notificaciones where clave = 'prueba-normas'`))[0].n === 0, 'al ejecutar la 028, las notificaciones del equipo pendientes de quien aún no ha leído las normas se retiran');
   await como(ana); await q(`select comunidad_unirme('Ana L.', $1, $2)`, [version, normas]);
   check((await q(`select comunidad_soy_miembro() v`))[0].v === true, 'al leerlas, vuelve a estar dentro');
@@ -2527,7 +2529,7 @@ console.log('\nLo que encontró la revisión de seguridad de la 029');
   await q(`delete from fbe_migraciones where numero > 27`);
   let err027 = '';
   try { await db.exec(readFileSync(new URL('../supabase/migraciones/027_comunidad.sql', import.meta.url), 'utf8')); } catch (e) { err027 = e.message; }
-  await q(`insert into fbe_migraciones (numero) values (28), (29) on conflict do nothing`);
+  for (const m of migraciones().filter((x) => x > '027')) await q(`insert into fbe_migraciones (numero) values ($1) on conflict do nothing`, [Number(m.slice(0, 3))]);
   check(/logros, encuestas o retos de equipo de la 029/.test(err027) && (await q(`select comunidad_version() v`))[0].v === version
     && (await q(`select pg_get_constraintdef(oid) d from pg_constraint where conname = 'comunidad_posts_validos'`))[0].d.includes('encuesta'),
     'repetir la 027 con logros, encuestas o retos de equipo se para antes de tocar nada');
@@ -2560,6 +2562,180 @@ console.log('\nLo que encontró la revisión de seguridad de la 029');
   await q(`update comunidad_ajustes set activa = false`);
   await q(`delete from bloques where id = any($1::uuid[])`, [bRev]);
   for (const x of previas) await q(`update sesiones set completada = true, fecha_realizada = $2 where id = $1`, [x.id, x.fecha_realizada]);
+}
+
+console.log('\nTareas, mensajes programados, el bloque entero y las bajas (migración 030)');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  await su();
+  await q(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  const hoyM = (await q(`select (now() at time zone 'Europe/Madrid')::date d`))[0].d;
+  check((await q(`select relname from pg_class where relname in ('tareas', 'tareas_plantillas') and relrowsecurity order by 1`)).length === 2, 'las dos tablas nuevas, con RLS');
+  check((await q(`select grantee, privilege_type from information_schema.role_table_grants where table_name in ('tareas', 'tareas_plantillas') and grantee in ('anon', 'public')`)).length === 0
+    && !(await q(`select has_table_privilege('authenticated', 'public.tareas', 'truncate') t`))[0].t, 'cerradas por defecto: nada para anon, ni truncate para nadie');
+  await anon();
+  check(await falla(`select * from tareas`) && await falla(`select * from tareas_plantillas`) && await falla(`select tarea_completar(gen_random_uuid())`) && await falla(`select * from bloque_semanas(gen_random_uuid())`), 'sin sesión, nada');
+
+  // El coach pone tareas
+  await como(pelayo, 'aal2');
+  const [tFoto] = await q(`insert into tareas (atleta_id, tipo, titulo) values ($1, 'foto', 'Foto de frente') returning *`, [aAna.id]);
+  const [tTexto] = await q(`insert into tareas (atleta_id, tipo, titulo, detalle) values ($1, 'texto', '¿Qué tal el hombro?', 'Del 1 al 10') returning *`, [aAna.id]);
+  const [tMedida] = await q(`insert into tareas (atleta_id, tipo, titulo) values ($1, 'medida', 'Cintura') returning *`, [aAna.id]);
+  const [tVideo] = await q(`insert into tareas (atleta_id, tipo, titulo, ejercicio_id) values ($1, 'video', 'Vídeo del press', $2) returning *`, [aAna.id, press.id]);
+  const [tFutura] = await q(`insert into tareas (atleta_id, tipo, titulo, fecha) values ($1, 'texto', 'El jueves', $2::date + 3) returning *`, [aAna.id, hoyM]);
+  const [tLuis] = await q(`insert into tareas (atleta_id, tipo, titulo) values ($1, 'texto', 'Cuéntame tu semana') returning *`, [aLuis.id]);
+  check(String(tFoto.fecha) === String(hoyM) && Math.abs(new Date(tFoto.creada_en) - Date.now()) < 60000, 'una tarea sale desde hoy (Madrid) si no se dice otra cosa');
+  check(await falla(`insert into tareas (atleta_id, tipo, titulo) values ($1, 'llamada', 'X')`, [aAna.id]) && await falla(`insert into tareas (atleta_id, tipo, titulo) values ($1, 'texto', '​')`, [aAna.id])
+    && await falla(`insert into tareas (atleta_id, tipo, titulo, ejercicio_id) values ($1, 'foto', 'X', $2)`, [aAna.id, press.id]) && await falla(`insert into tareas (atleta_id, tipo, titulo) values ($1, 'texto', $2)`, [aAna.id, 'x'.repeat(121)])
+    && await falla(`insert into tareas (atleta_id, tipo, titulo) values ($1, 'texto', 'X')`, [aAna.id + '0']),
+    'tipos conocidos, título visible y corto, y el ejercicio solo en las de vídeo');
+  check(await falla(`insert into tareas (atleta_id, tipo, titulo, respuesta) values ($1, 'texto', 'X', 'Hecha')`, [aAna.id]) && await falla(`update tareas set atleta_id = $2 where id = $1`, [tFoto.id, aLuis.id])
+    && (await q(`update tareas set creada_en = '2020-01-01' where id = $1 returning creada_en`, [tFoto.id]))[0].creada_en.getFullYear() > 2020,
+    'sin hacer no lleva respuesta; no cambia de atleta y su fecha de creación no se toca');
+  const nT = await notis(`clave = $1`, ['tarea:' + tLuis.id]);
+  check(nT.length === 1 && nT[0].usuario_id === luis && nT[0].tipo === 'tarea' && nT[0].titulo === 'Pelayo te ha puesto una tarea' && nT[0].cuerpo === 'Para hoy: la tienes en Tu día.' && nT[0].url === '#hoy'
+    && !JSON.stringify(nT[0]).includes('Cuéntame'), 'a Luis le llega «Pelayo te ha puesto una tarea» (sin el texto)');
+  await como(pelayo, 'aal2');
+  const [tLuisF] = await q(`insert into tareas (atleta_id, tipo, titulo, fecha) values ($1, 'texto', 'Luego', $2::date + 2) returning id`, [aLuis.id, hoyM]);
+  check((await notis(`clave = $1`, ['tarea:' + tLuisF.id]))[0]?.cuerpo.startsWith('Para el '), 'si es para otro día, se lo dice («Para el …»)');
+
+  // El atleta: solo las suyas, y solo marcarlas
+  await como(ana);
+  check(await n(`select count(*)::int n from tareas`) === 5 && await n(`select count(*)::int n from tareas where atleta_id = $1`, [aLuis.id]) === 0, 'Ana ve sus tareas, no las de Luis');
+  check(await falla(`insert into tareas (atleta_id, tipo, titulo) values ($1, 'texto', 'Me la pongo yo')`, [aAna.id])
+    && (await q(`update tareas set hecha_en = now(), titulo = 'Cambiada' where id = $1 returning id`, [tTexto.id])).length === 0
+    && (await q(`delete from tareas where id = $1 returning id`, [tTexto.id])).length === 0, 'no crea, cambia ni borra tareas (ni marcándolas a mano)');
+  check(await falla(`select * from tareas_plantillas`) === false && await n(`select count(*)::int n from tareas_plantillas`) === 0 && await falla(`insert into tareas_plantillas (tipo, titulo) values ('texto', 'X')`), 'las plantillas no las ve ni las crea');
+  const hecha = (await q(`select tarea_completar($1, true, '  Un 3, mejor  ') h`, [tTexto.id]))[0].h;
+  const [tt] = await q(`select hecha_en, respuesta from tareas where id = $1`, [tTexto.id]);
+  check(!!hecha && tt.respuesta === 'Un 3, mejor' && String(tt.hecha_en) === String(hecha), 'marca hecha una de texto, con su respuesta');
+  check((await q(`select tarea_completar($1, true, 'Un 2') h`, [tTexto.id]))[0].h.getTime() === hecha.getTime() && (await q(`select respuesta from tareas where id = $1`, [tTexto.id]))[0].respuesta === 'Un 2',
+    'cambiar la respuesta no cambia cuándo la hizo');
+  const nH = await notis(`clave = $1`, ['tarea_hecha:' + tTexto.id]);
+  check(nH.length === 1 && nH[0].usuario_id === pelayo && nH[0].titulo === 'Ana ha hecho su tarea' && nH[0].url === '#revisar' && !JSON.stringify(nH[0]).includes('Un 2'), 'al coach le llega «Ana ha hecho su tarea» (sin la respuesta)');
+  await como(ana);
+  check(await falla(`select tarea_completar($1)`, [tLuis.id]) && await falla(`select tarea_completar($1)`, [tFutura.id]) && await falla(`select tarea_completar($1, true, $2)`, [tTexto.id, 'x'.repeat(501)])
+    && await falla(`select tarea_completar($1, true, null, $2)`, [tTexto.id, vid.id]), 'ni la de otro, ni una de otro día que aún no toca, ni una respuesta larguísima, ni un archivo en una de texto');
+  await su();
+  const [fAna] = await q(`insert into archivos (atleta_id, tipo, ruta, pose) values ($1, 'foto_progreso', $2, 'frente') returning id`, [aAna.id, `${aAna.id}/tarea-foto.jpg`]);
+  const [vAna] = await q(`insert into archivos (atleta_id, tipo, ruta, ejercicio_id) values ($1, 'video_tecnica', $2, $3) returning id`, [aAna.id, `${aAna.id}/tarea-video.mp4`, press.id]);
+  const [fLuis] = await q(`insert into archivos (atleta_id, tipo, ruta, pose) values ($1, 'foto_progreso', $2, 'frente') returning id`, [aLuis.id, `${aLuis.id}/ajena.jpg`]);
+  await como(ana);
+  check(await falla(`select tarea_completar($1)`, [tFoto.id]) && await falla(`select tarea_completar($1, true, null, $2)`, [tFoto.id, vAna.id]) && await falla(`select tarea_completar($1, true, null, $2)`, [tFoto.id, fLuis.id])
+    && !!(await q(`select tarea_completar($1, true, null, $2) h`, [tFoto.id, fAna.id]))[0].h, 'la de foto, solo con una foto de progreso suya (ni sin foto, ni con un vídeo, ni con la de otro)');
+  check(await falla(`select tarea_completar($1, true, null, $2)`, [tVideo.id, fAna.id]) && !!(await q(`select tarea_completar($1, true, null, $2) h`, [tVideo.id, vAna.id]))[0].h, 'la de vídeo, con su vídeo de técnica');
+  await su();
+  const apartados = { pesos: await q(`delete from pesos where atleta_id = $1 and fecha >= $2 returning *`, [aAna.id, hoyM]), medidas: await q(`delete from medidas where atleta_id = $1 and fecha >= $2 returning *`, [aAna.id, hoyM]) };
+  await como(ana);
+  check(await falla(`select tarea_completar($1)`, [tMedida.id]), 'la de peso o medidas, solo con algo apuntado desde su día');
+  await su(); await q(`insert into medidas (atleta_id, fecha, cintura_cm) values ($1, $2, 72.5)`, [aAna.id, hoyM]);
+  await como(ana);
+  check(!!(await q(`select tarea_completar($1) h`, [tMedida.id]))[0].h, 'con la cintura de hoy apuntada, sí');
+  check((await q(`select tarea_completar($1, false) h`, [tMedida.id]))[0].h === null && (await q(`select hecha_en from tareas where id = $1`, [tMedida.id]))[0].hecha_en === null
+    && (await notis(`clave = $1 and estado = 'pendiente'`, ['tarea_hecha:' + tMedida.id])).length === 0, 'puede deshacerla (y la notificación al coach, si no ha salido, se retira)');
+  await como(pelayo, 'aal2');
+  await q(`update tareas set revisada_en = now() where id = $1`, [tTexto.id]);
+  check(await falla(`update tareas set revisada_en = now() where id = $1`, [tMedida.id]), 'el coach no marca revisada una que no está hecha');
+  await como(ana);
+  check(await falla(`select tarea_completar($1, false)`, [tTexto.id]) && await falla(`select tarea_completar($1, true, 'Otra')`, [tTexto.id]), 'revisada por el coach, ya no se cambia');
+  await su(); await q(`update atletas set estado = 'baja' where id = $1`, [aAna.id]);
+  await como(ana);
+  check(await falla(`select tarea_completar($1)`, [tMedida.id]) && await n(`select count(*)::int n from tareas`) === 5, 'de baja, las ve pero no las marca');
+  await su();
+  const baja = (await q(`select baja_en from atletas where id = $1`, [aAna.id]))[0].baja_en;
+  check(String(baja) === String(hoyM), 'al pasar a «baja», la base apunta el día');
+  await como(pelayo, 'aal2');
+  check((await q(`update atletas set baja_en = $2::date - 40 where id = $1 returning baja_en`, [aAna.id, hoyM])).length === 1 && await falla(`update atletas set baja_en = $2::date + 1 where id = $1`, [aAna.id, hoyM])
+    && await falla(`update atletas set baja_en = '2019-12-31' where id = $1`, [aAna.id]), 'el coach puede corregirlo (entre 2020 y hoy)');
+  check((await q(`update atletas set nombre = nombre where id = $1 returning baja_en`, [aAna.id]))[0].baja_en !== null, 'y no se pierde al cambiar otra cosa');
+  await q(`update atletas set estado = 'activo' where id = $1`, [aAna.id]);
+  check((await q(`select baja_en from atletas where id = $1`, [aAna.id]))[0].baja_en === null && await falla(`update atletas set baja_en = $2 where id = $1 and baja_en is null returning id`, [aAna.id, hoyM]) === false
+    && (await q(`select baja_en from atletas where id = $1`, [aAna.id]))[0].baja_en === null, 'al volver de alta se quita (y un activo no tiene día de baja)');
+  const [nuevoBaja] = await q(`insert into atletas (nombre, estado) values ('Antiguo', 'baja') returning id, baja_en`);
+  check(String(nuevoBaja.baja_en) === String(hoyM), 'una ficha que nace de baja, con el día de hoy');
+  await q(`delete from atletas where id = $1`, [nuevoBaja.id]);
+  await como(ana);
+  check(await falla(`update atletas set baja_en = null`) || (await q(`update atletas set baja_en = null returning id`)).length === 0, 'el atleta no toca su día de baja');
+
+  // Plantillas: solo el coach, como mucho 30
+  await como(pelayo, 'aal2');
+  await q(`insert into tareas_plantillas (tipo, titulo, orden) select 'texto', 'Plantilla ' || g, g from generate_series(1, 30) g`);
+  check(await falla(`insert into tareas_plantillas (tipo, titulo) values ('foto', 'La 31')`) && await falla(`insert into tareas_plantillas (tipo, titulo, ejercicio_id) values ('texto', 'X', $1)`, [press.id]), 'como mucho 30 plantillas, y el ejercicio solo en las de vídeo');
+  await q(`delete from tareas_plantillas`);
+  check((await q(`insert into tareas_plantillas (tipo, titulo, ejercicio_id) values ('video', 'Vídeo del press', $1) returning id`, [press.id])).length === 1, 'borrando, vuelve a caber');
+  await q(`delete from tareas where id = $1`, [tLuisF.id]);
+  check((await notis(`clave = $1`, ['tarea:' + tLuisF.id])).filter((x) => x.estado === 'pendiente').length === 0, 'si el coach borra una tarea, su notificación pendiente se retira');
+
+  // Mensajes programados en el chat
+  await como(pelayo, 'aal2');
+  const [mP] = await q(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Mañana empezamos bloque', now() + interval '1 day') returning *`, [aLuis.id]);
+  check(new Date(mP.creado_en).getTime() === new Date(mP.enviar_en).getTime() && mP.autor === 'coach', 'un mensaje programado lleva la hora a la que sale');
+  const nP = (await notis(`clave = $1`, ['comentario:' + mP.id]))[0];
+  check(nP?.titulo === 'Pelayo te ha escrito' && new Date(nP.enviar_desde) >= new Date(mP.enviar_en) - 1000, 'su notificación, en la cola para esa hora (la manda la función de envío de siempre)');
+  await como(luis);
+  check(await n(`select count(*)::int n from comentarios where id = $1`, [mP.id]) === 0 && (await q(`update comentarios set leido_en = now() where id = $1 returning id`, [mP.id])).length === 0,
+    'Luis no lo ve (ni lo marca leído) antes de su hora');
+  check(await falla(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Yo también', now() + interval '1 hour')`, [aLuis.id]), 'el atleta no programa mensajes');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Lejos', now() + interval '91 days')`, [aLuis.id])
+    && await falla(`insert into comentarios (sesion_id, texto, enviar_en) values ($1, 'En la sesión', now() + interval '1 hour')`, [sLuis.id]),
+    'como mucho a 90 días, y solo en el chat (no en una sesión)');
+  const [mYa] = await q(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Ya', now() + interval '5 seconds') returning enviar_en`, [aLuis.id]);
+  check(mYa.enviar_en === null, 'uno para «ya mismo» sale ya');
+  const nueva = (await q(`select now() + interval '2 days' t`))[0].t;
+  const [mC] = await q(`update comentarios set texto = 'Pasado mañana empezamos', enviar_en = $2 where id = $1 returning *`, [mP.id, nueva]);
+  check(mC.texto === 'Pasado mañana empezamos' && new Date(mC.creado_en).getTime() === new Date(nueva).getTime(), 'mientras no ha salido, el coach cambia el texto y la hora');
+  const nP2 = await notis(`clave = $1 and estado = 'pendiente'`, ['comentario:' + mP.id]);
+  check(nP2.length === 1 && new Date(nP2[0].enviar_desde) >= new Date(nueva) - 1000, 'y su notificación se rehace para la hora nueva');
+  await como(pelayo, 'aal2');
+  check(await falla(`update comentarios set atleta_id = $2 where id = $1`, [mP.id, aAna.id]), 'de un programado solo se cambian el texto y la hora');
+  await su(); await q(`update comentarios set enviar_en = now() - interval '1 minute', creado_en = now() - interval '1 minute' where id = $1`, [mP.id]);
+  await como(luis);
+  check(await n(`select count(*)::int n from comentarios where id = $1`, [mP.id]) === 1 && (await q(`update comentarios set leido_en = now() where id = $1 returning id`, [mP.id])).length === 1, 'llegada su hora, Luis lo ve y lo marca leído');
+  await como(pelayo, 'aal2');
+  check(await falla(`update comentarios set texto = 'Cambiado' where id = $1`, [mP.id]) && await falla(`update comentarios set enviar_en = now() + interval '1 day' where id = $1`, [mP.id]), 'ya salido, no se edita ni se reprograma');
+  const [mB] = await q(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Lo cancelo', now() + interval '3 hours') returning id`, [aLuis.id]);
+  await q(`delete from comentarios where id = $1`, [mB.id]);
+  check((await notis(`clave = $1 and estado = 'pendiente'`, ['comentario:' + mB.id])).length === 0, 'cancelarlo (borrarlo) retira su notificación');
+
+  // Avisos programados
+  await como(pelayo, 'aal2');
+  const [avP] = await q(`insert into avisos (texto, enviar_en) values ('Mañana, horario de verano', now() + interval '1 day') returning *`);
+  check(String(avP.desde) === String((await q(`select ((now() + interval '1 day') at time zone 'Europe/Madrid')::date d`))[0].d), 'un aviso programado empieza el día (en Madrid) de su hora');
+  const nAv = (await notis(`clave = $1 and usuario_id = $2`, ['aviso:' + avP.id, luis]))[0];
+  check(!!nAv && new Date(nAv.enviar_desde) >= new Date(avP.enviar_en) - 1000, 'y su notificación sale a esa hora');
+  await como(luis);
+  check(await n(`select count(*)::int n from avisos where id = $1`, [avP.id]) === 0, 'antes, Luis no lo ve');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into avisos (texto, enviar_en) values ('Lejos', now() + interval '91 days')`), 'como mucho a 90 días');
+  await su(); await q(`update avisos set enviar_en = now() - interval '1 minute', desde = (now() at time zone 'Europe/Madrid')::date where id = $1`, [avP.id]);
+  await como(luis);
+  check(await n(`select count(*)::int n from avisos where id = $1`, [avP.id]) === 1, 'a su hora, lo ve');
+  await como(pelayo, 'aal2'); await q(`delete from avisos where id = $1`, [avP.id]);
+
+  // El bloque entero
+  await como(pelayo, 'aal2');
+  await q(`update semanas set programacion = 'en_programacion' where id = $1`, [wAna2]);
+  await como(ana);
+  const bs = await q(`select * from bloque_semanas($1)`, [bAna]);
+  check(bs.length >= 2 && bs[0].numero === 1 && bs[0].publicada && bs.find((w) => w.numero === 2)?.publicada === false && Object.keys(bs[0]).join() === 'numero,fecha_inicio,publicada',
+    'Ana ve las semanas de su bloque (la que no está publicada, solo como «por publicar»: sin foco, nota ni sesiones)');
+  check(await n(`select count(*)::int n from semanas where id = $1`, [wAna2]) === 0, 'la sin publicar sigue sin verse por la tabla');
+  check((await q(`select * from bloque_semanas($1)`, [bLuis])).length === 0 && (await q(`select * from bloque_semanas($1)`, [pl.id])).length === 0, 'del bloque de otro o de una plantilla, nada');
+  await como(pelayo, 'aal2');
+  check((await q(`select * from bloque_semanas($1)`, [bLuis])).length >= 1 && (await q(`select * from bloque_semanas($1)`, [pl.id])).length === 0, 'el coach, de cualquier atleta (las plantillas no son un bloque)');
+  await q(`update semanas set programacion = 'programada' where id = $1`, [wAna2]);
+
+  // Ordenado para lo que sigue
+  await su();
+  await q(`delete from tareas`); await q(`delete from tareas_plantillas`);
+  await q(`delete from archivos where id = any($1::uuid[])`, [[fAna.id, vAna.id, fLuis.id]]);
+  await q(`delete from medidas where atleta_id = $1 and fecha = $2 and cintura_cm = 72.5`, [aAna.id, hoyM]);
+  for (const [tabla, filas] of Object.entries(apartados)) for (const f of filas) {
+    const cols = Object.keys(f);
+    await q(`insert into ${tabla} (${cols.join(', ')}) values (${cols.map((_, i) => `$${i + 1}`).join(', ')})`, cols.map((c) => f[c]));
+  }
+  await q(`delete from notificaciones where tipo in ('tarea', 'tarea_hecha')`);
 }
 
 console.log('\nLa verificación en dos pasos falla cerrada');

@@ -15,8 +15,27 @@ self.addEventListener('activate', (e) => {
     .then(() => self.clients.claim()));
 });
 
+// v0.48: «Compartir → FBE Equipo» (Android): el vídeo llega aquí en un POST; se guarda en una caché aparte (solo en
+// este móvil, hasta que la app lo coge o lo descarta) y se abre la app, que lo ofrece como vídeo de técnica
+const COMPARTIDO = 'fbe-compartido';
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
+  if (e.request.method === 'POST' && url.origin === self.location.origin && url.pathname.endsWith('/compartir-video')) {
+    e.respondWith((async () => {
+      let ok = false;
+      try {
+        const datos = await e.request.formData();
+        const f = datos.getAll('video').find((x) => x && typeof x === 'object' && /^video\//.test(x.type || ''));
+        if (f) {
+          const c = await caches.open(COMPARTIDO);
+          await c.put('compartido/video', new Response(f, { headers: { 'content-type': f.type, 'x-nombre': encodeURIComponent(String(f.name || 'video.mp4').slice(0, 120)) } }));
+          ok = true;
+        }
+      } catch { ok = false; }
+      return Response.redirect(new URL(`./?compartido=${ok ? '1' : '0'}#hoy`, self.registration.scope).href, 303);
+    })());
+    return;
+  }
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   // La página y la configuración: primero red, para coger siempre la última versión
   if (e.request.mode === 'navigate' || url.pathname.endsWith('/config.js')) {
@@ -42,6 +61,8 @@ self.addEventListener('push', (e) => {
   e.waitUntil((async () => {
     const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const v of ventanas) v.postMessage({ tipo: 'notificacion', url });
+    // v0.48: una marca en el icono de la app (donde se puede); al abrirla, la app pone el número de verdad
+    try { if (self.navigator && 'setAppBadge' in self.navigator) await self.navigator.setAppBadge().catch(() => {}); } catch { /* */ }
     const tag = d.etiqueta || d.id || undefined;
     await self.registration.showNotification(d.titulo || 'FBE Equipo', {
       body: d.cuerpo || '', tag, renotify: !!(tag && d.repetir), icon: 'icono-192.png', badge: 'insignia-96.png', lang: 'es', data: { url },

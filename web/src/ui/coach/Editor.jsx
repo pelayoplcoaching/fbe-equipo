@@ -52,6 +52,8 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   const idsSemana = [...new Set(sesionesSemana.flatMap((x) => (d.pautas[x.id] || []).map((p) => p.ejercicio_id)))].filter(Boolean).sort();
   const ultimas = useCarga(() => (atletaId && idsSemana.length ? api.ultimasPorEjercicio(atletaId, idsSemana, sesionesSemana.map((x) => x.id), finSemana).catch(() => ({})) : Promise.resolve({})),
     [atletaId, semanaId, idsSemana.join(',')]);
+  // v0.48: las notas fijadas del atleta en cada ejercicio («asiento en el 4»), para verlas junto a su pauta
+  const notasAtleta = useCarga(() => (atletaId ? api.notasEjercicio(atletaId).catch(() => ({})) : Promise.resolve({})), [atletaId]);
 
   if (carga.cargando && !d) return <Siluetas forma="tarjetas" n={3} texto="Cargando el bloque" />;
   if (carga.error) return <ErrorCaja error={carga.error} reintentar={carga.recargar} />;
@@ -206,7 +208,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       )}
 
       {semana && sesiones.map((s) => (
-        <EditorSesion key={`${s.id}-${version}`} sesion={s} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}}
+        <EditorSesion key={`${s.id}-${version}`} sesion={s} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} notasAtleta={notasAtleta.datos || {}}
           guardar={guardar} guardarDetalle={guardarDetalle} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
           corregirVariante={['finalizado', 'cancelado'].includes(bloque.estado) ? null : async (p, nuevo) => {
             await estructura(() => api.corregirVariante({ bloqueId: bloque.id, ejercicioId: p.ejercicio_id, variante: p.variante, nuevoEjercicioId: nuevo?.id || null }),
@@ -472,7 +474,7 @@ function DetalleSeries({ pauta, hechas = [], alGuardar }) {
 // «25×10 @8», «12 reps @7» (sin kilos) o «25×10» (sin RPE)
 const textoSerieHecha = (x) => `${x.kg != null ? `${num(x.kg, 2)}×${x.reps ?? '–'}` : `${x.reps ?? '–'} reps`}${x.rpe != null ? ` @${num(x.rpe, 1)}` : ''}`;
 
-function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {} }) {
+function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, notasAtleta = {} }) {
   const { api } = useApp();
   const lista = useMemo(() => Object.values(ejercicios), [ejercicios]);
   const numero = (pautaId, campo, dec = false) => (e) => {
@@ -549,6 +551,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                     <AvisoVariante pauta={p} ejercicio={ejercicios[p.ejercicio_id]} lista={lista} corregir={corregirVariante} />
                     <NotaPauta valor={p.notas_coach} alGuardar={(v) => guardar('sesion_ejercicios', p.id, { notas_coach: v })} />
                     {tieneDetalle(p) && <DetalleSeries pauta={p} hechas={series[p.id] || []} alGuardar={(d) => guardarDetalle(p.id, d)} />}
+                    {notasAtleta[p.ejercicio_id] && <div class="mini nota-atleta-coach" title="Su nota fijada en este ejercicio (la escribe el atleta en su sesión)"><Icono n="chincheta" /><span><span class="terciario">Su nota: </span>{notasAtleta[p.ejercicio_id].texto}</span></div>}
                     {ultimas[p.ejercicio_id]?.series.length > 0 && <div class="mini registro-serie ultima-vez-coach" title="Lo que hizo la última vez antes de esta semana">
                       <span class="terciario">Última vez{ultimas[p.ejercicio_id].fecha ? ` (${fmtCorta(ultimas[p.ejercicio_id].fecha)})` : ''}: </span>{ultimas[p.ejercicio_id].series.map(textoSerieHecha).join(' · ')}</div>}
                     {series[p.id]?.length > 0 && <div class="mini registro-serie hecho-semana" style="margin-top:3px"><span class="terciario">Esta semana: </span>{[...series[p.id]].sort((a, c) => a.numero - c.numero).map(textoSerieHecha).join(' · ')}</div>}</td>
