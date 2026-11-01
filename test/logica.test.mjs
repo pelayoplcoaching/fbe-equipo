@@ -11,7 +11,7 @@ import { sumarMeses, finPeriodo, importePeriodo, siguientePeriodo, resumenCobros
 import { modoCarga, columnasEditor, pesoAnterior, conNutricion, textoServicio, NIVELES } from '../web/src/logica/nivel.js';
 import { cardioValido, cardioHechoValido, limpiarCardio, limpiarCardioHecho, textoCardio, textoCardioHecho, ritmo, palabrasEsfuerzo, cardioPorSemana, cardioHechoDe } from '../web/src/logica/cardio.js';
 import { valeParaDia, textoVariante, tomasDelDia, paraElDia, leerIngrediente, leerIngredientes, escalarCantidad, textoIngrediente, ingredientesATexto, limpiarReceta, avisoMacros, macrosDe, textoMacros, recetarioPorToma, entradaMenu, cambiarRaciones, totalesDia, menuPorDia, copiarMenu, listaCompra, textoListaCompra, tomasDe, ordenarTomas, TOMAS_DEFECTO } from '../web/src/logica/comidas.js';
-import { conEntrenamiento, servicioDe, CAMPOS_SERVICIO } from '../web/src/logica/nivel.js';
+import { conEntrenamiento, servicioDe, CAMPOS_SERVICIO, fichaCambiada } from '../web/src/logica/nivel.js';
 import { materialesDe, revisarVariante, varianteSinMaterial, equivalentes } from '../web/src/logica/variantes.js';
 import { destinoEnRejilla } from '../web/src/ui/rejilla.js';
 import { e1rm, e1rmPorSemana, seriesPorGrupo, pauta, propuestaSerie, semanaActual, resumenAtleta, num, signo, mmss } from '../web/src/logica/calculos.js';
@@ -1000,6 +1000,11 @@ console.log('\nNivel y servicio (v0.22)');
     'el peso anterior es el de esa misma serie (sin peso, nada; series de más, el de la última que hizo)');
   check(conNutricion({}) && conNutricion({ nutricion: true }) && !conNutricion({ nutricion: false }) && conNutricion(null) && textoServicio({ nutricion: false }) === 'Solo entrenamiento',
     'con nutrición salvo que el coach diga lo contrario (una base sin la 018 sigue como siempre)');
+  // v0.46: la ficha que se vuelve a leer al volver a la app cambia con cualquier campo, también el peso semanal
+  const ficha = { id: 'a', nombre: 'Guti', nutricion: true, peso_frecuencia: 'diario', checkin_apartados: null };
+  check(fichaCambiada(ficha, { ...ficha, peso_frecuencia: 'semanal' }) && fichaCambiada(ficha, { ...ficha, entrenamiento: false })
+    && !fichaCambiada(ficha, { ...ficha }) && !fichaCambiada(ficha, { ...ficha, objetivo: null }) && !fichaCambiada(ficha, null)
+    && fichaCambiada(ficha, { ...ficha, checkin_apartados: ['peso'] }), 'fichaCambiada: cualquier campo de la ficha (peso semanal incluido)');
 }
 
 console.log('\nPreparar las semanas siguientes (v0.23)');

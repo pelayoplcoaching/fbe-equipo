@@ -5,6 +5,7 @@ import { AtletaApp } from './atleta/AtletaApp.jsx';
 import { CoachApp } from './coach/CoachApp.jsx';
 import { quitarPortada } from './portada.js';
 import { desactivarPush, desactivarPushLocal, sincronizarPush } from '../datos/push.js';
+import { fichaCambiada } from '../logica/nivel.js';
 
 const CLAVE_ACTIVACION = 'fbe-activacion-pendiente';
 export function guardarActivacionPendiente(datos) { try { localStorage.setItem(CLAVE_ACTIVACION, JSON.stringify(datos)); } catch { /* */ } }
@@ -128,9 +129,10 @@ export function App({ backend, api, cola }) {
       const nueva = await api.miAtleta().catch(() => null);
       if (!nueva || nueva.id !== atletaId) return;
       setEstado((e) => {
-        if (e.fase !== 'atleta' || e.atleta?.id !== nueva.id) return e;
-        const cambia = ['nutricion', 'nivel', 'estado', 'nombre', 'checkin_apartados'].some((k) => JSON.stringify(e.atleta[k]) !== JSON.stringify(nueva[k]));
-        return cambia ? { ...e, atleta: { ...e.atleta, ...nueva } } : e;
+        if (e.fase === 'atleta' && e.atleta?.id === nueva.id) return fichaCambiada(e.atleta, nueva) ? { ...e, atleta: { ...e.atleta, ...nueva } } : e;
+        // El coach en modo atleta: su propia ficha
+        if (e.fase === 'coach' && e.propio?.id === nueva.id) return fichaCambiada(e.propio, nueva) ? { ...e, propio: { ...e.propio, ...nueva } } : e;
+        return e;
       });
     };
     document.addEventListener('visibilitychange', releer);

@@ -26,6 +26,9 @@ export const servicioDe = (atleta) => (!conEntrenamiento(atleta) ? 'nutricion' :
 // Lo que se guarda en la ficha para cada servicio
 export const CAMPOS_SERVICIO = { entrenamiento: { entrenamiento: true, nutricion: false }, completo: { entrenamiento: true, nutricion: true }, nutricion: { entrenamiento: false, nutricion: true } };
 export const textoServicio = (atleta) => Object.fromEntries(SERVICIOS)[servicioDe(atleta)];
+// ¿Ha cambiado algo de la ficha que el coach puede tocar? (v0.46) Cualquier campo, no una lista: con una lista, el
+// peso semanal (v0.40) y el servicio sin entrenamiento no llegaban al móvil que ya tenía la app abierta.
+export const fichaCambiada = (antes, nueva) => !!nueva && Object.keys(nueva).some((k) => JSON.stringify(antes?.[k] ?? null) !== JSON.stringify(nueva[k] ?? null));
 
 // ¿Cómo se pauta la carga de este ejercicio? 'kg' | 'rpe' | null (sin nivel: libre)
 export function modoCarga(nivel, prioridad) {
