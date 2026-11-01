@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Paso, Segmentos, Icono, Pista } from '../comunes.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { ESCALAS, HORAS_SUENO, ZONAS, MEDIDAS, num, signo } from '../../logica/calculos.js';
@@ -13,7 +13,7 @@ function OpcionesGrandes({ etiqueta, opciones, valor, alCambiar }) {
   return (
     <div class="opciones-grandes" role="group" aria-label={etiqueta}>
       {opciones.map(([v, t, ayuda]) => (
-        <button type="button" key={String(v)} aria-pressed={valor === v ? 'true' : 'false'} onClick={() => alCambiar(valor === v ? null : v)}>
+        <button type="button" key={String(v)} aria-pressed={valor === v ? 'true' : 'false'} onClick={(ev) => alCambiar(valor === v ? null : v, ev, `${t}${ayuda ? `, ${ayuda}` : ''}`)}>
           <span class="op-n num">{t}</span>{ayuda && ' '}{ayuda && <span class="op-t">{ayuda}</span>}
           <span class="op-check" aria-hidden="true"><Icono n="hecho" /></span>
         </button>
@@ -50,16 +50,6 @@ function RespuestaPregunta({ p, valor, alCambiar }) {
   );
 }
 
-function Escala({ id, etiqueta, frases, valor, alCambiar }) {
-  return (
-    <div class="campo">
-      <span class="etq" id={id}>{etiqueta}</span>
-      <Segmentos etiqueta={etiqueta} opciones={escala(frases)} valor={valor} alCambiar={alCambiar} />
-      <span class="escala-frase">{valor ? frases[valor - 1] : `1 = ${frases[0].toLowerCase()}; ${frases.length} = ${frases[frases.length - 1].toLowerCase()}`}</span>
-    </div>
-  );
-}
-
 export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer }) {
   const { api, atleta, aviso } = useApp();
   const estaSemana = lunesDe(hoyISO());
@@ -87,9 +77,12 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
   const tituloRef = useRef(null);
   const enfocar = useRef(false);
   const temporizador = useRef(null);
+  const [anuncioRespuesta, setAnuncioRespuesta] = useState('');
   useEffect(() => () => clearTimeout(temporizador.current), []);
-  useEffect(() => { setEnviado(null); }, [lunes]);
-  useEffect(() => {
+  // Otra semana (o los datos de otra semana): nada de lo de antes sigue en marcha
+  useEffect(() => { setEnviado(null); clearTimeout(temporizador.current); setAnuncioRespuesta(''); }, [lunes]);
+  // El foco va al título de la pregunta nada más pintarla (antes de que el navegador la enseñe)
+  useLayoutEffect(() => {
     if (!enfocar.current) return;
     enfocar.current = false;
     tituloRef.current?.focus({ preventScroll: true });
@@ -106,6 +99,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
     const c = datos.datos.checkin || {};
     setF({ ...c });
     // Ya enviado, se abre en el repaso (cada respuesta se cambia tocándola); si no, en la primera pregunta
+    clearTimeout(temporizador.current);
     setPaso(datos.datos.checkin ? 999 : 0);
     setDesdeRepaso(false);
     // Las respuestas, como se escriben (los números con coma)
@@ -228,13 +222,13 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       ),
     },
     ver('descanso') && { id: 'sueno', titulo: '¿Cuánto duermes por noche?', auto: true, resumen: f.horas_sueno ? `${f.horas_sueno.replace('-', '–')} h` : null,
-      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Horas de sueño" valor={f.horas_sueno ?? null} opciones={HORAS_SUENO.map((h) => [h, `${h.replace('-', '–')} h`])} alCambiar={(v) => { set('horas_sueno')(v); avanzar(v); }} /> },
+      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Horas de sueño" valor={f.horas_sueno ?? null} opciones={HORAS_SUENO.map((h) => [h, `${h.replace('-', '–')} h`])} alCambiar={(v, ev, t) => { set('horas_sueno')(v); avanzar(v, ev, t); }} /> },
     ver('descanso') && { id: 'energia', titulo: '¿Cómo vas de energía?', auto: true, resumen: frase(ESCALAS.energia, f.energia),
-      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Energía (cansancio)" valor={f.energia ?? null} opciones={escala(ESCALAS.energia)} alCambiar={(v) => { set('energia')(v); avanzar(v); }} /> },
+      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Energía (cansancio)" valor={f.energia ?? null} opciones={escala(ESCALAS.energia)} alCambiar={(v, ev, t) => { set('energia')(v); avanzar(v, ev, t); }} /> },
     ver('descanso') && { id: 'recuperacion', titulo: '¿Cómo te recuperas?', auto: true, resumen: frase(ESCALAS.recuperacion, f.recuperacion),
-      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Recuperación" valor={f.recuperacion ?? null} opciones={escala(ESCALAS.recuperacion)} alCambiar={(v) => { set('recuperacion')(v); avanzar(v); }} /> },
+      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Recuperación" valor={f.recuperacion ?? null} opciones={escala(ESCALAS.recuperacion)} alCambiar={(v, ev, t) => { set('recuperacion')(v); avanzar(v, ev, t); }} /> },
     ver('descanso') && { id: 'motivacion', titulo: '¿Qué tal de motivación?', auto: true, resumen: frase(ESCALAS.motivacion, f.motivacion),
-      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Motivación" valor={f.motivacion ?? null} opciones={escala(ESCALAS.motivacion)} alCambiar={(v) => { set('motivacion')(v); avanzar(v); }} /> },
+      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Motivación" valor={f.motivacion ?? null} opciones={escala(ESCALAS.motivacion)} alCambiar={(v, ev, t) => { set('motivacion')(v); avanzar(v, ev, t); }} /> },
     ver('molestias') && {
       id: 'molestias', titulo: '¿Te ha molestado algo?',
       resumen: ZONAS.filter(([z]) => molestias[z] > 0).map(([z, nombre]) => `${nombre} (${['', 'leve', 'moderada', 'grave'][molestias[z]]})`).join(', ') || 'Sin molestias',
@@ -275,9 +269,9 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       ),
     },
     ver('alimentacion') && { id: 'saciedad', titulo: '¿Te has quedado con hambre?', auto: true, resumen: frase(ESCALAS.saciedad, f.saciedad),
-      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Saciedad" valor={f.saciedad ?? null} opciones={escala(ESCALAS.saciedad)} alCambiar={(v) => { set('saciedad')(v); avanzar(v); }} /> },
+      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Saciedad" valor={f.saciedad ?? null} opciones={escala(ESCALAS.saciedad)} alCambiar={(v, ev, t) => { set('saciedad')(v); avanzar(v, ev, t); }} /> },
     ver('alimentacion') && { id: 'satisfaccion', titulo: '¿Estás a gusto con la dieta?', auto: true, resumen: frase(ESCALAS.satisfaccion, f.satisfaccion_dieta),
-      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Satisfacción con la dieta" valor={f.satisfaccion_dieta ?? null} opciones={escala(ESCALAS.satisfaccion)} alCambiar={(v) => { set('satisfaccion_dieta')(v); avanzar(v); }} /> },
+      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Satisfacción con la dieta" valor={f.satisfaccion_dieta ?? null} opciones={escala(ESCALAS.satisfaccion)} alCambiar={(v, ev, t) => { set('satisfaccion_dieta')(v); avanzar(v, ev, t); }} /> },
     ver('medidas') && {
       id: 'medidas', titulo: 'Medidas', resumen: MEDIDAS.filter(([k]) => medidas[k] != null).map(([k, t]) => `${t} ${num(medidas[k])} cm`).join(', ') || (verMedidas ? 'Sin apuntar' : 'Esta semana no tocan'),
       cuerpo: () => (
@@ -329,7 +323,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
     ...(datos.datos.preguntas || []).map((q) => ({
       id: `p-${q.id}`, titulo: q.texto, deCoach: true, auto: q.tipo === 'escala' || q.tipo === 'si_no',
       resumen: resp[q.id] === true ? 'Sí' : resp[q.id] === false ? 'No' : resp[q.id] != null && resp[q.id] !== '' ? `${resp[q.id]}${q.tipo === 'numero' && q.unidad ? ` ${q.unidad}` : ''}` : null,
-      cuerpo: (avanzar) => <RespuestaPregunta p={q} valor={resp[q.id]} alCambiar={(v) => { setResp((r) => ({ ...r, [q.id]: v })); if (q.tipo === 'escala' || q.tipo === 'si_no') avanzar(v); }} />,
+      cuerpo: (avanzar) => <RespuestaPregunta p={q} valor={resp[q.id]} alCambiar={(v, ev) => { setResp((r) => ({ ...r, [q.id]: v })); if (q.tipo === 'escala' || q.tipo === 'si_no') avanzar(v, ev); }} />,
     })),
     {
       id: 'notas', titulo: 'Algo más para tu coach', resumen: f.notas?.trim() ? (f.notas.trim().length > 90 ? `${f.notas.trim().slice(0, 88)}…` : f.notas.trim()) : null,
@@ -344,12 +338,16 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
     clearTimeout(temporizador.current);
     const destino = Math.max(0, Math.min(n, total));
     if (destino >= total) setDesdeRepaso(false); else if (desde) setDesdeRepaso(true);
-    if (destino !== paso) { enfocar.current = true; setPaso(destino); setError(null); }
+    if (destino !== paso) { enfocar.current = true; setPaso(destino); setError(null); setAnuncioRespuesta(''); }
   }
-  // Al elegir una respuesta de una sola opción, al siguiente paso (o al repaso) un momento después
-  const avanzarSolo = (v) => {
-    if (v == null) return;
+  // Al elegir una respuesta de una sola opción, al siguiente paso (o al repaso) un momento después; quitarla lo para.
+  // Con el teclado o un lector de pantalla (un clic sin puntero: ev.detail === 0) no se avanza solo: se dice lo
+  // elegido y se sigue con «Siguiente», para no mover el foco por sorpresa.
+  const avanzarSolo = (v, ev, texto) => {
     clearTimeout(temporizador.current);
+    if (v == null) { setAnuncioRespuesta('Respuesta quitada'); return; }
+    setAnuncioRespuesta(`Elegido: ${texto || (v === true ? 'Sí' : v === false ? 'No' : String(v))}`);
+    if (ev && ev.detail === 0) return;
     const a = paso;
     temporizador.current = setTimeout(() => ir(desdeRepaso ? total : a + 1), 420);
   };
@@ -379,6 +377,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
           <span style={{ width: `${(Math.min(paso + 1, total) / total) * 100}%` }} />
         </div>
         <p class="sr" aria-live="polite">{anuncio}</p>
+        <p class="sr" aria-live="polite">{anuncioRespuesta}</p>
       </div>
 
       {enviado && (
@@ -426,7 +425,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         )}
       </div>
     </form>
-      {yaEnviado && enRevision && (
+      {yaEnviado && (
         <section class="seccion">
           <div class="seccion-cab"><h2>Comentarios con tu coach</h2>{datos.datos.checkin.revisado_en && <span class="chip ok"><Icono n="hecho" />Revisado</span>}</div>
           <div class="panel panel-pad">

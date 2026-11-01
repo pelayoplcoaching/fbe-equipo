@@ -11,6 +11,10 @@ const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'o
 const n0 = (x) => (x == null || x === '' ? null : Number(x));
 
 // ---------- sesión ----------
+// Series pautadas hechas (de la 1 a la última de la pauta): las de «Añadir serie» no cuentan para completar
+export const seriesPautadasHechas = (e, h = {}) => Array.from({ length: Math.max(0, e?.series || 0) }, (_, i) => i + 1).filter((k) => !!h?.[k]).length;
+export const pautadasHechas = (e, h = {}) => (e?.series || 0) > 0 && seriesPautadasHechas(e, h) === e.series;
+
 // Una línea con lo hecho en un ejercicio: «3 × 6 @ 42,5 kg», «6-6-5 @ 40 kg», «3 series, hasta 45 kg», «3 × 12».
 export function resumenSeries(series = []) {
   const ss = series.filter((s) => n0(s.reps) != null || n0(s.kg) != null);
@@ -26,7 +30,7 @@ export function resumenSeries(series = []) {
 }
 
 // La última vez que se hizo esta sesión (la de nombre igual más reciente, sin contar esta) y qué ha cambiado.
-// actual: { id, nombre, fecha, tonelaje, series, minutos }; entrenamientos: los de api.entrenamientos().
+// actual: { id, nombre, fecha, tonelaje, series, minutos }; entrenamientos: los de api.sesionesHechas() (o api.entrenamientos()).
 export function compararConAnterior(actual, entrenamientos = []) {
   if (!actual?.nombre) return null;
   const fecha = actual.fecha || '9999-12-31';

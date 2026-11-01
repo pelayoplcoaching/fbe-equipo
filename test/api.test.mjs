@@ -110,7 +110,7 @@ await api.guardarCheckin(ana.id, lunes, { horas_sueno: '6-7', energia: 3, motiva
 ci = await api.checkin(ana.id, lunes);
 check(ci.checkin.horas_sueno === '6-7' && ci.molestias.length === 0, 'reeditar el check-in actualiza y borra la molestia');
 const cons = await api.constancia(ana.id);
-check(cons.mapa.length === 12 && cons.diasEntrenados === 1 && cons.mapa[11].dias.some((d) => d.iso === hoy && d.nivel === 3), 'constancia: el día de hoy entrenado en el mapa de 12 semanas');
+check(cons.diasEntrenados === 1 && !('mapa' in cons), 'constancia: el día de hoy entrenado en las 12 semanas (v0.49: sin el mapa, que ya no usa nadie)');
 const pr = await api.progreso(ana.id);
 check(pr.ejercicios[0].nombre === 'Press banca' && pr.ejercicios[0].mejor === 81.3, `e1RM en progreso (${pr.ejercicios[0]?.mejor} kg)`);
 check(pr.volumen.estaSemana.pectoral === 2, 'series de pectoral esta semana: 2');

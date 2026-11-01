@@ -2,6 +2,8 @@
 // sesión o la ficha de un atleta. Donde el navegador no la tiene, con «reducir movimiento» o con la app en segundo
 // plano, el cambio se hace sin más. Las animaciones están en estilos.css (::view-transition-*), cortas y con ease-out.
 
+import { reportarError } from '../registro-errores.js';
+
 export const sinMovimiento = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 let enCurso = null;
@@ -16,7 +18,11 @@ export function conTransicion(cambio, tipo = 'adelante') {
   let t;
   try {
     // Preact pinta en una microtarea tras el cambio de estado: una tarea después ya está la pantalla nueva
-    t = d.startViewTransition(() => { cambio(); return new Promise((r) => setTimeout(r, 0)); });
+    // Un error dentro del cambio se apunta (Cuenta → Errores de la app) pero no se enseña: la pantalla sigue
+    t = d.startViewTransition(() => {
+      try { cambio(); } catch (e) { reportarError(e, 'transicion'); }
+      return new Promise((r) => setTimeout(r, 0));
+    });
   } catch { delete raiz.dataset.vt; cambio(); return; }
   enCurso = t;
   // Por si el navegador la deja colgada (la capa de la transición taparía los toques), como mucho un segundo

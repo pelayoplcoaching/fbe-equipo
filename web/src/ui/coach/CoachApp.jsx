@@ -64,6 +64,9 @@ export function CoachApp() {
 
   // v0.49: abrir y cerrar una ficha, y cambiar de sección, con una transición corta (donde se puede)
   const abrirAtleta = (atletaId, pestana = 'programa') => { conTransicion(() => { setTab('atletas'); setFicha({ atletaId, pestana }); setPeticion(null); }, 'abrir'); };
+  // v0.49: los resúmenes que ya cargó el panel, para la cabecera de la ficha (si se abre desde otro sitio, la ficha
+  // pide solo los de ese atleta)
+  const resumenesPanel = useRef(null);
   const cerrarFicha = () => conTransicion(() => { setFicha(null); setPeticion(null); }, 'cerrar');
   const total = bandeja.datos?.total || 0;
 
@@ -121,8 +124,8 @@ export function CoachApp() {
       </nav>
       <main key={tab} class="vista">
       {tab === 'atletas' && (ficha
-        ? <Ficha key={`${ficha.atletaId}:${ficha.n || 0}`} atletaId={ficha.atletaId} pestanaInicial={ficha.pestana} alVolver={cerrarFicha} alCambiar={() => bandeja.recargar(true)} />
-        : <Panel abrir={abrirAtleta} pendientes={bandeja.datos?.porAtleta || {}} peticion={pide('atletas')} alBuscar={abrirBuscar} abrirCuenta={() => { setTab('cuenta'); setFicha(null); }} />)}
+        ? <Ficha key={`${ficha.atletaId}:${ficha.n || 0}`} atletaId={ficha.atletaId} pestanaInicial={ficha.pestana} resumenInicial={resumenesPanel.current?.find((r) => r.atleta_id === ficha.atletaId) || null} alVolver={cerrarFicha} alCambiar={() => bandeja.recargar(true)} />
+        : <Panel abrir={abrirAtleta} pendientes={bandeja.datos?.porAtleta || {}} peticion={pide('atletas')} alBuscar={abrirBuscar} abrirCuenta={() => { setTab('cuenta'); setFicha(null); }} alCargar={(l) => { resumenesPanel.current = l; }} />)}
       {tab === 'revisar' && <Revisar bandeja={bandeja} abrirAtleta={abrirAtleta} />}
       {tab === 'mensajes' && <Conversaciones abrirAtleta={abrirAtleta} alCambiar={() => { bandeja.recargar(true); sinLeer.recargar(true); }} peticion={pide('mensajes')} />}
       {tab === 'plantillas' && <Plantillas peticion={pide('plantillas')} />}

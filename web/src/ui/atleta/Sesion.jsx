@@ -1,5 +1,5 @@
 import { Fragment } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos, usePreferencia, Pista } from '../comunes.jsx';
 import { BandaConexion } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
@@ -27,7 +27,7 @@ import { fraseSerie } from '../../logica/voz.js';
 import { hablar } from '../voz.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { vibrar } from '../hapticos.js';
-import { resumenSeries, compararConAnterior, textoComparacion } from '../../logica/visual.js';
+import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, seriesPautadasHechas } from '../../logica/visual.js';
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { api, atleta, cola, aviso, propio } = useApp();
@@ -63,6 +63,14 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // Notas fijadas del atleta por ejercicio (se cargan con la sesión y se guardan al momento)
   const [notas, setNotas] = useState({});
   usePantallaEncendida();
+  // v0.49: al completar las series pautadas de un ejercicio, su tarjeta se pliega un momento después. El temporizador
+  // de cada uno se guarda para cancelarlo (si se desmarca, si falla el guardado o al salir) y, al cumplirse, se
+  // vuelve a mirar con lo que hay entonces.
+  const hechasRef = useRef({});
+  hechasRef.current = hechas;
+  const plegar = useRef({});
+  const cancelarPlegado = (seId) => { clearTimeout(plegar.current[seId]); delete plegar.current[seId]; };
+  useEffect(() => () => { for (const t of Object.values(plegar.current)) clearTimeout(t); plegar.current = {}; }, []);
   useEffect(() => { if (det.datos?.notas) setNotas(det.datos.notas); }, [det.datos]);
   // v0.41: vídeos de técnica de cada ejercicio, enviados y guardados en el móvil sin enviar (se recuentan al
   // subir uno y cada vez que cambia la cola de pendientes: así el aviso pasa solo de «sin enviar» a «enviado»)
@@ -157,7 +165,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const etiquetas = etiquetasSuperserie(ejercicios);
   // La serie que toca ahora: la que dijo la última serie marcada (si sigue sin hacer) o la primera sin hacer
   const pendienteDe = (x) => Array.from({ length: x.series }, (_, i) => i + 1).find((k) => !hechas[x.id]?.[k]);
-  let prox = proxima && ejercicios.some((x) => x.id === proxima.id) && !hechas[proxima.id]?.[proxima.numero] ? proxima : null;
+  let prox = proxima && ejercicios.some((x) => x.id === proxima.id && proxima.numero <= x.series) && !hechas[proxima.id]?.[proxima.numero] ? proxima : null;
   if (!prox) { const x = ejercicios.find((y) => pendienteDe(y)); if (x) prox = { id: x.id, numero: pendienteDe(x) }; }
   if (sesion.completada) prox = null;
   const grupos = gruposSuperserie(ejercicios);
@@ -203,9 +211,11 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     const local = { ...datos, id: previa?.id || `local-${e.id}-${numero}` };
     setHechas((h) => ({ ...h, [e.id]: { ...h[e.id], [numero]: local } }));
     if (!previa) vibrar('serie');
-    // v0.49: al completar el ejercicio, su tarjeta se pliega en una línea (un momento después, para ver el check)
-    if (!previa && Object.keys(hechas[e.id] || {}).length + 1 === e.series) {
-      setTimeout(() => setAbiertos((a) => { const n = new Set(a || []); n.delete(e.id); return n; }), 700);
+    // v0.49: al completar las series pautadas (las de «Añadir serie» no cuentan), la tarjeta se pliega en una línea
+    // un momento después, para ver el check
+    if (!previa && numero <= e.series && !pautadasHechas(e, hechas[e.id]) && pautadasHechas(e, { ...hechas[e.id], [numero]: local })) {
+      cancelarPlegado(e.id);
+      plegar.current[e.id] = setTimeout(() => { delete plegar.current[e.id]; plegarTarjeta(e); }, 700);
     }
     if (!previa && previas.datos) {
       const r = recordsDeSesion(enOrden({ ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } }), previas.datos, claveSerie)[`${e.id}-${numero}`];
@@ -217,7 +227,10 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       cuenta[e.id] += 1;
       const r = trasSerie(ejercicios, cuenta, e.id);
       const sig = r.siguiente && ejercicios.find((x) => x.id === r.siguiente.id);
-      setProxima(r.siguiente ? { id: r.siguiente.id, numero: r.siguiente.numero } : null);
+      // La serie que toca, contando solo las pautadas (una de más no adelanta al ejercicio siguiente)
+      const cuentaP = Object.fromEntries(ejercicios.map((x) => [x.id, seriesPautadasHechas(x, x.id === e.id ? { ...hechas[e.id], [numero]: local } : hechas[x.id])]));
+      const rP = trasSerie(ejercicios, cuentaP, e.id);
+      setProxima(rP.siguiente ? { id: rP.siguiente.id, numero: rP.siguiente.numero } : null);
       const texto = !sig ? 'terminar la sesión' : sig.id === e.id || r.siguiente.numero > 1 ? `serie ${r.siguiente.numero} de ${nombreCon(sig)}` : nombreCon(sig);
       // v0.48: lo que dirá el entrenador por voz al acabar el descanso («Serie 3 de press banca: 80 kilos por 6»)
       let voz = '¡Sesión terminada! Buen trabajo.';
@@ -242,12 +255,14 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       setEnCola((c) => ({ ...c, [`${e.id}-${numero}`]: r.enCola }));
     } catch (err) {
       aviso(err.message, 'error');
+      cancelarPlegado(e.id);
       setHechas((h) => { const m = { ...h[e.id] }; if (previa) m[numero] = previa; else delete m[numero]; return { ...h, [e.id]: m }; });
     }
   }
 
   async function quitar(e, numero) {
     const previa = hechas[e.id]?.[numero];
+    cancelarPlegado(e.id);
     setHechas((h) => { const m = { ...h[e.id] }; delete m[numero]; return { ...h, [e.id]: m }; });
     try {
       await cola.enviar({ tipo: 'borrarSerie', datos: { sesion_ejercicio_id: e.id, numero }, atletaId: atleta.id });
@@ -258,7 +273,23 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     }
   }
 
-  const alternar = (eid) => setAbiertos((a) => { const n = new Set(a); n.has(eid) ? n.delete(eid) : n.add(eid); return n; });
+  // Pliega la tarjeta si sigue completa: antes, el foco pasa a su cabecera (el botón que la vuelve a abrir) para que no
+  // se pierda; y si la tarjeta empieza por encima de la pantalla (ya se ha bajado al siguiente), se compensa lo que
+  // encoge para que lo que se está viendo no salte
+  function plegarTarjeta(e) {
+    if (!pautadasHechas(e, hechasRef.current[e.id])) return;
+    const art = document.querySelector(`[data-se="${e.id}"]`);
+    const cab = art?.querySelector('.ejercicio-cab');
+    if (art && cab && art.contains(document.activeElement) && document.activeElement !== cab) cab.focus({ preventScroll: true });
+    const antes = art?.getBoundingClientRect();
+    setAbiertos((a) => { const n = new Set(a || []); n.delete(e.id); return n; });
+    if (!antes || antes.top >= 0) return;
+    requestAnimationFrame(() => {
+      const despues = art.isConnected ? art.getBoundingClientRect() : null;
+      if (despues && despues.height < antes.height) window.scrollBy({ top: despues.height - antes.height, behavior: 'instant' });
+    });
+  }
+  const alternar = (eid) => { cancelarPlegado(eid); setAbiertos((a) => { const n = new Set(a); n.has(eid) ? n.delete(eid) : n.add(eid); return n; }); };
   // v0.48: «¿Dónde entrenas hoy?». Se deshace lo que puso el lugar anterior (si aún no tiene series) y, fuera del
   // gimnasio, se cambia lo que no se puede hacer con ese material por la primera alternativa del coach que sí;
   // lo que se cambió a mano, o ya tiene series, no se toca
@@ -453,7 +484,9 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   const kgBackoff = top ? propuesta(2, hechas)?.kg : null;
   const tempo = tempoDe(e);
   // v0.49: hecho del todo y cerrado, el ejercicio es una sola línea (nombre, lo hecho y el check); se abre al tocarlo
-  const plegado = !abierto && n >= e.series && n > 0;
+  const completo = pautadasHechas(e, hechas);
+  const nPautadas = seriesPautadasHechas(e, hechas);
+  const plegado = !abierto && completo;
   // Las herramientas del ejercicio, en la hoja «Más» (fuera de la tarjeta, para que no estorben entre serie y serie)
   const herramientas = [
     { id: 'cambiar', ico: 'intercambiar', texto: 'Cambiar', detalle: 'Por una alternativa, si la máquina está ocupada o algo no te sienta bien' },
@@ -492,7 +525,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
             ? <span class="video-aviso pendiente"><Icono n="reloj" />{videosPendientes === 1 ? 'Vídeo guardado en el móvil, sin enviar' : `${videosPendientes} vídeos guardados en el móvil, sin enviar`}</span>
             : videos > 0 && <span class="video-aviso"><Icono n="hecho" />{videos === 1 ? 'Vídeo enviado' : `${videos} vídeos enviados`}</span>}
         </span>
-        <span class={`progreso-series ${n >= e.series ? 'hecho' : ''}`}>{n >= e.series ? <Icono n="hecho" width="22" height="22" titulo="Hecho" /> : `${n}/${e.series}`}</span>
+        <span class={`progreso-series ${completo ? 'hecho' : ''}`}>{completo ? <Icono n="hecho" width="22" height="22" titulo="Hecho" /> : `${nPautadas}/${e.series}`}</span>
       </button>
       {abierto && (
         <div class="ejercicio-cuerpo">
@@ -872,7 +905,8 @@ function Resumen({ resumen, sesion, alCerrar }) {
   }, [sesion?.id]);
   // v0.49: comparado con la última vez que hizo esta misma sesión (sale de sus entrenamientos; sin conexión, no sale)
   const cardio = cardioHechoValido(resumen.cardio);
-  const anteriores = useCarga(() => (cardio || !resumen.series || resumen.enCola ? Promise.resolve([]) : api.entrenamientos(atleta.id).catch(() => [])), [sesion?.id]);
+  // (solo las de ese nombre, las más recientes: no hace falta el historial entero)
+  const anteriores = useCarga(() => (cardio || !resumen.series || resumen.enCola ? Promise.resolve([]) : api.sesionesHechas(atleta.id, { nombre: sesion.nombre, limite: 4 }).catch(() => [])), [sesion?.id]);
   const comparacion = anteriores.datos ? compararConAnterior({ id: sesion.id, nombre: sesion.nombre, fecha: resumen.tarjeta?.fecha, tonelaje: resumen.tonelaje, series: resumen.series, minutos: resumen.minutos }, anteriores.datos) : null;
   const cifras = cardio ? [
     { k: 'minutos', v: resumen.cardio.minutos, u: 'min', t: NOMBRE_MODALIDAD[resumen.cardio.modalidad] },

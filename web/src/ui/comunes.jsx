@@ -308,7 +308,7 @@ export function Segmentos({ opciones, valor, alCambiar, etiqueta, clase = '' }) 
     <div class={`segmentos ${clase}`} role="group" aria-label={etiqueta}>
       {opciones.map(([v, t, ayuda]) => (
         <button type="button" key={String(v)} data-v={v} aria-pressed={valor === v ? 'true' : 'false'} title={ayuda}
-          onClick={() => alCambiar(valor === v ? null : v)}>{t}</button>
+          onClick={(ev) => alCambiar(valor === v ? null : v, ev)}>{t}</button>
       ))}
     </div>
   );

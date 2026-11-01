@@ -34,11 +34,12 @@ const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
 const PESTANAS = [['programa', 'Programa'], ['mensajes', 'Mensajes'], ['actividad', 'Actividad'], ['registro', 'Registro'], ['seguimiento', 'Seguimiento'], ['nutricion', 'Nutrición'], ['videos', 'Vídeos y fotos'], ['objetivos', 'Objetivos'], ['notas', 'Notas'], ['cobros', 'Cobros'], ['datos', 'Datos']];
 export const pestanasFicha = (a) => PESTANAS.filter(([k]) => (conNutricion(a) || k !== 'nutricion') && (conEntrenamiento(a) || !DE_ENTRENAMIENTO.includes(k)));
 
-export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambiar }) {
+export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambiar, resumenInicial = null }) {
   const { api } = useApp();
   const ficha = useCarga(() => api.ficha(atletaId), [atletaId]);
-  // v0.49: su resumen del panel (bloque, cumplimiento, peso y última actividad) para la cabecera; solo el coach
-  const resumen = useCarga(() => api.resumenes(undefined, { soloAtleta: atletaId }).then((x) => x[0] || null).catch(() => null), [atletaId]);
+  // v0.49: su resumen del panel (bloque, cumplimiento, peso y última actividad) para la cabecera; solo el coach. Se
+  // reutiliza el que ya cargó el panel; si no lo hay (búsqueda, notificación), se piden solo las filas de este atleta
+  const resumen = useCarga(() => (resumenInicial ? Promise.resolve(resumenInicial) : api.resumenes(undefined, { soloAtleta: atletaId }).then((x) => x[0] || null).catch(() => null)), [atletaId]);
   const r = resumen.datos;
   const [pest, setPest] = useState(pestanaInicial);
   const [invitar, setInvitar] = useState(false);

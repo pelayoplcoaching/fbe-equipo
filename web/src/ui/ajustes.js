@@ -14,12 +14,28 @@ const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
 // igual mientras la app esté abierta (antes se volvía a los de serie: «elijo otro sonido y suena el de siempre»)
 let enMemoria = null;
+const TEMAS = ['sistema', 'claro', 'oscuro'];
+// Lo guardado, completado con los de serie y saneado (sin pantalla, para poder probarlo):
+// - v0.49: quien apagó la vibración en la v0.48 (solo había una) la tiene apagada también al tocar;
+// - un tema, un acento o un negro puro que no sean de los que hay vuelven a los de serie (alguien pudo tocar el
+//   almacenamiento a mano, y el tema acaba en el color de la barra del sistema).
+export function normalizarAjustes(guardado = {}) {
+  const g = guardado && typeof guardado === 'object' && !Array.isArray(guardado) ? guardado : {};
+  const a = { ...AJUSTES_DEFECTO, ...g };
+  if (!('hapticos' in g) && 'vibracion' in g) a.hapticos = g.vibracion !== false;
+  a.hapticos = a.hapticos !== false;
+  if (!TEMAS.includes(a.tema)) a.tema = AJUSTES_DEFECTO.tema;
+  if (typeof a.acento !== 'string' || !/^[a-z]{1,20}$/.test(a.acento)) a.acento = AJUSTES_DEFECTO.acento;
+  a.oled = a.oled === true;
+  return a;
+}
 export function leerAjustes() {
+  let guardado = {};
   try {
-    const guardado = localStorage.getItem(CLAVE);
-    if (guardado) return { ...AJUSTES_DEFECTO, ...JSON.parse(guardado), ...(enMemoria || {}) };
-  } catch { /* sin almacenamiento */ }
-  return { ...AJUSTES_DEFECTO, ...(enMemoria || {}) };
+    const t = localStorage.getItem(CLAVE);
+    if (t) guardado = JSON.parse(t);
+  } catch { /* sin almacenamiento (o lo guardado no se entiende): los de serie */ }
+  return normalizarAjustes({ ...(guardado || {}), ...(enMemoria || {}) });
 }
 export const ajuste = (k) => leerAjustes()[k];
 
@@ -31,7 +47,8 @@ export function guardarAjustes(a) {
 
 // El tema usa el mismo atributo que el visor que aloja la demo (data-theme); con «sistema» se respeta lo que hubiera.
 let temaPrevio;
-export function aplicarTema(tema = leerAjustes().tema, a = leerAjustes()) {
+export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) {
+  const tema = TEMAS.includes(temaPedido) ? temaPedido : 'sistema';
   if (typeof document === 'undefined') return;
   const r = document.documentElement;
   if (temaPrevio === undefined) temaPrevio = r.getAttribute('data-theme');

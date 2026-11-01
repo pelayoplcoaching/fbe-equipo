@@ -970,8 +970,9 @@ export function crearApi(backend) {
       const dias = {};
       for (const x of series) { const d = aISO(new Date(x.registrada_en)); dias[d] = (dias[d] || 0) + 1; }
       for (const x of sesiones) if (x.completada && x.fecha_realizada >= desde && !dias[x.fecha_realizada]) dias[x.fecha_realizada] = 1;
-      const mapa = mapaCalor(dias, hoy);
-      return { racha: racha(lista, hoy), mapa, diasEntrenados: mapa.flatMap((w) => w.dias).filter((d) => d.nivel > 0).length };
+      // (v0.49: el calendario de Progreso sale de sesionesHechas; aquí solo hace falta la cuenta de días)
+      const diasEntrenados = mapaCalor(dias, hoy).flatMap((w) => w.dias).filter((d) => d.nivel > 0).length;
+      return { racha: racha(lista, hoy), diasEntrenados };
     },
     // Cardio hecho por semana (minutos, km y sesiones) en las últimas n semanas, para la gráfica de Progreso
     async cardioSemanas(atletaId, n = 8, hoy = hoyISO()) {
@@ -1026,6 +1027,26 @@ export function crearApi(backend) {
         b.select('cuestionarios', { eq: { atleta_id: atletaId }, cols: 'id,completado_en', limit: 1 }).catch(() => []),
       ]);
       return { sesion: ses.length > 0, peso: pes.length > 0, checkin: ck.length > 0, cuestionario: !!cu[0]?.completado_en };
+    },
+    // v0.49: sesiones hechas, ligeras (sin el historial entero): desde una fecha (el calendario de 16 semanas) o las de
+    // un nombre (la última vez que hizo esa sesión, para el resumen), de la más reciente a la más antigua y con sus
+    // series y tonelaje (solo de esas sesiones). limite: cuántas como mucho.
+    async sesionesHechas(atletaId, { desde = null, nombre = null, limite = null } = {}) {
+      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id' });
+      const semanas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id' }) : [];
+      if (!semanas.length) return [];
+      const filtro = { in: { semana_id: semanas.map((x) => x.id) }, eq: { completada: true, ...(nombre ? { nombre } : {}) }, order: [['fecha_realizada', 'desc']],
+        cols: 'id,nombre,tipo,fecha_realizada,duracion_min,cardio_hecho', ...(desde ? { gte: { fecha_realizada: desde } } : {}), ...(limite ? { limit: limite } : {}) };
+      const sesiones = (await b.select('sesiones', filtro)).filter((x) => x.fecha_realizada);
+      const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, cols: 'id,sesion_id' }) : [];
+      const series = pautas.length ? await b.select('series', { in: { sesion_ejercicio_id: pautas.map((x) => x.id) }, cols: 'sesion_ejercicio_id,kg,reps', limit: 20000 }) : [];
+      const sesionDe = Object.fromEntries(pautas.map((x) => [x.id, x.sesion_id]));
+      const porSesion = agrupar(series.filter((x) => Number(x.reps) > 0).map((x) => ({ ...x, sesion_id: sesionDe[x.sesion_ejercicio_id] })), 'sesion_id');
+      return sesiones.map((x) => {
+        const ss = porSesion[x.id] || [];
+        return { id: x.id, nombre: x.nombre, tipo: x.tipo, fecha: x.fecha_realizada, duracion_min: x.duracion_min, cardio_hecho: x.cardio_hecho || null,
+          series: ss.length, tonelaje: ss.reduce((t, s2) => t + (Number(s2.kg) || 0) * (Number(s2.reps) || 0), 0) };
+      });
     },
     // Historial de entrenamientos: sesiones hechas de todos sus bloques, de la más reciente a la más antigua,
     // con sus cifras (series, tonelaje, récords, músculos principales)

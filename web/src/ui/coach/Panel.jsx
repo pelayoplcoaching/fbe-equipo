@@ -53,9 +53,11 @@ function Alertas({ r, pendientes }) {
 const sueno = (h) => (h ? `${h.replace('-', '–')} h` : '—');
 const MOLESTIA = ['Sin dolor', 'Leve', 'Moderada', 'Grave'];
 
-export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrirCuenta }) {
+export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrirCuenta, alCargar }) {
   const { api, perfil } = useApp();
   const res = useCarga(() => api.resumenes(), []);
+  // v0.49: lo cargado se queda en CoachApp para la cabecera de la ficha (sin volver a pedirlo)
+  useEffect(() => { if (res.datos) alCargar?.(res.datos); }, [res.datos]);
   const [filtro, setFiltro] = useState('todos');
   const [nuevo, setNuevo] = useState(false);
   const [avisos, setAvisos] = useState(false);

@@ -15,7 +15,7 @@ import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { HabitosMes } from './Habitos.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { num, signo, GRUPOS, MEDIDAS, e1rm, rangoVolumen, estadoVolumen, tendenciaPeso, ritmoPeso } from '../../logica/calculos.js';
-import { fmtCorta, hoyISO, diasEntre, fmtConDia, fechaMadrid } from '../../logica/fechas.js';
+import { fmtCorta, hoyISO, diasEntre, fmtConDia, fechaMadrid, lunesDe, sumarDias } from '../../logica/fechas.js';
 
 
 // Contenido de progreso, reutilizado en la ficha del atleta del panel del coach
@@ -239,8 +239,9 @@ function TotalesCardio({ semanas }) {
 const DIAS_SEMANA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 function MapaConstancia({ atletaId, esCoach = false }) {
   const { api } = useApp();
-  const datos = useCarga(() => api.entrenamientos(atletaId).catch(() => []), [atletaId]);
   const hoy = fechaMadrid();
+  // Solo las sesiones de estas 16 semanas (no el historial entero)
+  const datos = useCarga(() => api.sesionesHechas(atletaId, { desde: sumarDias(lunesDe(hoy), -7 * 15) }).catch(() => []), [atletaId]);
   const [elegido, setElegido] = useState(null);
   const [foco, setFoco] = useState(hoy);
   const rejilla = useRef(null);

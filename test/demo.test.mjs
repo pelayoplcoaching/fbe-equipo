@@ -75,7 +75,19 @@ const pierna = Object.values(prog3.sesiones).flat().find((x) => x.nombre === 'Pi
 const detPierna = await api.sesion(pierna.id, ana.id);
 check(detPierna.ejercicios.filter((e) => e.superserie === 'A').length === 2, 'Pierna A trae una superserie (leg curl y gemelo)');
 const cons = await api.constancia(ana.id);
-check(cons.racha >= 1 && cons.mapa.length === 12 && cons.diasEntrenados > 0, `racha de semanas completas (${cons.racha}) y calendario de 12 semanas`);
+check(cons.racha >= 1 && cons.diasEntrenados > 0, `racha de semanas completas (${cons.racha}) y calendario de 12 semanas`);
+// v0.49: las sesiones hechas, ligeras (el calendario de 16 semanas y la última vez de una sesión), igual que las del historial
+{
+  const todas = await api.entrenamientos(ana.id);
+  const desde = sumarDias(lunesDe(hoyISO()), -7 * 15);
+  const ligeras = await api.sesionesHechas(ana.id, { desde });
+  const esperadas = todas.filter((x) => x.fecha >= desde);
+  check(ligeras.length === esperadas.length && ligeras.length > 0 && ligeras.every((x) => { const y = todas.find((z) => z.id === x.id); return y && y.fecha === x.fecha && y.series === x.series && Math.abs(y.tonelaje - x.tonelaje) < 1e-6; }),
+    `sesionesHechas desde una fecha: las mismas ${ligeras.length} sesiones, con sus series y tonelaje, sin cargar el historial entero`);
+  const nombre = todas[0].nombre;
+  const deNombre = await api.sesionesHechas(ana.id, { nombre, limite: 2 });
+  check(deNombre.length >= 1 && deNombre.length <= 2 && deNombre.every((x) => x.nombre === nombre) && deNombre[0].fecha >= (deNombre[1]?.fecha || ''), `y las de un nombre (${nombre}), las más recientes primero y como mucho las pedidas`);
+}
 const vitDemo = await api.vitrina(ana.id);
 check(vitDemo.ejercicios.length > 5 && vitDemo.recientes.length > 0, 'vitrina de récords con récords recientes');
 check(igualD((await api.progreso(ana.id)).volumenObjetivo, { espalda: [12, 22], gluteo: [6, 14] }), 'volumen objetivo propio de Ana');

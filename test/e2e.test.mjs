@@ -422,6 +422,10 @@ try {
   await p.getByText('Serie 3 quitada').waitFor();
   check((await primero.locator('.progreso-series').textContent()) === '2/3', 'quitar una serie por error');
   await primero.getByRole('button', { name: 'Marcar la serie 3 como hecha' }).click();
+  // Al plegarse, el foco (que estaba en el check) pasa a la cabecera de la tarjeta, que la vuelve a abrir; no se pierde
+  await primero.locator('.resumen-ej').waitFor();
+  const focoPlegado = await p.evaluate(() => { const a = document.activeElement; return { cab: a?.classList.contains('ejercicio-cab'), primero: a?.closest('.ejercicio') === document.querySelector('.ejercicio'), expandido: a?.getAttribute('aria-expanded') }; });
+  check(focoPlegado.cab && focoPlegado.primero && focoPlegado.expandido === 'false', `al plegarse, el foco pasa a su cabecera (y no a la página) ${JSON.stringify(focoPlegado)}`);
   await p.getByRole('button', { name: 'Saltar' }).click();
   await revisar('sesion');
   // A 360 px y en oscuro, la sesión con la tarjeta plegada y la serie que toca
@@ -500,6 +504,25 @@ try {
   await segundo.getByLabel('Repeticiones de la serie 1').fill('10');
   await segundo.getByRole('button', { name: 'Marcar la serie 1 como hecha' }).click();
   await p.getByRole('button', { name: 'Saltar' }).click();
+  // v0.49: una serie de más («Añadir serie») no completa el ejercicio ni lo pliega, y la que toca sigue a la vista
+  const saltarSiHay = async () => { if (await p.locator('.temporizador').count()) await p.getByRole('button', { name: 'Saltar' }).click(); };
+  await segundo.getByRole('button', { name: 'Añadir serie' }).click();
+  await segundo.getByLabel('Kilos de la serie 4').fill('30');
+  await segundo.getByLabel('Repeticiones de la serie 4').fill('10');
+  await segundo.getByRole('button', { name: 'Marcar la serie 4 como hecha' }).click();
+  await saltarSiHay();
+  await segundo.getByLabel('Kilos de la serie 2').fill('30');
+  await segundo.getByLabel('Repeticiones de la serie 2').fill('10');
+  await segundo.getByRole('button', { name: 'Marcar la serie 2 como hecha' }).click();
+  await saltarSiHay();
+  await p.waitForTimeout(1000);
+  const sigSeg = segundo.locator('.serie.siguiente');
+  check(!(await segundo.getAttribute('class')).includes('plegado') && await segundo.locator('.ejercicio-cuerpo').count() === 1 && (await segundo.locator('.progreso-series').textContent()) === '2/3'
+    && await sigSeg.count() === 1 && /serie 3$/.test(await sigSeg.getAttribute('aria-label')) && await sigSeg.isVisible(),
+    'con 2 de 3 pautadas y una de más, el ejercicio no se pliega (2/3) y la serie que toca, la 3, está a la vista');
+  await segundo.getByRole('button', { name: 'Quitar la serie 4' }).click();
+  await segundo.getByRole('button', { name: 'Quitar la serie 2' }).click();
+  await p.locator('.toast', { hasText: 'Serie 2 quitada' }).waitFor();
 
   console.log('\nAtleta: comentario para el coach');
   await p.getByLabel('Escribir a tu coach').fill('He cambiado el remo porque la barra estaba ocupada');
@@ -641,11 +664,20 @@ try {
   await p.getByRole('textbox', { name: 'peso en kilos' }).blur();
   await p.locator('.ck-nav').getByRole('button', { name: /Siguiente/ }).click();
   await p.waitForFunction(() => document.getElementById('ck-titulo')?.textContent.trim() === '¿Cuánto duermes por noche?');
+  await p.waitForFunction(() => document.activeElement?.id === 'ck-titulo', null, { timeout: 3000 }).catch(() => {});
   check(await p.evaluate(() => document.activeElement?.id === 'ck-titulo') && (await p.locator('.ck-barra').getAttribute('aria-valuetext')).startsWith('2 de'), 'con «Siguiente», a la segunda (el foco va a su pregunta y el progreso lo dice)');
   await responderCheckin('Horas de sueño', '7–8 h');
   check((await tituloCheckin()) === '¿Cómo vas de energía?', 'con una sola respuesta, pasa sola a la siguiente');
   await revisar('checkin-escala');
   await responderCheckin('Energía (cansancio)', '4 Algo de cansancio leve');
+  // Con el teclado (o un lector de pantalla) no pasa sola: dice lo elegido y se sigue con «Siguiente»
+  check((await tituloCheckin()) === '¿Cómo te recuperas?', 'tras la energía, la recuperación');
+  await p.getByRole('group', { name: 'Recuperación' }).getByRole('button', { name: '3 Algo de fatiga, puedo seguir', exact: true }).focus();
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(800);
+  check((await tituloCheckin()) === '¿Cómo te recuperas?' && (await p.locator('.ck-progreso p.sr').nth(1).textContent()).startsWith('Elegido: 3, Algo de fatiga')
+    && (await p.getByRole('group', { name: 'Recuperación' }).getByRole('button', { name: '3 Algo de fatiga, puedo seguir', exact: true }).getAttribute('aria-pressed')) === 'true',
+    'con el teclado, la respuesta se marca y se anuncia, pero no salta sola a la siguiente');
   await pasoCheckin('¿Qué tal de motivación?');
   await responderCheckin('Motivación', '5 Muy motivado');
   check((await tituloCheckin()) === '¿Te ha molestado algo?', 'se puede saltar una pregunta («Siguiente» sin contestar)');

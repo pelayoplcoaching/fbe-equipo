@@ -206,6 +206,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
                   {!esMarcador(c) && <TextoConEnlaces texto={c.texto} clase="burbuja-texto" />}
                   <span class="burbuja-pie">
                     {c.programado ? <span class="programado"><Icono n="reloj" />Programado para el {fmtProgramado(c.enviar_en)}</span> : <span class={gr.ultimo ? '' : 'sr'}>{horaDe(c.creado_en)}</span>}
+                    {mio && !c.programado && !gr.ultimo && <span class="sr">{c.leido_en ? 'visto' : 'enviado'}</span>}
                     {mio && !c.programado && gr.ultimo && <span class="visto" title={c.leido_en ? 'Visto' : 'Enviado'} aria-label={c.leido_en ? 'visto' : 'enviado'}>{c.leido_en ? '✓✓' : '✓'}</span>}
                     {(mio || yo === 'coach') && (
                       <button type="button" class="burbuja-mas" aria-label="Opciones del mensaje" onClick={() => setBorrando(borrando === c.id ? null : c.id)}><Icono n="abajo" /></button>
@@ -227,6 +228,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         <span ref={fin} class="chat-fin" aria-hidden="true" />
       </div>
       {nuevos && !abajo && <button type="button" class="chat-nuevos" onClick={irAbajo}>Mensajes nuevos <Icono n="abajo" /></button>}
+      <p class="sr" aria-live="polite">{nuevos && !abajo ? 'Hay mensajes nuevos más abajo' : ''}</p>
 
       <form class="chat-barra" onSubmit={enviar}>
         <div class="chat-barra-in">
@@ -300,7 +302,11 @@ function MedioChat({ archivo, alAbrir }) {
       <div class="medio-chat medio-fallo" role="group" aria-label={esFoto ? 'Imagen no disponible' : 'Vídeo no disponible'}>
         <Icono n={esFoto ? 'imagen' : 'video'} />
         <span class="peq">{esFoto ? 'No se pudo cargar la imagen' : 'No se pudo cargar el vídeo'}</span>
-        <button type="button" class="btn btn-peq" onClick={() => setIntento((x) => x + 1)}><Icono n="reiniciar" /> Reintentar</button>
+        {/* «Abrir» como siempre: un vídeo HEVC o una foto HEIC que aquí no se pintan pueden verse o descargarse en el visor */}
+        <span class="fila-envolver medio-fallo-acciones">
+          <button type="button" class="btn btn-peq" onClick={() => setIntento((x) => x + 1)}><Icono n="reiniciar" /> Reintentar</button>
+          <button type="button" class="btn btn-peq" onClick={alAbrir} aria-label={esFoto ? 'Abrir la foto' : 'Abrir el vídeo'}><Icono n="ojo" /> Abrir</button>
+        </span>
       </div>
     );
   }

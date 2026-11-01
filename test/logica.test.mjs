@@ -1499,6 +1499,25 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(cssAcento('morado') === '' && cssAcento('azul').includes('--morado:#1D55C4') && cssAcento('azul').includes(':root[data-theme="dark"]{--morado:#7EA6FF') && cssAcento('azul').includes('prefers-color-scheme: dark'),
     'el CSS de un acento: claro, oscuro del sistema y oscuro elegido (el morado no necesita nada)');
   check(cssAcento('no-existe') === '', 'un acento que no existe se queda en el morado');
+  console.log('\nv0.49 (revisión): ajustes guardados, series pautadas y el calendario');
+  const { normalizarAjustes, AJUSTES_DEFECTO } = await import('../web/src/ui/ajustes.js');
+  check(normalizarAjustes({ vibracion: false }).hapticos === false && normalizarAjustes({ vibracion: true }).hapticos === true, 'quien apagó la vibración en la v0.48 la tiene apagada también al tocar (y quien la tenía, encendida)');
+  check(normalizarAjustes({ vibracion: false, hapticos: true }).hapticos === true && normalizarAjustes({ vibracion: true, hapticos: false }).hapticos === false, 'lo elegido después en «Vibración al tocar» manda');
+  check(normalizarAjustes({}).hapticos === true && normalizarAjustes(null).hapticos === true && AJUSTES_DEFECTO.hapticos === true, 'sin nada guardado, encendida');
+  const raro = normalizarAjustes({ tema: '"><script>', acento: 'x;}body{', oled: 'si' });
+  check(raro.tema === 'sistema' && raro.acento === 'morado' && raro.oled === false && normalizarAjustes({ tema: 'oscuro', acento: 'pino', oled: true }).tema === 'oscuro', 'un tema, un acento o un negro puro que no son de los que hay vuelven a los de serie');
+  const { pautadasHechas, seriesPautadasHechas } = await import('../web/src/logica/visual.js');
+  const ej = { series: 3 };
+  check(!pautadasHechas(ej, { 1: {}, 2: {}, 4: {} }) && seriesPautadasHechas(ej, { 1: {}, 2: {}, 4: {} }) === 2, 'una serie de más («Añadir serie») no completa el ejercicio');
+  check(pautadasHechas(ej, { 1: {}, 2: {}, 3: {} }) && pautadasHechas(ej, { 1: {}, 2: {}, 3: {}, 4: {} }) && !pautadasHechas({ series: 0 }, {}), 'completo con las pautadas (con o sin de más); sin series pautadas, nunca');
+  const { contrasteCeldas, CELDA_UNA } = await import('../web/src/logica/acentos.js');
+  for (const a of ACENTOS) {
+    const r = ['claro', 'oscuro', 'oled'].map((t) => contrasteCeldas(a, t));
+    check(r.every((x) => x.ratio >= 3), `calendario con ${a.nombre}: el día con una sesión se distingue del vacío ≥ 3:1 (${r.map((x) => x.ratio).join(' / ')})`);
+  }
+  const css = (await import('node:fs')).readFileSync(new URL('../web/src/estilos.css', import.meta.url), 'utf8');
+  const valores = [...css.matchAll(/--celda-una:\s*(\d+)%/g)].map((m) => Number(m[1]));
+  check(valores.length === 3 && valores[0] === CELDA_UNA.claro && valores[1] === CELDA_UNA.oscuro && valores[2] === CELDA_UNA.oscuro, `estilos.css usa esas mismas mezclas (${valores.join(', ')} %)`);
   check(PATRONES.serie > 0 && PATRONES.serie <= 20 && PATRONES.record.reduce((t, x) => t + x, 0) < 300 && PATRONES.checkin.length === 3, 'las vibraciones son cortas (un toque al marcar, menos de 300 ms en total al batir un récord)');
 }
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

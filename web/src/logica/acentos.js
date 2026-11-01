@@ -80,6 +80,23 @@ export function acentoValido(acento, minimo = 4.5) {
   return ['claro', 'oscuro', 'oled'].every((t) => parejasAcento(acento, t).every((p) => p.ratio >= minimo));
 }
 
+// ---------- calendario de constancia (contraste de lo que no es texto, 3:1) ----------
+// El día con una sesión es el acento mezclado con la hoja (color-mix en sRGB); tiene que distinguirse del día vacío
+// (--hoja-2) al menos 3:1 en claro, oscuro y negro puro, con cualquier acento. Los porcentajes son los de
+// --celda-una en estilos.css (las pruebas comprueban que coinciden).
+export const CELDA_UNA = { claro: 75, oscuro: 65 };
+const rgb = (h) => [1, 3, 5].map((i) => parseInt(String(h).slice(i, i + 2), 16));
+export function mezclar(a, b, pct) {
+  const p = pct / 100;
+  return `#${rgb(a).map((x, i) => Math.round(x * p + rgb(b)[i] * (1 - p)).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+}
+export function contrasteCeldas(acento, tema) {
+  const v = tema === 'claro' ? acento.claro : acento.oscuro;
+  const sup = SUPERFICIES[tema];
+  const una = mezclar(v.morado, sup.hoja, tema === 'claro' ? CELDA_UNA.claro : CELDA_UNA.oscuro);
+  return { una, vacia: sup['hoja-2'], ratio: contraste(una, sup['hoja-2']) };
+}
+
 // ---------- CSS ----------
 const variables = (v) => `--morado:${v.morado};--morado-hover:${v.hover};--morado-suave:${v.suave};--sobre-morado:${v.sobre};--foco:${v.morado};--hero-2:${v.hero2};`;
 // El CSS de un acento, con los mismos selectores que estilos.css para el tema oscuro (así manda el del sistema
