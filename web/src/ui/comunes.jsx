@@ -1,6 +1,7 @@
 import { createContext } from 'preact';
 import { reportarError } from '../registro-errores.js';
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { escalaGrafica, puntoMasCercano, indicesRecord } from '../logica/visual.js';
 import { num, leerNumero } from '../logica/calculos.js';
 import { LOBO } from './marca-lobo.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
@@ -489,6 +490,67 @@ export function useCambioDeDia(alCambiar) {
   }, []);
 }
 
+// ---------------------------------------------------------------- navegación (v0.49)
+// Título grande al estilo iOS: arriba, grande y con su subtítulo; al bajar, se compacta en una barra pequeña que se
+// queda pegada. Sin escuchar el scroll: un IntersectionObserver vigila una marca invisible a unos 40 px del principio.
+// Al compactarse, la cabecera deja un margen igual a lo que encoge, para que lo de debajo no salte.
+// (Sin IntersectionObserver, se queda grande, como antes.)
+export function CabeceraGrande({ clase = '', children }) {
+  const centinela = useRef(null);
+  const cab = useRef(null);
+  const alto = useRef(0);
+  const [compacta, setCompacta] = useState(false);
+  useEffect(() => {
+    const el = centinela.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver(([e]) => {
+      const c = !e.isIntersecting && e.boundingClientRect.top < 0;
+      if (c && cab.current && !cab.current.classList.contains('compacta')) alto.current = cab.current.offsetHeight;
+      setCompacta(c);
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  useLayoutEffect(() => {
+    const h = cab.current;
+    if (!h) return;
+    h.style.marginBottom = compacta && alto.current ? `${Math.max(0, alto.current - h.offsetHeight)}px` : '';
+  }, [compacta]);
+  return (
+    <>
+      <span ref={centinela} class="cabecera-centinela" aria-hidden="true" />
+      <header ref={cab} class={`cabecera cabecera-grande${compacta ? ' compacta' : ''}${clase ? ` ${clase}` : ''}`}>{children}</header>
+    </>
+  );
+}
+
+// La píldora de la pestaña activa en la barra de abajo: un solo elemento que se desliza hasta el icono elegido.
+// Se coloca midiendo el icono (así da igual cuántas pestañas haya o cuáles estén ocultas a ese ancho); la primera
+// vez, sin animación.
+export function usePildora(clave) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const cont = ref.current;
+    const pild = cont?.querySelector('.tabs-pildora');
+    if (!pild) return undefined;
+    const colocar = () => {
+      const ico = cont.querySelector('.tab[aria-current="page"] .tab-ico');
+      if (!ico || !ico.getClientRects().length) { pild.style.opacity = '0'; return; }
+      const a = ico.getBoundingClientRect(), b = cont.getBoundingClientRect();
+      pild.style.opacity = '';
+      pild.style.width = `${a.width}px`;
+      pild.style.height = `${a.height}px`;
+      pild.style.transform = `translate(${Math.round(a.left - b.left)}px, ${Math.round(a.top - b.top)}px)`;
+    };
+    colocar();
+    const t = requestAnimationFrame(() => { pild.dataset.lista = '1'; });
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(colocar) : null;
+    ro?.observe(cont);
+    return () => { cancelAnimationFrame(t); ro?.disconnect(); };
+  }, [clave]);
+  return ref;
+}
+
 // Ancho real (en px) de un elemento: las gráficas dibujan a su tamaño para que los textos no crezcan en pantallas anchas
 export function useAncho(inicial = 340) {
   const [ancho, setAncho] = useState(inicial);
@@ -508,76 +570,154 @@ export function useAncho(inicial = 340) {
   return [ancho, ref];
 }
 
-// ---------------------------------------------------------------- gráfica de línea
+// ---------------------------------------------------------------- gráficas de línea (v0.49: táctiles)
+// Arrastrando el dedo (o el ratón) por la gráfica sale una guía vertical con la fecha y el valor de ese punto; con el
+// teclado, la gráfica es un deslizador (flechas, Inicio y Fin). Debajo de la línea, un degradado suave; los récords
+// (donde se pide) van marcados. Para los lectores de pantalla, un resumen en texto.
+function useRaspado(n, xs) {
+  const [sel, setSel] = useState(null);
+  const tocando = useRef(false);
+  const caja = useRef(null);
+  useEffect(() => { if (sel != null && sel >= n) setSel(null); }, [n]);
+  const desde = (e) => {
+    const svg = caja.current?.querySelector('svg');
+    if (!svg) return;
+    const r = svg.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal;
+    const x = ((e.clientX - r.left) / Math.max(1, r.width)) * (vb?.width || r.width);
+    setSel(puntoMasCercano(xs, x));
+  };
+  const eventos = {
+    onPointerDown: (e) => { tocando.current = true; try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* */ } desde(e); },
+    onPointerMove: (e) => { if (tocando.current || e.pointerType === 'mouse') desde(e); },
+    onPointerUp: () => { tocando.current = false; },
+    onPointerCancel: () => { tocando.current = false; },
+    onPointerLeave: (e) => { if (e.pointerType === 'mouse' && !tocando.current) setSel(null); },
+    onKeyDown: (e) => {
+      const actual = sel ?? n - 1;
+      const sig = { ArrowLeft: actual - 1, ArrowDown: actual - 1, ArrowRight: actual + 1, ArrowUp: actual + 1, Home: 0, End: n - 1 }[e.key];
+      if (sig == null) return;
+      e.preventDefault();
+      setSel(Math.max(0, Math.min(n - 1, sig)));
+    },
+    onBlur: () => { if (!tocando.current) setSel(null); },
+  };
+  return { sel, eventos, caja };
+}
+
+// La caja de una gráfica: el deslizador accesible, la etiqueta flotante del punto elegido y el resumen en texto
+function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, children }) {
+  const { sel, eventos, caja } = raspado;
+  const i = sel ?? n - 1;
+  const izq = sel == null ? 0 : Math.max(0, Math.min(100, (xs[sel] / W) * 100));
+  return (
+    <div class="grafica-caja" ref={caja}>
+      <div class="grafica-tactil" role="slider" tabIndex={0} aria-label={etiqueta} aria-valuemin="1" aria-valuemax={n} aria-valuenow={i + 1}
+        aria-valuetext={textoPunto(i)} {...eventos}>
+        {children}
+        {sel != null && (
+          <div class={`grafica-globo ${izq > 70 ? 'a-la-izq' : izq < 30 ? 'a-la-der' : ''}`} style={{ left: `${izq}%`, top: `${Math.max(0, ys[sel] - 8)}px` }} aria-hidden="true">
+            {textoPunto(sel)}
+          </div>
+        )}
+      </div>
+      <p class="sr">{resumen}</p>
+    </div>
+  );
+}
+
 // puntos: [{x: 'YYYY-MM-DD', y: número}]
 // rangoMin: el eje y abarca como poco esto (para que 2000 → 2080 kcal no parezca una montaña)
-export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null }) {
+// records: marca los puntos que superan a todos los anteriores (1RM estimado, tonelaje…)
+export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null, records = false }) {
   const [W, ref] = useAncho();
-  if (!puntos?.length) return null;
+  const id = useId();
+  const n = puntos?.length || 0;
   const H = Math.max(alto, Math.min(240, Math.round(W * 0.3))), izq = 34, der = 14, arr = 16, abj = 22; // más alta si hay mucho ancho
-  const ys = puntos.map((p) => p.y);
-  let lo = Math.min(...ys), hi = Math.max(...ys);
-  if (rangoMin != null && hi - lo < rangoMin) { const m = (hi + lo) / 2; lo = m - rangoMin / 2; hi = m + rangoMin / 2; }
-  else if (hi - lo < 1) { lo -= 1; hi += 1; }
-  const pad = (hi - lo) * 0.15;
-  lo -= pad; hi += pad;
-  const X = (i) => izq + (puntos.length === 1 ? (W - izq - der) / 2 : (i * (W - izq - der)) / (puntos.length - 1));
+  const { lo, hi, ticks } = escalaGrafica((puntos || []).map((p) => p.y), { rangoMin });
+  const X = (i) => izq + (n === 1 ? (W - izq - der) / 2 : (i * (W - izq - der)) / (n - 1));
   const Y = (v) => arr + (1 - (v - lo) / (hi - lo)) * (H - arr - abj);
+  const xs = (puntos || []).map((_, i) => X(i));
+  const raspado = useRaspado(n, xs);
+  if (!n) return null;
   const d = puntos.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(' ');
-  const area = `${d} L${X(puntos.length - 1).toFixed(1)} ${H - abj} L${X(0).toFixed(1)} ${H - abj}Z`;
-  const paso = hi - lo > 200 ? 50 : hi - lo > 8 ? 1 : 0.5;
-  const ticks = [...new Set([lo + (hi - lo) * 0.2, lo + (hi - lo) * 0.8].map((t) => Math.round(t / paso) * paso))];
-  const etiquetasX = puntos.length <= 2 ? puntos.map((_, i) => i) : [0, Math.floor((puntos.length - 1) / 2), puntos.length - 1];
-  const ultimo = puntos[puntos.length - 1];
+  const area = `${d} L${X(n - 1).toFixed(1)} ${H - abj} L${X(0).toFixed(1)} ${H - abj}Z`;
+  const etiquetasX = n <= 2 ? puntos.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
+  const ultimo = puntos[n - 1];
+  const prs = records ? indicesRecord(puntos.map((p) => p.y)) : [];
+  const conU = (v) => `${num(v, dec)}${unidad ? ` ${unidad}` : ''}`;
+  const textoPunto = (i) => `${fmtCorta(puntos[i].x)}: ${conU(puntos[i].y)}${prs.includes(i) ? ', récord' : ''}`;
+  const ys = puntos.map((p) => p.y);
+  const iMax = ys.indexOf(Math.max(...ys));
+  const resumen = `${etiqueta || 'Evolución'}. ${n} ${n === 1 ? 'punto' : 'puntos'}, del ${fmtCorta(puntos[0].x)} (${conU(puntos[0].y)}) al ${fmtCorta(ultimo.x)} (${conU(ultimo.y)}); el más alto, ${conU(ys[iMax])} el ${fmtCorta(puntos[iMax].x)}${prs.length ? `; ${prs.length} ${prs.length === 1 ? 'récord' : 'récords'}` : ''}.`;
+  const sel = raspado.sel;
   return (
-    <svg class="grafica" ref={ref} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={etiqueta || `Evolución: último valor ${num(ultimo.y, dec)} ${unidad}`}>
-      {ticks.map((t) => (
-        <g key={t}>
-          <line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" />
-          <text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(t, 1)}</text>
-        </g>
-      ))}
-      <path class="area" d={area} />
-      <path class="linea" d={d} />
-      {puntos.map((p, i) => <circle key={i} class={`punto ${i === puntos.length - 1 ? 'ultimo' : ''}`} cx={X(i)} cy={Y(p.y)} r={i === puntos.length - 1 ? 4.5 : 3} />)}
-      <text class="valor" x={Math.min(X(puntos.length - 1), W - der)} y={Y(ultimo.y) - 10} text-anchor="end">{num(ultimo.y, dec)}{unidad ? ` ${unidad}` : ''}</text>
-      {etiquetasX.map((i) => (
-        <text key={i} x={X(i)} y={H - 4} text-anchor={i === 0 ? 'start' : i === puntos.length - 1 ? 'end' : 'middle'}>{fmtCorta(puntos[i].x)}</text>
-      ))}
-    </svg>
+    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={puntos.map((p) => Y(p.y))} etiqueta={etiqueta || 'Evolución'} textoPunto={textoPunto} resumen={resumen}>
+      <svg class="grafica" ref={ref} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+        <defs><linearGradient id={`deg-${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="deg-a" /><stop offset="1" class="deg-b" /></linearGradient></defs>
+        {ticks.map((t) => (
+          <g key={t}>
+            <line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" />
+            <text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(t, 1)}</text>
+          </g>
+        ))}
+        <path class="area-deg" d={area} fill={`url(#deg-${id})`} />
+        <path class="linea" d={d} />
+        {sel != null && <line class="guia" x1={X(sel)} x2={X(sel)} y1={arr - 6} y2={H - abj} />}
+        {puntos.map((p, i) => <circle key={i} class={`punto ${i === n - 1 ? 'ultimo' : ''} ${prs.includes(i) ? 'record' : ''} ${i === sel ? 'elegido' : ''}`} cx={X(i)} cy={Y(p.y)} r={i === sel ? 5.5 : prs.includes(i) ? 4.5 : i === n - 1 ? 4.5 : 3} />)}
+        {sel == null && <text class="valor" x={Math.min(X(n - 1), W - der)} y={Y(ultimo.y) - 10} text-anchor="end">{conU(ultimo.y)}</text>}
+        {etiquetasX.map((i) => (
+          <text key={i} x={X(i)} y={H - 4} text-anchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}>{fmtCorta(puntos[i].x)}</text>
+        ))}
+      </svg>
+    </CajaGrafica>
   );
 }
 
 // Peso: cada pesada como un punto y la tendencia como línea, con el eje x en días reales
 export function GraficaPeso({ serie, alto = 170, etiqueta }) {
   const [W, ref] = useAncho();
-  if (!serie?.length) return null;
+  const id = useId();
+  const n = serie?.length || 0;
   const H = Math.max(alto, Math.min(240, Math.round(W * 0.3))), izq = 34, der = 14, arr = 14, abj = 22;
-  const ys = serie.flatMap((p) => [p.kg, p.tendencia]);
-  let lo = Math.min(...ys), hi = Math.max(...ys);
+  const ys0 = (serie || []).flatMap((p) => [p.kg, p.tendencia]);
+  let lo = n ? Math.min(...ys0) : 0, hi = n ? Math.max(...ys0) : 1;
   if (hi - lo < 1.5) { const m = (hi + lo) / 2; lo = m - 0.75; hi = m + 0.75; }
   const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
-  const d0 = serie[0].fecha, dN = serie[serie.length - 1].fecha;
-  const total = Math.max(1, diasEntre(d0, dN));
-  const X = (f) => izq + (serie.length === 1 ? (W - izq - der) / 2 : (diasEntre(d0, f) / total) * (W - izq - der));
+  const d0 = serie?.[0]?.fecha, dN = serie?.[n - 1]?.fecha;
+  const total = n ? Math.max(1, diasEntre(d0, dN)) : 1;
+  const X = (f) => izq + (n === 1 ? (W - izq - der) / 2 : (diasEntre(d0, f) / total) * (W - izq - der));
   const Y = (v) => arr + (1 - (v - lo) / (hi - lo)) * (H - arr - abj);
+  const xs = (serie || []).map((p) => X(p.fecha));
+  const raspado = useRaspado(n, xs);
+  if (!n) return null;
   const linea = serie.map((p, i) => `${i ? 'L' : 'M'}${X(p.fecha).toFixed(1)} ${Y(p.tendencia).toFixed(1)}`).join(' ');
+  const area = `${linea} L${X(dN).toFixed(1)} ${H - abj} L${X(d0).toFixed(1)} ${H - abj}Z`;
   const paso = hi - lo > 6 ? 1 : 0.5;
   const ticks = [...new Set([lo + (hi - lo) * 0.2, lo + (hi - lo) * 0.8].map((t) => Math.round(t / paso) * paso))];
-  const ult = serie[serie.length - 1];
+  const ult = serie[n - 1];
   const fechasX = total >= 14 ? [d0, aISO(new Date(Date.parse(`${d0}T12:00:00`) + (total / 2) * 864e5)), dN] : [d0, dN];
+  const textoPunto = (i) => `${fmtCorta(serie[i].fecha)}: ${num(serie[i].kg)} kg (tendencia ${num(serie[i].tendencia)})`;
+  const resumen = `${etiqueta || 'Peso'}. ${n} ${n === 1 ? 'pesada' : 'pesadas'} del ${fmtCorta(d0)} al ${fmtCorta(dN)}; la tendencia va de ${num(serie[0].tendencia)} a ${num(ult.tendencia)} kg.`;
+  const sel = raspado.sel;
   return (
-    <svg class="grafica grafica-peso" ref={ref} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={etiqueta || `Peso: tendencia ${num(ult.tendencia)} kg`}>
-      {ticks.map((t) => (
-        <g key={t}><line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" /><text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(t, 1)}</text></g>
-      ))}
-      {serie.map((p) => <circle key={p.fecha} class="pesada" cx={X(p.fecha)} cy={Y(p.kg)} r="2.6" />)}
-      <path class="linea" d={linea} />
-      <circle class="punto ultimo" cx={X(ult.fecha)} cy={Y(ult.tendencia)} r="4.5" />
-      {[...new Set(fechasX)].map((f, i, arr) => (
-        <text key={f} x={X(f)} y={H - 4} text-anchor={i === 0 ? 'start' : i === arr.length - 1 ? 'end' : 'middle'}>{fmtCorta(f)}</text>
-      ))}
-    </svg>
+    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={serie.map((p) => Y(Math.max(p.kg, p.tendencia)))} etiqueta={etiqueta || 'Peso'} textoPunto={textoPunto} resumen={resumen}>
+      <svg class="grafica grafica-peso" ref={ref} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+        <defs><linearGradient id={`deg-${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="deg-a" /><stop offset="1" class="deg-b" /></linearGradient></defs>
+        {ticks.map((t) => (
+          <g key={t}><line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" /><text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(t, 1)}</text></g>
+        ))}
+        <path class="area-deg" d={area} fill={`url(#deg-${id})`} />
+        {serie.map((p) => <circle key={p.fecha} class="pesada" cx={X(p.fecha)} cy={Y(p.kg)} r="2.6" />)}
+        <path class="linea" d={linea} />
+        {sel != null && <line class="guia" x1={xs[sel]} x2={xs[sel]} y1={arr - 6} y2={H - abj} />}
+        {sel != null && <circle class="punto elegido" cx={xs[sel]} cy={Y(serie[sel].tendencia)} r="5.5" />}
+        <circle class="punto ultimo" cx={X(ult.fecha)} cy={Y(ult.tendencia)} r="4.5" />
+        {[...new Set(fechasX)].map((f, i, arr2) => (
+          <text key={f} x={X(f)} y={H - 4} text-anchor={i === 0 ? 'start' : i === arr2.length - 1 ? 'end' : 'middle'}>{fmtCorta(f)}</text>
+        ))}
+      </svg>
+    </CajaGrafica>
   );
 }
 

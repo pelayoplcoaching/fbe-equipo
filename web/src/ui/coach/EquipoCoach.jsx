@@ -2,7 +2,7 @@
 // «Coach»), los retos, el ranking de la semana y quién ha entrado. Se abre y se cierra en Cuenta → Comunidad.
 // v0.47: el resumen de la semana, encuestas, retos de equipo, el podio con las rachas, ánimos y el perfil de cada uno.
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, Pestanas, Avatar, Cargando } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, Pestanas, Avatar, Cargando } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
 import { Muro, Retos, Ranking, ListaNormas, ConPerfiles } from '../Comunidad.jsx';
 import { fmtCorta } from '../../logica/fechas.js';
@@ -13,7 +13,7 @@ export function EquipoCoach() {
   const [vista, setVista] = useState('muro');
   return (
     <div class="contenido coach equipo">
-      <header class="cabecera"><div class="titulo"><h1>Equipo</h1><div class="sub">El muro de tus atletas: avisos, encuestas, retos y constancia</div></div></header>
+      <CabeceraGrande><div class="titulo"><h1>Equipo</h1><div class="sub">El muro de tus atletas: avisos, encuestas, retos y constancia</div></div></CabeceraGrande>
       <BandaDemo />
       <Pestanas opciones={VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eqc" clase="pestanas-justas" />
       <ConPerfiles>

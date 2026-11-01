@@ -1,8 +1,9 @@
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
+import { mapaConstancia } from '../../logica/visual.js';
 import { Logros } from '../Logros.jsx';
 import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
-import { Siluetas, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho } from '../comunes.jsx';
+import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho } from '../comunes.jsx';
 import { HistorialEjercicio } from '../Herramientas.jsx';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { HistoriaSemana, rangoLargo } from './TuSemana.jsx';
@@ -14,7 +15,7 @@ import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { HabitosMes } from './Habitos.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { num, signo, GRUPOS, MEDIDAS, e1rm, rangoVolumen, estadoVolumen, tendenciaPeso, ritmoPeso } from '../../logica/calculos.js';
-import { fmtCorta, hoyISO, diasEntre, desdeISO, fmtConDia } from '../../logica/fechas.js';
+import { fmtCorta, hoyISO, diasEntre, fmtConDia, fechaMadrid } from '../../logica/fechas.js';
 
 
 // Contenido de progreso, reutilizado en la ficha del atleta del panel del coach
@@ -111,7 +112,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
               <span class="v num">{num(ej.puntos[ej.puntos.length - 1].valor)}</span><span class="u">kg, semana del {fmtCorta(ej.puntos[ej.puntos.length - 1].semana)}</span>
               {ej.puntos.length > 1 && <span class="chip ok num">{signo(ej.puntos[ej.puntos.length - 1].valor - ej.puntos[0].valor)} kg desde el inicio</span>}
             </div>
-            {ej.puntos.length > 1 ? <Grafica puntos={ej.puntos.map((p) => ({ x: p.semana, y: p.valor }))} unidad="kg" etiqueta={`1RM estimado en ${ej.nombre}`} />
+            {ej.puntos.length > 1 ? <Grafica records puntos={ej.puntos.map((p) => ({ x: p.semana, y: p.valor }))} unidad="kg" etiqueta={`1RM estimado en ${ej.nombre}`} />
               : <p class="peq secundario">Con dos semanas de datos aparece la gráfica.</p>}
             <button class="btn-texto" style="justify-self:start" onClick={() => setHistorial(ej)}><Icono n="historial" /> Gráficas, récords e historial</button>
             <p class="mini terciario">Mejor serie de cada semana, con la fórmula de Epley y contando las repeticiones en recámara (RIR = 10 − RPE).</p>
@@ -159,8 +160,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
           <div class="panel panel-pad pila">
             {constanciaTotal.datos && (
               <>
-                <Calendario mapa={constanciaTotal.datos.mapa} />
-                <p class="mini terciario">Últimas 12 semanas: {constanciaTotal.datos.diasEntrenados} {constanciaTotal.datos.diasEntrenados === 1 ? 'día entrenado' : 'días entrenados'}. Más oscuro, más series ese día.</p>
+                <MapaConstancia atletaId={atletaId} esCoach={esCoach} />
               </>
             )}
             {constancia && (
@@ -234,26 +234,50 @@ function TotalesCardio({ semanas }) {
   );
 }
 
-// 12 semanas de lunes a domingo; cada cuadro, un día (más oscuro, más series)
-const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-function Calendario({ mapa }) {
-  const hoy = hoyISO();
-  const entrenados = mapa.flatMap((w) => w.dias).filter((d) => d.nivel > 0).length;
+// v0.49: 16 semanas de lunes a domingo, como en GitHub o Strava; cada cuadro, un día, más intenso con más sesiones
+// hechas (ninguna, una, dos o más). Tocar un día dice qué se hizo; con el teclado, las flechas mueven por los días.
+const DIAS_SEMANA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+function MapaConstancia({ atletaId, esCoach = false }) {
+  const { api } = useApp();
+  const datos = useCarga(() => api.entrenamientos(atletaId).catch(() => []), [atletaId]);
+  const hoy = fechaMadrid();
+  const [elegido, setElegido] = useState(null);
+  const [foco, setFoco] = useState(hoy);
+  const rejilla = useRef(null);
+  if (datos.cargando && !datos.datos) return <div class="sil" style="height:150px;border-radius:12px" />;
+  const m = mapaConstancia((datos.datos || []).map((x) => ({ fecha: x.fecha, nombre: x.nombre, series: x.series, cardio: !!x.cardio_hecho })), hoy, 16);
+  const pasados = m.semanas.flatMap((w) => w.dias).filter((d) => d.nivel >= 0);
+  const dia = elegido ? pasados.find((d) => d.iso === elegido) : null;
+  const textoDia = (d) => `${fmtConDia(d.iso)}: ${d.n ? d.sesiones.map((x) => x.nombre).join(', ') : 'descanso'}`;
+  const mover = (e) => {
+    const paso = { ArrowRight: 7, ArrowLeft: -7, ArrowDown: 1, ArrowUp: -1 }[e.key];
+    if (!paso) return;
+    e.preventDefault();
+    const idx = pasados.findIndex((d) => d.iso === foco);
+    const sig = pasados[Math.max(0, Math.min(pasados.length - 1, idx + paso))];
+    if (!sig) return;
+    setFoco(sig.iso);
+    requestAnimationFrame(() => rejilla.current?.querySelector(`[data-dia="${sig.iso}"]`)?.focus());
+  };
   return (
-    <div class="calendario" role="img" aria-label={`Días entrenados en las últimas 12 semanas: ${entrenados}`}>
-      <span />
-      {mapa.map((w, i) => {
-        const m = desdeISO(w.lunes).getMonth();
-        const nuevo = i === 0 || m !== desdeISO(mapa[i - 1].lunes).getMonth();
-        return <span class="cal-mes" key={w.lunes}>{nuevo && i < mapa.length - 1 ? MESES[m] : ''}</span>;
-      })}
-      {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d, r) => [
-        <span class="cal-dia" key={`d${r}`}>{r % 2 === 0 ? d : ''}</span>,
-        ...mapa.map((w) => {
-          const c = w.dias[r];
-          return <i key={c.iso} class={`cal-celda ${c.nivel < 0 ? 'futuro' : `n${c.nivel}`} ${c.iso === hoy ? 'hoy' : ''}`} title={c.nivel < 0 ? '' : `${fmtConDia(c.iso)}: ${c.n ? `${c.n} ${c.n === 1 ? 'serie' : 'series'}` : 'descanso'}`} />;
-        }),
-      ])}
+    <div class="pila-s mapa-constancia">
+      <div class="constancia-rejilla" ref={rejilla} role="group" aria-label={`Constancia de las últimas 16 semanas: ${m.diasActivos} días con sesión. Usa las flechas para moverte por los días`} onKeyDown={mover}>
+        {m.meses.map((x) => <span key={x.col} class="cr-mes" aria-hidden="true" style={{ gridColumn: `${x.col + 2} / span 3` }}>{x.texto}</span>)}
+        {DIAS_SEMANA.map((d, r) => <span key={d} class="cr-dia" aria-hidden="true" style={{ gridRow: r + 2 }}>{r % 2 === 0 ? d : ''}</span>)}
+        {m.semanas.map((w, c) => w.dias.map((d, r) => (d.nivel < 0
+          ? <span key={d.iso} class="cr-celda futuro" aria-hidden="true" style={{ gridColumn: c + 2, gridRow: r + 2 }} />
+          : <button type="button" key={d.iso} data-dia={d.iso} class={`cr-celda n${d.nivel} ${d.iso === hoy ? 'hoy' : ''} ${d.iso === elegido ? 'elegida' : ''}`}
+            style={{ gridColumn: c + 2, gridRow: r + 2 }} tabIndex={d.iso === foco ? 0 : -1} aria-label={textoDia(d)} aria-pressed={d.iso === elegido ? 'true' : 'false'}
+            onClick={() => { setFoco(d.iso); setElegido(elegido === d.iso ? null : d.iso); }} />)))}
+      </div>
+      <div class="separa cr-pie">
+        <span class="mini terciario">{m.diasActivos} {m.diasActivos === 1 ? 'día' : 'días'} con sesión en 16 semanas</span>
+        <span class="cr-leyenda mini terciario" aria-hidden="true">Menos <i class="cr-celda n0" /><i class="cr-celda n1" /><i class="cr-celda n2" /> Más</span>
+      </div>
+      <p class="cr-detalle peq" aria-live="polite">
+        {dia ? <><strong>{fmtConDia(dia.iso)}</strong>{dia.n ? `: ${dia.sesiones.map((x) => `${x.nombre}${x.series ? ` (${x.series} ${x.series === 1 ? 'serie' : 'series'})` : x.cardio ? ' (cardio)' : ''}`).join(', ')}` : ': descanso'}</>
+          : <span class="terciario">{esCoach ? 'Toca un día para ver qué hizo.' : 'Toca un día para ver qué hiciste.'}</span>}
+      </p>
     </div>
   );
 }
@@ -430,7 +454,7 @@ export function Progreso({ programa, salud }) {
   const semanas = useCarga(() => (entrena ? api.resumenesSemanales(atleta.id, 4).catch(() => []) : Promise.resolve([])), [atleta.id, entrena]);
   return (
     <div class="contenido">
-      <header class="cabecera"><div class="titulo"><h1>Tu progreso</h1></div></header>
+      <CabeceraGrande><div class="titulo"><h1>Tu progreso</h1></div></CabeceraGrande>
       {entrena ? <Pista id="progreso" icono="progreso">Todo lo de aquí sale solo de lo que apuntas en cada sesión y en el check-in. No tienes que rellenar nada: entra de vez en cuando a ver cómo vas.</Pista>
         : <Pista id="progreso-nutricion" icono="progreso">Aquí ves tu peso, tus medidas y tu nutrición: sale de lo que apuntas en Hoy y en el check-in.</Pista>}
       {entrena && <Cifras constancia={constancia} semanas={semanas} />}

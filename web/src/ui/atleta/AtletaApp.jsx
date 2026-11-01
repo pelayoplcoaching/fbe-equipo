@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia } from '../comunes.jsx';
+import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia, usePildora } from '../comunes.jsx';
+import { conTransicion } from '../transiciones.js';
 import { Mensajes } from './Mensajes.jsx';
 import { Hoy } from './Hoy.jsx';
 import { Sesion } from './Sesion.jsx';
@@ -129,8 +130,14 @@ export function AtletaApp() {
   const checkinPendiente = salud && checkinSemana.datos && !checkinSemana.datos.checkin && diaDeCheckin();
 
   // A quien solo lleva la nutrición no se le abren sesiones (una respuesta antigua en una sesión se lee en Mensajes)
-  const abrirSesion = (id) => { if (!conEntrenamiento(atleta)) { setTab('mensajes'); return; } setSesionId(id); window.scrollTo(0, 0); };
-  const cerrarSesion = () => { setSesionId(null); programa.recargar(true); noLeidos.recargar(true); };
+  // v0.49: abrir y cerrar la sesión, y cambiar de pestaña, con una transición corta (donde se puede)
+  const abrirSesion = (id) => { if (!conEntrenamiento(atleta)) { setTab('mensajes'); return; } conTransicion(() => { setSesionId(id); window.scrollTo(0, 0); }, 'abrir'); };
+  const cerrarSesion = () => { conTransicion(() => setSesionId(null), 'cerrar'); programa.recargar(true); noLeidos.recargar(true); };
+  const irAPestana = (id) => {
+    if (id === tab) return;
+    const orden = TABS.map(([t]) => t);
+    conTransicion(() => setTab(id), orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : 'adelante');
+  };
   const releer = () => noLeidos.recargar(true);
 
   // Los mensajes sueltos del coach cuentan en Mensajes; los de sesiones, check-ins y vídeos, en Hoy
@@ -140,14 +147,20 @@ export function AtletaApp() {
   const pendientesTareas = tareasDelDia(tareas.datos || []).filter((t) => !t.hecha_en).length;
   const insignia = (noLeidos.datos || []).length + pendientesTareas + (checkinPendiente ? 1 : 0);
   const compartido = {
-    programa, salud, recargarConsentimientos: () => consentimientos.recargar(true), irA: setTab, abrirSesion, checkinSemana,
+    programa, salud, recargarConsentimientos: () => consentimientos.recargar(true), irA: irAPestana, abrirSesion, checkinSemana,
     noLeidos: noLeidos.datos || [], releer,
   };
+  return <Pantallas {...{ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia }} />;
+}
+
+// La pantalla: la sesión abierta o la pestaña elegida con la barra de abajo (aparte, para la píldora de la barra)
+function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia }) {
+  const barra = usePildora(sesionId ? null : `${tab}:${TABS.length}`);
 
   return (
     <div class={`app ${sesionId ? 'en-sesion' : ''}`}>
       <InsigniaApp n={propio ? 0 : insignia} />
-      {!propio && <RecibirCompartido programa={programa} />}
+      {!propio && <RecibirCompartido programa={compartido.programa} />}
       {sesionId ? <main><BandaPendientes pendientes={pendientesArchivos} /><Sesion id={sesionId} alCerrar={cerrarSesion} alLeer={releer} salud={salud} /></main> : (
         <>
           <main key={`${tab}:${dia}`} class="vista">
@@ -163,11 +176,12 @@ export function AtletaApp() {
             {tab === 'perfil' && <Perfil {...compartido} />}
           </main>
           <nav class="tabs" aria-label="Secciones">
-            <div class={`tabs-in ${TABS.filter(([t]) => t !== 'perfil').length >= 7 ? 'tabs-muchas' : ''}`}>
+            <div ref={barra} class={`tabs-in ${TABS.filter(([t]) => t !== 'perfil').length >= 7 ? 'tabs-muchas' : ''}`}>
+              <span class="tabs-pildora" aria-hidden="true" />
               {TABS.map(([id, texto, icono]) => (
-                <button key={id} class={`tab ${id === 'perfil' ? 'tab-perfil' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>
+                <button key={id} class={`tab ${id === 'perfil' ? 'tab-perfil' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => irAPestana(id)}>
                   <span class={`tab-ico ${(id === 'checkin' && checkinPendiente) || (id === 'hoy' && respuestasSueltas) ? 'punto' : ''}`}>
-                    <Icono n={icono} />{id === 'mensajes' && <Insignia n={mensajesSinLeer} etiqueta={`${mensajesSinLeer} mensajes sin leer`} />}
+                    <Icono n={icono} class={`ico-${icono}`} />{id === 'mensajes' && <Insignia n={mensajesSinLeer} etiqueta={`${mensajesSinLeer} mensajes sin leer`} />}
                     {id === 'equipo' && tab !== 'equipo' && <Insignia n={nuevasEquipo} etiqueta={`${nuevasEquipo} ${nuevasEquipo === 1 ? 'publicación nueva' : 'publicaciones nuevas'} en el equipo`} />}
                   </span>
                   {texto}

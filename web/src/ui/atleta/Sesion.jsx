@@ -26,6 +26,8 @@ import { adaptarSesion, textoAdaptacion } from '../../logica/material.js';
 import { fraseSerie } from '../../logica/voz.js';
 import { hablar } from '../voz.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
+import { vibrar } from '../hapticos.js';
+import { resumenSeries, compararConAnterior, textoComparacion } from '../../logica/visual.js';
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { api, atleta, cola, aviso, propio } = useApp();
@@ -45,6 +47,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [intervalos, setIntervalos] = useState(null);       // null | { inicial }
   const [minutosHechos, setMinutosHechos] = useState(null); // lo que duró el temporizador de intervalos
   const [compartir, setCompartir] = useState(false);
+  // v0.49: la serie que toca ahora (la que dijo trasSerie al marcar la anterior), para resaltarla
+  const [proxima, setProxima] = useState(null);
   // Modo enfoque: se recuerda si el atleta lo prefiere; seFoco es el ejercicio que se ve
   const [enfoque, setEnfoque] = usePreferencia('fbe-enfoque', false);
   const [seFoco, setSeFoco] = useState(null);
@@ -151,6 +155,11 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const actualDe = (e) => (sustitutos[e.id] && ejerciciosPorId[sustitutos[e.id]]) || e.ejercicio;
 
   const etiquetas = etiquetasSuperserie(ejercicios);
+  // La serie que toca ahora: la que dijo la última serie marcada (si sigue sin hacer) o la primera sin hacer
+  const pendienteDe = (x) => Array.from({ length: x.series }, (_, i) => i + 1).find((k) => !hechas[x.id]?.[k]);
+  let prox = proxima && ejercicios.some((x) => x.id === proxima.id) && !hechas[proxima.id]?.[proxima.numero] ? proxima : null;
+  if (!prox) { const x = ejercicios.find((y) => pendienteDe(y)); if (x) prox = { id: x.id, numero: pendienteDe(x) }; }
+  if (sesion.completada) prox = null;
   const grupos = gruposSuperserie(ejercicios);
   // Lleva la vista a la serie que toca del siguiente ejercicio (tras abrirlo)
   function llevarA(seId) {
@@ -193,6 +202,11 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       registrada_en: previa?.registrada_en || new Date().toISOString() };
     const local = { ...datos, id: previa?.id || `local-${e.id}-${numero}` };
     setHechas((h) => ({ ...h, [e.id]: { ...h[e.id], [numero]: local } }));
+    if (!previa) vibrar('serie');
+    // v0.49: al completar el ejercicio, su tarjeta se pliega en una línea (un momento después, para ver el check)
+    if (!previa && Object.keys(hechas[e.id] || {}).length + 1 === e.series) {
+      setTimeout(() => setAbiertos((a) => { const n = new Set(a || []); n.delete(e.id); return n; }), 700);
+    }
     if (!previa && previas.datos) {
       const r = recordsDeSesion(enOrden({ ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } }), previas.datos, claveSerie)[`${e.id}-${numero}`];
       if (r) { celebrar(); aviso(`¡Récord en ${actualDe(e).nombre}!`, 'record'); }
@@ -203,6 +217,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       cuenta[e.id] += 1;
       const r = trasSerie(ejercicios, cuenta, e.id);
       const sig = r.siguiente && ejercicios.find((x) => x.id === r.siguiente.id);
+      setProxima(r.siguiente ? { id: r.siguiente.id, numero: r.siguiente.numero } : null);
       const texto = !sig ? 'terminar la sesión' : sig.id === e.id || r.siguiente.numero > 1 ? `serie ${r.siguiente.numero} de ${nombreCon(sig)}` : nombreCon(sig);
       // v0.48: lo que dirá el entrenador por voz al acabar el descanso («Serie 3 de press banca: 80 kilos por 6»)
       let voz = '¡Sesión terminada! Buen trabajo.';
@@ -337,7 +352,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
               lugar={porLugar[e.id] && sustitutos[e.id] === porLugar[e.id] ? lugar : null} deshacerLugar={() => deshacerLugar(e.id)}
               sinMaterial={lugar !== 'gimnasio' && sinAlternativa.includes(e.id) && !cambiado ? lugar : null}
               videos={videos.enviados[e.id] || 0} videosPendientes={videos.pendientes[e.id] || 0} alSubirVideo={() => setRecontarVideos((n) => n + 1)}
-              hechas={hechas[e.id] || {}} enCola={enCola} abierto={abiertos?.has(e.id)}
+              hechas={hechas[e.id] || {}} enCola={enCola} abierto={abiertos?.has(e.id)} siguiente={prox?.id === e.id ? prox.numero : null}
               alternar={() => alternar(e.id)} guardar={(n, v) => guardar(e, n, v)} quitar={(n) => quitar(e, n)}
               cambiar={(ej) => {
                 setSustitutos({ ...sustitutos, [e.id]: ej.id === e.ejercicio.id ? null : ej.id });
@@ -422,7 +437,7 @@ function Cronometro({ inicio, minutos, hechas, total }) {
   );
 }
 
-function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null }) {
+function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null }) {
   const { atleta, propio } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
   const [editandoNota, setEditandoNota] = useState(false);
@@ -437,24 +452,42 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   const tipoDe = (k) => (!top || k > e.series ? null : k === 1 ? 'top' : 'backoff');
   const kgBackoff = top ? propuesta(2, hechas)?.kg : null;
   const tempo = tempoDe(e);
+  // v0.49: hecho del todo y cerrado, el ejercicio es una sola línea (nombre, lo hecho y el check); se abre al tocarlo
+  const plegado = !abierto && n >= e.series && n > 0;
+  // Las herramientas del ejercicio, en la hoja «Más» (fuera de la tarjeta, para que no estorben entre serie y serie)
+  const herramientas = [
+    { id: 'cambiar', ico: 'intercambiar', texto: 'Cambiar', detalle: 'Por una alternativa, si la máquina está ocupada o algo no te sienta bien' },
+    { id: 'historial', ico: 'historial', texto: 'Historial', detalle: 'Tus series, gráficas y récords de este ejercicio' },
+    tempo && { id: 'tempo', ico: 'altavoz', texto: `Tempo ${tempo.texto}`, nombre: `Metrónomo de tempo ${tempo.texto}`, detalle: 'Metrónomo que marca la bajada, la pausa y la subida' },
+    !nota && !editandoNota && { id: 'nota', ico: 'chincheta', texto: 'Nota', detalle: 'Una nota fija para ti en este ejercicio (la silla en el 4, el agarre…)' },
+    conAproximacion && kgTrabajo > 0 && { id: 'aproximacion', ico: 'llama', texto: 'Aproximación', detalle: `Series de calentamiento hasta ${num(kgTrabajo, 2)} kg` },
+    (ej.instrucciones || ej.errores) && { id: 'tecnica', ico: 'biblioteca', texto: 'Técnica', detalle: 'Las claves y los errores comunes' },
+    ej.video_url && { id: 'tutorial', ico: 'video', texto: 'Tutorial', detalle: 'El vídeo del ejercicio (se abre aparte)', href: ej.video_url },
+  ].filter(Boolean);
+  const usar = (h) => {
+    if (h.id === 'tempo') prepararAudio();
+    if (h.id === 'nota') { setHoja(null); setEditandoNota(true); return; }
+    setHoja(h.id);
+  };
 
   return (
-    <article class="ejercicio" data-se={e.id} aria-label={etiqueta ? `${etiqueta}: ${ej.nombre}` : ej.nombre}>
+    <article class={`ejercicio ${plegado ? 'plegado' : ''} ${siguiente ? 'en-curso' : ''}`} data-se={e.id} aria-label={etiqueta ? `${etiqueta}: ${ej.nombre}` : ej.nombre}>
       <button class="ejercicio-cab" onClick={alternar} aria-expanded={abierto ? 'true' : 'false'}>
         <Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} />
         <span>
           <span class="nombre">{etiqueta && <span class="ss-etq">{etiqueta}</span>}{ej.nombre}</span>
-          {actual && <span class="cambiado">{lugar ? `Por tu material ${lugar === 'viaje' ? 'de viaje' : 'de casa'}: en lugar de` : 'En lugar de'} {e.ejercicio.nombre}</span>}
-          {sinMaterial && <span class="video-aviso pendiente"><Icono n="alerta" />Sin alternativa con tu material {sinMaterial === 'viaje' ? 'de viaje' : 'de casa'}</span>}
-          {e.variante && <span class="variante">{e.variante}</span>}
-          {e.tempo && tempo && <span class="variante">Tempo {tempo.texto}</span>}
-          <span class="pauta">
+          {plegado && <span class="resumen-ej num">{resumenSeries(Object.keys(hechas).map(Number).sort((a, b) => a - b).map((k) => hechas[k]))}</span>}
+          {!plegado && actual && <span class="cambiado">{lugar ? `Por tu material ${lugar === 'viaje' ? 'de viaje' : 'de casa'}: en lugar de` : 'En lugar de'} {e.ejercicio.nombre}</span>}
+          {!plegado && sinMaterial && <span class="video-aviso pendiente"><Icono n="alerta" />Sin alternativa con tu material {sinMaterial === 'viaje' ? 'de viaje' : 'de casa'}</span>}
+          {!plegado && e.variante && <span class="variante">{e.variante}</span>}
+          {!plegado && e.tempo && tempo && <span class="variante">Tempo {tempo.texto}</span>}
+          {!plegado && <span class="pauta">
             <span class="num">{pa.series}</span>
             {pa.detalle && <span>serie a serie</span>}
             {pa.esfuerzo && <span>{pa.esfuerzo}</span>}
             {pa.carga && !actual && <span class="num">{pa.carga}</span>}
             {pa.descanso && !etiqueta && <span>descanso {pa.descanso}</span>}
-          </span>
+          </span>}
           {videosPendientes > 0
             ? <span class="video-aviso pendiente"><Icono n="reloj" />{videosPendientes === 1 ? 'Vídeo guardado en el móvil, sin enviar' : `${videosPendientes} vídeos guardados en el móvil, sin enviar`}</span>
             : videos > 0 && <span class="video-aviso"><Icono n="hecho" />{videos === 1 ? 'Vídeo enviado' : `${videos} vídeos enviados`}</span>}
@@ -486,7 +519,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
             const prop = propuesta(k, hechas);
             return (
               <Fragment key={k}>
-                <FilaSerie numero={k} hecha={hechas[k]} propuesta={prop} activa={k === activa} barra={barra} record={hechas[k] ? records[`${e.id}-${k}`] : null}
+                <FilaSerie numero={k} hecha={hechas[k]} propuesta={prop} activa={k === activa} siguiente={k === siguiente} barra={barra} record={hechas[k] ? records[`${e.id}-${k}`] : null}
                   anterior={conAnterior ? pesoAnterior(ultimas, k) : null}
                   pendiente={enCola[`${e.id}-${k}`]} nombre={ej.nombre} tipo={tipoDe(k)}
                   guardar={(v) => guardar(k, v)} quitar={() => quitar(k)} />
@@ -503,16 +536,23 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
           })}
           <button class="btn-texto" style="justify-self:start" onClick={() => setExtra(extra + 1)}><Icono n="mas" /> Añadir serie</button>
           <div class="acciones-ej">
-            <button class="btn-texto" onClick={() => setHoja('cambiar')}><Icono n="intercambiar" /> Cambiar</button>
-            <button class="btn-texto" onClick={() => setHoja('historial')}><Icono n="historial" /> Historial</button>
-            {tempo && <button class="btn-texto" onClick={() => { prepararAudio(); setHoja('tempo'); }} aria-label={`Metrónomo de tempo ${tempo.texto}`}><Icono n="altavoz" /> Tempo {tempo.texto}</button>}
-            {!nota && !editandoNota && <button class="btn-texto" onClick={() => setEditandoNota(true)}><Icono n="chincheta" /> Nota</button>}
-            {conAproximacion && kgTrabajo > 0 && <button class="btn-texto" onClick={() => setHoja('aproximacion')}><Icono n="llama" /> Aproximación</button>}
-            {(ej.instrucciones || ej.errores) && <button class="btn-texto" onClick={() => setHoja('tecnica')}><Icono n="biblioteca" /> Técnica</button>}
-            {ej.video_url && <a class="btn-texto" href={ej.video_url} target="_blank" rel="noopener"><Icono n="video" /> Tutorial</a>}
             {!propio && <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} etiqueta={videos + videosPendientes > 0 ? 'Enviar otro vídeo' : undefined} alSubir={alSubirVideo} />}
+            <button class="btn-texto btn-mas" onClick={() => setHoja('mas')} aria-haspopup="dialog" aria-label={`Más herramientas de ${ej.nombre}`}><Icono n="opciones" /> Más</button>
           </div>
         </div>
+      )}
+      {hoja === 'mas' && (
+        <Hoja titulo={ej.nombre} alCerrar={() => setHoja(null)}>
+          <ul class="lista hoja-acciones">
+            {herramientas.map((h) => (
+              <li key={h.id}>
+                {h.href
+                  ? <a class="accion-fila" href={h.href} target="_blank" rel="noopener" onClick={() => setHoja(null)}><span class="ico"><Icono n={h.ico} /></span><span class="pila-xs"><strong>{h.texto}</strong><span class="peq secundario">{h.detalle}</span></span><Icono n="enlace" class="cola" /></a>
+                  : <button class="accion-fila" aria-label={h.nombre || h.texto} aria-describedby={`acc-${e.id}-${h.id}`} onClick={() => usar(h)}><span class="ico"><Icono n={h.ico} /></span><span class="pila-xs"><strong>{h.texto}</strong><span class="peq secundario" id={`acc-${e.id}-${h.id}`}>{h.detalle}</span></span><Icono n="derecha" class="cola" /></button>}
+              </li>
+            ))}
+          </ul>
+        </Hoja>
       )}
       {hoja === 'tecnica' && <Tecnica ej={ej} alCerrar={() => setHoja(null)} />}
       {hoja === 'cambiar' && <Cambiar e={e} actual={ej} alCerrar={() => setHoja(null)} alElegir={(x) => { cambiar(x); setHoja(null); }} />}
@@ -595,7 +635,7 @@ function Cambiar({ e, actual, alCerrar, alElegir }) {
 // Una serie: kilos y repeticiones con lo propuesto como pista gris (lo pautado o lo de la vez anterior).
 // Al marcarla con los campos vacíos se usa la pista, como en un cuaderno.
 // anterior: el peso de esta serie la última vez, en un recuadro pequeño (solo si el coach no ha pautado carga)
-function FilaSerie({ numero, hecha, propuesta, activa, pendiente, guardar, quitar, nombre, barra, record, tipo = null, anterior = null }) {
+function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false, pendiente, guardar, quitar, nombre, barra, record, tipo = null, anterior = null }) {
   const { aviso } = useApp();
   const fmt = (v, d) => (v == null ? '' : num(v, d));
   const [kg, setKg] = useState(hecha ? fmt(hecha.kg, 2) : '');
@@ -630,7 +670,7 @@ function FilaSerie({ numero, hecha, propuesta, activa, pendiente, guardar, quita
   };
   return (
     <>
-      <div class={`serie ${hecha ? 'hecha' : ''} ${activa ? 'activa' : ''} ${recien ? 'recien' : ''} ${tipo ? `serie-${tipo}` : ''}`} role="group"
+      <div class={`serie ${hecha ? 'hecha' : ''} ${activa ? 'activa' : ''} ${siguiente && !hecha ? 'siguiente' : ''} ${recien ? 'recien' : ''} ${record && recien ? 'con-record' : ''} ${tipo ? `serie-${tipo}` : ''}`} role="group" aria-current={siguiente && !hecha ? 'step' : undefined}
         aria-label={`${nombre}, serie ${numero}${tipo === 'top' ? ' (top)' : tipo === 'backoff' ? ' (back-off)' : ''}`}>
         <span class="n" title={tipo === 'top' ? 'Serie top' : tipo === 'backoff' ? 'Back-off' : undefined}>{tipo === 'top' ? 'T' : tipo === 'backoff' ? 'B' : numero}</span>
         <span class="celda-kg">
@@ -830,27 +870,48 @@ function Resumen({ resumen, sesion, alCerrar }) {
     const [c, m] = await Promise.all([api.comunidad(), api.miembroComunidad()]);
     return c.activa && !!m && !m.salido_en && !(await api.sesionCompartida(sesion.id));
   }, [sesion?.id]);
+  // v0.49: comparado con la última vez que hizo esta misma sesión (sale de sus entrenamientos; sin conexión, no sale)
+  const cardio = cardioHechoValido(resumen.cardio);
+  const anteriores = useCarga(() => (cardio || !resumen.series || resumen.enCola ? Promise.resolve([]) : api.entrenamientos(atleta.id).catch(() => [])), [sesion?.id]);
+  const comparacion = anteriores.datos ? compararConAnterior({ id: sesion.id, nombre: sesion.nombre, fecha: resumen.tarjeta?.fecha, tonelaje: resumen.tonelaje, series: resumen.series, minutos: resumen.minutos }, anteriores.datos) : null;
+  const cifras = cardio ? [
+    { k: 'minutos', v: resumen.cardio.minutos, u: 'min', t: NOMBRE_MODALIDAD[resumen.cardio.modalidad] },
+    resumen.cardio.km && { k: 'km', v: num(resumen.cardio.km, 1), u: 'km', t: 'Distancia' },
+    resumen.cardio.km && { k: 'ritmo', v: ritmo(resumen.cardio.minutos, resumen.cardio.km, resumen.cardio.modalidad).split(' ')[0], u: ritmo(resumen.cardio.minutos, resumen.cardio.km, resumen.cardio.modalidad).split(' ')[1], t: 'Ritmo' },
+  ] : [
+    { k: 'minutos', v: resumen.minutos ?? '—', u: resumen.minutos != null ? 'min' : '', t: 'Duración' },
+    { k: 'series', v: resumen.series, u: '', t: resumen.series === 1 ? 'Serie' : 'Series' },
+    { k: 'tonelaje', v: num(Math.round(resumen.tonelaje / 10) / 100, 1), u: 't', t: 'Tonelaje' },
+  ];
+  const nRecords = resumen.records.length;
   return (
-    <div class="contenido">
-      <header class="cabecera">
-        <div class="titulo"><h1>Sesión terminada</h1><div class="sub">{sesion.nombre}</div></div>
-      </header>
-      {cardioHechoValido(resumen.cardio) ? (
-        <div class="resumen-num">
-          <div><span class="v num">{resumen.cardio.minutos}</span><span class="k">minutos de {NOMBRE_MODALIDAD[resumen.cardio.modalidad].toLowerCase()}</span></div>
-          <div><span class="v num">{resumen.cardio.km ? num(resumen.cardio.km, 1) : '—'}</span><span class="k">km</span></div>
-          <div><span class="v num">{resumen.cardio.km ? ritmo(resumen.cardio.minutos, resumen.cardio.km, resumen.cardio.modalidad).split(' ')[0] : resumen.rpe ?? '—'}</span><span class="k">{resumen.cardio.km ? ritmo(resumen.cardio.minutos, resumen.cardio.km, resumen.cardio.modalidad).split(' ')[1] : 'esfuerzo'}</span></div>
+    <div class="contenido resumen-sesion">
+      <section class="resumen-hero" aria-labelledby="resumen-titulo" style={{ '--i': 0 }}>
+        <span class="resumen-medalla" aria-hidden="true"><Icono n={nRecords ? 'trofeo' : 'hecho'} /></span>
+        <div class="pila-xs">
+          <h1 id="resumen-titulo">Sesión terminada</h1>
+          <p class="resumen-sub">{sesion.nombre}{resumen.tarjeta?.fecha ? ` · ${fmtCorta(resumen.tarjeta.fecha)}` : ''}</p>
         </div>
-      ) : (
-        <div class="resumen-num">
-          <div><span class="v num">{resumen.series}</span><span class="k">series</span></div>
-          <div><span class="v num">{num(Math.round(resumen.tonelaje / 10) / 100, 1)} t</span><span class="k">tonelaje</span></div>
-          <div><span class="v num">{resumen.minutos ?? '—'}</span><span class="k">minutos</span></div>
-        </div>
+        {nRecords > 0 && <span class="resumen-pr num" style={{ '--i': 1 }}><Icono n="trofeo" />{nRecords === 1 ? '1 récord' : `${nRecords} récords`}</span>}
+      </section>
+      <dl class="resumen-num">
+        {cifras.filter(Boolean).map((c, i) => (
+          <div key={c.k} data-k={c.k} style={{ '--i': i + 2 }}>
+            <dt>{c.t}</dt>
+            <dd><span class="v num">{c.v}</span>{c.u && <span class="u">{c.u}</span>}</dd>
+          </div>
+        ))}
+      </dl>
+      {!cardio && resumen.series > 0 && !resumen.enCola && (
+        <p class={`resumen-compara ${!comparacion ? 'vacia' : comparacion.tonelaje > 0 ? 'sube' : comparacion.tonelaje < 0 ? 'baja' : ''}`} style={{ '--i': 5 }} aria-live="polite">
+          {anteriores.cargando && !anteriores.datos ? <span class="sil" style="width:70%;height:14px" />
+            : comparacion ? <><Icono n={comparacion.tonelaje >= 0 ? 'arriba' : 'abajo'} /><span><strong class="num">{textoComparacion(comparacion)}</strong>{comparacion.fecha ? <span class="secundario"> ({fmtCorta(comparacion.fecha)}{comparacion.series ? `, ${comparacion.series > 0 ? '+' : ''}${comparacion.series} ${Math.abs(comparacion.series) === 1 ? 'serie' : 'series'}` : ''})</span> : null}</span></>
+              : <><Icono n="estrella" /><span>La primera vez que haces esta sesión: la próxima te dirá cómo vas.</span></>}
+        </p>
       )}
-      {resumen.records.length > 0 && (
-        <section class="seccion">
-          <h2>{resumen.records.length === 1 ? 'Récord de hoy' : `${resumen.records.length} récords hoy`}</h2>
+      {nRecords > 0 && (
+        <section class="seccion resumen-records" style={{ '--i': 6 }}>
+          <h2>{nRecords === 1 ? 'Récord de hoy' : `${nRecords} récords hoy`}</h2>
           <div class="panel">
             <ul class="lista">
               {resumen.records.map((x) => (
@@ -866,16 +927,18 @@ function Resumen({ resumen, sesion, alCerrar }) {
         </section>
       )}
       {Object.keys(resumen.musculos || {}).length > 0 && (
-        <section class="seccion">
+        <section class="seccion" style={{ '--i': 7 }}>
           <h2>Músculos de hoy</h2>
           <div class="panel panel-pad"><MapaMuscular series={resumen.musculos} etiqueta="Series por músculo de hoy" /></div>
         </section>
       )}
       {resumen.enCola && <div class="banda-conexion"><Icono n="sinred" />Guardado en el móvil. Se enviará a tu coach cuando vuelva la conexión.</div>}
-      {resumen.series > 0 && resumen.tarjeta && <button class="btn btn-grande" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir la sesión</button>}
-      {compartida ? <p class="nota peq compartida-equipo"><Icono n="hecho" /> Compartida con el equipo</p>
-        : estadoEquipo.datos === true && <button class="btn btn-grande" onClick={() => setEquipo(true)}><Icono n="equipo" /> Compartir con el equipo</button>}
-      <button class="btn btn-primario btn-grande" onClick={alCerrar}>Volver a hoy</button>
+      <div class="resumen-acciones pila" style={{ '--i': 8 }}>
+        {resumen.series > 0 && resumen.tarjeta && <button class="btn btn-grande" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir la sesión</button>}
+        {compartida ? <p class="nota peq compartida-equipo"><Icono n="hecho" /> Compartida con el equipo</p>
+          : estadoEquipo.datos === true && <button class="btn btn-grande" onClick={() => setEquipo(true)}><Icono n="equipo" /> Compartir con el equipo</button>}
+        <button class="btn btn-primario btn-grande" onClick={alCerrar}>Volver a hoy</button>
+      </div>
       {compartir && <HojaCompartir datos={resumen.tarjeta} alCerrar={() => setCompartir(false)} />}
       {equipo && (
         <HojaCompartirEquipo alCerrar={() => setEquipo(false)} alCompartir={() => { setEquipo(false); setCompartida(true); }}

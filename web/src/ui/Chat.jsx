@@ -6,6 +6,8 @@ import { LIMITE_ARCHIVO_MB } from '../datos/api.js';
 import { hoyISO, sumarDias, fmtConDia, aISO, fmtProgramado } from '../logica/fechas.js';
 import { TextoConEnlaces } from './Enlaces.jsx';
 import { HojaProgramar } from './Programar.jsx';
+import { gruposChat } from '../logica/visual.js';
+import { sinMovimiento } from './transiciones.js';
 
 // El chat (v0.18): todos los mensajes con una persona en un solo hilo, como en WhatsApp pero sin más.
 // Lo que viene de una sesión, un check-in o un vídeo lleva su etiqueta, que abre ese sitio; lo que se escribe
@@ -23,6 +25,11 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const [borrando, setBorrando] = useState(null);    // id del mensaje con el menú de borrar abierto
   const [programar, setProgramar] = useState(null);  // v0.48: null | { nuevo: true } | mensaje programado a cambiar
   const lista = useRef(null);
+  const raiz = useRef(null);
+  const fin = useRef(null);
+  // v0.49: «Mensajes nuevos» cuando llega algo y estás leyendo más arriba; se va al llegar abajo
+  const [nuevos, setNuevos] = useState(false);
+  const [abajo, setAbajo] = useState(true);
   const area = useRef(null);
   const input = useRef(null);
   const recargar = useRef(null);
@@ -58,12 +65,35 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const n = conv.datos?.length || 0;
   const ultimoMio = mensajes_ultimo(conv.datos) === yo;
   const primeraCarga = useRef(true);
+  const nPrevio = useRef(0);
   useLayoutEffect(() => {
-    const raiz = document.documentElement;
-    const cerca = raiz.scrollHeight - raiz.scrollTop - window.innerHeight < 240;
-    if (primeraCarga.current || cerca || ultimoMio || adjunto) window.scrollTo(0, raiz.scrollHeight);
+    const doc = document.documentElement;
+    const cerca = doc.scrollHeight - doc.scrollTop - window.innerHeight < 240;
+    if (primeraCarga.current || cerca || ultimoMio || adjunto) window.scrollTo(0, doc.scrollHeight);
+    else if (n > nPrevio.current) setNuevos(true);
     if (n) primeraCarga.current = false;
+    nPrevio.current = n;
   }, [n, !!adjunto]);
+  // El final de la lista a la vista (sin escuchar el scroll)
+  useEffect(() => {
+    const el = fin.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver(([e]) => { setAbajo(e.isIntersecting); if (e.isIntersecting) setNuevos(false); }, { rootMargin: '0px 0px 120px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [!!conv.datos]);
+  // Los separadores de día se quedan pegados justo debajo de la cabecera de la pantalla (mida lo que mida)
+  useLayoutEffect(() => {
+    const cab = document.querySelector('.cabecera');
+    const el = raiz.current;
+    if (!cab || !el) return undefined;
+    const poner = () => el.style.setProperty('--chat-sep-top', `${Math.round(cab.getBoundingClientRect().height)}px`);
+    poner();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(poner) : null;
+    ro?.observe(cab);
+    return () => ro?.disconnect();
+  }, []);
+  const irAbajo = () => { setNuevos(false); window.scrollTo({ top: document.documentElement.scrollHeight, behavior: sinMovimiento() ? 'auto' : 'smooth' }); };
 
   const urlAdjunto = adjunto?.url || null;
   useEffect(() => () => { if (urlAdjunto) URL.revokeObjectURL(urlAdjunto); }, [urlAdjunto]);
@@ -144,9 +174,11 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     return yo === 'coach' ? `En su ${c.contexto.nombre}` : `En tu ${c.contexto.nombre}`;
   };
   const esMarcador = (c) => c.archivo && (c.texto === 'Foto' || c.texto === 'Vídeo');
+  // v0.49: los mensajes seguidos de la misma persona van juntos (solo el último lleva el pico y la hora)
+  const agrupado = Object.fromEntries(gruposChat(mensajes.map((c) => ({ ...c, contexto: etiqueta(c) ? c.contexto : null })), { dia: (iso) => aISO(new Date(iso)) }).map((x) => [x.id, x]));
 
   return (
-    <div class="chat" aria-label={`Chat con ${otro}`}>
+    <div class="chat" ref={raiz} aria-label={`Chat con ${otro}`}>
       <div class="chat-lista" ref={lista}>
         {conv.cargando && !conv.datos ? <Cargando texto="Cargando los mensajes" /> : !mensajes.length ? (
           <div class="chat-vacio">
@@ -162,8 +194,9 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
             {g.items.map((c) => {
               const mio = c.autor === yo;
               const etq = etiqueta(c);
+              const gr = agrupado[c.id] || { primero: true, ultimo: true };
               return (
-                <article key={c.id} class={`burbuja ${mio ? 'mia' : 'suya'} ${c.archivo ? 'con-medio' : ''} ${c.programado ? 'programada' : ''}`}>
+                <article key={c.id} class={`burbuja ${mio ? 'mia' : 'suya'} ${c.archivo ? 'con-medio' : ''} ${c.programado ? 'programada' : ''} ${gr.primero ? '' : 'sigue'} ${gr.ultimo ? 'cola' : 'sin-cola'}`}>
                   {etq && (
                     <button type="button" class="burbuja-ctx" onClick={() => c.contexto.tipo === 'archivo' ? setAbierto(c) : irContexto?.(c.contexto)}>
                       <Icono n={c.contexto.tipo === 'sesion' ? 'hoy' : c.contexto.tipo === 'checkin' ? 'checkin' : 'video'} />{etq}
@@ -172,8 +205,8 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
                   {c.archivo && <MedioChat archivo={c.archivo} alAbrir={() => setAbierto(c)} />}
                   {!esMarcador(c) && <TextoConEnlaces texto={c.texto} clase="burbuja-texto" />}
                   <span class="burbuja-pie">
-                    {c.programado ? <span class="programado"><Icono n="reloj" />Programado para el {fmtProgramado(c.enviar_en)}</span> : horaDe(c.creado_en)}
-                    {mio && !c.programado && <span class="visto" title={c.leido_en ? 'Visto' : 'Enviado'} aria-label={c.leido_en ? 'visto' : 'enviado'}>{c.leido_en ? '✓✓' : '✓'}</span>}
+                    {c.programado ? <span class="programado"><Icono n="reloj" />Programado para el {fmtProgramado(c.enviar_en)}</span> : <span class={gr.ultimo ? '' : 'sr'}>{horaDe(c.creado_en)}</span>}
+                    {mio && !c.programado && gr.ultimo && <span class="visto" title={c.leido_en ? 'Visto' : 'Enviado'} aria-label={c.leido_en ? 'visto' : 'enviado'}>{c.leido_en ? '✓✓' : '✓'}</span>}
                     {(mio || yo === 'coach') && (
                       <button type="button" class="burbuja-mas" aria-label="Opciones del mensaje" onClick={() => setBorrando(borrando === c.id ? null : c.id)}><Icono n="abajo" /></button>
                     )}
@@ -191,7 +224,9 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
           </section>
         ))}
         {modo === 'demo' && !conv.cargando && <p class="mini terciario chat-nota">En la demo no hay nadie al otro lado: lo que escribas se queda aquí.</p>}
+        <span ref={fin} class="chat-fin" aria-hidden="true" />
       </div>
+      {nuevos && !abajo && <button type="button" class="chat-nuevos" onClick={irAbajo}>Mensajes nuevos <Icono n="abajo" /></button>}
 
       <form class="chat-barra" onSubmit={enviar}>
         <div class="chat-barra-in">
@@ -241,22 +276,40 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   );
 }
 
-// La foto o el vídeo dentro de la burbuja: la miniatura si la hay; si no (o si no carga), el propio archivo
+// La foto o el vídeo dentro de la burbuja: la miniatura si la hay; si no (o si no carga), el propio archivo.
+// v0.49: mientras llega, un hueco neutro con un brillo suave; al cargar, aparece fundido; si falla, lo dice con
+// «Reintentar» (en lugar del icono de imagen rota del navegador).
 function MedioChat({ archivo, alAbrir }) {
   const { api } = useApp();
   const [url, setUrl] = useState(null);
   const [sinPoster, setSinPoster] = useState(false);
+  const [lista, setLista] = useState(false);
+  const [fallo, setFallo] = useState(false);
+  const [intento, setIntento] = useState(0);
   const esFoto = archivo.tipo === 'foto_progreso' || /^image\//.test(archivo.mime || '');
   const conPoster = !!archivo.poster_ruta && !sinPoster;
   useEffect(() => {
     let vivo = true;
-    setUrl(null);
-    api.urlArchivo(conPoster ? archivo.poster_ruta : archivo.ruta).then((u) => vivo && setUrl(u)).catch(() => { if (vivo && conPoster) setSinPoster(true); });
+    setUrl(null); setLista(false); setFallo(false);
+    api.urlArchivo(conPoster ? archivo.poster_ruta : archivo.ruta).then((u) => vivo && setUrl(u)).catch(() => { if (!vivo) return; if (conPoster) setSinPoster(true); else setFallo(true); });
     return () => { vivo = false; };
-  }, [archivo.ruta, archivo.poster_ruta, conPoster]);
+  }, [archivo.ruta, archivo.poster_ruta, conPoster, intento]);
+  const error = () => { if (conPoster) setSinPoster(true); else setFallo(true); };
+  if (fallo) {
+    return (
+      <div class="medio-chat medio-fallo" role="group" aria-label={esFoto ? 'Imagen no disponible' : 'Vídeo no disponible'}>
+        <Icono n={esFoto ? 'imagen' : 'video'} />
+        <span class="peq">{esFoto ? 'No se pudo cargar la imagen' : 'No se pudo cargar el vídeo'}</span>
+        <button type="button" class="btn btn-peq" onClick={() => setIntento((x) => x + 1)}><Icono n="reiniciar" /> Reintentar</button>
+      </div>
+    );
+  }
   return (
-    <button type="button" class="medio-chat" onClick={alAbrir} aria-label={esFoto ? 'Abrir la foto' : 'Abrir el vídeo'}>
-      {!url ? <span class="medio-chat-hueco" /> : esFoto || conPoster ? <img src={url} alt="" loading="lazy" onError={() => conPoster && setSinPoster(true)} /> : <video src={url} muted playsInline preload="metadata" />}
+    <button type="button" class={`medio-chat ${lista ? 'listo' : ''}`} onClick={alAbrir} aria-label={esFoto ? 'Abrir la foto' : 'Abrir el vídeo'}>
+      <span class="medio-chat-hueco" aria-hidden="true" />
+      {url && (esFoto || conPoster
+        ? <img key={`${url}:${intento}`} src={url} alt="" loading="lazy" onLoad={() => setLista(true)} onError={error} />
+        : <video key={`${url}:${intento}`} src={url} muted playsInline preload="metadata" onLoadedData={() => setLista(true)} onError={error} />)}
       {!esFoto && <span class="medio-chat-play" aria-hidden="true"><Icono n="play" />{archivo.duracion_seg ? <span class="num">{mmssCorto(archivo.duracion_seg)}</span> : null}</span>}
     </button>
   );

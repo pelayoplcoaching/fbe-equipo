@@ -2,7 +2,7 @@ import { hoyISO } from '../../logica/fechas.js';
 import { useState } from 'preact/hooks';
 import { AjustesDispositivo } from '../Ajustes.jsx';
 import { SeccionNotificaciones } from '../Notificaciones.jsx';
-import { useApp, useCarga, Icono, Hoja, HojaExportar, Avatar } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, Icono, Hoja, HojaExportar, Avatar } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
@@ -27,10 +27,10 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
 
   return (
     <div class="contenido">
-      <header class="cabecera">
+      <CabeceraGrande>
         <button class="btn btn-icono plano solo-estrecho" onClick={() => irA?.('hoy')} aria-label="Volver a Hoy"><Icono n="atras" /></button>
         <Avatar nombre={atleta.nombre} foto={perfil?.foto} clase="grande" lleno ampliable /><div class="titulo"><h1>{atleta.nombre}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div>
-      </header>
+      </CabeceraGrande>
       <BandaDemo />
 
       <section class="seccion">

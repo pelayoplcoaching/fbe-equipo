@@ -9,6 +9,7 @@ import { progresarPauta, opcionesDe } from '../logica/progresion.js';
 import { resumenCobros, cobradoEnMes, sumarMeses } from '../logica/cobros.js';
 import { planVigente, planSiguiente, objetivoDelDia, semanaNutricion, gastoAdaptativo, gastoPorSemanas, ajusteNutricion, avisosNutricion } from '../logica/nutricion.js';
 import { conDefecto, preferenciasValidas } from '../logica/notificaciones.js';
+import { chispaPeso, chispaSesiones } from '../logica/visual.js';
 import { limpiarCuestionario, avisoCuestionario, SIN_SALUD } from '../logica/cuestionario.js';
 import { APARTADOS_CHECKIN, preguntasDe, respuestasDe } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
@@ -2063,8 +2064,9 @@ export function crearApi(backend) {
       const perfiles = porId(await b.select('perfiles', { in: { id: ids }, cols: 'id,foto' }).catch(() => []));
       return atletas.map((a) => ({ ...a, foto: (a.perfil_id && perfiles[a.perfil_id]?.foto) || null }));
     },
-    async resumenes(hoy = hoyISO()) {
-      const atletas = await api.atletas();
+    // soloAtleta (v0.49): el de un atleta (la cabecera de su ficha), con los mismos cálculos que el panel
+    async resumenes(hoy = hoyISO(), { soloAtleta = null } = {}) {
+      const atletas = (await api.atletas()).filter((a) => !soloAtleta || a.id === soloAtleta);
       if (!atletas.length) return [];
       const ids = atletas.map((a) => a.id);
       // El bloque de cada atleta: el activo (o ajustado); si no tiene, el planificado más reciente (como lo que ve el atleta)
@@ -2093,6 +2095,9 @@ export function crearApi(backend) {
       const recientes = todasSemanas.length ? await b.select('sesiones', { in: { semana_id: todasSemanas.map((x) => x.id) }, eq: { completada: true }, gte: { fecha_realizada: sumarDias(lunesDe(hoy), -42) } }) : [];
       // Cumplimiento de las 4 últimas semanas acabadas: sesiones, series pautadas hechas y esfuerzo frente a la pauta
       const lunesHoy = lunesDe(hoy);
+      // v0.49: las minigráficas del panel: sesiones hechas de las programadas en las 6 últimas semanas (con la actual)
+      const sem6 = semanasQueCuentan(todasSemanas, todosBloques).filter((w) => lunesDe(w.fecha_inicio) >= sumarDias(lunesHoy, -35) && lunesDe(w.fecha_inicio) <= lunesHoy);
+      const ses6 = sem6.length ? await b.select('sesiones', { in: { semana_id: sem6.map((w) => w.id) }, cols: 'id,semana_id,completada' }) : [];
       const sem4 = semanasQueCuentan(todasSemanas, todosBloques).filter((w) => lunesDe(w.fecha_inicio) >= sumarDias(lunesHoy, -28) && lunesDe(w.fecha_inicio) < lunesHoy);
       const ses4 = sem4.length ? await b.select('sesiones', { in: { semana_id: sem4.map((w) => w.id) }, cols: 'id,semana_id,completada' }) : [];
       const pau4 = ses4.length ? await b.select('sesion_ejercicios', { in: { sesion_id: ses4.map((x) => x.id) }, cols: 'id,sesion_id,series,rpe_objetivo,rir_objetivo' }) : [];
@@ -2133,7 +2138,13 @@ export function crearApi(backend) {
         const bloque = bloques.filter((x) => x.atleta_id === a.id).sort((x, y) => (x.fecha_inicio < y.fecha_inicio ? 1 : -1))[0] || null;
         const semana = bloque ? actuales[bloque.id] || null : null;
         const cs = C[a.id] || [];
-        return resumenAtleta({
+        const misSemanas = sem6.filter((w) => atletaDeBloque[w.bloque_id] === a.id);
+        const idsMias = new Set(misSemanas.map((w) => w.id));
+        const chispas = {
+          peso: chispaPeso(P[a.id] || [], hoy, 8),
+          sesiones: chispaSesiones(misSemanas, ses6.filter((x) => idsMias.has(x.semana_id)), hoy, 6),
+        };
+        return { ...resumenAtleta({
           atleta: a, bloque, semana,
           semanas: bloque ? semanasPorBloque[bloque.id] || [] : [],
           sesiones: semana ? sesiones[semana.id] || [] : [],
@@ -2147,7 +2158,7 @@ export function crearApi(backend) {
           cuestionario: avisoCuestionario(Q[a.id]),
           cambiosReceta: (CR[a.id] || []).length,
           diasNutricion: a.nutricion === false ? null : unicos((RN[a.id] || []).filter((x) => x.fecha > sumarDias(hoy, -7) && x.fecha <= hoy).map((x) => x.fecha)).length,
-        }, hoy);
+        }, hoy), chispas };
       });
       // Cobros (v0.25, solo el coach; sin la migración 020, sin columna): cómo va cada uno, para verlo en el panel
       const pagosTodos = await b.select('pagos', { in: { atleta_id: ids } }).catch(() => null);

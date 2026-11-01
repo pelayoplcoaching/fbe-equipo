@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { AjustesDispositivo, Interruptor } from '../Ajustes.jsx';
 import { SeccionNotificaciones } from '../Notificaciones.jsx';
-import { useApp, useCarga, Icono, Hoja, Cargando, HojaExportar, copiar, Avatar, cuando } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, Icono, Hoja, Cargando, HojaExportar, copiar, Avatar, cuando } from '../comunes.jsx';
 import { num } from '../../logica/calculos.js';
 import { BandaDemo } from '../App.jsx';
 import { hoyISO } from '../../logica/fechas.js';
@@ -16,7 +16,7 @@ export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
   const [preparando, setPreparando] = useState(false);
   return (
     <div class="contenido coach">
-      <header class="cabecera"><Avatar nombre={perfil?.nombre || 'Coach'} foto={perfil?.foto} clase="grande" lleno ampliable /><div class="titulo"><h1>{perfil?.nombre || 'Cuenta'}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div></header>
+      <CabeceraGrande><Avatar nombre={perfil?.nombre || 'Coach'} foto={perfil?.foto} clase="grande" lleno ampliable /><div class="titulo"><h1>{perfil?.nombre || 'Cuenta'}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div></CabeceraGrande>
       <BandaDemo />
       <div class="panel">
         <ul class="lista">

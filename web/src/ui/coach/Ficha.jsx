@@ -5,7 +5,7 @@ import { CumplimientoYBloques } from './Cumplimiento.jsx';
 import { Actividad } from './Actividad.jsx';
 import { CompararFotos } from '../CompararFotos.jsx';
 import { CompararVideos } from '../Archivos.jsx';
-import { useUnaVez, Pestanas, useAncho, Siluetas, useApp, useCarga, Icono, ErrorCaja, Hoja, Vacio, Paso, Segmentos, HojaExportar, Avatar } from '../comunes.jsx';
+import { CabeceraGrande, useUnaVez, Pestanas, useAncho, Siluetas, useApp, useCarga, Icono, ErrorCaja, Hoja, Vacio, Paso, Segmentos, HojaExportar, Avatar } from '../comunes.jsx';
 import { EditorBloque, ElegirEjercicio } from './Editor.jsx';
 import { textoMarca, REPS_MAX_OBJETIVO } from '../../logica/objetivos.js';
 import { Invitacion } from './Panel.jsx';
@@ -16,7 +16,7 @@ import { Diario } from '../Diario.jsx';
 import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
 import { VerArchivo } from '../Archivos.jsx';
 import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, etiquetasSuperserie, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO } from '../../logica/calculos.js';
-import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, rangoSemana, aISO } from '../../logica/fechas.js';
+import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, rangoSemana, aISO, hace } from '../../logica/fechas.js';
 import { HabitosCoach } from './HabitosCoach.jsx';
 import { CuestionarioCoach, CheckinAMedida, ParaProgramar, LoQueUsa } from './CuestionarioCoach.jsx';
 import { respuestasDe } from '../../logica/preguntas.js';
@@ -26,6 +26,8 @@ import { CobrosAtleta } from './Cobros.jsx';
 import { TareasCoach } from '../Tareas.jsx';
 import { TusMeses } from '../atleta/TuMes.jsx';
 import { CompararCheckins } from './CompararCheckins.jsx';
+import { ChispaPeso } from './Panel.jsx';
+import { estadoAtleta, NOMBRE_ESTADO } from '../../logica/visual.js';
 
 // Las de entrenamiento, fuera a quien solo le llevas la nutrición (v0.26); Nutrición, a quien solo el entrenamiento
 const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
@@ -35,6 +37,9 @@ export const pestanasFicha = (a) => PESTANAS.filter(([k]) => (conNutricion(a) ||
 export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambiar }) {
   const { api } = useApp();
   const ficha = useCarga(() => api.ficha(atletaId), [atletaId]);
+  // v0.49: su resumen del panel (bloque, cumplimiento, peso y última actividad) para la cabecera; solo el coach
+  const resumen = useCarga(() => api.resumenes(undefined, { soloAtleta: atletaId }).then((x) => x[0] || null).catch(() => null), [atletaId]);
+  const r = resumen.datos;
   const [pest, setPest] = useState(pestanaInicial);
   const [invitar, setInvitar] = useState(false);
   const a = ficha.datos?.atleta;
@@ -48,17 +53,18 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
 
   return (
     <div class="contenido coach">
-      <header class="cabecera">
+      <CabeceraGrande>
         <button class="btn btn-icono plano" onClick={alVolver} aria-label="Volver a atletas"><Icono n="atras" /></button>
-        {a && <Avatar nombre={a.nombre} foto={a.foto} ampliable />}
+        {a && <span class={`avatar-estado estado-${r ? estadoAtleta(r) : 'cargando'}`}><Avatar nombre={a.nombre} foto={a.foto} ampliable /></span>}
         <div class="titulo">
           <h1>{a?.nombre || 'Atleta'}</h1>
-          <div class="sub">{a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : '')}</div>
+          <div class="sub">{r?.semana ? `${r.bloque?.nombre ? `${r.bloque.nombre} · ` : ''}Semana ${r.semana.numero} de ${r.semana.total}` : a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : '')}</div>
           {a && (a.nivel || servicioDe(a) !== 'completo') && <div class="mini terciario">{[conEntrenamiento(a) && a.nivel && `Nivel ${NOMBRE_NIVEL[a.nivel].toLowerCase()}`, servicioDe(a) !== 'completo' && Object.fromEntries(SERVICIOS)[servicioDe(a)]].filter(Boolean).join(' · ')}</div>}
         </div>
         {/* Sin cuenta vinculada (aunque se haya cambiado su estado a mano), siempre se le puede dar un código */}
         {a && !a.perfil_id && a.estado !== 'baja' && <button class="btn btn-primario btn-peq" onClick={() => setInvitar(true)}><Icono n="enviar" /> Código</button>}
-      </header>
+      </CabeceraGrande>
+      {a && <ChipsFicha r={r} cargando={resumen.cargando && !r} />}
       <ErrorCaja error={ficha.error} reintentar={ficha.recargar} />
       <Pestanas opciones={a ? pestanasFicha(a) : PESTANAS} valor={pest} alCambiar={setPest} etiqueta="Secciones de la ficha" />
       {!a ? <Siluetas forma="tarjetas" n={3} texto="Cargando la ficha" /> : (
@@ -83,6 +89,22 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
       )}
       {invitar && a && <Invitacion atleta={a} alCerrar={() => setInvitar(false)} />}
     </div>
+  );
+}
+
+// v0.49: las tres cifras que más dicen de un vistazo: cumplimiento (4 semanas), peso y última actividad
+function ChipsFicha({ r, cargando }) {
+  if (cargando) return <div class="ficha-chips" aria-hidden="true"><span class="sil" style="width:88px;height:30px;border-radius:999px" /><span class="sil" style="width:110px;height:30px;border-radius:999px" /><span class="sil" style="width:96px;height:30px;border-radius:999px" /></div>;
+  if (!r) return null;
+  const pct = r.cumplimiento?.series?.pct;
+  const est = estadoAtleta(r);
+  return (
+    <ul class="ficha-chips" aria-label="Resumen del atleta">
+      <li class={`chip estado-chip estado-${est}`}><span class="punto-estado" aria-hidden="true" />{NOMBRE_ESTADO[est]}</li>
+      <li class={`chip num ${pct == null ? '' : pct >= 90 ? 'ok' : pct >= 75 ? '' : 'aviso'}`} title="Series pautadas hechas en las 4 últimas semanas"><Icono n="diana" />{pct == null ? 'Sin cumplimiento aún' : `${pct} % cumplido`}</li>
+      <li class="chip num"><Icono n="bascula" />{r.peso ? (r.peso.ritmo ? `${signo(r.peso.ritmo.kgSemana, 2)} kg/sem` : `${num(r.peso.kg)} kg`) : 'Sin pesos'}<ChispaPeso puntos={r.chispas?.peso} /></li>
+      <li class="chip"><Icono n="reloj" />{r.ultimaSerie ? `Entrenó ${hace(r.ultimaSerie)}` : 'Sin series aún'}</li>
+    </ul>
   );
 }
 

@@ -5,6 +5,7 @@ import { Icono, useApp } from '../comunes.jsx';
 import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, propuestaBackoff, tieneDetalle, objetivoSerie } from '../../logica/calculos.js';
 import { hablar, prepararVoz } from '../voz.js';
 import { fraseCuenta } from '../../logica/voz.js';
+import { vibrar } from '../hapticos.js';
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
 
@@ -89,10 +90,10 @@ export function tono(frecuencia = 880, duracion = 0.08, volumen = 0.18) {
 }
 export function vibrarCorto(ms = 30) { if (leerAjustes().vibracion) try { navigator.vibrate?.(ms); } catch { /* */ } }
 
-// Récord: vibración más larga y tres notas que suben
+// Récord: vibración más larga (la de «vibración al tocar», v0.49) y tres notas que suben
 export function celebrar() {
   const a = leerAjustes();
-  if (a.vibracion) try { navigator.vibrate?.([40, 60, 40, 60, 180]); } catch { /* */ }
+  vibrar('record');
   if (!audio || !a.sonido) return;
   [523.25, 659.25, 783.99].forEach((f, i) => {
     const t = audio.currentTime + i * 0.11;

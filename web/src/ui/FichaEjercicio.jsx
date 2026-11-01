@@ -49,7 +49,7 @@ function Graficas({ d, nombre }) {
       )}
       {metricas.length > 1 && <Segmentos opciones={metricas.map((x) => [x.id, x.corto || x.nombre, x.nombre])} valor={m.id} etiqueta="Qué ver" alCambiar={(v) => v && setMetrica(v)} clase="seg-compacto" />}
       {puntos.length > 1
-        ? <Grafica puntos={puntos.map((p) => ({ x: p.semana, y: p.valor }))} unidad={m.unidad} dec={m.dec} alto={170} etiqueta={`${m.nombre} por semana en ${nombre}`} />
+        ? <Grafica records puntos={puntos.map((p) => ({ x: p.semana, y: p.valor }))} unidad={m.unidad} dec={m.dec} alto={170} etiqueta={`${m.nombre} por semana en ${nombre}`} />
         : <p class="peq secundario">{todos.length > 1 ? 'En este rango hay menos de dos semanas con datos: prueba uno más amplio.' : 'Con dos semanas de datos verás aquí la gráfica.'}</p>}
       <div class="separa" style="flex-wrap:wrap">
         <Segmentos opciones={RANGOS.map(([id, t]) => [id, t])} valor={rango} etiqueta="Rango" alCambiar={(v) => v && setRango(v)} clase="seg-compacto" />

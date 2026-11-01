@@ -5,7 +5,7 @@
 // filtros y novedades del muro, encuestas del coach y ánimos.
 import { createContext, Fragment } from 'preact';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando } from './comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando } from './comunes.jsx';
 import { Interruptor } from './Ajustes.jsx';
 import { reducirFoto } from './FotoPerfil.jsx';
 import {
@@ -111,7 +111,7 @@ function DentroDelEquipo({ m, alCambiar }) {
   const recibidos = animos.datos?.recibidos || [];
   return (
     <div class="contenido equipo">
-      <header class="cabecera">
+      <CabeceraGrande>
         <div class="titulo">
           <h1>Equipo</h1>
           <div class="sub fila-envolver cab-equipo">
@@ -120,7 +120,7 @@ function DentroDelEquipo({ m, alCambiar }) {
           </div>
         </div>
         <button class="btn btn-icono plano" aria-label="Ajustes de la comunidad" onClick={() => setAjustes(true)}><Icono n="ajustes" /></button>
-      </header>
+      </CabeceraGrande>
       {recibidos.length > 0 && (
         <p class="animos-recibidos peq"><span class="animos-ico" aria-hidden="true">🙌</span><span>Te han animado esta semana: <strong>{quienes(recibidos.map((x) => x.nombre), 3)}</strong></span></p>
       )}
@@ -161,7 +161,7 @@ function QueSeComparte() {
 function FueraDeLaComunidad() {
   return (
     <div class="contenido">
-      <header class="cabecera"><div class="titulo"><h1>Equipo</h1></div></header>
+      <CabeceraGrande><div class="titulo"><h1>Equipo</h1></div></CabeceraGrande>
       <Vacio icono="equipo" titulo="No estás en la comunidad">Tu coach te ha sacado de la comunidad del equipo. Si quieres volver, habla con él.</Vacio>
     </div>
   );
@@ -208,7 +208,7 @@ function EntrarComunidad({ antes, cambio = null, alEntrar }) {
   };
   return (
     <div class="contenido">
-      <header class="cabecera"><div class="titulo"><h1>Equipo</h1><div class="sub">Para animaros entre los atletas de FBE</div></div></header>
+      <CabeceraGrande><div class="titulo"><h1>Equipo</h1><div class="sub">Para animaros entre los atletas de FBE</div></div></CabeceraGrande>
       <section class="panel panel-pad pila entrar-equipo">
         <Icono n="equipo" class="entrar-equipo-ico" />
         <h2>{cambio === 'texto' ? 'Hemos cambiado lo que se comparte' : cambio === 'normas' ? 'Hemos actualizado las normas' : antes ? '¿Vuelves al equipo?' : 'Antes de entrar'}</h2>

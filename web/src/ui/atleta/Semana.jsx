@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { Siluetas, useApp, useCarga, Icono, Vacio, ErrorCaja, Pista } from '../comunes.jsx';
+import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, Vacio, ErrorCaja, Pista } from '../comunes.jsx';
 import { DiaSesion } from './Hoy.jsx';
 import { PlanSemana } from './Plan.jsx';
 import { HojaBloque } from './TuBloque.jsx';
@@ -23,13 +23,13 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
 
   return (
     <div class="contenido">
-      <header class="cabecera">
+      <CabeceraGrande>
         <div class="titulo">
           <h1>{p?.bloque ? `Bloque ${p.bloque.numero}: ${p.bloque.nombre}` : 'Tu programa'}</h1>
           {p?.bloque?.objetivo && <div class="sub">{p.bloque.objetivo}</div>}
         </div>
         {p?.bloque && <button class="btn btn-peq" onClick={() => setBloque(true)}><Icono n="semana" /> Tu bloque entero</button>}
-      </header>
+      </CabeceraGrande>
       {bloque && <HojaBloque alCerrar={() => setBloque(false)} abrirSesion={(id) => { setBloque(false); abrirSesion(id); }} />}
       <ErrorCaja error={error} reintentar={recargar} />
       {p?.semanas.length > 0 && <Pista id="semana" icono="semana">Aquí está tu bloque entero: cada semana con sus sesiones. Para entrenar, vuelve a Hoy y toca «Empezar»; aquí puedes ver lo que viene y lo que ya hiciste.</Pista>}

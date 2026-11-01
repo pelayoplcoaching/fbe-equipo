@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { Siluetas, useApp, useCarga, Icono, Cargando, Hoja, Vacio, Paso } from '../comunes.jsx';
+import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, Cargando, Hoja, Vacio, Paso } from '../comunes.jsx';
 import { EditorBloque } from './Editor.jsx';
 import { BandaDemo } from '../App.jsx';
 import { NOMBRE_FOCO } from '../../logica/calculos.js';
@@ -16,11 +16,11 @@ export function Plantillas({ peticion = null } = {}) {
   if (abierta) {
     return (
       <div class="contenido coach">
-        <header class="cabecera">
+        <CabeceraGrande>
           <button class="btn btn-icono plano" onClick={() => { setAbierta(null); lista.recargar(true); }} aria-label="Volver a plantillas"><Icono n="atras" /></button>
           <div class="titulo"><h1>Plantilla</h1><div class="sub">Los cambios no afectan a los bloques ya creados desde ella</div></div>
           <button class="btn" onClick={() => setAsignar((lista.datos || []).find((p) => p.id === abierta) || { id: abierta, nombre: 'Plantilla' })}><Icono n="atletas" /><span class="solo-ancho">Asignar a atletas</span><span class="sr">Asignar a atletas</span></button>
-        </header>
+        </CabeceraGrande>
         <EditorBloque key={abierta} bloqueId={abierta} alBorrar={() => { setAbierta(null); lista.recargar(true); }} />
         {asignar && <AsignarPlantilla plantilla={asignar} alCerrar={() => setAsignar(null)} />}
       </div>
@@ -28,10 +28,10 @@ export function Plantillas({ peticion = null } = {}) {
   }
   return (
     <div class="contenido coach">
-      <header class="cabecera">
+      <CabeceraGrande>
         <div class="titulo"><h1>Plantillas</h1><div class="sub">Bloques reutilizables para empezar más rápido</div></div>
         <button class="btn btn-primario" onClick={() => setNueva(true)}><Icono n="mas" /><span class="solo-ancho">Nueva plantilla</span><span class="sr">Nueva plantilla</span></button>
-      </header>
+      </CabeceraGrande>
       <BandaDemo />
       {lista.cargando && !lista.datos ? <Siluetas forma="lista" n={3} texto="Cargando las plantillas" /> : !lista.datos?.length ? (
         <div class="panel"><Vacio icono="plantillas" titulo="Sin plantillas" accion={<button class="btn btn-primario" onClick={() => setNueva(true)}>Crear una</button>}>

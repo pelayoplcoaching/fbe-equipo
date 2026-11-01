@@ -1405,5 +1405,101 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
     && n.constanciaMedia === 75, 'lo que renueva en 30 días (el cobro apuntado o el final del periodo, con su importe) y la constancia media del equipo');
   check(euros(1308) === '1.308 €' && euros(74.5) === '74,50 €' && euros(1308, true) === OCULTO, 'los euros a la española («1.308 €») o tapados');
 }
+
+// ---------- v0.49: piezas visuales ----------
+{
+  const { resumenSeries, compararConAnterior, textoComparacion, escalaGrafica, puntoMasCercano, indicesRecord, mapaConstancia, estadoAtleta, chispaPeso, chispaSesiones, trazoChispa, gruposChat } = await import('../web/src/logica/visual.js');
+  const { ACENTOS, ACENTO_DEFECTO, contraste, parejasAcento, acentoValido, cssAcento, SUPERFICIES } = await import('../web/src/logica/acentos.js');
+  const { PATRONES } = await import('../web/src/ui/hapticos.js');
+  console.log('\nv0.49: resumen de un ejercicio plegado');
+  check(resumenSeries([{ kg: 42.5, reps: 6 }, { kg: 42.5, reps: 6 }, { kg: 42.5, reps: 6 }]) === '3 × 6 @ 42,5 kg', 'mismas series: «3 × 6 @ 42,5 kg»');
+  check(resumenSeries([{ kg: 40, reps: 6 }, { kg: 40, reps: 6 }, { kg: 40, reps: 5 }]) === '6-6-5 @ 40 kg', 'mismos kilos, repeticiones distintas: «6-6-5 @ 40 kg»');
+  check(resumenSeries([{ kg: 42.5, reps: 6 }, { kg: 37.5, reps: 6 }, { kg: 37.5, reps: 6 }]) === '3 series, hasta 42,5 kg', 'top y back-off: «3 series, hasta 42,5 kg»');
+  check(resumenSeries([{ kg: null, reps: 12 }, { kg: 0, reps: 12 }]) === '2 × 12' && resumenSeries([{ reps: 10 }, { reps: 8 }]) === '10-8 reps', 'sin carga: «2 × 12» o «10-8 reps»');
+  check(resumenSeries([]) === '' && resumenSeries([{}]) === '', 'sin series, nada');
+
+  console.log('\nv0.49: comparación con la última vez que hizo la sesión');
+  const ent = [
+    { id: 's3', nombre: 'Torso A', fecha: '2026-10-27', tonelaje: 9999, series: 17, duracion_min: 70 },
+    { id: 's2', nombre: 'Torso A', fecha: '2026-10-20', tonelaje: 4880, series: 16, duracion_min: 62 },
+    { id: 's1', nombre: 'Torso A', fecha: '2026-10-13', tonelaje: 4500, series: 16, duracion_min: 60 },
+    { id: 'p2', nombre: 'Pierna A', fecha: '2026-10-22', tonelaje: 8000, series: 15 },
+    { id: 's0', nombre: 'torso a ', fecha: '2026-10-06', tonelaje: 4000, series: 0 },
+  ];
+  const c1 = compararConAnterior({ id: 's3', nombre: 'Torso A', fecha: '2026-10-27', tonelaje: 5000, series: 17, minutos: 65 }, ent);
+  check(c1 && c1.fecha === '2026-10-20' && c1.tonelaje === 120 && c1.series === 1 && c1.minutos === 3, 'compara con la anterior del mismo nombre (sin contarse a sí misma)');
+  check(textoComparacion(c1) === '+120 kg de tonelaje que la última vez', '«+120 kg de tonelaje que la última vez»');
+  check(textoComparacion({ tonelaje: -1340 }) === '1340 kg menos de tonelaje que la última vez' && textoComparacion({ tonelaje: 0.4 }) === 'El mismo tonelaje que la última vez', 'también cuando baja o se queda igual');
+  check(compararConAnterior({ id: 'x', nombre: 'Torso B', fecha: '2026-10-27', tonelaje: 1, series: 1 }, ent) === null && textoComparacion(null) === null, 'la primera vez no hay comparación');
+  check(compararConAnterior({ id: 'x', nombre: 'Torso A', fecha: '2026-10-10', tonelaje: 4600, series: 16 }, ent) === null, 'no cuenta las de después ni las que no tienen series');
+  check(compararConAnterior({ id: 'x', nombre: 'torso á', fecha: '2026-10-14', tonelaje: 4600, series: 16 }, ent)?.tonelaje === 100, 'el nombre se compara sin tildes ni mayúsculas');
+
+  console.log('\nv0.49: escala y récords de las gráficas');
+  const e1 = escalaGrafica([80, 90, 100]);
+  check(Math.abs(e1.lo - 77) < 1e-9 && Math.abs(e1.hi - 103) < 1e-9 && igual(e1.ticks, [82, 98]), `márgenes del 15 % y dos guías redondeadas (${e1.lo}–${e1.hi}, ${e1.ticks})`);
+  const e2 = escalaGrafica([2000, 2080], { rangoMin: 400 });
+  check(e2.hi - e2.lo >= 400 && e2.lo < 2000 && e2.hi > 2080, 'con rangoMin, el eje abarca como poco eso (2000 → 2080 kcal no es una montaña)');
+  const e3 = escalaGrafica([50, 50]);
+  check(e3.hi - e3.lo > 2 && e3.lo < 50 && e3.hi > 50, 'un valor repetido no deja el eje sin alto');
+  check(igual(escalaGrafica([]), { lo: 0, hi: 1, ticks: [] }), 'sin datos, una escala vacía');
+  check(puntoMasCercano([10, 50, 90], 62) === 1 && puntoMasCercano([10, 50, 90], 75) === 2 && puntoMasCercano([10, 50, 90], -5) === 0 && puntoMasCercano([], 3) === -1, 'el dedo elige el punto más cercano');
+  check(igual(indicesRecord([100, 105, 103, 105, 110, 90, 111]), [1, 4, 6]), 'récords: los que superan a todos los anteriores (igualar no cuenta; el primero tampoco)');
+
+  console.log('\nv0.49: calendario de constancia (16 semanas)');
+  const hoyC = '2026-11-01'; // domingo
+  const ses = [{ fecha: '2026-11-01', nombre: 'Torso A' }, { fecha: '2026-10-28', nombre: 'Pierna A' }, { fecha: '2026-10-28', nombre: 'Cardio' }, { fecha: '2026-07-12', nombre: 'Vieja' }, { fecha: '2026-11-03', nombre: 'Futura' }];
+  const mc = mapaConstancia(ses, hoyC, 16);
+  const dia = (iso) => mc.semanas.flatMap((w) => w.dias).find((d) => d.iso === iso);
+  check(mc.semanas.length === 16 && mc.semanas.every((w) => w.dias.length === 7) && mc.semanas[0].lunes === '2026-07-13' && mc.semanas[15].lunes === '2026-10-26', '16 columnas de lunes a domingo, la última la de hoy');
+  check(dia('2026-11-01').nivel === 1 && dia('2026-10-28').nivel === 2 && dia('2026-10-28').sesiones.length === 2 && dia('2026-10-27').nivel === 0, 'nivel 0, 1 o 2+ por sesiones hechas ese día, con lo que se hizo');
+  check(!dia('2026-07-12') && mc.diasActivos === 2 && mc.total === 3, 'lo de antes de las 16 semanas no cuenta (2 días, 3 sesiones)');
+  const mc2 = mapaConstancia([{ fecha: '2026-10-29', nombre: 'X' }], '2026-10-29', 16);
+  const d2 = mc2.semanas[15].dias;
+  check(d2[3].nivel === 1 && d2[4].nivel === -1 && d2[6].nivel === -1, 'los días que aún no han llegado van aparte (nivel -1)');
+  check(mc.meses[0].col === 0 && mc.meses.map((x) => x.texto).join() === 'jul,ago,sep,oct' && mc.meses.find((x) => x.texto === 'ago').col === 3, `meses en la columna donde empiezan (${mc.meses.map((x) => `${x.texto}@${x.col}`).join(' ')})`);
+  const mc3 = mapaConstancia([], '2026-11-25', 16);
+  check(mc3.meses[0].texto !== 'ago' || mc3.meses[1].col > 2, 'el primer mes se quita si el siguiente va justo detrás (no cabrían)');
+
+  console.log('\nv0.49: panel del coach (franja y minigráficas)');
+  check(estadoAtleta({ estado: 'invitado', alertas: [] }) === 'gris' && estadoAtleta({ estado: 'baja', alertas: [{ nivel: 'alerta' }] }) === 'gris', 'sin activar o de baja: gris');
+  check(estadoAtleta({ estado: 'activo', alertas: [{ tipo: 'sin_entrenar', nivel: 'aviso' }] }) === 'rojo' && estadoAtleta({ estado: 'activo', alertas: [{ tipo: 'molestia', nivel: 'alerta' }] }) === 'rojo'
+    && estadoAtleta({ estado: 'activo', alertas: [{ tipo: 'cumplimiento', nivel: 'aviso' }] }) === 'rojo', 'quedándose atrás (sin entrenar, poco cumplimiento) o algo grave: rojo');
+  check(estadoAtleta({ estado: 'activo', alertas: [{ tipo: 'molestia', nivel: 'aviso' }, { tipo: 'sin_checkin', nivel: 'info' }] }) === 'ambar', 'necesita atención (los mismos avisos que el filtro del panel): ámbar');
+  check(estadoAtleta({ estado: 'activo', alertas: [{ tipo: 'sin_checkin', nivel: 'info' }] }) === 'verde' && estadoAtleta({ estado: 'activo', alertas: [] }) === 'verde', 'solo avisos informativos: verde');
+  const cp = chispaPeso([{ fecha: '2026-09-01', kg: 90 }, { fecha: '2026-09-15', kg: 82 }, { fecha: '2026-09-16', kg: 81 }, { fecha: '2026-10-28', kg: '80.4' }, { fecha: '2026-11-02', kg: 70 }], hoyC, 8);
+  check(igual(cp, [{ x: '2026-09-14', y: 81.5 }, { x: '2026-10-26', y: 80.4 }]), 'peso: la media de cada semana de las 8 últimas (sin las de fuera ni las futuras)');
+  const sem = [{ id: 'w1', fecha_inicio: '2026-10-19' }, { id: 'w2', fecha_inicio: '2026-10-26' }, { id: 'w0', fecha_inicio: '2026-09-01' }];
+  const sp = chispaSesiones(sem, [{ semana_id: 'w1', completada: true }, { semana_id: 'w1', completada: true }, { semana_id: 'w1', completada: false }, { semana_id: 'w2', completada: true }, { semana_id: 'w0', completada: true }], hoyC, 6);
+  check(sp.length === 6 && sp[0].lunes === '2026-09-21' && igual(sp[4], { lunes: '2026-10-19', hechas: 2, total: 3 }) && igual(sp[5], { lunes: '2026-10-26', hechas: 1, total: 1 }) && sp[1].total === 0,
+    'sesiones: hechas de las programadas en cada una de las 6 últimas semanas');
+  check(trazoChispa([1, 2, 3], 64, 20, 2) === 'M2.0 18.0 L32.0 10.0 L62.0 2.0' && trazoChispa([5, 5], 64, 20, 2) === 'M2.0 10.0 L62.0 10.0' && trazoChispa([]) === '', 'la línea de la minigráfica, de izquierda a derecha');
+
+  console.log('\nv0.49: grupos del chat');
+  const t0 = Date.parse('2026-11-01T10:00:00Z');
+  const m = (id, autor, min, extra = {}) => ({ id, autor, creado_en: new Date(t0 + min * 60000).toISOString(), ...extra });
+  const g = gruposChat([m('a', 'atleta', 0), m('b', 'atleta', 2), m('c', 'atleta', 6), m('d', 'atleta', 13), m('e', 'coach', 14), m('f', 'coach', 15, { programado: true }), m('g', 'coach', 16, { contexto: { tipo: 'sesion' } })]);
+  const f = (id) => g.find((x) => x.id === id);
+  check(f('a').primero && !f('a').ultimo && !f('b').primero && !f('b').ultimo && !f('c').primero && f('c').ultimo, 'seguidos y con menos de 5 minutos entre uno y otro: un grupo (solo el último lleva pico y hora)');
+  check(f('d').primero && f('d').ultimo && f('e').primero, 'más de 5 minutos o cambio de persona: grupo nuevo');
+  check(f('f').primero && f('f').ultimo && f('g').primero, 'los programados y los que llevan etiqueta van solos');
+  const g2 = gruposChat([m('x', 'atleta', 0), m('y', 'atleta', 1)], { dia: (iso) => (iso < new Date(t0 + 30000).toISOString() ? 'ayer' : 'hoy') });
+  check(g2[0].ultimo && g2[1].primero, 'el cambio de día corta el grupo');
+
+  console.log('\nv0.49: colores de acento (contraste AA en claro, oscuro y negro puro)');
+  check(ACENTOS.length === 6 && ACENTOS[0].id === ACENTO_DEFECTO && ACENTO_DEFECTO === 'morado' && new Set(ACENTOS.map((a) => a.id)).size === 6, 'seis acentos, el morado FBE el primero y de serie');
+  check(contraste('#000000', '#FFFFFF') === 21 && contraste('#FFFFFF', '#FFFFFF') === 1 && contraste('#5438D8', '#FFFFFF') === contraste('#FFFFFF', '#5438D8'), 'el contraste WCAG (21:1 negro sobre blanco, simétrico)');
+  for (const a of ACENTOS) {
+    for (const tema of ['claro', 'oscuro', 'oled']) {
+      const ps = parejasAcento(a, tema);
+      const peor = ps.reduce((x, y) => (y.ratio < x.ratio ? y : x));
+      check(ps.length === Object.keys(SUPERFICIES[tema]).length + 4 && ps.every((x) => x.ratio >= 4.5), `${a.nombre} en ${tema}: todo ≥ 4,5:1 (el peor, ${peor.que}: ${peor.ratio}:1)`);
+    }
+    check(acentoValido(a), `${a.nombre}: válido como texto, en botones y en la tarjeta del día`);
+  }
+  check(cssAcento('morado') === '' && cssAcento('azul').includes('--morado:#1D55C4') && cssAcento('azul').includes(':root[data-theme="dark"]{--morado:#7EA6FF') && cssAcento('azul').includes('prefers-color-scheme: dark'),
+    'el CSS de un acento: claro, oscuro del sistema y oscuro elegido (el morado no necesita nada)');
+  check(cssAcento('no-existe') === '', 'un acento que no existe se queda en el morado');
+  check(PATRONES.serie > 0 && PATRONES.serie <= 20 && PATRONES.record.reduce((t, x) => t + x, 0) < 300 && PATRONES.checkin.length === 3, 'las vibraciones son cortas (un toque al marcar, menos de 300 ms en total al batir un récord)');
+}
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

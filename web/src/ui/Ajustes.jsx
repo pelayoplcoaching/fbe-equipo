@@ -4,6 +4,8 @@ import { Segmentos, Icono, useApp } from './comunes.jsx';
 import { leerAjustes, guardarAjustes } from './ajustes.js';
 import { prepararAudio, pitar, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
 import { hayVoz, hablar } from './voz.js';
+import { ACENTOS } from '../logica/acentos.js';
+import { puedeVibrar, vibrar } from './hapticos.js';
 
 const TEMAS = [['sistema', 'Sistema'], ['claro', 'Claro'], ['oscuro', 'Oscuro']];
 
@@ -34,6 +36,26 @@ export function AjustesDispositivo({ coach = false }) {
             <Segmentos opciones={TEMAS} valor={a.tema} etiqueta="Tema" alCambiar={(v) => cambiar('tema', v || 'sistema')} />
             <span class="peq terciario">Con «Sistema», claro u oscuro según tu móvil u ordenador.</span>
           </li>
+          {/* v0.49: negro puro para pantallas OLED, cuando se ve el tema oscuro */}
+          {a.tema !== 'claro' && (
+            <Interruptor id="aj-oled" texto="Negro puro (OLED)" valor={!!a.oled} alCambiar={(v) => cambiar('oled', v)}
+              ayuda={a.tema === 'oscuro' ? 'El fondo, negro del todo: en pantallas OLED gasta menos batería.' : 'Cuando tu móvil esté en oscuro, el fondo será negro del todo (en pantallas OLED gasta menos batería).'} />
+          )}
+          <li class="panel-pad pila-s">
+            <fieldset class="acentos">
+              <legend>Color de acento</legend>
+              <div class="acentos-lista">
+                {ACENTOS.map((c) => (
+                  <label key={c.id} class="acento-op" style={{ '--m-claro': c.claro.morado, '--m-oscuro': c.oscuro.morado }}>
+                    <input type="radio" name="aj-acento" class="sr" value={c.id} checked={(a.acento || 'morado') === c.id} onChange={() => cambiar('acento', c.id)} />
+                    <span class="acento-muestra" aria-hidden="true"><Icono n="hecho" /></span>
+                    <span class="acento-nombre">{c.nombre}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <span class="peq terciario">El color de los botones, los enlaces y lo que eliges. Todos se leen bien en claro y en oscuro.</span>
+          </li>
           {!coach && (
             <>
               <Interruptor id="aj-sonido" texto="Sonido al acabar el descanso" ayuda="Y al batir un récord o ganar un disco" valor={a.sonido} alCambiar={(v) => cambiar('sonido', v)} />
@@ -57,7 +79,11 @@ export function AjustesDispositivo({ coach = false }) {
                 ayuda={hayVoz() ? 'Te dice la siguiente serie («Serie 3 de press banca: 80 kilos por 6»), los últimos segundos del descanso y la última serie. La música sigue sonando (baja un momento mientras habla).' : 'Este navegador no puede hablar: los avisos del descanso siguen con su sonido.'}
                 valor={!!a.voz && hayVoz()} alCambiar={(v) => { cambiar('voz', v); if (v) hablar('Serie 1 de press banca: 60 kilos por 8.', { forzar: true }); }} />
               {a.voz && hayVoz() && <li class="panel-pad separa"><span class="peq secundario">¿Se oye bien?</span><button class="btn btn-peq" onClick={() => hablar('Serie 3 de sentadilla: 80 kilos por 6. Última serie.', { forzar: true })}><Icono n="altavoz" /> Probar la voz</button></li>}
-              <Interruptor id="aj-vibracion" texto="Vibración" ayuda="En los móviles que la permiten" valor={a.vibracion} alCambiar={(v) => cambiar('vibracion', v)} />
+              <Interruptor id="aj-vibracion" texto="Vibración al acabar el descanso" ayuda="Y en el metrónomo y los intervalos, en los móviles que la permiten" valor={a.vibracion} alCambiar={(v) => cambiar('vibracion', v)} />
+              {/* v0.49: la vibración al tocar, con su propio interruptor (de serie, encendida) */}
+              <Interruptor id="aj-hapticos" texto="Vibración al tocar" desactivado={!puedeVibrar()}
+                ayuda={puedeVibrar() ? 'Un toque corto al marcar una serie, al batir un récord y al enviar el check-in.' : 'Este navegador no deja vibrar a las webs (en iPhone, Safari no lo permite).'}
+                valor={a.hapticos !== false && puedeVibrar()} alCambiar={(v) => { cambiar('hapticos', v); if (v) setTimeout(() => vibrar('serie'), 0); }} />
               <Interruptor id="aj-pantalla" texto="Pantalla encendida durante la sesión" ayuda="Para no tener que desbloquear el móvil entre series" valor={a.pantalla} alCambiar={(v) => cambiar('pantalla', v)} />
               <Interruptor id="aj-peso-cifra" texto="Ver los kilos en Hoy" ayuda="Y en el resumen de tu semana. De serie, te dice cómo va tu peso respecto a tu objetivo, sin la cifra; la gráfica sigue en Progreso" valor={a.pesoCifra} alCambiar={(v) => cambiar('pesoCifra', v)} />
               <li class="panel-pad separa">

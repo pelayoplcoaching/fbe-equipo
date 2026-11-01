@@ -22,6 +22,16 @@ check(res.find((r) => r.nombre === 'Lucía Ferrer')?.servicio === 'nutricion' &&
 check(res.find((r) => r.nombre === 'Lucía Ferrer').alertas.some((a) => a.tipo === 'receta'), 'Lucía pide cambiar una receta (aviso en el panel)');
 for (const r of res) console.log('    ', r.nombre.padEnd(14), r.semana ? `S${r.semana.numero}/${r.semana.total}` : '—', `${r.sesiones.completadas}/${r.sesiones.total}`, r.peso ? `${r.peso.kg} (${r.peso.cambio})` : '', '|', r.alertas.map((a) => a.texto).join(' · '));
 check(res.find((r) => r.nombre === 'Carlos Vera').alertas.some((a) => a.tipo === 'sin_entrenar'), 'Carlos aparece sin entrenar');
+// v0.49: la franja y las minigráficas del panel, y el resumen de un solo atleta para la cabecera de su ficha
+{
+  const { estadoAtleta } = await import('../web/src/logica/visual.js');
+  const ana = res.find((r) => r.nombre === 'Ana López');
+  check(res.every((r) => r.chispas && Array.isArray(r.chispas.peso) && r.chispas.sesiones.length === 6) && ana.chispas.peso.length >= 2 && ana.chispas.sesiones.some((w) => w.hechas > 0),
+    `cada atleta trae sus minigráficas (Ana: ${ana.chispas.peso.length} semanas de peso, ${ana.chispas.sesiones.map((w) => `${w.hechas}/${w.total}`).join(' ')})`);
+  check(estadoAtleta(res.find((r) => r.nombre === 'Carlos Vera')) === 'rojo' && estadoAtleta(res.find((r) => r.estado === 'baja')) === 'gris', 'Carlos, sin entrenar, en rojo; quien está de baja, en gris');
+  const solo = await api.resumenes(undefined, { soloAtleta: ana.atleta_id });
+  check(solo.length === 1 && solo[0].atleta_id === ana.atleta_id && igualD(solo[0].chispas, ana.chispas) && solo[0].cumplimiento?.series?.pct === ana.cumplimiento?.series?.pct, 'el resumen de un solo atleta es el mismo que en el panel');
+}
 check(res.find((r) => r.nombre === 'Rubén Martín').alertas.some((a) => a.tipo === 'molestia'), 'Rubén aparece con molestia moderada');
 check(res.find((r) => r.nombre === 'Marta Gil').estado === 'invitado', 'Marta está pendiente de activar');
 check((await api.plantillas()).length === 2, '2 plantillas');

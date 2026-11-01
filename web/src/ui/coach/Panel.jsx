@@ -1,11 +1,39 @@
 import { useEffect, useState } from 'preact/hooks';
 import { HojaAvisos } from '../Avisos.jsx';
-import { useUnaVez, Siluetas, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos } from '../comunes.jsx';
+import { CabeceraGrande, useUnaVez, Siluetas, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos } from '../comunes.jsx';
 import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO } from '../../logica/nivel.js';
 import { BandaDemo } from '../App.jsx';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
 import { hace, fmtCorta } from '../../logica/fechas.js';
 import { fmtEuros } from '../../logica/cobros.js';
+import { estadoAtleta, NOMBRE_ESTADO, trazoChispa } from '../../logica/visual.js';
+
+// v0.49: minigráficas del panel (solo las ve el coach): el peso de las últimas semanas y las sesiones hechas de las
+// programadas en las 6 últimas, con su texto para los lectores de pantalla
+export function ChispaPeso({ puntos = [] }) {
+  if (puntos.length < 2) return null;
+  const ys = puntos.map((p) => p.y);
+  const dif = ys[ys.length - 1] - ys[0];
+  return (
+    <svg class={`chispa chispa-peso ${dif < -0.05 ? 'baja' : dif > 0.05 ? 'sube' : ''}`} viewBox="0 0 64 20" width="64" height="20" role="img"
+      aria-label={`Peso en ${puntos.length} semanas: de ${num(ys[0])} a ${num(ys[ys.length - 1])} kg`}>
+      <path d={trazoChispa(ys, 64, 20, 3)} />
+    </svg>
+  );
+}
+export function ChispaSesiones({ semanas = [] }) {
+  if (!semanas.some((w) => w.total > 0)) return null;
+  const w = 64 / semanas.length;
+  return (
+    <svg class="chispa chispa-sesiones" viewBox="0 0 64 20" width="64" height="20" role="img"
+      aria-label={`Sesiones en las ${semanas.length} últimas semanas: ${semanas.map((x) => (x.total ? `${x.hechas} de ${x.total}` : 'sin programar')).join(', ')}`}>
+      {semanas.map((x, i) => {
+        const h = x.total ? Math.max(2, (Math.min(x.hechas, x.total) / x.total) * 18) : 2;
+        return <rect key={x.lunes} class={!x.total ? 'vacia' : x.hechas >= x.total ? 'llena' : ''} x={i * w + 1.5} y={20 - h - 1} width={w - 3} height={h} rx="1.5" />;
+      })}
+    </svg>
+  );
+}
 
 function Pips({ hechas, total }) {
   if (!total) return <span class="terciario">—</span>;
@@ -42,7 +70,7 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
 
   return (
     <div class="contenido coach">
-      <header class="cabecera">
+      <CabeceraGrande>
         <div class="titulo"><h1>Atletas</h1><div class="sub">{lista.filter((r) => r.estado === 'activo').length} activos{atencion.length ? `, ${atencion.length} necesitan atención` : ''}</div></div>
         <div class="fila" style="gap:8px">
           {alBuscar && <button class="btn btn-icono solo-estrecho" onClick={alBuscar} aria-label="Buscar"><Icono n="buscar" /></button>}
@@ -50,7 +78,7 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
           <button class="btn btn-primario" onClick={() => setNuevo(true)}><Icono n="mas" /><span class="solo-ancho">Añadir atleta</span><span class="sr">Añadir atleta</span></button>
           {abrirCuenta && <button class="btn-avatar solo-estrecho" onClick={abrirCuenta} aria-label="Tu cuenta"><Avatar foto={perfil?.foto} nombre={perfil?.nombre || 'Coach'} /></button>}
         </div>
-      </header>
+      </CabeceraGrande>
       <BandaDemo />
       <ErrorCaja error={res.error} reintentar={res.recargar} />
       <div class="selector-chips" role="group" aria-label="Filtrar atletas">
@@ -73,18 +101,18 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
                 <thead><tr><th>Atleta</th>{conCobros && <th>Pagos</th>}<th>Semana</th><th>Sesiones</th><th>Peso</th><th>Sueño</th><th>Motivación</th><th>Molestias</th><th>Último registro</th></tr></thead>
                 <tbody>
                   {vista.map((r) => (
-                    <tr key={r.atleta_id} onClick={() => abrir(r.atleta_id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id); }}>
-                      <td><div class="nombre"><Avatar nombre={r.nombre} foto={r.foto} /><span>{r.nombre}</span></div><Alertas r={r} pendientes={pendientes[r.atleta_id]} /></td>
+                    <tr key={r.atleta_id} data-estado={estadoAtleta(r)} onClick={() => abrir(r.atleta_id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id); }}>
+                      <td class="celda-estado"><div class="nombre"><Avatar nombre={r.nombre} foto={r.foto} /><span>{r.nombre}<span class="sr">. {NOMBRE_ESTADO[estadoAtleta(r)]}</span></span></div><Alertas r={r} pendientes={pendientes[r.atleta_id]} /></td>
                       {conCobros && <td><CobroPanel c={r.cobro} /></td>}
                       {r.servicio === 'nutricion' ? (
                         <td colSpan={2}><span class="chip morado">Solo nutrición</span>{r.diasNutricion != null && <div class="mini terciario">{r.diasNutricion}/7 días apuntados</div>}</td>
                       ) : (
                         <>
                           <td class="num-c">{r.semana ? <>S{r.semana.numero}/{r.semana.total}<div class="mini terciario">{r.semana.foco ? NOMBRE_FOCO[r.semana.foco] : r.bloque?.nombre}</div></> : '—'}</td>
-                          <td><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /></td>
+                          <td><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /><ChispaSesiones semanas={r.chispas?.sesiones} /></td>
                         </>
                       )}
-                      <td class="num-c">{r.peso ? <>{num(r.peso.kg)} kg{r.peso.ritmo ? <div class="mini terciario">{signo(r.peso.ritmo.kgSemana, 2)}/sem</div> : r.peso.cambio != null && <div class="mini terciario">{signo(r.peso.cambio)}</div>}</> : '—'}</td>
+                      <td class="num-c">{r.peso ? <>{num(r.peso.kg)} kg<ChispaPeso puntos={r.chispas?.peso} />{r.peso.ritmo ? <div class="mini terciario">{signo(r.peso.ritmo.kgSemana, 2)}/sem</div> : r.peso.cambio != null && <div class="mini terciario">{signo(r.peso.cambio)}</div>}</> : '—'}</td>
                       <td class="num-c">{sueno(r.checkin?.horas_sueno)}</td>
                       <td>{r.checkin?.motivacion ? ESCALAS.motivacion[r.checkin.motivacion - 1] : '—'}</td>
                       <td>{r.maxMolestia ? <span class={`chip ${r.maxMolestia >= 2 ? 'aviso' : 'info'}`}>{MOLESTIA[r.maxMolestia]}</span> : <span class="terciario">—</span>}</td>
@@ -97,10 +125,10 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
           </div>
           <div class="pila solo-estrecho">
             {vista.map((r) => (
-              <button class="tarjeta-atleta" key={r.atleta_id} onClick={() => abrir(r.atleta_id)}>
+              <button class="tarjeta-atleta" key={r.atleta_id} data-estado={estadoAtleta(r)} onClick={() => abrir(r.atleta_id)}>
                 <div class="cab">
                   <Avatar nombre={r.nombre} foto={r.foto} />
-                  <span><strong>{r.nombre}</strong>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
+                  <span><strong>{r.nombre}</strong><span class="sr">. {NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
                   {r.semana && <span class="peq secundario num">S{r.semana.numero}/{r.semana.total}</span>}
                 </div>
                 <Alertas r={r} pendientes={pendientes[r.atleta_id]} />
@@ -108,8 +136,8 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
                   <div class="datos">
                     {r.servicio === 'nutricion'
                       ? <div><div class="k">Nutrición</div><div class="v">{r.diasNutricion != null ? `${r.diasNutricion}/7 días` : '—'}</div></div>
-                      : <div><div class="k">Sesiones</div><div class="v"><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} corto /></div></div>}
-                    <div><div class="k">Peso</div><div class="v">{r.peso ? `${num(r.peso.kg)}${r.peso.ritmo ? ` (${signo(r.peso.ritmo.kgSemana, 2)}/sem)` : r.peso.cambio != null ? ` (${signo(r.peso.cambio)})` : ''}` : '—'}</div></div>
+                      : <div><div class="k">Sesiones</div><div class="v"><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} corto /><ChispaSesiones semanas={r.chispas?.sesiones} /></div></div>}
+                    <div><div class="k">Peso</div><div class="v">{r.peso ? `${num(r.peso.kg)}${r.peso.ritmo ? ` (${signo(r.peso.ritmo.kgSemana, 2)}/sem)` : r.peso.cambio != null ? ` (${signo(r.peso.cambio)})` : ''}` : '—'}<ChispaPeso puntos={r.chispas?.peso} /></div></div>
                     {r.servicio !== 'nutricion' && <div><div class="k">Último registro</div><div class="v">{r.ultimaSerie ? hace(r.ultimaSerie) : '—'}</div></div>}
                   </div>
                 )}

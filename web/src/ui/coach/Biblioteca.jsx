@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useUnaVez, Pestanas, Siluetas, useApp, useCarga, Icono, Cargando, Hoja, Vacio, usePreferencia } from '../comunes.jsx';
+import { CabeceraGrande, useUnaVez, Pestanas, Siluetas, useApp, useCarga, Icono, Cargando, Hoja, Vacio, usePreferencia } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
 import { GRUPOS, NOMBRE_GRUPO, conPrincipal, TIPOS_EJERCICIO, CATEGORIAS_RECURSO, NOMBRE_CATEGORIA } from '../../logica/calculos.js';
 import { FAQ } from '../../datos/faq.js';
@@ -12,9 +12,9 @@ export function Biblioteca({ peticion = null } = {}) {
   useEffect(() => { if (peticion) setVista(peticion.vista || 'ejercicios'); }, [peticion?.id]);
   return (
     <div class="contenido coach">
-      <header class="cabecera">
+      <CabeceraGrande>
         <div class="titulo"><h1>Biblioteca</h1><div class="sub">{vista === 'ejercicios' ? 'Ejercicios, técnica y alternativas' : vista === 'recetas' ? 'Tus recetas, con su foto, macros e ingredientes' : 'Guías, enlaces y preguntas frecuentes para tus atletas'}</div></div>
-      </header>
+      </CabeceraGrande>
       <BandaDemo />
       <Pestanas opciones={[['ejercicios', 'Ejercicios'], ['recetas', 'Recetas'], ['recursos', 'Recursos']]} valor={vista} alCambiar={setVista} etiqueta="Biblioteca" idBase="bib" />
       <div class="pestana-panel" role="tabpanel" id="bib-panel" aria-labelledby={`bib-${vista}`} key={vista}>

@@ -1,7 +1,7 @@
 // Comidas del atleta (v0.26): su semana (el menú que organiza él) y sus recetas (las que le pone su coach para
 // cada comida del día). En Hoy, lo de hoy en una tarjeta.
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Pestanas, Vacio, Siluetas, ErrorCaja, Pista, usePreferencia } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Pestanas, Vacio, Siluetas, ErrorCaja, Pista, usePreferencia } from '../comunes.jsx';
 import { MenuSemana, VistaRecetario, HojaReceta, HojaElegirDia, HojaTusComidas, FotoReceta } from '../ComidasComun.jsx';
 import { NOMBRE_TOMA, ordenarTomas, totalesDia, textoMacros } from '../../logica/comidas.js';
 import { planVigente, objetivoDelDia, fmtKcal } from '../../logica/nutricion.js';
@@ -21,10 +21,10 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
   const darConsentimiento = async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); };
   return (
     <div class="contenido">
-      <header class="cabecera">
+      <CabeceraGrande>
         <div class="titulo"><h1>Comidas</h1><div class="sub">{vista === 'menu' ? 'Organiza lo que vas a comer cada día' : 'Las opciones de tu coach para cada comida'}</div></div>
         {r && <button class="btn btn-peq plano" onClick={() => setComidas(true)} aria-label={`Tus comidas del día: ${r.tomas.length}`}><Icono n="ajustes" /> {r.tomas.length} al día</button>}
-      </header>
+      </CabeceraGrande>
       <BandaDemo />
       <Pestanas opciones={[['menu', 'Tu semana'], ['recetas', 'Tus recetas']]} valor={vista} alCambiar={setVista} etiqueta="Comidas" idBase="comidas" />
       <div class="pestana-panel" role="tabpanel" id="comidas-panel" aria-labelledby={`comidas-${vista}`} key={vista}>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { ChipLlegada } from '../atleta/Preparacion.jsx';
-import { Siluetas, useApp, useCarga, Icono, ErrorCaja, cuando, Avatar, Hoja, usePreferencia } from '../comunes.jsx';
+import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, ErrorCaja, cuando, Avatar, Hoja, usePreferencia } from '../comunes.jsx';
 import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
 import { BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
@@ -74,9 +74,9 @@ export function Revisar({ bandeja, abrirAtleta }) {
 
   return (
     <div class="contenido coach">
-      <header class="cabecera">
+      <CabeceraGrande>
         <div class="titulo"><h1>Revisar</h1><div class="sub">{d?.total ? (d.total === 1 ? '1 cosa espera tu respuesta' : `${d.total} cosas esperan tu respuesta`) : 'Al día'}</div></div>
-      </header>
+      </CabeceraGrande>
       <BandaDemo />
       <ErrorCaja error={bandeja.error} reintentar={recargar} />
       <div class="selector-chips" role="group" aria-label="Qué revisar">

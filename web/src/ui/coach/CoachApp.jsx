@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Marca, Insignia } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, Icono, Marca, Insignia, usePildora } from '../comunes.jsx';
+import { conTransicion } from '../transiciones.js';
 import { Panel } from './Panel.jsx';
 import { Ficha } from './Ficha.jsx';
 import { Revisar } from './Revisar.jsx';
@@ -61,7 +62,9 @@ export function CoachApp() {
     return () => { window.removeEventListener('hashchange', ir); window.removeEventListener('fbe-notificacion', llega); };
   }, []);
 
-  const abrirAtleta = (atletaId, pestana = 'programa') => { setTab('atletas'); setFicha({ atletaId, pestana }); setPeticion(null); };
+  // v0.49: abrir y cerrar una ficha, y cambiar de sección, con una transición corta (donde se puede)
+  const abrirAtleta = (atletaId, pestana = 'programa') => { conTransicion(() => { setTab('atletas'); setFicha({ atletaId, pestana }); setPeticion(null); }, 'abrir'); };
+  const cerrarFicha = () => conTransicion(() => { setFicha(null); setPeticion(null); }, 'cerrar');
   const total = bandeja.datos?.total || 0;
 
   // Búsqueda rápida: Ctrl/Cmd + K en cualquier sitio, o «/» si no se está escribiendo
@@ -91,12 +94,14 @@ export function CoachApp() {
   };
   const pide = (t) => (peticion?.tab === t ? peticion : null);
   const mac = typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent);
+  const barra = usePildora(`${tab}:${pestanas.length}`);
 
   return (
     <>
     <div class="app coach" inert={buscar ? '' : undefined} aria-hidden={buscar ? 'true' : undefined}>
       <nav class="tabs" aria-label="Secciones">
-        <div class={`tabs-in ${pestanas.filter(([t]) => t !== 'cuenta').length >= 7 ? 'tabs-muchas' : ''}`}>
+        <div ref={barra} class={`tabs-in ${pestanas.filter(([t]) => t !== 'cuenta').length >= 7 ? 'tabs-muchas' : ''}`}>
+          <span class="tabs-pildora" aria-hidden="true" />
           <Marca />
           <button class="tab-buscar" onClick={abrirBuscar} aria-keyshortcuts={mac ? 'Meta+K' : 'Control+K'}>
             <Icono n="buscar" /><span>Buscar</span><kbd>{mac ? '⌘' : 'Ctrl'} K</kbd>
@@ -105,16 +110,18 @@ export function CoachApp() {
             <button key={id} class={`tab ${id === 'cuenta' ? 'tab-cuenta' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => {
               // Con su ficha ya creada, la pestaña entra directamente en el modo atleta
               if (id === 'modo-atleta' && propioCoach) { entrarModoAtleta(); return; }
-              setTab(id); setFicha(null); setPeticion(null);
+              if (id === tab && !ficha) return;
+              const orden = pestanas.map(([t]) => t);
+              conTransicion(() => { setTab(id); setFicha(null); setPeticion(null); }, orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : id === tab ? 'cerrar' : 'adelante');
             }}>
-              <span class="tab-ico"><Icono n={icono} />{id === 'revisar' && <Insignia n={total} etiqueta={`${total} por revisar`} />}{id === 'mensajes' && <Insignia n={sinLeer.datos || 0} etiqueta={`${sinLeer.datos || 0} mensajes sin leer`} />}</span>{texto}
+              <span class="tab-ico"><Icono n={icono} class={`ico-${icono}`} />{id === 'revisar' && <Insignia n={total} etiqueta={`${total} por revisar`} />}{id === 'mensajes' && <Insignia n={sinLeer.datos || 0} etiqueta={`${sinLeer.datos || 0} mensajes sin leer`} />}</span>{texto}
             </button>
           ))}
         </div>
       </nav>
       <main key={tab} class="vista">
       {tab === 'atletas' && (ficha
-        ? <Ficha key={`${ficha.atletaId}:${ficha.n || 0}`} atletaId={ficha.atletaId} pestanaInicial={ficha.pestana} alVolver={() => { setFicha(null); setPeticion(null); }} alCambiar={() => bandeja.recargar(true)} />
+        ? <Ficha key={`${ficha.atletaId}:${ficha.n || 0}`} atletaId={ficha.atletaId} pestanaInicial={ficha.pestana} alVolver={cerrarFicha} alCambiar={() => bandeja.recargar(true)} />
         : <Panel abrir={abrirAtleta} pendientes={bandeja.datos?.porAtleta || {}} peticion={pide('atletas')} alBuscar={abrirBuscar} abrirCuenta={() => { setTab('cuenta'); setFicha(null); }} />)}
       {tab === 'revisar' && <Revisar bandeja={bandeja} abrirAtleta={abrirAtleta} />}
       {tab === 'mensajes' && <Conversaciones abrirAtleta={abrirAtleta} alCambiar={() => { bandeja.recargar(true); sinLeer.recargar(true); }} peticion={pide('mensajes')} />}
@@ -136,7 +143,7 @@ function EmpezarModoAtleta() {
   const [ocupado, setOcupado] = useState(false);
   return (
     <div class="contenido">
-      <header class="cabecera"><div class="titulo"><h1>Modo atleta</h1></div></header>
+      <CabeceraGrande><div class="titulo"><h1>Modo atleta</h1></div></CabeceraGrande>
       <section class="panel panel-pad pila">
         <p>Entrena con la app como uno de tus atletas, sin otra cuenta: te programas desde aquí, como a cualquiera, y en el modo atleta ves y registras tu entrenamiento (Hoy, Semana y Progreso).</p>
         <p class="peq secundario">Es solo entrenamiento: sin nutrición, check-in, mensajes, vídeos ni cobros. Tu ficha no sale en Atletas, Revisar, Mensajes ni Cobros. Para programarte, toca «Programarlo» arriba, en el modo atleta.</p>

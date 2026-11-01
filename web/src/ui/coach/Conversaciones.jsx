@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Siluetas, Icono, Avatar, ErrorCaja, Vacio, cuando } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, Siluetas, Icono, Avatar, ErrorCaja, Vacio, cuando } from '../comunes.jsx';
 import { Chat } from '../Chat.jsx';
 import { BandaDemo } from '../App.jsx';
 
@@ -41,9 +41,9 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
   const sinLeer = (lista.datos || []).reduce((t, x) => t + x.sinLeer, 0);
   return (
     <div class="contenido coach">
-      <header class="cabecera">
+      <CabeceraGrande>
         <div class="titulo"><h1>Mensajes</h1><div class="sub">{sinLeer ? `${sinLeer} sin leer` : 'Al día'}</div></div>
-      </header>
+      </CabeceraGrande>
       <BandaDemo />
       <ErrorCaja error={lista.error} reintentar={lista.recargar} />
       {(lista.datos?.length || 0) > 6 && (
