@@ -1,7 +1,7 @@
 // Backend de la demo: todo en el navegador, con el mismo interfaz que el de Supabase.
 // No hay permisos por fila: la demo la usa una sola persona que puede cambiar de rol. Sí imita los
 // triggers que cambian lo que ve la app (autor de los comentarios, revisiones pendientes…).
-import { hoyISO, sumarDias as sumar, diasEntre as diasEntreIso } from '../logica/fechas.js';
+import { hoyISO, sumarDias as sumar, diasEntre as diasEntreIso, aISO, lunesDe } from '../logica/fechas.js';
 import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
@@ -60,9 +60,9 @@ const DEFECTOS = {
   menu_comidas: () => ({ receta_id: null, raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, hecho: false, orden: 0, creado_en: ahora() }),
   preguntas_checkin: () => ({ atleta_id: null, tipo: 'escala', unidad: null, ayuda: null, etiqueta_min: null, etiqueta_max: null, orden: 0, activa: true, creado_en: ahora() }),
   // Migración 027: la comunidad del equipo
-  comunidad_posts: () => ({ tipo: 'post', texto: null, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, atleta_id: null, creado_en: ahora() }),
-  comunidad_comentarios: () => ({ oculto: false, atleta_id: null, creado_en: ahora() }),
-  comunidad_retos: () => ({ descripcion: null, creado_en: ahora() }),
+  comunidad_posts: () => ({ tipo: 'post', texto: null, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, atleta_id: null, creado_en: ahora(), menciones: [], encuesta: null, reto_id: null }),
+  comunidad_comentarios: () => ({ oculto: false, atleta_id: null, creado_en: ahora(), menciones: [] }),
+  comunidad_retos: () => ({ descripcion: null, modo: 'individual', creado_en: ahora() }),
 };
 
 // Borrados en cascada, como en el esquema SQL.
@@ -73,8 +73,9 @@ const CASCADA = {
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
     ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'],
-    ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id']],
-  comunidad_posts: [['comunidad_comentarios', 'post_id'], ['comunidad_reacciones', 'post_id']],
+    ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
+    ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id']],
+  comunidad_posts: [['comunidad_comentarios', 'post_id'], ['comunidad_reacciones', 'post_id'], ['comunidad_votos', 'post_id']],
   recetas: [['recetas_atleta', 'receta_id']],
   habitos: [['registros_habito', 'habito_id']],
   bloques: [['semanas', 'bloque_id']],
@@ -83,7 +84,7 @@ const CASCADA = {
   sesion_ejercicios: [['series', 'sesion_ejercicio_id']],
 };
 // Al borrar estas filas, los comentarios se quedan sin el enlace (on delete set null)
-const ANULAR = { sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id']], ejercicios: [['objetivos', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
+const ANULAR = { comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id']], ejercicios: [['objetivos', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
 
 const cumple = (fila, f = {}) => {
   for (const [k, v] of Object.entries(f.eq || {})) if ((fila[k] ?? null) !== v) return false;
@@ -98,7 +99,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones'];
+const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos'];
 
 function guardarLocal(clave, valor) {
   try { localStorage.setItem(clave, JSON.stringify(valor)); } catch { /* sin almacenamiento: la demo vive en memoria */ }
@@ -138,7 +139,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
 
   // Como la migración 027: la comunidad. Lo de los demás solo se ve dentro (abierta, sin haber salido ni haber
   // sido sacado, con el texto vigente aceptado, sin estar de baja y sin ser la ficha del coach); el coach, todo.
-  const VERSION_COMUNIDAD = 'comunidad-2026-11';
+  // (El texto cambió en la 029, v0.47: como VERSION_COMUNIDAD de api.js)
+  const VERSION_COMUNIDAD = 'comunidad-2026-11-b';
   const perfilDe = (id) => tabla('perfiles').find((p) => p.id === id);
   const comunidadActiva = () => !!tabla('comunidad_ajustes').find((x) => x.id === true)?.activa;
   const miembroVisto = (m) => { const a = m && buscar('atletas', m.atleta_id); return !!a && !m.salido_en && !m.bloqueado && m.version === VERSION_COMUNIDAD && m.normas_version === VERSION_NORMAS && a.perfil_id === m.perfil_id && a.estado !== 'baja' && perfilDe(m.perfil_id)?.rol !== 'coach'; };
@@ -155,6 +157,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     comunidad_reportes: () => esCoach(),
     comunidad_retos: () => esCoach() || soyMiembro(),
     comunidad_cupos: () => false,
+    // Como la 029: los votos, como las reacciones; los ánimos, los que uno manda y los que recibe
+    comunidad_votos: (x) => esCoach() || (soyMiembro() && autorVisible(x.autor_id) && postVisible(x.post_id)),
+    comunidad_animos: (x) => esCoach() || (soyMiembro() && ((x.para === sesion?.user.id && autorVisible(x.de)) || (x.de === sesion?.user.id && autorVisible(x.para)))),
   };
   const miAtletaId = () => tabla('atletas').find((a) => a.perfil_id === sesion?.user.id)?.id || null;
   const fotoVisible = (ruta) => esCoach() || (!!miAtletaId() && ruta.split('/')[0] === miAtletaId()) || tabla('comunidad_posts').some((x) => x.foto_ruta === ruta && postVisible(x.id));
@@ -166,9 +171,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function gastarCupo(tipo) {
     const uid = sesion?.user.id;
     if (!uid || esCoach()) return;
-    const max = tipo === 'comentario' ? 100 : 20;
+    const max = tipo === 'comentario' ? 100 : tipo === 'animo' ? 40 : 20;
     const usados = tabla('comunidad_cupos').filter((c) => c.perfil_id === uid && c.tipo === tipo && Date.parse(c.creado_en) > Date.now() - 864e5).length;
-    if (usados >= max) throw new Error(tipo === 'post' ? 'Has publicado 20 veces en las últimas 24 horas: espera un poco' : tipo === 'comentario' ? 'Has escrito 100 comentarios en las últimas 24 horas: espera un poco' : 'Has avisado 20 veces en las últimas 24 horas: escribe a tu coach');
+    if (usados >= max) throw new Error(tipo === 'post' ? 'Has publicado 20 veces en las últimas 24 horas: espera un poco' : tipo === 'comentario' ? 'Has escrito 100 comentarios en las últimas 24 horas: espera un poco'
+      : tipo === 'animo' ? 'Has mandado 40 ánimos en las últimas 24 horas: mañana, más' : 'Has avisado 20 veces en las últimas 24 horas: escribe a tu coach');
     tabla('comunidad_cupos').push({ id: tabla('comunidad_cupos').length + 1, perfil_id: uid, tipo, creado_en: ahora() });
   }
   // Un nombre que se puede usar en el equipo (null) o por qué no
@@ -182,26 +188,39 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (tabla('comunidad_miembros').some((m) => !m.salido_en && m.atleta_id !== atletaId && m.nombre.toLowerCase() === v.toLowerCase())) return 'Ya hay alguien en el equipo con ese nombre: elige otro';
     return null;
   }
+  // Como la 029: de las menciones quedan solo quienes están dentro (o el coach), nunca el autor, sin repetir y 5 como mucho
+  const limpiarMenciones = (ids, autor) => [...new Set((Array.isArray(ids) ? ids : []).filter((x) => x && x !== autor && (perfilDe(x)?.rol === 'coach' || esMiembro(x))))].slice(0, 5);
   function prepararPost(f) {
     const uid = sesion?.user.id;
-    Object.assign(f, { autor_id: uid, creado_en: ahora(), oculta: false, sesion_id: null, resumen: null });
+    Object.assign(f, { autor_id: uid, creado_en: ahora(), oculta: false, sesion_id: null, resumen: null, reto_id: null });
     if (esCoach()) {
       f.atleta_id = null;
-      if (f.tipo !== 'aviso') throw new Error('Como coach, en el muro publicas avisos');
-      if (f.foto_ruta && !String(f.foto_ruta).startsWith('coach/')) throw new Error('La foto no va en su sitio');
+      if (f.tipo !== 'aviso' && f.tipo !== 'encuesta') throw new Error('Como coach, en el muro publicas avisos y encuestas');
+      if (f.foto_ruta && (f.tipo !== 'aviso' || !String(f.foto_ruta).startsWith('coach/'))) throw new Error('La foto no va en su sitio');
+      if (f.tipo === 'encuesta') {
+        const e = f.encuesta;
+        if (!e || typeof e !== 'object' || !Array.isArray(e.opciones)) throw new Error('Una encuesta lleva de 2 a 4 opciones');
+        const cierre = e.cierre ? Date.parse(e.cierre) : null;
+        if (e.cierre && !Number.isFinite(cierre)) throw new Error('El cierre de la encuesta no es una fecha válida');
+        if (cierre != null && cierre <= Date.now() + 5 * 60000) throw new Error('El cierre de la encuesta, más adelante (o sin cierre)');
+        f.encuesta = { opciones: e.opciones.map((o) => String(o ?? '').trim()), cierre: cierre != null ? new Date(cierre).toISOString() : null };
+      } else f.encuesta = null;
     } else {
       if (!soyMiembro()) throw sinPermiso();
       f.atleta_id = miAtletaId();
       f.fijada = false;
-      if (f.tipo !== 'post') throw new Error('Los avisos son del coach, y los entrenos se comparten desde el resumen de la sesión');
+      f.encuesta = null;
+      if (f.tipo !== 'post') throw new Error('Los avisos y las encuestas son del coach, y los entrenos y los logros se comparten desde su sitio');
       if (f.foto_ruta && !String(f.foto_ruta).startsWith(`${f.atleta_id}/`)) throw new Error('La foto no va en su sitio');
     }
+    f.menciones = limpiarMenciones(f.menciones, uid);
     gastarCupo('post');
   }
   function prepararComentarioComunidad(f) {
     const uid = sesion?.user.id;
     if (!(esCoach() || soyMiembro()) || !postVisible(f.post_id)) throw sinPermiso();
     Object.assign(f, { autor_id: uid, creado_en: ahora(), oculto: false, atleta_id: esCoach() ? null : miAtletaId() });
+    f.menciones = limpiarMenciones(f.menciones, uid);
     gastarCupo('comentario');
   }
   // La mejor serie de cada ejercicio de una sesión y su 1RM estimado (como comunidad_compartir_sesion)
@@ -436,14 +455,22 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const esFecha = (f) => typeof f === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f);
   const textoCorto = (v, max) => v == null || (String(v).length >= 1 && String(v).length <= max && textoVisible(v));
   const TOMAS = ['desayuno', 'media_manana', 'comida', 'merienda', 'cena', 'recena'];
+  // Como public.comunidad_encuesta_valida (029): de 2 a 4 opciones distintas, de 1 a 80 letras, y el cierre
+  const encuestaValida = (e) => !!e && typeof e === 'object' && !Array.isArray(e) && Object.keys(e).every((k) => ['opciones', 'cierre'].includes(k))
+    && Array.isArray(e.opciones) && e.opciones.length >= 2 && e.opciones.length <= 4 && e.opciones.every((o) => typeof o === 'string' && textoCorto(o, 80) && o != null)
+    && new Set(e.opciones.map((o) => o.trim().toLowerCase())).size === e.opciones.length && (e.cierre == null || typeof e.cierre === 'string');
   const FOTO_OK = (v, max) => v == null || (String(v).length <= max && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(String(v)));
   const CHECKS = {
     // Migración 027: la comunidad
-    comunidad_posts: (f) => ['aviso', 'post', 'entreno'].includes(f.tipo) && textoCorto(f.texto, 2000) && (f.tipo !== 'aviso' || f.texto != null)
-      && (f.tipo !== 'post' || f.texto != null || f.foto_ruta != null) && (f.tipo === 'entreno') === (f.resumen != null) && (!f.fijada || f.tipo === 'aviso'),
-    comunidad_comentarios: (f) => f.texto != null && textoCorto(f.texto, 1000),
+    // (029: logros, encuestas y menciones)
+    comunidad_posts: (f) => ['aviso', 'post', 'entreno', 'logro', 'encuesta'].includes(f.tipo) && textoCorto(f.texto, 2000) && (!['aviso', 'encuesta'].includes(f.tipo) || f.texto != null)
+      && (f.tipo !== 'encuesta' || String(f.texto).length <= 300)
+      && (f.tipo !== 'post' || f.texto != null || f.foto_ruta != null) && ['entreno', 'logro'].includes(f.tipo) === (f.resumen != null) && (!f.fijada || ['aviso', 'encuesta'].includes(f.tipo))
+      && (f.tipo === 'logro' || f.reto_id == null) && (['post', 'aviso'].includes(f.tipo) || f.foto_ruta == null)
+      && (f.tipo === 'encuesta') === (f.encuesta != null) && (f.encuesta == null || encuestaValida(f.encuesta)) && Array.isArray(f.menciones) && f.menciones.length <= 5,
+    comunidad_comentarios: (f) => f.texto != null && textoCorto(f.texto, 1000) && Array.isArray(f.menciones) && f.menciones.length <= 5,
     comunidad_retos: (f) => textoCorto(f.titulo, 80) && f.titulo != null && textoCorto(f.descripcion, 500) && esFecha(f.desde) && esFecha(f.hasta) && f.hasta >= f.desde
-      && diasEntreIso(f.desde, f.hasta) <= 366 && Number.isInteger(n(f.objetivo)) && entre(n(f.objetivo), 1, 100),
+      && diasEntreIso(f.desde, f.hasta) <= 366 && ['individual', 'equipo'].includes(f.modo ?? 'individual') && Number.isInteger(n(f.objetivo)) && entre(n(f.objetivo), 1, f.modo === 'equipo' ? 5000 : 100),
     // Migración 022: recetas, recetario, comidas del día y menú
     recetas: (f) => textoCorto(f.nombre, 80) && f.nombre != null && Array.isArray(f.tomas) && f.tomas.length <= 6 && f.tomas.every((t) => TOMAS.includes(t))
       && Number.isInteger(n(f.raciones)) && entre(n(f.raciones), 1, 20) && entre(n(f.kcal), 0, 5000) && entre(n(f.proteina_g), 0, 500) && entre(n(f.carbos_g), 0, 800) && entre(n(f.grasa_g), 0, 400)
@@ -581,7 +608,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function insertar(t, fila) {
     soloCoach(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
-    if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos'].includes(t)) throw sinPermiso();
+    if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos'].includes(t)) throw sinPermiso();
     if (t === 'comunidad_retos' && !esCoach()) throw sinPermiso();
     if (t === 'recetas_atleta' && !esCoach()) throw new Error('new row violates row-level security policy');
     const nueva = { ...(SIN_ID.includes(t) ? {} : { id: uuid() }), ...(DEFECTOS[t]?.() || {}), ...copia(fila) };
@@ -634,6 +661,37 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   };
   const nombreDe = (pid) => tabla('comunidad_miembros').find((m) => m.perfil_id === pid)?.nombre
     || (perfilDe(pid)?.rol === 'coach' ? String(perfilDe(pid).nombre || '').trim().split(/\s+/)[0] || 'Coach' : 'Alguien del equipo');
+  // Como la 029: semanas publicadas (una por lunes: la del bloque más reciente), rachas, retos conseguidos
+  const lunesHoy = () => lunesDe(hoyISO());
+  function semanasDe(atletaId) {
+    const bl = tabla('bloques').filter((x) => x.atleta_id === atletaId && !x.es_plantilla && x.estado !== 'cancelado')
+      .sort((x, y) => String(y.fecha_inicio || '').localeCompare(String(x.fecha_inicio || '')) || (y.numero || 0) - (x.numero || 0));
+    const porLunes = new Map();
+    for (const x of bl) {
+      for (const w of tabla('semanas').filter((s2) => s2.bloque_id === x.id && s2.programacion === 'programada' && s2.fecha_inicio)) {
+        const l = lunesDe(w.fecha_inicio);
+        if (l <= lunesHoy() && !porLunes.has(l)) porLunes.set(l, w);
+      }
+    }
+    return [...porLunes.entries()].map(([lunes, w]) => {
+      const ss = tabla('sesiones').filter((x) => x.semana_id === w.id);
+      return { lunes, previstas: ss.length, hechas: ss.filter((x) => x.completada).length };
+    }).filter((x) => x.previstas > 0).sort((a, b2) => (a.lunes < b2.lunes ? 1 : -1));
+  }
+  function rachaDe(atletaId) {
+    const semanas = semanasDe(atletaId);
+    const cuentan = semanas.filter((x) => x.lunes < lunesHoy() || x.hechas >= x.previstas);
+    const rota = cuentan.findIndex((x) => x.hechas < x.previstas);
+    return { racha: rota === -1 ? cuentan.length : rota, semana_completa: semanas.some((x) => x.lunes === lunesHoy() && x.hechas >= x.previstas) };
+  }
+  const hechasEntre = (atletaId, desde, hasta) => sesionesDe(atletaId).filter((x) => x.completada && x.fecha_realizada && x.fecha_realizada >= desde && x.fecha_realizada <= hasta).length;
+  const dentroTodos = () => tabla('comunidad_miembros').filter(miembroVisto);
+  const totalReto = (r) => dentroTodos().filter((m) => !m.sin_ranking).reduce((a, m) => a + hechasEntre(m.atleta_id, r.desde, r.hasta), 0);
+  const retoConseguido = (r, atletaId) => {
+    const m = tabla('comunidad_miembros').find((x) => x.atleta_id === atletaId);
+    if (!m || r.hasta < aISO(new Date(m.creado_en))) return false;
+    return ((r.modo || 'individual') === 'equipo' ? totalReto(r) : hechasEntre(atletaId, r.desde, r.hasta)) >= r.objetivo;
+  };
   function rpcComunidad(nombre, args, uid, perfil) {
     const yo = tabla('atletas').find((a) => a.perfil_id === uid);
     const coach = perfil?.rol === 'coach';
@@ -663,6 +721,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (args.p_borrar && !coach) {
         fotos = tabla('comunidad_posts').filter((x) => x.autor_id === uid && x.foto_ruta && !tabla('comunidad_reportes').some((r) => r.copia_foto === x.foto_ruta && !r.resuelto_en)).map((x) => x.foto_ruta);
         db.comunidad_reacciones = tabla('comunidad_reacciones').filter((x) => x.autor_id !== uid);
+        // (029) también sus votos y los ánimos que ha mandado
+        db.comunidad_votos = tabla('comunidad_votos').filter((x) => x.autor_id !== uid);
+        db.comunidad_animos = tabla('comunidad_animos').filter((x) => x.de !== uid);
         borrarCascada('comunidad_comentarios', tabla('comunidad_comentarios').filter((x) => x.autor_id === uid).map((x) => x.id));
         borrarCascada('comunidad_posts', tabla('comunidad_posts').filter((x) => x.autor_id === uid).map((x) => x.id));
       }
@@ -738,7 +799,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const de = c || x;
       const r = {
         id: uuid(), post_id: x.id, comentario_id: c?.id || null, autor_id: uid, motivo, creado_en: ahora(), resuelto_en: null, de_comentario: !!c,
-        copia_tipo: c ? 'comentario' : x.tipo, copia_texto: c ? c.texto : x.tipo === 'entreno' ? ['Entreno compartido', x.resumen?.nombre, x.texto].filter(Boolean).join(': ') : x.texto,
+        copia_tipo: c ? 'comentario' : x.tipo, copia_texto: c ? c.texto : x.tipo === 'entreno' ? ['Entreno compartido', x.resumen?.nombre, x.texto].filter(Boolean).join(': ')
+          : x.tipo === 'logro' ? ['Logro', x.resumen?.titulo, x.texto].filter(Boolean).join(': ') : x.texto,
         copia_foto: c ? null : x.foto_ruta, copia_autor_id: de.autor_id, copia_autor_nombre: nombreDe(de.autor_id), copia_atleta_id: de.atleta_id, copia_creado_en: de.creado_en,
       };
       tabla('comunidad_reportes').push(r);
@@ -749,8 +811,87 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const ms = tabla('comunidad_miembros').filter((m) => miembroVisto(m) && (!m.sin_ranking || m.perfil_id === uid));
       return tabla('comunidad_retos').flatMap((r) => ms.map((m) => ({
         reto_id: r.id, perfil_id: m.perfil_id, nombre: m.nombre, objetivo: r.objetivo, yo: m.perfil_id === uid,
-        hechas: sesionesDe(m.atleta_id).filter((x) => x.completada && x.fecha_realizada && x.fecha_realizada >= r.desde && x.fecha_realizada <= r.hasta).length,
+        hechas: hechasEntre(m.atleta_id, r.desde, r.hasta),
       })));
+    }
+    // Como la 029: el total del equipo en cada reto (sin quien no sale en el ranking)
+    if (nombre === 'comunidad_retos_totales') {
+      if (!veComunidad()) return [];
+      return tabla('comunidad_retos').map((r) => ({ reto_id: r.id, modo: r.modo || 'individual', total: totalReto(r) }));
+    }
+    if (nombre === 'comunidad_version') return VERSION_COMUNIDAD;
+    if (nombre === 'comunidad_rachas') {
+      if (!veComunidad()) return [];
+      return dentroTodos().filter((m) => esCoach() || !m.sin_ranking || m.perfil_id === uid)
+        .map((m) => ({ perfil_id: m.perfil_id, nombre: m.nombre, ...rachaDe(m.atleta_id), yo: m.perfil_id === uid }));
+    }
+    if (nombre === 'comunidad_resumen_semana') {
+      if (!veComunidad()) return [];
+      const l = lunesHoy(), dom = sumar(l, 6), hoy = hoyISO();
+      const cuentan = dentroTodos().filter((m) => !m.sin_ranking);
+      const perfiles = new Set(cuentan.map((m) => m.perfil_id));
+      return [{
+        sesiones: cuentan.reduce((a, m) => a + hechasEntre(m.atleta_id, l, dom), 0),
+        semana_completa: cuentan.filter((m) => semanasDe(m.atleta_id).some((x) => x.lunes === l && x.hechas >= x.previstas)).length,
+        miembros: cuentan.length,
+        records: tabla('comunidad_posts').filter((x) => x.tipo === 'entreno' && !x.oculta && perfiles.has(x.autor_id) && aISO(new Date(x.creado_en)) >= l && aISO(new Date(x.creado_en)) <= dom)
+          .reduce((a, x) => a + (x.resumen?.ejercicios || []).filter((e) => e.record).length, 0),
+        retos: tabla('comunidad_retos').filter((r) => hoy >= r.desde && hoy <= r.hasta).length,
+      }];
+    }
+    if (nombre === 'comunidad_perfil') {
+      if (!uid || !veComunidad()) return [];
+      const p = perfilDe(args.p_perfil);
+      if (p?.rol === 'coach') return [{ perfil_id: p.id, nombre: String(p.nombre || '').trim() || 'Coach', foto: p.foto || null, coach: true, desde: null, racha: null, retos: null, retos_titulos: null, entrenos: 0, yo: p.id === uid }];
+      const m = dentroTodos().find((x) => x.perfil_id === args.p_perfil);
+      if (!m) return [];
+      const ver = esCoach() || !m.sin_ranking || m.perfil_id === uid;
+      const conseguidos = tabla('comunidad_retos').filter((r) => retoConseguido(r, m.atleta_id)).sort((a, b2) => (a.hasta < b2.hasta ? 1 : a.hasta > b2.hasta ? -1 : a.titulo.localeCompare(b2.titulo)));
+      return [{
+        perfil_id: m.perfil_id, nombre: m.nombre, foto: p?.foto || null, coach: false, desde: m.creado_en,
+        racha: ver ? rachaDe(m.atleta_id).racha : null, retos: ver ? conseguidos.length : null, retos_titulos: ver ? conseguidos.slice(0, 20).map((r) => r.titulo) : null,
+        entrenos: tabla('comunidad_posts').filter((x) => x.autor_id === m.perfil_id && x.tipo === 'entreno' && (esCoach() || !x.oculta)).length, yo: m.perfil_id === uid,
+      }];
+    }
+    if (nombre === 'comunidad_compartir_logro') {
+      if (!uid || !soyMiembro()) throw new Error('Para compartir en el equipo tienes que estar en la comunidad');
+      const r = buscar('comunidad_retos', args.p_reto);
+      if (!r) throw new Error('Ese reto ya no está');
+      if (!retoConseguido(r, yo.id)) throw new Error('Ese reto aún no está conseguido');
+      if (tabla('comunidad_posts').some((x) => x.autor_id === uid && x.reto_id === r.id && x.tipo === 'logro')) throw new Error('Este logro ya está compartido en el equipo');
+      gastarCupo('post');
+      const modo = r.modo || 'individual';
+      const post = {
+        id: uuid(), autor_id: uid, atleta_id: yo.id, tipo: 'logro', texto: String(args.p_texto || '').trim() || null, foto_ruta: null, sesion_id: null, reto_id: r.id, menciones: [], encuesta: null,
+        fijada: false, oculta: false, creado_en: ahora(),
+        resumen: { titulo: r.titulo, modo, objetivo: r.objetivo, hechas: modo === 'equipo' ? totalReto(r) : hechasEntre(yo.id, r.desde, r.hasta), desde: r.desde, hasta: r.hasta },
+      };
+      comprobarChecks('comunidad_posts', post);
+      tabla('comunidad_posts').push(post);
+      return post.id;
+    }
+    if (nombre === 'comunidad_votar') {
+      if (!uid || !soyMiembro()) throw new Error('Para votar tienes que estar en la comunidad');
+      const x = buscar('comunidad_posts', args.p_post);
+      if (!x || x.tipo !== 'encuesta' || !postVisible(x.id)) throw new Error('Esa encuesta ya no está');
+      const op = args.p_opcion;
+      if (!Number.isInteger(op) || op < 0 || op >= x.encuesta.opciones.length) throw new Error('Esa opción no existe');
+      if (x.encuesta.cierre && Date.parse(x.encuesta.cierre) <= Date.now()) throw new Error('La encuesta ya está cerrada');
+      const ya = tabla('comunidad_votos').find((v) => v.post_id === x.id && v.autor_id === uid);
+      if (ya) Object.assign(ya, { opcion: op, creado_en: ahora() });
+      else tabla('comunidad_votos').push({ post_id: x.id, autor_id: uid, atleta_id: yo?.id || null, opcion: op, creado_en: ahora() });
+      return op;
+    }
+    if (nombre === 'comunidad_animar') {
+      if (!uid || !veComunidad()) throw new Error('Para animar tienes que estar en la comunidad');
+      if (!args.p_perfil || args.p_perfil === uid) throw new Error('A ti no te puedes mandar ánimo (¡pero vas bien!)');
+      const m = dentroTodos().find((x) => x.perfil_id === args.p_perfil);
+      if (!m) throw new Error('Esa persona ya no está en el equipo');
+      const semana = lunesHoy();
+      if (tabla('comunidad_animos').some((a) => a.de === uid && a.para === args.p_perfil && a.semana === semana)) throw new Error('Ya le has mandado ánimo esta semana');
+      gastarCupo('animo');
+      tabla('comunidad_animos').push({ de: uid, para: args.p_perfil, atleta_id: coach ? null : yo?.id || null, para_atleta_id: m.atleta_id, semana, creado_en: ahora() });
+      return semana;
     }
     if (nombre === 'comunidad_ranking') {
       if (!veComunidad()) return [];
@@ -774,6 +915,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         publicaciones: tabla('comunidad_posts').filter((x) => x.autor_id === uid),
         comentarios: tabla('comunidad_comentarios').filter((x) => x.autor_id === uid),
         reacciones: tabla('comunidad_reacciones').filter((x) => x.autor_id === uid),
+        votos: tabla('comunidad_votos').filter((x) => x.autor_id === uid),
+        animos_mandados: tabla('comunidad_animos').filter((x) => x.de === uid).map((a) => ({ para: a.para, para_nombre: nombreDe(a.para), semana: a.semana, creado_en: a.creado_en })),
+        animos_recibidos: tabla('comunidad_animos').filter((x) => x.para === uid).map((a) => ({ semana: a.semana, creado_en: a.creado_en })),
         avisos_al_coach: tabla('comunidad_reportes').filter((x) => x.autor_id === uid).map((r) => ({ id: r.id, post_id: r.post_id, comentario_id: r.comentario_id, motivo: r.motivo, creado_en: r.creado_en, resuelto_en: r.resuelto_en })),
       };
     }
@@ -816,7 +960,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       });
       const texto = String(args.p_texto || '').trim() || null;
       const post = {
-        id: uuid(), autor_id: uid, atleta_id: yo.id, tipo: 'entreno', texto, foto_ruta: null, sesion_id: s.id, fijada: false, oculta: false, creado_en: ahora(),
+        id: uuid(), autor_id: uid, atleta_id: yo.id, tipo: 'entreno', texto, foto_ruta: null, sesion_id: s.id, fijada: false, oculta: false, creado_en: ahora(), menciones: [], encuesta: null, reto_id: null,
         resumen: { nombre: s.nombre, tipo: s.tipo, fecha: s.fecha_realizada || hoyISO(), ...(s.duracion_min != null ? { minutos: s.duracion_min } : {}), series: hechas.length, con_kilos: kilos, ejercicios },
       };
       comprobarChecks('comunidad_posts', post);
@@ -974,7 +1118,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // Como la 027: en la comunidad, los atletas no cambian nada directamente; el coach abre o cierra, resuelve
       // avisos y cambia sus retos. Publicaciones y comentarios no se cambian (fijar y ocultar van por funciones).
       if (t.startsWith('comunidad_')) {
-        if (['comunidad_posts', 'comunidad_comentarios', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_cupos'].includes(t)) throw new Error('permission denied for table ' + t);
+        if (['comunidad_posts', 'comunidad_comentarios', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos'].includes(t)) throw new Error('permission denied for table ' + t);
         if (!esCoach()) return [];
         const permitidas = { comunidad_ajustes: ['activa'], comunidad_reportes: ['resuelto_en'] }[t];
         if (permitidas && Object.keys(cambios).some((k) => !permitidas.includes(k))) throw new Error('De un aviso solo se cambia si está resuelto');
@@ -1065,7 +1209,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta'].includes(t) && !esCoach()) return [];
       // Como la 027: cada uno borra lo suyo (que ve); el coach, cualquier publicación o comentario, sus retos y avisos
       if (t.startsWith('comunidad_')) {
-        if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos'].includes(t)) return [];
+        if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos'].includes(t)) return [];
         if (t === 'comunidad_retos' && !esCoach()) return [];
         const ids = tabla(t).filter((x) => cumple(x, f) && (esCoach() || (x.autor_id === sesion?.user.id && VISIBLE[t](x)))).map((x) => x.id);
         borrarCascada(t, ids);

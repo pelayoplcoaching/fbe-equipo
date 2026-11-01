@@ -557,15 +557,18 @@ export function semillaDemo(hoy = hoyISO()) {
 
 // v0.43: la comunidad del equipo, abierta, con Rubén, Carlos y Lucía dentro (Ana aún no: así se ve la entrada).
 // Un aviso del coach fijado, un entreno compartido por Rubén, un par de publicaciones, un reto y el ranking.
+// v0.47: un reto de equipo, uno ya acabado que Rubén consiguió (al entrar en Equipo lo celebra) y otro que Carlos
+// compartió como logro, una encuesta del coach con sus votos, una mención y los ánimos de esta semana.
 function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   const lucia = db.atletas.find((a) => a.nombre === 'Lucía Ferrer');
-  Object.assign(db, { comunidad_ajustes: [{ id: true, activa: true, actualizado_en: hace(60 * 24 * 6) }], comunidad_miembros: [], comunidad_posts: [], comunidad_comentarios: [], comunidad_reacciones: [], comunidad_reportes: [], comunidad_retos: [], comunidad_cupos: [] });
-  const miembro = (a, nombre, dias) => db.comunidad_miembros.push({ atleta_id: a.id, perfil_id: a.perfil_id, nombre, version: 'comunidad-2026-11', aceptado_en: hace(60 * 24 * dias), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, normas_version: VERSION_NORMAS, normas_leidas_en: hace(60 * 24 * dias), creado_en: hace(60 * 24 * dias) });
-  miembro(ruben, 'Rubén M.', 6);
-  miembro(carlos, 'Carlos V.', 5);
-  if (lucia) miembro(lucia, 'Lucía F.', 4);
+  Object.assign(db, { comunidad_ajustes: [{ id: true, activa: true, actualizado_en: hace(60 * 24 * 6) }], comunidad_miembros: [], comunidad_posts: [], comunidad_comentarios: [], comunidad_reacciones: [], comunidad_reportes: [], comunidad_retos: [], comunidad_cupos: [], comunidad_votos: [], comunidad_animos: [] });
+  // (entraron por primera vez hace semanas; aceptaron lo que se comparte ahora hace unos días)
+  const miembro = (a, nombre, dias, desde) => db.comunidad_miembros.push({ atleta_id: a.id, perfil_id: a.perfil_id, nombre, version: 'comunidad-2026-11-b', aceptado_en: hace(60 * 24 * dias), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, normas_version: VERSION_NORMAS, normas_leidas_en: hace(60 * 24 * dias), creado_en: hace(60 * 24 * desde) });
+  miembro(ruben, 'Rubén M.', 6, 24);
+  miembro(carlos, 'Carlos V.', 5, 40);
+  if (lucia) miembro(lucia, 'Lucía F.', 4, 12);
   const post = (autor, atleta, tipo, texto, min, extra = {}) => {
-    const p = { id: crypto.randomUUID(), autor_id: autor, atleta_id: atleta?.id || null, tipo, texto, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, creado_en: hace(min), ...extra };
+    const p = { id: crypto.randomUUID(), autor_id: autor, atleta_id: atleta?.id || null, tipo, texto, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, creado_en: hace(min), menciones: [], encuesta: null, reto_id: null, ...extra };
     db.comunidad_posts.push(p);
     return p;
   };
@@ -595,10 +598,45 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   reaccion(entreno, coachId, 'aplauso', 60 * 12);
   reaccion(pCarlos, ruben, 'fuerza', 60 * 3);
   if (lucia) reaccion(pCarlos, lucia, 'aplauso', 60 * 2);
-  const comentario = (p, a, texto, min) => p && db.comunidad_comentarios.push({ id: crypto.randomUUID(), post_id: p.id, autor_id: a.perfil_id || a, atleta_id: a.id && a.perfil_id ? a.id : null, texto, oculto: false, creado_en: hace(min) });
+  const comentario = (p, a, texto, min, menciones = []) => p && db.comunidad_comentarios.push({ id: crypto.randomUUID(), post_id: p.id, autor_id: a.perfil_id || a, atleta_id: a.id && a.perfil_id ? a.id : null, texto, oculto: false, creado_en: hace(min), menciones });
   comentario(entreno, coachId, 'Eso es lo que buscábamos: técnica limpia antes que kilos. Muy bien, Rubén.', 60 * 12);
   comentario(entreno, carlos, '¡Grande! Yo también la notaba al principio.', 60 * 10);
   comentario(pCarlos, ruben, '¡Vamos, Carlos! Dos sesiones valen más que ninguna.', 60 * 3);
   if (pLucia) comentario(pLucia, ruben, 'Yo a las 7:30. ¡Somos pocos pero buenos!', 60 * 28);
-  db.comunidad_retos.push({ id: crypto.randomUUID(), titulo: 'Reto de constancia: 8 sesiones', descripcion: 'Del lunes pasado a dentro de tres semanas: 8 sesiones terminadas. Lo puede conseguir todo el equipo.', desde: sumarDias(lunesHoy, -7), hasta: sumarDias(lunesHoy, 20), objetivo: 8, creado_en: hace(60 * 24 * 6) });
+  const reto = (titulo, descripcion, desde, hasta, objetivo, modo, dias) => {
+    const r = { id: crypto.randomUUID(), titulo, descripcion, desde, hasta, objetivo, modo, creado_en: hace(60 * 24 * dias) };
+    db.comunidad_retos.push(r);
+    return r;
+  };
+  reto('Reto de constancia: 8 sesiones', 'Del lunes pasado a dentro de tres semanas: 8 sesiones terminadas. Lo puede conseguir todo el equipo.', sumarDias(lunesHoy, -7), sumarDias(lunesHoy, 20), 8, 'individual', 6);
+  // v0.47
+  reto('Entre todos: 40 sesiones', 'Sumamos las sesiones de todo el equipo hasta dentro de tres semanas. Cada una cuenta.', sumarDias(lunesHoy, -7), sumarDias(lunesHoy, 20), 40, 'equipo', 6);
+  reto('Semana de arranque: 3 sesiones', 'Tres sesiones en la semana pasada.', sumarDias(lunesHoy, -7), sumarDias(lunesHoy, -1), 3, 'individual', 9);
+  const rCarlos = reto('Tres semanas en marcha: 4 sesiones', null, sumarDias(lunesHoy, -35), sumarDias(lunesHoy, -15), 4, 'individual', 36);
+  const hechasCarlos = (() => {
+    const bl = new Set(db.bloques.filter((x) => x.atleta_id === carlos.id && !x.es_plantilla).map((x) => x.id));
+    const ws = new Set(db.semanas.filter((w) => bl.has(w.bloque_id)).map((w) => w.id));
+    return db.sesiones.filter((x) => ws.has(x.semana_id) && x.completada && x.fecha_realizada >= rCarlos.desde && x.fecha_realizada <= rCarlos.hasta).length;
+  })();
+  const logro = post(carlos.perfil_id, carlos, 'logro', 'Con viajes de por medio, pero conseguido. ¡A por el siguiente!', 60 * 24 * 3, {
+    reto_id: rCarlos.id, resumen: { titulo: rCarlos.titulo, modo: 'individual', objetivo: 4, hechas: hechasCarlos, desde: rCarlos.desde, hasta: rCarlos.hasta },
+  });
+  reaccion(logro, ruben, 'aplauso', 60 * 24 * 2);
+  reaccion(logro, coachId, 'fuego', 60 * 24 * 2 + 30);
+  // La encuesta del coach (cierra dentro de cinco días) y sus votos
+  const cierre = new Date(Date.now() + 5 * 864e5); cierre.setMinutes(0, 0, 0);
+  const encuesta = post(coachId, null, 'encuesta', '¿Qué día os viene mejor para la quedada en el gimnasio?', 60 * 9, {
+    encuesta: { opciones: ['Sábado por la mañana', 'Domingo por la mañana', 'Entre semana, por la tarde'], cierre: cierre.toISOString() },
+  });
+  const voto = (a, opcion, min) => db.comunidad_votos.push({ post_id: encuesta.id, autor_id: a.perfil_id, atleta_id: a.id, opcion, creado_en: hace(min) });
+  voto(ruben, 0, 60 * 8);
+  voto(carlos, 1, 60 * 4);
+  if (lucia) voto(lucia, 0, 60 * 6);
+  // Una mención: Carlos a Lucía
+  if (pLucia && lucia) comentario(pLucia, carlos, '@Lucía F. yo a las 7:15, ¡nos vemos por allí!', 60 * 27, [lucia.perfil_id]);
+  // Los ánimos de esta semana: a Rubén le han animado Carlos y el coach; a Carlos, Lucía
+  const animo = (de, para, min) => db.comunidad_animos.push({ de: de.perfil_id || de, para: para.perfil_id, atleta_id: de.perfil_id ? de.id : null, para_atleta_id: para.id, semana: lunesHoy, creado_en: hace(min) });
+  animo(carlos, ruben, 30);
+  animo(coachId, ruben, 50);
+  if (lucia) animo(lucia, carlos, 70);
 }

@@ -8,7 +8,7 @@ import { Checkin } from './Checkin.jsx';
 import { Progreso } from './Progreso.jsx';
 import { Perfil } from './Perfil.jsx';
 import { Comidas } from './Comidas.jsx';
-import { Equipo } from '../Comunidad.jsx';
+import { Equipo, leerVistoEquipo } from '../Comunidad.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { usePendientesArchivos, BandaPendientes } from '../Pendientes.jsx';
@@ -46,6 +46,9 @@ export function AtletaApp() {
     return () => document.removeEventListener('visibilitychange', al);
   }, []);
   const equipo = !!comunidad.datos?.activa;
+  // v0.47: cuántas publicaciones nuevas de los demás hay desde su última visita al muro (lo recuerda este móvil),
+  // solo con la comunidad abierta y estando dentro
+  const [nuevasEquipo, setNuevasEquipo] = useState(0);
   const TABS = propio ? PESTANAS_PROPIO : pestanasAtleta(atleta, { equipo });
   const tabsRef = useRef(TABS);
   tabsRef.current = TABS;
@@ -57,6 +60,20 @@ export function AtletaApp() {
     if (equipo && inicial.current === 'equipo') { inicial.current = ''; setTab('equipo'); return; }
     if (!comunidad.cargando && !TABS.some(([t]) => t === tab)) setTab('hoy');
   }, [atleta.entrenamiento, atleta.nutricion, equipo, comunidad.cargando]);
+  useEffect(() => {
+    if (!equipo || propio) { setNuevasEquipo(0); return undefined; }
+    let vivo = true;
+    const contar = () => {
+      const desde = leerVistoEquipo(api.uid());
+      if (!desde) { setNuevasEquipo(0); return; }
+      api.novedadesComunidad(desde).then((n) => { if (vivo) setNuevasEquipo(n); }).catch(() => {});
+    };
+    contar();
+    const al = () => { if (document.visibilityState === 'visible') contar(); };
+    window.addEventListener('fbe-equipo-visto', contar);
+    document.addEventListener('visibilitychange', al);
+    return () => { vivo = false; window.removeEventListener('fbe-equipo-visto', contar); document.removeEventListener('visibilitychange', al); };
+  }, [equipo, propio, tab]);
   const [sesionId, setSesionId] = useState(null);
   const consentimientos = useCarga(() => api.consentimientos(), []);
   // Si la app se queda abierta de un día para otro (o se vuelve a ella por la mañana), todo se recalcula con el día nuevo
@@ -124,6 +141,7 @@ export function AtletaApp() {
                 <button key={id} class={`tab ${id === 'perfil' ? 'tab-perfil' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>
                   <span class={`tab-ico ${(id === 'checkin' && checkinPendiente) || (id === 'hoy' && respuestasSueltas) ? 'punto' : ''}`}>
                     <Icono n={icono} />{id === 'mensajes' && <Insignia n={mensajesSinLeer} etiqueta={`${mensajesSinLeer} mensajes sin leer`} />}
+                    {id === 'equipo' && tab !== 'equipo' && <Insignia n={nuevasEquipo} etiqueta={`${nuevasEquipo} ${nuevasEquipo === 1 ? 'publicación nueva' : 'publicaciones nuevas'} en el equipo`} />}
                   </span>
                   {texto}
                 </button>

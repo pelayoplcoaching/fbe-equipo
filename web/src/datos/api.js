@@ -18,16 +18,19 @@ import { pendiente as cuestionarioPendiente } from '../logica/cuestionario.js';
 import { revisarVariante, varianteSinMaterial } from '../logica/variantes.js';
 import { limpiarReceta, recetarioPorToma, tomasDe, ordenarTomas, entradaMenu, copiarMenu, cambiarRaciones } from '../logica/comidas.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
-import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO } from '../logica/comunidad.js';
+import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
-// El texto que se acepta al entrar en la comunidad (v0.43): como public.comunidad_version() de la migración 027
-export const VERSION_COMUNIDAD = 'comunidad-2026-11';
+// El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
+// racha, perfil del equipo, votos, ánimos y menciones). Si cambia, cada uno vuelve a aceptarlo.
+export const VERSION_COMUNIDAD = 'comunidad-2026-11-b';
 export { VERSION_NORMAS };
 
 const porId = (filas) => Object.fromEntries(filas.map((f) => [f.id, f]));
 const agrupar = (filas, col) => filas.reduce((m, f) => ((m[f[col]] ||= []).push(f), m), {});
 const unicos = (xs) => [...new Set(xs.filter((x) => x != null))];
+// Las menciones de una publicación o un comentario, con el nombre de quien se ve (las de quien ya no está, fuera)
+const mencionadosDe = (ids, personas) => (ids || []).filter((id) => personas[id]).map((id) => ({ perfil_id: id, nombre: personas[id].nombre }));
 // Servicio y nivel (v0.22) sin la migración 018 en la base: un aviso que diga qué falta, no el error técnico
 const falta020 = (e) => {
   const m = e?.message || '';
@@ -75,6 +78,14 @@ const falta027 = (e) => {
   const m = e?.message || '';
   if (/comunidad_/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n/i.test(m)) {
     throw new Error(`Para la comunidad del equipo falta ejecutar la migración 027 en Supabase (supabase/migraciones/027_comunidad.sql). Detalle: ${m}`);
+  }
+  throw e;
+};
+// Las mejoras de la comunidad (v0.47) sin la migración 029
+const falta029 = (e) => {
+  const m = e?.message || '';
+  if (/comunidad_|menciones|encuesta|reto_id|modo/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna/i.test(m)) {
+    throw new Error(`Para esta versión de la comunidad del equipo falta ejecutar la migración 029 en Supabase (supabase/migraciones/029_comunidad_mejoras.sql). Detalle: ${m}`);
   }
   throw e;
 };
@@ -127,9 +138,12 @@ const CAMPOS_SE = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'series',
   'rir_objetivo', 'rpe_objetivo', 'carga_sugerida_kg', 'descanso_seg', 'tempo', 'notas_coach', 'variante', 'backoff_pct', 'series_detalle'];
 
 // La comunidad del equipo (v0.43, migración 027)
-const TABLAS_COMUNIDAD = ['comunidad_ajustes', 'comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_retos'];
+const TABLAS_COMUNIDAD = ['comunidad_ajustes', 'comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_retos',
+  'comunidad_votos', 'comunidad_animos'];
 // Lo que la app lee de una publicación del muro (sin la ficha ni la sesión de su autor)
-const COLS_POST = 'id,autor_id,tipo,texto,foto_ruta,resumen,fijada,oculta,creado_en';
+const COLS_POST = 'id,autor_id,tipo,texto,foto_ruta,resumen,fijada,oculta,creado_en,menciones,encuesta,reto_id';
+// Los filtros del muro (v0.47), en la propia consulta: así «Ver más» sigue funcionando
+const FILTRO_MURO = { entrenos: { in: { tipo: ['entreno'] } }, logros: { in: { tipo: ['logro'] } }, avisos: { in: { tipo: ['aviso', 'encuesta'] } } };
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
@@ -163,7 +177,7 @@ export function crearApi(backend) {
     temporizadorEnvio = setTimeout(() => { Promise.resolve().then(() => backend.funcion('enviar-notificaciones')).catch(() => {}); }, ms);
   };
   const avisa = (m, t, c) => ((m === 'insert' || m === 'upsert') && ['comentarios', 'avisos', 'checkins', 'semanas', 'comunidad_posts', 'comunidad_comentarios'].includes(t))
-    || (m === 'rpc' && ['comunidad_reaccionar', 'comunidad_avisar_coach'].includes(t))
+    || (m === 'rpc' && ['comunidad_reaccionar', 'comunidad_avisar_coach', 'comunidad_animar'].includes(t))
     || (m === 'update' && ((t === 'semanas' && c?.programacion === 'programada') || (t === 'sesiones' && c?.completada === true) || (t === 'avisos' && 'texto' in (c || {}))));
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc']) {
     const f = escribe(backend[m].bind(backend));
@@ -1443,11 +1457,20 @@ export function crearApi(backend) {
     // base, la función aún no recibe las normas: se entra como en la v0.43 (la app las enseña igual antes de entrar)
     async entrarComunidad(nombre) {
       const p = { p_nombre: limpiarNombre(nombre), p_version: VERSION_COMUNIDAD };
-      await b.rpc('comunidad_unirme', { ...p, p_normas: VERSION_NORMAS }).catch((e) => {
+      await b.rpc('comunidad_unirme', { ...p, p_normas: VERSION_NORMAS }).catch(async (e) => {
+        // (v0.47) La base aún con el texto de antes: falta la 029
+        if (/no es el vigente/.test(e?.message || '')) {
+          const enLaBase = await b.rpc('comunidad_version', {}).catch(() => null);
+          if (enLaBase && enLaBase !== VERSION_COMUNIDAD) throw new Error('Para entrar con lo que se comparte ahora falta ejecutar la migración 029 en Supabase (supabase/migraciones/029_comunidad_mejoras.sql).');
+        }
         if (!sinNormas(e)) throw e;
         return b.rpc('comunidad_unirme', p).catch(falta027);
       });
       return api.miembroComunidad();
+    },
+    // ¿Está dentro de verdad? (sin haber salido ni haber sido sacado, con el texto y las normas vigentes)
+    dentroDeComunidad(m) {
+      return !!m && !m.salido_en && !m.bloqueado && m.version === VERSION_COMUNIDAD && !api.faltanNormas(m);
     },
     // ¿Le faltan por leer las normas vigentes? (sin la migración 028 no hay columna: entonces, no)
     faltanNormas(miembro) {
@@ -1470,22 +1493,28 @@ export function crearApi(backend) {
     },
     // El muro: los avisos fijados arriba y después lo más nuevo, de `limite` en `limite` (antes: el creado_en del
     // último que ya se ve). Cada publicación con su autor, sus reacciones (con quién), cuántos comentarios y la mía.
-    async muro({ limite = 20, antes = null } = {}) {
+    // v0.47: con un filtro (todo, entrenos, logros, avisos —también las encuestas— o lo mío), en la propia
+    // consulta; las menciones (con su nombre) y, en las encuestas, sus resultados con los votos que se ven.
+    async muro({ limite = 20, antes = null, filtro = 'todo' } = {}) {
+      const yo = uid();
+      const f = filtro === 'mio' ? { eq: { autor_id: yo } } : FILTRO_MURO[filtro] || {};
       const [fijadas, sueltas, personas] = await Promise.all([
-        antes ? [] : b.select('comunidad_posts', { eq: { fijada: true }, order: [['creado_en', 'desc']], limit: 20, cols: COLS_POST }),
-        b.select('comunidad_posts', { eq: { fijada: false }, order: [['creado_en', 'desc']], limit: limite + 1, cols: COLS_POST, ...(antes ? { lte: { creado_en: antes } } : {}) }),
+        antes ? [] : b.select('comunidad_posts', { ...f, eq: { ...(f.eq || {}), fijada: true }, order: [['creado_en', 'desc']], limit: 20, cols: COLS_POST }),
+        b.select('comunidad_posts', { ...f, eq: { ...(f.eq || {}), fijada: false }, order: [['creado_en', 'desc']], limit: limite + 1, cols: COLS_POST, ...(antes ? { lte: { creado_en: antes } } : {}) }),
         api.personasComunidad(),
-      ]);
+      ]).catch(falta029);
       const resto = sueltas.filter((x) => !antes || x.creado_en < antes);
       const posts = [...fijadas, ...resto.slice(0, limite)];
       const ids = posts.map((x) => x.id);
-      const [reacciones, comentarios] = ids.length ? await Promise.all([
+      const encuestas = posts.filter((x) => x.tipo === 'encuesta').map((x) => x.id);
+      const [reacciones, comentarios, votos] = ids.length ? await Promise.all([
         b.select('comunidad_reacciones', { in: { post_id: ids }, cols: 'post_id,autor_id,tipo' }),
         b.select('comunidad_comentarios', { in: { post_id: ids }, cols: 'id,post_id' }),
-      ]) : [[], []];
-      const yo = uid();
+        encuestas.length ? b.select('comunidad_votos', { in: { post_id: encuestas }, cols: 'post_id,autor_id,opcion' }) : [],
+      ]) : [[], [], []];
       const R = agrupar(reacciones, 'post_id');
       const C = agrupar(comentarios, 'post_id');
+      const V = agrupar(votos, 'post_id');
       const autorDe = (id) => personas[id] || { nombre: 'Alguien del equipo', foto: null, coach: false };
       return {
         personas,
@@ -1494,24 +1523,44 @@ export function crearApi(backend) {
           const rs = R[x.id] || [];
           const porTipo = {};
           for (const r of rs) (porTipo[r.tipo] ||= []).push(autorDe(r.autor_id).nombre);
-          return { ...x, autor: autorDe(x.autor_id), mio: x.autor_id === yo, reacciones: porTipo, miReaccion: rs.find((r) => r.autor_id === yo)?.tipo || null, comentarios: (C[x.id] || []).length };
+          return {
+            ...x, autor: autorDe(x.autor_id), mio: x.autor_id === yo, reacciones: porTipo, miReaccion: rs.find((r) => r.autor_id === yo)?.tipo || null, comentarios: (C[x.id] || []).length,
+            mencionados: mencionadosDe(x.menciones, personas),
+            ...(x.tipo === 'encuesta' ? { resultados: resultadosEncuesta(x.encuesta, V[x.id] || [], yo, (id) => autorDe(id).nombre) } : {}),
+          };
         }),
       };
     },
+    // Publicaciones nuevas de los demás desde una fecha (la insignia de Equipo; solo si está dentro)
+    async novedadesComunidad(desde) {
+      const m = await api.miembroComunidad();
+      if (!api.dentroDeComunidad(m)) return 0;
+      const filas = await b.select('comunidad_posts', { ...(desde ? { gte: { creado_en: desde } } : {}), neq: { autor_id: uid() }, cols: 'id,creado_en', order: [['creado_en', 'desc']], limit: 100 }).catch(() => []);
+      return filas.filter((x) => !desde || x.creado_en > desde).length;
+    },
     // Publicar: un atleta, texto y una foto opcional (un JPEG ya reducido en el móvil); el coach, un aviso (que puede
     // fijar arriba). Primero se registra y después se sube la foto (Storage solo acepta las ya registradas).
-    async publicarEnComunidad({ texto = '', foto = null, fijada = false } = {}) {
-      const t = String(texto || '').trim();
-      if (t.length > MAX_POST) throw new Error(`Hasta ${MAX_POST} letras.`);
+    // v0.47: con menciones (perfil_id de quien se ve, como mucho 5: la base deja solo las válidas) y, el coach, una
+    // encuesta ({ pregunta, opciones, cierre }) en lugar del aviso
+    async publicarEnComunidad({ texto = '', foto = null, fijada = false, menciones = [], encuesta = null } = {}) {
       const yo = await api.perfil();
       const coach = yo?.rol === 'coach';
+      const m = { menciones: [...new Set(menciones || [])].slice(0, MAX_MENCIONES) };
+      if (encuesta) {
+        if (!coach) throw new Error('Las encuestas son del coach.');
+        const e = limpiarEncuesta(encuesta);
+        if (e.error) throw new Error(e.error);
+        return (await b.insert('comunidad_posts', [{ tipo: 'encuesta', texto: e.pregunta, encuesta: e.encuesta, ...(fijada ? { fijada: true } : {}), ...m }]).catch(falta029))[0];
+      }
+      const t = String(texto || '').trim();
+      if (t.length > MAX_POST) throw new Error(`Hasta ${MAX_POST} letras.`);
       if (!t && !(foto && !coach)) throw new Error(coach ? 'Escribe el aviso.' : 'Escribe algo o elige una foto.');
       let foto_ruta = null;
       if (foto) {
         const atleta = coach ? null : await api.miAtleta();
         foto_ruta = coach ? `coach/${aleatorio()}.jpg` : `${atleta.id}/${aleatorio()}.jpg`;
       }
-      const [post] = await b.insert('comunidad_posts', [{ tipo: coach ? 'aviso' : 'post', texto: t || null, foto_ruta, ...(coach && fijada ? { fijada: true } : {}) }]).catch(falta027);
+      const [post] = await b.insert('comunidad_posts', [{ tipo: coach ? 'aviso' : 'post', texto: t || null, foto_ruta, ...(coach && fijada ? { fijada: true } : {}), ...(m.menciones.length ? m : {}) }]).catch(falta027);
       if (foto) {
         try { await b.storage.subir(foto_ruta, foto, 'image/jpeg', { bucket: 'comunidad' }); } catch (e) { await b.delete('comunidad_posts', { eq: { id: post.id } }).catch(() => {}); throw e; }
       }
@@ -1538,17 +1587,22 @@ export function crearApi(backend) {
     },
     async comentariosComunidad(postId) {
       const [filas, personas] = await Promise.all([
-        b.select('comunidad_comentarios', { eq: { post_id: postId }, order: [['creado_en', 'asc']], cols: 'id,post_id,autor_id,texto,oculto,creado_en' }),
+        b.select('comunidad_comentarios', { eq: { post_id: postId }, order: [['creado_en', 'asc']], cols: 'id,post_id,autor_id,texto,oculto,creado_en,menciones' }).catch(falta029),
         api.personasComunidad(),
       ]);
       const yo = uid();
-      return filas.map((c) => ({ ...c, autor: personas[c.autor_id] || { nombre: 'Alguien del equipo', foto: null, coach: false }, mio: c.autor_id === yo }));
+      return filas.map((c) => ({ ...c, autor: personas[c.autor_id] || { nombre: 'Alguien del equipo', foto: null, coach: false }, mio: c.autor_id === yo, mencionados: mencionadosDe(c.menciones, personas) }));
     },
-    async comentarEnComunidad(postId, texto) {
+    async comentarEnComunidad(postId, texto, menciones = []) {
       const t = String(texto || '').trim();
       if (!t) throw new Error('Escribe el comentario.');
       if (t.length > MAX_COMENTARIO) throw new Error(`Hasta ${MAX_COMENTARIO} letras.`);
-      return (await b.insert('comunidad_comentarios', [{ post_id: postId, texto: t }]))[0];
+      const m = [...new Set(menciones || [])].slice(0, MAX_MENCIONES);
+      return (await b.insert('comunidad_comentarios', [{ post_id: postId, texto: t, ...(m.length ? { menciones: m } : {}) }]).catch(falta029))[0];
+    },
+    // Votar en una encuesta (v0.47): votar otra opción cambia el voto, hasta el cierre
+    async votarEncuesta(postId, opcion) {
+      return b.rpc('comunidad_votar', { p_post: postId, p_opcion: Number(opcion) }).catch(falta029);
     },
     async borrarComentarioComunidad(id) { return b.delete('comunidad_comentarios', { eq: { id } }); },
     async ocultarComentarioComunidad(id, oculto = true) {
@@ -1578,7 +1632,8 @@ export function crearApi(backend) {
         const comentario = r.comentario_id ? C[r.comentario_id] || null : null;
         const borrado = r.de_comentario ? !comentario : !post;
         const texto = borrado ? r.copia_texto : r.de_comentario ? comentario.texto
-          : post.tipo === 'entreno' ? ['Entreno compartido', post.resumen?.nombre, post.texto].filter(Boolean).join(': ') : post.texto;
+          : post.tipo === 'entreno' ? ['Entreno compartido', post.resumen?.nombre, post.texto].filter(Boolean).join(': ')
+            : post.tipo === 'logro' ? ['Logro', post.resumen?.titulo, post.texto].filter(Boolean).join(': ') : post.texto;
         return {
           ...r, post, comentario, borrado, texto: texto || (r.copia_foto ? 'Una foto' : ''), foto: r.copia_foto || null,
           quienAvisa: nombreDe(r.autor_id) || 'Alguien del equipo',
@@ -1598,31 +1653,101 @@ export function crearApi(backend) {
       return b.rpc('comunidad_expulsar', { p_atleta: atletaId, p_bloquear: !!bloquear });
     },
     // Retos (del coach) con el progreso de cada miembro (solo recuentos), los más recientes primero
+    // v0.47: cada reto con su modo (individual o de equipo) y, en los de equipo, el total de todos (sin quien no sale
+    // en el ranking); y si lo he conseguido (conseguido) y ya lo he compartido (compartido)
     async retosComunidad() {
-      const [retos, progreso, personas] = await Promise.all([
+      const [retos, progreso, totales, personas, miembro, logros] = await Promise.all([
         b.select('comunidad_retos', { order: [['hasta', 'desc'], ['desde', 'desc']] }),
         b.rpc('comunidad_retos_progreso', {}).catch(() => []),
+        b.rpc('comunidad_retos_totales', {}).catch(() => []),
         api.personasComunidad(),
+        api.miembroComunidad(),
+        b.select('comunidad_posts', { eq: { tipo: 'logro', autor_id: uid() }, cols: 'id,reto_id' }).catch(() => []),
       ]);
       const G = agrupar(progreso || [], 'reto_id');
-      return retos.map((r) => ({
-        ...r,
-        progreso: (G[r.id] || []).map((x) => ({ ...x, foto: personas[x.perfil_id]?.foto || null }))
-          .sort((a, b2) => b2.hechas - a.hechas || String(a.nombre).localeCompare(String(b2.nombre), 'es')),
-      }));
+      const T = Object.fromEntries((totales || []).map((x) => [x.reto_id, x.total]));
+      const desde = miembro?.creado_en ? fechaDe(miembro.creado_en) : null;
+      const compartidos = new Set(logros.map((x) => x.reto_id).filter(Boolean));
+      return retos.map((r) => {
+        const filas = G[r.id] || [];
+        const yo = filas.find((x) => x.yo);
+        const reto = {
+          ...r, modo: r.modo || 'individual', total: T[r.id] ?? 0,
+          progreso: filas.map((x) => ({ ...x, foto: personas[x.perfil_id]?.foto || null }))
+            .sort((a, b2) => b2.hechas - a.hechas || String(a.nombre).localeCompare(String(b2.nombre), 'es')),
+        };
+        reto.conseguido = !!yo && retoConseguido(reto, { hechas: yo.hechas, total: reto.total, desde });
+        reto.compartido = compartidos.has(r.id);
+        return reto;
+      });
     },
-    async guardarReto({ titulo, descripcion = null, desde, hasta, objetivo }, id = null) {
-      const fila = { titulo: String(titulo || '').trim(), descripcion: String(descripcion || '').trim() || null, desde, hasta, objetivo: Number(objetivo) };
+    // Los retos conseguidos que aún no ha compartido (para celebrarlos)
+    async logrosComunidad() {
+      return (await api.retosComunidad()).filter((r) => r.conseguido && !r.compartido);
+    },
+    // Compartir un logro en el muro (la tarjeta la hace la base, que comprueba que está conseguido; una vez por reto)
+    async compartirLogro(retoId, texto = '') {
+      const t = String(texto || '').trim();
+      if (t.length > MAX_POST) throw new Error(`Hasta ${MAX_POST} letras.`);
+      return b.rpc('comunidad_compartir_logro', { p_reto: retoId, p_texto: t || null }).catch(falta029);
+    },
+    async guardarReto({ titulo, descripcion = null, desde, hasta, objetivo, modo = 'individual' }, id = null) {
+      const fila = { titulo: String(titulo || '').trim(), descripcion: String(descripcion || '').trim() || null, desde, hasta, objetivo: Number(objetivo), modo };
+      const max = RETO_MAX[modo];
+      if (!max) throw new Error('El reto, individual o de equipo.');
       if (!fila.titulo) throw new Error('Ponle un título al reto.');
       if (!desde || !hasta || hasta < desde) throw new Error('El final del reto, el mismo día que el principio o después.');
-      if (!Number.isInteger(fila.objetivo) || fila.objetivo < 1 || fila.objetivo > 100) throw new Error('El objetivo, de 1 a 100 sesiones.');
-      return id ? (await b.update('comunidad_retos', fila, { eq: { id } }))[0] : (await b.insert('comunidad_retos', [fila]).catch(falta027))[0];
+      if (!Number.isInteger(fila.objetivo) || fila.objetivo < 1 || fila.objetivo > max) throw new Error(`El objetivo, de 1 a ${max} sesiones${modo === 'equipo' ? ' entre todo el equipo' : ''}.`);
+      const sinModo = (e) => { if (/modo/.test(e?.message || '')) return falta029(e); throw e; };
+      return id ? (await b.update('comunidad_retos', fila, { eq: { id } }).catch(sinModo))[0] : (await b.insert('comunidad_retos', [fila]).catch(sinModo).catch(falta027))[0];
     },
     async borrarReto(id) { return b.delete('comunidad_retos', { eq: { id } }); },
     // Ranking de constancia de esta semana (solo recuentos)
+    // v0.47: con la racha de cada uno (sin la 029, 0)
     async rankingComunidad() {
-      const [filas, personas] = await Promise.all([b.rpc('comunidad_ranking', {}), api.personasComunidad()]);
-      return (filas || []).map((x) => ({ ...x, foto: personas[x.perfil_id]?.foto || null }));
+      const [filas, personas, rachas] = await Promise.all([b.rpc('comunidad_ranking', {}), api.personasComunidad(), api.rachasComunidad().catch(() => ({}))]);
+      return (filas || []).map((x) => ({ ...x, foto: personas[x.perfil_id]?.foto || null, racha: rachas[x.perfil_id]?.racha || 0 }));
+    },
+    // Rachas de semanas completas (v0.47): perfil_id → { racha, semana_completa, yo }
+    async rachasComunidad() {
+      const filas = await b.rpc('comunidad_rachas', {});
+      return Object.fromEntries((filas || []).map((x) => [x.perfil_id, { racha: x.racha, semana_completa: !!x.semana_completa, yo: !!x.yo }]));
+    },
+    // El resumen de la semana del equipo (v0.47): solo recuentos; null sin la 029 o fuera
+    async resumenSemanaComunidad() {
+      const filas = await b.rpc('comunidad_resumen_semana', {}).catch(() => null);
+      return (Array.isArray(filas) ? filas[0] : filas) || null;
+    },
+    // El perfil de alguien del equipo (v0.47): lo que da comunidad_perfil(), sus últimas publicaciones que se ven
+    // (5) y si ya le he mandado ánimo esta semana
+    async perfilComunidad(perfilId) {
+      const lunesM = lunesDe(hoyISO());
+      const [filas, posts, animo, personas] = await Promise.all([
+        b.rpc('comunidad_perfil', { p_perfil: perfilId }).catch(falta029),
+        b.select('comunidad_posts', { eq: { autor_id: perfilId }, order: [['creado_en', 'desc']], limit: 5, cols: COLS_POST }).catch(() => []),
+        b.select('comunidad_animos', { eq: { de: uid(), para: perfilId, semana: lunesM }, cols: 'semana' }).catch(() => []),
+        api.personasComunidad(),
+      ]);
+      const p = (Array.isArray(filas) ? filas[0] : filas) || null;
+      if (!p) return null;
+      return { ...p, posts: posts.map((x) => ({ ...x, mencionados: mencionadosDe(x.menciones, personas) })), animado: animo.length > 0 };
+    },
+    // Mandar ánimo 🙌 a alguien del equipo (v0.47): uno por persona y semana
+    async animar(perfilId) {
+      return b.rpc('comunidad_animar', { p_perfil: perfilId }).catch(falta029);
+    },
+    // Los ánimos de esta semana: quién me ha animado (nombres) y a quién he animado yo (perfil_id)
+    async animosComunidad() {
+      const yo = uid();
+      const lunesM = lunesDe(hoyISO());
+      const [filas, personas] = await Promise.all([
+        b.select('comunidad_animos', { eq: { semana: lunesM }, cols: 'de,para,creado_en', order: [['creado_en', 'asc']] }).catch(() => []),
+        api.personasComunidad(),
+      ]);
+      return {
+        recibidos: filas.filter((x) => x.para === yo && personas[x.de]).map((x) => ({ perfil_id: x.de, nombre: personas[x.de].nombre })),
+        mandados: new Set(filas.filter((x) => x.de === yo).map((x) => x.para)),
+      };
     },
     // Compartir con el equipo la sesión terminada: la tarjeta (y sus récords) la hace la base con lo registrado
     async compartirEnEquipo(sesionId, { texto = '', kilos = false } = {}) {
@@ -1666,9 +1791,12 @@ export function crearApi(backend) {
       // propio atleta, con comunidad_mis_datos() (también lo oculto y aunque haya salido); el coach, de las tablas.
       if (perfilId && perfilId === uid()) out.comunidad = await b.rpc('comunidad_mis_datos', {}).catch(() => null);
       else {
-        const [miembro, publicaciones, comentarios, reacciones] = await Promise.all(['comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones']
+        const [miembro, publicaciones, comentarios, reacciones, votos, animos_mandados] = await Promise.all(['comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos']
           .map((t) => b.select(t, { eq: { atleta_id: atletaId } }).catch(() => [])));
-        out.comunidad = { miembro: miembro[0] || null, publicaciones, comentarios, reacciones };
+        // (v0.47) sus votos y sus ánimos, los mandados y, de los recibidos, solo cuándo
+        const animos_recibidos = (await b.select('comunidad_animos', { eq: { para_atleta_id: atletaId }, cols: 'semana,creado_en' }).catch(() => []))
+          .map(({ semana, creado_en }) => ({ semana, creado_en }));
+        out.comunidad = { miembro: miembro[0] || null, publicaciones, comentarios, reacciones, votos, animos_mandados, animos_recibidos };
       }
       out.recetas = out.recetas_atleta.length ? await b.select('recetas', { in: { id: unicos(out.recetas_atleta.map((x) => x.receta_id)) } }).catch(() => []) : [];
       out.semanas = await b.select('semanas', { in: { bloque_id: out.bloques.map((x) => x.id) } });

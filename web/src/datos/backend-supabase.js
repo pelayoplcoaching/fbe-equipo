@@ -2,7 +2,7 @@
 
 // Tablas cuya clave no es «id» (para ordenar al paginar)
 export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id', menu_dias: 'atleta_id,fecha',
-  comunidad_miembros: 'atleta_id', comunidad_reacciones: 'post_id,autor_id' };
+  comunidad_miembros: 'atleta_id', comunidad_reacciones: 'post_id,autor_id', comunidad_votos: 'post_id,autor_id', comunidad_animos: 'de,para,semana' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 

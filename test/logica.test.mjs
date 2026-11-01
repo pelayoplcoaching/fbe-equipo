@@ -1,6 +1,8 @@
 // Lógica pura: fechas, 1RM estimado, propuestas de series, avisos del coach y la cola sin conexión.
 import { lunesDe, sumarDias, diasEntre, hace, rangoSemana } from '../web/src/logica/fechas.js';
-import { nombreEquipo, nombreValido, limpiarNombre, estadoReto, textoReto, ordenarRanking, quienes, recordsDeEquipo, REACCIONES } from '../web/src/logica/comunidad.js';
+import { nombreEquipo, nombreValido, limpiarNombre, estadoReto, textoReto, ordenarRanking, quienes, recordsDeEquipo, REACCIONES,
+  posicionesRanking, textoRacha, mencionEnCurso, sugerenciasMencion, insertarMencion, mencionesDeTexto, trozosConMenciones, encuestaCerrada, resultadosEncuesta, limpiarEncuesta, retoConseguido,
+  FILTROS_MURO } from '../web/src/logica/comunidad.js';
 import { conDefecto, preferenciasValidas, claveServidor, normalizarB64url, describirDispositivo, soportePush, esIos, momentoNotificacion, PREFERENCIAS_DEFECTO, TIPOS_ATLETA, TIPOS_COACH } from '../web/src/logica/notificaciones.js';
 import { resultadoCribado, avisoCuestionario, resumenCuestionario, limpiarCuestionario, pasosHechos, MENSAJE_ATLETA, RESULTADO_COACH, SINTOMAS, OTRAS, objetivosDe, textoObjetivos } from '../web/src/logica/cuestionario.js';
 import { pregunta, preguntasDe, respuestaValida, limpiarRespuestas, respuestasNoValidas, textoRespuesta, serieRespuestas } from '../web/src/logica/preguntas.js';
@@ -1227,5 +1229,34 @@ console.log('\nLa comunidad del equipo (v0.43)');
   check([...recordsDeEquipo(hist, 'hoy')].join() === 'dominadas', 'los récords de la tarjeta, como la base: 40 kg tras 100 no; más repeticiones sin carga sí; la primera vez no; lo de después no cuenta');
 }
 
+
+console.log('\nLas mejoras de la comunidad (v0.47)');
+{
+  const filas = ordenarRanking([{ nombre: 'C', hechas: 2, previstas: 3 }, { nombre: 'A', hechas: 3, previstas: 3 }, { nombre: 'B', hechas: 3, previstas: 3 }, { nombre: 'D', hechas: 1, previstas: 3 }]);
+  check(posicionesRanking(filas).join() === '1,1,3,4' && filas.map((x) => x.nombre).join() === 'A,B,C,D', 'el podio respeta los empates del ranking (1, 1, 3)');
+  check(textoRacha(1) === '1 semana seguida' && textoRacha(4) === '4 semanas seguidas', 'la racha, en palabras');
+  check(JSON.stringify(mencionEnCurso('Hola @Rub')) === '{"inicio":5,"consulta":"Rub"}' && mencionEnCurso('Hola @Rubén M', 13)?.consulta === 'Rubén M' && mencionEnCurso('correo@fbe') === null && mencionEnCurso('@') ?.consulta === '' && mencionEnCurso('@Ana hola que tal') === null,
+    'la mención que se está escribiendo (no un correo, ni lo que ya acabó)');
+  const gente = [{ perfil_id: 'a', nombre: 'Ana L.' }, { perfil_id: 'r', nombre: 'Rubén M.' }, { perfil_id: 'c', nombre: 'Pelayo', coach: true }, { perfil_id: 'l', nombre: 'Lucía F.' }];
+  check(sugerenciasMencion('ru', gente, 'a').map((x) => x.perfil_id).join() === 'r' && sugerenciasMencion('luc', gente).map((x) => x.nombre).join() === 'Lucía F.'
+    && sugerenciasMencion('', gente, 'a').map((x) => x.perfil_id).join() === 'c,l,r' && sugerenciasMencion('m.', gente).map((x) => x.perfil_id).join() === 'r', 'propone por el principio de cualquier palabra, sin tildes, sin uno mismo y el coach primero');
+  const ins = insertarMencion('Hola @Rub y más', { inicio: 5, consulta: 'Rub' }, 'Rubén M.');
+  check(ins.texto === 'Hola @Rubén M. y más' && ins.cursor === 15, 'elegir a alguien pone «@Nombre » y deja el cursor detrás');
+  check(mencionesDeTexto('Hola @Rubén M. y @Ana L.', [gente[1], gente[0], gente[3], gente[1]]).join() === 'r,a', 'solo van las menciones que siguen en el texto (sin repetir)');
+  check(mencionesDeTexto('x', []).length === 0 && mencionesDeTexto(gente.map((p) => `@${p.nombre}`).join(' ') + ' @Uno @Dos', [...gente, { perfil_id: 'u', nombre: 'Uno' }, { perfil_id: 'd', nombre: 'Dos' }]).length === 5, 'como mucho 5');
+  const tr = trozosConMenciones('Hola @Ana L. y @Ana, @Rubén M.', [{ perfil_id: 'r', nombre: 'Rubén M.' }, { perfil_id: 'a', nombre: 'Ana L.' }]);
+  check(tr.map((t) => (t.perfil_id ? `[${t.texto}]` : t.texto)).join('') === 'Hola [@Ana L.] y @Ana, [@Rubén M.]' && trozosConMenciones('Hola @Ana L.', []).length === 1, '«@Nombre» resaltado solo para quien está mencionado de verdad');
+  check(encuestaCerrada({ cierre: new Date(Date.now() - 1000).toISOString() }) && !encuestaCerrada({ cierre: null }) && !encuestaCerrada({ cierre: new Date(Date.now() + 864e5).toISOString() }), 'una encuesta, cerrada solo tras su cierre');
+  const r = resultadosEncuesta({ opciones: ['a', 'b', 'c'] }, [{ autor_id: 1, opcion: 0 }, { autor_id: 2, opcion: 1 }, { autor_id: 3, opcion: 2 }, { autor_id: 4, opcion: 9 }], 2, (id) => `P${id}`);
+  check(r.total === 3 && r.conteos.join() === '1,1,1' && r.porcentajes.reduce((a, x) => a + x, 0) === 100 && r.miVoto === 1 && r.quien[2].join() === 'P3', 'los resultados: cuántos, % que suman 100, mi voto y quién (un voto raro no cuenta)');
+  check(resultadosEncuesta({ opciones: ['a', 'b'] }, [], null).porcentajes.join() === '0,0', 'sin votos, 0 %');
+  check(limpiarEncuesta({ pregunta: ' ¿Sí? ', opciones: [' Sí', 'No', ''] }).encuesta.opciones.join() === 'Sí,No' && limpiarEncuesta({ pregunta: '¿Sí?', opciones: ['Sí'] }).error
+    && limpiarEncuesta({ pregunta: '¿Sí?', opciones: ['Sí', 'SÍ'] }).error && limpiarEncuesta({ pregunta: '¿Sí?', opciones: ['a', 'b'], cierre: '2020-01-01T10:00' }).error
+    && limpiarEncuesta({ pregunta: '', opciones: ['a', 'b'] }).error && limpiarEncuesta({ pregunta: '¿?', opciones: ['a', 'b', 'c', 'd', 'e'] }).error, 'una encuesta, como la base: pregunta, de 2 a 4 opciones distintas y el cierre en el futuro');
+  const reto = { desde: '2026-10-01', hasta: '2026-10-31', objetivo: 8, modo: 'individual' };
+  check(retoConseguido(reto, { hechas: 8, desde: '2026-10-15' }) && !retoConseguido(reto, { hechas: 7 }) && !retoConseguido(reto, { hechas: 9, desde: '2026-11-02' })
+    && retoConseguido({ ...reto, modo: 'equipo' }, { hechas: 0, total: 8 }) && !retoConseguido({ ...reto, modo: 'equipo' }, { hechas: 20, total: 7 }), 'un reto conseguido, como la base (individual, de equipo; no el que acabó antes de entrar)');
+  check(FILTROS_MURO.map(([k]) => k).join() === 'todo,entrenos,logros,avisos,mio', 'los filtros del muro');
+}
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

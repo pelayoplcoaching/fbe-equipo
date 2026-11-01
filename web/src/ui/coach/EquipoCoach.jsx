@@ -1,9 +1,10 @@
 // El equipo, visto por el coach (v0.43): el muro (avisos, fijar, ocultar, borrar, comentar y reaccionar como
 // «Coach»), los retos, el ranking de la semana y quién ha entrado. Se abre y se cierra en Cuenta → Comunidad.
+// v0.47: el resumen de la semana, encuestas, retos de equipo, el podio con las rachas, ánimos y el perfil de cada uno.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Pestanas, Avatar, Cargando } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
-import { Muro, Retos, Ranking, ListaNormas } from '../Comunidad.jsx';
+import { Muro, Retos, Ranking, ListaNormas, ConPerfiles } from '../Comunidad.jsx';
 import { fmtCorta } from '../../logica/fechas.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking'], ['miembros', 'Quién está'], ['normas', 'Normas']];
@@ -12,9 +13,10 @@ export function EquipoCoach() {
   const [vista, setVista] = useState('muro');
   return (
     <div class="contenido coach equipo">
-      <header class="cabecera"><div class="titulo"><h1>Equipo</h1><div class="sub">El muro de tus atletas: avisos, retos y constancia</div></div></header>
+      <header class="cabecera"><div class="titulo"><h1>Equipo</h1><div class="sub">El muro de tus atletas: avisos, encuestas, retos y constancia</div></div></header>
       <BandaDemo />
-      <Pestanas opciones={VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eqc" />
+      <Pestanas opciones={VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eqc" clase="pestanas-justas" />
+      <ConPerfiles>
       <div class="pestana-panel" role="tabpanel" id="eqc-panel" aria-labelledby={`eqc-${vista}`} key={vista}>
         {vista === 'muro' && <Muro coach />}
         {vista === 'retos' && <Retos coach />}
@@ -27,6 +29,7 @@ export function EquipoCoach() {
           </div>
         )}
       </div>
+      </ConPerfiles>
     </div>
   );
 }

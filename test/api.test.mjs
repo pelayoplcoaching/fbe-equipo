@@ -1,7 +1,7 @@
 // La capa de datos de la app (web/src/datos/api.js) contra el esquema real de Supabase con RLS.
 // Recorre el flujo completo: el coach da de alta, programa y publica; el atleta activa, entrena y hace check-in.
 import { crearPglite, crearBackendPglite } from './backend-pglite.mjs';
-import { crearApi } from '../web/src/datos/api.js';
+import { crearApi, VERSION_COMUNIDAD } from '../web/src/datos/api.js';
 import { hoyISO, lunesDe, sumarDias } from '../web/src/logica/fechas.js';
 
 let ok = 0, fallos = 0;
@@ -1189,7 +1189,7 @@ console.log('\nLa comunidad del equipo (v0.43, migración 027)');
   check((await api.miembroComunidad()) === null, 'Ana aún no ha entrado');
   check(await lanza(() => api.entrarComunidad('A')), 'el nombre, de 2 a 40 letras');
   const mA = await api.entrarComunidad('  Ana   L. ');
-  check(mA.nombre === 'Ana L.' && mA.version === 'comunidad-2026-11' && mA.normas_version === 'normas-2026-11' && !api.faltanNormas(mA), 'Ana entra con su nombre, el texto que aceptó y las normas leídas (v0.44)');
+  check(mA.nombre === 'Ana L.' && mA.version === VERSION_COMUNIDAD && mA.normas_version === 'normas-2026-11' && !api.faltanNormas(mA), 'Ana entra con su nombre, el texto que aceptó y las normas leídas (v0.44)');
   check(api.faltanNormas({ ...mA, normas_version: null }) && !api.faltanNormas((({ normas_version, ...r }) => r)(mA)), 'sin las normas vigentes le faltan por leer; sin la migración 028 (sin columna), no');
   {
     const llamadas = [];
@@ -1254,7 +1254,7 @@ console.log('\nLa comunidad del equipo (v0.43, migración 027)');
   await b.auth.entrar('ana@test', 'contraseña-ana-1');
   check((await api.comentariosComunidad(pA.id)).length === 0, 'Ana ya no ve el comentario oculto');
   const rk = await api.rankingComunidad();
-  check(Array.isArray(rk) && rk.every((x) => Object.keys(x).sort().join() === 'foto,hechas,nombre,perfil_id,previstas,yo'), `el ranking de la semana, solo recuentos (${rk.map((x) => `${x.nombre} ${x.hechas}/${x.previstas}`).join(', ') || 'sin semanas publicadas'})`);
+  check(Array.isArray(rk) && rk.every((x) => Object.keys(x).sort().join() === 'foto,hechas,nombre,perfil_id,previstas,racha,yo'), `el ranking de la semana, solo recuentos (${rk.map((x) => `${x.nombre} ${x.hechas}/${x.previstas}`).join(', ') || 'sin semanas publicadas'})`);
   check((await api.ajustesComunidad({ sinRanking: true })).sin_ranking === true, 'Ana elige no salir en el ranking');
   await b.auth.entrar('luis@test', 'contraseña-luis-1');
   check(!(await api.rankingComunidad()).some((x) => x.nombre === 'Ana L.') && !(await api.retosComunidad())[0].progreso.some((x) => x.nombre === 'Ana L.'), 'y Luis ya no la ve ni en el ranking ni en el reto');
@@ -1310,6 +1310,113 @@ console.log('\nLa comunidad del equipo (v0.43, migración 027)');
   check((await api.comunidad()).activa === false && (await api.muro()).posts.length === 0, 'cerrada, nadie ve el muro');
   check(await lanza(() => api.abrirComunidad(true)), 'y un atleta no la abre');
   await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+}
+
+console.log('\nLas mejoras de la comunidad (v0.47, migración 029)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.abrirComunidad(true);
+  const [aAna] = await b.sql(`select id, perfil_id from atletas where email = 'ana@test'`);
+  const [aLuis] = await b.sql(`select id, perfil_id from atletas where email = 'luis@test'`);
+  // Sin la 029 en la base, entrar con el texto nuevo dice qué falta
+  {
+    const sin029 = crearApi({ ...b, rpc: async (nombre, args) => {
+      if (nombre === 'comunidad_unirme') throw new Error('El texto que aceptas no es el vigente: recarga la app y vuelve a intentarlo');
+      if (nombre === 'comunidad_version') return 'comunidad-2026-11';
+      return b.rpc(nombre, args);
+    } });
+    await b.auth.entrar('ana@test', 'contraseña-ana-1');
+    let msg = '';
+    try { await sin029.entrarComunidad('Ana L.'); } catch (e) { msg = e.message; }
+    check(/migración 029/.test(msg), 'sin la migración 029, entrar con lo que se comparte ahora dice que falta');
+  }
+  const mA = await api.entrarComunidad('Ana L.');
+  await api.ajustesComunidad({ sinRanking: false });
+  await b.sql(`insert into preferencias_notificaciones (usuario_id, email) values ($1, true) on conflict (usuario_id) do update set email = true`, [aAna.perfil_id]);
+  check(api.dentroDeComunidad(mA) && !api.dentroDeComunidad({ ...mA, version: 'comunidad-2026-11' }) && !api.dentroDeComunidad({ ...mA, salido_en: new Date().toISOString() }), 'Ana vuelve aceptando el texto nuevo (con el de antes, estaría fuera)');
+  const vistoAntes = new Date(Date.now() - 1000).toISOString();
+
+  // Encuestas del coach
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(await lanza(() => api.publicarEnComunidad({ encuesta: { pregunta: '¿Qué día?', opciones: ['Sábado'] } }))
+    && await lanza(() => api.publicarEnComunidad({ encuesta: { pregunta: '¿Qué día?', opciones: ['Sábado', 'sábado'] } }))
+    && await lanza(() => api.publicarEnComunidad({ encuesta: { pregunta: '¿Qué día?', opciones: ['Sábado', 'Domingo'], cierre: '2020-01-01T10:00' } })),
+    'una encuesta, con 2 a 4 opciones distintas y el cierre en el futuro');
+  const enc = await api.publicarEnComunidad({ encuesta: { pregunta: '¿Sábado o domingo?', opciones: ['Sábado', 'Domingo', ''], cierre: new Date(Date.now() + 864e5).toISOString() }, fijada: true });
+  check(enc.tipo === 'encuesta' && enc.texto === '¿Sábado o domingo?' && enc.encuesta.opciones.join() === 'Sábado,Domingo' && enc.fijada, 'el coach publica una encuesta (las opciones vacías no van) y la fija arriba');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check(await lanza(() => api.publicarEnComunidad({ encuesta: { pregunta: '¿Y yo?', opciones: ['Sí', 'No'] } })), 'un atleta no publica encuestas');
+  check((await api.votarEncuesta(enc.id, 1)) === 1 && (await api.votarEncuesta(enc.id, 0)) === 0 && await lanza(() => api.votarEncuesta(enc.id, 5)), 'Ana vota, cambia su voto y no vota una opción que no existe');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  await api.votarEncuesta(enc.id, 0);
+  let muro = await api.muro();
+  let pe = muro.posts.find((x) => x.id === enc.id);
+  check(pe?.resultados?.total === 2 && pe.resultados.conteos.join() === '2,0' && pe.resultados.porcentajes.join() === '100,0' && pe.resultados.miVoto === 0 && pe.resultados.quien[0].sort().join() === 'Ana L.,Luis M.',
+    'en el muro, los resultados: cuántos, qué %, mi voto y quién ha votado');
+
+  // Menciones
+  const pM = await api.publicarEnComunidad({ texto: '¡Vamos, @Ana L.!', menciones: [aAna.perfil_id, aAna.perfil_id, aLuis.perfil_id, coachId] });
+  check(pM.menciones.join() === [aAna.perfil_id, coachId].join(), 'publica con menciones (sin repetir y sin él mismo, lo deja la base)');
+  await api.comentarEnComunidad(pM.id, 'Y tú también, @Pelayo', [coachId]);
+  muro = await api.muro();
+  check(muro.posts.find((x) => x.id === pM.id)?.mencionados.map((x) => x.nombre).join() === 'Ana L.,Pelayo Fernández', 'el muro trae el nombre de cada mencionado');
+  check((await api.comentariosComunidad(pM.id))[0].mencionados[0]?.perfil_id === coachId, 'y los comentarios, también');
+  const avisoMencion = await b.sql(`select titulo, cuerpo, url from notificaciones where usuario_id = $1 and clave like 'comunidad_mencion:%'`, [aAna.perfil_id]);
+  check(avisoMencion.some((x) => x.titulo === 'Luis M. te ha mencionado' && x.url === '#equipo' && !x.cuerpo.includes('Vamos')), 'a quien mencionan le avisa la base (sin el texto)');
+
+  // Filtros del muro (en la consulta) y novedades
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const pMia = await api.publicarEnComunidad({ texto: 'Lo mío' });
+  const tipos = async (filtro) => [...new Set((await api.muro({ filtro })).posts.map((x) => x.tipo))].sort().join();
+  const avisos = await tipos('avisos');
+  check(['encuesta', 'aviso,encuesta'].includes(avisos) && !(await api.muro({ filtro: 'avisos' })).posts.some((x) => x.id === pMia.id), `«Avisos»: avisos y encuestas del coach (${avisos})`);
+  check((await api.muro({ filtro: 'mio' })).posts.every((x) => x.mio) && (await api.muro({ filtro: 'mio' })).posts.some((x) => x.id === pMia.id), '«Lo mío»: solo lo suyo');
+  check((await api.muro({ filtro: 'entrenos' })).posts.every((x) => x.tipo === 'entreno') && (await api.muro({ filtro: 'logros' })).posts.every((x) => x.tipo === 'logro'), '«Entrenos» y «Logros»');
+  check((await api.novedadesComunidad(vistoAntes)) >= 2 && (await api.novedadesComunidad(new Date(Date.now() + 60000).toISOString())) === 0, 'las novedades: lo publicado por los demás desde su última visita (no lo suyo)');
+
+  // Retos de equipo, logros y su celebración
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(await lanza(() => api.guardarReto({ titulo: 'Mucho', desde: sumarDias(hoy, -60), hasta: sumarDias(hoy, 7), objetivo: 200 })), 'individual, hasta 100 sesiones');
+  const rEq = await api.guardarReto({ titulo: 'Entre todos', desde: sumarDias(hoy, -60), hasta: sumarDias(hoy, 7), objetivo: 1, modo: 'equipo' });
+  const rInd = await api.guardarReto({ titulo: 'Una sesión', desde: sumarDias(hoy, -60), hasta: sumarDias(hoy, 7), objetivo: 1 });
+  check(rEq.modo === 'equipo' && rInd.modo === 'individual' && !!(await api.guardarReto({ titulo: 'Equipo grande', desde: hoy, hasta: sumarDias(hoy, 7), objetivo: 200, modo: 'equipo' })), 'de equipo, hasta 5000');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  let retos = await api.retosComunidad();
+  const vEq = retos.find((r) => r.id === rEq.id), vInd = retos.find((r) => r.id === rInd.id);
+  check(vEq.modo === 'equipo' && vEq.total >= 1 && vEq.conseguido && vInd.conseguido && !vInd.compartido, `el reto de equipo trae el total de todos (${vEq.total}) y si lo ha conseguido`);
+  let logros = await api.logrosComunidad();
+  check(logros.some((r) => r.id === rInd.id) && logros.some((r) => r.id === rEq.id), 'los logros por celebrar: los conseguidos sin compartir');
+  const idLogro = await api.compartirLogro(rInd.id, '¡Hecho!');
+  check(await lanza(() => api.compartirLogro(rInd.id)), 'un logro se comparte una vez');
+  retos = await api.retosComunidad();
+  check(retos.find((r) => r.id === rInd.id).compartido && !(await api.logrosComunidad()).some((r) => r.id === rInd.id), 'compartido, ya no se celebra');
+  const pl = (await api.muro({ filtro: 'logros' })).posts.find((x) => x.id === idLogro);
+  check(pl?.tipo === 'logro' && pl.resumen.titulo === 'Una sesión' && pl.texto === '¡Hecho!', 'y sale en el muro, en «Logros»');
+
+  // Resumen, rachas, perfil y ánimos
+  const res = await api.resumenSemanaComunidad();
+  check(res && Object.keys(res).sort().join() === 'miembros,records,retos,semana_completa,sesiones' && res.retos >= 2, `el resumen de la semana (${JSON.stringify(res)})`);
+  const rachas = await api.rachasComunidad();
+  check(typeof rachas[aAna.perfil_id]?.racha === 'number' && rachas[aAna.perfil_id].yo, 'las rachas de cada uno');
+  const pf = await api.perfilComunidad(aLuis.perfil_id);
+  check(pf?.nombre === 'Luis M.' && pf.posts.length >= 1 && pf.posts.length <= 5 && pf.animado === false && typeof pf.entrenos === 'number', 'el perfil de Luis, con sus últimas publicaciones');
+  await api.animar(aLuis.perfil_id);
+  check((await api.perfilComunidad(aLuis.perfil_id)).animado && (await api.animosComunidad()).mandados.has(aLuis.perfil_id) && await lanza(() => api.animar(aLuis.perfil_id)), 'le manda ánimo (una vez por semana)');
+  check(await lanza(() => api.animar(aAna.perfil_id)), 'a ella misma no');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check((await api.animosComunidad()).recibidos.map((x) => x.nombre).join() === 'Ana L.', 'Luis ve quién le ha animado esta semana');
+  check((await api.perfilComunidad(coachId))?.coach === true, 'el perfil del coach');
+
+  // «Descargar mis datos» y la copia completa
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  let exp = await api.exportar(ana.id);
+  check(exp.comunidad.votos.some((v) => v.post_id === enc.id) && exp.comunidad.animos_mandados.some((a) => a.para === aLuis.perfil_id), '«Descargar mis datos» lleva sus votos y sus ánimos');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  exp = await api.exportar(aLuis.id);
+  check(exp.comunidad.votos.length === 1 && exp.comunidad.animos_recibidos.length === 1 && !('de' in exp.comunidad.animos_recibidos[0]), 'la del coach para Luis, también (de los ánimos recibidos, solo cuándo)');
+  const copia = await api.copiaCompleta();
+  check(Array.isArray(copia.comunidad_votos) && copia.comunidad_votos.length === 2 && copia.comunidad_animos.length === 1, 'la copia completa lleva los votos y los ánimos');
+  await api.abrirComunidad(false);
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
