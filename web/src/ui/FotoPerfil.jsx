@@ -44,6 +44,38 @@ export async function recortarImagen(archivo, { ancho = LADO, alto = LADO, max =
   }
 }
 
+// Una foto para el muro del equipo (v0.43): entera (sin recortar), con el lado largo de 1280 px como mucho y en
+// JPEG de menos de 500 KB. Devuelve un Blob (va a Storage, no a la base).
+export async function reducirFoto(archivo, { lado = 1280, max = 500 * 1024 } = {}) {
+  if (!archivo || !/^image\//.test(archivo.type || '')) throw new Error('Elige una imagen (una foto de tu galería o de la cámara).');
+  const url = URL.createObjectURL(archivo);
+  try {
+    const img = await new Promise((ok, mal) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = () => mal(new Error('No se ha podido abrir esa imagen. Prueba con otra.'));
+      i.src = url;
+    });
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) throw new Error('No se ha podido abrir esa imagen. Prueba con otra.');
+    const f = Math.min(1, lado / Math.max(w, h));
+    const lienzo = document.createElement('canvas');
+    lienzo.width = Math.round(w * f); lienzo.height = Math.round(h * f);
+    const ctx = lienzo.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+    for (const q of [0.82, 0.74, 0.66, 0.56, 0.46]) {
+      const blob = await new Promise((ok) => lienzo.toBlob(ok, 'image/jpeg', q));
+      if (blob && blob.size <= max) return blob;
+    }
+    throw new Error('La foto pesa demasiado incluso comprimida. Prueba con otra.');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 // La fila de Perfil (atleta) y Cuenta (coach): la foto actual y «Cambiar» / «Quitar»
 export function FilaFoto({ nombre, coach = false }) {
   const { api, perfil, fijarPerfil, aviso } = useApp();

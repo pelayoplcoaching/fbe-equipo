@@ -17,12 +17,14 @@ const textoEstado = (coach) => ({
 });
 
 // Los tipos que puede elegir: a quien solo le llevas el entrenamiento, sin el de nutrición
-const tiposDe = (coach, atleta) => (coach ? TIPOS_COACH : TIPOS_ATLETA.filter(([t]) => t !== 'nutricion' || conNutricion(atleta)));
+// (y el del equipo, solo con la comunidad abierta: v0.43)
+const tiposDe = (coach, atleta, equipo = false) => (coach ? TIPOS_COACH : TIPOS_ATLETA.filter(([t]) => t !== 'nutricion' || conNutricion(atleta)))
+  .filter(([t]) => t !== 'comunidad' || equipo);
 
 // «Respuestas, semana y 3 recordatorios»
-function resumenTipos(p, coach, atleta = null) {
+function resumenTipos(p, coach, atleta = null, equipo = false) {
   if (!p) return '';
-  const tipos = tiposDe(coach, atleta).filter(([t]) => !p.desactivados.includes(t));
+  const tipos = tiposDe(coach, atleta, equipo).filter(([t]) => !p.desactivados.includes(t));
   if (!tipos.length) return 'Ninguna activada';
   const avisos = tipos.filter(([t]) => !RECORDATORIOS.includes(t)).map(([, n]) => n.split(' ')[0].toLowerCase());
   const rec = tipos.filter(([t]) => RECORDATORIOS.includes(t)).length;
@@ -36,6 +38,7 @@ export function SeccionNotificaciones({ coach = false }) {
   const [abierta, setAbierta] = useState(false);
   const [aqui, setAqui] = useState(null);
   const prefs = useCarga(() => api.preferenciasNotificaciones(), [abierta]);
+  const equipo = !!useCarga(() => api.comunidad(), []).datos?.activa;
   // Lo último que se ha elegido en la hoja (puede que aún se esté guardando al cerrarla)
   const [local, setLocal] = useState(null);
   const estado = estadoPush(modo);
@@ -48,12 +51,12 @@ export function SeccionNotificaciones({ coach = false }) {
       <div class="panel">
         <ul class="lista">
           <li class="panel-pad separa">
-            <div><div>{titulo}</div><div class="peq terciario">{resumenTipos(local || prefs.datos, coach, atleta)}</div></div>
+            <div><div>{titulo}</div><div class="peq terciario">{resumenTipos(local || prefs.datos, coach, atleta, equipo)}</div></div>
             <button class="btn btn-peq" onClick={() => setAbierta(true)}><Icono n="campana" /> {estado === 'ok' && aqui === false ? 'Activar' : 'Ajustes'}</button>
           </li>
         </ul>
       </div>
-      {abierta && <HojaNotificaciones coach={coach} alCerrar={() => setAbierta(false)} alCambiar={setLocal} />}
+      {abierta && <HojaNotificaciones coach={coach} equipo={equipo} alCerrar={() => setAbierta(false)} alCambiar={setLocal} />}
     </section>
   );
 }
@@ -74,7 +77,7 @@ function Hora({ id, valor, min, max, alCambiar }) {
   );
 }
 
-export function HojaNotificaciones({ coach = false, alCerrar, alCambiar }) {
+export function HojaNotificaciones({ coach = false, equipo = false, alCerrar, alCambiar }) {
   const { api, aviso, modo, atleta } = useApp();
   const [estado, setEstado] = useState(() => estadoPush(modo));
   const prefs = useCarga(() => api.preferenciasNotificaciones(), []);
@@ -139,7 +142,7 @@ export function HojaNotificaciones({ coach = false, alCerrar, alCambiar }) {
     try { await api.quitarDispositivo(s.id); subs.recargar(true); aviso('Quitado: ya no le llegarán'); } catch (e) { aviso(e.message, 'error'); }
   }
 
-  const tipos = tiposDe(coach, atleta);
+  const tipos = tiposDe(coach, atleta, equipo);
   const conNut = coach || conNutricion(atleta);
   const tarde = quiere('habitos') || (conNut && quiere('nutricion')) || quiere('checkin');
   return (

@@ -2020,3 +2020,80 @@ input[type="range"] { accent-color: var(--morado); width: 100%; }
 .banda-modo-atleta .btn-peq svg { width: 15px; height: 15px; }
 .banda-modo-atleta .btn-peq { min-height: 30px; padding: 0 10px; font-size: 13px; border-radius: 8px; background: none; border-color: transparent; color: var(--morado); }
 .banda-pendientes .btn-texto { font-weight: 700; color: inherit; text-decoration: underline; }
+
+/* ---------- v0.43: la comunidad del equipo ---------- */
+/* Con 7 pestañas en el móvil (Equipo), un poco más estrechas para que quepan en 390 px */
+.tabs-in.tabs-muchas { grid-auto-columns: minmax(0, 1fr); }
+.tabs-in.tabs-muchas .tab { font-size: 10.5px; letter-spacing: -0.01em; padding-left: 0; padding-right: 0; min-width: 0; }
+.tabs-in.tabs-muchas .tab > span:first-child, .tabs-in.tabs-muchas .tab > .tab-ico { width: 44px; }
+@media (min-width: 900px) { .app.coach .tabs-in.tabs-muchas .tab { font-size: 15px; letter-spacing: 0; padding: 10px 12px; } .app.coach .tabs-in.tabs-muchas .tab > .tab-ico { width: auto; } }
+.puntos { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.casilla-peq { grid-template-columns: 20px auto; gap: 8px; font-size: 14px; align-items: center; }
+.casilla-peq input { width: 18px; height: 18px; margin: 0; }
+.entrar-equipo { justify-items: start; }
+.entrar-equipo > * { justify-self: stretch; }
+.entrar-equipo > svg.entrar-equipo-ico { justify-self: start; width: 40px; height: 40px; color: var(--morado); }
+.entrar-equipo h2 { font-size: 19px; }
+.muro { gap: 14px; }
+.compositor .area { min-height: 64px; }
+.compositor-pie { flex-wrap: wrap; }
+.compositor-foto { display: grid; gap: 8px; justify-items: start; }
+.compositor-foto img { max-width: 100%; max-height: 260px; border-radius: 12px; object-fit: cover; }
+.post { min-width: 0; }
+.post.fijada { box-shadow: var(--sombra), inset 3px 0 0 var(--morado); }
+.post.oculta { opacity: .75; }
+.post-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
+.post-quien { min-width: 0; }
+.post-quien strong { overflow-wrap: anywhere; }
+.post-quien .chip { min-height: 22px; font-size: 12px; padding: 0 8px; }
+.post-fijado { min-height: 24px; font-size: 12px; padding: 0 8px; gap: 4px; }
+.post-texto { white-space: pre-line; overflow-wrap: anywhere; }
+.post-foto { width: 100%; max-height: 420px; object-fit: cover; border-radius: 12px; display: block; background: var(--hoja-2); }
+.post-foto-cargando { aspect-ratio: 4 / 3; }
+.post-pie { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.reacciones { display: flex; gap: 6px; flex-wrap: wrap; }
+.reaccion { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; min-width: 44px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--linea); background: var(--hoja); font-size: 16px; color: var(--tinta); }
+.reaccion .num { font-size: 13.5px; font-weight: 700; }
+.reaccion[aria-pressed="true"] { background: var(--morado-suave); border-color: var(--morado); }
+.post-comentar svg { width: 18px; height: 18px; }
+.quien-reacciona { justify-self: start; min-height: 30px; padding: 2px 0; font-weight: 600; color: var(--tinta-2); text-align: left; }
+.opciones-post { display: grid; gap: 8px; }
+.opciones-post .btn { justify-content: flex-start; }
+.comentarios-equipo > li { padding: 10px 0; }
+.comentario-equipo { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; }
+.chip-mini { min-height: 20px; font-size: 11.5px; padding: 0 7px; margin-left: 6px; }
+.comentario-acciones .btn-texto { min-height: 30px; padding: 2px 0; margin-right: 10px; }
+/* La tarjeta de un entreno */
+.entreno-equipo { display: grid; gap: 10px; padding: 12px; border-radius: 12px; background: var(--hoja-2); box-shadow: inset 0 0 0 1px var(--borde); }
+.ee-cab { display: flex; gap: 10px; align-items: center; }
+.ee-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--morado); color: var(--sobre-morado); flex: none; }
+.ee-ico svg { width: 20px; height: 20px; }
+.ee-num { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ee-num > div { background: var(--hoja); border-radius: 10px; padding: 8px 10px; display: grid; }
+.ee-num .v { font-size: 20px; font-weight: 750; }
+.ee-num .k { font-size: 12.5px; color: var(--tinta-2); }
+.ee-ejercicios { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+.ee-ejercicios li { display: flex; justify-content: space-between; gap: 10px; }
+.ee-ejercicios li > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.ee-ejercicios li > span + span { flex: none; }
+.ee-record { display: flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 650; color: var(--morado); }
+.ee-record svg { width: 18px; height: 18px; flex: none; }
+.ee-previa { pointer-events: none; }
+.compartida-equipo { display: flex; gap: 8px; align-items: center; justify-content: center; }
+.compartida-equipo svg { width: 18px; height: 18px; color: var(--ok); }
+/* Retos y ranking */
+.reto-titulo { font-size: 16.5px; font-weight: 750; }
+.reto-yo { display: flex; gap: 6px; align-items: center; }
+.reto-yo svg { width: 18px; height: 18px; color: var(--morado); }
+.progreso-equipo > li { border-top: 0; }
+.fila-progreso { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(56px, 30%) auto; gap: 10px; align-items: center; padding: 8px 0; }
+.fila-progreso:has(.pos) { grid-template-columns: 22px auto minmax(0, 1fr) minmax(56px, 30%) auto; padding: 10px 14px; }
+.fila-progreso .pos { font-weight: 750; color: var(--tinta-2); text-align: right; }
+.fila-progreso .nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; }
+.fila-progreso.yo .nombre { font-weight: 750; }
+.barra-equipo { height: 8px; border-radius: 4px; background: var(--hoja-2); overflow: hidden; box-shadow: inset 0 0 0 1px var(--borde); }
+.barra-equipo span { display: block; height: 100%; background: var(--morado); border-radius: 4px; }
+.barra-equipo span.lleno { background: var(--ok); }
+.que-se-comparte summary { cursor: pointer; font-weight: 650; color: var(--morado); min-height: 32px; }
+.tarjeta-reporte .ico-reporte { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--alerta-suave); color: var(--alerta); flex: none; }
+.tarjeta-reporte .ico-reporte svg { width: 18px; height: 18px; }

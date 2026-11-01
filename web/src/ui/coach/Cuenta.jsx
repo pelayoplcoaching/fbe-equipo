@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { AjustesDispositivo } from '../Ajustes.jsx';
+import { AjustesDispositivo, Interruptor } from '../Ajustes.jsx';
 import { SeccionNotificaciones } from '../Notificaciones.jsx';
 import { useApp, useCarga, Icono, Hoja, Cargando, HojaExportar, copiar, Avatar, cuando } from '../comunes.jsx';
 import { num } from '../../logica/calculos.js';
@@ -9,7 +9,7 @@ import { CobrosTodos } from './Cobros.jsx';
 /* global __APP_VERSION__ */
 import { FilaFoto, FilaNombre } from '../FotoPerfil.jsx';
 
-export function Cuenta({ abrirAtleta } = {}) {
+export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
   const { perfil, backend, salir, api, aviso } = useApp();
   const [copia, setCopia] = useState(null);
   const [preparando, setPreparando] = useState(false);
@@ -25,6 +25,7 @@ export function Cuenta({ abrirAtleta } = {}) {
         </ul>
       </div>
       {backend.auth.mfa && <DosPasos />}
+      <SeccionComunidad alCambiar={alCambiarComunidad} />
       <SeccionNotificaciones coach />
       <AjustesDispositivo coach />
       <CobrosTodos abrirAtleta={abrirAtleta} />
@@ -43,6 +44,37 @@ export function Cuenta({ abrirAtleta } = {}) {
       <p class="mini terciario">FBE Equipo, versión {String(__APP_VERSION__)}.</p>
       {copia && <HojaExportar titulo="Copia completa" nombre={`fbe-atletas-copia-${hoyISO()}.json`} contenido={copia} tipo="application/json" alCerrar={() => setCopia(null)} />}
     </div>
+  );
+}
+
+// La comunidad del equipo (v0.43): abrirla o cerrarla. Cerrada, ningún atleta ve la pestaña Equipo (lo que haya
+// dentro se guarda). Sin la migración 027, lo dice.
+function SeccionComunidad({ alCambiar }) {
+  const { api, aviso } = useApp();
+  const estado = useCarga(() => Promise.all([api.comunidad(), api.miembrosComunidad()]), []);
+  const [ocupado, setOcupado] = useState(false);
+  const [c, miembros] = estado.datos || [null, []];
+  const dentro = (miembros || []).filter((m) => !m.salido_en).length;
+  return (
+    <section class="seccion">
+      <h2>Comunidad</h2>
+      <div class="panel">
+        {!c ? <div class="panel-pad"><Cargando /></div> : !c.disponible ? (
+          <p class="panel-pad peq secundario">Para abrir la comunidad del equipo falta ejecutar la migración 027 en Supabase (supabase/migraciones/027_comunidad.sql).</p>
+        ) : (
+          <ul class="lista">
+            <Interruptor id="comunidad-activa" texto="Comunidad del equipo" valor={c.activa} desactivado={ocupado}
+              ayuda={c.activa ? `Abierta: tus atletas ven la pestaña Equipo. ${dentro === 1 ? '1 ha entrado' : `${dentro} han entrado`}.` : 'Cerrada: nadie ve la pestaña Equipo (lo que haya dentro se guarda).'}
+              alCambiar={async (v) => {
+                setOcupado(true);
+                try { await api.abrirComunidad(v); await estado.recargar(true); alCambiar?.(); aviso(v ? 'Comunidad abierta: tus atletas ya ven la pestaña Equipo' : 'Comunidad cerrada'); }
+                catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
+              }} />
+            <li class="panel-pad mini terciario">Es voluntaria: cada atleta decide si entra (con su propio consentimiento) y puede salir cuando quiera. Dentro se ven los que han entrado y tú: nombre, foto de perfil, lo que publican y sus sesiones hechas en los retos y el ranking. Nunca su peso, medidas, nutrición, check-ins, molestias, vídeos ni vuestros mensajes.</li>
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }
 

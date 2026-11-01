@@ -14,6 +14,7 @@ export const TIPOS_ATLETA = [
   ['nutricion', 'Nutrición', 'Por la tarde, si aún no la has apuntado'],
   ['cuestionario', 'Peticiones de tu coach', 'Si te pide que rellenes o actualices tu cuestionario'],
   ['descanso', 'Descansos terminados', 'Al acabar tu descanso, si no tienes la app delante (música, otra app, pantalla bloqueada)'],
+  ['comunidad', 'Equipo', 'Reacciones y comentarios en lo que publicas, y los avisos del coach en el muro'],
 ];
 export const TIPOS_COACH = [
   ['mensaje', 'Mensajes de tus atletas', 'Cuando te escriben en una sesión, un check-in o un vídeo'],
@@ -21,6 +22,7 @@ export const TIPOS_COACH = [
   ['video_recibido', 'Vídeos de técnica', 'Cuando alguien sube uno'],
   ['sesion_hecha', 'Sesiones terminadas', 'Una por sesión: pueden ser muchas al día'],
   ['cuestionario_recibido', 'Cuestionarios', 'Cuando alguien completa o actualiza el suyo'],
+  ['comunidad', 'Equipo', 'Reacciones y comentarios en tus avisos del muro, y cuando alguien te avisa de algo'],
 ];
 export const RECORDATORIOS = ['sesion_hoy', 'checkin', 'habitos', 'nutricion'];
 
@@ -53,7 +55,7 @@ export function conDefecto(p) {
 // Lo que la base acepta (como la restricción de la migración 010)
 export function preferenciasValidas(p) {
   const hm = (h) => /^\d\d:\d\d$/.test(h || '');
-  const todos = [...TIPOS_ATLETA, ...TIPOS_COACH].map(([t]) => t);
+  const todos = [...new Set([...TIPOS_ATLETA, ...TIPOS_COACH].map(([t]) => t))];
   return (p.desactivados || []).every((t) => todos.includes(t))
     && hm(p.hora_manana) && p.hora_manana >= '05:00' && p.hora_manana <= '12:00'
     && hm(p.hora_tarde) && p.hora_tarde >= '12:00' && p.hora_tarde <= '23:30'

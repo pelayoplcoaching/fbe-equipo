@@ -17,8 +17,11 @@ import { cardioHechoValido, cardioPorSemana, textoCardioHecho, NOMBRE_MODALIDAD 
 import { pendiente as cuestionarioPendiente } from '../logica/cuestionario.js';
 import { revisarVariante, varianteSinMaterial } from '../logica/variantes.js';
 import { limpiarReceta, recetarioPorToma, tomasDe, ordenarTomas, entradaMenu, copiarMenu, cambiarRaciones } from '../logica/comidas.js';
+import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO } from '../logica/comunidad.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
+// El texto que se acepta al entrar en la comunidad (v0.43): como public.comunidad_version() de la migración 027
+export const VERSION_COMUNIDAD = 'comunidad-2026-11';
 
 const porId = (filas) => Object.fromEntries(filas.map((f) => [f.id, f]));
 const agrupar = (filas, col) => filas.reduce((m, f) => ((m[f[col]] ||= []).push(f), m), {});
@@ -62,6 +65,14 @@ const falta026 = (e) => {
   const m = e?.message || '';
   if (/peso_frecuencia/.test(m) && /schema cache|does not exist|no existe|column|columna/i.test(m)) {
     throw new Error(`Para pedir el peso una vez a la semana falta ejecutar la migración 026 en Supabase (supabase/migraciones/026_peso_semanal.sql). Detalle: ${m}`);
+  }
+  throw e;
+};
+// La comunidad (v0.43) sin la migración 027
+const falta027 = (e) => {
+  const m = e?.message || '';
+  if (/comunidad_/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n/i.test(m)) {
+    throw new Error(`Para la comunidad del equipo falta ejecutar la migración 027 en Supabase (supabase/migraciones/027_comunidad.sql). Detalle: ${m}`);
   }
   throw e;
 };
@@ -111,14 +122,18 @@ function bloqueActual(bloques) {
 const CAMPOS_SE = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'series', 'reps_min', 'reps_max',
   'rir_objetivo', 'rpe_objetivo', 'carga_sugerida_kg', 'descanso_seg', 'tempo', 'notas_coach', 'variante', 'backoff_pct', 'series_detalle'];
 
+// La comunidad del equipo (v0.43, migración 027)
+const TABLAS_COMUNIDAD = ['comunidad_ajustes', 'comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_retos'];
+// Lo que la app lee de una publicación del muro (sin la ficha ni la sesión de su autor)
+const COLS_POST = 'id,autor_id,tipo,texto,foto_ruta,resumen,fijada,oculta,creado_en';
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
   'archivos', 'comentarios', 'recursos', 'notas_ejercicio', 'respuestas_guardadas', 'avisos', 'habitos', 'registros_habito',
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
-  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias'];
-// Las que puede no tener aún una base (cobros, 020; comidas, 022): sin ellas, la copia sale igual
-const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias'];
+  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD];
+// Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027): sin ellas, la copia sale igual
+const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
 
@@ -143,7 +158,8 @@ export function crearApi(backend) {
     clearTimeout(temporizadorEnvio);
     temporizadorEnvio = setTimeout(() => { Promise.resolve().then(() => backend.funcion('enviar-notificaciones')).catch(() => {}); }, ms);
   };
-  const avisa = (m, t, c) => ((m === 'insert' || m === 'upsert') && ['comentarios', 'avisos', 'checkins', 'semanas'].includes(t))
+  const avisa = (m, t, c) => ((m === 'insert' || m === 'upsert') && ['comentarios', 'avisos', 'checkins', 'semanas', 'comunidad_posts', 'comunidad_comentarios'].includes(t))
+    || (m === 'rpc' && ['comunidad_reaccionar', 'comunidad_avisar_coach'].includes(t))
     || (m === 'update' && ((t === 'semanas' && c?.programacion === 'programada') || (t === 'sesiones' && c?.completada === true) || (t === 'avisos' && 'texto' in (c || {}))));
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc']) {
     const f = escribe(backend[m].bind(backend));
@@ -1395,6 +1411,219 @@ export function crearApi(backend) {
       return b.select('recursos', { order: [['orden', 'asc'], ['creado_en', 'asc']] });
     },
 
+    // ------------------------------------------------------------ comunidad del equipo (v0.43, migración 027)
+    // Si está abierta. Sin la 027 en la base, no existe (la pestaña no sale y nada falla).
+    async comunidad() {
+      try {
+        const [a] = await b.select('comunidad_ajustes', { cols: 'activa' });
+        return { disponible: true, activa: !!a?.activa };
+      } catch { return { disponible: false, activa: false }; }
+    },
+    // El coach la abre o la cierra (Cuenta → Comunidad)
+    async abrirComunidad(activa) {
+      const r = await b.update('comunidad_ajustes', { activa: !!activa }, { eq: { id: true } }).catch(falta027);
+      if (!r?.length) throw new Error('No se ha podido cambiar: solo el coach puede abrir o cerrar la comunidad.');
+      return { disponible: true, activa: !!r[0].activa };
+    },
+    // La fila de quien ha entrado (null si nunca ha entrado; con salido_en si ha salido)
+    async miembroComunidad() {
+      const id = uid();
+      if (!id) return null;
+      return (await b.select('comunidad_miembros', { eq: { perfil_id: id } }).catch(() => []))[0] || null;
+    },
+    // Los que han entrado (el coach: para Cuenta)
+    async miembrosComunidad() {
+      return b.select('comunidad_miembros', { order: [['nombre', 'asc']] }).catch(() => []);
+    },
+    async entrarComunidad(nombre) {
+      await b.rpc('comunidad_unirme', { p_nombre: limpiarNombre(nombre), p_version: VERSION_COMUNIDAD }).catch(falta027);
+      return api.miembroComunidad();
+    },
+    // Salir: lo suyo deja de verse; con borrar, además se borra (y sus fotos de Storage)
+    async salirComunidad({ borrar = false } = {}) {
+      const fotos = await b.rpc('comunidad_salir', { p_borrar: !!borrar });
+      if (fotos?.length) await b.storage.borrar(fotos, 'comunidad').catch(() => {});
+      return api.miembroComunidad();
+    },
+    async ajustesComunidad({ nombre = null, sinRanking = null } = {}) {
+      await b.rpc('comunidad_ajustar', { p_nombre: nombre == null ? null : limpiarNombre(nombre), p_sin_ranking: sinRanking });
+      return api.miembroComunidad();
+    },
+    // Quién se ve (el coach y los que están dentro): perfil_id → { nombre, foto, coach }
+    async personasComunidad() {
+      const filas = await b.rpc('comunidad_personas', {}).catch(() => []);
+      return Object.fromEntries((filas || []).map((x) => [x.perfil_id, { nombre: x.nombre, foto: x.foto || null, coach: !!x.coach }]));
+    },
+    // El muro: los avisos fijados arriba y después lo más nuevo, de `limite` en `limite` (antes: el creado_en del
+    // último que ya se ve). Cada publicación con su autor, sus reacciones (con quién), cuántos comentarios y la mía.
+    async muro({ limite = 20, antes = null } = {}) {
+      const [fijadas, sueltas, personas] = await Promise.all([
+        antes ? [] : b.select('comunidad_posts', { eq: { fijada: true }, order: [['creado_en', 'desc']], limit: 20, cols: COLS_POST }),
+        b.select('comunidad_posts', { eq: { fijada: false }, order: [['creado_en', 'desc']], limit: limite + 1, cols: COLS_POST, ...(antes ? { lte: { creado_en: antes } } : {}) }),
+        api.personasComunidad(),
+      ]);
+      const resto = sueltas.filter((x) => !antes || x.creado_en < antes);
+      const posts = [...fijadas, ...resto.slice(0, limite)];
+      const ids = posts.map((x) => x.id);
+      const [reacciones, comentarios] = ids.length ? await Promise.all([
+        b.select('comunidad_reacciones', { in: { post_id: ids }, cols: 'post_id,autor_id,tipo' }),
+        b.select('comunidad_comentarios', { in: { post_id: ids }, cols: 'id,post_id' }),
+      ]) : [[], []];
+      const yo = uid();
+      const R = agrupar(reacciones, 'post_id');
+      const C = agrupar(comentarios, 'post_id');
+      const autorDe = (id) => personas[id] || { nombre: 'Alguien del equipo', foto: null, coach: false };
+      return {
+        personas,
+        hayMas: resto.length > limite,
+        posts: posts.map((x) => {
+          const rs = R[x.id] || [];
+          const porTipo = {};
+          for (const r of rs) (porTipo[r.tipo] ||= []).push(autorDe(r.autor_id).nombre);
+          return { ...x, autor: autorDe(x.autor_id), mio: x.autor_id === yo, reacciones: porTipo, miReaccion: rs.find((r) => r.autor_id === yo)?.tipo || null, comentarios: (C[x.id] || []).length };
+        }),
+      };
+    },
+    // Publicar: un atleta, texto y una foto opcional (un JPEG ya reducido en el móvil); el coach, un aviso (que puede
+    // fijar arriba). Primero se registra y después se sube la foto (Storage solo acepta las ya registradas).
+    async publicarEnComunidad({ texto = '', foto = null, fijada = false } = {}) {
+      const t = String(texto || '').trim();
+      if (t.length > MAX_POST) throw new Error(`Hasta ${MAX_POST} letras.`);
+      const yo = await api.perfil();
+      const coach = yo?.rol === 'coach';
+      if (!t && !(foto && !coach)) throw new Error(coach ? 'Escribe el aviso.' : 'Escribe algo o elige una foto.');
+      let foto_ruta = null;
+      if (foto) {
+        const atleta = coach ? null : await api.miAtleta();
+        foto_ruta = coach ? `coach/${aleatorio()}.jpg` : `${atleta.id}/${aleatorio()}.jpg`;
+      }
+      const [post] = await b.insert('comunidad_posts', [{ tipo: coach ? 'aviso' : 'post', texto: t || null, foto_ruta, ...(coach && fijada ? { fijada: true } : {}) }]).catch(falta027);
+      if (foto) {
+        try { await b.storage.subir(foto_ruta, foto, 'image/jpeg', { bucket: 'comunidad' }); } catch (e) { await b.delete('comunidad_posts', { eq: { id: post.id } }).catch(() => {}); throw e; }
+      }
+      return post;
+    },
+    // Fijar y ocultar: solo el coach, con sus funciones (la app no puede cambiar publicaciones ni comentarios)
+    async fijarEnComunidad(id, fijada = true) {
+      return b.rpc('comunidad_moderar', { p_post: id, p_fijada: !!fijada, p_oculta: null });
+    },
+    async ocultarEnComunidad(id, oculta = true) {
+      return b.rpc('comunidad_moderar', { p_post: id, p_fijada: null, p_oculta: !!oculta });
+    },
+    // Borrar: la publicación y después su foto (la base no deja borrar una foto que aún use una publicación o un
+    // aviso abierto al coach: entonces se queda hasta que el coach lo resuelva)
+    async borrarDeComunidad(post) {
+      await b.delete('comunidad_posts', { eq: { id: post.id } });
+      if (post.foto_ruta) await b.storage.borrar([post.foto_ruta], 'comunidad').catch(() => {});
+    },
+    // Las fotos del muro, con enlaces que caducan en 5 minutos (la pantalla los pide al abrirla)
+    async urlFotoComunidad(ruta) { return b.storage.url(ruta, 300, 'comunidad'); },
+    // Una reacción (fuerza, fuego, aplauso): la misma otra vez la quita; otra la cambia. Devuelve la que queda.
+    async reaccionar(postId, tipo) {
+      return b.rpc('comunidad_reaccionar', { p_post: postId, p_tipo: tipo });
+    },
+    async comentariosComunidad(postId) {
+      const [filas, personas] = await Promise.all([
+        b.select('comunidad_comentarios', { eq: { post_id: postId }, order: [['creado_en', 'asc']], cols: 'id,post_id,autor_id,texto,oculto,creado_en' }),
+        api.personasComunidad(),
+      ]);
+      const yo = uid();
+      return filas.map((c) => ({ ...c, autor: personas[c.autor_id] || { nombre: 'Alguien del equipo', foto: null, coach: false }, mio: c.autor_id === yo }));
+    },
+    async comentarEnComunidad(postId, texto) {
+      const t = String(texto || '').trim();
+      if (!t) throw new Error('Escribe el comentario.');
+      if (t.length > MAX_COMENTARIO) throw new Error(`Hasta ${MAX_COMENTARIO} letras.`);
+      return (await b.insert('comunidad_comentarios', [{ post_id: postId, texto: t }]))[0];
+    },
+    async borrarComentarioComunidad(id) { return b.delete('comunidad_comentarios', { eq: { id } }); },
+    async ocultarComentarioComunidad(id, oculto = true) {
+      return b.rpc('comunidad_moderar_comentario', { p_comentario: id, p_oculto: !!oculto });
+    },
+    // «Avisar al coach» de una publicación o de un comentario
+    async avisarAlCoach({ postId = null, comentarioId = null, motivo = '' } = {}) {
+      const m = String(motivo || '').trim();
+      if (m.length > MAX_MOTIVO) throw new Error(`El motivo, hasta ${MAX_MOTIVO} letras.`);
+      return b.rpc('comunidad_avisar_coach', { p_post: postId, p_comentario: comentarioId, p_motivo: m || null });
+    },
+    // Los avisos sin resolver (el coach, en Revisar), con lo avisado y quién avisa. Si su autor lo ha borrado,
+    // sale igual con la copia que guardó la base al avisar (borrado: true)
+    async reportesComunidad() {
+      const reps = await b.select('comunidad_reportes', { nulo: ['resuelto_en'], order: [['creado_en', 'desc']] }).catch(() => []);
+      if (!reps.length) return [];
+      const [posts, comentarios, miembros, personas] = await Promise.all([
+        b.select('comunidad_posts', { in: { id: unicos(reps.map((r) => r.post_id)) } }),
+        b.select('comunidad_comentarios', { in: { id: unicos(reps.map((r) => r.comentario_id)) } }),
+        b.select('comunidad_miembros', { cols: 'perfil_id,nombre,salido_en' }).catch(() => []),
+        api.personasComunidad(),
+      ]);
+      const P = porId(posts), C = porId(comentarios);
+      const nombreDe = (id) => personas[id]?.nombre || miembros.find((m) => m.perfil_id === id)?.nombre || null;
+      return reps.map((r) => {
+        const post = r.post_id ? P[r.post_id] || null : null;
+        const comentario = r.comentario_id ? C[r.comentario_id] || null : null;
+        const borrado = r.de_comentario ? !comentario : !post;
+        const texto = borrado ? r.copia_texto : r.de_comentario ? comentario.texto
+          : post.tipo === 'entreno' ? ['Entreno compartido', post.resumen?.nombre, post.texto].filter(Boolean).join(': ') : post.texto;
+        return {
+          ...r, post, comentario, borrado, texto: texto || (r.copia_foto ? 'Una foto' : ''), foto: r.copia_foto || null,
+          quienAvisa: nombreDe(r.autor_id) || 'Alguien del equipo',
+          autor: nombreDe(r.copia_autor_id) || r.copia_autor_nombre || 'Alguien del equipo',
+        };
+      });
+    },
+    // Darlo por resuelto. Si lo avisado ya no está, su foto (que la base guardaba para el coach) se borra
+    async resolverReporte(r) {
+      const id = typeof r === 'object' ? r.id : r;
+      const fila = (await b.update('comunidad_reportes', { resuelto_en: new Date().toISOString() }, { eq: { id } }))[0] || null;
+      if (fila?.copia_foto && !fila.post_id) await b.storage.borrar([fila.copia_foto], 'comunidad').catch(() => {});
+      return fila;
+    },
+    // El coach saca a alguien de la comunidad (y no le deja volver) o le vuelve a admitir
+    async expulsarDeComunidad(atletaId, bloquear = true) {
+      return b.rpc('comunidad_expulsar', { p_atleta: atletaId, p_bloquear: !!bloquear });
+    },
+    // Retos (del coach) con el progreso de cada miembro (solo recuentos), los más recientes primero
+    async retosComunidad() {
+      const [retos, progreso, personas] = await Promise.all([
+        b.select('comunidad_retos', { order: [['hasta', 'desc'], ['desde', 'desc']] }),
+        b.rpc('comunidad_retos_progreso', {}).catch(() => []),
+        api.personasComunidad(),
+      ]);
+      const G = agrupar(progreso || [], 'reto_id');
+      return retos.map((r) => ({
+        ...r,
+        progreso: (G[r.id] || []).map((x) => ({ ...x, foto: personas[x.perfil_id]?.foto || null }))
+          .sort((a, b2) => b2.hechas - a.hechas || String(a.nombre).localeCompare(String(b2.nombre), 'es')),
+      }));
+    },
+    async guardarReto({ titulo, descripcion = null, desde, hasta, objetivo }, id = null) {
+      const fila = { titulo: String(titulo || '').trim(), descripcion: String(descripcion || '').trim() || null, desde, hasta, objetivo: Number(objetivo) };
+      if (!fila.titulo) throw new Error('Ponle un título al reto.');
+      if (!desde || !hasta || hasta < desde) throw new Error('El final del reto, el mismo día que el principio o después.');
+      if (!Number.isInteger(fila.objetivo) || fila.objetivo < 1 || fila.objetivo > 100) throw new Error('El objetivo, de 1 a 100 sesiones.');
+      return id ? (await b.update('comunidad_retos', fila, { eq: { id } }))[0] : (await b.insert('comunidad_retos', [fila]).catch(falta027))[0];
+    },
+    async borrarReto(id) { return b.delete('comunidad_retos', { eq: { id } }); },
+    // Ranking de constancia de esta semana (solo recuentos)
+    async rankingComunidad() {
+      const [filas, personas] = await Promise.all([b.rpc('comunidad_ranking', {}), api.personasComunidad()]);
+      return (filas || []).map((x) => ({ ...x, foto: personas[x.perfil_id]?.foto || null }));
+    },
+    // Compartir con el equipo la sesión terminada: la tarjeta (y sus récords) la hace la base con lo registrado
+    async compartirEnEquipo(sesionId, { texto = '', kilos = false } = {}) {
+      const t = String(texto || '').trim();
+      if (t.length > MAX_POST) throw new Error(`Hasta ${MAX_POST} letras.`);
+      return b.rpc('comunidad_compartir_sesion', { p_sesion: sesionId, p_texto: t || null, p_kilos: !!kilos });
+    },
+    // Los récords que pondrá la base en la tarjeta (para la vista previa): ejercicio_id con récord
+    async recordsParaEquipo(atletaId, sesionId) {
+      return recordsDeEquipo(await api.historial(atletaId), sesionId);
+    },
+    async sesionCompartida(sesionId) {
+      return (await b.select('comunidad_posts', { eq: { sesion_id: sesionId }, cols: 'id', limit: 1 }).catch(() => [])).length > 0;
+    },
+
     // ------------------------------------------------------------ exportaciones
     async exportar(atletaId) {
       const [atleta] = await b.select('atletas', { eq: { id: atletaId } });
@@ -1419,6 +1648,14 @@ export function crearApi(backend) {
         .map(({ id, dispositivo, creada_en, usada_en }) => ({ id, dispositivo, creada_en, usada_en })) : [];
       // Comidas (v0.26): sus comidas del día, su recetario (con las recetas) y su menú
       for (const t of ['comidas_atleta', 'recetas_atleta', 'menu_comidas', 'menu_dias']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      // La comunidad (v0.43): si entró, con qué nombre y lo que ha publicado, comentado, reaccionado y avisado. El
+      // propio atleta, con comunidad_mis_datos() (también lo oculto y aunque haya salido); el coach, de las tablas.
+      if (perfilId && perfilId === uid()) out.comunidad = await b.rpc('comunidad_mis_datos', {}).catch(() => null);
+      else {
+        const [miembro, publicaciones, comentarios, reacciones] = await Promise.all(['comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones']
+          .map((t) => b.select(t, { eq: { atleta_id: atletaId } }).catch(() => [])));
+        out.comunidad = { miembro: miembro[0] || null, publicaciones, comentarios, reacciones };
+      }
       out.recetas = out.recetas_atleta.length ? await b.select('recetas', { in: { id: unicos(out.recetas_atleta.map((x) => x.receta_id)) } }).catch(() => []) : [];
       out.semanas = await b.select('semanas', { in: { bloque_id: out.bloques.map((x) => x.id) } });
       out.sesiones = await b.select('sesiones', { in: { semana_id: out.semanas.map((s) => s.id) } });
@@ -1562,6 +1799,9 @@ export function crearApi(backend) {
       const enCarpeta = await b.storage.listar(atletaId);
       const rutas = [...new Set([...registrados.map((a) => a.ruta), ...enCarpeta])];
       if (rutas.length) await b.storage.borrar(rutas);
+      // Y sus fotos del muro (v0.43, bucket «comunidad»; sin la migración 027, no hay)
+      const delMuro = await b.storage.listar(atletaId, 'comunidad').catch(() => []);
+      if (delMuro.length) await b.storage.borrar(delMuro, 'comunidad').catch(() => {});
       return b.delete('atletas', { eq: { id: atletaId } });
     },
     // Verificación en dos pasos del coach: una vez activada, la base la exige siempre
@@ -1710,12 +1950,14 @@ export function crearApi(backend) {
         const R = porId(await b.select('recetas', { in: { id: unicos(cambios.map((c) => c.receta_id)) }, cols: 'id,nombre,foto_mini' }));
         items.recetas = cambios.map((c) => ({ ...c, receta: R[c.receta_id] || null, atleta: A[c.atleta_id] || null })).filter((c) => c.atleta && c.receta);
       }
+      // Avisos de la comunidad (v0.43; sin la migración 027, ninguno)
+      items.comunidad = await api.reportesComunidad().catch(() => []);
       // Los mensajes cuentan por conversación (como se ven en Revisar), no uno a uno
       const hilo = (c) => c.sesion_id || c.checkin_id || c.archivo_id || `general-${c.atleta_id}`;
       const unicosHilos = [...new Map(items.comentarios.map((c) => [hilo(c), c])).values()];
       const porAtleta = {};
       for (const lista of [items.sesiones, items.checkins, unicosHilos, items.archivos, items.recetas]) for (const x of lista) porAtleta[x.atleta.id] = (porAtleta[x.atleta.id] || 0) + 1;
-      return { ...items, total: items.sesiones.length + items.checkins.length + unicosHilos.length + items.archivos.length + items.recetas.length, porAtleta };
+      return { ...items, total: items.sesiones.length + items.checkins.length + unicosHilos.length + items.archivos.length + items.recetas.length + items.comunidad.length, porAtleta };
     },
     async marcarRevisado(tipo, id, revisado = true) {
       const [tabla, col] = REVISION[tipo];

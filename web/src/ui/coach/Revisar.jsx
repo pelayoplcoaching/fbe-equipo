@@ -49,7 +49,7 @@ function useAtajos(caja, n) {
   return i;
 }
 
-const FILTROS = [['todo', 'Todo'], ['mensajes', 'Mensajes'], ['sesiones', 'Sesiones'], ['checkins', 'Check-ins'], ['videos', 'Vídeos'], ['recetas', 'Recetas']];
+const FILTROS = [['todo', 'Todo'], ['mensajes', 'Mensajes'], ['sesiones', 'Sesiones'], ['checkins', 'Check-ins'], ['videos', 'Vídeos'], ['recetas', 'Recetas'], ['comunidad', 'Equipo']];
 
 // Bandeja del coach: todo lo que espera tu respuesta, de todos los atletas, en un sitio
 export function Revisar({ bandeja, abrirAtleta }) {
@@ -68,7 +68,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
     if (!h) { h = { clave, ultimo: c, n: 0 }; hilos.push(h); }
     h.n++;
   }
-  const cuentas = { mensajes: hilos.length, sesiones: d?.sesiones.length || 0, checkins: d?.checkins.length || 0, videos: d?.archivos.length || 0, recetas: d?.recetas?.length || 0 };
+  const cuentas = { mensajes: hilos.length, sesiones: d?.sesiones.length || 0, checkins: d?.checkins.length || 0, videos: d?.archivos.length || 0, recetas: d?.recetas?.length || 0, comunidad: d?.comunidad?.length || 0 };
   const ver = (k) => filtro === 'todo' || filtro === k;
 
   return (
@@ -91,6 +91,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
           {ver('checkins') && d.checkins.map((c) => <TarjetaCheckin key={c.id} c={c} recargar={recargar} abrirAtleta={abrirAtleta} />)}
           {ver('videos') && d.archivos.map((a) => <TarjetaVideo key={a.id} a={a} recargar={recargar} abrirAtleta={abrirAtleta} />)}
           {ver('recetas') && (d.recetas || []).map((r) => <TarjetaCambioReceta key={r.id} r={r} recargar={recargar} abrirAtleta={abrirAtleta} />)}
+          {ver('comunidad') && (d.comunidad || []).map((r) => <TarjetaReporte key={r.id} r={r} recargar={recargar} />)}
         </div>
       )}
       <p class="mini terciario">Comentar algo lo da por revisado. Las sesiones y los check-ins de más de 4 semanas salen de la bandeja solos.</p>
@@ -265,6 +266,59 @@ function TarjetaCambioReceta({ r, recargar, abrirAtleta }) {
       </div>
     </article>
   );
+}
+
+// «Avisar al coach» en la comunidad (v0.43): lo avisado, quién lo escribió y quién avisa. Ocultarlo (o borrarlo) lo
+// quita del muro; «Resuelto», si está bien así. Si su autor lo ha borrado, sale la copia que guardó la base.
+function TarjetaReporte({ r, recargar }) {
+  const { api, aviso } = useApp();
+  const [ocupado, setOcupado] = useState(false);
+  const oculto = r.borrado ? false : r.de_comentario ? r.comentario.oculto : r.post.oculta;
+  const hacer = async (fn, t) => {
+    if (ocupado) return;
+    setOcupado(true);
+    try { await fn(); aviso(t); recargar(); } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
+  };
+  const ocultar = () => hacer(async () => {
+    if (r.de_comentario) await api.ocultarComentarioComunidad(r.comentario.id, true); else await api.ocultarEnComunidad(r.post.id, true);
+    await api.resolverReporte(r);
+  }, r.de_comentario ? 'Comentario oculto' : 'Publicación oculta');
+  const borrar = () => hacer(async () => {
+    if (r.de_comentario) await api.borrarComentarioComunidad(r.comentario.id); else await api.borrarDeComunidad(r.post);
+    await api.resolverReporte({ ...r, post_id: r.de_comentario ? r.post_id : null });
+  }, 'Borrado del muro');
+  return (
+    <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar tarjeta-reporte">
+      <div class="revisar-cab">
+        <span class="ico-reporte" aria-hidden="true"><Icono n="bandera" /></span>
+        <span class="pila-xs"><strong>{r.de_comentario ? 'Un comentario en el equipo' : 'Una publicación en el equipo'}</strong><span class="mini terciario">De {r.autor} · avisa {r.quienAvisa} · {cuando(r.creado_en)}</span></span>
+      </div>
+      {r.borrado && <p class="mini terciario"><strong>Borrado por su autor</strong> después del aviso: esto es lo que había.</p>}
+      {r.texto && <p class="cita">«{r.texto.length > 300 ? `${r.texto.slice(0, 300)}…` : r.texto}»</p>}
+      {r.foto && <FotoAvisada ruta={r.foto} />}
+      {r.motivo && <p class="peq"><strong>Por qué:</strong> {r.motivo}</p>}
+      {oculto && <p class="mini terciario">Ya está oculto.</p>}
+      <div class="fila-envolver">
+        {!r.borrado && !oculto && <button class="btn btn-peq" disabled={ocupado} onClick={ocultar}><Icono n="ojo" /> Ocultar</button>}
+        {!r.borrado && <button class="btn btn-peq btn-peligro" disabled={ocupado} onClick={borrar}><Icono n="basura" /> Borrar</button>}
+        <button class="btn btn-peq revisar-hecho" disabled={ocupado} onClick={() => hacer(() => api.resolverReporte(r), 'Aviso resuelto')}><Icono n="hecho" /> Resuelto</button>
+      </div>
+    </article>
+  );
+}
+
+// La foto de lo avisado (el coach la puede ver mientras el aviso esté abierto, aunque su autor la haya borrado)
+function FotoAvisada({ ruta }) {
+  const { api } = useApp();
+  const [url, setUrl] = useState(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    api.urlFotoComunidad(ruta).then((u) => vivo && setUrl(u)).catch(() => vivo && setError(true));
+    return () => { vivo = false; };
+  }, [ruta]);
+  if (error) return <p class="mini terciario">La foto ya no está disponible.</p>;
+  return url ? <img class="post-foto" src={url} alt="La foto de lo avisado" loading="lazy" /> : null;
 }
 
 // Bandeja vacía: la barra en su sitio, en el soporte

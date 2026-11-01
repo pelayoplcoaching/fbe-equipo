@@ -1696,6 +1696,414 @@ console.log('\nEl peso, a diario o una vez a la semana (migración 026)');
   await q(`update atletas set peso_frecuencia = 'diario' where id = $1`, [fa.id]);
 }
 
+console.log('\nLa comunidad del equipo (migración 027)');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  const version = 'comunidad-2026-11';
+  await su();
+  const lunesM = (await q(`select ((now() at time zone 'Europe/Madrid')::date - (extract(isodow from (now() at time zone 'Europe/Madrid'))::integer - 1)) d`))[0].d;
+  // Una semana nueva para Ana y otra para Luis (la de esta semana, publicada): para el ranking y para compartir
+  await como(pelayo, 'aal2');
+  const bCA = (await q(`select crear_bloque_desde_plantilla($1, $2, $3) b`, [pl.id, aAna.id, lunesM]))[0].b;
+  const bCL = (await q(`select crear_bloque_desde_plantilla($1, $2, $3) b`, [pl.id, aLuis.id, lunesM]))[0].b;
+  await q(`update bloques set numero = 90 where id = any($1::uuid[])`, [[bCA, bCL]]);
+  await q(`update semanas set programacion = 'programada' where bloque_id = any($1::uuid[])`, [[bCA, bCL]]);
+  const [sCA] = await q(`select s.id from sesiones s join semanas w on w.id = s.semana_id where w.bloque_id = $1 order by s.orden limit 1`, [bCA]);
+  const [sCL] = await q(`select s.id from sesiones s join semanas w on w.id = s.semana_id where w.bloque_id = $1 order by s.orden limit 1`, [bCL]);
+  const pautasCA = await q(`select id, ejercicio_id from sesion_ejercicios where sesion_id = $1 order by orden`, [sCA.id]);
+
+  // Cerrada de entrada
+  await como(ana);
+  check((await q(`select activa from comunidad_ajustes`))[0]?.activa === false, 'de entrada la comunidad está cerrada (y cualquier cuenta puede saberlo)');
+  check((await q(`update comunidad_ajustes set activa = true returning id`)).length === 0, 'un atleta no la abre');
+  check(await falla(`select comunidad_unirme('Ana L.', $1)`, [version]), 'cerrada, nadie puede entrar');
+  await como(pelayo, 'aal2');
+  await q(`update comunidad_ajustes set activa = true`);
+  check((await q(`select activa from comunidad_ajustes`))[0].activa === true, 'el coach la abre (Cuenta → Comunidad)');
+  const [aviso1] = await q(`insert into comunidad_posts (tipo, texto, fijada) values ('aviso', 'Bienvenidos al muro del equipo', true) returning *`);
+  check(aviso1.autor_id === pelayo && aviso1.fijada && aviso1.atleta_id === null, 'el coach publica un aviso fijado arriba');
+  const [reto] = await q(`insert into comunidad_retos (titulo, desde, hasta, objetivo) values ('8 sesiones en 4 semanas', $1::date - 7, $1::date + 20, 8) returning id`, [lunesM]);
+  check(await falla(`insert into comunidad_retos (titulo, desde, hasta, objetivo) values ('Mal', current_date, current_date - 1, 3)`), 'un reto con sus fechas en orden');
+
+  // Quien no ha entrado no ve nada (ni nombres, ni fotos, ni recuentos)
+  await como(ana);
+  check(await n(`select count(*)::int n from comunidad_posts`) === 0 && await n(`select count(*)::int n from comunidad_retos`) === 0
+    && (await q(`select * from comunidad_personas()`)).length === 0 && (await q(`select * from comunidad_ranking()`)).length === 0
+    && (await q(`select * from comunidad_retos_progreso()`)).length === 0, 'sin haber entrado, Ana no ve nada: ni el muro, ni quién está, ni retos ni ranking');
+  await como(intruso);
+  check(await falla(`select comunidad_unirme('Intruso', $1)`, [version]), 'una cuenta sin ficha de atleta no puede entrar');
+  await como(ana);
+  check(await falla(`select comunidad_unirme('Ana L.', 'comunidad-2020-01')`), 'hay que aceptar el texto vigente');
+  check(await falla(`select comunidad_unirme('A', $1)`, [version]) && await falla(`select comunidad_unirme($1, $2)`, ['x'.repeat(41), version]), 'el nombre, de 2 a 40 letras');
+  check(await falla(`insert into comunidad_miembros (atleta_id, perfil_id, nombre, version) values ($1, $2, 'Ana', $3)`, [aAna.id, ana, version]), 'entrar no se hace escribiendo en la tabla');
+  await q(`select comunidad_unirme('  Ana   L. ', $1)`, [version]);
+  const [mAna] = await q(`select * from comunidad_miembros`);
+  check(mAna.nombre === 'Ana L.' && mAna.version === version && Math.abs(new Date(mAna.aceptado_en) - Date.now()) < 60000 && !mAna.salido_en, 'Ana entra con su nombre, el texto que aceptó y la hora de la base');
+  check(await falla(`update comunidad_miembros set sin_ranking = true`), 'no cambia su fila a mano (con sus ajustes)');
+  await como(luis);
+  await q(`select comunidad_unirme('Luis M.', $1)`, [version]);
+  check(await n(`select count(*)::int n from comunidad_miembros`) === 1, 'cada uno solo ve su propia fila de miembro');
+
+  // Dentro: el muro, quién está
+  await como(ana);
+  const personas = await q(`select * from comunidad_personas() order by coach desc, nombre`);
+  check(personas.length === 3 && personas[0].coach && personas[0].nombre === 'Pelayo Pérez' && personas.some((x) => x.nombre === 'Luis M.')
+    && Object.keys(personas[0]).sort().join() === 'coach,foto,nombre,perfil_id', 'dentro ve al coach y a los demás miembros: solo nombre y foto de perfil');
+  check((await q(`select id from comunidad_posts`)).length === 1, 've el aviso del coach');
+  const [pAna] = await q(`insert into comunidad_posts (texto, autor_id, fijada) values ('Primera semana completa', $1, true) returning *`, [luis]);
+  check(pAna.autor_id === ana && pAna.atleta_id === aAna.id && pAna.fijada === false && pAna.tipo === 'post', 'publica a su nombre aunque mande otro autor, y sin fijar');
+  check(await falla(`insert into comunidad_posts (tipo, texto) values ('aviso', 'Soy el coach')`), 'no publica avisos del coach');
+  check(await falla(`insert into comunidad_posts (tipo, texto, resumen, sesion_id) values ('entreno', 'Mi sesión', '{"nombre":"Inventada","series":99}', $1)`, [ses.id]),
+    'ni un entreno con la tarjeta hecha por ella (la hace la base)');
+  check(await falla(`insert into comunidad_posts (texto) values ($1)`, ['x'.repeat(2001)]) && await falla(`insert into comunidad_posts (texto) values (' ')`), 'texto de 1 a 2000 letras, con algo visible');
+  check(await falla(`insert into comunidad_retos (titulo, desde, hasta, objetivo) values ('Mío', current_date, current_date + 7, 3)`)
+    && (await q(`update comunidad_retos set objetivo = 1 returning id`)).length === 0 && (await q(`delete from comunidad_retos returning id`)).length === 0, 'no crea, cambia ni borra retos (ve los del coach)');
+  check(await falla(`update comunidad_posts set fijada = true where id = $1`, [pAna.id]) || (await q(`update comunidad_posts set fijada = true where id = $1 returning id`, [pAna.id])).length === 0, 'no fija nada');
+  await como(luis);
+  const [pLuis] = await q(`insert into comunidad_posts (texto) values ('Hoy, sentadilla') returning id`);
+  check(await falla(`update comunidad_posts set texto = 'Cambiado' where id = $1`, [pAna.id]), 'Luis no cambia lo de Ana');
+  await q(`delete from comunidad_posts where id = $1`, [pAna.id]);
+  check(await n(`select count(*)::int n from comunidad_posts where id = $1`, [pAna.id]) === 1, 'ni lo borra');
+  check(await falla(`update comunidad_posts set oculta = true where id = $1`, [pAna.id]) || (await q(`update comunidad_posts set oculta = true where id = $1 returning id`, [pAna.id])).length === 0, 'ni lo oculta');
+
+  // Reacciones
+  check(await falla(`insert into comunidad_reacciones (post_id, autor_id, tipo) values ($1, $2, 'fuerza')`, [pAna.id, ana]), 'las reacciones no se escriben a mano (nadie reacciona por otro)');
+  check((await q(`select comunidad_reaccionar($1, 'fuerza') r`, [pAna.id]))[0].r === 'fuerza', 'Luis reacciona 💪 a lo de Ana');
+  check((await q(`select comunidad_reaccionar($1, 'fuerza') r`, [pAna.id]))[0].r === null && await n(`select count(*)::int n from comunidad_reacciones`) === 0, 'tocar otra vez la quita');
+  await q(`select comunidad_reaccionar($1, 'fuego')`, [pAna.id]);
+  await q(`select comunidad_reaccionar($1, 'aplauso')`, [pAna.id]);
+  check((await q(`select tipo from comunidad_reacciones where post_id = $1`, [pAna.id])).map((x) => x.tipo).join() === 'aplauso', 'tocar otra la cambia: una por persona');
+  check(await falla(`select comunidad_reaccionar($1, 'corazon')`, [pAna.id]), 'solo 💪 🔥 👏');
+  // Notificaciones: Luis tiene el móvil activado; Ana no (a ella no se le acumula nada)
+  await como(ana);
+  await q(`select comunidad_reaccionar($1, 'fuego')`, [pLuis.id]);
+  const [cAna] = await q(`insert into comunidad_comentarios (post_id, texto, autor_id) values ($1, '¡Bien hecho!', $2) returning *`, [pLuis.id, luis]);
+  check(cAna.autor_id === ana && cAna.atleta_id === aAna.id, 'comenta a su nombre');
+  let nl = await notis(`usuario_id = $1 and tipo = 'comunidad'`, [luis]);
+  check(nl.length === 1 && nl[0].titulo === 'Ana L. ha reaccionado a tu publicación' && nl[0].url === '#equipo' && !nl[0].cuerpo.includes('Bien hecho'),
+    'a Luis le llega una sola por su publicación (reacción y comentario en la misma hora), sin el texto');
+  await como(luis);
+  await q(`select comunidad_reaccionar($1, 'fuerza')`, [pLuis.id]);
+  check((await notis(`usuario_id = $1 and tipo = 'comunidad'`, [luis])).length === 1, 'lo suyo en lo suyo no le avisa');
+  await como(luis);
+  check(await falla(`insert into comunidad_comentarios (post_id, texto) values ($1, $2)`, [pAna.id, 'x'.repeat(1001)]), 'comentarios de hasta 1000 letras');
+  const [cLuis] = await q(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Gracias') returning id`, [pLuis.id]);
+  await como(ana);
+  check(await n(`select count(*)::int n from comunidad_comentarios where post_id = $1`, [pLuis.id]) === 2 && await n(`select count(*)::int n from comunidad_reacciones where post_id = $1`, [pLuis.id]) === 2,
+    'Ana ve los comentarios y quién ha reaccionado');
+  await q(`delete from comunidad_comentarios where id = $1`, [cLuis.id]);
+  check(await n(`select count(*)::int n from comunidad_comentarios where id = $1`, [cLuis.id]) === 1, 'no borra el comentario de otro');
+  check(await falla(`update comunidad_comentarios set oculto = true where id = $1`, [cLuis.id]) || (await q(`update comunidad_comentarios set oculto = true where id = $1 returning id`, [cLuis.id])).length === 0, 'ni lo oculta');
+  await q(`delete from comunidad_comentarios where id = $1`, [cAna.id]);
+  check(await n(`select count(*)::int n from comunidad_comentarios where id = $1`, [cAna.id]) === 0, 'el suyo sí lo borra');
+
+  // Compartir un entreno: la tarjeta la hace la base
+  check(await falla(`select comunidad_compartir_sesion($1)`, [sCL.id]), 'no comparte la sesión de otro');
+  check(await falla(`select comunidad_compartir_sesion($1)`, [sCA.id]), 'ni una sin terminar');
+  await q(`insert into series (sesion_ejercicio_id, numero, kg, reps, rpe) values ($1, 1, 70, 8, 8), ($1, 2, 72.5, 6, 9), ($2, 1, 55, 10, 8)`, [pautasCA[0].id, pautasCA[1].id]);
+  await q(`update sesiones set completada = true, fecha_realizada = current_date, duracion_min = 55 where id = $1`, [sCA.id]);
+  const idE1 = (await q(`select comunidad_compartir_sesion($1, 'Sin kilos', false) id`, [ses.id]))[0].id;
+  const [e1] = await q(`select * from comunidad_posts where id = $1`, [idE1]);
+  const txt1 = JSON.stringify(e1.resumen);
+  check(e1.tipo === 'entreno' && e1.autor_id === ana && e1.resumen.con_kilos === false && e1.resumen.series >= 2 && e1.resumen.ejercicios.length >= 1 && !/"kg"|"e1rm"|"reps"/.test(txt1),
+    `comparte una sesión terminada sin los kilos: nombre, fecha, series y ejercicios (${txt1.slice(0, 120)}…)`);
+  check(!e1.resumen.ejercicios.some((x) => x.record), 'el primer día de un ejercicio no hay récord');
+  check(await falla(`select comunidad_compartir_sesion($1)`, [ses.id]), 'cada sesión, una vez');
+  check(await falla(`select comunidad_compartir_sesion($1, null, true, $2)`, [sCA.id, [press.id]]), 'la app ya no dice en qué hubo récord: lo decide la base');
+  const idE2 = (await q(`select comunidad_compartir_sesion($1, null, true) id`, [sCA.id]))[0].id;
+  const [e2] = await q(`select resumen from comunidad_posts where id = $1`, [idE2]);
+  const pressE2 = e2.resumen.ejercicios.find((x) => x.nombre === 'Press banca');
+  check(e2.resumen.con_kilos && e2.resumen.minutos === 55 && e2.resumen.series === 3 && pressE2?.kg === 70 && pressE2?.reps === 8 && pressE2.record === true && pressE2.e1rm > 80,
+    `con «Enseñar los kilos», la mejor serie de cada ejercicio y el récord con su 1RM estimado, calculados por la base (${JSON.stringify(pressE2)})`);
+  check(e2.resumen.ejercicios.filter((x) => x.record).length === 1, 'récord donde el 1RM estimado de hoy supera al mejor de antes (el remo de hoy es el primero: sin récord)');
+  check(await falla(`update comunidad_posts set resumen = '{"nombre":"Trampa","series":99}' where id = $1`, [idE2]) || (await q(`update comunidad_posts set resumen = '{"nombre":"Trampa"}' where id = $1 returning id`, [idE2])).length === 0,
+    'y nadie puede cambiar la tarjeta');
+  await como(luis);
+  check(await falla(`select comunidad_compartir_sesion($1)`, [sCA.id]), 'Luis no comparte la sesión de Ana');
+  check((await q(`select resumen from comunidad_posts where id = $1`, [idE2]))[0].resumen.ejercicios.length >= 2, 'y la ve en el muro');
+
+  // Avisar al coach
+  await como(ana);
+  const idRep = (await q(`select comunidad_avisar_coach($1, null, 'No me gusta este comentario') id`, [pLuis.id]))[0].id;
+  check(!!idRep && (await q(`select comunidad_avisar_coach($1, null, 'Otra vez') id`, [pLuis.id]))[0].id === idRep, 'avisa al coach de una publicación (una vez mientras siga abierto)');
+  check(await n(`select count(*)::int n from comunidad_reportes`) === 0, 'y no ve los avisos (ni el suyo)');
+  check(await falla(`insert into comunidad_reportes (post_id, autor_id) values ($1, $2)`, [pLuis.id, ana]), 'los avisos no se escriben a mano');
+  check((await notis(`usuario_id = $1 and clave = $2`, [pelayo, 'comunidad_reporte:' + idRep])).some((x) => x.url === '#revisar' && x.tipo === 'comunidad'), 'al coach le llega a Revisar');
+  await como(pelayo, 'aal2');
+  const reps = await q(`select * from comunidad_reportes where resuelto_en is null`);
+  check(reps.length === 1 && reps[0].motivo === 'No me gusta este comentario', 'el coach lo ve en Revisar');
+  // Ocultar: deja de verse (con sus comentarios y reacciones), también para su autor
+  await q(`select comunidad_moderar($1, null, true)`, [pLuis.id]);
+  await q(`update comunidad_reportes set resuelto_en = '2000-01-01' where id = $1`, [idRep]);
+  check(new Date((await q(`select resuelto_en from comunidad_reportes where id = $1`, [idRep]))[0].resuelto_en) > new Date(Date.now() - 60000), 'lo da por resuelto (con la hora de la base)');
+  await como(ana);
+  check(await n(`select count(*)::int n from comunidad_posts where id = $1`, [pLuis.id]) === 0 && await n(`select count(*)::int n from comunidad_reacciones where post_id = $1`, [pLuis.id]) === 0
+    && await n(`select count(*)::int n from comunidad_comentarios where post_id = $1`, [pLuis.id]) === 0, 'oculta, Ana ya no la ve (ni sus comentarios ni sus reacciones)');
+  check(await falla(`select comunidad_reaccionar($1, 'fuego')`, [pLuis.id]) && await falla(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Hola')`, [pLuis.id]), 'ni reacciona ni comenta en ella');
+  await como(luis);
+  check(await n(`select count(*)::int n from comunidad_posts where id = $1`, [pLuis.id]) === 0, 'tampoco su autor');
+
+  // Retos y ranking: solo recuentos
+  await como(ana);
+  const prog = await q(`select * from comunidad_retos_progreso()`);
+  const progAna = prog.find((x) => x.perfil_id === ana);
+  check(prog.length === 2 && progAna.yo && progAna.hechas >= 2 && progAna.objetivo === 8 && Object.keys(prog[0]).sort().join() === 'hechas,nombre,objetivo,perfil_id,reto_id,yo',
+    `el progreso del reto: cada miembro con sus sesiones hechas y el objetivo, nada más (Ana ${progAna?.hechas}/8)`);
+  const rk = await q(`select * from comunidad_ranking() order by nombre`);
+  check(rk.length === 2 && rk[0].nombre === 'Ana L.' && rk[0].hechas === 1 && rk[0].previstas === 1 && rk[1].hechas === 0 && Object.keys(rk[0]).sort().join() === 'hechas,nombre,perfil_id,previstas,yo',
+    'el ranking de la semana: sesiones hechas de las previstas (solo recuentos)');
+  await como(luis);
+  await q(`select comunidad_ajustar(null, true)`);
+  check((await q(`select * from comunidad_ranking()`)).map((x) => x.yo).join() === 'false,true' || (await q(`select * from comunidad_ranking()`)).length === 2, 'Luis deja de salir en el ranking (él sigue viendo lo suyo)');
+  await como(ana);
+  check(!(await q(`select * from comunidad_ranking()`)).some((x) => x.perfil_id === luis) && !(await q(`select * from comunidad_retos_progreso()`)).some((x) => x.perfil_id === luis),
+    'y Ana ya no lo ve ni en el ranking ni en los retos');
+  await como(luis);
+  check((await q(`select * from comunidad_retos_progreso()`)).some((x) => x.perfil_id === luis && x.yo), 'pero él sí ve su progreso');
+  check(await falla(`select comunidad_ajustar('L', null)`), 'cambiar el nombre, también de 2 a 40 letras');
+  await q(`select comunidad_ajustar('Luis Martín', false)`);
+
+  // Fotos en Storage: las ven los miembros mientras la publicación se vea
+  await como(ana);
+  const ruta = `${aAna.id}/abcdefgh12.jpg`;
+  check(await falla(`insert into comunidad_posts (texto, foto_ruta) values ('Foto', $1)`, [`${aLuis.id}/abcdefgh12.jpg`]), 'su foto, solo en su carpeta');
+  check(await falla(`insert into storage.objects (bucket_id, name) values ('comunidad', $1)`, [ruta]), 'sin publicación registrada, no se sube');
+  const [pFoto] = await q(`insert into comunidad_posts (texto, foto_ruta) values ('Con foto', $1) returning id`, [ruta]);
+  check(await falla(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [ruta]), 'ni va al bucket de los vídeos y fotos de progreso (las del muro tienen el suyo)');
+  await q(`insert into storage.objects (bucket_id, name) values ('comunidad', $1)`, [ruta]);
+  await como(luis);
+  check((await q(`select name from storage.objects where name = $1`, [ruta])).length === 1, 'Luis (miembro) ve la foto de Ana');
+  check(await falla(`insert into storage.objects (bucket_id, name) values ('comunidad', $1)`, [`${aAna.id}/zzzzzzzz12.jpg`]), 'y no sube nada a la carpeta de Ana');
+  await como(intruso);
+  check((await q(`select name from storage.objects where name = $1`, [ruta])).length === 0, 'una cuenta de fuera, no');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderar($1, null, true)`, [pFoto.id]);
+  check((await q(`select name from storage.objects where name = $1`, [ruta])).length === 1, 'el coach la sigue viendo aunque la oculte');
+  await como(luis);
+  check((await q(`select name from storage.objects where name = $1`, [ruta])).length === 0, 'oculta la publicación, Luis ya no ve la foto');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderar($1, null, false)`, [pFoto.id]);
+
+  // Salir: lo suyo deja de verse (y vuelve al volver)
+  await como(ana);
+  check((await q(`select comunidad_salir() f`))[0].f.length === 0, 'Ana sale (sin borrar lo suyo)');
+  check(await n(`select count(*)::int n from comunidad_posts`) === 0 && (await q(`select * from comunidad_personas()`)).length === 0, 'fuera, ya no ve nada');
+  check(await falla(`insert into comunidad_posts (texto) values ('Sigo aquí')`), 'ni publica');
+  await como(luis);
+  check(await n(`select count(*)::int n from comunidad_posts where autor_id = $1`, [ana]) === 0 && await n(`select count(*)::int n from comunidad_reacciones where autor_id = $1`, [ana]) === 0
+    && !(await q(`select * from comunidad_personas()`)).some((x) => x.perfil_id === ana) && !(await q(`select * from comunidad_ranking()`)).some((x) => x.perfil_id === ana),
+    'para Luis desaparece todo lo de Ana: publicaciones, reacciones, su nombre y su sitio en el ranking');
+  check((await q(`select name from storage.objects where name = $1`, [ruta])).length === 0, 'también su foto');
+  await como(ana);
+  await q(`select comunidad_unirme('Ana L.', $1)`, [version]);
+  await como(luis);
+  check(await n(`select count(*)::int n from comunidad_posts where autor_id = $1`, [ana]) === 4, 'si vuelve a entrar, lo suyo vuelve a verse');
+
+  // De baja, fuera al momento
+  await como(pelayo, 'aal2');
+  await q(`update atletas set estado = 'baja' where id = $1`, [aLuis.id]);
+  await como(luis);
+  check(await n(`select count(*)::int n from comunidad_posts`) === 0 && await falla(`insert into comunidad_posts (texto) values ('De baja')`) && await falla(`select comunidad_unirme('Luis', $1)`, [version]),
+    'un atleta de baja deja de ver la comunidad al momento (ni publica ni puede volver a entrar)');
+  await como(ana);
+  check(!(await q(`select * from comunidad_personas()`)).some((x) => x.perfil_id === luis), 'y los demás dejan de verlo');
+  await como(pelayo, 'aal2');
+  await q(`update atletas set estado = 'activo' where id = $1`, [aLuis.id]);
+
+  // Avisos del coach a todos (con sus preferencias)
+  const [aviso2] = await q(`insert into comunidad_posts (tipo, texto) values ('aviso', 'Mañana no hay sesión en el gimnasio') returning id`);
+  nl = await notis(`clave = $1`, ['comunidad_aviso:' + aviso2.id]);
+  check(nl.some((x) => x.usuario_id === luis) && !nl.some((x) => x.usuario_id === pelayo) && nl.every((x) => x.titulo === 'Pelayo ha publicado un aviso en el equipo' && x.url === '#equipo' && !x.cuerpo.includes('gimnasio')),
+    'un aviso del coach llega a los miembros (no a él), sin su texto');
+  await su();
+  await q(`update preferencias_notificaciones set desactivados = '{comunidad}' where usuario_id = $1`, [luis]);
+  await como(pelayo, 'aal2');
+  const [aviso3] = await q(`insert into comunidad_posts (tipo, texto) values ('aviso', 'Otro aviso') returning id`);
+  check(!(await notis(`clave = $1`, ['comunidad_aviso:' + aviso3.id])).some((x) => x.usuario_id === luis), 'quien quita «Comunidad» en Notificaciones no las recibe');
+  await q(`delete from comunidad_posts where id = $1`, [aviso2.id]);
+  check((await notis(`clave = $1 and estado = 'pendiente'`, ['comunidad_aviso:' + aviso2.id])).length === 0, 'una publicación borrada antes de que salga su notificación ya no avisa');
+  await su();
+  await q(`update preferencias_notificaciones set desactivados = '{}' where usuario_id = $1`, [luis]);
+
+  // El coach: todo; su ficha del modo atleta nunca es miembro
+  await como(pelayo, 'aal2');
+  check(await n(`select count(*)::int n from comunidad_posts`) >= 5 && await n(`select count(*)::int n from comunidad_miembros`) === 2, 'el coach lo ve todo (también lo oculto)');
+  const [yo] = await q(`insert into atletas (nombre, perfil_id, estado, nutricion) values ('Pelayo', $1, 'activo', false) returning id`, [pelayo]);
+  check(await falla(`select comunidad_unirme('Pelayo', $1)`, [version]), 'su ficha de atleta (modo atleta) no entra como miembro');
+  await q(`delete from atletas where id = $1`, [yo.id]);
+  check(await falla(`insert into comunidad_posts (tipo, texto) values ('post', 'Como atleta')`), 'el coach publica avisos, no publicaciones de atleta');
+  await q(`select comunidad_moderar($1, false, null)`, [aviso1.id]);
+  await q(`delete from comunidad_comentarios`);
+  check(await n(`select count(*)::int n from comunidad_comentarios`) === 0, 'y borra cualquier comentario');
+
+  // Cerrada otra vez: nadie ve nada
+  await q(`update comunidad_ajustes set activa = false`);
+  await como(ana);
+  check(await n(`select count(*)::int n from comunidad_posts`) === 0 && (await q(`select * from comunidad_personas()`)).length === 0 && (await q(`select * from comunidad_ranking()`)).length === 0,
+    'con la comunidad cerrada, los atletas no ven nada');
+  await anon();
+  check(await falla(`select * from comunidad_posts`) && await falla(`select * from comunidad_personas()`) && await falla(`select comunidad_reaccionar($1, 'fuego')`, [aviso1.id]), 'sin sesión, nada');
+  // Ordenado para lo que sigue
+  await su();
+  await q(`delete from comunidad_reportes`);
+  await q(`delete from comunidad_posts`);
+  await q(`delete from comunidad_miembros`);
+  await q(`delete from comunidad_retos`);
+  await q(`delete from comunidad_cupos`);
+  await q(`delete from bloques where id = any($1::uuid[])`, [[bCA, bCL]]);
+  await q(`delete from storage.objects where name = $1`, [ruta]);
+  await q(`delete from notificaciones where tipo = 'comunidad'`);
+}
+
+console.log('\nLo que encontró la revisión independiente de la 027');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  const version = 'comunidad-2026-11';
+  await como(pelayo, 'aal2');
+  await q(`update comunidad_ajustes set activa = true`);
+  await como(ana); await q(`select comunidad_unirme('Ana L.', $1)`, [version]);
+  await como(luis); await q(`select comunidad_unirme('Luis M.', $1)`, [version]);
+
+  // F1: un aviso al coach sobrevive aunque su autor borre lo avisado (con una copia), y su foto también
+  const fotoL = `${aLuis.id}/fotoluis0001.jpg`;
+  const [pL] = await q(`insert into comunidad_posts (texto, foto_ruta) values ('Esto es un insulto', $1) returning id`, [fotoL]);
+  await q(`insert into storage.objects (bucket_id, name) values ('comunidad', $1)`, [fotoL]);
+  const [cL] = await q(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Otro insulto') returning id`, [pL.id]);
+  await como(ana);
+  const rPost = (await q(`select comunidad_avisar_coach($1, null, 'acoso') id`, [pL.id]))[0].id;
+  const rCom = (await q(`select comunidad_avisar_coach(null, $1, 'acoso') id`, [cL.id]))[0].id;
+  await como(luis);
+  check(await falla(`delete from storage.objects where bucket_id = 'comunidad' and name = $1`, [fotoL]) || (await q(`delete from storage.objects where bucket_id = 'comunidad' and name = $1 returning id`, [fotoL])).length === 0,
+    'mientras su publicación exista, el autor no puede borrar (ni cambiar por otra) su foto');
+  await q(`delete from comunidad_comentarios where id = $1`, [cL.id]);
+  await q(`delete from comunidad_posts where id = $1`, [pL.id]);
+  await q(`delete from storage.objects where bucket_id = 'comunidad' and name = $1`, [fotoL]);
+  await como(pelayo, 'aal2');
+  const reps = await q(`select * from comunidad_reportes where id = any($1::uuid[]) and resuelto_en is null`, [[rPost, rCom]]);
+  const rp = reps.find((r) => r.id === rPost), rc = reps.find((r) => r.id === rCom);
+  check(reps.length === 2 && rp.post_id === null && rp.copia_texto === 'Esto es un insulto' && rp.copia_autor_nombre === 'Luis M.' && rp.copia_atleta_id === aLuis.id && rp.copia_foto === fotoL
+    && rc.de_comentario && rc.comentario_id === null && rc.copia_texto === 'Otro insulto', 'si el autor borra lo avisado, los avisos siguen ahí para el coach, con la copia (texto, autor, foto)');
+  check((await q(`select name from storage.objects where bucket_id = 'comunidad' and name = $1`, [fotoL])).length === 1, 'y la foto sigue en Storage (el coach la ve) mientras el aviso esté abierto');
+  await q(`update comunidad_reportes set resuelto_en = now() where id = any($1::uuid[])`, [[rPost, rCom]]);
+  await q(`delete from storage.objects where bucket_id = 'comunidad' and name = $1`, [fotoL]);
+
+  // F2: bucket propio, cupo que no se recupera borrando, sin cambiar una foto por otra
+  await su();
+  const [bucket] = await q(`select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'comunidad'`);
+  check(bucket && bucket.public === false && Number(bucket.file_size_limit) <= 650000 && bucket.allowed_mime_types.join() === 'image/jpeg', 'las fotos del muro van a su propio bucket privado: solo JPEG y de 600 KB como mucho');
+  check((await q(`select count(*)::int n from pg_policies where tablename = 'objects' and policyname like 'fbe_comunidad%' and cmd = 'UPDATE'`))[0].n === 0, 'sin permiso para sobrescribir una foto');
+  await como(ana);
+  const rutaT = `${aAna.id}/tarde00001.jpg`;
+  const [pT] = await q(`insert into comunidad_posts (texto, foto_ruta) values ('Foto tardía', $1) returning id`, [rutaT]);
+  await su(); await q(`update comunidad_posts set creado_en = now() - interval '1 hour' where id = $1`, [pT.id]);
+  await como(ana);
+  check(await falla(`insert into storage.objects (bucket_id, name) values ('comunidad', $1)`, [rutaT]), 'la foto se sube al publicar, no una hora después (cuando ya se ha visto la publicación sin ella)');
+  await q(`delete from comunidad_posts where id = $1`, [pT.id]);
+  await su(); await q(`delete from comunidad_cupos`);
+  await como(ana);
+  let cupo = 0;
+  for (let i = 0; i < 21; i++) {
+    try { const [x] = await q(`insert into comunidad_posts (texto) values ('ciclo') returning id`); await q(`delete from comunidad_posts where id = $1`, [x.id]); cupo++; } catch { break; }
+  }
+  check(cupo === 20, `borrar y volver a publicar no da más cupo: ${cupo} publicaciones en 24 horas`);
+  check(await falla(`select comunidad_compartir_sesion($1)`, [ses.id]), 'compartir un entreno también gasta cupo');
+  await su(); await q(`delete from comunidad_cupos`);
+
+  // F3: si cambia el texto de la entrada, hay que volver a aceptarlo
+  await q(`update comunidad_miembros set version = 'comunidad-2020-01' where perfil_id = $1`, [ana]);
+  await como(ana);
+  check((await q(`select comunidad_soy_miembro() v`))[0].v === false && await n(`select count(*)::int n from comunidad_posts`) === 0 && (await q(`select * from comunidad_personas()`)).length === 0,
+    'con el texto aceptado antiguo, no está dentro (no ve nada)');
+  await como(luis);
+  check(!(await q(`select * from comunidad_personas()`)).some((x) => x.perfil_id === ana), 'ni los demás la ven');
+  await como(ana); await q(`select comunidad_unirme('Ana L.', $1)`, [version]);
+  check((await q(`select comunidad_soy_miembro() v`))[0].v === true, 'al aceptar el texto vigente, vuelve a estar dentro');
+
+  // F4: el coach saca a alguien (y no le deja volver) y le vuelve a admitir
+  check(await falla(`select comunidad_expulsar($1, true)`, [aLuis.id]), 'un atleta no saca a nadie');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_expulsar($1, true)`, [aLuis.id]);
+  await como(ana);
+  check(!(await q(`select * from comunidad_personas()`)).some((x) => x.perfil_id === luis), 'el coach saca a Luis: deja de verse');
+  await como(luis);
+  check((await q(`select comunidad_soy_miembro() v`))[0].v === false && await falla(`select comunidad_unirme('Luis M.', $1)`, [version]), 'y Luis no puede volver a entrar');
+  await como(pelayo, 'aal2'); await q(`select comunidad_expulsar($1, false)`, [aLuis.id]);
+  await como(luis); await q(`select comunidad_unirme('Luis M.', $1)`, [version]);
+  check((await q(`select comunidad_soy_miembro() v`))[0].v === true, 'al readmitirle, puede volver a entrar él');
+
+  // F5: los récords los decide la base (una sesión peor que la anterior no es récord)
+  await como(pelayo, 'aal2');
+  const bR = (await q(`select crear_bloque_desde_plantilla($1, $2, $3) b`, [pl.id, aLuis.id, lunes]))[0].b;
+  await q(`update bloques set numero = 91 where id = $1`, [bR]);
+  await q(`update semanas set programacion = 'programada' where bloque_id = $1`, [bR]);
+  const [sR] = await q(`select s.id from sesiones s join semanas w on w.id = s.semana_id where w.bloque_id = $1 order by s.orden limit 1`, [bR]);
+  const [seR] = await q(`select id from sesion_ejercicios where sesion_id = $1 and ejercicio_id = $2`, [sR.id, press.id]);
+  const [sViejo] = await q(`select s.id from sesiones s join semanas w on w.id = s.semana_id where w.bloque_id = $1 order by s.orden limit 1`, [bLuis]);
+  const [seViejo] = await q(`select id from sesion_ejercicios where sesion_id = $1 and ejercicio_id = $2`, [sViejo.id, press.id]);
+  await su();
+  await q(`delete from series where sesion_ejercicio_id = $1`, [seViejo.id]);
+  await q(`insert into series (sesion_ejercicio_id, atleta_id, numero, kg, reps, rpe, registrada_en) values ($1, $2, 1, 100, 5, 8, now() - interval '14 days')`, [seViejo.id, aLuis.id]);
+  await q(`insert into series (sesion_ejercicio_id, atleta_id, numero, kg, reps, rpe) values ($1, $2, 1, 40, 5, 8)`, [seR.id, aLuis.id]);
+  await q(`update sesiones set completada = true, fecha_realizada = current_date where id = $1`, [sR.id]);
+  await como(luis);
+  const idR = (await q(`select comunidad_compartir_sesion($1, null, true) id`, [sR.id]))[0].id;
+  const [eR] = await q(`select resumen from comunidad_posts where id = $1`, [idR]);
+  check(!eR.resumen.ejercicios.some((x) => x.record), 'con 40 kg después de 100 kg, la tarjeta no dice récord (lo decide la base)');
+
+  // F6: todo lo suyo, también lo oculto y tras salir («Descargar mis datos»)
+  await como(ana);
+  const [pOculta] = await q(`insert into comunidad_posts (texto) values ('Me la ocultarán') returning id`);
+  await como(pelayo, 'aal2'); await q(`select comunidad_moderar($1, null, true)`, [pOculta.id]);
+  await como(ana);
+  check(await n(`select count(*)::int n from comunidad_posts where id = $1`, [pOculta.id]) === 0, 'en el muro, su autora no ve lo que el coach le ha ocultado');
+  await q(`select comunidad_salir(false)`);
+  const mios = (await q(`select comunidad_mis_datos() d`))[0].d;
+  check(mios.miembro?.nombre === 'Ana L.' && mios.publicaciones.some((x) => x.id === pOculta.id && x.oculta) && Array.isArray(mios.comentarios) && Array.isArray(mios.avisos_al_coach)
+    && mios.avisos_al_coach.every((r) => !('copia_texto' in r)), 'tras salir, «mis datos» le da todo lo suyo (también lo oculto), y de sus avisos solo lo que escribió');
+  await q(`select comunidad_unirme('Ana L.', $1)`, [version]);
+
+  // F7: las notificaciones del equipo pendientes no salen a quien ya no está dentro
+  const pendientesLuis = async () => (await q(`select count(*)::int n from notificaciones where usuario_id = $1 and tipo = 'comunidad' and estado = 'pendiente'`, [luis]))[0].n;
+  const [pLuis2] = await q(`select id from comunidad_posts where autor_id = $1 limit 1`, [luis]).then(async (x) => x.length ? x : (await como(luis), await q(`insert into comunidad_posts (texto) values ('Para notificar') returning id`)));
+  await como(ana); await q(`insert into comunidad_comentarios (post_id, texto) values ($1, 'ánimo')`, [pLuis2.id]);
+  await su(); const antesBaja = await pendientesLuis();
+  await como(pelayo, 'aal2'); await q(`update atletas set estado = 'baja' where id = $1`, [aLuis.id]);
+  await su(); const trasBaja = await pendientesLuis();
+  check(antesBaja >= 1 && trasBaja === 0, `al darle de baja, se retiran sus notificaciones del equipo pendientes (${antesBaja} → ${trasBaja})`);
+  await como(pelayo, 'aal2'); await q(`update atletas set estado = 'activo' where id = $1`, [aLuis.id]);
+  await su(); await q(`delete from notificaciones where tipo = 'comunidad'`);
+  await como(pelayo, 'aal2');
+  const [avisoN] = await q(`insert into comunidad_posts (tipo, texto) values ('aviso', 'Para todos') returning id`);
+  await su(); const antesCierre = await pendientesLuis();
+  await como(pelayo, 'aal2'); await q(`update comunidad_ajustes set activa = false`);
+  await su(); const trasCierre = await pendientesLuis();
+  check(antesCierre === 1 && trasCierre === 0, 'al cerrar la comunidad, también');
+  await como(pelayo, 'aal2'); await q(`update comunidad_ajustes set activa = true`); await q(`delete from comunidad_posts where id = $1`, [avisoN.id]);
+
+  // F8: nombres sin repetir, sin hacerse pasar por el coach y un cambio al día
+  await como(luis);
+  check(await falla(`select comunidad_ajustar('ana l.', null)`), 'un nombre ya usado en el equipo (sin distinguir mayúsculas), no');
+  check(await falla(`select comunidad_ajustar('Pelayo', null)`) && await falla(`select comunidad_ajustar('Coach Luis', null)`) && await falla(`select comunidad_ajustar('El Entrenador', null)`) && await falla(`select comunidad_ajustar('FBE oficial', null)`),
+    'ni el del coach, ni «coach», «entrenador» o «FBE»');
+  await su(); await q(`update comunidad_miembros set nombre_cambiado_en = null where perfil_id = $1`, [luis]);
+  await como(luis);
+  await q(`select comunidad_ajustar('Luis Martín', null)`);
+  check(await falla(`select comunidad_ajustar('Luis M. R.', null)`), 'un cambio de nombre al día (entrar no cuenta)');
+
+  // F10: la app no cambia publicaciones ni comentarios (ni los suyos): fijar y ocultar, solo el coach con sus funciones
+  const [pMia] = await q(`insert into comunidad_posts (texto) values ('Mía') returning id`);
+  check(await falla(`update comunidad_posts set texto = 'otra' where id = $1`, [pMia.id]) && await falla(`select comunidad_moderar($1, null, true)`, [pMia.id]), 'ni su propia publicación: sin permiso de UPDATE');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderar($1, null, true)`, [pMia.id]);
+  check((await q(`select oculta from comunidad_posts where id = $1`, [pMia.id]))[0].oculta === true, 'el coach sí, con comunidad_moderar()');
+
+  await su();
+  await q(`delete from comunidad_reportes`); await q(`delete from comunidad_posts`); await q(`delete from comunidad_miembros`); await q(`delete from comunidad_cupos`);
+  await q(`delete from bloques where id = $1`, [bR]);
+  await q(`delete from notificaciones where tipo = 'comunidad'`);
+  await q(`update comunidad_ajustes set activa = false`);
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

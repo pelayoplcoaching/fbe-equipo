@@ -1014,7 +1014,7 @@ try {
   await p.keyboard.press('Escape');
   await hojaNoti.waitFor({ state: 'detached' });
   const resumenNoti = await p.getByRole('heading', { name: 'Notificaciones' }).locator('..').locator('.terciario').textContent();
-  check(/Respuestas, semana, avisos, peticiones, descansos y 3 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
+  check(/Respuestas, semana, avisos, peticiones, descansos, equipo y 3 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
 
   // v0.13: cuestionario inicial y check-in a medida
   console.log('\nCuestionario y check-in a medida');
@@ -1635,11 +1635,228 @@ try {
   await p.locator('.tab', { hasText: 'Modo atleta' }).click();
   await banda.waitFor();
   check(true, 'con la ficha ya creada, la pestaña entra directamente');
+  check(await p.locator('.tab', { hasText: 'Equipo' }).count() === 0, 'en su modo atleta no sale la pestaña Equipo (su ficha nunca entra en la comunidad)');
   await p.locator('.tab', { hasText: 'Semana' }).click();
   await revisar('modo-atleta-semana');
   await p.locator('.tab', { hasText: 'Entrenador' }).click();
   await p.getByRole('heading', { name: 'Atletas' }).waitFor();
   check(await p.locator('.banda-modo-atleta').count() === 0, '«Entrenador» vuelve a la vista de coach');
+
+  console.log('\nLa comunidad del equipo (v0.43)');
+  {
+  // Se empieza de cero (la demo reiniciada): Ana aún no ha entrado; Rubén, Carlos y Lucía, sí
+  const cerrarDialogos = async () => {
+    for (let i = 0; i < 4; i++) {
+      const d = p.locator('[role=dialog]').first();
+      if (!(await d.isVisible().catch(() => false))) break;
+      // «Seguir» primero: así los discos quedan vistos y no vuelven a salir en Hoy
+      let hecho = false;
+      for (const nombre of ['Seguir', 'Entendido', 'Cerrar']) {
+        const b2 = d.getByRole('button', { name: nombre, exact: true }).first();
+        if (await b2.isVisible().catch(() => false)) { await b2.click(); hecho = true; break; }
+      }
+      if (!hecho) await p.keyboard.press('Escape');
+      await p.waitForTimeout(250);
+    }
+  };
+  const entrarComo = async (nombre) => {
+    if (!(await p.getByRole('heading', { name: 'Entra en tu cuenta' }).isVisible().catch(() => false))) {
+      if (!(await p.getByRole('button', { name: 'Cambiar de cuenta' }).isVisible().catch(() => false))) {
+        // (la banda de la demo está en Hoy, para un atleta, y en Atletas, para el coach)
+        const hoy = p.locator('.tab', { hasText: 'Hoy' });
+        if (await hoy.count()) await hoy.first().click(); else await p.locator('.tab', { hasText: 'Atletas' }).click();
+        await p.waitForTimeout(800);
+        await cerrarDialogos();
+      }
+      await p.getByRole('button', { name: 'Cambiar de cuenta' }).first().click();
+    }
+    await p.getByRole('button', { name: new RegExp(nombre) }).first().click();
+    await p.locator('nav.tabs').waitFor();
+    await p.waitForTimeout(800);
+    await cerrarDialogos();
+  };
+  await p.locator('.tab', { hasText: 'Atletas' }).click();
+  await p.getByRole('button', { name: 'Reiniciar' }).first().click();
+  await p.getByRole('button', { name: 'Sí, reiniciar' }).click();
+  await p.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor();
+  await entrarComo('Ana López');
+  const tabEquipo = p.locator('.tab', { hasText: 'Equipo' });
+  check(await tabEquipo.isVisible(), 'con la comunidad abierta, Ana ve la pestaña Equipo (cabe con las demás en 390 px)');
+  await tabEquipo.click();
+  await p.getByRole('heading', { name: 'Antes de entrar' }).waitFor();
+  const textoEntrada = await p.locator('.entrar-equipo').textContent();
+  check(textoEntrada.includes('Es voluntario') && textoEntrada.includes('Lo que nunca se comparte') && (await p.getByLabel('Tu nombre en el equipo').inputValue()) === 'Ana L.' && await p.locator('.post').count() === 0,
+    'la primera vez explica qué se comparte y con quién, propone «Ana L.» y no enseña nada del muro');
+  await revisar('equipo-entrar');
+  await p.getByRole('button', { name: 'Sí, quiero entrar' }).click();
+  await p.locator('.post').first().waitFor();
+  check(await p.locator('.post').first().evaluate((x) => x.classList.contains('fijada') && x.textContent.includes('Aviso del coach')), 'con «Sí, quiero entrar», dentro: arriba el aviso fijado del coach');
+  await revisar('equipo-muro');
+  await p.getByLabel('Tu publicación').fill('Primera semana en el equipo. ¡A por todas!');
+  await p.getByRole('button', { name: 'Publicar', exact: true }).click();
+  await p.locator('.post', { hasText: 'Primera semana en el equipo' }).waitFor();
+  check(await p.locator('.post', { hasText: 'Primera semana en el equipo' }).locator('strong', { hasText: 'Ana L.' }).count() === 1, 'publica un texto, con su nombre del equipo');
+  const deRuben = p.locator('.post.post-entreno', { hasText: 'Rubén M.' });
+  const fuerza = deRuben.getByRole('button', { name: /^Fuerza:/ });
+  check((await fuerza.getAttribute('aria-label')).startsWith('Fuerza: 1'), 'el entreno de Rubén ya tiene un 💪');
+  await fuerza.click();
+  await p.waitForFunction(() => [...document.querySelectorAll('.post-entreno .reaccion')].some((b) => b.getAttribute('aria-pressed') === 'true' && /^Fuerza: 2 \(.*Ana L\./.test(b.getAttribute('aria-label'))));
+  check(true, 'reacciona 💪: cuenta 2 y dice quién');
+  await deRuben.getByRole('button', { name: /^Fuego:/ }).click();
+  await p.waitForFunction(() => [...document.querySelectorAll('.post-entreno .reaccion')].some((b) => b.getAttribute('aria-pressed') === 'true' && /^Fuego: 2/.test(b.getAttribute('aria-label'))));
+  check((await fuerza.getAttribute('aria-label')).startsWith('Fuerza: 1'), 'tocar otra cambia la suya (una por persona)');
+  await deRuben.locator('.post-comentar').click();
+  const hojaCom = p.getByRole('dialog', { name: 'Comentarios' });
+  await hojaCom.locator('.comentario-equipo').first().waitFor();
+  await hojaCom.getByLabel('Tu comentario').fill('¡Enhorabuena, Rubén!');
+  await hojaCom.getByRole('button', { name: 'Comentar' }).click();
+  await hojaCom.locator('.comentario-equipo', { hasText: 'Enhorabuena, Rubén' }).waitFor();
+  check(await hojaCom.locator('.comentario-equipo').count() === 3, 'comenta en el entreno de Rubén (con los dos que había)');
+  await revisar('equipo-comentarios');
+  await hojaCom.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('article', { name: 'Publicación de Carlos V.' }).getByRole('button', { name: 'Opciones de la publicación' }).click();
+  await p.getByRole('dialog', { name: 'Publicación' }).getByRole('button', { name: 'Avisar al coach' }).click();
+  const hojaAvisar = p.getByRole('dialog', { name: 'Avisar al coach' });
+  await hojaAvisar.getByLabel('Por qué (si quieres)').fill('Prueba de aviso');
+  await revisar('equipo-avisar');
+  await hojaAvisar.getByRole('button', { name: 'Avisar al coach' }).click();
+  await p.locator('.toast', { hasText: 'tu coach lo mirará' }).waitFor();
+  check(true, '«Avisar al coach» de una publicación, con un motivo');
+  await p.getByRole('tab', { name: 'Retos' }).click();
+  await p.locator('.reto-yo').waitFor();
+  const llevaAntes = Number((await p.locator('.reto-yo strong').textContent()).trim());
+  check(llevaAntes >= 1 && await p.locator('.reto .fila-progreso').count() === 4, `el reto del coach: Ana lleva ${llevaAntes} de 8 y ve a los cuatro del equipo`);
+  await revisar('equipo-retos');
+  await p.getByRole('tab', { name: 'Ranking' }).click();
+  await p.locator('.ranking .fila-progreso.yo').waitFor();
+  check((await p.locator('.ranking').textContent()).includes('ni kilos ni peso'), 'el ranking de la semana: solo sesiones hechas de las previstas');
+  await revisar('equipo-ranking');
+
+  // Compartir un entreno al terminarlo (sin los kilos) y otro ya hecho (con ellos)
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  // (los discos que ya había ganado salen en Hoy un momento después)
+  await p.locator('.hero-dia').waitFor();
+  await p.waitForTimeout(800);
+  await cerrarDialogos();
+  await p.getByRole('button', { name: 'Empezar sesión' }).click();
+  await p.locator('.ejercicio').first().waitFor();
+  const prepEq = p.locator('.preparacion');
+  if (await prepEq.count()) { for (const [g, x] of [['¿Cómo has dormido?', 'Bien'], ['¿Cómo tienes la energía?', 'Alta'], ['¿Agujetas o molestias?', 'Ninguna']]) await prepEq.getByRole('group', { name: g }).getByRole('button', { name: x, exact: true }).click(); }
+  const primeroEq = p.locator('.ejercicio').first();
+  await primeroEq.getByLabel('Kilos de la serie 1').fill('20');
+  await primeroEq.getByLabel('Repeticiones de la serie 1').fill('10');
+  await primeroEq.getByRole('button', { name: 'Marcar la serie 1 como hecha' }).click();
+  await p.getByRole('button', { name: 'Saltar' }).click().catch(() => {});
+  await p.getByRole('button', { name: 'Terminar sesión' }).click();
+  await p.locator('.hoja-dialogo .segmentos button', { hasText: '8' }).first().click();
+  await p.getByRole('button', { name: 'Guardar y terminar' }).click();
+  await p.getByRole('heading', { name: 'Sesión terminada' }).waitFor();
+  await p.getByRole('button', { name: 'Compartir con el equipo' }).click();
+  const hojaEq = p.getByRole('dialog', { name: 'Compartir con el equipo' });
+  await hojaEq.waitFor();
+  check(!(await hojaEq.getByRole('switch', { name: /Enseñar los kilos/ }).isChecked()) && !(await hojaEq.locator('.entreno-equipo').textContent()).includes('kg'),
+    'al compartir, «Enseñar los kilos» viene apagado y la vista previa no los lleva');
+  await hojaEq.getByLabel('Un comentario (opcional)').fill('Torso B hecho');
+  await revisar('equipo-compartir');
+  await hojaEq.getByRole('button', { name: 'Compartir con el equipo' }).click();
+  await p.locator('.compartida-equipo').waitFor();
+  check(true, 'comparte la sesión terminada con el equipo');
+  await p.getByRole('button', { name: 'Volver a hoy' }).click();
+  await cerrarDialogos();
+  await p.locator('.tab', { hasText: 'Semana' }).click();
+  await p.locator('.dia', { hasText: 'Torso A' }).first().click();
+  await p.getByRole('button', { name: 'Cambiar la valoración' }).click();
+  await p.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await p.getByRole('heading', { name: 'Sesión terminada' }).waitFor();
+  await p.getByRole('button', { name: 'Compartir con el equipo' }).click();
+  await hojaEq.getByRole('switch', { name: /Enseñar los kilos/ }).check();
+  await hojaEq.locator('.entreno-equipo', { hasText: 'kg' }).waitFor();
+  check(true, 'con «Enseñar los kilos», la vista previa enseña su mejor serie de cada ejercicio');
+  await hojaEq.getByRole('button', { name: 'Compartir con el equipo' }).click();
+  await p.locator('.compartida-equipo').waitFor();
+  await p.getByRole('button', { name: 'Volver a hoy' }).click();
+  await cerrarDialogos();
+  await tabEquipo.click();
+  await p.locator('.post', { hasText: 'Torso B hecho' }).waitFor();
+  const misEntrenos = p.locator('.post.post-entreno', { hasText: 'Ana L.' });
+  check(await misEntrenos.count() === 2 && !(await p.locator('.post', { hasText: 'Torso B hecho' }).textContent()).includes(' kg ×')
+    && (await p.locator('.post.post-entreno', { hasText: 'Torso A' }).first().textContent()).includes('kg ×'), 'en el muro, sus dos entrenos: uno sin kilos y otro con ellos (la tarjeta la hace la base)');
+  await p.getByRole('tab', { name: 'Retos' }).click();
+  await p.locator('.reto-yo').waitFor();
+  check(Number((await p.locator('.reto-yo strong').textContent()).trim()) === llevaAntes + 1, `el reto suma la sesión de hoy (${llevaAntes} → ${llevaAntes + 1})`);
+  // No salir en el ranking
+  await p.getByRole('button', { name: 'Ajustes de la comunidad' }).click();
+  const hojaAj = p.getByRole('dialog', { name: 'Ajustes de la comunidad' });
+  await revisar('equipo-ajustes');
+  await hojaAj.getByRole('switch', { name: /No salir en el ranking/ }).check();
+  await p.locator('.toast', { hasText: 'Ya no sales en el ranking' }).waitFor();
+  await hojaAj.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('tab', { name: 'Ranking' }).click();
+  await p.locator('.ranking .nota', { hasText: 'No sales en el ranking' }).waitFor();
+  check(await p.locator('.ranking .fila-progreso.yo').count() === 0 && await p.locator('.ranking .fila-progreso').count() >= 1, 'con «No salir en el ranking», ya no sale (y ve su semana aparte)');
+  // Salir: lo suyo deja de verse
+  await p.getByRole('button', { name: 'Ajustes de la comunidad' }).click();
+  await hojaAj.getByRole('button', { name: 'Salir de la comunidad' }).click();
+  await hojaAj.getByRole('button', { name: 'Salir', exact: true }).click();
+  await p.getByRole('heading', { name: '¿Vuelves al equipo?' }).waitFor();
+  check(true, 'sale de la comunidad (y la pestaña ofrece volver)');
+  await entrarComo('Rubén Martín');
+  await tabEquipo.click();
+  await p.locator('.post').first().waitFor();
+  const muroRuben = await p.locator('.muro').textContent();
+  check(!muroRuben.includes('Ana L.') && !muroRuben.includes('Primera semana en el equipo') && !muroRuben.includes('Torso B hecho'), 'para Rubén desaparece todo lo de Ana (publicaciones, entrenos, comentarios y reacciones)');
+  await revisar('equipo-ruben');
+
+  // El coach: avisos fijados, Revisar y el interruptor
+  await entrarComo('Pelayo');
+  await p.locator('.tab', { hasText: 'Equipo' }).click();
+  await p.getByRole('heading', { name: 'Equipo' }).waitFor();
+  await p.getByLabel('Aviso para el equipo').fill('El sábado hay quedada en el gimnasio a las 10');
+  await p.getByLabel('Fijar arriba').check();
+  await p.getByRole('button', { name: 'Publicar aviso' }).click();
+  await p.locator('.post.fijada', { hasText: 'quedada en el gimnasio' }).waitFor();
+  check((await p.locator('.post').first().textContent()).includes('quedada en el gimnasio'), 'el coach publica un aviso y lo fija arriba');
+  await revisar('equipo-coach');
+  await p.locator('.tab', { hasText: 'Revisar' }).click();
+  await p.getByRole('button', { name: 'Equipo (1)' }).click();
+  const rep = p.locator('.tarjeta-reporte');
+  await rep.waitFor();
+  check((await rep.textContent()).includes('Prueba de aviso') && (await rep.textContent()).includes('Carlos V.'), 'en Revisar → Equipo, el aviso: qué, de quién y por qué');
+  await revisar('revisar-equipo');
+  await rep.getByRole('button', { name: 'Ocultar' }).click();
+  await p.locator('.toast', { hasText: 'Publicación oculta' }).waitFor();
+  await rep.waitFor({ state: 'detached' });
+  await p.locator('.tab', { hasText: 'Equipo' }).click();
+  await p.locator('.post.oculta', { hasText: 'Carlos V.' }).waitFor();
+  check(true, 'oculta la publicación avisada (él la sigue viendo, marcada)');
+  await p.getByRole('tab', { name: 'Quién está' }).click();
+  await p.getByRole('button', { name: 'Sacar del equipo' }).first().waitFor();
+  const filaCarlos = p.locator('.lista li', { hasText: 'Carlos V.' });
+  await filaCarlos.getByRole('button', { name: 'Sacar del equipo' }).click();
+  await filaCarlos.getByRole('group', { name: /Sacar a Carlos V\./ }).waitFor();
+  await revisar('equipo-sacar');
+  await filaCarlos.getByRole('button', { name: 'Sí, sacarle' }).click();
+  await p.locator('.toast', { hasText: 'ya no está en el equipo' }).waitFor();
+  await p.getByRole('heading', { name: 'Sacados del equipo' }).waitFor();
+  check(true, 'el coach saca a Carlos del equipo, confirmándolo en la propia pantalla');
+  await p.getByRole('button', { name: 'Volver a admitir' }).click();
+  await p.locator('.toast', { hasText: 'puede volver a entrar' }).waitFor();
+  check(await p.getByRole('heading', { name: 'Sacados del equipo' }).count() === 0, 'y le vuelve a admitir');
+  await p.getByRole('tab', { name: 'Muro' }).click();
+  await entrarComo('Rubén Martín');
+  await tabEquipo.click();
+  await p.locator('.post').first().waitFor();
+  check(!(await p.locator('.muro').textContent()).includes('Vuelvo después de dos semanas'), 'y los atletas ya no la ven');
+  await entrarComo('Pelayo');
+  await abrirPestana(p, 'Cuenta');
+  const interruptor = p.getByRole('switch', { name: /Comunidad del equipo/ });
+  await interruptor.uncheck();
+  await p.locator('.toast', { hasText: 'Comunidad cerrada' }).waitFor();
+  await p.locator('.tab', { hasText: 'Equipo' }).waitFor({ state: 'detached' });
+  await revisar('cuenta-comunidad');
+  await entrarComo('Rubén Martín');
+  check(await p.locator('.tab', { hasText: 'Equipo' }).count() === 0, 'con la comunidad cerrada, los atletas no ven la pestaña');
+  }
 } catch (e) {
   fallos++;
   console.log('  ✗ el flujo se ha interrumpido:', e.message.split('\n').slice(0, 12).join('\n      '));

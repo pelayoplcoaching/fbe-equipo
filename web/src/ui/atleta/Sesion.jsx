@@ -7,6 +7,7 @@ import { SubirArchivo } from '../Archivos.jsx';
 import { EVENTO_PENDIENTES, listarPendientes } from '../../datos/pendientes.js';
 import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herramientas.jsx';
 import { HojaCompartir } from '../Compartir.jsx';
+import { HojaCompartirEquipo } from '../Comunidad.jsx';
 import { RPES, prepararAudio, celebrar, usePantallaEncendida, useAhora, aNumero, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
 import { Enfoque } from './Enfoque.jsx';
 import { Metronomo } from './Metronomo.jsx';
@@ -721,7 +722,7 @@ function datosTarjeta(sesion, ejercicios, hechas, records, ejerciciosPorId, minu
   })));
   const porEjercicio = new Map();
   for (const s of series) {
-    const x = porEjercicio.get(s.ejercicio_id) || { nombre: s.nombre, mejor: null, record: null };
+    const x = porEjercicio.get(s.ejercicio_id) || { ejercicio_id: s.ejercicio_id, nombre: s.nombre, mejor: null, record: null };
     const valor = e1rm({ ...s, rpe: s.rpe ?? null }) ?? (Number(s.reps) || 0);
     if (!x.mejor || valor > x.valor) { x.mejor = s; x.valor = valor; }
     const r = records[`${s.sesion_ejercicio_id}-${s.numero}`];
@@ -737,12 +738,22 @@ function datosTarjeta(sesion, ejercicios, hechas, records, ejerciciosPorId, minu
     tonelaje: series.reduce((t, s) => t + (Number(s.kg) || 0) * (Number(s.reps) || 0), 0),
     minutos,
     records: lista.filter((x) => x.record).map((x) => ({ nombre: x.nombre, texto: x.record.texto })),
-    mejores: lista.map((x) => ({ nombre: x.nombre, serie: textoSerie({ ...x.mejor, rpe: null }) })),
+    mejores: lista.map((x) => ({ ejercicio_id: x.ejercicio_id, nombre: x.nombre, serie: textoSerie({ ...x.mejor, rpe: null }), kg: Number(x.mejor.kg) > 0 ? Number(x.mejor.kg) : null, reps: x.mejor.reps ?? null, e1rm: e1rm({ ...x.mejor, rpe: x.mejor.rpe ?? null }) })),
   };
 }
 
 function Resumen({ resumen, sesion, alCerrar }) {
+  const { api, atleta, propio } = useApp();
   const [compartir, setCompartir] = useState(false);
+  // v0.43: «Compartir con el equipo», si la comunidad está abierta y está dentro (y la sesión no está ya compartida)
+  const [equipo, setEquipo] = useState(false);
+  const [compartida, setCompartida] = useState(false);
+  const equipoPosible = !propio && atleta?.estado !== 'baja' && resumen.series > 0 && !!resumen.tarjeta && !resumen.enCola && !!sesion?.id;
+  const estadoEquipo = useCarga(async () => {
+    if (!equipoPosible) return false;
+    const [c, m] = await Promise.all([api.comunidad(), api.miembroComunidad()]);
+    return c.activa && !!m && !m.salido_en && !(await api.sesionCompartida(sesion.id));
+  }, [sesion?.id]);
   return (
     <div class="contenido">
       <header class="cabecera">
@@ -786,8 +797,15 @@ function Resumen({ resumen, sesion, alCerrar }) {
       )}
       {resumen.enCola && <div class="banda-conexion"><Icono n="sinred" />Guardado en el móvil. Se enviará a tu coach cuando vuelva la conexión.</div>}
       {resumen.series > 0 && resumen.tarjeta && <button class="btn btn-grande" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir la sesión</button>}
+      {compartida ? <p class="nota peq compartida-equipo"><Icono n="hecho" /> Compartida con el equipo</p>
+        : estadoEquipo.datos === true && <button class="btn btn-grande" onClick={() => setEquipo(true)}><Icono n="equipo" /> Compartir con el equipo</button>}
       <button class="btn btn-primario btn-grande" onClick={alCerrar}>Volver a hoy</button>
       {compartir && <HojaCompartir datos={resumen.tarjeta} alCerrar={() => setCompartir(false)} />}
+      {equipo && (
+        <HojaCompartirEquipo alCerrar={() => setEquipo(false)} alCompartir={() => { setEquipo(false); setCompartida(true); }}
+          datos={{ sesionId: sesion.id, nombre: resumen.tarjeta.nombre, fecha: resumen.tarjeta.fecha, minutos: resumen.minutos ?? resumen.tarjeta.minutos, series: resumen.series,
+            mejores: resumen.tarjeta.mejores }} />
+      )}
     </div>
   );
 }

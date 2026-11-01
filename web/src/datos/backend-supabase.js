@@ -1,7 +1,8 @@
 // Backend de producción: Supabase (Auth + PostgREST). Los permisos los impone la base de datos (RLS).
 
 // Tablas cuya clave no es «id» (para ordenar al paginar)
-export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id', menu_dias: 'atleta_id,fecha' };
+export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id', menu_dias: 'atleta_id,fecha',
+  comunidad_miembros: 'atleta_id', comunidad_reacciones: 'post_id,autor_id' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 
@@ -236,9 +237,10 @@ export function crearBackendSupabase({ url, anonKey }) {
       // Lo pequeño (fotos), de una vez. Los vídeos (v0.33), por trozos de 6 MB con el protocolo TUS de Supabase: si la
       // cobertura falla o el móvil suspende la app, se reintenta solo y sigue por el trozo en que iba (antes, una
       // sola petición que el iPhone cortaba con «timed out» y había que empezar de cero). alProgreso(0…1).
-      async subir(ruta, archivo, tipo, { alProgreso = null, senal = null } = {}) {
-        if (!archivo || archivo.size <= TROZO) {
-          const { error } = await sb.storage.from('archivos').upload(ruta, archivo, { contentType: tipo, upsert: false, cacheControl: '3600' });
+      // bucket: «archivos» (de siempre) o «comunidad» (v0.43, las fotos del muro: pequeñas, de una vez)
+      async subir(ruta, archivo, tipo, { alProgreso = null, senal = null, bucket = 'archivos' } = {}) {
+        if (!archivo || archivo.size <= TROZO || bucket !== 'archivos') {
+          const { error } = await sb.storage.from(bucket).upload(ruta, archivo, { contentType: tipo, upsert: false, cacheControl: '3600' });
           // Ya subido por un intento anterior (llegó el archivo, no la respuesta): vale
           if (error && !(String(error.statusCode) === '409' || /already exists|duplicate/i.test(error.message || ''))) throw traducir(error);
           alProgreso?.(1);
@@ -253,23 +255,23 @@ export function crearBackendSupabase({ url, anonKey }) {
         await pedirToken();
         await subirPorTrozos({ endpoint: `${url.replace(/\/$/, '')}/storage/v1/upload/resumable`, token: pedirToken, anonKey, ruta, archivo, tipo, alProgreso, senal });
       },
-      async url(ruta, segundos = 3600) {
-        const { data, error } = await sb.storage.from('archivos').createSignedUrl(ruta, segundos);
+      async url(ruta, segundos = 3600, bucket = 'archivos') {
+        const { data, error } = await sb.storage.from(bucket).createSignedUrl(ruta, segundos);
         if (error) throw traducir(error);
         return data.signedUrl;
       },
-      async borrar(rutas) {
+      async borrar(rutas, bucket = 'archivos') {
         if (!rutas.length) return;
         for (let i = 0; i < rutas.length; i += 500) {
-          const { error } = await sb.storage.from('archivos').remove(rutas.slice(i, i + 500));
+          const { error } = await sb.storage.from(bucket).remove(rutas.slice(i, i + 500));
           if (error) throw traducir(error);
         }
       },
       // Todos los archivos de una carpeta (<atleta_id>), de 1000 en 1000
-      async listar(carpeta) {
+      async listar(carpeta, bucket = 'archivos') {
         const rutas = [];
         for (let offset = 0; ; offset += 1000) {
-          const { data, error } = await sb.storage.from('archivos').list(carpeta, { limit: 1000, offset });
+          const { data, error } = await sb.storage.from(bucket).list(carpeta, { limit: 1000, offset });
           if (error) throw traducir(error);
           rutas.push(...data.filter((f) => f.id).map((f) => `${carpeta}/${f.name}`));
           if (data.length < 1000) return rutas;

@@ -8,15 +8,24 @@ import { Biblioteca } from './Biblioteca.jsx';
 import { Cuenta } from './Cuenta.jsx';
 import { Buscador } from './Buscador.jsx';
 import { Conversaciones } from './Conversaciones.jsx';
+import { EquipoCoach } from './EquipoCoach.jsx';
 
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
 // Modo atleta (v0.37): el coach entrena con la app de atleta, con su propia ficha (solo entrenamiento)
-const TABS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['mensajes', 'Mensajes', 'mensaje'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
+// Equipo (v0.43): el muro de la comunidad, solo con ella abierta (se abre en Cuenta → Comunidad)
+const TODAS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
+const TABS = TODAS.filter(([t]) => t !== 'equipo');
 
 export function CoachApp() {
   const { api, propioCoach, entrarModoAtleta, pedidoCoach, consumirPedidoCoach } = useApp();
+  const comunidad = useCarga(() => api.comunidad(), []);
+  const pestanas = comunidad.datos?.activa ? TODAS : TABS;
+  const pestanasRef = useRef(pestanas);
+  pestanasRef.current = pestanas;
   // Al volver del modo atleta con «Programarlo», se abre su ficha en el Programa
-  const [tab, setTab] = useState(() => { if (pedidoCoach) return 'atletas'; const h = location.hash.slice(1); return TABS.some(([t]) => t === h) && h !== 'modo-atleta' ? h : 'atletas'; });
+  const [tab, setTab] = useState(() => { if (pedidoCoach) return 'atletas'; const h = location.hash.slice(1); return TODAS.some(([t]) => t === h) && h !== 'modo-atleta' ? h : 'atletas'; });
+  // (#equipo con la comunidad cerrada, o sin la migración 027: a Atletas)
+  useEffect(() => { if (comunidad.datos && tab === 'equipo' && !comunidad.datos.activa) setTab('atletas'); }, [comunidad.datos]);
   const [ficha, setFicha] = useState(() => (pedidoCoach ? { atletaId: pedidoCoach.atletaId, pestana: pedidoCoach.pestana || 'programa' } : null)); // { atletaId, pestana }
   useEffect(() => { if (pedidoCoach) consumirPedidoCoach(); }, []);
   const bandeja = useCarga(() => api.bandeja(), []);
@@ -33,7 +42,7 @@ export function CoachApp() {
   }, []);
   // Al tocar una notificación con la app abierta, se va a su sección (y la bandeja se pone al día)
   useEffect(() => {
-    const ir = () => { const h = location.hash.slice(1); if (TABS.some(([t]) => t === h)) { setFicha(null); setTab(h); bandeja.recargar(true); } };
+    const ir = () => { const h = location.hash.slice(1); if (pestanasRef.current.some(([t]) => t === h)) { setFicha(null); setTab(h); bandeja.recargar(true); } };
     const llega = () => { bandeja.recargar(true); sinLeer.recargar(true); };
     window.addEventListener('hashchange', ir);
     window.addEventListener('fbe-notificacion', llega);
@@ -75,12 +84,12 @@ export function CoachApp() {
     <>
     <div class="app coach" inert={buscar ? '' : undefined} aria-hidden={buscar ? 'true' : undefined}>
       <nav class="tabs" aria-label="Secciones">
-        <div class="tabs-in">
+        <div class={`tabs-in ${pestanas.filter(([t]) => t !== 'cuenta').length >= 7 ? 'tabs-muchas' : ''}`}>
           <Marca />
           <button class="tab-buscar" onClick={abrirBuscar} aria-keyshortcuts={mac ? 'Meta+K' : 'Control+K'}>
             <Icono n="buscar" /><span>Buscar</span><kbd>{mac ? '⌘' : 'Ctrl'} K</kbd>
           </button>
-          {TABS.map(([id, texto, icono]) => (
+          {pestanas.map(([id, texto, icono]) => (
             <button key={id} class={`tab ${id === 'cuenta' ? 'tab-cuenta' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => {
               // Con su ficha ya creada, la pestaña entra directamente en el modo atleta
               if (id === 'modo-atleta' && propioCoach) { entrarModoAtleta(); return; }
@@ -99,7 +108,8 @@ export function CoachApp() {
       {tab === 'mensajes' && <Conversaciones abrirAtleta={abrirAtleta} alCambiar={() => { bandeja.recargar(true); sinLeer.recargar(true); }} peticion={pide('mensajes')} />}
       {tab === 'plantillas' && <Plantillas peticion={pide('plantillas')} />}
       {tab === 'biblioteca' && <Biblioteca peticion={pide('biblioteca')} />}
-      {tab === 'cuenta' && <Cuenta abrirAtleta={abrirAtleta} />}
+      {tab === 'cuenta' && <Cuenta abrirAtleta={abrirAtleta} alCambiarComunidad={() => comunidad.recargar(true)} />}
+      {tab === 'equipo' && <EquipoCoach />}
       {tab === 'modo-atleta' && <EmpezarModoAtleta />}
       </main>
     </div>

@@ -550,5 +550,54 @@ export function semillaDemo(hoy = hoyISO()) {
   db.recursos.push({ id: uuid(), atleta_id: null, categoria: 'entrenamiento', titulo: 'Calentamiento general (5 minutos)', descripcion: '2 min de bici o remo suave, 10 sentadillas sin peso, 10 puentes de glúteo, 10 rotaciones de hombro con banda y 5 zancadas por pierna.', url: null, orden: 1, creado_en: ahoraISO });
   // v0.26: recetas, Lucía (solo nutrición) y el menú de la semana (al final: no cambia lo aleatorio de lo anterior)
   sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana });
+  sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos });
   return db;
+}
+
+// v0.43: la comunidad del equipo, abierta, con Rubén, Carlos y Lucía dentro (Ana aún no: así se ve la entrada).
+// Un aviso del coach fijado, un entreno compartido por Rubén, un par de publicaciones, un reto y el ranking.
+function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
+  const lucia = db.atletas.find((a) => a.nombre === 'Lucía Ferrer');
+  Object.assign(db, { comunidad_ajustes: [{ id: true, activa: true, actualizado_en: hace(60 * 24 * 6) }], comunidad_miembros: [], comunidad_posts: [], comunidad_comentarios: [], comunidad_reacciones: [], comunidad_reportes: [], comunidad_retos: [], comunidad_cupos: [] });
+  const miembro = (a, nombre, dias) => db.comunidad_miembros.push({ atleta_id: a.id, perfil_id: a.perfil_id, nombre, version: 'comunidad-2026-11', aceptado_en: hace(60 * 24 * dias), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, creado_en: hace(60 * 24 * dias) });
+  miembro(ruben, 'Rubén M.', 6);
+  miembro(carlos, 'Carlos V.', 5);
+  if (lucia) miembro(lucia, 'Lucía F.', 4);
+  const post = (autor, atleta, tipo, texto, min, extra = {}) => {
+    const p = { id: crypto.randomUUID(), autor_id: autor, atleta_id: atleta?.id || null, tipo, texto, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, creado_en: hace(min), ...extra };
+    db.comunidad_posts.push(p);
+    return p;
+  };
+  const aviso = post(coachId, null, 'aviso', '¡Bienvenidos al muro del equipo! Aquí podéis contar qué tal vuestra semana, compartir un entreno al terminarlo y animaros entre vosotros. Esta semana arranca el reto de constancia: a por él.', 60 * 24 * 6, { fijada: true });
+  // El último entreno de Rubén, como lo deja la base al compartirlo (sin los kilos)
+  const bloquesR = new Set(db.bloques.filter((x) => x.atleta_id === ruben.id).map((x) => x.id));
+  const semanasR = new Set(db.semanas.filter((w) => bloquesR.has(w.bloque_id)).map((w) => w.id));
+  const ultima = db.sesiones.filter((x) => semanasR.has(x.semana_id) && x.completada).sort((x, y) => (x.fecha_realizada < y.fecha_realizada ? 1 : -1))[0];
+  let entreno = null;
+  if (ultima) {
+    const pautas = db.sesion_ejercicios.filter((p) => p.sesion_id === ultima.id).sort((a, b) => a.orden - b.orden);
+    const series = db.series.filter((x) => pautas.some((p) => p.id === x.sesion_ejercicio_id) && Number(x.reps) > 0);
+    const nombreEj = (id) => db.ejercicios.find((e) => e.id === id)?.nombre || 'Ejercicio';
+    const ejercicios = pautas.filter((p) => series.some((x) => x.sesion_ejercicio_id === p.id)).map((p, i) => ({ nombre: nombreEj(p.ejercicio_id), record: i === 0 }));
+    entreno = post(ruben.perfil_id, ruben, 'entreno', 'Primera vez que la sentadilla me sale sin molestias en la lumbar. Poco a poco 💪', 60 * 26, {
+      sesion_id: ultima.id,
+      resumen: { nombre: ultima.nombre, tipo: ultima.tipo, fecha: ultima.fecha_realizada, minutos: ultima.duracion_min, series: series.length, con_kilos: false, ejercicios },
+    });
+  }
+  const pCarlos = post(carlos.perfil_id, carlos, 'post', 'Vuelvo después de dos semanas parado por trabajo. Esta semana, aunque sean dos sesiones cortas, no fallo.', 60 * 5);
+  const pLucia = lucia ? post(lucia.perfil_id, lucia, 'post', '¿Alguien más entrena a primera hora? A las 7 el gimnasio está vacío y se agradece.', 60 * 30) : null;
+  const reaccion = (p, a, tipo, min) => p && db.comunidad_reacciones.push({ post_id: p.id, autor_id: a.perfil_id || a, atleta_id: a.id && a.perfil_id ? a.id : null, tipo, creado_en: hace(min) });
+  reaccion(aviso, ruben, 'aplauso', 60 * 24 * 5);
+  reaccion(aviso, carlos, 'fuego', 60 * 24 * 4);
+  reaccion(entreno, carlos, 'fuerza', 60 * 20);
+  if (lucia) reaccion(entreno, lucia, 'fuego', 60 * 18);
+  reaccion(entreno, coachId, 'aplauso', 60 * 12);
+  reaccion(pCarlos, ruben, 'fuerza', 60 * 3);
+  if (lucia) reaccion(pCarlos, lucia, 'aplauso', 60 * 2);
+  const comentario = (p, a, texto, min) => p && db.comunidad_comentarios.push({ id: crypto.randomUUID(), post_id: p.id, autor_id: a.perfil_id || a, atleta_id: a.id && a.perfil_id ? a.id : null, texto, oculto: false, creado_en: hace(min) });
+  comentario(entreno, coachId, 'Eso es lo que buscábamos: técnica limpia antes que kilos. Muy bien, Rubén.', 60 * 12);
+  comentario(entreno, carlos, '¡Grande! Yo también la notaba al principio.', 60 * 10);
+  comentario(pCarlos, ruben, '¡Vamos, Carlos! Dos sesiones valen más que ninguna.', 60 * 3);
+  if (pLucia) comentario(pLucia, ruben, 'Yo a las 7:30. ¡Somos pocos pero buenos!', 60 * 28);
+  db.comunidad_retos.push({ id: crypto.randomUUID(), titulo: 'Reto de constancia: 8 sesiones', descripcion: 'Del lunes pasado a dentro de tres semanas: 8 sesiones terminadas. Lo puede conseguir todo el equipo.', desde: sumarDias(lunesHoy, -7), hasta: sumarDias(lunesHoy, 20), objetivo: 8, creado_en: hace(60 * 24 * 6) });
 }

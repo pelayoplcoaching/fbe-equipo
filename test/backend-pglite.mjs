@@ -120,20 +120,21 @@ export function crearBackendPglite(db) {
     // Storage imitado: los objetos se registran en storage.objects (con sus políticas) y el contenido queda en memoria
     storage: {
       ficheros,
-      subir: (ruta, archivo) => como(async () => {
-        await db.query(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [ruta]);
-        ficheros.set(ruta, archivo);
+      subir: (ruta, archivo, tipo, { bucket = 'archivos' } = {}) => como(async () => {
+        await db.query(`insert into storage.objects (bucket_id, name) values ($1, $2)`, [bucket, ruta]);
+        ficheros.set(`${bucket}:${ruta}`, archivo);
+        if (bucket === 'archivos') ficheros.set(ruta, archivo);
       }),
-      url: (ruta) => como(async () => {
-        const r = await db.query(`select name from storage.objects where bucket_id = 'archivos' and name = $1`, [ruta]);
+      url: (ruta, segundos = 3600, bucket = 'archivos') => como(async () => {
+        const r = await db.query(`select name from storage.objects where bucket_id = $1 and name = $2`, [bucket, ruta]);
         if (!r.rows.length) throw new Error('No tienes permiso para ver ese archivo.');
-        return `pglite://${ruta}`;
+        return bucket === 'archivos' ? `pglite://${ruta}` : `pglite://${bucket}/${ruta}?s=${segundos}`;
       }),
-      borrar: (rutas) => como(async () => {
-        await db.query(`delete from storage.objects where bucket_id = 'archivos' and name = any($1::text[])`, [valor(rutas)]);
+      borrar: (rutas, bucket = 'archivos') => como(async () => {
+        await db.query(`delete from storage.objects where bucket_id = $1 and name = any($2::text[])`, [bucket, valor(rutas)]);
       }),
-      listar: (carpeta) => como(async () => {
-        const r = await db.query(`select name from storage.objects where bucket_id = 'archivos' and name like $1 order by name`, [`${carpeta}/%`]);
+      listar: (carpeta, bucket = 'archivos') => como(async () => {
+        const r = await db.query(`select name from storage.objects where bucket_id = $1 and name like $2 order by name`, [bucket, `${carpeta}/%`]);
         return r.rows.map((x) => x.name);
       }),
     },

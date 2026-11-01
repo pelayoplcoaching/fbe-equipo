@@ -1,5 +1,6 @@
 // Lógica pura: fechas, 1RM estimado, propuestas de series, avisos del coach y la cola sin conexión.
 import { lunesDe, sumarDias, diasEntre, hace, rangoSemana } from '../web/src/logica/fechas.js';
+import { nombreEquipo, nombreValido, limpiarNombre, estadoReto, textoReto, ordenarRanking, quienes, recordsDeEquipo, REACCIONES } from '../web/src/logica/comunidad.js';
 import { conDefecto, preferenciasValidas, claveServidor, normalizarB64url, describirDispositivo, soportePush, esIos, momentoNotificacion, PREFERENCIAS_DEFECTO, TIPOS_ATLETA, TIPOS_COACH } from '../web/src/logica/notificaciones.js';
 import { resultadoCribado, avisoCuestionario, resumenCuestionario, limpiarCuestionario, pasosHechos, MENSAJE_ATLETA, RESULTADO_COACH, SINTOMAS, OTRAS, objetivosDe, textoObjetivos } from '../web/src/logica/cuestionario.js';
 import { pregunta, preguntasDe, respuestaValida, limpiarRespuestas, respuestasNoValidas, textoRespuesta, serieRespuestas } from '../web/src/logica/preguntas.js';
@@ -799,7 +800,9 @@ console.log('\nNotificaciones');
   check(!preferenciasValidas({ ...d, hora_manana: '13:00' }) && !preferenciasValidas({ ...d, hora_tarde: '23:45' }) && !preferenciasValidas({ ...d, silencio_hasta: null })
     && !preferenciasValidas({ ...d, silencio_desde: '08:00', silencio_hasta: '08:00' }) && !preferenciasValidas({ ...d, desactivados: ['spam'] }) && !preferenciasValidas({ ...d, dia_checkin: 8 }),
     'como la base: mañana de 5 a 12, tarde de 12 a 23:30, «no molestar» completo y distinto, tipos conocidos');
-  check(TIPOS_ATLETA.length === 9 && TIPOS_COACH.length === 5 && TIPOS_COACH.every(([t]) => !TIPOS_ATLETA.some(([a]) => a === t)), 'tipos del atleta (con el fin del descanso, v0.39) y del coach, sin repetir');
+  check(TIPOS_ATLETA.length === 10 && TIPOS_COACH.length === 6 && TIPOS_COACH.every(([t]) => t === 'comunidad' || !TIPOS_ATLETA.some(([a]) => a === t)),
+    'tipos del atleta (con el fin del descanso, v0.39) y del coach, sin repetir (salvo «Equipo», v0.43, que tienen los dos)');
+  check(preferenciasValidas({ ...d, desactivados: ['comunidad'] }), 'quitar las del equipo es una preferencia válida');
   check(claveServidor('BFqg_w').length === 4 && claveServidor('BFqg_w')[0] === 4 && claveServidor('BFqg_w')[3] === 0xff, 'la clave VAPID en base64url pasa a bytes');
   check(normalizarB64url('ab+/cd==') === 'ab-_cd', 'las claves del navegador, en base64url sin relleno');
   check(describirDispositivo('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36') === 'Android · Chrome'
@@ -1193,6 +1196,30 @@ console.log('\nMoverse por la programación con el teclado (v0.34)');
   check(igual(destinoEnRejilla(F, { fila: 3, col: 2 }, 'abajo'), null) && igual(destinoEnRejilla(F, { fila: 0, col: 0 }, 'arriba'), null), 'si no hay casilla de esa columna más allá, no se mueve');
   check(igual(destinoEnRejilla(F, { fila: 1, col: 1 }, 'derecha'), { fila: 1, col: 2 }) && igual(destinoEnRejilla(F, { fila: 1, col: 2 }, 'derecha'), null) && igual(destinoEnRejilla(F, { fila: 1, col: 0 }, 'izquierda'), null),
     '← → van a la casilla de al lado dentro de la fila');
+}
+
+console.log('\nLa comunidad del equipo (v0.43)');
+{
+  check(nombreEquipo('Ana López García') === 'Ana L.' && nombreEquipo('rubén martín') === 'rubén M.' && nombreEquipo('Lucía') === 'Lucía' && nombreEquipo('') === '',
+    'el nombre de entrada en el equipo: nombre e inicial del apellido');
+  check(limpiarNombre('  Ana \n  L. ') === 'Ana L.' && nombreValido('Al') && !nombreValido('A') && !nombreValido('x'.repeat(41)) && !nombreValido('\u200b\u200b'), 'el nombre, de 2 a 40 letras y con algo visible (como la base)');
+  const r = { desde: '2026-11-02', hasta: '2026-11-29' };
+  check(estadoReto(r, '2026-11-01') === 'proximo' && estadoReto(r, '2026-11-02') === 'en_marcha' && estadoReto(r, '2026-11-29') === 'en_marcha' && estadoReto(r, '2026-11-30') === 'terminado',
+    'un reto está en marcha de su primer a su último día (los dos incluidos)');
+  check(textoReto(r, '2026-11-01') === 'Empieza mañana' && textoReto(r, '2026-11-28') === 'Queda 1 día' && textoReto(r, '2026-11-29') === 'Último día' && textoReto(r, '2026-11-10') === 'Quedan 19 días', 'y dice cuánto le queda');
+  const rk = ordenarRanking([{ nombre: 'B', hechas: 1, previstas: 3 }, { nombre: 'A', hechas: 2, previstas: 2 }, { nombre: 'C', hechas: 2, previstas: 3 }, { nombre: 'D', hechas: 0, previstas: 2 }]);
+  check(rk.map((x) => x.nombre).join('') === 'ACBD', 'el ranking, por la proporción de lo previsto que lleva hecho (y luego por sesiones)');
+  check(quienes(['Ana']) === 'Ana' && quienes(['Ana', 'Rubén']) === 'Ana y Rubén' && quienes(['Ana', 'Rubén', 'Carlos', 'Lucía']) === 'Ana, Rubén y 2 más', 'quién ha reaccionado, en corto');
+  check(REACCIONES.map(([k]) => k).join() === 'fuerza,fuego,aplauso', 'las tres reacciones, con las claves de la base');
+  const hist = [
+    { sesion_id: 'vieja', ejercicio_id: 'press', kg: 100, reps: 5, rpe: 8, registrada_en: '2026-10-01T10:00:00Z' },
+    { sesion_id: 'vieja', ejercicio_id: 'dominadas', kg: 0, reps: 8, registrada_en: '2026-10-01T10:10:00Z' },
+    { sesion_id: 'hoy', ejercicio_id: 'press', kg: 40, reps: 5, rpe: 8, registrada_en: '2026-11-01T10:00:00Z' },
+    { sesion_id: 'hoy', ejercicio_id: 'dominadas', kg: 0, reps: 10, registrada_en: '2026-11-01T10:10:00Z' },
+    { sesion_id: 'hoy', ejercicio_id: 'remo', kg: 60, reps: 8, registrada_en: '2026-11-01T10:20:00Z' },
+    { sesion_id: 'despues', ejercicio_id: 'dominadas', kg: 0, reps: 20, registrada_en: '2026-11-05T10:00:00Z' },
+  ];
+  check([...recordsDeEquipo(hist, 'hoy')].join() === 'dominadas', 'los récords de la tarjeta, como la base: 40 kg tras 100 no; más repeticiones sin carga sí; la primera vez no; lo de después no cuenta');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

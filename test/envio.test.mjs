@@ -232,6 +232,13 @@ console.log('\nLo que encontraron las revisiones');
   await enviarPendientes({ env: base, db: db9, recordatorios: false, fetch: async (url, op) => { vistosD.push({ h: op.headers, m: JSON.parse(des.descifrar(op.body)) }); return new Response('', { status: 201 }); } });
   check(vistosD[0]?.h.Urgency === 'high' && vistosD[0].h.Topic === 'descanso' && vistosD[0].m.etiqueta === 'descanso' && vistosD[0].m.repetir === true,
     'el fin del descanso sale con prioridad alta y con su etiqueta: el de la serie siguiente sustituye al anterior y vuelve a sonar');
+  // v0.43: las de la comunidad son un tipo más (sin cambiar la función): su título, su texto y a #equipo
+  const eq = navegador(33); const vistosE = [];
+  const db10 = dbCon([noti('j1', 'u10', [eq.sub], { tipo: 'comunidad', titulo: 'Rubén M. ha comentado tu publicación', cuerpo: 'Míralo en Equipo.', url: '#equipo' })]);
+  await enviarPendientes({ env: base, db: db10, recordatorios: false, fetch: async (url, op) => { vistosE.push({ h: op.headers, m: JSON.parse(eq.descifrar(op.body)) }); return new Response('', { status: 201 }); } });
+  check(vistosE.length === 1 && vistosE[0].m.titulo === 'Rubén M. ha comentado tu publicación' && vistosE[0].m.url === '#equipo' && vistosE[0].m.etiqueta === 'j1' && vistosE[0].h.Urgency === 'normal'
+    && db10.resultados.flatMap((x) => x.enviadas).some((x) => x.id === 'j1' && x.canal === 'push'),
+    'una notificación de la comunidad sale como las demás (a la pestaña Equipo), sin desplegar de nuevo la función');
 }
 
 console.log('\nQuién puede llamarla');

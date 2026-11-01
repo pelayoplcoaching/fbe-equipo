@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia } from '../comunes.jsx';
 import { Mensajes } from './Mensajes.jsx';
 import { Hoy } from './Hoy.jsx';
@@ -8,6 +8,7 @@ import { Checkin } from './Checkin.jsx';
 import { Progreso } from './Progreso.jsx';
 import { Perfil } from './Perfil.jsx';
 import { Comidas } from './Comidas.jsx';
+import { Equipo } from '../Comunidad.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { usePendientesArchivos, BandaPendientes } from '../Pendientes.jsx';
@@ -15,12 +16,14 @@ import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { hoyISO, semanaCheckin, diaDeCheckin } from '../../logica/fechas.js';
 
 // Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
-// Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento.
+// Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento. Equipo (v0.43), solo con
+// la comunidad abierta y a quien no está de baja.
 const TODAS = [
   ['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], ['comidas', 'Comidas', 'receta'], ['checkin', 'Check-in', 'checkin'],
-  ['progreso', 'Progreso', 'progreso'], ['mensajes', 'Mensajes', 'mensaje'], ['perfil', 'Perfil', 'perfil'],
+  ['progreso', 'Progreso', 'progreso'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['perfil', 'Perfil', 'perfil'],
 ];
-export const pestanasAtleta = (atleta) => TODAS.filter(([t]) => (t !== 'semana' || conEntrenamiento(atleta)) && (t !== 'comidas' || conNutricion(atleta)));
+export const pestanasAtleta = (atleta, { equipo = false } = {}) => TODAS.filter(([t]) => (t !== 'semana' || conEntrenamiento(atleta)) && (t !== 'comidas' || conNutricion(atleta))
+  && (t !== 'equipo' || (equipo && atleta?.estado !== 'baja')));
 // Modo atleta del coach (v0.37): solo el entrenamiento (sin check-in, mensajes, perfil ni nutrición, que son cosas
 // entre atleta y coach), y una pestaña para volver a la vista de coach
 const PESTANAS_PROPIO = [['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], ['progreso', 'Progreso', 'progreso']];
@@ -34,10 +37,26 @@ export function AtletaApp() {
   const { api, atleta, aviso, propio, salirModoAtleta } = useApp();
   // Vídeos guardados en el móvil sin cobertura: se envían solos (en cualquier pestaña)
   const pendientesArchivos = usePendientesArchivos(api, atleta?.id, aviso);
-  const TABS = propio ? PESTANAS_PROPIO : pestanasAtleta(atleta);
+  // La comunidad (v0.43): la pestaña Equipo solo si está abierta (sin la migración 027, nunca). El coach la puede
+  // cerrar con la app abierta: se vuelve a mirar al volver a la app.
+  const comunidad = useCarga(() => (propio || atleta.estado === 'baja' ? Promise.resolve({ activa: false }) : api.comunidad()), [atleta.id, atleta.estado]);
+  useEffect(() => {
+    const al = () => { if (document.visibilityState === 'visible') comunidad.recargar(true); };
+    document.addEventListener('visibilitychange', al);
+    return () => document.removeEventListener('visibilitychange', al);
+  }, []);
+  const equipo = !!comunidad.datos?.activa;
+  const TABS = propio ? PESTANAS_PROPIO : pestanasAtleta(atleta, { equipo });
+  const tabsRef = useRef(TABS);
+  tabsRef.current = TABS;
+  const inicial = useRef(typeof location !== 'undefined' ? location.hash.slice(1) : '');
   const [tab, setTab] = useState(() => tabInicial(TABS));
-  // Si el coach cambia su servicio con la app abierta y la pestaña ya no está, a Hoy
-  useEffect(() => { if (!TABS.some(([t]) => t === tab)) setTab('hoy'); }, [atleta.entrenamiento, atleta.nutricion]);
+  // Si el coach cambia su servicio (o cierra la comunidad) con la app abierta y la pestaña ya no está, a Hoy; si
+  // se abrió la app en #equipo (una notificación), se va ahí en cuanto se sabe que está abierta
+  useEffect(() => {
+    if (equipo && inicial.current === 'equipo') { inicial.current = ''; setTab('equipo'); return; }
+    if (!comunidad.cargando && !TABS.some(([t]) => t === tab)) setTab('hoy');
+  }, [atleta.entrenamiento, atleta.nutricion, equipo, comunidad.cargando]);
   const [sesionId, setSesionId] = useState(null);
   const consentimientos = useCarga(() => api.consentimientos(), []);
   // Si la app se queda abierta de un día para otro (o se vuelve a ella por la mañana), todo se recalcula con el día nuevo
@@ -54,7 +73,7 @@ export function AtletaApp() {
   // Al tocar una notificación con la app abierta, se va a su pestaña; si llega una, se ponen al día las respuestas
   useEffect(() => {
     // (con una sesión abierta no se sale de ella: la pestaña queda elegida para cuando la cierre)
-    const ir = () => { const h = location.hash.slice(1); if (TABS.some(([t]) => t === h)) { setTab(h); noLeidos.recargar(true); } };
+    const ir = () => { const h = location.hash.slice(1); if (tabsRef.current.some(([t]) => t === h)) { setTab(h); noLeidos.recargar(true); } };
     const llega = () => { noLeidos.recargar(true); programa.recargar(true); };
     window.addEventListener('hashchange', ir);
     window.addEventListener('fbe-notificacion', llega);
@@ -96,10 +115,11 @@ export function AtletaApp() {
             {tab === 'checkin' && <Checkin {...compartido} />}
             {tab === 'progreso' && <Progreso {...compartido} />}
             {tab === 'mensajes' && <Mensajes {...compartido} />}
+            {tab === 'equipo' && <Equipo {...compartido} />}
             {tab === 'perfil' && <Perfil {...compartido} />}
           </main>
           <nav class="tabs" aria-label="Secciones">
-            <div class="tabs-in">
+            <div class={`tabs-in ${TABS.filter(([t]) => t !== 'perfil').length >= 7 ? 'tabs-muchas' : ''}`}>
               {TABS.map(([id, texto, icono]) => (
                 <button key={id} class={`tab ${id === 'perfil' ? 'tab-perfil' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>
                   <span class={`tab-ico ${(id === 'checkin' && checkinPendiente) || (id === 'hoy' && respuestasSueltas) ? 'punto' : ''}`}>

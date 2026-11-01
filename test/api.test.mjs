@@ -1165,5 +1165,138 @@ console.log('Peso a diario o una vez a la semana (v0.40, migración 026)');
   await api.guardarFrecuenciaPeso(ana.id, 'diario');
 }
 
+console.log('\nLa comunidad del equipo (v0.43, migración 027)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const sinMigracion = crearApi({ ...b, select: async (t, f) => { if (t === 'comunidad_ajustes') throw new Error('relation "public.comunidad_ajustes" does not exist'); return b.select(t, f); } });
+  check(JSON.stringify(await sinMigracion.comunidad()) === '{"disponible":false,"activa":false}', 'sin la migración 027, la comunidad no existe (la pestaña no sale) y no falla');
+  check(JSON.stringify(await api.comunidad()) === '{"disponible":true,"activa":false}', 'con ella, cerrada de entrada');
+  check((await api.abrirComunidad(true)).activa === true, 'el coach la abre');
+  const aviso = await api.publicarEnComunidad({ texto: '¡Bienvenidos al muro!', fijada: true });
+  check(aviso.tipo === 'aviso' && aviso.fijada, 'el coach publica un aviso fijado');
+  const lunesM = lunesDe(hoyISO());
+  await api.guardarReto({ titulo: 'Cuatro semanas constantes', desde: sumarDias(lunesM, -7), hasta: sumarDias(lunesM, 20), objetivo: 8 });
+  check(await lanza(() => api.guardarReto({ titulo: 'Mal', desde: lunesM, hasta: sumarDias(lunesM, -1), objetivo: 3 })), 'un reto con las fechas en orden');
+  // Otro atleta, Luis
+  const luis = await api.crearAtleta({ nombre: 'Luis Martín', email: 'luis@test' });
+  const codL = await api.crearInvitacion(luis.id);
+  await b.auth.registrar('luis@test', 'contraseña-luis-1', 'Luis');
+  await api.canjearCodigo(codL);
+  await api.darConsentimientos();
+  check((await api.muro()).posts.length === 0 && Object.keys(await api.personasComunidad()).length === 0 && (await api.retosComunidad()).length === 0, 'sin entrar, Luis no ve nada (ni nombres)');
+  await api.entrarComunidad('Luis M.');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.miembroComunidad()) === null, 'Ana aún no ha entrado');
+  check(await lanza(() => api.entrarComunidad('A')), 'el nombre, de 2 a 40 letras');
+  const mA = await api.entrarComunidad('  Ana   L. ');
+  check(mA.nombre === 'Ana L.' && mA.version === 'comunidad-2026-11', 'Ana entra con su nombre y el texto que aceptó');
+  let muro = await api.muro();
+  check(muro.posts[0].id === aviso.id && muro.posts[0].autor.coach && muro.posts[0].autor.nombre === 'Pelayo Fernández', 've arriba el aviso del coach, con su nombre');
+  const foto = new Blob(['jpeg de prueba'], { type: 'image/jpeg' });
+  const pA = await api.publicarEnComunidad({ texto: 'Primera semana completa', foto });
+  check(pA.tipo === 'post' && pA.foto_ruta.startsWith(`${ana.id}/`) && b.storage.ficheros.has(`comunidad:${pA.foto_ruta}`), 'publica con una foto (en su carpeta del bucket «comunidad»)');
+  check(await lanza(() => api.publicarEnComunidad({ texto: '' })), 'algo que decir o una foto');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  muro = await api.muro();
+  const pVisto = muro.posts.find((x) => x.id === pA.id);
+  check(pVisto?.autor.nombre === 'Ana L.' && !pVisto.mio && /^pglite:\/\/comunidad\/.*\?s=300$/.test(await api.urlFotoComunidad(pA.foto_ruta)), 'Luis ve lo de Ana, con su nombre y su foto (enlace de 5 minutos)');
+  check(!('atleta_id' in pVisto) && !('sesion_id' in pVisto), 'del muro, la app no pide la ficha ni la sesión de nadie');
+  check(muro.posts[0].id === aviso.id && muro.posts[1].id === pA.id, 'el aviso fijado arriba y luego lo más nuevo');
+  check((await api.reaccionar(pA.id, 'fuerza')) === 'fuerza' && (await api.reaccionar(pA.id, 'fuego')) === 'fuego', 'reacciona y cambia de reacción');
+  await api.comentarEnComunidad(pA.id, '¡Muy bien!');
+  check(await lanza(() => api.comentarEnComunidad(pA.id, 'x'.repeat(1001))), 'comentarios de hasta 1000 letras');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  muro = await api.muro();
+  const pMio = muro.posts.find((x) => x.id === pA.id);
+  check(pMio.mio && pMio.reacciones.fuego?.join() === 'Luis M.' && pMio.comentarios === 1 && !pMio.miReaccion, 'Ana ve quién ha reaccionado (y cómo) y cuántos comentarios tiene');
+  const coms = await api.comentariosComunidad(pA.id);
+  check(coms.length === 1 && coms[0].autor.nombre === 'Luis M.' && !coms[0].mio, 'y el comentario de Luis');
+  // Compartir una sesión terminada
+  const prog = await api.programa(ana.id);
+  const hecha = Object.values(prog.sesiones).flat().find((x) => x.completada);
+  const previa = await api.recordsParaEquipo(ana.id, hecha.id);
+  const idE = await api.compartirEnEquipo(hecha.id, { texto: 'Hoy, pierna', kilos: false });
+  muro = await api.muro();
+  const e = muro.posts.find((x) => x.id === idE);
+  check(e?.tipo === 'entreno' && e.resumen.nombre === hecha.nombre && e.resumen.con_kilos === false && e.texto === 'Hoy, pierna' && !JSON.stringify(e.resumen).includes('"kg"'),
+    'comparte con el equipo una sesión terminada, sin los kilos (la tarjeta la hace la base)');
+  check(await api.sesionCompartida(hecha.id) && await lanza(() => api.compartirEnEquipo(hecha.id)), 'y una sesión solo se comparte una vez');
+  const nombresRecord = e.resumen.ejercicios.filter((x) => x.record).map((x) => x.nombre).sort().join();
+  const ejNombres = Object.fromEntries((await api.historial(ana.id)).map((x) => [x.ejercicio_id, x.ejercicio]));
+  check([...previa].map((id) => ejNombres[id]).sort().join() === nombresRecord, `la vista previa pone los mismos récords que la base (${nombresRecord || 'ninguno'})`);
+  // Avisar al coach
+  await api.avisarAlCoach({ comentarioId: coms[0].id, motivo: 'No me gusta' });
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  let band = await api.bandeja();
+  check(band.comunidad.length === 1 && band.comunidad[0].quienAvisa === 'Ana L.' && band.comunidad[0].autor === 'Luis M.' && band.comunidad[0].comentario?.texto === '¡Muy bien!' && band.total >= 1,
+    'el coach lo ve en Revisar: qué, de quién y quién avisa');
+  await api.ocultarComentarioComunidad(band.comunidad[0].comentario.id, true);
+  await api.resolverReporte(band.comunidad[0].id);
+  band = await api.bandeja();
+  check(band.comunidad.length === 0, 'lo oculta y lo da por resuelto');
+  const retos = await api.retosComunidad();
+  check(retos.length === 1 && retos[0].progreso.some((x) => x.nombre === 'Ana L.' && x.hechas >= 1) && retos[0].progreso.every((x) => Object.keys(x).sort().join() === 'foto,hechas,nombre,objetivo,perfil_id,reto_id,yo'),
+    'el progreso del reto: solo nombre, foto y recuentos');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.comentariosComunidad(pA.id)).length === 0, 'Ana ya no ve el comentario oculto');
+  const rk = await api.rankingComunidad();
+  check(Array.isArray(rk) && rk.every((x) => Object.keys(x).sort().join() === 'foto,hechas,nombre,perfil_id,previstas,yo'), `el ranking de la semana, solo recuentos (${rk.map((x) => `${x.nombre} ${x.hechas}/${x.previstas}`).join(', ') || 'sin semanas publicadas'})`);
+  check((await api.ajustesComunidad({ sinRanking: true })).sin_ranking === true, 'Ana elige no salir en el ranking');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check(!(await api.rankingComunidad()).some((x) => x.nombre === 'Ana L.') && !(await api.retosComunidad())[0].progreso.some((x) => x.nombre === 'Ana L.'), 'y Luis ya no la ve ni en el ranking ni en el reto');
+  // Salir y volver
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.salirComunidad()).salido_en != null && (await api.muro()).posts.length === 0, 'Ana sale (y deja de ver el muro)');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check(!(await api.muro()).posts.some((x) => x.autor_id === ana.perfil_id || x.id === pA.id) && await lanza(() => api.urlFotoComunidad(pA.foto_ruta)), 'para Luis desaparece lo de Ana, también su foto');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.entrarComunidad('Ana L.');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check((await api.muro()).posts.some((x) => x.id === pA.id), 'al volver, lo suyo vuelve a verse');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.salirComunidad({ borrar: true });
+  check((await b.sql(`select count(*)::int n from storage.objects where bucket_id = 'comunidad' and name = $1`, [pA.foto_ruta]))[0].n === 0, 'saliendo con «borrar», se borra lo suyo y su foto de Storage');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(!(await api.muro()).posts.some((x) => x.autor_id === ana.perfil_id), 'también para el coach');
+  const copia = await api.copiaCompleta();
+  check(Array.isArray(copia.comunidad_posts) && copia.comunidad_miembros.length === 2 && copia.comunidad_retos.length === 1, 'la copia completa lleva la comunidad');
+  // Revisión de la 027: avisos que sobreviven al borrado, «mis datos», sacar y readmitir
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  const pMal = await api.publicarEnComunidad({ texto: 'Algo que no debería' });
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.entrarComunidad('Ana L.');
+  await api.avisarAlCoach({ postId: pMal.id, motivo: 'Feo' });
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  await api.borrarDeComunidad(pMal);
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const avisoBorrado = (await api.bandeja()).comunidad.find((r) => r.borrado);
+  check(avisoBorrado?.texto === 'Algo que no debería' && avisoBorrado.autor === 'Luis M.' && avisoBorrado.quienAvisa === 'Ana L.', 'si el autor borra lo avisado, el coach lo sigue viendo en Revisar («borrado por su autor»)');
+  await api.resolverReporte(avisoBorrado);
+  check(!(await api.bandeja()).comunidad.some((r) => r.id === avisoBorrado.id), 'y lo da por resuelto');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const pOc = await api.publicarEnComunidad({ texto: 'Para ocultar' });
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.ocultarEnComunidad(pOc.id, true);
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.salirComunidad();
+  const exp = await api.exportar(ana.id);
+  check(exp.comunidad?.miembro?.nombre === 'Ana L.' && exp.comunidad.publicaciones.some((x) => x.id === pOc.id && x.oculta), '«Descargar mis datos» lleva todo lo suyo de la comunidad, también lo oculto y tras salir');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.expulsarDeComunidad(luis.id, true);
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check((await api.miembroComunidad()).bloqueado === true && await lanza(() => api.entrarComunidad('Luis M.')), 'el coach saca a Luis: no puede volver a entrar');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.expulsarDeComunidad(luis.id, false);
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check((await api.entrarComunidad('Luis M.')).salido_en === null, 'readmitido, vuelve a entrar él');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check((await api.miembrosComunidad()).length === 2, 'el coach ve quién ha entrado');
+  await api.abrirComunidad(false);
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check((await api.comunidad()).activa === false && (await api.muro()).posts.length === 0, 'cerrada, nadie ve el muro');
+  check(await lanza(() => api.abrirComunidad(true)), 'y un atleta no la abre');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

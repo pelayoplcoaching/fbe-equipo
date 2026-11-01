@@ -383,5 +383,71 @@ await b.auth.entrar('pelayo@fbe.demo', 'demo');
 const marta = (await api.atletas()).find((a) => a.nombre === 'Marta Gil');
 check(await lanza(() => api.apuntarMenu(marta.id, { fecha: hoyISO(), toma: 'comida', texto: 'Algo' })), 'sin su consentimiento de salud, ni el coach le apunta el menú (como en la base)');
 
+console.log('\nLa comunidad del equipo en la demo (v0.43)');
+{
+  await b.auth.entrar('ana@fbe.demo', 'demo');
+  const anaC = await api.miAtleta();
+  check((await api.comunidad()).activa && (await api.miembroComunidad()) === null, 'la comunidad está abierta y Ana aún no ha entrado (la demo enseña la entrada)');
+  check((await api.muro()).posts.length === 0 && Object.keys(await api.personasComunidad()).length === 0 && (await api.rankingComunidad()).length === 0, 'sin entrar, no ve nada (como en la base)');
+  await api.entrarComunidad('Ana L.');
+  const muro = await api.muro();
+  check(muro.posts[0].tipo === 'aviso' && muro.posts[0].fijada && muro.posts[0].autor.coach, 'dentro: arriba, el aviso fijado del coach');
+  const entrenoR = muro.posts.find((x) => x.tipo === 'entreno');
+  check(entrenoR?.autor.nombre === 'Rubén M.' && entrenoR.resumen.ejercicios.length >= 3 && entrenoR.comentarios === 2 && Object.values(entrenoR.reacciones).flat().length === 3, 'el entreno compartido de Rubén, con reacciones y comentarios');
+  check(muro.posts.length === 4, 'y las publicaciones de Carlos y Lucía');
+  const retos = await api.retosComunidad();
+  check(retos.length === 1 && retos[0].progreso.length === 4 && retos[0].progreso.some((x) => x.yo && x.nombre === 'Ana L.'), `un reto con el progreso de los cuatro (${retos[0]?.progreso.map((x) => `${x.nombre} ${x.hechas}`).join(', ')})`);
+  const rk = await api.rankingComunidad();
+  check(rk.some((x) => x.nombre === 'Rubén M.' && x.previstas >= 3) && rk.some((x) => x.yo) && !rk.some((x) => x.nombre === 'Lucía F.'), `el ranking de la semana (sin Lucía, que solo lleva nutrición): ${rk.map((x) => `${x.nombre} ${x.hechas}/${x.previstas}`).join(', ')}`);
+  const pA = await api.publicarEnComunidad({ texto: '¡Hola, equipo!' });
+  check(pA.autor_id && pA.tipo === 'post' && pA.fijada === false, 'publica a su nombre');
+  check(await lanza(() => b.insert('comunidad_posts', [{ tipo: 'aviso', texto: 'Soy coach' }])) && await lanza(() => b.insert('comunidad_reacciones', [{ post_id: pA.id, autor_id: 'x', tipo: 'fuego' }])),
+    'como en la base: ni avisos del coach ni reacciones a mano');
+  check((await api.reaccionar(entrenoR.id, 'fuerza')) === 'fuerza' && (await api.reaccionar(entrenoR.id, 'fuerza')) === null, 'reacciona y, al tocar otra vez, la quita');
+  await api.comentarEnComunidad(entrenoR.id, '¡Enhorabuena, Rubén!');
+  const hechas = Object.values((await api.programa(anaC.id)).sesiones).flat().filter((x) => x.completada);
+  const idSin = await api.compartirEnEquipo(hechas[0].id, { kilos: false });
+  const idCon = await api.compartirEnEquipo(hechas[1].id, { kilos: true, records: [] });
+  const m2 = await api.muro();
+  const sin = m2.posts.find((x) => x.id === idSin), con = m2.posts.find((x) => x.id === idCon);
+  check(!JSON.stringify(sin.resumen).includes('"kg"') && con.resumen.con_kilos && con.resumen.ejercicios.some((x) => x.kg > 0 && x.reps > 0), 'comparte un entreno sin los kilos y otro con ellos (la tarjeta, de lo registrado)');
+  check(await lanza(() => api.compartirEnEquipo(hechas[0].id)), 'una sesión, una vez');
+  await api.avisarAlCoach({ postId: m2.posts.find((x) => x.autor.nombre === 'Carlos V.').id, motivo: 'Prueba' });
+  await b.auth.entrar('ruben@fbe.demo', 'demo');
+  check((await api.muro()).posts.some((x) => x.id === pA.id), 'Rubén ve lo de Ana');
+  await b.auth.entrar('pelayo@fbe.demo', 'demo');
+  const band = await api.bandeja();
+  check(band.comunidad.length === 1 && band.comunidad[0].quienAvisa === 'Ana L.', 'el coach ve el aviso en Revisar');
+  await api.ocultarEnComunidad(band.comunidad[0].post.id, true);
+  await api.resolverReporte(band.comunidad[0].id);
+  check((await api.bandeja()).comunidad.length === 0 && (await api.muro()).posts.some((x) => x.oculta), 'lo oculta (él lo sigue viendo, marcado) y queda resuelto');
+  await b.auth.entrar('ruben@fbe.demo', 'demo');
+  check(!(await api.muro()).posts.some((x) => x.oculta || x.autor.nombre === 'Carlos V.'), 'los atletas ya no lo ven');
+  await b.auth.entrar('ana@fbe.demo', 'demo');
+  await api.ajustesComunidad({ sinRanking: true });
+  await api.salirComunidad();
+  await b.auth.entrar('ruben@fbe.demo', 'demo');
+  check(!(await api.muro()).posts.some((x) => x.id === pA.id || x.id === idSin) && !(await api.rankingComunidad()).some((x) => x.nombre === 'Ana L.'), 'si Ana sale, para Rubén desaparece todo lo suyo');
+  await b.auth.entrar('pelayo@fbe.demo', 'demo');
+  await api.actualizarAtleta((await api.atletas()).find((a) => a.nombre === 'Rubén Martín').id, { estado: 'baja' });
+  await b.auth.entrar('ruben@fbe.demo', 'demo');
+  check((await api.muro()).posts.length === 0 && await lanza(() => api.publicarEnComunidad({ texto: 'De baja' })), 'de baja, fuera al momento');
+  await b.auth.entrar('pelayo@fbe.demo', 'demo');
+  await api.actualizarAtleta((await api.atletas()).find((a) => a.nombre === 'Rubén Martín').id, { estado: 'activo' });
+  // Como la base tras la revisión: sacar y readmitir, nombres, y nada de cambiar publicaciones a mano
+  const carlosA = (await api.atletas()).find((x) => x.nombre === 'Carlos Vera');
+  await api.expulsarDeComunidad(carlosA.id, true);
+  await b.auth.entrar('carlos@fbe.demo', 'demo');
+  check((await api.miembroComunidad()).bloqueado && await lanza(() => api.entrarComunidad('Carlos V.')), 'el coach saca a Carlos y no puede volver a entrar');
+  await b.auth.entrar('lucia@fbe.demo', 'demo');
+  check(await lanza(() => api.ajustesComunidad({ nombre: 'Pelayo' })) && await lanza(() => api.ajustesComunidad({ nombre: 'rubén m.' })) && await lanza(() => b.update('comunidad_posts', { texto: 'x' }, { eq: {} })),
+    'ni el nombre del coach ni uno repetido, y las publicaciones no se cambian a mano');
+  await b.auth.entrar('pelayo@fbe.demo', 'demo');
+  await api.expulsarDeComunidad(carlosA.id, false);
+  await api.abrirComunidad(false);
+  await b.auth.entrar('lucia@fbe.demo', 'demo');
+  check((await api.muro()).posts.length === 0, 'cerrada, nadie ve el muro');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

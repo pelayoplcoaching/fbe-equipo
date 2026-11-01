@@ -58,6 +58,10 @@ const DEFECTOS = {
   menu_dias: () => ({ creado_en: ahora() }),
   menu_comidas: () => ({ receta_id: null, raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, hecho: false, orden: 0, creado_en: ahora() }),
   preguntas_checkin: () => ({ atleta_id: null, tipo: 'escala', unidad: null, ayuda: null, etiqueta_min: null, etiqueta_max: null, orden: 0, activa: true, creado_en: ahora() }),
+  // Migración 027: la comunidad del equipo
+  comunidad_posts: () => ({ tipo: 'post', texto: null, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, atleta_id: null, creado_en: ahora() }),
+  comunidad_comentarios: () => ({ oculto: false, atleta_id: null, creado_en: ahora() }),
+  comunidad_retos: () => ({ descripcion: null, creado_en: ahora() }),
 };
 
 // Borrados en cascada, como en el esquema SQL.
@@ -67,7 +71,9 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id']],
+    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'],
+    ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id']],
+  comunidad_posts: [['comunidad_comentarios', 'post_id'], ['comunidad_reacciones', 'post_id']],
   recetas: [['recetas_atleta', 'receta_id']],
   habitos: [['registros_habito', 'habito_id']],
   bloques: [['semanas', 'bloque_id']],
@@ -76,7 +82,7 @@ const CASCADA = {
   sesion_ejercicios: [['series', 'sesion_ejercicio_id']],
 };
 // Al borrar estas filas, los comentarios se quedan sin el enlace (on delete set null)
-const ANULAR = { recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id']], ejercicios: [['objetivos', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
+const ANULAR = { sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id']], ejercicios: [['objetivos', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
 
 const cumple = (fila, f = {}) => {
   for (const [k, v] of Object.entries(f.eq || {})) if ((fila[k] ?? null) !== v) return false;
@@ -91,7 +97,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias'];
+const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones'];
 
 function guardarLocal(clave, valor) {
   try { localStorage.setItem(clave, JSON.stringify(valor)); } catch { /* sin almacenamiento: la demo vive en memoria */ }
@@ -119,7 +125,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const buscar = (t, id) => tabla(t).find((x) => x.id === id);
   const miPerfil = () => tabla('perfiles').find((p) => p.id === sesion?.user.id);
   const deBaja = () => !esCoach() && tabla('atletas').some((a) => a.perfil_id === sesion?.user.id && a.estado === 'baja');
-  const ESCRIBE_ATLETA = ['series', 'pesos', 'checkins', 'molestias', 'medidas', 'marcas', 'comentarios', 'archivos', 'sesiones', 'notas_ejercicio', 'registros_habito', 'registros_nutricion', 'cuestionarios', 'menu_comidas', 'comidas_atleta', 'recetas_atleta', 'menu_dias'];
+  const ESCRIBE_ATLETA = ['series', 'pesos', 'checkins', 'molestias', 'medidas', 'marcas', 'comentarios', 'archivos', 'sesiones', 'notas_ejercicio', 'registros_habito', 'registros_nutricion', 'cuestionarios', 'menu_comidas', 'comidas_atleta', 'recetas_atleta', 'menu_dias', 'comunidad_posts', 'comunidad_comentarios'];
   const comprobarAlta = (t) => {
     if (ESCRIBE_ATLETA.includes(t) && deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
   };
@@ -129,9 +135,87 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     return (w && buscar('bloques', w.bloque_id))?.atleta_id ?? null;
   };
 
+  // Como la migración 027: la comunidad. Lo de los demás solo se ve dentro (abierta, sin haber salido ni haber
+  // sido sacado, con el texto vigente aceptado, sin estar de baja y sin ser la ficha del coach); el coach, todo.
+  const VERSION_COMUNIDAD = 'comunidad-2026-11';
+  const perfilDe = (id) => tabla('perfiles').find((p) => p.id === id);
+  const comunidadActiva = () => !!tabla('comunidad_ajustes').find((x) => x.id === true)?.activa;
+  const miembroVisto = (m) => { const a = m && buscar('atletas', m.atleta_id); return !!a && !m.salido_en && !m.bloqueado && m.version === VERSION_COMUNIDAD && a.perfil_id === m.perfil_id && a.estado !== 'baja' && perfilDe(m.perfil_id)?.rol !== 'coach'; };
+  const esMiembro = (pid) => miembroVisto(tabla('comunidad_miembros').find((x) => x.perfil_id === pid));
+  const soyMiembro = () => !!sesion && comunidadActiva() && esMiembro(sesion.user.id);
+  const veComunidad = () => esCoach() || soyMiembro();
+  const autorVisible = (pid) => veComunidad() && (perfilDe(pid)?.rol === 'coach' || esMiembro(pid));
+  const postVisible = (id) => { const x = buscar('comunidad_posts', id); return !!x && (esCoach() || (!x.oculta && soyMiembro() && autorVisible(x.autor_id))); };
+  const VISIBLE = {
+    comunidad_miembros: (x) => esCoach() || x.perfil_id === sesion?.user.id,
+    comunidad_posts: (x) => esCoach() || (!x.oculta && soyMiembro() && autorVisible(x.autor_id)),
+    comunidad_comentarios: (x) => esCoach() || (!x.oculto && soyMiembro() && autorVisible(x.autor_id) && postVisible(x.post_id)),
+    comunidad_reacciones: (x) => esCoach() || (soyMiembro() && autorVisible(x.autor_id) && postVisible(x.post_id)),
+    comunidad_reportes: () => esCoach(),
+    comunidad_retos: () => esCoach() || soyMiembro(),
+    comunidad_cupos: () => false,
+  };
+  const miAtletaId = () => tabla('atletas').find((a) => a.perfil_id === sesion?.user.id)?.id || null;
+  const fotoVisible = (ruta) => esCoach() || (!!miAtletaId() && ruta.split('/')[0] === miAtletaId()) || tabla('comunidad_posts').some((x) => x.foto_ruta === ruta && postVisible(x.id));
+  const fotoRegistrada = (ruta) => tabla('comunidad_posts').some((x) => x.foto_ruta === ruta && x.autor_id === sesion?.user.id && !x.oculta && Date.parse(x.creado_en) > Date.now() - 15 * 60000 && veComunidad());
+  const fotoBorrable = (ruta) => !!miAtletaId() && ruta.split('/')[0] === miAtletaId() && !tabla('comunidad_posts').some((x) => x.foto_ruta === ruta)
+    && !tabla('comunidad_reportes').some((r) => r.copia_foto === ruta && !r.resuelto_en);
+  const sinPermiso = () => new Error('new row violates row-level security policy');
+  // Cupos diarios (comunidad_cupos: no se borra con lo publicado)
+  function gastarCupo(tipo) {
+    const uid = sesion?.user.id;
+    if (!uid || esCoach()) return;
+    const max = tipo === 'comentario' ? 100 : 20;
+    const usados = tabla('comunidad_cupos').filter((c) => c.perfil_id === uid && c.tipo === tipo && Date.parse(c.creado_en) > Date.now() - 864e5).length;
+    if (usados >= max) throw new Error(tipo === 'post' ? 'Has publicado 20 veces en las últimas 24 horas: espera un poco' : tipo === 'comentario' ? 'Has escrito 100 comentarios en las últimas 24 horas: espera un poco' : 'Has avisado 20 veces en las últimas 24 horas: escribe a tu coach');
+    tabla('comunidad_cupos').push({ id: tabla('comunidad_cupos').length + 1, perfil_id: uid, tipo, creado_en: ahora() });
+  }
+  // Un nombre que se puede usar en el equipo (null) o por qué no
+  const DIACRITICOS = new RegExp('[\\u0300-\\u036f]', 'g'); // (en un texto: el empaquetado deja ASCII puro)
+  const normal = (t) => String(t || '').toLowerCase().normalize('NFD').replace(DIACRITICOS, '');
+  function problemaNombre(v, atletaId) {
+    if (!(v.length >= 2 && v.length <= 40 && textoVisible(v))) return 'Tu nombre en el equipo, de 2 a 40 letras';
+    const n = normal(v);
+    if (/(^|[^a-z0-9])(coach|entrenador|entrenadora|fbe)([^a-z0-9]|$)/.test(n)) return 'Ese nombre se confunde con el del coach: elige otro';
+    if (tabla('perfiles').some((p) => p.rol === 'coach' && String(p.nombre || '').trim() && n.split(' ')[0] === normal(String(p.nombre).trim()).split(' ')[0])) return 'Ese nombre se confunde con el del coach: elige otro';
+    if (tabla('comunidad_miembros').some((m) => !m.salido_en && m.atleta_id !== atletaId && m.nombre.toLowerCase() === v.toLowerCase())) return 'Ya hay alguien en el equipo con ese nombre: elige otro';
+    return null;
+  }
+  function prepararPost(f) {
+    const uid = sesion?.user.id;
+    Object.assign(f, { autor_id: uid, creado_en: ahora(), oculta: false, sesion_id: null, resumen: null });
+    if (esCoach()) {
+      f.atleta_id = null;
+      if (f.tipo !== 'aviso') throw new Error('Como coach, en el muro publicas avisos');
+      if (f.foto_ruta && !String(f.foto_ruta).startsWith('coach/')) throw new Error('La foto no va en su sitio');
+    } else {
+      if (!soyMiembro()) throw sinPermiso();
+      f.atleta_id = miAtletaId();
+      f.fijada = false;
+      if (f.tipo !== 'post') throw new Error('Los avisos son del coach, y los entrenos se comparten desde el resumen de la sesión');
+      if (f.foto_ruta && !String(f.foto_ruta).startsWith(`${f.atleta_id}/`)) throw new Error('La foto no va en su sitio');
+    }
+    gastarCupo('post');
+  }
+  function prepararComentarioComunidad(f) {
+    const uid = sesion?.user.id;
+    if (!(esCoach() || soyMiembro()) || !postVisible(f.post_id)) throw sinPermiso();
+    Object.assign(f, { autor_id: uid, creado_en: ahora(), oculto: false, atleta_id: esCoach() ? null : miAtletaId() });
+    gastarCupo('comentario');
+  }
+  // La mejor serie de cada ejercicio de una sesión y su 1RM estimado (como comunidad_compartir_sesion)
+  const e1rmBase = (s) => {
+    const k = Number(s.kg), r = Number(s.reps);
+    if (!(k > 0) || !(r >= 1 && r <= 12)) return null;
+    const res = s.rir != null ? Math.max(0, Number(s.rir)) : s.rpe != null ? Math.max(0, 10 - Number(s.rpe)) : 0;
+    return Math.round(k * (r + res <= 1 ? 1 : 1 + (r + res) / 30) * 10) / 10;
+  };
+
   // Lo que en Supabase hacen los triggers
   function antesDeInsertar(t, f) {
     comprobarAlta(t);
+    if (t === 'comunidad_posts') prepararPost(f);
+    if (t === 'comunidad_comentarios') prepararComentarioComunidad(f);
     if (t === 'series' && !f.atleta_id) {
       const se = buscar('sesion_ejercicios', f.sesion_ejercicio_id);
       f.atleta_id = se ? atletaDeSesion(se.sesion_id) : null;
@@ -353,6 +437,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const TOMAS = ['desayuno', 'media_manana', 'comida', 'merienda', 'cena', 'recena'];
   const FOTO_OK = (v, max) => v == null || (String(v).length <= max && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(String(v)));
   const CHECKS = {
+    // Migración 027: la comunidad
+    comunidad_posts: (f) => ['aviso', 'post', 'entreno'].includes(f.tipo) && textoCorto(f.texto, 2000) && (f.tipo !== 'aviso' || f.texto != null)
+      && (f.tipo !== 'post' || f.texto != null || f.foto_ruta != null) && (f.tipo === 'entreno') === (f.resumen != null) && (!f.fijada || f.tipo === 'aviso'),
+    comunidad_comentarios: (f) => f.texto != null && textoCorto(f.texto, 1000),
+    comunidad_retos: (f) => textoCorto(f.titulo, 80) && f.titulo != null && textoCorto(f.descripcion, 500) && esFecha(f.desde) && esFecha(f.hasta) && f.hasta >= f.desde
+      && diasEntreIso(f.desde, f.hasta) <= 366 && Number.isInteger(n(f.objetivo)) && entre(n(f.objetivo), 1, 100),
     // Migración 022: recetas, recetario, comidas del día y menú
     recetas: (f) => textoCorto(f.nombre, 80) && f.nombre != null && Array.isArray(f.tomas) && f.tomas.length <= 6 && f.tomas.every((t) => TOMAS.includes(t))
       && Number.isInteger(n(f.raciones)) && entre(n(f.raciones), 1, 20) && entre(n(f.kcal), 0, 5000) && entre(n(f.proteina_g), 0, 500) && entre(n(f.carbos_g), 0, 800) && entre(n(f.grasa_g), 0, 400)
@@ -429,7 +519,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     preferencias_notificaciones: (f) => {
       const hora = (h) => /^\d\d:\d\d(:00)?$/.test(String(h ?? ''));
       const h5 = (h) => String(h).slice(0, 5);
-      const tipos = ['respuesta', 'semana', 'aviso', 'sesion_hoy', 'checkin', 'habitos', 'nutricion', 'cuestionario', 'mensaje', 'checkin_recibido', 'video_recibido', 'sesion_hecha', 'cuestionario_recibido'];
+      const tipos = ['respuesta', 'semana', 'aviso', 'sesion_hoy', 'checkin', 'habitos', 'nutricion', 'cuestionario', 'mensaje', 'checkin_recibido', 'video_recibido', 'sesion_hecha', 'cuestionario_recibido', 'descanso', 'comunidad'];
       return Array.isArray(f.desactivados) && f.desactivados.every((t) => tipos.includes(t))
         && hora(f.hora_manana) && h5(f.hora_manana) >= '05:00' && h5(f.hora_manana) <= '12:00'
         && hora(f.hora_tarde) && h5(f.hora_tarde) >= '12:00' && h5(f.hora_tarde) <= '23:30'
@@ -489,6 +579,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   function insertar(t, fila) {
     soloCoach(t);
+    // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
+    if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos'].includes(t)) throw sinPermiso();
+    if (t === 'comunidad_retos' && !esCoach()) throw sinPermiso();
     if (t === 'recetas_atleta' && !esCoach()) throw new Error('new row violates row-level security policy');
     const nueva = { ...(SIN_ID.includes(t) ? {} : { id: uuid() }), ...(DEFECTOS[t]?.() || {}), ...copia(fila) };
     antesDeInsertar(t, nueva);
@@ -530,6 +623,204 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return u;
     } catch { return dataUrl; }
   };
+
+  // Las funciones de la comunidad (como las de la migración 027)
+  const limpiarNombre = (t) => String(t || '').replace(/[\s\u0000-\u001f\u007f]+/g, ' ').trim();
+  const sesionesDe = (atletaId) => {
+    const bloques = new Set(tabla('bloques').filter((x) => x.atleta_id === atletaId && !x.es_plantilla).map((x) => x.id));
+    const semanas = new Set(tabla('semanas').filter((w) => bloques.has(w.bloque_id)).map((w) => w.id));
+    return tabla('sesiones').filter((x) => semanas.has(x.semana_id));
+  };
+  const nombreDe = (pid) => tabla('comunidad_miembros').find((m) => m.perfil_id === pid)?.nombre
+    || (perfilDe(pid)?.rol === 'coach' ? String(perfilDe(pid).nombre || '').trim().split(/\s+/)[0] || 'Coach' : 'Alguien del equipo');
+  function rpcComunidad(nombre, args, uid, perfil) {
+    const yo = tabla('atletas').find((a) => a.perfil_id === uid);
+    const coach = perfil?.rol === 'coach';
+    if (nombre === 'comunidad_unirme') {
+      if (!uid) throw new Error('Necesitas iniciar sesión');
+      if (coach) throw new Error('El coach está en la comunidad como coach, no como miembro');
+      if (!yo) throw new Error('Solo los atletas del equipo pueden entrar');
+      if (yo.estado === 'baja') throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+      if (!comunidadActiva()) throw new Error('La comunidad no está abierta');
+      const m = tabla('comunidad_miembros').find((x) => x.atleta_id === yo.id);
+      if (m?.bloqueado) throw new Error('Tu coach te ha sacado de la comunidad: habla con él si quieres volver');
+      if (args.p_version !== VERSION_COMUNIDAD) throw new Error('El texto que aceptas no es el vigente: recarga la app y vuelve a intentarlo');
+      const v = limpiarNombre(args.p_nombre);
+      const problema = problemaNombre(v, yo.id);
+      if (problema) throw new Error(problema);
+      if (m) Object.assign(m, { perfil_id: uid, nombre: v, version: args.p_version, aceptado_en: ahora(), salido_en: null, nombre_cambiado_en: null });
+      else tabla('comunidad_miembros').push({ atleta_id: yo.id, perfil_id: uid, nombre: v, version: args.p_version, aceptado_en: ahora(), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, creado_en: ahora() });
+      return null;
+    }
+    if (nombre === 'comunidad_salir') {
+      if (!uid) throw new Error('Necesitas iniciar sesión');
+      for (const m of tabla('comunidad_miembros')) if (m.perfil_id === uid && !m.salido_en) m.salido_en = ahora();
+      let fotos = [];
+      if (args.p_borrar && !coach) {
+        fotos = tabla('comunidad_posts').filter((x) => x.autor_id === uid && x.foto_ruta && !tabla('comunidad_reportes').some((r) => r.copia_foto === x.foto_ruta && !r.resuelto_en)).map((x) => x.foto_ruta);
+        db.comunidad_reacciones = tabla('comunidad_reacciones').filter((x) => x.autor_id !== uid);
+        borrarCascada('comunidad_comentarios', tabla('comunidad_comentarios').filter((x) => x.autor_id === uid).map((x) => x.id));
+        borrarCascada('comunidad_posts', tabla('comunidad_posts').filter((x) => x.autor_id === uid).map((x) => x.id));
+      }
+      return fotos;
+    }
+    if (nombre === 'comunidad_ajustar') {
+      if (!soyMiembro()) throw new Error('No estás en la comunidad');
+      const m = tabla('comunidad_miembros').find((x) => x.perfil_id === uid && !x.salido_en);
+      if (args.p_nombre != null) {
+        const v = limpiarNombre(args.p_nombre);
+        if (v !== m.nombre) {
+          if (m.nombre_cambiado_en && Date.parse(m.nombre_cambiado_en) > Date.now() - 864e5) throw new Error('Ya has cambiado tu nombre hoy: podrás volver a hacerlo mañana');
+          const problema = problemaNombre(v, m.atleta_id);
+          if (problema) throw new Error(problema);
+          Object.assign(m, { nombre: v, nombre_cambiado_en: ahora() });
+        }
+      }
+      if (args.p_sin_ranking != null) m.sin_ranking = !!args.p_sin_ranking;
+      return null;
+    }
+    if (nombre === 'comunidad_expulsar') {
+      if (!esCoach()) throw new Error('Solo el coach puede sacar a alguien de la comunidad');
+      const m = tabla('comunidad_miembros').find((x) => x.atleta_id === args.p_atleta);
+      if (!m) throw new Error('Ese atleta no ha entrado en la comunidad');
+      if (args.p_bloquear !== false) Object.assign(m, { salido_en: m.salido_en || ahora(), bloqueado: true });
+      else m.bloqueado = false;
+      return null;
+    }
+    if (nombre === 'comunidad_moderar' || nombre === 'comunidad_moderar_comentario') {
+      if (!esCoach()) throw new Error('Fijar u ocultar es cosa del coach');
+      const x = nombre === 'comunidad_moderar' ? buscar('comunidad_posts', args.p_post) : buscar('comunidad_comentarios', args.p_comentario);
+      if (!x) throw new Error('Ya no está');
+      if (nombre === 'comunidad_moderar') {
+        const nueva = { ...x, fijada: args.p_fijada ?? x.fijada, oculta: args.p_oculta ?? x.oculta };
+        comprobarChecks('comunidad_posts', nueva);
+        Object.assign(x, { fijada: nueva.fijada, oculta: nueva.oculta });
+      } else if (args.p_oculto != null) x.oculto = !!args.p_oculto;
+      return null;
+    }
+    if (nombre === 'comunidad_personas') {
+      if (!veComunidad()) return [];
+      return [
+        ...tabla('perfiles').filter((p) => p.rol === 'coach').map((p) => ({ perfil_id: p.id, nombre: String(p.nombre || '').trim() || 'Coach', foto: p.foto || null, coach: true })),
+        ...tabla('comunidad_miembros').filter(miembroVisto).map((m) => ({ perfil_id: m.perfil_id, nombre: m.nombre, foto: perfilDe(m.perfil_id)?.foto || null, coach: false })),
+      ];
+    }
+    if (nombre === 'comunidad_reaccionar') {
+      if (!veComunidad()) throw new Error('Para reaccionar tienes que estar en la comunidad');
+      if (!postVisible(args.p_post)) throw new Error('Esa publicación ya no está');
+      if (args.p_tipo != null && !['fuerza', 'fuego', 'aplauso'].includes(args.p_tipo)) throw new Error('Esa reacción no existe');
+      const ya = tabla('comunidad_reacciones').find((x) => x.post_id === args.p_post && x.autor_id === uid);
+      if (args.p_tipo == null || ya?.tipo === args.p_tipo) { db.comunidad_reacciones = tabla('comunidad_reacciones').filter((x) => x !== ya); return null; }
+      if (ya) Object.assign(ya, { tipo: args.p_tipo, creado_en: ahora() });
+      else tabla('comunidad_reacciones').push({ post_id: args.p_post, autor_id: uid, atleta_id: coach ? null : yo?.id || null, tipo: args.p_tipo, creado_en: ahora() });
+      return args.p_tipo;
+    }
+    if (nombre === 'comunidad_avisar_coach') {
+      if (!soyMiembro()) throw new Error('Para avisar al coach tienes que estar en la comunidad');
+      let c = null, x = null;
+      if (args.p_comentario) {
+        c = buscar('comunidad_comentarios', args.p_comentario);
+        if (!c || !VISIBLE.comunidad_comentarios(c)) throw new Error('Ese comentario ya no está');
+        x = buscar('comunidad_posts', c.post_id);
+      } else {
+        x = args.p_post && buscar('comunidad_posts', args.p_post);
+        if (!x || !postVisible(x.id)) throw new Error('Esa publicación ya no está');
+      }
+      const motivo = String(args.p_motivo || '').trim() || null;
+      if (motivo && motivo.length > 300) throw new Error('El motivo, hasta 300 letras');
+      const ya = tabla('comunidad_reportes').find((r) => r.autor_id === uid && r.post_id === x.id && (r.comentario_id || null) === (args.p_comentario || null) && !r.resuelto_en);
+      if (ya) return ya.id;
+      gastarCupo('reporte');
+      const de = c || x;
+      const r = {
+        id: uuid(), post_id: x.id, comentario_id: c?.id || null, autor_id: uid, motivo, creado_en: ahora(), resuelto_en: null, de_comentario: !!c,
+        copia_tipo: c ? 'comentario' : x.tipo, copia_texto: c ? c.texto : x.tipo === 'entreno' ? ['Entreno compartido', x.resumen?.nombre, x.texto].filter(Boolean).join(': ') : x.texto,
+        copia_foto: c ? null : x.foto_ruta, copia_autor_id: de.autor_id, copia_autor_nombre: nombreDe(de.autor_id), copia_atleta_id: de.atleta_id, copia_creado_en: de.creado_en,
+      };
+      tabla('comunidad_reportes').push(r);
+      return r.id;
+    }
+    if (nombre === 'comunidad_retos_progreso') {
+      if (!veComunidad()) return [];
+      const ms = tabla('comunidad_miembros').filter((m) => miembroVisto(m) && (!m.sin_ranking || m.perfil_id === uid));
+      return tabla('comunidad_retos').flatMap((r) => ms.map((m) => ({
+        reto_id: r.id, perfil_id: m.perfil_id, nombre: m.nombre, objetivo: r.objetivo, yo: m.perfil_id === uid,
+        hechas: sesionesDe(m.atleta_id).filter((x) => x.completada && x.fecha_realizada && x.fecha_realizada >= r.desde && x.fecha_realizada <= r.hasta).length,
+      })));
+    }
+    if (nombre === 'comunidad_ranking') {
+      if (!veComunidad()) return [];
+      const lunes = sumar(hoyISO(), -((new Date(`${hoyISO()}T12:00:00`).getDay() + 6) % 7));
+      const out = [];
+      for (const m of tabla('comunidad_miembros').filter((x) => miembroVisto(x) && (!x.sin_ranking || x.perfil_id === uid))) {
+        const bl = tabla('bloques').filter((x) => x.atleta_id === m.atleta_id && !x.es_plantilla && x.estado !== 'cancelado')
+          .sort((x, y) => String(y.fecha_inicio || '').localeCompare(String(x.fecha_inicio || '')) || (y.numero || 0) - (x.numero || 0));
+        let w = null;
+        for (const x of bl) { w = tabla('semanas').find((s2) => s2.bloque_id === x.id && s2.programacion === 'programada' && s2.fecha_inicio === lunes); if (w) break; }
+        const ss = w ? tabla('sesiones').filter((x) => x.semana_id === w.id) : [];
+        if (ss.length) out.push({ perfil_id: m.perfil_id, nombre: m.nombre, hechas: ss.filter((x) => x.completada).length, previstas: ss.length, yo: m.perfil_id === uid });
+      }
+      return out;
+    }
+    if (nombre === 'comunidad_mis_datos') {
+      if (!uid) return null;
+      const m = tabla('comunidad_miembros').find((x) => x.perfil_id === uid);
+      return {
+        miembro: m ? (({ perfil_id, ...resto }) => resto)(m) : null,
+        publicaciones: tabla('comunidad_posts').filter((x) => x.autor_id === uid),
+        comentarios: tabla('comunidad_comentarios').filter((x) => x.autor_id === uid),
+        reacciones: tabla('comunidad_reacciones').filter((x) => x.autor_id === uid),
+        avisos_al_coach: tabla('comunidad_reportes').filter((x) => x.autor_id === uid).map((r) => ({ id: r.id, post_id: r.post_id, comentario_id: r.comentario_id, motivo: r.motivo, creado_en: r.creado_en, resuelto_en: r.resuelto_en })),
+      };
+    }
+    if (nombre === 'comunidad_compartir_sesion') {
+      if (!uid || !soyMiembro()) throw new Error('Para compartir en el equipo tienes que estar en la comunidad');
+      const s = buscar('sesiones', args.p_sesion);
+      const w = s && buscar('semanas', s.semana_id);
+      const bl = w && buscar('bloques', w.bloque_id);
+      if (!s || !bl || bl.es_plantilla || bl.atleta_id !== yo?.id || w.programacion !== 'programada') throw new Error('Esa sesión no es tuya');
+      if (!s.completada) throw new Error('Solo se comparte una sesión terminada');
+      if (tabla('comunidad_posts').some((x) => x.sesion_id === s.id)) throw new Error('Esta sesión ya está compartida en el equipo');
+      gastarCupo('post');
+      const kilos = !!args.p_kilos;
+      const pautaDe = (id) => buscar('sesion_ejercicios', id);
+      const todas = tabla('series').filter((x) => x.atleta_id === yo.id && Number(x.reps) > 0 && pautaDe(x.sesion_ejercicio_id))
+        .map((x) => { const p = pautaDe(x.sesion_ejercicio_id); return { ...x, ejercicio_id: x.sustituto_id || p.ejercicio_id, sesion_id: p.sesion_id, orden: p.orden, e1rm: e1rmBase(x) }; });
+      const hechas = todas.filter((x) => x.sesion_id === s.id);
+      const inicio = tabla('series').filter((x) => x.atleta_id === yo.id && pautaDe(x.sesion_ejercicio_id)?.sesion_id === s.id).map((x) => x.registrada_en).sort()[0] || ahora();
+      const previas = todas.filter((x) => x.sesion_id !== s.id && x.registrada_en < inicio);
+      const porEj = new Map();
+      for (const x of hechas) {
+        const ya = porEj.get(x.ejercicio_id);
+        const mejor = !ya || (x.e1rm ?? -1) > (ya.e1rm ?? -1) || ((x.e1rm ?? -1) === (ya.e1rm ?? -1) && (Number(x.kg) || 0) > (Number(ya.kg) || 0)) || ((x.e1rm ?? -1) === (ya.e1rm ?? -1) && (Number(x.kg) || 0) === (Number(ya.kg) || 0) && x.reps > ya.reps);
+        porEj.set(x.ejercicio_id, { ...(mejor ? x : ya), orden: Math.min(x.orden, ya?.orden ?? x.orden) });
+      }
+      const esRecord = (x) => {
+        const hoy = hechas.filter((y) => y.ejercicio_id === x.ejercicio_id);
+        const antes = previas.filter((y) => y.ejercicio_id === x.ejercicio_id);
+        const maxE = (l) => l.reduce((m, y) => (y.e1rm != null && (m == null || y.e1rm > m) ? y.e1rm : m), null);
+        const maxR = (l) => l.filter((y) => !(Number(y.kg) > 0)).reduce((m, y) => (m == null || y.reps > m ? y.reps : m), null);
+        const eHoy = maxE(hoy), eAntes = maxE(antes);
+        if (eHoy != null && eAntes != null && eHoy > eAntes) return true;
+        const conCarga = hoy.some((y) => Number(y.kg) > 0);
+        return !conCarga && maxR(antes) != null && maxR(hoy) > maxR(antes);
+      };
+      const nombreEj = (id) => buscar('ejercicios', id)?.nombre || 'Ejercicio';
+      const ejercicios = [...porEj.values()].sort((a, b2) => a.orden - b2.orden || nombreEj(a.ejercicio_id).localeCompare(nombreEj(b2.ejercicio_id))).slice(0, 30).map((x) => {
+        const record = esRecord(x);
+        return { nombre: nombreEj(x.ejercicio_id).slice(0, 80), record, ...(kilos && Number(x.kg) > 0 ? { kg: Number(x.kg) } : {}), ...(kilos ? { reps: x.reps } : {}), ...(kilos && record && x.e1rm != null ? { e1rm: x.e1rm } : {}) };
+      });
+      const texto = String(args.p_texto || '').trim() || null;
+      const post = {
+        id: uuid(), autor_id: uid, atleta_id: yo.id, tipo: 'entreno', texto, foto_ruta: null, sesion_id: s.id, fijada: false, oculta: false, creado_en: ahora(),
+        resumen: { nombre: s.nombre, tipo: s.tipo, fecha: s.fecha_realizada || hoyISO(), ...(s.duracion_min != null ? { minutos: s.duracion_min } : {}), series: hechas.length, con_kilos: kilos, ejercicios },
+      };
+      comprobarChecks('comunidad_posts', post);
+      tabla('comunidad_posts').push(post);
+      return post.id;
+    }
+    throw new Error(`Función no disponible en la demo: ${nombre}`);
+  }
 
   const b = {
     modo: 'demo',
@@ -602,11 +893,22 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     storage: {
       // Sin conexión (el navegador lo dice), como en el de verdad: así la demo enseña cómo un vídeo se queda guardado
       // en el móvil y se envía solo al volver la cobertura
-      async subir(ruta, archivo, tipo, { alProgreso = null } = {}) {
+      // bucket «comunidad» (v0.43): las fotos del muro, con las reglas de la 027 (verlas si se ve su publicación;
+      // borrarlas solo si ya nadie las usa; subirlas si su publicación ya está registrada)
+      async subir(ruta, archivo, tipo, { alProgreso = null, bucket = 'archivos' } = {}) {
         if (typeof navigator !== 'undefined' && navigator.onLine === false) { const e = new Error('Sin conexión.'); e.sinConexion = true; throw e; }
+        if (bucket === 'comunidad') {
+          if (!fotoRegistrada(ruta)) throw sinPermiso();
+          if (archivo?.size > 614400) throw new Error('El archivo supera el tamaño máximo permitido.');
+          ficheros.set(`comunidad:${ruta}`, archivo); alProgreso?.(1); return;
+        }
         ficheros.set(ruta, archivo); alProgreso?.(1);
       },
-      async url(ruta) {
+      async url(ruta, segundos = 3600, bucket = 'archivos') {
+        if (bucket === 'comunidad') {
+          if (!fotoVisible(ruta)) throw new Error('No tienes permiso para ver ese archivo.');
+          ruta = `comunidad:${ruta}`;
+        }
         if (urls.has(ruta)) return urls.get(ruta);
         const f = ficheros.get(ruta);
         // Los ejemplos de la demo van incrustados en base64: se sirven como blob (la política de seguridad de
@@ -624,10 +926,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         urls.set(ruta, u);
         return u;
       },
-      async borrar(rutas) {
-        for (const r of rutas) { ficheros.delete(r); if (urls.has(r)) { try { URL.revokeObjectURL(urls.get(r)); } catch { /* */ } urls.delete(r); } }
+      async borrar(rutas, bucket = 'archivos') {
+        for (let r of rutas) {
+          if (bucket === 'comunidad') { if (!esCoach() && !fotoBorrable(r)) continue; r = `comunidad:${r}`; }
+          ficheros.delete(r); if (urls.has(r)) { try { URL.revokeObjectURL(urls.get(r)); } catch { /* */ } urls.delete(r); }
+        }
       },
-      async listar(carpeta) { return [...ficheros.keys()].filter((r) => r.startsWith(`${carpeta}/`)); },
+      async listar(carpeta, bucket = 'archivos') {
+        const pre = bucket === 'comunidad' ? `comunidad:${carpeta}/` : `${carpeta}/`;
+        return [...ficheros.keys()].filter((r) => r.startsWith(pre)).map((r) => (bucket === 'comunidad' ? r.slice('comunidad:'.length) : r));
+      },
     },
     async select(t, f = {}) {
       // Para ver las siluetas de carga en la demo: localStorage «fbe-demo-retraso» = milisegundos por consulta
@@ -638,7 +946,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (esCoach() && sesion?.aal !== 'aal2' && (miPerfil()?.exige_2fa || (u?.mfa || []).some((x) => x.estado === 'verified')) && !['perfiles'].includes(t)) return [];
       // Los cobros solo los ve el coach (migración 020)
       if (['cobros_atletas', 'pagos'].includes(t) && !esCoach()) return [];
-      let filas = tabla(t).filter((x) => cumple(x, f));
+      let filas = tabla(t).filter((x) => cumple(x, f) && (!VISIBLE[t] || VISIBLE[t](x)));
       for (const [col, dir] of [...(f.order || [])].reverse()) {
         filas = filas.sort((a, b2) => {
           const x = a[col], y = b2[col];
@@ -659,6 +967,25 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async update(t, cambios, f) {
       if (['cobros_atletas', 'pagos', 'recetas'].includes(t) && !esCoach()) return [];
+      // Como la 027: en la comunidad, los atletas no cambian nada directamente; el coach abre o cierra, resuelve
+      // avisos y cambia sus retos. Publicaciones y comentarios no se cambian (fijar y ocultar van por funciones).
+      if (t.startsWith('comunidad_')) {
+        if (['comunidad_posts', 'comunidad_comentarios', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_cupos'].includes(t)) throw new Error('permission denied for table ' + t);
+        if (!esCoach()) return [];
+        const permitidas = { comunidad_ajustes: ['activa'], comunidad_reportes: ['resuelto_en'] }[t];
+        if (permitidas && Object.keys(cambios).some((k) => !permitidas.includes(k))) throw new Error('De un aviso solo se cambia si está resuelto');
+        const filas = tabla(t).filter((fila) => cumple(fila, f));
+        if (t === 'comunidad_retos') for (const fila of filas) comprobarChecks(t, { ...fila, ...cambios });
+        for (const fila of filas) {
+          const c = { ...copia(cambios) };
+          if (t === 'comunidad_reportes') c.resuelto_en = c.resuelto_en ? fila.resuelto_en || ahora() : null;
+          if (t === 'comunidad_ajustes') c.actualizado_en = ahora();
+          if (t === 'comunidad_retos') delete c.creado_en;
+          Object.assign(fila, c);
+        }
+        persistirYa();
+        return copia(filas);
+      }
       const res = [];
       const c = antesDeActualizar(t, cambios);
       const filas = tabla(t).filter((fila) => cumple(fila, f));
@@ -732,6 +1059,15 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async delete(t, f) {
       if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta'].includes(t) && !esCoach()) return [];
+      // Como la 027: cada uno borra lo suyo (que ve); el coach, cualquier publicación o comentario, sus retos y avisos
+      if (t.startsWith('comunidad_')) {
+        if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos'].includes(t)) return [];
+        if (t === 'comunidad_retos' && !esCoach()) return [];
+        const ids = tabla(t).filter((x) => cumple(x, f) && (esCoach() || (x.autor_id === sesion?.user.id && VISIBLE[t](x)))).map((x) => x.id);
+        borrarCascada(t, ids);
+        persistirYa();
+        return [];
+      }
       if (SIN_ID.includes(t)) { db[t] = tabla(t).filter((x) => !cumple(x, f)); persistirYa(); return; }
       const ids = tabla(t).filter((x) => cumple(x, f)).map((x) => x.id);
       if (t === 'preguntas_checkin' && ids.some(conRespuestas)) throw new Error('Esta pregunta ya tiene respuestas: archívala para no perderlas');
@@ -787,6 +1123,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'registrar_suscripcion_push' || nombre === 'actualizar_suscripcion_push') throw new Error('En la demo no se pueden activar las notificaciones');
       if (nombre === 'programar_descanso') return 'sin_canal'; // en la demo no hay notificaciones
       if (nombre === 'cancelar_descanso') return null;
+      // Migración 027: la comunidad del equipo
+      if (nombre.startsWith('comunidad_')) {
+        const r = rpcComunidad(nombre, args || {}, uid, perfil);
+        persistirYa();
+        return copia(r ?? null);
+      }
       throw new Error(`Función no disponible en la demo: ${nombre}`);
     },
   };
