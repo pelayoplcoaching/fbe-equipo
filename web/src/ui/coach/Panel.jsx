@@ -7,6 +7,8 @@ import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
 import { hace, fmtCorta } from '../../logica/fechas.js';
 import { fmtEuros } from '../../logica/cobros.js';
 import { estadoAtleta, NOMBRE_ESTADO, trazoChispa } from '../../logica/visual.js';
+import { equipoHoy, arcoDial } from '../../logica/tablero.js';
+import { hoyISO } from '../../logica/fechas.js';
 
 // v0.49: minigráficas del panel (solo las ve el coach): el peso de las últimas semanas y las sesiones hechas de las
 // programadas en las 6 últimas, con su texto para los lectores de pantalla
@@ -53,7 +55,7 @@ function Alertas({ r, pendientes }) {
 const sueno = (h) => (h ? `${h.replace('-', '–')} h` : '—');
 const MOLESTIA = ['Sin dolor', 'Leve', 'Moderada', 'Grave'];
 
-export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrirCuenta, alCargar }) {
+export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = null, peticion = null, alBuscar, abrirCuenta, alCargar }) {
   const { api, perfil } = useApp();
   const res = useCarga(() => api.resumenes(), []);
   // v0.49: lo cargado se queda en CoachApp para la cabecera de la ficha (sin volver a pedirlo)
@@ -67,7 +69,10 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
   const invitados = lista.filter((r) => r.estado === 'invitado');
   const deBaja = lista.filter((r) => r.estado === 'baja');
   // Columna de pagos solo si hay alguno apuntado (v0.25)
-  const vista = filtro === 'atencion' ? atencion : filtro === 'invitados' ? invitados : filtro === 'baja' ? deBaja : lista.filter((r) => r.estado !== 'baja');
+  // v0.51: «Hoy en tu equipo» con lo que ya ha cargado el panel (sin consultas nuevas)
+  const eq = res.datos ? equipoHoy(lista, hoyISO()) : null;
+  const inactivos = eq ? lista.filter((r) => eq.inactivos.includes(r.atleta_id)) : [];
+  const vista = filtro === 'atencion' ? atencion : filtro === 'invitados' ? invitados : filtro === 'baja' ? deBaja : filtro === 'inactivos' ? inactivos : lista.filter((r) => r.estado !== 'baja');
   const conCobros = lista.some((r) => r.cobro);
 
   return (
@@ -83,11 +88,13 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
       </CabeceraGrande>
       <BandaDemo />
       <ErrorCaja error={res.error} reintentar={res.recargar} />
+      {eq && eq.activos > 0 && <EquipoHoy eq={eq} porRevisar={porRevisar} irARevisar={irARevisar} filtro={filtro} alFiltrar={setFiltro} />}
       <div class="selector-chips" role="group" aria-label="Filtrar atletas">
         <button aria-pressed={filtro === 'todos' ? 'true' : 'false'} onClick={() => setFiltro('todos')}>Todos</button>
         <button aria-pressed={filtro === 'atencion' ? 'true' : 'false'} onClick={() => setFiltro('atencion')}>Necesitan atención ({atencion.length})</button>
         {invitados.length > 0 && <button aria-pressed={filtro === 'invitados' ? 'true' : 'false'} onClick={() => setFiltro('invitados')}>Sin activar ({invitados.length})</button>}
         {deBaja.length > 0 && <button aria-pressed={filtro === 'baja' ? 'true' : 'false'} onClick={() => setFiltro('baja')}>De baja ({deBaja.length})</button>}
+        {inactivos.length > 0 && <button aria-pressed={filtro === 'inactivos' ? 'true' : 'false'} onClick={() => setFiltro('inactivos')}>Sin actividad ({inactivos.length})</button>}
       </div>
 
       {res.cargando && !res.datos ? <Siluetas forma="lista" n={4} texto="Cargando tus atletas" /> : !vista.length ? (
@@ -152,6 +159,35 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
       {avisos && <HojaAvisos alCerrar={() => setAvisos(false)} />}
       {nuevo && <NuevoAtleta alCerrar={(id) => { setNuevo(false); res.recargar(true); if (id) abrir(id); }} />}
     </div>
+  );
+}
+
+// v0.51: «Hoy en tu equipo», como un resumen de WHOOP: cuántos de los activos han entrenado hoy (un dial), lo que
+// tienes por revisar (lleva a Revisar) y cuántos llevan 7 días o más sin actividad (filtra la lista)
+function EquipoHoy({ eq, porRevisar, irARevisar, filtro, alFiltrar }) {
+  const a = arcoDial(eq.activos ? eq.entrenaron / eq.activos : 0, 64, 7);
+  const n = eq.inactivos.length;
+  return (
+    <section class="panel equipo-hoy" aria-label="Hoy en tu equipo">
+      <div role="img" aria-label={`Han entrenado hoy ${eq.entrenaron} de ${eq.activos} activos`} class="eh-dial">
+        <span class="dial-esfera" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><path class="dial-pista" d={a.d} stroke-width="7" />{eq.entrenaron > 0 && <path class="dial-arco" d={a.d} stroke-width="7" stroke-dasharray={`${a.lleno} ${a.largo + 10}`} />}</svg>
+          <span class="dial-centro marcador"><span>{eq.entrenaron}<span class="u">/{eq.activos}</span></span></span>
+        </span>
+        <span class="eh-k" aria-hidden="true">Entrenaron hoy</span>
+      </div>
+      {irARevisar ? (
+        <button type="button" onClick={irARevisar} aria-label={`${porRevisar || 0} por revisar. Ir a Revisar`}>
+          <span class={`eh-cifra marcador ${!porRevisar ? 'cero' : ''}`} aria-hidden="true">{porRevisar || 0}</span>
+          <span class="eh-k" aria-hidden="true">Por revisar</span>
+        </button>
+      ) : <div><span class="eh-cifra marcador">{porRevisar || 0}</span><span class="eh-k">Por revisar</span></div>}
+      <button type="button" aria-pressed={filtro === 'inactivos' ? 'true' : 'false'} disabled={!n && filtro !== 'inactivos'} onClick={() => alFiltrar(filtro === 'inactivos' ? 'todos' : 'inactivos')}
+        aria-label={`${n} sin actividad desde hace 7 días o más.${n ? (filtro === 'inactivos' ? ' Ver a todos' : ' Ver quiénes') : ''}`}>
+        <span class={`eh-cifra marcador ${n ? 'alerta' : 'cero'}`} aria-hidden="true">{n}</span>
+        <span class="eh-k" aria-hidden="true">Sin actividad ≥ 7 días</span>
+      </button>
+    </section>
   );
 }
 

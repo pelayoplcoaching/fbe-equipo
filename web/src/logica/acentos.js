@@ -97,6 +97,26 @@ export function contrasteCeldas(acento, tema) {
   return { una, vacia: sup['hoja-2'], ratio: contraste(una, sup['hoja-2']) };
 }
 
+// ---------- vidrio (v0.51): la barra de abajo, las cabeceras pegadas y las hojas, translúcidas ----------
+// Cuánto tapa el vidrio (el % de la superficie en color-mix, en estilos.css: las pruebas comprueban que coinciden).
+// Se elige para el peor caso: lo que pase por detrás es negro puro en el tema claro y blanco puro en el oscuro (una
+// foto, la tarjeta del día, el botón claro del descanso). Sobre el vidrio solo va texto de tinta, tinta-2 y acento
+// (nunca tinta-3); en las hojas, que llevan de todo, también tinta-3, y por eso tapan más.
+export const VIDRIO = {
+  barra: { claro: 85, oscuro: 88, oled: 85 },     // la barra de abajo (sobre --hoja)
+  cabecera: { claro: 90, oscuro: 85, oled: 80 },  // las cabeceras pegadas (sobre --tiza, el fondo de la página)
+  hoja: { claro: 92, oscuro: 92, oled: 92 },      // las hojas (sobre --hoja; llevan también tinta-3)
+};
+const TEXTOS = { claro: { tinta: '#1B1730', 'tinta-2': '#524E6B', 'tinta-3': '#66627C' }, oscuro: { tinta: '#F0EEF9', 'tinta-2': '#B1ACC9', 'tinta-3': '#9A95B5' } };
+export function parejasVidrio(acento, tema, tipo = 'barra') {
+  const v = tema === 'claro' ? acento.claro : acento.oscuro;
+  const textos = TEXTOS[tema === 'claro' ? 'claro' : 'oscuro'];
+  const peor = tema === 'claro' ? '#000000' : '#FFFFFF';
+  const fondo = mezclar(SUPERFICIES[tema][tipo === 'cabecera' ? 'tiza' : 'hoja'], peor, VIDRIO[tipo][tema]);
+  const lista = [['tinta', textos.tinta], ['tinta-2', textos['tinta-2']], ...(tipo === 'hoja' ? [['tinta-3', textos['tinta-3']]] : []), ['acento', v.morado]];
+  return lista.map(([que, texto]) => ({ que: `${que} sobre el vidrio (${tipo})`, texto, fondo, ratio: contraste(texto, fondo) }));
+}
+
 // ---------- CSS ----------
 const variables = (v) => `--morado:${v.morado};--morado-hover:${v.hover};--morado-suave:${v.suave};--sobre-morado:${v.sobre};--foco:${v.morado};--hero-2:${v.hero2};`;
 // El CSS de un acento, con los mismos selectores que estilos.css para el tema oscuro (así manda el del sistema

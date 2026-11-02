@@ -34,6 +34,14 @@ async function abrirPestana(p, t) {
   await p.evaluate((id) => { location.hash = `#${id}`; }, t === 'Perfil' ? 'perfil' : 'cuenta');
   await p.waitForTimeout(400);
 }
+// v0.51: una sesión sin empezar abre con su portada; esto toca «Empezar» (si sale) y espera a la sesión
+async function sesionAbierta() {
+  await p.locator('.portada-sesion, .ejercicio').first().waitFor();
+  if (await p.locator('.portada-sesion').count()) {
+    await p.locator('.portada-empezar').getByRole('button', { name: 'Empezar', exact: true }).click();
+  }
+  await p.locator('.ejercicio').first().waitFor();
+}
 // v0.49: un ejercicio hecho del todo se pliega en una línea; esto lo abre (si no lo está)
 async function abrirEjercicio(loc) {
   if (!(await loc.locator('.ejercicio-cuerpo').count())) await loc.locator('.ejercicio-cab').click();
@@ -295,6 +303,22 @@ try {
   await p.locator('.cabecera-grande.compacta').waitFor();
   check(true, 'al bajar, el título se compacta en una barra pequeña');
   await revisar('titulo-compacto');
+  // v0.51: la barra de abajo y la cabecera compacta, de vidrio (translúcidas y desenfocadas); con «reducir
+  // transparencia» o «más contraste», opacas
+  const vidrio = () => p.evaluate(() => { const t = getComputedStyle(document.querySelector('.tabs')), c = getComputedStyle(document.querySelector('.cabecera-grande.compacta'));
+    const alfa = (x) => { const m = x.match(/\/ ([\d.]+)\)$/) || x.match(/rgba\([^)]*,\s*([\d.]+)\)$/); return m ? Number(m[1]) : 1; };
+    return { barra: t.backdropFilter, barraAlfa: alfa(t.backgroundColor), cab: c.backdropFilter, cabAlfa: alfa(c.backgroundColor) }; });
+  const v1 = await vidrio();
+  check(/blur\(20px\)/.test(v1.barra) && v1.barraAlfa < 1 && /blur/.test(v1.cab) && v1.cabAlfa < 1, `la barra de abajo y la cabecera compacta son de vidrio ${JSON.stringify(v1)}`);
+  const cdp = await ctx.newCDPSession(p);
+  await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] });
+  await p.waitForTimeout(400); // (la cabecera cambia de fondo con una transición corta)
+  const v2 = await vidrio();
+  await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-contrast', value: 'more' }] });
+  await p.waitForTimeout(400);
+  const v3 = await vidrio();
+  await cdp.send('Emulation.setEmulatedMedia', { features: [] });
+  check(v2.barra === 'none' && v2.barraAlfa === 1 && v2.cab === 'none' && v2.cabAlfa === 1 && v3.barra === 'none' && v3.cabAlfa === 1, `con «reducir transparencia» o «más contraste», opacas ${JSON.stringify([v2, v3])}`);
   await p.evaluate(() => window.scrollTo(0, 0));
   await p.locator('.cabecera-grande:not(.compacta)').waitFor();
   await p.emulateMedia({ reducedMotion: 'reduce' });
@@ -366,8 +390,58 @@ try {
   await hojaTuPlan.waitFor({ state: 'detached' });
 
   console.log('\nAtleta: entrenar');
+  // v0.51: los diales de Hoy (constancia, carga y cómo llegas), cada uno con su hoja
+  const diales = p.locator('.diales .dial');
+  check(await diales.count() === 3 && (await diales.allTextContents()).map((t) => t.replace(/\s+/g, ' ')).join('|').match(/Constancia.*\|.*Carga.*\|.*Cómo llegas.*Sin contestar/)
+    && (await diales.first().getAttribute('aria-label')).startsWith('Constancia: 0 de 3 sesiones'), `debajo de la tarjeta del día, tres diales: constancia (0 de 3), carga y cómo llegas (sin contestar) (${(await diales.allTextContents()).join(' / ')})`);
+  await diales.nth(1).click();
+  const hojaCarga = p.getByRole('dialog', { name: 'Carga de la semana' });
+  await hojaCarga.waitFor();
+  check((await hojaCarga.textContent()).includes('a estas alturas de la semana') && (await hojaCarga.textContent()).includes('Aún no hay con qué comparar'), 'la carga explica de dónde sale (y que aún no hay con qué comparar)');
+  await revisar('dial-carga');
+  await p.keyboard.press('Escape');
+  await hojaCarga.waitFor({ state: 'detached' });
+  await diales.nth(2).click();
+  const hojaLlegas = p.getByRole('dialog', { name: 'Cómo llegas hoy' });
+  await hojaLlegas.waitFor();
+  // (Torso A está prevista para otro día: desde Hoy no se contesta; solo para la sesión de hoy, que es la que se va a hacer)
+  check(await hojaLlegas.locator('.preparacion').count() === 0 && (await hojaLlegas.textContent()).includes('Hoy no tienes una sesión prevista'),
+    'sin sesión prevista para hoy, «Cómo llegas» no deja contestar (no se guarda en una sesión de otro día): se contesta al empezarla');
+  await revisar('dial-llegas');
+  await p.keyboard.press('Escape');
+  await hojaLlegas.waitFor({ state: 'detached' });
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.locator('.diales').scrollIntoViewIfNeeded();
+  check(await p.evaluate(() => { const d = document.querySelector('.diales').getBoundingClientRect(); return d.right <= innerWidth && [...document.querySelectorAll('.diales .dial')].every((x) => x.getBoundingClientRect().height >= 44); }), 'a 360 px y en oscuro, los diales caben (y cada uno es un botón de 44 px o más)');
+  await revisar('diales-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.evaluate(() => window.scrollTo(0, 0));
   await p.getByRole('button', { name: 'Empezar sesión' }).click();
+  // v0.51: antes de empezar, la portada: el dibujo de la sesión, su nombre en grande, los minutos, los músculos, la
+  // nota de tu coach como una cita, los ejercicios con sus pictogramas y un «Empezar» grande
+  const portada = p.locator('.portada-sesion');
+  await portada.waitFor();
+  const datosPortada = await p.evaluate(() => {
+    const h = document.querySelector('.portada-sesion h1'); const r = document.querySelector('.portada-sesion').getBoundingClientRect();
+    return { nombre: h.textContent, ancho: getComputedStyle(h).fontStretch, arte: document.querySelectorAll('.portada-arte > *').length, deBordeABorde: r.left <= 0.5 && Math.abs(r.right - innerWidth) < 1,
+      meta: document.querySelector('.portada-meta').textContent, pictos: document.querySelectorAll('.portada-lista .picto').length, filas: document.querySelectorAll('.portada-lista .ej-fila').length,
+      empezar: !!document.querySelector('.portada-empezar .btn-primario'), sinSeries: !document.querySelector('.ejercicio') };
+  });
+  check(datosPortada.nombre === 'Torso A' && parseFloat(datosPortada.ancho) >= 115 && datosPortada.arte > 10 && datosPortada.deBordeABorde && /unos \d+ min/.test(datosPortada.meta) && datosPortada.pictos === datosPortada.filas && datosPortada.filas > 0 && datosPortada.empezar && datosPortada.sinSeries,
+    `antes de empezar, la portada de la sesión: el dibujo de borde a borde, el nombre en ancho (${datosPortada.ancho}), minutos y músculos, los ejercicios con su pictograma y «Empezar» ${JSON.stringify(datosPortada)}`);
+  check(await p.locator('.portada-arte').getAttribute('aria-hidden') === 'true', 'el dibujo es decorativo');
+  await revisar('portada');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.waitForTimeout(200);
+  await revisar('portada-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.locator('.portada-empezar').getByRole('button', { name: 'Empezar', exact: true }).click();
   await p.locator('.ejercicio').first().waitFor();
+  check(await portada.count() === 0 && await p.locator('.sesion-vista .cabecera h1').textContent() === 'Torso A', 'al empezar, la portada se recoge en la cabecera de siempre');
   const prep = p.locator('.preparacion');
   check(await prep.count() === 1, 'antes de empezar le pregunta cómo llega');
   await prep.getByRole('group', { name: '¿Cómo has dormido?' }).getByRole('button', { name: 'Mal', exact: true }).click();
@@ -398,6 +472,19 @@ try {
   'el descanso sale en la página, debajo del ejercicio: un anillo grande con la cuenta');
   check(await p.locator('.ejercicio-cab .picto').count() === await p.locator('.ejercicio').count() && await p.locator('.ejercicio-cab .picto').evaluateAll((xs) => xs.every((x) => x.getAttribute('aria-hidden') === 'true')),
     'cada ejercicio con el pictograma de su patrón de movimiento (decorativo: el nombre es lo que se lee)');
+  // v0.51: arriba, un tramo por ejercicio (como las historias): se llena con las series y el que toca va resaltado
+  const tramos = p.locator('nav.tramos a');
+  const datosTramos = await p.evaluate(() => {
+    const as = [...document.querySelectorAll('nav.tramos a')];
+    return { n: as.length, actual: as.findIndex((a) => a.getAttribute('aria-current') === 'step'), primero: as[0]?.getAttribute('aria-label'), lleno: as[0]?.querySelector('.tramo-lleno').style.width, alto: Math.min(...as.map((a) => a.getBoundingClientRect().height)),
+      lista: document.querySelector('nav.tramos').getAttribute('aria-label'), ol: !!document.querySelector('nav.tramos ol > li > a') };
+  });
+  check(datosTramos.n === await p.locator('.ejercicio').count() && datosTramos.actual === 0 && /: 1 de 3 series, ahora$/.test(datosTramos.primero) && datosTramos.lleno.startsWith('33.3') && datosTramos.alto >= 44 && datosTramos.ol,
+    `arriba, un tramo por ejercicio: el primero lleno a un tercio y marcado como el actual («${datosTramos.primero}») ${JSON.stringify(datosTramos)}`);
+  await tramos.nth(2).click();
+  await p.waitForFunction(() => { const r = document.querySelectorAll('.ejercicio')[2].getBoundingClientRect(); return r.top >= 0 && r.top < innerHeight / 2; });
+  check(await p.evaluate(() => document.activeElement?.closest('.ejercicio') === document.querySelectorAll('.ejercicio')[2]), 'tocar un tramo lleva a su ejercicio (y el foco va a él)');
+  await p.evaluate(() => window.scrollTo(0, 0));
   // Si se queda fuera de la vista al bajar, una píldora flotante con lo que queda; al tocarla, vuelve al temporizador
   await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const pildoraD = p.locator('.pildora-descanso');
@@ -601,7 +688,26 @@ try {
   await p.getByRole('button', { name: 'Compartir la sesión' }).click();
   await p.locator('.tarjeta-img').waitFor();
   check((await p.locator('.tarjeta-img').evaluate((i) => i.complete && i.naturalWidth)) === 1080, 'crea la tarjeta para compartir (1080 × 1350)');
+  // v0.51: tres plantillas: «Cifras» (de entrada), «Mínima» y «Con tu foto» (una foto del móvil, que no se sube)
+  const plantillas = p.getByRole('group', { name: 'Plantilla' });
+  check((await plantillas.getByRole('radio').count()) === 3 && await plantillas.getByRole('radio', { name: 'Cifras' }).isChecked() && (await p.locator('.tarjeta-img').getAttribute('alt')).includes('(Cifras)'), 'elige entre tres plantillas; de entrada, «Cifras»');
   await revisar('compartir');
+  const srcAntes = await p.locator('.tarjeta-img').getAttribute('src');
+  await plantillas.getByRole('radio', { name: 'Mínima' }).click();
+  await p.waitForFunction((a) => document.querySelector('.tarjeta-img')?.getAttribute('src') !== a && document.querySelector('.tarjeta-previa')?.getAttribute('aria-busy') === 'false', srcAntes);
+  check((await p.locator('.tarjeta-img').getAttribute('alt')).includes('(Mínima)'), '«Mínima» rehace la tarjeta (el nombre y una cifra)');
+  const red = [];
+  p.on('request', (r) => { if (!r.url().startsWith('http://localhost:4174') && !r.url().startsWith('blob:') && !r.url().startsWith('data:')) red.push(r.url()); });
+  // Una foto de mentira (un PNG de 600 × 800 hecho aquí) elegida «del móvil»
+  const png = await p.evaluate(async () => { const c = document.createElement('canvas'); c.width = 600; c.height = 800; const x = c.getContext('2d'); const g = x.createLinearGradient(0, 0, 600, 800); g.addColorStop(0, '#f6d365'); g.addColorStop(1, '#fda085'); x.fillStyle = g; x.fillRect(0, 0, 600, 800); x.fillStyle = '#fff'; x.fillRect(200, 300, 200, 300); const b = await new Promise((r) => c.toBlob(r, 'image/png')); return [...new Uint8Array(await b.arrayBuffer())]; });
+  const srcMin = await p.locator('.tarjeta-img').getAttribute('src');
+  const [selector] = await Promise.all([p.waitForEvent('filechooser'), plantillas.getByRole('radio', { name: 'Con tu foto' }).click()]);
+  await selector.setFiles({ name: 'mi-foto.png', mimeType: 'image/png', buffer: Buffer.from(png) });
+  await p.waitForFunction((a) => document.querySelector('.tarjeta-img')?.getAttribute('src') !== a && document.querySelector('.tarjeta-previa')?.getAttribute('aria-busy') === 'false' && /sobre tu foto/.test(document.querySelector('.tarjeta-img').alt), srcMin);
+  const pixel = await p.locator('.tarjeta-img').evaluate(async (i) => { await i.decode().catch(() => {}); const c = document.createElement('canvas'); c.width = 1080; c.height = 1350; const x = c.getContext('2d'); x.drawImage(i, 0, 0); return [...x.getImageData(540, 500, 1, 1).data]; });
+  check(pixel[0] > 150 && pixel[1] > 100 && red.length === 0 && (await p.locator('.tarjeta-foto-elegir').textContent()).includes('no se sube'),
+    `«Con tu foto»: la foto del móvil de fondo, con las cifras encima, sin salir del móvil (${pixel.slice(0, 3).join(',')}; peticiones fuera: ${red.length})`);
+  await revisar('compartir-foto');
   await p.getByRole('button', { name: 'Cerrar' }).click();
   await p.getByRole('button', { name: 'Volver a hoy' }).click();
   // v0.50: con la sesión de hoy hecha, Hoy lo celebra: sus cifras, «Ver resumen» y lo siguiente (Pierna A)
@@ -612,11 +718,12 @@ try {
     && (await heroHecha.locator('.hero-siguiente').textContent()).includes('Pierna A') && await heroHecha.getByRole('button', { name: 'Ver resumen' }).count() === 1
     && await heroHecha.locator('.hero-cifras > div').count() >= 2 && await heroHecha.locator('svg.ilustracion').getAttribute('aria-hidden') === 'true',
   'con la sesión de hoy hecha, Hoy lo celebra: sus cifras, «Ver resumen» y lo siguiente (Pierna A)');
-  check((await p.locator('.semana-resumen .anillo').getAttribute('aria-label')) === '1 de 3 sesiones hechas esta semana' && (await p.locator('.semana-resumen').textContent()).includes('Te quedan 2 sesiones'), 'el anillo de la semana marca 1 de 3');
+  check((await p.locator('.diales .dial').first().getAttribute('aria-label')).startsWith('Constancia: 1 de 3 sesiones de esta semana') && (await p.locator('.semana-resumen').textContent()).includes('Te quedan 2 sesiones'), 'el dial de constancia marca 1 de 3 (y la tarjeta dice lo que queda)');
 
-  const disco = p.getByRole('dialog', { name: /disco/ });
+  const disco = p.getByRole('dialog', { name: /medalla/ });
   await disco.waitFor();
-  check((await disco.textContent()).includes('Constancia'), `tras su primera sesión gana su primer disco (${(await disco.locator('h2').textContent()).trim()})`);
+  check((await disco.textContent()).includes('Constancia') && (await disco.locator('.medalla-revela').getAttribute('data-metal')) === 'bronce' && (await disco.textContent()).includes('Medalla de bronce')
+    && await disco.locator('.medalla-metal.brilla .mm-barrido').count() === 1, `tras su primera sesión gana su primera medalla, de bronce, que entra con un brillo (${(await disco.locator('h2').textContent()).trim()})`);
   await revisar('logro');
   await disco.getByRole('button', { name: 'Seguir' }).click();
   await disco.waitFor({ state: 'detached' });
@@ -628,13 +735,14 @@ try {
   await p.emulateMedia({ colorScheme: null });
   await p.setViewportSize({ width: 390, height: 844 });
   await heroHecha.getByRole('button', { name: 'Ver resumen' }).click();
-  await p.locator('.ejercicio').first().waitFor();
+  await sesionAbierta();
   check((await p.locator('.cabecera h1').first().textContent()) === 'Torso A', '«Ver resumen» abre la sesión hecha');
   await p.getByRole('button', { name: 'Volver' }).first().click();
   await heroHecha.waitFor();
 
   console.log('\nAtleta: superserie');
   await p.getByRole('button', { name: 'Adelantar Pierna A' }).click();
+  await sesionAbierta();
   const ss = p.locator('.superserie');
   await ss.waitFor();
   check((await ss.locator('.ss-etq').allTextContents()).join(',') === 'A1,A2', 'la superserie aparece agrupada (A1, A2)');
@@ -758,7 +866,39 @@ try {
   await p.getByRole('heading', { name: 'Peso corporal' }).waitFor();
   check((await p.locator('.cifra .v').first().textContent()) === '58,4', 'el peso aparece en su progreso');
   check(await p.getByRole('heading', { name: 'Medidas' }).count() === 1, 'y sus medidas');
+  // v0.51: los anillos de la semana (sesiones, hábitos y check-in); el del check-in se acaba de cerrar: se celebra una vez
+  const anillos = p.locator('.anillos-semana');
+  await anillos.waitFor();
+  const datosAn = await p.evaluate(() => ({ ids: [...document.querySelectorAll('.anillos-svg [data-anillo]')].map((g) => g.dataset.anillo), celebra: [...document.querySelectorAll('.anillos-svg .celebra')].map((g) => g.dataset.anillo),
+    leyenda: document.querySelector('.anillos-leyenda').textContent, etiqueta: document.querySelector('.anillos-svg').getAttribute('aria-label') }));
+  check(datosAn.ids.join() === 'sesiones,habitos,checkin' && datosAn.celebra.includes('checkin') && /Check-in.*Enviado.*Cerrado/.test(datosAn.leyenda) && /Check-in, Enviado, cerrado/.test(datosAn.etiqueta),
+    `en Progreso, tres anillos (sesiones, hábitos y check-in) y el del check-in, recién cerrado, se celebra ${JSON.stringify(datosAn)}`);
+  await p.waitForTimeout(900);
+  check(await p.evaluate(() => JSON.stringify(window.__vib?.slice(-1))) === '[[22,60,22,60,48]]' && await p.evaluate(() => { try { return JSON.parse(localStorage.getItem(Object.keys(localStorage).find((k) => k.startsWith('fbe-anillos-')))).cerrados.includes('checkin'); } catch { return false; } }),
+    'con su vibración, y queda apuntado en el móvil para esta semana');
   await revisar('progreso');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await anillos.scrollIntoViewIfNeeded();
+  await revisar('anillos-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.locator('.tab', { hasText: 'Semana' }).click();
+  await p.getByRole('heading', { level: 1, name: /Bloque|Tu programa/ }).waitFor();
+  await p.waitForTimeout(450);
+  await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await p.locator('.anillos-semana').waitFor();
+  check(await p.locator('.anillos-svg .celebra').count() === 0, 'al volver, ya no se celebra otra vez (una vez por anillo y semana)');
+  // Con «reducir movimiento», el estado quieto (sin animaciones en los anillos)
+  await p.emulateMedia({ reducedMotion: 'reduce' });
+  await p.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('fbe-anillos-')) localStorage.removeItem(k); });
+  await p.locator('.tab', { hasText: 'Semana' }).click();
+  await p.getByRole('heading', { level: 1, name: /Bloque|Tu programa/ }).waitFor();
+  await p.waitForTimeout(450);
+  await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await p.locator('.anillos-svg .celebra').first().waitFor();
+  check(await p.evaluate(() => document.querySelector('.anillos-svg').getAnimations({ subtree: true }).length) === 0, 'con «reducir movimiento», los anillos se quedan quietos (sin animación)');
+  await p.emulateMedia({ reducedMotion: null });
   await abrirPestana(p, 'Perfil');
   await p.getByRole('heading', { name: 'Guías y recursos' }).waitFor();
   check(await p.locator('.recurso details').count() >= 10, 've las guías y preguntas frecuentes');
@@ -841,6 +981,29 @@ try {
   check((await tarjeta.textContent()).includes('Dolor moderado: hombros'), 'aviso de molestia moderada en hombros');
   check(await tarjeta.locator('.pips i.hecha').count() === 1, '1 sesión hecha esta semana');
   check((await tarjeta.textContent()).includes('por revisar'), 'el panel marca lo que tiene por revisar');
+  // v0.51: «Hoy en tu equipo»: cuántos han entrenado hoy, lo que hay por revisar y quién lleva 7 días sin actividad
+  const eqHoy = p.locator('.equipo-hoy');
+  await eqHoy.waitFor();
+  const etqEq = await eqHoy.locator('[role="img"], button').evaluateAll((xs) => xs.map((x) => x.getAttribute('aria-label')));
+  check(etqEq.length === 3 && /^Han entrenado hoy [1-9]\d* de \d+ activos$/.test(etqEq[0]) && /^[1-9]\d* por revisar\. Ir a Revisar$/.test(etqEq[1]) && /^\d+ sin actividad desde hace 7 días o más/.test(etqEq[2]),
+    `arriba del panel, «Hoy en tu equipo»: ${etqEq.join(' | ')}`);
+  await revisar('equipo-hoy');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('equipo-hoy-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  const inact = eqHoy.getByRole('button', { name: /sin actividad/ });
+  if (await inact.isEnabled()) {
+    await inact.click();
+    check(await inact.getAttribute('aria-pressed') === 'true' && await p.locator('.selector-chips button[aria-pressed="true"]', { hasText: 'Sin actividad' }).count() === 1, 'tocar «sin actividad» filtra la lista a esos atletas');
+    await inact.click();
+  } else check(true, 'nadie lleva 7 días sin actividad: no hay nada que filtrar');
+  await eqHoy.getByRole('button', { name: /por revisar/ }).click();
+  await p.getByRole('heading', { level: 1, name: 'Revisar' }).waitFor();
+  check(true, 'tocar «por revisar» lleva a Revisar');
+  await p.locator('.tab', { hasText: 'Atletas' }).click();
+  await p.getByRole('heading', { name: 'Atletas' }).waitFor();
   check((await p.locator('.tarjeta-atleta', { hasText: 'Rubén Martín' }).textContent()).includes('Hábitos:'), 'y avisa de que Rubén apenas cumple sus hábitos');
   await tarjeta.click();
   await p.getByRole('tab', { name: 'Registro' }).click();
@@ -1155,9 +1318,9 @@ try {
   await p.getByRole('button', { name: 'Entrar', exact: true }).click();
   await p.getByText('Tu coach te ha respondido').waitFor();
   check(true, 'en Hoy le avisa de la respuesta del coach');
-  const disco2 = p.getByRole('dialog', { name: /disco/ });
+  const disco2 = p.getByRole('dialog', { name: /medalla/ });
   await disco2.waitFor();
-  check((await disco2.textContent()).includes('Check-ins'), 'y le da el disco de su primer check-in');
+  check((await disco2.textContent()).includes('Check-ins'), 'y le da la medalla de su primer check-in');
   await disco2.getByRole('button', { name: 'Seguir' }).click();
   await disco2.waitFor({ state: 'detached' });
   const avisoLucia = p.locator('.aviso-coach', { hasText: 'el jueves no hay sala' });
@@ -1186,12 +1349,23 @@ try {
   console.log('\nDemo: atleta con historial');
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
   await p.getByRole('button', { name: /Ana López/ }).click();
-  const discosAna = p.getByRole('dialog', { name: /discos nuevos/ });
+  const discosAna = p.getByRole('dialog', { name: /medallas nuevas/ });
   await discosAna.waitFor();
-  check(true, 'la primera vez, Ana ve los discos que ya había ganado');
+  check(true, 'la primera vez, Ana ve las medallas que ya había ganado');
   await discosAna.getByRole('button', { name: 'Ver mis logros' }).click();
   await p.locator('.logros').waitFor();
   check(await p.locator('.logro').count() === 7, 'en Progreso, sus 7 logros');
+  // v0.51: medallas de metal: el nivel dice el metal (y su canto lo distingue sin el color)
+  const metales = await p.locator('.logro .logro-metal').allTextContents();
+  check(metales.length === 7 && metales.every((m) => ['Bronce', 'Plata', 'Oro', 'Platino', 'Sin medalla'].includes(m)) && metales.some((m) => m !== 'Sin medalla')
+    && (await p.locator('.logro').first().getAttribute('aria-label')).match(/medalla de (bronce|plata|oro|platino)|aún sin medalla/), `cada logro, con su medalla y su metal escrito (${metales.join(', ')})`);
+  await p.locator('.logros').scrollIntoViewIfNeeded();
+  await revisar('logros-medallas');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('logros-medallas-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
   // v0.49: constancia de 16 semanas: cada día por sesiones hechas, con leyenda; tocar un día dice qué hizo
   const mapaC = p.locator('.mapa-constancia');
   await mapaC.scrollIntoViewIfNeeded();
@@ -1395,7 +1569,7 @@ try {
   await revisar('hoy-letra-muy-grande-360');
   await p.setViewportSize({ width: 390, height: 844 });
   await p.locator('.semana-dias .dia.hecha').first().click();
-  await p.locator('.ejercicio').first().waitFor();
+  await sesionAbierta();
   // (una sesión hecha: sus ejercicios, plegados en una línea; se espera a que acaben de plegarse)
   await p.waitForTimeout(900);
   await revisar('sesion-letra-muy-grande');
@@ -1404,6 +1578,41 @@ try {
   check(await p.evaluate(() => document.documentElement.scrollWidth) <= 360, 'a 125 %, Hoy y la sesión caben sin desbordarse (también a 360 px)');
   await p.setViewportSize({ width: 390, height: 844 });
   await p.getByRole('button', { name: 'Volver' }).first().click();
+  // v0.51: a 125 % también la portada de una sesión sin empezar, los anillos y las medallas (sin tocar «Empezar»)
+  await p.locator('.semana-dias .dia').first().waitFor();
+  const pendienteA = p.locator('.semana-dias .dia:not(.hecha)').first();
+  if (await pendienteA.count()) {
+    await pendienteA.click();
+    await p.locator('.portada-sesion, .ejercicio').first().waitFor();
+    if (await p.locator('.portada-sesion').count()) {
+      await revisar('portada-letra-muy-grande');
+      await p.setViewportSize({ width: 360, height: 780 });
+      await revisar('portada-letra-muy-grande-360');
+      check(await p.evaluate(() => document.documentElement.scrollWidth) <= 360, 'a 125 % y 360 px, la portada cabe');
+      // v0.51 (revisión): a 125 % y 360 px la cabecera pegada es más alta; tocar un tramo deja el ejercicio debajo, a la vista
+      await p.locator('.portada-empezar').getByRole('button', { name: 'Empezar', exact: true }).click();
+      await p.locator('.ejercicio').first().waitFor();
+      const nTramos = await p.locator('nav.tramos a').count();
+      await p.locator('nav.tramos a').nth(Math.min(3, nTramos - 1)).click();
+      await p.waitForTimeout(900);
+      const tapada = await p.evaluate(() => {
+        const cab = document.querySelector('.sesion-vista > .cabecera').getBoundingClientRect();
+        const ej = document.activeElement?.closest('.ejercicio')?.querySelector('.ejercicio-cab')?.getBoundingClientRect();
+        return { cab: Math.round(cab.bottom), ej: ej ? Math.round(ej.top) : null, alto: Math.round(cab.height), foco: document.activeElement?.classList.contains('ejercicio-cab') };
+      });
+      check(tapada.foco && tapada.ej != null && tapada.ej >= tapada.cab - 1 && tapada.ej < 780, `a 125 % y 360 px, tocar un tramo deja la cabecera del ejercicio justo debajo de la cabecera pegada (${tapada.alto} px), sin taparla ${JSON.stringify(tapada)}`);
+      await p.setViewportSize({ width: 390, height: 844 });
+    } else check(true, 'la sesión pendiente ya estaba empezada: sin portada');
+    await p.getByRole('button', { name: 'Volver' }).first().click();
+  } else check(true, 'sin sesiones pendientes esta semana: no hay portada que mirar');
+  await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await p.locator('.logros').waitFor();
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.locator('.anillos-semana').scrollIntoViewIfNeeded().catch(() => {});
+  await revisar('progreso-letra-muy-grande-360');
+  check(await p.evaluate(() => document.documentElement.scrollWidth) <= 360, 'a 125 % y 360 px, los anillos y las medallas caben');
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
   await abrirPestana(p, 'Perfil');
   await p.getByRole('group', { name: 'Tamaño de la letra' }).getByRole('button', { name: 'Normal' }).click();
   await p.locator('.tab', { hasText: 'Hoy' }).click();
@@ -1412,8 +1621,26 @@ try {
   console.log('\nDemo: serie top, intervalos y cámara guiada');
   await p.locator('.toca-hoy').waitFor();
   check((await p.locator('.titular h2').textContent()) === 'Torso B', 'Ana tenía Torso B para hoy: «Hoy toca»');
+  // v0.51: con Torso B prevista para hoy, «Cómo llegas» se contesta desde Hoy y la sesión ya no lo vuelve a preguntar
+  // (la misma regla: contestado hoy en este móvil). Si hoy ya hizo otra sesión (los lunes), el dial enseña esa.
+  const dialLlegas = p.locator('.diales .dial').nth(2);
+  let contestoEnHoy = false;
+  if ((await dialLlegas.textContent()).includes('Contestar')) {
+    await dialLlegas.click();
+    const hojaL = p.getByRole('dialog', { name: 'Cómo llegas hoy' });
+    await hojaL.waitFor();
+    check((await hojaL.textContent()).includes('Se guarda con Torso B'), 'con la sesión prevista para hoy, «Cómo llegas» se contesta desde Hoy (se guarda con Torso B)');
+    for (const [g, x] of [['¿Cómo has dormido?', 'Bien'], ['¿Cómo tienes la energía?', 'Normal'], ['¿Agujetas o molestias?', 'Ninguna']]) await hojaL.getByRole('group', { name: g }).getByRole('button', { name: x, exact: true }).click();
+    await hojaL.locator('.consejo-dia').waitFor();
+    await p.keyboard.press('Escape');
+    await hojaL.waitFor({ state: 'detached' });
+    await p.waitForFunction(() => /Buen día/.test(document.querySelectorAll('.diales .dial')[2]?.textContent || ''));
+    check(true, 'y el dial pasa a «Buen día»');
+    contestoEnHoy = true;
+  } else check(/Buen día|Día flojo|Día difícil/.test(await dialLlegas.textContent()), `hoy ya hizo una sesión con su «¿Cómo llegas hoy?»: el dial la enseña (${await dialLlegas.textContent()})`);
   await p.getByRole('button', { name: 'Empezar sesión' }).click();
-  await p.locator('.ejercicio').first().waitFor();
+  await sesionAbierta();
+  if (contestoEnHoy) check(await p.locator('.preparacion').count() === 0 && (await p.locator('.consejo-dia').textContent()).includes('Buen día'), 'la sesión no vuelve a preguntar cómo llega: enseña lo contestado en Hoy');
   const prepAna = p.locator('.preparacion');
   if (await prepAna.count()) { for (const [g, x] of [['¿Cómo has dormido?', 'Bien'], ['¿Cómo tienes la energía?', 'Alta'], ['¿Agujetas o molestias?', 'Ninguna']]) await prepAna.getByRole('group', { name: g }).getByRole('button', { name: x, exact: true }).click(); }
   const primeroAna = p.locator('.ejercicio').first();
@@ -1797,6 +2024,11 @@ try {
   await p.locator('.tarjeta-cardio').waitFor();
   check((await p.locator('.tarjeta-cardio').textContent()).includes('Carrera') && (await p.locator('.tarjeta-cardio').textContent()).includes('puedes hablar'), 'la sesión de cardio le enseña la pauta: carrera, minutos y el esfuerzo con la prueba del habla');
   await revisar('cardio-sesion');
+  // v0.51: también la de cardio empieza con su portada (con la pauta en ella)
+  if (await p.locator('.portada-sesion').count()) {
+    await p.locator('.portada-empezar').getByRole('button', { name: 'Empezar', exact: true }).click();
+    await p.locator('.sesion-vista .tarjeta-cardio').waitFor();
+  }
   await p.getByRole('button', { name: 'Ahora no' }).click().catch(() => {});
   await p.getByRole('button', { name: 'Terminar sesión' }).click();
   const hojaFinC = p.getByRole('dialog', { name: 'Terminar sesión' });
@@ -1840,7 +2072,7 @@ try {
   for (let i = 0; i < 3; i++) { const d = p.locator('[role=dialog]').first(); if (!(await d.isVisible().catch(() => false))) break; const b2 = d.getByRole('button', { name: /^Seguir$|^Cerrar$|Ver mis logros/ }).first(); if (await b2.isVisible().catch(() => false)) await b2.click(); else await p.keyboard.press('Escape'); await p.waitForTimeout(200); }
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   await p.getByRole('button', { name: /^(Empezar|Continuar) sesión$/ }).first().click();
-  await p.locator('.ejercicio').first().waitFor();
+  await sesionAbierta();
   // Uno a uno (al abrir un ejercicio se puede cerrar otro)
   const conAnterior = [];
   for (let i = 0; i < await p.locator('.ejercicio').count(); i++) {
@@ -2254,6 +2486,13 @@ try {
   await p.locator('.post').first().waitFor();
   check(await p.locator('.post').first().evaluate((x) => x.classList.contains('fijada') && x.textContent.includes('Aviso del coach')), 'con «Sí, quiero entrar», dentro: arriba el aviso fijado del coach');
   await revisar('equipo-muro');
+  // v0.51: quien ha compartido un entreno hoy (Carlos, en la demo) lleva un aro en su foto, en el muro y en las listas;
+  // su entreno, con las cifras en grande y los ejercicios con su pictograma
+  const postCarlos = p.getByRole('article', { name: /^Entreno compartido de Carlos/ });
+  await postCarlos.locator('.aro-hoy').waitFor();
+  check((await postCarlos.locator('.post-cab').textContent()).includes('ha compartido un entreno hoy') && await p.getByRole('article', { name: /^Entreno compartido de Rubén/ }).locator('.post-cab .aro-hoy').count() === 0
+    && await postCarlos.locator('.ee-num .marcador').count() >= 3 && await postCarlos.locator('.ee-ejercicios .picto').count() >= 1,
+  'Carlos ha compartido un entreno hoy: su foto lleva el aro (Rubén, que lo compartió ayer, no); su entreno con las cifras en grande y los pictogramas');
   // v0.47: el resumen de la semana arriba del muro
   check((await p.locator('.resumen-equipo').textContent()).includes('Esta semana en el equipo') && await p.locator('.resumen-equipo dd').count() === 4, 'arriba del muro, el resumen de la semana del equipo (solo recuentos)');
   // v0.47: al escribir «@», propone a los del equipo
@@ -2373,7 +2612,7 @@ try {
   await p.waitForTimeout(800);
   await cerrarDialogos();
   await p.getByRole('button', { name: 'Empezar sesión' }).click();
-  await p.locator('.ejercicio').first().waitFor();
+  await sesionAbierta();
   const prepEq = p.locator('.preparacion');
   if (await prepEq.count()) { for (const [g, x] of [['¿Cómo has dormido?', 'Bien'], ['¿Cómo tienes la energía?', 'Alta'], ['¿Agujetas o molestias?', 'Ninguna']]) await prepEq.getByRole('group', { name: g }).getByRole('button', { name: x, exact: true }).click(); }
   const primeroEq = p.locator('.ejercicio').first();
@@ -2798,7 +3037,7 @@ try {
   await p.waitForTimeout(600);
   await cerrarDialogos();
   await p.getByRole('button', { name: 'Empezar sesión' }).click({ force: true });
-  await p.locator('.ejercicio').first().waitFor();
+  await sesionAbierta();
   const donde = p.locator('.donde-entrenas');
   await donde.waitFor();
   await donde.getByRole('button', { name: 'Casa', exact: true }).click();
@@ -2856,7 +3095,7 @@ try {
 
   // El acceso directo «Sesión de hoy» del icono (?accion=sesion) abre la sesión que toca
   await p.goto('http://localhost:4174/?demo&accion=sesion#hoy');
-  await p.locator('.ejercicio').first().waitFor();
+  await sesionAbierta();
   check(!(await p.evaluate(() => location.search)).includes('accion'), 'el acceso directo «Sesión de hoy» abre la sesión que toca (y limpia la dirección)');
   // Compartir un vídeo desde la galería (Android): el service worker lo deja en la caché y abre ?compartido=1
   await p.evaluate(async () => {

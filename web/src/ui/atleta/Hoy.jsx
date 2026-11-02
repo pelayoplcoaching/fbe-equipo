@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Anillo, Paso, usePreferencia, cuando, Pista, Avatar } from '../comunes.jsx';
+import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar } from '../comunes.jsx';
 import { resumenDia } from '../../logica/dia.js';
 import { BandaConexion, BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
@@ -31,6 +31,7 @@ import { TextoConEnlaces } from '../Enlaces.jsx';
 import { Ilustracion } from '../Ilustraciones.jsx';
 import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
 import { estadoHoy, sugerenciaDescanso, urlSegura } from '../../logica/diseno.js';
+import { Diales } from './Diales.jsx';
 
 // Minutos aproximados: cada serie ~40 s de trabajo más su descanso
 export { duracionEstimada };
@@ -385,6 +386,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         ) : null}
         {sesiones.length > 0 && <ResumenSemana hechas={hechas} total={sesiones.length} racha={constancia.datos?.racha ?? null} />}
       </section>
+      <Diales sesiones={sesiones} semana={semana} siguiente={siguiente} previstaHoy={enSemana ? toca.hoy : null} ejerciciosSiguiente={ejercicios} bloques={p.bloques || []} salud={salud} hoy={hoy} alContestar={recargar} />
 
       {entre}
       {!propio && <TarjetaMes salud={salud} />}
@@ -588,12 +590,11 @@ function HeroEspera({ bloque, notion, irA, propio }) {
   );
 }
 
-// Anillo de la semana y racha de semanas completas
+// Lo que queda de la semana y la racha de semanas completas (v0.51: el anillo pasa al dial «Constancia», justo debajo)
 function ResumenSemana({ hechas, total, racha }) {
   const quedan = total - hechas;
   return (
-    <div class="semana-resumen">
-      <Anillo hechas={hechas} total={total} />
+    <div class="semana-resumen sin-anillo">
       <div class="pila-xs">
         <strong>{quedan ? `Te ${quedan === 1 ? 'queda 1 sesión' : `quedan ${quedan} sesiones`}` : 'Semana completa'}</strong>
         {racha > 0 ? (

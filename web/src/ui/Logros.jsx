@@ -1,33 +1,90 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, usePreferencia } from './comunes.jsx';
 import { num } from '../logica/calculos.js';
-import { logrosNuevos, nivelesVistos, NIVELES_LOGRO } from '../logica/logros.js';
+import { logrosNuevos, nivelesVistos } from '../logica/logros.js';
+import { metalDe } from '../logica/tablero.js';
 import { celebrar } from './atleta/sesion-comun.jsx';
 
-// Medalla con forma de disco de competición: color del nivel, cifra del hito en la cara y buje metálico.
-// Sin nivel, un disco fantasma. El aro exterior marca lo que falta para el siguiente nivel.
-const NOMBRE_COLOR = Object.fromEntries(NIVELES_LOGRO.map((n) => [n.color, n.nombre]));
+// v0.51: medallas de metal. Los cuatro niveles de siempre (los mismos umbrales) son bronce, plata, oro y platino: la
+// cara con un degradado radial (la luz arriba a la izquierda), el canto con su degradado y su dibujo (liso, perlado,
+// estriado o doble, para distinguirlos sin el color), la cifra del hito grabada y, al conseguirla, un brillo que la
+// cruza (quieto con «reducir movimiento»). Sin nivel, una medalla fantasma. El aro exterior marca lo que falta.
 const abreviar = (n) => (n >= 1000 ? `${num(n / 1000, n % 1000 ? 1 : 0)}k` : String(n));
-
-export function Medalla({ color = null, cifra = null, progreso = null, tam = 76, clase = '' }) {
+const METAL = {
+  bronce: { luz: '#F6CFA6', medio: '#C9864F', sombra: '#8A4F25', cantoLuz: '#F0B98A', cantoSombra: '#6E3B17', tinta: '#3A1F0B', relieve: 'rgba(255, 236, 214, .65)' },
+  plata: { luz: '#FBFCFE', medio: '#C7CCD6', sombra: '#8C93A1', cantoLuz: '#FFFFFF', cantoSombra: '#6B7280', tinta: '#2B303B', relieve: 'rgba(255, 255, 255, .8)' },
+  oro: { luz: '#FFF4C4', medio: '#E9B949', sombra: '#A8781A', cantoLuz: '#FFF1B8', cantoSombra: '#8A6212', tinta: '#3F2A04', relieve: 'rgba(255, 248, 214, .75)' },
+  platino: { luz: '#F7FCFF', medio: '#C6D8E4', sombra: '#8AA5B8', cantoLuz: '#F4FBFF', cantoSombra: '#4E6577', tinta: '#1E2C38', relieve: 'rgba(255, 255, 255, .8)' },
+};
+let contador = 0;
+export function MedallaMetal({ nivel = 0, cifra = null, progreso = null, tam = 76, clase = '' }) {
+  const id = useRef(null);
+  if (!id.current) id.current = `mm${++contador}`;
+  const k = id.current;
+  const m = metalDe(nivel);
+  const c = m ? METAL[m.id] : null;
   const R = 46, C = 2 * Math.PI * R;
+  const texto = cifra != null ? abreviar(cifra) : null;
+  const tamCifra = texto && texto.length > 3 ? 20 : 25;
   return (
-    <svg class={`medalla ${color ? `disco-${color}` : 'fantasma'} ${clase}`} viewBox="0 0 100 100" width={tam} height={tam} aria-hidden="true">
+    <svg class={`medalla-metal ${m ? `metal-${m.id}` : 'fantasma'} ${clase}`} viewBox="0 0 100 100" width={tam} height={tam} aria-hidden="true">
       {progreso != null && (
         <>
-          <circle class="medalla-aro" cx="50" cy="50" r={R} />
-          <circle class="medalla-avance" cx="50" cy="50" r={R} stroke-dasharray={`${C * progreso} ${C}`} transform="rotate(-90 50 50)" />
+          <circle class="mm-aro" cx="50" cy="50" r={R} />
+          <circle class="mm-avance" cx="50" cy="50" r={R} stroke-dasharray={`${C * progreso} ${C}`} transform="rotate(-90 50 50)" />
         </>
       )}
-      <circle class="medalla-cara" cx="50" cy="50" r="38" />
-      <circle class="medalla-borde" cx="50" cy="50" r="33.5" />
-      <path class="medalla-brillo" d="M22 36a31 31 0 0 1 22-20" />
-      {cifra != null && <text class="medalla-cifra" x="50" y="33" text-anchor="middle">{abreviar(cifra)}</text>}
-      <circle class="medalla-buje" cx="50" cy="50" r="10.5" />
-      <circle class="medalla-agujero" cx="50" cy="50" r="4.2" />
+      {!m ? (
+        <>
+          <circle class="mm-cara" cx="50" cy="50" r="37" />
+          {texto && <text class="mm-cifra" x="50" y="50" dy="0.35em" text-anchor="middle" font-size={tamCifra}>{texto}</text>}
+        </>
+      ) : (
+        <>
+          <defs>
+            <linearGradient id={`${k}c`} x1="0" y1="0" x2="0.35" y2="1">
+              <stop offset="0" stop-color={c.cantoLuz} /><stop offset=".5" stop-color={c.medio} /><stop offset="1" stop-color={c.cantoSombra} />
+            </linearGradient>
+            <radialGradient id={`${k}f`} cx=".36" cy=".3" r=".85">
+              <stop offset="0" stop-color={c.luz} /><stop offset=".55" stop-color={c.medio} /><stop offset="1" stop-color={c.sombra} />
+            </radialGradient>
+            <linearGradient id={`${k}b`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#fff" stop-opacity="0" /><stop offset=".5" stop-color="#fff" stop-opacity=".75" /><stop offset="1" stop-color="#fff" stop-opacity="0" />
+            </linearGradient>
+            <clipPath id={`${k}r`}><circle cx="50" cy="50" r="39.5" /></clipPath>
+          </defs>
+          <circle cx="50" cy="50" r="39.5" fill={`url(#${k}c)`} stroke={c.cantoSombra} stroke-width="1.2" />
+          {m.canto === 'perlado' && <circle cx="50" cy="50" r="36.4" fill="none" stroke={c.relieve} stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0 4.75" />}
+          {m.canto === 'estriado' && <circle cx="50" cy="50" r="36.6" fill="none" stroke={c.cantoSombra} stroke-opacity=".55" stroke-width="4.6" stroke-dasharray="1.1 1.9" />}
+          {m.canto === 'doble' && (
+            <>
+              <circle cx="50" cy="50" r="37.6" fill="none" stroke={c.cantoSombra} stroke-opacity=".6" stroke-width="1" />
+              <circle cx="50" cy="50" r="35.4" fill="none" stroke={c.cantoSombra} stroke-opacity=".6" stroke-width="1" />
+              <circle cx="50" cy="50" r="36.5" fill="none" stroke={c.relieve} stroke-width="1.2" stroke-dasharray="0.9 2.1" />
+            </>
+          )}
+          <circle cx="50" cy="50" r="33.4" fill={`url(#${k}f)`} stroke={c.cantoSombra} stroke-opacity=".45" stroke-width="1" />
+          <circle cx="50" cy="50" r="28" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width=".8" />
+          <circle cx="50" cy="50" r="22.5" fill="none" stroke="#fff" stroke-opacity=".1" stroke-width=".8" />
+          <path d="M24 38a28 28 0 0 1 20-17" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2.6" stroke-linecap="round" />
+          {m.canto === 'doble' && <path d="M50 18.6l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill={c.cantoSombra} fill-opacity=".7" />}
+          {texto && (
+            <g class="mm-cifra" text-anchor="middle" font-size={tamCifra}>
+              <text x="50" y="51.2" dy="0.35em" fill={c.relieve}>{texto}</text>
+              <text x="50" y="50" dy="0.35em" fill={c.tinta}>{texto}</text>
+            </g>
+          )}
+          <g clip-path={`url(#${k}r)`}>
+            <g transform="rotate(22 50 50)"><rect class="mm-barrido" x="10" y="-20" width="26" height="140" fill={`url(#${k}b)`} /></g>
+          </g>
+        </>
+      )}
     </svg>
   );
 }
+// Lo que dice cada medalla: «Bronce», «Plata»… (sin nivel, «Sin medalla»)
+const nombreMetal = (nivel) => metalDe(nivel)?.nombre || 'Sin medalla';
+const medallaDe = (nivel) => (metalDe(nivel) ? `medalla de ${metalDe(nivel).nombre.toLowerCase()}` : 'sin medalla');
 
 // Cuadrícula de logros (en Progreso)
 export function Logros({ salud }) {
@@ -36,17 +93,18 @@ export function Logros({ salud }) {
   const [abierto, setAbierto] = useState(null);
   const lista = res.datos?.lista;
   if (!lista) return null;
-  const discos = lista.reduce((t, l) => t + l.nivel, 0), total = lista.length * 4;
+  const medallas = lista.reduce((t, l) => t + l.nivel, 0), total = lista.length * 4;
   return (
     <section class="seccion" aria-labelledby="logros-titulo">
-      <div class="seccion-cab"><h3 id="logros-titulo">Logros</h3><span class="peq secundario num">{discos} de {total} discos</span></div>
+      <div class="seccion-cab"><h3 id="logros-titulo">Logros</h3><span class="peq secundario num">{medallas} de {total} medallas</span></div>
       <div class="panel panel-pad">
         <ul class="logros">
           {lista.map((l) => (
             <li key={l.id}>
               <button class="logro" onClick={() => setAbierto(l)}
-                aria-label={`${l.titulo}: ${l.nivel ? `${NOMBRE_COLOR[l.color]}, ${l.conseguido}` : 'aún sin disco'}${l.siguiente ? `. Siguiente: ${l.siguiente.texto}` : '. Todos los discos'}`}>
-                <Medalla color={l.color} cifra={l.nivel ? l.niveles[l.nivel - 1].umbral : l.niveles[0].umbral} progreso={l.siguiente ? l.progreso : null} />
+                aria-label={`${l.titulo}: ${l.nivel ? `${medallaDe(l.nivel)}, ${l.conseguido}` : 'aún sin medalla'}${l.siguiente ? `. Siguiente: ${l.siguiente.texto}` : '. Todas las medallas'}`}>
+                <MedallaMetal nivel={l.nivel} cifra={l.nivel ? l.niveles[l.nivel - 1].umbral : l.niveles[0].umbral} progreso={l.siguiente ? l.progreso : null} />
+                <span class="logro-metal" aria-hidden="true">{nombreMetal(l.nivel)}</span>
                 <span class="logro-titulo">{l.titulo}</span>
                 <span class="mini terciario num">{l.siguiente ? `${abreviar(l.valor)} de ${abreviar(l.siguiente.umbral)}` : 'Completo'}</span>
               </button>
@@ -62,13 +120,13 @@ export function Logros({ salud }) {
 function HojaLogro({ logro: l, alCerrar }) {
   return (
     <Hoja titulo={l.titulo} alCerrar={alCerrar}>
-      <p class="secundario">{l.nivel ? `Tienes el ${NOMBRE_COLOR[l.color].toLowerCase()}: ${l.conseguido}.` : 'Aún no tienes ningún disco de este logro.'}
-        {l.siguiente ? ` Para el siguiente te ${l.siguiente.falta === 1 ? 'falta' : 'faltan'} ${num(l.siguiente.falta, 0)}.` : ' Ya los tienes todos.'}</p>
+      <p class="secundario">{l.nivel ? `Tienes la ${medallaDe(l.nivel)}: ${l.conseguido}.` : 'Aún no tienes ninguna medalla de este logro.'}
+        {l.siguiente ? ` Para la siguiente te ${l.siguiente.falta === 1 ? 'falta' : 'faltan'} ${num(l.siguiente.falta, 0)}.` : ' Ya las tienes todas.'}</p>
       <ol class="logro-niveles">
         {l.niveles.map((n) => (
           <li key={n.n} class={n.conseguido ? 'conseguido' : ''}>
-            <Medalla color={n.conseguido ? n.color : null} cifra={n.umbral} tam={64} />
-            <span class="pila-xs"><strong>{NIVELES_LOGRO[n.n - 1].nombre}</strong><span class="peq secundario">{n.texto}</span></span>
+            <MedallaMetal nivel={n.conseguido ? n.n : 0} cifra={n.umbral} tam={64} />
+            <span class="pila-xs"><strong>{nombreMetal(n.n)}</strong><span class="peq secundario">{n.texto}</span></span>
             <span class="sr">{n.conseguido ? 'Conseguido' : 'Pendiente'}</span>
             {n.conseguido && <Icono n="hecho" />}
           </li>
@@ -91,16 +149,19 @@ export function AvisoLogros({ salud, irA, pausado = false }) {
   if (!ver) return null;
   const terminar = (ir) => { setVistos(nivelesVistos(lista)); setCerrado(true); if (ir) irA('progreso'); };
   const principal = [...nuevos].sort((a, b) => b.nivel - a.nivel)[0];
+  const nivelP = principal.nivel;
+  const umbralP = lista.find((l) => l.id === principal.id).niveles[nivelP - 1].umbral;
   return (
-    <Hoja titulo={nuevos.length === 1 ? 'Nuevo disco' : `${nuevos.length} discos nuevos`} alCerrar={() => terminar(false)}>
-      <div class="logro-nuevo">
-        <Medalla color={principal.color} cifra={lista.find((l) => l.id === principal.id).niveles[principal.nivel - 1].umbral} tam={148} clase="entra" />
-        <p class="logro-nuevo-titulo"><strong>{principal.titulo}</strong>: {NOMBRE_COLOR[principal.color].toLowerCase()}</p>
+    <Hoja titulo={nuevos.length === 1 ? 'Nueva medalla' : `${nuevos.length} medallas nuevas`} alCerrar={() => terminar(false)}>
+      <div class="medalla-revela" data-metal={metalDe(nivelP)?.id}>
+        <MedallaMetal nivel={nivelP} cifra={umbralP} tam={176} clase="entra brilla" />
+        <span class="t-sobre">Medalla de {nombreMetal(nivelP).toLowerCase()}</span>
+        <h3>{principal.titulo}</h3>
         <p class="secundario">{principal.texto}</p>
         {nuevos.length > 1 && (
           <ul class="logro-nuevos-resto">
             {nuevos.filter((x) => x !== principal).map((x) => (
-              <li key={x.id}><Medalla color={x.color} tam={30} /><span><strong>{x.titulo}</strong>: {x.texto}</span></li>
+              <li key={x.id}><MedallaMetal nivel={x.nivel} tam={30} /><span><strong>{x.titulo}</strong>: {medallaDe(x.nivel)}, {x.texto}</span></li>
             ))}
           </ul>
         )}

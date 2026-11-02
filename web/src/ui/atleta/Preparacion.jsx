@@ -11,7 +11,8 @@ export function Preparacion({ inicial = null, alGuardar, alSaltar }) {
     setP(n);
     if (completa(n) && !guardando) {
       setGuardando(true);
-      try { await alGuardar(n); } finally { setGuardando(false); }
+      // (quien guarda dice si algo falla; aquí no se deja ninguna promesa rechazada sin atender)
+      try { await alGuardar(n); } catch { /* lo avisa quien guarda */ } finally { setGuardando(false); }
     }
   };
   return (

@@ -3,7 +3,7 @@
 // Safari no deja: no pasa nada). No depende de «reducir movimiento»: es otra cosa.
 import { leerAjustes } from './ajustes.js';
 
-export const PATRONES = { serie: 14, record: [18, 50, 18, 50, 70], checkin: [16, 70, 32] };
+export const PATRONES = { serie: 14, record: [18, 50, 18, 50, 70], checkin: [16, 70, 32], anillo: [22, 60, 22, 60, 48] };
 export const puedeVibrar = () => typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
 
 export function vibrar(que) {

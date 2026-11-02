@@ -2,9 +2,9 @@
 // «Coach»), los retos, el ranking de la semana y quién ha entrado. Se abre y se cierra en Cuenta → Comunidad.
 // v0.47: el resumen de la semana, encuestas, retos de equipo, el podio con las rachas, ánimos y el perfil de cada uno.
 import { useState } from 'preact/hooks';
-import { CabeceraGrande, useApp, useCarga, Pestanas, Avatar, Cargando } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, Pestanas, Cargando } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
-import { Muro, Retos, Ranking, ListaNormas, ConPerfiles } from '../Comunidad.jsx';
+import { Muro, Retos, Ranking, ListaNormas, ConPerfiles, AvatarEquipo, NotaHoy } from '../Comunidad.jsx';
 import { fmtCorta } from '../../logica/fechas.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking'], ['miembros', 'Quién está'], ['normas', 'Normas']];
@@ -62,8 +62,8 @@ function Miembros() {
             <li key={m.atleta_id} class="panel-pad pila-s">
               <div class="separa">
                 <span class="fila">
-                  <Avatar nombre={m.nombre} foto={A[m.atleta_id]?.foto} clase="peq" />
-                  <span class="pila-xs"><span>{m.nombre} {m.sin_ranking && <span class="chip">Sin ranking</span>}</span><span class="mini terciario">{A[m.atleta_id]?.nombre || ''} · entró el {fmtCorta(String(m.aceptado_en).slice(0, 10))}</span></span>
+                  <AvatarEquipo perfilId={m.perfil_id} nombre={m.nombre} foto={A[m.atleta_id]?.foto} clase="peq" />
+                  <span class="pila-xs"><span>{m.nombre}<NotaHoy perfilId={m.perfil_id} /> {m.sin_ranking && <span class="chip">Sin ranking</span>}</span><span class="mini terciario">{A[m.atleta_id]?.nombre || ''} · entró el {fmtCorta(String(m.aceptado_en).slice(0, 10))}</span></span>
                 </span>
                 {sacar !== m.atleta_id && <button class="btn btn-peq plano btn-peligro" onClick={() => setSacar(m.atleta_id)}>Sacar del equipo</button>}
               </div>

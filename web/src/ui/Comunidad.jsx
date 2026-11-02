@@ -14,6 +14,8 @@ import {
 } from '../logica/comunidad.js';
 import { fmtConDia, fmtCorta, hoyISO, sumarDias, lunesDe, aISO } from '../logica/fechas.js';
 import { num } from '../logica/calculos.js';
+import { Pictograma } from './Pictograma.jsx';
+import { patronEjercicio } from '../logica/diseno.js';
 import { VERSION_COMUNIDAD } from '../datos/api.js';
 import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 
@@ -46,23 +48,42 @@ function marcarCelebrado(uid, id) {
 // perfil en una hoja. Lo dan ConPerfiles (en Equipo, para el atleta y para el coach) y usePerfil.
 const PerfilCtx = createContext(null);
 const usePerfil = () => useContext(PerfilCtx) || (() => {});
-export function ConPerfiles({ children }) {
+// v0.51: quién ha compartido hoy un entreno en el muro (su foto lleva un aro, como en las historias). Solo con lo que
+// ya se ve en el muro: no se comparte nada nuevo de nadie.
+const HoyCtx = createContext(new Set());
+export const useCompartioHoy = (perfilId) => useContext(HoyCtx).has(perfilId);
+export function ConPerfiles({ children, cambios = 0 }) {
+  const { api } = useApp();
   const [abierto, setAbierto] = useState(null);
+  const hoy = useCarga(() => api.compartieronHoyComunidad().catch(() => new Set()), [cambios]);
   return (
     <PerfilCtx.Provider value={setAbierto}>
-      {children}
-      {abierto && <HojaPerfilEquipo perfilId={abierto} alCerrar={() => setAbierto(null)} />}
+      <HoyCtx.Provider value={hoy.datos || new Set()}>
+        {children}
+        {abierto && <HojaPerfilEquipo perfilId={abierto} alCerrar={() => setAbierto(null)} />}
+      </HoyCtx.Provider>
     </PerfilCtx.Provider>
   );
+}
+// La foto con su aro si ha compartido un entreno hoy. Lo que dice a los lectores de pantalla va después del nombre
+// (NotaHoy), no antes
+export function AvatarEquipo({ perfilId, nombre, foto = null, clase = '' }) {
+  const hoy = useCompartioHoy(perfilId);
+  const av = <Avatar nombre={nombre} foto={foto} clase={clase} />;
+  return hoy ? <span class="aro-hoy">{av}</span> : av;
+}
+export function NotaHoy({ perfilId }) {
+  return useCompartioHoy(perfilId) ? <span class="sr"> (ha compartido un entreno hoy)</span> : null;
 }
 // Un nombre (con su foto, si se quiere) que abre el perfil
 function BotonPersona({ perfilId, nombre, foto = null, clase = '', avatar = true, claseAvatar = 'peq', children }) {
   const abrir = usePerfil();
   return (
     <button type="button" class={`btn-persona ${clase}`} onClick={() => abrir(perfilId)}>
-      {avatar && <Avatar nombre={nombre} foto={foto} clase={claseAvatar} />}
+      {avatar && <AvatarEquipo perfilId={perfilId} nombre={nombre} foto={foto} clase={claseAvatar} />}
       <span class="sr">Ver el perfil de </span>
       {children || <span class="btn-persona-nombre">{nombre}</span>}
+      <NotaHoy perfilId={perfilId} />
     </button>
   );
 }
@@ -536,27 +557,32 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
   );
 }
 
-// La tarjeta de un entreno (la de la base o, al compartir, la vista previa)
+// La tarjeta de un entreno (la de la base o, al compartir, la vista previa). v0.51: como en Strava: el nombre en
+// grande, las cifras condensadas (minutos, series, ejercicios y récords), los ejercicios con su pictograma (sale del
+// nombre, que ya se comparte) y los récords resaltados. El resumen no trae los músculos: no hay mapa muscular.
 export function TarjetaEntreno({ r }) {
   if (!r) return null;
   const ejercicios = r.ejercicios || [];
   const records = ejercicios.filter((e) => e.record);
   const serie = (e) => (e.kg != null ? `${num(e.kg, 2)} kg × ${e.reps}` : e.reps != null ? `${e.reps} rep` : null);
+  const cifras = [
+    ['min', r.minutos ?? '—', 'Minutos'],
+    ['series', r.series ?? 0, 'Series'],
+    ['ejercicios', ejercicios.length, ejercicios.length === 1 ? 'Ejercicio' : 'Ejercicios'],
+    ...(records.length ? [['records', records.length, records.length === 1 ? 'Récord' : 'Récords']] : []),
+  ];
   return (
     <div class="entreno-equipo">
       <div class="ee-cab">
-        <span class="ee-ico"><Icono n="hoy" /></span>
-        <div class="pila-xs"><strong>{r.nombre}</strong><span class="mini secundario">{r.fecha ? fmtConDia(r.fecha) : ''}</span></div>
+        <div class="pila-xs"><strong class="t-titular">{r.nombre}</strong>{r.fecha && <span class="mini secundario">{fmtConDia(r.fecha)}</span>}</div>
       </div>
-      <div class="ee-num">
-        <div><span class="v num">{r.minutos ?? '—'}</span><span class="k">min</span></div>
-        <div><span class="v num">{r.series ?? 0}</span><span class="k">series</span></div>
-        <div><span class="v num">{ejercicios.length}</span><span class="k">{ejercicios.length === 1 ? 'ejercicio' : 'ejercicios'}</span></div>
-      </div>
+      <dl class="ee-num">
+        {cifras.map(([k, v, t]) => <div key={k}><dt class="k">{t}</dt><dd class="v marcador" style="margin:0">{v}</dd></div>)}
+      </dl>
       {ejercicios.length > 0 && (
         <ul class="ee-ejercicios">
           {ejercicios.map((e, i) => (
-            <li key={i}><span>{e.nombre}</span>{r.con_kilos && serie(e) && <span class="num secundario">{serie(e)}</span>}</li>
+            <li key={i}><Pictograma patron={patronEjercicio(e.nombre || '')} /><span>{e.nombre}</span>{r.con_kilos && serie(e) ? <span class="num secundario">{serie(e)}</span> : <span />}</li>
           ))}
         </ul>
       )}

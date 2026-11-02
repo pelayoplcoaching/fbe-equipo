@@ -924,6 +924,8 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     checkin: checkin ? { semana: checkin.semana_inicio, horas_sueno: checkin.horas_sueno, energia: checkin.energia, motivacion: checkin.motivacion } : null,
     maxMolestia,
     ultimaSerie: d.ultimaSerie || null,
+    // v0.51: la última sesión terminada (también las de cardio, que no llevan series), para «Hoy en tu equipo»
+    ultimaSesion: (d.sesionesRecientes || []).filter((x) => x.completada && x.fecha_realizada && x.fecha_realizada <= hoy).map((x) => x.fecha_realizada).sort().at(-1) || null,
     carga: d.sesionesRecientes ? cambioCarga(cargaSemanal(d.sesionesRecientes, hoy, 6)) : null,
     cumplimiento: d.cumplimiento || null,
     habitos: d.habitos || null,

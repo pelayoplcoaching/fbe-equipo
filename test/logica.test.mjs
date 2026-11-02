@@ -1655,5 +1655,118 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const ilus = fs.readFileSync(new URL('../web/src/ui/Ilustraciones.jsx', import.meta.url), 'utf8');
   check(['mensajes', 'diario', 'records', 'checkins', 'tareas', 'todo', 'filtro', 'descanso', 'hecha', 'semana', 'espera'].every((k) => new RegExp(`\\n  ${k}: \\(\\) =>`).test(ilus)) && !/#[0-9a-fA-F]{3,6}/.test(ilus), 'las ilustraciones: una por estado vacío y por día de Hoy, sin colores escritos (los pone el tema)');
 }
+// ---------- v0.51: piezas visuales ----------
+{
+  const T = await import('../web/src/logica/tablero.js');
+  const A = await import('../web/src/logica/arte.js');
+  const AC = await import('../web/src/logica/acentos.js');
+  const fs = await import('node:fs');
+  const css = fs.readFileSync(new URL('../web/src/estilos.css', import.meta.url), 'utf8');
+
+  console.log('\nv0.51: tipografía y vidrio');
+  const tokens = ['--tipo-display', '--tipo-titulo', '--tipo-titular', '--tipo-cuerpo', '--tipo-pie', '--cifra-xl', '--cifra-l', '--cifra-m', '--cifra-s', '--ancho-expandido', '--ancho-marcador'];
+  check(tokens.every((t) => new RegExp(`${t}:`).test(css)) && /--ancho-expandido: 12\d%/.test(css) && /--ancho-marcador: [78]\d%/.test(css), 'la escala tipográfica está en tokens: display, título, titular, cuerpo, pie y cifras, con el ancho expandido (títulos) y el condensado (cifras)');
+  check(/\.cabecera-grande \.titulo h1 \{ font-size: var\(--tipo-titulo\)/.test(css) && /\.titular h2 \{ font-size: var\(--tipo-display\)/.test(css) && /\.resumen-num \.v \{ font-size: var\(--cifra-l\); font-stretch: var\(--ancho-marcador\)/.test(css),
+    'los títulos de pantalla y la tarjeta del día usan la escala (expandidos) y las cifras grandes, el marcador (condensadas)');
+  let malas = [];
+  for (const a of AC.ACENTOS) for (const t of ['claro', 'oscuro', 'oled']) for (const tipo of ['barra', 'cabecera', 'hoja']) malas.push(...AC.parejasVidrio(a, t, tipo).filter((x) => x.ratio < 4.5).map((x) => `${a.id}/${t}/${x.que}: ${x.ratio}`));
+  check(malas.length === 0, `sobre el vidrio, el texto pasa AA en el peor caso (negro detrás en claro, blanco en oscuro) con los seis acentos ${malas.slice(0, 3).join('; ')}`);
+  check(AC.parejasVidrio(AC.ACENTOS[0], 'claro', 'hoja').some((x) => x.que.startsWith('tinta-3')) && !AC.parejasVidrio(AC.ACENTOS[0], 'claro', 'barra').some((x) => x.que.startsWith('tinta-3')), 'en las hojas también tinta-3 (por eso tapan más); en las barras, no');
+  const mezclas = (v, base) => [...css.matchAll(new RegExp(`${v}: color-mix\\(in srgb, var\\(--${base}\\) (\\d+)%`, 'g'))].map((m) => Number(m[1]));
+  const V = AC.VIDRIO;
+  check(mezclas('--vidrio', 'hoja').join() === [V.barra.claro, V.barra.oscuro, V.barra.oscuro, V.barra.oled, V.barra.oled].join()
+    && mezclas('--vidrio-cab', 'tiza').join() === [V.cabecera.claro, V.cabecera.oscuro, V.cabecera.oscuro, V.cabecera.oled, V.cabecera.oled].join()
+    && mezclas('--vidrio-hoja', 'hoja').join() === [V.hoja.claro, V.hoja.oscuro, V.hoja.oscuro, V.hoja.oled, V.hoja.oled].join(), 'estilos.css usa esas mismas transparencias (claro, los dos oscuros y los dos negro puro)');
+  check(/@media \(prefers-reduced-transparency: reduce\), \(prefers-contrast: more\)/.test(css) && /@supports not \(\(backdrop-filter: blur\(1px\)\) or \(-webkit-backdrop-filter: blur\(1px\)\)\)/.test(css), 'con «reducir transparencia», «más contraste» o sin backdrop-filter, superficies opacas');
+
+  console.log('\nv0.51: los diales de Hoy');
+  const ses = (n, hechas) => Array.from({ length: n }, (_, i) => ({ id: `s${i}`, orden: i + 1, completada: i < hechas }));
+  const c1 = T.dialConstancia(ses(3, 2));
+  check(c1.hechas === 2 && c1.total === 3 && Math.abs(c1.valor - 2 / 3) < 1e-9 && c1.etiqueta === 'Te queda 1' && c1.estado === 'en_curso', 'constancia: 2 de 3 sesiones, «Te queda 1»');
+  check(T.dialConstancia(ses(3, 3)).estado === 'completa' && T.dialConstancia([]).estado === 'sin' && T.dialConstancia([]).valor === 0, 'completa con todas; sin sesiones, vacía');
+  // Carga: semanas de lunes; «hoy» es miércoles 2026-11-04. Tres semanas anteriores con 300 de lunes a miércoles y 600 en total
+  const s = (f, rpe, min) => ({ completada: true, fecha_realizada: f, rpe_sesion: rpe, duracion_min: min });
+  const previas = ['2026-10-12', '2026-10-19', '2026-10-26'].flatMap((l) => [s(l, 6, 50), s(sumarDias(l, 4), 6, 50)]);
+  const k1 = T.dialCarga([...previas, s('2026-11-02', 6, 50)], '2026-11-04');
+  check(k1.esperado === 300 && k1.actual === 300 && k1.ratio === 1 && k1.estado === 'media' && k1.etiqueta === 'En tu media' && k1.valor === 0.5, 'carga: igual que lo que suele llevar a estas alturas de la semana, «En tu media» (la aguja en el centro)');
+  check(T.dialCarga([...previas, s('2026-11-02', 6, 50), s('2026-11-03', 8, 70)], '2026-11-04').estado === 'encima' && T.dialCarga([...previas], '2026-11-04').estado === 'debajo', 'por encima con una sesión de más; sin nada aún, por debajo');
+  const lunes = T.dialCarga([...previas], '2026-11-02');
+  check(lunes.esperado === 300 && lunes.estado === 'debajo', 'un lunes se compara con lo de los lunes (no con la semana entera)');
+  const sinLunes = T.dialCarga(['2026-10-19', '2026-10-26'].map((l) => s(sumarDias(l, 3), 6, 50)), '2026-11-02');
+  check(sinLunes.esperado === 0 && sinLunes.ratio === 1 && sinLunes.estado === 'media', 'si otras semanas a estas alturas no llevaba nada y hoy tampoco, va como siempre');
+  check(T.dialCarga([s('2026-10-26', 6, 50)], '2026-11-04').estado === 'sin_media' && T.dialCarga([{ ...s('2026-10-19', null, 50) }, s('2026-10-26', 6, 50)], '2026-11-04').estado === 'sin_media', 'con menos de dos semanas con carga (o sesiones sin esfuerzo), sin media');
+  check(T.BANDA_CARGA.join() === '0.8,1.3', 'la banda «En tu media», de 0,8 a 1,3 veces lo habitual');
+  const prep = { sueno: 1, energia: 2, molestias: 3 };
+  const sesP = [{ id: 'a', completada: true, fecha_realizada: '2026-11-03', preparacion: { sueno: 3, energia: 3, molestias: 3 } }, { id: 'b', completada: false, preparacion: prep }, { id: 'c', completada: true, fecha_realizada: '2026-11-04', preparacion: { sueno: 3, energia: 3, molestias: 3 } }];
+  check(T.preparacionDeHoy(sesP, '2026-11-04').sueno === 3 && T.preparacionDeHoy(sesP, '2026-11-04', { marcadas: ['b'] }) === prep && T.preparacionDeHoy(sesP, '2026-11-04', { seriesHoy: ['b'] }) === prep && T.preparacionDeHoy(sesP, '2026-11-05') === null, 'cómo llegas: solo lo contestado hoy (una sesión hecha hoy, una con series de hoy o la contestada hoy en este móvil); lo de ayer, no');
+  check(!T.prepDeHoy(sesP[1], '2026-11-04') && T.prepDeHoy(sesP[1], '2026-11-04', { marcadas: ['b'] }) && !T.prepDeHoy(sesP[0], '2026-11-04') && T.prepDeHoy(sesP[2], '2026-11-04') && !T.prepDeHoy({ id: 'z', completada: false, preparacion: null }, '2026-11-04', { marcadas: ['z'] }),
+    'la misma regla para el dial y la sesión: lo guardado sin hora de otro día no cuenta como de hoy (la sesión vuelve a preguntar)');
+  const hoyS = { id: 'h', completada: false }, sig = { id: 'g', completada: false };
+  check(T.sesionParaContestar({ previstaHoy: hoyS, siguiente: sig }) === hoyS && T.sesionParaContestar({ siguiente: sig }) === null && T.sesionParaContestar({ siguiente: sig, seriesHoy: ['g'] }) === sig
+    && T.sesionParaContestar({ previstaHoy: hoyS, baja: true }) === null && T.sesionParaContestar({ previstaHoy: { id: 'x', completada: true } }) === null,
+    'desde Hoy solo se contesta para la sesión prevista para hoy (o una con series de hoy); nunca de baja');
+  const ahoraIso = new Date().toISOString();
+  check(T.conSeriesDeHoy([{ registrada_en: ahoraIso }]) && !T.conSeriesDeHoy([{ registrada_en: new Date(Date.now() - 50 * 3600e3).toISOString() }]) && !T.conSeriesDeHoy([]), 'series de hoy, en hora de Madrid');
+  const l1 = T.dialComoLlegas(prep);
+  check(l1.estado === 'flojo' && l1.etiqueta === 'Día flojo' && l1.total === 6 && l1.respuestas.map((r) => r.texto).join() === 'Mal,Normal,Ninguna', 'con lo contestado: «Día flojo», 6 de 9, y cada respuesta');
+  check(T.dialComoLlegas(null).estado === 'sin_respuesta' && T.dialComoLlegas({ sueno: 1 }).estado === 'sin_respuesta', 'sin contestar (o a medias), lo pide');
+  const ar = T.arcoDial(0.5, 64, 7);
+  check(Math.abs(ar.largo - (2 * Math.PI * 28.5 * 0.75)) < 1e-6 && Math.abs(ar.lleno - ar.largo / 2) < 1e-6 && ar.punto.x === 32 && ar.punto.y === 3.5, 'el dial: 270° abierto por abajo; a la mitad, arriba del todo');
+
+  console.log('\nv0.51: los anillos de la semana');
+  const hab = (c, p) => ({ semana: { cumplidos: c, pedidos: p } });
+  const an = T.anillosSemana({ sesiones: ses(3, 3), habitos: [hab(5, 7), hab(9, 7)], checkin: { id: 'x' } });
+  check(an.map((a) => a.id).join() === 'sesiones,habitos,checkin' && an[0].cerrado && !an[1].cerrado && an[1].valor === 12 && an[1].objetivo === 14 && an[2].cerrado, 'sesiones (cerrado), hábitos (12 de 14 días: lo de más de un hábito no tapa lo que falta de otro) y check-in (cerrado)');
+  check(T.anillosSemana({ sesiones: ses(2, 1), habitos: [], conCheckin: false }).map((a) => a.id).join() === 'sesiones' && T.anillosSemana({ sesiones: [] })[0].cerrado === false, 'sin hábitos ni check-in, solo el de las sesiones; sin sesiones, nunca cerrado');
+  const c0 = T.anillosPorCelebrar(an, null, '2026-11-02');
+  check(c0.celebrar.join() === 'sesiones,checkin' && c0.guardar.lunes === '2026-11-02', 'celebra los que se han cerrado');
+  check(T.anillosPorCelebrar(an, c0.guardar, '2026-11-02').celebrar.length === 0 && T.anillosPorCelebrar(an, c0.guardar, '2026-11-09').celebrar.join() === 'sesiones,checkin', 'una vez por anillo y semana (la semana que viene, otra vez)');
+  check(T.anillosPorCelebrar(an, { lunes: '2026-11-02', cerrados: 'x' }, '2026-11-02').celebrar.length === 2 && T.anillosPorCelebrar(an, { lunes: '2026-11-02', cerrados: [{}] }, '2026-11-02').celebrar.length === 2, 'lo guardado raro no rompe nada');
+
+  console.log('\nv0.51: medallas, tramos, equipo y comunidad');
+  check(T.METALES.map((m) => `${m.nombre}:${m.canto}`).join() === 'Bronce:liso,Plata:perlado,Oro:estriado,Platino:doble' && T.metalDe(3).id === 'oro' && T.metalDe(0) === null, 'los cuatro niveles son bronce, plata, oro y platino, cada uno con su canto (se distinguen sin el color)');
+  const ejs = [{ id: 'e1', series: 3 }, { id: 'e2', series: 2, superserie: 'A' }, { id: 'e3', series: 2, superserie: 'A' }, { id: 'e4', series: 3 }];
+  const tr = T.tramosSesion(ejs, { e1: { 1: {}, 2: {}, 3: {}, 4: {} }, e2: { 1: {} }, e3: { 1: {} } }, 'e3');
+  check(tr.length === 3 && tr[0].completo && tr[0].hechas === 3 && tr[1].letra === 'A' && tr[1].series === 4 && tr[1].hechas === 2 && tr[1].actual && !tr[2].actual && tr[2].frac === 0, 'un tramo por ejercicio y uno por superserie; las series de más no cuentan; el de la serie que toca, resaltado');
+  const res = [
+    { atleta_id: 'a', estado: 'activo', servicio: 'completo', ultimaSerie: '2026-11-04', alertas: [] },
+    { atleta_id: 'b', estado: 'activo', servicio: 'entrenamiento', ultimaSerie: '2026-10-20', ultimaSesion: '2026-11-04', alertas: [] },
+    { atleta_id: 'c', estado: 'activo', servicio: 'completo', ultimaSerie: '2026-10-28', alertas: [] },
+    { atleta_id: 'd', estado: 'activo', servicio: 'completo', ultimaSerie: null, alertas: [{ tipo: 'sin_entrenar' }] },
+    { atleta_id: 'e', estado: 'activo', servicio: 'completo', ultimaSerie: null, alertas: [] },
+    { atleta_id: 'f', estado: 'activo', servicio: 'nutricion', ultimaSerie: null, alertas: [] },
+    { atleta_id: 'g', estado: 'baja', servicio: 'completo', ultimaSerie: '2026-09-01', alertas: [] },
+  ];
+  const eq = T.equipoHoy(res, '2026-11-04');
+  check(eq.activos === 5 && eq.entrenaron === 2 && eq.inactivos.join() === 'c,d', `hoy en tu equipo: 2 de 5 activos entrenaron (una serie o una sesión de cardio), y 2 sin actividad ≥ 7 días (los de solo nutrición y de baja no cuentan) ${JSON.stringify(eq)}`);
+  const { resumenAtleta } = await import('../web/src/logica/calculos.js');
+  const ra = resumenAtleta({ atleta: { id: 'x', nombre: 'X', estado: 'activo' }, sesionesRecientes: [{ completada: true, fecha_realizada: '2026-11-01' }, { completada: true, fecha_realizada: '2026-11-03' }, { completada: true, fecha_realizada: '2026-11-09' }] }, '2026-11-04');
+  check(ra.ultimaSesion === '2026-11-03', 'el resumen del panel trae la última sesión terminada (nunca una con fecha futura)');
+  const ahora = Date.now();
+  const posts = [{ tipo: 'entreno', autor_id: 'p1', creado_en: new Date(ahora).toISOString() }, { tipo: 'post', autor_id: 'p2', creado_en: new Date(ahora).toISOString() }, { tipo: 'entreno', autor_id: 'p3', creado_en: new Date(ahora - 50 * 3600e3).toISOString() }, { tipo: 'entreno', autor_id: 'p4', oculta: true, creado_en: new Date(ahora).toISOString() }];
+  const { fechaMadrid } = await import('../web/src/logica/fechas.js');
+  const quien = T.compartieronHoy(posts, fechaMadrid());
+  check(quien.has('p1') && !quien.has('p2') && !quien.has('p3') && !quien.has('p4') && quien.size === 1, 'el aro: solo quien ha compartido un entreno hoy (hora de Madrid) que se ve en el muro');
+
+  console.log('\nv0.51: la portada de la sesión y las tarjetas para compartir');
+  const p1 = A.arteSesion({ nombre: 'Torso A', tipo: 'fuerza', patron: 'empuje_h' });
+  const p2 = A.arteSesion({ nombre: 'Torso A', tipo: 'fuerza', patron: 'empuje_h' });
+  const p3 = A.arteSesion({ nombre: 'Pierna B', tipo: 'fuerza', patron: 'sentadilla' });
+  check(JSON.stringify(p1) === JSON.stringify(p2) && JSON.stringify(p1) !== JSON.stringify(p3) && p1.motivo === 'discos' && p1.familia === 'empuje' && p3.familia === 'pierna', 'el dibujo sale del nombre: la misma sesión, el mismo dibujo; otra, otro');
+  check(A.arteSesion({ nombre: 'Rodaje', tipo: 'cardio' }).motivo === 'ondas' && A.arteSesion({ nombre: 'Movilidad', tipo: 'movilidad' }).motivo === 'orbitas', 'cardio con ondas y movilidad con órbitas');
+  const dentro = [p1, p3].every((a) => a.formas.every((f) => Object.entries(f).every(([k, v]) => typeof v !== 'number' || Number.isFinite(v)) && (f.t !== 'circulo' || (f.r > 0 && f.r < 400))));
+  check(dentro && p1.formas.length > 10 && p1.formas.every((f) => ['acento', 'claro', 'tenue'].includes(f.tono)), 'solo geometría finita y tonos del tema (sin colores escritos)');
+  check(A.semilla('Torso A') === A.semilla('Torso A') && A.semilla('Torso A') !== A.semilla('Torso B') && (() => { const r = A.aleatorio(1); const xs = Array.from({ length: 100 }, r); return xs.every((x) => x >= 0 && x < 1); })(), 'semilla y números aleatorios repetibles, entre 0 y 1');
+  const d = { nombre: 'Torso A', series: 18, tonelaje: 6420, minutos: 52, records: [{ nombre: 'Press' }], mejores: [] };
+  check(A.cifrasTarjeta(d).map((c) => `${c.k}:${c.v}`).join() === 'minutos:52,series:18,tonelaje:6,4,records:1', '«Cifras»: duración, series, tonelaje y récords');
+  check(A.cifraHeroe(d).k === 'records' && A.cifraHeroe({ ...d, records: [] }).k === 'tonelaje' && A.cifraHeroe({ series: 3, tonelaje: 0, records: [] }).k === 'series', '«Mínima»: los récords si hay; si no, el tonelaje (o lo que haya)');
+  check(!JSON.stringify(A.cifrasTarjeta({ ...d, peso: 80, kcal: 2000, rpe: 9 })).match(/80|2000|peso|kcal|rpe/), 'ninguna lleva peso corporal, nutrición ni esfuerzo');
+  const f1 = A.encajarFoto(3000, 4000, 1080, 1350), f2 = A.encajarFoto(4000, 3000, 1080, 1350);
+  check(f1.sw === 3000 && f1.sh === 3750 && f1.sy === 88 && f2.sh === 3000 && f2.sw === 2400 && f2.sx === 800 && A.encajarFoto(0, 10) === null, 'la foto se encaja sin deformarse (las verticales, algo por encima del centro)');
+  check(A.PLANTILLAS_TARJETA.map(([k]) => k).join() === 'cifras,minima,foto', 'tres plantillas: Cifras, Mínima y Con tu foto');
+  const legal = await import('../web/src/legal.js');
+  const fila = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
+  check(/foto que eliges para una tarjeta/.test(fila[1]) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice que la foto de la tarjeta no se sube (sin cambiar la versión de la política)');
+}
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

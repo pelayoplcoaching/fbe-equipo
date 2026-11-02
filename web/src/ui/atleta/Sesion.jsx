@@ -19,7 +19,7 @@ import { MapaMuscular } from '../MapaMuscular.jsx';
 import { Preparacion, ConsejoDia } from './Preparacion.jsx';
 import { consejoPreparacion, subeCarga } from '../../logica/preparacion.js';
 import { pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION } from '../../logica/calculos.js';
-import { fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
+import { fmtCorta, hoyISO, lunesDe, sumarDias, fechaMadrid } from '../../logica/fechas.js';
 import { pesoAnterior } from '../../logica/nivel.js';
 import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
 import { DondeEntrenas } from './DondeEntrenas.jsx';
@@ -29,6 +29,10 @@ import { hablar } from '../voz.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { vibrar } from '../hapticos.js';
 import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, seriesPautadasHechas } from '../../logica/visual.js';
+import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
+import { resumenPautas } from '../../logica/diseno.js';
+import { Portada } from './Portada.jsx';
+import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { api, atleta, cola, aviso, propio } = useApp();
@@ -97,14 +101,48 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   }, [det.datos, recontarVideos]);
   // «¿Cómo llegas hoy?»: lo contestado (se guarda en la sesión), si se saltó y si se está cambiando
   const [prep, setPrep] = useState(undefined);
-  const [prepSaltada, setPrepSaltada] = usePreferencia(`fbe-prep-saltada-${id}`, false);
+  // v0.51: «Ahora no» vale para ese día (se guarda la fecha de Madrid; lo de antes, «true», ya no cuenta)
+  const [prepSaltadaDia, setPrepSaltadaDia] = usePreferencia(`fbe-prep-saltada-${id}`, false);
+  const prepSaltada = prepSaltadaDia === fechaMadrid();
+  const setPrepSaltada = (v) => setPrepSaltadaDia(v ? fechaMadrid() : false);
+  // v0.51: lo guardado de otro día (sin series): no cuenta como de hoy; se vuelve a preguntar y, si no contesta, se
+  // borra al saltar la pregunta o al marcar la primera serie (el coach no lo verá como de esta sesión)
+  const [prepAntigua, setPrepAntigua] = useState(false);
   const [editandoPrep, setEditandoPrep] = useState(false);
   // En un día flojo o malo, si sube la carga o va con los pesos de la última vez (lo elige el atleta; se recuerda en el móvil)
   const [eleccionCarga, setEleccionCarga] = usePreferencia(`fbe-carga-dia-${id}`, null);
-  useEffect(() => { if (det.datos && prep === undefined) setPrep(det.datos.sesion.preparacion || null); }, [det.datos]);
+  // v0.51: la portada antes de empezar; al tocar «Empezar» (o con alguna serie hecha) se pasa a la sesión de siempre
+  const [empezada, setEmpezada] = usePreferencia(`fbe-empezada-${id}`, false);
+  const [recienEmpezada, setRecienEmpezada] = useState(false);
+  // v0.51: la altura real de la cabecera pegada (con los tramos y la letra grande), para que lo que se lleva a la vista
+  // (scroll-margin-top de cada ejercicio) quede debajo y no tapado
+  useEffect(() => {
+    const cab = document.querySelector('.sesion-vista > .cabecera');
+    if (!cab || typeof ResizeObserver === 'undefined') return undefined;
+    const raiz = document.documentElement;
+    const ro = new ResizeObserver(() => raiz.style.setProperty('--alto-cab', `${Math.ceil(cab.getBoundingClientRect().height)}px`));
+    ro.observe(cab);
+    return () => { ro.disconnect(); raiz.style.removeProperty('--alto-cab'); };
+  }, [!!det.datos, empezada]);
+  // La regla de «de hoy», la misma que el dial de Hoy (logica/tablero.js, prepDeHoy)
+  useEffect(() => {
+    if (!det.datos || prep !== undefined) return;
+    const s = det.datos.sesion;
+    const conSeries = det.datos.ejercicios.some((e) => e.hechas.length);
+    const seriesHoy = det.datos.ejercicios.some((e) => conSeriesDeHoy(e.hechas)) ? [s.id] : [];
+    if (s.completada || prepDeHoy(s, hoyISO(), { marcadas: prepMarcadas(), seriesHoy })) setPrep(s.preparacion || null);
+    else { setPrep(null); setPrepAntigua(!!s.preparacion && !conSeries); }
+  }, [det.datos]);
   async function guardarPrep(p) {
-    setPrep(p); setEditandoPrep(false);
+    setPrep(p); setEditandoPrep(false); setPrepAntigua(false);
+    if (p) marcarPrepHoy(id); else desmarcarPrepHoy(id);
     try { await api.guardarPreparacion(id, p); } catch (err) { aviso(`No se ha podido guardar (${err.message}). El consejo vale igual.`, 'error'); }
+  }
+  // Lo de otro día que no se ha vuelto a contestar: fuera (sin avisar: no es nada que haya hecho hoy)
+  function quitarPrepAntigua() {
+    if (!prepAntigua) return;
+    setPrepAntigua(false);
+    api.guardarPreparacion(id, null).catch(() => {});
   }
   async function guardarNota(ejercicioId, texto) {
     try {
@@ -170,6 +208,29 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   if (!prox) { const x = ejercicios.find((y) => pendienteDe(y)); if (x) prox = { id: x.id, numero: pendienteDe(x) }; }
   if (sesion.completada) prox = null;
   const grupos = gruposSuperserie(ejercicios);
+  // v0.51: antes de empezar, la portada (no en las hechas, ni con series, ni de baja)
+  if (!sesion.completada && !empezada && todas.length === 0 && atleta.estado !== 'baja') {
+    return (
+      <Portada sesion={sesion} semana={semana} ejercicios={ejercicios} etiquetas={etiquetas} alCerrar={alCerrar}
+        alEmpezar={() => {
+          prepararAudio(); setRecienEmpezada(true); setEmpezada(true); window.scrollTo(0, 0);
+          requestAnimationFrame(() => document.querySelector('.sesion-vista .cabecera h1')?.focus({ preventScroll: true }));
+        }} />
+    );
+  }
+  // v0.51: un tramo por ejercicio (o superserie) arriba; tocarlo lleva a ese ejercicio
+  const tramos = !sesion.completada && ejercicios.length > 0 ? tramosSesion(ejercicios, hechas, prox?.id || null) : [];
+  function irAEjercicio(seId) {
+    const art = document.querySelector(`[data-se="${seId}"]`);
+    if (!art) return;
+    const quieto = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    // Con la altura real de la cabecera pegada (crece con la letra y con los tramos): la cabecera del ejercicio queda
+    // justo debajo, nunca tapada
+    const cab = document.querySelector('.sesion-vista > .cabecera');
+    const tapa = cab ? cab.getBoundingClientRect().height + (parseFloat(getComputedStyle(cab).top) || 0) : 0;
+    window.scrollTo({ top: Math.max(0, window.scrollY + art.getBoundingClientRect().top - tapa - 8), behavior: quieto ? 'auto' : 'smooth' });
+    art.querySelector('.ejercicio-cab')?.focus({ preventScroll: true });
+  }
   // Lleva la vista a la serie que toca del siguiente ejercicio (tras abrirlo)
   function llevarA(seId) {
     const quieto = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -196,9 +257,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const preguntarPrep = salud && ejercicios.length > 0 && !sesion.completada && atleta.estado !== 'baja'
     && ((!prep && !prepSaltada && todas.length === 0) || editandoPrep);
   // El modo enfoque espera a que conteste (o salte) cómo llega
-  const verEnfoque = enfoque && ejercicios.length > 0 && !sesion.completada && !terminando && !preguntarPrep;
+  const verEnfoque = enfoque && ejercicios.length > 0 && !sesion.completada && !terminando && !preguntarPrep && (empezada || todas.length > 0);
   // Abrir el modo enfoque a mano cuenta como «ahora no» a la pregunta de cómo llega
-  const abrirEnfoque = () => { prepararAudio(); setSeFoco(null); setEnfoque(true); if (preguntarPrep) { setPrepSaltada(true); setEditandoPrep(false); } };
+  const abrirEnfoque = () => { prepararAudio(); setSeFoco(null); setEnfoque(true); if (preguntarPrep) { setPrepSaltada(true); setEditandoPrep(false); quitarPrepAntigua(); } };
 
   async function guardar(e, numero, valores) {
     const problema = problemaSerie(valores);
@@ -212,6 +273,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     const local = { ...datos, id: previa?.id || `local-${e.id}-${numero}` };
     setHechas((h) => ({ ...h, [e.id]: { ...h[e.id], [numero]: local } }));
     if (!previa) vibrar('serie');
+    if (!previa) quitarPrepAntigua();
     // v0.49: al completar las series pautadas (las de «Añadir serie» no cuentan), la tarjeta se pliega en una línea
     // un momento después, para ver el check
     if (!previa && numero <= e.series && !pautadasHechas(e, hechas[e.id]) && pautadasHechas(e, { ...hechas[e.id], [numero]: local })) {
@@ -320,18 +382,34 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
 
   return (
     <>
-    <div class="contenido" inert={verEnfoque ? '' : undefined} aria-hidden={verEnfoque ? 'true' : undefined}>
-      <header class="cabecera">
+    <div class={`contenido sesion-vista ${recienEmpezada ? 'sesion-tras-portada' : ''}`} inert={verEnfoque ? '' : undefined} aria-hidden={verEnfoque ? 'true' : undefined}>
+      <header class={`cabecera ${tramos.length ? 'con-tramos' : ''}`}>
         <button class="btn btn-icono plano" onClick={alCerrar} aria-label="Volver"><Icono n="atras" /></button>
         <div class="titulo">
-          <h1>{sesion.nombre}</h1>
+          <h1 tabIndex={-1}>{sesion.nombre}</h1>
           <div class="sub">{sesion.tipo !== 'fuerza' ? NOMBRE_TIPO_SESION[sesion.tipo] : NOMBRE_INTENCION[sesion.intencion] || 'Sesión'}{sesion.completada ? ', hecha' : ''}</div>
         </div>
         {ejercicios.length > 0 && !sesion.completada && <button class="btn btn-icono plano" onClick={() => abrirEnfoque()} aria-label="Modo enfoque"><Icono n="enfoque" /></button>}
         {!ejercicios.length && <button class="btn btn-icono plano" onClick={() => setIntervalos({ inicial: delCoach })} aria-label="Temporizador de intervalos"><Icono n="intervalos" /></button>}
         <button class="btn btn-icono plano" onClick={() => setCalculadora(true)} aria-label="Calculadora"><Icono n="calculadora" /></button>
         {ejercicios.length > 0 && <Cronometro inicio={sesion.completada ? null : inicio} minutos={sesion.completada ? sesion.duracion_min : null} hechas={todas.length} total={totalPautadas} />}
-        {totalPautadas > 0 && (
+        {tramos.length > 0 ? (
+          <nav class="tramos" aria-label="Ejercicios de la sesión">
+            <ol>
+              {tramos.map((t) => {
+                const nombre = t.letra ? `Superserie ${t.letra}: ${t.ids.map((x) => actualDe(pautaDe[x]).nombre).join(' y ')}` : actualDe(pautaDe[t.id]).nombre;
+                return (
+                  <li key={t.id}>
+                    <a href={`#ej-${t.id}`} class={t.completo ? 'completo' : ''} aria-current={t.actual ? 'step' : undefined}
+                      aria-label={`${nombre}: ${t.hechas} de ${t.series} series${t.actual ? ', ahora' : ''}`} onClick={(ev) => { ev.preventDefault(); irAEjercicio(t.id); }}>
+                      <span class="tramo-barra" aria-hidden="true"><span class="tramo-lleno" style={{ width: `${t.frac * 100}%` }} /></span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+        ) : totalPautadas > 0 && (
           <div class="barra-sesion" role="progressbar" aria-label="Series hechas" aria-valuemin="0" aria-valuemax={totalPautadas} aria-valuenow={Math.min(todas.length, totalPautadas)}>
             <span style={{ width: `${Math.min(100, (todas.length / totalPautadas) * 100)}%` }} />
           </div>
@@ -350,7 +428,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         </div>
       )}
 
-      {preguntarPrep ? <Preparacion inicial={prep} alGuardar={guardarPrep} alSaltar={editandoPrep ? () => setEditandoPrep(false) : () => setPrepSaltada(true)} />
+      {preguntarPrep ? <Preparacion inicial={prep} alGuardar={guardarPrep} alSaltar={editandoPrep ? () => setEditandoPrep(false) : () => { setPrepSaltada(true); quitarPrepAntigua(); }} />
         : consejo && !sesion.completada && <ConsejoDia consejo={consejo} eleccion={eleccionCarga} alElegir={(v) => { setEleccionCarga(v); aviso(v === 'subir' ? 'Hoy vas con la carga que toca' : 'Hoy vas con los pesos de la última vez'); }} alCambiar={() => setEditandoPrep(true)} alQuitar={async () => { await guardarPrep(null); setPrepSaltada(true); }} />}
 
       {delCoach && !sesion.completada && (
@@ -428,7 +506,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         </section>
       )}
 
-      {compartir && <HojaCompartir datos={datosTarjeta(sesion, ejercicios, hechas, records, ejerciciosPorId, sesion.duracion_min)} alCerrar={() => setCompartir(false)} />}
+      {compartir && <HojaCompartir plantillas datos={datosTarjeta(sesion, ejercicios, hechas, records, ejerciciosPorId, sesion.duracion_min)} alCerrar={() => setCompartir(false)} />}
       {intervalos && <Intervalos inicial={intervalos.inicial} alCerrar={() => setIntervalos(null)}
         alTerminar={sesion.completada ? null : ({ minutos }) => {
           // En una sesión con ejercicios, el temporizador es solo una parte (el «para acabar»): manda el reloj de la sesión
@@ -510,7 +588,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   };
 
   return (
-    <article class={`ejercicio ${plegado ? 'plegado' : ''} ${siguiente ? 'en-curso' : ''}`} data-se={e.id} aria-label={etiqueta ? `${etiqueta}: ${ej.nombre}` : ej.nombre}>
+    <article id={`ej-${e.id}`} class={`ejercicio ${plegado ? 'plegado' : ''} ${siguiente ? 'en-curso' : ''}`} data-se={e.id} aria-label={etiqueta ? `${etiqueta}: ${ej.nombre}` : ej.nombre}>
       <button class="ejercicio-cab" onClick={alternar} aria-expanded={abierto ? 'true' : 'false'}>
         {/* v0.50: el pictograma de su patrón de movimiento, con el disco de la prioridad en la esquina */}
         <span class="ej-marca"><PictoEjercicio ejercicio={ej} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
@@ -888,6 +966,8 @@ function datosTarjeta(sesion, ejercicios, hechas, records, ejerciciosPorId, minu
   const lista = [...porEjercicio.values()];
   return {
     nombre: sesion.nombre,
+    // v0.51: el tipo y el patrón principal, para el dibujo de las plantillas (el mismo de la portada)
+    tipo: sesion.tipo || 'fuerza', patron: resumenPautas(ejercicios).patrones[0] || null,
     subtitulo: sesion.tipo && sesion.tipo !== 'fuerza' ? NOMBRE_TIPO_SESION[sesion.tipo] : NOMBRE_INTENCION[sesion.intencion] || null,
     fecha: sesion.fecha_realizada || hoyISO(),  // sesion ya trae los cambios encima
     series: series.length,
@@ -980,7 +1060,7 @@ function Resumen({ resumen, sesion, alCerrar }) {
           : estadoEquipo.datos === true && <button class="btn btn-grande" onClick={() => setEquipo(true)}><Icono n="equipo" /> Compartir con el equipo</button>}
         <button class="btn btn-primario btn-grande" onClick={alCerrar}>Volver a hoy</button>
       </div>
-      {compartir && <HojaCompartir datos={resumen.tarjeta} alCerrar={() => setCompartir(false)} />}
+      {compartir && <HojaCompartir plantillas datos={resumen.tarjeta} alCerrar={() => setCompartir(false)} />}
       {equipo && (
         <HojaCompartirEquipo alCerrar={() => setEquipo(false)} alCompartir={() => { setEquipo(false); setCompartida(true); }}
           datos={{ sesionId: sesion.id, nombre: resumen.tarjeta.nombre, fecha: resumen.tarjeta.fecha, minutos: resumen.minutos ?? resumen.tarjeta.minutos, series: resumen.series,

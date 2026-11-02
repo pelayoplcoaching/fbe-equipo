@@ -1,6 +1,7 @@
 import { useRef, useState } from 'preact/hooks';
 import { mapaConstancia } from '../../logica/visual.js';
 import { Logros } from '../Logros.jsx';
+import { AnillosSemana } from './Anillos.jsx';
 import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho } from '../comunes.jsx';
@@ -503,7 +504,7 @@ function Cifras({ constancia, semanas }) {
   );
 }
 
-export function Progreso({ programa, salud, irA }) {
+export function Progreso({ programa, salud, irA, checkinSemana }) {
   const { api, atleta } = useApp();
   const entrena = conEntrenamiento(atleta);
   const constancia = useCarga(() => (entrena ? api.constancia(atleta.id).catch(() => null) : Promise.resolve(null)), [atleta.id, entrena]);
@@ -513,6 +514,7 @@ export function Progreso({ programa, salud, irA }) {
       <CabeceraGrande><div class="titulo"><h1>Tu progreso</h1></div></CabeceraGrande>
       {entrena ? <Pista id="progreso" icono="progreso">Todo lo de aquí sale solo de lo que apuntas en cada sesión y en el check-in. No tienes que rellenar nada: entra de vez en cuando a ver cómo vas.</Pista>
         : <Pista id="progreso-nutricion" icono="progreso">Aquí ves tu peso, tus medidas y tu nutrición: sale de lo que apuntas en Hoy y en el check-in.</Pista>}
+      {entrena && <AnillosSemana programa={programa} salud={salud} checkinSemana={checkinSemana} />}
       {entrena && <Cifras constancia={constancia} semanas={semanas} />}
       {entrena && <TusSemanas salud={salud} lista={semanas} />}
       <TusMeses salud={salud} />

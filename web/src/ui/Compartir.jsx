@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { LOBO } from './marca-lobo.js';
 import { useApp, Hoja, Icono, Cargando, descargar, P } from './comunes.jsx';
 import { num } from '../logica/calculos.js';
+import { arteSesion, cifrasTarjeta, cifraHeroe, encajarFoto, PLANTILLAS_TARJETA } from '../logica/arte.js';
 
 // Tarjeta de la sesión para compartir (Instagram, WhatsApp…): 1080 × 1350, sin datos de salud.
 // d: { nombre, subtitulo, fecha (ISO), series, tonelaje (kg), minutos, records: [{ nombre, texto }], mejores: [{ nombre, serie }] }
 // Opcionales (para el informe del bloque): etiquetaFecha, cifras [[valor, etiqueta] × 3], tituloMejores
+// v0.51: al compartir una sesión, tres plantillas («Cifras», «Mínima» y «Con tu foto»), con la marca de FBE. La foto
+// se pinta aquí, en el lienzo del móvil, y no se sube a ningún sitio. Ninguna lleva peso corporal, salud ni nutrición.
 
 const W = 1080, H = 1350, M = 80;
 const C = {
@@ -22,7 +25,7 @@ function fechaLarga(iso) {
   return `${DIAS[f.getDay()]}, ${d} de ${MESES[m - 1]}`;
 }
 
-export async function dibujarTarjeta(d) {
+export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null } = {}) {
   try {
     await Promise.all([document.fonts.load(`800 100px ${FUENTE}`), document.fonts.load(`600 36px ${FUENTE}`), document.fonts.load(`500 30px ${FUENTE}`)]);
   } catch { /* sin la fuente se usa la del sistema */ }
@@ -61,6 +64,13 @@ export async function dibujarTarjeta(d) {
     x.restore();
   };
 
+  const lobo = await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = LOBO; });
+  const aBlob = () => new Promise((ok, mal) => cv.toBlob((b) => (b ? ok(b) : mal(new Error('No se ha podido crear la imagen.'))), 'image/png'));
+  if (plantilla !== 'clasica') {
+    dibujarPlantilla({ x, d, plantilla, foto, lobo, letra, cortar, lineas, icono });
+    return aBlob();
+  }
+
   // Fondo con un disco grande, como el de la marca
   x.fillStyle = C.fondo; x.fillRect(0, 0, W, H);
   const dx = W - 150, dy = H + 40;
@@ -72,7 +82,6 @@ export async function dibujarTarjeta(d) {
 
   // Marca y fecha
   // El lobo de la app (si la imagen no carga, el disco de siempre)
-  const lobo = await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = LOBO; });
   if (lobo) x.drawImage(lobo, M, M, 56, 56);
   else {
     x.fillStyle = C.morado; x.beginPath(); x.arc(M + 28, M + 28, 28, 0, Math.PI * 2); x.fill();
@@ -160,31 +169,185 @@ export async function dibujarTarjeta(d) {
   });
   letra(500, 30); x.fillStyle = C.tinta3; x.fillText('Entrenado con FBE Coaching', M, H - 66);
 
-  return new Promise((ok, mal) => cv.toBlob((b) => (b ? ok(b) : mal(new Error('No se ha podido crear la imagen.'))), 'image/png'));
+  return aBlob();
 }
 
-// Hoja con la vista previa y los botones para compartir o guardar la imagen
-export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión', nota = null, alt = null }) {
+// ---------- v0.51: las tres plantillas de una sesión ----------
+// El dibujo de la portada de la sesión (logica/arte.js), escalado a la tarjeta y con los colores de la tarjeta
+function dibujarArte(x, d, { escala = 2.7, dx = 0, dy = 0, opacidad = 1 } = {}) {
+  const a = arteSesion({ nombre: d.nombre, tipo: d.tipo || 'fuerza', patron: d.patron || null }, 400, 300);
+  const tono = { acento: C.morado, claro: '#E7E3FF', tenue: '#6F68A0' };
+  x.save();
+  x.translate(dx, dy); x.scale(escala, escala);
+  x.lineCap = 'round';
+  for (const f of a.formas) {
+    x.globalAlpha = f.opacidad * opacidad;
+    x.strokeStyle = tono[f.tono] || tono.tenue; x.fillStyle = tono[f.tono] || tono.tenue;
+    x.lineWidth = (f.grosor || 1) * 1.1;
+    x.beginPath();
+    if (f.t === 'circulo') { x.arc(f.cx, f.cy, f.r, 0, Math.PI * 2); x.stroke(); }
+    else if (f.t === 'elipse') { x.ellipse(f.cx, f.cy, f.rx, f.ry, (f.giro * Math.PI) / 180, 0, Math.PI * 2); x.stroke(); }
+    else if (f.t === 'linea') { x.moveTo(f.x1, f.y1); x.lineTo(f.x2, f.y2); x.stroke(); }
+    else if (f.t === 'trazo') x.stroke(new Path2D(f.d));
+    else { x.arc(f.cx, f.cy, f.r, 0, Math.PI * 2); x.fill(); }
+  }
+  x.restore();
+  x.globalAlpha = 1;
+}
+function dibujarPlantilla({ x, d, plantilla, foto, lobo, letra, cortar, lineas, icono }) {
+  const espaciado = (px) => { try { x.letterSpacing = `${px}px`; } catch { /* sin letterSpacing */ } };
+  // Fondo: la foto (cubriendo, con un degradado que deja leer) o el fondo de la marca con el dibujo de la sesión
+  x.fillStyle = C.fondo; x.fillRect(0, 0, W, H);
+  const r = plantilla === 'foto' && foto ? encajarFoto(foto.naturalWidth || foto.width, foto.naturalHeight || foto.height, W, H) : null;
+  if (r) {
+    x.drawImage(foto, r.sx, r.sy, r.sw, r.sh, 0, 0, W, H);
+    let g = x.createLinearGradient(0, 0, 0, 300);
+    g.addColorStop(0, 'rgba(10, 8, 24, .62)'); g.addColorStop(1, 'rgba(10, 8, 24, 0)');
+    x.fillStyle = g; x.fillRect(0, 0, W, 300);
+    g = x.createLinearGradient(0, H * 0.4, 0, H);
+    g.addColorStop(0, 'rgba(10, 8, 24, 0)'); g.addColorStop(0.45, 'rgba(10, 8, 24, .72)'); g.addColorStop(1, 'rgba(10, 8, 24, .94)');
+    x.fillStyle = g; x.fillRect(0, H * 0.4, W, H * 0.6);
+  } else if (plantilla === 'minima') {
+    dibujarArte(x, d, { escala: 3.4, dx: -180, dy: -60, opacidad: 0.9 });
+    const g = x.createLinearGradient(0, H * 0.35, 0, H);
+    g.addColorStop(0, 'rgba(19, 17, 28, 0)'); g.addColorStop(0.5, 'rgba(19, 17, 28, .85)'); g.addColorStop(1, C.fondo);
+    x.fillStyle = g; x.fillRect(0, H * 0.35, W, H * 0.65);
+  } else {
+    dibujarArte(x, d, { escala: 2.2, dx: 330, dy: -60, opacidad: 0.4 });
+  }
+  // La marca: el lobo y «FBE Equipo»; la fecha a la derecha
+  if (lobo) x.drawImage(lobo, M, M, 60, 60);
+  letra(800, 34, 'expanded'); x.fillStyle = C.tinta; x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+  x.fillText('FBE Equipo', M + 78, M + 42);
+  letra(500, 30); x.fillStyle = r ? '#E4E1F2' : C.tinta2; x.textAlign = 'right';
+  x.fillText(fechaLarga(d.fecha), W - M, M + 42);
+  x.textAlign = 'left';
+  const cifras = cifrasTarjeta(d);
+  const etiqueta = (t, cx, cy, color = C.tinta2) => { letra(750, 28); espaciado(3); x.fillStyle = color; x.fillText(t.toUpperCase(), cx, cy); espaciado(0); };
+  const cifra = (c, cx, cy, tam, ancho) => {
+    letra(650, tam, 'condensed'); x.fillStyle = C.tinta; x.fillText(c.v, cx, cy);
+    if (c.u) { const w = x.measureText(c.v).width; letra(700, Math.round(tam * 0.32)); x.fillStyle = C.tinta2; x.fillText(c.u, cx + w + 10, cy); }
+    if (ancho) return x.measureText(c.v).width <= ancho;
+    return true;
+  };
+  if (plantilla === 'cifras') {
+    // El nombre arriba y las cifras en grande, como un marcador (2 × 2)
+    let y = 300;
+    letra(800, 96, 'expanded'); x.fillStyle = C.tinta;
+    for (const l of lineas(d.nombre, W - 2 * M, 2)) { x.fillText(l, M - 4, y); y += 100; }
+    if (d.subtitulo) { letra(650, 38); x.fillStyle = C.morado; x.fillText(d.subtitulo, M, y - 40); }
+    const top = Math.max(y + 60, 560);
+    const celda = (W - 2 * M) / 2, alto = (H - 220 - top) / 2;
+    cifras.slice(0, 4).forEach((c, i) => {
+      const cx = M + (i % 2) * celda, cy = top + Math.floor(i / 2) * alto;
+      etiqueta(c.t, cx, cy + 10);
+      cifra(c, cx - 6, cy + 10 + Math.min(220, alto - 40), Math.min(232, alto - 30));
+    });
+    x.fillStyle = C.linea; x.fillRect(M, top + alto - 16, W - 2 * M, 2);
+  } else {
+    // «Mínima» y «Con tu foto»: el nombre y la cifra (o cifras) abajo
+    const h = cifraHeroe(d);
+    let y = plantilla === 'minima' ? H - 600 : H - 470;
+    if (d.subtitulo) { letra(700, 34); x.fillStyle = r ? '#D9D1FF' : C.morado; x.fillText(d.subtitulo, M, y - 112); }
+    letra(800, 100, 'expanded'); x.fillStyle = C.tinta;
+    const ls = lineas(d.nombre, W - 2 * M, 2);
+    y -= (ls.length - 1) * 100;
+    for (const l of ls) { x.fillText(l, M - 4, y); y += 104; }
+    if (plantilla === 'minima' && h) {
+      etiqueta(h.t, M, y + 30);
+      cifra(h, M - 8, y + 300, 300);
+    } else {
+      const fila = cifras.slice(0, 3), ancho = (W - 2 * M) / Math.max(1, fila.length);
+      fila.forEach((c, i) => { etiqueta(c.t, M + i * ancho, y + 20, '#D2CEE6'); cifra(c, M + i * ancho - 4, y + 168, 150); });
+    }
+  }
+  // Pie: los colores de los discos y la firma
+  const anchoBarra = 56;
+  [C.rojo, C.azul, C.amarillo, C.verde].forEach((col, i) => {
+    x.fillStyle = col; x.beginPath();
+    x.roundRect ? x.roundRect(M + i * (anchoBarra + 10), H - 102, anchoBarra, 12, 6) : x.rect(M + i * (anchoBarra + 10), H - 102, anchoBarra, 12);
+    x.fill();
+  });
+  letra(500, 30); x.fillStyle = r ? '#D2CEE6' : C.tinta3; x.textAlign = 'right';
+  x.fillText('Entrenado con FBE Coaching', W - M, H - 86);
+  x.textAlign = 'left';
+}
+
+// Hoja con la vista previa y los botones para compartir o guardar la imagen. plantillas (v0.51, al compartir una
+// sesión): elegir entre «Cifras», «Mínima» y «Con tu foto» (la foto se elige del móvil y no sale de él).
+export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión', nota = null, alt = null, plantillas = false }) {
   const { aviso } = useApp();
   const [img, setImg] = useState(null);
   const [error, setError] = useState(null);
+  const [plantilla, setPlantilla] = useState(plantillas ? 'cifras' : 'clasica');
+  const [foto, setFoto] = useState(null); // { img, url }
+  const entrada = useRef(null);
+  // La imagen que se ve lleva la plantilla (y la foto) con que se pintó: mientras no coincide con lo elegido, se está
+  // preparando (y su texto alternativo dice lo que de verdad se ve)
+  const clave = `${plantilla}:${plantilla === 'foto' ? foto?.url || '' : ''}`;
+  const preparando = !img || img.clave !== clave;
   useEffect(() => {
-    let url = null, vivo = true;
-    dibujarTarjeta(datos).then((blob) => {
+    let vivo = true;
+    const conFoto = plantilla === 'foto' ? foto?.img || null : null;
+    dibujarTarjeta(datos, { plantilla: plantilla === 'foto' && !conFoto ? 'minima' : plantilla, foto: conFoto }).then((blob) => {
       if (!vivo) return;
-      url = URL.createObjectURL(blob);
-      setImg({ blob, url });
+      const url = URL.createObjectURL(blob);
+      setImg((previa) => { if (previa?.url) URL.revokeObjectURL(previa.url); return { blob, url, clave, plantilla, conFoto: !!conFoto, pintada: plantilla === 'foto' && !conFoto ? 'minima' : plantilla }; });
     }).catch((e) => vivo && setError(e.message));
-    return () => { vivo = false; if (url) URL.revokeObjectURL(url); };
-  }, []);
+    return () => { vivo = false; };
+  }, [clave]);
+  // Al cerrar, fuera las URL de la imagen y de la foto (la foto no se guarda en ningún sitio)
+  const imgRef = useRef(null); imgRef.current = img;
+  const fotoRef = useRef(null); fotoRef.current = foto;
+  const montada = useRef(true);
+  useEffect(() => () => { montada.current = false; if (imgRef.current?.url) URL.revokeObjectURL(imgRef.current.url); if (fotoRef.current?.url) URL.revokeObjectURL(fotoRef.current.url); }, []);
+  const elegirFoto = (e) => {
+    const f = e.currentTarget.files?.[0];
+    e.currentTarget.value = '';
+    if (!f) return;
+    if (!/^image\//.test(f.type)) { aviso('Elige una imagen (JPG, PNG o HEIC).', 'error'); return; }
+    const url = URL.createObjectURL(f);
+    const im = new Image();
+    // (si la hoja se cierra mientras se abre la foto, su URL se libera aquí: nadie la va a usar)
+    im.onload = () => {
+      if (!montada.current) { URL.revokeObjectURL(url); return; }
+      setFoto((previa) => { if (previa?.url) URL.revokeObjectURL(previa.url); return { img: im, url }; }); setPlantilla('foto');
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); if (montada.current) aviso('No se ha podido abrir esa imagen. Prueba con otra.', 'error'); };
+    im.src = url;
+  };
   const nombre = `fbe-${datos.fecha}-${datos.nombre.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.png`;
   const archivo = img && (() => { try { return new File([img.blob], nombre, { type: 'image/png' }); } catch { return null; } })();
   const puedeCompartir = !!(archivo && navigator.canShare?.({ files: [archivo] }));
+  const texto = plantillas && img
+    ? `Tarjeta de ${datos.nombre} (${PLANTILLAS_TARJETA.find(([k]) => k === img.pintada)?.[1] || ''}${img.plantilla === 'foto' && !img.conFoto ? ', hasta que elijas una foto' : ''}): ${cifrasTarjeta(datos).map((c) => `${c.v}${c.u ? ` ${c.u}` : ''} ${c.t.toLowerCase()}`).join(', ')}${img.conFoto ? ', sobre tu foto' : ''}`
+    : alt || `Tarjeta de ${datos.nombre}: ${datos.series} series, ${num(datos.tonelaje / 1000, 1)} toneladas`;
   return (
     <Hoja titulo={titulo} alCerrar={alCerrar}>
+      {plantillas && (
+        <fieldset class="plantillas">
+          <legend>Plantilla</legend>
+          {PLANTILLAS_TARJETA.map(([k, t]) => (
+            <label class="plantilla-op" key={k}>
+              <input type="radio" name="plantilla-tarjeta" value={k} checked={plantilla === k} onChange={() => { setPlantilla(k); if (k === 'foto' && !foto) entrada.current?.click(); }} />
+              <span class="plantilla-mini" aria-hidden="true">{k === 'cifras' ? '42' : k === 'minima' ? 'A' : <Icono n="camara" />}</span>
+              <span class="plantilla-nombre">{t}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+      {plantillas && plantilla === 'foto' && (
+        <div class="tarjeta-foto-elegir">
+          <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => entrada.current?.click()}><Icono n="camara" /> {foto ? 'Cambiar la foto' : 'Elegir una foto'}</button>
+          <span class="mini terciario">La foto se prepara aquí, en tu móvil, y no se sube a ningún sitio: solo sale si tú compartes la imagen.</span>
+        </div>
+      )}
+      {plantillas && <input ref={entrada} type="file" accept="image/*" class="sr" tabIndex={-1} aria-label="Elegir una foto para la tarjeta" onChange={elegirFoto} />}
       {error ? <div class="error" role="alert">{error}</div> : !img ? <Cargando texto="Preparando la imagen" /> : (
         <>
-          <img class="tarjeta-img" src={img.url} alt={alt || `Tarjeta de ${datos.nombre}: ${datos.series} series, ${num(datos.tonelaje / 1000, 1)} toneladas`} />
+          <div class={`tarjeta-previa ${preparando ? 'cargando' : ''}`} aria-busy={preparando ? 'true' : 'false'}>
+            <img class="tarjeta-img" src={img.url} alt={texto} />
+          </div>
           <div class="fila-envolver">
             {puedeCompartir && (
               <button class="btn btn-primario" onClick={async () => {
@@ -193,7 +356,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
             )}
             <button class={`btn ${puedeCompartir ? '' : 'btn-primario'}`} onClick={async () => { if (!(await descargar(nombre, img.blob, 'image/png'))) aviso('Mantén pulsada la imagen para guardarla.', 'error'); }}><Icono n="descargar" /> Guardar imagen</button>
           </div>
-          <p class="mini terciario">{nota || 'Solo lleva el nombre de la sesión, las series, el tonelaje, los minutos y tus mejores series: nada de peso corporal ni datos de salud.'} En el móvil también puedes mantener pulsada la imagen para guardarla.</p>
+          <p class="mini terciario">{nota || (plantillas ? 'Solo lleva el nombre de la sesión, la duración, las series, el tonelaje y tus récords: nada de peso corporal, salud ni nutrición.' : 'Solo lleva el nombre de la sesión, las series, el tonelaje, los minutos y tus mejores series: nada de peso corporal ni datos de salud.')} En el móvil también puedes mantener pulsada la imagen para guardarla.</p>
         </>
       )}
     </Hoja>

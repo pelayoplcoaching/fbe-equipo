@@ -28,6 +28,7 @@ import { panelNegocio } from '../logica/negocio.js';
 import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
+import { compartieronHoy } from '../logica/tablero.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -1248,6 +1249,17 @@ export function crearApi(backend) {
       const lista = cargaSemanal(sesiones, hoy, semanas);
       return { semanas: lista, cambio: cambioCarga(lista) };
     },
+    // v0.51: las sesiones terminadas de las últimas semanas, para el dial «Carga» de Hoy: solo las columnas de la carga,
+    // y con los bloques que Hoy ya tiene (del programa), dos consultas en vez de tres. Las semanas, con margen (una
+    // sesión atrasada se puede hacer semanas después de la suya).
+    async cargaHoy(atletaId, { bloques = null, hoy = hoyISO(), semanas = 5 } = {}) {
+      const ids = bloques?.length ? bloques.map((x) => x.id || x) : (await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id' })).map((x) => x.id);
+      const desde = sumarDias(lunesDe(hoy), -7 * semanas);
+      const sem = ids.length ? await b.select('semanas', { in: { bloque_id: ids }, gte: { fecha_inicio: sumarDias(desde, -56) }, cols: 'id' }) : [];
+      if (!sem.length) return [];
+      const filas = await b.select('sesiones', { in: { semana_id: sem.map((x) => x.id) }, eq: { completada: true }, gte: { fecha_realizada: desde }, cols: 'id,completada,fecha_realizada,rpe_sesion,duracion_min' });
+      return filas.map((x) => ({ id: x.id, completada: x.completada, fecha_realizada: x.fecha_realizada, rpe_sesion: x.rpe_sesion, duracion_min: x.duracion_min }));
+    },
     // Mejores marcas de cada ejercicio sin contar una sesión (la que se está haciendo), para detectar récords en directo
     async marcasPrevias(atletaId, sesionId = null) {
       const todas = await api.historial(atletaId);
@@ -1977,6 +1989,17 @@ export function crearApi(backend) {
     async rankingComunidad() {
       const [filas, personas, rachas] = await Promise.all([b.rpc('comunidad_ranking', {}), api.personasComunidad(), api.rachasComunidad().catch(() => ({}))]);
       return (filas || []).map((x) => ({ ...x, foto: personas[x.perfil_id]?.foto || null, racha: rachas[x.perfil_id]?.racha || 0 }));
+    },
+    // v0.51: quién ha compartido un entreno hoy (hora de Madrid), para el aro de su foto. Solo los entrenos del muro que
+    // ya se ven (los mismos permisos por fila): nada que no se comparta ya. Una consulta pequeña, de las últimas 30 h.
+    async compartieronHoyComunidad() {
+      const desde = new Date(Date.now() - 30 * 3600e3).toISOString();
+      const [filas, personas] = await Promise.all([
+        b.select('comunidad_posts', { eq: { tipo: 'entreno' }, gte: { creado_en: desde }, order: [['creado_en', 'desc']], cols: 'autor_id,tipo,creado_en,oculta', limit: 200 }).catch(() => []),
+        api.personasComunidad(),
+      ]);
+      // Solo quien está dentro ahora (el coach también ve lo de quien ya ha salido)
+      return new Set([...compartieronHoy(filas, fechaMadrid())].filter((id) => personas[id]));
     },
     // Rachas de semanas completas (v0.47): perfil_id → { racha, semana_completa, yo }
     async rachasComunidad() {

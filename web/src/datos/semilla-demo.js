@@ -1,6 +1,6 @@
 // Datos de la demo, relativos a la fecha de hoy para que siempre parezcan actuales.
 // Atletas y cifras ficticios. Contraseña de todas las cuentas demo: "demo".
-import { hoyISO, lunesDe, sumarDias, instanteMadrid } from '../logica/fechas.js';
+import { hoyISO, lunesDe, sumarDias, instanteMadrid, partesMadrid } from '../logica/fechas.js';
 import { BIBLIOTECA_BASE } from './biblioteca-base.js';
 import { FAQ } from './faq.js';
 import { RESPUESTAS_EJEMPLO } from './respuestas.js';
@@ -677,6 +677,23 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
     entreno = post(ruben.perfil_id, ruben, 'entreno', 'Primera vez que la sentadilla me sale sin molestias en la lumbar. Poco a poco 💪', 60 * 26, {
       sesion_id: ultima.id,
       resumen: { nombre: ultima.nombre, tipo: ultima.tipo, fecha: ultima.fecha_realizada, minutos: ultima.duracion_min, series: series.length, con_kilos: false, ejercicios },
+    });
+  }
+  // v0.51: Carlos comparte hoy (hora de Madrid) su último entreno: en el muro y en las listas, su foto lleva el aro de
+  // «ha compartido un entreno hoy». Siempre dentro de hoy, sea la hora que sea (como mucho, hace 40 minutos).
+  const bloquesC = new Set(db.bloques.filter((x) => x.atleta_id === carlos.id).map((x) => x.id));
+  const semanasC = new Set(db.semanas.filter((w) => bloquesC.has(w.bloque_id)).map((w) => w.id));
+  const ultimaC = db.sesiones.filter((x) => semanasC.has(x.semana_id) && x.completada).sort((x, y) => (x.fecha_realizada < y.fecha_realizada ? 1 : -1))[0];
+  if (ultimaC) {
+    const [hh, mm] = partesMadrid().hora.split(':').map(Number);
+    const minutosHoy = Math.max(0.2, Math.min(40, (hh * 60 + mm) / 2));
+    const pautasC = db.sesion_ejercicios.filter((p) => p.sesion_id === ultimaC.id).sort((a, b) => a.orden - b.orden);
+    const seriesC = db.series.filter((x) => pautasC.some((p) => p.id === x.sesion_ejercicio_id) && Number(x.reps) > 0);
+    const nombreEjC = (id) => db.ejercicios.find((e) => e.id === id)?.nombre || 'Ejercicio';
+    post(carlos.perfil_id, carlos, 'entreno', 'Corta pero intensa, antes del trabajo.', minutosHoy, {
+      sesion_id: ultimaC.id,
+      resumen: { nombre: ultimaC.nombre, tipo: ultimaC.tipo, fecha: ultimaC.fecha_realizada, minutos: ultimaC.duracion_min, series: seriesC.length, con_kilos: false,
+        ejercicios: pautasC.filter((p) => seriesC.some((x) => x.sesion_ejercicio_id === p.id)).map((p) => ({ nombre: nombreEjC(p.ejercicio_id), record: false })) },
     });
   }
   const pCarlos = post(carlos.perfil_id, carlos, 'post', 'Vuelvo después de dos semanas parado por trabajo. Esta semana, aunque sean dos sesiones cortas, no fallo.', 60 * 5);

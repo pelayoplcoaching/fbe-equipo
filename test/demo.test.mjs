@@ -146,6 +146,13 @@ check(pasosDemo.sesion && pasosDemo.peso && pasosDemo.checkin, 'Ana ya ha dado t
 console.log('\nv0.6 en la demo');
 const logrosAna = await api.logros(ana.id);
 check(logrosAna.lista.length === 7 && logrosAna.lista.reduce((t, l) => t + l.nivel, 0) >= 6, `Ana tiene ${logrosAna.lista.reduce((t, l) => t + l.nivel, 0)} discos de 28`);
+// v0.51: el dial «Carga» de Hoy: solo las sesiones terminadas de las últimas semanas, con las columnas de la carga, y lo
+// mismo con los bloques que ya trae el programa (una consulta menos) que sin ellos
+const cargaA = await api.cargaHoy(ana.id);
+const progA = await api.programa(ana.id);
+const cargaB = await api.cargaHoy(ana.id, { bloques: progA.bloques });
+check(cargaA.length >= 4 && cargaA.every((x) => x.completada && Object.keys(x).sort().join() === 'completada,duracion_min,fecha_realizada,id,rpe_sesion') && JSON.stringify(cargaA.map((x) => x.id).sort()) === JSON.stringify(cargaB.map((x) => x.id).sort()),
+  `el dial de carga lee ${cargaA.length} sesiones terminadas, solo con las columnas que necesita (también con los bloques del programa)`);
 const infAna = await api.informes(ana.id);
 check(infAna.length >= 1 && infAna[0].principales.length >= 3 && infAna[0].principales.every((x) => x.cambio != null), 'informe de su bloque con la fuerza estimada de sus ejercicios principales');
 const sesAna = (await api.entrenamientos(ana.id))[0];
@@ -428,9 +435,14 @@ console.log('\nLa comunidad del equipo en la demo (v0.43)');
   const muro = await api.muro();
   check(muro.posts[0].tipo === 'aviso' && muro.posts[0].fijada && muro.posts[0].autor.coach, 'dentro: arriba, el aviso fijado del coach');
   check(Object.keys(await api.personasComunidad()).length === 5, 'los de la demo ya tienen leídas las normas vigentes: los ve a todos (con el coach)');
-  const entrenoR = muro.posts.find((x) => x.tipo === 'entreno');
+  const entrenoR = muro.posts.find((x) => x.tipo === 'entreno' && x.autor.nombre === 'Rubén M.');
   check(entrenoR?.autor.nombre === 'Rubén M.' && entrenoR.resumen.ejercicios.length >= 3 && entrenoR.comentarios === 2 && Object.values(entrenoR.reacciones).flat().length === 3, 'el entreno compartido de Rubén, con reacciones y comentarios');
-  check(muro.posts.length === 6 && muro.posts.some((x) => x.tipo === 'encuesta') && muro.posts.some((x) => x.tipo === 'logro'), 'y las publicaciones de Carlos y Lucía, la encuesta del coach y el logro de Carlos (v0.47)');
+  check(muro.posts.length === 7 && muro.posts.some((x) => x.tipo === 'encuesta') && muro.posts.some((x) => x.tipo === 'logro'), 'y las publicaciones de Carlos y Lucía, la encuesta del coach y el logro de Carlos (v0.47)');
+  // v0.51: Carlos ha compartido hoy su último entreno (su foto lleva el aro): sale de lo que ya se ve en el muro
+  const entrenoC = muro.posts.find((x) => x.tipo === 'entreno' && x.autor.nombre === 'Carlos V.');
+  const hoyEq = await api.compartieronHoyComunidad();
+  const carlosP = muro.posts.find((x) => x.autor.nombre === 'Carlos V.')?.autor_id;
+  check(!!entrenoC && entrenoC.resumen.con_kilos === false && hoyEq instanceof Set && hoyEq.has(carlosP) && hoyEq.size === 1, 'Carlos ha compartido hoy su último entreno (sin kilos): es el único con el aro de «hoy»');
   const retos = await api.retosComunidad();
   const reto8 = retos.find((r) => r.titulo === 'Reto de constancia: 8 sesiones');
   check(retos.length === 4 && reto8?.progreso.length === 4 && reto8.progreso.some((x) => x.yo && x.nombre === 'Ana L.'), `un reto con el progreso de los cuatro (${reto8?.progreso.map((x) => `${x.nombre} ${x.hechas}`).join(', ')})`);
