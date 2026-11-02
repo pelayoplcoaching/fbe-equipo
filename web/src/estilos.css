@@ -2464,7 +2464,7 @@ input[type="range"] { accent-color: var(--morado); width: 100%; }
 .cabecera-grande.compacta .titulo h1 { font-size: 1.125rem; line-height: 1.2; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: titulo-compacta .2s ease-out; }
 .cabecera-grande.compacta .titulo > :not(h1), .cabecera-grande.compacta .cab-extra { display: none; }
 .cabecera-grande.compacta .avatar.grande { width: 32px; height: 32px; font-size: 0.8125rem; }
-@keyframes titulo-compacta { from { opacity: 0; transform: translateY(6px); } }
+@keyframes titulo-compacta { from { transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) { .cabecera-grande { transition: none; } .cabecera-grande.compacta .titulo h1 { animation: none; } }
 
 /* ---------- Sesión: la serie que toca, la tarjeta plegada y la hoja «Más» ---------- */
