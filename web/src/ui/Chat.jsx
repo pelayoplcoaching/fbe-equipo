@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Cargando, Hoja, Avatar, cuando } from './comunes.jsx';
+import { useApp, useCarga, Icono, Cargando, Hoja, Avatar, cuando, Vacio } from './comunes.jsx';
 import { Hilo, HojaRespuestas } from './Hilo.jsx';
 import { VerArchivo, capturarPoster } from './Archivos.jsx';
 import { LIMITE_ARCHIVO_MB } from '../datos/api.js';
@@ -182,11 +182,12 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
       <div class="chat-lista" ref={lista}>
         {conv.cargando && !conv.datos ? <Cargando texto="Cargando los mensajes" /> : !mensajes.length ? (
           <div class="chat-vacio">
-            <Avatar nombre={otro} foto={fotoOtro} clase="grande" ampliable />
-            <p><strong>{yo === 'coach' ? `Tu conversación con ${primerNombre}` : `Tu conversación con ${nombreCoach}`}</strong></p>
-            <p class="peq secundario">{yo === 'coach'
-              ? 'Para lo que no es de una sesión concreta. Lo que escribas aquí le llega al momento; lo de sus sesiones, check-ins y vídeos también sale en este hilo con su etiqueta.'
-              : 'Para lo que no es de una sesión concreta: un viaje, una molestia, un cambio de horario, una duda. Tu coach lo recibe al momento. Puedes mandar fotos y vídeos con el clip.'}</p>
+            <Vacio ilustracion="mensajes" titulo={yo === 'coach' ? `Tu conversación con ${primerNombre}` : `Tu conversación con ${nombreCoach}`}
+              accion={<button type="button" class="btn btn-peq" onClick={() => raiz.current?.querySelector('.chat-area')?.focus()}><Icono n="editar" /> Escribir el primer mensaje</button>}>
+              {yo === 'coach'
+                ? 'Para lo que no es de una sesión concreta: le llega al momento, y lo de sus sesiones, check-ins y vídeos también sale aquí.'
+                : 'Para lo que no es de una sesión concreta (un viaje, una molestia, una duda): tu coach lo recibe al momento, también fotos y vídeos.'}
+            </Vacio>
           </div>
         ) : grupos.map((g) => (
           <section key={g.dia} class="chat-dia" aria-label={g.dia}>

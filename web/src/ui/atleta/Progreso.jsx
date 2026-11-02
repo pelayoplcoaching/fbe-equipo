@@ -15,12 +15,13 @@ import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { HabitosMes } from './Habitos.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { num, signo, GRUPOS, MEDIDAS, e1rm, rangoVolumen, estadoVolumen, tendenciaPeso, ritmoPeso } from '../../logica/calculos.js';
+import { historiaRecords } from '../../logica/diseno.js';
 import { fmtCorta, hoyISO, diasEntre, fmtConDia, fechaMadrid, lunesDe, sumarDias } from '../../logica/fechas.js';
 
 
 // Contenido de progreso, reutilizado en la ficha del atleta del panel del coach
 // entrenamiento: false a quien solo le llevas la nutrición (v0.26): sin fuerza, series, constancia ni cardio
-export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaDada = null, entrenamiento = true }) {
+export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaDada = null, entrenamiento = true, irA = null }) {
   const { api } = useApp();
   const { datos, cargando, error, recargar } = useCarga(() => api.progreso(atletaId), [atletaId]);
   const objetivos = useCarga(() => api.objetivos(atletaId).catch(() => []), [atletaId]);
@@ -120,7 +121,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
         )}
       </section>
 
-      <Vitrina datos={datos.vitrina} esCoach={esCoach} abrir={(x) => setHistorial({ id: x.id, nombre: x.nombre })} />
+      <Vitrina datos={datos.vitrina} esCoach={esCoach} atletaId={atletaId} irA={irA} abrirHistorial={(x) => setHistorial({ id: x.id, nombre: x.nombre })} />
 
       <Marcas atletaId={atletaId} ejercicios={ejercicios} esCoach={esCoach} />
 
@@ -283,10 +284,24 @@ function MapaConstancia({ atletaId, esCoach = false }) {
   );
 }
 
-// La mejor marca de cada ejercicio; en morado, las conseguidas en los últimos 30 días
-function Vitrina({ datos, esCoach, abrir }) {
+// La vitrina de récords (v0.50): una tarjeta por ejercicio, como un trofeo: su mejor marca (el 1RM estimado de su
+// mejor serie, o las repeticiones si va sin carga), la serie y el día, y «Nuevo» si la batió hace menos de 30 días.
+// Al tocarla, una hoja con cómo ha ido subiendo (la gráfica táctil) y cada vez que la batió.
+function Vitrina({ datos, esCoach, atletaId, abrirHistorial, irA }) {
   const [todas, setTodas] = useState(false);
-  if (!datos?.ejercicios.length) return null;
+  const [abierta, setAbierta] = useState(null);
+  if (!datos) return null;
+  if (!datos.ejercicios.length) {
+    return (
+      <section class="seccion">
+        <h2>Vitrina de récords</h2>
+        <div class="panel"><Vacio ilustracion="records" titulo={esCoach ? 'Aún no tiene récords' : 'Aún no tienes récords'}
+          accion={!esCoach && irA ? <button class="btn btn-peq" onClick={() => irA('hoy')}><Icono n="play" /> Ir a tu sesión de hoy</button> : null}>
+          {esCoach ? 'Con dos sesiones del mismo ejercicio, sus mejores marcas saldrán aquí.' : 'Cuando superes una marca tuya, saldrá aquí como un trofeo.'}
+        </Vacio></div>
+      </section>
+    );
+  }
   const hace30 = new Set(datos.recientes.map((r) => r.ejercicio_id));
   const lista = todas ? datos.ejercicios : datos.ejercicios.slice(0, 6);
   return (
@@ -295,27 +310,67 @@ function Vitrina({ datos, esCoach, abrir }) {
         <h2>Vitrina de récords</h2>
         {datos.recientes.length > 0 && <span class="chip morado num">{datos.recientes.length} {datos.recientes.length === 1 ? 'récord' : 'récords'} en 30 días</span>}
       </div>
-      <div class="panel">
-        <ul class="lista">
-          {lista.map((x) => (
+      <ul class="vitrina-rejilla">
+        {lista.map((x) => {
+          const reciente = hace30.has(x.id);
+          const fecha = x.e1rm?.fecha || x.ultimoRecord;
+          return (
             <li key={x.id}>
-              <button class={`vitrina-fila ${hace30.has(x.id) ? 'reciente' : ''}`} onClick={() => abrir(x)}>
-                <span class="ico"><Icono n="trofeo" /></span>
-                <span class="texto">
-                  <strong>{x.nombre}</strong>
-                  <span class="peq secundario">
-                    {x.e1rm ? `${num(x.e1rm.kg, 2)} kg × ${x.e1rm.reps}${x.e1rm.rpe ? ` @${num(x.e1rm.rpe)}` : ''}${x.e1rm.fecha ? `, ${fmtCorta(x.e1rm.fecha)}` : ''}` : 'Sin carga'}
-                  </span>
-                </span>
-                <span class="valor num">{x.e1rm ? <>{num(x.e1rm.valor)}<small> kg</small></> : <>{x.repsSinCarga}<small> rep</small></>}</span>
+              <button class={`trofeo-tarjeta ${reciente ? 'reciente' : ''}`} onClick={() => setAbierta(x)} aria-label={`${x.nombre}: ${x.e1rm ? `${num(x.e1rm.valor)} kilos de 1RM estimado` : `${x.repsSinCarga} repeticiones`}${reciente ? ', récord nuevo' : ''}. Ver cómo ha ido`}>
+                <span class="trofeo-ico" aria-hidden="true"><Icono n="trofeo" /></span>
+                {reciente && <span class="trofeo-nuevo" aria-hidden="true">Nuevo</span>}
+                <span class="trofeo-nombre" aria-hidden="true">{x.nombre}</span>
+                <span class="trofeo-valor num" aria-hidden="true">{x.e1rm ? <>{num(x.e1rm.valor)}<small> kg</small></> : <>{x.repsSinCarga}<small> rep</small></>}</span>
+                <span class="trofeo-detalle num" aria-hidden="true">{x.e1rm ? `${num(x.e1rm.kg, 2)} kg × ${x.e1rm.reps}${x.e1rm.rpe ? ` @${num(x.e1rm.rpe)}` : ''}` : 'Sin carga'}{fecha ? ` · ${fmtCorta(fecha)}` : ''}</span>
               </button>
             </li>
-          ))}
-        </ul>
-        {!todas && datos.ejercicios.length > 6 && <div class="panel-pad" style="padding-top:0"><button class="btn-texto" onClick={() => setTodas(true)}>Ver los {datos.ejercicios.length} ejercicios</button></div>}
-      </div>
-      <p class="mini terciario">{esCoach ? 'Mejor serie de cada ejercicio' : 'Tu mejor serie de cada ejercicio'} (1RM estimado). En morado, los récords de los últimos 30 días. Toca uno para ver su historial.</p>
+          );
+        })}
+      </ul>
+      {!todas && datos.ejercicios.length > 6 && <button class="btn-texto" style="justify-self:start" onClick={() => setTodas(true)}>Ver los {datos.ejercicios.length} ejercicios</button>}
+      <p class="mini terciario">{esCoach ? 'Mejor serie de cada ejercicio' : 'Tu mejor serie de cada ejercicio'} (1RM estimado). «Nuevo»: batido en los últimos 30 días. Toca uno para ver cómo ha ido.</p>
+      {abierta && <HojaRecord atletaId={atletaId} x={abierta} reciente={hace30.has(abierta.id)} alCerrar={() => setAbierta(null)}
+        abrirHistorial={() => { const x = abierta; setAbierta(null); abrirHistorial(x); }} />}
     </section>
+  );
+}
+
+// La evolución de un récord: su mejor marca hasta cada día en que subió y la lista de cada vez que lo batió
+function HojaRecord({ atletaId, x, reciente, alCerrar, abrirHistorial }) {
+  const { api } = useApp();
+  const h = useCarga(() => api.historial(atletaId).then((series) => historiaRecords(series, x.id)), [atletaId, x.id]);
+  const d = h.datos;
+  return (
+    <Hoja titulo={x.nombre} alCerrar={alCerrar}>
+      <div class={`record-cab ${reciente ? 'reciente' : ''}`}>
+        <span class="trofeo-ico" aria-hidden="true"><Icono n="trofeo" /></span>
+        <span class="pila-xs">
+          <span class="record-valor num">{x.e1rm ? <>{num(x.e1rm.valor)}<small> kg</small></> : <>{x.repsSinCarga}<small> rep</small></>}</span>
+          <span class="peq secundario">{x.e1rm ? `1RM estimado, de ${num(x.e1rm.kg, 2)} kg × ${x.e1rm.reps}${x.e1rm.rpe ? ` @${num(x.e1rm.rpe)}` : ''}${x.e1rm.fecha ? `, el ${fmtCorta(x.e1rm.fecha)}` : ''}` : 'Máximo de repeticiones sin carga'}</span>
+        </span>
+        {reciente && <span class="chip morado">Nuevo</span>}
+      </div>
+      {h.cargando && !d ? <Siluetas forma="grafica" texto="Cargando sus récords" /> : d && (
+        <>
+          {d.puntos.length > 1 ? <Grafica records puntos={d.puntos} unidad={d.unidad} etiqueta={`Récord de ${x.nombre}: cómo ha subido`} />
+            : <p class="peq secundario">Con una sesión más de este ejercicio verás cómo sube.</p>}
+          <section class="seccion">
+            <h3 class="sub-seccion">{d.veces.length === 1 ? 'La vez que lo batiste' : d.veces.length ? `Las ${d.veces.length} veces que lo batiste` : 'Aún no lo has batido'}</h3>
+            {d.veces.length > 0 ? (
+              <ol class="lista-records panel">
+                {d.veces.map((v, i) => (
+                  <li key={`${v.fecha}-${i}`}>
+                    <span class="lista-records-ico" aria-hidden="true"><Icono n={v.tipo === 'e1rm' ? 'trofeo' : v.tipo === 'reps' ? 'mas' : 'disco'} /></span>
+                    <span class="pila-xs"><span>{v.texto.charAt(0).toUpperCase() + v.texto.slice(1)}</span><span class="mini terciario">{fmtConDia(v.fecha)}</span></span>
+                  </li>
+                ))}
+              </ol>
+            ) : <p class="peq secundario">Lo de la primera vez que haces un ejercicio es tu punto de partida: el récord llega al superarlo.</p>}
+          </section>
+        </>
+      )}
+      <button class="btn" onClick={abrirHistorial}><Icono n="historial" /> Gráficas, récords e historial</button>
+    </Hoja>
   );
 }
 
@@ -448,7 +503,7 @@ function Cifras({ constancia, semanas }) {
   );
 }
 
-export function Progreso({ programa, salud }) {
+export function Progreso({ programa, salud, irA }) {
   const { api, atleta } = useApp();
   const entrena = conEntrenamiento(atleta);
   const constancia = useCarga(() => (entrena ? api.constancia(atleta.id).catch(() => null) : Promise.resolve(null)), [atleta.id, entrena]);
@@ -463,7 +518,7 @@ export function Progreso({ programa, salud }) {
       <TusMeses salud={salud} />
       {entrena && <TusBloques salud={salud} />}
       {entrena && <Logros salud={salud} />}
-      <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} entrenamiento={entrena} />
+      <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} entrenamiento={entrena} irA={irA} />
       {salud && <HabitosMes />}
       {salud && conNutricion(atleta) && <NutricionProgreso />}
       <Diario atletaId={atleta.id} nombreAtleta={atleta.nombre} salud={salud} />

@@ -144,7 +144,7 @@ export function aNumero(t) {
 // acabe (migración 025); si suena aquí, con la app delante, se anula, y también al saltarlo o cerrarlo. Si la app
 // vuelve tarde (el aviso ya sonó en el móvil), no suena otra vez.
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
-export function Temporizador({ fin, total, prioridad, texto, voz = null, alCambiar, clase = '' }) {
+export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = null, alCambiar, clase = '' }) {
   const { api } = useApp() || {};
   const ahora = useAhora(250);
   const quedan = Math.max(0, (fin - ahora) / 1000);
@@ -191,22 +191,48 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, alCambi
     const t = setTimeout(() => alCambiar(null), 6000);
     return () => clearTimeout(t);
   }, [quedan <= 0]);
-  const R = 31, C = 2 * Math.PI * R;
+  // v0.50: el temporizador va en la página, debajo del ejercicio; si se queda fuera de la vista al desplazarse,
+  // una píldora flotante con lo que queda (al tocarla, vuelve a él). Con IntersectionObserver, sin escuchar el scroll.
+  // En el modo enfoque, que es una pantalla aparte, no hace falta.
+  const caja = useRef(null);
+  const [fuera, setFuera] = useState(false);
+  const conPildora = !clase.includes('en-enfoque');
+  useEffect(() => {
+    const el = caja.current?.querySelector('.reloj-descanso');
+    if (!conPildora || !el || typeof IntersectionObserver === 'undefined') return undefined;
+    // (la cabecera de la sesión va pegada arriba: lo que queda debajo de ella no se ve)
+    // (en iOS el aviso puede llegar con el anillo aún medio fuera: cuenta como fuera si se ve menos de una cuarta parte)
+    const io = new IntersectionObserver(([e]) => setFuera(!e.isIntersecting || e.intersectionRatio < 0.25), { rootMargin: '-64px 0px -8px 0px', threshold: [0, 0.25, 0.5] });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const volver = () => {
+    const quieto = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    caja.current?.scrollIntoView({ block: 'center', behavior: quieto ? 'auto' : 'smooth' });
+    setTimeout(() => caja.current?.querySelector('.saltar')?.focus({ preventScroll: true }), quieto ? 0 : 350);
+  };
+  const R = 88, C = 2 * Math.PI * R;
   const frac = total ? Math.min(1, quedan / total) : 0;
-  const ajustar = (s) => alCambiar({ fin: Math.max(Date.now(), fin) + s * 1000, total: Math.max(total, (Math.max(Date.now(), fin) - Date.now()) / 1000 + s), prioridad, texto, voz });
+  const ajustar = (s) => alCambiar({ fin: Math.max(Date.now(), fin) + s * 1000, total: Math.max(total, (Math.max(Date.now(), fin) - Date.now()) / 1000 + s), prioridad, texto, voz, tras });
+  const color = COLOR_DISCO[prioridad] || 'var(--morado)';
+  const r2 = 9, c2 = 2 * Math.PI * r2;
   return (
-    <div class={`temporizador ${clase} ${quedan <= 0 ? 'fin' : ''}`} role="timer" aria-live="off">
-      <svg class="disco-t" viewBox="0 0 76 76" aria-hidden="true">
-        <circle cx="38" cy="38" r={R} fill="none" stroke="currentColor" stroke-opacity=".18" stroke-width="10" />
-        <circle cx="38" cy="38" r={R} fill="none" stroke={COLOR_DISCO[prioridad] || 'var(--morado)'} stroke-width="10"
-          stroke-dasharray={C} stroke-dashoffset={C * (1 - frac)} transform="rotate(-90 38 38)" style="transition: stroke-dashoffset .25s linear" />
-        <circle cx="38" cy="38" r="9" fill="currentColor" fill-opacity=".9" />
-      </svg>
-      <div>
-        <div class="cuenta num" role="timer" aria-label={quedan > 0 ? `Descanso: quedan ${Math.ceil(quedan)} segundos` : 'Descanso terminado'}>{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</div>
-        <div class="que">{quedan > 0 ? `Después: ${texto}` : 'Descanso terminado'}</div>
+    <>
+    <div ref={caja} class={`temporizador ${clase} ${quedan <= 0 ? 'fin' : ''}`} role="timer" aria-live="off" aria-label="Descanso" style={{ '--c-disco': color }}>
+      <div class="temporizador-cab">
+        <span class="temporizador-etq">{quedan > 0 ? 'Descanso' : 'Descanso terminado'}</span>
+        <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>
       </div>
-      <button class="saltar" onClick={() => alCambiar(null)}>{quedan > 0 ? 'Saltar' : 'Cerrar'}</button>
+      <div class="reloj-descanso">
+        <svg viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="carril" cx="100" cy="100" r={R} />
+          <circle class="arco" cx="100" cy="100" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - frac)} transform="rotate(-90 100 100)" />
+        </svg>
+        <div class="reloj-centro">
+          <div class="cuenta num" role="timer" aria-label={quedan > 0 ? `Descanso: quedan ${Math.ceil(quedan)} segundos` : 'Descanso terminado'}>{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</div>
+          {quedan > 0 && total > 0 && <div class="de num">de {mmss(total)}</div>}
+        </div>
+      </div>
       {/* v0.42: también ±1 minuto, para alargar el descanso por un imprevisto o acortarlo si hay prisa */}
       <div class="ajustes">
         <button onClick={() => ajustar(-60)} aria-label="Quitar 1 minuto">−1 min</button>
@@ -214,10 +240,23 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, alCambi
         <button onClick={() => ajustar(15)} aria-label="Añadir 15 segundos">+15 s</button>
         <button onClick={() => ajustar(60)} aria-label="Añadir 1 minuto">+1 min</button>
       </div>
+      <button class="saltar" onClick={() => alCambiar(null)}>{quedan > 0 ? 'Saltar' : 'Cerrar'}</button>
     </div>
+      {/* (fuera de la tarjeta: con su latido al sonar, una «fixed» dentro se movería con ella) */}
+      {conPildora && fuera && (
+        <button type="button" class={`pildora-descanso ${quedan <= 0 ? 'fin' : ''}`} onClick={volver} aria-live="off"
+          aria-label={quedan > 0 ? 'Descanso en curso, toca para volver' : 'Descanso terminado, toca para volver'}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle class="carril" cx="12" cy="12" r={r2} />
+            <circle class="arco" cx="12" cy="12" r={r2} stroke-dasharray={c2} stroke-dashoffset={c2 * (1 - frac)} transform="rotate(-90 12 12)" />
+          </svg>
+          <span class="num">{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</span>
+          <Icono n="arriba" />
+        </button>
+      )}
+    </>
   );
 }
-
 
 // Lo que hace falta para proponer cada serie de un ejercicio (con o sin alternativa)
 export function prepararEjercicio(e, actual, ultimas, foco, progresionAuto) {

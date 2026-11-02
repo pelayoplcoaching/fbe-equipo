@@ -1148,6 +1148,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         // la app no deja cargar «data:» en vídeos e imágenes)
         // (la promesa se guarda antes de esperar: dos peticiones a la vez de la misma ruta comparten el blob)
         if (!f && ruta.endsWith('/ejemplo-sentadilla.mp4')) { const pr = import('./video-demo.js').then((m) => aBlob(m.VIDEO_EJEMPLO, ruta)); urls.set(ruta, pr); return pr; }
+        // v0.50: la miniatura del vídeo de ejemplo (para la bandeja del coach y el diario)
+        if (!f && ruta.endsWith('/ejemplo-sentadilla.mp4.jpg')) { const pr = import('./poster-demo.js').then((m) => aBlob(m.POSTER_EJEMPLO, ruta)); urls.set(ruta, pr); return pr; }
         const foto = !f && ruta.match(/\/ejemplo-foto-(\d)\.jpg$/);
         if (foto) { const pr = import('./fotos-demo.js').then((m) => aBlob(m.FOTOS_EJEMPLO[foto[1]], ruta)); urls.set(ruta, pr); return pr; }
         if (!f) {

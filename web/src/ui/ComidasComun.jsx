@@ -4,7 +4,7 @@
 // de Desayuno, Comida, Merienda y Cena y al «Planificador semanal» de Notion.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos } from './comunes.jsx';
-import { BarraMacro, COLOR_MACRO } from './NutricionComun.jsx';
+import { COLOR_MACRO, MacrosDia } from './NutricionComun.jsx';
 import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, valeParaDia, textoVariante, tomasDelDia, paraElDia } from '../logica/comidas.js';
 import { planVigente, objetivoDelDia, fmtKcal } from '../logica/nutricion.js';
 import { hoyISO, lunesDe, sumarDias, fmtConDia, rangoSemana } from '../logica/fechas.js';
@@ -211,10 +211,8 @@ function TotalesDia({ entradas, plan }) {
   if (!obj) return <p class="peq secundario num">En el menú: {textoMacros(t)}</p>;
   return (
     <div class="pila-xs totales-menu">
-      <BarraMacro nombre="Kcal" valor={t.kcal} objetivo={obj.kcal} color={COLOR_MACRO.kcal} unidad="kcal" />
-      <BarraMacro nombre="Proteína" valor={t.proteina_g} objetivo={obj.proteina} color={COLOR_MACRO.proteina} />
-      {obj.carbos != null && <BarraMacro nombre="Hidratos" valor={t.carbos_g} objetivo={obj.carbos} color={COLOR_MACRO.carbos} />}
-      {obj.grasa != null && <BarraMacro nombre="Grasa" valor={t.grasa_g} objetivo={obj.grasa} color={COLOR_MACRO.grasa} />}
+      {/* v0.50: el mismo día que en Hoy: la barra de kcal y los anillos de macros */}
+      <MacrosDia reg={t} obj={obj} titulo="En el menú de este día" />
       {plan?.kcal_descanso != null && <span class="mini terciario">Objetivo de día de entreno; los de descanso, {fmtKcal(plan.kcal_descanso)} kcal.</span>}
       {t.conDatos < t.total && <span class="mini terciario">{t.total - t.conDatos === 1 ? 'Una comida' : `${t.total - t.conDatos} comidas`} sin kcal no cuentan.</span>}
     </div>

@@ -8,6 +8,7 @@ import { EVENTO_PENDIENTES, listarPendientes } from '../../datos/pendientes.js';
 import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herramientas.jsx';
 import { HojaCompartir } from '../Compartir.jsx';
 import { HojaCompartirEquipo } from '../Comunidad.jsx';
+import { PictoEjercicio } from '../Pictograma.jsx';
 import { RPES, prepararAudio, celebrar, usePantallaEncendida, useAhora, aNumero, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
 import { Enfoque } from './Enfoque.jsx';
 import { Metronomo } from './Metronomo.jsx';
@@ -242,7 +243,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           voz = fraseSerie({ numero: r.siguiente.numero, series: sig.series, nombre: a.nombre, kg: prop?.kg, reps: prop?.reps });
         } catch { voz = `Ahora, ${texto}.`; }
       }
-      if (r.descanso) setDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz });
+      // v0.50: el temporizador sale en la página, debajo de este ejercicio (o de su superserie)
+      if (r.descanso) setDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, tras: e.id });
       else if (r.enRonda) { setDescanso(null); aviso(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); }
       else hablar(voz);
       if (sig && sig.id !== e.id) {
@@ -391,18 +393,23 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
               }} />
           );
         });
-        if (!g.letra) return tarjetas;
+        const conReloj = descanso && !verEnfoque && g.items.some((e) => e.id === descanso.tras);
+        const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={setDescanso} />;
+        if (!g.letra) return reloj ? [...tarjetas, reloj] : tarjetas;
         const d = descansoGrupo(g);
-        return (
+        return [
           <section class="superserie" key={`ss-${g.items[0].id}`} aria-label={`Superserie ${g.letra}`}>
             <div class="superserie-cab">
               <span class="ss-letra" aria-hidden="true">{g.letra}</span>
               <span><strong>Superserie</strong>: alterna una serie de cada ejercicio{d ? ` y descansa ${mmss(d)} al acabar la ronda` : ' y descansa al acabar la ronda'}.</span>
             </div>
             {tarjetas}
-          </section>
-        );
+          </section>,
+          reloj,
+        ];
       })}
+      {/* (un descanso sin su ejercicio en la lista, por si acaso: antes de terminar) */}
+      {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={setDescanso} />}
 
       <button class="btn btn-primario btn-grande btn-ancho" onClick={() => setTerminando(true)}>
         <Icono n="hecho" /> {sesion.completada ? 'Cambiar la valoración' : 'Terminar sesión'}
@@ -421,7 +428,6 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         </section>
       )}
 
-      {descanso && !verEnfoque && <Temporizador {...descanso} alCambiar={setDescanso} />}
       {compartir && <HojaCompartir datos={datosTarjeta(sesion, ejercicios, hechas, records, ejerciciosPorId, sesion.duracion_min)} alCerrar={() => setCompartir(false)} />}
       {intervalos && <Intervalos inicial={intervalos.inicial} alCerrar={() => setIntervalos(null)}
         alTerminar={sesion.completada ? null : ({ minutos }) => {
@@ -462,7 +468,7 @@ function Cronometro({ inicio, minutos, hechas, total }) {
   const ahora = useAhora(1000);
   return (
     <div style="text-align:right">
-      <div class="num" style="font-size:17px">{minutos != null ? `${minutos} min` : inicio ? mmss((ahora - inicio) / 1000) : '0:00'}</div>
+      <div class="num" style="font-size:1.0625rem">{minutos != null ? `${minutos} min` : inicio ? mmss((ahora - inicio) / 1000) : '0:00'}</div>
       <div class="sesion-cab-num">{hechas}/{total} series</div>
     </div>
   );
@@ -506,7 +512,8 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   return (
     <article class={`ejercicio ${plegado ? 'plegado' : ''} ${siguiente ? 'en-curso' : ''}`} data-se={e.id} aria-label={etiqueta ? `${etiqueta}: ${ej.nombre}` : ej.nombre}>
       <button class="ejercicio-cab" onClick={alternar} aria-expanded={abierto ? 'true' : 'false'}>
-        <Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} />
+        {/* v0.50: el pictograma de su patrón de movimiento, con el disco de la prioridad en la esquina */}
+        <span class="ej-marca"><PictoEjercicio ejercicio={ej} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
         <span>
           <span class="nombre">{etiqueta && <span class="ss-etq">{etiqueta}</span>}{ej.nombre}</span>
           {plegado && <span class="resumen-ej num">{resumenSeries(Object.keys(hechas).map(Number).sort((a, b) => a - b).map((k) => hechas[k]))}</span>}

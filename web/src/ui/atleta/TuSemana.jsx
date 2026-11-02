@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Icono, Anillo } from '../comunes.jsx';
+import { Icono, Anillo, Capa } from '../comunes.jsx';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { num, signo, textoSerie, NOMBRE_GRUPO } from '../../logica/calculos.js';
 import { desdeISO } from '../../logica/fechas.js';
@@ -35,7 +35,9 @@ export function TarjetaSemana({ resumen, alAbrir, alQuitar }) {
 }
 
 // Historia a pantalla completa: se pasa con toques (o flechas) y avanza sola si no se toca
-export function HistoriaSemana({ resumen, salud, alCerrar }) {
+// v0.50: en su capa (en <body>), como las hojas
+export function HistoriaSemana(props) { return <Capa><HistoriaSemanaPantalla {...props} /></Capa>; }
+function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
   const r = resumen;
   const pantallas = [
     { id: 'portada', render: () => (

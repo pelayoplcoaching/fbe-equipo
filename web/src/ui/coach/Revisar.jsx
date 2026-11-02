@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { ChipLlegada } from '../atleta/Preparacion.jsx';
-import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, ErrorCaja, cuando, Avatar, Hoja, usePreferencia } from '../comunes.jsx';
+import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, ErrorCaja, cuando, Avatar, Hoja, usePreferencia, Vacio } from '../comunes.jsx';
+import { agruparPorAtleta, textoTipos, esDeslizar, duracionCorta } from '../../logica/diseno.js';
+import { vibrar } from '../hapticos.js';
 import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
 import { BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
@@ -11,11 +13,15 @@ import { NOMBRE_TOMA } from '../../logica/comidas.js';
 import { TarjetaTarea } from '../Tareas.jsx';
 
 // «Deshacer» en el aviso: vuelve a dejarlo pendiente
+// (los botones cuya acción tiene «Deshacer» llevan data-deshacer: solo esos se pueden pulsar deslizando la tarjeta)
 const deshacer = (api, tipo, id, recargar) => ({ texto: 'Deshacer', fn: async () => { await api.marcarRevisado(tipo, id, false); recargar(); } });
 
 // Atajos de teclado (como en Superhuman o Linear): j/k moverse, r responder, e revisado, o abrir la ficha
-function useAtajos(caja, n) {
+// v0.50: «r», «e» y «o» solo actúan sobre la tarjeta que tiene el foco (tras plegar un grupo o cambiar el filtro, la
+// posición de antes ya no es la misma tarjeta); clave: lo que cambia la lista (filtro y grupos plegados)
+function useAtajos(caja, n, clave = '') {
   const [i, setI] = useState(-1);
+  useEffect(() => { setI(-1); }, [clave]);
   useEffect(() => {
     const tarjetas = () => [...(caja.current?.querySelectorAll('.tarjeta-revisar') || [])];
     const enfocar = (k) => { const t = tarjetas(); if (!t.length) return; const j = Math.max(0, Math.min(t.length - 1, k)); setI(j); t[j].focus({ preventScroll: true }); t[j].scrollIntoView({ block: 'nearest' }); };
@@ -27,7 +33,7 @@ function useAtajos(caja, n) {
       const k = actual >= 0 ? actual : i;
       if (e.key === 'j' || (e.key === 'ArrowDown' && actual >= 0)) { e.preventDefault(); enfocar(k + 1); }
       else if (e.key === 'k' || (e.key === 'ArrowUp' && actual >= 0)) { e.preventDefault(); enfocar(k <= 0 ? 0 : k - 1); }
-      else if (k >= 0 && t[k]) {
+      else if (actual >= 0 && t[actual]) {
         const boton = (sel) => t[k].querySelector(sel);
         if (e.key === 'r') { e.preventDefault(); const b = boton('button[aria-expanded="false"]'); b?.click(); setTimeout(() => t[k].querySelector('textarea')?.focus(), 60); }
         else if (e.key === 'e') {
@@ -52,12 +58,16 @@ function useAtajos(caja, n) {
 
 const FILTROS = [['todo', 'Todo'], ['mensajes', 'Mensajes'], ['sesiones', 'Sesiones'], ['checkins', 'Check-ins'], ['videos', 'Vídeos'], ['tareas', 'Tareas'], ['recetas', 'Recetas'], ['comunidad', 'Equipo']];
 
-// Bandeja del coach: todo lo que espera tu respuesta, de todos los atletas, en un sitio
+// Bandeja del coach: todo lo que espera tu respuesta, de todos los atletas, en un sitio.
+// v0.50: agrupado por atleta (cada uno con su cabecera, que se pliega, y cuántas cosas tiene); deslizar una tarjeta a
+// la derecha la da por revisada (con el «Deshacer» de siempre; el botón «Revisado» sigue ahí); los vídeos, con su
+// miniatura y su duración.
 export function Revisar({ bandeja, abrirAtleta }) {
   const [filtro, setFiltro] = useState('todo');
+  const [plegados, setPlegados] = useState(() => new Set());
   const d = bandeja.datos;
   const caja = useRef(null);
-  useAtajos(caja, d?.total || 0);
+  useAtajos(caja, d?.total || 0, `${filtro}|${[...plegados].sort().join(',')}`);
   const recargar = () => bandeja.recargar(true);
   if (bandeja.cargando && !d) return <div class="contenido coach"><Siluetas forma="tarjetas" n={3} texto="Cargando lo que tienes por revisar" /></div>;
 
@@ -71,6 +81,26 @@ export function Revisar({ bandeja, abrirAtleta }) {
   }
   const cuentas = { mensajes: hilos.length, sesiones: d?.sesiones.length || 0, checkins: d?.checkins.length || 0, videos: d?.archivos.length || 0, recetas: d?.recetas?.length || 0, comunidad: d?.comunidad?.length || 0, tareas: d?.tareas?.length || 0 };
   const ver = (k) => filtro === 'todo' || filtro === k;
+  const items = d ? [
+    ...hilos.map((h) => ({ tipo: 'mensajes', clave: `m-${h.clave}`, atleta: h.ultimo.atleta ? { ...h.ultimo.atleta, id: h.ultimo.atleta.id || h.ultimo.atleta_id } : null, h })),
+    ...d.sesiones.map((s) => ({ tipo: 'sesiones', clave: `s-${s.id}`, atleta: s.atleta, s })),
+    ...d.checkins.map((c) => ({ tipo: 'checkins', clave: `c-${c.id}`, atleta: c.atleta, c })),
+    ...d.archivos.map((a) => ({ tipo: 'videos', clave: `v-${a.id}`, atleta: a.atleta, a })),
+    ...(d.tareas || []).map((t) => ({ tipo: 'tareas', clave: `t-${t.id}`, atleta: t.atleta, t })),
+    ...(d.recetas || []).map((r) => ({ tipo: 'recetas', clave: `r-${r.id}`, atleta: r.atleta, r })),
+    ...(d.comunidad || []).map((r) => ({ tipo: 'comunidad', clave: `e-${r.id}`, atleta: null, r })),
+  ].filter((x) => ver(x.tipo)) : [];
+  const grupos = agruparPorAtleta(items);
+  const alternar = (id) => setPlegados((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const tarjeta = (x) => {
+    if (x.tipo === 'mensajes') return <TarjetaMensaje h={x.h} recargar={recargar} abrirAtleta={abrirAtleta} />;
+    if (x.tipo === 'sesiones') return <TarjetaSesion s={x.s} recargar={recargar} abrirAtleta={abrirAtleta} />;
+    if (x.tipo === 'checkins') return <TarjetaCheckin c={x.c} recargar={recargar} abrirAtleta={abrirAtleta} />;
+    if (x.tipo === 'videos') return <TarjetaVideo a={x.a} recargar={recargar} abrirAtleta={abrirAtleta} />;
+    if (x.tipo === 'tareas') return <TarjetaTarea t={x.t} recargar={recargar} abrirAtleta={abrirAtleta} />;
+    if (x.tipo === 'recetas') return <TarjetaCambioReceta r={x.r} recargar={recargar} abrirAtleta={abrirAtleta} />;
+    return <TarjetaReporte r={x.r} recargar={recargar} />;
+  };
 
   return (
     <div class="contenido coach">
@@ -87,17 +117,82 @@ export function Revisar({ bandeja, abrirAtleta }) {
       {filtro === 'todo' && <VariantesPorRevisar abrirAtleta={abrirAtleta} />}
       {!d?.total ? <BandejaVacia /> : (
         <div class="rejilla-revisar" ref={caja}>
-          {ver('mensajes') && hilos.map((h) => <TarjetaMensaje key={h.clave} h={h} recargar={recargar} abrirAtleta={abrirAtleta} />)}
-          {ver('sesiones') && d.sesiones.map((s) => <TarjetaSesion key={s.id} s={s} recargar={recargar} abrirAtleta={abrirAtleta} />)}
-          {ver('checkins') && d.checkins.map((c) => <TarjetaCheckin key={c.id} c={c} recargar={recargar} abrirAtleta={abrirAtleta} />)}
-          {ver('videos') && d.archivos.map((a) => <TarjetaVideo key={a.id} a={a} recargar={recargar} abrirAtleta={abrirAtleta} />)}
-          {ver('tareas') && (d.tareas || []).map((t) => <TarjetaTarea key={t.id} t={t} recargar={recargar} abrirAtleta={abrirAtleta} />)}
-          {ver('recetas') && (d.recetas || []).map((r) => <TarjetaCambioReceta key={r.id} r={r} recargar={recargar} abrirAtleta={abrirAtleta} />)}
-          {ver('comunidad') && (d.comunidad || []).map((r) => <TarjetaReporte key={r.id} r={r} recargar={recargar} />)}
+          {grupos.map((g) => (
+            <GrupoRevisar key={g.id} g={g} abierto={!plegados.has(g.id)} alternar={() => alternar(g.id)}>
+              {g.items.map((x) => <Deslizable key={x.clave}>{tarjeta(x)}</Deslizable>)}
+            </GrupoRevisar>
+          ))}
         </div>
       )}
-      <p class="mini terciario">Comentar algo lo da por revisado. Las sesiones y los check-ins de más de 4 semanas salen de la bandeja solos.</p>
+      <p class="mini terciario">Comentar algo lo da por revisado; deslizar una tarjeta a la derecha, también. Las sesiones y los check-ins de más de 4 semanas salen de la bandeja solos.</p>
       {d?.total > 0 && <p class="mini terciario solo-ancho atajos">Con el teclado: <kbd>j</kbd> <kbd>k</kbd> para moverte, <kbd>r</kbd> responder, <kbd>e</kbd> revisado, <kbd>o</kbd> abrir su ficha.</p>}
+    </div>
+  );
+}
+
+// Lo de un atleta en la bandeja: su cabecera (que pliega y despliega) con cuántas cosas tiene y de qué
+function GrupoRevisar({ g, abierto, alternar, children }) {
+  const id = `rev-${g.id}`;
+  const nombre = g.atleta?.nombre || 'El equipo';
+  const tipos = textoTipos(g.tipos);
+  return (
+    <section class={`grupo-revisar ${abierto ? '' : 'plegado'}`} aria-labelledby={`${id}-cab`}>
+      <h2 class="grupo-revisar-h">
+        <button type="button" id={`${id}-cab`} class="grupo-revisar-cab" aria-expanded={abierto ? 'true' : 'false'} aria-controls={abierto ? id : undefined} onClick={alternar}>
+          {g.atleta ? <Avatar nombre={nombre} foto={g.atleta.foto} /> : <span class="ico-reporte" aria-hidden="true"><Icono n="bandera" /></span>}
+          <span class="pila-xs grupo-revisar-quien"><span class="grupo-revisar-nombre">{nombre}</span><span class="mini terciario">{tipos}</span></span>
+          <span class="grupo-revisar-n num" aria-hidden="true">{g.n}</span>
+          <span class="sr">, {g.n === 1 ? '1 pendiente' : `${g.n} pendientes`}</span>
+          <Icono n="abajo" class="grupo-revisar-chevron" />
+        </button>
+      </h2>
+      {abierto && <div id={id} class="grupo-revisar-items">{children}</div>}
+    </section>
+  );
+}
+
+// Deslizar a la derecha para dar por revisado (con el dedo; con el ratón, el botón): solo en las tarjetas cuyo botón
+// tiene «Deshacer» (data-deshacer: sesiones, check-ins, vídeos y tareas; no las recetas ni los avisos del equipo), y
+// lo que hace es pulsar ese botón, así el aviso y el «Deshacer» son los de siempre. Nada de lo que pasa dentro de una
+// hoja cuenta (ya van en su capa, pero por si acaso).
+function Deslizable({ children }) {
+  const ref = useRef(null);
+  const g = useRef(null);
+  const [dx, setDx] = useState(0);
+  const [hecho, setHecho] = useState(false);
+  const boton = () => ref.current?.querySelector('.tarjeta-revisar button.revisar-hecho[data-deshacer]:not([disabled])');
+  const fin = (e) => {
+    const s = g.current;
+    g.current = null;
+    if (!s?.activo) { setDx(0); return; }
+    const ancho = ref.current?.offsetWidth || 360;
+    const x = Math.max(0, e.clientX - s.x), y = e.clientY - s.y;
+    if (esDeslizar(x, y, ancho) && boton()) {
+      setHecho(true); setDx(ancho);
+      vibrar('serie');
+      const b = boton();
+      setTimeout(() => { b?.click(); setTimeout(() => { if (ref.current) { setHecho(false); setDx(0); } }, 400); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 160);
+    } else setDx(0);
+  };
+  return (
+    <div ref={ref} class={`deslizable ${dx ? 'moviendo' : ''} ${hecho ? 'hecho' : ''} ${g.current?.activo ? 'arrastrando' : ''}`} style={{ '--dx': `${dx}px` }}
+      onPointerDown={(e) => {
+        if (e.pointerType === 'mouse' || e.button > 0 || !boton() || e.target.closest('textarea, input, select, video, .reproductor, .rep-lienzo, .velo, [aria-modal="true"]')) return;
+        g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, activo: false };
+      }}
+      onPointerMove={(e) => {
+        const s = g.current;
+        if (!s || s.id !== e.pointerId) return;
+        const x = e.clientX - s.x, y = e.clientY - s.y;
+        if (!s.activo) {
+          if (Math.abs(y) > 14 && Math.abs(y) > Math.abs(x)) { g.current = null; return; }
+          if (x > 12 && x > Math.abs(y) * 1.4) { s.activo = true; try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* */ } }
+        }
+        if (s.activo) setDx(Math.max(0, x));
+      }}
+      onPointerUp={fin} onPointerCancel={() => { g.current = null; setDx(0); }}>
+      <div class="deslizable-fondo" aria-hidden="true"><Icono n="hecho" /><span>Revisado</span></div>
+      {children}
     </div>
   );
 }
@@ -168,7 +263,7 @@ function Acciones({ abierto, setAbierto, revisar, etiquetaComentar = 'Comentar' 
   return (
     <div class="fila-envolver">
       <button class="btn btn-peq" aria-expanded={abierto ? 'true' : 'false'} onClick={() => setAbierto(!abierto)}><Icono n="mensaje" /> {abierto ? 'Cerrar' : etiquetaComentar}</button>
-      {revisar && <button class="btn btn-peq revisar-hecho" onClick={revisar}><Icono n="hecho" /> Revisado</button>}
+      {revisar && <button class="btn btn-peq revisar-hecho" data-deshacer="" onClick={revisar}><Icono n="hecho" /> Revisado</button>}
     </div>
   );
 }
@@ -246,10 +341,41 @@ function TarjetaVideo({ a, recargar, abrirAtleta }) {
   return (
     <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar">
       <Cabecera atleta={a.atleta} tipo={a.tipo === 'foto_progreso' ? 'Foto de progreso' : 'Vídeo de técnica'} cuando={fmtConDia(a.fecha)} abrirAtleta={abrirAtleta} pestana="videos" />
-      {a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}
+      {!abierto ? (
+        <div class="revisar-video">
+          <MiniaturaRevisar a={a} alAbrir={() => setAbierto(true)} />
+          {a.nota_atleta ? <p class="cita">«{a.nota_atleta}»</p> : <p class="peq terciario">Sin nota.</p>}
+        </div>
+      ) : a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}
       {abierto && <><VerArchivo archivo={a} /><Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} alCambiar={recargar} placeholder="Qué corregir, qué está bien…" /></>}
       <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} etiquetaComentar="Ver y comentar" />
     </article>
+  );
+}
+
+// v0.50: la miniatura del vídeo (la que guardó el móvil al subirlo) o, si no hay, un hueco neutro; con su duración.
+// No descarga el vídeo: eso, al abrirlo. Las fotos de progreso se ven tal cual.
+function MiniaturaRevisar({ a, alAbrir }) {
+  const { api } = useApp();
+  const esFoto = a.tipo === 'foto_progreso';
+  // Las fotos de progreso (el cuerpo) no se cargan solas en una pantalla que puede ver otro: hueco hasta que la abres
+  const ruta = esFoto ? null : a.poster_ruta;
+  const [url, setUrl] = useState(null);
+  const [fallo, setFallo] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    setUrl(null); setFallo(false);
+    if (ruta) api.urlArchivo(ruta).then((u) => vivo && setUrl(u)).catch(() => vivo && setFallo(true));
+    return () => { vivo = false; };
+  }, [ruta]);
+  const nombre = a.atleta?.nombre?.split(' ')[0] || 'tu atleta';
+  return (
+    <button type="button" class={`revisar-mini ${esFoto ? 'foto' : ''}`} onClick={alAbrir}
+      aria-label={esFoto ? `Ver la foto de ${nombre}` : `Reproducir el vídeo de ${nombre}${a.duracion_seg ? ` (${duracionCorta(a.duracion_seg)})` : ''}`}>
+      {url && !fallo ? <img src={url} alt="" loading="lazy" onError={() => setFallo(true)} /> : <span class="revisar-mini-hueco" aria-hidden="true"><Icono n={esFoto ? 'imagen' : 'video'} /></span>}
+      {!esFoto && <span class="revisar-mini-play" aria-hidden="true"><Icono n="play" /></span>}
+      {!esFoto && a.duracion_seg ? <span class="revisar-mini-dur num" aria-hidden="true">{duracionCorta(a.duracion_seg)}</span> : null}
+    </button>
   );
 }
 
@@ -323,21 +449,11 @@ function FotoAvisada({ ruta }) {
   return url ? <img class="post-foto" src={url} alt="La foto de lo avisado" loading="lazy" /> : null;
 }
 
-// Bandeja vacía: la barra en su sitio, en el soporte
+// Bandeja vacía (v0.50): «Todo al día», con la barra en su soporte en línea y el lobo
 function BandejaVacia() {
   return (
     <div class="panel bandeja-vacia">
-      <svg viewBox="0 0 240 120" aria-hidden="true">
-        <rect x="34" y="20" width="8" height="92" rx="3" class="bv-soporte" />
-        <rect x="198" y="20" width="8" height="92" rx="3" class="bv-soporte" />
-        <rect x="26" y="108" width="24" height="6" rx="3" class="bv-soporte" />
-        <rect x="190" y="108" width="24" height="6" rx="3" class="bv-soporte" />
-        <rect x="8" y="44" width="224" height="6" rx="3" class="bv-barra" />
-        <rect x="52" y="22" width="12" height="50" rx="4" class="bv-rojo" /><rect x="66" y="27" width="10" height="40" rx="4" class="bv-azul" /><rect x="78" y="32" width="8" height="30" rx="3" class="bv-amarillo" />
-        <rect x="176" y="22" width="12" height="50" rx="4" class="bv-rojo" /><rect x="164" y="27" width="10" height="40" rx="4" class="bv-azul" /><rect x="154" y="32" width="8" height="30" rx="3" class="bv-amarillo" />
-      </svg>
-      <h2>Todo revisado</h2>
-      <p class="secundario">Tus atletas tienen respuesta. Aquí aparecerán sus sesiones, check-ins, mensajes y vídeos hasta que los revises o les contestes.</p>
+      <Vacio ilustracion="todo" titulo="Todo al día">Tus atletas tienen respuesta: aquí saldrá lo nuevo de sus sesiones, check-ins, mensajes y vídeos.</Vacio>
     </div>
   );
 }

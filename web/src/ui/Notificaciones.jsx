@@ -2,7 +2,7 @@
 // propone activarlas. Lo de la cuenta (qué tipos, a qué hora, «no molestar») se guarda en la base; activarlas
 // es de cada navegador.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Hoja, Cargando } from './comunes.jsx';
+import { useApp, useCarga, Icono, Hoja, Cargando, FilaIos } from './comunes.jsx';
 import { Interruptor } from './Ajustes.jsx';
 import { conNutricion } from '../logica/nivel.js';
 import { TIPOS_ATLETA, TIPOS_COACH, DIAS_CHECKIN, ESTADO_NOTIFICACION, RECORDATORIOS, momentoNotificacion } from '../logica/notificaciones.js';
@@ -33,7 +33,8 @@ function resumenTipos(p, coach, atleta = null, equipo = false) {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-export function SeccionNotificaciones({ coach = false }) {
+// fila (v0.50): en el perfil, una fila de la lista agrupada «Este móvil» en lugar de su propia sección
+export function SeccionNotificaciones({ coach = false, fila = false }) {
   const { api, modo, atleta } = useApp();
   const [abierta, setAbierta] = useState(false);
   const [aqui, setAqui] = useState(null);
@@ -45,6 +46,16 @@ export function SeccionNotificaciones({ coach = false }) {
   useEffect(() => { if (estado === 'ok') suscripcionActual().then((s) => setAqui(!!s)); }, [abierta]);
   const disp = coach ? 'dispositivo' : 'móvil';
   const titulo = estado === 'ok' ? (aqui ? `Activadas en este ${disp}` : `Desactivadas en este ${disp}`) : 'Qué te llega y cuándo';
+  const hoja = abierta && <HojaNotificaciones coach={coach} equipo={equipo} alCerrar={() => setAbierta(false)} alCambiar={setLocal} />;
+  if (fila) {
+    const resumen = resumenTipos(local || prefs.datos, coach, atleta, equipo);
+    return (
+      <>
+        <FilaIos icono="campana" titulo="Notificaciones" detalle={<>{titulo}<span class="sr">. </span><br /><span class="resumen-noti">{resumen}</span></>}
+          valor={estado === 'ok' && aqui === false ? 'Activar' : null} alTocar={() => setAbierta(true)} etiqueta={`Notificaciones: ${titulo}. ${resumen}`} clase="fila-notificaciones" dentro={hoja} />
+      </>
+    );
+  }
   return (
     <section class="seccion">
       <h2>Notificaciones</h2>
@@ -56,7 +67,7 @@ export function SeccionNotificaciones({ coach = false }) {
           </li>
         </ul>
       </div>
-      {abierta && <HojaNotificaciones coach={coach} equipo={equipo} alCerrar={() => setAbierta(false)} alCambiar={setLocal} />}
+      {hoja}
     </section>
   );
 }

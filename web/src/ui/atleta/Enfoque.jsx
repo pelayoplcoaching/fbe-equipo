@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Icono, Disco, useApp } from '../comunes.jsx';
+import { Icono, Disco, useApp, Capa } from '../comunes.jsx';
 import { Placas } from '../Herramientas.jsx';
 import { pauta, num, mmss, textoSerie, incrementoCarga, trasSerie, duracionEstimada, NOMBRE_PRIORIDAD, textoObjetivo } from '../../logica/calculos.js';
 import { fmtCorta } from '../../logica/fechas.js';
@@ -12,7 +12,9 @@ const RPE_ENFOQUE = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 
 // Modo enfoque: un ejercicio a pantalla completa, con cifras grandes y botones de +/−,
 // pensado para usarlo entre series con el móvil en la mano (o en el banco).
-export function Enfoque({
+// v0.50: en su capa (en <body>), como las hojas
+export function Enfoque(props) { return <Capa><EnfoquePantalla {...props} /></Capa>; }
+function EnfoquePantalla({
   ejercicios, hechas, records, etiquetas, actualDe, ultimasDe, foco, progresionAuto, notas, guardarNota,
   guardar, quitar, descanso, setDescanso, seId, setSeId, inicio, alSalir, alTerminar,
 }) {

@@ -1520,5 +1520,140 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(valores.length === 3 && valores[0] === CELDA_UNA.claro && valores[1] === CELDA_UNA.oscuro && valores[2] === CELDA_UNA.oscuro, `estilos.css usa esas mismas mezclas (${valores.join(', ')} %)`);
   check(PATRONES.serie > 0 && PATRONES.serie <= 20 && PATRONES.record.reduce((t, x) => t + x, 0) < 300 && PATRONES.checkin.length === 3, 'las vibraciones son cortas (un toque al marcar, menos de 300 ms en total al batir un récord)');
 }
+
+// ---------- v0.50: piezas visuales ----------
+{
+  const D = await import('../web/src/logica/diseno.js');
+  const { contraste, SUPERFICIES } = await import('../web/src/logica/acentos.js');
+  const fs = await import('node:fs');
+  console.log('\nv0.50: Hoy según el día');
+  const bloque = { id: 'b', numero: 2, nombre: 'Fuerza' };
+  const semana = { id: 'w', numero: 3, fecha_inicio: '2026-10-26' }; // lunes
+  const ses = (id, o, extra = {}) => ({ id, nombre: id, orden: o, completada: false, ...extra });
+  check(D.estadoHoy({ bloque: null, semana: null, sesiones: [], hoy: '2026-10-28' }).tipo === 'sin_semana' && D.estadoHoy({ bloque, semana: null }).tipo === 'sin_semana', 'sin bloque o sin semana publicada: espera a tu coach');
+  const hoyToca = D.estadoHoy({ bloque, semana, hoy: '2026-10-28', sesiones: [ses('A', 1, { completada: true, fecha_realizada: '2026-10-26' }), ses('B', 2, { dia_previsto: '2026-10-28' }), ses('C', 3, { dia_previsto: '2026-10-30' })] });
+  check(hoyToca.tipo === 'entreno' && hoyToca.siguiente.id === 'B' && hoyToca.hechas === 1 && hoyToca.total === 3, 'con una sesión prevista para hoy: entreno (la de hoy)');
+  const desc = D.estadoHoy({ bloque, semana, hoy: '2026-10-29', sesiones: [ses('A', 1, { completada: true, fecha_realizada: '2026-10-28' }), ses('B', 2, { dia_previsto: '2026-10-30' })] });
+  check(desc.tipo === 'descanso' && desc.proxima.sesion.id === 'B' && desc.proxima.dia === '2026-10-30', 'con plan y nada hoy: descanso, con lo siguiente y su día');
+  const hecha = D.estadoHoy({ bloque, semana, hoy: '2026-10-28', sesiones: [ses('A', 1, { completada: true, fecha_realizada: '2026-10-28' }), ses('B', 2, { dia_previsto: '2026-10-30' }), ses('C', 3)] });
+  check(hecha.tipo === 'hecha' && hecha.hechaHoy.id === 'A' && hecha.proxima.sesion.id === 'B', 'hecha hoy y nada más previsto hoy: la celebración y lo siguiente');
+  const sinPlan = D.estadoHoy({ bloque, semana, hoy: '2026-10-28', sesiones: [ses('A', 1, { completada: true, fecha_realizada: '2026-10-28' }), ses('B', 2)] });
+  check(sinPlan.tipo === 'hecha' && sinPlan.proxima.sesion.id === 'B' && sinPlan.proxima.dia === null, 'sin plan, lo siguiente es la primera pendiente (cuando quiera)');
+  const doble = D.estadoHoy({ bloque, semana, hoy: '2026-10-28', sesiones: [ses('A', 1, { completada: true, fecha_realizada: '2026-10-28' }), ses('B', 2, { dia_previsto: '2026-10-28' })] });
+  check(doble.tipo === 'entreno' && doble.siguiente.id === 'B', 'dos previstas para hoy y una hecha: la segunda sigue tocando');
+  const todas = D.estadoHoy({ bloque, semana, hoy: '2026-10-30', sesiones: [ses('A', 1, { completada: true, fecha_realizada: '2026-10-27' }), ses('B', 2, { completada: true, fecha_realizada: '2026-10-30' })] });
+  check(todas.tipo === 'semana' && todas.hechaHoy.id === 'B' && todas.proxima === null, 'todas hechas: semana completa (aunque la última sea de hoy)');
+  check(D.estadoHoy({ bloque, semana, hoy: '2026-10-28', sesiones: [] }).tipo === 'descanso', 'una semana publicada sin sesiones: descanso, sin nada después');
+  const atr = D.estadoHoy({ bloque, semana, hoy: '2026-10-29', sesiones: [ses('A', 1, { completada: true, fecha_realizada: '2026-10-29' }), ses('B', 2, { dia_previsto: '2026-10-27' }), ses('C', 3, { dia_previsto: '2026-10-31' })] });
+  check(atr.tipo === 'hecha' && atr.proxima.sesion.id === 'B' && atr.proxima.atrasada === true && atr.proxima.dia === '2026-10-27', 'hecha hoy con una sesión atrasada: lo siguiente es la atrasada (con su día), no la que viene');
+  const futura = D.estadoHoy({ bloque, semana: { ...semana, fecha_inicio: '2026-11-02' }, hoy: '2026-10-28', sesiones: [ses('A', 1, { dia_previsto: '2026-11-03' })] });
+  check(futura.tipo === 'entreno' && futura.siguiente.id === 'A', 'una semana que aún no ha empezado no es descanso: enseña la primera');
+  const ideas = new Set(Array.from({ length: 8 }, (_, i) => D.sugerenciaDescanso(`2026-11-0${i + 1}`).id));
+  check(ideas.size === D.SUGERENCIAS_DESCANSO.length && D.sugerenciaDescanso('2026-11-03').id === D.sugerenciaDescanso('2026-11-03').id && D.sugerenciaDescanso('2025-01-01').titulo, 'una idea para el descanso, distinta cada día y la misma todo el día (también antes de 2026)');
+
+  console.log('\nv0.50: pictogramas por patrón de movimiento');
+  const casos = [
+    ['Press banca', 'empuje_h'], ['Press inclinado con mancuernas', 'empuje_h'], ['Fondos en paralelas', 'empuje_h'], ['Flexiones', 'empuje_h'], ['Pec-fly/Pec-deck', 'empuje_h'],
+    ['Press militar con barra', 'empuje_v'], ['Landmine shoulder press', 'empuje_v'],
+    ['Remo con barra', 'tiron_h'], ['Face pull', 'tiron_h'], ['Pájaros desde polea baja', 'tiron_h'], ['Cruce de poleas reverso de pie', 'tiron_h'],
+    ['Dominadas pronas', 'tiron_v'], ['Jalón al pecho neutro', 'tiron_v'], ['Pull over unilateral desde polea alta', 'tiron_v'], ['Remo al mentón', 'tiron_v'],
+    ['Sentadilla barra baja', 'sentadilla'], ['Prensa de piernas', 'sentadilla'], ['Sentadilla goblet', 'sentadilla'],
+    ['Peso muerto rumano con barra RDL', 'bisagra'], ['Hip thrust unilateral con barra', 'bisagra'], ['Buenos días en multipower', 'bisagra'], ['Extensiones en banco inclinado 45º focus glúteo', 'bisagra'],
+    ['Sentadilla búlgara con mancuerna', 'unilateral'], ['Zancadas', 'unilateral'], ['High step up', 'unilateral'],
+    ['Curl de bíceps con mancuernas', 'brazo'], ['Press francés con barra', 'brazo'], ['Elevaciones laterales en máquina', 'brazo'],
+    ['Leg curl tumbado', 'pierna'], ['Curl femoral sentado', 'pierna'], ['Leg extensions', 'pierna'], ['Gemelo en máquina de pie', 'pierna'],
+    ['Plancha', 'core'], ['Press pallof', 'core'], ['Crunch en máquina', 'core'], ['Leg raises en banco declinado', 'core'],
+    ['Remo ergómetro', 'cardio'], ['Carrera continua', 'cardio'], ['Bici estática', 'cardio'], ['Cinta de correr', 'cardio'], ['Caminar en cinta inclinada', 'cardio'],
+    ['Tríceps en polea con cinta', 'brazo'], ['Curl en polea con cinta', 'brazo'], ['Face pull con cinta', 'tiron_h'], ['Jalón con cinta', 'tiron_v'],
+  ];
+  const mal = casos.filter(([n, p]) => D.patronEjercicio(n) !== p).map(([n, p]) => `${n}: ${D.patronEjercicio(n)} (no ${p})`);
+  check(!mal.length, `por el nombre, sin tildes ni mayúsculas: ${casos.length} ejercicios en su patrón${mal.length ? ` (fallan: ${mal.join('; ')})` : ''}`);
+  check(D.patronEjercicio('Curl femoral') === 'pierna' && D.patronEjercicio('Remo ergómetro') === 'cardio' && D.patronEjercicio('Press pallof') === 'core', 'lo más concreto antes: «curl femoral» es de pierna, «remo ergómetro» es cardio y «press pallof», core');
+  check(D.patronEjercicio('Máquina X', ['cuadriceps'], ['aislamiento']) === 'pierna' && D.patronEjercicio('Máquina X', ['deltoides'], ['aislamiento']) === 'brazo'
+    && D.patronEjercicio('Máquina X', ['pectoral']) === 'empuje_h' && D.patronEjercicio('Máquina X', ['espalda', 'biceps']) === 'tiron_h' && D.patronEjercicio('Máquina X', ['gluteo']) === 'bisagra', 'sin pista en el nombre: por el grupo principal y el tipo de la biblioteca');
+  check(D.patronEjercicio('Extensión en polea con cinta', ['triceps']) === 'brazo' && D.patronEjercicio('Algo en cinta', ['pectoral']) === 'empuje_h', '«cinta» como accesorio de polea no es cardio (solo «cinta de correr», «en cinta»…)');
+  check(D.urlSegura('https://www.notion.so/ana') === 'https://www.notion.so/ana' && D.urlSegura('http://notion.so/x') === null && D.urlSegura('javascript:alert(1)') === null
+    && D.urlSegura(' https://a.es/b ') === 'https://a.es/b' && D.urlSegura('') === null && D.urlSegura(null) === null && D.urlSegura('notion.so') === null, 'la página de Notion solo se enlaza si es https');
+  check(D.patronEjercicio('Algo nuevo') === 'otro' && D.patronEjercicio('') === 'otro' && D.patronEjercicio(null, null, null) === 'otro', 'sin nombre que diga nada ni grupos: «otro»');
+  check(D.PATRONES.length === 12 && D.PATRONES.every(([k]) => D.NOMBRE_PATRON[k]), 'doce patrones, cada uno con su nombre');
+  const pictos = fs.readFileSync(new URL('../web/src/ui/Pictograma.jsx', import.meta.url), 'utf8');
+  check(D.PATRONES.every(([k]) => new RegExp(`\\n  ${k}: `).test(pictos)) && /aria-hidden="true"/.test(pictos), 'cada patrón tiene su pictograma, decorativo (aria-hidden)');
+
+  console.log('\nv0.50: las tarjetas de Semana (minutos y músculos)');
+  const pa = (series, descanso, grupos, nombre = 'X', superserie = null) => ({ series, descanso_seg: descanso, superserie, ejercicio: { nombre, grupos_musculares: grupos } });
+  const r1 = D.resumenPautas([pa(3, 120, ['pectoral', 'triceps'], 'Press banca'), pa(3, 90, ['espalda', 'biceps'], 'Remo con barra'), pa(2, null, ['biceps'], 'Curl de bíceps')]);
+  // (3 × (40 + 120) + 3 × (40 + 90) + 2 × (40 + 90)) s = 1130 s ≈ 18,8 min → 20
+  check(r1.minutos === 20 && r1.series === 8 && r1.ejercicios === 3, `minutos de las series y sus descansos (90 s si no lo pone), redondeados a 5 (${r1.minutos})`);
+  check(r1.grupos.join() === 'biceps,espalda,pectoral' && r1.patrones.join() === 'empuje_h,tiron_h,brazo', `los músculos que más trabaja (principal 1, secundarios 0,5) y los patrones en su orden (${r1.grupos.join()})`);
+  const ss = D.resumenPautas([pa(3, 60, ['pectoral'], 'Press banca', 'A'), pa(3, 90, ['espalda'], 'Remo', 'A')]);
+  check(ss.minutos === 10, `en una superserie, el descanso al acabar cada ronda (3 × 80 s + 3 × 90 s = 8,5 min → ${ss.minutos})`);
+  check(D.resumenPautas([]).minutos === 0 && D.resumenPautas(null).grupos.length === 0 && D.resumenPautas([pa(0, 90, ['pectoral'])]).ejercicios === 0, 'sin ejercicios (o con 0 series), nada');
+  check(D.resumenPautas([pa(4, 90, ['cuadriceps', 'gluteo']), pa(3, 90, ['isquiotibiales', 'gluteo']), pa(3, 90, ['gemelo']), pa(3, 90, ['abdominales'])], 2).grupos.join() === 'cuadriceps,gluteo', 'como mucho los n que se piden');
+  check(D.resumenPautas([pa(3, 90, ['pectoral'], 'Press banca'), pa(3, 90, ['pectoral'], 'Press inclinado'), pa(3, 90, ['espalda'], 'Remo'), pa(2, 90, ['biceps'], 'Curl'), pa(2, 90, ['triceps'], 'Press francés'), pa(2, 90, ['abdominales'], 'Plancha')]).patrones.length === 4, 'los pictogramas, sin repetir y como mucho 4');
+
+  console.log('\nv0.50: la evolución de un récord');
+  const hs = [
+    { id: '1', ejercicio_id: 'b', fecha: '2026-09-01', sesion_id: 's1', kg: 60, reps: 5, rpe: 8 },
+    { id: '2', ejercicio_id: 'b', fecha: '2026-09-08', sesion_id: 's2', kg: 62.5, reps: 5, rpe: 8 },
+    { id: '3', ejercicio_id: 'b', fecha: '2026-09-15', sesion_id: 's3', kg: 60, reps: 5, rpe: 8 },
+    { id: '4', ejercicio_id: 'b', fecha: '2026-09-22', sesion_id: 's4', kg: 65, reps: 5, rpe: 8 },
+    { id: '5', ejercicio_id: 'x', fecha: '2026-09-22', sesion_id: 's4', kg: 100, reps: 5, rpe: 8 },
+  ];
+  const h = D.historiaRecords(hs, 'b');
+  check(h.unidad === 'kg' && h.puntos.map((x) => x.x).join() === '2026-09-01,2026-09-08,2026-09-22' && h.puntos[2].y > h.puntos[1].y && h.puntos[1].y > h.puntos[0].y, 'su mejor 1RM estimado en cada día que subió (el primero, su punto de partida; el día que no subió, nada)');
+  check(h.veces.length === 2 && h.veces[0].fecha === '2026-09-22' && h.veces[0].tipo === 'e1rm' && /1RM estimado/.test(h.veces[0].texto), 'cada vez que lo batió, de la más reciente a la más antigua (los mismos récords que la vitrina)');
+  const sinCarga = D.historiaRecords([{ ejercicio_id: 'd', fecha: '2026-09-01', sesion_id: 'a', kg: 0, reps: 8 }, { ejercicio_id: 'd', fecha: '2026-09-05', sesion_id: 'b', kg: 0, reps: 10 }], 'd');
+  check(sinCarga.unidad === 'rep' && sinCarga.puntos.map((x) => x.y).join() === '8,10' && sinCarga.veces.length === 1, 'sin carga, las repeticiones');
+  check(D.historiaRecords([], 'b').puntos.length === 0 && D.historiaRecords(hs, 'nada').veces.length === 0, 'sin series de ese ejercicio, vacía');
+  check(D.esReciente('2026-10-10', '2026-11-01') && !D.esReciente('2026-09-20', '2026-11-01') && !D.esReciente(null) && !D.esReciente('2026-11-05', '2026-11-01'), '«Nuevo»: batido hace menos de 30 días');
+
+  console.log('\nv0.50: la bandeja por atletas');
+  const ana = { id: 'a', nombre: 'Ana López' }, ruben = { id: 'r', nombre: 'Rubén Martín' }, carlos = { id: 'c', nombre: 'Carlos Vera' };
+  const g = D.agruparPorAtleta([
+    { tipo: 'sesiones', clave: '1', atleta: ruben }, { tipo: 'mensajes', clave: '2', atleta: ana }, { tipo: 'videos', clave: '3', atleta: ruben },
+    { tipo: 'comunidad', clave: '4', atleta: null }, { tipo: 'checkins', clave: '5', atleta: carlos }, { tipo: 'sesiones', clave: '6', atleta: ruben }, { tipo: 'tareas', clave: '7', atleta: ana },
+  ]);
+  check(g.map((x) => x.id).join() === 'r,a,c,equipo' && g[0].n === 3 && g[0].items.map((x) => x.clave).join() === '1,3,6', 'cada atleta con lo suyo (en su orden), primero quien más tiene; a igualdad, por nombre; lo del equipo, al final');
+  check(D.textoTipos(g[0].tipos) === '2 sesiones, 1 vídeo' && D.textoTipos({ checkins: 1 }) === '1 check-in' && D.textoTipos({}) === '', `y de qué («${D.textoTipos(g[0].tipos)}»)`);
+  check(D.agruparPorAtleta([]).length === 0 && D.agruparPorAtleta(null).length === 0, 'bandeja vacía, sin grupos');
+  check(D.esDeslizar(130, 10, 360) && !D.esDeslizar(80, 5, 360) && !D.esDeslizar(130, 120, 360) && !D.esDeslizar(-130, 0, 360) && D.esDeslizar(80, 5, 200), 'deslizar cuenta con más de un 35 % del ancho (o 96 px), claramente en horizontal y a la derecha');
+  check(D.duracionCorta(8) === '0:08' && D.duracionCorta(65) === '1:05' && D.duracionCorta(null) === '0:00', 'la duración de un vídeo: «0:08», «1:05»');
+
+  console.log('\nv0.50: un día de nutrición');
+  const obj = { kcal: 2000, proteina: 140, carbos: 220, grasa: 60 };
+  const m0 = D.macrosDia(null, obj);
+  check(m0.kcal.estado === 'sin_dato' && m0.kcal.quedan === 2000 && m0.macros.length === 3 && m0.macros.every((x) => x.valor === null && x.frac === 0), 'sin apuntar: todo por comer, los tres anillos vacíos');
+  const m1 = D.macrosDia({ kcal: 1500, proteina_g: 130, carbos_g: '150', grasa_g: 40 }, obj);
+  check(m1.kcal.quedan === 500 && m1.kcal.estado === 'falta' && m1.macros[0].estado === 'cumple' && m1.macros[1].valor === 150 && Math.abs(m1.macros[2].frac - 2 / 3) < 1e-9, 'lo comido, lo que queda y cada macro frente a su objetivo');
+  const m2 = D.macrosDia({ kcal: 2400 }, obj);
+  check(m2.kcal.quedan === -400 && m2.kcal.estado === 'pasado' && D.macrosDia({ kcal: 1950 }, obj).kcal.estado === 'cumple', 'pasarse se dice (y a ±10 %, en objetivo)');
+  check(D.macrosDia({ kcal: 5000 }, obj).kcal.frac === 1.5 && D.macrosDia(null, { kcal: 1800, proteina: 120, carbos: null, grasa: null }).macros.map((x) => x.id).join() === 'proteina', 'el anillo no pasa de 1,5 vueltas; con solo kcal y proteína, un anillo');
+  check(D.macrosDia({ kcal: 100 }, null) === null && D.macrosDia({ kcal: 100 }, { kcal: 0 }) === null, 'sin objetivo de kcal, nada');
+  for (const [tema, sup] of [['claro', SUPERFICIES.claro], ['oscuro', SUPERFICIES.oscuro], ['oled', SUPERFICIES.oled]]) {
+    const cols = D.COLORES_MACRO[tema === 'claro' ? 'claro' : 'oscuro'];
+    const peor = Math.min(...Object.values(cols).flatMap((c) => Object.values(sup).map((f) => contraste(c, f))));
+    check(peor >= 3, `los macros en ${tema}: cada color, al menos 3:1 sobre todas sus superficies (el peor, ${peor.toFixed(2)}:1); entre sí, distinto tono y con su nombre`);
+  }
+  const cssM = fs.readFileSync(new URL('../web/src/estilos.css', import.meta.url), 'utf8');
+  const decl = [...cssM.matchAll(/--macro-proteina: (#[0-9A-F]{6}); --macro-carbos: (#[0-9A-F]{6}); --macro-grasa: (#[0-9A-F]{6})/g)].map((x) => x.slice(1).join());
+  check(decl.length === 3 && decl[0] === Object.values(D.COLORES_MACRO.claro).join() && decl[1] === Object.values(D.COLORES_MACRO.oscuro).join() && decl[2] === decl[1], 'estilos.css usa esos mismos colores (claro y los dos oscuros)');
+
+  console.log('\nv0.50: perfil, tamaño de la letra y lo que se queda en el móvil');
+  check(D.semanasCompletas([{ fecha_inicio: '2026-10-05', total: 3, hechas: 3 }, { fecha_inicio: '2026-10-12', total: 3, hechas: 2 }, { fecha_inicio: '2026-10-19', total: 2, hechas: 2 }, { fecha_inicio: '2026-10-19', total: 1, hechas: 1 }, { fecha_inicio: '2026-10-26', total: 3, hechas: 3 }, { fecha_inicio: '2026-11-02', total: 0, hechas: 0 }], '2026-10-28') === 3,
+    'semanas completas en total (no la racha): las del mismo lunes se suman y la de esta semana cuenta si ya está completa');
+  check(D.semanasCompletas([], '2026-10-28') === 0 && D.semanasCompletas([{ fecha_inicio: '2026-11-02', total: 2, hechas: 2 }], '2026-10-28') === 0, 'sin semanas, o solo futuras, ninguna');
+  const { normalizarAjustes, AJUSTES_DEFECTO, TAMANOS_LETRA } = await import('../web/src/ui/ajustes.js');
+  check(AJUSTES_DEFECTO.letra === 'normal' && TAMANOS_LETRA.map(([k, , pct]) => `${k}:${pct}`).join() === 'normal:100,grande:112.5,muy-grande:125', 'tres tamaños de letra (100 %, 112,5 % y 125 %), el normal de serie');
+  check(normalizarAjustes({ letra: 'grande' }).letra === 'grande' && normalizarAjustes({ letra: 'enorme' }).letra === 'normal' && normalizarAjustes({ letra: '"><b>' }).letra === 'normal' && normalizarAjustes({ letra: 3 }).letra === 'normal' && normalizarAjustes({}).letra === 'normal', 'un tamaño que no es de los tres vuelve al normal');
+  const reglasPx = [...cssM.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([x, sel, b]) => [x, sel, b.replace(/font-size: min\([\d.]+rem, [\d.]+px\)/g, '')]).filter(([, , b]) => /font(-size)?:[^;]*\d px|font-size:[^;]*\d+(\.\d+)?px|font:\s*\d+\s+\d+(\.\d+)?px/.test(b)).map(([, sel]) => sel.trim());
+  check(reglasPx.length > 0 && reglasPx.every((sel) => /text|anillo-num|valor-barra/.test(sel)), `el texto va en rem: solo los textos de dentro de las gráficas (SVG) siguen en px (${reglasPx.length} reglas; la barra de abajo, en rem con un tope)`);
+  check(/:root\[data-letra="grande"\] \{ font-size: 112\.5%; \}/.test(cssM) && /:root\[data-letra="muy-grande"\] \{ font-size: 125%; \}/.test(cssM), 'el tamaño elegido cambia la raíz');
+  const legal = await import('../web/src/legal.js');
+  const fila = legal.PRIVACIDAD ? legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil') : null;
+  const textoLegal = fs.readFileSync(new URL('../web/src/legal.js', import.meta.url), 'utf8');
+  check(/el tamaño de la letra/.test(fila ? fila[1] : textoLegal) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice también el tamaño de la letra (sin cambiar la versión de la política)');
+  const ilus = fs.readFileSync(new URL('../web/src/ui/Ilustraciones.jsx', import.meta.url), 'utf8');
+  check(['mensajes', 'diario', 'records', 'checkins', 'tareas', 'todo', 'filtro', 'descanso', 'hecha', 'semana', 'espera'].every((k) => new RegExp(`\\n  ${k}: \\(\\) =>`).test(ilus)) && !/#[0-9a-fA-F]{3,6}/.test(ilus), 'las ilustraciones: una por estado vacío y por día de Hoy, sin colores escritos (los pone el tema)');
+}
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

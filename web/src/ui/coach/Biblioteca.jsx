@@ -1,3 +1,4 @@
+import { PictoEjercicio } from '../Pictograma.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useUnaVez, Pestanas, Siluetas, useApp, useCarga, Icono, Cargando, Hoja, Vacio, usePreferencia } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
@@ -55,7 +56,8 @@ function Ejercicios({ peticion = null }) {
         <div class="panel"><ul class="lista">
           {vista.map((e) => (
             <li key={e.id}>
-              <button class="dia" style="background:none;border-radius:0;grid-template-columns:1fr auto" onClick={() => setEditar(e)}>
+              <button class="dia fila-biblioteca" onClick={() => setEditar(e)}>
+                <PictoEjercicio ejercicio={e} />
                 <span>
                   <span class="nombre" style={e.activo === false ? 'color:var(--tinta-3)' : ''}>{e.nombre}{e.activo === false ? ' (oculto)' : ''}</span><br />
                   <span class="detalle">{(e.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(', ') || 'Sin grupo'}{(e.alternativas || []).length ? `; ${e.alternativas.length} alternativa${e.alternativas.length > 1 ? 's' : ''}` : ''}</span>
@@ -64,7 +66,7 @@ function Ejercicios({ peticion = null }) {
               </button>
             </li>
           ))}
-          {!vista.length && <li class="panel-pad secundario">Ningún ejercicio coincide.</li>}
+          {!vista.length && <li><Vacio ilustracion="filtro" titulo="Ningún ejercicio coincide" accion={<button class="btn btn-peq" onClick={() => { setQ(''); setGrupo(null); }}>Ver todos</button>}>Prueba con otro nombre o con otro grupo muscular.</Vacio></li>}
         </ul></div>
       )}
       {editar && <EditarEjercicio ejercicio={editar} todos={todos} porId={porId} alCerrar={(cambio) => { setEditar(null); if (cambio) lista.recargar(true); }} />}

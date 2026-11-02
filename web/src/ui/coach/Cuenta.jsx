@@ -164,7 +164,7 @@ function AltaFactor({ alCerrar, demo }) {
           <p class="secundario">1. En tu app de códigos, añade una cuenta escaneando este código QR:</p>
           <img class="qr" src={factor.qr} alt="Código QR para la app de verificación" />
           <p class="peq secundario">¿No puedes escanearlo? Escribe esta clave a mano:</p>
-          <div class="codigo-grande num" style="font-size:17px">{secreto}</div>
+          <div class="codigo-grande num" style="font-size:1.0625rem">{secreto}</div>
           <button type="button" class="btn-texto" onClick={async () => aviso((await copiar(factor.secreto)) ? 'Clave copiada' : 'Selecciónala y cópiala')}><Icono n="copiar" /> Copiar la clave</button>
           <p class="secundario">2. Escribe el código de 6 cifras que muestra la app:</p>
           {error && <div class="error" role="alert">{error}</div>}

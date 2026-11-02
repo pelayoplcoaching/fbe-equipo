@@ -60,9 +60,10 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
         </div>
       )}
       {datos.cargando && !datos.datos ? <Siluetas forma="galeria" n={6} texto="Cargando el diario" /> : !lista.length ? (
-        <div class="panel"><Vacio icono="video" titulo={esCoach ? 'Su diario está vacío' : 'Tu diario está vacío'}>
+        <div class="panel"><Vacio ilustracion="diario" titulo={esCoach ? 'Su diario está vacío' : 'Tu diario está vacío'}
+          accion={!esCoach ? <button class="btn btn-peq btn-primario" onClick={() => setSubir(true)}><Icono n="video" /> Subir un vídeo</button> : null}>
           {esCoach ? 'Cuando suba un vídeo (desde una sesión, el chat o su diario) o una foto de progreso, aparecerá aquí.'
-            : 'Graba una serie y súbela: se queda aquí, privada, y tu coach te la corrige encima. También puedes mandarla desde una sesión o desde el chat.'}
+            : 'Graba una serie y súbela: se queda aquí, privada, y tu coach te la corrige encima.'}
         </Vacio></div>
       ) : !visibles.length ? <p class="peq secundario">Nada con ese filtro.</p> : meses.map((m) => (
         <div class="diario-mes" key={m.clave}>

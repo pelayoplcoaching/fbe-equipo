@@ -164,6 +164,11 @@ const previas = await api.marcasPrevias(ana.id, sesS2.id);
 check(previas[press.id]?.e1rm?.valor === 81.3 && !previas[fondos.id], 'marcas previas a la sesión de hoy: sin contar lo que lleva hecho');
 const vitAna = await api.vitrina(ana.id);
 check(vitAna.ejercicios.some((x) => x.nombre === 'Press banca' && x.e1rm.valor === 81.3), 'vitrina de récords con su mejor press');
+// v0.50: las tarjetas de Semana (lo que trae cada sesión) y las semanas completas de la cabecera del perfil
+const pautasS2 = await api.pautasSemana([sesS2.id, '00000000-0000-0000-0000-000000000000']);
+check(pautasS2[sesS2.id].ejercicios === detS2.ejercicios.length && pautasS2[sesS2.id].minutos > 0 && pautasS2[sesS2.id].grupos.includes('pectoral') && pautasS2[sesS2.id].patrones.includes('empuje_h')
+  && pautasS2['00000000-0000-0000-0000-000000000000'].ejercicios === 0 && Object.keys(await api.pautasSemana([])).length === 0, 'Semana: cada sesión con sus ejercicios, minutos, músculos y patrones (con permisos: lo suyo)');
+check(Number.isInteger((await api.constancia(ana.id)).semanasCompletas), 'su constancia trae también las semanas completas en total');
 const csvAna = await api.seriesCsv(ana.id);
 check(csvAna.includes(';Press banca;') && csvAna.includes('Press con mancuernas'), 'exporta sus series a CSV');
 

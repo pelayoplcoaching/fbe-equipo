@@ -9,7 +9,7 @@ import { Bienvenida, PrimerosPasos } from './Bienvenida.jsx';
 import { AvisoLogros } from '../Logros.jsx';
 import { AvisosCoach } from '../Avisos.jsx';
 import { InformeBloque, TarjetaBloque } from '../InformeBloque.jsx';
-import { pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
+import { NOMBRE_GRUPO, pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
 import { diaDeCheckin, fmtConDia, hoyISO, desdeISO, rangoSemana, diasEntre, sumarDias } from '../../logica/fechas.js';
 import { queToca, diaPrevistoValido, cuandoDia } from '../../logica/plan.js';
 import { PlanSemana } from './Plan.jsx';
@@ -28,6 +28,9 @@ import { HojaTarea } from '../Tareas.jsx';
 import { TarjetaMes } from './TuMes.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { TextoConEnlaces } from '../Enlaces.jsx';
+import { Ilustracion } from '../Ilustraciones.jsx';
+import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
+import { estadoHoy, sugerenciaDescanso, urlSegura } from '../../logica/diseno.js';
 
 // Minutos aproximados: cada serie ~40 s de trabajo más su descanso
 export { duracionEstimada };
@@ -292,7 +295,7 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
           <Icono n="checkin" /><div><strong>Check-in semanal pendiente.</strong> Un minuto: peso, sueño, energía y cómo vas.</div>
         </button>
       )}
-      {atleta.notion_url && <a class="btn btn-ancho plano" href={atleta.notion_url} target="_blank" rel="noopener">Abrir mi página de Notion</a>}
+      {urlSegura(atleta.notion_url) && <a class="btn btn-ancho plano" href={urlSegura(atleta.notion_url)} target="_blank" rel="noopener">Abrir mi página de Notion</a>}
     </>
   );
 }
@@ -309,16 +312,13 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const toca = semana ? queToca(sesiones, semana, hoy) : { siguiente: null };
   const siguiente = toca.siguiente;
   const det = useCarga(() => (siguiente ? api.sesion(siguiente.id, atleta.id) : Promise.resolve(null)), [siguiente?.id]);
-  if (!p.bloque || !p.actual) {
+  // v0.50: la tarjeta de arriba según cómo va el día (entreno, descanso, hecha, semana completa o sin semana)
+  const e = estadoHoy({ bloque: p.bloque, semana, sesiones, hoy });
+  if (e.tipo === 'sin_semana') {
     return (
       <>
+        <HeroEspera bloque={p.bloque} notion={urlSegura(atleta.notion_url)} irA={irA} propio={propio} />
         {entre}
-        <div class="panel">
-          <Vacio icono="semana" titulo="Tu programa aún no está publicado">
-            Tu coach lo publicará aquí. Mientras tanto, tu plan sigue en tu página de Notion.
-          </Vacio>
-          {atleta.notion_url && <div class="panel-pad"><a class="btn btn-ancho" href={atleta.notion_url} target="_blank" rel="noopener">Abrir mi página de Notion</a></div>}
-        </div>
         {salud && conNutricion(atleta) && <MenuHoy irA={irA} salud={salud} compacto />}
         {salud && conNutricion(atleta) && <NutricionHoy />}
       </>
@@ -326,7 +326,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   }
   // Con plan: la de hoy, una atrasada o la próxima prevista; sin plan, la primera pendiente
   const enSemana = !!semana.fecha_inicio && semana.fecha_inicio <= hoy && hoy <= sumarDias(semana.fecha_inicio, 6);
-  const descanso = enSemana && toca.descanso;
+  const descanso = e.tipo === 'descanso';
   const previsto = siguiente && diaPrevistoValido(siguiente, semana);
   const hechas = sesiones.filter((s) => s.completada).length;
   const checkinHecho = !!checkinSemana.datos?.checkin;
@@ -337,31 +337,35 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
 
   return (
     <>
-      <section class="hero-dia" aria-label="Tu sesión de hoy">
+      <section class={`hero-dia hero-${e.tipo}`} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
+        {e.tipo !== 'entreno' && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
         <div class="titular">
           <div class="contexto">
             <span>Bloque {p.bloque.numero}: {p.bloque.nombre}</span>
             <span>Semana {semana.numero}</span>
             {semana.foco && <span>Foco: {NOMBRE_FOCO[semana.foco]?.toLowerCase()}</span>}
           </div>
-          {enSemana && toca.hoy && !descanso && <span class="chip toca-hoy"><Icono n="calendario" />Hoy toca</span>}
-          {descanso && <span class="chip toca-hoy descanso"><Icono n="sueno" />Día de descanso</span>}
-          <h2>{descanso ? 'Hoy descansas' : siguiente ? siguiente.nombre : 'Semana completada'}</h2>
-          {!descanso && !toca.hoy && previsto && <p class="peq secundario">{previsto > hoy ? `Prevista para ${cuandoDia(previsto, hoy)}.` : `La tenías prevista ${cuandoDia(previsto, hoy)}.`}</p>}
+          {e.tipo === 'entreno' && enSemana && toca.hoy && <span class="chip toca-hoy"><Icono n="calendario" />Hoy toca</span>}
+          {e.tipo === 'descanso' && <span class="chip toca-hoy descanso"><Icono n="sueno" />Día de descanso</span>}
+          {e.tipo === 'hecha' && <span class="chip toca-hoy hecha"><Icono n="hecho" />Hecha hoy</span>}
+          {e.tipo === 'semana' && <span class="chip toca-hoy hecha"><Icono n="llama" />Semana completa</span>}
+          <h2>{e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? '¡Sesión hecha!' : e.tipo === 'semana' ? '¡Semana completa!' : siguiente ? siguiente.nombre : 'Semana completada'}</h2>
+          {e.tipo === 'entreno' && !toca.hoy && previsto && <p class="peq secundario">{previsto > hoy ? `Prevista para ${cuandoDia(previsto, hoy)}.` : `La tenías prevista ${cuandoDia(previsto, hoy)}.`}</p>}
+          {e.tipo === 'semana' && <p class="peq secundario">Has hecho las {hechas} sesiones de esta semana.</p>}
         </div>
         {semana.nota_coach && (
           <div class="nota-coach"><Icono n="mensaje" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>
         )}
-        {descanso ? (
-          <div class="descanso-hoy">
-            <Icono n="sueno" />
-            <div class="pila-s">
-              <p><strong>Descansar también es entrenar.</strong> Tu próxima sesión es <strong>{toca.proxima.sesion.nombre}</strong>, {cuandoDia(toca.proxima.dia, hoy)}.</p>
-              <span class="hero-acciones">
-                <button class="btn btn-sobre-hero" onClick={() => abrirSesion(toca.proxima.sesion.id)}><Icono n="play" /> Entrenar hoy igualmente</button>
-                <button class="btn btn-sobre-hero" onClick={() => setPlanAbierto(true)}><Icono n="calendario" /> Cambiar el plan</button>
-              </span>
-            </div>
+        {e.tipo === 'descanso' ? (
+          <HeroDescanso proxima={e.proxima} hoy={hoy} abrirSesion={abrirSesion} abrirPlan={enSemana && sesiones.some((s) => !s.completada) ? () => setPlanAbierto(true) : null} />
+        ) : e.tipo === 'hecha' ? (
+          <HeroHecha sesion={e.hechaHoy} proxima={e.proxima} hoy={hoy} abrirSesion={abrirSesion} />
+        ) : e.tipo === 'semana' ? (
+          <div class="pila-s">
+            {salud && !propio && !checkinHecho && <div class="hero-acciones"><button class="btn btn-grande btn-hero" onClick={() => irA('checkin')}><Icono n="checkin" /> Hacer el check-in semanal</button></div>}
+            {checkinHecho && !propio && <p class="peq secundario">Check-in de la semana enviado. Tu coach prepara lo siguiente con lo que has registrado.</p>}
+            {(checkinHecho || !salud || propio) && <div class="hero-acciones"><button class="btn btn-grande btn-hero" onClick={() => irA('progreso')}><Icono n="progreso" /> Ver tu progreso</button></div>}
+            {e.hechaHoy && <div class="hero-acciones"><button class="btn btn-sobre-hero" onClick={() => abrirSesion(e.hechaHoy.id)}><Icono n="hecho" /> Ver la de hoy</button></div>}
           </div>
         ) : siguiente ? (
           <>
@@ -369,7 +373,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
               <div class="hero-meta">
                 {cardioValido(siguiente.cardio) && <span><b>{textoCardio(siguiente.cardio)}</b></span>}
                 {ejercicios.length > 0 && <><span><b>{ejercicios.length}</b> ejercicios</span><span>unos <b>{duracionEstimada(ejercicios)}</b> min</span></>}
-                {empezada && <span><b>{ejercicios.reduce((n, e) => n + e.hechas.length, 0)}</b> series ya hechas</span>}
+                {empezada && <span><b>{ejercicios.reduce((n, x) => n + x.hechas.length, 0)}</b> series ya hechas</span>}
               </div>
             )}
             <div class="hero-acciones">
@@ -378,13 +382,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
               </button>
             </div>
           </>
-        ) : (
-          <div class="pila-s">
-            <p class="peq">Has hecho las {hechas} sesiones de esta semana.</p>
-            {salud && !propio && !checkinHecho && <div class="hero-acciones"><button class="btn btn-grande btn-hero" onClick={() => irA('checkin')}><Icono n="checkin" /> Hacer el check-in semanal</button></div>}
-            {checkinHecho && !propio && <p class="peq secundario">Check-in de la semana enviado. Tu coach prepara lo siguiente con lo que has registrado.</p>}
-          </div>
-        )}
+        ) : null}
         {sesiones.length > 0 && <ResumenSemana hechas={hechas} total={sesiones.length} racha={constancia.datos?.racha ?? null} />}
       </section>
 
@@ -392,7 +390,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {!propio && <TarjetaMes salud={salud} />}
       <BloqueTerminado salud={salud} />
       <SemanaPasada salud={salud} />
-      {!descanso && siguiente && <SiguienteSesion sesion={siguiente} ejercicios={ejercicios} cargando={det.cargando && !det.datos} />}
+      {e.tipo === 'entreno' && siguiente && <SiguienteSesion sesion={siguiente} ejercicios={ejercicios} cargando={det.cargando && !det.datos} />}
 
       <section class="seccion">
         <div class="seccion-cab">
@@ -403,7 +401,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           </span>
         </div>
         <div class="semana-dias">
-          {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} actual={!descanso && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
+          {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} actual={e.tipo === 'entreno' && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
         </div>
       </section>
       {bloqueAbierto && <HojaBloque alCerrar={() => setBloqueAbierto(false)} abrirSesion={(id) => { setBloqueAbierto(false); abrirSesion(id); }} />}
@@ -521,6 +519,75 @@ function HojaPeso({ inicial, alCerrar, alGuardar }) {
   );
 }
 
+// v0.50: el día de descanso: una idea para hoy (moverse un poco, movilidad, dormir, comer) y lo que viene
+function HeroDescanso({ proxima, hoy, abrirSesion, abrirPlan }) {
+  const idea = sugerenciaDescanso(hoy);
+  return (
+    <div class="pila">
+      <div class="hero-sugerencia">
+        <span class="hero-sugerencia-ico" aria-hidden="true"><Icono n={idea.icono} /></span>
+        <span class="pila-xs"><strong>{idea.titulo}</strong><span class="peq">{idea.texto}</span></span>
+      </div>
+      <p class="hero-siguiente peq">
+        {proxima ? <>Lo siguiente: <strong>{proxima.sesion.nombre}</strong>{proxima.dia ? `, ${cuandoDia(proxima.dia, hoy)}` : ''}.</> : 'Esta semana no tienes más sesiones. Descansar también es entrenar.'}
+      </p>
+      <span class="hero-acciones">
+        {abrirPlan && <button class="btn btn-grande btn-hero" onClick={abrirPlan}><Icono n="calendario" /> Ver tu plan de la semana</button>}
+        {proxima && <button class="btn btn-sobre-hero" onClick={() => abrirSesion(proxima.sesion.id)}><Icono n="play" /> Entrenar hoy igualmente</button>}
+      </span>
+    </div>
+  );
+}
+
+// v0.50: la sesión de hoy ya está hecha: sus cifras (solo las sesiones hechas hoy, no el historial entero), «Ver
+// resumen» y lo que viene (o lo que se quedó atrás)
+function HeroHecha({ sesion, proxima, hoy, abrirSesion }) {
+  const { api, atleta } = useApp();
+  const res = useCarga(() => api.sesionesHechas(atleta.id, { desde: hoy }).then((l) => l.find((x) => x.id === sesion.id) || null).catch(() => null), [atleta.id, sesion.id]);
+  const r = res.datos;
+  const cifras = r ? [
+    r.duracion_min ? ['min', r.duracion_min, 'min'] : null,
+    r.series ? ['series', r.series, r.series === 1 ? 'serie' : 'series'] : null,
+    r.tonelaje ? ['t', num(Math.round(r.tonelaje / 100) / 10, 1), 't'] : null,
+  ].filter(Boolean) : [];
+  return (
+    <div class="pila">
+      <p class="hero-hecha-nombre"><strong>{sesion.nombre}</strong></p>
+      {cifras.length > 0 && (
+        <dl class="hero-cifras">
+          {cifras.map(([k, v, u]) => <div key={k}><dt class="sr">{u}</dt><dd><span class="num">{v}</span> <span class="u">{u}</span></dd></div>)}
+        </dl>
+      )}
+      {proxima && (proxima.atrasada
+        ? <p class="hero-siguiente peq">Te queda pendiente: <strong>{proxima.sesion.nombre}</strong>{proxima.dia ? ` (la tenías prevista ${cuandoDia(proxima.dia, hoy)})` : ''}.</p>
+        : <p class="hero-siguiente peq">Lo siguiente: <strong>{proxima.sesion.nombre}</strong>{proxima.dia ? `, ${cuandoDia(proxima.dia, hoy)}` : ', cuando quieras'}.</p>)}
+      <span class="hero-acciones">
+        <button class="btn btn-grande btn-hero" onClick={() => abrirSesion(sesion.id)}><Icono n="hecho" /> Ver resumen</button>
+        {proxima && <button class="btn btn-sobre-hero" onClick={() => abrirSesion(proxima.sesion.id)}><Icono n="play" /> Adelantar {proxima.sesion.nombre}</button>}
+      </span>
+    </div>
+  );
+}
+
+// v0.50: aún no hay semana publicada: tu coach la está preparando
+function HeroEspera({ bloque, notion, irA, propio }) {
+  return (
+    <section class="hero-dia hero-espera" aria-label="Tu semana, en camino">
+      <Ilustracion n="espera" clase="hero-ilu" />
+      <div class="titular">
+        {bloque && <div class="contexto"><span>Bloque {bloque.numero}: {bloque.nombre}</span></div>}
+        <span class="chip toca-hoy descanso"><Icono n="reloj" />En preparación</span>
+        <h2>Tu semana está en camino</h2>
+        <p class="peq secundario">Tu programa aún no está publicado: tu coach lo publicará aquí.{notion ? ' Mientras tanto, tu plan sigue en tu página de Notion.' : ''}</p>
+      </div>
+      <span class="hero-acciones">
+        {notion ? <a class="btn btn-grande btn-hero" href={notion} target="_blank" rel="noopener"><Icono n="enlace" /> Abrir mi página de Notion</a>
+          : !propio && <button class="btn btn-grande btn-hero" onClick={() => irA('mensajes')}><Icono n="mensaje" /> Escribir a tu coach</button>}
+      </span>
+    </section>
+  );
+}
+
 // Anillo de la semana y racha de semanas completas
 function ResumenSemana({ hechas, total, racha }) {
   const quedan = total - hechas;
@@ -539,19 +606,30 @@ function ResumenSemana({ hechas, total, racha }) {
   );
 }
 
-export function DiaSesion({ sesion, semana = null, actual, abrir, mensajes }) {
+// resumen (v0.50, en Semana): los músculos que más trabaja, los minutos estimados y los pictogramas de sus ejercicios
+export function DiaSesion({ sesion, semana = null, actual, abrir, mensajes, resumen = null }) {
   const hecha = sesion.completada;
   const previsto = !hecha && semana ? diaPrevistoValido(sesion, semana) : null;
+  const conResumen = resumen && resumen.ejercicios > 0;
   return (
-    <button class={`dia ${hecha ? 'hecha' : ''} ${actual ? 'actual' : ''}`} onClick={abrir}>
+    <button class={`dia ${hecha ? 'hecha' : ''} ${actual ? 'actual' : ''} ${conResumen ? 'con-resumen' : ''}`} onClick={abrir}>
       <span class="marca-dia">{hecha ? <Icono n="hecho" /> : sesion.orden}</span>
-      <span>
-        <span class="nombre">{sesion.nombre}</span><br />
+      <span class="dia-cuerpo">
+        <span class="nombre">{sesion.nombre}</span>
         <span class="detalle">
           {hecha ? `Hecha el ${fmtConDia(sesion.fecha_realizada)}${cardioHechoValido(sesion.cardio_hecho) ? `, ${textoCardioHecho(sesion.cardio_hecho)}` : ''}${sesion.rpe_sesion ? `, esfuerzo ${sesion.rpe_sesion}/10` : ''}`
             : previsto ? `${actual ? 'Siguiente, prevista' : 'Prevista'} ${cuandoDia(previsto)}`
             : actual ? 'Siguiente' : sesion.tipo && sesion.tipo !== 'fuerza' ? NOMBRE_TIPO_SESION[sesion.tipo] : NOMBRE_INTENCION[sesion.intencion] || 'Pendiente'}
         </span>
+        {conResumen && (
+          <span class="dia-resumen">
+            <span class="dia-pictos">{resumen.patrones.map((pt) => <Pictograma key={pt} patron={pt} />)}</span>
+            <span class="dia-chips">
+              {resumen.grupos.map((g) => <span key={g} class="chip-musculo">{NOMBRE_GRUPO[g] || g}</span>)}
+              <span class="chip-min num"><Icono n="reloj" />{resumen.minutos ? `unos ${resumen.minutos} min` : `${resumen.ejercicios} ejercicios`}</span>
+            </span>
+          </span>
+        )}
       </span>
       {mensajes ? <span class="chip morado"><Icono n="mensaje" />Nuevo</span> : <Icono n="derecha" width="20" height="20" class="terciario" />}
     </button>
@@ -574,7 +652,7 @@ function SiguienteSesion({ sesion, ejercicios, cargando }) {
                 const pa = pauta(e);
                 return (
                   <li class="ej-fila" key={e.id}>
-                    <Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} />
+                    <span class="ej-marca"><PictoEjercicio ejercicio={e.ejercicio} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
                     <div>
                       <div class="nombre">{etiquetas[e.id] && <span class="ss-etq">{etiquetas[e.id]}</span>}{e.ejercicio.nombre}</div>
                       <div class="pauta"><span class="num">{pa.series}</span>{pa.esfuerzo && <span>{pa.esfuerzo}</span>}{pa.carga && <span class="num">{pa.carga}</span>}{e.variante && <span>{e.variante}</span>}</div>

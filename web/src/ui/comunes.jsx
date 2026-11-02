@@ -1,10 +1,11 @@
-import { createContext } from 'preact';
+import { createContext, Component, render as pintarEn, h } from 'preact';
 import { reportarError } from '../registro-errores.js';
 import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { escalaGrafica, puntoMasCercano, indicesRecord } from '../logica/visual.js';
 import { num, leerNumero } from '../logica/calculos.js';
 import { LOBO } from './marca-lobo.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
+import { Ilustracion } from './Ilustraciones.jsx';
 import { fmtCorta, aISO, diasEntre, hoyISO } from '../logica/fechas.js';
 
 export const Ctx = createContext(null);
@@ -90,6 +91,12 @@ export const P = {
   bandera: 'M5.5 21V4M5.5 4.5h11.5l-2.2 4 2.2 4H5.5',
   ojo: 'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 14.8a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6zM4 20 20 4',
   carrito:'M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.2M9.5 20h.01M17 20h.01',
+  // v0.50: los ajustes del perfil
+  tema: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 3v18M12 7.5h3.6M12 12h5M12 16.5h3.6',
+  letra: 'M3 19 8 5h1l5 14M4.8 14.5h7.4M15 19l2.6-7h.8L21 19M15.9 16.6h4.2',
+  paleta: 'M12 3.5a8.5 8.5 0 1 0 0 17c1.1 0 1.6-.7 1.6-1.5 0-1.2-1.1-1.5-1.1-2.6 0-.9.7-1.4 1.6-1.4h2.4A4.5 4.5 0 0 0 21 10.5c0-3.9-4-7-9-7zM7.5 12h.01M9.5 8h.01M14.5 8h.01',
+  vibrar: 'M9 4h6a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM4.5 9v6M19.5 9v6M2 11v2M22 11v2',
+  privacidad: 'M12 3l7 2.8v5.4c0 4.6-3 8.3-7 9.8-4-1.5-7-5.2-7-9.8V5.8zM12 10.5a1.8 1.8 0 1 0 0-.1M12 12.5v3',
 };
 
 // Anillo de la semana: un segmento por sesión programada; los hechos, en morado
@@ -245,10 +252,11 @@ export function Siluetas({ forma = 'lista', n = 5, texto = 'Cargando' }) {
   );
 }
 
-export function Vacio({ icono = 'semana', titulo, children, accion }) {
+// v0.50: con ilustracion (una de Ilustraciones.jsx), el dibujo de línea en lugar del icono; una frase y lo siguiente
+export function Vacio({ icono = 'semana', ilustracion = null, titulo, children, accion }) {
   return (
-    <div class="vacio">
-      <Icono n={icono} />
+    <div class={`vacio${ilustracion ? ' con-ilustracion' : ''}`}>
+      {ilustracion ? <Ilustracion n={ilustracion} /> : <Icono n={icono} />}
       <p class="vacio-titulo">{titulo}</p>
       {children && <p>{children}</p>}
       {accion}
@@ -358,6 +366,28 @@ export function useAtraparFoco(ref) {
   }, []);
 }
 
+// v0.50: las capas que tapan la pantalla (hojas y pantallas completas) se pintan en <body>, fuera de la página: así un
+// antepasado con transform (una tarjeta que se desliza, una transición) nunca las encierra en su caja, y los gestos
+// de la página no reciben lo que pasa dentro de ellas.
+// (sin preact/compat: importarlo cambia el onChange de todos los campos por onInput. Es lo mismo que hace su portal:
+// pintar en un nodo propio de <body> con el contexto de la app, para que useApp siga funcionando dentro)
+class ConContexto extends Component {
+  getChildContext() { return this.props.contexto; }
+  render({ children }) { return children; }
+}
+export class Capa extends Component {
+  componentDidMount() {
+    this.nodo = document.createElement('div');
+    this.nodo.className = 'capa';
+    document.body.appendChild(this.nodo);
+    this.pintar();
+  }
+  componentDidUpdate() { this.pintar(); }
+  componentWillUnmount() { pintarEn(null, this.nodo); this.nodo.remove(); }
+  pintar() { pintarEn(h(ConContexto, { contexto: this.context }, this.props.children), this.nodo); }
+  render() { return null; }
+}
+
 export function Hoja({ titulo, alCerrar: alCerrarProp, children, ancho }) {
   const ref = useRef(null);
   useAtraparFoco(ref);
@@ -428,6 +458,7 @@ export function Hoja({ titulo, alCerrar: alCerrarProp, children, ancho }) {
     }
   };
   return (
+    <Capa>
     <div class="velo" onClick={(e) => { if (e.target === e.currentTarget) alCerrar(); }}>
       <div class="hoja-dialogo" role="dialog" aria-modal="true" aria-label={titulo} ref={ref} style={ancho ? { width: `min(${ancho}px, 100%)` } : undefined}>
         <div class="hoja-cab" onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar}>
@@ -440,6 +471,7 @@ export function Hoja({ titulo, alCerrar: alCerrarProp, children, ancho }) {
         {children}
       </div>
     </div>
+    </Capa>
   );
 }
 
@@ -772,6 +804,58 @@ export function Pista({ id, children, icono = 'pregunta' }) {
       <p>{children}</p>
       <button type="button" class="btn btn-peq" onClick={() => setVista(true)}>Entendido</button>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- listas agrupadas (v0.50, como los Ajustes de iOS)
+// Una sección con su título pequeño y una tarjeta con filas: cada fila con su icono en un cuadrito, el texto y, a la
+// derecha, su control (un botón, un interruptor) o, si lleva a otra parte, el valor y el chevrón.
+export function GrupoIos({ titulo, pie = null, children, clase = '', id }) {
+  return (
+    <section class={`seccion grupo-ios ${clase}`} aria-labelledby={id}>
+      <h2 id={id}>{titulo}</h2>
+      <div class="panel"><ul class="lista">{children}</ul></div>
+      {pie && <p class="mini terciario grupo-ios-pie">{pie}</p>}
+    </section>
+  );
+}
+// tono: '' (el acento), 'ok', 'aviso' o 'alerta'. Con alTocar o href, la fila entera es el botón (o el enlace) y
+// lleva el chevrón; si no, children va a la derecha. bloque: el control debajo, a todo el ancho (unos segmentos).
+export function IcoIos({ n, tono = '' }) {
+  return <span class={`ios-ico${tono ? ` ${tono}` : ''}`} aria-hidden="true"><Icono n={n} /></span>;
+}
+// dentro: lo que va en la fila pero no se ve en ella (la hoja que abre), para que la lista solo tenga filas
+export function FilaIos({ icono, tono = '', titulo, detalle = null, valor = null, alTocar = null, href = null, etiqueta, children, bloque = null, clase = '', dentro = null }) {
+  const texto = (
+    <span class="fila-ios-texto">
+      <span class="fila-ios-titulo">{titulo}</span>
+      {detalle && <span class="peq terciario">{detalle}</span>}
+    </span>
+  );
+  if (alTocar || href) {
+    const cuerpo = (
+      <>
+        {icono && <IcoIos n={icono} tono={tono} />}
+        {texto}
+        {valor != null && <span class="fila-ios-valor peq">{valor}</span>}
+        <Icono n={href ? 'enlace' : 'derecha'} class="fila-ios-chevron" />
+      </>
+    );
+    return (
+      <li class={`fila-ios-li ${clase}`}>
+        {href ? <a class={`fila-ios fila-ios-nav${tono === 'alerta' ? ' peligro' : ''}`} href={href} target="_blank" rel="noopener" aria-label={etiqueta}>{cuerpo}</a>
+          : <button type="button" class={`fila-ios fila-ios-nav${tono === 'alerta' ? ' peligro' : ''}`} onClick={alTocar} aria-label={etiqueta}>{cuerpo}</button>}
+        {dentro}
+      </li>
+    );
+  }
+  return (
+    <li class={`fila-ios${bloque ? ' fila-ios-bloque' : ''} ${clase}`}>
+      {icono && <IcoIos n={icono} tono={tono} />}
+      {texto}
+      {children && <span class="fila-ios-fin">{children}</span>}
+      {bloque && <div class="fila-ios-control">{bloque}</div>}
+    </li>
   );
 }
 

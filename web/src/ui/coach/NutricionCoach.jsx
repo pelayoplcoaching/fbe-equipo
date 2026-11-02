@@ -2,7 +2,7 @@
 // adaptativo (como MacroFactor), el ajuste para el ritmo que buscas con «Revisar y aplicar», sus semanas y sus días.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Segmentos, Paso, Vacio, Siluetas, ErrorCaja, Grafica } from '../comunes.jsx';
-import { TarjetaPlan, GraficaIngesta, textoPlan, textoRitmoCorto, NOMBRE_ESTADO_DIA } from '../NutricionComun.jsx';
+import { TarjetaPlan, GraficaIngesta, textoPlan, textoRitmoCorto, NOMBRE_ESTADO_DIA, MacrosDia } from '../NutricionComun.jsx';
 import { MODOS_NUTRICION, FASES_NUTRICION, NIVELES_ACTIVIDAD, fmtKcal, kcalDeMacros, planInicial, proteinaPorKg, textoRitmo } from '../../logica/nutricion.js';
 import { hoyISO, lunesDe, sumarDias, fmtConDia } from '../../logica/fechas.js';
 import { num, signo } from '../../logica/calculos.js';
@@ -51,6 +51,14 @@ export function NutricionCoach({ atleta }) {
       ) : (
         <TarjetaPlan plan={plan} siguiente={r.siguiente} diasEntreno={r.diasEntreno}
           acciones={<button class="btn btn-peq" onClick={() => abrir()}><Icono n="editar" /> Cambiar</button>} />
+      )}
+
+      {/* v0.50: su día de hoy, como lo ve él: la barra de kcal y los anillos de macros */}
+      {plan && conCifras && r.objetivoHoy && (
+        <section class="seccion">
+          <div class="seccion-cab"><h2>Su día de hoy</h2>{plan.kcal_descanso != null && <span class="mini terciario">{r.objetivoHoy.descanso ? 'Objetivo de descanso' : 'Objetivo de entreno'}</span>}</div>
+          <div class="panel panel-pad">{r.hoy ? <MacrosDia reg={r.hoy} obj={r.objetivoHoy} /> : <p class="peq secundario">Aún no ha apuntado nada hoy. Su objetivo: {fmtKcal(r.objetivoHoy.kcal)} kcal y {r.objetivoHoy.proteina} g de proteína.</p>}</div>
+        </section>
       )}
 
       {r.ajuste && <Ajuste r={r} alRevisar={() => { const b = r.siguiente || plan; abrir({ ...b, ...r.ajuste.nuevo }, { desde: b.desde > hoyISO() ? b.desde : proximoLunes(), motivo: motivoAjuste(r) }); }} />}

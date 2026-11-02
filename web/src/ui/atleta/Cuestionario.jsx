@@ -1,7 +1,7 @@
 // Cuestionario inicial del atleta: objetivo, experiencia y tiempo, dónde entrena y con qué, su salud (cribado
 // previo al ejercicio de la ACSM, 2015) y lesiones. Cada paso se guarda al pasar al siguiente.
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, Hoja, Icono, Segmentos, cuando } from '../comunes.jsx';
+import { useApp, useCarga, Hoja, Icono, Segmentos, cuando, IcoIos } from '../comunes.jsx';
 import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, MINUTOS, MENSAJE_ATLETA, conSalud, pendiente, objetivosDe } from '../../logica/cuestionario.js';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 
@@ -274,8 +274,8 @@ export function FilaCuestionario({ salud, recargarConsentimientos }) {
   return (
     <li class="panel-pad pila-s">
       <div class="separa">
-        <div><div>Tu cuestionario inicial</div>
-          <div class="peq terciario">{d?.completado_en ? `Enviado ${fechaCuando(d.completado_en)}${pendiente(d) ? '. Tu coach te pide que lo actualices' : ''}` : d ? 'Empezado, sin enviar' : 'Sin rellenar'}</div></div>
+        <div class="fila-ios-izq"><IcoIos n="pregunta" tono={!d?.completado_en || pendiente(d) ? 'aviso' : ''} /><div><div>Tu cuestionario inicial</div>
+          <div class="peq terciario">{d?.completado_en ? `Enviado ${fechaCuando(d.completado_en)}${pendiente(d) ? '. Tu coach te pide que lo actualices' : ''}` : d ? 'Empezado, sin enviar' : 'Sin rellenar'}</div></div></div>
         <button class={`btn btn-peq ${!d?.completado_en || pendiente(d) ? 'btn-primario' : ''}`} disabled={c.cargando && !d} onClick={() => setAbierto(true)}>{d?.completado_en ? 'Revisar' : d ? 'Seguir' : 'Rellenar'}</button>
       </div>
       {/* Sin consentimiento de salud (por ejemplo, tras retirarlo), lo de salud que ya estaba se puede borrar */}

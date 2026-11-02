@@ -161,7 +161,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         <div class="panel panel-pad pila" key={semana.id}>
           <div class="separa" style="flex-wrap:wrap">
             <div>
-              <strong style="font-size:18px">Semana {semana.numero}</strong>
+              <strong style="font-size:1.125rem">Semana {semana.numero}</strong>
               {semana.fecha_inicio && <span class="secundario peq">{'  '}{rangoSemana(semana.fecha_inicio)}</span>}
             </div>
             <div class="fila-envolver">

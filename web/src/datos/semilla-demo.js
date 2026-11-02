@@ -124,7 +124,8 @@ export function semillaDemo(hoy = hoyISO()) {
   }
 
   // Registra una sesión como hecha, con series realistas cerca de lo pautado
-  function hacerSesion(sesion, atletaId, fecha, { cumplimiento = 1 } = {}) {
+  // revisada: de serie, lo de semanas anteriores ya está revisado (lo de esta semana, aunque se hiciera el domingo, no)
+  function hacerSesion(sesion, atletaId, fecha, { cumplimiento = 1, revisada = fecha < lunesHoy } = {}) {
     const pautas = db.sesion_ejercicios.filter((p) => p.sesion_id === sesion.id).sort((a, b) => a.orden - b.orden);
     // Cómo llegó (sin tocar la secuencia aleatoria, para que el resto de la demo no cambie)
     const dia = Number(fecha.slice(8, 10));
@@ -147,7 +148,7 @@ export function semillaDemo(hoy = hoyISO()) {
     });
     Object.assign(sesion, {
       completada: true, fecha_realizada: fecha, rpe_sesion: Math.round(7 + r() * 2), duracion_min: Math.round(minuto + 10),
-      revisada_en: fecha < lunesHoy ? ahoraISO : null,  // lo de semanas anteriores ya está revisado
+      revisada_en: revisada ? ahoraISO : null,
     });
   }
 
@@ -191,10 +192,20 @@ export function semillaDemo(hoy = hoyISO()) {
           hacerSesion(s, atleta.id, f, { cumplimiento: r() < 0.15 ? 0.7 : 1 });
         });
       } else if (w === semanaActual) {
-        sesiones.slice(0, hechasEstaSemana).forEach((s, i) => {
-          const f = sumarDias(fecha, offsets[i]);
-          hacerSesion(s, atleta.id, f <= hoy ? f : hoy);
-        });
+        // Lo de esta semana ya hecho: en su día; si ese día aún no ha llegado (a principio de semana), en el más
+        // reciente que quede, sin pasar de hoy, cada una en un día distinto y en su orden (de la última hacia atrás:
+        // la última hecha sigue siendo la última). Antes se llevaba todo a hoy y, un lunes, el atleta tenía dos
+        // sesiones hoy: la tercera ya no contaba en los retos (como mucho dos por día, como en la base) y lo que
+        // pasaba en la demo dependía del día de la semana. Un día que ya ha llegado no cambia.
+        const hechasW = sesiones.slice(0, hechasEstaSemana);
+        const fechasW = [];
+        let siguienteF = sumarDias(hoy, 1);
+        for (let i = hechasW.length - 1; i >= 0; i--) {
+          const prevista = sumarDias(fecha, offsets[i]), tope = sumarDias(siguienteF, -1);
+          fechasW[i] = prevista < tope ? prevista : tope;
+          siguienteF = fechasW[i];
+        }
+        hechasW.forEach((s, i) => hacerSesion(s, atleta.id, fechasW[i], { revisada: false }));
       }
     }
 
@@ -355,7 +366,9 @@ export function semillaDemo(hoy = hoyISO()) {
   if (vidAna) {
     db.archivos.push({ id: uuid(), atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/ejemplo-sentadilla.mp4`, fecha: vidAna.fecha,
       sesion_ejercicio_id: vidAna.pauta.id, ejercicio_id: ej['Sentadilla barra alta'].id, nota_atleta: '¿Llego a la profundidad buena? La última repetición me ha costado.',
-      comentario_coach: null, mime: 'video/mp4', bytes: 21660, revisado_en: null, creado_en: hace(200), duracion_seg: 8 });
+      comentario_coach: null, mime: 'video/mp4', bytes: 21660, revisado_en: null, creado_en: hace(200), duracion_seg: 8,
+      // v0.50: con su miniatura, como los que suben los atletas (la bandeja del coach la enseña)
+      poster_ruta: `${ana.id}/ejemplo-sentadilla.mp4.jpg` });
     // Y otros dos antiguos en su diario (v0.18): uno destacado
     db.archivos.push({ id: uuid(), atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/ejemplo-sentadilla.mp4`, fecha: sumarDias(vidAna.fecha, -28),
       sesion_ejercicio_id: null, ejercicio_id: ej['Sentadilla barra alta'].id, nota_atleta: 'Mi mejor serie hasta ahora: 70 kg limpios.',

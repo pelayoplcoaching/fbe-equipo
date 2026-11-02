@@ -91,9 +91,9 @@ export function Panel({ abrir, pendientes = {}, peticion = null, alBuscar, abrir
       </div>
 
       {res.cargando && !res.datos ? <Siluetas forma="lista" n={4} texto="Cargando tus atletas" /> : !vista.length ? (
-        <div class="panel"><Vacio icono="atletas" titulo={lista.length ? 'Nadie en esta lista' : 'Aún no hay atletas'}
-          accion={!lista.length && <button class="btn btn-primario" onClick={() => setNuevo(true)}>Añadir el primero</button>}>
-          {lista.length ? 'Todo en orden por aquí.' : 'Dales de alta y envíales su código de invitación.'}
+        <div class="panel"><Vacio ilustracion="filtro" titulo={lista.length ? 'Nadie en esta lista' : 'Aún no hay atletas'}
+          accion={!lista.length ? <button class="btn btn-primario" onClick={() => setNuevo(true)}>Añadir el primero</button> : <button class="btn btn-peq" onClick={() => setFiltro('todos')}>Ver a todos</button>}>
+          {lista.length ? 'Nadie cumple este filtro: todo en orden por aquí.' : 'Dales de alta y envíales su código de invitación.'}
         </Vacio></div>
       ) : (
         <>

@@ -3,9 +3,12 @@
 import { useAncho, Icono } from './comunes.jsx';
 import { fmtCorta, fmtConDia, diasEntre } from '../logica/fechas.js';
 import { NOMBRE_FASE, fmtKcal, kcalMediaPlan } from '../logica/nutricion.js';
+import { macrosDia } from '../logica/diseno.js';
 import { num } from '../logica/calculos.js';
 
-export const COLOR_MACRO = { kcal: 'var(--morado)', proteina: 'var(--disco-rojo)', carbos: 'var(--disco-amarillo)', grasa: 'var(--disco-azul)' };
+// v0.50: los macros con sus propios colores (--macro-*): al menos 3:1 sobre el fondo en todos los temas, distintos de tono
+// entre sí y siempre con su nombre
+export const COLOR_MACRO = { kcal: 'var(--morado)', proteina: 'var(--macro-proteina)', carbos: 'var(--macro-carbos)', grasa: 'var(--macro-grasa)' };
 export const NOMBRE_ESTADO_DIA = { si: 'en objetivo', casi: 'cerca', no: 'lejos del objetivo', en_curso: 'en curso', incompleto: 'a medias (no cuenta)', dato: 'apuntado', sin_dato: 'sin apuntar' };
 
 // «−0,5 % a la semana»
@@ -28,6 +31,60 @@ export function BarraMacro({ nombre, valor, objetivo, color, unidad = 'g' }) {
       <span class="separa"><span class="peq">{nombre}</span><span class="num peq"><b>{valor == null ? '—' : num(valor, 0)}</b><span class="terciario"> / {num(objetivo, 0)} {unidad}</span></span></span>
       <span class="barra" role="img" aria-label={`${nombre}: ${valor == null ? 'sin apuntar' : `${num(valor, 0)} de ${num(objetivo, 0)} ${unidad}`}`}><i style={{ width: `${frac * 100}%` }} /></span>
     </div>
+  );
+}
+
+// Un día de nutrición (v0.50): la barra de kcal (comido, objetivo y lo que queda o lo que se ha pasado) y un anillo por
+// macro con su valor y su objetivo. Cada cifra va escrita: el color ayuda, pero no es lo único que lo dice.
+// reg: lo apuntado ese día; obj: su objetivo (objetivoDelDia). Lo usan Hoy del atleta, su menú y la ficha del coach.
+export function MacrosDia({ reg, obj, titulo = null }) {
+  const m = macrosDia(reg, obj);
+  if (!m) return null;
+  const k = m.kcal;
+  const escala = Math.max(k.objetivo, k.valor || 0);
+  const comido = k.valor == null ? 0 : (k.valor / escala) * 100;
+  const marca = (k.objetivo / escala) * 100;
+  const texto = k.valor == null ? `Kcal: sin apuntar, objetivo ${fmtKcal(k.objetivo)}`
+    : `Kcal: ${fmtKcal(k.valor)} de ${fmtKcal(k.objetivo)}, ${k.quedan >= 0 ? `quedan ${fmtKcal(k.quedan)}` : `${fmtKcal(-k.quedan)} de más`}`;
+  return (
+    <div class="macros-dia">
+      {titulo && <span class="mini terciario">{titulo}</span>}
+      <div class={`kcal-dia ${k.estado}`}>
+        <div class="kcal-dia-cifras num">
+          <span><b>{k.valor == null ? '—' : fmtKcal(k.valor)}</b><span class="mini terciario"> kcal hoy</span></span>
+          <span class="kcal-dia-quedan"><b>{k.valor == null ? fmtKcal(k.objetivo) : fmtKcal(Math.abs(k.quedan))}</b><span class="mini"> {k.valor == null ? 'por comer' : k.quedan >= 0 ? 'quedan' : 'de más'}</span></span>
+        </div>
+        <span class="kcal-barra" role="img" aria-label={texto}>
+          <i class="kcal-comido" style={{ width: `${Math.min(100, comido)}%` }} />
+          {k.valor != null && k.valor > k.objetivo && <i class="kcal-exceso" style={{ left: `${marca}%`, width: `${Math.max(0, comido - marca)}%` }} />}
+          <span class="kcal-objetivo" style={{ left: `${marca}%` }} />
+        </span>
+        <span class="mini terciario num kcal-dia-obj">Objetivo {fmtKcal(k.objetivo)} kcal</span>
+      </div>
+      {m.macros.length > 0 && (
+        <ul class="anillos-macro">
+          {m.macros.map((x) => <AnilloMacro key={x.id} x={x} />)}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function AnilloMacro({ x }) {
+  const R = 26, C = 2 * Math.PI * R;
+  const f = Math.min(1, x.frac);
+  return (
+    <li class={`anillo-macro m-${x.id} ${x.estado}`}>
+      <span class="anillo-macro-dibujo" role="img" aria-label={`${x.nombre}: ${x.valor == null ? 'sin apuntar' : `${num(x.valor, 0)} de ${num(x.objetivo, 0)} g`}`}>
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <circle class="carril" cx="32" cy="32" r={R} />
+          {x.valor != null && f > 0 && <circle class="lleno" cx="32" cy="32" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - f)} transform="rotate(-90 32 32)" />}
+        </svg>
+        <span class="anillo-macro-v num" aria-hidden="true">{x.valor == null ? '—' : num(x.valor, 0)}</span>
+      </span>
+      <span class="anillo-macro-nombre" aria-hidden="true">{x.nombre}</span>
+      <span class="anillo-macro-obj num" aria-hidden="true">de {num(x.objetivo, 0)} g</span>
+    </li>
   );
 }
 

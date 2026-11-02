@@ -1,14 +1,16 @@
 // Temporizador de intervalos (como Seconds o SmartWOD): EMOM, AMRAP, Tabata o trabajo y descanso,
 // a pantalla completa, con el color de cada fase, pitidos en los tres últimos segundos y la pantalla encendida.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Icono, Segmentos, Paso, usePreferencia, useAtraparFoco } from '../comunes.jsx';
+import { Icono, Segmentos, Paso, usePreferencia, useAtraparFoco, Capa } from '../comunes.jsx';
 import { fases, duracionTotal, enCurso, normalizar, textoIntervalos, MODOS_INTERVALOS, POR_DEFECTO } from '../../logica/intervalos.js';
 import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
 import { mmss } from '../../logica/calculos.js';
 
 const NOMBRE_FASE = { preparar: 'Prepárate', trabajo: 'Trabajo', descanso: 'Descanso' };
 
-export function Intervalos({ inicial = null, alCerrar, alTerminar = null }) {
+// v0.50: en su capa (en <body>), como las hojas
+export function Intervalos(props) { return <Capa><IntervalosPantalla {...props} /></Capa>; }
+function IntervalosPantalla({ inicial = null, alCerrar, alTerminar = null }) {
   const [guardada, setGuardada] = usePreferencia('fbe-intervalos', null);
   const [config, setConfig] = useState(() => normalizar(inicial || guardada || POR_DEFECTO.intervalos));
   const [corriendo, setCorriendo] = useState(false);

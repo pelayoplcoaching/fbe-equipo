@@ -1,5 +1,6 @@
 // Funciones de la app sobre cualquier backend (Supabase o demo). Toda la lógica vive aquí, una sola vez.
 import { hoyISO, lunesDe, sumarDias, aISO, rangoSemana, diasEntre, fechaMadrid } from '../logica/fechas.js';
+import { semanasCompletas, resumenPautas } from '../logica/diseno.js';
 import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjercicio, seriesACsv, mejoresMarcas, vitrina, racha, mapaCalor, cargaSemanal, cambioCarga, eventosRecord, resumenSemanal, num, tendenciaPeso, ritmoPeso, limpiarDetalle, agregadosDetalle } from '../logica/calculos.js';
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
@@ -362,6 +363,28 @@ export function crearApi(backend) {
       const semanas = await b.select('semanas', filtroSemanas);
       const sesiones = await b.select('sesiones', { in: { semana_id: semanas.map((s) => s.id) }, order: [['orden', 'asc']] });
       return { bloques, bloque, semanas, sesiones: agrupar(sesiones, 'semana_id'), actual: semanaActual(semanas) };
+    },
+
+    // v0.50: las cifras de la cabecera del perfil, sin el historial de entrenamientos entero: cuántas sesiones ha
+    // terminado (solo sus identificadores) y cuántos récords ha batido (los mismos de la vitrina, de su historial)
+    async cuantasSesionesHechas(atletaId) {
+      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id' });
+      const semanas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id' }) : [];
+      if (!semanas.length) return 0;
+      return (await b.select('sesiones', { in: { semana_id: semanas.map((x) => x.id) }, eq: { completada: true }, cols: 'id' })).length;
+    },
+    async cuantosRecords(atletaId) {
+      return eventosRecord(await api.historial(atletaId)).eventos.length;
+    },
+    // v0.50: lo que trae cada sesión de una semana (para sus tarjetas en Semana): cuántos ejercicios y series, los
+    // minutos estimados y los músculos que más trabaja. Solo lee la pauta y los grupos de cada ejercicio.
+    async pautasSemana(sesionIds = []) {
+      const ids = unicos(sesionIds || []);
+      if (!ids.length) return {};
+      const pautas = await b.select('sesion_ejercicios', { in: { sesion_id: ids }, order: [['orden', 'asc']], cols: 'id,sesion_id,ejercicio_id,orden,series,descanso_seg,superserie' });
+      const ejercicios = pautas.length ? porId(await b.select('ejercicios', { in: { id: unicos(pautas.map((x) => x.ejercicio_id)) }, cols: 'id,nombre,grupos_musculares' })) : {};
+      const porSesion = agrupar(pautas.map((x) => ({ ...x, ejercicio: ejercicios[x.ejercicio_id] || null })), 'sesion_id');
+      return Object.fromEntries(ids.map((id) => [id, resumenPautas(porSesion[id] || [])]));
     },
 
     // Una sesión con su prescripción, las series ya hechas, lo que hizo la última vez en cada ejercicio
@@ -972,7 +995,8 @@ export function crearApi(backend) {
       for (const x of sesiones) if (x.completada && x.fecha_realizada >= desde && !dias[x.fecha_realizada]) dias[x.fecha_realizada] = 1;
       // (v0.49: el calendario de Progreso sale de sesionesHechas; aquí solo hace falta la cuenta de días)
       const diasEntrenados = mapaCalor(dias, hoy).flatMap((w) => w.dias).filter((d) => d.nivel > 0).length;
-      return { racha: racha(lista, hoy), diasEntrenados };
+      // v0.50: también cuántas semanas completas lleva en total (la cabecera de su perfil)
+      return { racha: racha(lista, hoy), diasEntrenados, semanasCompletas: semanasCompletas(lista.map((w) => ({ ...w, fecha_inicio: w.fecha_inicio ? lunesDe(w.fecha_inicio) : null })), hoy) };
     },
     // Cardio hecho por semana (minutos, km y sesiones) en las últimas n semanas, para la gráfica de Progreso
     async cardioSemanas(atletaId, n = 8, hoy = hoyISO()) {

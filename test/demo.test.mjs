@@ -38,6 +38,10 @@ check((await api.plantillas()).length === 2, '2 plantillas');
 const bandeja = await api.bandeja();
 check(bandeja.comentarios.length === 1 && bandeja.comentarios[0].atleta.nombre === 'Rubén Martín', 'bandeja: el comentario de Rubén sin leer');
 check(bandeja.sesiones.length >= 3 && bandeja.checkins.length >= 2, `bandeja: ${bandeja.sesiones.length} sesiones y ${bandeja.checkins.length} check-ins por revisar`);
+{
+  const conPoster = bandeja.archivos.find((x) => x.poster_ruta);
+  check(!!conPoster && conPoster.duracion_seg > 0 && /^blob:/.test(String(await api.urlArchivo(conPoster.poster_ruta).catch(() => 'no'))), 'v0.50: el vídeo de Ana en la bandeja trae su miniatura y su duración');
+}
 check((await api.recursos()).filter((r) => r.categoria === 'faq').length === 15, 'las 15 preguntas frecuentes de la app (también cómo escribir al coach, cómo apuntar el cardio y el peso anterior)');
 
 console.log('\nAtleta en la demo');
@@ -70,6 +74,13 @@ const hilo = await api.comentarios({ sesionId: siguiente.id });
 check(hilo[0].autor === 'atleta', 'en la demo el autor también lo decide quién escribe');
 
 console.log('\nv0.3 en la demo');
+// v0.50: la demo da lo mismo para las tarjetas de Semana y la miniatura del vídeo de Ana en la bandeja
+{
+  const pr = await api.programa(ana.id);
+  const ids = (pr.sesiones[pr.actual.id] || []).map((x) => x.id);
+  const pt = await api.pautasSemana(ids);
+  check(ids.length > 0 && ids.every((id) => pt[id].ejercicios > 0 && pt[id].minutos > 0 && pt[id].grupos.length > 0 && pt[id].patrones.length > 0), 'Semana en la demo: cada sesión con sus minutos, músculos y pictogramas');
+}
 const prog3 = await api.programa(ana.id);
 const pierna = Object.values(prog3.sesiones).flat().find((x) => x.nombre === 'Pierna A');
 const detPierna = await api.sesion(pierna.id, ana.id);
@@ -579,10 +590,17 @@ console.log('\nLo que encontró la revisión de seguridad de la 029, en la demo'
   const yoHoy = hoyTres.progreso.find((x) => x.yo).hechas;
   check(yoHoy === 2 && !hoyTres.conseguido, `tres sesiones fechadas hoy cuentan dos (${yoHoy})`);
   await b3.auth.entrar('pelayo@fbe.demo', 'demo');
-  const totalAntes = (await a3.retosComunidad()).find((r) => r.modo === 'equipo').total;
-  const bloqueCarlos = (await b3.select('bloques', { eq: { atleta_id: atl['Carlos Vera'].id, es_plantilla: false } }))[0];
-  await a3.actualizar('bloques', bloqueCarlos.id, { estado: 'cancelado' });
-  check((await a3.retosComunidad()).find((r) => r.modo === 'equipo').total < totalAntes, 'las sesiones de un bloque cancelado no cuentan');
+  // (con quien más sesiones tiene en el reto del equipo: así vale cualquier día de la semana; antes era Carlos, que
+  // solo tenía una dentro los domingos. Su bloque vuelve después, para lo que sigue)
+  const equipoAntes = (await a3.retosComunidad()).find((r) => r.modo === 'equipo');
+  const quien = [...equipoAntes.progreso].sort((x, y) => y.hechas - x.hechas)[0];
+  const atletaQuien = Object.values(atl).find((a) => a.perfil_id === quien.perfil_id);
+  const bloquesQuien = (await b3.select('bloques', { eq: { atleta_id: atletaQuien.id, es_plantilla: false } })).filter((x) => x.estado !== 'cancelado');
+  for (const x of bloquesQuien) await a3.actualizar('bloques', x.id, { estado: 'cancelado' });
+  const totalCancelado = (await a3.retosComunidad()).find((r) => r.modo === 'equipo').total;
+  check(quien.hechas > 0 && totalCancelado === equipoAntes.total - quien.hechas, `las sesiones de un bloque cancelado no cuentan (${quien.nombre}: ${equipoAntes.total} → ${totalCancelado})`);
+  for (const x of bloquesQuien) await a3.actualizar('bloques', x.id, { estado: x.estado });
+  check((await a3.retosComunidad()).find((r) => r.modo === 'equipo').total === equipoAntes.total, 'y vuelven a contar si el bloque deja de estar cancelado');
   // L4: rachas solo desde 1; L6: el coach no anima con la comunidad cerrada
   check(Object.values(await a3.rachasComunidad()).every((x) => x.racha >= 1) && !(pid['Lucía F.'] in (await a3.rachasComunidad())), 'las rachas, solo desde 1 (Lucía, sin racha, no sale)');
   await a3.abrirComunidad(false);
@@ -712,6 +730,58 @@ console.log('\nv0.48 en la demo: tareas, programados, dónde entrenas, tu bloque
   check(await lanza(() => a5.completarTarea(tV2.id, { archivoId: vPress.id })), 'y un mismo vídeo no sirve para dos tareas');
   await b5.delete('archivos', { eq: { id: vPress.id } });
   check((await a5.tareas(ana5.id)).find((x) => x.id === tV.id).hecha_en === null, 'si borra el vídeo antes de que la revises, la tarea vuelve a pendiente');
+}
+
+
+// Los retos de la comunidad, con «hoy» fijado en cada día de una semana (de lunes a domingo) y en un cambio de mes:
+// la demo no puede depender del día en que se pruebe (antes, un lunes, la sesión de hoy ya no sumaba y lo del bloque
+// cancelado solo se veía los domingos). El reloj se cambia por uno fijo (a las 10:00 en Madrid) mientras se prueba.
+console.log('\nRetos de la comunidad, cualquier día de la semana');
+{
+  const DateReal = Date;
+  const conHoy = async (iso, fn) => {
+    const t = new DateReal(`${iso}T10:00:00+01:00`).getTime();
+    class DateFija extends DateReal { constructor(...a) { super(...(a.length ? a : [t])); } static now() { return t; } }
+    globalThis.Date = DateFija;
+    try { return await fn(); } finally { globalThis.Date = DateReal; }
+  };
+  const dias = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08', '2026-12-01'];
+  const nombres = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  for (const dia of dias) {
+    const r = await conHoy(dia, async () => {
+      const { fechaMadrid } = await import('../web/src/logica/fechas.js');
+      const hoyF = fechaMadrid();
+      const b6 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+      const a6 = crearApi(b6);
+      // La semilla: nadie con más de dos sesiones terminadas el mismo día (las que cuentan como mucho)
+      const porDia = {};
+      for (const x of (await b6.select('sesiones', {})).filter((y) => y.completada && y.fecha_realizada)) {
+        const w = (await b6.select('semanas', { eq: { id: x.semana_id } }))[0];
+        const bl = (await b6.select('bloques', { eq: { id: w.bloque_id } }))[0];
+        const k = `${bl.atleta_id}-${x.fecha_realizada}`; porDia[k] = (porDia[k] || 0) + 1;
+      }
+      const maxDia = Math.max(...Object.values(porDia));
+      // Rubén (como Ana en la prueba completa: dos hechas esta semana) termina hoy la que le queda: el reto suma una
+      await b6.auth.entrar('ruben@fbe.demo', 'demo');
+      const ruben6 = await a6.miAtleta();
+      const reto = async () => (await a6.retosComunidad()).find((x) => x.titulo.startsWith('Reto de constancia')).progreso.find((x) => x.yo).hechas;
+      const antes = await reto();
+      const prog6 = await a6.programa(ruben6.id);
+      const pendiente = (prog6.sesiones[prog6.actual.id] || []).find((x) => !x.completada);
+      await a6.actualizar('sesiones', pendiente.id, { completada: true, fecha_realizada: hoyF, duracion_min: 50, rpe_sesion: 7 });
+      const despues = await reto();
+      // El coach cancela el bloque de quien más lleva en el reto del equipo: sus sesiones dejan de contar
+      await b6.auth.entrar('pelayo@fbe.demo', 'demo');
+      const equipo = (await a6.retosComunidad()).find((x) => x.modo === 'equipo');
+      const quien = [...equipo.progreso].sort((x, y) => y.hechas - x.hechas)[0];
+      const at = (await a6.atletas()).find((a) => a.perfil_id === quien.perfil_id);
+      for (const x of await b6.select('bloques', { eq: { atleta_id: at.id, es_plantilla: false } })) await a6.actualizar('bloques', x.id, { estado: 'cancelado' });
+      const total = (await a6.retosComunidad()).find((x) => x.modo === 'equipo').total;
+      return { hoyF, semana: new DateReal(`${dia}T12:00:00`).getDay(), maxDia, antes, despues, quien: quien.hechas, totalAntes: equipo.total, total };
+    });
+    check(r.hoyF === dia && r.maxDia <= 2 && r.despues === r.antes + 1 && r.quien > 0 && r.total === r.totalAntes - r.quien,
+      `${nombres[r.semana]} ${dia}: la sesión de hoy suma (${r.antes} → ${r.despues}), un bloque cancelado resta lo suyo (${r.totalAntes} → ${r.total}) y nadie pasa de 2 sesiones en un día (${r.maxDia})`);
+  }
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

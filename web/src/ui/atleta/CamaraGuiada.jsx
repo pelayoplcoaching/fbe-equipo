@@ -1,7 +1,7 @@
 // Fotos de progreso guiadas (como ProgressCam): la foto anterior de la misma pose en transparencia para
 // encuadrar igual, cuenta atrás con pitidos para hacérsela solo y la foto recortada a 3:4, como se ve.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, Icono, Hoja, Segmentos, usePreferencia, useAtraparFoco } from '../comunes.jsx';
+import { useApp, Icono, Hoja, Segmentos, usePreferencia, useAtraparFoco, Capa } from '../comunes.jsx';
 import { LIMITE_ARCHIVO_MB } from '../../datos/api.js';
 import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
 import { fmtCorta, hoyISO } from '../../logica/fechas.js';
@@ -73,7 +73,9 @@ export function NuevaFoto({ fotos, alCerrar, alSubir }) {
   );
 }
 
-export function CamaraGuiada({ pose, guia, alCerrar, alCapturar }) {
+// v0.50: en su capa (en <body>), como las hojas
+export function CamaraGuiada(props) { return <Capa><CamaraGuiadaPantalla {...props} /></Capa>; }
+function CamaraGuiadaPantalla({ pose, guia, alCerrar, alCapturar }) {
   const { api } = useApp();
   const video = useRef(null);
   const marco = useRef(null);

@@ -3,27 +3,13 @@
 // plan?» si va sin contar); su plan con las pautas, y en Progreso, sus semanas y su gasto estimado.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Paso, Segmentos, usePreferencia } from '../comunes.jsx';
-import { TarjetaPlan, BarraMacro, GraficaIngesta, COLOR_MACRO, NOMBRE_ESTADO_DIA } from '../NutricionComun.jsx';
+import { TarjetaPlan, GraficaIngesta, NOMBRE_ESTADO_DIA, MacrosDia } from '../NutricionComun.jsx';
 import { fmtKcal, kcalDeMacros, objetivoDelDia, planVigente, NOMBRE_CUMPLIDO } from '../../logica/nutricion.js';
 import { hoyISO, sumarDias, fmtConDia, lunesDe, diasEntre } from '../../logica/fechas.js';
 import { LETRAS_DIA } from '../../logica/plan.js';
 import { num, signo } from '../../logica/calculos.js';
 
 // Anillo de las kcal del día (se llena hasta el objetivo; pasado el 110 %, en aviso)
-function AnilloKcal({ kcal, objetivo, tam = 96 }) {
-  const R = 40, C = 2 * Math.PI * R;
-  const frac = objetivo ? (Number(kcal) || 0) / objetivo : 0;
-  return (
-    <span class={`anillo-kcal ${frac > 1.1 ? 'pasado' : frac >= 0.9 ? 'cumple' : ''}`} style={{ width: `${tam}px`, height: `${tam}px` }} aria-hidden="true">
-      <svg viewBox="0 0 100 100" width={tam} height={tam}>
-        <circle cx="50" cy="50" r={R} class="pista" />
-        <circle cx="50" cy="50" r={R} class="lleno" stroke-dasharray={C} stroke-dashoffset={C * (1 - Math.max(0, Math.min(1, frac)))} transform="rotate(-90 50 50)" />
-      </svg>
-      <span class="anillo-kcal-texto"><b class="num">{kcal == null ? '—' : fmtKcal(kcal)}</b><span class="mini">de {fmtKcal(objetivo)}</span></span>
-    </span>
-  );
-}
-
 // En Hoy: la tarjeta del día. entrenaHoy: si hoy hay sesión (prevista o hecha), cuenta como día de entreno; con
 // días de descanso distintos, el atleta lo puede cambiar (quien no planifica la semana entrena cuando puede).
 export function NutricionHoy({ entrenaHoy = false }) {
@@ -65,13 +51,9 @@ export function NutricionHoy({ entrenaHoy = false }) {
           )}
           <button class="nutricion-hoy con-cifras" onClick={() => setHoja('apuntar')}
             aria-label={`Nutrición de hoy: ${reg?.kcal != null ? `${fmtKcal(reg.kcal)} de ${fmtKcal(obj.kcal)} kcal` : `sin apuntar, objetivo ${fmtKcal(obj.kcal)} kcal`}${reg?.proteina_g != null ? `, proteína ${num(reg.proteina_g, 0)} de ${obj.proteina} g` : ''}. Apuntar`}>
-            <AnilloKcal kcal={reg?.kcal ?? null} objetivo={obj.kcal} />
-            <span class="pila-s macros-hoy">
-              <BarraMacro nombre="Proteína" valor={reg?.proteina_g ?? null} objetivo={obj.proteina} color={COLOR_MACRO.proteina} />
-              {obj.carbos != null && <BarraMacro nombre="Hidratos" valor={reg?.carbos_g ?? null} objetivo={obj.carbos} color={COLOR_MACRO.carbos} />}
-              {obj.grasa != null && <BarraMacro nombre="Grasa" valor={reg?.grasa_g ?? null} objetivo={obj.grasa} color={COLOR_MACRO.grasa} />}
-              <span class="mini terciario">{reg ? 'Toca para corregir o completar' : 'Toca para apuntar lo de hoy'}</span>
-            </span>
+            {/* v0.50: la barra de kcal y los tres anillos de macros, con su valor y su objetivo */}
+            <MacrosDia reg={reg} obj={obj} />
+            <span class="mini terciario nutricion-hoy-pie"><Icono n="editar" />{reg ? 'Toca para corregir o completar' : 'Toca para apuntar lo de hoy'}</span>
           </button>
         </div>
       )}

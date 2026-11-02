@@ -397,7 +397,7 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
           <h2>Check-ins</h2>
           {lista.length >= 2 && <button class="btn-texto" onClick={() => setComparar(true)}><Icono n="intercambiar" /> Comparar dos</button>}
         </div>
-        {!lista.length ? <div class="panel"><Vacio icono="checkin" titulo="Sin check-ins todavía" /></div> : (
+        {!lista.length ? <div class="panel"><Vacio ilustracion="checkins" titulo="Sin check-ins todavía">Cuando envíe el primero, lo verás aquí con su peso, sus respuestas y sus fotos de esas fechas.</Vacio></div> : (
           <div class="panel"><div class="tabla-env">
             <table class="tabla-simple tabla-clic">
               <thead><tr><th>Semana</th><th>Sueño</th><th>Energía</th><th>Recup.</th><th>Motivación</th><th>Adherencia</th><th>Pasos</th><th>Molestias</th><th><span class="sr">Estado</span></th></tr></thead>

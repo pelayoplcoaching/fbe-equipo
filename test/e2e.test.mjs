@@ -392,6 +392,28 @@ try {
   await p.locator('.temporizador').waitFor();
   check(await p.evaluate(() => JSON.stringify(window.__vib)) === '[14]' && await primero.locator('.serie.siguiente .n').textContent() === 'B', 'al marcarla, un toque de vibración y el resalte pasa a la siguiente');
   check((await p.locator('.temporizador .cuenta').textContent()).startsWith('2:') || (await p.locator('.temporizador .cuenta').textContent()).startsWith('3:'), 'arranca el descanso pautado');
+  // v0.50: el temporizador va en la página, justo debajo del ejercicio, con un anillo grande y la cuenta en el centro
+  check(await p.evaluate(() => document.querySelector('.ejercicio').nextElementSibling?.classList.contains('temporizador')) && await p.locator('.temporizador .reloj-descanso svg .arco').count() === 1
+    && await p.locator('.temporizador').evaluate((t) => getComputedStyle(t).position) !== 'fixed' && /^\d:\d\d$/.test(await p.locator('.temporizador .cuenta').textContent()),
+  'el descanso sale en la página, debajo del ejercicio: un anillo grande con la cuenta');
+  check(await p.locator('.ejercicio-cab .picto').count() === await p.locator('.ejercicio').count() && await p.locator('.ejercicio-cab .picto').evaluateAll((xs) => xs.every((x) => x.getAttribute('aria-hidden') === 'true')),
+    'cada ejercicio con el pictograma de su patrón de movimiento (decorativo: el nombre es lo que se lee)');
+  // Si se queda fuera de la vista al bajar, una píldora flotante con lo que queda; al tocarla, vuelve al temporizador
+  await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const pildoraD = p.locator('.pildora-descanso');
+  await pildoraD.waitFor();
+  check(/^\d:\d\d/.test((await pildoraD.textContent()).trim()) && (await pildoraD.getAttribute('aria-label')) === 'Descanso en curso, toca para volver' && (await pildoraD.getAttribute('aria-live')) === 'off', `fuera de la vista, una píldora con lo que queda («${(await pildoraD.textContent()).trim()}»)`);
+  await revisar('temporizador-pildora');
+  await pildoraD.click();
+  await p.waitForFunction(() => { const r = document.querySelector('.reloj-descanso')?.getBoundingClientRect(); return r && r.top >= 0 && r.bottom <= innerHeight; });
+  await pildoraD.waitFor({ state: 'detached' });
+  check(true, 'tocarla vuelve al temporizador (y la píldora se va)');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.locator('.temporizador').scrollIntoViewIfNeeded();
+  await revisar('temporizador-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
   // v0.42: ±1 minuto además de ±15 s
   const segs = async () => { const [m, s] = (await p.locator('.temporizador .cuenta').textContent()).split(':').map(Number); return m * 60 + s; };
   const antes1 = await segs();
@@ -582,8 +604,14 @@ try {
   await revisar('compartir');
   await p.getByRole('button', { name: 'Cerrar' }).click();
   await p.getByRole('button', { name: 'Volver a hoy' }).click();
-  await p.locator('.titular h2', { hasText: 'Pierna A' }).waitFor();
-  check(true, 'hoy pasa a la siguiente sesión (Pierna A)');
+  // v0.50: con la sesión de hoy hecha, Hoy lo celebra: sus cifras, «Ver resumen» y lo siguiente (Pierna A)
+  const heroHecha = p.locator('.hero-dia.hero-hecha');
+  await heroHecha.waitFor();
+  await heroHecha.locator('.hero-cifras').waitFor();
+  check((await heroHecha.locator('.titular h2').textContent()) === '¡Sesión hecha!' && (await heroHecha.locator('.hero-hecha-nombre').textContent()).includes('Torso A')
+    && (await heroHecha.locator('.hero-siguiente').textContent()).includes('Pierna A') && await heroHecha.getByRole('button', { name: 'Ver resumen' }).count() === 1
+    && await heroHecha.locator('.hero-cifras > div').count() >= 2 && await heroHecha.locator('svg.ilustracion').getAttribute('aria-hidden') === 'true',
+  'con la sesión de hoy hecha, Hoy lo celebra: sus cifras, «Ver resumen» y lo siguiente (Pierna A)');
   check((await p.locator('.semana-resumen .anillo').getAttribute('aria-label')) === '1 de 3 sesiones hechas esta semana' && (await p.locator('.semana-resumen').textContent()).includes('Te quedan 2 sesiones'), 'el anillo de la semana marca 1 de 3');
 
   const disco = p.getByRole('dialog', { name: /disco/ });
@@ -593,8 +621,20 @@ try {
   await disco.getByRole('button', { name: 'Seguir' }).click();
   await disco.waitFor({ state: 'detached' });
 
+  await revisar('hoy-hecha');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('hoy-hecha-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await heroHecha.getByRole('button', { name: 'Ver resumen' }).click();
+  await p.locator('.ejercicio').first().waitFor();
+  check((await p.locator('.cabecera h1').first().textContent()) === 'Torso A', '«Ver resumen» abre la sesión hecha');
+  await p.getByRole('button', { name: 'Volver' }).first().click();
+  await heroHecha.waitFor();
+
   console.log('\nAtleta: superserie');
-  await p.getByRole('button', { name: 'Empezar sesión' }).click();
+  await p.getByRole('button', { name: 'Adelantar Pierna A' }).click();
   const ss = p.locator('.superserie');
   await ss.waitFor();
   check((await ss.locator('.ss-etq').allTextContents()).join(',') === 'A1,A2', 'la superserie aparece agrupada (A1, A2)');
@@ -643,7 +683,7 @@ try {
   await p.locator('.enfoque').waitFor({ state: 'detached' });
   await p.locator('.ejercicio').first().getByRole('button', { name: 'Quitar la serie 1' }).click();
   await p.getByRole('button', { name: 'Volver' }).click();
-  await p.locator('.titular h2', { hasText: 'Pierna A' }).waitFor();
+  await p.locator('.hero-dia .hero-siguiente', { hasText: 'Pierna A' }).waitFor();
 
   console.log('\nAtleta: peso de hoy');
   await p.getByRole('button', { name: 'Apuntar el de hoy' }).click();
@@ -722,20 +762,55 @@ try {
   await abrirPestana(p, 'Perfil');
   await p.getByRole('heading', { name: 'Guías y recursos' }).waitFor();
   check(await p.locator('.recurso details').count() >= 10, 've las guías y preguntas frecuentes');
+  // v0.50: el perfil, con su cabecera (foto, nombre, bloque y tres cifras) y la lista agrupada como en iOS
+  check(await p.getByRole('heading', { name: 'Preguntas frecuentes' }).count() === 1 && await p.locator('#grupo-faq ~ .panel .recurso details, section:has(#grupo-faq) .recurso details').count() >= 10
+    && await p.locator('section:has(#grupo-guias) .recurso').count() >= 1, 'las preguntas frecuentes, en su propio grupo, aparte de las guías');
+  const grupos = await p.locator('.grupo-ios > h2').allTextContents();
+  check(['Tu asesoría', 'Este móvil', 'Guías y recursos', 'Preguntas frecuentes', 'Cuenta'].every((g) => grupos.includes(g)), `los grupos del perfil: ${grupos.join(', ')}`);
+  await p.locator('.perfil-cifras dd.num:not(:has(.sil))').nth(2).waitFor();
+  const cifrasPerfil = await p.locator('.perfil-cifras > div').evaluateAll((xs) => xs.map((x) => [x.querySelector('dt').textContent, x.querySelector('dd').textContent]));
+  check(cifrasPerfil.map(([t]) => t).join() === 'Semanas completas,Sesiones,Récords' && cifrasPerfil.every(([, v]) => /^\d+$/.test(v)) && Number(cifrasPerfil[1][1]) >= 1
+    && (await p.locator('.perfil-cabeza').textContent()).includes('Lucía Prueba') && (await p.locator('.perfil-bloque').textContent()).includes('Semana'),
+  `la cabecera: su nombre, su bloque y su semana, y tres cifras (${cifrasPerfil.map((x) => x.join(' ')).join(', ')})`);
+  check(await p.locator('.grupo-ios .ios-ico').count() >= 10 && await p.locator('.grupo-ios .fila-ios-chevron').count() >= 3, 'cada fila con su icono; las que llevan a otra parte, con su chevrón');
   await revisar('perfil');
   await p.getByRole('group', { name: 'Tema' }).getByRole('button', { name: 'Oscuro' }).click();
   check(await p.evaluate(() => document.documentElement.dataset.theme) === 'dark', 'elige el tema oscuro en este móvil');
   await p.getByRole('group', { name: 'Tema' }).getByRole('button', { name: 'Sistema' }).click();
   check(await p.evaluate(() => !document.documentElement.hasAttribute('data-theme')), 'y vuelve al del sistema');
-  await p.getByRole('switch', { name: /Vibración al acabar el descanso/ }).uncheck();
+  // v0.50: el sonido, la voz y la vibración, en su hoja («Sonido y vibración»)
+  await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
+  const hojaSonido = p.getByRole('dialog', { name: 'Sonido y vibración' });
+  await hojaSonido.waitFor();
+  await hojaSonido.getByRole('switch', { name: /Vibración al acabar el descanso/ }).uncheck();
   check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).vibracion === false), 'quita la vibración (se recuerda en el móvil)');
-  await p.getByRole('switch', { name: /Vibración al acabar el descanso/ }).check();
+  await hojaSonido.getByRole('switch', { name: /Vibración al acabar el descanso/ }).check();
   // v0.49: la vibración al tocar, con su propio interruptor (encendido de serie)
-  const hapt = p.getByRole('switch', { name: /Vibración al tocar/ });
+  const hapt = hojaSonido.getByRole('switch', { name: /Vibración al tocar/ });
   check(await hapt.isChecked() && await hapt.isEnabled(), 'la vibración al tocar tiene su propio interruptor, encendido de serie');
   await hapt.uncheck();
   check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).hapticos === false && JSON.parse(localStorage.getItem('fbe-ajustes')).vibracion === true), 'y se apaga sin tocar la del descanso');
   await hapt.check();
+  await revisar('perfil-sonido');
+  await p.keyboard.press('Escape');
+  await hojaSonido.waitFor({ state: 'detached' });
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('perfil-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  // v0.50: el tamaño de la letra (Normal, Grande, Muy grande), en este móvil: cambia la raíz y nada se sale
+  const tamLetra = p.getByRole('group', { name: 'Tamaño de la letra' });
+  await tamLetra.getByRole('button', { name: 'Muy grande' }).click();
+  const raiz = () => p.evaluate(() => [getComputedStyle(document.documentElement).fontSize, document.documentElement.dataset.letra || '', JSON.parse(localStorage.getItem('fbe-ajustes')).letra]);
+  const r1 = await raiz();
+  check(r1[0] === '20px' && r1[1] === 'muy-grande' && r1[2] === 'muy-grande', `«Muy grande»: la letra de toda la app al 125 % (${r1.join(', ')}), y se recuerda en el móvil`);
+  await revisar('perfil-letra-muy-grande');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await revisar('perfil-letra-muy-grande-360');
+  await p.setViewportSize({ width: 390, height: 844 });
+  await tamLetra.getByRole('button', { name: 'Normal' }).click();
+  check((await raiz())[0] === '16px' && (await raiz())[1] === '', 'y vuelve a «Normal» (Hoy y la sesión, a 125 %, más abajo con Ana)');
   // v0.49: color de acento (seis) y negro puro, en el móvil
   const acentos = p.locator('.acento-op');
   check(await acentos.count() === 6 && await p.getByRole('radio', { name: 'Morado FBE' }).isChecked(), 'seis colores de acento, el morado FBE de serie');
@@ -796,6 +871,10 @@ try {
   check(await p.locator('.aviso-variante').count() === 0, 'con un toque lo cambia en todo su bloque y el aviso se va');
   await msg.getByRole('button', { name: 'Responder' }).click();
   await msg.getByRole('button', { name: 'Respuestas guardadas' }).click();
+  // v0.50 (revisión): la hoja va en su capa, fuera de la tarjeta (que se puede deslizar): su velo tapa toda la pantalla
+  await p.locator('.respuesta-guardada').first().waitFor();
+  const veloRG = await p.evaluate(() => { const v = [...document.querySelectorAll('.velo')].pop(); const r = v.getBoundingClientRect(); return { padre: v.parentElement?.classList.contains('capa') && v.parentElement.parentElement === document.body, cubre: r.left <= 0 && r.top <= 0 && r.right >= innerWidth && r.bottom >= innerHeight, r: [r.width, r.height, innerWidth, innerHeight].map(Math.round) }; });
+  check(veloRG.padre && veloRG.cubre, `«Respuestas guardadas» desde una tarjeta de Revisar: el velo tapa toda la pantalla (${veloRG.r.join(' × ')})`);
   await p.locator('.respuesta-guardada').first().locator('button').first().click();
   check((await msg.getByRole('textbox', { name: /Responder a Lucía/ }).inputValue()).includes('Lucía'), 'una respuesta guardada se pone con el nombre de la atleta');
   await msg.getByRole('textbox', { name: /Responder a Lucía/ }).fill('Perfecto, apúntalo siempre así');
@@ -843,6 +922,82 @@ try {
   await p.keyboard.press('e');
   await ck.waitFor({ state: 'detached' });
   check(true, 'y con la tecla e queda revisado otra vez');
+  // v0.50: la bandeja por atletas (cada uno se pliega, con su número), las miniaturas de los vídeos y deslizar para dar por revisado
+  const gruposRev = p.locator('.grupo-revisar');
+  check(await gruposRev.count() >= 2 && await p.locator('.grupo-revisar-cab[aria-expanded="true"]').count() === await gruposRev.count()
+    && /^\d+$/.test(await p.locator('.grupo-revisar-n').first().textContent()), `por atletas: ${await gruposRev.count()} grupos, cada uno con cuántas cosas tiene`);
+  const grupoAna = gruposRev.filter({ has: p.locator('.grupo-revisar-nombre', { hasText: 'Ana López' }) });
+  const miniAna = grupoAna.locator('.revisar-mini').first();
+  await miniAna.locator('img').waitFor();
+  check((await miniAna.locator('.revisar-mini-dur').textContent()) === '0:08' && (await miniAna.getAttribute('aria-label')) === 'Reproducir el vídeo de Ana (0:08)'
+    && await miniAna.locator('img').evaluate((i) => i.complete && i.naturalWidth > 0), 'el vídeo, con su miniatura y su duración');
+  const cabAna = grupoAna.locator('.grupo-revisar-cab');
+  const nAna = await grupoAna.locator('.tarjeta-revisar').count();
+  await cabAna.click();
+  check(await cabAna.getAttribute('aria-expanded') === 'false' && await grupoAna.locator('.tarjeta-revisar').count() === 0 && nAna > 0, 'la cabecera de cada atleta pliega lo suyo');
+  await cabAna.click();
+  check(await hay(grupoAna.locator('.tarjeta-revisar'), nAna), 'y lo vuelve a desplegar');
+  await revisar('revisar-grupos');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('revisar-grupos-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  check(await p.locator('button.revisar-hecho', { hasText: 'Resuelto' }).evaluateAll((xs) => xs.every((x) => !x.hasAttribute('data-deshacer')))
+    && await p.locator('button.revisar-hecho', { hasText: 'Revisado' }).evaluateAll((xs) => xs.length > 0 && xs.every((x) => x.hasAttribute('data-deshacer'))),
+  'deslizar solo pulsa los botones con «Deshacer» (no «Resuelto» en recetas ni en avisos del equipo)');
+  const conRevisado = p.locator('.deslizable').filter({ has: p.locator('button.revisar-hecho', { hasText: 'Revisado' }) });
+  const antesDesl = await p.locator('.tarjeta-revisar').count();
+  const desl = conRevisado.first();
+  await desl.scrollIntoViewIfNeeded();
+  await desl.evaluate((el) => {
+    const b = el.getBoundingClientRect(), y = b.top + 24, x0 = b.left + 30;
+    const blanco = el.querySelector('.tarjeta-revisar strong, .tarjeta-revisar .cita, .tarjeta-revisar');
+    const ev = (t, x) => blanco.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, pointerId: 41, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y }));
+    ev('pointerdown', x0);
+    for (let i = 1; i <= 8; i++) ev('pointermove', x0 + i * 28);
+    ev('pointerup', x0 + 8 * 28);
+  });
+  const avisoDesl = p.locator('.toast', { hasText: /revisad[oa]/ });
+  await avisoDesl.waitFor();
+  check(await hay(p.locator('.tarjeta-revisar'), antesDesl - 1), `deslizar una tarjeta a la derecha la da por revisada («${(await avisoDesl.textContent()).replace('Deshacer', '').trim()}»)`);
+  await avisoDesl.getByRole('button', { name: 'Deshacer' }).click();
+  check(await hay(p.locator('.tarjeta-revisar'), antesDesl), 'con el «Deshacer» de siempre');
+  // v0.50: los estados vacíos, con su dibujo de línea: la biblioteca sin resultados (y sus pictogramas)
+  await p.locator('.tab', { hasText: 'Biblioteca' }).click();
+  await p.getByLabel('Buscar ejercicio').fill('zzzz');
+  const vacioBib = p.locator('.vacio.con-ilustracion', { hasText: 'Ningún ejercicio coincide' });
+  await vacioBib.waitFor();
+  check(await vacioBib.locator('svg.ilustracion').getAttribute('aria-hidden') === 'true' && await vacioBib.getByRole('button', { name: 'Ver todos' }).count() === 1, 'buscar algo que no está: el dibujo, una frase y «Ver todos»');
+  await revisar('biblioteca-vacia');
+  await vacioBib.getByRole('button', { name: 'Ver todos' }).click();
+  await p.locator('.fila-biblioteca').first().waitFor();
+  check(await p.locator('.fila-biblioteca .picto').count() === await p.locator('.fila-biblioteca').count() && await p.locator('.fila-biblioteca .picto').count() > 10, 'la biblioteca, con el pictograma de cada ejercicio');
+  // …y la ficha de quien aún no ha empezado: sin check-ins, sin tareas y con el diario vacío
+  await p.locator('.tab', { hasText: 'Atletas' }).click();
+  await p.getByRole('heading', { name: 'Atletas' }).waitFor();
+  const filtroInv = p.getByRole('button', { name: /^Sin activar/ });
+  if (await filtroInv.count()) await filtroInv.click();
+  await p.locator('.tarjeta-atleta', { hasText: 'Marta Gil' }).first().click();
+  await p.getByRole('tab', { name: 'Seguimiento' }).click();
+  await p.locator('.vacio.con-ilustracion', { hasText: 'Sin tareas todavía' }).waitFor();
+  const vaciosSeg = p.locator('.vacio.con-ilustracion');
+  check(await vaciosSeg.count() >= 2 && (await p.locator('.contenido').textContent()).includes('Sin check-ins todavía') && await vaciosSeg.locator('svg.ilustracion[aria-hidden="true"]').count() === await vaciosSeg.count()
+    && await p.getByRole('button', { name: 'Poner la primera' }).count() === 1, 'su seguimiento vacío: cada estado con su dibujo, una frase y lo siguiente («Poner la primera»)');
+  await revisar('vacios-seguimiento');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('vacios-seguimiento-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.getByRole('tab', { name: 'Vídeos y fotos' }).click();
+  await p.locator('.vacio.con-ilustracion', { hasText: 'Su diario está vacío' }).waitFor();
+  check(true, 'y su diario vacío, con su dibujo');
+  await revisar('diario-vacio');
+  await p.getByRole('button', { name: 'Volver a atletas' }).click();
+  await p.getByRole('heading', { name: 'Atletas' }).waitFor();
+  const todosF = p.getByRole('button', { name: 'Todos', exact: true });
+  if (await todosF.count()) await todosF.first().click();
 
   console.log('\nCoach: avisos y plantilla para varios');
   await p.locator('.tab', { hasText: 'Atletas' }).click();
@@ -1095,9 +1250,31 @@ try {
   check((await p.locator('.informe-fuerza li').count()) >= 3, 'el informe de su bloque trae la fuerza estimada de sus ejercicios principales');
   await revisar('informe');
   await p.getByRole('button', { name: 'Cerrar' }).click();
+  // v0.50: la vitrina de récords en trofeos («Nuevo» si es de los últimos 30 días); al tocar uno, cómo ha ido subiendo
+  const trofeos = p.locator('.trofeo-tarjeta');
+  await trofeos.first().waitFor();
+  check(await trofeos.count() === 6 && await p.locator('.trofeo-tarjeta .trofeo-nuevo').count() >= 1 && /\d/.test(await trofeos.first().locator('.trofeo-valor').textContent())
+    && /Ver cómo ha ido$/.test(await trofeos.first().getAttribute('aria-label')), 'la vitrina: un trofeo por ejercicio, con su mejor marca, la serie, el día y «Nuevo»');
+  await trofeos.first().click();
+  const hojaRecord = p.getByRole('dialog').last();
+  await hojaRecord.locator('.record-cab').waitFor();
+  await hojaRecord.locator('.lista-records li').first().waitFor();
+  check(await hojaRecord.locator('svg.grafica').count() === 1 && await hojaRecord.locator('.grafica .punto.record').count() >= 1 && await hojaRecord.locator('.lista-records li').count() >= 1,
+    `al tocarlo, su evolución (la gráfica táctil) y cada vez que lo batió (${await hojaRecord.locator('.lista-records li').count()})`);
+  await revisar('record-evolucion');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('record-evolucion-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await hojaRecord.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaRecord.waitFor({ state: 'detached' });
+  await p.getByRole('button', { name: /^Ver los \d+ ejercicios$/ }).click();
+  check(await trofeos.count() > 6, '«Ver los N ejercicios» los enseña todos');
   await p.getByRole('button', { name: 'Gráficas, récords e historial' }).first().click();
   await p.getByRole('tab', { name: 'Gráficas', selected: true }).waitFor();
   check(await p.locator('.hoja-dialogo svg.grafica').waitFor().then(() => true, () => false), 'la ficha del ejercicio abre con su gráfica');
+  check(await p.locator('.hoja-dialogo .ficha-ej-cab .picto[aria-hidden="true"]').count() === 1, 'con el pictograma de su patrón junto a sus músculos');
   await p.getByRole('button', { name: '1 año' }).click();
   await p.getByRole('tab', { name: 'Récords' }).click();
   check(await p.locator('.tabla-records tbody tr').count() >= 6, 'y la tabla de récords de 1 a 12 repeticiones');
@@ -1105,6 +1282,45 @@ try {
   await p.getByRole('button', { name: 'Cerrar' }).click();
   await p.locator('.tab', { hasText: 'Semana' }).click();
   check(await hay(p.locator('.semanas-tabs button'), 4), 'Ana ve sus 4 semanas publicadas, no los borradores');
+  // v0.50: Semana: la semana con sus botones (y deslizando los días), y cada sesión con sus músculos, sus minutos y sus pictogramas
+  const tarjSem = p.locator('.semana-dias .dia.con-resumen');
+  await tarjSem.first().waitFor();
+  check(await tarjSem.count() >= 2 && await tarjSem.first().locator('.chip-musculo').count() >= 1 && /^unos \d+ min$/.test((await tarjSem.first().locator('.chip-min').textContent()).trim())
+    && await tarjSem.first().locator('.picto[aria-hidden="true"]').count() >= 1, `cada sesión con sus músculos, unos minutos y sus pictogramas («${(await tarjSem.first().locator('.dia-chips').textContent()).trim()}»)`);
+  check((await p.locator('#semana-titulo').textContent()).startsWith('Semana 4'), 'abre en la semana en curso');
+  await p.getByRole('button', { name: /^Semana anterior/ }).click();
+  await p.locator('#semana-titulo', { hasText: 'Semana 3' }).waitFor();
+  check((await p.locator('.semanas-tabs button[aria-pressed="true"]').textContent()).startsWith('S3'), 'el botón de la semana anterior la cambia (la alternativa al gesto)');
+  const zonaDias = p.locator('.dias-deslizar');
+  const bbDias = await zonaDias.boundingBox();
+  await p.mouse.move(bbDias.x + bbDias.width * 0.75, bbDias.y + 14);
+  await p.mouse.down();
+  await p.mouse.move(bbDias.x + bbDias.width * 0.15, bbDias.y + 18, { steps: 8 });
+  await p.mouse.up();
+  await p.locator('#semana-titulo', { hasText: 'Semana 4' }).waitFor();
+  check(true, 'deslizar los días a la izquierda pasa a la semana siguiente');
+  // v0.50 (revisión): arrastrar dentro de la hoja de cambiar el día no cambia de semana ni la cierra
+  const chipDia = p.locator('.dias-deslizar .tira-chip[aria-label^="Cambiar el día de"]').first();
+  if (await chipDia.count()) {
+    await chipDia.click();
+    const hojaDiaSem = p.getByRole('dialog', { name: /^¿Qué día harás/ });
+    await hojaDiaSem.waitFor();
+    // (por el título: un día es una fila entera y arrastrar dentro de ella es tocarla)
+    const bbH = await hojaDiaSem.locator('.hoja-cab h2').boundingBox();
+    await p.mouse.move(bbH.x + bbH.width * 0.9, bbH.y + bbH.height / 2);
+    await p.mouse.down();
+    await p.mouse.move(bbH.x + bbH.width * 0.05, bbH.y + bbH.height / 2 + 3, { steps: 8 });
+    await p.mouse.up();
+    await p.waitForTimeout(400);
+    check(await hojaDiaSem.isVisible() && (await p.locator('#semana-titulo').textContent()).startsWith('Semana 4'), 'arrastrar a los lados dentro de la hoja de cambiar el día no cambia de semana ni la cierra');
+    await p.keyboard.press('Escape');
+    await hojaDiaSem.waitFor({ state: 'detached' });
+  } else check(true, 'esta semana no queda ninguna sesión con día que cambiar');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('semana-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
   await revisar('semana');
   await p.getByRole('heading', { name: 'Tus entrenamientos' }).waitFor();
   check(await p.locator('button.entreno').count() >= 8, 'y su historial de entrenamientos, agrupado por meses');
@@ -1127,6 +1343,71 @@ try {
   await p.keyboard.press('Escape');
   await historia.waitFor({ state: 'detached' });
   check(await tarjetaSemana.count() === 0, 'al cerrarla, la tarjeta no vuelve a salir esa semana');
+
+  // v0.50: el día de descanso (si hoy no es domingo, Torso B pasa a mañana un momento): una idea para hoy y lo que viene
+  if (new Date().getDay() !== 0) {
+    const NOMBRES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    await p.locator('.toca-hoy').waitFor();
+    // (en el centro: arriba la taparía la cabecera pegada)
+    await p.getByRole('button', { name: 'Tu plan', exact: true }).evaluate((b) => b.scrollIntoView({ block: 'center' }));
+    await p.getByRole('button', { name: 'Tu plan', exact: true }).click();
+    const hojaPlanA = p.getByRole('dialog', { name: /^Tu plan,/ });
+    await hojaPlanA.getByRole('button', { name: /^Torso B: prevista hoy/ }).click();
+    const hojaDiaB = p.getByRole('dialog', { name: '¿Qué día harás Torso B?' });
+    await hojaDiaB.getByRole('button', { name: new RegExp(`^${NOMBRES[(new Date().getDay() + 1) % 7]}`) }).click();
+    await hojaDiaB.waitFor({ state: 'detached' });
+    await p.keyboard.press('Escape');
+    await hojaPlanA.waitFor({ state: 'detached' });
+    // (los lunes, lo que lleva hecho esta semana es de hoy: entonces Hoy celebra lo hecho y dice lo que viene)
+    await p.locator('.hero-dia.hero-descanso, .hero-dia.hero-hecha').waitFor();
+    const heroDesc = p.locator('.hero-dia.hero-descanso');
+    if (await heroDesc.count()) {
+      check((await heroDesc.locator('.titular h2').textContent()) === 'Hoy descansas' && (await heroDesc.locator('.hero-sugerencia strong').textContent()).length > 5
+        && /Lo siguiente: Torso B, mañana/.test(await heroDesc.locator('.hero-siguiente').textContent()) && await heroDesc.getByRole('button', { name: 'Ver tu plan de la semana' }).count() === 1
+        && await heroDesc.getByRole('button', { name: 'Entrenar hoy igualmente' }).count() === 1, `día de descanso: «${(await heroDesc.locator('.hero-sugerencia strong').textContent())}» y lo que viene (Torso B, mañana)`);
+      await revisar('hoy-descanso');
+      await p.setViewportSize({ width: 360, height: 780 });
+      await p.emulateMedia({ colorScheme: 'dark' });
+      await revisar('hoy-descanso-360-oscuro');
+      await p.emulateMedia({ colorScheme: null });
+      await p.setViewportSize({ width: 390, height: 844 });
+    } else {
+      check(/Lo siguiente: Torso B, mañana/.test(await p.locator('.hero-dia.hero-hecha .hero-siguiente').textContent()), 'hoy ya ha entrenado (es lunes): Hoy lo celebra y dice lo que viene (Torso B, mañana)');
+      await revisar('hoy-hecha-lunes');
+    }
+    // (en el centro: arriba la taparía la cabecera pegada)
+    await p.getByRole('button', { name: 'Tu plan', exact: true }).evaluate((b) => b.scrollIntoView({ block: 'center' }));
+    await p.getByRole('button', { name: 'Tu plan', exact: true }).click();
+    await hojaPlanA.getByRole('button', { name: /^Torso B: prevista mañana/ }).click();
+    await hojaDiaB.getByRole('button', { name: /, hoy/ }).click();
+    await hojaDiaB.waitFor({ state: 'detached' });
+    await p.keyboard.press('Escape');
+    await hojaPlanA.waitFor({ state: 'detached' });
+  } else check(true, 'hoy es domingo: no hay un día después en la semana para probar el descanso');
+  // v0.50: Hoy y una sesión con la letra más grande (125 %): nada se sale, tampoco a 360 px
+  await abrirPestana(p, 'Perfil');
+  await p.getByRole('group', { name: 'Tamaño de la letra' }).getByRole('button', { name: 'Muy grande' }).click();
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').waitFor();
+  check(await p.evaluate(() => getComputedStyle(document.documentElement).fontSize) === '20px', 'con «Muy grande», Hoy también va al 125 %');
+  await revisar('hoy-letra-muy-grande');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await revisar('hoy-letra-muy-grande-360');
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.locator('.semana-dias .dia.hecha').first().click();
+  await p.locator('.ejercicio').first().waitFor();
+  // (una sesión hecha: sus ejercicios, plegados en una línea; se espera a que acaben de plegarse)
+  await p.waitForTimeout(900);
+  await revisar('sesion-letra-muy-grande');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await revisar('sesion-letra-muy-grande-360');
+  check(await p.evaluate(() => document.documentElement.scrollWidth) <= 360, 'a 125 %, Hoy y la sesión caben sin desbordarse (también a 360 px)');
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.getByRole('button', { name: 'Volver' }).first().click();
+  await abrirPestana(p, 'Perfil');
+  await p.getByRole('group', { name: 'Tamaño de la letra' }).getByRole('button', { name: 'Normal' }).click();
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.toca-hoy').waitFor();
 
   console.log('\nDemo: serie top, intervalos y cámara guiada');
   await p.locator('.toca-hoy').waitFor();
@@ -1200,6 +1481,17 @@ try {
   await segDia.getByRole('button', { name: 'Hoy descanso' }).click();
   await p.waitForFunction(() => document.querySelector('button.nutricion-hoy')?.getAttribute('aria-label')?.includes('de 1695 kcal'));
   check(true, 'si al final no entrena, lo cambia a día de descanso y el objetivo baja (1695 kcal)');
+  // v0.50: la barra de kcal y los tres anillos de macros, cada uno con su valor, su objetivo y su nombre (no solo el color)
+  const anillosM = p.locator('.nutricion-hoy .anillo-macro');
+  check(await anillosM.count() === 3 && (await p.locator('.nutricion-hoy .anillo-macro-nombre').allTextContents()).join() === 'Proteína,Hidratos,Grasa'
+    && (await p.locator('.nutricion-hoy .anillo-macro [role="img"]').evaluateAll((xs) => xs.map((x) => x.getAttribute('aria-label')))).every((t) => /^(Proteína|Hidratos|Grasa): (\d+ de \d+ g|sin apuntar)$/.test(t))
+    && /^Kcal: /.test(await p.locator('.nutricion-hoy .kcal-barra').getAttribute('aria-label')) && /de 1695/.test(await p.locator('.nutricion-hoy .kcal-barra').getAttribute('aria-label')),
+  'la nutrición de hoy: la barra de kcal (comido, objetivo y lo que queda) y un anillo por macro, con su nombre y sus cifras');
+  await p.locator('.seccion-nutricion').scrollIntoViewIfNeeded();
+  await revisar('nutricion-anillos');
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('nutricion-anillos-oscuro');
+  await p.emulateMedia({ colorScheme: null });
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
   await p.getByRole('button', { name: /Pelayo/ }).click();
   // En la demo, el coach tiene la verificación en dos pasos (código 123456)
@@ -1211,6 +1503,8 @@ try {
   await p.getByRole('tab', { name: 'Nutrición' }).click();
   await p.locator('.ajuste-nutricion').waitFor();
   await revisar('nutricion-coach');
+  check(await p.getByRole('heading', { name: 'Su día de hoy' }).count() === 1 && (await p.locator('.macros-dia .anillo-macro').count() === 3 || (await p.locator('.contenido').textContent()).includes('Aún no ha apuntado nada hoy')),
+    'en su ficha, el coach ve su día de hoy con los mismos anillos');
   await p.getByRole('button', { name: /Revisar y aplicar/ }).click();
   const hojaCambio = p.getByRole('dialog', { name: 'Cambiar el plan' });
   check((await hojaCambio.locator('#pn-motivo').inputValue()).startsWith('Ajuste: gastas'), 'el ajuste sugerido abre el plan ya cambiado, con el motivo escrito para Ana');
@@ -1234,8 +1528,9 @@ try {
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
   await p.getByRole('button', { name: /Ana/ }).click();
   await abrirPestana(p, 'Perfil');
-  await p.getByRole('heading', { name: 'Notificaciones' }).waitFor();
-  await p.getByRole('heading', { name: 'Notificaciones' }).locator('..').getByRole('button', { name: /Ajustes/ }).click();
+  // v0.50: en el perfil, las notificaciones son una fila de «Este móvil»
+  await p.locator('.fila-notificaciones').waitFor();
+  await p.locator('.fila-notificaciones').getByRole('button', { name: /^Notificaciones/ }).click();
   const hojaNoti = p.getByRole('dialog', { name: 'Notificaciones' });
   await hojaNoti.locator('.lista-notificaciones li').first().waitFor();
   check(await hojaNoti.locator('.lista-notificaciones li').count() === 3 && (await hojaNoti.locator('.lista-notificaciones').textContent()).includes('Pelayo te ha respondido'),
@@ -1250,7 +1545,7 @@ try {
   await revisar('notificaciones-atleta');
   await p.keyboard.press('Escape');
   await hojaNoti.waitFor({ state: 'detached' });
-  const resumenNoti = await p.getByRole('heading', { name: 'Notificaciones' }).locator('..').locator('.terciario').textContent();
+  const resumenNoti = await p.locator('.fila-notificaciones .resumen-noti').textContent();
   check(/Respuestas, semana, avisos, peticiones, tareas, descansos, equipo y 3 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
 
   // v0.13: cuestionario inicial y check-in a medida
@@ -1383,12 +1678,12 @@ try {
   check(true, 'Perfil se abre desde el avatar de arriba (ya no está en la barra del móvil)');
   // Foto de perfil (v0.19): cualquier imagen; el móvil la recorta en cuadrado y la comprime
   await p.locator('input[type=file][aria-label="Foto de perfil nueva"]').setInputFiles(new URL('../web/iconos/icono-512.png', import.meta.url).pathname);
-  await p.locator('.cabecera .avatar.con-foto img').waitFor();
-  const fotoAna = await p.locator('.cabecera .avatar.con-foto img').getAttribute('src');
+  await p.locator('.perfil-cabeza .avatar.con-foto img').waitFor();
+  const fotoAna = await p.locator('.perfil-cabeza .avatar.con-foto img').getAttribute('src');
   check(/^data:image\/jpeg;base64,/.test(fotoAna) && fotoAna.length < 80000, `pone su foto de perfil: recortada y comprimida en el móvil (${Math.round(fotoAna.length / 1024)} KB)`);
   await revisar('perfil-foto');
   // v0.25: tocar la foto la abre en grande (guardada a 384 px)
-  await p.locator('.cabecera').getByRole('button', { name: /Ver en grande la foto/ }).click();
+  await p.locator('.perfil-cabeza').getByRole('button', { name: /Ver en grande la foto/ }).click();
   const hojaFoto = p.locator('.foto-ampliada');
   await hojaFoto.waitFor();
   const ancho = await hojaFoto.evaluate((img) => img.naturalWidth);
@@ -1575,7 +1870,8 @@ try {
   // v0.27.1: el aviso del descanso con los sonidos de FBE Timer (a Guti se le oía muy bajo)
   // (lo que suena: la duración de cada sonido que arranca; cada uno dura distinto)
   await p.evaluate(() => { if (!navigator.audioSession) Object.defineProperty(navigator, 'audioSession', { value: { type: 'auto' }, configurable: true }); window.__sonado = []; const ini = AudioBufferSourceNode.prototype.start; AudioBufferSourceNode.prototype.start = function (...x) { window.__sonado.push(Math.round((this.buffer?.duration || 0) * 100)); return ini.apply(this, x); }; });
-  const queSuena = p.getByLabel('Qué suena');
+  await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
+  const queSuena = p.getByRole('dialog', { name: 'Sonido y vibración' }).getByLabel('Qué suena');
   await queSuena.scrollIntoViewIfNeeded();
   await queSuena.selectOption('boxeo');
   await p.waitForFunction(() => window.__sonado.length >= 1, null, { timeout: 5000 }).catch(() => {});
@@ -1597,6 +1893,8 @@ try {
     'aunque el navegador no deje guardar, «Probar» toca el elegido (y lo dice: «Suena: Tono motivador»)');
   check((await p.locator('.contenido').textContent()).includes('FBE Equipo, versión'), 'y en sus ajustes se ve qué versión tiene');
   await revisar('ajustes-sonido');
+  await p.keyboard.press('Escape');
+  await p.getByRole('dialog', { name: 'Sonido y vibración' }).waitFor({ state: 'detached' });
   // v0.27.4: el peso en Hoy, sin la cifra de serie; quien la quiera, la enciende en Ajustes
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   const pesoAna = p.locator('.peso-hoy');
@@ -2161,7 +2459,9 @@ try {
   await hojaLogro.getByRole('button', { name: 'Compartirlo en el muro' }).click();
   await p.locator('.toast', { hasText: 'Logro compartido en el muro' }).waitFor();
   await p.locator('.post.post-logro', { hasText: '¡La primera de muchas!' }).waitFor();
-  check((await p.locator('.post.post-logro', { hasText: '¡La primera de muchas!' }).textContent()).includes('3 de 3 sesiones'), '«Compartirlo en el muro»: la tarjeta del logro, hecha por la base');
+  // (las que hizo de verdad: un lunes, la primera de esta semana va el domingo y la semana pasada suma una más)
+  const hechasLogro = Number(((await p.locator('.post.post-logro', { hasText: '¡La primera de muchas!' }).textContent()).match(/(\d+) de 3 sesiones/) || [])[1]);
+  check(hechasLogro >= 3, `«Compartirlo en el muro»: la tarjeta del logro, hecha por la base (${hechasLogro} de 3 sesiones)`);
   await p.locator('.post').first().waitFor();
   const muroRuben = await p.locator('.muro').textContent();
   check(!muroRuben.includes('Ana L.') && !muroRuben.includes('Primera semana en el equipo') && !muroRuben.includes('Torso B hecho'), 'para Rubén desaparece todo lo de Ana (publicaciones, entrenos, comentarios y reacciones)');
@@ -2483,13 +2783,15 @@ try {
     s.getVoices = () => [];
   });
   await abrirPestana(p, 'Perfil');
-  const intVoz = p.getByRole('switch', { name: /Entrenador por voz/ });
+  await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
+  const intVoz = p.getByRole('dialog', { name: 'Sonido y vibración' }).getByRole('switch', { name: /Entrenador por voz/ });
   await intVoz.waitFor();
   check(!(await intVoz.isChecked()), 'el entrenador por voz viene apagado');
   await intVoz.check();
   await p.getByRole('button', { name: 'Probar la voz' }).click();
   check((await p.evaluate(() => window.__dichos)).some((t) => t.startsWith('Serie 3 de sentadilla')), '«Probar la voz» lo dice');
   await revisar('perfil-voz');
+  await p.keyboard.press('Escape');
 
   // La sesión: lo que te dijo tu coach, dónde entrenas y la voz en el descanso
   await p.locator('.tab', { hasText: 'Hoy' }).click();

@@ -1,3 +1,4 @@
+import { PictoEjercicio } from './Pictograma.jsx';
 import { useState } from 'preact/hooks';
 import { Pestanas, Siluetas, useApp, useCarga, Icono, Hoja, Segmentos, Grafica, Vacio } from './comunes.jsx';
 import { textoSerie, num, NOMBRE_GRUPO } from '../logica/calculos.js';
@@ -16,7 +17,8 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
   const grupos = (ejercicio.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).filter(Boolean).join(', ');
   return (
     <Hoja titulo={ejercicio.nombre} alCerrar={alCerrar} ancho={680}>
-      {grupos && <p class="peq secundario" style="margin-top:-6px">{grupos}</p>}
+      {/* v0.50: su pictograma (el patrón de movimiento) junto a los músculos */}
+      <p class="ficha-ej-cab peq secundario"><PictoEjercicio ejercicio={ejercicio} clase="picto-grande" /><span>{grupos || 'Sin grupo muscular'}</span></p>
       <Pestanas opciones={pestanas} valor={vista} alCambiar={setVista} etiqueta="Ficha del ejercicio" clase="pestanas-ficha" idBase="fej" />
       <div class="pestana-panel" role="tabpanel" id="fej-panel" aria-labelledby={`fej-${vista}`} key={vista}>
         {vista === 'tecnica' ? <Tecnica ejercicio={ejercicio} />

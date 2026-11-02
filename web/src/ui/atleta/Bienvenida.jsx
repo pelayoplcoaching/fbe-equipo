@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Icono } from '../comunes.jsx';
+import { Icono, Capa } from '../comunes.jsx';
 
 // ---------- Bienvenida: cuatro pantallas la primera vez que entra un atleta nuevo ----------
 const DIBUJOS = {
@@ -52,7 +52,9 @@ const DIBUJOS = {
   ),
 };
 
-export function Bienvenida({ nombre, alTerminar }) {
+// v0.50: en su capa (en <body>), como las hojas
+export function Bienvenida(props) { return <Capa><BienvenidaPantalla {...props} /></Capa>; }
+function BienvenidaPantalla({ nombre, alTerminar }) {
   const ios = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
   const pantallas = [
     { dibujo: 'programa', titulo: `Hola, ${nombre}`, texto: 'Aquí tienes tu programa: cada sesión con sus ejercicios, series y cargas. El disco de color marca la prioridad de cada ejercicio.' },

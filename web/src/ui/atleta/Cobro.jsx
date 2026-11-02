@@ -1,7 +1,7 @@
 // Cómo va con sus pagos (v0.25, migración 021): el atleta solo ve el resumen (hasta cuándo tiene pagado y si
 // queda algo pendiente), nunca el precio, las notas ni la lista de cobros. En Hoy, arriba, cuando debe algo o su
 // periodo acaba (con «Ahora no» hasta mañana); en Perfil, siempre que haya cobros apuntados.
-import { useApp, useCarga, Icono, usePreferencia } from '../comunes.jsx';
+import { useApp, useCarga, Icono, usePreferencia, IcoIos } from '../comunes.jsx';
 import { fmtEuros } from '../../logica/cobros.js';
 import { fmtCorta, hoyISO } from '../../logica/fechas.js';
 
@@ -50,7 +50,7 @@ export function FilaCobro() {
   if (!t) return null;
   return (
     <li class="panel-pad separa">
-      <div><div>Tus pagos</div><div class="peq terciario">{t.titulo === 'Al día' ? t.texto : `${t.titulo}: ${t.texto.charAt(0).toLowerCase()}${t.texto.slice(1)}`}</div></div>
+      <div class="fila-ios-izq"><IcoIos n="calendario" tono={t.tono === 'alerta' ? 'alerta' : t.tono === 'aviso' ? 'aviso' : t.tono === 'ok' ? 'ok' : ''} /><div><div>Tus pagos</div><div class="peq terciario">{t.titulo === 'Al día' ? t.texto : `${t.titulo}: ${t.texto.charAt(0).toLowerCase()}${t.texto.slice(1)}`}</div></div></div>
       <span class={`chip ${t.tono === 'alerta' ? 'alerta' : t.tono === 'aviso' ? 'aviso' : t.tono === 'ok' ? 'ok' : 'info'}`}>{t.tono === 'ok' ? 'Al día' : t.tono === 'info' ? 'Acaba pronto' : t.tono === 'alerta' ? 'Retrasado' : c.estado === 'vencido' ? 'Por renovar' : 'Pendiente'}</span>
     </li>
   );

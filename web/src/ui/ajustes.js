@@ -3,22 +3,27 @@
 // enseña la cifra del peso o solo cómo va. Si el almacenamiento no está disponible, valen los de serie.
 // v0.49: color de acento, negro puro (OLED) en el tema oscuro y la vibración al tocar (marcar una serie, un récord,
 // enviar el check-in), aparte de la del descanso.
+// v0.50: el tamaño de la letra (Normal, Grande o Muy grande), que cambia el tamaño de la raíz (todo va en rem).
 import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
 
 const CLAVE = 'fbe-ajustes';
 // voz (v0.48): el entrenador por voz, apagado de entrada
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
-  acento: ACENTO_DEFECTO, oled: false, hapticos: true };
+  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal' };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
 // igual mientras la app esté abierta (antes se volvía a los de serie: «elijo otro sonido y suena el de siempre»)
 let enMemoria = null;
 const TEMAS = ['sistema', 'claro', 'oscuro'];
+// El tamaño de la letra: su nombre y cuánto crece la raíz (100 % son los 16 px del navegador)
+export const TAMANOS_LETRA = [['normal', 'Normal', 100], ['grande', 'Grande', 112.5], ['muy-grande', 'Muy grande', 125]];
+const LETRAS = TAMANOS_LETRA.map(([k]) => k);
 // Lo guardado, completado con los de serie y saneado (sin pantalla, para poder probarlo):
 // - v0.49: quien apagó la vibración en la v0.48 (solo había una) la tiene apagada también al tocar;
 // - un tema, un acento o un negro puro que no sean de los que hay vuelven a los de serie (alguien pudo tocar el
-//   almacenamiento a mano, y el tema acaba en el color de la barra del sistema).
+//   almacenamiento a mano, y el tema acaba en el color de la barra del sistema);
+// - v0.50: un tamaño de letra que no es de los tres vuelve al normal.
 export function normalizarAjustes(guardado = {}) {
   const g = guardado && typeof guardado === 'object' && !Array.isArray(guardado) ? guardado : {};
   const a = { ...AJUSTES_DEFECTO, ...g };
@@ -27,6 +32,7 @@ export function normalizarAjustes(guardado = {}) {
   if (!TEMAS.includes(a.tema)) a.tema = AJUSTES_DEFECTO.tema;
   if (typeof a.acento !== 'string' || !/^[a-z]{1,20}$/.test(a.acento)) a.acento = AJUSTES_DEFECTO.acento;
   a.oled = a.oled === true;
+  if (!LETRAS.includes(a.letra)) a.letra = AJUSTES_DEFECTO.letra;
   return a;
 }
 export function leerAjustes() {
@@ -59,6 +65,8 @@ export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) 
   // Negro puro: solo cambia algo cuando el tema que se ve es el oscuro (las reglas están en estilos.css)
   const oled = !!a.oled && tema !== 'claro';
   if (oled) r.setAttribute('data-oled', ''); else r.removeAttribute('data-oled');
+  // v0.50: el tamaño de la letra, en la raíz (estilos.css lo traduce a su font-size)
+  if (a.letra && a.letra !== 'normal' && LETRAS.includes(a.letra)) r.setAttribute('data-letra', a.letra); else r.removeAttribute('data-letra');
   // El acento: sus variables en una hoja propia al final del <head> (con los mismos selectores que el tema)
   let hoja = document.getElementById('fbe-acento');
   const css = cssAcento(a.acento);

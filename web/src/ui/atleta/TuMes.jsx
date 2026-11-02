@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Anillo, usePreferencia, Cargando } from '../comunes.jsx';
+import { useApp, useCarga, Icono, Anillo, usePreferencia, Cargando, Capa } from '../comunes.jsx';
 import { HojaCompartir } from '../Compartir.jsx';
 import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { nombreMes, mesConAnio, mesAnterior, calendarioMes, datosCompartirMes } from '../../logica/mes.js';
@@ -53,7 +53,9 @@ export function CalendarioMes({ mes, dias, peq = false }) {
 
 // Historia a pantalla completa (como «Tu semana»): toques, deslizar o las flechas; avanza sola salvo con movimiento
 // reducido. conCompartir: el atleta puede hacer la imagen (el coach lo ve sin ese botón).
-export function HistoriaMes({ resumen: r, salud, alCerrar, conCompartir = true, nombre = null }) {
+// v0.50: en su capa (en <body>), como las hojas
+export function HistoriaMes(props) { return <Capa><HistoriaMesPantalla {...props} /></Capa>; }
+function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true, nombre = null }) {
   const mes = r.mes;
   const tu = nombre ? `El ${nombreMes(mes)} de ${nombre}` : `Tu ${nombreMes(mes)}`;
   const pantallas = [

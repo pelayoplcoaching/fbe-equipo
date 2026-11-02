@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Cargando } from '../comunes.jsx';
+import { useApp, useCarga, Icono, Cargando, Capa } from '../comunes.jsx';
 import { construirResultados } from '../../logica/busqueda.js';
 
 // Búsqueda rápida (Ctrl/Cmd + K): saltar a un atleta (o a una de sus pestañas), una sección,
 // una plantilla, un ejercicio o una acción, sin soltar el teclado.
 
-export function Buscador({ alCerrar, ir }) {
+// v0.50: en su capa (en <body>), como las hojas
+export function Buscador(props) { return <Capa><BuscadorPantalla {...props} /></Capa>; }
+function BuscadorPantalla({ alCerrar, ir }) {
   const { api } = useApp();
   const datos = useCarga(() => Promise.all([api.atletas(), api.plantillas(), api.biblioteca()])
     .then(([atletas, plantillas, ejercicios]) => ({ atletas, plantillas, ejercicios })), []);
