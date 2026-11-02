@@ -3489,3 +3489,7 @@ body:has(.app.con-actividad)::before { height: calc(env(safe-area-inset-top, 0px
 @keyframes portada-recoge { to { translate: 0 -16px; scale: .9; } }
 @keyframes hero-paralaje { to { translate: 0 70px; } }
 @keyframes hero-paralaje-ilu { to { translate: 0 28px; } }
+
+/* v0.52.1: añadir y quitar series añadidas, en una fila */
+.series-acciones { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; justify-content: space-between; }
+.btn-quitar-serie { color: var(--tinta-2); }

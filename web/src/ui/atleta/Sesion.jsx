@@ -595,7 +595,10 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   const pa = pauta(e);
   const n = Object.keys(hechas).length;
   const [extra, setExtra] = useState(0);
-  const filas = Math.max(e.series, ...Object.keys(hechas).map(Number), 0) + extra;
+  // Las series añadidas suman a las pautadas; marcar una añadida no abre otra fila vacía detrás
+  const filas = Math.max(e.series + extra, ...Object.keys(hechas).map(Number), 0);
+  // La última fila se puede quitar si es una añadida sin hacer (si está hecha, primero se desmarca)
+  const quitable = filas > e.series && !hechas[filas] && !enCola[`${e.id}-${filas}`] ? filas : null;
   const activa = Array.from({ length: filas }, (_, i) => i + 1).find((k) => !hechas[k]);
   const { ej, prescripcion, sugerencia, barra, conAproximacion, kgTrabajo, propuesta, top } = prepararEjercicio(e, actual, ultimas, foco, progresionAuto);
   // Sin carga pautada (a RPE): en cada serie, su peso de la última vez como referencia
@@ -701,7 +704,10 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
               </Fragment>
             );
           })}
-          <button class="btn-texto" style="justify-self:start" onClick={() => setExtra(extra + 1)}><Icono n="mas" /> Añadir serie</button>
+          <div class="series-acciones">
+            <button class="btn-texto" onClick={() => setExtra(filas - e.series + 1)}><Icono n="mas" /> Añadir serie</button>
+            {quitable && <button class="btn-texto btn-quitar-serie" onClick={() => setExtra(Math.max(0, quitable - 1 - e.series))} aria-label={`Quitar la serie ${quitable}, la añadida`}><Icono n="menos" /> Quitar serie {quitable}</button>}
+          </div>
           <div class="acciones-ej">
             {!propio && <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} etiqueta={videos + videosPendientes > 0 ? 'Enviar otro vídeo' : undefined} alSubir={alSubirVideo} />}
             <button class="btn-texto btn-mas" onClick={() => setHoja('mas')} aria-haspopup="dialog" aria-label={`Más herramientas de ${ej.nombre}`}><Icono n="opciones" /> Más</button>

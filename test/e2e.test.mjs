@@ -629,9 +629,18 @@ try {
   check(!(await segundo.getAttribute('class')).includes('plegado') && await segundo.locator('.ejercicio-cuerpo').count() === 1 && (await segundo.locator('.progreso-series').textContent()) === '2/3'
     && await sigSeg.count() === 1 && /serie 3$/.test(await sigSeg.getAttribute('aria-label')) && await sigSeg.isVisible(),
     'con 2 de 3 pautadas y una de más, el ejercicio no se pliega (2/3) y la serie que toca, la 3, está a la vista');
-  await segundo.getByRole('button', { name: 'Quitar la serie 4' }).click();
-  await segundo.getByRole('button', { name: 'Quitar la serie 2' }).click();
+  await segundo.getByRole('button', { name: 'Quitar la serie 4', exact: true }).click();
+  await segundo.getByRole('button', { name: 'Quitar la serie 2', exact: true }).click();
   await p.locator('.toast', { hasText: 'Serie 2 quitada' }).waitFor();
+  // v0.52.1: la fila añadida, ya sin hacer, se quita con su botón (y no vuelve a salir otra vacía)
+  const quitarAnadida = segundo.getByRole('button', { name: 'Quitar la serie 4, la añadida' });
+  check(await hay(quitarAnadida, 1) && await hay(segundo.getByLabel('Kilos de la serie 4'), 1), 'desmarcada, la serie añadida se puede quitar');
+  await quitarAnadida.click();
+  check(await hay(segundo.getByLabel('Kilos de la serie 4'), 0) && await hay(quitarAnadida, 0) && await segundo.getByLabel('Kilos de la serie 3').count() === 1,
+    'quitar la serie añadida por error: vuelve a las 3 pautadas');
+  await segundo.getByRole('button', { name: 'Añadir serie' }).click();
+  await segundo.getByRole('button', { name: 'Quitar la serie 4, la añadida' }).click();
+  check(await hay(segundo.getByLabel('Kilos de la serie 4'), 0), 'y una añadida sin querer se quita al momento');
 
   console.log('\nAtleta: comentario para el coach');
   await p.getByLabel('Escribir a tu coach').fill('He cambiado el remo porque la barra estaba ocupada');
