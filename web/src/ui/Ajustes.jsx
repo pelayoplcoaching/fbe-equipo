@@ -6,6 +6,7 @@ import { prepararAudio, pitar, SONIDOS_DESCANSO } from './atleta/sesion-comun.js
 import { hayVoz, hablar } from './voz.js';
 import { ACENTOS } from '../logica/acentos.js';
 import { puedeVibrar, vibrar } from './hapticos.js';
+import { DESCANSOS_ATLETA, mmss } from '../logica/calculos.js';
 
 const TEMAS = [['sistema', 'Sistema'], ['claro', 'Claro'], ['oscuro', 'Oscuro']];
 export const VERSION_APP = typeof __APP_VERSION__ === 'undefined' ? '' : String(__APP_VERSION__);
@@ -28,7 +29,8 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
   const [a, setA] = useState(leerAjustes);
   const [sonido, setSonido] = useState(false);
   const cambiar = (k, v) => { const n = { ...a, [k]: v }; setA(n); guardarAjustes(n); };
-  const resumenSonido = [a.sonido ? 'Sonido' : 'Sin sonido', a.voz && hayVoz() ? 'voz' : null, a.vibracion ? 'vibración' : null].filter(Boolean).join(', ');
+  const resumenSonido = [a.sonido ? 'Sonido' : 'Sin sonido', a.voz && hayVoz() ? 'voz' : null, a.vibracion ? 'vibración' : null,
+    a.descansoDefecto ? `descanso ${mmss(a.descansoDefecto)}` : 'sin descanso automático'].filter(Boolean).join(', ');
   return (
     <>
     <GrupoIos titulo={`Este ${coach ? 'dispositivo' : 'móvil'}`} id="grupo-este-movil">
@@ -72,7 +74,8 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
   );
 }
 
-// Sonido, voz y vibración del descanso (v0.50: en su hoja, para que el perfil se lea de un vistazo)
+// Sonido, voz y vibración del descanso (v0.50: en su hoja, para que el perfil se lea de un vistazo). v0.52.2: y el
+// descanso que arranca solo si el coach no ha puesto uno
 function HojaSonido({ a, cambiar, alCerrar }) {
   const { aviso } = useApp();
   const nombreSonido = (k) => (SONIDOS_DESCANSO.find(([v]) => v === k) || [])[1] || k;
@@ -82,6 +85,14 @@ function HojaSonido({ a, cambiar, alCerrar }) {
     <Hoja titulo="Sonido y vibración" alCerrar={alCerrar}>
       <div class="panel grupo-ios-hoja">
         <ul class="lista">
+          <li class="panel-pad pila-s">
+            <label for="aj-descanso-defecto">Descanso si tu coach no lo pone</label>
+            <select id="aj-descanso-defecto" class="selector" aria-describedby="aj-descanso-defecto-ayuda" value={String(a.descansoDefecto)}
+              onChange={(e) => { const v = Number(e.currentTarget.value); cambiar('descansoDefecto', v); }}>
+              {DESCANSOS_ATLETA.map((v) => <option key={v} value={String(v)}>{v ? mmss(v) : 'Sin descanso automático'}</option>)}
+            </select>
+            <span class="peq terciario" id="aj-descanso-defecto-ayuda">Arranca solo al marcar una serie de un ejercicio en el que tu coach no te ha puesto descanso. Para un ejercicio en concreto, elige otro en su «Más», en «Descanso».</span>
+          </li>
           <Interruptor id="aj-sonido" icono="altavoz" texto="Sonido al acabar el descanso" ayuda="Y al batir un récord o ganar un disco" valor={a.sonido} alCambiar={(v) => cambiar('sonido', v)} />
           {a.sonido && (
             <li class="panel-pad pila-s">

@@ -225,6 +225,13 @@ try {
   await avisoVar.getByRole('button', { name: 'Quitar la variante' }).click();
   await p.locator('.toast', { hasText: 'Variante quitada' }).waitFor();
   check(await p.locator('.editor-sesion .aviso-variante').count() === 0 && (await p.getByLabel('Variante').nth(4).inputValue()) === '', 'y se puede quitar la variante (en todo el bloque)');
+  // v0.52.2: dos ejercicios de Torso A sin descanso del coach (como los que vinieron de Notion): el press militar y el jalón
+  const descansosEd = p.getByLabel('Descanso', { exact: true });
+  await descansosEd.nth(2).selectOption('');
+  await descansosEd.nth(3).selectOption('');
+  await p.waitForFunction(() => { const s = document.querySelectorAll('select[aria-label="Descanso"]'); return s[2]?.value === '' && s[3]?.value === '' && document.querySelector('.guardado')?.textContent === 'Guardado'; });
+  const filasSinDescanso = await p.evaluate(() => [...document.querySelectorAll('select[aria-label="Descanso"]')].slice(2, 4).map((x) => x.closest('tr')?.textContent || ''));
+  check(/Press militar/.test(filasSinDescanso[0]) && /Jalón/.test(filasSinDescanso[1]), 'quita el descanso del press militar y del jalón de Torso A («—»)');
   await p.getByRole('button', { name: 'Publicar al atleta' }).click();
   const avisoActivo = p.getByRole('dialog', { name: 'Este bloque aún no es el activo' });
   await avisoActivo.waitFor();
@@ -556,6 +563,12 @@ try {
   await hojaMas.locator('.hoja-acciones').waitFor();
   const filasMas = await hojaMas.locator('.accion-fila').evaluateAll((xs) => xs.map((x) => [x.querySelector('strong').textContent, Math.round(x.getBoundingClientRect().height)]));
   check(filasMas.length >= 5 && filasMas.every(([, h]) => h >= 44) && filasMas.some(([t]) => t === 'Cambiar') && filasMas.some(([t]) => t === 'Aproximación'), `«Más» abre la hoja con las herramientas en filas grandes ${JSON.stringify(filasMas)}`);
+  // v0.52.2: con el descanso del coach, «Más» lo enseña y no deja cambiarlo ahí (en el temporizador, sí, con ±15 s y ±1 min)
+  const filaDescCoach = hojaMas.locator('.accion-fija');
+  check(await filaDescCoach.count() === 1 && (await filaDescCoach.locator('strong').textContent()) === 'Descanso' && (await filaDescCoach.textContent()).includes('Te lo ha puesto tu coach: 3:00')
+    && await hojaMas.getByRole('button', { name: /Descanso/ }).count() === 0 && await filaDescCoach.locator('button, select, input').count() === 0,
+    'con el descanso del coach (3:00), «Más» lo enseña y no se puede cambiar ahí');
+  check(/descanso 3:00/.test(await primero.locator('.pauta').textContent()) && !/tuyo/.test(await primero.locator('.pauta').textContent()), 'y la pauta dice «descanso 3:00», sin «(tuyo)»');
   await revisar('sesion-mas');
   await hojaMas.getByRole('button', { name: 'Metrónomo de tempo 3-1-1' }).click();
   const metro = p.getByRole('dialog', { name: 'Tempo 3-1-1' });
@@ -641,6 +654,98 @@ try {
   await segundo.getByRole('button', { name: 'Añadir serie' }).click();
   await segundo.getByRole('button', { name: 'Quitar la serie 4, la añadida' }).click();
   check(await hay(segundo.getByLabel('Kilos de la serie 4'), 0), 'y una añadida sin querer se quita al momento');
+
+  console.log('\nAtleta: descansos sin el del coach (v0.52.2)');
+  // El press militar no tiene descanso del coach: vale el de por defecto (2:00) y sale como «(tuyo)»
+  await saltarSiHay();
+  const militar = p.locator('.ejercicio').nth(2);
+  await abrirEjercicio(militar);
+  check((await militar.locator('.ejercicio-cab .nombre').textContent()).includes('Press militar') && /descanso 2:00 \(tuyo\)/.test(await militar.locator('.pauta').textContent()),
+    `sin descanso del coach, la pauta dice el de por defecto: «${(await militar.locator('.pauta').textContent()).trim()}»`);
+  await militar.getByRole('button', { name: 'Marcar la serie 1 como hecha' }).click();
+  const relojM = p.locator('.temporizador');
+  await relojM.locator('.de').waitFor();
+  check((await relojM.locator('.de').textContent()) === 'de 2:00' && /^(2:00|1:5\d)$/.test(await relojM.locator('.cuenta').textContent()) && (await relojM.locator('.que').textContent()).includes('serie 2 de Press militar')
+    && await p.evaluate(() => document.querySelectorAll('.ejercicio')[2].nextElementSibling?.classList.contains('temporizador')),
+    'al marcar una serie de un ejercicio sin descanso del coach, arranca el de por defecto (2:00), debajo de él');
+  await p.getByRole('button', { name: 'Saltar' }).click();
+  await hay(relojM, 0);
+  // «Más» → Descanso: lo elige el atleta para este ejercicio (en todas sus sesiones)
+  await militar.getByRole('button', { name: /^Más herramientas/ }).click();
+  const hojaMasM = p.getByRole('dialog', { name: 'Press militar con barra' });
+  await hojaMasM.locator('.hoja-acciones').waitFor();
+  const filaDescM = hojaMasM.getByRole('button', { name: 'Descanso', exact: true });
+  check(await filaDescM.count() === 1 && (await filaDescM.textContent()).includes('Por defecto: 2:00') && await hojaMasM.locator('.accion-fija').count() === 0, 'en «Más», «Descanso: Por defecto: 2:00», que se puede cambiar');
+  await filaDescM.click();
+  const hojaD = p.getByRole('dialog', { name: 'Descanso', exact: true });
+  await hojaD.locator('.lista-descansos').waitFor();
+  const opcionesD = await hojaD.locator('.lista-descansos button').evaluateAll((xs) => xs.map((x) => [x.querySelector('span span').textContent, x.getAttribute('aria-pressed'), Math.round(x.getBoundingClientRect().height)]));
+  check(opcionesD.map(([t]) => t).join('|') === 'Usar el de por defecto|Sin descanso automático|1:00|1:30|2:00|2:30|3:00|4:00|5:00' && opcionesD[0][1] === 'true' && opcionesD.slice(1).every(([, x]) => x === 'false') && opcionesD.every(([, , h]) => h >= 44)
+    && (await hojaD.textContent()).includes('Ahora, 2:00'), `elige entre el de por defecto (marcado), sin descanso automático y de 1:00 a 5:00, en filas de 44 px o más ${JSON.stringify(opcionesD)}`);
+  await revisar('descanso-elegir');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.evaluate(() => document.documentElement.setAttribute('data-letra', 'muy-grande'));
+  await p.waitForTimeout(200);
+  check(await p.evaluate(() => getComputedStyle(document.documentElement).fontSize) === '20px' && await p.evaluate(() => { const h = document.querySelector('.hoja-dialogo'); return document.documentElement.scrollWidth <= 360 && h.scrollWidth <= h.clientWidth; }),
+    'a 360 px, en oscuro y con la letra al 125 %, la lista de descansos cabe');
+  await revisar('descanso-elegir-360-oscuro-125');
+  await p.evaluate(() => document.documentElement.removeAttribute('data-letra'));
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await hojaD.getByRole('button', { name: '1:30', exact: true }).click();
+  await hojaD.waitFor({ state: 'detached' });
+  await p.locator('.toast', { hasText: 'Descanso de Press militar con barra: 1:30' }).waitFor();
+  const guardadoD = await p.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('fbe-descansos-')); return k ? Object.values(JSON.parse(localStorage.getItem(k))) : []; });
+  check(/descanso 1:30 \(tuyo\)/.test(await militar.locator('.pauta').textContent()) && guardadoD.join() === '90', 'elige 1:30: la pauta dice «descanso 1:30 (tuyo)» y se guarda en el móvil');
+  await militar.getByRole('button', { name: 'Marcar la serie 2 como hecha' }).click();
+  await relojM.locator('.de').waitFor();
+  check((await relojM.locator('.de').textContent()) === 'de 1:30' && /^(1:30|1:2\d)$/.test(await relojM.locator('.cuenta').textContent()), 'y la serie siguiente arranca su descanso de 1:30');
+  await p.getByRole('button', { name: 'Saltar' }).click();
+  await hay(relojM, 0);
+  await militar.getByRole('button', { name: /^Más herramientas/ }).click();
+  await hojaMasM.locator('.hoja-acciones').waitFor();
+  check((await hojaMasM.getByRole('button', { name: 'Descanso', exact: true }).textContent()).includes('Tuyo: 1:30'), 'en «Más», ahora «Tuyo: 1:30»');
+  await p.keyboard.press('Escape');
+  await hojaMasM.waitFor({ state: 'detached' });
+  // (fuera las dos series: el resumen de la sesión sigue con las de antes)
+  await militar.getByRole('button', { name: 'Quitar la serie 2', exact: true }).click();
+  await p.locator('.toast', { hasText: 'Serie 2 quitada' }).waitFor();
+  await militar.getByRole('button', { name: 'Quitar la serie 1', exact: true }).click();
+  await p.locator('.toast', { hasText: 'Serie 1 quitada' }).waitFor();
+  // «Sin descanso automático» en Perfil → Sonido y vibración: sin temporizador donde el coach no puso descanso
+  await p.getByRole('button', { name: 'Volver' }).first().click();
+  await p.locator('.hero-dia').waitFor();
+  await abrirPestana(p, 'Perfil');
+  await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
+  const hojaSonD = p.getByRole('dialog', { name: 'Sonido y vibración' });
+  await hojaSonD.waitFor();
+  const selDesc = hojaSonD.getByLabel('Descanso si tu coach no lo pone');
+  const opcionesSel = await selDesc.locator('option').allTextContents();
+  check(await selDesc.inputValue() === '120' && opcionesSel.join('|') === 'Sin descanso automático|1:00|1:30|2:00|2:30|3:00|4:00|5:00', `en «Sonido y vibración», «Descanso si tu coach no lo pone»: 2:00 de serie (${opcionesSel.join(', ')})`);
+  await revisar('ajustes-descanso');
+  await selDesc.selectOption({ label: 'Sin descanso automático' });
+  check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).descansoDefecto) === 0, 'elige «Sin descanso automático» (se recuerda en el móvil)');
+  await p.keyboard.press('Escape');
+  await hojaSonD.waitFor({ state: 'detached' });
+  check(/sin descanso automático/.test(await p.getByRole('button', { name: /^Sonido y vibración/ }).textContent()), 'y el resumen de la fila lo dice');
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').getByRole('button', { name: 'Continuar sesión' }).click();
+  await sesionAbierta();
+  const jalon = p.locator('.ejercicio').nth(3);
+  await abrirEjercicio(jalon);
+  check(!/descanso/.test(await jalon.locator('.pauta').textContent()), 'sin descanso automático, el jalón (sin descanso del coach) no dice descanso');
+  await jalon.getByRole('button', { name: 'Marcar la serie 1 como hecha' }).click();
+  await jalon.locator('.progreso-series', { hasText: '1/3' }).waitFor();
+  await p.waitForTimeout(400);
+  check(await p.locator('.temporizador').count() === 0, 'y al marcar una serie no arranca ningún temporizador');
+  await jalon.getByRole('button', { name: 'Quitar la serie 1', exact: true }).click();
+  await p.locator('.toast', { hasText: 'Serie 1 quitada' }).waitFor();
+  // (lo elegido para el press militar sigue mandando sobre el de por defecto)
+  const militar2 = p.locator('.ejercicio').nth(2);
+  await abrirEjercicio(militar2);
+  check(/descanso 1:30 \(tuyo\)/.test(await militar2.locator('.pauta').textContent()), 'lo elegido para el press militar sigue valiendo aunque el de por defecto sea «sin descanso»');
+  await abrirEjercicio(primero);
 
   console.log('\nAtleta: comentario para el coach');
   await p.getByLabel('Escribir a tu coach').fill('He cambiado el remo porque la barra estaba ocupada');
@@ -940,6 +1045,11 @@ try {
   await hapt.uncheck();
   check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).hapticos === false && JSON.parse(localStorage.getItem('fbe-ajustes')).vibracion === true), 'y se apaga sin tocar la del descanso');
   await hapt.check();
+  // v0.52.2: el descanso de por defecto vuelve a 2:00 (se eligió «Sin descanso automático» en Torso A)
+  const selDescP = hojaSonido.getByLabel('Descanso si tu coach no lo pone');
+  check(await selDescP.inputValue() === '0', 'se recuerda «Sin descanso automático»');
+  await selDescP.selectOption('120');
+  check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).descansoDefecto) === 120, 'y vuelve a 2:00');
   await revisar('perfil-sonido');
   await p.keyboard.press('Escape');
   await hojaSonido.waitFor({ state: 'detached' });

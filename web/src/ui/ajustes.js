@@ -5,12 +5,14 @@
 // enviar el check-in), aparte de la del descanso.
 // v0.50: el tamaño de la letra (Normal, Grande o Muy grande), que cambia el tamaño de la raíz (todo va en rem).
 // v0.52: «Respira» en el descanso (un círculo que acompasa la respiración), apagado de entrada.
+// v0.52.2: el descanso si el coach no lo pone (de serie, 2:00; 0 = sin descanso automático).
 import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
+import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 
 const CLAVE = 'fbe-ajustes';
 // voz (v0.48): el entrenador por voz, apagado de entrada
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
-  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false };
+  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false, descansoDefecto: DESCANSO_DEFECTO };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -24,7 +26,8 @@ const LETRAS = TAMANOS_LETRA.map(([k]) => k);
 // - v0.49: quien apagó la vibración en la v0.48 (solo había una) la tiene apagada también al tocar;
 // - un tema, un acento o un negro puro que no sean de los que hay vuelven a los de serie (alguien pudo tocar el
 //   almacenamiento a mano, y el tema acaba en el color de la barra del sistema);
-// - v0.50: un tamaño de letra que no es de los tres vuelve al normal.
+// - v0.50: un tamaño de letra que no es de los tres vuelve al normal;
+// - v0.52.2: un descanso de por defecto que no es de la lista (1:00 a 5:00 o sin descanso) vuelve a 2:00.
 export function normalizarAjustes(guardado = {}) {
   const g = guardado && typeof guardado === 'object' && !Array.isArray(guardado) ? guardado : {};
   const a = { ...AJUSTES_DEFECTO, ...g };
@@ -35,6 +38,7 @@ export function normalizarAjustes(guardado = {}) {
   a.oled = a.oled === true;
   if (!LETRAS.includes(a.letra)) a.letra = AJUSTES_DEFECTO.letra;
   a.respira = a.respira === true;
+  if (!descansoValido(a.descansoDefecto)) a.descansoDefecto = DESCANSO_DEFECTO;
   return a;
 }
 export function leerAjustes() {

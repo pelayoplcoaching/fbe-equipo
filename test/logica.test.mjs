@@ -1956,5 +1956,83 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(!/(^|\n|\}|,)\s*\.destacado\s*[{,:]/.test(bloque52) && /\.destacados-lista > \.destacado \{/.test(bloque52), 'las tarjetas de destacados solo dentro de su lista (el diario ya usa «.destacado» para sus vídeos)');
   check(/Respira/.test(filaL[1]) && /hitos de la racha/.test(filaL[1]) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice «Respira» y los hitos ya celebrados (sin cambiar la versión de la política)');
 }
+{
+  console.log('\nv0.52.2: descansos cuando el coach no los pone');
+  const C = await import('../web/src/logica/calculos.js');
+  const { descansoEfectivo, resolverDescanso, limpiarDescansos, trasSerie, descansoGrupo, gruposSuperserie, DESCANSOS_ATLETA, textoDescanso } = C;
+  check(DESCANSOS_ATLETA.join() === '0,60,90,120,150,180,240,300' && C.DESCANSO_DEFECTO === 120, 'las opciones: sin descanso automático, 1:00, 1:30, 2:00, 2:30, 3:00, 4:00 y 5:00 (de serie, 2:00)');
+  const conCoach = { id: 'a', ejercicio_id: 'ea', descanso_seg: 150 }, sinCoach = { id: 'b', ejercicio_id: 'eb', descanso_seg: null };
+  const r1 = descansoEfectivo(conCoach, { propio: 90, defecto: 120 });
+  check(r1.seg === 150 && r1.origen === 'coach', 'manda el del coach (aunque el atleta haya elegido otro para ese ejercicio)');
+  const r2 = descansoEfectivo(sinCoach, { propio: 90, defecto: 120 });
+  check(r2.seg === 90 && r2.origen === 'propio', 'sin el del coach, el que eligió el atleta para ese ejercicio');
+  const r3 = descansoEfectivo(sinCoach, { propio: null, defecto: 120 });
+  check(r3.seg === 120 && r3.origen === 'defecto', 'sin ninguno de los dos, el de por defecto');
+  const r4 = descansoEfectivo(sinCoach, { propio: null, defecto: null });
+  check(r4.seg === null && r4.origen === null, 'y sin por defecto, sin temporizador');
+  const r5 = descansoEfectivo(sinCoach, { propio: null, defecto: 0 });
+  check(r5.seg === null && r5.origen === 'defecto', '«Sin descanso automático» de por defecto: sin temporizador');
+  const r6 = descansoEfectivo(sinCoach, { propio: 0, defecto: 120 });
+  check(r6.seg === null && r6.origen === 'propio', 'sin descanso para un ejercicio en concreto, aunque el de por defecto sea 2:00');
+  const r7 = descansoEfectivo({ descanso_seg: 0 }, { propio: 90, defecto: 120 });
+  check(r7.seg === null && r7.origen === 'coach', 'el «Sin descanso» del coach (0) también manda: sin temporizador, como siempre');
+  check(descansoEfectivo({ descanso_seg: undefined }, { defecto: 60 }).seg === 60 && descansoEfectivo({}, { defecto: 60 }).origen === 'defecto', 'sin el campo, como sin el del coach');
+  // Lo guardado que no vale se ignora
+  const malos = [45, '90', 90.5, -60, 600, NaN, true, {}, [90]];
+  check(malos.every((m) => { const x = descansoEfectivo(sinCoach, { propio: m, defecto: 120 }); return x.seg === 120 && x.origen === 'defecto'; }), 'un descanso guardado que no es de la lista (45 s, «90», 600 s…) se ignora: vale el de por defecto');
+  check(malos.every((m) => descansoEfectivo(sinCoach, { propio: null, defecto: m }).seg === null), 'y un por defecto que no es de la lista, también');
+  const limpio = limpiarDescansos({ eb: 90, ec: 45, ed: '120', ee: 0, ['x'.repeat(65)]: 60, ef: 300 });
+  check(JSON.stringify(limpio) === JSON.stringify({ eb: 90, ee: 0, ef: 300 }) && JSON.stringify(limpiarDescansos(null)) === '{}' && JSON.stringify(limpiarDescansos([90])) === '{}' && JSON.stringify(limpiarDescansos('90')) === '{}',
+    'lo guardado en el móvil se sanea: solo ejercicios con un descanso de la lista');
+  check(textoDescanso(90) === '1:30' && textoDescanso(0) === 'sin descanso automático' && textoDescanso(null, { delCoach: true }) === 'sin descanso', 'en texto: «1:30», «sin descanso automático» y el del coach «sin descanso»');
+
+  // En trasSerie, con el resolvedor
+  const res = resolverDescanso({ propios: { eb: 90 }, defecto: 120 });
+  check(res(conCoach) === 150 && res(sinCoach) === 90 && res({ id: 'c', ejercicio_id: 'ec' }) === 120 && resolverDescanso({ propios: { constructor: 90 } })({ ejercicio_id: 'constructor' }) === 90
+    && resolverDescanso({ propios: {} })({ ejercicio_id: 'toString' }) === null, 'el resolvedor: del coach, propio, por defecto (y nada heredado del prototipo)');
+  const lista = [{ ...sinCoach, series: 3 }, { ...conCoach, series: 3 }, { id: 'c', ejercicio_id: 'ec', descanso_seg: null, series: 3 }];
+  check(trasSerie(lista, { b: 1 }, 'b').descanso === null && trasSerie(lista, { a: 1 }, 'a').descanso === 150, 'sin resolvedor, trasSerie hace lo de siempre (solo el del coach)');
+  check(trasSerie(lista, { b: 1 }, 'b', res).descanso === 90 && trasSerie(lista, { a: 1 }, 'a', res).descanso === 150 && trasSerie(lista, { c: 1 }, 'c', res).descanso === 120,
+    'con él, tras una serie: el propio (1:30), el del coach (2:30) o el de por defecto (2:00)');
+  check(trasSerie(lista, { c: 1 }, 'c', resolverDescanso({ defecto: 0 })).descanso === null, 'con «Sin descanso automático», sin temporizador');
+  // Superseries: el mayor de los que valen para cada uno; dentro de la ronda, sin descanso
+  const ss = [{ id: 's1', ejercicio_id: 'e1', superserie: 'A', descanso_seg: 60, series: 3 }, { id: 's2', ejercicio_id: 'e2', superserie: 'A', descanso_seg: null, series: 3 }];
+  const g = gruposSuperserie(ss)[0];
+  check(descansoGrupo(g) === 60 && descansoGrupo(g, resolverDescanso({ defecto: 120 })) === 120 && descansoGrupo(g, resolverDescanso({ propios: { e2: 0 }, defecto: 120 })) === 60
+    && descansoGrupo(g, resolverDescanso({ propios: { e2: 300 } })) === 300, 'en una superserie, el mayor de los descansos que valen para cada uno');
+  const ss2 = ss.map((x) => ({ ...x, descanso_seg: null }));
+  check(descansoGrupo(gruposSuperserie(ss2)[0], resolverDescanso({ defecto: 0 })) === null && descansoGrupo(gruposSuperserie(ss2)[0], resolverDescanso({ propios: { e1: 90 }, defecto: 0 })) === 90, 'sin ninguno, sin descanso; con uno propio, ese');
+  const enRonda = trasSerie(ss2, { s1: 1 }, 's1', resolverDescanso({ defecto: 120 }));
+  const finRonda = trasSerie(ss2, { s1: 1, s2: 1 }, 's2', resolverDescanso({ propios: { e1: 150 }, defecto: 120 }));
+  check(enRonda.descanso === 0 && enRonda.enRonda && enRonda.siguiente.id === 's2' && finRonda.descanso === 150 && !finRonda.enRonda && finRonda.siguiente.id === 's1',
+    'de A1 a A2, sin descanso (0); al cerrar la ronda, el mayor (2:30 elegido frente a 2:00 por defecto)');
+
+  // El ajuste del móvil
+  const aj = await import('../web/src/ui/ajustes.js');
+  check(aj.AJUSTES_DEFECTO.descansoDefecto === 120 && aj.normalizarAjustes({}).descansoDefecto === 120 && aj.normalizarAjustes({ descansoDefecto: 0 }).descansoDefecto === 0
+    && aj.normalizarAjustes({ descansoDefecto: 300 }).descansoDefecto === 300, '«Descanso si tu coach no lo pone»: 2:00 de serie; se guarda cualquiera de la lista (también sin descanso)');
+  check([45, '90', 600, null, -1, 'sin'].every((v) => aj.normalizarAjustes({ descansoDefecto: v }).descansoDefecto === 120), 'y uno que no es de la lista vuelve a 2:00');
+
+  // Lo de cada ejercicio, en el móvil (fbe-descansos-<atleta>), con su copia en memoria
+  const D = await import('../web/src/ui/descansos.js');
+  const lsPrevio = globalThis.localStorage;
+  const guardado = { 'fbe-descansos-at2': JSON.stringify({ e1: 90, e2: 45, e3: 'x' }) };
+  globalThis.localStorage = { getItem: (k) => (k in guardado ? guardado[k] : null), setItem: (k, v) => { guardado[k] = v; } };
+  check(JSON.stringify(D.leerDescansos('at2')) === '{"e1":90}', 'al leer lo guardado, lo que no vale se ignora');
+  D.guardarDescanso('at1', 'e1', 90);
+  D.guardarDescanso('at1', 'e2', 0);
+  check(JSON.parse(guardado['fbe-descansos-at1']).e1 === 90 && JSON.parse(guardado['fbe-descansos-at1']).e2 === 0 && D.leerDescansos('at1').e1 === 90, 'se guarda por atleta y por ejercicio');
+  const m = D.guardarDescanso('at1', 'e1', null);
+  check(!('e1' in m) && m.e2 === 0 && !('e1' in JSON.parse(guardado['fbe-descansos-at1'])), '«Usar el de por defecto» lo quita');
+  check(!('e9' in D.guardarDescanso('at1', 'e9', 45)), 'uno que no es de la lista no se guarda');
+  globalThis.localStorage = { getItem() { throw new Error('bloqueado'); }, setItem() { throw new Error('lleno'); } };
+  D.guardarDescanso('at3', 'e1', 150);
+  check(D.leerDescansos('at3').e1 === 150 && JSON.stringify(D.leerDescansos('at4')) === '{}', 'si el navegador no deja guardar, se recuerda mientras la app está abierta');
+  if (lsPrevio === undefined) delete globalThis.localStorage; else globalThis.localStorage = lsPrevio;
+
+  const legal = await import('../web/src/legal.js');
+  const filaL = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
+  check(/Los descansos que eliges tú .* se guardan en tu móvil/.test(filaL[1]) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice que los descansos que eliges se guardan en tu móvil (sin cambiar la versión de la política)');
+}
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

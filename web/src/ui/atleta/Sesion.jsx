@@ -18,7 +18,10 @@ import { tempoDe } from '../../logica/tempo.js';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { Preparacion, ConsejoDia } from './Preparacion.jsx';
 import { consejoPreparacion, subeCarga } from '../../logica/preparacion.js';
-import { pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION } from '../../logica/calculos.js';
+import { pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
+  descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA } from '../../logica/calculos.js';
+import { leerAjustes } from '../ajustes.js';
+import { leerDescansos, guardarDescanso } from '../descansos.js';
 import { fmtCorta, hoyISO, lunesDe, sumarDias, fechaMadrid } from '../../logica/fechas.js';
 import { pesoAnterior } from '../../logica/nivel.js';
 import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
@@ -84,6 +87,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [extra, setExtra] = useState({ ejercicios: {}, ultimas: {} });
   // Notas fijadas del atleta por ejercicio (se cargan con la sesión y se guardan al momento)
   const [notas, setNotas] = useState({});
+  // v0.52.2: el descanso que eligió para cada ejercicio (ejercicio_id → segundos), en este móvil
+  const [descansosPropios, setDescansosPropios] = useState(() => leerDescansos(atleta.id));
   usePantallaEncendida();
   // v0.49: al completar las series pautadas de un ejercicio, su tarjeta se pliega un momento después. El temporizador
   // de cada uno se guarda para cancelarlo (si se desmarca, si falla el guardado o al salir) y, al cumplirse, se
@@ -221,6 +226,15 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const inicio = inicioDeTanda(todas);
   const totalPautadas = ejercicios.reduce((t, e) => t + e.series, 0);
   const actualDe = (e) => (sustitutos[e.id] && ejerciciosPorId[sustitutos[e.id]]) || e.ejercicio;
+  // v0.52.2: el descanso que vale para cada pauta: el del coach; si no puso, el que eligió el atleta para el ejercicio
+  // que está haciendo; si no, el de por defecto de este móvil (Perfil → Sonido y vibración)
+  const descansoDefecto = leerAjustes().descansoDefecto;
+  const infoDescanso = (x) => descansoEfectivo(x, { propio: descansosPropios[actualDe(x).id] ?? null, defecto: descansoDefecto });
+  const descansoDe = resolverDescanso({ propios: descansosPropios, defecto: descansoDefecto, ejercicioDe: (x) => actualDe(x).id });
+  function elegirDescanso(ej, seg) {
+    setDescansosPropios(guardarDescanso(atleta.id, ej.id, seg));
+    aviso(seg == null ? `${ej.nombre}: el descanso por defecto (${textoDescanso(descansoDefecto)})` : `Descanso de ${ej.nombre}: ${textoDescanso(seg)}`);
+  }
 
   const etiquetas = etiquetasSuperserie(ejercicios);
   // La serie que toca ahora: la que dijo la última serie marcada (si sigue sin hacer) o la primera sin hacer
@@ -324,11 +338,11 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       // Qué toca ahora: en una superserie se pasa al siguiente ejercicio de la ronda sin descanso
       const cuenta = Object.fromEntries(ejercicios.map((x) => [x.id, Object.keys(hechas[x.id] || {}).length]));
       cuenta[e.id] += 1;
-      const r = trasSerie(ejercicios, cuenta, e.id);
+      const r = trasSerie(ejercicios, cuenta, e.id, descansoDe);
       const sig = r.siguiente && ejercicios.find((x) => x.id === r.siguiente.id);
       // La serie que toca, contando solo las pautadas (una de más no adelanta al ejercicio siguiente)
       const cuentaP = Object.fromEntries(ejercicios.map((x) => [x.id, seriesPautadasHechas(x, x.id === e.id ? { ...hechas[e.id], [numero]: local } : hechas[x.id])]));
-      const rP = trasSerie(ejercicios, cuentaP, e.id);
+      const rP = trasSerie(ejercicios, cuentaP, e.id, descansoDe);
       setProxima(rP.siguiente ? { id: rP.siguiente.id, numero: rP.siguiente.numero } : null);
       const texto = !sig ? 'terminar la sesión' : sig.id === e.id || r.siguiente.numero > 1 ? `serie ${r.siguiente.numero} de ${nombreCon(sig)}` : nombreCon(sig);
       // v0.48: lo que dirá el entrenador por voz al acabar el descanso («Serie 3 de press banca: 80 kilos por 6»)
@@ -496,6 +510,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
               foco={semana?.foco} progresionAuto={progresionAuto && !cambiado && !frenar} etiqueta={etiquetas[e.id]} records={records}
               nota={notas[actual.id]} guardarNota={(t) => guardarNota(actual.id, t)}
               coach={det.datos.coach?.[actual.id] || null}
+              descanso={infoDescanso(e)} descansoPropio={descansosPropios[actual.id] ?? null} descansoDefecto={descansoDefecto} elegirDescanso={(seg) => elegirDescanso(actual, seg)}
               lugar={porLugar[e.id] && sustitutos[e.id] === porLugar[e.id] ? lugar : null} deshacerLugar={() => deshacerLugar(e.id)}
               sinMaterial={lugar !== 'gimnasio' && sinAlternativa.includes(e.id) && !cambiado ? lugar : null}
               videos={videos.enviados[e.id] || 0} videosPendientes={videos.pendientes[e.id] || 0} alSubirVideo={() => setRecontarVideos((n) => n + 1)}
@@ -510,12 +525,14 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         const conReloj = descanso && !verEnfoque && g.items.some((e) => e.id === descanso.tras);
         const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={cambiarDescanso} />;
         if (!g.letra) return reloj ? [...tarjetas, reloj] : tarjetas;
-        const d = descansoGrupo(g);
+        const d = descansoGrupo(g, descansoDe);
+        // (tuyo): si el de la ronda no es uno que puso el coach
+        const dTuyo = d && !g.items.some((x) => { const i = infoDescanso(x); return i.origen === 'coach' && i.seg === d; });
         return [
           <section class="superserie" key={`ss-${g.items[0].id}`} aria-label={`Superserie ${g.letra}`}>
             <div class="superserie-cab">
               <span class="ss-letra" aria-hidden="true">{g.letra}</span>
-              <span><strong>Superserie</strong>: alterna una serie de cada ejercicio{d ? ` y descansa ${mmss(d)} al acabar la ronda` : ' y descansa al acabar la ronda'}.</span>
+              <span><strong>Superserie</strong>: alterna una serie de cada ejercicio{d ? ` y descansa ${mmss(d)}${dTuyo ? ' (tuyo)' : ''} al acabar la ronda` : ' y descansa al acabar la ronda'}.</span>
             </div>
             {tarjetas}
           </section>,
@@ -588,7 +605,8 @@ function Cronometro({ inicio, minutos, hechas, total }) {
   );
 }
 
-function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null }) {
+function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null,
+  descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso }) {
   const { atleta, propio } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
   const [editandoNota, setEditandoNota] = useState(false);
@@ -611,9 +629,15 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   const nPautadas = seriesPautadasHechas(e, hechas);
   const plegado = !abierto && completo;
   // Las herramientas del ejercicio, en la hoja «Más» (fuera de la tarjeta, para que no estorben entre serie y serie)
+  // v0.52.2: el descanso: el del coach se ve y no se cambia aquí (en el temporizador, sí, con ±15 s y ±1 min);
+  // sin él, el que eliges tú para este ejercicio (o el de por defecto)
+  const delCoach = descanso.origen === 'coach';
+  const detalleDescanso = delCoach ? `Te lo ha puesto tu coach: ${textoDescanso(descanso.seg, { delCoach: true })}`
+    : descanso.origen === 'propio' ? `Tuyo: ${textoDescanso(descanso.seg)}` : `Por defecto: ${textoDescanso(descanso.seg)}`;
   const herramientas = [
     { id: 'cambiar', ico: 'intercambiar', texto: 'Cambiar', detalle: 'Por una alternativa, si la máquina está ocupada o algo no te sienta bien' },
     { id: 'historial', ico: 'historial', texto: 'Historial', detalle: 'Tus series, gráficas y récords de este ejercicio' },
+    { id: 'descanso', ico: 'reloj', texto: 'Descanso', detalle: detalleDescanso, fijo: delCoach },
     tempo && { id: 'tempo', ico: 'altavoz', texto: `Tempo ${tempo.texto}`, nombre: `Metrónomo de tempo ${tempo.texto}`, detalle: 'Metrónomo que marca la bajada, la pausa y la subida' },
     !nota && !editandoNota && { id: 'nota', ico: 'chincheta', texto: 'Nota', detalle: 'Una nota fija para ti en este ejercicio (la silla en el 4, el agarre…)' },
     conAproximacion && kgTrabajo > 0 && { id: 'aproximacion', ico: 'llama', texto: 'Aproximación', detalle: `Series de calentamiento hasta ${num(kgTrabajo, 2)} kg` },
@@ -656,7 +680,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
             {pa.detalle && <span>serie a serie</span>}
             {pa.esfuerzo && <span>{pa.esfuerzo}</span>}
             {pa.carga && !actual && <span class="num">{pa.carga}</span>}
-            {pa.descanso && !etiqueta && <span>descanso {pa.descanso}</span>}
+            {descanso.seg && !etiqueta && <span>descanso {mmss(descanso.seg)}{delCoach ? '' : ' (tuyo)'}</span>}
           </span>}
           {videosPendientes > 0
             ? <span class="video-aviso pendiente"><Icono n="reloj" />{videosPendientes === 1 ? 'Vídeo guardado en el móvil, sin enviar' : `${videosPendientes} vídeos guardados en el móvil, sin enviar`}</span>
@@ -719,7 +743,13 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
           <ul class="lista hoja-acciones">
             {herramientas.map((h) => (
               <li key={h.id}>
-                {h.href
+                {h.fijo ? (
+                  <div class="accion-fila accion-fija">
+                    <span class="ico"><Icono n={h.ico} /></span>
+                    <span class="pila-xs"><strong>{h.texto}</strong><span class="peq secundario">{h.detalle}</span><span class="peq terciario">En el descanso puedes alargarlo o acortarlo con ±15 s y ±1 min.</span></span>
+                    <span />
+                  </div>
+                ) : h.href
                   ? <a class="accion-fila" href={h.href} target="_blank" rel="noopener" onClick={() => setHoja(null)}><span class="ico"><Icono n={h.ico} /></span><span class="pila-xs"><strong>{h.texto}</strong><span class="peq secundario">{h.detalle}</span></span><Icono n="enlace" class="cola" /></a>
                   : <button class="accion-fila" aria-label={h.nombre || h.texto} aria-describedby={`acc-${e.id}-${h.id}`} onClick={() => usar(h)}><span class="ico"><Icono n={h.ico} /></span><span class="pila-xs"><strong>{h.texto}</strong><span class="peq secundario" id={`acc-${e.id}-${h.id}`}>{h.detalle}</span></span><Icono n="derecha" class="cola" /></button>}
               </li>
@@ -728,6 +758,8 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
         </Hoja>
       )}
       {hoja === 'tecnica' && <Tecnica ej={ej} alCerrar={() => setHoja(null)} />}
+      {hoja === 'descanso' && <ElegirDescanso nombre={ej.nombre} propio={descansoPropio} defecto={descansoDefecto}
+        alElegir={(seg) => { elegirDescanso(seg); setHoja(null); }} alCerrar={() => setHoja(null)} />}
       {hoja === 'cambiar' && <Cambiar e={e} actual={ej} alCerrar={() => setHoja(null)} alElegir={(x) => { cambiar(x); setHoja(null); }} />}
       {hoja === 'historial' && <HistorialEjercicio atletaId={atleta.id} ejercicio={ej} inicial="historial" alCerrar={() => setHoja(null)} />}
       {hoja === 'tempo' && <Metronomo tempo={tempo} nombre={ej.nombre} reps={e.reps_max ?? e.reps_min ?? 8} alCerrar={() => setHoja(null)} />}
@@ -773,6 +805,30 @@ function Tecnica({ ej, alCerrar }) {
 }
 
 // Cambiar el ejercicio por una alternativa equivalente (las que marca el coach en la biblioteca)
+// v0.52.2: el descanso de un ejercicio en el que el coach no ha puesto uno (se guarda en este móvil, para ese
+// ejercicio en todas las sesiones). Elegir uno lo guarda y cierra, como «Cambiar».
+function ElegirDescanso({ nombre, propio, defecto, alElegir, alCerrar }) {
+  const tuyo = DESCANSOS_ATLETA.includes(propio) ? propio : null;
+  const Opcion = ({ valor, texto, nota = null }) => {
+    const elegida = valor === tuyo;
+    return (
+      <button type="button" class={elegida ? 'elegida' : ''} aria-pressed={elegida ? 'true' : 'false'} onClick={() => alElegir(valor)}>
+        <span class="separa"><span style="font-weight:600">{texto}</span>{elegida && <Icono n="hecho" />}</span>
+        {nota && <span class="mini terciario">{nota}</span>}
+      </button>
+    );
+  };
+  return (
+    <Hoja titulo="Descanso" alCerrar={alCerrar}>
+      <p class="peq secundario">Tu coach no te ha puesto descanso en {nombre}. El que elijas arranca solo al marcar cada serie, en todas tus sesiones, y se guarda en este móvil.</p>
+      <div class="lista-elegir lista-descansos" role="group" aria-label={`Descanso de ${nombre}`}>
+        <Opcion valor={null} texto="Usar el de por defecto" nota={`Ahora, ${textoDescanso(defecto)}. Se cambia en Perfil, en «Sonido y vibración».`} />
+        {DESCANSOS_ATLETA.map((s) => <Opcion key={s} valor={s} texto={s ? mmss(s) : 'Sin descanso automático'} />)}
+      </div>
+    </Hoja>
+  );
+}
+
 function Cambiar({ e, actual, alCerrar, alElegir }) {
   const { api } = useApp();
   const [otros, setOtros] = useState(false);

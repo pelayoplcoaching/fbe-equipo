@@ -286,14 +286,53 @@ export function etiquetasSuperserie(ejercicios) {
   for (const g of gruposSuperserie(ejercicios)) if (g.letra) g.items.forEach((e, i) => { m[e.id] = `${g.letra}${i + 1}`; });
   return m;
 }
-// Descanso tras una ronda: el mayor de los pautados en el grupo
-export function descansoGrupo(g) {
-  return Math.max(0, ...g.items.map((x) => Number(x.descanso_seg) || 0)) || null;
+// ---------- descansos (v0.52.2) ----------
+// Muchas sesiones vinieron de Notion sin descanso pautado: sin él no había temporizador. Ahora, si el coach no lo
+// pone, vale el que el atleta elige para ese ejercicio y, si no, el de por defecto de su móvil. Lo que el atleta
+// puede elegir (0 = sin descanso automático):
+export const DESCANSOS_ATLETA = [0, 60, 90, 120, 150, 180, 240, 300];
+export const DESCANSO_DEFECTO = 120;
+export const descansoValido = (s) => typeof s === 'number' && DESCANSOS_ATLETA.includes(s);
+// El descanso que vale para una pauta y de dónde sale: { seg (null = sin temporizador), origen }.
+// Manda el del coach (también su «Sin descanso», 0); si no lo hay, el que eligió el atleta para ese ejercicio
+// (propio); si no, el de por defecto. Un valor que no es de la lista se ignora.
+export function descansoEfectivo(e, { propio = null, defecto = null } = {}) {
+  const c = e?.descanso_seg;
+  if (c != null && c !== '' && Number.isFinite(Number(c)) && Number(c) >= 0) return { seg: Number(c) > 0 ? Number(c) : null, origen: 'coach' };
+  if (descansoValido(propio)) return { seg: propio || null, origen: 'propio' };
+  if (descansoValido(defecto)) return { seg: defecto || null, origen: 'defecto' };
+  return { seg: null, origen: null };
+}
+// Un resolvedor para trasSerie y descansoGrupo: pauta → segundos (o null). propios: ejercicio_id → segundos;
+// ejercicioDe: el ejercicio de la pauta (el que se está haciendo, si se cambió por una alternativa)
+export function resolverDescanso({ propios = {}, defecto = null, ejercicioDe = (x) => x.ejercicio_id } = {}) {
+  return (x) => {
+    const k = ejercicioDe(x);
+    const propio = propios && k != null && Object.prototype.hasOwnProperty.call(propios, k) ? propios[k] : null;
+    return descansoEfectivo(x, { propio, defecto }).seg;
+  };
+}
+// Lo guardado en el móvil, saneado: solo ejercicios con un descanso de la lista
+export function limpiarDescansos(m) {
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(m).slice(0, 2000)) if (k && k.length <= 64 && descansoValido(v)) out[k] = v;
+  return out;
+}
+// En texto: «2:00», «sin descanso automático» (el «Sin descanso» del coach, «sin descanso»)
+export const textoDescanso = (s, { delCoach = false } = {}) => (s ? mmss(s) : delCoach ? 'sin descanso' : 'sin descanso automático');
+// Sin resolvedor, el de siempre: solo el del coach
+const descansoDelCoach = (x) => Number(x.descanso_seg) || null;
+
+// Descanso tras una ronda: el mayor de los del grupo (con el resolvedor, el que vale para cada uno)
+export function descansoGrupo(g, descansoDe = descansoDelCoach) {
+  return Math.max(0, ...g.items.map((x) => Number(descansoDe(x)) || 0)) || null;
 }
 
 // Qué toca después de registrar una serie de `eid`. hechas: id → series hechas (contando ya la nueva).
 // Devuelve { descanso (segundos, 0 = pasar sin descanso, null = sin temporizador), siguiente: { id, numero } | null, enRonda }
-export function trasSerie(ejercicios, hechas, eid) {
+// descansoDe (v0.52.2): pauta → segundos; de serie, solo el del coach (ver resolverDescanso)
+export function trasSerie(ejercicios, hechas, eid, descansoDe = descansoDelCoach) {
   const h = (x) => hechas[x.id] || 0;
   const pendiente = (x) => h(x) < x.series;
   const grupos = gruposSuperserie(ejercicios);
@@ -311,9 +350,9 @@ export function trasSerie(ejercicios, hechas, eid) {
     const enRonda = resto.find((x) => h(x) < n && pendiente(x));
     if (enRonda) return { descanso: 0, siguiente: sig(enRonda), enRonda: true };
     const proxima = g.items.find(pendiente);
-    return { descanso: descansoGrupo(g), siguiente: proxima ? sig(proxima) : fuera(), enRonda: false };
+    return { descanso: descansoGrupo(g, descansoDe), siguiente: proxima ? sig(proxima) : fuera(), enRonda: false };
   }
-  return { descanso: Number(e.descanso_seg) || null, siguiente: pendiente(e) ? sig(e) : fuera(), enRonda: false };
+  return { descanso: Number(descansoDe(e)) || null, siguiente: pendiente(e) ? sig(e) : fuera(), enRonda: false };
 }
 
 // Valores con los que se rellena una serie nueva. Carga: la mayor entre la pautada, la de la última vez

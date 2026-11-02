@@ -3493,3 +3493,10 @@ body:has(.app.con-actividad)::before { height: calc(env(safe-area-inset-top, 0px
 /* v0.52.1: añadir y quitar series añadidas, en una fila */
 .series-acciones { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; justify-content: space-between; }
 .btn-quitar-serie { color: var(--tinta-2); }
+
+/* v0.52.2: el descanso del ejercicio en «Más» (el del coach se ve, sin tocarse) y su lista para elegir */
+.accion-fila.accion-fija:hover, .accion-fila.accion-fija:active { background: none; }
+.lista-descansos { max-height: none; }
+.lista-descansos button { min-height: 48px; align-content: center; }
+.lista-descansos button:focus-visible { outline-offset: -3px; }
+.lista-descansos button .separa svg { width: 18px; height: 18px; color: var(--morado); flex: none; }
