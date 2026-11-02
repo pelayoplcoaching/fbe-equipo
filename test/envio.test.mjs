@@ -446,7 +446,7 @@ console.log('\nEn el navegador: activar, poner al día y quitar (push.js)');
   llamadas.length = 0;
   await sincronizarPush(api, 'supabase');
   check(llamadas.length === 1 && llamadas[0][0] === 'actualizar' && suscripcion, 'al abrir la app, la pone al día (sin crear otra)');
-  // v0.45 (aviso de Guti): si la base ya no la tiene (la borró el servidor tras un fallo del servicio de push), al abrir
+  // v0.45 (aviso de un atleta): si la base ya no la tiene (la borró el servidor tras un fallo del servicio de push), al abrir
   // la app con el permiso dado se vuelve a apuntar sola, en vez de darla de baja aquí
   filas.clear();
   llamadas.length = 0;

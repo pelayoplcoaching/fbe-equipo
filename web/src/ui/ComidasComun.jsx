@@ -5,7 +5,7 @@
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos } from './comunes.jsx';
 import { COLOR_MACRO, MacrosDia } from './NutricionComun.jsx';
-import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, valeParaDia, textoVariante, tomasDelDia, paraElDia } from '../logica/comidas.js';
+import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, porSecciones, valeParaDia, textoVariante, tomasDelDia, paraElDia } from '../logica/comidas.js';
 import { planVigente, objetivoDelDia, fmtKcal } from '../logica/nutricion.js';
 import { hoyISO, lunesDe, sumarDias, fmtConDia, rangoSemana } from '../logica/fechas.js';
 import { LETRAS_DIA } from '../logica/plan.js';
@@ -371,7 +371,9 @@ const cambiarMacros = (e, raciones) => {
   return { kcal: e.kcal == null ? null : e.kcal * k, proteina_g: e.proteina_g == null ? null : e.proteina_g * k, carbos_g: e.carbos_g == null ? null : e.carbos_g * k, grasa_g: e.grasa_g == null ? null : e.grasa_g * k };
 };
 
-// La lista de la compra de la semana (o desde hoy): los ingredientes sumados, para ir tachando y copiarla
+// La lista de la compra de la semana (o desde hoy): los ingredientes sumados por lo que se compra (v0.53.1: aunque
+// cada receta lo escriba a su manera), por secciones del súper, para ir tachando y copiarla. Cada línea dice el
+// total y, si sale de varias recetas, «en 3 recetas» despliega lo de cada una.
 function HojaCompra({ entradas, recetario, lunes, alCerrar }) {
   const { aviso } = useApp();
   const hoy = hoyISO();
@@ -380,8 +382,10 @@ function HojaCompra({ entradas, recetario, lunes, alCerrar }) {
   const xs = desde === 'hoy' ? entradas.filter((e) => e.fecha >= hoy) : entradas;
   const lista = listaCompra(xs, recetario.recetas, recetario.asignaciones);
   const [tachados, setTachados] = usePreferencia(`fbe-compra-${lunes}`, []);
-  const clave = (i) => `${i.nombre}|${i.unidad || ''}`;
+  const [abiertos, setAbiertos] = useState([]);
   const alternar = (k) => setTachados(tachados.includes(k) ? tachados.filter((x) => x !== k) : [...tachados, k]);
+  const desplegar = (k) => setAbiertos(abiertos.includes(k) ? abiertos.filter((x) => x !== k) : [...abiertos, k]);
+  let n = 0;
   return (
     <Hoja titulo="Lista de la compra" alCerrar={alCerrar}>
       {enCurso && (
@@ -392,21 +396,41 @@ function HojaCompra({ entradas, recetario, lunes, alCerrar }) {
       )}
       {!lista.items.length && !lista.libres.length ? <p class="peq secundario">No hay comidas en el menú para esos días.</p> : (
         <>
-          {lista.items.length > 0 && (
-            <ul class="lista-compra">
-              {lista.items.map((i) => {
-                const k = clave(i);
-                return (
-                  <li key={k}><label class="casilla"><input type="checkbox" checked={tachados.includes(k)} onChange={() => alternar(k)} />
-                    <span class={tachados.includes(k) ? 'tachado' : ''}>{i.cantidad == null ? i.nombre : textoIngrediente({ nombre: i.nombre, cantidad: i.cantidad, unidad: i.unidad })}<span class="mini terciario"> · {i.recetas.join(', ')}</span></span>
-                  </label></li>
-                );
-              })}
-            </ul>
-          )}
+          {porSecciones(lista.items).map(({ seccion, items }) => (
+            <div class="compra-seccion" key={seccion}>
+              <h3 class="etq">{seccion}</h3>
+              <ul class="lista-compra">
+                {items.map((i) => {
+                  const k = i.clave;
+                  const id = `compra-detalle-${n++}`;
+                  const abierto = abiertos.includes(k);
+                  const varias = i.recetas.length > 1;
+                  return (
+                    <li key={k} class="compra-item">
+                      <label class="casilla"><input type="checkbox" checked={tachados.includes(k)} onChange={() => alternar(k)} />
+                        <span class={tachados.includes(k) ? 'tachado' : ''}>{i.nombre}{i.texto && <>: <strong class="compra-total">{i.texto}</strong></>}
+                          {!varias && <span class="mini terciario"> · {i.recetas[0]}</span>}</span>
+                      </label>
+                      {varias && (
+                        <button type="button" class="btn-texto compra-recetas" aria-expanded={abierto ? 'true' : 'false'} aria-controls={abierto ? id : undefined}
+                          aria-label={`${i.nombre}: en ${i.recetas.length} recetas`} onClick={() => desplegar(k)}>
+                          en {i.recetas.length} recetas <Icono n={abierto ? 'arriba' : 'abajo'} />
+                        </button>
+                      )}
+                      {varias && abierto && (
+                        <ul id={id} class="compra-detalle">
+                          {i.detalle.map((d) => <li key={d.receta}>{d.receta}{d.texto ? `: ${d.texto}` : ''}</li>)}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
           {lista.libres.length > 0 && <p class="mini terciario">Sin receta (no suman ingredientes): {lista.libres.join(', ')}.</p>}
           <button class="btn" onClick={async () => aviso((await copiar(textoListaCompra(lista, `Lista de la compra, ${rangoSemana(lunes)}`))) ? 'Lista copiada: pégala donde quieras' : 'No se ha podido copiar')}><Icono n="copiar" /> Copiar la lista</button>
-          <p class="mini terciario">Las cantidades salen de tus recetas y de las raciones que has puesto en el menú, redondeadas para comprar.</p>
+          <p class="mini terciario">Las cantidades salen de tus recetas y de las raciones que has puesto en el menú, sumadas aunque cada receta lo escriba a su manera (las cucharadas, en ml) y redondeadas para comprar.</p>
         </>
       )}
     </Hoja>

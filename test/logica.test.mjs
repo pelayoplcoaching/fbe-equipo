@@ -12,7 +12,7 @@ import { progresarPauta, opcionesDe } from '../web/src/logica/progresion.js';
 import { sumarMeses, finPeriodo, importePeriodo, siguientePeriodo, resumenCobros, cobradoEnMes, fmtEuros, leerEuros } from '../web/src/logica/cobros.js';
 import { modoCarga, columnasEditor, pesoAnterior, conNutricion, textoServicio, NIVELES } from '../web/src/logica/nivel.js';
 import { cardioValido, cardioHechoValido, limpiarCardio, limpiarCardioHecho, textoCardio, textoCardioHecho, ritmo, palabrasEsfuerzo, cardioPorSemana, cardioHechoDe } from '../web/src/logica/cardio.js';
-import { valeParaDia, textoVariante, tomasDelDia, paraElDia, leerIngrediente, leerIngredientes, escalarCantidad, textoIngrediente, ingredientesATexto, limpiarReceta, avisoMacros, macrosDe, textoMacros, recetarioPorToma, entradaMenu, cambiarRaciones, totalesDia, menuPorDia, copiarMenu, listaCompra, textoListaCompra, tomasDe, ordenarTomas, TOMAS_DEFECTO } from '../web/src/logica/comidas.js';
+import { valeParaDia, textoVariante, tomasDelDia, paraElDia, leerIngrediente, leerIngredientes, escalarCantidad, textoIngrediente, ingredientesATexto, limpiarReceta, avisoMacros, macrosDe, textoMacros, recetarioPorToma, entradaMenu, cambiarRaciones, totalesDia, menuPorDia, copiarMenu, listaCompra, textoListaCompra, paraComprar, claveCompra, nombreCompra, seccionCompra, porSecciones, lineaCompra, tomasDe, ordenarTomas, TOMAS_DEFECTO } from '../web/src/logica/comidas.js';
 import { conEntrenamiento, servicioDe, CAMPOS_SERVICIO, fichaCambiada } from '../web/src/logica/nivel.js';
 import { materialesDe, revisarVariante, varianteSinMaterial, equivalentes } from '../web/src/logica/variantes.js';
 import { destinoEnRejilla } from '../web/src/ui/rejilla.js';
@@ -1004,7 +1004,7 @@ console.log('\nNivel y servicio (v0.22)');
   check(conNutricion({}) && conNutricion({ nutricion: true }) && !conNutricion({ nutricion: false }) && conNutricion(null) && textoServicio({ nutricion: false }) === 'Solo entrenamiento',
     'con nutrición salvo que el coach diga lo contrario (una base sin la 018 sigue como siempre)');
   // v0.46: la ficha que se vuelve a leer al volver a la app cambia con cualquier campo, también el peso semanal
-  const ficha = { id: 'a', nombre: 'Guti', nutricion: true, peso_frecuencia: 'diario', checkin_apartados: null };
+  const ficha = { id: 'a', nombre: 'Atleta', nutricion: true, peso_frecuencia: 'diario', checkin_apartados: null };
   check(fichaCambiada(ficha, { ...ficha, peso_frecuencia: 'semanal' }) && fichaCambiada(ficha, { ...ficha, entrenamiento: false })
     && !fichaCambiada(ficha, { ...ficha }) && !fichaCambiada(ficha, { ...ficha, objetivo: null }) && !fichaCambiada(ficha, null)
     && fichaCambiada(ficha, { ...ficha, checkin_apartados: ['peso'] }), 'fichaCambiada: cualquier campo de la ficha (peso semanal incluido)');
@@ -1136,8 +1136,90 @@ console.log('\nComidas: recetas, recetario y menú (v0.26)');
   const avena = lc.items.find((i) => i.nombre === 'Avena');
   check(avena.cantidad === 270 && lc.items.find((i) => i.nombre === 'Huevos').cantidad === 5 && lc.items.find((i) => i.nombre === 'Sal').cantidad === null && igual(lc.libres, ['Comida fuera']),
     'la lista de la compra suma los ingredientes (× factor × raciones ÷ raciones de la receta; lo que va por piezas, hacia arriba); lo escrito a mano va aparte, una vez');
-  check(listaCompra([{ receta_id: 'r2', raciones: 1 }], [{ id: 'r2', nombre: 'X', raciones: 4, ingredientes: [{ nombre: 'Cebolla', cantidad: 1 }, { nombre: 'Ajo', cantidad: 2, unidad: 'diente' }, { nombre: 'Aceite', cantidad: 2, unidad: 'cda' }] }], []).items.map((i) => i.cantidad).join() === '0.5,1,1', 'media cebolla y medio diente se compran enteros; las cucharadas no');
-  check(/☐ 270 g de avena/.test(textoListaCompra(lc)) && /Sin receta:\n☐ Comida fuera/.test(textoListaCompra(lc)), 'y en texto, para copiarla');
+  { const l2 = listaCompra([{ receta_id: 'r2', raciones: 1 }], [{ id: 'r2', nombre: 'X', raciones: 4, ingredientes: [{ nombre: 'Cebolla', cantidad: 1 }, { nombre: 'Ajo', cantidad: 2, unidad: 'diente' }, { nombre: 'Aceite', cantidad: 2, unidad: 'cda' }] }], []).items;
+    const de = (n) => l2.find((i) => i.nombre === n);
+    check(de('Cebolla').cantidad === 1 && de('Ajo').cantidad === 1 && de('Ajo').unidad === 'diente' && de('Ajo').texto === '1 diente' && de('Aceite').cantidad === 8 && de('Aceite').unidad === 'ml',
+      'media cebolla y medio diente se compran enteros; las cucharadas, en ml (media cucharada, 7,5 ml: 8 ml)'); }
+  check(/☐ Avena: 270 g/.test(textoListaCompra(lc)) && /Sin receta:\n☐ Comida fuera/.test(textoListaCompra(lc)), 'y en texto, para copiarla');
+  // v0.53.1: totales de lo que se compra, aunque cada receta lo escriba a su manera (recetas inventadas, al estilo de Notion)
+  {
+    const R = (id, nombre, lineas, raciones = 1) => ({ id, nombre, raciones, ingredientes: leerIngredientes(lineas.join('\n')) });
+    const recs = [
+      R('a', 'Tortilla francesa', ['1 cda (10 ml) de AOVE', '2 huevos M (100 g)', '5 claras de huevo (165 g)', 'Sal y pimienta al gusto']),
+      R('b', 'Pollo con verduras', ['1,5 cdas (15 ml) de AOVE', '180 g de pechuga de pollo', '2 huevos M cocidos (100 g)', 'Sal, pimienta y pimentón al gusto', 'Guarnición:', '100 g de arroz basmati (peso en crudo)']),
+      R('c', 'Ensalada templada', ['¾ cda (7 ml) de AOVE', '1 cdta (5 ml) de AOVE', '3 huevos M (150 g)', '6 claras de huevo (200 g)', '0,12 kg de pechugas de pollo (peso en crudo)', 'Sal y pimienta al gusto', '60 g de arroz integral (peso en crudo)']),
+      R('d', 'Albóndigas', ['245 g de pollo picado (peso en crudo)', '1 cda de aceite de oliva', '1 cdta de pimentón', '1 kg de tomate triturado', '250 g de tomate triturado', '2 filetes de pechuga de pollo', 'Un chorrito de vino blanco']),
+    ];
+    const lc = listaCompra(recs.map((r) => ({ receta_id: r.id, raciones: 1 })), recs, []);
+    const de = (n) => lc.items.filter((i) => i.nombre === n);
+    const una = (n) => (de(n).length === 1 ? de(n)[0] : null);
+    check(igual(leerIngrediente('1,5 cdas (15 ml) de AOVE'), { nombre: 'AOVE (15 ml)', cantidad: 1.5, unidad: 'cda' }) && igual(leerIngrediente('2 huevos M (100 g)'), { nombre: 'Huevos M (100 g)', cantidad: 2 }),
+      'las recetas se siguen leyendo y guardando como siempre (la equivalencia, en el nombre): esto es solo para la lista');
+    const aove = una('AOVE');
+    check(aove && aove.texto === '37 ml' && aove.cantidad === 37 && aove.unidad === 'ml' && lc.items.filter((i) => /aove/i.test(i.nombre)).length === 1 && aove.recetas.length === 3,
+      `el AOVE en cda, cdas, cdta y ¾ cda, con sus ml escritos (10 + 15 + 7 + 5), en una línea: «AOVE: 37 ml» (${aove?.texto})`);
+    check(una('Aceite de oliva')?.texto === '15 ml' && una('Pimentón')?.texto === '5 ml', 'sin ml escritos, la cucharada son 15 ml y la cucharadita 5 ml');
+    { const r = R('x', 'Para dos', ['1 cda (10 ml) de AOVE', '2 huevos M (100 g)'], 2);
+      const l = listaCompra([{ receta_id: 'x', raciones: 3 }], [r], [{ receta_id: 'x', factor: 1.5 }]).items;
+      check(l.find((i) => i.nombre === 'AOVE').texto === '23 ml' && l.find((i) => i.nombre === 'Huevos M').texto === '5 (≈ 225 g)',
+        'lo escrito entre paréntesis se multiplica como lo demás (× 1,5 de factor × 3 raciones ÷ 2 de la receta: 22,5 ml; 4,5 huevos, que son 5, unos 225 g)'); }
+    const huevos = una('Huevos M');
+    check(huevos && huevos.texto === '7 (≈ 350 g)' && huevos.cantidad === 7 && huevos.unidad === 'ud' && !de('Huevos M cocidos').length && lineaCompra(huevos) === 'Huevos M: 7 (≈ 350 g)',
+      `los huevos con y sin «cocidos» van juntos, en piezas y con su peso como pista: «Huevos M: 7 (≈ 350 g)» (${huevos && lineaCompra(huevos)})`);
+    check(igual(huevos.detalle, [{ receta: 'Tortilla francesa', texto: '2 (≈ 100 g)' }, { receta: 'Pollo con verduras', texto: '2 (≈ 100 g)' }, { receta: 'Ensalada templada', texto: '3 (≈ 150 g)' }]),
+      'y lo de cada receta, para desplegarlo («en 3 recetas»)');
+    check(una('Claras de huevo')?.texto === '11 (≈ 365 g)', 'las claras, aparte de los huevos enteros: 11 (≈ 365 g)');
+    const pechuga = una('Pechuga de pollo');
+    check(pechuga && lineaCompra(pechuga) === 'Pechuga de pollo: 300 g + 2 filetes' && pechuga.cantidad === null && pechuga.unidad === null && pechuga.recetas.length === 3,
+      `con unidades que no se suman (gramos y filetes), una sola línea con las dos: «Pechuga de pollo: 300 g + 2 filetes» (${pechuga && lineaCompra(pechuga)}); 0,12 kg de «pechugas» cuentan`);
+    check(una('Pollo picado (peso en crudo)')?.texto === '245 g' && lc.items.filter((i) => /pollo/i.test(i.nombre)).length === 2, 'el pollo picado no se junta con la pechuga (es otra compra)');
+    check(una('Arroz basmati (peso en crudo)')?.texto === '100 g' && una('Arroz integral (peso en crudo)')?.texto === '60 g', 'el arroz basmati y el integral, cada uno en su línea');
+    const tomate = una('Tomate triturado');
+    check(tomate && tomate.texto === '1,25 kg' && tomate.cantidad === 1250 && tomate.unidad === 'g', 'kg y g se suman (1 kg + 250 g: 1,25 kg)');
+    check(una('Sal y pimienta al gusto')?.texto === '' && igual(una('Sal y pimienta al gusto').recetas, ['Tortilla francesa', 'Ensalada templada']) && una('Sal, pimienta y pimentón al gusto')
+      && una('Un chorrito de vino blanco')?.cantidad === null && !lc.items.some((i) => /Guarnici/.test(i.nombre)),
+      'lo que no lleva cantidad sale una vez, tal cual («Sal y pimienta al gusto», en 2 recetas); lo que no se entiende, también; «Guarnición:» es un título, no se compra');
+    // Nada se pierde: lo que entra (contado aparte, de lo que se escribió) es lo que sale, grupo a grupo y en total
+    const entra = { g: 180 + 100 + 120 + 60 + 245 + 1000 + 250, ml: 10 + 15 + 7 + 5 + 15 + 5, piezas: 2 + 5 + 2 + 3 + 6 + 2 };
+    const sale = lc.items.reduce((t, i) => ({ g: t.g + i.suma.g, ml: t.ml + i.suma.ml, piezas: t.piezas + Object.values(i.suma.piezas).reduce((a, p) => a + p.n, 0) }), { g: 0, ml: 0, piezas: 0 });
+    const porGrupo = {};
+    for (const r of recs) for (const i of r.ingredientes) for (const x of paraComprar(i)) { const e = (porGrupo[x.clave] ||= { g: 0, ml: 0, n: 0 }); e.g += x.g || 0; e.ml += x.ml || 0; e.n += x.piezas?.n || 0; }
+    const cerca = (a, b) => Math.abs(a - b) < 1e-9;
+    const lineas = recs.reduce((t, r) => t + r.ingredientes.length, 0);
+    check(cerca(entra.g, sale.g) && cerca(entra.ml, sale.ml) && cerca(entra.piezas, sale.piezas) && Object.keys(porGrupo).length === lc.items.length
+      && lc.items.every((i) => porGrupo[i.clave] && cerca(porGrupo[i.clave].g, i.suma.g) && cerca(porGrupo[i.clave].ml, i.suma.ml) && cerca(porGrupo[i.clave].n, Object.values(i.suma.piezas).reduce((a, p) => a + p.n, 0)))
+      && lc.items.length < lineas, `nada se pierde: ${entra.g} g, ${entra.ml} ml y ${entra.piezas} piezas entran y salen, grupo a grupo (${lineas} líneas en ${lc.items.length})`);
+    // «4 claras (132 g) + 1 huevo entero (50 g)»: dos cosas, si las dos se entienden; si no, como está
+    const mas = R('m', 'Revuelto', ['2 huevos M (100 g)', '4 claras de huevo (132 g) + 1 huevo entero (50 g)', '1 bote + medio de tomate']);
+    const lm = listaCompra([{ receta_id: 'm', raciones: 1 }], [mas], []).items;
+    check(lm.find((i) => i.nombre === 'Claras de huevo')?.texto === '4 (≈ 130 g)' && lm.find((i) => i.nombre === 'Huevos M')?.texto === '3 (≈ 150 g)' && lm.some((i) => i.nombre === 'Bote + medio de tomate') && lm.length === 3,
+      '«4 claras de huevo (132 g) + 1 huevo entero (50 g)» se parte en claras (4, unos 130 g: el peso, de 5 en 5) y huevo; «1 bote + medio de tomate» (la otra parte no se entiende) se queda como está');
+    check(una('Huevos M') && (() => { const p = listaCompra([{ receta_id: 'p', raciones: 1 }], [R('p', 'P', ['2 huevos M (100 g)', '1 huevo'])], []).items[0]; return p.texto === '3' && p.suma.piezas.ud.n === 3; })(),
+      'si alguna pieza no trae su peso, el peso no se adivina: «3», sin pista');
+  }
+  {
+    const k = claveCompra;
+    check(k('Huevos M cocidos (100 g)') === k('huevo') && k('Dientes de ajo') === k('diente de ajo') && k('Tomate en dados') === k('Tomates') && k('Espinacas frescas') === k('Espinacas')
+      && k('Nueces') === k('Nuez') && k('Pechuga de pollo a la plancha') === k('Pechugas de pollo (peso en crudo)') && k('Sal y pimienta al gusto') === k('Sal y pimienta') && k('Ternera magra (5% grasa, en crudo)') === k('Ternera magra')
+      && k('Calabacín troceado') === k('calabacines') && k('Huevo entero') === k('Huevos L') && k('Garbanzos cocidos') === k('Garbanzos'),
+      'la clave: sin acentos ni paréntesis, en singular, sin «al gusto» ni lo que no cambia la compra (cocido, fresco, troceado, en dados, a la plancha, la talla del huevo)');
+    check(k('Pollo picado') !== k('Pechuga de pollo') && k('Arroz basmati') !== k('Arroz integral') && k('Arroz redondo') !== k('Arroz') && k('Leche desnatada') !== k('Leche') && k('Queso rallado light') !== k('Queso rallado')
+      && k('Pechuga de pavo en lonchas') !== k('Pechuga de pavo') && k('Claras de huevo') !== k('Huevos') && k('Pan integral') !== k('Pan'),
+      'lo que sí cambia la compra se queda: picado, basmati, integral, redondo, desnatado, light, en lonchas, claras');
+    check(nombreCompra('Huevos M (100 g)') === 'Huevos M' && nombreCompra('Patata (peso en crudo, 1 patata pequeña)') === 'Patata (peso en crudo)' && nombreCompra('Ternera magra (5% grasa, en crudo)') === 'Ternera magra (5% grasa, en crudo)'
+      && nombreCompra('Proteína en polvo (½ scoop)') === 'Proteína en polvo' && nombreCompra('Crackers integrales (4-5 unidades)') === 'Crackers integrales',
+      'el nombre en la lista, sin la equivalencia ni la cantidad de una receta («(1 patata pequeña)»), con sus notas («peso en crudo», «5% grasa»)');
+    const s = (n) => seccionCompra(k(n));
+    check(s('Pechuga de pollo') === 'Proteínas' && s('Claras de huevo') === 'Proteínas' && s('Caldo de pollo desgrasado') === 'Despensa' && s('Zumo de ½ limón') === 'Verduras y fruta' && s('Tomates cherry') === 'Verduras y fruta'
+      && s('Arroz basmati') === 'Hidratos' && s('Queso cottage') === 'Lácteos' && s('Mantequilla de cacahuete') === 'Despensa' && s('Mantequilla') === 'Lácteos' && s('Leche de coco light') === 'Despensa' && s('Leche desnatada') === 'Lácteos' && s('AOVE') === 'Despensa' && s('Hielo') === 'Otros',
+      'las secciones del súper por palabras: manda la que sale antes («caldo de pollo», despensa) y la más larga («mantequilla de cacahuete», «leche de coco»); si no, «Otros»');
+    const items = [{ nombre: 'Hielo', seccion: 'Otros' }, { nombre: 'AOVE', seccion: 'Despensa' }, { nombre: 'Huevos', seccion: 'Proteínas' }];
+    check(porSecciones(items).map((x) => x.seccion).join() === 'Proteínas,Despensa,Otros', 'por secciones, en el orden del súper y sin las vacías');
+    const recs = [{ id: 'a', nombre: 'A', raciones: 1, ingredientes: leerIngredientes('1 cda (10 ml) de AOVE\n2 huevos M (100 g)\nHielo') }, { id: 'b', nombre: 'B', raciones: 1, ingredientes: leerIngredientes('1 cdta (5 ml) de AOVE\n1 huevo M (50 g)') }];
+    const t = textoListaCompra(listaCompra([{ receta_id: 'a', raciones: 1 }, { receta_id: 'b', raciones: 1 }], recs, []), 'Compra');
+    check(t === 'Compra\n\nProteínas:\n☐ Huevos M: 3 (≈ 150 g)\n\nDespensa:\n☐ AOVE: 15 ml\n\nOtros:\n☐ Hielo', `el texto para copiar, con los totales y por secciones:\n${t}`);
+    check(listaCompra([], [], []).items.length === 0 && paraComprar(null).length === 0 && paraComprar({ nombre: 'Para la salsa:' }).length === 0, 'sin nada, nada');
+  }
 
   check(valeParaDia({ variante: null }, true) && valeParaDia({ variante: 'sin' }, true) && !valeParaDia({ variante: 'con' }, true) && valeParaDia({ variante: 'con' }, false) && !valeParaDia({ variante: 'sin' }, false)
     && textoVariante('sin', 'merienda') === 'Días sin merienda' && textoVariante('con', null) === null

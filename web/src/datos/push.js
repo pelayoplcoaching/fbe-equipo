@@ -106,7 +106,7 @@ export async function desactivarPushLocal() {
 // Al abrir la app con la sesión dentro: si este navegador tiene las notificaciones de esta cuenta, la base se
 // queda con su suscripción al día (los navegadores la renuevan de vez en cuando, y si se cambiaron las claves
 // VAPID hay que rehacerla).
-// v0.45 (aviso de Guti: «se me desactivan cada vez que cierro la app», Android con la app instalada): al abrir ya
+// v0.45 (aviso de un atleta: «se me desactivan cada vez que cierro la app», Android con la app instalada): al abrir ya
 // no se quita nunca la suscripción por una señal dudosa. Antes, si el navegador decía un momento que el permiso no
 // estaba dado, o si la base no encontraba la suscripción (p. ej. la había borrado el servidor por un fallo del
 // servicio de push), se daba de baja aquí y había que volver a activarlas a mano. Ahora: sin permiso, no se toca

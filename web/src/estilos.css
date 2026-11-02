@@ -2013,7 +2013,18 @@ button.entrada-texto:hover > span:first-child { text-decoration: underline; text
 .opcion-receta.elegida { background: var(--morado-suave); }
 .opcion-receta .nombre { display: inline-flex; gap: 6px; align-items: flex-start; }
 .sticky-abajo { position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -6px 18px -10px rgba(0, 0, 0, .35), var(--sombra); }
-.lista-compra { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lista-compra { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+/* v0.53.1: la lista de la compra por secciones; cada línea, su total y «en 3 recetas» (lo de cada una, al desplegar) */
+.compra-seccion { display: grid; gap: 2px; }
+.compra-seccion .etq { margin: 6px 0 0; font-size: 0.8125rem; font-weight: 700; color: var(--tinta-2); }
+.compra-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: center; }
+.compra-item .casilla { min-height: 44px; align-items: center; }
+.compra-item .casilla input { margin: 0; }
+.compra-item .casilla > span { min-width: 0; overflow-wrap: anywhere; }
+.compra-total { font-weight: 650; }
+.compra-recetas { min-height: 44px; padding: 0 2px 0 6px; font-size: 0.8125rem; font-weight: 600; color: var(--tinta-2); white-space: nowrap; }
+.compra-recetas svg { width: 16px; height: 16px; }
+.compra-detalle { grid-column: 1 / -1; list-style: none; margin: 0 0 6px 36px; padding: 4px 0 4px 12px; border-left: 2px solid var(--linea); display: grid; gap: 4px; font-size: 0.8125rem; color: var(--tinta-2); overflow-wrap: anywhere; }
 .menu-hoy-vacio { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; color: var(--tinta); }
 .menu-hoy-vacio > svg:first-child { width: 32px; height: 32px; color: var(--morado); }
 .menu-hoy-vacio > svg:last-child { width: 18px; height: 18px; color: var(--tinta-3); }

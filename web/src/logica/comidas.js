@@ -231,37 +231,198 @@ export function copiarMenu(entradas = [], lunesOrigen, lunesDestino) {
   }));
 }
 
+// ------------------------------------------------------------ lista de la compra (v0.53.1)
+// Para sumar lo mismo aunque esté escrito de otra forma («1 cda (10 ml) de AOVE» y «1 cdta (5 ml) de AOVE»; «2 huevos
+// M (100 g)» y «2 huevos M cocidos (100 g)»), cada ingrediente se pasa a lo que se compra: una clave y una cantidad en
+// gramos, mililitros o piezas. Solo para la lista de la compra: las recetas se guardan y se ven como se escribieron.
+//  - Clave: el nombre sin paréntesis, sin acentos, en minúsculas y en singular, sin «al gusto» ni lo que no cambia
+//    lo que compras (cocido, fresco, entero, limpio, troceado, en dados, en tiras, en rodajas, a la plancha…) y sin la
+//    talla del huevo. Lo que sí lo cambia se queda: picado, integral, basmati, desnatado, light, en lonchas, claras…
+//  - Cantidad: g y kg, en gramos; ml, cl y l, en mililitros. Las cucharadas, en mililitros: lo que diga la receta
+//    («1 cda (10 ml)»: 10 ml) y, si no lo dice, 15 ml la cucharada y 5 ml la cucharadita. Lo que se compra por piezas
+//    (huevos, latas, dientes, filetes…) se cuenta en piezas, con su peso como pista si la receta lo dice («2 huevos M
+//    (100 g)»: 2 huevos, unos 100 g).
+const PESO = { g: 1, kg: 1000 };
+const VOLUMEN = { ml: 1, cl: 10, l: 1000 };
+const CUCHARA = { cda: 15, cdta: 5 };
+const MEDIDAS = new Set(['taza', 'vaso', 'pizca', 'puñado', 'cazo']);
+const PIEZAS = new Set(['ud', 'diente', 'lata', 'pieza', 'filete', 'rebanada', 'loncha', 'hoja']);
+const EQUIVALENCIA = new RegExp(`\\(\\s*${NUM}\\s*(g|gr|grs|gramos?|kg|ml|cl|l)\\.?\\s*\\)`, 'i');
+const EN_ML = { ml: 1, cl: 10, l: 1000 };
+// «1 patata pequeña», «½ scoop», «4-5 unidades», «10 ml»: lo de una receta, que al sumar ya no vale («5% grasa» sí)
+const ES_CANTIDAD = new RegExp(`^(?:${NUM}|\\d+\\s*-\\s*\\d+)(?![\\d.,]*\\s*%)`);
+const FRASES_FUERA = ['al gusto', 'a la plancha', 'al horno', 'al vapor', 'en dados', 'en daditos', 'en tiras', 'en trozos', 'en rodajas', 'en cubos', 'para servir', 'para acompanar'];
+const PALABRA_FUERA = /^(cocid|hervid|trocead|cortad|fresc|enter|limpi|escurrid|lavad)(o|a|os|as)$/;
+const VACIAS = new Set(['de', 'del', 'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas']);
+const TALLA_HUEVO = new Set(['s', 'm', 'l', 'xl']);
+
+// Una palabra en singular, para comparar (no para enseñarla): huevos → huevo, nueces → nuez, cereales → cereal
+function singular(w) {
+  if (w.length <= 3 || /\d/.test(w)) return w;
+  if (w.endsWith('ces')) return `${w.slice(0, -3)}z`;
+  let s = w.endsWith('s') ? w.slice(0, -1) : w;
+  if (s.length > 3 && /[lnr]e$/.test(s)) s = s.slice(0, -1);
+  if (s.endsWith('ce')) s = `${s.slice(0, -2)}z`;
+  return s;
+}
+
+// El nombre → la clave con la que se agrupa en la lista
+export function claveCompra(nombre) {
+  let t = ` ${normal(String(nombre || '').replace(/\([^)]*\)/g, ' ')).replace(/(\d)\s+%/g, '$1%').replace(/[^a-z0-9%]+/g, ' ')} `;
+  for (const f of FRASES_FUERA) t = t.split(` ${f} `).join(' ');
+  const out = [];
+  for (const w of t.trim().split(' ')) {
+    if (!w || VACIAS.has(w) || PALABRA_FUERA.test(w)) continue;
+    if (TALLA_HUEVO.has(w) && out[out.length - 1] === 'huevo') continue;
+    out.push(singular(w));
+  }
+  return out.join(' ');
+}
+
+// El nombre para enseñarlo en la lista: sin la equivalencia ni lo que era la cantidad de una receta
+// («Huevos M (100 g)» → «Huevos M»; «Patata (peso en crudo, 1 patata pequeña)» → «Patata (peso en crudo)»)
+export function nombreCompra(nombre) {
+  return String(nombre || '').replace(/\s*\(([^)]*)\)/g, (_, dentro) => {
+    const quedan = dentro.split(',').map((x) => x.trim()).filter((x) => x && !ES_CANTIDAD.test(x));
+    return quedan.length ? ` (${quedan.join(', ')})` : '';
+  }).replace(/\s+/g, ' ').trim();
+}
+
+// Un ingrediente de una receta (multiplicado por su escala) → lo que se compra: [{ clave, nombre, g?, ml?, piezas?, sin? }].
+// piezas: { unidad, n, aprox?: { g } | { ml } }. sin: no lleva cantidad («Sal y pimienta al gusto»).
+// «4 claras de huevo (132 g) + 1 huevo entero (50 g)» son dos cosas, si las dos se entienden.
+export function paraComprar(i, escala = 1) {
+  if (!i?.nombre) return [];
+  const trozos = String(i.nombre).split(/\s+\+\s+/);
+  if (trozos.length > 1 && i.cantidad != null) {
+    const resto = trozos.slice(1).map(leerIngrediente);
+    if (resto.every((x) => x?.cantidad != null)) return [{ ...i, nombre: trozos[0] }, ...resto].flatMap((x) => unaCompra(x, escala));
+  }
+  return unaCompra(i, escala);
+}
+function unaCompra(i, escala) {
+  const nombre = String(i.nombre).trim();
+  const clave = claveCompra(nombre) || normal(nombre);
+  const x = { clave, nombre: nombreCompra(nombre) || nombre };
+  if (i.cantidad == null || !(Number(i.cantidad) > 0)) {
+    // «Guarnición:» o «Para la salsa:» son títulos de la receta, no algo que comprar
+    if (/:\s*$/.test(nombre)) return [];
+    return [{ ...x, sin: true }];
+  }
+  const c = Number(i.cantidad) * Number(escala || 1);
+  const u = i.unidad || 'ud';
+  const eq = nombre.match(EQUIVALENCIA);
+  const equiv = eq ? (EN_ML[eq[2].toLowerCase()] ? { ml: fraccion(eq[1]) * EN_ML[eq[2].toLowerCase()] * escala } : { g: fraccion(eq[1]) * (eq[2].toLowerCase() === 'kg' ? 1000 : 1) * escala }) : null;
+  if (PESO[u]) return [{ ...x, g: c * PESO[u] }];
+  if (VOLUMEN[u]) return [{ ...x, ml: c * VOLUMEN[u] }];
+  if (CUCHARA[u] || MEDIDAS.has(u)) {
+    if (equiv) return [{ ...x, ...equiv }];
+    if (CUCHARA[u]) return [{ ...x, ml: c * CUCHARA[u] }];
+  }
+  return [{ ...x, piezas: { unidad: u, n: c, ...(equiv ? { aprox: equiv } : {}) } }];
+}
+
+// Las secciones del súper, por palabras de la clave: manda la que sale antes en el nombre («caldo de pollo», a la
+// despensa; «zumo de limón», a la fruta) y, si empiezan igual, la más larga («mantequilla de cacahuete»)
+export const SECCIONES_COMPRA = ['Proteínas', 'Verduras y fruta', 'Hidratos', 'Lácteos', 'Despensa', 'Otros'];
+const PALABRAS_SECCION = [
+  ['Proteínas', 'pollo pavo ternera cerdo lomo solomillo pechuga contramuslo carne hamburguesa jamón huevo clara salmón atún merluza bacalao lubina dorada sepia calamar gamba langostino mejillón sardina caballa tofu tempeh seitán proteína'],
+  ['Verduras y fruta', 'tomate pimiento cebolla cebolleta calabacín zanahoria lechuga espinaca ajo puerro pepino apio champiñón seta calabaza col canónigo cogollo brócoli coliflor berenjena judía aguacate plátano manzana pera kiwi fresa arándano frambuesa fruto limón lima naranja mandarina uva melón sandía piña mango patata boniato ensalada rúcula cilantro perejil albahaca jengibre verdura'],
+  ['Hidratos', 'arroz pasta espagueti macarrón pan avena copo quinoa cous ñoqui noodle tortilla cereal muesli müsli cracker tostada picatoste lenteja garbanzo alubia legumbre harina'],
+  ['Lácteos', 'leche yogur skyr queso requesón kéfir nata mantequilla cuajada'],
+  ['Despensa', 'aceite aove sal pimienta pimentón comino curry orégano tomillo laurel canela eneldo cúrcuma garam azafrán colorante guindilla especia salsa soja teriyaki vinagre mostaza caldo miel cacao chocolate crema nuez almendra anacardo avellana pistacho cacahuete semilla chía pipa sésamo maíz vino edulcorante gelatina levadura|mantequilla de cacahuete|nuez moscada|leche de coco'],
+].flatMap(([s, txt]) => txt.split('|').flatMap((t, k) => (k ? [t] : t.split(' '))).map((p) => [claveCompra(p), s]));
+export function seccionCompra(clave) {
+  const k = ` ${clave} `;
+  let mejor = null;
+  for (const [p, s] of PALABRAS_SECCION) {
+    const at = k.indexOf(` ${p} `);
+    if (at >= 0 && (!mejor || at < mejor.at || (at === mejor.at && p.length > mejor.p.length))) mejor = { at, p, s };
+  }
+  return mejor ? mejor.s : 'Otros';
+}
+
+const sumaVacia = () => ({ g: 0, ml: 0, piezas: {}, sin: false });
+function sumar(s, x) {
+  if (x.sin) s.sin = true;
+  if (x.g) s.g += x.g;
+  if (x.ml) s.ml += x.ml;
+  if (x.piezas) {
+    const p = (s.piezas[x.piezas.unidad] ||= { n: 0, g: 0, ml: 0, todas: true });
+    p.n += x.piezas.n;
+    if (x.piezas.aprox) { p.g += x.piezas.aprox.g || 0; p.ml += x.piezas.aprox.ml || 0; } else p.todas = false;
+  }
+}
+// «350 g», «1,25 kg», «70 ml», «1,5 l»
+const textoMedida = (v, u) => { const r = escalarCantidad(v, u, 1); return r >= 1000 ? `${num(r / 1000, 2)} ${u === 'g' ? 'kg' : 'l'}` : `${num(r, 0)} ${u}`; };
+const pluralUnidad = (u) => (/[aeiou]$/.test(u) ? `${u}s` : `${u}es`);
+// Lo sumado en palabras: el peso, luego el volumen y luego las piezas, unidos con «+» («300 g + 2 filetes»).
+// Las piezas, con su peso como pista si todas lo traían («7 (≈ 350 g)»). En el total, lo que va por piezas se
+// redondea hacia arriba (media cebolla es una cebolla); lo de cada receta, de media en media.
+function textoSuma(s, total = true) {
+  const partes = [];
+  if (s.g > 0) partes.push(textoMedida(s.g, 'g'));
+  if (s.ml > 0) partes.push(textoMedida(s.ml, 'ml'));
+  for (const [u, p] of Object.entries(s.piezas)) {
+    const n = total && PIEZAS.has(u) ? Math.max(1, Math.ceil(p.n - 0.01)) : escalarCantidad(p.n, u, 1);
+    const pista = p.todas && (p.g > 0) !== (p.ml > 0) ? ` (≈ ${p.g > 0 ? textoMedida(p.g, 'g') : textoMedida(p.ml, 'ml')})` : '';
+    partes.push(`${num(n, 2)}${u === 'ud' ? '' : ` ${n > 1 ? pluralUnidad(u) : u}`}${pista}`);
+  }
+  return partes.join(' + ');
+}
+const masVeces = (m) => { let mejor = null; for (const [n, k] of m) if (!mejor || k > mejor[1]) mejor = [n, k]; return mejor?.[0]; };
+
 // La lista de la compra de unos días: los ingredientes de las recetas del menú, multiplicados por el factor del
-// atleta y las raciones apuntadas (y divididos por las raciones de la receta), sumados si coinciden nombre y
-// unidad. Lo escrito a mano va aparte («sin receta»). Devuelve { items: [{ nombre, cantidad, unidad, recetas }], libres }
+// atleta y las raciones apuntadas (y divididos por las raciones de la receta), sumados por lo que se compra
+// (claveCompra) aunque estén escritos de otra forma. Lo escrito a mano va aparte («sin receta»).
+// Devuelve { items: [{ clave, nombre, texto, cantidad, unidad, seccion, recetas, detalle, suma }], libres }:
+//  - nombre: como más veces está escrito; texto: el total («7 (≈ 350 g)», «300 g + 2 filetes»; '' si no lleva cantidad);
+//  - cantidad y unidad: el total si va en una sola unidad (g, ml o la de sus piezas), si no, null;
+//  - detalle: lo de cada receta [{ receta, texto }]; suma: lo sumado sin redondear.
+// Nada se pierde: lo que no se entiende va con su nombre, y lo que no lleva cantidad sale una vez.
 export function listaCompra(entradas = [], recetas = [], asignaciones = []) {
   const R = Object.fromEntries(recetas.map((r) => [r.id, r]));
   const factor = {};
   for (const a of asignaciones) factor[a.receta_id] = factor[a.receta_id] ?? Number(a.factor || 1);
-  const items = new Map();
+  const grupos = new Map();
   const libres = [];
   for (const e of entradas) {
     const r = e.receta_id ? R[e.receta_id] : null;
     if (!r) { if (!libres.includes(e.texto)) libres.push(e.texto); continue; }
     const escala = (factor[r.id] ?? 1) * Number(e.raciones || 1) / Number(r.raciones || 1);
-    for (const i of r.ingredientes || []) {
-      const clave = `${normal(i.nombre)}|${i.cantidad == null ? '' : i.unidad || ''}`;
-      const x = items.get(clave) || { nombre: i.nombre, unidad: i.cantidad == null ? null : i.unidad || null, cantidad: i.cantidad == null ? null : 0, recetas: [] };
-      if (i.cantidad != null) x.cantidad += Number(i.cantidad) * escala;
-      if (!x.recetas.includes(r.nombre)) x.recetas.push(r.nombre);
-      items.set(clave, x);
+    for (const x of (r.ingredientes || []).flatMap((i) => paraComprar(i, escala))) {
+      const g = grupos.get(x.clave) || { clave: x.clave, con: new Map(), sinC: new Map(), suma: sumaVacia(), porReceta: new Map() };
+      const nombres = x.sin ? g.sinC : g.con;
+      nombres.set(x.nombre, (nombres.get(x.nombre) || 0) + 1);
+      sumar(g.suma, x);
+      if (!g.porReceta.has(r.nombre)) g.porReceta.set(r.nombre, sumaVacia());
+      sumar(g.porReceta.get(r.nombre), x);
+      grupos.set(x.clave, g);
     }
   }
-  // Lo que se compra por piezas (media cebolla, un cuarto de pimiento) se redondea hacia arriba a piezas enteras
-  const porPiezas = (u) => !u || /^(ud|diente|lata|pieza|filete|rebanada|loncha|hoja)$/.test(u);
-  const lista = [...items.values()].map((x) => ({ ...x, cantidad: x.cantidad == null ? null : porPiezas(x.unidad) ? Math.max(1, Math.ceil(x.cantidad - 0.01)) : escalarCantidad(x.cantidad, x.unidad, 1) }))
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-  return { items: lista, libres };
+  const items = [...grupos.values()].map((g) => {
+    const nombre = masVeces(g.con) || masVeces(g.sinC);
+    const s = g.suma;
+    const tipos = (s.g > 0) + (s.ml > 0) + Object.keys(s.piezas).length;
+    const [u1, p1] = Object.entries(s.piezas)[0] || [];
+    const unidad = tipos !== 1 ? null : s.g > 0 ? 'g' : s.ml > 0 ? 'ml' : u1;
+    const cantidad = !unidad ? null : unidad === 'g' ? escalarCantidad(s.g, 'g', 1) : unidad === 'ml' ? escalarCantidad(s.ml, 'ml', 1)
+      : PIEZAS.has(unidad) ? Math.max(1, Math.ceil(p1.n - 0.01)) : escalarCantidad(p1.n, unidad, 1);
+    return {
+      clave: g.clave, nombre, texto: textoSuma(s), cantidad, unidad, seccion: seccionCompra(g.clave),
+      recetas: [...g.porReceta.keys()], detalle: [...g.porReceta].map(([receta, x]) => ({ receta, texto: textoSuma(x, false) })), suma: s,
+    };
+  }).sort((a, b) => SECCIONES_COMPRA.indexOf(a.seccion) - SECCIONES_COMPRA.indexOf(b.seccion) || a.nombre.localeCompare(b.nombre, 'es'));
+  return { items, libres };
 }
-// La lista en texto, para copiarla o compartirla
+// La lista por secciones del súper, en su orden y sin las vacías: [{ seccion, items }]
+export const porSecciones = (items = []) => SECCIONES_COMPRA.map((seccion) => ({ seccion, items: items.filter((i) => i.seccion === seccion) })).filter((x) => x.items.length);
+// Una línea: «Huevos M: 7 (≈ 350 g)», «Sal y pimienta al gusto»
+export const lineaCompra = (i) => (i.texto ? `${i.nombre}: ${i.texto}` : i.nombre);
+// La lista en texto, para copiarla o compartirla (por secciones)
 export function textoListaCompra({ items, libres }, titulo = 'Lista de la compra') {
-  const lineas = [titulo, ''];
-  for (const i of items) lineas.push(`☐ ${i.cantidad == null ? i.nombre : textoIngrediente({ nombre: i.nombre, cantidad: i.cantidad, unidad: i.unidad })}`);
+  const lineas = [titulo];
+  for (const { seccion, items: xs } of porSecciones(items)) { lineas.push('', `${seccion}:`); for (const i of xs) lineas.push(`☐ ${lineaCompra(i)}`); }
   if (libres.length) { lineas.push('', 'Sin receta:'); for (const t of libres) lineas.push(`☐ ${t}`); }
   return lineas.join('\n');
 }

@@ -913,7 +913,7 @@ try {
   await p.locator('#peso-hoy').blur();
   await p.getByRole('button', { name: 'Guardar', exact: true }).click();
   await p.locator('.peso-hoy .chip', { hasText: 'Apuntado' }).waitFor();
-  check(!/\d/.test(await p.locator('.peso-hoy').textContent()), 'apunta su peso de hoy en un toque; en Hoy, sin la cifra (a Guti no le gustaba verla siempre)');
+  check(!/\d/.test(await p.locator('.peso-hoy').textContent()), 'apunta su peso de hoy en un toque; en Hoy, sin la cifra (a un atleta no le gustaba verla siempre)');
 
   console.log('\nAtleta: check-in');
   await p.locator('.tab', { hasText: 'Check-in' }).click();
@@ -2218,7 +2218,7 @@ try {
   await filaPagos.waitFor();
   check((await filaPagos.textContent()).includes('Pagado hasta') && (await filaPagos.textContent()).includes('Al día') && !(await p.locator('.contenido').textContent()).includes('Performance'),
     'en su perfil ve «Tus pagos: al día, pagado hasta…», sin el precio ni el servicio');
-  // v0.27.1: el aviso del descanso con los sonidos de FBE Timer (a Guti se le oía muy bajo)
+  // v0.27.1: el aviso del descanso con los sonidos de FBE Timer (a un atleta se le oía muy bajo)
   // (lo que suena: la duración de cada sonido que arranca; cada uno dura distinto)
   await p.evaluate(() => { if (!navigator.audioSession) Object.defineProperty(navigator, 'audioSession', { value: { type: 'auto' }, configurable: true }); window.__sonado = []; const ini = AudioBufferSourceNode.prototype.start; AudioBufferSourceNode.prototype.start = function (...x) { window.__sonado.push(Math.round((this.buffer?.duration || 0) * 100)); return ini.apply(this, x); }; });
   await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
@@ -2412,8 +2412,9 @@ try {
   await hojaRec.locator('#rec-p').fill('38');
   await hojaRec.locator('#rec-h').fill('40');
   await hojaRec.locator('#rec-g').fill('12');
-  await hojaRec.getByLabel(/^Ingredientes/).fill('300 g de calabaza\n120 g de pechuga de pollo\n1 cebolla\nSal al gusto');
-  check(/4 ingredientes: 300 g de calabaza · 120 g de pechuga de pollo · 1 cebolla · Sal al gusto/.test(await hojaRec.locator('.ayuda', { hasText: 'ingredientes' }).textContent()), 'al escribir los ingredientes, enseña cómo los ha entendido (cantidad, unidad y nombre)');
+  // (la pechuga, escrita de otra forma que en el curry de Lucía: en kg, en plural y con «peso en crudo»; v0.53.1)
+  await hojaRec.getByLabel(/^Ingredientes/).fill('300 g de calabaza\n0,12 kg de pechugas de pollo (peso en crudo)\n1 cebolla\nSal al gusto');
+  check(/4 ingredientes: 300 g de calabaza · 0,12 kg de pechugas de pollo \(peso en crudo\) · 1 cebolla · Sal al gusto/.test(await hojaRec.locator('.ayuda', { hasText: 'ingredientes' }).textContent()), 'al escribir los ingredientes, enseña cómo los ha entendido (cantidad, unidad y nombre)');
   await hojaRec.getByLabel('Preparación').fill('Asa la calabaza con la cebolla.\nTritura y sirve con el pollo a la plancha.');
   await revisar('receta-nueva');
   await hojaRec.getByRole('button', { name: 'Guardar' }).click();
@@ -2465,12 +2466,54 @@ try {
   await hojaAn.getByRole('button', { name: 'Añadir', exact: true }).click();
   await p.locator('.toast', { hasText: 'Añadido al menú' }).waitFor();
   check(await hay(p.locator('.entrada-menu'), cenasAntes + 1) && await p.locator('.entrada-menu', { hasText: 'Crema de calabaza' }).count() === 1, 'Lucía se pone la receta nueva en la cena de hoy');
+  // v0.53.1: y el curry en la misma cena (su pechuga va en g y en singular): en la lista, una sola línea de pechuga con el total
+  const cenaHoy = p.locator('.toma-dia').filter({ has: p.locator('.toma-cab .etq', { hasText: /^Cena$/ }) });
+  await anadirCena.click();
+  const hojaAn2 = p.getByRole('dialog', { name: /^Cena, / });
+  await hojaAn2.waitFor();
+  await hojaAn2.getByRole('button', { name: /Pollo al curry con arroz basmati/ }).first().click();
+  await hojaAn2.getByRole('button', { name: 'Añadir', exact: true }).click();
+  check(await hay(p.locator('.entrada-menu'), cenasAntes + 2), 'y el pollo al curry en la misma cena');
   await p.getByRole('button', { name: 'Lista de la compra' }).click();
   const hojaCompra = p.getByRole('dialog', { name: 'Lista de la compra' });
   await hojaCompra.waitFor();
-  check((await hojaCompra.textContent()).includes('300 g de calabaza'), 'y la lista de la compra ya trae sus ingredientes');
+  check(await hojaCompra.locator('.compra-item', { hasText: /^Calabaza: 300 g/ }).count() === 1 && await hojaCompra.getByRole('heading', { name: 'Proteínas' }).count() === 1,
+    'y la lista de la compra ya trae sus ingredientes («Calabaza: 300 g»), por secciones del súper');
+  const pollo = hojaCompra.locator('.compra-item', { hasText: /pechugas? de pollo/i });
+  const lineaPollo = (await pollo.first().locator('.casilla').textContent()).trim();
+  const verRecetas = pollo.first().getByRole('button', { name: /en \d+ recetas/ });
+  check(await pollo.count() === 1 && /^Pechugas? de pollo( \(peso en crudo\))?: \d+ g$/.test(lineaPollo) && await verRecetas.getAttribute('aria-expanded') === 'false',
+    `la pechuga de las dos recetas, en una sola línea con el total («${lineaPollo}»)`);
+  await verRecetas.click();
+  const detallePollo = pollo.first().locator('.compra-detalle li');
+  await detallePollo.first().waitFor();
+  const lineasPollo = (await detallePollo.allTextContents()).map((t) => t.trim());
+  const g = (t) => Number((t.match(/: (\d+) g$/) || [])[1]);
+  const deCurry = lineasPollo.find((t) => t.startsWith('Pollo al curry con arroz basmati: '));
+  check(await verRecetas.getAttribute('aria-expanded') === 'true' && lineasPollo.includes('Crema de calabaza con pollo: 120 g') && deCurry && g(deCurry) % 150 === 0
+    && g(lineaPollo.replace(/^[^:]*: /, ': ')) === 120 + g(deCurry), `«en N recetas» despliega lo de cada una, y suman el total (${lineasPollo.join(' · ')})`);
   await revisar('lucia-compra');
+  // A 360 px y con la letra al 125 %, en oscuro: nada se sale de la hoja y los toques son de 44 px
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.evaluate(() => { document.documentElement.style.fontSize = '125%'; });
+  const medidas = await p.evaluate(() => {
+    const h = document.querySelector('.hoja-dialogo'); const r = h.getBoundingClientRect();
+    const fuera = [...h.querySelectorAll('.compra-item, .compra-item *')].filter((x) => { const b = x.getBoundingClientRect(); return b.width && (b.right > r.right + 0.5 || b.left < r.left - 0.5); }).length;
+    const bajos = [...h.querySelectorAll('.compra-item .casilla, .compra-recetas')].filter((x) => x.getBoundingClientRect().height < 43.5).length;
+    return { fuera, bajos, ancho: h.scrollWidth <= h.clientWidth };
+  });
+  check(medidas.fuera === 0 && medidas.bajos === 0 && medidas.ancho, `la lista a 360 px, al 125 % y en oscuro: nada se sale y cada toque tiene 44 px ${JSON.stringify(medidas)}`);
+  await revisar('lucia-compra-360-125-oscuro');
+  await p.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
   await hojaCompra.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaCompra.waitFor({ state: 'detached' });
+  // (el curry se quita: lo que sigue cuenta con la cena de antes)
+  await cenaHoy.locator('.entrada-menu', { hasText: 'Pollo al curry' }).last().locator('.entrada-texto').click();
+  await p.getByRole('dialog', { name: 'Pollo al curry con arroz basmati' }).getByRole('button', { name: 'Quitar del menú' }).click();
+  check(await hay(p.locator('.entrada-menu'), cenasAntes + 1), 'y se quita el curry de la cena');
 
   console.log('\nDías sin merienda (v0.27)');
   const interruptor = p.getByRole('switch', { name: 'Hoy sin merienda' });
