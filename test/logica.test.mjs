@@ -2034,5 +2034,182 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const filaL = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
   check(/Los descansos que eliges tú .* se guardan en tu móvil/.test(filaL[1]) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice que los descansos que eliges se guardan en tu móvil (sin cambiar la versión de la política)');
 }
+console.log('\nv0.53: días de entreno por semana (microciclos que no caben en una semana natural)');
+{
+  const N = await import('../web/src/logica/semana-natural.js');
+  const { racha, resumenAtleta } = await import('../web/src/logica/calculos.js');
+  const { rachaMaxima } = await import('../web/src/logica/logros.js');
+  const { semanasCompletas } = await import('../web/src/logica/diseno.js');
+  const { calendarioRacha } = await import('../web/src/logica/racha.js');
+  const { resumenMes, sumarMes } = await import('../web/src/logica/mes.js');
+  const { dialConstancia, anillosSemana } = await import('../web/src/logica/tablero.js');
+  const { cumplimiento } = await import('../web/src/logica/informe.js');
+  const { semillaDemo } = await import('../web/src/datos/semilla-demo.js');
+
+  check(N.diasSemanaValido(3) === 3 && N.diasSemanaValido('7') === 7 && N.diasSemanaValido(null) === null && N.diasSemanaValido('') === null
+    && [0, 8, -1, 2.5, 'tres', undefined, NaN].every((v) => N.diasSemanaValido(v) === null), 'el objetivo vale de 1 a 7; cualquier otra cosa es «Automático» (null)');
+  check(N.textoDiasSemana(1) === '1 día por semana' && N.textoDiasSemana(3) === '3 días por semana', 'su texto');
+
+  // --- Sin objetivo, exactamente lo de antes: contra las funciones de siempre, en la demo de 7 días seguidos ---
+  // (la lista de antes, como la montaban constancia(), logros() y resumenesSemanales(): una fila por semana del programa)
+  const antes = (semanas, sesiones) => semanas.map((w) => {
+    const ss = sesiones.filter((x) => x.semana_id === w.id);
+    return { fecha_inicio: w.fecha_inicio, total: ss.length, hechas: ss.filter((x) => x.completada).length };
+  });
+  let comparadas = 0, distintas = [];
+  for (let d = 0; d < 7; d++) {
+    const hoySemilla = sumarDias('2026-11-02', d);
+    const db = semillaDemo(hoySemilla);
+    for (const a of db.atletas) {
+      const bloques = db.bloques.filter((x) => x.atleta_id === a.id && !x.es_plantilla && x.estado !== 'cancelado');
+      const semanas = db.semanas.filter((w) => bloques.some((x) => x.id === w.bloque_id) && w.programacion === 'programada' && w.fecha_inicio);
+      const sesiones = db.sesiones.filter((x) => semanas.some((w) => w.id === x.semana_id));
+      const viejo = antes(semanas, sesiones);
+      const nuevo = N.paraRacha(N.semanasObjetivo({ diasSemana: null, sesiones, semanas, hoy: hoySemilla }));
+      const lunesViejo = viejo.map((w) => ({ ...w, fecha_inicio: lunesDe(w.fecha_inicio) }));
+      const L = new Map(semanas.map((w) => [w.id, lunesDe(w.fecha_inicio)]));
+      const conLunes = sesiones.map((x) => ({ ...x, semana_lunes: L.get(x.semana_id) }));
+      for (const h of [-21, -8, -1, 0, 3, 6, 13].map((k) => sumarDias(hoySemilla, k))) {
+        comparadas++;
+        const mes = h.slice(0, 7);
+        const mV = resumenMes({ sesiones: conLunes }, sumarMes(mes, -1)), mN = resumenMes({ sesiones: conLunes, semanasNaturales: N.semanasObjetivo({ diasSemana: null, sesiones, semanas, hoy: h }) }, sumarMes(mes, -1));
+        const ok1 = racha(viejo, h) === racha(nuevo, h) && rachaMaxima(viejo, h) === rachaMaxima(nuevo, h) && semanasCompletas(lunesViejo, h) === semanasCompletas(nuevo, h)
+          && igual(calendarioRacha(viejo, h, 12), calendarioRacha(nuevo, h, 12))
+          && igual([mV.semanasCompletas, mV.mejorRacha, mV.racha], [mN.semanasCompletas, mN.mejorRacha, mN.racha]);
+        if (!ok1) distintas.push(`${a.nombre} ${h}`);
+      }
+    }
+  }
+  check(comparadas >= 7 * 7 * 5 && !distintas.length, `sin objetivo, racha, racha más larga, semanas completas, el calendario de la racha y «Tu mes» salen igual que antes (${comparadas} comparaciones en la demo de 7 días distintos)${distintas.length ? `: distintas ${distintas.slice(0, 3).join(', ')}` : ''}`);
+  {
+    const db = semillaDemo('2026-11-05');
+    const a = db.atletas.find((x) => x.nombre === 'Ana López');
+    const bl = db.bloques.filter((x) => x.atleta_id === a.id);
+    const semanas = db.semanas.filter((w) => bl.some((x) => x.id === w.bloque_id) && w.programacion === 'programada');
+    const sesiones = db.sesiones.filter((x) => semanas.some((w) => w.id === x.semana_id));
+    const l = N.semanasObjetivo({ sesiones, semanas, hoy: '2026-11-05' });
+    const act = N.semanaEnCurso(l, '2026-11-05');
+    const ses = sesiones.filter((x) => x.semana_id === semanas.find((w) => w.fecha_inicio === '2026-11-02').id);
+    check(!!act && act.objetivo === ses.length && act.hechas === ses.filter((x) => x.completada).length && igual(dialConstancia(ses), dialConstancia(ses, act)),
+      'sin objetivo, la semana de hoy es la programada (el dial de Hoy, el mismo con una lista que con la otra)');
+  }
+
+  // --- Con objetivo: Dani, 3 días por semana, microciclos de 4 sesiones con las fechas de 7 en 7 ---
+  // Bloque desde el lunes 7 de septiembre, 6 semanas del programa (24 sesiones); entrena lunes, miércoles y viernes
+  const micro = (inicio = '2026-09-07', nSemanas = 6, bloque = 'b1', base = 0) => {
+    const semanas = Array.from({ length: nSemanas }, (_, i) => ({ id: `${bloque}-w${i + 1}`, numero: i + 1, bloque_id: bloque, fecha_inicio: sumarDias(inicio, 7 * i), programacion: 'programada' }));
+    const sesiones = semanas.flatMap((w) => [1, 2, 3, 4].map((o) => ({ id: `${w.id}-s${o}`, semana_id: w.id, orden: o, nombre: ['Torso A', 'Pierna A', 'Torso B', 'Pierna B'][o - 1], completada: false, fecha_realizada: null })));
+    return { semanas, sesiones };
+  };
+  const hacer = (sesiones, fechas) => { let k = 0; for (const s of sesiones) { if (k >= fechas.length) break; if (s.completada) continue; Object.assign(s, { completada: true, fecha_realizada: fechas[k++] }); } };
+  const lxv = (lunes) => [0, 2, 4].map((o) => sumarDias(lunes, o));
+  {
+    const { semanas, sesiones } = micro();
+    // 5 semanas naturales enteras (15 sesiones: 3 microciclos y 3 del cuarto) y hoy, el lunes de la sexta, una más
+    hacer(sesiones, [...[0, 1, 2, 3, 4].flatMap((k) => lxv(sumarDias('2026-09-07', 7 * k))), '2026-10-12']);
+    const hoy = '2026-10-12';
+    const l = N.semanasObjetivo({ diasSemana: 3, sesiones, semanas, hoy });
+    check(l.length === 6 && l.slice(0, 5).every((w) => w.objetivo === 3 && w.hechas === 3 && w.completa) && igual(l[5], { lunes: '2026-10-12', objetivo: 3, hechas: 1, completa: false }),
+      'con 3 días: cada semana de lunes a domingo, 3 de 3 (aunque los microciclos de 4 crucen de una semana a otra); la de hoy, 1 de 3');
+    const lista = N.paraRacha(l);
+    check(racha(lista, hoy) === 5 && rachaMaxima(lista, hoy) === 5 && semanasCompletas(lista, hoy) === 5, 'racha de 5 semanas completas seguidas (la de hoy, a medias, no la rompe)');
+    const viejo = N.paraRacha(N.semanasObjetivo({ sesiones, semanas, hoy }));
+    check(racha(viejo, hoy) === 0 && viejo.filter((w) => w.fecha_inicio < '2026-10-12').every((w) => w.total === 4), 'con «Automático», la de siempre: semanas de 4 que casi nunca se completan (racha 0)');
+    check(dialConstancia([], N.semanaEnCurso(l, hoy)).cifra === '1/3' && dialConstancia([], N.semanaEnCurso(l, hoy)).etiqueta === 'Te quedan 2', 'el dial de Hoy: «1/3, Te quedan 2» (no «1/4, Te quedan 3»)');
+    const an = anillosSemana({ semanaNatural: N.semanaEnCurso(l, hoy), conCheckin: false });
+    check(an[0].texto === '1 de 3' && !an[0].cerrado && anillosSemana({ semanaNatural: null, conCheckin: false })[0].objetivo === 0, 'el anillo de sesiones va hasta 3 (y sin nada que hacer, vacío)');
+    // Termina la semana: miércoles y viernes
+    hacer(sesiones, ['2026-10-14', '2026-10-16']);
+    const l2 = N.semanasObjetivo({ diasSemana: 3, sesiones, semanas, hoy: '2026-10-16' });
+    check(racha(N.paraRacha(l2), '2026-10-16') === 6 && N.semanaEnCurso(l2, '2026-10-16').completa && dialConstancia([], N.semanaEnCurso(l2, '2026-10-16')).etiqueta === 'Semana completa',
+      'la semana en curso suma en cuanto llega a 3 (racha 6, «Semana completa»)');
+    // Hoy sigue en su microciclo: el 5.º (18 hechas), aunque por fechas tocaría el 6.º
+    const porSemana = Object.fromEntries(semanas.map((w) => [w.id, sesiones.filter((x) => x.semana_id === w.id)]));
+    const m = N.semanaDelMicrociclo(semanas, porSemana, semanas[5]);
+    check(m.numero === 5 && porSemana[m.id].filter((x) => !x.completada).map((x) => x.nombre).join() === 'Torso B,Pierna B', 'Hoy enseña su microciclo (el 5.º, con Torso B y Pierna B pendientes), no el de las fechas');
+    const lista5 = N.sesionesDeLaSemana(semanas, porSemana, 3, '2026-10-16');
+    check(lista5.length === 3 && lista5.every((x) => x.completada) && lista5.map((x) => x.fecha_realizada).join() === '2026-10-12,2026-10-14,2026-10-16', 'la hoja de la constancia: las 3 hechas de esta semana (de dos microciclos)');
+    check(N.sesionesDeLaSemana(semanas, porSemana, 3, '2026-10-19').map((x) => x.nombre).join() === 'Torso B,Pierna B,Torso A', 'y el lunes siguiente, las 3 que le tocan en su orden (cruzando al microciclo siguiente)');
+    const todoHecho = Object.fromEntries(semanas.map((w) => [w.id, porSemana[w.id].map((x) => ({ ...x, completada: true }))]));
+    check(N.semanaDelMicrociclo(semanas, todoHecho, semanas[5]) === semanas[5], 'con todo hecho, la de siempre');
+  }
+  {
+    // Lunes y domingo: el domingo cuenta en su semana; el lunes siguiente, en la siguiente
+    const { semanas, sesiones } = micro('2026-09-07', 3);
+    hacer(sesiones, ['2026-09-07', '2026-09-09', '2026-09-13', '2026-09-14', '2026-09-20', '2026-09-21']);
+    const l = N.semanasObjetivo({ diasSemana: 3, sesiones, semanas, hoy: '2026-09-22' });
+    check(igual(l.map((w) => [w.lunes, w.hechas]), [['2026-09-07', 3], ['2026-09-14', 2], ['2026-09-21', 1]]) && l[0].completa && !l[1].completa,
+      'el domingo cuenta en su semana y el lunes, en la siguiente (semanas de lunes a domingo)');
+    check(racha(N.paraRacha(l), '2026-09-22') === 0 && rachaMaxima(N.paraRacha(l), '2026-09-22') === 1, 'una semana de 2 rompe la racha; la de hoy (1) no');
+    // Una sesión sin fecha cuenta el día que empezó su semana
+    const otra = micro('2026-09-07', 1);
+    Object.assign(otra.sesiones[0], { completada: true, fecha_realizada: null });
+    check(N.semanasObjetivo({ diasSemana: 1, ...otra, hoy: '2026-09-10' })[0].hechas === 1, 'una sesión hecha sin fecha cuenta en la semana en que empezó la suya');
+  }
+  {
+    // Antes del bloque, nada; un bloque que empieza un jueves cuenta desde esa semana
+    const { semanas, sesiones } = micro('2026-09-10', 2);
+    const l = N.semanasObjetivo({ diasSemana: 3, sesiones, semanas, hoy: '2026-09-21' });
+    check(l[0].lunes === '2026-09-07' && l.length === 3 && N.semanasObjetivo({ diasSemana: 3, sesiones, semanas, hoy: '2026-09-01' }).length === 0, 'las semanas de antes de su primer bloque no cuentan (empieza la del jueves en que arranca)');
+    check(!N.semanasObjetivo({ diasSemana: 3, sesiones: [], semanas: [], hoy: '2026-09-21' }).length && !N.semanasObjetivo({ diasSemana: 3, sesiones, semanas: [], hoy: '2026-09-21' }).length, 'sin programa, ninguna');
+  }
+  {
+    // Huecos: un bloque terminado, dos semanas de descanso y el siguiente: no rompen la racha
+    const a = micro('2026-09-07', 3, 'b1');
+    hacer(a.sesiones, [...[0, 1, 2].flatMap((k) => lxv(sumarDias('2026-09-07', 7 * k))), '2026-09-28', '2026-09-30', '2026-10-02']);
+    const b = micro('2026-10-19', 2, 'b2');
+    hacer(b.sesiones, [...lxv('2026-10-19'), ...lxv('2026-10-26')]);
+    const sem = [...a.semanas, ...b.semanas], ses = [...a.sesiones, ...b.sesiones];
+    const l = N.semanasObjetivo({ diasSemana: 3, sesiones: ses, semanas: sem, hoy: '2026-10-28' });
+    check(!l.some((w) => w.lunes === '2026-10-05' || w.lunes === '2026-10-12') && racha(N.paraRacha(l), '2026-10-28') === 6,
+      'las semanas sin nada que hacer (descanso entre bloques) ni suman ni rompen: 4 + 2 semanas seguidas');
+    // Sin entrenar con sesiones pendientes, sí rompe
+    const c = micro('2026-09-07', 4);
+    hacer(c.sesiones, [...lxv('2026-09-07'), ...lxv('2026-09-21')]);
+    const lc = N.semanasObjetivo({ diasSemana: 3, ...c, hoy: '2026-09-23' });
+    check(igual(lc.map((w) => [w.lunes, w.hechas, w.completa]), [['2026-09-07', 3, true], ['2026-09-14', 0, false], ['2026-09-21', 3, true]]) && racha(N.paraRacha(lc), '2026-09-23') === 1,
+      'una semana sin entrenar con sesiones pendientes sí rompe la racha');
+    // Al final del bloque, el objetivo es lo que queda (1 de 1)
+    const d = micro('2026-09-07', 1);
+    hacer(d.sesiones, lxv('2026-09-07'));
+    const ld = N.semanasObjetivo({ diasSemana: 3, ...d, hoy: '2026-09-15' });
+    check(igual(ld[1], { lunes: '2026-09-14', objetivo: 1, hechas: 0, completa: false }), 'al final del bloque, si solo le queda 1, su objetivo esa semana es 1');
+    hacer(d.sesiones, ['2026-09-15']);
+    check(N.semanasObjetivo({ diasSemana: 3, ...d, hoy: '2026-09-15' })[1].completa && N.semanasObjetivo({ diasSemana: 3, ...d, hoy: '2026-09-22' }).length === 2, 'hecha, completa; y la semana siguiente, sin nada que hacer, no sale');
+    // Las pendientes de un bloque viejo dejan de contar al empezar el siguiente
+    const e = micro('2026-09-07', 2, 'v');
+    hacer(e.sesiones, lxv('2026-09-07'));
+    const f = micro('2026-09-28', 1, 'n');
+    hacer(f.sesiones, lxv('2026-09-28'));
+    const le = N.semanasObjetivo({ diasSemana: 3, sesiones: [...e.sesiones, ...f.sesiones], semanas: [...e.semanas, ...f.semanas], hoy: '2026-10-05' });
+    check(igual(le.map((w) => [w.lunes, w.objetivo, w.hechas]), [['2026-09-07', 3, 3], ['2026-09-14', 3, 0], ['2026-09-21', 3, 0], ['2026-09-28', 3, 3], ['2026-10-05', 1, 0]]),
+      'las pendientes de un bloque cuentan hasta que empieza el siguiente (después, solo las del nuevo)');
+    // Una sesión repetida en la lista cuenta una vez; 4 en una semana con objetivo 3, completa (y 4 hechas)
+    const g = micro('2026-09-07', 2);
+    hacer(g.sesiones, ['2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10']);
+    const lg = N.semanasObjetivo({ diasSemana: 3, sesiones: [...g.sesiones, g.sesiones[0]], semanas: g.semanas, hoy: '2026-09-11' });
+    check(igual(lg, [{ lunes: '2026-09-07', objetivo: 3, hechas: 4, completa: true }]) && dialConstancia([], lg[0]).valor === 1, 'sesiones distintas: una repetida cuenta una vez; 4 de 3, completa (el dial, lleno)');
+  }
+  {
+    // «Tu mes» con su objetivo; el cumplimiento de lo hecho; el resumen del panel
+    const { semanas, sesiones } = micro('2026-09-28', 6);
+    hacer(sesiones, [...[0, 1, 2, 3].flatMap((k) => lxv(sumarDias('2026-09-28', 7 * k))), '2026-10-26']);
+    const nat = N.semanasObjetivo({ diasSemana: 3, sesiones, semanas, hoy: '2026-11-02' });
+    const L = new Map(semanas.map((w) => [w.id, w.fecha_inicio]));
+    const r = resumenMes({ sesiones: sesiones.map((x) => ({ ...x, semana_lunes: L.get(x.semana_id) })), semanasNaturales: nat }, '2026-10');
+    const r0 = resumenMes({ sesiones: sesiones.map((x) => ({ ...x, semana_lunes: L.get(x.semana_id) })) }, '2026-10');
+    check(r.semanasCompletas === 4 && r.mejorRacha === 4 && r.sesiones.previstas === 15 && r.sesiones.hechas === 11 && r0.semanasCompletas === 3 && r0.sesiones.previstas === 20,
+      '«Tu mes» de octubre: 4 semanas completas seguidas, 11 sesiones de 15 previstas (con «Automático», 3 completas de 20 previstas: las del programa)');
+    const ses = [{ id: 'a', completada: true, semana_lunes: '2026-10-05' }, { id: 'b', completada: false, semana_lunes: '2026-10-05' }];
+    const pautas = [{ id: 'pa', sesion_id: 'a', series: 3 }, { id: 'pb', sesion_id: 'b', series: 3 }];
+    const series = [{ sesion_ejercicio_id: 'pa', reps: 5 }, { sesion_ejercicio_id: 'pa', reps: 5 }];
+    check(cumplimiento({ sesiones: ses, pautas, series }, '2026-11-02').series.pct === 33 && cumplimiento({ sesiones: ses, pautas, series, soloHechas: true }, '2026-11-02').series.pct === 67,
+      'por microciclos, el cumplimiento de un microciclo es el de sus sesiones hechas (sus fechas no dicen qué tocaba)');
+    const base = { atleta: { id: 'x', nombre: 'Dani', estado: 'activo' }, bloque: null, semanas: [], semana: null, sesiones: [{ completada: true }, { completada: false }, { completada: false }, { completada: false }], checkins: [{ semana_inicio: '2026-10-26' }] };
+    const r1 = resumenAtleta(base, '2026-11-04'), r2 = resumenAtleta({ ...base, diasSemana: 3, semanaNatural: { lunes: '2026-11-02', objetivo: 3, hechas: 2, completa: false } }, '2026-11-04');
+    check(igual(r1.sesiones, { completadas: 1, total: 4 }) && r1.diasSemana === null && igual(r2.sesiones, { completadas: 2, total: 3 }) && r2.diasSemana === 3,
+      'en el panel del coach, «2/3» de su semana natural (sin objetivo, «1/4» de la programada, como antes)');
+  }
+}
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

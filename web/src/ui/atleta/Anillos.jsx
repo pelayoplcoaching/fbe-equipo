@@ -10,15 +10,19 @@ import { vibrar } from '../hapticos.js';
 const leer = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
 const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento: celebra otra vez la próxima */ } };
 
-export function AnillosSemana({ programa, salud, checkinSemana }) {
+// constancia (v0.53): la de Progreso; con objetivo de días por semana, el anillo de sesiones es el de su semana de lunes
+// a domingo (constancia.datos.actual), hasta ese objetivo
+export function AnillosSemana({ programa, salud, checkinSemana, constancia = null }) {
   const { api, atleta, propio } = useApp();
   const habitos = useCarga(() => (salud ? api.resumenHabitos(atleta.id).catch(() => []) : Promise.resolve([])), [atleta.id, salud]);
   const p = programa?.datos;
   const sesiones = p?.actual ? p.sesiones[p.actual.id] || [] : [];
   const conCheckin = salud && !propio;
-  const listo = !!p && habitos.datos != null && (!conCheckin || checkinSemana?.datos != null);
-  const anillos = useMemo(() => (listo ? anillosSemana({ sesiones, habitos: habitos.datos, checkin: checkinSemana?.datos?.checkin || null, conCheckin }) : null),
-    [listo, sesiones, habitos.datos, checkinSemana?.datos, conCheckin]);
+  const porObjetivo = !!p?.diasSemana;
+  const natural = porObjetivo ? constancia?.datos?.actual ?? null : undefined;
+  const listo = !!p && habitos.datos != null && (!conCheckin || checkinSemana?.datos != null) && (!porObjetivo || !!constancia?.datos);
+  const anillos = useMemo(() => (listo ? anillosSemana({ sesiones, habitos: habitos.datos, checkin: checkinSemana?.datos?.checkin || null, conCheckin, ...(porObjetivo ? { semanaNatural: natural } : {}) }) : null),
+    [listo, sesiones, habitos.datos, checkinSemana?.datos, conCheckin, porObjetivo, natural]);
   // Qué celebrar: lo cerrado esta semana que aún no se ha celebrado en este móvil (se apunta al momento)
   const clave = `fbe-anillos-${atleta.id}`;
   const [celebrar, setCelebrar] = useState([]);
@@ -32,7 +36,7 @@ export function AnillosSemana({ programa, salud, checkinSemana }) {
     setCelebrar(r.celebrar);
     if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) setTimeout(() => vibrar('anillo'), 700);
   }, [anillos]);
-  if (!anillos || !sesiones.length) return null;
+  if (!anillos || (porObjetivo ? !natural : !sesiones.length)) return null;
   const T = 136, G = 13, H = 3;
   const radio = (i) => T / 2 - G / 2 - i * (G + H);
   const cerrados = anillos.filter((a) => a.cerrado).length;

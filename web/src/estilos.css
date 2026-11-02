@@ -3500,3 +3500,12 @@ body:has(.app.con-actividad)::before { height: calc(env(safe-area-inset-top, 0px
 .lista-descansos button { min-height: 48px; align-content: center; }
 .lista-descansos button:focus-visible { outline-offset: -3px; }
 .lista-descansos button .separa svg { width: 18px; height: 18px; color: var(--morado); flex: none; }
+
+/* v0.53: días de entreno por semana (Ficha → Datos): el desplegable no ensancha la tarjeta a 360 px ni al 125 % */
+.campo-dias-semana { min-width: 0; }
+.campo-dias-semana .selector { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+/* (y el servicio de al lado: con la letra grande en un móvil estrecho, «Solo entrenamiento», «Completo» y «Solo nutrición»
+   van uno debajo de otro en vez de salirse; y nunca ensanchan la tarjeta) */
+.segmentos.segmentos-servicio { grid-auto-columns: minmax(0, 1fr); }
+.segmentos-servicio button { overflow-wrap: anywhere; hyphens: auto; }
+@media (max-width: 480px) { :root[data-letra="grande"] .segmentos.segmentos-servicio, :root[data-letra="muy-grande"] .segmentos.segmentos-servicio { grid-auto-flow: row; } }

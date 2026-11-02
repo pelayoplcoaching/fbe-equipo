@@ -10,10 +10,12 @@ import { seriesPautadasHechas } from './visual.js';
 const lim = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 
 // ---------- Hoy: los diales ----------
-// Constancia: sesiones hechas de las publicadas esta semana.
-export function dialConstancia(sesiones = []) {
-  const total = (sesiones || []).length;
-  const hechas = (sesiones || []).filter((s) => s.completada).length;
+// Constancia: sesiones hechas de las publicadas esta semana. v0.53: con objetivo de días por semana (microciclos), la
+// semana natural de semanasObjetivo() ({ hechas, objetivo }; null si no hay nada que hacer en ella).
+export function dialConstancia(sesiones = [], semanaNatural = undefined) {
+  const natural = semanaNatural !== undefined;
+  const total = natural ? semanaNatural?.objetivo || 0 : (sesiones || []).length;
+  const hechas = natural ? semanaNatural?.hechas || 0 : (sesiones || []).filter((s) => s.completada).length;
   return {
     id: 'constancia', valor: total ? lim(hechas / total) : 0, hechas, total, cifra: `${hechas}/${total}`,
     estado: !total ? 'sin' : hechas >= total ? 'completa' : hechas ? 'en_curso' : 'sin_empezar',
@@ -106,10 +108,13 @@ export function arcoDial(frac, tam = 64, grosor = 7) {
 // ---------- Progreso: los anillos de la semana ----------
 // sesiones: las de la semana publicada; habitos: los resúmenes de resumenHabito (null si no tiene); checkin: el de la
 // semana (o null); conCheckin: si le toca check-in (con el consentimiento de salud).
-export function anillosSemana({ sesiones = [], habitos = null, checkin = null, conCheckin = true } = {}) {
+// v0.53: semanaNatural, la de semanasObjetivo() para quien tiene objetivo de días por semana (el anillo de sesiones va
+// hasta ese objetivo, de lunes a domingo)
+export function anillosSemana({ sesiones = [], habitos = null, checkin = null, conCheckin = true, semanaNatural = undefined } = {}) {
   const out = [];
-  const total = (sesiones || []).length;
-  const hechas = (sesiones || []).filter((s) => s.completada).length;
+  const natural = semanaNatural !== undefined;
+  const total = natural ? semanaNatural?.objetivo || 0 : (sesiones || []).length;
+  const hechas = natural ? semanaNatural?.hechas || 0 : (sesiones || []).filter((s) => s.completada).length;
   out.push({ id: 'sesiones', nombre: 'Sesiones', valor: hechas, objetivo: total, frac: total ? lim(hechas / total) : 0, cerrado: total > 0 && hechas >= total, texto: `${hechas} de ${total}` });
   const hs = (habitos || []).filter((h) => h?.semana?.pedidos > 0);
   if (hs.length) {

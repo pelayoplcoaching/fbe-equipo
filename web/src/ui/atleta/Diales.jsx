@@ -10,6 +10,7 @@ import { dialConstancia, dialCarga, dialComoLlegas, preparacionDeHoy, sesionPara
 import { consejoPreparacion } from '../../logica/preparacion.js';
 import { num, cargaSemanal } from '../../logica/calculos.js';
 import { fmtConDia, fmtCorta, lunesDe, sumarDias } from '../../logica/fechas.js';
+import { sesionesDeLaSemana, textoDiasSemana } from '../../logica/semana-natural.js';
 
 // La esfera: un arco de 270° (abierto por abajo); con banda, la zona de «En tu media» y una aguja
 function Esfera({ frac, banda = null, aguja = false, children }) {
@@ -28,11 +29,12 @@ function Esfera({ frac, banda = null, aguja = false, children }) {
   );
 }
 
-export function Diales({ sesiones = [], semana = null, siguiente = null, previstaHoy = null, ejerciciosSiguiente = [], bloques = [], salud = false, hoy, alContestar }) {
+// natural (v0.53, con objetivo de días por semana): { semana (la de hoy, de semanasObjetivo), dias, semanas, sesionesPorSemana }
+export function Diales({ sesiones = [], semana = null, siguiente = null, previstaHoy = null, ejerciciosSiguiente = [], bloques = [], salud = false, hoy, alContestar, natural = null }) {
   const { api, atleta, aviso } = useApp();
   const [abierto, setAbierto] = useState(null);
   const carga = useCarga(() => api.cargaHoy(atleta.id, { bloques, hoy }).catch(() => null), [atleta.id, hoy, sesiones.filter((s) => s.completada).length]);
-  const c = dialConstancia(sesiones);
+  const c = natural ? dialConstancia(sesiones, natural.semana) : dialConstancia(sesiones);
   const k = carga.datos ? dialCarga(carga.datos, hoy, 4) : null;
   // La regla de «de hoy» (la misma que la sesión): hecha hoy, con series de hoy o contestada hoy en este móvil
   const seriesHoy = siguiente && ejerciciosSiguiente.some((e) => conSeriesDeHoy(e.hechas)) ? [siguiente.id] : [];
@@ -45,7 +47,7 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
   return (
     <section class="panel diales" style={{ '--n': n }} aria-label="Tu semana de un vistazo">
       <button type="button" class="dial" data-estado={c.estado} onClick={() => setAbierto('constancia')}
-        aria-label={`Constancia: ${c.hechas} de ${c.total} sesiones de esta semana. ${c.etiqueta}. Ver de dónde sale`}>
+        aria-label={`Constancia: ${c.hechas} de ${c.total} sesiones ${natural ? 'de tu objetivo de esta semana' : 'de esta semana'}. ${c.etiqueta}. Ver de dónde sale`}>
         <Esfera frac={c.valor}><span>{c.hechas}<span class="u">/{c.total}</span></span></Esfera>
         <span class="dial-nombre">Constancia</span>
         <span class="dial-estado">{c.etiqueta}</span>
@@ -66,7 +68,9 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
           <span class="dial-estado">{l.estado === 'sin_respuesta' ? (pendiente ? 'Contestar' : 'Sin contestar') : l.etiqueta}</span>
         </button>
       )}
-      {abierto === 'constancia' && <HojaConstancia c={c} sesiones={sesiones} semana={semana} alCerrar={() => setAbierto(null)} />}
+      {abierto === 'constancia' && (natural
+        ? <HojaConstancia c={c} natural={natural} sesiones={sesionesDeLaSemana(natural.semanas, natural.sesionesPorSemana, c.total, hoy)} semana={{ fecha_inicio: lunesDe(hoy) }} alCerrar={() => setAbierto(null)} />
+        : <HojaConstancia c={c} sesiones={sesiones} semana={semana} alCerrar={() => setAbierto(null)} />)}
       {abierto === 'carga' && <HojaCarga k={k} datos={carga.datos} hoy={hoy} alCerrar={() => setAbierto(null)} />}
       {abierto === 'llegas' && (
         <HojaLlegas l={l} prep={prep} pendiente={pendiente} baja={atleta.estado === 'baja'} hoy={hoy} alCerrar={() => setAbierto(null)}
@@ -80,13 +84,16 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
   );
 }
 
-function HojaConstancia({ c, sesiones, semana, alCerrar }) {
+function HojaConstancia({ c, sesiones, semana, alCerrar, natural = null }) {
+  const rango = semana?.fecha_inicio ? ` (del ${fmtCorta(semana.fecha_inicio)} al ${fmtCorta(sumarDias(semana.fecha_inicio, 6))})` : '';
   return (
     <Hoja titulo="Constancia" alCerrar={alCerrar}>
-      <p class="secundario">Las sesiones que has hecho de las que tu coach ha publicado esta semana{semana?.fecha_inicio ? ` (del ${fmtCorta(semana.fecha_inicio)} al ${fmtCorta(sumarDias(semana.fecha_inicio, 6))})` : ''}. Al completarlas todas, sumas una semana a tu racha.</p>
+      {natural
+        ? <p class="secundario">Tu coach te programa por microciclos: tu semana se cuenta de lunes a domingo{rango}, con un objetivo de {textoDiasSemana(natural.dias)}{c.total && c.total < natural.dias ? ` (esta semana, ${c.total}: no tienes más publicadas)` : ''}. Al llegar a él, sumas una semana a tu racha. Las sesiones van en el orden de tu programa.</p>
+        : <p class="secundario">Las sesiones que has hecho de las que tu coach ha publicado esta semana{rango}. Al completarlas todas, sumas una semana a tu racha.</p>}
       <dl class="dial-hoja-cifras">
         <div><dt>Hechas</dt><dd class="marcador">{c.hechas}</dd></div>
-        <div><dt>De la semana</dt><dd class="marcador">{c.total}</dd></div>
+        <div><dt>{natural ? 'Tu objetivo' : 'De la semana'}</dt><dd class="marcador">{c.total}</dd></div>
       </dl>
       {sesiones.length > 0 && (
         <ul class="dial-hoja-lista">

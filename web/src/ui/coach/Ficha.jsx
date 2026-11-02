@@ -21,6 +21,7 @@ import { HabitosCoach } from './HabitosCoach.jsx';
 import { CuestionarioCoach, CheckinAMedida, ParaProgramar, LoQueUsa } from './CuestionarioCoach.jsx';
 import { respuestasDe } from '../../logica/preguntas.js';
 import { NIVELES, NOMBRE_NIVEL, AYUDA_NIVEL, conNutricion, conEntrenamiento, SERVICIOS, servicioDe, CAMPOS_SERVICIO } from '../../logica/nivel.js';
+import { DIAS_SEMANA, diasSemanaValido, textoDiasSemana } from '../../logica/semana-natural.js';
 import { NutricionFicha } from './ComidasCoach.jsx';
 import { CobrosAtleta } from './Cobros.jsx';
 import { TareasCoach } from '../Tareas.jsx';
@@ -60,7 +61,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
         <div class="titulo">
           <h1>{a?.nombre || 'Atleta'}</h1>
           <div class="sub">{r?.semana ? `${r.bloque?.nombre ? `${r.bloque.nombre} · ` : ''}Semana ${r.semana.numero} de ${r.semana.total}` : a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : '')}</div>
-          {a && (a.nivel || servicioDe(a) !== 'completo') && <div class="mini terciario">{[conEntrenamiento(a) && a.nivel && `Nivel ${NOMBRE_NIVEL[a.nivel].toLowerCase()}`, servicioDe(a) !== 'completo' && Object.fromEntries(SERVICIOS)[servicioDe(a)]].filter(Boolean).join(' · ')}</div>}
+          {a && (a.nivel || servicioDe(a) !== 'completo' || (conEntrenamiento(a) && diasSemanaValido(a.dias_semana))) && <div class="mini terciario">{[conEntrenamiento(a) && a.nivel && `Nivel ${NOMBRE_NIVEL[a.nivel].toLowerCase()}`, conEntrenamiento(a) && diasSemanaValido(a.dias_semana) && textoDiasSemana(diasSemanaValido(a.dias_semana)), servicioDe(a) !== 'completo' && Object.fromEntries(SERVICIOS)[servicioDe(a)]].filter(Boolean).join(' · ')}</div>}
         </div>
         {/* Sin cuenta vinculada (aunque se haya cambiado su estado a mano), siempre se le puede dar un código */}
         {a && !a.perfil_id && a.estado !== 'baja' && <button class="btn btn-primario btn-peq" onClick={() => setInvitar(true)}><Icono n="enviar" /> Código</button>}
@@ -386,7 +387,7 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
   return (
     <div class="pila">
       <TareasCoach atleta={atleta} alCambiar={alCambiar} />
-      {conEntrenamiento(atleta) && <CumplimientoYBloques atletaId={atleta.id} />}
+      {conEntrenamiento(atleta) && <CumplimientoYBloques atletaId={atleta.id} diasSemana={diasSemanaValido(atleta.dias_semana)} />}
       <HabitosCoach atleta={atleta} />
       <VistaProgreso key={versionVol} atletaId={atleta.id} esCoach entrenamiento={conEntrenamiento(atleta)} />
       {conEntrenamiento(atleta) && <CargaEntreno atletaId={atleta.id} />}
@@ -603,6 +604,20 @@ function ServicioYNivel({ atleta, recargar }) {
         <Segmentos etiqueta="Nivel" clase="segmentos-nivel" valor={atleta.nivel || null} opciones={NIVELES}
           alCambiar={(v) => guardar({ nivel: v }, v ? `Nivel ${NOMBRE_NIVEL[v].toLowerCase()}` : 'Sin nivel')} />
         <span class="mini terciario">{atleta.nivel ? `${AYUDA_NIVEL[atleta.nivel]}. Donde no le pongas carga, verá en cada serie su peso de la última vez. Él no ve su nivel.` : 'Sin nivel, el editor te enseña todas las columnas (RIR, RPE y kg). Toca uno para que la tabla se adapte a cómo le programas.'}</span>
+      </div>}
+      {conEntrenamiento(atleta) && <div class="pila-s campo-dias-semana">
+        <label class="peq" for="d-dias-semana">Días de entreno por semana</label>
+        <select id="d-dias-semana" class="selector" aria-describedby="d-dias-semana-ayuda" disabled={ocupado}
+          value={diasSemanaValido(atleta.dias_semana) == null ? '' : String(diasSemanaValido(atleta.dias_semana))}
+          onChange={(e) => {
+            const v = diasSemanaValido(e.currentTarget.value);
+            if (v === diasSemanaValido(atleta.dias_semana)) return;
+            guardar({ dias_semana: v }, v ? `Su semana: ${textoDiasSemana(v)}, de lunes a domingo` : 'Su semana: la de cada semana programada');
+          }}>
+          <option value="">Automático (los de cada semana programada)</option>
+          {DIAS_SEMANA.map((n) => <option key={n} value={String(n)}>{n}</option>)}
+        </select>
+        <span class="mini terciario" id="d-dias-semana-ayuda">Para quien lleva microciclos que no caben en una semana natural (por ejemplo, 4 sesiones repartidas a 3 días por semana): la constancia, la racha y los anillos se cuentan por semanas de lunes a domingo con este objetivo.</span>
       </div>}
     </section>
   );

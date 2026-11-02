@@ -54,7 +54,8 @@ function usePantalla(alCerrar) {
 }
 
 export function PantallaRacha(props) { return <Capa><PantallaRachaDentro {...props} /></Capa>; }
-function PantallaRachaDentro({ racha = 0, semanas = [], alCerrar, hoy = hoyISO() }) {
+// diasSemana (v0.53): su objetivo de días por semana, si lo tiene (sus semanas son de lunes a domingo con ese objetivo)
+function PantallaRachaDentro({ racha = 0, semanas = [], alCerrar, hoy = hoyISO(), diasSemana = null }) {
   const ref = usePantalla(alCerrar);
   const cal = calendarioRacha(semanas, hoy, 12);
   const meta = proximoHito(racha);
@@ -65,7 +66,9 @@ function PantallaRachaDentro({ racha = 0, semanas = [], alCerrar, hoy = hoyISO()
         <div class={`racha-fuego ${racha ? '' : 'apagada'}`}><Llama /></div>
         <p class="racha-cifra marcador" aria-hidden="true">{racha}</p>
         <h2 id="racha-titulo">{racha ? `${racha === 1 ? 'semana completa' : 'semanas completas'} seguidas` : 'Aún sin racha'}<span class="sr">: {textoSemanas(racha)}</span></h2>
-        <p class="racha-sub">{racha ? 'Semanas con todas sus sesiones hechas. La de esta semana suma en cuanto la completas, y las semanas sin nada programado no la rompen.' : 'Haz todas las sesiones de una semana y empieza tu racha. Las semanas sin nada programado no la rompen.'}</p>
+        <p class="racha-sub">{diasSemana
+          ? (racha ? `Semanas de lunes a domingo con tus ${diasSemana === 1 ? 'sesión' : `${diasSemana} sesiones`} hechas. La de esta semana suma en cuanto llegas, y las semanas sin nada que hacer no la rompen.` : `Llega a ${diasSemana === 1 ? '1 sesión' : `${diasSemana} sesiones`} de lunes a domingo y empieza tu racha. Las semanas sin nada que hacer no la rompen.`)
+          : racha ? 'Semanas con todas sus sesiones hechas. La de esta semana suma en cuanto la completas, y las semanas sin nada programado no la rompen.' : 'Haz todas las sesiones de una semana y empieza tu racha. Las semanas sin nada programado no la rompen.'}</p>
         <section class="racha-bloque" aria-labelledby="racha-cal-t">
           <h3 id="racha-cal-t">Las últimas 12 semanas</h3>
           <ol class="racha-calendario">

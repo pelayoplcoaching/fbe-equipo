@@ -7,6 +7,7 @@ import { rachaMaxima } from './logros.js';
 import { cumpleHabito } from './habitos.js';
 import { planVigente, objetivoDelDia, evaluarDia } from './nutricion.js';
 import { cardioHechoValido } from './cardio.js';
+import { paraRacha } from './semana-natural.js';
 
 export const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 export const nombreMes = (mes) => MESES_LARGOS[Number(String(mes).slice(5, 7)) - 1] || '';
@@ -28,7 +29,8 @@ const enMes = (f, mes) => !!f && String(f).slice(0, 7) === mes;
 const jueves = (lunes) => sumarDias(lunes, 3);
 
 // d: { series (historial), sesiones (de las semanas que cuentan, con semana_lunes), habitos: [{ habito, registros }],
-//      nutricion: { planes, registros } | null, entrenos (Set de fechas de entreno, para la nutrición) }
+//      nutricion: { planes, registros } | null, entrenos (Set de fechas de entreno, para la nutrición),
+//      semanasNaturales (v0.53, solo con objetivo de días por semana: las de semanasObjetivo(), de lunes a domingo) }
 // opciones: { salud, conNutricion, conEntrenamiento }
 export function resumenMes(d, mes, { salud = true, conNutricion = true, conEntrenamiento = true } = {}) {
   const ini = primerDia(mes), fin = ultimoDia(mes);
@@ -50,7 +52,9 @@ export function resumenMes(d, mes, { salud = true, conNutricion = true, conEntre
     s.total++; if (x.completada) s.hechas++;
     porSemana.set(x.semana_lunes, s);
   }
-  const semanas = [...porSemana.values()];
+  // v0.53: con objetivo de días por semana, las semanas naturales con ese objetivo (las previstas, las de su objetivo)
+  const naturales = Array.isArray(d.semanasNaturales) ? paraRacha(d.semanasNaturales) : null;
+  const semanas = naturales || [...porSemana.values()];
   const delMes = semanas.filter((w) => enMes(jueves(w.fecha_inicio), mes));
   const semanasCompletas = delMes.filter((w) => w.total && w.hechas >= w.total).length;
   const mejorRacha = rachaMaxima(delMes, fin);
@@ -92,10 +96,10 @@ export function resumenMes(d, mes, { salud = true, conNutricion = true, conEntre
     }
     if (conPlan || d.nutricion.planes.some((p) => p.desde <= fin)) nutricion = { dias: regs.length, bien, cerca, adherencia: regs.length ? Math.round((bien / regs.length) * 100) : 0 };
   }
-  const entreno = conEntrenamiento && (hechas.length > 0 || previstas.length > 0 || series.length > 0);
+  const entreno = conEntrenamiento && (hechas.length > 0 || previstas.length > 0 || series.length > 0 || (!!naturales && delMes.length > 0));
   return {
     mes, desde: ini, hasta: fin,
-    sesiones: { hechas: hechas.length, previstas: Math.max(previstas.length, previstas.filter((x) => x.completada).length) },
+    sesiones: { hechas: hechas.length, previstas: naturales ? delMes.reduce((t, w) => t + w.total, 0) : Math.max(previstas.length, previstas.filter((x) => x.completada).length) },
     dias: dias.length, diasEntrenados: dias,
     series: series.length, tonelaje, minutos: hechas.reduce((t, x) => t + (Number(x.duracion_min) || 0), 0),
     records, semanasCompletas, mejorRacha, racha: rachaFin, cardio,

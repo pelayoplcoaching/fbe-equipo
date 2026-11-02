@@ -34,6 +34,7 @@ import { Ilustracion } from '../Ilustraciones.jsx';
 import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
 import { estadoHoy, sugerenciaDescanso, urlSegura } from '../../logica/diseno.js';
 import { Diales } from './Diales.jsx';
+import { semanasObjetivo, semanaEnCurso } from '../../logica/semana-natural.js';
 
 // Minutos aproximados: cada serie ~40 s de trabajo más su descanso
 export { duracionEstimada };
@@ -319,7 +320,14 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const siguiente = toca.siguiente;
   const det = useCarga(() => (siguiente ? api.sesion(siguiente.id, atleta.id) : Promise.resolve(null)), [siguiente?.id]);
   // v0.50: la tarjeta de arriba según cómo va el día (entreno, descanso, hecha, semana completa o sin semana)
-  const e = estadoHoy({ bloque: p.bloque, semana, sesiones, hoy });
+  const e0 = estadoHoy({ bloque: p.bloque, semana, sesiones, hoy });
+  // v0.53: con objetivo de días por semana (microciclos), la semana de lunes a domingo con ese objetivo: la de la
+  // constancia (de todos sus bloques) o, mientras carga, la de este bloque. La sesión que sigue es la de su microciclo
+  // (p.actual ya es el que le toca); con la semana natural hecha, la tarjeta de arriba dice «Semana hecha» y cuál sigue.
+  const dias = p.diasSemana || null;
+  const natural = !dias ? null : constancia.datos ? constancia.datos.actual
+    : semanaEnCurso(semanasObjetivo({ diasSemana: dias, sesiones: Object.values(p.sesiones || {}).flat(), semanas: p.semanas || [], hoy }), hoy);
+  const e = natural?.completa && !['sin_semana', 'semana'].includes(e0.tipo) ? { ...e0, tipo: 'semana', siguienteMicrociclo: e0.siguiente || toca.siguiente } : e0;
   if (e.tipo === 'sin_semana') {
     return (
       <>
@@ -355,9 +363,15 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           {e.tipo === 'descanso' && <span class="chip toca-hoy descanso"><Icono n="sueno" />Día de descanso</span>}
           {e.tipo === 'hecha' && <span class="chip toca-hoy hecha"><Icono n="hecho" />Hecha hoy</span>}
           {e.tipo === 'semana' && <span class="chip toca-hoy hecha"><Icono n="llama" />Semana completa</span>}
-          <h2>{e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? '¡Sesión hecha!' : e.tipo === 'semana' ? '¡Semana completa!' : siguiente ? siguiente.nombre : 'Semana completada'}</h2>
+          <h2>{e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? '¡Sesión hecha!' : e.tipo === 'semana' ? (dias && natural && !natural.completa ? '¡Todo hecho!' : '¡Semana completa!') : siguiente ? siguiente.nombre : 'Semana completada'}</h2>
           {e.tipo === 'entreno' && !toca.hoy && previsto && <p class="peq secundario">{previsto > hoy ? `Prevista para ${cuandoDia(previsto, hoy)}.` : `La tenías prevista ${cuandoDia(previsto, hoy)}.`}</p>}
-          {e.tipo === 'semana' && <p class="peq secundario">Has hecho las {hechas} sesiones de esta semana.</p>}
+          {e.tipo === 'semana' && !dias && <p class="peq secundario">Has hecho las {hechas} sesiones de esta semana.</p>}
+          {e.tipo === 'semana' && dias && (
+            <p class="peq secundario">
+              {natural ? `Semana hecha: ${natural.hechas} de ${natural.objetivo}.` : 'Has hecho todo lo que tienes publicado.'}
+              {e.siguienteMicrociclo ? <> La siguiente, <strong>{e.siguienteMicrociclo.nombre}</strong>, cuando te toque.</> : natural && !natural.completa ? ' Tu coach publicará lo siguiente.' : ''}
+            </p>
+          )}
         </div>
         {semana.nota_coach && (
           <div class="nota-coach"><Icono n="mensaje" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>
@@ -372,6 +386,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
             {checkinHecho && !propio && <p class="peq secundario">Check-in de la semana enviado. Tu coach prepara lo siguiente con lo que has registrado.</p>}
             {(checkinHecho || !salud || propio) && <div class="hero-acciones"><button class="btn btn-grande btn-hero" onClick={() => irA('progreso')}><Icono n="progreso" /> Ver tu progreso</button></div>}
             {e.hechaHoy && <div class="hero-acciones"><button class="btn btn-sobre-hero" onClick={() => abrirSesion(e.hechaHoy.id)}><Icono n="hecho" /> Ver la de hoy</button></div>}
+            {e.siguienteMicrociclo && <div class="hero-acciones"><button class="btn btn-sobre-hero" onClick={() => abrirSesion(e.siguienteMicrociclo.id)}><Icono n="play" /> Adelantar {e.siguienteMicrociclo.nombre}</button></div>}
           </div>
         ) : siguiente ? (
           <>
@@ -389,9 +404,10 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
             </div>
           </>
         ) : null}
-        {sesiones.length > 0 && <ResumenSemana hechas={hechas} total={sesiones.length} racha={constancia.datos?.racha ?? null} abrirRacha={constancia.datos ? () => setVerRacha(true) : null} />}
+        {(dias ? !!natural : sesiones.length > 0) && <ResumenSemana hechas={dias ? natural.hechas : hechas} total={dias ? natural.objetivo : sesiones.length} objetivo={dias} racha={constancia.datos?.racha ?? null} abrirRacha={constancia.datos ? () => setVerRacha(true) : null} />}
       </section>
-      <Diales sesiones={sesiones} semana={semana} siguiente={siguiente} previstaHoy={enSemana ? toca.hoy : null} ejerciciosSiguiente={ejercicios} bloques={p.bloques || []} salud={salud} hoy={hoy} alContestar={recargar} />
+      <Diales sesiones={sesiones} semana={semana} siguiente={siguiente} previstaHoy={enSemana ? toca.hoy : null} ejerciciosSiguiente={ejercicios} bloques={p.bloques || []} salud={salud} hoy={hoy} alContestar={recargar}
+        natural={dias ? { semana: natural, dias, semanas: p.semanas || [], sesionesPorSemana: p.sesiones || {} } : null} />
 
       {entre}
       {!propio && <TarjetaMes salud={salud} />}
@@ -411,7 +427,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} actual={e.tipo === 'entreno' && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
         </div>
       </section>
-      {verRacha && <PantallaRacha racha={constancia.datos?.racha || 0} semanas={constancia.datos?.semanas || []} hoy={hoy} alCerrar={() => setVerRacha(false)} />}
+      {verRacha && <PantallaRacha racha={constancia.datos?.racha || 0} semanas={constancia.datos?.semanas || []} diasSemana={constancia.datos?.diasSemana || null} hoy={hoy} alCerrar={() => setVerRacha(false)} />}
       {hito && !verRacha && <HitoRacha hito={hito} alCerrar={hitoVisto} />}
       {bloqueAbierto && <HojaBloque alCerrar={() => setBloqueAbierto(false)} abrirSesion={(id) => { setBloqueAbierto(false); abrirSesion(id); }} />}
       {planAbierto && (
@@ -599,8 +615,10 @@ function HeroEspera({ bloque, notion, irA, propio }) {
 
 // Lo que queda de la semana y la racha de semanas completas (v0.51: el anillo pasa al dial «Constancia», justo debajo)
 // v0.52: la racha es un botón que abre su pantalla (como en Duolingo)
-function ResumenSemana({ hechas, total, racha, abrirRacha = null }) {
-  const quedan = total - hechas;
+// v0.53: objetivo (días por semana, si lo tiene): las que le quedan para llegar a él, de lunes a domingo
+function ResumenSemana({ hechas, total, racha, abrirRacha = null, objetivo = null }) {
+  const quedan = Math.max(0, total - hechas);
+  const empezar = objetivo ? `Llega a ${total} esta semana para empezar una racha de semanas completas.` : 'Termínalas todas para empezar una racha de semanas completas.';
   const texto = racha === 1 ? '1 semana completa' : `${racha} semanas completas seguidas`;
   return (
     <div class="semana-resumen sin-anillo">
@@ -612,8 +630,8 @@ function ResumenSemana({ hechas, total, racha, abrirRacha = null }) {
             : <span class="racha"><Icono n="llama" />{texto}</span>
         ) : racha === 0 && quedan > 0 && (
           abrirRacha
-            ? <button type="button" class="racha-boton racha-cero" onClick={abrirRacha}>Termínalas todas para empezar una racha de semanas completas.</button>
-            : <span class="peq secundario">Termínalas todas para empezar una racha de semanas completas.</span>
+            ? <button type="button" class="racha-boton racha-cero" onClick={abrirRacha}>{empezar}</button>
+            : <span class="peq secundario">{empezar}</span>
         )}
       </div>
     </div>

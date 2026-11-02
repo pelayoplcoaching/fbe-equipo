@@ -30,6 +30,7 @@ import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
 import { compartieronHoy } from '../logica/tablero.js';
+import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -81,6 +82,14 @@ const falta026 = (e) => {
   const m = e?.message || '';
   if (/peso_frecuencia/.test(m) && /schema cache|does not exist|no existe|column|columna/i.test(m)) {
     throw new Error(`Para pedir el peso una vez a la semana falta ejecutar la migración 026 en Supabase (supabase/migraciones/026_peso_semanal.sql). Detalle: ${m}`);
+  }
+  throw e;
+};
+// Días de entreno por semana (v0.53) sin la migración 031 en la base
+const falta031 = (e) => {
+  const m = e?.message || '';
+  if (/dias_semana/.test(m) && /schema cache|does not exist|no existe|column|columna/i.test(m)) {
+    throw new Error(`Para los días de entreno por semana falta ejecutar la migración 031 en Supabase (supabase/migraciones/031_dias_semana.sql). Detalle: ${m}`);
   }
   throw e;
 };
@@ -223,6 +232,63 @@ export function crearApi(backend) {
     if (activas.length >= cupo) throw new Error(`Ya hay ${cupo} preguntas activas ${atletaId ? 'solo para este atleta' : 'para todos'}: archiva alguna antes de añadir otra`);
   }
 
+  // v0.53: su objetivo de días de entreno por semana (migración 031), o null (automático: cada semana del programa).
+  // Se lee la ficha entera: sin la 031 en la base no hay columna y vale null (todo como antes)
+  async function diasSemanaDe(atletaId) {
+    const [a] = await b.select('atletas', { eq: { id: atletaId }, limit: 1 }).catch(() => []);
+    return diasSemanaValido(a?.dias_semana);
+  }
+
+  // v0.53: para el panel, lo semanal de los atletas con objetivo de días por semana: { [atleta_id]: { diasSemana, actual,
+  // chispa (6 semanas), cumplimiento (4 últimas acabadas) } }. Solo consulta las sesiones de esos atletas.
+  async function semanasNaturalesPanel(atletas, { todosBloques, todasSemanas, hoy }) {
+    const conObjetivo = atletas.filter((a) => diasSemanaValido(a.dias_semana));
+    if (!conObjetivo.length) return {};
+    const ids = new Set(conObjetivo.map((a) => a.id));
+    const bloques = todosBloques.filter((x) => ids.has(x.atleta_id));
+    const cuentan = semanasQueCuentan(todasSemanas.filter((w) => bloques.some((x) => x.id === w.bloque_id)), bloques);
+    const sesiones = cuentan.length ? await b.select('sesiones', { in: { semana_id: cuentan.map((w) => w.id) }, cols: 'id,semana_id,completada,fecha_realizada,orden' }) : [];
+    const blo = porId(bloques), semPorId = porId(cuentan);
+    const lunesHoy = lunesDe(hoy), desde4 = sumarDias(lunesHoy, -28);
+    const out = {};
+    const tocaban = {};
+    for (const a of conObjetivo) {
+      const misSemanas = cuentan.filter((w) => blo[w.bloque_id]?.atleta_id === a.id);
+      const mias = new Set(misSemanas.map((w) => w.id));
+      const misSesiones = sesiones.filter((x) => mias.has(x.semana_id));
+      const diasSemana = diasSemanaValido(a.dias_semana);
+      const lista = semanasObjetivo({ diasSemana, sesiones: misSesiones, semanas: misSemanas, hoy });
+      const de = (l) => lista.find((x) => x.lunes === l) || null;
+      const chispa = Array.from({ length: 6 }, (_, i) => {
+        const l = sumarDias(lunesHoy, -7 * (5 - i));
+        const w = de(l);
+        return { lunes: l, hechas: w ? w.hechas : 0, total: w ? w.objetivo : 0 };
+      });
+      const cuatro = lista.filter((x) => x.lunes >= desde4 && x.lunes < lunesHoy);
+      const faltan = cuatro.reduce((t, x) => t + Math.max(0, x.objetivo - x.hechas), 0);
+      const orden = (x) => { const w = semPorId[x.semana_id]; return [blo[w.bloque_id]?.fecha_inicio || '', String(w.numero ?? 0).padStart(4, '0'), String(x.orden ?? 0).padStart(4, '0')].join('|'); };
+      const hechas4 = misSesiones.filter((x) => x.completada && x.fecha_realizada >= desde4 && x.fecha_realizada < lunesHoy);
+      const siguientes = misSesiones.filter((x) => !x.completada).sort((x, y) => (orden(x) < orden(y) ? -1 : 1)).slice(0, faltan);
+      tocaban[a.id] = [...hechas4, ...siguientes].map((x) => ({ ...x, semana_lunes: sumarDias(lunesHoy, -7) }));
+      const sesH = cuatro.reduce((t, x) => t + Math.min(x.hechas, x.objetivo), 0), sesT = cuatro.reduce((t, x) => t + x.objetivo, 0);
+      out[a.id] = { diasSemana, actual: semanaEnCurso(lista, hoy), chispa, sesiones4: { hechas: sesH, total: sesT, pct: sesT ? Math.round((sesH / sesT) * 100) : null } };
+    }
+    const todas = Object.values(tocaban).flat();
+    const pautas = todas.length ? await b.select('sesion_ejercicios', { in: { sesion_id: todas.map((x) => x.id) }, cols: 'id,sesion_id,series,rpe_objetivo,rir_objetivo' }) : [];
+    const series = pautas.length ? await b.select('series', { in: { sesion_ejercicio_id: pautas.map((x) => x.id) }, cols: 'sesion_ejercicio_id,reps,rpe,rir', limit: 20000 }) : [];
+    for (const a of conObjetivo) {
+      const ses = tocaban[a.id];
+      const o = out[a.id];
+      if (!ses.length) { o.cumplimiento = null; continue; }
+      const idsS = new Set(ses.map((x) => x.id));
+      const p = pautas.filter((x) => idsS.has(x.sesion_id));
+      const idsP = new Set(p.map((x) => x.id));
+      const c = cumplimiento({ sesiones: ses, pautas: p, series: series.filter((x) => idsP.has(x.sesion_ejercicio_id)) }, hoy);
+      o.cumplimiento = { ...c, sesiones: o.sesiones4 };
+    }
+    return out;
+  }
+
   const api = {
     backend: b,
     uid,
@@ -356,15 +422,22 @@ export function crearApi(backend) {
 
     // ------------------------------------------------------------ atleta: programa
     // Bloque actual con sus semanas visibles y sus sesiones. soloProgramadas=false para el coach.
+    // v0.53: a quien va por microciclos (objetivo de días por semana), la semana «actual» es la del microciclo que le toca
+    // (la primera publicada con algo pendiente, aunque por fechas ya hubiera pasado): sigue el orden del programa
     async programa(atletaId, { soloProgramadas = true, bloqueId = null } = {}) {
-      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, order: [['fecha_inicio', 'desc'], ['numero', 'desc']] });
+      const [bloques, diasSemana] = await Promise.all([
+        b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, order: [['fecha_inicio', 'desc'], ['numero', 'desc']] }),
+        diasSemanaDe(atletaId),
+      ]);
       const bloque = bloqueId ? bloques.find((x) => x.id === bloqueId) : bloqueActual(bloques) || bloques[0] || null;
-      if (!bloque) return { bloques, bloque: null, semanas: [], sesiones: {}, actual: null };
+      if (!bloque) return { bloques, bloque: null, semanas: [], sesiones: {}, actual: null, diasSemana };
       const filtroSemanas = { eq: { bloque_id: bloque.id }, order: [['numero', 'asc']] };
       if (soloProgramadas) filtroSemanas.eq.programacion = 'programada';
       const semanas = await b.select('semanas', filtroSemanas);
-      const sesiones = await b.select('sesiones', { in: { semana_id: semanas.map((s) => s.id) }, order: [['orden', 'asc']] });
-      return { bloques, bloque, semanas, sesiones: agrupar(sesiones, 'semana_id'), actual: semanaActual(semanas) };
+      const sesiones = agrupar(await b.select('sesiones', { in: { semana_id: semanas.map((s) => s.id) }, order: [['orden', 'asc']] }), 'semana_id');
+      const porFecha = semanaActual(semanas);
+      const actual = diasSemana ? semanaDelMicrociclo(semanas.filter((w) => w.programacion === 'programada'), sesiones, porFecha) : porFecha;
+      return { bloques, bloque, semanas, sesiones, actual, diasSemana };
     },
 
     // v0.50: las cifras de la cabecera del perfil, sin el historial de entrenamientos entero: cuántas sesiones ha
@@ -981,17 +1054,19 @@ export function crearApi(backend) {
       });
     },
     // Constancia a lo largo de todos sus bloques: racha de semanas completas y días entrenados (12 semanas)
+    // v0.53: con objetivo de días por semana (microciclos), por semanas de lunes a domingo con ese objetivo
+    // (semanasObjetivo); sin él, lo de siempre. «actual»: la semana de hoy ({ lunes, objetivo, hechas, completa } o null)
     async constancia(atletaId, hoy = hoyISO()) {
-      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: COLS_BLOQUE });
+      const [bloques, diasSemana] = await Promise.all([
+        b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: COLS_BLOQUE }),
+        diasSemanaDe(atletaId),
+      ]);
       const semanas = bloques.length ? semanasQueCuentan(await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, eq: { programacion: 'programada' } }), bloques) : [];
       const sesiones = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((x) => x.id) } }) : [];
       const desde = sumarDias(lunesDe(hoy), -7 * 11);
       const series = await b.select('series', { eq: { atleta_id: atletaId }, gte: { registrada_en: desde }, cols: 'registrada_en', limit: 10000 });
-      const porSemana = agrupar(sesiones, 'semana_id');
-      const lista = semanas.map((w) => {
-        const ss = porSemana[w.id] || [];
-        return { fecha_inicio: w.fecha_inicio, total: ss.length, hechas: ss.filter((x) => x.completada).length };
-      });
+      const objetivo = semanasObjetivo({ diasSemana, sesiones, semanas, hoy });
+      const lista = paraRacha(objetivo);
       const dias = {};
       for (const x of series) { const d = aISO(new Date(x.registrada_en)); dias[d] = (dias[d] || 0) + 1; }
       for (const x of sesiones) if (x.completada && x.fecha_realizada >= desde && !dias[x.fecha_realizada]) dias[x.fecha_realizada] = 1;
@@ -999,8 +1074,8 @@ export function crearApi(backend) {
       const diasEntrenados = mapaCalor(dias, hoy).flatMap((w) => w.dias).filter((d) => d.nivel > 0).length;
       // v0.50: también cuántas semanas completas lleva en total (la cabecera de su perfil)
       // v0.52: y cada semana (lunes, programadas y hechas), para el calendario de la pantalla de la racha
-      return { racha: racha(lista, hoy), diasEntrenados, semanasCompletas: semanasCompletas(lista.map((w) => ({ ...w, fecha_inicio: w.fecha_inicio ? lunesDe(w.fecha_inicio) : null })), hoy),
-        semanas: lista.filter((w) => w.fecha_inicio && w.total).map((w) => ({ fecha_inicio: lunesDe(w.fecha_inicio), total: w.total, hechas: w.hechas })) };
+      return { racha: racha(lista, hoy), diasEntrenados, semanasCompletas: semanasCompletas(lista, hoy), semanas: lista,
+        diasSemana, actual: semanaEnCurso(objetivo, hoy) };
     },
     // Cardio hecho por semana (minutos, km y sesiones) en las últimas n semanas, para la gráfica de Progreso
     async cardioSemanas(atletaId, n = 8, hoy = hoyISO()) {
@@ -1105,7 +1180,10 @@ export function crearApi(backend) {
     },
     // «Tu semana»: resumen de las últimas n semanas cerradas (las vacías no salen), de la más reciente a la más antigua
     async resumenesSemanales(atletaId, n = 4, hoy = hoyISO()) {
-      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: COLS_BLOQUE });
+      const [bloques, diasSemana] = await Promise.all([
+        b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: COLS_BLOQUE }),
+        diasSemanaDe(atletaId),
+      ]);
       const [series, pesos, todas] = await Promise.all([
         api.historial(atletaId),
         api.pesos(atletaId, 7 * (n + 4)).catch(() => []),
@@ -1115,13 +1193,20 @@ export function crearApi(backend) {
       const sesiones = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((x) => x.id) } }) : [];
       const lunesDeSemana = Object.fromEntries(semanas.map((w) => [w.id, w.fecha_inicio ? lunesDe(w.fecha_inicio) : null]));
       const conLunes = sesiones.map((x) => ({ ...x, semana_lunes: lunesDeSemana[x.semana_id] }));
-      const porSemana = agrupar(sesiones, 'semana_id');
-      const listaRacha = semanas.map((w) => ({ fecha_inicio: w.fecha_inicio, total: (porSemana[w.id] || []).length, hechas: (porSemana[w.id] || []).filter((x) => x.completada).length }));
+      // v0.53: con objetivo de días por semana, cada semana natural con su objetivo (la completa, la de su objetivo)
+      const objetivo = semanasObjetivo({ diasSemana, sesiones, semanas, hoy });
+      const listaRacha = paraRacha(objetivo);
       const { eventos } = eventosRecord(series);
       const lunesHoy = lunesDe(hoy);
       return Array.from({ length: n }, (_, i) => {
         const lunes = sumarDias(lunesHoy, -7 * (i + 1));
-        return { ...resumenSemanal({ series, sesiones: conLunes, pesos }, lunes, { eventos }), racha: racha(listaRacha, sumarDias(lunes, 6)) };
+        const r = { ...resumenSemanal({ series, sesiones: conLunes, pesos }, lunes, { eventos }), racha: racha(listaRacha, sumarDias(lunes, 6)) };
+        if (diasSemana) {
+          const w = objetivo.find((x) => x.lunes === lunes);
+          r.sesiones = { hechas: r.sesiones.hechas, total: Math.max(w?.objetivo || 0, r.sesiones.hechas), completa: !!w?.completa };
+          r.objetivoSemanal = diasSemana;
+        }
+        return r;
       }).filter((r) => !r.vacia);
     },
     // Actividad de un atleta (para el coach): lo que ha hecho en los últimos días, de lo más reciente a lo más antiguo.
@@ -1199,8 +1284,13 @@ export function crearApi(backend) {
       return (await b.update('sesiones', { preparacion }, { eq: { id: sesionId } }))[0];
     },
     // Informes de sus bloques (los que tienen semanas publicadas), del más reciente al más antiguo
+    // v0.53: a quien va por microciclos (objetivo de días por semana), el cumplimiento de lo hecho (las fechas de sus
+    // semanas no dicen qué tocaba ya)
     async informes(atletaId, { salud = true, hoy = hoyISO() } = {}) {
-      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false } });
+      const [bloques, diasSemana] = await Promise.all([
+        b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false } }),
+        diasSemanaDe(atletaId),
+      ]);
       if (!bloques.length) return [];
       const semanas = await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, eq: { programacion: 'programada' } });
       if (!semanas.length) return [];
@@ -1213,24 +1303,27 @@ export function crearApi(backend) {
       const { eventos } = eventosRecord(series);
       const semPorBloque = agrupar(semanas, 'bloque_id');
       return bloques.filter((bl) => semPorBloque[bl.id]?.length)
-        .map((bl) => informeBloque({ bloque: bl, semanas: semPorBloque[bl.id], sesiones, pautas, series, eventos, pesos }, hoy))
+        .map((bl) => informeBloque({ bloque: bl, semanas: semPorBloque[bl.id], sesiones, pautas, series, eventos, pesos, soloHechas: !!diasSemana }, hoy))
         .filter(Boolean)
         .sort((x, y) => (x.inicio < y.inicio ? 1 : -1));
     },
     // Logros: cuentas de toda su historia (sesiones, racha más larga, toneladas, récords, vídeos, check-ins y días con peso)
     async logros(atletaId, { salud = true, hoy = hoyISO() } = {}) {
-      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: COLS_BLOQUE });
+      const [bloques, diasSemana] = await Promise.all([
+        b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: COLS_BLOQUE }),
+        diasSemanaDe(atletaId),
+      ]);
       const semanas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, eq: { programacion: 'programada' }, cols: 'id,bloque_id,fecha_inicio,programacion' }) : [];
       const cuentan = semanasQueCuentan(semanas, bloques);
       const [sesiones, series, videos, checkins, pesos] = await Promise.all([
-        semanas.length ? b.select('sesiones', { in: { semana_id: semanas.map((x) => x.id) }, cols: 'id,semana_id,completada' }) : [],
+        semanas.length ? b.select('sesiones', { in: { semana_id: semanas.map((x) => x.id) }, cols: 'id,semana_id,completada,fecha_realizada' }) : [],
         api.historial(atletaId),
         b.select('archivos', { eq: { atleta_id: atletaId, tipo: 'video_tecnica' }, cols: 'id' }),
         salud ? b.select('checkins', { eq: { atleta_id: atletaId }, cols: 'id' }).catch(() => []) : [],
         salud ? b.select('pesos', { eq: { atleta_id: atletaId }, cols: 'fecha' }).catch(() => []) : [],
       ]);
-      const porSemana = agrupar(sesiones, 'semana_id');
-      const listaRacha = cuentan.map((w) => ({ fecha_inicio: w.fecha_inicio, total: (porSemana[w.id] || []).length, hechas: (porSemana[w.id] || []).filter((x) => x.completada).length }));
+      // v0.53: «Semanas completas», con su objetivo de días por semana si lo tiene
+      const listaRacha = paraRacha(semanasObjetivo({ diasSemana, sesiones, semanas: cuentan, hoy }));
       const hechas = series.filter((s) => Number(s.reps) > 0);
       const cuentas = {
         sesiones: sesiones.filter((x) => x.completada).length,
@@ -1663,8 +1756,11 @@ export function crearApi(backend) {
 
     // ------------------------------------------------------------ tu mes (v0.48)
     // Lo que se necesita para resumir los meses, una sola vez
-    async datosMes(atletaId, { salud = true, nutricion: conNut = true, desde = null } = {}) {
-      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: COLS_BLOQUE });
+    async datosMes(atletaId, { salud = true, nutricion: conNut = true, desde = null, hoy = hoyISO() } = {}) {
+      const [bloques, diasSemana] = await Promise.all([
+        b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: COLS_BLOQUE }),
+        diasSemanaDe(atletaId),
+      ]);
       const todas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, eq: { programacion: 'programada' } }) : [];
       const semanas = semanasQueCuentan(todas, bloques);
       const L = Object.fromEntries(semanas.map((w) => [w.id, w.fecha_inicio ? lunesDe(w.fecha_inicio) : null]));
@@ -1682,6 +1778,8 @@ export function crearApi(backend) {
         habitos: habitos.map((h) => ({ habito: h, registros: RH[h.id] || [] })),
         nutricion: salud && conNut ? { planes, registros } : null,
         entrenos: new Set(sesiones.filter((x) => x.completada && x.fecha_realizada).map((x) => x.fecha_realizada)),
+        // v0.53: con objetivo de días por semana, sus semanas naturales (las previstas, las completas y la racha del mes)
+        ...(diasSemana ? { semanasNaturales: semanasObjetivo({ diasSemana, sesiones, semanas, hoy }) } : {}),
       };
     },
     async resumenMes(atletaId, mes = mesAnterior(), { salud = true, nutricion: conNut = true, entrenamiento = true } = {}) {
@@ -2163,7 +2261,7 @@ export function crearApi(backend) {
       ]);
       // Sesiones hechas en las últimas 6 semanas (para la carga), de todos sus bloques
       const todosBloques = await b.select('bloques', { in: { atleta_id: ids }, eq: { es_plantilla: false }, cols: COLS_BLOQUE });
-      const todasSemanas = todosBloques.length ? await b.select('semanas', { in: { bloque_id: todosBloques.map((x) => x.id) }, cols: 'id,bloque_id,fecha_inicio,programacion' }) : [];
+      const todasSemanas = todosBloques.length ? await b.select('semanas', { in: { bloque_id: todosBloques.map((x) => x.id) }, cols: 'id,bloque_id,fecha_inicio,programacion,numero' }) : [];
       const recientes = todasSemanas.length ? await b.select('sesiones', { in: { semana_id: todasSemanas.map((x) => x.id) }, eq: { completada: true }, gte: { fecha_realizada: sumarDias(lunesDe(hoy), -42) } }) : [];
       // Cumplimiento de las 4 últimas semanas acabadas: sesiones, series pautadas hechas y esfuerzo frente a la pauta
       const lunesHoy = lunesDe(hoy);
@@ -2184,6 +2282,10 @@ export function crearApi(backend) {
       for (const [s] of ultimas) if (s) ultima[s.atleta_id] = fechaDe(s.registrada_en);
       const S4 = {};
       for (const x of ses4) (S4[atletaDeBloque[bloqueDeSemana[x.semana_id]]] ||= []).push({ ...x, semana_lunes: lunesSem4[x.semana_id] });
+      // v0.53: quien tiene objetivo de días por semana (microciclos) se mide por semanas de lunes a domingo con ese
+      // objetivo: la de hoy (sus sesiones), las 6 de la minigráfica y el cumplimiento de las 4 últimas acabadas (de lo
+      // hecho en ellas y, por lo que faltó hasta su objetivo, las siguientes pendientes de su programa, en su orden)
+      const NAT = await semanasNaturalesPanel(atletas, { todosBloques, todasSemanas, hoy });
       // Hábitos: cumplimiento de la última semana (7 días hasta hoy) de cada atleta
       const habitosTodos = await b.select('habitos', { in: { atleta_id: ids }, eq: { activo: true } });
       const regsHab = habitosTodos.length ? await b.select('registros_habito', { in: { habito_id: habitosTodos.map((h) => h.id) }, gte: { fecha: sumarDias(hoy, -7) } }) : [];
@@ -2206,7 +2308,8 @@ export function crearApi(backend) {
         const ids4 = new Set(s4.map((x) => x.id));
         const p4 = pau4.filter((p) => ids4.has(p.sesion_id));
         const idsP4 = new Set(p4.map((p) => p.id));
-        const cumple = s4.length ? cumplimiento({ sesiones: s4, pautas: p4, series: ser4.filter((x) => idsP4.has(x.sesion_ejercicio_id)) }, hoy) : null;
+        const nat = NAT[a.id] || null;
+        const cumple = nat ? nat.cumplimiento : s4.length ? cumplimiento({ sesiones: s4, pautas: p4, series: ser4.filter((x) => idsP4.has(x.sesion_ejercicio_id)) }, hoy) : null;
         const bloque = bloques.filter((x) => x.atleta_id === a.id).sort((x, y) => (x.fecha_inicio < y.fecha_inicio ? 1 : -1))[0] || null;
         const semana = bloque ? actuales[bloque.id] || null : null;
         const cs = C[a.id] || [];
@@ -2214,7 +2317,7 @@ export function crearApi(backend) {
         const idsMias = new Set(misSemanas.map((w) => w.id));
         const chispas = {
           peso: chispaPeso(P[a.id] || [], hoy, 8),
-          sesiones: chispaSesiones(misSemanas, ses6.filter((x) => idsMias.has(x.semana_id)), hoy, 6),
+          sesiones: nat ? nat.chispa : chispaSesiones(misSemanas, ses6.filter((x) => idsMias.has(x.semana_id)), hoy, 6),
         };
         return { ...resumenAtleta({
           atleta: a, bloque, semana,
@@ -2230,6 +2333,7 @@ export function crearApi(backend) {
           cuestionario: avisoCuestionario(Q[a.id]),
           cambiosReceta: (CR[a.id] || []).length,
           diasNutricion: a.nutricion === false ? null : unicos((RN[a.id] || []).filter((x) => x.fecha > sumarDias(hoy, -7) && x.fecha <= hoy).map((x) => x.fecha)).length,
+          diasSemana: nat ? nat.diasSemana : null, semanaNatural: nat ? nat.actual : null,
         }, hoy), chispas };
       });
       // Cobros (v0.25, solo el coach; sin la migración 020, sin columna): cómo va cada uno, para verlo en el panel
@@ -2247,7 +2351,13 @@ export function crearApi(backend) {
       return (await b.insert('atletas', [fila]).catch(falta018).catch(falta022))[0];
     },
     async actualizarAtleta(id, cambios) {
-      return (await b.update('atletas', cambios, { eq: { id } }).catch(falta018).catch(falta022))[0];
+      // Días de entreno por semana (v0.53): de 1 a 7, o vacío / null para «Automático»
+      if ('dias_semana' in cambios) {
+        const v = diasSemanaValido(cambios.dias_semana);
+        if (v == null && cambios.dias_semana != null && cambios.dias_semana !== '') throw new Error('Los días de entreno por semana van de 1 a 7 (o «Automático»)');
+        cambios = { ...cambios, dias_semana: v };
+      }
+      return (await b.update('atletas', cambios, { eq: { id } }).catch(falta018).catch(falta022).catch(falta031))[0];
     },
     // Borra al atleta con todo lo suyo, también sus vídeos y fotos de Storage
     // Borrado completo: todo lo que haya en su carpeta de Storage (registrado o no) y después su ficha,

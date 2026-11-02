@@ -1,6 +1,6 @@
 // Datos de la demo, relativos a la fecha de hoy para que siempre parezcan actuales.
 // Atletas y cifras ficticios. Contraseña de todas las cuentas demo: "demo".
-import { hoyISO, lunesDe, sumarDias, instanteMadrid, partesMadrid } from '../logica/fechas.js';
+import { hoyISO, lunesDe, sumarDias, diasEntre, instanteMadrid, partesMadrid } from '../logica/fechas.js';
 import { BIBLIOTECA_BASE } from './biblioteca-base.js';
 import { FAQ } from './faq.js';
 import { RESPUESTAS_EJEMPLO } from './respuestas.js';
@@ -566,7 +566,52 @@ export function semillaDemo(hoy = hoyISO()) {
   sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana });
   sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos });
   sembrarV048(db, { hoy, hace, ana, ruben, carlos, ej, ahoraISO, mesDe, inicioMes });
+  sembrarMicrociclos();
   return db;
+
+  // v0.53 (al final: no cambia lo aleatorio de lo anterior): Iván va por microciclos de 4 sesiones (torso-pierna A y B)
+  // que no caben en una semana natural: entrena 3 días por semana (lunes, miércoles y viernes) y su coach le ha puesto
+  // dias_semana = 3. Su bloque empezó hace 5 semanas, con las fechas de sus semanas de 7 en 7 (como las pone la app),
+  // así que va por detrás de ellas: 14 sesiones hechas (la semana de hace 3, solo 2) y las de esta semana hechas hasta
+  // ayer (el lunes, ninguna; el sábado y el domingo, las 3). Así se ven «x/3», la racha por semanas naturales y cuál sigue.
+  function sembrarMicrociclos() {
+    const MICRO = [...DIAS_TORSO_PIERNA, {
+      nombre: 'Pierna B', intencion: 'volumen', dinamica: 'Bisagra primero y con técnica limpia; en la prensa, recorrido completo sin despegar la zona lumbar.',
+      ej: [
+        ['Peso muerto convencional', 'alta', 3, 5, 6, 2, null, 130, 180],
+        ['Prensa (miscelánea)', 'media', 3, 10, 12, 2, null, 160, 120],
+        ['Hip thrust', 'media', 3, 8, 10, 2, null, 100, 90],
+        ['Leg curl tumbado', 'baja', 3, 10, 12, 1, null, 40, 75, null, 'A'],
+        ['Gemelo en máquina de pie', 'baja', 3, 12, 15, 1, null, 60, 75, null, 'A'],
+      ],
+    }];
+    const perfil = usuario('ivan@fbe.demo', 'Iván', 'atleta');
+    const ivan = { id: uuid(), perfil_id: perfil, nombre: 'Iván Prieto', email: 'ivan@fbe.demo', estado: 'activo', fecha_alta: sumarDias(lunesHoy, -7 * 9),
+      objetivo: 'Fuerza en torso-pierna, a su ritmo: 4 sesiones por microciclo, 3 días por semana', notion_url: null, progresion_auto: true, volumen_objetivo: null,
+      creado_en: ahoraISO, nivel: 'intermedio', nutricion: false, entrenamiento: true, dias_semana: 3 };
+    db.atletas.push(ivan);
+    for (const tipo of ['privacidad', 'datos_salud']) db.consentimientos.push({ id: uuid(), perfil_id: perfil, tipo, version: '2026-10', aceptado_en: ahoraISO, revocado_en: null });
+    const inicio = sumarDias(lunesHoy, -35);
+    const bloque = { id: uuid(), atleta_id: ivan.id, es_plantilla: false, numero: 1, nombre: 'Torso-pierna por microciclos', foco: 'volumen', objetivo: ivan.objetivo, descripcion: null,
+      fecha_inicio: inicio, fecha_fin: sumarDias(inicio, 7 * 8 - 1), estado: 'activo', creado_en: ahoraISO };
+    db.bloques.push(bloque);
+    const sesiones = [];
+    for (let w = 1; w <= 8; w++) {
+      const semana = crearSemana(bloque.id, w, sumarDias(inicio, 7 * (w - 1)), MICRO, 0.9, w <= 6 ? 'programada' : 'en_programacion', 2.5);
+      semana.foco = w === 8 ? 'descarga' : 'volumen';
+      if (w === 1) semana.nota_coach = 'Vas por microciclos: haz las 4 sesiones en orden, 3 días por semana. Si una semana solo te salen 2, sigue donde lo dejaste.';
+      sesiones.push(...db.sesiones.filter((x) => x.semana_id === semana.id).sort((a, b) => a.orden - b.orden));
+    }
+    // Lunes, miércoles y viernes de cada semana natural, en el orden del programa; la de hace 3 semanas, solo 2
+    const dia = diasEntre(lunesHoy, hoy);
+    let k = 0;
+    for (let atras = 5; atras >= 0; atras--) {
+      const lunes = sumarDias(lunesHoy, -7 * atras);
+      const dias = (atras === 3 ? [0, 2] : [0, 2, 4]).filter((o) => atras > 0 || o < dia);
+      for (const o of dias) hacerSesion(sesiones[k++], ivan.id, sumarDias(lunes, o), { revisada: true });
+    }
+    for (let atras = 5; atras >= 0; atras--) db.pesos.push({ id: uuid(), atleta_id: ivan.id, fecha: atras ? sumarDias(lunesHoy, -7 * atras) : hoy, kg: Math.round((81.4 + 0.1 * (5 - atras)) * 10) / 10, notas: null });
+  }
 }
 
 // v0.48 (al final: no cambia lo aleatorio de lo anterior): alternativas marcadas por el coach en la biblioteca de la

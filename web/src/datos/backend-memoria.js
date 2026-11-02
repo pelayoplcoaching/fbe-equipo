@@ -19,7 +19,7 @@ export const CODIGO_MFA_DEMO = '123456';
 
 const DEFECTOS = {
   perfiles: () => ({ rol: 'atleta', creado_en: ahora(), exige_2fa: false, foto: null }),
-  atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null, nutricion: true, entrenamiento: true, nivel: null, peso_frecuencia: 'diario', baja_en: null }),
+  atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null, nutricion: true, entrenamiento: true, nivel: null, peso_frecuencia: 'diario', baja_en: null, dias_semana: null }),
   invitaciones: () => ({ creada_en: ahora(), usada_en: null }),
   consentimientos: () => ({ aceptado_en: ahora(), revocado_en: null }),
   ejercicios: () => ({ grupos_musculares: [], activo: true, variante: null, video_url: null, instrucciones: null, errores: null, alternativas: [], tipo: [], rango_reps: null, creado_en: ahora() }),
@@ -651,7 +651,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     atletas: (f) => (f.checkin_apartados == null || (Array.isArray(f.checkin_apartados) && f.checkin_apartados.every((x) => ['peso', 'descanso', 'molestias', 'alimentacion', 'medidas', 'reloj'].includes(x))))
       && (f.nivel == null || ['novato', 'novato_intermedio', 'intermedio', 'avanzado'].includes(f.nivel)) && (f.nutricion === undefined || typeof f.nutricion === 'boolean')
-      && (f.entrenamiento === undefined || typeof f.entrenamiento === 'boolean') && (f.entrenamiento !== false || f.nutricion !== false),
+      && (f.entrenamiento === undefined || typeof f.entrenamiento === 'boolean') && (f.entrenamiento !== false || f.nutricion !== false)
+      // Como la 031: días de entreno por semana, null (automático) o de 1 a 7
+      && (f.dias_semana == null || (Number.isInteger(f.dias_semana) && f.dias_semana >= 1 && f.dias_semana <= 7)),
     registros_nutricion: (f) => fechaValida(f.fecha) && unDecimal(f.proteina_g) && unDecimal(f.carbos_g) && unDecimal(f.grasa_g) && unDecimal(f.fibra_g)
       && entre(n(f.kcal), 0, 15000) && entero(n(f.kcal)) && entre(n(f.proteina_g), 0, 1500) && entre(n(f.carbos_g), 0, 2500) && entre(n(f.grasa_g), 0, 1000)
       && entre(n(f.fibra_g), 0, 300) && (f.cumplido == null || [0, 1, 2].includes(Number(f.cumplido))) && (f.nota == null || (String(f.nota).length <= 280 && textoVisible(f.nota)))
@@ -1222,7 +1224,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return copia(filas);
       }
       const res = [];
-      // Como la 030: los avisos y la ficha del atleta solo los cambia el coach (el atleta, ni su estado ni su baja)
+      // Como la 030 (y la 031): los avisos y la ficha del atleta solo los cambia el coach (el atleta, ni su estado ni su baja,
+      // ni sus días de entreno por semana)
       if ((t === 'avisos' || t === 'atletas') && !esCoach()) return [];
       const c = antesDeActualizar(t, cambios);
       // Como en la base (RLS): nadie cambia lo que no ve (el atleta no marca leído un mensaje que aún no ha salido)

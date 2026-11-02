@@ -2783,6 +2783,45 @@ console.log('\nTareas, mensajes programados, el bloque entero y las bajas (migra
   await q(`delete from notificaciones where tipo in ('tarea', 'tarea_hecha')`);
 }
 
+console.log('\nDías de entreno por semana (migración 031)');
+{
+  await su();
+  await q(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  check((await q(`select dias_semana from atletas where id = $1`, [aAna.id]))[0].dias_semana === null, 'de entrada, sin objetivo (null: automático, todo como antes)');
+  const col = (await q(`select data_type, is_nullable from information_schema.columns where table_schema = 'public' and table_name = 'atletas' and column_name = 'dias_semana'`))[0];
+  check(col?.data_type === 'smallint' && col.is_nullable === 'YES', 'atletas.dias_semana es un smallint que admite null');
+  await como(pelayo, 'aal2');
+  check((await q(`update atletas set dias_semana = 3 where id = $1 returning dias_semana`, [aAna.id]))[0]?.dias_semana === 3, 'el coach le pone 3 días por semana');
+  check((await q(`update atletas set dias_semana = 1 where id = $1 returning dias_semana`, [aAna.id]))[0]?.dias_semana === 1
+    && (await q(`update atletas set dias_semana = 7 where id = $1 returning dias_semana`, [aAna.id]))[0]?.dias_semana === 7, 'de 1 a 7');
+  check(await falla(`update atletas set dias_semana = 0 where id = $1`, [aAna.id]) && await falla(`update atletas set dias_semana = 8 where id = $1`, [aAna.id])
+    && await falla(`update atletas set dias_semana = -3 where id = $1`, [aAna.id]) && await falla(`insert into atletas (nombre, dias_semana) values ('Fuera', 9)`),
+    'fuera de 1 a 7, la base lo rechaza (0, 8, −3 o 9 al crear la ficha)');
+  check((await q(`select dias_semana from atletas where id = $1`, [aAna.id]))[0].dias_semana === 7, 'y lo rechazado no cambia lo que había');
+  await q(`update atletas set dias_semana = 3 where id = $1`, [aAna.id]);
+  await como(ana);
+  check((await q(`select dias_semana from atletas`))[0]?.dias_semana === 3, 'Ana lee su objetivo en su ficha (la app cuenta con él)');
+  const cambia = await q(`update atletas set dias_semana = 5 returning id`).catch(() => []);
+  const quita = await q(`update atletas set dias_semana = null where perfil_id = $1 returning id`, [ana]).catch(() => []);
+  await su();
+  check(cambia.length === 0 && quita.length === 0 && (await q(`select dias_semana from atletas where id = $1`, [aAna.id]))[0].dias_semana === 3, 'Ana no puede cambiarse el objetivo ni quitárselo (lo decide el coach)');
+  await como(luis);
+  check((await q(`select dias_semana from atletas where id = $1`, [aAna.id])).length === 0 && (await q(`update atletas set dias_semana = 2 where id = $1 returning id`, [aAna.id]).catch(() => [])).length === 0,
+    'Luis no ve ni toca el de Ana');
+  check(!(await q(`select exists (select 1 from pg_policies where tablename = 'atletas' and cmd in ('UPDATE', 'ALL') and policyname <> 'coach_todo') x`))[0].x, 'en atletas, la única política que deja cambiar algo es la del coach');
+  await como(pelayo, 'aal2');
+  check((await q(`update atletas set dias_semana = null where id = $1 returning dias_semana`, [aAna.id]))[0]?.dias_semana === null, 'el coach lo vuelve a «Automático» (null)');
+  const sin30 = new PGlite();
+  await sin30.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin30.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '030')) await sin30.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let errSin30 = null;
+  try { await sin30.exec(readFileSync(new URL('../supabase/migraciones/031_dias_semana.sql', import.meta.url), 'utf8')); } catch (e) { errSin30 = e.message; }
+  check(/Antes de la 031 hace falta la 030/.test(errSin30 || '') && !(await sin30.query(`select 1 from information_schema.columns where table_name = 'atletas' and column_name = 'dias_semana'`)).rows.length,
+    'la 031 no se aplica sin la 030 (y no deja nada a medias)');
+  await sin30.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

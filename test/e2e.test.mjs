@@ -3064,7 +3064,7 @@ try {
   const hojaN = p.getByRole('dialog', { name: 'Panel de negocio' });
   await hojaN.locator('.negocio-cifras').waitFor();
   const txtN = await hojaN.textContent();
-  check(/Atletas activos\s*4/.test(txtN) && /\d €/.test(txtN) && txtN.includes('Renuevan en 30 días') && await hay(hojaN.locator('svg.grafica-negocio'), 2), 'el panel de negocio: activos, euros a la española, renovaciones y las dos gráficas de 12 meses');
+  check(/Atletas activos\s*5/.test(txtN) && /\d €/.test(txtN) && txtN.includes('Renuevan en 30 días') && await hay(hojaN.locator('svg.grafica-negocio'), 2), 'el panel de negocio: activos, euros a la española, renovaciones y las dos gráficas de 12 meses');
   await revisar('negocio');
   await hojaN.getByRole('switch', { name: /Ocultar importes/ }).check();
   await p.waitForTimeout(200);
@@ -3614,7 +3614,7 @@ try {
     await pildora.click();
     await tarjetaP.getByRole('button', { name: 'Volver a la sesión' }).click();
     await p.locator('.ejercicio').first().waitFor();
-    check(await p.locator('.temporizador').count() === 1 && await p.locator('.encurso').count() === 0, '«Volver a la sesión» vuelve con el descanso donde iba (y sin la píldora dentro de la sesión)');
+    check(await hay(p.locator('.temporizador'), 1, 10000) && await hay(p.locator('.encurso'), 0), '«Volver a la sesión» vuelve con el descanso donde iba (y sin la píldora dentro de la sesión)');
     // Al terminarla, la píldora se va (y si completa la semana y llega a un hito de la racha, lo celebra una vez)
     await p.getByRole('button', { name: 'Terminar sesión' }).click();
     await p.locator('.hoja-dialogo .segmentos button', { hasText: '8' }).click();
@@ -3663,6 +3663,120 @@ try {
   await p.evaluate(() => localStorage.setItem('fbe-en-curso-prueba', JSON.stringify({ id: 's', nombre: 'Torso B', hechas: 1, t: Date.now() })));
   await entrarComo('Pelayo');
   check(!(await p.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith('fbe-en-curso-')))), 'al cerrar la sesión (o cambiar de cuenta), no queda en el móvil ninguna sesión a medias');
+
+  console.log('\nv0.53: días de entreno por semana (microciclos que no caben en una semana natural)');
+  {
+  // (sigue como Pelayo) Iván, de la demo, va por microciclos de 4 sesiones a 3 días por semana (lunes, miércoles y viernes)
+  const abrirDatos = async (nombre) => {
+    await p.locator('.tab', { hasText: 'Atletas' }).click();
+    await p.locator('.tarjeta-atleta', { hasText: nombre }).first().click();
+    await p.getByRole('tab', { name: 'Datos' }).click();
+    await p.locator('#d-dias-semana').waitFor();
+  };
+  const cabFicha = () => p.locator('.cabecera-grande .titulo, .titulo').first().textContent();
+  await abrirDatos('Ana López');
+  const selDias = p.getByLabel('Días de entreno por semana');
+  check(await selDias.inputValue() === '' && (await selDias.locator('option').allTextContents()).join('|') === 'Automático (los de cada semana programada)|1|2|3|4|5|6|7'
+    && (await p.locator('#d-dias-semana-ayuda').textContent()).startsWith('Para quien lleva microciclos que no caben en una semana natural (por ejemplo, 4 sesiones repartidas a 3 días por semana): la constancia, la racha y los anillos se cuentan por semanas de lunes a domingo con este objetivo.')
+    && await selDias.getAttribute('aria-describedby') === 'd-dias-semana-ayuda',
+    'en Datos, junto al servicio y el nivel, «Días de entreno por semana»: Automático (de entrada) o de 1 a 7, con su explicación');
+  await p.locator('.servicio-nivel').scrollIntoViewIfNeeded();
+  await revisar('dias-semana-datos');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.evaluate(() => document.documentElement.setAttribute('data-letra', 'muy-grande'));
+  await p.waitForTimeout(200);
+  check(await p.evaluate(() => { const s = document.getElementById('d-dias-semana'), c = s.closest('.panel').getBoundingClientRect(), r = s.getBoundingClientRect(); return document.documentElement.scrollWidth <= 360 && r.left >= c.left && r.right <= c.right + 0.5 && r.height >= 44; }),
+    'a 360 px, en oscuro y con la letra al 125 %, el desplegable cabe en su tarjeta (y mide 44 px o más)');
+  await revisar('dias-semana-datos-360-oscuro-125');
+  await p.evaluate(() => document.documentElement.removeAttribute('data-letra'));
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.getByRole('button', { name: 'Volver a atletas' }).click();
+  // Iván viene con 3: se pasa a «Automático» y se ve como antes (las 4 de la semana del programa)
+  await abrirDatos('Iván Prieto');
+  check(await selDias.inputValue() === '3' && /3 días por semana/.test(await cabFicha()), 'Iván, de la demo, con 3 días por semana (también en la cabecera de su ficha)');
+  await selDias.selectOption('');
+  await p.locator('.toast', { hasText: 'Su semana: la de cada semana programada' }).waitFor();
+  await p.waitForFunction(() => document.getElementById('d-dias-semana')?.value === '');
+  check(!/días por semana/.test(await cabFicha()), 'a «Automático»: se guarda al elegirlo y la cabecera ya no lo dice');
+  const diaSemana = await p.evaluate(() => (new Date().getDay() + 6) % 7);
+  const hechasIvan = [0, 2, 4].filter((o) => o < diaSemana).length;  // lunes, miércoles y viernes, hasta ayer
+  await entrarComo('Iván Prieto');
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').waitFor();
+  await cerrarDialogos();
+  const dialC1 = p.locator('.diales .dial').first();
+  await p.waitForFunction(() => /^Constancia: \d+ de \d+/.test(document.querySelector('.diales .dial')?.getAttribute('aria-label') || ''));
+  check(/^Constancia: 0 de 4 sesiones de esta semana/.test(await dialC1.getAttribute('aria-label')) && (await dialC1.locator('.dial-centro').textContent()).replace(/\s/g, '') === '0/4'
+    && /Semana 6/.test(await p.locator('.hero-dia .contexto').textContent()),
+    'con «Automático», Iván ve lo de siempre: la semana 6 por fechas y «0/4» (las de esa semana del programa)');
+  await entrarComo('Pelayo');
+  await abrirDatos('Iván Prieto');
+  await selDias.selectOption('3');
+  await p.locator('.toast', { hasText: 'Su semana: 3 días por semana, de lunes a domingo' }).waitFor();
+  await p.waitForFunction(() => document.getElementById('d-dias-semana')?.value === '3');
+  check(/3 días por semana/.test(await cabFicha()), 'el coach le pone 3 días por semana en Ficha → Datos (se guarda al elegirlo)');
+  await p.getByRole('button', { name: 'Volver a atletas' }).click();
+  const tarjetaIvan = p.locator('.tarjeta-atleta', { hasText: 'Iván Prieto' }).first();
+  await tarjetaIvan.waitFor();
+  check(await tarjetaIvan.locator('.pips').first().getAttribute('aria-label') === `${hechasIvan} de 3 sesiones`, `en el panel, Iván lleva ${hechasIvan} de 3 esta semana (su objetivo, no 4)`);
+  await entrarComo('Iván Prieto');
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').waitFor();
+  await cerrarDialogos();
+  await p.waitForFunction(() => /tu objetivo/.test(document.querySelector('.diales .dial')?.getAttribute('aria-label') || ''));
+  const dialC3 = p.locator('.diales .dial').first();
+  check((await dialC3.getAttribute('aria-label')).startsWith(`Constancia: ${hechasIvan} de 3 sesiones de tu objetivo de esta semana`) && (await dialC3.locator('.dial-centro').textContent()).replace(/\s/g, '') === `${hechasIvan}/3`,
+    `con 3 días por semana, el dial de Constancia de Iván marca «${hechasIvan}/3» (de lunes a domingo)`);
+  const microIvan = Math.floor((14 + hechasIvan) / 4) + 1;
+  const heroIvan = await p.locator('.hero-dia').textContent();
+  check(Number(((await p.locator('.hero-dia .contexto span').allTextContents()).find((t) => /^Semana \d+$/.test(t.trim())) || '').replace(/\D/g, '')) === microIvan, `Hoy le enseña su microciclo (el ${microIvan}.º, el que le toca), no la semana 6 de las fechas`);
+  if (hechasIvan === 3) check(/Semana hecha: 3 de 3\. La siguiente, .+, cuando te toque\./.test(heroIvan) && /Semana completa/.test(await p.locator('.semana-resumen').textContent()), 'con las 3 hechas: «Semana hecha: 3 de 3. La siguiente, …, cuando te toque.»');
+  else check((await p.locator('.semana-resumen').textContent()).includes(3 - hechasIvan === 1 ? 'Te queda 1 sesión' : `Te quedan ${3 - hechasIvan} sesiones`) && /Empezar sesión|Continuar sesión/.test(heroIvan),
+    `«Te ${3 - hechasIvan === 1 ? 'queda 1 sesión' : `quedan ${3 - hechasIvan} sesiones`}» para llegar a 3, y la siguiente de su microciclo para empezar`);
+  const rachaIvan = hechasIvan === 3 ? 3 : 2;
+  const botonRI = p.locator('.hero-dia .racha-boton').first();
+  check((await botonRI.textContent()).includes(`${rachaIvan} semanas completas seguidas`), `la racha cuenta semanas naturales: ${rachaIvan} semanas completas seguidas (con «Automático», ninguna)`);
+  await revisar('hoy-microciclos');
+  await dialC3.click();
+  const hojaC = p.getByRole('dialog', { name: 'Constancia' });
+  await hojaC.locator('.dial-hoja-cifras').waitFor();
+  check(/microciclos/.test(await hojaC.textContent()) && /3 días por semana/.test(await hojaC.textContent()) && (await hojaC.locator('.dial-hoja-cifras dt').allTextContents()).join('|') === 'Hechas|Tu objetivo'
+    && await hojaC.locator('.dial-hoja-lista li').count() === 3, 'su hoja: de lunes a domingo con su objetivo de 3, y las 3 de esta semana (las hechas y las que le tocan)');
+  await revisar('hoja-constancia-microciclos');
+  await hojaC.getByRole('button', { name: 'Cerrar' }).first().click();
+  await hojaC.waitFor({ state: 'detached' });
+  await botonRI.click();
+  const pantallaRI = p.locator('.racha-pantalla');
+  await pantallaRI.waitFor();
+  check(Number((await pantallaRI.locator('.racha-cifra').textContent()).trim()) === rachaIvan && /Semanas de lunes a domingo con tus 3 sesiones hechas/.test(await pantallaRI.textContent())
+    && await pantallaRI.locator('.racha-semana.incompleta').count() === 1 && await pantallaRI.locator('.racha-semana.completa').count() === 4 + (hechasIvan === 3 ? 1 : 0),
+    'su pantalla de la racha: semanas de lunes a domingo con sus 3 sesiones (una sin completar, hace 3 semanas)');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('racha-microciclos-360-oscuro');
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await pantallaRI.getByRole('button', { name: 'Seguir' }).click();
+  await pantallaRI.waitFor({ state: 'detached' });
+  await p.locator('.tab', { hasText: 'Progreso' }).click();
+  const anilloS = p.locator('.anillos-leyenda li[data-anillo="sesiones"]');
+  await anilloS.waitFor();
+  await cerrarDialogos();
+  check((await anilloS.textContent()).includes(`${hechasIvan} de 3`) && (await p.locator('.cifras > div').first().textContent()).replace(/\s+/g, ' ').includes(`${rachaIvan}`),
+    `en Progreso, el anillo de sesiones va a 3 («${hechasIvan} de 3») y las cifras, con su racha (${rachaIvan})`);
+  await revisar('progreso-microciclos');
+  // Ana, con «Automático», como siempre: su dial cuenta las sesiones de su semana del programa
+  await entrarComo('Ana López');
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').waitFor();
+  await cerrarDialogos();
+  const totalAna = await p.locator('.semana-dias .dia').count(), hechasAna = await p.locator('.semana-dias .dia.hecha').count();
+  check((await p.locator('.diales .dial').first().getAttribute('aria-label')).startsWith(`Constancia: ${hechasAna} de ${totalAna} sesiones de esta semana.`) && totalAna > 0,
+    `con «Automático», Ana sigue igual: «${hechasAna}/${totalAna}», las de su semana del programa`);
+  await entrarComo('Pelayo');
+  }
   }
   await p.unroute('https://i.ytimg.com/**');
   }

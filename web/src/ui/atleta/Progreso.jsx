@@ -571,7 +571,7 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
       {entrena ? <Pista id="progreso" icono="progreso">Todo lo de aquí sale solo de lo que apuntas en cada sesión y en el check-in. No tienes que rellenar nada: entra de vez en cuando a ver cómo vas.</Pista>
         : <Pista id="progreso-nutricion" icono="progreso">Aquí ves tu peso, tus medidas y tu nutrición: sale de lo que apuntas en Hoy y en el check-in.</Pista>}
       {entrena && <Destacados progreso={progreso.datos} constancia={constancia.datos} programa={programa.datos} />}
-      {entrena && <AnillosSemana programa={programa} salud={salud} checkinSemana={checkinSemana} />}
+      {entrena && <AnillosSemana programa={programa} salud={salud} checkinSemana={checkinSemana} constancia={constancia} />}
       {entrena && <Cifras constancia={constancia} semanas={semanas} />}
       {entrena && <TusSemanas salud={salud} lista={semanas} />}
       <TusMeses salud={salud} />
@@ -593,11 +593,16 @@ function Destacados({ progreso, constancia, programa }) {
   if (!progreso) return null;
   const hoy = hoyISO();
   const calendario = constancia?.semanas ? calendarioRacha(constancia.semanas, hoy, 8) : [];
-  // Las semanas del bloque que ya cuentan: las acabadas y la de ahora si está completa
-  const bloque = (programa?.semanas || []).filter((w) => w.fecha_inicio && w.fecha_inicio <= hoy).map((w) => {
-    const ss = programa.sesiones?.[w.id] || [];
-    return { numero: w.numero, hechas: ss.filter((x) => x.completada).length, total: ss.length, acabada: sumarDias(w.fecha_inicio, 6) < hoy };
-  }).filter((w) => w.acabada || (w.total && w.hechas >= w.total));
+  // Las semanas del bloque que ya cuentan: las acabadas y la de ahora si está completa. v0.53: con objetivo de días por
+  // semana, las semanas de lunes a domingo desde que empezó el bloque, con su objetivo
+  const inicioBloque = programa?.bloque?.fecha_inicio || (programa?.semanas || []).map((w) => w.fecha_inicio).filter(Boolean).sort()[0] || null;
+  const bloque = constancia?.diasSemana
+    ? (constancia.semanas || []).filter((w) => inicioBloque && w.fecha_inicio >= lunesDe(inicioBloque) && w.total && (w.fecha_inicio < lunesDe(hoy) || w.hechas >= w.total))
+      .map((w, i) => ({ numero: i + 1, hechas: Math.min(w.hechas, w.total), total: w.total }))
+    : (programa?.semanas || []).filter((w) => w.fecha_inicio && w.fecha_inicio <= hoy).map((w) => {
+      const ss = programa.sesiones?.[w.id] || [];
+      return { numero: w.numero, hechas: ss.filter((x) => x.completada).length, total: ss.length, acabada: sumarDias(w.fecha_inicio, 6) < hoy };
+    }).filter((w) => w.acabada || (w.total && w.hechas >= w.total));
   const nombres = Object.fromEntries((progreso.vitrina?.ejercicios || []).map((e) => [e.id, e.nombre]));
   const lista = calcularDestacados({ dias: progreso.tonelaje || {}, ejercicios: progreso.ejercicios, racha: constancia?.racha, calendario, bloque, recientes: progreso.vitrina?.recientes, nombres }, hoy);
   if (!lista.length) return null;
@@ -614,7 +619,7 @@ function Destacados({ progreso, constancia, programa }) {
           </li>
         ))}
       </ul>
-      {verRacha && <PantallaRacha racha={constancia?.racha || 0} semanas={constancia?.semanas || []} hoy={hoy} alCerrar={() => setVerRacha(false)} />}
+      {verRacha && <PantallaRacha racha={constancia?.racha || 0} semanas={constancia?.semanas || []} diasSemana={constancia?.diasSemana || null} hoy={hoy} alCerrar={() => setVerRacha(false)} />}
     </section>
   );
 }

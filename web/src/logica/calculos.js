@@ -867,7 +867,7 @@ export function mapaCalor(dias, hoy = hoyISO(), semanas = 12) {
 
 // d: { atleta, bloque, semanas (todas las del bloque), semana (actual), sesiones (de la actual),
 //      sesionesPrevias (de la semana anterior), pesos (desc), checkins (desc), molestias (de la semana del último check-in),
-//      ultimaSerie (fecha ISO o null) }
+//      ultimaSerie (fecha ISO o null), diasSemana y semanaNatural (v0.53: su objetivo semanal y la semana de hoy) }
 export function resumenAtleta(d, hoy = hoyISO()) {
   const alertas = [];
   const { atleta, bloque, semanas = [], semana, sesiones = [], pesos = [], checkins = [], molestias = [] } = d;
@@ -958,7 +958,9 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     diasNutricion: d.diasNutricion ?? null,
     bloque: bloque ? { id: bloque.id, numero: bloque.numero, nombre: bloque.nombre, foco: bloque.foco } : null,
     semana: semana ? { id: semana.id, numero: semana.numero, foco: semana.foco, total: semanas.length } : null,
-    sesiones: { completadas, total: sesiones.length },
+    // v0.53: con objetivo de días por semana (d.diasSemana), las de esta semana natural frente a ese objetivo (d.semanaNatural)
+    sesiones: d.diasSemana ? { completadas: d.semanaNatural?.hechas || 0, total: d.semanaNatural?.objetivo || 0 } : { completadas, total: sesiones.length },
+    diasSemana: d.diasSemana || null,
     peso: peso ? { kg: Number(peso.kg), fecha: peso.fecha, cambio: pesoAnterior ? Math.round((peso.kg - pesoAnterior.kg) * 10) / 10 : null, ritmo: ritmoPeso(tendenciaPeso(pesos)) } : null,
     checkin: checkin ? { semana: checkin.semana_inicio, horas_sueno: checkin.horas_sueno, energia: checkin.energia, motivacion: checkin.motivacion } : null,
     maxMolestia,

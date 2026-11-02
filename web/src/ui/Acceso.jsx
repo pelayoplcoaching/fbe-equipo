@@ -9,6 +9,7 @@ const PERSONAS_DEMO = [
   ['ruben@fbe.demo', 'Rubén Martín', 'Atleta: con una molestia lumbar', 'R'],
   ['carlos@fbe.demo', 'Carlos Vera', 'Atleta: recomposición, con cardio y dos semanas parado', 'C'],
   ['lucia@fbe.demo', 'Lucía Ferrer', 'Atleta: solo nutrición, con su recetario y su menú', 'L'],
+  ['ivan@fbe.demo', 'Iván Prieto', 'Atleta: microciclos de 4 sesiones, 3 días por semana', 'I'],
 ];
 
 export function Acceso() {

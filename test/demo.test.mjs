@@ -17,7 +17,7 @@ console.log('Coach en la demo');
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 check((await api.perfil()).rol === 'coach', 'entra como coach');
 const res = await api.resumenes();
-check(res.length === 6, '6 atletas en el panel (con Lucía, solo nutrición, y Sergio, de baja desde hace dos meses: v0.48)');
+check(res.length === 7, '7 atletas en el panel (con Lucía, solo nutrición, Sergio, de baja desde hace dos meses: v0.48, e Iván, por microciclos: v0.53)');
 check(res.find((r) => r.nombre === 'Lucía Ferrer')?.servicio === 'nutricion' && !res.find((r) => r.nombre === 'Lucía Ferrer').alertas.some((a) => ['sin_bloque', 'sin_entrenar', 'publicar'].includes(a.tipo)), 'Lucía, solo nutrición: sin avisos de entrenamiento');
 check(res.find((r) => r.nombre === 'Lucía Ferrer').alertas.some((a) => a.tipo === 'receta'), 'Lucía pide cambiar una receta (aviso en el panel)');
 for (const r of res) console.log('    ', r.nombre.padEnd(14), r.semana ? `S${r.semana.numero}/${r.semana.total}` : '—', `${r.sesiones.completadas}/${r.sesiones.total}`, r.peso ? `${r.peso.kg} (${r.peso.cambio})` : '', '|', r.alertas.map((a) => a.texto).join(' · '));
@@ -377,7 +377,7 @@ await b.auth.mfa.verificar(f.id, '123456');
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 check((await api.atletas()).length === 0 && (await b.auth.mfa.nivel()).siguiente === 'aal2', 'sin el segundo paso, el coach no ve datos');
 await b.auth.mfa.verificar(f.id, '123456');
-check((await api.atletas()).length === 6, 'con el código 123456, sí');
+check((await api.atletas()).length === 7, 'con el código 123456, sí');
 await b.auth.mfa.quitar(f.id);
 await b.auth.entrar('ana@fbe.demo', 'demo');
 
@@ -697,7 +697,7 @@ console.log('\nv0.48 en la demo: tareas, programados, dónde entrenas, tu bloque
   for (let i = 0; i < 27; i++) await a4.guardarPlantillaTarea({ tipo: 'texto', titulo: `P${i}` });
   check(await lanza(() => a4.guardarPlantillaTarea({ tipo: 'texto', titulo: 'La 31' })), 'como mucho 30 plantillas (como en la base)');
   const pn = await a4.panelNegocio();
-  check(pn.activos === 4 && pn.meses.length === 12 && pn.bajas12 === 1 && pn.cobrado12 > 0 && pn.renovaciones.length >= 1, `el panel de negocio: ${pn.activos} activos, ${pn.bajas12} baja (Sergio) y ${pn.renovaciones.length} renovaciones en 30 días`);
+  check(pn.activos === 5 && pn.meses.length === 12 && pn.bajas12 === 1 && pn.cobrado12 > 0 && pn.renovaciones.length >= 1, `el panel de negocio: ${pn.activos} activos, ${pn.bajas12} baja (Sergio) y ${pn.renovaciones.length} renovaciones en 30 días`);
   const carlos = (await a4.atletas()).find((a) => a.nombre === 'Carlos Vera');
   await a4.actualizar('atletas', carlos.id, { estado: 'baja' });
   check((await a4.atletas()).find((a) => a.id === carlos.id).baja_en === hoy, 'dar de baja apunta el día (como la base)');
@@ -794,6 +794,71 @@ console.log('\nRetos de la comunidad, cualquier día de la semana');
     check(r.hoyF === dia && r.maxDia <= 2 && r.despues === r.antes + 1 && r.quien > 0 && r.total === r.totalAntes - r.quien,
       `${nombres[r.semana]} ${dia}: la sesión de hoy suma (${r.antes} → ${r.despues}), un bloque cancelado resta lo suyo (${r.totalAntes} → ${r.total}) y nadie pasa de 2 sesiones en un día (${r.maxDia})`);
   }
+}
+
+console.log('\nDías de entreno por semana en la demo (v0.53, como la 031)');
+{
+  const { racha } = await import('../web/src/logica/calculos.js');
+  const { semanasObjetivo, paraRacha } = await import('../web/src/logica/semana-natural.js');
+  const b6 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a6 = crearApi(b6);
+  const hoy = hoyISO(), lunesH = lunesDe(hoy);
+  const dia = Math.round((Date.parse(`${hoy}T12:00:00Z`) - Date.parse(`${lunesH}T12:00:00Z`)) / 864e5);
+  const hechasHoy = [0, 2, 4].filter((o) => o < dia).length;  // lunes, miércoles y viernes, hasta ayer
+  await b6.auth.entrar('pelayo@fbe.demo', 'demo');
+  const rs = await a6.resumenes();
+  const iv = rs.find((r) => r.nombre === 'Iván Prieto');
+  check(!!iv && iv.diasSemana === 3 && iv.sesiones.total === 3 && iv.sesiones.completadas === hechasHoy, `en el panel, Iván (3 días por semana): ${iv?.sesiones.completadas}/3 esta semana, no de 4`);
+  check(iv.chispas.sesiones.length === 6 && iv.chispas.sesiones.slice(0, 5).every((w) => w.total === 3) && iv.chispas.sesiones.slice(0, 5).map((w) => w.hechas).join() === '3,3,2,3,3',
+    `su minigráfica, por semanas naturales con su objetivo (${iv.chispas.sesiones.map((w) => `${w.hechas}/${w.total}`).join(' ')})`);
+  check(iv.cumplimiento?.sesiones.total === 12 && iv.cumplimiento.sesiones.hechas === 11 && iv.cumplimiento.series.pct >= 80 && !iv.alertas.some((a) => a.tipo === 'cumplimiento'),
+    `su cumplimiento de 4 semanas: ${iv.cumplimiento?.sesiones.hechas} de 12 sesiones de su objetivo y el ${iv.cumplimiento?.series.pct} % de las series (sin aviso)`);
+  const otros = rs.filter((r) => r.nombre !== 'Iván Prieto');
+  check(otros.every((r) => r.diasSemana === null), 'el resto, sin objetivo (todo como antes)');
+  const rub = otros.find((r) => r.nombre === 'Rubén Martín');
+  const antesRuben = { panel: rub, constancia: await a6.constancia(rub.atleta_id), logros: await a6.logros(rub.atleta_id), semanas: await a6.resumenesSemanales(rub.atleta_id, 4) };
+
+  await b6.auth.entrar('ivan@fbe.demo', 'demo');
+  const ivan = await a6.miAtleta();
+  const prog = await a6.programa(ivan.id);
+  const pend = Object.values(prog.sesiones).flat().filter((x) => !x.completada);
+  check(prog.diasSemana === 3 && (prog.sesiones[prog.actual.id] || []).some((x) => !x.completada) && prog.actual.numero < 6 && prog.actual.fecha_inicio < lunesH,
+    `Hoy le enseña su microciclo (el ${prog.actual.numero}.º, con lo que le queda), no el de las fechas (el 6.º)`);
+  const c = await a6.constancia(ivan.id);
+  check(c.diasSemana === 3 && c.actual?.objetivo === 3 && c.actual.hechas === hechasHoy && c.semanas.every((w) => w.total === 3),
+    `su constancia: ${c.actual?.hechas}/3 esta semana; cada semana natural, con objetivo 3`);
+  check(c.racha === (hechasHoy === 3 ? 3 : 2) && c.semanasCompletas === (hechasHoy === 3 ? 5 : 4), `racha de ${c.racha} semanas completas seguidas (la de hace 3 se quedó en 2) y ${c.semanasCompletas} en total`);
+  const sem = await a6.resumenesSemanales(ivan.id, 2);
+  check(sem[0].sesiones.total === 3 && sem[0].sesiones.completa && sem[0].objetivoSemanal === 3, '«Tu semana»: la pasada, 3 de 3, completa');
+  check((await a6.logros(ivan.id)).cuentas.racha === 2, 'el logro «Semanas completas», con su objetivo (2 seguidas como mucho)');
+  check(await lanza(() => b6.update('atletas', { dias_semana: 7 }, { eq: { id: ivan.id } }).then((r) => { if (r.length) throw new Error('cambiado'); })) === false
+    && (await a6.miAtleta()).dias_semana === 3, 'Iván no puede cambiarse el objetivo (como la base)');
+  check(pend.length > 0, 'le quedan sesiones de su bloque');
+
+  await b6.auth.entrar('pelayo@fbe.demo', 'demo');
+  check(await lanza(() => a6.actualizarAtleta(rub.atleta_id, { dias_semana: 8 })) && await lanza(() => b6.update('atletas', { dias_semana: 0 }, { eq: { id: rub.atleta_id } })), 'fuera de 1 a 7, no (como la base)');
+  await a6.actualizarAtleta(rub.atleta_id, { dias_semana: 3 });
+  const rub3 = (await a6.resumenes(undefined, { soloAtleta: rub.atleta_id }))[0];
+  const c3 = await a6.constancia(rub.atleta_id);
+  check(rub3.diasSemana === 3 && c3.diasSemana === 3 && rub3.sesiones.total === c3.actual?.objetivo && c3.actual.objetivo <= 3 && c3.semanas.every((w) => w.total <= 3),
+    `el coach le pone 3 a Rubén: su panel y su constancia pasan a su semana natural (esta semana, ${rub3.sesiones.completadas} de ${rub3.sesiones.total})`);
+  await a6.actualizarAtleta(rub.atleta_id, { dias_semana: '' });
+  const rubN = (await a6.resumenes(undefined, { soloAtleta: rub.atleta_id }))[0];
+  check((await a6.atletas()).find((a) => a.id === rub.atleta_id).dias_semana === null && igualD(rubN.sesiones, antesRuben.panel.sesiones) && igualD(rubN.chispas, antesRuben.panel.chispas)
+    && igualD(rubN.cumplimiento, antesRuben.panel.cumplimiento) && igualD(await a6.constancia(rub.atleta_id), antesRuben.constancia)
+    && igualD(await a6.logros(rub.atleta_id), antesRuben.logros) && igualD(await a6.resumenesSemanales(rub.atleta_id, 4), antesRuben.semanas),
+    'y al volver a «Automático», todo exactamente como antes (panel, constancia, logros y «Tu semana»)');
+  // La lista de Rubén con «Automático», la de siempre
+  const bl = (await b6.select('bloques', { eq: { atleta_id: rub.atleta_id, es_plantilla: false } }));
+  const ws = await b6.select('semanas', { in: { bloque_id: bl.map((x) => x.id) }, eq: { programacion: 'programada' } });
+  const ss = await b6.select('sesiones', { in: { semana_id: ws.map((w) => w.id) } });
+  const viejo = ws.map((w) => ({ fecha_inicio: w.fecha_inicio, total: ss.filter((x) => x.semana_id === w.id).length, hechas: ss.filter((x) => x.semana_id === w.id && x.completada).length }));
+  check(racha(viejo, hoy) === antesRuben.constancia.racha && racha(paraRacha(semanasObjetivo({ sesiones: ss, semanas: ws, hoy })), hoy) === antesRuben.constancia.racha, `la racha de Rubén, la misma que con la cuenta de antes (${antesRuben.constancia.racha})`);
+  // Sin la 031 en la base, lo dice
+  const sin031 = crearApi({ ...b6, auth: b6.auth, select: b6.select.bind(b6), update: async (t, c) => { if ('dias_semana' in c) throw new Error('Could not find the \'dias_semana\' column of \'atletas\' in the schema cache'); return b6.update(t, c); } });
+  let msg = '';
+  try { await sin031.actualizarAtleta(rub.atleta_id, { dias_semana: 3 }); } catch (e) { msg = e.message; }
+  check(/migración 031/.test(msg), 'sin la migración 031, guardar los días por semana dice que falta');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

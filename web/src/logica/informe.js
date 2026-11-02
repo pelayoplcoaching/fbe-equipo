@@ -14,9 +14,12 @@ const conRepes = (s) => Number(s.reps) > 0;
 // Cumplimiento de un conjunto de sesiones (con sus pautas y series). hoy decide qué sesiones «tocaban» ya.
 // sesiones: [{ id, completada, semana_lunes }]; pautas: [{ id, sesion_id, series, rpe_objetivo, rir_objetivo }];
 // series: [{ sesion_ejercicio_id, reps, rpe, rir }]
-export function cumplimiento({ sesiones, pautas, series }, hoy) {
+// v0.53: soloHechas, para quien va por microciclos (objetivo de días por semana): las fechas de sus semanas del programa
+// no dicen qué tocaba ya (va a su ritmo), así que solo cuentan las sesiones hechas (lo que hizo de lo pautado en ellas);
+// las sesiones que le faltan las cuenta su objetivo semanal, aparte.
+export function cumplimiento({ sesiones, pautas, series, soloHechas = false }, hoy) {
   const lunesHoy = lunesDe(hoy);
-  const tocaban = sesiones.filter((x) => x.completada || (x.semana_lunes && x.semana_lunes < lunesHoy));
+  const tocaban = sesiones.filter((x) => x.completada || (!soloHechas && x.semana_lunes && x.semana_lunes < lunesHoy));
   const ids = new Set(tocaban.map((x) => x.id));
   const misPautas = pautas.filter((p) => ids.has(p.sesion_id));
   const porPauta = {};
@@ -44,7 +47,8 @@ export function cumplimiento({ sesiones, pautas, series }, hoy) {
 }
 
 // d: { bloque, semanas (programadas), sesiones, pautas, ejercicios {id: {nombre}}, series (historial: con fecha,
-//      sesion_id, ejercicio_id, ejercicio, grupos), eventos (récords de toda la historia), pesos }
+//      sesion_id, ejercicio_id, ejercicio, grupos), eventos (récords de toda la historia), pesos,
+//      soloHechas (v0.53: por microciclos, el cumplimiento solo de lo hecho) }
 export function informeBloque(d, hoy) {
   const semanas = [...(d.semanas || [])].filter((w) => w.fecha_inicio).sort((a, b) => a.numero - b.numero);
   if (!semanas.length) return null;
@@ -64,7 +68,7 @@ export function informeBloque(d, hoy) {
     const ses = sesiones.filter((x) => x.semana_id === w.id);
     const ids = new Set(ses.map((x) => x.id));
     const ss = hechas.filter((s) => ids.has(s.sesion_id));
-    const c = cumplimiento({ sesiones: ses, pautas: pautas.filter((p) => ids.has(p.sesion_id)), series: ss }, hoy);
+    const c = cumplimiento({ sesiones: ses, pautas: pautas.filter((p) => ids.has(p.sesion_id)), series: ss, soloHechas: !!d.soloHechas }, hoy);
     return {
       numero: w.numero, foco: w.foco || null, lunes: lunesDeSemana[w.id],
       sesiones: { hechas: ses.filter((x) => x.completada).length, total: ses.length },
@@ -113,7 +117,7 @@ export function informeBloque(d, hoy) {
   const peso = pIni && pFin && pFin.fecha > pIni.fecha ? { inicio: pIni.tendencia, fin: pFin.tendencia, cambio: Math.round((pFin.tendencia - pIni.tendencia) * 10) / 10 } : null;
 
   const records = (d.eventos || []).filter((e) => idsSes.has(e.sesion_id)).map((e) => ({ ejercicio: e.ejercicio, texto: e.record.texto, tipo: e.record.tipo, fecha: e.fecha }));
-  const total = cumplimiento({ sesiones, pautas, series: hechas }, hoy);
+  const total = cumplimiento({ sesiones, pautas, series: hechas, soloHechas: !!d.soloHechas }, hoy);
   const sesHechas = sesiones.filter((x) => x.completada);
   return {
     bloque: { id: d.bloque.id, nombre: d.bloque.nombre, numero: d.bloque.numero, foco: d.bloque.foco || null, objetivo: d.bloque.objetivo || null },
