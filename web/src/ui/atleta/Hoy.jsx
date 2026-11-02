@@ -27,6 +27,8 @@ import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '
 import { HojaTarea } from '../Tareas.jsx';
 import { TarjetaMes } from './TuMes.jsx';
 import { HojaBloque } from './TuBloque.jsx';
+import { PantallaRacha, HitoRacha, useHitoRacha } from './Racha.jsx';
+import { lanzarConfeti } from '../confeti.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { Ilustracion } from '../Ilustraciones.jsx';
 import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
@@ -306,6 +308,9 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id, p]);
   const [planAbierto, setPlanAbierto] = useState(false);
   const [bloqueAbierto, setBloqueAbierto] = useState(false);
+  // v0.52: la pantalla de la racha y, al llegar a un hito (4, 8, 12, 26 o 52 semanas), su momento, una vez en este móvil
+  const [verRacha, setVerRacha] = useState(false);
+  const [hito, hitoVisto] = useHitoRacha(atleta.id, constancia.datos ? constancia.datos.racha : null);
   // Detalle de la siguiente sesión (ejercicios, duración): lo usan la tarjeta del día y la lista de debajo
   const hoy = hoyISO();
   const semana = p.actual;
@@ -378,13 +383,13 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
               </div>
             )}
             <div class="hero-acciones">
-              <button class="btn btn-grande btn-hero" onClick={() => abrirSesion(siguiente.id)}>
+              <button class="btn btn-grande btn-hero" onClick={(ev) => abrirSesion(siguiente.id, ev.currentTarget.closest('.hero-dia')?.querySelector('.titular h2'))}>
                 <Icono n="play" /> {empezada ? 'Continuar sesión' : 'Empezar sesión'}
               </button>
             </div>
           </>
         ) : null}
-        {sesiones.length > 0 && <ResumenSemana hechas={hechas} total={sesiones.length} racha={constancia.datos?.racha ?? null} />}
+        {sesiones.length > 0 && <ResumenSemana hechas={hechas} total={sesiones.length} racha={constancia.datos?.racha ?? null} abrirRacha={constancia.datos ? () => setVerRacha(true) : null} />}
       </section>
       <Diales sesiones={sesiones} semana={semana} siguiente={siguiente} previstaHoy={enSemana ? toca.hoy : null} ejerciciosSiguiente={ejercicios} bloques={p.bloques || []} salud={salud} hoy={hoy} alContestar={recargar} />
 
@@ -406,6 +411,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} actual={e.tipo === 'entreno' && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
         </div>
       </section>
+      {verRacha && <PantallaRacha racha={constancia.datos?.racha || 0} semanas={constancia.datos?.semanas || []} hoy={hoy} alCerrar={() => setVerRacha(false)} />}
+      {hito && !verRacha && <HitoRacha hito={hito} alCerrar={hitoVisto} />}
       {bloqueAbierto && <HojaBloque alCerrar={() => setBloqueAbierto(false)} abrirSesion={(id) => { setBloqueAbierto(false); abrirSesion(id); }} />}
       {planAbierto && (
         <Hoja titulo={`Tu plan, ${rangoSemana(semana.fecha_inicio)}`} alCerrar={() => setPlanAbierto(false)}>
@@ -440,7 +447,7 @@ function BloqueTerminado({ salud }) {
   if (!r || (visto === r.bloque.id && !abierto)) return null;
   return (
     <>
-      <TarjetaBloque informe={r} alAbrir={() => setAbierto(true)} alQuitar={() => setVisto(r.bloque.id)} />
+      <TarjetaBloque informe={r} alAbrir={() => { setAbierto(true); if (visto !== r.bloque.id) lanzarConfeti({ vibracion: 'anillo' }); }} alQuitar={() => setVisto(r.bloque.id)} />
       {abierto && <InformeBloque informe={r} salud={salud} alCerrar={() => { setAbierto(false); setVisto(r.bloque.id); }} />}
     </>
   );
@@ -591,16 +598,22 @@ function HeroEspera({ bloque, notion, irA, propio }) {
 }
 
 // Lo que queda de la semana y la racha de semanas completas (v0.51: el anillo pasa al dial «Constancia», justo debajo)
-function ResumenSemana({ hechas, total, racha }) {
+// v0.52: la racha es un botón que abre su pantalla (como en Duolingo)
+function ResumenSemana({ hechas, total, racha, abrirRacha = null }) {
   const quedan = total - hechas;
+  const texto = racha === 1 ? '1 semana completa' : `${racha} semanas completas seguidas`;
   return (
     <div class="semana-resumen sin-anillo">
       <div class="pila-xs">
         <strong>{quedan ? `Te ${quedan === 1 ? 'queda 1 sesión' : `quedan ${quedan} sesiones`}` : 'Semana completa'}</strong>
         {racha > 0 ? (
-          <span class="racha"><Icono n="llama" />{racha === 1 ? '1 semana completa' : `${racha} semanas completas seguidas`}</span>
+          abrirRacha
+            ? <button type="button" class="racha racha-boton" onClick={abrirRacha} aria-label={`${texto}. Ver tu racha`}><Icono n="llama" />{texto}<Icono n="derecha" class="racha-chevron" /></button>
+            : <span class="racha"><Icono n="llama" />{texto}</span>
         ) : racha === 0 && quedan > 0 && (
-          <span class="peq secundario">Termínalas todas para empezar una racha de semanas completas.</span>
+          abrirRacha
+            ? <button type="button" class="racha-boton racha-cero" onClick={abrirRacha}>Termínalas todas para empezar una racha de semanas completas.</button>
+            : <span class="peq secundario">Termínalas todas para empezar una racha de semanas completas.</span>
         )}
       </div>
     </div>

@@ -19,6 +19,8 @@ import { RecibirCompartido, limpiarDireccion } from '../Compartido.jsx';
 import { ponerInsignia } from '../insignia-app.js';
 import { queToca } from '../../logica/plan.js';
 import { tareasDelDia } from '../../logica/tareas.js';
+import { ActividadSesion, useEnCurso, comprobarEnCurso } from './EnCurso.jsx';
+import { estadoActividad } from '../../logica/actividad.js';
 
 // Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
 // Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento. Equipo (v0.43), solo con
@@ -131,7 +133,12 @@ export function AtletaApp() {
 
   // A quien solo lleva la nutrición no se le abren sesiones (una respuesta antigua en una sesión se lee en Mensajes)
   // v0.49: abrir y cerrar la sesión, y cambiar de pestaña, con una transición corta (donde se puede)
-  const abrirSesion = (id) => { if (!conEntrenamiento(atleta)) { setTab('mensajes'); return; } conTransicion(() => { setSesionId(id); window.scrollTo(0, 0); }, 'abrir'); };
+  // v0.52: desde la tarjeta de Hoy, su título pasa al de la portada (o al de la sesión, si ya está empezada)
+  const abrirSesion = (id, titulo = null) => {
+    if (!conEntrenamiento(atleta)) { setTab('mensajes'); return; }
+    conTransicion(() => { setSesionId(id); window.scrollTo(0, 0); }, 'abrir',
+      titulo ? [{ nombre: 'vt-titulo-sesion', desde: titulo, hasta: '.portada-sesion h1, .sesion-vista > .cabecera h1' }] : null);
+  };
   const cerrarSesion = () => { conTransicion(() => setSesionId(null), 'cerrar'); programa.recargar(true); noLeidos.recargar(true); };
   const irAPestana = (id) => {
     if (id === tab) return;
@@ -150,15 +157,21 @@ export function AtletaApp() {
     programa, salud, recargarConsentimientos: () => consentimientos.recargar(true), irA: irAPestana, abrirSesion, checkinSemana,
     noLeidos: noLeidos.datos || [], releer,
   };
-  return <Pantallas {...{ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia }} />;
+  return <Pantallas {...{ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia, atletaId: atleta.id }} />;
 }
 
 // La pantalla: la sesión abierta o la pestaña elegida con la barra de abajo (aparte, para la píldora de la barra)
-function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia }) {
+function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia, atletaId }) {
   const barra = usePildora(sesionId ? null : `${tab}:${TABS.length}`);
+  // v0.52: «Sesión en curso» (fuera de la sesión, con series hechas y sin terminar): la píldora de arriba
+  const enCurso = useEnCurso(atletaId);
+  const programa = compartido.programa.datos;
+  useEffect(() => { comprobarEnCurso(atletaId, programa); }, [programa]);
+  const conActividad = !sesionId && !!estadoActividad(enCurso);
 
   return (
-    <div class={`app ${sesionId ? 'en-sesion' : ''}`}>
+    <div class={`app ${sesionId ? 'en-sesion' : ''} ${conActividad ? 'con-actividad' : ''}`}>
+      {conActividad && <ActividadSesion datos={enCurso} alVolver={(id) => compartido.abrirSesion(id)} />}
       <InsigniaApp n={propio ? 0 : insignia} />
       {!propio && <RecibirCompartido programa={compartido.programa} />}
       {sesionId ? <main><BandaPendientes pendientes={pendientesArchivos} /><Sesion id={sesionId} alCerrar={cerrarSesion} alLeer={releer} salud={salud} /></main> : (

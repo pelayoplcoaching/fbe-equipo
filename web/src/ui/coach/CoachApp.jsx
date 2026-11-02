@@ -63,7 +63,11 @@ export function CoachApp() {
   }, []);
 
   // v0.49: abrir y cerrar una ficha, y cambiar de sección, con una transición corta (donde se puede)
-  const abrirAtleta = (atletaId, pestana = 'programa') => { conTransicion(() => { setTab('atletas'); setFicha({ atletaId, pestana }); setPeticion(null); }, 'abrir'); };
+  // v0.52: desde el panel, su foto pasa a la de la cabecera de la ficha (elemento compartido)
+  const abrirAtleta = (atletaId, pestana = 'programa', foto = null) => {
+    conTransicion(() => { setTab('atletas'); setFicha({ atletaId, pestana }); setPeticion(null); }, 'abrir',
+      foto ? [{ nombre: 'vt-avatar', desde: foto, hasta: '.avatar-estado .avatar' }] : null);
+  };
   // v0.49: los resúmenes que ya cargó el panel, para la cabecera de la ficha (si se abre desde otro sitio, la ficha
   // pide solo los de ese atleta)
   const resumenesPanel = useRef(null);

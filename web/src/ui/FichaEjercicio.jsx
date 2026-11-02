@@ -16,7 +16,7 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
   const pestanas = [['graficas', 'Gráficas'], ['records', 'Récords'], ['historial', 'Historial'], ...(tecnica ? [['tecnica', 'Técnica']] : [])];
   const grupos = (ejercicio.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).filter(Boolean).join(', ');
   return (
-    <Hoja titulo={ejercicio.nombre} alCerrar={alCerrar} ancho={680}>
+    <Hoja titulo={ejercicio.nombre} alCerrar={alCerrar} ancho={680} medio clase="ficha-ejercicio">
       {/* v0.50: su pictograma (el patrón de movimiento) junto a los músculos */}
       <p class="ficha-ej-cab peq secundario"><PictoEjercicio ejercicio={ejercicio} clase="picto-grande" /><span>{grupos || 'Sin grupo muscular'}</span></p>
       <Pestanas opciones={pestanas} valor={vista} alCambiar={setVista} etiqueta="Ficha del ejercicio" clase="pestanas-ficha" idBase="fej" />

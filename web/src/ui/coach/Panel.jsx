@@ -110,7 +110,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
                 <thead><tr><th>Atleta</th>{conCobros && <th>Pagos</th>}<th>Semana</th><th>Sesiones</th><th>Peso</th><th>Sueño</th><th>Motivación</th><th>Molestias</th><th>Último registro</th></tr></thead>
                 <tbody>
                   {vista.map((r) => (
-                    <tr key={r.atleta_id} data-estado={estadoAtleta(r)} onClick={() => abrir(r.atleta_id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id); }}>
+                    <tr key={r.atleta_id} data-estado={estadoAtleta(r)} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar')); }}>
                       <td class="celda-estado"><div class="nombre"><Avatar nombre={r.nombre} foto={r.foto} /><span>{r.nombre}<span class="sr">. {NOMBRE_ESTADO[estadoAtleta(r)]}</span></span></div><Alertas r={r} pendientes={pendientes[r.atleta_id]} /></td>
                       {conCobros && <td><CobroPanel c={r.cobro} /></td>}
                       {r.servicio === 'nutricion' ? (
@@ -134,7 +134,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
           </div>
           <div class="pila solo-estrecho">
             {vista.map((r) => (
-              <button class="tarjeta-atleta" key={r.atleta_id} data-estado={estadoAtleta(r)} onClick={() => abrir(r.atleta_id)}>
+              <button class="tarjeta-atleta" key={r.atleta_id} data-estado={estadoAtleta(r)} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))}>
                 <div class="cab">
                   <Avatar nombre={r.nombre} foto={r.foto} />
                   <span><strong>{r.nombre}</strong><span class="sr">. {NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>

@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { leerAjustes } from '../ajustes.js';
+import { leerAjustes, guardarAjustes } from '../ajustes.js';
+import { faseRespira, retrasoRespira } from '../../logica/respira.js';
+import { sinMovimiento } from '../transiciones.js';
 import { SONIDOS } from '../../datos/sonidos-descanso.js';
 import { Icono, useApp } from '../comunes.jsx';
 import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, propuestaBackoff, tieneDetalle, objetivoSerie } from '../../logica/calculos.js';
 import { hablar, prepararVoz } from '../voz.js';
 import { fraseCuenta } from '../../logica/voz.js';
 import { vibrar } from '../hapticos.js';
+import { descansoEnCurso } from '../en-curso.js';
+import { lanzarConfeti } from '../confeti.js';
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
 
@@ -94,6 +98,8 @@ export function vibrarCorto(ms = 30) { if (leerAjustes().vibracion) try { naviga
 export function celebrar() {
   const a = leerAjustes();
   vibrar('record');
+  // v0.52: y confeti (nunca con «reducir movimiento»; la vibración ya va aquí arriba)
+  lanzarConfeti({ vibracion: null });
   if (!audio || !a.sonido) return;
   [523.25, 659.25, 783.99].forEach((f, i) => {
     const t = audio.currentTime + i * 0.11;
@@ -144,9 +150,11 @@ export function aNumero(t) {
 // acabe (migración 025); si suena aquí, con la app delante, se anula, y también al saltarlo o cerrarlo. Si la app
 // vuelve tarde (el aviso ya sonó en el móvil), no suena otra vez.
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
-export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = null, alCambiar, clase = '' }) {
-  const { api } = useApp() || {};
+export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = null, inicio = null, alCambiar, clase = '' }) {
+  const { api, atleta } = useApp() || {};
   const ahora = useAhora(250);
+  const finRef = useRef(fin);
+  finRef.current = fin;
   const quedan = Math.max(0, (fin - ahora) / 1000);
   const avisado = useRef(false);
   const programado = useRef(false);
@@ -156,8 +164,9 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = 
     const t = setTimeout(() => { programado.current = true; api.programarDescanso(fin, texto); }, 700);
     return () => clearTimeout(t);
   }, [fin]);
-  // Al quitarse el temporizador (saltar, cerrar, salir de la sesión), fuera el aviso
-  useEffect(() => () => { if (programado.current) api?.cancelarDescanso?.(); }, []);
+  // Al quitarse el temporizador (saltar, cerrar), fuera el aviso. v0.52: si se sale de la sesión con el descanso en
+  // marcha, lo sigue llevando la píldora «Sesión en curso» (y el aviso al móvil se queda)
+  useEffect(() => () => { if (programado.current && !descansoEnCurso(atleta?.id, finRef.current)) api?.cancelarDescanso?.(); }, []);
   useEffect(() => {
     if (quedan <= 0 && !avisado.current) {
       avisado.current = true;
@@ -211,9 +220,23 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = 
     caja.current?.scrollIntoView({ block: 'center', behavior: quieto ? 'auto' : 'smooth' });
     setTimeout(() => caja.current?.querySelector('.saltar')?.focus({ preventScroll: true }), quieto ? 0 : 350);
   };
+  // v0.52: «Respira» (se recuerda en el móvil): un círculo que crece al inspirar (4 s) y encoge al soltar (6 s), contado
+  // desde que empezó el descanso; el texto «Inspira» / «Suelta» no se anuncia (la cuenta sigue mandando). Con «reducir
+  // movimiento», solo el texto.
+  const [respira, setRespira] = useState(() => leerAjustes().respira === true);
+  // (revisión: el ciclo cuenta desde el inicio de cada descanso, que viaja con él y no cambia con ±15 s ni ±1 min; el
+  // temporizador de un mismo ejercicio se reutiliza de una serie a otra, así que no vale lo del primer pintado)
+  // (sin él, de un descanso de antes de esta versión, el que sale de su final y su duración)
+  const inicioR = inicio || fin - total * 1000;
+  const cambiarRespira = () => { const v = !respira; setRespira(v); guardarAjustes({ ...leerAjustes(), respira: v }); };
+  const fase = respira && quedan > 0 ? faseRespira((ahora - inicioR) / 1000) : null;
+  const quietoRespira = sinMovimiento();
+  // (el retraso de la animación se fija cuando aparece el círculo, con lo que lleva el descanso en ese momento: cambiarlo
+  // después la haría saltar; y un círculo nuevo, por cada descanso)
+  const ponerRetraso = (el) => { if (el && !el.dataset.retraso) { el.dataset.retraso = '1'; el.style.animationDelay = `${retrasoRespira((Date.now() - inicioR) / 1000)}s`; } };
   const R = 88, C = 2 * Math.PI * R;
   const frac = total ? Math.min(1, quedan / total) : 0;
-  const ajustar = (s) => alCambiar({ fin: Math.max(Date.now(), fin) + s * 1000, total: Math.max(total, (Math.max(Date.now(), fin) - Date.now()) / 1000 + s), prioridad, texto, voz, tras });
+  const ajustar = (s) => alCambiar({ fin: Math.max(Date.now(), fin) + s * 1000, total: Math.max(total, (Math.max(Date.now(), fin) - Date.now()) / 1000 + s), prioridad, texto, voz, tras, inicio: inicioR });
   const color = COLOR_DISCO[prioridad] || 'var(--morado)';
   const r2 = 9, c2 = 2 * Math.PI * r2;
   return (
@@ -223,16 +246,23 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = 
         <span class="temporizador-etq">{quedan > 0 ? 'Descanso' : 'Descanso terminado'}</span>
         <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>
       </div>
-      <div class="reloj-descanso">
+      <div class={`reloj-descanso ${fase ? 'respirando' : ''}`}>
+        {fase && !quietoRespira && <span key={inicioR} ref={ponerRetraso} class="respira-circulo" aria-hidden="true" />}
         <svg viewBox="0 0 200 200" aria-hidden="true">
           <circle class="carril" cx="100" cy="100" r={R} />
           <circle class="arco" cx="100" cy="100" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - frac)} transform="rotate(-90 100 100)" />
         </svg>
         <div class="reloj-centro">
           <div class="cuenta num" role="timer" aria-label={quedan > 0 ? `Descanso: quedan ${Math.ceil(quedan)} segundos` : 'Descanso terminado'}>{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</div>
-          {quedan > 0 && total > 0 && <div class="de num">de {mmss(total)}</div>}
+          {quedan > 0 && total > 0 && !fase && <div class="de num">de {mmss(total)}</div>}
+          {fase && <div class={`respira-texto ${fase.fase}`} aria-hidden="true">{fase.texto}</div>}
         </div>
       </div>
+      {quedan > 0 && (
+        <button type="button" class="respira-boton" aria-pressed={respira ? 'true' : 'false'} onClick={cambiarRespira} title="Un círculo para acompasar la respiración mientras descansas">
+          <Icono n="sueno" />Respira
+        </button>
+      )}
       {/* v0.42: también ±1 minuto, para alargar el descanso por un imprevisto o acortarlo si hay prisa */}
       <div class="ajustes">
         <button onClick={() => ajustar(-60)} aria-label="Quitar 1 minuto">−1 min</button>

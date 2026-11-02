@@ -38,11 +38,14 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
   const cardio = cardioValido(sesion.cardio) ? sesion.cardio : null;
   return (
     <div class="contenido portada-vista">
+      {/* v0.52: la barra de arriba: el botón de volver y, al bajar, la portada se recoge en ella con el nombre (con las
+          animaciones ligadas al scroll, donde las hay; si no, se va con la portada, como antes) */}
+      <div class="portada-barra">
+        <button class="btn btn-icono" onClick={alCerrar} aria-label="Volver"><Icono n="atras" /></button>
+        <span class="portada-barra-titulo" aria-hidden="true"><span>{sesion.nombre}</span></span>
+      </div>
       <header class="portada-sesion">
         <ArteSesion nombre={sesion.nombre} tipo={tipo} patron={r.patrones[0] || null} />
-        <div class="portada-arriba">
-          <button class="btn btn-icono" onClick={alCerrar} aria-label="Volver"><Icono n="atras" /></button>
-        </div>
         <span />
         <div class="portada-texto">
           <span class="t-sobre">{sobre}</span>

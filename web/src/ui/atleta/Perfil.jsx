@@ -12,6 +12,7 @@ import { CATEGORIAS_RECURSO } from '../../logica/calculos.js';
 import { FilaCuestionario } from './Cuestionario.jsx';
 import { FilaCobro } from './Cobro.jsx';
 import { FilaFoto } from '../FotoPerfil.jsx';
+import { Carnet } from './Carnet.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -39,6 +40,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       </CabeceraGrande>
       <BandaDemo />
       <CabezaPerfil p={p} correo={backend.auth.sesion()?.user.email} />
+      {/* v0.52: el carné de atleta (como una tarjeta de Apple Wallet) */}
+      <Carnet bloque={p?.bloque || null} />
 
       <GrupoIos titulo="Tu asesoría" id="grupo-asesoria">
         <FilaFoto nombre={atleta.nombre} />
@@ -84,7 +87,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         </FilaIos>
       </GrupoIos>
 
-      {verPrivacidad && <Hoja titulo="Política de privacidad" alCerrar={() => setVerPrivacidad(false)}><TextoPrivacidad /><p class="peq secundario">{TEXTO_CONSENTIMIENTO_SALUD}</p></Hoja>}
+      {verPrivacidad && <Hoja titulo="Política de privacidad" alCerrar={() => setVerPrivacidad(false)} medio><TextoPrivacidad /><p class="peq secundario">{TEXTO_CONSENTIMIENTO_SALUD}</p></Hoja>}
       {exportado && <HojaExportar titulo="Tus datos" nombre={`mis-datos-fbe-${hoyISO()}.json`} contenido={exportado} tipo="application/json" alCerrar={() => setExportado(null)} />}
       {cambiarPass && <CambiarPassword alCerrar={() => setCambiarPass(false)} />}
     </div>

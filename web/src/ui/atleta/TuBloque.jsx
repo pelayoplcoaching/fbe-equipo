@@ -11,7 +11,7 @@ export function HojaBloque({ alCerrar, abrirSesion, atletaId = null, titulo = 'T
   const d = useCarga(() => api.tuBloque(id), [id]);
   const v = d.datos;
   return (
-    <Hoja titulo={v?.bloque ? `${titulo}: ${v.bloque.nombre}` : titulo} alCerrar={alCerrar} ancho={720}>
+    <Hoja titulo={v?.bloque ? `${titulo}: ${v.bloque.nombre}` : titulo} alCerrar={alCerrar} ancho={720} medio>
       <ErrorCaja error={d.error} reintentar={d.recargar} />
       {d.cargando && !v ? <Siluetas forma="filas" n={4} texto="Cargando tu bloque" /> : !v ? (
         <Vacio icono="semana" titulo="Tu bloque aún no está publicado">Cuando tu coach publique tu primera semana, aquí verás el bloque entero.</Vacio>

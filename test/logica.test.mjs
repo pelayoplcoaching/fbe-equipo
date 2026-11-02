@@ -1768,5 +1768,193 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const fila = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
   check(/foto que eliges para una tarjeta/.test(fila[1]) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice que la foto de la tarjeta no se sube (sin cambiar la versión de la política)');
 }
+// ---------- v0.52: movimiento, racha, destacados, gráficas, carné, confeti y respiración ----------
+{
+  const M = await import('../web/src/logica/muelle.js');
+  const AV = await import('../web/src/logica/actividad.js');
+  const R = await import('../web/src/logica/racha.js');
+  const D = await import('../web/src/logica/destacados.js');
+  const G = await import('../web/src/logica/rangos.js');
+  const CF = await import('../web/src/logica/confeti.js');
+  const RS = await import('../web/src/logica/respira.js');
+  const CA = await import('../web/src/logica/carnet.js');
+  const V = await import('../web/src/logica/vistas.js');
+  const fs = await import('node:fs');
+  const css = fs.readFileSync(new URL('../web/src/estilos.css', import.meta.url), 'utf8');
+  const cerca = (a, b, e = 0.5) => Math.abs(a - b) <= e;
+
+  console.log('\nv0.52: el muelle de las hojas');
+  const crit = M.muelle({ desde: 300, hasta: 0, velocidad: 0, rigidez: 400, amortiguacion: 1 });
+  const subA = M.muelle({ desde: 300, hasta: 0, velocidad: 0, rigidez: 400, amortiguacion: 0.7 });
+  const muestrasCrit = Array.from({ length: 120 }, (_, i) => crit.posicion(i / 60));
+  const muestrasSub = Array.from({ length: 120 }, (_, i) => subA.posicion(i / 60));
+  check(crit.posicion(0) === 300 && muestrasCrit.every((x) => x >= -1e-6) && muestrasCrit.every((x, i) => !i || x <= muestrasCrit[i - 1] + 1e-9) && cerca(crit.posicion(1.5), 0, 0.01),
+    'crítico (ζ = 1): baja sin pasarse nunca del tope y llega');
+  check(Math.min(...muestrasSub) < -1 && cerca(subA.posicion(2), 0, 0.05), 'subamortiguado (ζ < 1): se pasa un poco y vuelve');
+  const sobre = M.muelle({ desde: 300, hasta: 0, velocidad: 0, rigidez: 400, amortiguacion: 1.6 });
+  check(cerca(sobre.posicion(0), 300, 1e-6) && Array.from({ length: 200 }, (_, i) => sobre.posicion(i / 60)).every((x) => x >= -1e-6) && sobre.posicion(3) < 2, 'sobreamortiguado: llega despacio y sin pasarse');
+  const conV = M.muelle({ desde: 0, hasta: 0, velocidad: 1200, ...M.MUELLE });
+  check(conV.posicion(0.05) > 20 && cerca(conV.velocidad(0), 1200, 1e-6) && cerca(conV.posicion(1.5), 0, 0.5), 'con velocidad al soltar, sigue el impulso antes de volver (la velocidad inicial es la del dedo)');
+  const der = (f, t) => (f.posicion(t + 1e-4) - f.posicion(t - 1e-4)) / 2e-4;
+  check([0.03, 0.1, 0.3].every((t) => cerca(der(subA, t), subA.velocidad(t), 0.5) && cerca(der(crit, t), crit.velocidad(t), 0.5)), 'la velocidad es la derivada de la posición (sub y crítico)');
+  const fot = M.fotogramasMuelle({ desde: 500, hasta: 0, velocidad: 0, ...M.MUELLE });
+  check(fot.puntos[0] === 500 && fot.puntos[fot.puntos.length - 1] === 0 && fot.duracion > 200 && fot.duracion <= 1500 && Math.min(...fot.puntos) > -12, `fotogramas cada 1/60 s hasta asentarse (${fot.duracion} ms, se pasa como mucho ${Math.round(-Math.min(...fot.puntos))} px de 500)`);
+  check(M.MUELLE.amortiguacion < 1 && M.MUELLE.amortiguacion >= 0.8 && M.MUELLE_SUAVE.amortiguacion === 1, 'las constantes: al soltar, un poco subamortiguado (ζ 0,86); al abrir, crítico');
+  check(cerca(M.proyectar(100, 1000), 100 + 199, 1) && M.proyectar(100, 0) === 100 && M.proyectar(100, -1000) < 100, 'proyecta adónde iría con la deceleración de iOS (1000 px/s → ~199 px más)');
+  check(cerca(M.velocidadDe([{ y: 0, t: 0 }, { y: 10, t: 16 }, { y: 20, t: 32 }, { y: 30, t: 48 }]), 625, 1) && M.velocidadDe([]) === 0 && M.velocidadDe([{ y: 5, t: 10 }]) === 0
+    && cerca(M.velocidadDe([{ y: 0, t: 0 }, { y: 400, t: 300 }, { y: 410, t: 380 }, { y: 420, t: 400 }]), 200, 1), 'la velocidad al soltar: la pendiente de los últimos 100 ms (no la de todo el gesto)');
+  check(M.goma(0, 500) === 0 && M.goma(100, 500) < 100 && M.goma(100, 500) > 0 && M.goma(1e6, 500) < 500 && M.goma(200, 500) > M.goma(100, 500), 'la goma: por encima del tope se mueve menos que el dedo, cada vez menos, y nunca más que su tamaño');
+  check(M.arrastreVisible(120, 600) === 120 && M.arrastreVisible(-80, 600) > -80 && M.arrastreVisible(-80, 600) < 0, 'al arrastrar, 1:1 hacia abajo y con goma hacia arriba');
+  const topes = M.topesHoja({ alto: 700, pantalla: 844, medio: true });
+  check(topes.completa === 0 && topes.media === Math.round(700 - 844 * 0.55) && topes.cerrada === 724 && M.topesHoja({ alto: 400, pantalla: 844, medio: true }).media === undefined && M.topesHoja({ alto: 700, pantalla: 844 }).media === undefined,
+    'topes: completa, media (55 % de la pantalla, solo en las hojas largas que la piden) y cerrada');
+  const dh = (y, v, medio = true) => M.destinoHoja({ y, velocidad: v, alto: 700, pantalla: 844, medio }).tope;
+  check(dh(30, 0) === 'completa' && dh(200, 0) === 'media' && dh(600, 0) === 'cerrada' && dh(80, 1200) === 'media' && dh(260, 2600) === 'cerrada' && dh(250, -1500) === 'completa',
+    'al soltar, el tope más cercano a donde iría: un tirón hacia abajo baja a media (o cierra si es fuerte) y hacia arriba sube a completa');
+  check(dh(60, 0, false) === 'completa' && dh(300, 0, false) === 'cerrada' && dh(40, 900, false) === 'cerrada', 'sin tope medio: como antes, se cierra al pasar la mitad o con un gesto rápido hacia abajo');
+
+  console.log('\nv0.52: «Sesión en curso»');
+  const ahora = Date.parse('2026-11-04T10:00:00Z');
+  const ec = { id: 's1', nombre: 'Torso B', ejercicio: 'Press banca', siguiente: 'Serie 3 de 4: 60 kg × 6', hechas: 5, total: 18, t: ahora - 60000, descanso: { fin: ahora + 80000, total: 120, texto: 'serie 3 de Press banca' } };
+  const est = AV.estadoActividad(ec, ahora);
+  check(est.nombre === 'Torso B' && est.ejercicio === 'Press banca' && est.descanso.cuenta === '1:20' && cerca(est.descanso.frac, 80 / 120, 0.01) && !est.descanso.terminado, 'con series hechas: el nombre, el ejercicio y el descanso que queda (1:20 de 2:00)');
+  check(AV.estadoActividad({ ...ec, hechas: 0 }, ahora) === null && AV.estadoActividad({ ...ec, t: ahora - AV.VIGENCIA_EN_CURSO - 1 }, ahora) === null && AV.estadoActividad(null, ahora) === null && AV.estadoActividad({ nombre: 'x', t: ahora, hechas: 1 }, ahora) === null,
+    'sin series, de hace más de 4 horas o mal guardada: no hay píldora');
+  const fin = AV.estadoActividad({ ...ec, descanso: { ...ec.descanso, fin: ahora - 2000 } }, ahora);
+  check(fin.descanso.terminado && fin.descanso.cuenta === '¡Vamos!' && AV.estadoActividad({ ...ec, descanso: { ...ec.descanso, fin: ahora - 7000 } }, ahora).descanso === null, 'al acabar el descanso, «¡Vamos!» unos segundos y luego sin descanso');
+  check(AV.anuncioActividad({ descanso: null }, est) === 'Descanso en curso: 1:20.' && AV.anuncioActividad(est, AV.estadoActividad(ec, ahora + 1000)) === null && AV.anuncioActividad(est, fin) === 'Descanso terminado. Ahora: serie 3 de Press banca.',
+    'se anuncia al empezar y al acabar el descanso, nunca cada segundo');
+  check(AV.etiquetaActividad(est) === AV.etiquetaActividad(AV.estadoActividad(ec, ahora + 5000)) && !/\d:\d\d/.test(AV.etiquetaActividad(est)), 'el nombre de la píldora no cambia con cada segundo (sin la cuenta)');
+  check(!/peso|kcal|salud|rpe/i.test(JSON.stringify(Object.keys(est))), 'la píldora no lleva peso, salud ni nutrición');
+
+  console.log('\nv0.52: la racha y sus hitos');
+  check(R.HITOS_RACHA.join() === '4,8,12,26,52', 'hitos a las 4, 8, 12, 26 y 52 semanas');
+  const p3 = R.proximoHito(3), p5 = R.proximoHito(5), p52 = R.proximoHito(52), p0 = R.proximoHito(0);
+  check(p3.hito === 4 && p3.faltan === 1 && cerca(p3.frac, 0.75, 1e-9) && p5.hito === 8 && p5.anterior === 4 && cerca(p5.frac, 0.25, 1e-9) && p52.hito === 104 && p52.frac === 0 && p0.hito === 4 && p0.frac === 0,
+    'la próxima meta y la barra (del hito anterior al siguiente; pasadas las 52, de 52 en 52)');
+  check(R.hitoPorCelebrar(3, []) === null && R.hitoPorCelebrar(4, []) === 4 && R.hitoPorCelebrar(4, [4]) === null && R.hitoPorCelebrar(9, []) === 8 && R.hitoPorCelebrar(13, [4, 8]) === 12 && R.hitoPorCelebrar(13, [12]) === null,
+    'se celebra el hito más alto alcanzado, una sola vez (llegar a 9 de golpe celebra el de 8)');
+  check(R.marcarHitos(8, [4]).join() === '4,8' && R.marcarHitos(12, []).join() === '4,8,12' && R.marcarHitos(4, ['x', 99]).join() === '4', 'al celebrar uno, quedan vistos él y los de debajo (y nada raro de lo guardado)');
+  const semR = [{ fecha_inicio: '2026-10-05', total: 3, hechas: 3 }, { fecha_inicio: '2026-10-12', total: 3, hechas: 2 }, { fecha_inicio: '2026-10-19', total: 3, hechas: 3 }, { fecha_inicio: '2026-10-26', total: 2, hechas: 2 }, { fecha_inicio: '2026-10-26', total: 1, hechas: 1 }, { fecha_inicio: '2026-11-02', total: 3, hechas: 1 }];
+  const cal = R.calendarioRacha(semR, '2026-11-04', 6);
+  check(cal.length === 6 && cal.map((w) => w.estado).join() === 'sin_plan,completa,incompleta,completa,completa,en_curso' && cal[4].total === 3 && cal[5].actual && cal[0].lunes === '2026-09-28',
+    `el calendario: completas, sin completar, sin nada programado y la de ahora en curso (${cal.map((w) => w.estado).join(', ')})`);
+
+  console.log('\nv0.52: destacados de Progreso');
+  const hoyD = '2026-11-05'; // jueves
+  const dias = {};
+  for (const k of [1, 2, 3, 4]) { dias[`2026-10-${String(5 + 7 * (4 - k) - 0).padStart(2, '0')}`] = 4000; dias[`2026-10-${String(7 + 7 * (4 - k)).padStart(2, '0')}`] = 4000; }
+  dias['2026-11-02'] = 5000; dias['2026-11-04'] = 4200;
+  const td = D.destacados({ dias }, hoyD).find((x) => x.id === 'tonelaje');
+  check(td && /llevas un 15 % más de tonelaje/.test(td.texto) && td.grafica.valores.length === 5 && td.grafica.resaltado === 4, `tonelaje: esta semana frente a la media de las 4 anteriores hasta el mismo día («${td?.texto}»)`);
+  check(!D.destacados({ dias: { ...dias, '2026-11-04': 3000 } }, hoyD).some((x) => x.id === 'tonelaje') && !D.destacados({ dias: { '2026-11-02': 9000, '2026-10-26': 1000 } }, hoyD).some((x) => x.id === 'tonelaje'),
+    'tonelaje: no sale si sube menos de un 10 % ni sin 3 semanas con que comparar');
+  check(!D.destacados({ dias: { ...dias, '2026-11-04': 40000 } }, hoyD).some((x) => x.id === 'tonelaje'), 'tonelaje: tampoco si es más del triple (un dato raro, no una tendencia)');
+  const ejD = [
+    { id: 'pb', nombre: 'Press banca', puntos: [{ semana: '2026-09-28', valor: 70 }, { semana: '2026-10-05', valor: 71 }, { semana: '2026-10-19', valor: 72 }, { semana: '2026-11-02', valor: 73.2 }] },
+    { id: 'sq', nombre: 'Sentadilla', puntos: [{ semana: '2026-10-26', valor: 90 }, { semana: '2026-11-02', valor: 96 }] },
+  ];
+  const fd = D.destacados({ ejercicios: ejD }, hoyD).find((x) => x.id === 'fuerza');
+  check(fd && fd.texto === 'Tu press banca estimado ha subido 3 kg en 5 semanas.' && fd.ejercicioId === 'pb' && fd.grafica.valores.length === 4, `fuerza: el 1RM estimado de 6 semanas, en kilos redondeados a medio kilo («${fd?.texto}»)`);
+  check(!D.destacados({ ejercicios: [{ id: 'x', nombre: 'Remo', puntos: [{ semana: '2026-10-05', valor: 60 }, { semana: '2026-10-19', valor: 61 }, { semana: '2026-11-02', valor: 61.5 }] }] }, hoyD).some((x) => x.id === 'fuerza'),
+    'fuerza: con menos de 2,5 kg (o con solo dos semanas, como la sentadilla) no sale');
+  const calR = R.calendarioRacha(semR, '2026-11-04', 8);
+  check(D.destacados({ racha: 3, calendario: calR }, hoyD)[0]?.texto === 'Has entrenado 3 semanas seguidas completas.' && !D.destacados({ racha: 2, calendario: calR }, hoyD).length && D.destacados({ racha: 3, calendario: calR }, hoyD)[0].grafica.valores.length === 8,
+    'racha: desde 3 semanas completas seguidas, con las 8 últimas semanas pintadas');
+  const bl = (xs) => xs.map((h, i) => ({ numero: i + 1, hechas: h, total: 3 }));
+  const bd = D.destacados({ bloque: bl([2, 2, 3, 3, 3]) }, hoyD).find((x) => x.id === 'bloque');
+  check(bd && /mejor momento del bloque: el 100 %/.test(bd.texto) && !D.destacados({ bloque: bl([3, 3, 3, 3]) }, hoyD).length && !D.destacados({ bloque: bl([2, 3, 3]) }, hoyD).length && !D.destacados({ bloque: bl([3, 3, 2, 2, 3]) }, hoyD).length,
+    'constancia del bloque: solo si las 3 últimas semanas son lo mejor del bloque (≥ 90 %) y mejor que antes (todo al 100 % desde el principio no es «su mejor momento»)');
+  const rec = [{ ejercicio_id: 'pb', fecha: '2026-11-03' }, { ejercicio_id: 'sq', fecha: '2026-10-29' }, { ejercicio_id: 'pb', fecha: '2026-10-01' }];
+  const rd = D.destacados({ recientes: rec, nombres: { pb: 'Press banca', sq: 'Sentadilla' } }, hoyD).find((x) => x.id === 'records');
+  const rec3 = [...rec, { ejercicio_id: 'pb', fecha: '2026-11-04' }, { ejercicio_id: 'rm', fecha: '2026-11-04' }];
+  check(rd && rd.texto === 'Has batido récords en press banca y en sentadilla en las 2 últimas semanas.' && !D.destacados({ recientes: rec.slice(0, 1), nombres: {} }, hoyD).length
+    && !D.destacados({ recientes: [{ ejercicio_id: 'pb', fecha: '2026-11-03' }, { ejercicio_id: 'pb', fecha: '2026-11-04' }], nombres: {} }, hoyD).length
+    && D.destacados({ recientes: rec3, nombres: { pb: 'Press banca' } }, hoyD)[0].texto === 'Has batido récords en 3 ejercicios en las 2 últimas semanas.', `récords: en al menos 2 ejercicios en 14 días (batir dos veces el mismo es uno) («${rd?.texto}»)`);
+  const todos = D.destacados({ dias, ejercicios: ejD, racha: 3, calendario: calR, bloque: bl([2, 2, 3, 3, 3]), recientes: rec, nombres: { pb: 'Press banca', sq: 'Sentadilla' } }, hoyD);
+  check(todos.length === 4 && new Set(todos.map((x) => x.id)).size === 4 && D.destacados({}, hoyD).length === 0, `como mucho 4, los más fuertes primero (${todos.map((x) => x.id).join(', ')}); sin datos, ninguno`);
+  check(!/peso|kg de tendencia|kcal|salud|sueño/i.test(JSON.stringify(todos.map((x) => x.texto))), 'los destacados solo hablan de entrenamiento (nada de peso, salud ni nutrición)');
+  const tps = D.tonelajePorSemana(D.tonelajePorDia([{ fecha: '2026-11-02', kg: 50, reps: 10 }, { fecha: '2026-11-04', kg: 40, reps: 5 }, { fecha: '2026-10-28', kg: 100, reps: 3 }, { fecha: '2026-10-28', kg: 100, reps: 0 }]));
+  check(JSON.stringify(tps) === JSON.stringify([{ semana: '2026-10-26', valor: 300 }, { semana: '2026-11-02', valor: 700 }]), 'el tonelaje por semana (carga × repeticiones; las series sin repeticiones no cuentan)');
+
+  console.log('\nv0.52: gráficas con rango y cuentakilómetros');
+  const pts = [{ x: '2026-04-01', y: 1 }, { x: '2026-08-10', y: 2 }, { x: '2026-10-10', y: 3 }, { x: '2026-11-01', y: 4 }];
+  check(G.filtrarRango(pts, '1m', '2026-11-04').length === 2 && G.filtrarRango(pts, '3m', '2026-11-04').length === 3 && G.filtrarRango(pts, '6m', '2026-11-04').length === 3 && G.filtrarRango(pts, 'todo', '2026-11-04').length === 4,
+    '1M, 3M, 6M y Todo');
+  const sem = [{ semana: '2026-10-05', valor: 1 }, { semana: '2026-10-26', valor: 2 }];
+  check(G.filtrarRango(sem, '1m', '2026-11-04', { clave: 'semana', semanal: true }).length === 2 && G.RANGOS_GRAFICA.map(([, t]) => t).join() === '1M,3M,6M,Todo', 'por semanas, la semana empezada hace un mes cuenta entera');
+  check(G.rangoConDatos(pts, '1m', '2026-11-04') === '1m' && G.rangoConDatos([{ x: '2026-01-01', y: 1 }, { x: '2026-06-01', y: 2 }], '1m', '2026-11-04') === 'todo', 'si el rango preferido no tiene 2 puntos, el siguiente que los tenga');
+  const rem = G.remuestrear([[0, 0], [10, 10], [20, 0]], 5);
+  check(rem.length === 5 && JSON.stringify(rem) === JSON.stringify([[0, 0], [5, 5], [10, 10], [15, 5], [20, 0]]) && G.remuestrear([[3, 7]], 3).every(([x, y]) => x === 3 && y === 7) && G.remuestrear([], 4).length === 0,
+    'remuestrear una línea a n puntos repartidos por igual (interpolando)');
+  const a = G.remuestrear([[0, 10], [100, 10]], 4), b = G.remuestrear([[0, 0], [50, 40], [100, 20]], 4);
+  const m0 = G.mezclarPuntos(a, b, 0), m1 = G.mezclarPuntos(a, b, 1), mm = G.mezclarPuntos(a, b, 0.5);
+  check(JSON.stringify(m0) === JSON.stringify(a) && JSON.stringify(m1) === JSON.stringify(b) && cerca(mm[1][1], (a[1][1] + b[1][1]) / 2, 1e-9), 'la mezcla de dos trazos: de uno al otro sin saltos');
+  check(G.trazo([[0, 1], [2.25, 3]]) === 'M0.0 1.0 L2.3 3.0' && G.area([[0, 1], [2, 3]], 10) === 'M0.0 1.0 L2.0 3.0 L2.0 10 L0.0 10Z' && G.salidaSuave(0) === 0 && G.salidaSuave(1) === 1 && G.salidaSuave(0.5) > 0.5, 'el trazo, el área y la curva de salida');
+  check(G.seleccionValida(5, 6) === 5 && G.seleccionValida(6, 6) === null && G.seleccionValida(11, 4) === null && G.seleccionValida(null, 4) === null && G.seleccionValida(-1, 4) === null && G.seleccionValida(0, 0) === null,
+    'el punto elegido de una gráfica solo vale si existe (elegido el último y pasando a un rango con menos puntos, ninguno)');
+  const c1 = G.columnasCifra('82,5'), c2 = G.columnasCifra('102,5');
+  check(c1.map((x) => x.digito ?? x.c).join('|') === '8|2|,|5' && c1[3].clave === 1 && c2[4].clave === 1 && c2.find((x) => x.clave === 3).digito === 2 && c1.find((x) => x.clave === 3).digito === 2,
+    'el cuentakilómetros alinea las cifras por la derecha (las unidades con las unidades); la coma no rueda');
+
+  console.log('\nv0.52: carné, confeti y respiración');
+  const dc = CA.datosCarnet({ atleta: { id: 'a1', nombre: 'Ana López', nivel: 'intermedio', fecha_alta: '2026-03-16', peso: 63, objetivo: 'bajar 3 kg' }, bloque: { numero: 2, nombre: 'Fuerza base' } });
+  check(dc.nombre === 'Ana López' && dc.nivel === 'Intermedio' && dc.bloque === 'Bloque 2: Fuerza base' && dc.desde === 'marzo de 2026' && /^FBE·\d{6}$/.test(dc.numero) && CA.numeroCarnet('a1') === dc.numero && CA.numeroCarnet('a2') !== dc.numero,
+    'el carné: nombre, nivel, bloque, desde cuándo y un número estable');
+  check(Object.keys(dc).every((k) => CA.CAMPOS_CARNET.includes(k)) && !/63|bajar|kg/.test(JSON.stringify(dc)), 'y nada más: ni peso, ni objetivo, ni salud ni nutrición');
+  const img = CA.datosImagenCarnet(CA.datosCarnet({ atleta: { id: 'a1', nombre: 'Ana López', nivel: 'intermedio', fecha_alta: '2026-03-16' }, bloque: { numero: 3, nombre: 'Rehabilitación de hombro' } }));
+  check(!('bloque' in img) && !/Rehabilitaci|hombro/.test(JSON.stringify(img)) && img.nombre === 'Ana López' && img.desde === 'marzo de 2026' && Object.keys(img).join() === CA.CAMPOS_IMAGEN.join(),
+    'la imagen para compartir no lleva el bloque (su nombre lo escribe el coach y podría decir algo de salud)');
+  check(CA.fmtDesde('x') === null && CA.datosCarnet({ atleta: {} }).nombre === 'Atleta FBE' && CA.datosCarnet({ atleta: {} }).desde === null, 'sin datos, lo que se sabe');
+  const inc = CA.inclinacion({ x: 0, y: 0, w: 200, h: 100 }), inc2 = CA.inclinacion({ x: 100, y: 50, w: 200, h: 100 });
+  check(inc.rx === 8 && inc.ry === -8 && inc2.rx === 0 && inc2.ry === 0 && inc2.bx === 50 && CA.inclinacion({ x: 999, y: -5, w: 200, h: 100 }).ry === 8, 'la inclinación con el dedo: ±8° como mucho, y el brillo donde está el dedo');
+  check(CA.inclinacionMovil(45, 0).rx === 0 && CA.inclinacionMovil(90, 60).ry === 8 && CA.inclinacionMovil(90, 60).rx === -8, 'con el móvil: respecto a como se tenía, y con tope');
+  check(CF.cuantasParticulas({ nucleos: 8, memoria: 8, ancho: 390 }) === 140 && CF.cuantasParticulas({ nucleos: 4, memoria: 2, ancho: 360 }) < 70 && CF.cuantasParticulas({ nucleos: 2, memoria: 1, ancho: 320 }) >= CF.CONFETI.minimo && CF.escalaLienzo(3) === 2 && CF.escalaLienzo(0) === 1,
+    'el confeti: menos partículas en móviles modestos y el lienzo a 2× como mucho');
+  const ps = CF.crearParticulas(40, { ancho: 390, alto: 844, colores: ['#a', '#b'], semilla: 3 });
+  const y0 = ps.map((q) => q.y);
+  for (let i = 0; i < 90; i++) CF.moverParticulas(ps, 1 / 60);
+  check(ps.length === 40 && ps.every((q) => Number.isFinite(q.x) && Number.isFinite(q.y)) && ps.filter((q, i) => q.y > y0[i]).length > 30 && ps.some((q) => q.x < 195) && ps.some((q) => q.x > 195), 'salen en abanico, las frena el aire y caen con la gravedad');
+  const rapido = CF.crearParticulas(1, { ancho: 390, alto: 844, colores: ['#a'] });
+  const yA = rapido[0].y; CF.moverParticulas(rapido, 5);
+  check(Math.abs(rapido[0].y - yA) < 100 && CF.opacidadConfeti(0) === 1 && CF.opacidadConfeti(CF.CONFETI.duracion) === 0 && CF.CONFETI.duracion === 2500, 'un salto de tiempo enorme (el móvil se congela) no las dispara; se desvanece y acaba a los 2,5 s');
+  const r0 = RS.faseRespira(0), r2 = RS.faseRespira(2), r4 = RS.faseRespira(4), r7 = RS.faseRespira(7), r10 = RS.faseRespira(10);
+  check(r0.fase === 'inspira' && r0.escala === RS.ESCALA_RESPIRA.min && r2.fase === 'inspira' && cerca(r2.escala, (RS.ESCALA_RESPIRA.min + 1) / 2, 0.01) && r4.fase === 'suelta' && r4.escala === 1 && r7.fase === 'suelta' && r10.fase === 'inspira' && r10.ciclo === 1,
+    'respirar: 4 s inspirando (el círculo crece) y 6 s soltando (encoge), contados desde que empieza el descanso');
+  check(RS.retrasoRespira(13) === -3 && RS.retrasoRespira(0) === -0 && RS.CICLO_RESPIRA === 10 && RS.faseRespira(4).texto === 'Suelta' && RS.faseRespira(1).texto === 'Inspira', 'el retraso de la animación la acompasa con la cuenta atrás');
+  check(V.paresValidos([{ nombre: 'vt-avatar', desde: {}, hasta: '.x' }, { nombre: 'vt-avatar', desde: {}, hasta: '.y' }, { nombre: 'otro', desde: {}, hasta: '.z' }, { nombre: 'vt-ej-picto', desde: null, hasta: '.w' }]).length === 1,
+    'elemento compartido: un nombre nunca va en dos elementos (el segundo se descarta), y solo los nombres previstos');
+  check(V.seVe({ top: 10, left: 0, bottom: 50, right: 100, width: 100, height: 40 }, 390, 844) && !V.seVe({ top: 900, left: 0, bottom: 950, right: 100, width: 100, height: 50 }, 390, 844) && !V.seVe(null, 1, 1), 'solo se transforma si el origen se ve en la pantalla');
+
+  console.log('\nv0.52: preferencias del móvil sin almacenamiento');
+  const PR = await import('../web/src/ui/preferencias.js');
+  const lsPrevio = globalThis.localStorage;
+  globalThis.localStorage = { getItem() { throw new Error('bloqueado'); }, setItem() { throw new Error('lleno'); } };
+  PR.guardarPreferencia('fbe-hitos-racha-x', [4]);
+  const sinAlm = PR.leerPreferencia('fbe-hitos-racha-x', []);
+  check(JSON.stringify(sinAlm) === '[4]' && R.hitoPorCelebrar(4, sinAlm) === null && JSON.stringify(PR.leerPreferencia('otra', 'de serie')) === '"de serie"',
+    'si el navegador no deja guardar, lo guardado (un hito celebrado) se recuerda mientras la app está abierta: no se repite');
+  const guardado = {};
+  globalThis.localStorage = { getItem: (k) => (k in guardado ? guardado[k] : null), setItem: (k, v) => { guardado[k] = v; } };
+  PR.guardarPreferencia('fbe-pista-x', true);
+  check(guardado['fbe-pista-x'] === 'true' && PR.leerPreferencia('fbe-pista-x', false) === true, 'con almacenamiento, en el almacenamiento');
+  if (lsPrevio === undefined) delete globalThis.localStorage; else globalThis.localStorage = lsPrevio;
+
+  console.log('\nv0.52: CSS, ajustes y privacidad');
+  check(/@supports \(animation-timeline: scroll\(\)\)/.test(css) && /animation-timeline: (scroll|view)\(/.test(css) && /prefers-reduced-motion: no-preference\) \{\s*@supports \(animation-timeline: scroll\(\)\)|@supports \(animation-timeline: scroll\(\)\) \{\s*@media \(prefers-reduced-motion: no-preference\)/.test(css),
+    'las animaciones con el scroll van dentro de @supports y solo sin «reducir movimiento»');
+  const bloque52 = css.slice(css.indexOf('v0.52: diez mejoras'));
+  const keyframes52 = [...bloque52.matchAll(/@keyframes ([\w-]+) \{([^@]*?)\}\s*\}/g)];
+  check(keyframes52.length >= 5 && keyframes52.every(([, , cuerpo]) => !/(^|[\s{;])(width|height|top|left|right|bottom|margin|padding)\s*:/.test(cuerpo)), `las animaciones nuevas solo mueven transform, translate, scale u opacity (${keyframes52.length} keyframes)`);
+  const deTexto = ['hito-sube', 'racha-cifra', 'encurso-entra', 'destacado-entra'];
+  check(deTexto.every((k) => keyframes52.some(([, n, cuerpo]) => n === k && !/opacity/.test(cuerpo))), 'las entradas de lo que lleva texto (el hito, la cifra de la racha, la píldora, los destacados) solo se mueven: sin opacidad (axe podría medirlas a medias)');
+  const aj = await import('../web/src/ui/ajustes.js');
+  check(aj.AJUSTES_DEFECTO.respira === false && aj.normalizarAjustes({ respira: 'si' }).respira === false && aj.normalizarAjustes({ respira: true }).respira === true, '«Respira» va apagado de entrada y se guarda en el móvil');
+  const legal = await import('../web/src/legal.js');
+  const filaL = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
+  check(/kilos y las repeticiones que te propone/.test(filaL[1]) && /al cerrar la sesión/.test(filaL[1]), '«Lo que se queda en tu móvil» dice exactamente lo que guarda la píldora (también los kilos propuestos) y que se borra al cerrar la sesión');
+  check(!/(^|\n|\}|,)\s*\.destacado\s*[{,:]/.test(bloque52) && /\.destacados-lista > \.destacado \{/.test(bloque52), 'las tarjetas de destacados solo dentro de su lista (el diario ya usa «.destacado» para sus vídeos)');
+  check(/Respira/.test(filaL[1]) && /hitos de la racha/.test(filaL[1]) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice «Respira» y los hitos ya celebrados (sin cambiar la versión de la política)');
+}
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

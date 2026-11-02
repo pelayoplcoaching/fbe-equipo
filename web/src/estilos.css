@@ -3215,3 +3215,277 @@ body:has(.portada-sesion)::before { background: transparent !important; backdrop
 .ee-ejercicios .picto { width: 1.75rem; height: 1.75rem; border-radius: 8px; background: var(--hoja); }
 .ee-record { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--morado-suave); color: var(--tinta); font-size: var(--tipo-nota); font-weight: 650; margin: 0; }
 .ee-record svg { width: 18px; height: 18px; color: var(--morado); flex: none; }
+
+/* =====================================================================================================================
+   v0.52: diez mejoras de diseño y movimiento (hojas con muelle, elemento compartido, «Sesión en curso», la racha,
+   destacados, gráficas con rango, el carné, confeti, «Respira» y animaciones con el scroll). Con los tokens de siempre:
+   claro, oscuro, negro puro y los seis acentos; el texto en rem. Todo lo que se mueve, con transform u opacity (nunca
+   la opacidad de un texto) y quieto con «reducir movimiento».
+   ===================================================================================================================== */
+
+/* ---------- 1. Hojas con muelle: el tope medio y el velo al soltar ---------- */
+.hoja-dialogo.en-medio { max-height: var(--alto-medio, 55dvh); }
+/* (revisión: el diálogo recibe el foco si no tiene otro control que «Cerrar»; su contorno, por dentro) */
+.hoja-dialogo:focus { outline: none; }
+.hoja-dialogo:focus-visible { outline: 2px solid var(--foco); outline-offset: -3px; }
+.velo.soltando { transition: background-color .3s ease-out; }
+
+/* ---------- 2. Elemento compartido (View Transitions): la pareja se transforma; lo demás, como siempre ---------- */
+::view-transition-group(vt-titulo-sesion), ::view-transition-group(vt-avatar), ::view-transition-group(vt-ej-nombre), ::view-transition-group(vt-ej-picto) {
+  animation-duration: 380ms; animation-timing-function: cubic-bezier(.2, .9, .25, 1);
+}
+::view-transition-old(vt-titulo-sesion), ::view-transition-new(vt-titulo-sesion), ::view-transition-old(vt-ej-nombre), ::view-transition-new(vt-ej-nombre),
+::view-transition-old(vt-avatar), ::view-transition-new(vt-avatar), ::view-transition-old(vt-ej-picto), ::view-transition-new(vt-ej-picto) { animation-duration: 380ms; }
+:root[data-vt="morph"]::view-transition-old(root) { animation: vt-funde-fuera 200ms ease-out both; }
+:root[data-vt="morph"]::view-transition-new(root) { animation: vt-funde-dentro 220ms ease-out both; }
+:root[data-vt="morph"] .hoja-dialogo, :root[data-vt="morph"] .velo { animation: none; }
+@keyframes vt-funde-fuera { to { opacity: 0; } }
+@keyframes vt-funde-dentro { from { opacity: 0; } }
+
+/* ---------- 3. «Sesión en curso»: la píldora de arriba (como la Dynamic Island) ----------
+   La cabecera y la franja de arriba dejan su hueco: la píldora nunca tapa sus botones. */
+:root { --alto-actividad: 58px; }
+.app.con-actividad { padding-top: var(--alto-actividad); }
+.app.con-actividad .cabecera { top: calc(env(safe-area-inset-top, 0px) + var(--alto-actividad)); }
+body:has(.app.con-actividad)::before { height: calc(env(safe-area-inset-top, 0px) + var(--alto-actividad)); }
+.encurso { position: fixed; z-index: 25; top: calc(env(safe-area-inset-top, 0px) + 7px); left: 50%; width: min(26rem, calc(100vw - 32px)); transform: translateX(-50%); display: grid; justify-items: center; }
+.encurso-pildora, .encurso-tarjeta {
+  background: color-mix(in srgb, var(--flota) 88%, transparent); color: var(--sobre-flota);
+  backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 0 0 1px var(--borde-flota), 0 12px 30px -14px rgba(0, 0, 0, .6);
+}
+.encurso-pildora { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; max-width: 100%; padding: 4px 16px 4px 8px; border: 0; border-radius: 999px; font: inherit; text-align: left; -webkit-touch-callout: none; user-select: none; }
+.encurso-pildora:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
+.encurso-anillo { width: 30px; height: 30px; flex: none; }
+.encurso-anillo .carril { fill: none; stroke: currentColor; stroke-opacity: .22; stroke-width: 3; }
+.encurso-anillo .arco { fill: none; stroke: var(--ok); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset .5s linear; }
+.encurso-punto { width: 10px; height: 10px; margin: 0 6px 0 4px; border-radius: 50%; background: var(--ok); flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 30%, transparent); }
+.encurso-texto { display: grid; min-width: 0; line-height: 1.2; }
+.encurso-nombre { font-size: 0.875rem; font-weight: 760; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.encurso-ej { font-size: 0.75rem; color: color-mix(in srgb, var(--sobre-flota) 82%, var(--flota)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.encurso-cuenta { margin-left: 4px; font-size: 1.125rem; font-stretch: var(--ancho-marcador); font-weight: var(--cifra-peso); font-variant-numeric: tabular-nums; flex: none; }
+.encurso-cuenta.fin { color: var(--ok); }
+.encurso-tarjeta { width: 100%; margin-top: 8px; padding: 14px 16px 16px; border-radius: 22px; display: grid; gap: 10px; transform-origin: 50% 0; }
+.encurso-tarjeta .t-sobre { color: color-mix(in srgb, var(--sobre-flota) 82%, var(--flota)); }
+.encurso-tarjeta-nombre { font-size: var(--tipo-titular); font-weight: 780; font-stretch: var(--ancho-titulo); line-height: 1.2; overflow-wrap: anywhere; }
+.encurso-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin: 0; }
+.encurso-datos dt { font-size: 0.75rem; color: color-mix(in srgb, var(--sobre-flota) 82%, var(--flota)); }
+.encurso-datos dd { margin: 2px 0 0; font-size: 0.9375rem; font-weight: 650; overflow-wrap: anywhere; }
+.encurso-acciones { display: grid; }
+.encurso-acciones .btn { min-height: 48px; }
+.encurso-tarjeta :focus-visible { outline-color: var(--sobre-flota); }
+@media (prefers-reduced-motion: no-preference) {
+  .encurso-pildora { animation: encurso-entra .45s cubic-bezier(.2, 1.2, .35, 1) both; }
+  .encurso-tarjeta { animation: encurso-abre .3s cubic-bezier(.2, 1.1, .35, 1) both; }
+  .encurso-punto { animation: encurso-late 1.6s ease-in-out infinite; }
+}
+@keyframes encurso-entra { from { transform: translateY(-10px) scale(.86); } }
+@keyframes encurso-abre { from { transform: translateY(-6px) scale(.94); } }
+@keyframes encurso-late { 50% { transform: scale(.7); } }
+@media (prefers-reduced-motion: reduce) { .encurso-anillo .arco { transition: none; } }
+
+/* ---------- 4. La racha: su pantalla (como la de Duolingo) y los hitos ---------- */
+.racha-boton { border: 0; background: none; padding: 0; min-height: 44px; font: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
+.racha.racha-boton { font-size: 0.875rem; font-weight: 650; }
+.racha-boton .racha-chevron { width: 16px; height: 16px; opacity: .8; }
+.racha-cero { color: var(--tinta-2); font-size: 0.875rem; text-decoration: underline; text-underline-offset: 3px; }
+.hero-dia .racha-cero { color: var(--sobre-hero-2); }
+.hero-dia .racha-boton:focus-visible { outline-color: #fff; }
+.racha-pantalla, .hito-pantalla {
+  position: fixed; inset: 0; z-index: 45; overflow-y: auto; overscroll-behavior: contain; color: #F6F2FF;
+  background: radial-gradient(120% 60% at 50% -10%, rgba(255, 120, 50, .3) 0%, rgba(255, 120, 50, .06) 45%, transparent 70%), #140F24;
+}
+.racha-pantalla:focus, .hito-pantalla:focus { outline: none; }
+.racha-cerrar { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 10px); right: max(12px, env(safe-area-inset-right, 0px)); color: #F6F2FF; }
+.racha-cerrar:hover { background: rgba(255, 255, 255, .1); }
+.racha-pantalla :focus-visible, .hito-pantalla :focus-visible { outline-color: #fff; }
+.racha-cuerpo, .hito-cuerpo { max-width: 30rem; margin: 0 auto; display: grid; justify-items: center; text-align: center; gap: 12px;
+  padding: calc(env(safe-area-inset-top, 0px) + 56px) max(20px, env(safe-area-inset-right, 0px)) calc(28px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); }
+.racha-fuego { width: 8.5rem; height: 10.5rem; }
+.llama { width: 100%; height: 100%; overflow: visible; display: block; }
+.llama-brasa { fill: rgba(255, 140, 60, .28); }
+.llama-capa { transform-box: fill-box; transform-origin: 50% 100%; }
+.racha-fuego.apagada .llama { filter: grayscale(1); opacity: .5; }
+.racha-cifra { font-size: clamp(5rem, 26vw, 7.5rem); line-height: .86; color: #FFFFFF; margin-top: -6px; }
+.racha-pantalla h2 { font-size: var(--tipo-titulo-s); line-height: var(--tipo-titulo-s-lh); font-stretch: var(--ancho-titulo); font-weight: 800; letter-spacing: var(--tipo-titulo-s-tr); }
+.racha-sub { color: #CFC8EA; font-size: var(--tipo-nota); line-height: var(--tipo-nota-lh); max-width: 26rem; }
+.racha-bloque { width: 100%; display: grid; gap: 10px; margin-top: 10px; padding: 16px; border-radius: var(--r); background: rgba(255, 255, 255, .06); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.racha-bloque h3 { font-size: var(--tipo-titular); line-height: var(--tipo-titular-lh); font-weight: 760; text-align: left; }
+.racha-calendario { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px 6px; }
+.racha-semana { display: grid; justify-items: center; gap: 4px; min-width: 0; }
+.racha-marca { width: min(2.5rem, 100%); aspect-ratio: 1; border-radius: 12px; display: grid; place-items: center; font-size: 0.75rem; font-weight: 760; }
+/* (revisión: a 360 px o con «Muy grande», 4 semanas por fila: las fechas no se pisan) */
+@media (max-width: 380px) { .racha-calendario { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+:root[data-letra="grande"] .racha-calendario, :root[data-letra="muy-grande"] .racha-calendario { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.racha-marca svg { width: 20px; height: 20px; }
+.racha-semana.completa .racha-marca { background: linear-gradient(160deg, #FFB547, #FF5A1F); color: #2A0E00; }
+.racha-semana.incompleta .racha-marca { border: 2px solid #8F88B0; color: #CFC8EA; }
+.racha-semana.en_curso .racha-marca { border: 2px dashed #FFB547; color: #FFE3A8; }
+.racha-semana.sin_plan .racha-marca { background: rgba(255, 255, 255, .07); color: #ABA4C9; }
+.racha-fecha { font-size: 0.6875rem; color: #CFC8EA; white-space: nowrap; }
+.racha-leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; font-size: 0.75rem; color: #CFC8EA; }
+.racha-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.racha-leyenda i { width: 12px; height: 12px; border-radius: 4px; }
+.racha-leyenda i.completa { background: #FF8A3D; }
+.racha-leyenda i.incompleta { border: 2px solid #8F88B0; }
+.racha-leyenda i.sin_plan { background: rgba(255, 255, 255, .16); }
+.racha-meta { text-align: left; }
+.racha-barra { height: 12px; border-radius: 6px; background: rgba(255, 255, 255, .14); overflow: hidden; }
+.racha-barra span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #FF5A1F, #FFB547); transform-origin: 0 50%; transition: transform .9s cubic-bezier(.2, .8, .2, 1); }
+.racha-seguir, .hito-seguir { width: 100%; margin-top: 12px; min-height: 54px; background: #F6F2FF; color: #140F24; border-color: #F6F2FF; font-weight: 780; }
+.racha-seguir:hover, .hito-seguir:hover { background: #FFFFFF; }
+.hito-pantalla { display: grid; align-items: center; background: radial-gradient(90% 55% at 50% 30%, rgba(255, 130, 50, .42) 0%, rgba(255, 90, 31, .08) 55%, transparent 75%), #140F24; }
+.hito-fuego { position: relative; width: 11rem; height: 13.5rem; }
+.hito-num { position: absolute; left: 0; right: 0; top: 60%; text-align: center; font-size: 2.75rem; color: #3A1300; line-height: 1; }
+.hito-sobre { color: #FFD08A; margin-top: 4px; }
+.hito-pantalla h2 { color: #FFFFFF; }
+.hito-texto { color: #E4DEF7; font-size: 1.0625rem; max-width: 22rem; }
+@media (prefers-reduced-motion: no-preference) {
+  .llama-exterior { animation: llama-a 1.9s ease-in-out infinite alternate; }
+  .llama-media { animation: llama-b 1.3s ease-in-out infinite alternate; }
+  .llama-interior { animation: llama-c .9s ease-in-out infinite alternate; }
+  .llama-brasa { animation: llama-brasa 1.6s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 50%; }
+  .racha-cifra { animation: racha-cifra .7s cubic-bezier(.2, 1.3, .35, 1) .1s both; }
+  .hito-fuego { animation: hito-fuego .9s cubic-bezier(.2, 1.35, .35, 1) both; }
+  .hito-cuerpo > :not(.hito-fuego) { animation: hito-sube .55s cubic-bezier(.2, .8, .2, 1) .25s both; }
+}
+@keyframes llama-a { 0% { transform: scale(1, 1) skewX(0deg); } 50% { transform: scale(.97, 1.04) skewX(-2deg); } 100% { transform: scale(1.02, .97) skewX(1.5deg); } }
+@keyframes llama-b { 0% { transform: scale(1, .97) skewX(1deg); } 100% { transform: scale(.96, 1.05) skewX(-2.5deg); } }
+@keyframes llama-c { 0% { transform: scale(.95, 1.02); } 100% { transform: scale(1.04, .94) skewX(2deg); } }
+@keyframes llama-brasa { from { transform: scale(.9, 1); } to { transform: scale(1.08, 1); } }
+@keyframes racha-cifra { from { transform: translateY(18px) scale(.8); } }
+@keyframes hito-fuego { from { transform: scale(.4) rotate(-8deg); } }
+@keyframes hito-sube { from { transform: translateY(16px); } }
+@media (prefers-reduced-motion: reduce) { .racha-barra span { transition: none; } }
+
+/* ---------- 5. Destacados de Progreso (como los de Apple Salud) ---------- */
+.destacados-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+/* (revisión: solo dentro de su lista; el diario ya usa «.destacado» para sus vídeos destacados) */
+.destacados-lista > .destacado { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-content: start; padding: 14px 16px; }
+.destacado-sobre { display: flex; align-items: center; gap: 6px; font-size: var(--tipo-sobre); letter-spacing: var(--tipo-sobre-tr); text-transform: uppercase; font-weight: 760; color: var(--morado); }
+.destacado-sobre svg { width: 16px; height: 16px; }
+.destacado-texto { font-size: 1.0625rem; line-height: 1.32; font-weight: 680; letter-spacing: -0.005em; text-wrap: pretty; }
+.destacado-ir { justify-self: start; margin-top: -4px; }
+.destacado-ir svg { width: 16px; height: 16px; }
+.mini-grafica { width: 8.25rem; height: 2.5rem; overflow: visible; display: block; margin-top: 2px; }
+.mini-grafica polyline { fill: none; stroke: var(--morado); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.mini-grafica circle { fill: var(--morado); stroke: var(--hoja); stroke-width: 2; }
+.mini-grafica rect { fill: color-mix(in srgb, var(--tinta-3) 38%, var(--hoja)); }
+.mini-grafica rect.resaltada { fill: var(--morado); }
+.mini-grafica.pips { display: inline-flex; align-items: center; gap: 4px; width: auto; }
+.mini-grafica.pips i { width: 0.8125rem; height: 0.8125rem; border-radius: 4px; }
+.mini-grafica.pips .pip-lleno { background: var(--morado); }
+.mini-grafica.pips .pip-vacio { border: 1.5px solid var(--tinta-3); }
+.mini-grafica.pips .pip-nada { background: var(--linea); }
+@media (min-width: 560px) { .destacados-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: no-preference) {
+  .destacados-lista > .destacado { animation: destacado-entra .5s cubic-bezier(.2, .8, .2, 1) calc(var(--i, 0) * 70ms) both; }
+}
+@keyframes destacado-entra { from { transform: translateY(12px); } }
+
+/* ---------- 6. Gráficas con rango (1M · 3M · 6M · Todo), la línea que se transforma y el cuentakilómetros ---------- */
+.seg-rango { justify-self: start; min-width: min(17rem, 100%); }
+.seg-rango button { min-height: 44px; }
+.grafica .punto, .grafica .pesada { transition: opacity .25s ease-out; }
+.grafica.morfando .punto, .grafica.morfando .pesada { opacity: 0; transition: none; }
+.cambio-rango { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; margin-top: -4px; }
+.cambio-rango .odometro { color: var(--tinta); font-weight: 700; }
+.odometro { display: inline-flex; align-items: baseline; }
+.odo-cifras { display: inline-flex; }
+.odo-col { display: inline-block; height: 1.08em; line-height: 1.08; overflow: hidden; vertical-align: bottom; }
+.odo-tira { display: flex; flex-direction: column; transition: transform .7s cubic-bezier(.2, .8, .2, 1); }
+.odo-tira > span, .odo-c { display: block; height: 1.08em; line-height: 1.08; }
+.odo-c { display: inline-block; white-space: pre; }
+.cifra .odometro.v { line-height: 1.08; }
+@media (prefers-reduced-motion: reduce) { .odo-tira, .grafica .punto, .grafica .pesada { transition: none; } }
+
+/* ---------- 7. El carné de atleta (como una tarjeta de Apple Wallet) ----------
+   Siempre oscuro (como la tarjeta del día), con el acento en el degradado; el brillo holográfico y la inclinación se
+   mueven con transform (las variables las pone el dedo o el móvil). */
+.carnet-escena { perspective: 900px; display: grid; }
+.carnet {
+  position: relative; isolation: isolate; margin: 0; width: 100%; min-width: 0; max-width: 26rem; justify-self: center; aspect-ratio: 1.586;
+  border-radius: 20px; color: #F3F1FB; padding: 18px 20px; display: grid; grid-template-rows: auto 1fr; gap: 12px; touch-action: pan-y;
+  background: linear-gradient(135deg, #1A1633 0%, color-mix(in srgb, var(--morado) 30%, #1A1633) 100%);
+  box-shadow: 0 26px 40px -22px rgba(20, 14, 50, .65), inset 0 0 0 1px rgba(255, 255, 255, .1);
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .6s cubic-bezier(.2, .8, .2, 1);
+}
+.carnet.inclinando { transition: transform .08s linear; }
+.carnet-fondo { position: absolute; inset: 0; z-index: -1; border-radius: inherit; overflow: hidden; }
+.carnet-lineas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.carnet-lineas circle { fill: none; stroke: rgba(231, 227, 255, .12); stroke-width: 1.2; }
+.carnet-brillo { position: absolute; inset: -50%; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(115deg, transparent 38%, rgba(120, 220, 255, .14) 45%, rgba(255, 170, 240, .2) 50%, rgba(255, 230, 140, .14) 55%, transparent 62%);
+  transform: translate(var(--bx, 0%), var(--by, 0%)); transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
+.carnet.inclinando .carnet-brillo { transition: transform .08s linear; }
+.carnet-cab { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.carnet-cab img { width: 36px; height: 36px; border-radius: 9px; flex: none; }
+.carnet-marca { font-weight: 800; font-stretch: var(--ancho-expandido); font-size: 1rem; letter-spacing: .01em; }
+.carnet-numero { margin-left: auto; font-size: 0.8125rem; font-stretch: var(--ancho-marcador); font-weight: 650; color: #D7D2EE; }
+.carnet-cuerpo { align-self: end; display: grid; gap: 4px; min-width: 0; text-shadow: 0 1px 8px rgba(10, 8, 24, .45); }
+.carnet-etq { font-size: 0.6875rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 760; color: #D7D2EE; }
+.carnet-nombre { font-size: 1.5rem; line-height: 1.1; font-weight: 820; font-stretch: var(--ancho-expandido); letter-spacing: -0.015em; overflow-wrap: anywhere; }
+.carnet-datos { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0 0; }
+.carnet-datos dt { font-size: 0.6875rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 720; color: #D7D2EE; }
+.carnet-datos dd { margin: 1px 0 0; font-size: 0.875rem; font-weight: 650; overflow-wrap: anywhere; }
+.carnet-compartir { justify-self: center; }
+@media (prefers-reduced-motion: reduce) { .carnet, .carnet-brillo { transition: none; transform: none; } }
+
+/* ---------- 8. Confeti: un lienzo encima de todo, que no recibe toques ---------- */
+.confeti-lienzo { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 60; }
+
+/* ---------- 9. «Respira» en el descanso ---------- */
+.temporizador .respira-boton { display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; font-size: 0.875rem; margin-top: -4px; }
+.temporizador .respira-boton svg { width: 18px; height: 18px; }
+.temporizador .respira-boton[aria-pressed="true"] { background: color-mix(in srgb, var(--sobre-flota) 16%, transparent); border-color: var(--sobre-flota); }
+.respira-circulo { position: absolute; inset: 13%; border-radius: 50%; pointer-events: none; transform: scale(.62);
+  background: radial-gradient(circle, color-mix(in srgb, var(--c-disco, var(--morado)) 36%, transparent) 0%, color-mix(in srgb, var(--c-disco, var(--morado)) 14%, transparent) 70%, transparent 72%);
+  animation: respira 10s infinite both; }
+.respira-texto { font-size: 0.9375rem; font-weight: 720; letter-spacing: .04em; color: color-mix(in srgb, var(--sobre-flota) 90%, var(--flota)); }
+@keyframes respira { 0% { transform: scale(.62); animation-timing-function: ease-in-out; } 40% { transform: scale(1); animation-timing-function: ease-in-out; } 100% { transform: scale(.62); } }
+@media (prefers-reduced-motion: reduce) { .respira-circulo { display: none; } }
+
+/* ---------- 10. Con el scroll: la portada se recoge en la barra y los dibujos se mueven más despacio ----------
+   Solo donde el navegador tiene animaciones ligadas al scroll y sin «reducir movimiento»; si no, todo quieto y la
+   barra de la portada se va con ella (como antes). */
+.portada-barra { position: relative; z-index: 6; display: flex; align-items: center; gap: 10px; color: #fff;
+  height: calc(58px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));
+  margin: -12px calc(-1 * max(16px, env(safe-area-inset-right, 0px))) calc(-58px - env(safe-area-inset-top, 0px)) calc(-1 * max(16px, env(safe-area-inset-left, 0px))); }
+.portada-barra::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; background: color-mix(in srgb, var(--hero) 92%, transparent);
+  backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6); box-shadow: 0 1px 0 rgba(255, 255, 255, .08); }
+.portada-barra .btn-icono { width: 44px; height: 44px; border-radius: 50%; border: 0; color: #fff; flex: none; background: rgba(20, 16, 40, .5);
+  backdrop-filter: blur(12px) saturate(1.6); -webkit-backdrop-filter: blur(12px) saturate(1.6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18); }
+.portada-barra .btn-icono:hover { background: rgba(20, 16, 40, .7); }
+.portada-barra :focus-visible { outline-color: #fff; }
+.portada-barra-titulo { flex: 1; min-width: 0; overflow: hidden; }
+.portada-barra-titulo > span { display: block; transform: translateY(120%); color: var(--sobre-hero); font-weight: 780; font-stretch: var(--ancho-titulo); font-size: 1.0625rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* (la barra no ocupa sitio en la rejilla: su fila queda a 0; la portada sube lo que la separa, 12 px de margen y 20 de hueco) */
+.portada-sesion { margin-top: -32px; padding-top: calc(66px + env(safe-area-inset-top, 0px)); grid-template-rows: 1fr auto; }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  .portada-barra .btn-icono, .portada-barra::before, .encurso-pildora, .encurso-tarjeta { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .portada-barra .btn-icono { background: #241D46 !important; }
+  .portada-barra::before { background: var(--hero) !important; }
+  .encurso-pildora, .encurso-tarjeta { background: var(--flota) !important; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .portada-barra .btn-icono { background: #241D46; }
+  .portada-barra::before { background: var(--hero); }
+  .encurso-pildora, .encurso-tarjeta { background: var(--flota); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .portada-barra { position: sticky; top: 0; }
+    .portada-barra::before { animation: barra-aparece linear both; animation-timeline: scroll(root); animation-range: 130px 210px; }
+    .portada-barra-titulo > span { animation: barra-titulo linear both; animation-timeline: scroll(root); animation-range: 170px 240px; }
+    .portada-arte { animation: portada-arte 1.2s cubic-bezier(.2, .8, .2, 1) both, portada-paralaje linear both; animation-timeline: auto, scroll(root); animation-range: normal, 0 380px; }
+    .portada-texto { transform-origin: 0 100%; animation: portada-sube .45s cubic-bezier(.2, .8, .2, 1) both, portada-recoge linear both; animation-timeline: auto, scroll(root); animation-range: normal, 0 260px; }
+    .hero-dia::before { animation: hero-paralaje linear both; animation-timeline: view(); animation-range: exit; }
+    .hero-dia .hero-ilu { animation: ilu-entra .6s cubic-bezier(.2, .8, .2, 1) .05s both, hero-paralaje-ilu linear both; animation-timeline: auto, view(); animation-range: normal, exit; }
+  }
+}
+@keyframes barra-aparece { from { opacity: 0; } to { opacity: 1; } }
+@keyframes barra-titulo { from { transform: translateY(120%); } to { transform: none; } }
+@keyframes portada-paralaje { to { translate: 0 30%; } }
+@keyframes portada-recoge { to { translate: 0 -16px; scale: .9; } }
+@keyframes hero-paralaje { to { translate: 0 70px; } }
+@keyframes hero-paralaje-ilu { to { translate: 0 28px; } }

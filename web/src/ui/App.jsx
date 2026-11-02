@@ -1,4 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
+import { borrarTodoEnCurso } from './en-curso.js';
 import { Ctx, Cargando, Icono } from './comunes.jsx';
 import { Acceso, Vincular, NuevaPassword, SegundoPaso } from './Acceso.jsx';
 import { AtletaApp } from './atleta/AtletaApp.jsx';
@@ -149,7 +150,7 @@ export function App({ backend, api, cola }) {
     // Tras cambiar la foto o el nombre: el perfil nuevo, sin recargar toda la cuenta
     fijarPerfil: (p) => setEstado((e) => ({ ...e, perfil: p })),
     // Al cerrar sesión, este móvil deja de recibir las notificaciones de esa cuenta
-    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); await backend.auth.salir(); resolver(true); },
+    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); await backend.auth.salir(); resolver(true); },
     reiniciarDemo: () => { backend.reiniciar?.(); ultimoUid.current = undefined; resolver(true); },
     // Modo atleta del coach (v0.37)
     propioCoach: estado.fase === 'coach' ? estado.propio || null : null,

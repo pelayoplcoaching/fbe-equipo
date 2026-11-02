@@ -15,7 +15,7 @@ const C = {
   fondo: '#13111C', disco: '#221D3F', discoBorde: '#2E2757', tinta: '#EDEBF7', tinta2: '#ADA8C4', tinta3: '#7D7996',
   morado: '#A08CFF', linea: '#2F2B43', rojo: '#F0495C', azul: '#5B8FF2', amarillo: '#F2C230', verde: '#3DC27B',
 };
-const FUENTE = '"Archivo Variable", "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif';
+export const FUENTE = '"Archivo Variable", "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif';
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
@@ -275,7 +275,8 @@ function dibujarPlantilla({ x, d, plantilla, foto, lobo, letra, cortar, lineas, 
 
 // Hoja con la vista previa y los botones para compartir o guardar la imagen. plantillas (v0.51, al compartir una
 // sesión): elegir entre «Cifras», «Mínima» y «Con tu foto» (la foto se elige del móvil y no sale de él).
-export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión', nota = null, alt = null, plantillas = false }) {
+// v0.52: dibujar (opcional) pinta otra imagen con el mismo flujo de compartir y guardar (el carné de atleta)
+export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión', nota = null, alt = null, plantillas = false, dibujar = null, nombreArchivo = null }) {
   const { aviso } = useApp();
   const [img, setImg] = useState(null);
   const [error, setError] = useState(null);
@@ -289,7 +290,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
   useEffect(() => {
     let vivo = true;
     const conFoto = plantilla === 'foto' ? foto?.img || null : null;
-    dibujarTarjeta(datos, { plantilla: plantilla === 'foto' && !conFoto ? 'minima' : plantilla, foto: conFoto }).then((blob) => {
+    (dibujar || dibujarTarjeta)(datos, { plantilla: plantilla === 'foto' && !conFoto ? 'minima' : plantilla, foto: conFoto }).then((blob) => {
       if (!vivo) return;
       const url = URL.createObjectURL(blob);
       setImg((previa) => { if (previa?.url) URL.revokeObjectURL(previa.url); return { blob, url, clave, plantilla, conFoto: !!conFoto, pintada: plantilla === 'foto' && !conFoto ? 'minima' : plantilla }; });
@@ -316,7 +317,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
     im.onerror = () => { URL.revokeObjectURL(url); if (montada.current) aviso('No se ha podido abrir esa imagen. Prueba con otra.', 'error'); };
     im.src = url;
   };
-  const nombre = `fbe-${datos.fecha}-${datos.nombre.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.png`;
+  const nombre = nombreArchivo || `fbe-${datos.fecha}-${datos.nombre.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.png`;
   const archivo = img && (() => { try { return new File([img.blob], nombre, { type: 'image/png' }); } catch { return null; } })();
   const puedeCompartir = !!(archivo && navigator.canShare?.({ files: [archivo] }));
   const texto = plantillas && img

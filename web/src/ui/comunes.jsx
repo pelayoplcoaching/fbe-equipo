@@ -7,6 +7,10 @@ import { LOBO } from './marca-lobo.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { Ilustracion } from './Ilustraciones.jsx';
 import { fmtCorta, aISO, diasEntre, hoyISO } from '../logica/fechas.js';
+import { FRACCION_MEDIA, fotogramasMuelle, MUELLE, arrastreVisible, velocidadDe, destinoHoja } from '../logica/muelle.js';
+import { remuestrear, mezclarPuntos, trazo as trazoDe, area as areaDe, salidaSuave, columnasCifra, seleccionValida } from '../logica/rangos.js';
+import { sinMovimiento } from './transiciones.js';
+import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 
 export const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
@@ -388,10 +392,20 @@ export class Capa extends Component {
   render() { return null; }
 }
 
-export function Hoja({ titulo, alCerrar: alCerrarProp, children, ancho }) {
+// v0.52: con física de muelle (como Apple Maps o Things 3). En el móvil, arrastrar desde el asa o el título sigue al dedo
+// 1:1 (por encima de la hoja completa, con goma); al soltar se proyecta adónde iría con su velocidad y se va al tope
+// más cercano (completa, media o cerrada) con un muelle (logica/muelle.js) que corre como animación de la Web Animations
+// API (solo transform, por el compositor). medio: las hojas largas abren en el tope medio (~55 % de la pantalla, con su
+// contenido desplazable dentro) y se suben a completa. Escape, el foco atrapado y su vuelta al cerrar, como siempre.
+const leerY = (el) => { try { return new DOMMatrixReadOnly(getComputedStyle(el).transform).m42 || 0; } catch { return 0; } };
+// v0.52 (revisión): la hoja va dentro de su capa (no al revés): así, cuando corren sus efectos, el diálogo ya existe y
+// el foco entra en él al abrirse (desde la v0.50, con la capa por fuera, se quedaba en el botón que la abría)
+export function Hoja(props) { return <Capa><HojaDentro {...props} /></Capa>; }
+function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = false, clase = '' }) {
   const ref = useRef(null);
   useAtraparFoco(ref);
   const arrastre = useRef(null);
+  const animacion = useRef(null);
   // Siempre la versión actual de alCerrar (puede cambiar mientras está abierta: «no cerrar mientras sube el vídeo»)
   const cerrarRef = useRef(alCerrarProp);
   cerrarRef.current = alCerrarProp;
@@ -408,8 +422,9 @@ export function Hoja({ titulo, alCerrar: alCerrarProp, children, ancho }) {
       alCerrar();
     };
     document.addEventListener('keydown', tecla);
+    // El primer control (que no sea «Cerrar»); si no hay otro, el propio diálogo (tabIndex −1)
     const foco = ref.current?.querySelector('input, select, textarea, button:not(.cerrar-hoja)');
-    foco?.focus({ preventScroll: true });
+    (foco || ref.current)?.focus({ preventScroll: true });
     // La página de detrás no se desplaza mientras haya alguna hoja abierta (se cuentan, por si hay una encima de otra)
     const cuerpo = document.body;
     cuerpo.dataset.hojas = String(Number(cuerpo.dataset.hojas || 0) + 1);
@@ -423,44 +438,85 @@ export function Hoja({ titulo, alCerrar: alCerrarProp, children, ancho }) {
     };
   }, []);
 
-  // En el móvil, la hoja se cierra arrastrándola hacia abajo desde el asa o el título (como en iOS)
+  // v0.52: las hojas largas abren en el tope medio (en el móvil): su alto, el 55 % de la pantalla, con el contenido
+  // desplazable dentro; arrastrando el asa se suben a completa
+  const movil = () => !window.matchMedia('(min-width: 700px)').matches;
+  // (el tope medio se pone en cuanto el elemento existe, antes de pintarse y antes de los efectos)
+  const medioRef = useRef(medio);
+  const ponerRef = useCallback((hoja) => {
+    ref.current = hoja;
+    if (!hoja || hoja.dataset.muelle) return;
+    hoja.dataset.muelle = '1';
+    hoja.style.setProperty('--alto-medio', `${Math.round(window.innerHeight * FRACCION_MEDIA)}px`);
+    if (medioRef.current && movil()) hoja.classList.add('en-medio');
+  }, []);
+  useLayoutEffect(() => () => { try { animacion.current?.cancel(); } catch { /* */ } animacion.current = null; }, []);
+  // Lleva la hoja de «desde» a su tope con el muelle (la velocidad, la del dedo). Al acabar, deja el estado en reposo:
+  // completa (sin transform), media (con su alto medio, sin transform) o cerrada (se cierra).
+  const asentar = (hoja, desde, destino, velocidad) => {
+    const velo = hoja.parentElement;
+    const fin = () => {
+      animacion.current = null;
+      if (destino.tope === 'cerrada') { alCerrar(); return; }
+      hoja.style.transform = '';
+      if (destino.tope === 'media') hoja.classList.add('en-medio');
+      velo.classList.remove('soltando');
+    };
+    velo.classList.add('soltando');
+    if (destino.tope === 'cerrada') velo.classList.add('cerrando'); else velo.style.removeProperty('--velo');
+    if (sinMovimiento()) { fin(); return; }
+    const { puntos, duracion } = fotogramasMuelle({ desde, hasta: destino.y, velocidad, ...MUELLE });
+    hoja.style.transform = `translateY(${destino.y}px)`;
+    try {
+      const anim = hoja.animate(puntos.map((y) => ({ transform: `translateY(${y.toFixed(2)}px)` })), { duration: Math.max(16, duracion), easing: 'linear' });
+      animacion.current = anim;
+      anim.onfinish = () => { if (animacion.current === anim) fin(); };
+    } catch { fin(); }
+  };
   const alBajar = (e) => {
-    if (window.matchMedia('(min-width: 700px)').matches || e.button > 0) return;
+    if (!movil() || e.button > 0) return;
     if (e.target.closest('button, a, input, select, textarea')) return;
-    arrastre.current = { y0: e.clientY, t: performance.now(), yAnt: e.clientY, tAnt: performance.now(), dy: 0 };
+    const hoja = ref.current;
+    // Si se coge a medio camino (aún asentándose), se sigue desde donde está
+    let y = leerY(hoja);
+    try { animacion.current?.cancel(); } catch { /* */ }
+    animacion.current = null;
+    // Desde el tope medio, la hoja pasa a su alto completo (una sola vez, al empezar) desplazada lo mismo: no se mueve
+    if (hoja.classList.contains('en-medio')) {
+      const antes = hoja.getBoundingClientRect().top;
+      hoja.classList.remove('en-medio');
+      hoja.style.transform = '';
+      y = antes - hoja.getBoundingClientRect().top;
+    }
+    hoja.style.transform = y ? `translateY(${y}px)` : '';
+    const t = performance.now();
+    arrastre.current = { y0: e.clientY, base: y, y, alto: hoja.offsetHeight, muestras: [{ y, t }] };
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* */ }
-    ref.current.style.transition = 'none';
   };
   const alMover = (e) => {
     const a = arrastre.current;
     if (!a) return;
-    a.yAnt = a.y; a.tAnt = a.t; a.y = e.clientY; a.t = performance.now();
-    a.dy = Math.max(0, e.clientY - a.y0);
-    ref.current.style.transform = a.dy ? `translateY(${a.dy}px)` : '';
-    ref.current.parentElement.style.setProperty('--velo', String(Math.max(0, 1 - a.dy / 500)));
+    a.y = a.base + (e.clientY - a.y0);
+    a.muestras.push({ y: a.y, t: performance.now() });
+    if (a.muestras.length > 12) a.muestras.shift();
+    const visible = arrastreVisible(a.y, a.alto);
+    ref.current.style.transform = visible ? `translateY(${visible}px)` : '';
+    ref.current.parentElement.style.setProperty('--velo', String(Math.max(0, 1 - Math.max(0, visible) / Math.max(320, a.alto))));
   };
   const alSoltar = () => {
     const a = arrastre.current;
     arrastre.current = null;
     const hoja = ref.current;
     if (!a || !hoja) return;
-    const velocidad = a.y != null && a.t > a.tAnt ? (a.y - a.yAnt) / (a.t - a.tAnt) : 0; // px/ms al soltar
-    if (a.dy > Math.min(140, hoja.offsetHeight * 0.3) || (velocidad > 0.6 && a.dy > 20)) {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { alCerrar(); return; }
-      hoja.style.transition = 'transform .18s ease-in';
-      hoja.style.transform = `translateY(${hoja.offsetHeight + 40}px)`;
-      hoja.parentElement.classList.add('cerrando');
-      setTimeout(alCerrar, 170);
-    } else {
-      hoja.style.transition = 'transform .24s cubic-bezier(.2, .9, .3, 1.15)';
-      hoja.style.transform = '';
-      hoja.parentElement.style.removeProperty('--velo');
-    }
+    // (al soltar tras una pausa, la velocidad es la de ese momento: casi nada)
+    a.muestras.push({ y: a.y, t: performance.now() });
+    const velocidad = velocidadDe(a.muestras);
+    const desde = arrastreVisible(a.y, a.alto);
+    asentar(hoja, desde, destinoHoja({ y: desde, velocidad, alto: a.alto, pantalla: window.innerHeight, medio }), velocidad);
   };
   return (
-    <Capa>
     <div class="velo" onClick={(e) => { if (e.target === e.currentTarget) alCerrar(); }}>
-      <div class="hoja-dialogo" role="dialog" aria-modal="true" aria-label={titulo} ref={ref} style={ancho ? { width: `min(${ancho}px, 100%)` } : undefined}>
+      <div class={`hoja-dialogo${clase ? ` ${clase}` : ''}`} role="dialog" aria-modal="true" aria-label={titulo} ref={ponerRef} tabIndex={-1} style={ancho ? { width: `min(${ancho}px, 100%)` } : undefined}>
         <div class="hoja-cab" onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar}>
           <div class="asa" aria-hidden="true" />
           <div class="separa">
@@ -471,7 +527,6 @@ export function Hoja({ titulo, alCerrar: alCerrarProp, children, ancho }) {
         {children}
       </div>
     </div>
-    </Capa>
   );
 }
 
@@ -611,6 +666,9 @@ function useRaspado(n, xs) {
   const tocando = useRef(false);
   const caja = useRef(null);
   useEffect(() => { if (sel != null && sel >= n) setSel(null); }, [n]);
+  // v0.52 (revisión): si la gráfica cambia a menos puntos (otro rango) con un punto elegido, en este mismo pintado ese
+  // punto ya no existe: se ignora aquí (el efecto de arriba lo quita después), nunca se lee fuera de los datos
+  const selOk = seleccionValida(sel, n);
   const desde = (e) => {
     const svg = caja.current?.querySelector('svg');
     if (!svg) return;
@@ -626,7 +684,7 @@ function useRaspado(n, xs) {
     onPointerCancel: () => { tocando.current = false; },
     onPointerLeave: (e) => { if (e.pointerType === 'mouse' && !tocando.current) setSel(null); },
     onKeyDown: (e) => {
-      const actual = sel ?? n - 1;
+      const actual = selOk ?? n - 1;
       const sig = { ArrowLeft: actual - 1, ArrowDown: actual - 1, ArrowRight: actual + 1, ArrowUp: actual + 1, Home: 0, End: n - 1 }[e.key];
       if (sig == null) return;
       e.preventDefault();
@@ -634,7 +692,7 @@ function useRaspado(n, xs) {
     },
     onBlur: () => { if (!tocando.current) setSel(null); },
   };
-  return { sel, eventos, caja };
+  return { sel: selOk, eventos, caja };
 }
 
 // La caja de una gráfica: el deslizador accesible, la etiqueta flotante del punto elegido y el resumen en texto
@@ -658,10 +716,67 @@ function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, chi
   );
 }
 
+// v0.52: al cambiar de rango (o de ejercicio), la línea pasa de la forma vieja a la nueva (como en Revolut o Robinhood):
+// los dos trazos, remuestreados a los mismos puntos, se mezclan durante ~0,5 s cambiando el atributo «d» (sin volver a
+// pintar el componente). Los puntos se esconden mientras tanto. Con «reducir movimiento», el cambio es inmediato.
+// clave: lo que, al cambiar, transforma la línea (sin clave, nunca). pts: [[x, y]] en píxeles; base: el suelo del área.
+const MUESTRAS_MORPH = 64, DURACION_MORPH = 520;
+function useMorph(clave, pts, base) {
+  const linea = useRef(null), relleno = useRef(null);
+  const finales = useRef({});
+  const previo = useRef(null);
+  const firma = pts.map(([x, y]) => `${Math.round(x)},${Math.round(y)}`).join(';');
+  const raf = useRef(0);
+  const ultimaClave = useRef(clave);
+  useLayoutEffect(() => {
+    const nuevo = remuestrear(pts, MUESTRAS_MORPH);
+    const desde = previo.current;
+    const cambia = clave !== undefined && ultimaClave.current !== clave;
+    previo.current = nuevo;
+    ultimaClave.current = clave;
+    if (!cambia || !desde?.length || !nuevo.length || !linea.current || sinMovimiento()) return;
+    cancelAnimationFrame(raf.current);
+    const t0 = performance.now();
+    const svg = linea.current.ownerSVGElement;
+    svg?.classList.add('morfando');
+    const pintar = (m) => { linea.current?.setAttribute('d', trazoDe(m)); relleno.current?.setAttribute('d', areaDe(m, base)); };
+    pintar(desde);
+    const paso = (ahora) => {
+      const k = salidaSuave((ahora - t0) / DURACION_MORPH);
+      if (k < 1) { pintar(mezclarPuntos(desde, nuevo, k)); raf.current = requestAnimationFrame(paso); return; }
+      // Al acabar, el trazo de verdad (con sus esquinas en cada punto), el del último pintado
+      if (finales.current.linea) linea.current?.setAttribute('d', finales.current.linea);
+      if (finales.current.area) relleno.current?.setAttribute('d', finales.current.area);
+      svg?.classList.remove('morfando');
+    };
+    raf.current = requestAnimationFrame(paso);
+  }, [clave, firma]);
+  useEffect(() => () => cancelAnimationFrame(raf.current), []);
+  return { linea, relleno, finales };
+}
+
+// v0.52: una cifra que rueda como un cuentakilómetros al cambiar (cada dígito en su columna, que se desliza; solo
+// transform). Para los lectores de pantalla, el texto tal cual; con «reducir movimiento», sin rodar.
+export function Odometro({ texto, clase = '' }) {
+  const t = String(texto ?? '');
+  return (
+    <span class={`odometro ${clase}`}>
+      <span class="sr">{t}</span>
+      <span class="odo-cifras" aria-hidden="true">
+        {columnasCifra(t).map((c) => (c.digito == null
+          ? <span key={`c${c.clave}`} class="odo-c">{c.c}</span>
+          : <span key={`d${c.clave}`} class="odo-col"><span class="odo-tira" style={{ transform: `translateY(${-c.digito * 10}%)` }}>{DIGITOS.map((d) => <span key={d}>{d}</span>)}</span></span>))}
+      </span>
+    </span>
+  );
+}
+const DIGITOS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
 // puntos: [{x: 'YYYY-MM-DD', y: número}]
 // rangoMin: el eje y abarca como poco esto (para que 2000 → 2080 kcal no parezca una montaña)
 // records: marca los puntos que superan a todos los anteriores (1RM estimado, tonelaje…)
-export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null, records = false }) {
+// clave (v0.52): al cambiar, la línea se transforma en la nueva
+export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null, records = false, clave }) {
   const [W, ref] = useAncho();
   const id = useId();
   const n = puntos?.length || 0;
@@ -671,9 +786,11 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
   const Y = (v) => arr + (1 - (v - lo) / (hi - lo)) * (H - arr - abj);
   const xs = (puntos || []).map((_, i) => X(i));
   const raspado = useRaspado(n, xs);
+  const morph = useMorph(clave, (puntos || []).map((p, i) => [X(i), Y(p.y)]), H - abj);
   if (!n) return null;
   const d = puntos.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(' ');
   const area = `${d} L${X(n - 1).toFixed(1)} ${H - abj} L${X(0).toFixed(1)} ${H - abj}Z`;
+  morph.finales.current = { linea: d, area };
   const etiquetasX = n <= 2 ? puntos.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
   const ultimo = puntos[n - 1];
   const prs = records ? indicesRecord(puntos.map((p) => p.y)) : [];
@@ -693,8 +810,8 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
             <text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(t, 1)}</text>
           </g>
         ))}
-        <path class="area-deg" d={area} fill={`url(#deg-${id})`} />
-        <path class="linea" d={d} />
+        <path class="area-deg" ref={morph.relleno} d={area} fill={`url(#deg-${id})`} />
+        <path class="linea" ref={morph.linea} d={d} />
         {sel != null && <line class="guia" x1={X(sel)} x2={X(sel)} y1={arr - 6} y2={H - abj} />}
         {puntos.map((p, i) => <circle key={i} class={`punto ${i === n - 1 ? 'ultimo' : ''} ${prs.includes(i) ? 'record' : ''} ${i === sel ? 'elegido' : ''}`} cx={X(i)} cy={Y(p.y)} r={i === sel ? 5.5 : prs.includes(i) ? 4.5 : i === n - 1 ? 4.5 : 3} />)}
         {sel == null && <text class="valor" x={Math.min(X(n - 1), W - der)} y={Y(ultimo.y) - 10} text-anchor="end">{conU(ultimo.y)}</text>}
@@ -707,7 +824,7 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
 }
 
 // Peso: cada pesada como un punto y la tendencia como línea, con el eje x en días reales
-export function GraficaPeso({ serie, alto = 170, etiqueta }) {
+export function GraficaPeso({ serie, alto = 170, etiqueta, clave }) {
   const [W, ref] = useAncho();
   const id = useId();
   const n = serie?.length || 0;
@@ -722,9 +839,11 @@ export function GraficaPeso({ serie, alto = 170, etiqueta }) {
   const Y = (v) => arr + (1 - (v - lo) / (hi - lo)) * (H - arr - abj);
   const xs = (serie || []).map((p) => X(p.fecha));
   const raspado = useRaspado(n, xs);
+  const morph = useMorph(clave, (serie || []).map((p) => [X(p.fecha), Y(p.tendencia)]), H - abj);
   if (!n) return null;
   const linea = serie.map((p, i) => `${i ? 'L' : 'M'}${X(p.fecha).toFixed(1)} ${Y(p.tendencia).toFixed(1)}`).join(' ');
   const area = `${linea} L${X(dN).toFixed(1)} ${H - abj} L${X(d0).toFixed(1)} ${H - abj}Z`;
+  morph.finales.current = { linea, area };
   const paso = hi - lo > 6 ? 1 : 0.5;
   const ticks = [...new Set([lo + (hi - lo) * 0.2, lo + (hi - lo) * 0.8].map((t) => Math.round(t / paso) * paso))];
   const ult = serie[n - 1];
@@ -739,9 +858,9 @@ export function GraficaPeso({ serie, alto = 170, etiqueta }) {
         {ticks.map((t) => (
           <g key={t}><line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" /><text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(t, 1)}</text></g>
         ))}
-        <path class="area-deg" d={area} fill={`url(#deg-${id})`} />
+        <path class="area-deg" ref={morph.relleno} d={area} fill={`url(#deg-${id})`} />
         {serie.map((p) => <circle key={p.fecha} class="pesada" cx={X(p.fecha)} cy={Y(p.kg)} r="2.6" />)}
-        <path class="linea" d={linea} />
+        <path class="linea" ref={morph.linea} d={linea} />
         {sel != null && <line class="guia" x1={xs[sel]} x2={xs[sel]} y1={arr - 6} y2={H - abj} />}
         {sel != null && <circle class="punto elegido" cx={xs[sel]} cy={Y(serie[sel].tendencia)} r="5.5" />}
         <circle class="punto ultimo" cx={X(ult.fecha)} cy={Y(ult.tendencia)} r="4.5" />
@@ -867,8 +986,8 @@ export function Insignia({ n, etiqueta }) {
 
 // Guarda una preferencia del dispositivo (no datos: solo comodidades) sin romper si no hay almacenamiento
 export function usePreferencia(clave, inicial) {
-  const [v, setV] = useState(() => { try { const x = localStorage.getItem(clave); return x == null ? inicial : JSON.parse(x); } catch { return inicial; } });
-  const fijar = (nuevo) => { setV(nuevo); try { localStorage.setItem(clave, JSON.stringify(nuevo)); } catch { /* */ } };
+  const [v, setV] = useState(() => leerPreferencia(clave, inicial));
+  const fijar = (nuevo) => { setV(nuevo); guardarPreferencia(clave, nuevo); };
   return [v, fijar];
 }
 

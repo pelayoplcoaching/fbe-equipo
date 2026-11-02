@@ -4,12 +4,13 @@
 // v0.49: color de acento, negro puro (OLED) en el tema oscuro y la vibración al tocar (marcar una serie, un récord,
 // enviar el check-in), aparte de la del descanso.
 // v0.50: el tamaño de la letra (Normal, Grande o Muy grande), que cambia el tamaño de la raíz (todo va en rem).
+// v0.52: «Respira» en el descanso (un círculo que acompasa la respiración), apagado de entrada.
 import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
 
 const CLAVE = 'fbe-ajustes';
 // voz (v0.48): el entrenador por voz, apagado de entrada
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
-  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal' };
+  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -33,6 +34,7 @@ export function normalizarAjustes(guardado = {}) {
   if (typeof a.acento !== 'string' || !/^[a-z]{1,20}$/.test(a.acento)) a.acento = AJUSTES_DEFECTO.acento;
   a.oled = a.oled === true;
   if (!LETRAS.includes(a.letra)) a.letra = AJUSTES_DEFECTO.letra;
+  a.respira = a.respira === true;
   return a;
 }
 export function leerAjustes() {

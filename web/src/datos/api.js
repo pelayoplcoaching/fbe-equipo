@@ -1,6 +1,7 @@
 // Funciones de la app sobre cualquier backend (Supabase o demo). Toda la lógica vive aquí, una sola vez.
 import { hoyISO, lunesDe, sumarDias, aISO, rangoSemana, diasEntre, fechaMadrid } from '../logica/fechas.js';
 import { semanasCompletas, resumenPautas } from '../logica/diseno.js';
+import { tonelajePorDia } from '../logica/destacados.js';
 import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjercicio, seriesACsv, mejoresMarcas, vitrina, racha, mapaCalor, cargaSemanal, cambioCarga, eventosRecord, resumenSemanal, num, tendenciaPeso, ritmoPeso, limpiarDetalle, agregadosDetalle } from '../logica/calculos.js';
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
@@ -997,7 +998,9 @@ export function crearApi(backend) {
       // (v0.49: el calendario de Progreso sale de sesionesHechas; aquí solo hace falta la cuenta de días)
       const diasEntrenados = mapaCalor(dias, hoy).flatMap((w) => w.dias).filter((d) => d.nivel > 0).length;
       // v0.50: también cuántas semanas completas lleva en total (la cabecera de su perfil)
-      return { racha: racha(lista, hoy), diasEntrenados, semanasCompletas: semanasCompletas(lista.map((w) => ({ ...w, fecha_inicio: w.fecha_inicio ? lunesDe(w.fecha_inicio) : null })), hoy) };
+      // v0.52: y cada semana (lunes, programadas y hechas), para el calendario de la pantalla de la racha
+      return { racha: racha(lista, hoy), diasEntrenados, semanasCompletas: semanasCompletas(lista.map((w) => ({ ...w, fecha_inicio: w.fecha_inicio ? lunesDe(w.fecha_inicio) : null })), hoy),
+        semanas: lista.filter((w) => w.fecha_inicio && w.total).map((w) => ({ fecha_inicio: lunesDe(w.fecha_inicio), total: w.total, hechas: w.hechas })) };
     },
     // Cardio hecho por semana (minutos, km y sesiones) en las últimas n semanas, para la gráfica de Progreso
     async cardioSemanas(atletaId, n = 8, hoy = hoyISO()) {
@@ -1288,7 +1291,8 @@ export function crearApi(backend) {
       }).filter((e) => e.puntos.length).sort((a, c) => c.series - a.series);
       const lunes = lunesDe(hoyISO());
       return {
-        pesos, checkins, ejercicios, medidas, vitrina: vitrina(series), volumenObjetivo: ficha?.volumen_objetivo || null,
+        // v0.52: los kilos movidos de cada día (para la gráfica del tonelaje y los destacados), del mismo historial
+        pesos, checkins, ejercicios, medidas, vitrina: vitrina(series), volumenObjetivo: ficha?.volumen_objetivo || null, tonelaje: tonelajePorDia(series),
         volumen: { estaSemana: seriesPorGrupo(series, lunes), anterior: seriesPorGrupo(series, sumarDias(lunes, -7)) },
       };
     },

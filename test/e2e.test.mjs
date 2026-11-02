@@ -3126,6 +3126,425 @@ try {
   const man = JSON.parse(await (await fetch('http://localhost:4174/manifest.webmanifest')).text());
   check(man.shortcuts?.length === 4 && man.shortcuts[0].url.includes('accion=sesion') && man.share_target?.action === './compartir-video' && man.share_target.params.files[0].accept.includes('video/*'),
     'el manifiesto trae los accesos directos (sesión de hoy, check-in, mensajes, revisar) y recibe vídeos compartidos');
+
+  // ------------------------------------------------------------------------------------------------------------------
+  {
+  console.log('\nv0.52: hojas con muelle, elemento compartido, «Sesión en curso», racha, destacados, gráficas, carné, confeti y «Respira»');
+  // Espía de View Transitions: qué nombres hay puestos justo después del cambio (la pareja, y una sola vez cada nombre)
+  const hayVT = await p.evaluate(() => typeof document.startViewTransition === 'function');
+  const espiarVT = () => p.evaluate(() => {
+    window.__vt = [];
+    if (window.__vtEspia || !document.startViewTransition) return;
+    window.__vtEspia = true;
+    const orig = document.startViewTransition.bind(document);
+    document.startViewTransition = (cb) => {
+      const t = orig(cb);
+      t.updateCallbackDone.then(() => { window.__vt.push([...document.querySelectorAll('[style*="view-transition-name"]')].map((e) => `${e.style.viewTransitionName}:${e.tagName}`).filter((x) => !x.startsWith(':'))); }).catch(() => {});
+      return t;
+    };
+  });
+  const nombresVT = async () => { await p.waitForFunction(() => !document.documentElement.dataset.vt, null, { timeout: 4000 }).catch(() => {}); return p.evaluate(() => (window.__vt || []).flat()); };
+  const quedanNombresVT = () => p.evaluate(() => [...document.querySelectorAll('*')].filter((e) => e.style?.viewTransitionName).length);
+  // (2) El coach: la foto de Ana en el panel pasa a la cabecera de su ficha
+  await p.locator('.tab', { hasText: 'Atletas' }).click();
+  await p.locator('.tarjeta-atleta', { hasText: 'Ana López' }).waitFor();
+  await espiarVT();
+  await p.locator('.tarjeta-atleta', { hasText: 'Ana López' }).click();
+  await p.locator('.avatar-estado .avatar').waitFor();
+  const vtFoto = await nombresVT();
+  // (la ficha se espera como mucho 150 ms: en una máquina lenta puede no llegar y la transición va sin pareja)
+  check(!hayVT || (vtFoto.filter((x) => x.startsWith('vt-avatar:')).length <= 1 && vtFoto.every((x) => x === 'vt-avatar:SPAN')), `elemento compartido: la foto de Ana en el panel pasa a la de su ficha, con el nombre en un solo elemento (${vtFoto.join(', ') || 'sin pareja a tiempo'})`);
+  check(await quedanNombresVT() === 0, 'y al acabar no queda ningún nombre de transición puesto');
+  await p.getByRole('button', { name: 'Volver a atletas' }).click();
+  await p.locator('.tarjeta-atleta').first().waitFor();
+
+  await entrarComo('Ana López');
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').waitFor();
+  // (4) La racha: al tocarla, su pantalla con la llama, la cifra, 12 semanas y la próxima meta
+  const botonRacha = p.locator('.hero-dia .racha-boton').first();
+  await botonRacha.waitFor();
+  const rachaAna = Number(((await botonRacha.textContent()).match(/\d+/) || ['0'])[0]);
+  await botonRacha.click();
+  const pantallaR = p.locator('.racha-pantalla');
+  await pantallaR.waitFor();
+  const cifraR = Number((await pantallaR.locator('.racha-cifra').textContent()).trim());
+  check(cifraR === rachaAna && await pantallaR.locator('.racha-semana').count() === 12 && await pantallaR.locator('.racha-semana.completa').count() >= Math.min(rachaAna, 11)
+    && await pantallaR.locator('.racha-semana.en_curso, .racha-semana.completa').last().isVisible() && await pantallaR.locator('svg.llama .llama-capa').count() === 3,
+  `tocar la racha abre su pantalla: la llama, la cifra (${cifraR}), las últimas 12 semanas y la de ahora`);
+  const metaR = await pantallaR.getByRole('progressbar').evaluate((b) => [b.getAttribute('aria-valuenow'), b.getAttribute('aria-valuemax'), b.getAttribute('aria-label')]);
+  check(Number(metaR[1]) > rachaAna && Number(metaR[0]) <= rachaAna && /Hacia \d+ semanas/.test(metaR[2]) && /Próxima meta: \d+ semanas/.test(await pantallaR.locator('#racha-meta-t').textContent()), `y la próxima meta con su barra (${metaR.join(' · ')})`);
+  check(await pantallaR.evaluate((x) => getComputedStyle(x.querySelector('.llama-exterior')).animationName) === 'llama-a', 'la llama titila (solo transform)');
+  await revisar('racha');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('racha-360-oscuro');
+  check(await p.evaluate(() => document.documentElement.scrollWidth) <= 360, 'a 360 px y en oscuro, la pantalla de la racha cabe');
+  await p.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  check(await pantallaR.evaluate((x) => getComputedStyle(x.querySelector('.llama-exterior')).animationName) === 'none', 'con «reducir movimiento», la llama se queda quieta');
+  await p.emulateMedia({ colorScheme: 'light', reducedMotion: 'no-preference' });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.keyboard.press('Escape');
+  await pantallaR.waitFor({ state: 'detached' });
+  check(await p.evaluate(() => document.activeElement?.classList.contains('racha-boton')), 'Escape la cierra y el foco vuelve a la racha');
+  // (revisión) A 360 px y con «Muy grande», las semanas no se pisan (4 por fila)
+  await abrirPestana(p, 'Perfil');
+  await p.getByRole('group', { name: 'Tamaño de la letra' }).getByRole('button', { name: 'Muy grande' }).click();
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.setViewportSize({ width: 360, height: 780 });
+  await botonRacha.waitFor();
+  await botonRacha.click();
+  await pantallaR.waitFor();
+  const pisadas = await pantallaR.evaluate((x) => {
+    const r = [...x.querySelectorAll('.racha-marca, .racha-fecha')].map((e) => e.getBoundingClientRect());
+    let n = 0;
+    for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) { const a = r[i], b = r[j]; if (a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5) n++; }
+    const fuera = [...x.querySelectorAll('.racha-semana')].filter((l) => { const f = l.querySelector('.racha-fecha').getBoundingClientRect(), c = l.getBoundingClientRect(); return f.left < c.left - 1 || f.right > c.right + 1; }).length;
+    return { n, fuera, columnas: getComputedStyle(x.querySelector('.racha-calendario')).gridTemplateColumns.split(' ').length };
+  });
+  check(pisadas.n === 0 && pisadas.fuera === 0 && pisadas.columnas === 4 && await p.evaluate(() => document.documentElement.scrollWidth) <= 360, `a 125 % y 360 px, las 12 semanas no se pisan (${JSON.stringify(pisadas)})`);
+  await revisar('racha-125-360');
+  await p.keyboard.press('Escape');
+  await pantallaR.waitFor({ state: 'detached' });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await abrirPestana(p, 'Perfil');
+  await p.getByRole('group', { name: 'Tamaño de la letra' }).getByRole('button', { name: 'Normal' }).click();
+
+  // (5) y (6) Progreso: destacados arriba; las gráficas con su rango, la línea que se transforma y la cifra que rueda
+  await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await p.locator('.logros').waitFor();
+  const dest = p.locator('.destacados .destacado');
+  await hay(dest, await dest.count() || 1, 4000);
+  const nDest = await dest.count();
+  const textosDest = await dest.locator('.destacado-texto').allTextContents();
+  check(nDest >= 1 && nDest <= 4 && textosDest.every((t) => t.trim().endsWith('.')) && !textosDest.some((t) => /peso corporal|kcal|kg de tendencia|sueño/i.test(t)) && await dest.locator('.mini-grafica').count() === nDest,
+    `destacados: ${nDest} frases con su gráfica pequeña, solo de entrenamiento (${textosDest.map((t) => `«${t}»`).join(' ')})`);
+  check(await p.evaluate(() => { const d = document.querySelector('.destacados'); const a = document.querySelector('.anillos-semana'); return !!d && !!a && (d.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING) > 0; }), 'van arriba, antes de los anillos de la semana');
+  await p.locator('.destacados').scrollIntoViewIfNeeded();
+  await revisar('destacados');
+  const seccionF = p.locator('.seccion', { has: p.getByRole('heading', { name: 'Fuerza (1RM estimado)' }) });
+  await seccionF.scrollIntoViewIfNeeded();
+  const rangoF = seccionF.getByRole('group', { name: 'Rango de la gráfica del 1RM estimado' });
+  await rangoF.waitFor();
+  check((await rangoF.locator('button').allTextContents()).join() === '1M,3M,6M,Todo' && await rangoF.locator('button[aria-pressed="true"]').count() === 1, 'el 1RM estimado tiene su rango: 1M · 3M · 6M · Todo');
+  const lineaF = seccionF.locator('svg.grafica path.linea');
+  const chipAntes = (await seccionF.locator('.cifra .chip .sr').first().textContent().catch(() => '')).trim();
+  await rangoF.getByRole('button', { name: 'Todo', exact: true }).click();
+  const morfa = await p.waitForFunction(() => document.querySelector('.grafica.morfando'), null, { timeout: 1500 }).then(() => true).catch(() => false);
+  await p.waitForFunction(() => !document.querySelector('.grafica.morfando'), null, { timeout: 3000 }).catch(() => {});
+  check(morfa && (await rangoF.locator('button[aria-pressed="true"]').textContent()) === 'Todo', 'al cambiar de rango, la línea se transforma en la nueva');
+  // Con otro ejercicio (otros datos), la línea pasa de una forma a la otra y acaba en el trazo de verdad (con una esquina en cada punto)
+  const dAntes = await lineaF.getAttribute('d');
+  const valorAntes = (await seccionF.locator('.cifra .odometro.v .sr').textContent()).trim();
+  await seccionF.getByRole('group', { name: 'Ejercicio' }).locator('button[aria-pressed="false"]').first().click();
+  const morfa2 = await p.waitForFunction(() => document.querySelector('.grafica.morfando'), null, { timeout: 1500 }).then(() => true).catch(() => false);
+  await p.waitForFunction(() => !document.querySelector('.grafica.morfando'), null, { timeout: 3000 }).catch(() => {});
+  const dDespues = await lineaF.getAttribute('d');
+  const valorDespues = (await seccionF.locator('.cifra .odometro.v .sr').textContent()).trim();
+  check(morfa2 && dDespues !== dAntes && /^M[\d.]+ [\d.]+( L[\d.]+ [\d.]+)+$/.test(dDespues) && (dDespues.match(/L/g) || []).length + 1 === await seccionF.locator('svg.grafica .punto').count(),
+    'al cambiar de ejercicio, la línea se transforma en la del otro y acaba en el trazo de verdad (una esquina por punto)');
+  check(valorAntes !== valorDespues && await seccionF.locator('.cifra .odometro.v .odo-col').count() >= 2, `y su cifra rueda como un cuentakilómetros (${valorAntes} → ${valorDespues} kg)`);
+  const chipDespues = (await seccionF.locator('.cifra .chip .sr').first().textContent().catch(() => '')).trim();
+  check(/kg$/.test(chipDespues) && await seccionF.locator('.cifra .chip .odo-col .odo-tira').count() >= 1 && (await seccionF.locator('.cifra .chip').first().textContent()).includes('en todo'),
+    `lo ganado en el rango rueda como un cuentakilómetros (${chipAntes} → ${chipDespues}), con el texto para los lectores de pantalla`);
+  const grafF = seccionF.locator('.grafica-tactil');
+  await grafF.focus();
+  await p.keyboard.press('Home');
+  check(await grafF.getAttribute('aria-valuenow') === '1' && /kg/.test(await grafF.getAttribute('aria-valuetext')), 'y la gráfica sigue siendo un deslizador con el teclado (y táctil)');
+  check(await p.locator('.seccion', { has: p.getByRole('heading', { name: 'Tonelaje por semana' }) }).getByRole('group', { name: 'Rango de la gráfica del tonelaje' }).count() === 1
+    && await p.locator('.seccion', { has: p.getByRole('heading', { name: 'Peso corporal' }) }).getByRole('group', { name: 'Rango de la gráfica del peso' }).count() === 1, 'el tonelaje (nuevo) y el peso también tienen su rango');
+  await revisar('graficas-rango');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await seccionF.scrollIntoViewIfNeeded();
+  await revisar('graficas-rango-360-oscuro');
+  check(await p.evaluate(() => document.documentElement.scrollWidth) <= 360, 'a 360 px y en oscuro, las gráficas con su rango caben');
+  await p.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  await rangoF.getByRole('button', { name: '3M', exact: true }).click();
+  check(!(await p.locator('.grafica.morfando').count()) && await p.evaluate(() => getComputedStyle(document.querySelector('.odo-tira')).transitionDuration) === '0s', 'con «reducir movimiento», el cambio de rango es inmediato (sin transformar ni rodar)');
+  await p.emulateMedia({ colorScheme: 'light', reducedMotion: 'no-preference' });
+  await p.setViewportSize({ width: 390, height: 844 });
+  // (revisión) Elegido el último punto (con el teclado, sin salir de la gráfica) y pasando a un rango con menos puntos:
+  // la gráfica no falla
+  await rangoF.getByRole('button', { name: 'Todo', exact: true }).evaluate((b) => b.click());
+  await p.waitForTimeout(700);
+  const nTodo = await seccionF.locator('svg.grafica .punto').count();
+  await grafF.focus();
+  await p.keyboard.press('End');
+  check(await grafF.getAttribute('aria-valuenow') === String(nTodo), `con el último punto elegido (${nTodo} de ${nTodo})`);
+  const erroresAntes = errores.length;
+  await rangoF.getByRole('button', { name: '1M', exact: true }).evaluate((b) => b.click());
+  await p.waitForTimeout(800);
+  const n1M = await seccionF.locator('svg.grafica .punto').count();
+  check(errores.length === erroresAntes && (n1M < 2 || await p.evaluate(() => document.activeElement?.classList.contains('grafica-tactil'))) && (n1M < 2 || Number(await grafF.getAttribute('aria-valuenow')) <= n1M),
+    `y pasando a 1M sin salir de la gráfica (${nTodo} → ${n1M} puntos), no falla ni elige un punto que ya no está`);
+  // (con los datos de la demo, 1M puede tener los mismos puntos: lo mismo con un ejercicio de menos puntos, que es el
+  // mismo camino: el punto elegido deja de existir en el mismo pintado)
+  const chipsEj = seccionF.getByRole('group', { name: 'Ejercicio' }).locator('button');
+  const puntosEj = [];
+  for (let k = 0; k < Math.min(await chipsEj.count(), 8); k++) {
+    await chipsEj.nth(k).evaluate((b) => b.click());
+    await p.waitForTimeout(650);
+    puntosEj.push(await seccionF.locator('svg.grafica .punto').count());
+  }
+  const iMas = puntosEj.indexOf(Math.max(...puntosEj));
+  const iMenos = puntosEj.findIndex((x) => x >= 2 && x < puntosEj[iMas]);
+  if (iMenos >= 0) {
+    await chipsEj.nth(iMas).evaluate((b) => b.click());
+    await p.waitForTimeout(650);
+    await grafF.focus();
+    await p.keyboard.press('End');
+    const erroresAntes2 = errores.length;
+    await chipsEj.nth(iMenos).evaluate((b) => b.click());
+    await p.waitForTimeout(800);
+    check(errores.length === erroresAntes2 && await p.evaluate(() => document.activeElement?.classList.contains('grafica-tactil')) && Number(await grafF.getAttribute('aria-valuenow')) <= puntosEj[iMenos],
+      `elegido el último punto y pasando a una gráfica con menos (${puntosEj[iMas]} → ${puntosEj[iMenos]} puntos), no falla`);
+  } else check(true, `todas las gráficas de fuerza tienen los mismos puntos (${puntosEj.join(', ')})`);
+  await rangoF.getByRole('button', { name: '3M', exact: true }).click();
+
+  // (1) Hojas con muelle: la ficha del ejercicio abre en el tope medio; arrastrando el asa sube a completa; un tirón la cierra
+  await seccionF.getByRole('button', { name: 'Gráficas, récords e historial' }).click();
+  const fichaM = p.locator('.hoja-dialogo.ficha-ejercicio');
+  await fichaM.waitFor();
+  await p.waitForTimeout(400);
+  const medio = await fichaM.evaluate((h) => ({ medio: h.classList.contains('en-medio'), alto: Math.round(h.getBoundingClientRect().height), vista: innerHeight }));
+  check(medio.medio && Math.abs(medio.alto - Math.round(medio.vista * 0.55)) <= 2, `las hojas largas abren en el tope medio, el 55 % de la pantalla (${medio.alto} de ${medio.vista} px)`);
+  const asa = await fichaM.locator('.hoja-cab').boundingBox();
+  await p.mouse.move(asa.x + asa.width / 2, asa.y + 12); await p.mouse.down();
+  for (let k = 1; k <= 12; k++) { await p.mouse.move(asa.x + asa.width / 2, asa.y + 12 - k * 30); await p.waitForTimeout(16); }
+  await p.mouse.up();
+  await p.waitForFunction(() => { const h = document.querySelector('.hoja-dialogo.ficha-ejercicio'); return h && !h.getAnimations().length; }, null, { timeout: 3000 }).catch(() => {});
+  const completa = await fichaM.evaluate((h) => ({ medio: h.classList.contains('en-medio'), abajo: Math.round(h.getBoundingClientRect().bottom), vista: innerHeight, t: getComputedStyle(h).transform }));
+  check(!completa.medio && Math.abs(completa.abajo - completa.vista) <= 2 && (completa.t === 'none' || completa.t === 'matrix(1, 0, 0, 1, 0, 0)'), `arrastrando el asa hacia arriba, sube a completa y se asienta con el muelle (${JSON.stringify(completa)})`);
+  // Por encima de completa se resiste (goma): 200 px de dedo mueven bastante menos
+  await p.mouse.move(asa.x + asa.width / 2, completa.abajo - (await fichaM.boundingBox()).height + 12); await p.mouse.down();
+  const yGoma0 = (await fichaM.boundingBox()).y;
+  await p.mouse.move(asa.x + asa.width / 2, completa.abajo - (await fichaM.boundingBox()).height + 12 - 200, { steps: 8 });
+  const yGoma1 = await fichaM.evaluate((h) => h.getBoundingClientRect().y);
+  await p.mouse.up();
+  check(yGoma1 < yGoma0 && yGoma0 - yGoma1 < 120, `por encima del tope se resiste como una goma (200 px de dedo, ${Math.round(yGoma0 - yGoma1)} px de hoja)`);
+  await p.waitForFunction(() => { const h = document.querySelector('.hoja-dialogo.ficha-ejercicio'); return h && !h.getAnimations().length; }, null, { timeout: 3000 }).catch(() => {});
+  await revisar('hoja-completa');
+  const asa2 = await fichaM.locator('.hoja-cab').boundingBox();
+  await p.mouse.move(asa2.x + asa2.width / 2, asa2.y + 12); await p.mouse.down();
+  await p.mouse.move(asa2.x + asa2.width / 2, asa2.y + 12 + 520, { steps: 4 });
+  await p.mouse.up();
+  await fichaM.waitFor({ state: 'detached', timeout: 4000 });
+  check(true, 'arrastrándola hacia abajo se cierra, con el muelle hasta fuera (la velocidad del dedo cuenta: ver las pruebas de lógica)');
+  const abreFicha = seccionF.getByRole('button', { name: 'Gráficas, récords e historial' });
+  await abreFicha.focus();
+  await p.keyboard.press('Enter');
+  await fichaM.waitFor();
+  const focoDentro = await p.waitForFunction(() => !!document.activeElement?.closest('.hoja-dialogo.ficha-ejercicio'), null, { timeout: 2000 }).then(() => true).catch(() => false);
+  const focoEn = await p.evaluate(() => document.activeElement?.getAttribute('aria-label') || document.activeElement?.textContent.trim().slice(0, 30));
+  check(focoDentro, `al abrirse, el foco entra en la hoja (en «${focoEn}»), no se queda en el botón que la abrió`);
+  await p.keyboard.press('Escape');
+  await fichaM.waitFor({ state: 'detached' });
+  check(await p.evaluate(() => document.activeElement?.textContent.includes('Gráficas, récords e historial') && !document.activeElement.closest('[role=dialog]')), 'Escape la cierra y el foco vuelve al botón que la abrió');
+  // Una hoja cuyo único control es «Cerrar» (la de un dial): el foco va al propio diálogo
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  const dialC = p.locator('.diales .dial').first();
+  await dialC.waitFor();
+  await dialC.click();
+  const hojaDial = p.getByRole('dialog').last();
+  await hojaDial.waitFor();
+  check(await p.waitForFunction(() => { const a = document.activeElement; const d = [...document.querySelectorAll('[role=dialog]')].pop(); return !!a && !!d && d.contains(a); }, null, { timeout: 2000 }).then(() => true).catch(() => false),
+    'y en una hoja sin más controles que «Cerrar», el foco entra en el propio diálogo');
+  await p.keyboard.press('Escape');
+  await hojaDial.waitFor({ state: 'detached' });
+  check(await p.evaluate(() => document.activeElement?.classList.contains('dial')), 'y al cerrarla vuelve al dial');
+  await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await p.locator('.logros').waitFor();
+  await seccionF.scrollIntoViewIfNeeded();
+
+  // (7) El carné en Perfil: nombre, nivel, bloque y desde cuándo (nada de peso); se inclina con el dedo; se comparte como imagen
+  await abrirPestana(p, 'Perfil');
+  const carne = p.locator('.carnet');
+  await carne.waitFor();
+  await carne.scrollIntoViewIfNeeded();
+  const textoCarne = (await carne.textContent()).replace(/\s+/g, ' ');
+  check(/FBE Coaching/.test(textoCarne) && /Ana López/.test(textoCarne) && /Nivel/.test(textoCarne) && /Bloque/.test(textoCarne) && /Desde/.test(textoCarne) && !/\bkg\b|kcal|peso/i.test(textoCarne),
+    `el carné: FBE Coaching, su nombre, nivel, bloque y desde cuándo, sin peso ni nutrición («${textoCarne.trim().slice(0, 90)}…»)`);
+  const cajaC = await carne.boundingBox();
+  await p.mouse.move(cajaC.x + 10, cajaC.y + 10);
+  await p.mouse.move(cajaC.x + cajaC.width - 10, cajaC.y + 12, { steps: 4 });
+  await p.waitForTimeout(150);
+  const inclina = await carne.evaluate((c) => [c.style.getPropertyValue('--rx'), c.style.getPropertyValue('--ry')]);
+  check(parseFloat(inclina[0]) > 0 && parseFloat(inclina[1]) > 0, `se inclina siguiendo al dedo (${inclina.join(', ')})`);
+  await p.mouse.move(cajaC.x + cajaC.width / 2, cajaC.y + cajaC.height + 120);
+  await revisar('carne');
+  await p.getByRole('button', { name: 'Compartir o guardar el carné' }).click();
+  const hojaC = p.getByRole('dialog', { name: 'Tu carné' });
+  await hojaC.locator('.tarjeta-img').waitFor();
+  check((await hojaC.locator('.tarjeta-img').getAttribute('alt')).startsWith('Carné de atleta de FBE Coaching: Ana López') && (await hojaC.locator('.tarjeta-img').evaluate((i) => i.complete && i.naturalWidth)) === 1200
+    && await hojaC.getByRole('button', { name: 'Guardar imagen' }).count() === 1, 'se comparte o se guarda como imagen (1200 × 756) con la hoja de siempre');
+  const altC = await hojaC.locator('.tarjeta-img').getAttribute('alt');
+  check(!/Bloque|Fuerza base/.test(altC) && /ni el bloque/.test(await hojaC.textContent()) && /FBE·\d{6}/.test(textoCarne), `la imagen no lleva el bloque (lo escribe el coach y podría decir algo de salud): «${altC}»; el número de socio, de 6 cifras`);
+  await revisar('carne-compartir');
+  await hojaC.getByRole('button', { name: 'Cerrar' }).click();
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await carne.scrollIntoViewIfNeeded();
+  await revisar('carne-360-oscuro');
+  check(await p.evaluate(() => document.documentElement.scrollWidth) <= 360, 'a 360 px y en oscuro, el carné cabe');
+  await p.emulateMedia({ colorScheme: 'light' });
+  await p.setViewportSize({ width: 390, height: 844 });
+
+  // (2), (10), (9) y (3): la sesión de hoy desde Hoy (su título pasa a la portada), la portada que se recoge al bajar,
+  // «Respira» en el descanso y «Sesión en curso» al salir con series hechas
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').waitFor();
+  const botonHero = p.locator('.hero-dia').getByRole('button', { name: /^(Empezar|Continuar) sesión$/ });
+  if (await botonHero.count()) {
+    await espiarVT();
+    await botonHero.click();
+    await p.locator('.portada-sesion, .ejercicio').first().waitFor();
+    const vtTitulo = await nombresVT();
+    check(!hayVT || (vtTitulo.filter((x) => x.startsWith('vt-titulo-sesion:')).length <= 1 && vtTitulo.every((x) => x === 'vt-titulo-sesion:H1')), `el título de la sesión de Hoy pasa al de su portada (${vtTitulo.join(', ') || 'sin pareja a tiempo'})`);
+    check(await quedanNombresVT() === 0, 'y el nombre se quita al acabar');
+    if (await p.locator('.portada-sesion').count()) {
+      const conScroll = await p.evaluate(() => CSS.supports('animation-timeline: scroll()'));
+      check(await p.getByRole('button', { name: 'Volver' }).count() === 1 && await p.locator('.portada-barra-titulo').getAttribute('aria-hidden') === 'true', 'la portada lleva un solo «Volver» (en su barra) y el nombre de la barra no se lee dos veces');
+      await p.evaluate(() => window.scrollTo(0, 320));
+      await p.waitForTimeout(200);
+      const recoge = await p.evaluate(() => {
+        const b = document.querySelector('.portada-barra'), t = document.querySelector('.portada-barra-titulo > span');
+        return { pos: getComputedStyle(b).position, arriba: Math.round(b.getBoundingClientRect().top), titulo: new DOMMatrixReadOnly(getComputedStyle(t).transform).m42, fondo: Number(getComputedStyle(b, '::before').opacity) };
+      });
+      check(!conScroll || (recoge.pos === 'sticky' && recoge.arriba === 0 && Math.abs(recoge.titulo) < 1 && recoge.fondo > 0.9), `al bajar, la portada se recoge en la barra de arriba con su nombre (animaciones ligadas al scroll: ${conScroll ? JSON.stringify(recoge) : 'sin soporte, quieta'})`);
+      await revisar('portada-recogida');
+      await p.emulateMedia({ reducedMotion: 'reduce' });
+      check(await p.evaluate(() => getComputedStyle(document.querySelector('.portada-barra')).position) === 'relative', 'con «reducir movimiento», nada ligado al scroll (la barra se va con la portada)');
+      await p.emulateMedia({ reducedMotion: 'no-preference' });
+      await p.evaluate(() => window.scrollTo(0, 0));
+      await p.locator('.portada-empezar').getByRole('button', { name: 'Empezar', exact: true }).click();
+    }
+    await p.locator('.ejercicio').first().waitFor();
+    const ahoraNo = p.getByRole('button', { name: 'Ahora no' });
+    if (await ahoraNo.count()) await ahoraNo.first().click();
+    const sinHacer = p.locator('.ejercicio .serie:not(.hecha) .hecho-btn').first();
+    await abrirEjercicio(p.locator('.ejercicio', { has: p.locator('.serie:not(.hecha) .hecho-btn') }).first());
+    await sinHacer.click();
+    const relojR = p.locator('.temporizador');
+    await relojR.waitFor();
+    await relojR.scrollIntoViewIfNeeded();
+    const botonRespira = relojR.getByRole('button', { name: 'Respira' });
+    check(await botonRespira.getAttribute('aria-pressed') === 'false', '«Respira» va apagado de entrada');
+    await botonRespira.click();
+    await relojR.locator('.respira-texto').waitFor();
+    const respiraTxt = (await relojR.locator('.respira-texto').textContent()).trim();
+    check(['Inspira', 'Suelta'].includes(respiraTxt) && await relojR.locator('.respira-circulo').count() === 1 && await relojR.locator('.respira-texto').getAttribute('aria-hidden') === 'true'
+      && await relojR.locator('.cuenta').isVisible() && JSON.parse(await p.evaluate(() => localStorage.getItem('fbe-ajustes'))).respira === true,
+    `«Respira»: un círculo que crece y encoge con «${respiraTxt}» (sin anunciarlo: la cuenta sigue mandando), recordado en el móvil`);
+    await revisar('respira');
+    await p.emulateMedia({ reducedMotion: 'reduce' });
+    await p.waitForTimeout(300);
+    check(await relojR.locator('.respira-circulo').count() === 0 && await relojR.locator('.respira-texto').count() === 1, 'con «reducir movimiento», solo el texto');
+    await p.emulateMedia({ reducedMotion: 'no-preference' });
+    // (revisión) El ciclo va con el descanso: añadir tiempo no lo reinicia (el círculo es el mismo, con su retraso)
+    await relojR.locator('.respira-circulo').waitFor();
+    await relojR.locator('.respira-circulo').evaluate((el) => { el.dataset.marca = 'a'; });
+    const retraso0 = await relojR.locator('.respira-circulo').evaluate((el) => el.style.animationDelay);
+    // (un descanso largo, para que siga en marcha al salir de la sesión aunque la máquina vaya lenta)
+    await relojR.getByRole('button', { name: 'Añadir 1 minuto' }).click();
+    await relojR.getByRole('button', { name: 'Añadir 1 minuto' }).click();
+    check(await relojR.locator('.respira-circulo').evaluate((el) => el.dataset.marca === 'a') && await relojR.locator('.respira-circulo').evaluate((el) => el.style.animationDelay) === retraso0 && /^-?[\d.]+s$/.test(retraso0),
+      `añadir tiempo no reinicia la respiración (el ciclo cuenta desde que empezó este descanso: ${retraso0})`);
+    await botonRespira.click();
+    // El nombre y el pictograma del ejercicio pasan a la cabecera de su ficha
+    const ejR = p.locator('.ejercicio', { has: p.locator('.ejercicio-cuerpo') }).first();
+    await ejR.evaluate((el) => el.scrollIntoView({ block: 'start' }));
+    await espiarVT();
+    await ejR.getByRole('button', { name: /^Más herramientas/ }).click();
+    await p.getByRole('dialog').last().locator('.hoja-acciones').waitFor();
+    await p.getByRole('dialog').last().getByRole('button', { name: /^Historial/ }).click();
+    await p.locator('.ficha-ejercicio .ficha-ej-cab').waitFor();
+    const vtEj = await nombresVT();
+    check(!hayVT || (vtEj.includes('vt-ej-nombre:H2') && vtEj.filter((x) => x.startsWith('vt-ej-picto:')).length === 1 && vtEj.length === 2), `el nombre y el pictograma del ejercicio pasan a la cabecera de su ficha (${vtEj.join(', ') || 'sin View Transitions'})`);
+    check(await quedanNombresVT() === 0, 'y ningún nombre se queda puesto (ni en la tarjeta, que sigue debajo de la hoja)');
+    await p.keyboard.press('Escape');
+    await p.locator('.ficha-ejercicio').waitFor({ state: 'detached' });
+    // Fuera de la sesión: la píldora «Sesión en curso» arriba, sin tapar la cabecera
+    await p.getByRole('button', { name: 'Volver' }).first().click();
+    await p.locator('.hero-dia').waitFor();
+    const pildora = p.locator('.encurso-pildora');
+    await pildora.waitFor();
+    const etiquetaP = await pildora.getAttribute('aria-label');
+    const solape = await p.evaluate(() => {
+      const a = document.querySelector('.encurso-pildora').getBoundingClientRect();
+      const cab = document.querySelector('.cabecera');
+      const r = cab?.getBoundingClientRect();
+      return { abajo: Math.round(a.bottom), cab: r ? Math.round(r.top) : null };
+    });
+    check(/^Sesión en curso: .+, con un descanso en marcha\. Toca para ver más$/.test(etiquetaP) && await pildora.locator('.encurso-anillo').count() === 1 && /\d:\d\d/.test(await pildora.locator('.encurso-cuenta').textContent())
+      && solape.cab != null && solape.abajo <= solape.cab, `fuera de la sesión, la píldora «Sesión en curso» con el descanso y su anillo, sin tapar la cabecera (${etiquetaP}; ${JSON.stringify(solape)})`);
+    await pildora.click();
+    const tarjetaP = p.locator('.encurso-tarjeta');
+    await tarjetaP.waitFor();
+    check(await pildora.getAttribute('aria-expanded') === 'true' && /Lo siguiente/.test(await tarjetaP.textContent()) && /Serie \d+ de \d+/.test(await tarjetaP.textContent()) && await tarjetaP.getByRole('button', { name: 'Volver a la sesión' }).count() === 1,
+      'al tocarla se abre: lo siguiente (la serie que toca) y «Volver a la sesión»');
+    await revisar('actividad');
+    await p.setViewportSize({ width: 360, height: 780 });
+    await p.emulateMedia({ colorScheme: 'dark' });
+    await revisar('actividad-360-oscuro');
+    check(await p.evaluate(() => document.documentElement.scrollWidth) <= 360, 'a 360 px y en oscuro, la píldora y su tarjeta caben');
+    await p.emulateMedia({ colorScheme: 'light' });
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.keyboard.press('Escape');
+    await tarjetaP.waitFor({ state: 'detached' });
+    await pildora.click();
+    await tarjetaP.getByRole('button', { name: 'Volver a la sesión' }).click();
+    await p.locator('.ejercicio').first().waitFor();
+    check(await p.locator('.temporizador').count() === 1 && await p.locator('.encurso').count() === 0, '«Volver a la sesión» vuelve con el descanso donde iba (y sin la píldora dentro de la sesión)');
+    // Al terminarla, la píldora se va (y si completa la semana y llega a un hito de la racha, lo celebra una vez)
+    await p.getByRole('button', { name: 'Terminar sesión' }).click();
+    await p.locator('.hoja-dialogo .segmentos button', { hasText: '8' }).click();
+    await p.getByRole('button', { name: 'Guardar y terminar' }).click();
+    await p.getByRole('heading', { name: 'Sesión terminada' }).waitFor();
+    await p.getByRole('button', { name: 'Volver a hoy' }).click();
+    await p.locator('.hero-dia').waitFor();
+    await p.waitForTimeout(900);
+    check(await p.locator('.encurso').count() === 0 && !(await p.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith('fbe-en-curso-') && localStorage.getItem(k)))), 'al terminar la sesión, la píldora desaparece (y no queda nada en el móvil)');
+  } else check(true, 'Ana no tiene sesión pendiente hoy: sin píldora que probar');
+  // (4) y (8) El hito de la racha: si la racha ha llegado a uno (o ya estaba), se celebra a pantalla completa una vez
+  const rachaNueva = Number(((await p.locator('.hero-dia .racha-boton').first().textContent().catch(() => '')).match(/\d+/) || ['0'])[0]);
+  const hitos = [4, 8, 12, 26, 52].filter((h) => h <= rachaNueva);
+  if (hitos.length) {
+    let hitoP = p.locator('.hito-pantalla');
+    if (!(await hitoP.count())) {
+      // (ya celebrado en este móvil antes de la prueba: se olvida y se vuelve a Hoy)
+      await p.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('fbe-hitos-racha-')) localStorage.removeItem(k); });
+      await p.locator('.tab', { hasText: 'Progreso' }).click();
+      await p.locator('.logros').waitFor();
+      await p.locator('.tab', { hasText: 'Hoy' }).click();
+      hitoP = p.locator('.hito-pantalla');
+    }
+    await hitoP.waitFor();
+    const conf = await p.waitForFunction(() => document.querySelector('canvas.confeti-lienzo'), null, { timeout: 2000 }).then(() => true).catch(() => false);
+    check((await hitoP.getByRole('heading').textContent()).includes(`¡${hitos[hitos.length - 1]} semanas seguidas!`) && conf && await p.locator('canvas.confeti-lienzo').getAttribute('aria-hidden') === 'true'
+      && await p.evaluate(() => getComputedStyle(document.querySelector('canvas.confeti-lienzo')).pointerEvents) === 'none', `al llegar a ${hitos[hitos.length - 1]} semanas, un momento a pantalla completa con confeti (que no recibe toques)`);
+    await revisar('hito-racha');
+    await p.waitForFunction(() => !document.querySelector('canvas.confeti-lienzo'), null, { timeout: 4000 }).catch(() => {});
+    check(await p.locator('canvas.confeti-lienzo').count() === 0, 'el confeti se borra solo (unos 2,5 s)');
+    await hitoP.getByRole('button', { name: 'Seguir' }).click();
+    await hitoP.waitFor({ state: 'detached' });
+    await cerrarDialogos();
+    const hitoVisto = hitos[hitos.length - 1];
+    check(await p.evaluate((h) => Object.keys(localStorage).some((k) => { try { return k.startsWith('fbe-hitos-racha-') && JSON.parse(localStorage.getItem(k)).includes(h); } catch { return false; } }), hitoVisto), 'lo celebrado se guarda en el móvil, por atleta');
+    await p.locator('.tab', { hasText: 'Progreso' }).click();
+    await p.locator('.logros').waitFor();
+    await cerrarDialogos();
+    await p.locator('.tab', { hasText: 'Hoy' }).click();
+    await p.locator('.hero-dia').waitFor();
+    await p.waitForTimeout(800);
+    check(await p.locator('.hito-pantalla').count() === 0, 'y no vuelve a salir (una vez por hito en este móvil)');
+    await cerrarDialogos();
+  } else check(true, `la racha de Ana (${rachaNueva}) aún no llega a un hito`);
+  // (revisión) Lo de «Sesión en curso» no sobrevive a cerrar la sesión (ni a cambiar de cuenta en la demo)
+  await p.evaluate(() => localStorage.setItem('fbe-en-curso-prueba', JSON.stringify({ id: 's', nombre: 'Torso B', hechas: 1, t: Date.now() })));
+  await entrarComo('Pelayo');
+  check(!(await p.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith('fbe-en-curso-')))), 'al cerrar la sesión (o cambiar de cuenta), no queda en el móvil ninguna sesión a medias');
+  }
   await p.unroute('https://i.ytimg.com/**');
   }
 } catch (e) {

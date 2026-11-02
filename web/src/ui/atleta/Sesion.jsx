@@ -28,6 +28,9 @@ import { fraseSerie } from '../../logica/voz.js';
 import { hablar } from '../voz.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { vibrar } from '../hapticos.js';
+import { conTransicion } from '../transiciones.js';
+import { seVe } from '../../logica/vistas.js';
+import { guardarEnCurso, borrarEnCurso, cambiarDescansoEnCurso, leerEnCurso } from '../en-curso.js';
 import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, seriesPautadasHechas } from '../../logica/visual.js';
 import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
 import { resumenPautas } from '../../logica/diseno.js';
@@ -45,6 +48,20 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   useEffect(() => cola.alCambiar((n) => { if (!n) setEnCola({}); }), []);
   const [abiertos, setAbiertos] = useState(null);
   const [descanso, setDescanso] = useState(null);  // { fin, total, prioridad, texto }
+  // v0.52: el descanso también queda en «Sesión en curso» (al momento: si se quita, el aviso al móvil se anula; si se
+  // sale de la sesión con él en marcha, lo lleva la píldora de arriba)
+  const cambiarDescanso = (d) => { setDescanso(d); cambiarDescansoEnCurso(atleta.id, id, d); };
+  // v0.52: lo que dice la píldora (se calcula al pintar, más abajo) y se guarda en el móvil tras cada pintado
+  const enCurso = useRef(null);
+  enCurso.current = null;
+  // (hasta que las series de la sesión están en su sitio no se sabe si está a medias: no se borra nada antes)
+  const seriesListas = useRef(false);
+  useEffect(() => {
+    if (!det.datos || !seriesListas.current) return;
+    const x = enCurso.current;
+    if (!x) { borrarEnCurso(atleta.id, id); return; }
+    guardarEnCurso(atleta.id, { ...x, descanso: descanso ? { fin: descanso.fin, total: descanso.total, prioridad: descanso.prioridad || null, texto: descanso.texto || null, voz: descanso.voz || null, tras: descanso.tras || null, inicio: descanso.inicio || null } : null });
+  });
   const [terminando, setTerminando] = useState(false);
   const [resumen, setResumen] = useState(null);
   const [verDinamica, setVerDinamica] = useState(true);
@@ -173,6 +190,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     const m = {};
     for (const e of det.datos.ejercicios) m[e.id] = Object.fromEntries(e.hechas.map((s) => [s.numero, s]));
     setHechas(m);
+    seriesListas.current = true;
     // Si ya hay series hechas con una alternativa, esa es la que se está usando
     const desdeSeries = {};
     for (const e of det.datos.ejercicios) {
@@ -180,6 +198,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       if (ultima && !(e.id in sustitutos)) desdeSeries[e.id] = ultima.sustituto_id;
     }
     if (Object.keys(desdeSeries).length) setSustitutos({ ...sustitutos, ...desdeSeries });
+    // v0.52: al volver a la sesión con un descanso en marcha (lo llevaba la píldora de arriba), sigue donde iba
+    const ec = leerEnCurso(atleta.id);
+    if (ec?.id === id && ec.descanso && ec.descanso.fin > Date.now() - 6000 && !det.datos.sesion.completada && det.datos.ejercicios.some((x) => x.hechas.length)) setDescanso(ec.descanso);
     if (abiertos === null) {
       const primero = det.datos.ejercicios.find((e) => e.hechas.length < e.series) || det.datos.ejercicios[0];
       setAbiertos(new Set(primero ? [primero.id] : []));
@@ -254,6 +275,21 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // Sin consentimiento de salud (p. ej. si lo retiró) lo guardado no se usa
   const consejo = salud ? consejoPreparacion(prep) : null;
   const frenar = !subeCarga(consejo, eleccionCarga);
+  // v0.52: lo que dirá la píldora «Sesión en curso» si sale de la sesión: el ejercicio y la serie que tocan
+  if (!sesion.completada && todas.length > 0 && atleta.estado !== 'baja') {
+    const pe = prox && pautaDe[prox.id];
+    let siguienteTxt = null;
+    if (pe) {
+      siguienteTxt = `Serie ${prox.numero} de ${pe.series}`;
+      try {
+        const a = actualDe(pe), cambiado = a.id !== pe.ejercicio.id;
+        const prop = prepararEjercicio(pe, cambiado ? a : null, cambiado ? ultimas[a.id] || null : pe.ultimas, semana?.foco, progresionAuto && !cambiado && !frenar).propuesta(prox.numero, hechas[pe.id] || {});
+        if (prop?.kg) siguienteTxt += `: ${num(prop.kg, 2)} kg × ${prop.reps}`;
+        else if (prop?.reps) siguienteTxt += `: ${prop.reps} repeticiones`;
+      } catch { /* sin propuesta: la serie */ }
+    }
+    enCurso.current = { id, nombre: sesion.nombre, ejercicio: pe ? actualDe(pe).nombre : null, siguiente: siguienteTxt, hechas: todas.length, total: totalPautadas };
+  }
   const preguntarPrep = salud && ejercicios.length > 0 && !sesion.completada && atleta.estado !== 'baja'
     && ((!prep && !prepSaltada && todas.length === 0) || editandoPrep);
   // El modo enfoque espera a que conteste (o salte) cómo llega
@@ -306,8 +342,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         } catch { voz = `Ahora, ${texto}.`; }
       }
       // v0.50: el temporizador sale en la página, debajo de este ejercicio (o de su superserie)
-      if (r.descanso) setDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, tras: e.id });
-      else if (r.enRonda) { setDescanso(null); aviso(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); }
+      if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, tras: e.id, inicio: Date.now() });
+      else if (r.enRonda) { cambiarDescanso(null); aviso(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); }
       else hablar(voz);
       if (sig && sig.id !== e.id) {
         setAbiertos((a) => new Set([...a, sig.id]));
@@ -472,7 +508,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           );
         });
         const conReloj = descanso && !verEnfoque && g.items.some((e) => e.id === descanso.tras);
-        const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={setDescanso} />;
+        const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={cambiarDescanso} />;
         if (!g.letra) return reloj ? [...tarjetas, reloj] : tarjetas;
         const d = descansoGrupo(g);
         return [
@@ -487,7 +523,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         ];
       })}
       {/* (un descanso sin su ejercicio en la lista, por si acaso: antes de terminar) */}
-      {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={setDescanso} />}
+      {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={cambiarDescanso} />}
 
       <button class="btn btn-primario btn-grande btn-ancho" onClick={() => setTerminando(true)}>
         <Icono n="hecho" /> {sesion.completada ? 'Cambiar la valoración' : 'Terminar sesión'}
@@ -518,7 +554,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           alGuardar={async (cambios) => {
             const r = await cola.enviar({ tipo: 'sesion', datos: { id: sesion.id, cambios }, atletaId: atleta.id });
             setTerminando(false);
-            setDescanso(null);
+            cambiarDescanso(null);
             // La sesión ya está guardada: si el resumen falla por lo que sea, se enseña uno mínimo (nunca se queda colgada)
             let res;
             try { res = await calcularResumen(api, atleta.id, ejercicios, hechas, cambios, r.enCola, ejerciciosPorId, records, sesion); }
@@ -534,7 +570,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         <Enfoque ejercicios={ejercicios} hechas={hechas} records={records} etiquetas={etiquetas} actualDe={actualDe}
           ultimasDe={(x) => { const a = actualDe(x); return a.id !== x.ejercicio.id ? ultimas[a.id] || null : x.ultimas; }}
           foco={semana?.foco} progresionAuto={progresionAuto && !frenar} notas={notas} guardarNota={guardarNota}
-          guardar={guardar} quitar={quitar} descanso={descanso} setDescanso={setDescanso}
+          guardar={guardar} quitar={quitar} descanso={descanso} setDescanso={cambiarDescanso}
           seId={seActual} setSeId={setSeFoco} inicio={inicio} alTerminar={() => setTerminando(true)}
           alSalir={() => { setEnfoque(false); setAbiertos((a) => new Set([...(a || []), seActual])); llevarA(seActual); }} />
       )}
@@ -584,6 +620,19 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   const usar = (h) => {
     if (h.id === 'tempo') prepararAudio();
     if (h.id === 'nota') { setHoja(null); setEditandoNota(true); return; }
+    // v0.52: el nombre y el pictograma del ejercicio pasan a la cabecera de su ficha (elemento compartido)
+    // (si la cabecera de la tarjeta se ha quedado fuera de la pantalla, el nombre sale del título de la hoja «Más»)
+    if (h.id === 'historial') {
+      const cab = document.querySelector(`[data-se="${e.id}"] .ejercicio-cab`);
+      const aLaVista = (el) => !!el && seVe(el.getBoundingClientRect(), innerWidth, innerHeight);
+      const nombre = cab?.querySelector('.nombre');
+      const tituloMas = [...document.querySelectorAll('.hoja-dialogo .hoja-cab h2')].pop();
+      conTransicion(() => setHoja('historial'), 'morph', [
+        { nombre: 'vt-ej-nombre', desde: aLaVista(nombre) ? nombre : tituloMas, hasta: '.ficha-ejercicio .hoja-cab h2' },
+        { nombre: 'vt-ej-picto', desde: cab?.querySelector('.picto'), hasta: '.ficha-ejercicio .ficha-ej-cab .picto' },
+      ]);
+      return;
+    }
     setHoja(h.id);
   };
 
