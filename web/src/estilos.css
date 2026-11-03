@@ -2481,7 +2481,7 @@ input[type="range"] { accent-color: var(--morado); width: 100%; }
 
 /* ---------- Títulos grandes que se compactan al bajar ---------- */
 .cabecera-centinela { position: absolute; width: 1px; height: 1px; margin-top: 44px; pointer-events: none; visibility: hidden; }
-.cabecera-grande { transition: box-shadow .2s ease-out, background-color .2s ease-out; }
+.cabecera-grande { transition: box-shadow .2s ease-out, background-color .2s ease-out; overflow-anchor: none; }
 .cabecera-grande .titulo h1 { font-size: var(--tipo-titulo); font-stretch: var(--ancho-expandido); font-weight: 820; line-height: var(--tipo-titulo-lh); letter-spacing: var(--tipo-titulo-tr); }
 .cabecera-grande .sub { font-size: 0.875rem; margin-top: 3px; }
 .cabecera-grande.compacta { padding-top: 10px; padding-bottom: 8px; box-shadow: 0 1px 0 var(--linea); background: color-mix(in srgb, var(--tiza) 90%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
@@ -3520,3 +3520,6 @@ body:has(.app.con-actividad)::before { height: calc(env(safe-area-inset-top, 0px
 .segmentos.segmentos-servicio { grid-auto-columns: minmax(0, 1fr); }
 .segmentos-servicio button { overflow-wrap: anywhere; hyphens: auto; }
 @media (max-width: 480px) { :root[data-letra="grande"] .segmentos.segmentos-servicio, :root[data-letra="muy-grande"] .segmentos.segmentos-servicio { grid-auto-flow: row; } }
+
+/* v0.53.2: aviso de una semana con las fechas ya pasadas */
+.aviso-suave { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--morado-suave, color-mix(in srgb, var(--acento) 12%, transparent)); color: var(--tinta); }

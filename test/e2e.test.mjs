@@ -1615,6 +1615,23 @@ try {
   await p.emulateMedia({ colorScheme: null });
   await p.setViewportSize({ width: 390, height: 844 });
   await revisar('semana');
+  // v0.53.2: con la página apenas más alta que la pantalla, bajar hasta el final no hace temblar la cabecera grande
+  // (antes, al compactarse, el anclaje de scroll del navegador la devolvía arriba y volvía a crecer, una y otra vez)
+  {
+    await p.evaluate(() => scrollTo(0, 0));
+    await p.waitForTimeout(300);
+    const altoPag = await p.evaluate(() => document.documentElement.scrollHeight);
+    await p.setViewportSize({ width: 390, height: Math.max(500, altoPag - 160) });
+    await p.waitForTimeout(400);
+    await p.evaluate(() => { window.__cambiosCab = 0; window.__ysCab = []; addEventListener('scroll', () => window.__ysCab.push(scrollY)); new MutationObserver(() => window.__cambiosCab++).observe(document.querySelector('.cabecera-grande'), { attributes: true, attributeFilter: ['class'] }); });
+    for (let i = 0; i < 16; i++) { await p.mouse.move(195, 400); await p.mouse.wheel(0, 20); await p.waitForTimeout(40); }
+    await p.waitForTimeout(600);
+    const finCab = await p.evaluate(() => ({ y: scrollY, max: document.documentElement.scrollHeight - innerHeight, cambios: window.__cambiosCab, vuelve: window.__ysCab.some((y, i, a) => i > 0 && y < a[i - 1] - 10) }));
+    check(finCab.y >= finCab.max - 2 && finCab.cambios <= 1 && !finCab.vuelve, `bajar hasta el final de Semana no hace temblar la cabecera (${JSON.stringify(finCab)})`);
+    await p.evaluate(() => scrollTo(0, 0));
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.waitForTimeout(300);
+  }
   await p.getByRole('heading', { name: 'Tus entrenamientos' }).waitFor();
   check(await p.locator('button.entreno').count() >= 8, 'y su historial de entrenamientos, agrupado por meses');
   const nombreEntreno = (await p.locator('button.entreno .entreno-nombre').first().evaluate((el) => el.firstChild.textContent)).trim();

@@ -76,6 +76,10 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
                   ? <PlanSemana semana={semana} sesiones={sesiones} alCambiar={() => recargar(true)} soloTira />
                   : semana.fecha_inicio && <div class="panel panel-pad"><TiraSemana semana={semana} sesiones={sesiones} /></div>}
               </div>
+              {/* v0.53.2: la semana que toca ya pasó en el calendario (el coach la publicó con fechas de la anterior) */}
+              {semana.id === p.actual?.id && !planificable && semana.fecha_inicio && sumarDias(semana.fecha_inicio, 6) < hoyISO() && sesiones.some((s) => !s.completada) && (
+                <p class="aviso-suave peq">Las fechas de esta semana ya han pasado. Puedes hacer sus sesiones igual (al terminar, la app te pregunta qué día fue); para colocarlas por días, pídele a tu coach que mueva la semana a estas fechas.</p>
+              )}
               {(semana.foco || semana.nota_coach) && (
                 <div class="pila-s">
                   {semana.foco && <span class="chip morado" style="justify-self:start">Foco: {NOMBRE_FOCO[semana.foco]?.toLowerCase()}</span>}

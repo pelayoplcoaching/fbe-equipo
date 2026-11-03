@@ -583,31 +583,52 @@ export function useCambioDeDia(alCambiar) {
 // Al compactarse, la cabecera deja un margen igual a lo que encoge, para que lo de debajo no salte.
 // (Sin IntersectionObserver, se queda grande, como antes.)
 export function CabeceraGrande({ clase = '', children }) {
-  const centinela = useRef(null);
   const cab = useRef(null);
   const alto = useRef(0);
   const [compacta, setCompacta] = useState(false);
+  // v0.53.2: con el scroll y con histéresis (se compacta pasados 56 px y solo vuelve a grande por debajo de 12 px). Antes,
+  // con un IntersectionObserver, en una página apenas más alta que la pantalla (Semana con un título largo) el cambio de
+  // tamaño y el ajuste de scroll del navegador se realimentaban: al llegar al final, la cabecera se encogía, la página
+  // ya no daba para tanto, volvía a crecer… y la pantalla se quedaba temblando. Ahora, además, si la página no da para
+  // compactarse con holgura (lo que encoge + 56 px), no se compacta.
   useEffect(() => {
-    const el = centinela.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
-    const io = new IntersectionObserver(([e]) => {
-      const c = !e.isIntersecting && e.boundingClientRect.top < 0;
-      if (c && cab.current && !cab.current.classList.contains('compacta')) alto.current = cab.current.offsetHeight;
-      setCompacta(c);
-    });
-    io.observe(el);
-    return () => io.disconnect();
+    let raf = 0;
+    const mirar = () => {
+      raf = 0;
+      const h = cab.current;
+      if (!h) return;
+      const y = window.scrollY;
+      setCompacta((c) => {
+        if (c) return y > 12;
+        if (y <= 56) return false;
+        const grande = h.offsetHeight;
+        const sobra = document.documentElement.scrollHeight - window.innerHeight;
+        if (sobra < 56 + Math.max(0, grande - 56) + 40) return false;
+        alto.current = grande;
+        return true;
+      });
+    };
+    const alScroll = () => { if (!raf) raf = requestAnimationFrame(mirar); };
+    window.addEventListener('scroll', alScroll, { passive: true });
+    mirar();
+    return () => { window.removeEventListener('scroll', alScroll); if (raf) cancelAnimationFrame(raf); };
   }, []);
+  // Mientras cambia de tamaño, sin el «anclaje de scroll» del navegador: al encoger la cabecera, Chrome reajustaba el
+  // scroll para mantener a la vista lo que tenía delante y, en Semana, lo devolvía arriba del todo (y vuelta a crecer)
+  const primera = useRef(true);
   useLayoutEffect(() => {
     const h = cab.current;
-    if (!h) return;
+    if (!h) return undefined;
+    const raiz = document.documentElement;
+    const antes = raiz.style.overflowAnchor;
+    if (!primera.current) raiz.style.overflowAnchor = 'none';
+    primera.current = false;
     h.style.marginBottom = compacta && alto.current ? `${Math.max(0, alto.current - h.offsetHeight)}px` : '';
+    const t = setTimeout(() => { raiz.style.overflowAnchor = antes; }, 400);
+    return () => { clearTimeout(t); raiz.style.overflowAnchor = antes; };
   }, [compacta]);
   return (
-    <>
-      <span ref={centinela} class="cabecera-centinela" aria-hidden="true" />
-      <header ref={cab} class={`cabecera cabecera-grande${compacta ? ' compacta' : ''}${clase ? ` ${clase}` : ''}`}>{children}</header>
-    </>
+    <header ref={cab} class={`cabecera cabecera-grande${compacta ? ' compacta' : ''}${clase ? ` ${clase}` : ''}`}>{children}</header>
   );
 }
 
