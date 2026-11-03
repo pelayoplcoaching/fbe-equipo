@@ -1,4 +1,7 @@
 import { Fragment } from 'preact';
+import { cacheChat } from '../../datos/cacheChat.js';
+import { VERSION_LEGAL } from '../../legal.js';
+import { textoPrivacidadVista } from '../../logica/privacidad.js';
 import { useEffect, useState } from 'preact/hooks';
 import { ChipLlegada } from '../atleta/Preparacion.jsx';
 import { CumplimientoYBloques } from './Cumplimiento.jsx';
@@ -632,7 +635,9 @@ function SinNutricion({ irADatos }) {
 }
 
 function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, perfil } = useApp();
+  // (v0.56) si ha visto las novedades de la política (con la 034)
+  const vistaPrivacidad = useCarga(() => (atleta.perfil_id ? api.privacidadVistaDe(atleta.perfil_id) : Promise.resolve(null)), [atleta.perfil_id]);
   const [f, setF] = useState({ nombre: atleta.nombre, email: atleta.email || '', objetivo: atleta.objetivo || '', notion_url: atleta.notion_url || '', estado: atleta.estado, progresion_auto: atleta.progresion_auto !== false });
   const [borrar, setBorrar] = useState(false);
   const [confirmacion, setConfirmacion] = useState('');
@@ -668,6 +673,7 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
           <span>Sugerirle subir carga cuando llegue al tope del rango (doble progresión)<br /><span class="peq terciario">Si lo quitas, la app solo le propone lo pautado y lo de la última vez.</span></span></label>
         <button class="btn btn-primario">Guardar</button>
       </form>
+      {atleta.perfil_id && !vistaPrivacidad.cargando && <p class="peq terciario ficha-privacidad-vista">{textoPrivacidadVista(vistaPrivacidad.datos, VERSION_LEGAL)}</p>}
       {!atleta.perfil_id && atleta.estado !== 'baja' && (
         <div class="panel panel-pad separa"><span>Aún no ha activado su cuenta.</span><button class="btn" onClick={invitar}><Icono n="enviar" /> Generar código nuevo</button></div>
       )}
@@ -688,7 +694,7 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
             <input id="d-confirma" class="entrada" value={confirmacion} onInput={(e) => setConfirmacion(e.currentTarget.value)} />
             <div class="fila-envolver">
               <button class="btn" onClick={() => { setBorrar(false); setConfirmacion(''); }}>Cancelar</button>
-              <button class="btn btn-peligro" disabled={confirmacion.trim() !== atleta.nombre} onClick={async () => { await api.borrarAtleta(atleta.id); aviso('Atleta borrado'); alBorrar(); }}>Borrar definitivamente</button>
+              <button class="btn btn-peligro" disabled={confirmacion.trim() !== atleta.nombre} onClick={async () => { await api.borrarAtleta(atleta.id); cacheChat().quitarAtleta(perfil?.id, atleta.id).catch(() => {}); aviso('Atleta borrado'); alBorrar(); }}>Borrar definitivamente</button>
             </div>
           </div>
         )}

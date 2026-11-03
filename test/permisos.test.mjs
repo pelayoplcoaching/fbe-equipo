@@ -21,6 +21,7 @@ const como = async (uid, aal = 'aal1') => db.exec(`reset role; ${claims(uid, aal
 const anon = async () => db.exec(`reset role; ${claims('', '')} set role anon;`);
 const q = async (sql, params = []) => (await db.query(sql, params)).rows;
 const falla = async (sql, params = []) => { try { await db.query(sql, params); return false; } catch { return true; } };
+const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const nuevoUsuario = async (email) => {
   await su();
   return (await q(`insert into auth.users (email) values ($1) returning id`, [email]))[0].id;
@@ -2909,7 +2910,10 @@ console.log('\nEl chat como WhatsApp: responder, editar, eliminar, reacciones, d
   check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [mC.id]), 'una por persona y mensaje');
   const [rx2] = await q(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '❤️') on conflict (comentario_id, usuario_id) do update set emoji = excluded.emoji returning emoji`, [mC.id]);
   check(rx2.emoji === '❤️', 'tocar otra la cambia');
-  check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '🍺')`, [mA.id]), 'solo los seis emojis de la lista');
+  // (034) cualquier emoji (cada uno elige los suyos), pero solo un emoji: ni texto, ni espacios, ni invisibles
+  check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, 'ok')`, [mA.id]) && await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍 ')`, [mA.id])
+    && await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '\u200d')`, [mA.id]) && await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '\u202e👍')`, [mA.id])
+    && await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, $2)`, [mA.id, '👍'.repeat(17)]), 'solo un emoji (sin texto, espacios ni invisibles)');
   check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [mL.id]), 'no reacciona a los mensajes de Luis');
   check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [mP.id]), 'ni a uno programado que aún no ha salido');
   check(await falla(`update comentario_reacciones set comentario_id = $2 where comentario_id = $1`, [mC.id, mA.id]), 'de una reacción solo se cambia el emoji');
@@ -3644,7 +3648,9 @@ console.log('\nEl chat, aún más como WhatsApp: sin duplicados, entregado, PDF,
   await db.exec(`reset role; ${claims(ana, 'aal1')}`);
   await q(`insert into comentarios (archivo_id, autor, texto) values ($1, 'atleta', 'Foto de antes')`, [fViejo.id]);
   await su();
-  await db.exec(readFileSync(new URL('../supabase/migraciones/033_chat_mas_whatsapp.sql', import.meta.url), 'utf8'));
+  // (como dice su aviso: las siguientes, detrás, en la misma consulta)
+  await db.exec(`delete from fbe_migraciones where numero > 33;\n${readFileSync(new URL('../supabase/migraciones/033_chat_mas_whatsapp.sql', import.meta.url), 'utf8')}\n`
+    + readFileSync(new URL('../supabase/migraciones/034_chat_voz_y_encuestas.sql', import.meta.url), 'utf8'));
   const [eV] = await q(`select entregado_en, creado_en from comentarios where id = $1`, [viejoL.id]);
   const [eV2] = await q(`select entregado_en, leido_en from comentarios where id = $1`, [viejoL2.id]);
   check(fViejo.subido_por === null && new Date(eV.entregado_en).getTime() === new Date(eV.creado_en).getTime() && new Date(eV2.entregado_en).getTime() === new Date(eV2.leido_en).getTime(),
@@ -3657,6 +3663,317 @@ console.log('\nEl chat, aún más como WhatsApp: sin duplicados, entregado, PDF,
   const nc = (await q(`select nombre_coach() n`))[0].n;
   await como(intruso);
   check(typeof nc === 'string' && nc.length > 0 && !nc.includes(' ') && (await q(`select nombre_coach() n`))[0].n === null, 'el atleta ve el nombre corto de su coach; una cuenta sin atleta, no');
+}
+
+console.log('\nNotas de voz, encuestas, «escuchado» y reacciones a elegir (migración 034)');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  const uuid = () => crypto.randomUUID();
+  const insArch = (f) => q(`insert into archivos (${Object.keys(f).join(',')}) values (${Object.keys(f).map((_, i) => `$${i + 1}`).join(',')}) returning *`, Object.values(f));
+  const fallaArch = async (f) => { try { await insArch(f); return false; } catch { return true; } };
+  await su();
+  await q(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await q(`delete from chat_cupos`); await q(`delete from presencia`); await q(`delete from fbe_privado.storage_por_borrar`);
+  const cols = (await q(`select table_name || '.' || column_name c from information_schema.columns where table_schema = 'public' and ((table_name = 'comentarios' and column_name = 'escuchado_en') or (table_name = 'archivos' and column_name = 'onda')) order by 1`)).map((x) => x.c);
+  check(cols.join() === 'archivos.onda,comentarios.escuchado_en', 'comentarios trae escuchado_en; archivos, onda');
+  check((await q(`select relname from pg_class where relname in ('encuestas_chat', 'encuesta_votos') and relrowsecurity and relnamespace = 'public'::regnamespace`)).length === 2, 'las dos tablas nuevas nacen con permisos por fila');
+  const malos = await q(`select p.oid::regprocedure::text f from pg_proc p where p.pronamespace in ('public'::regnamespace, 'fbe_privado'::regnamespace)
+    and p.proname in ('marcar_escuchado', 'chat_encuesta', 'encuesta_votar', 'al_eliminar_encuesta', 'encuesta_preparar', 'comentario_preparar', 'archivo_proteger', 'archivo_proteger_cambios', 'archivo_borrable',
+                      'archivo_adjunto_borrar_mensaje', 'comentario_eliminar', 'chat_buscar', 'chat_copia_valida', 'chat_difundir', 'chat_gastar_cupo', 'chat_cupo_coach')
+    and coalesce(array_to_string(p.proconfig, ','), '') <> 'search_path=""'`);
+  check(!malos.length, `las funciones nuevas y las que cambia la 034, con search_path vacío${malos.length ? ` (no: ${malos.map((x) => x.f).join(', ')})` : ''}`);
+  // (revisión) Las notas de voz van a su propio bucket privado («voz»: 3 MB y solo audio); en «archivos», ya no hay audio
+  const tiposB = (await q(`select allowed_mime_types t from storage.buckets where id = 'archivos'`))[0]?.t || [];
+  const [bVoz] = await q(`select public, file_size_limit, allowed_mime_types t from storage.buckets where id = 'voz'`);
+  const AUDIO = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'];
+  check(bVoz && bVoz.public === false && Number(bVoz.file_size_limit) === 3145728 && bVoz.t.slice().sort().join() === AUDIO.slice().sort().join(),
+    '(revisión) las notas de voz, en su bucket privado «voz»: 3 MB por archivo y solo esos audios');
+  check(!AUDIO.some((t) => tiposB.includes(t)) && ['application/pdf', 'image/jpeg', 'video/mp4'].every((t) => tiposB.includes(t)) && new Set(tiposB).size === tiposB.length,
+    '(revisión) y en «archivos» ya no se admite audio (lo de antes sigue, sin repetir)');
+  check((await q(`select grantee, privilege_type from information_schema.role_table_grants where table_name in ('encuestas_chat', 'encuesta_votos') and grantee in ('authenticated', 'anon') and privilege_type <> 'SELECT'`)).length === 0
+    && (await q(`select 1 from information_schema.role_table_grants where table_name in ('encuestas_chat', 'encuesta_votos') and grantee = 'anon'`)).length === 0,
+    'de las encuestas y los votos, la app solo lee (se crean y se votan con sus funciones); sin sesión, nada');
+  await anon();
+  check(await falla(`select * from encuestas_chat`) && await falla(`select * from encuesta_votos`) && await falla(`select marcar_escuchado($1)`, [uuid()]) && await falla(`select encuesta_votar($1, '{0}')`, [uuid()]), 'sin sesión, nada de lo nuevo');
+
+  console.log('  · Notas de voz');
+  await como(ana);
+  const hoy = new Date().toISOString().slice(0, 10);
+  const onda = Array.from({ length: 32 }, (_, i) => (i * 7) % 101);
+  const voz = (extra = {}) => ({ atleta_id: aAna.id, tipo: 'audio', ruta: `${aAna.id}/audio-${hoy}-${uuid().slice(0, 8)}.webm`, mime: 'audio/webm', bytes: 30000, duracion_seg: 12, onda: `{${onda.join(',')}}`, ...extra });
+  const [vA] = await insArch(voz());
+  check(vA.tipo === 'audio' && vA.subido_por === 'atleta' && vA.onda.length === 32, 'Ana registra una nota de voz (a su nombre, con su onda)');
+  check(await fallaArch(voz({ duracion_seg: 0 })) && await fallaArch(voz({ duracion_seg: 62 })) && await fallaArch(voz({ duracion_seg: null })) && await fallaArch(voz({ bytes: 3145729 })) && await fallaArch(voz({ bytes: null })),
+    'de 1 a 61 segundos (el minuto y un margen) y hasta 3 MB');
+  check(await fallaArch(voz({ mime: 'audio/wav' })) && await fallaArch(voz({ mime: 'video/webm' })) && await fallaArch(voz({ ruta: `${aAna.id}/audio-${hoy}-x.exe` })) && await fallaArch(voz({ ruta: `${aAna.id}/adjunto-${hoy}-x.webm` }))
+    && await fallaArch(voz({ ruta: `${aLuis.id}/audio-${hoy}-x.webm` })) && await fallaArch(voz({ nombre: 'nota.webm' })) && await fallaArch(voz({ poster_ruta: `${aAna.id}/x.jpg` })) && await fallaArch(voz({ paginas: 1 })),
+    'solo los formatos que graban los navegadores, con su ruta audio-… en su carpeta, sin nombre, miniatura ni páginas');
+  check(await fallaArch(voz({ onda: '{1,2,3}' })) && await fallaArch(voz({ onda: `{${Array(8).fill(101).join(',')}}` })) && await fallaArch(voz({ onda: `{${Array(65).fill(5).join(',')}}` }))
+    && await fallaArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: `${aAna.id}/adjunto-${hoy}-onda.jpg`, mime: 'image/jpeg', bytes: 10, onda: `{${Array(8).fill(5).join(',')}}` }),
+    'la onda: de 8 a 64 barras de 0 a 100, y solo en una nota de voz');
+  check(await falla(`update archivos set onda = $2 where id = $1`, [vA.id, `{${Array(8).fill(1).join(',')}}`]) && await falla(`update archivos set duracion_seg = 5 where id = $1`, [vA.id]), 'Ana no le cambia ni la onda ni la duración');
+  const [mvA] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Nota de voz') returning *`, [vA.id]);
+  check(mvA.adjunto === true && mvA.atleta_id === aAna.id && mvA.escuchado_en === null, 'su mensaje es un adjunto del chat (como una foto)');
+  const avisoVoz = await notis(`usuario_id = $1 and tipo = 'mensaje' and clave like $2`, [pelayo, `mensaje:${aAna.id}:%`]);
+  check(avisoVoz.length >= 1 && avisoVoz.every((x) => !/nota de voz/i.test(`${x.titulo} ${x.cuerpo}`) || x.cuerpo === 'Mensaje nuevo'), 'al coach le llega como un mensaje, sin nada de su contenido');
+  await como(ana);
+  check(await falla(`update comentarios set escuchado_en = now() where id = $1`, [mvA.id]), 'nadie pone «escuchado» a mano');
+  check((await q(`delete from archivos where id = $1 returning id`, [vA.id])).length === 0 && (await q(`select archivo_borrable($1) b`, [vA.ruta]))[0].b === false,
+    'Ana no borra su nota de voz (ni de archivos ni de Storage): se elimina para todos, en 48 horas');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into comentarios (archivo_id, texto) values ($1, 'Nota de voz')`, [vA.id]), 'el coach no la pone en un mensaje suyo');
+  // «Escuchado»
+  const [vC] = await insArch(voz({ ruta: `${aAna.id}/audio-${hoy}-coach.webm` }));
+  const [mvC] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Nota de voz') returning *`, [vC.id]);
+  check(vC.subido_por === 'coach', 'el coach manda una nota de voz a Ana');
+  check(await falla(`select marcar_escuchado($1)`, [mvC.id]), 'el coach no marca como escuchada la suya');
+  await como(luis);
+  check(await falla(`select marcar_escuchado($1)`, [mvC.id]), 'ni Luis la de Ana');
+  await como(ana);
+  const t1 = (await q(`select marcar_escuchado($1) t`, [mvC.id]))[0].t;
+  const [eC] = await q(`select escuchado_en, leido_en, entregado_en from comentarios where id = $1`, [mvC.id]);
+  check(!!t1 && !!eC.escuchado_en && !!eC.leido_en && !!eC.entregado_en, 'Ana la escucha: escuchada (y leída y entregada), con la hora de la base');
+  check(new Date((await q(`select marcar_escuchado($1) t`, [mvC.id]))[0].t).getTime() === new Date(t1).getTime(), 'una vez y para siempre (escucharla otra vez no la cambia)');
+  check(await falla(`select marcar_escuchado($1)`, [mvA.id]), 'ni Ana marca como escuchada la suya');
+  const [txt] = await q(`select id from comentarios where atleta_id = $1 and autor = 'coach' and archivo_id is null and eliminado_en is null limit 1`, [aAna.id]);
+  if (txt) check(await falla(`select marcar_escuchado($1)`, [txt.id]), 'solo las notas de voz');
+  await como(pelayo, 'aal2');
+  check(!!(await q(`select marcar_escuchado($1) t`, [mvA.id]))[0].t, 'el coach escucha la de Ana: escuchada');
+  // Con «Mostrar cuándo estoy en línea» apagado, nada (por Realtime diría cuándo la escucha)
+  const [vC2] = await insArch(voz({ ruta: `${aAna.id}/audio-${hoy}-coach2.webm` }));
+  const [mvC2] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Nota de voz') returning *`, [vC2.id]);
+  await como(ana); await q(`select presencia_marcar(false)`);
+  check((await q(`select marcar_escuchado($1) t`, [mvC2.id]))[0].t === null && (await q(`select escuchado_en from comentarios where id = $1`, [mvC2.id]))[0].escuchado_en === null,
+    'con «en línea» apagado, escucharla no se apunta (sin señal al momento)');
+  await su(); await q(`delete from presencia`); await q(`delete from chat_cupos`);
+  // Eliminar para todos: también su archivo
+  await como(ana);
+  const el = (await q(`select comentario_eliminar($1) r`, [mvA.id]))[0].r;
+  check(el.estado === 'eliminado' && el.rutas.includes(vA.ruta) && (await q(`select 1 from archivos where id = $1`, [vA.id])).length === 0, 'Ana elimina su nota de voz para todos: el mensaje queda eliminado y el audio se va (a la cola de Storage)');
+  // El límite diario: 60 notas de voz (aparte de los 30 archivos)
+  await su(); await q(`delete from archivos where atleta_id = $1 and creado_en > now() - interval '1 day'`, [aAna.id]); await q(`delete from fbe_privado.storage_por_borrar`);
+  await como(ana);
+  let topeV = null;
+  for (let i = 0; i < 62 && !topeV; i++) { try { await insArch(voz({ ruta: `${aAna.id}/audio-${hoy}-lim${i}.webm` })); } catch (e) { topeV = { i, m: e.message }; } }
+  check(topeV?.i === 60 && /60 notas de voz/.test(topeV.m), 'como mucho 60 notas de voz al día (el atleta)');
+  check(!!(await insArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: `${aAna.id}/adjunto-${hoy}-tras-voz.jpg`, mime: 'image/jpeg', bytes: 100 }))[0], 'y no cuentan en los 30 archivos al día');
+  await su(); await q(`delete from archivos where atleta_id = $1 and creado_en > now() - interval '1 day'`, [aAna.id]); await q(`delete from fbe_privado.storage_por_borrar`);
+  // Reenviar (el coach) las suyas, nunca las de un atleta
+  await como(pelayo, 'aal2');
+  const [vR] = await insArch(voz({ ruta: `${aAna.id}/audio-${hoy}-reenv.webm` }));
+  const [mvR] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Nota de voz') returning id`, [vR.id]);
+  const [copiaL] = await insArch(voz({ atleta_id: aLuis.id, ruta: `${aLuis.id}/audio-${hoy}-copia.webm` }));
+  const rr = (await q(`select chat_reenviar($1, $2) r`, [mvR.id, JSON.stringify([{ atleta: aLuis.id, archivo: copiaL.id, cliente: uuid() }])]))[0].r;
+  check(rr.length === 1, 'el coach reenvía su nota de voz a Luis (con su copia)');
+  await como(ana);
+  const [vAna2] = await insArch(voz({ ruta: `${aAna.id}/audio-${hoy}-salud.webm` }));
+  const [mAna2] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Nota de voz') returning id`, [vAna2.id]);
+  await como(pelayo, 'aal2');
+  const [copiaL2] = await insArch(voz({ atleta_id: aLuis.id, ruta: `${aLuis.id}/audio-${hoy}-copia2.webm` }));
+  check(await falla(`select chat_reenviar($1, $2)`, [mAna2.id, JSON.stringify([{ atleta: aLuis.id, archivo: copiaL2.id }])]), 'pero nunca la de Ana (su voz, con lo que cuente, al chat de Luis)');
+  // Buscar: la marca «Nota de voz» no sale
+  check(!(await q(`select * from chat_buscar('nota de voz')`)).length, 'buscar no encuentra las marcas de las notas de voz');
+
+  console.log('  · Encuestas');
+  await su(); await q(`delete from chat_cupos`);
+  await como(pelayo, 'aal2');
+  const opciones = JSON.stringify(['Lunes', 'Martes', 'Jueves']);
+  const cE = uuid();
+  const r1 = (await q(`select chat_encuesta($1, null, $2, $3::jsonb, false, $4) r`, [aAna.id, '¿Qué día hacemos el test?', opciones, cE]))[0].r;
+  check(r1.enviados === 1 && r1.ids.length === 1, 'el coach manda una encuesta a Ana');
+  const [mE] = await q(`select * from comentarios where id = $1`, [r1.ids[0]]);
+  const [enc] = await q(`select * from encuestas_chat where comentario_id = $1`, [mE.id]);
+  check(mE.texto === '¿Qué día hacemos el test?' && mE.autor === 'coach' && enc.multiple === false && enc.opciones.length === 3, 'su mensaje lleva la pregunta; la encuesta, sus opciones');
+  check((await q(`select chat_encuesta($1, null, $2, $3::jsonb, false, $4) r`, [aAna.id, '¿Qué día hacemos el test?', opciones, cE]))[0].r.enviados === 0, 'repetida con el mismo id, no se duplica');
+  const malaE = async (pregunta, ops, extra = {}) => falla(`select chat_encuesta($1, $2, $3, $4::jsonb, $5, null)`, [extra.lista ? null : aAna.id, extra.lista || null, pregunta, JSON.stringify(ops), !!extra.multiple]);
+  check(await malaE('Una', ['Solo una']) && await malaE('Muchas', Array.from({ length: 13 }, (_, i) => `o${i}`)) && await malaE('Repes', ['Sí', ' sí ']) && await malaE('Vacía', ['a', '   '])
+    && await malaE('', ['a', 'b']) && await malaE('Números', [1, 2]) && await malaE('Larga', ['a'.repeat(101), 'b']) && await malaE('Invisible', ['​', 'b']),
+    'de 2 a 12 opciones de hasta 100 letras, visibles, sin repetir; y con pregunta');
+  check(await falla(`select chat_encuesta($1, $2, 'x', '["a","b"]'::jsonb, false, null)`, [aAna.id, uuid()]) && await falla(`select chat_encuesta(null, null, 'x', '["a","b"]'::jsonb, false, null)`), 'a un atleta o a una lista (no a los dos, ni a nadie)');
+  check(await falla(`update comentarios set texto = 'Otra pregunta' where id = $1`, [mE.id]), 'un mensaje con encuesta no se edita (ni en sus 15 minutos)');
+  check(await falla(`insert into encuestas_chat (comentario_id, atleta_id, pregunta, opciones) values ($1, $2, 'x', '["a","b"]')`, [mE.id, aAna.id]) && await falla(`update encuestas_chat set multiple = true where id = $1`, [enc.id])
+    && await falla(`delete from encuestas_chat where id = $1`, [enc.id]), 'ni la encuesta se crea, cambia o borra a mano');
+  await como(ana);
+  check((await q(`select * from encuestas_chat`)).length === 1, 'Ana ve su encuesta');
+  check(await falla(`select chat_encuesta($1, null, 'x', '["a","b"]'::jsonb, false, null)`, [aAna.id]), 'Ana no crea encuestas');
+  check(await falla(`insert into encuesta_votos (encuesta_id, atleta_id, opciones) values ($1, $2, '{0}')`, [enc.id, aAna.id]), 'ni vota a mano (con su función)');
+  const v1 = (await q(`select encuesta_votar($1, '{1}') v`, [enc.id]))[0].v;
+  check(igual(v1, [1]), 'Ana vota «Martes»');
+  check(igual((await q(`select encuesta_votar($1, '{2}') v`, [enc.id]))[0].v, [2]) && (await n(`select count(*)::int n from encuesta_votos`)) === 1, 'y cambia el voto (sigue siendo uno)');
+  check(await falla(`select encuesta_votar($1, '{0,1}')`, [enc.id]) && await falla(`select encuesta_votar($1, '{3}')`, [enc.id]) && await falla(`select encuesta_votar($1, '{-1}')`, [enc.id]) && await falla(`select encuesta_votar($1, '{1,1}')`, [enc.id]),
+    'una sola en una encuesta de una respuesta, y solo opciones que existen (sin repetir)');
+  await como(luis);
+  check(!(await q(`select * from encuestas_chat`)).length && !(await q(`select * from encuesta_votos`)).length && await falla(`select encuesta_votar($1, '{0}')`, [enc.id]), 'Luis ni la ve, ni ve el voto de Ana, ni vota en ella');
+  await como(pelayo, 'aal2');
+  check(igual((await q(`select opciones from encuesta_votos where encuesta_id = $1`, [enc.id]))[0].opciones, [2]) && await falla(`select encuesta_votar($1, '{0}')`, [enc.id]), 'el coach ve el voto de Ana (y él no vota)');
+  await como(ana);
+  check((await q(`select encuesta_votar($1, '{}') v`, [enc.id]))[0].v === null && !(await q(`select * from encuesta_votos`)).length, 'con ninguna opción, Ana quita su voto');
+  // De varias respuestas
+  await como(pelayo, 'aal2');
+  const r2 = (await q(`select chat_encuesta($1, null, '¿Qué te apetece?', '["Pierna","Torso","Cardio"]'::jsonb, true, null) r`, [aAna.id]))[0].r;
+  const [enc2] = await q(`select * from encuestas_chat where comentario_id = $1`, [r2.ids[0]]);
+  await como(ana);
+  check(igual((await q(`select encuesta_votar($1, '{2,0}') v`, [enc2.id]))[0].v, [0, 2]), 'en una de varias, elige varias (en orden)');
+  // De baja, no vota; eliminar el mensaje se lleva la encuesta y el voto
+  await su(); await q(`update atletas set estado = 'baja' where id = $1`, [aAna.id]);
+  await como(ana);
+  check(await falla(`select encuesta_votar($1, '{1}')`, [enc2.id]), 'de baja, Ana no vota');
+  await su(); await q(`update atletas set estado = 'activo' where id = $1`, [aAna.id]);
+  await como(pelayo, 'aal2');
+  check(await falla(`select chat_encuesta($1, null, 'x', '["a","b"]'::jsonb, false, null)`, [(await q(`insert into atletas (nombre, estado) values ('Baja 034', 'baja') returning id`))[0].id]), 'a un atleta de baja, no');
+  await q(`select comentario_eliminar($1)`, [r2.ids[0]]);
+  check(!(await q(`select 1 from encuestas_chat where id = $1`, [enc2.id])).length && !(await q(`select 1 from encuesta_votos where encuesta_id = $1`, [enc2.id])).length, 'eliminado su mensaje (para todos), la encuesta y su voto se van');
+  // A una lista de difusión: cada uno la suya, saltándose a los de baja
+  const [aBaja] = await q(`insert into atletas (nombre, estado) values ('Otra baja 034', 'baja') returning id`);
+  const [lista] = await q(`insert into listas_difusion (nombre) values ('Encuesta 034') returning id`);
+  await q(`insert into listas_difusion_miembros (lista_id, atleta_id) values ($1, $2), ($1, $3), ($1, $4)`, [lista.id, aAna.id, aLuis.id, aBaja.id]);
+  const r3 = (await q(`select chat_encuesta(null, $1, '¿Venís el sábado?', '["Sí","No"]'::jsonb, false, $2) r`, [lista.id, uuid()]))[0].r;
+  check(r3.enviados === 2 && r3.saltados === 1, 'a una lista: a Ana y a Luis, cada uno la suya (y se salta a quien está de baja)');
+  await como(luis);
+  const [encL] = await q(`select * from encuestas_chat`);
+  check(!!encL && encL.atleta_id === aLuis.id && igual((await q(`select encuesta_votar($1, '{0}') v`, [encL.id]))[0].v, [0]), 'Luis ve la suya y vota');
+  await como(ana);
+  check((await q(`select * from encuesta_votos`)).length === 0, 'y Ana no ve el voto de Luis');
+  // Cupos: votar (120 por hora, el atleta) y encuestas (30 por hora, el coach)
+  await su(); await q(`delete from chat_cupos`);
+  await como(ana);
+  const [encA3] = await q(`select e.* from encuestas_chat e where e.atleta_id = $1 order by creada_en desc limit 1`, [aAna.id]);
+  let topeVoto = null;
+  for (let i = 0; i < 125 && !topeVoto; i++) { try { await q(`select encuesta_votar($1, $2)`, [encA3.id, `{${i % 2}}`]); } catch (e) { topeVoto = { i, m: e.message }; } }
+  check(topeVoto?.i === 120 && /votado muchas veces/.test(topeVoto.m), 'como mucho 120 votos por hora (el atleta)');
+  await su(); await q(`delete from chat_cupos`);
+  await como(pelayo, 'aal2');
+  let topeE = null;
+  for (let i = 0; i < 32 && !topeE; i++) { try { await q(`select chat_encuesta($1, null, $2, '["a","b"]'::jsonb, false, null)`, [aAna.id, `e${i}`]); } catch (e) { topeE = { i, m: e.message }; } }
+  check(topeE?.i === 30 && /muchas encuestas/.test(topeE.m), 'como mucho 30 encuestas por hora (también el coach)');
+
+  console.log('  · Reacciones a elegir');
+  const [paraR] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Reacciona 034') returning id`, [aAna.id]);
+  await como(ana);
+  const [rx] = await q(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍🏽') returning emoji`, [paraR.id]);
+  check(rx.emoji === '👍🏽' && (await q(`update comentario_reacciones set emoji = '🔥' where comentario_id = $1 returning emoji`, [paraR.id]))[0].emoji === '🔥', 'cualquier emoji, también con su tono de piel');
+  await su();
+  await q(`delete from chat_cupos`); await q(`delete from comentario_reacciones`); await q(`delete from listas_difusion`); await q(`delete from atletas where estado = 'baja' and nombre like '%034'`);
+  await q(`delete from comentarios where atleta_id = any($1::uuid[]) and creado_en > now() - interval '1 day'`, [[aAna.id, aLuis.id]]);
+  await q(`delete from archivos where atleta_id = any($1::uuid[]) and creado_en > now() - interval '1 day'`, [[aAna.id, aLuis.id]]);
+  await q(`delete from fbe_privado.storage_por_borrar`); await q(`delete from notificaciones where tipo in ('respuesta', 'mensaje')`); await q(`delete from presencia`);
+
+  console.log('  · (revisión) El bucket de las notas de voz, la cola de Storage, encuestas sin reenviar y emojis');
+  {
+    await su(); await q(`delete from chat_cupos`); await q(`delete from fbe_privado.storage_por_borrar`);
+    await como(ana);
+    const [vz] = await insArch(voz());
+    check(!(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [vz.ruta])), 'Ana sube su nota de voz registrada al bucket «voz»');
+    check(await falla(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [voz().ruta]) && await falla(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [`${vz.ruta}-x`]) === true
+      && await falla(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [(await insArch(voz())).ruta]),
+      'una nota de voz no se sube al bucket «archivos» (ni registrada)');
+    check(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [`${aAna.id}/audio-${hoy}-sinfila.webm`]), 'sin su fila de nota de voz, nada sube a «voz»');
+    const [fotoA] = await insArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: `${aAna.id}/adjunto-${hoy}-${uuid().slice(0, 8)}.jpg`, mime: 'image/jpeg' });
+    check(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [fotoA.ruta]), 'ni una foto a «voz» (aunque esté registrada)');
+    check((await q(`select name from storage.objects where bucket_id = 'voz'`)).length === 1, 'Ana ve su nota de voz en Storage');
+    await q(`delete from storage.objects where bucket_id = 'voz' and name = $1`, [vz.ruta]);
+    await como(luis);
+    check(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [vz.ruta]) && !(await q(`select name from storage.objects where bucket_id = 'voz'`)).length,
+      'Luis ni ve ni sube nada a la nota de voz de Ana');
+    await como(pelayo, 'aal2');
+    check((await q(`select name from storage.objects where bucket_id = 'voz' and name = $1`, [vz.ruta])).length === 1, 'Ana no la borra de Storage (solo el coach, al vaciar la cola); el coach la ve');
+    check(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [`${aAna.id}/audio-${hoy}-coach-sinfila.webm`]), 'el coach tampoco sube a «voz» algo sin registrar');
+    const [vzC] = await insArch(voz());
+    check(!(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [vzC.ruta])) && (await q(`delete from storage.objects where bucket_id = 'voz' and name = $1 returning name`, [vzC.ruta])).length === 1,
+      'el coach sube la suya (con su fila) y borra de «voz»');
+    // La cola de Storage sabe de los dos buckets; una ruta en la cola no se vuelve a registrar
+    await su();
+    await q(`insert into fbe_privado.storage_por_borrar (ruta, bucket) values ($1, 'voz'), ($2, 'archivos')`, [`${aAna.id}/audio-${hoy}-reusada.webm`, `${aAna.id}/adjunto-video-${hoy}-reusado.mp4.jpg`]);
+    check(await falla(`insert into fbe_privado.storage_por_borrar (ruta, bucket) values ('x/y.jpg', 'comunidad')`), 'la cola de Storage: «archivos» o «voz»');
+    await como(ana);
+    let errReuso = '';
+    try { await insArch(voz({ ruta: `${aAna.id}/audio-${hoy}-reusada.webm` })); } catch (e) { errReuso = e.message; }
+    check(/ya se usó para un archivo eliminado/.test(errReuso), '(revisión) una ruta que espera a borrarse de Storage no se vuelve a registrar');
+    check(await fallaArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: `${aAna.id}/adjunto-video-${hoy}-nuevo.mp4`, mime: 'video/mp4', poster_ruta: `${aAna.id}/adjunto-video-${hoy}-reusado.mp4.jpg` }),
+      '(revisión) ni como portada de un vídeo');
+    check(await falla(`select * from storage_pendiente_cubos(10)`), 'la cola, con su bucket, solo la lee el coach');
+    await como(pelayo, 'aal2');
+    const colaB = await q(`select * from storage_pendiente_cubos(10) order by bucket`);
+    check(colaB.length === 2 && colaB[0].bucket === 'archivos' && colaB[1].bucket === 'voz', 'el coach la lee con el bucket de cada ruta');
+    // Eliminar una nota de voz para todos: su ruta, a la cola con el bucket «voz»
+    await su(); await q(`delete from fbe_privado.storage_por_borrar`);
+    await como(ana);
+    const [vzM] = await insArch(voz());
+    const [mVz] = await q(`insert into comentarios (archivo_id, autor, texto, adjunto) values ($1, 'atleta', 'Nota de voz', true) returning id`, [vzM.id]);
+    await q(`select comentario_eliminar($1)`, [mVz.id]);
+    await su();
+    check(igual((await q(`select ruta, bucket from fbe_privado.storage_por_borrar`)).map((x) => [x.ruta, x.bucket]), [[vzM.ruta, 'voz']]), '(revisión) al eliminarla, su ruta va a la cola con el bucket «voz»');
+    // Una encuesta no se reenvía
+    await q(`delete from chat_cupos`);
+    await como(pelayo, 'aal2');
+    const rE = (await q(`select chat_encuesta($1, null, '¿Sábado?', '["Sí","No"]'::jsonb, false, null) r`, [aAna.id]))[0].r;
+    let errFw = '';
+    try { await q(`select chat_reenviar($1, $2)`, [rE.ids[0], JSON.stringify([{ atleta: aLuis.id, cliente: uuid() }])]); } catch (e) { errFw = e.message; }
+    check(/Una encuesta no se reenvía/.test(errFw), '(revisión) una encuesta no se reenvía (se crea otra o va a una lista)');
+    // Un voto con un número enorme: el aviso de siempre (no un error de la base)
+    await como(ana);
+    const [encR] = await q(`select id from encuestas_chat where comentario_id = $1`, [rE.ids[0]]);
+    let errV = '';
+    try { await q(`select encuesta_votar($1, '{40000}')`, [encR.id]); } catch (e) { errV = e.message; }
+    check(/Esa opción no está en la encuesta/.test(errV) && !/smallint|out of range/i.test(errV), '(revisión) un voto a la opción 40000: «Esa opción no está en la encuesta» (no un error de rango)');
+    // Emojis: las teclas (1️⃣, #️⃣) y las banderas de etiquetas (🏴 + etiquetas + fin), sí; etiquetas sueltas, no
+    const [paraE] = await q(`insert into comentarios (atleta_id, autor, texto) values ($1, 'atleta', 'Teclas') returning id`, [aAna.id]);
+    await su(); const [paraE2] = await q(`insert into comentarios (atleta_id, autor, texto) values ($1, 'coach', 'Teclas 2') returning id`, [aAna.id]);
+    await como(ana);
+    const reac = async (e) => { try { await q(`delete from comentario_reacciones where comentario_id = $1`, [paraE2.id]); await q(`insert into comentario_reacciones (comentario_id, emoji) values ($1, $2)`, [paraE2.id, e]); return true; } catch { return false; } };
+    check(await reac('1️⃣') && await reac('#⃣') && await reac('*️⃣') && await reac('\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}'),
+      '(revisión) reacciones con teclas (1️⃣ #⃣ *️⃣) y banderas de etiquetas (Escocia)');
+    check(!(await reac('\u{E0067}\u{E0062}')) && !(await reac('👍\u{E0067}\u{E0062}')) && !(await reac('\u{1F3F4}\u{E0067}\u{E0062}')) && !(await reac('1')) && !(await reac('a⃣')),
+      '(revisión) pero no etiquetas sueltas o pegadas a otro emoji, ni una bandera sin cerrar, ni un número o una letra');
+    void paraE;
+    await su();
+    await q(`delete from chat_cupos`); await q(`delete from comentario_reacciones`); await q(`delete from storage.objects where bucket_id = 'voz'`);
+    await q(`delete from comentarios where atleta_id = any($1::uuid[]) and creado_en > now() - interval '1 day'`, [[aAna.id, aLuis.id]]);
+    await q(`delete from archivos where atleta_id = any($1::uuid[]) and creado_en > now() - interval '1 day'`, [[aAna.id, aLuis.id]]);
+    await q(`delete from fbe_privado.storage_por_borrar`); await q(`delete from notificaciones where tipo in ('respuesta', 'mensaje')`);
+  }
+
+  console.log('  · (v0.56) El aviso de privacidad: qué versión ha visto cada uno');
+  {
+    await su(); await q(`delete from privacidad_vista`);
+    check((await q(`select relrowsecurity r from pg_class where relname = 'privacidad_vista' and relnamespace = 'public'::regnamespace`))[0]?.r === true
+      && !(await q(`select 1 from information_schema.role_table_grants where table_name = 'privacidad_vista' and grantee in ('anon', 'authenticated') and (grantee = 'anon' or privilege_type not in ('SELECT', 'INSERT', 'UPDATE'))`)).length,
+      'privacidad_vista, con permisos por fila; sin sesión, nada; nadie la borra a mano');
+    await anon();
+    check(await falla(`select * from privacidad_vista`) && await falla(`insert into privacidad_vista (version) values ('2026-11')`), 'sin sesión, ni se lee ni se escribe');
+    await como(ana);
+    const [pv] = await q(`insert into privacidad_vista (version) values ('2026-11') returning *`);
+    check(pv.usuario_id === ana && pv.version === '2026-11', 'Ana pone la suya');
+    await como(luis);
+    const [pvL] = await q(`insert into privacidad_vista (usuario_id, version) values ($1, '2026-10') on conflict (usuario_id) do update set version = excluded.version returning *`, [ana]);
+    check(pvL.usuario_id === luis, '(Luis, con el usuario de Ana, solo pone la suya)');
+    check(!(await q(`update privacidad_vista set version = '2026-11' where usuario_id = $1 returning *`, [ana])).length && (await q(`select * from privacidad_vista`)).length === 1,
+      'Luis no cambia ni ve la de Ana');
+    await q(`update privacidad_vista set usuario_id = $1, version = '2026-11' where usuario_id = $2`, [ana, luis]);
+    await su();
+    const pvs = await q(`select usuario_id, version from privacidad_vista order by version`);
+    check(pvs.length === 2 && pvs.filter((x) => x.usuario_id === ana).length === 1 && pvs.filter((x) => x.usuario_id === luis).length === 1 && pvs.find((x) => x.usuario_id === ana).version === '2026-11',
+      'ni pasándose a otro usuario: la de Ana sigue igual (cada uno, solo la suya)');
+    await como(ana);
+    check((await q(`update privacidad_vista set version = '2026-01' returning version`))[0].version === '2026-11', 'nunca hacia atrás');
+    check(await falla(`update privacidad_vista set version = '2026-13'`) && await falla(`update privacidad_vista set version = 'cualquiera'`) && await falla(`update privacidad_vista set version = '2099-01'`),
+      'solo una versión con su formato que ya exista (no una de dentro de años)');
+    const proxima = (await q(`select to_char((now() at time zone 'Europe/Madrid') + interval '1 month', 'YYYY-MM') v`))[0].v;
+    check((await q(`update privacidad_vista set version = $1 returning version`, [proxima]))[0].version === proxima, '(la del mes que viene sí: margen para publicarla)');
+    await como(pelayo, 'aal2');
+    check((await q(`select usuario_id from privacidad_vista order by usuario_id`)).length === 2, 'el coach ve la de cada uno (en la ficha)');
+    await su(); await q(`delete from privacidad_vista`);
+  }
+
+  console.log('  · La 034 sin la 033');
+  const sin33 = new PGlite();
+  await sin33.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin33.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '033')) await sin33.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  let err34 = null;
+  try { await sin33.exec(readFileSync(new URL('../supabase/migraciones/034_chat_voz_y_encuestas.sql', import.meta.url), 'utf8')); } catch (e) { err34 = e.message; }
+  check(/Antes de la 034 hace falta la 033/.test(err34 || ''), 'la 034 no se aplica sin la 033');
+  await sin33.close();
 }
 
 console.log('\nLa verificación en dos pasos falla cerrada');

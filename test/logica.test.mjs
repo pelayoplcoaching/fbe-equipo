@@ -1734,7 +1734,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const legal = await import('../web/src/legal.js');
   const fila = legal.PRIVACIDAD ? legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil') : null;
   const textoLegal = fs.readFileSync(new URL('../web/src/legal.js', import.meta.url), 'utf8');
-  check(/el tamaño de la letra/.test(fila ? fila[1] : textoLegal) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice también el tamaño de la letra (sin cambiar la versión de la política)');
+  check(/el tamaño de la letra/.test(fila ? fila[1] : textoLegal) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice también el tamaño de la letra (sin cambiar la versión de la política)');
   const ilus = fs.readFileSync(new URL('../web/src/ui/Ilustraciones.jsx', import.meta.url), 'utf8');
   check(['mensajes', 'diario', 'records', 'checkins', 'tareas', 'todo', 'filtro', 'descanso', 'hecha', 'semana', 'espera'].every((k) => new RegExp(`\\n  ${k}: \\(\\) =>`).test(ilus)) && !/#[0-9a-fA-F]{3,6}/.test(ilus), 'las ilustraciones: una por estado vacío y por día de Hoy, sin colores escritos (los pone el tema)');
 }
@@ -1849,7 +1849,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(A.PLANTILLAS_TARJETA.map(([k]) => k).join() === 'cifras,minima,foto', 'tres plantillas: Cifras, Mínima y Con tu foto');
   const legal = await import('../web/src/legal.js');
   const fila = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
-  check(/foto que eliges para una tarjeta/.test(fila[1]) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice que la foto de la tarjeta no se sube (sin cambiar la versión de la política)');
+  check(/foto que eliges para una tarjeta/.test(fila[1]) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que la foto de la tarjeta no se sube (sin cambiar la versión de la política)');
 }
 // ---------- v0.52: movimiento, racha, destacados, gráficas, carné, confeti y respiración ----------
 {
@@ -2037,7 +2037,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const filaL = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
   check(/kilos y las repeticiones que te propone/.test(filaL[1]) && /al cerrar la sesión/.test(filaL[1]), '«Lo que se queda en tu móvil» dice exactamente lo que guarda la píldora (también los kilos propuestos) y que se borra al cerrar la sesión');
   check(!/(^|\n|\}|,)\s*\.destacado\s*[{,:]/.test(bloque52) && /\.destacados-lista > \.destacado \{/.test(bloque52), 'las tarjetas de destacados solo dentro de su lista (el diario ya usa «.destacado» para sus vídeos)');
-  check(/Respira/.test(filaL[1]) && /hitos de la racha/.test(filaL[1]) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice «Respira» y los hitos ya celebrados (sin cambiar la versión de la política)');
+  check(/Respira/.test(filaL[1]) && /hitos de la racha/.test(filaL[1]) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice «Respira» y los hitos ya celebrados (sin cambiar la versión de la política)');
 }
 {
   console.log('\nv0.52.2: descansos cuando el coach no los pone');
@@ -2115,7 +2115,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
 
   const legal = await import('../web/src/legal.js');
   const filaL = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
-  check(/Los descansos que eliges tú .* se guardan en tu móvil/.test(filaL[1]) && legal.VERSION_LEGAL === '2026-10', '«Lo que se queda en tu móvil» dice que los descansos que eliges se guardan en tu móvil (sin cambiar la versión de la política)');
+  check(/Los descansos que eliges tú .* se guardan en tu móvil/.test(filaL[1]) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que los descansos que eliges se guardan en tu móvil (sin cambiar la versión de la política)');
 }
 console.log('\nv0.53: días de entreno por semana (microciclos que no caben en una semana natural)');
 {
@@ -2333,7 +2333,8 @@ console.log('\nv0.53: días de entreno por semana (microciclos que no caben en u
     'lo que coincide se marca con sus letras de verdad (también con tildes)');
   check(M.normalLetras('Ñandú 💪 ß').length === 'Ñandú 💪 ß'.length, 'normalizar no mueve las posiciones (emojis y letras raras)');
   const rs = M.resumenReacciones([{ usuario_id: 'yo', emoji: '💪' }, { usuario_id: 'otro', emoji: '❤️' }, { usuario_id: 'x', emoji: '💪' }, { usuario_id: 'z', emoji: '🍺' }], 'yo');
-  check(igual(rs, [{ emoji: '❤️', n: 1, mia: false }, { emoji: '💪', n: 2, mia: true }]), 'las reacciones, agrupadas en el orden de la lista (las que no son de la lista, fuera)');
+  check(igual(rs, [{ emoji: '❤️', n: 1, mia: false }, { emoji: '💪', n: 2, mia: true }, { emoji: '🍺', n: 1, mia: false }]), 'las reacciones, agrupadas en el orden de la lista (v0.56: las demás, detrás)');
+  check(M.resumenReacciones([{ usuario_id: 'z', emoji: 'ok' }], 'yo').length === 0, '(y lo que no es un emoji, fuera)');
   check(M.siguienteReaccion('💪', '💪') === null && M.siguienteReaccion('💪', '❤️') === '❤️' && M.siguienteReaccion(null, '👍') === '👍', 'la misma la quita; otra la cambia');
   const mio = msg('m', 'atleta', 10);
   check(M.puedeEditar(mio, 'atleta', ahora) && !M.puedeEditar(msg('m', 'atleta', 16), 'atleta', ahora) && !M.puedeEditar(mio, 'coach', ahora)
@@ -2344,16 +2345,17 @@ console.log('\nv0.53: días de entreno por semana (microciclos que no caben en u
     'eliminar para todos: lo propio en 48 horas (el programado, siempre: se cancela)');
   check(M.cuandoInfo(new Date(ahora - 8 * 60000).toISOString(), ahora) === 'hoy 18:42' && M.cuandoInfo('2026-11-02T18:42:00', ahora) === 'ayer 18:42' && M.cuandoInfo('2026-10-26T09:05:00', ahora) === 'lun 26 oct, 9:05',
     'Info: «hoy 18:42», «ayer 18:42», «lun 26 oct, 9:05»');
-  check(igual(M.infoMensaje({ creado_en: '2026-11-03T18:42:00', leido_en: '2026-11-03T18:50:00', editado_en: '2026-11-03T18:45:00' }, ahora), [['Enviado', 'hoy 18:42'], ['Leído', 'hoy 18:50'], ['Editado', 'hoy 18:45']])
-    && M.infoMensaje({ creado_en: '2026-11-03T18:42:00' }, ahora)[1][1] === 'todavía no', 'Info de un mensaje: enviado, leído (o todavía no) y editado');
+  const filaInfo = (xs, k) => xs.find(([x]) => x === k) || null;
+  check(igual(M.infoMensaje({ creado_en: '2026-11-03T18:42:00', entregado_en: '2026-11-03T18:43:00', leido_en: '2026-11-03T18:50:00', editado_en: '2026-11-03T18:45:00' }, ahora), [['Enviado', 'hoy 18:42'], ['Entregado', 'hoy 18:43'], ['Leído', 'hoy 18:50'], ['Editado', 'hoy 18:45']])
+    && filaInfo(M.infoMensaje({ creado_en: '2026-11-03T18:42:00' }, ahora), 'Leído')[1] === 'todavía no', 'Info de un mensaje: enviado, entregado (v0.56), leído (o todavía no) y editado');
   {
     // (v0.54, revisión) L3: con «Mostrar cuándo estoy en línea» apagado, el leído sin hora; y el que guardó la base solo con el día
     const { instanteMadrid } = await import('../web/src/logica/fechas.js');
     const soloDia = instanteMadrid('2026-11-03', '00:00');
     check(M.leidoSoloDia(soloDia) && !M.leidoSoloDia('2026-11-03T18:50:00') && !M.leidoSoloDia(null), 'un leído de medianoche de Madrid es «solo el día»');
-    check(igual(M.infoMensaje({ creado_en: '2026-11-03T18:42:00', leido_en: '2026-11-03T18:50:00' }, ahora, { horaLeido: false })[1], ['Leído', 'hoy'])
-      && igual(M.infoMensaje({ creado_en: '2026-11-03T18:42:00', leido_en: soloDia }, ahora)[1], ['Leído', 'hoy'])
-      && igual(M.infoMensaje({ creado_en: '2026-11-02T18:42:00', leido_en: instanteMadrid('2026-11-02', '00:00') }, ahora)[1], ['Leído', 'ayer']),
+    check(igual(filaInfo(M.infoMensaje({ creado_en: '2026-11-03T18:42:00', leido_en: '2026-11-03T18:50:00' }, ahora, { horaLeido: false }), 'Leído'), ['Leído', 'hoy'])
+      && igual(filaInfo(M.infoMensaje({ creado_en: '2026-11-03T18:42:00', leido_en: soloDia }, ahora), 'Leído'), ['Leído', 'hoy'])
+      && igual(filaInfo(M.infoMensaje({ creado_en: '2026-11-02T18:42:00', leido_en: instanteMadrid('2026-11-02', '00:00') }, ahora), 'Leído'), ['Leído', 'ayer']),
       'Info: «Leído: hoy» sin hora si yo la oculto o si la otra parte la tenía oculta');
     check(M.diaInfo('2026-11-03T08:00:00', ahora) === 'hoy' && M.diaInfo('2026-10-26T09:05:00', ahora) === 'lun 26 oct' && M.diaInfo('2025-10-26T09:05:00', ahora) === 'dom 26 oct 2025' && M.diaInfo(null) === null,
       'el día de Info: hoy, ayer o la fecha (con el año, si no es este)');
@@ -2525,6 +2527,7 @@ console.log('\nv0.55: el chat, aún más como WhatsApp');
     && !C.reenviable({ ...mC, enviar_en: new Date(Date.now() + 864e5).toISOString() }, 'coach') && !C.reenviable({ ...mC, sesion_id: 's' }, 'coach') && !C.reenviable({ ...mC, archivo_id: 'v', adjunto: false }, 'coach')
     && C.reenviable({ ...mC, archivo_id: 'f', adjunto: true }, 'coach') && !C.reenviable({ ...mC, pendiente: true }, 'coach'),
     'se reenvía lo del coach, del chat y ya salido (lo de un atleta, no: son datos de salud de otra persona)');
+  check(!C.reenviable({ ...mC, encuesta: { id: 'e1', opciones: ['a', 'b'] } }, 'coach') && !C.reenviable({ ...mC, subida: { estado: 'subiendo' } }, 'coach'), '(revisión) una encuesta no se reenvía (ni lo que aún se está subiendo)');
   // PDF
   check(C.nombreSeguroPdf('../../etc/passwd') === 'passwd.pdf' && C.nombreSeguroPdf('C:\\Users\\Ana\\Plan.PDF') === 'Plan.pdf' && C.nombreSeguroPdf('') === 'documento.pdf' && C.nombreSeguroPdf('...pdf') === 'pdf.pdf',
     'el nombre de un PDF: sin carpetas (ni «../»), siempre .pdf y, si no queda nada, «documento.pdf»');
@@ -2579,6 +2582,174 @@ console.log('\nv0.55: el chat, aún más como WhatsApp');
   check(a1.tag === 'chat:#mensajes/x' && a1.n === 1 && a1.cuerpo === 'Mensaje nuevo' && a2.tag === a1.tag && a2.cuerpo === '3 mensajes nuevos de Ana' && a2.renotify && a3.tag === 'n3' && a3.cuerpo.startsWith('Tócalo'),
     'en el móvil, los de una conversación se juntan en una («3 mensajes nuevos de Ana»); lo demás, como siempre');
   check(!/texto|cuerpo: d\.texto/.test(fuente) && /mensajes nuevos/.test(fuente), '(sin el texto de los mensajes: solo cuántos y de quién)');
+}
+
+console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el móvil y más');
+{
+  const V = await import('../web/src/logica/notasVoz.js');
+  check(V.textoContador(42.7) === '0:42 / 1:00' && V.textoContador(75) === '1:00 / 1:00' && V.textoContador(0) === '0:00 / 1:00', 'notas de voz: «0:42 / 1:00» (y nunca más de 1:00)');
+  check(!V.quedaPoco(49.9) && V.quedaPoco(50) && V.quedaPoco(59.9) && !V.quedaPoco(60) && V.segundosRestantes(52.2) === 8, 'avisa en los últimos 10 segundos («Quedan 8 s»)');
+  check(!V.alLimite(59.99) && V.alLimite(60) && V.alLimite(61), 'al minuto se para sola');
+  check(V.duracionGuardada(0.3) === 1 && V.duracionGuardada(42.6) === 43 && V.duracionGuardada(64) === 60 && V.duracionGuardada(NaN) === 1, 'la duración que se guarda: de 1 a 60 segundos enteros (la base acepta hasta 61)');
+  check(V.formatoGrabacion((t) => t === 'audio/webm;codecs=opus')?.tipo === 'audio/webm' && V.formatoGrabacion((t) => t === 'audio/mp4')?.ext === 'm4a'
+    && V.formatoGrabacion(() => false) === null && V.formatoGrabacion(null) === null, 'el formato: Opus en WebM (Chrome, Android) o MP4/AAC (iPhone); si no hay, no se graba');
+  check(V.tipoAudio('audio/webm;codecs=opus').tipo === 'audio/webm' && V.tipoAudio('audio/x-m4a').tipo === 'audio/mp4' && V.tipoAudio('video/webm') === null && V.tipoAudio('audio/wav') === null,
+    'el audio se sube con su tipo sin parámetros (como lo acepta Storage), y solo los de la lista');
+  const onda = V.ondaDe([0, 0.1, 0.5, 0.2, 0, 0.9, 0.3, 0.1, 0, 0.4], 8);
+  check(onda.length === 8 && Math.max(...onda) === 100 && onda.every((x) => Number.isInteger(x) && x >= 0 && x <= 100) && V.ondaValida(onda) && V.ondaDe([], 4).length === 8 && !V.ondaValida([1, 2]) && !V.ondaValida(Array(8).fill(101)),
+    'la forma de onda: de 8 a 64 barras de 0 a 100 (lo más alto, al 100)');
+  check(V.gestoVoz(-130, 0) === 'cancelar' && V.gestoVoz(0, -90) === 'bloquear' && V.gestoVoz(-20, -20) === null && V.gestoVoz(-120, -100) === 'cancelar', 'deslizar a la izquierda cancela; hacia arriba, sigue grabando sin el dedo');
+  check(V.siguienteVelocidad(1) === 1.5 && V.siguienteVelocidad(1.5) === 2 && V.siguienteVelocidad(2) === 1 && V.textoVelocidad(1.5) === '1,5×', '1× → 1,5× → 2×');
+  check(/permiso/.test(V.errorMicro({ name: 'NotAllowedError' })) && /ningún micro/.test(V.errorMicro({ name: 'NotFoundError' })) && /navegador/.test(V.errorMicro({ name: 'NoSoportado' })) && /otra app/.test(V.errorMicro({ name: 'NotReadableError' })),
+    'permiso denegado, sin micro, micro ocupado o sin grabación: cada uno con su mensaje claro');
+  const nv = readFileSync(new URL('../web/src/ui/chat/NotaVoz.jsx', import.meta.url), 'utf8');
+  check(/getTracks\(\)\.forEach\(\(t\) => t\.stop\(\)\)/.test(nv) && /onstop = \(\) => \{\s*soltarMicro\(\)/.test(nv), 'el micro se suelta en cuanto se para la grabación (sin el indicador encendido)');
+
+  const E = await import('../web/src/logica/encuestas.js');
+  check(E.opcionesEncuesta(['  Sí ', 'No']).ok && igual(E.opcionesEncuesta(['  Sí ', 'No']).opciones, ['Sí', 'No']) && !E.opcionesEncuesta(['Solo una']).ok && !E.opcionesEncuesta(Array.from({ length: 13 }, (_, i) => `o${i}`)).ok
+    && !E.opcionesEncuesta(['Sí', 'sí']).ok && !E.opcionesEncuesta(['a'.repeat(101), 'b']).ok && !E.opcionesEncuesta(['​', 'b']).ok && !E.opcionesEncuesta('x').ok,
+    'encuestas: de 2 a 12 opciones de hasta 100 letras, visibles y sin repetir (como la base)');
+  const enc = E.limpiarEncuesta({ pregunta: ' ¿Qué día? ', opciones: ['Lunes', '', 'Martes'], multiple: 1 });
+  check(enc.ok && enc.pregunta === '¿Qué día?' && igual(enc.opciones, ['Lunes', 'Martes']) && enc.multiple === true && !E.limpiarEncuesta({ pregunta: '', opciones: ['a', 'b'] }).ok, 'la encuesta lista: sin las opciones vacías del formulario');
+  check(igual(E.alternarVoto([], 1), [1]) && igual(E.alternarVoto([1], 1), []) && igual(E.alternarVoto([1], 2), [2]) && igual(E.alternarVoto([2], 0, true), [0, 2]) && igual(E.alternarVoto([0, 2], 2, true), [0]),
+    'votar: tocar elige, tocar otra cambia, tocar la tuya quita (con varias, añade o quita)');
+  const res = E.resultadoEncuesta({ opciones: ['a', 'b', 'c'] }, [1]);
+  check(res.votado && res.total === 1 && res.filas[1].elegida && !res.filas[0].elegida && !E.resultadoEncuesta({ opciones: ['a', 'b'] }, null).votado, 'el resultado (en una conversación vota una persona)');
+
+  const I = await import('../web/src/logica/imagen.js');
+  check(igual(I.medidaReducida(4032, 3024), { ancho: 1600, alto: 1200 }) && igual(I.medidaReducida(3024, 4032, I.LADO_HD), { ancho: 1920, alto: 2560 }) && igual(I.medidaReducida(800, 600), { ancho: 800, alto: 600 }),
+    'fotos: el lado largo, 1600 px (HD, 2560); nunca se agranda');
+  check(I.opcionesFoto(false).calidad === 0.8 && I.opcionesFoto(true).lado === 2560 && I.comprimible('image/jpeg') && I.comprimible('image/heic') && !I.comprimible('image/gif') && !I.comprimible('video/mp4'),
+    'se vuelven a codificar las fotos (también una HEIC si el navegador sabe abrirla); un GIF, no');
+  check(I.nombreJpg('IMG_2041.HEIC') === 'IMG_2041.jpg' && I.nombreJpg('') === 'foto.jpg' && I.quedarseConNueva({ bytesNueva: 50 }) && !I.quedarseConNueva({ bytesNueva: 0 }) && !I.quedarseConNueva({ bytesNueva: 300 * 1048576 }),
+    '(revisión) siempre la copia vuelta a codificar (así se va el EXIF, también el GPS), aunque pese más, dentro del límite');
+  // (revisión) Si no se puede volver a codificar, a una JPEG se le quitan a mano los bloques APP1 (EXIF/XMP) y APP13 (IPTC)
+  const seg = (m, datos) => [0xFF, m, ((datos.length + 2) >> 8) & 255, (datos.length + 2) & 255, ...datos];
+  const gps = [...new TextEncoder().encode('Exif\0\0GPS 43.36N 5.84W')];
+  const jpg = new Uint8Array([0xFF, 0xD8, ...seg(0xE0, [...new TextEncoder().encode('JFIF\0'), 1, 2]), ...seg(0xE1, gps), ...seg(0xED, [...new TextEncoder().encode('Photoshop 3.0\0')]), ...seg(0xE2, [7, 7]),
+    ...seg(0xFE, [...new TextEncoder().encode('comentario')]), ...seg(0xDB, [0, 1, 2]), 0xFF, 0xDA, 0, 4, 1, 2, 0x11, 0x22, 0xFF, 0x00, 0x33, 0xFF, 0xD9]);
+  const limpia = I.quitarMetadatosJpeg(jpg);
+  const txt = (b) => new TextDecoder('latin1').decode(b);
+  check(I.esJpeg('image/jpeg') && !I.esJpeg('image/heic') && I.jpegConMetadatos(jpg) && limpia && !I.jpegConMetadatos(limpia) && !txt(limpia).includes('GPS') && !txt(limpia).includes('Photoshop') && !txt(limpia).includes('comentario')
+    && txt(limpia).includes('JFIF') && limpia.length === jpg.length - (gps.length + 4) - 18 - 14 && limpia.at(-1) === 0xD9 && limpia.at(-2) === 0xFF,
+    '(revisión) una JPEG sin volver a codificar: fuera EXIF, GPS, XMP, IPTC y comentarios; la imagen (y el JFIF y el perfil de color), igual');
+  check(I.quitarMetadatosJpeg(new Uint8Array([0xFF, 0xD8, 0xFF, 0xE1, 0, 200, 1])) === null && I.quitarMetadatosJpeg(new Uint8Array([0x89, 0x50, 0x4E, 0x47])) === null,
+    '(revisión) una JPEG rota (o una PNG o HEIC) no se «limpia» a medias: null, y la app avisa antes de enviarla');
+  const fotosSrc = readFileSync(new URL('../web/src/ui/fotos.js', import.meta.url), 'utf8');
+  const chatSrc56 = readFileSync(new URL('../web/src/ui/Chat.jsx', import.meta.url), 'utf8');
+  check(/limpia: false/.test(fotosSrc) && /quitarMetadatosJpeg/.test(fotosSrc) && chatSrc56.includes('Esta foto no se ha podido limpiar') && chatSrc56.includes('Enviar igualmente') && /Quitar \{/.test(chatSrc56),
+    '(revisión) la foto que no se ha podido limpiar (HEIC) avisa antes de salir: «Enviar igualmente» o «Quitar»');
+  check(I.girar(0) === 90 && I.girar(270) === 0 && igual(I.medidasGiradas(4, 3, 90), { ancho: 3, alto: 4 }) && igual(I.recorteValido({ x: -1, y: 0.99, w: 5, h: 0 }), { x: 0, y: 0.95, w: 1, h: 0.05 }),
+    'el editor: girar de 90 en 90 y un recorte siempre dentro de la foto (de al menos el 5 %)');
+  const rec = I.moverBorde({ x: 0, y: 0, w: 1, h: 1 }, 'izq', 0.2);
+  check(Math.abs(rec.x - 0.2) < 1e-9 && Math.abs(rec.w - 0.8) < 1e-9 && I.moverBorde(rec, 'der', -0.3).w <= 0.5 + 1e-9 && I.moverBorde({ x: 0, y: 0, w: 1, h: 1 }, 'arr', 2).h >= 0.05, 'y sus bordes, con el teclado o el deslizador');
+
+  const EM = await import('../web/src/logica/emojis.js');
+  check(EM.conTono('👍', '\u{1F3FD}') === '👍\u{1F3FD}' && EM.conTono('✌️', '\u{1F3FB}') === '✌\u{1F3FB}' && EM.conTono('🏋️‍♀️', '\u{1F3FF}') === '🏋\u{1F3FF}‍♀️'
+    && EM.conTono('😀', '\u{1F3FD}') === '😀' && EM.conTono('👍\u{1F3FD}', '') === '👍' && EM.admiteTono('🙏') && !EM.admiteTono('❤️'),
+    'tonos de piel: en las manos y las personas que lo admiten (también en «🏋️‍♀️»); en las caras, no');
+  check(EM.emojiValido('👍') && EM.emojiValido('👍🏽') && EM.emojiValido('🏳️‍🌈') && EM.emojiValido('🇪🇸') && EM.emojiValido('❤️') && !EM.emojiValido('ok') && !EM.emojiValido('👍 ') && !EM.emojiValido('‍')
+    && !EM.emojiValido('‮👍') && !EM.emojiValido('👍'.repeat(17)) && !EM.emojiValido('') && EM.emojiValido('1️⃣') && EM.emojiValido('#⃣') && EM.emojiValido('*️⃣')
+    && EM.emojiValido('\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}') && !EM.emojiValido('\u{E0067}\u{E0062}') && !EM.emojiValido('👍\u{E0067}') && !EM.emojiValido('\u{1F3F4}\u{E0067}\u{E0062}') && !EM.emojiValido('1') && !EM.emojiValido('a⃣'), 'una reacción es un emoji (cualquiera), como pide la base (034)');
+  const almE = new Map(); const memE = { getItem: (k) => almE.get(k) ?? null, setItem: (k, v) => almE.set(k, v) };
+  check(igual(EM.leerReacciones(memE, 'u1'), EM.REACCIONES_DEFECTO) && igual(EM.guardarReacciones(memE, 'u1', ['🔥', '🔥', 'ok', '🏆']).slice(0, 3), ['🔥', '🏆', '❤️']) && EM.leerReacciones(memE, 'u1').length === 6
+    && igual(EM.leerReacciones(memE, 'u2'), EM.REACCIONES_DEFECTO), 'tus seis reacciones: distintas, válidas, completadas con las de siempre y por cuenta');
+  EM.guardarTono(memE, '\u{1F3FE}');
+  check(EM.leerTono(memE) === '\u{1F3FE}' && (EM.guardarTono(memE, 'x'), EM.leerTono(memE)) === '', 'el tono elegido se guarda en el móvil (solo uno de los seis)');
+
+  const EN = await import('../web/src/logica/enlaces.js');
+  const trucada = EN.tarjetaEnlace('https://ejemplo.com/factura%E2%80%AEfdp.exe%E2%80%8B%E2%81%A6x');
+  check(trucada && !/[\u200b-\u200f\u202a-\u202e\u2060-\u2069]/.test(trucada.ruta) && trucada.ruta.includes('facturafdp.exe'), '(revisión) la ruta de la tarjeta, sin controles bidi ni invisibles (no se puede «dar la vuelta» al texto)');
+  check(igual(EN.tarjetaEnlace('https://www.examine.com/supplements/creatine/'), { dominio: 'examine.com', ruta: '/supplements/creatine', seguro: true }) && EN.tarjetaEnlace('javascript:alert(1)') === null
+    && EN.tarjetaEnlace('https://pubmed.ncbi.nlm.nih.gov/').ruta === '', 'la tarjeta de un enlace: su dominio y su ruta, sin pedir nada a nadie');
+
+  const CH = await import('../web/src/logica/chat.js');
+  const msgs = [{ id: 'f', archivo_id: 'a1', archivo: { tipo: 'adjunto', mime: 'image/jpeg' }, texto: 'Foto' }, { id: 'v', archivo_id: 'a2', archivo: { tipo: 'audio', mime: 'audio/webm' }, texto: 'Nota de voz' },
+    { id: 'e', texto: 'mira https://examine.com' }, { id: 'd', archivo_id: 'a3', archivo: { tipo: 'documento', mime: 'application/pdf' }, texto: 'Documento' }, { id: 'x', archivo_id: 'a4', archivo: { tipo: 'audio' }, texto: 'Nota de voz', eliminado_en: '2026-01-01' }];
+  check(igual(CH.porTipo(msgs, 'audio'), ['v']) && igual(CH.porTipo(msgs, 'enlace'), ['e']) && igual(CH.porTipo(msgs, 'foto'), ['f']) && igual(CH.porTipo(msgs, 'documento'), ['d']), 'buscar por tipo: fotos, enlaces, documentos y notas de voz (sin lo eliminado)');
+  const dia = (iso) => iso.slice(0, 10);
+  const porDia = [{ id: 'a', creado_en: '2026-10-01T10:00:00' }, { id: 'b', creado_en: '2026-10-05T10:00:00' }, { id: 'c', creado_en: '2026-10-09T10:00:00' }];
+  check(CH.primeroDesde(porDia, '2026-10-05', dia) === 'b' && CH.primeroDesde(porDia, '2026-10-06', dia) === 'c' && CH.primeroDesde(porDia, '2026-10-10', dia) === null && CH.primeroDesde(porDia, 'ayer', dia) === null,
+    'ir a una fecha: el primero de ese día (o del siguiente que tenga)');
+  check(CH.ultimoEditable([{ id: 1, autor: 'atleta' }, { id: 2, autor: 'coach' }, { id: 3, autor: 'atleta', pendiente: true }], 'atleta', () => true)?.id === 1 && CH.ultimoEditable([{ id: 1, autor: 'atleta' }], 'atleta', () => false) === null,
+    '↑ con el cuadro vacío: tu último mensaje que aún se puede editar');
+  check(CH.debeSonar({}) && !CH.debeSonar({ activado: false }) && !CH.debeSonar({ silenciada: true }) && !CH.debeSonar({ visible: false }) && !CH.debeSonar({ alCargar: true }),
+    'los sonidos: con el chat a la vista, activados y sin silenciar; nunca al cargar');
+  check(igual(CH.llegadosNuevos([{ id: 1 }], [{ id: 1 }, { id: 2, autor: 'coach' }, { id: 3, autor: 'atleta' }], 'atleta').map((c) => c.id), [2]) && CH.numeroInsignia(140) === 99 && CH.numeroInsignia(-2) === 0,
+    'lo que llega nuevo de la otra parte (para el tono) y el número del icono (hasta 99)');
+
+  const M2 = await import('../web/src/logica/mensajes.js');
+  check(M2.medioDe({ archivo: { tipo: 'audio', mime: 'audio/webm' } }) === 'audio' && M2.extractoCita({ archivo_id: 'x', archivo: { tipo: 'audio' }, texto: 'Nota de voz' }) === '🎤 Nota de voz'
+    && M2.esMarcador({ archivo_id: 'x', texto: 'Nota de voz' }), 'una nota de voz: «🎤 Nota de voz» en las citas y la lista');
+  const ahoraI = Date.parse('2026-11-03T19:00:00');
+  const fila = (xs, k) => xs.find(([x]) => x === k)?.[1];
+  const voz = { creado_en: '2026-11-03T18:42:00', entregado_en: '2026-11-03T18:43:00', leido_en: '2026-11-03T18:50:00', escuchado_en: '2026-11-03T18:51:00', archivo: { tipo: 'audio' } };
+  check(fila(M2.infoMensaje(voz, ahoraI), 'Escuchado') === 'hoy 18:51' && fila(M2.infoMensaje({ ...voz, escuchado_en: null }, ahoraI), 'Escuchado') === 'todavía no' && fila(M2.infoMensaje(voz, ahoraI, { horaLeido: false }), 'Escuchado') === 'hoy'
+    && !fila(M2.infoMensaje(voz, ahoraI, { horaLeido: false }), 'Entregado') && fila(M2.infoMensaje({ creado_en: voz.creado_en }, ahoraI), 'Escuchado') === undefined,
+    '«Info del mensaje»: enviado, entregado, leído y (en una nota de voz) escuchado; con «en línea» apagado, sin horas y sin «entregado»');
+
+  const { crearCacheChat, paraCache, MAX_CACHE } = await import('../web/src/datos/cacheChat.js');
+  const almC = new Map();
+  let relojC = Date.parse('2026-11-03T12:00:00Z');
+  let cerradaC = false;
+  const almacenC = { leer: async (k) => almC.get(k), guardar: async (k, v) => { almC.set(k, JSON.parse(JSON.stringify(v))); }, borrar: async (k) => { almC.delete(k); }, todo: async () => [...almC.entries()], borrarTodo: async () => almC.clear() };
+  const cache = crearCacheChat({ almacen: almacenC, ahora: () => relojC, estaCerrada: () => cerradaC });
+  const largos = Array.from({ length: 250 }, (_, i) => ({ id: `m${i}`, autor: 'coach', texto: `hola ${i}`, creado_en: '2026-11-03T10:00:00', archivo: i === 249 ? { id: 'a', ruta: 'x/adjunto-1.jpg', mime: 'image/jpeg', url: 'https://firmada', blob: 'x' } : null, enlaceFirmado: 'https://firmada' }));
+  await cache.guardar('u1', 'at1', [...largos, { id: 'pendiente-1', pendiente: true, texto: 'saliendo' }]);
+  const leido = await cache.leer('u1', 'at1');
+  check(leido.mensajes.length === MAX_CACHE && leido.mensajes.at(-1).id === 'm249' && !leido.mensajes.some((c) => c.pendiente) && !('enlaceFirmado' in leido.mensajes[0]) && !('url' in leido.mensajes.at(-1).archivo) && !('blob' in leido.mensajes.at(-1).archivo),
+    'la copia del chat en el móvil: los últimos 200, solo textos y datos (sin enlaces firmados ni archivos, ni lo que aún sale)');
+  check(await cache.leer('u2', 'at1') === null && (await cache.leer('u1', 'at2')) === null, 'por cuenta y por conversación (lo de otra persona en el mismo móvil no se ve)');
+  await cache.borrarTodo();
+  check(await cache.leer('u1', 'at1') === null && paraCache([{ id: 'a' }]).length === 1 && await crearCacheChat({ almacen: null }).leer('u1', 'at1') === null, 'al cerrar la sesión se borra entera; sin IndexedDB, el chat abre como siempre');
+  const appSrc = readFileSync(new URL('../web/src/ui/App.jsx', import.meta.url), 'utf8');
+  check((appSrc.match(/borrarCacheChat\(\)/g) || []).length >= 2, 'se borra al cerrar sesión y cuando la sesión se acaba sola');
+  // (revisión) Cerrada al salir (un guardado que llega tarde no la vuelve a crear), caduca a los 30 días y se limpia
+  await cache.guardar('u1', 'at1', largos.slice(0, 3));
+  cerradaC = true;
+  check(!(await cache.guardar('u1', 'at9', largos.slice(0, 3))) && !almC.has('u1:at9') && await cache.leer('u1', 'at1') === null, '(revisión) con la sesión cerrada no se guarda ni se lee nada (un guardado tardío no la vuelve a crear)');
+  cerradaC = false;
+  relojC += 29 * 864e5;
+  check((await cache.leer('u1', 'at1'))?.mensajes.length === 3, '(revisión) a los 29 días aún está');
+  relojC += 2 * 864e5;
+  check(await cache.leer('u1', 'at1') === null && !almC.has('u1:at1'), '(revisión) a los 30 días de la última vez que se abrió, caduca (y se borra)');
+  await cache.guardar('u1', 'at1', largos.slice(0, 2)); await cache.guardar('u1', 'at2', largos.slice(0, 2)); await cache.guardar('u2', 'at3', largos.slice(0, 2));
+  almC.set('u1:viejo', { perfil: 'u1', atleta: 'viejo', guardado_en: '2026-01-01T00:00:00Z', mensajes: [] });
+  const quitadas = await cache.purgar('u1', { conservar: ['at1'] });
+  check(quitadas === 2 && almC.has('u1:at1') && !almC.has('u1:at2') && almC.has('u2:at3') && !almC.has('u1:viejo'), '(revisión) en el móvil del coach se quita la de quien ya no está (borrado o de baja) y lo caducado; lo de otra cuenta, no se toca');
+  await cache.quitarAtleta('u1', 'at1');
+  check(!almC.has('u1:at1'), '(revisión) y al borrar un atleta, su conversación, al momento');
+  const CC = await import('../web/src/datos/cacheChat.js');
+  const promesa = CC.borrarCacheChat();
+  check(CC.cacheCerrada(), '(revisión) borrarCacheChat() la cierra al momento (síncrono), antes de borrar nada');
+  await promesa; CC.reabrirCacheChat();
+  check(!CC.cacheCerrada() && /reabrirCacheChat\(\)/.test(appSrc) && /borrarCompartido\(\)/.test(appSrc) && (appSrc.match(/borrarCompartido\(\)/g) || []).length >= 2, '(revisión) se reabre al entrar; y al salir (o caducar la sesión) se borra también lo compartido desde otra app');
+  const cacheSrc = readFileSync(new URL('../web/src/datos/cacheChat.js', import.meta.url), 'utf8');
+  const convSrc = readFileSync(new URL('../web/src/ui/coach/Conversaciones.jsx', import.meta.url), 'utf8');
+  check(/onversionchange/.test(cacheSrc) && /purgar\(perfil\.id, \{ conservar/.test(convSrc) && /estado !== 'baja'/.test(convSrc), '(revisión) si otra pestaña la cambia, se suelta; el coach purga al cargar sus conversaciones');
+
+  // (v0.56) El aviso de privacidad, una vez por versión
+  const PV = await import('../web/src/logica/privacidad.js');
+  const { VERSION_LEGAL } = await import('../web/src/legal.js');
+  check(VERSION_LEGAL === '2026-11' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+    && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
+  check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
+    'la versión más nueva de las dos (la base y este móvil); solo con su formato');
+  check(PV.NOVEDADES_PRIVACIDAD.length === 4 && /micro/i.test(PV.NOVEDADES_PRIVACIDAD.map((x) => x[2]).join(' ')) && /cerrar la sesión/.test(PV.NOVEDADES_PRIVACIDAD[1][2]) && /GPS/.test(PV.NOVEDADES_PRIVACIDAD[2][2]) && /voto/.test(PV.NOVEDADES_PRIVACIDAD[3][2])
+    && PV.clavePrivacidadLocal('u1') === 'fbe-privacidad-vista-u1', 'lo que cuenta: notas de voz y micro, la copia del chat (se borra al salir), fotos sin ubicación y los votos');
+  check(/Ha visto la política de privacidad vigente/.test(PV.textoPrivacidadVista({ version: '2026-11' }, '2026-11')) && /Vio la política de 2026-10/.test(PV.textoPrivacidadVista({ version: '2026-10' }, '2026-11')) && /Sin constancia/.test(PV.textoPrivacidadVista(null, '2026-11')),
+    'el coach lo ve en la ficha');
+  const avisoSrc = readFileSync(new URL('../web/src/ui/AvisoPrivacidad.jsx', import.meta.url), 'utf8');
+  check(/Entendido/.test(avisoSrc) && /alCerrar=\{cerrar\}/.test(avisoSrc) && /TextoPrivacidad/.test(avisoSrc) && !/preact\/compat/.test(avisoSrc), 'una hoja (Escape, fuera o «Entendido»: todo cuenta como vista), con la política entera a un toque');
+
+  const { normalizarAjustes } = await import('../web/src/ui/ajustes.js');
+  check(normalizarAjustes({}).sonidosChat === true && normalizarAjustes({ sonidosChat: false }).sonidosChat === false && normalizarAjustes({ fotosHd: 'sí' }).fotosHd === false, 'los ajustes nuevos: sonidos del chat (de serie, sí) y fotos en HD (de serie, no)');
+  const sn = readFileSync(new URL('../web/src/ui/sonidos.js', import.meta.url), 'utf8');
+  check(/createOscillator/.test(sn) && !/\.(mp3|ogg|wav|m4a)\b/.test(sn), 'los sonidos son tonos propios hechos al momento (sin archivos de audio de nadie)');
+  const legal = readFileSync(new URL('../web/src/legal.js', import.meta.url), 'utf8');
+  check(/EXIF/.test(legal) && /GPS/.test(legal) && /i\.ytimg\.com/.test(legal) && /micro/.test(legal) && /IndexedDB|copia de los últimos mensajes/.test(legal) && /notas de voz/i.test(legal), 'la privacidad cuenta lo nuevo: EXIF/GPS, YouTube, el micro, las notas de voz y la copia del chat en el móvil');
+  const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
+  check(/img-src[^;]*https:\/\/i\.ytimg\.com/.test(html) && !/img-src[^;]*\*[ ;]/.test(html) && /media-src[^;]*blob:/.test(html), 'la CSP: solo las miniaturas de YouTube de fuera; el audio grabado (blob:) se puede escuchar antes de enviarlo');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

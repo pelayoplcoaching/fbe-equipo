@@ -13,7 +13,9 @@ import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 const CLAVE = 'fbe-ajustes';
 // voz (v0.48): el entrenador por voz, apagado de entrada
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
-  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false, descansoDefecto: DESCANSO_DEFECTO, fondoChat: 'dibujos' };
+  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false, descansoDefecto: DESCANSO_DEFECTO, fondoChat: 'dibujos',
+  // v0.56: los sonidos del chat (al enviar y al recibir, con el chat abierto) y las fotos en HD (más grandes) de serie
+  sonidosChat: true, fotosHd: false };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -42,6 +44,8 @@ export function normalizarAjustes(guardado = {}) {
   if (!descansoValido(a.descansoDefecto)) a.descansoDefecto = DESCANSO_DEFECTO;
   // v0.54: el fondo del chat, con dibujos o liso
   if (!['dibujos', 'liso'].includes(a.fondoChat)) a.fondoChat = AJUSTES_DEFECTO.fondoChat;
+  a.sonidosChat = a.sonidosChat !== false;
+  a.fotosHd = a.fotosHd === true;
   return a;
 }
 export function leerAjustes() {

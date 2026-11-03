@@ -6,7 +6,9 @@ export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atlet
   // v0.54 (migración 032): el chat como WhatsApp
   comentario_reacciones: 'comentario_id,usuario_id', comentario_destacados: 'usuario_id,comentario_id', conversacion_estado: 'atleta_id', presencia: 'usuario_id',
   // v0.55 (migración 033): fijar, silenciar y las listas de difusión
-  conversacion_fijado: 'atleta_id', chat_silencios: 'usuario_id,atleta_id', listas_difusion_miembros: 'lista_id,atleta_id' };
+  conversacion_fijado: 'atleta_id', chat_silencios: 'usuario_id,atleta_id', listas_difusion_miembros: 'lista_id,atleta_id',
+  // v0.56 (migración 034): las encuestas del chat
+  encuesta_votos: 'encuesta_id', privacidad_vista: 'usuario_id' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 
@@ -371,7 +373,13 @@ export function crearBackendSupabase({ url, anonKey }) {
       // bucket: «archivos» (de siempre) o «comunidad» (v0.43, las fotos del muro: pequeñas, de una vez)
       async subir(ruta, archivo, tipo, { alProgreso = null, senal = null, bucket = 'archivos' } = {}) {
         if (!archivo || archivo.size <= TROZO || bucket !== 'archivos') {
-          const { error } = await sb.storage.from(bucket).upload(ruta, archivo, { contentType: tipo, upsert: false, cacheControl: '3600' });
+          // (v0.56) «Cancelar» también en una pequeña (de una vez): deja de esperarla; si llega a subirse, su fila se borra
+          // y su archivo va a la cola de Storage (lo hace la base)
+          let cancelar = null;
+          const cancelada = new Promise((_, mal) => { cancelar = () => { const e = new Error('Cancelado'); e.cancelado = true; mal(e); }; });
+          if (senal) senal.abortar = cancelar;
+          alProgreso?.(0.1);
+          const { error } = await Promise.race([sb.storage.from(bucket).upload(ruta, archivo, { contentType: tipo, upsert: false, cacheControl: '3600' }), cancelada]);
           // Ya subido por un intento anterior (llegó el archivo, no la respuesta): vale
           if (error && !(String(error.statusCode) === '409' || /already exists|duplicate/i.test(error.message || ''))) throw traducir(error);
           alProgreso?.(1);

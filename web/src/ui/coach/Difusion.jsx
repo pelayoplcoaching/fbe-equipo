@@ -6,6 +6,7 @@ import { capturarPoster } from '../Archivos.jsx';
 import { fmtProgramado } from '../../logica/fechas.js';
 import { planDifusion, textoSaltados, esPdf, paginasPdf, PDF_MAX_MB, tamanoTexto, nombreSeguroPdf } from '../../logica/chat.js';
 import { LIMITE_ARCHIVO_MB } from '../../datos/api.js';
+import { HojaEncuesta } from '../chat/Encuesta.jsx';
 
 // Las listas de difusión del coach (v0.55, migración 033), como las de WhatsApp: listas con nombre («Nutrición»,
 // «Compiten»…) y un mensaje que llega a cada uno por separado, en su chat (lo que contesten, a cada chat). Nadie ve la
@@ -97,6 +98,7 @@ function HojaEscribirDifusion({ lista, atletas, alCerrar, alEnviado }) {
   const [adjunto, setAdjunto] = useState(null); // { archivo, url, esPdf, esVideo, paginas }
   const [enviando, setEnviando] = useState(false);
   const [programar, setProgramar] = useState(false);
+  const [encuesta, setEncuesta] = useState(false); // v0.56: una encuesta a la lista (cada uno, la suya)
   const { destinos, saltados } = planDifusion(lista.miembros, atletas);
   // Este envío (su id y lo ya subido): al reintentar tras un fallo se reutiliza (no sale dos veces); con otro texto u
   // otro archivo, es otro envío
@@ -151,8 +153,10 @@ function HojaEscribirDifusion({ lista, atletas, alCerrar, alEnviado }) {
         <div class="fila-envolver">
           <button class="btn btn-primario" disabled={enviando || !destinos.length || (!texto.trim() && !adjunto)}><Icono n="enviar" /> {enviando ? 'Enviando…' : 'Enviar'}</button>
           <button type="button" class="btn" disabled={enviando || !texto.trim() || !!adjunto || !destinos.length} onClick={() => setProgramar(true)}><Icono n="reloj" /> Programar</button>
+          <button type="button" class="btn" disabled={enviando || !destinos.length} onClick={() => setEncuesta(true)}><Icono n="encuesta" /> Encuesta</button>
         </div>
       </form>
+      {encuesta && <HojaEncuesta listaId={lista.id} para={`«${lista.nombre}»`} alCerrar={() => setEncuesta(false)} alEnviada={(r) => { setEncuesta(false); alEnviado?.(r); }} />}
       {programar && <HojaProgramar titulo={`Programar la difusión «${lista.nombre}»`} alCerrar={() => setProgramar(false)} alGuardar={({ enviarEn }) => enviar(enviarEn)} />}
     </Hoja>
   );

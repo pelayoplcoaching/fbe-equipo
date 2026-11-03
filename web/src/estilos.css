@@ -3917,3 +3917,151 @@ body:has(.visor) .chat-barra, body:has(.visor) .chat-abajo { display: none; }
 .burbuja .doc-chat:not(.mini) { width: 300px; max-width: 100%; }
 .burbuja { grid-template-columns: minmax(0, 1fr); }
 .doc-chat-ico span { background: #A61B2B; color: #fff; }
+
+/* ---------- v0.56: notas de voz, encuestas, subidas con progreso, editor de fotos, búsqueda por tipo ---------- */
+
+.chat-tope { display: block; height: 1px; }
+.chat-sin-red { display: flex; align-items: center; gap: 6px; justify-content: center; margin: 6px auto; padding: 4px 12px; border-radius: 999px; background: var(--hoja); box-shadow: var(--sombra); width: fit-content; color: var(--tinta-2); }
+.chat-sin-red svg { width: 14px; height: 14px; }
+
+/* Soltar archivos encima (ordenador) */
+.chat.soltando { outline: 3px dashed var(--morado); outline-offset: -6px; }
+.chat-soltar { position: fixed; inset: 0; z-index: 40; display: grid; place-content: center; justify-items: center; gap: 6px; pointer-events: none;
+  background: color-mix(in srgb, var(--tiza) 82%, transparent); color: var(--tinta); text-align: center; }
+.chat-soltar svg { width: 40px; height: 40px; color: var(--morado); }
+
+/* El micro y la grabación */
+.chat-micro { touch-action: none; -webkit-user-select: none; user-select: none; }
+.chat-micro:active { transform: scale(1.12); }
+.chat-grabando { flex: 1; min-width: 0; min-height: 46px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 4px 12px; border-radius: 24px;
+  background: var(--hoja); box-shadow: var(--sombra); transform: translateX(var(--voz-dx, 0)); }
+.chat-grabando-punto { width: 10px; height: 10px; border-radius: 50%; background: var(--alerta); animation: voz-latido 1s ease-in-out infinite; flex: none; }
+@keyframes voz-latido { 50% { opacity: .35; } }
+.chat-grabando-tiempo { font-weight: 700; font-variant-numeric: tabular-nums; }
+.chat-grabando-aviso { color: var(--tinta-2); flex: 1; min-width: 8em; }
+.chat-grabando.acaba .chat-grabando-tiempo, .chat-grabando.acaba .chat-grabando-aviso { color: var(--alerta); font-weight: 700; }
+.chat-grabando-acciones { margin-left: auto; gap: 6px; }
+.chat-revisar-voz { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.chat-revisar-voz .voz { flex: 1; min-width: 0; }
+.chat-revisar-aviso { flex-basis: 100%; color: var(--tinta-2); margin: 0 4px; }
+
+/* El reproductor de una nota de voz */
+.voz { display: flex; align-items: center; gap: 8px; min-width: min(260px, 100%); max-width: 320px; }
+.voz.compacta { max-width: none; padding: 4px 10px; border-radius: 24px; background: var(--hoja); box-shadow: var(--sombra); }
+.voz-play { width: 44px; height: 44px; border-radius: 50%; flex: none; background: var(--morado); color: var(--sobre-morado); }
+.voz-cuerpo { position: relative; flex: 1; min-width: 0; display: grid; grid-template-rows: 28px auto; }
+.voz-onda { display: flex; align-items: center; gap: 2px; height: 28px; pointer-events: none; }
+.voz-onda span { flex: 1; min-width: 2px; border-radius: 2px; background: var(--tinta-3); opacity: .55; }
+.voz-onda span.hecha { background: var(--morado); opacity: 1; }
+.voz-barra { position: absolute; inset: 0 0 auto 0; height: 28px; width: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.voz-barra:focus-visible { opacity: 1; accent-color: var(--morado); }
+.voz-tiempo { color: var(--tinta-2); }
+.voz-vel { min-width: 44px; min-height: 32px; padding: 0 8px; border-radius: 999px; font-weight: 700; }
+.voz-micro { display: inline-flex; color: var(--tinta-3); }
+.voz-micro svg { width: 18px; height: 18px; }
+.voz-micro.escuchada { color: var(--leido); }
+.burbuja.con-voz { min-width: min(280px, 86vw); }
+
+/* Lo que se está subiendo: su vista previa, el anillo y «Cancelar» */
+.subida-chat { position: relative; display: grid; place-items: center; width: 280px; max-width: 100%; aspect-ratio: 4 / 5; border-radius: 12px; overflow: hidden; background: var(--hoja-2); }
+.subida-chat.es-voz, .subida-chat.es-pdf { aspect-ratio: auto; min-height: 72px; grid-template-columns: 1fr auto; padding: 8px 10px; }
+.subida-chat img, .subida-chat video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(.7); }
+.subida-chat.es-voz .subida-icono, .subida-chat.es-pdf .subida-icono { justify-self: start; }
+.subida-icono { display: inline-flex; align-items: center; gap: 6px; color: var(--tinta-2); min-width: 0; }
+.subida-icono svg { width: 22px; height: 22px; flex: none; }
+.subida-anillo { position: relative; width: 52px; height: 52px; display: grid; place-items: center; }
+.subida-anillo svg { position: absolute; inset: 0; width: 52px; height: 52px; }
+.subida-anillo circle { fill: rgba(0, 0, 0, .45); stroke-width: 3.5; }
+.subida-anillo .pista { stroke: rgba(255, 255, 255, .3); }
+.subida-anillo .hecho { fill: none; stroke: #fff; stroke-linecap: round; transition: stroke-dashoffset .2s linear; }
+.subida-chat.es-voz .subida-anillo circle.pista, .subida-chat.es-pdf .subida-anillo circle.pista { fill: var(--morado); stroke: color-mix(in srgb, var(--sobre-morado) 35%, transparent); }
+.subida-chat.es-voz .subida-anillo .hecho, .subida-chat.es-pdf .subida-anillo .hecho { stroke: var(--sobre-morado); }
+.subida-cancelar { position: relative; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: #fff; cursor: pointer; display: grid; place-items: center; }
+.subida-chat.es-voz .subida-cancelar, .subida-chat.es-pdf .subida-cancelar { color: var(--sobre-morado); }
+.subida-cancelar svg { width: 20px; height: 20px; }
+.subida-fallo { position: relative; display: grid; gap: 6px; justify-items: center; padding: 8px; border-radius: 10px; background: var(--hoja); color: var(--tinta); text-align: center; }
+
+/* La bandeja de adjuntos: editar y HD */
+.chat-adjunto-editar { position: absolute; left: 4px; bottom: 4px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .6); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.chat-adjunto-editar::after { content: ''; position: absolute; inset: -6px; }
+.chat-adjunto-editar svg { width: 16px; height: 16px; }
+.chat-hd { justify-self: start; font-weight: 700; }
+.chat-hd.activo, .btn.activo { background: var(--morado); color: var(--sobre-morado); }
+
+/* El editor de fotos */
+.editor-foto { display: grid; gap: 12px; }
+.editor-lienzo { display: grid; place-items: center; background: #111; border-radius: 12px; overflow: hidden; min-height: 180px; }
+.editor-canvas { display: block; max-width: 100%; max-height: 56vh; width: auto; height: auto; }
+.editor-canvas.herr-dibujar { cursor: crosshair; }
+.editor-barra { display: flex; flex-wrap: wrap; gap: 6px; }
+.editor-recorte { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px 12px; border: 0; padding: 0; margin: 0; }
+.editor-recorte legend { margin-bottom: 4px; }
+.editor-deslizador { display: grid; gap: 2px; }
+.editor-deslizador input { width: 100%; min-height: 32px; accent-color: var(--morado); }
+.editor-colores { display: flex; flex-wrap: wrap; gap: 8px; }
+.editor-color { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--tinta-3); cursor: pointer; position: relative; }
+.editor-color::after { content: ''; position: absolute; inset: -5px; }
+.editor-color[aria-checked="true"] { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 5px var(--morado); }
+.editor-texto .entrada { flex: 1; min-width: 0; }
+.editor-chip { gap: 0; }
+
+/* Las encuestas */
+.encuesta-chat { border: 0; margin: 0; padding: 2px 0; display: grid; gap: 6px; min-width: min(260px, 80vw); }
+.encuesta-pregunta { display: flex; align-items: flex-start; gap: 6px; padding: 0; font-size: 1rem; }
+.encuesta-pregunta svg { width: 18px; height: 18px; flex: none; margin-top: 2px; color: var(--morado); }
+.encuesta-opciones { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.encuesta-opcion { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto 4px; align-items: center; column-gap: 8px; row-gap: 4px;
+  min-height: 44px; padding: 6px 10px; border-radius: 10px; background: color-mix(in srgb, var(--hoja-2) 70%, transparent); cursor: pointer; }
+.encuesta-opcion.solo-ver { cursor: default; }
+.encuesta-opcion input { width: 20px; height: 20px; accent-color: var(--morado); margin: 0; }
+.encuesta-opcion:focus-within { outline: 2px solid var(--foco); outline-offset: 1px; }
+.encuesta-texto { overflow-wrap: anywhere; }
+.encuesta-barra { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--tinta-3) 30%, transparent); overflow: hidden; }
+.encuesta-barra span { display: block; height: 100%; background: var(--morado); }
+.encuesta-opcion.elegida { background: var(--morado-suave); }
+.encuesta-n { color: var(--morado); font-weight: 700; }
+.encuesta-campo .entrada { flex: 1; min-width: 0; }
+
+/* La búsqueda: por tipo y por fecha */
+.chat-busqueda-filtros { position: sticky; top: var(--chat-sep-top, 56px); z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 12px;
+  background: var(--tiza); border-bottom: 1px solid var(--linea); }
+.chat-busqueda-tipos { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; padding: 2px; }
+.chat-busqueda-tipos .chip { white-space: nowrap; min-height: 36px; }
+.chat-busqueda-fecha { display: inline-flex; align-items: center; gap: 4px; }
+.chat-busqueda-fecha svg { width: 18px; height: 18px; color: var(--tinta-2); }
+.chat-busqueda-fecha .entrada { min-height: 40px; padding: 4px 8px; width: auto; }
+
+/* La tarjeta de un enlace (sin pedir nada a esa web) */
+.vista-enlace { display: flex; align-items: center; gap: 10px; max-width: 320px; margin-top: 6px; padding: 8px 10px; border-radius: 10px; text-decoration: none; color: inherit;
+  background: color-mix(in srgb, var(--hoja-2) 70%, transparent); border-left: 3px solid var(--morado); min-height: 44px; }
+.vista-enlace-ico { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: var(--morado-suave); color: var(--morado); flex: none; }
+.vista-enlace-ico svg { width: 18px; height: 18px; }
+.vista-enlace-dominio { overflow-wrap: anywhere; }
+.vista-enlace-ruta { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+
+/* Los emojis: tono de piel, el «+» de las reacciones y tus seis */
+.panel-emojis { grid-template-rows: auto auto minmax(0, 1fr); }
+.panel-emojis-tonos { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 4px 6px 0; }
+.panel-emojis-tono { min-width: 44px; font-size: 1.1rem; }
+.menu-reaccion-mas svg { width: 20px; height: 20px; }
+.reacciones-huecos { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.menu-reaccion.activa { box-shadow: 0 0 0 2px var(--morado); }
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-grabando-punto { animation: none; }
+  .subida-anillo .hecho { transition: none; }
+  .chat-micro:active { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .chat-soltar { background: var(--tiza); }
+  .encuesta-opcion, .vista-enlace { background: var(--hoja-2); }
+}
+
+/* (v0.56, revisión) Las novedades de privacidad (una vez) y los avisos de lo que llega de otra app */
+.lista-novedades-privacidad { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lista-novedades-privacidad li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; }
+.lista-novedades-privacidad li > svg { width: 22px; height: 22px; color: var(--morado); margin-top: 2px; }
+.lista-novedades-privacidad p { margin: 2px 0 0; }
+.hoja-aviso-privacidad .btn-grande { width: 100%; margin-top: 8px; }
+.chat-de-fuera { display: flex; gap: 6px; align-items: flex-start; }
+.chat-de-fuera svg { flex: none; width: 16px; height: 16px; }

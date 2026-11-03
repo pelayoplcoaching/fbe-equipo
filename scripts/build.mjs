@@ -95,7 +95,8 @@ ${marcadoPortada}
       { name: 'Mensajes', short_name: 'Mensajes', url: './#mensajes', icons: [{ src: 'icono-192.png', sizes: '192x192', type: 'image/png' }] },
       { name: 'Revisar (coach)', short_name: 'Revisar', url: './#revisar', icons: [{ src: 'icono-192.png', sizes: '192x192', type: 'image/png' }] },
     ],
-    share_target: { action: './compartir-video', method: 'POST', enctype: 'multipart/form-data', params: { title: 'titulo', text: 'texto', files: [{ name: 'video', accept: ['video/*'] }] } },
+    // v0.56: fotos, vídeos y PDF (hasta 10) para el chat; un vídeo solo, también como vídeo de técnica (el atleta)
+    share_target: { action: './compartir', method: 'POST', enctype: 'multipart/form-data', params: { title: 'titulo', text: 'texto', files: [{ name: 'archivos', accept: ['image/*', 'video/*', 'application/pdf', '.pdf'] }] } },
   }, null, 2));
 
   // config.js y sw.js no pasan por esbuild: lo que no sea ASCII (tildes de los comentarios) se escribe como \\u…

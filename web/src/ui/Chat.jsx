@@ -28,6 +28,17 @@ import { Visor } from './chat/Visor.jsx';
 import { HojaReenviar } from './chat/Reenviar.jsx';
 import { InfoContacto, HojaSilenciar } from './chat/InfoContacto.jsx';
 import { DocumentoChat } from './chat/Documento.jsx';
+import { useGrabadora, BotonMicro, PanelGrabando, PanelRevisar, NotaVozChat } from './chat/NotaVoz.jsx';
+import { EditorFoto } from './chat/EditorFoto.jsx';
+import { EncuestaChat, HojaEncuesta } from './chat/Encuesta.jsx';
+import { HojaReaccionesRapidas } from './chat/Emojis.jsx';
+import { cacheChat } from '../datos/cacheChat.js';
+import { tomarParaChat } from './Compartido.jsx';
+import { sonar } from './sonidos.js';
+import { prepararFoto } from './fotos.js';
+import { debeSonar, porTipo, TIPOS_BUSQUEDA, primeroDesde, ultimoEditable } from '../logica/chat.js';
+import { leerReacciones, emojiValido } from '../logica/emojis.js';
+import { comprimible } from '../logica/imagen.js';
 
 // El chat (v0.18): todos los mensajes con una persona en un solo hilo, como en WhatsApp. Lo que viene de una sesión,
 // un check-in o un vídeo lleva su etiqueta, que abre ese sitio; lo que se escribe aquí es un mensaje general.
@@ -40,16 +51,23 @@ import { DocumentoChat } from './chat/Documento.jsx';
 // galería y PDF), la hora y los ✓ dentro de la burbuja, el pico en la primera de cada grupo, los mensajes de 1 a 3
 // emojis en grande, «Leer más» en los largos, la píldora del día y el botón ⌄ con lo nuevo, el visor de fotos y vídeos,
 // fijar un mensaje (el coach), seleccionar varios, «Info del contacto», reenviar (el coach), silenciar y animaciones.
+// v0.56: abre al momento (y sin cobertura) con lo guardado en el móvil; carga lo anterior al subir sin saltos; tonos al
+// enviar y al recibir; las fotos se reducen (sin EXIF) con «HD» y un editor (recortar, girar, dibujar, texto); el progreso
+// de cada envío dentro de su burbuja, con «Cancelar»; pegar o soltar archivos (ordenador); encuestas (el coach); ir a una
+// fecha y buscar por tipo; tonos de piel y tus seis reacciones; Ctrl/Cmd+F, Escape y ↑ para editar; y notas de voz de
+// hasta un minuto.
 // yo: 'coach' o 'atleta'. irContexto({tipo, id}): abrir la sesión, el check-in o el archivo.
 // cabecera: { izquierda, titulo, sub, derecha, verFicha } para pintar aquí la cabecera de la pantalla (con su estado, la
 // búsqueda y el menú); sin ella (en la ficha), una fila de herramientas. perfilOtro: el perfil del atleta (para el coach).
-const NOMBRE_EMOJI = { '❤️': 'corazón', '👍': 'pulgar arriba', '💪': 'bíceps', '😂': 'risa', '😮': 'sorpresa', '🙏': 'gracias' };
+const NOMBRE_EMOJI_FIJO = { '❤️': 'corazón', '👍': 'pulgar arriba', '💪': 'bíceps', '😂': 'risa', '😮': 'sorpresa', '🙏': 'gracias' };
+// (v0.56: cualquier emoji; de los que no tienen nombre aquí, el propio emoji)
+const NOMBRE_EMOJI = new Proxy(NOMBRE_EMOJI_FIJO, { get: (o, k) => o[k] || String(k) });
 const almacen = () => { try { return window.localStorage; } catch { return null; } };
 // En el ordenador (ratón y teclado), Enter envía; en el móvil, salta de línea (como WhatsApp)
 const enOrdenador = () => typeof window !== 'undefined' && !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 const ahorroDatos = () => typeof navigator !== 'undefined' && !!navigator.connection?.saveData;
 
-export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coach', fotoOtro = null, irContexto, alLeer, alCambiar, cabecera = null, perfilOtro = null, saltarA = null }) {
+export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coach', fotoOtro = null, irContexto, alLeer, alCambiar, cabecera = null, perfilOtro = null, saltarA = null, archivosIniciales = null }) {
   const { api, perfil, aviso, modo } = useApp();
   const yo = perfil?.rol === 'coach' ? 'coach' : 'atleta';
   const miId = perfil?.id || null;
@@ -85,6 +103,13 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const [reenviar, setReenviar] = useState(null);    // v0.55: [mensajes] a reenviar (el coach)
   const [fijar, setFijar] = useState(null);          // v0.55: el mensaje a fijar (elegir cuánto)
   const [fallido, setFallido] = useState(null);      // v0.55: el mensaje que no salió («Reintentar» / «Eliminar»)
+  const [subidas, setSubidas] = useState([]);
+  const [sinLimpiar, setSinLimpiar] = useState(null); // (revisión) fotos que no se han podido limpiar: avisar antes de enviarlas        // v0.56: fotos, vídeos, PDF y notas de voz saliendo (con su progreso)
+  const [editarFoto, setEditarFoto] = useState(null); // v0.56: el adjunto que se está editando
+  const [hd, setHd] = useState(() => leerAjustes().fotosHd === true);
+  const [filtroTipo, setFiltroTipo] = useState(null); // v0.56: buscar por tipo (foto, vídeo, enlace, documento, audio)
+  const [soltando, setSoltando] = useState(false);   // v0.56: arrastrando archivos encima (ordenador)
+  const [rapidasEmoji, setRapidasEmoji] = useState(() => leerReacciones(almacen(), perfil?.id));
   const lista = useRef(null);
   const raiz = useRef(null);
   const fin = useRef(null);
@@ -104,7 +129,13 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   recargar.current = conv.recargar;
   const [fondo, setFondo] = useState(leerAjustes().fondoChat !== 'liso');
 
-  const mensajes = conv.datos || [];
+  // v0.56: lo guardado en el móvil, mientras llega la base (o si no hay cobertura)
+  const [enCache, setEnCache] = useState(null);
+  useEffect(() => { let vivo = true; setEnCache(null); cacheChat().leer(miId, atletaId).then((x) => vivo && x && setEnCache(x.mensajes)); return () => { vivo = false; }; }, [miId, atletaId]);
+  useEffect(() => { if (conv.datos) cacheChat().guardar(miId, atletaId, conv.datos); }, [conv.datos]);
+  const datos = conv.datos || enCache;
+  const desdeCache = !conv.datos && !!enCache;
+  const mensajes = datos || [];
   const porId = useMemo(() => Object.fromEntries(mensajes.map((c) => [c.id, c])), [mensajes]);
   const hayMas = mensajes.length >= limite;
   const primerNombre = nombreAtleta.split(' ')[0];
@@ -125,7 +156,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     const enviado = (e) => {
       if (e.detail?.atletaId !== atletaId) return;
       const x = pendRef.current.find((p) => p.cliente_id === e.detail.cliente_id);
-      if (x) setRecien((r) => [...r.filter((y) => y.cliente_id !== x.cliente_id), { ...x, estado: 'enviado' }]);
+      if (x) { setRecien((r) => [...r.filter((y) => y.cliente_id !== x.cliente_id), { ...x, estado: 'enviado' }]); sonarSi('enviado'); }
       recargar.current?.(true);
       alCambiar?.();
     };
@@ -139,7 +170,15 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     const ids = new Set(mensajes.map((c) => c.cliente_id).filter(Boolean));
     if (recien.some((x) => ids.has(x.cliente_id))) setRecien((r) => r.filter((x) => !ids.has(x.cliente_id)));
   }, [mensajes]);
-  const vista = useMemo(() => conPendientes(mensajes, [...pend, ...recien], { perfil: miId, atletaId }), [mensajes, pend, recien, miId, atletaId]);
+  // v0.56: y lo que se está subiendo (fotos, vídeos, PDF, notas de voz), con su progreso, antes de lo programado
+  const vista = useMemo(() => {
+    const base = conPendientes(mensajes, [...pend, ...recien], { perfil: miId, atletaId });
+    if (!subidas.length) return base;
+    const futuro = base.findIndex((c) => c.programado);
+    const extra = subidas.map((x) => ({ id: `subida-${x.id}`, cliente_id: `subida-${x.id}`, atleta_id: atletaId, autor: yo, texto: x.texto || '', creado_en: x.creado_en,
+      pendiente: true, subida: x, archivo: null, leido_en: null, reacciones: [], responde_a: x.respondeA || null }));
+    return futuro < 0 ? [...base, ...extra] : [...base.slice(0, futuro), ...extra, ...base.slice(futuro)];
+  }, [mensajes, pend, recien, subidas, miId, atletaId]);
 
   // Al momento: por Realtime (fbe-mensaje), tras cualquier escritura propia (fbe-cambio), al llegar una
   // notificación y, por si acaso, cada medio minuto mientras la pantalla está visible
@@ -180,8 +219,10 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const ultimoPrevio = useRef(null);
   const cuantosPrevio = useRef(0);
   useLayoutEffect(() => {
-    if (!conv.datos) return;
+    if (!datos) return;
     const doc = document.documentElement;
+    // (v0.56) con lo guardado en el móvil, abajo del todo al momento; al llegar la base, ya en su sitio (los sin leer)
+    if (primeraCarga.current && !conv.datos) { window.scrollTo(0, doc.scrollHeight); return; }
     if (primeraCarga.current) {
       primeraCarga.current = false;
       const sep = separador.current ? document.getElementById('chat-sin-leer') : null;
@@ -196,13 +237,37 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         const llegados = vista.slice(cuantosPrevio.current).filter((c) => c.autor !== yo);
         if (llegados.length) { primerNuevo.current ||= llegados[0].id; setNuevos((n) => n + llegados.length); }
       }
+      // (v0.56) un tono suave por lo que acaba de llegar de la otra parte (nunca al abrir ni al cargar lo anterior)
+      if (!ultimoMio && vista.slice(cuantosPrevio.current).some((c) => c.autor !== yo && !c.eliminado_en)) sonarSi('recibido');
       // Lo que acaba de llegar de la otra parte quita su «escribiendo…»
       if (!ultimoMio) setEscribe(false);
     }
     ultimoPrevio.current = ultimoClave;
     cuantosPrevio.current = vista.length;
-  }, [ultimoClave, !!conv.datos]);
+  }, [ultimoClave, !!conv.datos, !!datos]);
   useLayoutEffect(() => { if (adjuntos.length) window.scrollTo(0, document.documentElement.scrollHeight); }, [adjuntos.length]);
+  // v0.56: lo anterior se carga solo al llegar arriba y la pantalla se queda donde estaba (sin saltos): se guarda lo que
+  // queda por debajo y, al llegar, se vuelve a poner ahí
+  const ancla = useRef(null);
+  const tope = useRef(null);
+  const cargarAnteriores = () => {
+    if (!hayMas || conv.cargando || ancla.current) return;
+    ancla.current = document.documentElement.scrollHeight - window.scrollY;
+    setLimite((l) => l + 200);
+  };
+  useLayoutEffect(() => {
+    if (ancla.current == null || conv.cargando) return;
+    const d = ancla.current;
+    ancla.current = null;
+    window.scrollTo(0, Math.max(0, document.documentElement.scrollHeight - d));
+  }, [mensajes.length, conv.cargando]);
+  useEffect(() => {
+    const el = tope.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting && !primeraCarga.current) cargarAnteriores(); }, { rootMargin: '300px 0px 0px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hayMas, conv.cargando, !!datos]);
   // El final de la lista a la vista (sin escuchar el scroll)
   useEffect(() => {
     const el = fin.current;
@@ -210,7 +275,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     const io = new IntersectionObserver(([e]) => { setAbajo(e.isIntersecting); if (e.isIntersecting) { setNuevos(0); primerNuevo.current = null; } }, { rootMargin: '0px 0px 120px 0px' });
     io.observe(el);
     return () => io.disconnect();
-  }, [!!conv.datos]);
+  }, [!!datos]);
   // Lo que mide la cabecera (y la barra del mensaje fijado): ahí se quedan la píldora del día y lo fijado
   useLayoutEffect(() => {
     const cab = document.querySelector('.cabecera');
@@ -303,10 +368,18 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
 
   // v0.54: buscar en el chat (de lo más reciente a lo más antiguo, como WhatsApp); al llegar a lo más antiguo
   // cargado, carga los anteriores
-  const encontrados = useMemo(() => (buscando ? coincidencias(mensajes, consulta).reverse() : []), [buscando, mensajes, consulta]);
+  // (v0.56) también por tipo (fotos, vídeos, enlaces, documentos, notas de voz), con o sin texto
+  const encontrados = useMemo(() => {
+    if (!buscando) return [];
+    if (!filtroTipo) return coincidencias(mensajes, consulta).reverse();
+    const delTipo = porTipo(mensajes, filtroTipo);
+    if (consulta.trim().length < 2) return delTipo;
+    const conTexto = new Set(coincidencias(mensajes, consulta));
+    return delTipo.filter((id) => conTexto.has(id));
+  }, [buscando, mensajes, consulta, filtroTipo]);
   const pos = actualId ? encontrados.indexOf(actualId) : -1;
   const masAntiguos = useRef(false);
-  useEffect(() => { setActualId(encontrados[0] || null); }, [consulta, buscando]);
+  useEffect(() => { setActualId(encontrados[0] || null); }, [consulta, buscando, filtroTipo]);
   useEffect(() => {
     if (masAntiguos.current && !conv.cargando) {
       masAntiguos.current = false;
@@ -321,8 +394,35 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   };
   const siguiente = () => { if (pos > 0) setActualId(encontrados[pos - 1]); };
   const abrirBusqueda = () => { setHoja(null); setSeleccion(null); setBuscando(true); setTimeout(() => inputBusqueda.current?.focus(), 0); };
-  const cerrarBusqueda = () => { setBuscando(false); setConsulta(''); setActualId(null); };
-  const contador = consulta.trim().length < 2 ? '' : encontrados.length ? `${pos + 1} de ${encontrados.length}${hayMas ? '+' : ''}` : hayMas ? 'Sin resultados aquí' : 'Sin resultados';
+  const cerrarBusqueda = () => { setBuscando(false); setConsulta(''); setActualId(null); setFiltroTipo(null); };
+  // v0.56: ir a una fecha (el calendario de la búsqueda): el primer mensaje de ese día (o del siguiente que tenga); si es
+  // más antiguo que lo cargado, se carga hasta ahí
+  const fechaPendiente = useRef(null);
+  async function irAFecha(fecha) {
+    if (!fecha) return;
+    const id = primeroDesde(mensajes, fecha, (iso) => aISO(new Date(iso)));
+    const primero = mensajes[0];
+    if (hayMas && (!primero || aISO(new Date(primero.creado_en)) > fecha)) {
+      try {
+        const n = await api.mensajesDesde(atletaId, new Date(`${fecha}T00:00:00`).toISOString());
+        fechaPendiente.current = fecha;
+        setLimite((l) => Math.max(l, n + 50));
+        return;
+      } catch { /* con lo cargado */ }
+    }
+    if (id) irA(id); else aviso('No hay mensajes desde ese día');
+  }
+  useEffect(() => { if (fechaPendiente.current && conv.datos && !conv.cargando) { const f = fechaPendiente.current; fechaPendiente.current = null; setTimeout(() => irAFecha(f), 0); } }, [conv.datos, conv.cargando]);
+  // v0.56: Ctrl/Cmd+F busca en el chat (en lugar de en la página) y Escape cierra la búsqueda
+  useEffect(() => {
+    const tecla = (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'f' || e.key === 'F') && !document.querySelector('[aria-modal="true"]')) { e.preventDefault(); abrirBusqueda(); return; }
+      if (e.key === 'Escape' && buscando && !document.querySelector('[aria-modal="true"]') && !e.defaultPrevented) { e.preventDefault(); cerrarBusqueda(); }
+    };
+    document.addEventListener('keydown', tecla);
+    return () => document.removeEventListener('keydown', tecla);
+  }, [buscando]);
+  const contador = consulta.trim().length < 2 && !filtroTipo ? '' : encontrados.length ? `${pos + 1} de ${encontrados.length}${hayMas ? '+' : ''}` : hayMas ? 'Sin resultados aquí' : 'Sin resultados';
 
   // v0.54: «escribiendo…», «en línea» y «últ. vez» (canal privado de la conversación). «Mostrar cuándo estoy en línea»
   // apagado: ni se comparte la mía ni se ve la del otro (lo impone también la base)
@@ -360,6 +460,10 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const fijado = useCarga(() => api.fijado(atletaId), [atletaId]);
   const silencios = useCarga(() => api.silencios(), [atletaId]);
   const silencio = silencios.datos?.[atletaId] || null;
+  // v0.56: los tonos, si toca (con el chat a la vista, los sonidos activados y la conversación sin silenciar)
+  const silencioRef = useRef(null);
+  silencioRef.current = silencio;
+  const sonarSi = (tipo) => { if (debeSonar({ activado: leerAjustes().sonidosChat !== false, silenciada: silenciado(silencioRef.current), visible: document.visibilityState === 'visible' })) sonar(tipo); };
   const nombreDelCoach = useCarga(() => (yo === 'atleta' ? api.nombreCoach() : Promise.resolve(null)), [yo]);
 
   // v0.54: el borrador de esta conversación se queda en el móvil (no lo que se está editando)
@@ -384,39 +488,69 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     setEmojis(false);
     area.current?.focus();
   }
+  // v0.56: de la galería, la cámara, el PDF, al pegar (Ctrl/Cmd+V) o al soltarlos encima: fotos, vídeos y PDF, con las
+  // mismas comprobaciones de siempre (tipo, tamaño, que un PDF lo sea de verdad), hasta 10 a la vez
+  async function anadirArchivos(archivos, { deFuera = false } = {}) {
+    const nuevas = [];
+    for (const f of archivos) {
+      if (adjuntos.length + nuevas.length >= MAX_FOTOS) { aviso(`Como mucho ${MAX_FOTOS} a la vez`, 'error'); break; }
+      const pdf = f.type === 'application/pdf' || (!f.type && /\.pdf$/i.test(f.name || ''));
+      if (pdf) {
+        if (f.size > PDF_MAX_MB * 1024 * 1024) { aviso(`El PDF pesa más de ${PDF_MAX_MB} MB`, 'error'); continue; }
+        let cab;
+        try { cab = new Uint8Array(await f.slice(0, 1024).arrayBuffer()); } catch { cab = new Uint8Array(); }
+        if (!esPdf(cab)) { aviso(`«${nombreSeguroPdf(f.name)}» no es un PDF`, 'error'); continue; }
+        let paginas = null;
+        try { if (f.size <= 8 * 1048576) paginas = paginasPdf(new TextDecoder('latin1').decode(await f.arrayBuffer())); } catch { /* sin páginas */ }
+        const doc = f.type === 'application/pdf' ? f : new File([f], f.name, { type: 'application/pdf' });
+        nuevas.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, archivo: doc, esPdf: true, paginas, nombre: nombreSeguroPdf(f.name), deFuera });
+        continue;
+      }
+      if (!/^(image|video)\//.test(f.type || '')) { aviso('Solo fotos, vídeos y PDF', 'error'); continue; }
+      if (f.size > LIMITE_ARCHIVO_MB * 1024 * 1024) { aviso(`Pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos).`, 'error'); continue; }
+      let url = null;
+      try { url = URL.createObjectURL(f); } catch { /* */ }
+      nuevas.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, archivo: f, url, esVideo: /^video\//.test(f.type || ''), deFuera });
+    }
+    anadir(nuevas);
+  }
   function elegido(e) {
     const archivos = [...(e.currentTarget.files || [])];
     e.currentTarget.value = '';
     if (!archivos.length) return;
-    const nuevas = [];
-    for (const f of archivos) {
-      if (!/^(image|video)\//.test(f.type || '')) { aviso('Solo fotos y vídeos', 'error'); continue; }
-      if (f.size > LIMITE_ARCHIVO_MB * 1024 * 1024) { aviso(`Pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos).`, 'error'); continue; }
-      if (adjuntos.length + nuevas.length >= MAX_FOTOS) { aviso(`Como mucho ${MAX_FOTOS} a la vez`, 'error'); break; }
-      let url = null;
-      try { url = URL.createObjectURL(f); } catch { /* */ }
-      nuevas.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, archivo: f, url, esVideo: /^video\//.test(f.type || '') });
-    }
-    anadir(nuevas);
+    const malos = archivos.filter((f) => !/^(image|video)\//.test(f.type || ''));
+    if (malos.length) aviso('Solo fotos y vídeos', 'error');
+    anadirArchivos(archivos.filter((f) => /^(image|video)\//.test(f.type || '')));
   }
-  // Un PDF: hasta 20 MB y que de verdad lo sea (su firma, «%PDF-», al principio); las páginas, si salen fácil
   async function elegidoDoc(e) {
     const archivos = [...(e.currentTarget.files || [])];
     e.currentTarget.value = '';
-    const nuevas = [];
-    for (const f of archivos) {
-      if (adjuntos.length + nuevas.length >= MAX_FOTOS) { aviso(`Como mucho ${MAX_FOTOS} a la vez`, 'error'); break; }
-      if (f.size > PDF_MAX_MB * 1024 * 1024) { aviso(`El PDF pesa más de ${PDF_MAX_MB} MB`, 'error'); continue; }
-      let cab;
-      try { cab = new Uint8Array(await f.slice(0, 1024).arrayBuffer()); } catch { cab = new Uint8Array(); }
-      if ((f.type && f.type !== 'application/pdf') || !esPdf(cab)) { aviso(`«${nombreSeguroPdf(f.name)}» no es un PDF`, 'error'); continue; }
-      let paginas = null;
-      try { if (f.size <= 8 * 1048576) paginas = paginasPdf(new TextDecoder('latin1').decode(await f.arrayBuffer())); } catch { /* sin páginas */ }
-      const pdf = f.type === 'application/pdf' ? f : new File([f], f.name, { type: 'application/pdf' });
-      nuevas.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, archivo: pdf, esPdf: true, paginas, nombre: nombreSeguroPdf(f.name) });
-    }
-    anadir(nuevas);
+    const malos = archivos.filter((f) => f.type && f.type !== 'application/pdf');
+    for (const f of malos) aviso(`«${nombreSeguroPdf(f.name)}» no es un PDF`, 'error');
+    await anadirArchivos(archivos.filter((f) => !f.type || f.type === 'application/pdf').map((f) => (f.type ? f : new File([f], f.name || 'documento.pdf', { type: 'application/pdf' }))));
   }
+  // v0.56: pegar una captura (o un archivo) en el cuadro de escribir y soltar archivos encima del chat (ordenador)
+  const pegar = (e) => {
+    const fs = [...(e.clipboardData?.files || [])];
+    if (!fs.length || editando) return;
+    e.preventDefault();
+    anadirArchivos(fs);
+  };
+  const conArchivos = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+  const arrastrar = {
+    onDragEnter: (e) => { if (conArchivos(e) && !editando) { e.preventDefault(); setSoltando(true); } },
+    onDragOver: (e) => { if (conArchivos(e) && !editando) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } },
+    onDragLeave: (e) => { if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) setSoltando(false); },
+    onDrop: (e) => { if (!conArchivos(e)) return; e.preventDefault(); setSoltando(false); if (!editando) anadirArchivos([...(e.dataTransfer.files || [])]); },
+  };
+  // v0.56: lo que llega desde «Compartir» (Android) para esta conversación: a la bandeja de adjuntos, sin enviarlo
+  useEffect(() => {
+    if (archivosIniciales?.length) anadirArchivos(archivosIniciales);
+    const coger = () => { const fs = tomarParaChat(atletaId); if (fs?.length) anadirArchivos(fs, { deFuera: true }); };
+    coger();
+    window.addEventListener('fbe-compartidos', coger);
+    return () => window.removeEventListener('fbe-compartidos', coger);
+  }, [archivosIniciales, atletaId]);
   const quitarAdjunto = (a) => { if (a.url) URL.revokeObjectURL(a.url); setAdjuntos((xs) => xs.filter((x) => x.id !== a.id)); };
 
   // Un mensaje de una sesión, un check-in o un vídeo del diario se contesta en ese mismo hilo (lo pide la base)
@@ -451,25 +585,29 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
       requestAnimationFrame(() => window.scrollTo(0, document.documentElement.scrollHeight));
       return;
     }
+    // v0.56: las fotos, los vídeos y los PDF salen al momento como burbujas con su progreso (y «Cancelar»); el pie va con
+    // la primera (como WhatsApp con varias fotos), y la cita también
+    // (revisión) las fotos se preparan antes (reducidas y sin sus datos); si alguna no se ha podido limpiar, se avisa
+    if (adjuntos.length) {
+      const pendientes = [...adjuntos];
+      const citaId = cita && enElChat(cita) ? cita.id : null;
+      setEnviando(true);
+      let preparadas;
+      try {
+        preparadas = await Promise.all(pendientes.map(async (a) => {
+          if (a.esVideo || a.esPdf || a.editada || a.preparada) return a;
+          const r = await prepararFoto(a.archivo, { hd });
+          return { ...a, archivo: r.archivo, preparada: true, sucia: !r.limpia };
+        }));
+      } finally { setEnviando(false); }
+      const items = preparadas.map((a, i) => ({ ...a, texto: i === 0 ? t : '', respondeA: i === 0 ? citaId : null, enDiario: a.esVideo && yo === 'atleta' && enDiario, hd }));
+      if (items.some((a) => a.sucia)) { setSinLimpiar(items); return; }
+      salirConAdjuntos(items);
+      return;
+    }
     setEnviando(true);
     try {
-      if (adjuntos.length) {
-        const pendientes = [...adjuntos];
-        for (let i = 0; i < pendientes.length; i++) {
-          const a = pendientes[i];
-          if (pendientes.length > 1) setProgreso({ i: i + 1, n: pendientes.length });
-          let poster = null, duracion_seg = null;
-          if (a.esVideo) {
-            const cap = await capturarPoster(a.archivo).catch(() => null);
-            poster = cap?.poster || null; duracion_seg = cap?.duracion ?? null;
-          }
-          // El pie va con la primera (como WhatsApp con varias fotos); la cita, también
-          await api.enviarMensaje(atletaId, { texto: i === 0 ? t : '', archivo: a.archivo, autor: yo, enDiario: a.esVideo && yo === 'atleta' && enDiario, poster, duracion_seg, paginas: a.paginas || null,
-            respondeA: i === 0 && cita && enElChat(cita) ? cita.id : null });
-          quitarAdjunto(a);
-          if (i === 0) limpiarCompositor();
-        }
-      } else if (cita && !enElChat(cita)) {
+      if (cita && !enElChat(cita)) {
         await api.comentar({ atletaId, sesionId: cita.sesion_id, checkinId: cita.checkin_id, archivoId: cita.archivo_id, texto: t, autor: yo, respondeA: cita.id });
       } else {
         await api.enviarMensaje(atletaId, { texto: t, autor: yo, respondeA: cita?.id || null });
@@ -499,6 +637,87 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
       await conv.recargar(true); alCambiar?.();
     } catch (err) { aviso(err.message, 'error'); }
   }
+
+  // Las fotos (ya preparadas), los vídeos y los PDF, a la cola de subidas; la bandeja y el cuadro se vacían
+  const salirConAdjuntos = (items) => {
+    setAdjuntos([]);
+    limpiarCompositor();
+    separador.current = null;
+    setSinLimpiar(null);
+    encolarSubidas(items);
+  };
+  // v0.56: la cola de lo que se sube (una a una, en orden): cada una con su progreso y «Cancelar». Sin cobertura, o si la
+  // base lo rechaza, se queda con «!» para reintentarla o quitarla. Las fotos se reducen antes (sin EXIF), salvo las ya
+  // editadas (ya lo están).
+  const subidasRef = useRef([]);
+  subidasRef.current = subidas;
+  const senales = useRef(new Map());
+  const subiendo = useRef(false);
+  const cambiarSubida = (id, c) => setSubidas((xs) => xs.map((x) => (x.id === id ? { ...x, ...c } : x)));
+  const quitarSubida = (id) => { const x = subidasRef.current.find((y) => y.id === id); if (x?.url && !x.compartidaUrl) URL.revokeObjectURL(x.url); setSubidas((xs) => xs.filter((y) => y.id !== id)); };
+  function encolarSubidas(items) {
+    const ahora = Date.now();
+    const nuevas = items.map((a, i) => ({ id: `${ahora}-${i}-${Math.random().toString(36).slice(2, 8)}`, archivo: a.archivo, url: a.url || null, esVideo: !!a.esVideo, esPdf: !!a.esPdf,
+      esAudio: !!a.esAudio, nombre: a.nombre || null, paginas: a.paginas || null, seg: a.seg || null, onda: a.onda || null, editada: !!a.editada, preparada: !!a.preparada, hd: !!a.hd, enDiario: !!a.enDiario,
+      texto: a.texto || '', respondeA: a.respondeA || null, progreso: 0, estado: 'espera', error: null, creado_en: new Date(ahora + i).toISOString() }));
+    subidasRef.current = [...subidasRef.current, ...nuevas];
+    setSubidas(subidasRef.current);
+    requestAnimationFrame(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    procesarSubidas();
+  }
+  async function procesarSubidas() {
+    if (subiendo.current) return;
+    subiendo.current = true;
+    try {
+      for (;;) {
+        const x = subidasRef.current.find((y) => y.estado === 'espera');
+        if (!x) break;
+        cambiarSubida(x.id, { estado: 'subiendo', progreso: 0.02 });
+        subidasRef.current = subidasRef.current.map((y) => (y.id === x.id ? { ...y, estado: 'subiendo' } : y));
+        const senal = {};
+        senales.current.set(x.id, senal);
+        try {
+          let archivo = x.archivo, poster = null, duracion_seg = x.seg;
+          if (!x.esVideo && !x.esPdf && !x.esAudio && !x.editada && !x.preparada && comprimible(archivo.type)) archivo = (await prepararFoto(archivo, { hd: x.hd })).archivo;
+          if (x.esVideo) { const cap = await capturarPoster(archivo).catch(() => null); poster = cap?.poster || null; duracion_seg = cap?.duracion ?? null; }
+          if (!subidasRef.current.some((y) => y.id === x.id)) continue; // cancelada mientras se preparaba
+          await api.enviarMensaje(atletaId, { texto: x.texto, archivo, autor: yo, enDiario: x.enDiario, poster, duracion_seg, paginas: x.paginas, onda: x.onda, respondeA: x.respondeA,
+            alProgreso: (p) => cambiarSubida(x.id, { progreso: Math.max(0.02, Math.min(1, p)) }), senal });
+          quitarSubida(x.id);
+          subidasRef.current = subidasRef.current.filter((y) => y.id !== x.id);
+          sonarSi('enviado');
+          await conv.recargar(true);
+          alCambiar?.();
+        } catch (err) {
+          if (err?.cancelado || !subidasRef.current.some((y) => y.id === x.id)) continue;
+          const m = err?.sinConexion ? 'Sin conexión: se ha quedado sin enviar' : err?.message || 'No se ha podido enviar';
+          cambiarSubida(x.id, { estado: 'fallo', error: m });
+          subidasRef.current = subidasRef.current.map((y) => (y.id === x.id ? { ...y, estado: 'fallo' } : y));
+        } finally { senales.current.delete(x.id); }
+      }
+    } finally { subiendo.current = false; }
+  }
+  const cancelarSubida = (id) => {
+    const senal = senales.current.get(id);
+    subidasRef.current = subidasRef.current.filter((y) => y.id !== id);
+    quitarSubida(id);
+    if (senal) senal.cancelada = true;
+    try { senal?.abortar?.(); } catch { /* */ }
+    aviso('Envío cancelado');
+  };
+  const reintentarSubida = (id) => { cambiarSubida(id, { estado: 'espera', error: null, progreso: 0 }); subidasRef.current = subidasRef.current.map((y) => (y.id === id ? { ...y, estado: 'espera', error: null } : y)); procesarSubidas(); };
+
+  // v0.56: las notas de voz (hasta un minuto); al enviarla, sale como las fotos: al momento, con su progreso
+  const grab = useGrabadora({ alError: (m) => aviso(m, 'error') });
+  const enviarVoz = (x) => {
+    const archivo = new File([x.blob], `nota-de-voz.${x.ext}`, { type: x.tipo });
+    let url = null;
+    try { url = URL.createObjectURL(x.blob); } catch { /* */ }
+    grab.descartar();
+    const citaId = citando && enElChat(citando) ? citando.id : null;
+    setCitando(null);
+    encolarSubidas([{ archivo, url, esAudio: true, seg: x.seg, onda: x.onda, respondeA: citaId }]);
+  };
 
   // v0.54: lo del menú de cada mensaje
   const responder = (c) => { setMenu(null); setEditando(null); setSeleccion(null); setCitando(c); setTimeout(() => area.current?.focus(), 0); };
@@ -609,6 +828,12 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     if (e.key === 'Escape' && emojis) { e.preventDefault(); setEmojis(false); return; }
     if (e.key === 'Escape' && (editando || citando)) { e.preventDefault(); if (editando) limpiarCompositor(); else setCitando(null); return; }
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { enviar(e); return; }
+    // (v0.56) ↑ con el cuadro vacío: editar tu último mensaje (si aún se puede, en sus 15 minutos)
+    if (e.key === 'ArrowUp' && !texto && !adjuntos.length && !editando && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
+      const c = ultimoEditable(vista, yo, (x) => puedeEditar(x, yo) && !x.encuesta);
+      if (c) { e.preventDefault(); editar(c); }
+      return;
+    }
     // (v0.55) En el ordenador, Enter envía (Mayús+Enter salta de línea); en el móvil, Enter salta de línea
     if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.isComposing && enOrdenador()) { e.preventDefault(); enviar(e); }
   }
@@ -667,6 +892,18 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
       <button type="button" class="btn btn-icono plano" aria-label="Cerrar la búsqueda" onClick={cerrarBusqueda}><Icono n="cerrar" /></button>
     </div>
   );
+  // v0.56: debajo de la búsqueda, buscar por tipo e ir a una fecha
+  const filtrosBusqueda = buscando && (
+    <div class="chat-busqueda-filtros" role="group" aria-label="Buscar por tipo o ir a una fecha">
+      <div class="chat-busqueda-tipos" role="radiogroup" aria-label="Qué buscar">
+        {[[null, 'Todo'], ...TIPOS_BUSQUEDA].map(([k, t]) => (
+          <button key={k || 'todo'} type="button" role="radio" aria-checked={filtroTipo === k ? 'true' : 'false'} class={`btn btn-peq chip ${filtroTipo === k ? 'activo' : ''}`} onClick={() => setFiltroTipo(k)}>{t}</button>
+        ))}
+      </div>
+      <label class="chat-busqueda-fecha"><Icono n="calendario" /><span class="sr">Ir a una fecha</span>
+        <input type="date" class="entrada" max={aISO(new Date())} aria-label="Ir a una fecha" onChange={(e) => irAFecha(e.currentTarget.value)} /></label>
+    </div>
+  );
   // v0.55: con mensajes seleccionados, la cabecera dice cuántos y qué se puede hacer con ellos
   const barraSeleccion = seleccion && (
     <div class="chat-seleccion" role="toolbar" aria-label="Mensajes seleccionados">
@@ -684,8 +921,10 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
 
   const conTexto = !!texto.trim();
   const mostrarEnviar = conTexto || adjuntos.length > 0 || !!editando;
+  const grabandoVoz = grab.estado === 'grabando' || grab.estado === 'pidiendo';
   return (
-    <div class={`chat ${fondo && cabecera ? 'con-fondo' : ''} ${seleccion ? 'seleccionando' : ''} ${emojis ? 'con-emojis' : ''}`} ref={raiz} aria-label={`Chat con ${otro}`}>
+    <div class={`chat ${fondo && cabecera ? 'con-fondo' : ''} ${seleccion ? 'seleccionando' : ''} ${emojis ? 'con-emojis' : ''} ${soltando ? 'soltando' : ''}`} ref={raiz} aria-label={`Chat con ${otro}`} {...arrastrar}>
+      {soltando && <div class="chat-soltar" aria-hidden="true"><Icono n="clip" /><strong>Suelta aquí para adjuntarlo</strong><span class="peq">Fotos, vídeos o PDF</span></div>}
       {fondo && cabecera && <FondoChat />}
       {cabecera ? (
         <header class={`cabecera cabecera-chat ${buscando ? 'buscando' : ''} ${seleccion ? 'eligiendo' : ''}`}>
@@ -706,6 +945,8 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
           {seleccion ? barraSeleccion : buscando ? barraBusqueda : <><span class={`peq secundario chat-estado ${escribe ? 'escribiendo' : ''}`}>{estado || ''}</span>{herramientas}</>}
         </div>
       )}
+      {filtrosBusqueda}
+      {desdeCache && conv.error && <p class="chat-sin-red mini" role="status"><Icono n="sinred" /> Sin conexión: esto es lo guardado en este móvil</p>}
       {vigente && (
         <div class="chat-fijado">
           <button type="button" class="chat-fijado-ir" onClick={() => irA(vigente.comentario_id)} aria-label={`Mensaje fijado: ${extractoCita(porId[vigente.comentario_id] || vigente.mensaje, 80)}. Ir al mensaje`}>
@@ -715,10 +956,11 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         </div>
       )}
       <div class="chat-lista" ref={lista}>
-        {hayMas && !conv.cargando && (
-          <button type="button" class="btn btn-peq chat-anteriores" onClick={() => setLimite((l) => l + 400)}><Icono n="arriba" /> Ver mensajes anteriores</button>
+        <span ref={tope} class="chat-tope" aria-hidden="true" />
+        {hayMas && conv.datos && (
+          <button type="button" class="btn btn-peq chat-anteriores" disabled={conv.cargando} onClick={cargarAnteriores}><Icono n="arriba" /> {conv.cargando ? 'Cargando los anteriores…' : 'Ver mensajes anteriores'}</button>
         )}
-        {conv.cargando && !conv.datos ? <Cargando texto="Cargando los mensajes" /> : !vista.length ? (
+        {!datos && (conv.cargando || !conv.error) ? <Cargando texto="Cargando los mensajes" /> : !vista.length ? (
           <div class="chat-vacio">
             <Vacio ilustracion="mensajes" titulo={yo === 'coach' ? `Tu conversación con ${primerNombre}` : `Tu conversación con ${nombreCoach}`}
               accion={<button type="button" class="btn btn-peq" onClick={() => raiz.current?.querySelector('.chat-area')?.focus()}><Icono n="editar" /> Escribir el primer mensaje</button>}>
@@ -738,7 +980,8 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
                   nueva={esNueva(c)} fijado={vigente?.comentario_id === c.id}
                   seleccionando={!!seleccion} seleccionado={!!seleccion?.has(c.id)} alAlternar={() => alternar(c)}
                   alMenu={() => (c.fallo ? setFallido(c) : c.pendiente ? null : setMenu(c))} alResponder={() => responder(c)} alIrA={irA} alAbrir={() => abrirMedio(c)}
-                  alContexto={() => (c.contexto.tipo === 'archivo' ? setAbierto(c) : irContexto?.(c.contexto))} alReacciones={() => setQuien(c)} alFallo={() => setFallido(c)} />
+                  alContexto={() => (c.contexto.tipo === 'archivo' ? setAbierto(c) : irContexto?.(c.contexto))} alReacciones={() => setQuien(c)} alFallo={() => setFallido(c)}
+                  alCancelarSubida={cancelarSubida} alReintentarSubida={reintentarSubida} alRecargar={() => { conv.recargar(true); avisarCambio(); }} />
               </Fragment>
             ))}
           </section>
@@ -785,6 +1028,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
                       {a.esPdf ? <span class="chat-adjunto-pdf" title={a.nombre}><Icono n="documento" /><span class="mini">PDF</span></span>
                         : a.url && (a.esVideo ? <video src={a.url} muted playsInline preload="metadata" /> : <img src={a.url} alt="" />)}
                       {a.esVideo && <span class="chat-adjunto-video" aria-hidden="true"><Icono n="video" /></span>}
+                      {!a.esVideo && !a.esPdf && comprimible(a.archivo.type) && <button type="button" class="chat-adjunto-editar" aria-label={`Editar la foto ${i + 1} (recortar, girar, dibujar, texto)`} onClick={() => setEditarFoto(a)}><Icono n="editar" /></button>}
                       <button type="button" class="chat-adjunto-quitar" aria-label={`Quitar ${a.esPdf ? `el documento ${a.nombre}` : a.esVideo ? 'el vídeo' : 'la foto'} ${i + 1}`} onClick={() => quitarAdjunto(a)}><Icono n="cerrar" /></button>
                     </div>
                   ))}
@@ -797,14 +1041,20 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
                 {adjuntos.some((a) => a.esVideo) && yo === 'atleta' && (
                   <label class="casilla mini"><input type="checkbox" checked={enDiario} onChange={(e) => setEnDiario(e.currentTarget.checked)} /><span>{adjuntos.filter((a) => a.esVideo).length > 1 ? 'Guardar los vídeos en mi diario como vídeos de técnica (tu coach los revisa)' : 'Guardarlo en mi diario como vídeo de técnica (tu coach lo revisa)'}</span></label>
                 )}
-                {progreso && <span class="mini secundario" role="status">Enviando {progreso.i} de {progreso.n}…</span>}
+                {adjuntos.some((a) => a.deFuera) && <span class="mini nota-coach chat-de-fuera" role="note"><Icono n="alerta" /><span>Te llega desde otra app: comprueba que es tuyo (y lo que se ve) antes de enviarlo.</span></span>}
+                {adjuntos.some((a) => !a.esVideo && !a.esPdf) && (
+                  <button type="button" class={`btn btn-peq chat-hd ${hd ? 'activo' : ''}`} aria-pressed={hd ? 'true' : 'false'} onClick={() => setHd((v) => !v)}
+                    title={hd ? 'Las fotos salen en HD (más grandes)' : 'Las fotos salen reducidas (pesan menos)'}><Icono n="hd" /> HD</button>
+                )}
               </div>
             </div>
           )}
+          {grab.estado === 'revisar' ? <PanelRevisar g={grab} alEnviar={enviarVoz} /> : (
           <div class="chat-escribir">
             <input ref={input} type="file" accept="image/*,video/*" multiple class="sr" tabIndex={-1} aria-label="Elegir fotos o vídeos de la galería" onChange={elegido} />
             <input ref={inputCamara} type="file" accept="video/*,image/*" capture="environment" class="sr" tabIndex={-1} aria-label="Hacer una foto o un vídeo" onChange={elegido} />
             <input ref={inputDoc} type="file" accept="application/pdf,.pdf" multiple class="sr" tabIndex={-1} aria-label="Elegir un PDF" onChange={elegidoDoc} />
+            {grabandoVoz ? <PanelGrabando g={grab} /> : (
             <div class="chat-campo">
               <BotonEmojis abierto={emojis} alCambiar={alternarEmojis} />
               <textarea ref={area} class="area chat-area" rows={1} aria-label={editando ? 'Editar el mensaje' : yo === 'coach' ? `Escribir a ${primerNombre}` : 'Escribir a tu coach'}
@@ -813,13 +1063,16 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
                 placeholder={adjuntos.length ? 'Pie (opcional)…' : yo === 'coach' ? `Escribe a ${primerNombre}… («/» para tus respuestas)` : 'Escribe a tu coach…'} value={texto}
                 onFocus={() => { if (emojis && !enOrdenador()) setEmojis(false); }} onSelect={recordarCursor} onKeyUp={recordarCursor} onClick={recordarCursor}
                 onInput={(e) => { setTexto(e.currentTarget.value); setRapidasFuera(false); ajustarAlto(e.currentTarget); recordarCursor(); if (e.currentTarget.value.trim()) canal.current?.escribiendo(yo); }}
-                onKeyDown={teclaArea} />
+                onKeyDown={teclaArea} onPaste={pegar} />
               <button type="button" class="btn btn-icono plano" aria-label="Adjuntar" aria-haspopup="dialog" disabled={!!editando} onClick={() => setHoja('adjuntar')}><Icono n="clip" /></button>
               {!conTexto && !adjuntos.length && !editando && <button type="button" class="btn btn-icono plano chat-camara" aria-label="Cámara" onClick={() => inputCamara.current?.click()}><Icono n="camara" /></button>}
               {yo === 'coach' && conTexto && !adjuntos.length && !editando && <button type="button" class="btn btn-icono plano" aria-label="Programar envío" title="Programar envío" onClick={() => setProgramar({ nuevo: true })}><Icono n="reloj" /></button>}
             </div>
-            {mostrarEnviar && <button class="btn btn-primario btn-icono chat-enviar" aria-label={editando ? 'Guardar el cambio' : 'Enviar'} disabled={enviando || (!conTexto && !adjuntos.length)}><Icono n={editando ? 'hecho' : 'enviar'} /></button>}
+            )}
+            {mostrarEnviar ? <button class="btn btn-primario btn-icono chat-enviar" aria-label={editando ? 'Guardar el cambio' : 'Enviar'} disabled={enviando || (!conTexto && !adjuntos.length)}><Icono n={editando ? 'hecho' : 'enviar'} /></button>
+              : !(grabandoVoz && grab.bloqueada) && <BotonMicro g={grab} />}
           </div>
+          )}
           {emojis && <PanelEmojis alElegir={ponerEmoji} />}
         </div>
       </form>
@@ -850,12 +1103,13 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
             <li><button type="button" class="accion-fila" onClick={() => { setHoja(null); inputCamara.current?.click(); }}><span class="ico"><Icono n="camara" /></span><span class="pila-xs"><strong>Cámara</strong><span class="peq secundario">Hacer una foto o un vídeo</span></span><span /></button></li>
             <li><button type="button" class="accion-fila" onClick={() => { setHoja(null); input.current?.click(); }}><span class="ico"><Icono n="imagen" /></span><span class="pila-xs"><strong>Galería</strong><span class="peq secundario">Fotos y vídeos (hasta {MAX_FOTOS} a la vez)</span></span><span /></button></li>
             <li><button type="button" class="accion-fila" onClick={() => { setHoja(null); inputDoc.current?.click(); }}><span class="ico"><Icono n="documento" /></span><span class="pila-xs"><strong>Documento</strong><span class="peq secundario">Un PDF de hasta {PDF_MAX_MB} MB</span></span><span /></button></li>
+            {yo === 'coach' && <li><button type="button" class="accion-fila" onClick={() => setHoja('encuesta')}><span class="ico"><Icono n="encuesta" /></span><span class="pila-xs"><strong>Encuesta</strong><span class="peq secundario">Una pregunta con opciones (de 2 a 12)</span></span><span /></button></li>}
             {yo === 'coach' && <li><button type="button" class="accion-fila" onClick={() => { setHoja(null); setGuardadas(true); }}><span class="ico"><Icono n="rayo" /></span><span class="pila-xs"><strong>Respuestas guardadas</strong></span><span /></button></li>}
           </ul>
         </Hoja>
       )}
       {menu && (
-        <HojaMensaje c={menu} yo={yo} miId={miId} fijado={vigente?.comentario_id === menu.id} alCerrar={() => setMenu(null)} alResponder={() => responder(menu)} alReaccionar={(e) => reaccionar(menu, e)}
+        <HojaMensaje c={menu} yo={yo} miId={miId} fijado={vigente?.comentario_id === menu.id} rapidas={rapidasEmoji} alElegirReacciones={() => { setMenu(null); setHoja('reacciones'); }} alCerrar={() => setMenu(null)} alResponder={() => responder(menu)} alReaccionar={(e) => reaccionar(menu, e)}
           alCopiar={() => copiarMensaje(menu)} alEditar={() => editar(menu)} alEliminar={() => { setMenu(null); setEliminar([menu]); }} alDestacar={() => destacar(menu)}
           alInfo={() => { setMenu(null); setInfo(menu); }} alCambiar={() => { setMenu(null); setProgramar(menu); }} alSeleccionar={() => seleccionar(menu)}
           alFijar={() => { setMenu(null); setFijar(menu); }} alDesfijar={desfijar} alReenviar={() => { setMenu(null); setReenviar([menu]); }} />
@@ -894,7 +1148,6 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
           <p class="peq secundario chat-info-texto">{extractoCita(porId[info.id] || info)}</p>
           <dl class="chat-info">
             {infoMensaje(porId[info.id] || info, Date.now(), { horaLeido: miVisible }).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
-            {(porId[info.id] || info).entregado_en && !(porId[info.id] || info).leido_en && <div><dt>Entregado</dt><dd>{miVisible ? cuandoInfo((porId[info.id] || info).entregado_en) : 'sí'}</dd></div>}
           </dl>
         </Hoja>
       )}
@@ -929,9 +1182,31 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
           alVerFicha={yo === 'coach' && cabecera?.verFicha ? () => { setHoja(null); cabecera.verFicha(); } : null} />
       )}
       {hoja === 'destacados' && <HojaDestacados atletaId={atletaId} nombreDe={nombreDe} alCerrar={() => setHoja(null)} alIr={(id) => { setHoja(null); setTimeout(() => irA(id), 60); }} />}
-      {hoja === 'archivos' && <HojaArchivosChat mensajes={mensajes} hayMas={hayMas} pestana={pestArchivos} alCerrar={() => setHoja(null)} alAbrir={(c) => { setHoja(null); abrirMedio(c); }}
+      {hoja === 'archivos' && <HojaArchivosChat mensajes={mensajes} hayMas={hayMas} pestana={pestArchivos} yo={yo} alCerrar={() => setHoja(null)} alAbrir={(c) => { setHoja(null); abrirMedio(c); }}
         alIr={(id) => { setHoja(null); setTimeout(() => irA(id), 60); }} alMas={() => setLimite((l) => l + 400)} />}
       {reenviar && <HojaReenviar mensajes={reenviar} alCerrar={() => setReenviar(null)} alHecho={() => { setReenviar(null); setSeleccion(null); alCambiar?.(); }} />}
+      {editarFoto && (
+        <EditorFoto archivo={editarFoto.archivo} hd={hd} alCerrar={() => setEditarFoto(null)}
+          alListo={(f) => {
+            const a = editarFoto;
+            let url = null;
+            try { url = URL.createObjectURL(f); } catch { /* */ }
+            if (a.url) URL.revokeObjectURL(a.url);
+            setAdjuntos((xs) => xs.map((x) => (x.id === a.id ? { ...x, archivo: f, url, editada: true } : x)));
+            setEditarFoto(null);
+          }} />
+      )}
+      {sinLimpiar && (
+        <Hoja titulo="Foto sin limpiar" alCerrar={() => setSinLimpiar(null)}>
+          <p class="nota-coach" role="alert"><Icono n="alerta" /><span>{sinLimpiar.filter((a) => a.sucia).length === 1 ? 'Esta foto no se ha podido limpiar' : `${sinLimpiar.filter((a) => a.sucia).length} fotos no se han podido limpiar`}: puede llevar la ubicación (GPS) y otros datos del móvil. Pasa con algunas HEIC del iPhone en este navegador.</span></p>
+          <div class="fila-envolver">
+            <button type="button" class="btn btn-primario" onClick={() => salirConAdjuntos(sinLimpiar)}><Icono n="enviar" /> Enviar igualmente</button>
+            <button type="button" class="btn" onClick={() => { const malas = new Set(sinLimpiar.filter((a) => a.sucia).map((a) => a.id)); setAdjuntos((xs) => xs.filter((x) => { if (malas.has(x.id) && x.url) URL.revokeObjectURL(x.url); return !malas.has(x.id); })); setSinLimpiar(null); }}><Icono n="basura" /> Quitar {sinLimpiar.filter((a) => a.sucia).length === 1 ? 'esa foto' : 'esas fotos'}</button>
+          </div>
+        </Hoja>
+      )}
+      {hoja === 'encuesta' && <HojaEncuesta atletaId={atletaId} para={primerNombre} alCerrar={() => setHoja(null)} alEnviada={() => { setHoja(null); conv.recargar(true); alCambiar?.(); sonarSi('enviado'); }} />}
+      {hoja === 'reacciones' && <HojaReaccionesRapidas uid={miId} alCerrar={() => { setRapidasEmoji(leerReacciones(almacen(), miId)); setHoja(null); }} />}
     </div>
   );
 }
@@ -961,7 +1236,8 @@ function Ticks({ estado: e }) {
 // navegador); mantenerla pulsada, el botón derecho, «Más opciones» o Mayús+F10 abren su menú. v0.55: la hora y los ✓
 // dentro, abajo a la derecha (el texto deja su hueco), el pico en la primera del grupo, 1 a 3 emojis en grande y sin
 // burbuja, «Leer más», «↪ Reenviado», los PDF y, al seleccionar varios, se marcan al tocarlas.
-function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, resaltada, hayMas, nueva, fijado, seleccionando, seleccionado, alAlternar, alMenu, alResponder, alIrA, alAbrir, alContexto, alReacciones, alFallo }) {
+function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, resaltada, hayMas, nueva, fijado, seleccionando, seleccionado, alAlternar, alMenu, alResponder, alIrA, alAbrir, alContexto, alReacciones, alFallo,
+  alCancelarSubida, alReintentarSubida, alRecargar }) {
   const mio = c.autor === yo;
   const eliminado = !!c.eliminado_en;
   const ref = useRef(null);
@@ -975,7 +1251,11 @@ function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, res
   const emojis = !c.archivo && !citado && !etq && !eliminado && !c.responde_a && !c.reenviado ? soloEmojis(c.texto) : 0;
   const largo = !eliminado && !entero && !esMarcador(c) ? recortarLargo(c.texto) : { texto: c.texto, cortado: false };
   const esDoc = c.archivo && (c.archivo.tipo === 'documento' || c.archivo.mime === 'application/pdf');
-  const soloMedio = !!c.archivo && !esDoc && esMarcador(c) && !eliminado;
+  // (v0.56) una nota de voz, una encuesta o algo que aún se está subiendo
+  const esVoz = !!c.archivo && (c.archivo.tipo === 'audio' || /^audio\//.test(c.archivo.mime || ''));
+  const conEncuesta = !!c.encuesta && !eliminado;
+  const sub = c.subida || null;
+  const soloMedio = !!c.archivo && !esDoc && !esVoz && esMarcador(c) && !eliminado;
   const soltar = () => {
     const g = gesto.current;
     gesto.current = null;
@@ -1020,7 +1300,7 @@ function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, res
     }
   };
   const tecla = (e) => { if (conMenu && !seleccionando && (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10'))) { e.preventDefault(); alMenu(); } };
-  const clases = ['burbuja', mio ? 'mia' : 'suya', c.archivo ? 'con-medio' : '', soloMedio ? 'solo-medio' : '', c.programado ? 'programada' : '', gr.primero ? 'cola' : 'sigue sin-cola',
+  const clases = ['burbuja', mio ? 'mia' : 'suya', c.archivo || (sub && !sub.esAudio && !sub.esPdf) ? 'con-medio' : '', esVoz || sub?.esAudio ? 'con-voz' : '', conEncuesta ? 'con-encuesta' : '', sub ? 'subiendo' : '', soloMedio ? 'solo-medio' : '', c.programado ? 'programada' : '', gr.primero ? 'cola' : 'sigue sin-cola',
     eliminado ? 'eliminada' : '', reacciones.length ? 'con-reacciones' : '', actual ? 'actual' : '', resaltada ? 'resaltada' : '', emojis ? `solo-emojis emojis-${emojis}` : '',
     nueva ? 'nueva' : '', c.pendiente ? 'pendiente' : '', c.fallo ? 'fallida' : '', seleccionado ? 'seleccionada' : ''].filter(Boolean).join(' ');
   const hora = horaDe(c.creado_en);
@@ -1063,8 +1343,11 @@ function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, res
           <Icono n={c.contexto.tipo === 'sesion' ? 'hoy' : c.contexto.tipo === 'checkin' ? 'checkin' : 'video'} />{etq}
         </button>
       )}
-      {c.archivo && !eliminado && (esDoc ? <DocumentoChat archivo={c.archivo} /> : <MedioChat archivo={c.archivo} alAbrir={alAbrir} />)}
+      {sub && <SubidaChat x={sub} alCancelar={() => alCancelarSubida(sub.id)} alReintentar={() => alReintentarSubida(sub.id)} />}
+      {c.archivo && !eliminado && (esDoc ? <DocumentoChat archivo={c.archivo} /> : esVoz ? <NotaVozChat c={c} mio={mio} alEscuchada={alRecargar} /> : <MedioChat archivo={c.archivo} alAbrir={alAbrir} />)}
+      {conEncuesta && <EncuestaChat key={`${c.encuesta.id}:${(c.encuesta.voto || []).join(',')}`} c={c} yo={yo} alVotado={alRecargar} />}
       {eliminado ? <p class="burbuja-texto burbuja-eliminada"><span aria-hidden="true">🚫 </span><em>Se eliminó este mensaje</em>{hueco}</p>
+        : conEncuesta || (sub && !c.texto) ? null
         : !esMarcador(c) ? (
           <div class="burbuja-cuerpo">
             <TextoChat id={entero || !largo.cortado ? c.id : `${c.id}-corto`} texto={textoVisible} clase="burbuja-texto" resaltar={consulta} fin={largo.cortado || c.programado ? null : hueco} />
@@ -1085,17 +1368,18 @@ function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, res
 }
 
 // El menú de un mensaje (una hoja: en el móvil, abajo): las reacciones arriba y, debajo, lo que se puede hacer
-function HojaMensaje({ c, yo, miId, fijado, alCerrar, alResponder, alReaccionar, alCopiar, alEditar, alEliminar, alDestacar, alInfo, alCambiar, alSeleccionar, alFijar, alDesfijar, alReenviar }) {
+function HojaMensaje({ c, yo, miId, fijado, rapidas = REACCIONES_CHAT, alElegirReacciones, alCerrar, alResponder, alReaccionar, alCopiar, alEditar, alEliminar, alDestacar, alInfo, alCambiar, alSeleccionar, alFijar, alDesfijar, alReenviar }) {
   const mio = c.autor === yo;
   const eliminado = !!c.eliminado_en;
   const mia = (c.reacciones || []).find((r) => r.usuario_id === miId)?.emoji || null;
+  const [todos, setTodos] = useState(false);
   const acciones = [
     !eliminado && !c.programado && ['responder', 'mensaje', 'Responder', alResponder],
     !eliminado && !esMarcador(c) && ['copiar', 'copiar', 'Copiar', alCopiar],
     reenviable(c, yo) && ['reenviar', 'reenviar', 'Reenviar', alReenviar],
     yo === 'coach' && puedeReaccionar(c) && (fijado ? ['desfijar', 'chincheta', 'Desfijar', alDesfijar] : ['fijar', 'chincheta', 'Fijar', alFijar]),
     c.programado && mio && ['cambiar', 'reloj', 'Cambiar el texto o la hora', alCambiar],
-    puedeEditar(c, yo) && ['editar', 'editar', 'Editar', alEditar],
+    puedeEditar(c, yo) && !c.encuesta && ['editar', 'editar', 'Editar', alEditar],
     puedeReaccionar(c) && ['destacar', 'estrella', c.destacado ? 'Quitar destacado' : 'Destacar', alDestacar],
     ['seleccionar', 'seleccionar', 'Seleccionar', alSeleccionar],
     mio && !c.programado && ['info', 'pregunta', 'Info', alInfo],
@@ -1106,11 +1390,19 @@ function HojaMensaje({ c, yo, miId, fijado, alCerrar, alResponder, alReaccionar,
       <p class="peq secundario hoja-mensaje-texto">{extractoCita(c)}</p>
       {puedeReaccionar(c) && (
         <div class="menu-reacciones" role="group" aria-label="Reaccionar">
-          {REACCIONES_CHAT.map((e) => (
+          {/* v0.56: tus seis (y la tuya, si es otra); «+» para cualquier emoji */}
+          {[...rapidas, ...(mia && !rapidas.includes(mia) ? [mia] : [])].map((e) => (
             <button key={e} type="button" class="menu-reaccion" aria-pressed={mia === e ? 'true' : 'false'} aria-label={mia === e ? `Quitar tu reacción (${NOMBRE_EMOJI[e]})` : `Reaccionar con ${NOMBRE_EMOJI[e]}`} onClick={() => alReaccionar(e)}>
               <span aria-hidden="true">{e}</span>
             </button>
           ))}
+          <button type="button" class="menu-reaccion menu-reaccion-mas" aria-expanded={todos ? 'true' : 'false'} aria-label="Reaccionar con otro emoji" onClick={() => setTodos((v) => !v)}><Icono n="mas" /></button>
+        </div>
+      )}
+      {todos && puedeReaccionar(c) && (
+        <div class="pila-xs">
+          <PanelEmojis alElegir={(e) => { if (emojiValido(e)) alReaccionar(e); }} />
+          <button type="button" class="btn btn-peq" onClick={alElegirReacciones}><Icono n="editar" /> Elegir tus seis reacciones</button>
         </div>
       )}
       <ul class="lista hoja-acciones">
@@ -1147,15 +1439,16 @@ function HojaDestacados({ atletaId, nombreDe, alCerrar, alIr }) {
 }
 
 // «Archivos, enlaces y documentos»: lo de los mensajes cargados (lo que ya se puede ver), en tres pestañas
-function HojaArchivosChat({ mensajes, hayMas, pestana = 'multimedia', alCerrar, alAbrir, alIr, alMas }) {
+function HojaArchivosChat({ mensajes, hayMas, pestana = 'multimedia', yo, alCerrar, alAbrir, alIr, alMas }) {
   const [pest, setPest] = useState(pestana);
   const medios = mediosDe(mensajes).filter((m) => m.tipo === 'foto' || m.tipo === 'video');
   const docs = mediosDe(mensajes).filter((m) => m.tipo === 'documento' || m.tipo === 'archivo');
   const enlaces = enlacesDe(mensajes);
+  const voces = mediosDe(mensajes).filter((m) => m.tipo === 'audio');
   const porId = Object.fromEntries(mensajes.map((c) => [c.id, c]));
   return (
     <Hoja titulo="Archivos, enlaces y documentos" alCerrar={alCerrar} ancho={720}>
-      <Pestanas opciones={[['multimedia', `Multimedia (${medios.length})`], ['enlaces', `Enlaces (${enlaces.length})`], ['documentos', `Documentos (${docs.length})`]]} valor={pest} alCambiar={setPest} etiqueta="Qué ver" idBase="chat-arch" />
+      <Pestanas opciones={[['multimedia', `Multimedia (${medios.length})`], ['enlaces', `Enlaces (${enlaces.length})`], ['documentos', `Documentos (${docs.length})`], ['voz', `Notas de voz (${voces.length})`]]} valor={pest} alCambiar={setPest} etiqueta="Qué ver" idBase="chat-arch" />
       <div role="tabpanel" id="chat-arch-panel" aria-labelledby={`chat-arch-${pest}`} class="chat-arch-panel">
         {pest === 'multimedia' && (!medios.length ? <Vacio icono="imagen" titulo="Sin fotos ni vídeos">Las fotos y los vídeos que os enviéis por aquí salen en esta pestaña.</Vacio> : (
           <ul class="chat-rejilla">
@@ -1178,6 +1471,17 @@ function HojaArchivosChat({ mensajes, hayMas, pestana = 'multimedia', alCerrar, 
             {docs.map((m) => (
               <li key={m.archivo.id} class="panel-pad chat-doc">
                 {m.tipo === 'documento' ? <DocumentoChat archivo={m.archivo} mini /> : <span>📄 Archivo</span>}
+                <span class="mini terciario">{cuandoInfo(porId[m.mensajeId]?.creado_en)}</span>
+                <button type="button" class="btn btn-peq" onClick={() => alIr(m.mensajeId)}>Ir al mensaje</button>
+              </li>
+            ))}
+          </ul>
+        ))}
+        {pest === 'voz' && (!voces.length ? <Vacio icono="micro" titulo="Sin notas de voz">Las notas de voz que os mandéis (de hasta un minuto) salen aquí.</Vacio> : (
+          <ul class="lista chat-docs">
+            {voces.map((m) => (
+              <li key={m.archivo.id} class="panel-pad chat-doc">
+                <NotaVozChat c={porId[m.mensajeId] || { id: m.mensajeId, archivo: m.archivo }} mio={porId[m.mensajeId]?.autor === yo} />
                 <span class="mini terciario">{cuandoInfo(porId[m.mensajeId]?.creado_en)}</span>
                 <button type="button" class="btn btn-peq" onClick={() => alIr(m.mensajeId)}>Ir al mensaje</button>
               </li>
@@ -1214,6 +1518,36 @@ function FondoChat() {
         </defs>
         <rect width="100%" height="100%" fill="url(#fbe-chat-dibujos)" />
       </svg>
+    </div>
+  );
+}
+
+// v0.56: lo que se está enviando, al momento en el chat (como WhatsApp): su vista previa (lo que está en el móvil), un
+// anillo con lo que lleva subido y «Cancelar»; si no sale, «!» con «Reintentar» o «Quitar»
+function SubidaChat({ x, alCancelar, alReintentar }) {
+  const pct = Math.round((x.progreso || 0) * 100);
+  const R = 18, C = 2 * Math.PI * R;
+  const que = x.esAudio ? 'la nota de voz' : x.esPdf ? `el PDF ${x.nombre || ''}`.trim() : x.esVideo ? 'el vídeo' : 'la foto';
+  return (
+    <div class={`subida-chat ${x.esAudio ? 'es-voz' : x.esPdf ? 'es-pdf' : ''} ${x.estado === 'fallo' ? 'fallida' : ''}`}>
+      {x.esAudio ? <span class="subida-icono"><Icono n="micro" /><span class="mini num">{mmssCorto(x.seg || 0)}</span></span>
+        : x.esPdf ? <span class="subida-icono"><Icono n="documento" /><span class="mini">{x.nombre || 'PDF'}</span></span>
+        : x.url ? (x.esVideo ? <video src={x.url} muted playsInline preload="metadata" aria-hidden="true" /> : <img src={x.url} alt="" />) : <span class="subida-icono"><Icono n="imagen" /></span>}
+      {x.estado === 'fallo' ? (
+        <span class="subida-fallo" role="alert">
+          <span class="mini">{x.error}</span>
+          <span class="fila-envolver">
+            <button type="button" class="btn btn-peq" onClick={alReintentar}><Icono n="reiniciar" /> Reintentar</button>
+            <button type="button" class="btn btn-peq" onClick={alCancelar}><Icono n="basura" /> Quitar</button>
+          </span>
+        </span>
+      ) : (
+        <span class="subida-anillo">
+          <svg viewBox="0 0 44 44" aria-hidden="true"><circle class="pista" cx="22" cy="22" r={R} /><circle class="hecho" cx="22" cy="22" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - (x.progreso || 0))} transform="rotate(-90 22 22)" /></svg>
+          <button type="button" class="subida-cancelar" aria-label={`Cancelar el envío de ${que}`} onClick={alCancelar}><Icono n="cerrar" /></button>
+          <span class="sr" role="progressbar" aria-label={`Enviando ${que}`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={pct}>{pct} %</span>
+        </span>
+      )}
     </div>
   );
 }

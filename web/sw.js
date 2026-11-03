@@ -15,29 +15,46 @@ self.addEventListener('activate', (e) => {
     .then(() => self.clients.claim()));
 });
 
-// v0.48: «Compartir → FBE Equipo» (Android): el vídeo llega aquí en un POST; se guarda en una caché aparte (solo en
-// este móvil, hasta que la app lo coge, y entonces se borra) y se abre la app, que lo ofrece como vídeo de técnica.
-// Solo MP4, MOV o WebM de hasta LIMITE_MB (como LIMITE_ARCHIVO_MB en api.js: una prueba comprueba que coinciden),
-// con «nosniff», y bajo una dirección que no existe (no se puede pedir desde ninguna página: nadie la sirve).
+// v0.48: «Compartir → FBE Equipo» (Android): lo compartido llega aquí en un POST; se guarda en una caché aparte (solo
+// en este móvil, hasta que la app lo coge, y entonces se borra) y se abre la app. Con «nosniff» y bajo una dirección que
+// no existe (no se puede pedir desde ninguna página: nadie la sirve).
+// v0.56: fotos, vídeos y PDF, hasta 10, para el chat (el coach elige la conversación); un vídeo solo, el atleta puede
+// enviarlo también como vídeo de técnica. Solo los tipos y tamaños de los adjuntos de siempre: vídeo MP4, MOV o WebM y
+// foto JPEG, PNG, WebP o HEIC de hasta LIMITE_MB (como LIMITE_ARCHIVO_MB en api.js: una prueba comprueba que
+// coinciden), PDF de hasta LIMITE_PDF_MB (como PDF_MAX_MB). Lo demás no se guarda. (/compartir-video, el de la v0.48,
+// sigue valiendo para quien tenga el manifiesto de antes.)
 const COMPARTIDO = 'fbe-compartido';
-const CLAVE_COMPARTIDO = 'https://fbe-compartido.invalid/video';
+const CLAVE_LISTA = 'https://fbe-compartido.invalid/lista';
+const claveArchivo = (i) => `https://fbe-compartido.invalid/archivo/${i}`;
 const TIPOS_VIDEO = ['video/mp4', 'video/quicktime', 'video/webm'];
+const TIPOS_FOTO = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 const LIMITE_MB = 200;
+const LIMITE_PDF_MB = 20;
+const MAX_COMPARTIDOS = 10;
+const valeCompartido = (x) => {
+  if (!x || typeof x !== 'object' || !(x.size > 0)) return false;
+  const t = String(x.type || '').toLowerCase();
+  if (t === 'application/pdf') return x.size <= LIMITE_PDF_MB * 1024 * 1024;
+  return (TIPOS_VIDEO.includes(t) || TIPOS_FOTO.includes(t)) && x.size <= LIMITE_MB * 1024 * 1024;
+};
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  if (e.request.method === 'POST' && url.origin === self.location.origin && url.pathname.endsWith('/compartir-video')) {
+  if (e.request.method === 'POST' && url.origin === self.location.origin && (url.pathname.endsWith('/compartir-video') || url.pathname.endsWith('/compartir'))) {
     e.respondWith((async () => {
-      let ok = false;
+      let n = 0;
       try {
         const datos = await e.request.formData();
-        const f = datos.getAll('video').find((x) => x && typeof x === 'object' && TIPOS_VIDEO.includes(String(x.type || '').toLowerCase()) && x.size > 0 && x.size <= LIMITE_MB * 1024 * 1024);
-        if (f) {
-          const c = await caches.open(COMPARTIDO);
-          await c.put(CLAVE_COMPARTIDO, new Response(f, { headers: { 'content-type': String(f.type).toLowerCase(), 'x-content-type-options': 'nosniff', 'x-nombre': encodeURIComponent(String(f.name || 'video.mp4').slice(0, 120)) } }));
-          ok = true;
+        const fs = [...datos.getAll('archivos'), ...datos.getAll('video')].filter(valeCompartido).slice(0, MAX_COMPARTIDOS);
+        const c = await caches.open(COMPARTIDO);
+        // Lo de un «Compartir» anterior que no se llegó a coger, fuera
+        for (const k of await c.keys()) await c.delete(k);
+        for (const f of fs) {
+          await c.put(claveArchivo(n), new Response(f, { headers: { 'content-type': String(f.type).toLowerCase(), 'x-content-type-options': 'nosniff', 'x-nombre': encodeURIComponent(String(f.name || 'archivo').slice(0, 120)) } }));
+          n++;
         }
-      } catch { ok = false; }
-      return Response.redirect(new URL(`./?compartido=${ok ? '1' : '0'}#hoy`, self.registration.scope).href, 303);
+        if (n) await c.put(CLAVE_LISTA, new Response(JSON.stringify({ n }), { headers: { 'content-type': 'application/json', 'x-content-type-options': 'nosniff' } }));
+      } catch { n = 0; }
+      return Response.redirect(new URL(`./?compartido=${n ? '1' : '0'}#mensajes`, self.registration.scope).href, 303);
     })());
     return;
   }

@@ -175,7 +175,11 @@ export function crearBackendPglite(db) {
     }),
     rpc: (nombre, args = {}) => como(async () => {
       // (como PostgREST: una lista de objetos o un objeto va como JSON; una lista de textos, como lista)
-      const params = Object.values(args).map((v) => (v && typeof v === 'object' && !(Array.isArray(v) && v.every((x) => typeof x !== 'object' || x === null)) ? JSON.stringify(v) : v));
+      // (v0.56) y lo que la función recibe como json/jsonb, como JSON aunque sea una lista de textos
+      const tipos = (await db.query(`select unnest(proargnames) n, unnest(proargtypes::regtype[]::text[]) t from pg_proc where proname = $1 and pronamespace = 'public'::regnamespace`, [nombre])).rows;
+      const esJson = new Set(tipos.filter((x) => /^jsonb?$/.test(x.t)).map((x) => x.n));
+      const comoJson = (k, v) => v != null && (esJson.has(k) || (typeof v === 'object' && !(Array.isArray(v) && v.every((x) => typeof x !== 'object' || x === null))));
+      const params = Object.entries(args).map(([k, v]) => (comoJson(k, v) ? JSON.stringify(v) : v));
       const named = Object.keys(args).map((k, i) => `${id(k)} => $${i + 1}`).join(', ');
       // Las que devuelven una tabla (returns table / setof), como PostgREST: una lista de filas
       const conjunto = (await db.query(`select bool_or(proretset) s from pg_proc where proname = $1 and pronamespace = 'public'::regnamespace`, [nombre])).rows[0]?.s;

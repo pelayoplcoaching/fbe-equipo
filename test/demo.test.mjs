@@ -1,4 +1,5 @@
 // La demo (backend en memoria + datos de ejemplo) responde igual que la app real a las mismas funciones.
+import { VERSION_LEGAL as VERSION_LEGAL_D } from '../web/src/legal.js';
 import { crearBackendMemoria } from '../web/src/datos/backend-memoria.js';
 import { semillaDemo } from '../web/src/datos/semilla-demo.js';
 import { crearApi } from '../web/src/datos/api.js';
@@ -882,8 +883,10 @@ console.log('\nEl chat como WhatsApp en la demo (v0.54): las mismas reglas que l
   const rS = await a5.comentar({ atletaId: ana.id, sesionId: sesMsg.sesion_id, texto: 'En la sesión', autor: 'atleta', respondeA: sesMsg.id });
   check(rS.responde_a === sesMsg.id, 'en el hilo de la sesión, sí');
   check(await a5.reaccionarMensaje(hola.id, '👍') === '👍' && await a5.reaccionarMensaje(hola.id, '🙏') === '🙏' && await a5.reaccionarMensaje(hola.id, '🙏') === null, 'reaccionar, cambiar y quitar');
-  check(await lanza(() => a5.reaccionarMensaje(paraRuben.id, '👍')) && await lanza(() => a5.reaccionarMensaje(prog.id, '👍')) && await lanza(() => a5.reaccionarMensaje(hola.id, '🍺')),
-    'no a lo de Rubén, ni al programado, ni con otros emojis');
+  check(await lanza(() => a5.reaccionarMensaje(paraRuben.id, '👍')) && await lanza(() => a5.reaccionarMensaje(prog.id, '👍')) && await lanza(() => a5.reaccionarMensaje(hola.id, 'ok')),
+    'no a lo de Rubén, ni al programado, ni con algo que no es un emoji');
+  // (v0.56, como la 034) cualquier emoji, con su tono de piel
+  check(await a5.reaccionarMensaje(hola.id, '👍🏽') === '👍🏽' && await a5.reaccionarMensaje(hola.id, '👍🏽') === null, '(034) cualquier emoji, también con tono de piel');
   await b5.insert('comentario_reacciones', [{ comentario_id: hola.id, emoji: '💪', usuario_id: 'otro' }]);
   check((await b5.select('comentario_reacciones', {}))[0].usuario_id !== 'otro', 'la reacción va a su nombre aunque mande otro');
   await a5.destacar(hola.id, true);
@@ -1108,6 +1111,126 @@ console.log('\nEl chat, aún más como WhatsApp, en la demo (v0.55): las mismas 
   check(sinRed, 'sin conexión, un mensaje no sale (como en el de verdad)');
   await comoAna();
   check(typeof (await a7.nombreCoach()) === 'string', 'el nombre del coach para «Info del contacto»');
+}
+
+console.log('\nNotas de voz, encuestas, «escuchado» y reacciones a elegir en la demo (v0.56): las mismas reglas que la 034');
+{
+  const b8 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a8 = crearApi(b8);
+  const coach = () => b8.auth.entrar('pelayo@fbe.demo', 'demo'), comoAna = () => b8.auth.entrar('ana@fbe.demo', 'demo'), comoRuben = () => b8.auth.entrar('ruben@fbe.demo', 'demo');
+  await coach();
+  const atl = await a8.atletas();
+  const ana = atl.find((a) => a.nombre === 'Ana López'), ruben = atl.find((a) => a.nombre.startsWith('Rubén'));
+  check(await a8.chat034() === true, 'la demo tiene todo lo de la 034');
+  // Notas de voz
+  await comoAna();
+  const hoy = new Date().toISOString().slice(0, 10);
+  const voz = (extra = {}) => ({ atleta_id: ana.id, tipo: 'audio', ruta: `${ana.id}/audio-${hoy}-${Math.random().toString(36).slice(2, 8)}.webm`, mime: 'audio/webm', bytes: 2000, duracion_seg: 10, ...extra });
+  check(!!(await b8.insert('archivos', [voz({ onda: Array(16).fill(40) })]))[0], 'Ana registra una nota de voz');
+  check(await lanza(() => b8.insert('archivos', [voz({ duracion_seg: 62 })])) && await lanza(() => b8.insert('archivos', [voz({ bytes: 3145729 })])) && await lanza(() => b8.insert('archivos', [voz({ mime: 'audio/wav' })]))
+    && await lanza(() => b8.insert('archivos', [voz({ ruta: `${ana.id}/audio-${hoy}-x.exe` })])) && await lanza(() => b8.insert('archivos', [voz({ onda: [1, 2] })])) && await lanza(() => b8.insert('archivos', [voz({ nombre: 'x.webm' })])),
+    'de 1 a 61 s, hasta 3 MB, de los formatos de grabar, con su ruta y una onda de 8 a 64 barras (como la base)');
+  const mV = await a8.enviarMensaje(ana.id, { archivo: new File([new Uint8Array(900)], 'n.webm', { type: 'audio/webm;codecs=opus' }), autor: 'atleta', duracion_seg: 7.4, onda: Array(20).fill(30) });
+  check(mV.texto === 'Nota de voz' && mV.adjunto === true && (await b8.select('archivos', { eq: { id: mV.archivo_id } }))[0].mime === 'audio/webm', 'Ana manda una por el chat («Nota de voz», como adjunto del chat)');
+  const [arV] = await b8.select('archivos', { eq: { id: mV.archivo_id } });
+  check(!(await b8.storage.borrar([arV.ruta])).length && (await b8.delete('archivos', { eq: { id: arV.id } }), (await b8.select('archivos', { eq: { id: arV.id } })).length === 1), 'Ana no la borra a mano (ni de Storage ni de archivos)');
+  check(await lanza(() => b8.update('comentarios', { escuchado_en: new Date().toISOString() }, { eq: { id: mV.id } })), 'nadie pone «escuchado» a mano');
+  await coach();
+  check(await lanza(() => b8.insert('comentarios', [{ atleta_id: ana.id, archivo_id: arV.id, texto: 'Nota de voz' }])), 'el coach no pone la de Ana en un mensaje suyo');
+  check(!!(await a8.marcarEscuchado(mV.id)) && !!(await b8.select('comentarios', { eq: { id: mV.id } }))[0].escuchado_en, 'el coach la escucha: escuchada');
+  const deCoach = await a8.enviarMensaje(ana.id, { archivo: new File([new Uint8Array(300)], 'n.webm', { type: 'audio/webm' }), autor: 'coach', duracion_seg: 3 });
+  await comoRuben();
+  check((await a8.marcarEscuchado(deCoach.id)) === null && !(await b8.select('comentarios', { eq: { id: deCoach.id } })).length, 'Rubén ni la ve ni la marca');
+  await comoAna();
+  await a8.marcarPresencia(false);
+  check((await a8.marcarEscuchado(deCoach.id)) === null, 'con «en línea» apagado, Ana la escucha y no se apunta');
+  await a8.marcarPresencia(true);
+  check(!!(await a8.marcarEscuchado(deCoach.id)), 'con él encendido, sí');
+  const cuarenta = [];
+  for (let i = 0; i < 61; i++) { try { await b8.insert('archivos', [voz()]); cuarenta.push(i); } catch (e) { cuarenta.push(e.message); break; } }
+  check(/60 notas de voz/.test(String(cuarenta.at(-1))), 'como mucho 60 al día (el atleta)');
+  // Encuestas
+  await coach();
+  const r = await a8.crearEncuestaChat({ atletaId: ana.id, pregunta: '¿Qué día?', opciones: ['Lunes', 'Martes'] });
+  check(r.enviados === 1, 'el coach manda una encuesta a Ana');
+  check(await lanza(() => b8.insert('encuestas_chat', [{ comentario_id: mV.id, atleta_id: ana.id, pregunta: 'x', opciones: ['a', 'b'] }])) && await lanza(() => b8.rpc('chat_encuesta', { p_atleta: ana.id, p_pregunta: 'x', p_opciones: ['a', 'A'] })),
+    'no se crea a mano; las opciones, sin repetir');
+  await comoAna();
+  const conE = (await a8.conversacion(ana.id)).find((c) => c.encuesta);
+  check(!!conE && igualD(await a8.votarEncuestaChat(conE.encuesta.id, [0]), [0]) && await lanza(() => a8.votarEncuestaChat(conE.encuesta.id, [0, 1])) && await lanza(() => a8.votarEncuestaChat(conE.encuesta.id, [7])),
+    'Ana vota (una sola, y de las que hay)');
+  check(await lanza(() => b8.insert('encuesta_votos', [{ encuesta_id: conE.encuesta.id, atleta_id: ana.id, opciones: [1] }])) && await lanza(() => a8.editarMensaje(conE.id, 'otra')), 'ni vota a mano, ni se edita el mensaje de la encuesta');
+  await comoRuben();
+  check(!(await b8.select('encuestas_chat', {})).length && !(await b8.select('encuesta_votos', {})).length && await lanza(() => a8.votarEncuestaChat(conE.encuesta.id, [1])), 'Rubén no ve la de Ana, ni su voto, ni vota en ella');
+  await coach();
+  check(igualD((await a8.conversacion(ana.id)).find((c) => c.id === conE.id).encuesta.voto, [0]) && await lanza(() => a8.votarEncuestaChat(conE.encuesta.id, [1])), 'el coach ve el voto (y no vota)');
+  await a8.eliminarMensaje((await a8.conversacion(ana.id)).find((c) => c.id === conE.id));
+  check(!(await b8.select('encuestas_chat', {})).some((e) => e.comentario_id === conE.id) && !(await b8.select('encuesta_votos', {})).some((v) => v.encuesta_id === conE.encuesta.id), 'eliminado el mensaje, la encuesta y su voto se van');
+  // Reacciones: cualquier emoji
+  await comoAna();
+  const paraR = (await a8.conversacion(ana.id)).find((c) => c.autor === 'coach' && !c.eliminado_en && !c.archivo);
+  check(await a8.reaccionarMensaje(paraR.id, '🔥') === '🔥' && await lanza(() => b8.insert('comentario_reacciones', [{ comentario_id: paraR.id, emoji: 'hola' }])), 'cualquier emoji como reacción; texto, no');
+  // La subida lenta de la demo (para el progreso y «Cancelar»)
+  const memL = new Map();
+  globalThis.localStorage = { getItem: (k) => memL.get(k) ?? null, setItem: (k, v) => memL.set(k, String(v)), removeItem: (k) => memL.delete(k) };
+  memL.set('fbe-demo-subida-lenta', '400');
+  const pasos = [];
+  const senal = {};
+  const subida = a8.enviarMensaje(ana.id, { archivo: new File([new Uint8Array(500)], 'foto.jpg', { type: 'image/jpeg' }), autor: 'atleta', alProgreso: (x) => pasos.push(x), senal });
+  await new Promise((ok) => setTimeout(ok, 150));
+  senal.abortar();
+  let cancelado = false;
+  try { await subida; } catch (e) { cancelado = !!e.cancelado; }
+  check(cancelado && pasos.length >= 1 && pasos.every((x) => x > 0 && x < 1) && !(await b8.select('archivos', { eq: { atleta_id: ana.id, tipo: 'adjunto' } })).some((x) => x.ruta.endsWith('.jpg') && x.bytes === 500),
+    'en la demo, la subida va por pasos (el progreso) y «Cancelar» la para y retira su registro');
+  delete globalThis.localStorage;
+
+  // (revisión) Como la 034: las notas de voz, en su bucket «voz»; la cola con su bucket; rutas en la cola, no se reusan;
+  // las encuestas no se reenvían; teclas y banderas de etiquetas como reacción
+  await comoAna();
+  const [vzD] = await b8.insert('archivos', [{ ...voz(), ruta: `${ana.id}/audio-${hoy}-dm${Date.now() % 1e6}.webm` }]).catch(async () => { await coach(); return b8.insert('archivos', [voz()]); });
+  await comoAna();
+  check(await lanza(() => b8.storage.subir(vzD.ruta, new Blob([new Uint8Array(10)], { type: 'audio/webm' }), 'audio/webm')) && !(await lanza(() => b8.storage.subir(vzD.ruta, new Blob([new Uint8Array(10)], { type: 'audio/webm' }), 'audio/webm', { bucket: 'voz' }))),
+    '(revisión) una nota de voz no va a «archivos»; a «voz», sí');
+  check(await lanza(() => b8.storage.subir(`${ana.id}/audio-${hoy}-sinfila.webm`, new Blob([new Uint8Array(10)]), 'audio/webm', { bucket: 'voz' }))
+    && await lanza(() => b8.storage.subir(vzD.ruta, new Blob([new Uint8Array(10)]), 'audio/wav', { bucket: 'voz' })), '(revisión) a «voz», solo lo registrado y en audio');
+  check((await a8.urlArchivo(vzD.ruta, { tipo: 'audio' })) !== null, '(revisión) y su enlace sale de «voz»');
+  await coach();
+  check(Array.isArray(await b8.rpc('storage_pendiente_cubos', { p_limite: 50 })), '(revisión) la cola de Storage, con el bucket de cada ruta (el coach)');
+  await comoAna();
+  check(await lanza(() => b8.rpc('storage_pendiente_cubos', { p_limite: 50 })), '(solo el coach)');
+  // Ana elimina su nota de voz para todos: su ruta espera en la cola (la vacía el coach) con el bucket «voz»
+  await a8.eliminarMensaje((await a8.conversacion(ana.id)).find((c) => c.id === mV.id));
+  await coach();
+  const enCola = (await b8.rpc('storage_pendiente_cubos', { p_limite: 500 })).find((x) => x.ruta === arV.ruta);
+  check(enCola?.bucket === 'voz', '(revisión) al eliminarla, su ruta espera en la cola con el bucket «voz»');
+  let errReD = '';
+  try { await b8.insert('archivos', [{ ...voz(), ruta: arV.ruta }]); } catch (e) { errReD = e.message; }
+  check(/ya se usó para un archivo eliminado/.test(errReD), '(revisión) una ruta que espera en la cola no se vuelve a registrar (tampoco el coach)');
+  const rE2 = await a8.crearEncuestaChat({ atletaId: ana.id, pregunta: '¿Otra?', opciones: ['Sí', 'No'] });
+  const conE2 = (await a8.conversacion(ana.id)).find((c) => c.encuesta && c.encuesta.pregunta === '¿Otra?');
+  let errFwD = '';
+  try { await a8.reenviar(conE2, [ruben.id]); } catch (e) { errFwD = e.message; }
+  check(rE2.enviados === 1 && /Una encuesta no se reenvía/.test(errFwD), '(revisión) una encuesta no se reenvía (como la base)');
+  await comoAna();
+  check(await lanza(() => a8.votarEncuestaChat(conE2.encuesta.id, [40000])), '(revisión) un voto a la opción 40000, rechazado con el aviso de siempre');
+  check(await a8.reaccionarMensaje(paraR.id, '1️⃣') === '1️⃣' && await a8.reaccionarMensaje(paraR.id, '\u{1F3F4}\u{E0067}\u{E0062}\u{E0077}\u{E006C}\u{E0073}\u{E007F}') !== undefined
+    && await lanza(() => b8.update('comentario_reacciones', { emoji: '\u{E0067}\u{E0062}' }, { eq: { comentario_id: paraR.id } })), '(revisión) teclas y banderas de etiquetas, sí; etiquetas sueltas, no');
+
+  // (v0.56) El aviso de privacidad, como la 034
+  await comoAna();
+  check((await a8.privacidadVista()).version === VERSION_LEGAL_D, 'en la demo, todos han visto ya la política actual (no sale al entrar)');
+  const anaUid = b8.auth.sesion().user.id;
+  check((await b8.update('privacidad_vista', { version: '2026-01' }, { eq: { usuario_id: anaUid } }))[0].version === VERSION_LEGAL_D, 'nunca hacia atrás');
+  check(await lanza(() => b8.update('privacidad_vista', { version: '2099-01' }, { eq: { usuario_id: anaUid } })) && await lanza(() => b8.upsert('privacidad_vista', [{ usuario_id: anaUid, version: '2026-13' }], 'usuario_id')),
+    'ni una de dentro de años ni sin formato');
+  await comoRuben();
+  const rubenUid = b8.auth.sesion().user.id;
+  await b8.upsert('privacidad_vista', [{ usuario_id: anaUid, version: '2026-10' }], 'usuario_id');
+  check(!(await b8.select('privacidad_vista', {})).some((x) => x.usuario_id === anaUid) && (await b8.select('privacidad_vista', {})).every((x) => x.usuario_id === rubenUid)
+    && !(await b8.update('privacidad_vista', { version: VERSION_LEGAL_D }, { eq: { usuario_id: anaUid } })).length, 'Rubén ni ve ni cambia la de Ana (con su usuario, solo la suya)');
+  await coach();
+  check((await a8.privacidadVistaDe(anaUid))?.version === VERSION_LEGAL_D, 'el coach la ve en la ficha');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

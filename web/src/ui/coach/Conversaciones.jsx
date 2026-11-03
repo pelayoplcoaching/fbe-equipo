@@ -8,6 +8,7 @@ import { silenciado, textoSilencio } from '../../logica/chat.js';
 import { conTransicion } from '../transiciones.js';
 import { HojaDifusion } from './Difusion.jsx';
 import { HojaSilenciar } from '../chat/InfoContacto.jsx';
+import { cacheChat } from '../../datos/cacheChat.js';
 
 // Mensajes del coach (v0.18): una conversación por atleta, como la lista de chats de WhatsApp.
 // v0.54, más WhatsApp: fijar (3), archivar (con su fila «Archivados» arriba; un mensaje nuevo del atleta la saca),
@@ -34,6 +35,11 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
   const silencios = useCarga(() => api.silencios(), [vuelta]);
   const recargar = useRef(null);
   recargar.current = lista.recargar;
+  // (revisión) En este móvil no se guarda la copia del chat de quien ya no está (borrado o de baja)
+  useEffect(() => {
+    if (!lista.datos || !perfil?.id) return;
+    cacheChat().purgar(perfil.id, { conservar: lista.datos.filter((r) => r.atleta.estado !== 'baja').map((r) => r.atleta.id) }).catch(() => {});
+  }, [lista.datos]);
   // (una vez por petición: al volver a la lista, no se vuelve a abrir esa conversación)
   const atendida = useRef(null);
   useEffect(() => {

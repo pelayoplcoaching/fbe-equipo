@@ -6,6 +6,7 @@ import { FAQ } from './faq.js';
 import { RESPUESTAS_EJEMPLO } from './respuestas.js';
 import { sembrarComidas } from './semilla-comidas.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
+import { VERSION_LEGAL } from '../legal.js';
 
 const uuid = () => crypto.randomUUID();
 
@@ -567,6 +568,8 @@ export function semillaDemo(hoy = hoyISO()) {
   sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos });
   sembrarV048(db, { hoy, hace, ana, ruben, carlos, ej, ahoraISO, mesDe, inicioMes });
   sembrarMicrociclos();
+  // v0.56: todos han visto ya el aviso de la política actual (en la demo no sale al entrar; las pruebas lo quitan)
+  db.privacidad_vista = db.perfiles.map((x) => ({ usuario_id: x.id, version: VERSION_LEGAL, vista_en: ahoraISO }));
   return db;
 
   // v0.53 (al final: no cambia lo aleatorio de lo anterior): Iván va por microciclos de 4 sesiones (torso-pierna A y B)

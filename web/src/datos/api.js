@@ -30,6 +30,11 @@ import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { textoVisible } from '../logica/texto.js';
+import { emojiValido } from '../logica/emojis.js';
+import { VERSION_LEGAL } from '../legal.js';
+import { formatoVersion, versionMayor, clavePrivacidadLocal } from '../logica/privacidad.js';
+import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
+import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida } from '../logica/notasVoz.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
 import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
@@ -44,6 +49,10 @@ export { VERSION_NORMAS };
 
 const porId = (filas) => Object.fromEntries(filas.map((f) => [f.id, f]));
 const agrupar = (filas, col) => filas.reduce((m, f) => ((m[f[col]] ||= []).push(f), m), {});
+// v0.56 (034): las notas de voz van en su propio bucket de Storage («voz»: 3 MB y solo audio); lo demás, en «archivos».
+// Por su tipo si se sabe; si no, por su ruta (la de una nota de voz es siempre <atleta>/audio-…, lo pide la base)
+export const cuboDe = (ruta, tipo = null) => (tipo ? (tipo === 'audio' ? 'voz' : 'archivos') : /^[^/]+\/audio-[^/]+$/.test(String(ruta || '')) ? 'voz' : 'archivos');
+const porCampo = (filas, col) => Object.fromEntries(filas.map((f) => [f[col], f]));
 const unicos = (xs) => [...new Set(xs.filter((x) => x != null))];
 // Las menciones de una publicación o un comentario, con el nombre de quien se ve (las de quien ya no está, fuera)
 const mencionadosDe = (ids, personas) => (ids || []).filter((id) => personas[id]).map((id) => ({ perfil_id: id, nombre: personas[id].nombre }));
@@ -144,6 +153,19 @@ const falta033 = (e) => {
   }
   throw e;
 };
+// v0.56 sin la migración 034: notas de voz, encuestas, «escuchado» y otras reacciones dicen qué falta
+const AVISO_034 = 'Para esto falta ejecutar la migración 034 en Supabase (supabase/migraciones/034_chat_voz_y_encuestas.sql)';
+const falta034 = (e) => {
+  const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+  const falta = /\b(escuchado_en|onda|encuestas_chat|encuesta_votos|chat_encuesta|encuesta_votar|marcar_escuchado)\b/.test(m)
+    && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m);
+  if (falta || (/\b(archivos_tipo_check|comentario_reacciones_emoji_valido)\b/.test(m) && /check constraint|23514/i.test(m))) throw new Error(`${AVISO_034}. Detalle: ${e?.message || e}`);
+  throw e;
+};
+// (v0.56) La versión de la política vista, en este móvil (por cuenta): solo lo que falta en la base
+const almacenNavegador = () => { try { return globalThis.localStorage || null; } catch { return null; } };
+const leerPrivacidadLocal = (id) => { try { return almacenNavegador()?.getItem(clavePrivacidadLocal(id)) || null; } catch { return null; } };
+const guardarPrivacidadLocal = (id, v) => { try { almacenNavegador()?.setItem(clavePrivacidadLocal(id), v); } catch { /* */ } };
 const sinCliente033 = (e) => /cliente_id/.test(e?.message || '') && /schema cache|does not exist|no existe|column|columna|PGRST20/i.test(e?.message || '');
 const duplicado = (e) => /duplicate|23505|Ya existe un registro igual/i.test(`${e?.codigo || e?.code || ''} ${e?.message || ''}`);
 // La función de entrar sin la migración 028 (sin el parámetro de las normas)
@@ -401,7 +423,34 @@ export function crearApi(backend) {
       return c.some((x) => x.tipo === 'datos_salud' && !x.revocado_en);
     },
     async darConsentimientos(tipos = ['privacidad', 'datos_salud']) {
-      return b.insert('consentimientos', tipos.map((tipo) => ({ perfil_id: uid(), tipo, version: VERSION_CONSENTIMIENTO })));
+      const r = await b.insert('consentimientos', tipos.map((tipo) => ({ perfil_id: uid(), tipo, version: VERSION_CONSENTIMIENTO })));
+      // (v0.56) quien acepta la política ahora la acepta en su versión actual: no le sale el aviso de novedades
+      if (tipos.includes('privacidad')) await api.marcarPrivacidadVista(VERSION_LEGAL);
+      return r;
+    },
+    // (v0.56) El aviso de privacidad, una vez por versión: cuál ha visto esta cuenta. En la base (034, la misma en todos
+    // sus móviles); antes de la 034 o sin conexión, lo de este móvil. Si este móvil sabe de una más nueva que la base
+    // (se vio sin la 034 o sin red), se le pasa a la base sin decir nada.
+    async privacidadVista() {
+      const id = uid();
+      if (!id) return { version: null, enBase: false };
+      const local = leerPrivacidadLocal(id);
+      const filas = await b.select('privacidad_vista', { eq: { usuario_id: id }, cols: 'version', limit: 1 }).catch(() => null);
+      const enBase = filas ? filas[0]?.version || null : null;
+      if (filas && formatoVersion(local) && (!enBase || local > enBase)) api.marcarPrivacidadVista(local).catch(() => {});
+      return { version: versionMayor(enBase, local), enBase: !!filas };
+    },
+    async marcarPrivacidadVista(version = VERSION_LEGAL) {
+      const id = uid();
+      if (!id || !formatoVersion(version)) return false;
+      // (en este móvil, solo versiones que la app conoce: nunca una «del futuro» que tape los avisos que vengan)
+      if (version <= VERSION_LEGAL) guardarPrivacidadLocal(id, version);
+      try { await b.upsert('privacidad_vista', [{ usuario_id: id, version }], 'usuario_id'); return true; } catch { return false; }
+    },
+    // El coach, en la ficha: qué versión ha visto ese atleta (null: ninguna o sin la 034)
+    async privacidadVistaDe(perfilId) {
+      if (!perfilId) return null;
+      return (await b.select('privacidad_vista', { eq: { usuario_id: perfilId }, cols: 'version,vista_en', limit: 1 }).catch(() => []))[0] || null;
     },
     async revocarConsentimiento(id) {
       return b.update('consentimientos', { revocado_en: new Date().toISOString() }, { eq: { id } });
@@ -1510,12 +1559,16 @@ export function crearApi(backend) {
       const sesIds = unicos(mensajes.map((c) => c.sesion_id).filter(Boolean));
       const arcIds = unicos(mensajes.map((c) => c.archivo_id).filter(Boolean));
       const ids = mensajes.map((c) => c.id);
-      const [sesiones, archivos, reacciones, destacados] = await Promise.all([
+      const [sesiones, archivos, reacciones, destacados, encuestas] = await Promise.all([
         sesIds.length ? b.select('sesiones', { in: { id: sesIds }, cols: 'id,nombre,semana_id' }).catch(() => []) : [],
         arcIds.length ? b.select('archivos', { in: { id: arcIds } }).catch(() => []) : [],
         ids.length ? b.select('comentario_reacciones', { in: { comentario_id: ids }, cols: 'comentario_id,usuario_id,emoji' }).catch(() => []) : [],
         ids.length && uid() ? b.select('comentario_destacados', { in: { comentario_id: ids }, eq: { usuario_id: uid() }, cols: 'comentario_id' }).catch(() => []) : [],
+        // (v0.56) las encuestas y su voto (sin la 034, ninguna)
+        ids.length ? b.select('encuestas_chat', { in: { comentario_id: ids } }).catch(() => []) : [],
       ]);
+      const votos = encuestas.length ? porCampo(await b.select('encuesta_votos', { in: { encuesta_id: encuestas.map((e) => e.id) } }).catch(() => []), 'encuesta_id') : {};
+      const E = porCampo(encuestas, 'comentario_id');
       const S = porId(sesiones), A = porId(archivos), R = agrupar(reacciones, 'comentario_id'), D = new Set(destacados.map((x) => x.comentario_id));
       const vistos = new Set();
       return mensajes.map((c) => {
@@ -1530,19 +1583,22 @@ export function crearApi(backend) {
           : null;
         const medio = archivo ? medioDe({ archivo }) : null;
         return { ...c, contexto, archivo: conMedio ? archivo : null, archivoId: archivo?.id || null, medio, programado: programado(c),
-          reacciones: c.eliminado_en ? [] : (R[c.id] || []).map(({ usuario_id, emoji }) => ({ usuario_id, emoji })), destacado: D.has(c.id) };
+          reacciones: c.eliminado_en ? [] : (R[c.id] || []).map(({ usuario_id, emoji }) => ({ usuario_id, emoji })), destacado: D.has(c.id),
+          encuesta: E[c.id] && !c.eliminado_en ? { id: E[c.id].id, pregunta: E[c.id].pregunta, opciones: E[c.id].opciones, multiple: E[c.id].multiple, voto: votos[E[c.id].id]?.opciones || null, votado_en: votos[E[c.id].id]?.votado_en || null } : null };
       });
     },
     // v0.54: responder, reaccionar, editar, eliminar para todos y destacar (migración 032)
     // Reaccionar: la misma la quita; otra la cambia. Devuelve la que queda (o null). Una por persona y mensaje.
     async reaccionarMensaje(comentarioId, emoji) {
-      if (!REACCIONES_CHAT.includes(emoji)) throw new Error('Esa reacción no está en la lista');
+      // (v0.56) cualquier emoji (cada uno elige los suyos); sin la 034, solo los seis de siempre
+      if (!emojiValido(emoji)) throw new Error('Esa reacción no es un emoji');
+      if (!REACCIONES_CHAT.includes(emoji)) await api.exigir034();
       const yo = uid();
       const [mia] = await b.select('comentario_reacciones', { eq: { comentario_id: comentarioId, usuario_id: yo }, cols: 'emoji' }).catch(falta032);
       const queda = siguienteReaccion(mia?.emoji || null, emoji);
       if (!queda) await b.delete('comentario_reacciones', { eq: { comentario_id: comentarioId, usuario_id: yo } });
       else if (mia) await b.update('comentario_reacciones', { emoji: queda }, { eq: { comentario_id: comentarioId, usuario_id: yo } });
-      else await b.insert('comentario_reacciones', [{ comentario_id: comentarioId, emoji: queda }]).catch(falta032);
+      else await b.insert('comentario_reacciones', [{ comentario_id: comentarioId, emoji: queda }]).catch(falta032).catch(falta034);
       return queda;
     },
     async editarMensaje(id, texto) {
@@ -1563,7 +1619,7 @@ export function crearApi(backend) {
       const rutas = Array.isArray(r?.rutas) ? r.rutas.filter((x) => typeof x === 'string' && x) : [];
       let almacenamiento = 'nada';
       const coach = await api.esCoachAhora();
-      if (rutas.length) almacenamiento = coach ? await api.borrarDeStorage(rutas) : 'pendiente';
+      if (rutas.length) almacenamiento = coach ? await api.borrarDeStorage(rutas.map((ruta) => ({ ruta, bucket: cuboDe(ruta, c?.archivo?.ruta === ruta ? c.archivo.tipo : null) }))) : 'pendiente';
       if (coach) api.limpiarAlmacenamiento().catch(() => {});
       return { estado: r?.estado || 'eliminado', almacenamiento };
     },
@@ -1575,10 +1631,12 @@ export function crearApi(backend) {
     },
     // El coach borra de Storage y lo quita de la cola: 'borrado' o, si Storage falla, 'pendiente' (se reintenta al
     // abrir la app y tras el siguiente borrado)
+    // (v0.56) rutas: textos o { ruta, bucket } (cada una de su bucket)
     async borrarDeStorage(rutas) {
+      const items = rutas.map((x) => (typeof x === 'string' ? { ruta: x, bucket: cuboDe(x) } : x));
       try {
-        await b.storage.borrar(rutas);
-        await b.rpc('storage_borrado', { p_rutas: rutas }).catch(() => {});
+        for (const cubo of ['archivos', 'voz']) { const rs = items.filter((x) => x.bucket === cubo).map((x) => x.ruta); if (rs.length) await b.storage.borrar(rs, cubo); }
+        await b.rpc('storage_borrado', { p_rutas: items.map((x) => x.ruta) }).catch(() => {});
         return 'borrado';
       } catch { return 'pendiente'; }
     },
@@ -1586,8 +1644,12 @@ export function crearApi(backend) {
     async limpiarAlmacenamiento() {
       if (!(await api.esCoachAhora())) return 0;
       let rutas;
-      try { rutas = await b.rpc('storage_pendiente', { p_limite: 200 }); } catch { return 0; }
-      rutas = (rutas || []).map((x) => (typeof x === 'string' ? x : x?.storage_pendiente || x?.r || null)).filter(Boolean);
+      // (v0.56) con su bucket (la 034); sin ella, todo es de «archivos»
+      try { rutas = (await b.rpc('storage_pendiente_cubos', { p_limite: 200 }) || []).filter((x) => x?.ruta).map((x) => ({ ruta: x.ruta, bucket: x.bucket === 'voz' ? 'voz' : 'archivos' })); }
+      catch {
+        try { rutas = await b.rpc('storage_pendiente', { p_limite: 200 }); } catch { return 0; }
+        rutas = (rutas || []).map((x) => (typeof x === 'string' ? x : x?.storage_pendiente || x?.r || null)).filter(Boolean).map((ruta) => ({ ruta, bucket: 'archivos' }));
+      }
       if (!rutas.length) return 0;
       return (await api.borrarDeStorage(rutas)) === 'borrado' ? rutas.length : 0;
     },
@@ -1663,6 +1725,41 @@ export function crearApi(backend) {
       return api._c033;
     },
     async exigir033() { if (!(await api.chat033())) throw new Error(AVISO_033); },
+    // v0.56: ¿tiene la base la 034? (notas de voz, encuestas, «escuchado», reacciones a elegir)
+    async chat034() {
+      if (!api._c034) {
+        api._c034 = b.select('encuestas_chat', { limit: 1, cols: 'id' }).then(() => true, (e) => {
+          const falta = /encuestas_chat|schema cache|does not exist|no existe|relation|PGRST20/i.test(e?.message || '');
+          if (!falta) api._c034 = null;
+          return !falta;
+        });
+      }
+      return api._c034;
+    },
+    async exigir034() { if (!(await api.chat034())) throw new Error(AVISO_034); },
+    // «Escuchado» (el micro azul): quien recibe una nota de voz la reproduce. Sin la 034, o con «en línea» apagado, nada.
+    async marcarEscuchado(comentarioId) {
+      if (!comentarioId || typeof backend.rpc !== 'function') return null;
+      try { return await backend.rpc('marcar_escuchado', { p_comentario: comentarioId }); } catch { return null; }
+    },
+    // Una encuesta (el coach) en el chat de un atleta o en el de cada uno de una lista de difusión. envio: lo de este
+    // envío (su id, el mismo al reintentar: no sale dos veces). Devuelve { enviados, saltados }.
+    async crearEncuestaChat({ atletaId = null, listaId = null, pregunta, opciones, multiple = false, envio = {} }) {
+      await api.exigir034();
+      const e = limpiarEncuestaChat({ pregunta, opciones, multiple });
+      if (!e.ok) throw new Error(e.error);
+      envio.cliente ||= nuevoUuid();
+      const r = await b.rpc('chat_encuesta', { p_atleta: atletaId, p_lista: listaId, p_pregunta: e.pregunta, p_opciones: e.opciones, p_multiple: e.multiple, p_cliente: envio.cliente }).catch(falta034);
+      return { enviados: Number(r?.enviados) || 0, saltados: Number(r?.saltados) || 0 };
+    },
+    // El voto del atleta (o quitarlo, con ninguna). Devuelve el que queda
+    async votarEncuestaChat(encuestaId, opciones = []) {
+      return (await b.rpc('encuesta_votar', { p_encuesta: encuestaId, p_opciones: opciones }).catch(falta034)) || null;
+    },
+    // Ir a una fecha: cuántos mensajes hay desde ese día (para cargar hasta ahí)
+    async mensajesDesde(atletaId, desdeISO) {
+      return (await b.select('comentarios', { eq: { atleta_id: atletaId }, gte: { creado_en: desdeISO }, cols: 'id' })).length;
+    },
     // «Entregado» (✓✓ gris): lo dirigido a mí que mi app acaba de descargar. Directo al backend (no es «un cambio» de
     // la pantalla) y como mucho cada 8 segundos; sin la 033, nada.
     async marcarEntregados({ ya = false } = {}) {
@@ -1736,14 +1833,16 @@ export function crearApi(backend) {
       const ext = (/\.([a-z0-9]{1,5})$/i.exec(archivo.ruta || '') || [])[1]?.toLowerCase() || 'bin';
       const esImagen = /^image\//.test(archivo.mime || '');
       const dia = hoyISO();
-      const ruta = archivo.tipo === 'documento' ? `${atletaId}/documento-${dia}-${aleatorio()}.pdf` : `${atletaId}/${esImagen ? 'adjunto' : 'adjunto-video'}-${dia}-${aleatorio()}.${ext}`;
+      const ruta = archivo.tipo === 'documento' ? `${atletaId}/documento-${dia}-${aleatorio()}.pdf` : archivo.tipo === 'audio' ? `${atletaId}/audio-${dia}-${aleatorio()}.${ext}`
+        : `${atletaId}/${esImagen ? 'adjunto' : 'adjunto-video'}-${dia}-${aleatorio()}.${ext}`;
       const poster_ruta = archivo.poster_ruta ? `${ruta}.jpg` : null;
       const [fila] = await b.insert('archivos', [{
-        atleta_id: atletaId, tipo: archivo.tipo === 'documento' ? 'documento' : 'adjunto', ruta, mime: archivo.mime || null, bytes: archivo.bytes ?? null, fecha: dia,
+        atleta_id: atletaId, tipo: archivo.tipo === 'documento' || archivo.tipo === 'audio' ? archivo.tipo : 'adjunto', ruta, mime: archivo.mime || null, bytes: archivo.bytes ?? null, fecha: dia,
         ...(archivo.duracion_seg != null ? { duracion_seg: archivo.duracion_seg } : {}), ...(poster_ruta ? { poster_ruta } : {}),
         ...(archivo.tipo === 'documento' ? { nombre: archivo.nombre || 'documento.pdf', ...(archivo.paginas ? { paginas: archivo.paginas } : {}) } : {}),
+        ...(archivo.tipo === 'audio' && ondaValida(archivo.onda) ? { onda: archivo.onda } : {}),
       }]).catch(falta033);
-      try { await b.storage.copiar(archivo.ruta, ruta); } catch (e) { await b.delete('archivos', { eq: { id: fila.id } }).catch(() => {}); throw e; }
+      try { await b.storage.copiar(archivo.ruta, ruta, cuboDe(archivo.ruta, archivo.tipo)); } catch (e) { await b.delete('archivos', { eq: { id: fila.id } }).catch(() => {}); throw e; }
       if (poster_ruta) await b.storage.copiar(archivo.poster_ruta, poster_ruta).catch(async () => { await b.update('archivos', { poster_ruta: null }, { eq: { id: fila.id } }).catch(() => {}); fila.poster_ruta = null; });
       return fila;
     },
@@ -1908,7 +2007,7 @@ export function crearApi(backend) {
     // respondeA (v0.54): el mensaje que cita (con foto o vídeo, el primero de varios lo lleva)
     // clienteId (v0.55): el id del móvil (sin repetir al reintentar). Un PDF (v0.55, migración 033) va como documento del
     // chat, con su nombre (saneado) y sus páginas (si se saben); la ruta la genera la app.
-    async enviarMensaje(atletaId, { texto = '', archivo = null, autor, enDiario = false, poster = null, duracion_seg = null, enviarEn = null, respondeA = null, clienteId = null, paginas = null }) {
+    async enviarMensaje(atletaId, { texto = '', archivo = null, autor, enDiario = false, poster = null, duracion_seg = null, enviarEn = null, respondeA = null, clienteId = null, paginas = null, onda = null, alProgreso = null, senal = null }) {
       const t = String(texto || '').trim();
       if (enviarEn) {
         if (archivo) throw new Error('Los mensajes con foto o vídeo no se pueden programar');
@@ -1921,16 +2020,27 @@ export function crearApi(backend) {
       if (!archivo) return api.comentar({ atletaId, texto: t, autor, respondeA, clienteId });
       const esPdf = archivo.type === 'application/pdf';
       const esVideo = /^video\//.test(archivo.type || '');
+      // (v0.56) una nota de voz: hasta un minuto y 3 MB, sin pie
+      const esAudio = /^audio\//.test(archivo.type || '');
       if (esPdf && archivo.size > PDF_MAX_MB * 1024 * 1024) throw new Error(`El PDF pesa más de ${PDF_MAX_MB} MB`);
       if (esPdf) await api.exigir033();
-      const tipo = esPdf ? 'documento' : enDiario ? (esVideo ? 'video_tecnica' : 'foto_progreso') : 'adjunto';
-      const fila = await api.subirArchivo(atletaId, archivo, { tipo, nota_atleta: enDiario && t ? t.slice(0, 500) : null, poster: esPdf ? null : poster, duracion_seg: esPdf ? null : duracion_seg,
-        ...(esPdf ? { nombre: nombreSeguroPdf(archivo.name), paginas } : {}) });
+      if (esAudio) {
+        await api.exigir034();
+        if (!tipoAudio(archivo.type)) throw new Error('Ese audio no se puede enviar');
+        if (archivo.size > MAX_VOZ_BYTES) throw new Error('La nota de voz pesa demasiado (más de 3 MB)');
+      }
+      const tipo = esPdf ? 'documento' : esAudio ? 'audio' : enDiario ? (esVideo ? 'video_tecnica' : 'foto_progreso') : 'adjunto';
+      const delChat = tipo === 'adjunto' || tipo === 'documento' || tipo === 'audio';
+      const fila = await api.subirArchivo(atletaId, archivo, { tipo, nota_atleta: enDiario && t ? t.slice(0, 500) : null, poster: esPdf || esAudio ? null : poster,
+        duracion_seg: esPdf ? null : esAudio ? duracionGuardada(duracion_seg) : duracion_seg, alProgreso, senal,
+        ...(esPdf ? { nombre: nombreSeguroPdf(archivo.name), paginas } : {}), ...(esAudio && ondaValida(onda) ? { onda } : {}) });
+      // (v0.56) «Cancelar» justo cuando acababa de subirse: no sale (y su archivo se retira)
+      if (senal?.cancelada) { if (delChat) await api.borrarArchivo(fila).catch(() => {}); const e = new Error('Cancelado'); e.cancelado = true; throw e; }
       try {
-        return await api.comentar({ atletaId, archivoId: fila.id, texto: t || (esPdf ? 'Documento' : esVideo ? 'Vídeo' : 'Foto'), autor, respondeA: tipo === 'adjunto' || tipo === 'documento' ? respondeA : null, clienteId });
+        return await api.comentar({ atletaId, archivoId: fila.id, texto: esAudio ? 'Nota de voz' : t || (esPdf ? 'Documento' : esVideo ? 'Vídeo' : 'Foto'), autor, respondeA: delChat ? respondeA : null, clienteId });
       } catch (e) {
         // Sin su mensaje, un adjunto no es nada: se retira (un vídeo del diario se queda, ya está en el diario)
-        if (tipo === 'adjunto' || tipo === 'documento') await api.borrarArchivo(fila).catch(() => {});
+        if (delChat) await api.borrarArchivo(fila).catch(() => {});
         throw e;
       }
     },
@@ -1958,7 +2068,7 @@ export function crearApi(backend) {
       if (tipo) eq.tipo = tipo;
       // Los adjuntos del chat no son vídeos de técnica ni fotos de progreso: solo salen si se piden
       // (v0.55) ni los documentos del chat
-      return (await b.select('archivos', { eq, ...(tipo ? {} : { neq: { tipo: 'adjunto' } }), order: [['fecha', 'desc'], ['creado_en', 'desc']] })).filter((a) => tipo || a.tipo !== 'documento');
+      return (await b.select('archivos', { eq, ...(tipo ? {} : { neq: { tipo: 'adjunto' } }), order: [['fecha', 'desc'], ['creado_en', 'desc']] })).filter((a) => tipo || (a.tipo !== 'documento' && a.tipo !== 'audio'));
     },
     // v0.41: cuántos vídeos de técnica ha enviado el atleta de cada ejercicio de una sesión (el aviso «Vídeo enviado»)
     async videosSesion(atletaId, seIds) {
@@ -2014,12 +2124,14 @@ export function crearApi(backend) {
       const dia = fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) && fecha <= hoyISO() ? fecha : hoyISO();
       // (v0.55) un documento, siempre .pdf: la ruta nunca sale de su nombre
       if (tipo === 'documento') return `${atletaId}/documento-${dia}-${aleatorio()}.pdf`;
+      // (v0.56) una nota de voz, con la extensión de su formato (nunca la del nombre)
+      if (tipo === 'audio') return `${atletaId}/audio-${dia}-${aleatorio()}.${tipoAudio(archivo.type)?.ext || 'webm'}`;
       return `${atletaId}/${tipo === 'adjunto' ? (esImagen ? 'adjunto' : 'adjunto-video') : esImagen ? 'foto' : 'video'}-${dia}-${aleatorio()}.${ext}`;
     },
     // alProgreso(0…1) de la subida; fecha: la del día en que se grabó (un vídeo que se queda pendiente sin cobertura
     // y se envía al día siguiente conserva su día). ruta: la de un intento anterior (v0.33): reintentar es seguro,
     // se reutiliza el registro si ya se hizo y, si el archivo llegó entero aunque no la respuesta, no se sube dos veces.
-    async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null, fecha = null, alProgreso = null, senal = null, ruta: rutaDada = null, nombre = null, paginas = null }) {
+    async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null, fecha = null, alProgreso = null, senal = null, ruta: rutaDada = null, nombre = null, paginas = null, onda = null }) {
       if (archivo.size > LIMITE_ARCHIVO_MB * 1024 * 1024) throw new Error(`El archivo pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos) o recórtalo.`);
       const esImagen = /^image\//.test(archivo.type || '') || tipo === 'foto_progreso';
       const ruta = rutaDada || api.rutaArchivo(atletaId, archivo, { tipo, fecha });
@@ -2032,14 +2144,16 @@ export function crearApi(backend) {
       if (!fila) {
         [fila] = await b.insert('archivos', [{
           atleta_id: atletaId, tipo, ruta, sesion_ejercicio_id, ejercicio_id, nota_atleta,
-          mime: archivo.type || null, bytes: archivo.size ?? null, fecha: dia,
+          mime: (tipo === 'audio' ? tipoAudio(archivo.type)?.tipo : archivo.type) || null, bytes: archivo.size ?? null, fecha: dia,
           ...(tipo === 'foto_progreso' && pose ? { pose } : {}),
           ...(poster_ruta ? { poster_ruta } : {}), ...(dur != null ? { duracion_seg: dur } : {}),
           ...(tipo === 'documento' ? { nombre: nombreSeguroPdf(nombre || archivo.name), ...(Number.isInteger(paginas) && paginas >= 1 && paginas <= 5000 ? { paginas } : {}) } : {}),
-        }]).catch(tipo === 'documento' ? falta033 : (e) => { throw e; });
+          ...(tipo === 'audio' && ondaValida(onda) ? { onda } : {}),
+        }]).catch(tipo === 'documento' ? falta033 : tipo === 'audio' ? falta034 : (e) => { throw e; });
       }
       try {
-        await b.storage.subir(ruta, archivo, archivo.type || 'application/octet-stream', { alProgreso, senal });
+        if (senal?.cancelada) { const e = new Error('Cancelado'); e.cancelado = true; throw e; }
+        await b.storage.subir(ruta, archivo, (tipo === 'audio' ? tipoAudio(archivo.type)?.tipo : archivo.type) || 'application/octet-stream', { alProgreso, senal, bucket: cuboDe(ruta, tipo) });
       } catch (e) {
         // Sin cobertura, el registro se queda: el siguiente intento (con la misma ruta) lo reutiliza
         if (!e?.sinConexion) await b.delete('archivos', { eq: { id: fila.id } }).catch(() => {});
@@ -2054,14 +2168,14 @@ export function crearApi(backend) {
     async descartarSubida(ruta) {
       if (ruta) await b.delete('archivos', { eq: { ruta } }).catch(() => {});
     },
-    async urlArchivo(ruta) { return b.storage.url(ruta); },
+    async urlArchivo(ruta, { tipo = null } = {}) { return b.storage.url(ruta, 3600, cuboDe(ruta, tipo)); },
     // (v0.54) Primero de Storage (mientras tiene su fila: el atleta solo puede borrar ahí lo que tiene fila y puede borrar)
     // y después la fila; lo que no se haya podido borrar de Storage queda en la cola (lo pone la base) y lo vacía el coach.
     // Devuelve 'borrado' | 'pendiente'.
     async borrarArchivo(archivo) {
       const rutas = [archivo.ruta, ...(archivo.poster_ruta ? [archivo.poster_ruta] : [])];
       let hechas = null;
-      try { hechas = await b.storage.borrar(rutas); } catch { hechas = null; }
+      try { hechas = await b.storage.borrar(rutas, cuboDe(archivo.ruta, archivo.tipo)); } catch { hechas = null; }
       await b.delete('archivos', { eq: { id: archivo.id } });
       const coach = await api.esCoachAhora();
       if (coach) { if (hechas) await b.rpc('storage_borrado', { p_rutas: rutas }).catch(() => {}); api.limpiarAlmacenamiento().catch(() => {}); }
@@ -2791,7 +2905,10 @@ export function crearApi(backend) {
       const registrados = await b.select('archivos', { eq: { atleta_id: atletaId }, cols: 'id,ruta' });
       const enCarpeta = await b.storage.listar(atletaId);
       const rutas = [...new Set([...registrados.map((a) => a.ruta), ...enCarpeta])];
-      if (rutas.length) await b.storage.borrar(rutas);
+      if (rutas.length) await b.storage.borrar(rutas.filter((r) => cuboDe(r) === 'archivos'));
+      // (v0.56) y sus notas de voz (bucket «voz»; sin la 034, no hay)
+      const voces = [...new Set([...registrados.map((a) => a.ruta).filter((r) => cuboDe(r) === 'voz'), ...(await b.storage.listar(atletaId, 'voz').catch(() => []))])];
+      if (voces.length) await b.storage.borrar(voces, 'voz').catch(() => {});
       // Y sus fotos del muro (v0.43, bucket «comunidad»; sin la migración 027, no hay)
       const delMuro = await b.storage.listar(atletaId, 'comunidad').catch(() => []);
       if (delMuro.length) await b.storage.borrar(delMuro, 'comunidad').catch(() => {});
@@ -2901,7 +3018,7 @@ export function crearApi(backend) {
         b.select('sesiones', { eq: { completada: true }, nulo: ['revisada_en'], gte: { fecha_realizada: desde }, order: [['fecha_realizada', 'desc']] }),
         b.select('checkins', { nulo: ['revisado_en'], gte: { semana_inicio: desde }, order: [['semana_inicio', 'desc']] }),
         b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], order: [['creado_en', 'desc']] }).then((xs) => xs.filter((c) => !c.eliminado_en)),
-        b.select('archivos', { nulo: ['revisado_en'], neq: { tipo: 'adjunto' }, order: [['creado_en', 'desc']] }).then((xs) => xs.filter((a) => a.tipo !== 'documento')),
+        b.select('archivos', { nulo: ['revisado_en'], neq: { tipo: 'adjunto' }, order: [['creado_en', 'desc']] }).then((xs) => xs.filter((a) => a.tipo !== 'documento' && a.tipo !== 'audio')),
         api.atletas(),
       ]);
       const A = porId(atletas);
