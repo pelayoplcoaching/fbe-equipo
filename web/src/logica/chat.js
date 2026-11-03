@@ -3,6 +3,8 @@
 // momento o al volver la cobertura), reenviar y difundir, los PDF (nombre, firma y páginas), silenciar, fijar y copiar
 // varios mensajes.
 import { textoPlano } from './formato.js';
+import { medioDe } from './mensajes.js';
+import { trozosConEnlaces } from './enlaces.js';
 
 // ------------------------------------------------------------------ mensajes solo de emojis
 // Un emoji «entero» (lo que se ve como uno): una bandera (dos letras regionales o una con etiquetas), un número en su
@@ -227,3 +229,39 @@ export function accionesSeleccion(sel = [], yo, ahora = Date.now(), { horas = 48
     reenviar: yo === 'coach' && sel.length > 0 && sel.every((c) => reenviable(c, yo, ahora)),
   };
 }
+
+// ---------------------------------------------------------------------------------------------------------- v0.56
+// Buscar por tipo en el chat (como WhatsApp): fotos, vídeos, enlaces, documentos o notas de voz. Lo más reciente primero.
+export const TIPOS_BUSQUEDA = [['foto', 'Fotos'], ['video', 'Vídeos'], ['enlace', 'Enlaces'], ['documento', 'Documentos'], ['audio', 'Notas de voz']];
+export function porTipo(mensajes = [], tipo, ahora = Date.now()) {
+  const ok = (c) => !c.eliminado_en && !(c.enviar_en && Date.parse(c.enviar_en) > ahora);
+  const es = tipo === 'enlace' ? (c) => trozosConEnlaces(c.texto || '').some((x) => x.tipo === 'enlace')
+    : (c) => (c.archivo || c.archivoId || c.archivo_id) && medioDe(c) === tipo;
+  return mensajes.filter((c) => ok(c) && es(c)).map((c) => c.id).reverse();
+}
+// Ir a una fecha: el primer mensaje de ese día o, si ese día no hubo, del siguiente que tenga (null si no hay ninguno
+// desde entonces). fecha: 'AAAA-MM-DD' (del día de quien mira); diaDe: la fecha local de un mensaje.
+export function primeroDesde(mensajes = [], fecha, diaDe) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fecha || ''))) return null;
+  return mensajes.find((c) => diaDe(c.creado_en) >= fecha && !(c.programado))?.id || null;
+}
+// ↑ con el cuadro vacío: editar el último mensaje propio que aún se puede editar (texto, sin eliminar, en sus 15 min)
+export function ultimoEditable(mensajes = [], yo, puede) {
+  for (let i = mensajes.length - 1; i >= 0; i--) {
+    const c = mensajes[i];
+    if (c.autor === yo && !c.pendiente && !c.fallo && puede(c)) return c;
+  }
+  return null;
+}
+// ¿Suena? Solo con el chat abierto y a la vista, con los sonidos activados, sin la conversación silenciada y por lo que
+// llega o sale ahora (nunca al abrir ni al cargar lo anterior)
+export function debeSonar({ activado = true, silenciada = false, visible = true, alCargar = false } = {}) {
+  return !!activado && !silenciada && !!visible && !alCargar;
+}
+// Lo que llegó nuevo de la otra parte entre dos vistas del chat (para el sonido): ids que no estaban, de la otra parte
+export function llegadosNuevos(antes = [], ahora = [], yo) {
+  const vistos = new Set(antes.map((c) => c.cliente_id || c.id));
+  return ahora.filter((c) => !vistos.has(c.cliente_id || c.id) && c.autor !== yo && !c.eliminado_en);
+}
+// El número del icono de la app: lo sin leer (como mucho 99; 0 lo quita)
+export const numeroInsignia = (n) => Math.max(0, Math.min(99, Math.floor(Number(n) || 0)));

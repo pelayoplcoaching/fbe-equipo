@@ -109,6 +109,14 @@ export const P = {
   silencio: 'M13.7 21a2 2 0 0 1-3.4 0M18.6 13A7.6 7.6 0 0 1 18 9a6 6 0 0 0-9.3-5M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14M3 3l18 18',
   teclado: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 9h.01M11 9h.01M15 9h.01M7 13h.01M17 13h.01M11 13h2M8 16h8',
   seleccionar: 'M9 11l3 3 8-8M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9',
+  // v0.56: notas de voz, encuestas y el editor de fotos
+  micro: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6',
+  parar: 'M7 7h10v10H7z',
+  encuesta: 'M5 20V12M10 20V6M15 20v-9M20 20V9M3 20h18',
+  recortar: 'M6 3v14a1 1 0 0 0 1 1h14M3 6h14a1 1 0 0 1 1 1v14',
+  texto: 'M5 6V4h14v2M12 4v16M9 20h6',
+  deshacer: 'M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
+  hd: 'M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5zM8 9v6M8 12h3M11 9v6M14 9v6h1a3 3 0 0 0 0-6z',
 };
 
 // Anillo de la semana: un segmento por sesión programada; los hechos, en morado

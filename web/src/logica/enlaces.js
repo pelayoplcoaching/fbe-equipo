@@ -41,3 +41,15 @@ export function trozosConEnlaces(texto) {
 
 // Los vídeos de YouTube de un texto (sin repetir, como mucho 3)
 export const videosYoutube = (texto) => [...new Set(trozosConEnlaces(texto).filter((x) => x.youtube).map((x) => x.youtube))].slice(0, 3);
+
+// v0.56: la tarjeta de un enlace que no es de YouTube, sin pedir nada a nadie (ni a la web enlazada ni a un servicio de
+// vistas previas): solo su dominio y un trozo de la ruta. { dominio, ruta, seguro } o null si no es una dirección http(s)
+export function tarjetaEnlace(url) {
+  let u;
+  try { u = new URL(String(url)); } catch { return null; }
+  if (!/^https?:$/.test(u.protocol) || !u.hostname) return null;
+  const dominio = u.hostname.toLowerCase().replace(/^www\./, '');
+  const ruta = decodeURIComponentSeguro(`${u.pathname}${u.search}`).replace(/\/$/, '').replace(/\s+/g, ' ').slice(0, 60);
+  return { dominio, ruta: ruta === '/' ? '' : ruta, seguro: u.protocol === 'https:' };
+}
+function decodeURIComponentSeguro(t) { try { return decodeURIComponent(t); } catch { return t; } }

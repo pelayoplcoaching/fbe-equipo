@@ -10,6 +10,8 @@ import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido } from '../logica/cardio.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
 import { fechaMadrid as fMadrid, instanteMadrid } from '../logica/fechas.js';
+import { emojiValido } from '../logica/emojis.js';
+import { opcionesEncuesta } from '../logica/encuestas.js';
 // Como la 033: lo que no lleva el nombre de un documento (control, invisibles y de dirección del texto, barras y <>:"|?*)
 const NOMBRE_PROHIBIDO = new RegExp('[/\\\\\\u0000-\\u001f\\u007f-\\u009f\\u200b-\\u200f\\u202a-\\u202e\\u2066-\\u2069\\ufeff<>:"|?*]');
 
@@ -38,7 +40,7 @@ const DEFECTOS = {
   marcas: () => ({ fecha: hoyISO(), reps: 1, tipo: 'test', notas: null }),
   objetivos: () => ({ progreso_pct: 0, estado: 'no_iniciado', descripcion: null, fecha_limite: null, ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, creado_en: ahora() }),
   archivos: () => ({ fecha: hoyISO(), sesion_ejercicio_id: null, ejercicio_id: null, comentario_coach: null, nota_atleta: null, mime: null, bytes: null, revisado_en: null, creado_en: ahora(), pose: null, poster_ruta: null, duracion_seg: null, destacado: false, nombre: null, paginas: null }),
-  comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null, cliente_id: null, reenviado: false, entregado_en: null }),
+  comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null, cliente_id: null, reenviado: false, entregado_en: null, escuchado_en: null }),
   // v0.55 (033): fijar, silenciar y las listas de difusión
   conversacion_fijado: () => ({ hasta: null, fijado_en: ahora() }),
   chat_silencios: () => ({ hasta: null, creado_en: ahora() }),
@@ -87,9 +89,11 @@ const CASCADA = {
     ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'], ['tareas', 'atleta_id'], ['conversacion_estado', 'atleta_id'],
-    ['conversacion_fijado', 'atleta_id'], ['chat_silencios', 'atleta_id'], ['listas_difusion_miembros', 'atleta_id']],
+    ['conversacion_fijado', 'atleta_id'], ['chat_silencios', 'atleta_id'], ['listas_difusion_miembros', 'atleta_id'], ['encuestas_chat', 'atleta_id'], ['encuesta_votos', 'atleta_id']],
   // Como la 032: las reacciones y los destacados se van con su mensaje; (033) y lo fijado
-  comentarios: [['comentario_reacciones', 'comentario_id'], ['comentario_destacados', 'comentario_id'], ['conversacion_fijado', 'comentario_id']],
+  comentarios: [['comentario_reacciones', 'comentario_id'], ['comentario_destacados', 'comentario_id'], ['conversacion_fijado', 'comentario_id'], ['encuestas_chat', 'comentario_id']],
+  // Como la 034: el voto se va con su encuesta
+  encuestas_chat: [['encuesta_votos', 'encuesta_id']],
   listas_difusion: [['listas_difusion_miembros', 'lista_id']],
   comunidad_posts: [['comunidad_comentarios', 'post_id'], ['comunidad_reacciones', 'post_id'], ['comunidad_votos', 'post_id']],
   recetas: [['recetas_atleta', 'receta_id']],
@@ -117,17 +121,18 @@ const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
 const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
-  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros'];
+  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
 const EMOJIS_CHAT = ['❤️', '👍', '💪', '😂', '😮', '🙏'];
-const CUPO_CHAT = { reaccion: 120, destacar: 120, edicion: 30, eliminar: 30, presencia: 30, silenciar: 30 };
+const CUPO_CHAT = { reaccion: 120, destacar: 120, edicion: 30, eliminar: 30, presencia: 30, silenciar: 30, voto: 120 };
 // Como la 033: los del coach (reenviar, mensajes por hora; difundir, envíos por hora)
-const CUPO_COACH = { reenviar: 300, difusion: 30 };
+const CUPO_COACH = { reenviar: 300, difusion: 30, encuesta: 30 };
 const AVISO_CUPO_CHAT = { reaccion: 'Has reaccionado muchas veces en la última hora: espera un poco', destacar: 'Has destacado muchos mensajes en la última hora: espera un poco',
   edicion: 'Has editado muchos mensajes en la última hora: espera un poco', eliminar: 'Has eliminado muchos mensajes en la última hora: espera un poco',
   presencia: 'Has cambiado muchas veces «Mostrar cuándo estoy en línea»: espera un poco',
   silenciar: 'Has silenciado y activado el chat muchas veces en la última hora: espera un poco',
-  reenviar: 'Has reenviado muchos mensajes en la última hora: espera un poco', difusion: 'Has enviado muchas difusiones en la última hora: espera un poco' };
+  reenviar: 'Has reenviado muchos mensajes en la última hora: espera un poco', difusion: 'Has enviado muchas difusiones en la última hora: espera un poco',
+  voto: 'Has votado muchas veces en la última hora: espera un poco', encuesta: 'Has creado muchas encuestas en la última hora: espera un poco' };
 
 function guardarLocal(clave, valor) {
   try { localStorage.setItem(clave, JSON.stringify(valor)); } catch { /* sin almacenamiento: la demo vive en memoria */ }
@@ -210,6 +215,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     chat_silencios: (x) => x.usuario_id === sesion?.user.id,
     listas_difusion: () => esCoach(),
     listas_difusion_miembros: () => esCoach(),
+    // Como la 034: las encuestas, el coach y el atleta de esa conversación (de mensajes ya salidos); el voto, el coach y él
+    encuestas_chat: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId() && comentarioVisible(x.comentario_id)),
+    encuesta_votos: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
   const programadoAun = (c) => !!c?.enviar_en && Date.parse(c.enviar_en) > Date.now();
@@ -248,6 +256,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     db.comentario_destacados = tabla('comentario_destacados').filter((d) => d.comentario_id !== c.id);
     // Como la 033: si estaba fijado, se desfija
     db.conversacion_fijado = tabla('conversacion_fijado').filter((f) => f.comentario_id !== c.id);
+    // Como la 034: su encuesta (y su voto), fuera
+    const enc = tabla('encuestas_chat').filter((e) => e.comentario_id === c.id).map((e) => e.id);
+    if (enc.length) { db.encuestas_chat = tabla('encuestas_chat').filter((e) => !enc.includes(e.id)); db.encuesta_votos = tabla('encuesta_votos').filter((v) => !enc.includes(v.encuesta_id)); }
     db.notificaciones = tabla('notificaciones').filter((n) => !(n.clave === `comentario:${c.id}` && n.estado === 'pendiente'));
   }
   const encolar = (rutas) => { for (const r of rutas) if (r && !tabla('storage_por_borrar').some((x) => x.ruta === r)) tabla('storage_por_borrar').push({ ruta: r, bucket: 'archivos', creado_en: ahora() }); };
@@ -258,8 +269,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const archivoDeRuta = (ruta) => tabla('archivos').find((a) => a.ruta === ruta || a.poster_ruta === ruta);
   const archivoVisible = (ruta) => { if (esCoach()) return true; const a = archivoDeRuta(ruta); return !!a && !!miAtletaId() && a.atleta_id === miAtletaId() && ruta.split('/')[0] === miAtletaId(); };
   const archivoBorrable = (ruta) => { if (esCoach()) return true; const a = archivoDeRuta(ruta); return archivoVisible(ruta) && !DEL_CHAT.includes(a.tipo); };
-  // Como la 033: las fotos, los vídeos y los documentos del chat
-  const DEL_CHAT = ['adjunto', 'documento'];
+  // Como la 033: las fotos, los vídeos y los documentos del chat; (034) y las notas de voz
+  const DEL_CHAT = ['adjunto', 'documento', 'audio'];
   const deBajaYo = () => !esCoach() && deBaja();
   const miAtletaId = () => tabla('atletas').find((a) => a.perfil_id === sesion?.user.id)?.id || null;
   const fotoVisible = (ruta) => esCoach() || (!!miAtletaId() && ruta.split('/')[0] === miAtletaId()) || tabla('comunidad_posts').some((x) => x.foto_ruta === ruta && postVisible(x.id));
@@ -363,6 +374,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // Como la 033: «Reenviado» solo lo pone chat_reenviar; «entregado», la base; el id del móvil no se repite
       if (!interno) f.reenviado = false;
       f.entregado_en = null;
+      f.escuchado_en = null;
       f.cliente_id = f.cliente_id || null;
       if (f.cliente_id && tabla('comentarios').some((x) => x.atleta_id === f.atleta_id && x.autor === f.autor && x.cliente_id === f.cliente_id)) {
         throw new Error('duplicate key value violates unique constraint "comentarios_cliente_unico"');
@@ -390,6 +402,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (t === 'checkins') f.revisado_en = null;
       if (t === 'archivos') {
         f.revisado_en = null; f.comentario_coach = null;
+        // Como la 034: las notas de voz, 60 al día (aparte)
+        if (f.tipo === 'audio' && tabla('archivos').filter((a) => a.atleta_id === f.atleta_id && a.tipo === 'audio' && Date.parse(a.creado_en) > Date.now() - 864e5).length >= 60) {
+          throw new Error('Has enviado 60 notas de voz en las últimas 24 horas: espera un poco');
+        }
         // Como la 033: como mucho 10 documentos al día (el atleta)
         if (f.tipo === 'documento' && tabla('archivos').filter((a) => a.atleta_id === f.atleta_id && a.tipo === 'documento' && Date.parse(a.creado_en) > Date.now() - 864e5).length >= 10) {
           throw new Error('Has enviado 10 documentos en las últimas 24 horas: espera un poco');
@@ -440,7 +456,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   // v0.54 (032): además, editar lo propio (solo el texto, de un mensaje sin foto ni vídeo y en sus 15 minutos; la hora
   // de la edición la pone la base); «editado», «eliminado» y la cita no se tocan (eliminar va por comentario_eliminar)
   // Como la 033: el id del móvil, «Reenviado» y «entregado» no se cambian después
-  const FIJOS_033 = ['cliente_id', 'reenviado', 'entregado_en'];
+  const FIJOS_033 = ['cliente_id', 'reenviado', 'entregado_en', 'escuchado_en'];
   function prepararComentario(m, antes) {
     const yo = esCoach() ? 'coach' : 'atleta';
     const igual = (k) => (m[k] ?? null) === (antes[k] ?? null);
@@ -456,7 +472,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (antes.autor !== yo) throw new Error('Solo quien escribió un mensaje puede editarlo');
       if (deBajaYo()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
       if (antes.eliminado_en) throw new Error('Ese mensaje se eliminó: ya no se puede editar');
-      if (antes.archivo_id || antes.dibujo) throw new Error('Solo se editan los mensajes de texto');
+      if (antes.archivo_id || antes.dibujo || tabla('encuestas_chat').some((e) => e.comentario_id === antes.id)) throw new Error('Solo se editan los mensajes de texto');
       if (Date.parse(antes.creado_en) < Date.now() - 15 * 60000) throw new Error('Un mensaje se edita en los 15 minutos siguientes a enviarlo');
       if (!['atleta_id', 'sesion_id', 'checkin_id', 'archivo_id', 'autor', 'creado_en', 'dibujo', 'adjunto', 'enviar_en', 'responde_a', 'eliminado_en', 'leido_en', ...FIJOS_033].every(igual)) throw new Error('De un mensaje solo se cambia el texto');
       if (!textoVisible(String(m.texto || ''))) throw new Error('Escribe el mensaje');
@@ -721,7 +737,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     sesiones: (f) => (f.cardio == null || cardioValido(f.cardio)) && (f.cardio_hecho == null || cardioHechoValido(f.cardio_hecho)),
     // Como la migración 014: tipos, miniatura en su carpeta y duración
     archivos: (f) => (f.pose == null || (f.tipo === 'foto_progreso' && ['frente', 'perfil', 'espalda'].includes(f.pose)))
-      && ['video_tecnica', 'foto_progreso', 'adjunto', 'documento'].includes(f.tipo)
+      && ['video_tecnica', 'foto_progreso', 'adjunto', 'documento', 'audio'].includes(f.tipo)
+      // Como la 034: una nota de voz, audio de 1 a 61 segundos y hasta 3 MB, con su ruta audio-…; su onda, de 8 a 64 barras
+      && (f.tipo !== 'audio' || (['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'].includes(f.mime) && n(f.bytes) >= 1 && n(f.bytes) <= 3145728
+        && entero(n(f.duracion_seg)) && entre(n(f.duracion_seg), 1, 61) && /\/audio-[A-Za-z0-9._-]+\.(webm|ogg|m4a|mp4|mp3|aac)$/.test(String(f.ruta)) && f.nombre == null && f.poster_ruta == null && f.paginas == null))
+      && (f.onda == null || (f.tipo === 'audio' && Array.isArray(f.onda) && f.onda.length >= 8 && f.onda.length <= 64 && f.onda.every((x) => Number.isInteger(x) && x >= 0 && x <= 100)))
       // Como la 033: un documento es un PDF de hasta 20 MB, con su nombre (saneado) y una ruta .pdf
       && (f.tipo !== 'documento' || (f.mime === 'application/pdf' && n(f.bytes) >= 1 && n(f.bytes) <= 20971520 && /\.pdf$/.test(String(f.ruta)) && /\.pdf$/i.test(String(f.nombre ?? '')) && f.poster_ruta == null))
       // (sin barras, «..», caracteres de control ni invisibles, ni <>:"|?*, ni punto o espacio al principio)
@@ -868,7 +888,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function prepararReaccionODestacado(t, f) {
     if (deBajaYo()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
     f.usuario_id = sesion?.user.id || null;
-    if (t === 'comentario_reacciones' && !EMOJIS_CHAT.includes(f.emoji)) throw new Error('Algún valor está fuera de rango.');
+    // Como la 034: cualquier emoji (uno), no solo los seis de siempre
+    if (t === 'comentario_reacciones' && !emojiValido(f.emoji)) throw new Error('Algún valor está fuera de rango.');
     if (!f.usuario_id || !comentarioReaccionable(f.comentario_id)) throw sinPermiso();
     if (tabla(t).some((x) => x.comentario_id === f.comentario_id && x.usuario_id === f.usuario_id)) throw new Error(`duplicate key value violates unique constraint "${t}_pkey"`);
     gastarCupoChat(t === 'comentario_reacciones' ? 'reaccion' : 'destacar');
@@ -876,7 +897,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   }
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
-    if (['presencia', 'chat_cupos'].includes(t)) throw sinPermisoTabla(t);
+    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos'].includes(t)) throw sinPermiso();
     if (t === 'comunidad_retos' && !esCoach()) throw sinPermiso();
@@ -1390,8 +1411,17 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // en el móvil y se envía solo al volver la cobertura
       // bucket «comunidad» (v0.43): las fotos del muro, con las reglas de la 027 (verlas si se ve su publicación;
       // borrarlas solo si ya nadie las usa; subirlas si su publicación ya está registrada)
-      async subir(ruta, archivo, tipo, { alProgreso = null, bucket = 'archivos' } = {}) {
+      async subir(ruta, archivo, tipo, { alProgreso = null, senal = null, bucket = 'archivos' } = {}) {
         if (typeof navigator !== 'undefined' && navigator.onLine === false) { const e = new Error('Sin conexión.'); e.sinConexion = true; throw e; }
+        // (v0.56, para probar el progreso y «Cancelar»): con «fbe-demo-subida-lenta» (ms), la subida va por pasos
+        const lenta = (() => { try { return Math.min(20000, Number(localStorage.getItem('fbe-demo-subida-lenta')) || 0); } catch { return 0; } })();
+        if (lenta && bucket === 'archivos') {
+          await new Promise((ok, mal) => {
+            let i = 0;
+            const t = setInterval(() => { i++; alProgreso?.(Math.min(0.95, i / 10)); if (i >= 10) { clearInterval(t); ok(); } }, lenta / 10);
+            if (senal) senal.abortar = () => { clearInterval(t); const e = new Error('Cancelado'); e.cancelado = true; mal(e); };
+          });
+        }
         if (bucket === 'comunidad') {
           if (!fotoRegistrada(ruta)) throw sinPermiso();
           if (archivo?.size > 614400) throw new Error('El archivo supera el tamaño máximo permitido.');
@@ -1490,10 +1520,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (['cobros_atletas', 'pagos', 'recetas'].includes(t) && !esCoach()) return [];
       // Como la 032: de una reacción, solo el emoji de la propia (en un mensaje en que aún se puede reaccionar); el estado
       // de las conversaciones, el coach; la presencia (solo con su función), los destacados y los cupos no se cambian
-      if (['presencia', 'chat_cupos', 'comentario_destacados'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos'].includes(t)) throw sinPermisoTabla(t);
       if (t === 'comentario_reacciones') {
         if (Object.keys(cambios).some((k) => k !== 'emoji')) throw new Error('De una reacción solo se cambia el emoji');
-        if (!EMOJIS_CHAT.includes(cambios.emoji)) throw new Error('Algún valor está fuera de rango.');
+        if (!emojiValido(cambios.emoji)) throw new Error('Algún valor está fuera de rango.');
         const filas = tabla(t).filter((x) => cumple(x, f) && x.usuario_id === sesion?.user.id);
         if (filas.length && deBajaYo()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
         for (const x of filas) { if (!comentarioReaccionable(x.comentario_id)) throw sinPermiso(); gastarCupoChat('reaccion'); Object.assign(x, { emoji: cambios.emoji, creado_en: ahora() }); }
@@ -1608,7 +1638,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async upsert(t, filas, onConflict) {
       soloCoach(t);
-      if (['presencia', 'chat_cupos', 'comentario_destacados'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos'].includes(t)) throw sinPermisoTabla(t);
       // Como la 033: lo fijado (uno por conversación) y el silencio propio
       if (t === 'conversacion_fijado' || t === 'chat_silencios') {
         const res = (Array.isArray(filas) ? filas : [filas]).map((f) => {
@@ -1667,7 +1697,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // Como la 032: el atleta no borra mensajes a mano (los elimina para todos con comentario_eliminar); reacciones y
       // destacados, cada uno los suyos; la presencia y los cupos, nadie
       if (t === 'comentarios' && !esCoach()) return [];
-      if (['presencia', 'chat_cupos'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos'].includes(t)) throw sinPermisoTabla(t);
       if (['conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros'].includes(t) && !esCoach()) return [];
       if (t === 'listas_difusion') { borrarCascada(t, tabla(t).filter((x) => cumple(x, f)).map((x) => x.id)); persistirYa(); return []; }
       if (t === 'comentario_reacciones' || t === 'comentario_destacados' || t === 'chat_silencios') {
@@ -1813,7 +1843,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const sin = (t) => String(t || '').toLowerCase().normalize('NFD').replace(DIACRITICOS, '');
         const q = sin(String(args.p_texto || '').trim());
         if (!esCoach() || q.length < 2 || q.length > 100) return [];
-        return copia(tabla('comentarios').filter((c) => !c.eliminado_en && !(c.archivo_id && ['Foto', 'Vídeo', 'Documento'].includes(c.texto)) && sin(c.texto).includes(q))
+        return copia(tabla('comentarios').filter((c) => !c.eliminado_en && !(c.archivo_id && ['Foto', 'Vídeo', 'Documento', 'Nota de voz'].includes(c.texto)) && sin(c.texto).includes(q))
           .sort((a, b2) => String(b2.creado_en).localeCompare(String(a.creado_en))).slice(0, Math.min(100, Math.max(1, args.p_limite || 40)))
           .map(({ id, atleta_id, autor, texto, creado_en, enviar_en }) => ({ id, atleta_id, autor, texto: String(texto).slice(0, 300), creado_en, enviar_en: enviar_en || null })));
       }
@@ -1874,7 +1904,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           if (ds && args.p_enviar_en) throw new Error('Los mensajes con foto, vídeo o documento no se pueden programar');
           const a0 = ds ? buscar('archivos', ds[0].archivo) : null;
           if (ds && !a0) throw new Error('Falta el archivo');
-          if (ds && !textoVisible(t)) t = a0.tipo === 'documento' ? 'Documento' : /^image\//.test(a0.mime || '') ? 'Foto' : 'Vídeo';
+          if (ds && !textoVisible(t)) t = a0.tipo === 'documento' ? 'Documento' : a0.tipo === 'audio' ? 'Nota de voz' : /^image\//.test(a0.mime || '') ? 'Foto' : 'Vídeo';
           gastarCupoCoach('difusion', 1);
           const miembros = tabla('listas_difusion_miembros').filter((m) => m.lista_id === args.p_lista).map((m) => buscar('atletas', m.atleta_id)).filter(Boolean)
             .sort((x, y) => x.nombre.localeCompare(y.nombre));
@@ -1893,6 +1923,62 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           persistirYa();
           return { enviados: ids.length, saltados, ids };
         } catch (e) { db = antes; throw e; }
+      }
+      // Migración 034: «escuchado», encuestas y votos
+      if (nombre === 'marcar_escuchado') {
+        if (!uid || !(esCoach() || miAtletaId())) throw new Error('Necesitas iniciar sesión');
+        const c = buscar('comentarios', args.p_comentario);
+        const a = c?.archivo_id ? buscar('archivos', c.archivo_id) : null;
+        if (!c || c.eliminado_en || a?.tipo !== 'audio' || !((esCoach() && c.autor === 'atleta') || (!esCoach() && c.atleta_id === miAtletaId() && c.autor === 'coach' && !programadoAun(c)))) throw new Error('Esa nota de voz no es para ti');
+        if (c.escuchado_en || !presenciaMiaVisible()) return c.escuchado_en || null;
+        const t = ahora();
+        Object.assign(c, { escuchado_en: t, leido_en: c.leido_en || t, entregado_en: c.entregado_en || t });
+        persistirYa();
+        return t;
+      }
+      if (nombre === 'chat_encuesta') {
+        if (!uid || !esCoach()) throw new Error('Solo el coach crea encuestas');
+        if (!!args.p_atleta === !!args.p_lista) throw new Error('Una encuesta va a un atleta o a una lista');
+        const pregunta = String(args.p_pregunta || '').trim();
+        if (!pregunta || pregunta.length > 300 || !textoVisible(pregunta)) throw new Error('Escribe la pregunta (hasta 300 letras)');
+        const ops = opcionesEncuesta(args.p_opciones);
+        if (!ops.ok) throw new Error(ops.error);
+        if (args.p_lista && !buscar('listas_difusion', args.p_lista)) throw new Error('Esa lista ya no está');
+        const antes = copia(db);
+        try {
+          gastarCupoCoach('encuesta', 1);
+          const destinos = args.p_atleta ? [buscar('atletas', args.p_atleta)].filter(Boolean)
+            : tabla('listas_difusion_miembros').filter((m) => m.lista_id === args.p_lista).map((m) => buscar('atletas', m.atleta_id)).filter(Boolean).sort((x, y) => x.nombre.localeCompare(y.nombre));
+          if (args.p_atleta && !destinos.length) throw new Error('Ese atleta no está');
+          const ids = [];
+          let saltados = 0;
+          for (const m of destinos) {
+            if (m.estado === 'baja') { if (args.p_atleta) throw new Error('Está de baja: no se le puede enviar'); saltados++; continue; }
+            if (args.p_cliente && tabla('comentarios').some((x) => x.atleta_id === m.id && x.autor === 'coach' && x.cliente_id === args.p_cliente)) continue;
+            const k = insertar('comentarios', { atleta_id: m.id, texto: pregunta, cliente_id: args.p_cliente || null }, { interno: true });
+            tabla('encuestas_chat').push({ id: uuid(), comentario_id: k.id, atleta_id: m.id, pregunta, opciones: ops.opciones, multiple: !!args.p_multiple, creada_en: ahora() });
+            ids.push(k.id);
+          }
+          persistirYa();
+          return { enviados: ids.length, saltados, ids };
+        } catch (e) { db = antes; throw e; }
+      }
+      if (nombre === 'encuesta_votar') {
+        const mio = miAtletaId();
+        if (!uid || !mio || esCoach()) throw new Error('Solo el atleta de la conversación vota');
+        const e = buscar('encuestas_chat', args.p_encuesta);
+        const c = e ? buscar('comentarios', e.comentario_id) : null;
+        if (!e || e.atleta_id !== mio || !c || c.eliminado_en || programadoAun(c)) throw new Error('Esa encuesta no está');
+        if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        const pedido = Array.isArray(args.p_opciones) ? args.p_opciones : [];
+        const voto = [...new Set(pedido)].sort((x, y) => x - y);
+        if (voto.length !== pedido.length || voto.some((x) => !Number.isInteger(x) || x < 0 || x >= e.opciones.length)) throw new Error('Esa opción no está en la encuesta');
+        if (!e.multiple && voto.length > 1) throw new Error('En esta encuesta se elige una opción');
+        gastarCupoChat('voto');
+        db.encuesta_votos = tabla('encuesta_votos').filter((v) => v.encuesta_id !== e.id);
+        if (voto.length) tabla('encuesta_votos').push({ encuesta_id: e.id, atleta_id: mio, opciones: voto, votado_en: ahora() });
+        persistirYa();
+        return voto.length ? voto : null;
       }
       if (nombre === 'bloque_semanas') {
         const bl = buscar('bloques', args.p_bloque);

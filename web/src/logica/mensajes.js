@@ -3,6 +3,7 @@
 import { textoPlano } from './formato.js';
 import { trozosConEnlaces } from './enlaces.js';
 import { partesMadrid } from './fechas.js';
+import { emojiValido } from './emojis.js';
 
 export const REACCIONES_CHAT = ['❤️', '👍', '💪', '😂', '😮', '🙏'];
 export const MINUTOS_EDITAR = 15;
@@ -13,20 +14,23 @@ export const TEXTO_ELIMINADO = 'Se eliminó este mensaje';
 const esProgramado = (c, ahora = Date.now()) => !!c?.enviar_en && Date.parse(c.enviar_en) > ahora;
 // Un mensaje cuyo texto es solo la marca de la foto o el vídeo (sin pie)
 // (v0.55) también «Documento», la de un PDF sin pie
-export const esMarcador = (c) => !!(c?.archivo_id || c?.archivoId || c?.archivo) && (c.texto === 'Foto' || c.texto === 'Vídeo' || c.texto === 'Documento');
+// (v0.56) y «Nota de voz»
+export const esMarcador = (c) => !!(c?.archivo_id || c?.archivoId || c?.archivo) && (c.texto === 'Foto' || c.texto === 'Vídeo' || c.texto === 'Documento' || c.texto === 'Nota de voz');
 // Qué lleva: 'foto' | 'video' | 'documento' (v0.55, un PDF) | 'archivo' | null (de su archivo, si se sabe; si no, de su marca)
 export function medioDe(c) {
   if (!c) return null;
   if (c.medio) return c.medio;
   const mime = c.archivo?.mime || '';
   if (c.archivo && (c.archivo.tipo === 'documento' || mime === 'application/pdf')) return 'documento';
+  if (c.archivo && (c.archivo.tipo === 'audio' || /^audio\//.test(mime))) return 'audio';
   if (c.archivo) return /^image\//.test(mime) || c.archivo.tipo === 'foto_progreso' ? 'foto' : /^video\//.test(mime) || c.archivo.tipo === 'video_tecnica' ? 'video' : 'archivo';
   if (c.texto === 'Foto' && (c.archivo_id || c.archivoId)) return 'foto';
   if (c.texto === 'Vídeo' && (c.archivo_id || c.archivoId)) return 'video';
   if (c.texto === 'Documento' && (c.archivo_id || c.archivoId)) return 'documento';
+  if (c.texto === 'Nota de voz' && (c.archivo_id || c.archivoId)) return 'audio';
   return null;
 }
-const ICONO_MEDIO = { foto: '📷 Foto', video: '🎥 Vídeo', documento: '📄 Documento', archivo: '📄 Archivo' };
+const ICONO_MEDIO = { foto: '📷 Foto', video: '🎥 Vídeo', documento: '📄 Documento', archivo: '📄 Archivo', audio: '🎤 Nota de voz' };
 
 // Lo que sale en una cita (y en la vista previa de la lista): el texto en una línea, sin marcas de formato, o
 // «📷 Foto» / «🎥 Vídeo» / «📄 Archivo» (con su pie, si lo tiene); «🚫 Se eliminó este mensaje» si se eliminó
@@ -90,13 +94,15 @@ export function resaltar(texto, consulta) {
 export function resumenReacciones(reacciones = [], miId) {
   const por = new Map();
   for (const r of reacciones) {
-    if (!REACCIONES_CHAT.includes(r.emoji)) continue;
+    // (v0.56) cualquier emoji (034); lo que no lo es, fuera
+    if (!emojiValido(r.emoji)) continue;
     const x = por.get(r.emoji) || { emoji: r.emoji, n: 0, mia: false };
     x.n++;
     if (r.usuario_id === miId) x.mia = true;
     por.set(r.emoji, x);
   }
-  return REACCIONES_CHAT.filter((e) => por.has(e)).map((e) => por.get(e));
+  // Las seis de siempre en su orden y, detrás, las demás en el orden en que llegaron
+  return [...REACCIONES_CHAT.filter((e) => por.has(e)), ...[...por.keys()].filter((e) => !REACCIONES_CHAT.includes(e))].map((e) => por.get(e));
 }
 // Tocar una reacción: la misma la quita; otra la cambia. Devuelve el emoji que queda (o null)
 export const siguienteReaccion = (actual, tocada) => (actual === tocada ? null : tocada);
@@ -149,13 +155,20 @@ export const leidoSoloDia = (iso) => !!iso && new Date(iso).getUTCSeconds() === 
 // lo tenía apagado, la base solo guarda el día. En los dos casos, «Leído: hoy» sin la hora.
 export function infoMensaje(c, ahora = Date.now(), { horaLeido = true } = {}) {
   if (!c) return [];
-  return [
+  // (v0.56) Entregado y, en una nota de voz, escuchado. Si la otra parte tiene «en línea» apagado, la base no apunta
+  // la entrega al abrir la app ni lo escuchado (y lo leído, solo el día); si lo tienes apagado tú, no ves sus horas.
+  const soloDia = !!c.leido_en && leidoSoloDia(c.leido_en);
+  const dia = (iso) => diaInfo(leidoSoloDia(iso) ? `${partesMadrid(iso).fecha}T12:00:00` : iso, ahora);
+  const entregado = c.entregado_en || c.leido_en;
+  const filas = [
     ['Enviado', cuandoInfo(c.creado_en, ahora)],
-    ['Leído', !c.leido_en ? 'todavía no' : leidoSoloDia(c.leido_en) ? diaInfo(`${partesMadrid(c.leido_en).fecha}T12:00:00`, ahora)
-      : !horaLeido ? diaInfo(c.leido_en, ahora) : cuandoInfo(c.leido_en, ahora)],
-    ...(c.editado_en ? [['Editado', cuandoInfo(c.editado_en, ahora)]] : []),
-    ...(c.eliminado_en ? [['Eliminado', cuandoInfo(c.eliminado_en, ahora)]] : []),
+    ...(horaLeido ? [['Entregado', !entregado ? 'todavía no' : soloDia ? dia(c.leido_en) : cuandoInfo(entregado, ahora)]] : []),
+    ['Leído', !c.leido_en ? 'todavía no' : soloDia ? dia(c.leido_en) : !horaLeido ? diaInfo(c.leido_en, ahora) : cuandoInfo(c.leido_en, ahora)],
   ];
+  if (medioDe(c) === 'audio') filas.push(['Escuchado', !c.escuchado_en ? 'todavía no' : !horaLeido ? diaInfo(c.escuchado_en, ahora) : cuandoInfo(c.escuchado_en, ahora)]);
+  if (c.editado_en) filas.push(['Editado', cuandoInfo(c.editado_en, ahora)]);
+  if (c.eliminado_en) filas.push(['Eliminado', cuandoInfo(c.eliminado_en, ahora)]);
+  return filas;
 }
 // «en línea», «escribiendo…» o «últ. vez hoy a las 18:42»
 export function textoUltimaVez(iso, ahora = Date.now()) {

@@ -383,7 +383,7 @@ console.log('\nEl service worker: compartir un vídeo a la app y la marca en el 
     };
     // Una caché por nombre (y sin caches.match global: así se ve que cada cosa mira solo en la suya)
     const porNombre = new Map();
-    const caches = { open: async (n) => { if (!porNombre.has(n)) porNombre.set(n, new Map()); const m = porNombre.get(n); if (n === 'fbe-compartido') return { put: async (k, r) => { guardado.set(String(k), r); }, match: async (k) => guardado.get(String(k)), delete: async (k) => guardado.delete(String(k)) };
+    const caches = { open: async (n) => { if (!porNombre.has(n)) porNombre.set(n, new Map()); const m = porNombre.get(n); if (n === 'fbe-compartido') return { put: async (k, r) => { guardado.set(String(k), r); }, match: async (k) => guardado.get(String(k)), delete: async (k) => guardado.delete(String(k)), keys: async () => [...guardado.keys()] };
       return { put: async (k, r) => { m.set(typeof k === 'string' ? k : k.url, r); }, match: async (k) => m.get(typeof k === 'string' ? k : k.url) }; }, keys: async () => [...porNombre.keys()], delete: async () => true };
     new Function('self', 'caches', codigo)(self, caches);
     const pedir = async (req) => {
@@ -398,10 +398,11 @@ console.log('\nEl service worker: compartir un vídeo a la app y la marca en el 
   const fd = new FormData();
   fd.append('video', new File([new Uint8Array([1, 2, 3, 4])], 'sentadilla.mp4', { type: 'video/mp4' }));
   const r = await sw.pedir(new Request('https://atletas.fbe.test/app/compartir-video', { method: 'POST', body: fd }));
-  const CLAVE = 'https://fbe-compartido.invalid/video';
+  // (v0.56) lo compartido va a la lista de lo compartido (archivo/0, 1…) y la app se abre en Mensajes
+  const CLAVE = 'https://fbe-compartido.invalid/archivo/0';
   const guardado = sw.guardado.get(CLAVE);
-  check(r?.status === 303 && r.headers.get('location') === 'https://atletas.fbe.test/app/?compartido=1#hoy', 'compartir un vídeo desde la galería abre la app en Hoy (?compartido=1)');
-  check(!!guardado && sw.guardado.size === 1 && guardado.headers.get('content-type') === 'video/mp4' && guardado.headers.get('x-content-type-options') === 'nosniff' && decodeURIComponent(guardado.headers.get('x-nombre')) === 'sentadilla.mp4' && (await guardado.arrayBuffer()).byteLength === 4,
+  check(r?.status === 303 && r.headers.get('location') === 'https://atletas.fbe.test/app/?compartido=1#mensajes', 'compartir un vídeo desde la galería abre la app en Mensajes (?compartido=1)');
+  check(!!guardado && sw.guardado.size === 2 && JSON.parse(await sw.guardado.get('https://fbe-compartido.invalid/lista').clone().text()).n === 1 && guardado.headers.get('content-type') === 'video/mp4' && guardado.headers.get('x-content-type-options') === 'nosniff' && decodeURIComponent(guardado.headers.get('x-nombre')) === 'sentadilla.mp4' && (await guardado.arrayBuffer()).byteLength === 4,
     'y el vídeo se queda guardado en el móvil (en su caché, con «nosniff» y bajo una dirección que no existe) para que la app lo recoja');
   const { LIMITE_ARCHIVO_MB } = await import('../web/src/datos/api.js');
   check(codigo.includes(`const LIMITE_MB = ${LIMITE_ARCHIVO_MB};`), `el límite del service worker es el de la app (${LIMITE_ARCHIVO_MB} MB)`);
@@ -430,6 +431,22 @@ console.log('\nEl service worker: compartir un vídeo a la app y la marca en el 
   const sw2 = crear({ conMarca: false });
   const r2 = await sw2.pedir(new Request('https://atletas.fbe.test/app/compartir-video', { method: 'POST', body: fd2 }));
   check(r2?.headers.get('location').includes('compartido=0') && !sw2.guardado.size, 'lo que no es un vídeo no se guarda (la app dice que no ha llegado nada)');
+  // (v0.56) fotos, vídeos y PDF (hasta 10), al chat; un PDF de más de 20 MB o algo que no sea eso, no
+  {
+    const { PDF_MAX_MB } = await import('../web/src/logica/chat.js');
+    check(codigo.includes(`const LIMITE_PDF_MB = ${PDF_MAX_MB};`), `(v0.56) el límite de los PDF del service worker es el de la app (${PDF_MAX_MB} MB)`);
+    const sw4 = crear({ conMarca: false });
+    const varios = [{ type: 'image/jpeg', size: 1000, name: 'a.jpg' }, { type: 'application/pdf', size: 2000, name: 'plan.pdf' }, { type: 'video/mp4', size: 3000, name: 'v.mp4' },
+      { type: 'application/pdf', size: (PDF_MAX_MB + 1) * 1048576, name: 'enorme.pdf' }, { type: 'text/html', size: 10, name: 'x.html' }, { type: 'image/svg+xml', size: 10, name: 'x.svg' }]
+      .map((x) => new File([new Uint8Array(Math.min(x.size, 4096))], x.name, { type: x.type })).map((f, i) => (i === 3 ? Object.defineProperty(f, 'size', { value: (PDF_MAX_MB + 1) * 1048576 }) : f));
+    const r4 = await sw4.pedir({ method: 'POST', url: 'https://atletas.fbe.test/app/compartir', formData: async () => ({ getAll: (k) => (k === 'archivos' ? varios : []) }) });
+    const lista4 = JSON.parse(await sw4.guardado.get('https://fbe-compartido.invalid/lista').clone().text());
+    check(r4.headers.get('location').endsWith('?compartido=1#mensajes') && lista4.n === 3 && ['image/jpeg', 'application/pdf', 'video/mp4'].every((t, i) => sw4.guardado.get(`https://fbe-compartido.invalid/archivo/${i}`)?.headers.get('content-type') === t),
+      '(v0.56) compartir fotos, PDF y vídeos: se guardan (con su tipo y «nosniff») los que valen; un PDF de más de 20 MB, HTML o SVG, no');
+    const once = Array.from({ length: 12 }, (_, i) => new File([new Uint8Array(4)], `f${i}.jpg`, { type: 'image/jpeg' }));
+    await sw4.pedir({ method: 'POST', url: 'https://atletas.fbe.test/app/compartir', formData: async () => ({ getAll: (k) => (k === 'archivos' ? once : []) }) });
+    check(JSON.parse(await sw4.guardado.get('https://fbe-compartido.invalid/lista').clone().text()).n === 10 && !sw4.guardado.has('https://fbe-compartido.invalid/archivo/10'), '(v0.56) como mucho 10 (como en el chat), y lo de un «Compartir» anterior se borra');
+  }
   check(await sw.pedir(new Request('https://otra.test/app/compartir-video', { method: 'POST', body: fd })) === null, 'un POST de otro sitio no lo atiende');
   await sw.push(JSON.stringify({ titulo: 'Pelayo te ha puesto una tarea', url: '#hoy' }));
   check(sw.marcas.length === 1, 'al llegar una notificación, marca el icono de la app (donde se puede)');

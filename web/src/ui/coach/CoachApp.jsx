@@ -10,7 +10,7 @@ import { Cuenta } from './Cuenta.jsx';
 import { Buscador } from './Buscador.jsx';
 import { Conversaciones } from './Conversaciones.jsx';
 import { EquipoCoach } from './EquipoCoach.jsx';
-import { pideCompartido, borrarCompartido, limpiarDireccion } from '../Compartido.jsx';
+import { RecibirCompartidoCoach } from '../Compartido.jsx';
 import { ponerInsignia } from '../insignia-app.js';
 
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
@@ -41,14 +41,8 @@ export function CoachApp() {
   const sinLeer = useCarga(() => api.mensajesSinLeer().catch(() => 0), []);
   // v0.48: el número del icono de la app (lo que espera tu respuesta y los mensajes sin leer)
   useEffect(() => { if (bandeja.datos) ponerInsignia((bandeja.datos.total || 0) + (sinLeer.datos || 0)); }, [bandeja.datos, sinLeer.datos]);
-  // «Compartir → FBE Equipo» es para tus atletas: desde la cuenta del coach no se envía nada (y se borra del móvil)
-  const { aviso } = useApp();
-  useEffect(() => {
-    if (!pideCompartido()) return;
-    limpiarDireccion(['compartido', 'accion']);
-    borrarCompartido();
-    aviso('Compartir un vídeo con FBE Equipo es para tus atletas: desde tu cuenta no se envía nada.');
-  }, []);
+  // (v0.56) «Compartir → FBE Equipo» desde la cuenta del coach: fotos, vídeos y PDF a la conversación que elija
+  // (RecibirCompartidoCoach, abajo)
   useEffect(() => { try { history.replaceState(null, '', `#${tab}`); } catch { /* */ } window.scrollTo(0, 0); }, [tab, ficha?.atletaId]);
   // La bandeja se refresca al cambiar de sección (no al montar: ya se carga sola)
   const montado = useRef(false);
@@ -118,6 +112,7 @@ export function CoachApp() {
 
   return (
     <>
+    <RecibirCompartidoCoach alAbrirChat={(id) => { setFicha(null); setTab('mensajes'); setPeticion({ tab: 'mensajes', atletaId: id, id: Date.now() }); }} />
     <div class="app coach" inert={buscar ? '' : undefined} aria-hidden={buscar ? 'true' : undefined}>
       <nav class="tabs" aria-label="Secciones">
         <div ref={barra} class={`tabs-in ${pestanas.filter(([t]) => t !== 'cuenta').length >= 7 ? 'tabs-muchas' : ''}`}>

@@ -1,5 +1,5 @@
 import { Fragment } from 'preact';
-import { trozosConEnlaces, miniaturaYoutube } from '../logica/enlaces.js';
+import { trozosConEnlaces, miniaturaYoutube, tarjetaEnlace } from '../logica/enlaces.js';
 import { Icono } from './comunes.jsx';
 import { tokensDeMensaje } from '../logica/formato.js';
 import { resaltar } from '../logica/mensajes.js';
@@ -37,7 +37,12 @@ export function TextoChat({ id = null, texto, clase = '', resaltar: consulta = '
   const enlaces = [];
   const juntar = (ts) => { for (const x of ts) { if (x.t === 'enlace') enlaces.push(x); else if (x.hijos) juntar(x.hijos); } };
   juntar(tokens);
-  const videos = conVista ? [...new Map(enlaces.filter((x) => x.youtube).map((x) => [x.youtube, x])).values()].slice(0, 3) : [];
+  // (v0.56) con el «ahorro de datos» del móvil, sin miniaturas de YouTube (no se pide nada a Google): una tarjeta, como
+  // los demás enlaces; de los que no son de YouTube, la tarjeta del primero, con su dominio (sin pedir nada a esa web)
+  const ahorro = typeof navigator !== 'undefined' && !!navigator.connection?.saveData;
+  const videos = conVista && !ahorro ? [...new Map(enlaces.filter((x) => x.youtube).map((x) => [x.youtube, x])).values()].slice(0, 3) : [];
+  const otro = conVista ? enlaces.find((x) => !x.youtube || ahorro) : null;
+  const tarjeta = otro ? tarjetaEnlace(otro.v) : null;
   const hoja = (v, k) => (consulta ? resaltar(v, consulta).map((p, i) => (p.marca ? <mark key={`${k}-${i}`} class="chat-marca">{p.v}</mark> : <Fragment key={`${k}-${i}`}>{p.v}</Fragment>)) : v);
   const pintar = (ts, base = 'f') => ts.map((x, i) => {
     const k = `${base}-${i}`;
@@ -57,6 +62,12 @@ export function TextoChat({ id = null, texto, clase = '', resaltar: consulta = '
           <span class="vista-youtube-pie mini"><Icono n="video" />YouTube</span>
         </a>
       ))}
+      {tarjeta && (
+        <a class="vista-enlace" href={otro.v} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${otro.youtube ? 'el vídeo de YouTube' : tarjeta.dominio} (en otra pestaña)`}>
+          <span class="vista-enlace-ico" aria-hidden="true"><Icono n={otro.youtube ? 'video' : 'enlace'} /></span>
+          <span class="pila-xs"><strong class="vista-enlace-dominio">{otro.youtube ? 'YouTube' : tarjeta.dominio}</strong>{tarjeta.ruta && <span class="mini secundario vista-enlace-ruta">{tarjeta.ruta}</span>}</span>
+        </a>
+      )}
     </>
   );
 }

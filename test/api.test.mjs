@@ -1645,7 +1645,8 @@ console.log('\nEl chat como WhatsApp (v0.54, migración 032)');
   let conv = await api.conversacion(aAna.id);
   check(conv.find((c) => c.id === hola.id).reacciones.length === 1 && conv.find((c) => c.id === hola.id).reacciones[0].emoji === '❤️', 'la conversación trae las reacciones (una por persona)');
   check(await api.reaccionarMensaje(hola.id, '❤️') === null && !(await api.conversacion(aAna.id)).find((c) => c.id === hola.id).reacciones.length, 'tocar la misma la quita');
-  check(await lanza(() => api.reaccionarMensaje(hola.id, '🍺')), 'solo las seis de la lista');
+  // (v0.56, 034) cualquier emoji, pero un emoji
+  check(await lanza(() => api.reaccionarMensaje(hola.id, 'ok')) && await lanza(() => api.reaccionarMensaje(hola.id, '👍 ')), 'solo emojis (ni texto ni espacios)');
   await api.destacar(hola.id, true);
   await api.destacar(hola.id, true);
   check((await api.conversacion(aAna.id)).find((c) => c.id === hola.id).destacado === true && (await api.destacados(aAna.id)).map((x) => x.id).join() === hola.id, 'destacar (dos veces no falla) y la lista de destacados');
@@ -1880,6 +1881,92 @@ console.log('\nEl chat, aún más como WhatsApp (v0.55, migración 033)');
   }
   check(typeof (await (async () => { await b.auth.entrar('ana@test', 'contraseña-ana-1'); return api.nombreCoach(); })()) === 'string', 'el atleta tiene el nombre de su coach para «Info del contacto»');
   await b.sql(`delete from listas_difusion`); await b.sql(`delete from chat_cupos`); await b.sql(`delete from conversacion_fijado`);
+}
+
+console.log('\nv0.56: notas de voz, encuestas, «escuchado» y reacciones a elegir (migración 034)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [aAna] = await b.sql(`select id from atletas where email = 'ana@test'`);
+  const [aLuis] = await b.sql(`select id from atletas where email = 'luis@test'`);
+  await b.sql(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await b.sql(`delete from chat_cupos`); await b.sql(`delete from presencia`);
+  check(await api.chat034() === true, 'la app sabe que la base tiene la 034');
+  // Sin la 034: lo de antes, como siempre; lo nuevo dice qué falta
+  {
+    const falta = (t) => { const e = new Error(`relation "public.${t}" does not exist`); e.code = '42P01'; return e; };
+    const sin034 = crearApi({ ...b, auth: b.auth, storage: b.storage, rpc: b.rpc.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b), insert: b.insert.bind(b),
+      select: async (t, f) => { if (['encuestas_chat', 'encuesta_votos'].includes(t)) throw falta(t); return b.select(t, f); } });
+    let m = '';
+    try { await sin034.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(400)], 'n.webm', { type: 'audio/webm' }), autor: 'coach', duracion_seg: 3 }); } catch (e) { m = e.message; }
+    check(/migración 034/.test(m), 'sin la 034, una nota de voz dice que falta la migración (y no sube nada)');
+    m = '';
+    try { await sin034.crearEncuestaChat({ atletaId: aAna.id, pregunta: '¿Sí?', opciones: ['Sí', 'No'] }); } catch (e) { m = e.message; }
+    check(/migración 034/.test(m), 'las encuestas, también');
+    const hola0 = await sin034.enviarMensaje(aAna.id, { texto: 'Antes de la 034', autor: 'coach' });
+    m = '';
+    try { await sin034.reaccionarMensaje(hola0.id, '🔥'); } catch (e) { m = e.message; }
+    check(/migración 034/.test(m) && await sin034.reaccionarMensaje(hola0.id, '👍') === '👍', 'una reacción nueva, también (las seis de siempre, sí)');
+    check((await sin034.conversacion(aAna.id)).some((c) => c.id === hola0.id && c.encuesta === null), 'y la conversación se lee como siempre');
+  }
+  // Nota de voz: se sube con su tipo (sin parámetros), su ruta audio-…, su duración y su onda; el mensaje, «Nota de voz»
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const onda = Array.from({ length: 40 }, (_, i) => (i * 13) % 101);
+  const progreso = [];
+  const voz = new File([new Uint8Array(24000)], 'nota-de-voz.webm', { type: 'audio/webm;codecs=opus' });
+  const mV = await api.enviarMensaje(aAna.id, { archivo: voz, autor: 'atleta', duracion_seg: 41.6, onda, texto: 'esto no va', alProgreso: (x) => progreso.push(x) });
+  const [aV] = await b.sql(`select * from archivos where id = $1`, [mV.archivo_id]);
+  check(aV.tipo === 'audio' && aV.mime === 'audio/webm' && aV.duracion_seg === 42 && aV.onda.length === 40 && new RegExp(`^${aAna.id}/audio-\\d{4}-\\d{2}-\\d{2}-[a-z0-9]+\\.webm$`).test(aV.ruta) && mV.texto === 'Nota de voz' && aV.subido_por === 'atleta',
+    'Ana manda una nota de voz: audio/webm (sin parámetros), ruta audio-…, 42 s, su onda y «Nota de voz» (sin pie)');
+  const iphone = await api.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(500)], 'n.mp4', { type: 'audio/mp4' }), autor: 'atleta', duracion_seg: 2 });
+  check((await b.sql(`select ruta, mime from archivos where id = $1`, [iphone.archivo_id]))[0].ruta.endsWith('.m4a'), 'la del iPhone (audio/mp4), .m4a');
+  check(await lanza(() => api.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(3 * 1048576 + 1)], 'n.webm', { type: 'audio/webm' }), autor: 'atleta', duracion_seg: 10 }))
+    && await lanza(() => api.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(10)], 'n.wav', { type: 'audio/wav' }), autor: 'atleta', duracion_seg: 10 })), 'más de 3 MB o un formato que no es de los de grabar, no');
+  const convA = await api.conversacion(aAna.id);
+  check(convA.find((c) => c.id === mV.id)?.medio === 'audio' && convA.find((c) => c.id === mV.id).archivo?.onda?.length === 40, 'en el chat, una nota de voz (con su onda para dibujarla)');
+  // «Escuchado»
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(!!(await api.marcarEscuchado(mV.id)) && !!(await b.sql(`select escuchado_en from comentarios where id = $1`, [mV.id]))[0].escuchado_en, 'el coach la escucha: escuchada (el micro azul para Ana)');
+  check(await api.marcarEscuchado(iphone.id).then((x) => !!x) && (await api.marcarEscuchado('00000000-0000-4000-8000-000000000000')) === null, 'una que no es para él (o no existe), nada (sin error en la pantalla)');
+  const deCoach = await api.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(800)], 'n.webm', { type: 'audio/webm' }), autor: 'coach', duracion_seg: 5, onda: Array(8).fill(50) });
+  // Reenviarla (la suya)
+  const rf = await api.reenviar((await api.conversacion(aAna.id)).find((c) => c.id === deCoach.id), [aLuis.id]);
+  const [copia] = await b.sql(`select a.* from comentarios c join archivos a on a.id = c.archivo_id where c.atleta_id = $1 and c.reenviado and a.tipo = 'audio'`, [aLuis.id]);
+  check(rf.enviados === 1 && copia && copia.ruta.startsWith(`${aLuis.id}/audio-`) && copia.duracion_seg === 5 && copia.onda.length === 8, 'el coach reenvía su nota de voz a Luis (su copia, con su duración y su onda)');
+  const deAnaV = (await api.conversacion(aAna.id)).find((c) => c.id === mV.id);
+  check(await lanza(() => api.reenviar(deAnaV, [aLuis.id])), 'la de Ana, no');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.marcarPresencia(false);
+  check((await api.marcarEscuchado(deCoach.id)) === null && !(await b.sql(`select escuchado_en from comentarios where id = $1`, [deCoach.id]))[0].escuchado_en, 'con «en línea» apagado, escucharla no se apunta');
+  await api.marcarPresencia(true);
+  check(!!(await api.marcarEscuchado(deCoach.id)), 'y con él encendido, sí');
+  // Encuestas
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const envio = {};
+  const e1 = await api.crearEncuestaChat({ atletaId: aAna.id, pregunta: '  ¿Qué día hacemos el test?  ', opciones: ['Lunes', '', 'Jueves'], envio });
+  const e1b = await api.crearEncuestaChat({ atletaId: aAna.id, pregunta: '¿Qué día hacemos el test?', opciones: ['Lunes', 'Jueves'], envio });
+  check(e1.enviados === 1 && e1b.enviados === 0, 'el coach manda una encuesta (las opciones vacías no cuentan); repetida con el mismo envío, no se duplica');
+  check(await lanza(() => api.crearEncuestaChat({ atletaId: aAna.id, pregunta: 'x', opciones: ['Solo'] })) && await lanza(() => api.crearEncuestaChat({ atletaId: aAna.id, pregunta: '', opciones: ['a', 'b'] })), 'sin dos opciones o sin pregunta, no');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const conE = (await api.conversacion(aAna.id)).find((c) => c.encuesta);
+  check(conE && conE.encuesta.pregunta === '¿Qué día hacemos el test?' && igual(conE.encuesta.opciones, ['Lunes', 'Jueves']) && conE.encuesta.voto === null, 'Ana la ve en su chat (sin votar)');
+  check(igual(await api.votarEncuestaChat(conE.encuesta.id, [1]), [1]) && igual((await api.conversacion(aAna.id)).find((c) => c.id === conE.id).encuesta.voto, [1]), 'vota «Jueves» y se ve su voto');
+  check(await lanza(() => api.editarMensaje(conE.id, 'otra')), 'el mensaje de una encuesta no se edita');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(igual((await api.conversacion(aAna.id)).find((c) => c.id === conE.id).encuesta.voto, [1]), 'el coach ve qué ha votado');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check(!(await api.conversacion(aLuis.id)).some((c) => c.encuesta?.id === conE.encuesta.id) && await lanza(() => api.votarEncuestaChat(conE.encuesta.id, [0])), 'Luis ni la ve ni vota');
+  // A una lista
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const lista = await api.guardarListaDifusion({ nombre: 'Encuesta API', miembros: [aAna.id, aLuis.id] });
+  const e2 = await api.crearEncuestaChat({ listaId: lista.id, pregunta: '¿Venís el sábado?', opciones: ['Sí', 'No'], multiple: false });
+  check(e2.enviados === 2, 'una encuesta a una lista: a cada uno, la suya');
+  // Reacciones: cualquier emoji
+  const r0 = await api.enviarMensaje(aAna.id, { texto: 'Reacciona', autor: 'coach' });
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check(await api.reaccionarMensaje(r0.id, '🔥') === '🔥' && await api.reaccionarMensaje(r0.id, '👍🏽') === '👍🏽' && await lanza(() => api.reaccionarMensaje(r0.id, 'ok')), 'cualquier emoji (también con tono de piel); texto, no');
+  // Ir a una fecha
+  check(await api.mensajesDesde(aAna.id, new Date(Date.now() - 3600000).toISOString()) >= 5 && await api.mensajesDesde(aAna.id, new Date(Date.now() + 3600000).toISOString()) === 0, 'ir a una fecha: cuántos mensajes hay desde ese día');
+  await b.sql(`delete from listas_difusion`); await b.sql(`delete from chat_cupos`); await b.sql(`delete from presencia`);
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

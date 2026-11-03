@@ -151,12 +151,16 @@ export function AjustesMensajes({ coach = false }) {
   }
   const otro = coach ? 'tus atletas' : 'tu coach';
   return (
-    <GrupoIos titulo="Mensajes" id="grupo-mensajes" pie="El fondo del chat se guarda en este móvil; lo de «en línea», en tu cuenta.">
+    <GrupoIos titulo="Mensajes" id="grupo-mensajes" pie="El fondo, los sonidos y las fotos en HD se guardan en este móvil; lo de «en línea», en tu cuenta.">
       <Interruptor id="aj-en-linea" icono="ojo" texto="Mostrar cuándo estoy en línea" valor={visible !== false} desactivado={visible === null || ocupado}
         ayuda={`Con esto, ${otro} ve${coach ? 'n' : ''} cuándo estás en el chat y tu última conexión («últ. vez hoy a las 18:42»). Si lo apagas, no se guarda y tú tampoco verás la suya.`}
         alCambiar={cambiarVisible} />
       <FilaIos icono="imagen" titulo="Fondo del chat" detalle={a.fondoChat === 'liso' ? 'Liso' : 'Con dibujos de FBE, muy suaves (con el negro puro, liso)'}
         bloque={<Segmentos opciones={[['dibujos', 'Con dibujos'], ['liso', 'Liso']]} valor={a.fondoChat || 'dibujos'} etiqueta="Fondo del chat" alCambiar={(v) => cambiar('fondoChat', v || 'dibujos')} />} />
+      <Interruptor id="aj-sonidos-chat" icono="altavoz" texto="Sonidos del chat" valor={a.sonidosChat !== false}
+        ayuda="Un tono suave al enviar y al recibir un mensaje, solo con el chat abierto (nunca en una conversación silenciada)." alCambiar={(v) => cambiar('sonidosChat', v)} />
+      <Interruptor id="aj-fotos-hd" icono="imagen" texto="Enviar las fotos en HD" valor={a.fotosHd === true}
+        ayuda="Más grandes (y más pesadas). Siempre se envían sin los datos de la foto (ubicación, móvil)." alCambiar={(v) => cambiar('fotosHd', v)} />
     </GrupoIos>
   );
 }

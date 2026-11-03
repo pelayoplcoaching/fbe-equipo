@@ -16,7 +16,7 @@ const srv = await servir(new URL('../dist', import.meta.url).pathname, 4174);
 // Cámara de mentira (Chrome la simula con un patrón) para probar las fotos guiadas
 const navegador = await chromium.launch({ executablePath: CHROME, args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES', bypassCSP: true });
-await ctx.grantPermissions(['clipboard-read', 'clipboard-write', 'camera']);
+await ctx.grantPermissions(['clipboard-read', 'clipboard-write', 'camera', 'microphone']);
 const p = await ctx.newPage();
 // Cuenta con espera: en una máquina lenta (GitHub) la lista puede tardar un poco en pintarse tras un clic
 const hay = async (loc, n, ms = 6000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await loc.count() === n) return true; await new Promise((r) => setTimeout(r, 100)); } return (await loc.count()) === n; };
@@ -2027,7 +2027,8 @@ try {
   await revisar('chat-adjunto');
   await p.getByRole('button', { name: 'Enviar' }).click();
   await p.locator('.burbuja.mia', { hasText: 'La rodilla hoy' }).waitFor();
-  check(await p.locator('.burbuja.mia', { hasText: 'La rodilla hoy' }).locator('.medio-chat').count() === 1, 'y una foto con pie, que sale en su burbuja');
+  // (v0.56: primero sale con su progreso; al subirse, con la foto de la base)
+  check(await hay(p.locator('.burbuja.mia', { hasText: 'La rodilla hoy' }).locator('.medio-chat'), 1, 10000), 'y una foto con pie, que sale en su burbuja');
   // v0.49: la foto aparece al cargar (sin el icono de imagen rota) y los dos mensajes seguidos van juntos
   await p.locator('.burbuja.mia', { hasText: 'La rodilla hoy' }).locator('.medio-chat.listo img').waitFor();
   await p.waitForTimeout(400);
@@ -3302,19 +3303,37 @@ try {
   await hojaV.getByRole('button', { name: 'Descartarlo' }).click();
   await hojaV.waitFor({ state: 'detached' });
   check(true, 'y se puede descartar');
-  // El coach no recibe vídeos compartidos: se descarta con un aviso
-  await p.evaluate(async () => {
+  // (v0.56) Compartir fotos y PDF (lo que deja el service worker): Ana, a su chat, en la bandeja de adjuntos (sin enviar)
+  const pngCompartido = [...(await import('node:fs')).readFileSync(new URL('../web/iconos/icono-180.png', import.meta.url))];
+  const compartir = (archivos) => p.evaluate(async (xs) => {
     const c = await caches.open('fbe-compartido');
-    await c.put('https://fbe-compartido.invalid/video', new Response(new Blob([new Uint8Array(16)], { type: 'video/mp4' }), { headers: { 'content-type': 'video/mp4' } }));
-  });
+    for (const [i, x] of xs.entries()) await c.put(`https://fbe-compartido.invalid/archivo/${i}`, new Response(new Blob([new Uint8Array(x.bytes)], { type: x.tipo }), { headers: { 'content-type': x.tipo, 'x-content-type-options': 'nosniff', 'x-nombre': x.nombre } }));
+    await c.put('https://fbe-compartido.invalid/lista', new Response(JSON.stringify({ n: xs.length }), { headers: { 'content-type': 'application/json' } }));
+  }, archivos);
+  await compartir([{ bytes: pngCompartido, tipo: 'image/png', nombre: 'captura.png' }, { bytes: [...new TextEncoder().encode('%PDF-1.4\n<< /Type /Pages /Count 1 >>')], tipo: 'application/pdf', nombre: 'plan.pdf' }]);
+  await p.goto('http://localhost:4174/?demo&compartido=1#hoy');
+  await p.locator('.chat-adjunto').waitFor();
+  check(await hay(p.locator('.chat-adjunto-item'), 2) && await p.locator('.chat-adjunto-item.es-pdf').count() === 1 && !(await p.evaluate(() => location.search)).includes('compartido'),
+    '(v0.56) compartir una foto y un PDF a la app: Ana los tiene en su chat, listos para enviar (sin enviarlos)');
+  check(!(await p.evaluate(async () => (await (await caches.open('fbe-compartido')).keys()).length)), '(y se borran del móvil en cuanto la app los coge)');
+  for (let i = 0; i < 12 && await p.locator('.chat-adjunto-quitar').count(); i++) await p.locator('.chat-adjunto-quitar').first().click();
+  await hay(p.locator('.chat-adjunto'), 0);
+  // El coach elige a qué conversación va
+  await compartir([{ bytes: pngCompartido, tipo: 'image/png', nombre: 'captura.png' }]);
   await entrarComo('Pelayo');
   await p.goto('http://localhost:4174/?demo&compartido=1#atletas');
-  await p.locator('.toast', { hasText: /vídeo/ }).waitFor();
-  check(!(await p.evaluate(async () => !!(await (await caches.open('fbe-compartido')).match('https://fbe-compartido.invalid/video')))), 'si lo comparte el coach, se descarta con un aviso');
+  const hojaEnviarA = p.getByRole('dialog', { name: 'Enviar a…' });
+  await hojaEnviarA.waitFor();
+  check((await hojaEnviarA.textContent()).includes('1 foto'), '(v0.56) si lo comparte el coach, elige la conversación');
+  await revisar('compartido-coach');
+  await hojaEnviarA.getByRole('button', { name: /Ana López/ }).click();
+  await p.locator('.chat-adjunto-item').waitFor();
+  check(await p.locator('.chat-adjunto-item').count() === 1 && await p.locator('.cabecera-chat', { hasText: 'Ana' }).count() >= 1, '(v0.56) y se abre ese chat con la foto lista para enviar');
+  await p.getByRole('button', { name: /^Quitar la foto/ }).click();
   // Los accesos directos del icono
   const man = JSON.parse(await (await fetch('http://localhost:4174/manifest.webmanifest')).text());
-  check(man.shortcuts?.length === 4 && man.shortcuts[0].url.includes('accion=sesion') && man.share_target?.action === './compartir-video' && man.share_target.params.files[0].accept.includes('video/*'),
-    'el manifiesto trae los accesos directos (sesión de hoy, check-in, mensajes, revisar) y recibe vídeos compartidos');
+  check(man.shortcuts?.length === 4 && man.shortcuts[0].url.includes('accion=sesion') && man.share_target?.action === './compartir' && ['video/*', 'image/*', 'application/pdf'].every((t) => man.share_target.params.files[0].accept.includes(t)),
+    'el manifiesto trae los accesos directos (sesión de hoy, check-in, mensajes, revisar) y recibe fotos, vídeos y PDF compartidos');
 
   // ------------------------------------------------------------------------------------------------------------------
   {
@@ -3909,7 +3928,7 @@ try {
   const deAna = p.locator('.burbuja.suya:not(.eliminada)', { hasText: 'gimnasio del hotel' }).last();
   let menu = await menuDe(deAna);
   await revisar('chat-menu');
-  check(await menu.getByRole('group', { name: 'Reaccionar' }).getByRole('button').count() === 6 && await menu.getByRole('button', { name: 'Responder' }).count() === 1
+  check(await menu.getByRole('group', { name: 'Reaccionar' }).locator('.menu-reaccion:not(.menu-reaccion-mas)').count() === 6 && await menu.getByRole('button', { name: 'Reaccionar con otro emoji' }).count() === 1 && await menu.getByRole('button', { name: 'Responder' }).count() === 1
     && await menu.getByRole('button', { name: 'Copiar' }).count() === 1 && await menu.getByRole('button', { name: 'Destacar' }).count() === 1 && await menu.getByRole('button', { name: 'Editar' }).count() === 0
     && await menu.getByRole('button', { name: 'Eliminar para todos' }).count() === 0, 'el menú de un mensaje de Ana: reacciones, Responder, Copiar y Destacar (ni editar ni eliminar lo suyo)');
   await menu.getByRole('button', { name: 'Responder' }).click();
@@ -4248,7 +4267,7 @@ try {
   check((await p.evaluate(() => window.__vts)).includes('abrir') || !(await p.evaluate(() => typeof document.startViewTransition === 'function')), 'el chat entra deslizándose desde la derecha (View Transitions)');
   // 2: el cuadro de escribir, como WhatsApp
   check(await p.getByRole('button', { name: 'Enviar', exact: true }).count() === 0 && await p.getByRole('button', { name: 'Cámara' }).count() === 1 && await p.getByRole('button', { name: 'Emojis' }).count() === 1
-    && await p.getByRole('button', { name: 'Adjuntar', exact: true }).count() === 1 && !(await p.locator('.chat-barra').textContent()).match(/micr/i), 'vacío: 😊, 📎 y la cámara; sin «Enviar» (ni micro)');
+    && await p.getByRole('button', { name: 'Adjuntar', exact: true }).count() === 1 && await p.getByRole('button', { name: /^Grabar una nota de voz/ }).count() === 1, 'vacío: 😊, 📎, la cámara y (v0.56) el micro; sin «Enviar»');
   await p.locator('.chat-area').fill('Hola');
   check(await p.getByRole('button', { name: 'Enviar', exact: true }).count() === 1 && await p.getByRole('button', { name: 'Programar envío' }).count() === 1 && await p.getByRole('button', { name: 'Cámara' }).count() === 0,
     'con texto, aparece «Enviar» (y el ⏰ del coach)');
@@ -4372,7 +4391,8 @@ try {
   const abajo = p.locator('.chat-abajo');
   await abajo.waitFor();
   check(await p.locator('.chat-nuevos').count() === 0 && (await abajo.getAttribute('aria-label')).length > 5, 'lejos del final: el botón ⌄ (sin dos controles para lo mismo)');
-  check(await p.locator('.chat-dia-flotante.visible').count() === 1, 'y la píldora del día mientras te desplazas');
+  await p.mouse.wheel(0, 60);
+  check(await hay(p.locator('.chat-dia-flotante.visible'), 1, 1200), 'y la píldora del día mientras te desplazas');
   await abajo.click();
   check(await hay(p.locator('.chat-abajo'), 0, 4000), '⌄ lleva al final (y se va)');
   // 9: seleccionar varios
@@ -4631,6 +4651,307 @@ try {
   }
   }
   }
+  // ------------------------------------------------------------------------------------------------------------------
+  console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el móvil y más');
+  {
+  const enviarYa = async () => { await p.getByRole('button', { name: 'Enviar', exact: true }).click(); };
+  const png = (await import('node:fs')).readFileSync(new URL('../web/iconos/icono-180.png', import.meta.url));
+  const demo = () => p.evaluate(() => JSON.parse(localStorage.getItem('fbe-demo-v2')));
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.emulateMedia({ colorScheme: 'light', reducedMotion: null });
+  await entrarComo('Ana López');
+  await p.evaluate(() => { window.__sonidos = []; window.addEventListener('fbe-sonido', (e) => window.__sonidos.push(e.detail.tipo)); });
+  await p.locator('.tab', { hasText: 'Mensajes' }).click();
+  await p.locator('.chat-area').waitFor();
+  await p.locator('.burbuja').first().waitFor();
+  await p.waitForTimeout(500);
+  check(!(await p.evaluate(() => window.__sonidos.length)), 'al abrir el chat no suena nada');
+  // 1: la copia del chat en el móvil (IndexedDB): con la base lenta, el chat abre al momento con lo guardado
+  const enIdb = () => p.evaluate(() => new Promise((ok) => { const r = indexedDB.open('fbe-chat-v1'); r.onsuccess = () => { const d = r.result; if (!d.objectStoreNames.contains('conversaciones')) { ok([]); return; } const t = d.transaction('conversaciones').objectStore('conversaciones').getAll(); t.onsuccess = () => { ok(t.result); d.close(); }; }; r.onerror = () => ok([]); }));
+  const copiaChat = await (async () => { for (let i = 0; i < 30; i++) { const x = await enIdb(); if (x.length) return x; await p.waitForTimeout(100); } return []; })();
+  check(copiaChat.length === 1 && copiaChat[0].mensajes.length > 0 && copiaChat[0].mensajes.every((c) => !('url' in (c.archivo || {}))), 'la conversación se guarda en el móvil (solo textos y datos)');
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').waitFor();
+  await p.evaluate(() => localStorage.setItem('fbe-demo-retraso', '2500'));
+  await p.locator('.tab', { hasText: 'Mensajes' }).click();
+  const deCache = await p.locator('.chat-lista .burbuja').first().waitFor({ timeout: 1500 }).then(() => true, () => false);
+  check(deCache && await p.getByText('Cargando los mensajes').count() === 0, 'con la base lenta (o sin cobertura), el chat abre al momento con lo guardado en el móvil');
+  await p.evaluate(() => localStorage.removeItem('fbe-demo-retraso'));
+  await p.waitForTimeout(2600);
+
+  // 16: notas de voz. El micro sale con el cuadro vacío; con texto, «Enviar»
+  const micro = p.getByRole('button', { name: /^Grabar una nota de voz/ });
+  check(await micro.count() === 1, 'con el cuadro vacío, el micro');
+  await p.locator('.chat-area').fill('algo');
+  check(await micro.count() === 0 && await p.getByRole('button', { name: 'Enviar', exact: true }).count() === 1, 'con texto, «Enviar» en su sitio');
+  await p.locator('.chat-area').fill('');
+  // (las pistas del micro, para ver que se sueltan)
+  await p.evaluate(() => { const orig = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices); window.__pistas = []; navigator.mediaDevices.getUserMedia = async (c) => { const s2 = await orig(c); window.__pistas.push(...s2.getTracks()); return s2; }; });
+  // Con el teclado (o un lector de pantalla): Enter empieza sin mantener; «Parar» y se escucha antes de enviarla
+  await micro.focus();
+  await p.keyboard.press('Enter');
+  const grabando = p.getByRole('group', { name: 'Grabando una nota de voz' });
+  await grabando.waitFor();
+  await p.getByRole('button', { name: 'Parar y escucharla' }).waitFor();
+  const contador = await grabando.locator('.chat-grabando-tiempo', { hasText: /^0:0\d \/ 1:00$/ }).waitFor({ timeout: 5000 }).then(() => true, () => false);
+  check(contador && (await grabando.textContent()).includes('Máximo 1 minuto'), 'graba con el aviso del minuto a la vista: «0:01 / 1:00» y «Máximo 1 minuto»');
+  await revisar('voz-grabando');
+  await p.waitForTimeout(1500);
+  // Los últimos 10 segundos (el reloj de la prueba se adelanta: no hace falta esperar un minuto)
+  await p.evaluate(() => { const t0 = performance.now(); window.__fbeRelojVoz = () => performance.now() + 50000 + 0 * t0; });
+  await p.locator('.chat-grabando.acaba').waitFor();
+  check((await grabando.textContent()).includes('Quedan') && /^0:5\d \/ 1:00$/.test((await grabando.locator('.chat-grabando-tiempo').textContent()).trim()), 'en los últimos 10 segundos avisa («Quedan 9 s · máx. 1 minuto»)');
+  // Al minuto se para sola, y lo grabado se queda para escucharlo y enviarlo
+  await p.evaluate(() => { window.__fbeRelojVoz = () => performance.now() + 61000; });
+  const revisarVoz = p.getByRole('group', { name: 'Nota de voz grabada' });
+  await revisarVoz.waitFor();
+  await p.evaluate(() => { delete window.__fbeRelojVoz; });
+  check((await revisarVoz.textContent()).includes('Has llegado al minuto: se ha parado sola') && await revisarVoz.getByRole('button', { name: 'Enviar la nota de voz' }).count() === 1
+    && await revisarVoz.getByRole('button', { name: 'Eliminar la nota de voz' }).count() === 1, 'al minuto se para sola: «Has llegado al minuto», y se queda para escucharla, enviarla o borrarla');
+  check(await hay(p.locator('.chat-grabando'), 0) && await p.evaluate(() => window.__pistas.length > 0 && window.__pistas.every((t) => t.readyState === 'ended')), 'y el micro se suelta en cuanto para (sin el indicador encendido)');
+  check(await revisarVoz.getByRole('button', { name: /^Escuchar la nota de voz \(1:00\)/ }).count() === 1 && await revisarVoz.locator('audio[src^="blob:"]').count() === 1, 'se puede escuchar antes (1:00)');
+  const vel = revisarVoz.getByRole('button', { name: /^Velocidad/ });
+  await vel.click();
+  check((await vel.getAttribute('aria-label')).includes('1,5×'), 'a 1×, 1,5× o 2×');
+  await revisar('voz-revisar');
+  await revisarVoz.getByRole('button', { name: 'Enviar la nota de voz' }).click();
+  const burbujaVoz = p.locator('.burbuja.mia.con-voz').last();
+  await burbujaVoz.waitFor();
+  await burbujaVoz.locator('.voz-play').waitFor({ timeout: 10000 });
+  check(/1:00/.test(await burbujaVoz.locator('.voz-play').getAttribute('aria-label')) && await burbujaVoz.locator('.voz-onda span').count() >= 8, 'enviada: sale en su burbuja, con ▶, su onda y su duración (1:00)');
+  check(await p.evaluate(() => window.__sonidos.includes('enviado')), 'y suena el tono de «enviado» (con el chat abierto)');
+  await p.waitForFunction(() => (JSON.parse(localStorage.getItem('fbe-demo-v2')).archivos || []).some((a) => a.tipo === 'audio'), null, { timeout: 5000 }).catch(() => {});
+  const filaV = (await demo()).archivos.filter((a) => a.tipo === 'audio').at(-1);
+  check(filaV && filaV.duracion_seg === 60 && filaV.mime === 'audio/webm' && filaV.onda?.length === 40 && /\/audio-.*\.webm$/.test(filaV.ruta), 'se guarda como nota de voz: 60 s, audio/webm, su onda y su ruta audio-…');
+  // Mantener pulsado y deslizar a la izquierda: se cancela (no se envía nada)
+  const caja = await micro.boundingBox();
+  const cx = caja.x + caja.width / 2, cy = caja.y + caja.height / 2;
+  const antesVoz = await p.locator('.burbuja.con-voz').count();
+  await p.mouse.move(cx, cy); await p.mouse.down();
+  await grabando.waitFor();
+  await p.waitForTimeout(700);
+  check((await grabando.textContent()).includes('Desliza para cancelar'), 'manteniéndolo: «‹ Desliza para cancelar · ↑ para no mantener»');
+  await p.mouse.move(cx - 60, cy, { steps: 3 }); await p.mouse.move(cx - 160, cy, { steps: 4 });
+  await p.mouse.up();
+  check(await hay(grabando, 0) && await hay(p.getByRole('group', { name: 'Nota de voz grabada' }), 0) && await p.locator('.burbuja.con-voz').count() === antesVoz, 'deslizar a la izquierda la cancela (no queda nada)');
+  // Mantener y deslizar hacia arriba: sigue grabando sin el dedo («Parar» y «Eliminar»)
+  await p.mouse.move(cx, cy); await p.mouse.down();
+  await grabando.waitFor();
+  await p.waitForTimeout(900);
+  await p.mouse.move(cx, cy - 50, { steps: 3 }); await p.mouse.move(cx, cy - 120, { steps: 4 });
+  await p.mouse.up();
+  await p.getByRole('button', { name: 'Parar y escucharla' }).waitFor();
+  check(await grabando.count() === 1 && await p.getByRole('button', { name: 'Eliminar la grabación' }).count() === 1, 'deslizar hacia arriba la deja grabando sin mantener');
+  await p.waitForTimeout(800);
+  await p.getByRole('button', { name: 'Parar y escucharla' }).click();
+  await p.getByRole('group', { name: 'Nota de voz grabada' }).waitFor();
+  await p.getByRole('button', { name: 'Eliminar la nota de voz' }).click();
+  check(await hay(p.getByRole('group', { name: 'Nota de voz grabada' }), 0) && await p.locator('.burbuja.con-voz').count() === antesVoz, 'y borrarla antes de enviarla');
+  // Reproducir la enviada (en su burbuja): se descarga al tocar ▶
+  await burbujaVoz.locator('.voz-play').click();
+  check(await hay(burbujaVoz.locator('audio'), 1), 'en la burbuja, ▶ la reproduce (se descarga al tocarla)');
+  await burbujaVoz.locator('.voz-vel').click();
+  check((await burbujaVoz.locator('.voz-vel').textContent()).trim() === '1,5×', 'con su velocidad (1,5×)');
+
+  // 5 y 6: una foto se reduce (sin EXIF) y sale al momento con su progreso; «Cancelar» la para
+  await p.locator('input[type=file][accept="image/*,video/*"]').setInputFiles({ name: 'tecnica.png', mimeType: 'image/png', buffer: png });
+  await p.locator('.chat-adjunto').waitFor();
+  check(await p.getByRole('button', { name: 'HD' }).getAttribute('aria-pressed') === 'false' && await p.getByRole('button', { name: /^Editar la foto 1/ }).count() === 1, 'la foto, con «HD» (apagado: se reduce) y «Editar»');
+  // 7: el editor (recortar, girar, dibujar, texto)
+  await p.getByRole('button', { name: /^Editar la foto 1/ }).click();
+  const editor = p.getByRole('dialog', { name: 'Editar la foto' });
+  await editor.waitFor();
+  await editor.locator('canvas').waitFor();
+  check(await editor.getByRole('toolbar', { name: 'Herramientas del editor' }).getByRole('button').count() >= 5 && await editor.getByRole('slider', { name: 'Borde izquierdo' }).count() === 1, 'el editor: recortar (con deslizadores), dibujar, texto, girar y deshacer');
+  await editor.getByRole('slider', { name: 'Borde izquierdo' }).focus();
+  for (let i = 0; i < 10; i++) await p.keyboard.press('ArrowRight');
+  await editor.getByRole('button', { name: 'Girar 90 grados' }).click();
+  await editor.getByRole('button', { name: 'Texto' }).click();
+  await editor.getByLabel('Texto para la foto').fill('¡Rodilla fuera!');
+  await editor.getByRole('button', { name: 'Poner' }).click();
+  check((await editor.locator('canvas').getAttribute('aria-label')).includes('¡Rodilla fuera!'), 'pone un texto en la foto (y lo dice para el lector de pantalla)');
+  const chip = editor.getByRole('button', { name: /^«¡Rodilla fuera!»/ });
+  await chip.focus(); await p.keyboard.press('ArrowUp');
+  await editor.getByRole('button', { name: 'Dibujar' }).click();
+  const lz = await editor.locator('canvas').boundingBox();
+  await p.mouse.move(lz.x + 20, lz.y + 20); await p.mouse.down(); await p.mouse.move(lz.x + 60, lz.y + 50, { steps: 5 }); await p.mouse.up();
+  check((await editor.locator('canvas').getAttribute('aria-label')).includes('1 trazo'), 'dibuja con el dedo o el ratón');
+  await p.setViewportSize({ width: 360, height: 740 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await revisar('editor-360-oscuro');
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.emulateMedia({ colorScheme: 'light' });
+  await editor.getByRole('button', { name: 'Listo' }).click();
+  await editor.waitFor({ state: 'detached' });
+  await p.evaluate(() => localStorage.setItem('fbe-demo-subida-lenta', '6000'));
+  await p.locator('.chat-area').fill('Mira la rodilla');
+  await enviarYa();
+  const subiendo = p.locator('.burbuja.mia.subiendo').last();
+  await subiendo.waitFor();
+  check(await subiendo.getByRole('progressbar').count() === 1 && await subiendo.locator('.subida-anillo > svg').count() === 1 && await p.locator('.chat-adjunto').count() === 0, 'sale al momento en el chat, con un anillo de progreso (y la bandeja se vacía)');
+  await revisar('chat-subiendo');
+  await subiendo.getByRole('button', { name: /^Cancelar el envío de la foto/ }).click();
+  check(await hay(p.locator('.burbuja.subiendo'), 0) && await hay(p.locator('.toast', { hasText: 'Envío cancelado' }), 1), '«Cancelar» la para (y no queda nada)');
+  await p.evaluate(() => localStorage.removeItem('fbe-demo-subida-lenta'));
+  // De nuevo, ahora sin parar: llega como JPEG (reducida y sin EXIF)
+  await p.locator('input[type=file][accept="image/*,video/*"]').setInputFiles({ name: 'tecnica.png', mimeType: 'image/png', buffer: png });
+  await p.getByRole('button', { name: /^Editar la foto 1/ }).click();
+  await editor.waitFor(); await editor.locator('canvas').waitFor();
+  await editor.getByRole('button', { name: 'Listo' }).click();
+  await editor.waitFor({ state: 'detached' });
+  await p.locator('.chat-area').fill('Ahora sí');
+  await enviarYa();
+  await p.locator('.burbuja.mia', { hasText: 'Ahora sí' }).locator('.medio-chat').waitFor({ timeout: 10000 });
+  await p.waitForFunction(() => (JSON.parse(localStorage.getItem('fbe-demo-v2')).archivos || []).filter((a) => a.tipo === 'adjunto').at(-1)?.mime === 'image/jpeg', null, { timeout: 5000 }).catch(() => {});
+  const fotoFila = (await demo()).archivos.filter((a) => a.tipo === 'adjunto').at(-1);
+  check(fotoFila.mime === 'image/jpeg' && /\.jpg$/.test(fotoFila.ruta), 'la foto llega en JPEG, vuelta a guardar en el móvil (así se va el EXIF, también la ubicación)');
+  // 9: pegar una captura y soltar archivos (ordenador)
+  await p.locator('.chat-area').click();
+  await p.evaluate((bytes) => {
+    const dt = new DataTransfer();
+    dt.items.add(new File([new Uint8Array(bytes)], 'captura.png', { type: 'image/png' }));
+    document.querySelector('.chat-area').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, [...png]);
+  check(await hay(p.locator('.chat-adjunto-item'), 1), 'pegar una captura en el cuadro la añade como adjunto');
+  await p.evaluate((bytes) => {
+    const dt = new DataTransfer();
+    dt.items.add(new File([new Uint8Array(bytes)], 'otra.png', { type: 'image/png' }));
+    const chat = document.querySelector('.chat');
+    chat.dispatchEvent(new DragEvent('dragenter', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    window.__soltar = !!document.querySelector('.chat-soltar');
+  }, [...png]);
+  check(await hay(p.locator('.chat-soltar'), 1) && (await p.locator('.chat-soltar').textContent()).includes('Suelta aquí'), 'al arrastrar archivos encima: «Suelta aquí para adjuntarlo»');
+  await p.evaluate((bytes) => {
+    const dt = new DataTransfer();
+    dt.items.add(new File([new Uint8Array(bytes)], 'otra.png', { type: 'image/png' }));
+    document.querySelector('.chat').dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+  }, [...png]);
+  check(await hay(p.locator('.chat-adjunto-item'), 2) && await hay(p.locator('.chat-soltar'), 0), 'y al soltarlos, a la bandeja');
+  for (let i = 0; i < 12 && await p.locator('.chat-adjunto-quitar').count(); i++) await p.locator('.chat-adjunto-quitar').first().click();
+  await hay(p.locator('.chat-adjunto'), 0);
+
+  // 10: la tarjeta de un enlace (sin pedir nada a esa web)
+  await p.locator('.chat-area').fill('Lee esto https://examine.com/supplements/creatine/');
+  await enviarYa();
+  const tarjeta = p.locator('.burbuja.mia', { hasText: 'Lee esto' }).last().locator('.vista-enlace');
+  await tarjeta.waitFor();
+  check((await tarjeta.textContent()).includes('examine.com') && (await tarjeta.getAttribute('href')).startsWith('https://examine.com'), 'un enlace sale con la tarjeta de su dominio');
+  // 15: ↑ con el cuadro vacío edita el último tuyo; Ctrl/Cmd+F busca; Escape cierra
+  await p.locator('.chat-area').fill('Para editar con la flecha');
+  await enviarYa();
+  await p.locator('.burbuja.mia', { hasText: 'Para editar con la flecha' }).locator('.visto:not(.pendiente)').waitFor();
+  await p.locator('.chat-area').fill('');
+  await p.locator('.chat-area').press('ArrowUp');
+  check(await hay(p.getByText('Editando el mensaje'), 1) && (await p.locator('.chat-area').inputValue()) === 'Para editar con la flecha', '↑ con el cuadro vacío: edita tu último mensaje');
+  await p.locator('.chat-area').press('Escape');
+  await hay(p.getByText('Editando el mensaje'), 0);
+  await p.keyboard.press('Control+f');
+  const busqueda = p.getByRole('search');
+  await busqueda.waitFor();
+  check(await p.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Buscar en el chat', null, { timeout: 3000 }).then(() => true, () => false), 'Ctrl/Cmd+F busca en el chat (no en la página)');
+  // 13: buscar por tipo e ir a una fecha
+  const filtros = p.getByRole('group', { name: 'Buscar por tipo o ir a una fecha' });
+  await filtros.getByRole('radio', { name: 'Notas de voz' }).click();
+  check(await hay(p.locator('.chat-busqueda-n', { hasText: /^1 de \d+/ }), 1) && await p.locator('.burbuja.actual.con-voz').count() === 1, 'buscar por tipo: las notas de voz (va a la más reciente)');
+  await filtros.getByRole('radio', { name: 'Fotos' }).click();
+  check(await hay(p.locator('.burbuja.actual.con-medio'), 1), 'y las fotos');
+  await revisar('chat-buscar-tipo');
+  await filtros.getByLabel('Ir a una fecha').fill(new Date().toISOString().slice(0, 10));
+  check(await hay(p.locator('.burbuja.resaltada'), 1), 'ir a una fecha: al primer mensaje de ese día (resaltado)');
+  await p.keyboard.press('Escape');
+  check(await hay(busqueda, 0), 'Escape cierra la búsqueda');
+  // 11: «Info del mensaje» (enviado, entregado, leído; en una nota de voz, escuchado)
+  await burbujaVoz.scrollIntoViewIfNeeded();
+  await burbujaVoz.click({ button: 'right', position: { x: 16, y: 10 } });
+  await p.getByRole('dialog', { name: 'Mensaje' }).getByRole('button', { name: 'Info' }).click();
+  const infoH = p.getByRole('dialog', { name: 'Info del mensaje' });
+  await infoH.waitFor();
+  const filasInfo = await infoH.locator('dt').allTextContents();
+  check(['Enviado', 'Entregado', 'Leído', 'Escuchado'].every((t) => filasInfo.includes(t)), `«Info del mensaje»: enviado, entregado, leído y escuchado (${filasInfo.join(', ')})`);
+  check(await infoH.locator('dt', { hasText: 'Escuchado' }).count() === 1 && (await infoH.locator('dt', { hasText: 'Escuchado' }).locator('xpath=following-sibling::dd').textContent()) === 'todavía no', '(aún sin escuchar)');
+  await p.keyboard.press('Escape');
+  // 14: reacciones con cualquier emoji y tus seis; tono de piel
+  const paraReaccion = p.locator('.burbuja.suya').last();
+  await paraReaccion.scrollIntoViewIfNeeded(); await paraReaccion.click({ button: 'right', position: { x: 16, y: 10 } });
+  const menuM = p.getByRole('dialog', { name: 'Mensaje' });
+  await menuM.getByRole('button', { name: 'Reaccionar con otro emoji' }).click();
+  await menuM.getByRole('group', { name: 'Emojis' }).getByRole('tab', { name: 'Deporte' }).click();
+  await menuM.locator('.emoji-boton', { hasText: '🔥' }).first().click();
+  check(await hay(paraReaccion.locator('.burbuja-reacciones', { hasText: '🔥' }), 1), 'reaccionar con cualquier emoji («+»)');
+  await paraReaccion.scrollIntoViewIfNeeded(); await paraReaccion.click({ button: 'right', position: { x: 16, y: 10 } });
+  await menuM.getByRole('button', { name: 'Reaccionar con otro emoji' }).click();
+  await menuM.getByRole('button', { name: 'Elegir tus seis reacciones' }).click();
+  const hojaR = p.getByRole('dialog', { name: 'Tus reacciones rápidas' });
+  await hojaR.waitFor();
+  await hojaR.getByRole('radio', { name: /^Casilla 1/ }).click();
+  await hojaR.getByRole('tab', { name: 'Deporte' }).click();
+  await hojaR.locator('.emoji-boton', { hasText: '🏆' }).first().click();
+  check((await hojaR.getByRole('radio', { name: /^Casilla 1/ }).textContent()).includes('🏆'), 'elige tus seis reacciones rápidas');
+  await revisar('reacciones-rapidas');
+  await hojaR.getByRole('button', { name: 'Listo' }).click();
+  await paraReaccion.scrollIntoViewIfNeeded(); await paraReaccion.click({ button: 'right', position: { x: 16, y: 10 } });
+  check(await menuM.getByRole('button', { name: /Reaccionar con 🏆|Quitar tu reacción/ }).count() >= 1 && (await menuM.getByRole('group', { name: 'Reaccionar' }).textContent()).includes('🏆'), 'y salen en el menú de cada mensaje');
+  await p.keyboard.press('Escape');
+  await p.getByRole('button', { name: 'Emojis' }).click();
+  const panelE = p.getByRole('group', { name: 'Emojis' });
+  await panelE.getByRole('button', { name: /^Tono de piel/ }).click();
+  await panelE.getByRole('radio', { name: 'Tono medio' }).click();
+  await panelE.getByRole('tab', { name: 'Gestos y personas' }).click();
+  check(await panelE.locator('.emoji-boton', { hasText: '👍🏽' }).count() >= 1, 'tono de piel: las manos y las personas lo llevan');
+  await p.getByRole('button', { name: 'Volver al teclado' }).click();
+  // 12: encuestas (el coach la crea; Ana vota y cambia el voto; el coach lo ve)
+  await entrarComo('Pelayo');
+  await p.locator('.tab', { hasText: 'Mensajes' }).click();
+  await p.locator('.conversacion', { hasText: 'Ana López' }).first().click();
+  await p.locator('.chat-area').waitFor();
+  // (el coach escucha la nota de voz de Ana: para ella, escuchada)
+  const vozAna = p.locator('.burbuja.suya.con-voz').last();
+  await vozAna.waitFor();
+  await vozAna.locator('.voz-play').click();
+  await hay(vozAna.locator('audio'), 1);
+  await p.getByRole('button', { name: 'Adjuntar', exact: true }).click();
+  await p.getByRole('dialog', { name: 'Adjuntar' }).getByRole('button', { name: /Encuesta/ }).click();
+  const hojaE = p.getByRole('dialog', { name: /Encuesta para/ });
+  await hojaE.waitFor();
+  await hojaE.getByLabel('Pregunta').fill('¿Qué día hacemos el test de 1RM?');
+  await hojaE.getByLabel('Opción 1', { exact: true }).fill('Lunes');
+  await hojaE.getByLabel('Opción 2', { exact: true }).fill('Jueves');
+  await hojaE.getByRole('button', { name: 'Añadir opción' }).click();
+  await hojaE.getByLabel('Opción 3', { exact: true }).fill('Sábado');
+  await revisar('encuesta-crear');
+  await hojaE.getByRole('button', { name: 'Enviar la encuesta' }).click();
+  await hojaE.waitFor({ state: 'detached' });
+  const encC = p.locator('.burbuja.mia.con-encuesta').last();
+  await encC.waitFor();
+  check((await encC.textContent()).includes('¿Qué día hacemos el test de 1RM?') && (await encC.textContent()).includes('Aún no ha votado') && await encC.locator('input[type=radio]').count() === 3, 'el coach manda una encuesta (aún sin votar)');
+  await entrarComo('Ana López');
+  await p.locator('.tab', { hasText: 'Mensajes' }).click();
+  const encA = p.locator('.burbuja.suya.con-encuesta').last();
+  await encA.waitFor();
+  await encA.getByText('Jueves').click();
+  check(await hay(encA.locator('.encuesta-opcion.elegida', { hasText: 'Jueves' }), 1), 'Ana vota «Jueves»');
+  await encA.getByText('Sábado').click();
+  check(await hay(encA.locator('.encuesta-opcion.elegida', { hasText: 'Sábado' }), 1) && await encA.locator('.encuesta-opcion.elegida').count() === 1, 'y cambia el voto (sigue siendo uno)');
+  await revisar('encuesta-votar');
+  check(await hay(p.locator('.burbuja.mia.con-voz').last().locator('.voz-micro.escuchada'), 1, 8000), 'su nota de voz, escuchada por el coach: el micro azul');
+  await entrarComo('Pelayo');
+  await p.locator('.tab', { hasText: 'Mensajes' }).click();
+  await p.locator('.conversacion', { hasText: 'Ana López' }).first().click();
+  const encC2 = p.locator('.burbuja.mia.con-encuesta').last();
+  await encC2.waitFor();
+  check(await hay(encC2.locator('.encuesta-opcion.elegida', { hasText: 'Sábado' }), 1) && (await encC2.textContent()).includes('Ha votado'), 'el coach ve que ha votado «Sábado»');
+  // A 360 px en oscuro y al 125 %
+  await p.setViewportSize({ width: 360, height: 740 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.evaluate(() => document.documentElement.setAttribute('data-letra', 'muy-grande'));
+  await p.waitForTimeout(300);
+  await revisar('chat-v056-360-oscuro-125');
+  check(await p.evaluate(() => document.documentElement.scrollWidth <= 360), 'a 360 px en oscuro y al 125 %, sin desbordes (la encuesta, las notas de voz y la tarjeta del enlace)');
+  await p.evaluate(() => document.documentElement.removeAttribute('data-letra'));
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  }
+
   await p.unroute('https://i.ytimg.com/**');
   }
 } catch (e) {
