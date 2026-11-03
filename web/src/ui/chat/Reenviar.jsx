@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'preact/hooks';
+import { useMemo, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, Avatar, useApp, useCarga, Cargando, Vacio } from '../comunes.jsx';
 import { normalLetras, extractoCita } from '../../logica/mensajes.js';
 import { textoSaltados } from '../../logica/chat.js';
@@ -39,6 +39,8 @@ export function HojaReenviar({ mensajes, alCerrar, alHecho }) {
   const [elegidos, setElegidos] = useState([]);
   const [enviando, setEnviando] = useState(false);
   const [progreso, setProgreso] = useState(null);
+  // Lo de cada mensaje en este «Reenviar» (sus ids y copias): al reintentar se reutiliza, y lo que ya entró no se repite
+  const envios = useRef({});
   const lista = useMemo(() => [...(atletas.datos || [])].sort((a, b) => (a.estado === 'baja') - (b.estado === 'baja') || a.nombre.localeCompare(b.nombre)), [atletas.datos]);
   async function enviar() {
     if (!elegidos.length || enviando) return;
@@ -47,7 +49,7 @@ export function HojaReenviar({ mensajes, alCerrar, alHecho }) {
     try {
       for (const [k, c] of mensajes.entries()) {
         if (mensajes.length > 1) setProgreso(`${k + 1} de ${mensajes.length}`);
-        const r = await api.reenviar(c, elegidos);
+        const r = await api.reenviar(c, elegidos, (envios.current[c.id] ||= {}));
         enviados += r.enviados; saltados = Math.max(saltados, r.saltados); fallidos += r.fallidos;
       }
       const n = elegidos.length;

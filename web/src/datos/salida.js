@@ -4,7 +4,7 @@
 // No se repite nunca: cada mensaje lleva su id (cliente_id) y la base no deja entrar dos con el mismo.
 // (La cola de las series, datos/cola.js, va por atleta y aparta lo rechazado: aquí hace falta por cuenta, con el
 // coach escribiendo a varios, y que lo fallido se quede a la vista. Comparte con ella qué es un error pasajero.)
-import { ordenarSalida, siguienteSalida, nuevoPendiente } from '../logica/chat.js';
+import { ordenarSalida, siguienteSalida, nuevoPendiente, quitarYaEnviados, retomarSalida } from '../logica/chat.js';
 import { esTemporal } from './cola.js';
 
 export const CLAVE_SALIDA = 'fbe-salida-v1';
@@ -14,7 +14,9 @@ function leer(almacen, clave) {
 }
 
 export function crearSalida(api, { clave = CLAVE_SALIDA, almacen = almacenDe(), reintentoMs = 20000 } = {}) {
-  let lista = ordenarSalida(leer(almacen, clave));
+  // Lo que se estaba enviando cuando se cerró la app (o se mató) vuelve a «pendiente»: si llegó a entrar, la base no
+  // lo repite (su cliente_id) y la app se queda con el que ya hay
+  let lista = retomarSalida(leer(almacen, clave));
   const oyentes = new Set();
   let vaciando = false;
   let reintento = null;
@@ -46,6 +48,13 @@ export function crearSalida(api, { clave = CLAVE_SALIDA, almacen = almacenDe(), 
       return s.vaciar();
     },
     descartar(clienteId) { lista = lista.filter((x) => x.cliente_id !== clienteId); avisar(); },
+    // Con la conversación de la base delante: lo que ya está en ella (por su cliente_id) sale de la bandeja (también un
+    // «!» o un ⏱ de algo que sí llegó y cuya respuesta se perdió)
+    confirmar(mensajes = []) {
+      const antes = lista.length;
+      lista = quitarYaEnviados(lista, mensajes);
+      if (lista.length !== antes) avisar();
+    },
     // Lo de esta cuenta, en orden, uno a uno. Se para (sin perder nada) si falta la cobertura o la sesión.
     async vaciar() {
       if (vaciando) return;

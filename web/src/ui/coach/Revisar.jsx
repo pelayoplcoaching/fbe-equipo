@@ -274,12 +274,15 @@ function TarjetaMensaje({ h, recargar, abrirAtleta }) {
   // Al abrirla se marcan como leídos; la bandeja se actualiza al cerrarla (no mientras lo lees)
   const alternar = (v) => { setAbierto(v); if (!v && leido.current) recargar(); };
   const c = h.ultimo;
-  const contexto = c.sesion_id ? `en ${c.sesion?.nombre || 'una sesión'}` : c.checkin_id ? 'en su check-in' : c.archivo_id ? 'en un vídeo' : 'mensaje';
+  // (v0.55) una foto, un vídeo o un PDF que manda por el chat se contesta en el chat, citándolo (la base no deja «pegar»
+  // la respuesta del coach a un archivo que subió el atleta: saldría como si lo mandara él)
+  const archivoId = c.adjunto ? null : c.archivo_id;
+  const contexto = c.sesion_id ? `en ${c.sesion?.nombre || 'una sesión'}` : c.checkin_id ? 'en su check-in' : archivoId ? 'en un vídeo' : 'mensaje';
   return (
     <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar mensaje-pendiente">
-      <Cabecera atleta={c.atleta} tipo={contexto} cuando={cuando(c.creado_en)} abrirAtleta={abrirAtleta} pestana={c.sesion_id ? 'registro' : c.checkin_id ? 'seguimiento' : c.archivo_id ? 'videos' : 'programa'} />
+      <Cabecera atleta={c.atleta} tipo={contexto} cuando={cuando(c.creado_en)} abrirAtleta={abrirAtleta} pestana={c.sesion_id ? 'registro' : c.checkin_id ? 'seguimiento' : archivoId ? 'videos' : 'programa'} />
       {!abierto && <p class="cita">«{c.texto}»{h.n > 1 ? <span class="terciario"> y {h.n - 1} más</span> : ''}</p>}
-      {abierto && <Hilo atletaId={c.atleta_id} sesionId={c.sesion_id} checkinId={c.checkin_id} archivoId={c.archivo_id} nombreAtleta={c.atleta.nombre} alCambiar={recargar} alLeer={() => { leido.current = true; }} />}
+      {abierto && <Hilo atletaId={c.atleta_id} sesionId={c.sesion_id} checkinId={c.checkin_id} archivoId={c.archivo_id} enChat={!!c.adjunto} nombreAtleta={c.atleta.nombre} alCambiar={recargar} alLeer={() => { leido.current = true; }} />}
       <Acciones abierto={abierto} setAbierto={alternar} etiquetaComentar="Responder" />
     </article>
   );

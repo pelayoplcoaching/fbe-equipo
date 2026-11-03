@@ -28,6 +28,8 @@ import { resumenMes, sumarMes, mesAnterior } from '../logica/mes.js';
 import { panelNegocio } from '../logica/negocio.js';
 import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
+import { esTemporal } from './cola.js';
+import { textoVisible } from '../logica/texto.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
 import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
@@ -133,7 +135,11 @@ const falta032 = (e) => {
 const AVISO_033 = 'Para esto falta ejecutar la migración 033 en Supabase (supabase/migraciones/033_chat_mas_whatsapp.sql)';
 const falta033 = (e) => {
   const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
-  if (/\b(cliente_id|reenviado|entregado_en|marcar_entregados|conversacion_fijado|chat_silencios|listas_difusion|listas_difusion_miembros|chat_reenviar|chat_difundir|paginas|archivos_tipo_check)\b/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna|relation|PGRST20|check constraint|23514/i.test(m)) {
+  // Solo lo que de verdad falta (una tabla, una función o una columna de la 033; o el tipo «documento», que antes de la
+  // 033 no deja pasar archivos_tipo_check). Un valor rechazado (un nombre de lista vacío, uno repetido…) es otra cosa.
+  const falta = /\b(cliente_id|reenviado|entregado_en|marcar_entregados|conversacion_fijado|chat_silencios|listas_difusion|listas_difusion_miembros|chat_reenviar|chat_difundir|paginas|subido_por|nombre_coach)\b/.test(m)
+    && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m);
+  if (falta || (/\barchivos_tipo_check\b/.test(m) && /check constraint|23514/i.test(m))) {
     throw new Error(`${AVISO_033}. Detalle: ${e?.message || e}`);
   }
   throw e;
@@ -1706,7 +1712,7 @@ export function crearApi(backend) {
     async guardarListaDifusion({ id = null, nombre, miembros = [] }) {
       await api.exigir033();
       const n = String(nombre || '').replace(/\s+/g, ' ').trim();
-      if (!n) throw new Error('Ponle un nombre a la lista');
+      if (!n || !textoVisible(n)) throw new Error('Ponle un nombre a la lista');
       if (n.length > 40) throw new Error('El nombre, hasta 40 letras');
       const ids = [...new Set(miembros)];
       if (ids.length > 256) throw new Error('Una lista, como mucho 256 atletas');
@@ -1742,35 +1748,76 @@ export function crearApi(backend) {
       return fila;
     },
     // Reenviar (el coach) un mensaje suyo a varios atletas. Con archivo, cada uno recibe su copia. Todo en una función de
-    // la base (chat_reenviar: comprueba, limita y lo crea todo de una vez); si falla, las copias se retiran.
+    // la base (chat_reenviar: comprueba, limita y lo crea todo de una vez).
+    // envio: lo de este «Reenviar» (lo guarda la pantalla y lo vuelve a pasar al reintentar): el cliente_id de cada atleta
+    // (el mismo en cada intento: la base no lo repite) y las copias ya hechas. Si la respuesta se pierde (sin cobertura)
+    // las copias se quedan (puede que ya lleven su mensaje); si la base lo rechaza, se retiran las que no lo llevan.
     // Devuelve { enviados, saltados (de baja), fallidos (no se pudo copiar el archivo) }
-    async reenviar(c, atletaIds) {
+    async reenviar(c, atletaIds, envio = {}) {
       await api.exigir033();
+      envio.clientes ||= {};
+      envio.copias ||= {};
       const { destinos, saltados, demasiados } = planReenvio(atletaIds, await api.atletas());
       if (demasiados) throw new Error('Se reenvía a 50 atletas como mucho');
       if (!destinos.length) throw new Error(saltados ? 'Están de baja: no se les puede reenviar' : 'Elige a quién reenviarlo');
+      for (const id of destinos) envio.clientes[id] ||= nuevoUuid();
+      // Lo que ya entró en un intento anterior (cuya respuesta se perdió) no se vuelve a mandar
+      const yaEstan = await api.yaEnviados(destinos.map((id) => envio.clientes[id]));
+      const faltan = destinos.filter((id) => !yaEstan.has(envio.clientes[id]));
+      if (!faltan.length) return { enviados: destinos.length, saltados, fallidos: 0 };
       const archivo = c.archivo_id ? (await b.select('archivos', { eq: { id: c.archivo_id } }))[0] || null : null;
       if (c.archivo_id && !archivo) throw new Error('Ese archivo ya no está');
       const lista = [];
       let fallidos = 0;
-      for (const atletaId of destinos) {
+      for (const atletaId of faltan) {
         let copia = null;
-        if (archivo) { try { copia = await api.copiarArchivoA(archivo, atletaId); } catch (e) { if (/033/.test(e?.message || '')) throw e; fallidos++; continue; } }
-        lista.push({ atleta: atletaId, archivo: copia?.id || null, cliente: nuevoUuid(), copia });
+        if (archivo) {
+          copia = envio.copias[atletaId] || null;
+          if (!copia) {
+            try { copia = await api.copiarArchivoA(archivo, atletaId); envio.copias[atletaId] = copia; } catch (e) { if (/033/.test(e?.message || '') || esTemporal(e)) throw e; fallidos++; continue; }
+          }
+        }
+        lista.push({ atleta: atletaId, archivo: copia?.id || null, cliente: envio.clientes[atletaId], copia });
       }
       if (!lista.length) throw new Error('No se ha podido copiar el archivo: vuelve a intentarlo');
       try {
         const r = await b.rpc('chat_reenviar', { p_comentario: c.id, p_destinos: lista.map(({ atleta, archivo: a, cliente }) => ({ atleta, archivo: a, cliente })) }).catch(falta033);
-        return { enviados: Array.isArray(r) ? r.length : lista.length, saltados, fallidos };
+        envio.copias = {};
+        return { enviados: (destinos.length - faltan.length) + (Array.isArray(r) ? r.length : lista.length), saltados, fallidos };
       } catch (e) {
-        for (const x of lista) if (x.copia) await api.borrarArchivo(x.copia).catch(() => {});
+        await api.retirarCopias(lista.map((x) => ({ copia: x.copia, cliente: x.cliente, atleta: x.atleta })), e, (x) => { delete envio.copias[x.atleta]; });
         throw e;
+      }
+    },
+    // ¿Cuáles de estos cliente_id (del coach) ya están en la base? (un reintento no repite lo que sí entró)
+    async yaEnviados(clientes = []) {
+      const ids = clientes.filter(Boolean);
+      if (!ids.length) return new Set();
+      const filas = await b.select('comentarios', { in: { cliente_id: ids }, eq: { autor: 'coach' }, cols: 'id,atleta_id,cliente_id' });
+      return new Set(filas.map((x) => x.cliente_id));
+    },
+    // Tras un fallo de reenviar o difundir: sin cobertura (o sin sesión) no se toca nada (la base puede haberlo creado
+    // y borrar la copia vaciaría su mensaje); si la base lo rechazó, se retiran las copias que no lleven ningún mensaje
+    // (lo comprueba antes; si no puede comprobarlo, tampoco las toca).
+    async retirarCopias(items, error, alRetirar = () => {}) {
+      const conCopia = items.filter((x) => x.copia);
+      if (!conCopia.length || esTemporal(error)) return;
+      let usadas;
+      try {
+        const ids = conCopia.map((x) => x.copia.id);
+        usadas = new Set((await b.select('comentarios', { in: { archivo_id: ids }, cols: 'id,archivo_id' })).map((x) => x.archivo_id));
+      } catch { return; }
+      for (const x of conCopia) {
+        if (usadas.has(x.copia.id)) continue;
+        await api.borrarArchivo(x.copia).then(() => alRetirar(x)).catch(() => {});
       }
     },
     // Una difusión (el coach): el mismo mensaje a cada miembro de la lista, en su chat. Con archivo: se sube una vez (a la
     // carpeta del primero) y se copia a la de cada uno; los mensajes los crea la base de una vez (chat_difundir: todos o
     // ninguno, sin repetir con el mismo id, y saltándose a los de baja). Devuelve { enviados, saltados }.
-    async difundir({ listaId, texto = '', archivo = null, enviarEn = null, paginas = null, poster = null, duracion_seg = null }) {
+    // envio: lo de este envío (lo guarda la pantalla para reintentar): su cliente_id (el mismo en cada intento) y lo ya
+    // subido. Si ya entró (la respuesta se perdió), no se repite; sin cobertura, lo subido se queda para el reintento.
+    async difundir({ listaId, texto = '', archivo = null, enviarEn = null, paginas = null, poster = null, duracion_seg = null, envio = {} }) {
       await api.exigir033();
       const t = String(texto || '').trim();
       if (!t && !archivo) throw new Error('Escribe el mensaje');
@@ -1781,23 +1828,37 @@ export function crearApi(backend) {
         if (!Number.isFinite(cuando) || cuando <= Date.now() + 60000) throw new Error('Elige una hora que aún no haya pasado');
         if (cuando > Date.now() + 90 * 864e5) throw new Error('Un mensaje se programa como mucho a 90 días vista');
       }
+      envio.cliente ||= nuevoUuid();
+      envio.subidas ||= {};
       const [miembros, atletas] = await Promise.all([b.select('listas_difusion_miembros', { eq: { lista_id: listaId } }).catch(falta033), api.atletas()]);
       const { destinos, saltados } = planDifusion(miembros, atletas);
       if (!destinos.length) throw new Error(saltados ? 'Todos los de esta lista están de baja' : 'Esta lista no tiene a nadie');
+      // ¿Ya salió en un intento anterior (y se perdió la respuesta)?
+      const ya = await b.select('comentarios', { eq: { cliente_id: envio.cliente, autor: 'coach' }, cols: 'id,atleta_id' });
+      if (ya.length) { envio.subidas = {}; return { enviados: ya.length, saltados }; }
       const subidas = [];
       try {
         if (archivo) {
           const esPdf = archivo.type === 'application/pdf';
           if (esPdf && archivo.size > PDF_MAX_MB * 1024 * 1024) throw new Error(`El PDF pesa más de ${PDF_MAX_MB} MB`);
-          const primera = await api.subirArchivo(destinos[0], archivo, { tipo: esPdf ? 'documento' : 'adjunto', poster: esPdf ? null : poster, duracion_seg: esPdf ? null : duracion_seg, ...(esPdf ? { nombre: archivo.name, paginas } : {}) });
+          let primera = envio.subidas[destinos[0]] || null;
+          if (!primera) {
+            primera = await api.subirArchivo(destinos[0], archivo, { tipo: esPdf ? 'documento' : 'adjunto', poster: esPdf ? null : poster, duracion_seg: esPdf ? null : duracion_seg, ...(esPdf ? { nombre: archivo.name, paginas } : {}) });
+            envio.subidas[destinos[0]] = primera;
+          }
           subidas.push(primera);
-          for (const id of destinos.slice(1)) subidas.push(await api.copiarArchivoA(primera, id));
+          for (const id of destinos.slice(1)) {
+            let x = envio.subidas[id] || null;
+            if (!x) { x = await api.copiarArchivoA(primera, id); envio.subidas[id] = x; }
+            subidas.push(x);
+          }
         }
         const r = await b.rpc('chat_difundir', { p_lista: listaId, p_texto: t, p_enviar_en: enviarEn ? new Date(Date.parse(enviarEn)).toISOString() : null,
-          p_destinos: subidas.length ? subidas.map((a) => ({ atleta: a.atleta_id, archivo: a.id })) : null, p_cliente: nuevoUuid() }).catch(falta033);
+          p_destinos: subidas.length ? subidas.map((a) => ({ atleta: a.atleta_id, archivo: a.id })) : null, p_cliente: envio.cliente }).catch(falta033);
+        envio.subidas = {};
         return { enviados: Number(r?.enviados) || 0, saltados: Number(r?.saltados) || saltados };
       } catch (e) {
-        for (const a of subidas) await api.borrarArchivo(a).catch(() => {});
+        await api.retirarCopias(Object.entries(envio.subidas).map(([atleta, copia]) => ({ atleta, copia })), e, (x) => { delete envio.subidas[x.atleta]; });
         throw e;
       }
     },

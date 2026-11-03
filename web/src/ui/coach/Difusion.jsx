@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, useApp, useCarga, Cargando, Vacio, ErrorCaja } from '../comunes.jsx';
 import { ElegirAtletas } from '../chat/Reenviar.jsx';
 import { HojaProgramar } from '../Programar.jsx';
@@ -98,6 +98,10 @@ function HojaEscribirDifusion({ lista, atletas, alCerrar, alEnviado }) {
   const [enviando, setEnviando] = useState(false);
   const [programar, setProgramar] = useState(false);
   const { destinos, saltados } = planDifusion(lista.miembros, atletas);
+  // Este envío (su id y lo ya subido): al reintentar tras un fallo se reutiliza (no sale dos veces); con otro texto u
+  // otro archivo, es otro envío
+  const envio = useRef({});
+  useEffect(() => { envio.current = {}; }, [texto, adjunto]);
   useEffect(() => () => { if (adjunto?.url) URL.revokeObjectURL(adjunto.url); }, [adjunto]);
   async function elegir(e) {
     const f = e.currentTarget.files?.[0];
@@ -123,7 +127,7 @@ function HojaEscribirDifusion({ lista, atletas, alCerrar, alEnviado }) {
     try {
       let poster = null, duracion_seg = null;
       if (adjunto?.esVideo) { const cap = await capturarPoster(adjunto.archivo).catch(() => null); poster = cap?.poster || null; duracion_seg = cap?.duracion ?? null; }
-      const r = await api.difundir({ listaId: lista.id, texto, archivo: adjunto?.archivo || null, enviarEn, paginas: adjunto?.paginas || null, poster, duracion_seg });
+      const r = await api.difundir({ listaId: lista.id, texto, archivo: adjunto?.archivo || null, enviarEn, paginas: adjunto?.paginas || null, poster, duracion_seg, envio: envio.current });
       aviso([enviarEn ? `Programada para el ${fmtProgramado(enviarEn)} a ${r.enviados}` : `Enviada a ${r.enviados} ${r.enviados === 1 ? 'atleta' : 'atletas'}`, textoSaltados(r.saltados)].filter(Boolean).join('. '));
       alEnviado?.(r);
     } catch (e) { aviso(e.message, 'error'); } finally { setEnviando(false); setProgramar(false); }

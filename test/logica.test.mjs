@@ -2491,6 +2491,27 @@ console.log('\nv0.55: el chat, aún más como WhatsApp');
   check(f?.estado === 'fallo' && /baja/.test(f.error), 'si la base lo rechaza, se queda con «!» (y por qué)');
   recargada.descartar(f.cliente_id);
   check(!recargada.pendientes('a').length, '«Eliminar» lo quita de la bandeja');
+  // (revisión) La app se cierra (o se mata) a media subida: lo que estaba «enviando» vuelve a pendiente al abrirla y sale
+  // (sin repetirse: la base no deja entrar dos con el mismo cliente_id)
+  check(igual(C.retomarSalida([{ cliente_id: 'k1', creado_en: 'b', estado: 'enviando' }, { cliente_id: 'k0', creado_en: 'a', estado: 'fallo' }, { cliente_id: 'k1', creado_en: 'b', estado: 'pendiente' }]).map((x) => [x.cliente_id, x.estado]), [['k0', 'fallo'], ['k1', 'pendiente']]),
+    '(revisión) al abrir: «enviando» vuelve a pendiente (los «!» siguen esperando a que los reintentes), en orden y sin repetir');
+  const memK = new Map(); const almK = { getItem: (k) => memK.get(k) ?? null, setItem: (k, v) => memK.set(k, String(v)), removeItem: (k) => memK.delete(k) };
+  const atascado = C.nuevoPendiente({ perfil: 'u', atletaId: 'a', autor: 'atleta', texto: 'a medias', id: 'k-atascado' });
+  almK.setItem('fbe-salida-v1', JSON.stringify([{ ...atascado, estado: 'enviando', intentos: 1 }]));
+  const enviadosK = [];
+  const salK = crearSalida({ uid: () => 'u', async enviarMensaje(atletaId, { texto, clienteId }) { enviadosK.push(clienteId); return { id: 's', cliente_id: clienteId }; } }, { almacen: almK, reintentoMs: 60000 });
+  check(salK.pendientes('a')[0]?.estado === 'pendiente', '(revisión) tras matar la app a media subida, el mensaje no se queda con ⏱ para siempre');
+  await salK.vaciar();
+  check(igual(enviadosK, ['k-atascado']) && !salK.pendientes('a').length, '(revisión) y sale solo, con su mismo cliente_id');
+  // Lo que ya está en la conversación de la base (llegó, pero la respuesta se perdió) sale de la bandeja: también un «!»
+  almK.setItem('fbe-salida-v1', JSON.stringify([{ ...atascado, cliente_id: 'k-llego', estado: 'fallo', error: 'x' }, { ...atascado, cliente_id: 'k-no', estado: 'fallo', error: 'x' }]));
+  const salK2 = crearSalida({ uid: () => 'u', async enviarMensaje() { throw new Error('no'); } }, { almacen: almK, reintentoMs: 60000 });
+  let avisosK = 0; salK2.oir(() => { avisosK++; });
+  salK2.confirmar([{ id: 'm1', cliente_id: 'k-llego' }, { id: 'm2', cliente_id: null }]);
+  check(igual(salK2.pendientes('a').map((x) => x.cliente_id), ['k-no']) && avisosK === 1 && JSON.parse(memK.get('fbe-salida-v1')).length === 1,
+    '(revisión) con la conversación delante, lo que ya está en la base sale de la bandeja (y del móvil)');
+  salK2.confirmar([{ id: 'm1', cliente_id: 'k-llego' }]);
+  check(avisosK === 1, '(y si no cambia nada, no avisa)');
   recargada.borrarTodo();
   check(memS.getItem('fbe-salida-v1') === null, 'al cerrar sesión no queda nada en el móvil');
   // Reenviar y difundir
@@ -2509,6 +2530,13 @@ console.log('\nv0.55: el chat, aún más como WhatsApp');
     'el nombre de un PDF: sin carpetas (ni «../»), siempre .pdf y, si no queda nada, «documento.pdf»');
   check(C.nombreSeguroPdf('plan\u0000\u0007\u202e fdp.exe.pdf') === 'plan fdp.exe.pdf' && C.nombreSeguroPdf('a..b..pdf') === 'a.b.pdf' && !C.nombreSeguroPdf('a<b>:"|?*.pdf').match(/[<>:"|?*]/)
     && [...C.nombreSeguroPdf('x'.repeat(300))].length === 120 && C.nombreSeguroPdf('  .oculto.pdf') === 'oculto.pdf', 'sin caracteres de control ni invisibles (ni el que da la vuelta al texto), sin «..», hasta 120 letras');
+  check(C.nombreSeguroPdf('informe. .pdf') === 'informe.pdf' && C.nombreSeguroPdf('informe..PDF') === 'informe.pdf' && C.nombreSeguroPdf('. . .pdf') === 'pdf.pdf' && C.nombreSeguroPdf('. . ..pdf.') === 'pdf.pdf' && C.nombreSeguroPdf(`${'x'.repeat(115)}.yy.pdf`).includes('..') === false,
+    '(revisión) sin punto ni espacio antes de «.pdf» (no queda «..», que la base no acepta)');
+  // Lo mismo que pide la base (033): el nombre saneado cumple siempre sus reglas
+  const REGLA_BD = new RegExp('[/\\\\\\u0000-\\u001f\\u007f-\\u009f\\u200b-\\u200f\\u202a-\\u202e\\u2066-\\u2069\\ufeff<>:"|?*]');
+  const raros = ['a\u200b.pdf', '\ufeffb.pdf', 'c\u2066d\u2069.pdf', 'e"f".pdf', 'g\u0085h.pdf', ' . i', 'j\\k/l.pdf', 'm'.repeat(400), '...', 'n. .', 'o\u202e.exe'];
+  check(raros.every((x) => { const nm = C.nombreSeguroPdf(x); return /\.pdf$/i.test(nm) && !REGLA_BD.test(nm) && !nm.includes('..') && !/^[.\s]/.test(nm) && [...nm].length <= 120 && nm.trim().length > 4; }),
+    '(revisión) cualquier nombre, ya saneado, pasa las reglas de la base');
   const bytes = (t) => new TextEncoder().encode(t);
   check(C.esPdf(bytes('%PDF-1.7\n')) && C.esPdf(bytes('\n\n  %PDF-1.4')) && !C.esPdf(bytes('<html>%PDF')) && !C.esPdf(bytes('GIF89a')) && !C.esPdf(new Uint8Array()) && !C.esPdf(bytes(`${'x'.repeat(1100)}%PDF-`)),
     'es un PDF si lleva su firma («%PDF-») al principio (en los primeros 1024 bytes)');

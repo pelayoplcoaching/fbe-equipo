@@ -78,6 +78,8 @@ export function ordenarSalida(lista = []) {
 }
 // El siguiente que toca enviar de esta cuenta (los fallidos esperan a que se reintenten a mano)
 export const siguienteSalida = (lista = [], perfil) => ordenarSalida(lista).find((x) => x.perfil === perfil && x.estado === 'pendiente') || null;
+// Al abrir la app: en orden, sin repetir, y lo que quedó «enviando» (la app se cerró a medias) otra vez pendiente
+export const retomarSalida = (lista = []) => ordenarSalida(lista).map((x) => (x.estado === 'enviando' ? { ...x, estado: 'pendiente' } : x));
 // Los que ya están en la base (por su id) salen de la bandeja
 export function quitarYaEnviados(lista = [], mensajes = []) {
   const ids = new Set(mensajes.map((c) => c.cliente_id).filter(Boolean));
@@ -135,10 +137,11 @@ export function nombreSeguroPdf(nombre) {
   t = t.replace(INVISIBLES, '').replace(/\s+/g, ' ').trim();
   while (t.includes('..')) t = t.replace(/\.\.+/g, '.');
   t = t.replace(/^[.\s]+/, '').replace(/[<>:"|?*]/g, '_');
-  let base = t.replace(/\.pdf$/i, '').trim();
-  if (!base) base = 'documento';
+  // (sin puntos ni espacios al final: «informe..pdf» no vale)
+  let base = t.replace(/\.pdf$/i, '').replace(/[.\s]+$/, '');
   const cps = [...base];
-  if (cps.length > 116) base = cps.slice(0, 116).join('').trimEnd();
+  if (cps.length > 116) base = cps.slice(0, 116).join('').replace(/[.\s]+$/, '');
+  if (!base) base = 'documento';
   return `${base}.pdf`;
 }
 const PDF = [0x25, 0x50, 0x44, 0x46, 0x2d]; // %PDF-

@@ -3,8 +3,8 @@
 --   · Envío al momento sin duplicados (comentarios.cliente_id): cada mensaje lleva un id que pone el móvil; uno
 --     repetido (un reintento sin cobertura) no entra dos veces: único por conversación y autor.
 --   · Entregado (comentarios.entregado_en, ✓✓ gris): lo apunta la base cuando la app de quien lo recibe lo descarga
---     (marcar_entregados(), solo lo dirigido a quien llama). Sin «Mostrar cuándo estoy en línea», solo el día (como
---     «leído»). Leerlo lo da por entregado.
+--     (marcar_entregados(), solo lo dirigido a quien llama). Sin «Mostrar cuándo estoy en línea», no se apunta al
+--     descargar (diría cuándo abre la app): solo al leerlo (y, como «leído», con el día). Leerlo lo da por entregado.
 --   · Documentos PDF en el chat: archivos.tipo 'documento' (application/pdf, hasta 20 MB, ruta generada y su nombre
 --     aparte, saneado; número de páginas si se sabe), con las mismas reglas que las fotos del chat (el atleta no los borra
 --     de Storage ni de archivos si llevan mensajes; eliminar para todos, en 48 horas). Como mucho 10 al día (el atleta).
@@ -13,7 +13,8 @@
 --     se desfija solo.
 --   · Reenviar (comentarios.reenviado, solo con chat_reenviar()): el coach reenvía lo suyo (texto, foto, vídeo o PDF) a
 --     uno o varios atletas. Las fotos, vídeos y PDF se copian antes en la carpeta de cada uno con su fila en archivos
---     (así solo ve su copia). Nadie más reenvía; nadie pone «Reenviado» a mano.
+--     (así solo ve su copia). Nadie más reenvía; nadie pone «Reenviado» a mano. La base apunta quién subió cada archivo
+--     (archivos.subido_por, que no se cambia): el coach no pone en un mensaje suyo, ni reenvía, lo que subió un atleta.
 --   · Listas de difusión (listas_difusion, listas_difusion_miembros): solo el coach. chat_difundir() manda un mensaje a
 --     cada miembro, en su chat privado, de una vez (todos o ninguno), sin repetir y saltándose a los de baja.
 --   · Silenciar una conversación (chat_silencios): cada uno la suya, 8 horas, 1 semana o siempre. Sus notificaciones
@@ -47,24 +48,37 @@ alter table public.comentarios add column if not exists entregado_en timestamptz
 alter table public.comentarios drop constraint if exists comentarios_cliente_unico;
 alter table public.comentarios add constraint comentarios_cliente_unico unique (atleta_id, autor, cliente_id);
 create index if not exists comentarios_por_entregar_idx on public.comentarios (atleta_id, autor) where entregado_en is null;
+-- Lo que ya se había leído antes de la 033 cuenta como entregado (cuando se leyó; nunca antes de escribirse)
+update public.comentarios set entregado_en = greatest(leido_en, creado_en) where leido_en is not null and entregado_en is null;
 
 alter table public.archivos add column if not exists nombre text;
 alter table public.archivos add column if not exists paginas smallint;
+-- Quién lo subió (lo pone la base al registrarlo; no se cambia): el coach no adjunta ni reenvía lo que subió un atleta
+alter table public.archivos add column if not exists subido_por text;
+alter table public.archivos drop constraint if exists archivos_subido_por_valido;
+alter table public.archivos add constraint archivos_subido_por_valido check (subido_por is null or subido_por in ('coach', 'atleta'));
+-- Los del chat de antes de la 033: de quien escribió su mensaje
+update public.archivos a set subido_por = case
+    when exists (select 1 from public.comentarios c where c.archivo_id = a.id and c.autor = 'atleta') then 'atleta'
+    when exists (select 1 from public.comentarios c where c.archivo_id = a.id and c.autor = 'coach') then 'coach' end
+where a.subido_por is null and a.tipo in ('adjunto', 'documento');
 alter table public.archivos drop constraint if exists archivos_tipo_check;
 alter table public.archivos add constraint archivos_tipo_check
   check (tipo in ('video_tecnica', 'foto_progreso', 'adjunto', 'documento')) not valid;
--- El nombre que se enseña (la ruta la genera la app): una línea, sin barras, sin «..» y sin caracteres de control
+-- El nombre que se enseña (la ruta la genera la app): una línea, sin barras, sin «..», sin caracteres de control ni
+-- invisibles (los de dirección del texto tampoco: no se disfraza «fdp.exe» de PDF), sin <>:"|?* (como lo deja la app)
 alter table public.archivos drop constraint if exists archivos_nombre_valido;
 alter table public.archivos add constraint archivos_nombre_valido
-  check (nombre is null or (char_length(nombre) between 1 and 120 and nombre !~ '[/\\[:cntrl:]]' and position('..' in nombre) = 0
-                            and public.texto_visible(nombre)));
+  check (nombre is null or (char_length(nombre) between 1 and 120
+                            and nombre !~ '[/\\[:cntrl:]\u0080-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff<>:"|?*]'
+                            and position('..' in nombre) = 0 and nombre !~ '^[.[:space:]]' and public.texto_visible(nombre)));
 alter table public.archivos drop constraint if exists archivos_paginas_validas;
 alter table public.archivos add constraint archivos_paginas_validas check (paginas is null or paginas between 1 and 5000);
 -- Un documento: un PDF de hasta 20 MB, con su nombre y una ruta .pdf
 alter table public.archivos drop constraint if exists archivos_documento_valido;
 alter table public.archivos add constraint archivos_documento_valido
   check (tipo <> 'documento' or (coalesce(mime = 'application/pdf', false) and coalesce(bytes between 1 and 20971520, false) and ruta ~ '\.pdf$'
-                                  and nombre is not null and poster_ruta is null));
+                                  and coalesce(nombre ~* '\.pdf$', false) and poster_ruta is null));
 
 -- Storage acepta también PDF (lo demás, como estaba)
 update storage.buckets set allowed_mime_types = allowed_mime_types || array['application/pdf']
@@ -143,6 +157,12 @@ begin
       raise exception 'No se puede comentar aquí';
     end if;
     new.adjunto := new.archivo_id is not null and coalesce((select a.tipo in ('adjunto', 'documento') from public.archivos a where a.id = new.archivo_id), false);
+    -- Una foto, un vídeo o un documento del chat va en un mensaje de quien lo subió (el coach no pone en un mensaje
+    -- suyo, ni reenvía después, lo que subió un atleta; ni al revés)
+    if v_autor is not null and new.adjunto
+       and (select a.subido_por from public.archivos a where a.id = new.archivo_id) is distinct from v_autor then
+      raise exception 'Ese archivo no lo has subido tú' using errcode = '42501';
+    end if;
     new.reenviado := coalesce(new.reenviado, false);
     new.leido_en := null;
     new.entregado_en := null;
@@ -234,7 +254,7 @@ begin
       end if;
       new.leido_en := coalesce(old.leido_en, case when public.presencia_mia_visible() then now()
                                                   else date_trunc('day', now() at time zone 'Europe/Madrid') at time zone 'Europe/Madrid' end);
-      new.entregado_en := coalesce(old.entregado_en, new.leido_en);
+      new.entregado_en := coalesce(old.entregado_en, greatest(new.leido_en, old.creado_en));
     end if;
   end if;
   return new;
@@ -244,18 +264,17 @@ end $$;
 -- 4. Entregado: lo que va dirigido a quien llama y su app ya ha descargado
 -- ---------------------------------------------------------------------
 -- El coach: lo escrito por los atletas; un atleta: lo que le escribe el coach en su conversación (ya salido). Devuelve
--- cuántos ha marcado. La hora, la de la base (sin «Mostrar cuándo estoy en línea», solo el día).
+-- cuántos ha marcado. La hora, la de la base. Sin «Mostrar cuándo estoy en línea», nada: el ✓✓ gris diría (también por
+-- Realtime, al momento) cuándo abre la app; esos mensajes cuentan como entregados al leerlos.
 create or replace function public.marcar_entregados() returns integer
 language plpgsql security definer set search_path = '' as $$
 declare
   v_coach boolean := public.es_coach();
   v_atleta uuid := public.mi_atleta_id();
-  v_cuando timestamptz := case when public.presencia_mia_visible() then now()
-                               else date_trunc('day', now() at time zone 'Europe/Madrid') at time zone 'Europe/Madrid' end;
   n integer;
 begin
-  if auth.uid() is null or not (v_coach or v_atleta is not null) then return 0; end if;
-  update public.comentarios k set entregado_en = v_cuando
+  if auth.uid() is null or not (v_coach or v_atleta is not null) or not public.presencia_mia_visible() then return 0; end if;
+  update public.comentarios k set entregado_en = now()
   where k.entregado_en is null and k.eliminado_en is null
     and ((v_coach and k.autor = 'atleta')
          or (not v_coach and k.autor = 'coach' and k.atleta_id = v_atleta and (k.enviar_en is null or k.enviar_en <= now())));
@@ -270,6 +289,9 @@ end $$;
 create or replace function public.archivo_proteger() returns trigger
 language plpgsql set search_path = public as $$
 begin
+  if current_user in ('authenticated', 'anon') then
+    new.subido_por := case when public.es_coach() then 'coach' else 'atleta' end;
+  end if;
   if current_user in ('authenticated', 'anon') and not public.es_coach() then
     new.revisado_en := null;
     new.comentario_coach := null;
@@ -286,10 +308,14 @@ begin
   return new;
 end $$;
 
--- (014) De un archivo, el atleta solo cambia el pie, el ejercicio y si está destacado (ni el nombre de un documento)
+-- (014) De un archivo, el atleta solo cambia el pie, el ejercicio y si está destacado (ni el nombre de un documento).
+-- Quién lo subió no lo cambia nadie (tampoco el coach).
 create or replace function public.archivo_proteger_cambios() returns trigger
 language plpgsql set search_path = public as $$
 begin
+  if current_user in ('authenticated', 'anon') and new.subido_por is distinct from old.subido_por then
+    raise exception 'No se cambia quién subió un archivo' using errcode = '42501';
+  end if;
   if current_user in ('authenticated', 'anon') and not public.es_coach() then
     if (new.id, new.atleta_id, new.tipo, new.ruta, new.sesion_ejercicio_id, new.fecha, new.comentario_coach,
         new.creado_en, new.mime, new.bytes, new.revisado_en, new.duracion_seg, new.pose, new.nombre, new.paginas)
@@ -455,6 +481,8 @@ create index if not exists chat_silencios_atleta_idx on public.chat_silencios (a
 
 -- A su nombre; de su conversación (el coach, la de cualquier atleta; un atleta, la suya); hasta 8 días (o siempre).
 -- Al silenciar, las notificaciones pendientes de esa conversación que saldrían mientras dura se quitan.
+-- Cuenta una vez en el cupo: un «insert … on conflict do update» pasa por aquí dos veces (antes de insertar y, al
+-- chocar, antes de actualizar); lo apunta la primera (en la transacción) y la segunda no vuelve a gastar.
 create or replace function public.chat_silencio_preparar() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
@@ -466,7 +494,12 @@ begin
     if new.usuario_id is null or not (public.es_coach() or (public.mi_atleta_id() is not null and new.atleta_id = public.mi_atleta_id())) then
       raise exception 'Solo puedes silenciar tus conversaciones' using errcode = '42501';
     end if;
-    perform fbe_privado.chat_gastar_cupo('silenciar');
+    if tg_op = 'UPDATE' and current_setting('fbe.silencio_cobrado', true) = new.atleta_id::text then
+      perform set_config('fbe.silencio_cobrado', '', true);
+    else
+      perform fbe_privado.chat_gastar_cupo('silenciar');
+      perform set_config('fbe.silencio_cobrado', case when tg_op = 'INSERT' then new.atleta_id::text else '' end, true);
+    end if;
   end if;
   if new.hasta is not null and coalesce(nullif(current_setting('role', true), ''), 'none') in ('authenticated', 'anon')
      and (new.hasta <= now() or new.hasta > now() + interval '8 days') then
@@ -484,6 +517,7 @@ language plpgsql security definer set search_path = '' as $$
 begin
   delete from public.notificaciones n
   where n.usuario_id = new.usuario_id and n.estado = 'pendiente' and n.tipo in ('respuesta', 'mensaje')
+    and (n.url = '#mensajes' or n.url like '#mensajes/%')
     and (new.hasta is null or n.enviar_desde < new.hasta)
     and (n.clave like 'mensaje:' || new.atleta_id::text || ':%'
          or (n.clave like 'comentario:%' and exists (select 1 from public.comentarios c where c.id::text = substr(n.clave, 12) and c.atleta_id = new.atleta_id)));
@@ -493,13 +527,16 @@ drop trigger if exists chat_silencios_zz_quitar on public.chat_silencios;
 create trigger chat_silencios_zz_quitar after insert or update on public.chat_silencios
   for each row execute function fbe_privado.al_silenciar();
 
--- Las notificaciones de los mensajes: la del coach lleva a esa conversación (#mensajes/<atleta>), y la de una
--- conversación silenciada (mientras sale) no se crea. Sin texto del mensaje, como siempre.
+-- Las notificaciones de los mensajes del chat: la del coach lleva a esa conversación (#mensajes/<atleta>), y la de una
+-- conversación silenciada (mientras sale) no se crea. Solo las del chat (las que llevan a #mensajes): un comentario
+-- en una sesión, un check-in o un vídeo sigue avisando. Sin texto del mensaje, como siempre.
+-- (Al quitar el silencio no se rehacen las de los programados del coach que se quitaron al silenciar: esos mensajes
+-- salen igual, sin aviso.)
 create or replace function fbe_privado.notificacion_chat() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare v_atleta uuid;
 begin
-  if new.tipo not in ('respuesta', 'mensaje') then return new; end if;
+  if new.tipo not in ('respuesta', 'mensaje') or not (new.url = '#mensajes' or new.url like '#mensajes/%') then return new; end if;
   if new.clave ~ '^comentario:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
     select c.atleta_id into v_atleta from public.comentarios c where c.id = substr(new.clave, 12)::uuid;
   elsif new.clave ~ '^mensaje:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:' then
@@ -586,7 +623,7 @@ create trigger listas_difusion_miembros_aa_preparar before insert on public.list
 create or replace function fbe_privado.chat_copia_valida(p_archivo uuid, p_atleta uuid, p_tipo text, p_mime text) returns boolean
 language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.archivos a
-                 where a.id = p_archivo and a.atleta_id = p_atleta and a.tipo in ('adjunto', 'documento')
+                 where a.id = p_archivo and a.atleta_id = p_atleta and a.tipo in ('adjunto', 'documento') and a.subido_por = 'coach'
                    and a.tipo = coalesce(p_tipo, a.tipo) and a.mime is not distinct from coalesce(p_mime, a.mime)
                    and a.creado_en > now() - interval '1 hour'
                    and not exists (select 1 from public.comentarios c where c.archivo_id = a.id))
@@ -616,7 +653,14 @@ begin
      or c.sesion_id is not null or c.checkin_id is not null or (c.archivo_id is not null and not c.adjunto) or c.dibujo is not null then
     raise exception 'Solo se reenvían tus mensajes del chat que ya han salido' using errcode = '42501';
   end if;
-  if c.archivo_id is not null then select * into a from public.archivos x where x.id = c.archivo_id; end if;
+  if c.archivo_id is not null then
+    select * into a from public.archivos x where x.id = c.archivo_id;
+    -- Solo lo que subió el coach: nunca la foto o el PDF de un atleta (con su salud) al chat de otro
+    if a.id is null or a.subido_por is distinct from 'coach'
+       or exists (select 1 from public.comentarios k where k.archivo_id = a.id and k.autor = 'atleta') then
+      raise exception 'Solo se reenvían las fotos, vídeos y documentos que has enviado tú' using errcode = '42501';
+    end if;
+  end if;
   if jsonb_typeof(p_destinos) <> 'array' then
     raise exception 'Elige a quién reenviarlo' using errcode = '22023';
   end if;

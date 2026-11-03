@@ -134,6 +134,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     return () => { quitar(); window.removeEventListener('fbe-salida-enviado', enviado); };
   }, [salida, atletaId]);
   useEffect(() => {
+    salida?.confirmar(mensajes);
     if (!recien.length) return;
     const ids = new Set(mensajes.map((c) => c.cliente_id).filter(Boolean));
     if (recien.some((x) => ids.has(x.cliente_id))) setRecien((r) => r.filter((x) => !ids.has(x.cliente_id)));

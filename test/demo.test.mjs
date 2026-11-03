@@ -935,7 +935,9 @@ console.log('\nLo que encontró la revisión de seguridad de la 032, también en
   const [adj] = await b6.select('archivos', { eq: { id: foto.archivo_id } });
   check(!!(await a6.urlArchivo(adj.ruta)), 'Ana ve su foto del chat');
   await coach();
-  const resp = await a6.comentar({ atletaId: ana.id, archivoId: adj.id, texto: 'Hielo hoy', autor: 'coach' });
+  // (v0.55) la respuesta va al chat citando la foto (la demo, como la 033, no deja «pegarla» a la foto de Ana)
+  check(await lanza(() => a6.comentar({ atletaId: ana.id, archivoId: adj.id, texto: 'Hielo hoy', autor: 'coach' })), '(033) el coach no pone en un mensaje suyo la foto que subió Ana');
+  const resp = await a6.enviarMensaje(ana.id, { texto: 'Hielo hoy', autor: 'coach', respondeA: foto.id });
   await comoAna();
   await b6.delete('archivos', { eq: { id: adj.id } });
   check((await b6.select('archivos', { eq: { id: adj.id } })).length === 1 && (await b6.select('comentarios', { eq: { id: resp.id } })).length === 1,
@@ -1070,6 +1072,34 @@ console.log('\nEl chat, aún más como WhatsApp, en la demo (v0.55): las mismas 
   await coach();
   check(await lanza(() => a7.reenviar(suyo, [ruben.id])), 'el coach no reenvía lo de un atleta');
   check(await lanza(() => b7.insert('listas_difusion', [{ nombre: 'compiten' }])), 'sin repetir el nombre de una lista');
+  // (revisión de la 033) Lo que sube un atleta no lo pone el coach en un mensaje suyo, ni lo reenvía; quién lo subió no se cambia
+  await comoAna();
+  const fAna = await a7.enviarMensaje(ana.id, { texto: 'Mi analítica', archivo: new Blob(['jpg'], { type: 'image/jpeg' }), autor: 'atleta' });
+  const [archF] = await b7.select('archivos', { eq: { id: fAna.archivo_id } });
+  check(archF.subido_por === 'atleta' && await lanza(() => b7.update('archivos', { subido_por: 'coach' }, { eq: { id: archF.id } })), '(revisión) la foto de Ana queda como suya, y no se cambia');
+  await coach();
+  check(await lanza(() => b7.insert('comentarios', [{ atleta_id: ana.id, archivo_id: archF.id, texto: 'Mira' }])) && await lanza(() => b7.update('archivos', { subido_por: 'coach' }, { eq: { id: archF.id } })),
+    '(revisión) el coach no la pone en un mensaje suyo (ni se la apunta)');
+  const fC = await a7.enviarMensaje(ana.id, { texto: 'Así', archivo: new Blob(['jpg'], { type: 'image/jpeg' }), autor: 'coach' });
+  await comoRuben();
+  const deRuben = (await b7.insert('archivos', [{ atleta_id: ruben.id, tipo: 'adjunto', ruta: `${ruben.id}/adjunto-propio.jpg`, mime: 'image/jpeg', bytes: 3 }]))[0];
+  await coach();
+  check(await lanza(() => b7.rpc('chat_reenviar', { p_comentario: fC.id, p_destinos: [{ atleta: ruben.id, archivo: deRuben.id }] })), '(revisión) la copia para reenviar, del coach (no una que subió Rubén)');
+  // (revisión) Sin «Mostrar cuándo estoy en línea», abrir la app no marca entregado (diría cuándo la abre); leerlo, sí (con el día)
+  const sinEnLinea = await a7.enviarMensaje(ana.id, { texto: 'Sin en línea', autor: 'coach' });
+  await comoAna();
+  await a7.marcarPresencia(false);
+  check(await b7.rpc('marcar_entregados', {}) === 0 && !(await b7.select('comentarios', { eq: { id: sinEnLinea.id } }))[0].entregado_en, '(revisión) sin «en línea», abrir la app no marca entregado');
+  await a7.marcarLeidos([sinEnLinea.id]);
+  const [leidoSin] = await b7.select('comentarios', { eq: { id: sinEnLinea.id } });
+  check(!!leidoSin.entregado_en && Date.parse(leidoSin.entregado_en) >= Date.parse(leidoSin.creado_en), '(revisión) al leerlo, entregado (nunca antes de escribirse)');
+  await a7.marcarPresencia(true);
+  // (revisión) El nombre de un documento, como la base: .pdf, sin invisibles ni marcas de dirección ni comillas
+  check(await lanza(() => b7.insert('archivos', [{ atleta_id: ana.id, tipo: 'documento', ruta: `${ana.id}/documento-r1.pdf`, mime: 'application/pdf', bytes: 10, nombre: 'informe\u202Efdp.exe' }]))
+    && await lanza(() => b7.insert('archivos', [{ atleta_id: ana.id, tipo: 'documento', ruta: `${ana.id}/documento-r2.pdf`, mime: 'application/pdf', bytes: 10, nombre: 'plan' }]))
+    && await lanza(() => b7.insert('archivos', [{ atleta_id: ana.id, tipo: 'documento', ruta: `${ana.id}/documento-r3.pdf`, mime: 'application/pdf', bytes: 10, nombre: 'a\u200bb.pdf' }]))
+    && await lanza(() => b7.insert('archivos', [{ atleta_id: ana.id, tipo: 'documento', ruta: `${ana.id}/documento-r4.pdf`, mime: 'application/pdf', bytes: 10, nombre: 'a"b".pdf' }])),
+    '(revisión) el nombre de un PDF: acaba en .pdf y sin invisibles, marcas de dirección ni comillas');
   // Sin conexión, el mensaje no sale (la bandeja de salida lo guarda)
   const antes = globalThis.navigator;
   Object.defineProperty(globalThis, 'navigator', { value: { onLine: false }, configurable: true });

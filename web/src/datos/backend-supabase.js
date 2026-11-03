@@ -393,10 +393,11 @@ export function crearBackendSupabase({ url, anonKey }) {
         return data.signedUrl;
       },
       // v0.55: copiar (reenviar y difundir, el coach): Storage comprueba que quien copia ve el original y puede subir la copia
-      // (la del coach, con su fila ya registrada en archivos: así ese atleta la ve)
+      // (la del coach, con su fila ya registrada en archivos: así ese atleta la ve). La ruta de la copia es nueva cada vez:
+      // si ya existe algo ahí (409), no es esta copia, así que es un error (no se da por buena).
       async copiar(desde, hasta, bucket = 'archivos') {
         const { error } = await sb.storage.from(bucket).copy(desde, hasta);
-        if (error && !(String(error.statusCode) === '409' || /already exists|duplicate/i.test(error.message || ''))) throw traducir(error);
+        if (error) throw traducir(error);
       },
       // Devuelve las rutas que de verdad se han borrado (las que no se pueden ver o no existen no salen)
       async borrar(rutas, bucket = 'archivos') {
