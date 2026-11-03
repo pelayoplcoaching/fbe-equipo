@@ -61,19 +61,38 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { cuerpo: e.data ? e.data.text() : '' }; }
-  const destino = typeof d.url === 'string' && /^#[a-z]+$/.test(d.url) ? d.url : '';
+  // (v0.55) «#mensajes/<atleta>»: la conversación de un mensaje (la del coach); el resto, una pestaña
+  const destino = typeof d.url === 'string' && /^#[a-z]+(\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/.test(d.url) ? d.url : '';
   const url = new URL('./' + destino, self.registration.scope).href;
   e.waitUntil((async () => {
     const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const v of ventanas) v.postMessage({ tipo: 'notificacion', url });
     // v0.48: una marca en el icono de la app (donde se puede); al abrirla, la app pone el número de verdad
     try { if (self.navigator && 'setAppBadge' in self.navigator) await self.navigator.setAppBadge().catch(() => {}); } catch { /* */ }
-    const tag = d.etiqueta || d.id || undefined;
-    await self.registration.showNotification(d.titulo || 'FBE Equipo', {
-      body: d.cuerpo || '', tag, renotify: !!(tag && d.repetir), icon: 'icono-192.png', badge: 'insignia-96.png', lang: 'es', data: { url },
+    const abiertas = typeof self.registration.getNotifications === 'function' ? await self.registration.getNotifications().catch(() => []) : [];
+    const aviso = agruparChat(d, destino, abiertas);
+    await self.registration.showNotification(aviso.titulo, {
+      body: aviso.cuerpo, tag: aviso.tag, renotify: aviso.renotify, icon: 'icono-192.png', badge: 'insignia-96.png', lang: 'es', data: { url, n: aviso.n },
     });
   })());
 });
+
+// v0.55: los mensajes de una misma conversación se juntan en una sola notificación («3 mensajes nuevos de Ana»), con su
+// etiqueta por conversación (#mensajes, la del atleta con su coach; #mensajes/<atleta>, la del coach con ese atleta).
+// Sin el texto de los mensajes, como siempre (eso no sale nunca del servidor). El resto, como antes: su etiqueta.
+function agruparChat(d, destino, abiertas) {
+  const titulo = d.titulo || 'FBE Equipo';
+  if (!/^#mensajes/.test(destino) || !['respuesta', 'mensaje'].includes(d.tipo || (/te ha (escrito|respondido)$/.test(titulo) ? 'mensaje' : ''))) {
+    const tag = d.etiqueta || d.id || undefined;
+    return { titulo, cuerpo: d.cuerpo || '', tag, renotify: !!(tag && d.repetir), n: 1 };
+  }
+  const tag = `chat:${destino}`;
+  const previa = abiertas.find((x) => x.tag === tag);
+  const n = Math.min(99, (Number(previa?.data?.n) || (previa ? 1 : 0)) + 1);
+  const quien = (/^(.{1,30}) te ha (escrito|respondido)$/.exec(titulo) || [])[1] || '';
+  const cuerpo = n === 1 ? (d.cuerpo || 'Mensaje nuevo') : `${n} mensajes nuevos${quien ? ` de ${quien}` : ''}`;
+  return { titulo, cuerpo, tag, renotify: true, n };
+}
 
 // Al tocarla: si la app ya está abierta, se trae delante y va a esa pestaña; si no, se abre ahí
 self.addEventListener('notificationclick', (e) => {

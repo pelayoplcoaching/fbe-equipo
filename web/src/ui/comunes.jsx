@@ -101,6 +101,14 @@ export const P = {
   paleta: 'M12 3.5a8.5 8.5 0 1 0 0 17c1.1 0 1.6-.7 1.6-1.5 0-1.2-1.1-1.5-1.1-2.6 0-.9.7-1.4 1.6-1.4h2.4A4.5 4.5 0 0 0 21 10.5c0-3.9-4-7-9-7zM7.5 12h.01M9.5 8h.01M14.5 8h.01',
   vibrar: 'M9 4h6a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM4.5 9v6M19.5 9v6M2 11v2M22 11v2',
   privacidad: 'M12 3l7 2.8v5.4c0 4.6-3 8.3-7 9.8-4-1.5-7-5.2-7-9.8V5.8zM12 10.5a1.8 1.8 0 1 0 0-.1M12 12.5v3',
+  // v0.55: el chat (emojis, adjuntar, documento, reenviar, silenciar, el teclado y seleccionar)
+  cara: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 14.5s1.3 1.8 3.5 1.8 3.5-1.8 3.5-1.8M9 9.5h.01M15 9.5h.01',
+  clip: 'M21.4 11.1l-8.5 8.5a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8',
+  documento: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6',
+  reenviar: 'M15 5l6 6-6 6M21 11H9a6 6 0 0 0-6 6v2',
+  silencio: 'M13.7 21a2 2 0 0 1-3.4 0M18.6 13A7.6 7.6 0 0 1 18 9a6 6 0 0 0-9.3-5M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14M3 3l18 18',
+  teclado: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 9h.01M11 9h.01M15 9h.01M7 13h.01M17 13h.01M11 13h2M8 16h8',
+  seleccionar: 'M9 11l3 3 8-8M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9',
 };
 
 // Anillo de la semana: un segmento por sesión programada; los hechos, en morado

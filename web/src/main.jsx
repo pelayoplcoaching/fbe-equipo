@@ -58,7 +58,8 @@ async function arrancar() {
       const d = e.data || {};
       if (d.tipo === 'abrir' && typeof d.url === 'string') {
         const h = new URL(d.url, location.href).hash;
-        if (/^#[a-z]+$/.test(h) && h !== location.hash) location.hash = h;
+        // (v0.55) también «#mensajes/<atleta>»: la conversación de esa notificación
+        if (/^#[a-z]+(\/[0-9a-f-]{36})?$/.test(h) && h !== location.hash) location.hash = h;
         else window.dispatchEvent(new Event('fbe-notificacion'));
       }
       if (d.tipo === 'notificacion') window.dispatchEvent(new Event('fbe-notificacion'));

@@ -14,7 +14,7 @@ function guardar(clave, ops) {
 }
 
 // Errores que no son culpa de la operación: sin conexión, o la sesión ha caducado o no hay sesión
-const esTemporal = (e) => !!e?.sinConexion || e?.status === 401 || /jwt|not authenticated|refresh token|sesi\u00f3n ha caducado/i.test(e?.message || '');
+export const esTemporal = (e) => !!e?.sinConexion || e?.status === 401 || /jwt|not authenticated|refresh token|sesi\u00f3n ha caducado/i.test(e?.message || '');
 
 export function crearCola(api, { clave = 'fbe-cola-v1', claveRechazos = 'fbe-cola-rechazadas-v1' } = {}) {
   let ops = leer(clave);

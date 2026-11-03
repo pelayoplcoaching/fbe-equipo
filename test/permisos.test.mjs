@@ -1167,7 +1167,12 @@ check(cAdj.adjunto === true && cVid.adjunto === false, 'el comentario de un adju
 check(await falla(`update comentarios set adjunto = true where id = $1`, [cVid.id]), 'y la marca no se cambia a mano');
 // El coach contesta a los dos: la respuesta al adjunto llega como mensaje del chat; la del vídeo, como respuesta en Hoy
 await como(pelayo, 'aal2');
-const [rAdj] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Con eso te apaño la sesión') returning *`, [adj.id]);
+// (033) Ya no «contesta» poniendo en un mensaje suyo la foto que subió Ana (saldría en el chat como si la mandara él, y
+// se podría reenviar): su foto del chat va en un mensaje suyo con un archivo suyo
+check(await falla(`insert into comentarios (archivo_id, texto) values ($1, 'Con eso te apaño la sesión')`, [adj.id]), '(033) el coach no pone en un mensaje suyo la foto del chat que subió Ana');
+const [adjC] = await q(`insert into archivos (atleta_id, tipo, ruta, mime, bytes) values ($1, 'adjunto', $2, 'image/jpeg', 90000) returning *`, [aAna.id, `${aAna.id}/adjunto-coach-1.jpg`]);
+check(adjC.subido_por === 'coach' && adj.subido_por === 'atleta', '(033) la base apunta quién subió cada archivo');
+const [rAdj] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Con eso te apaño la sesión') returning *`, [adjC.id]);
 const [rVid] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Buena profundidad') returning *`, [vidP.id]);
 check(rAdj.adjunto === true && rVid.adjunto === false, 'la marca del adjunto también la lleva la respuesta del coach');
 const avisoAdj = await notis(`clave = $1`, ['comentario:' + rAdj.id]);
@@ -1184,7 +1189,7 @@ check((await q(`update archivos set revisado_en = now(), destacado = true where 
 await como(ana);
 check((await q(`delete from archivos where id = $1 returning id`, [adj.id])).length === 0, 'la atleta no borra un adjunto del chat que lleva mensajes');
 await como(pelayo, 'aal2');
-await q(`delete from archivos where id = $1`, [adj.id]);
+await q(`delete from archivos where id in ($1, $2)`, [adj.id, adjC.id]);
 await como(ana);
 check((await q(`select eliminado_en from comentarios where id in ($1, $2)`, [cAdj.id, rAdj.id])).every((x) => x.eliminado_en) && (await q(`select archivo_id from comentarios where id = $1`, [cVid.id])).length === 1,
   'al borrar el coach un adjunto, sus mensajes quedan como eliminados (los dos); los comentarios de un vídeo del diario se quedan');
@@ -2890,7 +2895,7 @@ console.log('\nEl chat como WhatsApp: responder, editar, eliminar, reacciones, d
   await como(ana);
   check(await falla(`update comentarios set texto = 'Tarde' where id = $1`, [mA.id]), 'pasados 15 minutos, ya no se edita');
   await su();
-  const [adjA] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'adjunto', $1::text || '/chat-foto.jpg', 'image/jpeg') returning *`, [aAna.id]);
+  const [adjA] = await q(`insert into archivos (atleta_id, tipo, ruta, mime, subido_por) values ($1::uuid, 'adjunto', $1::text || '/chat-foto.jpg', 'image/jpeg', 'atleta') returning *`, [aAna.id]);
   const [vidA] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'video_tecnica', $1::text || '/tecnica-032.mp4', 'video/mp4') returning *`, [aAna.id]);
   await como(ana);
   const [mF] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'La rodilla') returning *`, [adjA.id]);
@@ -3269,6 +3274,389 @@ console.log('\nLo que encontró la revisión de seguridad de la 032');
     '(dejar «editado» como está no cambia nada: no hay forma de marcar «Editado» sin editar)');
   await su();
   await q(`delete from comentarios where id = any($1::uuid[])`, [[mC.id, mA.id, mC2.id, mE.id]]); await q(`delete from chat_cupos`); await q(`delete from presencia`);
+}
+
+console.log('\nEl chat, aún más como WhatsApp: sin duplicados, entregado, PDF, fijar, silenciar, reenviar y difundir (migración 033)');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  const ver = async (ruta) => (await q(`select name from storage.objects where bucket_id = 'archivos' and name = $1`, [ruta])).length === 1;
+  const uuid = () => crypto.randomUUID();
+  await su();
+  await q(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await q(`delete from chat_cupos`); await q(`delete from presencia`);
+  await q(`insert into storage.buckets (id, name) values ('archivos', 'archivos') on conflict do nothing`);
+  const cols = (await q(`select table_name || '.' || column_name c from information_schema.columns where table_schema = 'public' and ((table_name = 'comentarios' and column_name in ('cliente_id', 'reenviado', 'entregado_en')) or (table_name = 'archivos' and column_name in ('nombre', 'paginas'))) order by 1`)).map((r) => r.c);
+  check(cols.join() === 'archivos.nombre,archivos.paginas,comentarios.cliente_id,comentarios.entregado_en,comentarios.reenviado', 'comentarios trae cliente_id, reenviado y entregado_en; archivos, nombre y paginas');
+  check((await q(`select relname from pg_class where relname in ('conversacion_fijado', 'chat_silencios', 'listas_difusion', 'listas_difusion_miembros') and relrowsecurity and relnamespace = 'public'::regnamespace`)).length === 4,
+    'las cuatro tablas nuevas nacen con permisos por fila');
+  const malos = await q(`select p.oid::regprocedure::text f from pg_proc p where p.prosecdef and p.pronamespace in ('public'::regnamespace, 'fbe_privado'::regnamespace)
+    and p.proname in ('marcar_entregados', 'chat_reenviar', 'chat_difundir', 'nombre_coach', 'conversacion_fijado_preparar', 'chat_silencio_preparar', 'notificacion_chat', 'al_silenciar', 'al_eliminar_desfijar', 'chat_copia_valida', 'chat_cupo_coach', 'chat_gastar_cupo', 'comentario_eliminar', 'archivo_borrable', 'archivo_adjunto_borrar_mensaje')
+    and coalesce(array_to_string(p.proconfig, ','), '') <> 'search_path=""'`);
+  check(!malos.length, `las funciones con permisos de definidor, con search_path vacío${malos.length ? ` (no: ${malos.map((x) => x.f).join(', ')})` : ''}`);
+  check((await q(`select 1 from storage.buckets where id = 'archivos' and 'application/pdf' = any(allowed_mime_types) and 'image/jpeg' = any(allowed_mime_types) and 'video/mp4' = any(allowed_mime_types)`)).length === 1,
+    'Storage acepta PDF (y lo de antes sigue)');
+  await anon();
+  check(await falla(`select * from conversacion_fijado`) && await falla(`select * from chat_silencios`) && await falla(`select * from listas_difusion`) && await falla(`select marcar_entregados()`) && await falla(`select chat_reenviar(gen_random_uuid(), '[]')`),
+    'sin sesión, nada de lo nuevo');
+
+  console.log('  · Sin duplicados (cliente_id) y «Reenviado» solo con su función');
+  await como(ana);
+  const cid = uuid();
+  const [m1] = await q(`insert into comentarios (atleta_id, texto, cliente_id, reenviado, entregado_en) values ($1, 'Sin cobertura', $2, true, now()) returning *`, [aAna.id, cid]);
+  check(m1.cliente_id === cid && m1.reenviado === false && m1.entregado_en === null, 'Ana envía con el id de su móvil; nadie pone «Reenviado» ni «entregado» a mano (la base los limpia)');
+  check(await falla(`insert into comentarios (atleta_id, texto, cliente_id) values ($1, 'Sin cobertura', $2)`, [aAna.id, cid]), 'el mismo mensaje otra vez (un reintento) no entra dos veces');
+  await como(pelayo, 'aal2');
+  const [mc] = await q(`insert into comentarios (atleta_id, texto, cliente_id, reenviado) values ($1, 'Mismo id, otro autor', $2, true) returning *`, [aAna.id, cid]);
+  check(!!mc.id && mc.reenviado === false, 'el id es por autor (el coach no choca con el de Ana) y el coach tampoco pone «Reenviado» a mano');
+  check(await falla(`update comentarios set reenviado = true where id = $1`, [mc.id]) && await falla(`update comentarios set entregado_en = now() where id = $1`, [m1.id]), '«Reenviado» y «entregado» no se cambian después');
+  await como(ana);
+  check(await falla(`update comentarios set cliente_id = gen_random_uuid() where id = $1`, [mc.id]) && await falla(`update comentarios set cliente_id = null where id = $1`, [m1.id]),
+    'ni el id del móvil (ni el de lo del coach, que Ana puede marcar como leído)');
+
+  console.log('  · Entregado (✓✓ gris)');
+  await como(pelayo, 'aal2');
+  const [mP] = await q(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Programado 033', now() + interval '2 days') returning id`, [aAna.id]);
+  const [mL] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Para Luis 033') returning id`, [aLuis.id]);
+  await como(luis);
+  await q(`select marcar_entregados()`);
+  await su();
+  check((await q(`select entregado_en from comentarios where id = $1`, [mc.id]))[0].entregado_en === null && (await q(`select entregado_en from comentarios where id = $1`, [mL.id]))[0].entregado_en !== null,
+    'cada uno marca lo suyo: lo de Luis le llega a Luis; lo de Ana no se toca');
+  await como(ana);
+  const nA = (await q(`select marcar_entregados() n`))[0].n;
+  await su();
+  const [eC] = await q(`select entregado_en from comentarios where id = $1`, [mc.id]);
+  check(nA >= 1 && eC.entregado_en !== null && Math.abs(new Date(eC.entregado_en) - Date.now()) < 60000, 'la app de Ana descarga lo del coach: entregado (la hora, la de la base)');
+  check((await q(`select entregado_en from comentarios where id = $1`, [mP.id]))[0].entregado_en === null && (await q(`select entregado_en from comentarios where id = $1`, [m1.id]))[0].entregado_en === null,
+    'ni lo programado que aún no ha salido ni lo que escribe ella');
+  await como(ana);
+  check(!(await q(`select id from comentarios where id = $1`, [mP.id])).length, '(y lo programado sigue sin verse)');
+  await como(pelayo, 'aal2');
+  await q(`select marcar_entregados()`);
+  await su();
+  check((await q(`select entregado_en from comentarios where id = $1`, [m1.id]))[0].entregado_en !== null, 'el coach: lo de Ana le llega a él');
+  await como(pelayo, 'aal2');
+  const [mc2] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Leer lo da por entregado') returning id`, [aAna.id]);
+  await como(ana);
+  await q(`select presencia_marcar(false)`);
+  const [l2] = await q(`update comentarios set leido_en = now() where id = $1 returning leido_en, entregado_en, creado_en`, [mc2.id]);
+  check(!!l2.entregado_en && new Date(l2.entregado_en).getTime() === Math.max(new Date(l2.leido_en).getTime(), new Date(l2.creado_en).getTime()),
+    'leerlo lo da por entregado (sin «en línea», con el día del «leído», pero nunca antes de escribirse)');
+  await como(pelayo, 'aal2');
+  const [mc3] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Sin en línea') returning id`, [aAna.id]);
+  await como(ana);
+  const [{ marcar_entregados: nSin }] = await q(`select marcar_entregados()`);
+  await su();
+  check(nSin === 0 && (await q(`select entregado_en from comentarios where id = $1`, [mc3.id]))[0].entregado_en === null,
+    'sin «Mostrar cuándo estoy en línea», abrir la app no marca nada como entregado (por Realtime diría a qué hora la abre)');
+  await como(ana);
+  await q(`update comentarios set leido_en = now() where id = $1`, [mc3.id]);
+  await su();
+  const [e3] = await q(`select entregado_en, creado_en, to_char(leido_en at time zone 'Europe/Madrid', 'HH24:MI:SS') h from comentarios where id = $1`, [mc3.id]);
+  check(e3.h === '00:00:00' && new Date(e3.entregado_en).getTime() === new Date(e3.creado_en).getTime(), 'y al leerlo cuenta como entregado sin decir la hora (la del mensaje)');
+  await como(ana); await q(`select presencia_marcar(true)`);
+  await como(intruso);
+  check((await q(`select marcar_entregados() n`))[0].n === 0, 'una cuenta sin atleta no marca nada');
+
+  console.log('  · Documentos PDF');
+  await como(ana);
+  const rDoc = `${aAna.id}/documento-033.pdf`;
+  const pdf = (extra = {}) => ({ atleta_id: aAna.id, tipo: 'documento', ruta: rDoc, mime: 'application/pdf', bytes: 120000, nombre: 'Plan de comidas.pdf', paginas: 3, ...extra });
+  const insArch = (f) => q(`insert into archivos (${Object.keys(f).join(',')}) values (${Object.keys(f).map((_, i) => `$${i + 1}`).join(',')}) returning *`, Object.values(f));
+  const fallaArch = async (f) => { try { await insArch(f); return false; } catch { return true; } };
+  check(await fallaArch(pdf({ mime: 'image/jpeg' })) && await fallaArch(pdf({ bytes: 20971521 })) && await fallaArch(pdf({ bytes: null })) && await fallaArch(pdf({ ruta: `${aAna.id}/documento-033.exe` })),
+    'un documento es un PDF de hasta 20 MB con ruta .pdf (otro tipo, más grande, sin tamaño o con otra extensión, no)');
+  check(await fallaArch(pdf({ nombre: '../../secreto.pdf' })) && await fallaArch(pdf({ nombre: 'carpeta/plan.pdf' })) && await fallaArch(pdf({ nombre: 'plan\u0007.pdf' })) && await fallaArch(pdf({ nombre: null }))
+    && await fallaArch(pdf({ nombre: '   ' })) && await fallaArch(pdf({ ruta: `${aLuis.id}/documento-033.pdf` })) && await fallaArch(pdf({ poster_ruta: `${aAna.id}/x.jpg` })) && await fallaArch(pdf({ paginas: 0 })),
+    'su nombre, sin barras, «..», caracteres de control ni en blanco; en su carpeta; sin miniatura; con páginas de verdad');
+  check(await fallaArch(pdf({ nombre: 'Plan de comidas' })) && await fallaArch(pdf({ nombre: 'Plan de comidas.exe' })) && await fallaArch(pdf({ nombre: 'informe\u202Efdp.exe' }))
+    && await fallaArch(pdf({ nombre: 'plan\u200B.pdf' })) && await fallaArch(pdf({ nombre: '\uFEFFplan.pdf' })) && await fallaArch(pdf({ nombre: 'plan\u0085.pdf' })) && await fallaArch(pdf({ nombre: 'plan"1".pdf' }))
+    && await fallaArch(pdf({ nombre: 'a<b>.pdf' })) && await fallaArch(pdf({ nombre: '.oculto.pdf' })) && await fallaArch(pdf({ nombre: 'informe..pdf' })),
+    '(revisión) el nombre acaba en .pdf y no lleva invisibles, marcas de dirección del texto (no se disfraza un .exe), comillas ni <>, ni empieza por punto');
+  check(!!(await insArch(pdf({ ruta: `${aAna.id}/documento-033-mayus.pdf`, nombre: 'INFORME.PDF' })))[0], '(un .PDF en mayúsculas, sí)');
+  const [doc] = await insArch(pdf());
+  check(doc.tipo === 'documento' && doc.nombre === 'Plan de comidas.pdf', 'Ana registra su PDF (primero la fila, después Storage)');
+  await q(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [rDoc]);
+  check(await ver(rDoc), 'y lo sube (y lo ve: tiene su fila)');
+  const [mD] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Documento') returning *`, [doc.id]);
+  check(mD.adjunto === true && mD.atleta_id === aAna.id, 'su mensaje es un mensaje del chat (como una foto)');
+  check(await falla(`update archivos set nombre = 'otro.pdf' where id = $1`, [doc.id]), 'no le cambia el nombre después');
+  check((await q(`delete from storage.objects where name = $1 returning name`, [rDoc])).length === 0 && (await q(`delete from archivos where id = $1 returning id`, [doc.id])).length === 0,
+    'no lo borra de Storage ni de archivos (lleva su mensaje: eso va por eliminar para todos)');
+  await como(luis);
+  check(!(await ver(rDoc)) && !(await q(`select id from archivos where id = $1`, [doc.id])).length, 'Luis no ve el PDF de Ana');
+  await como(pelayo, 'aal2');
+  check(await ver(rDoc), 'el coach, sí');
+  await como(ana);
+  const elD = (await q(`select comentario_eliminar($1) r`, [mD.id]))[0].r;
+  await su();
+  check(elD.rutas[0] === rDoc && !(await q(`select 1 from archivos where id = $1`, [doc.id])).length && (await q(`select 1 from fbe_privado.storage_por_borrar where ruta = $1`, [rDoc])).length === 1,
+    'eliminado para todos, el PDF se va de la base (y a la cola de Storage), como una foto');
+  await como(ana);
+  check(!(await ver(rDoc)), 'y Ana ya no lo ve');
+  await su(); await q(`delete from storage.objects where name = $1`, [rDoc]); await q(`delete from fbe_privado.storage_por_borrar`); await q(`delete from archivos where atleta_id = $1 and creado_en > now() - interval '1 day'`, [aAna.id]);
+  await como(ana);
+  let topeDoc = null;
+  for (let i = 0; i < 11 && !topeDoc; i++) { try { await insArch(pdf({ ruta: `${aAna.id}/documento-tope-${i}.pdf` })); } catch (e) { topeDoc = { i, m: e.message }; } }
+  check(topeDoc?.i === 10 && /10 documentos/.test(topeDoc.m), 'como mucho 10 documentos al día (el atleta)');
+  await su(); await q(`delete from archivos where tipo = 'documento'`);
+  // El coach borra un PDF del chat con mensajes: quedan «Se eliminó este mensaje»
+  await como(pelayo, 'aal2');
+  const [docC] = await insArch(pdf({ ruta: `${aAna.id}/documento-coach.pdf` }));
+  const [mDC] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Tu plan') returning id`, [docC.id]);
+  await q(`delete from archivos where id = $1`, [docC.id]);
+  await su();
+  check((await q(`select eliminado_en from comentarios where id = $1`, [mDC.id]))[0].eliminado_en !== null, 'si el coach borra un PDF con mensajes, quedan como eliminados (no desaparecen)');
+  await q(`delete from fbe_privado.storage_por_borrar`);
+
+  console.log('  · Fijar un mensaje (solo el coach)');
+  await como(pelayo, 'aal2');
+  const [aFij] = await q(`insert into conversacion_fijado (atleta_id, comentario_id, hasta, fijado_en) values ($1, $2, now() + interval '7 days', '2020-01-01') returning *`, [aAna.id, mc.id]);
+  check(aFij.comentario_id === mc.id && Math.abs(new Date(aFij.fijado_en) - Date.now()) < 60000, 'el coach fija un mensaje de la conversación de Ana (la hora la pone la base)');
+  check(await falla(`insert into conversacion_fijado (atleta_id, comentario_id) values ($1, $2)`, [aAna.id, m1.id]), 'uno por conversación (fijar otro lo sustituye, no se suma)');
+  await q(`insert into conversacion_fijado (atleta_id, comentario_id, hasta) values ($1, $2, now() + interval '24 hours') on conflict (atleta_id) do update set comentario_id = excluded.comentario_id, hasta = excluded.hasta`, [aAna.id, m1.id]);
+  check((await q(`select comentario_id from conversacion_fijado where atleta_id = $1`, [aAna.id]))[0].comentario_id === m1.id, 'fijar otro sustituye al anterior');
+  check(await falla(`insert into conversacion_fijado (atleta_id, comentario_id) values ($1, $2)`, [aLuis.id, mc.id]), 'no se fija en la conversación de Luis un mensaje de la de Ana');
+  check(await falla(`update conversacion_fijado set comentario_id = $2 where atleta_id = $1`, [aAna.id, mP.id]), 'ni uno programado que aún no ha salido (no lo destapa)');
+  check(await falla(`update conversacion_fijado set hasta = now() + interval '40 days' where atleta_id = $1`, [aAna.id]) && await falla(`update conversacion_fijado set hasta = now() + interval '5 minutes' where atleta_id = $1`, [aAna.id]),
+    'de 1 hora a 30 días (24 h, 7 días o 30 días, como WhatsApp)');
+  check(await falla(`update conversacion_fijado set atleta_id = $2 where atleta_id = $1`, [aAna.id, aLuis.id]), 'no se pasa a otra conversación');
+  await como(ana);
+  check((await q(`select comentario_id from conversacion_fijado`)).map((x) => x.comentario_id).join() === m1.id, 'Ana ve lo fijado en su conversación');
+  check(await falla(`insert into conversacion_fijado (atleta_id, comentario_id) values ($1, $2)`, [aAna.id, mc.id]) && (await q(`update conversacion_fijado set hasta = null returning 1`)).length === 0
+    && (await q(`delete from conversacion_fijado returning 1`)).length === 0, 'pero no fija, ni cambia, ni desfija');
+  await como(luis);
+  check(await n(`select count(*)::int n from conversacion_fijado`) === 0, 'Luis no ve lo fijado de Ana');
+  await su(); await q(`update conversacion_fijado set hasta = now() - interval '1 minute' where atleta_id = $1`, [aAna.id]);
+  await como(ana);
+  check(await n(`select count(*)::int n from conversacion_fijado`) === 0, 'caducado, Ana deja de verlo');
+  await como(pelayo, 'aal2');
+  await q(`update conversacion_fijado set hasta = now() + interval '7 days' where atleta_id = $1`, [aAna.id]);
+  await como(ana);
+  await q(`select comentario_eliminar($1)`, [m1.id]);
+  await su();
+  check(await n(`select count(*)::int n from conversacion_fijado where atleta_id = $1`, [aAna.id]) === 0, 'eliminado para todos, se desfija solo');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into conversacion_fijado (atleta_id, comentario_id) values ($1, $2)`, [aAna.id, m1.id]), 'y uno eliminado no se fija');
+
+  console.log('  · Silenciar (cada uno lo suyo) y las notificaciones');
+  await su(); await q(`delete from notificaciones where tipo in ('respuesta', 'mensaje')`); await q(`delete from chat_cupos`);
+  await como(ana);
+  const [sA] = await q(`insert into chat_silencios (usuario_id, atleta_id, hasta) values ($1, $2, now() + interval '8 hours') returning *`, [pelayo, aAna.id]);
+  check(sA.usuario_id === ana, 'Ana silencia su conversación (a su nombre, aunque mande otro)');
+  check(await falla(`insert into chat_silencios (atleta_id) values ($1)`, [aLuis.id]), 'no silencia la de Luis');
+  check(await falla(`update chat_silencios set hasta = now() + interval '9 days'`) && await falla(`update chat_silencios set hasta = now() - interval '1 hour'`), '8 horas, 1 semana o siempre (ni más de 8 días ni ya pasado)');
+  await como(pelayo, 'aal2');
+  check(await n(`select count(*)::int n from chat_silencios`) === 0, 'el coach no ve lo que silencia Ana');
+  await q(`insert into comentarios (atleta_id, texto) values ($1, 'Silenciado 033')`, [aAna.id]);
+  check(!(await notis(`usuario_id = $1 and tipo = 'respuesta'`, [ana])).length, 'con su chat silenciado, a Ana no le llega notificación de lo nuevo');
+  await como(pelayo, 'aal2');
+  const [prog9] = await q(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Para dentro de dos días', now() + interval '2 days') returning id`, [aAna.id]);
+  check((await notis(`clave = $1`, ['comentario:' + prog9.id])).length === 1, 'uno programado para cuando ya no está silenciada sí deja su notificación');
+  await como(ana);
+  await q(`update chat_silencios set hasta = null where atleta_id = $1`, [aAna.id]);
+  check(!(await notis(`clave = $1`, ['comentario:' + prog9.id])).length, 'silenciada «siempre», las pendientes de esa conversación se quitan');
+  await q(`delete from chat_silencios where atleta_id = $1`, [aAna.id]);
+  await como(pelayo, 'aal2');
+  const [mOk] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Ya no silenciado') returning id`, [aAna.id]);
+  const nOk = await notis(`clave = $1`, ['comentario:' + mOk.id]);
+  check(nOk.length === 1 && nOk[0].url === '#mensajes' && !/silenciado/i.test(`${nOk[0].titulo} ${nOk[0].cuerpo}`), 'al volver a activarlas, sí (sin el texto del mensaje, como siempre)');
+  await como(pelayo, 'aal2');
+  await q(`insert into chat_silencios (atleta_id, hasta) values ($1, now() + interval '7 days')`, [aAna.id]);
+  await como(ana);
+  check(await n(`select count(*)::int n from chat_silencios`) === 0, 'Ana no ve que el coach la ha silenciado');
+  await q(`insert into comentarios (atleta_id, texto) values ($1, 'Pelayo, ¿me oyes?')`, [aAna.id]);
+  await como(luis);
+  await q(`insert into comentarios (atleta_id, texto) values ($1, 'Pelayo, duda de Luis')`, [aLuis.id]);
+  const aCoach = await notis(`usuario_id = $1 and tipo = 'mensaje'`, [pelayo]);
+  check(!aCoach.some((x) => x.clave.startsWith(`mensaje:${aAna.id}:`)) && aCoach.some((x) => x.clave.startsWith(`mensaje:${aLuis.id}:`)), 'el coach, con Ana silenciada: lo de Ana no suena; lo de Luis, sí');
+  check(aCoach.find((x) => x.clave.startsWith(`mensaje:${aLuis.id}:`))?.url === `#mensajes/${aLuis.id}`, 'y su notificación lleva a esa conversación (#mensajes/<atleta>)');
+  await como(pelayo, 'aal2');
+  const sinLeerCoach = await n(`select count(*)::int n from comentarios where autor = 'atleta' and atleta_id = $1 and leido_en is null`, [aAna.id]);
+  check(sinLeerCoach >= 1, 'silenciada, lo de Ana sigue contando como sin leer');
+  // (revisión) Silenciar es el chat: un comentario en un vídeo (o una sesión, o un check-in) sigue avisando
+  await su();
+  const [vidS] = await q(`insert into archivos (atleta_id, tipo, ruta, mime, subido_por) values ($1::uuid, 'video_tecnica', $1::text || '/silencio-tecnica.mp4', 'video/mp4', 'atleta') returning id`, [aAna.id]);
+  await q(`delete from notificaciones where usuario_id = $1 and clave like $2`, [pelayo, `mensaje:${aAna.id}:%`]);
+  await como(ana);
+  await q(`insert into comentarios (archivo_id, texto) values ($1, 'Mira mi sentadilla')`, [vidS.id]);
+  const aCoachVid = (await notis(`usuario_id = $1 and tipo = 'mensaje'`, [pelayo])).filter((x) => x.clave.startsWith(`mensaje:${aAna.id}:`));
+  check(aCoachVid.length === 1 && aCoachVid[0].url === '#revisar', '(revisión) con Ana silenciada, su comentario en un vídeo sí le avisa al coach (va a Revisar, no al chat)');
+  await como(ana);
+  await q(`insert into chat_silencios (atleta_id, hasta) values ($1, null) on conflict (usuario_id, atleta_id) do update set hasta = excluded.hasta`, [aAna.id]);
+  await como(pelayo, 'aal2');
+  const [rVidS] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Buena profundidad') returning id`, [vidS.id]);
+  const nVidS = await notis(`clave = $1`, ['comentario:' + rVidS.id]);
+  check(nVidS.length === 1 && nVidS[0].url === '#hoy', '(revisión) y con su chat silenciado, a Ana le llega la respuesta del coach en su vídeo');
+  await como(ana);
+  await q(`delete from chat_silencios where atleta_id = $1`, [aAna.id]);
+  await su(); await q(`delete from comentarios where archivo_id = $1`, [vidS.id]); await q(`delete from archivos where id = $1`, [vidS.id]);
+  // (revisión) Silenciar con «insert … on conflict do update» (como la app) gasta una vez, no dos
+  await q(`delete from chat_silencios`); await q(`delete from chat_cupos`);
+  await como(ana);
+  let topeU = null;
+  for (let i = 0; i < 40 && !topeU; i++) {
+    try { await q(`insert into chat_silencios (atleta_id, hasta) values ($1, now() + interval '8 hours') on conflict (usuario_id, atleta_id) do update set hasta = excluded.hasta`, [aAna.id]); }
+    catch (e) { topeU = { i, m: e.message }; }
+  }
+  check(topeU?.i === 30 && /silenciado/.test(topeU.m), `(revisión) cambiar el silencio (insert … on conflict) cuenta una vez: 30 por hora (${JSON.stringify(topeU)})`);
+  await su(); await q(`delete from chat_silencios`); await q(`delete from chat_cupos`);
+  await como(ana);
+  await q(`insert into chat_silencios (atleta_id, hasta) values ($1, now() + interval '8 hours')`, [aAna.id]);
+  await q(`update chat_silencios set hasta = now() + interval '7 days' where atleta_id = $1`, [aAna.id]);
+  await su();
+  check(await n(`select count(*)::int n from chat_cupos where tipo = 'silenciar'`) === 2, '(revisión) y un insert y luego un update, dos (cada cambio cuenta una vez)');
+  await q(`delete from chat_silencios`); await q(`delete from chat_cupos`);
+  await como(pelayo, 'aal2');
+  await su(); await q(`delete from chat_silencios`); await q(`delete from chat_cupos`);
+  await como(ana);
+  let topeS = null;
+  for (let i = 0; i < 70 && !topeS; i++) {
+    try { await q(i % 2 ? `delete from chat_silencios` : `insert into chat_silencios (atleta_id, hasta) values ($1, now() + interval '8 hours')`, [...(i % 2 ? [] : [aAna.id])]); }
+    catch (e) { topeS = { i, m: e.message }; }
+  }
+  check(topeS?.i === 60 && /silenciado/.test(topeS.m), 'como mucho 30 silencios por hora (el atleta)');
+  await su(); await q(`delete from chat_silencios`); await q(`delete from chat_cupos`);
+  check(await falla(`insert into notificaciones (usuario_id, tipo, titulo, url, clave, caduca_en) values ($1, 'mensaje', 'x', '#mensajes/no-es-uuid', 'x-033', now() + interval '1 day')`, [pelayo]), 'una notificación solo lleva a una conversación con su id de verdad');
+
+  console.log('  · Listas de difusión y difundir (solo el coach)');
+  await su();
+  const [aX] = await q(`insert into atletas (nombre, estado) values ('Xenia 033', 'baja') returning id`);
+  await como(pelayo, 'aal2');
+  const [lista] = await q(`insert into listas_difusion (nombre) values ('  Compiten  ') returning *`);
+  check(lista.nombre === 'Compiten', 'el coach crea una lista («Compiten»)');
+  check(await falla(`insert into listas_difusion (nombre) values ('compiten')`) && await falla(`insert into listas_difusion (nombre) values ('   ')`), 'sin repetir nombre ni en blanco');
+  await q(`insert into listas_difusion_miembros (lista_id, atleta_id) values ($1, $2), ($1, $3), ($1, $4)`, [lista.id, aAna.id, aLuis.id, aX.id]);
+  await como(ana);
+  check(await n(`select count(*)::int n from listas_difusion`) === 0 && await n(`select count(*)::int n from listas_difusion_miembros`) === 0, 'Ana no ve las listas ni quién está en ellas');
+  check(await falla(`insert into listas_difusion (nombre) values ('Mía')`) && await falla(`insert into listas_difusion_miembros (lista_id, atleta_id) values ($1, $2)`, [lista.id, aAna.id])
+    && (await q(`delete from listas_difusion_miembros returning 1`)).length === 0, 'ni crea, ni se apunta, ni quita a nadie');
+  check(await falla(`select chat_difundir($1, 'Hola a todos')`, [lista.id]), 'ni difunde');
+  await como(pelayo, 'aal2');
+  const cDif = uuid();
+  const r1 = (await q(`select chat_difundir($1, 'Mañana, test de 1RM', null, null, $2) r`, [lista.id, cDif]))[0].r;
+  check(r1.enviados === 2 && r1.saltados === 1, 'difundir: un mensaje a cada uno (Ana y Luis); Xenia, de baja, se salta y se dice');
+  const r2 = (await q(`select chat_difundir($1, 'Mañana, test de 1RM', null, null, $2) r`, [lista.id, cDif]))[0].r;
+  check(r2.enviados === 0, 'repetirlo con el mismo id (un reintento) no lo manda dos veces');
+  await como(ana);
+  const deDif = await q(`select * from comentarios where texto = 'Mañana, test de 1RM'`);
+  check(deDif.length === 1 && deDif[0].atleta_id === aAna.id && deDif[0].autor === 'coach' && !deDif[0].reenviado, 'a Ana le llega en su chat, como un mensaje normal (sin saber de la lista)');
+  await como(pelayo, 'aal2');
+  const r3 = (await q(`select chat_difundir($1, 'Recordatorio programado', now() + interval '1 day') r`, [lista.id]))[0].r;
+  check(r3.enviados === 2, 'también programada');
+  await como(ana);
+  check(!(await q(`select 1 from comentarios where texto = 'Recordatorio programado'`)).length, 'y, programada, Ana no la ve hasta su hora');
+  await como(pelayo, 'aal2');
+  check(await falla(`select chat_difundir($1, '   ')`, [lista.id]) && await falla(`select chat_difundir(gen_random_uuid(), 'x')`), 'sin texto (ni archivo) o sin lista, no');
+  await su(); await q(`delete from chat_cupos`);
+  await como(pelayo, 'aal2');
+  let topeD = null;
+  for (let i = 0; i < 31 && !topeD; i++) { try { await q(`select chat_difundir($1, $2)`, [lista.id, `d${i}`]); } catch (e) { topeD = { i, m: e.message }; } }
+  check(topeD?.i === 30 && /difusiones/.test(topeD.m), 'como mucho 30 difusiones por hora (también el coach)');
+  await su(); await q(`delete from chat_cupos`); await q(`delete from comentarios where texto ~ '^d[0-9]+$'`);
+
+  console.log('  · Reenviar (solo el coach, solo lo suyo; con archivo, una copia para cada uno)');
+  await como(pelayo, 'aal2');
+  const [txt] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Mira esta guía') returning id`, [aAna.id]);
+  const cFw = uuid();
+  const rr = (await q(`select chat_reenviar($1, $2) r`, [txt.id, JSON.stringify([{ atleta: aLuis.id, cliente: cFw }])]))[0].r;
+  check(rr.length === 1 && rr[0].atleta_id === aLuis.id, 'el coach reenvía a Luis un mensaje suyo del chat de Ana');
+  await como(luis);
+  const fw = await q(`select * from comentarios where id = $1`, [rr[0].id]);
+  check(fw.length === 1 && fw[0].reenviado === true && fw[0].autor === 'coach' && fw[0].texto === 'Mira esta guía', 'a Luis le llega en su chat, con «↪ Reenviado»');
+  check(!(await q(`select 1 from comentarios where id = $1`, [txt.id])).length, '(el original del chat de Ana, Luis no lo ve)');
+  check(await falla(`select chat_reenviar($1, $2)`, [fw[0].id, JSON.stringify([{ atleta: aLuis.id }])]), 'Luis no reenvía nada');
+  await como(ana);
+  const [deAna] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Mi rodilla, muy mal') returning id`, [aAna.id]);
+  check(await falla(`select chat_reenviar($1, $2)`, [deAna.id, JSON.stringify([{ atleta: aLuis.id }])]), 'ni Ana');
+  await como(pelayo, 'aal2');
+  check(await falla(`select chat_reenviar($1, $2)`, [deAna.id, JSON.stringify([{ atleta: aLuis.id }])]), 'el coach no reenvía lo de un atleta (datos de salud de otra persona)');
+  check(await falla(`select chat_reenviar($1, $2)`, [mP.id, JSON.stringify([{ atleta: aLuis.id }])]), 'ni uno suyo programado que aún no ha salido');
+  check(await falla(`select chat_reenviar($1, $2)`, [txt.id, JSON.stringify([{ atleta: aX.id }])]), 'ni a alguien de baja');
+  check(await falla(`select chat_reenviar($1, $2)`, [txt.id, JSON.stringify([{ atleta: aLuis.id }, { atleta: aLuis.id }])]) && await falla(`select chat_reenviar($1, '[]')`, [txt.id]), 'a cada uno una vez, y a alguien');
+  check((await q(`select chat_reenviar($1, $2) r`, [txt.id, JSON.stringify([{ atleta: aLuis.id, cliente: cFw }])]))[0].r.length === 0, 'repetido con el mismo id, no se duplica');
+  // Con foto: la copia en la carpeta de Luis, con su fila (la de Ana sigue sin poder verla)
+  const rF = `${aAna.id}/adjunto-033.jpg`, rCopia = `${aLuis.id}/adjunto-033-copia.jpg`;
+  const [fA] = await insArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: rF, mime: 'image/jpeg', bytes: 1000 });
+  await q(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [rF]);
+  const [mF] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Así se hace') returning id`, [fA.id]);
+  check(await falla(`select chat_reenviar($1, $2)`, [mF.id, JSON.stringify([{ atleta: aLuis.id }])]), 'con foto, sin copia para Luis no se reenvía');
+  check(await falla(`select chat_reenviar($1, $2)`, [mF.id, JSON.stringify([{ atleta: aLuis.id, archivo: fA.id }])]), 'ni con la de Ana (no es de Luis)');
+  const [fL] = await insArch({ atleta_id: aLuis.id, tipo: 'adjunto', ruta: rCopia, mime: 'image/jpeg', bytes: 1000 });
+  await q(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [rCopia]);
+  const rrF = (await q(`select chat_reenviar($1, $2) r`, [mF.id, JSON.stringify([{ atleta: aLuis.id, archivo: fL.id }])]))[0].r;
+  check(rrF.length === 1, 'con la copia registrada en la carpeta de Luis, sí');
+  check(await falla(`select chat_reenviar($1, $2)`, [mF.id, JSON.stringify([{ atleta: aLuis.id, archivo: fL.id }])]), 'y esa copia vale una sola vez');
+  await como(luis);
+  check(await ver(rCopia) && !(await ver(rF)), 'Luis ve su copia; la foto de la carpeta de Ana, no');
+  const [fwF] = await q(`select * from comentarios where id = $1`, [rrF[0].id]);
+  check(fwF.archivo_id === fL.id && fwF.adjunto && fwF.reenviado, 'su mensaje lleva su copia, como foto del chat y «Reenviado»');
+  check((await q(`delete from storage.objects where name = $1 returning name`, [rCopia])).length === 0, 'y no la borra de Storage (es un adjunto del chat)');
+  await como(ana);
+  check(!(await ver(rCopia)), 'Ana no ve la copia de Luis');
+  // (revisión) Lo que sube un atleta no lo pone el coach en un mensaje suyo, ni lo reenvía (la base sabe quién lo subió)
+  const rSalud = `${aAna.id}/adjunto-033-analitica.jpg`;
+  const [fSalud] = await insArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: rSalud, mime: 'image/jpeg', bytes: 2000 });
+  await q(`insert into comentarios (archivo_id, texto) values ($1, 'Mi analítica') returning id`, [fSalud.id]);
+  check(fSalud.subido_por === 'atleta', '(revisión) la foto que sube Ana queda como suya (subido_por, lo pone la base)');
+  check(await falla(`update archivos set subido_por = 'coach' where id = $1`, [fSalud.id]), '(revisión) Ana no cambia quién la subió');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into comentarios (archivo_id, texto) values ($1, 'Mira esto')`, [fSalud.id]), '(revisión) el coach no pone la foto de Ana en un mensaje suyo');
+  check(await falla(`update archivos set subido_por = 'coach' where id = $1`, [fSalud.id]), '(revisión) ni cambia quién la subió (tampoco el coach)');
+  check(await falla(`insert into archivos (atleta_id, tipo, ruta, mime, bytes) values ($1, 'adjunto', $2, 'image/jpeg', 2000)`, [aLuis.id, rSalud]), '(revisión) ni registra a su nombre la ruta de la foto de Ana (la ruta es de su carpeta y única)');
+  // Un mensaje del coach con la foto de Ana de antes de la 033 (o metido a mano): tampoco se reenvía
+  await db.exec(`reset role; ${claims(pelayo, 'aal2')}`); // sin la cuenta de la app (como una fila de antes de la 033)
+  const [mLegado] = await q(`insert into comentarios (atleta_id, autor, archivo_id, texto) values ($1, 'coach', $2, 'De antes') returning id`, [aAna.id, fSalud.id]);
+  await como(pelayo, 'aal2');
+  const [fL2] = await insArch({ atleta_id: aLuis.id, tipo: 'adjunto', ruta: `${aLuis.id}/adjunto-033-copia2.jpg`, mime: 'image/jpeg', bytes: 2000 });
+  check(fL2.subido_por === 'coach', '(la copia la registra el coach)');
+  check(await falla(`select chat_reenviar($1, $2)`, [mLegado.id, JSON.stringify([{ atleta: aLuis.id, archivo: fL2.id }])]),
+    '(revisión) un mensaje del coach con una foto que subió un atleta no se reenvía (ni con su copia): nunca la salud de Ana en el chat de Luis');
+  // Y la copia tiene que ser del coach: una que suba Luis no vale
+  await como(luis);
+  const [fDeLuis] = await insArch({ atleta_id: aLuis.id, tipo: 'adjunto', ruta: `${aLuis.id}/adjunto-033-luis.jpg`, mime: 'image/jpeg', bytes: 1000 });
+  await como(pelayo, 'aal2');
+  check(await falla(`select chat_reenviar($1, $2)`, [mF.id, JSON.stringify([{ atleta: aLuis.id, archivo: fDeLuis.id }])]), '(revisión) la copia, del coach (no vale un archivo que subió Luis)');
+  // Difundir con foto: cada uno con su copia
+  await como(pelayo, 'aal2');
+  const [cA] = await insArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: `${aAna.id}/dif-033.jpg`, mime: 'image/jpeg', bytes: 500 });
+  const [cL] = await insArch({ atleta_id: aLuis.id, tipo: 'adjunto', ruta: `${aLuis.id}/dif-033.jpg`, mime: 'image/jpeg', bytes: 500 });
+  check(await falla(`select chat_difundir($1, '', null, $2)`, [lista.id, JSON.stringify([{ atleta: aAna.id, archivo: cA.id }])]), 'difundir con foto: falta la copia de Luis, no sale a nadie (todos o ninguno)');
+  check(!(await q(`select 1 from comentarios where archivo_id = $1`, [cA.id])).length, '(ni a Ana)');
+  check(await falla(`select chat_difundir($1, 'x', now() + interval '1 day', $2)`, [lista.id, JSON.stringify([{ atleta: aAna.id, archivo: cA.id }, { atleta: aLuis.id, archivo: cL.id }])]), 'con foto, no se programa');
+  const rDF = (await q(`select chat_difundir($1, '', null, $2) r`, [lista.id, JSON.stringify([{ atleta: aAna.id, archivo: cA.id }, { atleta: aLuis.id, archivo: cL.id }])]))[0].r;
+  await su();
+  const msgsDF = await q(`select atleta_id, archivo_id, texto from comentarios where id = any($1::uuid[])`, [rDF.ids]);
+  check(rDF.enviados === 2 && msgsDF.every((x) => (x.atleta_id === aAna.id ? x.archivo_id === cA.id : x.archivo_id === cL.id) && x.texto === 'Foto'), 'con las dos copias, a cada uno la suya (sin pie: «Foto»)');
+  await su(); await q(`delete from chat_cupos`);
+  await q(`delete from comentarios where atleta_id = any($1::uuid[]) and creado_en > now() - interval '3 days'`, [[aAna.id, aLuis.id]]);
+  await q(`delete from storage.objects where bucket_id = 'archivos'`); await q(`delete from archivos where atleta_id = any($1::uuid[]) and creado_en > now() - interval '1 day' and tipo = 'adjunto'`, [[aAna.id, aLuis.id]]);
+  await q(`delete from fbe_privado.storage_por_borrar`); await q(`delete from listas_difusion`); await q(`delete from atletas where id = $1`, [aX.id]);
+  await q(`delete from notificaciones where tipo in ('respuesta', 'mensaje')`); await q(`delete from presencia`);
+  // (revisión) Lo de antes de la 033: lo ya leído cuenta como entregado (cuando se leyó, nunca antes de escribirse) y una
+  // foto del chat queda como de quien escribió su mensaje. Repetir la 033 lo pone (y no cambia lo demás).
+  await su();
+  const [viejoL] = await q(`insert into comentarios (atleta_id, autor, texto) values ($1, 'coach', 'Leído antes de la 033') returning id, creado_en`, [aAna.id]);
+  await q(`update comentarios set leido_en = creado_en - interval '3 hours', entregado_en = null where id = $1`, [viejoL.id]);
+  const [viejoL2] = await q(`insert into comentarios (atleta_id, autor, texto) values ($1, 'coach', 'Leído más tarde') returning id, creado_en`, [aAna.id]);
+  await q(`update comentarios set leido_en = creado_en + interval '2 hours', entregado_en = null where id = $1`, [viejoL2.id]);
+  const [fViejo] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'adjunto', $1::text || '/viejo-033.jpg', 'image/jpeg') returning id, subido_por`, [aAna.id]);
+  await db.exec(`reset role; ${claims(ana, 'aal1')}`);
+  await q(`insert into comentarios (archivo_id, autor, texto) values ($1, 'atleta', 'Foto de antes')`, [fViejo.id]);
+  await su();
+  await db.exec(readFileSync(new URL('../supabase/migraciones/033_chat_mas_whatsapp.sql', import.meta.url), 'utf8'));
+  const [eV] = await q(`select entregado_en, creado_en from comentarios where id = $1`, [viejoL.id]);
+  const [eV2] = await q(`select entregado_en, leido_en from comentarios where id = $1`, [viejoL2.id]);
+  check(fViejo.subido_por === null && new Date(eV.entregado_en).getTime() === new Date(eV.creado_en).getTime() && new Date(eV2.entregado_en).getTime() === new Date(eV2.leido_en).getTime(),
+    '(revisión) al aplicar la 033, lo ya leído queda entregado (al leerlo, y nunca antes de escribirse)');
+  check((await q(`select subido_por from archivos where id = $1`, [fViejo.id]))[0].subido_por === 'atleta', '(revisión) y una foto del chat de antes, de quien la mandó');
+  await q(`delete from comentarios where id in ($1, $2) or archivo_id = $3`, [viejoL.id, viejoL2.id, fViejo.id]); await q(`delete from archivos where id = $1`, [fViejo.id]);
+  await q(`delete from fbe_privado.storage_por_borrar`); await q(`delete from notificaciones where tipo in ('respuesta', 'mensaje')`);
+  // El nombre del coach para «Info del contacto» del atleta (el corto, como en sus notificaciones)
+  await como(ana);
+  const nc = (await q(`select nombre_coach() n`))[0].n;
+  await como(intruso);
+  check(typeof nc === 'string' && nc.length > 0 && !nc.includes(' ') && (await q(`select nombre_coach() n`))[0].n === null, 'el atleta ve el nombre corto de su coach; una cuenta sin atleta, no');
 }
 
 console.log('\nLa verificación en dos pasos falla cerrada');

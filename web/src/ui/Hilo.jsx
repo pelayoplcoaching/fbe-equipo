@@ -6,7 +6,9 @@ import { describirDibujo, dibujoValido } from '../logica/dibujo.js';
 
 // Conversación entre coach y atleta pegada a una sesión, un check-in o un vídeo.
 // Al abrirla, lo que escribió la otra parte queda como leído (alLeer); al enviar, avisa con alCambiar.
-export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer }) {
+// enChat (v0.55): el archivo es una foto, un vídeo o un PDF del chat: la respuesta va al chat, citando el último mensaje
+// de la otra parte (no «pegada» a su archivo: la base no deja poner en un mensaje lo que subió el otro).
+export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, enChat = false, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer }) {
   const { api, perfil, aviso } = useApp();
   const yo = perfil?.rol === 'coach' ? 'coach' : 'atleta';
   const hilo = useCarga(() => api.comentarios({ atletaId, sesionId, checkinId, archivoId }), [atletaId, sesionId, checkinId, archivoId]);
@@ -28,7 +30,11 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
     if (!texto.trim() || enviando) return;
     setEnviando(true);
     try {
-      await api.comentar({ atletaId, sesionId, checkinId, archivoId, texto, autor: yo, dibujo });
+      if (enChat) {
+        const cita = [...(hilo.datos || [])].reverse().find((c) => c.autor !== yo && !c.eliminado_en) || null;
+        await api.enviarMensaje(atletaId, { texto, autor: yo, respondeA: cita?.id || null });
+        aviso('Enviado al chat');
+      } else await api.comentar({ atletaId, sesionId, checkinId, archivoId, texto, autor: yo, dibujo });
       setTexto(''); setDibujo(null);
       await hilo.recargar(true);
       alCambiar?.();

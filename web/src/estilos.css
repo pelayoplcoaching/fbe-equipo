@@ -3675,3 +3675,245 @@ body:has(.app.con-actividad)::before { height: calc(env(safe-area-inset-top, 0px
 @media (prefers-reduced-motion: reduce) { .burbuja { transition: none; } }
 /* (la cabecera va ahora dentro del chat: su estado en una línea no puede ensanchar la columna) */
 .chat, .chat-lista, .chat-dia { grid-template-columns: minmax(0, 1fr); }
+
+/* ---------- v0.55: el chat, aún más como WhatsApp ---------- */
+:root { --leido: #0B66A0; --entregado: var(--tinta-3); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --leido: #62C6F2; } }
+:root[data-theme="dark"] { --leido: #62C6F2; }
+
+/* El cuadro de escribir: un campo redondo con 😊, el texto, 📎 y la cámara (o ⏰ del coach); fuera, enviar (solo con algo
+   escrito o adjunto). Encima del teclado del móvil (--teclado, de visualViewport) y, con él abierto, sin la barra de abajo */
+.chat-barra { bottom: calc(64px + env(safe-area-inset-bottom, 0px) + var(--teclado, 0px)); }
+:root[data-teclado] .chat-barra { bottom: var(--teclado, 0px); }
+:root[data-teclado] .app:has(.chat-barra) .tabs { display: none; }
+.chat-pagina { padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px) + var(--teclado, 0px)); }
+.chat-pagina:has(.chat.con-emojis) { padding-bottom: calc(150px + min(300px, 42dvh) + env(safe-area-inset-bottom, 0px)); }
+.chat-escribir { align-items: flex-end; gap: 6px; }
+.chat-campo { flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 0; border-radius: 24px; background: var(--hoja); box-shadow: var(--sombra); padding: 0 2px; }
+.chat-campo:focus-within { box-shadow: 0 0 0 2px var(--foco), var(--sombra); }
+.chat-campo .chat-area { box-shadow: none; background: transparent; padding: 11px 4px; min-width: 0; border-radius: 0; }
+.chat-campo .chat-area:focus { outline: none; }
+.chat-campo .btn-icono { width: 44px; height: 44px; flex: none; color: var(--tinta-2); }
+.chat-area { max-height: none; overflow-y: auto; }
+.chat-enviar { width: 48px; height: 48px; animation: enviar-entra .16s ease-out; }
+@keyframes enviar-entra { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+.chat-adjunto-item.es-pdf { border-radius: 10px; background: var(--hoja-2); display: grid; place-items: center; }
+.chat-adjunto-pdf { display: grid; justify-items: center; gap: 2px; color: var(--alerta); font-weight: 800; }
+.chat-adjunto-pdf svg { width: 24px; height: 24px; }
+
+/* El panel de emojis (en el sitio del teclado) */
+.panel-emojis { display: grid; grid-template-rows: auto minmax(0, 1fr); height: min(300px, 42dvh); border-radius: 16px; background: var(--hoja); box-shadow: var(--sombra); overflow: hidden; }
+.panel-emojis-cats { display: flex; overflow-x: auto; gap: 2px; padding: 4px; border-bottom: 1px solid var(--linea); scrollbar-width: none; }
+.panel-emojis-cats button { flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: none; font-size: 1.25rem; display: grid; place-items: center; cursor: pointer; }
+.panel-emojis-cats button[aria-selected="true"] { background: var(--morado-suave); box-shadow: inset 0 -2px 0 var(--morado); }
+.panel-emojis-rejilla { overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); align-content: start; padding: 4px; overscroll-behavior: contain; }
+.emoji-boton { width: 100%; height: 44px; border: 0; border-radius: 10px; background: none; font-size: 1.5rem; line-height: 1; display: grid; place-items: center; cursor: pointer; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.emoji-boton:hover, .emoji-boton:focus-visible { background: var(--hoja-2); }
+.emoji-boton:focus-visible, .panel-emojis-cats button:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
+
+/* La burbuja: la hora y los ✓ dentro, abajo a la derecha, y el texto les deja su hueco al final (como WhatsApp) */
+.burbuja { padding: 6px 10px 7px; gap: 4px; }
+.burbuja-pie { position: absolute; right: 8px; bottom: 5px; gap: 4px; line-height: 1; justify-self: auto; }
+.burbuja-pie.pie-bloque { position: static; justify-self: end; flex-wrap: wrap; justify-content: flex-end; }
+.burbuja-hueco { display: inline-block; height: 1px; vertical-align: baseline; }
+.burbuja.sin-cola .burbuja-pie { right: 8px; bottom: 5px; }
+.burbuja.sin-cola { padding-right: 10px; }
+.burbuja:not(:has(.burbuja-cuerpo, .burbuja-eliminada)) { padding-bottom: 24px; }
+.burbuja.solo-medio { padding: 4px 4px 4px; }
+.burbuja-pie.sobre-medio { right: 10px; bottom: 9px; padding: 3px 7px; border-radius: 999px; background: rgba(19, 17, 28, .62); color: #fff; }
+.burbuja-pie.sobre-medio .visto { color: #fff; }
+.burbuja-pie.sobre-medio .visto.leido { color: #8FD8FA; }
+.burbuja-cuerpo { display: grid; justify-items: start; }
+.burbuja-leer-mas { border: 0; background: none; padding: 6px 0 14px; min-height: 32px; color: var(--morado); font: inherit; font-size: 0.875rem; font-weight: 750; cursor: pointer; }
+.burbuja-pie .visto { color: var(--entregado); font-weight: 700; letter-spacing: -.12em; font-size: 0.8125rem; display: inline-flex; align-items: center; }
+.burbuja-pie .visto.leido { color: var(--leido); }
+.burbuja-pie .visto.pendiente svg { width: 12px; height: 12px; }
+.burbuja-pie .burbuja-fijada { display: inline-flex; color: var(--tinta-3); }
+.burbuja-pie .burbuja-fijada svg { width: 12px; height: 12px; }
+.burbuja-reenviado { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-style: italic; color: var(--tinta-2); }
+.burbuja-reenviado svg { width: 13px; height: 13px; }
+.burbuja.pendiente { opacity: .92; }
+.burbuja.fallida { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alerta) 45%, transparent); margin-right: 44px; }
+.burbuja-fallo { position: absolute; left: auto; right: -44px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: 0; background: none; padding: 0; cursor: pointer;
+  display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 0.9375rem; }
+.burbuja-fallo::before { content: ""; position: absolute; width: 24px; height: 24px; border-radius: 50%; background: var(--alerta); z-index: -1; }
+.burbuja-fallo { z-index: 0; isolation: isolate; }
+
+/* El pico: en la primera burbuja de cada grupo (como WhatsApp); las siguientes, redondas */
+.burbuja.suya { border-bottom-left-radius: 18px; }
+.burbuja.mia { border-bottom-right-radius: 18px; }
+.burbuja.suya.cola { border-top-left-radius: 4px; }
+.burbuja.mia.cola { border-top-right-radius: 4px; }
+.burbuja.cola::before { content: ""; position: absolute; top: 0; width: 10px; height: 14px; background: inherit; }
+.burbuja.suya.cola::before { left: -7px; clip-path: polygon(100% 0, 0 0, 100% 100%); }
+.burbuja.mia.cola::before { right: -7px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.burbuja.suya.sigue { border-top-left-radius: 8px; }
+.burbuja.mia.sigue { border-top-right-radius: 8px; }
+.burbuja.eliminada.cola::before, .burbuja.programada.cola::before, .burbuja.solo-emojis::before { display: none; }
+
+/* Solo 1 a 3 emojis: grandes y sin burbuja */
+.burbuja.solo-emojis { background: none; box-shadow: none; padding: 0 2px 22px; }
+.burbuja.solo-emojis .burbuja-texto { font-size: 2.75rem; line-height: 1.15; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; letter-spacing: .02em; }
+.burbuja.solo-emojis.emojis-1 .burbuja-texto { font-size: 3.25rem; }
+.burbuja.solo-emojis .burbuja-pie { bottom: 2px; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--hoja) 88%, transparent); }
+.burbuja.solo-emojis .burbuja-hueco { display: none; }
+
+/* Seleccionar varios: toda la fila se toca; la marca, a la izquierda */
+.chat.seleccionando .burbuja { user-select: none; -webkit-user-select: none; }
+.burbuja-elegir { position: absolute; inset: -2px -2px -2px -38px; z-index: 4; border: 0; background: none; padding: 0; cursor: pointer; border-radius: 12px; }
+.burbuja-elegir-marca { position: absolute; left: 4px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--tinta-3); background: var(--hoja); display: grid; place-items: center; color: var(--sobre-morado); }
+.burbuja-elegir[aria-pressed="true"] .burbuja-elegir-marca { background: var(--morado); border-color: var(--morado); }
+.burbuja-elegir-marca svg { width: 16px; height: 16px; }
+.burbuja-elegir:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
+.chat.seleccionando .burbuja.suya { margin-left: 34px; }
+.burbuja.seleccionada::after { content: ""; position: absolute; inset: -3px; border-radius: inherit; background: color-mix(in srgb, var(--morado) 16%, transparent); pointer-events: none; }
+.chat-seleccion { flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; }
+.chat-seleccion-n { flex: 1; min-width: 0; font-size: 1.0625rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-seleccion .no-disponible { opacity: .5; }
+
+/* La cabecera: tocar el nombre abre «Info del contacto» */
+.cabecera-contacto { position: relative; }
+.cabecera-contacto h1 { margin: 0; }
+.cabecera-contacto-boton { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cabecera-contacto-boton::after { content: ""; position: absolute; inset: -6px -4px; }
+.cabecera-contacto-boton:focus-visible { outline: none; }
+.cabecera-contacto:has(.cabecera-contacto-boton:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; border-radius: 8px; }
+.cabecera-chat .sub { display: flex; align-items: center; gap: 4px; }
+.sub-silencio { width: 14px; height: 14px; flex: none; }
+
+/* El mensaje fijado, debajo de la cabecera */
+.chat-fijado { position: sticky; top: calc(var(--chat-sep-top, 64px) + env(safe-area-inset-top, 0px)); z-index: 6; display: flex; align-items: center; gap: 2px;
+  margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding: 0 max(8px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px));
+  background: color-mix(in srgb, var(--hoja) 94%, transparent); border-bottom: 1px solid var(--linea); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.chat-fijado-ir { flex: 1; min-width: 0; min-height: 48px; display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 4px 8px; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.chat-fijado-ir > svg { width: 18px; height: 18px; color: var(--morado); flex: none; }
+.chat-fijado-ir strong { color: var(--morado); }
+.chat-fijado-texto { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tinta-2); }
+.chat-fijado-ir:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; border-radius: 8px; }
+
+/* Los separadores del día, en su sitio; arriba, la píldora flotante mientras te desplazas (se va al parar) */
+.chat-sep { position: static; }
+.chat-dia-flotante { position: fixed; left: 50%; top: calc(var(--chat-sep-top, 64px) + env(safe-area-inset-top, 0px) + 8px); z-index: 7; pointer-events: none;
+  padding: 4px 12px; border-radius: 999px; background: var(--hoja); color: var(--tinta-2); font-size: 0.75rem; font-weight: 700; box-shadow: inset 0 0 0 1px var(--borde), 0 2px 10px -4px rgba(27, 23, 48, .35);
+  transform: translate(-50%, -6px); opacity: 0; transition: opacity .25s ease-out, transform .25s ease-out; }
+.chat-dia-flotante:empty { display: none; }
+.chat-dia-flotante.visible { opacity: 1; transform: translate(-50%, 0); }
+.chat:has(.chat-fijado) .chat-dia-flotante { top: calc(var(--chat-sep-top, 64px) + env(safe-area-inset-top, 0px) + 56px); }
+@media (min-width: 900px) { .app.coach .chat-dia-flotante { left: calc(50% + 110px); } }
+
+/* El botón ⌄ (abajo a la derecha, con lo nuevo): sustituye a «Mensajes nuevos» (v0.49) */
+.chat-abajo { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(136px + env(safe-area-inset-bottom, 0px) + var(--teclado, 0px)); z-index: 16;
+  width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--hoja); color: var(--tinta-2); box-shadow: var(--sombra-alta); display: grid; place-items: center; cursor: pointer; animation: abajo-entra .2s ease-out; }
+@keyframes abajo-entra { from { opacity: 0; transform: translateY(10px) scale(.8); } }
+.chat-abajo svg { width: 22px; height: 22px; }
+.chat-abajo-n { position: absolute; top: -8px; right: -4px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--morado); color: var(--sobre-morado); font-size: 0.75rem; font-weight: 800; display: grid; place-items: center; }
+:root[data-teclado] .chat-abajo { bottom: calc(72px + var(--teclado, 0px)); }
+@media (min-width: 900px) { .app.coach .chat-abajo { bottom: 96px; } }
+
+/* Documentos PDF en la burbuja */
+.doc-chat { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; align-items: center; width: min(100%, 300px); min-height: 56px; padding: 8px 10px; border: 0; border-radius: 12px;
+  background: color-mix(in srgb, var(--tinta) 6%, transparent); color: inherit; font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
+.burbuja.mia .doc-chat { background: color-mix(in srgb, var(--hoja) 70%, transparent); }
+.doc-chat:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.doc-chat-ico { position: relative; width: 44px; height: 44px; display: grid; place-items: center; color: var(--alerta); }
+.doc-chat-ico svg { width: 36px; height: 36px; }
+.doc-chat-ico span { position: absolute; bottom: 7px; font-size: 0.5625rem; font-weight: 900; letter-spacing: .02em; background: var(--alerta); color: #fff; padding: 0 3px; border-radius: 3px; }
+.doc-chat-texto { display: grid; gap: 2px; min-width: 0; }
+.doc-chat-nombre { font-size: 0.875rem; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.doc-chat.mini { width: 100%; }
+.chat-doc { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; }
+.chat-doc .mini { grid-column: 1; }
+.chat-doc .btn { grid-row: 1 / span 2; grid-column: 2; }
+
+/* El vídeo en la burbuja: su miniatura, el ▶ en medio y la duración */
+.medio-chat-reproducir { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; display: grid; place-items: center; background: rgba(19, 17, 28, .58); color: #fff; }
+.medio-chat-reproducir svg { width: 24px; height: 24px; margin-left: 3px; fill: currentColor; }
+
+/* El visor a pantalla completa */
+.visor { position: fixed; inset: 0; z-index: 60; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; color: #fff; outline: none;
+  background: rgba(8, 7, 14, calc(.96 * var(--velo, 1))); touch-action: none; }
+.visor-cab { display: flex; align-items: center; gap: 8px; padding: calc(6px + env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) 6px max(8px, env(safe-area-inset-left, 0px)); background: linear-gradient(rgba(0, 0, 0, .55), transparent); z-index: 2; }
+.visor-cab .btn-icono, .visor-paso { color: #fff; background: rgba(255, 255, 255, .12); }
+.visor-quien { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.visor-quien strong, .visor-quien span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.visor-quien span { color: #D9D6E8; }
+.visor-n { color: #D9D6E8; padding: 0 6px; }
+.visor-escena { position: relative; overflow: hidden; min-height: 0; }
+.visor-pista { position: absolute; inset: 0; will-change: transform; }
+.visor-diapo { position: absolute; inset: 0; display: grid; place-items: center; }
+.visor-diapo.antes { transform: translateX(-100%); }
+.visor-diapo.despues { transform: translateX(100%); }
+.visor-medio { max-width: 100%; max-height: 100%; object-fit: contain; display: block; transform-origin: center; will-change: transform; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+video.visor-medio { width: 100%; max-height: 100%; background: #000; }
+.visor-cargando, .visor-fallo { color: #D9D6E8; font-size: 0.9375rem; }
+.visor-paso { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; opacity: 0; transition: opacity .15s; }
+.visor-anterior { left: 8px; }
+.visor-siguiente { right: 8px; }
+.visor-paso:focus-visible { opacity: 1; outline: 2px solid #fff; outline-offset: 2px; }
+@media (hover: hover) { .visor:hover .visor-paso { opacity: 1; } }
+.visor-pie-zona { display: grid; gap: 6px; padding: 8px max(12px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); background: linear-gradient(transparent, rgba(0, 0, 0, .65)); z-index: 2; }
+.visor-pie { max-height: 30dvh; overflow-y: auto; }
+.visor-pie-texto { margin: 0; font-size: 0.9375rem; line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere; color: #fff; }
+.visor-pie-texto a { color: #CFC8FF; }
+.visor-acciones { display: flex; justify-content: space-around; gap: 4px; }
+.visor-accion { min-width: 64px; min-height: 52px; display: grid; justify-items: center; gap: 2px; border: 0; background: none; color: #fff; font: inherit; font-size: 0.75rem; font-weight: 650; cursor: pointer; border-radius: 12px; padding: 4px 6px; }
+.visor-accion svg { width: 22px; height: 22px; }
+.visor-accion:focus-visible { outline: 2px solid #fff; outline-offset: 0; }
+body:has(.visor) .chat-barra, body:has(.visor) .chat-abajo { display: none; }
+
+/* Info del contacto */
+.contacto-cabeza { display: grid; justify-items: center; text-align: center; gap: 4px; padding: 4px 0 12px; }
+.avatar.enorme { width: 112px; height: 112px; font-size: 2.5rem; }
+.avatar-lobo { border-radius: 50%; object-fit: cover; background: var(--morado-suave); }
+.contacto-nombre { margin: 8px 0 0; font-size: 1.375rem; overflow-wrap: anywhere; }
+.contacto-estado { min-height: 1.4em; }
+.contacto-fondo { padding: 12px 4px 4px; }
+
+/* Elegir atletas (reenviar y listas de difusión) */
+.elegir-atletas { display: grid; gap: 8px; }
+.elegir-atletas-lista { max-height: 46dvh; overflow-y: auto; }
+.elegir-atleta { display: grid; grid-template-columns: 24px 36px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 52px; padding: 6px 12px; cursor: pointer; }
+.elegir-atleta input { width: 20px; height: 20px; accent-color: var(--morado); }
+.elegir-atleta.baja { opacity: .7; cursor: default; }
+.elegir-atleta strong { overflow-wrap: anywhere; }
+.reenviar-que { overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hoja-pie-fijo { position: sticky; bottom: 0; padding-top: 10px; background: var(--hoja); }
+.difusion-lista { display: flex; align-items: center; }
+.difusion-lista .accion-fila { flex: 1; min-width: 0; }
+.difusion-adjunto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.difusion-adjunto img, .difusion-adjunto video { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; }
+.difusion-adjuntar { justify-self: start; position: relative; }
+.difusion-adjuntar:focus-within { outline: 2px solid var(--foco); outline-offset: 2px; }
+
+/* La lista del coach: difusión y silenciadas */
+.conv-difusion { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 16px; border: 0; border-radius: var(--r);
+  background: var(--hoja); box-shadow: var(--sombra); text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.conv-difusion .ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--morado-suave); color: var(--morado); }
+.conv-difusion .ico svg, .conv-difusion > svg { width: 20px; height: 20px; }
+.conv-silencio { width: 14px; height: 14px; vertical-align: -2px; margin-right: 2px; }
+.conv-ultimo .visto.entregado { color: var(--tinta-3); }
+.conv-ultimo .visto.leido { color: var(--leido); }
+
+/* Animaciones (como WhatsApp): la burbuja nueva sube, la reacción salta, ↩ crece al deslizar y llega con un toque */
+.burbuja.nueva { animation: burbuja-sube .26s cubic-bezier(.2, .9, .3, 1.1) both; }
+@keyframes burbuja-sube { from { transform: translateY(14px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+.burbuja-reacciones { animation: reaccion-salta .32s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes reaccion-salta { 0% { transform: scale(.4); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.burbuja-deslizar { transition: transform .12s ease-out; }
+.burbuja.umbral .burbuja-deslizar { background: var(--morado); color: var(--sobre-morado); }
+.panel-emojis { animation: panel-sube .18s ease-out; }
+@keyframes panel-sube { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .burbuja.nueva, .burbuja-reacciones, .panel-emojis, .chat-enviar, .chat-abajo { animation: none; }
+  .chat-dia-flotante, .burbuja-deslizar, .visor-paso { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .chat-fijado { background: var(--hoja); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .visor { background: rgb(8, 7, 14); }
+}
+@media (forced-colors: active) { .burbuja.cola::before { display: none; } .burbuja-elegir-marca { forced-color-adjust: auto; } }
+/* (la hora va encima: la foto, el vídeo o el PDF dan el ancho a su burbuja) */
+.burbuja .medio-chat:not(.mini) { width: 280px; max-width: 100%; }
+.burbuja .doc-chat:not(.mini) { width: 300px; max-width: 100%; }
+.burbuja { grid-template-columns: minmax(0, 1fr); }
+.doc-chat-ico span { background: #A61B2B; color: #fff; }

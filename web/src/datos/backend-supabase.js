@@ -4,7 +4,9 @@
 export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id', menu_dias: 'atleta_id,fecha',
   comunidad_miembros: 'atleta_id', comunidad_reacciones: 'post_id,autor_id', comunidad_votos: 'post_id,autor_id', comunidad_animos: 'de,para,semana',
   // v0.54 (migración 032): el chat como WhatsApp
-  comentario_reacciones: 'comentario_id,usuario_id', comentario_destacados: 'usuario_id,comentario_id', conversacion_estado: 'atleta_id', presencia: 'usuario_id' };
+  comentario_reacciones: 'comentario_id,usuario_id', comentario_destacados: 'usuario_id,comentario_id', conversacion_estado: 'atleta_id', presencia: 'usuario_id',
+  // v0.55 (migración 033): fijar, silenciar y las listas de difusión
+  conversacion_fijado: 'atleta_id', chat_silencios: 'usuario_id,atleta_id', listas_difusion_miembros: 'lista_id,atleta_id' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 
@@ -384,10 +386,18 @@ export function crearBackendSupabase({ url, anonKey }) {
         await pedirToken();
         await subirPorTrozos({ endpoint: `${url.replace(/\/$/, '')}/storage/v1/upload/resumable`, token: pedirToken, anonKey, ruta, archivo, tipo, alProgreso, senal });
       },
-      async url(ruta, segundos = 3600, bucket = 'archivos') {
-        const { data, error } = await sb.storage.from(bucket).createSignedUrl(ruta, segundos);
+      // descargar (v0.55): el nombre con que se guarda («Guardar», que la persona pide)
+      async url(ruta, segundos = 3600, bucket = 'archivos', { descargar = null } = {}) {
+        const { data, error } = await sb.storage.from(bucket).createSignedUrl(ruta, segundos, descargar ? { download: descargar } : undefined);
         if (error) throw traducir(error);
         return data.signedUrl;
+      },
+      // v0.55: copiar (reenviar y difundir, el coach): Storage comprueba que quien copia ve el original y puede subir la copia
+      // (la del coach, con su fila ya registrada en archivos: así ese atleta la ve). La ruta de la copia es nueva cada vez:
+      // si ya existe algo ahí (409), no es esta copia, así que es un error (no se da por buena).
+      async copiar(desde, hasta, bucket = 'archivos') {
+        const { error } = await sb.storage.from(bucket).copy(desde, hasta);
+        if (error) throw traducir(error);
       },
       // Devuelve las rutas que de verdad se han borrado (las que no se pueden ver o no existen no salen)
       async borrar(rutas, bucket = 'archivos') {

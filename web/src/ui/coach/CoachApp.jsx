@@ -19,6 +19,10 @@ import { ponerInsignia } from '../insignia-app.js';
 const TODAS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
 const TABS = TODAS.filter(([t]) => t !== 'equipo');
 
+// v0.55: «#mensajes/<atleta>» (al tocar la notificación de un mensaje): Mensajes, con esa conversación abierta
+const RUTA_CHAT = /^mensajes\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+const chatDeRuta = (h) => (RUTA_CHAT.exec(h) || [])[1] || null;
+
 export function CoachApp() {
   const { api, propioCoach, entrarModoAtleta, pedidoCoach, consumirPedidoCoach } = useApp();
   const comunidad = useCarga(() => api.comunidad(), []);
@@ -26,7 +30,7 @@ export function CoachApp() {
   const pestanasRef = useRef(pestanas);
   pestanasRef.current = pestanas;
   // Al volver del modo atleta con «Programarlo», se abre su ficha en el Programa
-  const [tab, setTab] = useState(() => { if (pedidoCoach) return 'atletas'; const h = location.hash.slice(1); return TODAS.some(([t]) => t === h) && h !== 'modo-atleta' ? h : 'atletas'; });
+  const [tab, setTab] = useState(() => { if (pedidoCoach) return 'atletas'; const h = location.hash.slice(1); if (chatDeRuta(h)) return 'mensajes'; return TODAS.some(([t]) => t === h) && h !== 'modo-atleta' ? h : 'atletas'; });
   // (#equipo con la comunidad cerrada, o sin la migración 027: a Atletas)
   useEffect(() => { if (comunidad.datos && tab === 'equipo' && !comunidad.datos.activa) setTab('atletas'); }, [comunidad.datos]);
   const [ficha, setFicha] = useState(() => (pedidoCoach ? { atletaId: pedidoCoach.atletaId, pestana: pedidoCoach.pestana || 'programa' } : null)); // { atletaId, pestana }
@@ -57,7 +61,13 @@ export function CoachApp() {
   }, []);
   // Al tocar una notificación con la app abierta, se va a su sección (y la bandeja se pone al día)
   useEffect(() => {
-    const ir = () => { const h = location.hash.slice(1); if (pestanasRef.current.some(([t]) => t === h)) { setFicha(null); setTab(h); bandeja.recargar(true); } };
+    const ir = () => {
+      const h = location.hash.slice(1);
+      const chat = chatDeRuta(h);
+      // (el #hash vuelve a «#mensajes»: así la siguiente de esa misma conversación también la abre)
+      if (chat) { setFicha(null); setTab('mensajes'); setPeticion({ tab: 'mensajes', atletaId: chat, id: Date.now() }); sinLeer.recargar(true); try { history.replaceState(null, '', '#mensajes'); } catch { /* */ } return; }
+      if (pestanasRef.current.some(([t]) => t === h)) { setFicha(null); setTab(h); bandeja.recargar(true); }
+    };
     const llega = () => { bandeja.recargar(true); sinLeer.recargar(true); };
     window.addEventListener('hashchange', ir);
     window.addEventListener('fbe-notificacion', llega);
@@ -86,7 +96,8 @@ export function CoachApp() {
     const el = focoPrevio.current;
     if (!navegar) setTimeout(() => { if (el?.isConnected && el !== document.body) el.focus(); }, 0);
   };
-  const [peticion, setPeticion] = useState(null); // lo que pide la búsqueda a la sección de destino
+  // lo que pide la búsqueda a la sección de destino (v0.55: o la notificación de un mensaje, al abrir la app con ella)
+  const [peticion, setPeticion] = useState(() => { const chat = chatDeRuta(location.hash.slice(1)); return chat ? { tab: 'mensajes', atletaId: chat, id: Date.now() } : null; });
   useEffect(() => {
     const tecla = (e) => {
       const escribiendo = e.target.closest?.('input, textarea, select, [contenteditable="true"]');

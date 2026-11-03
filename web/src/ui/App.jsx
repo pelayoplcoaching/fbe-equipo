@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { borrarTodoEnCurso } from './en-curso.js';
 import { borrarBorradores } from '../logica/mensajes.js';
+import { salidaDe, borrarSalida } from '../datos/salida.js';
 const almacenLocal = () => { try { return window.localStorage; } catch { return null; } };
 import { Ctx, Cargando, Icono } from './comunes.jsx';
 import { Acceso, Vincular, NuevaPassword, SegundoPaso } from './Acceso.jsx';
@@ -53,7 +54,8 @@ export function App({ backend, api, cola }) {
       if (backend.modo === 'supabase') desactivarPushLocal();
       // (v0.54, revisión) Ni guardar lo de nadie: los borradores de los mensajes y la sesión en curso se van también
       // cuando la sesión se acaba sin «Salir» (caduca, se cierra en otro sitio, se cambia la contraseña)
-      borrarTodoEnCurso(); borrarBorradores(almacenLocal()); backend.reiniciarChats?.();
+      // (v0.55) y lo que quedaba en la bandeja de salida del chat
+      borrarTodoEnCurso(); borrarBorradores(almacenLocal()); borrarSalida(api); backend.reiniciarChats?.();
       setEstado({ fase: 'fuera' });
       return;
     }
@@ -74,6 +76,8 @@ export function App({ backend, api, cola }) {
         // Su propia ficha de atleta, si la tiene (modo atleta)
         const propio = await api.miAtleta().catch(() => null);
         setEstado({ fase: 'coach', perfil, propio });
+        // (v0.55) lo que quedó en la bandeja de salida del chat (sin cobertura), en cuanto se pueda
+        setTimeout(() => salidaDe(api)?.vaciar(), 1500);
         return;
       }
       let atleta = await api.miAtleta();
@@ -92,6 +96,7 @@ export function App({ backend, api, cola }) {
         borrarActivacionPendiente();
       }
       setEstado(atleta ? { fase: 'atleta', perfil, atleta } : { fase: 'vincular', perfil, codigoFallido });
+      if (atleta) setTimeout(() => salidaDe(api)?.vaciar(), 1500);
     } catch (e) {
       setEstado({ fase: 'error', error: e });
     }
@@ -166,7 +171,7 @@ export function App({ backend, api, cola }) {
     fijarPerfil: (p) => setEstado((e) => ({ ...e, perfil: p })),
     // Al cerrar sesión, este móvil deja de recibir las notificaciones de esa cuenta
     // (v0.54) y los borradores de los mensajes de este móvil
-    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); borrarBorradores(almacenLocal()); backend.reiniciarChats?.(); await backend.auth.salir(); resolver(true); },
+    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); borrarBorradores(almacenLocal()); borrarSalida(api); backend.reiniciarChats?.(); await backend.auth.salir(); resolver(true); },
     reiniciarDemo: () => { backend.reiniciar?.(); ultimoUid.current = undefined; resolver(true); },
     // Modo atleta del coach (v0.37)
     propioCoach: estado.fase === 'coach' ? estado.propio || null : null,
