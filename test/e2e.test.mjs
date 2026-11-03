@@ -4137,7 +4137,13 @@ try {
   await hojaArch.locator('.medio-chat.mini').first().click();
   await p.getByRole('dialog', { name: /Foto/ }).waitFor();
   check(true, 'tocar una foto de Multimedia la abre');
-  await p.keyboard.press('Escape');
+  // Cerrar el visor y la hoja de archivos (en CI, más lento, un Escape justo al abrir puede llegar antes que su escucha)
+  for (let i = 0; i < 6 && await p.locator('[role=dialog]').first().isVisible().catch(() => false); i++) {
+    await p.waitForTimeout(250);
+    await p.keyboard.press('Escape');
+  }
+  await p.locator('[role=dialog]').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+  await p.locator('.chat-area').waitFor();
   // Varias fotos con un pie
   const png = (await import('node:fs')).readFileSync(new URL('../web/iconos/icono-180.png', import.meta.url));
   await p.locator('input[type=file][accept="image/*,video/*"]').setInputFiles([1, 2, 3].map((i) => ({ name: `gym-${i}.png`, mimeType: 'image/png', buffer: png })));
