@@ -4519,6 +4519,7 @@ try {
   await menu.getByRole('button', { name: 'Reenviar' }).click();
   const hojaRe = p.getByRole('dialog', { name: 'Reenviar a…' });
   await hojaRe.waitFor();
+  await hojaRe.locator('.elegir-atleta.baja input[disabled]').first().waitFor({ state: 'attached', timeout: 15000 }).catch(() => {});
   check(await hojaRe.locator('.elegir-atleta.baja input[disabled]').count() >= 1, 'reenviar: los de baja no se pueden elegir');
   await hojaRe.locator('.elegir-atleta', { hasText: 'Rubén' }).locator('input').check();
   await revisar('chat-reenviar');
