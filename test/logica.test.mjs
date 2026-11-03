@@ -2752,5 +2752,127 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   check(/img-src[^;]*https:\/\/i\.ytimg\.com/.test(html) && !/img-src[^;]*\*[ ;]/.test(html) && /media-src[^;]*blob:/.test(html), 'la CSP: solo las miniaturas de YouTube de fuera; el audio grabado (blob:) se puede escuchar antes de enviarlo');
 }
 
+console.log('\nv0.57: los vídeos de técnica (encuadre, nivel, serie, marcas, tempo, puntos clave, nota, estado, enlace, superponer, zoom, Mi técnica y limpieza)');
+{
+  const T = await import('../web/src/logica/tecnica.js');
+  const D = await import('../web/src/logica/dibujo.js');
+  // 1. Encuadre según el ejercicio
+  check(T.encuadreDe('Sentadilla barra alta').vista === 'lado' && T.encuadreDe('Peso muerto rumano').vista === 'lado' && T.encuadreDe('Hip thrust con barra').vista === 'lado' && T.encuadreDe('Remo con barra').vista === 'lado',
+    'de lado: sentadilla, peso muerto, hip thrust y remo');
+  check(T.encuadreDe('Press banca').vista === '45' && T.encuadreDe('Press militar').vista === '45' && T.encuadreDe('Zancadas').vista === 'frente' && T.encuadreDe('Dominadas').vista === 'frente',
+    'a 45° los press; de frente zancadas y dominadas');
+  check(T.encuadreDe('Algo raro', ['cuadriceps']).vista === 'lado' && T.encuadreDe('', []).vista === 'lado' && /3 m/.test(T.encuadreDe('Sentadilla').texto), 'si no se sabe, de lado (por el grupo muscular o por defecto), con su explicación');
+  // El nivel
+  const n0 = T.nivelDe({ beta: 90, gamma: 0 }), nT = T.nivelDe({ beta: 70, gamma: 35 }), nL = T.nivelDe({ beta: 0, gamma: 90 }, 90);
+  check(n0.estado === 'recto' && n0.vertical && Math.abs(n0.inclinacion) < 0.1 && nT.estado === 'torcido' && T.nivelDe({ beta: null, gamma: 3 }) === null && T.nivelDe({}) === null,
+    'el nivel: el móvil vertical, recto; girado, torcido; sin datos (sin sensor), nada');
+  check(Math.abs(nL.inclinacion) < 0.5 && /Torcido \d+°: gíralo/.test(T.textoNivel(nT)) && T.textoNivel(null) === 'Sin nivel en este móvil', 'en horizontal cuenta el giro de la pantalla; y lo dice en palabras');
+  check(T.formatoVideo((t) => t === 'video/webm')?.tipo === 'video/webm' && T.formatoVideo((t) => t.startsWith('video/mp4'))?.ext === 'mp4' && T.formatoVideo(() => false) === null && T.formatoVideo(null) === null,
+    'graba en MP4 si el navegador sabe (se avanza fotograma a fotograma) y si no, en WebM');
+  check(/permiso/.test(T.errorCamara({ name: 'NotAllowedError' })) && /otra app/.test(T.errorCamara({ name: 'NotReadableError' })) && /galería/.test(T.errorCamara({})) && T.CUENTAS_ATRAS.join() === '3,5,10' && T.PARAR_SOLA.includes(0),
+    'los errores de la cámara, claros; cuenta atrás de 3, 5 o 10 s y «parar sola» opcional');
+  // 2. La serie
+  check(T.textoSerieVideo({ kg: 62.5, reps: 5, rpe: 8.5 }) === '62,5 kg × 5 @8,5' && T.textoSerieVideo({ kg: null, reps: 12, rpe: null }) === '12 reps' && T.textoSerieVideo(null) === null,
+    'la serie del vídeo: «62,5 kg × 5 @8,5» (sin carga, las repeticiones)');
+  check(T.serieValida(null) && T.serieValida(1) && T.serieValida(30) && !T.serieValida(0) && !T.serieValida(31) && !T.serieValida(1.5), 'una serie, de 1 a 30 (como la base)');
+  // 5. Marcas
+  const coms = [{ id: 'a', texto: 'En 0:01,5 la cadera; en 0:02, bien', dibujo: { t: 2, hasta: 3, formas: [{ tipo: 'linea', p: [[0, 0], [1, 1]] }] } }, { id: 'b', texto: 'Hora: 18:00', eliminado_en: null }, { id: 'c', texto: '0:03 borrado', eliminado_en: '2026-01-01' }];
+  const ms = T.marcadores({ comentarios: coms, revision: { voz_archivo_id: 'v', voz_inicio: 0.5, checklist: { puntos: [{ t: 'Rodillas', e: 'mal', s: 1 }, { t: 'Pies', e: 'bien' }] } }, duracion: 8 });
+  check(igual(ms.map((m) => [m.t, m.tipo]), [[0.5, 'voz'], [1, 'punto'], [1.5, 'comentario'], [2, 'comentario'], [2, 'dibujo']]), 'las marcas: voz, puntos con momento, minutos de los comentarios y dibujos; en orden, sin las horas ni lo eliminado');
+  check(ms[1].etiqueta === 'Punto clave en 0:01,0: Rodillas' && ms[4].hasta === 3 && T.marcadores({ comentarios: [{ id: 'x', texto: '0:09' }], duracion: 5 }).length === 0, 'cada una con su nombre (para el lector de pantalla); fuera del vídeo, no');
+  check(T.marcaVecina(ms, 1.2, 1).t === 1.5 && T.marcaVecina(ms, 1.2, -1).t === 1 && T.marcaVecina(ms, 9, 1) === null, 'la siguiente y la anterior (las teclas [ y ])');
+  // 9. Tempo
+  const { reps, aMedias } = T.repsDeMarcas([0, 1.5, 2.3, 2.5, 4, 4.8, 5.1]);
+  check(reps.length === 2 && igual(aMedias, [5.1]) && T.tempoValido({ reps }, 8) && !T.tempoValido({ reps: [[0, 1, 0.5]] }) && !T.tempoValido({ reps: [[2, 3, 4], [1, 2, 3]] }) && !T.tempoValido({ reps: [[0, 1, 9.5]] }, 8),
+    'el tempo: de tres en tres; en orden y dentro del vídeo (como la base)');
+  check(T.tempoValido({ reps: [[0, 1, 2], [2, 3, 4]] }) && !T.tempoValido({ reps: [] }) && !T.tempoValido({ reps: Array.from({ length: 31 }, (_, i) => [i * 3, i * 3 + 1, i * 3 + 2]) }) && !T.tempoValido({ reps: [[0, 1, 2]], x: 1 }) && !T.tempoValido(null),
+    'una repetición puede empezar donde acaba la anterior; de 1 a 30, sin campos de más');
+  const tt = T.tablaTempo({ reps });
+  check(tt.reps[0].bajada === 1.5 && tt.reps[0].subida === 0.8 && tt.media.bajada === 1.5 && T.textoSegundos(1.5) === '1,5 s' && T.tablaTempo(null).media === null, 'la tabla: bajada y subida de cada repetición y la media');
+  check(T.marcaTempoValida([], 0.2, 8) && !T.marcaTempoValida([1], 0.5, 8) && T.marcaTempoValida([0, 1, 2], 2, 8) && !T.marcaTempoValida([0, 1], 1, 8) && !T.marcaTempoValida([], 20, 8), 'cada marca, después de la anterior y dentro del vídeo');
+  // 12. Puntos clave
+  check(T.checklistSugerido('Sentadilla barra alta').length >= 5 && T.checklistSugerido('Hip thrust').some((x) => /Tibias verticales/.test(x)) && T.checklistSugerido('Press banca').some((x) => /45°/.test(x))
+    && T.checklistSugerido('Curl de bíceps').some((x) => /Recorrido completo/.test(x)), 'puntos sugeridos para los básicos (hip thrust aparte); para lo demás, unos generales');
+  const todos = ['sentadilla', 'peso muerto', 'hip thrust', 'press banca', 'press militar', 'remo', 'dominadas', 'zancadas', 'curl'].flatMap((x) => T.checklistSugerido(x));
+  check(T.plantillaValida(T.checklistSugerido('Press banca')) && todos.every((x) => [...x].length <= 120), 'todos caben en la lista del coach (hasta 120 letras)');
+  check(!T.plantillaValida([]) && !T.plantillaValida(Array(16).fill('x')) && !T.plantillaValida(['  ']) && !T.plantillaValida(['x'.repeat(121)]) && igual(T.limpiarPlantilla([' a  b ', 'a b', '', 'c']), ['a b', 'c']),
+    'la lista: de 1 a 15, sin vacíos ni repetidos');
+  const ckBien = { puntos: [{ t: 'Rodillas', e: 'mal', s: 1.5 }, { t: 'Pies', e: 'bien' }] };
+  check(T.checklistValido(ckBien) && !T.checklistValido({ puntos: [] }) && !T.checklistValido({ puntos: [{ t: 'x', e: 'si' }] }) && !T.checklistValido({ puntos: [{ t: ' ', e: 'bien' }] })
+    && !T.checklistValido({ puntos: [{ t: 'x', e: 'bien', s: -1 }] }) && !T.checklistValido({ puntos: [{ t: 'x', e: 'bien', otro: 1 }] }) && !T.checklistValido([]), 'los puntos revisados, con su forma exacta (como la base)');
+  check(igual(T.limpiarChecklist([{ t: 'A', e: 'bien', s: 1.234 }, { t: 'B', e: null }, { t: 'C', e: 'na' }]), { puntos: [{ t: 'A', e: 'bien', s: 1.2 }, { t: 'C', e: 'na' }] }) && T.limpiarChecklist([{ t: 'B', e: null }]) === null,
+    'solo van los marcados; su momento, en décimas');
+  check(igual(T.resumenChecklist(ckBien), { bien: 1, mal: 1, na: 0, total: 2 }), 'y su resumen');
+  // 13. Nota de técnica
+  check(T.puntuacionValida(null) && T.puntuacionValida(5) && !T.puntuacionValida(0) && !T.puntuacionValida(6) && !T.puntuacionValida(2.5) && T.NOMBRE_PUNTUACION[4] === 'Buena', 'la nota, de 1 a 5');
+  const serie = T.seriePuntuaciones([{ fecha: '2026-10-01', revision: { puntuacion: 2 } }, { fecha: '2026-11-01', revision: { puntuacion: 4 }, creado_en: 'b' }, { fecha: '2026-11-01', revision: { puntuacion: 3 }, creado_en: 'a' }, { fecha: '2026-10-15', revision: null }]);
+  check(igual(serie, [{ x: '2026-10-01', y: 2 }, { x: '2026-11-01', y: 4 }]), 'la gráfica de la nota: una por día (la última), sin los que no tienen');
+  // 15. Estado
+  check(T.estadoVideo({}).estado === 'enviado' && T.estadoVideo({ revision: { visto_el: '2026-11-03' } }).texto === 'Visto el 3 nov' && T.estadoVideo({ revision: { visto_el: '2026-11-03', corregido_en: 'x' } }).estado === 'corregido'
+    && T.estadoVideo({ respondido: true }).texto === 'Corregido', 'Enviado → Visto (el día) → Corregido (la corrección o una respuesta del coach)');
+  const id = '11111111-1111-4111-8111-111111111111';
+  check(T.enlaceVideo(id, 1.234) === `#videos/${id}@1.2` && T.enlaceVideo(id) === `#videos/${id}` && T.enlaceVideo('../x', 2) === null && igual(T.leerEnlaceVideo(`#videos/${id}@1.2`), { id, t: 1.2 })
+    && igual(T.leerEnlaceVideo(`#videos/${id}`), { id, t: null }) && T.leerEnlaceVideo(`#videos/${id}@1.23`) === null && T.leerEnlaceVideo('#videos/../evil') === null && T.leerEnlaceVideo(`#videos/${id}@12345`) === null,
+    'el enlace del aviso: #videos/<id>@<segundos con una décima>, nada más (como la base)');
+  const sql = readFileSync(new URL('../supabase/migraciones/035_videos_tecnica.sql', import.meta.url), 'utf8');
+  const sw = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8');
+  const mainJs = readFileSync(new URL('../web/src/main.jsx', import.meta.url), 'utf8');
+  check(sql.includes("'^#videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(@[0-9]{1,4}(\\.[0-9])?)?$'") && sw.includes('#videos\\/[0-9a-f]{8}') && mainJs.includes('#videos\\/[0-9a-f-]{36}(@[0-9]{1,4}'),
+    'la base, el service worker y la app aceptan la misma dirección (anclada)');
+  // 8. Superponer y la voz al ritmo
+  check(T.tiempoOtro(2, 1, 0.5) === 1.5 && T.tiempoOtro(0, 1, 0.5) === 0 && T.tiempoOtro(9, 0, 0, 6) === 6, 'superpuestos: el otro, en el mismo punto de su repetición (dentro de su vídeo)');
+  check(T.tiempoVoz(2, 0.5, 3) === 1.5 && T.tiempoVoz(0.2, 0.5, 3) === null && T.tiempoVoz(4, 0.5, 3) === null, 'la voz: su momento según el del vídeo (fuera de su tramo, callada)');
+  // 10. Zoom
+  check(T.limitarZoom(9) === 4 && T.limitarZoom(0.2) === 1 && T.limitarZoom(NaN) === 1 && igual(T.limitarPan({ x: 500, y: -500 }, 2, 300, 400), { x: 150, y: -200 }) && igual(T.limitarPan({ x: 5, y: 5 }, 1, 300, 400), { x: 0, y: 0 }),
+    'el zoom, de 1× a 4×; la imagen siempre tapa su caja');
+  // 16. Mi técnica
+  const vids = [{ tipo: 'video_tecnica', id: '1', fecha: '2026-09-01', ejercicio: { id: 's', nombre: 'Sentadilla' }, revision: { puntuacion: 2 } }, { tipo: 'video_tecnica', id: '2', fecha: '2026-11-01', ejercicio: { id: 's', nombre: 'Sentadilla' }, revision: { puntuacion: 4 } },
+    { tipo: 'video_tecnica', id: '3', fecha: '2026-10-01', ejercicio: { id: 'p', nombre: 'Press' } }, { tipo: 'video_tecnica', id: '4', fecha: '2026-11-02', ejercicio: null }, { tipo: 'foto_progreso', id: '5', fecha: '2026-11-02' }];
+  const gr = T.tecnicaPorEjercicio(vids);
+  check(gr.map((g) => g.id).join() === 's,p,sin' && gr[0].videos[0].id === '2' && gr[0].ultima === 4 && gr[0].puntos.length === 2 && gr[1].ultima === null, '«Mi técnica»: por ejercicio (el más reciente primero, «Sin ejercicio» al final), cada uno con su gráfica');
+  // 14. Orden de «Revisar seguidos»
+  const cola = [{ id: 'a', creado_en: '3', atleta: { nombre: 'Rubén' }, ejercicio: { nombre: 'Press' } }, { id: 'b', creado_en: '1', atleta: { nombre: 'Ana' }, ejercicio: { nombre: 'Sentadilla' } }, { id: 'c', creado_en: '2', atleta: { nombre: 'Ana' }, ejercicio: null }];
+  check(T.ordenarCola(cola).map((x) => x.id).join() === 'b,c,a' && T.ordenarCola(cola, 'atleta').map((x) => x.id).join() === 'b,c,a' && T.ordenarCola(cola, 'ejercicio').map((x) => x.id).join() === 'a,b,c',
+    'revisar seguidos: los más antiguos, por atleta o por ejercicio');
+  // 17. Limpieza y almacenamiento
+  check(T.restarMeses('2026-03-31', 1) === '2026-02-28' && T.restarMeses('2026-01-15', 2) === '2025-11-15' && T.restarMeses('2024-03-30', 1) === '2024-02-29', 'restar meses (fin de mes y años bisiestos)');
+  const ahora = Date.parse('2026-11-03T12:00:00Z');
+  const arch = [{ id: 'v1', tipo: 'video_tecnica', fecha: '2026-01-01' }, { id: 'v2', tipo: 'video_tecnica', fecha: '2026-01-01', destacado: true }, { id: 'v3', tipo: 'video_tecnica', fecha: '2026-10-01' },
+    { id: 'v4', tipo: 'video_tecnica', fecha: '2026-01-01' }, { id: 'v5', tipo: 'video_tecnica', fecha: '2026-01-01' }, { id: 'v6', tipo: 'video_tecnica', fecha: '2026-01-01' }, { id: 'v7', tipo: 'foto_progreso', fecha: '2026-01-01' },
+    { id: 'v8', tipo: 'video_tecnica', fecha: '2026-11-01', repite_de: 'v6', creado_en: '2026-11-01T10:00:00Z' }];
+  const viejos = T.videosViejos(arch, { comentarios: [{ archivo_id: 'v4', creado_en: '2026-10-30T10:00:00Z' }], tareas: [{ archivo_id: 'v5', revisada_en: null }], meses: 6, dias: 30, hoy: '2026-11-03', ahora });
+  check(igual(viejos.map((a) => a.id), ['v1']), 'limpieza: de más de 6 meses, sin destacar, sin conversación reciente, ni de una tarea por revisar, ni con una repetición reciente (y solo vídeos de técnica)');
+  check(T.avisoAlmacenamiento(0.5 * 1024 ** 3, 1).nivel === 'ok' && T.avisoAlmacenamiento(0.85 * 1024 ** 3, 1).nivel === 'cerca' && T.avisoAlmacenamiento(0.97 * 1024 ** 3, 1).nivel === 'lleno'
+    && T.avisoAlmacenamiento(0.85 * 1024 ** 3, 100).nivel === 'ok' && /85 %/.test(T.avisoAlmacenamiento(0.85 * 1024 ** 3, 1).texto), 'el aviso del almacenamiento: desde el 80 % del plan (y casi lleno desde el 95 %)');
+  // 6. Dibujos: más herramientas, colores y tramo
+  const nuevo = { t: 1, hasta: 2.5, formas: [{ tipo: 'flecha', p: [[0, 0], [1, 1]], c: 'rojo' }, { tipo: 'circulo', p: [[0.5, 0.5], [0.6, 0.6]] }, { tipo: 'lapiz', p: [[0, 0], [0.1, 0.1], [0.2, 0.3]] }, { tipo: 'texto', p: [[0.5, 0.5]], x: 'Rodillas' }] };
+  check(D.dibujoValido(nuevo) && D.dibujoValido({ t: 2, formas: [{ tipo: 'angulo', p: [[0.47, 0.66], [0.58, 0.49], [0.3, 0.73]] }] }), 'dibujos nuevos (flecha, círculo, lápiz, texto, color y tramo); los de antes siguen valiendo');
+  check(!D.dibujoValido({ t: 1, formas: [{ tipo: 'texto', p: [[0, 0]] }] }) && !D.dibujoValido({ t: 1, formas: [{ tipo: 'linea', p: [[0, 0], [1, 1]], x: 'a' }] }) && !D.dibujoValido({ t: 1, hasta: 1, formas: [{ tipo: 'linea', p: [[0, 0], [1, 1]] }] })
+    && !D.dibujoValido({ t: 1, formas: [{ tipo: 'linea', p: [[0, 0], [1, 1]], c: 'verde' }] }) && !D.dibujoValido({ t: 1, formas: [{ tipo: 'lapiz', p: [[0, 0]] }] }) && !D.dibujoValido({ t: 1, formas: [{ tipo: 'texto', p: [[0, 0]], x: ' ​ ' }] })
+    && !D.dibujoValido({ t: 1, formas: [{ tipo: 'texto', p: [[0, 0]], x: 'x'.repeat(41) }] }) && !D.dibujoValido({ t: 1, formas: Array(25).fill({ tipo: 'linea', p: [[0, 0], [1, 1]] }) }) && D.dibujoValido({ t: 1, formas: Array(24).fill({ tipo: 'linea', p: [[0, 0], [1, 1]] }) }),
+    'con su forma exacta (como la base): texto de 1 a 40 letras visibles, colores de la lista, tramo que acaba después, lápiz de 2 a 80 puntos, hasta 24 formas');
+  const l2 = D.limpiarDibujo(1.04, [{ tipo: 'lapiz', p: Array.from({ length: 200 }, (_, i) => [i / 200, 0.5]) }, { tipo: 'texto', p: [[0.5, 0.5]], x: '  Rodillas  ', c: 'amarillo' }, { tipo: 'flecha', p: [[0, 0], [1, 1]], c: 'cian' }], { hasta: 2.06 });
+  check(l2.t === 1 && l2.hasta === 2.1 && l2.formas[0].p.length === 80 && l2.formas[1].x === 'Rodillas' && !('c' in l2.formas[1]) && l2.formas[2].c === 'cian' && !('hasta' in D.limpiarDibujo(1, [{ tipo: 'linea', p: [[0, 0], [1, 1]] }], { hasta: 0.5 })),
+    'lo que se guarda: el lápiz aligerado a 80 puntos, el texto recortado, el amarillo (el de siempre) sin color, y el tramo solo si acaba después');
+  check(D.dibujoVisible({ t: 1, formas: [] }, 1.2) && !D.dibujoVisible({ t: 1, formas: [] }, 1.5) && D.dibujoVisible({ t: 1, hasta: 3, formas: [] }, 2.5) && !D.dibujoVisible({ t: 1, hasta: 3, formas: [] }, 3.2), 'un dibujo se ve en su fotograma o durante su tramo');
+  check(D.describirDibujo(nuevo) === 'una flecha, un círculo, un trazo y el texto «Rodillas»' && D.describirDibujo({ formas: [{ tipo: 'linea', p: [[0, 0], [1, 1]] }, { tipo: 'flecha', p: [[0, 0], [1, 1]] }, { tipo: 'flecha', p: [[0, 0], [1, 1]] }] }) === 'una línea y 2 flechas',
+    'descrito en palabras (para quien no lo ve)');
+  check(sql.includes("'linea', 'angulo', 'flecha', 'circulo', 'lapiz', 'texto'") && D.COLORES_DIBUJO.every(([k]) => sql.includes(`'${k}'`)) && /between 1 and 24/.test(sql) && D.MAX_FORMAS === 24, 'las mismas herramientas, colores y tope que la base');
+  // Los colores del dibujo se distinguen sobre el vídeo (borde oscuro) y cada uno lleva su nombre
+  check(D.COLORES_DIBUJO.length === 5 && D.COLORES_DIBUJO.every(([k, n, h]) => k && n && /^#[0-9A-F]{6}$/i.test(h)) && D.HEX_COLOR.amarillo === '#F2C230', 'cinco colores con nombre; el amarillo, el de siempre');
+  // Privacidad y otras comprobaciones del código
+  const legal = await import('../web/src/legal.js');
+  const filaV = legal.PRIVACIDAD.find(([t]) => t === 'Tus vídeos de técnica')?.[1] || '';
+  const filaM = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil')[1];
+  check(/nota de técnica de 1 a 5/.test(filaV) && /su voz sobre el vídeo/.test(filaV) && /el día \(no la hora\)/.test(filaV) && /sensor de inclinación/.test(filaV) && /destacados no se borran nunca/.test(filaV)
+    && /por donde iba/.test(filaM) && legal.VERSION_LEGAL === '2026-11', 'la privacidad lo cuenta (la corrección, la voz, «Visto» solo con el día, el nivel, la limpieza y la subida que sigue), sin cambiar de versión');
+  const src = (f) => readFileSync(new URL(`../web/src/ui/${f}`, import.meta.url), 'utf8');
+  const cam = src('tecnica/CamaraVideo.jsx');
+  check((cam.match(/soltarCamara\(\)/g) || []).length >= 5 && /audio: false/.test(cam) && /requestPermission/.test(cam) && !/preact\/compat/.test(cam + src('tecnica/Correccion.jsx') + src('tecnica/RevisionSeguida.jsx') + src('tecnica/MiTecnica.jsx') + src('Video.jsx')),
+    'la cámara se suelta al parar, cancelar, fallar y cerrar; graba sin sonido; pide el permiso del nivel en iPhone; sin preact/compat');
+  const css = readFileSync(new URL('../web/src/estilos.css', import.meta.url), 'utf8');
+  check(/prefers-reduced-motion: reduce\) \{ \.rep-zoom\.suave/.test(css) && !/@keyframes seguida-[a-z]+ \{[^}]*opacity/.test(css), 'con «reducir movimiento», nada se mueve; y las animaciones nuevas, sin opacidad (solo transform)');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

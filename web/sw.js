@@ -78,8 +78,10 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { cuerpo: e.data ? e.data.text() : '' }; }
-  // (v0.55) «#mensajes/<atleta>»: la conversación de un mensaje (la del coach); el resto, una pestaña
-  const destino = typeof d.url === 'string' && /^#[a-z]+(\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/.test(d.url) ? d.url : '';
+  // (v0.55) «#mensajes/<atleta>»: la conversación de un mensaje (la del coach); (v0.57) «#videos/<vídeo>@<segundos>»: el
+  // momento corregido de un vídeo; el resto, una pestaña
+  const destino = typeof d.url === 'string' && (/^#[a-z]+(\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/.test(d.url)
+    || /^#videos\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(@[0-9]{1,4}(\.[0-9])?)?$/.test(d.url)) ? d.url : '';
   const url = new URL('./' + destino, self.registration.scope).href;
   e.waitUntil((async () => {
     const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });

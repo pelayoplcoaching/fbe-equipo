@@ -4,6 +4,7 @@ import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Pa
 import { BandaConexion } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { SubirArchivo } from '../Archivos.jsx';
+import { textoSerieVideo } from '../../logica/tecnica.js';
 import { EVENTO_PENDIENTES, listarPendientes } from '../../datos/pendientes.js';
 import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herramientas.jsx';
 import { HojaCompartir } from '../Compartir.jsx';
@@ -733,7 +734,9 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
             {quitable && <button class="btn-texto btn-quitar-serie" onClick={() => setExtra(Math.max(0, quitable - 1 - e.series))} aria-label={`Quitar la serie ${quitable}, la añadida`}><Icono n="menos" /> Quitar serie {quitable}</button>}
           </div>
           <div class="acciones-ej">
-            {!propio && <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} etiqueta={videos + videosPendientes > 0 ? 'Enviar otro vídeo' : undefined} alSubir={alSubirVideo} />}
+            {!propio && <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} etiqueta={videos + videosPendientes > 0 ? 'Enviar otro vídeo' : undefined} alSubir={alSubirVideo}
+              ejercicio={ej} series={Array.from({ length: filas }, (_, i) => i + 1).map((k) => ({ numero: k, texto: hechas[k] ? textoSerieVideo(hechas[k]) : null }))}
+              serieInicial={Math.max(0, ...Object.keys(hechas).map(Number).filter((k) => hechas[k])) || null} />}
             <button class="btn-texto btn-mas" onClick={() => setHoja('mas')} aria-haspopup="dialog" aria-label={`Más herramientas de ${ej.nombre}`}><Icono n="opciones" /> Más</button>
           </div>
         </div>

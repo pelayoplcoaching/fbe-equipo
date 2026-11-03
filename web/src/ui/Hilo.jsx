@@ -3,6 +3,7 @@ import { useUnaVez, useApp, useCarga, Icono, Cargando, Hoja, cuando } from './co
 import { RESPUESTAS_EJEMPLO } from '../datos/respuestas.js';
 import { TextoConMomentos, BotonDibujo, reproductorDe, textoMomento } from './Video.jsx';
 import { describirDibujo, dibujoValido } from '../logica/dibujo.js';
+import { ponerCorrecciones } from './tecnica/correcciones.js';
 
 // Conversación entre coach y atleta pegada a una sesión, un check-in o un vídeo.
 // Al abrirla, lo que escribió la otra parte queda como leído (alLeer); al enviar, avisa con alCambiar.
@@ -20,6 +21,8 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
   const area = useRef(null);
   const primerNombre = nombreAtleta.split(' ')[0];
 
+  // (v0.57) lo que se dice del vídeo, para las marcas de su barra de tiempo y sus dibujos con tramo
+  useEffect(() => { if (archivoId && hilo.datos) ponerCorrecciones(archivoId, 'comentarios', hilo.datos); }, [archivoId, hilo.datos]);
   useEffect(() => {
     const ids = (hilo.datos || []).filter((c) => c.autor !== yo && !c.leido_en).map((c) => c.id);
     if (ids.length) api.marcarLeidos(ids).then(() => alLeer?.()).catch(() => {});

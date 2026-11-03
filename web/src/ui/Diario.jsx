@@ -5,7 +5,9 @@ import { VerArchivo, CompararVideos, SubirArchivo } from './Archivos.jsx';
 import { CompararFotos } from './CompararFotos.jsx';
 import { NuevaFoto, POSES } from './atleta/CamaraGuiada.jsx';
 import { mmssCorto } from './Chat.jsx';
+import { reproductorDe } from './Video.jsx';
 import { fmtCorta, fmtConDia } from '../logica/fechas.js';
+import { PanelCorreccion, EstadoVideo } from './tecnica/Correccion.jsx';
 
 const NOMBRE_POSE = Object.fromEntries(POSES);
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -24,6 +26,8 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
   const [comparar, setComparar] = useState(null); // 'videos' | 'fotos'
   const lista = datos.datos || [];
   const recargar = () => { datos.recargar(true); alCambiar?.(); };
+  // (v0.57) al enviar una repetición de un vídeo corregido, sale en el diario
+  useEffect(() => { const al = () => datos.recargar(true); window.addEventListener('fbe-video-repetido', al); return () => window.removeEventListener('fbe-video-repetido', al); }, []);
   const videos = lista.filter((a) => a.tipo === 'video_tecnica');
   const fotos = lista.filter((a) => a.tipo === 'foto_progreso');
   const ejercicios = [...new Map(lista.filter((a) => a.ejercicio).map((a) => [a.ejercicio.id, a.ejercicio])).values()].sort((x, y) => x.nombre.localeCompare(y.nombre));
@@ -84,7 +88,7 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
       {comparar === 'videos' && <CompararVideos videos={videos} nombreDe={nombreDe} alCerrar={() => setComparar(null)} />}
       {comparar === 'fotos' && <CompararFotos fotos={fotos} alCerrar={() => setComparar(null)} />}
       {abierto && (
-        <DetalleArchivo a={lista.find((x) => x.id === abierto.id) || abierto} atletaId={atletaId} nombreAtleta={nombreAtleta} esCoach={esCoach} nombre={nombreDe(abierto)}
+        <DetalleArchivo a={lista.find((x) => x.id === abierto.id) || abierto} lista={lista} atletaId={atletaId} nombreAtleta={nombreAtleta} esCoach={esCoach} nombre={nombreDe(abierto)}
           alCerrar={() => setAbierto(null)} alCambiar={recargar}
           alBorrar={async () => { try { await api.borrarArchivo(abierto); aviso(abierto.tipo === 'foto_progreso' ? 'Foto borrada' : 'Vídeo borrado'); setAbierto(null); recargar(); } catch (e) { aviso(e.message, 'error'); } }} />
       )}
@@ -120,9 +124,20 @@ function Miniatura({ a, nombre, alAbrir }) {
 }
 
 // El vídeo o la foto a lo grande, con su pie, su ejercicio, destacar, la conversación y borrar
-function DetalleArchivo({ a, atletaId, nombreAtleta, esCoach, nombre, alCerrar, alCambiar, alBorrar }) {
+export function DetalleArchivo({ a, lista = [], atletaId, nombreAtleta, esCoach, nombre, alCerrar, alCambiar, alBorrar, irA = null }) {
   const { api, aviso } = useApp();
   const [editar, setEditar] = useState(false);
+  const [comparar, setComparar] = useState(null); // [original, repetición]
+  // (v0.57) el original de una repetición y las repeticiones de este vídeo (para verlos lado a lado)
+  const original = a.repite_de ? lista.find((x) => x.id === a.repite_de) || null : null;
+  const repeticiones = lista.filter((x) => x.repite_de === a.id);
+  // Si se abre en un momento (el enlace de un aviso), el vídeo va ahí en cuanto está listo
+  useEffect(() => {
+    if (irA == null) return undefined;
+    let n = 0;
+    const t = setInterval(() => { const r = reproductorDe(a.id); if ((r && r.duracion() > 0) || ++n > 40) { clearInterval(t); r?.ir(irA); } }, 150);
+    return () => clearInterval(t);
+  }, [a.id, irA]);
   const [pie, setPie] = useState(a.nota_atleta || '');
   const [confirmar, setConfirmar] = useState(false);
   const esFoto = a.tipo === 'foto_progreso';
@@ -136,7 +151,17 @@ function DetalleArchivo({ a, atletaId, nombreAtleta, esCoach, nombre, alCerrar, 
         {!esCoach && <button class="btn btn-peq" onClick={() => setEditar(!editar)}><Icono n="editar" /> {a.nota_atleta ? 'Cambiar el pie' : 'Poner un pie'}</button>}
         {a.revisado_en ? <span class="chip ok"><Icono n="hecho" />{esCoach ? 'Revisado' : 'Revisado por tu coach'}</span> : !esFoto && <span class="chip">{esCoach ? 'Por revisar' : 'Pendiente de tu coach'}</span>}
         {a.duracion_seg ? <span class="chip num">{mmssCorto(a.duracion_seg)}</span> : null}
+        {a.revision?.puntuacion != null && <span class="chip morado num">Técnica {a.revision.puntuacion}/5</span>}
       </div>
+      {!esFoto && a.estado && <EstadoVideo estado={a.estado} />}
+      {(original || repeticiones.length > 0) && (
+        <div class="fila-envolver">
+          {original && <button class="btn btn-peq" onClick={() => setComparar([original, a])}><Icono n="duplicar" /> Comparar con el original ({fmtCorta(original.fecha)})</button>}
+          {repeticiones.map((x) => <button key={x.id} class="btn btn-peq" onClick={() => setComparar([a, x])}><Icono n="duplicar" /> Comparar con la repetición ({fmtCorta(x.fecha)})</button>)}
+        </div>
+      )}
+      {!esFoto && a.tipo === 'video_tecnica' && <PanelCorreccion video={{ ...a, atleta_id: a.atleta_id || atletaId }} esCoach={esCoach} nombreAtleta={nombreAtleta} alCambiar={alCambiar} />}
+      {comparar && <CompararVideos videos={comparar} nombreDe={(v) => (v.id === comparar[0].id ? 'Original' : 'Repetición')} inicialA={comparar[1].id} inicialB={comparar[0].id} alCerrar={() => setComparar(null)} />}
       {editar ? (
         <div class="fila" style="gap:8px;align-items:flex-end">
           <textarea class="area" rows={2} aria-label="Pie" maxLength={500} value={pie} onInput={(e) => setPie(e.currentTarget.value)} placeholder="Qué querías enseñar, cómo te sentiste…" />

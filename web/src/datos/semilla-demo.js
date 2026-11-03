@@ -365,18 +365,26 @@ export function semillaDemo(hoy = hoyISO()) {
   };
   const vidAna = pautaReciente(ana.id, 'Sentadilla barra alta');
   if (vidAna) {
+    // v0.57: con su serie (la 2 de esa sentadilla: «kg × reps @RPE» encima del vídeo)
+    const serieAna = db.series.some((x) => x.sesion_ejercicio_id === vidAna.pauta.id && x.numero === 2) ? 2 : null;
     db.archivos.push({ id: uuid(), atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/ejemplo-sentadilla.mp4`, fecha: vidAna.fecha,
       sesion_ejercicio_id: vidAna.pauta.id, ejercicio_id: ej['Sentadilla barra alta'].id, nota_atleta: '¿Llego a la profundidad buena? La última repetición me ha costado.',
       comentario_coach: null, mime: 'video/mp4', bytes: 21660, revisado_en: null, creado_en: hace(200), duracion_seg: 8,
       // v0.50: con su miniatura, como los que suben los atletas (la bandeja del coach la enseña)
-      poster_ruta: `${ana.id}/ejemplo-sentadilla.mp4.jpg` });
+      poster_ruta: `${ana.id}/ejemplo-sentadilla.mp4.jpg`, serie_numero: serieAna, repite_de: null });
     // Y otros dos antiguos en su diario (v0.18): uno destacado
-    db.archivos.push({ id: uuid(), atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/ejemplo-sentadilla.mp4`, fecha: sumarDias(vidAna.fecha, -28),
+    const idAna28 = uuid(), idAna49 = uuid();
+    db.archivos.push({ id: idAna28, atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/ejemplo-sentadilla.mp4`, fecha: sumarDias(vidAna.fecha, -28),
       sesion_ejercicio_id: null, ejercicio_id: ej['Sentadilla barra alta'].id, nota_atleta: 'Mi mejor serie hasta ahora: 70 kg limpios.',
       comentario_coach: null, mime: 'video/mp4', bytes: 21660, revisado_en: hace(60 * 24 * 27), creado_en: hace(60 * 24 * 28), duracion_seg: 8, destacado: true });
-    db.archivos.push({ id: uuid(), atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/ejemplo-sentadilla.mp4`, fecha: sumarDias(vidAna.fecha, -49),
+    db.archivos.push({ id: idAna49, atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/ejemplo-sentadilla.mp4`, fecha: sumarDias(vidAna.fecha, -49),
       sesion_ejercicio_id: null, ejercicio_id: ej['Press banca'].id, nota_atleta: null,
       comentario_coach: null, mime: 'video/mp4', bytes: 21660, revisado_en: hace(60 * 24 * 48), creado_en: hace(60 * 24 * 49), duracion_seg: 8 });
+    // v0.57 (035): sus notas de técnica (para «Mi técnica»)
+    (db.video_revisiones ||= []).push(
+      { archivo_id: idAna28, atleta_id: ana.id, puntuacion: 4, checklist: { puntos: [{ t: 'Rodillas en la dirección de los pies (sin irse hacia dentro)', e: 'bien' }, { t: 'Profundidad que se mantiene con la espalda neutra', e: 'bien', s: 2 }] }, tempo: null,
+        voz_archivo_id: null, voz_inicio: null, visto_el: sumarDias(vidAna.fecha, -27), corregido_en: hace(60 * 24 * 27), actualizado_en: hace(60 * 24 * 27) },
+      { archivo_id: idAna49, atleta_id: ana.id, puntuacion: 3, checklist: null, tempo: null, voz_archivo_id: null, voz_inicio: null, visto_el: sumarDias(vidAna.fecha, -48), corregido_en: hace(60 * 24 * 48), actualizado_en: hace(60 * 24 * 48) });
   }
   const vidRuben = pautaReciente(ruben.id, 'Sentadilla barra alta');
   if (vidRuben) {
@@ -390,9 +398,19 @@ export function semillaDemo(hoy = hoyISO()) {
       // v0.14: el ángulo de la cadera y la línea de la espalda, dibujados sobre el fotograma del 0:02
       dibujo: { t: 2, formas: [{ tipo: 'angulo', p: [[0.47, 0.66], [0.58, 0.49], [0.3, 0.73]] }, { tipo: 'linea', p: [[0.3, 0.73], [0.56, 0.9]] }] } });
     // Y uno de hace cinco semanas, para «Comparar dos»
-    db.archivos.push({ id: uuid(), atleta_id: ruben.id, tipo: 'video_tecnica', ruta: `${ruben.id}/ejemplo-sentadilla.mp4`, fecha: sumarDias(vidRuben.fecha, -35),
+    const idRuben35 = uuid();
+    db.archivos.push({ id: idRuben35, atleta_id: ruben.id, tipo: 'video_tecnica', ruta: `${ruben.id}/ejemplo-sentadilla.mp4`, fecha: sumarDias(vidRuben.fecha, -35),
       sesion_ejercicio_id: null, ejercicio_id: ej['Sentadilla barra alta'].id, nota_atleta: 'Mi primera semana.',
       comentario_coach: null, mime: 'video/mp4', bytes: 21660, revisado_en: hace(60 * 24 * 34), creado_en: hace(60 * 24 * 35), duracion_seg: 8 });
+    // v0.57 (035): la corrección del último (nota, puntos clave y tempo) y la nota del de hace cinco semanas
+    (db.video_revisiones ||= []).push(
+      { archivo_id: id, atleta_id: ruben.id, puntuacion: 3, tempo: { reps: [[0.4, 2.1, 3.0], [3.4, 5.0, 6.1]] }, voz_archivo_id: null, voz_inicio: null,
+        checklist: { puntos: [{ t: 'Pie entero apoyado: talón, base del dedo gordo y del meñique', e: 'bien' }, { t: 'Cadera y pecho suben a la vez', e: 'mal', s: 1.5 }, { t: 'Profundidad que se mantiene con la espalda neutra', e: 'bien', s: 2 }] },
+        visto_el: vidRuben.fecha, corregido_en: hace(2000), actualizado_en: hace(2000) },
+      { archivo_id: idRuben35, atleta_id: ruben.id, puntuacion: 2, checklist: null, tempo: null, voz_archivo_id: null, voz_inicio: null, visto_el: sumarDias(vidRuben.fecha, -34), corregido_en: hace(60 * 24 * 34), actualizado_en: hace(60 * 24 * 34) });
+    // La lista de puntos clave del coach para la sentadilla
+    (db.tecnica_plantillas ||= []).push({ ejercicio_id: ej['Sentadilla barra alta'].id, actualizado_en: hace(60 * 24 * 40),
+      puntos: ['Pie entero apoyado: talón, base del dedo gordo y del meñique', 'Rodillas en la dirección de los pies (sin irse hacia dentro)', 'Profundidad que se mantiene con la espalda neutra', 'Cadera y pecho suben a la vez', 'Aire y tronco firme antes de cada repetición'] });
   }
 
   // Fotos de progreso de Ana (siluetas de ejemplo), el mismo día que sus medidas

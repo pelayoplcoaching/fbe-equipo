@@ -40,6 +40,7 @@ import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
 import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
 import { planDifusion, planReenvio, nombreSeguroPdf, PDF_MAX_MB, hastaFijado, fijadoVigente, hastaSilencio, silenciado } from '../logica/chat.js';
+import { textoSerieVideo, serieValida, puntuacionValida, checklistValido, limpiarChecklist, tempoValido, plantillaValida, limpiarPlantilla, estadoVideo, tecnicaPorEjercicio } from '../logica/tecnica.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -166,6 +167,15 @@ const falta034 = (e) => {
 const almacenNavegador = () => { try { return globalThis.localStorage || null; } catch { return null; } };
 const leerPrivacidadLocal = (id) => { try { return almacenNavegador()?.getItem(clavePrivacidadLocal(id)) || null; } catch { return null; } };
 const guardarPrivacidadLocal = (id, v) => { try { almacenNavegador()?.setItem(clavePrivacidadLocal(id), v); } catch { /* */ } };
+// v0.57 sin la migración 035: los vídeos se ven y se envían como siempre; lo nuevo (la serie, repetir, la corrección, las
+// listas de puntos clave, «Visto» y la limpieza) dice qué falta
+export const AVISO_035 = 'Disponible tras la migración 035 (supabase/migraciones/035_videos_tecnica.sql)';
+const falta035 = (e) => {
+  const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+  if (/\b(serie_numero|repite_de|video_revisiones|tecnica_plantillas|video_visto|videos_limpieza|videos_limpiar)\b/.test(m)
+    && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m)) throw new Error(`${AVISO_035}. Detalle: ${e?.message || e}`);
+  throw e;
+};
 const sinCliente033 = (e) => /cliente_id/.test(e?.message || '') && /schema cache|does not exist|no existe|column|columna|PGRST20/i.test(e?.message || '');
 const duplicado = (e) => /duplicate|23505|Ya existe un registro igual/i.test(`${e?.codigo || e?.code || ''} ${e?.message || ''}`);
 // La función de entrar sin la migración 028 (sin el parámetro de las normas)
@@ -230,10 +240,10 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
   'archivos', 'comentarios', 'recursos', 'notas_ejercicio', 'respuestas_guardadas', 'avisos', 'habitos', 'registros_habito',
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
   'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
-  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado'];
-// Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032): sin ellas, la copia sale igual
+  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas'];
+// Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los vídeos, 035): sin ellas, la copia sale igual
 const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
-  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado'];
+  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas'];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
 
@@ -258,7 +268,8 @@ export function crearApi(backend) {
     clearTimeout(temporizadorEnvio);
     temporizadorEnvio = setTimeout(() => { Promise.resolve().then(() => backend.funcion('enviar-notificaciones')).catch(() => {}); }, ms);
   };
-  const avisa = (m, t, c) => ((m === 'insert' || m === 'upsert') && ['comentarios', 'avisos', 'checkins', 'semanas', 'comunidad_posts', 'comunidad_comentarios', 'tareas'].includes(t))
+  const avisa = (m, t, c) => ((m === 'insert' || m === 'upsert') && ['comentarios', 'avisos', 'checkins', 'semanas', 'comunidad_posts', 'comunidad_comentarios', 'tareas', 'video_revisiones'].includes(t))
+    || (m === 'update' && t === 'video_revisiones')
     || (m === 'rpc' && ['comunidad_reaccionar', 'comunidad_avisar_coach', 'comunidad_animar', 'tarea_completar'].includes(t))
     || (m === 'update' && ((t === 'semanas' && c?.programacion === 'programada') || (t === 'sesiones' && c?.completada === true) || (t === 'avisos' && 'texto' in (c || {}))));
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc']) {
@@ -2088,13 +2099,17 @@ export function crearApi(backend) {
       const seIds = unicos(archivos.filter((a) => !a.ejercicio_id && a.sesion_ejercicio_id).map((a) => a.sesion_ejercicio_id));
       const pautas = seIds.length ? await b.select('sesion_ejercicios', { in: { id: seIds }, cols: 'id,ejercicio_id' }).catch(() => []) : [];
       const ejIds = unicos([...archivos.map((a) => a.ejercicio_id), ...pautas.map((p) => p.ejercicio_id)].filter(Boolean));
-      const ejercicios = porId(ejIds.length ? await b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre' }) : []);
+      const ejercicios = porId(ejIds.length ? await b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre,grupos_musculares,tipo,video_url' }) : []);
       const pautaPorId = porId(pautas);
       const porArchivo = {};
       for (const c of comentarios) { const x = (porArchivo[c.archivo_id] ||= { n: 0, coach: false }); x.n++; if (c.autor === 'coach') x.coach = true; }
+      // (v0.57) la corrección de cada vídeo y la serie que se ve en él (sin la 035, sin ellas)
+      const extra = await api.extrasVideos(archivos);
       return archivos.map((a) => {
         const ejId = a.ejercicio_id || pautaPorId[a.sesion_ejercicio_id]?.ejercicio_id || null;
-        return { ...a, ejercicio: ejId ? ejercicios[ejId] || null : null, comentarios: porArchivo[a.id]?.n || 0, respondido: !!porArchivo[a.id]?.coach };
+        const revision = extra.revisiones[a.id] || null;
+        return { ...a, ejercicio: ejId ? ejercicios[ejId] || null : null, comentarios: porArchivo[a.id]?.n || 0, respondido: !!porArchivo[a.id]?.coach,
+          revision, serie: extra.series[a.id] || null, estado: a.tipo === 'video_tecnica' ? estadoVideo({ revision, respondido: !!porArchivo[a.id]?.coach }) : null };
       });
     },
     // Lo que el atleta puede cambiar de un archivo suyo (el coach, también): pie, ejercicio y destacado
@@ -2104,6 +2119,10 @@ export function crearApi(backend) {
       if (ejercicio_id !== undefined) c.ejercicio_id = ejercicio_id;
       if (destacado !== undefined) c.destacado = !!destacado;
       return (await b.update('archivos', c, { eq: { id } }))[0];
+    },
+    // (v0.57) Lo que ocupa todo, sin más (para el aviso del panel: una consulta de una columna)
+    async bytesUsados() {
+      return (await b.select('archivos', { cols: 'bytes' }).catch(() => [])).reduce((t, a) => t + (Number(a.bytes) || 0), 0);
     },
     // Espacio ocupado en Storage, por atleta (para que el coach sepa por dónde va el plan)
     async espacioUsado() {
@@ -2131,7 +2150,11 @@ export function crearApi(backend) {
     // alProgreso(0…1) de la subida; fecha: la del día en que se grabó (un vídeo que se queda pendiente sin cobertura
     // y se envía al día siguiente conserva su día). ruta: la de un intento anterior (v0.33): reintentar es seguro,
     // se reutiliza el registro si ya se hizo y, si el archivo llegó entero aunque no la respuesta, no se sube dos veces.
-    async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null, fecha = null, alProgreso = null, senal = null, ruta: rutaDada = null, nombre = null, paginas = null, onda = null }) {
+    // (v0.57, 035) serie_numero: la serie del ejercicio de la sesión que se ve en el vídeo; repite_de: el vídeo corregido que
+    // se graba de nuevo. Sin la 035, el vídeo sale igual, sin ellos. urlSubida / alUrlSubida: la dirección de la subida por
+    // trozos (TUS), para seguir por donde iba si se corta o se cierra la app.
+    async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null, fecha = null, alProgreso = null, senal = null, ruta: rutaDada = null, nombre = null, paginas = null, onda = null,
+      serie_numero = null, repite_de = null, urlSubida = null, alUrlSubida = null }) {
       if (archivo.size > LIMITE_ARCHIVO_MB * 1024 * 1024) throw new Error(`El archivo pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos) o recórtalo.`);
       const esImagen = /^image\//.test(archivo.type || '') || tipo === 'foto_progreso';
       const ruta = rutaDada || api.rutaArchivo(atletaId, archivo, { tipo, fecha });
@@ -2141,6 +2164,8 @@ export function crearApi(backend) {
       // Primero se registra (la base comprueba consentimiento, ruta y límite diario) y después se sube:
       // Storage solo acepta archivos ya registrados.
       let fila = rutaDada ? (await b.select('archivos', { eq: { ruta } }))[0] : null;
+      const enlaces = tipo === 'video_tecnica' && (serie_numero || repite_de) && await api.video035()
+        ? { ...(serie_numero && sesion_ejercicio_id && serieValida(Number(serie_numero)) ? { serie_numero: Number(serie_numero) } : {}), ...(repite_de ? { repite_de } : {}) } : {};
       if (!fila) {
         [fila] = await b.insert('archivos', [{
           atleta_id: atletaId, tipo, ruta, sesion_ejercicio_id, ejercicio_id, nota_atleta,
@@ -2149,11 +2174,12 @@ export function crearApi(backend) {
           ...(poster_ruta ? { poster_ruta } : {}), ...(dur != null ? { duracion_seg: dur } : {}),
           ...(tipo === 'documento' ? { nombre: nombreSeguroPdf(nombre || archivo.name), ...(Number.isInteger(paginas) && paginas >= 1 && paginas <= 5000 ? { paginas } : {}) } : {}),
           ...(tipo === 'audio' && ondaValida(onda) ? { onda } : {}),
-        }]).catch(tipo === 'documento' ? falta033 : tipo === 'audio' ? falta034 : (e) => { throw e; });
+          ...enlaces,
+        }]).catch(tipo === 'documento' ? falta033 : tipo === 'audio' ? falta034 : Object.keys(enlaces).length ? falta035 : (e) => { throw e; });
       }
       try {
         if (senal?.cancelada) { const e = new Error('Cancelado'); e.cancelado = true; throw e; }
-        await b.storage.subir(ruta, archivo, (tipo === 'audio' ? tipoAudio(archivo.type)?.tipo : archivo.type) || 'application/octet-stream', { alProgreso, senal, bucket: cuboDe(ruta, tipo) });
+        await b.storage.subir(ruta, archivo, (tipo === 'audio' ? tipoAudio(archivo.type)?.tipo : archivo.type) || 'application/octet-stream', { alProgreso, senal, bucket: cuboDe(ruta, tipo), urlSubida, alUrlSubida });
       } catch (e) {
         // Sin cobertura, el registro se queda: el siguiente intento (con la misma ruta) lo reutiliza
         if (!e?.sinConexion) await b.delete('archivos', { eq: { id: fila.id } }).catch(() => {});
@@ -2180,6 +2206,142 @@ export function crearApi(backend) {
       const coach = await api.esCoachAhora();
       if (coach) { if (hechas) await b.rpc('storage_borrado', { p_rutas: rutas }).catch(() => {}); api.limpiarAlmacenamiento().catch(() => {}); }
       return hechas ? 'borrado' : 'pendiente';
+    },
+
+    // ------------------------------------------------------------ v0.57: los vídeos de técnica (migración 035)
+    // ¿Tiene la base la 035? (la serie, repetir, la corrección, las listas de puntos clave, «Visto» y la limpieza)
+    async video035() {
+      if (!api._v035) {
+        api._v035 = b.select('video_revisiones', { limit: 1, cols: 'archivo_id' }).then(() => true, (e) => {
+          const falta = /video_revisiones|schema cache|does not exist|no existe|relation|PGRST20/i.test(e?.message || '');
+          if (!falta) api._v035 = null;
+          return !falta;
+        });
+      }
+      return api._v035;
+    },
+    async exigir035() { if (!(await api.video035())) throw new Error(AVISO_035); },
+    // La corrección de varios vídeos y la serie que se ve en cada uno: { revisiones: { id: fila }, series: { id: { texto, kg, reps, rpe, numero } } }
+    async extrasVideos(archivos) {
+      const vids = (archivos || []).filter((a) => a.tipo === 'video_tecnica');
+      if (!vids.length || !(await api.video035())) return { revisiones: {}, series: {} };
+      const conSerie = vids.filter((a) => a.serie_numero && a.sesion_ejercicio_id);
+      const [revs, series] = await Promise.all([
+        b.select('video_revisiones', { in: { archivo_id: vids.map((a) => a.id) } }).catch(() => []),
+        conSerie.length ? b.select('series', { in: { sesion_ejercicio_id: unicos(conSerie.map((a) => a.sesion_ejercicio_id)) }, cols: 'sesion_ejercicio_id,numero,kg,reps,rpe' }).catch(() => []) : [],
+      ]);
+      const out = { revisiones: porCampo(revs, 'archivo_id'), series: {} };
+      for (const a of conSerie) {
+        const s = series.find((x) => x.sesion_ejercicio_id === a.sesion_ejercicio_id && Number(x.numero) === Number(a.serie_numero));
+        out.series[a.id] = { numero: a.serie_numero, texto: s ? textoSerieVideo(s) : null, kg: s?.kg ?? null, reps: s?.reps ?? null, rpe: s?.rpe ?? null };
+      }
+      return out;
+    },
+    // La corrección de un vídeo (o null), con su voz ({ ruta, duracion_seg, onda }) si la lleva
+    async revisionVideo(archivoId) {
+      if (!archivoId || !(await api.video035())) return null;
+      const [r] = await b.select('video_revisiones', { eq: { archivo_id: archivoId } }).catch(() => []);
+      if (!r) return null;
+      const [voz] = r.voz_archivo_id ? await b.select('archivos', { eq: { id: r.voz_archivo_id }, cols: 'id,ruta,duracion_seg,onda,tipo' }).catch(() => []) : [];
+      return { ...r, voz: voz || null };
+    },
+    // El coach: la nota (1-5), los puntos clave revisados y el tempo (lo que venga; null lo quita). Devuelve la corrección.
+    async guardarRevision(video, { puntuacion, checklist, tempo } = {}) {
+      await api.exigir035();
+      const fila = { archivo_id: video.id, atleta_id: video.atleta_id };
+      if (puntuacion !== undefined) { if (!puntuacionValida(puntuacion)) throw new Error('La nota de técnica va de 1 a 5'); fila.puntuacion = puntuacion; }
+      if (checklist !== undefined) {
+        const c = Array.isArray(checklist) ? limpiarChecklist(checklist) : checklist;
+        if (c != null && !checklistValido(c)) throw new Error('Los puntos clave no tienen la forma que toca');
+        fila.checklist = c;
+      }
+      if (tempo !== undefined) {
+        if (tempo != null && !tempoValido(tempo, Number.isFinite(video.duracion_seg) ? video.duracion_seg : null)) throw new Error('El tempo tiene que ir en orden y dentro del vídeo');
+        fila.tempo = tempo;
+      }
+      await b.upsert('video_revisiones', [fila], 'archivo_id').catch(falta035);
+      return api.revisionVideo(video.id);
+    },
+    // «Visto por tu coach»: al abrir el vídeo (solo el coach; el día, nunca la hora). Sin la 035, nada.
+    async marcarVideoVisto(archivoId) {
+      if (!archivoId || !(await api.video035()) || !(await api.esCoachAhora())) return null;
+      try { return await b.rpc('video_visto', { p_archivo: archivoId }); } catch { return null; }
+    },
+    // La voz del coach sobre el vídeo (una nota de voz de hasta un minuto, en el bucket «voz»): empieza en «inicio» (s del
+    // vídeo). Si ya había una, la base retira la de antes. Devuelve la corrección.
+    async guardarVozVideo(video, audio, { inicio = 0, seg, onda = null } = {}) {
+      await api.exigir035();
+      if (!tipoAudio(audio?.type)) throw new Error('Ese audio no se puede enviar');
+      if (audio.size > MAX_VOZ_BYTES) throw new Error('La voz pesa demasiado (más de 3 MB)');
+      const archivo = audio instanceof File ? audio : new File([audio], `voz.${tipoAudio(audio.type).ext}`, { type: audio.type });
+      const fila = await api.subirArchivo(video.atleta_id, archivo, { tipo: 'audio', duracion_seg: duracionGuardada(seg), onda: ondaValida(onda) ? onda : null });
+      try {
+        await b.upsert('video_revisiones', [{ archivo_id: video.id, atleta_id: video.atleta_id, voz_archivo_id: fila.id, voz_inicio: Math.round(Math.max(0, Number(inicio) || 0) * 100) / 100 }], 'archivo_id').catch(falta035);
+      } catch (e) { await api.borrarArchivo(fila).catch(() => {}); throw e; }
+      api.limpiarAlmacenamiento().catch(() => {});
+      return api.revisionVideo(video.id);
+    },
+    async quitarVozVideo(video) {
+      await api.exigir035();
+      await b.update('video_revisiones', { voz_archivo_id: null }, { eq: { archivo_id: video.id } }).catch(falta035);
+      api.limpiarAlmacenamiento().catch(() => {});
+      return api.revisionVideo(video.id);
+    },
+    // Las listas de puntos clave de cada ejercicio (solo el coach). null si no tiene (o sin la 035)
+    async plantillaTecnica(ejercicioId) {
+      if (!ejercicioId || !(await api.video035())) return null;
+      const [x] = await b.select('tecnica_plantillas', { eq: { ejercicio_id: ejercicioId } }).catch(() => []);
+      return x?.puntos || null;
+    },
+    async guardarPlantillaTecnica(ejercicioId, puntos) {
+      await api.exigir035();
+      const ps = limpiarPlantilla(puntos);
+      if (!plantillaValida(ps)) throw new Error('Una lista lleva de 1 a 15 puntos, de hasta 120 letras');
+      await b.upsert('tecnica_plantillas', [{ ejercicio_id: ejercicioId, puntos: ps }], 'ejercicio_id').catch(falta035);
+      return ps;
+    },
+    async borrarPlantillaTecnica(ejercicioId) {
+      await api.exigir035();
+      await b.delete('tecnica_plantillas', { eq: { ejercicio_id: ejercicioId } }).catch(falta035);
+    },
+    // Un archivo por su id (el original de una repetición) y las repeticiones de un vídeo
+    async archivo(id) { if (!id) return null; const [a] = await b.select('archivos', { eq: { id } }).catch(() => []); return a || null; },
+    async repeticionesDe(id) {
+      if (!id || !(await api.video035())) return [];
+      return b.select('archivos', { eq: { repite_de: id }, order: [['creado_en', 'asc']] }).catch(() => []);
+    },
+    // «Mi técnica»: los vídeos de un atleta por ejercicio, con sus notas
+    async miTecnica(atletaId) {
+      return tecnicaPorEjercicio((await api.diario(atletaId)).filter((a) => a.tipo === 'video_tecnica'));
+    },
+    // Un vídeo de técnica con lo que hace falta para verlo solo (el enlace de un aviso): ejercicio, serie, corrección
+    async videoTecnica(archivoId) {
+      const [a] = await b.select('archivos', { eq: { id: archivoId } }).catch(() => []);
+      if (!a || a.tipo !== 'video_tecnica') return null;
+      const lista = await api.diario(a.atleta_id).catch(() => []);
+      return lista.find((x) => x.id === a.id) || { ...a, ejercicio: null, revision: null, serie: null, estado: estadoVideo({}) };
+    },
+    // Limpieza (el coach): lo que se borraría ({ n, bytes, lista: [{ id, atleta, fecha, bytes }] }) y borrarlo
+    async limpiezaVideos({ meses, dias = 30 }) {
+      await api.exigir035();
+      const r = await b.rpc('videos_limpieza', { p_meses: meses, p_dias: dias }).catch(falta035);
+      const A = porId(await api.atletas().catch(() => []));
+      return { n: Number(r?.n) || 0, bytes: Number(r?.bytes) || 0, lista: (r?.lista || []).map((x) => ({ ...x, atleta: A[x.atleta_id] || null })) };
+    },
+    async borrarVideosViejos({ meses, dias = 30, ids }) {
+      await api.exigir035();
+      let n = 0, bytes = 0;
+      for (let i = 0; i < ids.length; i += 300) {
+        const r = await b.rpc('videos_limpiar', { p_meses: meses, p_dias: dias, p_ids: ids.slice(i, i + 300) }).catch(falta035);
+        n += Number(r?.n) || 0; bytes += Number(r?.bytes) || 0;
+      }
+      const quitados = await api.limpiarAlmacenamiento().catch(() => 0);
+      return { n, bytes, almacenamiento: quitados >= 0 ? 'borrado' : 'pendiente' };
+    },
+    // Un fotograma con su dibujo, como foto en el chat de ese atleta (del coach: así se puede reenviar y nadie más la ve)
+    async enviarFotograma(atletaId, blob, { texto = '' } = {}) {
+      const f = new File([blob], `fotograma-${hoyISO()}.jpg`, { type: 'image/jpeg' });
+      return api.enviarMensaje(atletaId, { archivo: f, texto, autor: 'coach' });
     },
 
     // ------------------------------------------------------------ v0.48: lo que le dijo el coach de cada ejercicio
@@ -3054,6 +3216,17 @@ export function crearApi(backend) {
         archivos: archivos.map((a) => ({ ...a, atleta: A[a.atleta_id] || null })).filter((a) => a.atleta),
         recetas: [],
       };
+      // (v0.57) los vídeos, con su ejercicio, su serie y su corrección (para «Revisar seguidos»)
+      {
+        const vids = items.archivos;
+        const seIds = unicos(vids.filter((a) => !a.ejercicio_id && a.sesion_ejercicio_id).map((a) => a.sesion_ejercicio_id));
+        const PA = seIds.length ? porId(await b.select('sesion_ejercicios', { in: { id: seIds }, cols: 'id,ejercicio_id' }).catch(() => [])) : {};
+        const ejDe = (a) => a.ejercicio_id || PA[a.sesion_ejercicio_id]?.ejercicio_id || null;
+        const ejIds = unicos(vids.map(ejDe));
+        const EJ = ejIds.length ? porId(await b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre,grupos_musculares,tipo' }).catch(() => [])) : {};
+        const extra = await api.extrasVideos(vids);
+        items.archivos = vids.map((a) => ({ ...a, ejercicio: EJ[ejDe(a)] || null, serie: extra.series[a.id] || null, revision: extra.revisiones[a.id] || null }));
+      }
       // Recetas que un atleta pide cambiar (v0.26; sin la migración 022, ninguna)
       const cambios = await b.select('recetas_atleta', { nonulo: ['cambio_pedido_en'], order: [['cambio_pedido_en', 'desc']] }).catch(() => []);
       if (cambios.length) {

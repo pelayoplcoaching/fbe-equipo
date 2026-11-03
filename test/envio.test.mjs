@@ -363,6 +363,14 @@ console.log('\nEl service worker: los mensajes de una conversación, juntos, y a
   check(abiertas.some((x) => x.o.tag === 'a1') && abiertas.length === 3, 'lo que no es un mensaje, como siempre (su etiqueta)');
   await push(JSON.stringify({ id: 'x', titulo: 'Ana te ha escrito', url: '#mensajes/../../evil' }));
   check(abiertas.at(-1).o.data.url === 'https://atletas.fbe.test/app/', 'una dirección de conversación rara no se sigue');
+  // (v0.57) la corrección de un vídeo lleva a ese momento: #videos/<id>@<segundos>; nada más
+  const vid = '6c1f8b6f-2e3d-4d4c-8b9a-1f2e3d4c5b6a';
+  await push(JSON.stringify({ id: 'v1', titulo: 'Pelayo ha corregido tu vídeo', cuerpo: 'En tu vídeo', url: `#videos/${vid}@1.5`, etiqueta: 'v1' }));
+  check(abiertas.at(-1).o.data.url === `https://atletas.fbe.test/app/#videos/${vid}@1.5` && abiertas.at(-1).o.tag === 'v1', '(v0.57) la corrección de un vídeo lleva a su momento (#videos/<id>@1.5), con su etiqueta');
+  const malas = [`#videos/${vid}@1.5/../x`, `#videos/${vid}@12345`, '#videos/../../evil', `#videos/${vid}@1.55`];
+  for (const [i, mala] of malas.entries()) await push(JSON.stringify({ id: `v2-${i}`, titulo: 'x', url: mala }));
+  const raras = abiertas.filter((x) => String(x.o.tag).startsWith('v2-'));
+  check(raras.length === malas.length && raras.every((x) => x.o.data.url === 'https://atletas.fbe.test/app/'), '(v0.57) una dirección de vídeo rara no se sigue');
   check(!abiertas.some((x) => /rodilla|kg|dolor/i.test(`${x.t} ${x.o.body}`)), '(ninguna lleva el texto de los mensajes: no sale del servidor)');
 }
 

@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono } from './comunes.jsx';
 import { capturarPoster } from './Archivos.jsx';
-import { EVENTO_PENDIENTES, listarPendientes, quitarPendiente, marcarPendiente, archivoDe, conCerrojo } from '../datos/pendientes.js';
+import { EVENTO_PENDIENTES, listarPendientes, quitarPendiente, marcarPendiente, archivoDe, conCerrojo, ponerSubida, sigueEnElMovil, PERDIDO } from '../datos/pendientes.js';
 
 // Envía solos los vídeos que se quedaron guardados en el móvil sin cobertura (v0.33): al abrir la app, al volver
 // a ella, al recuperar la conexión y cada minuto mientras quede alguno. Va siempre (en cualquier pestaña).
+// v0.57: sigue por el trozo en que iba (la dirección de su subida se guarda con él), dice cuánto lleva, se puede cancelar
+// y, si el móvil ha perdido el vídeo, pide volver a elegirlo.
 export function usePendientesArchivos(api, atletaId, aviso) {
   const [lista, setLista] = useState([]);
   const [envio, setEnvio] = useState(null); // { id, progreso }
   const ocupado = useRef(false);
   const vivo = useRef(0); // generación: al cerrar sesión (o cambiar de atleta) el envío en marcha deja de seguir
+  const senal = useRef(null); // el envío en marcha, para «Cancelar»
 
   const leer = async () => { if (atletaId) setLista(await listarPendientes(atletaId)); };
   async function intentar({ todos = false } = {}) {
@@ -23,14 +26,21 @@ export function usePendientesArchivos(api, atletaId, aviso) {
         if (p.error && !todos) continue; // lo que el servidor rechazó espera a que la persona lo reintente
         let enviado = false, seguir = true;
         const r = await conCerrojo(p.id, async () => {
-          setEnvio({ id: p.id, progreso: 0 });
+          setEnvio({ id: p.id, progreso: p.progreso || 0 });
+          // (v0.57) si el navegador ya no tiene el vídeo (se borró el almacenamiento del móvil), hay que volver a elegirlo
+          if (!(await sigueEnElMovil(p))) { await marcarPendiente(p.id, PERDIDO).catch(() => {}); return; }
+          const s = senal.current = {};
           try {
             const f = archivoDe(p);
             const cap = /^video/.test(f.type || '') || p.opciones?.tipo === 'video_tecnica' ? await capturarPoster(f).catch(() => null) : null;
-            await api.subirArchivo(atletaId, f, { ...p.opciones, poster: cap?.poster || null, duracion_seg: p.opciones?.duracion_seg ?? cap?.duracion ?? null, alProgreso: (x) => setEnvio({ id: p.id, progreso: x }) });
+            let ultimo = 0;
+            await api.subirArchivo(atletaId, f, { ...p.opciones, poster: cap?.poster || null, duracion_seg: p.opciones?.duracion_seg ?? cap?.duracion ?? null, senal: s,
+              urlSubida: p.urlSubida || null, alUrlSubida: (url) => ponerSubida(p.id, { url }).catch(() => {}),
+              alProgreso: (x) => { setEnvio({ id: p.id, progreso: x }); if (x - ultimo >= 0.05) { ultimo = x; ponerSubida(p.id, { progreso: x }).catch(() => {}); } } });
             enviado = true;
           } catch (e) {
-            if (e?.sinConexion || e?.cancelado) { seguir = false; return; } // sigue sin cobertura: se reintenta luego
+            if (e?.cancelado) { seguir = false; await api.descartarSubida(p.opciones?.ruta).catch(() => {}); await quitarPendiente(p.id).catch(() => {}); aviso?.('Envío cancelado'); return; }
+            if (e?.sinConexion) { seguir = false; return; } // sigue sin cobertura: se reintenta luego (por donde iba)
             if (g === vivo.current) await marcarPendiente(p.id, e?.message || 'No se ha podido enviar').catch(() => {});
           }
         });
@@ -41,7 +51,7 @@ export function usePendientesArchivos(api, atletaId, aviso) {
         }
         if (!seguir) break;
       }
-    } finally { ocupado.current = false; setEnvio(null); leer(); }
+    } finally { ocupado.current = false; senal.current = null; setEnvio(null); leer(); }
   }
 
   useEffect(() => {
@@ -62,13 +72,14 @@ export function usePendientesArchivos(api, atletaId, aviso) {
   return {
     lista, envio,
     reintentar: () => intentar({ todos: true }),
+    cancelar: () => { const s = senal.current; if (s?.abortar) s.abortar(); else if (s) s.cancelada = true; },
     // Descartar: también su registro, si llegó a hacerse (no debe quedar un vídeo sin archivo)
     descartar: async (id) => { const p = lista.find((x) => x.id === id); await api.descartarSubida(p?.opciones?.ruta).catch(() => {}); await quitarPendiente(id); },
   };
 }
 
 export function BandaPendientes({ pendientes }) {
-  const { lista, envio, reintentar, descartar } = pendientes;
+  const { lista, envio, reintentar, descartar, cancelar } = pendientes;
   if (!lista.length) return null;
   const conError = lista.filter((p) => p.error);
   const esperando = lista.length - conError.length;
@@ -78,11 +89,13 @@ export function BandaPendientes({ pendientes }) {
       <Icono n={envio ? 'enviar' : 'sinred'} />
       <div class="pila-xs">
         {esperando > 0 && <span>{envio
-          ? `Enviando ${esperando > 1 ? `${que(esperando)} guardados` : 'el vídeo guardado'} sin cobertura… ${Math.round((envio.progreso || 0) * 100)} %`
-          : `${que(esperando)} guardado${esperando > 1 ? 's' : ''} en el móvil: se enviará${esperando > 1 ? 'n' : ''} solo${esperando > 1 ? 's' : ''} cuando haya cobertura.`}</span>}
+          ? <>{`Enviando ${esperando > 1 ? `${que(esperando)} guardados` : 'el vídeo guardado'}… ${Math.round((envio.progreso || 0) * 100)} %`}{' '}
+              <button type="button" class="btn-texto" onClick={cancelar}>Cancelar</button></>
+          : `${que(esperando)} guardado${esperando > 1 ? 's' : ''} en el móvil: se enviará${esperando > 1 ? 'n' : ''} solo${esperando > 1 ? 's' : ''} cuando haya cobertura${lista.some((p) => !p.error && p.progreso > 0) ? ', por donde iba' : ''}.`}</span>}
+        {envio && <span class="banda-progreso" aria-hidden="true"><span style={{ width: `${Math.round((envio.progreso || 0) * 100)}%` }} /></span>}
         {conError.map((p) => (
-          <span key={p.id} class="peq">No se ha podido enviar un vídeo: {p.error}{' '}
-            <button type="button" class="btn-texto" onClick={reintentar}>Reintentar</button>{' '}
+          <span key={p.id} class="peq">{p.error === PERDIDO ? p.error : `No se ha podido enviar un vídeo: ${p.error}`}{' '}
+            {p.error !== PERDIDO && <><button type="button" class="btn-texto" onClick={reintentar}>Reintentar</button>{' '}</>}
             <button type="button" class="btn-texto" onClick={() => descartar(p.id)}>Descartar</button>
           </span>
         ))}

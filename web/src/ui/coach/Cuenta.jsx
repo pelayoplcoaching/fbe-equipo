@@ -9,6 +9,7 @@ import { CobrosTodos } from './Cobros.jsx';
 import { SeccionNegocio } from './Negocio.jsx';
 /* global __APP_VERSION__ */
 import { FilaFoto, FilaNombre } from '../FotoPerfil.jsx';
+import { AvisoAlmacenamiento, LimpiarVideos } from '../tecnica/Limpieza.jsx';
 
 export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
   const { perfil, backend, salir, api, aviso } = useApp();
@@ -186,6 +187,7 @@ function Espacio() {
   const { api } = useApp();
   const [plan, setPlan] = useState(() => { try { return Number(localStorage.getItem('fbe-plan-gb')) || 1; } catch { return 1; } });
   const esp = useCarga(() => api.espacioUsado().catch(() => null), []);
+  const [limpiar, setLimpiar] = useState(false);
   const d = esp.datos;
   const cambiarPlan = (gb) => { setPlan(gb); try { localStorage.setItem('fbe-plan-gb', String(gb)); } catch { /* */ } };
   const pct = d ? Math.min(100, (d.total / (plan * GB)) * 100) : 0;
@@ -198,13 +200,16 @@ function Espacio() {
             <div class="separa"><span><strong class="num">{fmtTam(d.total)}</strong> <span class="secundario peq">de {plan} GB, en {d.archivos} {d.archivos === 1 ? 'archivo' : 'archivos'}</span></span>
               <select class="selector" style="width:auto;min-height:36px;padding:4px 8px" aria-label="Plan de Supabase" value={plan} onChange={(e) => cambiarPlan(Number(e.currentTarget.value))}><option value={1}>Plan gratuito (1 GB)</option><option value={100}>Plan Pro (100 GB)</option></select></div>
             <div class="espacio-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(pct)} aria-label="Espacio usado"><span class={pct > 85 ? 'lleno' : ''} style={{ width: `${Math.max(1, pct)}%` }} /></div>
+            <AvisoAlmacenamiento bytes={d.total} planGb={plan} />
+            <div class="fila-envolver"><button type="button" class="btn btn-peq" onClick={() => setLimpiar(true)}><Icono n="basura" /> Limpiar vídeos antiguos</button></div>
             {d.lista.filter((x) => x.bytes > 0).slice(0, 8).map((x) => (
               <div class="espacio-fila" key={x.atleta.id}><Avatar nombre={x.atleta.nombre} foto={x.atleta.foto} clase="peq" /><span>{x.atleta.nombre} <span class="mini terciario">({x.n} {x.n === 1 ? 'archivo' : 'archivos'})</span></span><strong class="num">{fmtTam(x.bytes)}</strong></div>
             ))}
-            <p class="mini terciario">Un vídeo de una serie (30–40 s) pesa 30–60 MB. El plan gratuito de Supabase da 1 GB; el Pro, 100 GB y después 0,021 $ por GB al mes. Nada se borra solo: si hace falta sitio, borra vídeos antiguos desde el diario de cada atleta.</p>
+            <p class="mini terciario">Un vídeo de una serie (30–40 s) pesa 30–60 MB (recortado en el móvil, unos 10). El plan gratuito de Supabase da 1 GB; el Pro, 100 GB y después 0,021 $ por GB al mes. Nada se borra solo: si hace falta sitio, «Limpiar vídeos antiguos» (o borra alguno desde el diario de cada atleta).</p>
           </>
         )}
       </div>
+      {limpiar && <LimpiarVideos alCerrar={() => setLimpiar(false)} alTerminar={() => esp.recargar(true)} />}
     </section>
   );
 }
