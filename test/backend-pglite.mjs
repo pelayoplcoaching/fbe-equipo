@@ -130,6 +130,15 @@ export function crearBackendPglite(db) {
         if (!r.rows.length) throw new Error('No tienes permiso para ver ese archivo.');
         return bucket === 'archivos' ? `pglite://${ruta}` : `pglite://${bucket}/${ruta}?s=${segundos}`;
       }),
+      // Copiar, como Storage: quien copia tiene que ver el original y poder subir la copia (con sus políticas)
+      copiar: (desde, hasta, bucket = 'archivos') => como(async () => {
+        const r = await db.query(`select name from storage.objects where bucket_id = $1 and name = $2`, [bucket, desde]);
+        if (!r.rows.length) throw new Error('No tienes permiso para ver ese archivo.');
+        await db.query(`insert into storage.objects (bucket_id, name) values ($1, $2)`, [bucket, hasta]);
+        const f = ficheros.get(`${bucket}:${desde}`);
+        ficheros.set(`${bucket}:${hasta}`, f);
+        if (bucket === 'archivos') ficheros.set(hasta, f);
+      }),
       borrar: (rutas, bucket = 'archivos') => como(async () => {
         return (await db.query(`delete from storage.objects where bucket_id = $1 and name = any($2::text[]) returning name`, [bucket, valor(rutas)])).rows.map((x) => x.name);
       }),
@@ -165,7 +174,8 @@ export function crearBackendPglite(db) {
       await db.query(`delete from public.${id(t)}${where(f, params)}`, params);
     }),
     rpc: (nombre, args = {}) => como(async () => {
-      const params = Object.values(args);
+      // (como PostgREST: una lista de objetos o un objeto va como JSON; una lista de textos, como lista)
+      const params = Object.values(args).map((v) => (v && typeof v === 'object' && !(Array.isArray(v) && v.every((x) => typeof x !== 'object' || x === null)) ? JSON.stringify(v) : v));
       const named = Object.keys(args).map((k, i) => `${id(k)} => $${i + 1}`).join(', ');
       // Las que devuelven una tabla (returns table / setof), como PostgREST: una lista de filas
       const conjunto = (await db.query(`select bool_or(proretset) s from pg_proc where proname = $1 and pronamespace = 'public'::regnamespace`, [nombre])).rows[0]?.s;

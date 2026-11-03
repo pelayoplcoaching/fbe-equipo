@@ -31,7 +31,8 @@ export function TextoConEnlaces({ texto, como = 'p', clase = '', conVista = true
 // v0.54: el texto de un mensaje del chat con el formato de WhatsApp (*negrita*, _cursiva_, ~tachado~, `mono`), sus
 // enlaces y sus vistas de YouTube. Se pinta con etiquetas (strong, em, s, code, a), nunca como HTML. resaltar: lo que se
 // busca en el chat (se marca donde coincide, con <mark>).
-export function TextoChat({ id = null, texto, clase = '', resaltar: consulta = '', conVista = true }) {
+// fin (v0.55): lo que va al final del párrafo (el hueco para la hora y los ✓ de la burbuja, como WhatsApp)
+export function TextoChat({ id = null, texto, clase = '', resaltar: consulta = '', conVista = true, fin = null }) {
   const tokens = tokensDeMensaje(id, texto);
   const enlaces = [];
   const juntar = (ts) => { for (const x of ts) { if (x.t === 'enlace') enlaces.push(x); else if (x.hijos) juntar(x.hijos); } };
@@ -48,7 +49,7 @@ export function TextoChat({ id = null, texto, clase = '', resaltar: consulta = '
   });
   return (
     <>
-      <p class={clase}>{pintar(tokens)}</p>
+      <p class={clase}>{pintar(tokens)}{fin}</p>
       {videos.map((v) => (
         <a key={v.youtube} class="vista-youtube" href={v.v} target="_blank" rel="noopener noreferrer" aria-label="Ver el vídeo en YouTube">
           <img src={miniaturaYoutube(v.youtube)} alt="" loading="lazy" width="320" height="180" referrerpolicy="no-referrer" />

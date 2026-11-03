@@ -336,6 +336,36 @@ console.log('\nEl service worker (lo que pasa en el móvil)');
   check(abierta === 'https://atletas.fbe.test/app/#hoy', 'con la app cerrada, la abre ahí');
 }
 
+console.log('\nEl service worker: los mensajes de una conversación, juntos, y a esa conversación (v0.55)');
+{
+  const { readFileSync } = await import('node:fs');
+  const codigo = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8').replace('__VERSION__', 'x').replace('__ARCHIVOS__', '[]');
+  const oyentes = {};
+  const abiertas = [];
+  const self = {
+    addEventListener: (t, f) => { oyentes[t] = f; },
+    registration: { scope: 'https://atletas.fbe.test/app/', getNotifications: async () => abiertas.map((x) => ({ tag: x.o.tag, data: x.o.data })),
+      showNotification: async (t, o) => { const i = abiertas.findIndex((x) => x.o.tag === o.tag); if (i >= 0) abiertas.splice(i, 1); abiertas.push({ t, o }); } },
+    clients: { matchAll: async () => [], openWindow: async () => {}, claim: async () => {} },
+    skipWaiting: () => {}, location: { origin: 'https://atletas.fbe.test' },
+  };
+  new Function('self', 'caches', codigo)(self, {});
+  const push = async (datos) => { let pr; oyentes.push({ data: { json: () => JSON.parse(datos), text: () => datos }, waitUntil: (x) => { pr = x; } }); await pr; };
+  const ana = '5b0f7a5e-1d2c-4c3b-9a8f-0e1d2c3b4a59';
+  // Lo que manda la función de siempre (sin cambiarla): id, título, cuerpo, url y etiqueta
+  for (const id of ['m1', 'm2', 'm3']) await push(JSON.stringify({ id, titulo: 'Ana te ha escrito', cuerpo: 'Mensaje nuevo', url: `#mensajes/${ana}`, etiqueta: id }));
+  const de = abiertas.filter((x) => x.o.tag === `chat:#mensajes/${ana}`);
+  check(de.length === 1 && de[0].o.body === '3 mensajes nuevos de Ana' && de[0].o.renotify === true && de[0].o.data.url === `https://atletas.fbe.test/app/#mensajes/${ana}` && de[0].o.icon === 'icono-192.png',
+    'tres mensajes de Ana: una sola notificación («3 mensajes nuevos de Ana»), que lleva a su conversación y con el icono de la app');
+  await push(JSON.stringify({ id: 'm4', titulo: 'Pelayo te ha escrito', cuerpo: 'Mensaje nuevo', url: '#mensajes', etiqueta: 'm4' }));
+  check(abiertas.some((x) => x.o.tag === 'chat:#mensajes' && x.o.body === 'Mensaje nuevo') && abiertas.length === 2, 'la del atleta (su chat con el coach), aparte');
+  await push(JSON.stringify({ id: 'a1', titulo: 'Aviso de Pelayo', cuerpo: 'Tócalo para leerlo en la app.', url: '#hoy', etiqueta: 'a1' }));
+  check(abiertas.some((x) => x.o.tag === 'a1') && abiertas.length === 3, 'lo que no es un mensaje, como siempre (su etiqueta)');
+  await push(JSON.stringify({ id: 'x', titulo: 'Ana te ha escrito', url: '#mensajes/../../evil' }));
+  check(abiertas.at(-1).o.data.url === 'https://atletas.fbe.test/app/', 'una dirección de conversación rara no se sigue');
+  check(!abiertas.some((x) => /rodilla|kg|dolor/i.test(`${x.t} ${x.o.body}`)), '(ninguna lleva el texto de los mensajes: no sale del servidor)');
+}
+
 console.log('\nEl service worker: compartir un vídeo a la app y la marca en el icono (v0.48)');
 {
   const { readFileSync } = await import('node:fs');

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 // Lógica pura: fechas, 1RM estimado, propuestas de series, avisos del coach y la cola sin conexión.
 import { lunesDe, sumarDias, diasEntre, hace, rangoSemana } from '../web/src/logica/fechas.js';
 import { nombreEquipo, nombreValido, limpiarNombre, estadoReto, textoReto, ordenarRanking, quienes, recordsDeEquipo, REACCIONES,
@@ -2398,7 +2399,7 @@ console.log('\nv0.53: días de entreno por semana (microciclos que no caben en u
   check(M.borrarBorradores(mem) === 2 && mem.length === 1, 'al cerrar la sesión se van todos (y nada más)');
   const roto = { getItem() { throw new Error('bloqueado'); }, setItem() { throw new Error('lleno'); }, removeItem() { throw new Error('x'); }, key() { throw new Error('x'); }, length: 1 };
   check(M.leerBorrador(roto, 'u', 'a') === null && M.guardarBorrador(roto, 'u', 'a', 'x') === false && M.borrarBorradores(roto) === 0, 'sin almacenamiento (bloqueado o lleno), no rompe nada');
-  check(igual(M.vistaPrevia({ autor: 'coach', texto: '*Hola*', leido_en: 'x' }), { borrador: false, texto: 'Hola', mio: true, visto: true, eliminado: false }) && M.vistaPrevia(null, { borrador: 'Te *escribo*' }).texto === 'Te escribo'
+  check(igual(M.vistaPrevia({ autor: 'coach', texto: '*Hola*', leido_en: 'x' }), { borrador: false, texto: 'Hola', mio: true, visto: true, entregado: true, eliminado: false }) && M.vistaPrevia(null, { borrador: 'Te *escribo*' }).texto === 'Te escribo'
     && M.vistaPrevia({ autor: 'atleta', texto: 'Foto', archivo_id: 'f' }).texto === '📷 Foto', 'la vista previa de la lista: ✓✓ en lo propio, «Borrador:» y «📷 Foto»');
   const conv = (nombre, extra = {}) => ({ atleta: { id: nombre, nombre }, ultimo: { creado_en: extra.t || '2026-11-01' }, sinLeer: 0, estado: null, ...extra });
   const orden = M.ordenarConversaciones([conv('Ana', { t: '2026-11-03' }), conv('Bea', { estado: { fijada_en: '2026-11-01T10:00' } }), conv('Car', { sinLeer: 2 }), conv('Dan', { estado: { fijada_en: '2026-11-02T10:00' } }), conv('Eva', { estado: { no_leida: true } })]);
@@ -2408,5 +2409,149 @@ console.log('\nv0.53: días de entreno por semana (microciclos que no caben en u
     && igual(M.filtrarConversaciones(filas, 'fijados').map((x) => x.atleta.nombre), ['B']) && igual(M.filtrarConversaciones(filas, 'todos', { archivadas: true }).map((x) => x.atleta.nombre), ['C']),
     'filtros «Todos / No leídos / Fijados» (sin las archivadas, que van aparte)');
 }
+console.log('\nv0.55: el chat, aún más como WhatsApp');
+{
+  const C = await import('../web/src/logica/chat.js');
+  const E = await import('../web/src/logica/emojis.js');
+  const M = await import('../web/src/logica/mensajes.js');
+  const { crearSalida } = await import('../web/src/datos/salida.js');
+  // Emojis solos (1 a 3, en grande)
+  check(C.soloEmojis('👍') === 1 && C.soloEmojis('💪💪') === 2 && C.soloEmojis(' 🔥 💯 🏋️ ') === 3 && C.soloEmojis('😂😂😂😂') === 0, '1 a 3 emojis solos van en grande; 4, no');
+  check(C.soloEmojis('hola 👍') === 0 && C.soloEmojis('👍!') === 0 && C.soloEmojis('123') === 0 && C.soloEmojis('') === 0 && C.soloEmojis('   ') === 0 && C.soloEmojis('#') === 0, 'con texto, signos o números, no');
+  check(C.cuantosEmojis('👍🏽') === 1 && C.cuantosEmojis('👩‍💻') === 1 && C.cuantosEmojis('🇪🇸') === 1 && C.cuantosEmojis('1️⃣') === 1 && C.cuantosEmojis('❤️‍🔥') === 1 && C.cuantosEmojis('🏃‍♀️💨') === 2,
+    'un emoji con su tono, unido con ZWJ, una bandera o un número en su tecla cuenta como uno');
+  check(E.TODOS_EMOJIS.length >= 300 && new Set(E.TODOS_EMOJIS).size === E.TODOS_EMOJIS.length && E.TODOS_EMOJIS.every((e) => C.cuantosEmojis(e) === 1) && E.CATEGORIAS_EMOJI.length >= 6,
+    `el selector: ${E.TODOS_EMOJIS.length} emojis propios, por categorías, sin repetir, y cada uno es un emoji entero`);
+  const memE = (() => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; })();
+  for (const e of ['👍', '💪', '🔥', '👍']) E.apuntarReciente(memE, e);
+  check(igual(E.leerRecientes(memE), ['👍', '🔥', '💪']), 'los recientes: el último primero, sin repetir');
+  for (let i = 0; i < 40; i++) E.apuntarReciente(memE, E.TODOS_EMOJIS[i]);
+  memE.setItem(E.CLAVE_RECIENTES, JSON.stringify([...JSON.parse(memE.getItem(E.CLAVE_RECIENTES)), '<script>', 7]));
+  check(E.leerRecientes(memE).length === 24 && E.leerRecientes(memE).every((e) => E.TODOS_EMOJIS.includes(e)), 'como mucho 24, y solo emojis de la lista (lo raro del almacenamiento no entra)');
+  check(E.leerRecientes({ getItem() { throw new Error('x'); } }).length === 0 && E.apuntarReciente({ getItem() { throw new Error('x'); }, setItem() { throw new Error('x'); } }, '👍')[0] === '👍', 'sin almacenamiento, no rompe');
+  check(igual(E.insertarEnTexto('Hola !', '👋', 5, 5), { texto: 'Hola 👋!', cursor: 7 }) && E.insertarEnTexto('abc', '🔥').texto === 'abc🔥' && E.insertarEnTexto('abcdef', '🔥', 1, 4).texto === 'a🔥ef',
+    'el emoji va donde está el cursor (o sustituye lo seleccionado)');
+  // Mensajes largos
+  const largo = Array.from({ length: 200 }, (_, i) => `palabra${i}`).join(' ');
+  const r = C.recortarLargo(largo);
+  check(r.cortado && r.texto.endsWith('…') && [...r.texto].length <= 702 && !/palabra\d*…$/.test(r.texto.replace(/ …$/, '')) || (r.cortado && / palabra\d+…$/.test(r.texto)), 'un mensaje de más de ~700 letras se corta con «Leer más» (en un espacio, sin partir una palabra)');
+  check(!C.recortarLargo('hola').cortado && !C.recortarLargo('x'.repeat(760)).cortado && C.recortarLargo('😀'.repeat(900)).texto.endsWith('😀…'), 'los cortos no (ni los que se pasan poco); un emoji no se parte por la mitad');
+  // La píldora del día
+  const ahora = new Date(2026, 10, 3, 18, 0).getTime();
+  const dia = (d, h = 10) => new Date(2026, 10, d, h).toISOString();
+  check(C.etiquetaDia(dia(3), ahora) === 'Hoy' && C.etiquetaDia(dia(2, 23), ahora) === 'Ayer' && C.etiquetaDia(dia(28 - 30 + 30 - 2 + 3, 9), ahora) !== '' && C.etiquetaDia(new Date(2026, 9, 31, 12).toISOString(), ahora) === 'sábado',
+    'la píldora: «Hoy», «Ayer» y el día de la semana en la última semana («sábado»)');
+  check(C.etiquetaDia(new Date(2026, 9, 12, 12).toISOString(), ahora) === '12 de octubre' && C.etiquetaDia(new Date(2025, 11, 24, 12).toISOString(), ahora) === '24 de diciembre de 2025' && C.etiquetaDia(null) === '' && C.etiquetaDia('no') === '',
+    'más atrás, «12 de octubre» (y el año si no es este)');
+  // Los ✓
+  const e = (c) => C.estadoEnvio({ autor: 'atleta', creado_en: 'x', ...c }, 'atleta');
+  check(e({ pendiente: true }) === 'pendiente' && e({ fallo: true }) === 'fallo' && e({}) === 'enviado' && e({ entregado_en: 'x' }) === 'entregado' && e({ entregado_en: 'x', leido_en: 'y' }) === 'leido' && e({ leido_en: 'y' }) === 'leido',
+    '⏱ al salir, ✓ en la base, ✓✓ gris al llegarle, ✓✓ azul al leerlo (y «!» si falló)');
+  check(C.estadoEnvio({ autor: 'coach' }, 'atleta') === null && C.estadoEnvio({ autor: 'coach', programado: true }, 'coach') === null && C.estadoEnvio({ autor: 'coach', eliminado_en: 'x' }, 'coach') === null, 'nada en lo del otro, en lo programado ni en lo eliminado');
+  // La bandeja de salida: orden y sin duplicados
+  const p1 = C.nuevoPendiente({ perfil: 'u', atletaId: 'a', autor: 'atleta', texto: '  uno  ', ahora: 1000, id: 'c1' });
+  const p2 = C.nuevoPendiente({ perfil: 'u', atletaId: 'a', autor: 'atleta', texto: 'dos', ahora: 2000, id: 'c2' });
+  const p3 = C.nuevoPendiente({ perfil: 'otro', atletaId: 'a', autor: 'atleta', texto: 'ajeno', ahora: 500, id: 'c3' });
+  check(p1.texto === 'uno' && p1.estado === 'pendiente' && p1.cliente_id === 'c1' && /^[0-9a-f-]{36}$/.test(C.nuevoPendiente({ perfil: 'u', atletaId: 'a', autor: 'atleta', texto: 'x' }).cliente_id), 'cada mensaje sale con su id (el mismo al reintentar)');
+  check(igual(C.ordenarSalida([p2, p1, p1, p3]).map((x) => x.cliente_id), ['c3', 'c1', 'c2']), 'en orden de creación y sin repetir');
+  check(C.siguienteSalida([p2, { ...p1, estado: 'fallo' }, p3], 'u').cliente_id === 'c2' && C.siguienteSalida([p3], 'u') === null, 'el siguiente: de esta cuenta y sin los fallidos (esperan a que se reintenten)');
+  check(igual(C.quitarYaEnviados([p1, p2], [{ cliente_id: 'c1' }]).map((x) => x.cliente_id), ['c2']), 'lo que ya está en la base sale de la bandeja');
+  const vistaC = C.conPendientes([{ id: 's1', cliente_id: 'c1', texto: 'uno' }], [p1, p2, p3, { ...C.nuevoPendiente({ perfil: 'u', atletaId: 'b', autor: 'atleta', texto: 'otro chat', id: 'c4' }) }, { ...p2, cliente_id: 'c5', estado: 'fallo', error: 'No' }, { ...p2, cliente_id: 'c6', estado: 'enviado' }], { perfil: 'u', atletaId: 'a' });
+  check(igual(vistaC.map((x) => x.id), ['s1', 'pendiente-c2', 'pendiente-c5', 'pendiente-c6']) && vistaC[1].pendiente && !vistaC[1].fallo && vistaC[2].fallo && !vistaC[3].pendiente && !vistaC[3].fallo,
+    'en el chat, lo que sale va al final (⏱, «!» o ya con ✓), sin repetir lo que ya llegó ni lo de otros chats o cuentas');
+  const conProg = C.conPendientes([{ id: 's1', creado_en: 'a' }, { id: 'p1', programado: true, enviar_en: new Date(Date.now() + 864e5).toISOString() }], [p2], { perfil: 'u', atletaId: 'a' });
+  check(igual(conProg.map((x) => x.id), ['s1', 'pendiente-c2', 'p1']), '(antes de los programados del coach, que van al final con su hora)');
+  // La bandeja de verdad (con una base de mentira): en orden, sin cobertura espera, lo rechazado se queda con «!»
+  const memS = (() => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), m }; })();
+  const enviados = [];
+  let sinRed = false;
+  const apiFalsa = { uid: () => 'u', async enviarMensaje(atletaId, { texto, clienteId }) {
+    if (sinRed) { const err = new Error('Sin conexión.'); err.sinConexion = true; throw err; }
+    if (texto === 'rechazado') throw new Error('Tu cuenta está de baja');
+    if (enviados.some((x) => x.clienteId === clienteId)) throw new Error('duplicado');
+    enviados.push({ atletaId, texto, clienteId });
+    return { id: `s-${clienteId}` };
+  } };
+  const sal = crearSalida(apiFalsa, { almacen: memS, reintentoMs: 60000 });
+  sinRed = true;
+  sal.encolar({ atletaId: 'a', autor: 'atleta', texto: 'primero' });
+  sal.encolar({ atletaId: 'a', autor: 'atleta', texto: 'segundo' });
+  await new Promise((r) => setTimeout(r, 20));
+  check(sal.pendientes('a').length === 2 && sal.pendientes('a').every((x) => x.estado === 'pendiente') && !enviados.length, 'sin cobertura, se quedan en la bandeja (y con ⏱)');
+  const recargada = crearSalida(apiFalsa, { almacen: memS, reintentoMs: 60000 });
+  check(recargada.pendientes('a').map((x) => x.texto).join() === 'primero,segundo', 'y se guardan en el móvil (al volver a abrir la app siguen ahí, en orden)');
+  sinRed = false;
+  await recargada.vaciar();
+  check(enviados.map((x) => x.texto).join() === 'primero,segundo' && !recargada.pendientes('a').length, 'al volver la cobertura, salen solos y en orden');
+  await recargada.vaciar();
+  check(enviados.length === 2, 'sin repetir ninguno');
+  recargada.encolar({ atletaId: 'a', autor: 'atleta', texto: 'rechazado' });
+  await new Promise((r) => setTimeout(r, 20));
+  const f = recargada.pendientes('a')[0];
+  check(f?.estado === 'fallo' && /baja/.test(f.error), 'si la base lo rechaza, se queda con «!» (y por qué)');
+  recargada.descartar(f.cliente_id);
+  check(!recargada.pendientes('a').length, '«Eliminar» lo quita de la bandeja');
+  recargada.borrarTodo();
+  check(memS.getItem('fbe-salida-v1') === null, 'al cerrar sesión no queda nada en el móvil');
+  // Reenviar y difundir
+  const atl = [{ id: 'a', estado: 'activo' }, { id: 'b', estado: 'baja' }, { id: 'c', estado: 'pausado' }];
+  check(igual(C.planDifusion([{ atleta_id: 'a' }, { atleta_id: 'b' }, { atleta_id: 'c' }, { atleta_id: 'a' }, { atleta_id: 'zz' }], atl), { destinos: ['a', 'c'], saltados: 1 }), 'difundir: a cada miembro una vez; los de baja se saltan (y se cuentan)');
+  check(igual(C.planReenvio(['a', 'b', 'a', 'x'], atl), { destinos: ['a'], saltados: 1, demasiados: false }) && C.planReenvio(Array.from({ length: 51 }, (_, i) => `z${i}`), Array.from({ length: 51 }, (_, i) => ({ id: `z${i}`, estado: 'activo' }))).demasiados,
+    'reenviar: sin repetir, sin los de baja, y como mucho 50');
+  check(C.textoSaltados(1) === '1 de baja: no le llega' && C.textoSaltados(3) === '3 de baja: no les llega' && C.textoSaltados(0) === '', 'y dice cuántos se saltan');
+  const mC = { id: 'm', autor: 'coach', creado_en: new Date().toISOString(), texto: 'x' };
+  check(C.reenviable(mC, 'coach') && !C.reenviable(mC, 'atleta') && !C.reenviable({ ...mC, autor: 'atleta' }, 'coach') && !C.reenviable({ ...mC, eliminado_en: 'x' }, 'coach')
+    && !C.reenviable({ ...mC, enviar_en: new Date(Date.now() + 864e5).toISOString() }, 'coach') && !C.reenviable({ ...mC, sesion_id: 's' }, 'coach') && !C.reenviable({ ...mC, archivo_id: 'v', adjunto: false }, 'coach')
+    && C.reenviable({ ...mC, archivo_id: 'f', adjunto: true }, 'coach') && !C.reenviable({ ...mC, pendiente: true }, 'coach'),
+    'se reenvía lo del coach, del chat y ya salido (lo de un atleta, no: son datos de salud de otra persona)');
+  // PDF
+  check(C.nombreSeguroPdf('../../etc/passwd') === 'passwd.pdf' && C.nombreSeguroPdf('C:\\Users\\Ana\\Plan.PDF') === 'Plan.pdf' && C.nombreSeguroPdf('') === 'documento.pdf' && C.nombreSeguroPdf('...pdf') === 'pdf.pdf',
+    'el nombre de un PDF: sin carpetas (ni «../»), siempre .pdf y, si no queda nada, «documento.pdf»');
+  check(C.nombreSeguroPdf('plan\u0000\u0007\u202e fdp.exe.pdf') === 'plan fdp.exe.pdf' && C.nombreSeguroPdf('a..b..pdf') === 'a.b.pdf' && !C.nombreSeguroPdf('a<b>:"|?*.pdf').match(/[<>:"|?*]/)
+    && [...C.nombreSeguroPdf('x'.repeat(300))].length === 120 && C.nombreSeguroPdf('  .oculto.pdf') === 'oculto.pdf', 'sin caracteres de control ni invisibles (ni el que da la vuelta al texto), sin «..», hasta 120 letras');
+  const bytes = (t) => new TextEncoder().encode(t);
+  check(C.esPdf(bytes('%PDF-1.7\n')) && C.esPdf(bytes('\n\n  %PDF-1.4')) && !C.esPdf(bytes('<html>%PDF')) && !C.esPdf(bytes('GIF89a')) && !C.esPdf(new Uint8Array()) && !C.esPdf(bytes(`${'x'.repeat(1100)}%PDF-`)),
+    'es un PDF si lleva su firma («%PDF-») al principio (en los primeros 1024 bytes)');
+  check(C.paginasPdf('<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 12 >>') === 12 && C.paginasPdf('<< /Count 3 /Type /Pages >>') === 3 && C.paginasPdf('/Type /Page /Type /Page /Type /Pages') === 2 && C.paginasPdf('nada') === null,
+    'las páginas, si salen fácil (si no, nada)');
+  check(C.tamanoTexto(500) === '500 B' && C.tamanoTexto(2048) === '2 KB' && C.tamanoTexto(1572864) === '1,5 MB' && C.textoPaginas(1) === '1 página' && C.textoPaginas(3) === '3 páginas' && C.textoPaginas(null) === '', 'lo que pesa y sus páginas');
+  check(M.medioDe({ archivo: { tipo: 'documento', mime: 'application/pdf' } }) === 'documento' && M.esMarcador({ archivo_id: 'x', texto: 'Documento' }) && M.extractoCita({ archivo: { tipo: 'documento' }, archivo_id: 'x', texto: 'Documento' }) === '📄 Documento'
+    && M.extractoCita({ archivo: { tipo: 'documento' }, archivo_id: 'x', texto: 'Tu plan' }) === '📄 Tu plan', 'un PDF en la cita y en la lista: «📄 Documento» (o su pie)');
+  // Silenciar y fijar
+  check(Date.parse(C.hastaSilencio('8h', ahora)) === ahora + 8 * 3600000 && Date.parse(C.hastaSilencio('semana', ahora)) === ahora + 7 * 864e5 && C.hastaSilencio('siempre', ahora) === null, 'silenciar: 8 horas, 1 semana o siempre');
+  let malSil = false; try { C.hastaSilencio('un año'); } catch { malSil = true; }
+  check(malSil, 'otra cosa, no');
+  check(C.silenciado({ hasta: null }, ahora) && C.silenciado({ hasta: new Date(ahora + 1000).toISOString() }, ahora) && !C.silenciado({ hasta: new Date(ahora - 1000).toISOString() }, ahora) && !C.silenciado(null, ahora),
+    'silenciado mientras dura (siempre, o hasta su hora)');
+  check(C.textoSilencio({ hasta: null }, ahora) === 'Silenciado siempre' && C.textoSilencio({ hasta: new Date(2026, 10, 3, 23, 5).toISOString() }, ahora) === 'Silenciado hasta las 23:05'
+    && C.textoSilencio({ hasta: new Date(2026, 10, 10, 9, 0).toISOString() }, ahora) === 'Silenciado hasta el 10 de noviembre' && C.textoSilencio(null, ahora) === null, 'y lo dice («hasta las 23:05», «hasta el 10 de noviembre»)');
+  check(Date.parse(C.hastaFijado('24h', ahora)) === ahora + 864e5 && Date.parse(C.hastaFijado('30d', ahora)) === ahora + 30 * 864e5 && C.fijadoVigente({ comentario_id: 'x', hasta: null }, ahora) && !C.fijadoVigente({ comentario_id: 'x', hasta: new Date(ahora - 1).toISOString() }, ahora),
+    'fijar: 24 horas, 7 días o 30 días; caducado, ya no sale');
+  // Seleccionar varios: copiar como WhatsApp y qué se puede hacer
+  const sel = [
+    { id: '2', autor: 'atleta', texto: 'Vale, *mañana*', creado_en: new Date(2026, 9, 12, 18, 43).toISOString() },
+    { id: '1', autor: 'coach', texto: 'Hoy pierna', creado_en: new Date(2026, 9, 12, 18, 42).toISOString() },
+    { id: '3', autor: 'coach', texto: 'x', eliminado_en: 'y', creado_en: new Date(2026, 9, 12, 18, 44).toISOString() },
+  ];
+  check(C.textoCopiado(sel, (a) => (a === 'coach' ? 'Tú' : 'Ana')) === '[12/10/26, 18:42] Tú: Hoy pierna\n[12/10/26, 18:43] Ana: Vale, mañana', 'copiar varios: «[12/10/26, 18:42] Ana: …», en orden y sin lo eliminado ni las marcas');
+  const reciente = (c) => ({ creado_en: new Date().toISOString(), ...c });
+  const ac1 = C.accionesSeleccion([reciente({ autor: 'coach' }), reciente({ autor: 'atleta' })], 'coach');
+  check(!ac1.eliminar.ok && /tus mensajes/.test(ac1.eliminar.motivo) && ac1.copiar && !ac1.reenviar, 'con algo de la otra parte: «Eliminar para todos», no (y dice por qué); reenviar, tampoco');
+  const ac2 = C.accionesSeleccion([reciente({ id: 'a', autor: 'coach' }), { id: 'b', autor: 'coach', creado_en: new Date(Date.now() - 49 * 3600000).toISOString() }], 'coach');
+  check(!ac2.eliminar.ok && /48 horas/.test(ac2.eliminar.motivo), 'ni si alguno tiene más de 48 horas');
+  const ac3 = C.accionesSeleccion([reciente({ id: 'a', autor: 'coach' }), reciente({ id: 'b', autor: 'coach' })], 'coach');
+  check(ac3.eliminar.ok && ac3.reenviar && ac3.destacar && !C.accionesSeleccion([reciente({ id: 'a', autor: 'atleta' })], 'atleta').reenviar, 'todo lo tuyo y reciente: eliminar y reenviar (el coach; el atleta no reenvía)');
+  // El aviso del móvil: los mensajes de una conversación, juntos («3 mensajes nuevos de Ana»)
+  const sw = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8');
+  const fuente = sw.slice(sw.indexOf('function agruparChat'), sw.indexOf('\n}\n', sw.indexOf('function agruparChat')) + 2);
+  const agruparChat = new Function(`${fuente}; return agruparChat;`)();
+  const a1 = agruparChat({ id: 'n1', titulo: 'Ana te ha escrito', cuerpo: 'Mensaje nuevo', url: '#mensajes/x' }, '#mensajes/x', []);
+  const a2 = agruparChat({ id: 'n2', titulo: 'Ana te ha escrito', cuerpo: 'Mensaje nuevo' }, '#mensajes/x', [{ tag: 'chat:#mensajes/x', data: { n: 2 } }]);
+  const a3 = agruparChat({ id: 'n3', titulo: 'Aviso de Pelayo', cuerpo: 'Tócalo para leerlo en la app.', etiqueta: 'n3' }, '#hoy', []);
+  check(a1.tag === 'chat:#mensajes/x' && a1.n === 1 && a1.cuerpo === 'Mensaje nuevo' && a2.tag === a1.tag && a2.cuerpo === '3 mensajes nuevos de Ana' && a2.renotify && a3.tag === 'n3' && a3.cuerpo.startsWith('Tócalo'),
+    'en el móvil, los de una conversación se juntan en una («3 mensajes nuevos de Ana»); lo demás, como siempre');
+  check(!/texto|cuerpo: d\.texto/.test(fuente) && /mensajes nuevos/.test(fuente), '(sin el texto de los mensajes: solo cuántos y de quién)');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

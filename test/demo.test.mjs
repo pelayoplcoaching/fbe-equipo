@@ -987,5 +987,98 @@ console.log('\nLo que encontró la revisión de seguridad de la 032, también en
   check(typeof a6.borrarMensaje === 'undefined', 'ya no hay api.borrarMensaje');
 }
 
+console.log('\nEl chat, aún más como WhatsApp, en la demo (v0.55): las mismas reglas que la 033');
+{
+  const b7 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a7 = crearApi(b7);
+  const coach = () => b7.auth.entrar('pelayo@fbe.demo', 'demo'), comoAna = () => b7.auth.entrar('ana@fbe.demo', 'demo'), comoRuben = () => b7.auth.entrar('ruben@fbe.demo', 'demo');
+  await coach();
+  const atl = await a7.atletas();
+  const ana = atl.find((a) => a.nombre === 'Ana López'), ruben = atl.find((a) => a.nombre.startsWith('Rubén')), sergio = atl.find((a) => a.estado === 'baja');
+  check(await a7.chat033() === true, 'la demo tiene todo lo de la 033');
+  // Sin duplicados y «Reenviado» solo con su función
+  const cid = crypto.randomUUID();
+  const m1 = await a7.enviarMensaje(ana.id, { texto: 'Uno', autor: 'coach', clienteId: cid });
+  const m2 = await a7.enviarMensaje(ana.id, { texto: 'Uno', autor: 'coach', clienteId: cid });
+  check(m1.id === m2.id && (await b7.select('comentarios', { eq: { cliente_id: cid } })).length === 1, 'el mismo id del móvil, una sola vez');
+  await comoAna();
+  const mA = (await b7.insert('comentarios', [{ atleta_id: ana.id, texto: 'Hola', reenviado: true, entregado_en: new Date().toISOString(), cliente_id: cid }]))[0];
+  check(mA.reenviado === false && mA.entregado_en === null, 'Ana no pone «Reenviado» ni «entregado» a mano (y su id no choca con el del coach)');
+  check(await lanza(() => b7.update('comentarios', { cliente_id: null }, { eq: { id: m1.id } })) && await lanza(() => b7.update('comentarios', { reenviado: true }, { eq: { id: m1.id } })), 'ni los cambia después');
+  // Entregado
+  await a7.marcarEntregados({ ya: true });
+  check(!!(await b7.select('comentarios', { eq: { id: m1.id } }))[0].entregado_en && !(await b7.select('comentarios', { eq: { id: mA.id } }))[0].entregado_en, 'la app de Ana descarga lo del coach: entregado (lo suyo, no)');
+  // PDF
+  const pdf = new Blob(['%PDF-1.4'], { type: 'application/pdf' }); pdf.name = 'Mi/analítica.pdf';
+  const mPdf = await a7.enviarMensaje(ana.id, { texto: 'La analítica', archivo: pdf, autor: 'atleta', paginas: 1 });
+  const [doc] = await b7.select('archivos', { eq: { id: mPdf.archivo_id } });
+  check(doc.tipo === 'documento' && doc.nombre === 'analítica.pdf' && /\/documento-.*\.pdf$/.test(doc.ruta) && mPdf.adjunto === true, 'Ana manda un PDF (nombre saneado, ruta generada, como mensaje del chat)');
+  check(await lanza(() => b7.insert('archivos', [{ atleta_id: ana.id, tipo: 'documento', ruta: `${ana.id}/documento-x.pdf`, mime: 'image/png', bytes: 10, nombre: 'x.pdf' }]))
+    && await lanza(() => b7.insert('archivos', [{ atleta_id: ana.id, tipo: 'documento', ruta: `${ana.id}/documento-y.pdf`, mime: 'application/pdf', bytes: 30 * 1048576, nombre: 'y.pdf' }]))
+    && await lanza(() => b7.insert('archivos', [{ atleta_id: ana.id, tipo: 'documento', ruta: `${ana.id}/documento-z.pdf`, mime: 'application/pdf', bytes: 10, nombre: '../z.pdf' }])), 'un documento: PDF, hasta 20 MB y con un nombre sin barras ni «..»');
+  check(!(await b7.storage.borrar([doc.ruta])).length && (await b7.delete('archivos', { eq: { id: doc.id } }), (await b7.select('archivos', { eq: { id: doc.id } })).length === 1), 'Ana no lo borra a mano (ni de Storage ni de archivos)');
+  await comoRuben();
+  check(await lanza(() => a7.urlArchivo(doc.ruta)), 'Rubén no ve el PDF de Ana');
+  // Fijar
+  await coach();
+  await a7.fijarMensaje(ana.id, m1.id, '7d');
+  await comoAna();
+  check((await a7.fijado(ana.id))?.comentario_id === m1.id && await lanza(() => a7.fijarMensaje(ana.id, mA.id, '7d')) && await lanza(() => b7.insert('conversacion_fijado', [{ atleta_id: ana.id, comentario_id: mA.id }])), 'el coach fija; Ana lo ve pero no fija');
+  await comoRuben();
+  check(!(await a7.fijado(ana.id)) && !(await b7.select('conversacion_fijado', {})).length, 'Rubén no ve lo fijado de Ana');
+  await coach();
+  const prog = await a7.enviarMensaje(ana.id, { texto: 'Mañana', autor: 'coach', enviarEn: new Date(Date.now() + 864e5).toISOString() });
+  check(await lanza(() => a7.fijarMensaje(ana.id, prog.id, '7d')) && await lanza(() => a7.fijarMensaje(ruben.id, m1.id, '7d')), 'ni uno programado ni uno de otra conversación');
+  await a7.eliminarMensaje(m1);
+  check(!(await a7.fijado(ana.id)), 'eliminado para todos, se desfija');
+  // Silenciar
+  await comoAna();
+  await a7.silenciar(ana.id, 'semana');
+  check(!!(await a7.silencios())[ana.id] && await lanza(() => a7.silenciar(ruben.id, '8h')), 'Ana silencia el suyo (el de otro, no)');
+  await coach();
+  check(!Object.keys(await a7.silencios()).length, 'el coach no ve que Ana lo ha silenciado');
+  await a7.silenciar(ana.id, 'siempre');
+  check((await a7.silencios())[ana.id]?.hasta === null, 'el coach silencia a Ana «siempre»');
+  await comoAna();
+  check(Object.keys(await a7.silencios()).length === 1 && (await a7.silencios())[ana.id].usuario_id !== undefined, '(Ana solo ve el suyo)');
+  // Listas de difusión, difundir y reenviar
+  await coach();
+  const lista = await a7.guardarListaDifusion({ nombre: 'Compiten', miembros: [ana.id, ruben.id, sergio.id] });
+  const d = await a7.difundir({ listaId: lista.id, texto: 'Test de 1RM el sábado' });
+  check(d.enviados === 2 && d.saltados === 1, 'difundir: Ana y Rubén, cada uno en su chat; Sergio (de baja), no');
+  const foto = new Blob(['jpg'], { type: 'image/jpeg' }); foto.name = 'g.jpg';
+  const df = await a7.difundir({ listaId: lista.id, texto: '', archivo: foto });
+  const copias = (await b7.select('comentarios', { eq: { texto: 'Foto' } })).filter((c) => [ana.id, ruben.id].includes(c.atleta_id) && c.archivo_id);
+  check(df.enviados === 2 && copias.length >= 2, 'con foto, cada uno con su copia');
+  await comoRuben();
+  const suya = (await a7.conversacion(ruben.id)).find((c) => c.texto === 'Foto' && c.archivo);
+  check(!!suya && !!(await a7.urlArchivo(suya.archivo.ruta)) && suya.archivo.ruta.startsWith(`${ruben.id}/`), 'Rubén ve su copia (en su carpeta)');
+  const deAna = copias.find((c) => c.atleta_id === ana.id);
+  const [archAna] = await (async () => { await coach(); return b7.select('archivos', { eq: { id: deAna.archivo_id } }); })();
+  await comoRuben();
+  check(await lanza(() => a7.urlArchivo(archAna.ruta)), 'y no la de Ana');
+  check(await lanza(() => a7.listasDifusion()).then(async (x) => x || !(await a7.listasDifusion()).length) && await lanza(() => a7.difundir({ listaId: lista.id, texto: 'x' })) && await lanza(() => a7.reenviar(suya, [ana.id])),
+    'Rubén no ve las listas, ni difunde, ni reenvía');
+  await coach();
+  const g = await a7.enviarMensaje(ana.id, { texto: 'Guía', autor: 'coach' });
+  const rr = await a7.reenviar(g, [ruben.id, sergio.id]);
+  check(rr.enviados === 1 && rr.saltados === 1, 'el coach reenvía (Sergio, de baja, se salta)');
+  await comoRuben();
+  check((await a7.conversacion(ruben.id)).some((c) => c.texto === 'Guía' && c.reenviado), 'a Rubén le llega con «Reenviado»');
+  await comoAna();
+  const suyo = await a7.enviarMensaje(ana.id, { texto: 'Mi rodilla', autor: 'atleta' });
+  await coach();
+  check(await lanza(() => a7.reenviar(suyo, [ruben.id])), 'el coach no reenvía lo de un atleta');
+  check(await lanza(() => b7.insert('listas_difusion', [{ nombre: 'compiten' }])), 'sin repetir el nombre de una lista');
+  // Sin conexión, el mensaje no sale (la bandeja de salida lo guarda)
+  const antes = globalThis.navigator;
+  Object.defineProperty(globalThis, 'navigator', { value: { onLine: false }, configurable: true });
+  const sinRed = await lanza(() => a7.enviarMensaje(ana.id, { texto: 'Sin red', autor: 'coach' }));
+  Object.defineProperty(globalThis, 'navigator', { value: antes, configurable: true });
+  check(sinRed, 'sin conexión, un mensaje no sale (como en el de verdad)');
+  await comoAna();
+  check(typeof (await a7.nombreCoach()) === 'string', 'el nombre del coach para «Info del contacto»');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

@@ -32,6 +32,7 @@ import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, M
 import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
 import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
+import { planDifusion, planReenvio, nombreSeguroPdf, PDF_MAX_MB, hastaFijado, fijadoVigente, hastaSilencio, silenciado } from '../logica/chat.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -128,6 +129,17 @@ const falta032 = (e) => {
   }
   throw e;
 };
+// El chat, aún más como WhatsApp (v0.55) sin la migración 033: lo de antes sigue igual; lo nuevo lo dice
+const AVISO_033 = 'Para esto falta ejecutar la migración 033 en Supabase (supabase/migraciones/033_chat_mas_whatsapp.sql)';
+const falta033 = (e) => {
+  const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+  if (/\b(cliente_id|reenviado|entregado_en|marcar_entregados|conversacion_fijado|chat_silencios|listas_difusion|listas_difusion_miembros|chat_reenviar|chat_difundir|paginas|archivos_tipo_check)\b/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna|relation|PGRST20|check constraint|23514/i.test(m)) {
+    throw new Error(`${AVISO_033}. Detalle: ${e?.message || e}`);
+  }
+  throw e;
+};
+const sinCliente033 = (e) => /cliente_id/.test(e?.message || '') && /schema cache|does not exist|no existe|column|columna|PGRST20/i.test(e?.message || '');
+const duplicado = (e) => /duplicate|23505|Ya existe un registro igual/i.test(`${e?.codigo || e?.code || ''} ${e?.message || ''}`);
 // La función de entrar sin la migración 028 (sin el parámetro de las normas)
 const sinNormas = (e) => /comunidad_unirme/.test(`${e?.message || ''}`) && /p_normas|schema cache|does not exist|no existe|PGRST202/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta018 = (e) => {
@@ -144,6 +156,7 @@ const fechaDe = (iso) => {
   const d = new Date(t);
   return Number.isNaN(d.getTime()) ? t.slice(0, 10) : aISO(d);
 };
+const nuevoUuid = () => globalThis.crypto?.randomUUID?.() || 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16); });
 const aleatorio = () => (globalThis.crypto?.randomUUID?.() || String(Math.random()).slice(2)).replace(/-/g, '').slice(0, 10);
 
 // Semanas que cuentan para la racha y el cumplimiento: las publicadas de bloques no cancelados; si dos bloques
@@ -343,6 +356,10 @@ export function crearApi(backend) {
       return b.delete('errores_app', { gte: { creado_en: '2000-01-01' } });
     },
     // La foto del coach, para el chat del atleta (la base solo deja ver eso del perfil del coach)
+    // v0.55: el nombre corto del coach («Info del contacto» del atleta); sin la 033, null
+    async nombreCoach() {
+      return (await b.rpc('nombre_coach', {}).catch(() => null)) || null;
+    },
     async fotoCoach() {
       return (await b.rpc('foto_coach', {}).catch(() => null)) || null;
     },
@@ -1439,14 +1456,27 @@ export function crearApi(backend) {
     },
     // dibujo: líneas y ángulos sobre un fotograma del vídeo ({ t, formas }), solo en comentarios de un vídeo
     // respondeA (v0.54): el mensaje que cita (de la misma conversación y del mismo hilo; lo comprueba la base)
-    async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null, respondeA = null }) {
+    // clienteId (v0.55): el id que pone el móvil (el de la bandeja de salida); si ese mensaje ya entró (un reintento sin
+    // cobertura cuya respuesta no llegó), devuelve el que ya está, sin repetirlo. Sin la 033, se envía sin él.
+    async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null, respondeA = null, clienteId = null }) {
       const fila = { atleta_id: atletaId, sesion_id: sesionId, checkin_id: checkinId, archivo_id: archivoId, texto: texto.trim(), autor };
       if (archivoId && dibujo) {
         if (!dibujoValido(dibujo)) throw new Error('El dibujo no tiene la forma que toca');
         fila.dibujo = dibujo;
       }
       if (respondeA) fila.responde_a = respondeA;
-      return (await b.insert('comentarios', [fila]).catch(respondeA ? falta032 : (e) => { throw e; }))[0];
+      if (clienteId) fila.cliente_id = clienteId;
+      const insertar = (f) => b.insert('comentarios', [f]).catch(respondeA ? falta032 : (e) => { throw e; });
+      try {
+        return (await insertar(fila))[0];
+      } catch (e) {
+        if (clienteId && duplicado(e)) {
+          const [ya] = await b.select('comentarios', { eq: { atleta_id: atletaId, cliente_id: clienteId, autor: autor === 'coach' ? 'coach' : 'atleta' } }).catch(() => []);
+          if (ya) return ya;
+        }
+        if (clienteId && sinCliente033(e)) { const { cliente_id, ...sin } = fila; return (await insertar(sin))[0]; }
+        throw e;
+      }
     },
     async marcarLeidos(ids) {
       if (!ids.length) return [];
@@ -1454,8 +1484,10 @@ export function crearApi(backend) {
     },
     // Lo que le ha escrito el coach y aún no ha leído
     async noLeidos(atletaId) {
-      // (v0.54) lo que el coach eliminó ya no cuenta
-      return (await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, nulo: ['leido_en'], order: [['creado_en', 'desc']] })).filter((c) => !c.eliminado_en);
+      // (v0.54) lo que el coach eliminó ya no cuenta. (v0.55) Lo que llega, entregado (✓✓ gris para el coach)
+      const filas = (await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, nulo: ['leido_en'], order: [['creado_en', 'desc']] })).filter((c) => !c.eliminado_en);
+      if (filas.some((c) => !c.entregado_en)) api.marcarEntregados().catch(() => {});
+      return filas;
     },
     // Un comentario es «un mensaje del chat» si va suelto o si lleva un adjunto del chat (lo marca la base);
     // lo demás es una respuesta pegada a una sesión, un check-in o un vídeo del diario
@@ -1467,6 +1499,8 @@ export function crearApi(backend) {
     async conversacion(atletaId, { limite = 400 } = {}) {
       const todos = await b.select('comentarios', { eq: { atleta_id: atletaId }, order: [['creado_en', 'desc']], limit: limite });
       const mensajes = todos.reverse();
+      // (v0.55) lo de la otra parte que acaba de llegar, entregado
+      if (mensajes.some((c) => c.entregado_en === null && !c.eliminado_en)) api.marcarEntregados().catch(() => {});
       const sesIds = unicos(mensajes.map((c) => c.sesion_id).filter(Boolean));
       const arcIds = unicos(mensajes.map((c) => c.archivo_id).filter(Boolean));
       const ids = mensajes.map((c) => c.id);
@@ -1486,7 +1520,7 @@ export function crearApi(backend) {
         if (archivo && conMedio) vistos.add(archivo.id);
         const contexto = c.sesion_id ? { tipo: 'sesion', id: c.sesion_id, nombre: S[c.sesion_id]?.nombre || 'una sesión' }
           : c.checkin_id ? { tipo: 'checkin', id: c.checkin_id, nombre: 'check-in' }
-          : archivo ? { tipo: 'archivo', id: archivo.id, nombre: archivo.tipo === 'adjunto' ? null : /^video/.test(archivo.mime || '') || archivo.tipo === 'video_tecnica' ? 'vídeo' : 'foto' }
+          : archivo ? { tipo: 'archivo', id: archivo.id, nombre: archivo.tipo === 'adjunto' || archivo.tipo === 'documento' ? null : /^video/.test(archivo.mime || '') || archivo.tipo === 'video_tecnica' ? 'vídeo' : 'foto' }
           : null;
         const medio = archivo ? medioDe({ archivo }) : null;
         return { ...c, contexto, archivo: conMedio ? archivo : null, archivoId: archivo?.id || null, medio, programado: programado(c),
@@ -1608,6 +1642,167 @@ export function crearApi(backend) {
       return typeof b.canalChat === 'function' ? b.canalChat(atletaId, oyente) : null;
     },
     reiniciarChats() { if (typeof b.reiniciarChats === 'function') b.reiniciarChats(); },
+
+    // ------------------------------------------------------------ v0.55: el chat, aún más como WhatsApp (migración 033)
+    // ¿Tiene la base la 033? Lo nuevo (fijar, silenciar, difusión, reenviar, documentos) lo pregunta antes; sin ella, lo
+    // de antes funciona igual y lo nuevo dice qué falta. (Un fallo de la red no se recuerda: se vuelve a preguntar.)
+    async chat033() {
+      if (!api._c033) {
+        api._c033 = b.select('conversacion_fijado', { limit: 1, cols: 'atleta_id' }).then(() => true, (e) => {
+          const falta = /conversacion_fijado|schema cache|does not exist|no existe|relation|PGRST20/i.test(e?.message || '');
+          if (!falta) api._c033 = null;
+          return !falta;
+        });
+      }
+      return api._c033;
+    },
+    async exigir033() { if (!(await api.chat033())) throw new Error(AVISO_033); },
+    // «Entregado» (✓✓ gris): lo dirigido a mí que mi app acaba de descargar. Directo al backend (no es «un cambio» de
+    // la pantalla) y como mucho cada 8 segundos; sin la 033, nada.
+    async marcarEntregados({ ya = false } = {}) {
+      if (!uid() || typeof backend.rpc !== 'function') return 0;
+      if (!ya && Date.now() - (api._entregados || 0) < 8000) {
+        // (lo que llegue dentro de esos 8 segundos, al acabar)
+        if (!api._entregadosLuego) api._entregadosLuego = setTimeout(() => { api._entregadosLuego = null; api.marcarEntregados({ ya: true }).catch(() => {}); }, 8000);
+        return 0;
+      }
+      api._entregados = Date.now();
+      try { return Number(await backend.rpc('marcar_entregados', {})) || 0; } catch { return 0; }
+    },
+    // El mensaje fijado de una conversación (con su mensaje), o null (si caducó, se eliminó o no hay)
+    async fijado(atletaId) {
+      const [f] = await b.select('conversacion_fijado', { eq: { atleta_id: atletaId } }).catch(() => []);
+      if (!fijadoVigente(f)) return null;
+      const [c] = await b.select('comentarios', { eq: { id: f.comentario_id } }).catch(() => []);
+      if (!c || c.eliminado_en) return null;
+      return { ...f, mensaje: c };
+    },
+    // duracion: '24h' | '7d' | '30d' (como WhatsApp). Uno por conversación: fijar otro sustituye al anterior.
+    async fijarMensaje(atletaId, comentarioId, duracion = '7d') {
+      await api.exigir033();
+      return (await b.upsert('conversacion_fijado', [{ atleta_id: atletaId, comentario_id: comentarioId, hasta: hastaFijado(duracion) }], 'atleta_id').catch(falta033))[0];
+    },
+    async desfijarMensaje(atletaId) { await b.delete('conversacion_fijado', { eq: { atleta_id: atletaId } }).catch(falta033); },
+    // Mis conversaciones silenciadas: { [atleta_id]: { hasta } } (solo las que siguen silenciadas)
+    async silencios() {
+      const filas = await b.select('chat_silencios', { eq: { usuario_id: uid() } }).catch(() => []);
+      return Object.fromEntries(filas.filter((x) => silenciado(x)).map((x) => [x.atleta_id, x]));
+    },
+    // opcion: '8h' | 'semana' | 'siempre'; null la vuelve a activar
+    async silenciar(atletaId, opcion) {
+      if (opcion == null) { await b.delete('chat_silencios', { eq: { usuario_id: uid(), atleta_id: atletaId } }).catch(falta033); return null; }
+      await api.exigir033();
+      return (await b.upsert('chat_silencios', [{ usuario_id: uid(), atleta_id: atletaId, hasta: hastaSilencio(opcion) }], 'usuario_id,atleta_id').catch(falta033))[0];
+    },
+    // Las listas de difusión (solo el coach): [{ id, nombre, miembros: [atleta_id] }]
+    async listasDifusion() {
+      const [listas, miembros] = await Promise.all([
+        b.select('listas_difusion', { order: [['nombre', 'asc']] }).catch(falta033),
+        b.select('listas_difusion_miembros', {}).catch(falta033),
+      ]);
+      const M = agrupar(miembros, 'lista_id');
+      return listas.map((l) => ({ ...l, miembros: (M[l.id] || []).map((m) => m.atleta_id) }));
+    },
+    async guardarListaDifusion({ id = null, nombre, miembros = [] }) {
+      await api.exigir033();
+      const n = String(nombre || '').replace(/\s+/g, ' ').trim();
+      if (!n) throw new Error('Ponle un nombre a la lista');
+      if (n.length > 40) throw new Error('El nombre, hasta 40 letras');
+      const ids = [...new Set(miembros)];
+      if (ids.length > 256) throw new Error('Una lista, como mucho 256 atletas');
+      const lista = id ? (await b.update('listas_difusion', { nombre: n }, { eq: { id } }).catch(falta033))[0] : (await b.insert('listas_difusion', [{ nombre: n }]).catch((e) => {
+        if (duplicado(e)) throw new Error('Ya tienes una lista con ese nombre');
+        return falta033(e);
+      }))[0];
+      if (!lista) throw new Error('Esa lista ya no está');
+      const antes = id ? (await b.select('listas_difusion_miembros', { eq: { lista_id: lista.id } })).map((m) => m.atleta_id) : [];
+      const quitar = antes.filter((x) => !ids.includes(x));
+      const poner = ids.filter((x) => !antes.includes(x));
+      if (quitar.length) await b.delete('listas_difusion_miembros', { eq: { lista_id: lista.id }, in: { atleta_id: quitar } });
+      if (poner.length) await b.insert('listas_difusion_miembros', poner.map((atleta_id) => ({ lista_id: lista.id, atleta_id })));
+      return { ...lista, miembros: ids };
+    },
+    async borrarListaDifusion(id) { await b.delete('listas_difusion', { eq: { id } }).catch(falta033); },
+    // Una copia de una foto, un vídeo o un documento del chat en la carpeta de otro atleta (el coach): primero su fila en
+    // archivos (con lo que la base comprueba) y después la copia en Storage, con los permisos del coach. Así ese atleta
+    // solo ve su copia (lo de la carpeta del otro sigue sin poder verlo).
+    async copiarArchivoA(archivo, atletaId) {
+      const ext = (/\.([a-z0-9]{1,5})$/i.exec(archivo.ruta || '') || [])[1]?.toLowerCase() || 'bin';
+      const esImagen = /^image\//.test(archivo.mime || '');
+      const dia = hoyISO();
+      const ruta = archivo.tipo === 'documento' ? `${atletaId}/documento-${dia}-${aleatorio()}.pdf` : `${atletaId}/${esImagen ? 'adjunto' : 'adjunto-video'}-${dia}-${aleatorio()}.${ext}`;
+      const poster_ruta = archivo.poster_ruta ? `${ruta}.jpg` : null;
+      const [fila] = await b.insert('archivos', [{
+        atleta_id: atletaId, tipo: archivo.tipo === 'documento' ? 'documento' : 'adjunto', ruta, mime: archivo.mime || null, bytes: archivo.bytes ?? null, fecha: dia,
+        ...(archivo.duracion_seg != null ? { duracion_seg: archivo.duracion_seg } : {}), ...(poster_ruta ? { poster_ruta } : {}),
+        ...(archivo.tipo === 'documento' ? { nombre: archivo.nombre || 'documento.pdf', ...(archivo.paginas ? { paginas: archivo.paginas } : {}) } : {}),
+      }]).catch(falta033);
+      try { await b.storage.copiar(archivo.ruta, ruta); } catch (e) { await b.delete('archivos', { eq: { id: fila.id } }).catch(() => {}); throw e; }
+      if (poster_ruta) await b.storage.copiar(archivo.poster_ruta, poster_ruta).catch(async () => { await b.update('archivos', { poster_ruta: null }, { eq: { id: fila.id } }).catch(() => {}); fila.poster_ruta = null; });
+      return fila;
+    },
+    // Reenviar (el coach) un mensaje suyo a varios atletas. Con archivo, cada uno recibe su copia. Todo en una función de
+    // la base (chat_reenviar: comprueba, limita y lo crea todo de una vez); si falla, las copias se retiran.
+    // Devuelve { enviados, saltados (de baja), fallidos (no se pudo copiar el archivo) }
+    async reenviar(c, atletaIds) {
+      await api.exigir033();
+      const { destinos, saltados, demasiados } = planReenvio(atletaIds, await api.atletas());
+      if (demasiados) throw new Error('Se reenvía a 50 atletas como mucho');
+      if (!destinos.length) throw new Error(saltados ? 'Están de baja: no se les puede reenviar' : 'Elige a quién reenviarlo');
+      const archivo = c.archivo_id ? (await b.select('archivos', { eq: { id: c.archivo_id } }))[0] || null : null;
+      if (c.archivo_id && !archivo) throw new Error('Ese archivo ya no está');
+      const lista = [];
+      let fallidos = 0;
+      for (const atletaId of destinos) {
+        let copia = null;
+        if (archivo) { try { copia = await api.copiarArchivoA(archivo, atletaId); } catch (e) { if (/033/.test(e?.message || '')) throw e; fallidos++; continue; } }
+        lista.push({ atleta: atletaId, archivo: copia?.id || null, cliente: nuevoUuid(), copia });
+      }
+      if (!lista.length) throw new Error('No se ha podido copiar el archivo: vuelve a intentarlo');
+      try {
+        const r = await b.rpc('chat_reenviar', { p_comentario: c.id, p_destinos: lista.map(({ atleta, archivo: a, cliente }) => ({ atleta, archivo: a, cliente })) }).catch(falta033);
+        return { enviados: Array.isArray(r) ? r.length : lista.length, saltados, fallidos };
+      } catch (e) {
+        for (const x of lista) if (x.copia) await api.borrarArchivo(x.copia).catch(() => {});
+        throw e;
+      }
+    },
+    // Una difusión (el coach): el mismo mensaje a cada miembro de la lista, en su chat. Con archivo: se sube una vez (a la
+    // carpeta del primero) y se copia a la de cada uno; los mensajes los crea la base de una vez (chat_difundir: todos o
+    // ninguno, sin repetir con el mismo id, y saltándose a los de baja). Devuelve { enviados, saltados }.
+    async difundir({ listaId, texto = '', archivo = null, enviarEn = null, paginas = null, poster = null, duracion_seg = null }) {
+      await api.exigir033();
+      const t = String(texto || '').trim();
+      if (!t && !archivo) throw new Error('Escribe el mensaje');
+      if (t.length > 4000) throw new Error('Un mensaje, hasta 4000 letras');
+      if (archivo && enviarEn) throw new Error('Los mensajes con foto, vídeo o documento no se pueden programar');
+      if (enviarEn) {
+        const cuando = Date.parse(enviarEn);
+        if (!Number.isFinite(cuando) || cuando <= Date.now() + 60000) throw new Error('Elige una hora que aún no haya pasado');
+        if (cuando > Date.now() + 90 * 864e5) throw new Error('Un mensaje se programa como mucho a 90 días vista');
+      }
+      const [miembros, atletas] = await Promise.all([b.select('listas_difusion_miembros', { eq: { lista_id: listaId } }).catch(falta033), api.atletas()]);
+      const { destinos, saltados } = planDifusion(miembros, atletas);
+      if (!destinos.length) throw new Error(saltados ? 'Todos los de esta lista están de baja' : 'Esta lista no tiene a nadie');
+      const subidas = [];
+      try {
+        if (archivo) {
+          const esPdf = archivo.type === 'application/pdf';
+          if (esPdf && archivo.size > PDF_MAX_MB * 1024 * 1024) throw new Error(`El PDF pesa más de ${PDF_MAX_MB} MB`);
+          const primera = await api.subirArchivo(destinos[0], archivo, { tipo: esPdf ? 'documento' : 'adjunto', poster: esPdf ? null : poster, duracion_seg: esPdf ? null : duracion_seg, ...(esPdf ? { nombre: archivo.name, paginas } : {}) });
+          subidas.push(primera);
+          for (const id of destinos.slice(1)) subidas.push(await api.copiarArchivoA(primera, id));
+        }
+        const r = await b.rpc('chat_difundir', { p_lista: listaId, p_texto: t, p_enviar_en: enviarEn ? new Date(Date.parse(enviarEn)).toISOString() : null,
+          p_destinos: subidas.length ? subidas.map((a) => ({ atleta: a.atleta_id, archivo: a.id })) : null, p_cliente: nuevoUuid() }).catch(falta033);
+        return { enviados: Number(r?.enviados) || 0, saltados: Number(r?.saltados) || saltados };
+      } catch (e) {
+        for (const a of subidas) await api.borrarArchivo(a).catch(() => {});
+        throw e;
+      }
+    },
+    // Un enlace para guardar el archivo (la persona lo pide: «Guardar»), con su nombre
+    async urlDescarga(ruta, nombre = null) { return b.storage.url(ruta, 600, 'archivos', { descargar: nombre || String(ruta).split('/').pop() }); },
     // El coach: una conversación por atleta, con el último mensaje y cuántos tiene sin leer; las que tienen
     // algo sin leer primero, luego por el último mensaje
     // (v0.54) con el estado de cada una (fijada, archivada, «no leída»), qué lleva el último (foto o vídeo) y sin contar
@@ -1616,7 +1811,8 @@ export function crearApi(backend) {
       const COLS = 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id,enviar_en';
       const [atletas, comentarios, estado] = await Promise.all([
         api.atletas(),
-        b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: `${COLS},adjunto,eliminado_en,editado_en` })
+        b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: `${COLS},adjunto,eliminado_en,editado_en,entregado_en` })
+          .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: `${COLS},adjunto,eliminado_en,editado_en` }))
           .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: COLS }))
           .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id' })),
         api.estadoConversaciones(),
@@ -1638,15 +1834,20 @@ export function crearApi(backend) {
     },
     // Cuántos mensajes de atletas tiene el coach sin leer (la insignia de Mensajes); lo eliminado no cuenta
     async mensajesSinLeer() {
-      const filas = await b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'id,eliminado_en' })
+      const filas = await b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'id,eliminado_en,entregado_en' })
+        .catch(() => b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'id,eliminado_en' }))
         .catch(() => b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'id' }));
+      // (v0.55) lo que llega a la app del coach queda entregado (✓✓ gris para el atleta)
+      if (filas.some((c) => !c.eliminado_en && c.entregado_en === null)) api.marcarEntregados().catch(() => {});
       return filas.filter((c) => !c.eliminado_en).length;
     },
     // Enviar desde el chat: texto, o una foto o un vídeo con texto (adjunto). Si el vídeo es de técnica
     // (enDiario), se guarda como tal: entra en su diario y en tu bandeja de vídeos, con su propio hilo.
     // enviarEn (v0.48): un mensaje del coach programado para esa hora (solo texto); hasta entonces el atleta no lo ve
     // respondeA (v0.54): el mensaje que cita (con foto o vídeo, el primero de varios lo lleva)
-    async enviarMensaje(atletaId, { texto = '', archivo = null, autor, enDiario = false, poster = null, duracion_seg = null, enviarEn = null, respondeA = null }) {
+    // clienteId (v0.55): el id del móvil (sin repetir al reintentar). Un PDF (v0.55, migración 033) va como documento del
+    // chat, con su nombre (saneado) y sus páginas (si se saben); la ruta la genera la app.
+    async enviarMensaje(atletaId, { texto = '', archivo = null, autor, enDiario = false, poster = null, duracion_seg = null, enviarEn = null, respondeA = null, clienteId = null, paginas = null }) {
       const t = String(texto || '').trim();
       if (enviarEn) {
         if (archivo) throw new Error('Los mensajes con foto o vídeo no se pueden programar');
@@ -1656,15 +1857,19 @@ export function crearApi(backend) {
         if (cuando > Date.now() + 90 * 864e5) throw new Error('Un mensaje se programa como mucho a 90 días vista');
         return (await b.insert('comentarios', [{ atleta_id: atletaId, sesion_id: null, checkin_id: null, archivo_id: null, texto: t, autor, enviar_en: new Date(cuando).toISOString(), ...(respondeA ? { responde_a: respondeA } : {}) }]).catch(falta030).catch(falta032))[0];
       }
-      if (!archivo) return api.comentar({ atletaId, texto: t, autor, respondeA });
+      if (!archivo) return api.comentar({ atletaId, texto: t, autor, respondeA, clienteId });
+      const esPdf = archivo.type === 'application/pdf';
       const esVideo = /^video\//.test(archivo.type || '');
-      const tipo = enDiario ? (esVideo ? 'video_tecnica' : 'foto_progreso') : 'adjunto';
-      const fila = await api.subirArchivo(atletaId, archivo, { tipo, nota_atleta: enDiario && t ? t.slice(0, 500) : null, poster, duracion_seg });
+      if (esPdf && archivo.size > PDF_MAX_MB * 1024 * 1024) throw new Error(`El PDF pesa más de ${PDF_MAX_MB} MB`);
+      if (esPdf) await api.exigir033();
+      const tipo = esPdf ? 'documento' : enDiario ? (esVideo ? 'video_tecnica' : 'foto_progreso') : 'adjunto';
+      const fila = await api.subirArchivo(atletaId, archivo, { tipo, nota_atleta: enDiario && t ? t.slice(0, 500) : null, poster: esPdf ? null : poster, duracion_seg: esPdf ? null : duracion_seg,
+        ...(esPdf ? { nombre: nombreSeguroPdf(archivo.name), paginas } : {}) });
       try {
-        return await api.comentar({ atletaId, archivoId: fila.id, texto: t || (esVideo ? 'Vídeo' : 'Foto'), autor, respondeA: tipo === 'adjunto' ? respondeA : null });
+        return await api.comentar({ atletaId, archivoId: fila.id, texto: t || (esPdf ? 'Documento' : esVideo ? 'Vídeo' : 'Foto'), autor, respondeA: tipo === 'adjunto' || tipo === 'documento' ? respondeA : null, clienteId });
       } catch (e) {
         // Sin su mensaje, un adjunto no es nada: se retira (un vídeo del diario se queda, ya está en el diario)
-        if (tipo === 'adjunto') await api.borrarArchivo(fila).catch(() => {});
+        if (tipo === 'adjunto' || tipo === 'documento') await api.borrarArchivo(fila).catch(() => {});
         throw e;
       }
     },
@@ -1691,7 +1896,8 @@ export function crearApi(backend) {
       const eq = { atleta_id: atletaId };
       if (tipo) eq.tipo = tipo;
       // Los adjuntos del chat no son vídeos de técnica ni fotos de progreso: solo salen si se piden
-      return b.select('archivos', { eq, ...(tipo ? {} : { neq: { tipo: 'adjunto' } }), order: [['fecha', 'desc'], ['creado_en', 'desc']] });
+      // (v0.55) ni los documentos del chat
+      return (await b.select('archivos', { eq, ...(tipo ? {} : { neq: { tipo: 'adjunto' } }), order: [['fecha', 'desc'], ['creado_en', 'desc']] })).filter((a) => tipo || a.tipo !== 'documento');
     },
     // v0.41: cuántos vídeos de técnica ha enviado el atleta de cada ejercicio de una sesión (el aviso «Vídeo enviado»)
     async videosSesion(atletaId, seIds) {
@@ -1745,12 +1951,14 @@ export function crearApi(backend) {
         || String(archivo.type || '').split('/')[1] || 'bin';
       const esImagen = /^image\//.test(archivo.type || '') || tipo === 'foto_progreso';
       const dia = fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) && fecha <= hoyISO() ? fecha : hoyISO();
+      // (v0.55) un documento, siempre .pdf: la ruta nunca sale de su nombre
+      if (tipo === 'documento') return `${atletaId}/documento-${dia}-${aleatorio()}.pdf`;
       return `${atletaId}/${tipo === 'adjunto' ? (esImagen ? 'adjunto' : 'adjunto-video') : esImagen ? 'foto' : 'video'}-${dia}-${aleatorio()}.${ext}`;
     },
     // alProgreso(0…1) de la subida; fecha: la del día en que se grabó (un vídeo que se queda pendiente sin cobertura
     // y se envía al día siguiente conserva su día). ruta: la de un intento anterior (v0.33): reintentar es seguro,
     // se reutiliza el registro si ya se hizo y, si el archivo llegó entero aunque no la respuesta, no se sube dos veces.
-    async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null, fecha = null, alProgreso = null, senal = null, ruta: rutaDada = null }) {
+    async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null, fecha = null, alProgreso = null, senal = null, ruta: rutaDada = null, nombre = null, paginas = null }) {
       if (archivo.size > LIMITE_ARCHIVO_MB * 1024 * 1024) throw new Error(`El archivo pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos) o recórtalo.`);
       const esImagen = /^image\//.test(archivo.type || '') || tipo === 'foto_progreso';
       const ruta = rutaDada || api.rutaArchivo(atletaId, archivo, { tipo, fecha });
@@ -1766,7 +1974,8 @@ export function crearApi(backend) {
           mime: archivo.type || null, bytes: archivo.size ?? null, fecha: dia,
           ...(tipo === 'foto_progreso' && pose ? { pose } : {}),
           ...(poster_ruta ? { poster_ruta } : {}), ...(dur != null ? { duracion_seg: dur } : {}),
-        }]);
+          ...(tipo === 'documento' ? { nombre: nombreSeguroPdf(nombre || archivo.name), ...(Number.isInteger(paginas) && paginas >= 1 && paginas <= 5000 ? { paginas } : {}) } : {}),
+        }]).catch(tipo === 'documento' ? falta033 : (e) => { throw e; });
       }
       try {
         await b.storage.subir(ruta, archivo, archivo.type || 'application/octet-stream', { alProgreso, senal });
@@ -2631,7 +2840,7 @@ export function crearApi(backend) {
         b.select('sesiones', { eq: { completada: true }, nulo: ['revisada_en'], gte: { fecha_realizada: desde }, order: [['fecha_realizada', 'desc']] }),
         b.select('checkins', { nulo: ['revisado_en'], gte: { semana_inicio: desde }, order: [['semana_inicio', 'desc']] }),
         b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], order: [['creado_en', 'desc']] }).then((xs) => xs.filter((c) => !c.eliminado_en)),
-        b.select('archivos', { nulo: ['revisado_en'], neq: { tipo: 'adjunto' }, order: [['creado_en', 'desc']] }),
+        b.select('archivos', { nulo: ['revisado_en'], neq: { tipo: 'adjunto' }, order: [['creado_en', 'desc']] }).then((xs) => xs.filter((a) => a.tipo !== 'documento')),
         api.atletas(),
       ]);
       const A = porId(atletas);

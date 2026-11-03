@@ -12,18 +12,21 @@ export const TEXTO_ELIMINADO = 'Se eliminó este mensaje';
 
 const esProgramado = (c, ahora = Date.now()) => !!c?.enviar_en && Date.parse(c.enviar_en) > ahora;
 // Un mensaje cuyo texto es solo la marca de la foto o el vídeo (sin pie)
-export const esMarcador = (c) => !!(c?.archivo_id || c?.archivoId || c?.archivo) && (c.texto === 'Foto' || c.texto === 'Vídeo');
-// Qué lleva: 'foto' | 'video' | 'archivo' | null (de su archivo, si se sabe; si no, de su marca)
+// (v0.55) también «Documento», la de un PDF sin pie
+export const esMarcador = (c) => !!(c?.archivo_id || c?.archivoId || c?.archivo) && (c.texto === 'Foto' || c.texto === 'Vídeo' || c.texto === 'Documento');
+// Qué lleva: 'foto' | 'video' | 'documento' (v0.55, un PDF) | 'archivo' | null (de su archivo, si se sabe; si no, de su marca)
 export function medioDe(c) {
   if (!c) return null;
   if (c.medio) return c.medio;
   const mime = c.archivo?.mime || '';
+  if (c.archivo && (c.archivo.tipo === 'documento' || mime === 'application/pdf')) return 'documento';
   if (c.archivo) return /^image\//.test(mime) || c.archivo.tipo === 'foto_progreso' ? 'foto' : /^video\//.test(mime) || c.archivo.tipo === 'video_tecnica' ? 'video' : 'archivo';
   if (c.texto === 'Foto' && (c.archivo_id || c.archivoId)) return 'foto';
   if (c.texto === 'Vídeo' && (c.archivo_id || c.archivoId)) return 'video';
+  if (c.texto === 'Documento' && (c.archivo_id || c.archivoId)) return 'documento';
   return null;
 }
-const ICONO_MEDIO = { foto: '📷 Foto', video: '🎥 Vídeo', archivo: '📄 Archivo' };
+const ICONO_MEDIO = { foto: '📷 Foto', video: '🎥 Vídeo', documento: '📄 Documento', archivo: '📄 Archivo' };
 
 // Lo que sale en una cita (y en la vista previa de la lista): el texto en una línea, sin marcas de formato, o
 // «📷 Foto» / «🎥 Vídeo» / «📄 Archivo» (con su pie, si lo tiene); «🚫 Se eliminó este mensaje» si se eliminó
@@ -247,7 +250,7 @@ export function vistaPrevia(ultimo, { borrador = null, yo = 'coach' } = {}) {
   if (borrador) return { borrador: true, texto: textoPlano(borrador).replace(/\s+/g, ' ').trim() };
   if (!ultimo) return null;
   const mio = ultimo.autor === yo;
-  return { borrador: false, texto: extractoCita(ultimo, 120), mio, visto: mio ? !!ultimo.leido_en : null, eliminado: !!ultimo.eliminado_en };
+  return { borrador: false, texto: extractoCita(ultimo, 120), mio, visto: mio ? !!ultimo.leido_en : null, entregado: mio ? !!(ultimo.entregado_en || ultimo.leido_en) : null, eliminado: !!ultimo.eliminado_en };
 }
 
 // El orden de la lista del coach: las fijadas arriba (la última fijada, la primera); después, como siempre (lo que

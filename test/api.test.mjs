@@ -1714,5 +1714,110 @@ console.log('\nEl chat como WhatsApp (v0.54, migración 032)');
   await b.sql(`delete from conversacion_estado`); await b.sql(`delete from chat_cupos`);
 }
 
+console.log('\nEl chat, aún más como WhatsApp (v0.55, migración 033)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [aAna] = await b.sql(`select id, perfil_id from atletas where email = 'ana@test'`);
+  const [aLuis] = await b.sql(`select id, perfil_id from atletas where email = 'luis@test'`);
+  await b.sql(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await b.sql(`delete from chat_cupos`);
+  check(await api.chat033() === true, 'la app sabe que la base tiene la 033');
+  // Sin la 033, lo de antes funciona y lo nuevo dice qué falta
+  {
+    const falta = (t) => new Error(`relation "public.${t}" does not exist`);
+    const sin033 = crearApi({ ...b, auth: b.auth, storage: b.storage, rpc: b.rpc.bind(b), update: b.update.bind(b), delete: b.delete.bind(b),
+      select: async (t, f) => { if (['conversacion_fijado', 'chat_silencios', 'listas_difusion', 'listas_difusion_miembros'].includes(t)) throw falta(t); return b.select(t, f); },
+      insert: async (t, filas) => { if (t === 'comentarios' && filas.some((x) => 'cliente_id' in x)) throw new Error("Could not find the 'cliente_id' column of 'comentarios' in the schema cache"); return b.insert(t, filas); },
+      upsert: async (t) => { throw falta(t); } });
+    const m = await sin033.enviarMensaje(aAna.id, { texto: 'Sin la 033 también sale', autor: 'coach', clienteId: crypto.randomUUID() });
+    check(!!m?.id && !m.cliente_id, 'sin la 033, un mensaje con el id del móvil sale igual (sin él)');
+    let msg = '';
+    try { await sin033.fijarMensaje(aAna.id, m.id, '7d'); } catch (e) { msg = e.message; }
+    check(/migración 033/.test(msg) && await sin033.fijado(aAna.id) === null && Object.keys(await sin033.silencios()).length === 0, 'fijar dice que falta la 033 (y leer lo fijado o silenciado, nada)');
+    msg = '';
+    try { await sin033.listasDifusion(); } catch (e) { msg = e.message; }
+    check(/migración 033/.test(msg), 'las listas de difusión, también');
+    check((await sin033.conversacion(aAna.id)).some((c) => c.id === m.id), 'y la conversación se lee como siempre');
+  }
+  // Sin duplicados: el mismo id del móvil, una sola vez
+  const cid = crypto.randomUUID();
+  const e1 = await api.enviarMensaje(aAna.id, { texto: 'Reintento sin cobertura', autor: 'coach', clienteId: cid });
+  const e2 = await api.enviarMensaje(aAna.id, { texto: 'Reintento sin cobertura', autor: 'coach', clienteId: cid });
+  check(e1.id === e2.id && (await b.sql(`select count(*)::int n from comentarios where cliente_id = $1`, [cid]))[0].n === 1, 'reenviar el mismo mensaje (sin respuesta la primera vez) no lo duplica: devuelve el que ya está');
+  // Entregado
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.noLeidos(aAna.id);
+  await api.marcarEntregados({ ya: true });
+  check(!!(await b.sql(`select entregado_en from comentarios where id = $1`, [e1.id]))[0].entregado_en, 'la app de Ana descarga lo del coach: entregado (✓✓ gris para él)');
+  // PDF
+  const pdf = new Blob(['%PDF-1.7\n<< /Type /Pages /Count 2 >>'], { type: 'application/pdf' });
+  pdf.name = '../Mi plan\u0007 de comidas.pdf';
+  const mPdf = await api.enviarMensaje(aAna.id, { texto: '', archivo: pdf, autor: 'atleta', paginas: 2 });
+  const [aPdf] = await b.sql(`select * from archivos where id = $1`, [mPdf.archivo_id]);
+  check(aPdf.tipo === 'documento' && aPdf.nombre === 'Mi plan de comidas.pdf' && aPdf.paginas === 2 && new RegExp(`^${aAna.id}/documento-\\d{4}-\\d{2}-\\d{2}-[a-z0-9]+\\.pdf$`).test(aPdf.ruta) && mPdf.texto === 'Documento',
+    'Ana manda un PDF: documento del chat, con su nombre saneado aparte y la ruta generada (nunca sale del nombre)');
+  check((await api.conversacion(aAna.id)).find((c) => c.id === mPdf.id)?.medio === 'documento' && !(await api.diario(aAna.id)).some((a) => a.id === aPdf.id), 'en el chat, un documento; en su diario, no');
+  check(!!(await api.urlArchivo(aPdf.ruta)), 'y lo abre con su enlace firmado');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check(await lanza(() => api.urlArchivo(aPdf.ruta)), 'Luis no');
+  // Fijar
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.fijarMensaje(aAna.id, e1.id, '24h');
+  check((await api.fijado(aAna.id))?.mensaje?.id === e1.id, 'el coach fija un mensaje');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.fijado(aAna.id))?.comentario_id === e1.id && await lanza(() => api.fijarMensaje(aAna.id, mPdf.id, '7d')) && await lanza(() => api.desfijarMensaje(aAna.id)).then(async (x) => x || !!(await api.fijado(aAna.id))),
+    'Ana lo ve, pero ni fija ni desfija');
+  // Silenciar
+  await api.silenciar(aAna.id, '8h');
+  const sil = await api.silencios();
+  check(!!sil[aAna.id] && Date.parse(sil[aAna.id].hasta) > Date.now() + 7 * 3600000, 'Ana silencia su chat 8 horas');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(!Object.keys(await api.silencios()).length, 'el coach no lo ve');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.silenciar(aAna.id, null);
+  check(!Object.keys(await api.silencios()).length, 'y lo vuelve a activar');
+  // Listas de difusión y difundir
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const lista = await api.guardarListaDifusion({ nombre: ' Compiten ', miembros: [aAna.id, aLuis.id] });
+  check(lista.nombre === 'Compiten' && igual((await api.listasDifusion()).find((l) => l.id === lista.id).miembros.sort(), [aAna.id, aLuis.id].sort()), 'el coach crea una lista con Ana y Luis');
+  check(await lanza(() => api.guardarListaDifusion({ nombre: 'compiten' })), 'sin repetir el nombre');
+  const d1 = await api.difundir({ listaId: lista.id, texto: 'Mañana, test de 1RM' });
+  check(d1.enviados === 2 && d1.saltados === 0, 'difunde un mensaje: a cada uno en su chat');
+  await b.sql(`update atletas set estado = 'baja' where id = $1`, [aLuis.id]);
+  const d2 = await api.difundir({ listaId: lista.id, texto: 'Solo a los activos' });
+  check(d2.enviados === 1 && d2.saltados === 1, 'Luis, de baja, se salta (y se dice)');
+  await b.sql(`update atletas set estado = 'activo' where id = $1`, [aLuis.id]);
+  const foto = new Blob(['jpg'], { type: 'image/jpeg' });
+  foto.name = 'gym.jpg';
+  const d3 = await api.difundir({ listaId: lista.id, texto: 'El gimnasio nuevo', archivo: foto });
+  const copias = await b.sql(`select a.atleta_id, a.ruta from comentarios c join archivos a on a.id = c.archivo_id where c.texto = 'El gimnasio nuevo'`);
+  check(d3.enviados === 2 && copias.length === 2 && copias.every((x) => x.ruta.startsWith(`${x.atleta_id}/`)) && new Set(copias.map((x) => x.ruta)).size === 2, 'con foto: se sube una vez y cada uno recibe su copia, en su carpeta');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  const deLuis = copias.find((x) => x.atleta_id === aLuis.id), deAna = copias.find((x) => x.atleta_id === aAna.id);
+  check(!!(await api.urlArchivo(deLuis.ruta)) && await lanza(() => api.urlArchivo(deAna.ruta)), 'Luis ve su copia; la de Ana, no');
+  check(await lanza(() => api.listasDifusion()).then(async (x) => x || !(await api.listasDifusion()).length) && await lanza(() => api.difundir({ listaId: lista.id, texto: 'x' })), 'Luis no ve las listas ni difunde');
+  // Reenviar
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const guia = await api.enviarMensaje(aAna.id, { texto: 'Guía de calentamiento', autor: 'coach' });
+  const rr = await api.reenviar(guia, [aLuis.id]);
+  check(rr.enviados === 1, 'el coach reenvía un mensaje suyo a Luis');
+  const foto2 = new Blob(['jpg2'], { type: 'image/jpeg' });
+  foto2.name = 'tecnica.jpg';
+  const conFoto = await api.enviarMensaje(aAna.id, { texto: 'Así, la espalda', archivo: foto2, autor: 'coach' });
+  const rf = await api.reenviar((await api.conversacion(aAna.id)).find((c) => c.id === conFoto.id), [aLuis.id]);
+  check(rf.enviados === 1 && rf.fallidos === 0, 'y uno con foto (con su copia)');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  const convL = await api.conversacion(aLuis.id);
+  const fw = convL.find((c) => c.texto === 'Así, la espalda');
+  check(convL.some((c) => c.texto === 'Guía de calentamiento' && c.reenviado) && fw?.reenviado && fw.archivo && fw.archivo.ruta.startsWith(`${aLuis.id}/`) && !!(await api.urlArchivo(fw.archivo.ruta)), 'a Luis le llegan con «Reenviado» (la foto, su copia)');
+  check(await lanza(() => api.reenviar(fw, [aAna.id])), 'Luis no reenvía');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const deAnaTxt = await api.enviarMensaje(aAna.id, { texto: 'Me duele la rodilla', autor: 'atleta' });
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(await lanza(() => api.reenviar(deAnaTxt, [aLuis.id])), 'el coach no reenvía lo de un atleta (son datos de salud de otra persona)');
+  check(typeof (await (async () => { await b.auth.entrar('ana@test', 'contraseña-ana-1'); return api.nombreCoach(); })()) === 'string', 'el atleta tiene el nombre de su coach para «Info del contacto»');
+  await b.sql(`delete from listas_difusion`); await b.sql(`delete from chat_cupos`); await b.sql(`delete from conversacion_fijado`);
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);
