@@ -49,7 +49,9 @@ export function tarjetaEnlace(url) {
   try { u = new URL(String(url)); } catch { return null; }
   if (!/^https?:$/.test(u.protocol) || !u.hostname) return null;
   const dominio = u.hostname.toLowerCase().replace(/^www\./, '');
-  const ruta = decodeURIComponentSeguro(`${u.pathname}${u.search}`).replace(/\/$/, '').replace(/\s+/g, ' ').slice(0, 60);
+  // (sin los caracteres que dan la vuelta al texto o no se ven: la ruta que sale es la que es)
+  const ruta = decodeURIComponentSeguro(`${u.pathname}${u.search}`).replace(INVISIBLES_RUTA, '').replace(/\/$/, '').replace(/\s+/g, ' ').slice(0, 60);
   return { dominio, ruta: ruta === '/' ? '' : ruta, seguro: u.protocol === 'https:' };
 }
+const INVISIBLES_RUTA = new RegExp('[\\u0000-\\u001f\\u007f-\\u009f\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2069\\ufeff]', 'g');
 function decodeURIComponentSeguro(t) { try { return decodeURIComponent(t); } catch { return t; } }

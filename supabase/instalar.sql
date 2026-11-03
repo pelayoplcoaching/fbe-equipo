@@ -9966,7 +9966,9 @@ insert into public.fbe_migraciones (numero) values (33)
 -- =====================================================================
 -- FBE Equipo, migración 034 (v0.56): notas de voz, encuestas, «escuchado» y reacciones a elegir
 --   · Notas de voz en el chat: archivos.tipo 'audio' (audio/webm, ogg, mp4/m4a, mpeg o aac; de 1 a 61 segundos, hasta
---     3 MB, ruta generada <atleta>/audio-…; su forma de onda, archivos.onda, de 8 a 64 barras de 0 a 100). Las mismas
+--     3 MB, ruta generada <atleta>/audio-…; su forma de onda, archivos.onda, de 8 a 64 barras de 0 a 100), en su propio
+--     bucket de Storage («voz»: privado, 3 MB por archivo y solo esos formatos; así el tope lo pone Storage, no lo que
+--     diga la app). Las mismas
 --     reglas que las fotos del chat: el atleta no las borra de Storage ni de archivos si llevan mensaje; se eliminan para
 --     todos en 48 horas; el coach reenvía las suyas (nunca las de un atleta). Como mucho 60 al día (el atleta), aparte de
 --     los 30 archivos.
@@ -9978,6 +9980,9 @@ insert into public.fbe_migraciones (numero) values (33)
 --     lo ven ese atleta y el coach. Un mensaje con encuesta no se edita; si se elimina, la encuesta y su voto se van.
 --   · Reacciones: cualquier emoji (con su tono de piel), no solo los seis de siempre: cada uno elige los suyos.
 --   · Cupos: votar (120 por hora, el atleta) y encuestas (30 por hora, el coach).
+--   · Una ruta que espera a borrarse de Storage no se vuelve a registrar (no se recupera así el acceso a lo eliminado).
+--   · El aviso de privacidad (privacidad_vista): qué versión de la política ha visto cada uno (solo la suya, nunca hacia
+--     atrás); la app lo enseña una vez por versión.
 -- Se ejecuta en el SQL Editor después de la 033 (o con instalar.sql en una base nueva). Se puede repetir.
 -- =====================================================================
 
@@ -10017,10 +10022,58 @@ alter table public.archivos add constraint archivos_onda_valida
   check (onda is null or (tipo = 'audio' and cardinality(onda) between 8 and 64 and 0 <= all(onda) and 100 >= all(onda)
                           and array_position(onda, null) is null));
 
--- Storage acepta también el audio de las notas de voz (lo demás, como estaba)
-update storage.buckets set allowed_mime_types = allowed_mime_types || array(
-    select m from unnest(array['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac']) m where not (m = any(allowed_mime_types)))
-where id = 'archivos' and allowed_mime_types is not null;
+-- Las notas de voz, en su propio bucket privado: 3 MB por archivo y solo audio (el límite lo pone Storage)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('voz', 'voz', false, 3145728, array['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'])
+on conflict (id) do update
+  set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+-- (en «archivos» no van: si una versión anterior de esta migración los añadió, fuera)
+update storage.buckets set allowed_mime_types = array(
+    select m from unnest(allowed_mime_types) m where m not in ('audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'))
+where id = 'archivos' and allowed_mime_types && array['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'];
+
+-- ¿Es la ruta de una nota de voz? (registrada: para verla, la de su atleta o el coach)
+create or replace function public.ruta_de_voz(p_ruta text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.archivos a where a.ruta = p_ruta and a.tipo = 'audio')
+$$;
+create or replace function public.voz_registrada(p_ruta text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.archivos a where a.ruta = p_ruta and a.tipo = 'audio'
+                 and (public.es_coach() or (public.mi_atleta_id() is not null and a.atleta_id = public.mi_atleta_id())))
+$$;
+-- Storage («voz»): se sube lo registrado como nota de voz (el atleta, en su carpeta; el coach, con su fila ya hecha:
+-- también las copias de lo que reenvía); lo ve su atleta (mientras tiene su fila) y el coach; solo lo borra el coach (la
+-- app del coach vacía la cola). En «archivos», nunca una nota de voz.
+drop policy if exists fbe_voz_ver on storage.objects;
+create policy fbe_voz_ver on storage.objects for select to authenticated
+  using (bucket_id = 'voz' and (public.es_coach() or ((storage.foldername(name))[1] = public.mi_atleta_id()::text and public.voz_registrada(name))));
+drop policy if exists fbe_voz_subir on storage.objects;
+create policy fbe_voz_subir on storage.objects for insert to authenticated
+  with check (bucket_id = 'voz' and public.voz_registrada(name) and (public.es_coach() or (storage.foldername(name))[1] = public.mi_atleta_id()::text));
+drop policy if exists fbe_voz_borrar on storage.objects;
+create policy fbe_voz_borrar on storage.objects for delete to authenticated
+  using (bucket_id = 'voz' and public.es_coach());
+drop policy if exists fbe_archivos_subir on storage.objects;
+create policy fbe_archivos_subir on storage.objects for insert to authenticated
+  with check (bucket_id = 'archivos' and (public.es_coach() or public.archivo_registrado(name)) and not public.ruta_de_voz(name));
+
+-- La cola de Storage (032) sabe de los dos buckets
+alter table fbe_privado.storage_por_borrar drop constraint if exists storage_por_borrar_bucket_check;
+alter table fbe_privado.storage_por_borrar add constraint storage_por_borrar_bucket_check check (bucket in ('archivos', 'voz'));
+create or replace function public.storage_pendiente_cubos(p_limite integer default 200) returns table (ruta text, bucket text)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not public.es_coach() then
+    raise exception 'Solo el coach' using errcode = '42501';
+  end if;
+  return query select s.ruta, s.bucket from fbe_privado.storage_por_borrar s order by s.creado_en, s.ruta limit least(greatest(coalesce(p_limite, 200), 1), 1000);
+end $$;
+-- ¿Espera esta ruta a borrarse de Storage? (archivo_proteger: no se vuelve a registrar)
+create or replace function public.ruta_por_borrar(p_ruta text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select p_ruta is not null and exists (select 1 from fbe_privado.storage_por_borrar s where s.ruta = p_ruta)
+$$;
 
 -- ---------------------------------------------------------------------
 -- 2. Cupos con los tipos nuevos (votar, el atleta; encuestas, el coach)
@@ -10268,6 +10321,11 @@ language plpgsql set search_path = '' as $$
 begin
   if current_user in ('authenticated', 'anon') then
     new.subido_por := case when public.es_coach() then 'coach' else 'atleta' end;
+    -- (034) Una ruta que espera a borrarse de Storage (de algo eliminado) no se vuelve a registrar: con su fila, se
+    -- volvería a ver hasta que se vacíe la cola
+    if public.ruta_por_borrar(new.ruta) or public.ruta_por_borrar(new.poster_ruta) then
+      raise exception 'Esa ruta ya se usó para un archivo eliminado: no se puede volver a registrar' using errcode = '42501';
+    end if;
   end if;
   if current_user in ('authenticated', 'anon') and not public.es_coach() then
     new.revisado_en := null;
@@ -10327,7 +10385,8 @@ create or replace function public.archivo_adjunto_borrar_mensaje() returns trigg
 language plpgsql security definer set search_path = '' as $$
 declare v_id uuid;
 begin
-  insert into fbe_privado.storage_por_borrar (ruta) select r from unnest(array[old.ruta, old.poster_ruta]) r where r is not null
+  insert into fbe_privado.storage_por_borrar (ruta, bucket) select r, case when old.tipo = 'audio' then 'voz' else 'archivos' end
+    from unnest(array[old.ruta, old.poster_ruta]) r where r is not null
     on conflict (ruta) do nothing;
   if old.tipo in ('adjunto', 'documento', 'audio') and exists (select 1 from public.atletas a where a.id = old.atleta_id) then
     for v_id in select c.id from public.comentarios c where c.archivo_id = old.id loop
@@ -10471,6 +10530,73 @@ begin
   return jsonb_build_object('enviados', jsonb_array_length(v_ids), 'saltados', v_saltados, 'ids', v_ids);
 end $$;
 
+-- (033) Reenviar: tampoco una encuesta
+create or replace function public.chat_reenviar(p_comentario uuid, p_destinos jsonb) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  c public.comentarios;
+  a public.archivos;
+  d jsonb;
+  v_atleta uuid;
+  v_archivo uuid;
+  v_id uuid;
+  v_n integer;
+  v_out jsonb := '[]'::jsonb;
+begin
+  if auth.uid() is null or not public.es_coach() then
+    raise exception 'Solo el coach puede reenviar mensajes' using errcode = '42501';
+  end if;
+  select * into c from public.comentarios k where k.id = p_comentario;
+  if c.id is null or c.autor <> 'coach' or c.eliminado_en is not null or (c.enviar_en is not null and c.enviar_en > now())
+     or c.sesion_id is not null or c.checkin_id is not null or (c.archivo_id is not null and not c.adjunto) or c.dibujo is not null then
+    raise exception 'Solo se reenvían tus mensajes del chat que ya han salido' using errcode = '42501';
+  end if;
+  -- (034) Una encuesta no se reenvía (llegaría como texto suelto): se manda otra
+  if exists (select 1 from public.encuestas_chat e where e.comentario_id = c.id) then
+    raise exception 'Una encuesta no se reenvía: crea otra (o mándala a una lista de difusión)' using errcode = '42501';
+  end if;
+  if c.archivo_id is not null then
+    select * into a from public.archivos x where x.id = c.archivo_id;
+    -- Solo lo que subió el coach: nunca la foto o el PDF de un atleta (con su salud) al chat de otro
+    if a.id is null or a.subido_por is distinct from 'coach'
+       or exists (select 1 from public.comentarios k where k.archivo_id = a.id and k.autor = 'atleta') then
+      raise exception 'Solo se reenvían las fotos, vídeos y documentos que has enviado tú' using errcode = '42501';
+    end if;
+  end if;
+  if jsonb_typeof(p_destinos) <> 'array' then
+    raise exception 'Elige a quién reenviarlo' using errcode = '22023';
+  end if;
+  v_n := jsonb_array_length(p_destinos);
+  if v_n < 1 or v_n > 50 then
+    raise exception 'Se reenvía a entre 1 y 50 atletas' using errcode = '22023';
+  end if;
+  if (select count(distinct x ->> 'atleta') from jsonb_array_elements(p_destinos) x) <> v_n then
+    raise exception 'Un atleta, una vez' using errcode = '22023';
+  end if;
+  perform fbe_privado.chat_cupo_coach('reenviar', v_n);
+  for d in select * from jsonb_array_elements(p_destinos) loop
+    v_atleta := nullif(d ->> 'atleta', '')::uuid;
+    v_archivo := nullif(d ->> 'archivo', '')::uuid;
+    if not exists (select 1 from public.atletas x where x.id = v_atleta and x.estado <> 'baja') then
+      raise exception 'Uno de los atletas no está (o está de baja)' using errcode = '42501';
+    end if;
+    if a.id is not null then
+      if v_archivo is null or not fbe_privado.chat_copia_valida(v_archivo, v_atleta, a.tipo, a.mime) then
+        raise exception 'Falta la copia del archivo para uno de los atletas' using errcode = '42501';
+      end if;
+    elsif v_archivo is not null then
+      raise exception 'Este mensaje no lleva archivo' using errcode = '22023';
+    end if;
+    v_id := null;
+    insert into public.comentarios (atleta_id, autor, texto, archivo_id, reenviado, cliente_id)
+    values (v_atleta, 'coach', c.texto, v_archivo, true, nullif(d ->> 'cliente', '')::uuid)
+    on conflict on constraint comentarios_cliente_unico do nothing
+    returning id into v_id;
+    if v_id is not null then v_out := v_out || jsonb_build_array(jsonb_build_object('atleta_id', v_atleta, 'id', v_id)); end if;
+  end loop;
+  return v_out;
+end $$;
+
 -- ---------------------------------------------------------------------
 -- 6. «Escuchado»: quien recibe una nota de voz la reproduce
 -- ---------------------------------------------------------------------
@@ -10577,10 +10703,12 @@ begin
     raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada' using errcode = '42501';
   end if;
   v_n := jsonb_array_length(e.opciones);
-  select coalesce(array_agg(distinct x order by x), '{}') into v_voto from unnest(coalesce(p_opciones, '{}')) x;
-  if cardinality(v_voto) <> cardinality(coalesce(p_opciones, '{}')) or exists (select 1 from unnest(v_voto) x where x is null or x < 0 or x >= v_n) then
+  -- (primero, que sean opciones de la encuesta: un número enorme no llega a guardarse)
+  if exists (select 1 from unnest(coalesce(p_opciones, '{}')) x where x is null or x < 0 or x >= v_n)
+     or (select count(distinct x) from unnest(coalesce(p_opciones, '{}')) x) <> cardinality(coalesce(p_opciones, '{}')) then
     raise exception 'Esa opción no está en la encuesta' using errcode = '22023';
   end if;
+  select coalesce(array_agg(distinct x::smallint order by x::smallint), '{}') into v_voto from unnest(coalesce(p_opciones, '{}')) x;
   if not e.multiple and cardinality(v_voto) > 1 then
     raise exception 'En esta encuesta se elige una opción' using errcode = '22023';
   end if;
@@ -10610,19 +10738,58 @@ create trigger comentarios_zz_encuesta after update of eliminado_en on public.co
 -- ---------------------------------------------------------------------
 -- 8. Reacciones: cualquier emoji (con su tono de piel), cada uno elige los suyos
 -- ---------------------------------------------------------------------
--- Un emoji (o una secuencia: tono de piel, banderas, ZWJ), de 1 a 16 caracteres, solo de los bloques de emojis (ni
--- letras, ni espacios, ni caracteres invisibles fuera de los que unen un emoji)
+-- Un emoji (o una secuencia: tono de piel, banderas, ZWJ, teclas «1️⃣» y las banderas de etiquetas, como la de Escocia, solo con
+-- su forma: 🏴 + etiquetas + la de cierre), de 1 a 16 caracteres (ni letras, ni espacios, ni invisibles sueltos)
 alter table public.comentario_reacciones drop constraint if exists comentario_reacciones_emoji_valido;
 alter table public.comentario_reacciones add constraint comentario_reacciones_emoji_valido
   check (char_length(emoji) between 1 and 16
-         and emoji ~ '^[©®‼⁉™ℹ↔-↙↩↪⌚⌛⌨⏏⏩-⏳⏸-⏺Ⓜ▪▫▶◀◻-◾☀-➿⤴⤵⬅-⬇⬛⬜⭐⭕〰〽㊗㊙\U0001F000-\U0001FAFF‍️⃣\U000E0020-\U000E007F]+$'
-         and emoji ~ '[^‍️⃣\U000E0020-\U000E007F]');
+         and emoji ~ '^(?:[©®‼⁉™ℹ↔-↙↩↪⌚⌛⌨⏏⏩-⏳⏸-⏺Ⓜ▪▫▶◀◻-◾☀-➿⤴⤵⬅-⬇⬛⬜⭐⭕〰〽㊗㊙\U0001F000-\U0001FAFF‍️]|[0-9#*]️?⃣|\U0001F3F4[\U000E0020-\U000E007E]+\U000E007F)+$'
+         and emoji ~ '[^‍️]');
+
+-- ---------------------------------------------------------------------
+-- 8b. El aviso de privacidad: qué versión ha visto cada uno (para enseñarlo una sola vez)
+-- ---------------------------------------------------------------------
+create table if not exists public.privacidad_vista (
+  usuario_id  uuid primary key default auth.uid() references public.perfiles(id) on delete cascade,
+  version     text not null,
+  vista_en    timestamptz not null default now()
+);
+alter table public.privacidad_vista drop constraint if exists privacidad_vista_version_valida;
+alter table public.privacidad_vista add constraint privacidad_vista_version_valida check (version ~ '^20[0-9]{2}-(0[1-9]|1[0-2])$');
+-- A su nombre; una versión de la política que ya exista (no una de más de un mes vista) y nunca hacia atrás; la hora,
+-- la de la base
+create or replace function public.privacidad_vista_preparar() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if current_user in ('authenticated', 'anon') then
+    new.usuario_id := auth.uid();
+    if new.usuario_id is null then raise exception 'Necesitas iniciar sesión' using errcode = '42501'; end if;
+    if tg_op = 'UPDATE' and new.usuario_id is distinct from old.usuario_id then raise exception 'Solo la tuya' using errcode = '42501'; end if;
+    if new.version > to_char((now() at time zone 'Europe/Madrid') + interval '1 month', 'YYYY-MM') then
+      raise exception 'Esa versión de la política aún no existe' using errcode = '22023';
+    end if;
+  end if;
+  if tg_op = 'UPDATE' and new.version < old.version then new.version := old.version; end if;
+  new.vista_en := now();
+  return new;
+end $$;
+drop trigger if exists privacidad_vista_aa_preparar on public.privacidad_vista;
+create trigger privacidad_vista_aa_preparar before insert or update on public.privacidad_vista
+  for each row execute function public.privacidad_vista_preparar();
 
 -- ---------------------------------------------------------------------
 -- 9. Permisos (desde la 019, cada tabla nueva lleva los suyos a mano)
 -- ---------------------------------------------------------------------
 alter table public.encuestas_chat enable row level security;
 alter table public.encuesta_votos enable row level security;
+alter table public.privacidad_vista enable row level security;
+-- El aviso de privacidad: cada uno, la suya (la lee y la pone); el coach las lee
+drop policy if exists ver on public.privacidad_vista;
+create policy ver on public.privacidad_vista for select to authenticated using (usuario_id = auth.uid() or public.es_coach());
+drop policy if exists propia_poner on public.privacidad_vista;
+create policy propia_poner on public.privacidad_vista for insert to authenticated with check (usuario_id = auth.uid());
+drop policy if exists propia_cambiar on public.privacidad_vista;
+create policy propia_cambiar on public.privacidad_vista for update to authenticated using (usuario_id = auth.uid()) with check (usuario_id = auth.uid());
 
 -- Las encuestas: el coach, todas; el atleta, las de su conversación (de mensajes ya salidos). Se crean con chat_encuesta()
 drop policy if exists coach_ver on public.encuestas_chat;
@@ -10640,6 +10807,8 @@ create policy atleta_ver on public.encuesta_votos for select to authenticated
 
 revoke all on public.encuestas_chat, public.encuesta_votos from public, anon, authenticated;
 grant select on public.encuestas_chat, public.encuesta_votos to authenticated;
+revoke all on public.privacidad_vista from public, anon, authenticated;
+grant select, insert, update on public.privacidad_vista to authenticated;
 
 -- Permisos (como al final de 003 a 033)
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;

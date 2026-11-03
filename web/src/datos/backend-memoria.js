@@ -121,7 +121,7 @@ const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
 const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
-  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos'];
+  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
 const EMOJIS_CHAT = ['❤️', '👍', '💪', '😂', '😮', '🙏'];
 const CUPO_CHAT = { reaccion: 120, destacar: 120, edicion: 30, eliminar: 30, presencia: 30, silenciar: 30, voto: 120 };
@@ -218,6 +218,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // Como la 034: las encuestas, el coach y el atleta de esa conversación (de mensajes ya salidos); el voto, el coach y él
     encuestas_chat: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId() && comentarioVisible(x.comentario_id)),
     encuesta_votos: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // Como la 034: la versión de la política vista, la propia (y el coach, todas)
+    privacidad_vista: (x) => x.usuario_id === sesion?.user.id || esCoach(),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
   const programadoAun = (c) => !!c?.enviar_en && Date.parse(c.enviar_en) > Date.now();
@@ -261,7 +263,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (enc.length) { db.encuestas_chat = tabla('encuestas_chat').filter((e) => !enc.includes(e.id)); db.encuesta_votos = tabla('encuesta_votos').filter((v) => !enc.includes(v.encuesta_id)); }
     db.notificaciones = tabla('notificaciones').filter((n) => !(n.clave === `comentario:${c.id}` && n.estado === 'pendiente'));
   }
-  const encolar = (rutas) => { for (const r of rutas) if (r && !tabla('storage_por_borrar').some((x) => x.ruta === r)) tabla('storage_por_borrar').push({ ruta: r, bucket: 'archivos', creado_en: ahora() }); };
+  const encolar = (rutas, bucket = 'archivos') => { for (const r of rutas) if (r && !tabla('storage_por_borrar').some((x) => x.ruta === r)) tabla('storage_por_borrar').push({ ruta: r, bucket, creado_en: ahora() }); };
   const archivoConMensajes = (id) => tabla('comentarios').some((c) => c.archivo_id === id);
   // Como la 033: quién subió un archivo (lo pone la base; los de la demo de antes, de quien escribió su mensaje)
   const subidoPor = (a) => a?.subido_por ?? (tabla('comentarios').some((c) => c.archivo_id === a?.id && c.autor === 'atleta') ? 'atleta'
@@ -397,7 +399,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       f.creada_en = ahora();
     }
     if (t === 'atletas') fechaBaja(f, null);
-    if (t === 'archivos') f.subido_por = esCoach() ? 'coach' : 'atleta';
+    if (t === 'archivos') {
+      f.subido_por = esCoach() ? 'coach' : 'atleta';
+      // Como la 034: una ruta que espera a borrarse de Storage no se vuelve a registrar
+      if (tabla('storage_por_borrar').some((x) => x.ruta === f.ruta || (f.poster_ruta && x.ruta === f.poster_ruta))) throw new Error('Esa ruta ya se usó para un archivo eliminado: no se puede volver a registrar');
+    }
     if (!esCoach()) {
       if (t === 'checkins') f.revisado_en = null;
       if (t === 'archivos') {
@@ -882,6 +888,19 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (tabla(t).filter((x) => x.lista_id === f.lista_id).length >= 256) throw new Error('Una lista de difusión, como mucho 256 atletas');
     }
   }
+  // Como la 034: la versión de la política vista, a su nombre; una que exista (no más de un mes vista), con su formato, y
+  // nunca hacia atrás; la hora, la del servidor
+  function prepararPrivacidad(f, antes) {
+    f.usuario_id = sesion?.user.id || null;
+    if (!f.usuario_id) throw new Error('Necesitas iniciar sesión');
+    if (antes && f.usuario_id !== antes.usuario_id) throw new Error('Solo la tuya');
+    if (!/^20[0-9]{2}-(0[1-9]|1[0-2])$/.test(String(f.version ?? ''))) throw new Error('Algún valor está fuera de rango.');
+    const [y, m] = fMadrid(new Date()).split('-').map(Number);
+    const tope = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+    if (f.version > tope) throw new Error('Esa versión de la política aún no existe');
+    if (antes && f.version < antes.version) f.version = antes.version;
+    f.vista_en = ahora();
+  }
   // Como la 032: la presencia solo se escribe con presencia_marcar(); los cupos, nadie
   const sinPermisoTabla = (t) => new Error(`permission denied for table ${t}`);
   // Como la 032: reaccionar y destacar, a su nombre, en mensajes que ya han salido y no se han eliminado; una por persona
@@ -912,6 +931,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (tabla(t).some((x) => x.atleta_id === nueva.atleta_id)) throw new Error('duplicate key value violates unique constraint "conversacion_fijado_pkey"');
       prepararFijado(nueva, null);
     }
+    if (t === 'privacidad_vista') {
+      prepararPrivacidad(nueva, null);
+      if (tabla(t).some((x) => x.usuario_id === nueva.usuario_id)) throw new Error('duplicate key value violates unique constraint "privacidad_vista_pkey"');
+    }
     if (t === 'chat_silencios') {
       prepararSilencio(nueva, null);
       if (tabla(t).some((x) => x.usuario_id === nueva.usuario_id && x.atleta_id === nueva.atleta_id)) throw new Error('duplicate key value violates unique constraint "chat_silencios_pkey"');
@@ -930,7 +953,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // adjunto del chat quedan como eliminados (salvo si se borra el atleta entero: se va todo)
     if (t === 'archivos') {
       for (const a of tabla('archivos').filter((x) => ids.includes(x.id))) {
-        encolar([a.ruta, a.poster_ruta]);
+        encolar([a.ruta, a.poster_ruta], a.tipo === 'audio' ? 'voz' : 'archivos');
         if (DEL_CHAT.includes(a.tipo) && buscar('atletas', a.atleta_id)) {
           for (const c of tabla('comentarios').filter((k) => k.archivo_id === a.id)) vaciarComentario(c);
           for (const c of tabla('comentarios').filter((k) => k.archivo_id === a.id)) c.archivo_id = null;
@@ -1427,12 +1450,21 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           if (archivo?.size > 614400) throw new Error('El archivo supera el tamaño máximo permitido.');
           ficheros.set(`comunidad:${ruta}`, archivo); alProgreso?.(1); return;
         }
+        // Como la 034: las notas de voz, en su bucket («voz»: 3 MB y solo audio, registradas como nota de voz); en
+        // «archivos», nunca una nota de voz
+        const a = archivoDeRuta(ruta);
+        if (bucket === 'voz') {
+          if (a?.tipo !== 'audio' || a.ruta !== ruta || !(esCoach() || (a.atleta_id === miAtletaId() && ruta.split('/')[0] === miAtletaId()))) throw sinPermiso();
+          if (archivo?.size > 3145728) throw new Error('The object exceeded the maximum allowed size');
+          if (!['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'].includes(String(tipo || '').split(';')[0])) throw new Error('mime type not supported');
+        } else if (bucket === 'archivos' && a?.tipo === 'audio') throw sinPermiso();
         ficheros.set(ruta, archivo); alProgreso?.(1);
       },
       // Como la 033: copiar en Storage (con los permisos de quien copia: ver el de origen y poder subir el de destino, que
       // tiene que estar registrado si no es el coach)
       async copiar(desde, hasta, bucket = 'archivos') {
-        if (bucket !== 'archivos' || !archivoVisible(desde)) throw new Error('No tienes permiso para ver ese archivo.');
+        if (!['archivos', 'voz'].includes(bucket) || !archivoVisible(desde) || (bucket === 'voz') !== (archivoDeRuta(desde)?.tipo === 'audio')) throw new Error('No tienes permiso para ver ese archivo.');
+        if ((bucket === 'voz') !== (archivoDeRuta(hasta)?.tipo === 'audio')) throw sinPermiso();
         if (!esCoach() && !(archivoDeRuta(hasta)?.atleta_id === miAtletaId() && hasta.split('/')[0] === miAtletaId())) throw sinPermiso();
         if (ficheros.has(hasta) || alias.has(hasta)) throw new Error('The resource already exists');
         if (ficheros.has(desde)) ficheros.set(hasta, ficheros.get(desde)); else alias.set(hasta, alias.get(desde) || desde);
@@ -1442,8 +1474,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           if (!fotoVisible(ruta)) throw new Error('No tienes permiso para ver ese archivo.');
           ruta = `comunidad:${ruta}`;
         }
-        // Como la 032 (revisión): un atleta solo ve lo de su carpeta que tiene su fila en archivos
-        else if (!archivoVisible(ruta)) throw new Error('No tienes permiso para ver ese archivo.');
+        // Como la 032 (revisión): un atleta solo ve lo de su carpeta que tiene su fila en archivos; (034) cada cosa en su bucket
+        else if (!archivoVisible(ruta) || (bucket === 'voz') !== (archivoDeRuta(ruta)?.tipo === 'audio')) throw new Error('No tienes permiso para ver ese archivo.');
         if (urls.has(ruta)) return urls.get(ruta);
         // Una copia (033) de un ejemplo de la demo: se sirve como el original
         if (!ficheros.has(ruta) && alias.has(ruta)) ruta = alias.get(ruta);
@@ -1471,8 +1503,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         for (let r of rutas) {
           const nombre = r;
           if (bucket === 'comunidad') { if (!esCoach() && !fotoBorrable(r)) continue; r = `comunidad:${r}`; }
-          // Como la 032 (revisión): un atleta solo borra lo suyo que puede borrar (con su fila; no un adjunto con mensajes)
-          else if (!archivoBorrable(r)) continue;
+          // Como la 032 (revisión): un atleta solo borra lo suyo que puede borrar (con su fila; no un adjunto con mensajes);
+          // (034) de «voz», solo el coach
+          else if (bucket === 'voz' ? !esCoach() : !archivoBorrable(r)) continue;
           ficheros.delete(r); alias.delete(r); if (urls.has(r)) { try { URL.revokeObjectURL(urls.get(r)); } catch { /* */ } urls.delete(r); }
           hechas.push(nombre);
         }
@@ -1532,6 +1565,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // Como la 033: lo fijado y las listas, el coach; cada silencio, quien lo puso; los miembros no se cambian (se quitan y se ponen)
       if (t === 'listas_difusion_miembros') throw sinPermisoTabla(t);
+      if (t === 'privacidad_vista') {
+        const filas = tabla(t).filter((x) => cumple(x, f) && x.usuario_id === sesion?.user.id);
+        for (const x of filas) { const m = { ...x, ...copia(cambios) }; prepararPrivacidad(m, x); Object.assign(x, m); }
+        persistirYa();
+        return copia(filas);
+      }
       if (t === 'conversacion_fijado' || t === 'listas_difusion' || t === 'chat_silencios') {
         if (t !== 'chat_silencios' && !esCoach()) return [];
         const filas = tabla(t).filter((x) => cumple(x, f) && VISIBLE[t](x));
@@ -1639,6 +1678,18 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     async upsert(t, filas, onConflict) {
       soloCoach(t);
       if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos'].includes(t)) throw sinPermisoTabla(t);
+      // Como la 034: la versión vista (con el usuario que sea, la base la pone a tu nombre: es la tuya la que cambia)
+      if (t === 'privacidad_vista') {
+        const res = (Array.isArray(filas) ? filas : [filas]).map((f) => {
+          const existente = tabla(t).find((x) => x.usuario_id === sesion?.user.id);
+          if (!existente) return insertar(t, f);
+          const m = { ...existente, ...copia(f) };
+          prepararPrivacidad(m, existente);
+          return Object.assign(existente, m);
+        });
+        persistirYa();
+        return copia(res);
+      }
       // Como la 033: lo fijado (uno por conversación) y el silencio propio
       if (t === 'conversacion_fijado' || t === 'chat_silencios') {
         const res = (Array.isArray(filas) ? filas : [filas]).map((f) => {
@@ -1821,6 +1872,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!esCoach()) throw new Error('Solo el coach');
         return tabla('storage_por_borrar').slice(0, Math.min(1000, Math.max(1, args?.p_limite || 200))).map((x) => x.ruta);
       }
+      if (nombre === 'storage_pendiente_cubos') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        return tabla('storage_por_borrar').slice(0, Math.min(1000, Math.max(1, args?.p_limite || 200))).map((x) => ({ ruta: x.ruta, bucket: x.bucket || 'archivos' }));
+      }
       if (nombre === 'storage_borrado') {
         if (!esCoach()) throw new Error('Solo el coach');
         const antes = tabla('storage_por_borrar').length;
@@ -1877,6 +1932,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           if (nombre === 'chat_reenviar') {
             const c = buscar('comentarios', args.p_comentario);
             if (!c || c.autor !== 'coach' || c.eliminado_en || programadoAun(c) || c.sesion_id || c.checkin_id || (c.archivo_id && !c.adjunto) || c.dibujo) throw new Error('Solo se reenvían tus mensajes del chat que ya han salido');
+            if (tabla('encuestas_chat').some((e) => e.comentario_id === c.id)) throw new Error('Una encuesta no se reenvía: crea otra (o mándala a una lista de difusión)');
             const a = c.archivo_id ? buscar('archivos', c.archivo_id) : null;
             // Solo lo que subió el coach: nunca la foto o el PDF de un atleta al chat de otro
             if (c.archivo_id && (!a || subidoPor(a) !== 'coach' || tabla('comentarios').some((k) => k.archivo_id === a.id && k.autor === 'atleta'))) throw new Error('Solo se reenvían las fotos, vídeos y documentos que has enviado tú');

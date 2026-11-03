@@ -103,7 +103,8 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const [reenviar, setReenviar] = useState(null);    // v0.55: [mensajes] a reenviar (el coach)
   const [fijar, setFijar] = useState(null);          // v0.55: el mensaje a fijar (elegir cuánto)
   const [fallido, setFallido] = useState(null);      // v0.55: el mensaje que no salió («Reintentar» / «Eliminar»)
-  const [subidas, setSubidas] = useState([]);        // v0.56: fotos, vídeos, PDF y notas de voz saliendo (con su progreso)
+  const [subidas, setSubidas] = useState([]);
+  const [sinLimpiar, setSinLimpiar] = useState(null); // (revisión) fotos que no se han podido limpiar: avisar antes de enviarlas        // v0.56: fotos, vídeos, PDF y notas de voz saliendo (con su progreso)
   const [editarFoto, setEditarFoto] = useState(null); // v0.56: el adjunto que se está editando
   const [hd, setHd] = useState(() => leerAjustes().fotosHd === true);
   const [filtroTipo, setFiltroTipo] = useState(null); // v0.56: buscar por tipo (foto, vídeo, enlace, documento, audio)
@@ -489,7 +490,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   }
   // v0.56: de la galería, la cámara, el PDF, al pegar (Ctrl/Cmd+V) o al soltarlos encima: fotos, vídeos y PDF, con las
   // mismas comprobaciones de siempre (tipo, tamaño, que un PDF lo sea de verdad), hasta 10 a la vez
-  async function anadirArchivos(archivos) {
+  async function anadirArchivos(archivos, { deFuera = false } = {}) {
     const nuevas = [];
     for (const f of archivos) {
       if (adjuntos.length + nuevas.length >= MAX_FOTOS) { aviso(`Como mucho ${MAX_FOTOS} a la vez`, 'error'); break; }
@@ -502,14 +503,14 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         let paginas = null;
         try { if (f.size <= 8 * 1048576) paginas = paginasPdf(new TextDecoder('latin1').decode(await f.arrayBuffer())); } catch { /* sin páginas */ }
         const doc = f.type === 'application/pdf' ? f : new File([f], f.name, { type: 'application/pdf' });
-        nuevas.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, archivo: doc, esPdf: true, paginas, nombre: nombreSeguroPdf(f.name) });
+        nuevas.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, archivo: doc, esPdf: true, paginas, nombre: nombreSeguroPdf(f.name), deFuera });
         continue;
       }
       if (!/^(image|video)\//.test(f.type || '')) { aviso('Solo fotos, vídeos y PDF', 'error'); continue; }
       if (f.size > LIMITE_ARCHIVO_MB * 1024 * 1024) { aviso(`Pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos).`, 'error'); continue; }
       let url = null;
       try { url = URL.createObjectURL(f); } catch { /* */ }
-      nuevas.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, archivo: f, url, esVideo: /^video\//.test(f.type || '') });
+      nuevas.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, archivo: f, url, esVideo: /^video\//.test(f.type || ''), deFuera });
     }
     anadir(nuevas);
   }
@@ -545,7 +546,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   // v0.56: lo que llega desde «Compartir» (Android) para esta conversación: a la bandeja de adjuntos, sin enviarlo
   useEffect(() => {
     if (archivosIniciales?.length) anadirArchivos(archivosIniciales);
-    const coger = () => { const fs = tomarParaChat(atletaId); if (fs?.length) anadirArchivos(fs); };
+    const coger = () => { const fs = tomarParaChat(atletaId); if (fs?.length) anadirArchivos(fs, { deFuera: true }); };
     coger();
     window.addEventListener('fbe-compartidos', coger);
     return () => window.removeEventListener('fbe-compartidos', coger);
@@ -586,13 +587,22 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     }
     // v0.56: las fotos, los vídeos y los PDF salen al momento como burbujas con su progreso (y «Cancelar»); el pie va con
     // la primera (como WhatsApp con varias fotos), y la cita también
+    // (revisión) las fotos se preparan antes (reducidas y sin sus datos); si alguna no se ha podido limpiar, se avisa
     if (adjuntos.length) {
       const pendientes = [...adjuntos];
       const citaId = cita && enElChat(cita) ? cita.id : null;
-      setAdjuntos([]);
-      limpiarCompositor();
-      separador.current = null;
-      encolarSubidas(pendientes.map((a, i) => ({ ...a, texto: i === 0 ? t : '', respondeA: i === 0 ? citaId : null, enDiario: a.esVideo && yo === 'atleta' && enDiario, hd })));
+      setEnviando(true);
+      let preparadas;
+      try {
+        preparadas = await Promise.all(pendientes.map(async (a) => {
+          if (a.esVideo || a.esPdf || a.editada || a.preparada) return a;
+          const r = await prepararFoto(a.archivo, { hd });
+          return { ...a, archivo: r.archivo, preparada: true, sucia: !r.limpia };
+        }));
+      } finally { setEnviando(false); }
+      const items = preparadas.map((a, i) => ({ ...a, texto: i === 0 ? t : '', respondeA: i === 0 ? citaId : null, enDiario: a.esVideo && yo === 'atleta' && enDiario, hd }));
+      if (items.some((a) => a.sucia)) { setSinLimpiar(items); return; }
+      salirConAdjuntos(items);
       return;
     }
     setEnviando(true);
@@ -628,6 +638,14 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     } catch (err) { aviso(err.message, 'error'); }
   }
 
+  // Las fotos (ya preparadas), los vídeos y los PDF, a la cola de subidas; la bandeja y el cuadro se vacían
+  const salirConAdjuntos = (items) => {
+    setAdjuntos([]);
+    limpiarCompositor();
+    separador.current = null;
+    setSinLimpiar(null);
+    encolarSubidas(items);
+  };
   // v0.56: la cola de lo que se sube (una a una, en orden): cada una con su progreso y «Cancelar». Sin cobertura, o si la
   // base lo rechaza, se queda con «!» para reintentarla o quitarla. Las fotos se reducen antes (sin EXIF), salvo las ya
   // editadas (ya lo están).
@@ -640,7 +658,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   function encolarSubidas(items) {
     const ahora = Date.now();
     const nuevas = items.map((a, i) => ({ id: `${ahora}-${i}-${Math.random().toString(36).slice(2, 8)}`, archivo: a.archivo, url: a.url || null, esVideo: !!a.esVideo, esPdf: !!a.esPdf,
-      esAudio: !!a.esAudio, nombre: a.nombre || null, paginas: a.paginas || null, seg: a.seg || null, onda: a.onda || null, editada: !!a.editada, hd: !!a.hd, enDiario: !!a.enDiario,
+      esAudio: !!a.esAudio, nombre: a.nombre || null, paginas: a.paginas || null, seg: a.seg || null, onda: a.onda || null, editada: !!a.editada, preparada: !!a.preparada, hd: !!a.hd, enDiario: !!a.enDiario,
       texto: a.texto || '', respondeA: a.respondeA || null, progreso: 0, estado: 'espera', error: null, creado_en: new Date(ahora + i).toISOString() }));
     subidasRef.current = [...subidasRef.current, ...nuevas];
     setSubidas(subidasRef.current);
@@ -660,7 +678,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         senales.current.set(x.id, senal);
         try {
           let archivo = x.archivo, poster = null, duracion_seg = x.seg;
-          if (!x.esVideo && !x.esPdf && !x.esAudio && !x.editada && comprimible(archivo.type)) archivo = (await prepararFoto(archivo, { hd: x.hd })).archivo;
+          if (!x.esVideo && !x.esPdf && !x.esAudio && !x.editada && !x.preparada && comprimible(archivo.type)) archivo = (await prepararFoto(archivo, { hd: x.hd })).archivo;
           if (x.esVideo) { const cap = await capturarPoster(archivo).catch(() => null); poster = cap?.poster || null; duracion_seg = cap?.duracion ?? null; }
           if (!subidasRef.current.some((y) => y.id === x.id)) continue; // cancelada mientras se preparaba
           await api.enviarMensaje(atletaId, { texto: x.texto, archivo, autor: yo, enDiario: x.enDiario, poster, duracion_seg, paginas: x.paginas, onda: x.onda, respondeA: x.respondeA,
@@ -1023,6 +1041,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
                 {adjuntos.some((a) => a.esVideo) && yo === 'atleta' && (
                   <label class="casilla mini"><input type="checkbox" checked={enDiario} onChange={(e) => setEnDiario(e.currentTarget.checked)} /><span>{adjuntos.filter((a) => a.esVideo).length > 1 ? 'Guardar los vídeos en mi diario como vídeos de técnica (tu coach los revisa)' : 'Guardarlo en mi diario como vídeo de técnica (tu coach lo revisa)'}</span></label>
                 )}
+                {adjuntos.some((a) => a.deFuera) && <span class="mini nota-coach chat-de-fuera" role="note"><Icono n="alerta" /><span>Te llega desde otra app: comprueba que es tuyo (y lo que se ve) antes de enviarlo.</span></span>}
                 {adjuntos.some((a) => !a.esVideo && !a.esPdf) && (
                   <button type="button" class={`btn btn-peq chat-hd ${hd ? 'activo' : ''}`} aria-pressed={hd ? 'true' : 'false'} onClick={() => setHd((v) => !v)}
                     title={hd ? 'Las fotos salen en HD (más grandes)' : 'Las fotos salen reducidas (pesan menos)'}><Icono n="hd" /> HD</button>
@@ -1176,6 +1195,15 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
             setAdjuntos((xs) => xs.map((x) => (x.id === a.id ? { ...x, archivo: f, url, editada: true } : x)));
             setEditarFoto(null);
           }} />
+      )}
+      {sinLimpiar && (
+        <Hoja titulo="Foto sin limpiar" alCerrar={() => setSinLimpiar(null)}>
+          <p class="nota-coach" role="alert"><Icono n="alerta" /><span>{sinLimpiar.filter((a) => a.sucia).length === 1 ? 'Esta foto no se ha podido limpiar' : `${sinLimpiar.filter((a) => a.sucia).length} fotos no se han podido limpiar`}: puede llevar la ubicación (GPS) y otros datos del móvil. Pasa con algunas HEIC del iPhone en este navegador.</span></p>
+          <div class="fila-envolver">
+            <button type="button" class="btn btn-primario" onClick={() => salirConAdjuntos(sinLimpiar)}><Icono n="enviar" /> Enviar igualmente</button>
+            <button type="button" class="btn" onClick={() => { const malas = new Set(sinLimpiar.filter((a) => a.sucia).map((a) => a.id)); setAdjuntos((xs) => xs.filter((x) => { if (malas.has(x.id) && x.url) URL.revokeObjectURL(x.url); return !malas.has(x.id); })); setSinLimpiar(null); }}><Icono n="basura" /> Quitar {sinLimpiar.filter((a) => a.sucia).length === 1 ? 'esa foto' : 'esas fotos'}</button>
+          </div>
+        </Hoja>
       )}
       {hoja === 'encuesta' && <HojaEncuesta atletaId={atletaId} para={primerNombre} alCerrar={() => setHoja(null)} alEnviada={() => { setHoja(null); conv.recargar(true); alCambiar?.(); sonarSi('enviado'); }} />}
       {hoja === 'reacciones' && <HojaReaccionesRapidas uid={miId} alCerrar={() => { setRapidasEmoji(leerReacciones(almacen(), miId)); setHoja(null); }} />}

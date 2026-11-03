@@ -31,6 +31,8 @@ import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
+import { VERSION_LEGAL } from '../legal.js';
+import { formatoVersion, versionMayor, clavePrivacidadLocal } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
 import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida } from '../logica/notasVoz.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
@@ -47,6 +49,9 @@ export { VERSION_NORMAS };
 
 const porId = (filas) => Object.fromEntries(filas.map((f) => [f.id, f]));
 const agrupar = (filas, col) => filas.reduce((m, f) => ((m[f[col]] ||= []).push(f), m), {});
+// v0.56 (034): las notas de voz van en su propio bucket de Storage («voz»: 3 MB y solo audio); lo demás, en «archivos».
+// Por su tipo si se sabe; si no, por su ruta (la de una nota de voz es siempre <atleta>/audio-…, lo pide la base)
+export const cuboDe = (ruta, tipo = null) => (tipo ? (tipo === 'audio' ? 'voz' : 'archivos') : /^[^/]+\/audio-[^/]+$/.test(String(ruta || '')) ? 'voz' : 'archivos');
 const porCampo = (filas, col) => Object.fromEntries(filas.map((f) => [f[col], f]));
 const unicos = (xs) => [...new Set(xs.filter((x) => x != null))];
 // Las menciones de una publicación o un comentario, con el nombre de quien se ve (las de quien ya no está, fuera)
@@ -157,6 +162,10 @@ const falta034 = (e) => {
   if (falta || (/\b(archivos_tipo_check|comentario_reacciones_emoji_valido)\b/.test(m) && /check constraint|23514/i.test(m))) throw new Error(`${AVISO_034}. Detalle: ${e?.message || e}`);
   throw e;
 };
+// (v0.56) La versión de la política vista, en este móvil (por cuenta): solo lo que falta en la base
+const almacenNavegador = () => { try { return globalThis.localStorage || null; } catch { return null; } };
+const leerPrivacidadLocal = (id) => { try { return almacenNavegador()?.getItem(clavePrivacidadLocal(id)) || null; } catch { return null; } };
+const guardarPrivacidadLocal = (id, v) => { try { almacenNavegador()?.setItem(clavePrivacidadLocal(id), v); } catch { /* */ } };
 const sinCliente033 = (e) => /cliente_id/.test(e?.message || '') && /schema cache|does not exist|no existe|column|columna|PGRST20/i.test(e?.message || '');
 const duplicado = (e) => /duplicate|23505|Ya existe un registro igual/i.test(`${e?.codigo || e?.code || ''} ${e?.message || ''}`);
 // La función de entrar sin la migración 028 (sin el parámetro de las normas)
@@ -414,7 +423,34 @@ export function crearApi(backend) {
       return c.some((x) => x.tipo === 'datos_salud' && !x.revocado_en);
     },
     async darConsentimientos(tipos = ['privacidad', 'datos_salud']) {
-      return b.insert('consentimientos', tipos.map((tipo) => ({ perfil_id: uid(), tipo, version: VERSION_CONSENTIMIENTO })));
+      const r = await b.insert('consentimientos', tipos.map((tipo) => ({ perfil_id: uid(), tipo, version: VERSION_CONSENTIMIENTO })));
+      // (v0.56) quien acepta la política ahora la acepta en su versión actual: no le sale el aviso de novedades
+      if (tipos.includes('privacidad')) await api.marcarPrivacidadVista(VERSION_LEGAL);
+      return r;
+    },
+    // (v0.56) El aviso de privacidad, una vez por versión: cuál ha visto esta cuenta. En la base (034, la misma en todos
+    // sus móviles); antes de la 034 o sin conexión, lo de este móvil. Si este móvil sabe de una más nueva que la base
+    // (se vio sin la 034 o sin red), se le pasa a la base sin decir nada.
+    async privacidadVista() {
+      const id = uid();
+      if (!id) return { version: null, enBase: false };
+      const local = leerPrivacidadLocal(id);
+      const filas = await b.select('privacidad_vista', { eq: { usuario_id: id }, cols: 'version', limit: 1 }).catch(() => null);
+      const enBase = filas ? filas[0]?.version || null : null;
+      if (filas && formatoVersion(local) && (!enBase || local > enBase)) api.marcarPrivacidadVista(local).catch(() => {});
+      return { version: versionMayor(enBase, local), enBase: !!filas };
+    },
+    async marcarPrivacidadVista(version = VERSION_LEGAL) {
+      const id = uid();
+      if (!id || !formatoVersion(version)) return false;
+      // (en este móvil, solo versiones que la app conoce: nunca una «del futuro» que tape los avisos que vengan)
+      if (version <= VERSION_LEGAL) guardarPrivacidadLocal(id, version);
+      try { await b.upsert('privacidad_vista', [{ usuario_id: id, version }], 'usuario_id'); return true; } catch { return false; }
+    },
+    // El coach, en la ficha: qué versión ha visto ese atleta (null: ninguna o sin la 034)
+    async privacidadVistaDe(perfilId) {
+      if (!perfilId) return null;
+      return (await b.select('privacidad_vista', { eq: { usuario_id: perfilId }, cols: 'version,vista_en', limit: 1 }).catch(() => []))[0] || null;
     },
     async revocarConsentimiento(id) {
       return b.update('consentimientos', { revocado_en: new Date().toISOString() }, { eq: { id } });
@@ -1583,7 +1619,7 @@ export function crearApi(backend) {
       const rutas = Array.isArray(r?.rutas) ? r.rutas.filter((x) => typeof x === 'string' && x) : [];
       let almacenamiento = 'nada';
       const coach = await api.esCoachAhora();
-      if (rutas.length) almacenamiento = coach ? await api.borrarDeStorage(rutas) : 'pendiente';
+      if (rutas.length) almacenamiento = coach ? await api.borrarDeStorage(rutas.map((ruta) => ({ ruta, bucket: cuboDe(ruta, c?.archivo?.ruta === ruta ? c.archivo.tipo : null) }))) : 'pendiente';
       if (coach) api.limpiarAlmacenamiento().catch(() => {});
       return { estado: r?.estado || 'eliminado', almacenamiento };
     },
@@ -1595,10 +1631,12 @@ export function crearApi(backend) {
     },
     // El coach borra de Storage y lo quita de la cola: 'borrado' o, si Storage falla, 'pendiente' (se reintenta al
     // abrir la app y tras el siguiente borrado)
+    // (v0.56) rutas: textos o { ruta, bucket } (cada una de su bucket)
     async borrarDeStorage(rutas) {
+      const items = rutas.map((x) => (typeof x === 'string' ? { ruta: x, bucket: cuboDe(x) } : x));
       try {
-        await b.storage.borrar(rutas);
-        await b.rpc('storage_borrado', { p_rutas: rutas }).catch(() => {});
+        for (const cubo of ['archivos', 'voz']) { const rs = items.filter((x) => x.bucket === cubo).map((x) => x.ruta); if (rs.length) await b.storage.borrar(rs, cubo); }
+        await b.rpc('storage_borrado', { p_rutas: items.map((x) => x.ruta) }).catch(() => {});
         return 'borrado';
       } catch { return 'pendiente'; }
     },
@@ -1606,8 +1644,12 @@ export function crearApi(backend) {
     async limpiarAlmacenamiento() {
       if (!(await api.esCoachAhora())) return 0;
       let rutas;
-      try { rutas = await b.rpc('storage_pendiente', { p_limite: 200 }); } catch { return 0; }
-      rutas = (rutas || []).map((x) => (typeof x === 'string' ? x : x?.storage_pendiente || x?.r || null)).filter(Boolean);
+      // (v0.56) con su bucket (la 034); sin ella, todo es de «archivos»
+      try { rutas = (await b.rpc('storage_pendiente_cubos', { p_limite: 200 }) || []).filter((x) => x?.ruta).map((x) => ({ ruta: x.ruta, bucket: x.bucket === 'voz' ? 'voz' : 'archivos' })); }
+      catch {
+        try { rutas = await b.rpc('storage_pendiente', { p_limite: 200 }); } catch { return 0; }
+        rutas = (rutas || []).map((x) => (typeof x === 'string' ? x : x?.storage_pendiente || x?.r || null)).filter(Boolean).map((ruta) => ({ ruta, bucket: 'archivos' }));
+      }
       if (!rutas.length) return 0;
       return (await api.borrarDeStorage(rutas)) === 'borrado' ? rutas.length : 0;
     },
@@ -1800,7 +1842,7 @@ export function crearApi(backend) {
         ...(archivo.tipo === 'documento' ? { nombre: archivo.nombre || 'documento.pdf', ...(archivo.paginas ? { paginas: archivo.paginas } : {}) } : {}),
         ...(archivo.tipo === 'audio' && ondaValida(archivo.onda) ? { onda: archivo.onda } : {}),
       }]).catch(falta033);
-      try { await b.storage.copiar(archivo.ruta, ruta); } catch (e) { await b.delete('archivos', { eq: { id: fila.id } }).catch(() => {}); throw e; }
+      try { await b.storage.copiar(archivo.ruta, ruta, cuboDe(archivo.ruta, archivo.tipo)); } catch (e) { await b.delete('archivos', { eq: { id: fila.id } }).catch(() => {}); throw e; }
       if (poster_ruta) await b.storage.copiar(archivo.poster_ruta, poster_ruta).catch(async () => { await b.update('archivos', { poster_ruta: null }, { eq: { id: fila.id } }).catch(() => {}); fila.poster_ruta = null; });
       return fila;
     },
@@ -2111,7 +2153,7 @@ export function crearApi(backend) {
       }
       try {
         if (senal?.cancelada) { const e = new Error('Cancelado'); e.cancelado = true; throw e; }
-        await b.storage.subir(ruta, archivo, (tipo === 'audio' ? tipoAudio(archivo.type)?.tipo : archivo.type) || 'application/octet-stream', { alProgreso, senal });
+        await b.storage.subir(ruta, archivo, (tipo === 'audio' ? tipoAudio(archivo.type)?.tipo : archivo.type) || 'application/octet-stream', { alProgreso, senal, bucket: cuboDe(ruta, tipo) });
       } catch (e) {
         // Sin cobertura, el registro se queda: el siguiente intento (con la misma ruta) lo reutiliza
         if (!e?.sinConexion) await b.delete('archivos', { eq: { id: fila.id } }).catch(() => {});
@@ -2126,14 +2168,14 @@ export function crearApi(backend) {
     async descartarSubida(ruta) {
       if (ruta) await b.delete('archivos', { eq: { ruta } }).catch(() => {});
     },
-    async urlArchivo(ruta) { return b.storage.url(ruta); },
+    async urlArchivo(ruta, { tipo = null } = {}) { return b.storage.url(ruta, 3600, cuboDe(ruta, tipo)); },
     // (v0.54) Primero de Storage (mientras tiene su fila: el atleta solo puede borrar ahí lo que tiene fila y puede borrar)
     // y después la fila; lo que no se haya podido borrar de Storage queda en la cola (lo pone la base) y lo vacía el coach.
     // Devuelve 'borrado' | 'pendiente'.
     async borrarArchivo(archivo) {
       const rutas = [archivo.ruta, ...(archivo.poster_ruta ? [archivo.poster_ruta] : [])];
       let hechas = null;
-      try { hechas = await b.storage.borrar(rutas); } catch { hechas = null; }
+      try { hechas = await b.storage.borrar(rutas, cuboDe(archivo.ruta, archivo.tipo)); } catch { hechas = null; }
       await b.delete('archivos', { eq: { id: archivo.id } });
       const coach = await api.esCoachAhora();
       if (coach) { if (hechas) await b.rpc('storage_borrado', { p_rutas: rutas }).catch(() => {}); api.limpiarAlmacenamiento().catch(() => {}); }
@@ -2863,7 +2905,10 @@ export function crearApi(backend) {
       const registrados = await b.select('archivos', { eq: { atleta_id: atletaId }, cols: 'id,ruta' });
       const enCarpeta = await b.storage.listar(atletaId);
       const rutas = [...new Set([...registrados.map((a) => a.ruta), ...enCarpeta])];
-      if (rutas.length) await b.storage.borrar(rutas);
+      if (rutas.length) await b.storage.borrar(rutas.filter((r) => cuboDe(r) === 'archivos'));
+      // (v0.56) y sus notas de voz (bucket «voz»; sin la 034, no hay)
+      const voces = [...new Set([...registrados.map((a) => a.ruta).filter((r) => cuboDe(r) === 'voz'), ...(await b.storage.listar(atletaId, 'voz').catch(() => []))])];
+      if (voces.length) await b.storage.borrar(voces, 'voz').catch(() => {});
       // Y sus fotos del muro (v0.43, bucket «comunidad»; sin la migración 027, no hay)
       const delMuro = await b.storage.listar(atletaId, 'comunidad').catch(() => []);
       if (delMuro.length) await b.storage.borrar(delMuro, 'comunidad').catch(() => {});

@@ -3315,16 +3315,20 @@ try {
   await p.locator('.chat-adjunto').waitFor();
   check(await hay(p.locator('.chat-adjunto-item'), 2) && await p.locator('.chat-adjunto-item.es-pdf').count() === 1 && !(await p.evaluate(() => location.search)).includes('compartido'),
     '(v0.56) compartir una foto y un PDF a la app: Ana los tiene en su chat, listos para enviar (sin enviarlos)');
+  check(await p.locator('.chat-de-fuera', { hasText: 'Te llega desde otra app' }).count() === 1, '(revisión) con el aviso de que llega de otra app (comprueba que es tuyo): también fotos y PDF');
   check(!(await p.evaluate(async () => (await (await caches.open('fbe-compartido')).keys()).length)), '(y se borran del móvil en cuanto la app los coge)');
   for (let i = 0; i < 12 && await p.locator('.chat-adjunto-quitar').count(); i++) await p.locator('.chat-adjunto-quitar').first().click();
   await hay(p.locator('.chat-adjunto'), 0);
   // El coach elige a qué conversación va
+  // (revisión) lo compartido que espera en el móvil se borra al cerrar la sesión
   await compartir([{ bytes: pngCompartido, tipo: 'image/png', nombre: 'captura.png' }]);
   await entrarComo('Pelayo');
+  check(!(await p.evaluate(async () => (await (await caches.open('fbe-compartido')).keys()).length)), '(revisión) al cerrar la sesión, lo compartido desde otra app que esperaba en el móvil se borra');
+  await compartir([{ bytes: pngCompartido, tipo: 'image/png', nombre: 'captura.png' }]);
   await p.goto('http://localhost:4174/?demo&compartido=1#atletas');
   const hojaEnviarA = p.getByRole('dialog', { name: 'Enviar a…' });
   await hojaEnviarA.waitFor();
-  check((await hojaEnviarA.textContent()).includes('1 foto'), '(v0.56) si lo comparte el coach, elige la conversación');
+  check((await hojaEnviarA.textContent()).includes('1 foto') && (await hojaEnviarA.textContent()).includes('Te llega desde otra app'), '(v0.56) si lo comparte el coach, elige la conversación (con el aviso de que llega de otra app)');
   await revisar('compartido-coach');
   await hojaEnviarA.getByRole('button', { name: /Ana López/ }).click();
   await p.locator('.chat-adjunto-item').waitFor();
@@ -4660,6 +4664,40 @@ try {
   await p.setViewportSize({ width: 390, height: 844 });
   await p.emulateMedia({ colorScheme: 'light', reducedMotion: null });
   await entrarComo('Ana López');
+  // (v0.56) Las novedades de privacidad, UNA vez: a quien no ha visto la versión actual le salen al abrir la app; al
+  // cerrarlas (de cualquier forma) no vuelven, tampoco al recargar. (En la demo todos la han visto: se le quita a Ana,
+  // con la app cerrada para que no la vuelva a escribir.)
+  await p.goto('http://localhost:4174/manifest.webmanifest');
+  const uidAna = await p.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('fbe-demo-v2')); const ses = JSON.parse(localStorage.getItem('fbe-demo-v2-sesion'));
+    d.privacidad_vista = (d.privacidad_vista || []).filter((x) => x.usuario_id !== ses.user.id);
+    localStorage.setItem('fbe-demo-v2', JSON.stringify(d));
+    for (const k of Object.keys(localStorage)) if (k.startsWith('fbe-privacidad-vista-')) localStorage.removeItem(k);
+    return ses.user.id;
+  });
+  await p.goto('http://localhost:4174/?demo#hoy');
+  const avisoPriv = p.getByRole('dialog', { name: 'Novedades de privacidad' });
+  await avisoPriv.waitFor();
+  const textoPriv = await avisoPriv.textContent();
+  check(['Notas de voz', 'micro', 'Copia del chat', 'cerrar la sesión', 'sin GPS', 'tu voto solo lo ve él'].every((t) => textoPriv.includes(t)) && await avisoPriv.getByRole('button', { name: 'Entendido' }).count() === 1
+    && await avisoPriv.getByRole('button', { name: 'Leer la política completa' }).count() === 1, '(v0.56) a quien no ha visto la política nueva, al abrir: sus novedades en corto, «Leer la política completa» y «Entendido»');
+  await revisar('aviso-privacidad');
+  await avisoPriv.getByRole('button', { name: 'Leer la política completa' }).click();
+  check((await avisoPriv.textContent()).includes('Lo que se queda en tu móvil'), 'la política entera, en la misma hoja');
+  await p.keyboard.press('Escape');
+  await avisoPriv.waitFor({ state: 'detached' });
+  const vistaGuardada = async () => { for (let i = 0; i < 30; i++) { const ok = await p.evaluate((u) => (JSON.parse(localStorage.getItem('fbe-demo-v2')).privacidad_vista || []).some((x) => x.usuario_id === u && x.version === '2026-11'), uidAna); if (ok) return true; await p.waitForTimeout(100); } return false; };
+  check(await vistaGuardada(), 'cerrarla con Escape cuenta como vista (se guarda en la base, para todos sus móviles)');
+  await p.reload();
+  await p.locator('.hero-dia').waitFor();
+  await p.waitForTimeout(1200);
+  check(await avisoPriv.count() === 0, 'y al volver a abrir la app ya no sale');
+  await p.goto('http://localhost:4174/manifest.webmanifest');
+  await p.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('fbe-privacidad-vista-')) localStorage.removeItem(k); });
+  await p.goto('http://localhost:4174/?demo#hoy');
+  await p.locator('.hero-dia').waitFor();
+  await p.waitForTimeout(1200);
+  check(await avisoPriv.count() === 0, 'tampoco en otro móvil (sin nada guardado en él: lo dice la base)');
   await p.evaluate(() => { window.__sonidos = []; window.addEventListener('fbe-sonido', (e) => window.__sonidos.push(e.detail.tipo)); });
   await p.locator('.tab', { hasText: 'Mensajes' }).click();
   await p.locator('.chat-area').waitFor();
@@ -4678,6 +4716,22 @@ try {
   check(deCache && await p.getByText('Cargando los mensajes').count() === 0, 'con la base lenta (o sin cobertura), el chat abre al momento con lo guardado en el móvil');
   await p.evaluate(() => localStorage.removeItem('fbe-demo-retraso'));
   await p.waitForTimeout(2600);
+
+  // (revisión) Una foto que no se puede limpiar (una HEIC que este navegador no abre): aviso antes de enviarla
+  const antesHeic = await p.locator('.chat-lista .burbuja').count();
+  await p.locator('input[type=file][aria-label="Elegir fotos o vídeos de la galería"]').setInputFiles({ name: 'IMG_0001.HEIC', mimeType: 'image/heic', buffer: Buffer.from('....ftypheic-esto-no-es-una-foto') });
+  await p.locator('.chat-adjunto-item').waitFor();
+  await enviarYa();
+  const hojaSucia = p.getByRole('dialog', { name: 'Foto sin limpiar' });
+  await hojaSucia.waitFor();
+  const textoSucia = await hojaSucia.textContent();
+  check(textoSucia.includes('Esta foto no se ha podido limpiar') && textoSucia.includes('ubicación') && await hojaSucia.getByRole('button', { name: 'Enviar igualmente' }).count() === 1
+    && await hojaSucia.getByRole('button', { name: /^Quitar/ }).count() === 1 && await p.locator('.chat-lista .burbuja').count() === antesHeic,
+    '(revisión) una foto que no se ha podido limpiar avisa ANTES de salir: «Enviar igualmente» o «Quitar» (aún no ha salido nada)');
+  await revisar('foto-sin-limpiar');
+  await hojaSucia.getByRole('button', { name: /^Quitar/ }).click();
+  await hojaSucia.waitFor({ state: 'detached' });
+  check(await hay(p.locator('.chat-adjunto-item'), 0) && await p.locator('.chat-lista .burbuja').count() === antesHeic && !(await p.locator('.subida-icono').count()), '(revisión) «Quitar»: fuera de la bandeja y no sale nada');
 
   // 16: notas de voz. El micro sale con el cuadro vacío; con texto, «Enviar»
   const micro = p.getByRole('button', { name: /^Grabar una nota de voz/ });

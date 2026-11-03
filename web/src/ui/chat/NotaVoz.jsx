@@ -62,7 +62,8 @@ export function useGrabadora({ alError }) {
       setGrabado({ blob, tipo: f.tipo, ext: f.ext, seg: duracionGuardada(s), onda: ondaDe(x.niveles, 40), limite: !!x.limite });
       setEstado('revisar');
     };
-    rec.start(250);
+    // (si el navegador no deja empezar, el micro se suelta y se dice)
+    try { rec.start(250); } catch (e) { soltarMicro(); setEstado('nada'); alError(errorMicro(e)); return; }
     x.inicio = reloj();
     setEstado('grabando');
     x.tic = setInterval(() => {
@@ -239,7 +240,7 @@ export function NotaVozChat({ c, mio, alEscuchada }) {
   const { api } = useApp();
   const a = c.archivo;
   return (
-    <ReproductorVoz pedirUrl={() => api.urlArchivo(a.ruta)} duracion={a.duracion_seg} onda={a.onda} propio={mio} escuchada={!!c.escuchado_en}
+    <ReproductorVoz pedirUrl={() => api.urlArchivo(a.ruta, { tipo: 'audio' })} duracion={a.duracion_seg} onda={a.onda} propio={mio} escuchada={!!c.escuchado_en}
       alReproducir={() => { if (!mio && !c.escuchado_en) api.marcarEscuchado(c.id).then((x) => { if (x) alEscuchada?.(); }); }} />
   );
 }

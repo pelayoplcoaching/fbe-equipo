@@ -1,7 +1,8 @@
 // La capa de datos de la app (web/src/datos/api.js) contra el esquema real de Supabase con RLS.
 // Recorre el flujo completo: el coach da de alta, programa y publica; el atleta activa, entrena y hace check-in.
 import { crearPglite, crearBackendPglite } from './backend-pglite.mjs';
-import { crearApi, VERSION_COMUNIDAD } from '../web/src/datos/api.js';
+import { crearApi, VERSION_COMUNIDAD, cuboDe } from '../web/src/datos/api.js';
+import { VERSION_LEGAL } from '../web/src/legal.js';
 import { hoyISO, lunesDe, sumarDias } from '../web/src/logica/fechas.js';
 
 let ok = 0, fallos = 0;
@@ -1932,6 +1933,19 @@ console.log('\nv0.56: notas de voz, encuestas, «escuchado» y reacciones a eleg
   const rf = await api.reenviar((await api.conversacion(aAna.id)).find((c) => c.id === deCoach.id), [aLuis.id]);
   const [copia] = await b.sql(`select a.* from comentarios c join archivos a on a.id = c.archivo_id where c.atleta_id = $1 and c.reenviado and a.tipo = 'audio'`, [aLuis.id]);
   check(rf.enviados === 1 && copia && copia.ruta.startsWith(`${aLuis.id}/audio-`) && copia.duracion_seg === 5 && copia.onda.length === 8, 'el coach reenvía su nota de voz a Luis (su copia, con su duración y su onda)');
+  // (revisión) Las notas de voz, en su bucket («voz»): la subida, la copia, el enlace firmado y el borrado
+  check(cuboDe(aV.ruta) === 'voz' && cuboDe(`${aAna.id}/adjunto-2026-11-03-abc.jpg`) === 'archivos' && cuboDe('x/cualquiera.webm', 'audio') === 'voz' && cuboDe(null) === 'archivos',
+    '(revisión) cada ruta, a su bucket: las notas de voz, a «voz»');
+  const enVoz = (r) => b.sql(`select 1 from storage.objects where bucket_id = 'voz' and name = $1`, [r]).then((x) => x.length === 1);
+  const enArch = (r) => b.sql(`select 1 from storage.objects where bucket_id = 'archivos' and name = $1`, [r]).then((x) => x.length === 1);
+  check(await enVoz(aV.ruta) && !(await enArch(aV.ruta)) && await enVoz(copia.ruta) && !(await enArch(copia.ruta)), '(revisión) la nota de Ana y la copia para Luis están en «voz» (no en «archivos»)');
+  check(/^pglite:\/\/voz\//.test(await api.urlArchivo(aV.ruta, { tipo: 'audio' })) && /^pglite:\/\/voz\//.test(await api.urlArchivo(aV.ruta)), '(revisión) y su enlace firmado sale de «voz»');
+  const borrable = await api.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(600)], 'n.webm', { type: 'audio/webm' }), autor: 'coach', duracion_seg: 3 });
+  const rutaBorrable = (await b.sql(`select ruta from archivos where id = $1`, [borrable.archivo_id]))[0].ruta;
+  check(await enVoz(rutaBorrable), '(la del coach, también en «voz»)');
+  await api.eliminarMensaje(borrable.id);
+  await api.limpiarAlmacenamiento?.();
+  check(!(await enVoz(rutaBorrable)) && !(await b.sql(`select 1 from fbe_privado.storage_por_borrar where ruta = $1`, [rutaBorrable])).length, '(revisión) eliminada para todos (el coach), se borra de «voz» (y sale de la cola)');
   const deAnaV = (await api.conversacion(aAna.id)).find((c) => c.id === mV.id);
   check(await lanza(() => api.reenviar(deAnaV, [aLuis.id])), 'la de Ana, no');
   await b.auth.entrar('ana@test', 'contraseña-ana-1');
@@ -1953,6 +1967,9 @@ console.log('\nv0.56: notas de voz, encuestas, «escuchado» y reacciones a eleg
   check(await lanza(() => api.editarMensaje(conE.id, 'otra')), 'el mensaje de una encuesta no se edita');
   await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
   check(igual((await api.conversacion(aAna.id)).find((c) => c.id === conE.id).encuesta.voto, [1]), 'el coach ve qué ha votado');
+  let errFwE = '';
+  try { await api.reenviar((await api.conversacion(aAna.id)).find((c) => c.id === conE.id), [aLuis.id]); } catch (e) { errFwE = e.message; }
+  check(/Una encuesta no se reenvía/.test(errFwE), '(revisión) una encuesta no se reenvía (lo dice la base)');
   await b.auth.entrar('luis@test', 'contraseña-luis-1');
   check(!(await api.conversacion(aLuis.id)).some((c) => c.encuesta?.id === conE.encuesta.id) && await lanza(() => api.votarEncuestaChat(conE.encuesta.id, [0])), 'Luis ni la ve ni vota');
   // A una lista
@@ -1966,6 +1983,35 @@ console.log('\nv0.56: notas de voz, encuestas, «escuchado» y reacciones a eleg
   check(await api.reaccionarMensaje(r0.id, '🔥') === '🔥' && await api.reaccionarMensaje(r0.id, '👍🏽') === '👍🏽' && await lanza(() => api.reaccionarMensaje(r0.id, 'ok')), 'cualquier emoji (también con tono de piel); texto, no');
   // Ir a una fecha
   check(await api.mensajesDesde(aAna.id, new Date(Date.now() - 3600000).toISOString()) >= 5 && await api.mensajesDesde(aAna.id, new Date(Date.now() + 3600000).toISOString()) === 0, 'ir a una fecha: cuántos mensajes hay desde ese día');
+  // (v0.56) El aviso de privacidad: quien acepta la política la acepta en su versión actual (no le sale el aviso)
+  const [anaPerfil] = await b.sql(`select perfil_id from atletas where id = $1`, [aAna.id]);
+  check((await api.privacidadVista()).version === VERSION_LEGAL && (await api.privacidadVista()).enBase === true, 'Ana aceptó la política al activar su cuenta: ya consta como vista la actual');
+  await b.sql(`delete from privacidad_vista`);
+  check((await api.privacidadVista()).version === null, 'sin nada guardado, no ha visto ninguna');
+  // Antes de la 034 (o sin conexión): en este móvil, por cuenta
+  const guardadoLocal = new Map();
+  globalThis.localStorage = { getItem: (k) => guardadoLocal.get(k) ?? null, setItem: (k, v) => guardadoLocal.set(k, String(v)), removeItem: (k) => guardadoLocal.delete(k) };
+  const faltaPv = () => { const e = new Error('relation "public.privacidad_vista" does not exist'); e.code = '42P01'; return e; };
+  const sinPv = crearApi({ ...b, auth: b.auth, storage: b.storage, rpc: b.rpc.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), insert: b.insert.bind(b),
+    select: async (t, f) => { if (t === 'privacidad_vista') throw faltaPv(); return b.select(t, f); }, upsert: async (t, ...r) => { if (t === 'privacidad_vista') throw faltaPv(); return b.upsert(t, ...r); } });
+  check((await sinPv.privacidadVista()).version === null && await sinPv.marcarPrivacidadVista(VERSION_LEGAL) === false && guardadoLocal.get(`fbe-privacidad-vista-${anaPerfil.perfil_id}`) === VERSION_LEGAL,
+    'sin la 034: se guarda en este móvil (por cuenta)');
+  check((await sinPv.privacidadVista()).version === VERSION_LEGAL && !(await b.sql(`select 1 from privacidad_vista`)).length, 'y ya no vuelve a salir en este móvil');
+  // Con la 034: lo de este móvil pasa a la base sin decir nada (así no sale en sus otros móviles)
+  check((await api.privacidadVista()).version === VERSION_LEGAL, 'con la base, cuenta lo del móvil');
+  let pasada = false;
+  for (let i = 0; i < 20 && !pasada; i++) { pasada = (await b.sql(`select version from privacidad_vista where usuario_id = $1`, [anaPerfil.perfil_id]))[0]?.version === VERSION_LEGAL; if (!pasada) await new Promise((r) => setTimeout(r, 25)); }
+  check(pasada, '(y se pasa a la base: en sus otros móviles tampoco sale)');
+  guardadoLocal.clear();
+  check((await api.privacidadVista()).version === VERSION_LEGAL, 'en otro móvil (sin nada guardado), la base dice que ya la vio');
+  check(await api.marcarPrivacidadVista('2099-01') === false && !guardadoLocal.size && (await api.privacidadVista()).version === VERSION_LEGAL && await api.marcarPrivacidadVista('nada') === false,
+    'una versión «del futuro» o sin formato no se guarda (ni en la base ni en el móvil)');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check((await api.privacidadVista()).version === null && await api.marcarPrivacidadVista() === true && (await api.privacidadVista()).version === VERSION_LEGAL && await api.privacidadVistaDe(anaPerfil.perfil_id) === null,
+    'Luis tiene la suya (la marca al cerrar el aviso) y no ve la de Ana');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check((await api.privacidadVistaDe(anaPerfil.perfil_id))?.version === VERSION_LEGAL && await api.privacidadVistaDe(null) === null, 'el coach ve en la ficha qué versión ha visto Ana');
+  delete globalThis.localStorage;
   await b.sql(`delete from listas_difusion`); await b.sql(`delete from chat_cupos`); await b.sql(`delete from presencia`);
 }
 

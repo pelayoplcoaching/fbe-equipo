@@ -3682,9 +3682,14 @@ console.log('\nNotas de voz, encuestas, «escuchado» y reacciones a elegir (mig
                       'archivo_adjunto_borrar_mensaje', 'comentario_eliminar', 'chat_buscar', 'chat_copia_valida', 'chat_difundir', 'chat_gastar_cupo', 'chat_cupo_coach')
     and coalesce(array_to_string(p.proconfig, ','), '') <> 'search_path=""'`);
   check(!malos.length, `las funciones nuevas y las que cambia la 034, con search_path vacío${malos.length ? ` (no: ${malos.map((x) => x.f).join(', ')})` : ''}`);
+  // (revisión) Las notas de voz van a su propio bucket privado («voz»: 3 MB y solo audio); en «archivos», ya no hay audio
   const tiposB = (await q(`select allowed_mime_types t from storage.buckets where id = 'archivos'`))[0]?.t || [];
-  check(['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac', 'application/pdf', 'image/jpeg', 'video/mp4'].every((t) => tiposB.includes(t)) && new Set(tiposB).size === tiposB.length,
-    'Storage acepta el audio de las notas de voz (y lo de antes sigue, sin repetir)');
+  const [bVoz] = await q(`select public, file_size_limit, allowed_mime_types t from storage.buckets where id = 'voz'`);
+  const AUDIO = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'];
+  check(bVoz && bVoz.public === false && Number(bVoz.file_size_limit) === 3145728 && bVoz.t.slice().sort().join() === AUDIO.slice().sort().join(),
+    '(revisión) las notas de voz, en su bucket privado «voz»: 3 MB por archivo y solo esos audios');
+  check(!AUDIO.some((t) => tiposB.includes(t)) && ['application/pdf', 'image/jpeg', 'video/mp4'].every((t) => tiposB.includes(t)) && new Set(tiposB).size === tiposB.length,
+    '(revisión) y en «archivos» ya no se admite audio (lo de antes sigue, sin repetir)');
   check((await q(`select grantee, privilege_type from information_schema.role_table_grants where table_name in ('encuestas_chat', 'encuesta_votos') and grantee in ('authenticated', 'anon') and privilege_type <> 'SELECT'`)).length === 0
     && (await q(`select 1 from information_schema.role_table_grants where table_name in ('encuestas_chat', 'encuesta_votos') and grantee = 'anon'`)).length === 0,
     'de las encuestas y los votos, la app solo lee (se crean y se votan con sus funciones); sin sesión, nada');
@@ -3852,6 +3857,113 @@ console.log('\nNotas de voz, encuestas, «escuchado» y reacciones a elegir (mig
   await q(`delete from comentarios where atleta_id = any($1::uuid[]) and creado_en > now() - interval '1 day'`, [[aAna.id, aLuis.id]]);
   await q(`delete from archivos where atleta_id = any($1::uuid[]) and creado_en > now() - interval '1 day'`, [[aAna.id, aLuis.id]]);
   await q(`delete from fbe_privado.storage_por_borrar`); await q(`delete from notificaciones where tipo in ('respuesta', 'mensaje')`); await q(`delete from presencia`);
+
+  console.log('  · (revisión) El bucket de las notas de voz, la cola de Storage, encuestas sin reenviar y emojis');
+  {
+    await su(); await q(`delete from chat_cupos`); await q(`delete from fbe_privado.storage_por_borrar`);
+    await como(ana);
+    const [vz] = await insArch(voz());
+    check(!(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [vz.ruta])), 'Ana sube su nota de voz registrada al bucket «voz»');
+    check(await falla(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [voz().ruta]) && await falla(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [`${vz.ruta}-x`]) === true
+      && await falla(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [(await insArch(voz())).ruta]),
+      'una nota de voz no se sube al bucket «archivos» (ni registrada)');
+    check(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [`${aAna.id}/audio-${hoy}-sinfila.webm`]), 'sin su fila de nota de voz, nada sube a «voz»');
+    const [fotoA] = await insArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: `${aAna.id}/adjunto-${hoy}-${uuid().slice(0, 8)}.jpg`, mime: 'image/jpeg' });
+    check(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [fotoA.ruta]), 'ni una foto a «voz» (aunque esté registrada)');
+    check((await q(`select name from storage.objects where bucket_id = 'voz'`)).length === 1, 'Ana ve su nota de voz en Storage');
+    await q(`delete from storage.objects where bucket_id = 'voz' and name = $1`, [vz.ruta]);
+    await como(luis);
+    check(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [vz.ruta]) && !(await q(`select name from storage.objects where bucket_id = 'voz'`)).length,
+      'Luis ni ve ni sube nada a la nota de voz de Ana');
+    await como(pelayo, 'aal2');
+    check((await q(`select name from storage.objects where bucket_id = 'voz' and name = $1`, [vz.ruta])).length === 1, 'Ana no la borra de Storage (solo el coach, al vaciar la cola); el coach la ve');
+    check(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [`${aAna.id}/audio-${hoy}-coach-sinfila.webm`]), 'el coach tampoco sube a «voz» algo sin registrar');
+    const [vzC] = await insArch(voz());
+    check(!(await falla(`insert into storage.objects (bucket_id, name) values ('voz', $1)`, [vzC.ruta])) && (await q(`delete from storage.objects where bucket_id = 'voz' and name = $1 returning name`, [vzC.ruta])).length === 1,
+      'el coach sube la suya (con su fila) y borra de «voz»');
+    // La cola de Storage sabe de los dos buckets; una ruta en la cola no se vuelve a registrar
+    await su();
+    await q(`insert into fbe_privado.storage_por_borrar (ruta, bucket) values ($1, 'voz'), ($2, 'archivos')`, [`${aAna.id}/audio-${hoy}-reusada.webm`, `${aAna.id}/adjunto-video-${hoy}-reusado.mp4.jpg`]);
+    check(await falla(`insert into fbe_privado.storage_por_borrar (ruta, bucket) values ('x/y.jpg', 'comunidad')`), 'la cola de Storage: «archivos» o «voz»');
+    await como(ana);
+    let errReuso = '';
+    try { await insArch(voz({ ruta: `${aAna.id}/audio-${hoy}-reusada.webm` })); } catch (e) { errReuso = e.message; }
+    check(/ya se usó para un archivo eliminado/.test(errReuso), '(revisión) una ruta que espera a borrarse de Storage no se vuelve a registrar');
+    check(await fallaArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: `${aAna.id}/adjunto-video-${hoy}-nuevo.mp4`, mime: 'video/mp4', poster_ruta: `${aAna.id}/adjunto-video-${hoy}-reusado.mp4.jpg` }),
+      '(revisión) ni como portada de un vídeo');
+    check(await falla(`select * from storage_pendiente_cubos(10)`), 'la cola, con su bucket, solo la lee el coach');
+    await como(pelayo, 'aal2');
+    const colaB = await q(`select * from storage_pendiente_cubos(10) order by bucket`);
+    check(colaB.length === 2 && colaB[0].bucket === 'archivos' && colaB[1].bucket === 'voz', 'el coach la lee con el bucket de cada ruta');
+    // Eliminar una nota de voz para todos: su ruta, a la cola con el bucket «voz»
+    await su(); await q(`delete from fbe_privado.storage_por_borrar`);
+    await como(ana);
+    const [vzM] = await insArch(voz());
+    const [mVz] = await q(`insert into comentarios (archivo_id, autor, texto, adjunto) values ($1, 'atleta', 'Nota de voz', true) returning id`, [vzM.id]);
+    await q(`select comentario_eliminar($1)`, [mVz.id]);
+    await su();
+    check(igual((await q(`select ruta, bucket from fbe_privado.storage_por_borrar`)).map((x) => [x.ruta, x.bucket]), [[vzM.ruta, 'voz']]), '(revisión) al eliminarla, su ruta va a la cola con el bucket «voz»');
+    // Una encuesta no se reenvía
+    await q(`delete from chat_cupos`);
+    await como(pelayo, 'aal2');
+    const rE = (await q(`select chat_encuesta($1, null, '¿Sábado?', '["Sí","No"]'::jsonb, false, null) r`, [aAna.id]))[0].r;
+    let errFw = '';
+    try { await q(`select chat_reenviar($1, $2)`, [rE.ids[0], JSON.stringify([{ atleta: aLuis.id, cliente: uuid() }])]); } catch (e) { errFw = e.message; }
+    check(/Una encuesta no se reenvía/.test(errFw), '(revisión) una encuesta no se reenvía (se crea otra o va a una lista)');
+    // Un voto con un número enorme: el aviso de siempre (no un error de la base)
+    await como(ana);
+    const [encR] = await q(`select id from encuestas_chat where comentario_id = $1`, [rE.ids[0]]);
+    let errV = '';
+    try { await q(`select encuesta_votar($1, '{40000}')`, [encR.id]); } catch (e) { errV = e.message; }
+    check(/Esa opción no está en la encuesta/.test(errV) && !/smallint|out of range/i.test(errV), '(revisión) un voto a la opción 40000: «Esa opción no está en la encuesta» (no un error de rango)');
+    // Emojis: las teclas (1️⃣, #️⃣) y las banderas de etiquetas (🏴 + etiquetas + fin), sí; etiquetas sueltas, no
+    const [paraE] = await q(`insert into comentarios (atleta_id, autor, texto) values ($1, 'atleta', 'Teclas') returning id`, [aAna.id]);
+    await su(); const [paraE2] = await q(`insert into comentarios (atleta_id, autor, texto) values ($1, 'coach', 'Teclas 2') returning id`, [aAna.id]);
+    await como(ana);
+    const reac = async (e) => { try { await q(`delete from comentario_reacciones where comentario_id = $1`, [paraE2.id]); await q(`insert into comentario_reacciones (comentario_id, emoji) values ($1, $2)`, [paraE2.id, e]); return true; } catch { return false; } };
+    check(await reac('1️⃣') && await reac('#⃣') && await reac('*️⃣') && await reac('\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}'),
+      '(revisión) reacciones con teclas (1️⃣ #⃣ *️⃣) y banderas de etiquetas (Escocia)');
+    check(!(await reac('\u{E0067}\u{E0062}')) && !(await reac('👍\u{E0067}\u{E0062}')) && !(await reac('\u{1F3F4}\u{E0067}\u{E0062}')) && !(await reac('1')) && !(await reac('a⃣')),
+      '(revisión) pero no etiquetas sueltas o pegadas a otro emoji, ni una bandera sin cerrar, ni un número o una letra');
+    void paraE;
+    await su();
+    await q(`delete from chat_cupos`); await q(`delete from comentario_reacciones`); await q(`delete from storage.objects where bucket_id = 'voz'`);
+    await q(`delete from comentarios where atleta_id = any($1::uuid[]) and creado_en > now() - interval '1 day'`, [[aAna.id, aLuis.id]]);
+    await q(`delete from archivos where atleta_id = any($1::uuid[]) and creado_en > now() - interval '1 day'`, [[aAna.id, aLuis.id]]);
+    await q(`delete from fbe_privado.storage_por_borrar`); await q(`delete from notificaciones where tipo in ('respuesta', 'mensaje')`);
+  }
+
+  console.log('  · (v0.56) El aviso de privacidad: qué versión ha visto cada uno');
+  {
+    await su(); await q(`delete from privacidad_vista`);
+    check((await q(`select relrowsecurity r from pg_class where relname = 'privacidad_vista' and relnamespace = 'public'::regnamespace`))[0]?.r === true
+      && !(await q(`select 1 from information_schema.role_table_grants where table_name = 'privacidad_vista' and grantee in ('anon', 'authenticated') and (grantee = 'anon' or privilege_type not in ('SELECT', 'INSERT', 'UPDATE'))`)).length,
+      'privacidad_vista, con permisos por fila; sin sesión, nada; nadie la borra a mano');
+    await anon();
+    check(await falla(`select * from privacidad_vista`) && await falla(`insert into privacidad_vista (version) values ('2026-11')`), 'sin sesión, ni se lee ni se escribe');
+    await como(ana);
+    const [pv] = await q(`insert into privacidad_vista (version) values ('2026-11') returning *`);
+    check(pv.usuario_id === ana && pv.version === '2026-11', 'Ana pone la suya');
+    await como(luis);
+    const [pvL] = await q(`insert into privacidad_vista (usuario_id, version) values ($1, '2026-10') on conflict (usuario_id) do update set version = excluded.version returning *`, [ana]);
+    check(pvL.usuario_id === luis, '(Luis, con el usuario de Ana, solo pone la suya)');
+    check(!(await q(`update privacidad_vista set version = '2026-11' where usuario_id = $1 returning *`, [ana])).length && (await q(`select * from privacidad_vista`)).length === 1,
+      'Luis no cambia ni ve la de Ana');
+    await q(`update privacidad_vista set usuario_id = $1, version = '2026-11' where usuario_id = $2`, [ana, luis]);
+    await su();
+    const pvs = await q(`select usuario_id, version from privacidad_vista order by version`);
+    check(pvs.length === 2 && pvs.filter((x) => x.usuario_id === ana).length === 1 && pvs.filter((x) => x.usuario_id === luis).length === 1 && pvs.find((x) => x.usuario_id === ana).version === '2026-11',
+      'ni pasándose a otro usuario: la de Ana sigue igual (cada uno, solo la suya)');
+    await como(ana);
+    check((await q(`update privacidad_vista set version = '2026-01' returning version`))[0].version === '2026-11', 'nunca hacia atrás');
+    check(await falla(`update privacidad_vista set version = '2026-13'`) && await falla(`update privacidad_vista set version = 'cualquiera'`) && await falla(`update privacidad_vista set version = '2099-01'`),
+      'solo una versión con su formato que ya exista (no una de dentro de años)');
+    const proxima = (await q(`select to_char((now() at time zone 'Europe/Madrid') + interval '1 month', 'YYYY-MM') v`))[0].v;
+    check((await q(`update privacidad_vista set version = $1 returning version`, [proxima]))[0].version === proxima, '(la del mes que viene sí: margen para publicarla)');
+    await como(pelayo, 'aal2');
+    check((await q(`select usuario_id from privacidad_vista order by usuario_id`)).length === 2, 'el coach ve la de cada uno (en la ficha)');
+    await su(); await q(`delete from privacidad_vista`);
+  }
 
   console.log('  · La 034 sin la 033');
   const sin33 = new PGlite();

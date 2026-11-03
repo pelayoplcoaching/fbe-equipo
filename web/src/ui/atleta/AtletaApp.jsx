@@ -12,6 +12,7 @@ import { Comidas } from './Comidas.jsx';
 import { Equipo, leerVistoEquipo } from '../Comunidad.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
+import { AvisoPrivacidad } from '../AvisoPrivacidad.jsx';
 import { usePendientesArchivos, BandaPendientes } from '../Pendientes.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { hoyISO, semanaCheckin, diaDeCheckin } from '../../logica/fechas.js';
@@ -157,7 +158,13 @@ export function AtletaApp() {
     programa, salud, recargarConsentimientos: () => consentimientos.recargar(true), irA: irAPestana, abrirSesion, checkinSemana,
     noLeidos: noLeidos.datos || [], releer,
   };
-  return <Pantallas {...{ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia, atletaId: atleta.id }} />;
+  return (
+    <>
+      <Pantallas {...{ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia, atletaId: atleta.id }} />
+      {/* (v0.56) las novedades de la política, una vez (el coach en su modo atleta, no) */}
+      {!propio && <AvisoPrivacidad />}
+    </>
+  );
 }
 
 // La pantalla: la sesión abierta o la pestaña elegida con la barra de abajo (aparte, para la píldora de la barra)

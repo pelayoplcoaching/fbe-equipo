@@ -103,6 +103,7 @@ export function RecibirCompartidoCoach({ alAbrirChat }) {
   return (
     <Hoja titulo="Enviar a…" alCerrar={() => setArchivos(null)} medio>
       <p class="peq secundario"><Icono n="clip" /> {resumen(archivos)}. Elige la conversación: se abre con ello listo para enviar (puedes añadir un pie).</p>
+      <p class="nota-coach"><Icono n="alerta" /><span>Te llega desde otra app: comprueba que es tuyo (y lo que se ve) antes de enviarlo. No sale nada hasta que lo envíes tú.</span></p>
       {atletas.cargando && !atletas.datos ? <Cargando texto="Cargando tus atletas" /> : (
         <ul class="lista hoja-acciones">
           {lista.map((a) => <li key={a.id}><button type="button" class="accion-fila" onClick={() => elegir(a)}><span class="ico"><Icono n="mensaje" /></span><span class="pila-xs"><strong>{a.nombre}</strong></span><Icono n="derecha" class="cola" /></button></li>)}

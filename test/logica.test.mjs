@@ -2527,6 +2527,7 @@ console.log('\nv0.55: el chat, aún más como WhatsApp');
     && !C.reenviable({ ...mC, enviar_en: new Date(Date.now() + 864e5).toISOString() }, 'coach') && !C.reenviable({ ...mC, sesion_id: 's' }, 'coach') && !C.reenviable({ ...mC, archivo_id: 'v', adjunto: false }, 'coach')
     && C.reenviable({ ...mC, archivo_id: 'f', adjunto: true }, 'coach') && !C.reenviable({ ...mC, pendiente: true }, 'coach'),
     'se reenvía lo del coach, del chat y ya salido (lo de un atleta, no: son datos de salud de otra persona)');
+  check(!C.reenviable({ ...mC, encuesta: { id: 'e1', opciones: ['a', 'b'] } }, 'coach') && !C.reenviable({ ...mC, subida: { estado: 'subiendo' } }, 'coach'), '(revisión) una encuesta no se reenvía (ni lo que aún se está subiendo)');
   // PDF
   check(C.nombreSeguroPdf('../../etc/passwd') === 'passwd.pdf' && C.nombreSeguroPdf('C:\\Users\\Ana\\Plan.PDF') === 'Plan.pdf' && C.nombreSeguroPdf('') === 'documento.pdf' && C.nombreSeguroPdf('...pdf') === 'pdf.pdf',
     'el nombre de un PDF: sin carpetas (ni «../»), siempre .pdf y, si no queda nada, «documento.pdf»');
@@ -2620,8 +2621,24 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
     'fotos: el lado largo, 1600 px (HD, 2560); nunca se agranda');
   check(I.opcionesFoto(false).calidad === 0.8 && I.opcionesFoto(true).lado === 2560 && I.comprimible('image/jpeg') && I.comprimible('image/heic') && !I.comprimible('image/gif') && !I.comprimible('video/mp4'),
     'se vuelven a codificar las fotos (también una HEIC si el navegador sabe abrirla); un GIF, no');
-  check(I.nombreJpg('IMG_2041.HEIC') === 'IMG_2041.jpg' && I.nombreJpg('') === 'foto.jpg' && I.quedarseConNueva({ tipo: 'image/jpeg', bytesOriginal: 10, bytesNueva: 50 }) && !I.quedarseConNueva({ tipo: 'image/png', bytesOriginal: 10, bytesNueva: 50 }),
-    'una JPEG o HEIC siempre se vuelve a codificar (así se va el EXIF, también el GPS); una PNG solo si pesa menos');
+  check(I.nombreJpg('IMG_2041.HEIC') === 'IMG_2041.jpg' && I.nombreJpg('') === 'foto.jpg' && I.quedarseConNueva({ bytesNueva: 50 }) && !I.quedarseConNueva({ bytesNueva: 0 }) && !I.quedarseConNueva({ bytesNueva: 300 * 1048576 }),
+    '(revisión) siempre la copia vuelta a codificar (así se va el EXIF, también el GPS), aunque pese más, dentro del límite');
+  // (revisión) Si no se puede volver a codificar, a una JPEG se le quitan a mano los bloques APP1 (EXIF/XMP) y APP13 (IPTC)
+  const seg = (m, datos) => [0xFF, m, ((datos.length + 2) >> 8) & 255, (datos.length + 2) & 255, ...datos];
+  const gps = [...new TextEncoder().encode('Exif\0\0GPS 43.36N 5.84W')];
+  const jpg = new Uint8Array([0xFF, 0xD8, ...seg(0xE0, [...new TextEncoder().encode('JFIF\0'), 1, 2]), ...seg(0xE1, gps), ...seg(0xED, [...new TextEncoder().encode('Photoshop 3.0\0')]), ...seg(0xE2, [7, 7]),
+    ...seg(0xFE, [...new TextEncoder().encode('comentario')]), ...seg(0xDB, [0, 1, 2]), 0xFF, 0xDA, 0, 4, 1, 2, 0x11, 0x22, 0xFF, 0x00, 0x33, 0xFF, 0xD9]);
+  const limpia = I.quitarMetadatosJpeg(jpg);
+  const txt = (b) => new TextDecoder('latin1').decode(b);
+  check(I.esJpeg('image/jpeg') && !I.esJpeg('image/heic') && I.jpegConMetadatos(jpg) && limpia && !I.jpegConMetadatos(limpia) && !txt(limpia).includes('GPS') && !txt(limpia).includes('Photoshop') && !txt(limpia).includes('comentario')
+    && txt(limpia).includes('JFIF') && limpia.length === jpg.length - (gps.length + 4) - 18 - 14 && limpia.at(-1) === 0xD9 && limpia.at(-2) === 0xFF,
+    '(revisión) una JPEG sin volver a codificar: fuera EXIF, GPS, XMP, IPTC y comentarios; la imagen (y el JFIF y el perfil de color), igual');
+  check(I.quitarMetadatosJpeg(new Uint8Array([0xFF, 0xD8, 0xFF, 0xE1, 0, 200, 1])) === null && I.quitarMetadatosJpeg(new Uint8Array([0x89, 0x50, 0x4E, 0x47])) === null,
+    '(revisión) una JPEG rota (o una PNG o HEIC) no se «limpia» a medias: null, y la app avisa antes de enviarla');
+  const fotosSrc = readFileSync(new URL('../web/src/ui/fotos.js', import.meta.url), 'utf8');
+  const chatSrc56 = readFileSync(new URL('../web/src/ui/Chat.jsx', import.meta.url), 'utf8');
+  check(/limpia: false/.test(fotosSrc) && /quitarMetadatosJpeg/.test(fotosSrc) && chatSrc56.includes('Esta foto no se ha podido limpiar') && chatSrc56.includes('Enviar igualmente') && /Quitar \{/.test(chatSrc56),
+    '(revisión) la foto que no se ha podido limpiar (HEIC) avisa antes de salir: «Enviar igualmente» o «Quitar»');
   check(I.girar(0) === 90 && I.girar(270) === 0 && igual(I.medidasGiradas(4, 3, 90), { ancho: 3, alto: 4 }) && igual(I.recorteValido({ x: -1, y: 0.99, w: 5, h: 0 }), { x: 0, y: 0.95, w: 1, h: 0.05 }),
     'el editor: girar de 90 en 90 y un recorte siempre dentro de la foto (de al menos el 5 %)');
   const rec = I.moverBorde({ x: 0, y: 0, w: 1, h: 1 }, 'izq', 0.2);
@@ -2632,7 +2649,8 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
     && EM.conTono('😀', '\u{1F3FD}') === '😀' && EM.conTono('👍\u{1F3FD}', '') === '👍' && EM.admiteTono('🙏') && !EM.admiteTono('❤️'),
     'tonos de piel: en las manos y las personas que lo admiten (también en «🏋️‍♀️»); en las caras, no');
   check(EM.emojiValido('👍') && EM.emojiValido('👍🏽') && EM.emojiValido('🏳️‍🌈') && EM.emojiValido('🇪🇸') && EM.emojiValido('❤️') && !EM.emojiValido('ok') && !EM.emojiValido('👍 ') && !EM.emojiValido('‍')
-    && !EM.emojiValido('‮👍') && !EM.emojiValido('👍'.repeat(17)) && !EM.emojiValido(''), 'una reacción es un emoji (cualquiera), como pide la base (034)');
+    && !EM.emojiValido('‮👍') && !EM.emojiValido('👍'.repeat(17)) && !EM.emojiValido('') && EM.emojiValido('1️⃣') && EM.emojiValido('#⃣') && EM.emojiValido('*️⃣')
+    && EM.emojiValido('\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}') && !EM.emojiValido('\u{E0067}\u{E0062}') && !EM.emojiValido('👍\u{E0067}') && !EM.emojiValido('\u{1F3F4}\u{E0067}\u{E0062}') && !EM.emojiValido('1') && !EM.emojiValido('a⃣'), 'una reacción es un emoji (cualquiera), como pide la base (034)');
   const almE = new Map(); const memE = { getItem: (k) => almE.get(k) ?? null, setItem: (k, v) => almE.set(k, v) };
   check(igual(EM.leerReacciones(memE, 'u1'), EM.REACCIONES_DEFECTO) && igual(EM.guardarReacciones(memE, 'u1', ['🔥', '🔥', 'ok', '🏆']).slice(0, 3), ['🔥', '🏆', '❤️']) && EM.leerReacciones(memE, 'u1').length === 6
     && igual(EM.leerReacciones(memE, 'u2'), EM.REACCIONES_DEFECTO), 'tus seis reacciones: distintas, válidas, completadas con las de siempre y por cuenta');
@@ -2640,6 +2658,8 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   check(EM.leerTono(memE) === '\u{1F3FE}' && (EM.guardarTono(memE, 'x'), EM.leerTono(memE)) === '', 'el tono elegido se guarda en el móvil (solo uno de los seis)');
 
   const EN = await import('../web/src/logica/enlaces.js');
+  const trucada = EN.tarjetaEnlace('https://ejemplo.com/factura%E2%80%AEfdp.exe%E2%80%8B%E2%81%A6x');
+  check(trucada && !/[\u200b-\u200f\u202a-\u202e\u2060-\u2069]/.test(trucada.ruta) && trucada.ruta.includes('facturafdp.exe'), '(revisión) la ruta de la tarjeta, sin controles bidi ni invisibles (no se puede «dar la vuelta» al texto)');
   check(igual(EN.tarjetaEnlace('https://www.examine.com/supplements/creatine/'), { dominio: 'examine.com', ruta: '/supplements/creatine', seguro: true }) && EN.tarjetaEnlace('javascript:alert(1)') === null
     && EN.tarjetaEnlace('https://pubmed.ncbi.nlm.nih.gov/').ruta === '', 'la tarjeta de un enlace: su dominio y su ruta, sin pedir nada a nadie');
 
@@ -2670,7 +2690,10 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
 
   const { crearCacheChat, paraCache, MAX_CACHE } = await import('../web/src/datos/cacheChat.js');
   const almC = new Map();
-  const cache = crearCacheChat({ almacen: { leer: async (k) => almC.get(k), guardar: async (k, v) => { almC.set(k, JSON.parse(JSON.stringify(v))); }, borrarTodo: async () => almC.clear() } });
+  let relojC = Date.parse('2026-11-03T12:00:00Z');
+  let cerradaC = false;
+  const almacenC = { leer: async (k) => almC.get(k), guardar: async (k, v) => { almC.set(k, JSON.parse(JSON.stringify(v))); }, borrar: async (k) => { almC.delete(k); }, todo: async () => [...almC.entries()], borrarTodo: async () => almC.clear() };
+  const cache = crearCacheChat({ almacen: almacenC, ahora: () => relojC, estaCerrada: () => cerradaC });
   const largos = Array.from({ length: 250 }, (_, i) => ({ id: `m${i}`, autor: 'coach', texto: `hola ${i}`, creado_en: '2026-11-03T10:00:00', archivo: i === 249 ? { id: 'a', ruta: 'x/adjunto-1.jpg', mime: 'image/jpeg', url: 'https://firmada', blob: 'x' } : null, enlaceFirmado: 'https://firmada' }));
   await cache.guardar('u1', 'at1', [...largos, { id: 'pendiente-1', pendiente: true, texto: 'saliendo' }]);
   const leido = await cache.leer('u1', 'at1');
@@ -2681,6 +2704,43 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   check(await cache.leer('u1', 'at1') === null && paraCache([{ id: 'a' }]).length === 1 && await crearCacheChat({ almacen: null }).leer('u1', 'at1') === null, 'al cerrar la sesión se borra entera; sin IndexedDB, el chat abre como siempre');
   const appSrc = readFileSync(new URL('../web/src/ui/App.jsx', import.meta.url), 'utf8');
   check((appSrc.match(/borrarCacheChat\(\)/g) || []).length >= 2, 'se borra al cerrar sesión y cuando la sesión se acaba sola');
+  // (revisión) Cerrada al salir (un guardado que llega tarde no la vuelve a crear), caduca a los 30 días y se limpia
+  await cache.guardar('u1', 'at1', largos.slice(0, 3));
+  cerradaC = true;
+  check(!(await cache.guardar('u1', 'at9', largos.slice(0, 3))) && !almC.has('u1:at9') && await cache.leer('u1', 'at1') === null, '(revisión) con la sesión cerrada no se guarda ni se lee nada (un guardado tardío no la vuelve a crear)');
+  cerradaC = false;
+  relojC += 29 * 864e5;
+  check((await cache.leer('u1', 'at1'))?.mensajes.length === 3, '(revisión) a los 29 días aún está');
+  relojC += 2 * 864e5;
+  check(await cache.leer('u1', 'at1') === null && !almC.has('u1:at1'), '(revisión) a los 30 días de la última vez que se abrió, caduca (y se borra)');
+  await cache.guardar('u1', 'at1', largos.slice(0, 2)); await cache.guardar('u1', 'at2', largos.slice(0, 2)); await cache.guardar('u2', 'at3', largos.slice(0, 2));
+  almC.set('u1:viejo', { perfil: 'u1', atleta: 'viejo', guardado_en: '2026-01-01T00:00:00Z', mensajes: [] });
+  const quitadas = await cache.purgar('u1', { conservar: ['at1'] });
+  check(quitadas === 2 && almC.has('u1:at1') && !almC.has('u1:at2') && almC.has('u2:at3') && !almC.has('u1:viejo'), '(revisión) en el móvil del coach se quita la de quien ya no está (borrado o de baja) y lo caducado; lo de otra cuenta, no se toca');
+  await cache.quitarAtleta('u1', 'at1');
+  check(!almC.has('u1:at1'), '(revisión) y al borrar un atleta, su conversación, al momento');
+  const CC = await import('../web/src/datos/cacheChat.js');
+  const promesa = CC.borrarCacheChat();
+  check(CC.cacheCerrada(), '(revisión) borrarCacheChat() la cierra al momento (síncrono), antes de borrar nada');
+  await promesa; CC.reabrirCacheChat();
+  check(!CC.cacheCerrada() && /reabrirCacheChat\(\)/.test(appSrc) && /borrarCompartido\(\)/.test(appSrc) && (appSrc.match(/borrarCompartido\(\)/g) || []).length >= 2, '(revisión) se reabre al entrar; y al salir (o caducar la sesión) se borra también lo compartido desde otra app');
+  const cacheSrc = readFileSync(new URL('../web/src/datos/cacheChat.js', import.meta.url), 'utf8');
+  const convSrc = readFileSync(new URL('../web/src/ui/coach/Conversaciones.jsx', import.meta.url), 'utf8');
+  check(/onversionchange/.test(cacheSrc) && /purgar\(perfil\.id, \{ conservar/.test(convSrc) && /estado !== 'baja'/.test(convSrc), '(revisión) si otra pestaña la cambia, se suelta; el coach purga al cargar sus conversaciones');
+
+  // (v0.56) El aviso de privacidad, una vez por versión
+  const PV = await import('../web/src/logica/privacidad.js');
+  const { VERSION_LEGAL } = await import('../web/src/legal.js');
+  check(VERSION_LEGAL === '2026-11' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+    && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
+  check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
+    'la versión más nueva de las dos (la base y este móvil); solo con su formato');
+  check(PV.NOVEDADES_PRIVACIDAD.length === 4 && /micro/i.test(PV.NOVEDADES_PRIVACIDAD.map((x) => x[2]).join(' ')) && /cerrar la sesión/.test(PV.NOVEDADES_PRIVACIDAD[1][2]) && /GPS/.test(PV.NOVEDADES_PRIVACIDAD[2][2]) && /voto/.test(PV.NOVEDADES_PRIVACIDAD[3][2])
+    && PV.clavePrivacidadLocal('u1') === 'fbe-privacidad-vista-u1', 'lo que cuenta: notas de voz y micro, la copia del chat (se borra al salir), fotos sin ubicación y los votos');
+  check(/Ha visto la política de privacidad vigente/.test(PV.textoPrivacidadVista({ version: '2026-11' }, '2026-11')) && /Vio la política de 2026-10/.test(PV.textoPrivacidadVista({ version: '2026-10' }, '2026-11')) && /Sin constancia/.test(PV.textoPrivacidadVista(null, '2026-11')),
+    'el coach lo ve en la ficha');
+  const avisoSrc = readFileSync(new URL('../web/src/ui/AvisoPrivacidad.jsx', import.meta.url), 'utf8');
+  check(/Entendido/.test(avisoSrc) && /alCerrar=\{cerrar\}/.test(avisoSrc) && /TextoPrivacidad/.test(avisoSrc) && !/preact\/compat/.test(avisoSrc), 'una hoja (Escape, fuera o «Entendido»: todo cuenta como vista), con la política entera a un toque');
 
   const { normalizarAjustes } = await import('../web/src/ui/ajustes.js');
   check(normalizarAjustes({}).sonidosChat === true && normalizarAjustes({ sonidosChat: false }).sonidosChat === false && normalizarAjustes({ fotosHd: 'sí' }).fotosHd === false, 'los ajustes nuevos: sonidos del chat (de serie, sí) y fotos en HD (de serie, no)');

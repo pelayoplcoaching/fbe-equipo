@@ -8,7 +8,7 @@ export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atlet
   // v0.55 (migración 033): fijar, silenciar y las listas de difusión
   conversacion_fijado: 'atleta_id', chat_silencios: 'usuario_id,atleta_id', listas_difusion_miembros: 'lista_id,atleta_id',
   // v0.56 (migración 034): las encuestas del chat
-  encuesta_votos: 'encuesta_id' };
+  encuesta_votos: 'encuesta_id', privacidad_vista: 'usuario_id' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 
