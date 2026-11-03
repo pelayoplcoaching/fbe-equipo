@@ -75,7 +75,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           {pest === 'mensajes' && (
             <section class="seccion chat-en-ficha">
               <h2 class="sr">Mensajes</h2>
-              <Chat atletaId={a.id} nombreAtleta={a.nombre} fotoOtro={a.foto} alCambiar={alCambiar} irContexto={(ctx) => setPest(ctx.tipo === 'sesion' ? 'registro' : ctx.tipo === 'checkin' ? 'seguimiento' : 'videos')} />
+              <Chat atletaId={a.id} nombreAtleta={a.nombre} fotoOtro={a.foto} perfilOtro={a.perfil_id || null} alCambiar={alCambiar} irContexto={(ctx) => setPest(ctx.tipo === 'sesion' ? 'registro' : ctx.tipo === 'checkin' ? 'seguimiento' : 'videos')} />
             </section>
           )}
           {pest === 'actividad' && <Actividad atleta={a} irA={setPest} />}

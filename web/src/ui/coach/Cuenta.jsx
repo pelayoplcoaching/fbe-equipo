@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { AjustesDispositivo, Interruptor } from '../Ajustes.jsx';
+import { AjustesDispositivo, AjustesMensajes, Interruptor } from '../Ajustes.jsx';
 import { SeccionNotificaciones } from '../Notificaciones.jsx';
 import { CabeceraGrande, useApp, useCarga, Icono, Hoja, Cargando, HojaExportar, copiar, Avatar, cuando } from '../comunes.jsx';
 import { num } from '../../logica/calculos.js';
@@ -29,6 +29,7 @@ export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
       <SeccionComunidad alCambiar={alCambiarComunidad} />
       <SeccionNotificaciones coach />
       <AjustesDispositivo coach />
+      <AjustesMensajes coach />
       <CobrosTodos abrirAtleta={abrirAtleta} />
       <SeccionNegocio abrirAtleta={abrirAtleta} />
       <Espacio />

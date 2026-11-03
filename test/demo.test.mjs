@@ -190,7 +190,8 @@ check(convDemo.find((c) => c.archivo?.tipo === 'adjunto')?.adjunto === true && a
   const nuevo = await api.enviarMensaje(ana.id, { texto: 'Prueba', archivo: new Blob(['jpg'], { type: 'image/jpeg' }), autor: 'atleta' });
   check(nuevo.adjunto === true, 'en la demo, el mensaje de un adjunto nace marcado como en la base real');
   await api.borrarArchivo((await b.select('archivos', { eq: { id: nuevo.archivo_id } }))[0]);
-  check((await b.select('comentarios', { eq: { id: nuevo.id } })).length === 0, 'y al borrar el adjunto se va su mensaje');
+  check((await b.select('comentarios', { eq: { id: nuevo.id } })).length === 1, '(v0.54) borrar desde archivos la foto del chat con su mensaje no hace nada: va por «eliminar para todos»');
+  check((await api.eliminarMensaje(nuevo)).estado === 'eliminado' && (await b.select('archivos', { eq: { id: nuevo.archivo_id } })).length === 0, 'y eliminándola para todos, la foto se va');
 }
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 const rubenDemo = (await api.atletas()).find((a) => a.nombre === 'Rubén Martín');
@@ -859,6 +860,131 @@ console.log('\nDías de entreno por semana en la demo (v0.53, como la 031)');
   let msg = '';
   try { await sin031.actualizarAtleta(rub.atleta_id, { dias_semana: 3 }); } catch (e) { msg = e.message; }
   check(/migración 031/.test(msg), 'sin la migración 031, guardar los días por semana dice que falta');
+}
+
+console.log('\nEl chat como WhatsApp en la demo (v0.54): las mismas reglas que la 032');
+{
+  const b5 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a5 = crearApi(b5);
+  await b5.auth.entrar('pelayo@fbe.demo', 'demo');
+  const atl = await a5.atletas();
+  const ana = atl.find((a) => a.nombre === 'Ana López'), ruben = atl.find((a) => a.nombre.startsWith('Rubén'));
+  const hola = await a5.enviarMensaje(ana.id, { texto: 'Hola *Ana*', autor: 'coach' });
+  const paraRuben = await a5.enviarMensaje(ruben.id, { texto: 'Rubén, descansa', autor: 'coach' });
+  const prog = (await a5.conversacion(ana.id)).find((c) => c.programado);
+  await b5.auth.entrar('ana@fbe.demo', 'demo');
+  const r = await a5.enviarMensaje(ana.id, { texto: 'Hola', autor: 'atleta', respondeA: hola.id });
+  check(r.responde_a === hola.id, 'Ana responde citando');
+  check(await lanza(() => a5.enviarMensaje(ana.id, { texto: 'x', autor: 'atleta', respondeA: paraRuben.id })) && await lanza(() => a5.enviarMensaje(ana.id, { texto: 'x', autor: 'atleta', respondeA: prog.id })),
+    'no cita lo de Rubén ni el programado (que aún no ve)');
+  const sesMsg = (await a5.conversacion(ana.id)).find((c) => c.sesion_id);
+  check(await lanza(() => a5.enviarMensaje(ana.id, { texto: 'x', autor: 'atleta', respondeA: sesMsg.id })), 'desde el chat no cita uno de una sesión (mismo hilo)');
+  const rS = await a5.comentar({ atletaId: ana.id, sesionId: sesMsg.sesion_id, texto: 'En la sesión', autor: 'atleta', respondeA: sesMsg.id });
+  check(rS.responde_a === sesMsg.id, 'en el hilo de la sesión, sí');
+  check(await a5.reaccionarMensaje(hola.id, '👍') === '👍' && await a5.reaccionarMensaje(hola.id, '🙏') === '🙏' && await a5.reaccionarMensaje(hola.id, '🙏') === null, 'reaccionar, cambiar y quitar');
+  check(await lanza(() => a5.reaccionarMensaje(paraRuben.id, '👍')) && await lanza(() => a5.reaccionarMensaje(prog.id, '👍')) && await lanza(() => a5.reaccionarMensaje(hola.id, '🍺')),
+    'no a lo de Rubén, ni al programado, ni con otros emojis');
+  await b5.insert('comentario_reacciones', [{ comentario_id: hola.id, emoji: '💪', usuario_id: 'otro' }]);
+  check((await b5.select('comentario_reacciones', {}))[0].usuario_id !== 'otro', 'la reacción va a su nombre aunque mande otro');
+  await a5.destacar(hola.id, true);
+  check((await a5.destacados(ana.id)).length === 1 && await lanza(() => a5.destacar(prog.id, true)), 'destacar (no el programado)');
+  check((await a5.editarMensaje(r.id, 'Hola, Pelayo')).editado_en && await lanza(() => a5.editarMensaje(hola.id, 'x')), 'edita lo suyo (no lo del coach)');
+  check(await lanza(() => b5.update('comentarios', { eliminado_en: new Date().toISOString() }, { eq: { id: r.id } })) && await lanza(() => b5.update('comentarios', { responde_a: null }, { eq: { id: r.id } })),
+    '«eliminado» y la cita no se tocan a mano');
+  check((await b5.delete('comentarios', { eq: { id: r.id } }), (await a5.conversacion(ana.id)).some((c) => c.id === r.id)), 'no borra a mano lo suyo');
+  check((await a5.eliminarMensaje(r)).estado === 'eliminado' && (await a5.conversacion(ana.id)).find((c) => c.id === r.id).texto === 'Se eliminó este mensaje', 'lo elimina para todos');
+  check(await lanza(() => a5.eliminarMensaje(hola)), 'no elimina lo del coach');
+  await b5.auth.entrar('pelayo@fbe.demo', 'demo');
+  check((await a5.destacados(ana.id)).length === 0, 'el coach no ve los destacados de Ana');
+  check(!(await a5.conversacion(ana.id)).find((c) => c.id === r.id).texto.includes('Pelayo'), 'ni el texto de lo que Ana eliminó');
+  check((await a5.buscarMensajes('pelayo')).every((m) => m.id !== r.id), 'ni lo encuentra al buscar');
+  await a5.cambiarEstadoConversacion(ana.id, { archivada: true });
+  const otros = atl.filter((x) => x.id !== ana.id);
+  for (const x of otros.slice(0, 3)) await a5.cambiarEstadoConversacion(x.id, { fijada: true });
+  check(await lanza(() => a5.cambiarEstadoConversacion(otros[3].id, { fijada: true })), 'como mucho 3 fijadas');
+  check(!(await a5.estadoConversaciones())[ana.id]?.fijada_en, 'archivada, no se fija');
+  await b5.auth.entrar('ana@fbe.demo', 'demo');
+  check(Object.keys(await a5.estadoConversaciones()).length === 0 && await lanza(() => a5.cambiarEstadoConversacion(ana.id, { fijada: true })), 'Ana no ve ni toca el estado de las conversaciones');
+  await a5.enviarMensaje(ana.id, { texto: 'Vuelvo', autor: 'atleta' });
+  await a5.marcarPresencia();
+  await b5.auth.entrar('pelayo@fbe.demo', 'demo');
+  check(!(await a5.estadoConversaciones())[ana.id].archivada_en, 'un mensaje nuevo de Ana la saca de archivadas');
+  await a5.marcarPresencia();
+  check(!!(await a5.ultimaConexion(ana.perfil_id)) && !(await a5.ultimaConexion(ruben.perfil_id)), 'el coach ve la última conexión de Ana (Rubén no ha entrado)');
+  check(await lanza(() => b5.insert('presencia', [{ usuario_id: ana.perfil_id, ultima_conexion: new Date().toISOString() }])), 'la presencia no se escribe a mano');
+  await b5.auth.entrar('ruben@fbe.demo', 'demo');
+  check(!(await a5.ultimaConexion(ana.perfil_id)) && !!(await a5.ultimaConexion()), 'Rubén no ve la de Ana; sí la del coach');
+  await b5.auth.entrar('ana@fbe.demo', 'demo');
+  await a5.marcarPresencia(false);
+  check(!(await a5.ultimaConexion()), 'Ana la oculta y deja de ver la del coach');
+  await b5.auth.entrar('pelayo@fbe.demo', 'demo');
+  check(!(await a5.ultimaConexion(ana.perfil_id)) && (await a5.eliminarMensaje(prog)).estado === 'cancelado', 'el coach ya no ve la de Ana; y cancela su programado');
+  check(b5.canalChat(ana.id, {}) === null || typeof b5.canalChat(ana.id, {})?.soltar === 'function', 'el canal de «escribiendo…» de la demo (sin BroadcastChannel, nada)');
+}
+
+console.log('\nLo que encontró la revisión de seguridad de la 032, también en la demo');
+{
+  const b6 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a6 = crearApi(b6);
+  const coach = () => b6.auth.entrar('pelayo@fbe.demo', 'demo'), comoAna = () => b6.auth.entrar('ana@fbe.demo', 'demo');
+  await coach();
+  const ana = (await a6.atletas()).find((a) => a.nombre === 'Ana López');
+  const hola = await a6.enviarMensaje(ana.id, { texto: 'Hola', autor: 'coach' });
+  await comoAna();
+  const foto = await a6.enviarMensaje(ana.id, { texto: 'Mi rodilla', archivo: new Blob(['jpg'], { type: 'image/jpeg' }), autor: 'atleta' });
+  const [adj] = await b6.select('archivos', { eq: { id: foto.archivo_id } });
+  check(!!(await a6.urlArchivo(adj.ruta)), 'Ana ve su foto del chat');
+  await coach();
+  const resp = await a6.comentar({ atletaId: ana.id, archivoId: adj.id, texto: 'Hielo hoy', autor: 'coach' });
+  await comoAna();
+  await b6.delete('archivos', { eq: { id: adj.id } });
+  check((await b6.select('archivos', { eq: { id: adj.id } })).length === 1 && (await b6.select('comentarios', { eq: { id: resp.id } })).length === 1,
+    'M2: Ana no borra desde archivos una foto del chat con mensajes (ni se lleva el del coach)');
+  check(!(await b6.storage.borrar([adj.ruta])).length && !!(await a6.urlArchivo(adj.ruta)), 'ni la borra de Storage a mano');
+  const el = await a6.eliminarMensaje(foto);
+  check(el.estado === 'eliminado' && el.almacenamiento === 'pendiente' && await lanza(() => a6.urlArchivo(adj.ruta)), 'M1: la elimina para todos y deja de verla al momento (queda en la cola)');
+  check((await b6.select('comentarios', { eq: { id: resp.id } }))[0]?.texto === 'Hielo hoy', 'la respuesta del coach se queda');
+  check(await lanza(() => b6.rpc('storage_pendiente', {})), 'Ana no ve la cola');
+  await coach();
+  check((await b6.rpc('storage_pendiente', {})).includes(adj.ruta) && (await a6.limpiarAlmacenamiento()) >= 1 && !(await b6.rpc('storage_pendiente', {})).length, 'el coach la vacía al abrir la app');
+  check(await lanza(() => a6.urlArchivo(adj.ruta)), 'y ya no está en Storage');
+  // Un adjunto que borra el coach (o una cascada): sus mensajes quedan eliminados, no desaparecen
+  await comoAna();
+  const foto2 = await a6.enviarMensaje(ana.id, { texto: 'Otra', archivo: new Blob(['jpg'], { type: 'image/jpeg' }), autor: 'atleta' });
+  await coach();
+  await b6.delete('archivos', { eq: { id: foto2.archivo_id } });
+  const f2 = (await b6.select('comentarios', { eq: { id: foto2.id } }))[0];
+  check(f2?.eliminado_en && f2.texto === 'Se eliminó este mensaje' && !f2.archivo_id, 'el coach borra el adjunto: el mensaje queda «Se eliminó este mensaje»');
+  // L2: de baja, ni reacciones, ni destacados, ni editar
+  await comoAna();
+  const mio = await a6.enviarMensaje(ana.id, { texto: 'Antes de la baja', autor: 'atleta' });
+  await coach();
+  await b6.update('atletas', { estado: 'baja' }, { eq: { id: ana.id } });
+  await comoAna();
+  check(await lanza(() => a6.reaccionarMensaje(hola.id, '👍')) && await lanza(() => a6.destacar(hola.id, true)) && await lanza(() => a6.editarMensaje(mio.id, 'Cambio')),
+    'L2: de baja, Ana no reacciona, ni destaca, ni edita');
+  await coach();
+  await b6.update('atletas', { estado: 'activo' }, { eq: { id: ana.id } });
+  // Leído: lo pone la base; no se adelanta ni vuelve a «no leído»
+  await comoAna();
+  await b6.update('comentarios', { leido_en: '2001-01-01T00:00:00Z' }, { eq: { id: hola.id } });
+  const leido = (await b6.select('comentarios', { eq: { id: hola.id } }))[0].leido_en;
+  check(leido && Math.abs(Date.parse(leido) - Date.now()) < 60000, 'el leído lo pone la base (no la hora que mande el móvil)');
+  check(await lanza(() => b6.update('comentarios', { leido_en: null }, { eq: { id: hola.id } })), 'y no vuelve a «no leído»');
+  // L3: sin «Mostrar cuándo estoy en línea», el leído es solo del día, y no hay canal de «escribiendo…»
+  await a6.marcarPresencia(false);
+  await coach();
+  const hola2 = await a6.enviarMensaje(ana.id, { texto: 'Otro', autor: 'coach' });
+  await comoAna();
+  await a6.marcarLeidos?.([hola2.id]);
+  if (!(await b6.select('comentarios', { eq: { id: hola2.id } }))[0].leido_en) await b6.update('comentarios', { leido_en: new Date().toISOString() }, { eq: { id: hola2.id } });
+  const l2 = (await b6.select('comentarios', { eq: { id: hola2.id } }))[0].leido_en;
+  check(l2 && /T(22|23):00:00/.test(new Date(l2).toISOString()), 'L3: oculta, su leído se guarda solo con el día (medianoche de Madrid)');
+  check(b6.canalChat(ana.id, {}) === null, 'y no hay canal: ni «en línea» ni «escribiendo…»');
+  // sesion_id y checkin_id no cambian al editar
+  const conSesion = (await a6.conversacion(ana.id)).find((c) => c.sesion_id && c.autor === 'atleta');
+  if (conSesion) check(await lanza(() => b6.update('comentarios', { sesion_id: null }, { eq: { id: conSesion.id } })), 'un mensaje no cambia de sesión al editarlo');
+  check(typeof a6.borrarMensaje === 'undefined', 'ya no hay api.borrarMensaje');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

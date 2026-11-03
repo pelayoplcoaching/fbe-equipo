@@ -673,6 +673,8 @@ console.log('\nChat y diario (v0.18)');
   // La miniatura no llegó a subirse: el atleta puede quitarla (y solo quitarla)
   const [sinPoster] = await b.update('archivos', { poster_ruta: null }, { eq: { id: tecnica.id } });
   check(sinPoster.poster_ruta === null && await lanza(() => b.update('archivos', { poster_ruta: `${ana.id}/otra.jpg` }, { eq: { id: tecnica.id } })), 'si la miniatura falla al subir, se queda sin ella; otra no se le puede poner');
+  check((await b.sql(`select 1 from fbe_privado.storage_por_borrar where ruta = $1`, [tecnica.poster_ruta])).length === 1 && await lanza(() => api.urlArchivo(tecnica.poster_ruta)),
+    '(v0.54) la miniatura que deja de estar registrada: el atleta ya no la ve, y va a la cola de Storage');
   const conv = await api.conversacion(ana.id);
   const ultimos = conv.slice(-2);
   check(conv.length === antes + 2 && ultimos[0].archivo?.tipo === 'adjunto' && ultimos[0].contexto?.nombre === null && ultimos[1].archivo?.tipo === 'video_tecnica' && ultimos[1].contexto?.nombre === 'vídeo'
@@ -700,20 +702,47 @@ console.log('\nChat y diario (v0.18)');
   await b.auth.entrar('ana@test', 'contraseña-ana-1');
   const conv2 = await api.conversacion(ana.id);
   check(conv2.at(-1).id === resp.id && conv2.filter((c) => c.archivoId === tecnica.id).length === 1, 'Ana ve la respuesta; el vídeo sale una vez (en su primer mensaje)');
-  // El coach contestó dentro del hilo de la foto: al borrar la foto se van los dos mensajes
+  // El coach contestó dentro del hilo de la foto
   await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
   const respFoto = await api.comentar({ atletaId: ana.id, archivoId: adjunto.id, texto: 'Esa rodilla, con hielo hoy', autor: 'coach' });
   check(respFoto.adjunto === true, 'la respuesta del coach a la foto también es un mensaje del chat');
   await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  // (v0.54, revisión de la 032) Una foto del chat con mensajes no se borra desde archivos (se saltaría las 48 horas y se
+  // llevaría lo del coach): va por eliminar para todos, y lo del coach se queda
   await api.borrarArchivo(adjunto);
-  check((await b.select('comentarios', { in: { id: [foto.id, respFoto.id] } })).length === 0 && !(await api.conversacion(ana.id)).some((c) => c.archivoId === adjunto.id),
-    'al borrar la foto del chat se van sus mensajes (el suyo y la respuesta)');
+  check((await b.select('comentarios', { in: { id: [foto.id, respFoto.id] } })).length === 2 && !!(await api.urlArchivo(adjunto.ruta)), 'borrar la foto del chat «desde el diario» no hace nada (ni a sus mensajes)');
+  const elF = await api.eliminarMensaje(foto);
+  check(elF.estado === 'eliminado' && elF.almacenamiento === 'pendiente', 'Ana la elimina para todos: su archivo, a la cola (Storage no le deja borrar lo que ya no tiene fila)');
+  check(await lanza(() => api.urlArchivo(adjunto.ruta)), 'y ya no la ve');
+  const trasF = await b.select('comentarios', { in: { id: [foto.id, respFoto.id] } });
+  check(trasF.find((c) => c.id === foto.id)?.eliminado_en && trasF.find((c) => c.id === respFoto.id)?.texto === 'Esa rodilla, con hielo hoy', 'su mensaje queda eliminado; la respuesta del coach se queda (sin la foto)');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(!!(await api.urlArchivo(adjunto.ruta)), 'el coach aún la tiene en Storage, hasta que vacía la cola');
+  check((await api.limpiarAlmacenamiento()) >= 1 && (await b.sql(`select 1 from storage.objects where name = $1`, [adjunto.ruta])).length === 0, 'al abrir la app, la cola se vacía: fuera de Storage');
+  check((await api.limpiarAlmacenamiento()) === 0, 'y no queda nada');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.limpiarAlmacenamiento()) === 0, '(un atleta no vacía la cola)');
   const foto2 = await api.enviarMensaje(ana.id, { texto: '', archivo: new Blob(['jpg'], { type: 'image/jpeg' }), autor: 'atleta' });
   const adjunto2 = (await b.select('archivos', { eq: { id: foto2.archivo_id } }))[0];
   check(foto2.texto === 'Foto', 'una foto sin texto lleva «Foto» como texto');
-  await api.borrarMensaje((await api.conversacion(ana.id)).find((c) => c.id === foto2.id));
-  check(!(await api.conversacion(ana.id)).some((c) => c.id === foto2.id) && (await b.select('archivos', { eq: { id: adjunto2.id } })).length === 0, 'borra su mensaje con la foto, y la foto se va con él');
-  check(await lanza(() => api.borrarMensaje({ id: resp.id })) || (await b.select('comentarios', { eq: { id: resp.id } })).length === 1, 'pero no puede borrar los del coach');
+  await api.eliminarMensaje(foto2);
+  check((await api.conversacion(ana.id)).find((c) => c.id === foto2.id)?.eliminado_en && (await b.select('archivos', { eq: { id: adjunto2.id } })).length === 0, 'elimina su mensaje con la foto, y la foto se va con él');
+  check(await lanza(() => api.eliminarMensaje({ id: resp.id })) && (await b.select('comentarios', { eq: { id: resp.id } })).length === 1, 'pero no puede eliminar los del coach');
+  // El coach elimina una foto suya: la borra de Storage al momento (y, si Storage falla, lo dice y queda en la cola)
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const fotoC = await api.enviarMensaje(ana.id, { texto: 'Tu técnica', archivo: new Blob(['jpg'], { type: 'image/jpeg' }), autor: 'coach' });
+  const rutaC = (await b.select('archivos', { eq: { id: fotoC.archivo_id } }))[0].ruta;
+  const elC = await api.eliminarMensaje(fotoC);
+  check(elC.almacenamiento === 'borrado' && (await b.sql(`select 1 from storage.objects where name = $1`, [rutaC])).length === 0, 'el coach elimina una foto suya: fuera de Storage al momento');
+  const fotoC2 = await api.enviarMensaje(ana.id, { texto: 'Otra', archivo: new Blob(['jpg'], { type: 'image/jpeg' }), autor: 'coach' });
+  const rutaC2 = (await b.select('archivos', { eq: { id: fotoC2.archivo_id } }))[0].ruta;
+  const borrarReal = b.storage.borrar;
+  b.storage.borrar = async () => { throw new Error('Sin conexión.'); };
+  const elC2 = await api.eliminarMensaje(fotoC2);
+  b.storage.borrar = borrarReal;
+  check(elC2.almacenamiento === 'pendiente' && (await b.sql(`select 1 from fbe_privado.storage_por_borrar where ruta = $1`, [rutaC2])).length === 1, 'si Storage falla, queda en la cola (y la app lo avisa)');
+  check((await api.limpiarAlmacenamiento()) >= 1 && (await b.sql(`select 1 from storage.objects where name = $1`, [rutaC2])).length === 0, 'y se reintenta al vaciarla');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
   await api.borrarArchivo(tecnica);
 }
 
@@ -973,6 +1002,7 @@ const suelto = await api.subirArchivo(ana.id, new Blob(['otro'], { type: 'video/
 await b.delete('archivos', { eq: { id: suelto.id } });
 await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
 check((await b.sql(`select count(*)::int n from storage.objects`))[0].n === 2, 'un archivo que la atleta borró solo de la tabla sigue en su carpeta');
+check((await b.sql(`select 1 from fbe_privado.storage_por_borrar where ruta = $1`, [suelto.ruta])).length === 1, '(v0.54) y en la cola de Storage: el atleta ya no lo ve ni lo borra');
 // v0.48: una tarea suya hecha (con su respuesta) y otra de vídeo, que también tienen que volver
 {
   const tVid = await api.ponerTarea(ana.id, { tipo: 'video', titulo: 'Vídeo del press', ejercicio_id: press.id, fecha: hoy });
@@ -1594,6 +1624,94 @@ console.log('\nTareas, mensajes programados, tu bloque, tu mes y el negocio (v0.
   check(!pnA || (pnA.activos === 0 && pnA.cobrado12 === 0), 'un atleta no saca nada del negocio');
   await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
   await b.sql(`delete from tareas`); await b.sql(`delete from tareas_plantillas`);
+}
+
+console.log('\nEl chat como WhatsApp (v0.54, migración 032)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [aAna] = await b.sql(`select id, perfil_id from atletas where email = 'ana@test'`);
+  const [aLuis] = await b.sql(`select id, perfil_id from atletas where email = 'luis@test'`);
+  await b.sql(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await b.sql(`delete from chat_cupos`);
+  const hola = await api.enviarMensaje(aAna.id, { texto: '¿Qué tal *la rodilla*?', autor: 'coach' });
+  const paraLuis = await api.enviarMensaje(aLuis.id, { texto: 'Luis, descansa', autor: 'coach' });
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const resp = await api.enviarMensaje(aAna.id, { texto: 'Mejor', autor: 'atleta', respondeA: hola.id });
+  check(resp.responde_a === hola.id, 'responder citando: el mensaje lleva su cita');
+  check(await lanza(() => api.enviarMensaje(aAna.id, { texto: 'x', autor: 'atleta', respondeA: paraLuis.id })), 'citar uno de otra conversación, no (lo dice la base)');
+  check(await api.reaccionarMensaje(hola.id, '💪') === '💪' && await api.reaccionarMensaje(hola.id, '❤️') === '❤️', 'reaccionar y cambiar la reacción');
+  let conv = await api.conversacion(aAna.id);
+  check(conv.find((c) => c.id === hola.id).reacciones.length === 1 && conv.find((c) => c.id === hola.id).reacciones[0].emoji === '❤️', 'la conversación trae las reacciones (una por persona)');
+  check(await api.reaccionarMensaje(hola.id, '❤️') === null && !(await api.conversacion(aAna.id)).find((c) => c.id === hola.id).reacciones.length, 'tocar la misma la quita');
+  check(await lanza(() => api.reaccionarMensaje(hola.id, '🍺')), 'solo las seis de la lista');
+  await api.destacar(hola.id, true);
+  await api.destacar(hola.id, true);
+  check((await api.conversacion(aAna.id)).find((c) => c.id === hola.id).destacado === true && (await api.destacados(aAna.id)).map((x) => x.id).join() === hola.id, 'destacar (dos veces no falla) y la lista de destacados');
+  const ed = await api.editarMensaje(resp.id, 'Mucho mejor');
+  check(ed.texto === 'Mucho mejor' && !!ed.editado_en, 'editar lo propio: «Editado»');
+  check(await lanza(() => api.editarMensaje(hola.id, 'No')) && await lanza(() => api.editarMensaje(resp.id, '   ')), 'no lo del coach, ni en blanco');
+  check((await api.eliminarMensaje(resp)).estado === 'eliminado', 'eliminar para todos');
+  conv = await api.conversacion(aAna.id);
+  const elim = conv.find((c) => c.id === resp.id);
+  check(elim.eliminado_en && elim.texto === 'Se eliminó este mensaje' && elim.responde_a === null && !elim.reacciones.length, 'queda «Se eliminó este mensaje», sin cita ni reacciones');
+  // Una foto del chat eliminada: se va de Storage
+  const foto = await api.enviarMensaje(aAna.id, { texto: '', archivo: new Blob(['jpg'], { type: 'image/jpeg' }), autor: 'atleta' });
+  const [arch] = await b.sql(`select ruta from archivos where id = $1`, [foto.archivo_id]);
+  check((await b.sql(`select 1 from storage.objects where name = $1`, [arch.ruta])).length === 1, 'la foto, subida');
+  const rFoto = await api.eliminarMensaje({ id: foto.id });
+  check(rFoto.estado === 'eliminado' && !(await b.sql(`select 1 from archivos where ruta = $1`, [arch.ruta])).length, 'al eliminarla para todos, la foto se va de la base');
+  check((await b.sql(`select 1 from fbe_privado.storage_por_borrar where ruta = $1`, [arch.ruta])).length === 1, 'y su ruta queda en la cola de Storage');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.limpiarAlmacenamiento();
+  check(!(await b.sql(`select 1 from storage.objects where name = $1`, [arch.ruta])).length && !(await b.sql(`select 1 from fbe_privado.storage_por_borrar where ruta = $1`, [arch.ruta])).length, 'el barrido del coach la quita de Storage y de la cola');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.conversacion(aAna.id)).find((c) => c.id === foto.id)?.eliminado_en, 'y su mensaje queda como eliminado');
+  // Presencia
+  const p1 = await api.marcarPresencia();
+  check(p1?.visible === true && !!p1.ultima_conexion, 'marca su última conexión');
+  check((await api.miPresencia()).visible === true, 'y la lee');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.marcarPresencia();
+  check(!!(await api.ultimaConexion(aAna.perfil_id)), 'el coach ve la última conexión de Ana');
+  check(!(await api.ultimaConexion(aLuis.perfil_id)), '(Luis aún no ha entrado: nada)');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check(!!(await api.ultimaConexion()), 'Ana ve la del coach');
+  await api.marcarPresencia(false);
+  check((await api.miPresencia()).visible === false && !(await api.ultimaConexion()), 'la oculta: deja de ver la del coach');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(!(await api.ultimaConexion(aAna.perfil_id)), 'y el coach la de Ana');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.marcarPresencia(true);
+  // Lista del coach: estado, búsqueda, no leído
+  await api.enviarMensaje(aAna.id, { texto: 'Pelayo, una pregunta sobre la sentadilla', autor: 'atleta' });
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.cambiarEstadoConversacion(aLuis.id, { fijada: true });
+  await api.cambiarEstadoConversacion(aAna.id, { archivada: true });
+  let lista = await api.conversaciones();
+  check(!!lista.find((x) => x.atleta.id === aLuis.id).estado?.fijada_en && !!lista.find((x) => x.atleta.id === aAna.id).estado?.archivada_en, 'fijar y archivar (la lista trae el estado de cada una)');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.enviarMensaje(aAna.id, { texto: 'Otra cosa', autor: 'atleta' });
+  check(Object.keys(await api.estadoConversaciones()).length === 0, 'Ana no ve el estado de las conversaciones');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  lista = await api.conversaciones();
+  check(!lista.find((x) => x.atleta.id === aAna.id).estado?.archivada_en, 'su mensaje nuevo la saca de archivadas');
+  await api.cambiarEstadoConversacion(aLuis.id, { noLeida: true });
+  check((await api.conversaciones()).find((x) => x.atleta.id === aLuis.id).estado.no_leida === true, '«Marcar como no leído»');
+  const enc = await api.buscarMensajes('SENTADILLA');
+  check(enc.length >= 1 && enc.every((m) => m.atleta_id === aAna.id) && (await api.buscarMensajes('x')).length === 0, 'buscar en los mensajes (sin mayúsculas; 2 letras como mínimo)');
+  check(lista.find((x) => x.atleta.id === aAna.id).sinLeer >= 1 && (await api.mensajesSinLeer()) >= 1, 'lo sin leer se cuenta (lo eliminado, no)');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.buscarMensajes('sentadilla')).length === 0, 'un atleta no busca en los mensajes de nadie');
+  // Programado: invisible por las vías nuevas
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const manana = new Date(Date.now() + 864e5).toISOString();
+  const prog = await api.enviarMensaje(aAna.id, { texto: 'Sorpresa', autor: 'coach', enviarEn: manana });
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check(await lanza(() => api.reaccionarMensaje(prog.id, '👍')) && await lanza(() => api.destacar(prog.id, true)) && await lanza(() => api.enviarMensaje(aAna.id, { texto: 'x', autor: 'atleta', respondeA: prog.id })),
+    'al programado no se reacciona, ni se destaca, ni se cita antes de que salga');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check((await api.eliminarMensaje(prog)).estado === 'cancelado', 'el coach cancela un programado (eliminar = cancelar el envío)');
+  await b.sql(`delete from conversacion_estado`); await b.sql(`delete from chat_cupos`);
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

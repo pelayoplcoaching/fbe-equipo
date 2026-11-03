@@ -31,6 +31,7 @@ import { palabrasMovimiento } from '../logica/variantes.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
 import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
+import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -119,6 +120,14 @@ const falta030 = (e) => {
 };
 // ¿Un mensaje o un aviso programado que aún no ha salido?
 const programado = (x) => !!x?.enviar_en && Date.parse(x.enviar_en) > Date.now();
+// El chat como WhatsApp (v0.54) sin la migración 032 en la base
+const falta032 = (e) => {
+  const m = e?.message || '';
+  if (/\b(responde_a|editado_en|eliminado_en|comentario_reacciones|comentario_destacados|conversacion_estado|presencia|presencia_marcar|comentario_eliminar|chat_buscar)\b/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna|PGRST20/i.test(m)) {
+    throw new Error(`Para responder, reaccionar, editar o eliminar mensajes falta ejecutar la migración 032 en Supabase (supabase/migraciones/032_chat_whatsapp.sql). Detalle: ${m}`);
+  }
+  throw e;
+};
 // La función de entrar sin la migración 028 (sin el parámetro de las normas)
 const sinNormas = (e) => /comunidad_unirme/.test(`${e?.message || ''}`) && /p_normas|schema cache|does not exist|no existe|PGRST202/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta018 = (e) => {
@@ -179,9 +188,11 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
   'archivos', 'comentarios', 'recursos', 'notas_ejercicio', 'respuestas_guardadas', 'avisos', 'habitos', 'registros_habito',
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
-  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas'];
-// Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030): sin ellas, la copia sale igual
-const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas'];
+  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
+  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado'];
+// Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032): sin ellas, la copia sale igual
+const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
+  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado'];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
 
@@ -1219,7 +1230,7 @@ export function crearApi(backend) {
         b.select('checkins', { eq: { atleta_id: atletaId }, gte: { semana_inicio: sumarDias(desde, -7) } }).catch(() => []),
         b.select('pesos', { eq: { atleta_id: atletaId }, gte: { fecha: desde }, order: [['fecha', 'asc']] }).catch(() => []),
         b.select('archivos', { eq: { atleta_id: atletaId }, gte: { fecha: desde } }),
-        b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'atleta' }, gte: { creado_en: `${desde}T00:00:00` } }),
+        b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'atleta' }, gte: { creado_en: `${desde}T00:00:00` } }).then((xs) => xs.filter((c) => !c.eliminado_en)),
       ]);
       const recordsPorSesion = {};
       for (const e of eventosRecord(series).eventos) if (e.sesion_id) (recordsPorSesion[e.sesion_id] ||= []).push(e);
@@ -1427,13 +1438,15 @@ export function crearApi(backend) {
       return b.select('comentarios', { eq, order: [['creado_en', 'asc']] });
     },
     // dibujo: líneas y ángulos sobre un fotograma del vídeo ({ t, formas }), solo en comentarios de un vídeo
-    async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null }) {
+    // respondeA (v0.54): el mensaje que cita (de la misma conversación y del mismo hilo; lo comprueba la base)
+    async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null, respondeA = null }) {
       const fila = { atleta_id: atletaId, sesion_id: sesionId, checkin_id: checkinId, archivo_id: archivoId, texto: texto.trim(), autor };
       if (archivoId && dibujo) {
         if (!dibujoValido(dibujo)) throw new Error('El dibujo no tiene la forma que toca');
         fila.dibujo = dibujo;
       }
-      return (await b.insert('comentarios', [fila]))[0];
+      if (respondeA) fila.responde_a = respondeA;
+      return (await b.insert('comentarios', [fila]).catch(respondeA ? falta032 : (e) => { throw e; }))[0];
     },
     async marcarLeidos(ids) {
       if (!ids.length) return [];
@@ -1441,43 +1454,172 @@ export function crearApi(backend) {
     },
     // Lo que le ha escrito el coach y aún no ha leído
     async noLeidos(atletaId) {
-      return b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, nulo: ['leido_en'], order: [['creado_en', 'desc']] });
+      // (v0.54) lo que el coach eliminó ya no cuenta
+      return (await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, nulo: ['leido_en'], order: [['creado_en', 'desc']] })).filter((c) => !c.eliminado_en);
     },
     // Un comentario es «un mensaje del chat» si va suelto o si lleva un adjunto del chat (lo marca la base);
     // lo demás es una respuesta pegada a una sesión, un check-in o un vídeo del diario
     esMensaje(c) { return !!c && (!!c.adjunto || (!c.sesion_id && !c.checkin_id && !c.archivo_id)); },
     // El chat (v0.18): todos los mensajes con un atleta en un solo hilo, con su contexto (sesión, check-in o vídeo)
     // y el archivo si lo hay. Los más antiguos primero.
+    // v0.54: cada mensaje, además, con sus reacciones ([{ usuario_id, emoji }]), si lo he destacado yo, qué lleva
+    // (medio: 'foto' | 'video' | 'archivo') y si se editó o se eliminó. Sin la migración 032, sin reacciones ni destacados.
     async conversacion(atletaId, { limite = 400 } = {}) {
       const todos = await b.select('comentarios', { eq: { atleta_id: atletaId }, order: [['creado_en', 'desc']], limit: limite });
       const mensajes = todos.reverse();
       const sesIds = unicos(mensajes.map((c) => c.sesion_id).filter(Boolean));
       const arcIds = unicos(mensajes.map((c) => c.archivo_id).filter(Boolean));
-      const [sesiones, archivos] = await Promise.all([
+      const ids = mensajes.map((c) => c.id);
+      const [sesiones, archivos, reacciones, destacados] = await Promise.all([
         sesIds.length ? b.select('sesiones', { in: { id: sesIds }, cols: 'id,nombre,semana_id' }).catch(() => []) : [],
         arcIds.length ? b.select('archivos', { in: { id: arcIds } }).catch(() => []) : [],
+        ids.length ? b.select('comentario_reacciones', { in: { comentario_id: ids }, cols: 'comentario_id,usuario_id,emoji' }).catch(() => []) : [],
+        ids.length && uid() ? b.select('comentario_destacados', { in: { comentario_id: ids }, eq: { usuario_id: uid() }, cols: 'comentario_id' }).catch(() => []) : [],
       ]);
-      const S = porId(sesiones), A = porId(archivos);
+      const S = porId(sesiones), A = porId(archivos), R = agrupar(reacciones, 'comentario_id'), D = new Set(destacados.map((x) => x.comentario_id));
       const vistos = new Set();
       return mensajes.map((c) => {
         const archivo = c.archivo_id ? A[c.archivo_id] || null : null;
-        // El vídeo o la foto se enseña en el primer mensaje de su hilo; los siguientes solo llevan la etiqueta
-        const conMedio = !!archivo && !vistos.has(archivo.id);
-        if (archivo) vistos.add(archivo.id);
+        // El vídeo o la foto se enseña en el primer mensaje de su hilo (que no se haya eliminado); los siguientes solo
+        // llevan la etiqueta
+        const conMedio = !!archivo && !vistos.has(archivo.id) && !c.eliminado_en;
+        if (archivo && conMedio) vistos.add(archivo.id);
         const contexto = c.sesion_id ? { tipo: 'sesion', id: c.sesion_id, nombre: S[c.sesion_id]?.nombre || 'una sesión' }
           : c.checkin_id ? { tipo: 'checkin', id: c.checkin_id, nombre: 'check-in' }
           : archivo ? { tipo: 'archivo', id: archivo.id, nombre: archivo.tipo === 'adjunto' ? null : /^video/.test(archivo.mime || '') || archivo.tipo === 'video_tecnica' ? 'vídeo' : 'foto' }
           : null;
-        return { ...c, contexto, archivo: conMedio ? archivo : null, archivoId: archivo?.id || null, programado: programado(c) };
+        const medio = archivo ? medioDe({ archivo }) : null;
+        return { ...c, contexto, archivo: conMedio ? archivo : null, archivoId: archivo?.id || null, medio, programado: programado(c),
+          reacciones: c.eliminado_en ? [] : (R[c.id] || []).map(({ usuario_id, emoji }) => ({ usuario_id, emoji })), destacado: D.has(c.id) };
       });
     },
+    // v0.54: responder, reaccionar, editar, eliminar para todos y destacar (migración 032)
+    // Reaccionar: la misma la quita; otra la cambia. Devuelve la que queda (o null). Una por persona y mensaje.
+    async reaccionarMensaje(comentarioId, emoji) {
+      if (!REACCIONES_CHAT.includes(emoji)) throw new Error('Esa reacción no está en la lista');
+      const yo = uid();
+      const [mia] = await b.select('comentario_reacciones', { eq: { comentario_id: comentarioId, usuario_id: yo }, cols: 'emoji' }).catch(falta032);
+      const queda = siguienteReaccion(mia?.emoji || null, emoji);
+      if (!queda) await b.delete('comentario_reacciones', { eq: { comentario_id: comentarioId, usuario_id: yo } });
+      else if (mia) await b.update('comentario_reacciones', { emoji: queda }, { eq: { comentario_id: comentarioId, usuario_id: yo } });
+      else await b.insert('comentario_reacciones', [{ comentario_id: comentarioId, emoji: queda }]).catch(falta032);
+      return queda;
+    },
+    async editarMensaje(id, texto) {
+      const t = String(texto || '').trim();
+      if (!t) throw new Error('Escribe el mensaje');
+      if (t.length > 4000) throw new Error('Un mensaje, hasta 4000 letras');
+      const r = (await b.update('comentarios', { texto: t }, { eq: { id } }).catch(falta032))[0];
+      if (!r) throw new Error('Ese mensaje ya no se puede editar');
+      return r;
+    },
+    // Eliminar para todos lo propio (48 horas); un programado del coach que aún no ha salido se cancela. Si llevaba una
+    // foto o un vídeo del chat, la base lo quita de su tabla (desde ahí nadie más que el coach lo ve) y lo pone en la cola
+    // de Storage. El coach lo borra de Storage al momento (y, si falla, se reintenta desde la cola); lo de un atleta lo
+    // borra la app del coach desde la cola (Storage no le deja borrar lo que ya no tiene su fila).
+    // Devuelve { estado: 'eliminado' | 'cancelado', almacenamiento: 'nada' | 'borrado' | 'pendiente' }
+    async eliminarMensaje(c) {
+      const r = await b.rpc('comentario_eliminar', { p_comentario: c.id || c }).catch(falta032);
+      const rutas = Array.isArray(r?.rutas) ? r.rutas.filter((x) => typeof x === 'string' && x) : [];
+      let almacenamiento = 'nada';
+      const coach = await api.esCoachAhora();
+      if (rutas.length) almacenamiento = coach ? await api.borrarDeStorage(rutas) : 'pendiente';
+      if (coach) api.limpiarAlmacenamiento().catch(() => {});
+      return { estado: r?.estado || 'eliminado', almacenamiento };
+    },
+    // ¿La sesión es la del coach? (para la cola de Storage)
+    async esCoachAhora() {
+      if (!uid()) return false;
+      const [p] = await b.select('perfiles', { eq: { id: uid() }, cols: 'rol' }).catch(() => []);
+      return p?.rol === 'coach';
+    },
+    // El coach borra de Storage y lo quita de la cola: 'borrado' o, si Storage falla, 'pendiente' (se reintenta al
+    // abrir la app y tras el siguiente borrado)
+    async borrarDeStorage(rutas) {
+      try {
+        await b.storage.borrar(rutas);
+        await b.rpc('storage_borrado', { p_rutas: rutas }).catch(() => {});
+        return 'borrado';
+      } catch { return 'pendiente'; }
+    },
+    // La cola de Storage (lo que ya no tiene su fila en archivos): la vacía el coach. Devuelve cuántas rutas ha quitado.
+    async limpiarAlmacenamiento() {
+      if (!(await api.esCoachAhora())) return 0;
+      let rutas;
+      try { rutas = await b.rpc('storage_pendiente', { p_limite: 200 }); } catch { return 0; }
+      rutas = (rutas || []).map((x) => (typeof x === 'string' ? x : x?.storage_pendiente || x?.r || null)).filter(Boolean);
+      if (!rutas.length) return 0;
+      return (await api.borrarDeStorage(rutas)) === 'borrado' ? rutas.length : 0;
+    },
+    async destacar(comentarioId, si = true) {
+      if (si) {
+        await b.insert('comentario_destacados', [{ comentario_id: comentarioId }]).catch((e) => {
+          if (/duplicate|23505|Ya existe/i.test(`${e?.codigo || ''} ${e?.message || ''}`)) return null;
+          return falta032(e);
+        });
+      } else await b.delete('comentario_destacados', { eq: { comentario_id: comentarioId, usuario_id: uid() } });
+      return si;
+    },
+    // Mis destacados de una conversación (los más recientes primero), con su mensaje
+    async destacados(atletaId) {
+      const mios = await b.select('comentario_destacados', { eq: { usuario_id: uid() }, order: [['creado_en', 'desc']] }).catch(() => []);
+      if (!mios.length) return [];
+      const msgs = porId(await b.select('comentarios', { in: { id: mios.map((x) => x.comentario_id) }, eq: { atleta_id: atletaId } }));
+      return mios.filter((x) => msgs[x.comentario_id]).map((x) => ({ ...msgs[x.comentario_id], destacado_en: x.creado_en }));
+    },
+    // Buscar en los mensajes de todas las conversaciones (el coach)
+    async buscarMensajes(texto, limite = 40) {
+      const t = String(texto || '').trim();
+      if (t.length < 2) return [];
+      return (await b.rpc('chat_buscar', { p_texto: t.slice(0, 100), p_limite: limite }).catch(falta032)) || [];
+    },
+    // El estado de las conversaciones del coach: { [atleta_id]: { fijada_en, archivada_en, no_leida } }
+    async estadoConversaciones() {
+      const filas = await b.select('conversacion_estado', {}).catch(() => []);
+      return Object.fromEntries(filas.map((x) => [x.atleta_id, x]));
+    },
+    // cambios: { fijada?: bool, archivada?: bool, noLeida?: bool }
+    async cambiarEstadoConversacion(atletaId, cambios = {}) {
+      const fila = { atleta_id: atletaId };
+      if ('fijada' in cambios) fila.fijada_en = cambios.fijada ? new Date().toISOString() : null;
+      if ('archivada' in cambios) fila.archivada_en = cambios.archivada ? new Date().toISOString() : null;
+      if ('noLeida' in cambios) fila.no_leida = !!cambios.noLeida;
+      return (await b.upsert('conversacion_estado', [fila], 'atleta_id').catch(falta032))[0];
+    },
+    // La última conexión: la mía (y si la enseño) y la de la otra parte (el coach, la de un atleta; un atleta, la de su
+    // coach). Sin la 032 (o si alguien la oculta), null.
+    async marcarPresencia(visible = null) {
+      return b.rpc('presencia_marcar', visible == null ? {} : { p_visible: !!visible }).catch(visible == null ? () => null : falta032);
+    },
+    async miPresencia() {
+      const yo = uid();
+      if (!yo) return { visible: true, ultima_conexion: null };
+      const [x] = await b.select('presencia', { eq: { usuario_id: yo } }).catch(() => []);
+      return { visible: x ? x.visible !== false : true, ultima_conexion: x?.ultima_conexion || null };
+    },
+    async ultimaConexion(usuarioId = null) {
+      const yo = uid();
+      const filas = await b.select('presencia', usuarioId ? { eq: { usuario_id: usuarioId } } : { neq: { usuario_id: yo } }).catch(() => []);
+      const x = filas.find((f) => f.usuario_id !== yo && f.visible !== false);
+      return x?.ultima_conexion || null;
+    },
+    // «escribiendo…» y «en línea» (el canal privado de la conversación); null si este backend no los tiene
+    canalChat(atletaId, oyente) {
+      return typeof b.canalChat === 'function' ? b.canalChat(atletaId, oyente) : null;
+    },
+    reiniciarChats() { if (typeof b.reiniciarChats === 'function') b.reiniciarChats(); },
     // El coach: una conversación por atleta, con el último mensaje y cuántos tiene sin leer; las que tienen
     // algo sin leer primero, luego por el último mensaje
+    // (v0.54) con el estado de cada una (fijada, archivada, «no leída»), qué lleva el último (foto o vídeo) y sin contar
+    // lo eliminado como sin leer. El orden fino (las fijadas arriba) lo pone la pantalla (ordenarConversaciones).
     async conversaciones() {
-      const [atletas, comentarios] = await Promise.all([
+      const COLS = 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id,enviar_en';
+      const [atletas, comentarios, estado] = await Promise.all([
         api.atletas(),
-        b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id,enviar_en' })
+        b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: `${COLS},adjunto,eliminado_en,editado_en` })
+          .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: COLS }))
           .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id' })),
+        api.estadoConversaciones(),
       ]);
       // (v0.48) El último mensaje es el último que ya ha salido; los programados se cuentan aparte
       const por = {};
@@ -1485,20 +1627,26 @@ export function crearApi(backend) {
         const x = (por[c.atleta_id] ||= { ultimo: null, sinLeer: 0, programados: 0 });
         if (programado(c)) { x.programados++; continue; }
         x.ultimo ||= c;
-        if (c.autor === 'atleta' && !c.leido_en) x.sinLeer++;
+        if (c.autor === 'atleta' && !c.leido_en && !c.eliminado_en) x.sinLeer++;
       }
-      return atletas.filter((a) => a.estado !== 'baja' || por[a.id]).map((a) => ({ atleta: a, ultimo: por[a.id]?.ultimo || null, sinLeer: por[a.id]?.sinLeer || 0, programados: por[a.id]?.programados || 0 }))
+      // Qué lleva el último de cada uno (foto, vídeo o archivo)
+      const arcIds = unicos(Object.values(por).map((x) => x.ultimo?.archivo_id));
+      const A = arcIds.length ? porId(await b.select('archivos', { in: { id: arcIds }, cols: 'id,tipo,mime' }).catch(() => [])) : {};
+      for (const x of Object.values(por)) if (x.ultimo?.archivo_id && A[x.ultimo.archivo_id]) x.ultimo = { ...x.ultimo, medio: medioDe({ archivo: A[x.ultimo.archivo_id] }) };
+      return atletas.filter((a) => a.estado !== 'baja' || por[a.id]).map((a) => ({ atleta: a, ultimo: por[a.id]?.ultimo || null, sinLeer: por[a.id]?.sinLeer || 0, programados: por[a.id]?.programados || 0, estado: estado[a.id] || null }))
         .sort((x, y) => (y.sinLeer > 0) - (x.sinLeer > 0) || String(y.ultimo?.creado_en || '').localeCompare(String(x.ultimo?.creado_en || '')) || x.atleta.nombre.localeCompare(y.atleta.nombre));
     },
-    // Cuántos mensajes de atletas tiene el coach sin leer (la insignia de Mensajes)
+    // Cuántos mensajes de atletas tiene el coach sin leer (la insignia de Mensajes); lo eliminado no cuenta
     async mensajesSinLeer() {
-      const filas = await b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'id' });
-      return filas.length;
+      const filas = await b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'id,eliminado_en' })
+        .catch(() => b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'id' }));
+      return filas.filter((c) => !c.eliminado_en).length;
     },
     // Enviar desde el chat: texto, o una foto o un vídeo con texto (adjunto). Si el vídeo es de técnica
     // (enDiario), se guarda como tal: entra en su diario y en tu bandeja de vídeos, con su propio hilo.
     // enviarEn (v0.48): un mensaje del coach programado para esa hora (solo texto); hasta entonces el atleta no lo ve
-    async enviarMensaje(atletaId, { texto = '', archivo = null, autor, enDiario = false, poster = null, duracion_seg = null, enviarEn = null }) {
+    // respondeA (v0.54): el mensaje que cita (con foto o vídeo, el primero de varios lo lleva)
+    async enviarMensaje(atletaId, { texto = '', archivo = null, autor, enDiario = false, poster = null, duracion_seg = null, enviarEn = null, respondeA = null }) {
       const t = String(texto || '').trim();
       if (enviarEn) {
         if (archivo) throw new Error('Los mensajes con foto o vídeo no se pueden programar');
@@ -1506,14 +1654,14 @@ export function crearApi(backend) {
         const cuando = Date.parse(enviarEn);
         if (!Number.isFinite(cuando) || cuando <= Date.now() + 60000) throw new Error('Elige una hora que aún no haya pasado');
         if (cuando > Date.now() + 90 * 864e5) throw new Error('Un mensaje se programa como mucho a 90 días vista');
-        return (await b.insert('comentarios', [{ atleta_id: atletaId, sesion_id: null, checkin_id: null, archivo_id: null, texto: t, autor, enviar_en: new Date(cuando).toISOString() }]).catch(falta030))[0];
+        return (await b.insert('comentarios', [{ atleta_id: atletaId, sesion_id: null, checkin_id: null, archivo_id: null, texto: t, autor, enviar_en: new Date(cuando).toISOString(), ...(respondeA ? { responde_a: respondeA } : {}) }]).catch(falta030).catch(falta032))[0];
       }
-      if (!archivo) return api.comentar({ atletaId, texto: t, autor });
+      if (!archivo) return api.comentar({ atletaId, texto: t, autor, respondeA });
       const esVideo = /^video\//.test(archivo.type || '');
       const tipo = enDiario ? (esVideo ? 'video_tecnica' : 'foto_progreso') : 'adjunto';
       const fila = await api.subirArchivo(atletaId, archivo, { tipo, nota_atleta: enDiario && t ? t.slice(0, 500) : null, poster, duracion_seg });
       try {
-        return await api.comentar({ atletaId, archivoId: fila.id, texto: t || (esVideo ? 'Vídeo' : 'Foto'), autor });
+        return await api.comentar({ atletaId, archivoId: fila.id, texto: t || (esVideo ? 'Vídeo' : 'Foto'), autor, respondeA: tipo === 'adjunto' ? respondeA : null });
       } catch (e) {
         // Sin su mensaje, un adjunto no es nada: se retira (un vídeo del diario se queda, ya está en el diario)
         if (tipo === 'adjunto') await api.borrarArchivo(fila).catch(() => {});
@@ -1533,16 +1681,11 @@ export function crearApi(backend) {
           c.enviar_en = new Date(cuando).toISOString();
         }
       }
-      const r = (await b.update('comentarios', c, { eq: { id } }).catch(falta030))[0];
+      // (v0.54) solo mientras sigue programado: uno que ya ha salido se edita como cualquier mensaje (en sus 15 minutos)
+      const r = (await b.update('comentarios', c, { eq: { id }, gte: { enviar_en: new Date().toISOString() } }).catch(falta030))[0];
       if (!r) throw new Error('Ese mensaje ya ha salido (o ya no está): no se puede cambiar');
       return r;
     },
-    // Borrar un mensaje propio (el coach, cualquiera); si llevaba un adjunto del chat, se va con él
-    async borrarMensaje(c) {
-      await b.delete('comentarios', { eq: { id: c.id } });
-      if (c.archivoId && c.archivo?.tipo === 'adjunto') await api.borrarArchivo(c.archivo).catch(() => {});
-    },
-
     // ------------------------------------------------------------ vídeos y fotos (Storage privado)
     async archivos(atletaId, tipo = null) {
       const eq = { atleta_id: atletaId };
@@ -1642,9 +1785,17 @@ export function crearApi(backend) {
       if (ruta) await b.delete('archivos', { eq: { ruta } }).catch(() => {});
     },
     async urlArchivo(ruta) { return b.storage.url(ruta); },
+    // (v0.54) Primero de Storage (mientras tiene su fila: el atleta solo puede borrar ahí lo que tiene fila y puede borrar)
+    // y después la fila; lo que no se haya podido borrar de Storage queda en la cola (lo pone la base) y lo vacía el coach.
+    // Devuelve 'borrado' | 'pendiente'.
     async borrarArchivo(archivo) {
+      const rutas = [archivo.ruta, ...(archivo.poster_ruta ? [archivo.poster_ruta] : [])];
+      let hechas = null;
+      try { hechas = await b.storage.borrar(rutas); } catch { hechas = null; }
       await b.delete('archivos', { eq: { id: archivo.id } });
-      await b.storage.borrar([archivo.ruta, ...(archivo.poster_ruta ? [archivo.poster_ruta] : [])]).catch(() => {});
+      const coach = await api.esCoachAhora();
+      if (coach) { if (hechas) await b.rpc('storage_borrado', { p_rutas: rutas }).catch(() => {}); api.limpiarAlmacenamiento().catch(() => {}); }
+      return hechas ? 'borrado' : 'pendiente';
     },
 
     // ------------------------------------------------------------ v0.48: lo que le dijo el coach de cada ejercicio
@@ -1653,7 +1804,7 @@ export function crearApi(backend) {
     async dichoPorCoach(atletaId, ejercicioIds, excluirSesionId = null, ejerciciosPorId = {}) {
       if (!ejercicioIds?.length) return {};
       const coment = await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, order: [['creado_en', 'desc']], limit: 300, cols: 'id,texto,creado_en,sesion_id,archivo_id,enviar_en' });
-      const delCoach = coment.filter((c) => !programado(c));
+      const delCoach = coment.filter((c) => !programado(c) && c.texto !== 'Se eliminó este mensaje');
       if (!delCoach.length) return {};
       const arcIds = unicos(delCoach.map((c) => c.archivo_id));
       const sesIds = unicos(delCoach.map((c) => c.sesion_id)).filter((id) => id !== excluirSesionId);
@@ -2177,6 +2328,10 @@ export function crearApi(backend) {
       out.comentarios = out.comentarios.filter((c) => !programado(c));
       out.avisos = out.avisos.filter((a) => !programado(a));
       out.tareas = await b.select('tareas', { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (v0.54) sus reacciones y sus destacados en el chat (los destacados solo los ve su dueño: si exporta el coach, vacíos)
+      const idsMsg = out.comentarios.map((c) => c.id);
+      out.comentario_reacciones = perfilId && idsMsg.length ? await b.select('comentario_reacciones', { in: { comentario_id: idsMsg }, eq: { usuario_id: perfilId } }).catch(() => []) : [];
+      out.comentario_destacados = perfilId && idsMsg.length ? await b.select('comentario_destacados', { in: { comentario_id: idsMsg }, eq: { usuario_id: perfilId } }).catch(() => []) : [];
       // Las preguntas que le hace su coach (también las de todos y las archivadas), para entender sus respuestas
       out.preguntas_checkin = await api.preguntasCheckin(atletaId, { archivadas: true });
       // Las notificaciones solo las ve su dueño (si exporta el coach, salen vacías); de los móviles, sin sus claves
@@ -2475,7 +2630,7 @@ export function crearApi(backend) {
       const [sesiones, checkins, comentarios, archivos, atletas] = await Promise.all([
         b.select('sesiones', { eq: { completada: true }, nulo: ['revisada_en'], gte: { fecha_realizada: desde }, order: [['fecha_realizada', 'desc']] }),
         b.select('checkins', { nulo: ['revisado_en'], gte: { semana_inicio: desde }, order: [['semana_inicio', 'desc']] }),
-        b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], order: [['creado_en', 'desc']] }),
+        b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], order: [['creado_en', 'desc']] }).then((xs) => xs.filter((c) => !c.eliminado_en)),
         b.select('archivos', { nulo: ['revisado_en'], neq: { tipo: 'adjunto' }, order: [['creado_en', 'desc']] }),
         api.atletas(),
       ]);

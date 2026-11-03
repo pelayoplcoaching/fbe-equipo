@@ -2293,5 +2293,120 @@ console.log('\nv0.53: días de entreno por semana (microciclos que no caben en u
       'en el panel del coach, «2/3» de su semana natural (sin objetivo, «1/4» de la programada, como antes)');
   }
 }
+{
+  console.log('\nEl chat como WhatsApp (v0.54): formato, citas, sin leer, búsqueda, reacciones, ventanas y borradores');
+  const F = await import('../web/src/logica/formato.js');
+  const M = await import('../web/src/logica/mensajes.js');
+  const tk = F.tokensFormato;
+  check(igual(tk('Hola *Ana*'), [{ t: 'texto', v: 'Hola ' }, { t: 'negrita', hijos: [{ t: 'texto', v: 'Ana' }] }]), '*negrita*');
+  check(igual(tk('_cursiva_ y ~tachado~'), [{ t: 'cursiva', hijos: [{ t: 'texto', v: 'cursiva' }] }, { t: 'texto', v: ' y ' }, { t: 'tachado', hijos: [{ t: 'texto', v: 'tachado' }] }]), '_cursiva_ y ~tachado~');
+  check(igual(tk('usa `RIR 2` hoy'), [{ t: 'texto', v: 'usa ' }, { t: 'mono', v: 'RIR 2' }, { t: 'texto', v: ' hoy' }]) && tk('```a\n*b*```')[0].t === 'mono' && tk('```a\n*b*```')[0].v === 'a\n*b*',
+    '`monoespaciado` y ```bloque``` (dentro no hay más formato)');
+  check(igual(tk('*_las dos_*'), [{ t: 'negrita', hijos: [{ t: 'cursiva', hijos: [{ t: 'texto', v: 'las dos' }] }] }]), 'se anidan (*_negrita y cursiva_*)');
+  check(igual(tk('2*3*4'), [{ t: 'texto', v: '2*3*4' }]) && igual(tk('mi_variable_larga'), [{ t: 'texto', v: 'mi_variable_larga' }]) && igual(tk('* suelto *'), [{ t: 'texto', v: '* suelto *' }]),
+    'como WhatsApp: dentro de una palabra o con espacios junto al signo, no es formato');
+  check(igual(tk('*no\ncruza*'), [{ t: 'texto', v: '*no\ncruza*' }]) && igual(tk('*sin cerrar'), [{ t: 'texto', v: '*sin cerrar' }]), 'no salta de línea; sin cerrar, es texto');
+  const conUrl = tk('Mira https://youtu.be/gMgvBspQ9lk_x y _esto_');
+  check(conUrl.some((x) => x.t === 'enlace' && x.v === 'https://youtu.be/gMgvBspQ9lk_x') && conUrl.some((x) => x.t === 'cursiva'), 'un «_» dentro de un enlace no abre cursiva, y el enlace sigue siendo enlace');
+  const enNegrita = tk('*mira https://www.youtube.com/watch?v=gMgvBspQ9lk*');
+  check(enNegrita[0].t === 'negrita' && enNegrita[0].hijos.some((x) => x.t === 'enlace' && x.youtube === 'gMgvBspQ9lk'), 'un enlace en negrita sigue siendo enlace (con su vídeo de YouTube)');
+  check(igual(tk('<b>hola</b> *x*')[0], { t: 'texto', v: '<b>hola</b> ' }), 'el HTML es texto (la pantalla nunca lo interpreta)');
+  check(F.textoPlano('*Hola* _Ana_, `RIR 2` ~ya~') === 'Hola Ana, RIR 2 ya' && !F.conFormato(tk('nada especial')), 'el texto sin las marcas (citas, vistas previas, búsqueda)');
+  check(igual(tk(' raro *x*'), [{ t: 'texto', v: ' raro *x*' }]), 'un texto con caracteres del área privada no se confunde con un enlace');
+
+  const ahora = Date.parse('2026-11-03T18:50:00');
+  const msg = (id, autor, min, extra = {}) => ({ id, autor, texto: `m${id}`, creado_en: new Date(ahora - min * 60000).toISOString(), leido_en: null, ...extra });
+  check(M.extractoCita({ texto: 'Hola *Ana*,\n\n¿qué tal?' }) === 'Hola Ana, ¿qué tal?' && M.extractoCita({ texto: 'x'.repeat(300) }).length === 160, 'la cita: en una línea, sin marcas y recortada');
+  check(M.extractoCita({ texto: 'Foto', archivo_id: 'a' }) === '📷 Foto' && M.extractoCita({ texto: 'Vídeo', archivoId: 'a' }) === '🎥 Vídeo'
+    && M.extractoCita({ texto: 'La rodilla', archivo: { mime: 'image/png' } }) === '📷 La rodilla' && M.extractoCita({ texto: 'x', archivo: { mime: 'application/pdf' } }) === '📄 x',
+    '«📷 Foto», «🎥 Vídeo», «📄 Archivo» (con su pie, si lo tiene)');
+  check(M.extractoCita({ texto: 'Se eliminó este mensaje', eliminado_en: 'x' }) === '🚫 Se eliminó este mensaje' && M.extractoCita(null) === 'Mensaje no disponible', 'eliminado o que no está');
+  const lista = [msg('1', 'coach', 60, { leido_en: 'x' }), msg('2', 'atleta', 50), msg('3', 'coach', 40), msg('4', 'coach', 30, { eliminado_en: 'x' }), msg('5', 'coach', 20), msg('6', 'coach', -60, { enviar_en: new Date(ahora + 3600000).toISOString() })];
+  check(igual(M.separadorNoLeidos(lista, 'atleta', ahora), { id: '3', n: 2 }) && M.textoNoLeidos(2) === '2 MENSAJES SIN LEER' && M.textoNoLeidos(1) === '1 MENSAJE SIN LEER',
+    '«2 MENSAJES SIN LEER» encima del primero sin leer de la otra parte (sin contar lo eliminado ni lo programado)');
+  check(M.separadorNoLeidos(lista.map((c) => ({ ...c, leido_en: 'x' })), 'atleta', ahora) === null && M.separadorNoLeidos(lista, 'coach', ahora).id === '2', 'nada sin leer, nada; y cada uno ve lo suyo');
+  const bus = [{ id: 'a', texto: 'Mañana *rodilla*' }, { id: 'b', texto: 'Foto', archivo_id: 'f' }, { id: 'c', texto: 'RODILLA bien' }, { id: 'd', texto: 'rodilla', eliminado_en: 'x' }, { id: 'e', texto: 'nada' }];
+  check(igual(M.coincidencias(bus, 'rodilla'), ['a', 'c']) && igual(M.coincidencias(bus, 'manana'), ['a']) && igual(M.coincidencias(bus, 'r'), []) && igual(M.coincidencias(bus, 'foto'), []),
+    'buscar: sin tildes ni mayúsculas, ni lo eliminado ni las marcas de las fotos; con 2 letras como mínimo');
+  check(igual(M.resaltar('La RodÍlla y la rodilla', 'rodilla'), [{ v: 'La ', marca: false }, { v: 'RodÍlla', marca: true }, { v: ' y la ', marca: false }, { v: 'rodilla', marca: true }]),
+    'lo que coincide se marca con sus letras de verdad (también con tildes)');
+  check(M.normalLetras('Ñandú 💪 ß').length === 'Ñandú 💪 ß'.length, 'normalizar no mueve las posiciones (emojis y letras raras)');
+  const rs = M.resumenReacciones([{ usuario_id: 'yo', emoji: '💪' }, { usuario_id: 'otro', emoji: '❤️' }, { usuario_id: 'x', emoji: '💪' }, { usuario_id: 'z', emoji: '🍺' }], 'yo');
+  check(igual(rs, [{ emoji: '❤️', n: 1, mia: false }, { emoji: '💪', n: 2, mia: true }]), 'las reacciones, agrupadas en el orden de la lista (las que no son de la lista, fuera)');
+  check(M.siguienteReaccion('💪', '💪') === null && M.siguienteReaccion('💪', '❤️') === '❤️' && M.siguienteReaccion(null, '👍') === '👍', 'la misma la quita; otra la cambia');
+  const mio = msg('m', 'atleta', 10);
+  check(M.puedeEditar(mio, 'atleta', ahora) && !M.puedeEditar(msg('m', 'atleta', 16), 'atleta', ahora) && !M.puedeEditar(mio, 'coach', ahora)
+    && !M.puedeEditar({ ...mio, archivo_id: 'a' }, 'atleta', ahora) && !M.puedeEditar({ ...mio, eliminado_en: 'x' }, 'atleta', ahora),
+    'editar: lo propio, de texto, en sus 15 minutos y sin eliminar');
+  check(M.puedeEliminar(msg('m', 'atleta', 47 * 60), 'atleta', ahora) && !M.puedeEliminar(msg('m', 'atleta', 49 * 60), 'atleta', ahora)
+    && M.puedeEliminar(msg('p', 'coach', -600, { enviar_en: new Date(ahora + 864e5).toISOString() }), 'coach', ahora) && !M.puedeEliminar(mio, 'coach', ahora),
+    'eliminar para todos: lo propio en 48 horas (el programado, siempre: se cancela)');
+  check(M.cuandoInfo(new Date(ahora - 8 * 60000).toISOString(), ahora) === 'hoy 18:42' && M.cuandoInfo('2026-11-02T18:42:00', ahora) === 'ayer 18:42' && M.cuandoInfo('2026-10-26T09:05:00', ahora) === 'lun 26 oct, 9:05',
+    'Info: «hoy 18:42», «ayer 18:42», «lun 26 oct, 9:05»');
+  check(igual(M.infoMensaje({ creado_en: '2026-11-03T18:42:00', leido_en: '2026-11-03T18:50:00', editado_en: '2026-11-03T18:45:00' }, ahora), [['Enviado', 'hoy 18:42'], ['Leído', 'hoy 18:50'], ['Editado', 'hoy 18:45']])
+    && M.infoMensaje({ creado_en: '2026-11-03T18:42:00' }, ahora)[1][1] === 'todavía no', 'Info de un mensaje: enviado, leído (o todavía no) y editado');
+  {
+    // (v0.54, revisión) L3: con «Mostrar cuándo estoy en línea» apagado, el leído sin hora; y el que guardó la base solo con el día
+    const { instanteMadrid } = await import('../web/src/logica/fechas.js');
+    const soloDia = instanteMadrid('2026-11-03', '00:00');
+    check(M.leidoSoloDia(soloDia) && !M.leidoSoloDia('2026-11-03T18:50:00') && !M.leidoSoloDia(null), 'un leído de medianoche de Madrid es «solo el día»');
+    check(igual(M.infoMensaje({ creado_en: '2026-11-03T18:42:00', leido_en: '2026-11-03T18:50:00' }, ahora, { horaLeido: false })[1], ['Leído', 'hoy'])
+      && igual(M.infoMensaje({ creado_en: '2026-11-03T18:42:00', leido_en: soloDia }, ahora)[1], ['Leído', 'hoy'])
+      && igual(M.infoMensaje({ creado_en: '2026-11-02T18:42:00', leido_en: instanteMadrid('2026-11-02', '00:00') }, ahora)[1], ['Leído', 'ayer']),
+      'Info: «Leído: hoy» sin hora si yo la oculto o si la otra parte la tenía oculta');
+    check(M.diaInfo('2026-11-03T08:00:00', ahora) === 'hoy' && M.diaInfo('2026-10-26T09:05:00', ahora) === 'lun 26 oct' && M.diaInfo('2025-10-26T09:05:00', ahora) === 'dom 26 oct 2025' && M.diaInfo(null) === null,
+      'el día de Info: hoy, ayer o la fecha (con el año, si no es este)');
+  }
+  {
+    // (v0.54, revisión) L1: el formato es lineal: 4000 caracteres hechos para atascarlo, en menos de 5 ms
+    const casos = { 'sin cierres': '*a '.repeat(1333), anidados: '*_~'.repeat(666) + 'x' + '~_*'.repeat(666), 'aperturas en una línea': '*x'.repeat(2000),
+      mezclados: '_*~`'.repeat(1000), 'con saltos': '*a\n_b '.repeat(700), comillas: '`*'.repeat(2000), triples: '```*_'.repeat(800) };
+    const tiempos = {};
+    for (const [k, v] of Object.entries(casos)) {
+      const s = v.slice(0, 4000);
+      for (let i = 0; i < 5; i++) tk(s);
+      const t = [];
+      for (let i = 0; i < 9; i++) { const t0 = performance.now(); tk(s); t.push(performance.now() - t0); }
+      tiempos[k] = t.sort((a, b) => a - b)[4];
+    }
+    const lento = Object.entries(tiempos).filter(([, ms]) => ms >= 5);
+    check(!lento.length, `formato lineal: 4000 caracteres patológicos en menos de 5 ms (mediana; el peor, ${Math.max(...Object.values(tiempos)).toFixed(2)} ms)${lento.length ? ' — lentos: ' + lento.map(([k, ms]) => `${k} ${ms.toFixed(1)} ms`).join(', ') : ''}`);
+    const largo = '*x'.repeat(2000) + ' *fin*';
+    check(tk(largo).some((x) => x.t === 'negrita'), 'y sigue encontrando lo que sí es formato al final');
+    const a1 = F.tokensDeMensaje('m1', 'Hola *Ana*'), a2 = F.tokensDeMensaje('m1', 'Hola *Ana*'), a3 = F.tokensDeMensaje('m1', 'Hola _Ana_');
+    check(a1 === a2 && a3 !== a1 && a3[1].t === 'cursiva' && igual(F.tokensDeMensaje(null, '*x*'), tk('*x*')), 'los tokens se guardan por mensaje y texto (si el texto cambia, se recalculan)');
+  }
+  check(M.textoUltimaVez('2026-11-03T18:42:00', ahora) === 'últ. vez hoy a las 18:42' && M.textoUltimaVez('2026-11-02T07:05:00', ahora) === 'últ. vez ayer a las 7:05' && M.textoUltimaVez('2026-10-30T10:00:00', ahora) === 'últ. vez el vie a las 10:00'
+    && M.textoUltimaVez('2026-09-01T10:00:00', ahora) === 'últ. vez el 1 sept' && M.textoUltimaVez(null) === null, '«últ. vez hoy a las 18:42», ayer, esta semana o la fecha');
+  check(M.estadoConexion({ escribiendo: true, enLinea: true }) === 'escribiendo…' && M.estadoConexion({ enLinea: true }) === 'en línea' && M.estadoConexion({}) === null, '«escribiendo…» antes que «en línea»');
+  const enl = M.enlacesDe([{ id: '1', texto: 'https://a.es y https://youtu.be/gMgvBspQ9lk' }, { id: '2', texto: 'otra vez https://a.es' }, { id: '3', texto: 'https://b.es', eliminado_en: 'x' }]);
+  check(igual(enl.map((x) => [x.url, x.mensajeId]), [['https://a.es', '2'], ['https://youtu.be/gMgvBspQ9lk', '1']]) && enl[1].youtube === 'gMgvBspQ9lk', 'los enlaces del chat: sin repetir, los últimos primero, sin lo eliminado');
+  check(igual(M.mediosDe([{ id: '1', archivo: { id: 'f', mime: 'image/jpeg' } }, { id: '2', archivo: { id: 'v', mime: 'video/mp4' } }, { id: '3', archivo: { id: 'g' }, eliminado_en: 'x' }]).map((x) => x.tipo), ['video', 'foto']), 'las fotos y los vídeos');
+  check(M.consultaRapida('/sub') === 'sub' && M.consultaRapida('/') === '' && M.consultaRapida('hola /x') === null && M.consultaRapida('/a\nb') === null, '«/» al principio abre las respuestas rápidas');
+  const rap = [{ titulo: 'Sube la carga', texto: 'Muy bien {nombre}' }, { titulo: 'Técnica', texto: 'Sube despacio' }, { titulo: 'Descanso', texto: 'Hoy descansa' }];
+  check(igual(M.filtrarRapidas(rap, 'sube').map((r) => r.titulo), ['Sube la carga', 'Técnica']) && M.filtrarRapidas(rap, 'tecnica')[0].titulo === 'Técnica' && M.filtrarRapidas(rap, '').length === 3,
+    'filtradas al escribir (las del título primero, sin tildes)');
+  const mem = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), key: (i) => [...m.keys()][i] ?? null, get length() { return m.size; }, m }; })();
+  M.guardarBorrador(mem, 'u1', 'a1', 'Hola, mañana ', { respondeA: 'c9', ahora });
+  check(igual(M.leerBorrador(mem, 'u1', 'a1', ahora), { texto: 'Hola, mañana ', respondeA: 'c9' }) && M.leerBorrador(mem, 'u1', 'a2', ahora) === null && M.leerBorrador(mem, 'u2', 'a1', ahora) === null,
+    'el borrador, por conversación y por cuenta');
+  M.guardarBorrador(mem, 'u1', 'a1', '   ', { ahora });
+  check(M.leerBorrador(mem, 'u1', 'a1', ahora) === null && mem.length === 0, 'vacío, se quita');
+  M.guardarBorrador(mem, 'u1', 'a1', 'viejo', { ahora: ahora - 31 * 864e5 });
+  check(M.leerBorrador(mem, 'u1', 'a1', ahora) === null && mem.length === 0, 'a los 30 días caduca');
+  M.guardarBorrador(mem, 'u1', 'a1', 'uno', { ahora }); M.guardarBorrador(mem, 'u1', 'a2', 'dos', { ahora }); mem.setItem('otra-cosa', '1');
+  check(M.borrarBorradores(mem) === 2 && mem.length === 1, 'al cerrar la sesión se van todos (y nada más)');
+  const roto = { getItem() { throw new Error('bloqueado'); }, setItem() { throw new Error('lleno'); }, removeItem() { throw new Error('x'); }, key() { throw new Error('x'); }, length: 1 };
+  check(M.leerBorrador(roto, 'u', 'a') === null && M.guardarBorrador(roto, 'u', 'a', 'x') === false && M.borrarBorradores(roto) === 0, 'sin almacenamiento (bloqueado o lleno), no rompe nada');
+  check(igual(M.vistaPrevia({ autor: 'coach', texto: '*Hola*', leido_en: 'x' }), { borrador: false, texto: 'Hola', mio: true, visto: true, eliminado: false }) && M.vistaPrevia(null, { borrador: 'Te *escribo*' }).texto === 'Te escribo'
+    && M.vistaPrevia({ autor: 'atleta', texto: 'Foto', archivo_id: 'f' }).texto === '📷 Foto', 'la vista previa de la lista: ✓✓ en lo propio, «Borrador:» y «📷 Foto»');
+  const conv = (nombre, extra = {}) => ({ atleta: { id: nombre, nombre }, ultimo: { creado_en: extra.t || '2026-11-01' }, sinLeer: 0, estado: null, ...extra });
+  const orden = M.ordenarConversaciones([conv('Ana', { t: '2026-11-03' }), conv('Bea', { estado: { fijada_en: '2026-11-01T10:00' } }), conv('Car', { sinLeer: 2 }), conv('Dan', { estado: { fijada_en: '2026-11-02T10:00' } }), conv('Eva', { estado: { no_leida: true } })]);
+  check(igual(orden.map((x) => x.atleta.nombre), ['Dan', 'Bea', 'Car', 'Eva', 'Ana']), 'la lista: las fijadas arriba (la última fijada primero), después lo sin leer (o «no leída») y lo más reciente');
+  const filas = [conv('A', { sinLeer: 1 }), conv('B', { estado: { fijada_en: 'x' } }), conv('C', { estado: { archivada_en: 'x' } }), conv('D', { estado: { no_leida: true } })];
+  check(igual(M.filtrarConversaciones(filas).map((x) => x.atleta.nombre), ['A', 'B', 'D']) && igual(M.filtrarConversaciones(filas, 'no-leidos').map((x) => x.atleta.nombre), ['A', 'D'])
+    && igual(M.filtrarConversaciones(filas, 'fijados').map((x) => x.atleta.nombre), ['B']) && igual(M.filtrarConversaciones(filas, 'todos', { archivadas: true }).map((x) => x.atleta.nombre), ['C']),
+    'filtros «Todos / No leídos / Fijados» (sin las archivadas, que van aparte)');
+}
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

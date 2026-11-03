@@ -48,3 +48,25 @@ grant usage on schema public to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+
+-- Realtime (lo justo de la Realtime Authorization de Supabase): realtime.messages con permisos por fila y
+-- realtime.topic(), que en Supabase da el canal al que intenta entrar o enviar quien conecta (aquí, un ajuste de la
+-- sesión: «select set_config('realtime.topic', 'chat:…', false)»)
+create schema realtime;
+create table realtime.messages (
+  id uuid not null default gen_random_uuid(),
+  topic text not null,
+  extension text not null,
+  payload jsonb,
+  event text,
+  private boolean default false,
+  inserted_at timestamp not null default now(),
+  updated_at timestamp not null default now(),
+  primary key (id, inserted_at)
+);
+alter table realtime.messages enable row level security;
+create function realtime.topic() returns text language sql stable as
+  $$ select nullif(current_setting('realtime.topic', true), '')::text $$;
+grant usage on schema realtime to anon, authenticated, service_role;
+grant select, insert, update on realtime.messages to authenticated;
+grant execute on function realtime.topic() to anon, authenticated, service_role;

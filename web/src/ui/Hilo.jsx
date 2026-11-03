@@ -44,9 +44,11 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
           {lista.map((c) => (
             <li key={c.id} class={`mensaje ${c.autor === yo ? 'mio' : 'suyo'}`}>
               <span class="quien">{nombre(c.autor)}</span>
-              <p>{archivoId ? <TextoConMomentos texto={c.texto} archivoId={archivoId} /> : c.texto}</p>
-              {dibujoValido(c.dibujo) && <BotonDibujo dibujo={c.dibujo} archivoId={archivoId} />}
-              <span class="cuando">{cuando(c.creado_en)}{c.autor === yo && c.leido_en ? ', visto' : ''}</span>
+              {/* v0.54: lo eliminado para todos, como en el chat; lo editado, con su «Editado» */}
+              {c.eliminado_en ? <p class="burbuja-eliminada"><span aria-hidden="true">🚫 </span><em>Se eliminó este mensaje</em></p>
+                : <p>{archivoId ? <TextoConMomentos texto={c.texto} archivoId={archivoId} /> : c.texto}</p>}
+              {!c.eliminado_en && dibujoValido(c.dibujo) && <BotonDibujo dibujo={c.dibujo} archivoId={archivoId} />}
+              <span class="cuando">{cuando(c.creado_en)}{c.editado_en && !c.eliminado_en ? ', editado' : ''}{c.autor === yo && c.leido_en ? ', visto' : ''}</span>
             </li>
           ))}
         </ol>

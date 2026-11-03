@@ -206,7 +206,10 @@ await q(`update comentarios set leido_en = now() where id = $1`, [c2.id]);
 check((await q(`select leido_en from comentarios where id = $1`, [c2.id]))[0].leido_en !== null, 'la atleta marca como leída la respuesta del coach');
 check(await falla(`update comentarios set texto = 'otra cosa' where id = $1`, [c2.id]), 'nadie reescribe un comentario desde la app');
 check((await q(`delete from comentarios where id = $1 returning id`, [c2.id])).length === 0, 'la atleta no puede borrar lo que escribió el coach');
-check((await q(`delete from comentarios where id = $1 returning id`, [c1.id])).length === 1, 'pero sí lo suyo');
+// v0.54 (migración 032): lo suyo ya no lo borra a mano; lo elimina para todos con comentario_eliminar (en 48 horas)
+check((await q(`delete from comentarios where id = $1 returning id`, [c1.id])).length === 0, 'ni borra a mano lo suyo (desde la 032, lo elimina para todos con su función)');
+check((await q(`select comentario_eliminar($1) r`, [c1.id]))[0].r.estado === 'eliminado' && (await q(`select texto, eliminado_en from comentarios where id = $1`, [c1.id]))[0].texto === 'Se eliminó este mensaje', 'pero sí lo elimina para todos');
+await su(); await q(`delete from comentarios where id = $1`, [c1.id]); await como(ana);
 
 console.log('\nRecursos');
 await como(pelayo);
@@ -1176,9 +1179,15 @@ await como(luis);
 check((await q(`update archivos set destacado = true where id = $1 returning id`, [vidP.id])).length === 0, 'Luis no toca los archivos de Ana');
 await como(pelayo, 'aal2');
 check((await q(`update archivos set revisado_en = now(), destacado = true where id = $1 returning revisado_en`, [vidP.id]))[0].revisado_en !== null, 'el coach sí lo revisa (y puede destacarlo)');
+// (v0.54, tras la revisión de la 032) Un adjunto con mensajes ya no lo borra el atleta (eso va por comentario_eliminar); si
+// lo borra el coach, sus mensajes quedan como eliminados
 await como(ana);
+check((await q(`delete from archivos where id = $1 returning id`, [adj.id])).length === 0, 'la atleta no borra un adjunto del chat que lleva mensajes');
+await como(pelayo, 'aal2');
 await q(`delete from archivos where id = $1`, [adj.id]);
-check((await q(`select 1 from comentarios where id in ($1, $2)`, [cAdj.id, rAdj.id])).length === 0 && (await q(`select archivo_id from comentarios where id = $1`, [cVid.id])).length === 1, 'al borrar un adjunto se van sus mensajes (los dos); los comentarios de un vídeo del diario se quedan');
+await como(ana);
+check((await q(`select eliminado_en from comentarios where id in ($1, $2)`, [cAdj.id, rAdj.id])).every((x) => x.eliminado_en) && (await q(`select archivo_id from comentarios where id = $1`, [cVid.id])).length === 1,
+  'al borrar el coach un adjunto, sus mensajes quedan como eliminados (los dos); los comentarios de un vídeo del diario se quedan');
 await su();
 const pub = await q(`select 1 from pg_publication where pubname = 'supabase_realtime'`);
 check(pub.length === 0 || (await q(`select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'comentarios'`)).length === 1, 'comentarios está en la publicación de Realtime si el proyecto la tiene (en la prueba no hay publicación y no pasa nada)');
@@ -2728,7 +2737,9 @@ console.log('\nTareas, mensajes programados, el bloque entero y las bajas (migra
   check(await n(`select count(*)::int n from comentarios where id = $1`, [mP.id]) === 1 && (await q(`update comentarios set leido_en = now() where id = $1 returning id`, [mP.id])).length === 1, 'llegada su hora, Luis lo ve y lo marca leído');
   check(await n(`select count(*)::int n from notificaciones where clave = $1`, ['comentario:' + mP.id]) === 1, 'y también su notificación');
   await como(pelayo, 'aal2');
-  check(await falla(`update comentarios set texto = 'Cambiado' where id = $1`, [mP.id]) && await falla(`update comentarios set enviar_en = now() + interval '1 day' where id = $1`, [mP.id]), 'ya salido, no se edita ni se reprograma');
+  // (v0.54: el texto de lo propio se edita en sus 15 minutos, como cualquier mensaje; pasados, no)
+  await su(); await q(`update comentarios set enviar_en = now() - interval '20 minutes', creado_en = now() - interval '20 minutes' where id = $1`, [mP.id]); await como(pelayo, 'aal2');
+  check(await falla(`update comentarios set texto = 'Cambiado' where id = $1`, [mP.id]) && await falla(`update comentarios set enviar_en = now() + interval '1 day' where id = $1`, [mP.id]), 'ya salido, no se reprograma (ni se edita pasados sus 15 minutos)');
   const [mB] = await q(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Lo cancelo', now() + interval '3 hours') returning id`, [aLuis.id]);
   await q(`delete from comentarios where id = $1`, [mB.id]);
   check((await notis(`clave = $1 and estado = 'pendiente'`, ['comentario:' + mB.id])).length === 0, 'cancelarlo (borrarlo) retira su notificación');
@@ -2820,6 +2831,444 @@ console.log('\nDías de entreno por semana (migración 031)');
   check(/Antes de la 031 hace falta la 030/.test(errSin30 || '') && !(await sin30.query(`select 1 from information_schema.columns where table_name = 'atletas' and column_name = 'dias_semana'`)).rows.length,
     'la 031 no se aplica sin la 030 (y no deja nada a medias)');
   await sin30.close();
+}
+
+console.log('\nEl chat como WhatsApp: responder, editar, eliminar, reacciones, destacados, estado, presencia y Realtime (migración 032)');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  await su();
+  await q(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await q(`delete from chat_cupos`);
+  const cols = (await q(`select column_name from information_schema.columns where table_schema = 'public' and table_name = 'comentarios' and column_name in ('responde_a', 'editado_en', 'eliminado_en') order by 1`)).map((r) => r.column_name);
+  check(cols.join() === 'editado_en,eliminado_en,responde_a', 'comentarios trae responde_a, editado_en y eliminado_en');
+  check((await q(`select relname from pg_class where relname in ('chat_cupos', 'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia') and relrowsecurity order by 1`)).length === 5,
+    'las cinco tablas nuevas nacen con permisos por fila');
+  check(!(await q(`select 1 from pg_policies where tablename = 'comentarios' and policyname = 'atleta_borrar'`)).length, 'el atleta ya no tiene política para borrar comentarios a mano');
+  // Mensajes de partida: uno del coach a Ana, uno de Ana, uno del coach a Luis, uno programado a Ana y uno en su sesión
+  await como(pelayo, 'aal2');
+  const [mC] = await q(`insert into comentarios (atleta_id, texto) values ($1, '¿Qué tal la rodilla hoy?') returning *`, [aAna.id]);
+  const [mL] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Luis, mañana descanso') returning *`, [aLuis.id]);
+  const [mP] = await q(`insert into comentarios (atleta_id, texto, enviar_en) values ($1, 'Sorpresa del lunes', now() + interval '2 days') returning *`, [aAna.id]);
+  const [mS] = await q(`insert into comentarios (sesion_id, texto) values ($1, 'En esta sesión, baja el peso') returning *`, [ses.id]);
+  await como(ana);
+  const [mA] = await q(`insert into comentarios (atleta_id, texto, editado_en, eliminado_en) values ($1, 'Mejor, gracias', now(), now()) returning *`, [aAna.id]);
+  check(mA.editado_en === null && mA.eliminado_en === null, 'nadie crea un mensaje ya «editado» o «eliminado» (la base lo limpia)');
+
+  console.log('  · Responder');
+  const [rA] = await q(`insert into comentarios (atleta_id, texto, responde_a) values ($1, 'Sí, mucho mejor', $2) returning *`, [aAna.id, mC.id]);
+  check(rA.responde_a === mC.id, 'Ana responde citando un mensaje de su chat');
+  check(await falla(`insert into comentarios (atleta_id, texto, responde_a) values ($1, 'Cotilla', $2)`, [aAna.id, mL.id]), 'no puede citar un mensaje de otra conversación (el de Luis)');
+  check(await falla(`insert into comentarios (atleta_id, texto, responde_a) values ($1, 'Adivino', $2)`, [aAna.id, mP.id]), 'ni uno programado que aún no ha salido, aunque sepa su id (la cita no lo destapa)');
+  check(await falla(`insert into comentarios (atleta_id, texto, responde_a) values ($1, 'Desde el chat', $2)`, [aAna.id, mS.id]), 'ni, desde el chat, uno de una sesión (tiene que ser del mismo hilo)');
+  const [rS] = await q(`insert into comentarios (sesion_id, texto, responde_a) values ($1, 'Vale, lo bajo', $2) returning *`, [ses.id, mS.id]);
+  check(rS.responde_a === mS.id && rS.sesion_id === ses.id, 'en el hilo de esa sesión, sí');
+  check(await falla(`update comentarios set responde_a = $2 where id = $1`, [mA.id, mC.id]), 'la cita no se pone ni se cambia después');
+  await como(luis);
+  check(await falla(`insert into comentarios (atleta_id, texto, responde_a) values ($1, 'Me meto', $2)`, [aLuis.id, mC.id]), 'Luis no puede citar en su chat un mensaje del de Ana');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into comentarios (atleta_id, texto, responde_a) values ($1, 'Mezclado', $2)`, [aLuis.id, mC.id]), 'el coach tampoco mezcla conversaciones (citar a Ana en el chat de Luis)');
+  check(await falla(`insert into comentarios (atleta_id, texto, responde_a) values ($1, 'Mi programado', $2)`, [aAna.id, mP.id]), 'ni cita uno suyo programado que aún no ha salido');
+
+  console.log('  · Editar');
+  await como(ana);
+  const [eA] = await q(`update comentarios set texto = 'Mejor, gracias. ¡Mucho', editado_en = '2020-01-01' where id = $1 returning *`, [mA.id]);
+  check(new Date(eA.editado_en).getFullYear() > 2020, 'la hora de la edición la pone la base (no la que mande el móvil)');
+  const [eA2] = await q(`update comentarios set texto = 'Mejor, gracias. ¡Mucho!' where id = $1 returning *`, [mA.id]);
+  check(eA2.texto === 'Mejor, gracias. ¡Mucho!' && eA2.editado_en !== null && Math.abs(new Date(eA2.editado_en) - Date.now()) < 60000, 'Ana edita su mensaje en sus 15 minutos: la base apunta cuándo');
+  check(await falla(`update comentarios set texto = 'Hackeado' where id = $1`, [mC.id]), 'no edita el del coach');
+  check(await falla(`update comentarios set texto = '   ' where id = $1`, [mA.id]), 'ni deja un mensaje en blanco');
+  check(await falla(`update comentarios set texto = 'Otra', leido_en = now() where id = $1`, [mA.id]), 'de lo suyo, solo el texto (ni marcarlo leído de paso)');
+  check(await falla(`update comentarios set editado_en = null where id = $1`, [mA.id]) && await falla(`update comentarios set eliminado_en = now() where id = $1`, [mA.id]),
+    '«Editado» y «eliminado» no se tocan a mano');
+  await como(pelayo, 'aal2');
+  check(await falla(`update comentarios set texto = 'Lo que yo diga' where id = $1`, [mA.id]), 'el coach no edita lo de Ana');
+  const [eC] = await q(`update comentarios set texto = '¿Qué tal la rodilla esta mañana?' where id = $1 returning editado_en`, [mC.id]);
+  check(eC.editado_en !== null, 'el coach edita lo suyo, también en sus 15 minutos');
+  const [eP] = await q(`update comentarios set texto = 'Sorpresa del lunes (cambiada)' where id = $1 returning *`, [mP.id]);
+  check(eP.editado_en === null && eP.texto === 'Sorpresa del lunes (cambiada)', 'su programado lo sigue cambiando como antes (sin «Editado»: aún no lo ha visto nadie)');
+  await su(); await q(`update comentarios set creado_en = now() - interval '16 minutes' where id = $1`, [mA.id]);
+  await como(ana);
+  check(await falla(`update comentarios set texto = 'Tarde' where id = $1`, [mA.id]), 'pasados 15 minutos, ya no se edita');
+  await su();
+  const [adjA] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'adjunto', $1::text || '/chat-foto.jpg', 'image/jpeg') returning *`, [aAna.id]);
+  const [vidA] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'video_tecnica', $1::text || '/tecnica-032.mp4', 'video/mp4') returning *`, [aAna.id]);
+  await como(ana);
+  const [mF] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'La rodilla') returning *`, [adjA.id]);
+  const [mV] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Mi sentadilla') returning *`, [vidA.id]);
+  check(await falla(`update comentarios set texto = 'Otro pie' where id = $1`, [mF.id]), 'un mensaje con foto o vídeo no se edita (solo los de texto)');
+
+  console.log('  · Reacciones');
+  await como(ana);
+  const [rx] = await q(`insert into comentario_reacciones (comentario_id, emoji, usuario_id) values ($1, '💪', $2) returning *`, [mC.id, pelayo]);
+  check(rx.usuario_id === ana, 'Ana reacciona a un mensaje del coach (a su nombre, aunque mande otro)');
+  check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [mC.id]), 'una por persona y mensaje');
+  const [rx2] = await q(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '❤️') on conflict (comentario_id, usuario_id) do update set emoji = excluded.emoji returning emoji`, [mC.id]);
+  check(rx2.emoji === '❤️', 'tocar otra la cambia');
+  check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '🍺')`, [mA.id]), 'solo los seis emojis de la lista');
+  check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [mL.id]), 'no reacciona a los mensajes de Luis');
+  check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [mP.id]), 'ni a uno programado que aún no ha salido');
+  check(await falla(`update comentario_reacciones set comentario_id = $2 where comentario_id = $1`, [mC.id, mA.id]), 'de una reacción solo se cambia el emoji');
+  await como(pelayo, 'aal2');
+  await q(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [mA.id]);
+  check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [mP.id]), 'el coach tampoco, a su programado antes de que salga');
+  await como(ana);
+  check(await n(`select count(*)::int n from comentario_reacciones`) === 2, 'Ana ve las reacciones de su conversación (la suya y la del coach)');
+  check((await q(`delete from comentario_reacciones where usuario_id = $1 returning 1`, [pelayo])).length === 0 && (await q(`update comentario_reacciones set emoji = '😂' where usuario_id = $1 returning 1`, [pelayo])).length === 0,
+    'no quita ni cambia la del coach');
+  await como(luis);
+  check(await n(`select count(*)::int n from comentario_reacciones`) === 0, 'Luis no ve las reacciones de la conversación de Ana');
+  await como(ana);
+  await q(`delete from comentario_reacciones where comentario_id = $1`, [mC.id]);
+  check(await n(`select count(*)::int n from comentario_reacciones where comentario_id = $1`, [mC.id]) === 0, 'tocar la misma la quita');
+  await su(); await q(`delete from chat_cupos`);
+  await como(ana);
+  let cupo = null;
+  for (let i = 0; i < 121 && !cupo; i++) {
+    try { await q(i ? `update comentario_reacciones set emoji = $2 where comentario_id = $1` : `insert into comentario_reacciones (comentario_id, emoji) values ($1, $2)`, [mC.id, i % 2 ? '👍' : '😂']); }
+    catch (e) { cupo = { i, msg: e.message }; }
+  }
+  check(cupo?.i === 120 && /reaccionado muchas veces/.test(cupo.msg), 'como mucho 120 reacciones por hora (el coach no tiene cupo)');
+  await su(); await q(`delete from chat_cupos`); await q(`delete from comentario_reacciones`);
+
+  console.log('  · Destacados');
+  await como(ana);
+  const [dA] = await q(`insert into comentario_destacados (comentario_id, usuario_id) values ($1, $2) returning *`, [mC.id, pelayo]);
+  check(dA.usuario_id === ana, 'Ana destaca un mensaje (a su nombre)');
+  check(await falla(`insert into comentario_destacados (comentario_id) values ($1)`, [mL.id]) && await falla(`insert into comentario_destacados (comentario_id) values ($1)`, [mP.id]),
+    'no destaca los de Luis ni uno programado');
+  await como(pelayo, 'aal2');
+  check(await n(`select count(*)::int n from comentario_destacados`) === 0, 'el coach no ve los destacados de Ana');
+  await q(`insert into comentario_destacados (comentario_id) values ($1)`, [mA.id]);
+  await como(ana);
+  check(await n(`select count(*)::int n from comentario_destacados`) === 1 && (await q(`delete from comentario_destacados where usuario_id = $1 returning 1`, [pelayo])).length === 0,
+    'ni Ana los del coach (ni puede quitarlos)');
+
+  console.log('  · Eliminar para todos');
+  await como(pelayo, 'aal2');
+  await q(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '😮')`, [mA.id]);
+  await como(ana);
+  await q(`insert into comentario_destacados (comentario_id) values ($1)`, [mA.id]);
+  const [rA2] = await q(`insert into comentarios (atleta_id, texto, responde_a) values ($1, 'Cito lo mío', $2) returning id`, [aAna.id, mA.id]);
+  check(await falla(`select comentario_eliminar($1)`, [mC.id]), 'Ana no elimina lo del coach');
+  await como(luis);
+  check(await falla(`select comentario_eliminar($1)`, [mA.id]), 'ni Luis lo de Ana');
+  await como(ana);
+  check(await falla(`select comentario_eliminar($1)`, [mP.id]), 'ni Ana «elimina» el programado que aún no ve');
+  const el = (await q(`select comentario_eliminar($1) r`, [mA.id]))[0].r;
+  const tras = (await q(`select * from comentarios where id = $1`, [mA.id]))[0];
+  check(el.estado === 'eliminado' && tras.texto === 'Se eliminó este mensaje' && tras.eliminado_en !== null && tras.editado_en === null && tras.responde_a === null,
+    'Ana elimina lo suyo: la base borra el texto (queda «Se eliminó este mensaje»)');
+  await su();
+  check(await n(`select count(*)::int n from comentario_reacciones where comentario_id = $1`, [mA.id]) === 0 && await n(`select count(*)::int n from comentario_destacados where comentario_id = $1`, [mA.id]) === 0,
+    'y se van sus reacciones y los destacados de todos');
+  await como(pelayo, 'aal2');
+  check(!(await q(`select texto from comentarios where atleta_id = $1`, [aAna.id])).some((x) => /Mejor, gracias/.test(x.texto)), 'el coach ya no puede leer el texto por ningún lado');
+  check((await q(`select responde_a from comentarios where id = $1`, [rA2.id]))[0].responde_a === mA.id, 'la respuesta que lo citaba lo sigue citando (y la cita sale eliminada)');
+  check(await falla(`update comentarios set texto = 'Resucitado' where id = $1`, [mA.id]) && await falla(`insert into comentarios (atleta_id, texto, responde_a) values ($1, 'x', $2)`, [aAna.id, mA.id]),
+    'uno eliminado no se edita ni se cita');
+  await como(ana);
+  check(await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [mA.id]) && await falla(`insert into comentario_destacados (comentario_id) values ($1)`, [mA.id]),
+    'ni se reacciona a él ni se destaca');
+  check((await q(`select comentario_eliminar($1) r`, [mA.id]))[0].r.estado === 'eliminado', 'eliminarlo otra vez no hace nada');
+  const elF = (await q(`select comentario_eliminar($1) r`, [mF.id]))[0].r;
+  await su();
+  check(elF.rutas.length === 1 && elF.rutas[0] === `${aAna.id}/chat-foto.jpg` && !(await q(`select 1 from archivos where id = $1`, [adjA.id])).length
+    && (await q(`select archivo_id from comentarios where id = $1`, [mF.id]))[0]?.archivo_id === null,
+    'la foto del chat se va con él (la base la quita y da su ruta para borrarla de Storage); el mensaje queda, eliminado');
+  await como(ana);
+  await q(`select comentario_eliminar($1)`, [mV.id]);
+  await su();
+  check((await q(`select archivo_id from comentarios where id = $1`, [mV.id]))[0].archivo_id === vidA.id && (await q(`select 1 from archivos where id = $1`, [vidA.id])).length === 1,
+    'el vídeo de técnica del diario no se borra al eliminar su comentario');
+  await q(`update comentarios set creado_en = now() - interval '49 hours' where id = $1`, [rA.id]);
+  await como(ana);
+  check(await falla(`select comentario_eliminar($1)`, [rA.id]), 'pasadas 48 horas, ya no se elimina para todos');
+  await su(); await q(`update atletas set estado = 'baja' where id = $1`, [aAna.id]);
+  await como(ana);
+  check(await falla(`select comentario_eliminar($1)`, [rS.id]), 'una cuenta de baja no elimina');
+  await su(); await q(`update atletas set estado = 'activo' where id = $1`, [aAna.id]);
+  await como(pelayo, 'aal2');
+  const [mC2] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Era para otro') returning id`, [aAna.id]);
+  check((await notis(`clave = $1 and estado = 'pendiente'`, ['comentario:' + mC2.id])).length === 1, 'el del coach deja su notificación pendiente…');
+  await como(pelayo, 'aal2');
+  await q(`select comentario_eliminar($1)`, [mC2.id]);
+  check((await notis(`clave = $1`, ['comentario:' + mC2.id])).length === 0, '…y al eliminarlo antes de que salga, ya no sale');
+  check((await notis(`tipo = 'mensaje' and usuario_id = $1`, [pelayo])).every((x) => !/Mejor|rodilla|Cito/.test(`${x.titulo} ${x.cuerpo || ''}`)), 'las notificaciones nunca llevan el texto (tampoco el de lo eliminado)');
+  await como(pelayo, 'aal2');
+  const can = (await q(`select comentario_eliminar($1) r`, [mP.id]))[0].r;
+  check(can.estado === 'cancelado' && !(await q(`select 1 from comentarios where id = $1`, [mP.id])).length && (await notis(`clave = $1`, ['comentario:' + mP.id])).length === 0,
+    'un programado del coach que aún no ha salido se cancela (se borra, con su notificación)');
+  await su(); await q(`delete from chat_cupos`);
+  await como(ana);
+  const borrables = [];
+  for (let i = 0; i < 31; i++) borrables.push((await q(`insert into comentarios (atleta_id, texto) values ($1, $2) returning id`, [aAna.id, `m${i}`]))[0].id);
+  let cupoE = null;
+  for (const [i, id] of borrables.entries()) { try { await q(`select comentario_eliminar($1)`, [id]); } catch (e) { cupoE = { i, msg: e.message }; break; } }
+  check(cupoE?.i === 30 && /eliminado muchos/.test(cupoE.msg), 'como mucho 30 eliminaciones por hora');
+  await su(); await q(`delete from chat_cupos`); await q(`delete from comentarios where id = any($1::uuid[])`, [borrables]);
+
+  console.log('  · Estado de las conversaciones (solo el coach)');
+  await su();
+  const [aX] = await q(`insert into atletas (nombre) values ('Xenia') returning id`);
+  const [aY] = await q(`insert into atletas (nombre) values ('Yago') returning id`);
+  await como(pelayo, 'aal2');
+  for (const a of [aAna.id, aLuis.id, aX.id]) await q(`insert into conversacion_estado (atleta_id, fijada_en) values ($1, '2020-01-01') on conflict (atleta_id) do update set fijada_en = excluded.fijada_en`, [a]);
+  const fij = await q(`select fijada_en from conversacion_estado where atleta_id = $1`, [aAna.id]);
+  check(Math.abs(new Date(fij[0].fijada_en) - Date.now()) < 60000, 'el coach fija una conversación (la hora la pone la base)');
+  check(await falla(`insert into conversacion_estado (atleta_id, fijada_en) values ($1, now())`, [aY.id]), 'como mucho 3 fijadas');
+  const [ar] = await q(`update conversacion_estado set archivada_en = now() where atleta_id = $1 returning *`, [aLuis.id]);
+  check(ar.archivada_en !== null && ar.fijada_en === null, 'archivar la desfija (como WhatsApp)');
+  await q(`insert into conversacion_estado (atleta_id, fijada_en) values ($1, now())`, [aY.id]);
+  await q(`insert into conversacion_estado (atleta_id, no_leida) values ($1, true) on conflict (atleta_id) do update set no_leida = true`, [aAna.id]);
+  await como(ana);
+  check(await n(`select count(*)::int n from conversacion_estado`) === 0 && await falla(`insert into conversacion_estado (atleta_id, fijada_en) values ($1, now())`, [aAna.id])
+    && (await q(`update conversacion_estado set no_leida = false returning 1`)).length === 0, 'Ana no ve ni toca el estado de las conversaciones del coach (ni la suya)');
+  await como(luis);
+  await q(`insert into comentarios (atleta_id, texto) values ($1, 'Pelayo, una duda')`, [aLuis.id]);
+  await su();
+  check((await q(`select archivada_en from conversacion_estado where atleta_id = $1`, [aLuis.id]))[0].archivada_en === null, 'un mensaje nuevo de Luis saca su conversación de archivadas');
+  await q(`delete from conversacion_estado`); await q(`delete from atletas where id = any($1::uuid[])`, [[aX.id, aY.id]]);
+
+  console.log('  · Última conexión y «Mostrar cuándo estoy en línea»');
+  await como(ana);
+  const p1 = (await q(`select presencia_marcar() r`))[0].r;
+  check(p1.visible === true && Math.abs(new Date(p1.ultima_conexion) - Date.now()) < 60000, 'Ana marca su última conexión (la hora la pone la base)');
+  await su(); await q(`update presencia set ultima_conexion = now() - interval '20 seconds' where usuario_id = $1`, [ana]);
+  const antes = (await q(`select ultima_conexion from presencia where usuario_id = $1`, [ana]))[0].ultima_conexion;
+  await como(ana);
+  await q(`select presencia_marcar()`);
+  await su();
+  check(new Date((await q(`select ultima_conexion from presencia where usuario_id = $1`, [ana]))[0].ultima_conexion).getTime() === new Date(antes).getTime(), 'como mucho una vez por minuto (antes, no la reescribe)');
+  await como(ana);
+  check(await falla(`insert into presencia (usuario_id, ultima_conexion) values ($1, now())`, [ana]) && await falla(`update presencia set ultima_conexion = now() + interval '1 year'`),
+    'no se escribe a mano (solo con presencia_marcar)');
+  await como(pelayo, 'aal2'); await q(`select presencia_marcar()`);
+  await como(luis); await q(`select presencia_marcar()`);
+  check(await n(`select count(*)::int n from presencia where usuario_id = $1`, [ana]) === 0 && await n(`select count(*)::int n from presencia where usuario_id = $1`, [pelayo]) === 1,
+    'Luis no ve la de Ana; sí la del coach');
+  await como(ana);
+  check(await n(`select count(*)::int n from presencia where usuario_id = $1`, [pelayo]) === 1 && await n(`select count(*)::int n from presencia where usuario_id = $1`, [luis]) === 0,
+    'Ana ve la del coach, no la de Luis');
+  await como(pelayo, 'aal2');
+  check(await n(`select count(*)::int n from presencia where usuario_id = any($1::uuid[])`, [[ana, luis]]) === 2, 'el coach ve la de sus atletas');
+  await como(ana);
+  const p2 = (await q(`select presencia_marcar(false) r`))[0].r;
+  check(p2.visible === false && p2.ultima_conexion === null, 'Ana la oculta: no se guarda su última conexión');
+  check(await n(`select count(*)::int n from presencia where usuario_id = $1`, [pelayo]) === 0, 'y, como en WhatsApp, deja de ver la del coach');
+  await como(pelayo, 'aal2');
+  check(await n(`select count(*)::int n from presencia where usuario_id = $1`, [ana]) === 0, 'el coach deja de ver la de Ana');
+  await como(ana); await q(`select presencia_marcar(true)`);
+  await anon();
+  check(await falla(`select * from presencia`) && await falla(`select presencia_marcar()`), 'sin sesión, nada');
+
+  console.log('  · Realtime: el canal privado de cada conversación');
+  const canal = async (topic, ext, quien, aal) => {
+    await (aal ? como(quien, aal) : como(quien));
+    await db.exec(`select set_config('realtime.topic', '${topic}', false)`);
+    const envia = !(await falla(`insert into realtime.messages (topic, extension, event, payload) values ($1, $2, 'escribiendo', '{}')`, [topic, ext]));
+    const recibe = (await q(`select count(*)::int n from realtime.messages where extension = $1`, [ext]))[0].n > 0;
+    return { envia, recibe };
+  };
+  await su(); await q(`insert into realtime.messages (topic, extension, event, payload) values ('x', 'broadcast', 'x', '{}'), ('x', 'presence', 'x', '{}')`);
+  const tAna = `chat:${aAna.id}`, tLuis = `chat:${aLuis.id}`;
+  const r1 = await canal(tAna, 'broadcast', ana);
+  check(r1.envia && r1.recibe, 'Ana entra en el canal de su conversación: envía y recibe («escribiendo…»)');
+  const r2 = await canal(tAna, 'presence', ana);
+  check(r2.envia && r2.recibe, 'y su presencia («en línea»)');
+  const r3 = await canal(tLuis, 'broadcast', ana);
+  const r4 = await canal(tLuis, 'presence', ana);
+  check(!r3.envia && !r3.recibe && !r4.envia && !r4.recibe, 'no entra en el de Luis (ni envía ni recibe)');
+  const r5 = await canal(tAna, 'broadcast', luis);
+  check(!r5.envia && !r5.recibe, 'Luis no entra en el de Ana');
+  const r6 = await canal(tLuis, 'broadcast', pelayo, 'aal2');
+  const r6b = await canal(tAna, 'presence', pelayo, 'aal2');
+  check(r6.envia && r6.recibe && r6b.envia && r6b.recibe, 'el coach, en los de sus atletas');
+  const raros = [];
+  for (const t of ['chat:no-es-un-uuid', `otro:${aAna.id}`, `chat:${aAna.id}x`, `chat:00000000-0000-0000-0000-000000000000`, '']) raros.push(await canal(t, 'broadcast', pelayo, 'aal2'));
+  check(raros.every((x) => !x.envia && !x.recibe), 'un canal con otro nombre (o de un atleta que no existe) no vale para nadie, tampoco para el coach');
+  const propio = await canal(`fbe-cambios:${ana}`, 'broadcast', ana), ajeno = await canal(`fbe-cambios:${luis}`, 'broadcast', ana), propioP = await canal(`fbe-cambios:${ana}`, 'presence', ana);
+  check(propio.envia && propio.recibe && !ajeno.envia && !ajeno.recibe && !propioP.envia, 'el canal propio de la cuenta (fbe-cambios:<su id>, para los mensajes nuevos): solo el suyo, y sin presencia');
+  const r7 = await canal(tAna, 'postgres_changes', ana);
+  check(!r7.envia, 'solo broadcast y presencia');
+  await como(ana); await q(`select presencia_marcar(false)`);
+  const r8 = await canal(tAna, 'presence', ana);
+  const r9 = await canal(tAna, 'broadcast', ana);
+  check(!r8.envia && !r8.recibe && !r9.envia && !r9.recibe, 'con «Mostrar cuándo estoy en línea» apagado, Ana no comparte ni ve la presencia, ni el «escribiendo…» (tras la revisión: el canal entero)');
+  const r9b = await canal(`fbe-cambios:${ana}`, 'broadcast', ana);
+  check(r9b.envia && r9b.recibe && (await q(`select chat_privado_disponible() d`))[0].d === true, 'su canal propio (los mensajes nuevos) sigue; y la app sabe que los privados están disponibles');
+  await como(ana); await q(`select presencia_marcar(true)`);
+  await anon(); await db.exec(`select set_config('realtime.topic', '${tAna}', false)`);
+  check(await falla(`insert into realtime.messages (topic, extension, event, payload) values ($1, 'broadcast', 'x', '{}')`, [tAna]), 'sin sesión, nada');
+  await su(); await db.exec(`select set_config('realtime.topic', '', false)`); await q(`delete from realtime.messages`);
+  const sinRt = new PGlite();
+  await sinRt.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8').split('-- Realtime (lo justo')[0]);
+  await sinRt.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  let errRt = null;
+  try { for (const m of migraciones()) await sinRt.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8')); } catch (e) { errRt = e.message; }
+  check(!errRt && (await sinRt.query(`select count(*)::int n from fbe_migraciones where numero = 32`)).rows[0].n === 1, 'en un proyecto sin realtime.messages, la 032 se aplica igual (sin «escribiendo…» ni «en línea»)');
+  await sinRt.close();
+
+  console.log('  · Buscar en los mensajes (solo el coach)');
+  await como(pelayo, 'aal2');
+  const enc = await q(`select * from chat_buscar('RODILLA esta')`);
+  check(enc.length === 1 && enc[0].id === mC.id, 'el coach busca sin mayúsculas en todas sus conversaciones');
+  check((await q(`select * from chat_buscar('que tal')`)).some((x) => x.id === mC.id), 'y sin tildes («que» encuentra «Qué»)');
+  check(!(await q(`select * from chat_buscar('eliminó')`)).length && !(await q(`select * from chat_buscar('gracias')`)).some((x) => x.atleta_id === aAna.id && x.autor === 'atleta' && /Mejor/.test(x.texto)),
+    'lo eliminado no sale');
+  check((await q(`select * from chat_buscar('%%')`)).length === 0 && (await q(`select * from chat_buscar('a')`)).length === 0, '«%» no lo encuentra todo y hacen falta 2 letras');
+  await como(ana);
+  check((await q(`select * from chat_buscar('rodilla')`)).length === 0, 'un atleta no busca con ella (ni en lo suyo)');
+  await su();
+  await q(`delete from comentarios where atleta_id = any($1::uuid[]) and creado_en > now() - interval '3 days'`, [[aAna.id, aLuis.id]]);
+  await q(`delete from archivos where id = $1`, [vidA.id]);
+  await q(`delete from presencia`); await q(`delete from chat_cupos`);
+}
+
+console.log('\nLo que encontró la revisión de seguridad de la 032');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  const ver = async (ruta) => (await q(`select name from storage.objects where bucket_id = 'archivos' and name = $1`, [ruta])).length === 1;
+  await su();
+  await q(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await q(`delete from chat_cupos`);
+  await q(`insert into storage.buckets (id, name) values ('archivos', 'archivos') on conflict do nothing`);
+  await q(`delete from storage.objects where bucket_id = 'archivos'`);
+  console.log('  · M1: lo que se quita de archivos deja de verse en Storage, y va a la cola');
+  await como(pelayo, 'aal2');
+  const [adjC] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'adjunto', $1::text || '/rev-coach.jpg', 'image/jpeg') returning *`, [aAna.id]);
+  await q(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [adjC.ruta]);
+  const [mFC] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Mira tu analítica') returning *`, [adjC.id]);
+  await como(ana);
+  check(await ver(adjC.ruta), 'Ana ve la foto que le manda el coach (tiene su fila en archivos)');
+  await como(pelayo, 'aal2');
+  const el = (await q(`select comentario_eliminar($1) r`, [mFC.id]))[0].r;
+  await como(ana);
+  check(el.rutas[0] === adjC.ruta && !(await ver(adjC.ruta)), 'eliminada para todos y sin limpiar Storage (la app falló): Ana ya no la ve ni la lista (sin fila, no hay permiso)');
+  check(!(await q(`select name from storage.objects where name like $1`, [`${aAna.id}/%`])).some((o) => o.name === adjC.ruta), '(tampoco al listar su carpeta)');
+  check((await q(`delete from storage.objects where name = $1 returning name`, [adjC.ruta])).length === 0, 'ni la borra ella (sin su fila no es suya: lo hace la app del coach)');
+  check(await falla(`select * from storage_pendiente()`) && await falla(`select storage_borrado($1)`, [[adjC.ruta]]), 'la cola no la ve ni la toca un atleta');
+  await como(pelayo, 'aal2');
+  check(await ver(adjC.ruta) && (await q(`select * from storage_pendiente() r`)).some((x) => x.r === adjC.ruta), 'el coach la ve y la tiene en la cola');
+  check((await q(`delete from storage.objects where name = $1 returning name`, [adjC.ruta])).length === 1 && (await q(`select storage_borrado($1) n`, [[adjC.ruta]]))[0].n === 1
+    && !(await q(`select * from storage_pendiente() r`)).some((x) => x.r === adjC.ruta), 'y la borra de Storage y la quita de la cola');
+  // Todo lo de archivos: fotos de progreso, vídeos y su miniatura, del atleta; el coach, lo de todos
+  await su();
+  const [vidA] = await q(`insert into archivos (atleta_id, tipo, ruta, poster_ruta, mime) values ($1::uuid, 'video_tecnica', $1::text || '/rev-tecnica.mp4', $1::text || '/rev-tecnica.mp4.jpg', 'video/mp4') returning *`, [aAna.id]);
+  const [fotoA] = await q(`insert into archivos (atleta_id, tipo, ruta, mime, pose) values ($1::uuid, 'foto_progreso', $1::text || '/rev-progreso.jpg', 'image/jpeg', 'frente') returning *`, [aAna.id]);
+  await q(`insert into storage.objects (bucket_id, name) values ('archivos', $1), ('archivos', $2), ('archivos', $3), ('archivos', $1 || '-huerfano.mp4')`, [vidA.ruta, vidA.poster_ruta, fotoA.ruta]);
+  await como(ana);
+  check(await ver(vidA.ruta) && await ver(vidA.poster_ruta) && await ver(fotoA.ruta), 'Ana ve sus vídeos, sus miniaturas y sus fotos de progreso');
+  check(!(await ver(`${vidA.ruta}-huerfano.mp4`)), 'pero no un archivo de su carpeta que no tiene fila en archivos');
+  check((await q(`delete from storage.objects where name = $1 returning name`, [`${vidA.ruta}-huerfano.mp4`])).length === 0, 'ni lo borra');
+  await como(luis);
+  check(!(await ver(vidA.ruta)) && !(await ver(fotoA.ruta)), 'Luis no ve lo de Ana');
+  await como(pelayo, 'aal2');
+  check(await ver(vidA.ruta) && await ver(`${vidA.ruta}-huerfano.mp4`), 'el coach ve todo (también lo huérfano, para limpiarlo)');
+  // Su vídeo del diario: lo borra de Storage (con su fila) y después la fila; la cola recoge lo que quede
+  await como(ana);
+  check((await q(`delete from storage.objects where name = any($1::text[]) returning name`, [[vidA.ruta, vidA.poster_ruta]])).length === 2, 'Ana borra de Storage su vídeo y su miniatura (mientras tiene su fila)');
+  check((await q(`delete from archivos where id = $1 returning id`, [vidA.id])).length === 1, 'y después su fila');
+  await como(pelayo, 'aal2');
+  const cola = (await q(`select * from storage_pendiente() r`)).map((x) => x.r);
+  check(cola.includes(vidA.ruta) && cola.includes(vidA.poster_ruta), 'lo borrado de archivos (y su miniatura) queda en la cola, por si no llegó a borrarse de Storage');
+  await q(`select storage_borrado($1)`, [cola]);
+  await su(); await q(`delete from storage.objects where name = $1`, [`${vidA.ruta}-huerfano.mp4`]);
+  // Si la miniatura falla al subir, el atleta la quita del vídeo (014): esa ruta deja de ser suya, y va a la cola
+  await su();
+  const [vidP] = await q(`insert into archivos (atleta_id, tipo, ruta, poster_ruta, mime) values ($1::uuid, 'video_tecnica', $1::text || '/rev-poster.mp4', $1::text || '/rev-poster.mp4.jpg', 'video/mp4') returning *`, [aAna.id]);
+  await q(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [vidP.poster_ruta]);
+  await como(ana);
+  check(await ver(vidP.poster_ruta) && (await q(`update archivos set poster_ruta = null where id = $1 returning id`, [vidP.id])).length === 1, 'Ana quita la miniatura de su vídeo');
+  check(!(await ver(vidP.poster_ruta)) && (await q(`delete from storage.objects where name = $1 returning name`, [vidP.poster_ruta])).length === 0, 'y deja de verla (ni la borra)');
+  await como(pelayo, 'aal2');
+  check((await q(`select * from storage_pendiente() r`)).some((x) => x.r === vidP.poster_ruta), 'pero queda en la cola del coach');
+  await q(`select storage_borrado($1)`, [[vidP.poster_ruta]]);
+  await su(); await q(`delete from storage.objects where name = $1`, [vidP.poster_ruta]); await q(`delete from archivos where id = $1`, [vidP.id]); await q(`delete from fbe_privado.storage_por_borrar`);
+
+  console.log('  · M2: el atleta no se lleva por delante mensajes del chat borrando archivos');
+  await como(pelayo, 'aal2');
+  const [adjC2] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'adjunto', $1::text || '/rev-coach2.jpg', 'image/jpeg') returning *`, [aAna.id]);
+  await q(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [adjC2.ruta]);
+  const [mF2] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Foto del coach') returning *`, [adjC2.id]);
+  const [mF2r] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Y fíjate en esto') returning *`, [adjC2.id]);
+  await su(); await q(`update comentarios set creado_en = now() - interval '30 days' where id = any($1::uuid[])`, [[mF2.id, mF2r.id]]);
+  await como(ana);
+  check((await q(`delete from archivos where id = $1 returning id`, [adjC2.id])).length === 0 && await n(`select count(*)::int n from comentarios where id = any($1::uuid[])`, [[mF2.id, mF2r.id]]) === 2,
+    'Ana no borra la foto del coach (ni, con ella, sus mensajes) desde archivos');
+  check((await q(`delete from storage.objects where name = $1 returning name`, [adjC2.ruta])).length === 0, 'ni su archivo de Storage');
+  const [adjA] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'adjunto', $1::text || '/rev-ana.jpg', 'image/jpeg') returning *`, [aAna.id]);
+  const [mFA] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Mi foto') returning *`, [adjA.id]);
+  await su(); await q(`update comentarios set creado_en = now() - interval '30 days' where id = $1`, [mFA.id]);
+  await como(ana);
+  check((await q(`delete from archivos where id = $1 returning id`, [adjA.id])).length === 0 && await n(`select count(*)::int n from comentarios where id = $1`, [mFA.id]) === 1,
+    'ni la suya de hace 30 días (se saltaría las 48 horas): eso va por comentario_eliminar');
+  // Una foto que le está mandando el coach (su fila y su archivo ya están; su mensaje aún no): Ana no la borra de Storage
+  await como(pelayo, 'aal2');
+  const [adjC3] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'adjunto', $1::text || '/rev-coach3.jpg', 'image/jpeg') returning *`, [aAna.id]);
+  await q(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [adjC3.ruta]);
+  await como(ana);
+  check(await ver(adjC3.ruta) && (await q(`delete from storage.objects where name = $1 returning name`, [adjC3.ruta])).length === 0,
+    'una foto del coach aún sin su mensaje: Ana la ve, pero no la borra de Storage (ningún adjunto del chat)');
+  await su(); await q(`delete from storage.objects where name = $1`, [adjC3.ruta]); await q(`delete from archivos where id = $1`, [adjC3.id]);
+  await como(ana);
+  const [adjSin] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'adjunto', $1::text || '/rev-sin-mensaje.jpg', 'image/jpeg') returning *`, [aAna.id]);
+  await su(); await q(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [adjSin.ruta]);
+  await como(ana);
+  check((await q(`delete from storage.objects where name = $1 returning name`, [adjSin.ruta])).length === 0
+    && (await q(`delete from archivos where id = $1 returning id`, [adjSin.id])).length === 1, 'un adjunto suyo sin mensaje (una subida que no llegó a enviarse) sí lo quita de archivos (su archivo, a la cola)');
+  await como(pelayo, 'aal2');
+  check((await q(`select * from storage_pendiente() r`)).some((x) => x.r === adjSin.ruta), '(y el coach lo tiene en la cola)');
+  await q(`select storage_borrado($1)`, [[adjSin.ruta]]); await su(); await q(`delete from storage.objects where name = $1`, [adjSin.ruta]);
+  await como(ana);
+  await su();
+  const [vidT] = await q(`insert into archivos (atleta_id, tipo, ruta, mime) values ($1::uuid, 'video_tecnica', $1::text || '/rev-diario.mp4', 'video/mp4') returning *`, [aAna.id]);
+  await como(pelayo, 'aal2');
+  const [cT] = await q(`insert into comentarios (archivo_id, texto) values ($1, 'Rodilla hacia dentro') returning id`, [vidT.id]);
+  await como(ana);
+  check((await q(`delete from archivos where id = $1 returning id`, [vidT.id])).length === 1, 'su vídeo del diario sí lo borra, como siempre');
+  await su();
+  check((await q(`select archivo_id, eliminado_en from comentarios where id = $1`, [cT.id]))[0]?.archivo_id === null, '(el comentario del coach se queda, sin el vídeo, como antes)');
+  // El coach borra un adjunto con mensajes: quedan eliminados, no desaparecen
+  await como(pelayo, 'aal2');
+  await q(`delete from archivos where id = $1`, [adjC2.id]);
+  await su();
+  const tras = await q(`select texto, eliminado_en, archivo_id from comentarios where id = any($1::uuid[])`, [[mF2.id, mF2r.id]]);
+  check(tras.length === 2 && tras.every((x) => x.eliminado_en && x.texto === 'Se eliminó este mensaje' && x.archivo_id === null), 'si el coach borra un adjunto del chat, sus mensajes quedan como «Se eliminó este mensaje» (no desaparecen)');
+  check((await q(`select 1 from fbe_privado.storage_por_borrar where ruta = $1`, [adjC2.ruta])).length === 1, 'y su archivo, a la cola');
+  await q(`delete from fbe_privado.storage_por_borrar`); await q(`delete from storage.objects where bucket_id = 'archivos'`);
+  await q(`delete from comentarios where id = any($1::uuid[])`, [[mF2.id, mF2r.id, mFA.id, cT.id]]); await q(`delete from archivos where id = $1`, [adjA.id]); await q(`delete from fbe_privado.storage_por_borrar`);
+
+  console.log('  · Baja, «leído» y cupos');
+  await como(pelayo, 'aal2');
+  const [mC] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Revisión: hola') returning *`, [aAna.id]);
+  await como(ana);
+  const [mA] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'Revisión: antes de la baja') returning *`, [aAna.id]);
+  await su(); await q(`update atletas set estado = 'baja' where id = $1`, [aAna.id]);
+  await como(ana);
+  check(await falla(`update comentarios set texto = 'editado de baja' where id = $1`, [mA.id]) && await falla(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [mC.id])
+    && await falla(`insert into comentario_destacados (comentario_id) values ($1)`, [mC.id]), 'de baja: no edita, ni reacciona, ni destaca');
+  check((await q(`update comentarios set leido_en = now() where id = $1 returning id`, [mC.id])).length === 1, '(sí puede marcar leído lo que le llega)');
+  await su(); await q(`update atletas set estado = 'activo' where id = $1`, [aAna.id]); await q(`update comentarios set leido_en = null where id = $1`, [mC.id]);
+  await como(ana);
+  const [l1] = await q(`update comentarios set leido_en = '2001-01-01' where id = $1 returning leido_en`, [mC.id]);
+  check(Math.abs(new Date(l1.leido_en) - Date.now()) < 60000, '«leído» lo fecha la base (no la hora que mande el móvil)');
+  const [l2] = await q(`update comentarios set leido_en = now() + interval '1 day' where id = $1 returning leido_en`, [mC.id]);
+  check(new Date(l2.leido_en).getTime() === new Date(l1.leido_en).getTime() && await falla(`update comentarios set leido_en = null where id = $1`, [mC.id]), 'una vez leído, no cambia ni vuelve a «no leído»');
+  const [mC2] = await (async () => { await como(pelayo, 'aal2'); return q(`insert into comentarios (atleta_id, texto) values ($1, 'Revisión: otro') returning *`, [aAna.id]); })();
+  await como(ana); await q(`select presencia_marcar(false)`);
+  const [l3] = await q(`update comentarios set leido_en = now() where id = $1 returning leido_en`, [mC2.id]);
+  const madrid = (await q(`select to_char($1::timestamptz at time zone 'Europe/Madrid', 'HH24:MI:SS') h`, [l3.leido_en]))[0].h;
+  check(madrid === '00:00:00', 'sin «Mostrar cuándo estoy en línea», lo leído queda con el día, no con la hora exacta');
+  await q(`select presencia_marcar(true)`);
+  const [mE] = await q(`insert into comentarios (atleta_id, texto) values ($1, 'cupo') returning id`, [aAna.id]);
+  await su();
+  check((await q(`select pg_get_functiondef('fbe_privado.chat_gastar_cupo(text)'::regprocedure) d`))[0].d.includes('pg_advisory_xact_lock'), 'el cupo se cuenta de uno en uno (bloqueo por cuenta y tipo)');
+  check(!(await q(`select 1 from pg_proc where proname = 'storage_pendiente' and prosecdef and array_to_string(proconfig, ',') <> 'search_path=""'`)).length, 'las funciones nuevas, con search_path vacío');
+  await como(ana);
+  check(!(await falla(`update comentarios set editado_en = null where id = $1`, [mE.id])) && (await q(`select editado_en from comentarios where id = $1`, [mE.id]))[0].editado_en === null,
+    '(dejar «editado» como está no cambia nada: no hay forma de marcar «Editado» sin editar)');
+  await su();
+  await q(`delete from comentarios where id = any($1::uuid[])`, [[mC.id, mA.id, mC2.id, mE.id]]); await q(`delete from chat_cupos`); await q(`delete from presencia`);
 }
 
 console.log('\nLa verificación en dos pasos falla cerrada');

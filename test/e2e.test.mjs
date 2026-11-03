@@ -3837,6 +3837,384 @@ try {
     `con «Automático», Ana sigue igual: «${hechasAna}/${totalAna}», las de su semana del programa`);
   await entrarComo('Pelayo');
   }
+  {
+  console.log('\nv0.54: el chat como WhatsApp');
+  // (sigue como Pelayo) Ayudas: abrir el chat de un atleta desde Mensajes, el menú de una burbuja (botón derecho) y
+  // deslizar una burbuja con el dedo (eventos de puntero táctiles)
+  const abrirChatCoach = async (nombre) => {
+    await p.locator('.tab', { hasText: 'Mensajes' }).click();
+    await p.locator('.conversacion', { hasText: nombre }).first().click();
+    await p.locator('.chat-area').waitFor();
+    await p.locator('.burbuja').first().waitFor();
+    await p.waitForTimeout(400);
+  };
+  const menuDe = async (burbuja) => {
+    await burbuja.scrollIntoViewIfNeeded();
+    await burbuja.click({ button: 'right', position: { x: 16, y: 10 } });
+    const d = p.getByRole('dialog', { name: 'Mensaje' });
+    await d.waitFor();
+    await p.waitForTimeout(350);
+    return d;
+  };
+  const deslizar = async (burbuja) => {
+    await burbuja.scrollIntoViewIfNeeded();
+    await burbuja.evaluate((el) => {
+      const r = el.getBoundingClientRect(), x0 = r.left + 30, y0 = r.top + r.height / 2;
+      const ev = (t, x) => el.dispatchEvent(new PointerEvent(t, { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y0, bubbles: true, button: 0 }));
+      ev('pointerdown', x0); for (let i = 1; i <= 8; i++) ev('pointermove', x0 + i * 12); ev('pointerup', x0 + 96);
+    });
+  };
+  const enviarTexto = async (t) => { await p.locator('.chat-area').fill(t); await p.getByRole('button', { name: 'Enviar', exact: true }).click(); await p.locator('.burbuja.mia', { hasText: t.replace(/[*_~`]/g, '').slice(0, 18) }).last().waitFor(); };
+  await abrirChatCoach('Ana López');
+  check(await p.locator('.cabecera-chat h1', { hasText: 'Ana López' }).count() === 1 && await p.getByRole('button', { name: 'Buscar en el chat' }).count() === 1 && await p.getByRole('button', { name: 'Más opciones del chat' }).count() === 1,
+    'la cabecera del chat: su nombre, buscar y el menú del chat');
+  // Formato de WhatsApp (con un enlace de YouTube en el mismo mensaje)
+  await enviarTexto('Hoy toca *pierna* y _movilidad_, ~nada de carrera~, `RIR 2` y mira https://youtu.be/gMgvBspQ9lk');
+  const bForm = p.locator('.burbuja.mia', { hasText: 'Hoy toca' }).last();
+  check(await bForm.locator('strong', { hasText: 'pierna' }).count() === 1 && await bForm.locator('em', { hasText: 'movilidad' }).count() === 1 && await bForm.locator('s', { hasText: 'nada de carrera' }).count() === 1
+    && await bForm.locator('code.chat-mono', { hasText: 'RIR 2' }).count() === 1 && !(await bForm.textContent()).includes('*pierna*')
+    && await hay(bForm.locator('.vista-youtube img'), 1) && await bForm.locator('a.enlace-texto').count() === 1, '*negrita*, _cursiva_, ~tachado~ y `mono` (con su enlace y la miniatura de YouTube)');
+  await revisar('chat-formato');
+  // «/» respuestas rápidas
+  await p.locator('.chat-area').fill('/');
+  const rapidas = p.getByRole('listbox', { name: 'Respuestas rápidas' });
+  await rapidas.waitFor();
+  const nRapidas = await rapidas.getByRole('option').count();
+  check(nRapidas >= 2 && (await p.locator('.chat-area').getAttribute('aria-controls')) === 'chat-rapidas', `«/» al principio enseña sus respuestas guardadas (${nRapidas})`);
+  await revisar('chat-rapidas');
+  const primera = (await rapidas.getByRole('option').first().locator('strong').textContent()).trim();
+  await p.locator('.chat-area').fill(`/${primera.slice(0, 4)}`);
+  await p.waitForTimeout(150);
+  check(await rapidas.getByRole('option').count() >= 1 && (await rapidas.getByRole('option').first().textContent()).includes(primera.slice(0, 4)), 'se filtran al escribir');
+  await p.locator('.chat-area').press('ArrowDown');
+  await p.locator('.chat-area').press('ArrowUp');
+  await p.locator('.chat-area').press('Enter');
+  const insertada = await p.locator('.chat-area').inputValue();
+  check(insertada.length > 5 && !insertada.startsWith('/') && !insertada.includes('{nombre}') && await rapidas.count() === 0, 'con las flechas y Enter se inserta (con su nombre)');
+  await p.locator('.chat-area').fill('/');
+  await rapidas.getByRole('option').nth(1).click();
+  check(!(await p.locator('.chat-area').inputValue()).startsWith('/'), 'o tocándola');
+  await p.locator('.chat-area').fill('');
+  // Responder desde el menú, y tocar la cita lleva al original
+  const deAna = p.locator('.burbuja.suya:not(.eliminada)', { hasText: 'gimnasio del hotel' }).last();
+  let menu = await menuDe(deAna);
+  await revisar('chat-menu');
+  check(await menu.getByRole('group', { name: 'Reaccionar' }).getByRole('button').count() === 6 && await menu.getByRole('button', { name: 'Responder' }).count() === 1
+    && await menu.getByRole('button', { name: 'Copiar' }).count() === 1 && await menu.getByRole('button', { name: 'Destacar' }).count() === 1 && await menu.getByRole('button', { name: 'Editar' }).count() === 0
+    && await menu.getByRole('button', { name: 'Eliminar para todos' }).count() === 0, 'el menú de un mensaje de Ana: reacciones, Responder, Copiar y Destacar (ni editar ni eliminar lo suyo)');
+  await menu.getByRole('button', { name: 'Responder' }).click();
+  await p.locator('.chat-cita-compositor').waitFor();
+  check((await p.locator('.chat-cita-compositor').textContent()).includes('📷'), 'el cuadro de escribir enseña lo que cita (la foto: «📷 …»)');
+  await revisar('chat-respondiendo');
+  await enviarTexto('Te respondo a la foto');
+  const conCita = p.locator('.burbuja.mia', { hasText: 'Te respondo a la foto' }).last();
+  check(await conCita.locator('.burbuja-cita', { hasText: 'Ana' }).count() === 1 && await p.locator('.chat-cita-compositor').count() === 0, 'el mensaje sale con la cita encima (quién y un trozo)');
+  await p.evaluate(() => window.scrollTo(0, 0));
+  await conCita.locator('.burbuja-cita').click();
+  check(await hay(p.locator('.burbuja.resaltada', { hasText: 'gimnasio del hotel' }), 1, 3000)
+    && await p.waitForFunction(() => { const el = document.querySelector('.burbuja.resaltada'); const r = el?.getBoundingClientRect(); return !!r && r.bottom > 0 && r.top < innerHeight; }, null, { timeout: 3000 }).then(() => true, () => false),
+    'tocar la cita lleva al original y lo resalta un momento');
+  // Responder deslizando la burbuja a la derecha
+  const vuelvo = p.locator('.burbuja.suya:not(.eliminada)', { hasText: 'estoy de viaje' }).last();
+  await deslizar(vuelvo);
+  await p.locator('.chat-cita-compositor').waitFor();
+  check((await p.locator('.chat-cita-compositor').textContent()).includes('estoy de viaje'), 'deslizar una burbuja a la derecha también responde');
+  await enviarTexto('Perfecto, el sábado entonces');
+  check(await p.locator('.burbuja.mia', { hasText: 'Perfecto, el sábado' }).last().locator('.burbuja-cita', { hasText: 'estoy de viaje' }).count() === 1, 'y sale con su cita');
+  // Reacciones: poner, cambiar y quitar
+  menu = await menuDe(vuelvo);
+  await menu.getByRole('button', { name: 'Reaccionar con bíceps' }).click();
+  await vuelvo.locator('.burbuja-reacciones').waitFor();
+  check((await vuelvo.locator('.burbuja-reacciones').textContent()).includes('💪') && (await vuelvo.locator('.burbuja-reacciones').getAttribute('aria-label')).includes('bíceps 1'), 'reacciona con 💪: sale en la esquina de la burbuja');
+  await revisar('chat-reaccion');
+  menu = await menuDe(vuelvo);
+  check(await menu.getByRole('button', { name: 'Quitar tu reacción (bíceps)' }).getAttribute('aria-pressed') === 'true', 'el menú marca la suya');
+  await menu.getByRole('button', { name: 'Reaccionar con corazón' }).click();
+  await p.waitForFunction(() => [...document.querySelectorAll('.burbuja-reacciones')].some((x) => x.textContent.includes('❤️')));
+  check(!(await vuelvo.locator('.burbuja-reacciones').textContent()).includes('💪'), 'tocar otra la cambia (una por persona)');
+  await vuelvo.locator('.burbuja-reacciones').click();
+  const hojaQuien = p.getByRole('dialog', { name: 'Reacciones' });
+  await hojaQuien.waitFor();
+  check((await hojaQuien.textContent()).includes('Tú'), 'tocar la píldora dice quién ha reaccionado');
+  await revisar('chat-quien');
+  await hojaQuien.getByRole('button', { name: 'Quitar la mía' }).click();
+  check(await hay(vuelvo.locator('.burbuja-reacciones'), 0), 'y la quita');
+  // Editar en sus 15 minutos (y, con el reloj adelantado 16 minutos, ya no)
+  const mio = p.locator('.burbuja.mia', { hasText: 'Perfecto, el sábado' }).last();
+  menu = await menuDe(mio);
+  check(await menu.getByRole('button', { name: 'Editar' }).count() === 1 && await menu.getByRole('button', { name: 'Info' }).count() === 1 && await menu.getByRole('button', { name: 'Eliminar para todos' }).count() === 1,
+    'en lo suyo: Editar, Info y Eliminar para todos');
+  await menu.getByRole('button', { name: 'Editar' }).click();
+  await p.locator('.chat-cita-compositor.editando').waitFor();
+  check(await p.locator('.chat-area').inputValue() === 'Perfecto, el sábado entonces', 'al editar, el texto vuelve al cuadro');
+  await p.locator('.chat-area').fill('Perfecto, el sábado entonces (la tercera)');
+  await p.getByRole('button', { name: 'Guardar el cambio' }).click();
+  await p.locator('.burbuja.mia', { hasText: '(la tercera)' }).waitFor();
+  check(await p.locator('.burbuja.mia', { hasText: '(la tercera)' }).locator('.burbuja-editado', { hasText: 'Editado' }).count() === 1, 'editado: lleva «Editado»');
+  menu = await menuDe(p.locator('.burbuja.mia', { hasText: '(la tercera)' }).last());
+  await menu.getByRole('button', { name: 'Info' }).click();
+  const hojaInfo = p.getByRole('dialog', { name: 'Info del mensaje' });
+  await hojaInfo.waitFor();
+  const txtInfo = await hojaInfo.textContent();
+  check(/Enviado\s*hoy \d/.test(txtInfo) && /Leído\s*todavía no/.test(txtInfo) && /Editado\s*hoy \d/.test(txtInfo), 'Info: «Enviado: hoy …», «Leído: todavía no» y «Editado: hoy …»');
+  await revisar('chat-info');
+  await hojaInfo.getByRole('button', { name: 'Cerrar' }).click();
+  menu = await menuDe(p.locator('.burbuja.mia', { hasText: '(la tercera)' }).last());
+  await menu.getByRole('button', { name: 'Editar' }).click();
+  await p.locator('.chat-area').fill('Demasiado tarde');
+  await p.evaluate(() => { const D = Date; const salto = 16 * 60000; class F extends D { constructor(...a) { if (a.length) super(...a); else super(D.now() + salto); } static now() { return D.now() + salto; } } window.__DateReal = D; window.Date = F; });
+  await p.getByRole('button', { name: 'Guardar el cambio' }).click();
+  await p.locator('.toast', { hasText: '15 minutos' }).waitFor();
+  await p.evaluate(() => { window.Date = window.__DateReal; });
+  check(await p.locator('.burbuja.mia', { hasText: 'Demasiado tarde' }).count() === 0, 'pasados 15 minutos (reloj adelantado), la edición se rechaza');
+  await p.getByRole('button', { name: 'Cancelar la edición' }).click();
+  // Eliminar para todos
+  await enviarTexto('Esto era para otro atleta');
+  menu = await menuDe(p.locator('.burbuja.mia', { hasText: 'Esto era para otro' }).last());
+  await menu.getByRole('button', { name: 'Eliminar para todos' }).click();
+  const hojaElim = p.getByRole('dialog', { name: '¿Eliminar para todos?' });
+  await hojaElim.waitFor();
+  await revisar('chat-eliminar');
+  await hojaElim.getByRole('button', { name: 'Eliminar para todos' }).click();
+  await p.locator('.toast', { hasText: 'Mensaje eliminado' }).waitFor();
+  check(await p.locator('.burbuja.mia', { hasText: 'Esto era para otro' }).count() === 0 && await p.locator('.burbuja.mia.eliminada', { hasText: 'Se eliminó este mensaje' }).count() >= 1, 'eliminado para todos: «🚫 Se eliminó este mensaje»');
+  // Buscar en el chat
+  await p.getByRole('button', { name: 'Buscar en el chat' }).click();
+  await p.getByRole('searchbox', { name: 'Buscar en el chat' }).fill('pierna');
+  await p.waitForTimeout(400);
+  const contador = async () => (await p.locator('.chat-busqueda-n').textContent()).trim();
+  const c1 = await contador();
+  check(/^1 de \d+\+?$/.test(c1) && await p.locator('.burbuja.actual .chat-marca').count() >= 1, `buscar: lo encontrado se marca y «${c1}»`);
+  await revisar('chat-buscar');
+  if (!c1.startsWith('1 de 1')) {
+    await p.getByRole('button', { name: /Coincidencia anterior/ }).click();
+    await p.waitForTimeout(300);
+    check((await contador()).startsWith('2 de'), '↑ va a la anterior («2 de …»)');
+    await p.getByRole('button', { name: /Coincidencia siguiente/ }).click();
+  } else check(true, '(una sola coincidencia)');
+  await p.getByRole('button', { name: 'Cerrar la búsqueda' }).click();
+  check(await p.locator('.chat-marca').count() === 0 && await p.locator('.cabecera-chat h1:not(.sr)').count() === 1, 'al cerrar, la cabecera vuelve');
+  // A 360 px, en oscuro y con la letra al 125 %: el chat y el menú
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.evaluate(() => document.documentElement.setAttribute('data-letra', 'muy-grande'));
+  await p.waitForTimeout(250);
+  await revisar('chat-360-oscuro-125');
+  menu = await menuDe(p.locator('.burbuja.mia', { hasText: '(la tercera)' }).last());
+  check(await menu.evaluate((d) => document.documentElement.scrollWidth <= 360 && [...d.querySelectorAll('.menu-reaccion')].every((b) => { const r = b.getBoundingClientRect(); return r.right <= 360 && r.width >= 40; })), 'a 360 px y 125 %, el menú cabe (las seis reacciones también)');
+  await revisar('chat-menu-360-oscuro-125');
+  await p.keyboard.press('Escape');
+  await p.evaluate(() => document.documentElement.removeAttribute('data-letra'));
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+  // Teclado: «Más opciones» y Mayús+F10
+  await p.locator('.burbuja.mia', { hasText: '(la tercera)' }).last().focus();
+  await p.keyboard.press('Shift+F10');
+  await p.getByRole('dialog', { name: 'Mensaje' }).waitFor();
+  check(true, 'Mayús+F10 sobre una burbuja abre su menú');
+  await p.keyboard.press('Escape');
+  await p.locator('.burbuja.mia', { hasText: '(la tercera)' }).last().getByRole('button', { name: 'Más opciones' }).focus();
+  check(await p.locator('.burbuja.mia', { hasText: '(la tercera)' }).last().getByRole('button', { name: 'Más opciones' }).evaluate((b) => getComputedStyle(b).opacity === '1'), '«Más opciones» se ve al llegar con el teclado');
+  // El borrador se queda (y sale en la lista)
+  await p.locator('.chat-area').fill('Mañana te digo lo de la rodilla');
+  await p.waitForTimeout(600);
+  await p.getByRole('button', { name: 'Volver a mensajes' }).click();
+  const filaAna = p.locator('.conv-fila', { hasText: 'Ana López' });
+  await filaAna.waitFor();
+  check((await filaAna.textContent()).includes('Borrador: Mañana te digo'), 'en la lista: «Borrador: …»');
+  await revisar('conversaciones-borrador');
+  // La lista: fijar, filtros, archivar, «no leído», buscar y la vista previa
+  await filaAna.getByRole('button', { name: 'Opciones de la conversación con Ana López' }).click();
+  let hojaConv = p.getByRole('dialog', { name: 'Ana López' });
+  await hojaConv.waitFor();
+  await revisar('conversacion-opciones');
+  await hojaConv.getByRole('button', { name: /Fijar arriba/ }).click();
+  await p.locator('.toast', { hasText: 'Fijada arriba' }).waitFor();
+  await p.waitForTimeout(300);
+  check((await p.locator('.conv-fila').first().textContent()).includes('Ana López') && await p.locator('.conversacion.fijada').count() === 1, 'fijada: arriba del todo, con su chincheta');
+  const filaRuben = p.locator('.conv-fila', { hasText: 'Rubén' }).first();
+  await filaRuben.getByRole('button', { name: /^Opciones de la conversación/ }).click();
+  hojaConv = p.getByRole('dialog').last();
+  await hojaConv.getByRole('button', { name: /^Archivar/ }).click();
+  await p.locator('.toast', { hasText: 'Archivada' }).waitFor();
+  await p.locator('.conv-archivados').waitFor();
+  check(await p.locator('.conv-fila', { hasText: 'Rubén' }).count() === 0 && (await p.locator('.conv-archivados').textContent()).includes('1'), 'archivar: sale de la lista y aparece «Archivados» arriba');
+  await p.locator('.conv-archivados').click();
+  await p.getByRole('heading', { name: 'Archivados' }).waitFor();
+  check(await p.locator('.conv-fila', { hasText: 'Rubén' }).count() === 1, 'en «Archivados», la de Rubén');
+  await revisar('conversaciones-archivadas');
+  await p.getByRole('button', { name: 'Todas' }).click();
+  const filaCarlos = p.locator('.conv-fila', { hasText: 'Carlos' }).first();
+  await filaCarlos.click({ button: 'right' });
+  hojaConv = p.getByRole('dialog').last();
+  await hojaConv.getByRole('button', { name: /Marcar como no leído/ }).click();
+  await p.locator('.toast', { hasText: 'Marcada como no leída' }).waitFor();
+  check(await hay(filaCarlos.locator('.conv-punto'), 1), '«Marcar como no leído» (con el botón derecho): un punto');
+  await p.getByRole('group', { name: 'Qué conversaciones ver' }).getByRole('button', { name: 'Fijados' }).click();
+  check(await hay(p.locator('.conv-fila'), 1) && (await p.locator('.conv-fila').textContent()).includes('Ana López'), 'filtro «Fijados»');
+  await p.getByRole('group', { name: 'Qué conversaciones ver' }).getByRole('button', { name: 'No leídos' }).click();
+  await p.waitForTimeout(200);
+  check(await p.locator('.conv-fila', { hasText: 'Carlos' }).count() === 1 && await p.locator('.conv-fila').evaluateAll((fs) => fs.every((f) => f.querySelector('.conv-n'))), 'filtro «No leídos» (también las marcadas)');
+  await revisar('conversaciones-filtro');
+  await p.getByRole('group', { name: 'Qué conversaciones ver' }).getByRole('button', { name: 'Todos' }).click();
+  await p.getByRole('searchbox', { name: 'Buscar atleta o mensaje' }).fill('hotel');
+  await p.locator('.conv-resultado').first().waitFor();
+  check(await p.locator('.conv-resultado', { hasText: 'Ana López' }).count() >= 1 && await p.locator('.conv-resultado .chat-marca').count() >= 1, 'buscar «hotel»: los mensajes que lo dicen, marcado');
+  await revisar('conversaciones-buscar');
+  await p.getByRole('searchbox', { name: 'Buscar atleta o mensaje' }).fill('carl');
+  await p.waitForTimeout(400);
+  check(await p.locator('.conv-fila').count() === 1 && (await p.locator('.conv-fila').textContent()).includes('Carlos'), 'y por nombre');
+  await p.getByRole('searchbox', { name: 'Buscar atleta o mensaje' }).fill('');
+  await filaCarlos.click({ button: 'right' });
+  await p.getByRole('dialog').last().getByRole('button', { name: 'Marcar como leído' }).click();
+  await filaAna.locator('.conversacion').click();
+  await p.locator('.chat-area').waitFor();
+  check(await p.locator('.chat-area').inputValue() === 'Mañana te digo lo de la rodilla', 'al volver al chat, el borrador sigue ahí');
+  await p.locator('.chat-area').fill('');
+  await p.waitForTimeout(600);
+  await p.getByRole('button', { name: 'Volver a mensajes' }).click();
+  await filaAna.waitFor();
+  check(!(await filaAna.textContent()).includes('Borrador') && /✓/.test(await filaAna.locator('.conv-ultimo').textContent()), 'sin borrador, la vista previa: lo último, con ✓ si es tuyo');
+  await filaAna.getByRole('button', { name: /^Opciones/ }).click();
+  await p.getByRole('dialog').last().getByRole('button', { name: 'Desfijar' }).click();
+  await p.locator('.conv-archivados').click();
+  await p.locator('.conv-fila', { hasText: 'Rubén' }).getByRole('button', { name: /^Opciones/ }).click();
+  await p.getByRole('dialog').last().getByRole('button', { name: 'Desarchivar' }).click();
+  await p.locator('.toast', { hasText: 'Ya no está archivada' }).waitFor();
+
+  // Ana: «N MENSAJES SIN LEER», lo eliminado, destacados, archivos, varias fotos, borrador y el fondo
+  await entrarComo('Ana López');
+  await p.locator('.tab', { hasText: 'Mensajes' }).click();
+  await p.locator('#chat-sin-leer').waitFor();
+  const txtSep = (await p.locator('#chat-sin-leer').textContent()).trim();
+  check(/^\d+ MENSAJES? SIN LEER$/.test(txtSep) && await p.locator('#chat-sin-leer').evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.top < innerHeight / 2; }),
+    `al abrir, «${txtSep}» encima del primero sin leer, y el chat abre ahí (no abajo del todo)`);
+  await revisar('chat-sin-leer');
+  check(await p.locator('.burbuja.suya.eliminada', { hasText: 'Se eliminó este mensaje' }).count() >= 1 && !(await p.locator('.chat-lista').textContent()).includes('Esto era para otro'), 'lo que el coach eliminó, Ana lo ve como «Se eliminó este mensaje» (sin el texto)');
+  check(await p.locator('.burbuja.suya', { hasText: 'Te respondo a la foto' }).locator('.burbuja-cita', { hasText: 'Tú' }).count() === 1, 'y la respuesta del coach cita su foto («Tú»)');
+  const bPierna = p.locator('.burbuja.suya', { hasText: 'Hoy toca' }).last();
+  menu = await menuDe(bPierna);
+  await menu.getByRole('button', { name: 'Destacar' }).click();
+  await p.locator('.toast', { hasText: 'Destacado' }).waitFor();
+  check(await hay(bPierna.locator('.burbuja-estrella'), 1), 'destaca un mensaje: lleva su estrella');
+  await p.getByRole('button', { name: 'Más opciones del chat' }).click();
+  await p.getByRole('dialog', { name: 'Opciones del chat' }).waitFor();
+  await revisar('chat-opciones');
+  await p.getByRole('button', { name: /Mensajes destacados/ }).click();
+  const hojaDest = p.getByRole('dialog', { name: 'Mensajes destacados' });
+  await hojaDest.locator('.chat-destacado').first().waitFor();
+  check(await hojaDest.locator('.chat-destacado').count() === 1 && (await hojaDest.textContent()).includes('Hoy toca pierna'), '«Mensajes destacados», con el suyo (sin las marcas de formato)');
+  await revisar('chat-destacados');
+  await p.evaluate(() => window.scrollTo(0, 0));
+  await hojaDest.locator('.chat-destacado').first().click();
+  check(await hay(p.locator('.burbuja.resaltada', { hasText: 'Hoy toca' }), 1, 3000), 'tocarlo lleva al mensaje');
+  await p.getByRole('button', { name: 'Más opciones del chat' }).click();
+  await p.getByRole('button', { name: /Archivos, enlaces y documentos/ }).click();
+  const hojaArch = p.getByRole('dialog', { name: 'Archivos, enlaces y documentos' });
+  await hojaArch.getByRole('tab', { name: /Multimedia/ }).waitFor();
+  await hojaArch.locator('.medio-chat.mini').first().waitFor();
+  check(await hojaArch.locator('.medio-chat.mini').count() >= 1 && (await hojaArch.getByRole('tab', { name: /Multimedia/ }).getAttribute('aria-selected')) === 'true', 'Multimedia: las fotos del chat');
+  await revisar('chat-archivos');
+  await hojaArch.getByRole('tab', { name: /Enlaces/ }).click();
+  check((await hojaArch.locator('.chat-enlace').first().textContent()).includes('youtu.be/gMgvBspQ9lk'), 'Enlaces: el de YouTube');
+  await hojaArch.getByRole('tab', { name: /Documentos/ }).click();
+  check(await hojaArch.locator('.vacio-titulo', { hasText: 'Sin documentos' }).count() === 1, 'Documentos (por el chat solo van fotos y vídeos: vacío, y lo explica)');
+  await hojaArch.getByRole('tab', { name: /Enlaces/ }).click();
+  await hojaArch.getByRole('button', { name: 'Ir al mensaje' }).first().click();
+  check(await hay(p.locator('.burbuja.resaltada', { hasText: 'Hoy toca' }), 1, 3000), '«Ir al mensaje» desde un enlace');
+  await p.getByRole('button', { name: 'Más opciones del chat' }).click();
+  await p.getByRole('button', { name: /Archivos, enlaces y documentos/ }).click();
+  await hojaArch.locator('.medio-chat.mini').first().click();
+  await p.getByRole('dialog', { name: /Foto/ }).waitFor();
+  check(true, 'tocar una foto de Multimedia la abre');
+  await p.keyboard.press('Escape');
+  // Varias fotos con un pie
+  const png = (await import('node:fs')).readFileSync(new URL('../web/iconos/icono-180.png', import.meta.url));
+  await p.locator('input[type=file][accept="image/*,video/*"]').setInputFiles([1, 2, 3].map((i) => ({ name: `gym-${i}.png`, mimeType: 'image/png', buffer: png })));
+  await p.locator('.chat-adjunto-item').nth(2).waitFor();
+  check(await p.locator('.chat-adjunto-item').count() === 3 && (await p.locator('.chat-adjunto').textContent()).includes('3 fotos y vídeos'), 'elige 3 fotos a la vez: una tira con las tres');
+  await revisar('chat-varias-fotos');
+  await p.getByRole('button', { name: 'Quitar la foto 2' }).click();
+  check(await hay(p.locator('.chat-adjunto-item'), 2), 'quita una');
+  const antesFotos = await p.locator('.burbuja.mia .medio-chat').count();
+  await p.locator('.chat-area').fill('Dos fotos del gimnasio nuevo');
+  await p.getByRole('button', { name: 'Enviar', exact: true }).click();
+  await p.locator('.burbuja.mia', { hasText: 'Dos fotos del gimnasio' }).waitFor();
+  check(await hay(p.locator('.burbuja.mia .medio-chat'), antesFotos + 2) && await p.locator('.burbuja.mia', { hasText: 'Dos fotos del gimnasio' }).locator('.medio-chat').count() === 1 && await p.locator('.chat-adjunto').count() === 0,
+    'se envían las dos (cada una en su mensaje) y el pie va con la primera');
+  // El borrador, al irse y volver
+  await p.locator('.chat-area').fill('Una duda que te escribo luego');
+  await p.waitForTimeout(600);
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').waitFor();
+  await p.waitForTimeout(600);
+  await cerrarDialogos();
+  await p.locator('.tab', { hasText: 'Mensajes' }).click();
+  await p.locator('.chat-area').waitFor();
+  check(await p.locator('.chat-area').inputValue() === 'Una duda que te escribo luego', 'el borrador se queda en el móvil al irse y volver');
+  await p.locator('.chat-area').fill('');
+  await p.waitForTimeout(600);
+  // El fondo del chat: con dibujos (de serie) o liso; con el negro puro, sin dibujos
+  check(await p.locator('.chat-fondo').count() === 1 && await p.locator('.chat-fondo').evaluate((x) => getComputedStyle(x).display !== 'none'), 'el fondo del chat, con dibujos de serie');
+  await p.evaluate(() => document.documentElement.setAttribute('data-oled', ''));
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.waitForTimeout(150);
+  check(await p.locator('.chat-fondo').evaluate((x) => getComputedStyle(x).display === 'none'), 'con el negro puro (OLED), sin dibujos');
+  await revisar('chat-oled');
+  await p.evaluate(() => document.documentElement.removeAttribute('data-oled'));
+  await p.emulateMedia({ colorScheme: null });
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').waitFor();
+  await cerrarDialogos();
+  await p.getByRole('button', { name: 'Tu perfil' }).click();
+  await p.getByRole('heading', { name: 'Mensajes', exact: true }).waitFor();
+  check(await p.getByRole('switch', { name: /Mostrar cuándo estoy en línea/ }).isChecked(), '«Mostrar cuándo estoy en línea», encendido de serie');
+  await p.getByRole('group', { name: 'Fondo del chat' }).getByRole('button', { name: 'Liso' }).click();
+  await revisar('perfil-mensajes');
+  await p.getByRole('button', { name: 'Volver a Hoy' }).click();
+  await p.locator('.tab', { hasText: 'Mensajes' }).click();
+  await p.locator('.chat-area').waitFor();
+  check(await p.locator('.chat-fondo').count() === 0, '«Fondo del chat: Liso», sin dibujos');
+  await p.locator('.tab', { hasText: 'Hoy' }).click();
+  await p.locator('.hero-dia').waitFor();
+  await cerrarDialogos();
+  await p.getByRole('button', { name: 'Tu perfil' }).click();
+  await p.getByRole('group', { name: 'Fondo del chat' }).getByRole('button', { name: 'Con dibujos' }).click();
+  await p.getByRole('button', { name: 'Volver a Hoy' }).click();
+
+  // «escribiendo…» y «en línea»: el coach en otra pestaña (en la demo, entre pestañas del navegador)
+  await p.locator('.tab', { hasText: 'Mensajes' }).click();
+  await p.locator('.chat-area').waitFor();
+  const q = await ctx.newPage();
+  await q.goto('http://localhost:4174/?demo#mensajes');
+  // (en la otra pestaña la demo abre con la cuenta guardada o en «Entra en tu cuenta»)
+  const entrarQ = q.getByRole('heading', { name: 'Entra en tu cuenta' });
+  await Promise.race([q.locator('nav.tabs').waitFor(), entrarQ.waitFor()]);
+  if (!(await entrarQ.isVisible().catch(() => false))) {
+    await q.waitForTimeout(600);
+    for (let i = 0; i < 4; i++) { const d = q.locator('[role=dialog]').first(); if (!(await d.isVisible().catch(() => false))) break; await q.keyboard.press('Escape'); await q.waitForTimeout(250); }
+    if (!(await q.getByRole('button', { name: 'Cambiar de cuenta' }).isVisible().catch(() => false))) { await q.locator('.tab', { hasText: 'Hoy' }).click(); await q.waitForTimeout(600); }
+    await q.getByRole('button', { name: 'Cambiar de cuenta' }).first().click();
+  }
+  await q.getByRole('button', { name: /Pelayo/ }).first().click();
+  const codQ = q.getByLabel('Código', { exact: true });
+  await Promise.race([codQ.waitFor(), q.locator('nav.tabs').waitFor()]);
+  if (await codQ.isVisible().catch(() => false)) { await codQ.fill('123456'); await q.getByRole('button', { name: 'Entrar' }).click(); }
+  await q.locator('nav.tabs').waitFor();
+  await q.waitForTimeout(600);
+  for (let i = 0; i < 4; i++) { const d = q.locator('[role=dialog]').first(); if (!(await d.isVisible().catch(() => false))) break; await q.keyboard.press('Escape'); await q.waitForTimeout(250); }
+  await q.locator('.tab', { hasText: 'Mensajes' }).click();
+  await q.locator('.conversacion', { hasText: 'Ana López' }).first().click();
+  await q.locator('.chat-area').waitFor();
+  check(await p.locator('.cabecera-chat .sub', { hasText: 'en línea' }).waitFor({ timeout: 8000 }).then(() => true, () => false), 'con el coach en el chat, Ana ve «en línea»');
+  await q.locator('.chat-area').pressSequentially('Ahora te', { delay: 40 });
+  check(await p.locator('.cabecera-chat .sub.escribiendo', { hasText: 'escribiendo…' }).waitFor({ timeout: 6000 }).then(() => true, () => false), 'y «escribiendo…» mientras escribe');
+  await revisar('chat-escribiendo');
+  await q.locator('.chat-area').fill('');
+  await q.close();
+  check(await p.locator('.cabecera-chat .sub', { hasText: 'en línea' }).waitFor({ state: 'detached', timeout: 15000 }).then(() => true, () => false), 'al irse, deja de estar «en línea»');
+  await entrarComo('Pelayo');
+  }
   }
   await p.unroute('https://i.ytimg.com/**');
   }

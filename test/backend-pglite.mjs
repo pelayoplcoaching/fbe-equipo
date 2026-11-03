@@ -131,7 +131,7 @@ export function crearBackendPglite(db) {
         return bucket === 'archivos' ? `pglite://${ruta}` : `pglite://${bucket}/${ruta}?s=${segundos}`;
       }),
       borrar: (rutas, bucket = 'archivos') => como(async () => {
-        await db.query(`delete from storage.objects where bucket_id = $1 and name = any($2::text[])`, [bucket, valor(rutas)]);
+        return (await db.query(`delete from storage.objects where bucket_id = $1 and name = any($2::text[]) returning name`, [bucket, valor(rutas)])).rows.map((x) => x.name);
       }),
       listar: (carpeta, bucket = 'archivos') => como(async () => {
         const r = await db.query(`select name from storage.objects where bucket_id = $1 and name like $2 order by name`, [bucket, `${carpeta}/%`]);

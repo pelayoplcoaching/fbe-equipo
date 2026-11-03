@@ -9,7 +9,7 @@ import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido } from '../logica/cardio.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
-import { fechaMadrid as fMadrid } from '../logica/fechas.js';
+import { fechaMadrid as fMadrid, instanteMadrid } from '../logica/fechas.js';
 
 const ahora = () => new Date().toISOString();
 const uuid = () => (globalThis.crypto?.randomUUID ? crypto.randomUUID()
@@ -36,7 +36,9 @@ const DEFECTOS = {
   marcas: () => ({ fecha: hoyISO(), reps: 1, tipo: 'test', notas: null }),
   objetivos: () => ({ progreso_pct: 0, estado: 'no_iniciado', descripcion: null, fecha_limite: null, ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, creado_en: ahora() }),
   archivos: () => ({ fecha: hoyISO(), sesion_ejercicio_id: null, ejercicio_id: null, comentario_coach: null, nota_atleta: null, mime: null, bytes: null, revisado_en: null, creado_en: ahora(), pose: null, poster_ruta: null, duracion_seg: null, destacado: false }),
-  comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null }),
+  comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null }),
+  // Migración 032: el chat como WhatsApp
+  conversacion_estado: () => ({ fijada_en: null, archivada_en: null, no_leida: false, actualizado_en: ahora() }),
   recursos: () => ({ atleta_id: null, categoria: 'general', descripcion: null, url: null, orden: 0, creado_en: ahora() }),
   notas_ejercicio: () => ({ actualizado_en: ahora() }),
   respuestas_guardadas: () => ({ orden: 0, creado_en: ahora() }),
@@ -78,7 +80,9 @@ const CASCADA = {
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
     ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
-    ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'], ['tareas', 'atleta_id']],
+    ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'], ['tareas', 'atleta_id'], ['conversacion_estado', 'atleta_id']],
+  // Como la 032: las reacciones y los destacados se van con su mensaje
+  comentarios: [['comentario_reacciones', 'comentario_id'], ['comentario_destacados', 'comentario_id']],
   comunidad_posts: [['comunidad_comentarios', 'post_id'], ['comunidad_reacciones', 'post_id'], ['comunidad_votos', 'post_id']],
   recetas: [['recetas_atleta', 'receta_id']],
   habitos: [['registros_habito', 'habito_id']],
@@ -88,7 +92,7 @@ const CASCADA = {
   sesion_ejercicios: [['series', 'sesion_ejercicio_id']],
 };
 // Al borrar estas filas, los comentarios se quedan sin el enlace (on delete set null)
-const ANULAR = { comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id']], ejercicios: [['objetivos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
+const ANULAR = { comentarios: [['comentarios', 'responde_a']], comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id']], ejercicios: [['objetivos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
 
 const cumple = (fila, f = {}) => {
   for (const [k, v] of Object.entries(f.eq || {})) if ((fila[k] ?? null) !== v) return false;
@@ -103,7 +107,14 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos'];
+const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos',
+  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar'];
+// Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
+const EMOJIS_CHAT = ['❤️', '👍', '💪', '😂', '😮', '🙏'];
+const CUPO_CHAT = { reaccion: 120, destacar: 120, edicion: 30, eliminar: 30, presencia: 30 };
+const AVISO_CUPO_CHAT = { reaccion: 'Has reaccionado muchas veces en la última hora: espera un poco', destacar: 'Has destacado muchos mensajes en la última hora: espera un poco',
+  edicion: 'Has editado muchos mensajes en la última hora: espera un poco', eliminar: 'Has eliminado muchos mensajes en la última hora: espera un poco',
+  presencia: 'Has cambiado muchas veces «Mostrar cuándo estoy en línea»: espera un poco' };
 
 function guardarLocal(clave, valor) {
   try { localStorage.setItem(clave, JSON.stringify(valor)); } catch { /* sin almacenamiento: la demo vive en memoria */ }
@@ -172,7 +183,51 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     notificaciones: (x) => x.usuario_id === sesion?.user.id && (esCoach() || x.estado !== 'pendiente' || Date.parse(x.enviar_desde) <= Date.now()),
     tareas: (x) => esCoach() || x.atleta_id === miAtletaId(),
     tareas_plantillas: () => esCoach(),
+    // Como la 032: reacciones, de las dos partes y en lo que se ve; destacados, cada uno los suyos; el estado de las
+    // conversaciones, solo el coach; la presencia, la propia y la de la otra parte (si los dos la enseñan)
+    comentario_reacciones: (x) => comentarioVisible(x.comentario_id),
+    comentario_destacados: (x) => x.usuario_id === sesion?.user.id && comentarioVisible(x.comentario_id),
+    conversacion_estado: () => esCoach(),
+    presencia: (x) => x.usuario_id === sesion?.user.id || (x.visible !== false && presenciaPuedoVer(x.usuario_id)),
+    chat_cupos: () => false,
   };
+  const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
+  const programadoAun = (c) => !!c?.enviar_en && Date.parse(c.enviar_en) > Date.now();
+  const comentarioReaccionable = (id) => { const c = buscar('comentarios', id); return !!c && !c.eliminado_en && !programadoAun(c) && (esCoach() || (!!miAtletaId() && c.atleta_id === miAtletaId())); };
+  const presenciaMiaVisible = () => tabla('presencia').find((x) => x.usuario_id === sesion?.user.id)?.visible !== false;
+  const presenciaPuedoVer = (pid) => !!sesion && pid !== sesion.user.id && presenciaMiaVisible()
+    && ((esCoach() && tabla('atletas').some((a) => a.perfil_id === pid)) || (!!miAtletaId() && perfilDe(pid)?.rol === 'coach'));
+  function gastarCupoChat(tipo) {
+    const uid = sesion?.user.id;
+    if (!uid || esCoach()) return;
+    db.chat_cupos = tabla('chat_cupos').filter((c) => Date.parse(c.creado_en) > Date.now() - 2 * 3600000);
+    if (tabla('chat_cupos').filter((c) => c.perfil_id === uid && c.tipo === tipo && Date.parse(c.creado_en) > Date.now() - 3600000).length >= CUPO_CHAT[tipo]) throw new Error(AVISO_CUPO_CHAT[tipo]);
+    tabla('chat_cupos').push({ perfil_id: uid, tipo, creado_en: ahora() });
+  }
+  // Como la 032: el hilo de un mensaje (el chat, una sesión, un check-in o un vídeo del diario)
+  const hiloDe = (c) => [c.sesion_id || null, c.checkin_id || null, c.adjunto ? null : c.archivo_id || null].join('|');
+  // Como la 032: las horas del estado de una conversación las pone la base; archivar desfija; 3 fijadas como mucho
+  function prepararEstadoConversacion(f, antes) {
+    f.fijada_en = f.fijada_en == null ? null : antes?.fijada_en || ahora();
+    f.archivada_en = f.archivada_en == null ? null : antes?.archivada_en || ahora();
+    if (f.archivada_en) f.fijada_en = null;
+    f.no_leida = !!f.no_leida;
+    if (f.fijada_en && tabla('conversacion_estado').filter((e) => e.fijada_en && e.atleta_id !== f.atleta_id).length >= 3) throw new Error('Puedes fijar 3 conversaciones como mucho');
+    f.actualizado_en = ahora();
+  }
+  // Como la 032 (revisión): vaciar un mensaje (eliminar para todos), la cola de Storage y lo que Storage deja ver y borrar
+  function vaciarComentario(c) {
+    Object.assign(c, { texto: 'Se eliminó este mensaje', dibujo: null, responde_a: null, editado_en: null, eliminado_en: c.eliminado_en || ahora(), archivo_id: c.adjunto ? null : c.archivo_id });
+    db.comentario_reacciones = tabla('comentario_reacciones').filter((r) => r.comentario_id !== c.id);
+    db.comentario_destacados = tabla('comentario_destacados').filter((d) => d.comentario_id !== c.id);
+    db.notificaciones = tabla('notificaciones').filter((n) => !(n.clave === `comentario:${c.id}` && n.estado === 'pendiente'));
+  }
+  const encolar = (rutas) => { for (const r of rutas) if (r && !tabla('storage_por_borrar').some((x) => x.ruta === r)) tabla('storage_por_borrar').push({ ruta: r, bucket: 'archivos', creado_en: ahora() }); };
+  const archivoConMensajes = (id) => tabla('comentarios').some((c) => c.archivo_id === id);
+  const archivoDeRuta = (ruta) => tabla('archivos').find((a) => a.ruta === ruta || a.poster_ruta === ruta);
+  const archivoVisible = (ruta) => { if (esCoach()) return true; const a = archivoDeRuta(ruta); return !!a && !!miAtletaId() && a.atleta_id === miAtletaId() && ruta.split('/')[0] === miAtletaId(); };
+  const archivoBorrable = (ruta) => { if (esCoach()) return true; const a = archivoDeRuta(ruta); return archivoVisible(ruta) && a.tipo !== 'adjunto'; };
+  const deBajaYo = () => !esCoach() && deBaja();
   const miAtletaId = () => tabla('atletas').find((a) => a.perfil_id === sesion?.user.id)?.id || null;
   const fotoVisible = (ruta) => esCoach() || (!!miAtletaId() && ruta.split('/')[0] === miAtletaId()) || tabla('comunidad_posts').some((x) => x.foto_ruta === ruta && postVisible(x.id));
   const fotoRegistrada = (ruta) => tabla('comunidad_posts').some((x) => x.foto_ruta === ruta && x.autor_id === sesion?.user.id && !x.oculta && Date.parse(x.creado_en) > Date.now() - 15 * 60000 && veComunidad());
@@ -265,10 +320,21 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       else if (f.checkin_id) f.atleta_id = buscar('checkins', f.checkin_id)?.atleta_id;
       else if (f.archivo_id) f.atleta_id = buscar('archivos', f.archivo_id)?.atleta_id;
       if (!f.atleta_id) throw new Error('No se puede comentar aquí');
+      // Como atleta_crear (002): un atleta solo escribe en su conversación
+      if (!esCoach() && f.atleta_id !== miAtletaId()) throw sinPermiso();
       // Como la 014: el adjunto lo fija la base según el tipo del archivo
       f.adjunto = !!f.archivo_id && buscar('archivos', f.archivo_id)?.tipo === 'adjunto';
       f.leido_en = null;
       f.creado_en = f.enviar_en ? new Date(Date.parse(f.enviar_en)).toISOString() : ahora();
+      // Como la 032: nadie crea un mensaje ya editado o eliminado; la cita, de la misma conversación y del mismo hilo,
+      // de algo que quien escribe ya ve, que ya ha salido y que no se ha eliminado
+      f.editado_en = null; f.eliminado_en = null;
+      if (f.responde_a) {
+        const c = buscar('comentarios', f.responde_a);
+        if (!c || !VISIBLE.comentarios(c) || c.atleta_id !== f.atleta_id || hiloDe(c) !== hiloDe(f) || c.eliminado_en || programadoAun(c)) {
+          throw new Error('Solo puedes responder a un mensaje de esta conversación');
+        }
+      } else f.responde_a = null;
     }
     if (t === 'avisos') prepararAviso(f, null);
     if (t === 'tareas') f.creada_en = ahora();
@@ -322,17 +388,42 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   }
   // Como la 030 (comentario_preparar): de un mensaje programado que aún no ha salido, el coach cambia el texto y la
   // hora (o lo manda ya); lo demás no se edita
+  // v0.54 (032): además, editar lo propio (solo el texto, de un mensaje sin foto ni vídeo y en sus 15 minutos; la hora
+  // de la edición la pone la base); «editado», «eliminado» y la cita no se tocan (eliminar va por comentario_eliminar)
   function prepararComentario(m, antes) {
-    if (!(esCoach() && antes.autor === 'coach' && antes.enviar_en && Date.parse(antes.enviar_en) > Date.now())) {
-      if (m.texto !== antes.texto || (m.enviar_en ?? null) !== (antes.enviar_en ?? null)) throw new Error('Un comentario no se puede editar');
+    const yo = esCoach() ? 'coach' : 'atleta';
+    const igual = (k) => (m[k] ?? null) === (antes[k] ?? null);
+    if (esCoach() && antes.autor === 'coach' && antes.enviar_en && Date.parse(antes.enviar_en) > Date.now()) {
+      if (!['responde_a', 'editado_en', 'eliminado_en', 'archivo_id', 'atleta_id', 'sesion_id', 'checkin_id', 'autor', 'dibujo', 'adjunto'].every(igual)) throw new Error('De un mensaje programado solo se cambian el texto y la hora');
+      if (m.enviar_en != null && Date.parse(m.enviar_en) > Date.now() + 90 * 864e5) throw new Error('Un mensaje se programa como mucho a 90 días vista');
+      if (m.enviar_en != null && !(Date.parse(m.enviar_en) > Date.now() + 30000)) m.enviar_en = null;
+      m.creado_en = m.enviar_en ? new Date(Date.parse(m.enviar_en)).toISOString() : ahora();
+      m.leido_en = null;
       return;
     }
-    if (m.enviar_en != null && Date.parse(m.enviar_en) > Date.now() + 90 * 864e5) throw new Error('Un mensaje se programa como mucho a 90 días vista');
-    if (m.enviar_en != null && !(Date.parse(m.enviar_en) > Date.now() + 30000)) m.enviar_en = null;
-    m.creado_en = m.enviar_en ? new Date(Date.parse(m.enviar_en)).toISOString() : ahora();
-    m.leido_en = null;
+    if (m.texto !== antes.texto) {
+      if (antes.autor !== yo) throw new Error('Solo quien escribió un mensaje puede editarlo');
+      if (deBajaYo()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+      if (antes.eliminado_en) throw new Error('Ese mensaje se eliminó: ya no se puede editar');
+      if (antes.archivo_id || antes.dibujo) throw new Error('Solo se editan los mensajes de texto');
+      if (Date.parse(antes.creado_en) < Date.now() - 15 * 60000) throw new Error('Un mensaje se edita en los 15 minutos siguientes a enviarlo');
+      if (!['atleta_id', 'sesion_id', 'checkin_id', 'archivo_id', 'autor', 'creado_en', 'dibujo', 'adjunto', 'enviar_en', 'responde_a', 'eliminado_en', 'leido_en'].every(igual)) throw new Error('De un mensaje solo se cambia el texto');
+      if (!textoVisible(String(m.texto || ''))) throw new Error('Escribe el mensaje');
+      gastarCupoChat('edicion');
+      m.editado_en = ahora();
+      return;
+    }
+    if (!['enviar_en', 'responde_a', 'editado_en', 'eliminado_en', 'atleta_id', 'sesion_id', 'checkin_id', 'autor', 'archivo_id', 'creado_en', 'dibujo', 'adjunto'].every(igual)) throw new Error('Un comentario no se puede editar');
+    if (antes.autor === yo && !igual('leido_en')) throw new Error('Solo quien recibe un comentario lo marca como leído');
+    // «Leído» lo fecha la base, una vez y para siempre; sin «Mostrar cuándo estoy en línea», solo el día
+    if (!igual('leido_en')) {
+      if (m.leido_en == null) throw new Error('Un mensaje leído no vuelve a «no leído»');
+      m.leido_en = antes.leido_en || (presenciaMiaVisible() ? ahora() : new Date(Date.parse(instanteMadrid(fMadrid(), '00:00'))).toISOString());
+    }
   }
   function despuesDeInsertar(t, f) {
+    // Como la 032: un mensaje nuevo del atleta saca su conversación de archivadas
+    if (t === 'comentarios' && f.autor === 'atleta') for (const e of tabla('conversacion_estado')) if (e.atleta_id === f.atleta_id) e.archivada_en = null;
     if (t === 'comentarios' && f.autor === 'coach') {
       const [tb, col, id] = f.sesion_id ? ['sesiones', 'revisada_en', f.sesion_id] : f.checkin_id ? ['checkins', 'revisado_en', f.checkin_id] : f.archivo_id ? ['archivos', 'revisado_en', f.archivo_id] : [];
       const fila = tb && buscar(tb, id);
@@ -672,14 +763,32 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
   }
 
-  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas', 'conversacion_estado'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  // Como la 032: la presencia solo se escribe con presencia_marcar(); los cupos, nadie
+  const sinPermisoTabla = (t) => new Error(`permission denied for table ${t}`);
+  // Como la 032: reaccionar y destacar, a su nombre, en mensajes que ya han salido y no se han eliminado; una por persona
+  function prepararReaccionODestacado(t, f) {
+    if (deBajaYo()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+    f.usuario_id = sesion?.user.id || null;
+    if (t === 'comentario_reacciones' && !EMOJIS_CHAT.includes(f.emoji)) throw new Error('Algún valor está fuera de rango.');
+    if (!f.usuario_id || !comentarioReaccionable(f.comentario_id)) throw sinPermiso();
+    if (tabla(t).some((x) => x.comentario_id === f.comentario_id && x.usuario_id === f.usuario_id)) throw new Error(`duplicate key value violates unique constraint "${t}_pkey"`);
+    gastarCupoChat(t === 'comentario_reacciones' ? 'reaccion' : 'destacar');
+    f.creado_en = ahora();
+  }
   function insertar(t, fila) {
     soloCoach(t);
+    if (['presencia', 'chat_cupos'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos'].includes(t)) throw sinPermiso();
     if (t === 'comunidad_retos' && !esCoach()) throw sinPermiso();
     if (t === 'recetas_atleta' && !esCoach()) throw new Error('new row violates row-level security policy');
     const nueva = { ...(SIN_ID.includes(t) ? {} : { id: uuid() }), ...(DEFECTOS[t]?.() || {}), ...copia(fila) };
+    if (t === 'comentario_reacciones' || t === 'comentario_destacados') prepararReaccionODestacado(t, nueva);
+    if (t === 'conversacion_estado') {
+      if (tabla(t).some((x) => x.atleta_id === nueva.atleta_id)) throw new Error('duplicate key value violates unique constraint "conversacion_estado_pkey"');
+      prepararEstadoConversacion(nueva, null);
+    }
     antesDeInsertar(t, nueva);
     if (t === 'objetivos') comprobarMarca(nueva);
     comprobarChecks(t, nueva);
@@ -689,10 +798,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   }
 
   function borrarCascada(t, ids) {
-    // Como la 014: el mensaje de un adjunto del chat se va con el archivo
+    // Como la 032 (revisión): al borrar un archivo, su ruta y su miniatura a la cola de Storage; los mensajes de un
+    // adjunto del chat quedan como eliminados (salvo si se borra el atleta entero: se va todo)
     if (t === 'archivos') {
-      const adj = tabla('archivos').filter((a) => ids.includes(a.id) && a.tipo === 'adjunto').map((a) => a.id);
-      if (adj.length) db.comentarios = tabla('comentarios').filter((c) => !adj.includes(c.archivo_id));
+      for (const a of tabla('archivos').filter((x) => ids.includes(x.id))) {
+        encolar([a.ruta, a.poster_ruta]);
+        if (a.tipo === 'adjunto' && buscar('atletas', a.atleta_id)) {
+          for (const c of tabla('comentarios').filter((k) => k.archivo_id === a.id)) vaciarComentario(c);
+          for (const c of tabla('comentarios').filter((k) => k.archivo_id === a.id)) c.archivo_id = null;
+        }
+      }
     }
     for (const [hija, col] of CASCADA[t] || []) {
       // Las que no tienen «id» (una fila por atleta) se borran por su columna
@@ -1057,8 +1172,46 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     throw new Error(`Función no disponible en la demo: ${nombre}`);
   }
 
+  // v0.54: «escribiendo…» y «en línea» en la demo, entre pestañas del mismo navegador (BroadcastChannel), con las
+  // mismas reglas que las políticas de realtime.messages de la 032: solo el coach y ese atleta; la presencia, solo si
+  // enseñas la tuya (y entonces ves la de los demás)
+  const canales = new Set();
+  function canalChat(atletaId, oyente = {}) {
+    if (typeof BroadcastChannel === 'undefined' || !sesion) return null;
+    const atleta = buscar('atletas', atletaId);
+    if (!atleta || !(esCoach() || (atleta.perfil_id && atleta.perfil_id === sesion.user.id))) { oyente.alEstado?.(false); return null; }
+    const yo = sesion.user.id;
+    const visible = presenciaMiaVisible();
+    // (revisión) Sin «Mostrar cuándo estoy en línea», ni «en línea» ni «escribiendo…»: el canal entero
+    if (!visible) { setTimeout(() => oyente.alEstado?.(false), 0); return null; }
+    const bc = new BroadcastChannel(`fbe-demo-chat:${atletaId}`);
+    const vistos = new Map();
+    const enLinea = () => visible && [...vistos.entries()].some(([id, t]) => id !== yo && Date.now() - t < 12000);
+    const decir = (tipo, extra = {}) => { try { bc.postMessage({ tipo, de: yo, ...extra }); } catch { /* */ } };
+    bc.onmessage = ({ data }) => {
+      if (!data || data.de === yo) return;
+      if (data.tipo === 'escribiendo') oyente.alEscribir?.(data.r === 'coach' ? 'coach' : 'atleta');
+      else if (data.tipo === 'cambio') oyente.alCambio?.();
+      else if (visible && (data.tipo === 'hola' || data.tipo === 'aqui')) { vistos.set(data.de, Date.now()); oyente.alPresencia?.(enLinea()); if (data.tipo === 'hola') decir('aqui'); }
+      else if (visible && data.tipo === 'adios') { vistos.delete(data.de); oyente.alPresencia?.(enLinea()); }
+    };
+    if (visible) decir('hola');
+    const latido = setInterval(() => { if (visible) decir('aqui'); oyente.alPresencia?.(enLinea()); }, 4000);
+    const x = { cerrar: () => { clearInterval(latido); if (visible) decir('adios'); try { bc.close(); } catch { /* */ } } };
+    canales.add(x);
+    setTimeout(() => oyente.alEstado?.(true), 0);
+    let ultimo = 0;
+    return {
+      escribiendo(rol) { if (Date.now() - ultimo < 2500) return; ultimo = Date.now(); decir('escribiendo', { r: rol === 'coach' ? 'coach' : 'atleta' }); },
+      cambio() { decir('cambio'); },
+      soltar() { canales.delete(x); x.cerrar(); },
+    };
+  }
+
   const b = {
     modo: 'demo',
+    canalChat,
+    reiniciarChats() { for (const x of canales) x.cerrar(); canales.clear(); },
     async iniciar() {},
     reiniciar() {
       db = semilla();
@@ -1144,6 +1297,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           if (!fotoVisible(ruta)) throw new Error('No tienes permiso para ver ese archivo.');
           ruta = `comunidad:${ruta}`;
         }
+        // Como la 032 (revisión): un atleta solo ve lo de su carpeta que tiene su fila en archivos
+        else if (!archivoVisible(ruta)) throw new Error('No tienes permiso para ver ese archivo.');
         if (urls.has(ruta)) return urls.get(ruta);
         const f = ficheros.get(ruta);
         // Los ejemplos de la demo van incrustados en base64: se sirven como blob (la política de seguridad de
@@ -1164,10 +1319,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return u;
       },
       async borrar(rutas, bucket = 'archivos') {
+        const hechas = [];
         for (let r of rutas) {
+          const nombre = r;
           if (bucket === 'comunidad') { if (!esCoach() && !fotoBorrable(r)) continue; r = `comunidad:${r}`; }
+          // Como la 032 (revisión): un atleta solo borra lo suyo que puede borrar (con su fila; no un adjunto con mensajes)
+          else if (!archivoBorrable(r)) continue;
           ficheros.delete(r); if (urls.has(r)) { try { URL.revokeObjectURL(urls.get(r)); } catch { /* */ } urls.delete(r); }
+          hechas.push(nombre);
         }
+        return hechas;
       },
       async listar(carpeta, bucket = 'archivos') {
         const pre = bucket === 'comunidad' ? `comunidad:${carpeta}/` : `${carpeta}/`;
@@ -1204,6 +1365,25 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async update(t, cambios, f) {
       if (['cobros_atletas', 'pagos', 'recetas'].includes(t) && !esCoach()) return [];
+      // Como la 032: de una reacción, solo el emoji de la propia (en un mensaje en que aún se puede reaccionar); el estado
+      // de las conversaciones, el coach; la presencia (solo con su función), los destacados y los cupos no se cambian
+      if (['presencia', 'chat_cupos', 'comentario_destacados'].includes(t)) throw sinPermisoTabla(t);
+      if (t === 'comentario_reacciones') {
+        if (Object.keys(cambios).some((k) => k !== 'emoji')) throw new Error('De una reacción solo se cambia el emoji');
+        if (!EMOJIS_CHAT.includes(cambios.emoji)) throw new Error('Algún valor está fuera de rango.');
+        const filas = tabla(t).filter((x) => cumple(x, f) && x.usuario_id === sesion?.user.id);
+        if (filas.length && deBajaYo()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        for (const x of filas) { if (!comentarioReaccionable(x.comentario_id)) throw sinPermiso(); gastarCupoChat('reaccion'); Object.assign(x, { emoji: cambios.emoji, creado_en: ahora() }); }
+        persistirYa();
+        return copia(filas);
+      }
+      if (t === 'conversacion_estado') {
+        if (!esCoach()) return [];
+        const filas = tabla(t).filter((x) => cumple(x, f));
+        for (const x of filas) { const m = { ...x, ...copia(cambios), atleta_id: x.atleta_id }; prepararEstadoConversacion(m, x); Object.assign(x, m); }
+        persistirYa();
+        return copia(filas);
+      }
       // Como la 027: en la comunidad, los atletas no cambian nada directamente; el coach abre o cierra, resuelve
       // avisos y cambia sus retos. Publicaciones y comentarios no se cambian (fijar y ocultar van por funciones).
       if (t.startsWith('comunidad_')) {
@@ -1269,7 +1449,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           const m = { ...fila, ...copia(c) };
           if (t === 'avisos') prepararAviso(m, fila);
           if (t === 'atletas' && ('estado' in c || 'baja_en' in c)) fechaBaja(m, fila);
-          if (t === 'comentarios' && ('texto' in c || 'enviar_en' in c)) prepararComentario(m, fila);
+          if (t === 'comentarios') prepararComentario(m, fila);
           porFila.set(fila, m);
         }
       }
@@ -1280,7 +1460,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (porFila.has(fila)) { Object.assign(fila, porFila.get(fila)); res.push(fila); continue; }
         // Como la migración 008: si la sesión cambia de semana, su día previsto se quita (salvo que venga uno nuevo)
         if (t === 'sesiones' && 'semana_id' in c && c.semana_id !== fila.semana_id && !('dia_previsto' in c)) fila.dia_previsto = null;
-        Object.assign(fila, copia(c)); if (porFilaFecha.has(fila)) fila.cambio_pedido_en = porFilaFecha.get(fila);
+        // Como la 032: la ruta o la miniatura que deja de estar registrada, a la cola de Storage
+        const antes = t === 'archivos' ? [fila.ruta, fila.poster_ruta] : [];
+        Object.assign(fila, copia(c));
+        if (t === 'archivos') encolar(antes.filter((r) => r && r !== fila.ruta && r !== fila.poster_ruta)); if (porFilaFecha.has(fila)) fila.cambio_pedido_en = porFilaFecha.get(fila);
         if (t === 'comidas_atleta') normalizarOpcional(fila);
         if (t === 'objetivos') comprobarMarca(fila); res.push(fila);
       }
@@ -1289,6 +1472,27 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async upsert(t, filas, onConflict) {
       soloCoach(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados'].includes(t)) throw sinPermisoTabla(t);
+      // Como la 032: el estado de una conversación (el coach) y la reacción propia (insertar o cambiar el emoji)
+      if (t === 'conversacion_estado' || t === 'comentario_reacciones') {
+        const res = (Array.isArray(filas) ? filas : [filas]).map((f) => {
+          const existente = t === 'conversacion_estado' ? tabla(t).find((x) => x.atleta_id === f.atleta_id)
+            : tabla(t).find((x) => x.comentario_id === f.comentario_id && x.usuario_id === sesion?.user.id);
+          if (!existente) return insertar(t, f);
+          if (t === 'comentario_reacciones') {
+            if (deBajaYo()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+            if (!EMOJIS_CHAT.includes(f.emoji)) throw new Error('Algún valor está fuera de rango.');
+            if (!comentarioReaccionable(existente.comentario_id)) throw sinPermiso();
+            gastarCupoChat('reaccion');
+            return Object.assign(existente, { emoji: f.emoji, creado_en: ahora() });
+          }
+          const m = { ...existente, ...copia(f) };
+          prepararEstadoConversacion(m, existente);
+          return Object.assign(existente, m);
+        });
+        persistirYa();
+        return copia(res);
+      }
       const cols = onConflict.split(',').map((c) => c.trim());
       const lista = Array.isArray(filas) ? filas : [filas];
       const res = lista.map((f) => {
@@ -1310,7 +1514,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async delete(t, f) {
-      if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'tareas', 'tareas_plantillas'].includes(t) && !esCoach()) return [];
+      if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'tareas', 'tareas_plantillas', 'conversacion_estado'].includes(t) && !esCoach()) return [];
+      // Como la 032: el atleta no borra mensajes a mano (los elimina para todos con comentario_eliminar); reacciones y
+      // destacados, cada uno los suyos; la presencia y los cupos, nadie
+      if (t === 'comentarios' && !esCoach()) return [];
+      if (['presencia', 'chat_cupos'].includes(t)) throw sinPermisoTabla(t);
+      if (t === 'comentario_reacciones' || t === 'comentario_destacados') {
+        db[t] = tabla(t).filter((x) => !(cumple(x, f) && x.usuario_id === sesion?.user.id));
+        persistirYa();
+        return [];
+      }
       // Como la 027: cada uno borra lo suyo (que ve); el coach, cualquier publicación o comentario, sus retos y avisos
       if (t.startsWith('comunidad_')) {
         if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos'].includes(t)) return [];
@@ -1321,7 +1534,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return [];
       }
       if (SIN_ID.includes(t)) { db[t] = tabla(t).filter((x) => !cumple(x, f)); persistirYa(); return; }
-      const ids = tabla(t).filter((x) => cumple(x, f)).map((x) => x.id);
+      // Como la 032 (revisión): el atleta borra sus archivos, pero no un adjunto del chat que lleva mensajes
+      const ids = tabla(t).filter((x) => cumple(x, f) && (t !== 'archivos' || esCoach() || (x.atleta_id === miAtletaId() && (x.tipo !== 'adjunto' || !archivoConMensajes(x.id))))).map((x) => x.id);
       if (t === 'preguntas_checkin' && ids.some(conRespuestas)) throw new Error('Esta pregunta ya tiene respuestas: archívala para no perderlas');
       // Como la 030: si se borra el archivo con que se hizo una tarea aún sin revisar, la tarea vuelve a pendiente
       if (t === 'archivos') for (const k of tabla('tareas')) if (ids.includes(k.archivo_id) && !k.revisada_en) Object.assign(k, { hecha_en: null, respuesta: null, archivo_id: null });
@@ -1401,6 +1615,55 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         Object.assign(x, { hecha_en: x.hecha_en || ahora(), respuesta: resp, archivo_id: args.p_archivo || null });
         persistirYa();
         return x.hecha_en;
+      }
+      // Migración 032: eliminar para todos, la última conexión y buscar en los mensajes
+      if (nombre === 'comentario_eliminar') {
+        const c = buscar('comentarios', args.p_comentario);
+        if (!uid) throw new Error('Necesitas iniciar sesión');
+        if (!c || !(esCoach() || (miAtletaId() && c.atleta_id === miAtletaId() && !programadoAun(c)))) throw new Error('Ese mensaje ya no está');
+        if (c.autor !== (esCoach() ? 'coach' : 'atleta')) throw new Error('Solo puedes eliminar tus mensajes');
+        if (c.eliminado_en) return { estado: 'eliminado', rutas: [] };
+        if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        if (programadoAun(c)) { borrarCascada('comentarios', [c.id]); db.notificaciones = tabla('notificaciones').filter((n) => n.clave !== `comentario:${c.id}`); persistirYa(); return { estado: 'cancelado', rutas: [] }; }
+        if (Date.parse(c.creado_en) < Date.now() - 48 * 3600000) throw new Error('Un mensaje se elimina para todos en las 48 horas siguientes a enviarlo');
+        gastarCupoChat('eliminar');
+        const adj = c.adjunto && c.archivo_id ? buscar('archivos', c.archivo_id) : null;
+        const rutas = adj && adj.tipo === 'adjunto' ? [adj.ruta, adj.poster_ruta].filter(Boolean) : [];
+        vaciarComentario(c);
+        if (rutas.length) { for (const k of tabla('comentarios')) if (k.archivo_id === adj.id && k.id !== c.id) k.archivo_id = null; borrarCascada('archivos', [adj.id]); }
+        persistirYa();
+        return { estado: 'eliminado', rutas };
+      }
+      // La cola de Storage, para el coach
+      if (nombre === 'storage_pendiente') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        return tabla('storage_por_borrar').slice(0, Math.min(1000, Math.max(1, args?.p_limite || 200))).map((x) => x.ruta);
+      }
+      if (nombre === 'storage_borrado') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        const antes = tabla('storage_por_borrar').length;
+        db.storage_por_borrar = tabla('storage_por_borrar').filter((x) => !(args.p_rutas || []).includes(x.ruta));
+        persistirYa();
+        return antes - tabla('storage_por_borrar').length;
+      }
+      if (nombre === 'presencia_marcar') {
+        if (!uid) throw new Error('Necesitas iniciar sesión');
+        let r = tabla('presencia').find((x) => x.usuario_id === uid);
+        const visible = args?.p_visible ?? r?.visible ?? true;
+        if (r && visible === r.visible && (!visible || (r.ultima_conexion && Date.parse(r.ultima_conexion) > Date.now() - 55000))) return { visible: r.visible, ultima_conexion: r.ultima_conexion };
+        if (r && visible !== r.visible) gastarCupoChat('presencia');
+        if (!r) { r = { usuario_id: uid }; tabla('presencia').push(r); }
+        Object.assign(r, { visible, ultima_conexion: visible ? ahora() : null, actualizado_en: ahora() });
+        persistirYa();
+        return { visible: r.visible, ultima_conexion: r.ultima_conexion };
+      }
+      if (nombre === 'chat_buscar') {
+        const sin = (t) => String(t || '').toLowerCase().normalize('NFD').replace(DIACRITICOS, '');
+        const q = sin(String(args.p_texto || '').trim());
+        if (!esCoach() || q.length < 2 || q.length > 100) return [];
+        return copia(tabla('comentarios').filter((c) => !c.eliminado_en && !(c.archivo_id && ['Foto', 'Vídeo'].includes(c.texto)) && sin(c.texto).includes(q))
+          .sort((a, b2) => String(b2.creado_en).localeCompare(String(a.creado_en))).slice(0, Math.min(100, Math.max(1, args.p_limite || 40)))
+          .map(({ id, atleta_id, autor, texto, creado_en, enviar_en }) => ({ id, atleta_id, autor, texto: String(texto).slice(0, 300), creado_en, enviar_en: enviar_en || null })));
       }
       if (nombre === 'bloque_semanas') {
         const bl = buscar('bloques', args.p_bloque);

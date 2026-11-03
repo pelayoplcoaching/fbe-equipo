@@ -6,13 +6,14 @@
 // v0.50: el tamaño de la letra (Normal, Grande o Muy grande), que cambia el tamaño de la raíz (todo va en rem).
 // v0.52: «Respira» en el descanso (un círculo que acompasa la respiración), apagado de entrada.
 // v0.52.2: el descanso si el coach no lo pone (de serie, 2:00; 0 = sin descanso automático).
+// v0.54: el fondo del chat («Con dibujos», de serie, o «Liso»).
 import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
 import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 
 const CLAVE = 'fbe-ajustes';
 // voz (v0.48): el entrenador por voz, apagado de entrada
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
-  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false, descansoDefecto: DESCANSO_DEFECTO };
+  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false, descansoDefecto: DESCANSO_DEFECTO, fondoChat: 'dibujos' };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -39,6 +40,8 @@ export function normalizarAjustes(guardado = {}) {
   if (!LETRAS.includes(a.letra)) a.letra = AJUSTES_DEFECTO.letra;
   a.respira = a.respira === true;
   if (!descansoValido(a.descansoDefecto)) a.descansoDefecto = DESCANSO_DEFECTO;
+  // v0.54: el fondo del chat, con dibujos o liso
+  if (!['dibujos', 'liso'].includes(a.fondoChat)) a.fondoChat = AJUSTES_DEFECTO.fondoChat;
   return a;
 }
 export function leerAjustes() {

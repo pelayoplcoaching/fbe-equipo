@@ -2,7 +2,9 @@
 
 // Tablas cuya clave no es «id» (para ordenar al paginar)
 export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id', menu_dias: 'atleta_id,fecha',
-  comunidad_miembros: 'atleta_id', comunidad_reacciones: 'post_id,autor_id', comunidad_votos: 'post_id,autor_id', comunidad_animos: 'de,para,semana' };
+  comunidad_miembros: 'atleta_id', comunidad_reacciones: 'post_id,autor_id', comunidad_votos: 'post_id,autor_id', comunidad_animos: 'de,para,semana',
+  // v0.54 (migración 032): el chat como WhatsApp
+  comentario_reacciones: 'comentario_id,usuario_id', comentario_destacados: 'usuario_id,comentario_id', conversacion_estado: 'atleta_id', presencia: 'usuario_id' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 
@@ -144,25 +146,152 @@ export function crearBackendSupabase({ url, anonKey }) {
 
   // Mensajes al momento (v0.18): los comentarios nuevos llegan por Realtime (con los permisos de fila de cada
   // cuenta) y se avisa a la pantalla con un evento; si Realtime no está, el chat se pone al día solo cada rato.
+  // (v0.54) también los cambios (una edición, un mensaje eliminado, un «visto»), igual con sus permisos de fila. Los
+  // borrados no: Realtime no les aplica los permisos de fila (mandaría a todos su id).
+  // Canales privados (autorizados por las políticas de realtime.messages de la 032) solo si la base dice que están
+  // (chat_privado_disponible(): sin la 032, la función no existe). Con ellos, todo va por privados: un error pasajero
+  // (CHANNEL_ERROR, TIMED_OUT) se reintenta con espera creciente, nunca se cae al público. Sin ellos, los mensajes nuevos
+  // van por el canal público de siempre (filtrado por sus permisos de fila) y no hay «escribiendo…» ni «en línea».
+  let disponible = null;
+  const privadoDisponible = () => {
+    if (!disponible) {
+      disponible = Promise.resolve(sb.rpc('chat_privado_disponible')).then(({ data, error }) => {
+        if (error) { if (/chat_privado_disponible|PGRST202|does not exist|no existe/i.test(`${error.code || ''} ${error.message || ''}`)) return false; throw error; }
+        return data === true;
+      });
+      // Si falla por la red (no porque falte la función), se vuelve a preguntar la próxima vez
+      disponible.catch(() => { disponible = null; });
+    }
+    return disponible;
+  };
+  let authRealtime = null;
+  const prepararAuth = () => {
+    if (!authRealtime) authRealtime = Promise.resolve(sb.realtime?.setAuth?.()).catch(() => {});
+    return authRealtime;
+  };
+  const espera = (intento) => Math.min(60000, 1000 * 2 ** Math.min(6, intento));
+
   let canal = null;
-  function escucharMensajes() {
+  let reintentoMensajes = null;
+  function escucharMensajes(intento = 0) {
     if (canal || !sesion || typeof window === 'undefined' || typeof sb.channel !== 'function') return;
-    try {
-      canal = sb.channel('fbe-comentarios')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comentarios' }, (p) => {
-          window.dispatchEvent(new CustomEvent('fbe-mensaje', { detail: p.new || null }));
-        })
-        .subscribe();
-    } catch { canal = null; }
+    const avisar = (p) => window.dispatchEvent(new CustomEvent('fbe-mensaje', { detail: p.new || null }));
+    const abrir = (nombre, privado) => sb.channel(nombre, privado ? { config: { private: true } } : undefined)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comentarios' }, avisar)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'comentarios' }, avisar);
+    const uidCanal = sesion.user.id;
+    canal = 'abriendo';
+    privadoDisponible().then(async (privado) => {
+      if (canal !== 'abriendo' || !sesion || sesion.user.id !== uidCanal) return;
+      if (!privado) { canal = abrir('fbe-comentarios', false).subscribe(); return; }
+      await prepararAuth();
+      if (canal !== 'abriendo') return;
+      const c = abrir(`fbe-cambios:${uidCanal}`, true);
+      canal = c;
+      c.subscribe((estado) => {
+        if (estado === 'SUBSCRIBED') intento = 0;
+        if ((estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT') && canal === c) {
+          try { sb.removeChannel(c); } catch { /* */ }
+          canal = null;
+          clearTimeout(reintentoMensajes);
+          reintentoMensajes = setTimeout(() => escucharMensajes(intento + 1), espera(intento));
+        }
+      });
+    }).catch(() => {
+      canal = null;
+      clearTimeout(reintentoMensajes);
+      reintentoMensajes = setTimeout(() => escucharMensajes(intento + 1), espera(intento));
+    });
   }
   function dejarDeEscuchar() {
-    if (!canal) return;
-    try { sb.removeChannel(canal); } catch { /* */ }
+    clearTimeout(reintentoMensajes);
+    if (canal && typeof canal === 'object') { try { sb.removeChannel(canal); } catch { /* */ } }
     canal = null;
+    disponible = null;
+    for (const x of chats.values()) { clearTimeout(x.reintento); if (x.canal) { try { sb.removeChannel(x.canal); } catch { /* */ } } }
+    chats.clear();
+  }
+
+  // v0.54: «escribiendo…», «en línea» y «algo ha cambiado» (una reacción, una edición) por un canal PRIVADO por
+  // conversación (chat:<atleta_id>): solo entran el coach y ese atleta, y solo si enseñan cuándo están en línea. Nunca
+  // uno público: sin los privados (sin la 032), esto no hace nada. Lo que viaja: quién escribe ('coach' | 'atleta').
+  // Varias pantallas pueden pedir el mismo canal (la lista de conversaciones y el chat): se comparte con un contador.
+  const chats = new Map();
+  const OYENTE_VACIO = { escribiendo() {}, cambio() {}, soltar() {} };
+  function canalChat(atletaId, oyente = {}) {
+    if (!sesion || typeof window === 'undefined' || typeof sb.channel !== 'function' || !/^[0-9a-f-]{36}$/.test(String(atletaId || ''))) return null;
+    // Sin «Mostrar cuándo estoy en línea», ni «escribiendo…» ni «en línea» (la base tampoco deja entrar)
+    if (oyente.visible === false) { setTimeout(() => oyente.alEstado?.(false), 0); return OYENTE_VACIO; }
+    const uidYo = sesion.user.id;
+    let x = chats.get(atletaId);
+    if (!x) {
+      x = { oyentes: new Set(), listo: false, rastreando: false, canal: null, intento: 0, reintento: null, cerrado: false };
+      chats.set(atletaId, x);
+      const repartir = (f, ...a) => { for (const o of x.oyentes) { try { o[f]?.(...a); } catch { /* */ } } };
+      const enLinea = () => {
+        const estado = x.canal?.presenceState?.() || {};
+        return Object.keys(estado).some((k) => k !== uidYo && (estado[k] || []).length > 0);
+      };
+      const reintentar = () => {
+        x.listo = false; x.rastreando = false;
+        repartir('alEstado', false);
+        if (x.canal) { try { sb.removeChannel(x.canal); } catch { /* */ } x.canal = null; }
+        if (x.cerrado) return;
+        clearTimeout(x.reintento);
+        x.reintento = setTimeout(abrir, espera(x.intento++));
+      };
+      const abrir = async () => {
+        if (x.cerrado) return;
+        try {
+          if (!(await privadoDisponible())) { repartir('alEstado', false); return; }
+          await prepararAuth();
+          if (x.cerrado) return;
+          const c = sb.channel(`chat:${atletaId}`, { config: { private: true, broadcast: { self: false }, presence: { key: uidYo, enabled: true } } });
+          x.canal = c;
+          c.on('broadcast', { event: 'escribiendo' }, ({ payload }) => repartir('alEscribir', payload?.r === 'coach' ? 'coach' : 'atleta'))
+            .on('broadcast', { event: 'cambio' }, () => repartir('alCambio'))
+            .on('presence', { event: 'sync' }, () => repartir('alPresencia', enLinea()));
+          c.subscribe(async (estado) => {
+            if (x.canal !== c) return;
+            if (estado === 'SUBSCRIBED') {
+              x.listo = true; x.intento = 0;
+              repartir('alEstado', true);
+              if (!x.rastreando) { x.rastreando = true; try { await c.track({ r: oyente.rol === 'coach' ? 'coach' : 'atleta' }); } catch { /* */ } }
+            } else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT') reintentar();
+          });
+        } catch { reintentar(); }
+      };
+      abrir();
+    }
+    x.oyentes.add(oyente);
+    if (x.listo) setTimeout(() => oyente.alEstado?.(true), 0);
+    let ultimoEscribiendo = 0;
+    return {
+      escribiendo(rol) {
+        if (!x.listo || !x.canal || Date.now() - ultimoEscribiendo < 2500) return;
+        ultimoEscribiendo = Date.now();
+        x.canal.send({ type: 'broadcast', event: 'escribiendo', payload: { r: rol === 'coach' ? 'coach' : 'atleta' } }).catch?.(() => {});
+      },
+      cambio() { if (x.listo && x.canal) x.canal.send({ type: 'broadcast', event: 'cambio', payload: {} }).catch?.(() => {}); },
+      soltar() {
+        x.oyentes.delete(oyente);
+        if (x.oyentes.size) return;
+        x.cerrado = true;
+        clearTimeout(x.reintento);
+        chats.delete(atletaId);
+        try { if (x.canal) sb.removeChannel(x.canal); } catch { /* */ }
+      },
+    };
   }
 
   return {
     modo: 'supabase',
+    canalChat,
+    // Al cambiar «Mostrar cuándo estoy en línea»: los canales se vuelven a abrir con lo nuevo (y la base lo comprueba)
+    reiniciarChats() {
+      for (const x of chats.values()) { x.cerrado = true; clearTimeout(x.reintento); try { if (x.canal) sb.removeChannel(x.canal); } catch { /* */ } }
+      chats.clear();
+    },
     async iniciar() {
       const { data } = await sb.auth.getSession();
       sesion = data.session;
@@ -260,12 +389,16 @@ export function crearBackendSupabase({ url, anonKey }) {
         if (error) throw traducir(error);
         return data.signedUrl;
       },
+      // Devuelve las rutas que de verdad se han borrado (las que no se pueden ver o no existen no salen)
       async borrar(rutas, bucket = 'archivos') {
-        if (!rutas.length) return;
+        const hechas = [];
+        if (!rutas.length) return hechas;
         for (let i = 0; i < rutas.length; i += 500) {
-          const { error } = await sb.storage.from(bucket).remove(rutas.slice(i, i + 500));
+          const { data, error } = await sb.storage.from(bucket).remove(rutas.slice(i, i + 500));
           if (error) throw traducir(error);
+          for (const f of data || []) if (f?.name) hechas.push(f.name);
         }
+        return hechas;
       },
       // Todos los archivos de una carpeta (<atleta_id>), de 1000 en 1000
       async listar(carpeta, bucket = 'archivos') {

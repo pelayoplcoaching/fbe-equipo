@@ -3523,3 +3523,155 @@ body:has(.app.con-actividad)::before { height: calc(env(safe-area-inset-top, 0px
 
 /* v0.53.2: aviso de una semana con las fechas ya pasadas */
 .aviso-suave { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--morado-suave, color-mix(in srgb, var(--acento) 12%, transparent)); color: var(--tinta); }
+
+/* ---------- v0.54: el chat como WhatsApp ---------- */
+/* El fondo con dibujos de FBE: muy suave, del color de acento, detrás de todo (las burbujas son opacas y su contraste
+   no cambia). Con el negro puro (OLED), sin dibujos. */
+.chat-fondo { position: fixed; inset: 0; z-index: -1; pointer-events: none; color: color-mix(in srgb, var(--morado) 12%, transparent); }
+.chat-fondo svg { display: block; width: 100%; height: 100%; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chat-fondo { color: color-mix(in srgb, var(--morado) 9%, transparent); } }
+:root[data-theme="dark"] .chat-fondo { color: color-mix(in srgb, var(--morado) 9%, transparent); }
+@media (prefers-color-scheme: dark) { :root[data-oled]:not([data-theme="light"]) .chat-fondo { display: none; } }
+:root[data-oled][data-theme="dark"] .chat-fondo { display: none; }
+@media (min-width: 900px) { .app.coach .chat-fondo { left: calc(220px + max(24px, env(safe-area-inset-left, 0px))); } }
+@media (forced-colors: active) { .chat-fondo { display: none; } }
+.chat.con-fondo .chat-nota, .chat.con-fondo .chat-vacio { background: var(--tiza); border-radius: var(--r); }
+.chat.con-fondo .chat-nota { justify-self: center; padding: 6px 12px; margin-top: 8px; }
+
+/* La cabecera del chat: el estado («escribiendo…», «en línea», «últ. vez…») y la búsqueda */
+.cabecera-chat .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cabecera-chat .sub.escribiendo, .chat-estado.escribiendo, .conv-escribiendo { color: var(--morado); font-weight: 650; }
+.cabecera-chat > .btn-icono { flex: none; }
+.cabecera-chat.buscando { gap: 4px; }
+.chat-busqueda { flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; }
+.chat-busqueda .entrada { flex: 1; min-width: 0; min-height: 44px; }
+.chat-busqueda-n { flex: none; min-width: 3.5em; text-align: center; }
+.chat-herramientas { display: flex; align-items: center; gap: 2px; min-height: 48px; }
+.chat-herramientas .chat-estado { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-anteriores { justify-self: center; margin: 4px 0 8px; }
+
+/* «3 MENSAJES SIN LEER» */
+.chat-sin-leer { display: flex; justify-content: center; margin: 10px calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding: 4px 0; background: color-mix(in srgb, var(--morado) 10%, var(--tiza)); scroll-margin-top: 80px; }
+.chat-sin-leer span { padding: 3px 12px; border-radius: 999px; background: var(--hoja); color: var(--tinta-2); font-size: 0.75rem; font-weight: 750; letter-spacing: .04em; box-shadow: inset 0 0 0 1px var(--borde); }
+
+/* La burbuja: deslizar para responder (el desplazamiento vertical sigue siendo del navegador), su menú y sus extras */
+.burbuja { touch-action: pan-y; scroll-margin-top: 96px; scroll-margin-bottom: 140px; transition: transform .18s ease-out, box-shadow .2s ease-out; }
+.burbuja.arrastrando { transition: none; }
+@media (hover: none) { .burbuja { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; } }
+.burbuja:focus { outline: none; }
+.burbuja:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.burbuja-deslizar { position: absolute; left: -40px; top: 50%; width: 30px; height: 30px; margin-top: -15px; border-radius: 50%; display: grid; place-items: center; background: var(--hoja); color: var(--morado); box-shadow: var(--sombra); transform: scale(calc(.4 + .6 * var(--deslizado, 0))); visibility: hidden; }
+.burbuja.arrastrando .burbuja-deslizar { visibility: visible; }
+.burbuja-deslizar svg { width: 16px; height: 16px; }
+.burbuja.resaltada { box-shadow: 0 0 0 3px color-mix(in srgb, var(--morado) 55%, transparent), var(--sombra); }
+.burbuja.actual { box-shadow: 0 0 0 2px var(--morado), var(--sombra); }
+.chat-marca { background: var(--disco-amarillo); color: #1D1933; border-radius: 3px; padding: 0 1px; }
+.burbuja-texto strong { font-weight: 750; }
+.burbuja-texto s { text-decoration-thickness: 1.5px; }
+.chat-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; padding: 1px 4px; border-radius: 5px; background: color-mix(in srgb, var(--tinta) 7%, transparent); white-space: pre-wrap; }
+.burbuja-eliminada { color: var(--tinta-2); }
+.burbuja.eliminada { box-shadow: inset 0 0 0 1px var(--linea); background: var(--hoja); }
+.burbuja-pie .burbuja-editado { font-style: italic; }
+.burbuja-pie .burbuja-estrella { display: inline-flex; color: var(--aviso); }
+.burbuja-pie .burbuja-estrella svg { width: 12px; height: 12px; fill: currentColor; }
+/* «Más opciones»: un círculo pequeño arriba a la derecha, con su zona de toque de 44 px; con ratón, al pasar por
+   encima; con teclado, al llegar con el foco (en el móvil, mejor mantener pulsado) */
+.burbuja-mas { position: absolute; top: -6px; right: -6px; width: 44px; height: 44px; padding: 0; border: 0; background: none; display: grid; place-items: center; color: var(--tinta-2); cursor: pointer; opacity: 0; pointer-events: none; }
+.burbuja-mas svg { width: 26px; height: 26px; padding: 5px; border-radius: 50%; background: var(--hoja); box-shadow: var(--sombra); }
+.burbuja-mas:focus-visible { opacity: 1; pointer-events: auto; outline: none; }
+.burbuja-mas:focus-visible svg { outline: 2px solid var(--foco); outline-offset: 1px; }
+@media (hover: hover) { .burbuja:hover .burbuja-mas { opacity: 1; pointer-events: auto; } }
+.burbuja.sin-cola { padding-right: 12px; }
+.burbuja.sin-cola .burbuja-pie:has(.burbuja-editado, .burbuja-estrella) { position: static; }
+/* La cita de arriba de la burbuja */
+.burbuja-cita { display: grid; gap: 1px; text-align: left; width: 100%; min-height: 44px; padding: 6px 10px; border: 0; border-left: 3px solid var(--morado); border-radius: 8px; background: color-mix(in srgb, var(--tinta) 6%, transparent); color: inherit; font: inherit; cursor: pointer; }
+.burbuja.mia .burbuja-cita { background: color-mix(in srgb, var(--hoja) 70%, transparent); }
+.burbuja-cita.de-mi { border-left-color: var(--ok); }
+.burbuja-cita strong { font-size: 0.7812rem; color: var(--morado); }
+.burbuja-cita.de-mi strong { color: var(--ok); }
+.burbuja-cita span { font-size: 0.8125rem; color: var(--tinta-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+/* Las reacciones: una píldora en la esquina de abajo */
+.burbuja.con-reacciones { margin-bottom: 14px; }
+.burbuja-reacciones { position: absolute; bottom: -16px; display: inline-flex; align-items: center; gap: 1px; min-height: 26px; padding: 0 7px; border: 0; border-radius: 999px; background: var(--hoja); box-shadow: var(--sombra); font: inherit; font-size: 0.875rem; line-height: 1; cursor: pointer; color: var(--tinta-2); }
+.burbuja-reacciones::after { content: ""; position: absolute; inset: -9px -6px; }
+.burbuja.suya .burbuja-reacciones { left: 10px; }
+.burbuja.mia .burbuja-reacciones { right: 10px; }
+.burbuja-reacciones .num { margin-left: 3px; font-size: 0.75rem; }
+/* El menú del mensaje (hoja): el texto, la fila de reacciones y lo demás */
+.hoja-mensaje-texto { overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.menu-reacciones { display: flex; justify-content: space-between; gap: 4px; padding: 6px; border-radius: 999px; background: var(--hoja-2); }
+.menu-reaccion { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; background: none; font-size: 1.5rem; line-height: 1; display: grid; place-items: center; cursor: pointer; }
+.menu-reaccion:hover { background: var(--hoja); }
+.menu-reaccion[aria-pressed="true"] { background: var(--morado-suave); box-shadow: inset 0 0 0 2px var(--morado); }
+@media (max-width: 359px) { .menu-reaccion { width: 40px; height: 40px; font-size: 1.3rem; } }
+.accion-fila.accion-eliminar strong, .accion-fila.accion-eliminar .ico { color: var(--alerta); }
+.accion-fila.accion-eliminar .ico { background: var(--alerta-suave); }
+.accion-fila[disabled] { opacity: .55; cursor: default; }
+.chat-info { display: grid; gap: 0; margin: 0; }
+.chat-info > div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--linea); }
+.chat-info dt { color: var(--tinta-2); }
+.chat-info dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+.chat-info-texto { overflow-wrap: anywhere; }
+.chat-quien-emoji { font-size: 1.25rem; }
+
+/* Responder y editar, encima del cuadro de escribir; las respuestas rápidas («/») */
+.chat-cita-compositor { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 4px 6px 12px; border-radius: 14px; background: var(--hoja); box-shadow: var(--sombra); border-left: 3px solid var(--morado); }
+.chat-cita-compositor > svg { width: 18px; height: 18px; color: var(--morado); }
+.chat-cita-compositor.editando { border-left-color: var(--aviso); }
+.chat-cita-compositor.editando > svg { color: var(--aviso); }
+.chat-cita-texto { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-rapidas { list-style: none; margin: 0; padding: 4px; border-radius: 14px; background: var(--hoja); box-shadow: var(--sombra-alta); }
+.chat-rapidas li { display: grid; gap: 2px; padding: 10px 12px; min-height: 44px; border-radius: 10px; cursor: pointer; }
+.chat-rapidas li.activa, .chat-rapidas li:hover { background: var(--morado-suave); }
+.chat-rapidas li strong { font-size: 0.9375rem; }
+
+/* Varias fotos con un pie: la tira con su ✕ y el «+» */
+.chat-adjunto { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.chat-adjunto-tira { display: flex; gap: 8px; overflow-x: auto; padding: 6px 2px 2px; scrollbar-width: thin; }
+.chat-adjunto-lista { display: flex; gap: 8px; flex: none; }
+.chat-adjunto-item { position: relative; flex: none; width: 64px; height: 64px; }
+.chat-adjunto-item img, .chat-adjunto-item video { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; background: var(--hoja-2); display: block; }
+.chat-adjunto-video { position: absolute; left: 4px; bottom: 4px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: rgba(19, 17, 28, .72); color: #fff; }
+.chat-adjunto-video svg { width: 14px; height: 14px; }
+.chat-adjunto-quitar { position: absolute; top: -10px; right: -10px; width: 44px; height: 44px; padding: 0; border: 0; background: none; display: grid; place-items: center; cursor: pointer; }
+.chat-adjunto-quitar svg { width: 22px; height: 22px; padding: 4px; border-radius: 50%; background: var(--tinta); color: var(--tiza); }
+.chat-adjunto-mas { flex: none; width: 64px; height: 64px; border-radius: 10px; border: 1.5px dashed var(--linea); background: none; color: var(--tinta-2); display: grid; place-items: center; cursor: pointer; }
+.chat-adjunto-mas svg { width: 22px; height: 22px; }
+.chat-adjunto-pie { padding: 0 2px 2px; }
+
+/* «Archivos, enlaces y documentos» y «Mensajes destacados» */
+.chat-arch-panel { display: grid; gap: 12px; padding-top: 12px; }
+.chat-rejilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.medio-chat.mini { width: 100%; aspect-ratio: 1; border-radius: 8px; }
+.medio-chat.mini.medio-fallo { display: grid; place-items: center; gap: 4px; padding: 4px; }
+.chat-enlace { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; }
+.chat-enlace .enlace-texto { overflow-wrap: anywhere; }
+.chat-enlace .mini { grid-column: 1; }
+.chat-enlace .btn { grid-row: 1 / span 2; grid-column: 2; }
+.chat-destacado { width: 100%; display: grid; gap: 4px; padding: 12px 16px; min-height: 44px; border: 0; background: none; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.chat-destacado:hover { background: var(--hoja-2); }
+.chat-destacado .secundario { overflow-wrap: anywhere; }
+
+/* La lista de conversaciones del coach: filtros, archivados, opciones, «escribiendo…», «Borrador:» y ✓✓ */
+.conv-filtros { margin-top: -6px; }
+.conv-archivados { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 16px; border: 0; border-radius: var(--r); background: var(--hoja); box-shadow: var(--sombra); text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.conv-archivados .ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--hoja-2); color: var(--tinta-2); }
+.conv-archivados .ico svg { width: 20px; height: 20px; }
+.conv-fila { display: flex; align-items: center; }
+.conv-fila > .conversacion { flex: 1; min-width: 0; }
+.conv-fila > .conv-opciones { flex: none; margin-right: 6px; color: var(--tinta-3); }
+.conv-hora { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.conv-hora svg { width: 14px; height: 14px; color: var(--tinta-2); }
+.conv-ultimo .visto { color: var(--tinta-3); font-weight: 700; letter-spacing: -.1em; margin-right: 2px; }
+.conv-ultimo .visto.leido { color: var(--morado); }
+.conv-borrador { color: var(--ok); font-weight: 700; }
+.conv-eliminado { font-style: italic; }
+.conv-punto { min-width: 12px; width: 12px; height: 12px; padding: 0; }
+.conv-titulo-busqueda { text-transform: uppercase; letter-spacing: .06em; font-weight: 750; padding: 10px 16px 2px; }
+.conv-resultado .conv-ultimo { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.conversaciones > li.conv-fila:first-child > .conversacion { border-radius: var(--r) 0 0 0; }
+.conversaciones > li.conv-fila:last-child > .conversacion { border-radius: 0 0 0 var(--r); }
+
+@media (prefers-reduced-motion: reduce) { .burbuja { transition: none; } }
+/* (la cabecera va ahora dentro del chat: su estado en una línea no puede ensanchar la columna) */
+.chat, .chat-lista, .chat-dia { grid-template-columns: minmax(0, 1fr); }

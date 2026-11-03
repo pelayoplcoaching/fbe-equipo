@@ -1,6 +1,8 @@
 import { Fragment } from 'preact';
 import { trozosConEnlaces, miniaturaYoutube } from '../logica/enlaces.js';
 import { Icono } from './comunes.jsx';
+import { tokensDeMensaje } from '../logica/formato.js';
+import { resaltar } from '../logica/mensajes.js';
 
 // Un texto con sus enlaces que se pueden tocar y, debajo, la miniatura de los vídeos de YouTube que lleve (v0.48).
 // La miniatura sale de i.ytimg.com (lo único de fuera que se carga); el enlace normal sigue funcionando.
@@ -17,6 +19,38 @@ export function TextoConEnlaces({ texto, como = 'p', clase = '', conVista = true
       </Etiqueta>
       {videos.map((v) => (
         <a key={v.youtube} class="vista-youtube" href={v.valor} target="_blank" rel="noopener noreferrer" aria-label="Ver el vídeo en YouTube">
+          <img src={miniaturaYoutube(v.youtube)} alt="" loading="lazy" width="320" height="180" referrerpolicy="no-referrer" />
+          <span class="vista-youtube-play" aria-hidden="true"><Icono n="play" /></span>
+          <span class="vista-youtube-pie mini"><Icono n="video" />YouTube</span>
+        </a>
+      ))}
+    </>
+  );
+}
+
+// v0.54: el texto de un mensaje del chat con el formato de WhatsApp (*negrita*, _cursiva_, ~tachado~, `mono`), sus
+// enlaces y sus vistas de YouTube. Se pinta con etiquetas (strong, em, s, code, a), nunca como HTML. resaltar: lo que se
+// busca en el chat (se marca donde coincide, con <mark>).
+export function TextoChat({ id = null, texto, clase = '', resaltar: consulta = '', conVista = true }) {
+  const tokens = tokensDeMensaje(id, texto);
+  const enlaces = [];
+  const juntar = (ts) => { for (const x of ts) { if (x.t === 'enlace') enlaces.push(x); else if (x.hijos) juntar(x.hijos); } };
+  juntar(tokens);
+  const videos = conVista ? [...new Map(enlaces.filter((x) => x.youtube).map((x) => [x.youtube, x])).values()].slice(0, 3) : [];
+  const hoja = (v, k) => (consulta ? resaltar(v, consulta).map((p, i) => (p.marca ? <mark key={`${k}-${i}`} class="chat-marca">{p.v}</mark> : <Fragment key={`${k}-${i}`}>{p.v}</Fragment>)) : v);
+  const pintar = (ts, base = 'f') => ts.map((x, i) => {
+    const k = `${base}-${i}`;
+    if (x.t === 'texto') return <Fragment key={k}>{hoja(x.v, k)}</Fragment>;
+    if (x.t === 'mono') return <code key={k} class="chat-mono">{hoja(x.v, k)}</code>;
+    if (x.t === 'enlace') return <a key={k} href={x.v} target="_blank" rel="noopener noreferrer" class="enlace-texto">{x.v.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60)}{x.v.length > 70 ? '…' : ''}</a>;
+    const Et = x.t === 'negrita' ? 'strong' : x.t === 'cursiva' ? 'em' : 's';
+    return <Et key={k}>{pintar(x.hijos, k)}</Et>;
+  });
+  return (
+    <>
+      <p class={clase}>{pintar(tokens)}</p>
+      {videos.map((v) => (
+        <a key={v.youtube} class="vista-youtube" href={v.v} target="_blank" rel="noopener noreferrer" aria-label="Ver el vídeo en YouTube">
           <img src={miniaturaYoutube(v.youtube)} alt="" loading="lazy" width="320" height="180" referrerpolicy="no-referrer" />
           <span class="vista-youtube-play" aria-hidden="true"><Icono n="play" /></span>
           <span class="vista-youtube-pie mini"><Icono n="video" />YouTube</span>

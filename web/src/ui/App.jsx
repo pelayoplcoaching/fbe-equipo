@@ -1,5 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { borrarTodoEnCurso } from './en-curso.js';
+import { borrarBorradores } from '../logica/mensajes.js';
+const almacenLocal = () => { try { return window.localStorage; } catch { return null; } };
 import { Ctx, Cargando, Icono } from './comunes.jsx';
 import { Acceso, Vincular, NuevaPassword, SegundoPaso } from './Acceso.jsx';
 import { AtletaApp } from './atleta/AtletaApp.jsx';
@@ -49,6 +51,9 @@ export function App({ backend, api, cola }) {
     if (!s) {
       // Sin sesión, este móvil no debe seguir recibiendo las notificaciones de nadie
       if (backend.modo === 'supabase') desactivarPushLocal();
+      // (v0.54, revisión) Ni guardar lo de nadie: los borradores de los mensajes y la sesión en curso se van también
+      // cuando la sesión se acaba sin «Salir» (caduca, se cierra en otro sitio, se cambia la contraseña)
+      borrarTodoEnCurso(); borrarBorradores(almacenLocal()); backend.reiniciarChats?.();
       setEstado({ fase: 'fuera' });
       return;
     }
@@ -122,6 +127,16 @@ export function App({ backend, api, cola }) {
   // Con la sesión dentro, si este móvil tiene las notificaciones activadas, la base se queda con su suscripción al día
   const dentro = estado.fase === 'atleta' || estado.fase === 'coach';
   useEffect(() => { if (dentro) sincronizarPush(api, backend.modo); }, [dentro, ultimoUid.current]);
+  // v0.54: la última conexión («últ. vez hoy a las 18:42»), como mucho una vez por minuto mientras la app está a la
+  // vista. Con «Mostrar cuándo estoy en línea» apagado, la base no la guarda (presencia_marcar no escribe nada).
+  useEffect(() => {
+    if (!dentro) return undefined;
+    const latir = () => { if (document.visibilityState === 'visible') Promise.resolve(api.marcarPresencia()).catch(() => {}); };
+    latir();
+    const t = setInterval(latir, 60000);
+    document.addEventListener('visibilitychange', latir);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', latir); };
+  }, [dentro, ultimoUid.current]);
   // La ficha del atleta (servicio, estado…) la cambia el coach: se vuelve a leer al volver a la app y cada media
   // hora, para que, por ejemplo, la nutrición aparezca o desaparezca sin tener que cerrar la app (v0.22)
   useEffect(() => {
@@ -150,7 +165,8 @@ export function App({ backend, api, cola }) {
     // Tras cambiar la foto o el nombre: el perfil nuevo, sin recargar toda la cuenta
     fijarPerfil: (p) => setEstado((e) => ({ ...e, perfil: p })),
     // Al cerrar sesión, este móvil deja de recibir las notificaciones de esa cuenta
-    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); await backend.auth.salir(); resolver(true); },
+    // (v0.54) y los borradores de los mensajes de este móvil
+    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); borrarBorradores(almacenLocal()); backend.reiniciarChats?.(); await backend.auth.salir(); resolver(true); },
     reiniciarDemo: () => { backend.reiniciar?.(); ultimoUid.current = undefined; resolver(true); },
     // Modo atleta del coach (v0.37)
     propioCoach: estado.fase === 'coach' ? estado.propio || null : null,

@@ -3,7 +3,8 @@
 
 // http(s)://… hasta un espacio; sin la puntuación del final de la frase
 const URL_RE = /https?:\/\/[^\s<>"']+/gi;
-const recortar = (u) => u.replace(/[).,;:!?\u00bb]+$/, '');
+// (v0.54: tampoco los signos del formato de WhatsApp, «*» y «~», ni la comilla del monoespaciado: «*mira https://…*»)
+const recortar = (u) => u.replace(/[).,;:!?\u00bb*~`]+$/, '');
 
 // El id de un vídeo de YouTube (11 caracteres) en youtube.com/watch?v=, youtu.be/, /shorts/, /embed/ o /live/; si no, null
 export function idYoutube(url) {

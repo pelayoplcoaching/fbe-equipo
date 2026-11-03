@@ -1,6 +1,6 @@
 import { hoyISO } from '../../logica/fechas.js';
 import { useState } from 'preact/hooks';
-import { AjustesDispositivo, VERSION_APP } from '../Ajustes.jsx';
+import { AjustesDispositivo, AjustesMensajes, VERSION_APP } from '../Ajustes.jsx';
 import { SeccionNotificaciones } from '../Notificaciones.jsx';
 import { CabeceraGrande, useApp, useCarga, Icono, Hoja, HojaExportar, Avatar, GrupoIos, FilaIos, IcoIos } from '../comunes.jsx';
 import { conEntrenamiento } from '../../logica/nivel.js';
@@ -54,6 +54,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       </GrupoIos>
 
       <AjustesDispositivo antes={<SeccionNotificaciones fila />} />
+      <AjustesMensajes />
 
       {guias.length > 0 && <Recursos titulo="Guías y recursos" id="grupo-guias" lista={guias} />}
       {faq.length > 0 && <Recursos titulo="Preguntas frecuentes" id="grupo-faq" lista={faq} />}

@@ -1,5 +1,5 @@
 /* global __APP_VERSION__ */
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { Segmentos, Icono, useApp, Hoja, GrupoIos, FilaIos, IcoIos } from './comunes.jsx';
 import { leerAjustes, guardarAjustes, TAMANOS_LETRA } from './ajustes.js';
 import { prepararAudio, pitar, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
@@ -126,5 +126,37 @@ function HojaSonido({ a, cambiar, alCerrar }) {
         </ul>
       </div>
     </Hoja>
+  );
+}
+
+// v0.54: los mensajes. «Mostrar cuándo estoy en línea» se guarda en la cuenta (la base la respeta: sin ella, no se
+// guarda tu última conexión ni compartes «en línea», y tampoco ves la de la otra parte, como en WhatsApp); «Fondo del
+// chat», en este móvil.
+export function AjustesMensajes({ coach = false }) {
+  const { api, aviso } = useApp();
+  const [a, setA] = useState(leerAjustes);
+  const [visible, setVisible] = useState(null);
+  const [ocupado, setOcupado] = useState(false);
+  useEffect(() => { let vivo = true; api.miPresencia().then((p) => vivo && setVisible(p.visible !== false)).catch(() => vivo && setVisible(true)); return () => { vivo = false; }; }, []);
+  const cambiar = (k, v) => { const n = { ...a, [k]: v }; setA(n); guardarAjustes(n); };
+  async function cambiarVisible(v) {
+    setOcupado(true);
+    try {
+      const r = await api.marcarPresencia(v);
+      setVisible(r?.visible !== false);
+      api.reiniciarChats?.();
+      window.dispatchEvent(new Event('fbe-presencia'));
+      aviso(v ? 'Ahora se ve cuándo estás en línea' : 'Ya no se ve cuándo estás en línea');
+    } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
+  }
+  const otro = coach ? 'tus atletas' : 'tu coach';
+  return (
+    <GrupoIos titulo="Mensajes" id="grupo-mensajes" pie="El fondo del chat se guarda en este móvil; lo de «en línea», en tu cuenta.">
+      <Interruptor id="aj-en-linea" icono="ojo" texto="Mostrar cuándo estoy en línea" valor={visible !== false} desactivado={visible === null || ocupado}
+        ayuda={`Con esto, ${otro} ve${coach ? 'n' : ''} cuándo estás en el chat y tu última conexión («últ. vez hoy a las 18:42»). Si lo apagas, no se guarda y tú tampoco verás la suya.`}
+        alCambiar={cambiarVisible} />
+      <FilaIos icono="imagen" titulo="Fondo del chat" detalle={a.fondoChat === 'liso' ? 'Liso' : 'Con dibujos de FBE, muy suaves (con el negro puro, liso)'}
+        bloque={<Segmentos opciones={[['dibujos', 'Con dibujos'], ['liso', 'Liso']]} valor={a.fondoChat || 'dibujos'} etiqueta="Fondo del chat" alCambiar={(v) => cambiar('fondoChat', v || 'dibujos')} />} />
+    </GrupoIos>
   );
 }

@@ -31,6 +31,8 @@ export function CoachApp() {
   useEffect(() => { if (comunidad.datos && tab === 'equipo' && !comunidad.datos.activa) setTab('atletas'); }, [comunidad.datos]);
   const [ficha, setFicha] = useState(() => (pedidoCoach ? { atletaId: pedidoCoach.atletaId, pestana: pedidoCoach.pestana || 'programa' } : null)); // { atletaId, pestana }
   useEffect(() => { if (pedidoCoach) consumirPedidoCoach(); }, []);
+  // v0.54 (revisión): al abrir, lo que quedó en la cola de Storage (fotos y vídeos ya quitados de la tabla) se borra
+  useEffect(() => { Promise.resolve(api.limpiarAlmacenamiento?.()).catch(() => {}); }, []);
   const bandeja = useCarga(() => api.bandeja(), []);
   const sinLeer = useCarga(() => api.mensajesSinLeer().catch(() => 0), []);
   // v0.48: el número del icono de la app (lo que espera tu respuesta y los mensajes sin leer)
