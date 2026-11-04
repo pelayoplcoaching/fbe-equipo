@@ -14,7 +14,7 @@ export function AnalisisVideo({ video, esCoach = false, revision = null, alGuard
   const [M, setM] = useState(null);
   const [error, setError] = useState(null);
   const id = useId();
-  const con036 = useCarga(() => (esCoach ? api.video036().catch(() => false) : Promise.resolve(false)), [esCoach]);
+  const con036 = useCarga(() => (esCoach ? api.video036().catch(() => null) : Promise.resolve(false)), [esCoach]);
   const necesita = abierto || !!guardado;
   useEffect(() => {
     if (!necesita || M) return undefined;
@@ -33,7 +33,7 @@ export function AnalisisVideo({ video, esCoach = false, revision = null, alGuard
       </div>
       {error && <p class="nota peq" role="alert">{error}</p>}
       {guardado && !abierto && (M ? <M.VerAnalisis video={video} analisis={guardado} /> : <Cargando texto="Cargando el análisis" />)}
-      {abierto && (M ? <M.default video={video} esCoach={esCoach} guardado={guardado} con036={!!con036.datos} alGuardado={alGuardado} /> : <Cargando texto="Cargando el análisis" />)}
+      {abierto && (M ? <M.default video={video} esCoach={esCoach} guardado={guardado} con036={con036.datos ?? null} alGuardado={alGuardado} /> : <Cargando texto="Cargando el análisis" />)}
       {!abierto ? (
         <div class="fila-envolver">
           <button type="button" class={`btn btn-peq ${guardado ? '' : 'btn-primario'}`} aria-expanded="false" onClick={() => setAbierto(true)}>

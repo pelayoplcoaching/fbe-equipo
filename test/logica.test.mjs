@@ -2733,11 +2733,12 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-11' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
-  check(PV.NOVEDADES_PRIVACIDAD.length === 4 && /micro/i.test(PV.NOVEDADES_PRIVACIDAD.map((x) => x[2]).join(' ')) && /cerrar la sesión/.test(PV.NOVEDADES_PRIVACIDAD[1][2]) && /GPS/.test(PV.NOVEDADES_PRIVACIDAD[2][2]) && /voto/.test(PV.NOVEDADES_PRIVACIDAD[3][2])
+  const nov11 = PV.NOVEDADES_PRIVACIDAD.filter((x) => x[3] === '2026-11');
+  check(nov11.length === 4 && /micro/i.test(nov11.map((x) => x[2]).join(' ')) && /cerrar la sesión/.test(nov11[1][2]) && /GPS/.test(nov11[2][2]) && /voto/.test(nov11[3][2])
     && PV.clavePrivacidadLocal('u1') === 'fbe-privacidad-vista-u1', 'lo que cuenta: notas de voz y micro, la copia del chat (se borra al salir), fotos sin ubicación y los votos');
   check(/Ha visto la política de privacidad vigente/.test(PV.textoPrivacidadVista({ version: '2026-11' }, '2026-11')) && /Vio la política de 2026-10/.test(PV.textoPrivacidadVista({ version: '2026-10' }, '2026-11')) && /Sin constancia/.test(PV.textoPrivacidadVista(null, '2026-11')),
     'el coach lo ve en la ficha');
@@ -2875,7 +2876,7 @@ console.log('\nv0.57: los vídeos de técnica (encuadre, nivel, serie, marcas, t
   const filaV = legal.PRIVACIDAD.find(([t]) => t === 'Tus vídeos de técnica')?.[1] || '';
   const filaM = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil')[1];
   check(/nota de técnica de 1 a 5/.test(filaV) && /su voz sobre el vídeo/.test(filaV) && /el día \(no la hora\)/.test(filaV) && /sensor de inclinación/.test(filaV) && /destacados no se borran nunca/.test(filaV)
-    && /por donde iba/.test(filaM) && legal.VERSION_LEGAL === '2026-11', 'la privacidad lo cuenta (la corrección, la voz, «Visto» solo con el día, el nivel, la limpieza y la subida que sigue), sin cambiar de versión');
+    && /por donde iba/.test(filaM) && /^2026-1[12]$/.test(legal.VERSION_LEGAL), 'la privacidad lo cuenta (la corrección, la voz, «Visto» solo con el día, el nivel, la limpieza y la subida que sigue; la versión, en la v0.58)');
   const src = (f) => readFileSync(new URL(`../web/src/ui/${f}`, import.meta.url), 'utf8');
   const cam = src('tecnica/CamaraVideo.jsx');
   check((cam.match(/soltarCamara\(\)/g) || []).length >= 5 && /audio: false/.test(cam) && /requestPermission/.test(cam) && !/preact\/compat/.test(cam + src('tecnica/Correccion.jsx') + src('tecnica/RevisionSeguida.jsx') + src('tecnica/MiTecnica.jsx') + src('Video.jsx')),
@@ -2986,7 +2987,7 @@ console.log('\nv0.58: el análisis automático de los vídeos (seguir la barra, 
   check(VALIDOS.every((j) => A.analisisValido(JSON.parse(j))), `los análisis bien formados valen (${VALIDOS.length}, también el máximo: 900 puntos y 30 repeticiones)`);
   const malos = MALFORMADOS.filter((j) => A.analisisValido(JSON.parse(j)));
   check(MALFORMADOS.length >= 40 && !malos.length, `y ${MALFORMADOS.length} mal formados, no (forma, tipos, límites, claves de más, la pose cruda y más de 64 kB)${malos.length ? `: ${malos[0].slice(0, 80)}` : ''}`);
-  check(A.tamJsonb({ a: 1, b: [1, 2] }) === '{"a": 1, "b": [1, 2]}'.length && A.tamJsonb(JSON.parse(MALFORMADOS.at(-1))) > A.MAX_BYTES_ANALISIS && A.tamJsonb(JSON.parse(VALIDOS.at(-1))) < A.MAX_BYTES_ANALISIS,
+  check(A.tamJsonb({ a: 1, b: [1, 2] }) === '{"a": 1, "b": [1, 2]}'.length && A.tamJsonb(JSON.parse(MALFORMADOS.reduce((x, y) => (y.length > x.length ? y : x)))) > A.MAX_BYTES_ANALISIS && A.tamJsonb(JSON.parse(VALIDOS.reduce((x, y) => (y.length > x.length ? y : x)))) < A.MAX_BYTES_ANALISIS,
     'el tamaño se mide como lo guarda la base (jsonb::text, con sus espacios): como mucho 64 kB');
   check(!A.analisisValido({ v: 1, barra: { p: [[0, 0.5, 0.5], [5.9, 0.5, 0.5]] } }, 4.8) && A.analisisValido({ v: 1, barra: { p: [[0, 0.5, 0.5], [5.9, 0.5, 0.5]] } }, 5) && !A.analisisValido({ v: 1, pose: { lado: 'izq', reps: [{ t: [0, 9], rodilla: 90 }] } }, 7), 'nada después del final del vídeo (con 1 s de margen, como el trigger)');
   const largos = []; for (let t = 0; t <= 60; t += 1 / 30) largos.push([t, 0.5 + 0.0001234 * Math.sin(t), 0.3 + 0.2 * Math.sin(t)]);
@@ -3002,7 +3003,51 @@ console.log('\nv0.58: el análisis automático de los vídeos (seguir la barra, 
   // Privacidad, rendimiento y lo que no se toca
   const legal = await import('../web/src/legal.js');
   const filaV = legal.PRIVACIDAD.find(([t]) => t === 'Tus vídeos de técnica')?.[1] || '';
-  check(/análisis automático/.test(filaV) && /experimental/i.test(filaV) && /no sale/.test(filaV) && legal.VERSION_LEGAL === '2026-11', 'la privacidad cuenta el análisis (experimental, hecho en el dispositivo, lo que se guarda), sin cambiar de versión');
+  check(/análisis automático/.test(filaV) && /experimental/i.test(filaV) && /no sale/.test(filaV), 'la privacidad cuenta el análisis (experimental, hecho en el dispositivo, lo que se guarda)');
+  // Revisión de seguridad de la v0.58
+  // M1: la política cambia (2026-12) y avisa una vez con sus novedades: las de la v0.57 y la v0.58 juntas
+  {
+    const PV2 = await import('../web/src/logica/privacidad.js');
+    const nueva = PV2.NOVEDADES_PRIVACIDAD.filter((x) => x[3] === '2026-12');
+    const t = nueva.map((x) => x[2]).join(' ');
+    check(legal.VERSION_LEGAL === '2026-12' && nueva.length === 1 && /nota de técnica \(de 1 a 5\)/.test(t) && /puntos clave/.test(t) && /tempo/.test(t) && /su voz sobre el vídeo/.test(t) && /solo el día/.test(t)
+      && /experimental/.test(t) && /trayectoria de la barra/.test(t) && /velocidad estimada/.test(t) && /ángulos/.test(t) && /en el móvil u ordenador/.test(t) && /resumen de cada repetición/.test(t) && /nunca se guardan/.test(t),
+      '(M1) la política pasa a la 2026-12 con una novedad, corta: la corrección (nota 1–5, puntos clave, tempo, voz), solo el día, el análisis en el dispositivo y que solo se guarda el resumen (nunca los puntos del cuerpo)');
+    check(PV2.debeAvisarPrivacidad('2026-11', legal.VERSION_LEGAL) && PV2.novedadesDesde('2026-11', '2026-12').map((x) => x[1]).join() === 'Vídeos de técnica' && PV2.novedadesDesde(null, '2026-12').length === 5
+      && PV2.novedadesDesde('2026-12', '2026-12').length === 0 && PV2.novedadesDesde('2026-10', '2026-11').length === 4,
+      '(M1) quien vio la 2026-11 ve solo lo nuevo (los vídeos); quien no vio ninguna, todo');
+    check(/Vio la política de 2026-11; la vigente es la 2026-12/.test(PV2.textoPrivacidadVista({ version: '2026-11' }, legal.VERSION_LEGAL)) && /vigente \(2026-12\)/.test(PV2.textoPrivacidadVista({ version: '2026-12' }, legal.VERSION_LEGAL))
+      && /novedadesDesde\(vista, VERSION_LEGAL\)/.test(readFileSync(new URL('../web/src/ui/AvisoPrivacidad.jsx', import.meta.url), 'utf8')), '(M1) el coach ve en «Datos» qué versión ha visto cada atleta; el aviso enseña las que le faltan');
+  }
+  // M2: lo analizado se olvida al salir (o al caducar la sesión) y, como mucho, el de los 5 últimos vídeos
+  {
+    const C = await import('../web/src/ui/tecnica/capas.js');
+    for (let i = 1; i <= 7; i++) C.guardarSesionAnalisis(`u1:v${i}`, { barra: { puntos: [[i, 0.5, 0.5]] } });
+    C.leerSesionAnalisis('u1:v3');
+    C.guardarSesionAnalisis('u1:v8', {});
+    check(C.MAX_SESION_ANALISIS === 5 && C.sesionesAnalisis().join() === 'u1:v5,u1:v6,u1:v7,u1:v3,u1:v8' && C.leerSesionAnalisis('u1:v1') === null, '(M2) lo analizado en la sesión: los 5 últimos vídeos (el que se vuelve a abrir pasa a ser el último)');
+    C.ponerCapa('v3', () => null);
+    check(typeof C.capaDe('v3') === 'function', '(M2) una capa puesta sobre un vídeo');
+    C.olvidarAnalisis();
+    check(!C.sesionesAnalisis().length && C.capaDe('v3') === null, '(M2) olvidarAnalisis(): fuera lo de la sesión y las capas sobre los vídeos');
+    const app = readFileSync(new URL('../web/src/ui/App.jsx', import.meta.url), 'utf8');
+    check((app.match(/borrarCacheChat\(\)\.catch\(\(\) => \{\}\); olvidarAnalisis\(\);/g) || []).length === 2 && !/new Map\(\)/.test(readFileSync(new URL('../web/src/ui/tecnica/analisis/PanelAnalisis.jsx', import.meta.url), 'utf8')),
+      '(M2) se llama al salir y cuando la sesión se acaba sola (donde se borra la copia del chat); el panel no guarda nada por su cuenta');
+  }
+  // L2: los números, con 4 decimales como mucho (como la base)
+  {
+    const A2 = await import('../web/src/logica/analisis.js');
+    check(A2.decimales(0.1234) === 4 && A2.decimales(1e-7) === 7 && A2.decimales(0.0015) === 4 && A2.decimales(1.5e-5) === 6 && A2.decimales(150) === 0 && A2.decimales(1e21) === 0 && A2.decimales(-2.25) === 2
+      && !A2.analisisValido({ v: 1, barra: { p: [[0, 0.12345, 0.5], [0.1, 0.5, 0.5]] } }) && A2.analisisValido({ v: 1, barra: { p: [[0, 0.1234, 0.5], [0.1, 0.5, 0.5]] } }),
+      '(L2) los decimales de un número tal como se envía (también con exponente): hasta 4 valen, como en la base');
+  }
+  // L1 y L4: la caché del modelo y lo que no se precarga
+  {
+    const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+    const sw = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8');
+    check(/soloDemo\(f\)/.test(build) && /video\(-barra\)\?-demo-/.test(build) && /__MODELO_DIR__/.test(build) && /__MODELO_ARCHIVOS__/.test(build) && /claveModelo\(url\)/.test(sw) && !/pathname\.includes\('\/modelos\/'\)/.test(sw) && /TIPO_MODELO\.test/.test(sw),
+      '(L1, L4) el service worker guarda solo los archivos del modelo (su carpeta, sin «?…», con su tipo) y no precarga los vídeos de la demo');
+  }
   const srcA = (f) => readFileSync(new URL(`../web/src/ui/${f}`, import.meta.url), 'utf8');
   const todo = ['tecnica/Analisis.jsx', 'tecnica/capas.js', 'tecnica/analisis/PanelAnalisis.jsx', 'tecnica/analisis/Capas.jsx', 'tecnica/analisis/procesar.js', 'tecnica/analisis/pose.js', 'tecnica/analisis/seguidor.worker.js'].map(srcA).join('\n');
   check(!/preact\/compat/.test(todo) && !/https?:\/\/(?!www\.)/.test(srcA('tecnica/analisis/pose.js') + srcA('tecnica/analisis/procesar.js')) && /terminate\(\)/.test(todo) && /bmp\.close\(\)/.test(todo) && /pose\.close\(\)/.test(todo) && /import\('\.\/analisis\/PanelAnalisis\.jsx'\)/.test(srcA('tecnica/Analisis.jsx'))
@@ -3011,7 +3056,7 @@ console.log('\nv0.58: el análisis automático de los vídeos (seguir la barra, 
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
   const sw = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8');
   check(/!f\.startsWith\('modelos\/'\)/.test(build) && /pose_landmark_lite\.tflite/.test(build) && !/pose_landmark_(full|heavy)/.test(build) && /script-src 'self' 'wasm-unsafe-eval';/.test(html) && !/script-src[^;]*https?:/.test(html)
-    && /\/modelos\//.test(sw) && /fbe-modelos-/.test(sw), 'el modelo (solo el «lite») va en la app, no se precarga al instalar y se guarda al usarlo; la CSP deja compilar wasm, sin scripts de fuera');
+    && /modelos\//.test(sw) && /fbe-modelos-/.test(sw), 'el modelo (solo el «lite») va en la app, no se precarga al instalar y se guarda al usarlo; la CSP deja compilar wasm, sin scripts de fuera');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

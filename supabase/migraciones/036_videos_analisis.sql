@@ -31,17 +31,21 @@ end $$;
 -- ---------------------------------------------------------------------
 alter table public.video_revisiones add column if not exists analisis jsonb;
 
--- Un número de jsonb entre lo y hi (false si no es un número; nunca un error)
+-- Un número de jsonb entre lo y hi y con 4 decimales como mucho (false si no es un número; nunca un error). (Revisión de
+-- seguridad: sin los decimales, 1e-400 o 0,1234567… valdrían aquí y la app los vería de otra forma; con 4, la base y la
+-- app, analisisValido(), dicen lo mismo de lo que manda la app.)
 create or replace function public.analisis_num(x jsonb, lo numeric, hi numeric) returns boolean
 language sql immutable set search_path = '' as $$
   select coalesce(jsonb_typeof(x) = 'number'
-    and (case when jsonb_typeof(x) = 'number' then (x #>> '{}')::numeric end) between lo and hi, false)
+    and (case when jsonb_typeof(x) = 'number' then (x #>> '{}')::numeric end) between lo and hi
+    and (case when jsonb_typeof(x) = 'number' then scale((x #>> '{}')::numeric) end) <= 4, false)
 $$;
 
 -- { "v": 1, "barra"?: { "p": [2..900 × [t, x, y]] }, "cal"?: { "cm", "px", "w", "h" },
 --   "reps"?: [1..30 × { "t": [ini, abajo, arriba], "dc"?, "vm"?, "vp"?, "rom"? }],
 --   "pose"?: { "lado": "izq" | "der", "reps": [1..30 × { "t": [desde, hasta], "rodilla"?, "cadera"?, "tronco"?, "codo"? }] } }
--- Con la barra o la pose (o las dos); las repeticiones de la velocidad, solo con la barra. Los momentos, de 0 a 3600 s (la
+-- Con la barra o la pose (o las dos); las repeticiones de la velocidad, solo con la barra. Cada número, con 4 decimales
+-- como mucho (analisis_num). Los momentos, de 0 a 3600 s (la
 -- duración del vídeo la mira el trigger). La trayectoria, con los momentos en orden; las repeticiones, por su «abajo».
 -- (Cada conversión, después de mirar el tipo, en su propia sentencia: no depende del orden en que se evalúa un «or». Y,
 -- por si acaso, cualquier error da false.)

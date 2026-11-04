@@ -11,7 +11,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'preact/hooks';
 import { useApp, Icono } from '../../comunes.jsx';
 import { reproductorDe, textoMomento } from '../../Video.jsx';
-import { ponerCapa } from '../capas.js';
+import { ponerCapa, leerSesionAnalisis, guardarSesionAnalisis } from '../capas.js';
 import { CapaAnalisis } from './Capas.jsx';
 import { seguirBarra, detectarPose } from './procesar.js';
 import { crearDetector, poseDisponible } from './pose.js';
@@ -21,8 +21,8 @@ import {
   DISCOS_CM, DISCO_CM, MAX_SEG_ANALISIS, textoVel, textoCm, textoPct, textoGrados, ladoProbable, resumenPose, repsDeCadera, angulosDe, poseEn, limpiarAnalisis,
 } from '../../../logica/analisis.js';
 
-// Lo de cada vídeo en esta sesión (para no repetir el análisis al cerrar y abrir su tarjeta)
-const sesion = new Map(); // «cuenta:archivoId» → { tramo, circulo, barra, cal, discoCm, repsEdit, pose } (cada cuenta, lo suyo)
+// Lo de cada vídeo en esta sesión (para no repetir el análisis al cerrar y abrir su tarjeta): en capas.js, por cuenta, de
+// los 5 últimos vídeos, y se olvida al cerrar la sesión
 
 export const AVISO_EXPERIMENTAL = 'Experimental: una estimación hecha en este dispositivo a partir del vídeo (no sale de aquí). Con la cámara quieta, de lado y perpendicular a la barra, y el disco entero a la vista, el error suele estar en torno al ±10–15 %: sirve para comparar repeticiones y series grabadas igual, no como medida de laboratorio.';
 
@@ -31,7 +31,7 @@ export default function PanelAnalisis({ video, esCoach = false, guardado = null,
   const demo = modo === 'demo';
   const id = video.id;
   const claveSesion = `${perfil?.id || ''}:${id}`;
-  const previo = sesion.get(claveSesion) || {};
+  const previo = useState(() => leerSesionAnalisis(claveSesion) || {})[0];
   const [pestana, setPestana] = useState('barra');
   const [tramo, setTramo] = useState(previo.tramo || { modo: 'todo', t0: 0, t1: null });
   const [circulo, setCirculo] = useState(previo.circulo || null); // { c: [x, y] de 0 a 1, r: px del vídeo, t }
@@ -52,7 +52,7 @@ export default function PanelAnalisis({ video, esCoach = false, guardado = null,
   const rep = () => reproductorDe(id);
   const vivo = useRef(true);
 
-  useEffect(() => { sesion.set(claveSesion, { tramo, circulo, barra, cal, discoCm, repsEdit, pose }); }, [claveSesion, tramo, circulo, barra, cal, discoCm, repsEdit, pose]);
+  useEffect(() => { guardarSesionAnalisis(claveSesion, { tramo, circulo, barra, cal, discoCm, repsEdit, pose }); }, [claveSesion, tramo, circulo, barra, cal, discoCm, repsEdit, pose]);
   // Al salir: se para lo que esté en marcha y se suelta el modelo (y la capa)
   useEffect(() => () => { vivo.current = false; control.current?.abort(); detector.current?.cerrar(); detector.current = null; rep()?.cancelarEleccion?.(); ponerCapa(id, null); }, [id]);
   // El momento del vídeo (para unir o partir la repetición en la que está)
@@ -275,11 +275,11 @@ export default function PanelAnalisis({ video, esCoach = false, guardado = null,
       <p class="mini terciario analisis-aviso">{esCoach ? AVISO_EXPERIMENTAL : `${AVISO_EXPERIMENTAL} Lo que analizas tú solo lo ves tú, en este móvil: no se guarda.`}</p>
       {esCoach && (
         <div class="fila-envolver analisis-guardar">
-          {con036
+          {con036 !== false
             ? <button type="button" class="btn btn-primario" disabled={ocupado || !paraGuardar || enCurso} onClick={guardar}><Icono n="hecho" /> {ocupado ? 'Guardando…' : 'Guardar en la corrección'}</button>
             : <button type="button" class="btn" disabled>Disponible tras la migración 036</button>}
-          {con036 && guardado && <button type="button" class="btn btn-peq plano" disabled={ocupado} onClick={quitar}><Icono n="basura" /> Quitar de la corrección</button>}
-          <span class="mini terciario">{con036 ? (guardado ? 'Ya hay un análisis guardado: guardar otra vez lo cambia.' : 'Tu atleta lo verá en su vídeo corregido (la trayectoria, la velocidad y los ángulos de cada repetición).') : 'Mientras tanto, el análisis funciona igual, pero no se guarda.'}</span>
+          {con036 !== false && guardado && <button type="button" class="btn btn-peq plano" disabled={ocupado} onClick={quitar}><Icono n="basura" /> Quitar de la corrección</button>}
+          <span class="mini terciario">{con036 !== false ? (guardado ? 'Ya hay un análisis guardado: guardar otra vez lo cambia.' : 'Tu atleta lo verá en su vídeo corregido (la trayectoria, la velocidad y los ángulos de cada repetición).') : 'Mientras tanto, el análisis funciona igual, pero no se guarda.'}</span>
         </div>
       )}
     </div>

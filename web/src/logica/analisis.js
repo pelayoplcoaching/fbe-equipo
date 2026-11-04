@@ -180,7 +180,7 @@ export function momentosDe(t0, t1, paso = PASO) {
 export const DISCOS_CM = [45, 40, 35, 25];
 export const DISCO_CM = 45;
 export const calibracionValida = (c) => !!c && typeof c === 'object' && !Array.isArray(c) && Object.keys(c).length === 4 && Object.keys(c).every((k) => ['cm', 'px', 'w', 'h'].includes(k))
-  && esNum(c.cm) && c.cm >= 10 && c.cm <= 60 && esNum(c.px) && c.px > 0 && c.px <= 10000
+  && esNum(c.cm) && c.cm >= 10 && c.cm <= 60 && decimales(c.cm) <= 4 && esNum(c.px) && c.px > 0 && c.px <= 10000 && decimales(c.px) <= 4
   && Number.isInteger(c.w) && c.w >= 1 && c.w <= 10000 && Number.isInteger(c.h) && c.h >= 1 && c.h <= 10000;
 // El diámetro en píxeles del vídeo entre dos toques (en coordenadas de 0 a 1)
 export const diametroPx = (a, b, w, h) => Math.hypot((b[0] - a[0]) * w, (b[1] - a[1]) * h);
@@ -532,7 +532,13 @@ export const MAX_BYTES_ANALISIS = 65536;
 export const ANGULOS = ['rodilla', 'cadera', 'tronco', 'codo'];
 const soloClaves = (o, ks) => Object.keys(o).every((k) => ks.includes(k));
 const esObj = (o) => !!o && typeof o === 'object' && !Array.isArray(o);
-const entre = (x, lo, hi) => esNum(x) && x >= lo && x <= hi;
+// (revisión de seguridad) Como analisis_num() en la base: un número con 4 decimales como mucho (los que tiene tal como se
+// envía, con JSON.stringify: 1e-7 tiene 7; 1.5e-3, 4)
+export function decimales(x) {
+  const m = /^-?\d+(?:\.(\d+))?(?:e([+-]?\d+))?$/i.exec(String(x));
+  return m ? Math.max(0, (m[1]?.length || 0) - Number(m[2] || 0)) : Infinity;
+}
+const entre = (x, lo, hi) => esNum(x) && x >= lo && x <= hi && decimales(x) <= 4;
 // El tamaño del texto que guarda la base (jsonb::text: «, » entre elementos y «: » tras cada clave)
 export function tamJsonb(x) {
   if (Array.isArray(x)) return 2 + x.reduce((s, v) => s + tamJsonb(v), 0) + Math.max(0, x.length - 1) * 2;
@@ -545,7 +551,7 @@ const bytes = (s) => (typeof TextEncoder !== 'undefined' ? new TextEncoder().enc
 // repeticiones de la velocidad, solo con barra; dur: la duración del vídeo (como el trigger: nada después de dur + 1)
 export function analisisValido(a, dur = null) {
   if (!esObj(a) || !soloClaves(a, ['v', 'barra', 'cal', 'reps', 'pose'])) return false;
-  if (a.v !== 1 || !('barra' in a || 'pose' in a) || ('reps' in a && !('barra' in a))) return false;
+  if (!entre(a.v, 1, 1) || !('barra' in a || 'pose' in a) || ('reps' in a && !('barra' in a))) return false;
   const tope = Number.isFinite(dur) && dur >= 0 ? Math.min(3600, dur + 1) : 3600;
   if ('barra' in a) {
     const b = a.barra;
@@ -553,7 +559,7 @@ export function analisisValido(a, dur = null) {
     let prev = -1;
     for (const p of b.p) {
       if (!Array.isArray(p) || p.length !== 3 || !p.every(esNum)) return false;
-      if (p[0] < 0 || p[0] > 3600 || p[0] <= prev || p[0] > tope || !entre(p[1], 0, 1) || !entre(p[2], 0, 1)) return false;
+      if (!entre(p[0], 0, 3600) || p[0] <= prev || p[0] > tope || !entre(p[1], 0, 1) || !entre(p[2], 0, 1)) return false;
       prev = p[0];
     }
   }
@@ -563,7 +569,7 @@ export function analisisValido(a, dur = null) {
     let prev = -1;
     for (const r of a.reps) {
       if (!esObj(r) || !soloClaves(r, ['t', 'dc', 'vm', 'vp', 'rom'])) return false;
-      if (!Array.isArray(r.t) || r.t.length !== 3 || !r.t.every(esNum)) return false;
+      if (!Array.isArray(r.t) || r.t.length !== 3 || !r.t.every((x) => entre(x, 0, 3600))) return false;
       if (r.t[0] < 0 || r.t[0] > r.t[1] || r.t[1] > r.t[2] || r.t[2] > 3600 || r.t[2] > tope || r.t[1] <= prev) return false;
       prev = r.t[1];
       if (('dc' in r && !entre(r.dc, 0, 60)) || ('vm' in r && !entre(r.vm, 0, 3)) || ('vp' in r && !entre(r.vp, 0, 3)) || ('rom' in r && !entre(r.rom, 0, 150))) return false;
@@ -574,7 +580,7 @@ export function analisisValido(a, dur = null) {
     if (!esObj(p) || !soloClaves(p, ['lado', 'reps']) || !['izq', 'der'].includes(p.lado) || !Array.isArray(p.reps) || p.reps.length < 1 || p.reps.length > MAX_REPS) return false;
     let prev = -1;
     for (const r of p.reps) {
-      if (!esObj(r) || !soloClaves(r, ['t', ...ANGULOS]) || !Array.isArray(r.t) || r.t.length !== 2 || !r.t.every(esNum)) return false;
+      if (!esObj(r) || !soloClaves(r, ['t', ...ANGULOS]) || !Array.isArray(r.t) || r.t.length !== 2 || !r.t.every((x) => entre(x, 0, 3600))) return false;
       if (r.t[0] < 0 || r.t[0] > r.t[1] || r.t[1] > 3600 || r.t[1] > tope || r.t[0] < prev) return false;
       prev = r.t[0];
       const ks = ANGULOS.filter((k) => k in r);

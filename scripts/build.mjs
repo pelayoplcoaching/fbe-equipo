@@ -132,9 +132,11 @@ ${marcadoPortada}
   writeFileSync(join(salida, 'index.html'), readFileSync(join(raiz, 'web/index.html'), 'utf8').replaceAll('__VERSION__', version)
     .replace('<!--PORTADA-ESTILO-->', () => estiloPortada('estandarte.webp')).replace('<!--PORTADA-->', () => marcadoPortada));
   // (v0.58) los modelos, no: se guardan en su propia caché la primera vez que se usan
-  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/')).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
+  // (revisión de seguridad v0.58) ni los vídeos de ejemplo de la demo (solo los pide la demo, al verlos)
+  const soloDemo = (f) => /^chunks\/video(-barra)?-demo-[A-Z0-9]+\.js$/.test(f);
+  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && !soloDemo(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
   writeFileSync(join(salida, 'sw.js'), aAscii(readFileSync(join(raiz, 'web/sw.js'), 'utf8').replace('__VERSION__', version).replace('__ARCHIVOS__', JSON.stringify(precache))
-    .replaceAll('__MODELOS__', JSON.stringify(`fbe-modelos-pose-${POSE_VERSION}`))));
+    .replaceAll('__MODELOS__', JSON.stringify(`fbe-modelos-pose-${POSE_VERSION}`)).replaceAll('__MODELO_DIR__', JSON.stringify(POSE_DIR)).replaceAll('__MODELO_ARCHIVOS__', JSON.stringify(POSE_ARCHIVOS))));
   for (const f of ['sw.js', 'config.js']) soloAscii(readFileSync(join(salida, f), 'utf8'), f);
   writeFileSync(join(salida, '.nojekyll'), '');
 

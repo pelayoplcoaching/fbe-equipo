@@ -4316,6 +4316,9 @@ console.log('\nEl análisis automático de los vídeos (migración 036)');
   check(MALFORMADOS.length >= 20 && !errores && rm.every((x) => x === false), `los ${MALFORMADOS.length} mal formados dan false, nunca un error (${rm.filter((x) => x !== false).length} no)`);
   check((await q(`select analisis_valido(null) a, analisis_num('"1"'::jsonb, 0, 2) b, analisis_num('1'::jsonb, 0, 2) c, analisis_num(null, 0, 2) d`)).every((x) => x.a === false && x.b === false && x.c === true && x.d === false),
     'null y los números que no lo son, false');
+  check((await q(`select analisis_valido('{"v":1,"barra":{"p":[[0,0.5,0.5],[0.1,0.5,1e-400]]}}') a, analisis_num('1e-400'::jsonb, 0, 1) b, analisis_num('1e400'::jsonb, 0, 3600) c,
+    analisis_num('0.1234'::jsonb, 0, 1) d, analisis_num('1.5e-3'::jsonb, 0, 1) e, analisis_num('0.12345'::jsonb, 0, 1) f`)).every((x) => !x.a && !x.b && !x.c && x.d && x.e && !x.f),
+    '(revisión, L2) con 4 decimales como mucho y sin exponentes extremos (1e-400, que la app ya leería como 0; 1e400), sin errores');
   // El coach lo guarda; Ana lo lee con video_correcciones(); Luis, no
   await como(ana);
   const v = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'a'), duracion_seg: 6, mime: 'video/webm', bytes: 1000 });

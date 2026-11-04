@@ -27,6 +27,8 @@ export const VALIDOS = [
   `{"v":1,${barra},"cal":{"cm":10,"px":0.5,"w":1,"h":10000},"reps":[{"t":[0,0,0]},{"t":[0,0.05,0.1],"vm":3,"vp":0,"rom":150,"dc":60}]}`,
   `{"v":1,"pose":{"lado":"der","reps":[{"t":[0,0],"codo":180},{"t":[0,2],"rodilla":0}]}}`,
   grande(),
+  // (revisión de seguridad) hasta 4 decimales, también escritos con exponente
+  `{"v":1,"barra":{"p":[[0,0.1234,0.5],[1.5e-3,0.5,0.5678]]},"cal":{"cm":45.0001,"px":90.25,"w":360,"h":640},"reps":[{"t":[0,0.0015,0.1],"vm":2.9999,"rom":1.5e2}]}`,
 ];
 
 export const MALFORMADOS = [
@@ -75,4 +77,15 @@ export const MALFORMADOS = [
   '{"v":1,"pose":{"lado":1,"reps":[{"t":[0,1],"rodilla":90}]}}',
   '{"v":1,"pose":{"lado":"izq"}}',
   demasiado(),
+  // (revisión de seguridad) más de 4 decimales o exponentes extremos: ni la base ni la app (1e-400 la app ya lo lee como 0:
+  // ese, solo en la base, en permisos.test)
+  '{"v":1,"barra":{"p":[[0,0.12345,0.5],[0.1,0.5,0.5]]}}',
+  '{"v":1,"barra":{"p":[[1e-7,0.5,0.5],[0.1,0.5,0.5]]}}',
+  `{"v":1,${barra},"cal":{"cm":45.00001,"px":90,"w":360,"h":640}}`,
+  `{"v":1,${barra},"cal":{"cm":45,"px":90.123456789,"w":360,"h":640}}`,
+  `{"v":1,${barra},"reps":[{"t":[0,1,2],"vm":5e-7}]}`,
+  `{"v":1,${barra},"reps":[{"t":[0,1.00001,2]}]}`,
+  '{"v":1,"pose":{"lado":"izq","reps":[{"t":[0,1],"rodilla":90.00001}]}}',
+  '{"v":1,"pose":{"lado":"izq","reps":[{"t":[0,1],"tronco":1E-10}]}}',
+  '{"v":1.00001,"pose":{"lado":"izq","reps":[{"t":[0,1],"rodilla":90}]}}',
 ];

@@ -2233,23 +2233,28 @@ export function crearApi(backend) {
     },
     async exigir035() { if (!(await api.video035())) throw new Error(AVISO_035); },
     // (v0.58) ¿Tiene la base la 036? (guardar el análisis automático en la corrección). El atleta no lee la tabla, pero si
-    // la columna existe la consulta no falla (le sale vacía).
+    // la columna existe la consulta no falla (le sale vacía). true, false o, si no se sabe (sin conexión, un error que no es
+    // «falta la columna»), null: no se recuerda y se vuelve a mirar la próxima vez (revisión de seguridad v0.58).
     async video036() {
       if (!api._v036) {
-        api._v036 = (async () => {
+        const pr = (async () => {
           if (!(await api.video035())) return false;
-          return b.select('video_revisiones', { limit: 1, cols: 'analisis' }).then(() => true, (e) => {
-            const falta = /analisis|schema cache|does not exist|no existe|column|columna|PGRST20/i.test(e?.message || '');
-            if (!falta) api._v036 = null;
-            return !falta;
-          });
+          try { await b.select('video_revisiones', { limit: 1, cols: 'analisis' }); return true; }
+          catch (e) {
+            const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+            if (/\banalisis\b/.test(m) && /schema cache|does not exist|no existe|could not find|column|columna|PGRST20[0-9]|42703/i.test(m)) return false;
+            return null;
+          }
         })();
+        api._v036 = pr;
+        pr.then((x) => { if (x == null && api._v036 === pr) api._v036 = null; });
       }
       return api._v036;
     },
     // El coach guarda en la corrección el análisis de un vídeo (o lo quita con null). Devuelve la corrección.
     async guardarAnalisis(video, analisis) {
-      if (!(await api.video036())) throw new Error(AVISO_036);
+      // (si no se sabe si está la 036, se intenta: el error que dé, el de verdad)
+      if ((await api.video036()) === false) throw new Error(AVISO_036);
       const dur = Number.isFinite(video?.duracion_seg) ? video.duracion_seg : null;
       if (analisis != null && !analisisValido(analisis, dur)) throw new Error('El análisis no tiene la forma que toca (o se sale del vídeo)');
       await b.upsert('video_revisiones', [{ archivo_id: video.id, atleta_id: video.atleta_id, analisis: analisis ?? null }], 'archivo_id').catch(falta036);

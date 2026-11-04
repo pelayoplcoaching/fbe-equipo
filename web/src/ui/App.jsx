@@ -3,6 +3,7 @@ import { borrarTodoEnCurso } from './en-curso.js';
 import { borrarBorradores } from '../logica/mensajes.js';
 import { salidaDe, borrarSalida } from '../datos/salida.js';
 import { borrarCacheChat, reabrirCacheChat, cacheChat } from '../datos/cacheChat.js';
+import { olvidarAnalisis } from './tecnica/capas.js';
 import { borrarCompartido } from './Compartido.jsx';
 import { borrarPendientes } from '../datos/pendientes.js';
 const almacenLocal = () => { try { return window.localStorage; } catch { return null; } };
@@ -58,7 +59,7 @@ export function App({ backend, api, cola }) {
       // (v0.54, revisión) Ni guardar lo de nadie: los borradores de los mensajes y la sesión en curso se van también
       // cuando la sesión se acaba sin «Salir» (caduca, se cierra en otro sitio, se cambia la contraseña)
       // (v0.55) y lo que quedaba en la bandeja de salida del chat
-      borrarTodoEnCurso(); borrarBorradores(almacenLocal()); borrarSalida(api); borrarCacheChat().catch(() => {}); borrarCompartido(); borrarPendientes(); backend.reiniciarChats?.();
+      borrarTodoEnCurso(); borrarBorradores(almacenLocal()); borrarSalida(api); borrarCacheChat().catch(() => {}); olvidarAnalisis(); borrarCompartido(); borrarPendientes(); backend.reiniciarChats?.();
       setEstado({ fase: 'fuera' });
       return;
     }
@@ -176,7 +177,7 @@ export function App({ backend, api, cola }) {
     fijarPerfil: (p) => setEstado((e) => ({ ...e, perfil: p })),
     // Al cerrar sesión, este móvil deja de recibir las notificaciones de esa cuenta
     // (v0.54) y los borradores de los mensajes de este móvil
-    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); borrarBorradores(almacenLocal()); borrarSalida(api); borrarCacheChat().catch(() => {}); borrarCompartido(); borrarPendientes(); backend.reiniciarChats?.(); await backend.auth.salir(); resolver(true); },
+    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); borrarBorradores(almacenLocal()); borrarSalida(api); borrarCacheChat().catch(() => {}); olvidarAnalisis(); borrarCompartido(); borrarPendientes(); backend.reiniciarChats?.(); await backend.auth.salir(); resolver(true); },
     reiniciarDemo: () => { backend.reiniciar?.(); ultimoUid.current = undefined; resolver(true); },
     // Modo atleta del coach (v0.37)
     propioCoach: estado.fase === 'coach' ? estado.propio || null : null,

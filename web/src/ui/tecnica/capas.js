@@ -12,6 +12,27 @@ export function ponerCapa(archivoId, capa) {
   for (const f of oyentes.get(archivoId) || []) f(capa || null);
 }
 export const capaDe = (archivoId) => capas.get(archivoId) || null;
+
+// (revisión de seguridad v0.58) Lo analizado en esta sesión (por cuenta y vídeo), como mucho de los 5 últimos vídeos (el
+// que se usa pasa a ser el más reciente). Se olvida al cerrar la sesión o al caducar (olvidarAnalisis), como la copia del chat.
+export const MAX_SESION_ANALISIS = 5;
+const sesion = new Map(); // «cuenta:archivoId» → { tramo, circulo, barra, cal, discoCm, repsEdit, pose }
+export function leerSesionAnalisis(clave) {
+  const x = sesion.get(clave);
+  if (x) { sesion.delete(clave); sesion.set(clave, x); }
+  return x || null;
+}
+export function guardarSesionAnalisis(clave, valor) {
+  sesion.delete(clave);
+  sesion.set(clave, valor);
+  while (sesion.size > MAX_SESION_ANALISIS) sesion.delete(sesion.keys().next().value);
+}
+export const sesionesAnalisis = () => [...sesion.keys()];
+// Olvida todo lo del análisis: lo de la sesión y las capas sobre los vídeos (los reproductores abiertos dejan de pintarlas)
+export function olvidarAnalisis() {
+  sesion.clear();
+  for (const id of [...capas.keys()]) ponerCapa(id, null);
+}
 export function useCapa(archivoId) {
   const [c, setC] = useState(() => capaDe(archivoId));
   useEffect(() => {

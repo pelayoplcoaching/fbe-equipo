@@ -2205,6 +2205,24 @@ console.log('\nv0.58: el análisis automático de los vídeos (migración 036)')
     check(await sin.video035() === true && await sin.video036() === false && m === AVISO_036 && m === 'Disponible tras la migración 036' && (await sin.revisionVideo(v.id))?.archivo_id === v.id,
       'sin la 036, la app lo sabe: guardar dice «Disponible tras la migración 036» y la corrección se lee igual');
   }
+  // (revisión de seguridad, L3) Un error de red (o cualquiera que no sea «falta la columna») no es «la 036 está» ni «no
+  // está»: no se sabe, no se recuerda y se vuelve a mirar; al guardar, sale el error de verdad
+  {
+    let mirar = 0, red = true;
+    const caido = () => new Error('TypeError: Failed to fetch');
+    const conRed = crearApi({ ...b, auth: b.auth, storage: b.storage, rpc: b.rpc.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), insert: b.insert.bind(b),
+      upsert: async (t, f, c) => { if (red && t === 'video_revisiones') throw caido(); return b.upsert(t, f, c); },
+      select: async (t, f) => { if (t === 'video_revisiones' && /analisis/.test(f?.cols || '')) { mirar++; if (red) throw caido(); } return b.select(t, f); } });
+    const primera = await conRed.video036();
+    const segunda = await conRed.video036();
+    let m = '';
+    try { await conRed.guardarAnalisis(v, analisis); } catch (e) { m = e.message; }
+    check(primera === null && segunda === null && mirar >= 3 && /Failed to fetch/.test(m) && !/migración 036/.test(m),
+      '(revisión) sin conexión, la 036 queda «no se sabe» (no «está»), se vuelve a mirar cada vez y guardar enseña el error de verdad');
+    red = false;
+    check(await conRed.video036() === true && (await conRed.guardarAnalisis(v, analisis)).analisis?.v === 1, '(revisión) y con la red de vuelta, se sabe y se guarda');
+    await conRed.guardarAnalisis(v, null);
+  }
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

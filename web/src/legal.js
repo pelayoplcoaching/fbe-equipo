@@ -1,5 +1,5 @@
 // Textos legales. BORRADOR revisable por Pelayo; datos del responsable completados el 26/10/2026.
-export const VERSION_LEGAL = '2026-11';
+export const VERSION_LEGAL = '2026-12';
 
 export const PRIVACIDAD = [
   ['Quién trata tus datos', 'Pelayo Fernández Cidón (FBE Coaching Online), NIF 71777712W, calle Fernández de los Ríos 63, 2.º D, 28015 Madrid. Contacto para privacidad: pelayoplcoaching@gmail.com.'],

@@ -5,6 +5,8 @@
 import { chromium } from 'playwright';
 import { servir } from './servidor.mjs';
 import { createRequire } from 'node:module';
+import { readFileSync as leerArchivo, readdirSync } from 'node:fs';
+import { VERSION_LEGAL } from '../web/src/legal.js';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
@@ -4680,14 +4682,14 @@ try {
   const avisoPriv = p.getByRole('dialog', { name: 'Novedades de privacidad' });
   await avisoPriv.waitFor();
   const textoPriv = await avisoPriv.textContent();
-  check(['Notas de voz', 'micro', 'Copia del chat', 'cerrar la sesión', 'sin GPS', 'tu voto solo lo ve él'].every((t) => textoPriv.includes(t)) && await avisoPriv.getByRole('button', { name: 'Entendido' }).count() === 1
+  check(['Vídeos de técnica', 'nota de técnica (de 1 a 5)', 'el resumen de cada repetición', 'Notas de voz', 'micro', 'Copia del chat', 'cerrar la sesión', 'sin GPS', 'tu voto solo lo ve él'].every((t) => textoPriv.includes(t)) && await avisoPriv.getByRole('button', { name: 'Entendido' }).count() === 1
     && await avisoPriv.getByRole('button', { name: 'Leer la política completa' }).count() === 1, '(v0.56) a quien no ha visto la política nueva, al abrir: sus novedades en corto, «Leer la política completa» y «Entendido»');
   await revisar('aviso-privacidad');
   await avisoPriv.getByRole('button', { name: 'Leer la política completa' }).click();
   check((await avisoPriv.textContent()).includes('Lo que se queda en tu móvil'), 'la política entera, en la misma hoja');
   await p.keyboard.press('Escape');
   await avisoPriv.waitFor({ state: 'detached' });
-  const vistaGuardada = async () => { for (let i = 0; i < 30; i++) { const ok = await p.evaluate((u) => (JSON.parse(localStorage.getItem('fbe-demo-v2')).privacidad_vista || []).some((x) => x.usuario_id === u && x.version === '2026-11'), uidAna); if (ok) return true; await p.waitForTimeout(100); } return false; };
+  const vistaGuardada = async () => { for (let i = 0; i < 30; i++) { const ok = await p.evaluate(([u, v]) => (JSON.parse(localStorage.getItem('fbe-demo-v2')).privacidad_vista || []).some((x) => x.usuario_id === u && x.version === v), [uidAna, VERSION_LEGAL]); if (ok) return true; await p.waitForTimeout(100); } return false; };
   check(await vistaGuardada(), 'cerrarla con Escape cuenta como vista (se guarda en la base, para todos sus móviles)');
   await p.reload();
   await p.locator('.hero-dia').waitFor();
@@ -5330,6 +5332,15 @@ try {
   };
   await p.setViewportSize({ width: 390, height: 844 });
   await p.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  // (revisión de seguridad, L4) Los vídeos de ejemplo de la demo están en la web, pero el service worker no los precarga
+  {
+    const dist = new URL('../dist/', import.meta.url);
+    const swDist = leerArchivo(new URL('sw.js', dist), 'utf8');
+    const deDemo = readdirSync(new URL('chunks/', dist)).filter((f) => /^video(-barra)?-demo-/.test(f));
+    const precache = JSON.parse(/const ARCHIVOS = (\[[^\]]*\]);/.exec(swDist)[1]);
+    check(deDemo.length === 2 && deDemo.every((f) => !precache.includes(f)) && precache.some((f) => f.startsWith('chunks/semilla-demo-')) && !precache.some((f) => f.startsWith('modelos/')),
+      `el service worker no precarga los vídeos de ejemplo de la demo (${deDemo.join(', ')}) ni el modelo: solo se piden al usarlos`);
+  }
   // El vídeo de la barra de Carlos (en la demo viene revisado): por revisar, para analizarlo en Revisar
   const idBarra = await p.evaluate(() => {
     const d = JSON.parse(localStorage.getItem('fbe-demo-v2'));
