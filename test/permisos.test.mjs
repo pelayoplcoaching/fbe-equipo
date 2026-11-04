@@ -4750,8 +4750,8 @@ console.log('\nLos vídeos de técnica, tanda B, primera mitad (migración 038)'
   const malos = await q(`select p.oid::regprocedure::text f from pg_proc p where p.pronamespace in ('public'::regnamespace, 'fbe_privado'::regnamespace) and p.proname = any($1) and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`, [nuevas]);
   check(!malos.length && (await q(`select count(distinct proname)::int n from pg_proc where proname = any($1)`, [nuevas]))[0].n === nuevas.length, `las funciones nuevas y las que cambia la 038, con search_path vacío${malos.length ? ` (no: ${malos.map((x) => x.f).join(', ')})` : ''}`);
   const definer = Object.fromEntries((await q(`select proname, prosecdef from pg_proc where proname = any($1)`, [nuevas])).map((x) => [x.proname, x.prosecdef]));
-  check(definer.comentario_respuesta_video && definer.comentario_sin_respuesta_video && definer.video_revision_angulos && definer.al_borrar_video_respuestas && definer.al_mover_archivo && !definer.archivo_angulo_fps && !definer.dos_angulos_valido,
-    'lo que lee por encima de los permisos, con los de su dueño (search_path vacío); el otro ángulo y el validador, sin');
+  check(definer.comentario_respuesta_video && definer.comentario_sin_respuesta_video && definer.video_revision_angulos && definer.al_borrar_video_respuestas && definer.al_mover_archivo && definer.archivo_angulo_fps && !definer.dos_angulos_valido,
+    'lo que lee o cambia por encima de los permisos (también quitar el desfase al desenlazar), con los de su dueño y search_path vacío; el validador, sin');
   check(!(await q(`select has_function_privilege('anon', 'public.dos_angulos_valido(jsonb)', 'execute') a, has_function_privilege('authenticated', 'fbe_privado.al_borrar_video_respuestas()', 'execute') b, has_function_privilege('authenticated', 'fbe_privado.comentario_sin_respuesta_video()', 'execute') c`)).some((x) => x.a || x.b || x.c),
     'sin sesión no se llaman; lo interno, tampoco desde la app');
   check((await q(`select pg_get_function_result('public.video_correcciones(uuid[])'::regprocedure) r`))[0].r.includes('dos_angulos jsonb') && !(await tiposDe('video_correcciones')).some((x) => HORAS.test(x)),
@@ -4767,7 +4767,12 @@ console.log('\nLos vídeos de técnica, tanda B, primera mitad (migración 038)'
   const fotoA = await insArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: ruta(aAna.id, 'foto', 'jpg'), mime: 'image/jpeg', bytes: 100 });
   await como(luis);
   const vl = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'l'), duracion_seg: 6, mime: 'video/mp4', bytes: 1000 });
-  const adj = async (atleta, seg, extra = {}) => insArch({ atleta_id: atleta, tipo: 'adjunto', ruta: ruta(atleta, 'adjunto-video', extra.ext || 'mp4'), mime: extra.mime || 'video/mp4', bytes: extra.bytes ?? 50000, duracion_seg: seg });
+  // (con su objeto en Storage, como al subirlo: el tamaño de verdad en metadata.size; extra.real, otro tamaño que el de la fila)
+  const adj = async (atleta, seg, extra = {}) => {
+    const a = await insArch({ atleta_id: atleta, tipo: 'adjunto', ruta: ruta(atleta, 'adjunto-video', extra.ext || 'mp4'), mime: extra.mime || 'video/mp4', bytes: extra.bytes ?? 50000, duracion_seg: seg });
+    if (!extra.sinSubir) await q(`insert into storage.objects (bucket_id, name, metadata) values ('archivos', $1, $2)`, [a.ruta, JSON.stringify({ size: extra.real ?? extra.bytes ?? 50000 })]);
+    return a;
+  };
   const responder = (video, archivo, texto = 'Vídeo') => q(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, $2, $3) returning *`, [video, texto, archivo]);
 
   console.log('  · 1 y 2. Respuestas en vídeo en el hilo de un vídeo');
@@ -4802,6 +4807,9 @@ console.log('\nLos vídeos de técnica, tanda B, primera mitad (migración 038)'
   check(await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, viejoA.id]) && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, enChat.id])
     && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, (await adj(aAna.id, 20, { mime: 'video/quicktime', ext: 'mov' })).id]),
     'recién subido (en la última hora), que no esté ya en el chat, en MP4 o WebM');
+  check(await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, (await adj(aAna.id, 20, { sinSubir: true })).id])
+    && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, (await adj(aAna.id, 20, { bytes: 50000, real: 150 * 1048576 })).id]),
+    '(M2) ya subido a Storage, y de 100 MB como mucho según Storage (no según lo que diga la fila)');
   check(await falla(`insert into comentarios (atleta_id, texto, archivo_id) values ($1, 'Vídeo', $2)`, [aAna.id, caraA.id]), 'y al revés: el vídeo de una respuesta no va como archivo de otro mensaje');
   check(await falla(`update comentarios set video_respuesta_id = $2 where id = $1`, [cA.id, otraA.id]) && await falla(`update comentarios set video_respuesta_id = null where id = $1`, [cA.id]),
     'la respuesta en vídeo de un mensaje no se cambia ni se quita desde la app');
@@ -4916,6 +4924,63 @@ console.log('\nLos vídeos de técnica, tanda B, primera mitad (migración 038)'
   await q(`insert into video_revisiones (archivo_id, atleta_id, dos_angulos) values ($1, $2, $3), ($4, $2, $5)`, [p1.id, aAna.id, JSON.stringify({ con: p2.id, desfase: 0.1 }), p2.id, JSON.stringify({ con: p1.id, desfase: -0.1 })]);
   check(!(await falla(`delete from archivos where id = any($1)`, [[p1.id, p2.id]])) && !(await q(`select 1 from video_revisiones where archivo_id = any($1)`, [[p1.id, p2.id]])).length,
     'los dos ángulos (con su desfase guardado en los dos) se borran de una vez sin problema');
+  // (H1) Borrar a la vez un vídeo y su respuesta (en los dos órdenes de la tabla), solo el vídeo, y un atleta entero
+  const enCola = async (rutas) => { await su(); const n = (await q(`select count(*)::int n from fbe_privado.storage_por_borrar where ruta = any($1)`, [rutas]))[0].n; await como(pelayo, 'aal2'); return n; };
+  const quedan = async (ids) => (await q(`select count(*)::int n from archivos where id = any($1)`, [ids]))[0].n;
+  await como(ana);
+  const vH1 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'h1'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  await como(pelayo, 'aal2');
+  const rH1 = await adj(aAna.id, 20);
+  await responder(vH1.id, rH1.id);
+  let eH1 = null;
+  try { await q(`delete from archivos where id = any($1)`, [[vH1.id, rH1.id]]); } catch (e) { eH1 = e.message; }
+  const nH1 = [await quedan([vH1.id, rH1.id]), await enCola([vH1.ruta, rH1.ruta])];
+  check(!eH1 && nH1[0] === 0 && nH1[1] === 2, `(H1) borrar a la vez un vídeo y su respuesta en vídeo (el vídeo primero en la tabla): sin error, los dos a la cola de Storage${eH1 ? ` (${eH1})` : ''} ${nH1}`);
+  const rH2 = await adj(aAna.id, 20);
+  await como(ana);
+  const vH2 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'h2'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  await como(pelayo, 'aal2');
+  await responder(vH2.id, rH2.id);
+  check(!(await falla(`delete from archivos where id = any($1)`, [[rH2.id, vH2.id]])) && await quedan([vH2.id, rH2.id]) === 0, '(H1) y en el otro orden (la respuesta primero en la tabla)');
+  await como(ana);
+  const vH3 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'h3'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  await como(pelayo, 'aal2');
+  const rH3 = await adj(aAna.id, 20);
+  const [cH3] = await responder(vH3.id, rH3.id);
+  check(!(await falla(`delete from archivos where id = $1`, [vH3.id])) && await quedan([rH3.id]) === 0 && (await q(`select eliminado_en is not null e, video_respuesta_id v from comentarios where id = $1`, [cH3.id]))[0]?.v === null,
+    '(H1) solo el vídeo: su respuesta en vídeo se va con él (y su mensaje queda como eliminado)');
+  // (L5) Si el coach borra el archivo de una respuesta, su mensaje queda como eliminado (no diciendo «Vídeo» sin vídeo)
+  await como(ana);
+  const vL5 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'l5'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  await como(pelayo, 'aal2');
+  const rL5 = await adj(aAna.id, 20);
+  const [cL5] = await responder(vL5.id, rL5.id, 'Mira esto');
+  await q(`delete from archivos where id = $1`, [rL5.id]);
+  const [cL5b] = await q(`select texto, eliminado_en, video_respuesta_id from comentarios where id = $1`, [cL5.id]);
+  check(cL5b.eliminado_en && cL5b.texto === 'Se eliminó este mensaje' && cL5b.video_respuesta_id === null, '(L5) el coach borra el archivo de una respuesta: su mensaje queda como «Se eliminó este mensaje»');
+  // (L5) Eliminar para todos: al coach se le devuelve la ruta del vídeo, para quitarlo de Storage al momento
+  const rL5c = await adj(aAna.id, 20);
+  const [cL5c] = await responder(vL5.id, rL5c.id);
+  const elC = (await q(`select comentario_eliminar($1) r`, [cL5c.id]))[0].r;
+  check(elC.estado === 'eliminado' && elC.rutas.includes(rL5c.ruta) && await quedan([rL5c.id]) === 0, '(L5) el coach elimina su respuesta en vídeo: se le devuelve su ruta (sale de Storage al momento) y su archivo se va');
+  // (L3) Desenlazar dos ángulos quita el desfase de las dos correcciones
+  await como(ana);
+  const d1 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'd1'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  const d2 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'd2'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000, angulo_de: d1.id });
+  await como(pelayo, 'aal2');
+  await q(`insert into video_revisiones (archivo_id, atleta_id, dos_angulos) values ($1, $2, $3), ($4, $2, $5)`, [d1.id, aAna.id, JSON.stringify({ con: d2.id, desfase: 0.2 }), d2.id, JSON.stringify({ con: d1.id, desfase: -0.2 })]);
+  await como(ana);
+  await q(`update archivos set angulo_de = null where id = $1`, [d2.id]);
+  await como(pelayo, 'aal2');
+  check((await q(`select dos_angulos from video_revisiones where archivo_id = any($1)`, [[d1.id, d2.id]])).every((x) => x.dos_angulos === null), '(L3) al desenlazarlos (Ana), el desfase de las dos correcciones se quita');
+  // (H1) Borrar un atleta entero con respuestas en vídeo
+  const [aEva] = await q(`insert into atletas (nombre) values ('Atleta v060') returning id`);
+  const vE = await insArch({ atleta_id: aEva.id, tipo: 'video_tecnica', ruta: ruta(aEva.id, 'e'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  const rE = await adj(aEva.id, 30);
+  await responder(vE.id, rE.id);
+  let eE = null;
+  try { await q(`delete from atletas where id = $1`, [aEva.id]); } catch (e) { eE = e.message; }
+  check(!eE && await quedan([vE.id, rE.id]) === 0 && await enCola([vE.ruta, rE.ruta]) === 2, `(H1) borrar a un atleta con una respuesta en vídeo: sin error, y sus archivos a la cola de Storage${eE ? ` (${eE})` : ''}`);
   await su();
   await q(`delete from archivos where ruta like '%/v060-%'`);
   await q(`delete from fbe_privado.storage_por_borrar`);

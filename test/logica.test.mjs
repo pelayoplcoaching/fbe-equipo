@@ -3355,6 +3355,13 @@ console.log('\nv0.60: el compositor, difuminar la cara, dos ángulos y la cámar
   check(ce && ce.x > c0.x && ce.x < medio.x + 0.01 && K.cajaEn(it.cajas, -1) === it.cajas[0].caja && K.cajaEn(it.cajas, 9) === it.cajas[3].caja && K.cajaEn([], 1) === null, 'la caja en un momento cualquiera (entre dos mirados, a medio camino; fuera, la más cercana)');
   const ts = K.tiemposCara(10), tsLargo = K.tiemposCara(500, { max: 600 });
   check(ts.length === 51 && ts[0] === 0 && ts.at(-1) < 10 && tsLargo.length === 600 && K.tiemposCara(0).length === 0, 'los momentos que se miran: unos 5 por segundo, como mucho 600 (memoria y tiempo acotados)');
+  // (revisión L1 y L2) Nunca una caja diminuta; el tramo, de 2 minutos como mucho aunque no se recorte
+  const mini = K.cajaMinima({ x: 0.5, y: 0.5, w: 0.001, h: 0.001 }), esquina = K.cajaMinima({ x: 0.999, y: 0.999, w: 0.001, h: 0.001 });
+  check(mini.w === K.CAJA_MIN && Math.abs(mini.x + mini.w / 2 - 0.5005) < 0.001 && esquina.x + esquina.w <= 1 && esquina.w >= K.CAJA_MIN - 1e-9 && K.cajaMinima(null) === null && K.cajaMinima(c0) .w === c0.w,
+    '(L1) una caja diminuta se agranda al mínimo (sin salirse); una normal no cambia');
+  const t1 = K.tramoDifuminar(0, null, 300), t2 = K.tramoDifuminar(10, 40, 300), t3 = K.tramoDifuminar(0, null, 90);
+  check(t1.hasta === 120 && t1.recortado && t2.hasta === 40 && !t2.recortado && t3.hasta === 90 && !t3.recortado && K.tramoDifuminar(0, null, null).recortado,
+    '(L2) difuminar: el tramo recortado, o todo el vídeo, de 2 minutos como mucho (y se dice si no cabe)');
   check(K.agrandar(c0, 2).w === 0.4 && K.agrandar({ x: 0.9, y: 0.9, w: 0.1, h: 0.1 }, 3).x + K.agrandar({ x: 0.9, y: 0.9, w: 0.1, h: 0.1 }, 3).w <= 1 && K.agrandar(c0, 1) === c0, 'agrandar una caja, sin salirse');
 
   // 9. Dos ángulos

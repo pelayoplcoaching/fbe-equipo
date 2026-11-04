@@ -89,6 +89,25 @@ export function cajaEn(cajas, t) {
   return mezclar(a.caja, b.caja, (t - a.t) / ((b.t - a.t) || 1));
 }
 
+// (revisión L1) Nunca una caja demasiado pequeña para tapar una cabeza: como mínimo «min» del lado (sobre su centro y sin
+// salirse). Con caja null (no se ha encontrado nada cerca), null.
+export const CAJA_MIN = 0.08;
+export function cajaMinima(c, min = CAJA_MIN) {
+  if (!c || ![c.x, c.y, c.w, c.h].every(Number.isFinite)) return null;
+  const w = Math.max(c.w, min), h = Math.max(c.h, min);
+  const x = lim(Math.min(c.x + c.w / 2 - w / 2, 1 - w)), y = lim(Math.min(c.y + c.h / 2 - h / 2, 1 - h));
+  return redondear({ x, y, w: Math.min(w, 1 - x), h: Math.min(h, 1 - y) });
+}
+// (revisión L2) El tramo que se difumina: el recortado (o todo el vídeo), de MAX segundos como mucho; recortado: si no cabe
+export function tramoDifuminar(desde, hasta, dur, max = 120) {
+  const d = Number(dur) > 0 ? Number(dur) : null;
+  const a = Math.max(0, Number(desde) || 0);
+  const b = Number.isFinite(Number(hasta)) && hasta != null ? Number(hasta) : d;
+  if (b == null) return { desde: a, hasta: a + max, recortado: true };
+  const fin = Math.min(b, d ?? b);
+  return { desde: a, hasta: Math.min(fin, a + max), recortado: fin - a > max + 0.05 };
+}
+
 // Los momentos que se miran: unos 5 por segundo (como mucho MAX muestras) del principio al final
 export function tiemposCara(dur, { porSegundo = 5, max = 600 } = {}) {
   const d = Number(dur);

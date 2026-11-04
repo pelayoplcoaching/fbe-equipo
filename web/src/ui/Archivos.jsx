@@ -56,7 +56,8 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   const [anguloDeAhora, setAnguloDeAhora] = useState(anguloDe);
   const [otroAngulo, setOtroAngulo] = useState(false);
   const [fps, setFps] = useState(null);
-  const [difuminar, setDifuminar] = useState(() => tipo === 'video_tecnica' && ajuste('difuminarCara') === true);
+  // (revisión M3) encendido de serie solo donde se puede difuminar: si no, ningún vídeo se podría enviar
+  const [difuminar, setDifuminar] = useState(() => tipo === 'video_tecnica' && ajuste('difuminarCara') === true && puedeDifuminar(modo === 'demo'));
   const [difuminado, setDifuminado] = useState(null); // { archivo, dur }
   const con038 = useCarga(() => (tipo === 'video_tecnica' ? api.video038().catch(() => null) : Promise.resolve(false)), []);
   const contenedor = useRef(null);
@@ -141,6 +142,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
     }
     if (pid) await quitarPendiente(pid).catch(() => {});
     if (a?.autoevaluacionError) aviso(`Vídeo enviado, pero tu valoración no se ha guardado: ${a.autoevaluacionError}`, 'error');
+    else if (a?.anguloPerdido) aviso('Vídeo enviado, pero ya no va como otro ángulo: el vídeo con el que iba se ha borrado o ya tiene pareja', 'error');
     else aviso(esVideo ? 'Vídeo enviado a tu coach' : 'Foto guardada');
     setArchivo(null); setNota(''); setCorte(null); setFallo(null); setDifuminado(null); setFps(null);
     // (v0.60) «Añadir otro ángulo»: el siguiente va enlazado a este, de la misma serie

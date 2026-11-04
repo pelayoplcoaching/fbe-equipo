@@ -2433,6 +2433,27 @@ console.log('\nv0.60: respuestas en vídeo, dos ángulos y cámara lenta (migrac
   await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
   check(!elim?.error && !(await b.sql(`select 1 from archivos where id = $1`, [cA.video_respuesta_id])).length, 'Ana elimina su respuesta en vídeo: su vídeo se va con ella');
   await b.sql(`delete from archivos where id = any($1::uuid[])`, [[s1.id, s2.id]]);
+  // (revisión L4) Un envío que esperaba (con su ruta) y cuyo otro ángulo ya no está: sale igual, sin el enlace, y lo dice
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const p1 = await api.subirArchivo(aAna.id, new Blob(['vídeo 060 p'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6 });
+  const pendiente = { tipo: 'video_tecnica', duracion_seg: 6, angulo_de: p1.id };
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await b.sql(`delete from archivos where id = $1`, [p1.id]);
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const p2 = await api.subirArchivo(aAna.id, new Blob(['vídeo 060 q'], { type: 'video/mp4' }), pendiente);
+  check(p2?.id && p2.anguloPerdido === true && p2.angulo_de == null, '(L4) si su otro ángulo se ha borrado antes del reintento, el vídeo sale sin el enlace (y la app lo dice)');
+  // (revisión H1) Borrar a un atleta con una respuesta en vídeo: primero la fila, después Storage (y la cola, vacía)
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const eva = await api.crearAtleta({ nombre: 'Atleta Borrable', email: 'borrable060@test' });
+  await b.sql(`update atletas set estado = 'activo' where id = $1`, [eva.id]);
+  const vEva = await api.subirArchivo(eva.id, new Blob(['vídeo eva'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6 });
+  const cEva = await api.responderConVideo(vEva, new Blob(['revisión eva'], { type: 'video/mp4' }), { autor: 'coach', seg: 30 });
+  const rutasEva = (await b.sql(`select ruta from archivos where atleta_id = $1`, [eva.id])).map((x) => x.ruta);
+  let eB = null;
+  try { await api.borrarAtleta(eva.id); } catch (e) { eB = e.message; }
+  check(!eB && cEva?.video_respuesta_id && rutasEva.length === 2 && !(await b.sql(`select 1 from atletas where id = $1`, [eva.id])).length
+    && !(await b.sql(`select 1 from storage.objects where name = any($1)`, [rutasEva])).length && !(await b.sql(`select 1 from fbe_privado.storage_por_borrar where ruta = any($1)`, [rutasEva])).length,
+    `(H1) borrar a un atleta con una respuesta en vídeo: se borra la fila y después sus archivos de Storage (la cola, vacía)${eB ? ` (${eB})` : ''}`);
 }
 
 // (v0.58.1) El historial del chat por páginas (400 y de 200 en 200), igual para el atleta que para el coach: con sus

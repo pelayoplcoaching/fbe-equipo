@@ -12372,8 +12372,13 @@ insert into public.fbe_migraciones (numero) values (37)
 --     la cola de Storage); el mensaje va en el hilo del vídeo (avisa como cualquier respuesta, sin el texto). Una
 --     respuesta, un vídeo; ese vídeo no va en otro mensaje ni se cambia. Al eliminar el mensaje (o borrarlo), su vídeo se
 --     borra; al borrar el vídeo de técnica, también sus respuestas en vídeo. El atleta no borra uno que lleva su mensaje.
+--     Si se borra el archivo de una respuesta (el coach, desde Storage o la limpieza), su mensaje queda como eliminado.
+--     El tamaño se comprueba con el de verdad, el de Storage (storage.objects.metadata.size, hasta 100 MB); la duración la
+--     dice la app al subirlo y la base no puede comprobarla (no lee el vídeo): el tope de 1 y 3 minutos lo pone la app.
+--     Los vídeos que se van con un mensaje o con su vídeo de técnica se apuntan y se borran al acabar la orden (así borrar
+--     a la vez un vídeo y sus respuestas, o un atleta entero, no choca consigo mismo).
 --   · Dos ángulos de la misma serie (archivos.angulo_de): un vídeo de técnica enlaza a otro del mismo atleta; un vídeo,
---     como mucho una pareja (sin cadenas). Pasar uno a otro atleta o borrarlo lo desenlaza. El desfase entre los dos (de −2
+--     como mucho una pareja (sin cadenas). Pasar uno a otro atleta, borrarlo o desenlazarlos quita también su desfase. El desfase entre los dos (de −2
 --     a +2 s) va con la corrección (video_revisiones.dos_angulos = { con, desfase }, con dos_angulos_valido()); no cuenta
 --     como corregir. El atleta lo lee con video_correcciones() (que lo devuelve, sin ninguna hora, como en la 036).
 --   · El ritmo de grabación (archivos.fps_captura, de 24 a 240): lo pone la app al subir un vídeo grabado en cámara lenta
@@ -12430,7 +12435,8 @@ begin
   end if;
   if tg_op = 'UPDATE' then
     if new.video_respuesta_id is not distinct from old.video_respuesta_id then return new; end if;
-    if v_app and (new.video_respuesta_id is not null or exists (select 1 from public.archivos x where x.id = old.video_respuesta_id)) then
+    -- (la base, desde otro disparador, sí: al borrar su archivo o eliminar el mensaje)
+    if v_app and pg_trigger_depth() <= 1 and (new.video_respuesta_id is not null or exists (select 1 from public.archivos x where x.id = old.video_respuesta_id)) then
       raise exception 'La respuesta en vídeo de un mensaje no se cambia' using errcode = '42501';
     end if;
     return new;
@@ -12446,7 +12452,10 @@ begin
      or coalesce(a.duracion_seg, 0) < 1 or a.duracion_seg > (case when new.autor = 'coach' then 181 else 61 end)
      or coalesce(a.bytes, 0) not between 1 and 104857600
      or a.creado_en < now() - interval '1 hour'
-     or public.archivo_con_mensajes(a.id) then
+     or public.archivo_con_mensajes(a.id)
+     -- (el tamaño de verdad, el de Storage: ya subido, y de 100 MB como mucho; el que dice la fila lo pone la app)
+     or not exists (select 1 from storage.objects o where o.bucket_id = 'archivos' and o.name = a.ruta
+                    and coalesce(o.metadata ->> 'size', '') ~ '^[0-9]{1,15}$' and (o.metadata ->> 'size')::bigint between 1 and 104857600) then
     raise exception 'La respuesta tiene que ser un vídeo tuyo recién grabado para este hilo (de hasta % min)', case when new.autor = 'coach' then 3 else 1 end
       using errcode = '42501';
   end if;
@@ -12456,23 +12465,91 @@ drop trigger if exists comentarios_q_respuesta_video on public.comentarios;
 create trigger comentarios_q_respuesta_video before insert or update of archivo_id, video_respuesta_id on public.comentarios
   for each row execute function public.comentario_respuesta_video();
 
+-- Los vídeos de respuestas que hay que borrar, apuntados por fila y borrados al acabar la orden (por sentencia): borrarlos
+-- dentro de la propia fila chocaría con la misma orden si también los borra (un atleta entero, o el vídeo y su respuesta
+-- a la vez). Vacía siempre: se llena y se vacía en la misma orden.
+create table if not exists fbe_privado.respuestas_por_borrar (archivo_id uuid primary key);
+alter table fbe_privado.respuestas_por_borrar enable row level security;
+revoke all on fbe_privado.respuestas_por_borrar from public, anon, authenticated;
+create or replace function fbe_privado.borrar_respuestas_apuntadas() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not exists (select 1 from fbe_privado.respuestas_por_borrar) then return null; end if;
+  -- (primero se vacía la lista: el borrado de abajo vuelve a pasar por aquí)
+  with x as (delete from fbe_privado.respuestas_por_borrar returning archivo_id)
+  delete from public.archivos a where a.tipo = 'adjunto' and a.id in (select archivo_id from x);
+  return null;
+end $$;
+
 -- Al eliminar el mensaje para todos (o borrarlo), su vídeo se va con él: fuera de la tabla y a la cola de Storage (lo pone
--- el disparador de archivos, 034)
+-- el disparador de archivos, 034), al acabar la orden
 create or replace function fbe_privado.comentario_sin_respuesta_video() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   if tg_op = 'DELETE' then
-    if old.video_respuesta_id is not null then delete from public.archivos a where a.id = old.video_respuesta_id and a.tipo = 'adjunto'; end if;
+    if old.video_respuesta_id is not null then insert into fbe_privado.respuestas_por_borrar values (old.video_respuesta_id) on conflict do nothing; end if;
     return old;
   end if;
   if new.eliminado_en is not null and old.eliminado_en is null and old.video_respuesta_id is not null then
-    delete from public.archivos a where a.id = old.video_respuesta_id and a.tipo = 'adjunto';
+    insert into fbe_privado.respuestas_por_borrar values (old.video_respuesta_id) on conflict do nothing;
   end if;
   return null;
 end $$;
 drop trigger if exists comentarios_zz_respuesta_video on public.comentarios;
 create trigger comentarios_zz_respuesta_video after update of eliminado_en or delete on public.comentarios
   for each row execute function fbe_privado.comentario_sin_respuesta_video();
+drop trigger if exists comentarios_zz_respuestas_fin on public.comentarios;
+create trigger comentarios_zz_respuestas_fin after update of eliminado_en or delete on public.comentarios
+  for each statement execute function fbe_privado.borrar_respuestas_apuntadas();
+
+-- (034) Eliminar para todos: además (038), si quien lo elimina es el coach, devuelve también la ruta del vídeo de una
+-- respuesta en vídeo, para quitarlo de Storage al momento (como las fotos del chat); si es el atleta, va a la cola
+create or replace function public.comentario_eliminar(p_comentario uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  c public.comentarios;
+  v_coach boolean := public.es_coach();
+  v_atleta uuid := public.mi_atleta_id();
+  v_rutas text[] := '{}';
+begin
+  if auth.uid() is null then
+    raise exception 'Necesitas iniciar sesión' using errcode = '42501';
+  end if;
+  select * into c from public.comentarios k where k.id = p_comentario for update;
+  if c.id is null or not (v_coach or (v_atleta is not null and c.atleta_id = v_atleta and (c.enviar_en is null or c.enviar_en <= now()))) then
+    raise exception 'Ese mensaje ya no está' using errcode = '42501';
+  end if;
+  if c.autor <> (case when v_coach then 'coach' else 'atleta' end) then
+    raise exception 'Solo puedes eliminar tus mensajes' using errcode = '42501';
+  end if;
+  if c.eliminado_en is not null then
+    return jsonb_build_object('estado', 'eliminado', 'rutas', '[]'::jsonb);
+  end if;
+  if not v_coach and public.esta_de_baja() then
+    raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada' using errcode = '42501';
+  end if;
+  if c.enviar_en is not null and c.enviar_en > now() then
+    delete from public.comentarios k where k.id = c.id;
+    return jsonb_build_object('estado', 'cancelado', 'rutas', '[]'::jsonb);
+  end if;
+  if c.creado_en < now() - interval '48 hours' then
+    raise exception 'Un mensaje se elimina para todos en las 48 horas siguientes a enviarlo' using errcode = '42501';
+  end if;
+  perform fbe_privado.chat_gastar_cupo('eliminar');
+  if c.adjunto and c.archivo_id is not null then
+    select array_remove(array[a.ruta, a.poster_ruta], null) into v_rutas from public.archivos a where a.id = c.archivo_id and a.tipo in ('adjunto', 'documento', 'audio');
+  end if;
+  -- (038) el vídeo de una respuesta: sus rutas, para el coach (el atleta no borra de Storage: lo hace la cola)
+  if v_coach and c.video_respuesta_id is not null then
+    select coalesce(v_rutas, '{}') || array_remove(array[a.ruta, a.poster_ruta], null) into v_rutas from public.archivos a where a.id = c.video_respuesta_id and a.tipo = 'adjunto';
+  end if;
+  perform fbe_privado.comentario_vaciar(c.id);
+  if c.adjunto and c.archivo_id is not null then
+    update public.comentarios k set archivo_id = null where k.archivo_id = c.archivo_id and k.id <> c.id;
+    delete from public.archivos a where a.id = c.archivo_id and a.tipo in ('adjunto', 'documento', 'audio');
+  end if;
+  return jsonb_build_object('estado', 'eliminado', 'rutas', to_jsonb(coalesce(v_rutas, '{}')));
+end $$;
 
 -- ---------------------------------------------------------------------
 -- 2. Dos ángulos de la misma serie y el ritmo de grabación (cámara lenta)
@@ -12490,13 +12567,19 @@ alter table public.archivos add constraint archivos_fps_valido
 -- El otro ángulo: otro vídeo de técnica del mismo atleta, que no tiene ya su pareja (ni enlaza a otro, ni lo enlaza otro);
 -- y este, tampoco (sin cadenas: un vídeo, como mucho dos ángulos). Lo enlaza el atleta (de los suyos, si no está de
 -- baja) o el coach. Al pasar el vídeo a otro atleta, se desenlaza. El ritmo de grabación, al subirlo; después no cambia.
--- (Con los permisos de quien escribe: así current_user dice si viene de la app; solo lee lo que ya ve: la pareja es suya)
+-- Al desenlazarlos (o cambiar de pareja), el desfase guardado de los dos se quita: si vuelven a enlazarse, se ajusta de
+-- nuevo. (Con los permisos de su dueño, para quitar ese desfase de la corrección, que el atleta no escribe; quién escribe lo
+-- dice el rol de la sesión; la fila que cambia, la de quien escribe: sus permisos los mira la propia orden)
 create or replace function public.archivo_angulo_fps() returns trigger
-language plpgsql security invoker set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $$
 declare
-  v_app boolean := current_user in ('authenticated', 'anon');
+  v_app boolean := coalesce(nullif(current_setting('role', true), ''), 'none') in ('authenticated', 'anon');
   p public.archivos;
 begin
+  if tg_op = 'UPDATE' and old.angulo_de is not null and new.angulo_de is distinct from old.angulo_de then
+    update public.video_revisiones r set dos_angulos = null
+    where (r.archivo_id = old.id and r.dos_angulos ->> 'con' = old.angulo_de::text) or (r.archivo_id = old.angulo_de and r.dos_angulos ->> 'con' = old.id::text);
+  end if;
   if tg_op = 'UPDATE' and v_app and new.fps_captura is distinct from old.fps_captura then
     raise exception 'El ritmo de grabación de un vídeo no se cambia' using errcode = '42501';
   end if;
@@ -12587,20 +12670,35 @@ end $$;
 -- ---------------------------------------------------------------------
 -- 3. Borrar un vídeo de técnica: sus respuestas en vídeo y el desfase que lo nombra
 -- ---------------------------------------------------------------------
+-- Por fila: de un vídeo de técnica, sus respuestas en vídeo se apuntan (se borran al acabar la orden) y el desfase que lo
+-- nombra se quita; del vídeo de una respuesta, su mensaje queda como eliminado (no se queda diciendo «Vídeo» sin vídeo)
 create or replace function fbe_privado.al_borrar_video_respuestas() returns trigger
 language plpgsql security definer set search_path = '' as $$
+declare v_id uuid;
 begin
-  if old.tipo <> 'video_tecnica' then return old; end if;
-  delete from public.archivos a where a.tipo = 'adjunto'
-    and a.id in (select c.video_respuesta_id from public.comentarios c where c.archivo_id = old.id and c.video_respuesta_id is not null);
-  -- (la de un vídeo que se borra en la misma orden ya no está: esa se va con él)
-  update public.video_revisiones r set dos_angulos = null where r.dos_angulos ->> 'con' = old.id::text
-    and exists (select 1 from public.archivos a where a.id = r.archivo_id);
+  if old.tipo = 'video_tecnica' then
+    insert into fbe_privado.respuestas_por_borrar
+      select c.video_respuesta_id from public.comentarios c where c.archivo_id = old.id and c.video_respuesta_id is not null
+      on conflict do nothing;
+    -- (la de un vídeo que se borra en la misma orden ya no está: esa se va con él)
+    update public.video_revisiones r set dos_angulos = null where r.dos_angulos ->> 'con' = old.id::text
+      and exists (select 1 from public.archivos a where a.id = r.archivo_id);
+  elsif old.tipo = 'adjunto' and exists (select 1 from public.atletas a where a.id = old.atleta_id) then
+    -- (si su vídeo de técnica se borra en la misma orden, el mensaje se queda sin hilo: no hay nada que tocar)
+    for v_id in select c.id from public.comentarios c where c.video_respuesta_id = old.id
+                and exists (select 1 from public.archivos v where v.id = c.archivo_id) loop
+      update public.comentarios c set video_respuesta_id = null where c.id = v_id;
+      if exists (select 1 from public.comentarios c where c.id = v_id and c.eliminado_en is null) then perform fbe_privado.comentario_vaciar(v_id); end if;
+    end loop;
+  end if;
   return old;
 end $$;
 drop trigger if exists archivos_ac_respuestas on public.archivos;
 create trigger archivos_ac_respuestas before delete on public.archivos
   for each row execute function fbe_privado.al_borrar_video_respuestas();
+drop trigger if exists archivos_zz_respuestas_fin on public.archivos;
+create trigger archivos_zz_respuestas_fin after delete on public.archivos
+  for each statement execute function fbe_privado.borrar_respuestas_apuntadas();
 
 -- ---------------------------------------------------------------------
 -- 4. Pasar un vídeo a otro atleta (035, 037): además, sus respuestas en vídeo y sus dos ángulos

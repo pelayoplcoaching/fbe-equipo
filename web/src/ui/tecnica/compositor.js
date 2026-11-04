@@ -5,8 +5,8 @@
 // cara» (13). Formato: MP4 si el navegador sabe; si no, WebM. Como mucho 720p y 3 minutos. Se puede cancelar y, al acabar
 // (bien, mal o cancelado), suelta todo: las pistas de la cámara y el micro, el lienzo, los vídeos y sus URL.
 // Lo que se puede probar sin navegador (el formato, los topes, la línea de tiempo de lo de encima) está en logica/composicion.js.
-import { elegirFormato, medidasSalida, encajar, capasEn, burbuja, MARCA_AGUA, FPS_COMPOSICION, BITS_COMPOSICION, MAX_SEG_REVISION, progresoDe } from '../../logica/composicion.js';
-import { cajaEn } from '../../logica/cara.js';
+import { elegirFormato, medidasSalida, encajar, capasEn, burbuja, MARCA_AGUA, FPS_COMPOSICION, BITS_COMPOSICION, MAX_SEG_REVISION, MAX_SEG_DIFUMINAR, progresoDe } from '../../logica/composicion.js';
+import { cajaEn, cajaMinima, tramoDifuminar } from '../../logica/cara.js';
 import { tiempoVoz } from '../../logica/tecnica.js';
 import { pintarFormas } from '../Video.jsx';
 
@@ -145,20 +145,27 @@ export function pintarBurbuja(ctx, cam, esquina, W, H) {
 // Tapar una zona (de 0 a 1 dentro de la imagen r) con un mosaico de cuadros grandes: no se reconoce la cara y se ve
 // igual en todos los navegadores (el desenfoque del lienzo, ctx.filter, no lo tiene Safari)
 const tesela = typeof document !== 'undefined' ? document.createElement('canvas') : null;
-export function taparZona(ctx, fuente, caja, r, { cuadros = 9 } = {}) {
-  if (!caja || !tesela) return;
-  const x = r.x + caja.x * r.w, y = r.y + caja.y * r.h, w = caja.w * r.w, h = caja.h * r.h;
-  if (!(w > 1 && h > 1)) return;
-  const n = Math.max(4, Math.min(16, cuadros));
-  tesela.width = n; tesela.height = Math.max(4, Math.round((n * h) / w));
-  const tx = tesela.getContext('2d');
-  const vw = fuente.videoWidth || r.w, vh = fuente.videoHeight || r.h;
-  try { tx.drawImage(fuente, caja.x * vw, caja.y * vh, caja.w * vw, caja.h * vh, 0, 0, tesela.width, tesela.height); } catch { return; }
-  ctx.save();
-  ctx.imageSmoothingEnabled = false;
-  ctx.beginPath(); if (ctx.ellipse) ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); else ctx.rect(x, y, w, h); ctx.clip();
-  ctx.drawImage(tesela, x, y, w, h);
-  ctx.restore();
+// (revisión L1) Falla cerrado: una caja diminuta se agranda al mínimo y, si no se puede pintar el mosaico, la zona se tapa
+// entera con una forma opaca (nunca se deja la cara a la vista)
+export function taparZona(ctx, fuente, cajaDada, r, { cuadros = 9 } = {}) {
+  const caja = cajaMinima(cajaDada);
+  if (!caja) return;
+  const x = r.x + caja.x * r.w, y = r.y + caja.y * r.h, w = Math.max(2, caja.w * r.w), h = Math.max(2, caja.h * r.h);
+  const forma = () => { ctx.beginPath(); if (ctx.ellipse) ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); else ctx.rect(x, y, w, h); };
+  const opaca = () => { ctx.save(); forma(); ctx.fillStyle = '#5B5670'; ctx.fill(); ctx.restore(); };
+  if (!tesela) { opaca(); return; }
+  try {
+    const n = Math.max(4, Math.min(16, cuadros));
+    tesela.width = n; tesela.height = Math.max(4, Math.round((n * h) / w));
+    const tx = tesela.getContext('2d');
+    const vw = fuente.videoWidth || r.w, vh = fuente.videoHeight || r.h;
+    tx.drawImage(fuente, caja.x * vw, caja.y * vh, Math.max(1, caja.w * vw), Math.max(1, caja.h * vh), 0, 0, tesela.width, tesela.height);
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    forma(); ctx.clip();
+    ctx.drawImage(tesela, x, y, w, h);
+    ctx.restore();
+  } catch { try { ctx.restore(); } catch { /* */ } opaca(); }
 }
 
 // ---------------------------------------------------------------- un vídeo para leer sus fotogramas
@@ -198,9 +205,11 @@ async function duracionDe(v) {
 
 // Reproduce el vídeo de «desde» a «hasta» (1×) y pinta cada fotograma con pintar(v, t) mientras se graba. Devuelve lo de
 // crearGrabacion().parar(). senal: { aborted }. Si el vídeo se atasca más de 5 s, para con un error.
-async function grabarReproduciendo(v, { desde, hasta, w, h, pistas = [], pintar, alProgreso = () => {}, senal = null, alEmpezar = null }) {
+async function grabarReproduciendo(v, { desde, hasta, w, h, pistas = [], pintar, alProgreso = () => {}, senal = null, alEmpezar = null, maxSeg = MAX_SEG_REVISION }) {
   if (senal?.aborted) throw new Cancelado();
-  const g = crearGrabacion({ w, h, pistas, maxSeg: MAX_SEG_REVISION + 2 });
+  // (revisión L2) con su tope: si llega a él (el vídeo no acaba donde dice), se para ahí
+  let tope = false;
+  const g = crearGrabacion({ w, h, pistas, maxSeg: maxSeg + 1, alTope: () => { tope = true; } });
   try {
     await irA(v, desde);
     pintar(g.ctx, v, v.currentTime);
@@ -215,7 +224,7 @@ async function grabarReproduciendo(v, { desde, hasta, w, h, pistas = [], pintar,
         if (senal?.aborted) { acabar(new Cancelado()); return; }
         pintar(g.ctx, v, v.currentTime);
         alProgreso(progresoDe(v.currentTime, desde, hasta));
-        if (v.currentTime >= hasta - 0.02 || v.ended) { acabar(); return; }
+        if (v.currentTime >= hasta - 0.02 || v.ended || tope) { acabar(); return; }
         if (typeof v.requestVideoFrameCallback === 'function') v.requestVideoFrameCallback(paso); else requestAnimationFrame(paso);
       };
       const reloj = setInterval(() => {
@@ -296,7 +305,10 @@ export async function buscarCaras(src, { desde = 0, hasta = null, detector, tiem
   const c = document.createElement('canvas');
   try {
     const dur = await duracionDe(v);
-    const fin = Math.min(hasta ?? dur, dur);
+    // (revisión L2) de 2 minutos como mucho (MAX_SEG_DIFUMINAR), aunque no se haya recortado
+    const tr = tramoDifuminar(desde, hasta, dur, MAX_SEG_DIFUMINAR);
+    const fin = tr.hasta;
+    desde = tr.desde;
     const ts = tiemposDe(Math.max(0.1, fin - desde)).map((t) => desde + t);
     const lado = 480, k = Math.min(1, lado / Math.max(v.videoWidth, v.videoHeight));
     c.width = Math.max(16, Math.round(v.videoWidth * k)); c.height = Math.max(16, Math.round(v.videoHeight * k));
@@ -313,17 +325,19 @@ export async function buscarCaras(src, { desde = 0, hasta = null, detector, tiem
       alProgreso((i + 1) / ts.length);
       if (i % 4 === 3) await new Promise((r) => setTimeout(r, 0));
     }
-    return { muestras, dur, desde, hasta: fin };
+    return { muestras, dur, desde, hasta: fin, recortado: tr.recortado };
   } finally { soltarVideo(v); c.width = 1; c.height = 1; }
 }
 export async function grabarDifuminado(src, { desde = 0, hasta, cajas, contenedor = null, alProgreso = () => {}, senal = null }) {
   const v = await abrirFuente(src, { contenedor });
   try {
     const dur = await duracionDe(v);
-    const fin = Math.min(hasta ?? dur, dur);
+    const tr = tramoDifuminar(desde, hasta, dur, MAX_SEG_DIFUMINAR);
     const { w, h } = medidasSalida(v.videoWidth, v.videoHeight);
     const pintar = (ctx, vid, t) => { const r = pintarFotograma(ctx, vid, w, h); taparZona(ctx, vid, cajaEn(cajas, t), r); };
-    return await grabarReproduciendo(v, { desde, hasta: fin, w, h, pintar, alProgreso, senal });
+    const res = await grabarReproduciendo(v, { desde: tr.desde, hasta: tr.hasta, w, h, pintar, alProgreso, senal, maxSeg: MAX_SEG_DIFUMINAR });
+    // (lo que dura de verdad: el tramo, no lo que tardó en grabarse)
+    return { ...res, seg: Math.min(res.seg, tr.hasta - tr.desde), recortado: tr.recortado };
   } finally { soltarVideo(v); }
 }
 

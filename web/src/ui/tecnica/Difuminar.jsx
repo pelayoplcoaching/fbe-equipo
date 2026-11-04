@@ -52,7 +52,7 @@ export function DifuminarCara({ archivo, corte, activo, setActivo, alListo }) {
       if (s.aborted) return;
       const f = new File([r.blob], `difuminado.${r.ext}`, { type: r.tipo });
       setVista({ url: URL.createObjectURL(r.blob), archivo: f, dur: r.seg, deteccion });
-      setMensaje(textoDeteccion(deteccion));
+      setMensaje(`${textoDeteccion(deteccion)}${r.recortado ? ` Solo se han difuminado (y se enviarán) los primeros ${MAX_SEG_DIFUMINAR / 60} minutos: recórtalo para elegir el trozo.` : ''}`);
       setFase('listo');
       alListo({ archivo: f, dur: r.seg });
     } catch (e) {

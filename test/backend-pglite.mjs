@@ -121,7 +121,8 @@ export function crearBackendPglite(db) {
     storage: {
       ficheros,
       subir: (ruta, archivo, tipo, { bucket = 'archivos' } = {}) => como(async () => {
-        await db.query(`insert into storage.objects (bucket_id, name) values ($1, $2)`, [bucket, ruta]);
+        // (como Storage: el tamaño de verdad, en metadata.size)
+        await db.query(`insert into storage.objects (bucket_id, name, metadata) values ($1, $2, $3)`, [bucket, ruta, JSON.stringify({ size: archivo?.size ?? 0, mimetype: tipo || null })]);
         ficheros.set(`${bucket}:${ruta}`, archivo);
         if (bucket === 'archivos') ficheros.set(ruta, archivo);
       }),
@@ -134,7 +135,7 @@ export function crearBackendPglite(db) {
       copiar: (desde, hasta, bucket = 'archivos') => como(async () => {
         const r = await db.query(`select name from storage.objects where bucket_id = $1 and name = $2`, [bucket, desde]);
         if (!r.rows.length) throw new Error('No tienes permiso para ver ese archivo.');
-        await db.query(`insert into storage.objects (bucket_id, name) values ($1, $2)`, [bucket, hasta]);
+        await db.query(`insert into storage.objects (bucket_id, name, metadata) select $1, $3, metadata from storage.objects where bucket_id = $1 and name = $2`, [bucket, desde, hasta]);
         const f = ficheros.get(`${bucket}:${desde}`);
         ficheros.set(`${bucket}:${hasta}`, f);
         if (bucket === 'archivos') ficheros.set(hasta, f);

@@ -2219,15 +2219,25 @@ export function crearApi(backend) {
       const extras038 = tipo === 'video_tecnica' && (angulo_de || fpsGuardado(fps_captura)) && (await api.video038()) !== false
         ? { ...(angulo_de ? { angulo_de } : {}), ...(fpsGuardado(fps_captura) ? { fps_captura: fpsGuardado(fps_captura) } : {}) } : {};
       if (!fila) {
-        [fila] = await b.insert('archivos', [{
+        const registrar = (extras) => b.insert('archivos', [{
           atleta_id: atletaId, tipo, ruta, sesion_ejercicio_id, ejercicio_id, nota_atleta,
           mime: (tipo === 'audio' ? tipoAudio(archivo.type)?.tipo : archivo.type) || null, bytes: archivo.size ?? null, fecha: dia,
           ...(tipo === 'foto_progreso' && pose ? { pose } : {}),
           ...(poster_ruta ? { poster_ruta } : {}), ...(dur != null ? { duracion_seg: dur } : {}),
           ...(tipo === 'documento' ? { nombre: nombreSeguroPdf(nombre || archivo.name), ...(Number.isInteger(paginas) && paginas >= 1 && paginas <= 5000 ? { paginas } : {}) } : {}),
           ...(tipo === 'audio' && ondaValida(onda) ? { onda } : {}),
-          ...enlaces, ...extras038, ...(derivado_de && tipo === 'adjunto' ? { derivado_de } : {}),
-        }]).catch(tipo === 'documento' ? falta033 : tipo === 'audio' ? falta034 : Object.keys(extras038).length ? falta038 : Object.keys(enlaces).length || derivado_de ? falta035 : (e) => { throw e; });
+          ...enlaces, ...extras, ...(derivado_de && tipo === 'adjunto' ? { derivado_de } : {}),
+        }]).catch(tipo === 'documento' ? falta033 : tipo === 'audio' ? falta034 : Object.keys(extras).length ? falta038 : Object.keys(enlaces).length || derivado_de ? falta035 : (e) => { throw e; });
+        try { [fila] = await registrar(extras038); }
+        catch (e) {
+          // (v0.60, L4) Un envío que esperaba en el móvil y su otro ángulo ya no está (o ya tiene pareja): sale igual, sin el
+          // enlace, y se dice (si no, cada reintento fallaría igual)
+          const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+          if (!extras038.angulo_de || !/23503|23514|42501|foreign key|clave ajena|otro \u00e1ngulo|angulo/i.test(m)) throw e;
+          const { angulo_de: _sin, ...resto } = extras038;
+          [fila] = await registrar(resto);
+          fila.anguloPerdido = true;
+        }
       }
       try {
         if (senal?.cancelada) { const e = new Error('Cancelado'); e.cancelado = true; throw e; }
@@ -3430,14 +3440,19 @@ export function crearApi(backend) {
       const registrados = await b.select('archivos', { eq: { atleta_id: atletaId }, cols: 'id,ruta' });
       const enCarpeta = await b.storage.listar(atletaId);
       const rutas = [...new Set([...registrados.map((a) => a.ruta), ...enCarpeta])];
-      if (rutas.length) await b.storage.borrar(rutas.filter((r) => cuboDe(r) === 'archivos'));
       // (v0.56) y sus notas de voz (bucket «voz»; sin la 034, no hay)
       const voces = [...new Set([...registrados.map((a) => a.ruta).filter((r) => cuboDe(r) === 'voz'), ...(await b.storage.listar(atletaId, 'voz').catch(() => []))])];
-      if (voces.length) await b.storage.borrar(voces, 'voz').catch(() => {});
       // Y sus fotos del muro (v0.43, bucket «comunidad»; sin la migración 027, no hay)
       const delMuro = await b.storage.listar(atletaId, 'comunidad').catch(() => []);
+      // (v0.60, revisión H1) Primero la fila (si la base no la deja borrar, sus archivos siguen ahí) y después Storage: lo
+      // borrado sale de la cola de Storage (lo que no se pueda borrar ahora se queda en ella y lo vacía el coach)
+      const r = await b.delete('atletas', { eq: { id: atletaId } });
+      const hechas = [];
+      if (rutas.length) hechas.push(...((await b.storage.borrar(rutas.filter((x) => cuboDe(x) === 'archivos')).catch(() => null)) || []));
+      if (voces.length) hechas.push(...((await b.storage.borrar(voces, 'voz').catch(() => null)) || []));
       if (delMuro.length) await b.storage.borrar(delMuro, 'comunidad').catch(() => {});
-      return b.delete('atletas', { eq: { id: atletaId } });
+      if (hechas.length) await b.rpc('storage_borrado', { p_rutas: hechas }).catch(() => {});
+      return r;
     },
     // Verificación en dos pasos del coach: una vez activada, la base la exige siempre
     async exigirDosPasos(valor) {

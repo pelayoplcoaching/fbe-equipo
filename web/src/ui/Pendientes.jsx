@@ -34,10 +34,10 @@ export function usePendientesArchivos(api, atletaId, aviso) {
             const f = archivoDe(p);
             const cap = /^video/.test(f.type || '') || p.opciones?.tipo === 'video_tecnica' ? await capturarPoster(f).catch(() => null) : null;
             let ultimo = 0;
-            await api.subirArchivo(atletaId, f, { ...p.opciones, poster: cap?.poster || null, duracion_seg: p.opciones?.duracion_seg ?? cap?.duracion ?? null, senal: s,
+            const hecho = await api.subirArchivo(atletaId, f, { ...p.opciones, poster: cap?.poster || null, duracion_seg: p.opciones?.duracion_seg ?? cap?.duracion ?? null, senal: s,
               urlSubida: p.urlSubida || null, alUrlSubida: (url) => ponerSubida(p.id, { url }).catch(() => {}),
               alProgreso: (x) => { setEnvio({ id: p.id, progreso: x }); if (x - ultimo >= 0.05) { ultimo = x; ponerSubida(p.id, { progreso: x }).catch(() => {}); } } });
-            enviado = true;
+            enviado = hecho?.anguloPerdido ? 'sin-angulo' : true;
           } catch (e) {
             if (e?.cancelado) { seguir = false; await api.descartarSubida(p.opciones?.ruta).catch(() => {}); await quitarPendiente(p.id).catch(() => {}); aviso?.('Envío cancelado'); return; }
             if (e?.sinConexion) { seguir = false; return; } // sigue sin cobertura: se reintenta luego (por donde iba)
@@ -47,7 +47,9 @@ export function usePendientesArchivos(api, atletaId, aviso) {
         if (r === 'ocupado') continue; // lo está enviando la hoja de subir u otra pestaña
         if (enviado) {
           await quitarPendiente(p.id).catch(() => {});
-          aviso?.(p.opciones?.tipo === 'video_tecnica' ? 'Vídeo pendiente enviado a tu coach' : 'Foto pendiente guardada');
+          // (v0.60) si su otro ángulo ya no estaba, sale sin el enlace (y se dice)
+          aviso?.(enviado === 'sin-angulo' ? 'Vídeo pendiente enviado, pero ya no va como otro ángulo: el vídeo con el que iba se ha borrado o ya tiene pareja'
+            : p.opciones?.tipo === 'video_tecnica' ? 'Vídeo pendiente enviado a tu coach' : 'Foto pendiente guardada');
         }
         if (!seguir) break;
       }

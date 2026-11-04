@@ -599,7 +599,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (t === 'checkins') c.revisado_en = null;
       // Como la migración 014: de un archivo, el atleta solo cambia el pie, el ejercicio y si está destacado
       // (y puede quitar la miniatura si no llegó a subirse: poster_ruta a null)
-      if (t === 'archivos' && Object.keys(c).some((k) => !['nota_atleta', 'ejercicio_id', 'destacado'].includes(k) && !(k === 'poster_ruta' && c[k] == null))) {
+      // (como la 038: y su otro ángulo, que mira su propio disparador; el ritmo de grabación, nadie)
+      if (t === 'archivos' && Object.keys(c).some((k) => !['nota_atleta', 'ejercicio_id', 'destacado', 'angulo_de'].includes(k) && !(k === 'poster_ruta' && c[k] == null))) {
         throw new Error('De un archivo solo puedes cambiar el pie, el ejercicio y si está destacado');
       }
     }
@@ -974,7 +975,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     const tope = f.autor === 'coach' ? 181 : 61;
     if (!a || a.tipo !== 'adjunto' || a.atleta_id !== f.atleta_id || subidoPor(a) !== f.autor || !['video/mp4', 'video/webm'].includes(a.mime)
       || !(Number(a.duracion_seg) >= 1 && Number(a.duracion_seg) <= tope) || !(Number(a.bytes) >= 1 && Number(a.bytes) <= 104857600)
-      || Date.parse(a.creado_en) < Date.now() - 3600e3 || archivoConMensajes(a.id)) {
+      || Date.parse(a.creado_en) < Date.now() - 3600e3 || archivoConMensajes(a.id)
+      // (como la 038: ya subido, y de 100 MB como mucho según Storage, no según la fila)
+      || !(Number(ficheros.get(a.ruta)?.size) >= 1 && Number(ficheros.get(a.ruta)?.size) <= 104857600)) {
       throw new Error(`La respuesta tiene que ser un vídeo tuyo recién grabado para este hilo (de hasta ${f.autor === 'coach' ? 3 : 1} min)`);
     }
   }
@@ -984,6 +987,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (antes && (f.fps_captura ?? null) !== (antes.fps_captura ?? null)) throw new Error('El ritmo de grabación de un vídeo no se cambia');
     if (antes && f.atleta_id !== antes.atleta_id) f.angulo_de = null;
     f.angulo_de = f.angulo_de ?? null;
+    // (como la 038: al desenlazarlos o cambiar de pareja, el desfase de los dos se quita)
+    if (antes?.angulo_de && f.angulo_de !== antes.angulo_de) {
+      for (const r of tabla('video_revisiones')) if (r.dos_angulos && ((r.archivo_id === antes.id && r.dos_angulos.con === antes.angulo_de) || (r.archivo_id === antes.angulo_de && r.dos_angulos.con === antes.id))) r.dos_angulos = null;
+    }
     if (f.angulo_de == null || (antes && f.angulo_de === antes.angulo_de)) return;
     if (antes && deBajaYo()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
     const p = buscar('archivos', f.angulo_de);
@@ -1258,6 +1265,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (voces.length) { ids = [...ids, ...voces]; }
       for (const a of tabla('archivos').filter((x) => ids.includes(x.id))) {
         encolar([a.ruta, a.poster_ruta], a.tipo === 'audio' ? 'voz' : 'archivos');
+        // Como la 038: el archivo de una respuesta en vídeo que se borra deja su mensaje como eliminado (si su hilo sigue)
+        if (a.tipo === 'adjunto' && buscar('atletas', a.atleta_id)) {
+          for (const c of tabla('comentarios').filter((k) => k.video_respuesta_id === a.id && k.archivo_id && !ids.includes(k.archivo_id) && buscar('archivos', k.archivo_id))) {
+            c.video_respuesta_id = null;
+            if (!c.eliminado_en) vaciarComentario(c);
+          }
+        }
         if (DEL_CHAT.includes(a.tipo) && buscar('atletas', a.atleta_id)) {
           for (const c of tabla('comentarios').filter((k) => k.archivo_id === a.id)) vaciarComentario(c);
           for (const c of tabla('comentarios').filter((k) => k.archivo_id === a.id)) c.archivo_id = null;
@@ -2335,8 +2349,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         gastarCupoChat('eliminar');
         const adj = c.adjunto && c.archivo_id ? buscar('archivos', c.archivo_id) : null;
         const rutas = adj && DEL_CHAT.includes(adj.tipo) ? [adj.ruta, adj.poster_ruta].filter(Boolean) : [];
+        // (como la 038: al coach, también las del vídeo de una respuesta en vídeo)
+        const resp = esCoach() && c.video_respuesta_id ? buscar('archivos', c.video_respuesta_id) : null;
+        if (resp) rutas.push(...[resp.ruta, resp.poster_ruta].filter(Boolean));
         vaciarComentario(c);
-        if (rutas.length) { for (const k of tabla('comentarios')) if (k.archivo_id === adj.id && k.id !== c.id) k.archivo_id = null; borrarCascada('archivos', [adj.id]); }
+        if (adj && DEL_CHAT.includes(adj.tipo)) { for (const k of tabla('comentarios')) if (k.archivo_id === adj.id && k.id !== c.id) k.archivo_id = null; borrarCascada('archivos', [adj.id]); }
         persistirYa();
         return { estado: 'eliminado', rutas };
       }

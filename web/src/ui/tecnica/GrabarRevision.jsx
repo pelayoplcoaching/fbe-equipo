@@ -53,25 +53,36 @@ export function GrabarRevision({ video, nombreAtleta = 'Atleta', alCerrar, alEnv
     x.micro = null; x.cara = null;
     if (camara.current) camara.current.srcObject = null;
   };
-  // Al cerrar (o salir), todo fuera: la grabación, el micro, la cámara y la vista previa
-  useEffect(() => () => { r.current.g?.cancelar(); soltar(); }, []);
+  // Al cerrar (o salir), todo fuera: la grabación, el micro, la cámara y la vista previa. (revisión M1) Y lo que aún se está
+  // pidiendo (el permiso del micro o de la cámara): cuando llegue, se suelta sin empezar nada (el turno ya no es el suyo)
+  const vivo = useRef(true);
+  const turno = useRef(0);
+  const caja = useRef(null);
+  useEffect(() => () => { vivo.current = false; turno.current++; r.current.g?.cancelar(); soltar(); }, []);
   useEffect(() => () => { if (hecho?.url) revocarLuego(hecho.url); }, [hecho?.url]);
 
   async function empezar() {
     setError(null); setFase('pidiendo');
+    const mio = ++turno.current;
+    const sigue = () => vivo.current && turno.current === mio;
     const x = r.current = { ...r.current, cancelada: false };
-    try {
-      x.micro = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-    } catch (e) { soltar(); setFase('preparar'); setError(textoError(e, 'el micro')); return; }
+    let micro = null, cara = null;
+    try { micro = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+    catch (e) { if (sigue()) { soltar(); setFase('preparar'); setError(textoError(e, 'el micro')); } return; }
+    if (!sigue()) { soltarFlujo(micro); return; }
+    x.micro = micro;
     if (conCara) {
-      try {
-        x.cara = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
-        if (camara.current) { camara.current.srcObject = x.cara; await camara.current.play().catch(() => {}); }
-      } catch (e) { soltar(); setFase('preparar'); setError(`${textoError(e, 'la cámara de delante')} Prueba sin tu cara en la burbuja.`); return; }
+      try { cara = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false }); }
+      catch (e) { if (sigue()) { soltar(); setFase('preparar'); setError(`${textoError(e, 'la cámara de delante')} Prueba sin tu cara en la burbuja.`); } else soltarFlujo(micro); return; }
+      if (!sigue()) { soltarFlujo(micro); soltarFlujo(cara); return; }
+      x.cara = cara;
+      if (camara.current) { camara.current.srcObject = cara; await camara.current.play().catch(() => {}); }
+      if (!sigue()) { soltarFlujo(micro); soltarFlujo(cara); return; }
     }
+    // (el reproductor de esta hoja, nunca el de la tarjeta de detrás)
     const rep = reproductorDe(video.id);
     const v = rep?.elemento?.();
-    if (!v?.videoWidth) { soltar(); setFase('preparar'); setError('El vídeo aún no está listo: espera un momento y vuelve a probar.'); return; }
+    if (!v?.videoWidth || !caja.current?.contains(v)) { soltar(); setFase('preparar'); setError('El vídeo aún no está listo: espera un momento y vuelve a probar.'); return; }
     const { w, h } = medidasSalida(v.videoWidth, v.videoHeight);
     let g;
     try { g = crearGrabacion({ w, h, pistas: x.micro.getAudioTracks(), maxSeg: MAX_SEG_REVISION, alTope: () => parar() }); }
@@ -106,7 +117,7 @@ export function GrabarRevision({ video, nombreAtleta = 'Atleta', alCerrar, alEnv
     } catch (e) { if (!e?.cancelado) setError(e.message); setFase('preparar'); }
     finally { x.g = null; x.parando = false; soltar(); }
   }
-  const cancelar = () => { r.current.g?.cancelar(); r.current.g = null; soltar(); setFase('preparar'); setSeg(0); };
+  const cancelar = () => { turno.current++; r.current.g?.cancelar(); r.current.g = null; soltar(); setFase('preparar'); setSeg(0); };
   const repetir = () => { setHecho(null); setFase('preparar'); setSeg(0); };
   async function enviar() {
     if (!hecho) return;
@@ -135,7 +146,7 @@ export function GrabarRevision({ video, nombreAtleta = 'Atleta', alCerrar, alEnv
         </div>
       ) : (
         <div class="pila-s">
-          <div class={`grabar-revision ${grabando ? 'grabando' : ''}`}>
+          <div ref={caja} class={`grabar-revision ${grabando ? 'grabando' : ''}`}>
             <VerArchivo archivo={video} cors etiqueta="El vídeo que revisas" />
             {conCara && <BurbujaArrastrable esquina={esquina} setEsquina={setEsquina} bloqueada={grabando} camara={camara} viva={!!r.current.cara} />}
           </div>
@@ -203,16 +214,23 @@ export function ResponderConVideo({ video, autor, nombre = 'tu coach', alCerrar,
   const vista = useRef(null);
   const r = useRef({});
   const soltar = () => { const x = r.current; clearInterval(x.tic); soltarFlujo(x.flujo); x.flujo = null; if (vista.current) vista.current.srcObject = null; };
-  useEffect(() => () => { r.current.cancelada = true; try { if (r.current.rec?.state !== 'inactive') r.current.rec?.stop(); } catch { /* */ } soltar(); }, []);
+  // (revisión H2) cerrada la hoja mientras se pide el permiso, la cámara que llegue después se suelta al momento
+  const vivo = useRef(true);
+  const turno = useRef(0);
+  useEffect(() => () => { vivo.current = false; turno.current++; r.current.cancelada = true; try { if (r.current.rec?.state !== 'inactive') r.current.rec?.stop(); } catch { /* */ } soltar(); }, []);
   useEffect(() => () => { if (hecho?.url) revocarLuego(hecho.url); }, [hecho?.url]);
   async function abrir() {
     setError(null); setFase('pidiendo');
-    try {
-      const f = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: { echoCancellation: true, noiseSuppression: true } });
-      r.current.flujo = f;
-      if (vista.current) { vista.current.srcObject = f; await vista.current.play().catch(() => {}); }
-      setFase('lista');
-    } catch (e) { soltar(); setFase('preparar'); setError(textoError(e, 'la cámara y el micro')); }
+    const mio = ++turno.current;
+    const sigue = () => vivo.current && turno.current === mio;
+    let f = null;
+    try { f = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: { echoCancellation: true, noiseSuppression: true } }); }
+    catch (e) { if (sigue()) { soltar(); setFase('preparar'); setError(textoError(e, 'la cámara y el micro')); } return; }
+    if (!sigue()) { soltarFlujo(f); return; }
+    r.current.flujo = f;
+    if (vista.current) { vista.current.srcObject = f; await vista.current.play().catch(() => {}); }
+    if (!sigue()) { soltarFlujo(f); return; }
+    setFase('lista');
   }
   function grabar() {
     const x = r.current;
@@ -237,7 +255,7 @@ export function ResponderConVideo({ video, autor, nombre = 'tu coach', alCerrar,
     x.tic = setInterval(() => { const s = (performance.now() - x.inicio) / 1000; setSeg(s); if (s >= MAX_SEG_CARA) parar(); }, 200);
   }
   function parar() { const x = r.current; clearInterval(x.tic); try { if (x.rec?.state === 'recording') x.rec.stop(); else soltar(); } catch { soltar(); } }
-  const cancelar = () => { r.current.cancelada = true; parar(); soltar(); setFase('preparar'); };
+  const cancelar = () => { turno.current++; r.current.cancelada = true; parar(); soltar(); setFase('preparar'); };
   async function enviar() {
     if (!hecho) return;
     setFase('enviando'); setSubida(0);

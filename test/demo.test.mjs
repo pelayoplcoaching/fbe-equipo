@@ -1579,6 +1579,27 @@ console.log('\nv0.60: respuestas en vídeo, dos ángulos y cámara lenta en la d
   await bT.update('archivos', { atleta_id: ruben.id, ruta: `${ruben.id}/${v1.ruta.split('/')[1]}` }, { eq: { id: v1.id } });
   check(!(await aT.archivo(cR.video_respuesta_id)) && (await aT.archivo(v2.id)).angulo_de === null && (await aT.correccionesDe([v1.id]))[0]?.dos_angulos == null,
     'pasar el vídeo a otro atleta borra sus respuestas en vídeo y lo desenlaza (y quita el desfase)');
+  // (revisión) Como la 038: el tamaño, el de Storage (un vídeo registrado pero sin subir no vale)
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  const [sinSubir] = await bT.insert('archivos', [{ atleta_id: ana.id, tipo: 'adjunto', ruta: `${ana.id}/adjunto-video-sinsubir.mp4`, mime: 'video/mp4', bytes: 100, duracion_seg: 5 }]);
+  check(await lanza(() => aT.comentar({ atletaId: ana.id, archivoId: v3.id, texto: 'x', autor: 'atleta', videoRespuestaId: sinSubir.id })), '(M2) un vídeo de respuesta que no está en Storage no vale');
+  // (L3) desenlazar quita el desfase; (L5) el coach elimina su respuesta (con la ruta) o borra su archivo (el mensaje, eliminado)
+  const w1 = await aT.subirArchivo(ana.id, new Blob(['w1'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6 });
+  const w2 = await aT.subirArchivo(ana.id, new Blob(['w2'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, angulo_de: w1.id });
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  await aT.guardarDesfase(w1, w2.id, 0.3);
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  await aT.desenlazarAngulo(w1);
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  check((await aT.correccionesDe([w1.id]))[0]?.dos_angulos == null, '(L3) al desenlazar dos ángulos, el desfase guardado se quita');
+  const cE = await aT.responderConVideo(w1, new Blob(['mp4'], { type: 'video/mp4' }), { autor: 'coach', seg: 20 });
+  const rE = await aT.archivo(cE.video_respuesta_id);
+  const elE = await bT.rpc('comentario_eliminar', { p_comentario: cE.id });
+  check(elE.rutas.includes(rE.ruta) && !(await aT.archivo(rE.id)), '(L5) el coach elimina su respuesta en vídeo: se le devuelve su ruta y su archivo se va');
+  const cF = await aT.responderConVideo(w1, new Blob(['mp4'], { type: 'video/mp4' }), { autor: 'coach', seg: 20, texto: 'Mira' });
+  await aT.borrarArchivo(await aT.archivo(cF.video_respuesta_id));
+  const [cF2] = await bT.select('comentarios', { eq: { id: cF.id } });
+  check(cF2.eliminado_en && cF2.texto === 'Se eliminó este mensaje' && !cF2.video_respuesta_id, '(L5) si el coach borra el archivo de una respuesta, su mensaje queda como eliminado');
   const cR2 = await aT.responderConVideo(v3, new Blob(['mp4'], { type: 'video/mp4' }), { autor: 'coach', seg: 30 });
   await aT.borrarArchivo(await aT.archivo(v3.id));
   check(!(await aT.archivo(cR2.video_respuesta_id)), 'y borrar un vídeo, sus respuestas en vídeo');
