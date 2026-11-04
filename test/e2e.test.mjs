@@ -4772,6 +4772,8 @@ try {
   check((await revisarVoz.textContent()).includes('Has llegado al minuto: se ha parado sola') && await revisarVoz.getByRole('button', { name: 'Enviar la nota de voz' }).count() === 1
     && await revisarVoz.getByRole('button', { name: 'Eliminar la nota de voz' }).count() === 1, 'al minuto se para sola: «Has llegado al minuto», y se queda para escucharla, enviarla o borrarla');
   check(await hay(p.locator('.chat-grabando'), 0) && await p.evaluate(() => window.__pistas.length > 0 && window.__pistas.every((t) => t.readyState === 'ended')), 'y el micro se suelta en cuanto para (sin el indicador encendido)');
+  await revisarVoz.locator('audio[src^="blob:"]').first().waitFor({ state: 'attached', timeout: 15000 }).catch(() => {});
+  await revisarVoz.getByRole('button', { name: /^Escuchar la nota de voz \(1:00\)/ }).first().waitFor({ timeout: 15000 }).catch(() => {});
   check(await revisarVoz.getByRole('button', { name: /^Escuchar la nota de voz \(1:00\)/ }).count() === 1 && await revisarVoz.locator('audio[src^="blob:"]').count() === 1, 'se puede escuchar antes (1:00)');
   const vel = revisarVoz.getByRole('button', { name: /^Velocidad/ });
   await vel.click();
