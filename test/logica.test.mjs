@@ -3660,6 +3660,13 @@ console.log('\nv0.62: avisar aunque bloquees el móvil (la pista del descanso) y
   check(bytes.length === p10.total * B && enTrama(0).every((x, i) => x === sil[i]) && enTrama(p10.cue).every((x, i) => x === datos.boxeo[i])
     && Array.from({ length: p10.total }, (_, i) => PI.esTrama(bytes, i * B)).every(Boolean),
     `la pista de 10 s: ${(bytes.length / 1024).toFixed(0)} KB de tramas del formato, en silencio hasta el aviso, que empieza en su trama (un descanso de 3 min, unos ${Math.round(180000 / 24 * B / 1024)} KB)`);
+  // (revisión L2) la pista, en trozos: el silencio reutiliza un mismo bloque de 6 s, sin un array del tamaño de la pista
+  const tz = PI.trozosPista(p10, datos), p15 = PI.planPista({ restanteMs: 15 * 60000 - 2000, clips: largos }), t15 = PI.trozosPista(p15, datos);
+  const unidos = new Uint8Array(tz.reduce((n, x) => n + x.length, 0)); { let i = 0; for (const x of tz) { unidos.set(x, i); i += x.length; } }
+  const total15 = t15.reduce((n, x) => n + x.length, 0);
+  check(unidos.every((x, i) => x === bytes[i]) && total15 === p15.total * B && Math.abs(total15 / 1024 / 1024 - 5.15) < 0.1 && Math.max(...t15.map((x) => x.length)) <= 250 * B
+    && new Set(t15.filter((x) => x.length === 250 * B).map((x) => x.buffer)).size === 1,
+    `(revisión L2) en trozos para el Blob, igual que seguida; una de 15 min (${(total15 / 1024 / 1024).toFixed(1)} MB) se arma con ${t15.length} trozos de como mucho 36 KB que comparten el mismo bloque de silencio`);
   check(PI.avisoSonando(10, p10) && PI.avisoSonando(9.97, p10) && !PI.avisoSonando(9.9, p10) && !PI.avisoSonando(NaN, p10) && !PI.avisoSonando(11, null),
     'se sabe que el aviso ya suena cuando la pista llega a él (para anular el aviso al móvil)');
   // ---------- el descanso: ±15 s, pausa y seguir (la misma cuenta que el temporizador)
@@ -3670,17 +3677,27 @@ console.log('\nv0.62: avisar aunque bloquees el móvil (la pista del descanso) y
     && PI.ajustarDescanso(d, 60, T0).fin === T0 + 90000 && PI.ajustarDescanso({ ...d, total: 20 }, 15, T0).total === 45,
     '+15 / −15 / +1 min como el temporizador (desde ahora si ya había acabado; el total crece si hace falta), sin perder lo demás del descanso');
   const pa = PI.pausarDescanso(d, T0 + 10000), si = PI.reanudarDescanso(pa, T0 + 50000);
-  check(pa.pausa === 20000 && PI.enPausa(pa) && PI.restanteMs(pa, T0 + 99999) === 20000 && PI.ajustarDescanso(pa, 15, T0).pausa === 35000 && PI.ajustarDescanso(pa, -60, T0).pausa === null && PI.ajustarDescanso(pa, -60, T0).fin === T0
+  check(pa.pausa === 20000 && pa.pausadoEn === T0 + 10000 && !('pausadoEn' in si) && !('pausadoEn' in PI.ajustarDescanso(pa, -60, T0)) && PI.enPausa(pa) && PI.restanteMs(pa, T0 + 99999) === 20000 && PI.ajustarDescanso(pa, 15, T0).pausa === 35000 && PI.ajustarDescanso(pa, -60, T0).pausa === null && PI.ajustarDescanso(pa, -60, T0).fin === T0
     && si.fin === T0 + 70000 && !('pausa' in si) && PI.pausarDescanso({ ...d, fin: T0 - 1 }, T0).pausa === undefined && PI.reanudarDescanso(d, T0) === d && PI.restanteMs(d, T0) === 30000 && PI.restanteMs(null) === 0,
-    'pausa (desde la pantalla de bloqueo): se queda con lo que faltaba, ±15 lo cambia (si llega a cero, acaba) y «Seguir» lo continúa desde ahora; uno ya acabado no se pausa');
+    'pausa (desde la pantalla de bloqueo): se queda con lo que faltaba (y cuándo se pausó), ±15 lo cambia (si llega a cero, acaba) y «Seguir» lo continúa desde ahora; uno ya acabado no se pausa');
+  check(PI.MAX_PAUSA_MS === 30 * 60000 && PI.pausaVigente(pa, T0 + 10000 + 29 * 60000) && !PI.pausaVigente(pa, T0 + 10000 + 31 * 60000) && !PI.pausaVigente({ ...pa, pausadoEn: undefined }, T0 + 20000)
+    && !PI.pausaVigente(d, T0) && !PI.pausaVigente(pa, T0),
+    '(revisión M2) una pausa vale media hora: después (o sin saber cuándo se pausó) ya no vuelve sola días después');
+  // (revisión M1) el aviso al móvil tras un botón de la pantalla de bloqueo, con la sesión cerrada
+  const a1 = PI.avisoTrasCambio(PI.ajustarDescanso({ ...d, fin: T0 + 10000 }, -15, T0), T0);
+  const a2 = PI.avisoTrasCambio(PI.reanudarDescanso(pa, T0 + 60000), T0 + 60000);
+  const a3 = PI.avisoTrasCambio(PI.ajustarDescanso(d, 15 * 60, T0), T0);
+  check(a1.programar === T0 && !a1.cancelar && PI.avisoTrasCambio({ fin: T0 - 5000 }, T0, { visible: true }).cancelar === true && a2.programar === T0 + 80000
+    && a3.programar === T0 + 30000 + 15 * 60000 && PI.avisoTrasCambio(pa, T0).cancelar && PI.avisoTrasCambio(null, T0).cancelar,
+    '(revisión M1) −15 con 10 s: avisa ya (no al final de antes); al seguir tras una pausa, para el final nuevo (aunque la pista no arranque); ⏩ más allá de la pista: para su final de verdad; en pausa o saltado, se anula; acabado con la app delante, avisa ella');
   // ---------- la pantalla de bloqueo
   check(PI.tituloMedia({ restanteS: 83 }) === 'Descanso · 1:23' && PI.tituloMedia({ restanteS: 83, pausa: true }) === 'Descanso en pausa · 1:23' && PI.tituloMedia({ restanteS: 83, oculta: true }) === 'Descanso'
     && PI.tituloMedia({ restanteS: 83, oculta: true, pausa: true }) === 'Descanso en pausa · 1:23' && PI.tituloMedia({ restanteS: 0 }) === '¡Vamos!' && PI.tituloMedia({ restanteS: 10, prueba: true }) === 'Prueba del aviso · 0:10',
     'el título de la pantalla de bloqueo: «Descanso · 1:23» (con la página oculta, sin la cifra, que se quedaría parada: ya la da la barra), «en pausa» y «¡Vamos!»');
   check(JSON.stringify(PI.posicionMedia({ total: 90, restanteS: 30 })) === '{"duration":90,"position":60,"playbackRate":1}' && JSON.stringify(PI.posicionMedia({ total: 90, restanteS: 120 })) === '{"duration":120,"position":0,"playbackRate":1}'
-    && PI.posicionMedia({ total: 90, restanteS: 30, pausa: true }).playbackRate === 0 && PI.posicionMedia({ total: 0, restanteS: 0 }).duration === 1
+    && PI.posicionMedia({ total: 90, restanteS: 30, pausa: true }).playbackRate === 1 && PI.posicionMedia({ total: 0, restanteS: 0 }).duration === 1
     && PI.albumMedia('serie 3 de press banca · 80 kg × 6') === 'Después: serie 3 de press banca · 80 kg × 6' && PI.albumMedia(null) === '',
-    'la barra de progreso (lo que va de descanso sobre el total, quieta en pausa; nunca más allá del final) y «Después: …» debajo');
+    'la barra de progreso (lo que va de descanso sobre el total; nunca más allá del final; la velocidad, siempre 1: con 0 setPositionState falla, la pausa la dice playbackState) y «Después: …» debajo');
   // ---------- lo que se dice y lo que lleva el aviso al móvil
   const ult = 'Serie 3 de press banca: 80 kilos por 6. Última serie.';
   check(PI.esUltima(ult) && !PI.esUltima('Serie 2 de press banca: 80 kilos por 6.') && PI.fraseTrasPista(ult, ['fin', 'ultima']) === 'Serie 3 de press banca: 80 kilos por 6.' && PI.fraseTrasPista(ult, ['boxeo']) === ult
@@ -3703,10 +3720,13 @@ console.log('\nv0.62: avisar aunque bloquees el móvil (la pista del descanso) y
   const g = AC.descansoGuardable({ ...pa, prioridad: 'alta', aviso: 'serie 2 de press banca · 80 kg × 6', extra: 'no' });
   const enC = { id: 's1', nombre: 'Torso', hechas: 3, t: T0, descanso: g };
   const ea = AC.estadoActividad(enC, T0 + 300000);
-  check(g.pausa === 20000 && g.aviso.endsWith('× 6') && !('extra' in g) && AC.descansoGuardable(null) === null && AC.descansoGuardable({ ...d }).pausa === null
+  check(g.pausa === 20000 && g.pausadoEn === T0 + 10000 && g.aviso.endsWith('× 6') && !('extra' in g) && AC.descansoGuardable(null) === null && AC.descansoGuardable({ ...d }).pausa === null
     && ea.descanso.pausa && ea.descanso.quedan === 20 && ea.descanso.cuenta === '0:20' && !ea.descanso.terminado && /en pausa/.test(AC.etiquetaActividad(ea))
     && AC.estadoActividad({ ...enC, descanso: AC.descansoGuardable(d) }, T0 + 300000).descanso === null,
     'la píldora «Sesión en curso» guarda el aviso y la pausa (nada más) y, en pausa, enseña lo que quedaba, quieto, aunque pase el tiempo');
+  check(AC.estadoActividad({ ...enC, t: T0 + 1900000 }, T0 + 1900000 + 1000).descanso === null && AC.estadoActividad({ ...enC, descanso: { ...g, pausadoEn: null } }, T0 + 20000).descanso === null
+    && AC.descansoGuardable(d).pausadoEn === null,
+    '(revisión M2) una pausa de hace más de media hora (o sin su hora) ya no sale en la píldora ni vuelve a la sesión');
   // ---------- la política
   const legal5 = await import('../web/src/legal.js');
   const PV4 = await import('../web/src/logica/privacidad.js');
@@ -3714,7 +3734,7 @@ console.log('\nv0.62: avisar aunque bloquees el móvil (la pista del descanso) y
   const not5 = legal5.PRIVACIDAD.find((x) => x[0] === 'Notificaciones')[1];
   check(legal5.VERSION_LEGAL === '2026-12.4' && PV4.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.4' && PV4.novedadesDesde('2026-12.3', '2026-12.4').length === 1
     && /Avisar aunque bloquees el móvil/.test(mov5) && /pantalla de bloqueo/.test(mov5) && /a la vista de cualquiera/.test(mov5) && /no sale de él/.test(mov5) && /carga que te propone/.test(not5)
-    && /lo ve quien mire tu móvil/.test(PV4.NOVEDADES_PRIVACIDAD[0][2]),
+    && /lo ve quien mire tu móvil/.test(PV4.NOVEDADES_PRIVACIDAD[0][2]) && /pantalla del coche, el reloj u otro aparato Bluetooth/.test(mov5),
     'la política 2026-12.4: el ajuste se queda en el móvil, la pantalla de bloqueo enseña el descanso y la serie siguiente (a la vista de quien mire el móvil) y el aviso lleva la carga');
 }
 

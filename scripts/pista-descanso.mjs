@@ -35,31 +35,35 @@ function ffmpeg(entrada, nombre, filtro = null) {
 }
 
 const CLIPS = {};
-// Los avisos de FBE Timer, tal cual (con su volumen)
-for (const [k, uri] of Object.entries(SONIDOS)) {
-  const f = join(tmp, `${k}-orig.mp3`);
-  writeFileSync(f, Buffer.from(uri.slice(uri.indexOf(',') + 1), 'base64'));
-  CLIPS[k] = ffmpeg(['-i', f], k);
-}
-// «Pitido suave» (el de pitidoSuave: dos notas de 880 Hz) y el pitido de la cuenta atrás (el de tono(660, 0.1))
-CLIPS.suave = ffmpeg(['-f', 'lavfi', '-i', 'aevalsrc=0.5*sin(2*PI*880*t)*(lt(mod(t\\,0.28)\\,0.22))*exp(-6*mod(t\\,0.28)):s=48000:d=0.52'], 'suave', 'afade=t=in:d=0.01');
-CLIPS.pitido = ffmpeg(['-f', 'lavfi', '-i', 'sine=frequency=660:sample_rate=48000:duration=0.12'], 'pitido', 'volume=2.8,afade=t=in:d=0.01,afade=t=out:st=0.06:d=0.06');
-
 const VOCES = {};
-if (carpetaVoces) {
-  for (const k of FRASES) {
-    const f = EXT.map((e) => join(carpetaVoces, `${k}.${e}`)).find((x) => existsSync(x));
-    if (!f) { console.log(`  (sin «${k}»)`); continue; }
-    VOCES[k] = ffmpeg(['-i', f], `voz-${k}`,
-      'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.03,areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05,areverse,loudnorm=I=-16:TP=-1.5:LRA=11');
+// (la carpeta temporal se borra siempre, también si ffmpeg falla)
+try {
+  // Los avisos de FBE Timer, tal cual (con su volumen)
+  for (const [k, uri] of Object.entries(SONIDOS)) {
+    const f = join(tmp, `${k}-orig.mp3`);
+    writeFileSync(f, Buffer.from(uri.slice(uri.indexOf(',') + 1), 'base64'));
+    CLIPS[k] = ffmpeg(['-i', f], k);
   }
-  // Las seis o ninguna: con media cuenta atrás grabada y la otra media en pitidos sonaría raro
-  if (Object.keys(VOCES).length !== FRASES.length) {
-    console.log(`  Faltan frases (${FRASES.filter((k) => !VOCES[k]).join(', ')}): la pista seguirá con los pitidos y el aviso.`);
-    for (const k of Object.keys(VOCES)) delete VOCES[k];
+  // «Pitido suave» (el de pitidoSuave: dos notas de 880 Hz) y el pitido de la cuenta atrás (el de tono(660, 0.1))
+  CLIPS.suave = ffmpeg(['-f', 'lavfi', '-i', 'aevalsrc=0.5*sin(2*PI*880*t)*(lt(mod(t\\,0.28)\\,0.22))*exp(-6*mod(t\\,0.28)):s=48000:d=0.52'], 'suave', 'afade=t=in:d=0.01');
+  CLIPS.pitido = ffmpeg(['-f', 'lavfi', '-i', 'sine=frequency=660:sample_rate=48000:duration=0.12'], 'pitido', 'volume=2.8,afade=t=in:d=0.01,afade=t=out:st=0.06:d=0.06');
+
+  if (carpetaVoces) {
+    for (const k of FRASES) {
+      const f = EXT.map((e) => join(carpetaVoces, `${k}.${e}`)).find((x) => existsSync(x));
+      if (!f) { console.log(`  (sin «${k}»)`); continue; }
+      VOCES[k] = ffmpeg(['-i', f], `voz-${k}`,
+        'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.03,areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05,areverse,loudnorm=I=-16:TP=-1.5:LRA=11');
+    }
+    // Las seis o ninguna: con media cuenta atrás grabada y la otra media en pitidos sonaría raro
+    if (Object.keys(VOCES).length !== FRASES.length) {
+      console.log(`  Faltan frases (${FRASES.filter((k) => !VOCES[k]).join(', ')}): la pista seguirá con los pitidos y el aviso.`);
+      for (const k of Object.keys(VOCES)) delete VOCES[k];
+    }
   }
+} finally {
+  rmSync(tmp, { recursive: true, force: true });
 }
-rmSync(tmp, { recursive: true, force: true });
 
 const js = (o) => `{\n${Object.entries(o).map(([k, v]) => `  '${k}': '${v}',`).join('\n')}${Object.keys(o).length ? '\n' : ''}}`;
 const texto = `// Sonidos de «Avisar aunque bloquees el móvil» (v0.62), en tramas MP3 de la pista (logica/pista.js, FORMATO_PISTA), en

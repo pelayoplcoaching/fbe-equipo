@@ -10,7 +10,8 @@ import { mmss, num } from './calculos.js';
 // (144 bytes, sin relleno) y dura 24 ms (1152 muestras): una pista de N tramas dura N × 24 ms exactos, y el navegador calcula
 // su duración por el tamaño (sin cabecera Xing que mienta, porque no se pone).
 export const FORMATO_PISTA = { tasa: 48000, kbps: 48, bytes: 144, ms: 24 };
-export const MAX_PISTA_MS = 15 * 60 * 1000;   // más larga, no (una pista de 15 min son 2,7 MB): queda el aviso al móvil
+export const MAX_PISTA_MS = 15 * 60 * 1000;   // más larga, no (una pista de 15 min son 5,4 MB): queda el aviso al móvil
+export const MAX_PAUSA_MS = 30 * 60 * 1000;   // un descanso en pausa más de media hora ya no vuelve (se dejó a medias)
 export const COLA_MS = 600;                   // un poco de silencio tras el aviso (que no se corte el final)
 const B = FORMATO_PISTA.bytes;
 
@@ -83,14 +84,29 @@ export function planPista({ restanteMs, cuentaAtras = true, sonido = 'tres-beeps
 }
 
 // Los bytes de la pista: datos es clave → Uint8Array de tramas (las de CLIPS/VOCES ya decodificadas del base64)
+// Los trozos de la pista, para new Blob(trozos): el silencio reutiliza un mismo bloque (6 s) en vez de copiarse trama a trama,
+// así el móvil no arma un array del tamaño de la pista entera en cada +15 / −15 (una de 15 min son 5,4 MB)
+const BLOQUE = 250;   // tramas por bloque de silencio
+let bloqueSilencio = null;
+function silencioDe(n) {
+  if (!bloqueSilencio) { const t = tramaSilencio(); bloqueSilencio = new Uint8Array(BLOQUE * B); for (let i = 0; i < BLOQUE; i++) bloqueSilencio.set(t, i * B); }
+  const out = [];
+  for (; n >= BLOQUE; n -= BLOQUE) out.push(bloqueSilencio);
+  if (n > 0) out.push(bloqueSilencio.subarray(0, n * B));
+  return out;
+}
+export function trozosPista(plan, datos) {
+  const out = [];
+  for (const [k, n] of plan.partes) {
+    if (k === null) out.push(...silencioDe(n)); else out.push(datos[k].subarray(0, n * B));
+  }
+  return out;
+}
+// Toda seguida (para las pruebas)
 export function componerPista(plan, datos) {
   const out = new Uint8Array(plan.total * B);
-  const silencio = tramaSilencio();
-  let t = 0;
-  for (const [k, n] of plan.partes) {
-    if (k === null) { for (let i = 0; i < n; i++) out.set(silencio, (t + i) * B); } else out.set(datos[k].subarray(0, n * B), t * B);
-    t += n;
-  }
+  let i = 0;
+  for (const t of trozosPista(plan, datos)) { out.set(t, i); i += t.length; }
   return out;
 }
 
@@ -104,7 +120,7 @@ export const restanteMs = (d, ahora = Date.now()) => (!d ? 0 : enPausa(d) ? Math
 export function ajustarDescanso(d, s, ahora = Date.now()) {
   if (enPausa(d)) {
     const p = d.pausa + s * 1000;
-    if (p <= 0) return { ...d, pausa: null, fin: ahora };
+    if (p <= 0) { const { pausadoEn, ...resto } = d; return { ...resto, pausa: null, fin: ahora }; }
     return { ...d, pausa: p, total: Math.max(d.total, p / 1000) };
   }
   const base = Math.max(ahora, d.fin);
@@ -112,12 +128,23 @@ export function ajustarDescanso(d, s, ahora = Date.now()) {
 }
 export function pausarDescanso(d, ahora = Date.now()) {
   if (!d || enPausa(d) || d.fin <= ahora) return d;
-  return { ...d, pausa: d.fin - ahora };
+  return { ...d, pausa: d.fin - ahora, pausadoEn: ahora };
 }
 export function reanudarDescanso(d, ahora = Date.now()) {
   if (!enPausa(d)) return d;
-  const { pausa, ...resto } = d;
+  const { pausa, pausadoEn, ...resto } = d;
   return { ...resto, fin: ahora + pausa };
+}
+// ¿Sigue valiendo esa pausa? (se pausó en la pantalla de bloqueo hace menos de media hora; sin la hora, no)
+export const pausaVigente = (d, ahora = Date.now()) => enPausa(d) && Number.isFinite(d.pausadoEn) && ahora - d.pausadoEn >= 0 && ahora - d.pausadoEn < MAX_PAUSA_MS;
+
+// Qué hacer con el aviso al móvil tras cambiar el descanso fuera del temporizador (los botones de la pantalla de bloqueo):
+// sin descanso o en pausa, anularlo; si con el cambio ya ha acabado (−15 con 10 s), con la app delante avisa ella (anularlo) y,
+// si no, que avise ya (la base admite un final de hasta 10 s atrás: se manda «ahora»); si no, para su final nuevo.
+export function avisoTrasCambio(n, ahora = Date.now(), { visible = false } = {}) {
+  if (!n || enPausa(n)) return { cancelar: true };
+  if (n.fin <= ahora) return visible ? { cancelar: true } : { programar: ahora };
+  return { programar: n.fin };
 }
 
 // ---------- la pantalla de bloqueo (Media Session) ----------
@@ -128,10 +155,11 @@ export function tituloMedia({ restanteS, pausa = false, prueba = false, oculta =
   return oculta && !pausa ? base : `${base} · ${mmss(restanteS)}`;
 }
 export const albumMedia = (texto) => (texto ? `Después: ${texto}` : '');
-export function posicionMedia({ total, restanteS, pausa = false }) {
+// (la velocidad, siempre 1: la especificación no admite 0 y setPositionState fallaría; la pausa la dice playbackState)
+export function posicionMedia({ total, restanteS }) {
   const r = Math.max(0, Number(restanteS) || 0);
   const duration = Math.max(1, Number(total) || 0, r);
-  return { duration, position: Math.min(duration, Math.max(0, duration - r)), playbackRate: pausa ? 0 : 1 };
+  return { duration, position: Math.min(duration, Math.max(0, duration - r)), playbackRate: 1 };
 }
 
 // ---------- lo que se dice y lo que lleva el aviso al móvil ----------

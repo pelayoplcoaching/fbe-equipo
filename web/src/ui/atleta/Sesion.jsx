@@ -40,7 +40,7 @@ import { seVe } from '../../logica/vistas.js';
 import { guardarEnCurso, borrarEnCurso, cambiarDescansoEnCurso, leerEnCurso } from '../en-curso.js';
 import { descansoGuardable } from '../../logica/actividad.js';
 import { sincronizarPista, prepararPista, EVENTO_PISTA } from '../pista-descanso.js';
-import { textoAviso } from '../../logica/pista.js';
+import { textoAviso, pausaVigente } from '../../logica/pista.js';
 import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, seriesPautadasHechas } from '../../logica/visual.js';
 import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
 import { resumenPautas } from '../../logica/diseno.js';
@@ -231,9 +231,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       if (ultima && !(e.id in sustitutos)) desdeSeries[e.id] = ultima.sustituto_id;
     }
     if (Object.keys(desdeSeries).length) setSustitutos({ ...sustitutos, ...desdeSeries });
-    // v0.52: al volver a la sesión con un descanso en marcha (lo llevaba la píldora de arriba), sigue donde iba (v0.62: o en pausa)
+    // v0.52: al volver a la sesión con un descanso en marcha (lo llevaba la píldora de arriba), sigue donde iba (v0.62: o en pausa, si se pausó hace menos de media hora)
     const ec = leerEnCurso(atleta.id);
-    if (ec?.id === id && ec.descanso && (ec.descanso.fin > Date.now() - 6000 || Number.isFinite(ec.descanso.pausa)) && !det.datos.sesion.completada && det.datos.ejercicios.some((x) => x.hechas.length)) setDescanso(ec.descanso);
+    if (ec?.id === id && ec.descanso && ((!Number.isFinite(ec.descanso.pausa) && ec.descanso.fin > Date.now() - 6000) || pausaVigente(ec.descanso)) && !det.datos.sesion.completada && det.datos.ejercicios.some((x) => x.hechas.length)) setDescanso(ec.descanso);
     if (abiertos === null) {
       const primero = det.datos.ejercicios.find((e) => e.hechas.length < e.series) || det.datos.ejercicios[0];
       setAbiertos(new Set(primero ? [primero.id] : []));

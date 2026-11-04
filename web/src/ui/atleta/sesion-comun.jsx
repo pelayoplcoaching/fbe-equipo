@@ -11,7 +11,7 @@ import { vibrar } from '../hapticos.js';
 import { descansoEnCurso } from '../en-curso.js';
 import { lanzarConfeti } from '../confeti.js';
 import { pistaManda, pistaSono, pistaFinal, prepararPista, pistaActiva } from '../pista-descanso.js';
-import { ajustarDescanso, reanudarDescanso, fraseTrasPista } from '../../logica/pista.js';
+import { ajustarDescanso, reanudarDescanso, fraseTrasPista, avisoTrasCambio } from '../../logica/pista.js';
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
 
@@ -162,7 +162,7 @@ export function aNumero(t) {
 // delante. Desde la pantalla de bloqueo se puede pausar el descanso (pausa: los ms que quedaban): aquí sale «en pausa» y
 // «Seguir».
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
-export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, alCambiar, clase = '' }) {
+export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '' }) {
   const { api, atleta } = useApp() || {};
   const ahora = useAhora(250);
   const finRef = useRef(fin);
@@ -174,7 +174,16 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   useEffect(() => {
     // (en pausa, fuera el aviso al móvil; al seguir, con su final nuevo, se vuelve a programar)
     if (pausado) { if (conAvisoAlMovil() && programado.current) { programado.current = false; api?.cancelarDescanso?.(); } return undefined; }
-    if (!api?.programarDescanso || !conAvisoAlMovil() || fin <= Date.now()) return undefined;
+    if (!api?.programarDescanso || !conAvisoAlMovil()) return undefined;
+    // (acabado a mano, p. ej. −15 con 10 s desde la pantalla de bloqueo: el aviso de antes llegaría tarde. Con la app delante
+    // avisa ella y se anula; si no, que avise ya. La misma regla que para la píldora: avisoTrasCambio)
+    if (fin <= Date.now()) {
+      if (programado.current) {
+        const r = avisoTrasCambio({ fin }, Date.now(), { visible: document.visibilityState === 'visible' });
+        if (r.cancelar) { programado.current = false; api.cancelarDescanso?.(); } else api.programarDescanso(r.programar, aviso || texto);
+      }
+      return undefined;
+    }
     // (un momento después: con varios +15 seguidos, solo el último). v0.62: con la carga propuesta, si se sabe
     const t = setTimeout(() => { programado.current = true; api.programarDescanso(fin, aviso || texto); }, 700);
     return () => clearTimeout(t);
@@ -258,7 +267,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   const ponerRetraso = (el) => { if (el && !el.dataset.retraso) { el.dataset.retraso = '1'; el.style.animationDelay = `${retrasoRespira((Date.now() - inicioR) / 1000)}s`; } };
   const R = 88, C = 2 * Math.PI * R;
   const frac = total ? Math.min(1, quedan / total) : 0;
-  const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, ...(pausado ? { pausa } : {}) });
+  const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, ...(pausado ? { pausa, pausadoEn } : {}) });
   const ajustar = (s) => alCambiar(ajustarDescanso(este(), s));
   const conPista = quedan > 0 && pistaManda(fin);
   const color = COLOR_DISCO[prioridad] || 'var(--morado)';

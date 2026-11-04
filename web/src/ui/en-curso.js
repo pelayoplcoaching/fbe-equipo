@@ -43,8 +43,9 @@ export function borrarEnCurso(atletaId, sesionId = null) {
   if (sesionId && x && x.id !== sesionId) return;
   memoria.set(atletaId, null);
   try { localStorage.removeItem(clave(atletaId)); } catch { /* */ }
-  // v0.62: y la pista del descanso de esa sesión, si suena (al terminarla o quitarle todas las series)
-  pararPista({ sesionId: sesionId || x?.id || null });
+  // v0.62: y la pista del descanso de esa sesión, si suena (al terminarla o quitarle todas las series); si su aviso ya está
+  // sonando, que acabe
+  pararPista({ sesionId: sesionId || x?.id || null, dejarAcabar: true });
   if (x) avisar();
 }
 

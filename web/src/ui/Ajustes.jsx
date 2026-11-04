@@ -4,7 +4,7 @@ import { Segmentos, Icono, useApp, Hoja, GrupoIos, FilaIos, IcoIos } from './com
 import { leerAjustes, guardarAjustes, TAMANOS_LETRA } from './ajustes.js';
 import { prepararAudio, pitar, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
 import { hayVoz, hablar } from './voz.js';
-import { plataformaPistaAqui, prepararPista, probarPista, frasesDelCoach, pararPista } from './pista-descanso.js';
+import { plataformaPistaAqui, prepararPista, probarPista, frasesDelCoach, pararPista, descansoSonando } from './pista-descanso.js';
 import { ACENTOS } from '../logica/acentos.js';
 import { puedeVibrar, vibrar } from './hapticos.js';
 import { DESCANSOS_ATLETA, mmss } from '../logica/calculos.js';
@@ -128,15 +128,24 @@ function HojaSonido({ a, cambiar, alCerrar }) {
               más (la app de inicio o Safari) y Android; en el ordenador no sale. Apagado de serie: pausa la música de otras apps */}
           {a.sonido && plataforma && (
             <Interruptor id="aj-bloqueo" icono="candado" texto="Avisar aunque bloquees el móvil" valor={!!a.vozBloqueo}
-              ayuda={`Suena el aviso al acabar el descanso aunque el móvil esté bloqueado${plataforma === 'ios' ? ' o en silencio' : ''}, y la pantalla de bloqueo enseña lo que queda. A cambio, tu música (${plataforma === 'ios' ? 'Spotify, Apple Music' : 'Spotify, YouTube Music'}…) se pausa en cada descanso y tienes que volver a darle a play.${a.voz ? (frasesDelCoach() ? ' Con el móvil bloqueado habla la voz grabada de tu coach.' : ' Con el móvil bloqueado no habla la voz del móvil: suena el aviso.') : ''}`}
+              ayuda={`Suena el aviso al acabar el descanso aunque el móvil esté bloqueado${plataforma === 'ios' ? ' o en silencio' : ''}, y la pantalla de bloqueo enseña lo que queda. A cambio, tu música (${plataforma === 'ios' ? 'Spotify, Apple Music' : 'Spotify, YouTube Music'}…) se pausa en cada descanso y tienes que volver a darle a play.${a.voz && frasesDelCoach() ? ' Con el móvil bloqueado, la cuenta y el final los dice la voz grabada de tu coach.' : ' Con el móvil bloqueado suena el aviso (un sonido), no la voz: la voz del móvil solo habla con la app delante.'}`}
               alCambiar={(v) => { cambiar('vozBloqueo', v); if (v) setTimeout(() => prepararPista(), 0); else pararPista(); }} />
           )}
-          {a.sonido && plataforma && a.vozBloqueo && (
-            <li class="panel-pad separa">
-              <span class="peq secundario">Bloquea el móvil y espera 10 segundos</span>
-              <button class="btn btn-peq" onClick={() => { prepararAudio(); const ok = probarPista(10); aviso(ok ? 'Bloquea el móvil: en 10 segundos suena el aviso' : 'Aún se está preparando: vuelve a probar en un momento', ok ? undefined : 'error'); }}><Icono n="candado" /> Probar con el móvil bloqueado</button>
-            </li>
-          )}
+          {a.sonido && plataforma && a.vozBloqueo && (() => {
+            // (con un descanso de verdad sonando, no: la prueba lo cambiaría por la suya)
+            const ocupado = descansoSonando();
+            return (
+              <li class="panel-pad separa">
+                <span class="peq secundario" id="aj-probar-bloqueo-ayuda">{ocupado ? 'Tienes un descanso en marcha: pruébalo cuando acabe' : 'Bloquea el móvil y espera 10 segundos'}</span>
+                <button class="btn btn-peq" disabled={ocupado} aria-describedby="aj-probar-bloqueo-ayuda" onClick={() => {
+                  prepararAudio();
+                  const r = probarPista(10);
+                  if (r === 'ocupado') aviso('Tienes un descanso en marcha: pruébalo cuando acabe', 'error');
+                  else aviso(r ? 'Bloquea el móvil: en 10 segundos suena el aviso' : 'Aún se está preparando: vuelve a probar en un momento', r ? undefined : 'error');
+                }}><Icono n="candado" /> Probar con el móvil bloqueado</button>
+              </li>
+            );
+          })()}
           <Interruptor id="aj-vibracion" icono="vibrar" texto="Vibración al acabar el descanso" ayuda="Y en el metrónomo y los intervalos, en los móviles que la permiten" valor={a.vibracion} alCambiar={(v) => cambiar('vibracion', v)} />
           {/* v0.49: la vibración al tocar, con su propio interruptor (de serie, encendida) */}
           <Interruptor id="aj-hapticos" icono="vibrar" texto="Vibración al tocar" desactivado={!puedeVibrar()}

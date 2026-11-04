@@ -158,8 +158,8 @@ export async function probarPista062({ navegador, check, base = 'http://localhos
     await fila.check();
     await h.getByRole('button', { name: 'Probar con el móvil bloqueado' }).waitFor();
     const ayuda2 = await h.locator('label[for="aj-bloqueo"]').textContent();
-    check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).vozBloqueo === true) && /no habla la voz del móvil: suena el aviso/.test(ayuda2),
-      'al encenderlo se guarda en el móvil y, con la voz encendida, avisa de que con el móvil bloqueado suena el aviso (no la voz del móvil)');
+    check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).vozBloqueo === true) && /Con el móvil bloqueado suena el aviso \(un sonido\), no la voz/.test(ayuda2),
+      'al encenderlo se guarda en el móvil y dice claro que con el móvil bloqueado suena un sonido, no la voz');
     await revisar('ajuste-bloqueo', p);
     check(await estrecho('ajuste-bloqueo', p), 'la hoja de «Sonido y vibración» cabe a 360 px en oscuro');
     // Probar: una pista de 10 s
@@ -275,6 +275,90 @@ export async function probarPista062({ navegador, check, base = 'http://localhos
     await hay(p.locator('.encurso-cuenta'), 0);
     check(!(await pista()).src && await p.locator('.encurso-cuenta').count() === 0 && (await rpcs()).slice(n2).some(([n]) => n === 'cancelar_descanso'),
       '⏭ en la pantalla de bloqueo, con la sesión cerrada: salta el descanso (la píldora lo quita), para la pista y anula el aviso al móvil');
+
+    // ---------- (revisión) más casos de la pista
+    const marcarLibre = async () => {
+      const b = p.getByRole('button', { name: /^Marcar la serie \d+ como hecha$/ }).first();
+      await b.click();
+      await esperar(p, () => !!document.getElementById('fbe-pista')?.getAttribute('src'));
+    };
+    const volverASesion = async () => {
+      await p.locator('.encurso-pildora').click();
+      await p.getByRole('button', { name: 'Volver a la sesión' }).click();
+      await p.locator('.ejercicio').first().waitFor();
+    };
+    const salirDeSesion = async () => { await p.getByRole('button', { name: 'Volver' }).first().click(); await p.locator('.encurso-pildora').waitFor(); };
+    const oculta = (si) => p.evaluate((x) => { if (x) Object.defineProperty(document, 'visibilityState', { get: () => 'hidden', configurable: true }); else delete document.visibilityState; }, si);
+    // L7: con un descanso sonando, «Probar con el móvil bloqueado» espera
+    await volverASesion();
+    await marcarLibre();
+    await salirDeSesion();
+    h = await hojaSonido(p);
+    check(await h.getByRole('button', { name: 'Probar con el móvil bloqueado' }).isDisabled() && await h.getByText('Tienes un descanso en marcha: pruébalo cuando acabe').count() === 1,
+      '(revisión L7) con un descanso de verdad sonando, «Probar con el móvil bloqueado» espera (no lo cambia por la prueba)');
+    await p.keyboard.press('Escape');
+    await h.waitFor({ state: 'detached' });
+    // M1 (a): con la sesión cerrada y el móvil bloqueado, ⏪ con 10 s acaba el descanso: el aviso al móvil, ya (no al final de antes)
+    await p.locator('.encurso-pildora').waitFor();
+    for (let i = 0; i < 30 && ((await pista()).fin - Date.now()) > 20000; i++) { await p.evaluate(() => window.__acciones.seekbackward()); await p.waitForTimeout(120); }
+    const finViejo = (await pista()).fin;
+    await oculta(true);
+    const na = (await rpcs()).length;
+    await p.evaluate(() => window.__acciones.seekbackward());
+    await esperar(p, (n) => (window.__rpcs || []).slice(n).some(([x]) => x === 'programar_descanso'), na, 4000);
+    const pa = (await rpcs()).slice(na).filter(([x]) => x === 'programar_descanso').at(-1);
+    await oculta(false);
+    check(pa && Math.abs(new Date(pa[1].p_fin).getTime() - Date.now()) < 3000 && finViejo - new Date(pa[1].p_fin).getTime() > 3000 && !(await pista()).src,
+      '(revisión M1) con la sesión cerrada y el móvil bloqueado, ⏪ que acaba el descanso manda el aviso al móvil ya (no al final de antes) y suelta la pista');
+    await p.waitForTimeout(6500);
+    // M1 (b): pausa y, al seguir, la pista no arranca: el aviso al móvil queda programado para el final nuevo
+    await volverASesion();
+    await marcarLibre();
+    await salirDeSesion();
+    await p.evaluate(() => window.__acciones.pause());
+    await esperar(p, () => (window.__rpcs || []).at(-1)?.[0] === 'cancelar_descanso', null, 4000);
+    await p.evaluate(() => { window.__playOriginal = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { return Promise.reject(new DOMException('No', 'NotAllowedError')); }; });
+    const nb = (await rpcs()).length;
+    await p.evaluate(() => window.__acciones.play());
+    await esperar(p, (n) => (window.__rpcs || []).slice(n).some(([x]) => x === 'programar_descanso'), nb, 4000);
+    await p.evaluate(() => { HTMLMediaElement.prototype.play = window.__playOriginal; });
+    const pb = (await rpcs()).slice(nb).filter(([x]) => x === 'programar_descanso').at(-1);
+    const enCursoB = await p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find((k) => k.startsWith('fbe-en-curso-')))).descanso);
+    check(pb && enCursoB && !Number.isFinite(enCursoB.pausa) && Math.abs(new Date(pb[1].p_fin).getTime() - enCursoB.fin) < 50 && !(await pista()).src && (await pista()).tipo === 'ambient',
+      '(revisión M1) pausa y, al seguir, el móvil no deja arrancar la pista: el aviso al móvil queda programado para el final nuevo (no se pierde) y la sesión de audio vuelve a «ambient»');
+    // M3: el sistema corta la pista (una llamada): vuelve «ambient», fuera la pantalla de bloqueo y el aviso pasa a la página; si
+    // el sistema la vuelve a poner, se para
+    // M1, con la sesión abierta: el mismo caso lo lleva el temporizador (el aviso de antes no se queda para el final viejo)
+    await volverASesion();
+    await p.getByRole('button', { name: 'Saltar' }).click().catch(() => {});
+    await marcarLibre();
+    for (let i = 0; i < 20 && ((await pista()).fin - Date.now()) > 80000; i++) { await p.getByRole('button', { name: 'Quitar 1 minuto' }).click(); await p.waitForTimeout(80); }
+    for (let i = 0; i < 20 && ((await pista()).fin - Date.now()) > 20000; i++) { await p.getByRole('button', { name: 'Quitar 15 segundos' }).click(); await p.waitForTimeout(80); }
+    await p.waitForTimeout(900);
+    const finViejoS = (await pista()).fin;
+    await oculta(true);
+    const ns = (await rpcs()).length;
+    await p.evaluate(() => window.__acciones.seekbackward());
+    await esperar(p, (n) => (window.__rpcs || []).slice(n).some(([x]) => x === 'programar_descanso'), ns, 4000);
+    const ps = (await rpcs()).slice(ns).filter(([x]) => x === 'programar_descanso').at(-1);
+    await oculta(false);
+    check(ps && Math.abs(new Date(ps[1].p_fin).getTime() - Date.now()) < 3000 && finViejoS - new Date(ps[1].p_fin).getTime() > 3000,
+      '(revisión M1) con la sesión abierta y el móvil bloqueado, ⏪ que acaba el descanso también manda el aviso al móvil ya (no al final de antes)');
+    await p.waitForTimeout(6500);
+    await p.getByRole('button', { name: 'Cerrar' }).click().catch(() => {});
+    await marcarLibre();
+    await p.evaluate(() => document.getElementById('fbe-pista').pause());
+    await esperar(p, () => navigator.audioSession.type === 'ambient' && !navigator.mediaSession.metadata);
+    await hay(p.locator('.temporizador .pista-activa'), 0);
+    const tc = await pista();
+    await p.evaluate(() => { navigator.audioSession.tipos.length = 0; return document.getElementById('fbe-pista').play().catch(() => {}); });
+    await p.waitForTimeout(800);
+    const td = await pista();
+    check(tc.paused && tc.tipo === 'ambient' && tc.titulo === null && tc.acciones === '' && await p.locator('.temporizador .pista-activa').count() === 0 && td.paused
+      && await p.evaluate(() => !navigator.audioSession.tipos.includes('playback')),
+      '(revisión M3) si el sistema corta la pista: vuelve «ambient» (el pitido de la página no para la música otra vez), fuera la pantalla de bloqueo, el aviso lo da la página; y si el sistema la vuelve a poner, se para (sin avisar dos veces)');
+    await p.getByRole('button', { name: 'Saltar' }).click().catch(() => {});
+    await salirDeSesion();
     // Quien no lo enciende sigue como siempre: sin pista y en «ambient»
     await p.evaluate(() => { const a = JSON.parse(localStorage.getItem('fbe-ajustes')); a.vozBloqueo = false; localStorage.setItem('fbe-ajustes', JSON.stringify(a)); });
     await p.reload();
