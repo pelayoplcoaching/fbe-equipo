@@ -470,13 +470,22 @@ try {
   // v0.49: la vibración al tocar (aquí, apuntada para comprobarla)
   await p.evaluate(() => { window.__vib = []; Object.defineProperty(navigator, 'vibrate', { value: (x) => { window.__vib.push(x); return true; }, configurable: true }); });
   const primero = p.locator('.ejercicio').first();
+  // v0.63: la pista de deslizar (la primera vez, en el móvil) se lee y se cierra (la prueba de los gestos está en e2e-teclado-063)
+  const pistaDesliza = p.locator('.pista', { hasText: 'Desliza una serie a la derecha' });
+  check(await hay(pistaDesliza, 1), 'la primera vez, una pista de cómo marcar deslizando');
+  await pistaDesliza.getByRole('button', { name: 'Entendido' }).click();
+  await hay(pistaDesliza, 0);
   check(await primero.locator('.serie.siguiente').count() === 1 && (await primero.locator('.serie.siguiente .n').textContent()) === 'T', 'la serie que toca (la top) va resaltada');
   await primero.getByLabel('Kilos de la serie 1').fill('42,5');
   await primero.getByLabel('Repeticiones de la serie 1').fill('6');
-  await primero.getByLabel('RPE de la serie 1').selectOption('8');
+  // v0.63: con el teclado de la app (de serie), el RPE es un botón que abre sus valores (antes, un desplegable)
+  await primero.getByRole('button', { name: /^RPE de la serie 1/ }).click();
+  await p.locator('.teclado-serie[data-campo="rpe"]').getByRole('button', { name: '8', exact: true }).click();
+  await p.waitForFunction(() => /: 8$/.test(document.querySelector('.ejercicio .serie[data-n="1"] .rpe-boton')?.getAttribute('aria-label') || ''));
   await primero.getByRole('button', { name: 'Marcar la serie 1 como hecha' }).click();
   await p.locator('.temporizador').waitFor();
-  check(await p.evaluate(() => JSON.stringify(window.__vib)) === '[14]' && await primero.locator('.serie.siguiente .n').textContent() === 'B', 'al marcarla, un toque de vibración y el resalte pasa a la siguiente');
+  // (el toque suave de las teclas, 8 ms, aparte: aquí cuenta el de marcar la serie)
+  check(await p.evaluate(() => JSON.stringify(window.__vib.filter((x) => x !== 8))) === '[14]' && await primero.locator('.serie.siguiente .n').textContent() === 'B', 'al marcarla, un toque de vibración y el resalte pasa a la siguiente');
   check((await p.locator('.temporizador .cuenta').textContent()).startsWith('2:') || (await p.locator('.temporizador .cuenta').textContent()).startsWith('3:'), 'arranca el descanso pautado');
   // v0.50: el temporizador va en la página, justo debajo del ejercicio, con un anillo grande y la cuenta en el centro
   check(await p.evaluate(() => document.querySelector('.ejercicio').nextElementSibling?.classList.contains('temporizador')) && await p.locator('.temporizador .reloj-descanso svg .arco').count() === 1
@@ -670,7 +679,7 @@ try {
   await militar.getByRole('button', { name: 'Marcar la serie 1 como hecha' }).click();
   const relojM = p.locator('.temporizador');
   await relojM.locator('.de').waitFor();
-  check((await relojM.locator('.de').textContent()) === 'de 2:00' && /^(2:00|1:5\d)$/.test(await relojM.locator('.cuenta').textContent()) && (await relojM.locator('.que').textContent()).includes('serie 2 de Press militar')
+  check((await relojM.locator('.de').textContent()) === 'de 2:00' && /^(2:00|1:5\d)$/.test(await relojM.locator('.cuenta').textContent()) && /^Ahora toca: Press militar[^,]*, serie 2 de \d/.test(await relojM.locator('.ahora-toca').getAttribute('aria-label'))
     && await p.evaluate(() => document.querySelectorAll('.ejercicio')[2].nextElementSibling?.classList.contains('temporizador')),
     'al marcar una serie de un ejercicio sin descanso del coach, arranca el de por defecto (2:00), debajo de él');
   await p.getByRole('button', { name: 'Saltar' }).click();
@@ -872,7 +881,8 @@ try {
   check(!(await p.locator('.temporizador').count()), 'tras A1 pasa a A2 sin descanso');
   await a2.getByRole('button', { name: 'Marcar la serie 1 como hecha' }).click();
   await p.locator('.temporizador').waitFor();
-  check((await p.locator('.temporizador .que').textContent()).includes('serie 2 de A1'), 'al cerrar la ronda, descanso y vuelta a A1');
+  // v0.63: lo de después va en la tarjeta «Ahora toca» (antes, la línea «Después: serie 2 de A1 …»)
+  check(/^Ahora toca: Siguiente ejercicio, A1 .+, serie 2 de \d/.test(await p.locator('.temporizador .ahora-toca').getAttribute('aria-label')), 'al cerrar la ronda, descanso y vuelta a A1');
   await revisar('superserie');
   const alSonarLista = await temporizadorAlSonar(p);
   check(alSonarLista.ok, `al acabar el descanso, el temporizador (con sus ±15 s y ±1 min) cabe entero en la pantalla ${JSON.stringify(alSonarLista)}`);
@@ -5577,6 +5587,18 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ la pista del descanso de la v0.62:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.63: apuntar las series con el dedo en un iPhone (táctil): el teclado de la app (−/+, cifras, «Siguiente» hasta marcar),
+// el cambio que pasa a las series siguientes con «Deshacer», deslizar para marcar (y cancelar), mantener pulsado, «Ahora toca»
+// en el descanso (y tocarla), el modo enfoque, volver al teclado del móvil y 360 px en oscuro (test/e2e-teclado-063.mjs)
+console.log('\nv0.63: el teclado de la app, deslizar para marcar y «Ahora toca»');
+try {
+  const { probarTeclado063 } = await import('./e2e-teclado-063.mjs');
+  await probarTeclado063({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ apuntar las series de la v0.63:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):

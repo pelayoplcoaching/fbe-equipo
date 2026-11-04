@@ -20,7 +20,7 @@ export function Placas({ kg, barra = 20, etiqueta = 'Por lado', discos = undefin
 }
 
 // Calculadora: 1RM estimado de una serie, tabla de cargas por repeticiones y RPE, y discos para una carga
-export function Calculadora({ inicial = {}, alCerrar }) {
+export function Calculadora({ inicial = {}, alCerrar, discos = undefined }) {
   const [kg, setKg] = useState(inicial.kg ?? 60);
   const [reps, setReps] = useState(inicial.reps ?? 5);
   const [rpe, setRpe] = useState(inicial.rpe ?? 8);
@@ -55,7 +55,7 @@ export function Calculadora({ inicial = {}, alCerrar }) {
       <section class="pila-s">
         <h3 class="peq secundario">Discos para una carga (barra de 20 kg)</h3>
         <Paso id="calc-carga" valor={carga} paso={2.5} min={20} max={500} dec={2} etiqueta="carga total en la barra" alCambiar={(v) => setCarga(v ?? 20)} />
-        {discosPorLado(carga) ? <Placas kg={carga} /> : <p class="peq secundario">Con discos estándar no se puede cargar exacto: prueba con un múltiplo de 2,5 kg.</p>}
+        {discosPorLado(carga, 20, discos) ? <Placas kg={carga} discos={discos} /> : <p class="peq secundario">Con discos estándar no se puede cargar exacto: prueba con un múltiplo de 2,5 kg.</p>}
       </section>
     </Hoja>
   );

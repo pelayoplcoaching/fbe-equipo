@@ -69,6 +69,8 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
         <>
           <FilaIos icono="altavoz" titulo="Sonido y vibración" detalle={resumenSonido} alTocar={() => setSonido(true)} etiqueta={`Sonido y vibración: ${resumenSonido}`} />
           <Interruptor id="aj-pantalla" icono="movil" texto="Pantalla encendida durante la sesión" ayuda="Para no tener que desbloquear el móvil entre series" valor={a.pantalla} alCambiar={(v) => cambiar('pantalla', v)} />
+          {/* v0.63 (1): el teclado de la app al apuntar las series (apagado, el del móvil, como antes) */}
+          <Interruptor id="aj-teclado" icono="teclado" texto="Teclado de la app al apuntar las series" ayuda="Teclas grandes, −/+ con el salto de cada ejercicio y «Siguiente» de los kilos a las repeticiones, al RPE y a marcar la serie. Apagado, sale el teclado del móvil" valor={a.tecladoApp !== false} alCambiar={(v) => cambiar('tecladoApp', v)} />
           {/* v0.60 (13): «Difuminar la cara» encendido de serie al enviar un vídeo (en este móvil) */}
           {puedeDifuminar(modo === 'demo') && <Interruptor id="aj-difuminar" icono="cara" texto="Difuminar la cara al enviar un vídeo" ayuda="Encendido de serie en la hoja de enviar (puedes apagarlo en cada vídeo). Se hace en el móvil: el original no sale de él" valor={!!a.difuminarCara} alCambiar={(v) => cambiar('difuminarCara', v)} />}
           {/* v0.61 (20): solo donde el navegador dice si la conexión es wifi o datos móviles (Chrome de Android); en el iPhone

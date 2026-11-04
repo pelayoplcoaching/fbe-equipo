@@ -54,7 +54,8 @@ const NOMBRE = { kg: 'Kilos', reps: 'Repeticiones', rpe: 'RPE' };
 // campo: 'kg' | 'reps' | 'rpe'; texto: lo escrito en kilos o repeticiones; rpe: el RPE elegido ('' sin él); base: lo que
 // te propone la app (el gris), para −/+ con el campo vacío; paso: el salto de los kilos; serie: «Serie 2», «Top»…;
 // anterior: lo de la última vez en esa serie; objetivo: «RPE 8» si lo pide tu coach; final: 'hecha' (Siguiente marca la
-// serie), 'listo' (una serie ya hecha: Siguiente cierra; nunca la desmarca) o null (hay otro campo después);
+// serie), 'listo' (una serie ya hecha: Siguiente cierra; nunca la desmarca), 'guardar' (el modo enfoque, corrigiendo una
+// serie: la guarda) o null (hay otro campo después);
 // ancla: () => la fila (para subirla sobre el teclado); dentro(el): si el foco o el toque están en los campos de la fila;
 // barra: se carga con barra (discos por lado); discoMinimo, alDisco(d), lugar: el disco más pequeño de ese gimnasio;
 // alCalculadora(kg): abre la calculadora (discos por lado y 1RM). enCapa: en su capa de <body> (en la sesión) o dentro
@@ -99,7 +100,8 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
       if (raiz.current?.contains(i.t) || dentro?.(i.t)) return;
       alCerrar();
     };
-    const tecla = (e) => { if (e.key === 'Escape' && !document.querySelector('.velo')) { e.preventDefault(); alCerrar(); } };
+    // (Escape es del teclado: el modo enfoque, que también lo escucha, no se cierra)
+    const tecla = (e) => { if (e.key === 'Escape' && !document.querySelector('.velo')) { e.preventDefault(); e.stopImmediatePropagation(); alCerrar(); } };
     document.addEventListener('pointerdown', baja, true);
     document.addEventListener('pointerup', sube, true);
     document.addEventListener('keydown', tecla);
@@ -124,8 +126,9 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
   const sinFoco = (e) => e.preventDefault();
   const delta = campo === 'kg' ? paso : 1;
   const kgAhora = campo === 'kg' ? (texto !== '' ? Number(String(texto).replace(',', '.')) : Number(base)) : null;
-  const sig = final === 'hecha' ? 'Hecha' : final === 'listo' ? 'Listo' : 'Siguiente';
-  const etiquetaSig = final === 'hecha' ? `Marcar la ${serie.toLowerCase()} como hecha` : final === 'listo' ? 'Listo: cerrar el teclado' : 'Siguiente campo';
+  const sig = final === 'hecha' ? 'Hecha' : final === 'listo' ? 'Listo' : final === 'guardar' ? 'Guardar' : 'Siguiente';
+  const etiquetaSig = final === 'hecha' ? `Hecha: marcar la ${serie.toLowerCase()} y empezar el descanso` : final === 'listo' ? 'Listo: cerrar el teclado'
+    : final === 'guardar' ? `Guardar los cambios de la ${serie.toLowerCase()}` : `Siguiente: ${NOMBRE[campo === 'kg' ? 'reps' : 'rpe'].toLowerCase()}`;
   // (una función, no un componente: un componente nuevo en cada pintado rehace los botones entre bajar y subir el dedo)
   const T = ({ k, children, etiqueta, clase = '' }) => (
     <button key={`t-${k}`} type="button" tabIndex={-1} class={`tecla ${clase}`} aria-label={etiqueta} onClick={() => pulsar(k)}>{children}</button>
@@ -174,17 +177,17 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
           {T({ k: '4', children: '4' })}{T({ k: '5', children: '5' })}{T({ k: '6', children: '6' })}
           <button type="button" tabIndex={-1} class="tecla tecla-paso" onClick={() => sumar(delta)} aria-label={campo === 'kg' ? `Añadir ${num(delta, 2)} kilos` : 'Una repetición más'}>+{num(delta, 2)}</button>
           {T({ k: '7', children: '7' })}{T({ k: '8', children: '8' })}{T({ k: '9', children: '9' })}
-          {T({ k: 'borrar', etiqueta: 'Borrar', clase: 'tecla-borrar', children: <Icono n="atras" /> })}
+          {T({ k: 'borrar', etiqueta: 'Borrar', clase: 'tecla-borrar', children: <Icono n="retroceso" /> })}
           {campo === 'kg' ? T({ k: ',', etiqueta: 'Coma decimal', children: ',' }) : <span aria-hidden="true" />}
           {T({ k: '0', children: '0' })}
-          <button type="button" tabIndex={-1} class={`tecla tecla-siguiente ${final === 'hecha' ? 'es-hecha' : ''}`} aria-label={etiquetaSig} onClick={() => { tocar(); alSiguiente(); }}>
-            {final === 'hecha' && <Icono n="hecho" />}{sig}{!final && <Icono n="derecha" />}
+          <button type="button" tabIndex={-1} class={`tecla tecla-siguiente ${final === 'hecha' || final === 'guardar' ? 'es-hecha' : ''}`} aria-label={etiquetaSig} onClick={() => { tocar(); alSiguiente(); }}>
+            {(final === 'hecha' || final === 'guardar') && <Icono n="hecho" />}{sig}{!final && <Icono n="derecha" />}
           </button>
         </div>
       )}
       {campo === 'rpe' && (
-        <button type="button" tabIndex={-1} class={`tecla tecla-siguiente ancha ${final === 'hecha' ? 'es-hecha' : ''}`} aria-label={etiquetaSig} onClick={() => { tocar(); alSiguiente(); }}>
-          {final === 'hecha' && <Icono n="hecho" />}{sig}{!final && <Icono n="derecha" />}
+        <button type="button" tabIndex={-1} class={`tecla tecla-siguiente ancha ${final === 'hecha' || final === 'guardar' ? 'es-hecha' : ''}`} aria-label={etiquetaSig} onClick={() => { tocar(); alSiguiente(); }}>
+          {(final === 'hecha' || final === 'guardar') && <Icono n="hecho" />}{sig}{!final && <Icono n="derecha" />}
         </button>
       )}
       <p class="sr" aria-live="polite">{anuncio}</p>

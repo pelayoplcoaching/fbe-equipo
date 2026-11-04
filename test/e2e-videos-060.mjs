@@ -236,6 +236,10 @@ export async function probarVideos060({ navegador, check, base = 'http://localho
     check(bytesRev > 0 && /^video\/(mp4|webm)$/.test(await rev.getAttribute('data-tipo')), `la revisión grabada, para verla antes de enviarla (${await rev.getAttribute('data-tipo')}, ${bytesRev} bytes)`);
     check(await p.evaluate(() => ![...document.querySelectorAll('video')].some((v) => v.srcObject && v.srcObject.getTracks().some((t) => t.readyState === 'live'))), 'al parar, la cámara y el micro se sueltan');
     check(await gr.getByRole('button', { name: 'Repetir' }).count() === 1, 'con «Enviar» y «Repetir»');
+    // (v0.63: en una máquina lenta, la hoja aún se estaba recolocando tras parar y el contraste salía a medias: se espera a que
+    // acabe cualquier animación, sin el tope de 1,5 s de revisar)
+    await p.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter((a) => a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished.catch(() => {}))),
+      new Promise((r) => setTimeout(r, 8000))]));
     await revisar('grabar-revision-revisar');
     await gr.getByRole('button', { name: 'Enviar' }).click();
     await p.locator('.toast', { hasText: 'Revisión enviada a Ana' }).waitFor({ timeout: 20000 });

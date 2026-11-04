@@ -1531,8 +1531,8 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   {
     const uid = bT.auth.sesion().user.id;
     const pv = async (v) => (await bT.upsert('privacidad_vista', [{ usuario_id: uid, version: v }], 'usuario_id'))[0].version;
-    check(VERSION_LEGAL_D === '2026-12.4' && await aT.versionLegal() === '2026-12.4' && await pv('2026-12.4') === '2026-12.4' && await pv('2026-12.3') === '2026-12.4' && await pv('2026-12') === '2026-12.4' && await pv('2026-11') === '2026-12.4',
-      '(M2) en la demo (que tiene la 037), la 2026-12.4 (v0.62); nunca hacia atrás, comparando por partes');
+    check(VERSION_LEGAL_D === '2026-12.5' && await aT.versionLegal() === '2026-12.5' && await pv('2026-12.5') === '2026-12.5' && await pv('2026-12.4') === '2026-12.5' && await pv('2026-12') === '2026-12.5' && await pv('2026-11') === '2026-12.5',
+      '(M2) en la demo (que tiene la 037), la 2026-12.5 (v0.63); nunca hacia atrás, comparando por partes');
     check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.10')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato y de un mes que ya existe');
   }
   await bT.auth.entrar('pelayo@fbe.demo', 'demo');

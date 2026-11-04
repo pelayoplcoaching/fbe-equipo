@@ -4444,3 +4444,96 @@ video.respuesta-video { display: block; width: 100%; max-width: 280px; max-heigh
   box-shadow: 0 4px 16px rgba(0, 0, 0, .25); max-width: calc(100vw - 32px); white-space: nowrap; }
 .en-sesion .pildora-subida { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 .pildora-subida-aro { width: 18px; height: 18px; border-radius: 50%; flex: none; background: conic-gradient(var(--morado) var(--p, 0%), rgba(127, 127, 127, .35) 0); }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   v0.63: el teclado de la app al apuntar una serie, deslizar para marcarla y «Ahora toca» en el descanso
+   --------------------------------------------------------------------------------------------------------------- */
+.teclado-serie {
+  position: fixed; z-index: 34; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: var(--ancho-atleta);
+  display: grid; gap: 8px; padding: 10px max(10px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
+  background: var(--hoja-2); border-top: 1px solid var(--linea); border-radius: 18px 18px 0 0; box-shadow: 0 -10px 30px -12px rgba(0, 0, 0, .35);
+  touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.teclado-serie.entra { animation: teclado-sube .2s cubic-bezier(.2, .9, .3, 1); }
+@keyframes teclado-sube { from { transform: translateY(100%); } }
+.teclado-cab { display: flex; align-items: center; gap: 6px; min-height: 40px; }
+.teclado-titulo { flex: 1; min-width: 0; font-size: 0.9375rem; color: var(--tinta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.teclado-meta { color: var(--tinta-2); font-size: 0.875rem; }
+.teclado-icono { width: 44px; height: 40px; border-radius: 12px; border: 1px solid var(--linea); background: var(--hoja); color: var(--tinta); display: grid; place-items: center; flex: none; }
+.teclado-icono svg { width: 22px; height: 22px; }
+.teclado-discos { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; flex-wrap: wrap; }
+.teclado-discos .discos-ayuda { font-size: 0.8125rem; }
+.teclado-discos-acc { display: flex; gap: 6px; margin-left: auto; }
+.teclado-chip { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--linea); background: var(--hoja); color: var(--tinta); font-weight: 650; font-size: 0.8438rem; display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.teclado-chip svg { width: 16px; height: 16px; }
+.teclado-chip[aria-expanded="true"] { border-color: var(--morado); color: var(--morado); }
+.teclado-teclas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.teclado-serie .tecla {
+  min-height: 54px; border-radius: 14px; border: 1px solid var(--linea); background: var(--hoja); color: var(--tinta);
+  font-size: 1.5rem; font-weight: 680; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 4px;
+  box-shadow: 0 1px 0 var(--linea);
+}
+.teclado-serie .tecla:active { background: var(--morado-suave); transform: scale(.97); }
+.teclado-serie .tecla svg { width: 24px; height: 24px; }
+.teclado-serie .tecla-paso { font-size: 1.125rem; font-weight: 750; color: var(--morado); background: var(--morado-suave); border-color: transparent; }
+.teclado-serie .tecla-borrar { color: var(--tinta-2); font-size: 1.375rem; }
+.teclado-serie .tecla-siguiente { grid-column: span 2; font-size: 1.0625rem; font-weight: 750; background: var(--morado); color: var(--sobre-morado); border-color: var(--morado); }
+.teclado-serie .tecla-siguiente.es-hecha { background: var(--ok); border-color: var(--ok); color: var(--hoja); }
+.teclado-serie > .tecla-siguiente.ancha { width: 100%; grid-column: 1 / -1; }
+.teclado-serie .tecla-siguiente svg { width: 20px; height: 20px; }
+.teclado-rpe { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
+.teclado-rpe .tecla { font-size: 1.25rem; }
+.teclado-rpe .tecla[aria-pressed="true"] { background: var(--morado); color: var(--sobre-morado); border-color: var(--morado); }
+.teclado-rpe .tecla-sin { font-size: 0.875rem; font-weight: 700; }
+.teclado-elige-disco { display: grid; gap: 8px; }
+.teclado-elige-disco .teclado-rpe { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.teclado-elige-disco .tecla { font-size: 1rem; }
+@media (max-width: 380px) { .teclado-serie .tecla { min-height: 50px; } .teclado-teclas, .teclado-rpe { gap: 6px; } }
+@media (max-height: 640px) { .teclado-serie .tecla { min-height: 44px; } .teclado-serie { gap: 6px; padding-top: 8px; } }
+@media (prefers-reduced-motion: reduce) { .teclado-serie.entra { animation: none; } .teclado-serie .tecla:active { transform: none; } }
+/* Con el teclado abierto: sitio debajo para subir las últimas filas, y los avisos por encima de él */
+html[data-teclado] .sesion-vista { padding-bottom: calc(var(--alto-teclado, 320px) + 24px); }
+html[data-teclado] .enfoque-cuerpo { padding-bottom: calc(var(--alto-teclado, 320px) + 16px); }
+html[data-teclado] .toast { bottom: calc(var(--alto-teclado, 320px) + 12px); top: auto; }
+html[data-teclado] .pildora-descanso { display: none; }
+/* El campo que escribe el teclado */
+.serie .celda.en-teclado, .serie .rpe.en-teclado { outline: 3px solid var(--foco); outline-offset: -2px; background: var(--hoja); border-color: transparent; }
+.paso-grande input.en-teclado { outline: 3px solid var(--foco); outline-offset: 1px; }
+.serie .rpe-boton { display: grid; place-items: center; cursor: pointer; }
+.serie .rpe-boton.rpe-objetivo { color: var(--tinta-2); }
+/* Deslizar una serie: la fila se va con el dedo y debajo aparece el ✓ */
+.serie-desliza { position: relative; border-radius: 12px; }
+.serie-desliza > .serie { position: relative; touch-action: pan-y; -webkit-touch-callout: none; }
+.serie-desliza > .serie .n { -webkit-user-select: none; user-select: none; }
+.serie-desliza.arrastrando { overflow: hidden; }
+.serie-desliza.arrastrando > .serie { background: var(--hoja); box-shadow: 0 2px 10px -4px rgba(0, 0, 0, .3); }
+.serie-fondo {
+  position: absolute; inset: 0; border-radius: 12px; display: flex; align-items: center; gap: 8px; padding-left: 16px;
+  background: color-mix(in srgb, var(--ok) calc(30% + 70% * var(--progreso, 0)), var(--hoja-2)); color: var(--tinta); font-weight: 750; font-size: 0.9375rem;
+}
+.serie-desliza.pasado .serie-fondo { background: var(--ok); color: var(--hoja); }
+.serie-fondo svg { width: 24px; height: 24px; }
+.serie-desliza:not(.arrastrando) > .serie { transition: transform .22s cubic-bezier(.2, .9, .3, 1); }
+@media (prefers-reduced-motion: reduce) { .serie-desliza:not(.arrastrando) > .serie { transition: none; } }
+/* «Ahora toca», dentro del temporizador del descanso: para leerlo de lejos */
+.temporizador .ahora-toca {
+  width: 100%; display: grid; gap: 4px; justify-items: start; text-align: left; padding: 12px 14px; min-height: 0;
+  border-radius: 16px; border: 1px solid color-mix(in srgb, var(--sobre-flota) 28%, transparent); background: color-mix(in srgb, var(--sobre-flota) 9%, transparent); color: var(--sobre-flota);
+}
+.temporizador .ahora-toca:hover { background: color-mix(in srgb, var(--sobre-flota) 14%, transparent); }
+.ahora-cab { width: 100%; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ahora-etq { font-size: 0.75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.ahora-serie { font-size: 0.875rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ahora-nombre { font-size: 1.0625rem; font-weight: 750; line-height: 1.25; }
+.ahora-toca .ss-etq { background: var(--sobre-flota); color: var(--flota); }
+.ahora-carga { font-size: clamp(2.125rem, 11vw, 2.75rem); font-weight: 820; line-height: 1.05; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; font-stretch: var(--ancho-marcador, 100%); white-space: nowrap; }
+.ahora-carga small { font-size: 0.5em; font-weight: 700; }
+.ahora-por { font-weight: 600; }
+.ahora-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.9375rem; font-weight: 650; }
+.ahora-meta small { font-size: 0.8125rem; font-weight: 700; }
+.ahora-esfuerzo { padding: 1px 8px; border-radius: 999px; background: var(--sobre-flota); color: var(--flota); font-weight: 800; }
+.ahora-discos .discos-ayuda .terciario { color: inherit; }
+.ahora-nota { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 6px; align-items: start; font-size: 0.875rem; line-height: 1.35; }
+.ahora-nota svg { width: 16px; height: 16px; margin-top: 2px; }
+.ahora-nota > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.temporizador.en-enfoque .ahora-carga { font-size: clamp(1.875rem, 9vw, 2.25rem); }

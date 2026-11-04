@@ -13,7 +13,12 @@ import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herram
 import { HojaCompartir } from '../Compartir.jsx';
 import { HojaCompartirEquipo } from '../Comunidad.jsx';
 import { PictoEjercicio } from '../Pictograma.jsx';
-import { RPES, prepararAudio, celebrar, usePantallaEncendida, useAhora, aNumero, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
+import { prepararAudio, celebrar, usePantallaEncendida, useAhora, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
+import { FilaSerie } from './FilaSerie.jsx';
+import { useTecladoApp } from './Teclado.jsx';
+import { pasoKg, tipoCarga, pideRpe, discoMinimoValido, DISCO_MINIMO_DEFECTO, discosCon } from '../../logica/teclado.js';
+import { propagarCambio, aplicarPropagacion, deshacerPropagacion, textoPropagacion } from '../../logica/propagar.js';
+import { ahoraToca, serieQueToca } from '../../logica/ahora-toca.js';
 import { Enfoque } from './Enfoque.jsx';
 import { Metronomo } from './Metronomo.jsx';
 import { Intervalos } from './Intervalos.jsx';
@@ -22,7 +27,7 @@ import { tempoDe } from '../../logica/tempo.js';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { Preparacion, ConsejoDia } from './Preparacion.jsx';
 import { consejoPreparacion, subeCarga } from '../../logica/preparacion.js';
-import { pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
+import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
   descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA } from '../../logica/calculos.js';
 import { leerAjustes } from '../ajustes.js';
 import { leerDescansos, guardarDescanso } from '../descansos.js';
@@ -87,7 +92,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [terminando, setTerminando] = useState(false);
   const [resumen, setResumen] = useState(null);
   const [verDinamica, setVerDinamica] = useState(true);
-  const [calculadora, setCalculadora] = useState(false);
+  const [calculadora, setCalculadora] = useState(false); // false | true | { kg } (desde el teclado: los discos de esa carga)
   const [intervalos, setIntervalos] = useState(null);       // null | { inicial }
   const [minutosHechos, setMinutosHechos] = useState(null); // lo que duró el temporizador de intervalos
   const [compartir, setCompartir] = useState(false);
@@ -102,6 +107,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [lugar, setLugar] = usePreferencia(`fbe-lugar-${id}`, 'gimnasio');
   const [porLugar, setPorLugar] = usePreferencia(`fbe-lugar-cambios-${id}`, {});
   const [sinAlternativa, setSinAlternativa] = usePreferencia(`fbe-lugar-sin-${id}`, []);
+  // v0.63: el teclado de la app (un ajuste del móvil) y el disco más pequeño de cada sitio (gimnasio, casa, viaje), en el móvil
+  const tecladoApp = useTecladoApp();
+  const [discosLugar, setDiscosLugar] = usePreferencia(`fbe-discos-${atleta.id}`, {});
   // Ejercicios elegidos fuera de las alternativas (de la biblioteca) y su «última vez»
   const [extra, setExtra] = useState({ ejercicios: {}, ultimas: {} });
   // Notas fijadas del atleta por ejercicio (se cargan con la sesión y se guardan al momento)
@@ -266,10 +274,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
 
   const etiquetas = etiquetasSuperserie(ejercicios);
   // La serie que toca ahora: la que dijo la última serie marcada (si sigue sin hacer) o la primera sin hacer
-  const pendienteDe = (x) => Array.from({ length: x.series }, (_, i) => i + 1).find((k) => !hechas[x.id]?.[k]);
-  let prox = proxima && ejercicios.some((x) => x.id === proxima.id && proxima.numero <= x.series) && !hechas[proxima.id]?.[proxima.numero] ? proxima : null;
-  if (!prox) { const x = ejercicios.find((y) => pendienteDe(y)); if (x) prox = { id: x.id, numero: pendienteDe(x) }; }
-  if (sesion.completada) prox = null;
+  // (v0.63: la misma regla en logica/ahora-toca.js, para la tarjeta «Ahora toca» del descanso)
+  const prox = serieQueToca(ejercicios, hechas, proxima, { completada: sesion.completada });
   const grupos = gruposSuperserie(ejercicios);
   // v0.51: antes de empezar, la portada (no en las hechas, ni con series, ni de baja)
   if (!sesion.completada && !empezada && todas.length === 0 && atleta.estado !== 'baja') {
@@ -317,6 +323,13 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // Sin consentimiento de salud (p. ej. si lo retiró) lo guardado no se usa
   const consejo = salud ? consejoPreparacion(prep) : null;
   const frenar = !subeCarga(consejo, eleccionCarga);
+  // La propuesta de una serie (kilos y repeticiones que te propone la app), la misma para la píldora «Sesión en curso», la
+  // pantalla de bloqueo (al marcar, en guardar) y la tarjeta «Ahora toca» del descanso
+  const ultimasDe = (x) => { const a = actualDe(x); return a.id !== x.ejercicio.id ? ultimas[a.id] || null : x.ultimas; };
+  const propuestaDe = (pe, numero, h = hechas[pe.id] || {}) => {
+    const a = actualDe(pe), cambiado = a.id !== pe.ejercicio.id;
+    return prepararEjercicio(pe, cambiado ? a : null, ultimasDe(pe), semana?.foco, progresionAuto && !cambiado && !frenar).propuesta(numero, h);
+  };
   // v0.52: lo que dirá la píldora «Sesión en curso» si sale de la sesión: el ejercicio y la serie que tocan
   if (!sesion.completada && todas.length > 0 && atleta.estado !== 'baja') {
     const pe = prox && pautaDe[prox.id];
@@ -324,13 +337,35 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     if (pe) {
       siguienteTxt = `Serie ${prox.numero} de ${pe.series}`;
       try {
-        const a = actualDe(pe), cambiado = a.id !== pe.ejercicio.id;
-        const prop = prepararEjercicio(pe, cambiado ? a : null, cambiado ? ultimas[a.id] || null : pe.ultimas, semana?.foco, progresionAuto && !cambiado && !frenar).propuesta(prox.numero, hechas[pe.id] || {});
+        const prop = propuestaDe(pe, prox.numero);
         if (prop?.kg) siguienteTxt += `: ${num(prop.kg, 2)} kg × ${prop.reps}`;
         else if (prop?.reps) siguienteTxt += `: ${prop.reps} repeticiones`;
       } catch { /* sin propuesta: la serie */ }
     }
     enCurso.current = { id, nombre: sesion.nombre, ejercicio: pe ? actualDe(pe).nombre : null, siguiente: siguienteTxt, hechas: todas.length, total: totalPautadas };
+  }
+  // v0.63 (8): «Ahora toca» en el descanso: la serie que toca (la de la píldora), con su propuesta, la última vez, el
+  // recordatorio o la nota de tu coach y los discos por lado
+  const ahora = descanso && !sesion.completada ? ahoraToca({
+    ejercicios, hechas, proxima, completada: sesion.completada, tras: descanso.tras, etiquetas,
+    propuestaDe: (pe, k) => propuestaDe(pe, k), nombreDe: (x) => actualDe(x).nombre, ultimasDe,
+    recordatoriosDe: (x) => tecnica037.datos?.recs?.[actualDe(x).id] || [], barraDe: (x) => esBarra(actualDe(x).nombre),
+  }) : null;
+  // v0.63: el disco más pequeño de donde entrena hoy y lo que el teclado necesita de la sesión
+  const discoMinimo = discoMinimoValido(discosLugar?.[lugar]) ? Number(discosLugar[lugar]) : DISCO_MINIMO_DEFECTO;
+  const teclado = { app: tecladoApp, discoMinimo, lugar,
+    alDisco: (d) => { setDiscosLugar({ ...(discosLugar || {}), [lugar]: d }); aviso(`Disco más pequeño ${lugar === 'casa' ? 'en casa' : lugar === 'viaje' ? 'de viaje' : 'en el gimnasio'}: ${num(d, 2)} kg`); },
+    alCalculadora: (kg) => setCalculadora({ kg }) };
+  // Tocar «Ahora toca»: a esa serie, con el teclado en los kilos (o, con el del móvil, el campo enfocado)
+  function irASerie(seId, numero) {
+    setAbiertos((a) => new Set([...(a || []), seId]));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const fila = document.querySelector(`[data-se="${seId}"] .serie[data-n="${numero}"]`);
+      if (!fila) { irAEjercicio(seId); return; }
+      const quieto = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      if (!tecladoApp) fila.scrollIntoView({ block: 'center', behavior: quieto ? 'auto' : 'smooth' });
+      fila.querySelector('input.celda')?.focus({ preventScroll: true });
+    }));
   }
   const preguntarPrep = salud && ejercicios.length > 0 && !sesion.completada && atleta.estado !== 'baja'
     && ((!prep && !prepSaltada && todas.length === 0) || editandoPrep);
@@ -379,9 +414,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       let avisoMovil = texto;
       if (sig) {
         try {
-          const a = actualDe(sig), cambiado = a.id !== sig.ejercicio.id;
+          const a = actualDe(sig);
           const hSig = sig.id === e.id ? { ...hechas[e.id], [numero]: local } : (hechas[sig.id] || {});
-          const prop = prepararEjercicio(sig, cambiado ? a : null, cambiado ? ultimas[a.id] || null : sig.ultimas, semana?.foco, progresionAuto && !cambiado && !frenar).propuesta(r.siguiente.numero, hSig);
+          const prop = propuestaDe(sig, r.siguiente.numero, hSig);
           voz = fraseSerie({ numero: r.siguiente.numero, series: sig.series, nombre: a.nombre, kg: prop?.kg, reps: prop?.reps });
           avisoMovil = textoAviso({ texto, kg: prop?.kg, reps: prop?.reps }) || texto;
         } catch { voz = `Ahora, ${texto}.`; }
@@ -546,7 +581,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
               lugar={porLugar[e.id] && sustitutos[e.id] === porLugar[e.id] ? lugar : null} deshacerLugar={() => deshacerLugar(e.id)}
               sinMaterial={lugar !== 'gimnasio' && sinAlternativa.includes(e.id) && !cambiado ? lugar : null}
               videos={videos.enviados[e.id] || 0} videosPendientes={videos.pendientes[e.id] || 0} alSubirVideo={() => setRecontarVideos((n) => n + 1)}
-              hechas={hechas[e.id] || {}} enCola={enCola} abierto={abiertos?.has(e.id)} siguiente={prox?.id === e.id ? prox.numero : null}
+              hechas={hechas[e.id] || {}} enCola={enCola} abierto={abiertos?.has(e.id)} siguiente={prox?.id === e.id ? prox.numero : null} teclado={teclado}
               alternar={() => alternar(e.id)} guardar={(n, v) => guardar(e, n, v)} quitar={(n) => quitar(e, n)}
               cambiar={(ej) => {
                 setSustitutos({ ...sustitutos, [e.id]: ej.id === e.ejercicio.id ? null : ej.id });
@@ -555,7 +590,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           );
         });
         const conReloj = descanso && !verEnfoque && g.items.some((e) => e.id === descanso.tras);
-        const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={cambiarDescanso} />;
+        const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} />;
         if (!g.letra) return reloj ? [...tarjetas, reloj] : tarjetas;
         const d = descansoGrupo(g, descansoDe);
         // (tuyo): si el de la ronda no es uno que puso el coach
@@ -572,7 +607,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         ];
       })}
       {/* (un descanso sin su ejercicio en la lista, por si acaso: antes de terminar) */}
-      {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={cambiarDescanso} />}
+      {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} />}
 
       <button class="btn btn-primario btn-grande btn-ancho" onClick={() => setTerminando(true)}>
         <Icono n="hecho" /> {sesion.completada ? 'Cambiar la valoración' : 'Terminar sesión'}
@@ -597,7 +632,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           // En una sesión con ejercicios, el temporizador es solo una parte (el «para acabar»): manda el reloj de la sesión
           setIntervalos(null); setMinutosHechos(ejercicios.length ? null : minutos + 5); setTerminando(true);
         }} />}
-      {calculadora && <Calculadora inicial={ultimaHecha ? { kg: Number(ultimaHecha.kg) || 60, reps: ultimaHecha.reps || 5, rpe: ultimaHecha.rpe ? Math.round(ultimaHecha.rpe) : 8 } : {}} alCerrar={() => setCalculadora(false)} />}
+      {calculadora && <Calculadora inicial={calculadora.kg ? { kg: calculadora.kg, reps: 5, rpe: 8 } : ultimaHecha ? { kg: Number(ultimaHecha.kg) || 60, reps: ultimaHecha.reps || 5, rpe: ultimaHecha.rpe ? Math.round(ultimaHecha.rpe) : 8 } : {}}
+        discos={discosCon(discoMinimo)} alCerrar={() => setCalculadora(false)} />}
       {terminando && (
         <Terminar sesion={sesion} semana={semana} inicio={inicio} minutosSugeridos={minutosHechos} conEjercicios={ejercicios.length > 0} alCerrar={() => { setTerminando(false); setMinutosHechos(null); }}
           alGuardar={async (cambios) => {
@@ -619,7 +655,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         <Enfoque ejercicios={ejercicios} hechas={hechas} records={records} etiquetas={etiquetas} actualDe={actualDe}
           ultimasDe={(x) => { const a = actualDe(x); return a.id !== x.ejercicio.id ? ultimas[a.id] || null : x.ultimas; }}
           foco={semana?.foco} progresionAuto={progresionAuto && !frenar} notas={notas} guardarNota={guardarNota}
-          guardar={guardar} quitar={quitar} descanso={descanso} setDescanso={cambiarDescanso}
+          guardar={guardar} quitar={quitar} descanso={descanso} setDescanso={cambiarDescanso} ahora={ahora} teclado={teclado}
           seId={seActual} setSeId={setSeFoco} inicio={inicio} alTerminar={() => setTerminando(true)}
           alSalir={() => { setEnfoque(false); setAbiertos((a) => new Set([...(a || []), seActual])); llevarA(seActual); }} />
       )}
@@ -638,8 +674,8 @@ function Cronometro({ inicio, minutos, hechas, total }) {
 }
 
 function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
-  descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso }) {
-  const { atleta, propio } = useApp();
+  descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null }) {
+  const { atleta, propio, aviso } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
   const [editandoNota, setEditandoNota] = useState(false);
   const pa = pauta(e);
@@ -651,6 +687,50 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   const quitable = filas > e.series && !hechas[filas] && !enCola[`${e.id}-${filas}`] ? filas : null;
   const activa = Array.from({ length: filas }, (_, i) => i + 1).find((k) => !hechas[k]);
   const { ej, prescripcion, sugerencia, barra, conAproximacion, kgTrabajo, propuesta, top } = prepararEjercicio(e, actual, ultimas, foco, progresionAuto);
+  // v0.63: lo escrito en cada serie (lo lleva el ejercicio, no cada fila: un cambio puede pasar a las siguientes). Las hechas
+  // se rellenan con lo guardado cada vez que cambia la serie guardada (como antes en cada fila)
+  const fmtV = (v, d) => (v == null ? '' : num(v, d));
+  const deHecha = (h) => ({ kg: fmtV(h.kg, 2), reps: fmtV(h.reps, 0), rpe: h.rpe ?? '' });
+  const sincronizadas = useRef(null);
+  const [borr, setBorr] = useState(() => {
+    sincronizadas.current = {};
+    const b = {};
+    for (const [k, h] of Object.entries(hechas)) if (h) { b[k] = deHecha(h); sincronizadas.current[k] = h.id; }
+    return b;
+  });
+  const firmaHechas = Object.entries(hechas).map(([k, h]) => `${k}:${h?.id ?? ''}`).join(',');
+  useEffect(() => {
+    let nuevos = null;
+    for (const [k, h] of Object.entries(hechas)) {
+      if (!h || sincronizadas.current[k] === h.id) continue;
+      sincronizadas.current[k] = h.id;
+      (nuevos ||= {})[k] = deHecha(h);
+    }
+    for (const k of Object.keys(sincronizadas.current)) if (!hechas[k]) delete sincronizadas.current[k];
+    if (nuevos) setBorr((b) => ({ ...b, ...nuevos }));
+  }, [firmaHechas]);
+  const hechasEj = useRef(hechas);
+  hechasEj.current = hechas;
+  const cambiarBorr = (k, c, t) => setBorr((b) => ({ ...b, [k]: { ...(b[k] || { kg: '', reps: '', rpe: '' }), [c]: t } }));
+  // v0.63 (2): al soltar los kilos o las repeticiones de una serie sin hacer, el cambio pasa a las siguientes sin hacer que
+  // llevaban lo mismo (misma pauta y sin tocar), con «Deshacer» en el aviso
+  function comprometer(k, c, antes, despues) {
+    const filasP = Array.from({ length: filas }, (_, i) => i + 1).map((x) => ({
+      numero: x, hecha: !!hechas[x], pautada: x <= e.series, tipo: tipoDe(x),
+      prescrito: (() => { try { return propuesta(x, hechas)?.[c] ?? null; } catch { return null; } })(),
+      texto: x === k ? antes : String(borr[x]?.[c] ?? ''),
+    }));
+    const cambios = propagarCambio(filasP, k, antes, despues);
+    if (!cambios.length) return;
+    setBorr((b) => aplicarPropagacion(b, c, cambios));
+    aviso(textoPropagacion(cambios.map((x) => x.numero)), 'ok', { texto: 'Deshacer', fn: () => {
+      // (las que ya se han marcado como hechas no se tocan: lo guardado manda)
+      const vivos = cambios.filter((x) => !hechasEj.current[x.numero]);
+      setBorr((b) => deshacerPropagacion(b, c, vivos));
+    } });
+  }
+  const conRpe = pideRpe(prescripcion);
+  const conDiscos = tipoCarga(ej.nombre) === 'discos';
   // Sin carga pautada (a RPE): en cada serie, su peso de la última vez como referencia
   const conAnterior = prescripcion.carga_sugerida_kg == null;
   const tipoDe = (k) => (!top || k > e.series ? null : k === 1 ? 'top' : 'backoff');
@@ -741,6 +821,8 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
           )}
           {/* Se queda hasta acabar el ejercicio: si desapareciera tras la primera serie, las filas subirían bajo el dedo */}
           {sugerencia && n < e.series && <p class={`sugerencia ${sugerencia.tipo}`}><Icono n={sugerencia.tipo === 'subir' ? 'arriba' : 'reiniciar'} />{sugerencia.texto}</p>}
+          {/* v0.63 (3): la primera vez, en el móvil (con el dedo), cómo marcar sin apuntar y cómo abrir el teclado */}
+          {siguiente && !completo && tactil() && <Pista id="deslizar-serie" icono="hecho">Desliza una serie a la derecha para marcarla como hecha (lo mismo que ✓: con lo que hayas escrito o, si no, con lo que te propone). Mantenla pulsada para abrir el teclado en los kilos.</Pista>}
           <div class="series-cab" aria-hidden="true"><span>Serie</span><span>Kg</span><span>Reps</span><span>Esfuerzo</span><span /></div>
           {Array.from({ length: filas }, (_, i) => i + 1).map((k) => {
             const prop = propuesta(k, hechas);
@@ -749,7 +831,10 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
                 <FilaSerie numero={k} hecha={hechas[k]} propuesta={prop} activa={k === activa} siguiente={k === siguiente} barra={barra} record={hechas[k] ? records[`${e.id}-${k}`] : null}
                   anterior={conAnterior ? pesoAnterior(ultimas, k) : null}
                   pendiente={enCola[`${e.id}-${k}`]} nombre={ej.nombre} tipo={tipoDe(k)}
-                  guardar={(v) => guardar(k, v)} quitar={() => quitar(k)} />
+                  guardar={(v) => guardar(k, v)} quitar={() => quitar(k)}
+                  valores={borr[k] || VACIA} cambiar={(c, t) => cambiarBorr(k, c, t)} alComprometer={comprometer}
+                  teclado={teclado} conRpe={conRpe || prop?.rpe != null} objetivoEsfuerzo={pa.esfuerzo} conDiscos={conDiscos}
+                  paso={pasoKg({ nombre: ej.nombre, kg: aNum((borr[k] || VACIA).kg) ?? prop?.kg ?? null, discoMinimo: teclado?.discoMinimo })} />
                 {k === 1 && top && n < e.series && (
                   <p class="backoff-nota">
                     <Icono n="abajo" />
@@ -803,6 +888,10 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
     </article>
   );
 }
+
+const VACIA = { kg: '', reps: '', rpe: '' };
+const tactil = () => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+const aNum = (t) => { const x = String(t ?? '').replace(',', '.').trim(); return x === '' || !Number.isFinite(Number(x)) ? null : Number(x); };
 
 // «Lo que te dijo tu coach» (v0.48): sus últimos comentarios de este ejercicio (en tus vídeos o en sesiones
 // anteriores en que lo nombró)
@@ -894,74 +983,6 @@ function Cambiar({ e, actual, alCerrar, alElegir }) {
         </div>
       )}
     </Hoja>
-  );
-}
-
-// Una serie: kilos y repeticiones con lo propuesto como pista gris (lo pautado o lo de la vez anterior).
-// Al marcarla con los campos vacíos se usa la pista, como en un cuaderno.
-// anterior: el peso de esta serie la última vez, en un recuadro pequeño (solo si el coach no ha pautado carga)
-function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false, pendiente, guardar, quitar, nombre, barra, record, tipo = null, anterior = null }) {
-  const { aviso } = useApp();
-  const fmt = (v, d) => (v == null ? '' : num(v, d));
-  const [kg, setKg] = useState(hecha ? fmt(hecha.kg, 2) : '');
-  const [reps, setReps] = useState(hecha ? fmt(hecha.reps, 0) : '');
-  const [rpe, setRpe] = useState(hecha?.rpe ?? '');
-  useEffect(() => { if (hecha) { setKg(fmt(hecha.kg, 2)); setReps(fmt(hecha.reps, 0)); setRpe(hecha.rpe ?? ''); } }, [hecha?.id]);
-  const valores = (k = kg, r = reps, e = rpe) => ({
-    kg: aNumero(k) ?? propuesta.kg ?? null,
-    reps: aNumero(r) ?? propuesta.reps ?? null,
-    rpe: e === '' ? '' : Number(e),
-  });
-  // Si ya está hecha, cada cambio se guarda al momento
-  const confirmar = (k, r, e) => {
-    if (!hecha) return;
-    const v = valores(k, r, e);
-    const problema = problemaSerie(v);
-    // Si lo escrito no vale, se avisa y se vuelve a lo guardado
-    if (problema) { aviso(problema, 'error'); setKg(fmt(hecha.kg, 2)); setReps(fmt(hecha.reps, 0)); return; }
-    guardar(v);
-  };
-  const [recien, setRecien] = useState(false);
-  useEffect(() => { if (!recien) return undefined; const t = setTimeout(() => setRecien(false), 600); return () => clearTimeout(t); }, [recien]);
-  const marcar = () => {
-    if (hecha) { quitar(); return; }
-    const v = valores();
-    if (v.reps == null) return;
-    const problema = problemaSerie(v);
-    if (problema) { aviso(problema, 'error'); return; }
-    setKg(fmt(v.kg, 2)); setReps(fmt(v.reps, 0));
-    setRecien(true);
-    guardar(v);
-  };
-  return (
-    <>
-      <div class={`serie ${hecha ? 'hecha' : ''} ${activa ? 'activa' : ''} ${siguiente && !hecha ? 'siguiente' : ''} ${recien ? 'recien' : ''} ${record && recien ? 'con-record' : ''} ${tipo ? `serie-${tipo}` : ''}`} role="group" aria-current={siguiente && !hecha ? 'step' : undefined}
-        aria-label={`${nombre}, serie ${numero}${tipo === 'top' ? ' (top)' : tipo === 'backoff' ? ' (back-off)' : ''}`}>
-        <span class="n" title={tipo === 'top' ? 'Serie top' : tipo === 'backoff' ? 'Back-off' : undefined}>{tipo === 'top' ? 'T' : tipo === 'backoff' ? 'B' : numero}</span>
-        <span class="celda-kg">
-          <input class="celda" inputMode="decimal" enterKeyHint="next" aria-label={`Kilos de la serie ${numero}${anterior != null ? ` (la última vez, ${num(anterior, 2)} kg)` : ''}`} value={kg}
-            placeholder={fmt(propuesta.kg, 2) || '–'} onInput={(e) => setKg(e.currentTarget.value)}
-            onChange={(e) => confirmar(e.currentTarget.value, reps, rpe)} onFocus={(e) => e.currentTarget.select()} />
-          {anterior != null && <span class="peso-anterior" aria-hidden="true" title="Tu peso de la última vez en esta serie"><small>ant.</small> {num(anterior, 2)}</span>}
-        </span>
-        <input class="celda" inputMode="numeric" enterKeyHint="done" aria-label={`Repeticiones de la serie ${numero}`} value={reps}
-          placeholder={fmt(propuesta.reps, 0) || '–'} onInput={(e) => setReps(e.currentTarget.value)}
-          onChange={(e) => confirmar(kg, e.currentTarget.value, rpe)} onFocus={(e) => e.currentTarget.select()} />
-        <select class={`rpe ${propuesta.rpe != null && rpe === '' ? 'rpe-objetivo' : ''}`} aria-label={`RPE de la serie ${numero}${propuesta.rpe != null ? ` (objetivo ${num(propuesta.rpe)})` : ''}`} value={rpe} onChange={(e) => {
-          const v = e.currentTarget.value === '' ? '' : Number(e.currentTarget.value);
-          setRpe(v); confirmar(kg, reps, v);
-        }}>
-          {RPES.map((r) => <option key={r} value={r}>{r === '' ? (propuesta.rpe != null ? `→ ${num(propuesta.rpe)}` : 'RPE') : num(r)}</option>)}
-        </select>
-        <button class="hecho-btn" onClick={marcar} aria-pressed={hecha ? 'true' : 'false'}
-          aria-label={hecha ? `Quitar la serie ${numero}` : `Marcar la serie ${numero} como hecha`}>
-          <Icono n="hecho" />
-        </button>
-      </div>
-      {record && <div class="record-serie"><Icono n="trofeo" /><span><strong>Récord</strong>: {record.texto}</span></div>}
-      {activa && barra && !hecha && <div class="serie-discos"><Placas kg={aNumero(kg) ?? propuesta.kg} /></div>}
-      {pendiente && hecha && <div class="pendiente-envio">Serie {numero} guardada en el móvil; se enviará al volver la conexión.</div>}
-    </>
   );
 }
 
