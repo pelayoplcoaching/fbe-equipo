@@ -1415,5 +1415,30 @@ console.log('\nv0.58: el análisis automático de los vídeos (como la 036)');
   }
 }
 
+// (v0.58.1) El historial del chat por páginas en la demo, como en la base: para la atleta como para el coach
+console.log('\nv0.58.1: el historial del chat por páginas en la demo');
+{
+  const semillaLarga = () => {
+    const d = semillaDemo();
+    const ana = d.atletas.find((a) => a.nombre.startsWith('Ana'));
+    const t0 = Date.now() - 60 * 864e5;
+    for (let i = 0; i < 650; i++) d.comentarios.push({ id: crypto.randomUUID(), atleta_id: ana.id, sesion_id: null, checkin_id: null, archivo_id: null, autor: i % 2 ? 'coach' : 'atleta', adjunto: false, dibujo: null, texto: `Antiguo ${i}`, creado_en: new Date(t0 + i * 3600e3).toISOString(), leido_en: null });
+    return d;
+  };
+  const b7 = crearBackendMemoria({ semilla: semillaLarga, persistir: false });
+  const a7 = crearApi(b7);
+  await b7.auth.entrar('pelayo@fbe.demo', 'demo');
+  const ana7 = (await a7.atletas()).find((a) => a.nombre.startsWith('Ana'));
+  const deCoach = [];
+  for (const limite of [400, 600, 1000]) deCoach.push((await a7.conversacion(ana7.id, { limite })).filter((c) => !c.programado).map((c) => c.id));
+  await b7.auth.entrar('ana@fbe.demo', 'demo');
+  const deAna = [];
+  for (const limite of [400, 600, 1000]) deAna.push((await a7.conversacion(ana7.id, { limite })).map((c) => c.id));
+  const total = deAna[2].length;
+  check(deAna[0].length === 400 && deAna[1].length === 600 && deAna[1].slice(-400).join() === deAna[0].join() && total > 650 && total < 1000,
+    `(v0.58.1) la atleta, de página en página: 400, 600 (los 200 anteriores encima) y hasta el primero (${total})`);
+  check(deAna[2].join() === deCoach[2].join() && (await a7.conversacion(ana7.id, { limite: 1000 }))[0].texto === 'Antiguo 0', '(v0.58.1) lo mismo que ve el coach (sin lo programado), hasta el primer mensaje');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

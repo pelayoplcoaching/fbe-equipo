@@ -99,9 +99,13 @@ export function crearCacheChat({ almacen = hayIdb() ? almacenIdb() : null, max =
         return x;
       } catch { return null; }
     },
-    async guardar(perfil, atleta, mensajes) {
+    // (v0.58.1) completa: la base dice que no hay nada más antiguo que «mensajes». La copia lo apunta solo si cabe entera
+    // (si se queda con los últimos 200 de más, no es la conversación entera): así, al abrir con ella, se sabe si hay más.
+    async guardar(perfil, atleta, mensajes, { completa = false } = {}) {
       if (!almacen || !perfil || !atleta || estaCerrada()) return false;
-      try { await almacen.guardar(claveCache(perfil, atleta), { perfil, atleta, guardado_en: new Date(ahora()).toISOString(), mensajes: paraCache(mensajes, max) }); return true; } catch { return false; }
+      const lista = paraCache(mensajes, max);
+      const entera = !!completa && lista.length === paraCache(mensajes, Infinity).length;
+      try { await almacen.guardar(claveCache(perfil, atleta), { perfil, atleta, guardado_en: new Date(ahora()).toISOString(), completa: entera, mensajes: lista }); return true; } catch { return false; }
     },
     // (revisión) Limpieza: fuera lo caducado y, en el móvil del coach, las conversaciones de quien ya no está (borrado o
     // de baja). conservar: los ids de atleta que siguen (null = no mirar eso). Devuelve cuántas quita.

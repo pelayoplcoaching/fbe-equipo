@@ -242,6 +242,14 @@ export function porTipo(mensajes = [], tipo, ahora = Date.now()) {
 }
 // Ir a una fecha: el primer mensaje de ese día o, si ese día no hubo, del siguiente que tenga (null si no hay ninguno
 // desde entonces). fecha: 'AAAA-MM-DD' (del día de quien mira); diaDe: la fecha local de un mensaje.
+// (v0.58.1) ¿Hay mensajes más antiguos que los cargados? De la base: si ha devuelto tantos como se pidieron (limite: lo
+// pedido PARA ESOS datos, no lo que se está pidiendo ahora). De la copia del móvil (como mucho los 200 últimos, mientras
+// llega la base): siempre, salvo que la copia sea la conversación entera (completa). Antes, con la copia, se comparaba
+// 200 con la primera página (400) y nunca había «más»: arriba de lo guardado no se cargaba nada.
+export function hayAnteriores({ cargados = 0, limite, desdeCache = false, cacheCompleta = false }) {
+  if (desdeCache) return !cacheCompleta;
+  return cargados >= limite;
+}
 export function primeroDesde(mensajes = [], fecha, diaDe) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fecha || ''))) return null;
   return mensajes.find((c) => diaDe(c.creado_en) >= fecha && !(c.programado))?.id || null;

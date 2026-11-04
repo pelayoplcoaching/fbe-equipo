@@ -5517,6 +5517,17 @@ try {
 
 check(errores.length === 0, errores.length ? `sin errores: ${errores.join(' || ')}` : 'sin errores de consola, desbordes ni controles sin nombre');
 
+// v0.58.1: el chat de la atleta en el iPhone (táctil), con más de dos páginas de historial: sin y con la copia del móvil,
+// hasta el primer mensaje, sin saltos, e «ir a una fecha» (test/e2e-chat-iphone.mjs)
+console.log('\nv0.58.1: el chat de la atleta en el iPhone, con todo su historial');
+try {
+  const { probarChatIphone } = await import('./e2e-chat-iphone.mjs');
+  await probarChatIphone({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el chat en el iPhone:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
 console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');
