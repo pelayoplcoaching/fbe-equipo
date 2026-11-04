@@ -4,6 +4,9 @@ import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Pa
 import { BandaConexion } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { SubirArchivo } from '../Archivos.jsx';
+import { RecuerdaEjercicio } from '../tecnica/Recordatorios.jsx';
+import { BotonModelo } from '../tecnica/Modelos.jsx';
+import { recordatoriosPorEjercicio } from '../../logica/correccion.js';
 import { textoSerieVideo } from '../../logica/tecnica.js';
 import { EVENTO_PENDIENTES, listarPendientes } from '../../datos/pendientes.js';
 import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herramientas.jsx';
@@ -122,6 +125,15 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     window.addEventListener(EVENTO_PENDIENTES, contar);
     return () => { vivo = false; window.removeEventListener(EVENTO_PENDIENTES, contar); };
   }, [det.datos, recontarVideos]);
+  // v0.59 (037): los recordatorios de técnica de tu coach («Recuerda: …») y sus vídeos modelo, por ejercicio
+  const idsEjSesion = [...new Set((det.datos?.ejercicios || []).map((e) => e.ejercicio?.id).concat(Object.values(sustitutos || {})).filter(Boolean))];
+  const tecnica037 = useCarga(async () => {
+    if (!idsEjSesion.length || propio) return { recs: {}, modelos: {} };
+    const [recs, mods] = await Promise.all([api.recordatoriosActivos(atleta.id).catch(() => []), api.videosModelo(idsEjSesion).catch(() => [])]);
+    const modelos = {};
+    for (const m of mods) (modelos[m.ejercicio_id] ||= []).push(m);
+    return { recs: recordatoriosPorEjercicio(recs), modelos };
+  }, [id, idsEjSesion.join(',')]);
   // «¿Cómo llegas hoy?»: lo contestado (se guarda en la sesión), si se saltó y si se está cambiando
   const [prep, setPrep] = useState(undefined);
   // v0.51: «Ahora no» vale para ese día (se guarda la fecha de Madrid; lo de antes, «true», ya no cuenta)
@@ -511,6 +523,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
               foco={semana?.foco} progresionAuto={progresionAuto && !cambiado && !frenar} etiqueta={etiquetas[e.id]} records={records}
               nota={notas[actual.id]} guardarNota={(t) => guardarNota(actual.id, t)}
               coach={det.datos.coach?.[actual.id] || null}
+              recordatorios={tecnica037.datos?.recs?.[actual.id] || []} modelos={tecnica037.datos?.modelos?.[actual.id] || []}
               descanso={infoDescanso(e)} descansoPropio={descansosPropios[actual.id] ?? null} descansoDefecto={descansoDefecto} elegirDescanso={(seg) => elegirDescanso(actual, seg)}
               lugar={porLugar[e.id] && sustitutos[e.id] === porLugar[e.id] ? lugar : null} deshacerLugar={() => deshacerLugar(e.id)}
               sinMaterial={lugar !== 'gimnasio' && sinAlternativa.includes(e.id) && !cambiado ? lugar : null}
@@ -606,7 +619,7 @@ function Cronometro({ inicio, minutos, hechas, total }) {
   );
 }
 
-function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null,
+function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
   descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso }) {
   const { atleta, propio } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
@@ -691,6 +704,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
       </button>
       {abierto && (
         <div class="ejercicio-cuerpo">
+          <RecuerdaEjercicio recordatorios={recordatorios} />
           <NotaFijada nota={nota} alGuardar={guardarNota} editando={editandoNota} alEditar={setEditandoNota} />
           {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}
           {sinMaterial && <p class="cambio-lugar"><span>Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.</span></p>}
@@ -735,8 +749,9 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
           </div>
           <div class="acciones-ej">
             {!propio && <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} etiqueta={videos + videosPendientes > 0 ? 'Enviar otro vídeo' : undefined} alSubir={alSubirVideo}
-              ejercicio={ej} series={Array.from({ length: filas }, (_, i) => i + 1).map((k) => ({ numero: k, texto: hechas[k] ? textoSerieVideo(hechas[k]) : null }))}
+              ejercicio={ej} series={Array.from({ length: filas }, (_, i) => i + 1).map((k) => ({ numero: k, texto: hechas[k] ? textoSerieVideo(hechas[k]) : null, rpe: hechas[k]?.rpe != null && Number(hechas[k].rpe) > 0 ? Number(hechas[k].rpe) : null }))}
               serieInicial={Math.max(0, ...Object.keys(hechas).map(Number).filter((k) => hechas[k])) || null} />}
+            <BotonModelo ejercicio={ej} modelos={modelos} clase="btn-texto" />
             <button class="btn-texto btn-mas" onClick={() => setHoja('mas')} aria-haspopup="dialog" aria-label={`Más herramientas de ${ej.nombre}`}><Icono n="opciones" /> Más</button>
           </div>
         </div>

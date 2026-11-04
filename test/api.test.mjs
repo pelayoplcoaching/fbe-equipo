@@ -2225,6 +2225,152 @@ console.log('\nv0.58: el análisis automático de los vídeos (migración 036)')
   }
 }
 
+console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
+{
+  const { AVISO_037 } = await import('../web/src/datos/api.js');
+  const { limpiarAutoevaluacion } = await import('../web/src/logica/correccion.js');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [aAna] = await b.sql(`select id from atletas where email = 'ana@test'`);
+  const [aLuis] = await b.sql(`select id from atletas where email = 'luis@test'`);
+  await b.sql(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await b.sql(`delete from fbe_privado.storage_por_borrar`); await b.sql(`delete from chat_cupos`);
+  const sent = await api.crear('ejercicios', { nombre: 'Sentadilla con barra v059', grupos_musculares: ['cuadriceps', 'gluteo'] });
+  check(await api.video037() === true, 'la app sabe que la base tiene la 037');
+  // 12. Ana envía un vídeo con su valoración
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.darConsentimientos(['datos_salud']).catch(() => {});
+  const auto = limpiarAutoevaluacion({ rpe: 8.5, nota: 'Me cuesta el final', molestia: true, zona: 'zona_lumbar' }, { salud: true });
+  const v1 = await api.subirArchivo(aAna.id, new Blob(['vídeo 059 a'], { type: 'video/mp4' }), { tipo: 'video_tecnica', ejercicio_id: sent.id, duracion_seg: 8, autoevaluacion: auto });
+  check(v1.autoevaluacion?.molestia === true && Number(v1.autoevaluacion.rpe) === 8.5 && !v1.autoevaluacionError, 'Ana envía un vídeo con su valoración (RPE, lo que nota y una molestia)');
+  const a2 = await api.guardarAutoevaluacion(v1, { rpe: 9, nota: 'Mejor', molestia: true, zona: 'rodilla' }, { salud: false });
+  check(a2.molestia === null && a2.zona === null && Number(a2.rpe) === 9, 'sin decir que tiene consentimiento de salud, la app no manda la molestia');
+  check((await api.autoevaluacion(v1.id))?.nota === 'Mejor', 'y la lee');
+  const v2 = await api.subirArchivo(aAna.id, new Blob(['vídeo 059 b'], { type: 'video/mp4' }), { tipo: 'video_tecnica', ejercicio_id: sent.id, duracion_seg: 8 });
+  const v3 = await api.subirArchivo(aAna.id, new Blob(['vídeo 059 c'], { type: 'video/mp4' }), { tipo: 'video_tecnica', ejercicio_id: sent.id, duracion_seg: 8 });
+  check(await lanza(() => api.fijarRecordatorio({ atletaId: aAna.id, ejercicioId: sent.id, texto: 'Yo misma' })) && await lanza(() => api.guardarFrase({ texto: 'Mía' })), 'Ana no fija recordatorios ni guarda frases');
+  // El coach: la bandeja trae lo que nota; corrige dos vídeos; fija recordatorios y frases
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const enB = (await api.bandeja()).archivos.find((x) => x.id === v1.id);
+  check(enB?.autoevaluacion?.nota === 'Mejor' && (await api.autoevaluacion(v1.id))?.rpe != null, 'en la bandeja del coach, cada vídeo con lo que nota el atleta');
+  check(await lanza(() => api.guardarAutoevaluacion(v1, { rpe: 6 })), 'el coach no la cambia');
+  await api.guardarRevision(v2, { puntuacion: 3, checklist: [{ t: 'Pecho arriba', e: 'mal', s: 1.5 }, { t: 'Pies', e: 'bien' }] });
+  await api.guardarRevision(v3, { puntuacion: 4 });
+  const sug = await api.sugerenciasRecordatorio(aAna.id, sent.id);
+  check(sug.length === 1 && sug[0].texto === 'Pecho arriba' && sug[0].archivoId === v2.id && sug[0].segundo === 1.5, '14. se propone fijar lo marcado a corregir del último vídeo corregido, con su momento');
+  const r1 = await api.fijarRecordatorio({ atletaId: aAna.id, ejercicioId: sent.id, texto: sug[0].texto, archivoId: sug[0].archivoId, segundo: sug[0].segundo });
+  await api.fijarRecordatorio({ atletaId: aAna.id, ejercicioId: sent.id, texto: 'Aire antes de bajar' });
+  await api.fijarRecordatorio({ atletaId: aAna.id, ejercicioId: sent.id, texto: 'x'.repeat(200) });
+  check(r1.archivo_id === v2.id && Number(r1.segundo) === 1.5 && await lanza(() => api.fijarRecordatorio({ atletaId: aAna.id, ejercicioId: sent.id, texto: 'El cuarto' })), 'el coach los fija (como mucho 3 activos)');
+  const lista = await api.recordatoriosCoach(aAna.id, sent.id);
+  check(lista.length === 3 && lista.some((r) => [...r.texto].length === 140 && r.texto.endsWith('…')) && (await api.sugerenciasRecordatorio(aAna.id, sent.id)).length === 0, 'un texto largo se corta en 140 (con «…»); lo ya fijado no se vuelve a proponer');
+  await api.editarRecordatorio(lista.find((r) => r.texto.startsWith('xxx')).id, { activo: false });
+  await api.editarRecordatorio(r1.id, { texto: 'Pecho arriba al subir' });
+  // 4. Frases
+  check((await api.frasesCorreccion(sent.id)).length === 0, 'sin frases guardadas, ninguna en la base (las sugeridas son de la app)');
+  const sugeridas = await api.guardarFrasesSugeridas(sent);
+  const f1 = await api.guardarFrase({ ejercicioId: null, texto: 'Muy bien: así', dibujo: { t: 0, formas: [{ tipo: 'flecha', p: [[0.2, 0.2], [0.5, 0.5]] }] } });
+  check(sugeridas.length >= 3 && sugeridas.every((f) => f.ejercicio_id === sent.id) && (await api.guardarFrasesSugeridas(sent)).filter((f) => f.ejercicio_id === sent.id).length === sugeridas.length, 'el coach guarda las sugeridas de su ejercicio (dos veces, sin repetirlas)');
+  const todas = await api.frasesCorreccion(sent.id);
+  check(todas.length === sugeridas.length + 1 && todas.at(-1).id === f1.id && todas.at(-1).dibujo?.formas?.length === 1 && await lanza(() => api.guardarFrase({ texto: 'Mal dibujo', dibujo: { t: 0, formas: [] } })),
+    'las del ejercicio y luego las de todos (con su dibujo); un dibujo mal formado, no');
+  await api.guardarFrase({ id: todas[0].id, ejercicioId: sent.id, texto: 'Cambiada', orden: 0 });
+  await api.borrarFrase(todas[1].id);
+  check((await api.frasesCorreccion(sent.id)).some((f) => f.texto === 'Cambiada') && !(await api.frasesCorreccion(sent.id)).some((f) => f.id === todas[1].id), 'las cambia y las borra');
+  // 6. Vídeos modelo
+  const m1 = await api.subirVideoModelo(sent, new File([new Uint8Array(3000)], 'demo.mp4', { type: 'video/mp4' }), { angulo: 'De lado', poster: new Blob([new Uint8Array(200)], { type: 'image/jpeg' }), duracion_seg: 4.4 });
+  check(/^modelos\/[0-9a-f-]{36}\/modelo-[A-Za-z0-9]+\.mp4$/.test(m1.ruta) && m1.poster_ruta === `${m1.ruta}.jpg` && m1.duracion_seg === 4 && (await b.sql(`select 1 from storage.objects where name = any($1)`, [[m1.ruta, m1.poster_ruta]])).length === 2,
+    'el coach sube su vídeo modelo (y su miniatura) a modelos/<ejercicio>/');
+  check(await lanza(() => api.subirVideoModelo(sent, new File(['x'], 'a.txt', { type: 'text/plain' }))), 'solo un vídeo');
+  // 15. Las marcas a mano y 18. los tiempos de la cola
+  check(igual(await api.guardarRepsManual(v1, [2.5, 0.5, 4.5]), [0.5, 2.5, 4.5]) && igual(await api.repsManual(v1.id), [0.5, 2.5, 4.5]) && await lanza(() => api.guardarRepsManual(v1, [1, 9.5])), '15. el coach guarda sus marcas de repetición (en orden y dentro del vídeo)');
+  const est = await api.estadisticasRevision();
+  check(est.n30 >= 2 && est.mediana != null && est.p90 >= est.mediana && est.semana >= 2 && est.pendientes >= 1 && est.masAntiguo != null, `18. los tiempos de la cola (mediana ${est.mediana} h, p90 ${est.p90} h, ${est.semana} esta semana, ${est.pendientes} esperando)`);
+  // Ana: sus recordatorios activos, los vídeos modelo, su mejor vídeo
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const recs = await api.recordatoriosActivos(aAna.id);
+  check(recs.length === 2 && recs.some((r) => r.texto === 'Pecho arriba al subir' && r.archivo_id === v2.id) && recs.every((r) => !Object.keys(r).some((k) => /_en$/.test(k))), 'Ana ve sus 2 recordatorios activos (sin horas), con el vídeo corregido');
+  const mods = await api.videosModelo([sent.id]);
+  check(mods.length === 1 && mods[0].angulo === 'De lado' && /^pglite:\/\/modelos\//.test(await api.urlModelo(mods[0])) && /^pglite:/.test(await api.urlArchivo(mods[0].poster_ruta)), 've el vídeo modelo de su coach (y lo abre con su enlace)');
+  const mejor = await api.mejorVideoDe({ ...v1, ejercicio: { id: sent.id } });
+  check(mejor?.id === v3.id && mejor.revision?.puntuacion === 4, '7. «Comparar con tu mejor»: el de mejor nota de ese ejercicio');
+  check(igual(await api.repsManual(v1.id), []) && await lanza(() => api.guardarRepsManual(v1, [1])) && (await api.frasesCorreccion(sent.id)).length === 0, 'las marcas a mano y las frases son del coach');
+  const copia = await api.exportar(aAna.id);
+  check(copia.video_autoevaluacion?.some((x) => x.archivo_id === v1.id) && copia.recordatorios_tecnica?.length === 2, 'su copia de datos lleva su valoración y sus recordatorios');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check((await api.recordatoriosActivos(aAna.id)).length === 0 && (await api.autoevaluacion(v1.id)) === null && (await api.mejorVideoDe({ ...v1, ejercicio: { id: sent.id } })) === null && (await api.videosModelo([sent.id])).length === 1,
+    'Luis no ve nada de Ana (el vídeo modelo, sí: es del coach)');
+  // El coach lo borra: a la cola de Storage y sale de Storage
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const copiaC = await api.copiaCompleta();
+  check(['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion'].every((t) => Array.isArray(copiaC[t]) && copiaC[t].length > 0), 'la copia completa del coach lleva las cuatro tablas nuevas');
+  check(await api.borrarVideoModelo(m1) === 'borrado' && !(await b.sql(`select 1 from storage.objects where name like 'modelos/%'`)).length && !(await b.sql(`select 1 from fbe_privado.storage_por_borrar`)).length
+    && !(await api.videosModelo([sent.id])).length, 'borrar un vídeo modelo lo saca de Storage (por la cola)');
+  // Sin la 037: lo de la v0.58 sigue igual; lo nuevo dice qué falta (y el vídeo sale igual, sin su valoración)
+  {
+    const falta = (t) => { const e = new Error(`relation "public.${t}" does not exist`); e.code = '42P01'; return e; };
+    const tablas37 = ['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion'];
+    const sin = crearApi({ ...b, auth: b.auth, storage: b.storage, update: b.update.bind(b), delete: b.delete.bind(b),
+      rpc: async (n, a) => { if (/recordatorios_activos|videos_modelo_de/.test(n)) throw falta(n); return b.rpc(n, a); },
+      insert: async (t, f) => { if (tablas37.includes(t)) throw falta(t); return b.insert(t, f); },
+      upsert: async (t, f, c) => { if (tablas37.includes(t)) throw falta(t); return b.upsert(t, f, c); },
+      select: async (t, f) => { if (tablas37.includes(t)) throw falta(t); return b.select(t, f); } });
+    let m = '';
+    try { await sin.fijarRecordatorio({ atletaId: aAna.id, ejercicioId: sent.id, texto: 'x' }); } catch (e) { m = e.message; }
+    check(await sin.video037() === false && m === AVISO_037 && m === 'Disponible tras la migración 037' && (await sin.frasesCorreccion(sent.id)).length === 0 && (await sin.videosModelo([sent.id])).length === 0
+      && (await sin.recordatoriosActivos(aAna.id)).length === 0 && (await sin.autoevaluacion(v1.id)) === null && (await sin.revisionVideo(v2.id))?.puntuacion === 3,
+      'sin la 037, la app lo sabe: fijar dice «Disponible tras la migración 037», leer no falla y la corrección se lee igual');
+    await b.auth.entrar('ana@test', 'contraseña-ana-1');
+    const v4 = await sin.subirArchivo(aAna.id, new Blob(['vídeo 059 d'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 5, autoevaluacion: { rpe: 8, nota: null, molestia: null, zona: null } });
+    check(v4?.id && /migración 037/.test(v4.autoevaluacionError || ''), 'y un vídeo con valoración sale igual (avisa de que la valoración no se ha guardado)');
+    await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  }
+  // (revisión) M2: la política 2026-12.1, solo con la 037. Sin ella (la app se publica antes de que se ejecute), la 2026-12,
+  // exactamente como antes: la base de la 034 no admite «2026-12.1» y el aviso no vuelve a salir en cada visita
+  {
+    const { VERSION_LEGAL: VL } = await import('../web/src/legal.js');
+    const PV = await import('../web/src/logica/privacidad.js');
+    const previo = globalThis.localStorage;
+    const local = new Map();
+    globalThis.localStorage = { getItem: (k) => local.get(k) ?? null, setItem: (k, v) => local.set(k, String(v)), removeItem: (k) => local.delete(k) };
+    const falta = (t) => { const e = new Error(`relation "public.${t}" does not exist`); e.code = '42P01'; return e; };
+    const tablas37 = ['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion'];
+    // (como la 034: «AAAA-MM» y nada más)
+    const restriccion034 = (t, f) => { if (t === 'privacidad_vista' && [f].flat().some((x) => !/^20[0-9]{2}-(0[1-9]|1[0-2])$/.test(x.version))) throw new Error('new row for relation "privacidad_vista" violates check constraint "privacidad_vista_version_valida"'); };
+    const sin = crearApi({ ...b, auth: b.auth, storage: b.storage, update: b.update.bind(b), delete: b.delete.bind(b), rpc: b.rpc.bind(b),
+      insert: async (t, f) => { if (tablas37.includes(t)) throw falta(t); restriccion034(t, f); return b.insert(t, f); },
+      upsert: async (t, f, c) => { if (tablas37.includes(t)) throw falta(t); restriccion034(t, f); return b.upsert(t, f, c); },
+      select: async (t, f) => { if (tablas37.includes(t)) throw falta(t); return b.select(t, f); } });
+    await b.auth.entrar('ana@test', 'contraseña-ana-1');
+    const [{ perfil_id: anaUid }] = await b.sql(`select perfil_id from atletas where id = $1`, [aAna.id]);
+    const enBase = async () => (await b.sql(`select version from privacidad_vista where usuario_id = $1`, [anaUid]))[0]?.version || null;
+    await b.sql(`delete from privacidad_vista where usuario_id = $1`, [anaUid]);
+    // Sin la 037
+    check(VL === '2026-12.1' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.1', 'la vigente: 2026-12.1 con la 037; sin ella, 2026-12');
+    check(PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()) && await sin.marcarPrivacidadVista() === true && await enBase() === '2026-12',
+      'sin la 037: quien no ha visto la 2026-12 la ve y, al cerrarla, la base guarda 2026-12 (lo que admite)');
+    local.clear();
+    check(!PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()), 'y no vuelve a salir (tampoco en otro móvil)');
+    check(await sin.marcarPrivacidadVista('2026-12.1') === false && await enBase() === '2026-12', '(la base de la 034 no admite «2026-12.1»: por eso no se manda)');
+    local.set(`fbe-privacidad-vista-${anaUid}`, '2026-12.1');
+    await sin.privacidadVista();
+    await new Promise((r) => setTimeout(r, 60));
+    check(await enBase() === '2026-12' && !PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()), 'si este móvil ya vio la 2026-12.1, a una base sin la 037 no le manda nada que no admita');
+    local.clear();
+    // Con la 037: quien vio la 2026-12 ve solo lo nuevo, una vez
+    const v = (await api.privacidadVista()).version;
+    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.1',
+      'con la 037, quien vio la 2026-12 ve el aviso con solo lo de la 037');
+    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.1', 'al cerrarlo, la base guarda la 2026-12.1');
+    local.clear();
+    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.1', 'y ya no vuelve a salir (en ningún móvil)');
+    check(await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.1', 'nunca hacia atrás (la base, comparando por partes)');
+    await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+    check(/vigente \(2026-12\.1\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
+    globalThis.localStorage = previo;
+  }
+  await b.sql(`delete from recordatorios_tecnica`); await b.sql(`delete from frases_correccion`); await b.sql(`delete from chat_cupos`);
+}
+
 // (v0.58.1) El historial del chat por páginas (400 y de 200 en 200), igual para el atleta que para el coach: con sus
 // permisos de fila (lo programado del coach que aún no ha salido no lo ve ni le cuenta en la página) hasta el primero
 console.log('\nv0.58.1: el historial del chat por páginas, para el atleta como para el coach');

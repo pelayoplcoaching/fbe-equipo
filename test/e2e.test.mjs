@@ -5096,9 +5096,9 @@ try {
   check(Math.abs(await tiempoDe(vidA) - antesJog - 0.1) < 0.02, 'el ajuste fino va fotograma a fotograma con las flechas');
   // 7. La voz del coach sobre el vídeo (el micro de mentira de Chrome)
   await panel.getByRole('button', { name: 'Grabar desde aquí' }).click();
-  await panel.getByRole('button', { name: 'Parar' }).waitFor();
+  await panel.getByRole('button', { name: 'Parar', exact: true }).waitFor();
   await p.waitForTimeout(1600);
-  await panel.getByRole('button', { name: 'Parar' }).click();
+  await panel.getByRole('button', { name: 'Parar', exact: true }).click();
   await panel.getByRole('button', { name: 'Guardar la voz' }).click();
   await p.locator('.toast', { hasText: 'Voz guardada' }).waitFor();
   check(await hay(vidA.locator('.rep-marca-voz'), 1) && await vidA.locator('.rep-voz').count() === 1, 'la voz se guarda (con su marca en la barra y «Voz del coach» en el reproductor)');
@@ -5526,6 +5526,17 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ el chat en el iPhone:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.59: los vídeos de técnica, tanda A (recorte solo, cómo la ha notado, tiempos de la cola, tira, repeticiones, frases,
+// recordatorios, comparar con su mejor y con el vídeo modelo, y pasar un vídeo a otro atleta) (test/e2e-videos-059.mjs)
+console.log('\nv0.59: los vídeos de técnica, tanda A');
+try {
+  const { probarVideos059 } = await import('./e2e-videos-059.mjs');
+  await probarVideos059({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ los vídeos de la v0.59:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):

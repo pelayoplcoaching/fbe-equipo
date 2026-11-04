@@ -4,12 +4,16 @@ import { RESPUESTAS_EJEMPLO } from '../datos/respuestas.js';
 import { TextoConMomentos, BotonDibujo, reproductorDe, textoMomento } from './Video.jsx';
 import { describirDibujo, dibujoValido } from '../logica/dibujo.js';
 import { ponerCorrecciones } from './tecnica/correcciones.js';
+import { ChipsFrases } from './tecnica/Frases.jsx';
+import { insertarFrase, dibujoEnMomento, dibujoParaFrase, limpiarTextoFrase } from '../logica/correccion.js';
+import { partirMomentos } from '../logica/momentos.js';
 
 // Conversación entre coach y atleta pegada a una sesión, un check-in o un vídeo.
 // Al abrirla, lo que escribió la otra parte queda como leído (alLeer); al enviar, avisa con alCambiar.
 // enChat (v0.55): el archivo es una foto, un vídeo o un PDF del chat: la respuesta va al chat, citando el último mensaje
 // de la otra parte (no «pegada» a su archivo: la base no deja poner en un mensaje lo que subió el otro).
-export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, enChat = false, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer }) {
+// v0.59 (4): en el hilo de un vídeo, el coach tiene sus frases de corrección a un toque (ejercicio: el del vídeo)
+export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, enChat = false, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer, ejercicio = null }) {
   const { api, perfil, aviso } = useApp();
   const yo = perfil?.rol === 'coach' ? 'coach' : 'atleta';
   const hilo = useCarga(() => api.comentarios({ atletaId, sesionId, checkinId, archivoId }), [atletaId, sesionId, checkinId, archivoId]);
@@ -20,6 +24,7 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
   const [dibujando, setDibujando] = useState(false);
   const area = useRef(null);
   const primerNombre = nombreAtleta.split(' ')[0];
+  const con037 = useCarga(() => (yo === 'coach' && archivoId && !enChat ? api.video037().catch(() => false) : Promise.resolve(false)), [archivoId, yo]);
 
   // (v0.57) lo que se dice del vídeo, para las marcas de su barra de tiempo y sus dibujos con tramo
   useEffect(() => { if (archivoId && hilo.datos) ponerCorrecciones(archivoId, 'comentarios', hilo.datos); }, [archivoId, hilo.datos]);
@@ -44,6 +49,21 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
     } catch (err) { aviso(err.message, 'error'); } finally { setEnviando(false); }
   }
 
+  // Una frase: al comentario, con el momento del vídeo delante, y su dibujo (si lo lleva) en ese momento
+  const usarFrase = (f) => {
+    const r = archivoId ? reproductorDe(archivoId) : null;
+    const t = r ? Math.round(r.ahora() * 100) / 100 : null;
+    const m = t != null ? textoMomento(t, true) : null;
+    setTexto((x) => insertarFrase(x, f.texto, { momento: m }));
+    if (f.dibujo && t != null) { const d = dibujoEnMomento(f.dibujo, t, dibujo); if (d) { setDibujo(d); r?.mostrar?.(d); } }
+    area.current?.focus();
+  };
+  // «Guardar como frase»: lo escrito (sin los momentos) y el dibujo pendiente, para este ejercicio
+  const textoFrase = limpiarTextoFrase(partirMomentos(texto).filter((p) => !p.momento).map((p) => p.texto).join(' '));
+  const guardarComoFrase = async () => {
+    try { await api.guardarFrase({ ejercicioId: ejercicio?.id || null, texto: textoFrase, dibujo: dibujo ? dibujoParaFrase(dibujo) : null }); aviso('Guardada como frase'); }
+    catch (e) { aviso(e.message, 'error'); }
+  };
   const lista = hilo.datos || [];
   const nombre = (autor) => (autor === yo ? 'Tú' : autor === 'coach' ? 'Tu coach' : nombreAtleta.split(' ')[0]);
   return (
@@ -73,6 +93,8 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
         <div class="chip morado chip-dibujo"><Icono n="regla" /> Dibujo en {textoMomento(dibujo.t, true)}: {describirDibujo(dibujo, reproductorDe(archivoId)?.proporcion?.() || 1)}
           <button type="button" class="btn-texto mini" aria-label="Quitar el dibujo" onClick={() => setDibujo(null)}><Icono n="cerrar" /></button></div>
       )}
+      {yo === 'coach' && archivoId && !enChat && <ChipsFrases ejercicio={ejercicio} alElegir={usarFrase} />}
+      {con037.datos && textoFrase && <button type="button" class="btn-texto mini" onClick={guardarComoFrase}><Icono n="mas" /> Guardar como frase{dibujo ? ' (con el dibujo)' : ''}</button>}
       <div class="hilo-extras">
         {archivoId && !dibujando && (
           <button type="button" class="btn-texto mini" onClick={() => {

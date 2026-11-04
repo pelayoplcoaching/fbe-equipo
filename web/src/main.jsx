@@ -22,6 +22,8 @@ async function arrancar() {
   } else {
     const [{ crearBackendMemoria }, { semillaDemo }] = await Promise.all([import('./datos/backend-memoria.js'), import('./datos/semilla-demo.js')]);
     backend = crearBackendMemoria({ semilla: () => semillaDemo() });
+    // (solo en la demo, para las pruebas: lo que haría el coach desde el SQL Editor, como pasar un vídeo a otro atleta)
+    globalThis.__fbeDemo = backend;
   }
   await backend.iniciar();
   const api = crearApi(backend);

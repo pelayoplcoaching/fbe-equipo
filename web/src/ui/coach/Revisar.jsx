@@ -13,6 +13,7 @@ import { ESCALAS, NOMBRE_ZONA, num } from '../../logica/calculos.js';
 import { fmtConDia, rangoSemana } from '../../logica/fechas.js';
 import { NOMBRE_TOMA } from '../../logica/comidas.js';
 import { TarjetaTarea } from '../Tareas.jsx';
+import { horasEsperando, textoEspera, nivelEspera, NOMBRE_NIVEL_ESPERA, ordenarGruposPorEspera, OBJETIVOS_REVISION, OBJETIVO_REVISION, textoHoras, textoAutoevaluacion } from '../../logica/correccion.js';
 
 // «Deshacer» en el aviso: vuelve a dejarlo pendiente
 // (los botones cuya acción tiene «Deshacer» llevan data-deshacer: solo esos se pueden pulsar deslizando la tarjeta)
@@ -68,6 +69,9 @@ export function Revisar({ bandeja, abrirAtleta }) {
   const [filtro, setFiltro] = useState('todo');
   const [plegados, setPlegados] = useState(() => new Set());
   const [seguidos, setSeguidos] = useState(false);
+  // (v0.59) los vídeos, por más tiempo esperando (o como siempre), con el objetivo de revisión del coach (24 o 48 h)
+  const [orden, setOrden] = usePreferencia('fbe-revisar-orden', 'reciente');
+  const [objetivo, setObjetivo] = usePreferencia('fbe-objetivo-revision', OBJETIVO_REVISION);
   const d = bandeja.datos;
   const caja = useRef(null);
   useAtajos(caja, d?.total || 0, `${filtro}|${[...plegados].sort().join(',')}`);
@@ -93,13 +97,15 @@ export function Revisar({ bandeja, abrirAtleta }) {
     ...(d.recetas || []).map((r) => ({ tipo: 'recetas', clave: `r-${r.id}`, atleta: r.atleta, r })),
     ...(d.comunidad || []).map((r) => ({ tipo: 'comunidad', clave: `e-${r.id}`, atleta: null, r })),
   ].filter((x) => ver(x.tipo)) : [];
-  const grupos = agruparPorAtleta(items);
+  const conVideos = (d?.archivos || []).some((a) => a.tipo === 'video_tecnica');
+  const claveEspera = (x) => (x.tipo === 'videos' && x.a?.tipo === 'video_tecnica' ? x.a.creado_en : null);
+  const grupos = orden === 'espera' ? ordenarGruposPorEspera(agruparPorAtleta(items), claveEspera) : agruparPorAtleta(items);
   const alternar = (id) => setPlegados((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const tarjeta = (x) => {
     if (x.tipo === 'mensajes') return <TarjetaMensaje h={x.h} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'sesiones') return <TarjetaSesion s={x.s} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'checkins') return <TarjetaCheckin c={x.c} recargar={recargar} abrirAtleta={abrirAtleta} />;
-    if (x.tipo === 'videos') return <TarjetaVideo a={x.a} recargar={recargar} abrirAtleta={abrirAtleta} />;
+    if (x.tipo === 'videos') return <TarjetaVideo a={x.a} recargar={recargar} abrirAtleta={abrirAtleta} objetivo={objetivo} />;
     if (x.tipo === 'tareas') return <TarjetaTarea t={x.t} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'recetas') return <TarjetaCambioReceta r={x.r} recargar={recargar} abrirAtleta={abrirAtleta} />;
     return <TarjetaReporte r={x.r} recargar={recargar} />;
@@ -124,6 +130,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
           <Icono n="video" /> Revisar los vídeos seguidos ({d.archivos.filter((a) => a.tipo === 'video_tecnica').length})
         </button>
       )}
+      {conVideos && (filtro === 'todo' || filtro === 'videos') && <TiemposRevision objetivo={objetivo} setObjetivo={setObjetivo} orden={orden} setOrden={setOrden} />}
       {seguidos && <RevisionSeguida videos={d.archivos.filter((a) => a.tipo === 'video_tecnica')} abrirAtleta={abrirAtleta} alCerrar={() => { setSeguidos(false); recargar(); }} />}
       {!d?.total ? <BandejaVacia /> : (
         <div class="rejilla-revisar" ref={caja}>
@@ -347,7 +354,7 @@ function TarjetaCheckin({ c, recargar, abrirAtleta }) {
   );
 }
 
-function TarjetaVideo({ a, recargar, abrirAtleta }) {
+function TarjetaVideo({ a, recargar, abrirAtleta, objetivo = OBJETIVO_REVISION }) {
   const { api, aviso } = useApp();
   const [abierto, setAbierto] = useState(false);
   // (v0.57) una repetición de un vídeo corregido: lado a lado con el original
@@ -357,9 +364,11 @@ function TarjetaVideo({ a, recargar, abrirAtleta }) {
   return (
     <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar">
       <Cabecera atleta={a.atleta} tipo={a.tipo === 'foto_progreso' ? 'Foto de progreso' : a.ejercicio?.nombre ? `Vídeo: ${a.ejercicio.nombre}` : 'Vídeo de técnica'} cuando={fmtConDia(a.fecha)} abrirAtleta={abrirAtleta} pestana="videos" />
-      {(a.serie || a.repite_de) && (
+      {(a.serie || a.repite_de || a.tipo === 'video_tecnica') && (
         <div class="fila-envolver">
+          {a.tipo === 'video_tecnica' && <ChipEspera creado={a.creado_en} objetivo={objetivo} />}
           {a.serie && <span class="chip num">Serie {a.serie.numero}{a.serie.texto ? `: ${a.serie.texto}` : ''}</span>}
+          {a.autoevaluacion?.molestia && <span class="chip alerta"><Icono n="alerta" />{textoAutoevaluacion(a.autoevaluacion, a.atleta?.nombre).molestia}</span>}
           {a.repite_de && <button type="button" class="btn btn-peq" onClick={verOriginal}><Icono n="duplicar" /> Repetición: comparar con el original</button>}
         </div>
       )}
@@ -367,12 +376,54 @@ function TarjetaVideo({ a, recargar, abrirAtleta }) {
       {!abierto ? (
         <div class="revisar-video">
           <MiniaturaRevisar a={a} alAbrir={() => setAbierto(true)} />
-          {a.nota_atleta ? <p class="cita">«{a.nota_atleta}»</p> : <p class="peq terciario">Sin nota.</p>}
+          {a.nota_atleta ? <p class="cita">«{a.nota_atleta}»</p> : !a.autoevaluacion?.nota && <p class="peq terciario">Sin nota.</p>}
+          {!abierto && a.autoevaluacion && (a.autoevaluacion.nota || a.autoevaluacion.rpe != null) && <p class="peq secundario">{textoAutoevaluacion(a.autoevaluacion, a.atleta?.nombre).titulo} {[a.autoevaluacion.rpe != null ? textoAutoevaluacion(a.autoevaluacion).rpe : null, a.autoevaluacion.nota ? `«${a.autoevaluacion.nota}»` : null].filter(Boolean).join(' · ')}</p>}
         </div>
       ) : a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}
-      {abierto && <><VerArchivo archivo={a} />{a.tipo === 'video_tecnica' && <PanelCorreccion video={a} esCoach nombreAtleta={a.atleta.nombre} />}<Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} alCambiar={recargar} placeholder="Qué corregir, qué está bien…" /></>}
+      {abierto && <><VerArchivo archivo={a} />{a.tipo === 'video_tecnica' && <PanelCorreccion video={a} esCoach nombreAtleta={a.atleta.nombre} />}<Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} alCambiar={recargar} placeholder="Qué corregir, qué está bien…" ejercicio={a.ejercicio || null} /></>}
       <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} etiquetaComentar="Ver y comentar" />
     </article>
+  );
+}
+
+// v0.59 (18): cuánto lleva esperando («hace 26 h»), con el color del objetivo del coach: a tiempo, cerca o pasado
+function ChipEspera({ creado, objetivo }) {
+  const h = horasEsperando(creado);
+  if (h == null) return null;
+  const n = nivelEspera(h, objetivo);
+  return <span class={`chip num espera espera-${n}`} title={`Esperando: ${NOMBRE_NIVEL_ESPERA[n]} (objetivo ${objetivo} h)`}><Icono n="reloj" />{textoEspera(h)}<span class="sr">, {NOMBRE_NIVEL_ESPERA[n]}</span></span>;
+}
+
+// Los tiempos de la cola (solo el coach): el objetivo, el orden, la mediana y el p90 de lo que tardas en revisar (30
+// días), los revisados esta semana y el que más lleva esperando
+function TiemposRevision({ objetivo, setObjetivo, orden, setOrden }) {
+  const { api } = useApp();
+  const [abierto, setAbierto] = useState(false);
+  const est = useCarga(() => (abierto ? api.estadisticasRevision() : Promise.resolve(null)), [abierto]);
+  const e = est.datos;
+  return (
+    <div class="tiempos-revision panel panel-pad pila-s">
+      <div class="fila-envolver">
+        <label class="campo-linea"><span class="mini">Orden</span>
+          <select class="selector" value={orden} onChange={(ev) => setOrden(ev.currentTarget.value)} aria-label="Orden de los vídeos">
+            <option value="reciente">Lo más reciente primero</option><option value="espera">Más tiempo esperando</option>
+          </select></label>
+        <span class="mini" id="objetivo-revision">Objetivo</span>
+        <div class="segmentos" role="group" aria-labelledby="objetivo-revision">
+          {OBJETIVOS_REVISION.map((h) => <button key={h} type="button" aria-pressed={objetivo === h ? 'true' : 'false'} onClick={() => setObjetivo(h)}>{h} h</button>)}
+        </div>
+        <button type="button" class="btn-texto mini" aria-expanded={abierto ? 'true' : 'false'} onClick={() => setAbierto(!abierto)}><Icono n="historial" /> Tus tiempos de revisión</button>
+      </div>
+      {abierto && (e ? (
+        <dl class="tiempos-datos" aria-label="Tus tiempos de revisión">
+          <div><dt>Mediana (30 días)</dt><dd class="num">{textoHoras(e.mediana)}</dd></div>
+          <div><dt>P90 (30 días)</dt><dd class="num">{textoHoras(e.p90)}</dd></div>
+          <div><dt>Revisados esta semana</dt><dd class="num">{e.semana}</dd></div>
+          <div><dt>El que más espera</dt><dd class={`num espera-${nivelEspera(e.masAntiguo, objetivo) || 'ok'}`}>{e.masAntiguo != null ? textoHoras(e.masAntiguo) : '—'}</dd></div>
+        </dl>
+      ) : <p class="mini terciario" role="status">Calculando…</p>)}
+      {abierto && e && <p class="mini terciario">De que llega el vídeo a que lo das por revisado (o lo corriges), en los {e.n30} que has revisado en los últimos 30 días. Verde: dentro de la mitad del objetivo; ámbar: antes del objetivo; rojo: pasado.</p>}
+    </div>
   );
 }
 

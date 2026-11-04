@@ -1734,7 +1734,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const legal = await import('../web/src/legal.js');
   const fila = legal.PRIVACIDAD ? legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil') : null;
   const textoLegal = fs.readFileSync(new URL('../web/src/legal.js', import.meta.url), 'utf8');
-  check(/el tamaño de la letra/.test(fila ? fila[1] : textoLegal) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice también el tamaño de la letra (sin cambiar la versión de la política)');
+  check(/el tamaño de la letra/.test(fila ? fila[1] : textoLegal) && /^\d{4}-\d{2}(\.[1-9])?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice también el tamaño de la letra (sin cambiar la versión de la política)');
   const ilus = fs.readFileSync(new URL('../web/src/ui/Ilustraciones.jsx', import.meta.url), 'utf8');
   check(['mensajes', 'diario', 'records', 'checkins', 'tareas', 'todo', 'filtro', 'descanso', 'hecha', 'semana', 'espera'].every((k) => new RegExp(`\\n  ${k}: \\(\\) =>`).test(ilus)) && !/#[0-9a-fA-F]{3,6}/.test(ilus), 'las ilustraciones: una por estado vacío y por día de Hoy, sin colores escritos (los pone el tema)');
 }
@@ -1849,7 +1849,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(A.PLANTILLAS_TARJETA.map(([k]) => k).join() === 'cifras,minima,foto', 'tres plantillas: Cifras, Mínima y Con tu foto');
   const legal = await import('../web/src/legal.js');
   const fila = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
-  check(/foto que eliges para una tarjeta/.test(fila[1]) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que la foto de la tarjeta no se sube (sin cambiar la versión de la política)');
+  check(/foto que eliges para una tarjeta/.test(fila[1]) && /^\d{4}-\d{2}(\.[1-9])?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que la foto de la tarjeta no se sube (sin cambiar la versión de la política)');
 }
 // ---------- v0.52: movimiento, racha, destacados, gráficas, carné, confeti y respiración ----------
 {
@@ -2037,7 +2037,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const filaL = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
   check(/kilos y las repeticiones que te propone/.test(filaL[1]) && /al cerrar la sesión/.test(filaL[1]), '«Lo que se queda en tu móvil» dice exactamente lo que guarda la píldora (también los kilos propuestos) y que se borra al cerrar la sesión');
   check(!/(^|\n|\}|,)\s*\.destacado\s*[{,:]/.test(bloque52) && /\.destacados-lista > \.destacado \{/.test(bloque52), 'las tarjetas de destacados solo dentro de su lista (el diario ya usa «.destacado» para sus vídeos)');
-  check(/Respira/.test(filaL[1]) && /hitos de la racha/.test(filaL[1]) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice «Respira» y los hitos ya celebrados (sin cambiar la versión de la política)');
+  check(/Respira/.test(filaL[1]) && /hitos de la racha/.test(filaL[1]) && /^\d{4}-\d{2}(\.[1-9])?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice «Respira» y los hitos ya celebrados (sin cambiar la versión de la política)');
 }
 {
   console.log('\nv0.52.2: descansos cuando el coach no los pone');
@@ -2115,7 +2115,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
 
   const legal = await import('../web/src/legal.js');
   const filaL = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
-  check(/Los descansos que eliges tú .* se guardan en tu móvil/.test(filaL[1]) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que los descansos que eliges se guardan en tu móvil (sin cambiar la versión de la política)');
+  check(/Los descansos que eliges tú .* se guardan en tu móvil/.test(filaL[1]) && /^\d{4}-\d{2}(\.[1-9])?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que los descansos que eliges se guardan en tu móvil (sin cambiar la versión de la política)');
 }
 console.log('\nv0.53: días de entreno por semana (microciclos que no caben en una semana natural)');
 {
@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.1' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -2897,7 +2897,7 @@ console.log('\nv0.57: los vídeos de técnica (encuadre, nivel, serie, marcas, t
   const filaV = legal.PRIVACIDAD.find(([t]) => t === 'Tus vídeos de técnica')?.[1] || '';
   const filaM = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil')[1];
   check(/nota de técnica de 1 a 5/.test(filaV) && /su voz sobre el vídeo/.test(filaV) && /el día \(no la hora\)/.test(filaV) && /sensor de inclinación/.test(filaV) && /destacados no se borran nunca/.test(filaV)
-    && /por donde iba/.test(filaM) && /^2026-1[12]$/.test(legal.VERSION_LEGAL), 'la privacidad lo cuenta (la corrección, la voz, «Visto» solo con el día, el nivel, la limpieza y la subida que sigue; la versión, en la v0.58)');
+    && /por donde iba/.test(filaM) && /^2026-1[12](\.[1-9])?$/.test(legal.VERSION_LEGAL), 'la privacidad lo cuenta (la corrección, la voz, «Visto» solo con el día, el nivel, la limpieza y la subida que sigue; la versión, en la v0.58)');
   const src = (f) => readFileSync(new URL(`../web/src/ui/${f}`, import.meta.url), 'utf8');
   const cam = src('tecnica/CamaraVideo.jsx');
   check((cam.match(/soltarCamara\(\)/g) || []).length >= 5 && /audio: false/.test(cam) && /requestPermission/.test(cam) && !/preact\/compat/.test(cam + src('tecnica/Correccion.jsx') + src('tecnica/RevisionSeguida.jsx') + src('tecnica/MiTecnica.jsx') + src('Video.jsx')),
@@ -3031,14 +3031,14 @@ console.log('\nv0.58: el análisis automático de los vídeos (seguir la barra, 
     const PV2 = await import('../web/src/logica/privacidad.js');
     const nueva = PV2.NOVEDADES_PRIVACIDAD.filter((x) => x[3] === '2026-12');
     const t = nueva.map((x) => x[2]).join(' ');
-    check(legal.VERSION_LEGAL === '2026-12' && nueva.length === 1 && /nota de técnica \(de 1 a 5\)/.test(t) && /puntos clave/.test(t) && /tempo/.test(t) && /su voz sobre el vídeo/.test(t) && /solo el día/.test(t)
+    check(legal.VERSION_LEGAL.startsWith('2026-12') && nueva.length === 1 && /nota de técnica \(de 1 a 5\)/.test(t) && /puntos clave/.test(t) && /tempo/.test(t) && /su voz sobre el vídeo/.test(t) && /solo el día/.test(t)
       && /experimental/.test(t) && /trayectoria de la barra/.test(t) && /velocidad estimada/.test(t) && /ángulos/.test(t) && /en el móvil u ordenador/.test(t) && /resumen de cada repetición/.test(t) && /nunca se guardan/.test(t),
       '(M1) la política pasa a la 2026-12 con una novedad, corta: la corrección (nota 1–5, puntos clave, tempo, voz), solo el día, el análisis en el dispositivo y que solo se guarda el resumen (nunca los puntos del cuerpo)');
-    check(PV2.debeAvisarPrivacidad('2026-11', legal.VERSION_LEGAL) && PV2.novedadesDesde('2026-11', '2026-12').map((x) => x[1]).join() === 'Vídeos de técnica' && PV2.novedadesDesde(null, '2026-12').length === 5
+    check(PV2.debeAvisarPrivacidad('2026-11', legal.VERSION_LEGAL) && PV2.novedadesDesde('2026-11', '2026-12').map((x) => x[1]).join() === 'Vídeos de técnica' && PV2.novedadesDesde(null, '2026-12').length === 5 && PV2.novedadesDesde(null, '2026-12.1').length === 6
       && PV2.novedadesDesde('2026-12', '2026-12').length === 0 && PV2.novedadesDesde('2026-10', '2026-11').length === 4,
       '(M1) quien vio la 2026-11 ve solo lo nuevo (los vídeos); quien no vio ninguna, todo');
-    check(/Vio la política de 2026-11; la vigente es la 2026-12/.test(PV2.textoPrivacidadVista({ version: '2026-11' }, legal.VERSION_LEGAL)) && /vigente \(2026-12\)/.test(PV2.textoPrivacidadVista({ version: '2026-12' }, legal.VERSION_LEGAL))
-      && /novedadesDesde\(vista, VERSION_LEGAL\)/.test(readFileSync(new URL('../web/src/ui/AvisoPrivacidad.jsx', import.meta.url), 'utf8')), '(M1) el coach ve en «Datos» qué versión ha visto cada atleta; el aviso enseña las que le faltan');
+    check(/Vio la política de 2026-11; la vigente es la 2026-12/.test(PV2.textoPrivacidadVista({ version: '2026-11' }, '2026-12')) && /vigente \(2026-12\)/.test(PV2.textoPrivacidadVista({ version: '2026-12' }, '2026-12'))
+      && /novedadesDesde\(vista, actual\)/.test(readFileSync(new URL('../web/src/ui/AvisoPrivacidad.jsx', import.meta.url), 'utf8')), '(M1) el coach ve en «Datos» qué versión ha visto cada atleta; el aviso enseña las que le faltan');
   }
   // M2: lo analizado se olvida al salir (o al caducar la sesión) y, como mucho, el de los 5 últimos vídeos
   {
@@ -3078,6 +3078,198 @@ console.log('\nv0.58: el análisis automático de los vídeos (seguir la barra, 
   const sw = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8');
   check(/!f\.startsWith\('modelos\/'\)/.test(build) && /pose_landmark_lite\.tflite/.test(build) && !/pose_landmark_(full|heavy)/.test(build) && /script-src 'self' 'wasm-unsafe-eval';/.test(html) && !/script-src[^;]*https?:/.test(html)
     && /modelos\//.test(sw) && /fbe-modelos-/.test(sw), 'el modelo (solo el «lite») va en la app, no se precarga al instalar y se guarda al usarlo; la CSP deja compilar wasm, sin scripts de fuera');
+}
+
+console.log('\nv0.59: los vídeos de técnica, tanda A (recorte automático, repeticiones, cola, frases, recordatorios, valoración)');
+{
+  const MV = await import('../web/src/logica/movimiento.js');
+  const RP = await import('../web/src/logica/repeticiones.js');
+  const CO = await import('../web/src/logica/correccion.js');
+  // 10. El recorte automático, con fotogramas inventados: 5 por segundo, 8×8 píxeles; quieto, se mueve y quieto
+  const fps = 5, px = 64;
+  let semilla = 7;
+  const ruido = () => { semilla = (semilla * 16807) % 2147483647; return (semilla % 3) - 1; };
+  const fotograma = (t, mueve) => Uint8Array.from({ length: px }, (_, k) => Math.max(0, Math.min(255, 100 + ruido() + (mueve ? Math.round(80 * Math.sin(t * 9 + k)) : 0))));
+  const clip = (dur, ini, fin) => { const { tiempos } = MV.tiemposMuestreo(dur); return { tiempos, frames: tiempos.map((t) => fotograma(t, t >= ini && t <= fin)) }; };
+  const c1 = clip(10, 3, 6);
+  const d1 = MV.detectarMovimiento(c1.frames, { tiempos: c1.tiempos, dur: 10 });
+  check(d1 && Math.abs(d1.inicio - 3) <= 0.4 && Math.abs(d1.fin - 6) <= 0.4 && Math.abs(d1.desde - (d1.inicio - 1)) < 0.01 && Math.abs(d1.hasta - (d1.fin + 1)) < 0.01 && MV.recorteUtil(d1, 10),
+    `(10) quieto 3 s, se mueve hasta el 6 y quieto: propone de ${d1?.desde} a ${d1?.hasta} (el movimiento, con 1 s de margen)`);
+  const c2 = clip(6, 0, 6);
+  check(MV.detectarMovimiento(c2.frames, { tiempos: c2.tiempos, dur: 6 }) === null, 'moviéndose todo el rato igual: nada que proponer');
+  const c3 = clip(6, 99, 99);
+  check(MV.detectarMovimiento(c3.frames, { tiempos: c3.tiempos, dur: 6 }) === null, 'quieto (solo ruido del sensor): nada');
+  // Un golpe suelto (un fotograma) no cuenta; una pausa corta dentro de la serie no la parte
+  const c4 = (() => { const { tiempos } = MV.tiemposMuestreo(12); return { tiempos, frames: tiempos.map((t) => fotograma(t, (t >= 1 && t <= 1.2) || (t >= 4 && t <= 6) || (t >= 6.8 && t <= 8))) }; })();
+  const d4 = MV.detectarMovimiento(c4.frames, { tiempos: c4.tiempos, dur: 12 });
+  check(d4 && Math.abs(d4.inicio - 4) <= 0.4 && Math.abs(d4.fin - 8) <= 0.4, `un golpe suelto al principio no cuenta y una pausa de 0,8 s no parte la serie (${d4?.inicio}–${d4?.fin})`);
+  const c5 = clip(10, 0.2, 9.5);
+  const d5 = MV.detectarMovimiento(c5.frames, { tiempos: c5.tiempos, dur: 10 });
+  check(d5 && d5.desde === 0 && d5.hasta === 10 && !MV.recorteUtil(d5, 10), 'si se mueve casi todo el vídeo, el margen no se sale (de 0 a 10) y no se propone recortar');
+  check(!MV.recorteUtil({ desde: 0.5, hasta: 3.2 }, 3.5) && MV.detectarMovimiento([], {}) === null && MV.detectarMovimiento([fotograma(0, false)], {}) === null, 'en un vídeo de menos de 4 s, o sin fotogramas, nada');
+  const m30 = MV.tiemposMuestreo(30), m120 = MV.tiemposMuestreo(120);
+  check(m30.tiempos.length === 151 && Math.abs(m30.fps - 5) < 0.01 && m120.tiempos.length <= 301 && m120.tiempos.at(-1) === 120 && m120.fps < 5 && MV.tiemposMuestreo(0).tiempos.length === 0,
+    'a 5 fotogramas por segundo (en uno largo, menos: como mucho 300), del principio al final');
+  check(igual(MV.tamMuestra(1080, 1920), { w: 90, h: 160 }) && igual(MV.tamMuestra(100, 50), { w: 100, h: 50 }) && igual(MV.tamMuestra(0, 0), { w: 0, h: 0 }), 'a 160 px como mucho (el lado largo)');
+  check(igual(MV.diferencias([[0, 0], [10, 20], [10, 20]]), [15, 0]), 'la diferencia media entre fotogramas');
+  // 19. La tira
+  check(MV.momentosTira(3).length === 12 && MV.momentosTira(8).length === 16 && MV.momentosTira(60).length === 20 && Math.abs(MV.momentosTira(4)[0] - 4 / 24) < 0.001,
+    '(19) la tira: de 12 a 20 miniaturas (dos por segundo), cada una en el centro de su trozo');
+  check(MV.tiraDisponible({ dur: 3 }) && !MV.tiraDisponible({ dur: 2 }) && !MV.tiraDisponible({ dur: 10, memoria: 1 }) && MV.tiraDisponible({ dur: 10, memoria: 4 }) && !MV.tiraDisponible({ dur: NaN }),
+    'ni en un vídeo muy corto ni en un móvil con poca memoria');
+  check(MV.momentoEnTira(0.5, 8) === 4 && MV.momentoEnTira(-1, 8) === 0 && MV.momentoEnTira(2, 8) === 8 && MV.indiceTira([0.5, 1.5, 2.5], 1.4) === 1 && MV.indiceTira([], 1) === -1, 'tocar en la tira lleva a su momento; el teclado, de miniatura en miniatura');
+  // 15. Las repeticiones
+  const analisis = { v: 1, barra: { p: [[0, 0.5, 0.5], [6, 0.5, 0.5]] }, reps: [{ t: [0.4, 1.1, 1.9], vm: 1.0 }, { t: [2.3, 3.0, 3.9], vm: 0.89 }, { t: [4.3, 5.0, 6.05], vm: 0.76 }] };
+  const ra = RP.marcasRepeticiones({ analisis, tempo: { reps: [[0, 1, 2]] }, manual: [0.5], duracion: 6.1 });
+  check(ra.fuente === 'analisis' && igual(ra.reps.map((r) => [r.n, r.t]), [[1, 0.4], [2, 2.3], [3, 4.3]]), '(15) del análisis guardado antes que del tempo o de las marcas a mano');
+  check(RP.marcasRepeticiones({ sesion: [{ t: [1, 2, 3], vm: 0.5 }], analisis }).fuente === 'sesion' && RP.marcasRepeticiones({ tempo: { reps: [[0.2, 1, 2], [2.5, 3, 4]] } }).reps.length === 2
+    && RP.marcasRepeticiones({ manual: { t: [3, 1, 2] } }).reps.map((r) => r.t).join() === '1,2,3' && RP.marcasRepeticiones({}).fuente === null
+    && RP.marcasRepeticiones({ analisis: { pose: { lado: 'izq', reps: [{ t: [0.5, 2], rodilla: 80 }, { t: [2.5, 4], rodilla: 95 }] } } }).reps.length === 2,
+    'el de esta sesión antes que el guardado; si no, el tempo, las marcas a mano o las de la pose');
+  check(RP.marcasRepeticiones({ tempo: { reps: [[0.2, 1, 2], [9, 10, 11]] }, duracion: 5 }).reps.length === 1, 'las de fuera del vídeo, no');
+  const p1 = RP.peorRepeticion({ reps: ra.reps });
+  check(p1?.motivo === 'velocidad' && p1.t === 4.3 && /0,76 m\/s, −24 %/.test(p1.texto) && RP.indicePeor(ra.reps, p1) === 2, `«la peor»: la más lenta (${p1?.texto})`);
+  const pose = { reps: [{ t: [0.5, 2], rodilla: 80, tronco: 30 }, { t: [2.5, 4], rodilla: 97, tronco: 41 }, { t: [4.5, 6], rodilla: 85 }] };
+  const p2 = RP.peorRepeticion({ reps: [], pose });
+  check(p2?.motivo === 'profundidad' && p2.t === 2.5 && /97°/.test(p2.texto), 'sin velocidad, con la pose: la menos profunda');
+  check(RP.peorRepeticion({ pose: { reps: [{ t: [0, 1], tronco: 20 }, { t: [1, 2], tronco: 35 }] } })?.motivo === 'tronco' && RP.peorRepeticion({ reps: [{ t: 0, vm: 0.5 }] }) === null
+    && RP.peorRepeticion({ reps: [{ t: 0, vm: 0.5 }, { t: 1, vm: 0.5 }] }) === null && RP.peorRepeticion({}) === null, 'o la del tronco más inclinado; con una sola (o todas iguales), ninguna');
+  const marcasT = RP.marcasRepeticiones({ tempo: { reps: [[0.2, 1, 2], [2.4, 3, 4]] } }).reps;
+  check(RP.indicePeor(marcasT, { t: 2.6 }) === 1 && RP.indicePeor(marcasT, { t: 9 }) === 1 && RP.indicePeor([], { t: 1 }) === -1, 'la peor se busca entre las marcas por su momento');
+  check(RP.repVecina(ra.reps, 0, 1).n === 1 && RP.repVecina(ra.reps, 2.3, 1).n === 3 && RP.repVecina(ra.reps, 2.3, -1).n === 1 && RP.repVecina(ra.reps, 0.2, -1) === null && RP.repActual(ra.reps, 3) === 1 && RP.repActual(ra.reps, 0.1) === -1,
+    '[ y ]: a la anterior y a la siguiente; en cuál está el vídeo');
+  check(igual(RP.anadirRepManual([1, 3], 2), [1, 2, 3]) && igual(RP.anadirRepManual([1], 1.1), [1]) && RP.anadirRepManual(Array.from({ length: 30 }, (_, i) => i), 40).length === 30 && igual(RP.quitarRepManual([1, 2], 2), [1]),
+    '«Marcar rep»: en orden, sin dos casi iguales y como mucho 30');
+  // El validador de las marcas a mano (como reps_manual_validas)
+  check(RP.repsManualValidas({ t: [0, 1.5, 3] }) && RP.repsManualValidas({ t: [1] }, 1) && !RP.repsManualValidas({ t: [0, 3] }, 1) && [null, {}, [], { t: [] }, { t: [2, 1] }, { t: [1, 1] }, { t: ['1'] }, { t: [-1] }, { t: [3601] }, { t: [0.12345] }, { t: [1], x: 1 }, { t: Array(31).fill(0).map((_, i) => i) }, { t: [NaN] }]
+    .every((x) => !RP.repsManualValidas(x)), 'las marcas a mano: en orden, de 0 a 3600 s (y dentro del vídeo), 4 decimales como mucho; lo mal formado, no');
+  // 18. La cola
+  const H = 3600000, ahora = Date.parse('2026-11-04T12:00:00Z');
+  check(CO.textoEspera(26.4) === 'hace 26 h' && CO.textoEspera(0.5) === 'hace menos de 1 h' && CO.textoEspera(80) === 'hace 3 días' && CO.horasEsperando(new Date(ahora - 5 * H).toISOString(), ahora) === 5 && CO.horasEsperando(null) === null,
+    '(18) cuánto lleva esperando: «hace 26 h» (y, pasados 3 días, en días)');
+  check(CO.nivelEspera(10, 24) === 'ok' && CO.nivelEspera(13, 24) === 'aviso' && CO.nivelEspera(25, 24) === 'alerta' && CO.nivelEspera(25, 48) === 'aviso' && CO.nivelEspera(23, 48) === 'ok' && CO.nivelEspera(30, 7) === 'alerta' && CO.nivelEspera(null) === null,
+    'con el objetivo (24 o 48 h): a tiempo hasta la mitad, cerca hasta el objetivo, pasado después');
+  const iso = (h) => new Date(ahora - h * H).toISOString();
+  const vids = [
+    { creado_en: iso(50), revisado_en: iso(40) },          // 10 h
+    { creado_en: iso(30), revisado_en: iso(26), corregido_en: iso(28) }, // 2 h (lo primero)
+    { creado_en: iso(100), corregido_en: iso(70) },        // 30 h
+    { creado_en: iso(24 * 40), revisado_en: iso(24 * 35) }, // fuera de los 30 días
+    { creado_en: iso(20) },                                 // espera 20 h
+    { creado_en: iso(5) },                                  // espera 5 h
+  ];
+  const est = CO.estadisticasRevision(vids, { ahora, desdeSemana: ahora - 45 * H });
+  check(est.n30 === 3 && est.mediana === 10 && est.p90 === 30 && est.semana === 2 && est.pendientes === 2 && est.masAntiguo === 20, `la mediana (${est.mediana} h) y el p90 (${est.p90} h) de 30 días, los de esta semana y el que más espera`);
+  check(igual(CO.estadisticasRevision([], { ahora }), { n30: 0, mediana: null, p90: null, semana: 0, pendientes: 0, masAntiguo: null }) && CO.estadisticasRevision([{ creado_en: 'no' }], { ahora }).pendientes === 0, 'sin vídeos, sin datos');
+  check(new Date(CO.inicioSemana(Date.parse('2026-11-04T12:00:00'))).getDay() === 1 && new Date(CO.inicioSemana(Date.parse('2026-11-08T23:00:00'))).getDate() === 2, 'esta semana: desde el lunes a las 0:00');
+  const items = [{ x: 1, a: { creado_en: iso(2) } }, { x: 2 }, { x: 3, a: { creado_en: iso(30) } }];
+  check(igual(CO.ordenarPorEspera(items).map((i) => i.x), [3, 1, 2]), 'por más tiempo esperando (lo que no es un vídeo, detrás)');
+  const grupos = [{ id: 'a', items: [{ x: 1, a: { creado_en: iso(3) } }] }, { id: 'b', items: [{ x: 2 }, { x: 3, a: { creado_en: iso(40) } }] }, { id: 'c', items: [{ x: 4 }] }];
+  check(igual(CO.ordenarGruposPorEspera(grupos).map((g) => g.id), ['b', 'a', 'c']) && igual(CO.ordenarGruposPorEspera(grupos)[0].items.map((i) => i.x), [3, 2]), 'y los atletas, por su vídeo que más espera');
+  check(CO.textoHoras(26) === '26 h' && CO.textoHoras(2.5) === '2,5 h' && CO.textoHoras(0.25) === '15 min' && CO.textoHoras(96) === '4 días' && CO.textoHoras(null) === '—', 'las horas, en palabras');
+  // 4. Las frases
+  check(CO.insertarFrase('', 'Rodillas fuera', { momento: '0:04,2' }) === '0:04,2 Rodillas fuera' && CO.insertarFrase('Bien', 'Rodillas fuera', { momento: '0:04,2' }) === 'Bien\n0:04,2 Rodillas fuera'
+    && CO.insertarFrase('Bien\n0:04,2 ', 'Rodillas fuera', { momento: '0:04,2' }) === 'Bien\n0:04,2 Rodillas fuera' && CO.insertarFrase('0:01 Rodillas fuera', 'Rodillas  fuera ', { momento: '0:02' }) === '0:01 Rodillas fuera'
+    && CO.insertarFrase('Hola', '   ') === 'Hola' && CO.insertarFrase('Hola', 'Sin momento') === 'Hola\nSin momento',
+    '(4) la frase va al comentario en una línea nueva, con el momento del vídeo delante (sin repetirse)');
+  const dib = { t: 0, hasta: 1.5, formas: [{ tipo: 'flecha', p: [[0.2, 0.2], [0.5, 0.5]] }] };
+  const enT = CO.dibujoEnMomento(dib, 4.2);
+  check(enT.t === 4.2 && enT.hasta === 5.7 && enT.formas.length === 1 && CO.dibujoEnMomento({ t: 0, formas: [] }, 3) === null && CO.dibujoEnMomento(dib, 4.2, { t: 4.2, formas: [{ tipo: 'linea', p: [[0, 0], [1, 1]] }] }).formas.length === 2,
+    'su dibujo, en el momento en que está el vídeo (con su tramo), junto al que ya había en ese momento');
+  check(igual(CO.dibujoParaFrase({ t: 3, hasta: 4, formas: dib.formas }), { t: 0, formas: dib.formas, hasta: 1 }) && CO.dibujoParaFrase(null) === null, 'un dibujo se guarda en una frase desde el 0');
+  check(CO.frasesSugeridas('Sentadilla trasera', ['cuadriceps']).length >= 3 && CO.frasesSugeridas('Press banca', ['pectoral']).some((t) => /Escápulas/.test(t)) && CO.frasesSugeridas('Hip thrust con barra').some((t) => /Tibias/.test(t))
+    && CO.frasesSugeridas('Ejercicio raro').length >= 2 && CO.frasesSugeridas('Peso muerto rumano', ['isquiotibiales']).every((t) => [...t].length <= 140), 'las sugeridas de los básicos (neutras, de hasta 140 letras)');
+  check(CO.fraseValida({ texto: 'Bien', dibujo: dib }) && !CO.fraseValida({ texto: '' }) && !CO.fraseValida({ texto: 'x'.repeat(141) }) && !CO.fraseValida({ texto: 'Bien', dibujo: { t: 0, formas: [] } }) && !CO.fraseValida({ texto: '​' }) && !CO.fraseValida(null),
+    'una frase válida: de 1 a 140 letras visibles y, si lleva dibujo, uno válido');
+  const fr = CO.frasesPara([{ id: 1, ejercicio_id: null, orden: 0 }, { id: 2, ejercicio_id: 'e', orden: 2 }, { id: 3, ejercicio_id: 'e', orden: 1 }, { id: 4, ejercicio_id: 'otro' }], 'e');
+  check(igual(fr.map((f) => f.id), [3, 2, 1]), 'las del ejercicio primero (en su orden) y luego las de todos; las de otro, no');
+  // 14. Los recordatorios
+  check(CO.limpiarTextoRecordatorio('  Rodillas   fuera ') === 'Rodillas fuera' && [...CO.limpiarTextoRecordatorio('x'.repeat(200))].length === 140 && CO.limpiarTextoRecordatorio('x'.repeat(200)).endsWith('…')
+    && CO.recordatorioValido({ texto: 'Bien', archivo_id: 'v', segundo: 2 }) && !CO.recordatorioValido({ texto: 'Bien', segundo: 2 }) && !CO.recordatorioValido({ texto: '' }) && !CO.recordatorioValido({ texto: 'x', archivo_id: 'v', segundo: 3601 }),
+    '(14) un recordatorio: de 1 a 140 letras; su momento, solo con su vídeo');
+  const diario = [
+    { id: 'v1', tipo: 'video_tecnica', ejercicio: { id: 'e' }, fecha: '2026-10-01', revision: { corregido_el: '2026-10-02', checklist: { puntos: [{ t: 'Rodillas fuera', e: 'mal', s: 1.5 }, { t: 'Pies', e: 'bien' }] } } },
+    { id: 'v2', tipo: 'video_tecnica', ejercicio: { id: 'e' }, fecha: '2026-10-20', revision: { corregido_el: '2026-10-21', checklist: { puntos: [{ t: 'Pecho arriba', e: 'mal' }, { t: 'Rodillas fuera', e: 'mal', s: 2 }] } } },
+    { id: 'v3', tipo: 'video_tecnica', ejercicio: { id: 'e' }, fecha: '2026-10-25', revision: null },
+  ];
+  const sug = CO.sugerenciasRecordatorio(diario, 'e', [{ texto: 'rodillas fuera' }]);
+  check(sug.length === 1 && sug[0].texto === 'Pecho arriba' && sug[0].archivoId === 'v2' && sug[0].segundo === null && CO.sugerenciasRecordatorio(diario, 'otro').length === 0 && CO.sugerenciasRecordatorio(diario, null).length === 0,
+    'lo que se propone fijar: los ✗ del último vídeo corregido de ese ejercicio, sin los que ya son recordatorios');
+  check(igual(Object.keys(CO.recordatoriosPorEjercicio([{ ejercicio_id: 'a' }, { ejercicio_id: 'a' }, { ejercicio_id: 'b' }, { ejercicio_id: 'a' }, { ejercicio_id: 'a' }])), ['a', 'b'])
+    && CO.recordatoriosPorEjercicio([{ ejercicio_id: 'a' }, { ejercicio_id: 'a' }, { ejercicio_id: 'a' }, { ejercicio_id: 'a' }]).a.length === 3 && CO.claveEntendido('x', '2026-11-04') === 'fbe-recuerda-x-2026-11-04',
+    'por ejercicio, como mucho 3; «Entendido», por día');
+  // 12. La valoración del atleta
+  check(igual(CO.limpiarAutoevaluacion({ rpe: '8.5', nota: '  Me cuesta  ', molestia: true, zona: 'rodilla' }, { salud: true }), { rpe: 8.5, nota: 'Me cuesta', molestia: true, zona: 'rodilla' })
+    && igual(CO.limpiarAutoevaluacion({ rpe: 9, molestia: true, zona: 'rodilla' }, { salud: false }), { rpe: 9, nota: null, molestia: null, zona: null })
+    && CO.limpiarAutoevaluacion({ molestia: true }, { salud: false }) === null && CO.limpiarAutoevaluacion({}) === null && CO.limpiarAutoevaluacion({ rpe: 8.3 }) === null
+    && igual(CO.limpiarAutoevaluacion({ molestia: false, zona: 'rodilla' }, { salud: true }), { rpe: null, nota: null, molestia: false, zona: null }),
+    '(12) la valoración: sin consentimiento de salud, nada de la molestia; la zona, solo con molestia; el RPE, de 6 a 10 de medio en medio');
+  check(CO.autoevaluacionValida({ rpe: 6 }) && CO.autoevaluacionValida({ nota: 'x' }) && CO.autoevaluacionValida({ molestia: false }) && [null, {}, { rpe: 5.5 }, { rpe: 10.5 }, { rpe: 7.25 }, { nota: '' }, { nota: 'x'.repeat(281) }, { molestia: 'si' }, { molestia: false, zona: 'rodilla' }, { molestia: true, zona: 'pie' }, { nota: '​' }]
+    .every((x) => !CO.autoevaluacionValida(x)), 'como la restricción de la base (lo mal formado, no)');
+  const txt = CO.textoAutoevaluacion({ rpe: 8.5, nota: 'Rodillas', molestia: true, zona: 'zona_lumbar' }, 'Ana López');
+  check(txt.titulo === 'Ana nota:' && txt.rpe === 'RPE 8,5' && txt.molestia === 'Molestia: zona lumbar' && CO.textoAutoevaluacion({ molestia: false }).molestia === 'Sin molestias' && CO.textoAutoevaluacion(null) === null,
+    'para el coach: «Ana nota: …», su RPE y si nota molestias');
+  check(CO.compararAutoevaluacion({ rpe: 9.5 }, 2).lectura?.includes('bajar la carga') && CO.compararAutoevaluacion({ rpe: 7 }, 4).lectura?.includes('margen') && CO.compararAutoevaluacion({ rpe: 8 }, 3).texto === 'su esfuerzo, RPE 8 · tu nota de técnica, 3/5'
+    && CO.compararAutoevaluacion(null, null) === null && CO.compararAutoevaluacion(null, 4).texto === 'tu nota de técnica, 4/5', 'su esfuerzo junto a tu nota de técnica');
+  // 7. Su mejor
+  const vs = [
+    { id: 'a', tipo: 'video_tecnica', atleta_id: 'x', ejercicio: { id: 'e' }, fecha: '2026-09-01', revision: { corregido_el: '2026-09-02', puntuacion: 4 } },
+    { id: 'b', tipo: 'video_tecnica', atleta_id: 'x', ejercicio: { id: 'e' }, fecha: '2026-10-01', revision: { corregido_el: '2026-10-02', puntuacion: 4, analisis: { reps: [{ vm: 0.8 }, { vm: 0.9 }] } } },
+    { id: 'c', tipo: 'video_tecnica', atleta_id: 'x', ejercicio: { id: 'e' }, fecha: '2026-10-10', revision: { corregido_el: '2026-10-11', puntuacion: 3, analisis: { reps: [{ vm: 1.2 }] } } },
+    { id: 'd', tipo: 'video_tecnica', atleta_id: 'x', ejercicio: { id: 'e' }, fecha: '2026-11-01', revision: null },
+    { id: 'f', tipo: 'video_tecnica', atleta_id: 'y', ejercicio: { id: 'e' }, fecha: '2026-11-01', revision: { corregido_el: '2026-11-01', puntuacion: 5 } },
+    { id: 'g', tipo: 'video_tecnica', atleta_id: 'x', ejercicio: { id: 'otro' }, fecha: '2026-11-01', revision: { corregido_el: '2026-11-01', puntuacion: 5 } },
+  ];
+  check(CO.mejorVideo(vs, vs[3])?.id === 'b' && CO.mejorVideo(vs, vs[1])?.id === 'a' && CO.mejorVideo(vs.slice(2, 4), vs[3])?.id === 'c' && CO.mejorVideo(vs, { id: 'z', ejercicio: null }) === null && CO.mejorVideo([], vs[0]) === null,
+    '(7) su mejor: la mejor nota, después la mejor velocidad guardada, después el más reciente; del mismo atleta y ejercicio, y ya corregido');
+  check(CO.mejorVideo([{ id: 'h', tipo: 'video_tecnica', atleta_id: 'x', ejercicio: { id: 'e' }, fecha: '2026-01-01', revision: { corregido_el: '2026-01-02' } }, { id: 'i', tipo: 'video_tecnica', atleta_id: 'x', ejercicio: { id: 'e' }, fecha: '2026-02-01', revision: { corregido_el: '2026-02-02' } }], vs[3])?.id === 'i'
+    && CO.velocidadMaxima({ reps: [{ vm: 0.5 }, { vm: 0.7 }, {}] }) === 0.7 && CO.velocidadMaxima(null) === null && CO.porQueMejor(vs[1]) === 'nota 4/5 · 0,9 m/s', 'sin nota ni velocidad, el más reciente; y por qué es el mejor');
+  // Sin preact/compat y las cachés de la sesión se olvidan al salir
+  const srcV = (f) => readFileSync(new URL(`../web/src/ui/${f}`, import.meta.url), 'utf8');
+  const todo59 = ['tecnica/Tira.jsx', 'tecnica/Recordatorios.jsx', 'tecnica/Frases.jsx', 'tecnica/Modelos.jsx', 'tecnica/Autoevaluacion.jsx', 'Video.jsx', 'Archivos.jsx', 'recorte.js'].map(srcV).join('\n');
+  check(!/preact\/compat/.test(todo59) && (srcV('App.jsx').match(/olvidarAnalisis\(\); olvidarTiras\(\);/g) || []).length === 2, 'sin preact/compat; la tira de miniaturas se olvida al cerrar la sesión (como el análisis)');
+  // (revisión de la v0.59) M2: la política 2026-12.1, comparada por partes (nunca como texto)
+  {
+    const PV = await import('../web/src/logica/privacidad.js');
+    const orden = ['2025-12', '2026-01', '2026-11', '2026-12', '2026-12.1', '2026-12.2', '2026-12.9', '2027-01', '2027-01.1'];
+    let bien = true;
+    for (let i = 0; i < orden.length; i++) for (let j = 0; j < orden.length; j++) if (PV.compararVersiones(orden[i], orden[j]) !== Math.sign(i - j)) bien = false;
+    check(bien && PV.compararVersiones('2026-12', 'x') === null && PV.compararVersiones(null, '2026-12') === null, `se ordenan por partes: ${orden.join(' < ')}`);
+    check(PV.formatoVersion('2026-12.1') && PV.formatoVersion('2026-12.9') && !PV.formatoVersion('2026-12.0') && !PV.formatoVersion('2026-12.10') && !PV.formatoVersion('2026-12.') && !PV.formatoVersion('2026-12-1') && !PV.formatoVersion('2026-13.1')
+      && PV.versionSinRevision('2026-12.1') === '2026-12' && PV.versionSinRevision('2026-12') === '2026-12' && PV.versionSinRevision('x') === null,
+      'el formato: «AAAA-MM» o «AAAA-MM.n» (de 1 a 9); sin la revisión, la del mes');
+    check(PV.debeAvisarPrivacidad('2026-12', '2026-12.1') && !PV.debeAvisarPrivacidad('2026-12.1', '2026-12.1') && !PV.debeAvisarPrivacidad('2026-12.1', '2026-12') && !PV.debeAvisarPrivacidad('2027-01', '2026-12.1')
+      && PV.debeAvisarPrivacidad('2026-11', '2026-12.1') && PV.versionMayor('2026-12.1', '2026-12') === '2026-12.1' && PV.versionMayor('2026-12', '2026-12.1') === '2026-12.1' && PV.versionMayor('2027-01', '2026-12.2') === '2027-01',
+      'quien vio la 2026-12 ve el aviso de la 2026-12.1; quien vio esa (o una posterior), no; sin la 037 (2026-12), nadie lo vuelve a ver');
+    const n121 = PV.novedadesDesde('2026-12', '2026-12.1');
+    check(n121.length === 1 && n121[0][3] === '2026-12.1' && /cómo lo has notado/.test(n121[0][2]) && /consentimiento de salud/.test(n121[0][2]) && /recordatorios/.test(n121[0][2]) && /vídeos modelo/.test(n121[0][2])
+      && PV.novedadesDesde('2026-12.1', '2026-12.1').length === 0 && PV.novedadesDesde('2026-11', '2026-12.1').length === 2 && PV.novedadesDesde('2026-11', '2026-12').length === 1
+      && !/cómo lo has notado|recordatorios|vídeos modelo/.test(PV.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12')[2]),
+      'quien vio la 2026-12 ve solo lo de la 037 (cómo lo has notado, con la molestia y su consentimiento, recordatorios y vídeos modelo); la entrada de la 2026-12 queda como estaba');
+    check(/vigente \(2026-12\.1\)/.test(PV.textoPrivacidadVista({ version: '2026-12.1' }, '2026-12.1')) && /Vio la política de 2026-12; la vigente es la 2026-12\.1/.test(PV.textoPrivacidadVista({ version: '2026-12' }, '2026-12.1'))
+      && /vigente/.test(PV.textoPrivacidadVista({ version: '2027-01' }, '2026-12.1')) && /Ha visto la política de privacidad vigente/.test(PV.textoPrivacidadVista({ version: '2026-12.1' }, '2026-12')), 'el coach lo ve en la ficha, también con la revisión');
+    const srcApi = readFileSync(new URL('../web/src/datos/api.js', import.meta.url), 'utf8');
+    check(/async versionLegal\(\)/.test(srcApi) && /video037\(\)/.test(srcApi.slice(srcApi.indexOf('async versionLegal()'), srcApi.indexOf('async versionLegal()') + 400)) && !/version <= VERSION_LEGAL|local > enBase/.test(srcApi),
+      'la app usa la 2026-12.1 solo si la base tiene la 037 (si no, la 2026-12, como antes); nada compara versiones como texto');
+  }
+  // L3: los «Entendido», solo de hoy (los demás se quitan al cargar y todos al salir)
+  {
+    const CO2 = await import('../web/src/logica/correccion.js');
+    const ks = ['fbe-recuerda-a-2026-11-03', 'fbe-recuerda-b-2026-11-04', 'fbe-recuerda-c-2026-10-01', 'fbe-tema', 'otra-fbe-recuerda-x-2026-11-03', null];
+    check(CO2.clavesEntendido(ks, '2026-11-04').join() === 'fbe-recuerda-a-2026-11-03,fbe-recuerda-c-2026-10-01' && CO2.clavesEntendido(ks).length === 3 && CO2.clavesEntendido(null).length === 0
+      && CO2.claveEntendido('b', '2026-11-04') === 'fbe-recuerda-b-2026-11-04', 'al cargar se quitan los «Entendido» que no son de hoy; al salir, todos (y nada más)');
+    const srcApp = readFileSync(new URL('../web/src/ui/App.jsx', import.meta.url), 'utf8');
+    const srcEnt = readFileSync(new URL('../web/src/ui/tecnica/entendidos.js', import.meta.url), 'utf8');
+    check((srcApp.match(/olvidarEntendidos\(\);/g) || []).length === 2 && /podarEntendidos\(\);/.test(srcApp) && /try \{/.test(srcEnt) && /catch/.test(srcEnt),
+      'App los quita al salir y cuando la sesión caduca (con try/catch: sin almacenamiento, no pasa nada)');
+  }
+  // L2 y L5: la política dice qué se puede hacer con la valoración y qué pasa con la molestia al retirar el consentimiento
+  {
+    const legal2 = await import('../web/src/legal.js');
+    const tv = legal2.PRIVACIDAD.find((x) => x[0] === 'Tus vídeos de técnica')[1];
+    check(/cambiarlo hasta que tu coach revise el vídeo y borrarlo cuando quieras/.test(tv) && /Si retiras el consentimiento de datos de salud, ya no puedes contar molestias nuevas/.test(tv) && /no se borran solas/.test(tv)
+      && /lo ya tratado sigue siendo lícito/.test(tv), 'cambiarla hasta que se revisa y borrarla cuando quiera; al retirar el consentimiento, no hay molestias nuevas y las contadas siguen (como lo demás ya tratado)');
+  }
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

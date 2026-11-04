@@ -32,7 +32,7 @@ import { esTemporal } from './cola.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
 import { VERSION_LEGAL } from '../legal.js';
-import { formatoVersion, versionMayor, clavePrivacidadLocal } from '../logica/privacidad.js';
+import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
 import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida } from '../logica/notasVoz.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
@@ -42,6 +42,8 @@ import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.
 import { planDifusion, planReenvio, nombreSeguroPdf, PDF_MAX_MB, hastaFijado, fijadoVigente, hastaSilencio, silenciado } from '../logica/chat.js';
 import { textoSerieVideo, serieValida, puntuacionValida, checklistValido, limpiarChecklist, tempoValido, plantillaValida, limpiarPlantilla, estadoVideo, tecnicaPorEjercicio } from '../logica/tecnica.js';
 import { analisisValido } from '../logica/analisis.js';
+import { limpiarTextoRecordatorio, textoRecordatorioValido, recordatorioValido, sugerenciasRecordatorio, frasesPara, fraseValida, limpiarTextoFrase, frasesSugeridas, limpiarAutoevaluacion, autoevaluacionValida, mejorVideo, estadisticasRevision as estadisticasCola } from '../logica/correccion.js';
+import { repsManualValidas } from '../logica/repeticiones.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -184,6 +186,15 @@ const falta036 = (e) => {
   if (/\banalisis\b/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m)) throw new Error(`${AVISO_036} (supabase/migraciones/036_videos_analisis.sql). Detalle: ${e?.message || e}`);
   throw e;
 };
+// v0.59 sin la migración 037: los vídeos funcionan como en la v0.58; lo nuevo (recordatorios, frases, vídeos modelo, la
+// valoración del atleta y las marcas de repetición guardadas) dice qué falta
+export const AVISO_037 = 'Disponible tras la migración 037';
+const falta037 = (e) => {
+  const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+  if (/\b(recordatorios_tecnica|recordatorios_activos|frases_correccion|videos_modelo|videos_modelo_de|video_autoevaluacion|reps_manual)\b/.test(m)
+    && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m)) throw new Error(`${AVISO_037} (supabase/migraciones/037_videos_tanda_a.sql). Detalle: ${e?.message || e}`);
+  throw e;
+};
 const sinCliente033 = (e) => /cliente_id/.test(e?.message || '') && /schema cache|does not exist|no existe|column|columna|PGRST20/i.test(e?.message || '');
 const duplicado = (e) => /duplicate|23505|Ya existe un registro igual/i.test(`${e?.codigo || e?.code || ''} ${e?.message || ''}`);
 // La función de entrar sin la migración 028 (sin el parámetro de las normas)
@@ -248,10 +259,12 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
   'archivos', 'comentarios', 'recursos', 'notas_ejercicio', 'respuestas_guardadas', 'avisos', 'habitos', 'registros_habito',
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
   'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
-  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas'];
+  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
+  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion'];
 // Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los vídeos, 035): sin ellas, la copia sale igual
 const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
-  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas'];
+  'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
+  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion'];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
 
@@ -444,26 +457,38 @@ export function crearApi(backend) {
     async darConsentimientos(tipos = ['privacidad', 'datos_salud']) {
       const r = await b.insert('consentimientos', tipos.map((tipo) => ({ perfil_id: uid(), tipo, version: VERSION_CONSENTIMIENTO })));
       // (v0.56) quien acepta la política ahora la acepta en su versión actual: no le sale el aviso de novedades
-      if (tipos.includes('privacidad')) await api.marcarPrivacidadVista(VERSION_LEGAL);
+      if (tipos.includes('privacidad')) await api.marcarPrivacidadVista(await api.versionLegal());
       return r;
     },
     // (v0.56) El aviso de privacidad, una vez por versión: cuál ha visto esta cuenta. En la base (034, la misma en todos
     // sus móviles); antes de la 034 o sin conexión, lo de este móvil. Si este móvil sabe de una más nueva que la base
     // (se vio sin la 034 o sin red), se le pasa a la base sin decir nada.
+    // (v0.59) La versión de la política vigente para esta base: la de legal.js (2026-12.1) si la base tiene la 037 (que admite
+    // revisiones, «AAAA-MM.n»); sin la 037 (la app se publica antes de que Pelayo la ejecute) o si no se sabe, la del mes
+    // (2026-12), exactamente como antes: así la base no rechaza lo visto y el aviso no vuelve a salir en cada visita.
+    async versionLegal() {
+      if (versionSinRevision(VERSION_LEGAL) === VERSION_LEGAL) return VERSION_LEGAL;
+      return (await api.video037().catch(() => null)) === true ? VERSION_LEGAL : versionSinRevision(VERSION_LEGAL);
+    },
     async privacidadVista() {
       const id = uid();
       if (!id) return { version: null, enBase: false };
       const local = leerPrivacidadLocal(id);
       const filas = await b.select('privacidad_vista', { eq: { usuario_id: id }, cols: 'version', limit: 1 }).catch(() => null);
       const enBase = filas ? filas[0]?.version || null : null;
-      if (filas && formatoVersion(local) && (!enBase || local > enBase)) api.marcarPrivacidadVista(local).catch(() => {});
+      if (filas && formatoVersion(local) && (!enBase || compararVersiones(local, enBase) > 0)) {
+        // (lo de este móvil, a la base; sin la 037, sin su revisión, que la base no la admite)
+        const subir = (await api.versionLegal()) === VERSION_LEGAL ? local : versionSinRevision(local);
+        if (!enBase || compararVersiones(subir, enBase) > 0) api.marcarPrivacidadVista(subir).catch(() => {});
+      }
       return { version: versionMayor(enBase, local), enBase: !!filas };
     },
-    async marcarPrivacidadVista(version = VERSION_LEGAL) {
+    async marcarPrivacidadVista(version) {
       const id = uid();
+      if (version === undefined) version = await api.versionLegal();
       if (!id || !formatoVersion(version)) return false;
       // (en este móvil, solo versiones que la app conoce: nunca una «del futuro» que tape los avisos que vengan)
-      if (version <= VERSION_LEGAL) guardarPrivacidadLocal(id, version);
+      if (compararVersiones(version, VERSION_LEGAL) <= 0) guardarPrivacidadLocal(id, version);
       try { await b.upsert('privacidad_vista', [{ usuario_id: id, version }], 'usuario_id'); return true; } catch { return false; }
     },
     // El coach, en la ficha: qué versión ha visto ese atleta (null: ninguna o sin la 034)
@@ -2165,7 +2190,7 @@ export function crearApi(backend) {
     // se graba de nuevo. Sin la 035, el vídeo sale igual, sin ellos. urlSubida / alUrlSubida: la dirección de la subida por
     // trozos (TUS), para seguir por donde iba si se corta o se cierra la app.
     async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null, fecha = null, alProgreso = null, senal = null, ruta: rutaDada = null, nombre = null, paginas = null, onda = null,
-      serie_numero = null, repite_de = null, urlSubida = null, alUrlSubida = null, derivado_de = null }) {
+      serie_numero = null, repite_de = null, urlSubida = null, alUrlSubida = null, derivado_de = null, autoevaluacion = null }) {
       if (archivo.size > LIMITE_ARCHIVO_MB * 1024 * 1024) throw new Error(`El archivo pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos) o recórtalo.`);
       const esImagen = /^image\//.test(archivo.type || '') || tipo === 'foto_progreso';
       const ruta = rutaDada || api.rutaArchivo(atletaId, archivo, { tipo, fecha });
@@ -2199,6 +2224,10 @@ export function crearApi(backend) {
       }
       // La miniatura es un extra: si falla, el vídeo queda igualmente (la cuadrícula enseña el primer fotograma)
       if (poster_ruta) await b.storage.subir(poster_ruta, poster, 'image/jpeg').catch(async () => { await b.update('archivos', { poster_ruta: null }, { eq: { id: fila.id } }).catch(() => {}); fila.poster_ruta = null; });
+      // (v0.59, 037) la valoración del atleta («¿Cómo la has notado?»), ya limpia; si no se puede guardar, el vídeo sale igual
+      if (autoevaluacion && tipo === 'video_tecnica') {
+        try { fila.autoevaluacion = await api.guardarAutoevaluacion(fila, autoevaluacion, { limpia: true }); } catch (e) { fila.autoevaluacionError = e?.message || String(e); }
+      }
       return fila;
     },
     // Un envío pendiente que se descarta: su registro (si llegó a hacerse) no debe quedar sin archivo
@@ -2393,6 +2422,186 @@ export function crearApi(backend) {
       await api.exigir035();
       const f = new File([blob], `fotograma-${hoyISO()}.jpg`, { type: 'image/jpeg' });
       return api.enviarMensaje(video.atleta_id, { archivo: f, texto, autor: 'coach', derivado_de: video.id });
+    },
+
+    // ------------------------------------------------------------ v0.59: los vídeos de técnica, tanda A (migración 037)
+    // ¿Tiene la base la 037? true, false o, si no se sabe (sin conexión), null: no se recuerda y se vuelve a mirar
+    async video037() {
+      if (!api._v037) {
+        const pr = (async () => {
+          try { await b.select('video_autoevaluacion', { limit: 1, cols: 'archivo_id' }); return true; }
+          catch (e) {
+            const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+            if (/video_autoevaluacion|schema cache|does not exist|no existe|relation|could not find|PGRST20[0-9]|42P01/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v037 = pr;
+        pr.then((x) => { if (x == null && api._v037 === pr) api._v037 = null; });
+      }
+      return api._v037;
+    },
+    async exigir037() { if ((await api.video037()) === false) throw new Error(AVISO_037); },
+
+    // 14. Recordatorios de técnica: los activos de un atleta (el atleta, los suyos; sin horas) y, para el coach, todos
+    async recordatoriosActivos(atletaId) {
+      if (!atletaId || !(await api.video037())) return [];
+      return (await b.rpc('recordatorios_activos', { p_atleta: atletaId }).catch(() => [])) || [];
+    },
+    async recordatoriosCoach(atletaId, ejercicioId = null) {
+      if (!atletaId || !(await api.video037())) return [];
+      return b.select('recordatorios_tecnica', { eq: { atleta_id: atletaId, ...(ejercicioId ? { ejercicio_id: ejercicioId } : {}) }, order: [['activo', 'desc'], ['creado_en', 'desc']] }).catch(() => []);
+    },
+    // El coach fija uno (hasta 140 letras; con su vídeo y su momento, si quiere). Como mucho 3 activos por ejercicio.
+    async fijarRecordatorio({ atletaId, ejercicioId, texto, archivoId = null, segundo = null }) {
+      await api.exigir037();
+      const fila = { atleta_id: atletaId, ejercicio_id: ejercicioId, texto: limpiarTextoRecordatorio(texto), archivo_id: archivoId || null,
+        segundo: archivoId && Number.isFinite(Number(segundo)) && segundo !== null ? Math.round(Math.min(3600, Math.max(0, Number(segundo))) * 10) / 10 : null, activo: true };
+      if (!recordatorioValido(fila)) throw new Error('Un recordatorio lleva de 1 a 140 letras');
+      return (await b.insert('recordatorios_tecnica', [fila]).catch(falta037))[0];
+    },
+    async editarRecordatorio(id, { texto, activo } = {}) {
+      await api.exigir037();
+      const c = {};
+      if (texto !== undefined) { c.texto = limpiarTextoRecordatorio(texto); if (!textoRecordatorioValido(c.texto)) throw new Error('Un recordatorio lleva de 1 a 140 letras'); }
+      if (activo !== undefined) c.activo = !!activo;
+      return (await b.update('recordatorios_tecnica', c, { eq: { id } }).catch(falta037))[0] || null;
+    },
+    async borrarRecordatorio(id) { await api.exigir037(); await b.delete('recordatorios_tecnica', { eq: { id } }).catch(falta037); },
+    // Lo que se propone fijar: los ✗ del último vídeo corregido de ese ejercicio (sin los que ya son recordatorios)
+    async sugerenciasRecordatorio(atletaId, ejercicioId) {
+      if (!atletaId || !ejercicioId) return [];
+      const [videos, activos] = await Promise.all([api.diario(atletaId).catch(() => []), api.recordatoriosActivos(atletaId)]);
+      return sugerenciasRecordatorio(videos, ejercicioId, activos.filter((r) => r.ejercicio_id === ejercicioId));
+    },
+
+    // 4. Frases de corrección (solo el coach): las de un ejercicio y las de todos
+    async frasesCorreccion(ejercicioId = null) {
+      if (!(await api.video037())) return [];
+      const filas = await b.select('frases_correccion', { order: [['orden', 'asc'], ['creado_en', 'asc']] }).catch(() => []);
+      return frasesPara(filas, ejercicioId);
+    },
+    async guardarFrase({ id = null, ejercicioId = null, texto, dibujo = null, orden = 0 }) {
+      await api.exigir037();
+      const fila = { ejercicio_id: ejercicioId || null, texto: limpiarTextoFrase(texto), dibujo: dibujo ?? null, orden: Number.isInteger(orden) ? Math.max(0, Math.min(999, orden)) : 0 };
+      if (!fraseValida(fila)) throw new Error('Una frase lleva de 1 a 140 letras (y, si quieres, un dibujo)');
+      if (id) return (await b.update('frases_correccion', { texto: fila.texto, dibujo: fila.dibujo, orden: fila.orden }, { eq: { id } }).catch(falta037))[0] || null;
+      return (await b.insert('frases_correccion', [fila]).catch(falta037))[0];
+    },
+    async borrarFrase(id) { await api.exigir037(); await b.delete('frases_correccion', { eq: { id } }).catch(falta037); },
+    // Las sugeridas de un ejercicio, a la base (para cambiarlas o borrarlas como las tuyas)
+    async guardarFrasesSugeridas(ejercicio) {
+      await api.exigir037();
+      const ya = (await api.frasesCorreccion(ejercicio.id)).filter((f) => f.ejercicio_id === ejercicio.id).map((f) => f.texto);
+      const nuevas = frasesSugeridas(ejercicio.nombre, ejercicio.grupos_musculares || [], ejercicio.tipo || []).filter((t) => !ya.includes(t));
+      if (nuevas.length) await b.insert('frases_correccion', nuevas.map((texto, i) => ({ ejercicio_id: ejercicio.id, texto, dibujo: null, orden: ya.length + i }))).catch(falta037);
+      return api.frasesCorreccion(ejercicio.id);
+    },
+
+    // 6. Vídeos modelo del coach: los de unos ejercicios (el coach y sus atletas; sin horas) y su enlace
+    async videosModelo(ejercicioIds) {
+      const ids = unicos(ejercicioIds || []);
+      if (!ids.length || !(await api.video037())) return [];
+      const out = [];
+      for (let i = 0; i < ids.length; i += 200) out.push(...((await b.rpc('videos_modelo_de', { p_ejercicios: ids.slice(i, i + 200) }).catch(() => [])) || []));
+      return out;
+    },
+    rutaModelo(ejercicioId, archivo) {
+      const t = String(archivo?.type || '');
+      const ext = /quicktime/.test(t) ? 'mov' : /webm/.test(t) ? 'webm' : 'mp4';
+      return `modelos/${ejercicioId}/modelo-${aleatorio()}${aleatorio()}.${ext}`;
+    },
+    async urlModelo(m) { return b.storage.url(m.ruta, 3600, 'archivos'); },
+    // Primero se registra (la base comprueba la ruta y que no haya más de 6) y después se sube; si la subida falla, el
+    // registro se quita
+    async subirVideoModelo(ejercicio, archivo, { angulo = null, poster = null, duracion_seg = null, alProgreso = null, senal = null } = {}) {
+      await api.exigir037();
+      if (!/^video\/(mp4|quicktime|webm)/.test(archivo?.type || '')) throw new Error('Elige un vídeo (MP4, MOV o WebM)');
+      if (archivo.size > LIMITE_ARCHIVO_MB * 1024 * 1024) throw new Error(`El vídeo pesa más de ${LIMITE_ARCHIVO_MB} MB: recórtalo`);
+      const ruta = api.rutaModelo(ejercicio.id, archivo);
+      const dur = Number.isFinite(Number(duracion_seg)) && duracion_seg != null ? Math.min(600, Math.max(0, Math.round(Number(duracion_seg)))) : null;
+      const actuales = await api.videosModelo([ejercicio.id]);
+      const [fila] = await b.insert('videos_modelo', [{ ejercicio_id: ejercicio.id, ruta, poster_ruta: poster ? `${ruta}.jpg` : null, duracion_seg: dur,
+        mime: String(archivo.type).split(';')[0], bytes: archivo.size, angulo: angulo ? limpiarTextoFrase(angulo).slice(0, 40) : null, orden: actuales.length }]).catch(falta037);
+      try {
+        await b.storage.subir(ruta, archivo, String(archivo.type).split(';')[0], { alProgreso, senal, bucket: 'archivos' });
+      } catch (e) { await b.delete('videos_modelo', { eq: { id: fila.id } }).catch(() => {}); api.limpiarAlmacenamiento().catch(() => {}); throw e; }
+      if (fila.poster_ruta) await b.storage.subir(fila.poster_ruta, poster, 'image/jpeg', { bucket: 'archivos' }).catch(async () => { await b.update('videos_modelo', { poster_ruta: null }, { eq: { id: fila.id } }).catch(() => {}); fila.poster_ruta = null; });
+      return fila;
+    },
+    async editarVideoModelo(id, { angulo, orden } = {}) {
+      await api.exigir037();
+      const c = {};
+      if (angulo !== undefined) c.angulo = angulo ? limpiarTextoFrase(angulo).slice(0, 40) : null;
+      if (orden !== undefined) c.orden = orden;
+      return (await b.update('videos_modelo', c, { eq: { id } }).catch(falta037))[0] || null;
+    },
+    // Al borrarlo, sus archivos van a la cola de Storage (la base) y la app del coach la vacía
+    async borrarVideoModelo(m) {
+      await api.exigir037();
+      await b.delete('videos_modelo', { eq: { id: m.id } }).catch(falta037);
+      const quitados = await api.limpiarAlmacenamiento().catch(() => 0);
+      return quitados > 0 ? 'borrado' : 'pendiente';
+    },
+
+    // 7. «Comparar con su mejor»: de sus vídeos de ese ejercicio ya corregidos, el de mejor nota (después, la mejor
+    // velocidad guardada; después, el más reciente). Por el diario (el atleta, solo los suyos)
+    async mejorVideoDe(video) {
+      if (!video?.atleta_id || video.tipo !== 'video_tecnica') return null;
+      const lista = await api.diario(video.atleta_id).catch(() => []);
+      const yo = lista.find((x) => x.id === video.id) || video;
+      return mejorVideo(lista, { ...yo, ejercicio: yo.ejercicio || video.ejercicio || null });
+    },
+
+    // 12. La valoración del atleta antes de enviar un vídeo (la suya; el coach la lee)
+    async autoevaluacion(archivoId) {
+      if (!archivoId || !(await api.video037())) return null;
+      const [x] = await b.select('video_autoevaluacion', { eq: { archivo_id: archivoId } }).catch(() => []);
+      return x || null;
+    },
+    async autoevaluaciones(ids) {
+      const todos = unicos(ids || []);
+      if (!todos.length || !(await api.video037())) return {};
+      return porCampo(await b.select('video_autoevaluacion', { in: { archivo_id: todos } }).catch(() => []), 'archivo_id');
+    },
+    // datos: { rpe, nota, molestia, zona } (lo de la molestia, solo con salud: si no, se quita aquí y la base lo exige).
+    // Sin nada que contar, se quita. Devuelve la guardada (o null).
+    async guardarAutoevaluacion(archivo, datos, { salud = false, limpia = false } = {}) {
+      await api.exigir037();
+      const f = limpia ? datos : limpiarAutoevaluacion(datos || {}, { salud });
+      if (!f) { await b.delete('video_autoevaluacion', { eq: { archivo_id: archivo.id } }).catch(falta037); return null; }
+      if (!autoevaluacionValida(f)) throw new Error('La valoración no tiene la forma que toca');
+      return (await b.upsert('video_autoevaluacion', [{ archivo_id: archivo.id, atleta_id: archivo.atleta_id, ...f }], 'archivo_id').catch(falta037))[0] || null;
+    },
+
+    // 15. Las marcas de repetición a mano (el coach; en la corrección): [segundos] o []
+    async repsManual(archivoId) {
+      if (!archivoId || !(await api.video037()) || !(await api.esCoachAhora())) return [];
+      const [x] = await b.select('video_revisiones', { eq: { archivo_id: archivoId }, cols: 'archivo_id,reps_manual' }).catch(() => []);
+      return x?.reps_manual?.t || [];
+    },
+    async guardarRepsManual(video, lista) {
+      await api.exigir037();
+      const t = [...(lista || [])].filter((x) => Number.isFinite(x)).map((x) => Math.round(x * 100) / 100).sort((a, b2) => a - b2);
+      const reps = t.length ? { t } : null;
+      if (reps && !repsManualValidas(reps, Number.isFinite(video?.duracion_seg) ? video.duracion_seg : null)) throw new Error('Las marcas tienen que ir en orden y dentro del vídeo (como mucho 30)');
+      await b.upsert('video_revisiones', [{ archivo_id: video.id, atleta_id: video.atleta_id, reps_manual: reps }], 'archivo_id').catch(falta037);
+      return t;
+    },
+
+    // 18. Los tiempos de la cola (el coach): de lo que llega a lo primero entre «Revisado» (o una respuesta) y la
+    // corrección. Los de los últimos 30 días, los de esta semana y el que más espera.
+    async estadisticasRevision({ ahora = Date.now() } = {}) {
+      const desde = new Date(ahora - 120 * 864e5).toISOString();
+      const atletas = porId(await api.atletas().catch(() => []));
+      const [recientes, pendientes] = await Promise.all([
+        b.select('archivos', { eq: { tipo: 'video_tecnica' }, gte: { creado_en: desde }, cols: 'id,atleta_id,creado_en,revisado_en' }).catch(() => []),
+        b.select('archivos', { eq: { tipo: 'video_tecnica' }, nulo: ['revisado_en'], cols: 'id,atleta_id,creado_en,revisado_en' }).catch(() => []),
+      ]);
+      const vids = Object.values(porId([...recientes, ...pendientes])).filter((v) => atletas[v.atleta_id]);
+      const revs = (await api.video035().catch(() => false)) && vids.length
+        ? porCampo((await Promise.all(Array.from({ length: Math.ceil(vids.length / 200) }, (_, i) => b.select('video_revisiones', { in: { archivo_id: vids.slice(i * 200, i * 200 + 200).map((v) => v.id) }, cols: 'archivo_id,corregido_en' }).catch(() => [])))).flat(), 'archivo_id') : {};
+      return estadisticasCola(vids.map((v) => ({ ...v, corregido_en: revs[v.id]?.corregido_en || null })), { ahora });
     },
 
     // ------------------------------------------------------------ v0.48: lo que le dijo el coach de cada ejercicio
@@ -2928,6 +3137,9 @@ export function crearApi(backend) {
       // (v0.57) la corrección de sus vídeos de técnica (con días, como la ve en la app; sin la 035, ninguna)
       const vids = out.archivos.filter((a) => a.tipo === 'video_tecnica').map((a) => a.id);
       out.video_correcciones = vids.length && await api.video035().catch(() => false) ? await api.correccionesDe(vids).catch(() => []) : [];
+      // (v0.59, 037) su valoración de cada vídeo y los recordatorios de técnica activos (sin horas, como los ve)
+      out.video_autoevaluacion = vids.length ? Object.values(await api.autoevaluaciones(vids).catch(() => ({}))) : [];
+      out.recordatorios_tecnica = await api.recordatoriosActivos(atletaId).catch(() => []);
       // (v0.54) sus reacciones y sus destacados en el chat (los destacados solo los ve su dueño: si exporta el coach, vacíos)
       const idsMsg = out.comentarios.map((c) => c.id);
       out.comentario_reacciones = perfilId && idsMsg.length ? await b.select('comentario_reacciones', { in: { comentario_id: idsMsg }, eq: { usuario_id: perfilId } }).catch(() => []) : [];
@@ -3279,7 +3491,9 @@ export function crearApi(backend) {
         const ejIds = unicos(vids.map(ejDe));
         const EJ = ejIds.length ? porId(await b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre,grupos_musculares,tipo' }).catch(() => [])) : {};
         const extra = await api.extrasVideos(vids);
-        items.archivos = vids.map((a) => ({ ...a, ejercicio: EJ[ejDe(a)] || null, serie: extra.series[a.id] || null, revision: extra.revisiones[a.id] || null }));
+        // (v0.59, 037) y lo que nota el atleta (su valoración al enviarlo)
+        const autos = await api.autoevaluaciones(vids.filter((a) => a.tipo === 'video_tecnica').map((a) => a.id)).catch(() => ({}));
+        items.archivos = vids.map((a) => ({ ...a, ejercicio: EJ[ejDe(a)] || null, serie: extra.series[a.id] || null, revision: extra.revisiones[a.id] || null, autoevaluacion: autos[a.id] || null }));
       }
       // Recetas que un atleta pide cambiar (v0.26; sin la migración 022, ninguna)
       const cambios = await b.select('recetas_atleta', { nonulo: ['cambio_pedido_en'], order: [['cambio_pedido_en', 'desc']] }).catch(() => []);

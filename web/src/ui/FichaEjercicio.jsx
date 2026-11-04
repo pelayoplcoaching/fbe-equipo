@@ -4,6 +4,7 @@ import { Pestanas, Siluetas, useApp, useCarga, Icono, Hoja, Segmentos, Grafica, 
 import { textoSerie, num, NOMBRE_GRUPO } from '../logica/calculos.js';
 import { serieSemanal, recortarRango, metricasDe, tablaRecords, RANGOS } from '../logica/ejercicio.js';
 import { fmtCorta, hoyISO } from '../logica/fechas.js';
+import { BotonModelo } from './tecnica/Modelos.jsx';
 
 // Ficha de un ejercicio (como en Strong o Hevy): gráficas por semana con rango, récords de 1 a 12
 // repeticiones (real frente a estimado), historial completo y la técnica si la hay.
@@ -11,7 +12,9 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
   const { api } = useApp();
   const h = useCarga(() => api.historialEjercicio(atletaId, ejercicio.id), [atletaId, ejercicio.id]);
   const d = h.datos;
-  const tecnica = !!(ejercicio.instrucciones || ejercicio.errores || ejercicio.video_url);
+  // (v0.59) y los vídeos modelo de tu coach (037)
+  const modelos = useCarga(() => api.videosModelo([ejercicio.id]).catch(() => []), [ejercicio.id]);
+  const tecnica = !!(ejercicio.instrucciones || ejercicio.errores || ejercicio.video_url || modelos.datos?.length);
   const [vista, setVista] = useState(inicial);
   const pestanas = [['graficas', 'Gráficas'], ['records', 'Récords'], ['historial', 'Historial'], ...(tecnica ? [['tecnica', 'Técnica']] : [])];
   const grupos = (ejercicio.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).filter(Boolean).join(', ');
@@ -21,7 +24,7 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
       <p class="ficha-ej-cab peq secundario"><PictoEjercicio ejercicio={ejercicio} clase="picto-grande" /><span>{grupos || 'Sin grupo muscular'}</span></p>
       <Pestanas opciones={pestanas} valor={vista} alCambiar={setVista} etiqueta="Ficha del ejercicio" clase="pestanas-ficha" idBase="fej" />
       <div class="pestana-panel" role="tabpanel" id="fej-panel" aria-labelledby={`fej-${vista}`} key={vista}>
-        {vista === 'tecnica' ? <Tecnica ejercicio={ejercicio} />
+        {vista === 'tecnica' ? <Tecnica ejercicio={ejercicio} modelos={modelos.datos || []} />
           : h.cargando && !d ? <Siluetas forma="grafica" texto="Cargando el ejercicio" />
             : !d?.sesiones.length ? <Vacio icono="historial" titulo="Aún no hay series de este ejercicio" />
               : vista === 'graficas' ? <Graficas d={d} nombre={ejercicio.nombre} />
@@ -105,13 +108,14 @@ function Historial({ d }) {
   );
 }
 
-function Tecnica({ ejercicio: e }) {
+function Tecnica({ ejercicio: e, modelos = [] }) {
   const parrafos = (t) => t.split(/\n{2,}/).map((p, i) => <p key={i} class="secundario" style="white-space:pre-line">{p}</p>);
   return (
     <div class="pila">
       {e.rango_reps && <p class="peq"><span class="terciario">Rango recomendado: </span>{e.rango_reps}</p>}
       {e.instrucciones && <section class="pila-s"><h3 class="peq">Claves</h3>{parrafos(e.instrucciones)}</section>}
       {e.errores && <section class="pila-s"><h3 class="peq">Errores comunes</h3>{parrafos(e.errores)}</section>}
+      {modelos.length > 0 && <div><BotonModelo ejercicio={e} modelos={modelos} clase="btn" /></div>}
       {e.video_url && <a class="btn" href={e.video_url} target="_blank" rel="noopener" style="justify-self:start"><Icono n="video" /> Ver el vídeo de técnica</a>}
     </div>
   );

@@ -4377,6 +4377,358 @@ console.log('\nEl análisis automático de los vídeos (migración 036)');
   await sin35.close();
 }
 
+console.log('\nLos vídeos de técnica, tanda A (migración 037)');
+{
+  const insArch = async (f) => (await q(`insert into archivos (${Object.keys(f).join(',')}) values (${Object.keys(f).map((_, i) => `$${i + 1}`).join(',')}) returning *`, Object.values(f)))[0];
+  const ruta = (atleta, x) => `${atleta}/v059-${x}-${Math.random().toString(36).slice(2, 8)}.mp4`;
+  const HORAS = /^(timestamptz|timestamp|time|timetz|interval)$/;
+  const tiposDe = async (f) => (await q(`select t.typname from pg_proc p, unnest(p.proallargtypes) a(oid) join pg_type t on t.oid = a.oid where p.proname = $1 and p.pronamespace = 'public'::regnamespace`, [f])).map((x) => x.typname);
+  await su();
+  await q(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await q(`update consentimientos set revocado_en = null where perfil_id = $1 and tipo = 'datos_salud'`, [ana]);
+  await q(`insert into consentimientos (perfil_id, tipo, version) select $1, 'datos_salud', '2026-10' where not exists (select 1 from consentimientos where perfil_id = $1 and tipo = 'datos_salud' and revocado_en is null)`, [ana]);
+  await q(`delete from fbe_privado.storage_por_borrar`);
+  await q(`delete from chat_cupos`);
+  // La forma: tablas con permisos por fila, nada para anon, funciones con search_path vacío
+  const tablas = ['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion'];
+  check((await q(`select relname from pg_class where relname = any($1) and relrowsecurity and relnamespace = 'public'::regnamespace`, [tablas])).length === 4, 'las cuatro tablas nuevas nacen con permisos por fila');
+  check((await q(`select 1 from information_schema.role_table_grants where table_name = any($1) and grantee in ('anon', 'PUBLIC')`, [tablas])).length === 0
+    && (await q(`select count(distinct table_name)::int n from information_schema.role_table_grants where table_name = any($1) and grantee = 'authenticated' and privilege_type = 'SELECT'`, [tablas]))[0].n === 4,
+    'sin sesión, ningún permiso sobre ellas (la app, los suyos a mano)');
+  const pol = Object.fromEntries((await q(`select tablename t, count(*)::int n from pg_policies where tablename = any($1) group by 1`, [tablas])).map((x) => [x.t, x.n]));
+  check(pol.recordatorios_tecnica === 1 && pol.frases_correccion === 1 && pol.videos_modelo === 1 && pol.video_autoevaluacion === 5 && (await q(`select count(*)::int n from pg_policies where tablename = 'video_revisiones'`))[0].n === 1,
+    'políticas: el coach en recordatorios, frases y vídeos modelo (el atleta, ninguna); la valoración, el coach la lee y el atleta la suya; la corrección, como estaba');
+  const nuevas = ['recordatorio_preparar', 'recordatorios_activos', 'frase_preparar', 'video_modelo_preparar', 'video_modelo_borrado', 'video_modelo_visible', 'videos_modelo_de', 'video_autoevaluacion_preparar', 'chat_gastar_cupo', 'reps_manual_validas', 'video_revision_reps', 'al_mover_archivo'];
+  const malos = await q(`select p.oid::regprocedure::text f from pg_proc p where p.pronamespace in ('public'::regnamespace, 'fbe_privado'::regnamespace) and p.proname = any($1) and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`, [nuevas]);
+  check(!malos.length && (await q(`select count(*)::int n from pg_proc where proname = any($1)`, [nuevas]))[0].n === nuevas.length, `las funciones nuevas y las que cambia la 037, con search_path vacío${malos.length ? ` (no: ${malos.map((x) => x.f).join(', ')})` : ''}`);
+  const definer = Object.fromEntries((await q(`select proname, prosecdef from pg_proc where proname = any($1)`, [nuevas])).map((x) => [x.proname, x.prosecdef]));
+  check(definer.recordatorios_activos && definer.videos_modelo_de && definer.video_modelo_visible && definer.video_autoevaluacion_preparar && definer.al_mover_archivo && !definer.recordatorio_preparar && !definer.reps_manual_validas,
+    'lo que lee por encima de los permisos (recordatorios_activos, videos_modelo_de, la política de Storage, la valoración y pasar un vídeo), con los permisos de su dueño; lo demás, sin');
+  check(!(await q(`select has_function_privilege('anon', 'public.recordatorios_activos(uuid)', 'execute') a, has_function_privilege('anon', 'public.videos_modelo_de(uuid[])', 'execute') b`)).some((x) => x.a || x.b)
+    && !(await q(`select has_function_privilege('authenticated', 'fbe_privado.al_mover_archivo()', 'execute') x`))[0].x, 'sin sesión no se llaman; lo interno, tampoco desde la app');
+  check(!(await tiposDe('recordatorios_activos')).some((x) => HORAS.test(x)) && !(await tiposDe('videos_modelo_de')).some((x) => HORAS.test(x)), 'recordatorios_activos y videos_modelo_de no devuelven ninguna hora');
+  check((await q(`select pg_get_function_result('public.video_correcciones(uuid[])'::regprocedure) r`))[0].r.includes('analisis jsonb') && !(await tiposDe('video_correcciones')).some((x) => HORAS.test(x)),
+    'video_correcciones() sigue como en la 036 (con el análisis y sin horas)');
+
+  // Lo que hace falta: un ejercicio, los vídeos de Ana y uno de Luis
+  await como(pelayo, 'aal2');
+  const [sent] = await q(`insert into ejercicios (nombre, grupos_musculares) values ('Sentadilla v059', '{cuadriceps,gluteo}') returning id`);
+  await como(ana);
+  const va = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'a'), ejercicio_id: sent.id, duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  const vb = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'b'), ejercicio_id: sent.id, duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  await como(luis);
+  const vl = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'l'), ejercicio_id: sent.id, duracion_seg: 6, mime: 'video/mp4', bytes: 1000 });
+
+  console.log('  · 14. Recordatorios de técnica');
+  await como(ana);
+  check(await falla(`insert into recordatorios_tecnica (atleta_id, ejercicio_id, texto) values ($1, $2, 'Me lo pongo yo')`, [aAna.id, sent.id]), 'Ana no se pone recordatorios');
+  await como(pelayo, 'aal2');
+  const ins = (t, extra = {}) => q(`insert into recordatorios_tecnica (atleta_id, ejercicio_id, texto, archivo_id, segundo, activo) values ($1, $2, $3, $4, $5, $6) returning *`,
+    [extra.atleta ?? aAna.id, extra.ejercicio ?? sent.id, t, extra.archivo ?? null, extra.segundo ?? null, extra.activo ?? true]);
+  const [r1] = await ins('  Rodillas   hacia fuera al bajar ', { archivo: va.id, segundo: 2.5 });
+  check(r1.texto === 'Rodillas hacia fuera al bajar' && Number(r1.segundo) === 2.5 && r1.activo, 'el coach fija uno para Ana (sin espacios de más), con su vídeo y su momento');
+  await ins('Pecho arriba', { archivo: va.id }); await ins('Aire antes de bajar');
+  check(await falla(`insert into recordatorios_tecnica (atleta_id, ejercicio_id, texto) values ($1, $2, 'El cuarto')`, [aAna.id, sent.id]), 'como mucho 3 activos por atleta y ejercicio');
+  const [r4] = await ins('Uno guardado sin activar', { activo: false });
+  check(r4 && await falla(`update recordatorios_tecnica set activo = true where id = $1`, [r4.id]), 'uno sin activar se guarda, pero no se activa si ya hay 3');
+  const [adjL] = await q(`insert into archivos (atleta_id, tipo, ruta, mime, bytes) values ($1, 'adjunto', $2, 'image/jpeg', 100) returning id`, [aLuis.id, `${aLuis.id}/v059-adj-${Math.random().toString(36).slice(2, 8)}.jpg`]);
+  check(await falla(`insert into recordatorios_tecnica (atleta_id, ejercicio_id, texto, archivo_id) values ($1, $2, 'Con el vídeo de Luis', $3)`, [aAna.id, sent.id, vl.id])
+    && await falla(`insert into recordatorios_tecnica (atleta_id, ejercicio_id, texto, archivo_id) values ($1, $2, 'Con una foto', $3)`, [aLuis.id, sent.id, adjL.id])
+    && await falla(`insert into recordatorios_tecnica (atleta_id, ejercicio_id, texto, segundo) values ($1, $2, 'Momento sin vídeo', 2)`, [aLuis.id, sent.id])
+    && await falla(`insert into recordatorios_tecnica (atleta_id, ejercicio_id, texto) values ($1, $2, $3)`, [aLuis.id, sent.id, 'x'.repeat(141)])
+    && await falla(`insert into recordatorios_tecnica (atleta_id, ejercicio_id, texto) values ($1, $2, '​ ')`, [aLuis.id, sent.id])
+    && await falla(`insert into recordatorios_tecnica (atleta_id, ejercicio_id, texto, archivo_id, segundo) values ($1, $2, 'Fuera', $3, 3601)`, [aLuis.id, sent.id, vl.id]),
+    'el vídeo, de técnica y de ese atleta; un momento, solo con su vídeo y de 0 a 3600 s; el texto, de 1 a 140 letras visibles');
+  check(await falla(`update recordatorios_tecnica set atleta_id = $2 where id = $1`, [r1.id, aLuis.id]) && await falla(`update recordatorios_tecnica set ejercicio_id = $2 where id = $1`, [r1.id, press.id]),
+    'no cambia de atleta ni de ejercicio');
+  const [r1b] = await q(`update recordatorios_tecnica set texto = 'Rodillas fuera', creado_en = '2020-01-01' where id = $1 returning *`, [r1.id]);
+  check(r1b.texto === 'Rodillas fuera' && r1b.creado_en > new Date('2021-01-01') && r1b.actualizado_en >= r1.actualizado_en, 'el coach lo cambia (las fechas las pone la base)');
+  await como(ana);
+  const deAna = await q(`select * from recordatorios_activos($1)`, [aAna.id]);
+  check(deAna.length === 3 && deAna.every((r) => !Object.keys(r).some((k) => /_en$/.test(k))) && deAna.find((r) => r.id === r1.id)?.archivo_id === va.id && Number(deAna.find((r) => r.id === r1.id).segundo) === 2.5
+    && (await q(`select * from recordatorios_tecnica`)).length === 0, 'Ana lee sus 3 activos con recordatorios_activos() (sin horas, con su vídeo y su momento), nunca de la tabla');
+  check((await q(`update recordatorios_tecnica set texto = 'Mío' where id = $1 returning 1`, [r1.id])).length === 0 && (await q(`delete from recordatorios_tecnica where id = $1 returning 1`, [r1.id])).length === 0
+    && (await q(`select * from recordatorios_activos($1)`, [aLuis.id])).length === 0, 'ni los cambia, ni los borra, ni lee los de otro');
+  await como(luis);
+  check((await q(`select * from recordatorios_activos($1)`, [aAna.id])).length === 0 && (await q(`select * from recordatorios_tecnica`)).length === 0, 'Luis no ve los de Ana');
+  await como(intruso);
+  check(await falla(`select * from recordatorios_activos($1)`, [aAna.id]), 'una cuenta sin ficha, tampoco');
+  await anon();
+  check(await falla(`select * from recordatorios_activos($1)`, [aAna.id]) && await falla(`select * from recordatorios_tecnica`), 'sin sesión, nada');
+  await como(pelayo, 'aal2');
+  await q(`update recordatorios_tecnica set activo = false where id = $1`, [r1.id]);
+  await como(ana);
+  check((await q(`select * from recordatorios_activos($1)`, [aAna.id])).length === 2, 'el coach lo quita (lo desactiva) y Ana deja de verlo');
+  await como(pelayo, 'aal2');
+
+  console.log('  · 4. Frases de corrección');
+  const dib = JSON.stringify({ t: 0, hasta: 1.5, formas: [{ tipo: 'flecha', p: [[0.2, 0.2], [0.5, 0.5]], c: 'rojo' }] });
+  const [f1] = await q(`insert into frases_correccion (ejercicio_id, texto, dibujo, orden) values ($1, '  Rodillas  fuera ', $2, 1) returning *`, [sent.id, dib]);
+  const [f2] = await q(`insert into frases_correccion (texto) values ('Muy bien: así') returning *`);
+  check(f1.texto === 'Rodillas fuera' && f1.dibujo?.formas?.length === 1 && f2.ejercicio_id === null, 'el coach guarda frases (de un ejercicio, con un dibujo ya hecho, o para todos)');
+  check(await falla(`insert into frases_correccion (texto, dibujo) values ('Mal dibujo', '{"t":0,"formas":[]}')`) && await falla(`insert into frases_correccion (texto) values ($1)`, ['x'.repeat(141)])
+    && await falla(`insert into frases_correccion (texto) values ('')`) && await falla(`insert into frases_correccion (texto, orden) values ('Orden', 1000)`), 'el dibujo, válido (dibujo_valido); el texto, de 1 a 140; el orden, de 0 a 999');
+  for (let i = 0; i < 39; i++) await q(`insert into frases_correccion (ejercicio_id, texto) values ($1, $2)`, [sent.id, `Frase ${i}`]);
+  check(await falla(`insert into frases_correccion (ejercicio_id, texto) values ($1, 'La 41')`, [sent.id]), 'como mucho 40 por ejercicio');
+  await q(`delete from frases_correccion where texto like 'Frase %'`);
+  await como(ana);
+  check((await q(`select * from frases_correccion`)).length === 0 && await falla(`insert into frases_correccion (texto) values ('Mía')`) && (await q(`update frases_correccion set texto = 'x' returning 1`)).length === 0, 'el atleta ni las ve ni las escribe');
+  await anon();
+  check(await falla(`select * from frases_correccion`), 'sin sesión, nada');
+
+  console.log('  · 6. Vídeos modelo');
+  await como(pelayo, 'aal2');
+  const rm = (x = 'demo1234') => `modelos/${sent.id}/modelo-${x}.mp4`;
+  const [m1] = await q(`insert into videos_modelo (ejercicio_id, ruta, poster_ruta, duracion_seg, mime, bytes, angulo) values ($1, $2, $3, 6, 'video/mp4', 5000, '  De  lado ') returning *`, [sent.id, rm(), `${rm()}.jpg`]);
+  check(m1.angulo === 'De lado' && m1.ruta === rm(), 'el coach registra su vídeo modelo de la sentadilla (en modelos/<ejercicio>/)');
+  check(await falla(`insert into videos_modelo (ejercicio_id, ruta) values ($1, $2)`, [sent.id, `modelos/${press.id}/modelo-otro12345.mp4`])
+    && await falla(`insert into videos_modelo (ejercicio_id, ruta) values ($1, $2)`, [sent.id, `modelos/${sent.id}/../modelo-xx123456.mp4`])
+    && await falla(`insert into videos_modelo (ejercicio_id, ruta) values ($1, $2)`, [sent.id, `${aAna.id}/modelo-abcdef12.mp4`])
+    && await falla(`insert into videos_modelo (ejercicio_id, ruta, poster_ruta) values ($1, $2, 'otra.jpg')`, [sent.id, rm('poster12')])
+    && await falla(`insert into videos_modelo (ejercicio_id, ruta, mime) values ($1, $2, 'text/html')`, [sent.id, rm('mime1234')])
+    && await falla(`insert into videos_modelo (ejercicio_id, ruta, duracion_seg) values ($1, $2, 601)`, [sent.id, rm('larga123')])
+    && await falla(`insert into videos_modelo (ejercicio_id, ruta) values ($1, $2)`, [sent.id, rm()]),
+    'la ruta, en la carpeta de su ejercicio y con su forma (sin «..»); su miniatura, al lado; solo vídeo; hasta 10 min; sin repetir');
+  check(await falla(`update videos_modelo set ruta = $2 where id = $1`, [m1.id, rm('cambio12')]) && (await q(`update videos_modelo set angulo = 'De frente', orden = 2 where id = $1 returning angulo`, [m1.id]))[0].angulo === 'De frente',
+    'de uno subido solo cambian el ángulo, el orden y la duración');
+  for (let i = 2; i <= 6; i++) await q(`insert into videos_modelo (ejercicio_id, ruta) values ($1, $2)`, [sent.id, rm(`otro${i}xyz`)]);
+  check(await falla(`insert into videos_modelo (ejercicio_id, ruta) values ($1, $2)`, [sent.id, rm('elsiete7')]), 'como mucho 6 por ejercicio');
+  await q(`delete from videos_modelo where ruta like '%/modelo-otro%'`);
+  await su(); await q(`delete from fbe_privado.storage_por_borrar`); await como(pelayo, 'aal2');
+  // En Storage: el coach lo sube; los atletas vinculados lo ven (y su miniatura); nada más de modelos/
+  await q(`insert into storage.objects (bucket_id, name) values ('archivos', $1), ('archivos', $2), ('archivos', $3), ('archivos', 'coach/privado.jpg')`, [rm(), `${rm()}.jpg`, `modelos/${sent.id}/modelo-sinregistro.mp4`]);
+  await como(ana);
+  const vistos = (await q(`select name from storage.objects where bucket_id = 'archivos' and (name like 'modelos/%' or name like 'coach/%') order by name`)).map((x) => x.name);
+  check(vistos.length === 2 && vistos.includes(rm()) && vistos.includes(`${rm()}.jpg`), `Ana ve el vídeo modelo y su miniatura en Storage, y nada más de modelos/ ni del coach (${vistos.length})`);
+  const deModelo = await q(`select * from videos_modelo_de($1)`, [[sent.id, press.id]]);
+  check(deModelo.length === 1 && deModelo[0].ruta === rm() && !Object.keys(deModelo[0]).some((k) => /_en$/.test(k)) && (await q(`select * from videos_modelo`)).length === 0,
+    'y lo lista con videos_modelo_de() (sin horas), nunca de la tabla');
+  check(await falla(`insert into videos_modelo (ejercicio_id, ruta) values ($1, $2)`, [sent.id, rm('mio12345')]) && await falla(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [rm('subo1234')])
+    && (await q(`delete from storage.objects where name = $1 returning 1`, [rm()])).length === 0 && (await q(`update videos_modelo set angulo = 'x' returning 1`)).length === 0,
+    'no registra, ni sube, ni borra, ni cambia vídeos modelo');
+  check(await falla(`select * from videos_modelo_de($1)`, [Array.from({ length: 201 }, () => sent.id)]), 'como mucho 200 ejercicios por vez');
+  await su();
+  await q(`update atletas set estado = 'baja' where id = $1`, [aLuis.id]);
+  await como(luis);
+  check((await q(`select * from videos_modelo_de($1)`, [[sent.id]])).length === 0 && (await q(`select name from storage.objects where name like 'modelos/%'`)).length === 0, 'un atleta de baja ya no los ve');
+  await su();
+  await q(`update atletas set estado = 'activo' where id = $1`, [aLuis.id]);
+  await como(intruso);
+  check(await falla(`select * from videos_modelo_de($1)`, [[sent.id]]) && (await q(`select name from storage.objects where name like 'modelos/%'`)).length === 0, 'una cuenta sin ficha, tampoco');
+  await anon();
+  check(await falla(`select * from videos_modelo_de($1)`, [[sent.id]]) && await falla(`select * from videos_modelo`), 'sin sesión, nada');
+  // Borrarlo: a la cola de Storage, y esa ruta no vuelve
+  await como(pelayo, 'aal2');
+  await q(`delete from videos_modelo where id = $1`, [m1.id]);
+  await su();
+  const cola = (await q(`select ruta, bucket from fbe_privado.storage_por_borrar where ruta like 'modelos/%' order by ruta`));
+  check(cola.length === 2 && cola.every((x) => x.bucket === 'archivos') && cola.some((x) => x.ruta === rm()), 'al borrarlo, su vídeo y su miniatura van a la cola de Storage');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into videos_modelo (ejercicio_id, ruta) values ($1, $2)`, [sent.id, rm()]), 'y su ruta no se vuelve a registrar mientras espera');
+  await como(ana);
+  check((await q(`select name from storage.objects where name = $1`, [rm()])).length === 0, 'Ana deja de verlo en Storage');
+  await su();
+  await q(`delete from storage.objects where name like 'modelos/%' or name = 'coach/privado.jpg'`); await q(`delete from fbe_privado.storage_por_borrar`);
+  await como(pelayo, 'aal2');
+  const [m2] = await q(`insert into videos_modelo (ejercicio_id, ruta) values ($1, $2) returning id`, [sent.id, rm('borrarej')]);
+  const [ejB] = await q(`insert into ejercicios (nombre, grupos_musculares) values ('Ejercicio v059 que se borra', '{espalda}') returning id`);
+  await q(`insert into videos_modelo (ejercicio_id, ruta) values ($1, $2)`, [ejB.id, `modelos/${ejB.id}/modelo-cascada1.mp4`]);
+  await q(`delete from ejercicios where id = $1`, [ejB.id]);
+  await su();
+  check((await q(`select 1 from fbe_privado.storage_por_borrar where ruta = $1`, [`modelos/${ejB.id}/modelo-cascada1.mp4`])).length === 1 && m2, 'si se borra el ejercicio, sus vídeos modelo también van a la cola');
+  await q(`delete from fbe_privado.storage_por_borrar`);
+
+  console.log('  · 12. La valoración del atleta');
+  await como(ana);
+  const [a1] = await q(`insert into video_autoevaluacion (archivo_id, atleta_id, rpe, nota, molestia, zona) values ($1, $2, 8.5, '  En la última se me van las rodillas ', true, 'rodilla') returning *`, [va.id, aLuis.id]);
+  check(a1.atleta_id === aAna.id && Number(a1.rpe) === 8.5 && a1.nota === 'En la última se me van las rodillas' && a1.molestia === true && a1.zona === 'rodilla', 'Ana valora su vídeo (RPE, lo que nota y una molestia en la rodilla), a su nombre aunque mande otro atleta');
+  const [a1b] = await q(`update video_autoevaluacion set molestia = false, zona = 'rodilla' where archivo_id = $1 returning *`, [va.id]);
+  check(a1b.molestia === false && a1b.zona === null, 'y la cambia (sin molestia, sin zona)');
+  const malasAuto = [['rpe', 5.5], ['rpe', 10.5], ['rpe', 7.25], ['nota', 'x'.repeat(281)], ['nota', '​'], ['zona', 'pie']];
+  let rechazadas = 0;
+  for (const [c, v] of malasAuto) if (await falla(`update video_autoevaluacion set ${c} = $2, molestia = true where archivo_id = $1`, [va.id, v])) rechazadas++;
+  check(rechazadas === malasAuto.length && await falla(`insert into video_autoevaluacion (archivo_id) values ($1)`, [vb.id]) && await falla(`insert into video_autoevaluacion (archivo_id, rpe) values ($1, 8)`, [adjL.id]),
+    'el RPE, de 6 a 10 de medio en medio; lo que nota, hasta 280 letras visibles; la zona, de la lista; algo que contar; y de un vídeo de técnica');
+  check(await falla(`insert into video_autoevaluacion (archivo_id, rpe) values ($1, 8)`, [vl.id]), 'no valora un vídeo de Luis');
+  // (revisión, L4) El mismo error para un vídeo de otro, algo que no es un vídeo de técnica o un id que no existe
+  await su();
+  const [adjA] = await q(`insert into archivos (atleta_id, tipo, ruta, mime, bytes) values ($1, 'adjunto', $2, 'image/jpeg', 100) returning id`, [aAna.id, `${aAna.id}/v059-adjA-${Math.random().toString(36).slice(2, 8)}.jpg`]);
+  await como(ana);
+  const errsL4 = [];
+  for (const id of [vl.id, adjA.id, adjL.id, '00000000-0000-4000-8000-000000000059']) errsL4.push(await mensaje(`insert into video_autoevaluacion (archivo_id, rpe) values ($1, 8)`, [id]));
+  check(errsL4.every((m) => m === errsL4[0]) && /Solo valoras tus vídeos de técnica/.test(errsL4[0] || ''), `(L4) el mismo error para el vídeo de Luis, una foto suya o de Luis y un id que no existe (no se sabe cuál es: ${errsL4[0]})`);
+  await su(); await q(`delete from archivos where id = $1`, [adjA.id]);
+  await como(ana);
+  // La molestia es un dato de salud: sin su consentimiento, no
+  await q(`update consentimientos set revocado_en = now() where perfil_id = $1 and tipo = 'datos_salud' and revocado_en is null`, [ana]);
+  check(await falla(`insert into video_autoevaluacion (archivo_id, molestia) values ($1, true)`, [vb.id]) && await falla(`insert into video_autoevaluacion (archivo_id, rpe, molestia) values ($1, 8, false)`, [vb.id])
+    && (await q(`insert into video_autoevaluacion (archivo_id, rpe, nota) values ($1, 8, 'Bien') returning molestia`, [vb.id]))[0].molestia === null
+    && (await q(`update video_autoevaluacion set nota = 'Muy bien' where archivo_id = $1 returning nota`, [va.id]))[0].nota === 'Muy bien',
+    'sin consentimiento de datos de salud no cuenta molestias (ni «no»); el esfuerzo y lo que nota, sí (y lo de antes no se toca)');
+  await su();
+  await q(`update consentimientos set revocado_en = null where perfil_id = $1 and tipo = 'datos_salud'`, [ana]);
+  await como(pelayo, 'aal2');
+  check((await q(`select * from video_autoevaluacion where archivo_id = $1`, [va.id]))[0]?.nota === 'Muy bien', 'el coach la lee');
+  check(await falla(`insert into video_autoevaluacion (archivo_id, rpe) values ($1, 7)`, [vl.id]) && (await q(`update video_autoevaluacion set rpe = 6 where archivo_id = $1 returning 1`, [va.id])).length === 0
+    && (await q(`delete from video_autoevaluacion where archivo_id = $1 returning 1`, [va.id])).length === 0, 'pero no la escribe, ni la cambia, ni la borra (es del atleta)');
+  await como(luis);
+  check((await q(`select * from video_autoevaluacion`)).length === 0 && (await q(`update video_autoevaluacion set rpe = 6 returning 1`)).length === 0, 'Luis no ve ni toca la de Ana');
+  await anon();
+  check(await falla(`select * from video_autoevaluacion`), 'sin sesión, nada');
+  // Hasta que el coach lo revisa o lo corrige
+  await como(pelayo, 'aal2');
+  await q(`update archivos set revisado_en = now() where id = $1`, [vb.id]);
+  await como(ana);
+  check(await falla(`update video_autoevaluacion set rpe = 9 where archivo_id = $1`, [vb.id]), 'revisado el vídeo, ya no la cambia');
+  await como(pelayo, 'aal2');
+  await q(`update archivos set revisado_en = null where id = $1`, [vb.id]);
+  await q(`insert into video_revisiones (archivo_id, atleta_id, puntuacion) values ($1, $2, 3)`, [vb.id, aAna.id]);
+  await como(ana);
+  check(await falla(`update video_autoevaluacion set rpe = 9 where archivo_id = $1`, [vb.id]) && (await q(`delete from video_autoevaluacion where archivo_id = $1 returning 1`, [vb.id])).length === 1,
+    'corregido, tampoco (pero quitarla, siempre)');
+  // Con su cupo por hora (el del chat): 30 cambios
+  await su(); await q(`delete from chat_cupos`);
+  await como(ana);
+  let hechos = 0, msg = '';
+  for (let i = 0; i < 35; i++) { try { await q(`update video_autoevaluacion set rpe = $2 where archivo_id = $1`, [va.id, i % 2 ? 7 : 8]); hechos++; } catch (e) { msg = e.message; break; } }
+  check(hechos === 30 && /valoración en la última hora/.test(msg), `con su cupo: 30 cambios por hora (${hechos})`);
+  // (revisión, L1) Como lo guarda la app (upsert): cada uno cuenta una vez (antes, el INSERT y el UPDATE contaban dos)
+  await su(); await q(`delete from chat_cupos`);
+  await como(ana);
+  let ups = 0, msgU = '';
+  for (let i = 0; i < 31; i++) {
+    try { await q(`insert into video_autoevaluacion (archivo_id, rpe) values ($1, $2) on conflict (archivo_id) do update set rpe = excluded.rpe`, [va.id, i % 2 ? 7 : 8]); ups++; } catch (e) { msgU = e.message; break; }
+  }
+  await su();
+  check(ups === 30 && /valoración en la última hora/.test(msgU) && (await q(`select count(*)::int n from chat_cupos where perfil_id = $1 and tipo = 'autoevaluacion'`, [ana]))[0].n === 30,
+    `(L1) 30 «upserts» pasan y el 31.º no (${ups}); cada uno cuenta una vez`);
+  await su(); await q(`delete from chat_cupos`);
+  await como(ana);
+  const rpeAhora = (await q(`select rpe from video_autoevaluacion where archivo_id = $1`, [va.id]))[0].rpe;
+  for (let i = 0; i < 3; i++) await q(`update video_autoevaluacion set rpe = $2 where archivo_id = $1`, [va.id, rpeAhora]);
+  await q(`insert into video_autoevaluacion (archivo_id, rpe) values ($1, $2) on conflict (archivo_id) do update set rpe = excluded.rpe`, [va.id, rpeAhora]);
+  await su();
+  check((await q(`select count(*)::int n from chat_cupos where perfil_id = $1 and tipo = 'autoevaluacion'`, [ana]))[0].n === 0, '(L1) guardar lo mismo que había no cuenta');
+  await su(); await q(`delete from chat_cupos`);
+  await q(`update atletas set estado = 'baja' where id = $1`, [aAna.id]);
+  await como(ana);
+  check(await falla(`update video_autoevaluacion set rpe = 9 where archivo_id = $1`, [va.id]), 'de baja, tampoco');
+  await su();
+  await q(`update atletas set estado = 'activo' where id = $1`, [aAna.id]);
+
+  console.log('  · 15. Las marcas de repetición a mano (reps_manual_validas)');
+  const VALIDAS = ['{"t":[0]}', '{"t":[0.4,2.3,4.3]}', '{"t":[1.2345,3600]}', JSON.stringify({ t: Array.from({ length: 30 }, (_, i) => i * 2) })];
+  const MALAS = ['null', '[]', '{}', '"t"', '1', 'true', '{"t":[]}', '{"t":null}', '{"t":{}}', '{"t":"1"}', '{"t":["1"]}', '{"t":[true]}', '{"t":[null]}', '{"t":[[1]]}', '{"t":[{"x":1}]}',
+    '{"t":[-1]}', '{"t":[3600.5]}', '{"t":[2,1]}', '{"t":[1,1]}', '{"t":[0.12345]}', '{"t":[1e-400]}', '{"t":[1e400]}', '{"t":[1],"x":2}', '{"T":[1]}', JSON.stringify({ t: Array.from({ length: 31 }, (_, i) => i) })];
+  const rv = []; for (const j of VALIDAS) rv.push((await q(`select reps_manual_validas($1::jsonb) ok`, [j]))[0].ok);
+  const rmx = []; let errs = 0;
+  for (const j of MALAS) { try { rmx.push((await q(`select reps_manual_validas($1::jsonb) ok`, [j]))[0].ok); } catch { errs++; } }
+  check(rv.every((x) => x === true) && MALAS.length >= 20 && !errs && rmx.every((x) => x === false) && (await q(`select reps_manual_validas(null) x`))[0].x === false,
+    `los ${VALIDAS.length} bien formados valen; los ${MALAS.length} mal formados dan false, nunca un error (${rmx.filter((x) => x !== false).length} no)`);
+  await como(pelayo, 'aal2');
+  await q(`insert into video_revisiones (archivo_id, atleta_id, reps_manual) values ($1, $2, '{"t":[0.5,2.5,4.5]}') on conflict (archivo_id) do update set reps_manual = excluded.reps_manual`, [va.id, aAna.id]);
+  const [rr] = await q(`select reps_manual, corregido_en from video_revisiones where archivo_id = $1`, [va.id]);
+  check(rr.reps_manual.t.length === 3 && rr.corregido_en === null, 'el coach guarda sus marcas en la corrección (no cuenta como corregir: no avisa)');
+  check(await falla(`update video_revisiones set reps_manual = '{"t":[2,1]}' where archivo_id = $1`, [va.id]) && await falla(`update video_revisiones set reps_manual = '{"t":[1,10]}' where archivo_id = $1`, [va.id]),
+    'en orden y dentro del vídeo (8 s: nada en el 0:10)');
+  await como(ana);
+  check(await falla(`update video_revisiones set reps_manual = '{"t":[1]}' where archivo_id = $1`, [va.id]) === false && (await q(`update video_revisiones set reps_manual = '{"t":[1]}' where archivo_id = $1 returning 1`, [va.id])).length === 0
+    && (await q(`select * from video_correcciones($1)`, [[va.id]]))[0] && !('reps_manual' in (await q(`select * from video_correcciones($1)`, [[va.id]]))[0]), 'Ana no las cambia (ni las ve: son del coach)');
+
+  console.log('  · Pasar un vídeo a otro atleta: su hilo, su corrección, su voz, su valoración y sus recordatorios');
+  await como(ana);
+  const vm = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'm'), ejercicio_id: sent.id, duracion_seg: 8, mime: 'video/mp4', bytes: 1000,
+    nota_atleta: 'Me molesta la rodilla izquierda al bajar', sesion_ejercicio_id: seAna.id, serie_numero: 2 });
+  await q(`update archivos set destacado = true where id = $1`, [vm.id]);
+  check((await q(`select nota_atleta, destacado, sesion_ejercicio_id, serie_numero from archivos where id = $1`, [vm.id])).map((x) => `${!!x.nota_atleta}${x.destacado}${x.sesion_ejercicio_id === seAna.id}${x.serie_numero}`).join() === 'truetruetrue2',
+    '(antes: el vídeo lleva el pie de Ana, su estrella y la serie de su sesión)');
+  const [cA] = await q(`insert into comentarios (atleta_id, archivo_id, texto) values ($1, $2, '¿Está bien la bajada?') returning id`, [aAna.id, vm.id]);
+  await q(`insert into video_autoevaluacion (archivo_id, rpe, molestia, zona) values ($1, 9, true, 'zona_lumbar')`, [vm.id]);
+  await como(pelayo, 'aal2');
+  const [cC] = await q(`insert into comentarios (atleta_id, archivo_id, texto, dibujo) values ($1, $2, 'En 0:02 la espalda se redondea', $3) returning id`, [aAna.id, vm.id, JSON.stringify({ t: 2, formas: [{ tipo: 'linea', p: [[0.1, 0.1], [0.5, 0.5]] }] })]);
+  const [voz] = await q(`insert into archivos (atleta_id, tipo, ruta, mime, bytes, duracion_seg) values ($1, 'audio', $2, 'audio/webm', 1000, 5) returning id`, [aAna.id, `${aAna.id}/audio-v059-${Math.random().toString(36).slice(2, 8)}.webm`]);
+  await q(`insert into video_revisiones (archivo_id, atleta_id, puntuacion, voz_archivo_id, voz_inicio) values ($1, $2, 3, $3, 0)`, [vm.id, aAna.id, voz.id]);
+  const [rmv] = await ins('Espalda neutra al bajar', { archivo: vm.id, segundo: 2 });
+  for (const t of ['Luis 1', 'Luis 2', 'Luis 3']) await ins(t, { atleta: aLuis.id });
+  await como(ana);
+  await q(`update comentarios set leido_en = now() where id = $1`, [cC.id]);
+  await q(`insert into comentario_reacciones (comentario_id, emoji) values ($1, '👍')`, [cC.id]);
+  await q(`insert into comentario_destacados (comentario_id) values ($1)`, [cC.id]);
+  await su();
+  check((await notis(`clave = $1 and estado = 'pendiente'`, [`comentario:${cC.id}`])).length + (await notis(`clave = $1`, [`video:${vm.id}`])).length >= 1, '(antes: un aviso pendiente para Ana de lo que le dijo el coach)');
+  await como(ana);
+  check((await q(`select id from comentarios where archivo_id = $1`, [vm.id])).length === 2 && (await q(`select * from video_correcciones($1)`, [[vm.id]])).length === 1
+    && (await q(`select * from recordatorios_activos($1)`, [aAna.id])).some((r) => r.id === rmv.id), '(antes: Ana ve el hilo, la corrección y el recordatorio)');
+  await como(pelayo, 'aal2');
+  await q(`update archivos set atleta_id = $2, ruta = $3 where id = $1`, [vm.id, aLuis.id, ruta(aLuis.id, 'movido')]);
+  await como(ana);
+  check((await q(`select id from comentarios where archivo_id = $1 or id = any($2)`, [vm.id, [cA.id, cC.id]])).length === 0, 'Ana ya no lee el hilo del vídeo que el coach ha pasado a Luis (ni lo suyo ni lo del coach)');
+  check((await q(`select * from video_correcciones($1)`, [[vm.id]])).length === 0 && (await q(`select 1 from archivos where id in ($1, $2)`, [vm.id, voz.id])).length === 0, 'ni su corrección, ni el vídeo, ni la voz del coach');
+  check((await q(`select * from video_autoevaluacion where archivo_id = $1`, [vm.id])).length === 0 && !(await q(`select * from recordatorios_activos($1)`, [aAna.id])).some((r) => r.id === rmv.id || r.archivo_id === vm.id),
+    'ni su valoración, ni el recordatorio enlazado a ese vídeo');
+  const susVideos = (await q(`select id from archivos where atleta_id = $1 and tipo = 'video_tecnica'`, [aAna.id])).map((x) => x.id);
+  check(!susVideos.includes(vm.id) && !(await q(`select archivo_id from video_correcciones($1)`, [susVideos])).some((x) => x.archivo_id === vm.id), 'ni sale entre sus vídeos corregidos («Comparar con su mejor» no puede elegirlo)');
+  await su();
+  check((await q(`select 1 from comentarios where id = $1`, [cA.id])).length === 0 && (await q(`select atleta_id, leido_en, dibujo from comentarios where id = $1`, [cC.id]))[0]?.atleta_id === aLuis.id
+    && (await q(`select leido_en from comentarios where id = $1`, [cC.id]))[0].leido_en === null && (await q(`select dibujo from comentarios where id = $1`, [cC.id]))[0].dibujo?.t === 2,
+    'lo que escribió Ana se borra; lo del coach (con su dibujo) pasa a Luis, sin «leído»');
+  check((await q(`select 1 from comentario_reacciones where comentario_id = $1`, [cC.id])).length === 0 && (await q(`select 1 from comentario_destacados where comentario_id = $1`, [cC.id])).length === 0
+    && (await notis(`estado = 'pendiente' and clave in ($1, $2, $3)`, [`comentario:${cC.id}`, `comentario:${cA.id}`, `video:${vm.id}`])).length === 0, 'sin la reacción ni el destacado de Ana, y sus avisos pendientes se retiran');
+  check((await q(`select * from video_autoevaluacion where archivo_id = $1`, [vm.id])).length === 0 && (await q(`select atleta_id, activo from recordatorios_tecnica where id = $1`, [rmv.id]))[0]?.atleta_id === aLuis.id
+    && (await q(`select activo from recordatorios_tecnica where id = $1`, [rmv.id]))[0].activo === false && (await q(`select voz_archivo_id, atleta_id from video_revisiones where archivo_id = $1`, [vm.id]))[0].atleta_id === aLuis.id,
+    'su valoración se borra; el recordatorio va con el vídeo (sin activar: Luis ya tenía 3) y la corrección, también (sin la voz)');
+  const [vmM] = await q(`select atleta_id, nota_atleta, destacado, sesion_ejercicio_id, serie_numero, ejercicio_id from archivos where id = $1`, [vm.id]);
+  check(vmM.atleta_id === aLuis.id && vmM.nota_atleta === null, '(M1) el pie que escribió Ana (podía contar algo de su salud) no pasa a Luis');
+  check(vmM.destacado === false, '(M1) ni su estrella');
+  check(vmM.sesion_ejercicio_id === null && vmM.serie_numero === null && vmM.ejercicio_id === sent.id, '(M1) ni la serie de su sesión (el ejercicio, sí)');
+  await como(luis);
+  check((await q(`select id from comentarios where archivo_id = $1`, [vm.id])).map((x) => x.id).join() === cC.id && (await q(`select puntuacion from video_correcciones($1)`, [[vm.id]]))[0]?.puntuacion === 3,
+    'Luis ve lo del coach en el hilo y la corrección');
+  await su();
+  await q(`delete from archivos where ruta like '%/v059-%' or ruta like '%/audio-v059-%'`);
+  check((await q(`select 1 from video_autoevaluacion`)).length === 0 && (await q(`select 1 from recordatorios_tecnica where archivo_id is not null or segundo is not null`)).length === 0,
+    'al borrar los vídeos, su valoración se va y los recordatorios se quedan sin vídeo ni momento');
+  await q(`delete from recordatorios_tecnica`); await q(`delete from frases_correccion`); await q(`delete from videos_modelo`); await q(`delete from fbe_privado.storage_por_borrar`); await q(`delete from chat_cupos`);
+  await q(`delete from ejercicios where id = $1`, [sent.id]);
+
+  console.log('  · (revisión, M2) El aviso de privacidad con revisiones («2026-12.1»)');
+  await su(); await q(`delete from privacidad_vista`);
+  check(/\\\.\[1-9\]/.test((await q(`select pg_get_constraintdef(oid) d from pg_constraint where conname = 'privacidad_vista_version_valida'`))[0].d), 'la restricción admite «AAAA-MM.n»');
+  await como(ana);
+  const pvR = async (v) => (await q(`insert into privacidad_vista (version) values ($1) on conflict (usuario_id) do update set version = excluded.version returning version`, [v]))[0].version;
+  check(await pvR('2026-12') === '2026-12' && await pvR('2026-12.1') === '2026-12.1', 'Ana pasa de la 2026-12 a la 2026-12.1');
+  check(await pvR('2026-12') === '2026-12.1' && await pvR('2026-11') === '2026-12.1', 'nunca hacia atrás (ni a la del mes sin revisión)');
+  check(await falla(`update privacidad_vista set version = '2026-12.0'`) && await falla(`update privacidad_vista set version = '2026-12.10'`) && await falla(`update privacidad_vista set version = '2026-12.'`)
+    && await falla(`update privacidad_vista set version = '2026-12-1'`) && await falla(`update privacidad_vista set version = '2099-01.1'`), 'solo con su formato (de 1 a 9) y nunca de un mes que aún no ha llegado');
+  const proximaR = (await q(`select to_char((now() at time zone 'Europe/Madrid') + interval '1 month', 'YYYY-MM') v`))[0].v;
+  const pasadaR = (await q(`select to_char((now() at time zone 'Europe/Madrid') + interval '2 month', 'YYYY-MM') v`))[0].v;
+  check(await pvR(`${proximaR}.2`) === `${proximaR}.2` && await falla(`update privacidad_vista set version = $1`, [`${pasadaR}.1`]), 'el mes, el de los siete primeros caracteres: hasta el que viene (con su revisión), no después');
+  check(await pvR(`${proximaR}.1`) === `${proximaR}.2`, 'y dentro del mismo mes, la revisión tampoco va hacia atrás');
+  await su(); await q(`delete from privacidad_vista`);
+
+  console.log('  · La 037 sin la 036, y sobre una base que ya va por delante');
+  const sin36 = new PGlite();
+  await sin36.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin36.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '036')) await sin36.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  const sql37 = readFileSync(new URL('../supabase/migraciones/037_videos_tanda_a.sql', import.meta.url), 'utf8');
+  let e37 = null;
+  try { await sin36.exec(sql37); } catch (e) { e37 = e.message; }
+  check(/Antes de la 037 hace falta la 036/.test(e37 || '') && !(await sin36.query(`select 1 from pg_class where relname = 'recordatorios_tecnica'`)).rows.length, 'la 037 no se aplica sin la 036 (y no deja nada a medias)');
+  const defPv = async () => (await sin36.query(`select pg_get_constraintdef(oid) d from pg_constraint where conname = 'privacidad_vista_version_valida'`)).rows[0].d;
+  check(!/\\\./.test(await defPv()) && (await sin36.query(`select '2026-12.1' ~ '^20[0-9]{2}-(0[1-9]|1[0-2])$' ok`)).rows[0].ok === false,
+    '(M2) sin la 037, la base no admite «2026-12.1» (por eso la app, sin la 037, usa la 2026-12)');
+  await sin36.exec(readFileSync(new URL('../supabase/migraciones/036_videos_analisis.sql', import.meta.url), 'utf8'));
+  await sin36.exec(sql37);
+  await sin36.exec(sql37);
+  check((await sin36.query(`select count(*)::int n from fbe_migraciones where numero = 37`)).rows[0].n === 1, 'con la 036, se aplica (y se puede repetir: queda apuntada una vez)');
+  await sin36.exec(`insert into public.fbe_migraciones (numero) values (38)`);
+  let e38 = null;
+  try { await sin36.exec(sql37); } catch (e) { e38 = e.message; }
+  check(/ya tiene la migración 038/.test(e38 || ''), 'ni en una base que ya tiene una posterior');
+  await sin36.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

@@ -12,8 +12,13 @@ import { ponerCorrecciones, useCorrecciones } from './correcciones.js';
 import { useGrabadora, ReproductorVoz } from '../chat/NotaVoz.jsx';
 import { textoContador } from '../../logica/notasVoz.js';
 import { AVISO_035 } from '../../datos/api.js';
-import { SubirArchivo } from '../Archivos.jsx';
+import { SubirArchivo, CompararVideos } from '../Archivos.jsx';
 import { AnalisisVideo } from './Analisis.jsx';
+import { AutoevaluacionCoach, AutoevaluacionAtleta } from './Autoevaluacion.jsx';
+import { RecordatoriosCoach } from './Recordatorios.jsx';
+import { HojaTecnica } from './Frases.jsx';
+import { porQueMejor } from '../../logica/correccion.js';
+import { fmtCorta } from '../../logica/fechas.js';
 import {
   ESTADOS_PUNTO, NOMBRE_PUNTUACION, checklistSugerido, resumenChecklist, FASES_TEMPO, repsDeMarcas, tablaTempo, textoSegundos, marcaTempoValida, PASOS_ESTADO, limpiarPlantilla, MAX_PUNTOS,
 } from '../../logica/tecnica.js';
@@ -40,6 +45,21 @@ export function PanelCorreccion({ video, esCoach = false, nombreAtleta = 'Atleta
   const con035 = useCarga(() => api.video035().catch(() => false), []);
   const rev = useCarga(() => api.revisionVideo(video.id).catch(() => null), [video.id]);
   useEffect(() => { if (!rev.cargando) ponerCorrecciones(video.id, 'revision', rev.datos || null); }, [rev.datos, rev.cargando, video.id]);
+  // (v0.59, 037) Las marcas de repetición a mano del coach: las guardadas y cómo guardarlas (sin la 037, solo en pantalla)
+  const { aviso } = useApp();
+  useEffect(() => {
+    if (!esCoach) return undefined;
+    let vivo = true;
+    (async () => {
+      if (!(await api.video037().catch(() => false)) || !vivo) return;
+      ponerCorrecciones(video.id, 'repsManual', await api.repsManual(video.id).catch(() => []));
+      ponerCorrecciones(video.id, 'guardarRepsManual', async (lista) => {
+        ponerCorrecciones(video.id, 'repsManual', lista);
+        try { await api.guardarRepsManual(video, lista); } catch (e) { aviso(e.message, 'error'); }
+      });
+    })();
+    return () => { vivo = false; ponerCorrecciones(video.id, 'guardarRepsManual', null); };
+  }, [video.id, esCoach]);
   if (con035.cargando && con035.datos == null) return null;
   const recargar = async () => { await rev.recargar(true); alCambiar?.(); };
   if (!con035.datos) return (
@@ -72,9 +92,11 @@ function CorregirVideo({ video, revision, nombreAtleta, alGuardar }) {
   useEffect(() => { setNota(revision?.puntuacion ?? null); }, [revision?.puntuacion]);
   const [marcas, setMarcas] = useState(() => (revision?.tempo?.reps || []).flat());
   useEffect(() => { setMarcas((revision?.tempo?.reps || []).flat()); }, [revision?.tempo]);
-  const [editarLista, setEditarLista] = useState(false);
+  const [editarLista, setEditarLista] = useState(false); // false | 'puntos' | 'frases' | 'modelo'
   const [ocupado, setOcupado] = useState(false);
   const primer = (nombreAtleta || 'Atleta').split(' ')[0];
+  // (v0.59) lo que nota el atleta (su valoración al enviarlo)
+  const auto = useCarga(() => api.autoevaluacion(video.id).catch(() => null), [video.id]);
   const rep = () => reproductorDe(video.id);
   const cambiado = nota !== (revision?.puntuacion ?? null) || JSON.stringify(puntos.filter((p) => p.e)) !== JSON.stringify(revision?.checklist?.puntos || [])
     || JSON.stringify(repsDeMarcas(marcas).reps) !== JSON.stringify(revision?.tempo?.reps || []);
@@ -92,6 +114,7 @@ function CorregirVideo({ video, revision, nombreAtleta, alGuardar }) {
   return (
     <section class="correccion panel-pad pila-s" aria-label="Corregir el vídeo">
       <div class="correccion-cab separa"><h3>Corrección</h3>{revision?.corregido_el ? <span class="chip ok mini">Corregido</span> : null}</div>
+      <AutoevaluacionCoach auto={auto.datos} nombreAtleta={nombreAtleta} puntuacion={nota} rpeSerie={video.serie?.rpe ?? null} />
       <div class="campo">
         <span class="etq" id={`nota-${video.id}`}>Nota de técnica</span>
         <div class="segmentos correccion-nota" role="group" aria-labelledby={`nota-${video.id}`}>
@@ -101,7 +124,8 @@ function CorregirVideo({ video, revision, nombreAtleta, alGuardar }) {
       </div>
       <div class="campo">
         <div class="separa"><span class="etq">Puntos clave{ej ? ` de ${ej.nombre}` : ''}</span>
-          {ej?.id && <button type="button" class="btn-texto mini" onClick={() => setEditarLista(true)}><Icono n="editar" /> Cambiar la lista</button>}</div>
+          {ej?.id && <span class="fila-envolver"><button type="button" class="btn-texto mini" onClick={() => setEditarLista('puntos')}><Icono n="editar" /> Cambiar la lista</button>
+            <button type="button" class="btn-texto mini" onClick={() => setEditarLista('frases')} aria-haspopup="dialog">Frases y vídeo modelo</button></span>}</div>
         <ul class="lista-puntos">
           {puntos.map((p, i) => (
             <li key={`${i}-${p.t}`} class={`punto-clave ${p.e || ''}`}>
@@ -124,32 +148,11 @@ function CorregirVideo({ video, revision, nombreAtleta, alGuardar }) {
         <ExportarFotograma video={video} nombreAtleta={primer} />
       </div>
       <VozSobreVideo video={video} revision={revision} alGuardar={alGuardar} />
-      {editarLista && ej?.id && <EditarLista ejercicio={ej} puntos={puntos.map((p) => p.t)} alCerrar={() => setEditarLista(false)} alGuardar={(ps) => { setPuntos(ps.map((t) => puntos.find((p) => p.t === t) || { t, e: null })); plantilla.recargar(true); setEditarLista(false); }} />}
+      <RecordatoriosCoach video={video} ejercicio={ej} nombreAtleta={nombreAtleta} puntosMal={puntos.filter((p) => p.e === 'mal')} />
+      <CompararCon video={video} esCoach />
+      {editarLista && ej?.id && <HojaTecnica ejercicio={ej} inicial={editarLista} puntos={editarLista === 'puntos' ? puntos.map((p) => p.t) : null} alCerrar={() => setEditarLista(false)}
+        alGuardarPuntos={(ps) => { setPuntos(ps.map((t) => puntos.find((p) => p.t === t) || { t, e: null })); plantilla.recargar(true); setEditarLista(false); }} />}
     </section>
-  );
-}
-
-// La lista de puntos clave de un ejercicio (la del coach): una línea por punto, hasta 15
-function EditarLista({ ejercicio, puntos, alCerrar, alGuardar }) {
-  const { api, aviso } = useApp();
-  const [texto, setTexto] = useState(puntos.join('\n'));
-  const [ocupado, setOcupado] = useState(false);
-  const lista = limpiarPlantilla(texto.split('\n'));
-  return (
-    <Hoja titulo={`Puntos clave de ${ejercicio.nombre}`} alCerrar={alCerrar}>
-      <div class="campo">
-        <label for="lista-puntos">Un punto por línea (hasta {MAX_PUNTOS})</label>
-        <textarea id="lista-puntos" class="area" rows={8} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} />
-        <span class="ayuda">{lista.length} {lista.length === 1 ? 'punto' : 'puntos'}. Se usa en los vídeos de {ejercicio.nombre} de todos tus atletas (no la ven ellos: ven lo que marques en cada vídeo).</span>
-      </div>
-      <div class="fila-envolver">
-        <button type="button" class="btn btn-primario" disabled={ocupado || !lista.length} onClick={async () => {
-          setOcupado(true);
-          try { const ps = await api.guardarPlantillaTecnica(ejercicio.id, lista); aviso('Lista guardada'); alGuardar(ps); } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
-        }}>Guardar la lista</button>
-        <button type="button" class="btn" onClick={() => setTexto(checklistSugerido(ejercicio.nombre, ejercicio.grupos_musculares || [], ejercicio.tipo || []).join('\n'))}>Usar los sugeridos</button>
-      </div>
-    </Hoja>
   );
 }
 
@@ -316,6 +319,8 @@ function VerCorreccion({ video, revision }) {
           {r.voz_archivo_id && <p class="mini secundario"><Icono n="micro" /> Tu coach te habla sobre el vídeo: dale a ▶ y lo oirás a su ritmo (si lo pausas, se pausa).</p>}
         </>
       )}
+      <AutoevaluacionAtleta video={video} rpeSerie={video.serie?.rpe ?? null} />
+      <CompararCon video={video} />
       <div class="fila-envolver">
         {corregido && <RepetirVideo video={video} puntos={paraRepetir} />}
         <button type="button" class="btn btn-peq plano" aria-expanded={tempo ? 'true' : 'false'} onClick={() => setTempo(!tempo)}><Icono n="reloj" /> Medir tu tempo</button>
@@ -334,5 +339,27 @@ function RepetirVideo({ video, puntos }) {
     <SubirArchivo atletaId={atleta.id} ejercicioId={ej?.id || video.ejercicio_id || null} ejercicio={ej} titulo={`Repetir: ${ej?.nombre || 'vídeo de técnica'}`}
       etiqueta="Grabar de nuevo con la corrección" clase="btn btn-peq btn-primario" repiteDe={video.id} puntos={puntos} directoACamara
       alSubir={() => { if (typeof window !== 'undefined') window.dispatchEvent(new Event('fbe-video-repetido')); }} />
+  );
+}
+
+// v0.59 (6 y 7): «Comparar con su mejor» (el de mejor nota de ese ejercicio entre sus vídeos corregidos; después, la mejor
+// velocidad guardada; después, el más reciente) y «Comparar con el vídeo modelo» del coach. El atleta, con los suyos.
+function CompararCon({ video, esCoach = false }) {
+  const { api } = useApp();
+  const ej = video.ejercicio || null;
+  const mejor = useCarga(() => api.mejorVideoDe(video).catch(() => null), [video.id]);
+  const modelos = useCarga(() => (ej?.id ? api.videosModelo([ej.id]).catch(() => []) : Promise.resolve([])), [ej?.id]);
+  const [comparar, setComparar] = useState(null); // 'mejor' | 'modelo'
+  const m = mejor.datos;
+  const hayModelo = (modelos.datos || []).length > 0;
+  if (!m && !hayModelo) return null;
+  const nombre = (v) => (v.id === video.id ? 'Este vídeo' : v.id === m?.id ? (esCoach ? 'Su mejor' : 'Tu mejor') : v.ejercicio?.nombre || 'Vídeo');
+  return (
+    <div class="fila-envolver comparar-con">
+      {m && <button type="button" class="btn btn-peq" onClick={() => setComparar('mejor')} aria-haspopup="dialog"><Icono n="duplicar" /> {esCoach ? 'Comparar con su mejor' : 'Comparar con tu mejor'} <span class="terciario num">({fmtCorta(m.fecha)}{porQueMejor(m) ? ` · ${porQueMejor(m)}` : ''})</span></button>}
+      {hayModelo && <button type="button" class="btn btn-peq" onClick={() => setComparar('modelo')} aria-haspopup="dialog"><Icono n="video" /> Comparar con el vídeo modelo</button>}
+      {comparar === 'mejor' && m && <CompararVideos videos={[m, video]} nombreDe={nombre} inicialA={video.id} inicialB={m.id} alCerrar={() => setComparar(null)} />}
+      {comparar === 'modelo' && <CompararVideos videos={[video]} nombreDe={nombre} inicialA={video.id} inicialB="modelo" alCerrar={() => setComparar(null)} />}
+    </div>
   );
 }
