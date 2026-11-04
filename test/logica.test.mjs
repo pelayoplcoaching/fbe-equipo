@@ -2702,6 +2702,27 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   check(leido.mensajes.length === MAX_CACHE && leido.mensajes.at(-1).id === 'm249' && !leido.mensajes.some((c) => c.pendiente) && !('enlaceFirmado' in leido.mensajes[0]) && !('url' in leido.mensajes.at(-1).archivo) && !('blob' in leido.mensajes.at(-1).archivo),
     'la copia del chat en el móvil: los últimos 200, solo textos y datos (sin enlaces firmados ni archivos, ni lo que aún sale)');
   check(await cache.leer('u2', 'at1') === null && (await cache.leer('u1', 'at2')) === null, 'por cuenta y por conversación (lo de otra persona en el mismo móvil no se ve)');
+  // (v0.58.1) «Hay más» con la copia del móvil: la copia (200) es más corta que la primera página (400); antes se
+  // comparaban y nunca había más, así que arriba de lo guardado no se cargaba nada
+  {
+    const { hayAnteriores } = await import('../web/src/logica/chat.js');
+    check(leido.completa === false && hayAnteriores({ cargados: leido.mensajes.length, limite: 400, desdeCache: true, cacheCompleta: leido.completa }),
+      '(v0.58.1) la copia de una conversación de más de 200 no es «entera»: abriendo con ella, hay mensajes anteriores');
+    await cache.guardar('u1', 'at1', largos, { completa: true });
+    check((await cache.leer('u1', 'at1')).completa === false, '(v0.58.1) aunque la base diga que no hay más, si la copia se queda con los últimos 200, no es entera');
+    await cache.guardar('u1', 'at1', largos.slice(0, 30), { completa: true });
+    const corta = await cache.leer('u1', 'at1');
+    check(corta.completa === true && !hayAnteriores({ cargados: 30, limite: 400, desdeCache: true, cacheCompleta: corta.completa }), '(v0.58.1) una conversación corta guardada entera: no hay nada más que cargar');
+    await cache.guardar('u1', 'at1', largos.slice(0, 30));
+    check((await cache.leer('u1', 'at1')).completa === false, '(v0.58.1) sin saberlo (o en una copia de antes, sin la marca), se supone que hay más');
+    check(hayAnteriores({ cargados: 400, limite: 400 }) && !hayAnteriores({ cargados: 399, limite: 400 }) && hayAnteriores({ cargados: 600, limite: 600 }) && !hayAnteriores({ cargados: 656, limite: 800 }),
+      '(v0.58.1) de la base: hay más si ha devuelto tantos como se pidieron (con el límite de esa respuesta)');
+    const chatSrc = readFileSync(new URL('../web/src/ui/Chat.jsx', import.meta.url), 'utf8');
+    const cssChat = readFileSync(new URL('../web/src/estilos.css', import.meta.url), 'utf8');
+    check(/hayAnteriores\(\{ cargados: mensajes\.length, limite: limiteDatos, desdeCache/.test(chatSrc) && !/mensajes\.length >= limite\b/.test(chatSrc)
+      && /:root:has\(\.chat-lista\) \{ overflow-anchor: none; \}/.test(cssChat) && /volverAlAncla/.test(chatSrc),
+      '(v0.58.1) el chat calcula «hay más» con la copia y con el límite de lo cargado, y ancla él mismo lo que se lee (sin el anclaje de Chromium)');
+  }
   await cache.borrarTodo();
   check(await cache.leer('u1', 'at1') === null && paraCache([{ id: 'a' }]).length === 1 && await crearCacheChat({ almacen: null }).leer('u1', 'at1') === null, 'al cerrar la sesión se borra entera; sin IndexedDB, el chat abre como siempre');
   const appSrc = readFileSync(new URL('../web/src/ui/App.jsx', import.meta.url), 'utf8');

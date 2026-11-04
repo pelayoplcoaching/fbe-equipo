@@ -36,7 +36,7 @@ import { cacheChat } from '../datos/cacheChat.js';
 import { tomarParaChat } from './Compartido.jsx';
 import { sonar } from './sonidos.js';
 import { prepararFoto } from './fotos.js';
-import { debeSonar, porTipo, TIPOS_BUSQUEDA, primeroDesde, ultimoEditable } from '../logica/chat.js';
+import { debeSonar, porTipo, TIPOS_BUSQUEDA, primeroDesde, ultimoEditable, hayAnteriores } from '../logica/chat.js';
 import { leerReacciones, emojiValido } from '../logica/emojis.js';
 import { comprimible } from '../logica/imagen.js';
 
@@ -72,7 +72,10 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const yo = perfil?.rol === 'coach' ? 'coach' : 'atleta';
   const miId = perfil?.id || null;
   const [limite, setLimite] = useState(400);
-  const conv = useCarga(() => api.conversacion(atletaId, { limite }), [atletaId, limite]);
+  // (v0.58.1) cuántos se pidieron para cada respuesta: mientras llega la página siguiente, lo que se ve sigue siendo de la
+  // anterior (y «hay más» se calcula con su límite, no con el nuevo)
+  const limiteDe = useRef(new WeakMap());
+  const conv = useCarga(async () => { const d = await api.conversacion(atletaId, { limite }); if (d && typeof d === 'object') limiteDe.current.set(d, limite); return d; }, [atletaId, limite]);
   const borradorInicial = useMemo(() => leerBorrador(almacen(), miId, atletaId), [miId, atletaId]);
   const [texto, setTexto] = useState(borradorInicial?.texto || '');
   const [adjuntos, setAdjuntos] = useState([]);      // [{ id, archivo, url, esVideo, esPdf, paginas }]
@@ -130,14 +133,17 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const [fondo, setFondo] = useState(leerAjustes().fondoChat !== 'liso');
 
   // v0.56: lo guardado en el móvil, mientras llega la base (o si no hay cobertura)
-  const [enCache, setEnCache] = useState(null);
-  useEffect(() => { let vivo = true; setEnCache(null); cacheChat().leer(miId, atletaId).then((x) => vivo && x && setEnCache(x.mensajes)); return () => { vivo = false; }; }, [miId, atletaId]);
-  useEffect(() => { if (conv.datos) cacheChat().guardar(miId, atletaId, conv.datos); }, [conv.datos]);
+  const [copia, setCopia] = useState(null);
+  useEffect(() => { let vivo = true; setCopia(null); cacheChat().leer(miId, atletaId).then((x) => vivo && x && setCopia(x)); return () => { vivo = false; }; }, [miId, atletaId]);
+  const limiteDatos = conv.datos ? limiteDe.current.get(conv.datos) ?? limite : limite;
+  useEffect(() => { if (conv.datos) cacheChat().guardar(miId, atletaId, conv.datos, { completa: !hayAnteriores({ cargados: conv.datos.length, limite: limiteDatos }) }); }, [conv.datos]);
+  const enCache = copia?.mensajes || null;
   const datos = conv.datos || enCache;
   const desdeCache = !conv.datos && !!enCache;
   const mensajes = datos || [];
   const porId = useMemo(() => Object.fromEntries(mensajes.map((c) => [c.id, c])), [mensajes]);
-  const hayMas = mensajes.length >= limite;
+  // (v0.58.1) con la copia del móvil (los últimos 200), hay más salvo que la copia sea la conversación entera
+  const hayMas = hayAnteriores({ cargados: mensajes.length, limite: limiteDatos, desdeCache, cacheCompleta: copia?.completa === true });
   const primerNombre = nombreAtleta.split(' ')[0];
   const otro = yo === 'coach' ? primerNombre : nombreCoach;
   const nombreDe = (autor) => (autor === yo ? 'Tú' : yo === 'coach' ? primerNombre : 'Tu coach');
@@ -218,6 +224,27 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const primeraCarga = useRef(true);
   const ultimoPrevio = useRef(null);
   const cuantosPrevio = useRef(0);
+  // (v0.58.1) El anclaje del desplazamiento, hecho aquí: Safari (iPhone) no lo tiene y, al entrar mensajes por arriba
+  // (la página anterior, la conversación de la base en lugar de la copia del móvil, el más antiguo que sale al llegar uno
+  // nuevo), la pantalla se movía. Justo antes de pintar la lista cambiada se mide el mensaje que se está leyendo (el
+  // primero bajo la cabecera) y, ya pintada, se vuelve a poner donde estaba (overflow-anchor: none en el chat, para que
+  // Chromium no lo haga a su manera encima). Se mide aquí, al pintar, porque aún está la lista de antes en pantalla.
+  const anclaje = useRef(null);
+  const primeroPrevio = useRef(null);
+  const copiaPrevia = useRef(false);
+  const primeroVista = vista.length ? vista[0].cliente_id || vista[0].id : null;
+  if ((primeroVista !== primeroPrevio.current && primeroPrevio.current) || (conv.datos && copiaPrevia.current)) {
+    const a = medirAncla(raiz.current);
+    anclaje.current = a ? { ...a, copia: copiaPrevia.current } : null;
+  }
+  primeroPrevio.current = primeroVista;
+  copiaPrevia.current = desdeCache;
+  useLayoutEffect(() => {
+    const a = anclaje.current;
+    if (!a || primeraCarga.current) return;
+    anclaje.current = null;
+    volverAlAncla(a);
+  });
   useLayoutEffect(() => {
     if (!datos) return;
     const doc = document.documentElement;
@@ -225,8 +252,12 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     if (primeraCarga.current && !conv.datos) { window.scrollTo(0, doc.scrollHeight); return; }
     if (primeraCarga.current) {
       primeraCarga.current = false;
+      const a = anclaje.current;
+      anclaje.current = null;
       const sep = separador.current ? document.getElementById('chat-sin-leer') : null;
-      if (sep) {
+      // (v0.58.1) si con la copia ya se había subido a leer, al llegar la base no salta abajo: sigue en ese mensaje
+      // (y lo anterior queda encima). Antes volvía al final (o a los sin leer) y se perdía por dónde iba.
+      if (a?.copia && a.fin > 240 && volverAlAncla(a)) { /* donde estaba */ } else if (sep) {
         const cab = document.querySelector('.cabecera');
         window.scrollTo(0, Math.max(0, sep.getBoundingClientRect().top + window.scrollY - (cab?.getBoundingClientRect().height || 0) - 12));
       } else window.scrollTo(0, doc.scrollHeight);
@@ -246,21 +277,18 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     cuantosPrevio.current = vista.length;
   }, [ultimoClave, !!conv.datos, !!datos]);
   useLayoutEffect(() => { if (adjuntos.length) window.scrollTo(0, document.documentElement.scrollHeight); }, [adjuntos.length]);
-  // v0.56: lo anterior se carga solo al llegar arriba y la pantalla se queda donde estaba (sin saltos): se guarda lo que
-  // queda por debajo y, al llegar, se vuelve a poner ahí
-  const ancla = useRef(null);
+  // v0.56: lo anterior se carga solo al llegar arriba y la pantalla se queda donde estaba (sin saltos). (v0.58.1) Con el
+  // anclaje de arriba, en el mensaje que se lee al llegar la página (antes: donde se estaba al pedirla, ~300 px más abajo
+  // si el dedo seguía subiendo, como pasa siempre con la inercia del iPhone). Con la copia del móvil aún no se pide nada:
+  // la primera página de la base ya trae lo de antes de la copia.
+  const pidiendo = useRef(false);
   const tope = useRef(null);
   const cargarAnteriores = () => {
-    if (!hayMas || conv.cargando || ancla.current) return;
-    ancla.current = document.documentElement.scrollHeight - window.scrollY;
+    if (!hayMas || desdeCache || conv.cargando || pidiendo.current) return;
+    pidiendo.current = true;
     setLimite((l) => l + 200);
   };
-  useLayoutEffect(() => {
-    if (ancla.current == null || conv.cargando) return;
-    const d = ancla.current;
-    ancla.current = null;
-    window.scrollTo(0, Math.max(0, document.documentElement.scrollHeight - d));
-  }, [mensajes.length, conv.cargando]);
+  useEffect(() => { if (!conv.cargando) pidiendo.current = false; }, [conv.cargando]);
   useEffect(() => {
     const el = tope.current;
     if (!el || typeof IntersectionObserver === 'undefined') return undefined;
@@ -322,6 +350,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     if (!vv) return undefined;
     const raizDoc = document.documentElement;
     let raf = 0;
+    let antes = 0;
     const poner = () => {
       raf = 0;
       // (lo que tapa menos de 80 px es la barra del navegador o un pellizco, no el teclado)
@@ -330,7 +359,11 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
       const estaba = abajoRef.current;
       raizDoc.style.setProperty('--teclado', `${tapa}px`);
       if (tapa) raizDoc.dataset.teclado = ''; else delete raizDoc.dataset.teclado;
-      if (estaba) requestAnimationFrame(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      // (v0.58.1) solo si se abre o se cierra el teclado: en el iPhone, visualViewport también avisa al moverse la barra de
+      // Safari o al rebotar, y eso devolvía abajo del todo a quien empezaba a subir
+      const cambia = tapa !== antes;
+      antes = tapa;
+      if (estaba && cambia) requestAnimationFrame(() => window.scrollTo(0, document.documentElement.scrollHeight));
     };
     const al = () => { if (!raf) raf = requestAnimationFrame(poner); };
     vv.addEventListener('resize', al);
@@ -957,8 +990,8 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
       )}
       <div class="chat-lista" ref={lista}>
         <span ref={tope} class="chat-tope" aria-hidden="true" />
-        {hayMas && conv.datos && (
-          <button type="button" class="btn btn-peq chat-anteriores" disabled={conv.cargando} onClick={cargarAnteriores}><Icono n="arriba" /> {conv.cargando ? 'Cargando los anteriores…' : 'Ver mensajes anteriores'}</button>
+        {hayMas && datos && (
+          <button type="button" class="btn btn-peq chat-anteriores" disabled={conv.cargando} onClick={desdeCache ? () => conv.recargar() : cargarAnteriores}><Icono n="arriba" /> {conv.cargando ? 'Cargando los anteriores…' : 'Ver mensajes anteriores'}</button>
         )}
         {!datos && (conv.cargando || !conv.error) ? <Cargando texto="Cargando los mensajes" /> : !vista.length ? (
           <div class="chat-vacio">
@@ -1209,6 +1242,26 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
       {hoja === 'reacciones' && <HojaReaccionesRapidas uid={miId} alCerrar={() => { setRapidasEmoji(leerReacciones(almacen(), miId)); setHoja(null); }} />}
     </div>
   );
+}
+
+// (v0.58.1) El anclaje del chat: el primer mensaje bajo la cabecera (búsqueda binaria: van en orden de arriba abajo), dónde
+// está en pantalla y cuánto queda por debajo; y volver a ponerlo ahí
+function medirAncla(raiz) {
+  const bs = raiz?.querySelectorAll('.chat-lista .burbuja[id]');
+  if (!bs?.length) return null;
+  const tope = document.querySelector('.cabecera')?.getBoundingClientRect().bottom || 0;
+  let lo = 0, hi = bs.length - 1, i = -1;
+  while (lo <= hi) { const m = (lo + hi) >> 1; if (bs[m].getBoundingClientRect().bottom > tope) { i = m; hi = m - 1; } else lo = m + 1; }
+  if (i < 0) return null;
+  const doc = document.documentElement;
+  return { id: bs[i].id, top: bs[i].getBoundingClientRect().top, fin: doc.scrollHeight - window.scrollY - window.innerHeight };
+}
+function volverAlAncla(a) {
+  const el = a && document.getElementById(a.id);
+  if (!el) return false;
+  const d = el.getBoundingClientRect().top - a.top;
+  if (Math.abs(d) >= 1) window.scrollTo(0, window.scrollY + d);
+  return true;
 }
 
 function ajustarAlto(el) {

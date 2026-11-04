@@ -3921,6 +3921,9 @@ body:has(.visor) .chat-barra, body:has(.visor) .chat-abajo { display: none; }
 /* ---------- v0.56: notas de voz, encuestas, subidas con progreso, editor de fotos, búsqueda por tipo ---------- */
 
 .chat-tope { display: block; height: 1px; }
+/* (v0.58.1) El chat ancla él mismo lo que se lee al entrar mensajes por arriba (Safari no tiene anclaje); Chromium, que sí, no
+   lo hace encima a su manera */
+:root:has(.chat-lista) { overflow-anchor: none; }
 .chat-sin-red { display: flex; align-items: center; gap: 6px; justify-content: center; margin: 6px auto; padding: 4px 12px; border-radius: 999px; background: var(--hoja); box-shadow: var(--sombra); width: fit-content; color: var(--tinta-2); }
 .chat-sin-red svg { width: 14px; height: 14px; }
 
