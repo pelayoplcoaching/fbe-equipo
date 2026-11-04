@@ -7,6 +7,7 @@
 // v0.52: «Respira» en el descanso (un círculo que acompasa la respiración), apagado de entrada.
 // v0.52.2: el descanso si el coach no lo pone (de serie, 2:00; 0 = sin descanso automático).
 // v0.54: el fondo del chat («Con dibujos», de serie, o «Liso»).
+// v0.62: «Avisar aunque bloquees el móvil», apagado de serie.
 import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
 import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 
@@ -19,7 +20,10 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   // v0.60: «Difuminar la cara» al enviar un vídeo, encendido de serie en este móvil (apagado si no se elige)
   difuminarCara: false,
   // v0.61: «Subir los vídeos solo con wifi» (solo sale donde el navegador dice si es wifi: Chrome de Android)
-  soloWifi: false };
+  soloWifi: false,
+  // v0.62: «Avisar aunque bloquees el móvil» (la pista del descanso, ui/pista-descanso.js): apagado de serie, porque en el
+  // iPhone (y en Android) pausa la música de otras apps mientras dura el descanso. Solo sale donde puede funcionar
+  vozBloqueo: false };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -52,6 +56,7 @@ export function normalizarAjustes(guardado = {}) {
   a.fotosHd = a.fotosHd === true;
   a.difuminarCara = a.difuminarCara === true;
   a.soloWifi = a.soloWifi === true;
+  a.vozBloqueo = a.vozBloqueo === true;
   return a;
 }
 export function leerAjustes() {

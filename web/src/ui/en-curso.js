@@ -1,7 +1,8 @@
 // v0.52: la sesión que el atleta lleva a medias, en este móvil (para la píldora «Sesión en curso» y para que el descanso
 // siga al volver a la sesión). Solo el nombre, el ejercicio y la serie que tocan y el descanso: nada de salud. Se borra
 // al terminar la sesión (o si se quitan todas sus series). Sin almacenamiento, vale mientras la app está abierta.
-import { enCursoValido } from '../logica/actividad.js';
+import { enCursoValido, descansoGuardable } from '../logica/actividad.js';
+import { pararPista } from './pista-descanso.js';
 
 const clave = (atletaId) => `fbe-en-curso-${atletaId}`;
 export const EVENTO_EN_CURSO = 'fbe-en-curso';
@@ -30,8 +31,7 @@ export function guardarEnCurso(atletaId, datos) {
 export function cambiarDescansoEnCurso(atletaId, sesionId, descanso) {
   const x = leerEnCurso(atletaId);
   if (!x || x.id !== sesionId) return;
-  const d = descanso ? { fin: descanso.fin, total: descanso.total, prioridad: descanso.prioridad || null, texto: descanso.texto || null, voz: descanso.voz || null, tras: descanso.tras || null, inicio: descanso.inicio || null } : null;
-  const n = { ...x, descanso: d, t: Date.now() };
+  const n = { ...x, descanso: descansoGuardable(descanso), t: Date.now() };
   memoria.set(atletaId, n);
   try { localStorage.setItem(clave(atletaId), JSON.stringify(n)); } catch { /* */ }
   avisar();
@@ -43,6 +43,8 @@ export function borrarEnCurso(atletaId, sesionId = null) {
   if (sesionId && x && x.id !== sesionId) return;
   memoria.set(atletaId, null);
   try { localStorage.removeItem(clave(atletaId)); } catch { /* */ }
+  // v0.62: y la pista del descanso de esa sesión, si suena (al terminarla o quitarle todas las series)
+  pararPista({ sesionId: sesionId || x?.id || null });
   if (x) avisar();
 }
 
@@ -55,6 +57,7 @@ export function descansoEnCurso(atletaId, fin) {
 // Al cerrar la sesión de la app (o cambiar de cuenta en la demo): fuera la de todos los atletas de este móvil
 export function borrarTodoEnCurso() {
   memoria.clear();
+  pararPista();
   try { for (const k of Object.keys(localStorage)) if (k.startsWith('fbe-en-curso-')) localStorage.removeItem(k); } catch { /* */ }
   avisar();
 }

@@ -25,8 +25,9 @@ export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) &&
 // Lo que cambia en cada versión (corto: el texto entero está en la política): [icono, título, texto, versión]. La 2026-11
 // (v0.56: el chat), la 2026-12 (v0.57 y v0.58: los vídeos de técnica y su análisis automático) y la 2026-12.1 (v0.59, con
 // la 037: cómo lo has notado, los recordatorios y los vídeos modelo) y la 2026-12.2 (v0.60: las respuestas en vídeo, exportar
-// y difuminar la cara en el móvil)
+// y difuminar la cara en el móvil) y la 2026-12.4 (v0.62: avisar aunque bloquees el móvil)
 export const NOVEDADES_PRIVACIDAD = [
+  ['candado', 'Avisar aunque bloquees el móvil', 'Si lo enciendes (se guarda solo en ese móvil), la pantalla de bloqueo enseña tu descanso y la serie siguiente con sus kilos mientras descansas: lo ve quien mire tu móvil, sin desbloquearlo. El aviso del fin del descanso dice también la carga que te toca.', '2026-12.4'],
   ['video', 'Resumen de la sesión, informe del mes y solo con wifi', 'Tu coach puede mandarte un resumen de toda una sesión y el informe de técnica de cada mes: te llegan al chat con un aviso sin el texto. El informe y el 1RM estimado por la velocidad se calculan en el móvil al abrirlos, sin guardarse aparte. «Subir los vídeos solo con wifi» se guarda solo en tu móvil.', '2026-12.3'],
   ['video', 'Respuestas en vídeo, exportar y difuminar la cara', 'Tu coach puede grabar su revisión (su voz y, si quiere, su cara) y los dos podéis responder en el hilo con la cámara de delante: la cámara y el micro solo se usan mientras se graba. Exportar con correcciones se hace en el móvil, sin subir nada. Con «Difuminar la cara», tu móvil tapa tu cara y solo se sube el vídeo difuminado: el original no sale de él.', '2026-12.2'],
   ['video', 'Cómo lo has notado, recordatorios y vídeos modelo', 'Al enviar un vídeo puedes contar cómo lo has notado: el esfuerzo, lo que notas y, solo con tu consentimiento de salud, una molestia. Lo ve solo tu coach. Tu coach puede fijarte recordatorios en tu sesión y enseñarte sus vídeos modelo.', '2026-12.1'],

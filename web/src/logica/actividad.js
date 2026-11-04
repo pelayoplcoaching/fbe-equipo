@@ -12,14 +12,24 @@ export function enCursoValido(x) {
   return !!(x && typeof x === 'object' && typeof x.id === 'string' && x.id && typeof x.nombre === 'string' && Number.isFinite(x.t) && x.hechas > 0);
 }
 
+// El descanso tal y como se guarda (solo lo de la píldora: lo que queda y lo que toca después). v0.62: con el texto del aviso
+// al móvil (con la carga propuesta) y, si se ha pausado desde la pantalla de bloqueo, los ms que quedaban (pausa).
+export function descansoGuardable(d) {
+  if (!d || !Number.isFinite(d.fin)) return null;
+  return { fin: d.fin, total: d.total, prioridad: d.prioridad || null, texto: d.texto || null, voz: d.voz || null, tras: d.tras || null, inicio: d.inicio || null,
+    aviso: d.aviso || null, pausa: Number.isFinite(d.pausa) && d.pausa >= 0 ? d.pausa : null };
+}
+
 // Cómo está ahora: null si no hay nada (o es de hace demasiado); si no, lo que pinta la píldora
 export function estadoActividad(x, ahora = Date.now()) {
   if (!enCursoValido(x) || ahora - x.t > VIGENCIA_EN_CURSO || x.t - ahora > 60000) return null;
   let descanso = null;
   const d = x.descanso;
-  if (d && Number.isFinite(d.fin) && Number.isFinite(d.total) && d.total > 0 && ahora - d.fin < FIN_VISIBLE) {
-    const quedan = Math.max(0, (d.fin - ahora) / 1000);
-    descanso = { quedan, frac: Math.min(1, quedan / d.total), terminado: quedan <= 0, texto: d.texto || null, cuenta: quedan > 0 ? mmss(quedan) : '¡Vamos!' };
+  // (v0.62: en pausa, lo que quedaba al pausar, quieto)
+  const pausa = d && Number.isFinite(d.pausa) && d.pausa > 0 ? d.pausa : null;
+  if (d && Number.isFinite(d.fin) && Number.isFinite(d.total) && d.total > 0 && (pausa || ahora - d.fin < FIN_VISIBLE)) {
+    const quedan = pausa ? pausa / 1000 : Math.max(0, (d.fin - ahora) / 1000);
+    descanso = { quedan, frac: Math.min(1, quedan / d.total), terminado: quedan <= 0, texto: d.texto || null, cuenta: quedan > 0 ? mmss(quedan) : '¡Vamos!', pausa: !!pausa };
   }
   return {
     id: x.id, nombre: x.nombre, ejercicio: x.ejercicio || null, siguiente: x.siguiente || null,
@@ -39,5 +49,5 @@ export function anuncioActividad(antes, ahora) {
 // El nombre de la píldora para los lectores de pantalla (no cambia con cada segundo)
 export function etiquetaActividad(e) {
   if (!e) return '';
-  return `Sesión en curso: ${e.nombre}${e.ejercicio ? `, ${e.ejercicio}` : ''}${e.descanso && !e.descanso.terminado ? ', con un descanso en marcha' : ''}. Toca para ver más`;
+  return `Sesión en curso: ${e.nombre}${e.ejercicio ? `, ${e.ejercicio}` : ''}${e.descanso && !e.descanso.terminado ? (e.descanso.pausa ? ', con un descanso en pausa' : ', con un descanso en marcha') : ''}. Toca para ver más`;
 }
