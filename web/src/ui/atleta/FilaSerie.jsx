@@ -21,6 +21,7 @@ import { siguienteCampo, discosCon } from '../../logica/teclado.js';
 import { ejeGesto, estadoDeslizar, cruceUmbral, sigueLarga, LARGA_MS } from '../../logica/deslizar.js';
 
 const fmt = (v, d) => (v == null ? '' : num(v, d));
+const mismoNum = (a, b) => (a == null && b == null) || (a != null && b != null && Math.abs(Number(a) - Number(b)) < 1e-9);
 
 export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false, pendiente, guardar, quitar, nombre, barra, record, tipo = null, anterior = null,
   valores = { kg: '', reps: '', rpe: '' }, cambiar, alComprometer = null, teclado = null, conRpe = false, paso = 2.5, objetivoEsfuerzo = null, conDiscos = false }) {
@@ -39,6 +40,9 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
     const problema = problemaSerie(v);
     // Si lo escrito no vale, se avisa y se vuelve a lo guardado
     if (problema) { aviso(problema, 'error'); cambiar('kg', fmt(hecha.kg, 2)); cambiar('reps', fmt(hecha.reps, 0)); return; }
+    // (revisión M2) lo mismo que ya está guardado no se vuelve a guardar (ni a la cola sin conexión)
+    const guardada = { kg: hecha.kg == null ? null : Number(hecha.kg), reps: hecha.reps == null ? null : Number(hecha.reps), rpe: hecha.rpe == null || hecha.rpe === '' ? '' : Number(hecha.rpe) };
+    if (mismoNum(v.kg, guardada.kg) && mismoNum(v.reps, guardada.reps) && (v.rpe === '' ? guardada.rpe === '' : mismoNum(v.rpe, guardada.rpe))) return;
     guardar(v);
   };
   const [recien, setRecien] = useState(false);
@@ -49,6 +53,9 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
     if (v.reps == null) return;
     const problema = problemaSerie(v);
     if (problema) { aviso(problema, 'error'); return; }
+    // (revisión M2) lo que estaba a medio escribir se suelta antes (el cambio que pasa a las siguientes, con su aviso) y no
+    // queda pendiente: así, al soltar el campo después, no se vuelve a guardar la serie
+    for (const c of Object.keys(inicio.current)) comprometer(c);
     cambiar('kg', fmt(v.kg, 2)); cambiar('reps', fmt(v.reps, 0));
     setRecien(true);
     guardar(v);
@@ -68,10 +75,18 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
     const antes = inicio.current[c];
     delete inicio.current[c];
     const ahora = c === 'rpe' ? rpe : valores[c];
-    if (String(antes ?? '') === String(ahora ?? '')) return;
+    // (revisión M2) se comparan los valores, no el texto: «42,50» y «42,5», o vacío y lo propuesto (el gris), son lo mismo
+    if (mismoValor(c, antes, ahora)) return;
     if (hecha) confirmar(kg, reps, rpe);
     else if (c !== 'rpe') alComprometer?.(numero, c, String(antes ?? ''), String(ahora ?? ''));
   };
+  const efectivo = (c, t) => {
+    if (c === 'rpe') return t === '' || t == null ? null : Number(t);
+    return aNumero(t) ?? propuesta[c] ?? null;
+  };
+  const mismoValor = (c, a, b) => mismoNum(efectivo(c, a), efectivo(c, b));
+  // (lo que se escribe con el foco ya dentro, p. ej. tras marcarla: también se guarda al soltar el campo)
+  const escribir = (c, t) => { if (!(c in inicio.current)) inicio.current[c] = valores[c]; cambiar(c, t); };
   const alEntrar = (c) => (e) => {
     if (!(c in inicio.current)) inicio.current[c] = c === 'rpe' ? rpe : valores[c];
     // (con el teclado de la app, lo primero que se teclea ya sustituye: sin seleccionar, que en el iPhone saca su menú de copiar)
@@ -122,13 +137,24 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
   const soltarGesto = () => { const g = gesto.current; if (g) clearTimeout(g.largo); gesto.current = null; };
   useEffect(() => () => soltarGesto(), []);
   const alBajar = (e) => {
+    if (bloquearClic.current === Infinity) bloquearClic.current = 0; // (por si no llegó el levantar del dedo de la pulsación larga)
     if (e.pointerType === 'mouse' || !e.isPrimary || gesto.current) return;
     const g = { id: e.pointerId, x: e.clientX, y: e.clientY, eje: null, pasado: false, ancho: fila.current?.getBoundingClientRect().width || 320 };
     g.largo = setTimeout(() => {
       if (gesto.current !== g || g.eje) return;
       g.hecho = true;
       vibrar('toque');
-      bloquearClic.current = Date.now() + 700;
+      // (revisión M1) el clic que llega al levantar el dedo (en el iPhone, tras un toque largo, puede caer en ✓) no cuenta:
+      // se bloquea mientras siga pulsado y hasta 400 ms después de soltar, se suelte donde se suelte
+      bloquearClic.current = Infinity;
+      const soltar = (ev) => {
+        if (ev.pointerId !== g.id) return;
+        window.removeEventListener('pointerup', soltar, true); window.removeEventListener('pointercancel', soltar, true);
+        bloquearClic.current = Date.now() + 400;
+      };
+      window.addEventListener('pointerup', soltar, true); window.addEventListener('pointercancel', soltar, true);
+      // Con el teclado de la app, se abre en los kilos; con el del móvil, el campo queda enfocado (en el iPhone, el teclado
+      // del sistema solo sale si se enfoca dentro de un toque: hace falta tocar el campo otra vez; en Android sale)
       enfocar('kg');
     }, LARGA_MS);
     gesto.current = g;
@@ -160,7 +186,11 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
     const completar = g.pasado && e.type === 'pointerup';
     setArrastre(null);
     poner(0);
-    if (completar && !hecha) marcar();
+    if (!completar || hecha) return;
+    // (revisión M2) como «Hecha» en el teclado: primero se suelta el campo que se editaba (se guarda lo escrito y el cambio
+    // pasa a las siguientes, con su aviso) y se cierra el teclado; luego se marca
+    if (campoRef.current || dentro(document.activeElement)) cerrar();
+    marcar();
   };
   // (tras un deslizamiento o una pulsación larga, el clic que viene detrás no cuenta: ni marca ni enfoca otra cosa)
   const alClicCaptura = (e) => { if (Date.now() < bloquearClic.current) { e.preventDefault(); e.stopPropagation(); } };
@@ -182,12 +212,12 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
           <span class="n" title={tipo === 'top' ? 'Serie top' : tipo === 'backoff' ? 'Back-off' : undefined}>{tipo === 'top' ? 'T' : tipo === 'backoff' ? 'B' : numero}</span>
           <span class="celda-kg">
             <input ref={refs.kg} class={`celda ${campo === 'kg' ? 'en-teclado' : ''}`} inputMode={app ? 'none' : 'decimal'} enterKeyHint="next" aria-label={`Kilos de la serie ${numero}${anterior != null ? ` (la última vez, ${num(anterior, 2)} kg)` : ''}`} value={kg}
-              placeholder={fmt(propuesta.kg, 2) || '–'} onInput={(e) => cambiar('kg', e.currentTarget.value)} autoComplete="off"
+              placeholder={fmt(propuesta.kg, 2) || '–'} onInput={(e) => escribir('kg', e.currentTarget.value)} autoComplete="off"
               onFocus={alEntrar('kg')} onBlur={alSalir('kg')} onKeyDown={alTecla('kg')} />
             {anterior != null && <span class="peso-anterior" aria-hidden="true" title="Tu peso de la última vez en esta serie"><small>ant.</small> {num(anterior, 2)}</span>}
           </span>
           <input ref={refs.reps} class={`celda ${campo === 'reps' ? 'en-teclado' : ''}`} inputMode={app ? 'none' : 'numeric'} enterKeyHint="done" aria-label={`Repeticiones de la serie ${numero}`} value={reps}
-            placeholder={fmt(propuesta.reps, 0) || '–'} onInput={(e) => cambiar('reps', e.currentTarget.value)} autoComplete="off"
+            placeholder={fmt(propuesta.reps, 0) || '–'} onInput={(e) => escribir('reps', e.currentTarget.value)} autoComplete="off"
             onFocus={alEntrar('reps')} onBlur={alSalir('reps')} onKeyDown={alTecla('reps')} />
           {app ? (
             <button ref={refs.rpe} type="button" class={`rpe rpe-boton ${propuesta.rpe != null && rpe === '' ? 'rpe-objetivo' : ''} ${campo === 'rpe' ? 'en-teclado' : ''}`}
@@ -216,7 +246,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
       {app && campo && (
         <Teclado enCapa campo={campo} clave={`${numero}`} texto={campo === 'rpe' ? '' : valores[campo]} rpe={rpe} base={campo === 'kg' ? kgBase : propuesta.reps ?? null}
           paso={paso} serie={serieTxt} anterior={anterior != null ? `${num(anterior, 2)} kg` : null} objetivo={propuesta.rpe != null ? `RPE ${num(propuesta.rpe)}` : objetivoEsfuerzo}
-          final={finalDe(campo)} alTexto={(t) => cambiar(campo, t)} alRpe={elegirRpe} alSiguiente={() => siguienteDe(campo)} alCerrar={cerrar}
+          final={finalDe(campo)} alTexto={(t) => escribir(campo, t)} alRpe={elegirRpe} alSiguiente={() => siguienteDe(campo)} alCerrar={cerrar}
           ancla={() => fila.current} dentro={dentro} barra={barra} discoMinimo={teclado.discoMinimo} alDisco={teclado.alDisco && conDiscos ? teclado.alDisco : null}
           lugar={teclado.lugar} alCalculadora={barra && teclado.alCalculadora ? teclado.alCalculadora : null} alMovil={alMovil} />
       )}

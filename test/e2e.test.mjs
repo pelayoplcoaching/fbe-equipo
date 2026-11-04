@@ -1795,7 +1795,9 @@ try {
   } else check(/Buen día|Día flojo|Día difícil/.test(await dialLlegas.textContent()), `hoy ya hizo una sesión con su «¿Cómo llegas hoy?»: el dial la enseña (${await dialLlegas.textContent()})`);
   await p.getByRole('button', { name: 'Empezar sesión' }).click();
   await sesionAbierta();
-  if (contestoEnHoy) check(await p.locator('.preparacion').count() === 0 && (await p.locator('.consejo-dia').textContent()).includes('Buen día'), 'la sesión no vuelve a preguntar cómo llega: enseña lo contestado en Hoy');
+  // (la sesión decide si pregunta cuando ya tiene sus series: en una máquina lenta, un momento después de pintarse; se espera)
+  if (contestoEnHoy) check(await p.waitForFunction(() => !document.querySelector('.preparacion') && /Buen día/.test(document.querySelector('.consejo-dia')?.textContent || ''), null, { timeout: 10000 }).then(() => true, () => false),
+    'la sesión no vuelve a preguntar cómo llega: enseña lo contestado en Hoy');
   const prepAna = p.locator('.preparacion');
   if (await prepAna.count()) { for (const [g, x] of [['¿Cómo has dormido?', 'Bien'], ['¿Cómo tienes la energía?', 'Alta'], ['¿Agujetas o molestias?', 'Ninguna']]) await prepAna.getByRole('group', { name: g }).getByRole('button', { name: x, exact: true }).click(); }
   const primeroAna = p.locator('.ejercicio').first();

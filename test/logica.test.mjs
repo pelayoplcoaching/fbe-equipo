@@ -3865,6 +3865,13 @@ console.log('\nv0.63: el teclado de la app, el cambio que pasa a las series sigu
     'en una superserie, tras la ronda (A1 y A2) el descanso y «Ahora toca» vuelve a A1, serie 2, con su etiqueta');
   const s3 = AT.ahoraToca({ ejercicios: SS, hechas: { a1: { 1: 1, 2: 1, 3: 1 }, a2: { 1: 1, 2: 1, 3: 1 } }, proxima: trasSerie(SS, { a1: 3, a2: 3, c: 0 }, 'a2').siguiente, tras: 'a2', propuestaDe: () => ({ kg: 12, reps: 12 }) });
   check(s3.id === 'c' && s3.numero === 1 && s3.otroEjercicio, 'acabada la superserie, el siguiente ejercicio');
+  // (revisión L1) saltarse una serie: marcar la 1 y la 3 de 4. Contando las hechas, trasSerie diría la «3» (ya hecha); la regla
+  // de la sesión dice la 2, y es la que usan ahora también la pantalla de bloqueo, el aviso al móvil y la voz
+  const EJ4 = [{ id: 'x', series: 4, ejercicio: { nombre: 'Press banca' } }];
+  const hSalto = { x: { 1: {}, 3: {} } };
+  const tS = trasSerie(EJ4, { x: 2 }, 'x');
+  check(tS.siguiente.numero === 3 && igual(AT.serieQueToca(EJ4, hSalto, tS.siguiente), { id: 'x', numero: 2 }) && AT.ahoraToca({ ejercicios: EJ4, hechas: hSalto, proxima: tS.siguiente }).numero === 2,
+    'saltándose una serie (1 y 3 de 4), la siguiente es la 2 para la tarjeta, la píldora, la pantalla de bloqueo, el aviso y la voz (no la «3» de contar las hechas)');
   // ---------- la política
   const legal6 = await import('../web/src/legal.js');
   const PV5 = await import('../web/src/logica/privacidad.js');

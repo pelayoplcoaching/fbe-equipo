@@ -15,6 +15,16 @@ const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 export async function probarTeclado063({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
   const ctx = await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, locale: 'es-ES', bypassCSP: true });
+  // Cuántas veces se guarda una serie (la demo deja su base en __fbeDemo antes de crear la api, que se queda con su upsert)
+  await ctx.addInitScript(() => {
+    window.__guardadas = 0;
+    let demo = null;
+    Object.defineProperty(window, '__fbeDemo', { configurable: true, get: () => demo, set: (v) => {
+      demo = v;
+      const o = v.upsert.bind(v);
+      v.upsert = (t, filas, ...r) => { if (t === 'series') window.__guardadas += (filas || []).length; return o(t, filas, ...r); };
+    } });
+  });
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errores.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') errores.push(`${m.text()} ${m.location()?.url || ''}`); });
@@ -226,6 +236,20 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
     check(/^Kilos de la serie 3/.test(await enFoco()) && await ej.getByRole('button', { name: 'Marcar la serie 3 como hecha' }).count() === 1, 'mantener pulsada una serie abre el teclado en sus kilos (sin marcarla)');
     await teclado.getByRole('button', { name: 'Ocultar el teclado' }).click();
     await hay(teclado, 0);
+    // (revisión M1) mantener pulsado más de un segundo sobre ✓ y soltar: el clic de detrás no marca ni desmarca nada
+    for (const [n, hecha] of [[1, true], [3, false]]) {
+      const b = ej.locator(`.serie[data-n="${n}"] .hecho-btn`);
+      await b.scrollIntoViewIfNeeded();
+      const rb = await b.boundingBox();
+      await toque('touchStart', rb.x + rb.width / 2, rb.y + rb.height / 2);
+      await p.waitForTimeout(1500);
+      await toque('touchEnd');
+      await p.waitForTimeout(800);
+      check(await b.getAttribute('aria-pressed') === (hecha ? 'true' : 'false') && await p.locator('.toast', { hasText: `Serie ${n} quitada` }).count() === 0,
+        `mantener pulsado 1,5 s el ✓ de la serie ${n} (${hecha ? 'hecha' : 'sin hacer'}) y soltar no la ${hecha ? 'quita' : 'marca'}`);
+      if (await teclado.count()) { await teclado.getByRole('button', { name: 'Ocultar el teclado' }).click(); await hay(teclado, 0); }
+    }
+    await saltar();
 
     // ---------------------------------------------------------------- 2. el cambio pasa a las series siguientes, con «Deshacer»
     // Un ejercicio con series iguales (sin top ni back-off) y ninguna hecha
@@ -237,7 +261,10 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
       await x.locator('.ejercicio-cuerpo').waitFor();
       const ns = await x.locator('.serie .n').allTextContents();
       const reps = await x.locator('.serie').evaluateAll((fs) => fs.map((f) => f.querySelectorAll('.celda')[1]?.getAttribute('placeholder')));
-      if (ns.slice(0, 3).join() === '1,2,3' && reps[0] && reps[0] === reps[1] && reps[1] === reps[2] && await x.getByRole('button', { name: /^Quitar la serie/ }).count() === 0) iguales = x;
+      // (con carga: el récord del aviso conjunto sale de los kilos)
+      const kgs = await x.locator('.serie').evaluateAll((fs) => fs.map((f) => f.querySelectorAll('.celda')[0]?.getAttribute('placeholder')));
+      if (ns.slice(0, 3).join() === '1,2,3' && reps[0] && reps[0] === reps[1] && reps[1] === reps[2] && /^\d/.test(kgs[0] || '') && kgs[0] === kgs[1] && kgs[1] === kgs[2]
+        && await x.getByRole('button', { name: /^Quitar la serie/ }).count() === 0) iguales = x;
     }
     if (!iguales) check(false, 'hay un ejercicio con tres series iguales para probar el cambio que pasa a las siguientes');
     else {
@@ -260,6 +287,31 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
       check(await iguales.getByLabel('Repeticiones de la serie 2').inputValue() === '' && await iguales.getByLabel('Repeticiones de la serie 3').inputValue() === '' && await reps1.inputValue() === nuevo,
         'y la serie 1 se queda como la dejaste');
       if (await teclado.count()) { await teclado.getByRole('button', { name: 'Ocultar el teclado' }).click(); await hay(teclado, 0); }
+      // (revisión M2 y L3) deslizar con el teclado abierto: como «Hecha», suelta el campo (el cambio pasa a las siguientes), cierra
+      // el teclado y guarda la serie una sola vez; el aviso junta el récord y «También en las series 2 y 3 · Deshacer»
+      await p.evaluate(() => { window.__guardadas = 0; });
+      const kgI = iguales.getByLabel('Kilos de la serie 1');
+      await kgI.click();
+      await esperar(() => document.querySelector('.teclado-serie')?.dataset.campo === 'kg');
+      for (const c of '200') await tecla(c).click();
+      await deslizar(iguales.locator('.serie[data-n="1"]'), [12, 40, 80, 120, 160, 200]);
+      const avisoD = p.locator('.toast', { hasText: 'También en las series 2 y 3' });
+      await avisoD.waitFor();
+      await p.waitForTimeout(1500);
+      await p.locator('.sesion-vista .cabecera h1').click();
+      await p.waitForTimeout(800);
+      const textoD = (await avisoD.textContent().catch(() => '')) || '';
+      check(await iguales.getByRole('button', { name: 'Quitar la serie 1' }).count() === 1 && await hay(teclado, 0) && await p.evaluate(() => window.__guardadas) === 1
+        && await iguales.getByLabel('Kilos de la serie 2').inputValue() === '200' && await iguales.getByLabel('Kilos de la serie 3').inputValue() === '200',
+        `deslizar con el teclado abierto marca la serie, cierra el teclado, pasa los 200 kg a la 2 y la 3 y la guarda una sola vez (${await p.evaluate(() => window.__guardadas)})`);
+      check(/¡Récord en .+! · También en las series 2 y 3/.test(textoD) && await avisoD.getByRole('button', { name: 'Deshacer' }).count() === 1,
+        `el récord y el cambio en un solo aviso, con «Deshacer» a mano («${textoD.replace('Deshacer', '').trim()}»)`);
+      await avisoD.getByRole('button', { name: 'Deshacer' }).click();
+      check(await esperar(() => { const f = [...document.querySelectorAll('.ejercicio')].find((x) => x.querySelector('.serie[data-n="1"] .hecho-btn[aria-pressed="true"]') && x !== document.querySelector('.ejercicio'));
+        return f && f.querySelector('.serie[data-n="2"] .celda').value === '' && f.querySelector('.serie[data-n="3"] .celda').value === ''; }, null, 3000)
+        && await iguales.getByRole('button', { name: 'Quitar la serie 1' }).count() === 1,
+        'y «Deshacer» devuelve la 2 y la 3 a como estaban (la serie marcada se queda)');
+      await saltar();
     }
 
     // ---------------------------------------------------------------- volver al teclado del móvil (y a la app)
