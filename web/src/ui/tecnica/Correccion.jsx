@@ -71,14 +71,14 @@ function CorregirVideo({ video, revision, nombreAtleta, alGuardar }) {
     try {
       const { reps } = repsDeMarcas(marcas);
       await api.guardarRevision(video, { puntuacion: nota, checklist: puntos.filter((p) => p.e), tempo: reps.length ? { reps } : null });
-      aviso(revision?.corregido_en ? 'Corrección guardada' : `Corrección guardada: a ${primer} le llega un aviso`);
+      aviso(revision?.corregido_el ? 'Corrección guardada' : `Corrección guardada: a ${primer} le llega un aviso`);
       await alGuardar?.();
     } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
   }
   const ponerPunto = (i, c) => setPuntos((ps) => ps.map((p, j) => (j === i ? { ...p, ...c } : p)));
   return (
     <section class="correccion panel-pad pila-s" aria-label="Corregir el vídeo">
-      <div class="correccion-cab separa"><h3>Corrección</h3>{revision?.corregido_en ? <span class="chip ok mini">Corregido</span> : null}</div>
+      <div class="correccion-cab separa"><h3>Corrección</h3>{revision?.corregido_el ? <span class="chip ok mini">Corregido</span> : null}</div>
       <div class="campo">
         <span class="etq" id={`nota-${video.id}`}>Nota de técnica</span>
         <div class="segmentos correccion-nota" role="group" aria-labelledby={`nota-${video.id}`}>
@@ -243,7 +243,7 @@ function ExportarFotograma({ video, nombreAtleta }) {
     try {
       const blob = await reproductorDe(video.id)?.fotograma();
       if (!blob) throw new Error('El vídeo aún no está listo');
-      await api.enviarFotograma(video.atleta_id, blob, { texto: `En el ${textoMomento(reproductorDe(video.id)?.ahora() || 0, true)} de tu vídeo` });
+      await api.enviarFotograma(video, blob, { texto: `En el ${textoMomento(reproductorDe(video.id)?.ahora() || 0, true)} de tu vídeo` });
       aviso(`Fotograma enviado al chat de ${nombreAtleta}`);
     } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
   };
@@ -275,13 +275,13 @@ function VerCorreccion({ video, revision }) {
   const res = resumenChecklist(r?.checklist);
   const tabla = tablaTempo(r?.tempo);
   const delCoach = (corr.comentarios || []).filter((c) => c.autor === 'coach' && !c.eliminado_en);
-  const corregido = !!r?.corregido_en || delCoach.length > 0;
+  const corregido = !!r?.corregido_el || delCoach.length > 0;
   // Lo que se lleva a la cámara al grabar de nuevo: lo marcado para corregir (o lo que dijo tu coach)
   const puntosRepetir = ps.filter((p) => p.e === 'mal').map((p) => p.t);
   const paraRepetir = puntosRepetir.length ? puntosRepetir : delCoach.slice(-2).map((c) => (c.texto.length > 120 ? `${c.texto.slice(0, 117)}…` : c.texto));
   return (
     <section class="correccion panel-pad pila-s" aria-label="La corrección de tu coach">
-      {r?.corregido_en && (
+      {r?.corregido_el && (
         <>
           <h3>La corrección de tu coach</h3>
           {r.puntuacion != null && <p class="correccion-nota-ver"><span class="num nota-grande">{r.puntuacion}<span class="terciario">/5</span></span> <span class="peq">Técnica: {NOMBRE_PUNTUACION[r.puntuacion].toLowerCase()}</span></p>}

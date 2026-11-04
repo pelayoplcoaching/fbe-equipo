@@ -197,7 +197,7 @@ export function seriePuntuaciones(videos = []) {
 const MESES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const diaCorto = (iso) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${Number(iso.slice(8, 10))} ${MESES_C[Number(iso.slice(5, 7)) - 1]}` : '');
 export function estadoVideo({ revision = null, respondido = false } = {}) {
-  if (revision?.corregido_en || respondido) return { estado: 'corregido', texto: 'Corregido' };
+  if (revision?.corregido_el || respondido) return { estado: 'corregido', texto: 'Corregido' };
   if (revision?.visto_el) return { estado: 'visto', texto: `Visto el ${diaCorto(revision.visto_el)}` };
   return { estado: 'enviado', texto: 'Enviado' };
 }
@@ -265,8 +265,9 @@ export function ordenarCola(videos = [], orden = 'antiguos') {
 }
 
 // ---------- Limpieza y aviso del almacenamiento ----------
-// Como fbe_privado.videos_viejos() en la base: de técnica, de más de «meses» meses (por su día), sin destacar, sin un
-// mensaje o una corrección de los últimos «dias» días, sin una repetición de esos días y sin una tarea por revisar
+// Como fbe_privado.videos_viejos() en la base: de técnica, de más de «meses» meses (desde que llegó y por su día: los dos),
+// ya revisado o corregido (no espera en la cola del coach), sin destacar, sin un mensaje o una corrección de los últimos
+// «dias» días (abrirlo, «Visto», no cuenta), sin una repetición de esos días y sin una tarea por revisar
 export function restarMeses(iso, meses) {
   const [y, m, d] = iso.split('-').map(Number);
   const total = y * 12 + (m - 1) - meses;
@@ -274,13 +275,19 @@ export function restarMeses(iso, meses) {
   const ultimo = new Date(Date.UTC(ny, nm + 1, 0)).getUTCDate();
   return `${ny}-${String(nm + 1).padStart(2, '0')}-${String(Math.min(d, ultimo)).padStart(2, '0')}`;
 }
+const DIA_MADRID = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' });
+const diaMadrid = (iso) => { const t = Date.parse(iso); return Number.isFinite(t) ? DIA_MADRID.format(new Date(t)) : null; };
+export const DIAS_LIMPIEZA_MIN = 7;
 export function videosViejos(archivos = [], { comentarios = [], revisiones = [], tareas = [], meses, dias = 30, hoy, ahora = Date.now() } = {}) {
   const corte = restarMeses(hoy, meses);
   const desde = ahora - dias * 864e5;
   const reciente = (iso) => !!iso && Date.parse(iso) > desde;
-  return (archivos || []).filter((a) => a.tipo === 'video_tecnica' && !a.destacado && a.fecha < corte
+  const corregida = (a) => (revisiones || []).some((r) => r.archivo_id === a.id && r.corregido_en);
+  const llego = (a) => [a.fecha, diaMadrid(a.creado_en)].filter(Boolean).sort().pop() || null;
+  return (archivos || []).filter((a) => a.tipo === 'video_tecnica' && !a.destacado && !!llego(a) && llego(a) < corte
+    && (!!a.revisado_en || corregida(a))
     && !(comentarios || []).some((c) => c.archivo_id === a.id && reciente(c.creado_en))
-    && !(revisiones || []).some((r) => r.archivo_id === a.id && reciente(r.actualizado_en))
+    && !(revisiones || []).some((r) => r.archivo_id === a.id && r.corregido_en && reciente(r.actualizado_en))
     && !(archivos || []).some((n) => n.repite_de === a.id && reciente(n.creado_en))
     && !(tareas || []).some((t) => t.archivo_id === a.id && !t.revisada_en));
 }

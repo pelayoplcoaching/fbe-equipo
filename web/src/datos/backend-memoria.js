@@ -228,8 +228,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     encuesta_votos: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     // Como la 034: la versión de la política vista, la propia (y el coach, todas)
     privacidad_vista: (x) => x.usuario_id === sesion?.user.id || esCoach(),
-    // Como la 035: la corrección, el coach y el atleta de ese vídeo; las listas de puntos clave, solo el coach
-    video_revisiones: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // Como la 035: la corrección (con sus horas), solo el coach: el atleta lee la suya con video_correcciones() (días);
+    // las listas de puntos clave, solo el coach
+    video_revisiones: () => esCoach(),
     tecnica_plantillas: () => esCoach(),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
@@ -377,6 +378,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       else if (f.checkin_id) f.atleta_id = buscar('checkins', f.checkin_id)?.atleta_id;
       else if (f.archivo_id) f.atleta_id = buscar('archivos', f.archivo_id)?.atleta_id;
       if (!f.atleta_id) throw new Error('No se puede comentar aquí');
+      // Como la 035: la voz del coach sobre un vídeo no va en un mensaje (al borrar el vídeo, se borra)
+      if (f.archivo_id && esVozDeVideo(f.archivo_id)) throw new Error('Esa nota de voz es la voz de tu coach sobre un vídeo: no va en un mensaje');
       // Como atleta_crear (002): un atleta solo escribe en su conversación
       if (!esCoach() && f.atleta_id !== miAtletaId()) throw sinPermiso();
       // Como la 014: el adjunto lo fija la base según el tipo del archivo (033: también un documento)
@@ -410,7 +413,17 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       f.creada_en = ahora();
     }
     if (t === 'atletas') fechaBaja(f, null);
-    if (t === 'archivos') comprobarEnlaces(f);
+    if (t === 'archivos') {
+      // Como la 035: el día de un archivo del atleta, como mucho mañana (en Madrid)
+      if (!esCoach() && f.fecha && f.fecha > sumar(fechaMadrid(), 1)) f.fecha = sumar(fechaMadrid(), 1);
+      comprobarEnlaces(f);
+      // Como la 035: el fotograma de un vídeo, solo del coach y de un vídeo de técnica de ese atleta
+      if (f.derivado_de != null) {
+        if (!esCoach()) throw new Error('Solo el coach manda un fotograma de un vídeo');
+        const v = buscar('archivos', f.derivado_de);
+        if (!v || v.tipo !== 'video_tecnica' || v.atleta_id !== f.atleta_id || f.tipo !== 'adjunto' || !/^image\//.test(f.mime || '')) throw new Error('El fotograma tiene que ser de un vídeo de técnica de este atleta');
+      } else f.derivado_de = null;
+    }
     if (t === 'video_revisiones') {
       if (tabla(t).some((x) => x.archivo_id === f.archivo_id)) throw new Error('duplicate key value violates unique constraint "video_revisiones_pkey"');
       prepararRevision(f, null);
@@ -427,7 +440,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (!esCoach()) {
       if (t === 'checkins') f.revisado_en = null;
       if (t === 'archivos') {
-        f.revisado_en = null; f.comentario_coach = null;
+        // (como archivo_proteger, 003: cuándo llegó lo pone la base; la limpieza de la 035 cuenta desde ahí)
+        f.revisado_en = null; f.comentario_coach = null; f.creado_en = ahora();
         // Como la 034: las notas de voz, 60 al día (aparte)
         if (f.tipo === 'audio' && tabla('archivos').filter((a) => a.atleta_id === f.atleta_id && a.tipo === 'audio' && Date.parse(a.creado_en) > Date.now() - 864e5).length >= 60) {
           throw new Error('Has enviado 60 notas de voz en las últimas 24 horas: espera un poco');
@@ -529,6 +543,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     const c = { ...cambios };
     if (t !== 'comentarios') comprobarAlta(t);
     if (t === 'archivos' && 'subido_por' in c) throw new Error('No se cambia quién subió un archivo');
+    if (t === 'archivos' && 'derivado_de' in c) throw new Error('No se cambia de qué vídeo sale un fotograma');
     if (t === 'notas_ejercicio') c.actualizado_en = ahora();
     if (t === 'recetas') { c.actualizada_en = ahora(); delete c.creada_en; }
     if (t === 'comidas_atleta' && !esCoach()) delete c.opcional;
@@ -878,16 +893,37 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
 
   const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
+  // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
+    const mueve = !!antes && f.atleta_id !== antes.atleta_id;
     if (f.sesion_ejercicio_id == null) f.serie_numero = null;
-    if (f.serie_numero != null && (!antes || f.serie_numero !== antes.serie_numero || f.sesion_ejercicio_id !== antes.sesion_ejercicio_id || f.atleta_id !== antes.atleta_id)) {
+    if (f.serie_numero != null && (!antes || f.serie_numero !== antes.serie_numero || f.sesion_ejercicio_id !== antes.sesion_ejercicio_id || mueve)) {
       const se = buscar('sesion_ejercicios', f.sesion_ejercicio_id);
-      if (!se || atletaDeSesion(se.sesion_id) !== f.atleta_id) throw new Error('Esa serie no es de este atleta');
+      if (!se || atletaDeSesion(se.sesion_id) !== f.atleta_id) {
+        if (mueve && f.serie_numero === antes.serie_numero && f.sesion_ejercicio_id === antes.sesion_ejercicio_id) f.serie_numero = null;
+        else throw new Error('Esa serie no es de este atleta');
+      }
     }
-    if (f.repite_de != null && (!antes || f.repite_de !== antes.repite_de || f.atleta_id !== antes.atleta_id)) {
+    if (f.repite_de != null && (!antes || f.repite_de !== antes.repite_de || mueve)) {
       const o = buscar('archivos', f.repite_de);
-      if (!o || o.atleta_id !== f.atleta_id || o.tipo !== 'video_tecnica' || o.id === f.id) throw new Error('Solo se repite un vídeo de técnica tuyo');
+      if (!o || o.atleta_id !== f.atleta_id || o.tipo !== 'video_tecnica' || o.id === f.id) {
+        if (mueve && f.repite_de === antes.repite_de) f.repite_de = null;
+        else throw new Error('Solo se repite un vídeo de técnica tuyo');
+      }
     }
+  }
+  // Como la 035 (al_mover_archivo): el vídeo que pasa a otro atleta se lleva su corrección (sin la voz del coach, que era
+  // del primero) y las repeticiones del primero se quedan sueltas
+  function alMoverArchivo(fila, atletaAntes) {
+    if (fila.atleta_id === atletaAntes) return;
+    for (const r of tabla('video_revisiones')) {
+      if (r.archivo_id !== fila.id) continue;
+      const voz = r.voz_archivo_id;
+      if (voz) { r.voz_archivo_id = null; r.voz_inicio = null; r.actualizado_en = ahora(); }
+      r.atleta_id = fila.atleta_id;
+      if (voz) soltarVoz(voz);
+    }
+    for (const x of tabla('archivos')) if (x.repite_de === fila.id && x.atleta_id !== fila.atleta_id) x.repite_de = null;
   }
   // Como la 035 (video_revision_preparar): de un vídeo de técnica; el tempo, dentro del vídeo; la voz, una nota de voz de
   // ese atleta subida por el coach; «Visto», el día de hoy (y se queda); «Corregido», la primera vez que lleva algo
@@ -902,6 +938,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     else if (!antes || f.voz_archivo_id !== antes.voz_archivo_id) {
       const v = buscar('archivos', f.voz_archivo_id);
       if (!v || v.tipo !== 'audio' || v.atleta_id !== a.atleta_id || subidoPor(v) !== 'coach') throw new Error('La voz tiene que ser una nota de voz tuya para este atleta');
+      if (archivoConMensajes(v.id)) throw new Error('Esa nota de voz ya está en el chat: graba la voz para el vídeo');
       if (tabla('video_revisiones').some((r) => r !== antes && r.voz_archivo_id === f.voz_archivo_id && r.archivo_id !== f.archivo_id)) throw new Error('duplicate key value violates unique constraint "video_revisiones_voz_unica"');
     }
     if (f.voz_archivo_id != null) { f.voz_inicio = Number(f.voz_inicio) || 0; if (f.voz_inicio > dur) throw new Error('La voz empieza después de que acabe el vídeo'); }
@@ -909,7 +946,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     f.visto_el = antes ? (antes.visto_el || (f.visto_el ? hoy : null)) : (f.visto_el ? hoy : null);
     f.corregido_en = antes ? antes.corregido_en || null : null;
     if (!f.corregido_en && (f.puntuacion != null || f.checklist != null || f.tempo != null || f.voz_archivo_id != null)) f.corregido_en = ahora();
-    f.actualizado_en = ahora();
+    // actualizado_en, solo cuando cambia la corrección (abrir el vídeo no la cambia)
+    const igualQue = (k) => JSON.stringify(f[k] ?? null) === JSON.stringify(antes?.[k] ?? null);
+    f.actualizado_en = antes && ['puntuacion', 'checklist', 'tempo', 'voz_archivo_id', 'voz_inicio'].every(igualQue) ? antes.actualizado_en : ahora();
   }
   // La voz de una corrección que se quita (o se cambia por otra) se va con su archivo (como la 035)
   const soltarVoz = (id) => { if (id && buscar('archivos', id)?.tipo === 'audio') borrarCascada('archivos', [id]); };
@@ -1753,7 +1792,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // Cuestionarios: lo que pone el trigger depende de cada fila
       if (t === 'cuestionarios') for (const fila of filas) { const m = { ...copia(fila), ...copia(c) }; prepararCuestionario(m, fila); porFila.set(fila, m); }
-      if (t === 'archivos') for (const fila of filas) comprobarEnlaces(porFila.get(fila) || { ...fila, ...copia(c) }, fila);
+      // (lo que ajusta comprobarEnlaces en cada fila, como el trigger: se aplica después)
+      const ajustes = new Map();
+      if (t === 'archivos') for (const fila of filas) { const m = porFila.get(fila) || { ...fila, ...copia(c) }; comprobarEnlaces(m, fila); ajustes.set(fila, { serie_numero: m.serie_numero ?? null, repite_de: m.repite_de ?? null, atleta: fila.atleta_id }); }
       for (const fila of filas) comprobarChecks(t, porFila.get(fila) || { ...fila, ...copia(c) });
       for (const fila of filas) {
         if (porFila.has(fila)) { Object.assign(fila, porFila.get(fila)); res.push(fila); continue; }
@@ -1762,7 +1803,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         // Como la 032: la ruta o la miniatura que deja de estar registrada, a la cola de Storage
         const antes = t === 'archivos' ? [fila.ruta, fila.poster_ruta] : [];
         Object.assign(fila, copia(c));
-        if (t === 'archivos') encolar(antes.filter((r) => r && r !== fila.ruta && r !== fila.poster_ruta)); if (porFilaFecha.has(fila)) fila.cambio_pedido_en = porFilaFecha.get(fila);
+        if (t === 'archivos') {
+          encolar(antes.filter((r) => r && r !== fila.ruta && r !== fila.poster_ruta));
+          const aj = ajustes.get(fila);
+          if (aj) { fila.serie_numero = aj.serie_numero; fila.repite_de = aj.repite_de; alMoverArchivo(fila, aj.atleta); }
+        }
+        if (porFilaFecha.has(fila)) fila.cambio_pedido_en = porFilaFecha.get(fila);
         if (t === 'comidas_atleta') normalizarOpcional(fila);
         if (t === 'objetivos') comprobarMarca(fila); res.push(fila);
       }
@@ -1954,10 +2000,19 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return r.visto_el;
       }
+      // Como la 035: la corrección como la lee la app, sin ninguna hora (de «Visto» y «Corregido», el día en Madrid)
+      if (nombre === 'video_correcciones') {
+        if (!uid || !(esCoach() || miAtletaId())) throw new Error('Necesitas iniciar sesión');
+        const ids = args.p_archivos;
+        if (!Array.isArray(ids) || ids.length > 1000) throw new Error('De 0 a 1000 vídeos de una vez');
+        return copia(tabla('video_revisiones').filter((r) => ids.includes(r.archivo_id) && (esCoach() || r.atleta_id === miAtletaId()))
+          .map((r) => ({ archivo_id: r.archivo_id, atleta_id: r.atleta_id, puntuacion: r.puntuacion ?? null, checklist: r.checklist ?? null, tempo: r.tempo ?? null,
+            voz_archivo_id: r.voz_archivo_id ?? null, voz_inicio: r.voz_inicio ?? null, visto_el: r.visto_el ?? null, corregido_el: r.corregido_en ? fMadrid(new Date(r.corregido_en)) : null })));
+      }
       if (nombre === 'videos_limpieza' || nombre === 'videos_limpiar') {
         if (!esCoach()) throw new Error('Solo el coach');
         const meses = Number(args.p_meses), dias = Number(args.p_dias ?? 30);
-        if (!Number.isInteger(meses) || meses < 1 || meses > 60 || !Number.isInteger(dias) || dias < 0 || dias > 365) throw new Error('De 1 a 60 meses y de 0 a 365 días');
+        if (!Number.isInteger(meses) || meses < 1 || meses > 60 || !Number.isInteger(dias) || dias < 7 || dias > 365) throw new Error('De 1 a 60 meses y de 7 a 365 días');
         const viejos = videosViejos(tabla('archivos'), { comentarios: tabla('comentarios'), revisiones: tabla('video_revisiones'), tareas: tabla('tareas'), meses, dias, hoy: fMadrid() })
           .sort((x, y) => (x.fecha < y.fecha ? -1 : x.fecha > y.fecha ? 1 : x.id < y.id ? -1 : 1));
         if (nombre === 'videos_limpieza') {
@@ -2067,7 +2122,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'chat_reenviar' || nombre === 'chat_difundir') {
         if (!uid || !esCoach()) throw new Error(nombre === 'chat_reenviar' ? 'Solo el coach puede reenviar mensajes' : 'Solo el coach envía difusiones');
         // ¿Es esta la copia de ese archivo para ese atleta? (del chat, suya, recién registrada, del mismo formato y sin mensajes)
-        const copiaValida = (id, atletaId, tipo, mime) => { const a = buscar('archivos', id); return !!a && a.atleta_id === atletaId && DEL_CHAT.includes(a.tipo) && subidoPor(a) === 'coach' && (!tipo || a.tipo === tipo) && (!mime || a.mime === mime) && Date.parse(a.creado_en) > Date.now() - 3600000 && !archivoConMensajes(a.id); };
+        const copiaValida = (id, atletaId, tipo, mime) => { const a = buscar('archivos', id); return !!a && a.atleta_id === atletaId && DEL_CHAT.includes(a.tipo) && subidoPor(a) === 'coach' && (!tipo || a.tipo === tipo) && (!mime || a.mime === mime) && Date.parse(a.creado_en) > Date.now() - 3600000 && !a.derivado_de && !archivoConMensajes(a.id); };
         const nuevo = (fila, reenviado) => {
           const ya = fila.cliente_id && tabla('comentarios').find((x) => x.atleta_id === fila.atleta_id && x.autor === 'coach' && x.cliente_id === fila.cliente_id);
           if (ya) return null;
@@ -2084,6 +2139,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
             const a = c.archivo_id ? buscar('archivos', c.archivo_id) : null;
             // Solo lo que subió el coach: nunca la foto o el PDF de un atleta al chat de otro
             if (c.archivo_id && (!a || subidoPor(a) !== 'coach' || tabla('comentarios').some((k) => k.archivo_id === a.id && k.autor === 'atleta'))) throw new Error('Solo se reenvían las fotos, vídeos y documentos que has enviado tú');
+            // Como la 035: ni el fotograma del vídeo de un atleta
+            if (a?.derivado_de) throw new Error('Un fotograma del vídeo de un atleta es solo suyo: no se reenvía');
             const ds = Array.isArray(args.p_destinos) ? args.p_destinos : [];
             if (ds.length < 1 || ds.length > 50) throw new Error('Se reenvía a entre 1 y 50 atletas');
             if (new Set(ds.map((d) => d.atleta)).size !== ds.length) throw new Error('Un atleta, una vez');

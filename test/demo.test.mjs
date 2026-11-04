@@ -1259,7 +1259,12 @@ console.log('\nLos vídeos de técnica en la demo (v0.57): las mismas reglas que
     && !(await b9.update('video_revisiones', { puntuacion: 5 }, { eq: { archivo_id: corr.id } })).length && !(await b9.select('tecnica_plantillas', {})).length
     && await lanza(() => b9.insert('tecnica_plantillas', [{ ejercicio_id: sent.id, puntos: ['x'] }])) && await lanza(() => b9.rpc('videos_limpieza', { p_meses: 6, p_dias: 30 })),
     'Ana ni se corrige, ni se marca «Visto», ni ve ni escribe las listas, ni limpia');
-  check(!(await b9.select('video_revisiones', {})).some((r) => r.atleta_id !== ana.id), 'y solo ve las correcciones de sus vídeos');
+  // (revisión de seguridad, H1) la tabla, con horas, solo el coach; Ana lee las suyas con días (video_correcciones)
+  const idsTodos = [...dAna, ...dRub].filter((x) => x.tipo === 'video_tecnica').map((x) => x.id);
+  const deAna = await b9.rpc('video_correcciones', { p_archivos: idsTodos });
+  check(!(await b9.select('video_revisiones', {})).length && deAna.length >= 2 && deAna.every((r) => r.atleta_id === ana.id)
+    && deAna.every((r) => !Object.keys(r).some((k) => /_en$/.test(k)) && (r.visto_el == null || /^\d{4}-\d{2}-\d{2}$/.test(r.visto_el)) && (r.corregido_el == null || /^\d{4}-\d{2}-\d{2}$/.test(r.corregido_el))),
+    'y solo ve las correcciones de sus vídeos, con el día de «Visto» y de «Corregido» (nunca la hora, ni la tabla)');
   // La serie y repetir, como la 035
   const seAna = vAna.sesion_ejercicio_id;
   const seRub = (await b9.select('archivos', { eq: { atleta_id: ruben.id } })).find((x) => x.sesion_ejercicio_id)?.sesion_ejercicio_id;
@@ -1274,10 +1279,14 @@ console.log('\nLos vídeos de técnica en la demo (v0.57): las mismas reglas que
   check(await b9.rpc('video_visto', { p_archivo: vAna.id }) === new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date()), 'el coach lo abre: «Visto» con el día de hoy');
   check(await lanza(() => a9.guardarRevision(vAna, { puntuacion: 6 })) && await lanza(() => b9.upsert('video_revisiones', [{ archivo_id: vAna.id, atleta_id: ana.id, tempo: { reps: [[0, 1, 30]] } }], 'archivo_id'))
     && await lanza(() => b9.upsert('video_revisiones', [{ archivo_id: vAna.id, atleta_id: ana.id, checklist: { puntos: [{ t: '', e: 'bien' }] } }], 'archivo_id')), 'con las mismas reglas: nota, tempo dentro del vídeo, puntos con su forma');
+  const [antesVisto] = await b9.select('video_revisiones', { eq: { archivo_id: vAna.id } });
+  await b9.rpc('video_visto', { p_archivo: vAna.id });
+  check((await b9.select('video_revisiones', { eq: { archivo_id: vAna.id } }))[0].actualizado_en === antesVisto.actualizado_en, '(revisión) abrirlo otra vez no cambia la fila');
   const r = await a9.guardarRevision(vAna, { puntuacion: 4, checklist: [{ t: 'Rodillas', e: 'mal', s: 1 }], tempo: { reps: [[0.2, 1, 1.6]] } });
+  const [rA0] = await b9.select('video_revisiones', { eq: { archivo_id: vAna.id } });
   await b9.upsert('video_revisiones', [{ archivo_id: vAna.id, atleta_id: ruben.id, corregido_en: '2020-01-01T00:00:00Z', visto_el: '2020-01-01' }], 'archivo_id');
   const [rB] = await b9.select('video_revisiones', { eq: { archivo_id: vAna.id } });
-  check(r.corregido_en && rB.atleta_id === ana.id && rB.corregido_en === r.corregido_en && rB.visto_el !== '2020-01-01', '«Visto» y «Corregido» los pone la «base» (no se fechan a mano) y la corrección es de Ana');
+  check(r.corregido_el && rB.atleta_id === ana.id && rB.corregido_en === rA0.corregido_en && rB.visto_el !== '2020-01-01', '«Visto» y «Corregido» los pone la «base» (no se fechan a mano) y la corrección es de Ana');
   // La voz
   await comoAna();
   const vozAna = (await b9.insert('archivos', [{ atleta_id: ana.id, tipo: 'audio', ruta: `${ana.id}/audio-057-a.webm`, mime: 'audio/webm', bytes: 900, duracion_seg: 5 }]))[0];
@@ -1288,11 +1297,35 @@ console.log('\nLos vídeos de técnica en la demo (v0.57): las mismas reglas que
   check(rv.voz_archivo_id && rv2.voz_archivo_id !== rv.voz_archivo_id && !(await b9.select('archivos', { eq: { id: rv.voz_archivo_id } })).length, 'el coach pone su voz; otra la cambia (y la de antes se borra)');
   await comoAna();
   check(!(await b9.delete('archivos', { eq: { id: rv2.voz_archivo_id } })) && (await b9.select('archivos', { eq: { id: rv2.voz_archivo_id } })).length === 1, 'Ana no borra la voz de su coach');
+  // (revisión de seguridad, M2) la voz del vídeo no va en un mensaje; una nota de voz del chat no es la voz de un vídeo
+  await coach();
+  check(await lanza(() => b9.insert('comentarios', [{ atleta_id: ana.id, archivo_id: rv2.voz_archivo_id, texto: 'Nota de voz' }])), '(revisión) la voz del vídeo no se pone en un mensaje');
+  const notaChat = await a9.enviarMensaje(ana.id, { archivo: new File([new Uint8Array(800)], 'n.webm', { type: 'audio/webm' }), autor: 'coach', duracion_seg: 3 });
+  check(await lanza(() => b9.update('video_revisiones', { voz_archivo_id: notaChat.archivo_id }, { eq: { archivo_id: vAna.id } })), '(revisión) ni una nota de voz del chat se usa como voz del vídeo');
+  // (revisión de seguridad, M1) el fotograma: lo marca la base, no se cambia y no se reenvía
+  const foto = await a9.enviarFotograma(vAna, new Blob([new Uint8Array(200)], { type: 'image/jpeg' }), { texto: 'Mira' });
+  const [fotoA] = await b9.select('archivos', { eq: { id: foto.archivo_id } });
+  check(fotoA.derivado_de === vAna.id && await lanza(() => b9.update('archivos', { derivado_de: null }, { eq: { id: fotoA.id } })), '(revisión) el fotograma lleva de qué vídeo sale, y no se quita');
+  const copiaF = (await b9.insert('archivos', [{ atleta_id: ruben.id, tipo: 'adjunto', ruta: `${ruben.id}/adjunto-057-f.jpg`, mime: 'image/jpeg', bytes: 200 }]))[0];
+  check(await lanza(() => b9.rpc('chat_reenviar', { p_comentario: foto.id, p_destinos: [{ atleta: ruben.id, archivo: copiaF.id }] }))
+    && await lanza(() => b9.insert('archivos', [{ atleta_id: ruben.id, tipo: 'adjunto', ruta: `${ruben.id}/adjunto-057-g.jpg`, mime: 'image/jpeg', derivado_de: vAna.id }])),
+    '(revisión) no se reenvía a Rubén, ni se hace pasar por un fotograma de otro atleta');
+  await comoAna();
+  check(await lanza(() => b9.insert('archivos', [{ atleta_id: ana.id, tipo: 'adjunto', ruta: `${ana.id}/adjunto-057-h.jpg`, mime: 'image/jpeg', derivado_de: vAna.id }])), '(revisión) un atleta no marca fotogramas');
+  // (revisión de seguridad, H2) el día de un archivo del atleta, como mucho mañana; cuándo llegó, la base
+  const futuro = (await b9.insert('archivos', [{ atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/video-057-fut.mp4`, fecha: '2099-01-01', creado_en: '2020-01-01T00:00:00Z' }]))[0];
+  check(futuro.fecha <= sumarDias(hoyISO(), 1) && Date.parse(futuro.creado_en) > Date.now() - 60000, '(revisión) un día del futuro se queda en mañana, y cuándo llegó no se pone a mano');
   // La limpieza
   await coach();
-  const viejo = (await b9.insert('archivos', [{ atleta_id: ruben.id, tipo: 'video_tecnica', ruta: `${ruben.id}/video-viejo-057.mp4`, fecha: '2025-01-01', bytes: 5000 }]))[0];
+  const viejo = (await b9.insert('archivos', [{ atleta_id: ruben.id, tipo: 'video_tecnica', ruta: `${ruben.id}/video-viejo-057.mp4`, fecha: '2025-01-01', creado_en: '2025-01-01T10:00:00Z', revisado_en: '2025-01-02T10:00:00Z', bytes: 5000 }]))[0];
+  await comoAna();
+  const atrasado = (await b9.insert('archivos', [{ atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/video-057-atras.mp4`, fecha: '2021-01-01' }]))[0];
+  await coach();
+  const sinRevisar = (await b9.insert('archivos', [{ atleta_id: ruben.id, tipo: 'video_tecnica', ruta: `${ruben.id}/video-viejo-057b.mp4`, fecha: '2025-01-01', creado_en: '2025-01-01T10:00:00Z', bytes: 5000 }]))[0];
   const vista = await a9.limpiezaVideos({ meses: 6, dias: 30 });
   check(vista.lista.some((x) => x.id === viejo.id) && !vista.lista.some((x) => x.id === vAna.id || x.destacado), 'la limpieza enseña lo viejo (nunca lo reciente ni lo destacado)');
+  check(!vista.lista.some((x) => x.id === atrasado.id) && !vista.lista.some((x) => x.id === sinRevisar.id) && await lanza(() => a9.limpiezaVideos({ meses: 6, dias: 0 })),
+    '(revisión) ni uno con el día puesto atrás a mano (llegó hoy), ni uno que aún espera en la cola, y la conversación protege al menos 7 días');
   check((await a9.borrarVideosViejos({ meses: 6, dias: 30, ids: [viejo.id, vAna.id] })).n === 1 && (await b9.select('archivos', { eq: { id: vAna.id } })).length === 1, 'y borra solo lo que sigue cumpliéndolo');
   // Al borrar el vídeo, su corrección y la voz se van; la repetición se queda suelta; un dibujo en su hilo no lo impide
   await a9.comentar({ atletaId: ana.id, archivoId: vAna.id, texto: 'Mira', autor: 'coach', dibujo: { t: 1, hasta: 2, formas: [{ tipo: 'flecha', p: [[0, 0], [1, 1]], c: 'rojo' }, { tipo: 'texto', p: [[0.5, 0.5]], x: 'Rodillas' }] } });
@@ -1302,6 +1335,22 @@ console.log('\nLos vídeos de técnica en la demo (v0.57): las mismas reglas que
   await coach();
   check(!(await b9.select('video_revisiones', { eq: { archivo_id: vAna.id } })).length && !(await b9.select('archivos', { eq: { id: rv2.voz_archivo_id } })).length && (await b9.select('archivos', { eq: { id: repe.id } }))[0].repite_de === null,
     'al borrarlo, su corrección y la voz se van (y la repetición queda suelta)');
+  // (revisión de seguridad, L4) el coach pasa un vídeo a otro atleta: su corrección va con él (sin la voz) y Ana ya no la ve
+  {
+    await comoAna();
+    const vM = (await b9.insert('archivos', [{ atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/video-057-mover.mp4`, duracion_seg: 8 }]))[0];
+    const vRep = (await b9.insert('archivos', [{ atleta_id: ana.id, tipo: 'video_tecnica', ruta: `${ana.id}/video-057-mover2.mp4`, repite_de: vM.id }]))[0];
+    await coach();
+    const rvM = await a9.guardarVozVideo(vM, new File([new Uint8Array(500)], 'v.webm', { type: 'audio/webm' }), { inicio: 0, seg: 2 });
+    await a9.guardarRevision(vM, { puntuacion: 3 });
+    await b9.update('archivos', { atleta_id: ruben.id, ruta: `${ruben.id}/video-057-mover.mp4` }, { eq: { id: vM.id } });
+    const [revM] = await b9.select('video_revisiones', { eq: { archivo_id: vM.id } });
+    check(revM.atleta_id === ruben.id && revM.voz_archivo_id === null && !(await b9.select('archivos', { eq: { id: rvM.voz_archivo_id } })).length
+      && (await b9.select('archivos', { eq: { id: vRep.id } }))[0].repite_de === null, '(revisión) al pasarlo a Rubén, su corrección va con él, sin la voz (era de Ana), y la repetición de Ana queda suelta');
+    await comoAna();
+    check(!(await b9.rpc('video_correcciones', { p_archivos: [vM.id] })).length, '(revisión) y Ana ya no la ve');
+    await coach();
+  }
   // La subida «por trozos» de la demo sigue por donde iba
   const memL = new Map();
   globalThis.localStorage = { getItem: (k) => memL.get(k) ?? null, setItem: (k, v) => memL.set(k, String(v)), removeItem: (k) => memL.delete(k) };

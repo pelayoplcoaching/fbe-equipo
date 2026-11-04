@@ -172,7 +172,7 @@ const guardarPrivacidadLocal = (id, v) => { try { almacenNavegador()?.setItem(cl
 export const AVISO_035 = 'Disponible tras la migración 035 (supabase/migraciones/035_videos_tecnica.sql)';
 const falta035 = (e) => {
   const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
-  if (/\b(serie_numero|repite_de|video_revisiones|tecnica_plantillas|video_visto|videos_limpieza|videos_limpiar)\b/.test(m)
+  if (/\b(serie_numero|repite_de|derivado_de|video_revisiones|video_correcciones|tecnica_plantillas|video_visto|videos_limpieza|videos_limpiar)\b/.test(m)
     && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m)) throw new Error(`${AVISO_035}. Detalle: ${e?.message || e}`);
   throw e;
 };
@@ -1593,7 +1593,7 @@ export function crearApi(backend) {
           : archivo ? { tipo: 'archivo', id: archivo.id, nombre: archivo.tipo === 'adjunto' || archivo.tipo === 'documento' ? null : /^video/.test(archivo.mime || '') || archivo.tipo === 'video_tecnica' ? 'vídeo' : 'foto' }
           : null;
         const medio = archivo ? medioDe({ archivo }) : null;
-        return { ...c, contexto, archivo: conMedio ? archivo : null, archivoId: archivo?.id || null, medio, programado: programado(c),
+        return { ...c, contexto, archivo: conMedio ? archivo : null, archivoId: archivo?.id || null, medio, programado: programado(c), fotograma: !!archivo?.derivado_de,
           reacciones: c.eliminado_en ? [] : (R[c.id] || []).map(({ usuario_id, emoji }) => ({ usuario_id, emoji })), destacado: D.has(c.id),
           encuesta: E[c.id] && !c.eliminado_en ? { id: E[c.id].id, pregunta: E[c.id].pregunta, opciones: E[c.id].opciones, multiple: E[c.id].multiple, voto: votos[E[c.id].id]?.opciones || null, votado_en: votos[E[c.id].id]?.votado_en || null } : null };
       });
@@ -1841,6 +1841,8 @@ export function crearApi(backend) {
     // archivos (con lo que la base comprueba) y después la copia en Storage, con los permisos del coach. Así ese atleta
     // solo ve su copia (lo de la carpeta del otro sigue sin poder verlo).
     async copiarArchivoA(archivo, atletaId) {
+      // (v0.57) el fotograma de un vídeo de un atleta es solo suyo (la base tampoco lo deja)
+      if (archivo?.derivado_de) throw new Error('Un fotograma del vídeo de un atleta es solo suyo: no se reenvía');
       const ext = (/\.([a-z0-9]{1,5})$/i.exec(archivo.ruta || '') || [])[1]?.toLowerCase() || 'bin';
       const esImagen = /^image\//.test(archivo.mime || '');
       const dia = hoyISO();
@@ -2018,7 +2020,7 @@ export function crearApi(backend) {
     // respondeA (v0.54): el mensaje que cita (con foto o vídeo, el primero de varios lo lleva)
     // clienteId (v0.55): el id del móvil (sin repetir al reintentar). Un PDF (v0.55, migración 033) va como documento del
     // chat, con su nombre (saneado) y sus páginas (si se saben); la ruta la genera la app.
-    async enviarMensaje(atletaId, { texto = '', archivo = null, autor, enDiario = false, poster = null, duracion_seg = null, enviarEn = null, respondeA = null, clienteId = null, paginas = null, onda = null, alProgreso = null, senal = null }) {
+    async enviarMensaje(atletaId, { texto = '', archivo = null, autor, enDiario = false, poster = null, duracion_seg = null, enviarEn = null, respondeA = null, clienteId = null, paginas = null, onda = null, alProgreso = null, senal = null, derivado_de = null }) {
       const t = String(texto || '').trim();
       if (enviarEn) {
         if (archivo) throw new Error('Los mensajes con foto o vídeo no se pueden programar');
@@ -2044,7 +2046,8 @@ export function crearApi(backend) {
       const delChat = tipo === 'adjunto' || tipo === 'documento' || tipo === 'audio';
       const fila = await api.subirArchivo(atletaId, archivo, { tipo, nota_atleta: enDiario && t ? t.slice(0, 500) : null, poster: esPdf || esAudio ? null : poster,
         duracion_seg: esPdf ? null : esAudio ? duracionGuardada(duracion_seg) : duracion_seg, alProgreso, senal,
-        ...(esPdf ? { nombre: nombreSeguroPdf(archivo.name), paginas } : {}), ...(esAudio && ondaValida(onda) ? { onda } : {}) });
+        ...(esPdf ? { nombre: nombreSeguroPdf(archivo.name), paginas } : {}), ...(esAudio && ondaValida(onda) ? { onda } : {}),
+        ...(derivado_de && tipo === 'adjunto' && /^image\//.test(archivo.type || '') ? { derivado_de } : {}) });
       // (v0.56) «Cancelar» justo cuando acababa de subirse: no sale (y su archivo se retira)
       if (senal?.cancelada) { if (delChat) await api.borrarArchivo(fila).catch(() => {}); const e = new Error('Cancelado'); e.cancelado = true; throw e; }
       try {
@@ -2154,7 +2157,7 @@ export function crearApi(backend) {
     // se graba de nuevo. Sin la 035, el vídeo sale igual, sin ellos. urlSubida / alUrlSubida: la dirección de la subida por
     // trozos (TUS), para seguir por donde iba si se corta o se cierra la app.
     async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null, fecha = null, alProgreso = null, senal = null, ruta: rutaDada = null, nombre = null, paginas = null, onda = null,
-      serie_numero = null, repite_de = null, urlSubida = null, alUrlSubida = null }) {
+      serie_numero = null, repite_de = null, urlSubida = null, alUrlSubida = null, derivado_de = null }) {
       if (archivo.size > LIMITE_ARCHIVO_MB * 1024 * 1024) throw new Error(`El archivo pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos) o recórtalo.`);
       const esImagen = /^image\//.test(archivo.type || '') || tipo === 'foto_progreso';
       const ruta = rutaDada || api.rutaArchivo(atletaId, archivo, { tipo, fecha });
@@ -2174,8 +2177,8 @@ export function crearApi(backend) {
           ...(poster_ruta ? { poster_ruta } : {}), ...(dur != null ? { duracion_seg: dur } : {}),
           ...(tipo === 'documento' ? { nombre: nombreSeguroPdf(nombre || archivo.name), ...(Number.isInteger(paginas) && paginas >= 1 && paginas <= 5000 ? { paginas } : {}) } : {}),
           ...(tipo === 'audio' && ondaValida(onda) ? { onda } : {}),
-          ...enlaces,
-        }]).catch(tipo === 'documento' ? falta033 : tipo === 'audio' ? falta034 : Object.keys(enlaces).length ? falta035 : (e) => { throw e; });
+          ...enlaces, ...(derivado_de && tipo === 'adjunto' ? { derivado_de } : {}),
+        }]).catch(tipo === 'documento' ? falta033 : tipo === 'audio' ? falta034 : Object.keys(enlaces).length || derivado_de ? falta035 : (e) => { throw e; });
       }
       try {
         if (senal?.cancelada) { const e = new Error('Cancelado'); e.cancelado = true; throw e; }
@@ -2227,7 +2230,7 @@ export function crearApi(backend) {
       if (!vids.length || !(await api.video035())) return { revisiones: {}, series: {} };
       const conSerie = vids.filter((a) => a.serie_numero && a.sesion_ejercicio_id);
       const [revs, series] = await Promise.all([
-        b.select('video_revisiones', { in: { archivo_id: vids.map((a) => a.id) } }).catch(() => []),
+        api.correccionesDe(vids.map((a) => a.id)).catch(() => []),
         conSerie.length ? b.select('series', { in: { sesion_ejercicio_id: unicos(conSerie.map((a) => a.sesion_ejercicio_id)) }, cols: 'sesion_ejercicio_id,numero,kg,reps,rpe' }).catch(() => []) : [],
       ]);
       const out = { revisiones: porCampo(revs, 'archivo_id'), series: {} };
@@ -2237,10 +2240,18 @@ export function crearApi(backend) {
       }
       return out;
     },
+    // La corrección de unos vídeos como la lee la app (la base: video_correcciones). Sin ninguna hora: de «Visto» y de
+    // «Corregido», solo el día (visto_el, corregido_el). El atleta no puede leer la tabla (lleva las horas, del coach).
+    async correccionesDe(ids) {
+      const todos = unicos(ids || []);
+      const out = [];
+      for (let i = 0; i < todos.length; i += 1000) out.push(...((await b.rpc('video_correcciones', { p_archivos: todos.slice(i, i + 1000) })) || []));
+      return out;
+    },
     // La corrección de un vídeo (o null), con su voz ({ ruta, duracion_seg, onda }) si la lleva
     async revisionVideo(archivoId) {
       if (!archivoId || !(await api.video035())) return null;
-      const [r] = await b.select('video_revisiones', { eq: { archivo_id: archivoId } }).catch(() => []);
+      const [r] = await api.correccionesDe([archivoId]).catch(() => []);
       if (!r) return null;
       const [voz] = r.voz_archivo_id ? await b.select('archivos', { eq: { id: r.voz_archivo_id }, cols: 'id,ruta,duracion_seg,onda,tipo' }).catch(() => []) : [];
       return { ...r, voz: voz || null };
@@ -2326,7 +2337,9 @@ export function crearApi(backend) {
       await api.exigir035();
       const r = await b.rpc('videos_limpieza', { p_meses: meses, p_dias: dias }).catch(falta035);
       const A = porId(await api.atletas().catch(() => []));
-      return { n: Number(r?.n) || 0, bytes: Number(r?.bytes) || 0, lista: (r?.lista || []).map((x) => ({ ...x, atleta: A[x.atleta_id] || null })) };
+      const lista = (r?.lista || []).map((x) => ({ ...x, atleta: A[x.atleta_id] || null }));
+      // La base enseña (y borra) como mucho 300 de una vez, los más antiguos: lo que se borra ahora es «lote»
+      return { n: Number(r?.n) || 0, bytes: Number(r?.bytes) || 0, lista, lote: { n: lista.length, bytes: lista.reduce((t, x) => t + (Number(x.bytes) || 0), 0) } };
     },
     async borrarVideosViejos({ meses, dias = 30, ids }) {
       await api.exigir035();
@@ -2338,10 +2351,12 @@ export function crearApi(backend) {
       const quitados = await api.limpiarAlmacenamiento().catch(() => 0);
       return { n, bytes, almacenamiento: quitados >= 0 ? 'borrado' : 'pendiente' };
     },
-    // Un fotograma con su dibujo, como foto en el chat de ese atleta (del coach: así se puede reenviar y nadie más la ve)
-    async enviarFotograma(atletaId, blob, { texto = '' } = {}) {
+    // Un fotograma de un vídeo con su dibujo, como foto en el chat de ese atleta. Lleva de qué vídeo sale (derivado_de, que
+    // comprueba la base): es solo de ese atleta, como su vídeo; ni se reenvía ni se difunde. Sin la 035, no se manda.
+    async enviarFotograma(video, blob, { texto = '' } = {}) {
+      await api.exigir035();
       const f = new File([blob], `fotograma-${hoyISO()}.jpg`, { type: 'image/jpeg' });
-      return api.enviarMensaje(atletaId, { archivo: f, texto, autor: 'coach' });
+      return api.enviarMensaje(video.atleta_id, { archivo: f, texto, autor: 'coach', derivado_de: video.id });
     },
 
     // ------------------------------------------------------------ v0.48: lo que le dijo el coach de cada ejercicio
@@ -2874,6 +2889,9 @@ export function crearApi(backend) {
       out.comentarios = out.comentarios.filter((c) => !programado(c));
       out.avisos = out.avisos.filter((a) => !programado(a));
       out.tareas = await b.select('tareas', { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (v0.57) la corrección de sus vídeos de técnica (con días, como la ve en la app; sin la 035, ninguna)
+      const vids = out.archivos.filter((a) => a.tipo === 'video_tecnica').map((a) => a.id);
+      out.video_correcciones = vids.length && await api.video035().catch(() => false) ? await api.correccionesDe(vids).catch(() => []) : [];
       // (v0.54) sus reacciones y sus destacados en el chat (los destacados solo los ve su dueño: si exporta el coach, vacíos)
       const idsMsg = out.comentarios.map((c) => c.id);
       out.comentario_reacciones = perfilId && idsMsg.length ? await b.select('comentario_reacciones', { in: { comentario_id: idsMsg }, eq: { usuario_id: perfilId } }).catch(() => []) : [];

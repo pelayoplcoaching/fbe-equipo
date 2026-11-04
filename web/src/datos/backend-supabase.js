@@ -64,6 +64,19 @@ function aplicarFiltro(q, f = {}) {
 
 const TROZO = 6 * 1024 * 1024;
 
+// (v0.57, revisión de seguridad) ¿Es esta dirección de una subida empezada (la que se guardó en el móvil) de este mismo
+// servidor de subidas? Tiene que empezar por su dirección y «/» (y seguir igual al leerla como URL: sin «..» ni otro
+// servidor); si no, se empieza otra subida y el token de la sesión nunca va a otro sitio.
+export function urlSubidaValida(urlSubida, endpoint) {
+  if (typeof urlSubida !== 'string' || typeof endpoint !== 'string' || !endpoint) return false;
+  const base = endpoint.replace(/\/+$/, '') + '/';
+  if (!urlSubida.startsWith(base) || urlSubida.length <= base.length || urlSubida.length > 2048) return false;
+  try {
+    const u = new URL(urlSubida), e = new URL(base);
+    return /^https?:$/.test(u.protocol) && u.origin === e.origin && u.href === urlSubida && u.pathname.startsWith(e.pathname) && !u.username && !u.password;
+  } catch { return false; }
+}
+
 // Subida por trozos (TUS, el protocolo de subidas reanudables de Supabase Storage). Se exporta para probarla.
 // (v0.57) urlSubida: la dirección de una subida empezada (la guarda la app con el vídeo pendiente): se sigue por el trozo en
 // que iba, también tras cerrar la app; si ya no vale (caducó a las 24 h), TUS empieza otra. alUrlSubida(url): en cuanto
@@ -87,7 +100,7 @@ export function subirPorTrozos({ endpoint, token, anonKey, ruta, archivo, tipo, 
       // Cada intento va con su ruta (la registra la app justo antes): no se retoman subidas de otro intento por su huella,
       // solo la de este mismo vídeo, por su dirección (urlSubida)
       storeFingerprintForResuming: false,
-      ...(typeof urlSubida === 'string' && /^https?:\/\//.test(urlSubida) ? { uploadUrl: urlSubida } : {}),
+      ...(urlSubidaValida(urlSubida, endpoint) ? { uploadUrl: urlSubida } : {}),
       onUploadUrlAvailable: () => { try { if (subida.url) alUrlSubida?.(subida.url); } catch { /* */ } },
       chunkSize: TROZO, // Supabase pide trozos de 6 MB exactos
       metadata: { bucketName: bucket, objectName: ruta, contentType: tipo || 'application/octet-stream', cacheControl: '3600' },

@@ -2528,6 +2528,8 @@ console.log('\nv0.55: el chat, aún más como WhatsApp');
     && C.reenviable({ ...mC, archivo_id: 'f', adjunto: true }, 'coach') && !C.reenviable({ ...mC, pendiente: true }, 'coach'),
     'se reenvía lo del coach, del chat y ya salido (lo de un atleta, no: son datos de salud de otra persona)');
   check(!C.reenviable({ ...mC, encuesta: { id: 'e1', opciones: ['a', 'b'] } }, 'coach') && !C.reenviable({ ...mC, subida: { estado: 'subiendo' } }, 'coach'), '(revisión) una encuesta no se reenvía (ni lo que aún se está subiendo)');
+  check(!C.reenviable({ ...mC, archivo_id: 'f', adjunto: true, fotograma: true }, 'coach') && !C.accionesSeleccion([{ ...mC, archivo_id: 'f', adjunto: true, fotograma: true }], 'coach').reenviar,
+    '(v0.57, revisión de seguridad) el fotograma del vídeo de un atleta no se reenvía (es solo suyo)');
   // PDF
   check(C.nombreSeguroPdf('../../etc/passwd') === 'passwd.pdf' && C.nombreSeguroPdf('C:\\Users\\Ana\\Plan.PDF') === 'Plan.pdf' && C.nombreSeguroPdf('') === 'documento.pdf' && C.nombreSeguroPdf('...pdf') === 'pdf.pdf',
     'el nombre de un PDF: sin carpetas (ni «../»), siempre .pdf y, si no queda nada, «documento.pdf»');
@@ -2808,7 +2810,7 @@ console.log('\nv0.57: los vídeos de técnica (encuadre, nivel, serie, marcas, t
   const serie = T.seriePuntuaciones([{ fecha: '2026-10-01', revision: { puntuacion: 2 } }, { fecha: '2026-11-01', revision: { puntuacion: 4 }, creado_en: 'b' }, { fecha: '2026-11-01', revision: { puntuacion: 3 }, creado_en: 'a' }, { fecha: '2026-10-15', revision: null }]);
   check(igual(serie, [{ x: '2026-10-01', y: 2 }, { x: '2026-11-01', y: 4 }]), 'la gráfica de la nota: una por día (la última), sin los que no tienen');
   // 15. Estado
-  check(T.estadoVideo({}).estado === 'enviado' && T.estadoVideo({ revision: { visto_el: '2026-11-03' } }).texto === 'Visto el 3 nov' && T.estadoVideo({ revision: { visto_el: '2026-11-03', corregido_en: 'x' } }).estado === 'corregido'
+  check(T.estadoVideo({}).estado === 'enviado' && T.estadoVideo({ revision: { visto_el: '2026-11-03' } }).texto === 'Visto el 3 nov' && T.estadoVideo({ revision: { visto_el: '2026-11-03', corregido_el: '2026-11-03' } }).estado === 'corregido'
     && T.estadoVideo({ respondido: true }).texto === 'Corregido', 'Enviado → Visto (el día) → Corregido (la corrección o una respuesta del coach)');
   const id = '11111111-1111-4111-8111-111111111111';
   check(T.enlaceVideo(id, 1.234) === `#videos/${id}@1.2` && T.enlaceVideo(id) === `#videos/${id}` && T.enlaceVideo('../x', 2) === null && igual(T.leerEnlaceVideo(`#videos/${id}@1.2`), { id, t: 1.2 })
@@ -2837,11 +2839,19 @@ console.log('\nv0.57: los vídeos de técnica (encuadre, nivel, serie, marcas, t
   // 17. Limpieza y almacenamiento
   check(T.restarMeses('2026-03-31', 1) === '2026-02-28' && T.restarMeses('2026-01-15', 2) === '2025-11-15' && T.restarMeses('2024-03-30', 1) === '2024-02-29', 'restar meses (fin de mes y años bisiestos)');
   const ahora = Date.parse('2026-11-03T12:00:00Z');
-  const arch = [{ id: 'v1', tipo: 'video_tecnica', fecha: '2026-01-01' }, { id: 'v2', tipo: 'video_tecnica', fecha: '2026-01-01', destacado: true }, { id: 'v3', tipo: 'video_tecnica', fecha: '2026-10-01' },
-    { id: 'v4', tipo: 'video_tecnica', fecha: '2026-01-01' }, { id: 'v5', tipo: 'video_tecnica', fecha: '2026-01-01' }, { id: 'v6', tipo: 'video_tecnica', fecha: '2026-01-01' }, { id: 'v7', tipo: 'foto_progreso', fecha: '2026-01-01' },
-    { id: 'v8', tipo: 'video_tecnica', fecha: '2026-11-01', repite_de: 'v6', creado_en: '2026-11-01T10:00:00Z' }];
-  const viejos = T.videosViejos(arch, { comentarios: [{ archivo_id: 'v4', creado_en: '2026-10-30T10:00:00Z' }], tareas: [{ archivo_id: 'v5', revisada_en: null }], meses: 6, dias: 30, hoy: '2026-11-03', ahora });
-  check(igual(viejos.map((a) => a.id), ['v1']), 'limpieza: de más de 6 meses, sin destacar, sin conversación reciente, ni de una tarea por revisar, ni con una repetición reciente (y solo vídeos de técnica)');
+  const viejoV = (id, x = {}) => ({ id, tipo: 'video_tecnica', fecha: '2026-01-01', creado_en: '2026-01-01T10:00:00Z', revisado_en: '2026-01-02T10:00:00Z', ...x });
+  const arch = [viejoV('v1'), viejoV('v2', { destacado: true }), viejoV('v3', { fecha: '2026-10-01', creado_en: '2026-10-01T10:00:00Z' }),
+    viejoV('v4'), viejoV('v5'), viejoV('v6'), { id: 'v7', tipo: 'foto_progreso', fecha: '2026-01-01', creado_en: '2026-01-01T10:00:00Z' },
+    viejoV('v8', { fecha: '2026-11-01', repite_de: 'v6', creado_en: '2026-11-01T10:00:00Z' }),
+    // (v0.57, revisión de seguridad) con el día puesto a mano: cuenta también cuándo llegó; sin revisar ni corregir, en la cola
+    viejoV('v9', { creado_en: '2026-10-20T10:00:00Z' }), viejoV('v10', { revisado_en: null }), viejoV('v11', { revisado_en: null }), viejoV('v12'), viejoV('v13')];
+  const revs = [{ archivo_id: 'v11', corregido_en: '2026-01-03T10:00:00Z', actualizado_en: '2026-01-03T10:00:00Z' },
+    { archivo_id: 'v12', corregido_en: null, visto_el: '2026-11-02', actualizado_en: '2026-11-02T10:00:00Z' }, { archivo_id: 'v13', corregido_en: '2026-01-03T10:00:00Z', actualizado_en: '2026-11-02T10:00:00Z' }];
+  const viejos = T.videosViejos(arch, { comentarios: [{ archivo_id: 'v4', creado_en: '2026-10-30T10:00:00Z' }], tareas: [{ archivo_id: 'v5', revisada_en: null }], revisiones: revs, meses: 6, dias: 30, hoy: '2026-11-03', ahora });
+  check(igual(viejos.map((a) => a.id), ['v1', 'v11', 'v12']), 'limpieza: de más de 6 meses, sin destacar, sin conversación reciente, ni de una tarea por revisar, ni con una repetición reciente (y solo vídeos de técnica)');
+  check(!viejos.some((a) => a.id === 'v9') && !viejos.some((a) => a.id === 'v10') && viejos.some((a) => a.id === 'v11') && viejos.some((a) => a.id === 'v12') && !viejos.some((a) => a.id === 'v13'),
+    'un día puesto a mano no lo hace viejo (cuenta cuándo llegó); el que espera en la cola del coach no se borra; abrirlo («Visto») no lo protege, corregirlo hace poco, sí');
+  check(T.DIAS_LIMPIEZA_MIN === 7 && /not between 7 and 365/.test(sql), 'la protección de la conversación, de al menos 7 días (como la base)');
   check(T.avisoAlmacenamiento(0.5 * 1024 ** 3, 1).nivel === 'ok' && T.avisoAlmacenamiento(0.85 * 1024 ** 3, 1).nivel === 'cerca' && T.avisoAlmacenamiento(0.97 * 1024 ** 3, 1).nivel === 'lleno'
     && T.avisoAlmacenamiento(0.85 * 1024 ** 3, 100).nivel === 'ok' && /85 %/.test(T.avisoAlmacenamiento(0.85 * 1024 ** 3, 1).texto), 'el aviso del almacenamiento: desde el 80 % del plan (y casi lleno desde el 95 %)');
   // 6. Dibujos: más herramientas, colores y tramo

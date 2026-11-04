@@ -5097,6 +5097,8 @@ try {
   await panel.getByRole('button', { name: 'Fotograma al chat' }).click();
   await p.locator('.toast', { hasText: 'Fotograma enviado al chat de Ana' }).waitFor();
   check(await enDemo((d) => d.archivos.some((a) => a.tipo === 'adjunto' && a.subido_por === 'coach' && /^image\/jpeg/.test(a.mime))), 'el fotograma llega a su chat como una foto (del coach)');
+  check(await enDemo((d) => d.archivos.some((a) => a.tipo === 'adjunto' && /^image\/jpeg/.test(a.mime) && d.archivos.some((v) => v.id === a.derivado_de && v.tipo === 'video_tecnica' && v.atleta_id === a.atleta_id))),
+    '(revisión) y lleva de qué vídeo de Ana sale (así no se puede reenviar a nadie más)');
   // 6. Más herramientas de dibujo: flecha, texto y círculo en rojo, visibles un tramo
   await vidA.getByRole('button', { name: 'Dibujar sobre el vídeo' }).click();
   const lienzo = vidA.locator('.rep-lienzo');

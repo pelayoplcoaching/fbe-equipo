@@ -3985,13 +3985,14 @@ console.log('\nLos vídeos de técnica, mucho mejores (migración 035)');
   await su();
   await q(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
   await q(`delete from fbe_privado.storage_por_borrar`);
-  const cols = (await q(`select column_name c from information_schema.columns where table_schema = 'public' and table_name = 'archivos' and column_name in ('serie_numero', 'repite_de') order by 1`)).map((x) => x.c);
-  check(cols.join() === 'repite_de,serie_numero', 'archivos trae serie_numero y repite_de');
+  const cols = (await q(`select column_name c from information_schema.columns where table_schema = 'public' and table_name = 'archivos' and column_name in ('serie_numero', 'repite_de', 'derivado_de') order by 1`)).map((x) => x.c);
+  check(cols.join() === 'derivado_de,repite_de,serie_numero', 'archivos trae serie_numero, repite_de y derivado_de');
   check((await q(`select relname from pg_class where relname in ('video_revisiones', 'tecnica_plantillas') and relrowsecurity and relnamespace = 'public'::regnamespace`)).length === 2, 'las dos tablas nuevas nacen con permisos por fila');
   check((await q(`select 1 from information_schema.role_table_grants where table_name in ('video_revisiones', 'tecnica_plantillas') and grantee = 'anon'`)).length === 0, 'sin sesión, ningún permiso sobre ellas');
   const malos = await q(`select p.oid::regprocedure::text f from pg_proc p where p.pronamespace in ('public'::regnamespace, 'fbe_privado'::regnamespace)
     and p.proname in ('archivo_enlaces', 'archivo_proteger_cambios', 'dibujo_valido', 'checklist_valido', 'tempo_valido', 'video_revision_preparar', 'video_revision_voz_suelta', 'archivo_es_voz_video', 'video_visto',
-                      'puntos_tecnica_validos', 'tecnica_plantilla_preparar', 'momento_de_comentario', 'enlace_video', 'notificacion_video', 'al_corregir_video', 'videos_viejos', 'videos_limpieza', 'videos_limpiar')
+                      'puntos_tecnica_validos', 'tecnica_plantilla_preparar', 'momento_de_comentario', 'enlace_video', 'notificacion_video', 'al_corregir_video', 'videos_viejos', 'videos_limpieza', 'videos_limpiar',
+                      'video_correcciones', 'al_mover_archivo', 'comentario_sin_voz_video', 'chat_reenviar', 'chat_copia_valida')
     and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`);
   check(!malos.length, `las funciones nuevas y las que cambia la 035, con search_path vacío${malos.length ? ` (no: ${malos.map((x) => x.f).join(', ')})` : ''}`);
   check((await q(`select count(*)::int n from pg_proc where proname in ('videos_viejos', 'video_revision_voz_suelta', 'notificacion_video', 'al_corregir_video') and pronamespace = 'fbe_privado'::regnamespace`))[0].n === 4
@@ -4082,10 +4083,11 @@ console.log('\nLos vídeos de técnica, mucho mejores (migración 035)');
   await q(`update video_revisiones set voz_archivo_id = $2, voz_inicio = 1.25 where archivo_id = $1`, [v1.id, voz1.id]);
   check((await q(`select voz_inicio::float v from video_revisiones where archivo_id = $1`, [v1.id]))[0].v === 1.25, 'el coach pone su voz desde el 0:01,2');
   await como(ana);
-  check((await q(`select voz_archivo_id from video_revisiones where archivo_id = $1`, [v1.id]))[0].voz_archivo_id === voz1.id && (await q(`select voz_registrada($1) ok`, [voz1.ruta]))[0].ok === true
+  check((await q(`select voz_archivo_id from video_correcciones($1)`, [[v1.id]]))[0].voz_archivo_id === voz1.id && (await q(`select voz_registrada($1) ok`, [voz1.ruta]))[0].ok === true
     && (await q(`delete from archivos where id = $1 returning id`, [voz1.id])).length === 0, 'Ana la ve (y la puede escuchar: Storage la deja), pero no la borra');
   await como(luis);
-  check((await q(`select * from video_revisiones where archivo_id = $1`, [v1.id])).length === 0 && (await q(`select * from video_revisiones`)).length === 0, 'Luis no ve la corrección de Ana');
+  check((await q(`select * from video_revisiones where archivo_id = $1`, [v1.id])).length === 0 && (await q(`select * from video_revisiones`)).length === 0
+    && (await q(`select * from video_correcciones($1)`, [[v1.id]])).length === 0, 'Luis no ve la corrección de Ana');
   await como(pelayo, 'aal2');
   const voz2 = await insVoz(aAna.id, 'c2');
   await q(`update video_revisiones set voz_archivo_id = $2 where archivo_id = $1`, [v1.id, voz2.id]);
@@ -4109,16 +4111,36 @@ console.log('\nLos vídeos de técnica, mucho mejores (migración 035)');
 
   console.log('  · Limpieza de vídeos antiguos');
   await su();
-  const viejo = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'viejo'), fecha: '2025-01-10', bytes: 5000, poster_ruta: `${aLuis.id}/v057-viejo.jpg` });
-  const viejoDest = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'dest'), fecha: '2025-01-10', bytes: 5000, destacado: true });
-  const viejoHablado = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'hab'), fecha: '2025-01-10', bytes: 5000 });
+  const antiguo = { fecha: '2025-01-10', creado_en: '2025-01-10T10:00:00Z', revisado_en: '2025-01-11T10:00:00Z' };
+  const viejo = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'viejo'), ...antiguo, bytes: 5000, poster_ruta: `${aLuis.id}/v057-viejo.jpg` });
+  const viejoDest = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'dest'), ...antiguo, bytes: 5000, destacado: true });
+  const viejoHablado = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'hab'), ...antiguo, bytes: 5000 });
+  // (revisión de seguridad, H2) uno con el día puesto atrás pero llegado hoy, uno sin revisar (en la cola), uno solo «Visto» hoy
+  const viejoFalso = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'falso'), fecha: '2021-01-01', revisado_en: '2025-01-11T10:00:00Z', bytes: 5000 });
+  const viejoCola = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'cola'), fecha: '2025-01-10', creado_en: '2025-01-10T10:00:00Z', bytes: 5000 });
+  const viejoVisto = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'visto'), ...antiguo, bytes: 5000 });
+  const viejoCorr = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'corr'), fecha: '2025-01-10', creado_en: '2025-01-10T10:00:00Z', bytes: 5000 });
   const viejoFoto = (await q(`insert into archivos (atleta_id, tipo, ruta, fecha) values ($1::uuid, 'foto_progreso', $1::text || '/v057-vieja.jpg', '2025-01-10') returning id`, [aLuis.id]))[0];
   await como(pelayo, 'aal2');
   await q(`insert into comentarios (archivo_id, texto) values ($1, 'Lo seguimos hablando')`, [viejoHablado.id]);
+  await q(`select video_visto($1)`, [viejoVisto.id]);
+  await su();
+  await q(`insert into video_revisiones (archivo_id, atleta_id, puntuacion, corregido_en, actualizado_en) values ($1, $2, 3, '2025-01-11', '2025-01-11')`, [viejoCorr.id, aLuis.id]);
+  await q(`set session_replication_role = replica`);
+  await q(`update video_revisiones set actualizado_en = '2025-01-11', corregido_en = '2025-01-11' where archivo_id = $1`, [viejoCorr.id]);
+  await q(`update archivos set revisado_en = null where id = $1`, [viejoCorr.id]);
+  await q(`set session_replication_role = default`);
   await como(luis);
   check(await falla(`select videos_limpieza(6, 30)`) && await falla(`select videos_limpiar(6, 30, $1)`, [[viejo.id]]), 'el atleta no limpia nada');
   await como(pelayo, 'aal2');
   const prev = (await q(`select videos_limpieza(6, 30) r`))[0].r;
+  {
+    const idsP = prev.lista.map((x) => x.id);
+    check(!idsP.includes(viejoFalso.id) && !idsP.includes(viejoCola.id) && idsP.includes(viejoVisto.id) && idsP.includes(viejoCorr.id),
+      '(revisión) cuenta cuándo llegó (no el día puesto a mano); no el que espera en la cola; abrirlo («Visto») no lo protege; corregido hace tiempo, sí entra');
+    check(await falla(`select videos_limpieza(6, 0)`) && await falla(`select videos_limpieza(6, 6)`) && await falla(`select videos_limpiar(6, 0, $1)`, [[viejo.id]]) && !(await falla(`select videos_limpieza(6, 7)`)),
+      '(revisión) la conversación protege al menos 7 días (con 0, nada la protegería)');
+  }
   const ids = prev.lista.map((x) => x.id);
   check(ids.includes(viejo.id) && !ids.includes(viejoDest.id) && !ids.includes(viejoHablado.id) && !ids.includes(viejoFoto.id) && !ids.includes(v1.id) && prev.n === ids.length && prev.bytes >= 5000,
     'lo que se borraría: de más de 6 meses, sin destacar, sin conversación reciente, solo vídeos de técnica (con cuántos y cuánto ocupan)');
@@ -4140,6 +4162,120 @@ console.log('\nLos vídeos de técnica, mucho mejores (migración 035)');
   await q(`delete from archivos where ruta like '%/v057-%' or ruta like '%/audio-v057-%'`); await q(`delete from tecnica_plantillas`); await q(`delete from fbe_privado.storage_por_borrar`);
   await anon();
   check(await falla(`select * from video_revisiones`) && await falla(`select * from tecnica_plantillas`) && await falla(`select video_visto($1)`, [v2.id]) && await falla(`select videos_limpieza(6, 30)`), 'sin sesión, nada de lo nuevo');
+
+  console.log('  · Revisión de seguridad de la 035');
+  {
+    await como(ana);
+    const sv = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 's1'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+    const svRep = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 's2'), repite_de: sv.id, duracion_seg: 6 });
+    // H1: «Visto» una vez; el atleta nunca ve una hora (ni con «Mostrar cuándo estoy en línea» ni sin él)
+    await como(pelayo, 'aal2');
+    await q(`select video_visto($1)`, [sv.id]);
+    const t0 = (await q(`select actualizado_en::text a, visto_el::text v from video_revisiones where archivo_id = $1`, [sv.id]))[0];
+    await q(`select video_visto($1)`, [sv.id]); await q(`select video_visto($1)`, [sv.id]);
+    const t1 = (await q(`select actualizado_en::text a, visto_el::text v from video_revisiones where archivo_id = $1`, [sv.id]))[0];
+    check(t0.a === t1.a && t0.v === t1.v, '(H1) abrir otra vez el vídeo no toca la fila: ni el día de «Visto» ni su fecha de cambio');
+    await q(`update video_revisiones set puntuacion = 4 where archivo_id = $1`, [sv.id]);
+    const tiposCols = (await q(`select t.typname from pg_proc p, unnest(p.proallargtypes) with ordinality a(oid, i) join pg_type t on t.oid = a.oid
+                                where p.proname = 'video_correcciones' and p.pronamespace = 'public'::regnamespace`)).map((x) => x.typname);
+    check(tiposCols.length > 0 && !tiposCols.some((x) => /^(timestamptz|timestamp|time|timetz|interval)$/.test(x)), `(H1) video_correcciones no devuelve ninguna hora (${tiposCols.join(', ')})`);
+    for (const visible of [true, false]) {
+      await su();
+      await q(`insert into presencia (usuario_id, visible, ultima_conexion) values ($1, $2, null) on conflict (usuario_id) do update set visible = $2, ultima_conexion = null`, [pelayo, visible]);
+      await como(ana);
+      const filas = await q(`select * from video_correcciones($1)`, [[sv.id]]);
+      const fila = filas[0] || {};
+      const conHora = Object.entries(fila).filter(([, x]) => typeof x === 'string' && /\d{2}:\d{2}/.test(x));
+      check(filas.length === 1 && !Object.keys(fila).some((k) => /_en$/.test(k)) && !conHora.length && fila.puntuacion === 4
+        && (await q(`select visto_el::text v, corregido_el::text c from video_correcciones($1)`, [[sv.id]]))[0].c === t0.v
+        && (await q(`select * from video_revisiones`)).length === 0 && (await q(`select corregido_en from video_revisiones where archivo_id = $1`, [sv.id])).length === 0,
+        `(H1) con la presencia del coach ${visible ? 'visible' : 'escondida'}, Ana ve el día de «Visto» y «Corregido», nunca la hora (ni la tabla)`);
+    }
+    check(await falla(`select * from video_correcciones($1)`, [Array.from({ length: 1001 }, () => sv.id)]), '(H1) como mucho 1000 vídeos por vez');
+    await su();
+    await q(`delete from presencia where usuario_id = $1`, [pelayo]);
+    // H2: el día de un archivo del atleta, como mucho mañana; cuándo llegó, la base
+    await como(ana);
+    const manana = (await q(`select ((now() at time zone 'Europe/Madrid')::date + 1)::text d`))[0].d;
+    const fut = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'fut'), fecha: '2099-01-01', creado_en: '2020-01-01' });
+    const atras = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'atras'), fecha: '2021-01-01', creado_en: '2021-01-01' });
+    const [fx] = await q(`select fecha::text f, (creado_en > now() - interval '1 minute') hoy from archivos where id = $1`, [fut.id]);
+    const [ax] = await q(`select fecha::text f, (creado_en > now() - interval '1 minute') hoy from archivos where id = $1`, [atras.id]);
+    check(fx.f === manana && fx.hoy && ax.f === '2021-01-01' && ax.hoy, '(H2) un día del futuro se queda en mañana; uno de atrás vale (un vídeo pendiente), pero cuándo llegó lo pone la base');
+    await como(pelayo, 'aal2');
+    await q(`update archivos set revisado_en = now() where id = $1`, [atras.id]);
+    check(!(await q(`select videos_limpieza(1, 7) r`))[0].r.lista.some((x) => x.id === atras.id), '(H2) así que el de atrás no se puede borrar como viejo: llegó hoy');
+    // M1: el fotograma de un vídeo
+    const frame = { atleta_id: aAna.id, tipo: 'adjunto', mime: 'image/jpeg', bytes: 300 };
+    const fot = await insArch({ ...frame, ruta: `${aAna.id}/adjunto-v057-f1.jpg`, derivado_de: sv.id });
+    const [cFot] = await q(`insert into comentarios (atleta_id, texto, archivo_id) values ($1, 'Mira', $2) returning id`, [aAna.id, fot.id]);
+    const copiaL = await insArch({ atleta_id: aLuis.id, tipo: 'adjunto', mime: 'image/jpeg', bytes: 300, ruta: `${aLuis.id}/adjunto-v057-c1.jpg` });
+    check(fot.derivado_de === sv.id && await falla(`select chat_reenviar($1, $2::jsonb)`, [cFot.id, JSON.stringify([{ atleta: aLuis.id, archivo: copiaL.id }])]),
+      '(M1) el fotograma del vídeo de Ana va a su chat, y chat_reenviar no lo reenvía a Luis');
+    check(await falla(`update archivos set derivado_de = null where id = $1`, [fot.id]) && await fallaArch({ ...frame, atleta_id: aLuis.id, ruta: `${aLuis.id}/adjunto-v057-f2.jpg`, derivado_de: sv.id })
+      && await fallaArch({ ...frame, ruta: `${aAna.id}/adjunto-v057-f3.jpg`, derivado_de: fot.id }) && await fallaArch({ ...frame, tipo: 'documento', mime: 'application/pdf', ruta: `${aAna.id}/documento-v057-f4.pdf`, derivado_de: sv.id }),
+      '(M1) el coach no lo quita después, ni lo pone a un archivo de otro atleta, ni de algo que no es un vídeo, ni en un documento');
+    const fotL = await insArch({ atleta_id: aLuis.id, tipo: 'adjunto', mime: 'image/jpeg', bytes: 300, ruta: `${aLuis.id}/adjunto-v057-c2.jpg` });
+    await su();
+    await q(`set session_replication_role = replica`);
+    await q(`update archivos set derivado_de = $2 where id = $1`, [fotL.id, sv.id]);
+    await q(`set session_replication_role = default`);
+    check((await q(`select fbe_privado.chat_copia_valida($1, $2, 'adjunto', 'image/jpeg') ok`, [fotL.id, aLuis.id]))[0].ok === false
+      && (await q(`select fbe_privado.chat_copia_valida($1, $2, 'adjunto', 'image/jpeg') ok`, [copiaL.id, aLuis.id]))[0].ok === true,
+      '(M1) y un fotograma nunca vale como copia para reenviar o difundir (chat_copia_valida)');
+    await como(ana);
+    check(await fallaArch({ ...frame, ruta: `${aAna.id}/adjunto-v057-f5.jpg`, derivado_de: sv.id }), '(M1) un atleta no marca fotogramas');
+    // M2: la voz de un vídeo y las notas de voz del chat, por separado
+    await como(pelayo, 'aal2');
+    const insVozS = async (x) => (await q(`insert into archivos (atleta_id, tipo, ruta, mime, bytes, duracion_seg) values ($1::uuid, 'audio', $1::text || $2, 'audio/webm', 4000, 5) returning *`, [aAna.id, `/audio-v057-${x}.webm`]))[0];
+    const nota = await insVozS('chat');
+    await q(`insert into comentarios (atleta_id, texto, archivo_id) values ($1, 'Nota de voz', $2)`, [aAna.id, nota.id]);
+    check(await falla(`update video_revisiones set voz_archivo_id = $2 where archivo_id = $1`, [sv.id, nota.id]), '(M2) una nota de voz del chat no se usa como voz del vídeo (al borrar el vídeo, se iría su mensaje)');
+    const vozS = await insVozS('video');
+    await q(`update video_revisiones set voz_archivo_id = $2, voz_inicio = 0 where archivo_id = $1`, [sv.id, vozS.id]);
+    check(await falla(`insert into comentarios (atleta_id, texto, archivo_id) values ($1, 'Nota de voz', $2)`, [aAna.id, vozS.id])
+      && await falla(`insert into comentarios (archivo_id, texto) values ($1, 'x')`, [vozS.id]), '(M2) ni la voz de un vídeo se pone después en un mensaje o un comentario');
+    // L4: el coach pasa el vídeo a Luis: su corrección va con él (sin la voz, que era de Ana) y Ana ya no la ve
+    await q(`update archivos set atleta_id = $2, ruta = $3 where id = $1`, [sv.id, aLuis.id, ruta(aLuis.id, 'movido')]);
+    const [rm] = await q(`select atleta_id, voz_archivo_id, puntuacion from video_revisiones where archivo_id = $1`, [sv.id]);
+    check(rm.atleta_id === aLuis.id && rm.voz_archivo_id === null && rm.puntuacion === 4 && !(await q(`select 1 from archivos where id = $1`, [vozS.id])).length
+      && (await q(`select repite_de from archivos where id = $1`, [svRep.id]))[0].repite_de === null, '(L4) al pasar el vídeo a Luis, su corrección va con él, sin la voz de Ana, y la repetición de Ana queda suelta');
+    await como(ana);
+    check((await q(`select * from video_correcciones($1)`, [[sv.id]])).length === 0, '(L4) y Ana ya no ve esa corrección');
+    await como(luis);
+    check((await q(`select puntuacion from video_correcciones($1)`, [[sv.id]]))[0]?.puntuacion === 4, '(L4) Luis, sí');
+    // L2: el aviso de la corrección, aún sin salir, se retira si el vídeo se borra
+    await como(ana);
+    const sv3 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 's3'), duracion_seg: 8 });
+    await como(pelayo, 'aal2');
+    await q(`insert into video_revisiones (archivo_id, atleta_id, puntuacion) values ($1, $2, 2)`, [sv3.id, aAna.id]);
+    const antesL2 = await notis(`clave = $1 and estado = 'pendiente'`, ['video:' + sv3.id]);
+    await como(pelayo, 'aal2');
+    await q(`delete from archivos where id = $1`, [sv3.id]);
+    check(antesL2.length === 1 && (await notis(`clave = $1`, ['video:' + sv3.id])).length === 0, '(L2) se borra el vídeo antes de que salga el aviso de su corrección: el aviso se retira');
+    // L5: algo mal formado da false, nunca un error
+    await su();
+    const malos = ['[1]', '"x"', '5', 'null', '{"t":"a","formas":[{"tipo":"linea","p":[[0,0],[1,1]]}]}', '{"t":1,"hasta":"z","formas":[{"tipo":"linea","p":[[0,0],[1,1]]}]}',
+      '{"t":[1],"formas":[]}', '{"t":1,"formas":[{"tipo":"texto","p":[[0,0]],"x":5}]}', '{"t":1,"formas":[5]}', '{"t":1,"formas":[{"tipo":"linea","p":[[0,"a"],[1,1]]}]}', '{"t":1,"formas":"x"}'];
+    const rD = [];
+    for (const j of malos) rD.push((await q(`select dibujo_valido($1::jsonb) ok`, [j]))[0].ok);
+    const malosC = ['[1]', '"x"', '{"puntos":[{"t":"a","e":"bien","s":"1"}]}', '{"puntos":[{"t":"a","e":"bien","s":[1]}]}', '{"puntos":[5]}', '{"puntos":{"a":1}}', '{"puntos":[{"t":5,"e":"bien"}]}'];
+    const rC = [];
+    for (const j of malosC) rC.push((await q(`select checklist_valido($1::jsonb) ok`, [j]))[0].ok);
+    const malosT = ['[1]', '"x"', '{"reps":[1]}', '{"reps":[[1,"a",3]]}', '{"reps":"x"}', '{"reps":[{"a":1}]}'];
+    const rT = [];
+    for (const j of malosT) rT.push((await q(`select tempo_valido($1::jsonb) ok`, [j]))[0].ok);
+    check(rD.every((x) => x === false) && rC.every((x) => x === false) && rT.every((x) => x === false)
+      && (await q(`select dibujo_valido('{"t":1,"hasta":2,"formas":[{"tipo":"linea","p":[[0,0],[1,1]]}]}') a, checklist_valido('{"puntos":[{"t":"a","e":"bien","s":1}]}') b, tempo_valido('{"reps":[[0,1,2]]}') c`))
+        .every((x) => x.a && x.b && x.c),
+      `(L5) dibujos, puntos y tempo mal formados: false, nunca un error (${[...rD, ...rC, ...rT].map(String).join(' ')})`);
+    await como(pelayo, 'aal2');
+    check(await falla(`update video_revisiones set tempo = '{"reps":[[1,"a",3]]}' where archivo_id = $1`, [sv.id]), '(L5) y un tempo mal formado se rechaza con la restricción, sin romper el trigger');
+    await su();
+    await q(`delete from comentarios where archivo_id in (select id from archivos where ruta like '%/v057-%' or ruta like '%/audio-v057-%' or ruta like '%/adjunto-v057-%')`);
+    await q(`delete from archivos where ruta like '%/v057-%' or ruta like '%/audio-v057-%' or ruta like '%/adjunto-v057-%' or ruta like '%/documento-v057-%'`);
+    await q(`delete from fbe_privado.storage_por_borrar`);
+  }
 
   console.log('  · La 035 sin la 034');
   const sin34 = new PGlite();
