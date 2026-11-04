@@ -12,7 +12,9 @@ export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atlet
   // v0.57 (migración 035): la corrección de cada vídeo y las listas de puntos clave
   video_revisiones: 'archivo_id', tecnica_plantillas: 'ejercicio_id',
   // v0.59 (migración 037): la valoración del atleta de cada vídeo
-  video_autoevaluacion: 'archivo_id' };
+  video_autoevaluacion: 'archivo_id',
+  // v0.61 (migración 039): la velocidad mínima de cada ejercicio
+  umbrales_velocidad: 'ejercicio_id' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 

@@ -2345,7 +2345,7 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     const enBase = async () => (await b.sql(`select version from privacidad_vista where usuario_id = $1`, [anaUid]))[0]?.version || null;
     await b.sql(`delete from privacidad_vista where usuario_id = $1`, [anaUid]);
     // Sin la 037
-    check(VL === '2026-12.2' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.2', '(v0.60) la vigente: 2026-12.2 con la 037 (la misma detección); sin ella, 2026-12');
+    check(VL === '2026-12.3' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.3', '(v0.61) la vigente: 2026-12.3 con la 037 (la misma detección); sin ella, 2026-12');
     check(PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()) && await sin.marcarPrivacidadVista() === true && await enBase() === '2026-12',
       'sin la 037: quien no ha visto la 2026-12 la ve y, al cerrarla, la base guarda 2026-12 (lo que admite)');
     local.clear();
@@ -2358,14 +2358,14 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     local.clear();
     // Con la 037: quien vio la 2026-12 ve solo lo nuevo, una vez
     const v = (await api.privacidadVista()).version;
-    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.2,2026-12.1',
-      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 y la 2026-12.2)');
-    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.2', 'al cerrarlo, la base guarda la 2026-12.2');
+    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.3,2026-12.2,2026-12.1',
+      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1, la 2026-12.2 y la 2026-12.3)');
+    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.3', 'al cerrarlo, la base guarda la 2026-12.3');
     local.clear();
-    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.2', 'y ya no vuelve a salir (en ningún móvil)');
-    check(await api.marcarPrivacidadVista('2026-12.1') === true && await enBase() === '2026-12.2' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.2', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.1 ni a la 2026-12)');
+    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.3', 'y ya no vuelve a salir (en ningún móvil)');
+    check(await api.marcarPrivacidadVista('2026-12.1') === true && await enBase() === '2026-12.3' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.3', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.1 ni a la 2026-12)');
     await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
-    check(/vigente \(2026-12\.2\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
+    check(/vigente \(2026-12\.3\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
     globalThis.localStorage = previo;
   }
   await b.sql(`delete from recordatorios_tecnica`); await b.sql(`delete from frases_correccion`); await b.sql(`delete from chat_cupos`);
@@ -2454,6 +2454,101 @@ console.log('\nv0.60: respuestas en vídeo, dos ángulos y cámara lenta (migrac
   check(!eB && cEva?.video_respuesta_id && rutasEva.length === 2 && !(await b.sql(`select 1 from atletas where id = $1`, [eva.id])).length
     && !(await b.sql(`select 1 from storage.objects where name = any($1)`, [rutasEva])).length && !(await b.sql(`select 1 from fbe_privado.storage_por_borrar where ruta = any($1)`, [rutasEva])).length,
     `(H1) borrar a un atleta con una respuesta en vídeo: se borra la fila y después sus archivos de Storage (la cola, vacía)${eB ? ` (${eB})` : ''}`);
+}
+
+// v0.61: los vídeos de técnica, tanda B (segunda mitad, migración 039): revisar la sesión con su resumen, la velocidad
+// mínima de cada ejercicio (solo el coach la cambia; el atleta la lee), el informe del mes con su tarjeta en el chat, contra
+// la base de verdad; y sin la 039, lo de antes igual
+console.log('\nv0.61: revisar la sesión, el perfil carga–velocidad y el informe del mes (migración 039)');
+{
+  const { AVISO_039 } = await import('../web/src/datos/api.js');
+  const SV = await import('../web/src/logica/sesionVideos.js');
+  const IT = await import('../web/src/logica/informeTecnica.js');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [aAna] = await b.sql(`select id from atletas where email = 'ana@test'`);
+  await b.sql(`update atletas set estado = 'activo' where id = $1`, [aAna.id]);
+  await b.sql(`update archivos set creado_en = creado_en - interval '3 days'`);
+  await b.sql(`delete from chat_cupos`);
+  check(await api.video039() === true, 'la app sabe que la base tiene la 039');
+  // Una sesión de Ana con dos ejercicios y sus series (hecha ayer)
+  const [e1] = await b.sql(`insert into ejercicios (nombre) values ('Sentadilla v061') returning id`);
+  const [e2] = await b.sql(`insert into ejercicios (nombre) values ('Press banca v061') returning id`);
+  const [bl] = await b.sql(`insert into bloques (atleta_id, nombre, estado) values ($1, 'Bloque v061', 'activo') returning id`, [aAna.id]);
+  const [se] = await b.sql(`insert into semanas (bloque_id, numero, programacion) values ($1, 1, 'programada') returning id`, [bl.id]);
+  const ayer = sumarDias(hoyISO(), -1);
+  const [ses] = await b.sql(`insert into sesiones (semana_id, orden, nombre, completada, fecha_realizada) values ($1, 1, 'Pierna v061', true, $2) returning id`, [se.id, ayer]);
+  const [p1] = await b.sql(`insert into sesion_ejercicios (sesion_id, ejercicio_id, orden, series) values ($1, $2, 2, 3) returning id`, [ses.id, e1.id]);
+  const [p2] = await b.sql(`insert into sesion_ejercicios (sesion_id, ejercicio_id, orden, series) values ($1, $2, 1, 3) returning id`, [ses.id, e2.id]);
+  await b.sql(`insert into series (sesion_ejercicio_id, atleta_id, numero, kg, reps, rpe) values ($1, $3, 1, 80, 5, 8), ($1, $3, 2, 100, 5, 9), ($2, $3, 1, 60, 8, 8)`, [p1.id, p2.id, aAna.id]);
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const vS = await api.subirArchivo(aAna.id, new Blob(['vídeo 061 s'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, sesion_ejercicio_id: p1.id, ejercicio_id: e1.id, serie_numero: 2 });
+  const vP = await api.subirArchivo(aAna.id, new Blob(['vídeo 061 p'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, sesion_ejercicio_id: p2.id, ejercicio_id: e2.id, serie_numero: 1 });
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const band = await api.bandeja();
+  const mios = band.archivos.filter((a) => a.id === vS.id || a.id === vP.id);
+  const pautas = Object.fromEntries(mios.map((a) => [a.sesion_ejercicio_id, a.pauta]));
+  const ag = SV.agruparPorSesion(mios, pautas);
+  check(mios.length === 2 && mios.every((a) => a.pauta?.sesion_id === ses.id && a.sesionVideo?.nombre === 'Pierna v061' && a.sesionVideo.fecha === ayer)
+    && ag.grupos.length === 1 && ag.grupos[0].videos.map((v) => v.id).join() === `${vP.id},${vS.id}`,
+    '(5) la bandeja trae la sesión de cada vídeo y su orden en ella: los dos de «Pierna» van juntos, en el orden de la sesión');
+  const pr = await api.sesionParaRevisar(ses.id);
+  check(pr.sesion.id === ses.id && pr.pautas.map((x) => x.id).join() === `${p2.id},${p1.id}` && pr.pautas[1].hechas.length === 2 && pr.pautas[1].ejercicio.nombre === 'Sentadilla v061' && pr.resumen === null,
+    'con las series de la sesión (cada ejercicio con lo que hizo) y sin resumen aún');
+  check(await lanza(() => api.enviarResumenSesion({ atletaId: aAna.id, sesionId: ses.id, texto: '   ' })), 'un resumen vacío no sale');
+  const c = await api.enviarResumenSesion({ atletaId: aAna.id, sesionId: ses.id, texto: SV.borradorResumen([{ ...mios[0], ejercicio: { nombre: 'Sentadilla' } }], { nombre: 'Ana' }) + 'Muy bien.' });
+  check(c?.sesion_id === ses.id && c.autor === 'coach' && c.texto.startsWith('Resumen de la sesión, Ana:') && (await api.sesionParaRevisar(ses.id)).resumen?.id === c.id, 'el resumen va al hilo de esa sesión, una vez');
+  let m = '';
+  try { await api.enviarResumenSesion({ atletaId: aAna.id, sesionId: ses.id, texto: 'Resumen de la sesión: otra vez' }); } catch (e) { m = e.message; }
+  check(/Ya le has mandado el resumen/.test(m) && (await b.sql(`select count(*)::int n from comentarios where sesion_id = $1`, [ses.id]))[0].n === 1, 'y no se manda dos veces');
+  const avisos = await b.sql(`select titulo, cuerpo from notificaciones where clave = $1`, ['comentario:' + c.id]);
+  check(avisos.length === 1 && !/Muy bien|Resumen/.test(`${avisos[0].titulo} ${avisos[0].cuerpo || ''}`), 'un solo aviso para toda la sesión, sin el texto');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check((await api.conversacion(aAna.id)).some((x) => x.id === c.id && x.contexto?.tipo === 'sesion' && x.contexto.nombre === 'Pierna v061'), 'Ana lo ve en su chat, con la sesión de contexto');
+
+  // 16. La velocidad mínima de cada ejercicio (la escribe el coach; Ana la lee sin horas)
+  check(await lanza(() => api.guardarUmbralVelocidad(e1.id, 0.3)), 'Ana no puede cambiar la velocidad mínima');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(await api.guardarUmbralVelocidad(e1.id, 0.32) === 0.32 && await lanza(() => api.guardarUmbralVelocidad(e1.id, 0.04)) && await lanza(() => api.guardarUmbralVelocidad(e1.id, 0.1234)),
+    'el coach pone 0,32 m/s a la sentadilla (y no algo fuera de rango ni con 4 decimales)');
+  check(await api.guardarUmbralVelocidad(e1.id, 0.31) === 0.31 && (await api.umbralesVelocidad([e1.id, e2.id]))[e1.id] === 0.31, 'la cambia (una por ejercicio)');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const uA = await api.umbralesVelocidad([e1.id, e2.id]);
+  check(uA[e1.id] === 0.31 && !(e2.id in uA) && Object.keys(uA).length === 1, 'Ana la lee para sus ejercicios (la del press, la de serie: sin fila)');
+  const dp = await api.datosPerfilVelocidad(aAna.id, e1.id);
+  check(dp.umbrales[e1.id] === 0.31 && dp.series.length === 2 && dp.con039, 'y lo que hace falta para su perfil (la velocidad mínima y sus series, para el 1RM por repeticiones)');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(await api.guardarUmbralVelocidad(e1.id, null) === null && !Object.keys(await api.umbralesVelocidad([e1.id])).length, 'y vuelve a la de serie');
+
+  // 17. El informe del mes y su tarjeta en el chat
+  const mes = hoyISO().slice(0, 7);
+  const r = await api.informeTecnica(aAna.id, mes);
+  check(r.informe.mes === mes && r.informe.enviados >= 2 && r.videos.some((v) => v.id === vS.id), `(17) el informe de ${IT.textoMes(mes)} (${r.informe.enviados} vídeos)`);
+  check(await lanza(() => api.informeTecnica(aAna.id, '2026-13')), 'un mes que no existe, no');
+  check(await api.informeEnviado(aAna.id, mes) === false, 'aún no se lo ha mandado');
+  const ci = await api.enviarInformeTecnica(aAna.id, mes);
+  check(ci?.texto === IT.textoTarjetaInforme(mes) && !ci.sesion_id && !ci.archivo_id && await api.informeEnviado(aAna.id, mes) === true && await lanza(() => api.enviarInformeTecnica(aAna.id, mes)),
+    'se lo manda: un mensaje del chat de siempre (una vez por mes)');
+  const avI = await b.sql(`select url, titulo, cuerpo from notificaciones where clave = $1`, ['comentario:' + ci.id]);
+  check(avI.length === 1 && avI[0].url === '#mensajes' && !/informe/i.test(`${avI[0].titulo} ${avI[0].cuerpo || ''}`), 'con un aviso al chat, sin el texto');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const enChat = (await api.conversacion(aAna.id)).find((x) => x.id === ci.id);
+  check(IT.leerTarjetaInforme(enChat) === mes && (await api.informeTecnica(aAna.id, mes)).informe.enviados === r.informe.enviados, 'Ana lo ve como la tarjeta del informe y lo abre: el mismo informe que el coach');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+
+  // Sin la 039: la velocidad mínima, la de serie (sin error) y cambiarla dice qué falta
+  const falta = (t) => { const e = new Error(`relation "public.${t}" does not exist`); e.code = '42P01'; return e; };
+  const sin = crearApi({ ...b, auth: b.auth, storage: b.storage, insert: b.insert.bind(b), update: b.update.bind(b), delete: async (t, f) => { if (t === 'umbrales_velocidad') throw falta(t); return b.delete(t, f); },
+    rpc: async (n, a) => { if (n === 'umbrales_velocidad_de') { const e = new Error('Could not find the function public.umbrales_velocidad_de'); e.code = 'PGRST202'; throw e; } return b.rpc(n, a); },
+    upsert: async (t, f, c2) => { if (t === 'umbrales_velocidad') throw falta(t); return b.upsert(t, f, c2); },
+    select: async (t, f) => { if (t === 'umbrales_velocidad') throw falta(t); return b.select(t, f); } });
+  check(await sin.video039() === false && !Object.keys(await sin.umbralesVelocidad([e1.id])).length && (await sin.datosPerfilVelocidad(aAna.id, e1.id)).con039 === false, 'sin la 039, la app lo sabe y usa la de serie');
+  let m39 = '';
+  try { await sin.guardarUmbralVelocidad(e1.id, 0.3); } catch (e) { m39 = e.message; }
+  check(m39 === AVISO_039 && (await sin.sesionParaRevisar(ses.id)).sesion.id === ses.id && (await sin.informeTecnica(aAna.id, mes)).informe.mes === mes,
+    `y cambiarla dice «${AVISO_039}» (revisar la sesión y el informe funcionan igual)`);
+  await b.sql(`delete from archivos where id = any($1::uuid[])`, [[vS.id, vP.id]]);
+  await b.sql(`delete from comentarios where id = $1`, [ci.id]);
+  await b.sql(`delete from bloques where id = $1`, [bl.id]);
 }
 
 // (v0.58.1) El historial del chat por páginas (400 y de 200 en 200), igual para el atleta que para el coach: con sus

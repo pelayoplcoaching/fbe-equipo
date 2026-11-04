@@ -71,6 +71,8 @@ export function Revisar({ bandeja, abrirAtleta }) {
   const [filtro, setFiltro] = useState('todo');
   const [plegados, setPlegados] = useState(() => new Set());
   const [seguidos, setSeguidos] = useState(false);
+  // (v0.61) las sesiones que el coach ha pedido ver uno a uno (sus vídeos, cada uno en su tarjeta de siempre)
+  const [separadas, setSeparadas] = useState(() => new Set());
   // (v0.59) los vídeos, por más tiempo esperando (o como siempre), con el objetivo de revisión del coach (24 o 48 h)
   const [orden, setOrden] = usePreferencia('fbe-revisar-orden', 'reciente');
   const [objetivo, setObjetivo] = usePreferencia('fbe-objetivo-revision', OBJETIVO_REVISION);
@@ -94,7 +96,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
     ...hilos.map((h) => ({ tipo: 'mensajes', clave: `m-${h.clave}`, atleta: h.ultimo.atleta ? { ...h.ultimo.atleta, id: h.ultimo.atleta.id || h.ultimo.atleta_id } : null, h })),
     ...d.sesiones.map((s) => ({ tipo: 'sesiones', clave: `s-${s.id}`, atleta: s.atleta, s })),
     ...d.checkins.map((c) => ({ tipo: 'checkins', clave: `c-${c.id}`, atleta: c.atleta, c })),
-    ...itemsVideos(d.archivos),
+    ...itemsVideos(d.archivos, separadas),
     ...(d.tareas || []).map((t) => ({ tipo: 'tareas', clave: `t-${t.id}`, atleta: t.atleta, t })),
     ...(d.recetas || []).map((r) => ({ tipo: 'recetas', clave: `r-${r.id}`, atleta: r.atleta, r })),
     ...(d.comunidad || []).map((r) => ({ tipo: 'comunidad', clave: `e-${r.id}`, atleta: null, r })),
@@ -107,7 +109,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
     if (x.tipo === 'mensajes') return <TarjetaMensaje h={x.h} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'sesiones') return <TarjetaSesion s={x.s} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'checkins') return <TarjetaCheckin c={x.c} recargar={recargar} abrirAtleta={abrirAtleta} />;
-    if (x.tipo === 'videos' && x.g) return <TarjetaSesionVideos g={x.g} recargar={recargar} abrirAtleta={abrirAtleta} objetivo={objetivo} />;
+    if (x.tipo === 'videos' && x.g) return <TarjetaSesionVideos g={x.g} recargar={recargar} abrirAtleta={abrirAtleta} objetivo={objetivo} separar={() => setSeparadas((s) => new Set(s).add(x.g.sesionId))} />;
     if (x.tipo === 'videos') return <TarjetaVideo a={x.a} recargar={recargar} abrirAtleta={abrirAtleta} objetivo={objetivo} />;
     if (x.tipo === 'tareas') return <TarjetaTarea t={x.t} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'recetas') return <TarjetaCambioReceta r={x.r} recargar={recargar} abrirAtleta={abrirAtleta} />;
@@ -391,8 +393,8 @@ function TarjetaVideo({ a, recargar, abrirAtleta, objetivo = OBJETIVO_REVISION }
 
 // (v0.61, 5) Los vídeos de la bandeja: los de una misma sesión (dos o más, del mismo atleta) van en una sola tarjeta, donde
 // iría el primero; los demás, uno a uno como siempre
-function itemsVideos(archivos = []) {
-  const pautas = Object.fromEntries(archivos.filter((a) => a.pauta && a.sesion_ejercicio_id).map((a) => [a.sesion_ejercicio_id, a.pauta]));
+function itemsVideos(archivos = [], separadas = new Set()) {
+  const pautas = Object.fromEntries(archivos.filter((a) => a.pauta && a.sesion_ejercicio_id && !separadas.has(a.pauta.sesion_id)).map((a) => [a.sesion_ejercicio_id, a.pauta]));
   const { grupos } = agruparPorSesion(archivos, pautas);
   const deVideo = new Map(grupos.flatMap((g) => g.videos.map((v) => [v.id, g])));
   const puestos = new Set();
@@ -409,7 +411,7 @@ function itemsVideos(archivos = []) {
 
 // (v0.61, 5) Una sesión con varios vídeos: «Sesión del martes · 4 vídeos», los ejercicios en su orden y «Revisar la sesión»
 // (uno detrás de otro, con las series de la sesión y, al final, un solo resumen para el atleta)
-function TarjetaSesionVideos({ g, recargar, abrirAtleta, objetivo = OBJETIVO_REVISION }) {
+function TarjetaSesionVideos({ g, recargar, abrirAtleta, objetivo = OBJETIVO_REVISION, separar }) {
   const [abierta, setAbierta] = useState(false);
   const v0 = g.videos[0];
   const fecha = v0.sesionVideo?.fecha || v0.fecha;
@@ -436,6 +438,7 @@ function TarjetaSesionVideos({ g, recargar, abrirAtleta, objetivo = OBJETIVO_REV
       {abierta && <RevisionSesion grupo={g} abrirAtleta={abrirAtleta} alCerrar={() => { setAbierta(false); recargar(); }} />}
       <div class="fila-envolver">
         <button type="button" class="btn btn-peq btn-primario" onClick={() => setAbierta(true)} aria-haspopup="dialog"><Icono n="video" /> Revisar la sesión</button>
+        {separar && <button type="button" class="btn btn-peq" onClick={separar}>Ver uno a uno</button>}
       </div>
     </article>
   );

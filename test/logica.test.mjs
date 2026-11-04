@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.2' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.3' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -3392,6 +3392,210 @@ console.log('\nv0.60: el compositor, difuminar la cara, dos ángulos y la cámar
   check(PV2.compararVersiones(legal3.VERSION_LEGAL, '2026-12.2') >= 0 && PV2.NOVEDADES_PRIVACIDAD.some((x) => x[3] === '2026-12.2') && PV2.novedadesDesde('2026-12.1', '2026-12.2').length === 1
     && /micro/.test(tv3) && /cámara de delante/.test(tv3) && /no se sube a ningún sitio/.test(tv3) && /el original no sale del móvil/.test(tv3),
     'la política 2026-12.2: el micro y la cámara de delante (revisión grabada y respuestas), exportar en el móvil y difuminar la cara (el original no sale)');
+}
+
+// v0.61: los vídeos de técnica, tanda B (segunda mitad): revisar la sesión, la estela, el perfil carga–velocidad, el
+// informe del mes y solo con wifi
+console.log('\nv0.61: revisar la sesión, la estela, el perfil carga–velocidad, el informe del mes y solo con wifi');
+{
+  const CV = await import('../web/src/logica/cargaVelocidad.js');
+  const ES = await import('../web/src/logica/estela.js');
+  const RD = await import('../web/src/logica/red.js');
+  const SV = await import('../web/src/logica/sesionVideos.js');
+  const IT = await import('../web/src/logica/informeTecnica.js');
+  const cerca = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
+  // ---------- 16. La recta, el R² y el 1RM
+  const rg = CV.regresionLineal([{ kg: 60, v: 0.95 }, { kg: 80, v: 0.775 }, { kg: 100, v: 0.6 }]);
+  check(cerca(rg.b, -0.00875) && cerca(rg.a, 1.475) && cerca(rg.r2, 1) && rg.n === 3, 'la recta de mínimos cuadrados (v = 1,475 − 0,00875 · kg) y su R² = 1 con puntos alineados');
+  const rg2 = CV.regresionLineal([{ kg: 50, v: 1 }, { kg: 70, v: 0.7 }, { kg: 90, v: 0.65 }, { kg: 110, v: 0.35 }]);
+  check(cerca(rg2.b, -0.0101, 1e-4) && rg2.r2 > 0.9 && rg2.r2 < 1, `con ruido: pendiente −0,0101 y R² ${rg2.r2.toFixed(3)}`);
+  check(CV.regresionLineal([{ kg: 80, v: 0.6 }, { kg: 80, v: 0.7 }, { kg: 80, v: 0.5 }]) === null && CV.regresionLineal([{ kg: 80, v: 0.6 }]) === null && CV.regresionLineal([]) === null,
+    'con todas las cargas iguales (o menos de 2 puntos) no hay recta');
+  check(CV.regresionLineal([{ kg: 60, v: 0.5 }, { kg: 80, v: 0.5 }, { kg: 100, v: 0.5 }]).r2 === 0, 'con todas las velocidades iguales, R² 0 (no un NaN)');
+  const vid = (kg, vms, fecha = '2026-10-10', extra = {}) => ({ id: `v${kg}-${fecha}-${Math.random()}`, tipo: 'video_tecnica', fecha, serie: kg == null ? null : { kg }, revision: { analisis: { reps: vms.map((vm) => ({ t: [0, 1, 2], vm })) } }, ...extra });
+  check(CV.mejorVelocidad({ reps: [{ vm: 0.5 }, { vm: 0.62 }, { vm: 'x' }, { vm: 4 }, {}] }) === 0.62 && CV.mejorVelocidad(null) === null && CV.mejorVelocidad({ reps: [] }) === null, 'de cada vídeo, la velocidad media de su mejor repetición (lo que no es una velocidad, fuera)');
+  const pts = CV.puntosPerfil([vid(60, [0.9, 0.95]), vid(null, [0.8]), vid(0, [0.8]), { ...vid(80, [0.7]), revision: null }, vid(100, [0.6]), { ...vid(70, [0.8]), tipo: 'foto_progreso' }, vid(90, [0.7], '2026-11-02')]);
+  check(pts.length === 3 && pts[0].kg === 60 && pts[0].v === 0.95 && pts.every((p) => p.kg > 0), 'un punto por vídeo con su carga y su análisis (sin carga, a 0 kg, sin análisis o sin ser de técnica, no cuenta)');
+  check(CV.puntosPerfil([vid(60, [0.9]), vid(90, [0.7], '2026-11-02')], { hasta: '2026-10-31' }).length === 1, 'y hasta un día (para comparar meses)');
+  const tres = [vid(60, [0.95]), vid(80, [0.76]), vid(100, [0.61])];
+  const p3 = CV.perfilCargaVelocidad(tres, { umbral: 0.3 });
+  check(p3.estado === 'ok' && p3.cargas === 3 && p3.n === 3 && p3.avisos.includes('pocas-cargas') && cerca(p3.e1rm, 136.5, 1) && p3.r2 > 0.99,
+    `con 3 cargas distintas, el 1RM a 0,30 m/s (${p3.e1rm} kg), con el aviso de que son pocas`);
+  const p3b = CV.perfilCargaVelocidad(tres, { umbral: 0.17 });
+  check(p3b.e1rm > p3.e1rm && p3b.e1rm % 0.5 === 0, 'una velocidad mínima más baja da un 1RM más alto (redondeado a 0,5 kg)');
+  const dos = CV.perfilCargaVelocidad([vid(60, [0.95]), vid(60, [0.9]), vid(100, [0.61])], { umbral: 0.3 });
+  check(dos.estado === 'pocos' && dos.e1rm == null && dos.cargas === 2 && dos.n === 3, 'con solo 2 cargas distintas (aunque haya 3 vídeos), nunca un 1RM');
+  check(CV.perfilCargaVelocidad([], {}).estado === 'sin-datos' && CV.perfilCargaVelocidad([vid(60, [0.9])]).estado === 'pocos', 'sin puntos, nada; con uno, «pocos»');
+  const iguales = CV.perfilCargaVelocidad([vid(80, [0.6]), vid(80, [0.7]), vid(80, [0.65])], { umbral: 0.3 });
+  check(iguales.estado === 'pocos' && iguales.e1rm == null, 'todas a la misma carga: sin 1RM');
+  const sube = CV.perfilCargaVelocidad([vid(60, [0.5]), vid(80, [0.6]), vid(100, [0.7])], { umbral: 0.3 });
+  check(sube.estado === 'sin-pendiente' && sube.e1rm == null, 'si la velocidad no baja al subir la carga (pendiente ≥ 0), sin 1RM');
+  const plana = CV.perfilCargaVelocidad([vid(60, [0.6]), vid(80, [0.6]), vid(100, [0.6])], { umbral: 0.3 });
+  check(plana.estado === 'sin-pendiente', 'ni con la pendiente a cero');
+  const alto = CV.perfilCargaVelocidad(tres, { umbral: 0.8 });
+  check(alto.estado === 'incoherente' && alto.e1rm == null, 'una velocidad mínima por encima de lo ya levantado: sin 1RM (no puede ser menos que lo movido)');
+  const lejos = CV.perfilCargaVelocidad([vid(20, [1.2]), vid(22, [1.19]), vid(24, [1.185])], { umbral: 0.15 });
+  check(lejos.estado === 'lejos' && lejos.e1rm == null, 'si el 1RM queda a más de 2,5 veces la mayor carga, no se da');
+  const extrap = CV.perfilCargaVelocidad([vid(40, [1.0]), vid(50, [0.9]), vid(60, [0.8]), vid(70, [0.7])], { umbral: 0.17 });
+  check(extrap.estado === 'ok' && extrap.avisos.includes('extrapola') && !extrap.avisos.includes('pocas-cargas'), `con 4 cargas, sin el aviso de pocas; extrapolando mucho (${extrap.e1rm} kg desde 70), con el suyo`);
+  const ruido = CV.perfilCargaVelocidad([vid(60, [0.95]), vid(80, [0.55]), vid(100, [0.75]), vid(110, [0.4])], { umbral: 0.3 });
+  check(ruido.r2 < CV.R2_BAJO && ruido.avisos.includes('r2-bajo'), `R² bajo (${ruido.r2}): con su aviso`);
+  const estrecho = CV.perfilCargaVelocidad([vid(100, [0.5]), vid(105, [0.46]), vid(110, [0.42])], { umbral: 0.3 });
+  check(estrecho.avisos.includes('rango-estrecho'), 'cargas muy juntas (100–110 kg): con su aviso');
+  const conAtipico = [vid(40, [1.1]), vid(60, [0.95]), vid(70, [0.86]), vid(80, [0.77]), vid(90, [0.69]), vid(100, [1.5]), vid(110, [0.52])];
+  const pa = CV.perfilCargaVelocidad(conAtipico, { umbral: 0.3 });
+  check(pa.atipicos.length === 1 && pa.atipicos[0].kg === 100 && pa.avisos.includes('atipicos') && pa.r2 > 0.98 && pa.estado === 'ok',
+    `un vídeo muy fuera de la recta (100 kg a 1,5 m/s) se deja fuera (con aviso) y la recta queda limpia (R² ${pa.r2})`);
+  check(CV.quitarAtipicos(conAtipico.slice(0, 4).map((v) => ({ kg: v.serie.kg, v: v.revision.analisis.reps[0].vm }))).atipicos.length === 0, 'con menos de 5 puntos no se quita ninguno');
+  const pocasTrasQuitar = CV.quitarAtipicos([{ kg: 60, v: 0.9 }, { kg: 60, v: 0.91 }, { kg: 60, v: 0.92 }, { kg: 80, v: 0.7 }, { kg: 100, v: 2 }]);
+  check(pocasTrasQuitar.atipicos.length === 0, 'ni si al quitarlo quedarían menos de 3 cargas distintas');
+  // Las velocidades mínimas de serie y las del coach
+  check(CV.umbralPorDefecto('Sentadilla barra alta').v === 0.3 && CV.umbralPorDefecto('Press banca').v === 0.17 && CV.umbralPorDefecto('Press de banca inclinado').v === 0.17
+    && CV.umbralPorDefecto('Peso muerto convencional').v === 0.15 && CV.umbralPorDefecto('Peso muerto rumano').generico && CV.umbralPorDefecto('Press militar').v === 0.19
+    && CV.umbralPorDefecto('Dominadas lastradas').v === 0.23 && CV.umbralPorDefecto('Curl de bíceps').generico && CV.umbralPorDefecto('Curl de bíceps').v === 0.3,
+    'las de serie: sentadilla 0,30, banca 0,17, peso muerto 0,15 (el rumano no), militar 0,19, dominadas 0,23; el resto, la genérica (0,30)');
+  check(CV.umbralDe({ id: 'e1', nombre: 'Sentadilla' }, { e1: 0.33 }).v === 0.33 && CV.umbralDe({ id: 'e1', nombre: 'Sentadilla' }, { e1: 2 }).v === 0.3 && CV.umbralDe({ id: 'e1', nombre: 'Sentadilla' }, {}).propio === false,
+    'la del coach manda (si es válida); si no, la de serie');
+  const malosU = [0, 0.04, 0.049, 1.001, 2, -0.3, NaN, Infinity, -Infinity, 0.1234, 0.30001, '0.3', null, undefined, {}, [], true];
+  check(CV.umbralValido(0.05) && CV.umbralValido(1) && CV.umbralValido(0.175) && CV.umbralValido(0.3) && malosU.every((x) => !CV.umbralValido(x)), `una velocidad mínima: de 0,05 a 1 m/s con 3 decimales (${malosU.length} que no, como umbral_velocidad_valido de la 039)`);
+  check(CV.leerUmbral('0,3') === 0.3 && CV.leerUmbral('0.175') === 0.175 && CV.leerUmbral('1') === 1 && CV.leerUmbral('0,1234') === null && CV.leerUmbral('2') === null && CV.leerUmbral('abc') === null && CV.leerUmbral('') === null && CV.leerUmbral(',') === null,
+    'lo que escribe el coach («0,3», «0.175»), o null');
+  // Comparar con el 1RM por repeticiones y RPE
+  const ser = [{ kg: 100, reps: 5, rpe: 8, fecha: '2026-10-01' }, { kg: 110, reps: 3, rpe: 9, fecha: '2026-10-20' }, { kg: 140, reps: 1, rpe: 10, fecha: '2026-06-01' }];
+  const pr = CV.e1rmPorRepeticiones(ser, { hasta: '2026-10-31' });
+  check(pr.valor === 124.7 && pr.fecha === '2026-10-20' && CV.e1rmPorRepeticiones(ser, { hasta: '2026-06-30' }).valor === 140,
+    'el 1RM por repeticiones y RPE: el mejor de las 8 semanas anteriores (como en Progreso)');
+  check(CV.diferenciaPct(110, 100) === 10 && CV.diferenciaPct(90, 100) === -10 && CV.diferenciaPct(null, 100) === null, 'y en cuánto difieren');
+  check(CV.textoKg(136.5) === '136,5 kg' && CV.textoUmbral(0.3) === '0,30 m/s' && CV.textoUmbral(0.175) === '0,175 m/s' && /3 cargas/.test(CV.textoEstado(dos)) && /no baja/.test(CV.textoEstado(sube)), 'los textos');
+
+  // ---------- 8. La estela
+  const tray = ES.limpiarTrayectoria([[0, 0.5, 0.2], [0.5, 0.5, 0.4], [1, 0.5, 0.6], [1.5, 0.5, 0.8], [1.4, 0.1, 0.1], ['x', 0, 0], [2, 1.2, 0.5]]);
+  check(tray.length === 4, 'la trayectoria limpia: en orden, dentro de la imagen (lo demás, fuera)');
+  const pe = ES.puntosEstela(tray, 1.2, { ventana: 0.5 });
+  check(pe.length === 3 && cerca(pe[0][0], 0.7) && cerca(pe[pe.length - 1][0], 1.2) && cerca(pe[pe.length - 1][2], 0.68) && cerca(pe[1][0], 1),
+    'en t, los puntos de los últimos N fotogramas: desde t − ventana (interpolado) hasta t (interpolado)');
+  check(ES.puntosEstela(tray, -1).length === 0 && ES.puntosEstela(tray, 5, { ventana: 0.5 }).length === 0 && ES.puntosEstela([], 1).length === 0 && ES.puntosEstela(tray, NaN).length === 0,
+    'antes de empezar, mucho después de acabar o sin trayectoria, nada');
+  check(ES.alfaEstela(0, 1) === 1 && cerca(ES.alfaEstela(0.5, 1), 0.25) && ES.alfaEstela(1, 1) === ES.ALFA_MIN && ES.alfaEstela(1.2, 1) === 0 && ES.alfaEstela(-0.1, 1) === 0 && ES.alfaEstela(0.1, 0) === 0,
+    'la transparencia: 1 lo de ahora, se apaga (cuadrática) hasta el mínimo al final de la ventana; fuera, 0');
+  const sg = ES.segmentosEstela(tray, 1.5, { ventana: 1 });
+  check(sg.length >= 2 && sg.every((x, i) => i === 0 || x.alfa >= sg[i - 1].alfa) && sg[sg.length - 1].alfa > 0.5 && sg[0].alfa < 0.5, 'los tramos, del más viejo (tenue) al más nuevo (fuerte)');
+  const conHueco = [[0, 0.1, 0.1], [0.1, 0.2, 0.2], [1.5, 0.8, 0.8], [1.6, 0.9, 0.9]];
+  const sh = ES.segmentosEstela(conHueco, 1.6, { ventana: 2 });
+  check(sh.length === 2 && sh.every((x) => Math.abs(x.a[0] - x.b[0]) < 0.2), 'un hueco de más de medio segundo corta la estela (no se une)');
+  const est = ES.segmentosEstela(tray, 0.2, { estatica: true });
+  check(est.length === tray.length - 1 && est.every((x) => x.alfa === 0.85), 'con «reducir movimiento», la trayectoria entera y quieta (misma transparencia, no depende de t)');
+  check(igual(ES.cabezaEstela(tray, 0.25), [0.5, 0.30000000000000004]) || cerca(ES.cabezaEstela(tray, 0.25)[1], 0.3), 'la cabeza: dónde está ahora');
+  check(cerca(ES.segundosEstela(45), 1.5) && cerca(ES.segundosEstela(15), 0.5) && cerca(ES.segundosEstela(7), 1.5), 'lo larga: 15, 45 o 90 fotogramas (a 30 por segundo); otra cosa, la media');
+  const fotos = [0, 0.1, 0.2, 0.3].map((t) => ({ t, kp: Array.from({ length: 33 }, (_, i) => (i === 23 ? [0.4, 0.5 + t, 0.9] : i === 24 ? [0.6, 0.5, 0.2] : [0.5, 0.5, 0.9])) }));
+  check(ES.trayectoriaArticulacion(fotos, 'cadera', 'izq').length === 4 && ES.trayectoriaArticulacion(fotos, 'cadera', 'der').length === 0 && ES.trayectoriaArticulacion(fotos, 'nada').length === 0,
+    'la de una articulación con los puntos del cuerpo de esta sesión: del lado elegido y solo donde se ve bien');
+  check(igual(ES.fuentesEstela({ barra: tray }).map((x) => x[0]), ['barra']) && ES.fuentesEstela({ barra: null, pose: { fotos, lado: 'izq' } }).some((x) => x[0] === 'cadera') && !ES.fuentesEstela({}).length,
+    'qué se puede seguir: la barra (guardada o de esta sesión) y, con puntos del cuerpo, las articulaciones');
+  check(ES.trayectoriaEstela({ fuente: 'rodilla', barra: tray }).fuente === 'barra' && ES.trayectoriaEstela({ fuente: 'cadera', barra: tray, pose: { fotos, lado: 'izq' } }).fuente === 'cadera' && ES.trayectoriaEstela({}).fuente === null,
+    'si lo elegido no está, la primera que haya');
+  const largo = Array.from({ length: 1200 }, (_, i) => [i / 30, 0.5, (i % 30) / 30]);
+  check(ES.segmentosEstela(largo, 39, { estatica: true }).length <= ES.MAX_SEGMENTOS + 1, 'una trayectoria larga no pinta cientos de líneas');
+
+  // ---------- 20. Solo con wifi
+  const nav = (c, onLine = true) => ({ connection: c, onLine });
+  const android4g = RD.leerRed(nav({ type: 'cellular', saveData: false }));
+  const androidWifi = RD.leerRed(nav({ type: 'wifi' }));
+  const iphone = RD.leerRed(nav(undefined)), escritorio = RD.leerRed(nav({ effectiveType: '4g', saveData: false }));
+  check(android4g.celular && !android4g.wifi && android4g.conocida && androidWifi.wifi && !iphone.conocida && iphone.tipo === null && escritorio.tipo === null, 'el tipo de conexión: solo lo dice Chrome de Android');
+  check(RD.mostrarOpcionWifi(android4g) && RD.mostrarOpcionWifi(androidWifi) && !RD.mostrarOpcionWifi(iphone) && !RD.mostrarOpcionWifi(escritorio), 'la opción sale solo donde se sabe (en el iPhone y el ordenador, no)');
+  check(RD.motivoEspera({ soloWifi: true, red: android4g }) === 'wifi' && RD.motivoEspera({ soloWifi: true, red: androidWifi }) === null && RD.motivoEspera({ soloWifi: false, red: android4g }) === null
+    && RD.motivoEspera({ soloWifi: true, red: android4g, forzado: true }) === null && RD.motivoEspera({ soloWifi: true, red: iphone }) === null,
+    'con «solo con wifi» y datos móviles, espera; con wifi, sin la opción o con «Subir ahora», sale; donde no se sabe, sale');
+  check(RD.leerRed(nav({ type: 'bluetooth' })).celular && RD.leerRed(nav({ type: 'ethernet' })).wifi && !RD.leerRed(nav({ type: 'unknown' })).conocida, 'compartir datos por bluetooth cuenta como datos; el cable, como wifi');
+  check(RD.motivoEspera({ red: RD.leerRed(nav({ type: 'cellular', saveData: true })) }) === 'ahorro' && RD.motivoEspera({ red: RD.leerRed(nav({ type: 'wifi', saveData: true })) }) === null
+    && RD.motivoEspera({ red: RD.leerRed(nav({ saveData: true })) }) === 'ahorro', 'con el ahorro de datos del móvil, espera también (salvo con wifi)');
+  check(RD.leerRed(nav({ type: 'wifi' }, false)).enLinea === false && RD.leerRed(null).tipo === null, 'y sin conexión, lo dice');
+
+  // ---------- 5. Revisar la sesión
+  const pautas = { pa: { sesion_id: 's1', orden: 2 }, pb: { sesion_id: 's1', orden: 1 }, pc: { sesion_id: 's2', orden: 1 } };
+  const vs = [
+    { id: 'v1', tipo: 'video_tecnica', atleta_id: 'a', sesion_ejercicio_id: 'pa', serie_numero: 2, creado_en: '2026-11-03T10:00:00Z' },
+    { id: 'v2', tipo: 'video_tecnica', atleta_id: 'a', sesion_ejercicio_id: 'pb', serie_numero: 3, creado_en: '2026-11-03T10:05:00Z' },
+    { id: 'v3', tipo: 'video_tecnica', atleta_id: 'a', sesion_ejercicio_id: 'pa', serie_numero: 1, creado_en: '2026-11-03T10:10:00Z' },
+    { id: 'v4', tipo: 'video_tecnica', atleta_id: 'a', sesion_ejercicio_id: 'pc', creado_en: '2026-11-03T10:15:00Z' },
+    { id: 'v5', tipo: 'video_tecnica', atleta_id: 'a', sesion_ejercicio_id: null },
+    { id: 'f1', tipo: 'foto_progreso', atleta_id: 'a', sesion_ejercicio_id: 'pa' },
+    { id: 'v6', tipo: 'video_tecnica', atleta_id: 'b', sesion_ejercicio_id: 'pb' },
+  ];
+  const ag = SV.agruparPorSesion(vs, pautas);
+  check(ag.grupos.length === 1 && igual(ag.grupos[0].videos.map((v) => v.id), ['v2', 'v3', 'v1']) && ag.grupos[0].sesionId === 's1',
+    'los de una misma sesión y atleta, juntos, en el orden de los ejercicios de la sesión y, dentro, por su serie');
+  check(igual(ag.sueltos.map((v) => v.id), ['v4', 'v5', 'f1', 'v6']), 'uno solo de su sesión, uno sin sesión, una foto o el de otro atleta van sueltos');
+  check(SV.agruparPorSesion([], {}).grupos.length === 0 && SV.sesionDeVideo({ tipo: 'video_tecnica', sesion_ejercicio_id: 'zz' }, pautas) === null, 'sin nada, nada');
+  check(SV.tituloSesion('2026-11-03', 4, '2026-11-04') === 'Sesión de ayer · 4 vídeos' && SV.tituloSesion('2026-11-04', 2, '2026-11-04') === 'Sesión de hoy · 2 vídeos'
+    && SV.tituloSesion('2026-11-01', 3, '2026-11-04') === 'Sesión del domingo · 3 vídeos' && SV.tituloSesion('2026-10-03', 1, '2026-11-04') === 'Sesión del 3 oct · 1 vídeo' && SV.tituloSesion(null) === 'Sesión',
+    '«Sesión del domingo · 3 vídeos» (en la última semana), de hoy, de ayer o con su día');
+  const tsp = SV.textoSeriesPauta([{ numero: 2, kg: 62.5, reps: 8, rpe: 8.5 }, { numero: 1, kg: 60, reps: 8, rpe: null, rir: 2 }, { numero: 3, kg: null, reps: 10 }], 2);
+  check(igual(tsp.map((x) => x.texto), ['60 kg × 8 RIR 2', '62,5 kg × 8 @8,5', '10 reps']) && tsp[1].delVideo && !tsp[0].delVideo, 'las series de la sesión, con la del vídeo marcada');
+  const bor = SV.borradorResumen([
+    { ejercicio: { nombre: 'Sentadilla' }, serie: { numero: 2 }, revision: { puntuacion: 4, checklist: { puntos: [{ t: 'Cadera y pecho suben a la vez', e: 'mal' }, { t: 'Pie', e: 'bien' }] } } },
+    { ejercicio: { nombre: 'Press banca' }, revision: null },
+  ], { nombre: 'Ana López' });
+  check(bor.startsWith('Resumen de la sesión, Ana:') && bor.includes('· Sentadilla (serie 2): 4/5 (buena), a corregir: cadera y pecho suben a la vez') && bor.includes('· Press banca\n'),
+    'el borrador del resumen: una línea por vídeo con lo ya corregido');
+  check(SV.limpiarResumen('  Hola  \r\n\r\n\r\n\r\nFin  ') === 'Hola\n\nFin' && SV.limpiarResumen('   ') === null && SV.limpiarResumen('​') === null && SV.limpiarResumen('x'.repeat(4001)) === null && SV.limpiarResumen('x'.repeat(4000)).length === 4000,
+    'lo que se manda: sin espacios de sobra, con algo visible, hasta 4000 letras');
+  check(SV.esResumenSesion({ autor: 'coach', sesion_id: 's', texto: 'Resumen de la sesión: bien' }) && !SV.esResumenSesion({ autor: 'atleta', sesion_id: 's', texto: 'Resumen de la sesión' })
+    && !SV.esResumenSesion({ autor: 'coach', sesion_id: null, texto: 'Resumen de la sesión' }) && !SV.esResumenSesion({ autor: 'coach', sesion_id: 's', texto: 'Resumen de la sesión', eliminado_en: 'x' }),
+    'un resumen es del coach, en el hilo de una sesión y sin eliminar (así no se manda dos veces)');
+  check(igual(SV.progresoSesion([{ id: 'a' }, { id: 'b', revisado_en: 'x' }, { id: 'c', revision: { corregido_el: '2026-11-01' } }], new Set(['a'])), { hechos: 3, total: 3 }), 'cuántos de la sesión están revisados');
+
+  // ---------- 17. El informe del mes
+  const ej1 = { id: 'e1', nombre: 'Sentadilla' }, ej2 = { id: 'e2', nombre: 'Press banca' };
+  const vi = (o) => ({ tipo: 'video_tecnica', ...o });
+  const lista = [
+    vi({ id: 'a', fecha: '2026-10-02', creado_en: '2026-10-02T12:00:00', revisado_en: '2026-10-03T12:00:00', ejercicio: ej1, serie: { kg: 60 }, revision: { puntuacion: 3, corregido_el: '2026-10-03', checklist: { puntos: [{ t: 'Cadera y pecho suben a la vez', e: 'mal' }, { t: 'Pie entero', e: 'bien' }] }, analisis: { reps: [{ vm: 0.95 }] } } }),
+    vi({ id: 'b', fecha: '2026-10-15', creado_en: '2026-10-15T12:00:00', revisado_en: null, ejercicio: ej1, serie: { kg: 80 }, revision: { puntuacion: 4, corregido_el: '2026-10-15', checklist: { puntos: [{ t: 'cadera y  pecho suben a la vez', e: 'mal' }, { t: 'Rodillas fuera', e: 'mal' }] }, analisis: { reps: [{ vm: 0.76 }] } } }),
+    vi({ id: 'c', fecha: '2026-10-28', creado_en: '2026-10-28T12:00:00', revisado_en: '2026-10-31T12:00:00', ejercicio: ej1, serie: { kg: 100 }, destacado: true, revision: { puntuacion: 4, corregido_el: '2026-10-30', analisis: { reps: [{ vm: 0.61 }] } } }),
+    vi({ id: 'd', fecha: '2026-10-20', creado_en: '2026-10-20T12:00:00', revisado_en: null, ejercicio: ej2, revision: null }),
+    vi({ id: 'e', fecha: '2026-09-20', creado_en: '2026-09-20T12:00:00', revisado_en: '2026-09-21T12:00:00', ejercicio: ej1, serie: { kg: 70 }, revision: { puntuacion: 2, corregido_el: '2026-09-21', analisis: { reps: [{ vm: 0.86 }] } } }),
+    vi({ id: 'f', fecha: '2026-09-25', ejercicio: ej1, serie: { kg: 90 }, revision: { puntuacion: 2, analisis: { reps: [{ vm: 0.68 }] } } }),
+    vi({ id: 'g', fecha: '2026-09-27', ejercicio: ej1, serie: { kg: 50 }, revision: { analisis: { reps: [{ vm: 1.04 }] } } }),
+    { id: 'h', tipo: 'foto_progreso', fecha: '2026-10-05' },
+  ];
+  const inf = IT.informeMes(lista, { mes: '2026-10', recordatorios: [{ id: 1 }, { id: 2 }], umbrales: {} });
+  check(inf.enviados === 4 && inf.revisados === 3 && inf.medianaDias === 1 && inf.recordatorios === 2 && !inf.vacio,
+    'vídeos enviados (4, sin la foto ni los de otro mes), revisados (3: dado por revisado o corregido) y la mediana de días hasta la revisión (1)');
+  const sen = inf.ejercicios.find((e) => e.id === 'e1');
+  check(sen.videos === 3 && igual(sen.notas.map((x) => x.nota), [3, 4, 4]) && sen.primera === 3 && sen.ultima === 4 && sen.cambio === 1 && sen.media === 3.7 && inf.ejercicios[0].id === 'e1'
+    && inf.ejercicios.find((e) => e.id === 'e2').notas.length === 0, 'la nota de cada ejercicio a lo largo del mes (y cómo cambia)');
+  check(inf.aCorregir.length === 2 && inf.aCorregir[0].n === 2 && inf.aCorregir[0].texto === 'Cadera y pecho suben a la vez' && inf.aCorregir[1].texto === 'Rodillas fuera',
+    'los puntos «a corregir» que más salen (mismo texto aunque cambien mayúsculas o espacios)');
+  check(inf.mejor.id === 'c' && inf.mejor.porque === 'destacado', 'el mejor vídeo: el destacado');
+  const sinDest = IT.informeMes(lista.map((v) => ({ ...v, destacado: false })), { mes: '2026-10' });
+  check(sinDest.mejor.id === 'c' && sinDest.mejor.porque === 'nota' && sinDest.mejor.nota === 4, 'sin destacado, el de mejor nota (el más reciente si empatan)');
+  const e1 = inf.e1rm.find((x) => x.id === 'e1');
+  check(!!e1 && e1.ahora > 0 && e1.antes > 0 && e1.cambio === Math.round((e1.ahora - e1.antes) * 2) / 2 && inf.e1rm.length === 1,
+    `el 1RM estimado por la velocidad al final del mes y del anterior (${e1?.antes} → ${e1?.ahora} kg)`);
+  const sinAntes = IT.informeMes(lista.filter((v) => v.fecha >= '2026-10-01'), { mes: '2026-10' });
+  check(sinAntes.e1rm[0]?.antes === null && sinAntes.e1rm[0]?.cambio === null, 'si el mes anterior no tenía perfil (menos de 3 cargas), solo el de ahora');
+  const vacio = IT.informeMes(lista, { mes: '2026-08' });
+  check(vacio.vacio && vacio.enviados === 0 && vacio.medianaDias === null && vacio.mejor === null && IT.informeMes(lista, { mes: '2026-13' }) === null && IT.informeMes(lista, { mes: 'x' }) === null,
+    'un mes sin vídeos, vacío; un mes que no existe, null');
+  check(igual(IT.mesesConVideos(lista), ['2026-10', '2026-09']), 'los meses con vídeos, del más reciente');
+  check(IT.diasHastaRevision({ creado_en: '2026-10-02T12:00:00', revisado_en: '2026-10-02T18:00:00' }) === 0 && IT.diasHastaRevision({ fecha: '2026-10-01', revision: { corregido_el: '2026-10-04' } }) === 3 && IT.diasHastaRevision({ fecha: '2026-10-01' }) === null,
+    'los días hasta la revisión (el primero entre «revisado» y «corregido»)');
+  check(IT.textoDias(0) === 'el mismo día' && IT.textoDias(1) === '1 día' && IT.textoDias(2.5) === '2,5 días' && IT.textoDias(null) === '—', 'en días, nunca en horas');
+  check(IT.textoTarjetaInforme('2026-10') === 'Tu informe de técnica de octubre de 2026' && IT.textoTarjetaInforme('2026-1') === null, 'el mensaje de la tarjeta del chat');
+  const tj = { autor: 'coach', texto: 'Tu informe de técnica de octubre de 2026' };
+  check(IT.leerTarjetaInforme(tj) === '2026-10' && IT.leerTarjetaInforme({ ...tj, texto: 'Tu informe de técnica de enero de 2027' }) === '2027-01' && IT.leerTarjetaInforme({ ...tj, autor: 'atleta' }) === null
+    && IT.leerTarjetaInforme({ ...tj, sesion_id: 's' }) === null && IT.leerTarjetaInforme({ ...tj, archivo_id: 'a', adjunto: true }) === null && IT.leerTarjetaInforme({ ...tj, eliminado_en: 'x' }) === null
+    && IT.leerTarjetaInforme({ ...tj, texto: 'Tu informe de técnica de octubre de 2026 y más' }) === null && IT.leerTarjetaInforme({ ...tj, texto: 'Tu informe de técnica de brumario de 2026' }) === null,
+    'la tarjeta: solo un mensaje del coach en el chat con ese texto exacto (no del atleta, ni en una sesión, ni con archivo, ni eliminado)');
+  // La política: lo nuevo, en la 2026-12.3
+  const PV3 = await import('../web/src/logica/privacidad.js');
+  const legal4 = await import('../web/src/legal.js');
+  const tv4 = legal4.PRIVACIDAD.find((x) => x[0] === 'Tus vídeos de técnica')[1];
+  const mov4 = legal4.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
+  check(legal4.VERSION_LEGAL === '2026-12.3' && PV3.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.3' && PV3.novedadesDesde('2026-12.2', '2026-12.3').length === 1
+    && /resumen de toda la sesión/.test(tv4) && /informe de técnica de cada mes/.test(tv4) && /sin guardarlo/.test(tv4) && /solo con wifi/.test(mov4) && /tipo de conexión/.test(mov4),
+    'la política 2026-12.3: el resumen de la sesión, el informe del mes (calculado, sin guardarse), el perfil y «solo con wifi» (en el móvil)');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
