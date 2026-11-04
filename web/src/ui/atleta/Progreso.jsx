@@ -15,6 +15,7 @@ import { HistoriaSemana, rangoLargo } from './TuSemana.jsx';
 import { TusMeses } from './TuMes.jsx';
 import { VerArchivo, CompararVideos } from '../Archivos.jsx';
 import { Diario } from '../Diario.jsx';
+import { MiTecnica } from '../tecnica/MiTecnica.jsx';
 import { NutricionProgreso } from './Nutricion.jsx';
 import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { HabitosMes } from './Habitos.jsx';
@@ -580,6 +581,7 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
       <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} progresoDado={progreso} entrenamiento={entrena} irA={irA} />
       {salud && <HabitosMes />}
       {salud && conNutricion(atleta) && <NutricionProgreso />}
+      {entrena && <MiTecnica atletaId={atleta.id} nombreAtleta={atleta.nombre} />}
       <Diario atletaId={atleta.id} nombreAtleta={atleta.nombre} salud={salud} />
     </div>
   );

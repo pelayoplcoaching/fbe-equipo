@@ -8,7 +8,9 @@ export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atlet
   // v0.55 (migración 033): fijar, silenciar y las listas de difusión
   conversacion_fijado: 'atleta_id', chat_silencios: 'usuario_id,atleta_id', listas_difusion_miembros: 'lista_id,atleta_id',
   // v0.56 (migración 034): las encuestas del chat
-  encuesta_votos: 'encuesta_id', privacidad_vista: 'usuario_id' };
+  encuesta_votos: 'encuesta_id', privacidad_vista: 'usuario_id',
+  // v0.57 (migración 035): la corrección de cada vídeo y las listas de puntos clave
+  video_revisiones: 'archivo_id', tecnica_plantillas: 'ejercicio_id' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 
@@ -62,8 +64,24 @@ function aplicarFiltro(q, f = {}) {
 
 const TROZO = 6 * 1024 * 1024;
 
+// (v0.57, revisión de seguridad) ¿Es esta dirección de una subida empezada (la que se guardó en el móvil) de este mismo
+// servidor de subidas? Tiene que empezar por su dirección y «/» (y seguir igual al leerla como URL: sin «..» ni otro
+// servidor); si no, se empieza otra subida y el token de la sesión nunca va a otro sitio.
+export function urlSubidaValida(urlSubida, endpoint) {
+  if (typeof urlSubida !== 'string' || typeof endpoint !== 'string' || !endpoint) return false;
+  const base = endpoint.replace(/\/+$/, '') + '/';
+  if (!urlSubida.startsWith(base) || urlSubida.length <= base.length || urlSubida.length > 2048) return false;
+  try {
+    const u = new URL(urlSubida), e = new URL(base);
+    return /^https?:$/.test(u.protocol) && u.origin === e.origin && u.href === urlSubida && u.pathname.startsWith(e.pathname) && !u.username && !u.password;
+  } catch { return false; }
+}
+
 // Subida por trozos (TUS, el protocolo de subidas reanudables de Supabase Storage). Se exporta para probarla.
-export function subirPorTrozos({ endpoint, token, anonKey, ruta, archivo, tipo, alProgreso = null, senal = null, reintentos = [0, 1000, 3000, 5000, 10000, 15000, 20000, 30000, 30000, 60000, 60000] }) {
+// (v0.57) urlSubida: la dirección de una subida empezada (la guarda la app con el vídeo pendiente): se sigue por el trozo en
+// que iba, también tras cerrar la app; si ya no vale (caducó a las 24 h), TUS empieza otra. alUrlSubida(url): en cuanto
+// Storage la da, para guardarla.
+export function subirPorTrozos({ endpoint, token, anonKey, ruta, archivo, tipo, alProgreso = null, senal = null, bucket = 'archivos', urlSubida = null, alUrlSubida = null, reintentos = [0, 1000, 3000, 5000, 10000, 15000, 20000, 30000, 30000, 60000, 60000] }) {
   // token: el de la sesión o una función que lo da (se pide en cada trozo: una subida larga sobrevive a su renovación)
   const pedirToken = typeof token === 'function' ? token : async () => token;
   return new Promise((ok, mal) => {
@@ -79,10 +97,13 @@ export function subirPorTrozos({ endpoint, token, anonKey, ruta, archivo, tipo, 
         return !st || st >= 500 || st === 409 || st === 423;
       },
       uploadDataDuringCreation: true,
-      // Cada intento va con su ruta (la registra la app justo antes): no se retoman subidas de otro intento
+      // Cada intento va con su ruta (la registra la app justo antes): no se retoman subidas de otro intento por su huella,
+      // solo la de este mismo vídeo, por su dirección (urlSubida)
       storeFingerprintForResuming: false,
+      ...(urlSubidaValida(urlSubida, endpoint) ? { uploadUrl: urlSubida } : {}),
+      onUploadUrlAvailable: () => { try { if (subida.url) alUrlSubida?.(subida.url); } catch { /* */ } },
       chunkSize: TROZO, // Supabase pide trozos de 6 MB exactos
-      metadata: { bucketName: 'archivos', objectName: ruta, contentType: tipo || 'application/octet-stream', cacheControl: '3600' },
+      metadata: { bucketName: bucket, objectName: ruta, contentType: tipo || 'application/octet-stream', cacheControl: '3600' },
       onProgress: (hecho, total) => alProgreso?.(total ? hecho / total : 0),
       onSuccess: () => ok(),
       onError: (err) => {
@@ -371,7 +392,7 @@ export function crearBackendSupabase({ url, anonKey }) {
       // cobertura falla o el móvil suspende la app, se reintenta solo y sigue por el trozo en que iba (antes, una
       // sola petición que el iPhone cortaba con «timed out» y había que empezar de cero). alProgreso(0…1).
       // bucket: «archivos» (de siempre) o «comunidad» (v0.43, las fotos del muro: pequeñas, de una vez)
-      async subir(ruta, archivo, tipo, { alProgreso = null, senal = null, bucket = 'archivos' } = {}) {
+      async subir(ruta, archivo, tipo, { alProgreso = null, senal = null, bucket = 'archivos', urlSubida = null, alUrlSubida = null } = {}) {
         if (!archivo || archivo.size <= TROZO || bucket !== 'archivos') {
           // (v0.56) «Cancelar» también en una pequeña (de una vez): deja de esperarla; si llega a subirse, su fila se borra
           // y su archivo va a la cola de Storage (lo hace la base)
@@ -392,7 +413,7 @@ export function crearBackendSupabase({ url, anonKey }) {
           return t;
         };
         await pedirToken();
-        await subirPorTrozos({ endpoint: `${url.replace(/\/$/, '')}/storage/v1/upload/resumable`, token: pedirToken, anonKey, ruta, archivo, tipo, alProgreso, senal });
+        await subirPorTrozos({ endpoint: `${url.replace(/\/$/, '')}/storage/v1/upload/resumable`, token: pedirToken, anonKey, ruta, archivo, tipo, alProgreso, senal, bucket, urlSubida, alUrlSubida });
       },
       // descargar (v0.55): el nombre con que se guarda («Guardar», que la persona pide)
       async url(ruta, segundos = 3600, bucket = 'archivos', { descargar = null } = {}) {

@@ -22,6 +22,8 @@ import { queToca } from '../../logica/plan.js';
 import { tareasDelDia } from '../../logica/tareas.js';
 import { ActividadSesion, useEnCurso, comprobarEnCurso } from './EnCurso.jsx';
 import { estadoActividad } from '../../logica/actividad.js';
+import { leerEnlaceVideo } from '../../logica/tecnica.js';
+import { VideoEnlazado } from '../tecnica/MiTecnica.jsx';
 
 // Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
 // Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento. Equipo (v0.43), solo con
@@ -38,6 +40,8 @@ const PESTANAS_PROPIO = [['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], 
 
 function tabInicial(tabs) {
   const h = (typeof location !== 'undefined' ? location.hash : '').slice(1);
+  // (v0.57) el vídeo de un aviso (#videos/<id>@<s>) se abre sobre Progreso
+  if (leerEnlaceVideo(`#${h}`) && tabs.some(([t]) => t === 'progreso')) return 'progreso';
   return tabs.some(([t]) => t === h) ? h : 'hoy';
 }
 
@@ -62,6 +66,7 @@ export function AtletaApp() {
   tabsRef.current = TABS;
   const inicial = useRef(typeof location !== 'undefined' ? location.hash.slice(1) : '');
   const [tab, setTab] = useState(() => tabInicial(TABS));
+  const [videoEnlace, setVideoEnlace] = useState(() => (typeof location !== 'undefined' && !propio ? leerEnlaceVideo(location.hash) : null));
   // Si el coach cambia su servicio (o cierra la comunidad) con la app abierta y la pestaña ya no está, a Hoy; si
   // se abrió la app en #equipo (una notificación), se va ahí en cuanto se sabe que está abierta
   useEffect(() => {
@@ -116,7 +121,12 @@ export function AtletaApp() {
   // Al tocar una notificación con la app abierta, se va a su pestaña; si llega una, se ponen al día las respuestas
   useEffect(() => {
     // (con una sesión abierta no se sale de ella: la pestaña queda elegida para cuando la cierre)
-    const ir = () => { const h = location.hash.slice(1); if (tabsRef.current.some(([t]) => t === h)) { setTab(h); noLeidos.recargar(true); } };
+    const ir = () => {
+      const h = location.hash.slice(1);
+      const v = leerEnlaceVideo(location.hash);
+      if (v && !propio) { if (tabsRef.current.some(([t]) => t === 'progreso')) setTab('progreso'); setVideoEnlace(v); noLeidos.recargar(true); return; }
+      if (tabsRef.current.some(([t]) => t === h)) { setTab(h); noLeidos.recargar(true); }
+    };
     const llega = () => { noLeidos.recargar(true); programa.recargar(true); };
     window.addEventListener('hashchange', ir);
     window.addEventListener('fbe-notificacion', llega);
@@ -161,6 +171,7 @@ export function AtletaApp() {
   return (
     <>
       <Pantallas {...{ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia, atletaId: atleta.id }} />
+      {videoEnlace && <VideoEnlazado key={`${videoEnlace.id}@${videoEnlace.t}`} id={videoEnlace.id} t={videoEnlace.t} alCerrar={() => setVideoEnlace(null)} />}
       {/* (v0.56) las novedades de la política, una vez (el coach en su modo atleta, no) */}
       {!propio && <AvisoPrivacidad />}
     </>

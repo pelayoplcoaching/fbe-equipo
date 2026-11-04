@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Reproductor, reproductorDe } from './Video.jsx';
-import { useApp, Icono, Hoja, Cargando } from './comunes.jsx';
+import { useApp, Icono, Hoja, Cargando, useCarga } from './comunes.jsx';
 import { fmtCorta } from '../logica/fechas.js';
 import { LIMITE_ARCHIVO_MB } from '../datos/api.js';
 import { sePuedeRecortar, recortarVideo, prepararVideo, megasEstimados } from './recorte.js';
-import { guardarPendiente, quitarPendiente, conCerrojo } from '../datos/pendientes.js';
+import { guardarPendiente, quitarPendiente, conCerrojo, ponerSubida, avisarPendientes } from '../datos/pendientes.js';
+import { CamaraVideo, puedeGrabarVideo } from './tecnica/CamaraVideo.jsx';
+import { encuadreDe, tiempoOtro } from '../logica/tecnica.js';
 import { hoyISO } from '../logica/fechas.js';
 
 // Botón que abre la cámara o la galería y envía el vídeo (o la foto) a la carpeta privada del atleta.
@@ -16,8 +18,17 @@ const LIMITE_ELEGIR_MB = 2048; // un vídeo largo se puede elegir si luego se va
 
 // inicial (v0.48): un archivo que ya viene elegido (el que llega con «Compartir → FBE Equipo»): se abre directamente la
 // hoja (con su recorte) y, si se cierra sin enviarlo, alCancelar
-export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicioId = null, ejercicioId = null, titulo, etiqueta, clase = 'btn-texto', alSubir, inicial = null, alCancelar = null, alGuardarEnMovil = null }) {
+// v0.57: con la cámara guiada («Grabar con guía»: encuadre, nivel, cuenta atrás y parar sola) o de la galería; con su
+// serie (series: [{ numero, texto }], de la sesión) y, al grabar de nuevo un vídeo corregido, el original (repiteDe) y sus
+// puntos a la vista en la cámara (puntos). abrirCamara: empieza en la cámara.
+export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicioId = null, ejercicioId = null, titulo, etiqueta, clase = 'btn-texto', alSubir, inicial = null, alCancelar = null, alGuardarEnMovil = null,
+  ejercicio = null, series = null, serieInicial = null, repiteDe = null, puntos = [], abrirCamara = false, directoACamara = false }) {
   const { api, aviso } = useApp();
+  const [elegir, setElegir] = useState(false);
+  const [camara, setCamara] = useState(false);
+  const [serie, setSerie] = useState(serieInicial);
+  const senal = useRef(null);
+  const con035 = useCarga(() => (series?.length || repiteDe ? api.video035().catch(() => false) : Promise.resolve(false)), [!!series?.length, !!repiteDe]);
   const input = useRef(null);
   const [archivo, setArchivo] = useState(null);
   const [vista, setVista] = useState(null);
@@ -33,6 +44,11 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   const controlRecorte = useRef(null);
   const esVideo = tipo === 'video_tecnica';
   const recortable = esVideo && sePuedeRecortar();
+  const guiada = esVideo && !inicial && puedeGrabarVideo();
+  const enc = esVideo ? encuadreDe(ejercicio?.nombre || '', ejercicio?.grupos_musculares || [], ejercicio?.tipo || []) : null;
+  useEffect(() => { if (abrirCamara && guiada) setCamara(true); }, []);
+  const abrir = () => { if (guiada && directoACamara) setCamara(true); else if (guiada) setElegir(true); else input.current?.click(); };
+  const grabado = (f) => { setCamara(false); setArchivo(f); setCorte(null); setFallo(null); setSinVista(false); try { setVista(URL.createObjectURL(f)); } catch { setVista(null); } };
 
   useEffect(() => () => { if (vista) URL.revokeObjectURL(vista); }, [vista]);
   useEffect(() => () => cancelar.current?.(), []); // si se va de la pantalla a medias, se para el recorte
@@ -60,7 +76,8 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   // Se guarda primero en el móvil (v0.33) y se sube desde ahí: si el móvil cierra la app a medias o no hay cobertura,
   // no se pierde y se envía solo luego (con la misma ruta: reintentar no duplica). Si no se puede guardar, se sube igual.
   async function subir(f, duracion) {
-    const opciones = { tipo, sesion_ejercicio_id: sesionEjercicioId, ejercicio_id: ejercicioId, nota_atleta: nota.trim() || null, duracion_seg: duracion, fecha: hoyISO() };
+    const opciones = { tipo, sesion_ejercicio_id: sesionEjercicioId, ejercicio_id: ejercicioId, nota_atleta: nota.trim() || null, duracion_seg: duracion, fecha: hoyISO(),
+      ...(esVideo && con035.datos && serie && sesionEjercicioId ? { serie_numero: Number(serie) } : {}), ...(esVideo && con035.datos && repiteDe ? { repite_de: repiteDe } : {}) };
     opciones.ruta = api.rutaArchivo(atletaId, f, opciones);
     const pid = esVideo ? await guardarPendiente({ atletaId, archivo: f, opciones }).catch(() => null) : null;
     let a = null, error = null;
@@ -69,7 +86,11 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
         // La miniatura y la duración del vídeo se sacan en el móvil antes de subirlo (si no se puede, se sube igual)
         const cap = esVideo ? await capturarPoster(f).catch(() => null) : null;
         setSubida(0);
-        a = await api.subirArchivo(atletaId, f, { ...opciones, poster: cap?.poster || null, duracion_seg: duracion ?? cap?.duracion ?? null, alProgreso: setSubida });
+        const s = senal.current = {};
+        let ultimo = 0;
+        a = await api.subirArchivo(atletaId, f, { ...opciones, poster: cap?.poster || null, duracion_seg: duracion ?? cap?.duracion ?? null, senal: s,
+          alUrlSubida: pid ? (url) => ponerSubida(pid, { url }).catch(() => {}) : null,
+          alProgreso: (x) => { setSubida(x); if (pid && x - ultimo >= 0.05) { ultimo = x; ponerSubida(pid, { progreso: x }).catch(() => {}); } } });
       } catch (e) { error = e; }
     });
     if (r === 'ocupado') { // ya lo está enviando la cola de pendientes: avisará al terminar
@@ -77,9 +98,17 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
       setArchivo(null); setNota(''); setCorte(null); setFallo(null);
       return;
     }
+    senal.current = null;
+    if (error?.cancelado) {
+      if (pid) await quitarPendiente(pid).catch(() => {});
+      await api.descartarSubida(opciones.ruta).catch(() => {});
+      aviso('Envío cancelado');
+      return;
+    }
     if (error) {
-      // Sin cobertura: ya está guardado en el móvil y se enviará solo
+      // Sin cobertura: ya está guardado en el móvil y se enviará solo (por donde iba)
       if (error.sinConexion && !error.cancelado && pid) {
+        await ponerSubida(pid, {}).catch(() => {}); avisarPendientes();
         aviso(esVideo ? 'Sin cobertura: el vídeo queda guardado en tu móvil y se enviará solo' : 'Sin cobertura: la foto queda guardada en tu móvil y se enviará sola');
         setArchivo(null); setNota(''); setCorte(null); setFallo(null);
         alGuardarEnMovil?.();
@@ -127,15 +156,24 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
       if (f.size > LIMITE_ARCHIVO_MB * MB) throw new Error(`Pesa más de ${LIMITE_ARCHIVO_MB} MB. Recórtalo para enviar solo la serie.`);
       await subir(f, duracion);
     } catch (err) {
-      aviso(err.sinConexion ? 'Sin cobertura y no se ha podido guardar en el móvil: inténtalo luego' : err.message, 'error');
+      aviso(err.sinConexion ? 'Sin cobertura y no se ha podido guardar el vídeo en el móvil: cuando vuelva la cobertura, elígelo otra vez para enviarlo' : err.message, 'error');
     } finally { setSubiendo(false); setPreparando(null); setSubida(null); }
   }
   const mb = (n) => (n < 104858 ? 'menos de 0,1' : (n / MB).toLocaleString('es-ES', { maximumFractionDigits: n < 10 * MB ? 1 : 0 }));
   const cerrar = () => { if (preparando != null) { cancelar.current?.(); return; } if (!subiendo) { setArchivo(null); setFallo(null); if (inicial) alCancelar?.(); } };
   return (
     <>
-      {!inicial && <button type="button" class={clase} onClick={() => input.current?.click()}><Icono n={esVideo ? 'camara' : 'imagen'} /> {etiqueta || (esVideo ? 'Vídeo para tu coach' : 'Añadir foto')}</button>}
+      {!inicial && <button type="button" class={clase} onClick={abrir} aria-haspopup={guiada ? 'dialog' : undefined}><Icono n={esVideo ? 'camara' : 'imagen'} /> {etiqueta || (esVideo ? 'Vídeo para tu coach' : 'Añadir foto')}</button>}
       {!inicial && <input ref={input} type="file" accept={esVideo ? 'video/*' : 'image/*'} hidden onChange={elegido} aria-label={esVideo ? 'Elegir vídeo' : 'Elegir foto'} />}
+      {elegir && (
+        <Hoja titulo={titulo || 'Vídeo de técnica'} alCerrar={() => setElegir(false)}>
+          <p class="peq secundario"><b>{enc.titulo}.</b> {enc.texto}</p>
+          <button type="button" class="btn btn-primario btn-grande" onClick={() => { setElegir(false); setCamara(true); }}><Icono n="camara" /> Grabar con guía</button>
+          <button type="button" class="btn btn-grande" onClick={() => { setElegir(false); input.current?.click(); }}><Icono n="imagen" /> Elegir de la galería</button>
+          <p class="mini terciario">Con guía: el encuadre, un nivel para poner el móvil recto, cuenta atrás y, si quieres, que pare sola. Sin sonido.</p>
+        </Hoja>
+      )}
+      {camara && <CamaraVideo ejercicio={ejercicio} titulo={titulo || 'Vídeo de técnica'} puntos={puntos} alCerrar={() => setCamara(false)} alGrabar={grabado} />}
       {archivo && (
         <Hoja titulo={titulo || (esVideo ? 'Vídeo de técnica' : 'Foto de progreso')} alCerrar={cerrar}>
           {preparando != null ? (
@@ -165,6 +203,17 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
                   {archivo.size <= LIMITE_ARCHIVO_MB * MB && <div class="aviso-variante-botones"><button type="button" class="btn btn-peq" onClick={() => enviar({ entero: true })}>Enviarlo entero, sin recortar</button></div>}
                 </div>
               )}
+              {esVideo && series?.length > 0 && con035.datos && (
+                <div class="campo">
+                  <label for="arch-serie">¿De qué serie es?</label>
+                  <select id="arch-serie" class="selector" value={serie || ''} onChange={(e) => setSerie(e.currentTarget.value ? Number(e.currentTarget.value) : null)}>
+                    <option value="">De ninguna en concreto</option>
+                    {series.map((x) => <option key={x.numero} value={x.numero}>Serie {x.numero}{x.texto ? `: ${x.texto}` : ''}</option>)}
+                  </select>
+                  <span class="ayuda">Tu coach verá los kilos, las repeticiones y el esfuerzo de esa serie encima del vídeo.</span>
+                </div>
+              )}
+              {esVideo && repiteDe && <p class="mini secundario"><Icono n="reiniciar" /> Va como repetición de tu vídeo corregido: tu coach verá los dos lado a lado.</p>}
               <div class="campo">
                 <label for="arch-nota">{esVideo ? '¿Qué quieres que mire?' : 'Nota (opcional)'}</label>
                 <textarea id="arch-nota" class="area" style="min-height:64px" value={nota} onInput={(e) => setNota(e.currentTarget.value)}
@@ -172,6 +221,13 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
               </div>
               {grandeSinRecorte && sinVista && <div class="error" role="alert">Este vídeo no se puede recortar en este móvil y pesa más de {LIMITE_ARCHIVO_MB} MB. Grábalo de nuevo, solo la serie.</div>}
               <button class="btn btn-primario btn-grande" disabled={subiendo || grandeSinRecorte} onClick={() => enviar()}>{subiendo ? (subida != null && subida > 0 ? `Subiendo… ${Math.round(subida * 100)} %` : 'Subiendo…') : grandeSinRecorte && !sinVista ? 'Cargando el vídeo…' : esVideo ? (recortado ? 'Recortar y enviar' : 'Enviar a tu coach') : 'Guardar foto'}</button>
+              {subiendo && subida != null && (
+                <>
+                  <div class="recorte-progreso subida-progreso" aria-hidden="true"><span style={{ width: `${Math.round(subida * 100)}%` }} /></div>
+                  <button type="button" class="btn btn-texto" onClick={() => { const x = senal.current; if (x?.abortar) x.abortar(); else if (x) x.cancelada = true; }}>Cancelar el envío</button>
+                  <p class="mini terciario">Si se corta la cobertura o sales de la app, sigue por donde iba.</p>
+                </>
+              )}
             </>
           )}
         </Hoja>
@@ -257,8 +313,11 @@ export function capturarPoster(archivo, { ancho = 480, segundo = 0.5, tiempo = 7
   });
 }
 
+// v0.57: con la serie que se ve en él (archivo.serie: «Serie 2 · 60 kg × 8 @8») encima, y al abrirlo el coach queda
+// «Visto» para el atleta (solo el día)
+export const textoChipSerie = (serie) => (serie?.numero ? `Serie ${serie.numero}${serie.texto ? ` · ${serie.texto}` : ''}` : null);
 export function VerArchivo({ archivo }) {
-  const { api } = useApp();
+  const { api, perfil } = useApp();
   const [url, setUrl] = useState(null);
   const [error, setError] = useState(null);
   useEffect(() => {
@@ -266,38 +325,144 @@ export function VerArchivo({ archivo }) {
     api.urlArchivo(archivo.ruta).then((u) => vivo && setUrl(u)).catch((e) => vivo && setError(e.message));
     return () => { vivo = false; };
   }, [archivo.ruta]);
+  useEffect(() => { if (perfil?.rol === 'coach' && archivo.tipo === 'video_tecnica' && archivo.id) api.marcarVideoVisto(archivo.id).catch?.(() => {}); }, [archivo.id]);
   if (error) return <div class="nota peq">{error}</div>;
   if (!url) return <div class="medio medio-cargando"><Cargando texto="Cargando el archivo" /></div>;
   const esFoto = archivo.tipo === 'foto_progreso' || (archivo.tipo === 'adjunto' && /^image\//.test(archivo.mime || ''));
   return esFoto
     ? <img class="medio" src={url} alt={archivo.tipo === 'adjunto' ? 'Foto enviada en el chat' : `Foto de progreso del ${archivo.fecha}`} loading="lazy" />
-    : <Reproductor src={url} archivoId={archivo.id} />;
+    : <Reproductor src={url} archivoId={archivo.id} serie={textoChipSerie(archivo.serie)} />;
 }
 
 // Dos vídeos lado a lado (el mismo ejercicio hace dos meses y hoy, o dos intentos): cada uno con su
 // reproductor y un mando común para arrancar, parar y volver al principio los dos a la vez
-export function CompararVideos({ videos, nombreDe, alCerrar }) {
-  const [a, setA] = useState(videos[videos.length - 1]?.id || null);
-  const [b, setB] = useState(videos.length > 1 ? videos[videos.length - 2].id : null);
+// v0.57: o superpuestos (el de encima, con su transparencia); y alineados: se marca el inicio de la repetición en cada uno
+// y van a la vez desde ahí. La demostración de la biblioteca es de YouTube: se abre aparte (no se puede superponer).
+export function CompararVideos({ videos, nombreDe, alCerrar, inicialA = null, inicialB = null, demostracion = null }) {
+  const [a, setA] = useState(inicialA || videos[videos.length - 1]?.id || null);
+  const [b, setB] = useState(inicialB || (videos.length > 1 ? videos[videos.length - 2].id : null));
+  const [modo, setModo] = useState('lado');
+  const [marcas, setMarcas] = useState({}); // id → segundo en que empieza la repetición
   const va = videos.find((v) => v.id === a), vb = videos.find((v) => v.id === b);
-  const ambos = (f) => [va, vb].forEach((v) => v && f(reproductorDe(v.id)));
+  const ambos = (f) => [va, vb].forEach((v) => v && f(reproductorDe(v.id), v));
   const opciones = videos.map((v) => <option key={v.id} value={v.id}>{nombreDe(v)}, {fmtCorta(v.fecha)}</option>);
+  const alineados = va && vb && marcas[va.id] != null && marcas[vb.id] != null;
+  // La demostración de la biblioteca de ese ejercicio (si los dos son del mismo y la tiene)
+  const demo = demostracion ?? (va?.ejercicio?.id && va.ejercicio.id === vb?.ejercicio?.id && /^https:\/\//.test(va.ejercicio.video_url || '') ? va.ejercicio.video_url : null);
+  const aLaVez = () => {
+    if (alineados) {
+      const ra = reproductorDe(va.id), rb = reproductorDe(vb.id);
+      rb?.ir(tiempoOtro(ra?.ahora() || 0, marcas[va.id], marcas[vb.id], rb?.duracion?.() || null));
+    }
+    ambos((r) => r?.reproducir?.());
+  };
+  const alInicio = () => ambos((r, v) => r?.ir?.(marcas[v.id] ?? 0));
   return (
     <Hoja titulo="Comparar dos vídeos" alCerrar={alCerrar} ancho={960}>
-      <div class="comparar-videos">
-        {[['a', a, setA, va], ['b', b, setB, vb]].map(([k, id, set, v]) => (
-          <div class="pila-s" key={k}>
-            <select class="selector" aria-label={k === 'a' ? 'Vídeo de la izquierda' : 'Vídeo de la derecha'} value={id || ''} onChange={(e) => set(e.currentTarget.value)}>{opciones}</select>
-            {v ? <VerArchivo archivo={v} key={v.id} /> : <div class="medio medio-cargando peq secundario">Elige un vídeo</div>}
+      <div class="segmentos comparar-modo" role="group" aria-label="Cómo compararlos">
+        <button type="button" aria-pressed={modo === 'lado' ? 'true' : 'false'} onClick={() => setModo('lado')}>Lado a lado</button>
+        <button type="button" aria-pressed={modo === 'encima' ? 'true' : 'false'} onClick={() => setModo('encima')}>Superpuestos</button>
+      </div>
+      {modo === 'lado' ? (
+        <>
+          <div class="comparar-videos">
+            {[['a', a, setA, va], ['b', b, setB, vb]].map(([k, id, set, v]) => (
+              <div class="pila-s" key={k}>
+                <select class="selector" aria-label={k === 'a' ? 'Vídeo de la izquierda' : 'Vídeo de la derecha'} value={id || ''} onChange={(e) => set(e.currentTarget.value)}>{opciones}</select>
+                {v ? <VerArchivo archivo={v} key={v.id} /> : <div class="medio medio-cargando peq secundario">Elige un vídeo</div>}
+                {v && (
+                  <div class="fila-envolver comparar-marca">
+                    <button type="button" class="btn btn-peq" onClick={() => setMarcas((m) => ({ ...m, [v.id]: Math.round((reproductorDe(v.id)?.ahora() || 0) * 100) / 100 }))}
+                      aria-label={`Marcar aquí el inicio de la repetición (${k === 'a' ? 'izquierda' : 'derecha'})`}><Icono n="chincheta" /> Empieza aquí</button>
+                    {marcas[v.id] != null && <span class="mini secundario num">Inicio: {textoMomentoCorto(marcas[v.id])}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
+          <div class="fila-envolver">
+            <button class="btn btn-primario" onClick={aLaVez}><Icono n="play" /> Los dos a la vez</button>
+            <button class="btn" onClick={() => ambos((r) => r?.pausar?.())}><Icono n="pausa" /> Pausar los dos</button>
+            <button class="btn" onClick={alInicio}><Icono n="reiniciar" /> {alineados ? 'Al inicio de la repetición' : 'Al principio'}</button>
+          </div>
+          <p class="mini terciario">{alineados ? 'Alineados: los dos empiezan la repetición a la vez.' : 'Para alinearlos, para cada vídeo justo cuando empieza la repetición y toca «Empieza aquí».'} Pon los dos a 0,25× y avanza fotograma a fotograma en cada uno para comparar la misma posición.</p>
+        </>
+      ) : (
+        <Superpuestos videos={videos} opciones={opciones} a={a} b={b} setA={setA} setB={setB} marcas={marcas} setMarcas={setMarcas} />
+      )}
+      {demo && (
+        <p class="mini secundario"><a href={demo} target="_blank" rel="noopener">Ver la demostración de la biblioteca</a> (YouTube: se abre aparte, no se puede superponer).</p>
+      )}
+    </Hoja>
+  );
+}
+const textoMomentoCorto = (t) => { const d = Math.floor(Math.max(0, t) * 10 + 1e-6); return `${Math.floor(d / 600)}:${String(Math.floor((d % 600) / 10)).padStart(2, '0')},${d % 10}`; };
+
+// Los dos vídeos uno encima del otro: el de abajo manda; el de encima va a su mismo punto de la repetición (si están
+// marcados) y se ve con la transparencia que elijas. Fotograma a fotograma, mueve el que elijas (o los dos).
+function Superpuestos({ videos, opciones, a, b, setA, setB, marcas, setMarcas }) {
+  const { api } = useApp();
+  const abajo = useRef(null), encima = useRef(null);
+  const [urls, setUrls] = useState({});
+  const [opacidad, setOpacidad] = useState(50);
+  const [mover, setMover] = useState('los dos');
+  const [vel, setVel] = useState(1);
+  const [jugando, setJugando] = useState(false);
+  const va = videos.find((v) => v.id === a), vb = videos.find((v) => v.id === b);
+  useEffect(() => {
+    let vivo = true;
+    for (const v of [va, vb]) if (v && !urls[v.id]) api.urlArchivo(v.ruta).then((u) => vivo && setUrls((x) => ({ ...x, [v.id]: u }))).catch(() => {});
+    return () => { vivo = false; };
+  }, [a, b]);
+  const mA = va ? marcas[va.id] ?? 0 : 0, mB = vb ? marcas[vb.id] ?? 0 : 0;
+  const alinear = () => { const x = abajo.current, y = encima.current; if (x && y) { const t = tiempoOtro(x.currentTime, mA, mB, y.duration || null); if (Math.abs(y.currentTime - t) > 0.06) y.currentTime = t; } };
+  const reproducir = () => { const x = abajo.current, y = encima.current; if (!x || !y) return; x.playbackRate = vel; y.playbackRate = vel; alinear(); x.play().catch(() => {}); y.play().catch(() => {}); };
+  const pausar = () => { abajo.current?.pause(); encima.current?.pause(); };
+  const paso = (n) => {
+    pausar();
+    const d = n / 30;
+    if (mover !== 'encima' && abajo.current) abajo.current.currentTime = Math.max(0, abajo.current.currentTime + d);
+    if (mover === 'encima' && encima.current) encima.current.currentTime = Math.max(0, encima.current.currentTime + d);
+    if (mover === 'los dos') setTimeout(alinear, 0);
+  };
+  const marcar = (v, el) => v && el && setMarcas((m) => ({ ...m, [v.id]: Math.round(el.currentTime * 100) / 100 }));
+  const alInicio = () => { pausar(); if (abajo.current) abajo.current.currentTime = mA; if (encima.current) encima.current.currentTime = mB; };
+  return (
+    <div class="pila-s superpuestos">
+      <div class="comparar-selectores">
+        <select class="selector" aria-label="Vídeo de abajo" value={a || ''} onChange={(e) => setA(e.currentTarget.value)}>{opciones}</select>
+        <select class="selector" aria-label="Vídeo de encima" value={b || ''} onChange={(e) => setB(e.currentTarget.value)}>{opciones}</select>
+      </div>
+      <div class="superpuestos-marco">
+        {va && urls[va.id] && <video ref={abajo} class="superpuesto-abajo" src={urls[va.id]} playsInline muted preload="auto" onTimeUpdate={() => { if (jugando) alinear(); }} onPlay={() => setJugando(true)} onPause={() => setJugando(false)} aria-label="Vídeo de abajo" />}
+        {vb && urls[vb.id] && <video ref={encima} class="superpuesto-encima" src={urls[vb.id]} playsInline muted preload="auto" style={{ opacity: opacidad / 100 }} aria-label="Vídeo de encima" />}
+        {(!va || !vb) && <div class="medio medio-cargando peq secundario">Elige los dos vídeos</div>}
+      </div>
+      <label class="superpuestos-opacidad">
+        <span class="mini">Transparencia del de encima</span>
+        <input type="range" min="0" max="100" step="5" value={opacidad} onInput={(e) => setOpacidad(Number(e.currentTarget.value))} aria-valuetext={`${opacidad} %`} />
+      </label>
+      <div class="fila-envolver">
+        <button class="btn btn-primario" onClick={jugando ? pausar : reproducir}><Icono n={jugando ? 'pausa' : 'play'} /> {jugando ? 'Pausar' : 'Reproducir los dos'}</button>
+        <div class="segmentos" role="group" aria-label="Velocidad de los dos">
+          {[[0.25, '0,25×'], [0.5, '0,5×'], [1, '1×']].map(([r, t]) => <button key={r} type="button" aria-pressed={vel === r ? 'true' : 'false'} onClick={() => { setVel(r); if (abajo.current) abajo.current.playbackRate = r; if (encima.current) encima.current.playbackRate = r; }}>{t}</button>)}
+        </div>
+        <button class="btn" onClick={alInicio}><Icono n="reiniciar" /> Al inicio</button>
       </div>
       <div class="fila-envolver">
-        <button class="btn btn-primario" onClick={() => ambos((r) => r?.reproducir?.())}><Icono n="play" /> Los dos a la vez</button>
-        <button class="btn" onClick={() => ambos((r) => r?.pausar?.())}><Icono n="pausa" /> Pausar los dos</button>
-        <button class="btn" onClick={() => ambos((r) => r?.ir?.(0))}><Icono n="reiniciar" /> Al principio</button>
+        <label class="campo-linea"><span class="mini">Fotograma a fotograma:</span>
+          <select class="selector" value={mover} onChange={(e) => setMover(e.currentTarget.value)} aria-label="Qué vídeo se mueve">
+            <option value="los dos">los dos</option><option value="abajo">el de abajo</option><option value="encima">el de encima</option>
+          </select></label>
+        <button class="btn btn-icono" onClick={() => paso(-1)} aria-label="Fotograma anterior"><Icono n="atras" /></button>
+        <button class="btn btn-icono" onClick={() => paso(1)} aria-label="Fotograma siguiente"><Icono n="derecha" /></button>
       </div>
-      <p class="mini terciario">Pon los dos a 0,25× y avanza fotograma a fotograma en cada uno para comparar la misma posición.</p>
-    </Hoja>
+      <div class="fila-envolver">
+        <button type="button" class="btn btn-peq" onClick={() => marcar(va, abajo.current)}><Icono n="chincheta" /> Empieza aquí (abajo)</button>
+        <button type="button" class="btn btn-peq" onClick={() => marcar(vb, encima.current)}><Icono n="chincheta" /> Empieza aquí (encima)</button>
+        <span class="mini secundario num">{va && marcas[va.id] != null ? `Abajo: ${textoMomentoCorto(mA)}` : ''}{vb && marcas[vb.id] != null ? ` · Encima: ${textoMomentoCorto(mB)}` : ''}</span>
+      </div>
+      <p class="mini terciario">Mueve primero el de abajo hasta el inicio de la repetición y márcalo; luego, solo el de encima, y márcalo: al reproducir, van a la vez.</p>
+    </div>
   );
 }

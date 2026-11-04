@@ -109,7 +109,8 @@ export function conPendientes(mensajes = [], lista = [], { perfil, atletaId, aho
 export function reenviable(c, yo, ahora = Date.now()) {
   return yo === 'coach' && !!c && c.autor === 'coach' && !c.eliminado_en && !c.pendiente && !c.fallo && !c.dibujo
     && !(c.enviar_en && Date.parse(c.enviar_en) > ahora) && !c.sesion_id && !c.checkin_id && (!c.archivo_id || !!c.adjunto)
-    && !String(c.id || '').startsWith('pendiente-') && !c.encuesta && !c.subida; // (v0.56) ni una encuesta (llegaría como texto) ni lo que aún se sube
+    && !String(c.id || '').startsWith('pendiente-') && !c.encuesta && !c.subida // (v0.56) ni una encuesta (llegaría como texto) ni lo que aún se sube
+    && !c.fotograma; // (v0.57) ni el fotograma del vídeo de un atleta (es solo suyo; la base tampoco lo deja)
 }
 // A quién va: los elegidos que existen y no están de baja (como mucho 50); cuántos se saltan
 export function planReenvio(ids = [], atletas = []) {

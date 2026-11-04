@@ -6,7 +6,9 @@ import { vibrar } from '../hapticos.js';
 import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
 import { BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
-import { VerArchivo } from '../Archivos.jsx';
+import { VerArchivo, CompararVideos } from '../Archivos.jsx';
+import { PanelCorreccion } from '../tecnica/Correccion.jsx';
+import { RevisionSeguida } from '../tecnica/RevisionSeguida.jsx';
 import { ESCALAS, NOMBRE_ZONA, num } from '../../logica/calculos.js';
 import { fmtConDia, rangoSemana } from '../../logica/fechas.js';
 import { NOMBRE_TOMA } from '../../logica/comidas.js';
@@ -65,6 +67,7 @@ const FILTROS = [['todo', 'Todo'], ['mensajes', 'Mensajes'], ['sesiones', 'Sesio
 export function Revisar({ bandeja, abrirAtleta }) {
   const [filtro, setFiltro] = useState('todo');
   const [plegados, setPlegados] = useState(() => new Set());
+  const [seguidos, setSeguidos] = useState(false);
   const d = bandeja.datos;
   const caja = useRef(null);
   useAtajos(caja, d?.total || 0, `${filtro}|${[...plegados].sort().join(',')}`);
@@ -115,6 +118,13 @@ export function Revisar({ bandeja, abrirAtleta }) {
         ))}
       </div>
       {filtro === 'todo' && <VariantesPorRevisar abrirAtleta={abrirAtleta} />}
+      {/* v0.57: los vídeos por revisar, uno detrás de otro */}
+      {(d?.archivos || []).some((a) => a.tipo === 'video_tecnica') && (filtro === 'todo' || filtro === 'videos') && (
+        <button type="button" class="btn btn-peq revisar-seguidos" onClick={() => setSeguidos(true)} aria-haspopup="dialog">
+          <Icono n="video" /> Revisar los vídeos seguidos ({d.archivos.filter((a) => a.tipo === 'video_tecnica').length})
+        </button>
+      )}
+      {seguidos && <RevisionSeguida videos={d.archivos.filter((a) => a.tipo === 'video_tecnica')} abrirAtleta={abrirAtleta} alCerrar={() => { setSeguidos(false); recargar(); }} />}
       {!d?.total ? <BandejaVacia /> : (
         <div class="rejilla-revisar" ref={caja}>
           {grupos.map((g) => (
@@ -340,17 +350,27 @@ function TarjetaCheckin({ c, recargar, abrirAtleta }) {
 function TarjetaVideo({ a, recargar, abrirAtleta }) {
   const { api, aviso } = useApp();
   const [abierto, setAbierto] = useState(false);
+  // (v0.57) una repetición de un vídeo corregido: lado a lado con el original
+  const [comparar, setComparar] = useState(null);
+  const verOriginal = async () => { try { const o = await api.archivo(a.repite_de); if (!o) { aviso('El original ya no está', 'error'); return; } setComparar([o, a]); } catch (e) { aviso(e.message, 'error'); } };
   const revisar = async () => { try { await api.marcarRevisado('archivo', a.id); aviso('Vídeo revisado', 'ok', deshacer(api, 'archivo', a.id, recargar)); recargar(); } catch (e) { aviso(e.message, 'error'); } };
   return (
     <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar">
-      <Cabecera atleta={a.atleta} tipo={a.tipo === 'foto_progreso' ? 'Foto de progreso' : 'Vídeo de técnica'} cuando={fmtConDia(a.fecha)} abrirAtleta={abrirAtleta} pestana="videos" />
+      <Cabecera atleta={a.atleta} tipo={a.tipo === 'foto_progreso' ? 'Foto de progreso' : a.ejercicio?.nombre ? `Vídeo: ${a.ejercicio.nombre}` : 'Vídeo de técnica'} cuando={fmtConDia(a.fecha)} abrirAtleta={abrirAtleta} pestana="videos" />
+      {(a.serie || a.repite_de) && (
+        <div class="fila-envolver">
+          {a.serie && <span class="chip num">Serie {a.serie.numero}{a.serie.texto ? `: ${a.serie.texto}` : ''}</span>}
+          {a.repite_de && <button type="button" class="btn btn-peq" onClick={verOriginal}><Icono n="duplicar" /> Repetición: comparar con el original</button>}
+        </div>
+      )}
+      {comparar && <CompararVideos videos={comparar} nombreDe={(v) => (v.id === a.id ? 'Repetición' : 'Original')} inicialA={a.id} inicialB={comparar[0].id} alCerrar={() => setComparar(null)} />}
       {!abierto ? (
         <div class="revisar-video">
           <MiniaturaRevisar a={a} alAbrir={() => setAbierto(true)} />
           {a.nota_atleta ? <p class="cita">«{a.nota_atleta}»</p> : <p class="peq terciario">Sin nota.</p>}
         </div>
       ) : a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}
-      {abierto && <><VerArchivo archivo={a} /><Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} alCambiar={recargar} placeholder="Qué corregir, qué está bien…" /></>}
+      {abierto && <><VerArchivo archivo={a} />{a.tipo === 'video_tecnica' && <PanelCorreccion video={a} esCoach nombreAtleta={a.atleta.nombre} />}<Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} alCambiar={recargar} placeholder="Qué corregir, qué está bien…" /></>}
       <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} etiquetaComentar="Ver y comentar" />
     </article>
   );

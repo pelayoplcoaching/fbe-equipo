@@ -2,6 +2,7 @@
 // Recorre el flujo completo: el coach da de alta, programa y publica; el atleta activa, entrena y hace check-in.
 import { crearPglite, crearBackendPglite } from './backend-pglite.mjs';
 import { crearApi, VERSION_COMUNIDAD, cuboDe } from '../web/src/datos/api.js';
+import { reenviable } from '../web/src/logica/chat.js';
 import { VERSION_LEGAL } from '../web/src/legal.js';
 import { hoyISO, lunesDe, sumarDias } from '../web/src/logica/fechas.js';
 
@@ -2013,6 +2014,155 @@ console.log('\nv0.56: notas de voz, encuestas, «escuchado» y reacciones a eleg
   check((await api.privacidadVistaDe(anaPerfil.perfil_id))?.version === VERSION_LEGAL && await api.privacidadVistaDe(null) === null, 'el coach ve en la ficha qué versión ha visto Ana');
   delete globalThis.localStorage;
   await b.sql(`delete from listas_difusion`); await b.sql(`delete from chat_cupos`); await b.sql(`delete from presencia`);
+}
+
+console.log('\nv0.57: los vídeos de técnica (migración 035)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [aAna] = await b.sql(`select id from atletas where email = 'ana@test'`);
+  const [aLuis] = await b.sql(`select id from atletas where email = 'luis@test'`);
+  await b.sql(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  await b.sql(`delete from fbe_privado.storage_por_borrar`);
+  check(await api.video035() === true, 'la app sabe que la base tiene la 035');
+  const [se] = await b.sql(`select se.id, se.ejercicio_id from sesion_ejercicios se join sesiones s on s.id = se.sesion_id join semanas w on w.id = s.semana_id join bloques bl on bl.id = w.bloque_id where bl.atleta_id = $1 order by se.id limit 1`, [aAna.id]);
+  await b.sql(`insert into series (sesion_ejercicio_id, numero, kg, reps, rpe) values ($1, 3, 62.5, 5, 8.5) on conflict (sesion_ejercicio_id, numero) do update set kg = 62.5, reps = 5, rpe = 8.5`, [se.id]);
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const v = await api.subirArchivo(aAna.id, new Blob(['vídeo 057'], { type: 'video/mp4' }), { tipo: 'video_tecnica', sesion_ejercicio_id: se.id, serie_numero: 3, duracion_seg: 8 });
+  const rep = await api.subirArchivo(aAna.id, new Blob(['otra vez'], { type: 'video/mp4' }), { tipo: 'video_tecnica', ejercicio_id: se.ejercicio_id, repite_de: v.id, duracion_seg: 6 });
+  check(v.serie_numero === 3 && rep.repite_de === v.id, 'Ana envía un vídeo con su serie y otro que lo repite');
+  let d = (await api.diario(aAna.id)).find((x) => x.id === v.id);
+  check(d.serie?.texto === '62,5 kg × 5 @8,5' && d.serie.numero === 3 && d.estado.estado === 'enviado' && d.revision === null, 'el diario lo trae con su serie («62,5 kg × 5 @8,5») y «Enviado»');
+  check(await api.marcarVideoVisto(v.id) === null && !(await b.sql(`select 1 from video_revisiones where archivo_id = $1`, [v.id])).length, 'si lo abre ella, no cuenta como visto');
+  check(await lanza(() => api.guardarRevision(v, { puntuacion: 5 })) && await lanza(() => api.guardarPlantillaTecnica(se.ejercicio_id, ['x'])), 'ni se corrige ni toca las listas del coach');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const band = await api.bandeja();
+  const enB = band.archivos.find((x) => x.id === v.id);
+  check(enB?.serie?.texto === '62,5 kg × 5 @8,5' && enB.ejercicio?.id === se.ejercicio_id, 'en la bandeja del coach, con su ejercicio y su serie');
+  const vis = await api.marcarVideoVisto(v.id);
+  check(/^\d{4}-\d{2}-\d{2}$/.test(vis) && (await api.diario(aAna.id)).find((x) => x.id === v.id).estado.estado === 'visto', 'el coach lo abre: «Visto» (el día)');
+  check(await lanza(() => api.guardarRevision(v, { puntuacion: 7 })) && await lanza(() => api.guardarRevision(v, { tempo: { reps: [[0, 1, 30]] } })) && await lanza(() => api.guardarRevision(v, { checklist: { puntos: [{ t: 'x', e: 'quizá' }] } })),
+    'una nota fuera de 1 a 5, un tempo fuera del vídeo o unos puntos mal formados no se guardan');
+  const r = await api.guardarRevision(v, { puntuacion: 4, checklist: [{ t: 'Rodillas', e: 'mal', s: 1.5 }, { t: 'Pies', e: null }], tempo: { reps: [[0.2, 1.4, 2.1]] } });
+  check(r.puntuacion === 4 && r.checklist.puntos.length === 1 && r.tempo.reps.length === 1 && /^\d{4}-\d{2}-\d{2}$/.test(r.corregido_el) && r.atleta_id === aAna.id, 'la corrección: nota, el punto marcado (con su momento) y el tempo');
+  // (revisión de seguridad, H1) abrirlo otra vez no cambia nada de la fila (ni su fecha de cambio)
+  const [antesV] = await b.sql(`select actualizado_en::text a from video_revisiones where archivo_id = $1`, [v.id]);
+  await api.marcarVideoVisto(v.id);
+  check((await b.sql(`select actualizado_en::text a from video_revisiones where archivo_id = $1`, [v.id]))[0].a === antesV.a, '(revisión) abrir otra vez el vídeo no toca la corrección');
+  const plant = await api.guardarPlantillaTecnica(se.ejercicio_id, [' Escápulas juntas ', 'Escápulas juntas', 'Codos a 45°']);
+  check(igual(plant, ['Escápulas juntas', 'Codos a 45°']) && igual(await api.plantillaTecnica(se.ejercicio_id), plant), 'la lista del coach para ese ejercicio (sin repetidos)');
+  // La voz del coach sobre el vídeo
+  const voz = new File([new Uint8Array(2000)], 'voz.webm', { type: 'audio/webm' });
+  const rv = await api.guardarVozVideo(v, voz, { inicio: 1.234, seg: 9.6, onda: Array(40).fill(30) });
+  check(rv.voz_archivo_id && rv.voz?.ruta && Number(rv.voz_inicio) === 1.23 && rv.voz.duracion_seg === 10 && cuboDe(rv.voz.ruta) === 'voz', 'el coach graba su voz sobre el vídeo (una nota de voz en el bucket «voz», desde el 0:01,2)');
+  const rv2 = await api.guardarVozVideo(v, new File([new Uint8Array(1500)], 'v.webm', { type: 'audio/webm' }), { inicio: 0, seg: 4 });
+  check(rv2.voz_archivo_id !== rv.voz_archivo_id && !(await b.sql(`select 1 from archivos where id = $1`, [rv.voz_archivo_id])).length, 'grabarla otra vez cambia la de antes (que se borra)');
+  check(await lanza(() => api.guardarVozVideo(v, new File([new Uint8Array(4 * 1048576)], 'g.webm', { type: 'audio/webm' }), { seg: 5 })) && await lanza(() => api.guardarVozVideo(v, new File(['x'], 'a.txt', { type: 'text/plain' }), { seg: 5 })),
+    'una voz de más de 3 MB, o que no es audio, no');
+  // El fotograma al chat de Ana (una foto del coach)
+  const msg = await api.enviarFotograma(v, new Blob([new Uint8Array(300)], { type: 'image/jpeg' }), { texto: 'En el 0:01,5 de tu vídeo' });
+  const [adj] = await b.sql(`select tipo, subido_por, mime, derivado_de from archivos where id = $1`, [msg.archivo_id]);
+  check(msg.adjunto && adj.tipo === 'adjunto' && adj.subido_por === 'coach' && adj.mime === 'image/jpeg' && adj.derivado_de === v.id, 'el fotograma va al chat de Ana como una foto del coach (con el vídeo del que sale)');
+  // (revisión de seguridad, M1) y no se reenvía a nadie: ni lo ofrece el chat ni lo deja la app
+  const enChat = (await api.conversacion(aAna.id)).find((c) => c.id === msg.id);
+  check(enChat?.fotograma === true && !reenviable(enChat, 'coach') && await lanza(() => api.reenviar(enChat, [aLuis.id])), '(revisión) el fotograma no se puede reenviar a otro atleta');
+  // Ana: «Corregido», la corrección y la voz (que oye y no borra), y «Mi técnica»
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  d = (await api.diario(aAna.id)).find((x) => x.id === v.id);
+  const rA = await api.revisionVideo(v.id);
+  check(d.estado.estado === 'corregido' && rA.puntuacion === 4 && rA.voz?.ruta && /^pglite:\/\/voz\//.test(await api.urlArchivo(rA.voz.ruta, { tipo: 'audio' })), 'Ana ve «Corregido», la corrección y puede oír la voz');
+  // (revisión de seguridad, H1) sin ninguna hora: de «Visto» y «Corregido», el día; la tabla (con horas) no la lee
+  check(!Object.keys(rA).some((k) => /_en$/.test(k)) && /^\d{4}-\d{2}-\d{2}$/.test(rA.visto_el) && /^\d{4}-\d{2}-\d{2}$/.test(rA.corregido_el) && !Object.keys(d.revision).some((k) => /_en$/.test(k))
+    && !(await b.select('video_revisiones', {})).length, '(revisión) Ana ve el día de «Visto» y de «Corregido», nunca la hora (ni lee la tabla con las horas)');
+  const copiaAna = await api.exportar(aAna.id);
+  check(copiaAna.video_correcciones?.some((x) => x.archivo_id === v.id && x.corregido_el && !('corregido_en' in x)), '(revisión) y su copia de datos lleva la corrección de sus vídeos, con días');
+  check(await api.plantillaTecnica(se.ejercicio_id) === null && await lanza(() => api.quitarVozVideo(v)) === false && (await api.revisionVideo(v.id)).voz_archivo_id === rv2.voz_archivo_id,
+    'no ve las listas del coach ni le quita la voz (la base no le deja: no cambia nada)');
+  const mt = await api.miTecnica(aAna.id);
+  const g = mt.find((x) => x.id === se.ejercicio_id);
+  check(g && g.videos.some((x) => x.id === v.id) && g.videos.some((x) => x.id === rep.id) && g.puntos.length === 1 && g.ultima === 4, '«Mi técnica»: sus vídeos de ese ejercicio y su nota');
+  check((await api.archivo(v.id))?.id === v.id && (await api.repeticionesDe(v.id)).map((x) => x.id).join() === rep.id && (await api.videoTecnica(v.id)).serie.texto === '62,5 kg × 5 @8,5',
+    'el original, sus repeticiones y el vídeo de un aviso, con todo');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check(await api.revisionVideo(v.id) === null && (await api.videoTecnica(v.id)) === null, 'Luis no ve nada de eso');
+  // La limpieza (el coach)
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const viejo = await b.sql(`insert into archivos (atleta_id, tipo, ruta, fecha, bytes, creado_en, revisado_en) values ($1::uuid, 'video_tecnica', $1::text || '/v057-viejo.mp4', '2025-01-01', 7340032, '2025-01-01', '2025-01-02') returning id`, [aLuis.id]);
+  await b.sql(`insert into storage.objects (bucket_id, name) values ('archivos', $1)`, [`${aLuis.id}/v057-viejo.mp4`]);
+  const pre = await api.limpiezaVideos({ meses: 6, dias: 30 });
+  check(pre.n >= 1 && pre.lista.some((x) => x.id === viejo[0].id && x.atleta?.nombre === 'Luis Martín') && !pre.lista.some((x) => x.id === v.id) && pre.bytes >= 7340032, 'lo que se borraría, con de quién es y cuánto ocupa');
+  check(pre.lote.n === pre.lista.length && pre.lote.bytes === pre.lista.reduce((t, x) => t + (Number(x.bytes) || 0), 0), '(revisión) y lo que se borra al confirmar (los que enseña la lista, como mucho 300)');
+  check(await lanza(() => api.limpiezaVideos({ meses: 6, dias: 0 })), '(revisión) la conversación protege al menos 7 días');
+  const hecho = await api.borrarVideosViejos({ meses: 6, dias: 30, ids: [viejo[0].id] });
+  check(hecho.n === 1 && hecho.bytes === 7340032 && !(await b.sql(`select 1 from archivos where id = $1`, [viejo[0].id])).length
+    && !(await b.sql(`select 1 from fbe_privado.storage_por_borrar`)).length && !(await b.sql(`select 1 from storage.objects where name = $1`, [`${aLuis.id}/v057-viejo.mp4`])).length,
+    'se borra y la app del coach vacía la cola: el archivo sale de Storage');
+  check(typeof (await api.bytesUsados()) === 'number' && (await api.bytesUsados()) > 0, 'lo que ocupa todo (para el aviso del panel)');
+  // Sin la 035: lo de siempre, igual; lo nuevo dice qué falta (y un vídeo con serie sale igual, sin ella)
+  {
+    const falta = (t) => { const e = new Error(`relation "public.${t}" does not exist`); e.code = '42P01'; return e; };
+    const sin = crearApi({ ...b, auth: b.auth, storage: b.storage, rpc: async (n, a) => { if (/video|videos_/.test(n)) throw falta(n); return b.rpc(n, a); }, update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b),
+      insert: async (t, f) => { if (Array.isArray(f) && f.some((x) => 'serie_numero' in x || 'repite_de' in x)) throw new Error('column "serie_numero" of relation "archivos" does not exist'); return b.insert(t, f); },
+      select: async (t, f) => { if (['video_revisiones', 'tecnica_plantillas'].includes(t)) throw falta(t); return b.select(t, f); } });
+    check(await sin.video035() === false && await sin.revisionVideo(v.id) === null && await sin.marcarVideoVisto(v.id) === null && await sin.plantillaTecnica(se.ejercicio_id) === null, 'sin la 035, la app lo sabe y no falla al leer');
+    let m = '';
+    try { await sin.guardarRevision(v, { puntuacion: 3 }); } catch (e) { m = e.message; }
+    check(/Disponible tras la migración 035/.test(m), 'corregir dice «Disponible tras la migración 035»');
+    await b.auth.entrar('ana@test', 'contraseña-ana-1');
+    const sinSerie = await sin.subirArchivo(aAna.id, new Blob(['v'], { type: 'video/mp4' }), { tipo: 'video_tecnica', sesion_ejercicio_id: se.id, serie_numero: 3 });
+    check(sinSerie.serie_numero == null && (await sin.diario(aAna.id)).find((x) => x.id === sinSerie.id).serie === null, 'y un vídeo con su serie se envía igual, sin ella');
+    await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  }
+  // 3. La subida por trozos sigue por donde iba (TUS, con un servidor de prueba)
+  {
+    const http = await import('node:http');
+    const { subirPorTrozos } = await import('../web/src/datos/backend-supabase.js');
+    const subidas = new Map(); let creadas = 0, recibidos = 0, cortar = 0;
+    const srv = http.createServer((req, res) => {
+      const cab = { 'Tus-Resumable': '1.0.0', 'Access-Control-Expose-Headers': 'Location, Upload-Offset' };
+      const leer = () => new Promise((ok) => { const t = []; req.on('data', (x) => t.push(x)); req.on('end', () => ok(Buffer.concat(t))); });
+      if (req.method === 'POST') {
+        const idS = `s${++creadas}`; subidas.set(idS, { largo: Number(req.headers['upload-length']), off: 0 });
+        leer().then((x) => { subidas.get(idS).off += x.length; recibidos += x.length; res.writeHead(201, { ...cab, Location: `http://localhost:${srv.address().port}/up/${idS}`, 'Upload-Offset': String(subidas.get(idS).off) }); res.end(); });
+        return;
+      }
+      const idS = req.url.split('/').pop(); const u = subidas.get(idS);
+      if (!u) { res.writeHead(404, cab); res.end(); return; }
+      if (req.method === 'HEAD') { res.writeHead(200, { ...cab, 'Upload-Offset': String(u.off), 'Upload-Length': String(u.largo), 'Cache-Control': 'no-store' }); res.end(); return; }
+      if (req.method === 'PATCH') {
+        if (cortar > 0) { cortar--; req.socket.destroy(); return; }
+        leer().then((x) => { u.off += x.length; recibidos += x.length; res.writeHead(204, { ...cab, 'Upload-Offset': String(u.off) }); res.end(); });
+        return;
+      }
+      res.writeHead(405, cab); res.end();
+    });
+    await new Promise((ok) => srv.listen(0, ok));
+    const endpoint = `http://localhost:${srv.address().port}/up`;
+    const datos = Buffer.alloc(13 * 1048576, 7);
+    let url = null; const pasos = [];
+    cortar = 1;
+    let corte = null;
+    try { await subirPorTrozos({ endpoint, token: 't', anonKey: 'k', ruta: 'a/b.mp4', archivo: datos, tipo: 'video/mp4', reintentos: [], alUrlSubida: (x) => { url = x; }, alProgreso: (x) => pasos.push(x) }); } catch (e) { corte = e; }
+    const tras1 = recibidos;
+    check(corte?.sinConexion && url && /\/up\/s1$/.test(url) && tras1 === 6 * 1048576, 'se corta a media subida: queda la dirección de la subida y lo ya subido (el primer trozo de 6 MB)');
+    await subirPorTrozos({ endpoint, token: 't', anonKey: 'k', ruta: 'a/b.mp4', archivo: datos, tipo: 'video/mp4', reintentos: [], urlSubida: url, alProgreso: (x) => pasos.push(x) });
+    check(creadas === 1 && recibidos === datos.length && subidas.get('s1').off === datos.length, 'con esa dirección sigue por donde iba: no vuelve a subir lo que ya estaba (13 MB en total)');
+    await subirPorTrozos({ endpoint, token: 't', anonKey: 'k', ruta: 'a/c.mp4', archivo: Buffer.alloc(1000, 1), tipo: 'video/mp4', reintentos: [], urlSubida: `${endpoint}/caducada` });
+    check(creadas === 2 && subidas.get('s2').off === 1000, 'si la dirección ya no vale (caducó), empieza otra subida');
+    // (revisión de seguridad, L3) una dirección guardada que no es de este servidor de subidas no recibe nada (ni el token)
+    let ajenas = 0;
+    const otro = http.createServer((req, res) => { ajenas++; res.writeHead(204, { 'Tus-Resumable': '1.0.0', 'Upload-Offset': '0' }); res.end(); });
+    await new Promise((ok) => otro.listen(0, ok));
+    await subirPorTrozos({ endpoint, token: 't', anonKey: 'k', ruta: 'a/d.mp4', archivo: Buffer.alloc(500, 1), tipo: 'video/mp4', reintentos: [], urlSubida: `http://localhost:${otro.address().port}/up/s1` });
+    check(ajenas === 0 && creadas === 3, '(revisión) una dirección de subida de otro servidor no se usa: se empieza otra subida');
+    const { urlSubidaValida } = await import('../web/src/datos/backend-supabase.js');
+    const ep = 'https://x.supabase.co/storage/v1/upload/resumable';
+    check(urlSubidaValida(`${ep}/abc`, ep) && urlSubidaValida(`${ep}/abc`, `${ep}/`) && !urlSubidaValida(ep, ep) && !urlSubidaValida(`${ep}/`, ep) && !urlSubidaValida(`${ep}x/abc`, ep)
+      && !urlSubidaValida(`${ep}/../../../otra`, ep) && !urlSubidaValida('https://malo.example/storage/v1/upload/resumable/abc', ep) && !urlSubidaValida(`https://x.supabase.co@malo.example/storage/v1/upload/resumable/abc`, ep)
+      && !urlSubidaValida('javascript:alert(1)', ep) && !urlSubidaValida(null, ep) && !urlSubidaValida(`${ep}/abc`, ''),
+      '(revisión) solo valen las direcciones de este servidor de subidas («endpoint/…», sin «..» ni otro servidor)');
+    otro.close();
+    srv.close();
+  }
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

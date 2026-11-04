@@ -9,6 +9,7 @@ import { fmtEuros } from '../../logica/cobros.js';
 import { estadoAtleta, NOMBRE_ESTADO, trazoChispa } from '../../logica/visual.js';
 import { equipoHoy, arcoDial } from '../../logica/tablero.js';
 import { hoyISO } from '../../logica/fechas.js';
+import { AvisoAlmacenamientoPanel } from '../tecnica/Limpieza.jsx';
 
 // v0.49: minigráficas del panel (solo las ve el coach): el peso de las últimas semanas y las sesiones hechas de las
 // programadas en las 6 últimas, con su texto para los lectores de pantalla
@@ -87,6 +88,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
         </div>
       </CabeceraGrande>
       <BandaDemo />
+      <AvisoAlmacenamientoPanel abrirCuenta={abrirCuenta} />
       <ErrorCaja error={res.error} reintentar={res.recargar} />
       {eq && eq.activos > 0 && <EquipoHoy eq={eq} porRevisar={porRevisar} irARevisar={irARevisar} filtro={filtro} alFiltrar={setFiltro} />}
       <div class="selector-chips" role="group" aria-label="Filtrar atletas">

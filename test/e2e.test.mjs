@@ -5007,6 +5007,314 @@ try {
   await p.setViewportSize({ width: 390, height: 844 });
   }
 
+  console.log('\nv0.57: los vídeos de técnica, mucho mejores');
+  {
+  const demo = () => p.evaluate(() => JSON.parse(localStorage.getItem('fbe-demo-v2')));
+  // (la demo guarda en el navegador un instante después de cada cambio)
+  const enDemo = async (f) => { for (let i = 0; i < 40; i++) { if (f(await demo())) return true; await p.waitForTimeout(100); } return false; };
+  const tiempoDe = (loc) => loc.locator('video.medio').first().evaluate((v) => v.currentTime);
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.emulateMedia({ colorScheme: 'light', reducedMotion: null });
+  await entrarComo('Pelayo');
+  await p.locator('.tab', { hasText: 'Revisar' }).first().click();
+  await p.getByRole('heading', { name: 'Revisar' }).waitFor();
+  // 14. Revisar seguidos: los vídeos por revisar, uno detrás de otro (j / k, deslizar, Escape)
+  const botonSeguidos = p.getByRole('button', { name: /Revisar los vídeos seguidos/ });
+  await botonSeguidos.waitFor();
+  await botonSeguidos.click();
+  const seguida = p.getByRole('dialog', { name: 'Revisar los vídeos seguidos' });
+  await seguida.waitFor();
+  await p.waitForFunction(() => document.activeElement?.classList.contains('seguida-cerrar'));
+  await seguida.locator('video.medio').waitFor();
+  const contador = (await seguida.locator('.seguida-contador').textContent()).trim();
+  check(/^1 de \d+$/.test(contador) && (await seguida.textContent()).includes('Ana López'), `«Revisar seguidos» abre el primero a pantalla completa (${contador})`);
+  await revisar('revisar-seguidos');
+  const total = Number(contador.split(' de ')[1]);
+  await p.keyboard.press('j');
+  await seguida.locator('.seguida-contador', { hasText: total > 1 ? `2 de ${total}` : 'revisados' }).waitFor();
+  await p.keyboard.press('k');
+  await seguida.locator('.seguida-contador', { hasText: `1 de ${total}` }).waitFor();
+  check(true, 'j pasa al siguiente y k vuelve');
+  await seguida.getByRole('combobox', { name: 'Orden' }).selectOption('atleta');
+  await seguida.locator('.seguida-contador', { hasText: `1 de ${total}` }).waitFor();
+  await p.keyboard.press('Escape');
+  await seguida.waitFor({ state: 'detached' });
+  check(true, 'se ordena por atleta y Escape lo cierra');
+
+  // 2, 5, 9, 10, 12, 13: la tarjeta del vídeo de Ana, con su serie, y la corrección
+  const vidA = p.locator('.tarjeta-revisar', { hasText: '¿Llego a la profundidad buena?' });
+  check(/Serie 2: [\d,]+ kg × \d+/.test(await vidA.locator('.chip', { hasText: 'Serie' }).first().textContent()), 'la tarjeta dice de qué serie es el vídeo (kg × reps @RPE)');
+  await vidA.getByRole('button', { name: 'Ver y comentar' }).click();
+  await vidA.locator('video.medio').waitFor();
+  await vidA.getByRole('button', { name: 'Fotograma siguiente' }).and(p.locator(':enabled')).waitFor();
+  check(/^Serie 2 · [\d,]+ kg × \d+/.test(await vidA.locator('.rep-serie').textContent()), 'y lo lleva encima del vídeo');
+  const panel = vidA.locator('.correccion');
+  await panel.getByRole('button', { name: '4 de 5: Buena' }).click();
+  const puntos = panel.locator('.punto-clave');
+  check(await puntos.count() === 5 && (await puntos.first().textContent()).includes('Pie entero apoyado'), 'los puntos clave de la sentadilla son la lista del coach');
+  await puntos.nth(0).getByRole('button', { name: 'Bien', exact: true }).click();
+  await puntos.nth(1).getByRole('button', { name: 'A corregir', exact: true }).click();
+  for (let i = 0; i < 6; i++) await vidA.getByRole('button', { name: 'Fotograma siguiente' }).click();
+  await puntos.nth(1).getByRole('button', { name: 'Marcar este momento del vídeo' }).click();
+  check((await puntos.nth(1).locator('.marca-tiempo').textContent()) === '0:00,2', 'un punto «a corregir» con su momento (el del vídeo)');
+  // El tempo: tres marcas (bajada, abajo y arriba), avanzando fotograma a fotograma
+  await panel.getByRole('button', { name: /Empieza la bajada/ }).click();
+  for (let i = 0; i < 9; i++) await vidA.getByRole('button', { name: 'Fotograma siguiente' }).click();
+  await panel.getByRole('button', { name: /^.?Abajo/ }).click();
+  for (let i = 0; i < 6; i++) await vidA.getByRole('button', { name: 'Fotograma siguiente' }).click();
+  await panel.getByRole('button', { name: /Arriba/ }).click();
+  const filaTempo = await panel.locator('.tabla-tempo tbody tr').first().textContent();
+  check(/^1\s*0,3 s\s*0,2 s$/.test(filaTempo.replace(/ /g, ' ')), `el tempo de la repetición: bajada y subida en segundos (${filaTempo})`);
+  await revisar('correccion-coach');
+  await panel.getByRole('button', { name: 'Guardar la corrección' }).click();
+  await p.locator('.toast', { hasText: 'Corrección guardada: a Ana le llega un aviso' }).waitFor();
+  await enDemo((d) => (d.video_revisiones || []).some((r) => r.puntuacion === 4 && r.tempo));
+  const rev = (await demo()).video_revisiones.find((r) => r.puntuacion === 4 && r.tempo);
+  check(rev && rev.checklist.puntos.length === 2 && rev.checklist.puntos[1].e === 'mal' && rev.checklist.puntos[1].s === 0.2 && rev.tempo.reps.length === 1 && rev.corregido_en && rev.visto_el,
+    'se guarda: nota 4, dos puntos (uno con su momento), el tempo, «Visto» y «Corregido»');
+  check(await hay(vidA.locator('.rep-marca-punto'), 1), 'el punto con momento sale como marca en la barra de tiempo');
+  await vidA.getByRole('button', { name: /^Ir a: Punto clave en 0:00,2/ }).click();
+  check(Math.abs(await tiempoDe(vidA) - 0.2) < 0.05, 'tocar la marca lleva el vídeo a ese momento');
+  // Zoom y ajuste fino
+  await vidA.getByRole('button', { name: 'Acercar la imagen' }).click();
+  check(/scale\(1\.5\)/.test(await vidA.locator('.rep-zoom').getAttribute('style') || ''), '«Acercar» amplía la imagen (y se puede mover)');
+  await vidA.getByRole('button', { name: 'Tamaño normal' }).click();
+  await vidA.locator('.rep-jog').focus();
+  const antesJog = await tiempoDe(vidA);
+  for (let i = 0; i < 3; i++) await p.keyboard.press('ArrowRight');
+  await p.waitForTimeout(200);
+  check(Math.abs(await tiempoDe(vidA) - antesJog - 0.1) < 0.02, 'el ajuste fino va fotograma a fotograma con las flechas');
+  // 7. La voz del coach sobre el vídeo (el micro de mentira de Chrome)
+  await panel.getByRole('button', { name: 'Grabar desde aquí' }).click();
+  await panel.getByRole('button', { name: 'Parar' }).waitFor();
+  await p.waitForTimeout(1600);
+  await panel.getByRole('button', { name: 'Parar' }).click();
+  await panel.getByRole('button', { name: 'Guardar la voz' }).click();
+  await p.locator('.toast', { hasText: 'Voz guardada' }).waitFor();
+  check(await hay(vidA.locator('.rep-marca-voz'), 1) && await vidA.locator('.rep-voz').count() === 1, 'la voz se guarda (con su marca en la barra y «Voz del coach» en el reproductor)');
+  check(await enDemo((d) => d.archivos.some((a) => a.tipo === 'audio' && a.subido_por === 'coach' && d.video_revisiones.some((r) => r.voz_archivo_id === a.id))), 'como nota de voz del coach para Ana, enlazada a la corrección');
+  // 11. El fotograma con su dibujo, al chat de Ana
+  await panel.getByRole('button', { name: 'Fotograma al chat' }).click();
+  await p.locator('.toast', { hasText: 'Fotograma enviado al chat de Ana' }).waitFor();
+  check(await enDemo((d) => d.archivos.some((a) => a.tipo === 'adjunto' && a.subido_por === 'coach' && /^image\/jpeg/.test(a.mime))), 'el fotograma llega a su chat como una foto (del coach)');
+  check(await enDemo((d) => d.archivos.some((a) => a.tipo === 'adjunto' && /^image\/jpeg/.test(a.mime) && d.archivos.some((v) => v.id === a.derivado_de && v.tipo === 'video_tecnica' && v.atleta_id === a.atleta_id))),
+    '(revisión) y lleva de qué vídeo de Ana sale (así no se puede reenviar a nadie más)');
+  // 6. Más herramientas de dibujo: flecha, texto y círculo en rojo, visibles un tramo
+  await vidA.getByRole('button', { name: 'Dibujar sobre el vídeo' }).click();
+  const lienzo = vidA.locator('.rep-lienzo');
+  await lienzo.waitFor();
+  const lb = await lienzo.boundingBox();
+  const pt = (fx, fy) => [lb.x + lb.width * fx, lb.y + lb.height * fy];
+  await vidA.getByRole('button', { name: 'Flecha' }).click();
+  let [x1, y1] = pt(0.3, 0.3); let [x2, y2] = pt(0.6, 0.6);
+  await p.mouse.move(x1, y1); await p.mouse.down(); await p.mouse.move(x2, y2, { steps: 5 }); await p.mouse.up();
+  await vidA.getByRole('button', { name: 'Texto', exact: true }).click();
+  await vidA.getByLabel('Texto de la etiqueta').fill('Rodillas');
+  [x1, y1] = pt(0.2, 0.8); await p.mouse.click(x1, y1);
+  await vidA.getByRole('button', { name: 'Rojo' }).click();
+  await vidA.getByRole('button', { name: 'Círculo' }).click();
+  [x1, y1] = pt(0.5, 0.5); [x2, y2] = pt(0.6, 0.55);
+  await p.mouse.move(x1, y1); await p.mouse.down(); await p.mouse.move(x2, y2, { steps: 5 }); await p.mouse.up();
+  check(await lienzo.locator('.forma').count() === 3 && await lienzo.locator('.forma.etiqueta text').textContent() === 'Rodillas'
+    && /255, 107, 107|#FF6B6B/i.test(await lienzo.locator('.forma.aro').getAttribute('style')), 'flecha, texto y un círculo en rojo sobre el fotograma');
+  for (let i = 0; i < 9; i++) await vidA.getByRole('button', { name: 'Fotograma siguiente' }).click();
+  await vidA.getByRole('button', { name: 'Que se vea hasta este momento' }).click();
+  check(/Visible de/.test(await vidA.locator('.rep-tramo').textContent()), '«Hasta aquí»: el dibujo se verá durante un tramo');
+  await revisar('dibujo-v057');
+  await vidA.getByRole('button', { name: 'Hecho' }).click();
+  const chipDib = await vidA.locator('.chip-dibujo').textContent();
+  check(chipDib.includes('una flecha') && chipDib.includes('un círculo') && chipDib.includes('el texto «Rodillas»'), `el dibujo descrito en palabras (${chipDib.trim()})`);
+  await vidA.getByRole('textbox', { name: /Responder a Ana/ }).fill('Mira las rodillas en el fotograma');
+  await vidA.locator('button[aria-label="Enviar"]').click();
+  await vidA.waitFor({ state: 'detached' });
+  await enDemo((d) => d.comentarios.some((c) => c.texto?.includes('Mira las rodillas')));
+  const dibujoGuardado = (await demo()).comentarios.find((c) => c.texto?.includes('Mira las rodillas'))?.dibujo;
+  check(dibujoGuardado && dibujoGuardado.hasta > dibujoGuardado.t && dibujoGuardado.formas.some((f) => f.tipo === 'texto' && f.x === 'Rodillas') && dibujoGuardado.formas.some((f) => f.c === 'rojo'),
+    'el comentario se envía con su dibujo (con tramo, texto y color) y el vídeo sale de la bandeja');
+
+  // 8. Comparar superpuestos y alineados (Rubén tiene dos vídeos de sentadilla)
+  await p.locator('.tab', { hasText: 'Atletas' }).first().click();
+  await p.locator('.tarjeta-atleta', { hasText: 'Rubén Martín' }).first().click();
+  await p.getByRole('tab', { name: 'Vídeos y fotos' }).click();
+  await p.getByRole('button', { name: 'Comparar dos' }).click();
+  const comp = p.getByRole('dialog', { name: 'Comparar dos vídeos' });
+  await comp.locator('video.medio').nth(1).waitFor();
+  await comp.locator('.comparar-marca').first().waitFor();
+  for (const b of await comp.getByRole('button', { name: /Marcar aquí el inicio de la repetición/ }).all()) await b.click();
+  check((await comp.textContent()).includes('Alineados'), 'lado a lado: se marca el inicio de la repetición en cada uno y quedan alineados');
+  await comp.getByRole('button', { name: 'Superpuestos' }).click();
+  await comp.locator('.superpuestos-marco video').nth(1).waitFor();
+  await comp.getByRole('slider', { name: 'Transparencia del de encima' }).fill('30');
+  check(/opacity: 0\.3/.test(await comp.locator('.superpuesto-encima').getAttribute('style')), 'superpuestos: el de encima con la transparencia elegida');
+  await comp.getByRole('button', { name: 'Reproducir los dos' }).click();
+  await p.waitForTimeout(500);
+  check(await comp.locator('.superpuestos-marco video').evaluateAll((vs) => vs.length === 2 && vs.every((v) => !v.paused)), 'y se reproducen los dos a la vez');
+  await revisar('superpuestos');
+  await comp.getByRole('button', { name: 'Pausar' }).click();
+  await comp.getByRole('button', { name: 'Cerrar' }).click();
+  await comp.waitFor({ state: 'detached' });
+
+  // 15, 4, 16: Ana: el aviso lleva al momento corregido; ve la corrección, la voz al ritmo del vídeo y graba de nuevo
+  const idAna = (await demo()).video_revisiones.find((r) => r.puntuacion === 4 && r.tempo).archivo_id;
+  await entrarComo('Ana López');
+  await p.evaluate((h) => { location.hash = h; }, `#videos/${idAna}@0.2`);
+  const det = p.getByRole('dialog', { name: /^Sentadilla barra alta,/ });
+  await det.locator('video.medio').waitFor();
+  await det.getByRole('button', { name: 'Fotograma siguiente' }).and(p.locator(':enabled')).waitFor();
+  await p.waitForFunction(() => { const v = document.querySelector('.hoja-dialogo video.medio'); return v && Math.abs(v.currentTime - 0.2) < 0.05; });
+  check(true, 'el enlace del aviso (#videos/<id>@0.2) abre su vídeo en ese momento');
+  check((await det.locator('.estado-video').getAttribute('aria-label')) === 'Estado del vídeo: Corregido' && (await det.textContent()).includes('Técnica: buena')
+    && await det.locator('.lista-puntos.ver .punto-clave').count() === 2 && await det.locator('.tabla-tempo').count() === 1,
+    've «Corregido», la nota (4/5), los puntos (✓ y ✗) y su tempo');
+  await revisar('correccion-atleta');
+  await det.getByRole('button', { name: /^Ir a: Voz del coach/ }).click();
+  await det.getByRole('button', { name: 'Reproducir' }).click();
+  await p.waitForFunction(() => { const a = document.querySelector('.hoja-dialogo audio'); return a && !a.paused; }, null, { timeout: 8000 });
+  check(true, 'al reproducir el vídeo, la voz del coach suena a su ritmo');
+  await det.getByRole('button', { name: 'Pausar' }).click();
+  await p.waitForFunction(() => document.querySelector('.hoja-dialogo audio')?.paused === true);
+  check(true, 'y al pausar el vídeo, la voz se pausa');
+  // «Grabar de nuevo con la corrección»: la cámara guiada, con lo corregido a la vista, el nivel y la cuenta atrás
+  await det.getByRole('button', { name: 'Grabar de nuevo con la corrección' }).click();
+  const cam = p.getByRole('dialog', { name: /^Repetir: Sentadilla/ });
+  await cam.waitFor();
+  await p.waitForFunction(() => document.activeElement?.classList.contains('camara-cerrar'));
+  check((await cam.locator('.camara-puntos').textContent()).includes('Rodillas en la dirección de los pies') && (await cam.textContent()).includes('De lado'),
+    'la cámara guiada: el encuadre de la sentadilla (de lado) y lo que corrigió el coach');
+  await p.waitForTimeout(300);
+  await p.evaluate(() => window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { alpha: 0, beta: 70, gamma: 35 })));
+  await cam.locator('.camara-nivel.torcido').waitFor({ state: 'attached', timeout: 8000 });
+  check((await cam.locator('.camara-pista').textContent()).includes('Torcido'), 'con el móvil torcido, el nivel lo avisa');
+  await cam.getByRole('button', { name: '3 s' }).click();
+  await cam.locator('.camara-espera', { hasText: 'Abriendo' }).waitFor({ state: 'detached' });
+  await revisar('camara-video');
+  await cam.getByRole('button', { name: 'Grabar en 3 segundos' }).click();
+  await cam.locator('.camara-cuenta').waitFor();
+  await cam.locator('.camara-rec').waitFor({ timeout: 8000 });
+  await p.waitForTimeout(1500);
+  await cam.getByRole('button', { name: 'Parar la grabación' }).click();
+  await cam.getByRole('button', { name: 'Usar este vídeo' }).click();
+  await p.locator('.camara').waitFor({ state: 'detached' });
+  check(await p.evaluate(() => !document.querySelector('.camara')), 'tras grabar, la cámara se cierra (y se suelta)');
+  const hojaRep = p.getByRole('dialog', { name: /^Repetir: Sentadilla/ });
+  await hojaRep.getByText('Va como repetición de tu vídeo corregido').waitFor();
+  await hojaRep.getByRole('button', { name: 'Enviar a tu coach' }).click();
+  await p.locator('.toast', { hasText: 'Vídeo enviado a tu coach' }).waitFor();
+  await enDemo((d) => d.archivos.some((a) => a.repite_de === idAna));
+  const repe = (await demo()).archivos.find((a) => a.repite_de === idAna);
+  check(!!repe && repe.tipo === 'video_tecnica', 'se envía como repetición del vídeo corregido');
+  await det.getByRole('button', { name: 'Cerrar' }).click();
+  await det.waitFor({ state: 'detached' });
+  // «Mi técnica» en Progreso: por ejercicio, su nota en el tiempo y comparar dos
+  await p.locator('.tab', { hasText: 'Progreso' }).first().click();
+  const mt = p.locator('.mi-tecnica');
+  await mt.waitFor();
+  await mt.scrollIntoViewIfNeeded();
+  await hay(mt.locator('.tecnica-item'), 3);
+  check(await mt.locator('.tecnica-item').count() >= 3 && await mt.getByRole('img', { name: /Tu nota de técnica en Sentadilla barra alta/ }).count() + await mt.locator('[aria-label*="Tu nota de técnica en Sentadilla"]').count() >= 1,
+    '«Mi técnica»: sus vídeos de sentadilla en el tiempo y la gráfica de su nota');
+  check((await mt.locator('.tecnica-ver').first().getAttribute('aria-label')).includes('Enviado'), 'el recién enviado, «Enviado»');
+  const elegir = mt.getByRole('button', { name: /^Elegir para comparar/ });
+  await elegir.nth(0).click(); await elegir.nth(1).click();
+  await mt.getByRole('button', { name: 'Comparar los dos' }).click();
+  const comp2 = p.getByRole('dialog', { name: 'Comparar dos vídeos' });
+  await comp2.locator('video.medio').nth(1).waitFor();
+  check(true, 'y compara dos cualesquiera');
+  await comp2.getByRole('button', { name: 'Cerrar' }).click();
+  await revisar('mi-tecnica');
+
+  // 3. La subida sigue por donde iba si se corta la conexión (la demo imita la subida por trozos) y se puede cancelar
+  await p.evaluate(() => localStorage.setItem('fbe-demo-subida-lenta', '5000'));
+  await p.locator('.diario').getByRole('button', { name: 'Subir vídeo' }).click();
+  const hojaSub = p.getByRole('dialog', { name: 'Subir un vídeo' });
+  const { VIDEO_EJEMPLO } = await import('../web/src/datos/video-demo.js');
+  await hojaSub.locator('input[type=file]').setInputFiles({ name: 'serie.mp4', mimeType: 'video/mp4', buffer: Buffer.from(VIDEO_EJEMPLO.split(',')[1], 'base64') });
+  const hojaEnv = p.getByRole('dialog', { name: 'Elegir o grabar el vídeo' });
+  await hojaEnv.getByRole('button', { name: 'Enviar a tu coach' }).click();
+  await hojaEnv.getByRole('button', { name: /Subiendo… [3-9]\d %/ }).waitFor({ timeout: 8000 });
+  await ctx.setOffline(true);
+  await p.locator('.toast', { hasText: 'Sin cobertura: el vídeo queda guardado' }).waitFor();
+  await p.locator('.banda-pendientes', { hasText: 'por donde iba' }).waitFor();
+  check(true, 'sin cobertura a media subida, el vídeo se queda en el móvil y «se enviará solo, por donde iba»');
+  await ctx.setOffline(false);
+  await p.locator('.banda-pendientes', { hasText: /Enviando el vídeo guardado… ([3-9]\d|100) %/ }).waitFor({ timeout: 8000 });
+  check(true, 'al volver la cobertura sigue desde lo ya subido (no desde cero)');
+  await p.locator('.toast', { hasText: 'Vídeo pendiente enviado a tu coach' }).waitFor({ timeout: 15000 });
+  check(true, 'y llega');
+  await p.evaluate(() => localStorage.removeItem('fbe-demo-subida-lenta'));
+  if (await hojaSub.isVisible().catch(() => false)) { await hojaSub.getByRole('button', { name: 'Cerrar' }).click(); await hojaSub.waitFor({ state: 'detached' }); }
+
+  // A 360 px, en oscuro y al 125 %
+  await p.setViewportSize({ width: 360, height: 740 });
+  await p.emulateMedia({ colorScheme: 'dark' });
+  await p.evaluate(() => document.documentElement.setAttribute('data-letra', 'muy-grande'));
+  await p.evaluate((h) => { location.hash = h; }, `#videos/${idAna}@0.2`);
+  const det2 = p.getByRole('dialog', { name: /^Sentadilla barra alta,/ });
+  await det2.locator('.correccion').waitFor();
+  await revisar('video-v057-360-oscuro-125');
+  check(await p.evaluate(() => document.documentElement.scrollWidth <= 360), 'a 360 px en oscuro y al 125 %, la corrección y el reproductor caben');
+  await det2.getByRole('button', { name: 'Cerrar' }).click();
+  await mt.scrollIntoViewIfNeeded();
+  await revisar('mi-tecnica-360-oscuro-125');
+  await p.evaluate(() => document.documentElement.removeAttribute('data-letra'));
+  await p.emulateMedia({ colorScheme: null });
+  await p.setViewportSize({ width: 390, height: 844 });
+
+  // Y el coach ve la repetición junto al original (y Ana, «Visto» en cuanto la abre)
+  await entrarComo('Pelayo');
+  await p.locator('.tab', { hasText: 'Revisar' }).first().click();
+  const tarjRep = p.locator('.tarjeta-revisar').filter({ has: p.getByRole('button', { name: 'Repetición: comparar con el original' }) }).first();
+  await tarjRep.waitFor();
+  await tarjRep.getByRole('button', { name: 'Repetición: comparar con el original' }).click();
+  const comp3 = p.getByRole('dialog', { name: 'Comparar dos vídeos' });
+  await comp3.locator('video.medio').nth(1).waitFor();
+  check(true, 'el coach ve la repetición lado a lado con el original');
+  await comp3.getByRole('button', { name: 'Cerrar' }).click();
+  await comp3.waitFor({ state: 'detached' });
+  let visto = false;
+  for (let i = 0; i < 30 && !visto; i++) { visto = (await demo()).video_revisiones.some((r) => r.archivo_id === repe.id && r.visto_el); if (!visto) await p.waitForTimeout(100); }
+  check(visto, 'al abrirlo, queda «Visto» (solo el día)');
+  // 17. Limpieza y aviso del almacenamiento: un vídeo viejo de Rubén y el almacenamiento casi lleno (900 MB de 1 GB)
+  const idViejo = await p.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('fbe-demo-v2'));
+    const ruben = d.atletas.find((a) => a.nombre.startsWith('Rubén'));
+    const v = d.archivos.filter((a) => a.atleta_id === ruben.id && a.tipo === 'video_tecnica').sort((a, b) => (a.fecha < b.fecha ? -1 : 1))[0];
+    const hace = new Date(Date.now() - 200 * 864e5);
+    v.fecha = hace.toISOString().slice(0, 10); v.creado_en = hace.toISOString();
+    for (const r of d.video_revisiones || []) if (r.archivo_id === v.id) r.actualizado_en = hace.toISOString();
+    for (const c of d.comentarios) if (c.archivo_id === v.id) c.creado_en = hace.toISOString();
+    v.bytes = 900 * 1048576;
+    localStorage.setItem('fbe-demo-v2', JSON.stringify(d));
+    localStorage.setItem('fbe-plan-gb', '1');
+    return v.id;
+  });
+  await p.reload();
+  await p.locator('nav.tabs').waitFor();
+  await cerrarDialogos();
+  await p.locator('.tab', { hasText: 'Atletas' }).first().click();
+  await p.getByRole('heading', { name: 'Atletas' }).waitFor();
+  const avisoAlm = p.locator('.aviso-almacen');
+  await avisoAlm.waitFor();
+  check(/88 %|8\d,\d %/.test(await avisoAlm.textContent()), `el panel avisa de que el almacenamiento se acerca al límite del plan (${(await avisoAlm.textContent()).trim()})`);
+  await avisoAlm.getByRole('button', { name: 'Limpiar vídeos antiguos' }).click();
+  await p.getByRole('heading', { name: 'Espacio de vídeos y fotos' }).waitFor();
+  await p.getByRole('button', { name: 'Limpiar vídeos antiguos' }).last().click();
+  const hojaL = p.getByRole('dialog', { name: 'Limpiar vídeos antiguos' });
+  await hojaL.getByLabel('Vídeos de técnica de hace más de').selectOption('3');
+  await hojaL.getByRole('button', { name: 'Ver qué se borraría' }).click();
+  await hojaL.locator('.limpiar-lista').waitFor();
+  check(/^1 vídeo, 900 MB/.test((await hojaL.locator('[role=status] > p').first().textContent()).trim()) && (await hojaL.textContent()).includes('Rubén Martín'),
+    'antes de borrar, cuántos, cuánto ocupan y de quién (los destacados y los recientes, nunca)');
+  await revisar('limpieza');
+  await hojaL.getByRole('button', { name: 'Borrar este vídeo' }).click();
+  await hojaL.getByRole('button', { name: /^Sí, borrar/ }).click();
+  await p.locator('.toast', { hasText: '1 vídeo borrado (900 MB)' }).waitFor();
+  check(await enDemo((d) => !d.archivos.some((a) => a.id === idViejo)), 'se confirma en la app y se borra (sus archivos, a la cola de Storage)');
+  await hojaL.getByRole('button', { name: 'Cerrar' }).click();
+  await p.evaluate(() => localStorage.removeItem('fbe-plan-gb'));
+
+  }
+
   await p.unroute('https://i.ytimg.com/**');
   }
 } catch (e) {
