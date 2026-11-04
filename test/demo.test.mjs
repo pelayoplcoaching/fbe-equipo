@@ -1371,5 +1371,49 @@ console.log('\nLos vídeos de técnica en la demo (v0.57): las mismas reglas que
   delete globalThis.localStorage;
 }
 
+console.log('\nv0.58: el análisis automático de los vídeos (como la 036)');
+{
+  const { VALIDOS, MALFORMADOS } = await import('./analisis-casos.mjs');
+  const { limpiarAnalisis, repeticiones, calibracion } = await import('../web/src/logica/analisis.js');
+  const bA = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const apiA = crearApi(bA);
+  await bA.auth.entrar('pelayo@fbe.demo', 'demo');
+  const carlos = (await apiA.atletas()).find((a) => a.nombre === 'Carlos Vera');
+  const vid = (await apiA.archivos(carlos.id, 'video_tecnica')).find((a) => /ejemplo-barra\.webm$/.test(a.ruta));
+  check(vid && vid.mime === 'video/webm' && vid.duracion_seg === 6 && vid.revisado_en && (await apiA.bandeja()).archivos.every((a) => a.id !== vid.id), 'la demo trae el vídeo de la barra de Carlos (WebM, ya revisado: no espera en la bandeja)');
+  check(await apiA.video036() === true, 'y la demo tiene lo de la 036');
+  // La misma forma que la base: el mismo juego de casos
+  const raw = (j) => bA.upsert('video_revisiones', [{ archivo_id: vid.id, atleta_id: carlos.id, analisis: JSON.parse(j) }], 'archivo_id').then(() => true, () => false);
+  const okV = []; for (const j of VALIDOS.slice(0, 5)) okV.push(await raw(j));
+  // (el «null» de JSON, en la app, es no tener análisis: como un null de la base)
+  const okM = []; for (const j of MALFORMADOS.filter((x) => x !== 'null')) okM.push(await raw(j));
+  check(okV.every(Boolean) && okM.every((x) => !x), `la demo acepta los bien formados y rechaza los ${okM.length} mal formados, como analisis_valido()`);
+  check(!(await raw(JSON.stringify({ v: 1, barra: { p: [[0, 0.5, 0.5], [7.5, 0.5, 0.5]] } }))), 'y lo que se sale del vídeo (6 s, con 1 s de margen)');
+  await bA.delete('video_revisiones', { eq: { archivo_id: vid.id } });
+  const p = []; for (let t = 0; t <= 5; t += 1 / 30) p.push([t, 0.5, (200 + 80 * (1 - Math.cos(2 * Math.PI * t / 1.6))) / 640]);
+  const cal = calibracion(45, 90, 360, 640);
+  const analisis = limpiarAnalisis({ barra: { p }, cal, reps: repeticiones(p, { cal }) });
+  const r = await apiA.guardarAnalisis(vid, analisis);
+  check(r.analisis?.reps?.length === 3 && r.corregido_el && r.puntuacion == null, 'el coach lo guarda en la demo: cuenta como corrección');
+  await bA.auth.entrar('carlos@fbe.demo', 'demo');
+  const vis = await apiA.revisionVideo(vid.id);
+  check(vis.analisis?.reps?.[2]?.vm === analisis.reps[2].vm && !Object.keys(vis).some((k) => /_en$/.test(k)) && await lanza(() => apiA.guardarAnalisis(vid, analisis)) && !(await bA.select('video_revisiones', {})).length,
+    'Carlos lo lee con video_correcciones() (sin horas) y no lo puede guardar ni leer la tabla');
+  await bA.auth.entrar('ana@fbe.demo', 'demo');
+  check(await apiA.revisionVideo(vid.id) === null, 'Ana no ve el de Carlos');
+  // (v0.58, la prueba de punta a punta fallaba a ratos con ERR_FILE_NOT_FOUND) Los dos vídeos de Rubén comparten el
+  // ejemplo de la demo: borrar uno no suelta el blob que sigue usando el otro
+  {
+    const { resolveObjectURL } = await import('node:buffer');
+    await bA.auth.entrar('pelayo@fbe.demo', 'demo');
+    const ruben = (await apiA.atletas()).find((a) => a.nombre === 'Rubén Martín');
+    const [v1, v2] = await apiA.archivos(ruben.id, 'video_tecnica');
+    const u1 = await apiA.urlArchivo(v1.ruta);
+    await apiA.borrarArchivo(v2);
+    check(v1.ruta === v2.ruta && /^blob:/.test(u1) && resolveObjectURL(u1)?.size > 1000 && await apiA.urlArchivo(v1.ruta) === u1,
+      'borrar un vídeo de la demo no suelta el blob del ejemplo que comparte con otro (el que se está viendo sigue cargando)');
+  }
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

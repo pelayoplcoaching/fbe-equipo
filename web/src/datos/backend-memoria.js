@@ -13,6 +13,7 @@ import { fechaMadrid as fMadrid, instanteMadrid } from '../logica/fechas.js';
 import { emojiValido } from '../logica/emojis.js';
 import { opcionesEncuesta } from '../logica/encuestas.js';
 import { checklistValido, tempoValido, plantillaValida, videosViejos } from '../logica/tecnica.js';
+import { analisisValido } from '../logica/analisis.js';
 // Como la 033: lo que no lleva el nombre de un documento (control, invisibles y de dirección del texto, barras y <>:"|?*)
 const NOMBRE_PROHIBIDO = new RegExp('[/\\\\\\u0000-\\u001f\\u007f-\\u009f\\u200b-\\u200f\\u202a-\\u202e\\u2066-\\u2069\\ufeff<>:"|?*]');
 
@@ -42,7 +43,7 @@ const DEFECTOS = {
   objetivos: () => ({ progreso_pct: 0, estado: 'no_iniciado', descripcion: null, fecha_limite: null, ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, creado_en: ahora() }),
   archivos: () => ({ fecha: hoyISO(), sesion_ejercicio_id: null, ejercicio_id: null, comentario_coach: null, nota_atleta: null, mime: null, bytes: null, revisado_en: null, creado_en: ahora(), pose: null, poster_ruta: null, duracion_seg: null, destacado: false, nombre: null, paginas: null, serie_numero: null, repite_de: null }),
   // v0.57 (035): la corrección de cada vídeo y las listas de puntos clave del coach
-  video_revisiones: () => ({ puntuacion: null, checklist: null, tempo: null, voz_archivo_id: null, voz_inicio: null, visto_el: null, corregido_en: null, actualizado_en: ahora() }),
+  video_revisiones: () => ({ puntuacion: null, checklist: null, tempo: null, voz_archivo_id: null, voz_inicio: null, visto_el: null, corregido_en: null, actualizado_en: ahora(), analisis: null }),
   tecnica_plantillas: () => ({ actualizado_en: ahora() }),
   comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null, cliente_id: null, reenviado: false, entregado_en: null, escuchado_en: null }),
   // v0.55 (033): fijar, silenciar y las listas de difusión
@@ -795,7 +796,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && (f.repite_de == null || (f.tipo === 'video_tecnica' && f.repite_de !== f.id)),
     video_revisiones: (f) => (f.puntuacion == null || (entero(n(f.puntuacion)) && entre(n(f.puntuacion), 1, 5)))
       && (f.checklist == null || checklistValido(f.checklist)) && (f.tempo == null || tempoValido(f.tempo))
-      && (f.voz_inicio == null || (n(f.voz_inicio) >= 0 && n(f.voz_inicio) < 3600)),
+      && (f.voz_inicio == null || (n(f.voz_inicio) >= 0 && n(f.voz_inicio) < 3600))
+      // Como la 036: el análisis automático, con su forma exacta (analisis_valido)
+      && (f.analisis == null || analisisValido(f.analisis)),
     tecnica_plantillas: (f) => plantillaValida(f.puntos),
     semanas: (f) => f.foco == null || FOCOS_SEMANA.includes(f.foco),
     bloques: (f) => f.foco == null || FOCOS_BLOQUE.includes(f.foco),
@@ -934,6 +937,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     f.atleta_id = a.atleta_id;
     const dur = (Number.isFinite(a.duracion_seg) ? a.duracion_seg : 3599) + 1;
     if (f.tempo != null && f.tempo.reps?.flat().some((x) => x > dur)) throw new Error('El tempo se sale del vídeo');
+    // Como la 036: el análisis, dentro del vídeo
+    if (f.analisis != null && analisisValido(f.analisis) && !analisisValido(f.analisis, dur - 1)) throw new Error('El análisis se sale del vídeo');
     if (f.voz_archivo_id == null) f.voz_inicio = null;
     else if (!antes || f.voz_archivo_id !== antes.voz_archivo_id) {
       const v = buscar('archivos', f.voz_archivo_id);
@@ -945,10 +950,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     const hoy = fMadrid();
     f.visto_el = antes ? (antes.visto_el || (f.visto_el ? hoy : null)) : (f.visto_el ? hoy : null);
     f.corregido_en = antes ? antes.corregido_en || null : null;
-    if (!f.corregido_en && (f.puntuacion != null || f.checklist != null || f.tempo != null || f.voz_archivo_id != null)) f.corregido_en = ahora();
+    if (!f.corregido_en && (f.puntuacion != null || f.checklist != null || f.tempo != null || f.voz_archivo_id != null || f.analisis != null)) f.corregido_en = ahora();
     // actualizado_en, solo cuando cambia la corrección (abrir el vídeo no la cambia)
     const igualQue = (k) => JSON.stringify(f[k] ?? null) === JSON.stringify(antes?.[k] ?? null);
-    f.actualizado_en = antes && ['puntuacion', 'checklist', 'tempo', 'voz_archivo_id', 'voz_inicio'].every(igualQue) ? antes.actualizado_en : ahora();
+    f.actualizado_en = antes && ['puntuacion', 'checklist', 'tempo', 'voz_archivo_id', 'voz_inicio', 'analisis'].every(igualQue) ? antes.actualizado_en : ahora();
   }
   // La voz de una corrección que se quita (o se cambia por otra) se va con su archivo (como la 035)
   const soltarVoz = (id) => { if (id && buscar('archivos', id)?.tipo === 'audio') borrarCascada('archivos', [id]); };
@@ -1603,6 +1608,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         // la app no deja cargar «data:» en vídeos e imágenes)
         // (la promesa se guarda antes de esperar: dos peticiones a la vez de la misma ruta comparten el blob)
         if (!f && ruta.endsWith('/ejemplo-sentadilla.mp4')) { const pr = import('./video-demo.js').then((m) => aBlob(m.VIDEO_EJEMPLO, ruta)); urls.set(ruta, pr); return pr; }
+        // v0.58: el del análisis de la barra (un disco que hace 3 repeticiones; WebM)
+        if (!f && ruta.endsWith('/ejemplo-barra.webm')) { const pr = import('./video-barra-demo.js').then((m) => aBlob(m.VIDEO_BARRA, ruta)); urls.set(ruta, pr); return pr; }
         // v0.50: la miniatura del vídeo de ejemplo (para la bandeja del coach y el diario)
         if (!f && ruta.endsWith('/ejemplo-sentadilla.mp4.jpg')) { const pr = import('./poster-demo.js').then((m) => aBlob(m.POSTER_EJEMPLO, ruta)); urls.set(ruta, pr); return pr; }
         const foto = !f && ruta.match(/\/ejemplo-foto-(\d)\.jpg$/);
@@ -1624,7 +1631,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           // Como la 032 (revisión): un atleta solo borra lo suyo que puede borrar (con su fila; no un adjunto con mensajes);
           // (034) de «voz», solo el coach
           else if (bucket === 'voz' ? !esCoach() : !archivoBorrable(r)) continue;
-          ficheros.delete(r); alias.delete(r); if (urls.has(r)) { try { URL.revokeObjectURL(urls.get(r)); } catch { /* */ } urls.delete(r); }
+          // (v0.58) Los ejemplos de la demo (vídeos y fotos incrustados) los comparten varios archivos con la misma ruta: su
+          // blob se queda toda la sesión (si se soltara, el otro vídeo que lo está cargando daría ERR_FILE_NOT_FOUND). Lo que
+          // se subió de verdad se suelta, pero un rato después, cuando ya nadie lo está cargando.
+          const subido = ficheros.has(r);
+          ficheros.delete(r); alias.delete(r);
+          if (subido && urls.has(r)) { const u = urls.get(r); urls.delete(r); if (typeof u === 'string') setTimeout(() => { try { URL.revokeObjectURL(u); } catch { /* */ } }, 10000); }
           hechas.push(nombre);
         }
         return hechas;
@@ -2007,7 +2019,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!Array.isArray(ids) || ids.length > 1000) throw new Error('De 0 a 1000 vídeos de una vez');
         return copia(tabla('video_revisiones').filter((r) => ids.includes(r.archivo_id) && (esCoach() || r.atleta_id === miAtletaId()))
           .map((r) => ({ archivo_id: r.archivo_id, atleta_id: r.atleta_id, puntuacion: r.puntuacion ?? null, checklist: r.checklist ?? null, tempo: r.tempo ?? null,
-            voz_archivo_id: r.voz_archivo_id ?? null, voz_inicio: r.voz_inicio ?? null, visto_el: r.visto_el ?? null, corregido_el: r.corregido_en ? fMadrid(new Date(r.corregido_en)) : null })));
+            voz_archivo_id: r.voz_archivo_id ?? null, voz_inicio: r.voz_inicio ?? null, visto_el: r.visto_el ?? null, corregido_el: r.corregido_en ? fMadrid(new Date(r.corregido_en)) : null,
+            // (036) y el análisis automático que guardó el coach
+            analisis: r.analisis ?? null })));
       }
       if (nombre === 'videos_limpieza' || nombre === 'videos_limpiar') {
         if (!esCoach()) throw new Error('Solo el coach');

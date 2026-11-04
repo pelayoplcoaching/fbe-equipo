@@ -2,6 +2,22 @@
 const VERSION = '__VERSION__';
 const ARCHIVOS = __ARCHIVOS__;
 const CACHE = `fbe-atletas-${VERSION}`;
+// v0.58: el modelo de los puntos del cuerpo (modelos/pose-<versión>/, unos 12 MB): no se descarga al instalar la app,
+// sino la primera vez que se usa, y entonces se guarda aquí (una caché por versión del modelo, que sobrevive a las
+// actualizaciones de la app)
+const MODELOS = typeof __MODELOS__ !== 'undefined' ? __MODELOS__ : 'fbe-modelos';
+// (revisión de seguridad v0.58) Solo los archivos del modelo, en su carpeta bajo el alcance de la app, sin lo que vaya tras
+// «?» (la clave es la dirección limpia), y solo si llegan con el tipo de un modelo (no una página de error)
+const MODELO_DIR = typeof __MODELO_DIR__ !== 'undefined' ? __MODELO_DIR__ : 'modelos/pose/';
+const MODELO_ARCHIVOS = typeof __MODELO_ARCHIVOS__ !== 'undefined' ? __MODELO_ARCHIVOS__ : ['pose.js', 'pose_solution_packed_assets_loader.js', 'pose_solution_packed_assets.data',
+  'pose_solution_simd_wasm_bin.js', 'pose_solution_simd_wasm_bin.wasm', 'pose_solution_wasm_bin.js', 'pose_solution_wasm_bin.wasm', 'pose_web.binarypb', 'pose_landmark_lite.tflite'];
+const TIPO_MODELO = /^(text\/javascript|application\/javascript|application\/wasm|application\/octet-stream)\s*(;|$)/i;
+function claveModelo(url) {
+  const base = new URL(MODELO_DIR, self.registration.scope);
+  if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) return null;
+  const nombre = url.pathname.slice(base.pathname.length);
+  return MODELO_ARCHIVOS.includes(nombre) ? base.href + nombre : null;
+}
 
 self.addEventListener('install', (e) => {
   // La versión nueva se descarga y espera: la app ofrece «Actualizar» (o se activa sola al abrirla de cero)
@@ -11,7 +27,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('message', (e) => { if (e.data === 'activar') self.skipWaiting(); });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('fbe-atletas-') && k !== CACHE).map((k) => caches.delete(k))))
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => (k.startsWith('fbe-atletas-') && k !== CACHE) || (k.startsWith('fbe-modelos-') && k !== MODELOS)).map((k) => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -66,6 +82,15 @@ self.addEventListener('fetch', (e) => {
       caches.open(CACHE).then((c) => c.put(e.request.mode === 'navigate' ? './' : e.request, copia));
       return r;
     }).catch(() => caches.open(CACHE).then((c) => c.match(e.request.mode === 'navigate' ? './' : e.request))));
+    return;
+  }
+  // (v0.58) El modelo de los puntos del cuerpo: de su caché si ya está; si no, de la red, y se guarda para la próxima vez
+  const clave = claveModelo(url);
+  if (clave) {
+    e.respondWith(caches.open(MODELOS).then((c) => c.match(clave).then((r) => r || fetch(clave, { credentials: 'same-origin' }).then((x) => {
+      if (x.ok && x.status === 200 && TIPO_MODELO.test(x.headers.get('content-type') || '')) c.put(clave, x.clone()).catch(() => {});
+      return x;
+    }))));
     return;
   }
   // Lo demás (código, estilos, fuentes, iconos): de la caché de la app si está (nunca de otra, como la de lo compartido)

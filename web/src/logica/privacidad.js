@@ -5,13 +5,17 @@ export const formatoVersion = (v) => typeof v === 'string' && /^20\d{2}-(0[1-9]|
 export const versionMayor = (a, b) => [a, b].filter(formatoVersion).sort().pop() || null;
 // Hay que enseñarlo si no ha visto ninguna o ha visto una anterior a la actual
 export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) && (!formatoVersion(vista) || vista < actual);
-// Lo que cambia en la 2026-11 (corto: el texto entero está en la política)
+// Lo que cambia en cada versión (corto: el texto entero está en la política): [icono, título, texto, versión]. La 2026-11
+// (v0.56: el chat) y la 2026-12 (v0.57 y v0.58: los vídeos de técnica y su análisis automático)
 export const NOVEDADES_PRIVACIDAD = [
-  ['micro', 'Notas de voz', 'El micro solo se usa mientras grabas una nota de voz (el navegador te pide permiso y se suelta en cuanto paras). Solo las escucha tu coach.'],
-  ['mensaje', 'Copia del chat en el móvil', 'Para que el chat abra al momento, el móvil guarda una copia de los textos de los últimos mensajes (nunca fotos, vídeos ni audios). Se borra al cerrar la sesión.'],
-  ['imagen', 'Fotos sin ubicación', 'Las fotos se limpian antes de salir (sin GPS ni datos del móvil). Si una no se puede limpiar, te avisamos antes de enviarla. Los vídeos salen tal cual.'],
-  ['encuesta', 'Encuestas del chat', 'Si tu coach te manda una encuesta, tu voto solo lo ve él.'],
+  ['video', 'Vídeos de técnica', 'La corrección de tu coach puede llevar una nota de técnica (de 1 a 5), los puntos clave, el tempo y su voz sobre el vídeo. De «Visto» y «Corregido» ves solo el día. El análisis automático (experimental: la trayectoria de la barra, la velocidad estimada y los ángulos de cada repetición) se calcula en el móvil u ordenador, y si tu coach lo guarda, solo se guarda el resumen de cada repetición: los puntos de tu cuerpo nunca se guardan.', '2026-12'],
+  ['micro', 'Notas de voz', 'El micro solo se usa mientras grabas una nota de voz (el navegador te pide permiso y se suelta en cuanto paras). Solo las escucha tu coach.', '2026-11'],
+  ['mensaje', 'Copia del chat en el móvil', 'Para que el chat abra al momento, el móvil guarda una copia de los textos de los últimos mensajes (nunca fotos, vídeos ni audios). Se borra al cerrar la sesión.', '2026-11'],
+  ['imagen', 'Fotos sin ubicación', 'Las fotos se limpian antes de salir (sin GPS ni datos del móvil). Si una no se puede limpiar, te avisamos antes de enviarla. Los vídeos salen tal cual.', '2026-11'],
+  ['encuesta', 'Encuestas del chat', 'Si tu coach te manda una encuesta, tu voto solo lo ve él.', '2026-11'],
 ];
+// Las novedades que no ha visto: las de después de la versión que vio (todas, si no vio ninguna), hasta la actual
+export const novedadesDesde = (vista, actual) => NOVEDADES_PRIVACIDAD.filter(([, , , v]) => v <= actual && (!formatoVersion(vista) || v > vista));
 // Antes de la 034 (o si la base no responde): por cuenta, en este móvil
 export const clavePrivacidadLocal = (uid) => `fbe-privacidad-vista-${uid}`;
 // En la ficha del coach: si ese atleta ha visto las novedades de la política vigente

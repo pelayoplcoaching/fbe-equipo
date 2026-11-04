@@ -336,6 +336,41 @@ console.log('\nEl service worker (lo que pasa en el móvil)');
   check(abierta === 'https://atletas.fbe.test/app/#hoy', 'con la app cerrada, la abre ahí');
 }
 
+console.log('\nEl service worker: la caché del modelo de los puntos del cuerpo (v0.58, revisión de seguridad L1)');
+{
+  const { readFileSync } = await import('node:fs');
+  const codigo = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8').replace('__VERSION__', 'x').replace('__ARCHIVOS__', '[]')
+    .replaceAll('__MODELOS__', JSON.stringify('fbe-modelos-pose-9')).replaceAll('__MODELO_DIR__', JSON.stringify('modelos/pose-9/')).replaceAll('__MODELO_ARCHIVOS__', JSON.stringify(['pose.js', 'pose_landmark_lite.tflite', 'pose_solution_simd_wasm_bin.wasm']));
+  const oyentes = {};
+  const guardados = new Map(); const pedidos = [];
+  const cache = { match: async (k) => guardados.get(typeof k === 'string' ? k : k.url) || null, put: async (k, r) => { guardados.set(typeof k === 'string' ? k : k.url, r); } };
+  const caches = { open: async () => cache, keys: async () => [], delete: async () => true };
+  const tipos = { js: 'text/javascript', tflite: 'application/octet-stream', wasm: 'application/wasm' };
+  let respuestaHtml = false;
+  const fetch = async (u) => { const url = typeof u === 'string' ? u : u.url; pedidos.push(url); const ext = url.split('.').pop(); return new Response('x', { status: 200, headers: { 'content-type': respuestaHtml ? 'text/html' : tipos[ext] || 'application/octet-stream' } }); };
+  const self = { addEventListener: (t, f) => { oyentes[t] = f; }, registration: { scope: 'https://atletas.fbe.test/app/' }, clients: { matchAll: async () => [], claim: async () => {} }, skipWaiting: () => {}, location: { origin: 'https://atletas.fbe.test' } };
+  new Function('self', 'caches', 'fetch', codigo)(self, caches, fetch);
+  const pedir = async (url) => { let r = null; oyentes.fetch({ request: { url, method: 'GET', mode: 'cors' }, respondWith: (x) => { r = x; } }); return r ? await r : null; };
+  const base = 'https://atletas.fbe.test/app/modelos/pose-9/';
+  await pedir(`${base}pose.js`);
+  await pedir(`${base}pose_landmark_lite.tflite?v=otra`);
+  check(guardados.has(`${base}pose.js`) && guardados.has(`${base}pose_landmark_lite.tflite`) && ![...guardados.keys()].some((k) => k.includes('?')) && pedidos.includes(`${base}pose_landmark_lite.tflite`),
+    'guarda los archivos del modelo con su dirección limpia (sin «?…»: ni se guarda ni se pide con ella)');
+  const antes = guardados.size;
+  await pedir('https://atletas.fbe.test/app/modelos/pose-9/LICENSE.txt');
+  await pedir('https://atletas.fbe.test/app/modelos/otra/pose.js');
+  await pedir('https://atletas.fbe.test/otra-app/modelos/pose-9/pose.js');
+  await pedir('https://atletas.fbe.test/app/chunks/x.js?/modelos/pose-9/pose.js');
+  check(guardados.size === antes, 'nada más: ni otros archivos de la carpeta, ni otra carpeta de «modelos», ni fuera del alcance de la app, ni «/modelos/» en la consulta');
+  respuestaHtml = true;
+  const r = await pedir(`${base}pose_solution_simd_wasm_bin.wasm`);
+  check(r?.status === 200 && !guardados.has(`${base}pose_solution_simd_wasm_bin.wasm`), 'y si llega algo que no es un modelo (una página de error), se entrega pero no se guarda');
+  respuestaHtml = false;
+  const n = pedidos.length;
+  await pedir(`${base}pose.js`);
+  check(pedidos.length === n, 'lo guardado se sirve de la caché, sin volver a pedirlo');
+}
+
 console.log('\nEl service worker: los mensajes de una conversación, juntos, y a esa conversación (v0.55)');
 {
   const { readFileSync } = await import('node:fs');

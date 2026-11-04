@@ -2733,11 +2733,12 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-11' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
-  check(PV.NOVEDADES_PRIVACIDAD.length === 4 && /micro/i.test(PV.NOVEDADES_PRIVACIDAD.map((x) => x[2]).join(' ')) && /cerrar la sesión/.test(PV.NOVEDADES_PRIVACIDAD[1][2]) && /GPS/.test(PV.NOVEDADES_PRIVACIDAD[2][2]) && /voto/.test(PV.NOVEDADES_PRIVACIDAD[3][2])
+  const nov11 = PV.NOVEDADES_PRIVACIDAD.filter((x) => x[3] === '2026-11');
+  check(nov11.length === 4 && /micro/i.test(nov11.map((x) => x[2]).join(' ')) && /cerrar la sesión/.test(nov11[1][2]) && /GPS/.test(nov11[2][2]) && /voto/.test(nov11[3][2])
     && PV.clavePrivacidadLocal('u1') === 'fbe-privacidad-vista-u1', 'lo que cuenta: notas de voz y micro, la copia del chat (se borra al salir), fotos sin ubicación y los votos');
   check(/Ha visto la política de privacidad vigente/.test(PV.textoPrivacidadVista({ version: '2026-11' }, '2026-11')) && /Vio la política de 2026-10/.test(PV.textoPrivacidadVista({ version: '2026-10' }, '2026-11')) && /Sin constancia/.test(PV.textoPrivacidadVista(null, '2026-11')),
     'el coach lo ve en la ficha');
@@ -2875,13 +2876,187 @@ console.log('\nv0.57: los vídeos de técnica (encuadre, nivel, serie, marcas, t
   const filaV = legal.PRIVACIDAD.find(([t]) => t === 'Tus vídeos de técnica')?.[1] || '';
   const filaM = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil')[1];
   check(/nota de técnica de 1 a 5/.test(filaV) && /su voz sobre el vídeo/.test(filaV) && /el día \(no la hora\)/.test(filaV) && /sensor de inclinación/.test(filaV) && /destacados no se borran nunca/.test(filaV)
-    && /por donde iba/.test(filaM) && legal.VERSION_LEGAL === '2026-11', 'la privacidad lo cuenta (la corrección, la voz, «Visto» solo con el día, el nivel, la limpieza y la subida que sigue), sin cambiar de versión');
+    && /por donde iba/.test(filaM) && /^2026-1[12]$/.test(legal.VERSION_LEGAL), 'la privacidad lo cuenta (la corrección, la voz, «Visto» solo con el día, el nivel, la limpieza y la subida que sigue; la versión, en la v0.58)');
   const src = (f) => readFileSync(new URL(`../web/src/ui/${f}`, import.meta.url), 'utf8');
   const cam = src('tecnica/CamaraVideo.jsx');
   check((cam.match(/soltarCamara\(\)/g) || []).length >= 5 && /audio: false/.test(cam) && /requestPermission/.test(cam) && !/preact\/compat/.test(cam + src('tecnica/Correccion.jsx') + src('tecnica/RevisionSeguida.jsx') + src('tecnica/MiTecnica.jsx') + src('Video.jsx')),
     'la cámara se suelta al parar, cancelar, fallar y cerrar; graba sin sonido; pide el permiso del nivel en iPhone; sin preact/compat');
   const css = readFileSync(new URL('../web/src/estilos.css', import.meta.url), 'utf8');
   check(/prefers-reduced-motion: reduce\) \{ \.rep-zoom\.suave/.test(css) && !/@keyframes seguida-[a-z]+ \{[^}]*opacity/.test(css), 'con «reducir movimiento», nada se mueve; y las animaciones nuevas, sin opacidad (solo transform)');
+}
+
+console.log('\nv0.58: el análisis automático de los vídeos (seguir la barra, la velocidad, los puntos del cuerpo y lo que se guarda)');
+{
+  const A = await import('../web/src/logica/analisis.js');
+  const { VALIDOS, MALFORMADOS } = await import('./analisis-casos.mjs');
+  // 18. La NCC y el seguidor sobre fotogramas sintéticos (un disco con su aro y su buje sobre un fondo con ruido)
+  check(Math.abs(A.ncc(Uint8Array.from([1, 2, 3, 4]), Uint8Array.from([2, 4, 6, 8])) - 1) < 1e-9 && Math.abs(A.ncc(Uint8Array.from([1, 2, 3, 4]), Uint8Array.from([4, 3, 2, 1])) + 1) < 1e-9
+    && A.ncc(Uint8Array.from([5, 5, 5]), Uint8Array.from([1, 2, 3])) === 0, 'la NCC: 1 si son iguales (aunque cambie el brillo), −1 al revés y 0 si una es plana');
+  const w = 180, h = 320;
+  let semilla = 7; const azar = () => { semilla = (semilla * 16807) % 2147483647; return semilla / 2147483647; };
+  const fondo = new Uint8Array(w * h).map(() => 90 + Math.floor(azar() * 50));
+  const disco = (cx, cy, r, brillo = 0) => { const g = Uint8Array.from(fondo); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const d = Math.hypot(x - cx, y - cy); if (d <= r) g[y * w + x] = Math.min(255, (d < r * 0.25 ? 220 : d > r * 0.8 ? 30 : 60 + Math.floor(azar() * 10)) + brillo); } return g; };
+  {
+    const I = A.integrales(fondo, w, h);
+    const tpl = A.plantillaDe(fondo, w, h, 50, 60, 6);
+    const ventana = []; for (let y = 54; y <= 66; y++) for (let x = 44; x <= 56; x++) ventana.push(fondo[y * w + x]);
+    check(Math.abs(A.nccEn(fondo, w, h, I, tpl, 50, 60) - 1) < 1e-6 && Math.abs(A.ncc(Uint8Array.from(ventana), Float32Array.from(tpl.d)) - 1) < 1e-6 && A.nccEn(fondo, w, h, I, tpl, 2, 2) === null,
+      'la NCC con imágenes integrales da lo mismo que la directa (y nada si la ventana se sale)');
+  }
+  const tray = (i) => [90 + 4 * Math.sin(i / 9), 100 + 120 * (1 - Math.cos(i / 15)) / 2];
+  const [x0, y0] = tray(0);
+  const seg = A.crearSeguidor(disco(x0, y0, 20), w, h, { x: x0, y: y0, r: 20 });
+  let err = 0, noOk = 0;
+  for (let i = 1; i < 150; i++) { const [x, y] = tray(i); const r = seg.paso(disco(x, y, 20)); if (r.estado !== 'ok') noOk++; err = Math.max(err, Math.hypot(r.x - x, r.y - y)); }
+  check(noOk === 0 && err < 0.75, `sigue el disco 150 fotogramas (sube, baja y se va a los lados) con menos de 0,75 px de error (${err.toFixed(2)} px)`);
+  const est = [seg.paso(fondo).estado, seg.paso(fondo).estado, seg.paso(fondo).estado];
+  check(est.join() === 'dudoso,dudoso,perdido', 'si el disco desaparece: dos fotogramas dudosos y, al tercero, perdido');
+  {
+    const s2 = A.crearSeguidor(disco(90, 100, 18), w, h, { x: 90, y: 100, r: 18 });
+    let ok2 = true;
+    for (let i = 1; i <= 60; i++) { const r = s2.paso(disco(90, 100 + i, 18, Math.round(i * 0.8))); if (r.estado !== 'ok' || Math.abs(r.y - (100 + i)) > 1) ok2 = false; }
+    check(ok2, 'y no lo pierde si la luz cambia poco a poco (la plantilla se actualiza despacio)');
+  }
+  check(A.crearSeguidor(fondo, w, h, { x: 2, y: 2, r: 10 }) === null && A.crearSeguidor(new Uint8Array(w * h).fill(80), w, h, { x: 90, y: 90, r: 10 }) === null, 'no empieza con un círculo que se sale de la imagen o sobre algo plano');
+  const tp = A.tamProceso(1080, 1920, 100);
+  check(tp.w <= 360 && Math.abs(tp.w / tp.h - 1080 / 1920) < 0.01 && 100 * tp.k <= 20.01 && A.tamProceso(360, 640, 10).w === 360, 'se procesa a 360 px de ancho como mucho (menos si el disco es grande: su radio, ~20 px)');
+  const tra = A.tramoAnalisis(5, 200, 180);
+  check(tra.t0 === 5 && tra.t1 === 65 && tra.recortado && A.momentosDe(0, 1).length === 31 && !A.tramoAnalisis(0, 3, 3).recortado, 'como mucho 60 s; un fotograma cada 1/30 s');
+  // 19. Repeticiones y velocidad con trayectorias sintéticas: 3 sentadillas (bajada de 0,7 s; subidas de 0,8, 0,9 y 1,05 s; 80 cm)
+  const W = 360, H = 640, cal = A.calibracion(45, 90, W, H);
+  const fases = [[0.4, 'q'], [0.7, 'b'], [0.8, 's'], [0.7, 'b'], [0.9, 's'], [0.7, 'b'], [1.05, 's'], [0.4, 'q']];
+  const yDe = (t) => { let a = 0; for (const [d, f] of fases) { if (t <= a + d) { const c = (1 - Math.cos(Math.PI * (t - a) / d)) / 2; return f === 'q' ? 200 : f === 'b' ? 200 + 160 * c : 360 - 160 * c; } a += d; } return 200; };
+  const total = fases.reduce((x, f) => x + f[0], 0);
+  const pts = []; for (let t = 0; t <= total; t += 1 / 30) pts.push([Math.round(t * 1000) / 1000, 0.5, yDe(t) / H]);
+  const reps = A.repeticiones(pts, { cal });
+  const cerca = (a, b, tol) => Math.abs(a - b) <= tol;
+  check(reps.length === 3 && [1, 0.889, 0.762].every((v, i) => cerca(reps[i].vm, v, v * 0.05)), `3 repeticiones; la velocidad media de cada subida, con menos de un 5 % de error (${reps.map((r) => r.vm).join(', ')} m/s)`);
+  check(reps.every((r) => cerca(r.rom, 80, 3)) && [0.8, 0.9, 1.05].every((d, i) => cerca(reps[i].dc, d, 0.06)) && [1, 0.889, 0.762].every((v, i) => cerca(reps[i].vp, (Math.PI / 2) * v, 0.08 * v * Math.PI / 2)),
+    'el recorrido (80 cm), lo que dura cada subida y la velocidad pico (π/2 de la media en una sinusoide), dentro de su margen');
+  check(reps.every((r) => r.t[0] <= r.t[1] && r.t[1] <= r.t[2]) && cerca(reps[0].t[0], 0.4, 0.1) && cerca(reps[0].t[1], 1.1, 0.06), 'cada una con sus momentos: empieza a bajar, abajo y arriba');
+  // Con ruido (medio píxel) y un 20 % de fotogramas perdidos
+  semilla = 3;
+  const gauss = () => Math.sqrt(-2 * Math.log(azar() + 1e-12)) * Math.cos(2 * Math.PI * azar());
+  const ruido = pts.filter(() => azar() > 0.2).map(([t, x, y]) => [t, x + (gauss() * 0.5) / W, y + (gauss() * 0.7) / H]);
+  const rr = A.repeticiones(ruido, { cal });
+  check(rr.length === 3 && [1, 0.889, 0.762].every((v, i) => cerca(rr[i].vm, v, v * 0.08)), `con ruido y fotogramas perdidos, igual: 3 y su velocidad (${rr.map((r) => r.vm).join(', ')})`);
+  // Peso muerto: desde el suelo, una rampa a velocidad constante (0,5 m/s) con 0,15 s para arrancar y para frenar: 60 cm en
+  // 1,35 s (media de verdad, 0,444 m/s; pico, 0,5)
+  const posRampa = (t) => { const ta = 0.15, D = 1.35, v = 0.6 / (D - ta); const u = t - 0.5; if (u <= 0) return 0; if (u >= D) return 0.6;
+    if (u < ta) return (v * u * u) / (2 * ta); if (u > D - ta) { const r = D - u; return 0.6 - (v * r * r) / (2 * ta); } return (v * ta) / 2 + v * (u - ta); };
+  const rampa = []; for (let t = 0; t <= 3.5; t += 1 / 30) rampa.push([t, 0.5, (500 - posRampa(t) / 0.005) / H]);
+  const rm = A.repeticiones(rampa, { cal });
+  check(rm.length === 1 && cerca(rm[0].vm, 0.444, 0.444 * 0.08) && cerca(rm[0].vp, 0.5, 0.025) && cerca(rm[0].rom, 60, 2) && cerca(rm[0].dc, 1.35, 0.08), `una rampa a velocidad constante (como un peso muerto desde el suelo): ${rm[0]?.vm} m/s de media, ${rm[0]?.vp} de pico, ${rm[0]?.rom} cm`);
+  const rmR = A.repeticiones(rampa.map(([t, x, y]) => [t, x, y + (gauss() * 0.7) / H]), { cal });
+  check(rmR.length === 1 && cerca(rmR[0].vm, 0.444, 0.444 * 0.08), `y con ruido en las pausas de abajo y de arriba, igual (${rmR[0]?.vm} m/s: el ruido no alarga la subida)`);
+  check(A.repeticiones(pts.map(([t, x]) => [t, x, 0.5 + (gauss() * 0.5) / H]), { cal }).length === 0 && A.repeticiones([], { cal }).length === 0, 'sin movimiento (solo ruido), ninguna repetición');
+  const sinCal = A.repeticiones(pts);
+  check(sinCal.length === 3 && sinCal.every((r) => r.vm == null && r.rom == null && r.dc > 0), 'sin calibrar: las mismas repeticiones y lo que dura cada subida, sin m/s ni cm');
+  const res = A.resumenSerie(reps);
+  check(res.mejor === 0 && cerca(res.perdidaMejor, 23.8, 3) && res.perdidaPrimera === res.perdidaMejor && A.resumenSerie(sinCal) === null, `la mejor (la 1.ª) y la pérdida de velocidad de la mejor a la última (${res.perdidaMejor} %)`);
+  const unidas = A.unirReps(pts, reps, 0, { cal });
+  const partidas = A.partirRep(pts, unidas, 0, 1.9, { cal });
+  check(unidas.length === 2 && unidas[0].t[1] === reps[0].t[1] && cerca(unidas[0].t[2], reps[1].t[2], 0.05) && partidas.length === 3 && partidas.every((r, i) => cerca(r.vm, reps[i].vm, 0.03)),
+    'el coach une dos repeticiones (de lo más bajo de la primera a lo más alto de la segunda) y, al partirla, vuelven a ser las de antes');
+  check(A.partirRep(pts, reps, 0, 99, { cal }) === reps && A.unirReps(pts, reps, 2, { cal }) === reps, 'partir fuera de la repetición o unir la última no cambia nada');
+  const dv = A.desvioHorizontal([[0, 0.5, 0.5], [1, 0.48, 0.5], [2, 0.53, 0.5]], cal);
+  check(dv.unidad === 'cm' && cerca(dv.izq, 3.6, 0.1) && cerca(dv.der, 5.4, 0.1) && A.desvioHorizontal([[0, 0.5, 0.5], [1, 0.4, 0.5]]).unidad === '%', 'cuánto se separa la barra de la vertical del principio (en cm, o en % del ancho sin calibrar)');
+  const fs = A.fasesTrayectoria(pts);
+  check(fs.some((f) => f.fase === 'baja') && fs.some((f) => f.fase === 'sube') && fs.filter((f) => f.fase === 'sube').length === 3, 'la trayectoria, en tramos de bajada y de subida (para pintarlos de dos colores)');
+  const po = A.posicionEn([[0, 0.2, 0.4], [0.2, 0.4, 0.6]], 0.1);
+  check(cerca(po[0], 0.3, 1e-9) && cerca(po[1], 0.5, 1e-9) && A.posicionEn([[0, 0.2, 0.4], [0.2, 0.4, 0.6]], 2) === null && A.posicionEn([[0, 0.2, 0.4], [3, 0.4, 0.6]], 1) === null && A.repEn(reps, reps[1].t[1]) === 1,
+    'dónde está la barra en cada momento (y nada fuera de la trayectoria o en un hueco); en qué repetición está el vídeo');
+  check(cal && cal.px === 90 && A.calibracion(9, 90, W, H) === null && A.calibracion(61, 90, W, H) === null && A.calibracion(45, 0, W, H) === null && A.calibracion(45, 90, 0, H) === null
+    && cerca(A.diametroPx([0.25, 0.5], [0.5, 0.5], W, H), 90, 1e-9) && cerca(A.metrosPorPx(cal), 0.005, 1e-12) && A.DISCOS_CM.join() === '45,40,35,25' && A.DISCO_CM === 45,
+    'la calibración: un disco de 10 a 60 cm (45 de serie) y su diámetro en píxeles (o dos toques de lado a lado)');
+  // 20. Los ángulos
+  check(cerca(A.angulo([0, 0], [1, 0], [1, 1]), 90, 1e-9) && cerca(A.angulo([0, 0], [1, 0], [2, 0]), 180, 1e-9) && A.angulo([1, 0], [1, 0], [2, 0]) === null
+    && cerca(A.inclinacionTronco([0, 10], [0, 0]), 0, 1e-9) && cerca(A.inclinacionTronco([0, 0], [10, 0]), 90, 1e-9) && cerca(A.inclinacionTronco([0, 10], [10, 0]), 45, 1e-9),
+    'los ángulos de 0 a 180° y la inclinación del tronco desde la vertical (0° erguido, 90° tumbado)');
+  const kp = Array.from({ length: 33 }, () => [0.5, 0.5, 0.1]);
+  const pon = (i, x, y, v = 0.9) => { kp[i] = [x, y, v]; };
+  pon(11, 0.5, 0.3); pon(13, 0.55, 0.4); pon(15, 0.65, 0.4); pon(23, 0.5, 0.55); pon(25, 0.6, 0.55); pon(27, 0.6, 0.75);
+  const g = A.angulosDe(kp, 'izq', 1, 1);
+  check(cerca(g.rodilla, 90, 0.1) && cerca(g.cadera, 90, 0.1) && cerca(g.tronco, 0, 0.1) && g.codo > 90 && A.angulosDe(kp, 'der', 1, 1).rodilla === null, 'los ángulos de un fotograma (rodilla, cadera, tronco y codo) del lado elegido; lo que no se ve, sin ángulo');
+  const fotos = [0, 0.5, 1, 1.5, 2].map((t) => ({ t, kp: kp.map((q, i) => (i === 25 ? [0.6 - 0.05 * t, 0.55, 0.9] : q)) }));
+  check(A.ladoProbable(fotos) === 'izq' && A.ladoProbable(fotos.map((f) => ({ ...f, kp: f.kp.map((q, i) => (i % 2 === 0 && i > 10 ? [q[0], q[1], 0.95] : q)) }))) === 'der', 'el lado que se ve mejor (el que mira a la cámara)');
+  const rp = A.resumenPose(fotos, [{ t: [0, 0.5, 1] }, { t: [1.5, 1.7, 2] }], 'izq', { codo: true });
+  check(rp.length === 2 && rp[0].rodilla === Math.round(Math.min(...[0, 0.5, 1].map((t) => A.angulosDe(fotos[t * 2].kp, 'izq').rodilla))) && rp[0].tronco === 0 && rp[0].codo != null && rp[0].t.join() === '0,1' && A.poseEn(fotos, 0.55).t === 0.5 && A.poseEn(fotos, 5) === null,
+    'por repetición: la rodilla mínima (profundidad), el tronco más inclinado y el codo (en los press)');
+  // Lo que se guarda: igual que analisis_valido() en la base
+  check(VALIDOS.every((j) => A.analisisValido(JSON.parse(j))), `los análisis bien formados valen (${VALIDOS.length}, también el máximo: 900 puntos y 30 repeticiones)`);
+  const malos = MALFORMADOS.filter((j) => A.analisisValido(JSON.parse(j)));
+  check(MALFORMADOS.length >= 40 && !malos.length, `y ${MALFORMADOS.length} mal formados, no (forma, tipos, límites, claves de más, la pose cruda y más de 64 kB)${malos.length ? `: ${malos[0].slice(0, 80)}` : ''}`);
+  check(A.tamJsonb({ a: 1, b: [1, 2] }) === '{"a": 1, "b": [1, 2]}'.length && A.tamJsonb(JSON.parse(MALFORMADOS.reduce((x, y) => (y.length > x.length ? y : x)))) > A.MAX_BYTES_ANALISIS && A.tamJsonb(JSON.parse(VALIDOS.reduce((x, y) => (y.length > x.length ? y : x)))) < A.MAX_BYTES_ANALISIS,
+    'el tamaño se mide como lo guarda la base (jsonb::text, con sus espacios): como mucho 64 kB');
+  check(!A.analisisValido({ v: 1, barra: { p: [[0, 0.5, 0.5], [5.9, 0.5, 0.5]] } }, 4.8) && A.analisisValido({ v: 1, barra: { p: [[0, 0.5, 0.5], [5.9, 0.5, 0.5]] } }, 5) && !A.analisisValido({ v: 1, pose: { lado: 'izq', reps: [{ t: [0, 9], rodilla: 90 }] } }, 7), 'nada después del final del vídeo (con 1 s de margen, como el trigger)');
+  const largos = []; for (let t = 0; t <= 60; t += 1 / 30) largos.push([t, 0.5 + 0.0001234 * Math.sin(t), 0.3 + 0.2 * Math.sin(t)]);
+  const limpio = A.limpiarAnalisis({ barra: { p: largos }, cal, reps: A.repeticiones(largos, { cal }), pose: { lado: 'der', reps: [{ t: [0, 1], rodilla: 85.4, tronco: 190 }] } });
+  check(limpio.barra.p.length <= 900 && limpio.barra.p.at(-1)[0] === Math.round(largos.at(-1)[0] * 1000) / 1000 && limpio.barra.p.every((q) => q.every((x) => Math.round(x * 1000) / 1000 === x))
+    && limpio.pose.reps[0].rodilla === 85 && limpio.pose.reps[0].tronco === 180 && A.analisisValido(limpio, 61) && A.limpiarAnalisis({}) === null && !('reps' in A.limpiarAnalisis({ pose: { lado: 'izq', reps: [{ t: [0, 1], rodilla: 90 }] }, reps: [{ t: [0, 1, 2] }] })),
+    `lo que se guarda: 1801 puntos de 60 s quedan en ${limpio.barra.p.length} con 3 decimales; la pose, solo por repetición; vale para la base`);
+  const sql36 = readFileSync(new URL('../supabase/migraciones/036_videos_analisis.sql', import.meta.url), 'utf8');
+  check(/n > 900/.test(sql36) && /n > 30/.test(sql36) && /65536/.test(sql36) && A.MAX_PUNTOS_BARRA === 900 && A.MAX_REPS === 30 && A.MAX_BYTES_ANALISIS === 65536 && /'izq', 'der'/.test(sql36) && /0, 150/.test(sql36) && /0, 3\)/.test(sql36) && /10, 60/.test(sql36),
+    'los mismos topes que la base: 900 puntos, 30 repeticiones, 64 kB, 0–3 m/s, 0–150 cm, discos de 10 a 60 cm');
+  check(igual(A.serieVelocidad([{ fecha: '2026-10-02', revision: { analisis: { reps: [{ vm: 0.6 }, { vm: 0.7 }] } } }, { fecha: '2026-10-01', revision: { analisis: { reps: [{ vm: 0.5 }] } } }, { fecha: '2026-10-02', revision: { analisis: { reps: [{ vm: 0.65 }] } } }, { fecha: '2026-10-03', revision: null }]),
+    [{ x: '2026-10-01', y: 0.5 }, { x: '2026-10-02', y: 0.7 }]), '«Mi técnica»: la mejor velocidad media de cada día, en orden');
+  // Privacidad, rendimiento y lo que no se toca
+  const legal = await import('../web/src/legal.js');
+  const filaV = legal.PRIVACIDAD.find(([t]) => t === 'Tus vídeos de técnica')?.[1] || '';
+  check(/análisis automático/.test(filaV) && /experimental/i.test(filaV) && /no sale/.test(filaV), 'la privacidad cuenta el análisis (experimental, hecho en el dispositivo, lo que se guarda)');
+  // Revisión de seguridad de la v0.58
+  // M1: la política cambia (2026-12) y avisa una vez con sus novedades: las de la v0.57 y la v0.58 juntas
+  {
+    const PV2 = await import('../web/src/logica/privacidad.js');
+    const nueva = PV2.NOVEDADES_PRIVACIDAD.filter((x) => x[3] === '2026-12');
+    const t = nueva.map((x) => x[2]).join(' ');
+    check(legal.VERSION_LEGAL === '2026-12' && nueva.length === 1 && /nota de técnica \(de 1 a 5\)/.test(t) && /puntos clave/.test(t) && /tempo/.test(t) && /su voz sobre el vídeo/.test(t) && /solo el día/.test(t)
+      && /experimental/.test(t) && /trayectoria de la barra/.test(t) && /velocidad estimada/.test(t) && /ángulos/.test(t) && /en el móvil u ordenador/.test(t) && /resumen de cada repetición/.test(t) && /nunca se guardan/.test(t),
+      '(M1) la política pasa a la 2026-12 con una novedad, corta: la corrección (nota 1–5, puntos clave, tempo, voz), solo el día, el análisis en el dispositivo y que solo se guarda el resumen (nunca los puntos del cuerpo)');
+    check(PV2.debeAvisarPrivacidad('2026-11', legal.VERSION_LEGAL) && PV2.novedadesDesde('2026-11', '2026-12').map((x) => x[1]).join() === 'Vídeos de técnica' && PV2.novedadesDesde(null, '2026-12').length === 5
+      && PV2.novedadesDesde('2026-12', '2026-12').length === 0 && PV2.novedadesDesde('2026-10', '2026-11').length === 4,
+      '(M1) quien vio la 2026-11 ve solo lo nuevo (los vídeos); quien no vio ninguna, todo');
+    check(/Vio la política de 2026-11; la vigente es la 2026-12/.test(PV2.textoPrivacidadVista({ version: '2026-11' }, legal.VERSION_LEGAL)) && /vigente \(2026-12\)/.test(PV2.textoPrivacidadVista({ version: '2026-12' }, legal.VERSION_LEGAL))
+      && /novedadesDesde\(vista, VERSION_LEGAL\)/.test(readFileSync(new URL('../web/src/ui/AvisoPrivacidad.jsx', import.meta.url), 'utf8')), '(M1) el coach ve en «Datos» qué versión ha visto cada atleta; el aviso enseña las que le faltan');
+  }
+  // M2: lo analizado se olvida al salir (o al caducar la sesión) y, como mucho, el de los 5 últimos vídeos
+  {
+    const C = await import('../web/src/ui/tecnica/capas.js');
+    for (let i = 1; i <= 7; i++) C.guardarSesionAnalisis(`u1:v${i}`, { barra: { puntos: [[i, 0.5, 0.5]] } });
+    C.leerSesionAnalisis('u1:v3');
+    C.guardarSesionAnalisis('u1:v8', {});
+    check(C.MAX_SESION_ANALISIS === 5 && C.sesionesAnalisis().join() === 'u1:v5,u1:v6,u1:v7,u1:v3,u1:v8' && C.leerSesionAnalisis('u1:v1') === null, '(M2) lo analizado en la sesión: los 5 últimos vídeos (el que se vuelve a abrir pasa a ser el último)');
+    C.ponerCapa('v3', () => null);
+    check(typeof C.capaDe('v3') === 'function', '(M2) una capa puesta sobre un vídeo');
+    C.olvidarAnalisis();
+    check(!C.sesionesAnalisis().length && C.capaDe('v3') === null, '(M2) olvidarAnalisis(): fuera lo de la sesión y las capas sobre los vídeos');
+    const app = readFileSync(new URL('../web/src/ui/App.jsx', import.meta.url), 'utf8');
+    check((app.match(/borrarCacheChat\(\)\.catch\(\(\) => \{\}\); olvidarAnalisis\(\);/g) || []).length === 2 && !/new Map\(\)/.test(readFileSync(new URL('../web/src/ui/tecnica/analisis/PanelAnalisis.jsx', import.meta.url), 'utf8')),
+      '(M2) se llama al salir y cuando la sesión se acaba sola (donde se borra la copia del chat); el panel no guarda nada por su cuenta');
+  }
+  // L2: los números, con 4 decimales como mucho (como la base)
+  {
+    const A2 = await import('../web/src/logica/analisis.js');
+    check(A2.decimales(0.1234) === 4 && A2.decimales(1e-7) === 7 && A2.decimales(0.0015) === 4 && A2.decimales(1.5e-5) === 6 && A2.decimales(150) === 0 && A2.decimales(1e21) === 0 && A2.decimales(-2.25) === 2
+      && !A2.analisisValido({ v: 1, barra: { p: [[0, 0.12345, 0.5], [0.1, 0.5, 0.5]] } }) && A2.analisisValido({ v: 1, barra: { p: [[0, 0.1234, 0.5], [0.1, 0.5, 0.5]] } }),
+      '(L2) los decimales de un número tal como se envía (también con exponente): hasta 4 valen, como en la base');
+  }
+  // L1 y L4: la caché del modelo y lo que no se precarga
+  {
+    const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+    const sw = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8');
+    check(/soloDemo\(f\)/.test(build) && /video\(-barra\)\?-demo-/.test(build) && /__MODELO_DIR__/.test(build) && /__MODELO_ARCHIVOS__/.test(build) && /claveModelo\(url\)/.test(sw) && !/pathname\.includes\('\/modelos\/'\)/.test(sw) && /TIPO_MODELO\.test/.test(sw),
+      '(L1, L4) el service worker guarda solo los archivos del modelo (su carpeta, sin «?…», con su tipo) y no precarga los vídeos de la demo');
+  }
+  const srcA = (f) => readFileSync(new URL(`../web/src/ui/${f}`, import.meta.url), 'utf8');
+  const todo = ['tecnica/Analisis.jsx', 'tecnica/capas.js', 'tecnica/analisis/PanelAnalisis.jsx', 'tecnica/analisis/Capas.jsx', 'tecnica/analisis/procesar.js', 'tecnica/analisis/pose.js', 'tecnica/analisis/seguidor.worker.js'].map(srcA).join('\n');
+  check(!/preact\/compat/.test(todo) && !/https?:\/\/(?!www\.)/.test(srcA('tecnica/analisis/pose.js') + srcA('tecnica/analisis/procesar.js')) && /terminate\(\)/.test(todo) && /bmp\.close\(\)/.test(todo) && /pose\.close\(\)/.test(todo) && /import\('\.\/analisis\/PanelAnalisis\.jsx'\)/.test(srcA('tecnica/Analisis.jsx'))
+    && !/from '\.\/analisis\//.test(srcA('tecnica/Analisis.jsx')), 'sin preact/compat; nada de fuera (ni CDN); se sueltan el worker, las imágenes y el modelo; el panel se carga solo al usarlo');
+  const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
+  const sw = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8');
+  check(/!f\.startsWith\('modelos\/'\)/.test(build) && /pose_landmark_lite\.tflite/.test(build) && !/pose_landmark_(full|heavy)/.test(build) && /script-src 'self' 'wasm-unsafe-eval';/.test(html) && !/script-src[^;]*https?:/.test(html)
+    && /modelos\//.test(sw) && /fbe-modelos-/.test(sw), 'el modelo (solo el «lite») va en la app, no se precarga al instalar y se guarda al usarlo; la CSP deja compilar wasm, sin scripts de fuera');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

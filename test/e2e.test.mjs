@@ -5,6 +5,8 @@
 import { chromium } from 'playwright';
 import { servir } from './servidor.mjs';
 import { createRequire } from 'node:module';
+import { readFileSync as leerArchivo, readdirSync } from 'node:fs';
+import { VERSION_LEGAL } from '../web/src/legal.js';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
@@ -22,7 +24,8 @@ const p = await ctx.newPage();
 const hay = async (loc, n, ms = 6000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await loc.count() === n) return true; await new Promise((r) => setTimeout(r, 100)); } return (await loc.count()) === n; };
 const errores = [];
 p.on('pageerror', (e) => errores.push(e.message));
-p.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); });
+// (con el recurso que falla, si lo hay: así se sabe cuál)
+p.on('console', (m) => { if (m.type() === 'error') { const u = m.location()?.url; errores.push(u && !m.text().includes(u) ? `${m.text()} [${u}]` : m.text()); } });
 
 // Perfil (atleta) y Cuenta (coach) no están en la barra del móvil: se abren desde el avatar de arriba (v0.18)
 async function abrirPestana(p, t) {
@@ -4408,8 +4411,13 @@ try {
   await p.locator('.burbuja.mia', { hasText: 'Sin cobertura, el primero' }).locator('.burbuja-elegir').click();
   check((await barraSel.textContent()).includes('2 seleccionados') && await barraSel.getByRole('button', { name: 'Eliminar para todos' }).count() === 1 && await barraSel.getByRole('button', { name: 'Reenviar' }).isEnabled(), 'tocar otra la suma (Eliminar y Reenviar, para lo tuyo)');
   await revisar('chat-seleccion');
+  // (el portapapeles solo se puede escribir con la página delante: si otra ventana de la prueba le ha quitado el foco, falla
+  // a ratos; y si falla, que se diga, no que se espere al aviso 30 s)
+  await p.bringToFront();
   await barraSel.getByRole('button', { name: 'Copiar' }).click();
-  await p.locator('.toast', { hasText: '2 mensajes copiados' }).waitFor();
+  const avisoCopia = p.locator('.toast', { hasText: /mensajes copiados|No se ha podido copiar/ }).first();
+  await avisoCopia.waitFor();
+  check((await avisoCopia.textContent()).includes('2 mensajes copiados'), `copia los dos (${(await avisoCopia.textContent()).trim()})`);
   const copiado = await p.evaluate(() => navigator.clipboard.readText());
   check(/^\[\d\d\/\d\d\/\d\d, \d{1,2}:\d\d\] Tú: Mañana a las 9/.test(copiado) && copiado.split('\n').length === 2, 'Copiar, como WhatsApp: «[12/10/26, 18:42] Tú: …»');
   await menuDe(p.locator('.burbuja.mia', { hasText: 'Mañana a las 9' }).last()).then((m) => m.getByRole('button', { name: 'Seleccionar' }).click());
@@ -4680,14 +4688,14 @@ try {
   const avisoPriv = p.getByRole('dialog', { name: 'Novedades de privacidad' });
   await avisoPriv.waitFor();
   const textoPriv = await avisoPriv.textContent();
-  check(['Notas de voz', 'micro', 'Copia del chat', 'cerrar la sesión', 'sin GPS', 'tu voto solo lo ve él'].every((t) => textoPriv.includes(t)) && await avisoPriv.getByRole('button', { name: 'Entendido' }).count() === 1
+  check(['Vídeos de técnica', 'nota de técnica (de 1 a 5)', 'el resumen de cada repetición', 'Notas de voz', 'micro', 'Copia del chat', 'cerrar la sesión', 'sin GPS', 'tu voto solo lo ve él'].every((t) => textoPriv.includes(t)) && await avisoPriv.getByRole('button', { name: 'Entendido' }).count() === 1
     && await avisoPriv.getByRole('button', { name: 'Leer la política completa' }).count() === 1, '(v0.56) a quien no ha visto la política nueva, al abrir: sus novedades en corto, «Leer la política completa» y «Entendido»');
   await revisar('aviso-privacidad');
   await avisoPriv.getByRole('button', { name: 'Leer la política completa' }).click();
   check((await avisoPriv.textContent()).includes('Lo que se queda en tu móvil'), 'la política entera, en la misma hoja');
   await p.keyboard.press('Escape');
   await avisoPriv.waitFor({ state: 'detached' });
-  const vistaGuardada = async () => { for (let i = 0; i < 30; i++) { const ok = await p.evaluate((u) => (JSON.parse(localStorage.getItem('fbe-demo-v2')).privacidad_vista || []).some((x) => x.usuario_id === u && x.version === '2026-11'), uidAna); if (ok) return true; await p.waitForTimeout(100); } return false; };
+  const vistaGuardada = async () => { for (let i = 0; i < 30; i++) { const ok = await p.evaluate(([u, v]) => (JSON.parse(localStorage.getItem('fbe-demo-v2')).privacidad_vista || []).some((x) => x.usuario_id === u && x.version === v), [uidAna, VERSION_LEGAL]); if (ok) return true; await p.waitForTimeout(100); } return false; };
   check(await vistaGuardada(), 'cerrarla con Escape cuenta como vista (se guarda en la base, para todos sus móviles)');
   await p.reload();
   await p.locator('.hero-dia').waitFor();
@@ -5315,6 +5323,188 @@ try {
 
   }
 
+  console.log('\nv0.58: el análisis automático de los vídeos (experimental)');
+  {
+  const demoD = () => p.evaluate(() => JSON.parse(localStorage.getItem('fbe-demo-v2')));
+  const enDemoD = async (f) => { for (let i = 0; i < 60; i++) { if (f(await demoD())) return true; await p.waitForTimeout(100); } return false; };
+  // Toca un punto de la imagen (x, y de 0 a 1 del vídeo), con el vídeo centrado en la pantalla
+  const tocarVideo = async (loc, fx, fy) => {
+    await loc.evaluate((v) => v.scrollIntoView({ block: 'center' }));
+    await p.waitForTimeout(200);
+    const caja = await loc.boundingBox();
+    const [vw, vh] = await loc.evaluate((v) => [v.videoWidth, v.videoHeight]);
+    const k = Math.min(caja.width / vw, caja.height / vh);
+    await p.mouse.click(caja.x + (caja.width - vw * k) / 2 + fx * vw * k, caja.y + (caja.height - vh * k) / 2 + fy * vh * k);
+  };
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  // (revisión de seguridad, L4) Los vídeos de ejemplo de la demo están en la web, pero el service worker no los precarga
+  {
+    const dist = new URL('../dist/', import.meta.url);
+    const swDist = leerArchivo(new URL('sw.js', dist), 'utf8');
+    const deDemo = readdirSync(new URL('chunks/', dist)).filter((f) => /^video(-barra)?-demo-/.test(f));
+    const precache = JSON.parse(/const ARCHIVOS = (\[[^\]]*\]);/.exec(swDist)[1]);
+    check(deDemo.length === 2 && deDemo.every((f) => !precache.includes(f)) && precache.some((f) => f.startsWith('chunks/semilla-demo-')) && !precache.some((f) => f.startsWith('modelos/')),
+      `el service worker no precarga los vídeos de ejemplo de la demo (${deDemo.join(', ')}) ni el modelo: solo se piden al usarlos`);
+  }
+  // El vídeo de la barra de Carlos (en la demo viene revisado): por revisar, para analizarlo en Revisar
+  const idBarra = await p.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('fbe-demo-v2'));
+    const v = d.archivos.find((a) => /ejemplo-barra\.webm$/.test(a.ruta));
+    v.revisado_en = null;
+    localStorage.setItem('fbe-demo-v2', JSON.stringify(d));
+    return v.id;
+  });
+  const pedidas = [];
+  const alPedir = (r) => pedidas.push(r.url());
+  p.on('request', alPedir);
+  await p.reload();
+  await p.locator('nav.tabs').waitFor();
+  await cerrarDialogos();
+  await p.locator('.tab', { hasText: 'Revisar' }).first().click();
+  await p.getByRole('heading', { name: 'Revisar' }).waitFor();
+  // (Carlos puede tener más cosas en la bandeja, de antes en esta prueba: la tarjeta de su vídeo)
+  const tarj = p.locator('.tarjeta-revisar', { hasText: 'Carlos Vera' }).filter({ hasText: 'Vídeo: Sentadilla barra alta' }).first();
+  await tarj.waitFor();
+  await tarj.getByRole('button', { name: 'Ver y comentar' }).click();
+  const vidR = tarj.locator('video.medio');
+  await vidR.waitFor();
+  await p.waitForFunction(() => [...document.querySelectorAll('.tarjeta-revisar video.medio')].some((v) => v.readyState >= 1 && v.videoWidth > 0));
+  await tarj.getByRole('button', { name: 'Analizar el vídeo' }).waitFor();
+  check(!pedidas.some((u) => /PanelAnalisis|chunks\/analisis-|\/modelos\//.test(u)), 'sin abrir el análisis no se descarga nada de él (ni el panel, ni el worker, ni el modelo)');
+  await tarj.getByRole('button', { name: 'Analizar el vídeo' }).click();
+  await tarj.locator('.analisis-cuerpo').waitFor();
+  check(pedidas.some((u) => /PanelAnalisis/.test(u)) && !pedidas.some((u) => /\/modelos\//.test(u)) && (await tarj.locator('.analisis .chip', { hasText: 'Experimental' }).count()) === 1
+    && /±10–15 %/.test(await tarj.locator('.analisis-aviso').textContent()), 'en Revisar, «Analizar el vídeo» descarga el panel (el modelo, aún no), marcado «Experimental» y con su aviso (±10–15 %)');
+  await revisar('analisis-inicio');
+  // 18. Tocar el disco (en el primer fotograma) y ajustar el círculo
+  await tarj.getByRole('button', { name: 'Marcar la barra' }).click();
+  await tarj.locator('.rep-elegir').waitFor();
+  check((await tarj.locator('.rep-elegir-texto').textContent()).includes('Toca el centro del disco'), 'el vídeo va al principio del tramo y pide tocar el centro del disco');
+  await tocarVideo(vidR, 0.5, 200 / 640);
+  await tarj.getByRole('slider', { name: 'Tamaño del círculo' }).waitFor();
+  await tarj.getByRole('slider', { name: 'Tamaño del círculo' }).evaluate((el) => { el.value = '45'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  check(await tarj.locator('.capa-circulo circle').count() === 1 && (await tarj.locator('.rep-elegir').count()) === 0, 'el círculo sale encima del disco, y se ajusta (tamaño y flechas)');
+  await tarj.getByRole('button', { name: 'Mover el círculo a la derecha' }).click();
+  await tarj.getByRole('button', { name: 'Mover el círculo a la izquierda' }).click();
+  // Seguir la barra: con su progreso y «Cancelar»
+  await tarj.getByRole('button', { name: 'Seguir la barra' }).click();
+  await tarj.locator('.analisis-progreso progress').waitFor();
+  await tarj.locator('.analisis-progreso').getByRole('button', { name: 'Cancelar' }).click();
+  await tarj.locator('.analisis-progreso').waitFor({ state: 'detached' });
+  check(await tarj.locator('.tabla-velocidad').count() === 0 && await tarj.getByRole('button', { name: 'Seguir la barra' }).isEnabled(), '«Cancelar» lo para (sin resultado) y se puede volver a empezar');
+  await tarj.getByRole('button', { name: 'Seguir la barra' }).click();
+  await tarj.locator('.tabla-velocidad').waitFor({ timeout: 90000 });
+  check(pedidas.some((u) => /chunks\/analisis-[0-9A-Z]+\.js/.test(u)) && !pedidas.some((u) => !u.startsWith('http://localhost:4174/') && !/^(data|blob):/.test(u) && !/i\.ytimg\.com/.test(u)),
+    'la barra se sigue en un Web Worker de la propia app; nada sale a otro servidor');
+  check(await tarj.locator('.capa-analisis .capa-tramo.fase-sube').count() >= 3 && await tarj.locator('.capa-analisis .capa-tramo.fase-baja').count() >= 3 && await tarj.locator('.capa-analisis .capa-vertical').count() === 1,
+    'la trayectoria encima del vídeo: de un color al bajar y de otro al subir, con la vertical desde donde empieza');
+  check(await tarj.locator('.tabla-velocidad tbody tr').count() === 3 && !(await tarj.locator('.tabla-velocidad thead').textContent()).includes('Media') && (await tarj.locator('.analisis-calibrar').textContent()).includes('Sin calibrar'),
+    'sin calibrar: las 3 repeticiones y lo que dura cada subida (sin m/s)');
+  // 19. Calibrar con el círculo (disco de 45 cm): la velocidad de cada repetición (la del vídeo: 1,00, 0,89 y 0,76 m/s; 80 cm)
+  await tarj.getByRole('button', { name: 'Usar el círculo' }).click();
+  await hay(tarj.locator('.tabla-velocidad thead th', { hasText: 'Media' }), 1);
+  const filas = await tarj.locator('.tabla-velocidad tbody tr').evaluateAll((trs) => trs.map((tr) => [...tr.querySelectorAll('td')].map((td) => Number(td.textContent.replace(',', '.')))));
+  const esperadas = [1, 0.889, 0.762];
+  check(filas.length === 3 && filas.every((f, i) => Math.abs(f[0] - esperadas[i]) <= esperadas[i] * 0.12) && filas.every((f) => Math.abs(f[3] - 80) <= 6) && filas[0][1] > filas[0][0],
+    `calibrado con el disco de 45 cm: la velocidad media de cada subida y su recorrido, cerca de los del vídeo (${filas.map((f) => `${f[0]} m/s, ${f[3]} cm`).join(' · ')})`);
+  check(/Mejor: la 1\.ª/.test(await tarj.locator('.analisis-resumen').textContent()) && /Pérdida de velocidad: \d+ %/.test(await tarj.locator('.analisis-resumen').textContent())
+    && await tarj.locator('svg.grafica-reps rect.barra').count() === 3 && /cm a la derecha/.test(await tarj.locator('.analisis-leyenda').textContent()),
+    'la mejor repetición, la pérdida de velocidad, una gráfica de barras y el desvío de la vertical en cm');
+  // El punto de la barra, al ritmo del vídeo
+  await tarj.getByRole('button', { name: 'Ir a la repetición 1' }).click();
+  await p.waitForTimeout(400);
+  const cy1 = Number(await tarj.locator('.capa-punto').getAttribute('cy'));
+  await tarj.getByRole('button', { name: 'Ir a la repetición 2' }).click();
+  await p.waitForTimeout(150);
+  for (let i = 0; i < 12; i++) await tarj.getByRole('button', { name: 'Fotograma siguiente' }).click();
+  await p.waitForTimeout(400);
+  const cy2 = Number(await tarj.locator('.capa-punto').getAttribute('cy'));
+  check(Number.isFinite(cy1) && Number.isFinite(cy2) && cy2 - cy1 > 10, `el punto de la barra va con el vídeo (más abajo a media bajada: ${Math.round(cy1)} → ${Math.round(cy2)})`);
+  // Unir y partir repeticiones
+  await tarj.getByRole('button', { name: 'Ir a la repetición 1' }).click();
+  await tarj.getByRole('button', { name: 'Unir con la siguiente' }).click();
+  await hay(tarj.locator('.tabla-velocidad tbody tr'), 2);
+  check(await tarj.locator('.tabla-velocidad tbody tr').count() === 2, 'el coach une dos repeticiones (si es una con un frenazo)');
+  await tarj.getByRole('button', { name: 'Como al principio' }).click();
+  await hay(tarj.locator('.tabla-velocidad tbody tr'), 3);
+  check(await tarj.locator('.tabla-velocidad tbody tr').count() === 3, 'y vuelve a como estaba');
+  await revisar('analisis-velocidad');
+  await p.setViewportSize({ width: 360, height: 780 });
+  await p.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  await p.waitForTimeout(300);
+  await revisar('analisis-velocidad-360-oscuro');
+  check(await p.evaluate(() => document.documentElement.scrollWidth <= 360), 'a 360 px y en oscuro, sin desbordes (la tabla cabe)');
+  await p.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  await p.setViewportSize({ width: 390, height: 844 });
+  // 20. Los puntos del cuerpo, con puntos de prueba (el modelo de verdad, abajo): el lado izquierdo, que sube y baja con la barra
+  await p.evaluate(() => {
+    window.__fbePosePrueba = (t) => {
+      const u = (1 - Math.cos((2 * Math.PI * Math.max(0, t - 0.4)) / 1.55)) / 2;
+      const kp = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, visibility: 0.05 }));
+      const pon = (i, x, y) => { kp[i] = { x, y, visibility: 0.95 }; };
+      pon(11, 0.5 + 0.08 * u, 0.25 + 0.2 * u); pon(13, 0.56, 0.33 + 0.18 * u); pon(15, 0.62, 0.32 + 0.18 * u);
+      pon(23, 0.46 - 0.04 * u, 0.5 + 0.16 * u); pon(25, 0.55 + 0.05 * u, 0.7); pon(27, 0.5, 0.88); pon(29, 0.48, 0.9); pon(31, 0.56, 0.9);
+      return kp;
+    };
+  });
+  await tarj.getByRole('button', { name: 'Puntos del cuerpo' }).click();
+  await tarj.getByRole('button', { name: 'Detectar los puntos del cuerpo' }).click();
+  await tarj.locator('.tabla-pose').waitFor({ timeout: 60000 });
+  check(!pedidas.some((u) => /\/modelos\//.test(u)) && await tarj.locator('.capa-pose line.hueso:not(.otro)').count() >= 4 && /rodilla \d+°/.test(await tarj.locator('.analisis-angulos').textContent()),
+    'el esqueleto encima del vídeo y los ángulos del fotograma (rodilla, cadera, tronco y codo)');
+  check(await tarj.locator('.tabla-pose tbody tr').count() === 3 && (await tarj.locator('.tabla-pose thead').textContent()).includes('Rodilla mín.'), 'por repetición (las de la barra): la rodilla mínima y el tronco más inclinado');
+  const antesLado = await tarj.locator('.analisis-angulos').textContent();
+  await tarj.getByRole('group', { name: 'Lado' }).getByRole('button', { name: 'Derecho' }).click();
+  check((await tarj.locator('.analisis-angulos').textContent()) !== antesLado && /no se ven|—/.test(await tarj.locator('.analisis-angulos').textContent()), 'el coach cambia de lado (el derecho no se ve en este vídeo)');
+  await tarj.getByRole('group', { name: 'Lado' }).getByRole('button', { name: 'Izquierdo' }).click();
+  await revisar('analisis-pose');
+  // Guardar en la corrección
+  await tarj.getByRole('button', { name: 'Guardar en la corrección' }).click();
+  await p.locator('.toast', { hasText: 'Análisis guardado en la corrección' }).waitFor();
+  check(await enDemoD((d) => { const r = (d.video_revisiones || []).find((x) => x.archivo_id === idBarra); const a = r?.analisis; return a && a.v === 1 && a.reps?.length === 3 && a.cal?.cm === 45 && a.barra.p.length > 100 && a.pose?.reps?.length === 3 && !JSON.stringify(a).includes('kp') && r.corregido_en; }),
+    'se guarda en la corrección: la trayectoria, la calibración, las 3 repeticiones y la pose por repetición (sin los puntos de cada fotograma)');
+  p.off('request', alPedir);
+  // El atleta lo ve en su vídeo corregido
+  await entrarComo('Carlos Vera');
+  await p.evaluate((h) => { location.hash = h; }, `#videos/${idBarra}`);
+  const detC = p.getByRole('dialog', { name: /^Sentadilla barra alta,/ });
+  await detC.locator('video.medio').waitFor();
+  await detC.locator('.tabla-velocidad').waitFor();
+  check((await detC.getByRole('heading', { name: 'El análisis de tu coach' }).count()) === 1 && await detC.locator('.tabla-velocidad tbody tr').count() === 3 && await detC.locator('.tabla-pose tbody tr').count() === 3
+    && await detC.locator('.capa-analisis .capa-tramo').count() >= 6 && (await detC.locator('.analisis .chip', { hasText: 'Experimental' }).count()) >= 1,
+    'Carlos lo ve en su vídeo corregido: la trayectoria encima, la velocidad de cada repetición y sus ángulos (marcado «Experimental»)');
+  await revisar('analisis-atleta');
+  await detC.getByRole('button', { name: 'Analizar la barra en tu móvil' }).click();
+  await detC.locator('.analisis-cuerpo').waitFor();
+  check(await detC.getByRole('button', { name: 'Puntos del cuerpo' }).count() === 0 && await detC.getByRole('button', { name: /Guardar en la corrección|Disponible tras/ }).count() === 0
+    && /no se guarda/.test(await detC.locator('.analisis-aviso').textContent()) && await detC.getByRole('button', { name: 'Marcar la barra' }).count() === 1,
+    'y puede analizar su barra en su móvil (sin los puntos del cuerpo y sin guardarlo)');
+  // Y sin OffscreenCanvas (Safari antiguo): sin worker, en la propia página, a ratos; el mismo resultado
+  await p.evaluate(() => { window.__offscreen = window.OffscreenCanvas; delete window.OffscreenCanvas; });
+  await detC.getByRole('button', { name: 'Marcar la barra' }).click();
+  await detC.locator('.rep-elegir').waitFor();
+  await tocarVideo(detC.locator('video.medio'), 0.5, 200 / 640);
+  await detC.getByRole('slider', { name: 'Tamaño del círculo' }).evaluate((el) => { el.value = '45'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await detC.getByRole('button', { name: 'Seguir la barra' }).click();
+  await hay(detC.locator('.analisis-cuerpo .tabla-velocidad tbody tr'), 3, 90000);
+  await detC.getByRole('button', { name: 'Usar el círculo' }).click();
+  await hay(detC.locator('.tabla-velocidad thead th', { hasText: 'Media' }), 1);
+  const filasC = await detC.locator('.tabla-velocidad tbody tr').evaluateAll((trs) => trs.map((tr) => Number(tr.querySelector('td').textContent.replace(',', '.'))));
+  check(filasC.length === 3 && filasC.every((v, i) => Math.abs(v - [1, 0.889, 0.762][i]) <= [1, 0.889, 0.762][i] * 0.12) && /no se guarda/.test(await detC.locator('.analisis-aviso').textContent()),
+    `sin OffscreenCanvas (sin worker), el atleta sigue su barra en la propia página con el mismo resultado (${filasC.join(', ')} m/s), sin guardarlo`);
+  await p.evaluate(() => { window.OffscreenCanvas = window.__offscreen; });
+  await detC.getByRole('button', { name: 'Cerrar el análisis' }).click();
+  await detC.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
+  await detC.waitFor({ state: 'detached' });
+  await p.locator('.tab', { hasText: 'Progreso' }).first().click();
+  const vel = p.locator('.mi-tecnica-velocidad');
+  await vel.waitFor();
+  check(/m\/s/.test(await vel.textContent()) && /±10–15 %/.test(await vel.textContent()), '«Mi técnica»: la velocidad de su mejor repetición en ese ejercicio (estimada)');
+  await revisar('mi-tecnica-velocidad');
+  await p.emulateMedia({ colorScheme: null, reducedMotion: null });
+  }
+
   await p.unroute('https://i.ytimg.com/**');
   }
 } catch (e) {
@@ -5324,6 +5514,54 @@ try {
 }
 
 check(errores.length === 0, errores.length ? `sin errores: ${errores.join(' || ')}` : 'sin errores de consola, desbordes ni controles sin nombre');
+
+// v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
+// se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
+console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');
+try {
+  const cx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES' });
+  const pm = await cx.newPage();
+  const pedidasM = [];
+  const erroresM = [];
+  pm.on('request', (r) => pedidasM.push(r.url()));
+  pm.on('pageerror', (e) => erroresM.push(e.message));
+  pm.on('console', (m) => { if (m.type() === 'error' && /Content Security Policy|CSP/.test(m.text())) erroresM.push(m.text()); });
+  await pm.goto('http://localhost:4174/?demo');
+  await pm.getByRole('button', { name: /Pelayo/ }).first().click();
+  const codM = pm.getByLabel('Código', { exact: true });
+  await Promise.race([codM.waitFor(), pm.locator('nav.tabs').waitFor()]);
+  if (await codM.isVisible().catch(() => false)) { await codM.fill('123456'); await pm.getByRole('button', { name: 'Entrar' }).click(); }
+  await pm.locator('nav.tabs').waitFor();
+  await pm.waitForTimeout(800);
+  for (let i = 0; i < 4; i++) { const d = pm.locator('[role=dialog]').first(); if (!(await d.isVisible().catch(() => false))) break; await pm.keyboard.press('Escape'); await pm.waitForTimeout(250); }
+  await pm.locator('.tab', { hasText: 'Atletas' }).first().click();
+  await pm.locator('.tarjeta-atleta', { hasText: 'Carlos Vera' }).first().click();
+  await pm.getByRole('tab', { name: 'Vídeos y fotos' }).click();
+  await pm.locator('.diario-item').first().click();
+  const detM = pm.getByRole('dialog').last();
+  await detM.locator('video.medio').waitFor();
+  await pm.waitForFunction(() => [...document.querySelectorAll('video.medio')].some((v) => v.readyState >= 1));
+  await detM.getByRole('button', { name: 'Analizar el vídeo' }).click();
+  await detM.getByRole('button', { name: 'Puntos del cuerpo' }).click();
+  // Un tramo corto (del principio a 0,3 s): el modelo, por software, va despacio
+  await detM.getByRole('button', { name: 'Entre dos marcas' }).click();
+  await detM.getByRole('button', { name: 'Inicio aquí' }).click();
+  for (let i = 0; i < 9; i++) await detM.getByRole('button', { name: 'Fotograma siguiente' }).click();
+  await pm.waitForTimeout(300);
+  await detM.getByRole('button', { name: 'Fin aquí' }).click();
+  check(!pedidasM.some((u) => /\/modelos\//.test(u)), 'el modelo no se descarga al abrir la app ni el análisis');
+  await detM.getByRole('button', { name: 'Detectar los puntos del cuerpo' }).click();
+  await Promise.race([detM.locator('.tabla-pose').waitFor({ timeout: 150000 }), detM.locator('.analisis-angulos').waitFor({ timeout: 150000 }), detM.getByText('No se ha encontrado a nadie en el vídeo').waitFor({ timeout: 150000 })]);
+  const delModelo = pedidasM.filter((u) => /\/modelos\/pose-[\d.]+\//.test(u));
+  check(['pose.js', 'pose_landmark_lite.tflite', 'pose_solution_packed_assets.data', 'pose_web.binarypb'].every((f) => delModelo.some((u) => u.endsWith(f))) && delModelo.some((u) => /wasm_bin\.wasm$/.test(u))
+    && delModelo.every((u) => u.startsWith('http://localhost:4174/modelos/')) && !pedidasM.some((u) => /googleapis|jsdelivr|unpkg|tfhub|kaggle|cdn\./.test(u)),
+    `al usarlo, el modelo («lite»), su wasm y su grafo se descargan de la propia app (${delModelo.length} archivos), nunca de un CDN`);
+  check(!erroresM.length && !(await detM.locator('.nota[role=alert]').textContent().catch(() => '')).includes('no arranca'), `arranca con la política de seguridad de la app (wasm-unsafe-eval) y analiza el tramo sin errores${erroresM.length ? `: ${erroresM.join(' | ').slice(0, 300)}` : ''}`);
+  await cx.close();
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el modelo de los puntos del cuerpo:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 
 // v0.21: la página que genera las claves de las notificaciones (se abre con doble clic, sin servidor)
 console.log('\nClaves de las notificaciones (scripts/claves-notificaciones.html)');

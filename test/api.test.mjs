@@ -2165,5 +2165,65 @@ console.log('\nv0.57: los vídeos de técnica (migración 035)');
   }
 }
 
+console.log('\nv0.58: el análisis automático de los vídeos (migración 036)');
+{
+  const { limpiarAnalisis, repeticiones, calibracion, serieVelocidad } = await import('../web/src/logica/analisis.js');
+  const { AVISO_036 } = await import('../web/src/datos/api.js');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [aAna] = await b.sql(`select id from atletas where email = 'ana@test'`);
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const v = await api.subirArchivo(aAna.id, new Blob(['vídeo 058'], { type: 'video/webm' }), { tipo: 'video_tecnica', duracion_seg: 6 });
+  // Un análisis como el de la app: 3 subidas de 80 cm, calibrado con un disco de 45 cm
+  const p = []; for (let t = 0; t <= 5; t += 1 / 30) p.push([t, 0.5, (200 + 80 * (1 - Math.cos(2 * Math.PI * t / 1.6))) / 640]);
+  const cal = calibracion(45, 90, 360, 640);
+  const analisis = limpiarAnalisis({ barra: { p }, cal, reps: repeticiones(p, { cal }), pose: { lado: 'der', reps: [{ t: [0, 1.6], rodilla: 88, tronco: 35 }] } });
+  check(await lanza(() => api.guardarAnalisis(v, analisis)), 'Ana no guarda el análisis de su vídeo (lo hace en su móvil, sin guardarlo)');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(await api.video036() === true && analisis.reps.length === 3, 'la app sabe que la base tiene la 036');
+  check(await lanza(() => api.guardarAnalisis(v, { v: 1, barra: { p: [[0, 0.5, 0.5]] } })) && await lanza(() => api.guardarAnalisis(v, { v: 1, barra: { p: [[0, 0.5, 0.5], [7.5, 0.5, 0.5]] } }))
+    && await lanza(() => api.guardarAnalisis(v, { ...analisis, pose: { lado: 'der', reps: [{ t: [0, 1], puntos: [[0.5, 0.5]] }] } })), 'uno mal formado, que se sale del vídeo o con los puntos del cuerpo en crudo, no se guarda');
+  const r = await api.guardarAnalisis(v, analisis);
+  check(r.analisis?.reps?.length === 3 && r.analisis.cal.cm === 45 && r.analisis.pose.reps[0].rodilla === 88 && /^\d{4}-\d{2}-\d{2}$/.test(r.corregido_el), 'el coach lo guarda en la corrección (y cuenta como corregido)');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const rA = await api.revisionVideo(v.id);
+  const d = (await api.diario(aAna.id)).find((x) => x.id === v.id);
+  check(rA.analisis?.barra?.p?.length === analisis.barra.p.length && d.revision.analisis.reps[1].vm === analisis.reps[1].vm && d.estado.estado === 'corregido', 'Ana lo ve en su vídeo corregido (la trayectoria, las repeticiones y la pose)');
+  const g = (await api.miTecnica(aAna.id)).find((x) => x.videos.some((y) => y.id === v.id));
+  check(serieVelocidad(g.videos).length === 1 && serieVelocidad(g.videos)[0].y === Math.max(...analisis.reps.map((x) => x.vm)), '«Mi técnica» tiene su velocidad para la gráfica');
+  check((await api.exportar(aAna.id)).video_correcciones.some((x) => x.archivo_id === v.id && x.analisis?.v === 1), 'y su copia de datos lo lleva');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check(await api.revisionVideo(v.id) === null, 'Luis no lo ve');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check((await api.guardarAnalisis(v, null)).analisis === null, 'el coach lo quita');
+  // Sin la 036: el análisis funciona en el móvil del coach, pero guardarlo dice qué falta (y lo de la 035, igual)
+  {
+    const sin = crearApi({ ...b, auth: b.auth, storage: b.storage, rpc: b.rpc.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), insert: b.insert.bind(b),
+      upsert: async (t, f, c) => { if (t === 'video_revisiones' && f.some((x) => 'analisis' in x)) { const e = new Error('column "analisis" of relation "video_revisiones" does not exist'); e.code = '42703'; throw e; } return b.upsert(t, f, c); },
+      select: async (t, f) => { if (t === 'video_revisiones' && /analisis/.test(f?.cols || '')) { const e = new Error('column video_revisiones.analisis does not exist'); e.code = '42703'; throw e; } return b.select(t, f); } });
+    let m = '';
+    try { await sin.guardarAnalisis(v, analisis); } catch (e) { m = e.message; }
+    check(await sin.video035() === true && await sin.video036() === false && m === AVISO_036 && m === 'Disponible tras la migración 036' && (await sin.revisionVideo(v.id))?.archivo_id === v.id,
+      'sin la 036, la app lo sabe: guardar dice «Disponible tras la migración 036» y la corrección se lee igual');
+  }
+  // (revisión de seguridad, L3) Un error de red (o cualquiera que no sea «falta la columna») no es «la 036 está» ni «no
+  // está»: no se sabe, no se recuerda y se vuelve a mirar; al guardar, sale el error de verdad
+  {
+    let mirar = 0, red = true;
+    const caido = () => new Error('TypeError: Failed to fetch');
+    const conRed = crearApi({ ...b, auth: b.auth, storage: b.storage, rpc: b.rpc.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), insert: b.insert.bind(b),
+      upsert: async (t, f, c) => { if (red && t === 'video_revisiones') throw caido(); return b.upsert(t, f, c); },
+      select: async (t, f) => { if (t === 'video_revisiones' && /analisis/.test(f?.cols || '')) { mirar++; if (red) throw caido(); } return b.select(t, f); } });
+    const primera = await conRed.video036();
+    const segunda = await conRed.video036();
+    let m = '';
+    try { await conRed.guardarAnalisis(v, analisis); } catch (e) { m = e.message; }
+    check(primera === null && segunda === null && mirar >= 3 && /Failed to fetch/.test(m) && !/migración 036/.test(m),
+      '(revisión) sin conexión, la 036 queda «no se sabe» (no «está»), se vuelve a mirar cada vez y guardar enseña el error de verdad');
+    red = false;
+    check(await conRed.video036() === true && (await conRed.guardarAnalisis(v, analisis)).analisis?.v === 1, '(revisión) y con la red de vuelta, se sabe y se guarda');
+    await conRed.guardarAnalisis(v, null);
+  }
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);
