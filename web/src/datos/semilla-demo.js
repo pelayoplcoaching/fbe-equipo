@@ -412,6 +412,13 @@ export function semillaDemo(hoy = hoyISO()) {
     (db.tecnica_plantillas ||= []).push({ ejercicio_id: ej['Sentadilla barra alta'].id, actualizado_en: hace(60 * 24 * 40),
       puntos: ['Pie entero apoyado: talón, base del dedo gordo y del meñique', 'Rodillas en la dirección de los pies (sin irse hacia dentro)', 'Profundidad que se mantiene con la espalda neutra', 'Cadera y pecho suben a la vez', 'Aire y tronco firme antes de cada repetición'] });
   }
+  // v0.58: un vídeo de Carlos para el análisis automático (experimental): un disco de 45 cm que hace 3 sentadillas a
+  // velocidad conocida (lo genera scripts/video-barra-demo.mjs). Ya revisado: no espera en la bandeja del coach.
+  if (ej['Sentadilla barra alta']) {
+    db.archivos.push({ id: uuid(), atleta_id: carlos.id, tipo: 'video_tecnica', ruta: `${carlos.id}/ejemplo-barra.webm`, fecha: sumarDias(hoy, -14),
+      sesion_ejercicio_id: null, ejercicio_id: ej['Sentadilla barra alta'].id, nota_atleta: 'Tres repeticiones con 80 kg: ¿cómo va la velocidad?',
+      comentario_coach: null, mime: 'video/webm', bytes: 154584, revisado_en: hace(60 * 24 * 13), creado_en: hace(60 * 24 * 14), duracion_seg: 6, serie_numero: null, repite_de: null });
+  }
 
   // Fotos de progreso de Ana (siluetas de ejemplo), el mismo día que sus medidas
   [[56, 1], [28, 2], [0, 3]].forEach(([dias, n]) => db.archivos.push({

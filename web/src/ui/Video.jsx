@@ -4,6 +4,7 @@ import { textoMomento, partirMomentos } from '../logica/momentos.js';
 import { grados, rectImagen, limpiarDibujo, describirDibujo, dibujoVisible, dibujoValido, MAX_FORMAS, MAX_TEXTO_DIBUJO, COLORES_DIBUJO, HEX_COLOR, COLOR_DIBUJO } from '../logica/dibujo.js';
 import { marcadores, marcaVecina, tiempoVoz, limitarZoom, limitarPan, ZOOM_MAX } from '../logica/tecnica.js';
 import { useCorrecciones } from './tecnica/correcciones.js';
+import { useCapa } from './tecnica/capas.js';
 export { textoMomento };
 
 // Reproductor para revisar técnica: cámara lenta (0,25×, 0,5×, 1×), fotograma a fotograma, bucle y
@@ -16,6 +17,8 @@ export { textoMomento };
 // el vídeo la pausa; ir a otro momento la lleva ahí), zoom (pellizcar, dos toques o + y −, y mover la imagen) y un
 // ajuste fino para ir fotograma a fotograma arrastrando. Las capas de análisis (v0.58: trayectoria de la barra,
 // velocidad, puntos del cuerpo) irán en «capas», entre el vídeo y los dibujos, con el mismo rectángulo de la imagen.
+// v0.58: así es: el análisis automático pone su capa (tecnica/capas.js) y, para empezar, pide «elegir un punto» de la
+// imagen (el disco de la barra): un toque sobre el vídeo en pausa, que da sus coordenadas de 0 a 1.
 
 // (v0.57) por id, una pila: el mismo vídeo puede estar a la vez en su tarjeta y en «Comparar»; manda el último abierto y, al
 // cerrarse, vuelve el de antes
@@ -46,6 +49,11 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null 
   const [edicion, setEdicion] = useState(null);      // { formas, herramienta, color, enCurso, alTerminar, t0, hasta, texto }
   const edicionRef = useRef(null);
   edicionRef.current = edicion;
+  // (v0.58) Elegir un punto de la imagen para el análisis: { texto, alElegir }
+  const [eleccion, setEleccion] = useState(null);
+  const eleccionRef = useRef(null);
+  eleccionRef.current = eleccion;
+  const capaAnalisis = useCapa(archivoId);
   const [zoom, setZoom] = useState({ z: 1, x: 0, y: 0 });
   const zoomRefVal = useRef(zoom);
   zoomRefVal.current = zoom;
@@ -102,9 +110,22 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null 
       },
       // Este fotograma con lo que se ve dibujado encima, como imagen JPEG (para mandarla o guardarla)
       fotograma: () => ultimo.current.exportar(),
+      // (v0.58) Para el análisis: el vídeo (su dirección y el elemento) y elegir un punto de la imagen con un toque. Da
+      // [x, y] de 0 a 1, o null si se cancela (o se pide otro)
+      fuente: () => ultimo.current.src || null,
+      elemento: () => v.current || null,
+      elegirPunto: ({ texto = 'Toca la imagen' } = {}) => new Promise((ok) => {
+        eleccionRef.current?.alElegir?.(null);
+        edicionRef.current?.alTerminar?.(null); setEdicion(null);
+        v.current?.pause();
+        setEleccion({ texto, alElegir: ok });
+        v.current?.scrollIntoView?.({ block: 'nearest' });
+      }),
+      cancelarEleccion: () => { const e = eleccionRef.current; setEleccion(null); e?.alElegir?.(null); },
     };
     reproductores.set(archivoId, [...(reproductores.get(archivoId) || []), api]);
     return () => {
+      eleccionRef.current?.alElegir?.(null);
       const resto = (reproductores.get(archivoId) || []).filter((x) => x !== api);
       if (resto.length) reproductores.set(archivoId, resto); else reproductores.delete(archivoId);
     };
@@ -217,7 +238,7 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null 
   // Zoom y mover la imagen: pellizcar (dos dedos), dos toques (o doble clic) y arrastrar con zoom; nunca mientras se dibuja
   const centroDe = (e) => { const b = marco.current.getBoundingClientRect(); return { x: e.clientX - b.left - b.width / 2, y: e.clientY - b.top - b.height / 2 }; };
   const gBajar = (e) => {
-    if (edicionRef.current || e.button > 0) return;
+    if (edicionRef.current || eleccionRef.current || e.button > 0) return;
     const g = gesto.current;
     g.punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (g.punteros.size === 2) {
@@ -284,10 +305,19 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null 
   }
 
   ultimo.current.exportar = exportarFotograma;
+  ultimo.current.src = src;
+  const elegir = (e) => {
+    const el2 = eleccionRef.current; if (!el2 || !rect.w) return;
+    e.preventDefault(); e.stopPropagation();
+    const p = aNorm(e);
+    setEleccion(null);
+    el2.alElegir?.(p);
+  };
+  const pintarCapa = capas || capaAnalisis;
   const zoomEstilo = zoom.z > 1 || zoom.x || zoom.y ? { transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.z})` } : undefined;
   const totalFotogramas = Math.max(1, Math.round((dur || 0) / FOTOGRAMA));
   return (
-    <div class={`reproductor ${edicion ? 'dibujando' : ''} ${zoom.z > 1 ? 'con-zoom' : ''}`} onKeyDown={tecla}>
+    <div class={`reproductor ${edicion ? 'dibujando' : ''} ${eleccion ? 'eligiendo' : ''} ${zoom.z > 1 ? 'con-zoom' : ''}`} onKeyDown={tecla}>
       <div class="rep-marco" ref={marco} onPointerDown={gBajar} onPointerMove={gMover} onPointerUp={gSoltar} onPointerCancel={gSoltar}>
         <div class={`rep-zoom ${sinMovimiento() ? '' : 'suave'}`} ref={capaZoom} style={zoomEstilo}>
           <video class="medio" ref={v} src={src} playsInline preload="metadata" loop={bucle}
@@ -295,7 +325,7 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null 
             onTimeUpdate={(e) => alTiempo(e.currentTarget.currentTime)} onSeeked={(e) => alTiempo(e.currentTarget.currentTime)}
             onPlay={() => { setJugando(true); if (visto && visto.hasta == null) setVisto(null); sincronizar(); }} onPause={() => { setJugando(false); sincronizar(); }}
             onRateChange={sincronizar} onClick={clicVideo} onDblClick={dobleClic} />
-          {capas && rect.w > 0 && <div class="rep-capas" aria-hidden="true">{capas({ rect, caja, t, dur, proporcion, video: v.current })}</div>}
+          {pintarCapa && rect.w > 0 && <div class="rep-capas" aria-hidden="true">{pintarCapa({ rect, caja, t, dur, proporcion, video: v.current, jugando })}</div>}
           {(formas.length > 0 || edicion) && rect.w > 0 && (
             <svg class={`rep-lienzo ${edicion ? '' : 'solo-ver'}`} viewBox={`0 0 ${caja.w} ${caja.h}`} role="img" aria-label={formas.length ? `Dibujo: ${describirDibujo({ formas }, proporcion)}` : 'Lienzo para dibujar sobre el vídeo'}
               onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alCancelar}>
@@ -303,6 +333,11 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null 
             </svg>
           )}
         </div>
+        {eleccion && rect.w > 0 && (
+          <div class="rep-elegir" onPointerDown={elegir}>
+            <span class="rep-elegir-texto" role="status">{eleccion.texto}</span>
+          </div>
+        )}
         {serie && <span class="rep-serie num">{serie}</span>}
         {zoom.z > 1 && <span class="rep-zoom-nivel num" aria-hidden="true">{String(Math.round(zoom.z * 10) / 10).replace('.', ',')}×</span>}
       </div>

@@ -408,6 +408,9 @@ end $$;
 -- La corrección de unos vídeos, como la lee la app (el atleta, la de los suyos; el coach, cualquiera): sin ninguna hora.
 -- De «Visto» y de «Corregido», solo el día (en Madrid), muestre o no el coach cuándo está en línea; actualizado_en no
 -- sale. (El atleta no lee la tabla: ahí están las horas, que son solo para el coach.) Como mucho 1000 vídeos por vez.
+-- (v0.58) La 036 la amplía con el análisis: si se repite la 035 en una base que ya la tiene, se borra y se crea como aquí
+-- (la 036, después, la vuelve a ampliar; sus permisos, al final)
+drop function if exists public.video_correcciones(uuid[]);
 create or replace function public.video_correcciones(p_archivos uuid[])
 returns table (archivo_id uuid, atleta_id uuid, puntuacion smallint, checklist jsonb, tempo jsonb, voz_archivo_id uuid, voz_inicio numeric,
                visto_el date, corregido_el date)

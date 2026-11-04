@@ -41,6 +41,7 @@ import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelM
 import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
 import { planDifusion, planReenvio, nombreSeguroPdf, PDF_MAX_MB, hastaFijado, fijadoVigente, hastaSilencio, silenciado } from '../logica/chat.js';
 import { textoSerieVideo, serieValida, puntuacionValida, checklistValido, limpiarChecklist, tempoValido, plantillaValida, limpiarPlantilla, estadoVideo, tecnicaPorEjercicio } from '../logica/tecnica.js';
+import { analisisValido } from '../logica/analisis.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -174,6 +175,13 @@ const falta035 = (e) => {
   const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
   if (/\b(serie_numero|repite_de|derivado_de|video_revisiones|video_correcciones|tecnica_plantillas|video_visto|videos_limpieza|videos_limpiar)\b/.test(m)
     && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m)) throw new Error(`${AVISO_035}. Detalle: ${e?.message || e}`);
+  throw e;
+};
+// v0.58 sin la migración 036: el análisis automático de un vídeo funciona igual (en el móvil del coach), pero no se guarda
+export const AVISO_036 = 'Disponible tras la migración 036';
+const falta036 = (e) => {
+  const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+  if (/\banalisis\b/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m)) throw new Error(`${AVISO_036} (supabase/migraciones/036_videos_analisis.sql). Detalle: ${e?.message || e}`);
   throw e;
 };
 const sinCliente033 = (e) => /cliente_id/.test(e?.message || '') && /schema cache|does not exist|no existe|column|columna|PGRST20/i.test(e?.message || '');
@@ -2224,6 +2232,29 @@ export function crearApi(backend) {
       return api._v035;
     },
     async exigir035() { if (!(await api.video035())) throw new Error(AVISO_035); },
+    // (v0.58) ¿Tiene la base la 036? (guardar el análisis automático en la corrección). El atleta no lee la tabla, pero si
+    // la columna existe la consulta no falla (le sale vacía).
+    async video036() {
+      if (!api._v036) {
+        api._v036 = (async () => {
+          if (!(await api.video035())) return false;
+          return b.select('video_revisiones', { limit: 1, cols: 'analisis' }).then(() => true, (e) => {
+            const falta = /analisis|schema cache|does not exist|no existe|column|columna|PGRST20/i.test(e?.message || '');
+            if (!falta) api._v036 = null;
+            return !falta;
+          });
+        })();
+      }
+      return api._v036;
+    },
+    // El coach guarda en la corrección el análisis de un vídeo (o lo quita con null). Devuelve la corrección.
+    async guardarAnalisis(video, analisis) {
+      if (!(await api.video036())) throw new Error(AVISO_036);
+      const dur = Number.isFinite(video?.duracion_seg) ? video.duracion_seg : null;
+      if (analisis != null && !analisisValido(analisis, dur)) throw new Error('El análisis no tiene la forma que toca (o se sale del vídeo)');
+      await b.upsert('video_revisiones', [{ archivo_id: video.id, atleta_id: video.atleta_id, analisis: analisis ?? null }], 'archivo_id').catch(falta036);
+      return api.revisionVideo(video.id);
+    },
     // La corrección de varios vídeos y la serie que se ve en cada uno: { revisiones: { id: fila }, series: { id: { texto, kg, reps, rpe, numero } } }
     async extrasVideos(archivos) {
       const vids = (archivos || []).filter((a) => a.tipo === 'video_tecnica');

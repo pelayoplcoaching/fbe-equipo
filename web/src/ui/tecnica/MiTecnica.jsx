@@ -1,12 +1,14 @@
 // «Mi técnica» (v0.57), en Progreso: los vídeos de técnica del atleta por ejercicio, en una línea de tiempo (con los
 // destacados y su estado), la gráfica de su nota de técnica en ese ejercicio y comparar dos cualesquiera.
 // Y el vídeo de un aviso («Pelayo ha corregido tu vídeo»: #videos/<id>@<segundos>), abierto en ese momento.
+// v0.58: y, si tu coach ha guardado el análisis de la barra, cómo evoluciona la velocidad (estimada) en ese ejercicio.
 import { useEffect, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Grafica, Hoja, Cargando } from '../comunes.jsx';
 import { CompararVideos } from '../Archivos.jsx';
 import { DetalleArchivo } from '../Diario.jsx';
 import { fmtCorta, fmtConDia } from '../../logica/fechas.js';
 import { NOMBRE_PUNTUACION } from '../../logica/tecnica.js';
+import { serieVelocidad, textoVel } from '../../logica/analisis.js';
 
 export function MiTecnica({ atletaId, nombreAtleta }) {
   const { api, aviso } = useApp();
@@ -40,6 +42,7 @@ export function MiTecnica({ atletaId, nombreAtleta }) {
         {g.puntos.length > 1
           ? <Grafica puntos={g.puntos} dec={0} rangoMin={4} clave={`tecnica-${g.id}`} etiqueta={`Tu nota de técnica en ${g.nombre}`} />
           : <p class="peq secundario">{g.puntos.length === 1 ? `Tu coach le ha puesto ${g.puntos[0].y}/5 (${NOMBRE_PUNTUACION[g.puntos[0].y].toLowerCase()}) a tu técnica. Con el siguiente vídeo corregido verás cómo evoluciona.` : 'Cuando tu coach ponga nota a la técnica de tus vídeos, verás aquí cómo evoluciona.'}</p>}
+        <VelocidadEjercicio g={g} />
         <ol class="tecnica-linea">
           {g.videos.map((v) => (
             <li key={v.id} class={`tecnica-item ${v.destacado ? 'destacado' : ''}`}>
@@ -84,5 +87,20 @@ export function VideoEnlazado({ id, t, alCerrar }) {
     <DetalleArchivo a={v} lista={lista} atletaId={atleta.id} nombreAtleta={atleta.nombre} nombre={v.ejercicio?.nombre || 'Vídeo'} irA={t}
       alCerrar={alCerrar} alCambiar={() => datos.recargar(true)}
       alBorrar={async () => { try { await api.borrarArchivo(v); aviso('Vídeo borrado'); alCerrar(); } catch (e) { aviso(e.message, 'error'); } }} />
+  );
+}
+
+// La velocidad media de la mejor repetición de cada vídeo de ese ejercicio (del análisis que guardó tu coach)
+function VelocidadEjercicio({ g }) {
+  const vel = serieVelocidad(g.videos);
+  if (!vel.length) return null;
+  return (
+    <div class="pila-xs mi-tecnica-velocidad">
+      <div class="separa"><span class="etq">Velocidad de la barra (estimada)</span><span class="chip aviso experimental">Experimental</span></div>
+      {vel.length > 1
+        ? <Grafica puntos={vel} unidad="m/s" dec={2} rangoMin={0.2} clave={`vel-${g.id}`} etiqueta={`Velocidad media de tu mejor repetición en ${g.nombre}, estimada`} />
+        : <p class="peq secundario">Tu mejor repetición: {textoVel(vel[0].y)} de velocidad media en la subida. Con el siguiente vídeo analizado verás cómo evoluciona.</p>}
+      <span class="mini terciario">Es una estimación a partir del vídeo (con un error de en torno al ±10–15 %): compárala entre vídeos grabados igual.</span>
+    </div>
   );
 }

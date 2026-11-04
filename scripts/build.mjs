@@ -17,6 +17,28 @@ const imagenPortada = join(raiz, IMAGEN_PORTADA);
 rmSync(salida, { recursive: true, force: true });
 mkdirSync(salida, { recursive: true });
 
+// v0.58: el análisis automático de los vídeos. El worker que sigue la barra va aparte (chunks/analisis-<hash>.js) y los
+// puntos del cuerpo usan MediaPipe Pose (@mediapipe/pose, Apache-2.0): su modelo «lite», su wasm y su grafo se copian en
+// modelos/pose-<versión>/ y se sirven desde la propia app (nunca de un CDN). Solo se descargan al usarlos: el service worker
+// no los guarda al instalar (los guarda la primera vez que se piden). En la demo de un solo archivo no van (no caben).
+const POSE_PAQUETE = join(raiz, 'node_modules/@mediapipe/pose');
+const POSE_VERSION = JSON.parse(readFileSync(join(POSE_PAQUETE, 'package.json'), 'utf8')).version;
+const POSE_DIR = `modelos/pose-${POSE_VERSION}/`;
+const POSE_ARCHIVOS = ['pose.js', 'pose_solution_packed_assets_loader.js', 'pose_solution_packed_assets.data', 'pose_solution_simd_wasm_bin.js', 'pose_solution_simd_wasm_bin.wasm',
+  'pose_solution_wasm_bin.js', 'pose_solution_wasm_bin.wasm', 'pose_web.binarypb', 'pose_landmark_lite.tflite'];
+let rutaWorker = null;
+if (!demo) {
+  const w = await esbuild.build({ entryPoints: [join(raiz, 'web/src/ui/tecnica/analisis/seguidor.worker.js')], bundle: true, minify: true, format: 'iife', target: ['es2020', 'safari15'], write: false, legalComments: 'none', logLevel: 'warning' });
+  const codigo = w.outputFiles[0].text;
+  soloAscii(codigo, 'El worker del análisis');
+  rutaWorker = `chunks/analisis-${createHash('sha256').update(codigo).digest('hex').slice(0, 8).toUpperCase()}.js`;
+  mkdirSync(join(salida, 'chunks'), { recursive: true });
+  writeFileSync(join(salida, rutaWorker), codigo);
+  mkdirSync(join(salida, POSE_DIR), { recursive: true });
+  for (const f of POSE_ARCHIVOS) copyFileSync(join(POSE_PAQUETE, f), join(salida, POSE_DIR, f));
+  copyFileSync(join(raiz, 'web/licencias/mediapipe-LICENSE.txt'), join(salida, POSE_DIR, 'LICENSE.txt'));
+}
+
 const comun = {
   entryPoints: [join(raiz, 'web/src/main.jsx')],
   bundle: true,
@@ -26,7 +48,8 @@ const comun = {
   jsx: 'automatic',
   jsxImportSource: 'preact',
   loader: { '.json': 'json' },
-  define: { __DEMO__: demo ? 'true' : 'false', __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(join(raiz, 'package.json'), 'utf8')).version) },
+  define: { __DEMO__: demo ? 'true' : 'false', __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(join(raiz, 'package.json'), 'utf8')).version),
+    __WORKER_ANALISIS__: JSON.stringify(rutaWorker), __POSE__: JSON.stringify(demo ? null : POSE_DIR) },
   // La demo privada lleva tu biblioteca real (vídeos y técnica) si está en tu ordenador; la web pública, solo nombres
   plugins: demo && existsSync(join(raiz, 'web/src/datos/biblioteca-fbe.json')) ? [{
     name: 'biblioteca-real',
@@ -108,12 +131,16 @@ ${marcadoPortada}
   const version = createHash('sha256').update(archivos.filter((f) => f !== 'config.js').map((f) => readFileSync(join(salida, f))).join('')).digest('hex').slice(0, 10);
   writeFileSync(join(salida, 'index.html'), readFileSync(join(raiz, 'web/index.html'), 'utf8').replaceAll('__VERSION__', version)
     .replace('<!--PORTADA-ESTILO-->', () => estiloPortada('estandarte.webp')).replace('<!--PORTADA-->', () => marcadoPortada));
-  const precache = ['./', ...archivos.filter((f) => f !== 'index.html').map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
-  writeFileSync(join(salida, 'sw.js'), aAscii(readFileSync(join(raiz, 'web/sw.js'), 'utf8').replace('__VERSION__', version).replace('__ARCHIVOS__', JSON.stringify(precache))));
+  // (v0.58) los modelos, no: se guardan en su propia caché la primera vez que se usan
+  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/')).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
+  writeFileSync(join(salida, 'sw.js'), aAscii(readFileSync(join(raiz, 'web/sw.js'), 'utf8').replace('__VERSION__', version).replace('__ARCHIVOS__', JSON.stringify(precache))
+    .replaceAll('__MODELOS__', JSON.stringify(`fbe-modelos-pose-${POSE_VERSION}`))));
   for (const f of ['sw.js', 'config.js']) soloAscii(readFileSync(join(salida, f), 'utf8'), f);
   writeFileSync(join(salida, '.nojekyll'), '');
 
   const tam = (f) => (statSync(join(salida, f)).size / 1024).toFixed(0);
   console.log(`dist/ versión ${version}`);
   for (const f of archivos.sort()) console.log(`  ${f.padEnd(44)} ${tam(f).padStart(5)} KB`);
+  const modelos = archivos.filter((f) => f.startsWith('modelos/')).reduce((t, f) => t + statSync(join(salida, f)).size, 0);
+  console.log(`  (modelos/, que no se precarga: ${(modelos / 1048576).toFixed(1)} MB)`);
 }

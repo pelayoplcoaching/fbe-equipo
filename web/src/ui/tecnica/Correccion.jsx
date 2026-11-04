@@ -3,6 +3,8 @@
 // (marcando la bajada, abajo y el final de la subida mientras avanza fotograma a fotograma), su voz sobre el vídeo (hasta
 // un minuto, al ritmo del vídeo) y mandar el fotograma con su dibujo al chat. El atleta la ve ordenada, oye la voz al
 // reproducir el vídeo, puede medir su tempo (solo en su móvil) y «Grabar de nuevo con la corrección».
+// v0.58: y el análisis automático (experimental): el coach lo hace aquí (con o sin la 035/036; guardarlo, con la 036) y
+// el atleta ve el guardado y puede analizar su barra en su móvil.
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { reproductorDe, textoMomento } from '../Video.jsx';
@@ -11,6 +13,7 @@ import { useGrabadora, ReproductorVoz } from '../chat/NotaVoz.jsx';
 import { textoContador } from '../../logica/notasVoz.js';
 import { AVISO_035 } from '../../datos/api.js';
 import { SubirArchivo } from '../Archivos.jsx';
+import { AnalisisVideo } from './Analisis.jsx';
 import {
   ESTADOS_PUNTO, NOMBRE_PUNTUACION, checklistSugerido, resumenChecklist, FASES_TEMPO, repsDeMarcas, tablaTempo, textoSegundos, marcaTempoValida, PASOS_ESTADO, limpiarPlantilla, MAX_PUNTOS,
 } from '../../logica/tecnica.js';
@@ -38,12 +41,22 @@ export function PanelCorreccion({ video, esCoach = false, nombreAtleta = 'Atleta
   const rev = useCarga(() => api.revisionVideo(video.id).catch(() => null), [video.id]);
   useEffect(() => { if (!rev.cargando) ponerCorrecciones(video.id, 'revision', rev.datos || null); }, [rev.datos, rev.cargando, video.id]);
   if (con035.cargando && con035.datos == null) return null;
-  if (!con035.datos) return esCoach ? <p class="mini terciario">La nota, los puntos clave, el tempo y la voz sobre el vídeo: {AVISO_035}.</p> : null;
-  if (rev.cargando && !rev.datos) return null;
   const recargar = async () => { await rev.recargar(true); alCambiar?.(); };
-  return esCoach
-    ? <CorregirVideo video={video} revision={rev.datos} nombreAtleta={nombreAtleta} alGuardar={recargar} />
-    : <VerCorreccion video={video} revision={rev.datos} />;
+  if (!con035.datos) return (
+    <>
+      {esCoach && <p class="mini terciario">La nota, los puntos clave, el tempo y la voz sobre el vídeo: {AVISO_035}.</p>}
+      <AnalisisVideo video={video} esCoach={esCoach} revision={null} alGuardado={recargar} />
+    </>
+  );
+  if (rev.cargando && !rev.datos) return null;
+  return (
+    <>
+      {esCoach
+        ? <CorregirVideo video={video} revision={rev.datos} nombreAtleta={nombreAtleta} alGuardar={recargar} />
+        : <VerCorreccion video={video} revision={rev.datos} />}
+      <AnalisisVideo video={video} esCoach={esCoach} revision={rev.datos} alGuardado={recargar} />
+    </>
+  );
 }
 
 // ---------------------------------------------------------------- el coach

@@ -2,6 +2,10 @@
 const VERSION = '__VERSION__';
 const ARCHIVOS = __ARCHIVOS__;
 const CACHE = `fbe-atletas-${VERSION}`;
+// v0.58: el modelo de los puntos del cuerpo (modelos/pose-<versión>/, unos 12 MB): no se descarga al instalar la app,
+// sino la primera vez que se usa, y entonces se guarda aquí (una caché por versión del modelo, que sobrevive a las
+// actualizaciones de la app)
+const MODELOS = typeof __MODELOS__ !== 'undefined' ? __MODELOS__ : 'fbe-modelos';
 
 self.addEventListener('install', (e) => {
   // La versión nueva se descarga y espera: la app ofrece «Actualizar» (o se activa sola al abrirla de cero)
@@ -11,7 +15,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('message', (e) => { if (e.data === 'activar') self.skipWaiting(); });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('fbe-atletas-') && k !== CACHE).map((k) => caches.delete(k))))
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => (k.startsWith('fbe-atletas-') && k !== CACHE) || (k.startsWith('fbe-modelos-') && k !== MODELOS)).map((k) => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -66,6 +70,14 @@ self.addEventListener('fetch', (e) => {
       caches.open(CACHE).then((c) => c.put(e.request.mode === 'navigate' ? './' : e.request, copia));
       return r;
     }).catch(() => caches.open(CACHE).then((c) => c.match(e.request.mode === 'navigate' ? './' : e.request))));
+    return;
+  }
+  // (v0.58) El modelo de los puntos del cuerpo: de su caché si ya está; si no, de la red, y se guarda para la próxima vez
+  if (url.pathname.includes('/modelos/')) {
+    e.respondWith(caches.open(MODELOS).then((c) => c.match(e.request).then((r) => r || fetch(e.request).then((x) => {
+      if (x.ok && x.status === 200) c.put(e.request, x.clone()).catch(() => {});
+      return x;
+    }))));
     return;
   }
   // Lo demás (código, estilos, fuentes, iconos): de la caché de la app si está (nunca de otra, como la de lo compartido)

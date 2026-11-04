@@ -15,6 +15,7 @@
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
     "@fontsource-variable/cinzel": "^5.3.0",
+    "@mediapipe/pose": "0.5.1675469404",
     "@supabase/supabase-js": "^2.118.0",
     "preact": "^10.29.8",
     "tus-js-client": "^4.3.1"
