@@ -4288,6 +4288,92 @@ console.log('\nLos vídeos de técnica, mucho mejores (migración 035)');
   await sin34.close();
 }
 
+console.log('\nEl análisis automático de los vídeos (migración 036)');
+{
+  const { VALIDOS, MALFORMADOS } = await import('./analisis-casos.mjs');
+  const { tamJsonb } = await import('../web/src/logica/analisis.js');
+  const insArch = async (f) => (await q(`insert into archivos (${Object.keys(f).join(',')}) values (${Object.keys(f).map((_, i) => `$${i + 1}`).join(',')}) returning *`, Object.values(f)))[0];
+  const ruta = (atleta, x) => `${atleta}/v058-${x}-${Math.random().toString(36).slice(2, 8)}.webm`;
+  await su();
+  check((await q(`select data_type from information_schema.columns where table_schema = 'public' and table_name = 'video_revisiones' and column_name = 'analisis'`))[0]?.data_type === 'jsonb'
+    && (await q(`select 1 from pg_constraint where conname = 'video_revisiones_analisis_valido'`)).length === 1, 'video_revisiones trae analisis (jsonb), con su restricción');
+  const malosSp = await q(`select p.oid::regprocedure::text f from pg_proc p where p.pronamespace = 'public'::regnamespace
+    and p.proname in ('analisis_valido', 'analisis_num', 'video_revision_preparar', 'video_correcciones') and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`);
+  check(!malosSp.length && (await q(`select prosecdef d from pg_proc where proname = 'video_correcciones'`))[0].d === true && (await q(`select prosecdef d from pg_proc where proname = 'analisis_valido'`))[0].d === false,
+    'las funciones nuevas y las que cambia la 036, con search_path vacío (video_correcciones, como antes, con los permisos de su dueño; el validador, sin)');
+  check(!(await q(`select has_function_privilege('anon', 'public.video_correcciones(uuid[])', 'execute') x`))[0].x && (await q(`select has_function_privilege('authenticated', 'public.video_correcciones(uuid[])', 'execute') x`))[0].x
+    && !(await q(`select has_function_privilege('anon', 'public.analisis_valido(jsonb)', 'execute') x`))[0].x
+    && (await q(`select 1 from information_schema.role_table_grants where table_name = 'video_revisiones' and grantee = 'anon'`)).length === 0
+    && (await q(`select count(*)::int n from pg_policies where tablename = 'video_revisiones'`))[0].n === 1,
+    'al volver a crear video_correcciones, sus permisos son los de la 035: la app sí, sin sesión no; la tabla, sin nada para anon y con una sola política (la del coach)');
+  const tipos = (await q(`select t.typname from pg_proc p, unnest(p.proallargtypes) a(oid) join pg_type t on t.oid = a.oid where p.proname = 'video_correcciones'`)).map((x) => x.typname);
+  check(tipos.includes('jsonb') && !tipos.some((x) => /^(timestamptz|timestamp|time|timetz|interval)$/.test(x)), `video_correcciones devuelve el análisis y sigue sin ninguna hora (${tipos.join(', ')})`);
+  // El validador: lo mismo que la app (analisisValido), y nunca un error
+  const rv = []; for (const j of VALIDOS) rv.push((await q(`select analisis_valido($1::jsonb) ok, octet_length($1::jsonb::text) n`, [j]))[0]);
+  check(rv.every((x) => x.ok === true) && rv.every((x, i) => x.n === tamJsonb(JSON.parse(VALIDOS[i]))), `los ${VALIDOS.length} bien formados valen, y su tamaño en la base es el que calcula la app`);
+  const rm = []; let errores = 0;
+  for (const j of MALFORMADOS) { try { rm.push((await q(`select analisis_valido($1::jsonb) ok`, [j]))[0].ok); } catch { errores++; } }
+  check(MALFORMADOS.length >= 20 && !errores && rm.every((x) => x === false), `los ${MALFORMADOS.length} mal formados dan false, nunca un error (${rm.filter((x) => x !== false).length} no)`);
+  check((await q(`select analisis_valido(null) a, analisis_num('"1"'::jsonb, 0, 2) b, analisis_num('1'::jsonb, 0, 2) c, analisis_num(null, 0, 2) d`)).every((x) => x.a === false && x.b === false && x.c === true && x.d === false),
+    'null y los números que no lo son, false');
+  // El coach lo guarda; Ana lo lee con video_correcciones(); Luis, no
+  await como(ana);
+  const v = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'a'), duracion_seg: 6, mime: 'video/webm', bytes: 1000 });
+  const otro = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'b'), duracion_seg: 6, mime: 'video/webm', bytes: 1000 });
+  const analisis = JSON.parse(VALIDOS[2]);
+  check(await falla(`insert into video_revisiones (archivo_id, atleta_id, analisis) values ($1, $2, $3)`, [v.id, aAna.id, JSON.stringify(analisis)]), 'Ana no guarda un análisis (ni en su vídeo)');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into video_revisiones (archivo_id, atleta_id, analisis) values ($1, $2, $3)`, [v.id, aAna.id, MALFORMADOS[12]])
+    && await falla(`insert into video_revisiones (archivo_id, atleta_id, analisis) values ($1, $2, $3)`, [v.id, aAna.id, JSON.stringify({ v: 1, barra: { p: [[0, 0.5, 0.5], [7.5, 0.5, 0.5]] } })])
+    && await falla(`insert into video_revisiones (archivo_id, atleta_id, analisis) values ($1, $2, $3)`, [v.id, aAna.id, JSON.stringify({ v: 1, pose: { lado: 'izq', reps: [{ t: [0, 8], rodilla: 90 }] } })]),
+    'uno mal formado, o que se sale del vídeo (6 s; la trayectoria o la pose después del 0:07), no se guarda');
+  await q(`insert into video_revisiones (archivo_id, atleta_id, analisis) values ($1, $2, $3)`, [v.id, aAna.id, JSON.stringify(analisis)]);
+  const [r1] = await q(`select analisis, corregido_en, actualizado_en::text a from video_revisiones where archivo_id = $1`, [v.id]);
+  check(r1.analisis?.reps?.[0]?.vm === 0.52 && r1.corregido_en && (await notis(`clave = $1`, ['video:' + v.id])).length === 1, 'el coach lo guarda: cuenta como corregir (a Ana le llega «ha corregido tu vídeo», una vez)');
+  await como(pelayo, 'aal2');
+  await q(`update video_revisiones set analisis = $2 where archivo_id = $1`, [v.id, JSON.stringify({ ...analisis, reps: [{ ...analisis.reps[0], vm: 0.6 }] })]);
+  const [r2] = await q(`select actualizado_en::text a from video_revisiones where archivo_id = $1`, [v.id]);
+  await q(`update video_revisiones set puntuacion = puntuacion where archivo_id = $1`, [v.id]);
+  check(r2.a !== r1.a && (await q(`select actualizado_en::text a from video_revisiones where archivo_id = $1`, [v.id]))[0].a === r2.a && (await notis(`clave = $1`, ['video:' + v.id])).length === 1,
+    'cambiarlo mueve su fecha de cambio (y no vuelve a avisar); tocar otra cosa sin cambiarla, no');
+  await como(ana);
+  const leida = await q(`select * from video_correcciones($1)`, [[v.id, otro.id]]);
+  check(leida.length === 1 && leida[0].analisis?.reps?.[0]?.vm === 0.6 && leida[0].analisis.pose.lado === 'izq' && !Object.keys(leida[0]).some((k) => /_en$/.test(k))
+    && (await q(`select * from video_revisiones`)).length === 0, 'Ana lo lee del suyo con video_correcciones() (sin horas), nunca de la tabla');
+  check((await q(`update video_revisiones set analisis = null where archivo_id = $1 returning 1`, [v.id])).length === 0 && await falla(`delete from video_revisiones where archivo_id = $1`, [v.id]) === false
+    && (await q(`select analisis is not null x from video_correcciones($1)`, [[v.id]]))[0].x, 'ni lo quita ni lo cambia');
+  await como(luis);
+  check((await q(`select * from video_correcciones($1)`, [[v.id]])).length === 0, 'Luis no ve el análisis del vídeo de Ana');
+  await anon();
+  check(await falla(`select * from video_correcciones($1)`, [[v.id]]) && await falla(`select analisis_valido('{}'::jsonb)`), 'sin sesión, nada');
+  // Quitarlo; y si el vídeo pasa a otro atleta, va con él
+  await como(pelayo, 'aal2');
+  await q(`update video_revisiones set analisis = null where archivo_id = $1`, [v.id]);
+  check((await q(`select analisis from video_revisiones where archivo_id = $1`, [v.id]))[0].analisis === null, 'el coach lo quita de la corrección');
+  await q(`update video_revisiones set analisis = $2 where archivo_id = $1`, [v.id, VALIDOS[0]]);
+  await q(`update archivos set atleta_id = $2, ruta = $3 where id = $1`, [v.id, aLuis.id, ruta(aLuis.id, 'movido')]);
+  await como(luis);
+  check((await q(`select analisis from video_correcciones($1)`, [[v.id]]))[0]?.analisis?.barra?.p?.length === 2, 'si el coach pasa el vídeo a Luis, el análisis va con él');
+  await su();
+  await q(`delete from archivos where ruta like '%/v058-%'`);
+  // La 036 sin la 035, y sobre una base que ya va por delante
+  const sin35 = new PGlite();
+  await sin35.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin35.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '035')) await sin35.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  const sql36 = readFileSync(new URL('../supabase/migraciones/036_videos_analisis.sql', import.meta.url), 'utf8');
+  let err36 = null;
+  try { await sin35.exec(sql36); } catch (e) { err36 = e.message; }
+  check(/Antes de la 036 hace falta la 035/.test(err36 || '') && !(await sin35.query(`select 1 from information_schema.columns where table_name = 'video_revisiones' and column_name = 'analisis'`)).rows.length,
+    'la 036 no se aplica sin la 035 (y no deja nada a medias)');
+  await sin35.exec(readFileSync(new URL('../supabase/migraciones/035_videos_tecnica.sql', import.meta.url), 'utf8'));
+  await sin35.exec(`insert into public.fbe_migraciones (numero) values (37)`);
+  let err37 = null;
+  try { await sin35.exec(sql36); } catch (e) { err37 = e.message; }
+  check(/ya tiene la migración 037/.test(err37 || ''), 'ni en una base que ya tiene una posterior');
+  await sin35.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

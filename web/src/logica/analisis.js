@@ -278,9 +278,9 @@ const r2 = (x) => Math.round(x * 100) / 100;
 const r1 = (x) => Math.round(x * 10) / 10;
 
 // Una repetición de un tramo ya preparado ({ t, s: altura suavizada, v: su velocidad }): abajo, el punto más bajo de
-// [minDe]; arriba, el más alto de [maxDe] (después de abajo); la subida, de cuando empieza a subir de verdad (más del 3 %
+// [minDe]; arriba, el más alto de [maxDe] (después de abajo); la subida, de cuando empieza a subir de verdad (más del 5 %
 // de su velocidad pico) a cuando para (entre muestras, interpolado); ini, cuando empezó a bajar antes (no antes de idesde).
-function medirEntre(P, minDe, maxDe, idesde, cal) {
+function medirEntre(P, minDe, maxDe, idesde, cal, enteras = false) {
   const { t, s, v } = P;
   const n = s.length;
   const [a0, a1] = [Math.max(0, minDe[0]), Math.min(n - 1, minDe[1])];
@@ -296,19 +296,24 @@ function medirEntre(P, minDe, maxDe, idesde, cal) {
   for (let i = imin; i <= imax; i++) if (v[i] > v[ipk]) ipk = i;
   const vp = v[ipk];
   if (!(vp > 0)) return null;
-  const umbral = 0.03 * vp;
-  let a = imin; while (a < ipk && v[a] <= umbral) a++;
-  let b = imax; while (b > ipk && v[b] <= umbral) b--;
+  const umbral = 0.05 * vp;
+  // La subida: lo que sube de verdad alrededor del pico (así, el ruido de una pausa abajo o arriba no la alarga); al unir
+  // dos repeticiones (con un frenazo en medio), de la primera a la última muestra que sube
+  let a, b;
+  if (enteras) { a = imin; while (a < ipk && v[a] <= umbral) a++; b = imax; while (b > ipk && v[b] <= umbral) b--; }
+  else { a = ipk; while (a > imin && v[a - 1] > umbral) a--; b = ipk; while (b < imax && v[b + 1] > umbral) b++; }
   if (b <= a) return null;
   // El cruce del umbral, entre la muestra de antes y la de después (sin perder medio fotograma en cada punta)
   const cruce = (i, j) => { const f = v[j] !== v[i] ? Math.max(0, Math.min(1, (umbral - v[i]) / (v[j] - v[i]))) : 0; return [t[i] + (t[j] - t[i]) * f, s[i] + (s[j] - s[i]) * f]; };
   const [ta, sa] = a > imin ? cruce(a - 1, a) : [t[a], s[a]];
   const [tb, sb] = b < imax ? cruce(b + 1, b) : [t[b], s[b]];
+  // Cuándo empezó a bajar (si bajó: un peso muerto empieza abajo)
   let ini = imin;
   while (ini > Math.max(0, idesde) && v[ini - 1] < -umbral) ini--;
+  const tini = ini < imin ? t[ini] : ta;
   const dc = tb - ta;
   if (!(dc > 0)) return null;
-  const out = { t: [r3(Math.min(t[ini], ta)), r3(ta), r3(tb)], dc: r2(dc), _i: [ini, a, b, imin, imax] };
+  const out = { t: [r3(Math.min(tini, ta)), r3(ta), r3(tb)], dc: r2(dc), _i: [ini, a, b, imin, imax] };
   if (cal) {
     out.vm = r2(Math.min(3, Math.max(0, (sb - sa) / dc)));
     out.vp = r2(Math.min(3, Math.max(0, vp)));
@@ -345,14 +350,14 @@ export function repeticiones(puntos, { cal = null, sigma = 1.5 } = {}) {
   return out.slice(0, MAX_REPS).map(({ _i, ...r }) => r);
 }
 // Una repetición medida en la trayectoria: abajo, en [minDe]; arriba, en [maxDe] (momentos en s); ini, si se da
-function medirEn(puntos, minDe, maxDe, { cal = null, sigma = 1.5, ini = null } = {}) {
+function medirEn(puntos, minDe, maxDe, { cal = null, sigma = 1.5, ini = null, enteras = false } = {}) {
   const c = calibracionValida(cal) ? cal : null;
   for (const tramo of serieUniforme(puntos)) {
     const n = tramo.t.length;
     if (n < 3 || minDe[0] > tramo.t[n - 1] || maxDe[1] < tramo.t[0]) continue;
     const P = preparar(tramo, c, sigma);
     const idx = (tt) => Math.max(0, Math.min(n - 1, Math.round((tt - tramo.t[0]) / (tramo.t[1] - tramo.t[0]))));
-    const r = medirEntre(P, minDe.map(idx), maxDe.map(idx), idx(minDe[0]), c);
+    const r = medirEntre(P, minDe.map(idx), maxDe.map(idx), idx(minDe[0]), c, enteras);
     if (!r) return null;
     const { _i, ...rep } = r;
     if (ini != null && ini <= rep.t[1]) rep.t[0] = r3(Math.max(0, ini));
@@ -367,7 +372,7 @@ export const medirTramo = (puntos, ta, tb, op = {}) => medirEn(puntos, [ta, tb],
 export function unirReps(puntos, reps, i, op = {}) {
   if (!reps?.[i] || !reps[i + 1]) return reps;
   const a = reps[i], b = reps[i + 1];
-  const r = medirEn(puntos, [a.t[1] - 0.15, a.t[2]], [b.t[1], b.t[2] + 0.15], { ...op, ini: a.t[0] });
+  const r = medirEn(puntos, [a.t[1] - 0.15, a.t[2]], [b.t[1], b.t[2] + 0.15], { ...op, ini: a.t[0], enteras: true });
   return r ? [...reps.slice(0, i), r, ...reps.slice(i + 2)] : reps;
 }
 // Partir una repetición en el momento t (el coach ve que son dos): la primera hasta t; la segunda, desde t
