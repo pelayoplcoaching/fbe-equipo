@@ -1734,7 +1734,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const legal = await import('../web/src/legal.js');
   const fila = legal.PRIVACIDAD ? legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil') : null;
   const textoLegal = fs.readFileSync(new URL('../web/src/legal.js', import.meta.url), 'utf8');
-  check(/el tamaño de la letra/.test(fila ? fila[1] : textoLegal) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice también el tamaño de la letra (sin cambiar la versión de la política)');
+  check(/el tamaño de la letra/.test(fila ? fila[1] : textoLegal) && /^\d{4}-\d{2}(\.[1-9])?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice también el tamaño de la letra (sin cambiar la versión de la política)');
   const ilus = fs.readFileSync(new URL('../web/src/ui/Ilustraciones.jsx', import.meta.url), 'utf8');
   check(['mensajes', 'diario', 'records', 'checkins', 'tareas', 'todo', 'filtro', 'descanso', 'hecha', 'semana', 'espera'].every((k) => new RegExp(`\\n  ${k}: \\(\\) =>`).test(ilus)) && !/#[0-9a-fA-F]{3,6}/.test(ilus), 'las ilustraciones: una por estado vacío y por día de Hoy, sin colores escritos (los pone el tema)');
 }
@@ -1849,7 +1849,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(A.PLANTILLAS_TARJETA.map(([k]) => k).join() === 'cifras,minima,foto', 'tres plantillas: Cifras, Mínima y Con tu foto');
   const legal = await import('../web/src/legal.js');
   const fila = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
-  check(/foto que eliges para una tarjeta/.test(fila[1]) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que la foto de la tarjeta no se sube (sin cambiar la versión de la política)');
+  check(/foto que eliges para una tarjeta/.test(fila[1]) && /^\d{4}-\d{2}(\.[1-9])?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que la foto de la tarjeta no se sube (sin cambiar la versión de la política)');
 }
 // ---------- v0.52: movimiento, racha, destacados, gráficas, carné, confeti y respiración ----------
 {
@@ -2037,7 +2037,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const filaL = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
   check(/kilos y las repeticiones que te propone/.test(filaL[1]) && /al cerrar la sesión/.test(filaL[1]), '«Lo que se queda en tu móvil» dice exactamente lo que guarda la píldora (también los kilos propuestos) y que se borra al cerrar la sesión');
   check(!/(^|\n|\}|,)\s*\.destacado\s*[{,:]/.test(bloque52) && /\.destacados-lista > \.destacado \{/.test(bloque52), 'las tarjetas de destacados solo dentro de su lista (el diario ya usa «.destacado» para sus vídeos)');
-  check(/Respira/.test(filaL[1]) && /hitos de la racha/.test(filaL[1]) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice «Respira» y los hitos ya celebrados (sin cambiar la versión de la política)');
+  check(/Respira/.test(filaL[1]) && /hitos de la racha/.test(filaL[1]) && /^\d{4}-\d{2}(\.[1-9])?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice «Respira» y los hitos ya celebrados (sin cambiar la versión de la política)');
 }
 {
   console.log('\nv0.52.2: descansos cuando el coach no los pone');
@@ -2115,7 +2115,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
 
   const legal = await import('../web/src/legal.js');
   const filaL = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
-  check(/Los descansos que eliges tú .* se guardan en tu móvil/.test(filaL[1]) && /^\d{4}-\d{2}$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que los descansos que eliges se guardan en tu móvil (sin cambiar la versión de la política)');
+  check(/Los descansos que eliges tú .* se guardan en tu móvil/.test(filaL[1]) && /^\d{4}-\d{2}(\.[1-9])?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que los descansos que eliges se guardan en tu móvil (sin cambiar la versión de la política)');
 }
 console.log('\nv0.53: días de entreno por semana (microciclos que no caben en una semana natural)');
 {
@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.1' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -2897,7 +2897,7 @@ console.log('\nv0.57: los vídeos de técnica (encuadre, nivel, serie, marcas, t
   const filaV = legal.PRIVACIDAD.find(([t]) => t === 'Tus vídeos de técnica')?.[1] || '';
   const filaM = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil')[1];
   check(/nota de técnica de 1 a 5/.test(filaV) && /su voz sobre el vídeo/.test(filaV) && /el día \(no la hora\)/.test(filaV) && /sensor de inclinación/.test(filaV) && /destacados no se borran nunca/.test(filaV)
-    && /por donde iba/.test(filaM) && /^2026-1[12]$/.test(legal.VERSION_LEGAL), 'la privacidad lo cuenta (la corrección, la voz, «Visto» solo con el día, el nivel, la limpieza y la subida que sigue; la versión, en la v0.58)');
+    && /por donde iba/.test(filaM) && /^2026-1[12](\.[1-9])?$/.test(legal.VERSION_LEGAL), 'la privacidad lo cuenta (la corrección, la voz, «Visto» solo con el día, el nivel, la limpieza y la subida que sigue; la versión, en la v0.58)');
   const src = (f) => readFileSync(new URL(`../web/src/ui/${f}`, import.meta.url), 'utf8');
   const cam = src('tecnica/CamaraVideo.jsx');
   check((cam.match(/soltarCamara\(\)/g) || []).length >= 5 && /audio: false/.test(cam) && /requestPermission/.test(cam) && !/preact\/compat/.test(cam + src('tecnica/Correccion.jsx') + src('tecnica/RevisionSeguida.jsx') + src('tecnica/MiTecnica.jsx') + src('Video.jsx')),
@@ -3031,14 +3031,14 @@ console.log('\nv0.58: el análisis automático de los vídeos (seguir la barra, 
     const PV2 = await import('../web/src/logica/privacidad.js');
     const nueva = PV2.NOVEDADES_PRIVACIDAD.filter((x) => x[3] === '2026-12');
     const t = nueva.map((x) => x[2]).join(' ');
-    check(legal.VERSION_LEGAL === '2026-12' && nueva.length === 1 && /nota de técnica \(de 1 a 5\)/.test(t) && /puntos clave/.test(t) && /tempo/.test(t) && /su voz sobre el vídeo/.test(t) && /solo el día/.test(t)
+    check(legal.VERSION_LEGAL.startsWith('2026-12') && nueva.length === 1 && /nota de técnica \(de 1 a 5\)/.test(t) && /puntos clave/.test(t) && /tempo/.test(t) && /su voz sobre el vídeo/.test(t) && /solo el día/.test(t)
       && /experimental/.test(t) && /trayectoria de la barra/.test(t) && /velocidad estimada/.test(t) && /ángulos/.test(t) && /en el móvil u ordenador/.test(t) && /resumen de cada repetición/.test(t) && /nunca se guardan/.test(t),
       '(M1) la política pasa a la 2026-12 con una novedad, corta: la corrección (nota 1–5, puntos clave, tempo, voz), solo el día, el análisis en el dispositivo y que solo se guarda el resumen (nunca los puntos del cuerpo)');
-    check(PV2.debeAvisarPrivacidad('2026-11', legal.VERSION_LEGAL) && PV2.novedadesDesde('2026-11', '2026-12').map((x) => x[1]).join() === 'Vídeos de técnica' && PV2.novedadesDesde(null, '2026-12').length === 5
+    check(PV2.debeAvisarPrivacidad('2026-11', legal.VERSION_LEGAL) && PV2.novedadesDesde('2026-11', '2026-12').map((x) => x[1]).join() === 'Vídeos de técnica' && PV2.novedadesDesde(null, '2026-12').length === 5 && PV2.novedadesDesde(null, '2026-12.1').length === 6
       && PV2.novedadesDesde('2026-12', '2026-12').length === 0 && PV2.novedadesDesde('2026-10', '2026-11').length === 4,
       '(M1) quien vio la 2026-11 ve solo lo nuevo (los vídeos); quien no vio ninguna, todo');
-    check(/Vio la política de 2026-11; la vigente es la 2026-12/.test(PV2.textoPrivacidadVista({ version: '2026-11' }, legal.VERSION_LEGAL)) && /vigente \(2026-12\)/.test(PV2.textoPrivacidadVista({ version: '2026-12' }, legal.VERSION_LEGAL))
-      && /novedadesDesde\(vista, VERSION_LEGAL\)/.test(readFileSync(new URL('../web/src/ui/AvisoPrivacidad.jsx', import.meta.url), 'utf8')), '(M1) el coach ve en «Datos» qué versión ha visto cada atleta; el aviso enseña las que le faltan');
+    check(/Vio la política de 2026-11; la vigente es la 2026-12/.test(PV2.textoPrivacidadVista({ version: '2026-11' }, '2026-12')) && /vigente \(2026-12\)/.test(PV2.textoPrivacidadVista({ version: '2026-12' }, '2026-12'))
+      && /novedadesDesde\(vista, actual\)/.test(readFileSync(new URL('../web/src/ui/AvisoPrivacidad.jsx', import.meta.url), 'utf8')), '(M1) el coach ve en «Datos» qué versión ha visto cada atleta; el aviso enseña las que le faltan');
   }
   // M2: lo analizado se olvida al salir (o al caducar la sesión) y, como mucho, el de los 5 últimos vídeos
   {
@@ -3228,6 +3228,48 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (recorte automático, rep
   const srcV = (f) => readFileSync(new URL(`../web/src/ui/${f}`, import.meta.url), 'utf8');
   const todo59 = ['tecnica/Tira.jsx', 'tecnica/Recordatorios.jsx', 'tecnica/Frases.jsx', 'tecnica/Modelos.jsx', 'tecnica/Autoevaluacion.jsx', 'Video.jsx', 'Archivos.jsx', 'recorte.js'].map(srcV).join('\n');
   check(!/preact\/compat/.test(todo59) && (srcV('App.jsx').match(/olvidarAnalisis\(\); olvidarTiras\(\);/g) || []).length === 2, 'sin preact/compat; la tira de miniaturas se olvida al cerrar la sesión (como el análisis)');
+  // (revisión de la v0.59) M2: la política 2026-12.1, comparada por partes (nunca como texto)
+  {
+    const PV = await import('../web/src/logica/privacidad.js');
+    const orden = ['2025-12', '2026-01', '2026-11', '2026-12', '2026-12.1', '2026-12.2', '2026-12.9', '2027-01', '2027-01.1'];
+    let bien = true;
+    for (let i = 0; i < orden.length; i++) for (let j = 0; j < orden.length; j++) if (PV.compararVersiones(orden[i], orden[j]) !== Math.sign(i - j)) bien = false;
+    check(bien && PV.compararVersiones('2026-12', 'x') === null && PV.compararVersiones(null, '2026-12') === null, `se ordenan por partes: ${orden.join(' < ')}`);
+    check(PV.formatoVersion('2026-12.1') && PV.formatoVersion('2026-12.9') && !PV.formatoVersion('2026-12.0') && !PV.formatoVersion('2026-12.10') && !PV.formatoVersion('2026-12.') && !PV.formatoVersion('2026-12-1') && !PV.formatoVersion('2026-13.1')
+      && PV.versionSinRevision('2026-12.1') === '2026-12' && PV.versionSinRevision('2026-12') === '2026-12' && PV.versionSinRevision('x') === null,
+      'el formato: «AAAA-MM» o «AAAA-MM.n» (de 1 a 9); sin la revisión, la del mes');
+    check(PV.debeAvisarPrivacidad('2026-12', '2026-12.1') && !PV.debeAvisarPrivacidad('2026-12.1', '2026-12.1') && !PV.debeAvisarPrivacidad('2026-12.1', '2026-12') && !PV.debeAvisarPrivacidad('2027-01', '2026-12.1')
+      && PV.debeAvisarPrivacidad('2026-11', '2026-12.1') && PV.versionMayor('2026-12.1', '2026-12') === '2026-12.1' && PV.versionMayor('2026-12', '2026-12.1') === '2026-12.1' && PV.versionMayor('2027-01', '2026-12.2') === '2027-01',
+      'quien vio la 2026-12 ve el aviso de la 2026-12.1; quien vio esa (o una posterior), no; sin la 037 (2026-12), nadie lo vuelve a ver');
+    const n121 = PV.novedadesDesde('2026-12', '2026-12.1');
+    check(n121.length === 1 && n121[0][3] === '2026-12.1' && /cómo lo has notado/.test(n121[0][2]) && /consentimiento de salud/.test(n121[0][2]) && /recordatorios/.test(n121[0][2]) && /vídeos modelo/.test(n121[0][2])
+      && PV.novedadesDesde('2026-12.1', '2026-12.1').length === 0 && PV.novedadesDesde('2026-11', '2026-12.1').length === 2 && PV.novedadesDesde('2026-11', '2026-12').length === 1
+      && !/cómo lo has notado|recordatorios|vídeos modelo/.test(PV.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12')[2]),
+      'quien vio la 2026-12 ve solo lo de la 037 (cómo lo has notado, con la molestia y su consentimiento, recordatorios y vídeos modelo); la entrada de la 2026-12 queda como estaba');
+    check(/vigente \(2026-12\.1\)/.test(PV.textoPrivacidadVista({ version: '2026-12.1' }, '2026-12.1')) && /Vio la política de 2026-12; la vigente es la 2026-12\.1/.test(PV.textoPrivacidadVista({ version: '2026-12' }, '2026-12.1'))
+      && /vigente/.test(PV.textoPrivacidadVista({ version: '2027-01' }, '2026-12.1')) && /Ha visto la política de privacidad vigente/.test(PV.textoPrivacidadVista({ version: '2026-12.1' }, '2026-12')), 'el coach lo ve en la ficha, también con la revisión');
+    const srcApi = readFileSync(new URL('../web/src/datos/api.js', import.meta.url), 'utf8');
+    check(/async versionLegal\(\)/.test(srcApi) && /video037\(\)/.test(srcApi.slice(srcApi.indexOf('async versionLegal()'), srcApi.indexOf('async versionLegal()') + 400)) && !/version <= VERSION_LEGAL|local > enBase/.test(srcApi),
+      'la app usa la 2026-12.1 solo si la base tiene la 037 (si no, la 2026-12, como antes); nada compara versiones como texto');
+  }
+  // L3: los «Entendido», solo de hoy (los demás se quitan al cargar y todos al salir)
+  {
+    const CO2 = await import('../web/src/logica/correccion.js');
+    const ks = ['fbe-recuerda-a-2026-11-03', 'fbe-recuerda-b-2026-11-04', 'fbe-recuerda-c-2026-10-01', 'fbe-tema', 'otra-fbe-recuerda-x-2026-11-03', null];
+    check(CO2.clavesEntendido(ks, '2026-11-04').join() === 'fbe-recuerda-a-2026-11-03,fbe-recuerda-c-2026-10-01' && CO2.clavesEntendido(ks).length === 3 && CO2.clavesEntendido(null).length === 0
+      && CO2.claveEntendido('b', '2026-11-04') === 'fbe-recuerda-b-2026-11-04', 'al cargar se quitan los «Entendido» que no son de hoy; al salir, todos (y nada más)');
+    const srcApp = readFileSync(new URL('../web/src/ui/App.jsx', import.meta.url), 'utf8');
+    const srcEnt = readFileSync(new URL('../web/src/ui/tecnica/entendidos.js', import.meta.url), 'utf8');
+    check((srcApp.match(/olvidarEntendidos\(\);/g) || []).length === 2 && /podarEntendidos\(\);/.test(srcApp) && /try \{/.test(srcEnt) && /catch/.test(srcEnt),
+      'App los quita al salir y cuando la sesión caduca (con try/catch: sin almacenamiento, no pasa nada)');
+  }
+  // L2 y L5: la política dice qué se puede hacer con la valoración y qué pasa con la molestia al retirar el consentimiento
+  {
+    const legal2 = await import('../web/src/legal.js');
+    const tv = legal2.PRIVACIDAD.find((x) => x[0] === 'Tus vídeos de técnica')[1];
+    check(/cambiarlo hasta que tu coach revise el vídeo y borrarlo cuando quieras/.test(tv) && /Si retiras el consentimiento de datos de salud, ya no puedes contar molestias nuevas/.test(tv) && /no se borran solas/.test(tv)
+      && /lo ya tratado sigue siendo lícito/.test(tv), 'cambiarla hasta que se revisa y borrarla cuando quiera; al retirar el consentimiento, no hay molestias nuevas y las contadas siguen (como lo demás ya tratado)');
+  }
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

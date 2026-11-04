@@ -2324,6 +2324,50 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     check(v4?.id && /migración 037/.test(v4.autoevaluacionError || ''), 'y un vídeo con valoración sale igual (avisa de que la valoración no se ha guardado)');
     await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
   }
+  // (revisión) M2: la política 2026-12.1, solo con la 037. Sin ella (la app se publica antes de que se ejecute), la 2026-12,
+  // exactamente como antes: la base de la 034 no admite «2026-12.1» y el aviso no vuelve a salir en cada visita
+  {
+    const { VERSION_LEGAL: VL } = await import('../web/src/legal.js');
+    const PV = await import('../web/src/logica/privacidad.js');
+    const previo = globalThis.localStorage;
+    const local = new Map();
+    globalThis.localStorage = { getItem: (k) => local.get(k) ?? null, setItem: (k, v) => local.set(k, String(v)), removeItem: (k) => local.delete(k) };
+    const falta = (t) => { const e = new Error(`relation "public.${t}" does not exist`); e.code = '42P01'; return e; };
+    const tablas37 = ['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion'];
+    // (como la 034: «AAAA-MM» y nada más)
+    const restriccion034 = (t, f) => { if (t === 'privacidad_vista' && [f].flat().some((x) => !/^20[0-9]{2}-(0[1-9]|1[0-2])$/.test(x.version))) throw new Error('new row for relation "privacidad_vista" violates check constraint "privacidad_vista_version_valida"'); };
+    const sin = crearApi({ ...b, auth: b.auth, storage: b.storage, update: b.update.bind(b), delete: b.delete.bind(b), rpc: b.rpc.bind(b),
+      insert: async (t, f) => { if (tablas37.includes(t)) throw falta(t); restriccion034(t, f); return b.insert(t, f); },
+      upsert: async (t, f, c) => { if (tablas37.includes(t)) throw falta(t); restriccion034(t, f); return b.upsert(t, f, c); },
+      select: async (t, f) => { if (tablas37.includes(t)) throw falta(t); return b.select(t, f); } });
+    await b.auth.entrar('ana@test', 'contraseña-ana-1');
+    const [{ perfil_id: anaUid }] = await b.sql(`select perfil_id from atletas where id = $1`, [aAna.id]);
+    const enBase = async () => (await b.sql(`select version from privacidad_vista where usuario_id = $1`, [anaUid]))[0]?.version || null;
+    await b.sql(`delete from privacidad_vista where usuario_id = $1`, [anaUid]);
+    // Sin la 037
+    check(VL === '2026-12.1' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.1', 'la vigente: 2026-12.1 con la 037; sin ella, 2026-12');
+    check(PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()) && await sin.marcarPrivacidadVista() === true && await enBase() === '2026-12',
+      'sin la 037: quien no ha visto la 2026-12 la ve y, al cerrarla, la base guarda 2026-12 (lo que admite)');
+    local.clear();
+    check(!PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()), 'y no vuelve a salir (tampoco en otro móvil)');
+    check(await sin.marcarPrivacidadVista('2026-12.1') === false && await enBase() === '2026-12', '(la base de la 034 no admite «2026-12.1»: por eso no se manda)');
+    local.set(`fbe-privacidad-vista-${anaUid}`, '2026-12.1');
+    await sin.privacidadVista();
+    await new Promise((r) => setTimeout(r, 60));
+    check(await enBase() === '2026-12' && !PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()), 'si este móvil ya vio la 2026-12.1, a una base sin la 037 no le manda nada que no admita');
+    local.clear();
+    // Con la 037: quien vio la 2026-12 ve solo lo nuevo, una vez
+    const v = (await api.privacidadVista()).version;
+    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.1',
+      'con la 037, quien vio la 2026-12 ve el aviso con solo lo de la 037');
+    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.1', 'al cerrarlo, la base guarda la 2026-12.1');
+    local.clear();
+    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.1', 'y ya no vuelve a salir (en ningún móvil)');
+    check(await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.1', 'nunca hacia atrás (la base, comparando por partes)');
+    await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+    check(/vigente \(2026-12\.1\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
+    globalThis.localStorage = previo;
+  }
   await b.sql(`delete from recordatorios_tecnica`); await b.sql(`delete from frases_correccion`); await b.sql(`delete from chat_cupos`);
 }
 

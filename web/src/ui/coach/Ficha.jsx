@@ -638,6 +638,8 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
   const { api, aviso, perfil } = useApp();
   // (v0.56) si ha visto las novedades de la política (con la 034)
   const vistaPrivacidad = useCarga(() => (atleta.perfil_id ? api.privacidadVistaDe(atleta.perfil_id) : Promise.resolve(null)), [atleta.perfil_id]);
+  // (v0.59) la vigente para esta base (2026-12.1 con la 037; sin ella, 2026-12)
+  const versionVigente = useCarga(() => api.versionLegal().catch(() => VERSION_LEGAL), []);
   const [f, setF] = useState({ nombre: atleta.nombre, email: atleta.email || '', objetivo: atleta.objetivo || '', notion_url: atleta.notion_url || '', estado: atleta.estado, progresion_auto: atleta.progresion_auto !== false });
   const [borrar, setBorrar] = useState(false);
   const [confirmacion, setConfirmacion] = useState('');
@@ -673,7 +675,7 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
           <span>Sugerirle subir carga cuando llegue al tope del rango (doble progresión)<br /><span class="peq terciario">Si lo quitas, la app solo le propone lo pautado y lo de la última vez.</span></span></label>
         <button class="btn btn-primario">Guardar</button>
       </form>
-      {atleta.perfil_id && !vistaPrivacidad.cargando && <p class="peq terciario ficha-privacidad-vista">{textoPrivacidadVista(vistaPrivacidad.datos, VERSION_LEGAL)}</p>}
+      {atleta.perfil_id && !vistaPrivacidad.cargando && versionVigente.datos && <p class="peq terciario ficha-privacidad-vista">{textoPrivacidadVista(vistaPrivacidad.datos, versionVigente.datos)}</p>}
       {!atleta.perfil_id && atleta.estado !== 'baja' && (
         <div class="panel panel-pad separa"><span>Aún no ha activado su cuenta.</span><button class="btn" onClick={invitar}><Icono n="enviar" /> Generar código nuevo</button></div>
       )}

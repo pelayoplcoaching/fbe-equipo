@@ -32,7 +32,7 @@ import { esTemporal } from './cola.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
 import { VERSION_LEGAL } from '../legal.js';
-import { formatoVersion, versionMayor, clavePrivacidadLocal } from '../logica/privacidad.js';
+import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
 import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida } from '../logica/notasVoz.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
@@ -457,26 +457,38 @@ export function crearApi(backend) {
     async darConsentimientos(tipos = ['privacidad', 'datos_salud']) {
       const r = await b.insert('consentimientos', tipos.map((tipo) => ({ perfil_id: uid(), tipo, version: VERSION_CONSENTIMIENTO })));
       // (v0.56) quien acepta la política ahora la acepta en su versión actual: no le sale el aviso de novedades
-      if (tipos.includes('privacidad')) await api.marcarPrivacidadVista(VERSION_LEGAL);
+      if (tipos.includes('privacidad')) await api.marcarPrivacidadVista(await api.versionLegal());
       return r;
     },
     // (v0.56) El aviso de privacidad, una vez por versión: cuál ha visto esta cuenta. En la base (034, la misma en todos
     // sus móviles); antes de la 034 o sin conexión, lo de este móvil. Si este móvil sabe de una más nueva que la base
     // (se vio sin la 034 o sin red), se le pasa a la base sin decir nada.
+    // (v0.59) La versión de la política vigente para esta base: la de legal.js (2026-12.1) si la base tiene la 037 (que admite
+    // revisiones, «AAAA-MM.n»); sin la 037 (la app se publica antes de que Pelayo la ejecute) o si no se sabe, la del mes
+    // (2026-12), exactamente como antes: así la base no rechaza lo visto y el aviso no vuelve a salir en cada visita.
+    async versionLegal() {
+      if (versionSinRevision(VERSION_LEGAL) === VERSION_LEGAL) return VERSION_LEGAL;
+      return (await api.video037().catch(() => null)) === true ? VERSION_LEGAL : versionSinRevision(VERSION_LEGAL);
+    },
     async privacidadVista() {
       const id = uid();
       if (!id) return { version: null, enBase: false };
       const local = leerPrivacidadLocal(id);
       const filas = await b.select('privacidad_vista', { eq: { usuario_id: id }, cols: 'version', limit: 1 }).catch(() => null);
       const enBase = filas ? filas[0]?.version || null : null;
-      if (filas && formatoVersion(local) && (!enBase || local > enBase)) api.marcarPrivacidadVista(local).catch(() => {});
+      if (filas && formatoVersion(local) && (!enBase || compararVersiones(local, enBase) > 0)) {
+        // (lo de este móvil, a la base; sin la 037, sin su revisión, que la base no la admite)
+        const subir = (await api.versionLegal()) === VERSION_LEGAL ? local : versionSinRevision(local);
+        if (!enBase || compararVersiones(subir, enBase) > 0) api.marcarPrivacidadVista(subir).catch(() => {});
+      }
       return { version: versionMayor(enBase, local), enBase: !!filas };
     },
-    async marcarPrivacidadVista(version = VERSION_LEGAL) {
+    async marcarPrivacidadVista(version) {
       const id = uid();
+      if (version === undefined) version = await api.versionLegal();
       if (!id || !formatoVersion(version)) return false;
       // (en este móvil, solo versiones que la app conoce: nunca una «del futuro» que tape los avisos que vengan)
-      if (version <= VERSION_LEGAL) guardarPrivacidadLocal(id, version);
+      if (compararVersiones(version, VERSION_LEGAL) <= 0) guardarPrivacidadLocal(id, version);
       try { await b.upsert('privacidad_vista', [{ usuario_id: id, version }], 'usuario_id'); return true; } catch { return false; }
     },
     // El coach, en la ficha: qué versión ha visto ese atleta (null: ninguna o sin la 034)

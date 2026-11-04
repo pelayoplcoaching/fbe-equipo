@@ -16,6 +16,7 @@ import { checklistValido, tempoValido, plantillaValida, videosViejos } from '../
 import { analisisValido } from '../logica/analisis.js';
 import { recordatorioValido, fraseValida, autoevaluacionValida, MAX_RECORDATORIOS } from '../logica/correccion.js';
 import { repsManualValidas } from '../logica/repeticiones.js';
+import { compararVersiones } from '../logica/privacidad.js';
 // Como la 033: lo que no lleva el nombre de un documento (control, invisibles y de dirección del texto, barras y <>:"|?*)
 const NOMBRE_PROHIBIDO = new RegExp('[/\\\\\\u0000-\\u001f\\u007f-\\u009f\\u200b-\\u200f\\u202a-\\u202e\\u2066-\\u2069\\ufeff<>:"|?*]');
 
@@ -1031,18 +1032,19 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function prepararAutoevaluacion(f, antes) {
     if (antes && f.archivo_id !== antes.archivo_id) throw new Error('Una valoración no cambia de vídeo');
     const a = buscar('archivos', f.archivo_id);
-    if (!a || a.tipo !== 'video_tecnica') throw new Error('Solo se valora un vídeo de técnica');
+    // (como la 037: el mismo error si no existe, no es un vídeo de técnica o es de otro)
+    if (!a || a.tipo !== 'video_tecnica' || (!esCoach() && a.atleta_id !== miAtletaId())) throw new Error('Solo valoras tus vídeos de técnica');
     f.atleta_id = a.atleta_id;
     f.nota = f.nota == null ? null : String(f.nota).trim() || null;
     if (f.molestia !== true) f.zona = null;
     if (esCoach()) throw new Error('La valoración es del atleta: tú la lees');
-    if (a.atleta_id !== miAtletaId()) throw new Error('Solo valoras tus vídeos');
     if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
     if (a.revisado_en || tabla('video_revisiones').some((r) => r.archivo_id === a.id && r.corregido_en)) throw new Error('Tu coach ya ha revisado este vídeo: tu valoración ya no se cambia');
     if ((f.molestia != null || f.zona != null) && (!antes || f.molestia !== antes.molestia || f.zona !== antes.zona) && !consentimientoDe(a.atleta_id)) {
       throw new Error('Para contar si notas alguna molestia hace falta tu consentimiento de datos de salud');
     }
-    gastarCupoChat('autoevaluacion');
+    // (como la 037: una vez por cambio; lo que no cambia nada, no cuenta)
+    if (!antes || ['rpe', 'nota', 'molestia', 'zona'].some((k) => (f[k] ?? null) !== (antes[k] ?? null))) gastarCupoChat('autoevaluacion');
     f.creado_en = antes ? antes.creado_en : ahora();
     f.actualizado_en = ahora();
   }
@@ -1122,11 +1124,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     f.usuario_id = sesion?.user.id || null;
     if (!f.usuario_id) throw new Error('Necesitas iniciar sesión');
     if (antes && f.usuario_id !== antes.usuario_id) throw new Error('Solo la tuya');
-    if (!/^20[0-9]{2}-(0[1-9]|1[0-2])$/.test(String(f.version ?? ''))) throw new Error('Algún valor está fuera de rango.');
+    // (como la 037: «AAAA-MM» o con su revisión, «AAAA-MM.n»; el mes, como mucho el que viene; se compara por partes)
+    if (!/^20[0-9]{2}-(0[1-9]|1[0-2])(\.[1-9])?$/.test(String(f.version ?? ''))) throw new Error('Algún valor está fuera de rango.');
     const [y, m] = fMadrid(new Date()).split('-').map(Number);
     const tope = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
-    if (f.version > tope) throw new Error('Esa versión de la política aún no existe');
-    if (antes && f.version < antes.version) f.version = antes.version;
+    if (f.version.slice(0, 7) > tope) throw new Error('Esa versión de la política aún no existe');
+    if (antes && compararVersiones(f.version, antes.version) < 0) f.version = antes.version;
     f.vista_en = ahora();
   }
   // Como la 032: la presencia solo se escribe con presencia_marcar(); los cupos, nadie
@@ -1950,7 +1953,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (t === 'cuestionarios') for (const fila of filas) { const m = { ...copia(fila), ...copia(c) }; prepararCuestionario(m, fila); porFila.set(fila, m); }
       // (lo que ajusta comprobarEnlaces en cada fila, como el trigger: se aplica después)
       const ajustes = new Map();
-      if (t === 'archivos') for (const fila of filas) { const m = porFila.get(fila) || { ...fila, ...copia(c) }; comprobarEnlaces(m, fila); ajustes.set(fila, { serie_numero: m.serie_numero ?? null, repite_de: m.repite_de ?? null, atleta: fila.atleta_id }); }
+      // (como la 037, archivos_aa_mover: al pasar a otro atleta, ni el pie, ni la estrella, ni la serie del de antes)
+      const LIMPIAR_AL_MOVER = { nota_atleta: null, destacado: false, sesion_ejercicio_id: null, serie_numero: null };
+      if (t === 'archivos') for (const fila of filas) { const m = porFila.get(fila) || { ...fila, ...copia(c) }; const mueve = m.atleta_id !== fila.atleta_id; if (mueve) Object.assign(m, LIMPIAR_AL_MOVER); comprobarEnlaces(m, fila); ajustes.set(fila, { serie_numero: m.serie_numero ?? null, repite_de: m.repite_de ?? null, atleta: fila.atleta_id, mueve }); }
       for (const fila of filas) comprobarChecks(t, porFila.get(fila) || { ...fila, ...copia(c) });
       for (const fila of filas) {
         if (porFila.has(fila)) { Object.assign(fila, porFila.get(fila)); res.push(fila); continue; }
@@ -1962,7 +1967,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (t === 'archivos') {
           encolar(antes.filter((r) => r && r !== fila.ruta && r !== fila.poster_ruta));
           const aj = ajustes.get(fila);
-          if (aj) { fila.serie_numero = aj.serie_numero; fila.repite_de = aj.repite_de; alMoverArchivo(fila, aj.atleta); }
+          if (aj) { if (aj.mueve) Object.assign(fila, LIMPIAR_AL_MOVER); fila.serie_numero = aj.serie_numero; fila.repite_de = aj.repite_de; alMoverArchivo(fila, aj.atleta); }
         }
         if (porFilaFecha.has(fila)) fila.cambio_pedido_en = porFilaFecha.get(fila);
         if (t === 'comidas_atleta') normalizarOpcional(fila);

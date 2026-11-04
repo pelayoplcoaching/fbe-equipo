@@ -318,6 +318,18 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     await detR.locator('.mensaje', { hasText: 'Rodillas hacia fuera' }).waitFor();
     check(!(await detR.textContent()).includes('Tu valoración') || !(await detR.textContent()).includes('RPE 8,5'), 'Rubén lo ve con lo que dijo el coach (y sin la valoración de Ana)');
     await detR.getByRole('button', { name: 'Cerrar' }).first().click();
+
+    // ---------------------------------------------------------------- «Entendido», solo de hoy (y nada al salir)
+    const hoyE = await p.evaluate(() => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date()));
+    await p.evaluate((h) => { localStorage.setItem('fbe-recuerda-viejo-2020-01-01', 'true'); localStorage.setItem(`fbe-recuerda-hoy-${h}`, 'true'); }, hoyE);
+    await p.reload();
+    await p.locator('nav.tabs').waitFor();
+    await cerrarDialogos();
+    const claves = () => p.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('fbe-recuerda-')));
+    const k1 = await claves();
+    check(!k1.includes('fbe-recuerda-viejo-2020-01-01') && k1.includes(`fbe-recuerda-hoy-${hoyE}`), `(L3) al abrir la app, los «Entendido» de otros días se quitan; los de hoy, no (${k1.join(', ')})`);
+    await entrarComo('Ana López');
+    check((await claves()).length === 0, '(L3) y al salir de la cuenta, todos');
   } catch (e) {
     check(false, `v0.59: el flujo se ha interrumpido: ${e.message.split('\n').slice(0, 10).join('\n      ')}`);
     await p.screenshot({ path: new URL('./e2e-fallo-059.png', import.meta.url).pathname }).catch(() => {});

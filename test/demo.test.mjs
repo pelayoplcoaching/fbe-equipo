@@ -1485,7 +1485,9 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   check(mejor && mejor.revision?.puntuacion === 4 && mejor.atleta_id === ana.id, '«Comparar con su mejor»: el de mejor nota de Ana en la sentadilla');
   // Pasar un vídeo a otro atleta: el hilo, la valoración y los recordatorios
   await bT.auth.entrar('ana@fbe.demo', 'demo');
-  const v3 = await aT.subirArchivo(ana.id, new File([new Uint8Array(500)], 's3.mp4', { type: 'video/mp4' }), { tipo: 'video_tecnica', ejercicio_id: sent.id, duracion_seg: 6, autoevaluacion: { rpe: 8, nota: null, molestia: null, zona: null } });
+  const seAnaD = (await bT.select('archivos', { eq: { atleta_id: ana.id } })).find((x) => x.sesion_ejercicio_id)?.sesion_ejercicio_id || null;
+  const v3 = await aT.subirArchivo(ana.id, new File([new Uint8Array(500)], 's3.mp4', { type: 'video/mp4' }), { tipo: 'video_tecnica', ejercicio_id: sent.id, duracion_seg: 6, nota_atleta: 'Me molesta la rodilla', sesion_ejercicio_id: seAnaD, autoevaluacion: { rpe: 8, nota: null, molestia: null, zona: null } });
+  await bT.update('archivos', { destacado: true }, { eq: { id: v3.id } });
   await aT.comentar({ atletaId: ana.id, archivoId: v3.id, texto: '¿Qué tal?', autor: 'atleta' });
   await bT.auth.entrar('pelayo@fbe.demo', 'demo');
   await aT.comentar({ atletaId: ana.id, archivoId: v3.id, texto: 'En 0:02, la espalda', autor: 'coach' });
@@ -1498,6 +1500,42 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   await bT.auth.entrar('pelayo@fbe.demo', 'demo');
   const hilo = await aT.comentarios({ atletaId: ruben.id, archivoId: v3.id });
   check(hilo.length === 1 && hilo[0].autor === 'coach' && hilo[0].atleta_id === ruben.id && (await aT.recordatoriosCoach(ruben.id, sent.id)).some((r) => r.id === rMov.id && r.activo), 'lo del coach (y el recordatorio) pasa a Rubén; lo de Ana se borra');
+  const [v3M] = await bT.select('archivos', { eq: { id: v3.id } });
+  check(!!seAnaD && v3M.atleta_id === ruben.id && v3M.nota_atleta === null && v3M.destacado === false && v3M.sesion_ejercicio_id === null && v3M.serie_numero == null,
+    '(M1) del vídeo, ni el pie de Ana, ni su estrella, ni la serie de su sesión pasan a Rubén (como la 037)');
+  // (revisión) L4: el mismo error para un vídeo de otro, algo que no es un vídeo de técnica o un id que no existe
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  const errD = async (id) => { try { await bT.upsert('video_autoevaluacion', [{ archivo_id: id, rpe: 8 }], 'archivo_id'); return null; } catch (e) { return e.message; } };
+  const fotoAna = (await bT.select('archivos', { eq: { atleta_id: ana.id } })).find((x) => x.tipo !== 'video_tecnica');
+  const eL4 = [await errD(v3.id), await errD(crypto.randomUUID()), ...(fotoAna ? [await errD(fotoAna.id)] : [])];
+  check(eL4.length === 3 && eL4.every((m) => m === eL4[0]) && /Solo valoras tus vídeos de técnica/.test(eL4[0] || ''), '(L4) el mismo error para el vídeo de Rubén, un id que no existe y algo que no es un vídeo de técnica');
+  // (revisión) L1: cada cambio cuenta una vez y lo que no cambia nada, no (30 por hora)
+  {
+    const bL = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+    const aL = crearApi(bL);
+    await bL.auth.entrar('ana@fbe.demo', 'demo');
+    const anaL = (await bL.select('atletas', {}))[0].id;
+    const sentL = (await aL.biblioteca()).find((e) => e.nombre === 'Sentadilla barra alta');
+    const vL = await aL.subirArchivo(anaL, new File([new Uint8Array(300)], 'l1.mp4', { type: 'video/mp4' }), { tipo: 'video_tecnica', ejercicio_id: sentL.id, duracion_seg: 6 });
+    let n = 0, m = '';
+    for (let i = 0; i < 31; i++) {
+      try {
+        await aL.guardarAutoevaluacion(vL, { rpe: i % 2 ? 7 : 8, nota: null, molestia: null, zona: null });
+        n++;
+        if (i < 5) await aL.guardarAutoevaluacion(vL, { rpe: i % 2 ? 7 : 8, nota: null, molestia: null, zona: null });
+      } catch (e) { m = e.message; break; }
+    }
+    check(n === 30 && /valoración en la última hora/.test(m), `(L1) 30 cambios pasan y el 31.º no; guardar lo mismo no cuenta (${n})`);
+  }
+  // (revisión) M2: la versión de la política con su revisión, como la 037
+  {
+    const uid = bT.auth.sesion().user.id;
+    const pv = async (v) => (await bT.upsert('privacidad_vista', [{ usuario_id: uid, version: v }], 'usuario_id'))[0].version;
+    check(VERSION_LEGAL_D === '2026-12.1' && await aT.versionLegal() === '2026-12.1' && await pv('2026-12') === '2026-12.1' && await pv('2026-11') === '2026-12.1',
+      '(M2) en la demo (que tiene la 037), la 2026-12.1; nunca hacia atrás, comparando por partes');
+    check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.10')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato y de un mes que ya existe');
+  }
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
 }
 
 // (v0.58.1) El historial del chat por páginas en la demo, como en la base: para la atleta como para el coach

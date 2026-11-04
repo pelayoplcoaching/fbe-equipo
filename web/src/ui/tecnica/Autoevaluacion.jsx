@@ -107,6 +107,7 @@ export function AutoevaluacionAtleta({ video, rpeSerie = null }) {
   const [editar, setEditar] = useState(false);
   const [valor, setValor] = useState({});
   const [ocupado, setOcupado] = useState(false);
+  const [confirmar, setConfirmar] = useState(false);
   if (!con037.datos) return null;
   const revisado = !!video.revisado_en || !!video.revision?.corregido_el;
   const x = a.datos ? textoAutoevaluacion(a.datos, 'Tú') : null;
@@ -116,10 +117,21 @@ export function AutoevaluacionAtleta({ video, rpeSerie = null }) {
     try { await api.guardarAutoevaluacion(video, { ...valor, rpe: rpeSerie ?? valor.rpe ?? null }, { salud }); aviso('Valoración guardada'); setEditar(false); await a.recargar(true); }
     catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
   };
+  // (borrarla, cuando quiera: también después de que la revise su coach; es suya)
+  const borrar = async () => {
+    setOcupado(true);
+    try { await api.guardarAutoevaluacion(video, null); aviso('Valoración borrada'); setConfirmar(false); await a.recargar(true); }
+    catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
+  };
   return (
     <section class="autoevaluacion-atleta pila-xs" aria-label="Tu valoración">
       <div class="separa"><span class="etq">Tu valoración</span>
-        {!revisado && !editar && <button type="button" class="btn-texto mini" onClick={() => { setValor({ rpe: a.datos?.rpe != null ? Number(a.datos.rpe) : null, nota: a.datos?.nota || '', molestia: a.datos?.molestia ?? null, zona: a.datos?.zona || null }); setEditar(true); }}><Icono n="editar" /> {a.datos ? 'Cambiarla' : 'Añadirla'}</button>}</div>
+        {!editar && <span class="fila-envolver">
+          {!revisado && <button type="button" class="btn-texto mini" onClick={() => { setValor({ rpe: a.datos?.rpe != null ? Number(a.datos.rpe) : null, nota: a.datos?.nota || '', molestia: a.datos?.molestia ?? null, zona: a.datos?.zona || null }); setEditar(true); }}><Icono n="editar" /> {a.datos ? 'Cambiarla' : 'Añadirla'}</button>}
+          {a.datos && (confirmar
+            ? <><span class="mini">¿Borrarla?</span><button type="button" class="btn-texto mini btn-peligro" disabled={ocupado} onClick={borrar}>Sí, borrar</button><button type="button" class="btn-texto mini" onClick={() => setConfirmar(false)}>No</button></>
+            : <button type="button" class="btn-texto mini" onClick={() => setConfirmar(true)}><Icono n="basura" /> Borrarla</button>)}
+        </span>}</div>
       {editar ? (
         <>
           <CamposAutoevaluacion valor={valor} setValor={setValor} rpeSerie={rpeSerie} salud={salud} idBase={`auto-${video.id}`} />
@@ -129,7 +141,7 @@ export function AutoevaluacionAtleta({ video, rpeSerie = null }) {
           </div>
         </>
       ) : x ? (
-        <p class="peq secundario">{[x.rpe, x.nota ? `«${x.nota}»` : null, x.molestia].filter(Boolean).join(' · ')}{revisado ? '' : ' (puedes cambiarla hasta que tu coach lo revise)'}</p>
+        <p class="peq secundario">{[x.rpe, x.nota ? `«${x.nota}»` : null, x.molestia].filter(Boolean).join(' · ')}{revisado ? ' (puedes borrarla cuando quieras)' : ' (puedes cambiarla hasta que tu coach lo revise y borrarla cuando quieras)'}</p>
       ) : <p class="mini terciario">Cuéntale a tu coach cómo la has notado (hasta que lo revise).</p>}
     </section>
   );

@@ -21,6 +21,8 @@
 --   · Pasar un vídeo a otro atleta (035): ahora también su hilo. Lo que escribió el atleta de antes se borra (son sus
 --     palabras); lo del coach va con el vídeo (como su corrección), sin «leído» ni las reacciones y destacados del de
 --     antes; sus avisos pendientes se retiran. Su valoración se borra; sus recordatorios van con él (activos solo si caben).
+--     Del propio vídeo, el pie del atleta de antes, su estrella y la serie de su sesión no pasan al nuevo.
+--   · El aviso de privacidad (034) admite revisiones dentro del mes («2026-12.1»), para avisar de lo de esta migración.
 -- Se ejecuta en el SQL Editor después de la 036 (o con instalar.sql en una base nueva). Se puede repetir.
 -- =====================================================================
 
@@ -290,8 +292,9 @@ begin
     raise exception 'Una valoración no cambia de vídeo' using errcode = '42501';
   end if;
   select * into a from public.archivos x where x.id = new.archivo_id;
-  if a.id is null or a.tipo <> 'video_tecnica' then
-    raise exception 'Solo se valora un vídeo de técnica' using errcode = '22023';
+  -- (desde la app, el mismo error si no existe, no es un vídeo de técnica o es de otro: no se sabe cuál de las tres)
+  if a.id is null or a.tipo <> 'video_tecnica' or (v_app and a.atleta_id is distinct from public.mi_atleta_id() and not public.es_coach()) then
+    raise exception 'Solo valoras tus vídeos de técnica' using errcode = '42501';
   end if;
   new.atleta_id := a.atleta_id;
   new.nota := nullif(btrim(coalesce(new.nota, '')), '');
@@ -299,9 +302,6 @@ begin
   if v_app then
     if auth.uid() is null or public.es_coach() then
       raise exception 'La valoración es del atleta: tú la lees' using errcode = '42501';
-    end if;
-    if a.atleta_id is distinct from public.mi_atleta_id() then
-      raise exception 'Solo valoras tus vídeos' using errcode = '42501';
     end if;
     if public.esta_de_baja() then
       raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada' using errcode = '42501';
@@ -314,7 +314,12 @@ begin
        and not public.consentimiento_salud_de_atleta(a.atleta_id) then
       raise exception 'Para contar si notas alguna molestia hace falta tu consentimiento de datos de salud' using errcode = '42501';
     end if;
-    perform fbe_privado.chat_gastar_cupo('autoevaluacion');
+    -- Con su cupo, una vez por cambio: un «upsert» que ya existe pasa por el INSERT (que no cuenta) y luego por el UPDATE
+    -- (que cuenta si cambia algo); un UPDATE que no cambia nada, no cuenta
+    if (tg_op = 'INSERT' and not exists (select 1 from public.video_autoevaluacion x where x.archivo_id = new.archivo_id))
+       or (tg_op = 'UPDATE' and (new.rpe, new.nota, new.molestia, new.zona) is distinct from (old.rpe, old.nota, old.molestia, old.zona)) then
+      perform fbe_privado.chat_gastar_cupo('autoevaluacion');
+    end if;
   end if;
   if tg_op = 'INSERT' then new.creado_en := now(); else new.creado_en := old.creado_en; end if;
   new.actualizado_en := now();
@@ -444,6 +449,54 @@ end $$;
 drop trigger if exists archivos_zz_mover on public.archivos;
 create trigger archivos_zz_mover after update of atleta_id on public.archivos
   for each row execute function fbe_privado.al_mover_archivo();
+-- Y del propio vídeo, antes de cambiarlo: el pie que escribió el atleta de antes (son sus palabras y puede contar algo de
+-- su salud), su estrella (era suya) y la serie de su sesión (sin la sesión, tampoco el número de serie: 035) no pasan al
+-- nuevo. Va antes que archivos_ab_enlaces (035), que ya no tiene que mirar esa serie.
+create or replace function fbe_privado.antes_de_mover_archivo() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.atleta_id is distinct from old.atleta_id then
+    new.nota_atleta := null;
+    new.destacado := false;
+    new.sesion_ejercicio_id := null;
+    new.serie_numero := null;
+  end if;
+  return new;
+end $$;
+drop trigger if exists archivos_aa_mover on public.archivos;
+create trigger archivos_aa_mover before update of atleta_id on public.archivos
+  for each row execute function fbe_privado.antes_de_mover_archivo();
+
+-- ---------------------------------------------------------------------
+-- 6b. El aviso de privacidad (034) con revisiones dentro de un mes: «AAAA-MM» o «AAAA-MM.n» (de 1 a 9), para añadir algo
+--     a la política sin esperar al mes siguiente (la 2026-12.1, con lo de esta migración). El mes, como mucho el que viene
+--     (como en la 034); nunca hacia atrás, comparando por partes (el mes y luego la revisión), no como texto.
+-- ---------------------------------------------------------------------
+alter table public.privacidad_vista drop constraint if exists privacidad_vista_version_valida;
+alter table public.privacidad_vista add constraint privacidad_vista_version_valida check (version ~ '^20[0-9]{2}-(0[1-9]|1[0-2])(\.[1-9])?$');
+create or replace function public.privacidad_vista_preparar() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  -- (lo mal formado, antes de compararlo: así nunca se cambia por la de antes ni da un error de conversión)
+  if new.version is null or new.version !~ '^20[0-9]{2}-(0[1-9]|1[0-2])(\.[1-9])?$' then
+    raise exception 'Esa versión de la política no tiene su formato' using errcode = '23514';
+  end if;
+  if current_user in ('authenticated', 'anon') then
+    new.usuario_id := auth.uid();
+    if new.usuario_id is null then raise exception 'Necesitas iniciar sesión' using errcode = '42501'; end if;
+    if tg_op = 'UPDATE' and new.usuario_id is distinct from old.usuario_id then raise exception 'Solo la tuya' using errcode = '42501'; end if;
+    if left(new.version, 7) collate "C" > to_char((now() at time zone 'Europe/Madrid') + interval '1 month', 'YYYY-MM') collate "C" then
+      raise exception 'Esa versión de la política aún no existe' using errcode = '22023';
+    end if;
+  end if;
+  if tg_op = 'UPDATE' and (left(new.version, 7) collate "C" < left(old.version, 7) collate "C"
+      or (left(new.version, 7) = left(old.version, 7) and coalesce(nullif(substr(new.version, 9), '')::int, 0) < coalesce(nullif(substr(old.version, 9), '')::int, 0))) then
+    -- (la de antes ya tiene su formato: la restricción no deja guardar otra cosa)
+    new.version := old.version;
+  end if;
+  new.vista_en := now();
+  return new;
+end $$;
 
 -- ---------------------------------------------------------------------
 -- 7. Permisos (desde la 019, cada tabla nueva lleva los suyos a mano)

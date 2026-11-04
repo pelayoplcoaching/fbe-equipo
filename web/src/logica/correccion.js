@@ -101,8 +101,11 @@ export function recordatoriosPorEjercicio(lista = []) {
   for (const k of Object.keys(out)) out[k] = out[k].slice(0, MAX_RECORDATORIOS);
   return out;
 }
-// «Entendido» se recuerda en el móvil solo ese día
-export const claveEntendido = (id, dia) => `fbe-recuerda-${id}-${dia}`;
+// «Entendido» se recuerda en el móvil solo ese día (las claves de otros días se quitan al cargar la app y todas al salir)
+export const PREFIJO_ENTENDIDO = 'fbe-recuerda-';
+export const claveEntendido = (id, dia) => `${PREFIJO_ENTENDIDO}${id}-${dia}`;
+// De unas claves del almacenamiento, las de «Entendido» (todas o, con hoy, las que no son de hoy)
+export const clavesEntendido = (claves, hoy = null) => (claves || []).filter((k) => typeof k === 'string' && k.startsWith(PREFIJO_ENTENDIDO) && (!hoy || !k.endsWith(`-${hoy}`)));
 
 // ---------- La valoración del atleta (antes de enviar el vídeo) ----------
 export const RPES_AUTO = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
