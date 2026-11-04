@@ -387,6 +387,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .temporizador .ajustes { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .temporizador .ajustes button { min-width: 0; padding: 0 4px; white-space: nowrap; font-size: 0.9062rem; }
 .temporizador :focus-visible { outline-color: var(--sobre-flota); }
+/* v0.62: «Te avisa aunque bloquees el móvil» (la pista del descanso suena) y «Seguir» tras pausarlo en la pantalla de bloqueo */
+.temporizador .pista-activa { margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: color-mix(in srgb, var(--sobre-flota) 85%, var(--flota)); text-align: center; }
+.temporizador .pista-activa .ico, .temporizador .pista-activa svg { width: 14px; height: 14px; flex: none; }
+.temporizador button.seguir-descanso { width: 100%; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 1rem; background: color-mix(in srgb, var(--sobre-flota) 16%, transparent); }
 .en-sesion .toast { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
 .en-sesion .contenido { padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
 .temporizador.fin { animation: latido .9s ease-in-out 3; }

@@ -4,6 +4,7 @@ import { Segmentos, Icono, useApp, Hoja, GrupoIos, FilaIos, IcoIos } from './com
 import { leerAjustes, guardarAjustes, TAMANOS_LETRA } from './ajustes.js';
 import { prepararAudio, pitar, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
 import { hayVoz, hablar } from './voz.js';
+import { plataformaPistaAqui, prepararPista, probarPista, frasesDelCoach, pararPista, descansoSonando } from './pista-descanso.js';
 import { ACENTOS } from '../logica/acentos.js';
 import { puedeVibrar, vibrar } from './hapticos.js';
 import { DESCANSOS_ATLETA, mmss } from '../logica/calculos.js';
@@ -32,7 +33,7 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
   const [a, setA] = useState(leerAjustes);
   const [sonido, setSonido] = useState(false);
   const cambiar = (k, v) => { const n = { ...a, [k]: v }; setA(n); guardarAjustes(n); };
-  const resumenSonido = [a.sonido ? 'Sonido' : 'Sin sonido', a.voz && hayVoz() ? 'voz' : null, a.vibracion ? 'vibración' : null,
+  const resumenSonido = [a.sonido ? 'Sonido' : 'Sin sonido', a.voz && hayVoz() ? 'voz' : null, a.sonido && a.vozBloqueo && plataformaPistaAqui() ? 'avisa con el móvil bloqueado' : null, a.vibracion ? 'vibración' : null,
     a.descansoDefecto ? `descanso ${mmss(a.descansoDefecto)}` : 'sin descanso automático'].filter(Boolean).join(', ');
   return (
     <>
@@ -89,6 +90,7 @@ function HojaSonido({ a, cambiar, alCerrar }) {
   const nombreSonido = (k) => (SONIDOS_DESCANSO.find(([v]) => v === k) || [])[1] || k;
   // Suena el que se ve elegido (no el guardado: por si este navegador no deja guardar) y lo dice
   const probar = (k = a.sonidoDescanso) => { prepararAudio(); pitar(k); aviso(`Suena: ${nombreSonido(k)}`); };
+  const plataforma = plataformaPistaAqui();
   return (
     <Hoja titulo="Sonido y vibración" alCerrar={alCerrar}>
       <div class="panel grupo-ios-hoja">
@@ -122,6 +124,28 @@ function HojaSonido({ a, cambiar, alCerrar }) {
             ayuda={hayVoz() ? 'Te dice la siguiente serie («Serie 3 de press banca: 80 kilos por 6»), los últimos segundos del descanso y la última serie. La música sigue sonando (baja un momento mientras habla).' : 'Este navegador no puede hablar: los avisos del descanso siguen con su sonido.'}
             valor={!!a.voz && hayVoz()} alCambiar={(v) => { cambiar('voz', v); if (v) hablar('Serie 1 de press banca: 60 kilos por 8.', { forzar: true }); }} />
           {a.voz && hayVoz() && <li class="panel-pad separa"><span class="peq secundario">¿Se oye bien?</span><button class="btn btn-peq" onClick={() => hablar('Serie 3 de sentadilla: 80 kilos por 6. Última serie.', { forzar: true })}><Icono n="altavoz" /> Probar la voz</button></li>}
+          {/* v0.62: el aviso con el móvil bloqueado (la pista del descanso). Solo donde puede funcionar: iPhone con Safari 16.4 o
+              más (la app de inicio o Safari) y Android; en el ordenador no sale. Apagado de serie: pausa la música de otras apps */}
+          {a.sonido && plataforma && (
+            <Interruptor id="aj-bloqueo" icono="candado" texto="Avisar aunque bloquees el móvil" valor={!!a.vozBloqueo}
+              ayuda={`Suena el aviso al acabar el descanso aunque el móvil esté bloqueado${plataforma === 'ios' ? ' o en silencio' : ''}, y la pantalla de bloqueo enseña lo que queda. A cambio, tu música (${plataforma === 'ios' ? 'Spotify, Apple Music' : 'Spotify, YouTube Music'}…) se pausa en cada descanso y tienes que volver a darle a play.${a.voz && frasesDelCoach() ? ' Con el móvil bloqueado, la cuenta y el final los dice la voz grabada de tu coach.' : ' Con el móvil bloqueado suena el aviso (un sonido), no la voz: la voz del móvil solo habla con la app delante.'}`}
+              alCambiar={(v) => { cambiar('vozBloqueo', v); if (v) setTimeout(() => prepararPista(), 0); else pararPista(); }} />
+          )}
+          {a.sonido && plataforma && a.vozBloqueo && (() => {
+            // (con un descanso de verdad sonando, no: la prueba lo cambiaría por la suya)
+            const ocupado = descansoSonando();
+            return (
+              <li class="panel-pad separa">
+                <span class="peq secundario" id="aj-probar-bloqueo-ayuda">{ocupado ? 'Tienes un descanso en marcha: pruébalo cuando acabe' : 'Bloquea el móvil y espera 10 segundos'}</span>
+                <button class="btn btn-peq" disabled={ocupado} aria-describedby="aj-probar-bloqueo-ayuda" onClick={() => {
+                  prepararAudio();
+                  const r = probarPista(10);
+                  if (r === 'ocupado') aviso('Tienes un descanso en marcha: pruébalo cuando acabe', 'error');
+                  else aviso(r ? 'Bloquea el móvil: en 10 segundos suena el aviso' : 'Aún se está preparando: vuelve a probar en un momento', r ? undefined : 'error');
+                }}><Icono n="candado" /> Probar con el móvil bloqueado</button>
+              </li>
+            );
+          })()}
           <Interruptor id="aj-vibracion" icono="vibrar" texto="Vibración al acabar el descanso" ayuda="Y en el metrónomo y los intervalos, en los móviles que la permiten" valor={a.vibracion} alCambiar={(v) => cambiar('vibracion', v)} />
           {/* v0.49: la vibración al tocar, con su propio interruptor (de serie, encendida) */}
           <Interruptor id="aj-hapticos" icono="vibrar" texto="Vibración al tocar" desactivado={!puedeVibrar()}

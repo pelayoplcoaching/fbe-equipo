@@ -5567,6 +5567,18 @@ try {
   console.log('  ✗ los vídeos de la v0.61:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.62: «Avisar aunque bloquees el móvil» (la pista del descanso) y el descanso en la pantalla de bloqueo (Media Session):
+// dónde sale el ajuste, la pista al marcar una serie, ±15, pausa y ⏭ desde la pantalla de bloqueo, una sola voz al acabar,
+// «Saltar» lo suelta todo y el aviso al móvil sigue programado (test/e2e-pista-062.mjs)
+console.log('\nv0.62: avisar aunque bloquees el móvil y el descanso en la pantalla de bloqueo');
+try {
+  const { probarPista062 } = await import('./e2e-pista-062.mjs');
+  await probarPista062({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la pista del descanso de la v0.62:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
 console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');

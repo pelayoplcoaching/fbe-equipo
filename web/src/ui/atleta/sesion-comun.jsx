@@ -10,6 +10,8 @@ import { fraseCuenta } from '../../logica/voz.js';
 import { vibrar } from '../hapticos.js';
 import { descansoEnCurso } from '../en-curso.js';
 import { lanzarConfeti } from '../confeti.js';
+import { pistaManda, pistaSono, pistaFinal, prepararPista, pistaActiva } from '../pista-descanso.js';
+import { ajustarDescanso, reanudarDescanso, fraseTrasPista, avisoTrasCambio } from '../../logica/pista.js';
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
 
@@ -41,11 +43,14 @@ function cargar(k) {
   return buffers[k];
 }
 export function prepararAudio() {
-  try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch { /* solo Safari */ }
+  // (v0.62: no mientras suena la pista de «Avisar aunque bloquees el móvil», que va en «playback»: la cortaría)
+  try { if (navigator.audioSession && !pistaActiva()) navigator.audioSession.type = 'ambient'; } catch { /* solo Safari */ }
   try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch { audio = null; }
   cargar(leerAjustes().sonidoDescanso);
   // v0.48: el entrenador por voz se «despierta» en el mismo toque (iPhone)
   prepararVoz();
+  // v0.62: los sonidos de la pista del descanso (solo con el ajuste encendido)
+  prepararPista();
 }
 function pitidoSuave(volumen = 1) {
   if (!audio) return;
@@ -92,6 +97,8 @@ export function tono(frecuencia = 880, duracion = 0.08, volumen = 0.18) {
     o.start(t); o.stop(t + duracion + 0.02);
   } catch { /* sin audio */ }
 }
+// La vibración del aviso, sola (v0.62: cuando el sonido ya lo pone la pista del descanso)
+export function vibrarAviso() { if (leerAjustes().vibracion) try { navigator.vibrate?.([200, 100, 200, 100, 400]); } catch { /* */ } }
 export function vibrarCorto(ms = 30) { if (leerAjustes().vibracion) try { navigator.vibrate?.(ms); } catch { /* */ } }
 
 // Récord: vibración más larga (la de «vibración al tocar», v0.49) y tres notas que suben
@@ -149,21 +156,38 @@ export function aNumero(t) {
 // puede sonar. Por eso, al empezar el descanso (y con cada +15 / −15), se programa un aviso al móvil para cuando
 // acabe (migración 025); si suena aquí, con la app delante, se anula, y también al saltarlo o cerrarlo. Si la app
 // vuelve tarde (el aviso ya sonó en el móvil), no suena otra vez.
+// v0.62: con «Avisar aunque bloquees el móvil», el pitido del final y la cuenta atrás los pone la pista del descanso (suena
+// aunque la página esté congelada): aquí solo se vibra y, si la página sigue viva, la voz del móvil dice la serie siguiente
+// (sin repetir lo que ya haya dicho la pista). Si su aviso ha sonado, se anula el aviso al móvil aunque la app no esté
+// delante. Desde la pantalla de bloqueo se puede pausar el descanso (pausa: los ms que quedaban): aquí sale «en pausa» y
+// «Seguir».
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
-export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = null, inicio = null, alCambiar, clase = '' }) {
+export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '' }) {
   const { api, atleta } = useApp() || {};
   const ahora = useAhora(250);
   const finRef = useRef(fin);
   finRef.current = fin;
-  const quedan = Math.max(0, (fin - ahora) / 1000);
+  const pausado = Number.isFinite(pausa);
+  const quedan = pausado ? Math.max(0, pausa / 1000) : Math.max(0, (fin - ahora) / 1000);
   const avisado = useRef(false);
   const programado = useRef(false);
   useEffect(() => {
-    if (!api?.programarDescanso || !conAvisoAlMovil() || fin <= Date.now()) return undefined;
-    // (un momento después: con varios +15 seguidos, solo el último)
-    const t = setTimeout(() => { programado.current = true; api.programarDescanso(fin, texto); }, 700);
+    // (en pausa, fuera el aviso al móvil; al seguir, con su final nuevo, se vuelve a programar)
+    if (pausado) { if (conAvisoAlMovil() && programado.current) { programado.current = false; api?.cancelarDescanso?.(); } return undefined; }
+    if (!api?.programarDescanso || !conAvisoAlMovil()) return undefined;
+    // (acabado a mano, p. ej. −15 con 10 s desde la pantalla de bloqueo: el aviso de antes llegaría tarde. Con la app delante
+    // avisa ella y se anula; si no, que avise ya. La misma regla que para la píldora: avisoTrasCambio)
+    if (fin <= Date.now()) {
+      if (programado.current) {
+        const r = avisoTrasCambio({ fin }, Date.now(), { visible: document.visibilityState === 'visible' });
+        if (r.cancelar) { programado.current = false; api.cancelarDescanso?.(); } else api.programarDescanso(r.programar, aviso || texto);
+      }
+      return undefined;
+    }
+    // (un momento después: con varios +15 seguidos, solo el último). v0.62: con la carga propuesta, si se sabe
+    const t = setTimeout(() => { programado.current = true; api.programarDescanso(fin, aviso || texto); }, 700);
     return () => clearTimeout(t);
-  }, [fin]);
+  }, [fin, pausado]);
   // Al quitarse el temporizador (saltar, cerrar), fuera el aviso. v0.52: si se sale de la sesión con el descanso en
   // marcha, lo sigue llevando la píldora «Sesión en curso» (y el aviso al móvil se queda)
   useEffect(() => () => { if (programado.current && !descansoEnCurso(atleta?.id, finRef.current)) api?.cancelarDescanso?.(); }, []);
@@ -171,11 +195,16 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = 
     if (quedan <= 0 && !avisado.current) {
       avisado.current = true;
       const tarde = Date.now() - fin > 4000; // la app estaba congelada: ya avisó el móvil
-      if (document.visibilityState === 'visible' && programado.current) { programado.current = false; api?.cancelarDescanso?.(); }
+      const manda = pistaManda(fin);
+      if ((document.visibilityState === 'visible' || pistaSono(fin)) && programado.current) { programado.current = false; api?.cancelarDescanso?.(); }
       if (!tarde) {
-        pitar();
-        // v0.48: con el entrenador por voz, lo que toca ahora («Serie 3 de press banca: 80 kilos por 6»)
-        if (leerAjustes().voz) setTimeout(() => hablar(voz || '¡Vamos!'), leerAjustes().sonido ? 900 : 0);
+        if (manda) vibrarAviso(); else pitar();
+        // v0.48: con el entrenador por voz, lo que toca ahora («Serie 3 de press banca: 80 kilos por 6»); v0.62: si ha avisado
+        // la pista, después de su aviso y sin repetir lo que haya dicho
+        if (leerAjustes().voz) {
+          const frase = manda ? fraseTrasPista(voz, pistaFinal(fin)) : (voz || '¡Vamos!');
+          if (frase) setTimeout(() => hablar(frase), manda ? 1800 : leerAjustes().sonido ? 900 : 0);
+        }
       }
     }
     if (quedan > 0) avisado.current = false;
@@ -185,6 +214,8 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = 
   const contado = useRef(null);
   useEffect(() => {
     const a = leerAjustes();
+    // (v0.62: la cuenta la lleva la pista del descanso, si suena; en pausa, nada)
+    if (pausado || pistaManda(fin)) { contado.current = segundo; return; }
     // Con el entrenador por voz, la cuenta se dice (a los 10 y en los 3 últimos); si no, los pitidos de siempre
     if (a.voz && contado.current !== segundo && fraseCuenta(segundo) && (segundo === 10 ? total > 20 : true)) {
       hablar(fraseCuenta(segundo));
@@ -229,21 +260,23 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = 
   // (sin él, de un descanso de antes de esta versión, el que sale de su final y su duración)
   const inicioR = inicio || fin - total * 1000;
   const cambiarRespira = () => { const v = !respira; setRespira(v); guardarAjustes({ ...leerAjustes(), respira: v }); };
-  const fase = respira && quedan > 0 ? faseRespira((ahora - inicioR) / 1000) : null;
+  const fase = respira && quedan > 0 && !pausado ? faseRespira((ahora - inicioR) / 1000) : null;
   const quietoRespira = sinMovimiento();
   // (el retraso de la animación se fija cuando aparece el círculo, con lo que lleva el descanso en ese momento: cambiarlo
   // después la haría saltar; y un círculo nuevo, por cada descanso)
   const ponerRetraso = (el) => { if (el && !el.dataset.retraso) { el.dataset.retraso = '1'; el.style.animationDelay = `${retrasoRespira((Date.now() - inicioR) / 1000)}s`; } };
   const R = 88, C = 2 * Math.PI * R;
   const frac = total ? Math.min(1, quedan / total) : 0;
-  const ajustar = (s) => alCambiar({ fin: Math.max(Date.now(), fin) + s * 1000, total: Math.max(total, (Math.max(Date.now(), fin) - Date.now()) / 1000 + s), prioridad, texto, voz, tras, inicio: inicioR });
+  const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, ...(pausado ? { pausa, pausadoEn } : {}) });
+  const ajustar = (s) => alCambiar(ajustarDescanso(este(), s));
+  const conPista = quedan > 0 && pistaManda(fin);
   const color = COLOR_DISCO[prioridad] || 'var(--morado)';
   const r2 = 9, c2 = 2 * Math.PI * r2;
   return (
     <>
     <div ref={caja} class={`temporizador ${clase} ${quedan <= 0 ? 'fin' : ''}`} role="timer" aria-live="off" aria-label="Descanso" style={{ '--c-disco': color }}>
       <div class="temporizador-cab">
-        <span class="temporizador-etq">{quedan > 0 ? 'Descanso' : 'Descanso terminado'}</span>
+        <span class="temporizador-etq">{quedan > 0 ? (pausado ? 'Descanso en pausa' : 'Descanso') : 'Descanso terminado'}</span>
         <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>
       </div>
       <div class={`reloj-descanso ${fase ? 'respirando' : ''}`}>
@@ -253,12 +286,13 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = 
           <circle class="arco" cx="100" cy="100" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - frac)} transform="rotate(-90 100 100)" />
         </svg>
         <div class="reloj-centro">
-          <div class="cuenta num" role="timer" aria-label={quedan > 0 ? `Descanso: quedan ${Math.ceil(quedan)} segundos` : 'Descanso terminado'}>{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</div>
+          <div class="cuenta num" role="timer" aria-label={quedan > 0 ? `Descanso${pausado ? ' en pausa' : ''}: quedan ${Math.ceil(quedan)} segundos` : 'Descanso terminado'}>{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</div>
           {quedan > 0 && total > 0 && !fase && <div class="de num">de {mmss(total)}</div>}
           {fase && <div class={`respira-texto ${fase.fase}`} aria-hidden="true">{fase.texto}</div>}
         </div>
       </div>
-      {quedan > 0 && (
+      {conPista && <p class="pista-activa peq"><Icono n="candado" />{pausado ? 'En pausa desde la pantalla de bloqueo' : 'Te avisa aunque bloquees el móvil'}</p>}
+      {quedan > 0 && !pausado && (
         <button type="button" class="respira-boton" aria-pressed={respira ? 'true' : 'false'} onClick={cambiarRespira} title="Un círculo para acompasar la respiración mientras descansas">
           <Icono n="sueno" />Respira
         </button>
@@ -270,6 +304,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, tras = 
         <button onClick={() => ajustar(15)} aria-label="Añadir 15 segundos">+15 s</button>
         <button onClick={() => ajustar(60)} aria-label="Añadir 1 minuto">+1 min</button>
       </div>
+      {pausado && <button type="button" class="btn btn-primario seguir-descanso" onClick={() => alCambiar(reanudarDescanso(este()))}><Icono n="play" /> Seguir</button>}
       <button class="saltar" onClick={() => alCambiar(null)}>{quedan > 0 ? 'Saltar' : 'Cerrar'}</button>
     </div>
       {/* (fuera de la tarjeta: con su latido al sonar, una «fixed» dentro se movería con ella) */}

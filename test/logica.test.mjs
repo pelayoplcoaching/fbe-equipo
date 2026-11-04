@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.3' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.4' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -3606,9 +3606,136 @@ console.log('\nv0.61: revisar la sesión, la estela, el perfil carga–velocidad
   const legal4 = await import('../web/src/legal.js');
   const tv4 = legal4.PRIVACIDAD.find((x) => x[0] === 'Tus vídeos de técnica')[1];
   const mov4 = legal4.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
-  check(legal4.VERSION_LEGAL === '2026-12.3' && PV3.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.3' && PV3.novedadesDesde('2026-12.2', '2026-12.3').length === 1
+  check(PV3.compararVersiones(legal4.VERSION_LEGAL, '2026-12.3') >= 0 && PV3.NOVEDADES_PRIVACIDAD.some((x) => x[3] === '2026-12.3') && PV3.novedadesDesde('2026-12.2', '2026-12.3').length === 1
     && /resumen de toda la sesión/.test(tv4) && /informe de técnica de cada mes/.test(tv4) && /sin guardarlo/.test(tv4) && /solo con wifi/.test(mov4) && /tipo de conexión/.test(mov4),
     'la política 2026-12.3: el resumen de la sesión, el informe del mes (calculado, sin guardarse), el perfil y «solo con wifi» (en el móvil)');
+}
+
+console.log('\nv0.62: avisar aunque bloquees el móvil (la pista del descanso) y el descanso en la pantalla de bloqueo');
+{
+  const PI = await import('../web/src/logica/pista.js');
+  const { CLIPS, VOCES } = await import('../web/src/datos/pista-descanso.js');
+  const { SONIDOS } = await import('../web/src/datos/sonidos-descanso.js');
+  const AC = await import('../web/src/logica/actividad.js');
+  const { normalizarAjustes, AJUSTES_DEFECTO } = await import('../web/src/ui/ajustes.js');
+  const B = PI.FORMATO_PISTA.bytes;
+  // ---------- el formato de las tramas
+  const sil = PI.tramaSilencio();
+  check(B === 144 && PI.FORMATO_PISTA.ms === 24 && sil.length === 144 && PI.esTrama(sil, 0) && sil.subarray(4).every((x) => x === 0),
+    'una trama en silencio: MPEG-1 capa III, 48 kHz, mono, 48 kbit/s (144 bytes, 24 ms), con la información lateral a cero');
+  const info = PI.tramaSilencio(); info.set([...'Info'].map((c) => c.charCodeAt(0)), 21);
+  const sucio = new Uint8Array([0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 3, 1, 2, 3, ...info, 7, 7, ...sil, ...sil]);
+  check(PI.tramasDe(sucio).length === 2 * B && PI.tramasDe(new Uint8Array(50)).length === 0,
+    'de un MP3 solo se quedan las tramas del formato: sin la etiqueta ID3, sin la trama «Info» de LAME (mentiría la duración) y sin basura');
+  const dec = (v) => new Uint8Array(Buffer.from(v, 'base64'));
+  const datos = Object.fromEntries(Object.entries(CLIPS).map(([k, v]) => [k, dec(v)]));
+  const tramasOk = (d) => d.length > 0 && d.length % B === 0 && Array.from({ length: d.length / B }, (_, i) => PI.esTrama(d, i * B)).every(Boolean) && ((d[4] << 1) | (d[5] >> 7)) === 0;
+  check(Object.keys(SONIDOS).every((k) => k in CLIPS) && 'suave' in CLIPS && 'pitido' in CLIPS && Object.values(datos).every(tramasOk) && Object.keys(VOCES).length === 0,
+    `los sonidos de la pista (los ${Object.keys(SONIDOS).length} de FBE Timer, el suave y el pitido de la cuenta): tramas enteras del formato, la primera sin depender de otra; sin frases del coach grabadas`);
+  check(datos.pitido.length / B <= 8 && Object.keys(SONIDOS).every((k) => datos[k].length / B * 24 < 2500), 'el pitido de la cuenta dura menos de 0,2 s y ningún aviso pasa de 2,5 s (cabe antes del final de la pista)');
+  const largos = Object.fromEntries(Object.entries(datos).map(([k, d]) => [k, d.length / B]));
+  // ---------- el plan: qué suena y cuándo
+  const p10 = PI.planPista({ restanteMs: 10000, clips: largos, sonido: 'boxeo' });
+  const inicios = []; let t = 0; for (const [k, n] of p10.partes) { if (k) inicios.push([k, t]); t += n; }
+  check(p10.cue === 417 && Math.abs(p10.cueMs - 10000) <= 12 && p10.final.join() === 'boxeo' && inicios.map(([k]) => k).join() === 'pitido,pitido,pitido,boxeo'
+    && inicios.slice(0, 3).every(([, x], i) => Math.abs(x * 24 - (7000 + i * 1000)) <= 24) && p10.total === t && p10.duracionMs === t * 24 && p10.partes.at(-1)[0] === null,
+    'con 10 s: silencio, un pitido a los 3, 2 y 1 s del final, el aviso elegido justo al acabar (a ±12 ms; los pitidos, a una trama) y un poco de silencio detrás');
+  check(PI.planPista({ restanteMs: 10000, clips: largos, cuentaAtras: false }).partes.filter(([k]) => k).map(([k]) => k).join() === 'tres-beeps'
+    && PI.planPista({ restanteMs: 2000, clips: largos }).partes.filter(([k]) => k === 'pitido').length === 2
+    && PI.planPista({ restanteMs: 0, clips: largos }) === null && PI.planPista({ restanteMs: PI.MAX_PISTA_MS + 1, clips: largos }) === null
+    && PI.planPista({ restanteMs: 5000, clips: largos, sonido: 'inventado' }).final.join() === 'tres-beeps' && PI.planPista({ restanteMs: 5000, clips: largos, sonido: 'suave' }).final.join() === 'suave',
+    'sin «Pitidos en los 3 últimos segundos», solo el aviso; con 2 s, solo los pitidos que caben; sin tiempo o con más de 15 min, sin pista; un aviso que no existe, los tres beeps');
+  const voces = { fin: 40, vamos: 25, ultima: 30, tres: 60, dos: 20, uno: 20 };
+  const pv = PI.planPista({ restanteMs: 10000, clips: largos, voz: true, voces, ultima: true });
+  const iv = []; t = 0; for (const [k, n] of pv.partes) { if (k) iv.push([k, t, n]); t += n; }
+  check(pv.final.join() === 'fin,ultima' && iv.map(([k]) => k).join() === 'tres,dos,uno,fin,ultima' && iv.every(([, x, n], i) => i === 0 || x >= iv[i - 1][1] + iv[i - 1][2])
+    && iv[1][1] === iv[0][1] + 60 && pv.cue === iv[3][1] && pv.cue >= 417
+    && PI.planPista({ restanteMs: 10000, clips: largos, voz: true, voces }).final.join() === 'fin,vamos'
+    && PI.planPista({ restanteMs: 10000, clips: largos, voz: true, voces: { ...voces, uno: 0 } }).final.join() === 'tres-beeps'
+    && PI.planPista({ restanteMs: 10000, clips: largos, voz: false, voces }).final.join() === 'tres-beeps',
+    'con las seis frases del coach y la voz encendida: su «tres, dos, uno», «Se acabó el descanso» y «Última serie» (o «¡Vamos!»), sin pisarse (si una no cabe, va justo detrás); sin las seis o sin la voz, los pitidos y el aviso');
+  // ---------- componerla
+  const bytes = PI.componerPista(p10, datos);
+  const enTrama = (i) => bytes.subarray(i * B, (i + 1) * B);
+  check(bytes.length === p10.total * B && enTrama(0).every((x, i) => x === sil[i]) && enTrama(p10.cue).every((x, i) => x === datos.boxeo[i])
+    && Array.from({ length: p10.total }, (_, i) => PI.esTrama(bytes, i * B)).every(Boolean),
+    `la pista de 10 s: ${(bytes.length / 1024).toFixed(0)} KB de tramas del formato, en silencio hasta el aviso, que empieza en su trama (un descanso de 3 min, unos ${Math.round(180000 / 24 * B / 1024)} KB)`);
+  // (revisión L2) la pista, en trozos: el silencio reutiliza un mismo bloque de 6 s, sin un array del tamaño de la pista
+  const tz = PI.trozosPista(p10, datos), p15 = PI.planPista({ restanteMs: 15 * 60000 - 2000, clips: largos }), t15 = PI.trozosPista(p15, datos);
+  const unidos = new Uint8Array(tz.reduce((n, x) => n + x.length, 0)); { let i = 0; for (const x of tz) { unidos.set(x, i); i += x.length; } }
+  const total15 = t15.reduce((n, x) => n + x.length, 0);
+  check(unidos.every((x, i) => x === bytes[i]) && total15 === p15.total * B && Math.abs(total15 / 1024 / 1024 - 5.15) < 0.1 && Math.max(...t15.map((x) => x.length)) <= 250 * B
+    && new Set(t15.filter((x) => x.length === 250 * B).map((x) => x.buffer)).size === 1,
+    `(revisión L2) en trozos para el Blob, igual que seguida; una de 15 min (${(total15 / 1024 / 1024).toFixed(1)} MB) se arma con ${t15.length} trozos de como mucho 36 KB que comparten el mismo bloque de silencio`);
+  check(PI.avisoSonando(10, p10) && PI.avisoSonando(9.97, p10) && !PI.avisoSonando(9.9, p10) && !PI.avisoSonando(NaN, p10) && !PI.avisoSonando(11, null),
+    'se sabe que el aviso ya suena cuando la pista llega a él (para anular el aviso al móvil)');
+  // ---------- el descanso: ±15 s, pausa y seguir (la misma cuenta que el temporizador)
+  const T0 = 1_000_000_000_000;
+  const d = { fin: T0 + 30000, total: 90, texto: 'serie 2 de press banca', inicio: T0 - 60000 };
+  const a15 = PI.ajustarDescanso(d, 15, T0), m15 = PI.ajustarDescanso({ ...d, fin: T0 + 10000 }, -15, T0), tras = PI.ajustarDescanso({ ...d, fin: T0 - 2000 }, 15, T0);
+  check(a15.fin === T0 + 45000 && a15.total === 90 && a15.texto === d.texto && a15.inicio === d.inicio && m15.fin === T0 - 5000 && tras.fin === T0 + 15000 && tras.total === 90
+    && PI.ajustarDescanso(d, 60, T0).fin === T0 + 90000 && PI.ajustarDescanso({ ...d, total: 20 }, 15, T0).total === 45,
+    '+15 / −15 / +1 min como el temporizador (desde ahora si ya había acabado; el total crece si hace falta), sin perder lo demás del descanso');
+  const pa = PI.pausarDescanso(d, T0 + 10000), si = PI.reanudarDescanso(pa, T0 + 50000);
+  check(pa.pausa === 20000 && pa.pausadoEn === T0 + 10000 && !('pausadoEn' in si) && !('pausadoEn' in PI.ajustarDescanso(pa, -60, T0)) && PI.enPausa(pa) && PI.restanteMs(pa, T0 + 99999) === 20000 && PI.ajustarDescanso(pa, 15, T0).pausa === 35000 && PI.ajustarDescanso(pa, -60, T0).pausa === null && PI.ajustarDescanso(pa, -60, T0).fin === T0
+    && si.fin === T0 + 70000 && !('pausa' in si) && PI.pausarDescanso({ ...d, fin: T0 - 1 }, T0).pausa === undefined && PI.reanudarDescanso(d, T0) === d && PI.restanteMs(d, T0) === 30000 && PI.restanteMs(null) === 0,
+    'pausa (desde la pantalla de bloqueo): se queda con lo que faltaba (y cuándo se pausó), ±15 lo cambia (si llega a cero, acaba) y «Seguir» lo continúa desde ahora; uno ya acabado no se pausa');
+  check(PI.MAX_PAUSA_MS === 30 * 60000 && PI.pausaVigente(pa, T0 + 10000 + 29 * 60000) && !PI.pausaVigente(pa, T0 + 10000 + 31 * 60000) && !PI.pausaVigente({ ...pa, pausadoEn: undefined }, T0 + 20000)
+    && !PI.pausaVigente(d, T0) && !PI.pausaVigente(pa, T0),
+    '(revisión M2) una pausa vale media hora: después (o sin saber cuándo se pausó) ya no vuelve sola días después');
+  // (revisión M1) el aviso al móvil tras un botón de la pantalla de bloqueo, con la sesión cerrada
+  const a1 = PI.avisoTrasCambio(PI.ajustarDescanso({ ...d, fin: T0 + 10000 }, -15, T0), T0);
+  const a2 = PI.avisoTrasCambio(PI.reanudarDescanso(pa, T0 + 60000), T0 + 60000);
+  const a3 = PI.avisoTrasCambio(PI.ajustarDescanso(d, 15 * 60, T0), T0);
+  check(a1.programar === T0 && !a1.cancelar && PI.avisoTrasCambio({ fin: T0 - 5000 }, T0, { visible: true }).cancelar === true && a2.programar === T0 + 80000
+    && a3.programar === T0 + 30000 + 15 * 60000 && PI.avisoTrasCambio(pa, T0).cancelar && PI.avisoTrasCambio(null, T0).cancelar,
+    '(revisión M1) −15 con 10 s: avisa ya (no al final de antes); al seguir tras una pausa, para el final nuevo (aunque la pista no arranque); ⏩ más allá de la pista: para su final de verdad; en pausa o saltado, se anula; acabado con la app delante, avisa ella');
+  // ---------- la pantalla de bloqueo
+  check(PI.tituloMedia({ restanteS: 83 }) === 'Descanso · 1:23' && PI.tituloMedia({ restanteS: 83, pausa: true }) === 'Descanso en pausa · 1:23' && PI.tituloMedia({ restanteS: 83, oculta: true }) === 'Descanso'
+    && PI.tituloMedia({ restanteS: 83, oculta: true, pausa: true }) === 'Descanso en pausa · 1:23' && PI.tituloMedia({ restanteS: 0 }) === '¡Vamos!' && PI.tituloMedia({ restanteS: 10, prueba: true }) === 'Prueba del aviso · 0:10',
+    'el título de la pantalla de bloqueo: «Descanso · 1:23» (con la página oculta, sin la cifra, que se quedaría parada: ya la da la barra), «en pausa» y «¡Vamos!»');
+  check(JSON.stringify(PI.posicionMedia({ total: 90, restanteS: 30 })) === '{"duration":90,"position":60,"playbackRate":1}' && JSON.stringify(PI.posicionMedia({ total: 90, restanteS: 120 })) === '{"duration":120,"position":0,"playbackRate":1}'
+    && PI.posicionMedia({ total: 90, restanteS: 30, pausa: true }).playbackRate === 1 && PI.posicionMedia({ total: 0, restanteS: 0 }).duration === 1
+    && PI.albumMedia('serie 3 de press banca · 80 kg × 6') === 'Después: serie 3 de press banca · 80 kg × 6' && PI.albumMedia(null) === '',
+    'la barra de progreso (lo que va de descanso sobre el total; nunca más allá del final; la velocidad, siempre 1: con 0 setPositionState falla, la pausa la dice playbackState) y «Después: …» debajo');
+  // ---------- lo que se dice y lo que lleva el aviso al móvil
+  const ult = 'Serie 3 de press banca: 80 kilos por 6. Última serie.';
+  check(PI.esUltima(ult) && !PI.esUltima('Serie 2 de press banca: 80 kilos por 6.') && PI.fraseTrasPista(ult, ['fin', 'ultima']) === 'Serie 3 de press banca: 80 kilos por 6.' && PI.fraseTrasPista(ult, ['boxeo']) === ult
+    && PI.fraseTrasPista(null, ['fin', 'vamos']) === '' && PI.fraseTrasPista('', ['boxeo']) === '¡Vamos!' && PI.fraseTrasPista('¡Sesión terminada! Buen trabajo.', ['fin', 'vamos']) === '¡Sesión terminada! Buen trabajo.',
+    'si la página sigue viva al acabar, la voz del móvil dice la serie siguiente sin repetir lo que acaba de decir la pista («Última serie», «¡Vamos!»): nunca dos veces');
+  check(PI.textoAviso({ texto: 'serie 3 de press banca', kg: 80, reps: 6 }) === 'serie 3 de press banca · 80 kg × 6' && PI.textoAviso({ texto: 'serie 3 de press banca', kg: 82.5 }) === 'serie 3 de press banca · 82,5 kg'
+    && PI.textoAviso({ texto: 'dominadas', reps: 8 }) === 'dominadas · 8 reps' && PI.textoAviso({ texto: 'terminar la sesión' }) === 'terminar la sesión' && PI.textoAviso({ texto: '' }) === '' && PI.textoAviso({ texto: 'x'.repeat(200), kg: 50, reps: 5 }).length === 150,
+    'el aviso al móvil del fin del descanso, con la carga que le propone si se sabe («Ahora: serie 3 de press banca · 80 kg × 6»), sin pasar de 150 caracteres');
+  // ---------- dónde sale el ajuste
+  const IPH = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
+  const AND = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36';
+  const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15';
+  check(PI.plataformaPista({ ua: IPH, audioSession: true }) === 'ios' && PI.plataformaPista({ ua: IPH, audioSession: false, mediaSession: true }) === null
+    && PI.plataformaPista({ ua: MAC, plataforma: 'MacIntel', toques: 5, audioSession: true }) === 'ios' && PI.plataformaPista({ ua: MAC, plataforma: 'MacIntel', toques: 0, audioSession: true, mediaSession: true }) === null
+    && PI.plataformaPista({ ua: AND, mediaSession: true }) === 'android' && PI.plataformaPista({ ua: AND, mediaSession: false }) === null && PI.plataformaPista({ ua: IPH, audioSession: true, audio: false }) === null,
+    'el ajuste sale solo donde puede funcionar: iPhone o iPad con Safari 16.4+ (audioSession) y Android con Media Session; en el ordenador, no');
+  check(AJUSTES_DEFECTO.vozBloqueo === false && normalizarAjustes({}).vozBloqueo === false && normalizarAjustes({ vozBloqueo: true }).vozBloqueo === true && normalizarAjustes({ vozBloqueo: 'si' }).vozBloqueo === false,
+    '«Avisar aunque bloquees el móvil», apagado de serie en cada móvil (quien no lo enciende sigue como siempre, en «ambient»)');
+  // ---------- la píldora y lo que se guarda
+  const g = AC.descansoGuardable({ ...pa, prioridad: 'alta', aviso: 'serie 2 de press banca · 80 kg × 6', extra: 'no' });
+  const enC = { id: 's1', nombre: 'Torso', hechas: 3, t: T0, descanso: g };
+  const ea = AC.estadoActividad(enC, T0 + 300000);
+  check(g.pausa === 20000 && g.pausadoEn === T0 + 10000 && g.aviso.endsWith('× 6') && !('extra' in g) && AC.descansoGuardable(null) === null && AC.descansoGuardable({ ...d }).pausa === null
+    && ea.descanso.pausa && ea.descanso.quedan === 20 && ea.descanso.cuenta === '0:20' && !ea.descanso.terminado && /en pausa/.test(AC.etiquetaActividad(ea))
+    && AC.estadoActividad({ ...enC, descanso: AC.descansoGuardable(d) }, T0 + 300000).descanso === null,
+    'la píldora «Sesión en curso» guarda el aviso y la pausa (nada más) y, en pausa, enseña lo que quedaba, quieto, aunque pase el tiempo');
+  check(AC.estadoActividad({ ...enC, t: T0 + 1900000 }, T0 + 1900000 + 1000).descanso === null && AC.estadoActividad({ ...enC, descanso: { ...g, pausadoEn: null } }, T0 + 20000).descanso === null
+    && AC.descansoGuardable(d).pausadoEn === null,
+    '(revisión M2) una pausa de hace más de media hora (o sin su hora) ya no sale en la píldora ni vuelve a la sesión');
+  // ---------- la política
+  const legal5 = await import('../web/src/legal.js');
+  const PV4 = await import('../web/src/logica/privacidad.js');
+  const mov5 = legal5.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
+  const not5 = legal5.PRIVACIDAD.find((x) => x[0] === 'Notificaciones')[1];
+  check(legal5.VERSION_LEGAL === '2026-12.4' && PV4.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.4' && PV4.novedadesDesde('2026-12.3', '2026-12.4').length === 1
+    && /Avisar aunque bloquees el móvil/.test(mov5) && /pantalla de bloqueo/.test(mov5) && /a la vista de cualquiera/.test(mov5) && /no sale de él/.test(mov5) && /carga que te propone/.test(not5)
+    && /lo ve quien mire tu móvil/.test(PV4.NOVEDADES_PRIVACIDAD[0][2]) && /pantalla del coche, el reloj u otro aparato Bluetooth/.test(mov5),
+    'la política 2026-12.4: el ajuste se queda en el móvil, la pantalla de bloqueo enseña el descanso y la serie siguiente (a la vista de quien mire el móvil) y el aviso lleva la carga');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

@@ -4,13 +4,16 @@
 // mantenerla pulsada), se abre una tarjeta con lo siguiente y «Volver a la sesión». Los cambios se anuncian con
 // educación (al empezar y al acabar el descanso), nunca cada segundo. La cabecera deja su hueco (no tapa sus botones).
 // Si el descanso acaba aquí, suena como en la sesión (y se anula el aviso al móvil: ya ha sonado).
+// v0.62: si lo avisa la pista de «Avisar aunque bloquees el móvil», aquí solo vibra y dice la serie siguiente (sin repetir).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono } from '../comunes.jsx';
 import { leerEnCurso, borrarEnCurso, EVENTO_EN_CURSO } from '../en-curso.js';
 import { estadoActividad, anuncioActividad, etiquetaActividad } from '../../logica/actividad.js';
-import { pitar } from './sesion-comun.jsx';
+import { pitar, vibrarAviso } from './sesion-comun.jsx';
 import { leerAjustes } from '../ajustes.js';
 import { hablar } from '../voz.js';
+import { pistaManda, pistaSono, pistaFinal } from '../pista-descanso.js';
+import { fraseTrasPista } from '../../logica/pista.js';
 
 export function useEnCurso(atletaId) {
   const [x, setX] = useState(() => leerEnCurso(atletaId));
@@ -29,7 +32,7 @@ export function ActividadSesion({ datos, alVolver }) {
   const { api } = useApp();
   // El reloj solo corre con un descanso en marcha (cada medio segundo); si no, la píldora no cambia sola
   const [ahora, setAhora] = useState(Date.now());
-  const conDescanso = !!datos?.descanso && datos.descanso.fin > Date.now() - 6500;
+  const conDescanso = !!datos?.descanso && !Number.isFinite(datos.descanso.pausa) && datos.descanso.fin > Date.now() - 6500;
   useEffect(() => {
     if (!conDescanso) return undefined;
     const i = setInterval(() => setAhora(Date.now()), 500);
@@ -48,9 +51,13 @@ export function ActividadSesion({ datos, alVolver }) {
     if (a && previo.current) setAnuncio(a);
     // Si el descanso acaba con la píldora delante (no si ya había acabado al llegar), suena como en la sesión
     if (e?.descanso?.terminado && previo.current?.descanso && !previo.current.descanso.terminado && Date.now() - datos.descanso.fin < 4000) {
-      pitar();
-      if (leerAjustes().voz) setTimeout(() => hablar(datos.descanso.voz || '¡Vamos!'), leerAjustes().sonido ? 900 : 0);
-      if (document.visibilityState === 'visible' && typeof Notification !== 'undefined' && Notification.permission === 'granted') api?.cancelarDescanso?.();
+      const fin = datos.descanso.fin, manda = pistaManda(fin);
+      if (manda) vibrarAviso(); else pitar();
+      if (leerAjustes().voz) {
+        const frase = manda ? fraseTrasPista(datos.descanso.voz, pistaFinal(fin)) : (datos.descanso.voz || '¡Vamos!');
+        if (frase) setTimeout(() => hablar(frase), manda ? 1800 : leerAjustes().sonido ? 900 : 0);
+      }
+      if ((document.visibilityState === 'visible' || pistaSono(fin)) && typeof Notification !== 'undefined' && Notification.permission === 'granted') api?.cancelarDescanso?.();
     }
     previo.current = e;
   });
@@ -94,7 +101,7 @@ export function ActividadSesion({ datos, alVolver }) {
           <dl class="encurso-datos">
             {e.ejercicio && <div><dt>Ahora</dt><dd>{e.ejercicio}</dd></div>}
             {e.siguiente && <div><dt>Lo siguiente</dt><dd class="num">{e.siguiente}</dd></div>}
-            {d && <div><dt>Descanso</dt><dd class="num">{d.terminado ? 'Terminado' : `Quedan ${d.cuenta}`}</dd></div>}
+            {d && <div><dt>Descanso</dt><dd class="num">{d.terminado ? 'Terminado' : `${d.pausa ? 'En pausa: quedan' : 'Quedan'} ${d.cuenta}`}</dd></div>}
             <div><dt>Series</dt><dd class="num">{e.hechas}{e.total ? ` de ${e.total}` : ''}</dd></div>
           </dl>
           <div class="encurso-acciones">

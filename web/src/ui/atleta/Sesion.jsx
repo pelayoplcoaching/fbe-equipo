@@ -38,6 +38,9 @@ import { vibrar } from '../hapticos.js';
 import { conTransicion } from '../transiciones.js';
 import { seVe } from '../../logica/vistas.js';
 import { guardarEnCurso, borrarEnCurso, cambiarDescansoEnCurso, leerEnCurso } from '../en-curso.js';
+import { descansoGuardable } from '../../logica/actividad.js';
+import { sincronizarPista, prepararPista, EVENTO_PISTA } from '../pista-descanso.js';
+import { textoAviso, pausaVigente } from '../../logica/pista.js';
 import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, seriesPautadasHechas } from '../../logica/visual.js';
 import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
 import { resumenPautas } from '../../logica/diseno.js';
@@ -57,7 +60,19 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [descanso, setDescanso] = useState(null);  // { fin, total, prioridad, texto }
   // v0.52: el descanso también queda en «Sesión en curso» (al momento: si se quita, el aviso al móvil se anula; si se
   // sale de la sesión con él en marcha, lo lleva la píldora de arriba)
-  const cambiarDescanso = (d) => { setDescanso(d); cambiarDescansoEnCurso(atleta.id, id, d); };
+  // v0.62: y la pista de «Avisar aunque bloquees el móvil», en el mismo toque (en el iPhone, el audio solo arranca ahí)
+  const avisosPista = () => (api?.programarDescanso && typeof Notification !== 'undefined' && Notification.permission === 'granted'
+    ? { programar: (f, t) => api.programarDescanso(f, t), cancelar: () => api.cancelarDescanso?.() } : null);
+  const cambiarDescanso = (d) => { setDescanso(d); cambiarDescansoEnCurso(atleta.id, id, d); sincronizarPista(d, { atletaId: atleta.id, sesionId: id, avisos: avisosPista() }); };
+  const cambiarRef = useRef(cambiarDescanso);
+  cambiarRef.current = cambiarDescanso;
+  useEffect(() => {
+    prepararPista();
+    // Lo que piden los botones de la pantalla de bloqueo (pausa, ±15 s, saltar), con la sesión abierta: como en la app
+    const remoto = (e) => { e.preventDefault(); cambiarRef.current(e.detail); };
+    window.addEventListener(EVENTO_PISTA, remoto);
+    return () => window.removeEventListener(EVENTO_PISTA, remoto);
+  }, []);
   // v0.52: lo que dice la píldora (se calcula al pintar, más abajo) y se guarda en el móvil tras cada pintado
   const enCurso = useRef(null);
   enCurso.current = null;
@@ -67,7 +82,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     if (!det.datos || !seriesListas.current) return;
     const x = enCurso.current;
     if (!x) { borrarEnCurso(atleta.id, id); return; }
-    guardarEnCurso(atleta.id, { ...x, descanso: descanso ? { fin: descanso.fin, total: descanso.total, prioridad: descanso.prioridad || null, texto: descanso.texto || null, voz: descanso.voz || null, tras: descanso.tras || null, inicio: descanso.inicio || null } : null });
+    guardarEnCurso(atleta.id, { ...x, descanso: descansoGuardable(descanso) });
   });
   const [terminando, setTerminando] = useState(false);
   const [resumen, setResumen] = useState(null);
@@ -216,9 +231,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       if (ultima && !(e.id in sustitutos)) desdeSeries[e.id] = ultima.sustituto_id;
     }
     if (Object.keys(desdeSeries).length) setSustitutos({ ...sustitutos, ...desdeSeries });
-    // v0.52: al volver a la sesión con un descanso en marcha (lo llevaba la píldora de arriba), sigue donde iba
+    // v0.52: al volver a la sesión con un descanso en marcha (lo llevaba la píldora de arriba), sigue donde iba (v0.62: o en pausa, si se pausó hace menos de media hora)
     const ec = leerEnCurso(atleta.id);
-    if (ec?.id === id && ec.descanso && ec.descanso.fin > Date.now() - 6000 && !det.datos.sesion.completada && det.datos.ejercicios.some((x) => x.hechas.length)) setDescanso(ec.descanso);
+    if (ec?.id === id && ec.descanso && ((!Number.isFinite(ec.descanso.pausa) && ec.descanso.fin > Date.now() - 6000) || pausaVigente(ec.descanso)) && !det.datos.sesion.completada && det.datos.ejercicios.some((x) => x.hechas.length)) setDescanso(ec.descanso);
     if (abiertos === null) {
       const primero = det.datos.ejercicios.find((e) => e.hechas.length < e.series) || det.datos.ejercicios[0];
       setAbiertos(new Set(primero ? [primero.id] : []));
@@ -360,16 +375,19 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       const texto = !sig ? 'terminar la sesión' : sig.id === e.id || r.siguiente.numero > 1 ? `serie ${r.siguiente.numero} de ${nombreCon(sig)}` : nombreCon(sig);
       // v0.48: lo que dirá el entrenador por voz al acabar el descanso («Serie 3 de press banca: 80 kilos por 6»)
       let voz = '¡Sesión terminada! Buen trabajo.';
+      // v0.62: el aviso al móvil y la pantalla de bloqueo, con la carga que le propone («serie 3 de press banca · 80 kg × 6»)
+      let avisoMovil = texto;
       if (sig) {
         try {
           const a = actualDe(sig), cambiado = a.id !== sig.ejercicio.id;
           const hSig = sig.id === e.id ? { ...hechas[e.id], [numero]: local } : (hechas[sig.id] || {});
           const prop = prepararEjercicio(sig, cambiado ? a : null, cambiado ? ultimas[a.id] || null : sig.ultimas, semana?.foco, progresionAuto && !cambiado && !frenar).propuesta(r.siguiente.numero, hSig);
           voz = fraseSerie({ numero: r.siguiente.numero, series: sig.series, nombre: a.nombre, kg: prop?.kg, reps: prop?.reps });
+          avisoMovil = textoAviso({ texto, kg: prop?.kg, reps: prop?.reps }) || texto;
         } catch { voz = `Ahora, ${texto}.`; }
       }
       // v0.50: el temporizador sale en la página, debajo de este ejercicio (o de su superserie)
-      if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, tras: e.id, inicio: Date.now() });
+      if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, aviso: avisoMovil, tras: e.id, inicio: Date.now() });
       else if (r.enRonda) { cambiarDescanso(null); aviso(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); }
       else hablar(voz);
       if (sig && sig.id !== e.id) {
