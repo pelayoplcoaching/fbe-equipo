@@ -4267,3 +4267,68 @@ body:has(.visor) .chat-barra, body:has(.visor) .chat-abajo { display: none; }
 .rep-elegir-texto { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); max-width: calc(100% - 20px); padding: 4px 12px; border-radius: 999px; background: rgba(11, 10, 16, .85); color: #FFFFFF; font-size: 0.8125rem; font-weight: 700; text-align: center; pointer-events: none; }
 .reproductor.eligiendo .rep-marco { box-shadow: 0 0 0 3px var(--morado); }
 .mi-tecnica-velocidad { border-top: 1px solid var(--linea); padding-top: 8px; }
+
+/* ---------------------------------------------------------------- v0.59: los vídeos de técnica, tanda A */
+/* Una marca por repetición encima de la barra de tiempo, «la peor» y sus mandos */
+.rep-pista-tiempo.con-reps { padding-top: 20px; }
+.rep-reps-marcas { position: absolute; left: 8px; right: 8px; top: 0; height: 20px; }
+.rep-rep { position: absolute; top: 0; width: 24px; height: 20px; margin-left: -12px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+.rep-rep span { display: grid; place-items: center; min-width: 16px; height: 16px; padding: 0 2px; border-radius: 4px; background: var(--hoja-2); border: 1px solid var(--linea); color: var(--tinta-2); font-size: 0.625rem; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; }
+.rep-rep span:empty { min-width: 4px; width: 4px; padding: 0; }
+.rep-rep.actual span { background: var(--morado); border-color: var(--morado); color: var(--sobre-morado); }
+.rep-rep.peor span { border-color: var(--alerta); box-shadow: 0 0 0 1px var(--alerta); }
+.rep-rep:focus-visible { outline: 2px solid var(--foco); outline-offset: 1px; border-radius: 4px; }
+.rep-reps-mando { gap: 6px; align-items: center; }
+.rep-reps-cual { min-width: 0; }
+.rep-peor { color: var(--alerta); white-space: normal; text-align: left; }
+/* La tira de miniaturas */
+.rep-tira { position: relative; display: flex; height: 48px; border-radius: 8px; overflow: hidden; background: var(--hoja-2); border: 1px solid var(--linea); touch-action: none; cursor: pointer; user-select: none; }
+.rep-tira:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.tira-celda { flex: 1 1 0; min-width: 0; height: 100%; border-right: 1px solid var(--hoja); }
+.tira-celda:last-of-type { border-right: 0; }
+.tira-celda canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tira-celda.vacia { background: var(--linea); opacity: .5; }
+.tira-cursor { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: var(--morado); box-shadow: 0 0 0 1px var(--hoja); pointer-events: none; }
+/* «Recuerda: …» en la sesión */
+.recuerdas { margin-bottom: 8px; }
+.recuerda { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--morado-suave); color: var(--tinta); border: 1px solid transparent; }
+.recuerda-texto { display: flex; gap: 6px; align-items: flex-start; overflow-wrap: anywhere; }
+.recuerda-texto svg { flex: none; margin-top: 2px; color: var(--morado); }
+.recuerda-acciones { display: flex; flex-wrap: wrap; gap: 6px; }
+.recuerda.plegado { display: inline-flex; padding: 4px 8px; background: none; color: var(--morado); justify-self: start; }
+/* El recorte automático */
+.recorte-auto { gap: 8px; align-items: center; }
+.recorte-auto .mini { overflow-wrap: anywhere; }
+/* La valoración del atleta */
+.autoevaluacion { border: 1px solid var(--linea); border-radius: 12px; display: grid; gap: 10px; }
+.autoevaluacion-abrir { justify-self: start; font-weight: 650; }
+.autoevaluacion-rpe { flex-wrap: wrap; }
+.autoevaluacion-rpe button { min-width: 44px; }
+.autoevaluacion-coach { padding: 10px 12px; border-radius: 12px; background: var(--hoja-2); border: 1px solid var(--linea); }
+.autoevaluacion-coach .cita { margin: 0; overflow-wrap: anywhere; }
+.autoevaluacion-atleta p { overflow-wrap: anywhere; }
+/* Los recordatorios del coach y sus frases */
+.lista-recordatorios, .lista-frases, .lista-frases-sugeridas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lista-frases-sugeridas li::before { content: '· '; color: var(--tinta-3); }
+.recordatorio-fila, .frase-fila { display: grid; gap: 4px; padding: 8px 10px; border-radius: 10px; background: var(--hoja-2); overflow-wrap: anywhere; }
+.recordatorio-fila .fila-envolver, .frase-fila .fila-envolver { gap: 8px; align-items: center; }
+.recordatorio-nuevo .entrada, .frase-fila .entrada { min-width: 0; flex: 1 1 auto; }
+.recordatorio-sugeridos .btn { white-space: normal; text-align: left; }
+.frases-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.chip-frase { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--linea); background: var(--hoja); color: var(--tinta); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; text-align: left; max-width: 100%; overflow-wrap: anywhere; }
+.chip-frase:hover { border-color: var(--morado); }
+.chip-frase:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.chip-frase svg { flex: none; color: var(--morado); }
+.modelo-fila { padding-bottom: 12px; border-bottom: 1px solid var(--linea); }
+.comparar-con .btn { white-space: normal; text-align: left; }
+/* Los tiempos de la cola de Revisar */
+.chip.espera-ok { background: var(--ok-suave); border-color: transparent; color: var(--ok); }
+.chip.espera-aviso { background: var(--aviso-suave); border-color: transparent; color: var(--aviso); }
+.chip.espera-alerta { background: var(--alerta-suave); border-color: transparent; color: var(--alerta); }
+.tiempos-revision .fila-envolver { gap: 8px; align-items: center; }
+.tiempos-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.tiempos-datos > div { padding: 8px 10px; border-radius: 10px; background: var(--hoja-2); min-width: 0; }
+.tiempos-datos dt { font-size: 0.75rem; color: var(--tinta-3); }
+.tiempos-datos dd { margin: 2px 0 0; font-size: 1.125rem; font-weight: 750; }
+.tiempos-datos dd.espera-ok { color: var(--ok); } .tiempos-datos dd.espera-aviso { color: var(--aviso); } .tiempos-datos dd.espera-alerta { color: var(--alerta); }
+@media (min-width: 640px) { .tiempos-datos { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

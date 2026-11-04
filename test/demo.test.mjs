@@ -8,6 +8,7 @@ import { hoyISO, lunesDe, sumarDias } from '../web/src/logica/fechas.js';
 let ok = 0, fallos = 0;
 const lanza = async (fn) => { try { await fn(); return false; } catch { return true; } };
 const igualD = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const igual = igualD;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
 process.on('unhandledRejection', (e) => { console.error('ERROR:', e.stack); process.exit(1); });
 
@@ -1413,6 +1414,90 @@ console.log('\nv0.58: el análisis automático de los vídeos (como la 036)');
     check(v1.ruta === v2.ruta && /^blob:/.test(u1) && resolveObjectURL(u1)?.size > 1000 && await apiA.urlArchivo(v1.ruta) === u1,
       'borrar un vídeo de la demo no suelta el blob del ejemplo que comparte con otro (el que se está viendo sigue cargando)');
   }
+}
+
+console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas reglas que la 037)');
+{
+  const { limpiarAutoevaluacion } = await import('../web/src/logica/correccion.js');
+  const bT = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const aT = crearApi(bT);
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  const atl = await aT.atletas();
+  const ana = atl.find((a) => a.nombre === 'Ana López'), ruben = atl.find((a) => a.nombre === 'Rubén Martín');
+  const sent = (await aT.biblioteca()).find((e) => e.nombre === 'Sentadilla barra alta');
+  check(await aT.video037() === true, 'la demo tiene lo de la 037');
+  // La demo trae: lo que nota Ana del vídeo que espera revisión y el vídeo modelo de la sentadilla
+  const band = await aT.bandeja();
+  const vPend = band.archivos.find((a) => a.atleta_id === ana.id && a.tipo === 'video_tecnica');
+  check(vPend?.autoevaluacion?.rpe === 8.5 && vPend.autoevaluacion.molestia === false, 'la bandeja del coach trae lo que nota Ana de su vídeo (RPE 8,5, sin molestias)');
+  const mods = await aT.videosModelo([sent.id]);
+  check(mods.length === 1 && mods[0].angulo === 'De lado' && /^blob:/.test(await aT.urlModelo(mods[0])), 'y el vídeo modelo de la sentadilla (con su enlace)');
+  // 14. Recordatorios: el coach, como mucho 3 activos; Ana, los suyos sin horas; Rubén, ninguno de Ana
+  const diarioAna = await aT.diario(ana.id);
+  const vCorr = diarioAna.find((a) => a.tipo === 'video_tecnica' && a.revision?.corregido_el && a.ejercicio?.id === sent.id);
+  const r1 = await aT.fijarRecordatorio({ atletaId: ana.id, ejercicioId: sent.id, texto: '  Rodillas   hacia fuera ', archivoId: vCorr.id, segundo: 2 });
+  await aT.fijarRecordatorio({ atletaId: ana.id, ejercicioId: sent.id, texto: 'Pecho arriba' });
+  await aT.fijarRecordatorio({ atletaId: ana.id, ejercicioId: sent.id, texto: 'Aire antes de bajar' });
+  check(r1.texto === 'Rodillas hacia fuera' && await lanza(() => aT.fijarRecordatorio({ atletaId: ana.id, ejercicioId: sent.id, texto: 'El cuarto' })), 'el coach fija hasta 3 (sin espacios de más)');
+  const vRuben = (await aT.diario(ruben.id)).find((a) => a.tipo === 'video_tecnica');
+  check(await lanza(() => bT.insert('recordatorios_tecnica', [{ atleta_id: ana.id, ejercicio_id: sent.id, texto: 'Con el de Rubén', archivo_id: vRuben.id, activo: false }]))
+    && await lanza(() => bT.insert('recordatorios_tecnica', [{ atleta_id: ana.id, ejercicio_id: sent.id, texto: 'Momento sin vídeo', segundo: 2, activo: false }]))
+    && await lanza(() => bT.insert('recordatorios_tecnica', [{ atleta_id: ana.id, ejercicio_id: sent.id, texto: 'x'.repeat(141), activo: false }]))
+    && await lanza(() => bT.update('recordatorios_tecnica', { atleta_id: ruben.id }, { eq: { id: r1.id } })), 'con las mismas reglas: su vídeo, de ese atleta; un momento, con su vídeo; hasta 140; no cambia de atleta');
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  const recA = await aT.recordatoriosActivos(ana.id);
+  check(recA.length === 3 && recA.every((r) => !Object.keys(r).some((k) => /_en$/.test(k))) && recA.find((r) => r.id === r1.id).archivo_id === vCorr.id && !(await bT.select('recordatorios_tecnica', {})).length
+    && await lanza(() => aT.fijarRecordatorio({ atletaId: ana.id, ejercicioId: sent.id, texto: 'Mío' })) && !(await bT.update('recordatorios_tecnica', { texto: 'x' }, { eq: { id: r1.id } })).length,
+    'Ana ve sus 3 (sin horas, con el vídeo corregido), nunca la tabla, y no los escribe');
+  // 12. Su valoración al enviar un vídeo
+  const v = await aT.subirArchivo(ana.id, new File([new Uint8Array(500)], 'serie.mp4', { type: 'video/mp4' }), { tipo: 'video_tecnica', ejercicio_id: sent.id, duracion_seg: 6,
+    autoevaluacion: limpiarAutoevaluacion({ rpe: 9, nota: 'Me cuesta', molestia: true, zona: 'rodilla' }, { salud: true }) });
+  check(v.autoevaluacion?.zona === 'rodilla' && v.autoevaluacion.atleta_id === ana.id, 'Ana envía un vídeo con su valoración (con una molestia en la rodilla)');
+  check(await lanza(() => bT.upsert('video_autoevaluacion', [{ archivo_id: v.id, rpe: 5.5 }], 'archivo_id')) && await lanza(() => bT.upsert('video_autoevaluacion', [{ archivo_id: v.id, nota: 'x'.repeat(281) }], 'archivo_id'))
+    && await lanza(() => bT.upsert('video_autoevaluacion', [{ archivo_id: v.id, molestia: true, zona: 'pie' }], 'archivo_id')), 'con las mismas reglas que la base');
+  const c = await bT.select('consentimientos', {});
+  for (const x of c.filter((x) => x.tipo === 'datos_salud')) await bT.update('consentimientos', { revocado_en: new Date().toISOString() }, { eq: { id: x.id } });
+  const v2 = await aT.subirArchivo(ana.id, new File([new Uint8Array(500)], 's2.mp4', { type: 'video/mp4' }), { tipo: 'video_tecnica', ejercicio_id: sent.id, duracion_seg: 6 });
+  check(await lanza(() => bT.insert('video_autoevaluacion', [{ archivo_id: v2.id, molestia: false }])) && (await aT.guardarAutoevaluacion(v2, { rpe: 8 }, { salud: false }))?.rpe === 8,
+    'sin consentimiento de datos de salud, la molestia no se guarda (el esfuerzo, sí)');
+  await bT.auth.entrar('ruben@fbe.demo', 'demo').catch(() => null);
+  if ((await aT.perfil())?.rol === 'atleta') check(!(await bT.select('video_autoevaluacion', { eq: { archivo_id: v.id } })).length && !(await aT.recordatoriosActivos(ana.id)).length, 'Rubén no ve la valoración ni los recordatorios de Ana');
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  check((await aT.autoevaluacion(v.id))?.nota === 'Me cuesta' && await lanza(() => aT.guardarAutoevaluacion(v, { rpe: 6 })), 'el coach la lee pero no la cambia');
+  await aT.marcarRevisado('archivo', v.id);
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  check(await lanza(() => aT.guardarAutoevaluacion(v, { rpe: 7 })), 'revisado el vídeo, Ana ya no la cambia');
+  // 4. Frases, 6. vídeos modelo, 15. marcas a mano: del coach
+  check(!(await aT.frasesCorreccion(sent.id)).length && await lanza(() => aT.guardarFrase({ texto: 'Mía' })) && await lanza(() => aT.subirVideoModelo(sent, new File([new Uint8Array(10)], 'm.mp4', { type: 'video/mp4' }))), 'Ana no tiene frases ni sube vídeos modelo');
+  check((await aT.videosModelo([sent.id])).length === 1 && await lanza(() => bT.storage.subir(`modelos/${sent.id}/modelo-intruso12.mp4`, new Blob(['x']), 'video/mp4')), 've el modelo, pero no sube a modelos/');
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  const fs = await aT.guardarFrasesSugeridas(sent);
+  check(fs.length >= 3 && await lanza(() => aT.guardarFrase({ texto: 'Mal dibujo', dibujo: { t: 0, formas: [] } })), 'el coach guarda sus frases (y no una con un dibujo mal formado)');
+  const m2 = await aT.subirVideoModelo(sent, new File([new Uint8Array(1000)], 'demo.mp4', { type: 'video/mp4' }), { angulo: 'De frente' });
+  check((await aT.videosModelo([sent.id])).length === 2 && /^modelos\//.test(m2.ruta), 'y sube otro vídeo modelo');
+  await aT.borrarVideoModelo(m2);
+  check((await aT.videosModelo([sent.id])).length === 1 && !(await bT.select('videos_modelo', { eq: { id: m2.id } })).length, 'borrarlo lo quita (y a la cola de Storage, que vacía el coach)');
+  check(igual(await aT.guardarRepsManual(v, [1, 3]), [1, 3]) && igual(await aT.repsManual(v.id), [1, 3]) && await lanza(() => aT.guardarRepsManual(v, [1, 9])), 'las marcas de repetición a mano, en orden y dentro del vídeo');
+  const est = await aT.estadisticasRevision();
+  check(est.pendientes >= 1 && est.masAntiguo != null && est.semana >= 1, `los tiempos de la cola en la demo (${est.pendientes} esperando, ${est.semana} revisados esta semana)`);
+  // 7. Su mejor: el de mejor nota de ese ejercicio
+  const mejor = await aT.mejorVideoDe({ ...vPend, ejercicio: sent });
+  check(mejor && mejor.revision?.puntuacion === 4 && mejor.atleta_id === ana.id, '«Comparar con su mejor»: el de mejor nota de Ana en la sentadilla');
+  // Pasar un vídeo a otro atleta: el hilo, la valoración y los recordatorios
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  const v3 = await aT.subirArchivo(ana.id, new File([new Uint8Array(500)], 's3.mp4', { type: 'video/mp4' }), { tipo: 'video_tecnica', ejercicio_id: sent.id, duracion_seg: 6, autoevaluacion: { rpe: 8, nota: null, molestia: null, zona: null } });
+  await aT.comentar({ atletaId: ana.id, archivoId: v3.id, texto: '¿Qué tal?', autor: 'atleta' });
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  await aT.comentar({ atletaId: ana.id, archivoId: v3.id, texto: 'En 0:02, la espalda', autor: 'coach' });
+  await aT.editarRecordatorio(r1.id, { activo: false });
+  const rMov = await aT.fijarRecordatorio({ atletaId: ana.id, ejercicioId: sent.id, texto: 'Espalda neutra', archivoId: v3.id, segundo: 2 });
+  await bT.update('archivos', { atleta_id: ruben.id }, { eq: { id: v3.id } });
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  check(!(await aT.comentarios({ atletaId: ana.id, archivoId: v3.id })).length && !(await aT.recordatoriosActivos(ana.id)).some((r) => r.id === rMov.id) && !(await bT.select('video_autoevaluacion', { eq: { archivo_id: v3.id } })).length,
+    'pasado el vídeo a Rubén, Ana ya no ve su hilo, su valoración ni el recordatorio enlazado');
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  const hilo = await aT.comentarios({ atletaId: ruben.id, archivoId: v3.id });
+  check(hilo.length === 1 && hilo[0].autor === 'coach' && hilo[0].atleta_id === ruben.id && (await aT.recordatoriosCoach(ruben.id, sent.id)).some((r) => r.id === rMov.id && r.activo), 'lo del coach (y el recordatorio) pasa a Rubén; lo de Ana se borra');
 }
 
 // (v0.58.1) El historial del chat por páginas en la demo, como en la base: para la atleta como para el coach

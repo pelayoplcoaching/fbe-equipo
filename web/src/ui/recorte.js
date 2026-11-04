@@ -174,3 +174,43 @@ export async function recortarVideo(archivo, { inicio = 0, fin, alProgreso = () 
     document.removeEventListener('visibilitychange', enVisibilidad);
   }
 }
+
+// v0.59: dónde empieza y acaba el movimiento, para proponer el recorte. En otro <video> (el que se ve no se toca), unos 5
+// fotogramas por segundo a 160 px como mucho, en gris, en un lienzo pequeño; con pausas cortas entre uno y otro para no
+// trabar la pantalla. Se puede cancelar (senal.aborted) y tiene un tope de tiempo: si algo falla, devuelve null sin más.
+export async function buscarMovimiento(src, { dur = null, senal = null, tope = 15000 } = {}) {
+  const { tiemposMuestreo, tamMuestra, detectarMovimiento } = await import('../logica/movimiento.js');
+  if (typeof document === 'undefined' || !src) return null;
+  const v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto';
+  v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
+  const fin = Date.now() + tope;
+  try {
+    v.src = src;
+    if (v.readyState < 1) await esperar(v, 'loadedmetadata', 8000);
+    const d = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : dur;
+    if (!(d > 0)) return null;
+    const { tiempos } = tiemposMuestreo(d);
+    const { w, h } = tamMuestra(v.videoWidth, v.videoHeight);
+    if (!w || !h) return null;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    const frames = [];
+    for (const t of tiempos) {
+      if (senal?.aborted || Date.now() > fin) return null;
+      v.currentTime = Math.min(t, Math.max(0, d - 0.05));
+      await esperar(v, 'seeked', 4000);
+      ctx.drawImage(v, 0, 0, w, h);
+      const px = ctx.getImageData(0, 0, w, h).data;
+      const g = new Uint8Array(w * h);
+      for (let i = 0, j = 0; j < g.length; i += 4, j++) g[j] = (px[i] * 77 + px[i + 1] * 150 + px[i + 2] * 29) >> 8;
+      frames.push(g);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    if (senal?.aborted) return null;
+    return detectarMovimiento(frames, { tiempos, dur: d });
+  } catch { return null; } finally {
+    try { v.removeAttribute('src'); v.load(); } catch { /* */ }
+  }
+}

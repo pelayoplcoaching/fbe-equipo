@@ -5,6 +5,8 @@ import { grados, rectImagen, limpiarDibujo, describirDibujo, dibujoVisible, dibu
 import { marcadores, marcaVecina, tiempoVoz, limitarZoom, limitarPan, ZOOM_MAX } from '../logica/tecnica.js';
 import { useCorrecciones } from './tecnica/correcciones.js';
 import { useCapa } from './tecnica/capas.js';
+import { marcasRepeticiones, peorRepeticion, indicePeor, repVecina, repActual, anadirRepManual, etiquetaRep, NOMBRE_FUENTE_REPS } from '../logica/repeticiones.js';
+import { TiraMiniaturas } from './tecnica/Tira.jsx';
 export { textoMomento };
 
 // Reproductor para revisar técnica: cámara lenta (0,25×, 0,5×, 1×), fotograma a fotograma, bucle y
@@ -19,6 +21,9 @@ export { textoMomento };
 // velocidad, puntos del cuerpo) irán en «capas», entre el vídeo y los dibujos, con el mismo rectángulo de la imagen.
 // v0.58: así es: el análisis automático pone su capa (tecnica/capas.js) y, para empezar, pide «elegir un punto» de la
 // imagen (el disco de la barra): un toque sobre el vídeo en pausa, que da sus coordenadas de 0 a 1.
+// v0.59: una marca por repetición encima de la barra de tiempo («Rep 1…n», del análisis, del tempo o marcadas a mano), ir
+// a la anterior o a la siguiente (con los botones o con [ y ]; las correcciones, con { y }), «la peor» señalada y, debajo,
+// la tira de miniaturas para ir a un momento de un toque.
 
 // (v0.57) por id, una pila: el mismo vídeo puede estar a la vez en su tarjeta y en «Comparar»; manda el último abierto y, al
 // cerrarse, vuelve el de antes
@@ -31,7 +36,7 @@ const HERRAMIENTAS = [['linea', 'Línea'], ['angulo', 'Ángulo'], ['flecha', 'Fl
 const PX_FOTOGRAMA = 8; // el ajuste fino: un fotograma cada 8 px de arrastre
 const sinMovimiento = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function Reproductor({ src, archivoId = null, serie = null, capas = null }) {
+export function Reproductor({ src, archivoId = null, serie = null, capas = null, repeticiones = false }) {
   const app = useApp();
   const v = useRef(null);
   const marco = useRef(null);
@@ -64,6 +69,19 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null 
   const marcas = useMemo(() => marcadores({ comentarios: corr.comentarios || [], revision: corr.revision || null, duracion: dur || null }), [corr.comentarios, corr.revision, dur]);
   const tramos = useMemo(() => (corr.comentarios || []).filter((c) => !c.eliminado_en && dibujoValido(c.dibujo) && c.dibujo.hasta != null).map((c) => c.dibujo), [corr.comentarios]);
   const r = corr.revision || null;
+  // (v0.59) Las repeticiones: del análisis de esta sesión o del guardado, del tempo o marcadas a mano (el coach las guarda
+  // en la corrección; el atleta, solo en su móvil)
+  const esCoachRep = app?.perfil?.rol === 'coach';
+  const [repsLocal, setRepsLocal] = useState([]);
+  const manualActual = corr.repsManual?.length ? corr.repsManual : repsLocal;
+  const repsTodas = useMemo(() => marcasRepeticiones({ sesion: corr.repsSesion || null, analisis: r?.analisis || null, tempo: r?.tempo || null, manual: manualActual, duracion: dur || null }),
+    [corr.repsSesion, r?.analisis, r?.tempo, manualActual, dur]);
+  const reps = repeticiones ? repsTodas : { fuente: 'no', reps: [] };
+  const peor = useMemo(() => {
+    const p = peorRepeticion({ reps: reps.reps, pose: corr.poseSesion || r?.analisis?.pose || null });
+    const i = indicePeor(reps.reps, p);
+    return p && i >= 0 ? { ...p, i } : null;
+  }, [reps, corr.poseSesion, r?.analisis]);
   const voz = r?.voz_archivo_id && (r.voz?.ruta || r.vozUrl) ? { ruta: r.voz?.ruta || null, url: r.vozUrl || null, inicio: Number(r.voz_inicio) || 0, dur: Number(r.voz?.duracion_seg) || 0 } : null;
   const [vozActiva, setVozActiva] = useState(true);
   const [urlVoz, setUrlVoz] = useState(null);
@@ -166,8 +184,15 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null 
     else if (e.key === '+' || e.key === '=') { e.preventDefault(); ponerZoom(zoom.z + 0.5); }
     else if (e.key === '-') { e.preventDefault(); ponerZoom(zoom.z - 0.5); }
     else if (e.key === '0') { e.preventDefault(); ponerZoom(1); }
-    else if (e.key === '[' || e.key === ']') { const m = marcaVecina(marcas, el()?.currentTime || 0, e.key === ']' ? 1 : -1); if (m) { e.preventDefault(); irMarca(m); } }
+    else if ((e.key === '[' || e.key === ']') && reps.reps.length) { const m = repVecina(reps.reps, el()?.currentTime || 0, e.key === ']' ? 1 : -1); e.preventDefault(); if (m) irA(m.t); }
+    else if (e.key === '[' || e.key === ']' || e.key === '{' || e.key === '}') { const m = marcaVecina(marcas, el()?.currentTime || 0, e.key === ']' || e.key === '}' ? 1 : -1); if (m) { e.preventDefault(); irMarca(m); } }
   };
+  // «Marcar rep» (a mano, si no salen solas): el coach las guarda en la corrección (si puede); el atleta, solo aquí
+  const marcarRep = () => {
+    const nuevo = anadirRepManual(manualActual, Math.round((el()?.currentTime || 0) * 100) / 100);
+    if (esCoachRep && corr.guardarRepsManual) corr.guardarRepsManual(nuevo); else setRepsLocal(nuevo);
+  };
+  const borrarReps = () => { if (esCoachRep && corr.guardarRepsManual && corr.repsManual?.length) corr.guardarRepsManual([]); setRepsLocal([]); };
   // Un dibujo enseñado se quita al reproducir o al irse lejos de su momento (uno con tramo, al salir de él)
   const alTiempo = (tt) => { setT(tt); if (visto && !dibujoVisible(visto, tt)) setVisto(null); sincronizar(); };
   const irMarca = (m) => {
@@ -346,7 +371,17 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null 
       ) : (
         <div class="rep-barra">
           <button class="btn btn-icono plano" onClick={alternar} aria-label={jugando ? 'Pausar' : 'Reproducir'} disabled={!listo}><Icono n={jugando ? 'pausa' : 'play'} /></button>
-          <div class={`rep-pista-tiempo ${marcas.length ? 'con-marcas' : ''}`}>
+          <div class={`rep-pista-tiempo ${marcas.length ? 'con-marcas' : ''} ${reps.reps.length && dur > 0 ? 'con-reps' : ''}`}>
+            {reps.reps.length > 0 && dur > 0 && (
+              <div class="rep-reps-marcas" role="group" aria-label={`Repeticiones (${reps.reps.length})`}>
+                {reps.reps.map((m, i) => (
+                  <button key={`rep-${m.n}-${m.t}`} type="button" class={`rep-rep ${peor?.i === i ? 'peor' : ''} ${repActual(reps.reps, t) === i ? 'actual' : ''}`} style={{ left: `${Math.min(100, (m.t / dur) * 100)}%` }}
+                    aria-label={etiquetaRep(m, peor?.i === i)} title={etiquetaRep(m, peor?.i === i)} onClick={() => irA(m.t)}>
+                    <span aria-hidden="true">{reps.reps.length <= 12 ? m.n : ''}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             <input type="range" class="rep-tiempo" min="0" max={dur || 0} step="0.01" value={t} aria-label="Momento del vídeo" aria-valuetext={textoMomento(t, true)}
               onInput={(e) => { const x = el(); if (x) { x.pause(); x.currentTime = Number(e.currentTarget.value); } }} disabled={!listo} />
             {marcas.length > 0 && dur > 0 && (
@@ -362,6 +397,26 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null 
         </div>
       )}
       <AjusteFino t={t} dur={dur} total={totalFotogramas} irA={irA} listo={listo} ahora={() => el()?.currentTime || 0} />
+      {!edicion && <TiraMiniaturas src={src} clave={archivoId || src} dur={dur} t={t} irA={irA} listo={listo} />}
+      {repeticiones && !edicion && listo && (reps.reps.length > 0 || reps.fuente == null) && (
+        <div class="rep-reps-mando fila-envolver" role="group" aria-label="Repeticiones">
+          {reps.reps.length > 0 && (
+            <>
+              <button type="button" class="btn btn-peq" aria-label="Repetición anterior" onClick={() => { const m = repVecina(reps.reps, el()?.currentTime || 0, -1); if (m) irA(m.t); }}><Icono n="atras" /> Rep.</button>
+              <span class="mini num rep-reps-cual" aria-live="polite">{repActual(reps.reps, t) >= 0 ? `Rep. ${repActual(reps.reps, t) + 1} de ${reps.reps.length}` : `${reps.reps.length} rep.`}<span class="terciario"> {NOMBRE_FUENTE_REPS[reps.fuente] || ''}</span></span>
+              <button type="button" class="btn btn-peq" aria-label="Repetición siguiente" onClick={() => { const m = repVecina(reps.reps, el()?.currentTime || 0, 1); if (m) irA(m.t); }}>Rep. <Icono n="derecha" /></button>
+              {peor && <button type="button" class="btn btn-peq rep-peor" onClick={() => irA(reps.reps[peor.i].t)}><Icono n="alerta" /> La peor: la {peor.i + 1}.ª, {peor.texto}</button>}
+            </>
+          )}
+          {(reps.fuente == null || reps.fuente === 'manual') && (
+            <>
+              <button type="button" class="btn btn-peq plano" onClick={marcarRep} aria-label="Marcar una repetición aquí"><Icono n="chincheta" /> Marcar rep</button>
+              {reps.fuente === 'manual' && <button type="button" class="btn btn-peq plano" onClick={borrarReps}>Borrar las marcas</button>}
+              {reps.fuente == null && <span class="mini terciario">Para el vídeo al empezar cada repetición y márcala{esCoachRep ? '' : ' (solo en tu móvil)'}.</span>}
+            </>
+          )}
+        </div>
+      )}
       <div class="rep-controles">
         <div class="segmentos rep-vel" role="group" aria-label="Velocidad">
           {VELOCIDADES.map(([rr, txt]) => <button key={rr} type="button" aria-pressed={vel === rr ? 'true' : 'false'} onClick={() => fijarVel(rr)} disabled={!!edicion}>{txt}</button>)}

@@ -12,6 +12,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'preact/hooks';
 import { useApp, Icono } from '../../comunes.jsx';
 import { reproductorDe, textoMomento } from '../../Video.jsx';
 import { ponerCapa, leerSesionAnalisis, guardarSesionAnalisis } from '../capas.js';
+import { ponerCorrecciones } from '../correcciones.js';
 import { CapaAnalisis } from './Capas.jsx';
 import { seguirBarra, detectarPose } from './procesar.js';
 import { crearDetector, poseDisponible } from './pose.js';
@@ -92,6 +93,10 @@ export default function PanelAnalisis({ video, esCoach = false, guardado = null,
     return resumenPose(poseVista.fotos, base, poseVista.lado, { w: poseVista.w, h: poseVista.h, codo: esPress });
   }, [poseVista, reps, esPress, guardado, barra]);
 
+  // (v0.59) Las repeticiones de esta sesión (y su pose), para las marcas «Rep 1…n» del reproductor y «la peor»
+  useEffect(() => { ponerCorrecciones(id, 'repsSesion', vista?.propio && reps.length ? reps : null); }, [id, vista, reps]);
+  useEffect(() => { ponerCorrecciones(id, 'poseSesion', poseVista && repsPose.length ? { reps: repsPose } : null); }, [id, poseVista, repsPose]);
+  useEffect(() => () => { ponerCorrecciones(id, 'repsSesion', null); ponerCorrecciones(id, 'poseSesion', null); }, [id]);
   // La capa sobre el vídeo
   useEffect(() => {
     const estado = {

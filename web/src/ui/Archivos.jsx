@@ -3,7 +3,12 @@ import { Reproductor, reproductorDe } from './Video.jsx';
 import { useApp, Icono, Hoja, Cargando, useCarga } from './comunes.jsx';
 import { fmtCorta } from '../logica/fechas.js';
 import { LIMITE_ARCHIVO_MB } from '../datos/api.js';
-import { sePuedeRecortar, recortarVideo, prepararVideo, megasEstimados } from './recorte.js';
+import { sePuedeRecortar, recortarVideo, prepararVideo, megasEstimados, buscarMovimiento } from './recorte.js';
+import { recorteUtil, MIN_SEG_RECORTE } from '../logica/movimiento.js';
+import { AutoevaluacionEnvio } from './tecnica/Autoevaluacion.jsx';
+import { rpeAutoValido } from '../logica/correccion.js';
+const rpeDeSerie = (x) => (x != null && rpeAutoValido(Number(x)) ? Number(x) : null);
+import { marcasRepeticiones } from '../logica/repeticiones.js';
 import { guardarPendiente, quitarPendiente, conCerrojo, ponerSubida, avisarPendientes } from '../datos/pendientes.js';
 import { CamaraVideo, puedeGrabarVideo } from './tecnica/CamaraVideo.jsx';
 import { encuadreDe, tiempoOtro } from '../logica/tecnica.js';
@@ -39,6 +44,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   const [corte, setCorte] = useState(null); // { dur, inicio, fin }
   const [subida, setSubida] = useState(null); // progreso de la subida (0…1)
   const [enPausa, setEnPausa] = useState(false); // el recorte está en pausa (se salió de la app) y no siguió solo
+  const [auto, setAuto] = useState(null); // (v0.59) la valoración del atleta, ya limpia (o null)
   const contenedor = useRef(null);
   const cancelar = useRef(null);
   const controlRecorte = useRef(null);
@@ -77,7 +83,8 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   // no se pierde y se envía solo luego (con la misma ruta: reintentar no duplica). Si no se puede guardar, se sube igual.
   async function subir(f, duracion) {
     const opciones = { tipo, sesion_ejercicio_id: sesionEjercicioId, ejercicio_id: ejercicioId, nota_atleta: nota.trim() || null, duracion_seg: duracion, fecha: hoyISO(),
-      ...(esVideo && con035.datos && serie && sesionEjercicioId ? { serie_numero: Number(serie) } : {}), ...(esVideo && con035.datos && repiteDe ? { repite_de: repiteDe } : {}) };
+      ...(esVideo && con035.datos && serie && sesionEjercicioId ? { serie_numero: Number(serie) } : {}), ...(esVideo && con035.datos && repiteDe ? { repite_de: repiteDe } : {}),
+      ...(esVideo && auto ? { autoevaluacion: auto } : {}) };
     opciones.ruta = api.rutaArchivo(atletaId, f, opciones);
     const pid = esVideo ? await guardarPendiente({ atletaId, archivo: f, opciones }).catch(() => null) : null;
     let a = null, error = null;
@@ -118,7 +125,8 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
       throw error;
     }
     if (pid) await quitarPendiente(pid).catch(() => {});
-    aviso(esVideo ? 'Vídeo enviado a tu coach' : 'Foto guardada');
+    if (a?.autoevaluacionError) aviso(`Vídeo enviado, pero tu valoración no se ha guardado: ${a.autoevaluacionError}`, 'error');
+    else aviso(esVideo ? 'Vídeo enviado a tu coach' : 'Foto guardada');
     setArchivo(null); setNota(''); setCorte(null); setFallo(null);
     alSubir?.(a);
   }
@@ -214,6 +222,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
                 </div>
               )}
               {esVideo && repiteDe && <p class="mini secundario"><Icono n="reiniciar" /> Va como repetición de tu vídeo corregido: tu coach verá los dos lado a lado.</p>}
+              {esVideo && <AutoevaluacionEnvio rpeSerie={rpeDeSerie(serie && series?.find((x) => Number(x.numero) === Number(serie))?.rpe)} alCambiar={setAuto} />}
               <div class="campo">
                 <label for="arch-nota">{esVideo ? '¿Qué quieres que mire?' : 'Nota (opcional)'}</label>
                 <textarea id="arch-nota" class="area" style="min-height:64px" value={nota} onInput={(e) => setNota(e.currentTarget.value)}
@@ -243,8 +252,31 @@ const reloj = (s) => { const t = Math.max(0, s); const m = Math.floor(t / 60); c
 // ese momento. «Aquí» usa el momento en que está el vídeo. Mientras se ve, solo se reproduce el trozo elegido.
 function VistaRecorte({ src, recortable, corte, setCorte, alFallar }) {
   const v = useRef(null);
+  // (v0.59) El recorte automático: dónde empieza y acaba el movimiento (con un segundo de margen), propuesto sin tocar nada;
+  // si se mueve un deslizador o se elige «Sin recortar», manda lo de la persona
+  const [auto, setAuto] = useState(null); // null | 'buscando' | 'nada' | 'quitado' | { desde, hasta }
+  const tocado = useRef(false);
+  const senalAuto = useRef(null);
+  const dur = corte?.dur || 0;
+  useEffect(() => {
+    if (!recortable || !(dur >= MIN_SEG_RECORTE)) return undefined;
+    const senal = { aborted: false };
+    senalAuto.current = senal;
+    tocado.current = false;
+    setAuto('buscando');
+    buscarMovimiento(src, { dur, senal }).then((det) => {
+      if (senal.aborted) return;
+      if (det && recorteUtil(det, dur) && !tocado.current) { setCorte((c) => (c ? { ...c, inicio: det.desde, fin: det.hasta } : c)); setAuto(det); }
+      else setAuto('nada');
+    }, () => { if (!senal.aborted) setAuto('nada'); });
+    return () => { senal.aborted = true; };
+  }, [src, dur > 0, recortable]);
+  const tocar = () => { tocado.current = true; if (senalAuto.current) senalAuto.current.aborted = true; setAuto((a) => (a === 'buscando' ? 'nada' : a)); };
+  const sinRecortar = () => { tocar(); setAuto('quitado'); setCorte((c) => (c ? { ...c, inicio: 0, fin: c.dur } : c)); };
+  const autoVigente = auto && typeof auto === 'object' && corte && Math.abs(corte.inicio - auto.desde) < 0.01 && Math.abs(corte.fin - auto.hasta) < 0.01;
   const ir = (t) => { const x = v.current; if (!x) return; x.pause(); x.currentTime = t; };
   const fijar = (campo, valor) => {
+    tocar();
     setCorte((c) => {
       if (!c) return c;
       const n = { ...c, [campo]: valor };
@@ -263,6 +295,13 @@ function VistaRecorte({ src, recortable, corte, setCorte, alFallar }) {
       {recortable && corte && corte.dur > 1.5 && (
         <div class="recorte" role="group" aria-label="Recortar el vídeo">
           <div class="recorte-titulo"><b>Recorta lo que sobra</b><span class="mini terciario">Deja solo la serie: sube antes y ocupa menos.</span></div>
+          {auto === 'buscando' && <p class="mini terciario recorte-auto" role="status">Buscando dónde empieza y acaba la serie…</p>}
+          {autoVigente && (
+            <div class="recorte-auto fila-envolver" role="status">
+              <span class="mini"><Icono n="recortar" /> Recortado solo: de <b class="num">{reloj(auto.desde)}</b> a <b class="num">{reloj(auto.hasta)}</b>, donde te mueves (con un segundo de margen). Ajústalo si quieres.</span>
+              <button type="button" class="btn btn-peq" onClick={sinRecortar}>Sin recortar</button>
+            </div>
+          )}
           <div class="recorte-barra" aria-hidden="true">
             <span style={{ left: `${(corte.inicio / corte.dur) * 100}%`, width: `${((corte.fin - corte.inicio) / corte.dur) * 100}%` }} />
           </div>
@@ -331,24 +370,36 @@ export function VerArchivo({ archivo }) {
   const esFoto = archivo.tipo === 'foto_progreso' || (archivo.tipo === 'adjunto' && /^image\//.test(archivo.mime || ''));
   return esFoto
     ? <img class="medio" src={url} alt={archivo.tipo === 'adjunto' ? 'Foto enviada en el chat' : `Foto de progreso del ${archivo.fecha}`} loading="lazy" />
-    : <Reproductor src={url} archivoId={archivo.id} serie={textoChipSerie(archivo.serie)} />;
+    : <Reproductor src={url} archivoId={archivo.id} serie={textoChipSerie(archivo.serie)} repeticiones={archivo.tipo === 'video_tecnica'} />;
 }
 
 // Dos vídeos lado a lado (el mismo ejercicio hace dos meses y hoy, o dos intentos): cada uno con su
 // reproductor y un mando común para arrancar, parar y volver al principio los dos a la vez
 // v0.57: o superpuestos (el de encima, con su transparencia); y alineados: se marca el inicio de la repetición en cada uno
 // y van a la vez desde ahí. La demostración de la biblioteca es de YouTube: se abre aparte (no se puede superponer).
-export function CompararVideos({ videos, nombreDe, alCerrar, inicialA = null, inicialB = null, demostracion = null }) {
-  const [a, setA] = useState(inicialA || videos[videos.length - 1]?.id || null);
-  const [b, setB] = useState(inicialB || (videos.length > 1 ? videos[videos.length - 2].id : null));
+// v0.59 (6): con los vídeos modelo del coach de esos ejercicios (037) como uno más: se superponen y se alinean como los
+// demás (inicialB = 'modelo': empieza con el modelo a la derecha). La demostración de YouTube, solo si no hay modelo.
+// Y si los dos traen sus repeticiones (del análisis o del tempo), se alinean por la primera con un toque.
+export function CompararVideos({ videos: propios, nombreDe: nombrePropio, alCerrar, inicialA = null, inicialB = null, demostracion = null, conModelos = true }) {
+  const { api } = useApp();
+  const ejIds = [...new Set(propios.map((v) => v.ejercicio?.id || v.ejercicio_id).filter(Boolean))];
+  const modelos = useCarga(() => (conModelos && ejIds.length ? api.videosModelo(ejIds).catch(() => []) : Promise.resolve([])), [ejIds.join(',')]);
+  const deModelo = (modelos.datos || []).map((m) => ({ ...m, id: `modelo:${m.id}`, modeloId: m.id, tipo: 'modelo', fecha: null, ejercicio: propios.find((v) => (v.ejercicio?.id || v.ejercicio_id) === m.ejercicio_id)?.ejercicio || null }));
+  const videos = [...propios, ...deModelo];
+  const nombreDe = (v) => (v.tipo === 'modelo' ? `Vídeo modelo${v.angulo ? ` (${v.angulo})` : ''}` : nombrePropio(v));
+  const [a, setA] = useState(inicialA || propios[propios.length - 1]?.id || null);
+  const [b, setB] = useState(inicialB && inicialB !== 'modelo' ? inicialB : (propios.length > 1 && inicialB !== 'modelo' ? propios[propios.length - 2].id : null));
+  useEffect(() => { if (!b && deModelo.length) setB(deModelo[0].id); }, [deModelo.length]);
   const [modo, setModo] = useState('lado');
   const [marcas, setMarcas] = useState({}); // id → segundo en que empieza la repetición
   const va = videos.find((v) => v.id === a), vb = videos.find((v) => v.id === b);
   const ambos = (f) => [va, vb].forEach((v) => v && f(reproductorDe(v.id), v));
-  const opciones = videos.map((v) => <option key={v.id} value={v.id}>{nombreDe(v)}, {fmtCorta(v.fecha)}</option>);
+  const opciones = videos.map((v) => <option key={v.id} value={v.id}>{nombreDe(v)}{v.fecha ? `, ${fmtCorta(v.fecha)}` : ''}</option>);
   const alineados = va && vb && marcas[va.id] != null && marcas[vb.id] != null;
-  // La demostración de la biblioteca de ese ejercicio (si los dos son del mismo y la tiene)
-  const demo = demostracion ?? (va?.ejercicio?.id && va.ejercicio.id === vb?.ejercicio?.id && /^https:\/\//.test(va.ejercicio.video_url || '') ? va.ejercicio.video_url : null);
+  const primeraRep = (v) => marcasRepeticiones({ analisis: v?.revision?.analisis || null, tempo: v?.revision?.tempo || null, duracion: v?.duracion_seg || null }).reps[0]?.t ?? null;
+  const repsA = primeraRep(va), repsB = primeraRep(vb);
+  // La demostración de la biblioteca de ese ejercicio (si los dos son del mismo, la tiene y no hay vídeo modelo)
+  const demo = deModelo.length ? null : demostracion ?? (va?.ejercicio?.id && va.ejercicio.id === vb?.ejercicio?.id && /^https:\/\//.test(va.ejercicio.video_url || '') ? va.ejercicio.video_url : null);
   const aLaVez = () => {
     if (alineados) {
       const ra = reproductorDe(va.id), rb = reproductorDe(vb.id);
@@ -385,6 +436,7 @@ export function CompararVideos({ videos, nombreDe, alCerrar, inicialA = null, in
             <button class="btn" onClick={() => ambos((r) => r?.pausar?.())}><Icono n="pausa" /> Pausar los dos</button>
             <button class="btn" onClick={alInicio}><Icono n="reiniciar" /> {alineados ? 'Al inicio de la repetición' : 'Al principio'}</button>
           </div>
+          {repsA != null && repsB != null && <button type="button" class="btn btn-peq" onClick={() => setMarcas((m) => ({ ...m, [va.id]: repsA, [vb.id]: repsB }))}><Icono n="chincheta" /> Alinear por la 1.ª repetición</button>}
           <p class="mini terciario">{alineados ? 'Alineados: los dos empiezan la repetición a la vez.' : 'Para alinearlos, para cada vídeo justo cuando empieza la repetición y toca «Empieza aquí».'} Pon los dos a 0,25× y avanza fotograma a fotograma en cada uno para comparar la misma posición.</p>
         </>
       ) : (

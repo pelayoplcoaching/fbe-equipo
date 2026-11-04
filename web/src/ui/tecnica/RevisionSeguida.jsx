@@ -100,7 +100,7 @@ function Pantalla({ videos, alCerrar, abrirAtleta }) {
             {actual.nota_atleta && <p class="cita">«{actual.nota_atleta}»</p>}
             <VerArchivo archivo={actual} />
             <PanelCorreccion video={actual} esCoach nombreAtleta={nombre} />
-            <Hilo atletaId={actual.atleta_id} archivoId={actual.id} nombreAtleta={nombre} alCambiar={contestado} placeholder="Qué corregir, qué está bien…" />
+            <Hilo atletaId={actual.atleta_id} archivoId={actual.id} nombreAtleta={nombre} alCambiar={contestado} placeholder="Qué corregir, qué está bien…" ejercicio={actual.ejercicio || null} />
           </article>
         ) : (
           <div class="seguida-fin pila-s" role="status">

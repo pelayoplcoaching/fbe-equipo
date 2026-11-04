@@ -5,6 +5,7 @@ import { BandaDemo } from '../App.jsx';
 import { GRUPOS, NOMBRE_GRUPO, conPrincipal, TIPOS_EJERCICIO, CATEGORIAS_RECURSO, NOMBRE_CATEGORIA } from '../../logica/calculos.js';
 import { FAQ } from '../../datos/faq.js';
 import { RecetasBiblioteca } from './ComidasCoach.jsx';
+import { HojaTecnica } from '../tecnica/Frases.jsx';
 
 const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -75,6 +76,7 @@ function Ejercicios({ peticion = null }) {
 }
 
 function EditarEjercicio({ ejercicio, todos, porId, alCerrar }) {
+  const [tecnica, setTecnica] = useState(false);
   const { api, aviso } = useApp();
   const nuevo = !ejercicio.id;
   const [f, setF] = useState({
@@ -156,6 +158,9 @@ function EditarEjercicio({ ejercicio, todos, porId, alCerrar }) {
         {!nuevo && <label class="casilla"><input type="checkbox" checked={!f.activo} onChange={(e) => setF({ ...f, activo: !e.currentTarget.checked })} /><span>Ocultar al elegir ejercicios (se mantiene en los programas que ya lo usan)</span></label>}
         <button class="btn btn-primario btn-grande" disabled={ocupado}>Guardar</button>
       </form>
+      {/* v0.59: la técnica del ejercicio (puntos clave, frases y vídeo modelo), aparte del formulario: se guarda al momento */}
+      {!nuevo && ejercicio.id && <button type="button" class="btn" style="justify-self:start" onClick={() => setTecnica(true)} aria-haspopup="dialog"><Icono n="video" /> Puntos clave, frases y vídeo modelo</button>}
+      {tecnica && <HojaTecnica ejercicio={ejercicio} inicial="modelo" alCerrar={() => setTecnica(false)} />}
     </Hoja>
   );
 }

@@ -8,6 +8,7 @@ import { mmssCorto } from './Chat.jsx';
 import { reproductorDe } from './Video.jsx';
 import { fmtCorta, fmtConDia } from '../logica/fechas.js';
 import { PanelCorreccion, EstadoVideo } from './tecnica/Correccion.jsx';
+import { RecordatoriosAtleta } from './tecnica/Recordatorios.jsx';
 
 const NOMBRE_POSE = Object.fromEntries(POSES);
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -54,6 +55,8 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
         {videos.length >= 2 && <button class="btn btn-peq" onClick={() => setComparar('videos')}><Icono n="duplicar" /> Comparar dos</button>}
         {fotos.length >= 2 && (esCoach || salud) && <button class="btn btn-peq" onClick={() => setComparar('fotos')}><Icono n="imagen" /> Antes y después</button>}
       </div>
+      {/* v0.59: los recordatorios de técnica que tiene activos (el coach) */}
+      {esCoach && <RecordatoriosAtleta atletaId={atletaId} ejercicios={Object.fromEntries(ejercicios.map((e) => [e.id, e]))} />}
       {lista.length > 0 && (
         <div class="selector-chips" role="group" aria-label="Filtrar el diario">
           {[['todo', 'Todo'], ['videos', 'Vídeos'], ['fotos', 'Fotos'], ['destacados', 'Destacados']].map(([v, t]) => (
@@ -169,7 +172,7 @@ export function DetalleArchivo({ a, lista = [], atletaId, nombreAtleta, esCoach,
         </div>
       ) : a.nota_atleta && <p class={esCoach ? 'cita' : 'peq secundario'}>{esCoach ? `«${a.nota_atleta}»` : a.nota_atleta}</p>}
       {!esFoto || esCoach ? (
-        <Hilo atletaId={atletaId} archivoId={a.id} nombreAtleta={nombreAtleta} alCambiar={alCambiar}
+        <Hilo atletaId={atletaId} archivoId={a.id} nombreAtleta={nombreAtleta} alCambiar={alCambiar} ejercicio={a.ejercicio || null}
           placeholder={esCoach ? 'Qué corregir, qué está bien…' : undefined} vacio={esCoach ? 'Sin comentarios todavía.' : 'Tu coach te contestará aquí.'} />
       ) : null}
       <div class="fila-envolver">
