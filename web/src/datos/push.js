@@ -21,6 +21,10 @@ export const conEmail = () => !!(typeof window !== 'undefined' && window.FBE_CON
 const leerMarca = () => { try { return JSON.parse(localStorage.getItem(CLAVE_LOCAL) || 'null'); } catch { return null; } };
 const guardarMarca = (m) => { try { if (m) localStorage.setItem(CLAVE_LOCAL, JSON.stringify(m)); else localStorage.removeItem(CLAVE_LOCAL); } catch { /* */ } };
 
+// (v0.61) ¿Tiene este móvil activadas las notificaciones de la app (con su permiso)? Para el aviso local de «Vídeo enviado»
+export function avisosActivosAqui() {
+  try { return typeof Notification !== 'undefined' && Notification.permission === 'granted' && !!leerMarca()?.endpoint; } catch { return false; }
+}
 export function estadoPush(modo) {
   if (typeof window === 'undefined') return 'no_soportado';
   const nav = window.navigator;

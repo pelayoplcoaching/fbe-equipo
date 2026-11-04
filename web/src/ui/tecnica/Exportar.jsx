@@ -2,11 +2,14 @@
 // con su momento, los puntos clave con el suyo, la nota de técnica y la marca «FBE») y su voz sobre el vídeo, si la hay,
 // hecho en este móvil u ordenador con el compositor. No se sube nada: se guarda en el móvil («Compartir» → Guardar vídeo, o
 // una descarga). El coach, de cualquier vídeo corregido; el atleta, de los suyos.
+// v0.61 (8): y, si hay trayectoria, con la estela del movimiento (encendida de entrada si lo está en el reproductor).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono, Hoja } from '../comunes.jsx';
 import { useCorrecciones } from './correcciones.js';
 import { revocarLuego, exportarCorregido, puedeComponer, guardarEnMovil } from './compositor.js';
 import { lineaDeCapas, textoNota, nombreExportado, MAX_SEG_REVISION } from '../../logica/composicion.js';
+import { useEstela, sinMovimiento } from './Estela.jsx';
+import { NOMBRE_ARTICULACION } from '../../logica/estela.js';
 
 export const puedeExportar = (conVoz = false) => puedeComponer({ audio: conVoz });
 
@@ -37,6 +40,9 @@ function HojaExportarVideo({ video, revision, comentarios, esCoach, alCerrar }) 
   const linea = lineaDeCapas({ comentarios, revision, duracion: video.duracion_seg });
   const nota = textoNota(revision?.puntuacion ?? null);
   const voz = !!revision?.voz_archivo_id && !!revision?.voz?.ruta;
+  const estela = useEstela(useCorrecciones(video.id));
+  const [conEstela, setConEstela] = useState(() => estela.prefs.activa);
+  const estelaLista = estela.disponible && conEstela && estela.trayectoria.length > 1 ? { puntos: estela.trayectoria, ventana: estela.ventana, estatica: sinMovimiento() } : null;
   async function hacer() {
     setError(null); setFase('haciendo'); setProgreso(0);
     const s = senal.current = { aborted: false };
@@ -44,7 +50,7 @@ function HojaExportarVideo({ video, revision, comentarios, esCoach, alCerrar }) 
       const src = await api.urlArchivo(video.ruta);
       const vozUrl = voz && puedeExportar(true) ? await api.urlArchivo(revision.voz.ruta, { tipo: 'audio' }).catch(() => null) : null;
       const r = await exportarCorregido({ src, linea, nota, voz: vozUrl ? { url: vozUrl, inicio: Number(revision.voz_inicio) || 0, dur: Number(revision.voz.duracion_seg) || 0 } : null,
-        contenedor: contenedor.current, alProgreso: setProgreso, senal: s });
+        estela: estelaLista, contenedor: contenedor.current, alProgreso: setProgreso, senal: s });
       if (s.aborted) return;
       setHecho({ ...r, url: URL.createObjectURL(r.blob) });
       setFase('hecho');
@@ -66,7 +72,7 @@ function HojaExportarVideo({ video, revision, comentarios, esCoach, alCerrar }) 
     <Hoja titulo="Exportar con correcciones" alCerrar={() => { cancelar(); alCerrar(); }}>
       {fase === 'hecho' && hecho ? (
         <div class="pila-s">
-          <video class="medio exportado" src={hecho.url} controls playsInline aria-label="El vídeo exportado con las correcciones" data-bytes={hecho.blob.size} data-tipo={hecho.tipo} />
+          <video class="medio exportado" src={hecho.url} controls playsInline aria-label="El vídeo exportado con las correcciones" data-bytes={hecho.blob.size} data-tipo={hecho.tipo} data-estela={hecho.estela || 0} />
           <p class="mini terciario">{hecho.tipo === 'video/mp4' ? 'MP4' : 'WebM'}, {mb(hecho.blob.size)} MB{hecho.recortado ? ` (los primeros ${MAX_SEG_REVISION / 60} minutos)` : ''}. Está solo en este {esCoach ? 'dispositivo' : 'móvil'}: no se ha subido nada.</p>
           <div class="fila-envolver">
             <button type="button" class="btn btn-primario" onClick={guardar}><Icono n="descargar" /> Guardar en el móvil</button>
@@ -86,6 +92,12 @@ function HojaExportarVideo({ video, revision, comentarios, esCoach, alCerrar }) 
           ) : (
             <>
               <p class="peq secundario">Se hace en este {esCoach ? 'dispositivo' : 'móvil'}, sin subir nada: el vídeo con {[linea.some((x) => x.tipo === 'dibujo') && 'los dibujos', linea.some((x) => x.tipo === 'comentario') && 'los comentarios', linea.some((x) => x.tipo === 'punto') && 'los puntos clave', nota && 'la nota', voz && 'la voz del coach'].filter(Boolean).join(', ') || 'las correcciones'} encima (y una marca «FBE» pequeña). Hasta 3 minutos.</p>
+              {estela.disponible && (
+                <label class="casilla">
+                  <input type="checkbox" checked={conEstela} onChange={(e) => setConEstela(e.currentTarget.checked)} />
+                  <span class="peq">Con la estela del movimiento ({(NOMBRE_ARTICULACION[estela.fuente] || 'barra').toLowerCase()})</span>
+                </label>
+              )}
               {error && <p class="error" role="alert">{error}</p>}
               <button type="button" class="btn btn-primario" onClick={hacer}><Icono n="video" /> Preparar el vídeo</button>
             </>

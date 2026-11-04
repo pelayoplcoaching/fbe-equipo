@@ -17,7 +17,9 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   // v0.56: los sonidos del chat (al enviar y al recibir, con el chat abierto) y las fotos en HD (más grandes) de serie
   sonidosChat: true, fotosHd: false,
   // v0.60: «Difuminar la cara» al enviar un vídeo, encendido de serie en este móvil (apagado si no se elige)
-  difuminarCara: false };
+  difuminarCara: false,
+  // v0.61: «Subir los vídeos solo con wifi» (solo sale donde el navegador dice si es wifi: Chrome de Android)
+  soloWifi: false };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -49,6 +51,7 @@ export function normalizarAjustes(guardado = {}) {
   a.sonidosChat = a.sonidosChat !== false;
   a.fotosHd = a.fotosHd === true;
   a.difuminarCara = a.difuminarCara === true;
+  a.soloWifi = a.soloWifi === true;
   return a;
 }
 export function leerAjustes() {

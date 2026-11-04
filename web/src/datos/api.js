@@ -46,6 +46,9 @@ import { limpiarTextoRecordatorio, textoRecordatorioValido, recordatorioValido, 
 import { repsManualValidas } from '../logica/repeticiones.js';
 import { tipoBase, tipoRespuestaValido, duracionRespuesta, MAX_BYTES_RESPUESTA, MAX_SEG_RESPUESTA } from '../logica/composicion.js';
 import { dosAngulosValido, limitarDesfase, fpsGuardado } from '../logica/angulos.js';
+import { umbralValido } from '../logica/cargaVelocidad.js';
+import { informeMes, mesValido, textoTarjetaInforme, leerTarjetaInforme, textoMes } from '../logica/informeTecnica.js';
+import { limpiarResumen, esResumenSesion, ordenEnSesion } from '../logica/sesionVideos.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -204,6 +207,13 @@ const falta038 = (e) => {
   const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
   if (/\b(video_respuesta_id|angulo_de|fps_captura|dos_angulos)\b/.test(m)
     && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m)) throw new Error(`${AVISO_038} (supabase/migraciones/038_videos_tanda_b1.sql). Detalle: ${e?.message || e}`);
+  throw e;
+};
+// (v0.61) La 039: la velocidad mínima de cada ejercicio (para el 1RM estimado por la velocidad)
+export const AVISO_039 = 'Disponible tras la migración 039';
+const falta039 = (e) => {
+  const m = `${e?.message || ''} ${e?.code || ''}`;
+  if (/umbral/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m)) throw new Error(`${AVISO_039} (supabase/migraciones/039_videos_tanda_b2.sql). Detalle: ${e?.message || e}`);
   throw e;
 };
 const sinCliente033 = (e) => /cliente_id/.test(e?.message || '') && /schema cache|does not exist|no existe|column|columna|PGRST20/i.test(e?.message || '');
@@ -1569,16 +1579,18 @@ export function crearApi(backend) {
     // clienteId (v0.55): el id que pone el móvil (el de la bandeja de salida); si ese mensaje ya entró (un reintento sin
     // cobertura cuya respuesta no llegó), devuelve el que ya está, sin repetirlo. Sin la 033, se envía sin él.
     // videoRespuestaId (v0.60, 038): el vídeo de una respuesta en el hilo de un vídeo (ver responderConVideo)
-    async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null, respondeA = null, clienteId = null, videoRespuestaId = null }) {
+    // resumenSesion (v0.61, 039): el resumen de una sesión (uno por sesión, lo marca y lo comprueba la base)
+    async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null, respondeA = null, clienteId = null, videoRespuestaId = null, resumenSesion = false }) {
       const fila = { atleta_id: atletaId, sesion_id: sesionId, checkin_id: checkinId, archivo_id: archivoId, texto: texto.trim(), autor };
       if (videoRespuestaId) fila.video_respuesta_id = videoRespuestaId;
+      if (resumenSesion) fila.resumen_sesion = true;
       if (archivoId && dibujo) {
         if (!dibujoValido(dibujo)) throw new Error('El dibujo no tiene la forma que toca');
         fila.dibujo = dibujo;
       }
       if (respondeA) fila.responde_a = respondeA;
       if (clienteId) fila.cliente_id = clienteId;
-      const insertar = (f) => b.insert('comentarios', [f]).catch(respondeA ? falta032 : videoRespuestaId ? falta038 : (e) => { throw e; });
+      const insertar = (f) => b.insert('comentarios', [f]).catch(respondeA ? falta032 : videoRespuestaId ? falta038 : resumenSesion ? falta039 : (e) => { throw e; });
       try {
         return (await insertar(fila))[0];
       } catch (e) {
@@ -2696,6 +2708,108 @@ export function crearApi(backend) {
       return j;
     },
 
+    // ------------------------------------------------------------ v0.61: los vídeos de técnica, tanda B (segunda mitad)
+    // 5. «Revisar la sesión»: lo que hace falta para revisar los vídeos de una sesión seguidos (la sesión, sus ejercicios
+    // en orden con sus series y si ya se le mandó el resumen) y mandarle ese resumen, una vez, en el hilo de la sesión
+    // (avisa una vez, sin el texto, como cualquier respuesta del coach en una sesión)
+    async sesionParaRevisar(sesionId) {
+      const [s] = await b.select('sesiones', { eq: { id: sesionId }, cols: 'id,nombre,fecha_realizada,semana_id,completada' }).catch(() => []);
+      if (!s) return null;
+      const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: sesionId }, order: [['orden', 'asc']], cols: 'id,ejercicio_id,orden,series' }).catch(() => []);
+      const [series, ejercicios, coment] = await Promise.all([
+        pautas.length ? b.select('series', { in: { sesion_ejercicio_id: pautas.map((p) => p.id) }, order: [['numero', 'asc']], cols: 'sesion_ejercicio_id,numero,kg,reps,rpe,rir' }).catch(() => []) : [],
+        pautas.length ? b.select('ejercicios', { in: { id: unicos(pautas.map((p) => p.ejercicio_id)) }, cols: 'id,nombre' }).catch(() => []) : [],
+        api.resumenesDeSesion(sesionId),
+      ]);
+      const EJ = porId(ejercicios), S = agrupar(series, 'sesion_ejercicio_id');
+      return { sesion: s, pautas: pautas.map((p) => ({ ...p, ejercicio: EJ[p.ejercicio_id] || null, hechas: S[p.id] || [] })), resumen: coment[0] || null };
+    },
+    // (revisión M2) El resumen de una sesión: con la 039, el que marca la base (uno por sesión, sin depender del texto); sin
+    // ella, como antes, el comentario del coach en esa sesión que empieza por «Resumen de la sesión»
+    async resumenesDeSesion(sesionId) {
+      const marca = (await api.video039().catch(() => null)) === true;
+      const filas = await b.select('comentarios', { eq: { sesion_id: sesionId, autor: 'coach', ...(marca ? { resumen_sesion: true } : {}) }, cols: `id,texto,autor,sesion_id,eliminado_en,creado_en${marca ? ',resumen_sesion' : ''}` }).catch(() => []);
+      return filas.filter((c) => !c.eliminado_en && (marca ? c.resumen_sesion === true : esResumenSesion(c)));
+    },
+    async enviarResumenSesion({ atletaId, sesionId, texto }) {
+      const t = limpiarResumen(texto);
+      if (!t) throw new Error('Escribe el resumen (hasta 4000 letras)');
+      const marca = (await api.video039().catch(() => null)) === true;
+      if ((await api.resumenesDeSesion(sesionId)).length) throw new Error('Ya le has mandado el resumen de esta sesión: lo tiene en el hilo de la sesión');
+      try {
+        return await api.comentar({ atletaId, sesionId, texto: t, autor: 'coach', resumenSesion: marca });
+      } catch (e) {
+        if (duplicado(e) || /Ya le has mandado el resumen/.test(e?.message || '')) throw new Error('Ya le has mandado el resumen de esta sesión: lo tiene en el hilo de la sesión');
+        throw e;
+      }
+    },
+
+    // 16. El perfil carga–velocidad: la velocidad mínima de cada ejercicio (039; el coach la cambia, todos la leen sin
+    // horas). Sin la 039, ninguna (la app usa la de serie de cada ejercicio). { ejercicio_id: m/s }
+    async video039() {
+      if (!api._v039) {
+        const pr = (async () => {
+          try { await b.select('umbrales_velocidad', { limit: 1, cols: 'ejercicio_id' }); return true; }
+          catch (e) {
+            const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+            if (/umbrales_velocidad|schema cache|does not exist|no existe|relation|could not find|PGRST20[0-9]|42P01/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v039 = pr;
+        pr.then((x) => { if (x == null && api._v039 === pr) api._v039 = null; });
+      }
+      return api._v039;
+    },
+    async exigir039() { if ((await api.video039()) === false) throw new Error(AVISO_039); },
+    async umbralesVelocidad(ejercicioIds = []) {
+      const ids = unicos((ejercicioIds || []).filter(Boolean)).slice(0, 200);
+      if (!ids.length || !(await api.video039())) return {};
+      const filas = (await b.rpc('umbrales_velocidad_de', { p_ejercicios: ids }).catch(() => [])) || [];
+      return Object.fromEntries(filas.filter((x) => umbralValido(Number(x.vmin))).map((x) => [x.ejercicio_id, Number(x.vmin)]));
+    },
+    // El coach la cambia (null: vuelve a la de serie)
+    async guardarUmbralVelocidad(ejercicioId, vmin) {
+      await api.exigir039();
+      if (!ejercicioId) throw new Error('Falta el ejercicio');
+      if (vmin == null) { await b.delete('umbrales_velocidad', { eq: { ejercicio_id: ejercicioId } }).catch(falta039); return null; }
+      const v = Number(vmin);
+      if (!umbralValido(v)) throw new Error('La velocidad mínima va de 0,05 a 1 m/s (con 3 decimales como mucho)');
+      const [f] = await b.upsert('umbrales_velocidad', [{ ejercicio_id: ejercicioId, vmin: v }], 'ejercicio_id').catch(falta039);
+      return f ? Number(f.vmin) : v;
+    },
+    // Lo que hace falta para el perfil de un ejercicio: la velocidad mínima propia (si la hay) y sus series (para comparar
+    // con el 1RM por repeticiones y RPE)
+    async datosPerfilVelocidad(atletaId, ejercicioId) {
+      const [umbrales, hist] = await Promise.all([
+        api.umbralesVelocidad([ejercicioId]).catch(() => ({})),
+        api.historialEjercicio(atletaId, ejercicioId).catch(() => ({ series: [] })),
+      ]);
+      return { umbrales, series: hist.series || [], con039: (await api.video039().catch(() => null)) !== false };
+    },
+
+    // 17. El informe del mes (en el móvil, con lo que ya hay) y mandárselo al atleta: un mensaje del chat que la app enseña
+    // como una tarjeta («Tu informe de técnica de octubre de 2026», con «Ver el informe»); avisa una vez, sin el texto
+    async informeTecnica(atletaId, mes) {
+      if (!mesValido(mes)) throw new Error('Ese mes no vale');
+      const videos = (await api.diario(atletaId)).filter((a) => a.tipo === 'video_tecnica');
+      const ejIds = unicos(videos.map((v) => v.ejercicio?.id).filter(Boolean));
+      const [recordatorios, umbrales] = await Promise.all([api.recordatoriosActivos(atletaId).catch(() => []), api.umbralesVelocidad(ejIds).catch(() => ({}))]);
+      return { informe: informeMes(videos, { mes, recordatorios, umbrales }), videos };
+    },
+    async informeEnviado(atletaId, mes) {
+      const t = textoTarjetaInforme(mes);
+      if (!t) return false;
+      const filas = await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach', texto: t }, cols: 'id,texto,autor,atleta_id,sesion_id,checkin_id,archivo_id,adjunto,eliminado_en' }).catch(() => []);
+      return filas.some((c) => leerTarjetaInforme(c) === mes);
+    },
+    async enviarInformeTecnica(atletaId, mes) {
+      const t = textoTarjetaInforme(mes);
+      if (!t) throw new Error('Ese mes no vale');
+      if (await api.informeEnviado(atletaId, mes)) throw new Error(`Ya le has mandado el informe de ${textoMes(mes)}: lo tiene en el chat`);
+      return api.comentar({ atletaId, texto: t, autor: 'coach' });
+    },
+
     // 18. Los tiempos de la cola (el coach): de lo que llega a lo primero entre «Revisado» (o una respuesta) y la
     // corrección. Los de los últimos 30 días, los de esta semana y el que más espera.
     async estadisticasRevision({ ahora = Date.now() } = {}) {
@@ -3597,15 +3711,23 @@ export function crearApi(backend) {
       // (v0.57) los vídeos, con su ejercicio, su serie y su corrección (para «Revisar seguidos»)
       {
         const vids = items.archivos;
-        const seIds = unicos(vids.filter((a) => !a.ejercicio_id && a.sesion_ejercicio_id).map((a) => a.sesion_ejercicio_id));
-        const PA = seIds.length ? porId(await b.select('sesion_ejercicios', { in: { id: seIds }, cols: 'id,ejercicio_id' }).catch(() => [])) : {};
+        // (v0.61) de todos los que van con un ejercicio de una sesión: su sesión y su orden en ella (para «Revisar la sesión»)
+        const seIds = unicos(vids.filter((a) => a.sesion_ejercicio_id).map((a) => a.sesion_ejercicio_id));
+        const PA = seIds.length ? porId(await b.select('sesion_ejercicios', { in: { id: seIds }, cols: 'id,ejercicio_id,sesion_id,orden' }).catch(() => [])) : {};
+        const sIds = unicos(Object.values(PA).map((x) => x.sesion_id).filter(Boolean));
+        const SV = sIds.length ? porId(await b.select('sesiones', { in: { id: sIds }, cols: 'id,nombre,fecha_realizada' }).catch(() => [])) : {};
         const ejDe = (a) => a.ejercicio_id || PA[a.sesion_ejercicio_id]?.ejercicio_id || null;
         const ejIds = unicos(vids.map(ejDe));
         const EJ = ejIds.length ? porId(await b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre,grupos_musculares,tipo' }).catch(() => [])) : {};
         const extra = await api.extrasVideos(vids);
         // (v0.59, 037) y lo que nota el atleta (su valoración al enviarlo)
         const autos = await api.autoevaluaciones(vids.filter((a) => a.tipo === 'video_tecnica').map((a) => a.id)).catch(() => ({}));
-        items.archivos = vids.map((a) => ({ ...a, ejercicio: EJ[ejDe(a)] || null, serie: extra.series[a.id] || null, revision: extra.revisiones[a.id] || null, autoevaluacion: autos[a.id] || null }));
+        items.archivos = vids.map((a) => {
+          const pa = a.sesion_ejercicio_id ? PA[a.sesion_ejercicio_id] || null : null;
+          const se = pa?.sesion_id ? SV[pa.sesion_id] || null : null;
+          return { ...a, ejercicio: EJ[ejDe(a)] || null, serie: extra.series[a.id] || null, revision: extra.revisiones[a.id] || null, autoevaluacion: autos[a.id] || null,
+            pauta: pa ? { sesion_id: pa.sesion_id, orden: pa.orden } : null, sesionVideo: se ? { id: se.id, nombre: se.nombre, fecha: se.fecha_realizada || a.fecha } : null };
+        });
       }
       // Recetas que un atleta pide cambiar (v0.26; sin la migración 022, ninguna)
       const cambios = await b.select('recetas_atleta', { nonulo: ['cambio_pedido_en'], order: [['cambio_pedido_en', 'desc']] }).catch(() => []);

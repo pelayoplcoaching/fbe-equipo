@@ -13,7 +13,7 @@ import { Equipo, leerVistoEquipo } from '../Comunidad.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { AvisoPrivacidad } from '../AvisoPrivacidad.jsx';
-import { usePendientesArchivos, BandaPendientes } from '../Pendientes.jsx';
+import { usePendientesArchivos, BandaPendientes, PildoraSubida } from '../Pendientes.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { hoyISO, semanaCheckin, diaDeCheckin } from '../../logica/fechas.js';
 import { RecibirCompartido, limpiarDireccion } from '../Compartido.jsx';
@@ -191,6 +191,7 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
     <div class={`app ${sesionId ? 'en-sesion' : ''} ${conActividad ? 'con-actividad' : ''}`}>
       {conActividad && <ActividadSesion datos={enCurso} alVolver={(id) => compartido.abrirSesion(id)} />}
       <InsigniaApp n={propio ? 0 : insignia} />
+      <PildoraSubida />
       {!propio && <RecibirCompartido programa={compartido.programa} />}
       {sesionId ? <main><BandaPendientes pendientes={pendientesArchivos} /><Sesion id={sesionId} alCerrar={cerrarSesion} alLeer={releer} salud={salud} /></main> : (
         <>

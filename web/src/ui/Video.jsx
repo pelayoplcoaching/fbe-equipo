@@ -7,6 +7,7 @@ import { useCorrecciones } from './tecnica/correcciones.js';
 import { useCapa } from './tecnica/capas.js';
 import { marcasRepeticiones, peorRepeticion, indicePeor, repVecina, repActual, anadirRepManual, etiquetaRep, NOMBRE_FUENTE_REPS } from '../logica/repeticiones.js';
 import { TiraMiniaturas } from './tecnica/Tira.jsx';
+import { useEstela, CapaEstela, MandosEstela, estelaParaCompositor } from './tecnica/Estela.jsx';
 export { textoMomento };
 
 // Reproductor para revisar técnica: cámara lenta (0,25×, 0,5×, 1×), fotograma a fotograma, bucle y
@@ -27,6 +28,9 @@ export { textoMomento };
 // v0.59: una marca por repetición encima de la barra de tiempo («Rep 1…n», del análisis, del tempo o marcadas a mano), ir
 // a la anterior o a la siguiente (con los botones o con [ y ]; las correcciones, con { y }), «la peor» señalada y, debajo,
 // la tira de miniaturas para ir a un momento de un toque.
+// v0.61: la «Estela del movimiento» (la trayectoria de la barra o de una articulación en los últimos fotogramas, que se va
+// apagando; con «reducir movimiento», entera y quieta), encima de la imagen y en lo que graba el compositor; y j y l, un
+// segundo atrás o adelante (k o espacio, reproducir o pausar).
 
 // (v0.57) por id, una pila: el mismo vídeo puede estar a la vez en su tarjeta y en «Comparar»; manda el último abierto y, al
 // cerrarse, vuelve el de antes
@@ -72,6 +76,8 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
   const marcas = useMemo(() => marcadores({ comentarios: corr.comentarios || [], revision: corr.revision || null, duracion: dur || null }), [corr.comentarios, corr.revision, dur]);
   const tramos = useMemo(() => (corr.comentarios || []).filter((c) => !c.eliminado_en && dibujoValido(c.dibujo) && c.dibujo.hasta != null).map((c) => c.dibujo), [corr.comentarios]);
   const r = corr.revision || null;
+  // (v0.61) La estela del movimiento: del análisis guardado o del de esta sesión (y de sus puntos del cuerpo)
+  const estela = useEstela(corr);
   // (v0.59) Las repeticiones: del análisis de esta sesión o del guardado, del tempo o marcadas a mano (el coach las guarda
   // en la corrección; el atleta, solo en su móvil)
   const esCoachRep = app?.perfil?.rol === 'coach';
@@ -132,7 +138,8 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
       // Este fotograma con lo que se ve dibujado encima, como imagen JPEG (para mandarla o guardarla)
       fotograma: () => ultimo.current.exportar(),
       // (v0.60) Lo que se ve ahora: para pintarlo igual en un lienzo («Grabar la revisión»)
-      estado: () => { const u = ultimo.current; return { formas: u.formas || [], zoom: u.zoom || { z: 1, x: 0, y: 0 }, caja: u.caja || { w: 0, h: 0 }, rect: u.rect || null, proporcion: u.proporcion || 1, vel: u.vel || 1, dibujando: !!u.dibujando }; },
+      // (v0.61) y la estela, si está encendida: { puntos, ventana, estatica }
+      estado: () => { const u = ultimo.current; return { formas: u.formas || [], zoom: u.zoom || { z: 1, x: 0, y: 0 }, caja: u.caja || { w: 0, h: 0 }, rect: u.rect || null, proporcion: u.proporcion || 1, vel: u.vel || 1, dibujando: !!u.dibujando, estela: u.estela || null }; },
       // (v0.58) Para el análisis: el vídeo (su dirección y el elemento) y elegir un punto de la imagen con un toque. Da
       // [x, y] de 0 a 1, o null si se cancela (o se pide otro)
       fuente: () => ultimo.current.src || null,
@@ -184,6 +191,7 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
     if (e.key === ' ' || e.key === 'k') { e.preventDefault(); alternar(); }
     else if (e.key === ',' || (e.key === 'ArrowLeft' && !e.shiftKey)) { e.preventDefault(); paso(-1); }
     else if (e.key === '.' || (e.key === 'ArrowRight' && !e.shiftKey)) { e.preventDefault(); paso(1); }
+    else if (e.key === 'j' || e.key === 'l') { e.preventDefault(); irA((el()?.currentTime || 0) + (e.key === 'l' ? 1 : -1)); }
     else if (e.key === 'ArrowLeft' && e.shiftKey) { e.preventDefault(); irA((el()?.currentTime || 0) - 0.5); }
     else if (e.key === 'ArrowRight' && e.shiftKey) { e.preventDefault(); irA((el()?.currentTime || 0) + 0.5); }
     else if (e.key === '+' || e.key === '=') { e.preventDefault(); ponerZoom(zoom.z + 0.5); }
@@ -336,7 +344,7 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
 
   ultimo.current.exportar = exportarFotograma;
   ultimo.current.src = src;
-  Object.assign(ultimo.current, { formas, zoom, caja, rect, proporcion, vel, dibujando: !!edicion });
+  Object.assign(ultimo.current, { formas, zoom, caja, rect, proporcion, vel, dibujando: !!edicion, estela: estelaParaCompositor(estela) });
   const elegir = (e) => {
     const el2 = eleccionRef.current; if (!el2 || !rect.w) return;
     e.preventDefault(); e.stopPropagation();
@@ -358,6 +366,7 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
             onPlay={() => { setJugando(true); if (visto && visto.hasta == null) setVisto(null); sincronizar(); }} onPause={() => { setJugando(false); sincronizar(); }}
             onRateChange={sincronizar} onClick={clicVideo} onDblClick={dobleClic} />
           {pintarCapa && rect.w > 0 && <div class="rep-capas" aria-hidden="true">{pintarCapa({ rect, caja, t, dur, proporcion, video: v.current, jugando })}</div>}
+          {estela.activa && rect.w > 0 && <div class="rep-capas rep-capa-estela" aria-hidden="true"><CapaEstela estela={estela} rect={rect} caja={caja} t={t} video={v.current} /></div>}
           {(formas.length > 0 || edicion) && rect.w > 0 && (
             <svg class={`rep-lienzo ${edicion ? '' : 'solo-ver'}`} viewBox={`0 0 ${caja.w} ${caja.h}`} role="img" aria-label={formas.length ? `Dibujo: ${describirDibujo({ formas }, proporcion)}` : 'Lienzo para dibujar sobre el vídeo'}
               onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alCancelar}>
@@ -436,6 +445,7 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
           <button class="btn btn-icono" onClick={() => ponerZoom(zoom.z + 0.5)} aria-label="Acercar la imagen" disabled={!listo || zoom.z >= ZOOM_MAX}><Icono n="mas" /></button>
           {zoom.z > 1 && <button class="btn btn-peq" onClick={() => ponerZoom(1)}>Tamaño normal</button>}
         </span>
+        <MandosEstela estela={estela} desactivado={!!edicion} />
         {voz && (
           <button class="btn btn-peq rep-voz" aria-pressed={vozActiva ? 'true' : 'false'} onClick={() => setVozActiva(!vozActiva)}>
             <Icono n="micro" /> Voz del coach{vozActiva ? '' : ' (silenciada)'}

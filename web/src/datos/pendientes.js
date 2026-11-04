@@ -55,7 +55,7 @@ export async function listarPendientes(atletaId) {
     ]);
     const E = Object.fromEntries((errores || []).map((x) => [x.id, x.error]));
     const S = Object.fromEntries((subidas || []).map((x) => [x.id, x]));
-    return (todos || []).filter((p) => p.atletaId === atletaId).map((p) => ({ ...p, error: E[p.id] || null, urlSubida: S[p.id]?.url || null, progreso: S[p.id]?.progreso ?? null }))
+    return (todos || []).filter((p) => p.atletaId === atletaId).map((p) => ({ ...p, error: E[p.id] || null, urlSubida: S[p.id]?.url || null, progreso: S[p.id]?.progreso ?? null, forzado: S[p.id]?.forzado === true }))
       .sort((a, b) => (a.creado < b.creado ? -1 : 1));
   } catch { return []; }
 }
@@ -64,10 +64,12 @@ export async function quitarPendiente(id) {
   avisar();
 }
 // (v0.57) La dirección de su subida por trozos y lo que lleva subido (0…1): para seguir por ahí
-export async function ponerSubida(id, { url = undefined, progreso = undefined } = {}) {
+// (v0.61, revisión L1) y si se ha pedido «Subir ahora» aunque no haya wifi (forzado: se queda con él hasta que sale)
+export async function ponerSubida(id, { url = undefined, progreso = undefined, forzado = undefined } = {}) {
   if (!id) return;
   const antes = await operar([SUBIDAS], 'readonly', (tx) => tx.objectStore(SUBIDAS).get(id)).catch(() => null);
-  await operar([SUBIDAS], 'readwrite', (tx) => tx.objectStore(SUBIDAS).put({ id, url: url !== undefined ? url : antes?.url || null, progreso: progreso !== undefined ? progreso : antes?.progreso ?? null }));
+  await operar([SUBIDAS], 'readwrite', (tx) => tx.objectStore(SUBIDAS).put({ id, url: url !== undefined ? url : antes?.url || null, progreso: progreso !== undefined ? progreso : antes?.progreso ?? null,
+    forzado: forzado !== undefined ? forzado === true : antes?.forzado === true }));
 }
 // ¿Se puede leer aún el vídeo guardado? (si el navegador lo ha perdido, hay que volver a elegirlo)
 export async function sigueEnElMovil(p) {

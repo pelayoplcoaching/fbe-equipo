@@ -4375,3 +4375,68 @@ video.respuesta-video { display: block; width: 100%; max-width: 280px; max-heigh
 .dos-angulos-desfase input[type=range] { flex: 1 1 120px; min-width: 0; }
 /* 13: difuminar la cara */
 .difuminar-cuerpo { margin-top: 6px; }
+
+/* ---------------------------------------------------------------- v0.61: vídeos, tanda B (segunda mitad) */
+/* 5: «Revisar la sesión» */
+.sesion-videos-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sesion-videos-lista li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.sesion-videos-lista li > .ico, .sesion-videos-lista li > svg { color: var(--tinta-3); flex: none; }
+.revision-sesion-titulo { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sesion-series { background: var(--hoja-2); }
+.sesion-series-lista { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 0.875rem; }
+.sesion-series-lista li.actual { font-weight: 650; }
+.sesion-series-lista li.actual::marker { color: var(--morado); }
+.serie-del-video { font-weight: 750; color: var(--morado); }
+.resumen-sesion { text-align: left; align-items: stretch; }
+.resumen-sesion-texto { min-height: 160px; width: 100%; }
+.resumen-sesion-enviado { white-space: pre-wrap; }
+/* 8: la estela del movimiento */
+.rep-capa-estela { z-index: 1; }
+.capa-estela { position: absolute; inset: 0; overflow: visible; }
+.capa-estela .estela-fondo line { stroke: rgba(0, 0, 0, .55); stroke-width: 7; stroke-linecap: round; }
+.capa-estela .estela-trazo line { stroke: #3EE0FF; stroke-width: 3.5; stroke-linecap: round; }
+.capa-estela .estela-cabeza { fill: #FFFFFF; stroke: #3EE0FF; stroke-width: 2.5; }
+.rep-estela { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rep-estela-ico { display: inline-block; width: 14px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, transparent, #3EE0FF); }
+.selector-peq { padding-block: 4px; min-height: 32px; font-size: 0.8125rem; max-width: 9rem; }
+/* 16: el perfil carga–velocidad */
+.perfil-velocidad { border-top: 1px solid var(--linea); padding-top: 12px; }
+.perfil-grafica { margin: 0; min-width: 0; }
+.grafica-perfil { width: 100%; height: auto; display: block; }
+.grafica-perfil .perfil-punto { fill: var(--morado); stroke: var(--hoja); stroke-width: 2; }
+.grafica-perfil .perfil-punto.atipico { fill: var(--hoja); stroke: var(--tinta-3); stroke-width: 2; }
+.grafica-perfil .perfil-recta { stroke: var(--tinta-2); stroke-width: 2; }
+.grafica-perfil .perfil-umbral-linea { stroke: var(--aviso); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.grafica-perfil .perfil-e1rm-punto { fill: var(--hoja); stroke: var(--aviso); stroke-width: 2.5; }
+.perfil-leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 4px; }
+.perfil-ley-punto { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--morado); }
+.perfil-ley-recta { display: inline-block; width: 16px; height: 2px; background: var(--tinta-2); }
+.perfil-ley-umbral { display: inline-block; width: 16px; border-top: 2px dashed var(--aviso); }
+.perfil-tabla summary { cursor: pointer; color: var(--morado); padding: 6px 0; }
+.perfil-tabla table { border-collapse: collapse; width: 100%; }
+.perfil-tabla th, .perfil-tabla td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--linea); }
+.perfil-e1rm { display: flex; flex-direction: column; gap: 2px; }
+.perfil-e1rm-cifra { font-size: 1.75rem; font-weight: 800; line-height: 1.1; }
+.perfil-avisos { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; color: var(--tinta-2); }
+.perfil-umbral { align-items: center; }
+.entrada-corta { width: 6rem; }
+/* 17: el informe del mes */
+.informes-mes { margin-top: 4px; }
+.informe-cifras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.informe-cifras > div { padding: 8px 10px; border-radius: 10px; background: var(--hoja-2); min-width: 0; }
+.informe-cifras dt { font-size: 0.75rem; color: var(--tinta-3); }
+.informe-cifras dd { margin: 2px 0 0; font-size: 1.125rem; font-weight: 750; }
+.informe-lista li { padding: 6px 0; gap: 8px; }
+.informe-notas { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.informe-lista-num { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
+.informe-tecnica h3 { margin: 0; }
+.tarjeta-informe-chat { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 6px; padding: 10px; border-radius: 12px; background: var(--morado-suave); }
+.tarjeta-informe-chat .pila-xs { flex: 1 1 8rem; min-width: 0; }
+.tarjeta-informe-ico { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--hoja); color: var(--morado); flex: none; }
+/* 20: subir solo con wifi y la píldora de la subida */
+.banda-espera b { font-weight: 700; }
+.pildora-subida { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 60; pointer-events: none;
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: 999px; background: var(--tinta); color: var(--hoja); font-size: 0.8125rem; font-weight: 650;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .25); max-width: calc(100vw - 32px); white-space: nowrap; }
+.en-sesion .pildora-subida { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+.pildora-subida-aro { width: 18px; height: 18px; border-radius: 50%; flex: none; background: conic-gradient(var(--morado) var(--p, 0%), rgba(127, 127, 127, .35) 0); }

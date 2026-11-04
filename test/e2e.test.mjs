@@ -1167,7 +1167,11 @@ try {
   await msg.getByRole('textbox', { name: /Responder a Lucía/ }).fill('Perfecto, apúntalo siempre así');
   await msg.locator('button[aria-label="Enviar"]').click();
   await p.locator('.tarjeta-revisar', { hasText: 'He cambiado el remo' }).waitFor({ state: 'detached' });
-  check(await p.locator('.tarjeta-revisar', { hasText: 'Torso A' }).filter({ hasText: 'Lucía' }).count() === 0, 'al responder, su sesión sale de la bandeja');
+  check(await p.locator('.tarjeta-revisar:not(.tarjeta-sesion-videos)', { hasText: 'Torso A' }).filter({ hasText: 'Lucía' }).count() === 0, 'al responder, su sesión sale de la bandeja');
+  // (v0.61) sus dos vídeos de esa sesión van juntos en una tarjeta («Revisar la sesión»); «Ver uno a uno», como antes
+  const grupoLucia = p.locator('.tarjeta-sesion-videos').filter({ hasText: 'Lucía' });
+  check(/· 2 vídeos/.test(await grupoLucia.textContent()), '(v0.61) los dos vídeos de Lucía de esa sesión, en una sola tarjeta');
+  await grupoLucia.getByRole('button', { name: 'Ver uno a uno' }).click();
   const vid = p.locator('.tarjeta-revisar', { hasText: '¿Bajo bien la barra?' });
   await vid.getByRole('button', { name: 'Ver y comentar' }).click();
   await vid.locator('video.medio').waitFor();
@@ -5550,6 +5554,17 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ los vídeos de la v0.60:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.61: los vídeos de técnica, tanda B (segunda mitad): revisar la sesión con un solo resumen, la estela del movimiento (y
+// al exportar), el perfil carga–velocidad, el informe del mes y solo con wifi (test/e2e-videos-061.mjs)
+console.log('\nv0.61: los vídeos de técnica, tanda B (segunda mitad)');
+try {
+  const { probarVideos061 } = await import('./e2e-videos-061.mjs');
+  await probarVideos061({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ los vídeos de la v0.61:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):

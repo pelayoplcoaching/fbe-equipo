@@ -8,6 +8,7 @@
 import { elegirFormato, medidasSalida, encajar, capasEn, burbuja, MARCA_AGUA, FPS_COMPOSICION, BITS_COMPOSICION, MAX_SEG_REVISION, MAX_SEG_DIFUMINAR, progresoDe } from '../../logica/composicion.js';
 import { cajaEn, cajaMinima, tramoDifuminar } from '../../logica/cara.js';
 import { tiempoVoz } from '../../logica/tecnica.js';
+import { segmentosEstela, cabezaEstela } from '../../logica/estela.js';
 import { pintarFormas } from '../Video.jsx';
 
 const esCompatible = (t) => { try { return !!globalThis.MediaRecorder?.isTypeSupported?.(t); } catch { return false; } };
@@ -98,6 +99,23 @@ export function pintarDibujo(ctx, formas, r, proporcion) {
   ctx.save(); ctx.translate(r.x, r.y);
   pintarFormas(ctx, formas, r.w, r.h, proporcion);
   ctx.restore();
+}
+// (v0.61, 8) La estela del movimiento en la imagen (con el mismo zoom ya puesto), en el momento t: { puntos, ventana, estatica }
+export const COLOR_ESTELA_LIENZO = '#3EE0FF';
+export function pintarEstela(ctx, estela, t, r) {
+  if (!estela?.puntos?.length || !r?.w) return 0;
+  const segs = segmentosEstela(estela.puntos, t, { ventana: estela.ventana, estatica: !!estela.estatica });
+  const k = Math.max(1, Math.min(r.w, r.h) / 360);
+  const X = (x) => r.x + x * r.w, Y = (y) => r.y + y * r.h;
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const [ancho, color] of [[7 * k, 'rgba(0,0,0,.55)'], [3.5 * k, COLOR_ESTELA_LIENZO]]) {
+    ctx.lineWidth = ancho; ctx.strokeStyle = color;
+    for (const sg of segs) { ctx.globalAlpha = sg.alfa; ctx.beginPath(); ctx.moveTo(X(sg.a[0]), Y(sg.a[1])); ctx.lineTo(X(sg.b[0]), Y(sg.b[1])); ctx.stroke(); }
+  }
+  const cab = cabezaEstela(estela.puntos, t);
+  if (cab) { ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.strokeStyle = COLOR_ESTELA_LIENZO; ctx.lineWidth = 2.5 * k; ctx.beginPath(); ctx.arc(X(cab[0]), Y(cab[1]), 5 * k, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+  return segs.length;
 }
 const redondo = (ctx, x, y, w, h, rr) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, rr); else ctx.rect(x, y, w, h); };
 // Un texto en su píldora (abajo a la izquierda, uno encima de otro; o en una esquina)
@@ -243,7 +261,8 @@ async function grabarReproduciendo(v, { desde, hasta, w, h, pistas = [], pintar,
 // ---------------------------------------------------------------- 3. Exportar con correcciones
 // El vídeo con lo que corrigió el coach encima (los dibujos en su tramo, los comentarios con su momento y los puntos clave
 // con el suyo, la nota en una esquina y la marca «FBE») y su voz sobre el vídeo, si la hay. Nada sale del dispositivo.
-export async function exportarCorregido({ src, linea = [], nota = null, voz = null, contenedor = null, alProgreso = () => {}, senal = null }) {
+// (v0.61) estela: la del movimiento, si está encendida ({ puntos, ventana, estatica }), entre el vídeo y los dibujos
+export async function exportarCorregido({ src, linea = [], nota = null, voz = null, estela = null, contenedor = null, alProgreso = () => {}, senal = null }) {
   const v = await abrirFuente(src, { contenedor });
   let audio = null, actx = null, destino = null;
   try {
@@ -268,6 +287,7 @@ export async function exportarCorregido({ src, linea = [], nota = null, voz = nu
       } catch { audio = null; }
     }
     const kNota = Math.max(1, Math.min(w, h) / 400);
+    let conEstela = 0; // (los fotogramas con la estela pintada)
     const sincronizarVoz = (t) => {
       if (!audio) return;
       const tv = tiempoVoz(t, voz.inicio || 0, voz.dur || audio.duration || 0);
@@ -277,6 +297,7 @@ export async function exportarCorregido({ src, linea = [], nota = null, voz = nu
     };
     const pintar = (ctx, vid, t) => {
       const r = pintarFotograma(ctx, vid, w, h);
+      if (estela && pintarEstela(ctx, estela, t, r) > 0) conEstela++;
       const { dibujos, textos } = capasEn(linea, t);
       for (const d of dibujos) pintarDibujo(ctx, d.formas, r, r.w / r.h);
       pintarTextos(ctx, textos, w, h);
@@ -286,7 +307,7 @@ export async function exportarCorregido({ src, linea = [], nota = null, voz = nu
     };
     if (actx?.state === 'suspended') await actx.resume().catch(() => {});
     const r = await grabarReproduciendo(v, { desde: 0, hasta, w, h, pistas, pintar, alProgreso, senal });
-    return { ...r, recortado: dur > MAX_SEG_REVISION + 0.5 };
+    return { ...r, recortado: dur > MAX_SEG_REVISION + 0.5, estela: conEstela };
   } finally {
     soltarVideo(v);
     if (audio) { try { audio.pause(); audio.removeAttribute('src'); audio.load(); } catch { /* */ } }

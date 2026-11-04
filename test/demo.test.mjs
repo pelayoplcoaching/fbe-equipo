@@ -1531,8 +1531,8 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   {
     const uid = bT.auth.sesion().user.id;
     const pv = async (v) => (await bT.upsert('privacidad_vista', [{ usuario_id: uid, version: v }], 'usuario_id'))[0].version;
-    check(VERSION_LEGAL_D === '2026-12.2' && await aT.versionLegal() === '2026-12.2' && await pv('2026-12.2') === '2026-12.2' && await pv('2026-12.1') === '2026-12.2' && await pv('2026-12') === '2026-12.2' && await pv('2026-11') === '2026-12.2',
-      '(M2) en la demo (que tiene la 037), la 2026-12.2 (v0.60); nunca hacia atrás, comparando por partes');
+    check(VERSION_LEGAL_D === '2026-12.3' && await aT.versionLegal() === '2026-12.3' && await pv('2026-12.3') === '2026-12.3' && await pv('2026-12.2') === '2026-12.3' && await pv('2026-12') === '2026-12.3' && await pv('2026-11') === '2026-12.3',
+      '(M2) en la demo (que tiene la 037), la 2026-12.3 (v0.61); nunca hacia atrás, comparando por partes');
     check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.10')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato y de un mes que ya existe');
   }
   await bT.auth.entrar('pelayo@fbe.demo', 'demo');
@@ -1628,6 +1628,72 @@ console.log('\nv0.58.1: el historial del chat por páginas en la demo');
   check(deAna[0].length === 400 && deAna[1].length === 600 && deAna[1].slice(-400).join() === deAna[0].join() && total > 650 && total < 1000,
     `(v0.58.1) la atleta, de página en página: 400, 600 (los 200 anteriores encima) y hasta el primero (${total})`);
   check(deAna[2].join() === deCoach[2].join() && (await a7.conversacion(ana7.id, { limite: 1000 }))[0].texto === 'Antiguo 0', '(v0.58.1) lo mismo que ve el coach (sin lo programado), hasta el primer mensaje');
+}
+
+console.log('\nv0.61: revisar la sesión, la velocidad mínima y el informe del mes en la demo (las mismas reglas que la 039)');
+{
+  const SV = await import('../web/src/logica/sesionVideos.js');
+  const IT = await import('../web/src/logica/informeTecnica.js');
+  const bT = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const aT = crearApi(bT);
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  const atl = await aT.atletas();
+  const ana = atl.find((a) => a.nombre === 'Ana López');
+  check(await aT.video039() === true, 'la demo tiene lo de la 039');
+  // Una sesión hecha de Ana con dos ejercicios con series
+  const bloques = await bT.select('bloques', { eq: { atleta_id: ana.id } });
+  const semanas = await bT.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) } });
+  const sesiones = (await bT.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) }, eq: { completada: true } }));
+  let ses = null, ps = [];
+  for (const s of sesiones) {
+    const pp = (await bT.select('sesion_ejercicios', { eq: { sesion_id: s.id }, order: [['orden', 'asc']] }));
+    const conSeries = [];
+    for (const p of pp) if ((await bT.select('series', { eq: { sesion_ejercicio_id: p.id } })).length) conSeries.push(p);
+    if (conSeries.length >= 2) { ses = s; ps = conSeries.slice(0, 2); break; }
+  }
+  check(!!ses, 'una sesión de Ana con dos ejercicios hechos');
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  const v2 = await aT.subirArchivo(ana.id, new Blob(['b'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, sesion_ejercicio_id: ps[1].id, ejercicio_id: ps[1].ejercicio_id, serie_numero: 1 });
+  const v1 = await aT.subirArchivo(ana.id, new Blob(['a'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, sesion_ejercicio_id: ps[0].id, ejercicio_id: ps[0].ejercicio_id, serie_numero: 1 });
+  check(await lanza(() => aT.guardarUmbralVelocidad(ps[0].ejercicio_id, 0.3)) && await lanza(() => bT.insert('umbrales_velocidad', [{ ejercicio_id: ps[0].ejercicio_id, vmin: 0.3 }])),
+    'Ana no escribe la velocidad mínima (como la 039)');
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  const band = await aT.bandeja();
+  const mios = band.archivos.filter((a) => a.id === v1.id || a.id === v2.id);
+  const ag = SV.agruparPorSesion(mios, Object.fromEntries(mios.map((a) => [a.sesion_ejercicio_id, a.pauta])));
+  check(ag.grupos.length === 1 && ag.grupos[0].videos.map((v) => v.id).join() === `${v1.id},${v2.id}` && mios.every((a) => a.sesionVideo?.id === ses.id), '(5) en la bandeja, juntos y en el orden de la sesión');
+  const pr = await aT.sesionParaRevisar(ses.id);
+  check(pr.pautas.length >= 2 && pr.pautas[0].hechas.length > 0 && pr.resumen === null, 'con las series de la sesión');
+  const normal = await aT.comentar({ atletaId: ana.id, sesionId: ses.id, texto: 'Resumen de la sesión (un mensaje normal)', autor: 'coach' });
+  check(normal.resumen_sesion === false && (await aT.sesionParaRevisar(ses.id)).resumen === null, '(M2) un mensaje que empieza igual no es un resumen (como la 039)');
+  const c = await aT.enviarResumenSesion({ atletaId: ana.id, sesionId: ses.id, texto: 'Resumen de la sesión: muy bien' });
+  check(c?.sesion_id === ses.id && c.resumen_sesion === true && (await aT.sesionParaRevisar(ses.id)).resumen?.id === c.id && await lanza(() => aT.enviarResumenSesion({ atletaId: ana.id, sesionId: ses.id, texto: 'Otro' }))
+    && await lanza(() => bT.insert('comentarios', [{ atleta_id: ana.id, sesion_id: ses.id, texto: 'Otro', resumen_sesion: true }])),
+    'el resumen, en el hilo de la sesión, marcado y una vez (la demo lo impide como la base)');
+  check(await lanza(() => bT.update('comentarios', { resumen_sesion: false }, { eq: { id: c.id } })) && await lanza(() => bT.update('comentarios', { resumen_sesion: true }, { eq: { id: normal.id } })), 'la marca no se cambia después');
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  check(await lanza(() => bT.insert('comentarios', [{ atleta_id: ana.id, sesion_id: ps[0].sesion_id, texto: 'Resumen de la sesión', resumen_sesion: true }])), 'Ana no escribe un «resumen»');
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  await bT.rpc('comentario_eliminar', { p_comentario: c.id });
+  check((await bT.select('comentarios', { eq: { id: c.id } }))[0]?.resumen_sesion === false && !!(await aT.enviarResumenSesion({ atletaId: ana.id, sesionId: ses.id, texto: 'Resumen de la sesión: de nuevo' }))?.resumen_sesion,
+    'eliminado para todos, deja de contar: la sesión admite otro');
+  // 16. La velocidad mínima
+  const ej = ps[0].ejercicio_id;
+  check(await aT.guardarUmbralVelocidad(ej, 0.3) === 0.3 && await lanza(() => aT.guardarUmbralVelocidad(ej, 0.0499)) && await lanza(() => bT.upsert('umbrales_velocidad', [{ ejercicio_id: ej, vmin: 0.1234 }], 'ejercicio_id'))
+    && await lanza(() => bT.update('umbrales_velocidad', { ejercicio_id: ps[1].ejercicio_id }, { eq: { ejercicio_id: ej } })), 'el coach la escribe; la demo rechaza lo mismo que la base (rango, decimales, cambiar de ejercicio)');
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  check((await aT.umbralesVelocidad([ej]))[ej] === 0.3 && !(await bT.select('umbrales_velocidad', {})).length && await lanza(() => bT.rpc('umbrales_velocidad_de', { p_ejercicios: Array.from({ length: 201 }, () => ej) })),
+    'Ana la lee con su función (no la tabla), como mucho 200 de una vez');
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  await aT.guardarUmbralVelocidad(ej, null);
+  check(!Object.keys(await aT.umbralesVelocidad([ej])).length, 'y la quita');
+  // 17. El informe
+  const mes = hoyISO().slice(0, 7);
+  const ci = await aT.enviarInformeTecnica(ana.id, mes);
+  check(IT.leerTarjetaInforme(ci) === mes && await aT.informeEnviado(ana.id, mes) && await lanza(() => aT.enviarInformeTecnica(ana.id, mes)), '(17) el informe, como una tarjeta del chat (una vez por mes)');
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  const r = await aT.informeTecnica(ana.id, mes);
+  check(r.informe.enviados >= 2 && (await aT.conversacion(ana.id)).some((x) => x.id === ci.id), 'Ana lo ve en su chat y lo abre');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

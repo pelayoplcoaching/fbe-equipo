@@ -96,7 +96,10 @@ export default function PanelAnalisis({ video, esCoach = false, guardado = null,
   // (v0.59) Las repeticiones de esta sesión (y su pose), para las marcas «Rep 1…n» del reproductor y «la peor»
   useEffect(() => { ponerCorrecciones(id, 'repsSesion', vista?.propio && reps.length ? reps : null); }, [id, vista, reps]);
   useEffect(() => { ponerCorrecciones(id, 'poseSesion', poseVista && repsPose.length ? { reps: repsPose } : null); }, [id, poseVista, repsPose]);
-  useEffect(() => () => { ponerCorrecciones(id, 'repsSesion', null); ponerCorrecciones(id, 'poseSesion', null); }, [id]);
+  // (v0.61) y la trayectoria de esta sesión y sus puntos del cuerpo, para la estela del movimiento del reproductor
+  useEffect(() => { ponerCorrecciones(id, 'barraSesion', vista?.propio ? vista.puntos : null); }, [id, vista]);
+  useEffect(() => { ponerCorrecciones(id, 'poseFotosSesion', poseVista ? { fotos: poseVista.fotos, lado: poseVista.lado } : null); }, [id, poseVista]);
+  useEffect(() => () => { ponerCorrecciones(id, 'repsSesion', null); ponerCorrecciones(id, 'poseSesion', null); ponerCorrecciones(id, 'barraSesion', null); ponerCorrecciones(id, 'poseFotosSesion', null); }, [id]);
   // La capa sobre el vídeo
   useEffect(() => {
     const estado = {

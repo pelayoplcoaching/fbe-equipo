@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono, Hoja, usePreferencia } from '../comunes.jsx';
 import { reproductorDe } from '../Video.jsx';
 import { VerArchivo } from '../Archivos.jsx';
-import { revocarLuego, crearGrabacion, puedeComponer, pintarFotograma, pintarDibujo, pintarBurbuja, pintarPildora, pintarMarcaAgua, pintarTextos, soltarFlujo, formatoComposicion } from './compositor.js';
+import { revocarLuego, crearGrabacion, puedeComponer, pintarFotograma, pintarDibujo, pintarBurbuja, pintarPildora, pintarMarcaAgua, pintarTextos, soltarFlujo, formatoComposicion, pintarEstela } from './compositor.js';
 import { useCorrecciones } from './correcciones.js';
 import { medidasSalida, burbuja, esquinaMasCercana, esquinaValida, NOMBRE_ESQUINA, ESQUINAS, MAX_SEG_REVISION, MAX_SEG_CARA, elegirFormato, lineaDeCapas, capasEn } from '../../logica/composicion.js';
 import { textoContador } from '../../logica/notasVoz.js';
@@ -92,6 +92,8 @@ export function GrabarRevision({ video, nombreAtleta = 'Atleta', alCerrar, alEnv
     const pintar = () => {
       const est = rep.estado?.() || {};
       const rr = pintarFotograma(g.ctx, v, w, h, { zoom: est.zoom, caja: est.caja, rect: est.rect });
+      // (v0.61) la estela del movimiento, si está encendida en el reproductor
+      if (est.estela) pintarEstela(g.ctx, est.estela, v.currentTime, rr);
       pintarDibujo(g.ctx, est.formas, rr, est.proporcion || rr.w / rr.h);
       g.ctx.setTransform(1, 0, 0, 1, 0, 0);
       pintarTextos(g.ctx, capasEn(lineaRef.current, v.currentTime).textos, w, h);

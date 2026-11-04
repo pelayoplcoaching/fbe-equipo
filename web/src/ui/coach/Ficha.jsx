@@ -16,6 +16,7 @@ import { VistaProgreso } from '../atleta/Progreso.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { Chat } from '../Chat.jsx';
 import { Diario } from '../Diario.jsx';
+import { MiTecnica } from '../tecnica/MiTecnica.jsx';
 import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
 import { VerArchivo } from '../Archivos.jsx';
 import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, etiquetasSuperserie, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO } from '../../logica/calculos.js';
@@ -85,7 +86,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           {pest === 'registro' && <Registro atleta={a} alCambiar={alCambiar} />}
           {pest === 'seguimiento' && <Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} />}
           {pest === 'nutricion' && (conNutricion(a) ? <NutricionFicha atleta={a} /> : <SinNutricion irADatos={() => setPest('datos')} />)}
-          {pest === 'videos' && <Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} />}
+          {pest === 'videos' && <><MiTecnica atletaId={a.id} nombreAtleta={a.nombre} esCoach /><Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} /></>}
           {pest === 'objetivos' && <Objetivos atleta={a} />}
           {pest === 'cobros' && <CobrosAtleta atleta={a} />}
           {pest === 'notas' && <Notas atleta={a} notas={ficha.datos.notas} recargar={() => ficha.recargar(true)} />}

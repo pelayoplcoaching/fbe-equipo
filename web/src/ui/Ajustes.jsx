@@ -8,6 +8,7 @@ import { ACENTOS } from '../logica/acentos.js';
 import { puedeVibrar, vibrar } from './hapticos.js';
 import { DESCANSOS_ATLETA, mmss } from '../logica/calculos.js';
 import { puedeDifuminar } from './tecnica/Difuminar.jsx';
+import { leerRed, mostrarOpcionWifi } from '../logica/red.js';
 
 const TEMAS = [['sistema', 'Sistema'], ['claro', 'Claro'], ['oscuro', 'Oscuro']];
 export const VERSION_APP = typeof __APP_VERSION__ === 'undefined' ? '' : String(__APP_VERSION__);
@@ -69,6 +70,9 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
           <Interruptor id="aj-pantalla" icono="movil" texto="Pantalla encendida durante la sesión" ayuda="Para no tener que desbloquear el móvil entre series" valor={a.pantalla} alCambiar={(v) => cambiar('pantalla', v)} />
           {/* v0.60 (13): «Difuminar la cara» encendido de serie al enviar un vídeo (en este móvil) */}
           {puedeDifuminar(modo === 'demo') && <Interruptor id="aj-difuminar" icono="cara" texto="Difuminar la cara al enviar un vídeo" ayuda="Encendido de serie en la hoja de enviar (puedes apagarlo en cada vídeo). Se hace en el móvil: el original no sale de él" valor={!!a.difuminarCara} alCambiar={(v) => cambiar('difuminarCara', v)} />}
+          {/* v0.61 (20): solo donde el navegador dice si la conexión es wifi o datos móviles (Chrome de Android); en el iPhone
+              y en el ordenador no se puede saber, así que no sale (no funcionaría) */}
+          {mostrarOpcionWifi(leerRed()) && <Interruptor id="aj-solo-wifi" icono="enviar" texto="Subir los vídeos solo con wifi" ayuda={`Con datos móviles, el vídeo espera en el móvil («Esperando wifi») y sale solo al conectarte a una wifi; puedes subirlo antes con «Subir ahora».${leerRed().ahorro ? ' Tienes el ahorro de datos del móvil activado: con esta opción encendida, los vídeos no gastan tus datos.' : ''}`} valor={!!a.soloWifi} alCambiar={(v) => cambiar('soloWifi', v)} />}
           <Interruptor id="aj-peso-cifra" icono="bascula" texto="Ver los kilos en Hoy" ayuda="Y en el resumen de tu semana. De serie, te dice cómo va tu peso respecto a tu objetivo, sin la cifra; la gráfica sigue en Progreso" valor={a.pesoCifra} alCambiar={(v) => cambiar('pesoCifra', v)} />
         </>
       )}
