@@ -2225,5 +2225,39 @@ console.log('\nv0.58: el análisis automático de los vídeos (migración 036)')
   }
 }
 
+// (v0.58.1) El historial del chat por páginas (400 y de 200 en 200), igual para el atleta que para el coach: con sus
+// permisos de fila (lo programado del coach que aún no ha salido no lo ve ni le cuenta en la página) hasta el primero
+console.log('\nv0.58.1: el historial del chat por páginas, para el atleta como para el coach');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const pag = await api.crearAtleta({ nombre: 'Atleta Paginada', email: 'paginada@test' });
+  const codP = await api.crearInvitacion(pag.id);
+  await b.auth.registrar('paginada@test', 'contraseña-paginada-1', 'Paginada');
+  await api.canjearCodigo(codP);
+  await api.darConsentimientos();
+  // 650 antiguos (uno por hora desde hace 60 días; la prueba los pone tal cual, sin los disparadores que fechan «ahora»)
+  await b.guion(`set session_replication_role = replica;
+    insert into comentarios (atleta_id, autor, texto, creado_en)
+      select '${pag.id}', case when i % 2 = 0 then 'atleta' else 'coach' end, 'Antiguo ' || i, now() - interval '60 days' + i * interval '1 hour' from generate_series(0, 649) i;
+    set session_replication_role = default;`);
+  await api.enviarMensaje(pag.id, { texto: 'Hoy, del atleta', autor: 'atleta' });
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.enviarMensaje(pag.id, { texto: 'Hoy, del coach (difusión larga) '.repeat(20), autor: 'coach' });
+  await api.enviarMensaje(pag.id, { texto: 'Programado para mañana', autor: 'coach', enviarEn: new Date(Date.now() + 864e5).toISOString() });
+  const paginas = async () => { const out = []; for (const limite of [400, 600, 800]) out.push(await api.conversacion(pag.id, { limite })); return out; };
+  const [c400, c600, c800] = await paginas();
+  await b.auth.entrar('paginada@test', 'contraseña-paginada-1');
+  const [a400, a600, a800] = await paginas();
+  const ids = (xs) => xs.map((c) => c.id).join();
+  const sinProg = (xs) => xs.filter((c) => !c.programado);
+  check(c400.length === 400 && a400.length === 400 && c400.at(-1).programado && !a400.some((c) => c.enviar_en) && a400.at(-1).texto.startsWith('Hoy, del coach'),
+    '(v0.58.1) la primera página: 400 para los dos (el atleta, sin el programado; lo último que ve, la difusión de hoy)');
+  check(a600.length === 600 && a600.slice(-400).map((c) => c.id).join() === ids(a400) && ids(sinProg(c600).slice(-599)) === ids(a600.slice(-599)),
+    '(v0.58.1) la página anterior (600): el atleta recibe 200 más antiguos, encima de lo que ya tenía, como el coach');
+  check(a800.length === 652 && a800[0].texto === 'Antiguo 0' && ids(sinProg(c800)) === ids(a800) && c800.length === 653,
+    '(v0.58.1) y la última: hasta el primer mensaje de todos (652 para el atleta, 653 con el programado para el coach)');
+  check(await api.mensajesDesde(pag.id, new Date(Date.now() - 60 * 864e5 - 3600e3).toISOString()) === 652, '(v0.58.1) «ir a una fecha» cuenta lo que ve el atleta (sin el programado)');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);
