@@ -127,6 +127,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     const tarj = p.locator('.tarjeta-revisar').filter({ has: p.locator('.chip.alerta', { hasText: 'Molestia: rodilla' }) }).first();
     await tarj.waitFor();
     const chip = tarj.locator('.chip.espera');
+    await p.waitForFunction(() => [...document.querySelectorAll('.chip.espera')].some((c) => c.textContent.includes('hace 30 h')), null, { timeout: 10000 }).catch(() => {});
     check((await chip.textContent()).includes('hace 30 h') && /espera-alerta/.test(await chip.getAttribute('class')), '(18) el vídeo dice cuánto lleva esperando («hace 30 h»), en rojo con el objetivo de 24 h');
     await p.getByRole('group', { name: 'Objetivo' }).getByRole('button', { name: '48 h' }).click();
     await p.waitForFunction(() => [...document.querySelectorAll('.chip.espera')].some((c) => c.textContent.includes('hace 30 h') && c.classList.contains('espera-aviso')));
