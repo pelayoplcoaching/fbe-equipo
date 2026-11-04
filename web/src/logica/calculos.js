@@ -733,12 +733,13 @@ export function esBarra(nombre = '') {
 // Discos por lado para llegar a una carga total con barra de 20 kg (los que hay en cualquier gimnasio).
 // Devuelve null si no se puede cargar exacto.
 export const DISCOS = [25, 20, 15, 10, 5, 2.5, 1.25];
-export function discosPorLado(total, barra = 20) {
+// (v0.63) discos: los que hay, si no son los de siempre (con discos fraccionados o sin los de 1,25)
+export function discosPorLado(total, barra = 20, discos = DISCOS) {
   const kg = Number(total);
   if (!kg || kg < barra) return null;
   let resto = Math.round(((kg - barra) / 2) * 100) / 100;
   const lado = [];
-  for (const d of DISCOS) while (resto >= d - 1e-9) { lado.push(d); resto = Math.round((resto - d) * 100) / 100; }
+  for (const d of (Array.isArray(discos) && discos.length ? discos : DISCOS)) while (resto >= d - 1e-9) { lado.push(d); resto = Math.round((resto - d) * 100) / 100; }
   return resto > 0.001 ? null : lado;
 }
 
