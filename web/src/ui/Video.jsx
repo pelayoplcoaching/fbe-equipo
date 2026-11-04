@@ -21,6 +21,9 @@ export { textoMomento };
 // velocidad, puntos del cuerpo) irán en «capas», entre el vídeo y los dibujos, con el mismo rectángulo de la imagen.
 // v0.58: así es: el análisis automático pone su capa (tecnica/capas.js) y, para empezar, pide «elegir un punto» de la
 // imagen (el disco de la barra): un toque sobre el vídeo en pausa, que da sus coordenadas de 0 a 1.
+// v0.60: lo que se ve en el reproductor (estado(): las formas dibujadas, el zoom, el tamaño y la velocidad), para grabarlo
+// con «Grabar la revisión»; con cors, el vídeo de un enlace firmado se lee con CORS (para pintarlo en un lienzo); un vídeo
+// grabado en cámara lenta se abre a su velocidad (velocidadInicial); compacto: sin la tira ni el ajuste fino (dos ángulos).
 // v0.59: una marca por repetición encima de la barra de tiempo («Rep 1…n», del análisis, del tempo o marcadas a mano), ir
 // a la anterior o a la siguiente (con los botones o con [ y ]; las correcciones, con { y }), «la peor» señalada y, debajo,
 // la tira de miniaturas para ir a un momento de un toque.
@@ -36,7 +39,7 @@ const HERRAMIENTAS = [['linea', 'Línea'], ['angulo', 'Ángulo'], ['flecha', 'Fl
 const PX_FOTOGRAMA = 8; // el ajuste fino: un fotograma cada 8 px de arrastre
 const sinMovimiento = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function Reproductor({ src, archivoId = null, serie = null, capas = null, repeticiones = false }) {
+export function Reproductor({ src, archivoId = null, serie = null, capas = null, repeticiones = false, cors = false, velocidadInicial = 1, compacto = false, etiqueta = null }) {
   const app = useApp();
   const v = useRef(null);
   const marco = useRef(null);
@@ -46,7 +49,7 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
   const [jugando, setJugando] = useState(false);
   const [t, setT] = useState(0);
   const [dur, setDur] = useState(0);
-  const [vel, setVel] = useState(1);
+  const [vel, setVel] = useState(VELOCIDADES.some(([x]) => x === velocidadInicial) ? velocidadInicial : 1);
   const [bucle, setBucle] = useState(true);
   // Dibujo: el que se enseña (de un comentario) o el que se está haciendo
   const [caja, setCaja] = useState({ w: 0, h: 0, vw: 0, vh: 0 });
@@ -128,6 +131,8 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
       },
       // Este fotograma con lo que se ve dibujado encima, como imagen JPEG (para mandarla o guardarla)
       fotograma: () => ultimo.current.exportar(),
+      // (v0.60) Lo que se ve ahora: para pintarlo igual en un lienzo («Grabar la revisión»)
+      estado: () => { const u = ultimo.current; return { formas: u.formas || [], zoom: u.zoom || { z: 1, x: 0, y: 0 }, caja: u.caja || { w: 0, h: 0 }, rect: u.rect || null, proporcion: u.proporcion || 1, vel: u.vel || 1, dibujando: !!u.dibujando }; },
       // (v0.58) Para el análisis: el vídeo (su dirección y el elemento) y elegir un punto de la imagen con un toque. Da
       // [x, y] de 0 a 1, o null si se cancela (o se pide otro)
       fuente: () => ultimo.current.src || null,
@@ -331,6 +336,7 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
 
   ultimo.current.exportar = exportarFotograma;
   ultimo.current.src = src;
+  Object.assign(ultimo.current, { formas, zoom, caja, rect, proporcion, vel, dibujando: !!edicion });
   const elegir = (e) => {
     const el2 = eleccionRef.current; if (!el2 || !rect.w) return;
     e.preventDefault(); e.stopPropagation();
@@ -345,7 +351,8 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
     <div class={`reproductor ${edicion ? 'dibujando' : ''} ${eleccion ? 'eligiendo' : ''} ${zoom.z > 1 ? 'con-zoom' : ''}`} onKeyDown={tecla}>
       <div class="rep-marco" ref={marco} onPointerDown={gBajar} onPointerMove={gMover} onPointerUp={gSoltar} onPointerCancel={gSoltar}>
         <div class={`rep-zoom ${sinMovimiento() ? '' : 'suave'}`} ref={capaZoom} style={zoomEstilo}>
-          <video class="medio" ref={v} src={src} playsInline preload="metadata" loop={bucle}
+          <video class="medio" ref={v} src={src} playsInline preload="metadata" loop={bucle} crossOrigin={cors && !/^blob:|^data:/.test(src || '') ? 'anonymous' : undefined}
+            aria-label={etiqueta || undefined}
             onLoadedMetadata={(e) => { setDur(e.currentTarget.duration || 0); setListo(true); e.currentTarget.playbackRate = vel; }}
             onTimeUpdate={(e) => alTiempo(e.currentTarget.currentTime)} onSeeked={(e) => alTiempo(e.currentTarget.currentTime)}
             onPlay={() => { setJugando(true); if (visto && visto.hasta == null) setVisto(null); sincronizar(); }} onPause={() => { setJugando(false); sincronizar(); }}
@@ -396,8 +403,8 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
           <span class="num mini rep-reloj">{textoMomento(t, vel < 1)}<span class="terciario"> / {textoMomento(dur)}</span></span>
         </div>
       )}
-      <AjusteFino t={t} dur={dur} total={totalFotogramas} irA={irA} listo={listo} ahora={() => el()?.currentTime || 0} />
-      {!edicion && <TiraMiniaturas src={src} clave={archivoId || src} dur={dur} t={t} irA={irA} listo={listo} />}
+      {!compacto && <AjusteFino t={t} dur={dur} total={totalFotogramas} irA={irA} listo={listo} ahora={() => el()?.currentTime || 0} />}
+      {!edicion && !compacto && <TiraMiniaturas src={src} clave={archivoId || src} dur={dur} t={t} irA={irA} listo={listo} />}
       {repeticiones && !edicion && listo && (reps.reps.length > 0 || reps.fuente == null) && (
         <div class="rep-reps-mando fila-envolver" role="group" aria-label="Repeticiones">
           {reps.reps.length > 0 && (

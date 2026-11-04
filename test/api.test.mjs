@@ -2345,7 +2345,7 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     const enBase = async () => (await b.sql(`select version from privacidad_vista where usuario_id = $1`, [anaUid]))[0]?.version || null;
     await b.sql(`delete from privacidad_vista where usuario_id = $1`, [anaUid]);
     // Sin la 037
-    check(VL === '2026-12.1' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.1', 'la vigente: 2026-12.1 con la 037; sin ella, 2026-12');
+    check(VL === '2026-12.2' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.2', '(v0.60) la vigente: 2026-12.2 con la 037 (la misma detección); sin ella, 2026-12');
     check(PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()) && await sin.marcarPrivacidadVista() === true && await enBase() === '2026-12',
       'sin la 037: quien no ha visto la 2026-12 la ve y, al cerrarla, la base guarda 2026-12 (lo que admite)');
     local.clear();
@@ -2358,17 +2358,102 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     local.clear();
     // Con la 037: quien vio la 2026-12 ve solo lo nuevo, una vez
     const v = (await api.privacidadVista()).version;
-    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.1',
-      'con la 037, quien vio la 2026-12 ve el aviso con solo lo de la 037');
-    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.1', 'al cerrarlo, la base guarda la 2026-12.1');
+    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.2,2026-12.1',
+      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 y la 2026-12.2)');
+    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.2', 'al cerrarlo, la base guarda la 2026-12.2');
     local.clear();
-    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.1', 'y ya no vuelve a salir (en ningún móvil)');
-    check(await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.1', 'nunca hacia atrás (la base, comparando por partes)');
+    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.2', 'y ya no vuelve a salir (en ningún móvil)');
+    check(await api.marcarPrivacidadVista('2026-12.1') === true && await enBase() === '2026-12.2' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.2', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.1 ni a la 2026-12)');
     await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
-    check(/vigente \(2026-12\.1\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
+    check(/vigente \(2026-12\.2\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
     globalThis.localStorage = previo;
   }
   await b.sql(`delete from recordatorios_tecnica`); await b.sql(`delete from frases_correccion`); await b.sql(`delete from chat_cupos`);
+}
+
+// v0.60: los vídeos de técnica, tanda B (primera mitad, migración 038): las respuestas en vídeo del hilo, dos ángulos con su
+// desfase y el ritmo de la cámara lenta, contra la base de verdad; y sin la 038, lo de antes igual y lo nuevo diciendo qué falta
+console.log('\nv0.60: respuestas en vídeo, dos ángulos y cámara lenta (migración 038)');
+{
+  const { AVISO_038 } = await import('../web/src/datos/api.js');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const [aAna] = await b.sql(`select id from atletas where email = 'ana@test'`);
+  await b.sql(`update atletas set estado = 'activo' where id = $1`, [aAna.id]);
+  await b.sql(`update archivos set creado_en = creado_en - interval '3 days'`);
+  await b.sql(`delete from fbe_privado.storage_por_borrar`); await b.sql(`delete from chat_cupos`);
+  check(await api.video038() === true, 'la app sabe que la base tiene la 038');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const s1 = await api.subirArchivo(aAna.id, new Blob(['vídeo 060 a'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, fps_captura: 119.88 });
+  const s2 = await api.subirArchivo(aAna.id, new Blob(['vídeo 060 b'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, angulo_de: s1.id });
+  check(s1.fps_captura === 120 && s2.angulo_de === s1.id, '(11 y 9) Ana envía un vídeo grabado a 120 fps y otro como su otro ángulo (al enviarlo)');
+  check((await api.parejaAngulo(s1))?.id === s2.id && (await api.parejaAngulo(s2))?.id === s1.id && !(await api.candidatosAngulo(s1)).some((x) => x.id === s2.id || x.id === s1.id),
+    'la pareja de cada uno (de los dos lados); los ya enlazados no se proponen para otro');
+  check(await lanza(() => api.enlazarAngulo({ ...s1, angulo_de: null }, s2.id)), 'ni se enlaza en cadena');
+  // 2. Ana responde en el hilo con la cámara de delante; el coach, con su revisión grabada
+  const cA = await api.responderConVideo(s1, new Blob(['webm'], { type: 'video/webm;codecs=vp8,opus' }), { autor: 'atleta', seg: 12.4 });
+  check(cA?.video_respuesta_id && cA.archivo_id === s1.id && cA.texto === 'Vídeo', '(2) Ana responde en el hilo de su vídeo con un vídeo de 12 s (WebM)');
+  let m = '';
+  try { await api.responderConVideo(s1, new Blob(['x'], { type: 'video/mp4' }), { autor: 'atleta', seg: 75 }); } catch (e) { m = e.message; }
+  check(/un minuto/.test(m) && await lanza(() => api.responderConVideo(s1, new Blob(['x'], { type: 'video/quicktime' }), { autor: 'atleta', seg: 5 })) && await lanza(() => api.responderConVideo(s1, new Blob([], { type: 'video/mp4' }), { autor: 'atleta', seg: 5 })),
+    'de un minuto como mucho, MP4 o WebM y con algo dentro');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const cR = await api.responderConVideo(s1, new Blob(['mp4 de la revisión'], { type: 'video/mp4' }), { autor: 'coach', seg: 150, texto: 'Revisión grabada' });
+  const hilo = await api.comentarios({ archivoId: s1.id });
+  const vids = await api.videosDeRespuestas(hilo);
+  check(cR.texto === 'Revisión grabada' && vids[cR.id]?.mime === 'video/mp4' && vids[cR.id].duracion_seg === 150 && vids[cA.id]?.mime === 'video/webm' && vids[cR.id].tipo === 'adjunto',
+    '(1) el coach manda su revisión grabada (2:30): en el hilo, cada respuesta con su vídeo (archivos del chat de siempre)');
+  check(!(await api.conversacion(aAna.id)).some((c) => c.id === cR.id && api.esMensaje(c)), 'y van en el hilo del vídeo (no como mensajes sueltos del chat)');
+  // El desfase de los dos ángulos, con la corrección
+  const j = await api.guardarDesfase(s1, s2.id, 0.0666);
+  const [rev] = await api.correccionesDe([s1.id]);
+  check(j.desfase === 0.067 && Number(rev.dos_angulos.desfase) === 0.067 && rev.corregido_el === null, '(9) el coach guarda el desfase (2 fotogramas) con la corrección, sin contar como corregido');
+  check(await lanza(() => api.guardarDesfase(s1, s1.id, 0.5)), 'con su otro ángulo, no con otro');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check(Number((await api.revisionVideo(s1.id))?.dos_angulos?.desfase) === 0.067 && await lanza(() => api.guardarDesfase(s1, s2.id, 0)), 'Ana lo lee (sin poder cambiarlo)');
+  await api.desenlazarAngulo(s1);
+  check((await api.parejaAngulo(s1)) === null && (await api.parejaAngulo(s2)) === null, 'Ana los desenlaza (desde cualquiera de los dos)');
+  // Sin la 038: lo de antes igual; lo nuevo dice qué falta (y el vídeo sale igual, sin su ritmo ni su pareja)
+  {
+    const falta = (c) => { const e = new Error(`column comentarios.${c} does not exist`); e.code = '42703'; return e; };
+    const con = (f) => JSON.stringify(f || {});
+    const sin = crearApi({ ...b, auth: b.auth, storage: b.storage, delete: b.delete.bind(b), rpc: b.rpc.bind(b),
+      select: async (t, f) => { if (/video_respuesta_id|angulo_de|fps_captura|dos_angulos/.test(con(f))) throw falta('video_respuesta_id'); return b.select(t, f); },
+      insert: async (t, f) => { if (/video_respuesta_id|angulo_de|fps_captura/.test(con(f))) throw falta('video_respuesta_id'); return b.insert(t, f); },
+      update: async (t, c, f) => { if (/angulo_de/.test(con(c))) throw falta('angulo_de'); return b.update(t, c, f); },
+      upsert: async (t, f, c) => { if (/dos_angulos/.test(con(f))) throw falta('dos_angulos'); return b.upsert(t, f, c); } });
+    let m2 = '';
+    try { await sin.responderConVideo(s1, new Blob(['x'], { type: 'video/mp4' }), { autor: 'atleta', seg: 5 }); } catch (e) { m2 = e.message; }
+    const s3 = await sin.subirArchivo(aAna.id, new Blob(['vídeo 060 c'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, fps_captura: 120, angulo_de: s1.id });
+    check(await sin.video038() === false && m2 === AVISO_038 && m2 === 'Disponible tras la migración 038' && s3?.id && s3.fps_captura == null && s3.angulo_de == null
+      && await lanza(() => sin.enlazarAngulo(s3, s1.id)) && (await sin.parejaAngulo(s1)) === null && (await sin.revisionVideo(s1.id)) != null,
+      'sin la 038, la app lo sabe: responder con vídeo y enlazar dicen «Disponible tras la migración 038», el vídeo sale igual (sin ritmo ni pareja) y la corrección se lee igual');
+  }
+  // Eliminar la respuesta para todos se lleva su vídeo
+  const elim = await api.eliminarMensaje(cA).catch((e) => ({ error: e.message }));
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(!elim?.error && !(await b.sql(`select 1 from archivos where id = $1`, [cA.video_respuesta_id])).length, 'Ana elimina su respuesta en vídeo: su vídeo se va con ella');
+  await b.sql(`delete from archivos where id = any($1::uuid[])`, [[s1.id, s2.id]]);
+  // (revisión L4) Un envío que esperaba (con su ruta) y cuyo otro ángulo ya no está: sale igual, sin el enlace, y lo dice
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const p1 = await api.subirArchivo(aAna.id, new Blob(['vídeo 060 p'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6 });
+  const pendiente = { tipo: 'video_tecnica', duracion_seg: 6, angulo_de: p1.id };
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await b.sql(`delete from archivos where id = $1`, [p1.id]);
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const p2 = await api.subirArchivo(aAna.id, new Blob(['vídeo 060 q'], { type: 'video/mp4' }), pendiente);
+  check(p2?.id && p2.anguloPerdido === true && p2.angulo_de == null, '(L4) si su otro ángulo se ha borrado antes del reintento, el vídeo sale sin el enlace (y la app lo dice)');
+  // (revisión H1) Borrar a un atleta con una respuesta en vídeo: primero la fila, después Storage (y la cola, vacía)
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const eva = await api.crearAtleta({ nombre: 'Atleta Borrable', email: 'borrable060@test' });
+  await b.sql(`update atletas set estado = 'activo' where id = $1`, [eva.id]);
+  const vEva = await api.subirArchivo(eva.id, new Blob(['vídeo eva'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6 });
+  const cEva = await api.responderConVideo(vEva, new Blob(['revisión eva'], { type: 'video/mp4' }), { autor: 'coach', seg: 30 });
+  const rutasEva = (await b.sql(`select ruta from archivos where atleta_id = $1`, [eva.id])).map((x) => x.ruta);
+  let eB = null;
+  try { await api.borrarAtleta(eva.id); } catch (e) { eB = e.message; }
+  check(!eB && cEva?.video_respuesta_id && rutasEva.length === 2 && !(await b.sql(`select 1 from atletas where id = $1`, [eva.id])).length
+    && !(await b.sql(`select 1 from storage.objects where name = any($1)`, [rutasEva])).length && !(await b.sql(`select 1 from fbe_privado.storage_por_borrar where ruta = any($1)`, [rutasEva])).length,
+    `(H1) borrar a un atleta con una respuesta en vídeo: se borra la fila y después sus archivos de Storage (la cola, vacía)${eB ? ` (${eB})` : ''}`);
 }
 
 // (v0.58.1) El historial del chat por páginas (400 y de 200 en 200), igual para el atleta que para el coach: con sus

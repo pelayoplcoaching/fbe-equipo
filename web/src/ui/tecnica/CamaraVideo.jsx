@@ -3,11 +3,17 @@
 // iPhone se pide permiso con un toque), cuenta atrás de 3, 5 o 10 s con pitidos, y «parar sola» a los N segundos para
 // grabarse sin manos. Lo grabado pasa al recorte y al aligerado de siempre. La cámara se suelta al parar, al cancelar, si
 // falla y al cerrar. Desde un vídeo corregido («Grabar de nuevo con la corrección»), los puntos que marcó el coach a la vista.
+// v0.60 (11): «Cámara lenta» si la cámara da 60 fotogramas por segundo o más (getCapabilities): pide 240, 120 o 60 (lo más
+// alto que dé) con una resolución que llegue a ese ritmo; el ritmo real (getSettings) va con el vídeo (038: fps_captura) y
+// el reproductor lo abre a 0,25× o 0,5×. Si no lo da (el iPhone, con Safari, solo da 30 o 60 a una web), se dice y se
+// propone la cámara lenta del propio móvil y elegir el vídeo de la galería.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Segmentos, usePreferencia, useAtraparFoco, Capa } from '../comunes.jsx';
 import { prepararAudio, tono, vibrarCorto } from '../atleta/sesion-comun.jsx';
 import { encuadreDe, nivelDe, textoNivel, CUENTAS_ATRAS, PARAR_SOLA, MAX_GRABACION_SEG, formatoVideo, errorCamara } from '../../logica/tecnica.js';
 import { mmss } from '../../logica/notasVoz.js';
+import { elegirCamaraLenta, textoSinLenta } from '../../logica/angulos.js';
+const esIosNav = () => typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
 
 export const puedeGrabarVideo = () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof globalThis.MediaRecorder === 'function'
   && !!formatoVideo((t) => globalThis.MediaRecorder.isTypeSupported?.(t));
@@ -33,6 +39,11 @@ function CamaraVideoPantalla({ ejercicio = null, titulo = 'Vídeo de técnica', 
   const [pideNivel, setPideNivel] = useState(false);
   const [sinNivel, setSinNivel] = useState(false);
   const [verPuntos, setVerPuntos] = useState(puntos.length > 0);
+  // (v0.60) La cámara lenta: lo que da la cámara (null: aún no se sabe; false: no llega a 60), si está puesta y el ritmo real
+  const [capLenta, setCapLenta] = useState(null);
+  const [lenta, setLenta] = useState(false);
+  const [fpsReal, setFpsReal] = useState(null);
+  const [verPorQue, setVerPorQue] = useState(false);
   const r = useRef({});
 
   const soltarCamara = () => { try { r.current.flujo?.getTracks().forEach((t) => t.stop()); } catch { /* */ } r.current.flujo = null; if (video.current) video.current.srcObject = null; };
@@ -44,15 +55,30 @@ function CamaraVideoPantalla({ ejercicio = null, titulo = 'Vídeo de técnica', 
     let vivo = true;
     setLista(false); setError(null);
     if (!navigator.mediaDevices?.getUserMedia) { setError(errorCamara({ name: 'NoSoportado' })); return undefined; }
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: trasera ? 'environment' : 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false })
+    const pedido = lenta && capLenta
+      ? { facingMode: trasera ? 'environment' : 'user', width: { ideal: capLenta.width }, height: { ideal: capLenta.height }, frameRate: { ideal: capLenta.fps, min: 50 } }
+      : { facingMode: trasera ? 'environment' : 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } };
+    navigator.mediaDevices.getUserMedia({ video: pedido, audio: false })
       .then((s) => {
         if (!vivo) { s.getTracks().forEach((t) => t.stop()); return; }
         r.current.flujo = s;
+        const pista = s.getVideoTracks?.()[0];
+        // Lo que puede dar esta cámara (una vez, con la normal) y el ritmo con que de verdad graba
+        if (!lenta) { let cap = null; try { cap = pista?.getCapabilities?.() || null; } catch { cap = null; } setCapLenta(elegirCamaraLenta(cap) || false); }
+        let ajustes = null; try { ajustes = pista?.getSettings?.() || null; } catch { ajustes = null; }
+        r.current.fps = Math.round(Number(ajustes?.frameRate) || 30);
+        setFpsReal(r.current.fps);
         if (video.current) { video.current.srcObject = s; video.current.play?.().catch(() => {}); }
       })
-      .catch((e) => { if (vivo) { soltarCamara(); setError(errorCamara(e)); } });
+      .catch((e) => {
+        if (!vivo) return;
+        soltarCamara();
+        // (si la cámara lenta no arranca, la normal)
+        if (lenta) { setLenta(false); setError(null); return; }
+        setError(errorCamara(e));
+      });
     return () => { vivo = false; soltarCamara(); };
-  }, [trasera, abrir]);
+  }, [trasera, abrir, lenta]);
 
   // El nivel (DeviceOrientation): en iPhone hace falta pedir permiso con un toque; si no hay sensor, no sale
   const escucharNivel = () => {
@@ -120,7 +146,7 @@ function CamaraVideoPantalla({ ejercicio = null, titulo = 'Vídeo de técnica', 
     const f = formatoVideo((t) => globalThis.MediaRecorder?.isTypeSupported?.(t));
     if (!flujo || !f) { setEstado('camara'); setError(errorCamara({ name: 'NoSoportado' })); return; }
     let rec;
-    try { rec = new globalThis.MediaRecorder(flujo, { mimeType: f.grabar, videoBitsPerSecond: 5_000_000 }); } catch (e) { soltarCamara(); setEstado('camara'); setError(errorCamara(e)); return; }
+    try { rec = new globalThis.MediaRecorder(flujo, { mimeType: f.grabar, videoBitsPerSecond: (r.current.fps || 30) >= 50 ? 8_000_000 : 5_000_000 }); } catch (e) { soltarCamara(); setEstado('camara'); setError(errorCamara(e)); return; }
     const trozos = [];
     r.current.rec = rec; r.current.cancelada = false;
     rec.ondataavailable = (ev) => { if (ev.data?.size) trozos.push(ev.data); };
@@ -130,7 +156,7 @@ function CamaraVideoPantalla({ ejercicio = null, titulo = 'Vídeo de técnica', 
       if (r.current.cancelada || !trozos.length) { if (!r.current.cancelada) { setEstado('camara'); setAbrir((n) => n + 1); } return; }
       const blob = new Blob(trozos, { type: f.tipo });
       const archivo = new File([blob], `grabacion-${Date.now()}.${f.ext}`, { type: f.tipo });
-      setGrabado({ archivo, url: URL.createObjectURL(blob) });
+      setGrabado({ archivo, url: URL.createObjectURL(blob), fps: r.current.fps || null });
       setEstado('revisar');
     };
     try { rec.start(500); } catch (e) { soltarCamara(); setEstado('camara'); setError(errorCamara(e)); return; }
@@ -205,19 +231,28 @@ function CamaraVideoPantalla({ ejercicio = null, titulo = 'Vídeo de técnica', 
         {estado === 'revisar' ? (
           <div class="fila-envolver camara-decidir">
             <button class="btn btn-grande" onClick={repetir}><Icono n="reiniciar" /> Repetir</button>
-            <button class="btn btn-primario btn-grande" onClick={() => { const g = grabado; setGrabado(null); alGrabar?.(g.archivo); }}><Icono n="hecho" /> Usar este vídeo</button>
+            <button class="btn btn-primario btn-grande" onClick={() => { const g = grabado; setGrabado(null); alGrabar?.(g.archivo, { fps: g.fps }); }}><Icono n="hecho" /> Usar este vídeo</button>
           </div>
         ) : (
           <>
             <p class="mini camara-pista" role="status"><b>{enc.titulo}.</b> {enc.texto}{' '}
               {nivel ? <span class={`camara-nivel-texto ${nivel.estado}`}>{textoNivel(nivel)}.</span> : null}
               {torcido ? ' Endereza el móvil para que la barra no salga inclinada.' : ''}</p>
-            {(pideNivel || puntos.length > 0) && (
+            {(pideNivel || puntos.length > 0 || capLenta != null) && (
               <div class="fila-envolver camara-extras">
                 {pideNivel && <button class="btn btn-peq" onClick={activarNivel}><Icono n="regla" /> Activar el nivel</button>}
                 {puntos.length > 0 && <button class="btn btn-peq" aria-pressed={verPuntos ? 'true' : 'false'} onClick={() => setVerPuntos(!verPuntos)}><Icono n="hecho" /> La corrección</button>}
+                {capLenta ? (
+                  <button class="btn btn-peq camara-lenta" aria-pressed={lenta ? 'true' : 'false'} disabled={grabando || contando} onClick={() => setLenta(!lenta)}>
+                    <Icono n="reloj" /> Cámara lenta ({lenta && fpsReal ? fpsReal : capLenta.fps} fps)
+                  </button>
+                ) : capLenta === false ? (
+                  <button class="btn-texto mini camara-sin-lenta" aria-expanded={verPorQue ? 'true' : 'false'} onClick={() => setVerPorQue(!verPorQue)}>¿Y la cámara lenta?</button>
+                ) : null}
               </div>
             )}
+            {capLenta === false && verPorQue && <p class="mini camara-pista" role="note">{textoSinLenta({ ios: esIosNav() })}</p>}
+            {lenta && fpsReal != null && fpsReal < 50 && <p class="mini camara-pista" role="status">La cámara no ha dado más de {fpsReal} fps: se grabará a velocidad normal.</p>}
             {sinNivel && <span class="sr">Este móvil no tiene nivel: colócalo recto a ojo.</span>}
             <div class="camara-controles camara-controles-video">
               <Segmentos etiqueta="Cuenta atrás" clase="camara-espera-seg" valor={espera} alCambiar={(x) => x && setEspera(x)} opciones={CUENTAS_ATRAS.map((s) => [s, `${s} s`])} />

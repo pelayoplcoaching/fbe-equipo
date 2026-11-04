@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.1' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.2' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -3270,6 +3270,128 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (recorte automático, rep
     check(/cambiarlo hasta que tu coach revise el vídeo y borrarlo cuando quieras/.test(tv) && /Si retiras el consentimiento de datos de salud, ya no puedes contar molestias nuevas/.test(tv) && /no se borran solas/.test(tv)
       && /lo ya tratado sigue siendo lícito/.test(tv), 'cambiarla hasta que se revisa y borrarla cuando quiera; al retirar el consentimiento, no hay molestias nuevas y las contadas siguen (como lo demás ya tratado)');
   }
+}
+
+// v0.60: los vídeos de técnica, tanda B (primera mitad): el compositor (formato, topes, lo de encima en cada momento), la
+// cara (la caja de la cabeza con los puntos del cuerpo y rellenar los fotogramas sin ella), dos ángulos y la cámara lenta
+console.log('\nv0.60: el compositor, difuminar la cara, dos ángulos y la cámara lenta');
+{
+  const C = await import('../web/src/logica/composicion.js');
+  const K = await import('../web/src/logica/cara.js');
+  const A = await import('../web/src/logica/angulos.js');
+  // El formato: MP4 si se sabe; si no, WebM (VP9 y luego VP8); con sonido, su códec; null si no hay ninguno
+  const solo = (...ts) => (t) => ts.includes(t);
+  check(C.elegirFormato(solo('video/mp4;codecs=avc1.42E01F', 'video/webm;codecs=vp9'))?.tipo === 'video/mp4' && C.elegirFormato(solo('video/webm;codecs=vp9', 'video/webm;codecs=vp8')).grabar === 'video/webm;codecs=vp9'
+    && C.elegirFormato(solo('video/webm;codecs=vp8')).ext === 'webm' && C.elegirFormato(solo('video/webm')).tipo === 'video/webm', 'el formato: MP4 primero (Safari, Chrome reciente); si no, WebM VP9, VP8 o a secas');
+  check(C.elegirFormato(solo('video/mp4;codecs=avc1.42E01F'), { audio: true }) === null && C.elegirFormato(solo('video/mp4;codecs=avc1,mp4a.40.2'), { audio: true }).grabar === 'video/mp4;codecs=avc1,mp4a.40.2'
+    && C.elegirFormato(solo('video/mp4'), { audio: true }).tipo === 'video/mp4' && C.elegirFormato(solo('video/webm;codecs=vp9,opus'), { audio: true }).ext === 'webm',
+    'con sonido (el micro, la voz del coach), uno que lo lleve (AAC u Opus); el de Safari, «video/mp4» a secas');
+  check(C.elegirFormato(() => false) === null && C.elegirFormato(null) === null && C.elegirFormato(() => { throw new Error('x'); }) === null, 'sin ninguno (o si el navegador falla al preguntar), null: el botón no sale');
+  check(C.tipoBase('video/webm;codecs=vp9,opus') === 'video/webm' && C.tipoRespuestaValido('video/mp4;codecs=avc1') && !C.tipoRespuestaValido('video/quicktime') && !C.tipoRespuestaValido(''), 'lo que se guarda: el tipo sin códecs (mp4 o webm)');
+  // Los topes: 720p (múltiplos de 16, nunca más grande) y 3 minutos
+  const m1 = C.medidasSalida(1080, 1920), m2 = C.medidasSalida(3840, 2160), m3 = C.medidasSalida(640, 360);
+  check(m1.w === 720 && m1.h === 1280 && m2.w === 1280 && m2.h === 720 && m3.w === 640 && m3.h === 368 && [m1, m2, m3].every((m) => m.w % 16 === 0 && m.h % 16 === 0),
+    `el tamaño: el lado corto a 720 y el largo a 1280 como mucho, en múltiplos de 16 (${m1.w}×${m1.h}, ${m2.w}×${m2.h}, ${m3.w}×${m3.h})`);
+  check(C.MAX_SEG_REVISION === 180 && C.MAX_SEG_CARA === 60 && C.dentroDelTope(180) && !C.dentroDelTope(181) && !C.dentroDelTope(0) && C.dentroDelTope(60, C.MAX_SEG_CARA) && !C.dentroDelTope(61, C.MAX_SEG_CARA),
+    'los topes: 3 minutos la revisión grabada y la exportación; 1 minuto la cámara de delante');
+  check(C.duracionRespuesta(179.6, 'coach') === 180 && C.duracionRespuesta(500, 'coach') === 181 && C.duracionRespuesta(75, 'atleta') === 61 && C.duracionRespuesta(0.2) === 1, 'la duración que se guarda (como la 038: de 1 s al tope y un segundo de margen)');
+  const enc = C.encajar(400, 400, 1920, 1080);
+  check(enc.w === 400 && Math.round(enc.h) === 225 && Math.round(enc.y) === 88 && enc.x === 0, 'la imagen encajada en el lienzo (con bandas si no coincide la proporción)');
+  // La burbuja: su esquina, al soltarla, la más cercana
+  const bb = C.burbuja('abajo-der', 720, 1280), ba = C.burbuja('arriba-izq', 720, 1280);
+  check(bb.d === 202 && bb.cx > 720 / 2 && bb.cy > 1280 / 2 && bb.cx + bb.d / 2 <= 720 && ba.cx - ba.d / 2 >= 0 && ba.cy - ba.d / 2 >= 0, 'la burbuja de la cámara de delante, en su esquina y dentro del lienzo');
+  check(C.esquinaMasCercana(0.1, 0.9) === 'abajo-izq' && C.esquinaMasCercana(0.8, 0.2) === 'arriba-der' && C.esquinaValida('arriba-der') && !C.esquinaValida('centro'), 'al arrastrarla y soltarla, va a la esquina más cercana');
+  // Lo que se ve encima en cada momento (exportar con correcciones)
+  const dib = { t: 2, formas: [{ tipo: 'flecha', p: [[0.1, 0.1], [0.5, 0.5]] }] };
+  const linea = C.lineaDeCapas({
+    comentarios: [
+      { id: 'c1', autor: 'coach', texto: '0:02 Rodillas fuera al bajar', dibujo: dib },
+      { id: 'c2', autor: 'coach', texto: 'Muy bien la profundidad en el 0:05,5 de la última repetición, sigue así', dibujo: { t: 4, hasta: 6, formas: dib.formas } },
+      { id: 'c3', autor: 'atleta', texto: '0:03 ¿Así?', dibujo: null },
+      { id: 'c4', autor: 'coach', texto: '0:01 eliminado', eliminado_en: '2026-11-01T10:00:00Z' },
+      { id: 'c5', autor: 'coach', texto: '0:20 fuera del vídeo' },
+    ],
+    revision: { checklist: { puntos: [{ t: 'Pies firmes', e: 'bien', s: 1 }, { t: 'Espalda neutra', e: 'mal' }] } },
+    duracion: 8,
+  });
+  check(linea.length === 5 && linea.map((x) => x.tipo).join() === 'punto,comentario,dibujo,dibujo,comentario' && linea.every((x) => x.id !== 'c3' && x.id !== 'c4' && x.id !== 'c5'),
+    `la línea de tiempo: los dibujos y los comentarios con su momento (del coach, sin lo eliminado ni lo de fuera del vídeo) y los puntos con el suyo (${linea.map((x) => `${x.tipo}@${x.desde}`).join(', ')})`);
+  const en = (t) => C.capasEn(linea, t);
+  check(en(1.5).textos[0].texto === '✓ Pies firmes' && en(2.2).dibujos.length === 1 && en(2.2).textos.some((x) => x.texto === 'Rodillas fuera al bajar') && en(4.6).dibujos.map((x) => x.id).join() === 'c2'
+    && en(5).dibujos.length === 1 && en(5.6).textos.some((x) => /^Muy bien la profundidad en el de la última/.test(x.texto)) && en(7.5).dibujos.length === 0,
+    'en cada momento: un dibujo sin tramo, 2,5 s desde el suyo; uno con tramo, mientras dura; un texto, 3 s');
+  check(C.capasEn([1, 2, 3, 4, 5].map((i) => ({ tipo: 'comentario', desde: i * 0.1, hasta: 9, texto: `t${i}` })), 1).textos.map((x) => x.texto).join() === 't3,t4,t5', 'como mucho 3 textos a la vez (los más recientes): no tapan la imagen');
+  check(C.textoNota(4) === 'Técnica 4/5 · Buena' && C.textoNota(null) === null && C.textoNota(6) === null && C.MARCA_AGUA === 'FBE', 'la nota de la esquina y la marca «FBE»');
+  check(C.nombreExportado({ ejercicio: 'Sentadilla barra alta', fecha: '2026-11-04', ext: 'mp4' }) === 'sentadilla-barra-alta-2026-11-04-corregido.mp4' && C.nombreExportado({ ext: 'webm' }) === 'video-corregido.webm',
+    'el nombre del archivo: el ejercicio y el día (nada del atleta)');
+  check(C.progresoDe(5, 0, 10) === 0.5 && C.progresoDe(-1, 0, 10) === 0 && C.progresoDe(12, 0, 10) === 1 && C.progresoDe(3, 3, 3) === 0, 'el progreso, de 0 a 1');
+
+  // 13. La caja de la cabeza con los puntos del cuerpo (MediaPipe Pose: 0 nariz, 1-6 ojos, 7-8 orejas, 9-10 boca)
+  const pose = (cara, vis = 0.9) => Array.from({ length: 33 }, (_, i) => (i <= 10 ? { x: cara[0] + ((i % 5) - 2) * 0.01, y: cara[1] + (i % 3) * 0.008, visibility: vis } : { x: 0.5, y: 0.8, visibility: 0.9 }));
+  const cj = K.cajaCabeza(pose([0.5, 0.2]), { w: 1080, h: 1920 });
+  check(cj && cj.x < 0.5 && cj.x + cj.w > 0.5 && cj.y < 0.2 && cj.y + cj.h > 0.2 && Math.abs(cj.w * 1080 - cj.h * 1920) < 3 && cj.y + cj.h / 2 < 0.21,
+    `la caja: alrededor de la cara, cuadrada en píxeles y un poco hacia arriba (la frente) (${JSON.stringify(cj)})`);
+  check(K.cajaCabeza(pose([0.5, 0.2], 0.2), { w: 1080, h: 1920 }) === null && K.cajaCabeza(null) === null && K.cajaCabeza([{ x: 0.5, y: 0.5 }], { w: 100, h: 100 }) === null,
+    'sin puntos de la cara visibles (o con menos de dos), ninguna caja');
+  const borde = K.cajaCabeza(pose([0.01, 0.01]), { w: 1000, h: 1000 });
+  check(borde.x === 0 && borde.y === 0 && borde.w > 0 && borde.x + borde.w <= 1 && borde.y + borde.h <= 1, 'en el borde de la imagen, la caja no se sale');
+  const perfil = Array.from({ length: 33 }, () => ({ x: 0, y: 0, visibility: 0 }));
+  Object.assign(perfil, { 0: { x: 0.40, y: 0.30, visibility: 0.95 }, 2: { x: 0.42, y: 0.29, visibility: 0.9 }, 7: { x: 0.46, y: 0.30, visibility: 0.9 }, 11: { x: 0.45, y: 0.4, visibility: 0.9 }, 12: { x: 0.47, y: 0.4, visibility: 0.9 } });
+  const cp = K.cajaCabeza(perfil, { w: 1000, h: 1000 });
+  check(cp && cp.w >= 0.06 && cp.w * 1000 >= (0.46 - 0.40) * 1000 * 2.3 && cp.x < 0.40 && cp.x + cp.w > 0.46, 'de perfil (la nariz, un ojo y una oreja), con margen de sobra para toda la cabeza');
+  // Rellenar los fotogramas sin cara
+  const c0 = { x: 0.1, y: 0.1, w: 0.2, h: 0.2 }, c1 = { x: 0.3, y: 0.1, w: 0.2, h: 0.2 };
+  const it = K.interpolarCajas([{ t: 0, caja: c0 }, { t: 0.2, caja: null }, { t: 0.4, caja: c1 }, { t: 0.6, caja: null }]);
+  const medio = it.cajas[1].caja;
+  check(it.detectadas === 2 && it.rellenadas === 2 && it.cajas[1].rellena && medio.x < 0.2 && medio.x > 0.1 && medio.w > 0.2 && it.cajas[3].caja.w > 0.2 && Math.abs(it.cajas[3].caja.x + it.cajas[3].caja.w / 2 - 0.4) < 0.001,
+    'un fotograma sin cara entre dos con ella: a medio camino (y un poco más grande); al final, la del último (agrandada)');
+  check(it.cobertura === 0.5 && it.estado === 'bien' && it.huecoMax === 0.4, `con la mitad y huecos cortos, «bien» (${it.cobertura}, ${it.huecoMax} s)`);
+  const largo = K.interpolarCajas([{ t: 0, caja: c0 }, ...[0.5, 1, 1.5, 2, 2.5].map((t) => ({ t, caja: null })), { t: 3, caja: c1 }]);
+  check(largo.estado === 'avisar' && largo.huecoMax === 3 && largo.cajas.every((x) => x.caja), 'un hueco largo (3 s) se rellena igual, pero se avisa en la vista previa');
+  const nada = K.interpolarCajas([{ t: 0, caja: null }, { t: 1, caja: null }]);
+  check(nada.estado === 'nada' && nada.detectadas === 0 && nada.cajas.every((x) => x.caja === null) && K.interpolarCajas([]).estado === 'nada', 'sin cara en ningún fotograma: «nada» (no se envía un vídeo «difuminado» que no lo está)');
+  check(/no se ha encontrado tu cara/i.test(K.textoDeteccion(nada)) && /Revisa la vista previa/.test(K.textoDeteccion(largo)) && /50 %/.test(K.textoDeteccion(it)), 'lo que dice la vista previa en cada caso');
+  const ce = K.cajaEn(it.cajas, 0.1);
+  check(ce && ce.x > c0.x && ce.x < medio.x + 0.01 && K.cajaEn(it.cajas, -1) === it.cajas[0].caja && K.cajaEn(it.cajas, 9) === it.cajas[3].caja && K.cajaEn([], 1) === null, 'la caja en un momento cualquiera (entre dos mirados, a medio camino; fuera, la más cercana)');
+  const ts = K.tiemposCara(10), tsLargo = K.tiemposCara(500, { max: 600 });
+  check(ts.length === 51 && ts[0] === 0 && ts.at(-1) < 10 && tsLargo.length === 600 && K.tiemposCara(0).length === 0, 'los momentos que se miran: unos 5 por segundo, como mucho 600 (memoria y tiempo acotados)');
+  // (revisión L1 y L2) Nunca una caja diminuta; el tramo, de 2 minutos como mucho aunque no se recorte
+  const mini = K.cajaMinima({ x: 0.5, y: 0.5, w: 0.001, h: 0.001 }), esquina = K.cajaMinima({ x: 0.999, y: 0.999, w: 0.001, h: 0.001 });
+  check(mini.w === K.CAJA_MIN && Math.abs(mini.x + mini.w / 2 - 0.5005) < 0.001 && esquina.x + esquina.w <= 1 && esquina.w >= K.CAJA_MIN - 1e-9 && K.cajaMinima(null) === null && K.cajaMinima(c0) .w === c0.w,
+    '(L1) una caja diminuta se agranda al mínimo (sin salirse); una normal no cambia');
+  const t1 = K.tramoDifuminar(0, null, 300), t2 = K.tramoDifuminar(10, 40, 300), t3 = K.tramoDifuminar(0, null, 90);
+  check(t1.hasta === 120 && t1.recortado && t2.hasta === 40 && !t2.recortado && t3.hasta === 90 && !t3.recortado && K.tramoDifuminar(0, null, null).recortado,
+    '(L2) difuminar: el tramo recortado, o todo el vídeo, de 2 minutos como mucho (y se dice si no cabe)');
+  check(K.agrandar(c0, 2).w === 0.4 && K.agrandar({ x: 0.9, y: 0.9, w: 0.1, h: 0.1 }, 3).x + K.agrandar({ x: 0.9, y: 0.9, w: 0.1, h: 0.1 }, 3).w <= 1 && K.agrandar(c0, 1) === c0, 'agrandar una caja, sin salirse');
+
+  // 9. Dos ángulos
+  check(A.limitarDesfase(3) === 2 && A.limitarDesfase(-2.5) === -2 && A.limitarDesfase(1 / 30) === 0.033 && A.limitarDesfase('x') === 0, 'el desfase: de −2 a +2 s, con 3 decimales');
+  check(A.tiempoPareja(1, 0.5) === 1.5 && A.tiempoPareja(0.2, -0.5) === 0 && A.tiempoPareja(9, 1, 8) === 8 && A.tiempoPareja(1, 5) === 3, 'el momento del otro ángulo (dentro de su vídeo)');
+  const UU = '0b0f7a5e-1d2c-4c3b-9a8f-0e1d2c3b4a59';
+  check(A.dosAngulosValido({ con: UU, desfase: 0.25 }) && A.dosAngulosValido({ con: UU, desfase: -2 }) && A.dosAngulosValido({ con: UU, desfase: 0.033 }), 'el desfase guardado: { con, desfase }');
+  const malosA = [null, [], 'x', {}, { con: UU }, { desfase: 0 }, { con: UU, desfase: 2.01 }, { con: UU, desfase: 0.0333 }, { con: UU, desfase: '0.5' }, { con: 'no', desfase: 0 }, { con: UU.toUpperCase(), desfase: 0 },
+    { con: UU, desfase: 0, x: 1 }, { con: UU, desfase: Infinity }, { con: UU, desfase: NaN }, { con: 5, desfase: 0 }];
+  check(malosA.every((j) => !A.dosAngulosValido(j)), `y nada más (${malosA.length} mal formados, como dos_angulos_valido de la 038)`);
+  check(A.textoDesfase(0) === 'sin desfase' && A.textoDesfase(0.25) === '+0,25 s' && A.textoDesfase(-1 / 30) === '−0,033 s (−1 fotograma)', 'el texto del desfase');
+  const lista = [{ id: 'a', tipo: 'video_tecnica', angulo_de: null }, { id: 'b', tipo: 'video_tecnica', angulo_de: 'a' }, { id: 'c', tipo: 'video_tecnica', angulo_de: null }];
+  check(A.parejaDe(lista[0], lista)?.id === 'b' && A.parejaDe(lista[1], lista)?.id === 'a' && A.parejaDe(lista[2], lista) === null && !A.admiteOtroAngulo(lista[0], lista) && A.admiteOtroAngulo(lista[2], lista),
+    'la pareja de un vídeo (la enlace él o el otro) y si admite otro ángulo');
+  check(A.disposicionAngulos(390) === 'pila' && A.disposicionAngulos(980) === 'lado', 'uno encima del otro en un móvil; uno al lado del otro si caben');
+  // 11. La cámara lenta
+  check(A.elegirCamaraLenta({ frameRate: { max: 30 } }) === null && A.elegirCamaraLenta(null) === null && A.elegirCamaraLenta({}) === null, 'sin 60 fps (o si la cámara no lo dice), no hay cámara lenta');
+  const l60 = A.elegirCamaraLenta({ frameRate: { max: 60 }, width: { max: 1920 }, height: { max: 1080 } }), l240 = A.elegirCamaraLenta({ frameRate: { max: 240 }, width: { max: 3840 }, height: { max: 2160 } });
+  const l120 = A.elegirCamaraLenta({ frameRate: { max: 120.0 }, width: { max: 1280 }, height: { max: 720 } });
+  check(l60.fps === 60 && l60.width === 1920 && l120.fps === 120 && l120.width === 1280 && l240.fps === 240 && l240.width === 1280 && l240.height === 720, 'pide 240 o 120 si la cámara llega; si no, 60; con una resolución que llegue a ese ritmo');
+  check(A.velocidadInicial(240) === 0.25 && A.velocidadInicial(120) === 0.25 && A.velocidadInicial(60) === 0.5 && A.velocidadInicial(30) === 1 && A.velocidadInicial(null) === 1, 'se abre a 0,25× (100 fps o más) o 0,5× (50 o más)');
+  check(A.fpsGuardado(119.88) === 120 && A.fpsGuardado(10) === null && A.fpsGuardado(300) === null && A.fpsGuardado('x') === null, 'el ritmo que se guarda (038: de 24 a 240)');
+  check(/Cámara lenta/.test(A.textoSinLenta({ ios: true })) && /galería/.test(A.textoSinLenta({ ios: false })), 'y cuando no se puede, se dice (en el iPhone, la cámara lenta del propio móvil)');
+  // La política: lo nuevo, en la 2026-12.2
+  const PV2 = await import('../web/src/logica/privacidad.js');
+  const legal3 = await import('../web/src/legal.js');
+  const tv3 = legal3.PRIVACIDAD.find((x) => x[0] === 'Tus vídeos de técnica')[1];
+  check(legal3.VERSION_LEGAL === '2026-12.2' && PV2.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.2' && PV2.novedadesDesde('2026-12.1', '2026-12.2').length === 1
+    && /micro/.test(tv3) && /cámara de delante/.test(tv3) && /no se sube a ningún sitio/.test(tv3) && /el original no sale del móvil/.test(tv3),
+    'la política 2026-12.2: el micro y la cámara de delante (revisión grabada y respuestas), exportar en el móvil y difuminar la cara (el original no sale)');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

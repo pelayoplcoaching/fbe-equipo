@@ -5,6 +5,8 @@
 // reproducir el vídeo, puede medir su tempo (solo en su móvil) y «Grabar de nuevo con la corrección».
 // v0.58: y el análisis automático (experimental): el coach lo hace aquí (con o sin la 035/036; guardarlo, con la 036) y
 // el atleta ve el guardado y puede analizar su barra en su móvil.
+// v0.60: «Grabar la revisión» (el coach: lo que hace en el reproductor y su voz, al hilo del vídeo), «Exportar con
+// correcciones» (el coach y el atleta, en su móvil) y los dos ángulos de la serie.
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { reproductorDe, textoMomento } from '../Video.jsx';
@@ -19,6 +21,10 @@ import { RecordatoriosCoach } from './Recordatorios.jsx';
 import { HojaTecnica } from './Frases.jsx';
 import { porQueMejor } from '../../logica/correccion.js';
 import { fmtCorta } from '../../logica/fechas.js';
+import { GrabarRevision, puedeGrabarRevision } from './GrabarRevision.jsx';
+import { BotonExportar } from './Exportar.jsx';
+import { AngulosVideo } from './DosAngulos.jsx';
+import { AVISO_038 } from '../../datos/api.js';
 import {
   ESTADOS_PUNTO, NOMBRE_PUNTUACION, checklistSugerido, resumenChecklist, FASES_TEMPO, repsDeMarcas, tablaTempo, textoSegundos, marcaTempoValida, PASOS_ESTADO, limpiarPlantilla, MAX_PUNTOS,
 } from '../../logica/tecnica.js';
@@ -74,6 +80,10 @@ export function PanelCorreccion({ video, esCoach = false, nombreAtleta = 'Atleta
       {esCoach
         ? <CorregirVideo video={video} revision={rev.datos} nombreAtleta={nombreAtleta} alGuardar={recargar} />
         : <VerCorreccion video={video} revision={rev.datos} />}
+      <div class="fila-envolver tanda-b">
+        <BotonExportar video={video} revision={rev.datos} esCoach={esCoach} />
+        <AngulosVideo video={video} esCoach={esCoach} revision={rev.datos} alCambiar={alCambiar} />
+      </div>
       <AnalisisVideo video={video} esCoach={esCoach} revision={rev.datos} alGuardado={recargar} />
     </>
   );
@@ -147,6 +157,7 @@ function CorregirVideo({ video, revision, nombreAtleta, alGuardar }) {
         <button type="button" class="btn btn-primario" disabled={ocupado || !cambiado} onClick={guardar}><Icono n="hecho" /> {ocupado ? 'Guardando…' : 'Guardar la corrección'}</button>
         <ExportarFotograma video={video} nombreAtleta={primer} />
       </div>
+      <GrabarLaRevision video={video} nombreAtleta={nombreAtleta} alEnviado={alGuardar} />
       <VozSobreVideo video={video} revision={revision} alGuardar={alGuardar} />
       <RecordatoriosCoach video={video} ejercicio={ej} nombreAtleta={nombreAtleta} puntosMal={puntos.filter((p) => p.e === 'mal')} />
       <CompararCon video={video} esCoach />
@@ -192,6 +203,26 @@ export function TablaTempo({ tabla }) {
         {tabla.reps.length > 1 && <tr class="media"><th scope="row">Media</th><td class="num">{textoSegundos(tabla.media.bajada)}</td><td class="num">{textoSegundos(tabla.media.subida)}</td></tr>}
       </tbody>
     </table>
+  );
+}
+
+// v0.60 (1): «Grabar la revisión» (solo si este navegador puede grabar un lienzo con sonido; con la 038)
+function GrabarLaRevision({ video, nombreAtleta, alEnviado }) {
+  const { api } = useApp();
+  const con038 = useCarga(() => api.video038().catch(() => null), []);
+  const [abierta, setAbierta] = useState(false);
+  if (!puedeGrabarRevision()) return null;
+  return (
+    <div class="campo grabar-la-revision">
+      <span class="etq">Grabar la revisión</span>
+      {con038.datos === false ? <span class="ayuda">{AVISO_038}.</span> : (
+        <div class="fila-envolver">
+          <button type="button" class="btn btn-peq" onClick={() => setAbierta(true)} aria-haspopup="dialog"><Icono n="video" /> Grabar la revisión</button>
+          <span class="ayuda">Lo que haces en el vídeo y tu voz (si quieres, con tu cara), hasta 3 min: le llega en el hilo.</span>
+        </div>
+      )}
+      {abierta && <GrabarRevision video={video} nombreAtleta={nombreAtleta} alCerrar={() => setAbierta(false)} alEnviado={alEnviado} />}
+    </div>
   );
 }
 

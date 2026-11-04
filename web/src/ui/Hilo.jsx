@@ -7,12 +7,15 @@ import { ponerCorrecciones } from './tecnica/correcciones.js';
 import { ChipsFrases } from './tecnica/Frases.jsx';
 import { insertarFrase, dibujoEnMomento, dibujoParaFrase, limpiarTextoFrase } from '../logica/correccion.js';
 import { partirMomentos } from '../logica/momentos.js';
+import { ResponderConVideo, VideoRespuesta, puedeResponderConVideo } from './tecnica/GrabarRevision.jsx';
 
 // Conversación entre coach y atleta pegada a una sesión, un check-in o un vídeo.
 // Al abrirla, lo que escribió la otra parte queda como leído (alLeer); al enviar, avisa con alCambiar.
 // enChat (v0.55): el archivo es una foto, un vídeo o un PDF del chat: la respuesta va al chat, citando el último mensaje
 // de la otra parte (no «pegada» a su archivo: la base no deja poner en un mensaje lo que subió el otro).
 // v0.59 (4): en el hilo de un vídeo, el coach tiene sus frases de corrección a un toque (ejercicio: el del vídeo)
+// v0.60 (1 y 2, 038): las respuestas en vídeo del hilo de un vídeo de técnica (la revisión grabada del coach, o un vídeo con
+// la cámara de delante del coach o del atleta) se ven en su mensaje; «Responder con vídeo» graba una (hasta un minuto).
 export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, enChat = false, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer, ejercicio = null }) {
   const { api, perfil, aviso } = useApp();
   const yo = perfil?.rol === 'coach' ? 'coach' : 'atleta';
@@ -25,6 +28,23 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
   const area = useRef(null);
   const primerNombre = nombreAtleta.split(' ')[0];
   const con037 = useCarga(() => (yo === 'coach' && archivoId && !enChat ? api.video037().catch(() => false) : Promise.resolve(false)), [archivoId, yo]);
+  // (v0.60) ¿Es el hilo de un vídeo de técnica? ¿Y tiene la base la 038? (las respuestas en vídeo)
+  const delVideo = useCarga(async () => {
+    if (!archivoId || enChat) return null;
+    const a = await api.archivo(archivoId).catch(() => null);
+    return a?.tipo === 'video_tecnica' ? { video: a, con038: (await api.video038().catch(() => null)) !== false } : null;
+  }, [archivoId, enChat]);
+  const videosResp = useCarga(() => (hilo.datos?.some((c) => c.video_respuesta_id) ? api.videosDeRespuestas(hilo.datos) : Promise.resolve({})), [hilo.datos]);
+  const [conVideo, setConVideo] = useState(false);
+  // (v0.60) Una respuesta en vídeo enviada desde fuera del hilo («Grabar la revisión»): el hilo se vuelve a leer
+  useEffect(() => {
+    if (!archivoId) return undefined;
+    const f = (e) => { if (e.detail === archivoId) hilo.recargar(true); };
+    window.addEventListener('fbe-hilo', f);
+    return () => window.removeEventListener('fbe-hilo', f);
+  }, [archivoId]);
+  const { atleta } = useApp();
+  const puedeVideo = !!delVideo.datos && puedeResponderConVideo() && (yo === 'coach' || atleta?.estado !== 'baja');
 
   // (v0.57) lo que se dice del vídeo, para las marcas de su barra de tiempo y sus dibujos con tramo
   useEffect(() => { if (archivoId && hilo.datos) ponerCorrecciones(archivoId, 'comentarios', hilo.datos); }, [archivoId, hilo.datos]);
@@ -76,6 +96,7 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
               {/* v0.54: lo eliminado para todos, como en el chat; lo editado, con su «Editado» */}
               {c.eliminado_en ? <p class="burbuja-eliminada"><span aria-hidden="true">🚫 </span><em>Se eliminó este mensaje</em></p>
                 : <p>{archivoId ? <TextoConMomentos texto={c.texto} archivoId={archivoId} /> : c.texto}</p>}
+              {!c.eliminado_en && c.video_respuesta_id && <VideoRespuesta archivo={videosResp.datos?.[c.id] || (videosResp.cargando ? undefined : null)} deQuien={nombre(c.autor)} />}
               {!c.eliminado_en && dibujoValido(c.dibujo) && <BotonDibujo dibujo={c.dibujo} archivoId={archivoId} />}
               <span class="cuando">{cuando(c.creado_en)}{c.editado_en && !c.eliminado_en ? ', editado' : ''}{c.autor === yo && c.leido_en ? ', visto' : ''}</span>
             </li>
@@ -114,7 +135,14 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
           }}><Icono n="reloj" /> Comentar este momento</button>
         )}
         {yo === 'coach' && <button type="button" class="btn-texto mini responder-guardadas" onClick={() => setGuardadas(true)}><Icono n="rayo" /> Respuestas guardadas</button>}
+        {puedeVideo && (delVideo.datos.con038
+          ? <button type="button" class="btn-texto mini" onClick={() => setConVideo(true)} aria-haspopup="dialog"><Icono n="camara" /> Responder con vídeo</button>
+          : <span class="mini terciario">Responder con vídeo: Disponible tras la migración 038</span>)}
       </div>
+      {conVideo && delVideo.datos?.video && (
+        <ResponderConVideo video={delVideo.datos.video} autor={yo} nombre={yo === 'coach' ? primerNombre : 'tu coach'} alCerrar={() => setConVideo(false)}
+          alEnviado={async () => { await hilo.recargar(true); alCambiar?.(); }} />
+      )}
       {guardadas && (
         <HojaRespuestas nombre={primerNombre} texto={texto} alCerrar={() => setGuardadas(false)}
           alElegir={(t) => { setTexto((x) => (x.trim() ? `${x.trimEnd()}\n\n${t}` : t)); setGuardadas(false); }} />

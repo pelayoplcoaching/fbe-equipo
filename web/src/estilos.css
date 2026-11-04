@@ -4332,3 +4332,46 @@ body:has(.visor) .chat-barra, body:has(.visor) .chat-abajo { display: none; }
 .tiempos-datos dd { margin: 2px 0 0; font-size: 1.125rem; font-weight: 750; }
 .tiempos-datos dd.espera-ok { color: var(--ok); } .tiempos-datos dd.espera-aviso { color: var(--aviso); } .tiempos-datos dd.espera-alerta { color: var(--alerta); }
 @media (min-width: 640px) { .tiempos-datos { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ---------------------------------------------------------------- v0.60: los vídeos de técnica, tanda B (primera mitad) */
+.camara .camara-sin-lenta { color: #fff; text-decoration: underline; }
+.chip-lenta { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; }
+.tanda-b { gap: 8px; }
+.tanda-b:empty { display: none; }
+.angulos-video { gap: 8px; }
+.angulos-video:empty { display: none; }
+.exportar-vista { width: 100%; max-height: 40vh; overflow: hidden; border-radius: var(--r-s); background: #000; }
+.exportar-vista.oculto { display: none; }
+.exportar-vista video { display: block; width: 100%; max-height: 40vh; object-fit: contain; }
+video.exportado, video.difuminado-vista, .respuesta-cara-previa { background: #000; border-radius: var(--r-s); }
+/* 1 y 2: grabar la revisión, con la burbuja de la cara (se arrastra a una esquina antes de grabar) */
+.grabar-revision { position: relative; }
+.grabar-revision .burbuja-cara { position: absolute; z-index: 3; width: 26%; max-width: 120px; aspect-ratio: 1; border-radius: 50%; overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, .9); background: rgba(15, 14, 23, .72); color: #fff; display: grid; place-items: center; touch-action: none; cursor: grab; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
+.grabar-revision.grabando .burbuja-cara { cursor: default; }
+.grabar-revision .burbuja-cara.arrastrando { cursor: grabbing; }
+.burbuja-cara video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.burbuja-arriba-izq { top: 4%; left: 4%; } .burbuja-arriba-der { top: 4%; right: 4%; }
+.burbuja-abajo-izq { bottom: 30%; left: 4%; } .burbuja-abajo-der { bottom: 30%; right: 4%; }
+.burbuja-cara.arrastrando { right: auto; bottom: auto; }
+.grabar-revision-camara { position: fixed; left: -10000px; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+.grabar-revision-mando { align-items: center; gap: 8px; }
+.grabar-revision-esquinas button { min-width: 44px; font-size: 1.1rem; }
+.respuesta-cara-marco { position: relative; aspect-ratio: 1; max-width: 360px; width: 100%; margin: 0 auto; border-radius: 50%; overflow: hidden; background: #0F0E17; display: grid; place-items: center; }
+.respuesta-cara-marco video { width: 100%; height: 100%; object-fit: cover; }
+.respuesta-cara-marco video.espejo { transform: scaleX(-1); }
+.respuesta-cara-marco .camara-rec { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); }
+.respuesta-cara-hueco { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; opacity: .7; }
+.respuesta-cara-hueco .icono { width: 48px; height: 48px; }
+video.respuesta-video { display: block; width: 100%; max-width: 280px; max-height: 360px; margin-top: 6px; border-radius: var(--r-s); background: #000; }
+.respuesta-video-hueco { display: block; width: 100%; max-width: 280px; aspect-ratio: 9 / 16; max-height: 200px; margin-top: 6px; }
+/* 9: dos ángulos (uno encima del otro en el móvil; uno al lado del otro si caben) */
+.dos-angulos-panes { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 700px) { .dos-angulos-panes { grid-template-columns: 1fr 1fr; } }
+.dos-angulos-pane { min-width: 0; }
+.dos-angulos-mando { margin-top: 8px; }
+.dos-angulos-tiempo { width: 100%; }
+.dos-angulos-desfase { align-items: center; gap: 6px; }
+.dos-angulos-desfase input[type=range] { flex: 1 1 120px; min-width: 0; }
+/* 13: difuminar la cara */
+.difuminar-cuerpo { margin-top: 6px; }

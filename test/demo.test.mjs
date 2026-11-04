@@ -1531,11 +1531,78 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   {
     const uid = bT.auth.sesion().user.id;
     const pv = async (v) => (await bT.upsert('privacidad_vista', [{ usuario_id: uid, version: v }], 'usuario_id'))[0].version;
-    check(VERSION_LEGAL_D === '2026-12.1' && await aT.versionLegal() === '2026-12.1' && await pv('2026-12') === '2026-12.1' && await pv('2026-11') === '2026-12.1',
-      '(M2) en la demo (que tiene la 037), la 2026-12.1; nunca hacia atrás, comparando por partes');
+    check(VERSION_LEGAL_D === '2026-12.2' && await aT.versionLegal() === '2026-12.2' && await pv('2026-12.2') === '2026-12.2' && await pv('2026-12.1') === '2026-12.2' && await pv('2026-12') === '2026-12.2' && await pv('2026-11') === '2026-12.2',
+      '(M2) en la demo (que tiene la 037), la 2026-12.2 (v0.60); nunca hacia atrás, comparando por partes');
     check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.10')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato y de un mes que ya existe');
   }
   await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+}
+
+// v0.60: los vídeos de técnica, tanda B (primera mitad) en la demo: las mismas reglas que la 038
+console.log('\nv0.60: respuestas en vídeo, dos ángulos y cámara lenta en la demo (las mismas reglas que la 038)');
+{
+  const bT = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const aT = crearApi(bT);
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  const atl = await aT.atletas();
+  const ana = atl.find((a) => a.nombre === 'Ana López'), ruben = atl.find((a) => a.nombre === 'Rubén Martín');
+  check(await aT.video038() === true, 'la demo tiene lo de la 038');
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  const v1 = await aT.subirArchivo(ana.id, new Blob(['a'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, fps_captura: 240 });
+  const v2 = await aT.subirArchivo(ana.id, new Blob(['b'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, angulo_de: v1.id });
+  const v3 = await aT.subirArchivo(ana.id, new Blob(['c'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6 });
+  check(v1.fps_captura === 240 && v2.angulo_de === v1.id && (await aT.parejaAngulo(v1))?.id === v2.id && (await aT.parejaAngulo(v2))?.id === v1.id, '(11 y 9) el ritmo de la cámara lenta y el otro ángulo, al enviarlo');
+  check(await lanza(() => aT.enlazarAngulo(v3, v1.id)) && await lanza(() => aT.enlazarAngulo(v3, v2.id)) && await lanza(() => aT.enlazarAngulo(v3, v3.id))
+    && await lanza(() => bT.update('archivos', { fps_captura: 60 }, { eq: { id: v1.id } })), 'como mucho una pareja (ni un tercero, ni en cadena, ni consigo); el ritmo no se cambia');
+  const cA = await aT.responderConVideo(v1, new Blob(['webm'], { type: 'video/webm' }), { autor: 'atleta', seg: 20 });
+  check(cA?.video_respuesta_id && cA.autor === 'atleta' && await lanza(() => aT.responderConVideo(v1, new Blob(['x'], { type: 'video/mp4' }), { autor: 'atleta', seg: 70 })),
+    '(2) Ana responde con la cámara de delante (y no más de un minuto)');
+  // (como la 038, aunque la app no lo mande: una respuesta en vídeo de 70 s del atleta, en el chat o con el vídeo del coach, no)
+  const largo = await aT.subirArchivo(ana.id, new File(['x'], 'r.mp4', { type: 'video/mp4' }), { tipo: 'adjunto', duracion_seg: 70 });
+  check(await lanza(() => aT.comentar({ atletaId: ana.id, archivoId: v1.id, texto: 'x', autor: 'atleta', videoRespuestaId: largo.id }))
+    && await lanza(() => aT.comentar({ atletaId: ana.id, texto: 'x', autor: 'atleta', videoRespuestaId: cA.video_respuesta_id }))
+    && await lanza(() => aT.comentar({ atletaId: ana.id, archivoId: cA.video_respuesta_id, texto: 'x', autor: 'atleta' })), 'la demo comprueba lo mismo que la base (duración, el hilo de un vídeo, una vez)');
+  check(await lanza(() => bT.update('comentarios', { video_respuesta_id: null }, { eq: { id: cA.id } })) && (await bT.delete('archivos', { eq: { id: cA.video_respuesta_id } }), !!(await aT.archivo(cA.video_respuesta_id))),
+    'ni se cambia, ni Ana borra el vídeo de su mensaje');
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  const cR = await aT.responderConVideo(v1, new Blob(['mp4'], { type: 'video/mp4' }), { autor: 'coach', seg: 170, texto: 'Revisión grabada' });
+  const vids = await aT.videosDeRespuestas(await aT.comentarios({ archivoId: v1.id }));
+  check(vids[cR.id]?.duracion_seg === 170 && vids[cA.id]?.mime === 'video/webm', '(1) el coach manda su revisión grabada (2:50); el hilo trae los dos vídeos');
+  const j = await aT.guardarDesfase(v1, v2.id, -0.25);
+  check(j.desfase === -0.25 && Number((await aT.correccionesDe([v1.id]))[0]?.dos_angulos?.desfase) === -0.25 && (await aT.correccionesDe([v1.id]))[0].corregido_el === null
+    && await lanza(() => aT.guardarDesfase(v1, v3.id, 0)) && await lanza(() => bT.upsert('video_revisiones', [{ archivo_id: v1.id, atleta_id: ana.id, dos_angulos: { con: v2.id, desfase: 2.5 } }], 'archivo_id')) && (await aT.guardarDesfase(v1, v2.id, 2.5)).desfase === 2, '(9) el desfase con la corrección (no cuenta como corregido), solo con su pareja y de −2 a +2 s');
+  // Eliminar la respuesta se lleva su vídeo; pasar el vídeo a otro atleta, sus respuestas en vídeo y su pareja
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  await aT.eliminarMensaje(cA);
+  check(!(await aT.archivo(cA.video_respuesta_id)), 'Ana elimina su respuesta: su vídeo se va con ella');
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  await bT.update('archivos', { atleta_id: ruben.id, ruta: `${ruben.id}/${v1.ruta.split('/')[1]}` }, { eq: { id: v1.id } });
+  check(!(await aT.archivo(cR.video_respuesta_id)) && (await aT.archivo(v2.id)).angulo_de === null && (await aT.correccionesDe([v1.id]))[0]?.dos_angulos == null,
+    'pasar el vídeo a otro atleta borra sus respuestas en vídeo y lo desenlaza (y quita el desfase)');
+  // (revisión) Como la 038: el tamaño, el de Storage (un vídeo registrado pero sin subir no vale)
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  const [sinSubir] = await bT.insert('archivos', [{ atleta_id: ana.id, tipo: 'adjunto', ruta: `${ana.id}/adjunto-video-sinsubir.mp4`, mime: 'video/mp4', bytes: 100, duracion_seg: 5 }]);
+  check(await lanza(() => aT.comentar({ atletaId: ana.id, archivoId: v3.id, texto: 'x', autor: 'atleta', videoRespuestaId: sinSubir.id })), '(M2) un vídeo de respuesta que no está en Storage no vale');
+  // (L3) desenlazar quita el desfase; (L5) el coach elimina su respuesta (con la ruta) o borra su archivo (el mensaje, eliminado)
+  const w1 = await aT.subirArchivo(ana.id, new Blob(['w1'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6 });
+  const w2 = await aT.subirArchivo(ana.id, new Blob(['w2'], { type: 'video/mp4' }), { tipo: 'video_tecnica', duracion_seg: 6, angulo_de: w1.id });
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  await aT.guardarDesfase(w1, w2.id, 0.3);
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  await aT.desenlazarAngulo(w1);
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  check((await aT.correccionesDe([w1.id]))[0]?.dos_angulos == null, '(L3) al desenlazar dos ángulos, el desfase guardado se quita');
+  const cE = await aT.responderConVideo(w1, new Blob(['mp4'], { type: 'video/mp4' }), { autor: 'coach', seg: 20 });
+  const rE = await aT.archivo(cE.video_respuesta_id);
+  const elE = await bT.rpc('comentario_eliminar', { p_comentario: cE.id });
+  check(elE.rutas.includes(rE.ruta) && !(await aT.archivo(rE.id)), '(L5) el coach elimina su respuesta en vídeo: se le devuelve su ruta y su archivo se va');
+  const cF = await aT.responderConVideo(w1, new Blob(['mp4'], { type: 'video/mp4' }), { autor: 'coach', seg: 20, texto: 'Mira' });
+  await aT.borrarArchivo(await aT.archivo(cF.video_respuesta_id));
+  const [cF2] = await bT.select('comentarios', { eq: { id: cF.id } });
+  check(cF2.eliminado_en && cF2.texto === 'Se eliminó este mensaje' && !cF2.video_respuesta_id, '(L5) si el coach borra el archivo de una respuesta, su mensaje queda como eliminado');
+  const cR2 = await aT.responderConVideo(v3, new Blob(['mp4'], { type: 'video/mp4' }), { autor: 'coach', seg: 30 });
+  await aT.borrarArchivo(await aT.archivo(v3.id));
+  check(!(await aT.archivo(cR2.video_respuesta_id)), 'y borrar un vídeo, sus respuestas en vídeo');
 }
 
 // (v0.58.1) El historial del chat por páginas en la demo, como en la base: para la atleta como para el coach

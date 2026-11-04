@@ -4729,6 +4729,283 @@ console.log('\nLos vídeos de técnica, tanda A (migración 037)');
   await sin36.close();
 }
 
+console.log('\nLos vídeos de técnica, tanda B, primera mitad (migración 038)');
+{
+  const insArch = async (f) => (await q(`insert into archivos (${Object.keys(f).join(',')}) values (${Object.keys(f).map((_, i) => `$${i + 1}`).join(',')}) returning *`, Object.values(f)))[0];
+  const ruta = (atleta, x, ext = 'mp4') => `${atleta}/v060-${x}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const HORAS = /^(timestamptz|timestamp|time|timetz|interval)$/;
+  const tiposDe = async (f) => (await q(`select t.typname from pg_proc p, unnest(p.proallargtypes) a(oid) join pg_type t on t.oid = a.oid where p.proname = $1 and p.pronamespace = 'public'::regnamespace`, [f])).map((x) => x.typname);
+  await su();
+  await q(`update atletas set estado = 'activo' where id = any($1::uuid[])`, [[aAna.id, aLuis.id]]);
+  // (los archivos de antes, de hace días: el cupo de 30 al día del atleta, libre para estas pruebas)
+  await q(`update archivos set creado_en = creado_en - interval '3 days'`);
+  await q(`delete from chat_cupos`); await q(`delete from fbe_privado.storage_por_borrar`);
+  // La forma
+  const cols = await q(`select table_name t, column_name c, data_type d from information_schema.columns where (table_name, column_name) in (('comentarios','video_respuesta_id'), ('archivos','angulo_de'), ('archivos','fps_captura'), ('video_revisiones','dos_angulos'))`);
+  check(cols.length === 4 && cols.find((x) => x.c === 'dos_angulos').d === 'jsonb' && cols.find((x) => x.c === 'fps_captura').d === 'smallint', 'las cuatro columnas nuevas (respuesta en vídeo, otro ángulo, ritmo de grabación y desfase)');
+  check((await q(`select relname from pg_class where relname = any($1) and relrowsecurity and relnamespace = 'public'::regnamespace`, [['comentarios', 'archivos', 'video_revisiones']])).length === 3
+    && (await q(`select 1 from information_schema.role_table_grants where table_name = any($1) and grantee in ('anon', 'PUBLIC')`, [['comentarios', 'archivos', 'video_revisiones']])).length === 0,
+    'las tablas, con sus permisos por fila y nada para anon (sin tablas ni políticas nuevas)');
+  const nuevas = ['archivo_con_mensajes', 'comentario_respuesta_video', 'comentario_sin_respuesta_video', 'archivo_angulo_fps', 'dos_angulos_valido', 'video_revision_angulos', 'video_correcciones', 'al_borrar_video_respuestas', 'al_mover_archivo'];
+  const malos = await q(`select p.oid::regprocedure::text f from pg_proc p where p.pronamespace in ('public'::regnamespace, 'fbe_privado'::regnamespace) and p.proname = any($1) and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`, [nuevas]);
+  check(!malos.length && (await q(`select count(distinct proname)::int n from pg_proc where proname = any($1)`, [nuevas]))[0].n === nuevas.length, `las funciones nuevas y las que cambia la 038, con search_path vacío${malos.length ? ` (no: ${malos.map((x) => x.f).join(', ')})` : ''}`);
+  const definer = Object.fromEntries((await q(`select proname, prosecdef from pg_proc where proname = any($1)`, [nuevas])).map((x) => [x.proname, x.prosecdef]));
+  check(definer.comentario_respuesta_video && definer.comentario_sin_respuesta_video && definer.video_revision_angulos && definer.al_borrar_video_respuestas && definer.al_mover_archivo && definer.archivo_angulo_fps && !definer.dos_angulos_valido,
+    'lo que lee o cambia por encima de los permisos (también quitar el desfase al desenlazar), con los de su dueño y search_path vacío; el validador, sin');
+  check(!(await q(`select has_function_privilege('anon', 'public.dos_angulos_valido(jsonb)', 'execute') a, has_function_privilege('authenticated', 'fbe_privado.al_borrar_video_respuestas()', 'execute') b, has_function_privilege('authenticated', 'fbe_privado.comentario_sin_respuesta_video()', 'execute') c`)).some((x) => x.a || x.b || x.c),
+    'sin sesión no se llaman; lo interno, tampoco desde la app');
+  check((await q(`select pg_get_function_result('public.video_correcciones(uuid[])'::regprocedure) r`))[0].r.includes('dos_angulos jsonb') && !(await tiposDe('video_correcciones')).some((x) => HORAS.test(x)),
+    'video_correcciones() devuelve también el desfase (y sigue sin ninguna hora)');
+
+  // Lo que hace falta
+  await como(pelayo, 'aal2');
+  const [ej] = await q(`insert into ejercicios (nombre, grupos_musculares) values ('Peso muerto v060', '{cuadriceps,gluteo}') returning id`);
+  await como(ana);
+  const va = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'a'), ejercicio_id: ej.id, duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  const vb = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'b'), ejercicio_id: ej.id, duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  const vc = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'c'), ejercicio_id: ej.id, duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  const fotoA = await insArch({ atleta_id: aAna.id, tipo: 'adjunto', ruta: ruta(aAna.id, 'foto', 'jpg'), mime: 'image/jpeg', bytes: 100 });
+  await como(luis);
+  const vl = await insArch({ atleta_id: aLuis.id, tipo: 'video_tecnica', ruta: ruta(aLuis.id, 'l'), duracion_seg: 6, mime: 'video/mp4', bytes: 1000 });
+  // (con su objeto en Storage, como al subirlo: el tamaño de verdad en metadata.size; extra.real, otro tamaño que el de la fila)
+  const adj = async (atleta, seg, extra = {}) => {
+    const a = await insArch({ atleta_id: atleta, tipo: 'adjunto', ruta: ruta(atleta, 'adjunto-video', extra.ext || 'mp4'), mime: extra.mime || 'video/mp4', bytes: extra.bytes ?? 50000, duracion_seg: seg });
+    if (!extra.sinSubir) await q(`insert into storage.objects (bucket_id, name, metadata) values ('archivos', $1, $2)`, [a.ruta, JSON.stringify({ size: extra.real ?? extra.bytes ?? 50000 })]);
+    return a;
+  };
+  const responder = (video, archivo, texto = 'Vídeo') => q(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, $2, $3) returning *`, [video, texto, archivo]);
+
+  console.log('  · 1 y 2. Respuestas en vídeo en el hilo de un vídeo');
+  await su(); await q(`delete from notificaciones`);
+  await como(pelayo, 'aal2');
+  const revC = await adj(aAna.id, 150);
+  const [cRev] = await responder(va.id, revC.id, 'Revisión grabada');
+  check(cRev.video_respuesta_id === revC.id && cRev.autor === 'coach' && cRev.atleta_id === aAna.id && !cRev.adjunto, 'el coach responde en el hilo del vídeo de Ana con su revisión grabada (2:30)');
+  const avisos = await notis(`clave = $1`, ['comentario:' + cRev.id]);
+  check(avisos.length === 1 && avisos[0].url.startsWith(`#videos/${va.id}`) && !/Revisión grabada/.test(`${avisos[0].titulo} ${avisos[0].cuerpo || ''}`), 'a Ana le llega el aviso, al vídeo y sin el texto');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, (await adj(aAna.id, 182)).id]), 'la del coach, de 3 minutos como mucho (y un segundo de margen)');
+  await como(ana);
+  const caraA = await adj(aAna.id, 40, { mime: 'video/webm', ext: 'webm' });
+  const [cA] = await responder(va.id, caraA.id);
+  check(cA.autor === 'atleta' && cA.video_respuesta_id === caraA.id, 'Ana responde en su hilo con la cámara de delante (40 s, WebM)');
+  const largoA = await adj(aAna.id, 75);
+  check(await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, largoA.id]), 'la del atleta, de un minuto como mucho');
+  const otraA = await adj(aAna.id, 20);
+  check(await falla(`insert into comentarios (atleta_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [aAna.id, otraA.id])
+    && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [fotoA.id, otraA.id])
+    && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, revC.id])
+    && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, caraA.id])
+    && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, vb.id])
+    && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, fotoA.id]),
+    'solo en el hilo de un vídeo de técnica (ni en el chat ni en el de una foto), con un vídeo suyo (no el del coach), no uno ya usado, ni un vídeo de técnica ni una foto');
+  const viejoA = await adj(aAna.id, 20);
+  await su(); await q(`update archivos set creado_en = now() - interval '2 hours' where id = $1`, [viejoA.id]);
+  await como(ana);
+  const enChat = await adj(aAna.id, 20);
+  await q(`insert into comentarios (atleta_id, texto, archivo_id) values ($1, 'Vídeo', $2)`, [aAna.id, enChat.id]);
+  check(await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, viejoA.id]) && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, enChat.id])
+    && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, (await adj(aAna.id, 20, { mime: 'video/quicktime', ext: 'mov' })).id]),
+    'recién subido (en la última hora), que no esté ya en el chat, en MP4 o WebM');
+  check(await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, (await adj(aAna.id, 20, { sinSubir: true })).id])
+    && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, (await adj(aAna.id, 20, { bytes: 50000, real: 150 * 1048576 })).id]),
+    '(M2) ya subido a Storage, y de 100 MB como mucho según Storage (no según lo que diga la fila)');
+  check(await falla(`insert into comentarios (atleta_id, texto, archivo_id) values ($1, 'Vídeo', $2)`, [aAna.id, caraA.id]), 'y al revés: el vídeo de una respuesta no va como archivo de otro mensaje');
+  check(await falla(`update comentarios set video_respuesta_id = $2 where id = $1`, [cA.id, otraA.id]) && await falla(`update comentarios set video_respuesta_id = null where id = $1`, [cA.id]),
+    'la respuesta en vídeo de un mensaje no se cambia ni se quita desde la app');
+  check((await q(`delete from archivos where id = $1 returning 1`, [revC.id])).length === 0 && (await q(`delete from archivos where id = $1 returning 1`, [caraA.id])).length === 0,
+    'Ana no borra el vídeo de la revisión de su coach (ni el suyo, que lleva su mensaje: eso va por eliminarlo)');
+  await como(luis);
+  check((await q(`select 1 from archivos where id = any($1)`, [[revC.id, caraA.id]])).length === 0 && (await q(`select 1 from comentarios where id = any($1)`, [[cRev.id, cA.id]])).length === 0
+    && await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, otraA.id]), 'Luis no ve nada de eso (ni responde en el hilo de Ana con un vídeo de ella)');
+  await su(); await q(`update atletas set estado = 'baja' where id = $1`, [aAna.id]);
+  await como(ana);
+  check(await falla(`insert into comentarios (archivo_id, texto, video_respuesta_id) values ($1, 'x', $2)`, [va.id, otraA.id]), 'de baja, Ana no responde (ni con vídeo)');
+  await su(); await q(`update atletas set estado = 'activo' where id = $1`, [aAna.id]);
+  // Eliminar el mensaje se lleva su vídeo (fuera de la tabla y a la cola de Storage)
+  await como(ana);
+  check((await q(`select comentario_eliminar($1) r`, [cA.id]))[0].r.estado === 'eliminado', 'Ana elimina su respuesta en vídeo para todos');
+  await su();
+  check(!(await q(`select 1 from archivos where id = $1`, [caraA.id])).length && (await q(`select 1 from fbe_privado.storage_por_borrar where ruta = $1`, [caraA.ruta])).length === 1
+    && (await q(`select video_respuesta_id from comentarios where id = $1`, [cA.id]))[0].video_respuesta_id === null, 'y su vídeo se va con él (a la cola de Storage); el mensaje queda como «Se eliminó»');
+  await como(pelayo, 'aal2');
+  const otraC = await adj(aAna.id, 30);
+  const [cC2] = await responder(vc.id, otraC.id);
+  await q(`delete from comentarios where id = $1`, [cC2.id]);
+  await su();
+  check(!(await q(`select 1 from archivos where id = $1`, [otraC.id])).length, 'si el coach borra un mensaje con respuesta en vídeo, también se va su vídeo');
+
+  console.log('  · 9. Dos ángulos de la misma serie');
+  await como(ana);
+  check((await q(`update archivos set angulo_de = $2 where id = $1 returning angulo_de`, [vb.id, va.id]))[0].angulo_de === va.id, 'Ana enlaza un vídeo como el otro ángulo de otro suyo');
+  check(await falla(`update archivos set angulo_de = $2 where id = $1`, [vc.id, va.id]) && await falla(`update archivos set angulo_de = $2 where id = $1`, [vc.id, vb.id])
+    && await falla(`update archivos set angulo_de = $2 where id = $1`, [va.id, vc.id]),
+    'como mucho una pareja (ni un tercero al mismo, ni en cadena, ni el que ya está enlazado)');
+  check(await falla(`update archivos set angulo_de = $2 where id = $1`, [vc.id, vc.id]) && await falla(`update archivos set angulo_de = $2 where id = $1`, [vc.id, vl.id])
+    && await falla(`update archivos set angulo_de = $2 where id = $1`, [vc.id, fotoA.id]) && await falla(`update archivos set angulo_de = $2 where id = $1`, [fotoA.id, vc.id]),
+    'ni consigo mismo, ni con uno de Luis, ni con algo que no es un vídeo de técnica');
+  const nuevoAng = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'd'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000, angulo_de: vc.id });
+  check(nuevoAng.angulo_de === vc.id && await falla(`insert into archivos (atleta_id, tipo, ruta, mime, bytes, angulo_de) values ($1, 'video_tecnica', $2, 'video/mp4', 10, $3)`, [aAna.id, ruta(aAna.id, 'e'), vc.id]),
+    'al enviar un vídeo, ya como el otro ángulo (y no un tercero)');
+  await su(); await q(`update atletas set estado = 'baja' where id = $1`, [aAna.id]);
+  await como(ana);
+  check(await falla(`update archivos set angulo_de = null where id = $1`, [nuevoAng.id]) === false && await falla(`update archivos set angulo_de = $2 where id = $1`, [nuevoAng.id, vc.id]), 'de baja, no enlaza');
+  await su(); await q(`update atletas set estado = 'activo' where id = $1`, [aAna.id]);
+  // El desfase, con la corrección (no cuenta como corregir)
+  const DA_BIEN = [{ con: vb.id, desfase: 0.25 }, { con: vb.id, desfase: -2 }, { con: vb.id, desfase: 2 }, { con: vb.id, desfase: 0.033 }, { con: vb.id, desfase: 0 }];
+  const DA_MAL = ['null', '[]', '{}', '"x"', '1', 'true', JSON.stringify({ con: vb.id }), JSON.stringify({ desfase: 0 }), JSON.stringify({ con: vb.id, desfase: 2.01 }), JSON.stringify({ con: vb.id, desfase: -2.5 }),
+    JSON.stringify({ con: vb.id, desfase: 0.0333 }), JSON.stringify({ con: vb.id, desfase: '0.5' }), JSON.stringify({ con: vb.id, desfase: null }), JSON.stringify({ con: 'no-es', desfase: 0 }),
+    JSON.stringify({ con: vb.id.toUpperCase(), desfase: 0 }), JSON.stringify({ con: 5, desfase: 0 }), JSON.stringify({ con: vb.id, desfase: 0, x: 1 }), JSON.stringify({ CON: vb.id, desfase: 0 }),
+    `{"con":"${vb.id}","desfase":1e-400}`, `{"con":"${vb.id}","desfase":1e400}`, JSON.stringify({ con: [vb.id], desfase: 0 }), JSON.stringify({ con: vb.id, desfase: [0.5] }), JSON.stringify({ con: vb.id, desfase: { v: 1 } })];
+  const okDA = []; for (const j of DA_BIEN) okDA.push((await q(`select dos_angulos_valido($1::jsonb) ok`, [JSON.stringify(j)]))[0].ok);
+  const malDA = []; let errDA = 0;
+  for (const j of DA_MAL) { try { malDA.push((await q(`select dos_angulos_valido($1::jsonb) ok`, [j]))[0].ok); } catch { errDA++; } }
+  check(okDA.every((x) => x === true) && DA_MAL.length >= 20 && !errDA && malDA.every((x) => x === false) && (await q(`select dos_angulos_valido(null) x`))[0].x === false,
+    `dos_angulos_valido(): los ${DA_BIEN.length} bien formados valen; los ${DA_MAL.length} mal formados dan false, nunca un error (${malDA.filter((x) => x !== false).length} no)`);
+  await su(); await q(`delete from notificaciones`);
+  await como(pelayo, 'aal2');
+  await q(`insert into video_revisiones (archivo_id, atleta_id, dos_angulos) values ($1, $2, $3) on conflict (archivo_id) do update set dos_angulos = excluded.dos_angulos`, [va.id, aAna.id, JSON.stringify({ con: vb.id, desfase: 0.25 })]);
+  const [rA] = await q(`select dos_angulos, corregido_en from video_revisiones where archivo_id = $1`, [va.id]);
+  check(Number(rA.dos_angulos.desfase) === 0.25 && rA.corregido_en === null && !(await notis(`clave = $1`, ['video:' + va.id])).length, 'el coach guarda el desfase con la corrección (no cuenta como corregir: no avisa)');
+  await como(pelayo, 'aal2');
+  check(await falla(`update video_revisiones set dos_angulos = $2 where archivo_id = $1`, [va.id, JSON.stringify({ con: vc.id, desfase: 0 })])
+    && await falla(`update video_revisiones set dos_angulos = $2 where archivo_id = $1`, [va.id, JSON.stringify({ con: vb.id, desfase: 3 })]), 'con su otro ángulo (no con otro vídeo) y de −2 a +2 s');
+  await q(`insert into video_revisiones (archivo_id, atleta_id, dos_angulos) values ($1, $2, $3)`, [vb.id, aAna.id, JSON.stringify({ con: va.id, desfase: -0.25 })]);
+  check(true, 'también desde el otro lado (el de la pareja)');
+  await como(ana);
+  const leida = await q(`select archivo_id, dos_angulos from video_correcciones($1)`, [[va.id]]);
+  check(Number(leida[0]?.dos_angulos?.desfase) === 0.25 && (await q(`update video_revisiones set dos_angulos = null where archivo_id = $1 returning 1`, [va.id])).length === 0,
+    'Ana lo lee con video_correcciones() (sin horas), pero no lo cambia');
+  // Pasar uno a otro atleta o borrarlo los desenlaza
+  await como(pelayo, 'aal2');
+  await q(`update archivos set atleta_id = $2, ruta = $3 where id = $1`, [vb.id, aLuis.id, ruta(aLuis.id, 'movido')]);
+  await su();
+  const [vbM] = await q(`select angulo_de from archivos where id = $1`, [vb.id]);
+  check(vbM.angulo_de === null && (await q(`select dos_angulos from video_revisiones where archivo_id = any($1)`, [[va.id, vb.id]])).every((x) => x.dos_angulos === null),
+    'pasar uno de los dos a otro atleta los desenlaza (y quita el desfase de los dos)');
+  await como(pelayo, 'aal2');
+  await q(`delete from archivos where id = $1`, [vc.id]);
+  check((await q(`select angulo_de from archivos where id = $1`, [nuevoAng.id]))[0].angulo_de === null, 'borrar uno lo desenlaza');
+
+  console.log('  · 11. El ritmo de grabación (cámara lenta)');
+  await como(ana);
+  const lento = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'lento'), duracion_seg: 4, mime: 'video/mp4', bytes: 1000, fps_captura: 120 });
+  check(lento.fps_captura === 120 && await falla(`insert into archivos (atleta_id, tipo, ruta, mime, bytes, fps_captura) values ($1, 'video_tecnica', $2, 'video/mp4', 10, 300)`, [aAna.id, ruta(aAna.id, 'x')])
+    && await falla(`insert into archivos (atleta_id, tipo, ruta, mime, bytes, fps_captura) values ($1, 'video_tecnica', $2, 'video/mp4', 10, 12)`, [aAna.id, ruta(aAna.id, 'y')])
+    && await falla(`insert into archivos (atleta_id, tipo, ruta, mime, bytes, fps_captura) values ($1, 'adjunto', $2, 'video/mp4', 10, 120)`, [aAna.id, ruta(aAna.id, 'z')]),
+    'un vídeo grabado a 120 fps lo lleva apuntado (de 24 a 240, y solo en un vídeo de técnica)');
+  check(await falla(`update archivos set fps_captura = 240 where id = $1`, [lento.id]), 'y no se cambia después (ni Ana)');
+  await como(pelayo, 'aal2');
+  check(await falla(`update archivos set fps_captura = null where id = $1`, [lento.id]), 'ni el coach');
+
+  console.log('  · Borrar un vídeo y pasarlo a otro atleta: sus respuestas en vídeo');
+  await como(pelayo, 'aal2');
+  const revD = await adj(aAna.id, 60);
+  const [cD] = await responder(va.id, revD.id);
+  await como(ana);
+  const caraD = await adj(aAna.id, 10);
+  const [cD2] = await responder(va.id, caraD.id);
+  await como(pelayo, 'aal2');
+  await q(`update archivos set atleta_id = $2, ruta = $3 where id = $1`, [va.id, aLuis.id, ruta(aLuis.id, 'movido-a')]);
+  await su();
+  check(!(await q(`select 1 from archivos where id = any($1)`, [[revD.id, caraD.id]])).length && (await q(`select video_respuesta_id v from comentarios where id = $1`, [cD.id]))[0]?.v === null
+    && !(await q(`select 1 from comentarios where id = $1`, [cD2.id])).length && (await q(`select 1 from fbe_privado.storage_por_borrar where ruta = any($1)`, [[revD.ruta, caraD.ruta]])).length === 2,
+    'al pasar el vídeo a otro atleta, sus respuestas en vídeo se borran (a la cola de Storage): lo del de antes, fuera; el mensaje del coach se queda, sin el vídeo');
+  await como(pelayo, 'aal2');
+  const revE = await adj(aLuis.id, 30);
+  await responder(va.id, revE.id);
+  await q(`delete from archivos where id = $1`, [va.id]);
+  await su();
+  check(!(await q(`select 1 from archivos where id = $1`, [revE.id])).length, 'al borrar el vídeo de técnica, sus respuestas en vídeo también');
+  await como(ana);
+  const p1 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'p1'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  const p2 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'p2'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000, angulo_de: p1.id });
+  await como(pelayo, 'aal2');
+  await q(`insert into video_revisiones (archivo_id, atleta_id, dos_angulos) values ($1, $2, $3), ($4, $2, $5)`, [p1.id, aAna.id, JSON.stringify({ con: p2.id, desfase: 0.1 }), p2.id, JSON.stringify({ con: p1.id, desfase: -0.1 })]);
+  check(!(await falla(`delete from archivos where id = any($1)`, [[p1.id, p2.id]])) && !(await q(`select 1 from video_revisiones where archivo_id = any($1)`, [[p1.id, p2.id]])).length,
+    'los dos ángulos (con su desfase guardado en los dos) se borran de una vez sin problema');
+  // (H1) Borrar a la vez un vídeo y su respuesta (en los dos órdenes de la tabla), solo el vídeo, y un atleta entero
+  const enCola = async (rutas) => { await su(); const n = (await q(`select count(*)::int n from fbe_privado.storage_por_borrar where ruta = any($1)`, [rutas]))[0].n; await como(pelayo, 'aal2'); return n; };
+  const quedan = async (ids) => (await q(`select count(*)::int n from archivos where id = any($1)`, [ids]))[0].n;
+  await como(ana);
+  const vH1 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'h1'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  await como(pelayo, 'aal2');
+  const rH1 = await adj(aAna.id, 20);
+  await responder(vH1.id, rH1.id);
+  let eH1 = null;
+  try { await q(`delete from archivos where id = any($1)`, [[vH1.id, rH1.id]]); } catch (e) { eH1 = e.message; }
+  const nH1 = [await quedan([vH1.id, rH1.id]), await enCola([vH1.ruta, rH1.ruta])];
+  check(!eH1 && nH1[0] === 0 && nH1[1] === 2, `(H1) borrar a la vez un vídeo y su respuesta en vídeo (el vídeo primero en la tabla): sin error, los dos a la cola de Storage${eH1 ? ` (${eH1})` : ''} ${nH1}`);
+  const rH2 = await adj(aAna.id, 20);
+  await como(ana);
+  const vH2 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'h2'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  await como(pelayo, 'aal2');
+  await responder(vH2.id, rH2.id);
+  check(!(await falla(`delete from archivos where id = any($1)`, [[rH2.id, vH2.id]])) && await quedan([vH2.id, rH2.id]) === 0, '(H1) y en el otro orden (la respuesta primero en la tabla)');
+  await como(ana);
+  const vH3 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'h3'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  await como(pelayo, 'aal2');
+  const rH3 = await adj(aAna.id, 20);
+  const [cH3] = await responder(vH3.id, rH3.id);
+  check(!(await falla(`delete from archivos where id = $1`, [vH3.id])) && await quedan([rH3.id]) === 0 && (await q(`select eliminado_en is not null e, video_respuesta_id v from comentarios where id = $1`, [cH3.id]))[0]?.v === null,
+    '(H1) solo el vídeo: su respuesta en vídeo se va con él (y su mensaje queda como eliminado)');
+  // (L5) Si el coach borra el archivo de una respuesta, su mensaje queda como eliminado (no diciendo «Vídeo» sin vídeo)
+  await como(ana);
+  const vL5 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'l5'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  await como(pelayo, 'aal2');
+  const rL5 = await adj(aAna.id, 20);
+  const [cL5] = await responder(vL5.id, rL5.id, 'Mira esto');
+  await q(`delete from archivos where id = $1`, [rL5.id]);
+  const [cL5b] = await q(`select texto, eliminado_en, video_respuesta_id from comentarios where id = $1`, [cL5.id]);
+  check(cL5b.eliminado_en && cL5b.texto === 'Se eliminó este mensaje' && cL5b.video_respuesta_id === null, '(L5) el coach borra el archivo de una respuesta: su mensaje queda como «Se eliminó este mensaje»');
+  // (L5) Eliminar para todos: al coach se le devuelve la ruta del vídeo, para quitarlo de Storage al momento
+  const rL5c = await adj(aAna.id, 20);
+  const [cL5c] = await responder(vL5.id, rL5c.id);
+  const elC = (await q(`select comentario_eliminar($1) r`, [cL5c.id]))[0].r;
+  check(elC.estado === 'eliminado' && elC.rutas.includes(rL5c.ruta) && await quedan([rL5c.id]) === 0, '(L5) el coach elimina su respuesta en vídeo: se le devuelve su ruta (sale de Storage al momento) y su archivo se va');
+  // (L3) Desenlazar dos ángulos quita el desfase de las dos correcciones
+  await como(ana);
+  const d1 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'd1'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  const d2 = await insArch({ atleta_id: aAna.id, tipo: 'video_tecnica', ruta: ruta(aAna.id, 'd2'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000, angulo_de: d1.id });
+  await como(pelayo, 'aal2');
+  await q(`insert into video_revisiones (archivo_id, atleta_id, dos_angulos) values ($1, $2, $3), ($4, $2, $5)`, [d1.id, aAna.id, JSON.stringify({ con: d2.id, desfase: 0.2 }), d2.id, JSON.stringify({ con: d1.id, desfase: -0.2 })]);
+  await como(ana);
+  await q(`update archivos set angulo_de = null where id = $1`, [d2.id]);
+  await como(pelayo, 'aal2');
+  check((await q(`select dos_angulos from video_revisiones where archivo_id = any($1)`, [[d1.id, d2.id]])).every((x) => x.dos_angulos === null), '(L3) al desenlazarlos (Ana), el desfase de las dos correcciones se quita');
+  // (H1) Borrar un atleta entero con respuestas en vídeo
+  const [aEva] = await q(`insert into atletas (nombre) values ('Atleta v060') returning id`);
+  const vE = await insArch({ atleta_id: aEva.id, tipo: 'video_tecnica', ruta: ruta(aEva.id, 'e'), duracion_seg: 8, mime: 'video/mp4', bytes: 1000 });
+  const rE = await adj(aEva.id, 30);
+  await responder(vE.id, rE.id);
+  let eE = null;
+  try { await q(`delete from atletas where id = $1`, [aEva.id]); } catch (e) { eE = e.message; }
+  check(!eE && await quedan([vE.id, rE.id]) === 0 && await enCola([vE.ruta, rE.ruta]) === 2, `(H1) borrar a un atleta con una respuesta en vídeo: sin error, y sus archivos a la cola de Storage${eE ? ` (${eE})` : ''}`);
+  await su();
+  await q(`delete from archivos where ruta like '%/v060-%'`);
+  await q(`delete from fbe_privado.storage_por_borrar`);
+
+  console.log('  · La 038 sin la 037, y sobre una base que ya va por delante');
+  const sin37 = new PGlite();
+  await sin37.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin37.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '037')) await sin37.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  const sql38 = readFileSync(new URL('../supabase/migraciones/038_videos_tanda_b1.sql', import.meta.url), 'utf8');
+  let e38 = null;
+  try { await sin37.exec(sql38); } catch (e) { e38 = e.message; }
+  check(/Antes de la 038 hace falta la 037/.test(e38 || '') && !(await sin37.query(`select 1 from information_schema.columns where table_name = 'comentarios' and column_name = 'video_respuesta_id'`)).rows.length,
+    'la 038 no se aplica sin la 037 (y no deja nada a medias)');
+  await sin37.exec(readFileSync(new URL('../supabase/migraciones/037_videos_tanda_a.sql', import.meta.url), 'utf8'));
+  await sin37.exec(sql38);
+  await sin37.exec(sql38);
+  check((await sin37.query(`select count(*)::int n from fbe_migraciones where numero = 38`)).rows[0].n === 1, 'con la 037, se aplica (y se puede repetir: queda apuntada una vez)');
+  await sin37.exec(`insert into public.fbe_migraciones (numero) values (39)`);
+  let e39 = null;
+  try { await sin37.exec(sql38); } catch (e) { e39 = e.message; }
+  check(/ya tiene la migración 039/.test(e39 || ''), 'ni en una base que ya tiene una posterior');
+  await sin37.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

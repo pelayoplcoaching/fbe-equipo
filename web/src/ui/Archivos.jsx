@@ -13,6 +13,9 @@ import { guardarPendiente, quitarPendiente, conCerrojo, ponerSubida, avisarPendi
 import { CamaraVideo, puedeGrabarVideo } from './tecnica/CamaraVideo.jsx';
 import { encuadreDe, tiempoOtro } from '../logica/tecnica.js';
 import { hoyISO } from '../logica/fechas.js';
+import { velocidadInicial, esLenta } from '../logica/angulos.js';
+import { DifuminarCara, puedeDifuminar } from './tecnica/Difuminar.jsx';
+import { ajuste } from './ajustes.js';
 
 // Botón que abre la cámara o la galería y envía el vídeo (o la foto) a la carpeta privada del atleta.
 // Vídeos (v0.30): antes de enviarlo se elige dónde empieza y acaba la serie, y el móvil lo recorta y lo aligera
@@ -26,9 +29,11 @@ const LIMITE_ELEGIR_MB = 2048; // un vídeo largo se puede elegir si luego se va
 // v0.57: con la cámara guiada («Grabar con guía»: encuadre, nivel, cuenta atrás y parar sola) o de la galería; con su
 // serie (series: [{ numero, texto }], de la sesión) y, al grabar de nuevo un vídeo corregido, el original (repiteDe) y sus
 // puntos a la vista en la cámara (puntos). abrirCamara: empieza en la cámara.
+// v0.60: anguloDe, el vídeo del que este es el otro ángulo (038; «Añadir otro ángulo» también al terminar de enviar uno);
+// el ritmo de la cámara lenta (fps_captura) si se grabó así; y «Difuminar la cara» (se envía solo el difuminado).
 export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicioId = null, ejercicioId = null, titulo, etiqueta, clase = 'btn-texto', alSubir, inicial = null, alCancelar = null, alGuardarEnMovil = null,
-  ejercicio = null, series = null, serieInicial = null, repiteDe = null, puntos = [], abrirCamara = false, directoACamara = false }) {
-  const { api, aviso } = useApp();
+  ejercicio = null, series = null, serieInicial = null, repiteDe = null, puntos = [], abrirCamara = false, directoACamara = false, anguloDe = null }) {
+  const { api, aviso, modo } = useApp();
   const [elegir, setElegir] = useState(false);
   const [camara, setCamara] = useState(false);
   const [serie, setSerie] = useState(serieInicial);
@@ -45,6 +50,16 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   const [subida, setSubida] = useState(null); // progreso de la subida (0…1)
   const [enPausa, setEnPausa] = useState(false); // el recorte está en pausa (se salió de la app) y no siguió solo
   const [auto, setAuto] = useState(null); // (v0.59) la valoración del atleta, ya limpia (o null)
+  // (v0.60) el otro ángulo (el de la prop, o el que se acaba de enviar), el ritmo de la cámara lenta y el difuminado
+  const [anguloSig, setAnguloSig] = useState(null); // { id, serie } del que se acaba de enviar: «¿Otro ángulo?»
+  const subidoAntes = useRef(null); // (lo enviado mientras se pregunta por el otro ángulo: alSubir, al terminar)
+  const [anguloDeAhora, setAnguloDeAhora] = useState(anguloDe);
+  const [otroAngulo, setOtroAngulo] = useState(false);
+  const [fps, setFps] = useState(null);
+  // (revisión M3) encendido de serie solo donde se puede difuminar: si no, ningún vídeo se podría enviar
+  const [difuminar, setDifuminar] = useState(() => tipo === 'video_tecnica' && ajuste('difuminarCara') === true && puedeDifuminar(modo === 'demo'));
+  const [difuminado, setDifuminado] = useState(null); // { archivo, dur }
+  const con038 = useCarga(() => (tipo === 'video_tecnica' ? api.video038().catch(() => null) : Promise.resolve(false)), []);
   const contenedor = useRef(null);
   const cancelar = useRef(null);
   const controlRecorte = useRef(null);
@@ -54,7 +69,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   const enc = esVideo ? encuadreDe(ejercicio?.nombre || '', ejercicio?.grupos_musculares || [], ejercicio?.tipo || []) : null;
   useEffect(() => { if (abrirCamara && guiada) setCamara(true); }, []);
   const abrir = () => { if (guiada && directoACamara) setCamara(true); else if (guiada) setElegir(true); else input.current?.click(); };
-  const grabado = (f) => { setCamara(false); setArchivo(f); setCorte(null); setFallo(null); setSinVista(false); try { setVista(URL.createObjectURL(f)); } catch { setVista(null); } };
+  const grabado = (f, meta = null) => { setCamara(false); setArchivo(f); setFps(meta?.fps || null); setCorte(null); setFallo(null); setSinVista(false); try { setVista(URL.createObjectURL(f)); } catch { setVista(null); } };
 
   useEffect(() => () => { if (vista) URL.revokeObjectURL(vista); }, [vista]);
   useEffect(() => () => cancelar.current?.(), []); // si se va de la pantalla a medias, se para el recorte
@@ -71,7 +86,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
     if (!f) return;
     const tope = recortable ? LIMITE_ELEGIR_MB : LIMITE_ARCHIVO_MB;
     if (f.size > tope * MB) { aviso(`Pesa más de ${tope} MB. Graba solo la serie (unos 30 segundos).`, 'error'); return; }
-    setArchivo(f); setCorte(null); setFallo(null); setSinVista(false);
+    setArchivo(f); setFps(null); setCorte(null); setFallo(null); setSinVista(false);
     try { setVista(URL.createObjectURL(f)); } catch { setVista(null); }
   }
   const recortado = !!corte && (corte.inicio > 0.25 || corte.fin < corte.dur - 0.25);
@@ -84,7 +99,8 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   async function subir(f, duracion) {
     const opciones = { tipo, sesion_ejercicio_id: sesionEjercicioId, ejercicio_id: ejercicioId, nota_atleta: nota.trim() || null, duracion_seg: duracion, fecha: hoyISO(),
       ...(esVideo && con035.datos && serie && sesionEjercicioId ? { serie_numero: Number(serie) } : {}), ...(esVideo && con035.datos && repiteDe ? { repite_de: repiteDe } : {}),
-      ...(esVideo && auto ? { autoevaluacion: auto } : {}) };
+      ...(esVideo && auto ? { autoevaluacion: auto } : {}),
+      ...(esVideo && anguloDeAhora ? { angulo_de: anguloDeAhora } : {}), ...(esVideo && fps && !(difuminar && difuminado) ? { fps_captura: fps } : {}) };
     opciones.ruta = api.rutaArchivo(atletaId, f, opciones);
     const pid = esVideo ? await guardarPendiente({ atletaId, archivo: f, opciones }).catch(() => null) : null;
     let a = null, error = null;
@@ -126,12 +142,26 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
     }
     if (pid) await quitarPendiente(pid).catch(() => {});
     if (a?.autoevaluacionError) aviso(`Vídeo enviado, pero tu valoración no se ha guardado: ${a.autoevaluacionError}`, 'error');
+    else if (a?.anguloPerdido) aviso('Vídeo enviado, pero ya no va como otro ángulo: el vídeo con el que iba se ha borrado o ya tiene pareja', 'error');
     else aviso(esVideo ? 'Vídeo enviado a tu coach' : 'Foto guardada');
-    setArchivo(null); setNota(''); setCorte(null); setFallo(null);
-    alSubir?.(a);
+    setArchivo(null); setNota(''); setCorte(null); setFallo(null); setDifuminado(null); setFps(null);
+    // (v0.60) «Añadir otro ángulo»: el siguiente va enlazado a este, de la misma serie
+    const preguntar = esVideo && otroAngulo && a?.id && !anguloDeAhora;
+    setOtroAngulo(false);
+    if (anguloDeAhora && !anguloDe) setAnguloDeAhora(null);
+    if (preguntar) { subidoAntes.current = a; setAnguloSig({ id: a.id, serie }); } else { subidoAntes.current = null; alSubir?.(a); }
   }
   async function enviar({ entero = false } = {}) {
     if (subiendo) return;
+    // (v0.60) Con «Difuminar la cara», solo el difuminado (ya recortado): el original no sale del móvil
+    if (esVideo && difuminar) {
+      if (!difuminado) { aviso('Prepara antes la vista previa del vídeo difuminado (o apaga «Difuminar la cara»)', 'error'); return; }
+      setSubiendo(true);
+      try { await subir(difuminado.archivo, Math.round(difuminado.dur)); }
+      catch (err) { aviso(err.sinConexion ? 'Sin cobertura y no se ha podido guardar el vídeo en el móvil: cuando vuelva la cobertura, elígelo otra vez para enviarlo' : err.message, 'error'); }
+      finally { setSubiendo(false); setSubida(null); }
+      return;
+    }
     // En el mismo toque (antes de esperar nada): el vídeo que se va a recortar se arranca con el gesto (iPhone)
     const preparado = aligerar && !entero ? prepararVideo(archivo) : null;
     setSubiendo(true);
@@ -173,6 +203,14 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
     <>
       {!inicial && <button type="button" class={clase} onClick={abrir} aria-haspopup={guiada ? 'dialog' : undefined}><Icono n={esVideo ? 'camara' : 'imagen'} /> {etiqueta || (esVideo ? 'Vídeo para tu coach' : 'Añadir foto')}</button>}
       {!inicial && <input ref={input} type="file" accept={esVideo ? 'video/*' : 'image/*'} hidden onChange={elegido} aria-label={esVideo ? 'Elegir vídeo' : 'Elegir foto'} />}
+      {anguloSig && (
+        <Hoja titulo="¿Otro ángulo de la misma serie?" alCerrar={() => { setAnguloSig(null); const a = subidoAntes.current; subidoAntes.current = null; if (a) alSubir?.(a); }}>
+          <p class="peq secundario">El mismo momento grabado desde otro sitio (por ejemplo, de frente): tu coach verá los dos a la vez.</p>
+          {guiada && <button type="button" class="btn btn-primario btn-grande" onClick={() => { setAnguloDeAhora(anguloSig.id); setSerie(anguloSig.serie); setAnguloSig(null); setCamara(true); }}><Icono n="camara" /> Grabar el otro ángulo</button>}
+          <button type="button" class="btn btn-grande" onClick={() => { setAnguloDeAhora(anguloSig.id); setSerie(anguloSig.serie); setAnguloSig(null); input.current?.click(); }}><Icono n="imagen" /> Elegirlo de la galería</button>
+          <button type="button" class="btn btn-texto" onClick={() => { setAnguloSig(null); const a = subidoAntes.current; subidoAntes.current = null; if (a) alSubir?.(a); }}>Ahora no</button>
+        </Hoja>
+      )}
       {elegir && (
         <Hoja titulo={titulo || 'Vídeo de técnica'} alCerrar={() => setElegir(false)}>
           <p class="peq secundario"><b>{enc.titulo}.</b> {enc.texto}</p>
@@ -197,8 +235,19 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
           ) : (
             <>
               {vista && (esVideo
-                ? <VistaRecorte src={vista} recortable={recortable} corte={corte} setCorte={setCorte} alFallar={() => setSinVista(true)} />
+                ? <div hidden={!!(difuminar && difuminado)}><VistaRecorte src={vista} recortable={recortable && !(difuminar && difuminado)} corte={corte} setCorte={setCorte} alFallar={() => setSinVista(true)} /></div>
                 : <img class="medio" src={vista} alt="Vista previa de la foto" />)}
+              {esVideo && puedeDifuminar(modo === 'demo') && (
+                <DifuminarCara archivo={archivo} corte={corte} activo={difuminar} setActivo={setDifuminar} alListo={setDifuminado} />
+              )}
+              {esVideo && fps >= 50 && <p class="mini secundario"><Icono n="reloj" /> Grabado en cámara lenta ({fps} fps){con038.datos === false ? '. Abrirlo ya a cámara lenta: disponible tras la migración 038.' : ': tu coach lo abrirá a cámara lenta.'}</p>}
+              {esVideo && anguloDeAhora && <p class="mini secundario"><Icono n="duplicar" /> Va como otro ángulo de la misma serie: tu coach verá los dos a la vez.</p>}
+              {esVideo && !anguloDeAhora && con038.datos !== false && !repiteDe && (
+                <label class="casilla">
+                  <input type="checkbox" checked={otroAngulo} onChange={(e) => setOtroAngulo(e.currentTarget.checked)} />
+                  <span class="peq">Añadir otro ángulo de esta serie después</span>
+                </label>
+              )}
               <p class="mini terciario">
                 {aligerar && corte
                   ? <>Se enviarán {duracionTexto(corte.fin - corte.inicio)} de vídeo{megasEstimados(corte.fin - corte.inicio) * MB < archivo.size ? <>, unos {mb(megasEstimados(corte.fin - corte.inicio) * MB)} MB (el original pesa {mb(archivo.size)} MB)</> : null}. </>
@@ -229,7 +278,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
                   placeholder={esVideo ? 'Por ejemplo: la profundidad, o si se me van las rodillas' : 'Frente, perfil, espalda…'} />
               </div>
               {grandeSinRecorte && sinVista && <div class="error" role="alert">Este vídeo no se puede recortar en este móvil y pesa más de {LIMITE_ARCHIVO_MB} MB. Grábalo de nuevo, solo la serie.</div>}
-              <button class="btn btn-primario btn-grande" disabled={subiendo || grandeSinRecorte} onClick={() => enviar()}>{subiendo ? (subida != null && subida > 0 ? `Subiendo… ${Math.round(subida * 100)} %` : 'Subiendo…') : grandeSinRecorte && !sinVista ? 'Cargando el vídeo…' : esVideo ? (recortado ? 'Recortar y enviar' : 'Enviar a tu coach') : 'Guardar foto'}</button>
+              <button class="btn btn-primario btn-grande" disabled={subiendo || (grandeSinRecorte && !(difuminar && difuminado)) || (esVideo && difuminar && !difuminado)} onClick={() => enviar()}>{subiendo ? (subida != null && subida > 0 ? `Subiendo… ${Math.round(subida * 100)} %` : 'Subiendo…') : esVideo && difuminar ? (difuminado ? 'Enviar el difuminado' : 'Primero, la vista previa') : grandeSinRecorte && !sinVista ? 'Cargando el vídeo…' : esVideo ? (recortado ? 'Recortar y enviar' : 'Enviar a tu coach') : 'Guardar foto'}</button>
               {subiendo && subida != null && (
                 <>
                   <div class="recorte-progreso subida-progreso" aria-hidden="true"><span style={{ width: `${Math.round(subida * 100)}%` }} /></div>
@@ -355,7 +404,8 @@ export function capturarPoster(archivo, { ancho = 480, segundo = 0.5, tiempo = 7
 // v0.57: con la serie que se ve en él (archivo.serie: «Serie 2 · 60 kg × 8 @8») encima, y al abrirlo el coach queda
 // «Visto» para el atleta (solo el día)
 export const textoChipSerie = (serie) => (serie?.numero ? `Serie ${serie.numero}${serie.texto ? ` · ${serie.texto}` : ''}` : null);
-export function VerArchivo({ archivo }) {
+// v0.60 (11): un vídeo grabado en cámara lenta (fps_captura, 038) se abre a 0,25× o 0,5×. cors y compacto: ver Reproductor.
+export function VerArchivo({ archivo, cors = false, compacto = false, etiqueta = null }) {
   const { api, perfil } = useApp();
   const [url, setUrl] = useState(null);
   const [error, setError] = useState(null);
@@ -370,7 +420,13 @@ export function VerArchivo({ archivo }) {
   const esFoto = archivo.tipo === 'foto_progreso' || (archivo.tipo === 'adjunto' && /^image\//.test(archivo.mime || ''));
   return esFoto
     ? <img class="medio" src={url} alt={archivo.tipo === 'adjunto' ? 'Foto enviada en el chat' : `Foto de progreso del ${archivo.fecha}`} loading="lazy" />
-    : <Reproductor src={url} archivoId={archivo.id} serie={textoChipSerie(archivo.serie)} repeticiones={archivo.tipo === 'video_tecnica'} />;
+    : (
+      <>
+        <Reproductor src={url} archivoId={archivo.id} serie={textoChipSerie(archivo.serie)} repeticiones={archivo.tipo === 'video_tecnica' && !compacto}
+          cors={cors} compacto={compacto} etiqueta={etiqueta} velocidadInicial={velocidadInicial(archivo.fps_captura)} />
+        {esLenta(archivo.fps_captura) && <p class="mini secundario chip-lenta"><Icono n="reloj" /> Grabado en cámara lenta ({archivo.fps_captura} fps): se abre a {velocidadInicial(archivo.fps_captura) === 0.25 ? '0,25×' : '0,5×'}.</p>}
+      </>
+    );
 }
 
 // Dos vídeos lado a lado (el mismo ejercicio hace dos meses y hoy, o dos intentos): cada uno con su

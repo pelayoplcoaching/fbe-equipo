@@ -34,6 +34,7 @@ create table storage.objects (
   name text not null,
   owner uuid default auth.uid(),
   created_at timestamptz default now(),
+  metadata jsonb,
   unique (bucket_id, name)
 );
 alter table storage.objects enable row level security;

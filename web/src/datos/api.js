@@ -44,6 +44,8 @@ import { textoSerieVideo, serieValida, puntuacionValida, checklistValido, limpia
 import { analisisValido } from '../logica/analisis.js';
 import { limpiarTextoRecordatorio, textoRecordatorioValido, recordatorioValido, sugerenciasRecordatorio, frasesPara, fraseValida, limpiarTextoFrase, frasesSugeridas, limpiarAutoevaluacion, autoevaluacionValida, mejorVideo, estadisticasRevision as estadisticasCola } from '../logica/correccion.js';
 import { repsManualValidas } from '../logica/repeticiones.js';
+import { tipoBase, tipoRespuestaValido, duracionRespuesta, MAX_BYTES_RESPUESTA, MAX_SEG_RESPUESTA } from '../logica/composicion.js';
+import { dosAngulosValido, limitarDesfase, fpsGuardado } from '../logica/angulos.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -193,6 +195,15 @@ const falta037 = (e) => {
   const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
   if (/\b(recordatorios_tecnica|recordatorios_activos|frases_correccion|videos_modelo|videos_modelo_de|video_autoevaluacion|reps_manual)\b/.test(m)
     && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m)) throw new Error(`${AVISO_037} (supabase/migraciones/037_videos_tanda_a.sql). Detalle: ${e?.message || e}`);
+  throw e;
+};
+// v0.60 sin la migración 038: lo de antes, igual; las respuestas en vídeo del hilo, los dos ángulos (enlazarlos y su
+// desfase) y el ritmo de la cámara lenta dicen qué falta. Exportar y difuminar la cara (en el móvil) no la necesitan.
+export const AVISO_038 = 'Disponible tras la migración 038';
+const falta038 = (e) => {
+  const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+  if (/\b(video_respuesta_id|angulo_de|fps_captura|dos_angulos)\b/.test(m)
+    && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42883|42703/i.test(m)) throw new Error(`${AVISO_038} (supabase/migraciones/038_videos_tanda_b1.sql). Detalle: ${e?.message || e}`);
   throw e;
 };
 const sinCliente033 = (e) => /cliente_id/.test(e?.message || '') && /schema cache|does not exist|no existe|column|columna|PGRST20/i.test(e?.message || '');
@@ -1557,15 +1568,17 @@ export function crearApi(backend) {
     // respondeA (v0.54): el mensaje que cita (de la misma conversación y del mismo hilo; lo comprueba la base)
     // clienteId (v0.55): el id que pone el móvil (el de la bandeja de salida); si ese mensaje ya entró (un reintento sin
     // cobertura cuya respuesta no llegó), devuelve el que ya está, sin repetirlo. Sin la 033, se envía sin él.
-    async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null, respondeA = null, clienteId = null }) {
+    // videoRespuestaId (v0.60, 038): el vídeo de una respuesta en el hilo de un vídeo (ver responderConVideo)
+    async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null, respondeA = null, clienteId = null, videoRespuestaId = null }) {
       const fila = { atleta_id: atletaId, sesion_id: sesionId, checkin_id: checkinId, archivo_id: archivoId, texto: texto.trim(), autor };
+      if (videoRespuestaId) fila.video_respuesta_id = videoRespuestaId;
       if (archivoId && dibujo) {
         if (!dibujoValido(dibujo)) throw new Error('El dibujo no tiene la forma que toca');
         fila.dibujo = dibujo;
       }
       if (respondeA) fila.responde_a = respondeA;
       if (clienteId) fila.cliente_id = clienteId;
-      const insertar = (f) => b.insert('comentarios', [f]).catch(respondeA ? falta032 : (e) => { throw e; });
+      const insertar = (f) => b.insert('comentarios', [f]).catch(respondeA ? falta032 : videoRespuestaId ? falta038 : (e) => { throw e; });
       try {
         return (await insertar(fila))[0];
       } catch (e) {
@@ -2190,7 +2203,7 @@ export function crearApi(backend) {
     // se graba de nuevo. Sin la 035, el vídeo sale igual, sin ellos. urlSubida / alUrlSubida: la dirección de la subida por
     // trozos (TUS), para seguir por donde iba si se corta o se cierra la app.
     async subirArchivo(atletaId, archivo, { tipo, sesion_ejercicio_id = null, ejercicio_id = null, nota_atleta = null, pose = null, poster = null, duracion_seg = null, fecha = null, alProgreso = null, senal = null, ruta: rutaDada = null, nombre = null, paginas = null, onda = null,
-      serie_numero = null, repite_de = null, urlSubida = null, alUrlSubida = null, derivado_de = null, autoevaluacion = null }) {
+      serie_numero = null, repite_de = null, urlSubida = null, alUrlSubida = null, derivado_de = null, autoevaluacion = null, angulo_de = null, fps_captura = null }) {
       if (archivo.size > LIMITE_ARCHIVO_MB * 1024 * 1024) throw new Error(`El archivo pesa más de ${LIMITE_ARCHIVO_MB} MB. Graba solo la serie (unos 30 segundos) o recórtalo.`);
       const esImagen = /^image\//.test(archivo.type || '') || tipo === 'foto_progreso';
       const ruta = rutaDada || api.rutaArchivo(atletaId, archivo, { tipo, fecha });
@@ -2202,16 +2215,29 @@ export function crearApi(backend) {
       let fila = rutaDada ? (await b.select('archivos', { eq: { ruta } }))[0] : null;
       const enlaces = tipo === 'video_tecnica' && (serie_numero || repite_de) && await api.video035()
         ? { ...(serie_numero && sesion_ejercicio_id && serieValida(Number(serie_numero)) ? { serie_numero: Number(serie_numero) } : {}), ...(repite_de ? { repite_de } : {}) } : {};
+      // (v0.60, 038) el otro ángulo de la misma serie y el ritmo de la cámara lenta; sin la 038, el vídeo sale igual, sin ellos
+      const extras038 = tipo === 'video_tecnica' && (angulo_de || fpsGuardado(fps_captura)) && (await api.video038()) !== false
+        ? { ...(angulo_de ? { angulo_de } : {}), ...(fpsGuardado(fps_captura) ? { fps_captura: fpsGuardado(fps_captura) } : {}) } : {};
       if (!fila) {
-        [fila] = await b.insert('archivos', [{
+        const registrar = (extras) => b.insert('archivos', [{
           atleta_id: atletaId, tipo, ruta, sesion_ejercicio_id, ejercicio_id, nota_atleta,
           mime: (tipo === 'audio' ? tipoAudio(archivo.type)?.tipo : archivo.type) || null, bytes: archivo.size ?? null, fecha: dia,
           ...(tipo === 'foto_progreso' && pose ? { pose } : {}),
           ...(poster_ruta ? { poster_ruta } : {}), ...(dur != null ? { duracion_seg: dur } : {}),
           ...(tipo === 'documento' ? { nombre: nombreSeguroPdf(nombre || archivo.name), ...(Number.isInteger(paginas) && paginas >= 1 && paginas <= 5000 ? { paginas } : {}) } : {}),
           ...(tipo === 'audio' && ondaValida(onda) ? { onda } : {}),
-          ...enlaces, ...(derivado_de && tipo === 'adjunto' ? { derivado_de } : {}),
-        }]).catch(tipo === 'documento' ? falta033 : tipo === 'audio' ? falta034 : Object.keys(enlaces).length || derivado_de ? falta035 : (e) => { throw e; });
+          ...enlaces, ...extras, ...(derivado_de && tipo === 'adjunto' ? { derivado_de } : {}),
+        }]).catch(tipo === 'documento' ? falta033 : tipo === 'audio' ? falta034 : Object.keys(extras).length ? falta038 : Object.keys(enlaces).length || derivado_de ? falta035 : (e) => { throw e; });
+        try { [fila] = await registrar(extras038); }
+        catch (e) {
+          // (v0.60, L4) Un envío que esperaba en el móvil y su otro ángulo ya no está (o ya tiene pareja): sale igual, sin el
+          // enlace, y se dice (si no, cada reintento fallaría igual)
+          const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+          if (!extras038.angulo_de || !/23503|23514|42501|foreign key|clave ajena|otro \u00e1ngulo|angulo/i.test(m)) throw e;
+          const { angulo_de: _sin, ...resto } = extras038;
+          [fila] = await registrar(resto);
+          fila.anguloPerdido = true;
+        }
       }
       try {
         if (senal?.cancelada) { const e = new Error('Cancelado'); e.cancelado = true; throw e; }
@@ -2587,6 +2613,87 @@ export function crearApi(backend) {
       if (reps && !repsManualValidas(reps, Number.isFinite(video?.duracion_seg) ? video.duracion_seg : null)) throw new Error('Las marcas tienen que ir en orden y dentro del vídeo (como mucho 30)');
       await b.upsert('video_revisiones', [{ archivo_id: video.id, atleta_id: video.atleta_id, reps_manual: reps }], 'archivo_id').catch(falta037);
       return t;
+    },
+
+    // ------------------------------------------------------------ v0.60: los vídeos de técnica, tanda B (migración 038)
+    // ¿Tiene la base la 038? true, false o, si no se sabe (sin conexión), null: no se recuerda y se vuelve a mirar
+    async video038() {
+      if (!api._v038) {
+        const pr = (async () => {
+          try { await b.select('comentarios', { limit: 1, cols: 'id,video_respuesta_id' }); return true; }
+          catch (e) {
+            const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+            if (/video_respuesta_id|schema cache|does not exist|no existe|could not find|column|columna|PGRST20[0-9]|42703/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v038 = pr;
+        pr.then((x) => { if (x == null && api._v038 === pr) api._v038 = null; });
+      }
+      return api._v038;
+    },
+    async exigir038() { if ((await api.video038()) === false) throw new Error(AVISO_038); },
+
+    // 1 y 2. Una respuesta en vídeo en el hilo de un vídeo de técnica: «Grabar la revisión» del coach (hasta 3 min) o la
+    // cámara de delante (hasta 1 min, el coach o el atleta). Se sube como un archivo del chat (con sus reglas) y se manda en
+    // el hilo; si el mensaje no sale, el vídeo se retira. senal/alProgreso, como al subir cualquier archivo.
+    async responderConVideo(video, blob, { autor, seg, texto = '', poster = null, alProgreso = null, senal = null } = {}) {
+      await api.exigir038();
+      const quien = autor === 'coach' ? 'coach' : 'atleta';
+      const tipo = tipoBase(blob?.type);
+      if (!tipoRespuestaValido(tipo)) throw new Error('Ese vídeo no se puede enviar (tiene que ser MP4 o WebM)');
+      if (!(blob.size > 0)) throw new Error('El vídeo ha salido vacío: grábalo otra vez');
+      if (blob.size > MAX_BYTES_RESPUESTA) throw new Error('El vídeo pesa demasiado (más de 100 MB)');
+      if (!(Number(seg) > 0) || Number(seg) > MAX_SEG_RESPUESTA[quien] + 0.5) throw new Error(quien === 'coach' ? 'Como mucho 3 minutos' : 'Como mucho un minuto');
+      const f = blob instanceof File && blob.type === tipo ? blob : new File([blob], `respuesta.${tipo === 'video/webm' ? 'webm' : 'mp4'}`, { type: tipo });
+      const fila = await api.subirArchivo(video.atleta_id, f, { tipo: 'adjunto', duracion_seg: duracionRespuesta(seg, quien), poster, alProgreso, senal });
+      if (senal?.cancelada) { await api.borrarArchivo(fila).catch(() => {}); const e = new Error('Cancelado'); e.cancelado = true; throw e; }
+      try {
+        return await api.comentar({ atletaId: video.atleta_id, archivoId: video.id, texto: String(texto || '').trim() || (quien === 'coach' && seg > 61 ? 'Revisión grabada' : 'Vídeo'), autor: quien, videoRespuestaId: fila.id });
+      } catch (e) { await api.borrarArchivo(fila).catch(() => {}); throw e; }
+    },
+    // Los vídeos de las respuestas de un hilo: { comentarioId: archivo }
+    async videosDeRespuestas(comentarios) {
+      const ids = unicos((comentarios || []).map((c) => c.video_respuesta_id));
+      if (!ids.length) return {};
+      const A = porId(await b.select('archivos', { in: { id: ids } }).catch(() => []));
+      return Object.fromEntries((comentarios || []).filter((c) => c.video_respuesta_id && A[c.video_respuesta_id]).map((c) => [c.id, A[c.video_respuesta_id]]));
+    },
+
+    // 9. Dos ángulos de la misma serie: enlazar uno con otro (o quitarlo), la pareja de un vídeo y el desfase (el coach, en
+    // la corrección; el atleta lo lee con ella)
+    async enlazarAngulo(video, otroId) {
+      await api.exigir038();
+      if (!otroId || otroId === video.id) throw new Error('Elige otro vídeo');
+      return (await b.update('archivos', { angulo_de: otroId }, { eq: { id: video.id } }).catch(falta038))[0] || null;
+    },
+    async desenlazarAngulo(video) {
+      await api.exigir038();
+      const pareja = await api.parejaAngulo(video);
+      const fila = video.angulo_de ? video : pareja?.angulo_de === video.id ? pareja : null;
+      if (fila) await b.update('archivos', { angulo_de: null }, { eq: { id: fila.id } }).catch(falta038);
+      return true;
+    },
+    async parejaAngulo(video) {
+      if (!video?.id || (await api.video038()) === false) return null;
+      const filas = await b.select('archivos', { eq: { angulo_de: video.id }, limit: 1 }).catch(() => []);
+      if (filas[0]) return filas[0];
+      const [yo] = await b.select('archivos', { eq: { id: video.id }, cols: 'id,angulo_de' }).catch(() => []);
+      return yo?.angulo_de ? api.archivo(yo.angulo_de) : null;
+    },
+    // Los vídeos de técnica del atleta que pueden ser su otro ángulo (sin pareja; los de esa misma serie, primero)
+    async candidatosAngulo(video) {
+      const todos = (await b.select('archivos', { eq: { atleta_id: video.atleta_id, tipo: 'video_tecnica' }, order: [['fecha', 'desc'], ['creado_en', 'desc']], limit: 60 }).catch(() => []));
+      const enlazados = new Set(todos.flatMap((a) => (a.angulo_de ? [a.id, a.angulo_de] : [])));
+      const misma = (a) => !!video.sesion_ejercicio_id && a.sesion_ejercicio_id === video.sesion_ejercicio_id && (a.serie_numero ?? null) === (video.serie_numero ?? null);
+      return todos.filter((a) => a.id !== video.id && !enlazados.has(a.id)).sort((a, b2) => Number(misma(b2)) - Number(misma(a)));
+    },
+    async guardarDesfase(video, otroId, desfase) {
+      await api.exigir038();
+      const j = otroId == null ? null : { con: otroId, desfase: limitarDesfase(desfase) };
+      if (j && !dosAngulosValido(j)) throw new Error('El desfase va de −2 a +2 segundos');
+      await b.upsert('video_revisiones', [{ archivo_id: video.id, atleta_id: video.atleta_id, dos_angulos: j }], 'archivo_id').catch(falta038);
+      return j;
     },
 
     // 18. Los tiempos de la cola (el coach): de lo que llega a lo primero entre «Revisado» (o una respuesta) y la
@@ -3333,14 +3440,19 @@ export function crearApi(backend) {
       const registrados = await b.select('archivos', { eq: { atleta_id: atletaId }, cols: 'id,ruta' });
       const enCarpeta = await b.storage.listar(atletaId);
       const rutas = [...new Set([...registrados.map((a) => a.ruta), ...enCarpeta])];
-      if (rutas.length) await b.storage.borrar(rutas.filter((r) => cuboDe(r) === 'archivos'));
       // (v0.56) y sus notas de voz (bucket «voz»; sin la 034, no hay)
       const voces = [...new Set([...registrados.map((a) => a.ruta).filter((r) => cuboDe(r) === 'voz'), ...(await b.storage.listar(atletaId, 'voz').catch(() => []))])];
-      if (voces.length) await b.storage.borrar(voces, 'voz').catch(() => {});
       // Y sus fotos del muro (v0.43, bucket «comunidad»; sin la migración 027, no hay)
       const delMuro = await b.storage.listar(atletaId, 'comunidad').catch(() => []);
+      // (v0.60, revisión H1) Primero la fila (si la base no la deja borrar, sus archivos siguen ahí) y después Storage: lo
+      // borrado sale de la cola de Storage (lo que no se pueda borrar ahora se queda en ella y lo vacía el coach)
+      const r = await b.delete('atletas', { eq: { id: atletaId } });
+      const hechas = [];
+      if (rutas.length) hechas.push(...((await b.storage.borrar(rutas.filter((x) => cuboDe(x) === 'archivos')).catch(() => null)) || []));
+      if (voces.length) hechas.push(...((await b.storage.borrar(voces, 'voz').catch(() => null)) || []));
       if (delMuro.length) await b.storage.borrar(delMuro, 'comunidad').catch(() => {});
-      return b.delete('atletas', { eq: { id: atletaId } });
+      if (hechas.length) await b.rpc('storage_borrado', { p_rutas: hechas }).catch(() => {});
+      return r;
     },
     // Verificación en dos pasos del coach: una vez activada, la base la exige siempre
     async exigirDosPasos(valor) {
