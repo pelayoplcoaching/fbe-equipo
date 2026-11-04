@@ -22,15 +22,16 @@ import {
 } from '../../../logica/analisis.js';
 
 // Lo de cada vídeo en esta sesión (para no repetir el análisis al cerrar y abrir su tarjeta)
-const sesion = new Map(); // archivoId → { tramo, circulo, barra, cal, discoCm, repsEdit, pose }
+const sesion = new Map(); // «cuenta:archivoId» → { tramo, circulo, barra, cal, discoCm, repsEdit, pose } (cada cuenta, lo suyo)
 
 export const AVISO_EXPERIMENTAL = 'Experimental: una estimación hecha en este dispositivo a partir del vídeo (no sale de aquí). Con la cámara quieta, de lado y perpendicular a la barra, y el disco entero a la vista, el error suele estar en torno al ±10–15 %: sirve para comparar repeticiones y series grabadas igual, no como medida de laboratorio.';
 
 export default function PanelAnalisis({ video, esCoach = false, guardado = null, con036 = false, alGuardado }) {
-  const { api, aviso, modo } = useApp();
+  const { api, aviso, modo, perfil } = useApp();
   const demo = modo === 'demo';
   const id = video.id;
-  const previo = sesion.get(id) || {};
+  const claveSesion = `${perfil?.id || ''}:${id}`;
+  const previo = sesion.get(claveSesion) || {};
   const [pestana, setPestana] = useState('barra');
   const [tramo, setTramo] = useState(previo.tramo || { modo: 'todo', t0: 0, t1: null });
   const [circulo, setCirculo] = useState(previo.circulo || null); // { c: [x, y] de 0 a 1, r: px del vídeo, t }
@@ -51,7 +52,7 @@ export default function PanelAnalisis({ video, esCoach = false, guardado = null,
   const rep = () => reproductorDe(id);
   const vivo = useRef(true);
 
-  useEffect(() => { sesion.set(id, { tramo, circulo, barra, cal, discoCm, repsEdit, pose }); }, [id, tramo, circulo, barra, cal, discoCm, repsEdit, pose]);
+  useEffect(() => { sesion.set(claveSesion, { tramo, circulo, barra, cal, discoCm, repsEdit, pose }); }, [claveSesion, tramo, circulo, barra, cal, discoCm, repsEdit, pose]);
   // Al salir: se para lo que esté en marcha y se suelta el modelo (y la capa)
   useEffect(() => () => { vivo.current = false; control.current?.abort(); detector.current?.cerrar(); detector.current = null; rep()?.cancelarEleccion?.(); ponerCapa(id, null); }, [id]);
   // El momento del vídeo (para unir o partir la repetición en la que está)

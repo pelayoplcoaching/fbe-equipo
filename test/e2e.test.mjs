@@ -5346,7 +5346,8 @@ try {
   await cerrarDialogos();
   await p.locator('.tab', { hasText: 'Revisar' }).first().click();
   await p.getByRole('heading', { name: 'Revisar' }).waitFor();
-  const tarj = p.locator('.tarjeta-revisar', { hasText: 'Carlos Vera' }).first();
+  // (Carlos puede tener más cosas en la bandeja, de antes en esta prueba: la tarjeta de su vídeo)
+  const tarj = p.locator('.tarjeta-revisar', { hasText: 'Carlos Vera' }).filter({ hasText: 'Vídeo: Sentadilla barra alta' }).first();
   await tarj.waitFor();
   await tarj.getByRole('button', { name: 'Ver y comentar' }).click();
   const vidR = tarj.locator('video.medio');
@@ -5462,6 +5463,20 @@ try {
   check(await detC.getByRole('button', { name: 'Puntos del cuerpo' }).count() === 0 && await detC.getByRole('button', { name: /Guardar en la corrección|Disponible tras/ }).count() === 0
     && /no se guarda/.test(await detC.locator('.analisis-aviso').textContent()) && await detC.getByRole('button', { name: 'Marcar la barra' }).count() === 1,
     'y puede analizar su barra en su móvil (sin los puntos del cuerpo y sin guardarlo)');
+  // Y sin OffscreenCanvas (Safari antiguo): sin worker, en la propia página, a ratos; el mismo resultado
+  await p.evaluate(() => { window.__offscreen = window.OffscreenCanvas; delete window.OffscreenCanvas; });
+  await detC.getByRole('button', { name: 'Marcar la barra' }).click();
+  await detC.locator('.rep-elegir').waitFor();
+  await tocarVideo(detC.locator('video.medio'), 0.5, 200 / 640);
+  await detC.getByRole('slider', { name: 'Tamaño del círculo' }).evaluate((el) => { el.value = '45'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await detC.getByRole('button', { name: 'Seguir la barra' }).click();
+  await hay(detC.locator('.analisis-cuerpo .tabla-velocidad tbody tr'), 3, 90000);
+  await detC.getByRole('button', { name: 'Usar el círculo' }).click();
+  await hay(detC.locator('.tabla-velocidad thead th', { hasText: 'Media' }), 1);
+  const filasC = await detC.locator('.tabla-velocidad tbody tr').evaluateAll((trs) => trs.map((tr) => Number(tr.querySelector('td').textContent.replace(',', '.'))));
+  check(filasC.length === 3 && filasC.every((v, i) => Math.abs(v - [1, 0.889, 0.762][i]) <= [1, 0.889, 0.762][i] * 0.12) && /no se guarda/.test(await detC.locator('.analisis-aviso').textContent()),
+    `sin OffscreenCanvas (sin worker), el atleta sigue su barra en la propia página con el mismo resultado (${filasC.join(', ')} m/s), sin guardarlo`);
+  await p.evaluate(() => { window.OffscreenCanvas = window.__offscreen; });
   await detC.getByRole('button', { name: 'Cerrar el análisis' }).click();
   await detC.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
   await detC.waitFor({ state: 'detached' });
