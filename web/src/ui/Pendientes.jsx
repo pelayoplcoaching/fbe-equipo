@@ -6,11 +6,12 @@ import { leerRed, motivoEspera, ETIQUETA_ESPERA, TEXTO_ESPERA } from '../logica/
 import { ajuste } from './ajustes.js';
 import { subidaEmpieza, subidaProgreso, subidaAcaba, subidaActual, alCambiarSubida } from '../datos/subidas.js';
 
-// (v0.61, 20) Lo que se ha pedido subir ya aunque no haya wifi («Subir ahora»): solo mientras la app está abierta
+// (v0.61, 20) Lo que se ha pedido subir ya aunque no haya wifi («Subir ahora»): se apunta con el pendiente (revisión L1:
+// también tras cerrar la app) y, mientras se guarda, aquí
 const forzados = new Set();
 // ¿Espera este pendiente a la wifi (o por el ahorro de datos)? null si no
 export const esperaDe = (p, red = leerRed()) => (p && !p.error && (p.opciones?.tipo === 'video_tecnica' || /^video/.test(p.mime || ''))
-  ? motivoEspera({ soloWifi: ajuste('soloWifi') === true, red, forzado: forzados.has(p.id) }) : null);
+  ? motivoEspera({ soloWifi: ajuste('soloWifi') === true, red, forzado: p.forzado === true || forzados.has(p.id) }) : null);
 
 // Envía solos los vídeos que se quedaron guardados en el móvil sin cobertura (v0.33): al abrir la app, al volver
 // a ella, al recuperar la conexión y cada minuto mientras quede alguno. Va siempre (en cualquier pestaña).
@@ -43,7 +44,7 @@ export function usePendientesArchivos(api, atletaId, aviso) {
         let enviado = false, seguir = true;
         const r = await conCerrojo(p.id, async () => {
           setEnvio({ id: p.id, progreso: p.progreso || 0 });
-          subidaEmpieza(p.id, { nombre: 'Vídeo guardado' }); subidaProgreso(p.id, p.progreso || 0);
+          subidaEmpieza(p.id); subidaProgreso(p.id, p.progreso || 0);
           // (v0.57) si el navegador ya no tiene el vídeo (se borró el almacenamiento del móvil), hay que volver a elegirlo
           if (!(await sigueEnElMovil(p))) { await marcarPendiente(p.id, PERDIDO).catch(() => {}); return; }
           const s = senal.current = {};
@@ -96,7 +97,7 @@ export function usePendientesArchivos(api, atletaId, aviso) {
 
   return {
     lista: lista.map((p) => ({ ...p, espera: esperaDe(p, red) })), envio,
-    subirAhora: (id) => { forzados.add(id); setLista((l) => [...l]); intentar(); },
+    subirAhora: async (id) => { forzados.add(id); setLista((l) => [...l]); await ponerSubida(id, { forzado: true }).catch(() => {}); intentar(); },
     reintentar: () => intentar({ todos: true }),
     cancelar: () => { const s = senal.current; if (s?.abortar) s.abortar(); else if (s) s.cancelada = true; },
     // Descartar: también su registro, si llegó a hacerse (no debe quedar un vídeo sin archivo)
@@ -145,10 +146,11 @@ export function PildoraSubida() {
   useEffect(() => alCambiarSubida((v) => setX(v)), []);
   if (!x) return null;
   const pct = Math.round((x.progreso || 0) * 100);
+  const que = x.n > 1 ? `Subiendo ${x.n} vídeos` : 'Subiendo el vídeo';
   return (
-    <div class="pildora-subida" role="progressbar" aria-label="Subiendo el vídeo" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-valuetext={`${pct} %`}>
+    <div class="pildora-subida" role="progressbar" aria-label={que} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-valuetext={`${pct} %`} data-n={x.n}>
       <span class="pildora-subida-aro" aria-hidden="true" style={{ '--p': `${pct}%` }} />
-      <span class="num">Subiendo el vídeo · {pct} %</span>
+      <span class="num">{que} · {pct} %</span>
     </div>
   );
 }

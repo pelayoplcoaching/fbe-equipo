@@ -5015,10 +5015,10 @@ console.log('\nLos vídeos de técnica, tanda B, segunda mitad (migración 039)'
     && (await q(`select 1 from information_schema.role_table_grants where table_name = 'umbrales_velocidad' and grantee in ('anon', 'PUBLIC')`)).length === 0
     && (await q(`select data_type d, numeric_scale e from information_schema.columns where table_name = 'umbrales_velocidad' and column_name = 'vmin'`))[0]?.d === 'numeric',
     'la tabla de la velocidad mínima: con sus permisos por fila, nada para anon y numeric sin escala (0,1234 no se redondea en silencio)');
-  const nuevas = ['umbral_velocidad_valido', 'umbral_velocidad_preparar', 'umbrales_velocidad_de'];
+  const nuevas = ['umbral_velocidad_valido', 'umbral_velocidad_preparar', 'umbrales_velocidad_de', 'comentario_resumen_sesion'];
   const malosSp = await q(`select p.oid::regprocedure::text f from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = any($1) and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`, [nuevas]);
   const def = Object.fromEntries((await q(`select proname, prosecdef from pg_proc where proname = any($1)`, [nuevas])).map((x) => [x.proname, x.prosecdef]));
-  check(!malosSp.length && Object.keys(def).length === 3 && def.umbrales_velocidad_de && !def.umbral_velocidad_valido && !def.umbral_velocidad_preparar,
+  check(!malosSp.length && Object.keys(def).length === 4 && def.umbrales_velocidad_de && def.comentario_resumen_sesion && !def.umbral_velocidad_valido && !def.umbral_velocidad_preparar,
     'sus funciones, con search_path vacío; la que lee para los atletas, con los permisos de su dueño; el validador y el trigger, sin');
   check(!(await q(`select has_function_privilege('anon', 'public.umbrales_velocidad_de(uuid[])', 'execute') a, has_function_privilege('anon', 'public.umbral_velocidad_valido(numeric)', 'execute') b`)).some((x) => x.a || x.b),
     'sin sesión no se llaman');
@@ -5026,11 +5026,11 @@ console.log('\nLos vídeos de técnica, tanda B, segunda mitad (migración 039)'
     'umbrales_velocidad_de() no devuelve ninguna hora');
   // El validador: false con todo lo mal formado, nunca un error
   const validoU = async (v) => (await q(`select public.umbral_velocidad_valido($1::numeric) ok`, [v]))[0].ok;
-  const buenosU = ['0.05', '1', '0.3', '0.175', '0.300', '1.000', '0.17', '0.999'];
-  const malosU = [null, '0', '0.04', '0.0499', '1.0001', '2', '-0.3', 'NaN', 'Infinity', '-Infinity', '0.1234', '0.30001', '100', '-0', '0.000', '0.00001', '1.5', '0.0001', '-1', '99.999', '0.049999', '1.001', '0.04999999999'];
+  const buenosU = ['0.05', '1', '0.3', '0.175', '0.300', '1.000', '0.17', '0.999', '0.3000', '0.17000', '1.0000000', '0.0500'];
+  const malosU = [null, '0', '0.04', '0.0499', '1.0001', '2', '-0.3', 'NaN', 'Infinity', '-Infinity', '0.1234', '0.30001', '100', '-0', '0.000', '0.00001', '1.5', '0.0001', '-1', '99.999', '0.049999', '1.001', '0.04999999999', '0.12340', '0.17501000'];
   const okB = []; for (const v of buenosU) okB.push(await validoU(v));
   const okM = []; for (const v of malosU) okM.push(await validoU(v));
-  check(okB.every((x) => x === true), 'la velocidad mínima: de 0,05 a 1 m/s, con hasta 3 decimales');
+  check(okB.every((x) => x === true), 'la velocidad mínima: de 0,05 a 1 m/s, con hasta 3 decimales (los ceros del final no cuentan: 0,3000 vale)');
   check(okM.every((x) => x === false), `y ${malosU.length} mal formadas dan false, nunca un error (ni NaN, ni infinito, ni 4 decimales, ni fuera de rango)`);
   // Lo que hace falta
   await como(pelayo, 'aal2');
@@ -5069,15 +5069,55 @@ console.log('\nLos vídeos de técnica, tanda B, segunda mitad (migración 039)'
   await q(`delete from ejercicios where id = $1`, [ejU2.id]);
   check((await q(`select count(*)::int n from umbrales_velocidad where ejercicio_id = $1`, [ejU2.id]))[0].n === 0, 'al borrar el ejercicio, su velocidad mínima se va con él');
 
-  // 5. El resumen de la sesión: un comentario del coach en la sesión (sin tabla nueva), un solo aviso y sin el texto
-  console.log('  · 5. El resumen de una sesión: un aviso, sin el texto');
+  // 5. El resumen de la sesión: un comentario del coach en la sesión marcado por la base (resumen_sesion), uno por sesión,
+  // un solo aviso y sin el texto (revisión M2)
+  console.log('  · 5. El resumen de una sesión: marcado por la base, uno por sesión, un aviso sin el texto');
   await su(); await q(`delete from notificaciones`);
-  const [sesA] = await q(`select s.id from sesiones s join semanas w on w.id = s.semana_id join bloques b on b.id = w.bloque_id where b.atleta_id = $1 limit 1`, [aAna.id]);
+  check((await q(`select data_type d, is_nullable n, column_default x from information_schema.columns where table_name = 'comentarios' and column_name = 'resumen_sesion'`))[0]?.d === 'boolean'
+    && (await q(`select 1 from pg_indexes where indexname = 'comentarios_resumen_sesion_unico'`)).length === 1
+    && (await q(`select prosecdef s, proconfig c from pg_proc where proname = 'comentario_resumen_sesion'`))[0]?.c?.includes('search_path=""'),
+    'la marca del resumen (comentarios.resumen_sesion), con su índice único por sesión y su trigger (con search_path vacío)');
+  const sesionesAna = await q(`select s.id from sesiones s join semanas w on w.id = s.semana_id join bloques b on b.id = w.bloque_id where b.atleta_id = $1 order by s.id limit 2`, [aAna.id]);
+  const [sesA, sesB] = sesionesAna;
   await como(pelayo, 'aal2');
-  const [res] = await q(`insert into comentarios (sesion_id, texto) values ($1, $2) returning *`, [sesA.id, 'Resumen de la sesión, Ana:\n· Sentadilla: 4/5 (buena)']);
+  const [res] = await q(`insert into comentarios (sesion_id, texto, resumen_sesion) values ($1, $2, true) returning *`, [sesA.id, 'Resumen de la sesión, Ana:\n· Sentadilla: 4/5 (buena)']);
   const avisosR = await notis(`usuario_id = (select perfil_id from atletas where id = $1)`, [aAna.id]);
-  check(res.autor === 'coach' && res.atleta_id === aAna.id && avisosR.length === 1 && !/Resumen|Sentadilla/.test(`${avisosR[0].titulo} ${avisosR[0].cuerpo || ''}`),
-    'el resumen de toda la sesión va al hilo de esa sesión: a Ana le llega un solo aviso, sin el texto');
+  check(res.autor === 'coach' && res.atleta_id === aAna.id && res.resumen_sesion === true && avisosR.length === 1 && !/Resumen|Sentadilla/.test(`${avisosR[0].titulo} ${avisosR[0].cuerpo || ''}`),
+    'el coach manda el resumen de toda la sesión al hilo de esa sesión (marcado): a Ana le llega un solo aviso, sin el texto');
+  await como(pelayo, 'aal2');
+  let eDos = '';
+  try { await q(`insert into comentarios (sesion_id, texto, resumen_sesion) values ($1, 'Otro texto cualquiera', true)`, [sesA.id]); } catch (e) { eDos = e.message; }
+  check(/Ya le has mandado el resumen de esta sesión/.test(eDos) && (await q(`select count(*)::int n from comentarios where sesion_id = $1 and resumen_sesion`, [sesA.id]))[0].n === 1,
+    'un segundo resumen de la misma sesión se rechaza con un aviso claro (aunque el texto sea otro)');
+  check(await falla(`insert into comentarios (sesion_id, texto, resumen_sesion) values ($1, 'a', true), ($1, 'b', true)`, [sesB.id]) && (await q(`select count(*)::int n from comentarios where sesion_id = $1`, [sesB.id]))[0].n === 0,
+    'ni dos a la vez en la misma orden (no queda ninguno a medias)');
+  const [normal] = await q(`insert into comentarios (sesion_id, texto) values ($1, 'Resumen de la sesión (esto es un mensaje normal)') returning *`, [sesA.id]);
+  check(normal.resumen_sesion === false, 'un mensaje normal que empieza igual no es un resumen (no depende del texto)');
+  check(await falla(`update comentarios set resumen_sesion = true where id = $1`, [normal.id]) && await falla(`update comentarios set resumen_sesion = false where id = $1`, [res.id])
+    && await falla(`insert into comentarios (atleta_id, texto, resumen_sesion) values ($1, 'x', true)`, [aAna.id]),
+    'la marca no se pone ni se quita después, y fuera del hilo de una sesión no vale');
+  const [edit] = await q(`update comentarios set texto = 'Resumen de la sesión, Ana: corregido' where id = $1 returning resumen_sesion`, [res.id]);
+  check(edit.resumen_sesion === true, 'editar su texto no le quita la marca');
+  // El atleta no puede hacerse pasar por el resumen (ni de baja)
+  await como(ana);
+  check(await falla(`insert into comentarios (sesion_id, texto, resumen_sesion) values ($1, 'Resumen de la sesión: me lo invento', true)`, [sesB.id])
+    && await falla(`update comentarios set resumen_sesion = false where id = $1`, [res.id]) && await falla(`update comentarios set resumen_sesion = true where id = $1`, [normal.id])
+    && (await q(`select count(*)::int n from comentarios where sesion_id = $1 and resumen_sesion`, [sesA.id]))[0].n === 1,
+    'Ana no escribe un «resumen» ni quita o pone la marca');
+  const [mioA] = await q(`insert into comentarios (sesion_id, texto) values ($1, 'Gracias') returning *`, [sesB.id]);
+  check(mioA.resumen_sesion === false && await falla(`update comentarios set resumen_sesion = true where id = $1`, [mioA.id]), 'ni convierte uno suyo en resumen');
+  await su(); await q(`update atletas set estado = 'baja' where id = $1`, [aAna.id]);
+  await como(ana);
+  check(await falla(`insert into comentarios (sesion_id, texto, resumen_sesion) values ($1, 'Resumen', true)`, [sesB.id]), 'ni de baja');
+  await su(); await q(`update atletas set estado = 'activo' where id = $1`, [aAna.id]);
+  // Al eliminarlo para todos, la marca se quita y la sesión admite otro
+  await como(pelayo, 'aal2');
+  const r1 = await q(`select public.comentario_eliminar($1) r`, [res.id]);
+  const [quitado] = await q(`select resumen_sesion, eliminado_en from comentarios where id = $1`, [res.id]);
+  const [otro] = await q(`insert into comentarios (sesion_id, texto, resumen_sesion) values ($1, 'Resumen de la sesión, de nuevo', true) returning resumen_sesion`, [sesA.id]);
+  check(r1[0].r.estado === 'eliminado' && quitado.resumen_sesion === false && !!quitado.eliminado_en && otro.resumen_sesion === true, 'eliminado para todos, deja de contar: la sesión puede llevar otro');
+  await su();
+  await q(`delete from comentarios where sesion_id = any($1)`, [[sesA.id, sesB.id]]);
 
   // 17. El informe: un mensaje del chat de siempre (sin tabla nueva), un aviso sin el texto
   await su(); await q(`delete from notificaciones`);
@@ -5086,7 +5126,7 @@ console.log('\nLos vídeos de técnica, tanda B, segunda mitad (migración 039)'
   const avisosI = await notis(`clave = $1`, ['comentario:' + inf.id]);
   check(avisosI.length === 1 && avisosI[0].url === '#mensajes' && !/informe/i.test(`${avisosI[0].titulo} ${avisosI[0].cuerpo || ''}`), 'el informe del mes, un mensaje del chat: un aviso al chat, sin el texto');
   await su();
-  await q(`delete from comentarios where id = any($1)`, [[res.id, inf.id]]);
+  await q(`delete from comentarios where id = $1`, [inf.id]);
   await q(`delete from notificaciones`);
   await q(`delete from umbrales_velocidad`);
   await q(`delete from ejercicios where id = $1`, [ejU.id]);

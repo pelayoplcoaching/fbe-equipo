@@ -183,12 +183,14 @@ export const TEXTO_AVISO = {
   atipicos: 'Se ha dejado fuera algún vídeo muy alejado de la recta.',
   'umbral-generico': 'Con la velocidad mínima genérica (0,30 m/s): tu coach puede ajustarla para este ejercicio.',
 };
-export function textoEstado(p) {
+// (revisión L5) con esCoach, dicho para el coach (de su atleta), no para el atleta
+export const textoAviso = (a, { esCoach = false } = {}) => (a === 'umbral-generico' && esCoach ? 'Con la velocidad mínima genérica (0,30 m/s): puedes ajustarla para este ejercicio.' : TEXTO_AVISO[a] || '');
+export function textoEstado(p, { esCoach = false } = {}) {
   if (!p) return '';
   if (p.estado === 'sin-datos') return 'Aún no hay vídeos de este ejercicio con la velocidad analizada y los kilos de su serie.';
   if (p.estado === 'pocos') return `Hacen falta vídeos con al menos ${MIN_CARGAS} cargas distintas (ahora, ${p.cargas === 1 ? '1 carga' : `${p.cargas} cargas`}) para estimar el 1RM.`;
   if (p.estado === 'sin-pendiente') return 'La velocidad no baja al subir la carga: así no se puede estimar el 1RM (revisa los vídeos o graba alguno más pesado).';
-  if (p.estado === 'incoherente') return 'Con esa velocidad mínima saldría menos de lo que ya has movido: la velocidad mínima parece alta para este ejercicio.';
+  if (p.estado === 'incoherente') return `Con esa velocidad mínima saldría menos de lo que ya ${esCoach ? 'ha' : 'has'} movido: la velocidad mínima parece alta para este ejercicio.`;
   if (p.estado === 'lejos') return 'Las cargas medidas quedan muy lejos del 1RM: graba alguna serie más pesada para estimarlo.';
   return '';
 }

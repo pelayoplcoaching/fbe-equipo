@@ -2495,11 +2495,17 @@ console.log('\nv0.61: revisar la sesión, el perfil carga–velocidad y el infor
   check(pr.sesion.id === ses.id && pr.pautas.map((x) => x.id).join() === `${p2.id},${p1.id}` && pr.pautas[1].hechas.length === 2 && pr.pautas[1].ejercicio.nombre === 'Sentadilla v061' && pr.resumen === null,
     'con las series de la sesión (cada ejercicio con lo que hizo) y sin resumen aún');
   check(await lanza(() => api.enviarResumenSesion({ atletaId: aAna.id, sesionId: ses.id, texto: '   ' })), 'un resumen vacío no sale');
+  // (revisión M2) con la 039, lo que cuenta es la marca de la base, no el texto
+  const normal = await api.comentar({ atletaId: aAna.id, sesionId: ses.id, texto: 'Resumen de la sesión: esto es un mensaje normal', autor: 'coach' });
+  check(normal.resumen_sesion === false && (await api.sesionParaRevisar(ses.id)).resumen === null, '(M2) un mensaje del coach que empieza igual no cuenta como resumen');
   const c = await api.enviarResumenSesion({ atletaId: aAna.id, sesionId: ses.id, texto: SV.borradorResumen([{ ...mios[0], ejercicio: { nombre: 'Sentadilla' } }], { nombre: 'Ana' }) + 'Muy bien.' });
-  check(c?.sesion_id === ses.id && c.autor === 'coach' && c.texto.startsWith('Resumen de la sesión, Ana:') && (await api.sesionParaRevisar(ses.id)).resumen?.id === c.id, 'el resumen va al hilo de esa sesión, una vez');
+  check(c?.sesion_id === ses.id && c.autor === 'coach' && c.resumen_sesion === true && c.texto.startsWith('Resumen de la sesión, Ana:') && (await api.sesionParaRevisar(ses.id)).resumen?.id === c.id, 'el resumen va al hilo de esa sesión, marcado por la base');
   let m = '';
   try { await api.enviarResumenSesion({ atletaId: aAna.id, sesionId: ses.id, texto: 'Resumen de la sesión: otra vez' }); } catch (e) { m = e.message; }
-  check(/Ya le has mandado el resumen/.test(m) && (await b.sql(`select count(*)::int n from comentarios where sesion_id = $1`, [ses.id]))[0].n === 1, 'y no se manda dos veces');
+  let mDirecto = '';
+  try { await b.insert('comentarios', [{ atleta_id: aAna.id, sesion_id: ses.id, texto: 'Otro texto', autor: 'coach', resumen_sesion: true }]); } catch (e) { mDirecto = e.message; }
+  check(/Ya le has mandado el resumen/.test(m) && /Ya le has mandado el resumen/.test(mDirecto) && (await b.sql(`select count(*)::int n from comentarios where sesion_id = $1 and resumen_sesion`, [ses.id]))[0].n === 1,
+    'y no se manda dos veces (tampoco saltándose la app: lo impide la base)');
   const avisos = await b.sql(`select titulo, cuerpo from notificaciones where clave = $1`, ['comentario:' + c.id]);
   check(avisos.length === 1 && !/Muy bien|Resumen/.test(`${avisos[0].titulo} ${avisos[0].cuerpo || ''}`), 'un solo aviso para toda la sesión, sin el texto');
   await b.auth.entrar('ana@test', 'contraseña-ana-1');

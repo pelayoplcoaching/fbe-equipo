@@ -1579,16 +1579,18 @@ export function crearApi(backend) {
     // clienteId (v0.55): el id que pone el móvil (el de la bandeja de salida); si ese mensaje ya entró (un reintento sin
     // cobertura cuya respuesta no llegó), devuelve el que ya está, sin repetirlo. Sin la 033, se envía sin él.
     // videoRespuestaId (v0.60, 038): el vídeo de una respuesta en el hilo de un vídeo (ver responderConVideo)
-    async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null, respondeA = null, clienteId = null, videoRespuestaId = null }) {
+    // resumenSesion (v0.61, 039): el resumen de una sesión (uno por sesión, lo marca y lo comprueba la base)
+    async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null, respondeA = null, clienteId = null, videoRespuestaId = null, resumenSesion = false }) {
       const fila = { atleta_id: atletaId, sesion_id: sesionId, checkin_id: checkinId, archivo_id: archivoId, texto: texto.trim(), autor };
       if (videoRespuestaId) fila.video_respuesta_id = videoRespuestaId;
+      if (resumenSesion) fila.resumen_sesion = true;
       if (archivoId && dibujo) {
         if (!dibujoValido(dibujo)) throw new Error('El dibujo no tiene la forma que toca');
         fila.dibujo = dibujo;
       }
       if (respondeA) fila.responde_a = respondeA;
       if (clienteId) fila.cliente_id = clienteId;
-      const insertar = (f) => b.insert('comentarios', [f]).catch(respondeA ? falta032 : videoRespuestaId ? falta038 : (e) => { throw e; });
+      const insertar = (f) => b.insert('comentarios', [f]).catch(respondeA ? falta032 : videoRespuestaId ? falta038 : resumenSesion ? falta039 : (e) => { throw e; });
       try {
         return (await insertar(fila))[0];
       } catch (e) {
@@ -2717,17 +2719,29 @@ export function crearApi(backend) {
       const [series, ejercicios, coment] = await Promise.all([
         pautas.length ? b.select('series', { in: { sesion_ejercicio_id: pautas.map((p) => p.id) }, order: [['numero', 'asc']], cols: 'sesion_ejercicio_id,numero,kg,reps,rpe,rir' }).catch(() => []) : [],
         pautas.length ? b.select('ejercicios', { in: { id: unicos(pautas.map((p) => p.ejercicio_id)) }, cols: 'id,nombre' }).catch(() => []) : [],
-        b.select('comentarios', { eq: { sesion_id: sesionId, autor: 'coach' }, cols: 'id,texto,autor,sesion_id,eliminado_en,creado_en' }).catch(() => []),
+        api.resumenesDeSesion(sesionId),
       ]);
       const EJ = porId(ejercicios), S = agrupar(series, 'sesion_ejercicio_id');
-      return { sesion: s, pautas: pautas.map((p) => ({ ...p, ejercicio: EJ[p.ejercicio_id] || null, hechas: S[p.id] || [] })), resumen: coment.find(esResumenSesion) || null };
+      return { sesion: s, pautas: pautas.map((p) => ({ ...p, ejercicio: EJ[p.ejercicio_id] || null, hechas: S[p.id] || [] })), resumen: coment[0] || null };
+    },
+    // (revisión M2) El resumen de una sesión: con la 039, el que marca la base (uno por sesión, sin depender del texto); sin
+    // ella, como antes, el comentario del coach en esa sesión que empieza por «Resumen de la sesión»
+    async resumenesDeSesion(sesionId) {
+      const marca = (await api.video039().catch(() => null)) === true;
+      const filas = await b.select('comentarios', { eq: { sesion_id: sesionId, autor: 'coach', ...(marca ? { resumen_sesion: true } : {}) }, cols: `id,texto,autor,sesion_id,eliminado_en,creado_en${marca ? ',resumen_sesion' : ''}` }).catch(() => []);
+      return filas.filter((c) => !c.eliminado_en && (marca ? c.resumen_sesion === true : esResumenSesion(c)));
     },
     async enviarResumenSesion({ atletaId, sesionId, texto }) {
       const t = limpiarResumen(texto);
       if (!t) throw new Error('Escribe el resumen (hasta 4000 letras)');
-      const ya = await b.select('comentarios', { eq: { sesion_id: sesionId, autor: 'coach' }, cols: 'id,texto,autor,sesion_id,eliminado_en' }).catch(() => []);
-      if (ya.some(esResumenSesion)) throw new Error('Ya le has mandado el resumen de esta sesión: lo tiene en el hilo de la sesión');
-      return api.comentar({ atletaId, sesionId, texto: t, autor: 'coach' });
+      const marca = (await api.video039().catch(() => null)) === true;
+      if ((await api.resumenesDeSesion(sesionId)).length) throw new Error('Ya le has mandado el resumen de esta sesión: lo tiene en el hilo de la sesión');
+      try {
+        return await api.comentar({ atletaId, sesionId, texto: t, autor: 'coach', resumenSesion: marca });
+      } catch (e) {
+        if (duplicado(e) || /Ya le has mandado el resumen/.test(e?.message || '')) throw new Error('Ya le has mandado el resumen de esta sesión: lo tiene en el hilo de la sesión');
+        throw e;
+      }
     },
 
     // 16. El perfil carga–velocidad: la velocidad mínima de cada ejercicio (039; el coach la cambia, todos la leen sin

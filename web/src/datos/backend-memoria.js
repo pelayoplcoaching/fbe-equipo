@@ -57,7 +57,7 @@ const DEFECTOS = {
   umbrales_velocidad: () => ({ actualizado_en: ahora() }),
   videos_modelo: () => ({ poster_ruta: null, duracion_seg: null, mime: null, bytes: null, angulo: null, orden: 0, creado_en: ahora() }),
   video_autoevaluacion: () => ({ rpe: null, nota: null, molestia: null, zona: null, creado_en: ahora(), actualizado_en: ahora() }),
-  comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null, cliente_id: null, reenviado: false, entregado_en: null, escuchado_en: null, video_respuesta_id: null }),
+  comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null, cliente_id: null, reenviado: false, entregado_en: null, escuchado_en: null, video_respuesta_id: null, resumen_sesion: false }),
   // v0.55 (033): fijar, silenciar y las listas de difusión
   conversacion_fijado: () => ({ hasta: null, fijado_en: ahora() }),
   chat_silencios: () => ({ hasta: null, creado_en: ahora() }),
@@ -288,7 +288,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   }
   // Como la 032 (revisión): vaciar un mensaje (eliminar para todos), la cola de Storage y lo que Storage deja ver y borrar
   function vaciarComentario(c) {
-    Object.assign(c, { texto: 'Se eliminó este mensaje', dibujo: null, responde_a: null, editado_en: null, eliminado_en: c.eliminado_en || ahora(), archivo_id: c.adjunto ? null : c.archivo_id });
+    Object.assign(c, { texto: 'Se eliminó este mensaje', dibujo: null, responde_a: null, editado_en: null, eliminado_en: c.eliminado_en || ahora(), archivo_id: c.adjunto ? null : c.archivo_id, resumen_sesion: false });
     db.comentario_reacciones = tabla('comentario_reacciones').filter((r) => r.comentario_id !== c.id);
     db.comentario_destacados = tabla('comentario_destacados').filter((d) => d.comentario_id !== c.id);
     // Como la 033: si estaba fijado, se desfija
@@ -428,6 +428,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // de algo que quien escribe ya ve, que ya ha salido y que no se ha eliminado
       f.editado_en = null; f.eliminado_en = null;
       comprobarRespuestaVideo(f, interno);
+      // Como la 039: el resumen de una sesión, solo del coach, en el hilo de una sesión y uno por sesión
+      if (f.resumen_sesion) {
+        if (f.autor !== 'coach' || !esCoach()) throw new Error('El resumen de una sesión lo escribe tu coach');
+        if (!f.sesion_id || f.archivo_id || f.checkin_id) throw new Error('El resumen va en el hilo de una sesión');
+        if (tabla('comentarios').some((c) => c.sesion_id === f.sesion_id && c.resumen_sesion && !c.eliminado_en)) throw new Error('Ya le has mandado el resumen de esta sesión: lo tiene en el hilo de la sesión (si quieres cambiarlo, edítalo)');
+        f.resumen_sesion = true;
+      } else f.resumen_sesion = false;
       if (f.responde_a) {
         const c = buscar('comentarios', f.responde_a);
         if (!c || !VISIBLE.comentarios(c) || c.atleta_id !== f.atleta_id || hiloDe(c) !== hiloDe(f) || c.eliminado_en || programadoAun(c)) {
@@ -539,6 +546,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const FIJOS_033 = ['cliente_id', 'reenviado', 'entregado_en', 'escuchado_en', 'video_respuesta_id'];
   function prepararComentario(m, antes) {
     const yo = esCoach() ? 'coach' : 'atleta';
+    // Como la 039: la marca del resumen de una sesión no se pone ni se quita después
+    if ((m.resumen_sesion ?? false) !== (antes.resumen_sesion ?? false)) throw new Error('Un mensaje no pasa a ser (ni deja de ser) el resumen de una sesión');
     const igual = (k) => (m[k] ?? null) === (antes[k] ?? null);
     if (esCoach() && antes.autor === 'coach' && antes.enviar_en && Date.parse(antes.enviar_en) > Date.now()) {
       if (!['responde_a', 'editado_en', 'eliminado_en', 'archivo_id', 'atleta_id', 'sesion_id', 'checkin_id', 'autor', 'dibujo', 'adjunto', ...FIJOS_033].every(igual)) throw new Error('De un mensaje programado solo se cambian el texto y la hora');

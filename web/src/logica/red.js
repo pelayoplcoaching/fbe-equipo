@@ -22,12 +22,14 @@ export function leerRed(nav = typeof navigator !== 'undefined' ? navigator : nul
 // ¿Sale la opción? Solo donde el navegador dice el tipo de conexión (Chrome de Android): en el iPhone y en el ordenador no
 // funcionaría (no se sabe si es wifi), así que no se enseña.
 export const mostrarOpcionWifi = (red) => !!red && red.tipo != null;
-// ¿Espera este envío? null (se sube) | 'wifi' (solo con wifi y está con datos móviles) | 'ahorro' (el móvil tiene el
-// ahorro de datos y no consta que sea wifi). forzado: «Subir ahora» lo sube igual.
+// ¿Espera este envío? null (se sube) | 'wifi' (solo con wifi y está con datos móviles) | 'ahorro' (solo con wifi, el móvil
+// tiene el ahorro de datos y la red, que se conoce, no es wifi ni datos móviles: «otra», «mixta»…). forzado: «Subir ahora».
+// (revisión L1) Sin «solo con wifi» no espera nunca (tampoco con el ahorro de datos: lo explica el ajuste), y donde no se sabe
+// el tipo de conexión (iPhone, ordenador) tampoco: no se podría saber cuándo hay wifi.
 export function motivoEspera({ soloWifi = false, red = null, forzado = false } = {}) {
-  if (forzado || !red) return null;
+  if (forzado || !red || !soloWifi || !red.conocida) return null;
   if (red.wifi) return null;
-  if (soloWifi && red.celular) return 'wifi';
+  if (red.celular) return 'wifi';
   if (red.ahorro) return 'ahorro';
   return null;
 }

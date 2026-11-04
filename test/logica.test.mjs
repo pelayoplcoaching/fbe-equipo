@@ -3508,8 +3508,21 @@ console.log('\nv0.61: revisar la sesión, la estela, el perfil carga–velocidad
     && RD.motivoEspera({ soloWifi: true, red: android4g, forzado: true }) === null && RD.motivoEspera({ soloWifi: true, red: iphone }) === null,
     'con «solo con wifi» y datos móviles, espera; con wifi, sin la opción o con «Subir ahora», sale; donde no se sabe, sale');
   check(RD.leerRed(nav({ type: 'bluetooth' })).celular && RD.leerRed(nav({ type: 'ethernet' })).wifi && !RD.leerRed(nav({ type: 'unknown' })).conocida, 'compartir datos por bluetooth cuenta como datos; el cable, como wifi');
-  check(RD.motivoEspera({ red: RD.leerRed(nav({ type: 'cellular', saveData: true })) }) === 'ahorro' && RD.motivoEspera({ red: RD.leerRed(nav({ type: 'wifi', saveData: true })) }) === null
-    && RD.motivoEspera({ red: RD.leerRed(nav({ saveData: true })) }) === 'ahorro', 'con el ahorro de datos del móvil, espera también (salvo con wifi)');
+  check(RD.motivoEspera({ red: RD.leerRed(nav({ type: 'cellular', saveData: true })) }) === null && RD.motivoEspera({ red: RD.leerRed(nav({ saveData: true })) }) === null
+    && RD.motivoEspera({ soloWifi: true, red: RD.leerRed(nav({ saveData: true })) }) === null,
+    '(revisión L1) sin «solo con wifi», el ahorro de datos no retiene nada; y donde no se sabe el tipo de conexión (ordenador), tampoco');
+  check(RD.motivoEspera({ soloWifi: true, red: RD.leerRed(nav({ type: 'other', saveData: true })) }) === 'ahorro' && RD.motivoEspera({ soloWifi: true, red: RD.leerRed(nav({ type: 'other' })) }) === null
+    && RD.motivoEspera({ soloWifi: true, red: RD.leerRed(nav({ type: 'wifi', saveData: true })) }) === null && RD.motivoEspera({ soloWifi: true, red: RD.leerRed(nav({ type: 'cellular', saveData: true })) }) === 'wifi',
+    'con «solo con wifi», una red conocida que no es wifi (ni datos) y el ahorro de datos, espera; con wifi, nunca');
+  // (revisión L3) La píldora, con todas las subidas en marcha
+  const SB = await import('../web/src/datos/subidas.js');
+  check(SB.resumirSubidas([]) === null && igual(SB.resumirSubidas([{ progreso: 0.2 }, { progreso: 0.6 }]), { n: 2, progreso: 0.4 }), '(revisión L3) la píldora resume todas las subidas en marcha (cuántas y su progreso)');
+  SB.subidaEmpieza('a'); SB.subidaEmpieza('b'); SB.subidaProgreso('a', 0.5);
+  const dosSub = SB.subidaActual();
+  SB.subidaAcaba('a', { ok: false });
+  const una = SB.subidaActual();
+  SB.subidaAcaba('b', { ok: false });
+  check(dosSub.n === 2 && una.n === 1 && una.progreso === 0 && SB.subidaActual() === null, 'y solo se va cuando han acabado todas (no al acabar la primera)');
   check(RD.leerRed(nav({ type: 'wifi' }, false)).enLinea === false && RD.leerRed(null).tipo === null, 'y sin conexión, lo dice');
 
   // ---------- 5. Revisar la sesión

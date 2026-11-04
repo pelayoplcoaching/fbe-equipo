@@ -9,7 +9,7 @@ import { useApp, useCarga, Icono, useAncho } from '../comunes.jsx';
 import { AVISO_039 } from '../../datos/api.js';
 import { fmtCorta } from '../../logica/fechas.js';
 import {
-  perfilCargaVelocidad, umbralDe, leerUmbral, velocidadEn, e1rmPorRepeticiones, diferenciaPct, textoUmbral, textoR2, textoKg, textoEstado, TEXTO_AVISO, MIN_CARGAS, puntosPerfil,
+  perfilCargaVelocidad, umbralDe, leerUmbral, velocidadEn, e1rmPorRepeticiones, diferenciaPct, textoUmbral, textoR2, textoKg, textoEstado, textoAviso, MIN_CARGAS, puntosPerfil,
 } from '../../logica/cargaVelocidad.js';
 import { textoVel } from '../../logica/analisis.js';
 
@@ -47,18 +47,18 @@ export function PerfilVelocidad({ g, atletaId, esCoach = false }) {
           <span class="perfil-e1rm-cifra num">{textoKg(p.e1rm)}</span>
           <span class="mini secundario">1RM estimado por la velocidad, con {textoUmbral(u.v)} de velocidad mínima</span>
         </div>
-      ) : <p class="peq secundario perfil-sin-e1rm" role="note">{textoEstado(p)}</p>}
+      ) : <p class="peq secundario perfil-sin-e1rm" role="note">{textoEstado(p, { esCoach })}</p>}
       {porReps && (
         <p class="mini secundario">Por repeticiones y RPE (Progreso, últimas 8 semanas): <b class="num">{textoKg(porReps.valor)}</b>{dif != null ? <span class="num"> · la velocidad da un {Math.abs(dif)} % {dif >= 0 ? 'más' : 'menos'}</span> : null}</p>
       )}
       {p.avisos.length > 0 && (
         <ul class="perfil-avisos mini">
-          {p.avisos.map((a) => <li key={a}><Icono n="alerta" /> {TEXTO_AVISO[a]}</li>)}
+          {p.avisos.map((a) => <li key={a}><Icono n="alerta" /> {textoAviso(a, { esCoach })}</li>)}
         </ul>
       )}
       <p class="mini terciario">Sale de la velocidad estimada en el vídeo (±10–15 %) y de los kilos apuntados en la serie de cada vídeo. Sirve para ver la tendencia, no sustituye a un test de 1RM.</p>
       <div class="perfil-umbral fila-envolver">
-        <span class="mini">Velocidad mínima: <b class="num">{textoUmbral(u.v)}</b> <span class="terciario">{u.propio ? '(la de tu coach para este ejercicio)' : u.generico ? '(genérica)' : `(de serie para ${u.de})`}</span></span>
+        <span class="mini">Velocidad mínima: <b class="num">{textoUmbral(u.v)}</b> <span class="terciario">{u.propio ? (esCoach ? '(la tuya para este ejercicio)' : '(la de tu coach para este ejercicio)') : u.generico ? '(genérica)' : `(de serie para ${u.de})`}</span></span>
         {esCoach && (con039
           ? !editando && <button type="button" class="btn btn-peq plano" onClick={() => { setTexto(String(u.v).replace('.', ',')); setEditando(true); }}>Cambiarla</button>
           : <span class="mini terciario">Cambiarla: {AVISO_039}.</span>)}

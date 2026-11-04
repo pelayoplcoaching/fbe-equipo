@@ -1664,9 +1664,19 @@ console.log('\nv0.61: revisar la sesión, la velocidad mínima y el informe del 
   check(ag.grupos.length === 1 && ag.grupos[0].videos.map((v) => v.id).join() === `${v1.id},${v2.id}` && mios.every((a) => a.sesionVideo?.id === ses.id), '(5) en la bandeja, juntos y en el orden de la sesión');
   const pr = await aT.sesionParaRevisar(ses.id);
   check(pr.pautas.length >= 2 && pr.pautas[0].hechas.length > 0 && pr.resumen === null, 'con las series de la sesión');
+  const normal = await aT.comentar({ atletaId: ana.id, sesionId: ses.id, texto: 'Resumen de la sesión (un mensaje normal)', autor: 'coach' });
+  check(normal.resumen_sesion === false && (await aT.sesionParaRevisar(ses.id)).resumen === null, '(M2) un mensaje que empieza igual no es un resumen (como la 039)');
   const c = await aT.enviarResumenSesion({ atletaId: ana.id, sesionId: ses.id, texto: 'Resumen de la sesión: muy bien' });
-  check(c?.sesion_id === ses.id && (await aT.sesionParaRevisar(ses.id)).resumen?.id === c.id && await lanza(() => aT.enviarResumenSesion({ atletaId: ana.id, sesionId: ses.id, texto: 'Resumen de la sesión: otra' })),
-    'el resumen, en el hilo de la sesión y una vez');
+  check(c?.sesion_id === ses.id && c.resumen_sesion === true && (await aT.sesionParaRevisar(ses.id)).resumen?.id === c.id && await lanza(() => aT.enviarResumenSesion({ atletaId: ana.id, sesionId: ses.id, texto: 'Otro' }))
+    && await lanza(() => bT.insert('comentarios', [{ atleta_id: ana.id, sesion_id: ses.id, texto: 'Otro', resumen_sesion: true }])),
+    'el resumen, en el hilo de la sesión, marcado y una vez (la demo lo impide como la base)');
+  check(await lanza(() => bT.update('comentarios', { resumen_sesion: false }, { eq: { id: c.id } })) && await lanza(() => bT.update('comentarios', { resumen_sesion: true }, { eq: { id: normal.id } })), 'la marca no se cambia después');
+  await bT.auth.entrar('ana@fbe.demo', 'demo');
+  check(await lanza(() => bT.insert('comentarios', [{ atleta_id: ana.id, sesion_id: ps[0].sesion_id, texto: 'Resumen de la sesión', resumen_sesion: true }])), 'Ana no escribe un «resumen»');
+  await bT.auth.entrar('pelayo@fbe.demo', 'demo');
+  await bT.rpc('comentario_eliminar', { p_comentario: c.id });
+  check((await bT.select('comentarios', { eq: { id: c.id } }))[0]?.resumen_sesion === false && !!(await aT.enviarResumenSesion({ atletaId: ana.id, sesionId: ses.id, texto: 'Resumen de la sesión: de nuevo' }))?.resumen_sesion,
+    'eliminado para todos, deja de contar: la sesión admite otro');
   // 16. La velocidad mínima
   const ej = ps[0].ejercicio_id;
   check(await aT.guardarUmbralVelocidad(ej, 0.3) === 0.3 && await lanza(() => aT.guardarUmbralVelocidad(ej, 0.0499)) && await lanza(() => bT.upsert('umbrales_velocidad', [{ ejercicio_id: ej, vmin: 0.1234 }], 'ejercicio_id'))

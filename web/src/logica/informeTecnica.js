@@ -133,7 +133,7 @@ export const textoTarjetaInforme = (mes) => (mesValido(mes) ? `Tu informe de té
 const RE_TARJETA = new RegExp(`^Tu informe de técnica de (${MESES_LARGOS.join('|')}) de (20\\d{2})$`);
 // El mes de una tarjeta (solo en un mensaje del coach del chat, sin sesión, check-in ni vídeo), o null
 export function leerTarjetaInforme(c) {
-  if (!c || c.autor !== 'coach' || c.eliminado_en || c.sesion_id || c.checkin_id || (c.archivo_id && !c.adjunto) || c.archivo_id) return null;
+  if (!c || c.autor !== 'coach' || c.eliminado_en || c.sesion_id || c.checkin_id || c.archivo_id) return null;
   const m = RE_TARJETA.exec(String(c.texto || '').trim());
   if (!m) return null;
   return `${m[2]}-${String(MESES_LARGOS.indexOf(m[1]) + 1).padStart(2, '0')}`;

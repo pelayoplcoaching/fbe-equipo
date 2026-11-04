@@ -44,10 +44,14 @@ export function MiTecnica({ atletaId, nombreAtleta, esCoach = false }) {
       <div class="panel panel-pad pila-s">
         <div class="separa"><strong>{g.nombre}</strong>{g.ultima != null && <span class="chip morado num">Última nota: {g.ultima}/5</span>}</div>
         {g.puntos.length > 1
-          ? <Grafica puntos={g.puntos} dec={0} rangoMin={4} clave={`tecnica-${g.id}`} etiqueta={`Tu nota de técnica en ${g.nombre}`} />
-          : <p class="peq secundario">{g.puntos.length === 1 ? `Tu coach le ha puesto ${g.puntos[0].y}/5 (${NOMBRE_PUNTUACION[g.puntos[0].y].toLowerCase()}) a tu técnica. Con el siguiente vídeo corregido verás cómo evoluciona.` : 'Cuando tu coach ponga nota a la técnica de tus vídeos, verás aquí cómo evoluciona.'}</p>}
-        <VelocidadEjercicio g={g} />
-        <PerfilVelocidad g={g} atletaId={atletaId} esCoach={esCoach} />
+          ? <Grafica puntos={g.puntos} dec={0} rangoMin={4} clave={`tecnica-${g.id}`} etiqueta={`${esCoach ? 'Su' : 'Tu'} nota de técnica en ${g.nombre}`} />
+          : <p class="peq secundario">{g.puntos.length === 1
+            ? (esCoach ? `Le has puesto ${g.puntos[0].y}/5 (${NOMBRE_PUNTUACION[g.puntos[0].y].toLowerCase()}) a su técnica. Con el siguiente vídeo corregido verás cómo evoluciona.`
+              : `Tu coach le ha puesto ${g.puntos[0].y}/5 (${NOMBRE_PUNTUACION[g.puntos[0].y].toLowerCase()}) a tu técnica. Con el siguiente vídeo corregido verás cómo evoluciona.`)
+            : esCoach ? 'Cuando pongas nota a la técnica de sus vídeos, verás aquí cómo evoluciona.' : 'Cuando tu coach ponga nota a la técnica de tus vídeos, verás aquí cómo evoluciona.'}</p>}
+        <VelocidadEjercicio g={g} esCoach={esCoach} />
+        {/* (revisión L4) con su clave: al cambiar de ejercicio, sin los datos del anterior mientras carga */}
+        <PerfilVelocidad key={g.id} g={g} atletaId={atletaId} esCoach={esCoach} />
         <ol class="tecnica-linea">
           {g.videos.map((v) => (
             <li key={v.id} class={`tecnica-item ${v.destacado ? 'destacado' : ''}`}>
@@ -97,15 +101,15 @@ export function VideoEnlazado({ id, t, alCerrar }) {
 }
 
 // La velocidad media de la mejor repetición de cada vídeo de ese ejercicio (del análisis que guardó tu coach)
-function VelocidadEjercicio({ g }) {
+function VelocidadEjercicio({ g, esCoach = false }) {
   const vel = serieVelocidad(g.videos);
   if (!vel.length) return null;
   return (
     <div class="pila-xs mi-tecnica-velocidad">
       <div class="separa"><span class="etq">Velocidad de la barra (estimada)</span><span class="chip aviso experimental">Experimental</span></div>
       {vel.length > 1
-        ? <Grafica puntos={vel} unidad="m/s" dec={2} rangoMin={0.2} clave={`vel-${g.id}`} etiqueta={`Velocidad media de tu mejor repetición en ${g.nombre}, estimada`} />
-        : <p class="peq secundario">Tu mejor repetición: {textoVel(vel[0].y)} de velocidad media en la subida. Con el siguiente vídeo analizado verás cómo evoluciona.</p>}
+        ? <Grafica puntos={vel} unidad="m/s" dec={2} rangoMin={0.2} clave={`vel-${g.id}`} etiqueta={`Velocidad media de ${esCoach ? 'su' : 'tu'} mejor repetición en ${g.nombre}, estimada`} />
+        : <p class="peq secundario">{esCoach ? 'Su' : 'Tu'} mejor repetición: {textoVel(vel[0].y)} de velocidad media en la subida. Con el siguiente vídeo analizado verás cómo evoluciona.</p>}
       <span class="mini terciario">Es una estimación a partir del vídeo (con un error de en torno al ±10–15 %): compárala entre vídeos grabados igual.</span>
     </div>
   );

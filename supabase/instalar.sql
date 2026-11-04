@@ -12780,7 +12780,12 @@ insert into public.fbe_migraciones (numero) values (38)
 --     ejercicio, de 0,05 a 1 m/s con 3 decimales como mucho (umbral_velocidad_valido: algo mal formado da false, nunca un
 --     error). Sin fila, la app usa el de serie de ese ejercicio. Solo el coach la escribe; los atletas vinculados la leen con
 --     umbrales_velocidad_de() (sin ninguna hora). No es un dato de nadie: es un ajuste de cada ejercicio, para todos.
---   · Nada más: «Revisar la sesión» manda su resumen como un comentario de la sesión de siempre (002), la estela del
+--   · El resumen de una sesión («Revisar la sesión»): un comentario del coach en el hilo de esa sesión (002), marcado por la
+--     base como resumen (comentarios.resumen_sesion), uno por sesión como mucho: un segundo se rechaza con un aviso claro (no
+--     se convierte en una edición del primero, que el atleta ya ha leído o le ha avisado; para cambiarlo, el coach lo edita
+--     o lo elimina como cualquier mensaje suyo). La marca la pone solo el coach al escribirlo (nunca un atleta, de baja o no) y
+--     después no se cambia desde la app; al eliminarlo para todos, se quita y la sesión puede llevar otro. No depende del texto.
+--   · Nada más: la estela del
 --     movimiento sale del análisis ya guardado (036) o del de esa sesión, el perfil carga–velocidad y el informe del mes se
 --     calculan en el móvil con lo que ya hay, el informe se manda como un mensaje del chat de siempre y «Subir los vídeos
 --     solo con wifi» se guarda en el móvil.
@@ -12817,7 +12822,8 @@ begin
   if v is null then return false; end if;
   if v = 'NaN'::numeric then return false; end if;
   if v < 0.05 or v > 1 then return false; end if;
-  if scale(v) > 3 then return false; end if;
+  -- (revisión L6) los ceros del final no cuentan: 0,3000 es 0,3
+  if scale(trim_scale(v)) > 3 then return false; end if;
   return true;
 exception when others then
   return false;
@@ -12865,7 +12871,50 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 2. Permisos (desde la 019, cada tabla nueva lleva los suyos a mano)
+-- 2. El resumen de una sesión: uno por sesión, marcado por la base
+-- ---------------------------------------------------------------------
+alter table public.comentarios add column if not exists resumen_sesion boolean not null default false;
+alter table public.comentarios drop constraint if exists comentarios_resumen_valido;
+alter table public.comentarios add constraint comentarios_resumen_valido
+  check (not resumen_sesion or (sesion_id is not null and autor = 'coach' and archivo_id is null and checkin_id is null));
+create unique index if not exists comentarios_resumen_sesion_unico on public.comentarios (sesion_id) where resumen_sesion;
+
+-- Después de comentario_preparar (que pone su autor: «r» va después de «preparar»). Al escribirlo: solo el coach, en el
+-- hilo de una sesión, y si esa sesión aún no tiene uno (una sesión a la vez: dos a la vez no se saltan la regla; el índice
+-- único lo garantiza igual). Después, desde la app, la marca no se pone ni se quita; al eliminarlo para todos (o vaciarlo),
+-- se quita. (Lee los resúmenes de la sesión, que el atleta también ve: con los permisos de su dueño; quién escribe lo dice el
+-- rol de la sesión, como en la 037)
+create or replace function public.comentario_resumen_sesion() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_app boolean := coalesce(nullif(current_setting('role', true), ''), 'none') in ('authenticated', 'anon');
+begin
+  if tg_op = 'UPDATE' then
+    if new.eliminado_en is not null then new.resumen_sesion := false; return new; end if;
+    if new.resumen_sesion is distinct from old.resumen_sesion and v_app then
+      raise exception 'Un mensaje no pasa a ser (ni deja de ser) el resumen de una sesión' using errcode = '42501';
+    end if;
+    return new;
+  end if;
+  if not coalesce(new.resumen_sesion, false) then new.resumen_sesion := false; return new; end if;
+  if new.autor is distinct from 'coach' or (v_app and not public.es_coach()) then
+    raise exception 'El resumen de una sesión lo escribe tu coach' using errcode = '42501';
+  end if;
+  if new.sesion_id is null or new.archivo_id is not null or new.checkin_id is not null then
+    raise exception 'El resumen va en el hilo de una sesión' using errcode = '22023';
+  end if;
+  perform pg_advisory_xact_lock(hashtext('fbe-resumen:' || new.sesion_id::text));
+  if exists (select 1 from public.comentarios c where c.sesion_id = new.sesion_id and c.resumen_sesion and c.id <> new.id) then
+    raise exception 'Ya le has mandado el resumen de esta sesión: lo tiene en el hilo de la sesión (si quieres cambiarlo, edítalo)' using errcode = '23505';
+  end if;
+  return new;
+end $$;
+drop trigger if exists comentarios_r_resumen_sesion on public.comentarios;
+create trigger comentarios_r_resumen_sesion before insert or update of resumen_sesion, eliminado_en on public.comentarios
+  for each row execute function public.comentario_resumen_sesion();
+
+-- ---------------------------------------------------------------------
+-- 3. Permisos (desde la 019, cada tabla nueva lleva los suyos a mano)
 -- ---------------------------------------------------------------------
 alter table public.umbrales_velocidad enable row level security;
 -- El coach, todo. El atleta, nada de la tabla (lleva la hora del cambio): las suyas, con umbrales_velocidad_de()

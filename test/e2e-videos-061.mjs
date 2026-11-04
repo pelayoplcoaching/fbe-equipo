@@ -34,7 +34,7 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     pg.on('requestfailed', (r) => { if (process.env.DEPURAR) console.log('requestfailed', r.url().slice(0, 80), r.failure()?.errorText); });
   };
   vigilar(p);
-  const hay = async (loc, n, ms = 10000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await loc.count() === n) return true; await p.waitForTimeout(100); } return (await loc.count()) === n; };
+  const hay = async (loc, n, ms = 10000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await loc.count() === n) return true; await loc.page().waitForTimeout(100); } return (await loc.count()) === n; };
   const demo = (pg = p) => pg.evaluate(() => JSON.parse(localStorage.getItem('fbe-demo-v2')));
   const enDemo = async (f, veces = 80, pg = p) => { for (let i = 0; i < veces; i++) { if (f(await demo(pg))) return true; await pg.waitForTimeout(150); } return false; };
   async function revisar(paso, pg = p) {
@@ -302,7 +302,7 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     await p.locator('.toast', { hasText: 'Velocidad mínima de Sentadilla barra alta' }).waitFor();
     await p.waitForFunction((antes) => document.querySelector('.perfil-e1rm-cifra')?.textContent.trim() !== antes, e1);
     const e1b = (await p.locator('.perfil-e1rm-cifra').textContent()).trim();
-    check(e1b !== e1 && await enDemo((d) => d.umbrales_velocidad?.some((u) => u.ejercicio_id === datos.sq && Number(u.vmin) === 0.25)) && /la de tu coach/.test(await perfil.textContent()),
+    check(e1b !== e1 && await enDemo((d) => d.umbrales_velocidad?.some((u) => u.ejercicio_id === datos.sq && Number(u.vmin) === 0.25)) && /\(la tuya para este ejercicio\)/.test(await perfil.textContent()),
       `el coach cambia la velocidad mínima (0,25 m/s): el 1RM pasa a ${e1b}`);
 
     // ---------------------------------------------------------------- 17. El informe del mes
@@ -410,6 +410,28 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     await q.evaluate(() => { window.__conexion.type = 'wifi'; window.__conexion.dispatchEvent(new Event('change')); });
     check(await enDemo((d) => d.archivos.filter((a) => a.tipo === 'video_tecnica' && Number(a.bytes) === VIDEO.length).length === 2, 100, q) && await hay(q.locator('.banda-espera'), 0, 15000),
       'al conectarse a una wifi, lo que esperaba se sube solo');
+    // (revisión M1) Un vídeo que sigue subiendo en segundo plano y, mientras, se graba o se elige otro: los dos llegan
+    await q.evaluate(() => localStorage.setItem('fbe-demo-subida-lenta', '20000'));
+    const notas = (d) => d.archivos.filter((a) => a.tipo === 'video_tecnica').map((a) => a.nota_atleta);
+    await q.locator('.diario').getByRole('button', { name: 'Subir vídeo' }).click();
+    await hojaSub.locator('input[type=file]').setInputFiles({ name: 'serie-1.webm', mimeType: 'video/webm', buffer: VIDEO });
+    await hojaEnv.locator('.recorte-auto', { hasText: 'Recortado solo' }).waitFor({ timeout: 20000 });
+    await hojaEnv.getByRole('button', { name: 'Sin recortar' }).click();
+    await hojaEnv.getByLabel('¿Qué quieres que mire?').fill('Serie 1, la que sigue sola');
+    await hojaEnv.getByRole('button', { name: 'Enviar a tu coach' }).click();
+    await hojaEnv.getByRole('button', { name: 'Seguir en segundo plano' }).click();
+    await hojaEnv.waitFor({ state: 'detached' });
+    check(await q.locator('.pildora-subida').count() === 1 && await hojaSub.isVisible(), '(revisión M1) «Seguir en segundo plano»: la hoja se cierra, la píldora dice cómo va y se puede enviar otro');
+    await hojaSub.locator('input[type=file]').setInputFiles({ name: 'serie-2.webm', mimeType: 'video/webm', buffer: VIDEO });
+    await hojaEnv.locator('.recorte-auto', { hasText: 'Recortado solo' }).waitFor({ timeout: 20000 });
+    await hojaEnv.getByRole('button', { name: 'Sin recortar' }).click();
+    await hojaEnv.getByLabel('¿Qué quieres que mire?').fill('Serie 2, grabada mientras');
+    await hojaEnv.getByRole('button', { name: 'Enviar a tu coach' }).click();
+    const dosALaVez = await q.locator('.pildora-subida[data-n="2"]').waitFor({ timeout: 15000 }).then(() => true, () => false);
+    check(await enDemo((d) => notas(d).includes('Serie 1, la que sigue sola') && notas(d).includes('Serie 2, grabada mientras'), 200, q),
+      `y llegan los dos: el que siguió solo y el que se envió mientras (no se pierde ninguno)${dosALaVez ? ', con la píldora contando los dos' : ''}`);
+    check(dosALaVez && await hay(q.locator('.pildora-subida'), 0, 40000), '(revisión L3) la píldora cuenta las dos subidas y solo se va cuando acaban todas');
+    await q.evaluate(() => localStorage.removeItem('fbe-demo-subida-lenta'));
   } catch (e) {
     check(false, `v0.61 (solo con wifi): el flujo se ha interrumpido: ${e.message.split('\n').slice(0, 10).join('\n      ')}`);
     await q.screenshot({ path: new URL('./e2e-fallo-061.png', import.meta.url).pathname }).catch(() => {});
