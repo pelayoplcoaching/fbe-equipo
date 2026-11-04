@@ -13,6 +13,7 @@ import { guardarPendiente, quitarPendiente, conCerrojo, ponerSubida, avisarPendi
 import { CamaraVideo, puedeGrabarVideo } from './tecnica/CamaraVideo.jsx';
 import { encuadreDe, tiempoOtro } from '../logica/tecnica.js';
 import { hoyISO } from '../logica/fechas.js';
+import { velocidadInicial, esLenta } from '../logica/angulos.js';
 
 // Botón que abre la cámara o la galería y envía el vídeo (o la foto) a la carpeta privada del atleta.
 // Vídeos (v0.30): antes de enviarlo se elige dónde empieza y acaba la serie, y el móvil lo recorta y lo aligera
@@ -355,7 +356,8 @@ export function capturarPoster(archivo, { ancho = 480, segundo = 0.5, tiempo = 7
 // v0.57: con la serie que se ve en él (archivo.serie: «Serie 2 · 60 kg × 8 @8») encima, y al abrirlo el coach queda
 // «Visto» para el atleta (solo el día)
 export const textoChipSerie = (serie) => (serie?.numero ? `Serie ${serie.numero}${serie.texto ? ` · ${serie.texto}` : ''}` : null);
-export function VerArchivo({ archivo }) {
+// v0.60 (11): un vídeo grabado en cámara lenta (fps_captura, 038) se abre a 0,25× o 0,5×. cors y compacto: ver Reproductor.
+export function VerArchivo({ archivo, cors = false, compacto = false, etiqueta = null }) {
   const { api, perfil } = useApp();
   const [url, setUrl] = useState(null);
   const [error, setError] = useState(null);
@@ -370,7 +372,13 @@ export function VerArchivo({ archivo }) {
   const esFoto = archivo.tipo === 'foto_progreso' || (archivo.tipo === 'adjunto' && /^image\//.test(archivo.mime || ''));
   return esFoto
     ? <img class="medio" src={url} alt={archivo.tipo === 'adjunto' ? 'Foto enviada en el chat' : `Foto de progreso del ${archivo.fecha}`} loading="lazy" />
-    : <Reproductor src={url} archivoId={archivo.id} serie={textoChipSerie(archivo.serie)} repeticiones={archivo.tipo === 'video_tecnica'} />;
+    : (
+      <>
+        <Reproductor src={url} archivoId={archivo.id} serie={textoChipSerie(archivo.serie)} repeticiones={archivo.tipo === 'video_tecnica' && !compacto}
+          cors={cors} compacto={compacto} etiqueta={etiqueta} velocidadInicial={velocidadInicial(archivo.fps_captura)} />
+        {esLenta(archivo.fps_captura) && <p class="mini secundario chip-lenta"><Icono n="reloj" /> Grabado en cámara lenta ({archivo.fps_captura} fps): se abre a {velocidadInicial(archivo.fps_captura) === 0.25 ? '0,25×' : '0,5×'}.</p>}
+      </>
+    );
 }
 
 // Dos vídeos lado a lado (el mismo ejercicio hace dos meses y hoy, o dos intentos): cada uno con su
