@@ -50,7 +50,8 @@ const largos = (o) => Object.fromEntries(Object.entries(o || {}).map(([k, v]) =>
 export const frasesDelCoach = () => !!sonidos && conFrases(largos(sonidos.voces));
 
 let el = null;        // el <audio> (uno para siempre: en iPhone, una vez arrancado con un toque, puede volver a sonar sin otro)
-let actual = null;    // { d, ctx, plan, url, sonado, nuestra, interrumpida, prueba, corregido }
+let actual = null;    // { d, ctx, plan, url, gen, sonado, interrumpida, prueba, corregido }
+let generacion = 0;   // cada pista nueva, un número: lo que llegue de una anterior (su pausa, su error) no cuenta
 let ultimo = null;    // el último que acabó: { fin, sonado, final }
 let reloj = null, programar = null;
 
@@ -65,17 +66,20 @@ function crear() {
   a.hidden = true;
   a.setAttribute('playsinline', '');
   a.setAttribute('aria-hidden', 'true');
+  // Los avisos del <audio> llegan tarde (en una cola): con un móvil lento, los de la pista de antes (al cambiar de pista con
+  // ±15, o al soltarla) pueden llegar cuando ya suena la nueva. Solo cuentan los de la pista actual (su dirección).
+  const deLaActual = () => !!actual && a.getAttribute('src') === actual.url && a.dataset.gen === String(actual.gen);
   a.addEventListener('timeupdate', () => {
-    if (!actual || actual.sonado || a.paused || !avisoSonando(a.currentTime, actual.plan)) return;
+    if (!deLaActual() || actual.sonado || a.paused || !avisoSonando(a.currentTime, actual.plan)) return;
     actual.sonado = true;
     if (!actual.prueba) actual.ctx?.avisos?.cancelar?.();
     try { window.dispatchEvent(new CustomEvent('fbe-pista-sono', { detail: actual.d.fin })); } catch { /* */ }
   });
   a.addEventListener('playing', () => {
-    if (!actual) return;
+    if (!deLaActual()) return;
     // (si el sistema la había cortado, el descanso ya es de la página, que avisa ella: si iOS la vuelve a poner, se para, para
     // no avisar dos veces)
-    if (actual.interrumpida) { actual.nuestra = true; try { a.pause(); } catch { /* */ } return; }
+    if (actual.interrumpida || enPausa(actual.d)) { try { a.pause(); } catch { /* */ } return; }
     // (si arrancó tarde, se adelanta para que el aviso caiga justo al final del descanso, como el disco)
     const objetivo = actual.plan.cueMs / 1000 - (actual.d.fin - Date.now()) / 1000;
     if (!actual.corregido && objetivo - a.currentTime > 0.25 && objetivo < actual.plan.cueMs / 1000 - 1) {
@@ -83,15 +87,15 @@ function crear() {
       try { a.currentTime = objetivo; } catch { /* */ }
     }
   });
+  // Una pausa que no hemos pedido nosotros (las nuestras: el descanso en pausa, o al soltarla, que deja actual a null) con la pista
+  // actual sonando: la ha parado el sistema (una llamada, Siri, otra app que suena). Ya no avisa ella; el aviso al móvil sigue.
   a.addEventListener('pause', () => {
-    if (!actual) return;
-    if (actual.nuestra) { actual.nuestra = false; return; }
-    // La ha parado el sistema (una llamada, Siri, otra app que suena): ya no avisa ella; el aviso al móvil sigue.
-    // (no si ya vuelve a sonar: al cambiar de pista, la anterior avisa de su pausa cuando la nueva ya ha arrancado)
-    if (a.paused && !a.ended) interrumpir();
+    if (!deLaActual() || enPausa(actual.d) || actual.interrumpida || !a.paused || a.ended) return;
+    interrumpir();
   });
-  a.addEventListener('error', () => { if (actual && a.getAttribute('src')) interrumpir(); });
-  a.addEventListener('ended', () => liberar());
+  // (un error de la pista de antes, o del cambio de dirección, no cuenta: solo el de la actual)
+  a.addEventListener('error', () => { if (deLaActual() && a.error && a.currentSrc === actual.url) interrumpir(); });
+  a.addEventListener('ended', () => { if (deLaActual()) liberar(); });
   document.body.appendChild(a);
   return a;
 }
@@ -192,17 +196,18 @@ function empezar(d, ctx, prueba = false) {
   const url = URL.createObjectURL(new Blob(trozosPista(plan, { ...s.clips, ...s.voces }), { type: 'audio/mpeg' }));
   el ||= crear();
   const previa = actual?.url;
-  actual = { d, ctx, plan, url, sonado: false, nuestra: false, interrumpida: false, prueba, corregido: false };
+  actual = { d, ctx, plan, url, gen: ++generacion, sonado: false, interrumpida: false, prueba, corregido: false };
   ponerSesionAudio('playback');
   try { el.volume = Math.min(1, Math.max(0.1, Number(a.volumen) || 1)); } catch { /* en iPhone no se puede */ }
   // (la dirección nueva justo antes de play(): en iOS 26.0–26.1, una app de inicio que vuelve a abrirse no suena sin esto)
   el.src = url;
-  Object.assign(el.dataset, { fin: String(d.fin), cue: String(plan.cueMs), duracion: String(plan.duracionMs), final: plan.final.join(',') });
+  Object.assign(el.dataset, { gen: String(actual.gen), fin: String(d.fin), cue: String(plan.cueMs), duracion: String(plan.duracionMs), final: plan.final.join(',') });
   const yo = actual;
-  try {
-    const pr = el.play();
-    pr?.catch?.(() => { if (actual === yo) { yo.interrumpida = true; liberar(); } });
-  } catch { yo.interrumpida = true; }
+  // Si play() falla de verdad (el móvil no deja, no hay salida de audio), fuera la pista: avisan la página y el aviso al móvil.
+  // Un AbortError no es un fallo: lo da nuestra propia pausa (la de la pantalla de bloqueo) o el cambio de pista si llegan antes
+  // de que la pista haya empezado (en un móvil lento, o recién hecho un +15).
+  const fallo = (e) => { if (actual !== yo || e?.name === 'AbortError') return; yo.interrumpida = true; liberar(); };
+  try { el.play()?.catch?.(fallo); } catch (e) { fallo(e); }
   if (previa) URL.revokeObjectURL(previa);
   ponerMedia();
   clearInterval(reloj);
@@ -220,7 +225,7 @@ export function sincronizarPista(d, ctx = {}) {
     if (!actual) return false;
     actual.d = d;
     actual.ctx = ctx;
-    if (!el.paused) { actual.nuestra = true; el.pause(); }
+    if (!el.paused) el.pause();
     ponerMedia();
     return true;
   }
@@ -249,9 +254,8 @@ function liberar() {
   if (actual) ultimo = { fin: actual.d.fin, sonado: actual.sonado, final: actual.plan.final, prueba: actual.prueba };
   const url = actual?.url;
   if (el) {
-    if (actual && !el.paused) actual.nuestra = true;
     try { el.pause(); el.removeAttribute('src'); el.load(); } catch { /* */ }
-    for (const k of ['fin', 'cue', 'duracion', 'final']) delete el.dataset[k];
+    for (const k of ['gen', 'fin', 'cue', 'duracion', 'final']) delete el.dataset[k];
   }
   if (url) URL.revokeObjectURL(url);
   if (actual) { limpiarMedia(); ponerSesionAudio('ambient'); }

@@ -202,20 +202,35 @@ export async function probarPista062({ navegador, check, base = 'http://localhos
     check(prog.length >= 1 && Math.abs(new Date(prog.at(-1)[1].p_fin).getTime() - t1.fin) < 50 && /^serie 2 de .+ · [\d,]+ kg × \d+$/.test(prog.at(-1)[1].p_despues),
       `el aviso al móvil se programa igual, por si la pista no suena («Ahora: ${prog.at(-1)?.[1].p_despues}»)`);
     await revisar('descanso-con-pista', p);
-    // +15: se rehace
+    // +15: se rehace. (CI v0.62) Y su play() se queda sin resolver, como en un móvil (o un ordenador) lento: así la pausa de la
+    // pantalla de bloqueo llega antes de que la pista haya empezado. La pausa rechaza ese play() con un AbortError, que no es un
+    // fallo de la pista (antes se tomaba por uno y se soltaba todo: fuera la pantalla de bloqueo y sus botones)
+    await p.evaluate(() => {
+      window.__playOriginal = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () {
+        const el = this;
+        window.__playOriginal.call(el).catch(() => {});
+        return new Promise((ok, mal) => el.addEventListener('pause', () => mal(new DOMException('La pausa interrumpe play()', 'AbortError')), { once: true }));
+      };
+    });
+    const antes15 = Date.now();
     await p.getByRole('button', { name: 'Añadir 15 segundos' }).click();
-    await esperar(p, (f) => Number(document.getElementById('fbe-pista')?.dataset.fin) > f + 10000, t1.fin);
+    await esperar(p, (f) => { const a = document.getElementById('fbe-pista'); return Number(a?.dataset.fin) > f + 10000 && !a.paused; }, t1.fin);
     const t2 = await pista();
-    check(Math.abs(t2.fin - t1.fin - 15000) < 1500 && t2.src !== t1.src && !t2.paused && t2.cue > t1.cue + 10000, '+15 s rehace la pista: el aviso cae 15 s más tarde');
+    check(Math.abs(t2.fin - t1.fin - 15000) < 1500 && t2.src !== t1.src && !t2.paused && t2.cue >= t2.fin - Date.now() - 100 && t2.cue <= t2.fin - antes15 + 100,
+      '+15 s rehace la pista: el aviso cae 15 s más tarde (justo al final nuevo)');
     // Los botones de la pantalla de bloqueo: pausa, seguir, +15
     await p.evaluate(() => window.__acciones.pause());
     await p.locator('.temporizador-etq', { hasText: 'Descanso en pausa' }).waitFor();
+    await esperar(p, () => document.getElementById('fbe-pista')?.paused && navigator.mediaSession.playbackState === 'paused');
+    await p.evaluate(() => { HTMLMediaElement.prototype.play = window.__playOriginal; });
     const t3 = await pista();
     const cuentaPausa = await p.locator('.temporizador .cuenta').textContent();
     await p.waitForTimeout(1300);
-    check(t3.paused && t3.estado === 'paused' && /en pausa/.test(t3.titulo) && await p.locator('.temporizador .cuenta').textContent() === cuentaPausa
+    check(t3.paused && t3.estado === 'paused' && /en pausa/.test(t3.titulo) && t3.src === t2.src && t3.tipo === 'playback' && t3.acciones === 'nexttrack,pause,play,seekbackward,seekforward,stop'
+      && await p.locator('.temporizador .cuenta').textContent() === cuentaPausa
       && await p.getByRole('button', { name: 'Seguir' }).count() === 1 && (await rpcs()).at(-1)[0] === 'cancelar_descanso',
-      'pausa en la pantalla de bloqueo: el descanso se para (la cuenta, quieta), la pista también, sale «Seguir» y se anula el aviso al móvil');
+      'pausa en la pantalla de bloqueo (aunque llegue antes de que la pista haya empezado): el descanso se para (la cuenta, quieta), la pista también (sin soltarla: siguen la pantalla de bloqueo y sus botones), sale «Seguir» y se anula el aviso al móvil');
     await revisar('descanso-en-pausa', p);
     check(await estrecho('descanso-en-pausa', p), 'el descanso en pausa cabe a 360 px en oscuro');
     await p.evaluate(() => window.__acciones.play());
@@ -304,11 +319,16 @@ export async function probarPista062({ navegador, check, base = 'http://localhos
     const finViejo = (await pista()).fin;
     await oculta(true);
     const na = (await rpcs()).length;
-    await p.evaluate(() => window.__acciones.seekbackward());
-    await esperar(p, (n) => (window.__rpcs || []).slice(n).some(([x]) => x === 'programar_descanso'), na, 4000);
+    // (dos ⏪ seguidos: con 20 s o menos, el segundo lo acaba seguro)
+    const tA = Date.now();
+    await p.evaluate(() => { window.__acciones.seekbackward(); window.__acciones.seekbackward?.(); });
+    const tB = Date.now();
+    await esperar(p, (n) => (window.__rpcs || []).slice(n).some(([x]) => x === 'programar_descanso'), na, 8000);
+    await esperar(p, () => !document.getElementById('fbe-pista')?.getAttribute('src'));
     const pa = (await rpcs()).slice(na).filter(([x]) => x === 'programar_descanso').at(-1);
     await oculta(false);
-    check(pa && Math.abs(new Date(pa[1].p_fin).getTime() - Date.now()) < 3000 && finViejo - new Date(pa[1].p_fin).getTime() > 3000 && !(await pista()).src,
+    const pfa = pa ? new Date(pa[1].p_fin).getTime() : NaN;
+    check(pa && pfa >= tA - 500 && pfa <= tB + 1000 && finViejo - pfa > 2000 && !(await pista()).src,
       '(revisión M1) con la sesión cerrada y el móvil bloqueado, ⏪ que acaba el descanso manda el aviso al móvil ya (no al final de antes) y suelta la pista');
     await p.waitForTimeout(6500);
     // M1 (b): pausa y, al seguir, la pista no arranca: el aviso al móvil queda programado para el final nuevo
@@ -338,11 +358,15 @@ export async function probarPista062({ navegador, check, base = 'http://localhos
     const finViejoS = (await pista()).fin;
     await oculta(true);
     const ns = (await rpcs()).length;
-    await p.evaluate(() => window.__acciones.seekbackward());
-    await esperar(p, (n) => (window.__rpcs || []).slice(n).some(([x]) => x === 'programar_descanso'), ns, 4000);
+    const tS = Date.now();
+    await p.evaluate(() => { window.__acciones.seekbackward(); window.__acciones.seekbackward?.(); });
+    await p.locator('.temporizador.fin').waitFor({ timeout: 15000 });
+    const tS2 = Date.now();
+    await esperar(p, (n) => (window.__rpcs || []).slice(n).some(([x, a]) => x === 'programar_descanso' && new Date(a.p_fin).getTime() <= Date.now() + 1000), ns, 8000);
     const ps = (await rpcs()).slice(ns).filter(([x]) => x === 'programar_descanso').at(-1);
     await oculta(false);
-    check(ps && Math.abs(new Date(ps[1].p_fin).getTime() - Date.now()) < 3000 && finViejoS - new Date(ps[1].p_fin).getTime() > 3000,
+    const pfs = ps ? new Date(ps[1].p_fin).getTime() : NaN;
+    check(ps && pfs >= tS - 500 && pfs <= tS2 + 1000 && finViejoS - pfs > 2000,
       '(revisión M1) con la sesión abierta y el móvil bloqueado, ⏪ que acaba el descanso también manda el aviso al móvil ya (no al final de antes)');
     await p.waitForTimeout(6500);
     await p.getByRole('button', { name: 'Cerrar' }).click().catch(() => {});
