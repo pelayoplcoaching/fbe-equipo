@@ -207,6 +207,7 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     await rs.getByRole('button', { name: 'Al resumen' }).click();
     const area = rs.getByLabel(/Tu resumen para Ana/);
     await area.waitFor();
+    for (let fin = Date.now() + 10000; Date.now() < fin && !(await area.inputValue()).startsWith('Resumen'); ) await p.waitForTimeout(100);
     const borrador = await area.inputValue();
     check(borrador.startsWith('Resumen de la sesión, Ana:') && datos.ejAna.every((n) => borrador.includes(`· ${n}`)), 'al final, el borrador del resumen, con una línea por vídeo');
     await area.fill(`${borrador}Muy buena sesión: sigue así.`);

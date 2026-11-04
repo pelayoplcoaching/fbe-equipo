@@ -36,7 +36,9 @@ function Pantalla({ grupo, alCerrar, abrirAtleta }) {
   const titulo = tituloSesion(fecha, videos.length);
   const ya = enviado || datos.datos?.resumen || null;
   const cerrarRef = useRef(alCerrar); cerrarRef.current = alCerrar;
-  const ir = (n) => setI(Math.max(0, Math.min(videos.length, n)));
+  const borrador = () => borradorResumen(videos.map((v) => ({ ...v, revision: correccionesDe(v.id).revision || v.revision || null })), { nombre });
+  // (el borrador, en el mismo paso que el resumen: así el cuadro nunca se ve vacío un momento)
+  const ir = (n) => { const k = Math.max(0, Math.min(videos.length, n)); if (k >= videos.length && texto == null) setTexto(borrador()); setI(k); };
   const nav = useRef({}); nav.current = { siguiente: () => ir(i + 1), anterior: () => ir(i - 1) };
 
   // El teclado (como «Revisar seguidos»): → / j siguiente, ← / k anterior; no mientras se escribe ni dentro del
@@ -66,7 +68,7 @@ function Pantalla({ grupo, alCerrar, abrirAtleta }) {
   // Al llegar al final, el borrador con lo que ya ha corregido (la nota y lo que hay que corregir de cada vídeo)
   useEffect(() => {
     if (!fin || texto != null) return;
-    setTexto(borradorResumen(videos.map((v) => ({ ...v, revision: correccionesDe(v.id).revision || v.revision || null })), { nombre }));
+    setTexto(borrador());
   }, [fin]);
 
   const revisado = async () => {
