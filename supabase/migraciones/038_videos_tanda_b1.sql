@@ -228,7 +228,9 @@ begin
   if old.tipo <> 'video_tecnica' then return old; end if;
   delete from public.archivos a where a.tipo = 'adjunto'
     and a.id in (select c.video_respuesta_id from public.comentarios c where c.archivo_id = old.id and c.video_respuesta_id is not null);
-  update public.video_revisiones r set dos_angulos = null where r.dos_angulos ->> 'con' = old.id::text;
+  -- (la de un vídeo que se borra en la misma orden ya no está: esa se va con él)
+  update public.video_revisiones r set dos_angulos = null where r.dos_angulos ->> 'con' = old.id::text
+    and exists (select 1 from public.archivos a where a.id = r.archivo_id);
   return old;
 end $$;
 drop trigger if exists archivos_ac_respuestas on public.archivos;

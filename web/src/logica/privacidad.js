@@ -24,8 +24,10 @@ export const versionMayor = (a, b) => {
 export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) && (!formatoVersion(vista) || compararVersiones(vista, actual) < 0);
 // Lo que cambia en cada versión (corto: el texto entero está en la política): [icono, título, texto, versión]. La 2026-11
 // (v0.56: el chat), la 2026-12 (v0.57 y v0.58: los vídeos de técnica y su análisis automático) y la 2026-12.1 (v0.59, con
-// la 037: cómo lo has notado, los recordatorios y los vídeos modelo)
+// la 037: cómo lo has notado, los recordatorios y los vídeos modelo) y la 2026-12.2 (v0.60: las respuestas en vídeo, exportar
+// y difuminar la cara en el móvil)
 export const NOVEDADES_PRIVACIDAD = [
+  ['video', 'Respuestas en vídeo, exportar y difuminar la cara', 'Tu coach puede grabar su revisión (su voz y, si quiere, su cara) y los dos podéis responder en el hilo con la cámara de delante: la cámara y el micro solo se usan mientras se graba. Exportar con correcciones se hace en el móvil, sin subir nada. Con «Difuminar la cara», tu móvil tapa tu cara y solo se sube el vídeo difuminado: el original no sale de él.', '2026-12.2'],
   ['video', 'Cómo lo has notado, recordatorios y vídeos modelo', 'Al enviar un vídeo puedes contar cómo lo has notado: el esfuerzo, lo que notas y, solo con tu consentimiento de salud, una molestia. Lo ve solo tu coach. Tu coach puede fijarte recordatorios en tu sesión y enseñarte sus vídeos modelo.', '2026-12.1'],
   ['video', 'Vídeos de técnica', 'La corrección de tu coach puede llevar una nota de técnica (de 1 a 5), los puntos clave, el tempo y su voz sobre el vídeo. De «Visto» y «Corregido» ves solo el día. El análisis automático (experimental: la trayectoria de la barra, la velocidad estimada y los ángulos de cada repetición) se calcula en el móvil u ordenador, y si tu coach lo guarda, solo se guarda el resumen de cada repetición: los puntos de tu cuerpo nunca se guardan.', '2026-12'],
   ['micro', 'Notas de voz', 'El micro solo se usa mientras grabas una nota de voz (el navegador te pide permiso y se suelta en cuanto paras). Solo las escucha tu coach.', '2026-11'],

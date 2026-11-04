@@ -15,7 +15,9 @@ const CLAVE = 'fbe-ajustes';
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
   acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false, descansoDefecto: DESCANSO_DEFECTO, fondoChat: 'dibujos',
   // v0.56: los sonidos del chat (al enviar y al recibir, con el chat abierto) y las fotos en HD (más grandes) de serie
-  sonidosChat: true, fotosHd: false };
+  sonidosChat: true, fotosHd: false,
+  // v0.60: «Difuminar la cara» al enviar un vídeo, encendido de serie en este móvil (apagado si no se elige)
+  difuminarCara: false };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -46,6 +48,7 @@ export function normalizarAjustes(guardado = {}) {
   if (!['dibujos', 'liso'].includes(a.fondoChat)) a.fondoChat = AJUSTES_DEFECTO.fondoChat;
   a.sonidosChat = a.sonidosChat !== false;
   a.fotosHd = a.fotosHd === true;
+  a.difuminarCara = a.difuminarCara === true;
   return a;
 }
 export function leerAjustes() {

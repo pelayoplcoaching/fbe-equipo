@@ -110,9 +110,11 @@ export function capasEn(linea, t) {
 // La nota de la esquina («Técnica 4/5 · Buena») y la marca de agua
 export const textoNota = (p) => (Number.isInteger(p) && p >= 1 && p <= 5 ? `Técnica ${p}/5 · ${NOMBRE_PUNTUACION[p]}` : null);
 export const MARCA_AGUA = 'FBE';
-// El nombre del archivo exportado (sin nada del atleta: el ejercicio y el día)
+// El nombre del archivo exportado (sin nada del atleta: el ejercicio y el día). (Las tildes, en un texto: el empaquetado deja
+// ASCII puro)
+const DIACRITICOS = new RegExp('[\\u0300-\\u036f]', 'g');
 export function nombreExportado({ ejercicio = '', fecha = '', ext = 'mp4' } = {}) {
-  const base = String(ejercicio || 'video').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'video';
+  const base = String(ejercicio || 'video').normalize('NFD').replace(DIACRITICOS, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'video';
   const dia = /^\d{4}-\d{2}-\d{2}$/.test(fecha || '') ? `-${fecha}` : '';
   return `${base}${dia}-corregido.${ext === 'webm' ? 'webm' : 'mp4'}`;
 }

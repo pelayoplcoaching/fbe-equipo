@@ -114,7 +114,7 @@ function Miniatura({ a, nombre, alAbrir }) {
     return () => { vivo = false; };
   }, [a.ruta, a.poster_ruta, conPoster]);
   return (
-    <button class={`diario-item ${a.destacado ? 'destacado' : ''}`} onClick={alAbrir} aria-label={`${nombre}, ${fmtConDia(a.fecha)}${a.destacado ? ', destacado' : ''}${a.respondido ? ', con respuesta del coach' : ''}`}>
+    <button class={`diario-item ${a.destacado ? 'destacado' : ''}`} data-id={a.id} onClick={alAbrir} aria-label={`${nombre}, ${fmtConDia(a.fecha)}${a.destacado ? ', destacado' : ''}${a.respondido ? ', con respuesta del coach' : ''}`}>
       <span class="diario-medio">
         {!url ? <span class="medio-chat-hueco" /> : esFoto || conPoster ? <img src={url} alt="" loading="lazy" onError={() => conPoster && setSinPoster(true)} /> : <video src={url} muted playsInline preload="metadata" />}
         {!esFoto && <span class="medio-chat-play" aria-hidden="true"><Icono n="play" />{a.duracion_seg ? <span class="num">{mmssCorto(a.duracion_seg)}</span> : null}</span>}

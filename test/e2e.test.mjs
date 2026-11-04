@@ -26,6 +26,8 @@ const errores = [];
 p.on('pageerror', (e) => errores.push(e.message));
 // (con el recurso que falla, si lo hay: así se sabe cuál)
 p.on('console', (m) => { if (m.type() === 'error') { const u = m.location()?.url; errores.push(u && !m.text().includes(u) ? `${m.text()} [${u}]` : m.text()); } });
+// (con DEPURAR=1, cada petición que falla, en su sitio entre las comprobaciones)
+if (process.env.DEPURAR) p.on('requestfailed', (r) => console.log('      · falla', r.url().slice(0, 70), r.failure()?.errorText));
 
 // Perfil (atleta) y Cuenta (coach) no están en la barra del móvil: se abren desde el avatar de arriba (v0.18)
 async function abrirPestana(p, t) {
@@ -5537,6 +5539,17 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ los vídeos de la v0.59:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.60: los vídeos de técnica, tanda B (primera mitad): cámara lenta, difuminar la cara, otro ángulo, grabar la revisión
+// (con la burbuja), responder con vídeo, exportar con correcciones y dos ángulos (test/e2e-videos-060.mjs)
+console.log('\nv0.60: los vídeos de técnica, tanda B (primera mitad)');
+try {
+  const { probarVideos060 } = await import('./e2e-videos-060.mjs');
+  await probarVideos060({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ los vídeos de la v0.60:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):

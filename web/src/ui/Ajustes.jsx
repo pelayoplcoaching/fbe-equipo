@@ -65,6 +65,8 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
         <>
           <FilaIos icono="altavoz" titulo="Sonido y vibración" detalle={resumenSonido} alTocar={() => setSonido(true)} etiqueta={`Sonido y vibración: ${resumenSonido}`} />
           <Interruptor id="aj-pantalla" icono="movil" texto="Pantalla encendida durante la sesión" ayuda="Para no tener que desbloquear el móvil entre series" valor={a.pantalla} alCambiar={(v) => cambiar('pantalla', v)} />
+          {/* v0.60 (13): «Difuminar la cara» encendido de serie al enviar un vídeo (en este móvil) */}
+          <Interruptor id="aj-difuminar" icono="cara" texto="Difuminar la cara al enviar un vídeo" ayuda="Encendido de serie en la hoja de enviar (puedes apagarlo en cada vídeo). Se hace en el móvil: el original no sale de él" valor={!!a.difuminarCara} alCambiar={(v) => cambiar('difuminarCara', v)} />
           <Interruptor id="aj-peso-cifra" icono="bascula" texto="Ver los kilos en Hoy" ayuda="Y en el resumen de tu semana. De serie, te dice cómo va tu peso respecto a tu objetivo, sin la cifra; la gráfica sigue en Progreso" valor={a.pesoCifra} alCambiar={(v) => cambiar('pesoCifra', v)} />
         </>
       )}

@@ -2668,7 +2668,7 @@ export function crearApi(backend) {
       if (!video?.id || (await api.video038()) === false) return null;
       const filas = await b.select('archivos', { eq: { angulo_de: video.id }, limit: 1 }).catch(() => []);
       if (filas[0]) return filas[0];
-      const [yo] = video.angulo_de !== undefined ? [video] : await b.select('archivos', { eq: { id: video.id } }).catch(() => []);
+      const [yo] = await b.select('archivos', { eq: { id: video.id }, cols: 'id,angulo_de' }).catch(() => []);
       return yo?.angulo_de ? api.archivo(yo.angulo_de) : null;
     },
     // Los vídeos de técnica del atleta que pueden ser su otro ángulo (sin pareja; los de esa misma serie, primero)
