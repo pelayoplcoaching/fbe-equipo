@@ -18,6 +18,7 @@ import { recordatorioValido, fraseValida, autoevaluacionValida, MAX_RECORDATORIO
 import { repsManualValidas } from '../logica/repeticiones.js';
 import { compararVersiones } from '../logica/privacidad.js';
 import { dosAngulosValido } from '../logica/angulos.js';
+import { umbralValido } from '../logica/cargaVelocidad.js';
 // Como la 033: lo que no lleva el nombre de un documento (control, invisibles y de dirección del texto, barras y <>:"|?*)
 const NOMBRE_PROHIBIDO = new RegExp('[/\\\\\\u0000-\\u001f\\u007f-\\u009f\\u200b-\\u200f\\u202a-\\u202e\\u2066-\\u2069\\ufeff<>:"|?*]');
 
@@ -52,6 +53,8 @@ const DEFECTOS = {
   // v0.59 (037): recordatorios, frases, vídeos modelo y la valoración del atleta
   recordatorios_tecnica: () => ({ archivo_id: null, segundo: null, activo: true, creado_en: ahora(), actualizado_en: ahora() }),
   frases_correccion: () => ({ ejercicio_id: null, dibujo: null, orden: 0, creado_en: ahora() }),
+  // Como la 039: la velocidad mínima de un ejercicio (para el 1RM estimado por la velocidad)
+  umbrales_velocidad: () => ({ actualizado_en: ahora() }),
   videos_modelo: () => ({ poster_ruta: null, duracion_seg: null, mime: null, bytes: null, angulo: null, orden: 0, creado_en: ahora() }),
   video_autoevaluacion: () => ({ rpe: null, nota: null, molestia: null, zona: null, creado_en: ahora(), actualizado_en: ahora() }),
   comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null, cliente_id: null, reenviado: false, entregado_en: null, escuchado_en: null, video_respuesta_id: null }),
@@ -107,7 +110,7 @@ const CASCADA = {
     ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id']],
   // Como la 035: la corrección se va con su vídeo; la lista de puntos clave, con su ejercicio
   archivos: [['video_revisiones', 'archivo_id'], ['video_autoevaluacion', 'archivo_id']],
-  ejercicios: [['tecnica_plantillas', 'ejercicio_id'], ['recordatorios_tecnica', 'ejercicio_id'], ['frases_correccion', 'ejercicio_id'], ['videos_modelo', 'ejercicio_id']],
+  ejercicios: [['tecnica_plantillas', 'ejercicio_id'], ['recordatorios_tecnica', 'ejercicio_id'], ['frases_correccion', 'ejercicio_id'], ['videos_modelo', 'ejercicio_id'], ['umbrales_velocidad', 'ejercicio_id']],
   // Como la 032: las reacciones y los destacados se van con su mensaje; (033) y lo fijado
   comentarios: [['comentario_reacciones', 'comentario_id'], ['comentario_destacados', 'comentario_id'], ['conversacion_fijado', 'comentario_id'], ['encuestas_chat', 'comentario_id']],
   // Como la 034: el voto se va con su encuesta
@@ -139,7 +142,7 @@ const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
 const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
-  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion'];
+  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
 const EMOJIS_CHAT = ['❤️', '👍', '💪', '😂', '😮', '🙏'];
 const CUPO_CHAT = { reaccion: 120, destacar: 120, edicion: 30, eliminar: 30, presencia: 30, silenciar: 30, voto: 120, autoevaluacion: 30 };
@@ -249,6 +252,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     recordatorios_tecnica: () => esCoach(),
     frases_correccion: () => esCoach(),
     videos_modelo: () => esCoach(),
+    // Como la 039: la velocidad mínima de cada ejercicio, solo el coach (el atleta la lee con umbrales_velocidad_de())
+    umbrales_velocidad: () => esCoach(),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
@@ -456,10 +461,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'recordatorios_tecnica') prepararRecordatorio(f, null);
     if (t === 'frases_correccion') prepararFrase(f, null);
     if (t === 'videos_modelo') prepararModelo(f, null);
+    if (t === 'umbrales_velocidad') prepararUmbral(f, null);
     if (t === 'video_autoevaluacion') {
       if (tabla(t).some((x) => x.archivo_id === f.archivo_id)) throw new Error('duplicate key value violates unique constraint "video_autoevaluacion_pkey"');
       prepararAutoevaluacion(f, null);
     }
+    if (t === 'umbrales_velocidad' && tabla(t).some((x) => x.ejercicio_id === f.ejercicio_id)) throw new Error('duplicate key value violates unique constraint "umbrales_velocidad_pkey"');
     if (t === 'tecnica_plantillas') {
       if (tabla(t).some((x) => x.ejercicio_id === f.ejercicio_id)) throw new Error('duplicate key value violates unique constraint "tecnica_plantillas_pkey"');
       f.puntos = (f.puntos || []).map((x) => String(x).trim()); f.actualizado_en = ahora();
@@ -848,6 +855,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && (f.bytes == null || (entero(n(f.bytes)) && entre(n(f.bytes), 1, 209715200))) && (f.angulo == null || ([...String(f.angulo)].length >= 1 && [...String(f.angulo)].length <= 40 && textoVisible(f.angulo)))
       && entero(n(f.orden)) && entre(n(f.orden), 0, 99),
     video_autoevaluacion: (f) => autoevaluacionValida(f),
+    // Como la 039: de 0,05 a 1 m/s con 3 decimales como mucho (umbral_velocidad_valido)
+    umbrales_velocidad: (f) => umbralValido(f.vmin),
     semanas: (f) => f.foco == null || FOCOS_SEMANA.includes(f.foco),
     bloques: (f) => f.foco == null || FOCOS_BLOQUE.includes(f.foco),
     habitos: (f) => {
@@ -942,7 +951,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
   }
 
-  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -1076,6 +1085,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (tabla('frases_correccion').filter((x) => (x.ejercicio_id ?? null) === (f.ejercicio_id ?? null)).length >= 40) throw new Error('Como mucho 40 frases por ejercicio: borra alguna antes');
       f.creado_en = ahora();
     } else f.creado_en = antes.creado_en;
+  }
+  // Como la 039 (umbral_velocidad_preparar): no cambia de ejercicio, sin ceros de más, la fecha de la base, 1000 como mucho
+  function prepararUmbral(f, antes) {
+    if (antes && f.ejercicio_id !== antes.ejercicio_id) throw new Error('Una velocidad mínima no cambia de ejercicio');
+    if (typeof f.vmin === 'string' && f.vmin.trim() !== '') f.vmin = Number(f.vmin);
+    if (!antes && tabla('umbrales_velocidad').length >= 1000) throw new Error('Como mucho 1000 velocidades mínimas: quita alguna antes');
+    f.actualizado_en = ahora();
   }
   // Como la 037 (video_modelo_preparar): 6 por ejercicio; una ruta de la cola de Storage no vuelve; de uno subido solo
   // cambian el ángulo, el orden, la duración y quitar la miniatura
@@ -1889,15 +1905,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async update(t, cambios, f) {
-      if (['cobros_atletas', 'pagos', 'recetas', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo'].includes(t) && !esCoach()) return [];
+      if (['cobros_atletas', 'pagos', 'recetas', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad'].includes(t) && !esCoach()) return [];
       // Como la 037: recordatorios, frases y vídeos modelo (el coach, con sus triggers); la valoración, el atleta de la suya
-      if (['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion'].includes(t)) {
+      if (['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'umbrales_velocidad'].includes(t)) {
         const filas = tabla(t).filter((x) => cumple(x, f) && VISIBLE[t](x));
         const nuevas = filas.map((x) => {
           const m = { ...x, ...copia(cambios) };
           if (t === 'recordatorios_tecnica') prepararRecordatorio(m, x);
           else if (t === 'frases_correccion') prepararFrase(m, x);
           else if (t === 'videos_modelo') prepararModelo(m, x);
+          else if (t === 'umbrales_velocidad') prepararUmbral(m, x);
           else { if (m.atleta_id !== x.atleta_id && 'atleta_id' in cambios && cambios.atleta_id !== miAtletaId()) throw sinPermiso(); prepararAutoevaluacion(m, x); }
           comprobarChecks(t, m);
           return [x, m];
@@ -2074,6 +2091,19 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return copia(res);
       }
+      // Como la 039: la velocidad mínima, una por ejercicio (solo el coach, con su trigger)
+      if (t === 'umbrales_velocidad') {
+        const res = (Array.isArray(filas) ? filas : [filas]).map((fila) => {
+          const existente = tabla(t).find((x) => x.ejercicio_id === fila.ejercicio_id);
+          if (!existente) return insertar(t, fila);
+          const m = { ...existente, ...copia(fila) };
+          prepararUmbral(m, existente);
+          comprobarChecks(t, m);
+          return Object.assign(existente, m);
+        });
+        persistirYa();
+        return copia(res);
+      }
       if (t === 'video_revisiones' || t === 'tecnica_plantillas') {
         const clave = t === 'video_revisiones' ? 'archivo_id' : 'ejercicio_id';
         const res = (Array.isArray(filas) ? filas : [filas]).map((fila) => {
@@ -2157,7 +2187,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async delete(t, f) {
-      if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo'].includes(t) && !esCoach()) return [];
+      if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad'].includes(t) && !esCoach()) return [];
       // Como la 037: la valoración la quita su atleta (el coach solo la lee)
       if (t === 'video_autoevaluacion') {
         if (esCoach() || !miAtletaId()) return [];
@@ -2283,6 +2313,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           .sort((a, b) => String(a.ejercicio_id).localeCompare(String(b.ejercicio_id)) || String(a.creado_en).localeCompare(String(b.creado_en)))
           .map((r) => ({ id: r.id, ejercicio_id: r.ejercicio_id, texto: r.texto, archivo_id: enlace(r) ? r.archivo_id : null, segundo: enlace(r) ? r.segundo ?? null : null,
             actualizado_el: r.actualizado_en ? fMadrid(new Date(r.actualizado_en)) : null })));
+      }
+      // Como la 039: la velocidad mínima de unos ejercicios (el coach y los atletas vinculados; sin horas)
+      if (nombre === 'umbrales_velocidad_de') {
+        if (!uid || !(esCoach() || miAtletaId())) throw new Error('Necesitas iniciar sesión');
+        const ids = args.p_ejercicios;
+        if (!Array.isArray(ids) || ids.length > 200) throw new Error('De 0 a 200 ejercicios de una vez');
+        return copia(tabla('umbrales_velocidad').filter((u) => ids.includes(u.ejercicio_id) && umbralValido(Number(u.vmin)))
+          .sort((a, b) => String(a.ejercicio_id).localeCompare(String(b.ejercicio_id))).map((u) => ({ ejercicio_id: u.ejercicio_id, vmin: Number(u.vmin) })));
       }
       if (nombre === 'videos_modelo_de') {
         if (!uid || !(esCoach() || miAtletaId())) throw new Error('Necesitas iniciar sesión');

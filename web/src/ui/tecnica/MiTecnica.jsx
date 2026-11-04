@@ -2,6 +2,8 @@
 // destacados y su estado), la gráfica de su nota de técnica en ese ejercicio y comparar dos cualesquiera.
 // Y el vídeo de un aviso («Pelayo ha corregido tu vídeo»: #videos/<id>@<segundos>), abierto en ese momento.
 // v0.58: y, si tu coach ha guardado el análisis de la barra, cómo evoluciona la velocidad (estimada) en ese ejercicio.
+// v0.61: el perfil carga–velocidad con el 1RM estimado (16) y el informe de cada mes (17). También en la ficha del atleta,
+// para el coach (esCoach: cambia la velocidad mínima de cada ejercicio y le manda el informe).
 import { useEffect, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Grafica, Hoja, Cargando } from '../comunes.jsx';
 import { CompararVideos } from '../Archivos.jsx';
@@ -9,8 +11,10 @@ import { DetalleArchivo } from '../Diario.jsx';
 import { fmtCorta, fmtConDia } from '../../logica/fechas.js';
 import { NOMBRE_PUNTUACION } from '../../logica/tecnica.js';
 import { serieVelocidad, textoVel } from '../../logica/analisis.js';
+import { PerfilVelocidad } from './PerfilVelocidad.jsx';
+import { InformesMes } from './InformeMes.jsx';
 
-export function MiTecnica({ atletaId, nombreAtleta }) {
+export function MiTecnica({ atletaId, nombreAtleta, esCoach = false }) {
   const { api, aviso } = useApp();
   const datos = useCarga(() => api.miTecnica(atletaId).catch(() => []), [atletaId]);
   const [ej, setEj] = useState(null);
@@ -29,7 +33,7 @@ export function MiTecnica({ atletaId, nombreAtleta }) {
   return (
     <section class="seccion mi-tecnica" aria-labelledby="mi-tecnica-t">
       <div class="seccion-cab">
-        <h2 id="mi-tecnica-t">Mi técnica</h2>
+        <h2 id="mi-tecnica-t">{esCoach ? 'Su técnica' : 'Mi técnica'}</h2>
         <span class="peq terciario num">{todos.length} {todos.length === 1 ? 'vídeo' : 'vídeos'}</span>
       </div>
       {grupos.length > 1 && (
@@ -43,6 +47,7 @@ export function MiTecnica({ atletaId, nombreAtleta }) {
           ? <Grafica puntos={g.puntos} dec={0} rangoMin={4} clave={`tecnica-${g.id}`} etiqueta={`Tu nota de técnica en ${g.nombre}`} />
           : <p class="peq secundario">{g.puntos.length === 1 ? `Tu coach le ha puesto ${g.puntos[0].y}/5 (${NOMBRE_PUNTUACION[g.puntos[0].y].toLowerCase()}) a tu técnica. Con el siguiente vídeo corregido verás cómo evoluciona.` : 'Cuando tu coach ponga nota a la técnica de tus vídeos, verás aquí cómo evoluciona.'}</p>}
         <VelocidadEjercicio g={g} />
+        <PerfilVelocidad g={g} atletaId={atletaId} esCoach={esCoach} />
         <ol class="tecnica-linea">
           {g.videos.map((v) => (
             <li key={v.id} class={`tecnica-item ${v.destacado ? 'destacado' : ''}`}>
@@ -65,6 +70,7 @@ export function MiTecnica({ atletaId, nombreAtleta }) {
           </div>
         )}
       </div>
+      <InformesMes videos={todos} atletaId={atletaId} nombreAtleta={nombreAtleta} esCoach={esCoach} />
       {comparar && vistos.length === 2 && <CompararVideos videos={vistos} nombreDe={(v) => v.ejercicio?.nombre || 'Vídeo'} inicialA={vistos[1].id} inicialB={vistos[0].id} alCerrar={() => setComparar(false)} />}
       {abierto && (
         <DetalleArchivo a={todos.find((x) => x.id === abierto.id) || abierto} lista={todos} atletaId={atletaId} nombreAtleta={nombreAtleta} nombre={abierto.ejercicio?.nombre || 'Vídeo'}

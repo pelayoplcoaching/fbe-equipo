@@ -9,6 +9,8 @@ import { Hilo } from '../Hilo.jsx';
 import { VerArchivo, CompararVideos } from '../Archivos.jsx';
 import { PanelCorreccion } from '../tecnica/Correccion.jsx';
 import { RevisionSeguida } from '../tecnica/RevisionSeguida.jsx';
+import { RevisionSesion } from '../tecnica/RevisionSesion.jsx';
+import { agruparPorSesion, tituloSesion } from '../../logica/sesionVideos.js';
 import { ESCALAS, NOMBRE_ZONA, num } from '../../logica/calculos.js';
 import { fmtConDia, rangoSemana } from '../../logica/fechas.js';
 import { NOMBRE_TOMA } from '../../logica/comidas.js';
@@ -92,19 +94,20 @@ export function Revisar({ bandeja, abrirAtleta }) {
     ...hilos.map((h) => ({ tipo: 'mensajes', clave: `m-${h.clave}`, atleta: h.ultimo.atleta ? { ...h.ultimo.atleta, id: h.ultimo.atleta.id || h.ultimo.atleta_id } : null, h })),
     ...d.sesiones.map((s) => ({ tipo: 'sesiones', clave: `s-${s.id}`, atleta: s.atleta, s })),
     ...d.checkins.map((c) => ({ tipo: 'checkins', clave: `c-${c.id}`, atleta: c.atleta, c })),
-    ...d.archivos.map((a) => ({ tipo: 'videos', clave: `v-${a.id}`, atleta: a.atleta, a })),
+    ...itemsVideos(d.archivos),
     ...(d.tareas || []).map((t) => ({ tipo: 'tareas', clave: `t-${t.id}`, atleta: t.atleta, t })),
     ...(d.recetas || []).map((r) => ({ tipo: 'recetas', clave: `r-${r.id}`, atleta: r.atleta, r })),
     ...(d.comunidad || []).map((r) => ({ tipo: 'comunidad', clave: `e-${r.id}`, atleta: null, r })),
   ].filter((x) => ver(x.tipo)) : [];
   const conVideos = (d?.archivos || []).some((a) => a.tipo === 'video_tecnica');
-  const claveEspera = (x) => (x.tipo === 'videos' && x.a?.tipo === 'video_tecnica' ? x.a.creado_en : null);
+  const claveEspera = (x) => (x.tipo === 'videos' && x.g ? x.g.videos.map((v) => v.creado_en).filter(Boolean).sort()[0] || null : x.tipo === 'videos' && x.a?.tipo === 'video_tecnica' ? x.a.creado_en : null);
   const grupos = orden === 'espera' ? ordenarGruposPorEspera(agruparPorAtleta(items), claveEspera) : agruparPorAtleta(items);
   const alternar = (id) => setPlegados((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const tarjeta = (x) => {
     if (x.tipo === 'mensajes') return <TarjetaMensaje h={x.h} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'sesiones') return <TarjetaSesion s={x.s} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'checkins') return <TarjetaCheckin c={x.c} recargar={recargar} abrirAtleta={abrirAtleta} />;
+    if (x.tipo === 'videos' && x.g) return <TarjetaSesionVideos g={x.g} recargar={recargar} abrirAtleta={abrirAtleta} objetivo={objetivo} />;
     if (x.tipo === 'videos') return <TarjetaVideo a={x.a} recargar={recargar} abrirAtleta={abrirAtleta} objetivo={objetivo} />;
     if (x.tipo === 'tareas') return <TarjetaTarea t={x.t} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'recetas') return <TarjetaCambioReceta r={x.r} recargar={recargar} abrirAtleta={abrirAtleta} />;
@@ -382,6 +385,58 @@ function TarjetaVideo({ a, recargar, abrirAtleta, objetivo = OBJETIVO_REVISION }
       ) : a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}
       {abierto && <><VerArchivo archivo={a} />{a.tipo === 'video_tecnica' && <PanelCorreccion video={a} esCoach nombreAtleta={a.atleta.nombre} />}<Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} alCambiar={recargar} placeholder="Qué corregir, qué está bien…" ejercicio={a.ejercicio || null} /></>}
       <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} etiquetaComentar="Ver y comentar" />
+    </article>
+  );
+}
+
+// (v0.61, 5) Los vídeos de la bandeja: los de una misma sesión (dos o más, del mismo atleta) van en una sola tarjeta, donde
+// iría el primero; los demás, uno a uno como siempre
+function itemsVideos(archivos = []) {
+  const pautas = Object.fromEntries(archivos.filter((a) => a.pauta && a.sesion_ejercicio_id).map((a) => [a.sesion_ejercicio_id, a.pauta]));
+  const { grupos } = agruparPorSesion(archivos, pautas);
+  const deVideo = new Map(grupos.flatMap((g) => g.videos.map((v) => [v.id, g])));
+  const puestos = new Set();
+  const out = [];
+  for (const a of archivos) {
+    const g = deVideo.get(a.id);
+    if (!g) { out.push({ tipo: 'videos', clave: `v-${a.id}`, atleta: a.atleta, a }); continue; }
+    if (puestos.has(g)) continue;
+    puestos.add(g);
+    out.push({ tipo: 'videos', clave: `sv-${g.sesionId}`, atleta: g.videos[0].atleta, g });
+  }
+  return out;
+}
+
+// (v0.61, 5) Una sesión con varios vídeos: «Sesión del martes · 4 vídeos», los ejercicios en su orden y «Revisar la sesión»
+// (uno detrás de otro, con las series de la sesión y, al final, un solo resumen para el atleta)
+function TarjetaSesionVideos({ g, recargar, abrirAtleta, objetivo = OBJETIVO_REVISION }) {
+  const [abierta, setAbierta] = useState(false);
+  const v0 = g.videos[0];
+  const fecha = v0.sesionVideo?.fecha || v0.fecha;
+  const titulo = tituloSesion(fecha, g.videos.length);
+  const masAntiguo = g.videos.map((v) => v.creado_en).filter(Boolean).sort()[0] || null;
+  const molestia = g.videos.find((v) => v.autoevaluacion?.molestia);
+  return (
+    <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar tarjeta-sesion-videos">
+      <Cabecera atleta={v0.atleta} tipo={titulo} cuando={v0.sesionVideo?.nombre || null} abrirAtleta={abrirAtleta} pestana="videos" />
+      <div class="fila-envolver">
+        {masAntiguo && <ChipEspera creado={masAntiguo} objetivo={objetivo} />}
+        {molestia && <span class="chip alerta"><Icono n="alerta" />{textoAutoevaluacion(molestia.autoevaluacion, v0.atleta?.nombre).molestia}</span>}
+      </div>
+      <ol class="sesion-videos-lista">
+        {g.videos.map((v) => (
+          <li key={v.id}>
+            <Icono n="video" />
+            <span class="peq">{v.ejercicio?.nombre || 'Vídeo'}</span>
+            {v.serie && <span class="chip num">Serie {v.serie.numero}{v.serie.texto ? `: ${v.serie.texto}` : ''}</span>}
+            {v.revision?.corregido_el && <span class="chip morado">Corregido</span>}
+          </li>
+        ))}
+      </ol>
+      {abierta && <RevisionSesion grupo={g} abrirAtleta={abrirAtleta} alCerrar={() => { setAbierta(false); recargar(); }} />}
+      <div class="fila-envolver">
+        <button type="button" class="btn btn-peq btn-primario" onClick={() => setAbierta(true)} aria-haspopup="dialog"><Icono n="video" /> Revisar la sesión</button>
+      </div>
     </article>
   );
 }

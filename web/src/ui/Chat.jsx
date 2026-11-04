@@ -1,3 +1,5 @@
+import { leerTarjetaInforme, textoMes } from '../logica/informeTecnica.js';
+import { HojaInforme } from './tecnica/InformeMes.jsx';
 import { Fragment } from 'preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Cargando, Hoja, cuando, Vacio, copiar, Pestanas } from './comunes.jsx';
@@ -1289,6 +1291,19 @@ function Ticks({ estado: e }) {
 // navegador); mantenerla pulsada, el botón derecho, «Más opciones» o Mayús+F10 abren su menú. v0.55: la hora y los ✓
 // dentro, abajo a la derecha (el texto deja su hueco), el pico en la primera del grupo, 1 a 3 emojis en grande y sin
 // burbuja, «Leer más», «↪ Reenviado», los PDF y, al seleccionar varios, se marcan al tocarlas.
+// (v0.61, 17) La tarjeta del informe del mes en el chat: «Ver el informe» lo abre en la app (se calcula al abrirlo)
+function TarjetaInformeChat({ mes, atletaId, yo }) {
+  const [abierto, setAbierto] = useState(false);
+  return (
+    <div class="tarjeta-informe-chat">
+      <span class="tarjeta-informe-ico" aria-hidden="true"><Icono n="progreso" /></span>
+      <span class="pila-xs"><strong class="peq">Informe de técnica</strong><span class="mini secundario">{textoMes(mes)}</span></span>
+      <button type="button" class="btn btn-peq" onClick={(e) => { e.stopPropagation(); setAbierto(true); }} aria-haspopup="dialog">Ver el informe</button>
+      {abierto && <HojaInforme atletaId={atletaId} mes={mes} esCoach={yo === 'coach'} alCerrar={() => setAbierto(false)} />}
+    </div>
+  );
+}
+
 function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, resaltada, hayMas, nueva, fijado, seleccionando, seleccionado, alAlternar, alMenu, alResponder, alIrA, alAbrir, alContexto, alReacciones, alFallo,
   alCancelarSubida, alReintentarSubida, alRecargar }) {
   const mio = c.autor === yo;
@@ -1307,6 +1322,8 @@ function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, res
   // (v0.56) una nota de voz, una encuesta o algo que aún se está subiendo
   const esVoz = !!c.archivo && (c.archivo.tipo === 'audio' || /^audio\//.test(c.archivo.mime || ''));
   const conEncuesta = !!c.encuesta && !eliminado;
+  // (v0.61) el informe de técnica del mes que manda el coach: su tarjeta, con «Ver el informe»
+  const mesInforme = !eliminado && !c.programado ? leerTarjetaInforme(c) : null;
   const sub = c.subida || null;
   const soloMedio = !!c.archivo && !esDoc && !esVoz && esMarcador(c) && !eliminado;
   const soltar = () => {
@@ -1407,6 +1424,7 @@ function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, res
             {largo.cortado && <button type="button" class="burbuja-leer-mas" onClick={() => setEntero(true)}>Leer más</button>}
           </div>
         ) : null}
+      {mesInforme && <TarjetaInformeChat mes={mesInforme} atletaId={c.atleta_id} yo={yo} />}
       <span class={`burbuja-pie ${c.programado ? 'pie-bloque' : ''} ${soloMedio ? 'sobre-medio' : ''}`}>{pieDentro}</span>
       {conMenu && !seleccionando && <button type="button" class="burbuja-mas" aria-label="Más opciones" aria-haspopup="dialog" onClick={alMenu}><Icono n="abajo" /></button>}
       {reacciones.length > 0 && (

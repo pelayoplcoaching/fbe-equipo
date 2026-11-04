@@ -16,6 +16,8 @@ import { hoyISO } from '../logica/fechas.js';
 import { velocidadInicial, esLenta } from '../logica/angulos.js';
 import { DifuminarCara, puedeDifuminar } from './tecnica/Difuminar.jsx';
 import { ajuste } from './ajustes.js';
+import { leerRed, motivoEspera, TEXTO_ESPERA } from '../logica/red.js';
+import { subidaEmpieza, subidaProgreso, subidaAcaba } from '../datos/subidas.js';
 
 // Botón que abre la cámara o la galería y envía el vídeo (o la foto) a la carpeta privada del atleta.
 // Vídeos (v0.30): antes de enviarlo se elige dónde empieza y acaba la serie, y el móvil lo recorta y lo aligera
@@ -31,6 +33,9 @@ const LIMITE_ELEGIR_MB = 2048; // un vídeo largo se puede elegir si luego se va
 // puntos a la vista en la cámara (puntos). abrirCamara: empieza en la cámara.
 // v0.60: anguloDe, el vídeo del que este es el otro ángulo (038; «Añadir otro ángulo» también al terminar de enviar uno);
 // el ritmo de la cámara lenta (fps_captura) si se grabó así; y «Difuminar la cara» (se envía solo el difuminado).
+// v0.61 (20): con «Subir los vídeos solo con wifi» (o el ahorro de datos del móvil) y datos móviles, el vídeo se queda en
+// el móvil esperando la wifi (la cola de pendientes lo sube al conectarse, o con «Subir ahora»); mientras sube, la píldora
+// de arriba enseña cuánto lleva en cualquier pantalla y la hoja se puede cerrar («Seguir en segundo plano»).
 export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicioId = null, ejercicioId = null, titulo, etiqueta, clase = 'btn-texto', alSubir, inicial = null, alCancelar = null, alGuardarEnMovil = null,
   ejercicio = null, series = null, serieInicial = null, repiteDe = null, puntos = [], abrirCamara = false, directoACamara = false, anguloDe = null }) {
   const { api, aviso, modo } = useApp();
@@ -48,6 +53,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
   const [fallo, setFallo] = useState(null); // el recorte ha fallado: se ofrece enviarlo entero
   const [corte, setCorte] = useState(null); // { dur, inicio, fin }
   const [subida, setSubida] = useState(null); // progreso de la subida (0…1)
+  const [segundoPlano, setSegundoPlano] = useState(false); // (v0.61) la hoja, cerrada mientras sigue subiendo
   const [enPausa, setEnPausa] = useState(false); // el recorte está en pausa (se salió de la app) y no siguió solo
   const [auto, setAuto] = useState(null); // (v0.59) la valoración del atleta, ya limpia (o null)
   // (v0.60) el otro ángulo (el de la prop, o el que se acaba de enviar), el ritmo de la cámara lenta y el difuminado
@@ -103,7 +109,17 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
       ...(esVideo && anguloDeAhora ? { angulo_de: anguloDeAhora } : {}), ...(esVideo && fps && !(difuminar && difuminado) ? { fps_captura: fps } : {}) };
     opciones.ruta = api.rutaArchivo(atletaId, f, opciones);
     const pid = esVideo ? await guardarPendiente({ atletaId, archivo: f, opciones }).catch(() => null) : null;
+    // (v0.61) Solo con wifi (o con el ahorro de datos) y con datos móviles: espera en el móvil, sin subir nada
+    const espera = esVideo && pid ? motivoEspera({ soloWifi: ajuste('soloWifi') === true, red: leerRed() }) : null;
+    if (espera) {
+      avisarPendientes();
+      aviso(`${TEXTO_ESPERA[espera]} Puedes subirlo antes con «Subir ahora».`);
+      setArchivo(null); setNota(''); setCorte(null); setFallo(null); setDifuminado(null); setFps(null);
+      alGuardarEnMovil?.();
+      return;
+    }
     let a = null, error = null;
+    const idSubida = pid || `hoja-${opciones.ruta}`;
     const r = await conCerrojo(pid || `hoja-${opciones.ruta}`, async () => {
       try {
         // La miniatura y la duración del vídeo se sacan en el móvil antes de subirlo (si no se puede, se sube igual)
@@ -111,10 +127,11 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
         setSubida(0);
         const s = senal.current = {};
         let ultimo = 0;
+        if (esVideo) subidaEmpieza(idSubida, { nombre: ejercicio?.nombre || 'Vídeo' });
         a = await api.subirArchivo(atletaId, f, { ...opciones, poster: cap?.poster || null, duracion_seg: duracion ?? cap?.duracion ?? null, senal: s,
           alUrlSubida: pid ? (url) => ponerSubida(pid, { url }).catch(() => {}) : null,
-          alProgreso: (x) => { setSubida(x); if (pid && x - ultimo >= 0.05) { ultimo = x; ponerSubida(pid, { progreso: x }).catch(() => {}); } } });
-      } catch (e) { error = e; }
+          alProgreso: (x) => { setSubida(x); if (esVideo) subidaProgreso(idSubida, x); if (pid && x - ultimo >= 0.05) { ultimo = x; ponerSubida(pid, { progreso: x }).catch(() => {}); } } });
+      } catch (e) { error = e; } finally { if (esVideo) subidaAcaba(idSubida, { ok: !error && !!a }); }
     });
     if (r === 'ocupado') { // ya lo está enviando la cola de pendientes: avisará al terminar
       aviso('El vídeo se está enviando: te aviso al terminar');
@@ -141,12 +158,14 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
       throw error;
     }
     if (pid) await quitarPendiente(pid).catch(() => {});
+    const enFondo = segundoPlanoRef.current;
+    segundoPlanoRef.current = false; setSegundoPlano(false);
     if (a?.autoevaluacionError) aviso(`Vídeo enviado, pero tu valoración no se ha guardado: ${a.autoevaluacionError}`, 'error');
     else if (a?.anguloPerdido) aviso('Vídeo enviado, pero ya no va como otro ángulo: el vídeo con el que iba se ha borrado o ya tiene pareja', 'error');
     else aviso(esVideo ? 'Vídeo enviado a tu coach' : 'Foto guardada');
     setArchivo(null); setNota(''); setCorte(null); setFallo(null); setDifuminado(null); setFps(null);
     // (v0.60) «Añadir otro ángulo»: el siguiente va enlazado a este, de la misma serie
-    const preguntar = esVideo && otroAngulo && a?.id && !anguloDeAhora;
+    const preguntar = esVideo && otroAngulo && a?.id && !anguloDeAhora && !enFondo;
     setOtroAngulo(false);
     if (anguloDeAhora && !anguloDe) setAnguloDeAhora(null);
     if (preguntar) { subidoAntes.current = a; setAnguloSig({ id: a.id, serie }); } else { subidoAntes.current = null; alSubir?.(a); }
@@ -159,7 +178,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
       setSubiendo(true);
       try { await subir(difuminado.archivo, Math.round(difuminado.dur)); }
       catch (err) { aviso(err.sinConexion ? 'Sin cobertura y no se ha podido guardar el vídeo en el móvil: cuando vuelva la cobertura, elígelo otra vez para enviarlo' : err.message, 'error'); }
-      finally { setSubiendo(false); setSubida(null); }
+      finally { setSubiendo(false); setSubida(null); segundoPlanoRef.current = false; setSegundoPlano(false); }
       return;
     }
     // En el mismo toque (antes de esperar nada): el vídeo que se va a recortar se arranca con el gesto (iPhone)
@@ -195,10 +214,13 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
       await subir(f, duracion);
     } catch (err) {
       aviso(err.sinConexion ? 'Sin cobertura y no se ha podido guardar el vídeo en el móvil: cuando vuelva la cobertura, elígelo otra vez para enviarlo' : err.message, 'error');
-    } finally { setSubiendo(false); setPreparando(null); setSubida(null); }
+    } finally { setSubiendo(false); setPreparando(null); setSubida(null); segundoPlanoRef.current = false; setSegundoPlano(false); }
   }
   const mb = (n) => (n < 104858 ? 'menos de 0,1' : (n / MB).toLocaleString('es-ES', { maximumFractionDigits: n < 10 * MB ? 1 : 0 }));
-  const cerrar = () => { if (preparando != null) { cancelar.current?.(); return; } if (!subiendo) { setArchivo(null); setFallo(null); if (inicial) alCancelar?.(); } };
+  const cerrar = () => { if (preparando != null) { cancelar.current?.(); return; } if (subiendo && subida != null) { irAFondo(); return; } if (!subiendo) { setArchivo(null); setFallo(null); if (inicial) alCancelar?.(); } };
+  // (v0.61) Cerrar la hoja mientras sube: la subida sigue (la píldora de arriba dice cuánto lleva) y avisa al terminar
+  const segundoPlanoRef = useRef(false);
+  const irAFondo = () => { segundoPlanoRef.current = true; setSegundoPlano(true); };
   return (
     <>
       {!inicial && <button type="button" class={clase} onClick={abrir} aria-haspopup={guiada ? 'dialog' : undefined}><Icono n={esVideo ? 'camara' : 'imagen'} /> {etiqueta || (esVideo ? 'Vídeo para tu coach' : 'Añadir foto')}</button>}
@@ -220,7 +242,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
         </Hoja>
       )}
       {camara && <CamaraVideo ejercicio={ejercicio} titulo={titulo || 'Vídeo de técnica'} puntos={puntos} alCerrar={() => setCamara(false)} alGrabar={grabado} />}
-      {archivo && (
+      {archivo && !segundoPlano && (
         <Hoja titulo={titulo || (esVideo ? 'Vídeo de técnica' : 'Foto de progreso')} alCerrar={cerrar}>
           {preparando != null ? (
             <div class="recorte-preparando" role="status">
@@ -282,8 +304,11 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
               {subiendo && subida != null && (
                 <>
                   <div class="recorte-progreso subida-progreso" aria-hidden="true"><span style={{ width: `${Math.round(subida * 100)}%` }} /></div>
-                  <button type="button" class="btn btn-texto" onClick={() => { const x = senal.current; if (x?.abortar) x.abortar(); else if (x) x.cancelada = true; }}>Cancelar el envío</button>
-                  <p class="mini terciario">Si se corta la cobertura o sales de la app, sigue por donde iba.</p>
+                  <div class="fila-envolver">
+                    <button type="button" class="btn btn-texto" onClick={() => { const x = senal.current; if (x?.abortar) x.abortar(); else if (x) x.cancelada = true; }}>Cancelar el envío</button>
+                    {esVideo && <button type="button" class="btn btn-texto" onClick={irAFondo}>Seguir en segundo plano</button>}
+                  </div>
+                  <p class="mini terciario">Si se corta la cobertura o sales de la app, sigue por donde iba (en el iPhone, al volver a la app).</p>
                 </>
               )}
             </>

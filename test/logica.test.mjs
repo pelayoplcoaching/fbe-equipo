@@ -3389,7 +3389,7 @@ console.log('\nv0.60: el compositor, difuminar la cara, dos ángulos y la cámar
   const PV2 = await import('../web/src/logica/privacidad.js');
   const legal3 = await import('../web/src/legal.js');
   const tv3 = legal3.PRIVACIDAD.find((x) => x[0] === 'Tus vídeos de técnica')[1];
-  check(legal3.VERSION_LEGAL === '2026-12.2' && PV2.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.2' && PV2.novedadesDesde('2026-12.1', '2026-12.2').length === 1
+  check(PV2.compararVersiones(legal3.VERSION_LEGAL, '2026-12.2') >= 0 && PV2.NOVEDADES_PRIVACIDAD.some((x) => x[3] === '2026-12.2') && PV2.novedadesDesde('2026-12.1', '2026-12.2').length === 1
     && /micro/.test(tv3) && /cámara de delante/.test(tv3) && /no se sube a ningún sitio/.test(tv3) && /el original no sale del móvil/.test(tv3),
     'la política 2026-12.2: el micro y la cámara de delante (revisión grabada y respuestas), exportar en el móvil y difuminar la cara (el original no sale)');
 }
