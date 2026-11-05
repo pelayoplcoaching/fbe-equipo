@@ -1531,8 +1531,8 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   {
     const uid = bT.auth.sesion().user.id;
     const pv = async (v) => (await bT.upsert('privacidad_vista', [{ usuario_id: uid, version: v }], 'usuario_id'))[0].version;
-    check(VERSION_LEGAL_D === '2026-12.7' && await aT.versionLegal() === '2026-12.7' && await pv('2026-12.7') === '2026-12.7' && await pv('2026-12.6') === '2026-12.7' && await pv('2026-12') === '2026-12.7' && await pv('2026-11') === '2026-12.7',
-      '(M2) en la demo (que tiene la 037), la 2026-12.7 (v0.65); nunca hacia atrás, comparando por partes');
+    check(VERSION_LEGAL_D === '2026-12.8' && await aT.versionLegal() === '2026-12.8' && await pv('2026-12.8') === '2026-12.8' && await pv('2026-12.7') === '2026-12.8' && await pv('2026-12') === '2026-12.8' && await pv('2026-11') === '2026-12.8',
+      '(M2) en la demo (que tiene la 037), la 2026-12.8 (v0.69); nunca hacia atrás, comparando por partes');
     check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.10')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato y de un mes que ya existe');
   }
   await bT.auth.entrar('pelayo@fbe.demo', 'demo');
@@ -1694,6 +1694,53 @@ console.log('\nv0.61: revisar la sesión, la velocidad mínima y el informe del 
   await bT.auth.entrar('ana@fbe.demo', 'demo');
   const r = await aT.informeTecnica(ana.id, mes);
   check(r.informe.enviados >= 2 && (await aT.conversacion(ana.id)).some((x) => x.id === ci.id), 'Ana lo ve en su chat y lo abre');
+}
+
+console.log('\nv0.69: la comunidad, primera tanda (las mismas reglas de la 041 en la demo)');
+{
+  const b3 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a3 = crearApi(b3);
+  await b3.auth.entrar('carlos@fbe.demo', 'demo');
+  const nuevos = await a3.nuevosComunidad();
+  check(nuevos.length === 1 && nuevos[0].nombre === 'Lucía F.' && !nuevos[0].bienvenida && await a3.comunidad041() === true, 'Carlos ve que Lucía acaba de entrar (la demo tiene la 041)');
+  await a3.darBienvenida(nuevos[0].perfil_id);
+  check((await a3.nuevosComunidad())[0].bienvenida && await lanza(() => a3.darBienvenida(nuevos[0].perfil_id)) && await lanza(() => a3.darBienvenida(a3.uid()))
+    && await lanza(() => b3.insert('comunidad_bienvenidas', [{ de: a3.uid(), para: nuevos[0].perfil_id }])), 'le da la bienvenida una vez; ni a sí mismo ni a mano');
+  await b3.auth.entrar('lucia@fbe.demo', 'demo');
+  check((await a3.nuevosComunidad()).length === 0 && (await a3.bienvenidasRecibidas()).map((x) => x.nombre).sort().join() === 'Carlos V.,Rubén M.', 'Lucía no se ve a sí misma; ve quién le ha dado la bienvenida');
+  const post = (await a3.muro()).posts.find((x) => x.mio && x.tipo === 'post');
+  const coms = await a3.comentariosComunidad(post.id);
+  const deRuben = coms.find((c) => c.autor.nombre === 'Rubén M.');
+  check(deRuben.fuerza.join() === 'Pelayo' && coms.every((c) => c.con041), 'el comentario de Rubén en su publicación ya tiene el 💪 del coach');
+  await a3.comentarEnComunidad(post.id, '¡Gracias!', [], deRuben.id);
+  const otro = (await a3.muro()).posts.find((x) => !x.mio && x.comentarios > 0 && x.id !== post.id);
+  const ajeno = otro && (await a3.comentariosComunidad(otro.id))[0];
+  check(await lanza(() => a3.comentarEnComunidad(post.id, 'x', [], ajeno?.id || 'nada')), 'responder a un comentario de otra publicación, no (como la base)');
+  const resp = (await a3.comentariosComunidad(post.id)).find((c) => c.texto === '¡Gracias!');
+  await a3.comentarEnComunidad(post.id, 'Y otra', [], resp.id);
+  check(resp.responde_a === deRuben.id && (await a3.comentariosComunidad(post.id)).find((c) => c.texto === 'Y otra').responde_a === deRuben.id, 'responde a Rubén; a una respuesta, cuelga del mismo comentario');
+  check(await a3.reaccionarComentario(deRuben.id) === true && await a3.reaccionarComentario(deRuben.id) === false, '💪 a un comentario: otra vez lo quita');
+  // Entrenando ahora: Lucía lo enciende y apunta una serie de una sesión sin terminar (en la demo no entrena: se finge)
+  await b3.auth.entrar('ruben@fbe.demo', 'demo');
+  check(await lanza(() => b3.insert('comunidad_comentario_reacciones', [{ comentario_id: deRuben.id, autor_id: a3.uid() }])), 'los 💪 no se escriben a mano');
+  await a3.verEntrenandoComunidad(true);
+  await b3.auth.entrar('carlos@fbe.demo', 'demo');
+  check((await a3.entrenandoAhora()).length === 0, 'nadie entrenando: Rubén lo ha encendido, pero no ha apuntado nada en los últimos 20 minutos');
+  await b3.auth.entrar('ruben@fbe.demo', 'demo');
+  const misBloques = (await b3.select('bloques', { eq: { atleta_id: (await a3.miAtleta()).id, es_plantilla: false } })).map((x) => x.id);
+  const misSemanas = (await b3.select('semanas', { in: { bloque_id: misBloques } })).map((x) => x.id);
+  const sinHacer = (await b3.select('sesiones', { in: { semana_id: misSemanas } })).find((x) => !x.completada);
+  const pauta = sinHacer && (await b3.select('sesion_ejercicios', { eq: { sesion_id: sinHacer.id } }))[0];
+  if (pauta) await b3.insert('series', [{ sesion_ejercicio_id: pauta.id, numero: 20, kg: 40, reps: 8 }]);
+  await b3.auth.entrar('carlos@fbe.demo', 'demo');
+  const ahora = await a3.entrenandoAhora();
+  check(!!pauta && ahora.length === 1 && ahora[0].nombre === 'Rubén M.' && Object.keys(ahora[0]).sort().join() === 'foto,nombre,perfil_id', 'Rubén apunta una serie: Carlos le ve «entrenando ahora» (solo su nombre y su foto)');
+  await b3.auth.entrar('ruben@fbe.demo', 'demo');
+  await a3.verEntrenandoComunidad(false);
+  await b3.auth.entrar('carlos@fbe.demo', 'demo');
+  check((await a3.entrenandoAhora()).length === 0, 'al apagarlo, ya no sale');
+  const datos = await b3.rpc('comunidad_mis_datos', {});
+  check(Array.isArray(datos.bienvenidas_dadas) && datos.bienvenidas_dadas.length === 1 && Array.isArray(datos.reacciones_comentarios), '«Descargar mis datos» lleva sus bienvenidas y sus 💪 a comentarios');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

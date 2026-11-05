@@ -27,8 +27,10 @@ export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) &&
 // la 037: cómo lo has notado, los recordatorios y los vídeos modelo) y la 2026-12.2 (v0.60: las respuestas en vídeo, exportar
 // y difuminar la cara en el móvil) y la 2026-12.4 (v0.62: avisar aunque bloquees el móvil) y la 2026-12.5 (v0.63: el teclado
 // de la app y tus discos, en el móvil) y la 2026-12.6 (v0.64: el orden de hoy de una sesión, en el móvil) y la 2026-12.7 (v0.65:
-// la copia de tu semana en el móvil, para abrir sin cobertura)
+// la copia de tu semana en el móvil, para abrir sin cobertura) y la 2026-12.8 (v0.69: «Entrenando ahora», la bienvenida, las
+// respuestas y los 💪 a comentarios, el resumen del domingo y compartir los entrenos sin preguntar)
 export const NOVEDADES_PRIVACIDAD = [
+  ['equipo', 'Novedades del equipo', 'En la comunidad, «Que el equipo vea cuándo estoy entrenando» (apagado de entrada) enseña tu nombre y tu foto mientras entrenas, nunca la hora ni lo que haces. Puedes dar la bienvenida a quien entra, responder a un comentario y darle 💪, y el domingo te puede llegar el resumen de la semana del equipo (solo recuentos). «Compartir mis entrenos sin preguntar» se guarda solo en tu móvil.', '2026-12.8'],
   ['sinred', 'Tu semana, también sin cobertura', 'Para que Hoy y tu sesión abran al momento aunque no tengas señal, el móvil guarda una copia de tu semana (tu programa y las sesiones que te quedan, con lo que hiciste la última vez y las notas de tu coach). Solo para tu cuenta: se pone al día con conexión y se borra al cerrar la sesión. También la última versión de la app que has abierto, para enseñarte sus novedades una vez.', '2026-12.7'],
   ['ordenar', 'El orden de tu sesión', 'Si cambias el orden de los ejercicios de una sesión (con la máquina ocupada, por ejemplo), se guarda solo en tu móvil y para esa sesión: la pauta de tu coach no cambia. Tu coach ve en qué orden los hiciste por la hora de cada serie, que ya se guardaba.', '2026-12.6'],
   ['teclado', 'El teclado de la app y tus discos', 'Si apuntas las series con el teclado de la app o con el del móvil, y el disco más pequeño que tienes en cada sitio (para los −/+ de los kilos), se guarda solo en tu móvil.', '2026-12.5'],

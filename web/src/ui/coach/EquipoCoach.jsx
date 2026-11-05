@@ -4,7 +4,7 @@
 import { useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, Pestanas, Cargando } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
-import { Muro, Retos, Ranking, ListaNormas, ConPerfiles, AvatarEquipo, NotaHoy } from '../Comunidad.jsx';
+import { Muro, Retos, Ranking, ListaNormas, ConPerfiles, AvatarEquipo, NotaHoy, EntrenandoAhora } from '../Comunidad.jsx';
 import { fmtCorta } from '../../logica/fechas.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking'], ['miembros', 'Quién está'], ['normas', 'Normas']];
@@ -15,8 +15,9 @@ export function EquipoCoach() {
     <div class="contenido coach equipo">
       <CabeceraGrande><div class="titulo"><h1>Equipo</h1><div class="sub">El muro de tus atletas: avisos, encuestas, retos y constancia</div></div></CabeceraGrande>
       <BandaDemo />
-      <Pestanas opciones={VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eqc" clase="pestanas-justas" />
       <ConPerfiles>
+      <EntrenandoAhora />
+      <Pestanas opciones={VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eqc" clase="pestanas-justas" />
       <div class="pestana-panel" role="tabpanel" id="eqc-panel" aria-labelledby={`eqc-${vista}`} key={vista}>
         {vista === 'muro' && <Muro coach />}
         {vista === 'retos' && <Retos coach />}

@@ -3,6 +3,8 @@
 // permisos los pone la base (migraciones 027 a 029): lo de aquí solo enseña o esconde botones.
 // v0.47: resumen de la semana, rachas, podio, perfil del equipo, retos de equipo, celebración de logros, menciones,
 // filtros y novedades del muro, encuestas del coach y ánimos.
+// v0.69 (migración 041): bienvenida a los nuevos, «Entrenando ahora», compartir los entrenos sin preguntar (en el móvil),
+// responder a un comentario y 💪 a un comentario. Sin la 041, lo que la necesita no sale (o lo dice).
 import { createContext, Fragment } from 'preact';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando } from './comunes.jsx';
@@ -11,12 +13,14 @@ import { reducirFoto } from './FotoPerfil.jsx';
 import {
   REACCIONES, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_PREGUNTA, MAX_OPCION, RETO_MAX, FILTROS_MURO, MEDALLAS, nombreEquipo, nombreValido, estadoReto, textoReto,
   ordenarRanking, posicionesRanking, quienes, textoRacha, mencionEnCurso, sugerenciasMencion, insertarMencion, mencionesDeTexto, trozosConMenciones, encuestaCerrada,
+  hilosComentarios, DIAS_BIENVENIDA,
 } from '../logica/comunidad.js';
 import { fmtConDia, fmtCorta, hoyISO, sumarDias, lunesDe, aISO } from '../logica/fechas.js';
 import { num } from '../logica/calculos.js';
 import { Pictograma } from './Pictograma.jsx';
 import { patronEjercicio } from '../logica/diseno.js';
-import { VERSION_COMUNIDAD } from '../datos/api.js';
+import { VERSION_COMUNIDAD, AVISO_041 } from '../datos/api.js';
+import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
@@ -42,6 +46,11 @@ function leerCelebrados(uid) {
 function marcarCelebrado(uid, id) {
   guardarLocal(claveCelebrados(uid), JSON.stringify([...new Set([...leerCelebrados(uid), id])].slice(-200)));
 }
+
+// v0.69: «Compartir mis entrenos sin preguntar», un ajuste de este móvil (por cuenta). Lo lee el resumen de la sesión
+const claveAutoCompartir = (uid) => `fbe-equipo-autocompartir:${uid || ''}`;
+export const leerAutoCompartir = (uid) => leerPreferencia(claveAutoCompartir(uid), false) === true;
+const guardarAutoCompartir = (uid, v) => guardarPreferencia(claveAutoCompartir(uid), !!v);
 
 // ---------------------------------------------------------------- el perfil en el equipo (v0.47)
 // Tocar a alguien (su foto o su nombre en una publicación, un comentario, el ranking, un reto o una mención) abre su
@@ -128,8 +137,12 @@ function DentroDelEquipo({ m, alCambiar }) {
     setCelebrar(null);
     if (compartido) setCambios((c) => c + 1);
   };
+  // v0.69: en su primera semana, quién le ha dado la bienvenida
+  const nuevo = !!m.creado_en && Date.parse(m.creado_en) > Date.now() - DIAS_BIENVENIDA * 864e5;
+  const bienvenidas = useCarga(() => (nuevo ? api.bienvenidasRecibidas().catch(() => []) : Promise.resolve([])), []);
   const n = racha.datos?.racha || 0;
   const recibidos = animos.datos?.recibidos || [];
+  const deBienvenida = bienvenidas.datos || [];
   return (
     <div class="contenido equipo">
       <CabeceraGrande>
@@ -142,9 +155,13 @@ function DentroDelEquipo({ m, alCambiar }) {
         </div>
         <button class="btn btn-icono plano" aria-label="Ajustes de la comunidad" onClick={() => setAjustes(true)}><Icono n="ajustes" /></button>
       </CabeceraGrande>
+      {deBienvenida.length > 0 && (
+        <p class="animos-recibidos peq"><span class="animos-ico" aria-hidden="true">👋</span><span>Te han dado la bienvenida: <strong>{quienes(deBienvenida.map((x) => x.nombre), 3)}</strong></span></p>
+      )}
       {recibidos.length > 0 && (
         <p class="animos-recibidos peq"><span class="animos-ico" aria-hidden="true">🙌</span><span>Te han animado esta semana: <strong>{quienes(recibidos.map((x) => x.nombre), 3)}</strong></span></p>
       )}
+      <EntrenandoAhora />
       <Pestanas opciones={VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eq" />
       <div class="pestana-panel" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista}>
         {vista === 'muro' && <Muro cambios={cambios} />}
@@ -290,6 +307,7 @@ export function Muro({ coach = false, cambios = 0 }) {
   return (
     <div class="pila muro">
       <ResumenSemana cambios={cambios} />
+      {filtro === 'todo' && <BienvenidaNuevos />}
       <Compositor coach={coach} personas={d?.personas || {}} alPublicar={recargar} />
       <div class="filtros-muro" role="group" aria-label="Qué ver en el muro">
         {FILTROS_MURO.map(([k, t]) => <button key={k} type="button" class="chip-filtro" aria-pressed={filtro === k ? 'true' : 'false'} onClick={() => cambiarFiltro(k)}>{t}</button>)}
@@ -308,6 +326,77 @@ export function Muro({ coach = false, cambios = 0 }) {
         ))}
       {d?.hayMas && <button class="btn" onClick={() => setPaginas(paginas + 1)}>Ver más</button>}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- v0.69: bienvenida y «Entrenando ahora»
+// Quien ha entrado por primera vez en los últimos 7 días: «Ana L. se ha unido al equipo» con «Dar la bienvenida 👋» (una vez
+// por persona; nunca a uno mismo). Sale de comunidad_nuevos() (041): sin ella, nada.
+function BienvenidaNuevos() {
+  const { api, aviso } = useApp();
+  const nuevos = useCarga(() => api.nuevosComunidad().catch(() => []), []);
+  const [dadas, setDadas] = useState([]);
+  const [ocupado, una] = useUnaVez();
+  const lista = nuevos.datos || [];
+  if (!lista.length) return null;
+  const dar = (x) => una(async () => {
+    try { await api.darBienvenida(x.perfil_id); setDadas((l) => [...l, x.perfil_id]); aviso(`Le has dado la bienvenida a ${x.nombre} 👋`); } catch (e) { aviso(e.message, 'error'); }
+  });
+  return (
+    <div class="pila-s bienvenidas-nuevos">
+      {lista.map((x) => {
+        const dada = x.bienvenida || dadas.includes(x.perfil_id);
+        return (
+          <section key={x.perfil_id} class="panel panel-pad bienvenida-nuevo" aria-label={`${x.nombre} se ha unido al equipo`}>
+            <span class="bn-ico" aria-hidden="true">👋</span>
+            <div class="bn-texto pila-xs">
+              <span><BotonPersona perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} avatar={false}><strong class="btn-persona-nombre">{x.nombre}</strong></BotonPersona> se ha unido al equipo</span>
+              <span class="mini terciario">{cuando(x.desde)}</span>
+            </div>
+            <button type="button" class={`btn btn-peq ${dada ? 'hecho' : 'btn-primario'} bn-boton`} disabled={ocupado || dada} onClick={() => dar(x)}
+              aria-label={dada ? `Ya le has dado la bienvenida a ${x.nombre}` : `Dar la bienvenida a ${x.nombre}`}>
+              {dada ? <><Icono n="hecho" /> Bienvenida dada</> : <>Dar la bienvenida <span aria-hidden="true">👋</span></>}
+            </button>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+// Arriba en Equipo: quién está entrenando ahora (solo quien lo ha encendido; ni horas ni nada de su sesión) con «🙌», que
+// manda el ánimo de siempre (uno por persona y semana). Se vuelve a mirar cada dos minutos con la pestaña delante.
+export function EntrenandoAhora() {
+  const { api, aviso } = useApp();
+  const [vuelta, setVuelta] = useState(0);
+  const ahora = useCarga(() => api.entrenandoAhora(), [vuelta]);
+  const animos = useCarga(() => api.animosComunidad().catch(() => null), []);
+  const [nuevos, setNuevos] = useState([]);
+  const [ocupado, una] = useUnaVez();
+  useEffect(() => {
+    const t = setInterval(() => { if (!document.hidden) setVuelta((v) => v + 1); }, 120000);
+    return () => clearInterval(t);
+  }, []);
+  const lista = ahora.datos || [];
+  if (!lista.length) return null;
+  const animado = (id) => nuevos.includes(id) || !!animos.datos?.mandados?.has(id);
+  const animar = (x) => una(async () => {
+    try { await api.animar(x.perfil_id); setNuevos((l) => [...l, x.perfil_id]); aviso(`Le has mandado ánimo a ${x.nombre} 🙌`); } catch (e) { aviso(e.message, 'error'); }
+  });
+  return (
+    <section class="panel panel-pad entrenando-ahora" aria-labelledby="eq-entrenando-t">
+      <h2 id="eq-entrenando-t" class="ea-t"><span class="ea-punto" aria-hidden="true" />Entrenando ahora</h2>
+      <ul class="ea-lista">
+        {lista.map((x) => (
+          <li key={x.perfil_id} class="ea-persona">
+            <BotonPersona perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} clase="ea-quien" claseAvatar="">
+              <span class="btn-persona-nombre ea-nombre">{x.nombre}</span>
+            </BotonPersona>
+            <BotonAnimar nombre={x.nombre} animado={animado(x.perfil_id)} ocupado={ocupado} alAnimar={() => animar(x)} />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -751,55 +840,86 @@ function HojaAvisar({ postId = null, comentarioId = null, alCerrar }) {
   );
 }
 
+// v0.69 (041): cada comentario con «Responder» y 💪 (uno por persona, con cuántos); las respuestas, debajo y sangradas (un
+// nivel: responder a una respuesta cuelga del mismo comentario). Sin la 041, como antes.
 function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
   const { api, aviso } = useApp();
-  const abrir = usePerfil();
   const lista = useCarga(() => api.comentariosComunidad(post.id), [post.id]);
   const [texto, setTexto] = useState('');
   const [elegidas, setElegidas] = useState([]);
   const [avisar, setAvisar] = useState(null);
+  const [respondiendo, setRespondiendo] = useState(null); // { id, nombre }
   const [ocupado, una] = useUnaVez();
   const recargar = async () => { await lista.recargar(true); alCambiar(); };
   const enviar = (e) => {
     e.preventDefault();
     una(async () => {
-      try { await api.comentarEnComunidad(post.id, texto, mencionesDeTexto(texto, elegidas)); setTexto(''); setElegidas([]); await recargar(); } catch (err) { aviso(err.message, 'error'); }
+      try {
+        await api.comentarEnComunidad(post.id, texto, mencionesDeTexto(texto, elegidas), respondiendo?.id || null);
+        setTexto(''); setElegidas([]); setRespondiendo(null); await recargar();
+      } catch (err) { aviso(err.message, 'error'); }
     });
   };
-  const accion = (fn, texto2) => una(async () => { try { await fn(); aviso(texto2); await recargar(); } catch (err) { aviso(err.message, 'error'); } });
+  const accion = (fn, texto2) => una(async () => { try { await fn(); if (texto2) aviso(texto2); await recargar(); } catch (err) { aviso(err.message, 'error'); } });
+  const responder = (c) => {
+    setRespondiendo({ id: c.responde_a || c.id, nombre: c.autor.nombre });
+    requestAnimationFrame(() => document.getElementById('eq-comentario')?.focus());
+  };
+  const hilos = hilosComentarios(lista.datos || []);
+  const item = (c, respuesta = false) => (
+    <li key={c.id} class={`comentario-equipo ${respuesta ? 'respuesta' : ''}`}>
+      {/* (la foto también abre el perfil, con el dedo; con el teclado, el nombre) */}
+      <BotonFoto c={c} />
+      <div class="pila-xs">
+        <span class="peq"><BotonPersona perfilId={c.autor_id} nombre={c.autor.nombre} avatar={false} clase="comentario-nombre"><strong>{c.autor.nombre}</strong></BotonPersona>{c.autor.coach && <span class="chip morado chip-mini">Coach</span>} <span class="mini terciario">{cuando(c.creado_en)}</span></span>
+        <TextoConMenciones texto={c.texto} mencionados={c.mencionados} clase="post-texto peq" como="span" />
+        {c.oculto && <span class="mini terciario">Oculto: los atletas no lo ven.</span>}
+        <span class="fila-envolver comentario-acciones">
+          {c.con041 && !c.oculto && (
+            <button type="button" class="btn-texto mini fuerza-comentario" aria-pressed={c.miFuerza ? 'true' : 'false'} disabled={ocupado}
+              aria-label={`Fuerza: ${c.fuerza.length}${c.fuerza.length ? ` (${c.fuerza.join(', ')})` : ''}`} onClick={() => accion(() => api.reaccionarComentario(c.id))}>
+              <span aria-hidden="true">💪</span>{c.fuerza.length > 0 && <span class="num" aria-hidden="true">{c.fuerza.length}</span>}
+            </button>
+          )}
+          {c.con041 && !c.oculto && <button type="button" class="btn-texto mini" onClick={() => responder(c)} aria-label={`Responder a ${c.autor.nombre}`}>Responder</button>}
+          {(coach || c.mio) && <button class="btn-texto mini peligro" disabled={ocupado} onClick={() => accion(() => api.borrarComentarioComunidad(c.id), 'Comentario borrado')}>Borrar</button>}
+          {coach && !c.mio && <button class="btn-texto mini" disabled={ocupado} onClick={() => accion(() => api.ocultarComentarioComunidad(c.id, !c.oculto), c.oculto ? 'Vuelve a verse' : 'Comentario oculto')}>{c.oculto ? 'Mostrar' : 'Ocultar'}</button>}
+          {!coach && !c.mio && !c.autor.coach && <button class="btn-texto mini" onClick={() => setAvisar(c.id)}>Avisar al coach</button>}
+        </span>
+        {c.respuestas?.length > 0 && <ul class="lista respuestas-equipo" aria-label={`Respuestas a ${c.autor.nombre}`}>{c.respuestas.map((r) => item(r, true))}</ul>}
+      </div>
+    </li>
+  );
   return (
     <Hoja titulo="Comentarios" alCerrar={alCerrar}>
       <div class="pila">
         {lista.cargando && !lista.datos ? <Cargando texto="Cargando los comentarios" /> : !(lista.datos || []).length ? (
           <p class="secundario">Aún no hay comentarios. ¡Anímale!</p>
         ) : (
-          <ul class="lista comentarios-equipo">
-            {lista.datos.map((c) => (
-              <li key={c.id} class="comentario-equipo">
-                {/* (la foto también abre el perfil, con el dedo; con el teclado, el nombre) */}
-                <button type="button" class="btn-persona comentario-avatar" tabIndex={-1} aria-hidden="true" title={`Ver el perfil de ${c.autor.nombre}`} onClick={() => abrir(c.autor_id)}><Avatar nombre={c.autor.nombre} foto={c.autor.foto} clase="peq" /></button>
-                <div class="pila-xs">
-                  <span class="peq"><BotonPersona perfilId={c.autor_id} nombre={c.autor.nombre} avatar={false} clase="comentario-nombre"><strong>{c.autor.nombre}</strong></BotonPersona>{c.autor.coach && <span class="chip morado chip-mini">Coach</span>} <span class="mini terciario">{cuando(c.creado_en)}</span></span>
-                  <TextoConMenciones texto={c.texto} mencionados={c.mencionados} clase="post-texto peq" como="span" />
-                  {c.oculto && <span class="mini terciario">Oculto: los atletas no lo ven.</span>}
-                  <span class="fila-envolver comentario-acciones">
-                    {(coach || c.mio) && <button class="btn-texto mini peligro" disabled={ocupado} onClick={() => accion(() => api.borrarComentarioComunidad(c.id), 'Comentario borrado')}>Borrar</button>}
-                    {coach && !c.mio && <button class="btn-texto mini" disabled={ocupado} onClick={() => accion(() => api.ocultarComentarioComunidad(c.id, !c.oculto), c.oculto ? 'Vuelve a verse' : 'Comentario oculto')}>{c.oculto ? 'Mostrar' : 'Ocultar'}</button>}
-                    {!coach && !c.mio && !c.autor.coach && <button class="btn-texto mini" onClick={() => setAvisar(c.id)}>Avisar al coach</button>}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <ul class="lista comentarios-equipo">{hilos.map((c) => item(c))}</ul>
         )}
         <form class="pila-s" onSubmit={enviar}>
-          <AreaConMenciones id="eq-comentario" etiqueta="Tu comentario" valor={texto} alCambiar={setTexto} personas={personas}
-            alMencionar={(p) => setElegidas((l) => [...l.filter((x) => x.perfil_id !== p.perfil_id), p])} maxLength={MAX_COMENTARIO} rows={2} placeholder="Escribe un comentario… (@ para mencionar)" />
-          <button class="btn btn-primario" disabled={ocupado || !texto.trim()}><Icono n="enviar" /> Comentar</button>
+          {respondiendo && (
+            <p class="respondiendo peq"><span>Respondiendo a <strong>{respondiendo.nombre}</strong></span>
+              <button type="button" class="btn-texto mini" onClick={() => setRespondiendo(null)}>Cancelar la respuesta</button></p>
+          )}
+          <AreaConMenciones id="eq-comentario" etiqueta={respondiendo ? `Tu respuesta a ${respondiendo.nombre}` : 'Tu comentario'} valor={texto} alCambiar={setTexto} personas={personas}
+            alMencionar={(p) => setElegidas((l) => [...l.filter((x) => x.perfil_id !== p.perfil_id), p])} maxLength={MAX_COMENTARIO} rows={2}
+            placeholder={respondiendo ? 'Escribe tu respuesta…' : 'Escribe un comentario… (@ para mencionar)'} />
+          <button class="btn btn-primario" disabled={ocupado || !texto.trim()}><Icono n="enviar" /> {respondiendo ? 'Responder' : 'Comentar'}</button>
         </form>
       </div>
       {avisar && <HojaAvisar comentarioId={avisar} alCerrar={() => setAvisar(null)} />}
     </Hoja>
+  );
+}
+// La foto de quien comenta, que abre su perfil (fuera del orden del teclado: con él, el nombre)
+function BotonFoto({ c }) {
+  const abrir = usePerfil();
+  return (
+    <button type="button" class="btn-persona comentario-avatar" tabIndex={-1} aria-hidden="true" title={`Ver el perfil de ${c.autor.nombre}`} onClick={() => abrir(c.autor_id)}>
+      <Avatar nombre={c.autor.nombre} foto={c.autor.foto} clase="peq" />
+    </button>
   );
 }
 
@@ -1141,6 +1261,9 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
   const [salir, setSalir] = useState(false);
   const [borrar, setBorrar] = useState(false);
   const [normas, setNormas] = useState(false);
+  const [auto, setAuto] = useState(() => leerAutoCompartir(api.uid()));
+  // (la columna llega con la 041: sin ella, «Entrenando ahora» dice que falta)
+  const con041 = 'ver_entrenando' in miembro;
   const [ocupado, una] = useUnaVez();
   const hacer = (fn, texto, cerrar = false) => una(async () => {
     try { await fn(); aviso(texto); if (cerrar) alCerrar(); alCambiar(); } catch (e) { aviso(e.message, 'error'); }
@@ -1156,6 +1279,14 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
         <div class="panel"><ul class="lista">
           <Interruptor id="eq-sin-ranking" texto="No salir en el ranking" ayuda="Ni en el ranking ni en su podio, ni en los retos de los demás (tus sesiones no suman en los de equipo), ni tu racha ni tus retos en tu perfil. Tú sigues viendo lo tuyo." valor={!!miembro.sin_ranking} desactivado={ocupado}
             alCambiar={(v) => hacer(() => api.ajustesComunidad({ sinRanking: v }), v ? 'Ya no sales en el ranking' : 'Vuelves a salir en el ranking')} />
+          {/* v0.69 (041): «Entrenando ahora», voluntario y apagado de entrada; sin la 041 en la base, lo dice */}
+          <Interruptor id="eq-entrenando" texto="Que el equipo vea cuándo estoy entrenando"
+            ayuda={con041 ? 'Sales en «Entrenando ahora» mientras apuntas una sesión (hasta 20 minutos después de tu última serie) y te pueden mandar ánimo. Solo tu nombre y tu foto: ni la hora ni lo que haces.' : AVISO_041}
+            valor={!!miembro.ver_entrenando} desactivado={ocupado || !con041}
+            alCambiar={(v) => hacer(() => api.verEntrenandoComunidad(v), v ? 'El equipo verá cuándo estás entrenando' : 'Ya no se ve cuándo estás entrenando')} />
+          <Interruptor id="eq-autocompartir" texto="Compartir mis entrenos sin preguntar"
+            ayuda="Al terminar una sesión, se comparte sola con el equipo, sin los kilos (con «Deshacer» por si acaso). Se guarda en este móvil."
+            valor={auto} alCambiar={(v) => { guardarAutoCompartir(api.uid(), v); setAuto(v); aviso(v ? 'Tus entrenos se compartirán solos al terminarlos' : 'Te volveremos a preguntar al terminar'); }} />
         </ul></div>
         <details class="pila-s que-se-comparte"><summary>Qué se comparte y con quién</summary><QueSeComparte /></details>
         <button class="btn" style="justify-self:start" onClick={() => setNormas(true)}><Icono n="escudo" /> Normas del equipo</button>

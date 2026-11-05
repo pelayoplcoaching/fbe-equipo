@@ -737,10 +737,13 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   const lucia = db.atletas.find((a) => a.nombre === 'Lucía Ferrer');
   Object.assign(db, { comunidad_ajustes: [{ id: true, activa: true, actualizado_en: hace(60 * 24 * 6) }], comunidad_miembros: [], comunidad_posts: [], comunidad_comentarios: [], comunidad_reacciones: [], comunidad_reportes: [], comunidad_retos: [], comunidad_cupos: [], comunidad_votos: [], comunidad_animos: [] });
   // (entraron por primera vez hace semanas; aceptaron lo que se comparte ahora hace unos días)
-  const miembro = (a, nombre, dias, desde) => db.comunidad_miembros.push({ atleta_id: a.id, perfil_id: a.perfil_id, nombre, version: 'comunidad-2026-11-b', aceptado_en: hace(60 * 24 * dias), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, normas_version: VERSION_NORMAS, normas_leidas_en: hace(60 * 24 * dias), creado_en: hace(60 * 24 * desde), entrado_en: hace(60 * 24 * desde) });
+  // v0.69: Lucía entró hace tres días (en el muro sale «Lucía F. se ha unido al equipo» con «Dar la bienvenida 👋») y Carlos
+  // deja que el equipo vea cuándo está entrenando
+  const miembro = (a, nombre, dias, desde, extra = {}) => db.comunidad_miembros.push({ atleta_id: a.id, perfil_id: a.perfil_id, nombre, version: 'comunidad-2026-11-b', aceptado_en: hace(60 * 24 * dias), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, normas_version: VERSION_NORMAS, normas_leidas_en: hace(60 * 24 * dias), creado_en: hace(60 * 24 * desde), entrado_en: hace(60 * 24 * desde), ver_entrenando: false, ...extra });
   miembro(ruben, 'Rubén M.', 6, 24);
-  miembro(carlos, 'Carlos V.', 5, 40);
-  if (lucia) miembro(lucia, 'Lucía F.', 4, 12);
+  miembro(carlos, 'Carlos V.', 5, 40, { ver_entrenando: true });
+  if (lucia) miembro(lucia, 'Lucía F.', 3, 3);
+  Object.assign(db, { comunidad_comentario_reacciones: [], comunidad_bienvenidas: [] });
   const post = (autor, atleta, tipo, texto, min, extra = {}) => {
     const p = { id: crypto.randomUUID(), autor_id: autor, atleta_id: atleta?.id || null, tipo, texto, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, creado_en: hace(min), menciones: [], encuesta: null, reto_id: null, ...extra };
     db.comunidad_posts.push(p);
@@ -830,4 +833,9 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   animo(carlos, ruben, 30);
   animo(coachId, ruben, 50);
   if (lucia) animo(lucia, carlos, 70);
+  // v0.69: Rubén ya le dio la bienvenida a Lucía y el coach da 💪 al comentario de Rubén en la publicación de Lucía. (Nadie
+  // está «entrenando ahora» de entrada: Carlos lo tiene encendido, pero en la demo no entrena: sale «sin entrenar»)
+  if (lucia) db.comunidad_bienvenidas.push({ de: ruben.perfil_id, para: lucia.perfil_id, atleta_id: ruben.id, para_atleta_id: lucia.id, creado_en: hace(60 * 24 * 2) });
+  const deRubenALucia = pLucia && db.comunidad_comentarios.find((c) => c.post_id === pLucia.id && c.autor_id === ruben.perfil_id);
+  if (deRubenALucia) db.comunidad_comentario_reacciones.push({ comentario_id: deRubenALucia.id, autor_id: coachId, atleta_id: null, creado_en: hace(60 * 20) });
 }

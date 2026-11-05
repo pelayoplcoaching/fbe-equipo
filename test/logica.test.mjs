@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.7' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.8' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -4060,8 +4060,8 @@ console.log('\nv0.65: abrir sin cobertura y «Novedades» tras actualizar');
   const legal8 = await import('../web/src/legal.js');
   const PV7 = await import('../web/src/logica/privacidad.js');
   const mov8 = legal8.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
-  check(legal8.VERSION_LEGAL === '2026-12.7' && PV7.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.7' && PV7.novedadesDesde('2026-12.6', '2026-12.7').length === 1 && PV7.formatoVersion('2026-12.7')
-    && /copia de tu semana/.test(mov8) && /sin cobertura/.test(mov8) && /al cerrar la sesión/.test(mov8) && /última versión de la app/.test(mov8) && /sin cobertura|sin señal|no tengas señal/.test(PV7.NOVEDADES_PRIVACIDAD[0][2]),
+  check(PV7.NOVEDADES_PRIVACIDAD.some((x) => x[3] === '2026-12.7') && PV7.novedadesDesde('2026-12.6', '2026-12.7').length === 1 && PV7.formatoVersion('2026-12.7')
+    && /copia de tu semana/.test(mov8) && /sin cobertura/.test(mov8) && /al cerrar la sesión/.test(mov8) && /última versión de la app/.test(mov8) && /sin cobertura|sin señal|no tengas señal/.test(PV7.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.7')[2]),
     'la política 2026-12.7: la copia de tu semana en el móvil (para abrir sin cobertura) y la última versión vista');
   const appSrc = readFileSync(new URL('../web/src/ui/App.jsx', import.meta.url), 'utf8');
   check(/Sin conexión · se guardará al volver/.test(appSrc), 'sin conexión, una línea tranquila: «Sin conexión · se guardará al volver»');
@@ -4114,6 +4114,44 @@ console.log('\nv0.68: la bienvenida del día');
   check(m({ ultimoDia: hoyB, estado: 'hecha' }).mensaje === 'La sesión de hoy ya está hecha. ¡Buen trabajo!' && m({ ultimoDia: '2026-11-03', estado: 'descanso' }).mensaje === 'Hoy toca descanso: recupera bien.'
     && m({ ultimoDia: '2026-11-03', estado: 'semana' }).mensaje === 'Semana completa. ¡Enhorabuena!' && m({ ultimoDia: '2026-11-03' }).mensaje === '¿Qué toca hoy?',
     'hecha, descanso, semana completa y lo de siempre');
+}
+
+console.log('\nv0.69: la comunidad, primera tanda (bienvenida, entrenando ahora, respuestas, 💪 a comentarios, el resumen del domingo)');
+{
+  const C = await import('../web/src/logica/comunidad.js');
+  const r = C.textoResumenDomingo({ sesiones: 42, records: 3, semana_completa: 5 });
+  check(r.titulo === 'Esta semana en el equipo: 42 sesiones, 3 récords' && r.cuerpo === '5 con la semana completa. Míralo en Equipo.' && r.titulo.length <= 80 && r.cuerpo.length <= 160,
+    'el resumen del domingo: «Esta semana en el equipo: 42 sesiones, 3 récords» (cabe en una notificación)');
+  check(C.textoResumenDomingo({ sesiones: 1, records: 1 }).titulo === 'Esta semana en el equipo: 1 sesión, 1 récord' && C.textoResumenDomingo({ sesiones: 7 }).titulo === 'Esta semana en el equipo: 7 sesiones'
+    && C.textoResumenDomingo({ sesiones: 7 }).cuerpo === 'Míralo en Equipo.' && C.textoResumenDomingo({ sesiones: 0, records: 2 }) === null && C.textoResumenDomingo() === null,
+    'en singular, sin récords y sin semanas completas; sin sesiones, no hay resumen');
+  const ahora = Date.parse('2026-11-05T12:00:00Z');
+  const n = C.nuevosParaBienvenida([
+    { perfil_id: 'a', desde: '2026-11-01T10:00:00Z' }, { perfil_id: 'yo', desde: '2026-11-04T10:00:00Z' },
+    { perfil_id: 'b', desde: '2026-11-04T10:00:00Z' }, { perfil_id: 'c', desde: '2026-10-28T10:00:00Z' }, null,
+  ], 'yo', ahora);
+  check(n.map((x) => x.perfil_id).join() === 'b,a' && C.DIAS_BIENVENIDA === 7, 'la bienvenida: los de su primera semana (7 días), los más nuevos primero, nunca uno mismo');
+  const L = [
+    { id: '1', responde_a: null }, { id: '2', responde_a: null }, { id: '3', responde_a: '1' }, { id: '4', responde_a: '3' },
+    { id: '5', responde_a: 'oculto' }, { id: '6', responde_a: '2' },
+  ];
+  const h = C.hilosComentarios(L);
+  check(h.map((x) => x.id).join() === '1,2,5' && h[0].respuestas.map((x) => x.id).join() === '3,4' && h[1].respuestas.map((x) => x.id).join() === '6' && h[2].respuestas.length === 0
+    && h.every((x) => x.respuestas.every((y) => !y.respuestas.length)),
+    'los comentarios con sus respuestas debajo (un nivel); la respuesta a un comentario que ya no se ve, suelta');
+  check(C.hilosComentarios([]).length === 0, 'sin comentarios, nada');
+  // La política 2026-12.8 y las novedades de la 0.69
+  const legal = await import('../web/src/legal.js');
+  const PV = await import('../web/src/logica/privacidad.js');
+  const { NOVEDADES } = await import('../web/src/novedades.js');
+  const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
+  const mov = legal.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
+  check(legal.VERSION_LEGAL === '2026-12.8' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.8' && PV.novedadesDesde('2026-12.7', '2026-12.8').length === 1
+    && /Entrenando ahora/.test(com) && /apagado de entrada/.test(com) && /nunca la hora/.test(com) && /bienvenida/.test(com) && /responder a un comentario/.test(com) && /domingo/.test(com)
+    && /Compartir mis entrenos sin preguntar/.test(mov) && /solo en ese móvil/.test(mov) && /Deshacer/.test(mov),
+    'la política 2026-12.8: «Entrenando ahora» (apagado de entrada, sin horas), la bienvenida, las respuestas, el resumen del domingo y compartir sin preguntar (en el móvil)');
+  const v = NOVEDADES['0.69'];
+  check(v.atleta.length <= 3 && v.atleta.every((t) => t.length <= 140) && v.coach.every((t) => t.length <= 140), 'las novedades de la 0.69: hasta tres frases cortas para los atletas (y una para el coach)');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

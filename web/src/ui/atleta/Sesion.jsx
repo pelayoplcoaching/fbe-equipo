@@ -11,7 +11,7 @@ import { textoSerieVideo } from '../../logica/tecnica.js';
 import { EVENTO_PENDIENTES, listarPendientes } from '../../datos/pendientes.js';
 import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herramientas.jsx';
 import { HojaCompartir } from '../Compartir.jsx';
-import { HojaCompartirEquipo } from '../Comunidad.jsx';
+import { HojaCompartirEquipo, leerAutoCompartir } from '../Comunidad.jsx';
 import { PictoEjercicio } from '../Pictograma.jsx';
 import { prepararAudio, celebrar, usePantallaEncendida, useAhora, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
 import { FilaSerie } from './FilaSerie.jsx';
@@ -1263,8 +1263,11 @@ function datosTarjeta(sesion, ejercicios, hechas, records, ejerciciosPorId, minu
   };
 }
 
+// v0.69: las sesiones compartidas solas que se han deshecho (para no volver a compartirlas al volver a este resumen)
+const deshechasEquipo = new Set();
+
 function Resumen({ resumen, sesion, alCerrar }) {
-  const { api, atleta, propio } = useApp();
+  const { api, atleta, propio, aviso } = useApp();
   const [compartir, setCompartir] = useState(false);
   // v0.43: «Compartir con el equipo», si la comunidad está abierta y está dentro (y la sesión no está ya compartida)
   const [equipo, setEquipo] = useState(false);
@@ -1273,8 +1276,24 @@ function Resumen({ resumen, sesion, alCerrar }) {
   const estadoEquipo = useCarga(async () => {
     if (!equipoPosible) return false;
     const [c, m] = await Promise.all([api.comunidad(), api.miembroComunidad()]);
-    return c.activa && !!m && !m.salido_en && !(await api.sesionCompartida(sesion.id));
+    return c.activa && api.dentroDeComunidad(m) && !(await api.sesionCompartida(sesion.id));
   }, [sesion?.id]);
+  // v0.69: «Compartir mis entrenos sin preguntar» (Equipo → ajustes, en este móvil): se comparte sola, sin los kilos, con
+  // «Deshacer» (borra la publicación). Solo estando dentro del equipo y una vez por sesión.
+  const auto = useRef(false);
+  useEffect(() => {
+    if (estadoEquipo.datos !== true || auto.current || deshechasEquipo.has(sesion.id) || !leerAutoCompartir(api.uid())) return;
+    auto.current = true;
+    (async () => {
+      try {
+        const id = await api.compartirEnEquipo(sesion.id, { texto: '', kilos: false });
+        setCompartida(true);
+        aviso('Compartido con el equipo', 'ok', { texto: 'Deshacer', fn: async () => {
+          try { await api.borrarDeComunidad({ id }); deshechasEquipo.add(sesion.id); setCompartida(false); aviso('Ya no está en el muro'); } catch (e) { aviso(e.message, 'error'); }
+        } });
+      } catch (e) { aviso(`No se ha podido compartir con el equipo: ${e.message}`, 'error'); }
+    })();
+  }, [estadoEquipo.datos]);
   // v0.49: comparado con la última vez que hizo esta misma sesión (sale de sus entrenamientos; sin conexión, no sale)
   const cardio = cardioHechoValido(resumen.cardio);
   // (solo las de ese nombre, las más recientes: no hace falta el historial entero)

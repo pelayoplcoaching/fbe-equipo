@@ -187,3 +187,43 @@ export function retoConseguido(r, { hechas = 0, total = 0, desde = null } = {}) 
   if (desde && r.hasta < desde) return false;
   return (r.modo === 'equipo' ? total : hechas) >= r.objetivo;
 }
+
+// ---------------------------------------------------------------- v0.69 (migración 041)
+// Bienvenida a los nuevos: la tarjeta sale 7 días desde que entró por primera vez
+export const DIAS_BIENVENIDA = 7;
+// «Entrenando ahora»: una serie apuntada en los últimos 20 minutos de una sesión sin terminar (lo decide la base)
+export const MINUTOS_ENTRENANDO = 20;
+// Los que se ven en la tarjeta de bienvenida: de los demás, en su primera semana, los más nuevos primero (como la base)
+export function nuevosParaBienvenida(filas = [], yo = null, ahora = Date.now()) {
+  return (filas || []).filter((x) => x && x.perfil_id !== yo && Date.parse(x.desde) > ahora - DIAS_BIENVENIDA * 864e5)
+    .sort((a, b) => Date.parse(b.desde) - Date.parse(a.desde));
+}
+// El resumen del domingo (como public.comunidad_texto_resumen de la 041): sin sesiones, nada
+export function textoResumenDomingo({ sesiones = 0, records = 0, semana_completa = 0 } = {}) {
+  const s = Number(sesiones) || 0, r = Number(records) || 0, c = Number(semana_completa) || 0;
+  if (s < 1) return null;
+  return {
+    titulo: `Esta semana en el equipo: ${s} ${s === 1 ? 'sesión' : 'sesiones'}${r > 0 ? `, ${r} ${r === 1 ? 'récord' : 'récords'}` : ''}`,
+    cuerpo: `${c > 0 ? `${c} con la semana completa. ` : ''}Míralo en Equipo.`,
+  };
+}
+// Los comentarios con sus respuestas debajo (un nivel). Una respuesta cuyo comentario ya no se ve (borrado u oculto) sale
+// suelta, en su sitio. Devuelve [{ ...comentario, respuestas: [...] }] en orden.
+export function hilosComentarios(lista = []) {
+  const ids = new Set(lista.map((c) => c.id));
+  const raiz = [];
+  const por = new Map();
+  for (const c of lista) {
+    if (c.responde_a && ids.has(c.responde_a)) continue;
+    const x = { ...c, respuestas: [] };
+    por.set(c.id, x);
+    raiz.push(x);
+  }
+  for (const c of lista) {
+    if (!c.responde_a || !ids.has(c.responde_a)) continue;
+    const padre = por.get(c.responde_a) || por.get(lista.find((y) => y.id === c.responde_a)?.responde_a);
+    if (padre) padre.respuestas.push({ ...c, respuestas: [] });
+    else raiz.push({ ...c, respuestas: [] });
+  }
+  return raiz;
+}

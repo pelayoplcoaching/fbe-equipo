@@ -204,7 +204,10 @@ export async function probarSinRed065({ navegador, check, base = 'http://localho
     await p.reload();
     await novedades.waitFor({ timeout: 10000 });
     const texto = await novedades.textContent();
-    check(/sin cobertura/i.test(texto) && !/Máquina ocupada/.test(texto) && await novedades.locator('li').count() >= 2 && await novedades.getByRole('button', { name: 'Vale' }).count() === 1,
+    // (las de la versión más nueva primero, 5 como mucho: desde la 0.69, las de la 0.65 ya no caben)
+    const { NOVEDADES } = await import('../web/src/novedades.js');
+    const masNueva = Object.keys(NOVEDADES).sort((a, b) => Number(b.split('.')[1]) - Number(a.split('.')[1])).find((v) => NOVEDADES[v].atleta?.length);
+    check(texto.includes(NOVEDADES[masNueva].atleta[0]) && !/Máquina ocupada/.test(texto) && await novedades.locator('li').count() >= 2 && await novedades.getByRole('button', { name: 'Vale' }).count() === 1,
       'tras cambiar de versión (de la 0.64 a esta), «Novedades» sale con lo nuevo de las versiones que no ha visto (no lo de la 0.64) y «Vale»');
     await revisar('novedades');
     check(await estrecho('novedades', '.hoja-novedades li, .hoja-novedades .btn'), '«Novedades» cabe a 360 px en oscuro');

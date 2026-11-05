@@ -2345,7 +2345,7 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     const enBase = async () => (await b.sql(`select version from privacidad_vista where usuario_id = $1`, [anaUid]))[0]?.version || null;
     await b.sql(`delete from privacidad_vista where usuario_id = $1`, [anaUid]);
     // Sin la 037
-    check(VL === '2026-12.7' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.7', '(v0.65) la vigente: 2026-12.7 con la 037 (la misma detección); sin ella, 2026-12');
+    check(VL === '2026-12.8' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.8', '(v0.69) la vigente: 2026-12.8 con la 037 (la misma detección); sin ella, 2026-12');
     check(PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()) && await sin.marcarPrivacidadVista() === true && await enBase() === '2026-12',
       'sin la 037: quien no ha visto la 2026-12 la ve y, al cerrarla, la base guarda 2026-12 (lo que admite)');
     local.clear();
@@ -2358,14 +2358,14 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     local.clear();
     // Con la 037: quien vio la 2026-12 ve solo lo nuevo, una vez
     const v = (await api.privacidadVista()).version;
-    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.7,2026-12.6,2026-12.5,2026-12.4,2026-12.3,2026-12.2,2026-12.1',
-      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 a la 2026-12.7)');
-    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.7', 'al cerrarlo, la base guarda la 2026-12.7');
+    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.8,2026-12.7,2026-12.6,2026-12.5,2026-12.4,2026-12.3,2026-12.2,2026-12.1',
+      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 a la 2026-12.8)');
+    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.8', 'al cerrarlo, la base guarda la 2026-12.8');
     local.clear();
-    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.7', 'y ya no vuelve a salir (en ningún móvil)');
-    check(await api.marcarPrivacidadVista('2026-12.1') === true && await enBase() === '2026-12.7' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.7', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.1 ni a la 2026-12)');
+    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.8', 'y ya no vuelve a salir (en ningún móvil)');
+    check(await api.marcarPrivacidadVista('2026-12.1') === true && await enBase() === '2026-12.8' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.8', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.1 ni a la 2026-12)');
     await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
-    check(/vigente \(2026-12\.7\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
+    check(/vigente \(2026-12\.8\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
     globalThis.localStorage = previo;
   }
   await b.sql(`delete from recordatorios_tecnica`); await b.sql(`delete from frases_correccion`); await b.sql(`delete from chat_cupos`);
@@ -2608,6 +2608,57 @@ console.log('\nv0.67: «Revisión semanal»');
   let largo = null;
   try { await api.marcarRevision(una.atleta_id, r1.lunes, { nota: 'x'.repeat(501) }); } catch (e) { largo = e.message; }
   check(/500/.test(largo || ''), 'una nota de más de 500 caracteres se rechaza con un aviso claro');
+}
+
+console.log('\nv0.69: la comunidad, primera tanda (041)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.abrirComunidad(true);
+  for (const [email, clave, nombre] of [['ana@test', 'contraseña-ana-1', 'Ana L.'], ['luis@test', 'contraseña-luis-1', 'Luis M.']]) {
+    await b.auth.entrar(email, clave);
+    const m = await api.miembroComunidad();
+    if (!api.dentroDeComunidad(m)) await api.entrarComunidad(nombre);
+  }
+  await b.sql(`update comunidad_miembros set creado_en = now() - interval '1 day' where nombre = 'Luis M.'`);
+  await b.sql(`update comunidad_miembros set creado_en = now() - interval '30 days' where nombre = 'Ana L.'`);
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check(await api.comunidad041() === true, 'la app sabe que la base tiene la 041');
+  const nuevos = await api.nuevosComunidad();
+  check(nuevos.length === 1 && nuevos[0].nombre === 'Luis M.' && nuevos[0].bienvenida === false, 'Ana ve que Luis acaba de entrar');
+  await api.darBienvenida(nuevos[0].perfil_id);
+  check((await api.nuevosComunidad())[0].bienvenida === true && await lanza(() => api.darBienvenida(nuevos[0].perfil_id)), 'le da la bienvenida (una vez)');
+  const post = await api.publicarEnComunidad({ texto: 'Sentadilla hecha' });
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check((await api.bienvenidasRecibidas()).map((x) => x.nombre).join() === 'Ana L.', 'Luis ve quién le ha dado la bienvenida');
+  const c1 = await api.comentarEnComunidad(post.id, '¡Vamos!');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  await api.comentarEnComunidad(post.id, 'Gracias', [], c1.id);
+  await api.reaccionarComentario(c1.id);
+  const lista = await api.comentariosComunidad(post.id);
+  const resp = lista.find((c) => c.texto === 'Gracias');
+  check(lista.every((c) => c.con041) && resp.responde_a === c1.id && lista.find((c) => c.id === c1.id).fuerza.join() === 'Ana L.' && lista.find((c) => c.id === c1.id).miFuerza,
+    'responde al comentario de Luis y le da 💪 (con quién y si es el suyo)');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check((await api.verEntrenandoComunidad(true)).ver_entrenando === true, 'Luis enciende «Que el equipo vea cuándo estoy entrenando»');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check(Array.isArray(await api.entrenandoAhora()), '«Entrenando ahora» responde (vacío si nadie está entrenando)');
+  const [libre] = await b.sql(`select s.id from sesiones s join semanas w on w.id = s.semana_id join bloques bl on bl.id = w.bloque_id
+    where bl.atleta_id = (select id from atletas where perfil_id = $1) and s.completada and w.programacion = 'programada' and not exists (select 1 from comunidad_posts p where p.sesion_id = s.id) limit 1`, [api.uid()]);
+  const id = libre ? await api.compartirEnEquipo(libre.id).catch(() => null) : null;
+  check(!!id, 'compartir una sesión terminada devuelve su publicación');
+  if (id) { await api.borrarDeComunidad({ id }); check(!(await api.muro()).posts.some((x) => x.id === id), 'compartir solo devuelve la publicación, y «Deshacer» la borra'); }
+  // Sin la 041: los comentarios salen como antes (sin responder ni 💪), sin nuevos ni «entrenando ahora»
+  const falta = (q) => new Error(`column comunidad_comentarios.responde_a does not exist (${q})`);
+  const sin041 = crearApi({ ...b, auth: b.auth, storage: b.storage, insert: b.insert.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b),
+    select: async (t, f) => { if (t === 'comunidad_comentarios' && /responde_a/.test(f?.cols || '')) throw falta(t); if (['comunidad_bienvenidas', 'comunidad_comentario_reacciones'].includes(t)) throw falta(t); return b.select(t, f); },
+    rpc: async (n, a) => { if (['comunidad_nuevos', 'comunidad_entrenando_ahora', 'comunidad_dar_bienvenida', 'comunidad_reaccionar_comentario', 'comunidad_entrenando_visible'].includes(n)) throw new Error(`Could not find the function public.${n} in the schema cache`); return b.rpc(n, a); } });
+  const listaSin = await sin041.comentariosComunidad(post.id);
+  let msg041 = null;
+  try { await sin041.reaccionarComentario(c1.id); } catch (e) { msg041 = e.message; }
+  check(listaSin.length === lista.length && listaSin.every((c) => !c.con041 && c.responde_a === null) && (await sin041.nuevosComunidad()).length === 0 && await sin041.entrenandoAhora() === null
+    && await sin041.comunidad041() === false && /Disponible tras la migración 041/.test(msg041 || ''),
+    'sin la 041: los comentarios como antes, sin nuevos ni «entrenando ahora», y lo nuevo dice «Disponible tras la migración 041»');
+  await api.borrarDeComunidad(post);
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

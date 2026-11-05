@@ -37,7 +37,7 @@ import { VERSION_LEGAL } from '../legal.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
 import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida } from '../logica/notasVoz.js';
-import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido } from '../logica/comunidad.js';
+import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido, nuevosParaBienvenida } from '../logica/comunidad.js';
 import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
 import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
@@ -130,6 +130,15 @@ const falta029 = (e) => {
   const m = e?.message || '';
   if (/comunidad_|menciones|encuesta|reto_id|modo/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna/i.test(m)) {
     throw new Error(`Para esta versión de la comunidad del equipo falta ejecutar la migración 029 en Supabase (supabase/migraciones/029_comunidad_mejoras.sql). Detalle: ${m}`);
+  }
+  throw e;
+};
+// La primera tanda de mejoras de la comunidad (v0.69) sin la migración 041
+export const AVISO_041 = 'Disponible tras la migración 041';
+const falta041 = (e) => {
+  const m = e?.message || '';
+  if (/comunidad_|responde_a|ver_entrenando/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna|PGRST20/i.test(m)) {
+    throw new Error(`${AVISO_041} en Supabase (supabase/migraciones/041_comunidad_animo.sql).`);
   }
   throw e;
 };
@@ -271,7 +280,7 @@ const CAMPOS_SE = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'series',
 
 // La comunidad del equipo (v0.43, migración 027)
 const TABLAS_COMUNIDAD = ['comunidad_ajustes', 'comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_retos',
-  'comunidad_votos', 'comunidad_animos'];
+  'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas'];
 // Lo que la app lee de una publicación del muro (sin la ficha ni la sesión de su autor)
 const COLS_POST = 'id,autor_id,tipo,texto,foto_ruta,resumen,fijada,oculta,creado_en,menciones,encuesta,reto_id';
 // Los filtros del muro (v0.47), en la propia consulta: así «Ver más» sigue funcionando
@@ -3217,20 +3226,39 @@ export function crearApi(backend) {
     async reaccionar(postId, tipo) {
       return b.rpc('comunidad_reaccionar', { p_post: postId, p_tipo: tipo });
     },
+    // v0.69 (041): con a qué comentario responde (responde_a) y sus 💪 (cuántos, de quién y si está el mío). Sin la 041,
+    // como antes (responder y 💪 dicen que faltan: con041 = false)
     async comentariosComunidad(postId) {
-      const [filas, personas] = await Promise.all([
-        b.select('comunidad_comentarios', { eq: { post_id: postId }, order: [['creado_en', 'asc']], cols: 'id,post_id,autor_id,texto,oculto,creado_en,menciones' }).catch(falta029),
+      const COLS = 'id,post_id,autor_id,texto,oculto,creado_en,menciones';
+      const [filas041, personas] = await Promise.all([
+        b.select('comunidad_comentarios', { eq: { post_id: postId }, order: [['creado_en', 'asc']], cols: `${COLS},responde_a` }).catch(() => null),
         api.personasComunidad(),
       ]);
+      const con041 = !!filas041;
+      const filas = filas041 || await b.select('comunidad_comentarios', { eq: { post_id: postId }, order: [['creado_en', 'asc']], cols: COLS }).catch(falta029);
       const yo = uid();
-      return filas.map((c) => ({ ...c, autor: personas[c.autor_id] || { nombre: 'Alguien del equipo', foto: null, coach: false }, mio: c.autor_id === yo, mencionados: mencionadosDe(c.menciones, personas) }));
+      const ids = filas.map((c) => c.id);
+      const reac = con041 && ids.length ? await b.select('comunidad_comentario_reacciones', { in: { comentario_id: ids }, cols: 'comentario_id,autor_id' }).catch(() => []) : [];
+      const R = agrupar(reac, 'comentario_id');
+      const nombre = (id) => personas[id]?.nombre || 'Alguien del equipo';
+      return filas.map((c) => ({
+        ...c, responde_a: c.responde_a || null, con041,
+        autor: personas[c.autor_id] || { nombre: 'Alguien del equipo', foto: null, coach: false }, mio: c.autor_id === yo, mencionados: mencionadosDe(c.menciones, personas),
+        fuerza: (R[c.id] || []).map((r) => nombre(r.autor_id)), miFuerza: (R[c.id] || []).some((r) => r.autor_id === yo),
+      }));
     },
-    async comentarEnComunidad(postId, texto, menciones = []) {
+    // respondeA (v0.69, 041): el comentario al que responde (la base lo cuelga del primero si es una respuesta)
+    async comentarEnComunidad(postId, texto, menciones = [], respondeA = null) {
       const t = String(texto || '').trim();
       if (!t) throw new Error('Escribe el comentario.');
       if (t.length > MAX_COMENTARIO) throw new Error(`Hasta ${MAX_COMENTARIO} letras.`);
       const m = [...new Set(menciones || [])].slice(0, MAX_MENCIONES);
-      return (await b.insert('comunidad_comentarios', [{ post_id: postId, texto: t, ...(m.length ? { menciones: m } : {}) }]).catch(falta029))[0];
+      return (await b.insert('comunidad_comentarios', [{ post_id: postId, texto: t, ...(m.length ? { menciones: m } : {}), ...(respondeA ? { responde_a: respondeA } : {}) }])
+        .catch(respondeA ? falta041 : falta029).catch(falta029))[0];
+    },
+    // 💪 a un comentario (v0.69, 041): otra vez lo quita. Devuelve si queda puesto
+    async reaccionarComentario(comentarioId) {
+      return b.rpc('comunidad_reaccionar_comentario', { p_comentario: comentarioId }).catch(falta041);
     },
     // Votar en una encuesta (v0.47): votar otra opción cambia el voto, hasta el cierre
     async votarEncuesta(postId, opcion) {
@@ -3404,6 +3432,50 @@ export function crearApi(backend) {
     async recordsParaEquipo(atletaId, sesionId) {
       return recordsDeEquipo(await api.historial(atletaId), sesionId);
     },
+    // ------------------------------------------------------------ v0.69 (migración 041)
+    // ¿Está la 041? true / false / null (no se sabe: un corte). Como revision040
+    async comunidad041() {
+      if (!api._v041) {
+        const pr = (async () => {
+          try { await b.rpc('comunidad_nuevos', {}); return true; } catch (e) {
+            const m = `${e?.message || ''} ${e?.code || ''}`;
+            if (/comunidad_nuevos|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v041 = pr;
+        pr.then((x) => { if (x == null && api._v041 === pr) api._v041 = null; });
+      }
+      return api._v041;
+    },
+    // Los nuevos (los 7 días después de entrar por primera vez), con si ya les he dado la bienvenida. Sin la 041, ninguno
+    async nuevosComunidad() {
+      const filas = await b.rpc('comunidad_nuevos', {}).catch(() => []);
+      const personas = filas?.length ? await api.personasComunidad() : {};
+      return nuevosParaBienvenida((filas || []).map((x) => ({ ...x, foto: x.foto || personas[x.perfil_id]?.foto || null, bienvenida: !!x.bienvenida })), uid());
+    },
+    async darBienvenida(perfilId) {
+      return b.rpc('comunidad_dar_bienvenida', { p_perfil: perfilId }).catch(falta041);
+    },
+    // Quién me ha dado la bienvenida (nombres; solo de quien sigue dentro)
+    async bienvenidasRecibidas() {
+      const yo = uid();
+      if (!yo) return [];
+      const [filas, personas] = await Promise.all([
+        b.select('comunidad_bienvenidas', { eq: { para: yo }, cols: 'de,creado_en', order: [['creado_en', 'asc']] }).catch(() => []),
+        api.personasComunidad(),
+      ]);
+      return filas.filter((x) => personas[x.de]).map((x) => ({ perfil_id: x.de, nombre: personas[x.de].nombre }));
+    },
+    // Quién está entrenando ahora (solo quien lo ha encendido; sin horas). null sin la 041 (no sale nada)
+    async entrenandoAhora() {
+      try { return (await b.rpc('comunidad_entrenando_ahora', {})) || []; } catch { return null; }
+    },
+    // «Que el equipo vea cuándo estoy entrenando»
+    async verEntrenandoComunidad(visible) {
+      await b.rpc('comunidad_entrenando_visible', { p_visible: !!visible }).catch(falta041);
+      return api.miembroComunidad();
+    },
     async sesionCompartida(sesionId) {
       return (await b.select('comunidad_posts', { eq: { sesion_id: sesionId }, cols: 'id', limit: 1 }).catch(() => [])).length > 0;
     },
@@ -3457,9 +3529,17 @@ export function crearApi(backend) {
         const animos_recibidos = (await b.select('comunidad_animos', { eq: { para_atleta_id: atletaId }, cols: 'semana,creado_en' }).catch(() => []))
           .map(({ semana, creado_en }) => ({ semana, creado_en }));
         const sinMenciones = (x) => ({ ...x, menciones: (x.menciones || []).length });
+        // (v0.69, 041) sus 💪 a comentarios y las bienvenidas, también sin identificadores de otras personas
+        const [reacComentarios, bienDadas, bienRecibidas] = await Promise.all([
+          b.select('comunidad_comentario_reacciones', { eq: { atleta_id: atletaId }, cols: 'comentario_id,creado_en' }).catch(() => []),
+          b.select('comunidad_bienvenidas', { eq: { atleta_id: atletaId }, cols: 'creado_en' }).catch(() => []),
+          b.select('comunidad_bienvenidas', { eq: { para_atleta_id: atletaId }, cols: 'creado_en' }).catch(() => []),
+        ]);
         out.comunidad = {
           miembro: miembro[0] || null, publicaciones: publicaciones.map(sinMenciones), comentarios: comentarios.map(sinMenciones), reacciones, votos,
           animos_mandados: animos.map(({ semana, creado_en }) => ({ semana, creado_en })), animos_recibidos,
+          reacciones_comentarios: reacComentarios.map(({ comentario_id, creado_en }) => ({ comentario_id, creado_en })),
+          bienvenidas_dadas: bienDadas.map(({ creado_en }) => ({ creado_en })), bienvenidas_recibidas: bienRecibidas.map(({ creado_en }) => ({ creado_en })),
         };
       }
       out.recetas = out.recetas_atleta.length ? await b.select('recetas', { in: { id: unicos(out.recetas_atleta.map((x) => x.receta_id)) } }).catch(() => []) : [];
