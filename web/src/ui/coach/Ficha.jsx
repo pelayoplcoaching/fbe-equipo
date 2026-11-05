@@ -33,6 +33,7 @@ import { TusMeses } from '../atleta/TuMes.jsx';
 import { CompararCheckins } from './CompararCheckins.jsx';
 import { ChispaPeso } from './Panel.jsx';
 import { estadoAtleta, NOMBRE_ESTADO } from '../../logica/visual.js';
+import { ordenReal } from '../../logica/orden-sesion.js';
 
 // Las de entrenamiento, fuera a quien solo le llevas la nutrición (v0.26); Nutrición, a quien solo el entrenamiento
 const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
@@ -241,6 +242,7 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, recargar }) {
           </div>
           {s.preparacion && <ChipLlegada preparacion={s.preparacion} />}
           {s.nota_atleta && <div class="nota-coach"><Icono n="mensaje" /><div>{s.nota_atleta}</div></div>}
+          <HechoEnOtroOrden pautas={completo.pautas[s.id] || []} series={completo.series} ejercicios={ejercicios} />
           {(completo.pautas[s.id] || []).length > 0 && (
             <div class="tabla-env">
               <table class="tabla-simple tabla-registro">
@@ -277,6 +279,26 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, recargar }) {
       ))}
       {!todas && sesiones.length > 6 && <button class="btn" onClick={() => setTodas(true)}>Ver las {sesiones.length - 6} sesiones anteriores</button>}
       <p class="mini terciario">En naranja, las series por debajo del rango de repeticiones, por encima del esfuerzo pautado o los ejercicios con menos series de las pautadas.</p>
+    </div>
+  );
+}
+
+// v0.64 (4): si el atleta hizo los ejercicios en otro orden que el pautado (p. ej. con la máquina ocupada), el orden de verdad:
+// sale de la hora de cada serie (ya se guardaba), sin nada nuevo en la base. Con el nombre del ejercicio que hizo (si lo cambió)
+function HechoEnOtroOrden({ pautas, series, ejercicios }) {
+  const real = ordenReal(pautas, series);
+  if (!real) return null;
+  const porId = Object.fromEntries(pautas.map((p) => [p.id, p]));
+  const etq = etiquetasSuperserie(pautas);
+  const nombre = (id) => {
+    const sust = (series[id] || []).map((h) => h.sustituto_id).filter(Boolean).at(-1);
+    return ejercicios[sust || porId[id]?.ejercicio_id]?.nombre || 'Ejercicio';
+  };
+  const textoBloque = (b) => b.ids.map((id) => `${etq[id] ? `${etq[id]} ` : ''}${nombre(id)}`).join(' + ');
+  return (
+    <div class="orden-real">
+      <span class="orden-real-cab"><Icono n="ordenar" /><strong>Hecho en otro orden</strong></span>
+      <ol>{real.map((b) => <li key={b.clave}>{textoBloque(b)}</li>)}</ol>
     </div>
   );
 }

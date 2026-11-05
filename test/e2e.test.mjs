@@ -58,7 +58,7 @@ async function herramienta(loc, nombre) {
   await loc.getByRole('button', { name: /^Más herramientas/ }).click();
   const hoja = p.getByRole('dialog').last();
   await hoja.locator('.hoja-acciones').waitFor();
-  await hoja.getByRole('button', { name: nombre }).click();
+  await hoja.getByRole('button', { name: nombre, exact: true }).click();
 }
 // v0.49: el check-in, una pregunta por pantalla. Avanza con «Siguiente» hasta la pregunta con ese título (o el repaso)
 const tituloCheckin = async () => (await p.locator('#ck-titulo').textContent()).trim();
@@ -5601,6 +5601,17 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ apuntar las series de la v0.63:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.64: «Máquina ocupada · hacerlo luego» (con «Ahora toca» siguiéndolo), «Cambiar el orden» sin arrastrar y el coach viendo
+// «Hecho en otro orden», a 360 px en oscuro (test/e2e-sesion-064.mjs)
+console.log('\nv0.64: «Máquina ocupada» y el orden de la sesión');
+try {
+  const { probarSesion064 } = await import('./e2e-sesion-064.mjs');
+  await probarSesion064({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la sesión de la v0.64:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):

@@ -235,7 +235,14 @@ export function sincronizarPista(d, ctx = {}) {
     if (actual && actual.d.fin !== d.fin) liberar();
     return !!actual;
   }
-  if (actual && !actual.prueba && actual.d.fin === d.fin && !actual.interrumpida && !el.paused) { actual.d = d; actual.ctx = ctx; return true; }
+  if (actual && !actual.prueba && actual.d.fin === d.fin && !actual.interrumpida && !el.paused) {
+    // (v0.64: con el mismo descanso, lo que toca después puede cambiar, p. ej. al dejar un ejercicio para luego: la pantalla
+    // de bloqueo lo dice al momento)
+    const cambia = (actual.d.aviso || actual.d.texto || '') !== (d.aviso || d.texto || '');
+    actual.d = d; actual.ctx = ctx;
+    if (cambia) ponerMedia();
+    return true;
+  }
   return empezar(d, ctx);
 }
 
