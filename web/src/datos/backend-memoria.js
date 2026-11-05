@@ -55,6 +55,8 @@ const DEFECTOS = {
   frases_correccion: () => ({ ejercicio_id: null, dibujo: null, orden: 0, creado_en: ahora() }),
   // Como la 039: la velocidad mínima de un ejercicio (para el 1RM estimado por la velocidad)
   umbrales_velocidad: () => ({ actualizado_en: ahora() }),
+  // Como la 040: la revisión semanal del coach (una por atleta y lunes)
+  revisiones_semanales: () => ({ hecha: false, nota: null, actualizado_en: ahora() }),
   videos_modelo: () => ({ poster_ruta: null, duracion_seg: null, mime: null, bytes: null, angulo: null, orden: 0, creado_en: ahora() }),
   video_autoevaluacion: () => ({ rpe: null, nota: null, molestia: null, zona: null, creado_en: ahora(), actualizado_en: ahora() }),
   comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null, cliente_id: null, reenviado: false, entregado_en: null, escuchado_en: null, video_respuesta_id: null, resumen_sesion: false }),
@@ -107,7 +109,7 @@ const CASCADA = {
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'], ['tareas', 'atleta_id'], ['conversacion_estado', 'atleta_id'],
     ['conversacion_fijado', 'atleta_id'], ['chat_silencios', 'atleta_id'], ['listas_difusion_miembros', 'atleta_id'], ['encuestas_chat', 'atleta_id'], ['encuesta_votos', 'atleta_id'], ['video_revisiones', 'atleta_id'],
-    ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id']],
+    ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id'], ['revisiones_semanales', 'atleta_id']],
   // Como la 035: la corrección se va con su vídeo; la lista de puntos clave, con su ejercicio
   archivos: [['video_revisiones', 'archivo_id'], ['video_autoevaluacion', 'archivo_id']],
   ejercicios: [['tecnica_plantillas', 'ejercicio_id'], ['recordatorios_tecnica', 'ejercicio_id'], ['frases_correccion', 'ejercicio_id'], ['videos_modelo', 'ejercicio_id'], ['umbrales_velocidad', 'ejercicio_id']],
@@ -142,7 +144,7 @@ const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
 const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
-  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad'];
+  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
 const EMOJIS_CHAT = ['❤️', '👍', '💪', '😂', '😮', '🙏'];
 const CUPO_CHAT = { reaccion: 120, destacar: 120, edicion: 30, eliminar: 30, presencia: 30, silenciar: 30, voto: 120, autoevaluacion: 30 };
@@ -265,6 +267,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     videos_modelo: () => esCoach(),
     // Como la 039: la velocidad mínima de cada ejercicio, solo el coach (el atleta la lee con umbrales_velocidad_de())
     umbrales_velocidad: () => esCoach(),
+    // Como la 040: la revisión semanal, solo el coach
+    revisiones_semanales: () => esCoach(),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
@@ -877,6 +881,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     video_autoevaluacion: (f) => autoevaluacionValida(f),
     // Como la 039: de 0,05 a 1 m/s con 3 decimales como mucho (umbral_velocidad_valido)
     umbrales_velocidad: (f) => umbralValido(f.vmin),
+    // Como la 040: el lunes, un lunes; la nota, de 500 caracteres como mucho
+    revisiones_semanales: (f) => /^\d{4}-\d{2}-\d{2}$/.test(String(f.lunes)) && new Date(`${f.lunes}T12:00:00Z`).getUTCDay() === 1 && (f.nota == null || [...String(f.nota)].length <= 500),
     semanas: (f) => f.foco == null || FOCOS_SEMANA.includes(f.foco),
     bloques: (f) => f.foco == null || FOCOS_BLOQUE.includes(f.foco),
     habitos: (f) => {
@@ -971,7 +977,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
   }
 
-  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -2122,6 +2128,19 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           if (!existente) return insertar(t, fila);
           const m = { ...existente, ...copia(fila) };
           prepararUmbral(m, existente);
+          comprobarChecks(t, m);
+          return Object.assign(existente, m);
+        });
+        persistirYa();
+        return copia(res);
+      }
+      // Como la 040: una por atleta y lunes (el trigger pone la hora y deja la nota vacía en null)
+      if (t === 'revisiones_semanales') {
+        const res = (Array.isArray(filas) ? filas : [filas]).map((fila) => {
+          const limpia = (m) => { m.actualizado_en = ahora(); if (m.nota != null && !String(m.nota).trim()) m.nota = null; return m; };
+          const existente = tabla(t).find((x) => x.atleta_id === fila.atleta_id && x.lunes === fila.lunes);
+          if (!existente) return insertar(t, limpia({ ...copia(fila) }));
+          const m = limpia({ ...existente, ...copia(fila) });
           comprobarChecks(t, m);
           return Object.assign(existente, m);
         });

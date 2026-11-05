@@ -4598,3 +4598,27 @@ html[data-teclado] .pildora-descanso { display: none; }
   :root[data-gimnasio] .sesion-vista .serie .celda { font-size: 1.625rem; }
   :root[data-gimnasio] .sesion-vista .serie .hecho-btn { width: 54px; }
 }
+
+/* ---------------------------------------------------------------- v0.67: «Revisión semanal» (coach) */
+.revision-progreso { display: grid; gap: 10px; }
+.revision-progreso .fila-entre { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.barra-revision, .barra-sesiones { display: block; height: 8px; border-radius: 999px; background: var(--hoja-2); overflow: hidden; }
+.barra-revision span, .barra-sesiones span { display: block; height: 100%; background: var(--ok); border-radius: inherit; transition: width .3s ease; }
+.barra-sesiones { height: 5px; max-width: 160px; }
+.barra-sesiones span { background: var(--morado); }
+.revision-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.revision-fila { display: grid; gap: 10px; padding: 14px; }
+.revision-fila.hecha { background: var(--hoja-2); }
+.revision-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.revision-quien strong { overflow-wrap: anywhere; }
+.revision-casilla { display: grid; justify-items: center; gap: 2px; font-size: 0.75rem; font-weight: 650; color: var(--tinta-2); cursor: pointer; }
+.revision-casilla input { width: 30px; height: 30px; accent-color: var(--ok); cursor: pointer; margin: 0; }
+.revision-avisos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.revision-anterior { display: flex; gap: 6px; align-items: flex-start; margin: 0; color: var(--tinta-2); background: var(--hoja-2); border-radius: 10px; padding: 8px 10px; }
+.revision-anterior svg { width: 14px; height: 14px; flex: none; margin-top: 2px; }
+.revision-nota textarea { width: 100%; min-height: 56px; resize: vertical; border-radius: 10px; border: 1px solid var(--linea); background: var(--hoja); color: var(--tinta); font: inherit; padding: 8px 10px; }
+.revision-acciones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.revision-acciones .btn { justify-content: center; min-width: 0; padding-inline: 6px; font-size: 0.875rem; gap: 6px; }
+.revision-acciones .btn svg { width: 16px; height: 16px; }
+.revision-acciones .btn svg { flex: none; }
+@media (prefers-reduced-motion: reduce) { .barra-revision span, .barra-sesiones span { transition: none; } }

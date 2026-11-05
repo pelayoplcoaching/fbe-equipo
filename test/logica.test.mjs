@@ -4067,5 +4067,28 @@ console.log('\nv0.65: abrir sin cobertura y «Novedades» tras actualizar');
   check(/Sin conexión · se guardará al volver/.test(appSrc), 'sin conexión, una línea tranquila: «Sin conexión · se guardará al volver»');
 }
 
+console.log('\nv0.67: «Revisión semanal» del coach');
+{
+  const RV = await import('../web/src/logica/revision.js');
+  const base = { sesiones: { completadas: 3, total: 3 }, checkin: true, molestia: 0, videos: 0, mensajes: 0, hecha: false, servicio: 'completo' };
+  const f = (nombre, x = {}) => ({ ...base, nombre, atleta_id: nombre, ...x });
+  const av = RV.avisosRevision(f('A', { molestia: 3, mensajes: 2, videos: 1, checkin: false }));
+  check(av.map((x) => x.tipo).join(',') === 'molestia,mensajes,videos,checkin' && av[0].nivel === 'alerta' && av[0].texto === 'Molestia 3/5' && av[1].texto === '2 mensajes sin leer' && av[2].texto === '1 vídeo sin revisar' && av[3].texto === 'Sin check-in',
+    'lo que pide atención: molestia (fuerte, en rojo), mensajes sin leer, vídeos sin revisar y el check-in que falta');
+  check(RV.avisosRevision(f('B')).map((x) => x.texto).join() === 'Check-in enviado' && RV.avisosRevision(f('C', { molestia: 1 })).length === 1
+    && RV.avisosRevision(f('N', { servicio: 'nutricion', checkin: false })).length === 0 && RV.pendientesDe(f('B')) === 0,
+    'el check-in enviado sale en verde (no cuenta como pendiente); una molestia de 1/5 no sale; a quien solo lleva nutrición no se le pide check-in de entreno');
+  const orden = RV.ordenRevision([
+    f('Zoe', { hecha: true, molestia: 3 }),
+    f('Bea', { sesiones: { completadas: 1, total: 3 } }),
+    f('Ana'),
+    f('Leo', { mensajes: 1 }),
+    f('Iván', { molestia: 3 }),
+    f('Cris', { sesiones: { completadas: 0, total: 3 } }),
+  ]).map((x) => x.nombre);
+  check(orden.join(' ') === 'Iván Leo Cris Bea Ana Zoe', `el orden: lo urgente, lo que más pide atención, quien ha hecho menos de lo pautado y, al final, los revisados (${orden.join(', ')})`);
+  check(RV.ordenRevision([]).length === 0 && RV.ordenRevision(null).length === 0, 'sin atletas, lista vacía');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

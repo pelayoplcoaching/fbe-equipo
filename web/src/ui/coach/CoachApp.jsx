@@ -4,6 +4,7 @@ import { conTransicion } from '../transiciones.js';
 import { Panel } from './Panel.jsx';
 import { Ficha } from './Ficha.jsx';
 import { Revisar } from './Revisar.jsx';
+import { RevisionSemanal } from './RevisionSemanal.jsx';
 import { Plantillas } from './Plantillas.jsx';
 import { Biblioteca } from './Biblioteca.jsx';
 import { Cuenta } from './Cuenta.jsx';
@@ -17,7 +18,7 @@ import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
 // Modo atleta (v0.37): el coach entrena con la app de atleta, con su propia ficha (solo entrenamiento)
 // Equipo (v0.43): el muro de la comunidad, solo con ella abierta (se abre en Cuenta → Comunidad)
-const TODAS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
+const TODAS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['revision', 'Revisión semanal', 'hecho'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
 const TABS = TODAS.filter(([t]) => t !== 'equipo');
 
 // v0.55: «#mensajes/<atleta>» (al tocar la notificación de un mensaje): Mensajes, con esa conversación abierta
@@ -143,6 +144,7 @@ export function CoachApp() {
         : <Panel abrir={abrirAtleta} pendientes={bandeja.datos?.porAtleta || {}} porRevisar={bandeja.datos ? total : null}
             irARevisar={() => conTransicion(() => { setTab('revisar'); setFicha(null); setPeticion(null); }, 'adelante')} peticion={pide('atletas')} alBuscar={abrirBuscar} abrirCuenta={() => { setTab('cuenta'); setFicha(null); }} alCargar={(l) => { resumenesPanel.current = l; }} />)}
       {tab === 'revisar' && <Revisar bandeja={bandeja} abrirAtleta={abrirAtleta} />}
+      {tab === 'revision' && <RevisionSemanal abrirAtleta={abrirAtleta} />}
       {tab === 'mensajes' && <Conversaciones abrirAtleta={abrirAtleta} alCambiar={() => { bandeja.recargar(true); sinLeer.recargar(true); }} peticion={pide('mensajes')} />}
       {tab === 'plantillas' && <Plantillas peticion={pide('plantillas')} />}
       {tab === 'biblioteca' && <Biblioteca peticion={pide('biblioteca')} />}

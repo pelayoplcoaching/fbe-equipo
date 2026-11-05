@@ -19,3 +19,4 @@ web/src/datos/biblioteca-fbe.json
 # Las claves de las notificaciones que escribe «npm run claves-push»: van a Supabase y se borran
 supabase/.env.notificaciones
 test/e2e-fallo-066.png
+test/e2e-fallo-067.png

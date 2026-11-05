@@ -283,11 +283,11 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
   'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
-  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion'];
-// Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los vídeos, 035): sin ellas, la copia sale igual
+  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales'];
+// Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los vídeos, 035; la revisión semanal, 040): sin ellas, la copia sale igual
 const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
-  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion'];
+  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales'];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
 
@@ -2772,6 +2772,65 @@ export function crearApi(backend) {
       return api._v039;
     },
     async exigir039() { if ((await api.video039()) === false) throw new Error(AVISO_039); },
+    // ------------------------------------------------------------ v0.67: «Revisión semanal» (coach)
+    // ¿Está la 040 (la tabla de las revisiones)? true / false / null (no se sabe: un corte)
+    async revision040() {
+      if (!api._v040) {
+        const pr = (async () => {
+          try { await b.select('revisiones_semanales', { limit: 1, cols: 'atleta_id' }); return true; }
+          catch (e) {
+            const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+            if (/revisiones_semanales|schema cache|does not exist|no existe|relation|could not find|PGRST20[0-9]|42P01/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v040 = pr;
+        pr.then((x) => { if (x == null && api._v040 === pr) api._v040 = null; });
+      }
+      return api._v040;
+    },
+    // Todos los atletas activos para la revisión de la semana (la del lunes de hoy): su resumen (foto, sesiones de la semana,
+    // check-in, molestias), cuántos vídeos tiene sin revisar y cuántos mensajes sin leer, y la revisión de esta semana y la
+    // nota de la anterior (con la 040; sin ella, revisiones: false)
+    async revisionSemanal(hoy = fechaMadrid()) {
+      const lunes = lunesDe(hoy), anterior = sumarDias(lunes, -7);
+      const [resumenes, sinLeer, videos, con040] = await Promise.all([
+        api.resumenes(hoy),
+        b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'atleta_id,eliminado_en' }).then((xs) => xs.filter((c) => !c.eliminado_en)).catch(() => []),
+        b.select('archivos', { eq: { tipo: 'video' }, nulo: ['revisado_en'], cols: 'atleta_id' }).catch(() => []),
+        api.revision040().catch(() => null),
+      ]);
+      const contar = (xs) => xs.reduce((m, x) => { m[x.atleta_id] = (m[x.atleta_id] || 0) + 1; return m; }, {});
+      const L = contar(sinLeer), V = contar(videos);
+      let revs = [];
+      if (con040) revs = await b.select('revisiones_semanales', { in: { lunes: [lunes, anterior] } }).catch(() => []);
+      const R = {};
+      for (const r of revs) (R[r.atleta_id] ||= {})[r.lunes] = r;
+      const filas = resumenes.filter((r) => r.estado !== 'baja').map((r) => {
+        const esta = R[r.atleta_id]?.[lunes] || null, pasada = R[r.atleta_id]?.[anterior] || null;
+        return {
+          atleta_id: r.atleta_id, nombre: r.nombre, foto: r.foto, estado: r.estado, servicio: r.servicio,
+          sesiones: r.sesiones || { completadas: 0, total: 0 },
+          checkin: !!(r.checkin && r.checkin.semana >= anterior),
+          molestia: r.maxMolestia || 0,
+          videos: V[r.atleta_id] || 0,
+          mensajes: L[r.atleta_id] || 0,
+          hecha: !!esta?.hecha, nota: esta?.nota || '', notaAnterior: pasada?.nota || '',
+        };
+      });
+      return { lunes, revisiones: con040 === true, filas };
+    },
+    async marcarRevision(atletaId, lunes, cambios) {
+      if ((await api.revision040()) === false) throw new Error('Para guardar la revisión semanal falta ejecutar la migración 040 en Supabase (supabase/migraciones/040_revision_semanal.sql).');
+      const fila = { atleta_id: atletaId, lunes };
+      if ('hecha' in cambios) fila.hecha = !!cambios.hecha;
+      if ('nota' in cambios) {
+        const nota = String(cambios.nota ?? '').trim();
+        if ([...nota].length > 500) throw new Error('La nota, como mucho 500 caracteres');
+        fila.nota = nota || null;
+      }
+      return (await b.upsert('revisiones_semanales', [fila], 'atleta_id,lunes'))[0];
+    },
     async umbralesVelocidad(ejercicioIds = []) {
       const ids = unicos((ejercicioIds || []).filter(Boolean)).slice(0, 200);
       if (!ids.length || !(await api.video039())) return {};

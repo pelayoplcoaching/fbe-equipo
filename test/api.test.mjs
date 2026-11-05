@@ -2591,5 +2591,24 @@ console.log('\nv0.58.1: el historial del chat por páginas, para el atleta como 
   check(await api.mensajesDesde(pag.id, new Date(Date.now() - 60 * 864e5 - 3600e3).toISOString()) === 652, '(v0.58.1) «ir a una fecha» cuenta lo que ve el atleta (sin el programado)');
 }
 
+console.log('\nv0.67: «Revisión semanal»');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const hoyR = '2026-11-07'; // un sábado
+  const r1 = await api.revisionSemanal(hoyR);
+  const una = r1.filas[0];
+  check(r1.lunes === '2026-11-02' && r1.revisiones === true && r1.filas.length >= 1 && 'sesiones' in una && 'mensajes' in una && 'videos' in una && una.hecha === false && una.nota === '',
+    'la semana del lunes de hoy, con la 040: cada atleta con sus sesiones, mensajes sin leer, vídeos sin revisar y la revisión sin marcar');
+  await api.marcarRevision(una.atleta_id, r1.lunes, { hecha: true });
+  await api.marcarRevision(una.atleta_id, r1.lunes, { nota: '  Subir 2,5 kg en sentadilla  ' });
+  const r2 = (await api.revisionSemanal(hoyR)).filas.find((f) => f.atleta_id === una.atleta_id);
+  check(r2.hecha === true && r2.nota === 'Subir 2,5 kg en sentadilla', 'marcarla y la nota se guardan por separado (la nota no desmarca la casilla), sin espacios de más');
+  const r3 = (await api.revisionSemanal('2026-11-10')).filas.find((f) => f.atleta_id === una.atleta_id);
+  check(r3.hecha === false && r3.nota === '' && r3.notaAnterior === 'Subir 2,5 kg en sentadilla', 'el lunes siguiente empieza sin marcar, con la nota de la semana pasada a la vista');
+  let largo = null;
+  try { await api.marcarRevision(una.atleta_id, r1.lunes, { nota: 'x'.repeat(501) }); } catch (e) { largo = e.message; }
+  check(/500/.test(largo || ''), 'una nota de más de 500 caracteres se rechaza con un aviso claro');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

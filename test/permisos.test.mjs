@@ -5153,6 +5153,71 @@ console.log('\nLos vídeos de técnica, tanda B, segunda mitad (migración 039)'
   await sin38.close();
 }
 
+console.log('\nLa revisión semanal del coach (migración 040)');
+{
+  await su();
+  check((await q(`select relname from pg_class where relname = 'revisiones_semanales' and relrowsecurity and relnamespace = 'public'::regnamespace`)).length === 1
+    && (await q(`select 1 from information_schema.role_table_grants where table_name = 'revisiones_semanales' and grantee in ('anon', 'PUBLIC')`)).length === 0,
+    'la tabla: con sus permisos por fila y nada para anon');
+  const nuevas040 = ['revision_semanal_valida', 'revision_semanal_preparar'];
+  const malosSp040 = await q(`select p.oid::regprocedure::text f from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = any($1) and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`, [nuevas040]);
+  check(!malosSp040.length && (await q(`select count(*)::int n from pg_proc where proname = any($1) and not prosecdef`, [nuevas040]))[0].n === 2, 'sus funciones, con search_path vacío y sin permisos de su dueño');
+  const valida = async (l, n) => (await q(`select public.revision_semanal_valida($1::date, $2) ok`, [l, n]))[0].ok;
+  check(await valida('2026-11-02', null) && await valida('2026-11-02', 'x'.repeat(500)) && !(await valida('2026-11-03', null)) && !(await valida('2026-11-02', 'x'.repeat(501))) && !(await valida(null, null)),
+    'el validador: un lunes y una nota de hasta 500 caracteres; lo demás, false (nunca un error)');
+  // El coach: escribe, lee y guarda el historial
+  await como(pelayo, 'aal2');
+  await q(`insert into revisiones_semanales (atleta_id, lunes, hecha, nota) values ($1, '2026-11-02', true, '  Subir 2,5 kg  ')`, [aAna.id]);
+  await q(`insert into revisiones_semanales (atleta_id, lunes, hecha, nota) values ($1, '2026-11-09', false, '   ')`, [aAna.id]);
+  const mias = await q(`select lunes::text l, hecha, nota from revisiones_semanales where atleta_id = $1 order by lunes`, [aAna.id]);
+  check(mias.length === 2 && mias[0].hecha === true && mias[1].nota === null, 'el coach marca la revisión y deja una nota; una por semana (el historial se queda); la nota vacía queda en nada');
+  let eLunes = null;
+  try { await q(`insert into revisiones_semanales (atleta_id, lunes) values ($1, '2026-11-04')`, [aAna.id]); } catch (e) { eLunes = e.message; }
+  check(/revisiones_semanales_validas/.test(eLunes || ''), 'una semana que no empieza en lunes, no');
+  let eDoble = null;
+  try { await q(`insert into revisiones_semanales (atleta_id, lunes) values ($1, '2026-11-02')`, [aAna.id]); } catch (e) { eDoble = e.message; }
+  check(/duplicate|revisiones_semanales_pkey/.test(eDoble || ''), 'una sola por atleta y semana');
+  // El atleta (y quien no tiene nada que ver): ni lo ve ni lo escribe
+  await como(ana);
+  const vistaAna = await q(`select * from revisiones_semanales`);
+  let eAna = null;
+  try { await q(`insert into revisiones_semanales (atleta_id, lunes, hecha) values ($1, '2026-11-16', true)`, [aAna.id]); } catch (e) { eAna = e.message; }
+  await q(`update revisiones_semanales set nota = 'x'`);
+  await q(`delete from revisiones_semanales`);
+  await como(intruso);
+  const vistaIntruso = await q(`select * from revisiones_semanales`);
+  await su();
+  check(!vistaAna.length && /row-level security/.test(eAna || '') && !vistaIntruso.length && (await q(`select count(*)::int n from revisiones_semanales where nota is distinct from 'x'`))[0].n === 2,
+    'el atleta no la ve ni la escribe (ni la cambia ni la borra), ni nadie más');
+  // Al borrar al atleta, se van con él
+  const [aTmp] = await q(`insert into atletas (nombre) values ('Temporal') returning id`);
+  await q(`insert into revisiones_semanales (atleta_id, lunes) values ($1, '2026-11-02')`, [aTmp.id]);
+  await q(`delete from atletas where id = $1`, [aTmp.id]);
+  check((await q(`select count(*)::int n from revisiones_semanales where atleta_id = $1`, [aTmp.id]))[0].n === 0, 'al borrar un atleta, sus revisiones se van con él');
+  await q(`delete from revisiones_semanales`);
+
+  console.log('  · La 040 sin la 039, repetida y sobre una base que ya va por delante');
+  const sin39 = new PGlite();
+  await sin39.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin39.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '039')) await sin39.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  const sql40 = readFileSync(new URL('../supabase/migraciones/040_revision_semanal.sql', import.meta.url), 'utf8');
+  let e40a = null;
+  try { await sin39.exec(sql40); } catch (e) { e40a = e.message; }
+  check(/Antes de la 040 hace falta la 039/.test(e40a || '') && !(await sin39.query(`select 1 from pg_class where relname = 'revisiones_semanales'`)).rows.length, 'la 040 no se aplica sin la 039 (y no deja nada a medias)');
+  await sin39.exec(readFileSync(new URL('../supabase/migraciones/039_videos_tanda_b2.sql', import.meta.url), 'utf8'));
+  await sin39.exec(sql40);
+  await sin39.exec(`insert into public.atletas (nombre) values ('x'); insert into public.revisiones_semanales (atleta_id, lunes, hecha, nota) select id, '2026-11-02', true, 'n' from public.atletas where nombre = 'x'`);
+  await sin39.exec(sql40);
+  check((await sin39.query(`select count(*)::int n from fbe_migraciones where numero = 40`)).rows[0].n === 1 && (await sin39.query(`select hecha, nota from revisiones_semanales`)).rows[0]?.nota === 'n',
+    'con la 039, se aplica; repetida, queda apuntada una vez y no toca lo guardado');
+  await sin39.exec(`insert into public.fbe_migraciones (numero) values (41)`);
+  let e40b = null;
+  try { await sin39.exec(sql40); } catch (e) { e40b = e.message; }
+  check(/ya tiene la migración 041/.test(e40b || ''), 'ni en una base que ya tiene una posterior');
+  await sin39.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);
