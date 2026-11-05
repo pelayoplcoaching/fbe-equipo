@@ -18,7 +18,9 @@ const PNG = readFileSync(new URL('../web/iconos/icono-180.png', import.meta.url)
 
 export async function probarComunidad073({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
-  const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES', bypassCSP: true, acceptDownloads: true });
+  // (v0.76) el navegador en hora de Madrid, como la prueba (fechaMadrid): en CI (UTC), de 0:00 a 1:00 en Madrid la app aún
+  // estaba en el día anterior y el aniversario de «hoy» no salía
+  const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES', timezoneId: 'Europe/Madrid', bypassCSP: true, acceptDownloads: true });
   // «<Mes> en el equipo» sale del 1 al 7: fuera de esos días, el reloj del navegador va al día 3 del mes que viene (y sigue corriendo)
   const ahora = new Date();
   let hoy = fechaMadrid(ahora);
