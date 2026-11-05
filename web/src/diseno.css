@@ -145,11 +145,8 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    Rojo = alerta o pendiente (y el disco «obligatorio», que siempre lleva forma de disco). Fuera de eso, los datos
    van en morado y lo conseguido en verde. */
 
-/* Proteína: violeta de marca (antes, frambuesa: al lado de una alerta parecía un aviso de «te has pasado»). Fijo,
-   no sigue el color de acento, para que no coincida con el azul de la grasa. >= 3:1 sobre todas las superficies. */
-:root { --macro-proteina: #5438D8; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --macro-proteina: #A596FF; } }
-:root[data-theme="dark"] { --macro-proteina: #A596FF; }
+/* Proteína: violeta de marca (antes, frambuesa: al lado de una alerta parecía un aviso de «te has pasado»). Desde la
+   v0.75 está en estilos.css (--macro-proteina) y en COLORES_MACRO de logica/diseno.js. */
 
 /* Hábitos: el anillo avanza en morado y se pone verde al cumplirse (antes, cada hábito tomaba un color de los discos
    de prioridad: rojo para la proteína, azul para el agua...). */

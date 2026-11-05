@@ -209,8 +209,8 @@ export function macrosDia(reg, obj) {
 // uno, al menos 3:1 sobre todas las superficies del tema (contraste de lo que no es texto), también sobre el negro
 // puro. Entre sí se distinguen por el tono (rojo frambuesa, ámbar y azul), y siempre van con su nombre y su cifra.
 export const COLORES_MACRO = {
-  claro: { proteina: '#C0264E', carbos: '#8F5E00', grasa: '#1F5BC6' },
-  oscuro: { proteina: '#FF7F9C', carbos: '#F0BE3C', grasa: '#7AA8FF' },
+  claro: { proteina: '#5438D8', carbos: '#8F5E00', grasa: '#1F5BC6' },
+  oscuro: { proteina: '#A596FF', carbos: '#F0BE3C', grasa: '#7AA8FF' },
 };
 
 // ---------- Perfil: las cifras de la cabecera ----------
