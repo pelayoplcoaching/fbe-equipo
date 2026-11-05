@@ -166,7 +166,9 @@ export async function probarComunidad069({ navegador, check, base = 'http://loca
     await deCarlos.getByRole('button', { name: 'Responder a Carlos V.' }).first().click();
     const caja = hojaCom.getByLabel('Tu respuesta a Carlos V.');
     await caja.waitFor();
-    check(await p.evaluate(() => document.activeElement?.id === 'eq-comentario') && (await hojaCom.locator('.respondiendo').textContent()).includes('Carlos V.'),
+    // (el foco llega en el siguiente fotograma: en una máquina lenta, se espera a que llegue)
+    const conFoco = await p.waitForFunction(() => document.activeElement?.id === 'eq-comentario', null, { timeout: 5000 }).then(() => true, () => false);
+    check(conFoco && (await hojaCom.locator('.respondiendo').textContent()).includes('Carlos V.'),
       '«Responder»: «Respondiendo a Carlos V.» y el foco en la caja');
     await caja.fill('¡Allí nos vemos!');
     await hojaCom.getByRole('button', { name: 'Responder', exact: true }).click();

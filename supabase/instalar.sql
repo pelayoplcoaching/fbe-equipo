@@ -13055,6 +13055,17 @@ end $$;
 -- 1. Columnas y tablas
 -- ---------------------------------------------------------------------
 alter table public.comunidad_miembros add column if not exists ver_entrenando boolean not null default false;
+-- (revisión) se apaga al salir, al ser sacado o bloqueado: al volver, empieza apagado otra vez (hay que encenderlo de nuevo)
+create or replace function public.comunidad_miembro_apagar_entrenando() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if (new.salido_en is not null and old.salido_en is null) or (new.bloqueado and not old.bloqueado) then new.ver_entrenando := false; end if;
+  return new;
+end $$;
+drop trigger if exists comunidad_miembro_apagar_entrenando on public.comunidad_miembros;
+create trigger comunidad_miembro_apagar_entrenando before update of salido_en, bloqueado on public.comunidad_miembros
+  for each row execute function public.comunidad_miembro_apagar_entrenando();
+update public.comunidad_miembros set ver_entrenando = false where ver_entrenando and (salido_en is not null or bloqueado);
 
 alter table public.comunidad_comentarios add column if not exists responde_a uuid references public.comunidad_comentarios(id) on delete set null;
 create index if not exists comunidad_comentarios_responde_idx on public.comunidad_comentarios (responde_a);
@@ -13473,6 +13484,8 @@ begin
   v_n := v_n + v_m;
 
   -- (v0.69, 041) El domingo por la tarde, el resumen de la semana del equipo (una vez: la clave lleva el día)
+  -- (revisión) en su propio bloque: si algo falla aquí, no se pierden los demás recordatorios de esa pasada
+  begin
   if v_dow = 7 and v_local >= v_hoy + time '19:00' and v_local < v_hoy + time '22:00' and public.comunidad_activa() then
     select t.titulo, t.cuerpo into v_titulo, v_cuerpo
     from fbe_privado.comunidad_resumen_de_la_semana() r
@@ -13489,6 +13502,9 @@ begin
       v_n := v_n + v_m;
     end if;
   end if;
+  exception when others then
+    raise warning 'FBE: resumen del domingo no creado: %', sqlerrm;
+  end;
   return v_n;
 end $$;
 

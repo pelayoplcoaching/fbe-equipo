@@ -5334,7 +5334,7 @@ console.log('\nLa comunidad, primera tanda de mejoras: bienvenida, entrenando ah
   check(pasados20 === 0 && terminada === 0 && salido === 0, 'no sale con la última serie de hace más de 20 minutos, con la sesión terminada ni si ha salido del equipo');
   await como(luis); await q(`select comunidad_unirme('Luis M.', $1, $2)`, [version, normas]);
   await su();
-  check((await q(`select ver_entrenando from comunidad_miembros where perfil_id = $1`, [luis]))[0].ver_entrenando === true, '(al volver a entrar se mantiene lo que eligió)');
+  check((await q(`select ver_entrenando from comunidad_miembros where perfil_id = $1`, [luis]))[0].ver_entrenando === false, '(revisión) al salir se apaga: al volver a entrar empieza apagado y hay que encenderlo otra vez');
   await q(`delete from series where id = $1`, [serieL.id]);
   await q(`update sesiones set completada = $2, fecha_realizada = $3 where id = $1`, [sesL.id, estadoSesL.completada, estadoSesL.fecha_realizada]);
 
@@ -5415,7 +5415,7 @@ console.log('\nLa comunidad, primera tanda de mejoras: bienvenida, entrenando ah
   await como(luis);
   const datosL = (await q(`select comunidad_mis_datos() d`))[0].d;
   check(datosL.reacciones_comentarios?.length === 1 && Array.isArray(datosL.bienvenidas_dadas) && datosL.bienvenidas_recibidas?.length === 1 && !('de' in datosL.bienvenidas_recibidas[0])
-    && datosL.miembro.ver_entrenando === true && datosL.comentarios.some((c) => 'responde_a' in c),
+    && typeof datosL.miembro.ver_entrenando === 'boolean' && datosL.comentarios.some((c) => 'responde_a' in c),
     '«Descargar mis datos» lleva sus 💪 a comentarios, las bienvenidas (las recibidas, solo cuándo), «entrenando ahora» y a qué responde cada comentario');
   await q(`select comunidad_salir(true)`);
   await su();

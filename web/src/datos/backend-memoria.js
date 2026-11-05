@@ -1439,7 +1439,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
     if (nombre === 'comunidad_salir') {
       if (!uid) throw new Error('Necesitas iniciar sesión');
-      for (const m of tabla('comunidad_miembros')) if (m.perfil_id === uid && !m.salido_en) m.salido_en = ahora();
+      // (como la 041, revisión: al salir se apaga «Entrenando ahora»)
+      for (const m of tabla('comunidad_miembros')) if (m.perfil_id === uid && !m.salido_en) { m.salido_en = ahora(); m.ver_entrenando = false; }
       let fotos = [];
       if (args.p_borrar && !coach) {
         fotos = tabla('comunidad_posts').filter((x) => x.autor_id === uid && x.foto_ruta && !tabla('comunidad_reportes').some((r) => r.copia_foto === x.foto_ruta && !r.resuelto_en)).map((x) => x.foto_ruta);
@@ -1474,7 +1475,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (!esCoach()) throw new Error('Solo el coach puede sacar a alguien de la comunidad');
       const m = tabla('comunidad_miembros').find((x) => x.atleta_id === args.p_atleta);
       if (!m) throw new Error('Ese atleta no ha entrado en la comunidad');
-      if (args.p_bloquear !== false) Object.assign(m, { salido_en: m.salido_en || ahora(), bloqueado: true });
+      if (args.p_bloquear !== false) Object.assign(m, { salido_en: m.salido_en || ahora(), bloqueado: true, ver_entrenando: false });
       else m.bloqueado = false;
       return null;
     }
