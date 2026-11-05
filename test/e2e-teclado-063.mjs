@@ -363,7 +363,8 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
       check(await enf.isVisible(), 'Escape cierra el teclado, no el modo enfoque');
     } else check(false, 'en el modo enfoque, tras marcar, el descanso trae «Ahora toca»');
   } catch (e) {
-    check(false, `apuntar las series de la v0.63: ${e.message.split('\n').slice(0, 6).join(' ')}`);
+    check(false, `apuntar las series de la v0.63: ${e.message.split('\n').slice(0, 6).join(' ')} | en: ${(e.stack || '').split('\n').find((l) => l.includes('e2e-teclado-063')) || '?'}`);
+    await p.screenshot({ path: new URL('./e2e-fallo-063.png', import.meta.url).pathname }).catch(() => {});
   }
   check(!errores.length, `sin errores ni fallos de accesibilidad${errores.length ? `: ${errores.join(' | ').slice(0, 900)}` : ''}`);
   await ctx.close();

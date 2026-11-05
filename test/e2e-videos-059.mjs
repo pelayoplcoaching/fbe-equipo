@@ -23,6 +23,14 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
   const hay = async (loc, n, ms = 8000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await loc.count() === n) return true; await p.waitForTimeout(100); } return (await loc.count()) === n; };
   const alMenos = async (loc, n, ms = 10000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await loc.count() >= n) return true; await p.waitForTimeout(100); } return (await loc.count()) >= n; };
   const demo = () => p.evaluate(() => JSON.parse(localStorage.getItem('fbe-demo-v2')));
+  // (la sesión abre sola el primer ejercicio al terminar de cargar: en una CPU lenta, mirar antes de que lo haga y tocar la
+  // cabecera lo volvía a cerrar. Se espera a que se asiente; si no se abrió sola, se abre y se espera a verlo abierto)
+  const abrirEjercicio = async (ej) => {
+    const cab = ej.locator('.ejercicio-cab');
+    const sola = await p.waitForFunction((el) => el.getAttribute('aria-expanded') === 'true', await cab.elementHandle(), { timeout: 4000 }).then(() => true, () => false);
+    if (!sola) await cab.click();
+    await ej.locator('.ejercicio-cuerpo').waitFor();
+  };
   const enDemo = async (f) => { for (let i = 0; i < 60; i++) { if (f(await demo())) return true; await p.waitForTimeout(100); } return false; };
   const tiempo = (loc) => loc.locator('video.medio').first().evaluate((v) => v.currentTime);
   async function revisar(paso) {
@@ -256,11 +264,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     if (await p.locator('.portada-sesion').count()) await p.locator('.portada-empezar').getByRole('button', { name: 'Empezar', exact: true }).click();
     const sent = p.locator('.ejercicio', { hasText: 'Sentadilla barra alta' }).first();
     await sent.waitFor();
-    // (la sesión abre sola el primer ejercicio al terminar de cargar: en una CPU lenta, mirar antes de que lo haga y tocar
-    // la cabecera lo volvía a cerrar. Se espera a que se asiente; si no se abrió sola, se abre y se espera a verlo abierto)
-    const cabSent = sent.locator('.ejercicio-cab');
-    const abierta = async () => p.waitForFunction((el) => el.getAttribute('aria-expanded') === 'true', await cabSent.elementHandle(), { timeout: 4000 }).then(() => true, () => false);
-    if (!(await abierta())) { await cabSent.click(); await sent.locator('.ejercicio-cuerpo').waitFor(); }
+    await abrirEjercicio(sent);
     const rec = sent.locator('.recuerda', { hasText: 'Recuerda:' });
     await rec.waitFor();
     check((await rec.textContent()).includes('Rodillas hacia fuera al bajar') && await sent.getByRole('button', { name: 'Ver el vídeo modelo' }).count() === 1,
@@ -312,8 +316,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     await p.locator('.dia', { hasText: 'Pierna A' }).first().click();
     const sent2 = p.locator('.ejercicio', { hasText: 'Sentadilla barra alta' }).first();
     await sent2.waitFor();
-    if (!(await sent2.locator('.ejercicio-cuerpo').count())) await sent2.locator('.ejercicio-cab').click();
-    await sent2.locator('.ejercicio-cuerpo').waitFor();
+    await abrirEjercicio(sent2);
     await p.waitForTimeout(800);
     check(await sent2.locator('.recuerda').count() === 0, 'ni el recordatorio enlazado a ese vídeo');
     await entrarComo('Rubén Martín');

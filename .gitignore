@@ -5,6 +5,7 @@ test/e2e-fallo.png
 test/e2e-fallo-059.png
 test/e2e-fallo-060.png
 test/e2e-fallo-061.png
+test/e2e-fallo-063.png
 .DS_Store
 # Documentación legal privada (DPA, contratos): nunca al repositorio
 docs/legal/
