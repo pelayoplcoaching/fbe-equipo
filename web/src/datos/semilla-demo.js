@@ -869,4 +869,17 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
     db.comunidad_preguntas.push({ id: crypto.randomUUID(), post_id: pregunta.id, comentario_id: respuesta.id, pregunta: pregunta.texto, respuesta: respuesta.texto, creado_en: hace(60 * 24 * 2 - 100), actualizado_en: hace(60 * 24 * 2 - 100) });
   }
   if (pLucia && deRubenALucia) pLucia.mejor_comentario = deRubenALucia.id;
+  // v0.72 (044): una quedada del coach dentro de cuatro días (con 12 plazas; Rubén va y Carlos no puede); sin plantillas, sin
+  // atleta de la semana y la moderación apagada (para probarlo)
+  Object.assign(db, { comunidad_eventos: [], comunidad_evento_asistentes: [], comunidad_plantillas: [], comunidad_destacados: [],
+    comunidad_moderacion: [{ id: true, palabras: [], lento_min: 0, actualizado_en: hace(60 * 24 * 6) }] });
+  for (const p of db.comunidad_posts) Object.assign(p, { publicar_en: null, retenida: false });
+  for (const c of db.comunidad_comentarios) c.retenido = false;
+  for (const m of db.comunidad_miembros) m.silenciado_hasta = null;
+  const quedada = { id: crypto.randomUUID(), titulo: 'Quedada en el parque: circuito y café', empieza_en: instanteMadrid(sumarDias(hoyISO(), 4), '10:00'),
+    lugar: 'Parque del Retiro, puerta de Alcalá', descripcion: 'Un circuito suave de 45 minutos para todos los niveles y, después, café. Trae agua.',
+    plazas: 12, cancelado_en: null, creado_en: hace(60 * 20), actualizado_en: hace(60 * 20) };
+  db.comunidad_eventos.push(quedada);
+  db.comunidad_evento_asistentes.push({ evento_id: quedada.id, perfil_id: ruben.perfil_id, atleta_id: ruben.id, va: true, creado_en: hace(60 * 18) },
+    { evento_id: quedada.id, perfil_id: carlos.perfil_id, atleta_id: carlos.id, va: false, creado_en: hace(60 * 15) });
 }

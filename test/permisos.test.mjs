@@ -5993,6 +5993,300 @@ console.log('\nLa comunidad, tercera tanda: temas, preguntas al coach, varias fo
   await sin42.close();
 }
 
+console.log('\nLa comunidad, cuarta tanda: eventos, programados y plantillas, el panel, el atleta de la semana y la moderación (migración 044)');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  const ms = (x) => new Date(x).getTime();
+  await su();
+  const tablas044 = ['comunidad_eventos', 'comunidad_evento_asistentes', 'comunidad_plantillas', 'comunidad_destacados', 'comunidad_moderacion'];
+  const permisosDe = async (t) => (await q(`select privilege_type p from information_schema.role_table_grants where table_name = $1 and grantee = 'authenticated' order by 1`, [t])).map((x) => x.p).join();
+  check((await q(`select relname from pg_class where relname = any($1) and relrowsecurity and relnamespace = 'public'::regnamespace`, [tablas044])).length === 5
+    && (await q(`select 1 from information_schema.role_table_grants where table_name = any($1) and grantee in ('anon', 'PUBLIC')`, [tablas044])).length === 0
+    && await permisosDe('comunidad_eventos') === 'DELETE,INSERT,SELECT,UPDATE' && await permisosDe('comunidad_plantillas') === 'DELETE,INSERT,SELECT'
+    && await permisosDe('comunidad_evento_asistentes') === 'SELECT' && await permisosDe('comunidad_destacados') === 'SELECT' && await permisosDe('comunidad_moderacion') === 'SELECT',
+    'las tablas nuevas: con sus permisos por fila; quién va, el atleta de la semana y la moderación, solo lectura (se escriben con sus funciones); nada para anon');
+  const nuevas044 = ['comunidad_evento_valido', 'comunidad_palabras_validas', 'comunidad_normal', 'comunidad_texto_filtrado', 'comunidad_destacado_visible', 'comunidad_evento_preparar',
+    'comunidad_evento_cambiado', 'comunidad_evento_responder', 'comunidad_post_programar', 'comunidad_programado_cambiar', 'comunidad_plantilla_preparar', 'comunidad_moderar_entrada',
+    'comunidad_post_moderar', 'comunidad_comentario_moderar', 'comunidad_al_retener', 'comunidad_silenciar', 'comunidad_moderacion_guardar', 'comunidad_aprobar', 'comunidad_destacar',
+    'comunidad_destacado_quitar', 'comunidad_panel'];
+  check(!(await q(`select 1 from pg_proc p where p.proname = any($1) and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`, [nuevas044])).length
+    && (await q(`select count(distinct proname)::int n from pg_proc where proname = any($1)`, [nuevas044]))[0].n === nuevas044.length
+    && !(await q(`select 1 from pg_proc where proname = any($1) and (has_function_privilege('anon', oid, 'execute') or (pronamespace = 'fbe_privado'::regnamespace and has_function_privilege('authenticated', oid, 'execute')))`, [nuevas044])).length,
+    'sus funciones, con search_path vacío, ninguna para anon y las internas solo para la base');
+  check((await q(`select comunidad_evento_valido('Quedada', 'Retiro', null, 10) a, comunidad_evento_valido('', 'Retiro', null, null) b, comunidad_evento_valido('Quedada', 'Retiro', null, 0) c,
+      comunidad_evento_valido(repeat('x', 81), 'Retiro', null, null) d, comunidad_evento_valido(null, null, null, null) e, comunidad_palabras_validas('{}') f, comunidad_palabras_validas(array['tonto', 'mala palabra']) g,
+      comunidad_palabras_validas(array['Tonto']) h, comunidad_palabras_validas(array['x']) i, comunidad_palabras_validas(null) j, comunidad_palabras_validas(array[array['ab', 'cd'], array['ef', 'gh']]) k`))
+    .map((x) => [x.a, x.b, x.c, x.d, x.e, x.f, x.g, x.h, x.i, x.j, x.k].join()).join() === 'true,false,false,false,false,true,true,false,false,false,false',
+    'los validadores: el evento (título, sitio, descripción y plazas) y las palabras filtradas (ya normalizadas, de 2 a 40), nunca un error');
+  check((await q(`select fbe_privado.comunidad_texto_filtrado('Eres un TONTÓ, ¿eh?', array['tonto']) a, fbe_privado.comunidad_texto_filtrado('Qué tontería', array['tonto']) b,
+      fbe_privado.comunidad_texto_filtrado('Una mala   palabra', array['mala palabra']) c, fbe_privado.comunidad_texto_filtrado('Hola', '{}') d`)).map((x) => [x.a, x.b, x.c, x.d].join()).join() === 'true,false,true,false',
+    'las palabras filtradas: palabras enteras, sin mayúsculas ni tildes («tontería» no salta con «tonto»)');
+  await q(`update comunidad_miembros set sin_ranking = false, silenciado_hasta = null where perfil_id in ($1, $2)`, [ana, luis]);
+  await q(`delete from notificaciones`);
+  const aLas = (dias, hora) => `((now() at time zone 'Europe/Madrid')::date + ${dias} + time '${hora}') at time zone 'Europe/Madrid'`;
+
+  console.log('  · Eventos y quién va');
+  await como(ana);
+  check(await falla(`insert into comunidad_eventos (titulo, empieza_en, lugar) values ('Mío', now() + interval '1 day', 'Casa')`), 'un atleta no crea eventos');
+  await como(pelayo, 'aal2');
+  check(await falla(`insert into comunidad_eventos (titulo, empieza_en, lugar) values ('Ayer', now() - interval '1 hour', 'Retiro')`)
+    && await falla(`insert into comunidad_eventos (titulo, empieza_en, lugar) values ('Lejos', now() + interval '400 days', 'Retiro')`)
+    && await falla(`insert into comunidad_eventos (titulo, empieza_en, lugar, plazas) values ('Sin plazas', now() + interval '1 day', 'Retiro', 0)`),
+    'el coach: más adelante, como mucho a un año y con plazas válidas');
+  const [ev] = await q(`insert into comunidad_eventos (titulo, empieza_en, lugar, descripcion, plazas, creado_en, cancelado_en) values ('Quedada en el Retiro', ${aLas(3, '18:00')}, ' Puerta de Alcalá ', '', 5, '2020-01-01', now()) returning *`);
+  check(!!ev && ev.lugar === 'Puerta de Alcalá' && ev.descripcion === null && ev.cancelado_en === null && ms(ev.creado_en) > ms('2025-01-01'), 'crea una quedada (las fechas y lo cancelado las pone la base; sin espacios de más)');
+  await como(ana);
+  check((await q(`select id from comunidad_eventos`)).map((x) => x.id).join() === ev.id && (await q(`select comunidad_evento_responder($1, true) v`, [ev.id]))[0].v === true,
+    'Ana la ve y se apunta («Me apunto»)');
+  check(await falla(`insert into comunidad_evento_asistentes (evento_id, perfil_id, va) values ($1, $2, true)`, [ev.id, ana]) && await falla(`update comunidad_eventos set titulo = 'Cambiado' where id = $1`, [ev.id])
+    || (await q(`select titulo from comunidad_eventos where id = $1`, [ev.id]))[0].titulo === 'Quedada en el Retiro', 'ni se apunta a mano ni cambia el evento');
+  await como(luis);
+  const vistosLuis = (await q(`select perfil_id, va from comunidad_evento_asistentes where evento_id = $1`, [ev.id])).map((x) => `${x.perfil_id === ana}:${x.va}`).join();
+  await como(intruso);
+  const vistosIntruso = (await q(`select * from comunidad_evento_asistentes`)).length + (await q(`select * from comunidad_eventos`)).length;
+  check(vistosLuis === 'true:true' && vistosIntruso === 0 && await falla(`select comunidad_evento_responder($1, true)`, [ev.id]),
+    'Luis ve que Ana va (como las reacciones); una cuenta de fuera no ve ni el evento ni quién va, ni se apunta');
+  await como(pelayo, 'aal2');
+  await q(`update comunidad_eventos set plazas = 1 where id = $1`, [ev.id]);
+  await como(luis);
+  check(await falla(`select comunidad_evento_responder($1, true)`, [ev.id]) && (await q(`select comunidad_evento_responder($1, false) v`, [ev.id]))[0].v === false, 'con las plazas llenas, Luis no puede apuntarse; «No voy», sí');
+  await su();
+  await q(`select crear_recordatorios(${aLas(3, '15:00')})`);
+  const antesDeHora = await n(`select count(*)::int n from notificaciones where clave like 'comunidad_evento:%'`);
+  await q(`select crear_recordatorios(${aLas(3, '16:30')})`);
+  await q(`select crear_recordatorios(${aLas(3, '16:31')})`);
+  const rec = await q(`select usuario_id, titulo, caduca_en from notificaciones where clave like 'comunidad_evento:%'`);
+  check(antesDeHora === 0 && rec.length === 1 && rec[0].usuario_id === ana && rec[0].titulo === 'A las 18:00: Quedada en el Retiro' && ms(rec[0].caduca_en) === ms(ev.empieza_en),
+    'dos horas antes (y no antes), una vez, solo a quien va: «A las 18:00: Quedada en el Retiro» (caduca al empezar)');
+  await como(pelayo, 'aal2');
+  await q(`update comunidad_eventos set cancelado_en = now() where id = $1`, [ev.id]);
+  await su();
+  check(await n(`select count(*)::int n from notificaciones where clave like 'comunidad_evento:%'`) === 0
+    && await n(`select count(*)::int n from notificaciones where usuario_id = $1 and clave = $2 and titulo = 'Se cancela: Quedada en el Retiro'`, [ana, `comunidad_evento_cancelado:${ev.id}`]) === 1
+    && await n(`select count(*)::int n from notificaciones where clave like 'comunidad_evento_cancelado:%'`) === 1,
+    'al cancelarlo, el recordatorio pendiente se retira y a quien iba (solo a Ana) le llega «Se cancela: …»');
+  await como(pelayo, 'aal2');
+  await q(`update comunidad_eventos set cancelado_en = null where id = $1`, [ev.id]);
+  const sigue = (await q(`select cancelado_en from comunidad_eventos where id = $1`, [ev.id]))[0].cancelado_en;
+  await como(ana);
+  check(sigue !== null && await falla(`select comunidad_evento_responder($1, null)`, [ev.id]), 'un evento cancelado no se descancela, y ya no se responde');
+  const datosAna = (await q(`select comunidad_mis_datos() d`))[0].d;
+  check(datosAna.eventos?.length === 1 && datosAna.eventos[0].va === true && Array.isArray(datosAna.atleta_de_la_semana), '«Descargar mis datos» lleva sus respuestas a los eventos');
+
+  console.log('  · Avisos programados');
+  await su(); await q(`delete from notificaciones`);
+  await como(pelayo, 'aal2');
+  const [prog] = await q(`insert into comunidad_posts (tipo, texto, publicar_en, menciones) values ('aviso', 'Mañana, sesión especial zz044', now() + interval '1 hour', $1) returning *`, [[ana]]);
+  check(ms(prog.creado_en) === ms(prog.publicar_en) && prog.menciones.length === 0, 'el coach programa un aviso: sale con la fecha de su hora y sin menciones (avisarían antes de tiempo)');
+  check(await falla(`insert into comunidad_posts (tipo, texto, publicar_en) values ('aviso', 'Lejos', now() + interval '91 days')`)
+    && (await q(`insert into comunidad_posts (tipo, texto, publicar_en) values ('aviso', 'Casi ya', now() + interval '10 seconds') returning publicar_en`))[0].publicar_en === null,
+    'como mucho a 90 días; con menos de 30 s, se publica ya');
+  await q(`delete from comunidad_posts where texto = 'Casi ya'`);
+  await su();
+  const avisosYa = await n(`select count(*)::int n from notificaciones where clave = $1`, [`comunidad_aviso:${prog.id}`]);
+  await como(ana);
+  const anaLo = (await q(`select id from comunidad_posts where id = $1`, [prog.id])).length;
+  const anaVis = (await q(`select comunidad_post_visible($1) v`, [prog.id]))[0].v;
+  const anaBusca = (await q(`select id from comunidad_buscar('zz044')`)).length;
+  check(avisosYa === 0 && anaLo === 0 && anaVis === false && anaBusca === 0 && await falla(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Antes de tiempo')`, [prog.id])
+    && await falla(`select comunidad_reaccionar($1, 'fuerza')`, [prog.id]), 'hasta su hora, Ana no lo ve (ni buscándolo), no puede comentarlo ni reaccionar, y no le ha llegado nada');
+  check(await falla(`insert into comunidad_posts (texto, publicar_en) values ('Yo también programo', now() + interval '1 hour')`), 'un atleta no programa');
+  check(await falla(`select comunidad_programado_cambiar($1, 'Hackeado', null)`, [prog.id]), 'ni cambia lo programado');
+  await como(pelayo, 'aal2');
+  const nueva = (await q(`select comunidad_programado_cambiar($1, 'Mañana, sesión especial zz044 (a las 10)', now() + interval '2 hours') v`, [prog.id]))[0].v;
+  // (revisión) un comentario del coach con una mención en lo programado no avisa antes de tiempo
+  const [cProg] = await q(`insert into comunidad_comentarios (post_id, texto, menciones) values ($1, '@Ana L. mira esto', $2) returning id`, [prog.id, [ana]]);
+  await su();
+  const mencionProg = await n(`select count(*)::int n from notificaciones where clave like $1`, [`comunidad_mencion:${cProg.id.replace(/-/g, '')}:%`]);
+  await q(`delete from comunidad_comentarios where id = $1`, [cProg.id]);
+  check(mencionProg === 0, '(revisión) una mención en un comentario de un aviso programado no avisa (aún no se ve)');
+  await como(pelayo, 'aal2');
+  check(ms(nueva) > Date.now() + 3600e3 && (await q(`select texto, creado_en from comunidad_posts where id = $1`, [prog.id])).map((x) => `${x.texto}|${ms(x.creado_en) === ms(nueva)}`).join() === 'Mañana, sesión especial zz044 (a las 10)|true',
+    'el coach lo cambia (texto y hora)');
+  // (sale: como si hubiera llegado su hora)
+  await su();
+  await q(`update comunidad_posts set publicar_en = now() - interval '1 second', creado_en = now() - interval '1 second' where id = $1`, [prog.id]);
+  await como(ana);
+  const anaYa = (await q(`select id from comunidad_posts where id = $1`, [prog.id])).length;
+  await su();
+  // (revisión) Luis «vuelve a entrar» después de que saliera: a él no le llega el aviso de algo de antes
+  const [{ e: entradaLuis }] = await q(`select entrado_en e from comunidad_miembros where perfil_id = $1`, [luis]);
+  const [{ e: entradaAna }] = await q(`select entrado_en e from comunidad_miembros where perfil_id = $1`, [ana]);
+  await q(`update comunidad_miembros set entrado_en = now() - interval '1 hour' where perfil_id = $1`, [ana]);
+  await q(`update comunidad_miembros set entrado_en = now() where perfil_id = $1`, [luis]);
+  await q(`select crear_recordatorios(now())`);
+  await q(`select crear_recordatorios(now())`);
+  const avisoLuis = await n(`select count(*)::int n from notificaciones where clave = $1 and usuario_id = $2`, [`comunidad_aviso:${prog.id}`, luis]);
+  await q(`update comunidad_miembros set entrado_en = $2 where perfil_id = $1`, [luis, entradaLuis]);
+  await q(`update comunidad_miembros set entrado_en = $2 where perfil_id = $1`, [ana, entradaAna]);
+  check(avisoLuis === 0, '(revisión) a quien entra después de que saliera, no le llega su aviso');
+  check(anaYa === 1 && await n(`select count(*)::int n from notificaciones where clave = $1 and titulo like '% ha publicado un aviso en el equipo'`, [`comunidad_aviso:${prog.id}`]) === 1
+    && await n(`select count(*)::int n from notificaciones where clave = $1 and usuario_id = $2`, [`comunidad_aviso:${prog.id}`, pelayo]) === 0,
+    'al llegar su hora, Ana lo ve, y crear_recordatorios() avisa una vez a los de dentro («… ha publicado un aviso en el equipo»), no al coach');
+  await q(`select crear_recordatorios(now())`);
+  check(await n(`select count(*)::int n from notificaciones where clave = $1 and usuario_id = $2`, [`comunidad_aviso:${prog.id}`, luis]) === 1, '(Luis, con su entrada de antes, sí)');
+  await como(pelayo, 'aal2');
+  check(await falla(`select comunidad_programado_cambiar($1, 'Tarde', null)`, [prog.id]), 'lo ya publicado no se cambia como programado');
+  await q(`delete from comunidad_posts where id = $1`, [prog.id]);
+
+  console.log('  · Plantillas');
+  await como(pelayo, 'aal2');
+  await q(`insert into comunidad_plantillas (texto) select 'Plantilla ' || g from generate_series(1, 30) g`);
+  check(await n(`select count(*)::int n from comunidad_plantillas`) === 30 && await falla(`insert into comunidad_plantillas (texto) values ('La 31')`), 'el coach guarda hasta 30 plantillas (la 31, no)');
+  await como(ana);
+  check(!(await q(`select * from comunidad_plantillas`)).length && await falla(`insert into comunidad_plantillas (texto) values ('Mía')`), 'las plantillas son del coach: un atleta ni las ve ni las crea');
+  await como(pelayo, 'aal2');
+  await q(`delete from comunidad_plantillas`);
+
+  console.log('  · El panel de la comunidad');
+  await como(ana);
+  check(await falla(`select comunidad_panel()`), 'solo el coach');
+  await como(pelayo, 'aal2');
+  const panel = (await q(`select comunidad_panel() p`))[0].p;
+  check(panel.semanas?.length === 4 && panel.semanas.every((s) => ['activos', 'publicaciones', 'reacciones', 'comentarios'].every((k) => Number.isInteger(s[k]))) && panel.miembros >= 2
+    && Array.isArray(panel.nunca) && Array.isArray(panel.inactivos) && Array.isArray(panel.activos) && Number.isInteger(panel.reportes) && Number.isInteger(panel.retenidos)
+    && !/texto|zz04|Hola equipo/.test(JSON.stringify(panel)), 'el coach: 4 semanas de recuentos, quién falta, lo pendiente y los más activos (sin el contenido de nada)');
+
+  console.log('  · El atleta de la semana');
+  await como(ana);
+  check(await falla(`select comunidad_destacar($1, 'Yo misma')`, [ana]), 'un atleta no se elige');
+  await su(); await q(`update comunidad_miembros set sin_ranking = true where perfil_id = $1`, [luis]);
+  await como(pelayo, 'aal2');
+  check(await falla(`select comunidad_destacar($1, 'Por no fallar')`, [luis]) && await falla(`select comunidad_destacar($1, $2)`, [ana, 'x'.repeat(141)]) && await falla(`select comunidad_destacar($1, 'Fuera')`, [intruso]),
+    'no se elige a quien no sale en el ranking, con una línea de más de 140 ni a alguien de fuera');
+  await su(); await q(`update comunidad_miembros set sin_ranking = false where perfil_id = $1`, [luis]); await q(`delete from notificaciones`);
+  await como(pelayo, 'aal2');
+  const d1 = (await q(`select comunidad_destacar($1, '  Por no fallar   ni un día ') id`, [luis]))[0].id;
+  await su();
+  check(await n(`select count(*)::int n from notificaciones where usuario_id = $1 and clave = $2`, [luis, `comunidad_destacado:${d1}`]) === 1, 'a Luis le llega el aviso (sin la línea)');
+  await como(ana);
+  check((await q(`select perfil_id, motivo from comunidad_destacados`)).map((x) => `${x.perfil_id === luis}|${x.motivo}`).join() === 'true|Por no fallar ni un día'
+    && await falla(`insert into comunidad_destacados (perfil_id, motivo) values ($1, 'Yo')`, [ana]), 'Ana lo ve (con la línea, sin espacios de más) y no lo escribe a mano');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_destacar($1, 'Por su constancia')`, [ana]);
+  await como(luis);
+  const deLuis = (await q(`select perfil_id from comunidad_destacados`)).map((x) => x.perfil_id === ana).join();
+  await como(intruso);
+  const deIntruso = (await q(`select * from comunidad_destacados`)).length;
+  await como(pelayo, 'aal2');
+  check(deLuis === 'true' && deIntruso === 0 && await n(`select count(*)::int n from comunidad_destacados`) === 2 && await n(`select count(*)::int n from comunidad_destacados where hasta > now()`) === 1,
+    'uno a la vez: el nuevo (Ana) sustituye al de antes, que queda para el coach (los de dentro, solo el de ahora; de fuera, nada)');
+  await su(); await q(`update comunidad_miembros set sin_ranking = true where perfil_id = $1`, [ana]);
+  await como(luis);
+  const conSinRanking = (await q(`select * from comunidad_destacados`)).length;
+  await su(); await q(`update comunidad_miembros set sin_ranking = false where perfil_id = $1`, [ana]);
+  await como(pelayo, 'aal2'); await q(`select comunidad_destacado_quitar()`);
+  check(conSinRanking === 0 && await n(`select count(*)::int n from comunidad_destacados where hasta > now()`) === 0, 'si después elige no salir en el ranking, deja de verse; el coach lo quita antes de tiempo');
+
+  console.log('  · Moderación: silenciar');
+  await como(ana);
+  check(await falla(`select comunidad_silenciar($1, 24)`, [luis]), 'un atleta no silencia');
+  await como(pelayo, 'aal2');
+  const hasta = (await q(`select comunidad_silenciar($1, 24) h`, [luis]))[0].h;
+  const [pAnaSil] = await q(`insert into comunidad_posts (tipo, texto) values ('aviso', 'Aviso para silenciados') returning id`);
+  await como(luis);
+  const filaLuis = (await q(`select silenciado_hasta from comunidad_miembros`))[0];
+  check(Math.abs(ms(hasta) - Date.now() - 864e5) < 60000 && ms(filaLuis.silenciado_hasta) === ms(hasta)
+    && /pausado tus publicaciones/.test(await mensaje(`insert into comunidad_posts (texto) values ('Hola')`) || '') && await falla(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Hola')`, [pAnaSil.id])
+    && (await q(`select comunidad_reaccionar($1, 'fuerza') r`, [pAnaSil.id]))[0].r === 'fuerza',
+    'silenciado 24 h, Luis ve hasta cuándo en su fila, no publica ni comenta (con un mensaje claro) y sí reacciona');
+  await como(ana);
+  check(!(await q(`select silenciado_hasta from comunidad_miembros where perfil_id = $1`, [luis])).length, 'los demás no saben que está silenciado');
+  await como(pelayo, 'aal2');
+  check((await q(`select comunidad_silenciar($1, 0) h`, [luis]))[0].h === null, 'el coach le quita el silencio');
+  await como(luis);
+  check((await q(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Ya puedo') returning id`, [pAnaSil.id])).length === 1, 'y vuelve a poder comentar');
+
+  console.log('  · Moderación: palabras filtradas y modo lento');
+  await como(ana);
+  check(await falla(`select comunidad_moderacion_guardar(array['tonto'], 0)`) && !(await q(`select * from comunidad_moderacion`)).length, 'un atleta ni las cambia ni las ve');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderacion_guardar(array['Tonto', ' Mala   PALABRA ', 'tonto', 'x'], 0)`);
+  check((await q(`select palabras from comunidad_moderacion`))[0].palabras.join() === 'mala palabra,tonto' && await falla(`select comunidad_moderacion_guardar(array[repeat('a', 41)], 0)`),
+    'el coach las guarda normalizadas (sin repetir, sin las de una letra); de más de 40, no');
+  await su(); await q(`delete from notificaciones`);
+  await como(luis);
+  const [ret] = await q(`insert into comunidad_posts (texto, menciones) values ('Eres un TONTO, @Ana L.', $1) returning id, retenida`, [[ana]]);
+  const [retPreg] = await q(`insert into comunidad_posts (texto, tema) values ('¿Esto es de tontos? zz044', 'pregunta') returning id, retenida`);
+  const [cRet] = await q(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Qué mala palabra') returning id, retenido`, [pAnaSil.id]);
+  const [cBien] = await q(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Qué tontería') returning id, retenido`, [pAnaSil.id]);
+  check(ret.retenida === true && retPreg.retenida === false && cRet.retenido === true && cBien.retenido === false && (await q(`select id from comunidad_posts where id = $1`, [ret.id])).length === 1,
+    'con una palabra filtrada, la publicación y el comentario quedan retenidos (palabras enteras); su autor los ve');
+  await su();
+  check(await n(`select count(*)::int n from notificaciones where clave like $1`, [`comunidad_mencion:${ret.id.replace(/-/g, '')}:%`]) === 0
+    && await n(`select count(*)::int n from notificaciones where clave like 'comunidad:' || $1 || ':%' and usuario_id = $2`, [pAnaSil.id, pelayo]) === 1,
+    'lo retenido no avisa (ni la mención a Ana); el comentario que no lo está, sí');
+  // (revisión) un comentario (del coach) con una mención en una publicación retenida no avisa; ni un comentario retenido con mención
+  await como(pelayo, 'aal2');
+  const [cEnRet] = await q(`insert into comunidad_comentarios (post_id, texto, menciones) values ($1, '@Ana L. ojo', $2) returning id`, [ret.id, [ana]]);
+  await como(luis);
+  const [cRetMen] = await q(`insert into comunidad_comentarios (post_id, texto, menciones) values ($1, 'Qué tonto, @Ana L.', $2) returning id, retenido`, [pAnaSil.id, [ana]]);
+  await su();
+  check(await n(`select count(*)::int n from notificaciones where clave like $1 or clave like $2`, [`comunidad_mencion:${cEnRet.id.replace(/-/g, '')}:%`, `comunidad_mencion:${cRetMen.id.replace(/-/g, '')}:%`]) === 0 && cRetMen.retenido,
+    '(revisión) una mención en un comentario de una publicación retenida, o en un comentario retenido, no avisa');
+  // (revisión) un entreno retenido no cuenta en el resumen de la semana ni en el perfil del equipo
+  const [ent] = await q(`insert into comunidad_posts (autor_id, atleta_id, tipo, texto, resumen) values ($1, $2, 'entreno', 'Entreno zz044', '{"nombre": "Pierna", "ejercicios": [{"nombre": "Sentadilla", "record": true}]}') returning id`, [luis, aLuis.id]);
+  await como(ana);
+  const recA = (await q(`select records r from comunidad_resumen_semana()`))[0].r, entA = (await q(`select entrenos e from comunidad_perfil($1)`, [luis]))[0].e;
+  const domA = (await (async () => { await su(); return q(`select records r from fbe_privado.comunidad_resumen_de_la_semana()`); })())[0].r;
+  await q(`update comunidad_posts set retenida = true where id = $1`, [ent.id]);
+  await como(ana);
+  const recB = (await q(`select records r from comunidad_resumen_semana()`))[0].r, entB = (await q(`select entrenos e from comunidad_perfil($1)`, [luis]))[0].e;
+  await su();
+  const domB = (await q(`select records r from fbe_privado.comunidad_resumen_de_la_semana()`))[0].r;
+  await q(`delete from comunidad_posts where id = $1`, [ent.id]);
+  check(recB === recA - 1 && entB === entA - 1 && domB === domA - 1, '(revisión) un entreno retenido no cuenta en el resumen de la semana, en el del domingo ni en los entrenos del perfil');
+  await como(ana);
+  const anaRet = (await q(`select id from comunidad_posts where id = $1`, [ret.id])).length + (await q(`select id from comunidad_comentarios where id = $1`, [cRet.id])).length;
+  const anaBien = (await q(`select id from comunidad_comentarios where id = $1`, [cBien.id])).length;
+  check(anaRet === 0 && anaBien === 1 && await falla(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Visto')`, [ret.id]), 'Ana no ve lo retenido (ni lo puede comentar); lo demás, sí');
+  check(await falla(`select comunidad_avisar_coach(null, $1, 'Retenido')`, [cRet.id]), '(revisión) ni avisa al coach de un comentario retenido que no ve');
+  await como(pelayo, 'aal2');
+  const [aCoachFiltro] = await q(`insert into comunidad_posts (tipo, texto) values ('aviso', 'No seáis tontos: a entrenar') returning retenida`);
+  check(aCoachFiltro.retenida === false && (await q(`select count(*)::int n from comunidad_posts where retenida`))[0].n === 1, 'al coach nunca se le retiene nada; él ve lo retenido');
+  await q(`select comunidad_aprobar($1, null)`, [ret.id]);
+  await q(`select comunidad_aprobar(null, $1)`, [cRet.id]);
+  await como(ana);
+  check((await q(`select id from comunidad_posts where id = $1`, [ret.id])).length === 1 && (await q(`select id from comunidad_comentarios where id = $1`, [cRet.id])).length === 1
+    && await falla(`select comunidad_aprobar($1, null)`, [ret.id]), 'el coach lo aprueba: ya lo ve Ana (un atleta no aprueba)');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderacion_guardar('{}', 10)`);
+  await como(luis);
+  const lento1 = await mensaje(`insert into comunidad_posts (texto) values ('Una más')`);
+  await su(); await q(`update comunidad_posts set creado_en = now() - interval '11 minutes' where autor_id = $1`, [luis]);
+  await como(luis);
+  const [lento2] = await q(`insert into comunidad_posts (texto) values ('Pasados 10 minutos') returning id`);
+  check(/Modo lento: una publicación cada 10 minutos/.test(lento1 || '') && !!lento2 && await falla(`insert into comunidad_posts (texto) values ('Otra seguida')`)
+    && (await q(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Comentar sí') returning id`, [pAnaSil.id])).length === 1,
+    'con el modo lento (10 min), Luis publica una vez cada 10 minutos; comentar, sí');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderacion_guardar('{}', 0)`);
+  await su();
+  await q(`delete from comunidad_posts where id = any($1::uuid[]) or texto in ('No seáis tontos: a entrenar', 'Aviso para silenciados')`, [[ret.id, retPreg.id, lento2.id]]);
+  await q(`delete from comunidad_eventos`); await q(`delete from comunidad_destacados`); await q(`delete from notificaciones`);
+
+  console.log('  · La 044 sin la 043, repetida y sobre una base que ya va por delante');
+  const sin43 = new PGlite();
+  await sin43.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin43.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '043')) await sin43.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  const sql44 = readFileSync(new URL('../supabase/migraciones/044_comunidad_coach.sql', import.meta.url), 'utf8');
+  let e44a = null;
+  try { await sin43.exec(sql44); } catch (e) { e44a = e.message; }
+  check(/Antes de la 044 hace falta la 043/.test(e44a || '') && !(await sin43.query(`select 1 from pg_class where relname = 'comunidad_eventos'`)).rows.length, 'la 044 no se aplica sin la 043 (y no deja nada a medias)');
+  await sin43.exec(readFileSync(new URL('../supabase/migraciones/043_comunidad_conversacion.sql', import.meta.url), 'utf8'));
+  await sin43.exec(sql44);
+  await sin43.exec(`insert into public.comunidad_eventos (titulo, empieza_en, lugar) values ('Quedada', now() + interval '1 day', 'Retiro')`);
+  await sin43.exec(sql44);
+  check((await sin43.query(`select count(*)::int n from fbe_migraciones where numero = 44`)).rows[0].n === 1 && (await sin43.query(`select count(*)::int n from comunidad_eventos`)).rows[0].n === 1
+    && (await sin43.query(`select count(*)::int n from comunidad_moderacion`)).rows[0].n === 1, 'con la 043, se aplica; repetida, queda apuntada una vez y no toca lo guardado');
+  await sin43.exec(`insert into public.fbe_migraciones (numero) values (45)`);
+  let e44b = null;
+  try { await sin43.exec(sql44); } catch (e) { e44b = e.message; }
+  check(/ya tiene la migración 045/.test(e44b || ''), 'ni en una base que ya tiene una posterior');
+  await sin43.close();
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

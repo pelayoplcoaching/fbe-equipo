@@ -85,22 +85,24 @@ function plegar(linea) {
   return out.join('\r\n');
 }
 export function calendarioICS(eventos, { hora = '18:00', minutos = 60, avisoMin = 30, url = '' } = {}) {
-  const [hh, mm] = String(hora).split(':').map((x) => Number(x) || 0);
-  const ini = hh * 60 + mm, fin = ini + minutos;
   const hhmm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}${String(m % 60).padStart(2, '0')}00`;
   const sello = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
   const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FBE Coaching//FBE Equipo//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
   for (const e of eventos) {
+    // (v0.72) un evento puede traer su hora, su duración, su título, su sitio y su aviso (los eventos del equipo)
+    const [hh, mm] = String(e.hora || hora).split(':').map((x) => Number(x) || 0);
+    const ini = hh * 60 + mm, fin = ini + (e.minutos || minutos);
     const diaFin = fin >= 24 * 60 ? sumarDias(e.dia, 1) : e.dia;
     lineas.push('BEGIN:VEVENT',
       `UID:fbe-${e.id}@fbe-atletas`,
       `DTSTAMP:${sello}`,
       `DTSTART:${compacta(e.dia)}T${hhmm(ini)}`,
       `DTEND:${compacta(diaFin)}T${hhmm(fin % (24 * 60))}`,
-      `SUMMARY:${escapar(`Entreno: ${e.nombre}`)}`,
+      `SUMMARY:${escapar(e.titulo || `Entreno: ${e.nombre}`)}`,
       `DESCRIPTION:${escapar(e.descripcion || 'Sesión de FBE Equipo.')}`,
+      ...(e.lugar ? [`LOCATION:${escapar(e.lugar)}`] : []),
       ...(url ? [`URL:${escapar(url)}`] : []),
-      'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${escapar(`Hoy entrenas: ${e.nombre}`)}`, `TRIGGER:-PT${Math.max(0, avisoMin)}M`, 'END:VALARM',
+      'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${escapar(e.aviso || `Hoy entrenas: ${e.nombre}`)}`, `TRIGGER:-PT${Math.max(0, e.avisoMin ?? avisoMin)}M`, 'END:VALARM',
       'END:VEVENT');
   }
   lineas.push('END:VCALENDAR');

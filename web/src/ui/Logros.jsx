@@ -4,6 +4,7 @@ import { num } from '../logica/calculos.js';
 import { logrosNuevos, nivelesVistos } from '../logica/logros.js';
 import { metalDe } from '../logica/tablero.js';
 import { celebrar } from './atleta/sesion-comun.jsx';
+import { useBienvenidaAbierta } from './Bienvenida.jsx';
 
 // v0.51: medallas de metal. Los cuatro niveles de siempre (los mismos umbrales) son bronce, plata, oro y platino: la
 // cara con un degradado radial (la luz arriba a la izquierda), el canto con su degradado y su dibujo (liso, perlado,
@@ -144,7 +145,9 @@ export function AvisoLogros({ salud, irA, pausado = false }) {
   const [cerrado, setCerrado] = useState(false);
   const lista = res.datos?.lista;
   const nuevos = lista ? logrosNuevos(lista, vistos || {}) : [];
-  const ver = !pausado && !cerrado && nuevos.length > 0;
+  // (v0.72) y no encima de la bienvenida del día: espera a que se cierre
+  const bienvenida = useBienvenidaAbierta();
+  const ver = !pausado && !bienvenida && !cerrado && nuevos.length > 0;
   useEffect(() => { if (ver) celebrar(); }, [ver]);
   if (!ver) return null;
   const terminar = (ir) => { setVistos(nivelesVistos(lista)); setCerrado(true); if (ir) irA('progreso'); };

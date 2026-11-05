@@ -2923,7 +2923,8 @@ try {
   await p.getByRole('heading', { name: 'Equipo', exact: true }).waitFor();
   await p.getByLabel('Aviso para el equipo').fill('El sábado hay quedada en el gimnasio a las 10');
   await p.getByLabel('Fijar arriba').check();
-  await p.getByRole('button', { name: 'Publicar aviso' }).click();
+  // (v0.72: «Publicar ahora» o «Programar»)
+  await p.getByRole('button', { name: 'Publicar ahora' }).click();
   await p.locator('.post.fijada', { hasText: 'quedada en el gimnasio' }).waitFor();
   check((await p.locator('.post').first().textContent()).includes('quedada en el gimnasio'), 'el coach publica un aviso y lo fija arriba');
   await revisar('equipo-coach');
@@ -2935,7 +2936,7 @@ try {
   await p.getByRole('button', { name: 'Otra opción' }).click();
   await p.getByLabel('Opción 3', { exact: true }).fill('Lo miro y te digo');
   await revisar('equipo-coach-encuesta');
-  await p.getByRole('button', { name: 'Publicar encuesta' }).click();
+  await p.getByRole('button', { name: 'Publicar ahora' }).click();
   await p.locator('.toast', { hasText: 'Encuesta publicada' }).waitFor();
   const encQuedada = p.locator('.post.post-encuesta', { hasText: '¿Qué os parece entrenar juntos' });
   await encQuedada.waitFor();
@@ -5687,6 +5688,17 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ la comunidad de la v0.71:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.72: la comunidad, cuarta tanda (eventos y quedadas, avisos programados y plantillas, el panel, el atleta de la semana y la
+// moderación) (test/e2e-comunidad-072.mjs)
+console.log('\nv0.72: la comunidad, cuarta tanda');
+try {
+  const { probarComunidad072 } = await import('./e2e-comunidad-072.mjs');
+  await probarComunidad072({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la comunidad de la v0.72:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):

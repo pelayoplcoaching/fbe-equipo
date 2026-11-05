@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.72': {
+    atleta: [
+      'Eventos y quedadas del equipo: apúntate desde «Próximos» o el muro y añádelos a tu calendario.',
+      'Cada semana, tu coach puede elegir al atleta de la semana: sale arriba del muro 🏅.',
+    ],
+    coach: [
+      'Equipo: eventos, avisos programados, plantillas, panel, atleta de la semana y moderación. Necesita la migración 044.',
+    ],
+  },
   '0.71': {
     atleta: [
       'En el muro: elige un tema, sube hasta 4 fotos y busca por texto o nombre.',

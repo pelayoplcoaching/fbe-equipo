@@ -9,6 +9,8 @@
 // completas, e insignias. Sin la 042, lo del atleta no sale y el coach ve «Disponible tras la migración 042».
 // v0.71 (migración 043): temas en el muro, preguntas al coach y «Preguntas del equipo», varias fotos con su galería, guardar
 // y buscar en el muro, y la mejor respuesta. Sin la 043, el muro va como antes (y el coach ve «Disponible tras la migración 043»).
+// v0.72 (migración 044, lo nuevo en ComunidadCoach.jsx): eventos y quedadas («Próximos» y su tarjeta en el muro), avisos
+// programados y plantillas, el atleta de la semana arriba del muro y la moderación (silenciar, lo retenido y el modo lento).
 import { createContext, Fragment } from 'preact';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando } from './comunes.jsx';
@@ -20,8 +22,11 @@ import {
   hilosComentarios, DIAS_BIENVENIDA,
   MAX_COMPANEROS, MEDIDAS_RETO, MODOS_RETO, retoMaximo, unidadReto, EQUIPOS_DE_ENTRADA, PLANTILLAS_RETO, plantillaReto, plantillaCon042, repartirEquipos, siguienteInsignia,
   nombreTema, temasPara, temaPorDefecto, FILTROS_MURO_043, MAX_FOTOS, busquedaValida, puedeElegirMejor, etiquetaMejor, mejorPrimero,
+  mezclarEventos, silenciadoHasta,
 } from '../logica/comunidad.js';
-import { fmtConDia, fmtCorta, hoyISO, sumarDias, lunesDe, aISO } from '../logica/fechas.js';
+import { Proximos, TarjetaEvento, Programados, HojaPlantillas, TarjetaDestacado, HojaDestacar, HojaSilenciar, LineaSilencio } from './ComunidadCoach.jsx';
+import { HojaProgramar } from './Programar.jsx';
+import { fmtConDia, fmtCorta, hoyISO, sumarDias, lunesDe, aISO, fmtProgramado } from '../logica/fechas.js';
 import { num } from '../logica/calculos.js';
 import { Pictograma } from './Pictograma.jsx';
 import { patronEjercicio } from '../logica/diseno.js';
@@ -65,6 +70,8 @@ const guardarAutoCompartir = (uid, v) => guardarPreferencia(claveAutoCompartir(u
 // perfil en una hoja. Lo dan ConPerfiles (en Equipo, para el atleta y para el coach) y usePerfil.
 const PerfilCtx = createContext(null);
 const usePerfil = () => useContext(PerfilCtx) || (() => {});
+// v0.72 (044): hasta cuándo está silenciado quien mira (null: puede publicar y comentar). Lo da el muro del atleta
+const SilencioCtx = createContext(null);
 // v0.51: quién ha compartido hoy un entreno en el muro (su foto lleva un aro, como en las historias). Solo con lo que
 // ya se ve en el muro: no se comparte nada nuevo de nadie.
 const HoyCtx = createContext(new Set());
@@ -130,6 +137,8 @@ function DentroDelEquipo({ m, alCambiar }) {
   const con043 = useCarga(() => api.comunidad043().catch(() => null), []);
   // Al compartir un logro, el muro, los retos y la racha se vuelven a leer
   const [cambios, setCambios] = useState(0);
+  // v0.72: al apuntarse a un evento (en «Próximos» o en el muro), los dos se vuelven a leer
+  const [eventos, setEventos] = useState(0);
   const racha = useCarga(() => api.rachasComunidad().then((r) => r[yo] || null).catch(() => null), [cambios]);
   const animos = useCarga(() => api.animosComunidad().catch(() => null), []);
   // La celebración: un reto conseguido que este móvil aún no ha celebrado (y que no está compartido)
@@ -170,11 +179,12 @@ function DentroDelEquipo({ m, alCambiar }) {
       {recibidos.length > 0 && (
         <p class="animos-recibidos peq"><span class="animos-ico" aria-hidden="true">🙌</span><span>Te han animado esta semana: <strong>{quienes(recibidos.map((x) => x.nombre), 3)}</strong></span></p>
       )}
+      <Proximos cambios={eventos} alCambiar={() => setEventos((v) => v + 1)} />
       <EntrenandoAhora />
       <CompanerosRacha cambios={cambios} />
       <Pestanas opciones={con043.datos ? VISTAS_043 : VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eq" clase={con043.datos ? 'pestanas-justas' : ''} />
       <div class="pestana-panel" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista}>
-        {vista === 'muro' && <Muro cambios={cambios} />}
+        {vista === 'muro' && <Muro cambios={cambios} miembro={m} eventos={eventos} alEventos={() => setEventos((v) => v + 1)} />}
         {vista === 'retos' && <Retos miembro={m} cambios={cambios} alCompartirLogro={(r) => setCelebrar({ reto: r, celebracion: false })} />}
         {vista === 'ranking' && <Ranking miembro={m} />}
         {vista === 'preguntas' && <PreguntasEquipo />}
@@ -295,9 +305,16 @@ function EntrarComunidad({ antes, cambio = null, alEntrar }) {
 // ---------------------------------------------------------------- el muro
 // v0.47: arriba, el resumen de la semana; filtros (en la propia consulta, así «Ver más» sigue funcionando); y, para
 // el atleta, «Nuevo» en lo publicado por los demás desde su última visita (este móvil lo recuerda).
-export function Muro({ coach = false, cambios = 0 }) {
+export function Muro({ coach = false, cambios = 0, miembro = null, eventos = 0, alEventos = null }) {
   const { api, aviso } = useApp();
   const yo = api.uid();
+  const abrirPerfil = usePerfil();
+  // v0.72 (044): los eventos (como tarjetas, en su sitio) y el atleta de la semana arriba, en «Todo» y sin búsqueda
+  const [vEv, setVEv] = useState(0);
+  const listaEventos = useCarga(() => api.eventosComunidad().catch(() => null), [eventos, vEv, cambios]);
+  const destacado = useCarga(() => api.destacadoComunidad().catch(() => null), [cambios]);
+  const recargarEventos = () => { setVEv((v) => v + 1); alEventos?.(); };
+  const silencio = coach ? null : silenciadoHasta(miembro);
   const [filtro, setFiltro] = useState('todo');
   const [paginas, setPaginas] = useState(1);
   // v0.71: la búsqueda que se ha lanzado (la del cuadro, al darle a Buscar o a Intro)
@@ -312,8 +329,11 @@ export function Muro({ coach = false, cambios = 0 }) {
     const previo = leerVistoEquipo(yo);
     guardarVistoEquipo(yo, [previo, ultima].filter(Boolean).sort().at(-1) || new Date().toISOString());
   }, [d]);
-  const recargar = () => muro.recargar(true);
-  const posts = d?.posts || [];
+  // (v0.72: y lo programado, que sale en su lista)
+  const [vProg, setVProg] = useState(0);
+  const recargar = () => { setVProg((v) => v + 1); return muro.recargar(true); };
+  const enTodo = filtro === 'todo' && !buscar;
+  const posts = d ? (enTodo && listaEventos.datos?.length ? mezclarEventos(d.posts, listaEventos.datos, { hayMas: d.hayMas }) : d.posts) : [];
   const esNueva = (p) => !!visto.current && !p.mio && !p.fijada && p.creado_en > visto.current;
   const primera = posts.findIndex(esNueva);
   const ultima = posts.map(esNueva).lastIndexOf(true);
@@ -328,10 +348,13 @@ export function Muro({ coach = false, cambios = 0 }) {
   };
   const quitarBusqueda = () => { setEscrito(''); setBuscar(''); setPaginas(1); };
   return (
+    <SilencioCtx.Provider value={silencio}>
     <div class="pila muro">
+      {enTodo && destacado.datos?.actual && <TarjetaDestacado d={destacado.datos.actual} alAbrirPerfil={abrirPerfil} />}
       <ResumenSemana cambios={cambios} />
       {filtro === 'todo' && !buscar && <BienvenidaNuevos />}
-      <Compositor coach={coach} personas={d?.personas || {}} con043={con043} alPublicar={recargar} />
+      {silencio ? <LineaSilencio hasta={silencio} /> : <Compositor coach={coach} personas={d?.personas || {}} con043={con043} con044={!!d?.con044} alPublicar={recargar} />}
+      {coach && d?.con044 && <Programados cambios={cambios + vProg} alCambiar={() => muro.recargar(true)} />}
       {con043 && (
         <form class="buscar-muro" role="search" aria-label="Buscar en el muro" onSubmit={lanzarBusqueda}>
           <label class="sr" for="eq-buscar">Buscar en el muro</label>
@@ -359,12 +382,13 @@ export function Muro({ coach = false, cambios = 0 }) {
         ) : posts.map((p, i) => (
           <Fragment key={p.id}>
             {i === primera && <div class="muro-separa nuevo"><span>Nuevo<span class="sr"> desde tu última visita</span></span></div>}
-            <TarjetaPost post={p} coach={coach} personas={d.personas} alCambiar={recargar} />
+            {p.esEvento ? <TarjetaEvento e={p} coach={coach} alCambiar={recargarEventos} /> : <TarjetaPost post={p} coach={coach} personas={d.personas} alCambiar={recargar} />}
             {i === ultima && i < posts.length - 1 && <div class="muro-separa"><span>Ya lo habías visto</span></div>}
           </Fragment>
         ))}
       {d?.hayMas && <button class="btn" onClick={() => setPaginas(paginas + 1)}>Ver más</button>}
     </div>
+    </SilencioCtx.Provider>
   );
 }
 
@@ -668,8 +692,11 @@ function TextoConMenciones({ texto, mencionados = [], clase = 'post-texto', como
 
 // v0.71 (043): con un tema (el de entrada, charla; el del coach, avisos) y hasta 4 fotos, reducidas en el móvil. Sin la 043,
 // sin tema y con una foto.
-function Compositor({ coach, personas = {}, con043 = false, alPublicar }) {
+// v0.72 (044): el coach, «Publicar ahora» o «Programar» (día y hora de Madrid) y sus plantillas de avisos
+function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPublicar }) {
   const { api, aviso } = useApp();
+  const [programar, setProgramar] = useState(false);
+  const [plantillas, setPlantillas] = useState(false);
   const [modo, setModo] = useState('aviso'); // el coach: aviso o encuesta (v0.47)
   const [texto, setTexto] = useState('');
   const [elegidas, setElegidas] = useState([]);
@@ -698,24 +725,29 @@ function Compositor({ coach, personas = {}, con043 = false, alPublicar }) {
     if (nuevas.length) setFotos((l) => [...l, ...nuevas].slice(0, maxFotos));
   };
   const quitarFoto = (i) => setFotos((l) => l.filter((_, k) => k !== i));
-  const publicar = (e) => {
-    e.preventDefault();
-    una(async () => {
+  const publicar = (e, publicarEn = null) => {
+    e?.preventDefault();
+    return una(async () => {
       try {
+        const cuando = publicarEn ? ` para el ${fmtProgramado(publicarEn)}` : '';
         if (encuesta) {
-          await api.publicarEnComunidad({ encuesta: { pregunta, opciones, cierre: cierre ? new Date(cierre).toISOString() : null }, fijada });
+          await api.publicarEnComunidad({ encuesta: { pregunta, opciones, cierre: cierre ? new Date(cierre).toISOString() : null }, fijada, publicarEn });
           setPregunta(''); setOpciones(['', '']); setCierre(''); setFijada(false);
-          aviso('Encuesta publicada en el muro');
+          aviso(publicarEn ? `Encuesta programada${cuando}` : 'Encuesta publicada en el muro');
         } else {
-          await api.publicarEnComunidad({ texto, fotos: fotos.map((f) => f.blob), tema: con043 ? tema : null, fijada, menciones: mencionesDeTexto(texto, elegidas) });
+          const post = await api.publicarEnComunidad({ texto, fotos: fotos.map((f) => f.blob), tema: con043 ? tema : null, fijada, menciones: mencionesDeTexto(texto, elegidas), publicarEn });
           setTexto(''); setFotos([]); setFijada(false); setElegidas([]);
-          aviso(coach ? 'Aviso publicado en el muro' : tema === 'pregunta' && con043 ? 'Pregunta publicada: tu coach te contesta en los comentarios' : 'Publicado en el equipo');
+          aviso(publicarEn ? `Aviso programado${cuando}` : post?.retenida ? 'Tu publicación está pendiente de revisión' : coach ? 'Aviso publicado en el muro' : tema === 'pregunta' && con043 ? 'Pregunta publicada: tu coach te contesta en los comentarios' : 'Publicado en el equipo');
           setTema(temaPorDefecto(coach));
         }
+        setProgramar(false);
         alPublicar();
       } catch (err) { aviso(err.message, 'error'); }
     });
   };
+  const guardarPlantilla = () => una(async () => {
+    try { await api.guardarPlantilla(texto); aviso('Guardado como plantilla'); } catch (err) { aviso(err.message, 'error'); }
+  });
   const vacio = !texto.trim() && !fotos.length;
   const encuestaLista = pregunta.trim() && opciones.filter((o) => o.trim()).length >= 2;
   const ahoraLocal = (() => { const d = new Date(Date.now() + 10 * 60000); return `${aISO(d)}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; })();
@@ -750,6 +782,12 @@ function Compositor({ coach, personas = {}, con043 = false, alPublicar }) {
           alMencionar={(p) => setElegidas((l) => [...l.filter((x) => x.perfil_id !== p.perfil_id), p])} maxLength={MAX_POST} rows={2}
           placeholder={coach ? 'Un aviso para todo el equipo…' : esPregunta ? '¿Qué le quieres preguntar a tu coach?' : '¿Qué tal tu semana? Anima al equipo… (@ para mencionar)'} />
       )}
+      {coach && con044 && !encuesta && (
+        <div class="fila-envolver compositor-plantillas">
+          <button type="button" class="btn btn-peq plano" onClick={() => setPlantillas(true)}><Icono n="plantillas" /> Usar plantilla</button>
+          <button type="button" class="btn btn-peq plano" disabled={ocupado || !texto.trim()} onClick={guardarPlantilla}><Icono n="guardar" /> Guardar como plantilla</button>
+        </div>
+      )}
       {!encuesta && con043 && (
         <div class="compositor-tema">
           <label for="eq-tema" class="peq">Tema</label>
@@ -783,11 +821,19 @@ function Compositor({ coach, personas = {}, con043 = false, alPublicar }) {
           )}
           {coach && <label class="casilla casilla-peq"><input type="checkbox" checked={fijada} onChange={(e) => setFijada(e.currentTarget.checked)} /><span>Fijar arriba</span></label>}
         </span>
-        <button class="btn btn-peq btn-primario" disabled={ocupado || (encuesta ? !encuestaLista : coach ? !texto.trim() : vacio)}>
-          {ocupado ? 'Publicando…' : encuesta ? 'Publicar encuesta' : coach ? 'Publicar aviso' : esPregunta ? 'Preguntar' : 'Publicar'}
-        </button>
+        <span class="fila compositor-enviar">
+          {coach && con044 && (
+            <button type="button" class="btn btn-peq" disabled={ocupado || (encuesta ? !encuestaLista : !texto.trim())} onClick={() => setProgramar(true)}><Icono n="reloj" /> Programar</button>
+          )}
+          <button class="btn btn-peq btn-primario" disabled={ocupado || (encuesta ? !encuestaLista : coach ? !texto.trim() : vacio)}>
+            {ocupado ? 'Publicando…' : encuesta ? (con044 ? 'Publicar ahora' : 'Publicar encuesta') : coach ? (con044 ? 'Publicar ahora' : 'Publicar aviso') : esPregunta ? 'Preguntar' : 'Publicar'}
+          </button>
+        </span>
       </div>
       {!encuesta && texto.length > MAX_POST - 200 && <span class="mini terciario">{MAX_POST - texto.length} letras más como mucho</span>}
+      {programar && <HojaProgramar titulo={encuesta ? 'Programar la encuesta' : 'Programar el aviso'} boton={encuesta ? 'Programar la encuesta' : 'Programar el aviso'}
+        alCerrar={() => setProgramar(false)} alGuardar={({ enviarEn }) => publicar(null, enviarEn)} />}
+      {plantillas && <HojaPlantillas alCerrar={() => setPlantillas(false)} alUsar={(t) => { setTexto(t); setPlantillas(false); aviso('Plantilla puesta: cámbiala si quieres antes de publicar'); }} />}
     </form>
   );
 }
@@ -843,6 +889,10 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
         {(coach || post.mio || !post.autor.coach) && <button class="btn btn-icono plano" aria-label="Opciones de la publicación" onClick={() => setHoja('opciones')}><Icono n="opciones" stroke-width="3" /></button>}
       </header>
       {post.oculta && <p class="nota peq">Oculta: los atletas no la ven.</p>}
+      {post.retenida && (coach
+        ? <p class="nota peq fila-envolver retenida-linea"><span>Pendiente de revisión (lleva una palabra filtrada): los atletas no la ven.</span>
+            <button type="button" class="btn btn-peq btn-primario" disabled={ocupado} onClick={() => una(async () => { try { await api.aprobarComunidad({ postId: post.id }); aviso('Aprobada: ya se ve'); alCambiar(); } catch (e) { aviso(e.message, 'error'); } })}><Icono n="hecho" /> Aprobar</button></p>
+        : post.mio && <p class="nota peq retenida-linea" role="status">Tu publicación está pendiente de revisión: la verá el equipo cuando tu coach la apruebe.</p>)}
       {post.tema === 'pregunta' && post.respondidaCoach && <p class="post-pregunta mini"><span class="chip chip-mini ok"><Icono n="hecho" />Respondida por el coach</span></p>}
       {post.tipo === 'encuesta' ? <EncuestaPost post={post} coach={coach} alCambiar={alCambiar} alVerVotos={() => setHoja('votos')} /> : (
         <div class="post-cuerpo" onClick={tocar}>
@@ -879,8 +929,9 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
       {hoja === 'comentarios' && <HojaComentarios post={post} coach={coach} personas={personas} alCerrar={() => setHoja(null)} alCambiar={alCambiar} />}
       {hoja === 'quien' && <HojaQuien post={post} alCerrar={() => setHoja(null)} />}
       {hoja === 'votos' && <HojaVotantes post={post} alCerrar={() => setHoja(null)} />}
-      {hoja === 'opciones' && <HojaOpcionesPost post={post} coach={coach} alCerrar={() => setHoja(null)} alCambiar={alCambiar} alAvisar={() => setHoja('avisar')} />}
+      {hoja === 'opciones' && <HojaOpcionesPost post={post} coach={coach} alCerrar={() => setHoja(null)} alCambiar={alCambiar} alAvisar={() => setHoja('avisar')} alSilenciar={() => setHoja('silenciar')} />}
       {hoja === 'avisar' && <HojaAvisar postId={post.id} alCerrar={() => setHoja(null)} />}
+      {hoja === 'silenciar' && <HojaSilenciarDe perfilId={post.autor_id} nombre={post.autor.nombre} alCerrar={() => setHoja(null)} />}
     </article>
   );
 }
@@ -1067,7 +1118,15 @@ function HojaQuien({ post, alCerrar }) {
   );
 }
 
-function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar }) {
+// v0.72 (044): silenciar (el coach), sabiendo hasta cuándo lo está ya (la fila del miembro solo la ve el coach)
+function HojaSilenciarDe({ perfilId, nombre, alCerrar, alCambiar = null }) {
+  const { api } = useApp();
+  const p = useCarga(() => api.perfilComunidad(perfilId).catch(() => null), [perfilId]);
+  if (p.cargando && !p.datos) return null;
+  return <HojaSilenciar perfilId={perfilId} nombre={nombre} hasta={silenciadoHasta(p.datos)} alCerrar={alCerrar} alCambiar={alCambiar} />;
+}
+
+function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar, alSilenciar = null }) {
   const { api, aviso } = useApp();
   const [borrar, setBorrar] = useState(false);
   const [ocupado, una] = useUnaVez();
@@ -1088,6 +1147,7 @@ function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar }) {
         <div class="pila-s opciones-post">
           {coach && ['aviso', 'encuesta'].includes(post.tipo) && <button class="btn" disabled={ocupado} onClick={() => hacer(() => api.fijarEnComunidad(post.id, !post.fijada), post.fijada ? 'Ya no está fijado' : 'Fijado arriba')}><Icono n="chincheta" /> {post.fijada ? 'Quitar de arriba' : 'Fijar arriba'}</button>}
           {coach && !post.mio && <button class="btn" disabled={ocupado} onClick={() => hacer(() => api.ocultarEnComunidad(post.id, !post.oculta), post.oculta ? 'Vuelve a verse' : 'Oculta para los atletas')}><Icono n="ojo" /> {post.oculta ? 'Volver a mostrarla' : 'Ocultarla'}</button>}
+          {coach && post.con044 && !post.mio && !post.autor.coach && alSilenciar && <button class="btn" onClick={alSilenciar}><Icono n="silencio" /> Silenciar a {post.autor.nombre}</button>}
           {!coach && !post.mio && !post.autor.coach && <button class="btn" onClick={alAvisar}><Icono n="bandera" /> Avisar al coach</button>}
           {(coach || post.mio) && <button class="btn btn-peligro" onClick={() => setBorrar(true)}><Icono n="basura" /> Borrar</button>}
           {!coach && post.mio && <p class="mini terciario">Lo ven los del equipo y tu coach mientras sigas en la comunidad.</p>}
@@ -1132,6 +1192,8 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
   // v0.71 (043): la mejor respuesta (primero, con su distintivo) y, en una pregunta, guardarla como pregunta frecuente
   const [mejor, setMejor] = useState(post.mejor_comentario || null);
   const [frecuente, setFrecuente] = useState(null); // el comentario del coach que se guarda
+  const [silenciar, setSilenciar] = useState(null); // v0.72: { perfilId, nombre }
+  const silencio = useContext(SilencioCtx);
   const yo = api.uid();
   const [ocupado, una] = useUnaVez();
   const recargar = async () => { await lista.recargar(true); alCambiar(); };
@@ -1139,8 +1201,9 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
     e.preventDefault();
     una(async () => {
       try {
-        await api.comentarEnComunidad(post.id, texto, mencionesDeTexto(texto, elegidas), respondiendo?.id || null);
+        const c = await api.comentarEnComunidad(post.id, texto, mencionesDeTexto(texto, elegidas), respondiendo?.id || null);
         setTexto(''); setElegidas([]); setRespondiendo(null); await recargar();
+        if (c?.retenido) aviso('Tu comentario está pendiente de revisión');
       } catch (err) { aviso(err.message, 'error'); }
     });
   };
@@ -1168,6 +1231,8 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
         {c.id === mejor && <span class="chip chip-mini ok insignia-mejor"><Icono n="hecho" />{etiquetaMejor(post, c)}</span>}
         <TextoConMenciones texto={c.texto} mencionados={c.mencionados} clase="post-texto peq" como="span" />
         {c.oculto && <span class="mini terciario">Oculto: los atletas no lo ven.</span>}
+        {c.retenido && (coach ? <span class="mini terciario">Pendiente de revisión: los atletas no lo ven.</span>
+          : c.mio && <span class="mini terciario retenida-linea">Tu comentario está pendiente de revisión: lo verán cuando tu coach lo apruebe.</span>)}
         <span class="fila-envolver comentario-acciones">
           {c.con041 && !c.oculto && (
             <button type="button" class="btn-texto mini fuerza-comentario" aria-pressed={c.miFuerza ? 'true' : 'false'} disabled={ocupado}
@@ -1187,6 +1252,8 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
           )}
           {(coach || c.mio) && <button class="btn-texto mini peligro" disabled={ocupado} onClick={() => accion(() => api.borrarComentarioComunidad(c.id), 'Comentario borrado')}>Borrar</button>}
           {coach && !c.mio && <button class="btn-texto mini" disabled={ocupado} onClick={() => accion(() => api.ocultarComentarioComunidad(c.id, !c.oculto), c.oculto ? 'Vuelve a verse' : 'Comentario oculto')}>{c.oculto ? 'Mostrar' : 'Ocultar'}</button>}
+          {coach && c.retenido && <button class="btn-texto mini" disabled={ocupado} onClick={() => accion(() => api.aprobarComunidad({ comentarioId: c.id }), 'Aprobado: ya se ve')} aria-label={`Aprobar el comentario de ${c.autor.nombre}`}>Aprobar</button>}
+          {coach && post.con044 && !c.mio && !c.autor.coach && <button class="btn-texto mini" onClick={() => setSilenciar({ perfilId: c.autor_id, nombre: c.autor.nombre })} aria-label={`Silenciar a ${c.autor.nombre}`}>Silenciar</button>}
           {!coach && !c.mio && !c.autor.coach && <button class="btn-texto mini" onClick={() => setAvisar(c.id)}>Avisar al coach</button>}
         </span>
         {c.respuestas?.length > 0 && <ul class="lista respuestas-equipo" aria-label={`Respuestas a ${c.autor.nombre}`}>{c.respuestas.map((r) => item(r, true))}</ul>}
@@ -1201,6 +1268,7 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
         ) : (
           <ul class="lista comentarios-equipo">{hilos.map((c) => item(c))}</ul>
         )}
+        {silencio ? <LineaSilencio hasta={silencio} /> : (
         <form class="pila-s" onSubmit={enviar}>
           {respondiendo && (
             <p class="respondiendo peq"><span>Respondiendo a <strong>{respondiendo.nombre}</strong></span>
@@ -1211,7 +1279,9 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
             placeholder={respondiendo ? 'Escribe tu respuesta…' : 'Escribe un comentario… (@ para mencionar)'} />
           <button class="btn btn-primario" disabled={ocupado || !texto.trim()}><Icono n="enviar" /> {respondiendo ? 'Responder' : 'Comentar'}</button>
         </form>
+        )}
       </div>
+      {silenciar && <HojaSilenciarDe perfilId={silenciar.perfilId} nombre={silenciar.nombre} alCerrar={() => setSilenciar(null)} />}
       {avisar && <HojaAvisar comentarioId={avisar} alCerrar={() => setAvisar(null)} />}
       {frecuente && <HojaPreguntaFrecuente post={post} comentario={frecuente} alCerrar={() => setFrecuente(null)}
         alGuardar={async () => { setFrecuente(null); setMejor(frecuente.id); await recargar(); }} />}
@@ -1679,6 +1749,7 @@ function HojaPerfilEquipo({ perfilId, alCerrar }) {
   const mias = useCarga(() => (perfil?.rol === 'coach' ? Promise.resolve(null) : api.companerosComunidad().catch(() => null)), [vuelta]);
   const insignias = useCarga(() => api.insigniasComunidad(perfilId).catch(() => ({})), [perfilId]);
   const [animadoAhora, setAnimadoAhora] = useState(false);
+  const [hojaCoach, setHojaCoach] = useState(null); // v0.72: 'destacar' | 'silenciar'
   const [ocupado, una] = useUnaVez();
   const x = p.datos;
   const animar = () => una(async () => {
@@ -1728,6 +1799,19 @@ function HojaPerfilEquipo({ perfilId, alCerrar }) {
             </div>
           )}
           {!x.yo && !x.coach && <BotonAnimar grande nombre={x.nombre} animado={x.animado || animadoAhora} ocupado={ocupado} alAnimar={animar} />}
+          {/* v0.72 (044): el coach, el atleta de la semana y silenciar */}
+          {perfil?.rol === 'coach' && !x.coach && !x.yo && (
+            <div class="pila-s pe-coach">
+              {x.silenciado_hasta && Date.parse(x.silenciado_hasta) > Date.now() && <p class="nota peq">Silenciado hasta el {fmtProgramado(x.silenciado_hasta)}.</p>}
+              <div class="fila-envolver">
+                <button type="button" class="btn" disabled={x.sin_ranking} onClick={() => setHojaCoach('destacar')} title={x.sin_ranking ? 'No sale en el ranking' : undefined}>🏅 Atleta de la semana</button>
+                <button type="button" class="btn" onClick={() => setHojaCoach('silenciar')}><Icono n="silencio" /> Silenciar…</button>
+              </div>
+              {x.sin_ranking && <p class="mini terciario">Ha elegido no salir en el ranking: no se puede elegir atleta de la semana.</p>}
+            </div>
+          )}
+          {hojaCoach === 'destacar' && <HojaDestacar perfilId={perfilId} alCerrar={() => setHojaCoach(null)} alGuardar={() => setHojaCoach(null)} />}
+          {hojaCoach === 'silenciar' && <HojaSilenciar perfilId={perfilId} nombre={x.nombre} hasta={silenciadoHasta(x)} alCerrar={() => setHojaCoach(null)} alCambiar={() => p.recargar(true)} />}
           {!x.yo && !x.coach && mias.datos && !yaConmigo && libres > 0 && (
             <button type="button" class="btn" disabled={ocupado} onClick={invitar}><span aria-hidden="true">🤝</span> Invitar a ser compañeros de racha</button>
           )}

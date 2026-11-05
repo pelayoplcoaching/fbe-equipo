@@ -4739,3 +4739,52 @@ html[data-teclado] .pildora-descanso { display: none; }
 .pregunta-equipo details > summary { cursor: pointer; padding: 12px 14px; font-weight: 650; list-style-position: outside; overflow-wrap: anywhere; min-height: 44px; }
 .pregunta-equipo .pe-respuesta { padding: 0 14px 14px; }
 .pregunta-equipo .pe-respuesta .post-texto { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* ---------------------------------------------------------------- v0.72: eventos, programados, panel, atleta de la semana y moderación */
+.pr-t { font-size: 1rem; font-weight: 700; margin: 0; display: inline-flex; align-items: center; gap: 6px; }
+.pr-t svg { width: 18px; height: 18px; }
+.pr-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.pr-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; min-height: 48px; padding: 6px 4px;
+  background: none; border: 0; border-radius: var(--r-s); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.pr-item:hover { background: var(--morado-suave); }
+.pr-item:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.pr-titulo { font-weight: 650; overflow-wrap: anywhere; }
+.pr-texto { min-width: 0; }
+.ev-dia { display: inline-grid; place-items: center; min-width: 44px; padding: 4px 6px; border-radius: 10px; background: var(--morado-suave); color: var(--morado); line-height: 1.1; }
+.ev-dia-mes { font-size: 0.6875rem; font-weight: 750; text-transform: uppercase; letter-spacing: .04em; }
+.ev-dia-n { font-size: 1.25rem; font-weight: 800; }
+.evento-equipo .ev-cab { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; }
+.evento-equipo .ev-texto { min-width: 0; }
+.evento-equipo .ev-titulo { font-size: 1.0625rem; overflow-wrap: anywhere; }
+.evento-equipo .ev-texto .secundario { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.evento-equipo .ev-texto svg { width: 15px; height: 15px; flex: none; }
+.ev-donde { overflow-wrap: anywhere; }
+.ev-lugar { overflow-wrap: anywhere; min-width: 0; }
+.ev-quien { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: space-between; }
+.evento-equipo.cancelado .ev-titulo { text-decoration: line-through; }
+.evento-equipo.cancelado .le-k { color: var(--alerta); }
+.evento-equipo.cancelado, .evento-equipo.pasado { opacity: .85; }
+.evento-equipo .post-texto { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.prog-lista, .plantillas-avisos, .mod-lista, .pc-activos { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.prog-texto { white-space: pre-wrap; overflow-wrap: anywhere; }
+.compositor-plantillas { gap: 4px; }
+.compositor-enviar { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.compositor-pie { flex-wrap: wrap; gap: 6px; }
+.destacado-semana { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; background: var(--aviso-suave); border: 1.5px solid var(--aviso); }
+.ds-ico { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 1.5rem; background: var(--hoja); }
+.ds-nombre { font-size: 1.0625rem; font-weight: 750; justify-self: start; text-align: left; overflow-wrap: anywhere; }
+.ds-motivo { overflow-wrap: anywhere; }
+.retenida-linea { margin: 0; align-items: center; justify-content: space-between; }
+.silencio-linea { margin: 0; }
+.pe-coach { border-top: 1px solid var(--linea); padding-top: 10px; }
+.pc-tabla-caja { overflow-x: auto; }
+.pc-tabla { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.pc-tabla th, .pc-tabla td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+.pc-tabla th[scope="row"] { text-align: left; font-weight: 600; }
+.pc-tabla thead th { color: var(--tinta-2); font-weight: 650; }
+.pc-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.pc-cifras > div { background: var(--hoja); border: 1px solid var(--linea); border-radius: var(--r-s); padding: 10px; display: grid; gap: 2px; }
+.pc-cifras dt { font-size: 0.75rem; color: var(--tinta-2); }
+.pc-cifras dd { margin: 0; font-size: 1.375rem; font-weight: 800; }
+.pc-activos li { gap: 8px; flex-wrap: wrap; }
+.pc-historial ul { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 4px; }
+.pc-historial li, .pc-activos li span { overflow-wrap: anywhere; }

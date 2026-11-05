@@ -2345,7 +2345,7 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     const enBase = async () => (await b.sql(`select version from privacidad_vista where usuario_id = $1`, [anaUid]))[0]?.version || null;
     await b.sql(`delete from privacidad_vista where usuario_id = $1`, [anaUid]);
     // Sin la 037
-    check(VL === '2026-12.10' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.10', '(v0.71) la vigente: 2026-12.10 con la 037 y la 043 (la misma detección); sin la 037, 2026-12');
+    check(VL === '2026-12.11' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.11', '(v0.72) la vigente: 2026-12.11 con la 037, la 043 y la 044 (la misma detección); sin la 037, 2026-12');
     check(PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()) && await sin.marcarPrivacidadVista() === true && await enBase() === '2026-12',
       'sin la 037: quien no ha visto la 2026-12 la ve y, al cerrarla, la base guarda 2026-12 (lo que admite)');
     local.clear();
@@ -2359,14 +2359,14 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     // Con la 037: quien vio la 2026-12 ve solo lo nuevo, una vez
     const v = (await api.privacidadVista()).version;
     check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal())
-      && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.10,2026-12.9,2026-12.8,2026-12.7,2026-12.6,2026-12.5,2026-12.4,2026-12.3,2026-12.2,2026-12.1',
-      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 a la 2026-12.10)');
-    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.10', 'al cerrarlo, la base guarda la 2026-12.10 (con la 043, revisiones de dos cifras)');
+      && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.11,2026-12.10,2026-12.9,2026-12.8,2026-12.7,2026-12.6,2026-12.5,2026-12.4,2026-12.3,2026-12.2,2026-12.1',
+      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 a la 2026-12.11)');
+    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.11', 'al cerrarlo, la base guarda la 2026-12.11 (con la 043, revisiones de dos cifras; con la 044, la .11)');
     local.clear();
-    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.10', 'y ya no vuelve a salir (en ningún móvil)');
-    check(await api.marcarPrivacidadVista('2026-12.9') === true && await enBase() === '2026-12.10' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.10', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.9 ni a la 2026-12)');
+    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.11', 'y ya no vuelve a salir (en ningún móvil)');
+    check(await api.marcarPrivacidadVista('2026-12.9') === true && await enBase() === '2026-12.11' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.11', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.9 ni a la 2026-12)');
     await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
-    check(/vigente \(2026-12\.10\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
+    check(/vigente \(2026-12\.11\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
     globalThis.localStorage = previo;
   }
   await b.sql(`delete from recordatorios_tecnica`); await b.sql(`delete from frases_correccion`); await b.sql(`delete from chat_cupos`);
@@ -2677,10 +2677,71 @@ console.log('\nv0.71: la comunidad, tercera tanda (migración 043), con la capa 
   const ms = await sin043.muro({ buscar: 'zz043' });
   let msg = null;
   try { await sin043.publicarEnComunidad({ texto: 'Dos fotos', fotos: [new Blob(['a']), new Blob(['b'])] }); } catch (e) { msg = e.message; }
-  check(await sin043.versionLegal() === '2026-12.9' && await api.versionLegal() === '2026-12.10', 'la política: con la 037 pero sin la 043, la 2026-12.9 (la más nueva que admite esa base); con la 043, la 2026-12.10');
+  check(await sin043.versionLegal() === '2026-12.9' && await api.versionLegal() === '2026-12.11', 'la política: con la 037 pero sin la 043, la 2026-12.9 (la más nueva que admite esa base); con la 043 y la 044, la 2026-12.11');
   check(await sin043.comunidad043() === false && !ms.con043 && ms.posts.length > 1 && ms.posts.every((x) => !x.guardado) && /disponible tras la migración 043/i.test(msg || ''),
     'sin la 043: el muro como antes (sin buscar ni guardados) y varias fotos dicen «Disponible tras la migración 043»');
   await api.borrarDeComunidad(p1);
+}
+
+console.log('\nv0.72: la comunidad, cuarta tanda (migración 044), con la capa de datos');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check(await api.comunidad044() === true, 'la app sabe que la base tiene la 044');
+  const { fechaMadrid: fM, sumarDias: sD } = await import('../web/src/logica/fechas.js');
+  const ev = await api.guardarEvento({ titulo: 'Quedada zz044', fecha: sD(fM(), 3), hora: '18:00', lugar: 'Retiro', descripcion: '', plazas: '' });
+  check(ev.plazas === null && ev.descripcion === null && new Date(ev.empieza_en).toISOString() === (await import('../web/src/logica/fechas.js')).instanteMadrid(sD(fM(), 3), '18:00'),
+    'el coach crea un evento con el día y la hora de Madrid (sin plazas: sin límite)');
+  check(await lanza(() => api.guardarEvento({ titulo: '', fecha: sD(fM(), 3), hora: '18:00', lugar: 'Retiro' })) && await lanza(() => api.guardarEvento({ titulo: 'Ayer', fecha: sD(fM(), -1), hora: '18:00', lugar: 'Retiro' })),
+    'sin título o en el pasado, no');
+  const prog = await api.publicarEnComunidad({ texto: 'Programado zz044', publicarEn: new Date(Date.now() + 3600e3).toISOString() });
+  const mc = await api.muro();
+  check((await api.programadosComunidad()).some((x) => x.id === prog.id) && !mc.posts.some((x) => x.id === prog.id) && mc.con044,
+    'un aviso programado sale en «Programados» del coach, no en su muro');
+  await api.guardarPlantilla('Recordad hidrataros zz044');
+  check((await api.plantillasComunidad()).map((x) => x.texto).join() === 'Recordad hidrataros zz044' && (await api.panelComunidad())?.semanas?.length === 4, 'plantillas y el panel (4 semanas)');
+  await api.guardarModeracion({ palabras: 'zzpalabrota', lento: 0 });
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const anaUid = api.uid();
+  const evs = await api.eventosComunidad();
+  check(evs.some((x) => x.id === ev.id && x.miRespuesta === null) && await api.responderEvento(ev.id, true) === true
+    && (await api.eventosComunidad()).find((x) => x.id === ev.id).van.join() === 'Ana L.', 'Ana ve el evento, se apunta y sale entre los que van');
+  check(!(await api.muro()).posts.some((x) => x.id === prog.id) && await lanza(() => api.panelComunidad()) && await api.plantillasComunidad().then((x) => x.length === 0),
+    'Ana no ve lo programado, ni el panel, ni las plantillas');
+  const ret = await api.publicarEnComunidad({ texto: 'Una ZZPALABROTA aquí' });
+  check(ret.retenida === true && (await api.muro()).posts.find((x) => x.id === ret.id)?.retenida === true, 'con una palabra filtrada, queda retenida (su autora la ve, con «pendiente de revisión»)');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  check(!(await api.muro()).posts.some((x) => x.id === ret.id) && (await api.eventosComunidad()).find((x) => x.id === ev.id).van.join() === 'Ana L.', 'Luis no ve lo retenido; ve que Ana va');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  check((await api.retenidosComunidad()).some((x) => x.id === ret.id && x.autor === 'Ana L.'), 'el coach lo tiene en «Pendiente de revisión»');
+  await api.aprobarComunidad({ postId: ret.id });
+  await api.destacarAtleta(anaUid, 'Por no fallar ni un día');
+  await api.silenciarComunidad(anaUid, 24);
+  check((await api.perfilComunidad(anaUid)).silenciado_hasta && (await api.silenciadosComunidad()).length === 1, 'el coach la silencia 24 h (lo ve en su perfil y en la lista)');
+  await api.cambiarProgramado(prog.id, { publicarEn: null });
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  let msg = null;
+  try { await api.publicarEnComunidad({ texto: 'Hola' }); } catch (e) { msg = e.message; }
+  check(/pausado tus publicaciones/.test(msg || '') && !!(await api.miembroComunidad()).silenciado_hasta, 'silenciada, Ana no publica (y su fila dice hasta cuándo)');
+  const m2 = await api.muro();
+  check(m2.posts.some((x) => x.id === prog.id) && m2.posts.some((x) => x.id === ret.id && !x.retenida) && (await api.destacadoComunidad()).actual?.motivo === 'Por no fallar ni un día',
+    '«Publicar ya» lo programado: Ana lo ve; lo aprobado también; y es la atleta de la semana');
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  await api.silenciarComunidad(anaUid, 0);
+  await api.quitarDestacado();
+  await api.guardarModeracion({ palabras: '', lento: 0 });
+  await api.cancelarEvento(ev.id);
+  for (const x of [prog, ret]) await api.borrarDeComunidad(x);
+  for (const x of await api.plantillasComunidad()) await api.borrarPlantilla(x.id);
+  // Sin la 044
+  const falta = (t) => { const e = new Error(`Could not find the table 'public.${t}' in the schema cache`); e.code = 'PGRST205'; return e; };
+  const sin044 = crearApi({ ...b, auth: b.auth, storage: b.storage, insert: b.insert.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b),
+    select: async (t, f) => { if (['comunidad_eventos', 'comunidad_plantillas', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw falta(t); if (t === 'comunidad_posts' && /publicar_en/.test(f?.cols || '')) throw new Error('column comunidad_posts.publicar_en does not exist'); return b.select(t, f); },
+    rpc: async (n, a) => { if (n === 'comunidad_panel') throw new Error('Could not find the function public.comunidad_panel in the schema cache'); return b.rpc(n, a); } });
+  let msg2 = null;
+  try { await sin044.publicarEnComunidad({ texto: 'Programado', publicarEn: new Date(Date.now() + 3600e3).toISOString() }); } catch (e) { msg2 = e.message; }
+  check(await sin044.comunidad044() === false && await sin044.versionLegal() === '2026-12.10' && await sin044.eventosComunidad() === null && await sin044.panelComunidad() === null
+    && await sin044.plantillasComunidad() === null && await sin044.destacadoComunidad() === null && !(await sin044.muro()).con044 && /disponible tras la migración 044/i.test(msg2 || ''),
+    'sin la 044: la política sigue en la 2026-12.10, no hay eventos, panel, plantillas ni atleta de la semana, el muro como antes y programar dice «Disponible tras la migración 044»');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

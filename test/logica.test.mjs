@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.10' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.11' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -4211,7 +4211,7 @@ console.log('\nv0.70: compañeros de racha, retos por equipos, de cardio y de se
   const PV = await import('../web/src/logica/privacidad.js');
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
-  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.9') > 0 && PV.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.9' && PV.novedadesDesde('2026-12.8', '2026-12.9').length === 1 && PV.formatoVersion('2026-12.9')
+  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.9') > 0 && PV.NOVEDADES_PRIVACIDAD[2][3] === '2026-12.9' && PV.novedadesDesde('2026-12.8', '2026-12.9').length === 1 && PV.formatoVersion('2026-12.9')
     && /compañeros de racha/.test(com) && /No salir en el ranking/.test(com) && /retos por equipos/.test(com) && /Contar mis minutos de cardio en los retos/.test(com) && /apagado de entrada/.test(com) && /insignias/i.test(com),
     'la política 2026-12.9: compañeros de racha y su racha, retos por equipos, minutos de cardio (si lo enciendes) e insignias');
   const v = NOVEDADES['0.70'];
@@ -4253,7 +4253,7 @@ console.log('\nv0.71: la comunidad, tercera tanda (temas, preguntas, varias foto
     && PV.versionMayor('2026-12.9', '2026-12.10') === '2026-12.10' && PV.versionSinRevision('2026-12.10') === '2026-12' && PV.debeAvisarPrivacidad('2026-12.9', '2026-12.10'),
     '(v0.71) revisiones de una o dos cifras (2026-12.10 sí; .100, .0 y .01 no), comparadas como números: 2026-12.9 < 2026-12.10 < 2027-01');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
-  check(legal.VERSION_LEGAL === '2026-12.10' && legal.VERSION_LEGAL_SIN_043 === '2026-12.9' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.10' && PV.novedadesDesde('2026-12.9', '2026-12.10').length === 1
+  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.10') > 0 && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && legal.VERSION_LEGAL_SIN_043 === '2026-12.9' && PV.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.10' && PV.novedadesDesde('2026-12.9', '2026-12.10').length === 1
     && PV.novedadesDesde('2026-12.9', '2026-12.9').length === 0 && /tema/.test(com) && /hasta 4 fotos/.test(com) && /Pregunta para el coach/.test(com) && /sin tu nombre/.test(com)
     && /solo lo ves tú/.test(com) && /búsqueda/.test(com) && /Mejor respuesta/.test(com),
     'la política 2026-12.10 cuenta los temas, las preguntas y su copia sin nombre, las fotos, lo guardado (solo para ti), la búsqueda y la mejor respuesta; su novedad sale una vez');
@@ -4262,6 +4262,58 @@ console.log('\nv0.71: la comunidad, tercera tanda (temas, preguntas, varias foto
   const ui = readFileSync(new URL('../web/src/ui/Comunidad.jsx', import.meta.url), 'utf8');
   check(!/preact\/compat/.test(ui) && /prefers-reduced-motion: no-preference\) \{ \.galeria-pista/.test(readFileSync(new URL('../web/src/estilos.css', import.meta.url), 'utf8')),
     'sin preact/compat; la galería solo se desliza suave si el móvil no pide menos movimiento');
+}
+
+console.log('\nv0.72: la comunidad, cuarta tanda (eventos, programados, atleta de la semana y moderación)');
+{
+  const C = await import('../web/src/logica/comunidad.js');
+  const { calendarioICS } = await import('../web/src/logica/plan.js');
+  const { partesMadrid } = await import('../web/src/logica/fechas.js');
+  check(C.eventoValido({ titulo: 'Quedada', lugar: 'Retiro' }) === null && C.eventoValido({ titulo: 'Quedada', lugar: 'Retiro', plazas: '12' }) === null && C.eventoValido({ titulo: 'Quedada', lugar: 'Retiro', plazas: '' }) === null
+    && /título/.test(C.eventoValido({ titulo: '  ', lugar: 'Retiro' })) && /sitio/.test(C.eventoValido({ titulo: 'Q', lugar: '' })) && /plazas/.test(C.eventoValido({ titulo: 'Q', lugar: 'R', plazas: 0 }))
+    && /plazas/.test(C.eventoValido({ titulo: 'Q', lugar: 'R', plazas: 2.5 })) && /título/.test(C.eventoValido({ titulo: 'x'.repeat(81), lugar: 'R' })) && /descripción/.test(C.eventoValido({ titulo: 'Q', lugar: 'R', descripcion: 'x'.repeat(1001) })),
+    'un evento: título (hasta 80), sitio o enlace, descripción (hasta 1000) y plazas de 1 a 500 o sin límite (como comunidad_evento_valido)');
+  const ahora = Date.parse('2026-11-05T12:00:00Z');
+  const evs = [{ id: 'b', empieza_en: '2026-11-08T09:00:00Z', creado_en: '2026-11-04T10:00:00Z', van: ['Ana L.'], plazas: 3 }, { id: 'a', empieza_en: '2026-11-06T17:00:00Z', creado_en: '2026-11-05T09:00:00Z', van: [], plazas: null },
+    { id: 'c', empieza_en: '2026-11-07T17:00:00Z', creado_en: '2026-11-01T09:00:00Z', cancelado_en: '2026-11-02T09:00:00Z', van: [] }, { id: 'd', empieza_en: '2026-11-04T17:00:00Z', creado_en: '2026-10-20T09:00:00Z', van: [] }];
+  check(C.estadoEvento(evs[0], ahora) === 'proximo' && C.estadoEvento(evs[2], ahora) === 'cancelado' && C.estadoEvento(evs[3], ahora) === 'pasado'
+    && C.eventosProximos(evs, ahora).map((e) => e.id).join() === 'a,b' && C.plazasLibres(evs[0]) === 2 && C.plazasLibres(evs[1]) === null && C.plazasLibres({ plazas: 1, van: ['x', 'y'] }) === 0,
+    'cancelado, pasado o próximo; los próximos, del más cercano; plazas libres (sin límite: null)');
+  const posts = [{ id: 'f', fijada: true, creado_en: '2026-10-01T00:00:00Z' }, { id: 'p1', creado_en: '2026-11-05T10:00:00Z' }, { id: 'p2', creado_en: '2026-11-03T10:00:00Z' }];
+  check(C.mezclarEventos(posts, evs, { ahora }).map((x) => x.id).join() === 'f,p1,a,b,p2,c,d' && C.mezclarEventos(posts, evs, { hayMas: true, ahora }).map((x) => x.id).join() === 'f,p1,a,b,p2'
+    && C.mezclarEventos(posts, evs, { ahora }).filter((x) => x.esEvento).length === 4 && C.mezclarEventos(posts, [{ id: 'viejo', empieza_en: '2026-10-01T00:00:00Z', creado_en: '2026-09-01T00:00:00Z' }], { ahora }).length === 3,
+    'en el muro, cada evento en su sitio por la fecha en que se creó (lo fijado arriba; con más páginas, solo entre lo que ya se ve; los de hace más de una semana, no)');
+  const ics = calendarioICS([C.datosICSEvento({ id: 'e1', titulo: 'Quedada; circuito', empieza_en: '2026-11-08T09:00:00Z', lugar: 'Retiro, puerta de Alcalá', descripcion: 'Trae agua' }, partesMadrid)], { url: 'https://x.test/' });
+  check(/DTSTART:20261108T100000/.test(ics) && /DTEND:20261108T113000/.test(ics) && /SUMMARY:Quedada\\; circuito/.test(ics) && /LOCATION:Retiro\\, puerta de Alcalá/.test(ics) && /TRIGGER:-PT120M/.test(ics)
+    && /UID:fbe-evento-e1@fbe-atletas/.test(ics) && /En 2 horas: Quedada/.test(ics) && !/Entreno:/.test(ics),
+    'el .ics de un evento (con el calendario de la semana): a la hora de Madrid, con su título, su sitio y un aviso 2 h antes');
+  const icsSesion = calendarioICS([{ id: 's', dia: '2026-11-08', nombre: 'Pierna' }], { hora: '18:30', minutos: 60, avisoMin: 30 });
+  check(/SUMMARY:Entreno: Pierna/.test(icsSesion) && /DTSTART:20261108T183000/.test(icsSesion) && /TRIGGER:-PT30M/.test(icsSesion) && !/LOCATION/.test(icsSesion), 'el de las sesiones, como siempre');
+  check(C.programadoValido(new Date(Date.now() + 3600e3).toISOString()) && !C.programadoValido(new Date(Date.now() + 10000).toISOString()) && !C.programadoValido(new Date(Date.now() + 91 * 864e5).toISOString()) && !C.programadoValido(null),
+    'programar: de 30 s a 90 días vista');
+  check(C.textoDestacado('Ana L.', ' Por no fallar ni un día ') === 'Atleta de la semana: Ana L. · Por no fallar ni un día' && C.textoDestacado('Ana L.', '') === 'Atleta de la semana: Ana L.'
+    && C.destacadoActivo([{ id: 1, desde: '2026-11-01T00:00:00Z', hasta: '2026-11-04T00:00:00Z' }, { id: 2, desde: '2026-11-04T00:00:00Z', hasta: '2026-11-11T00:00:00Z' }], ahora)?.id === 2,
+    'el atleta de la semana: «Atleta de la semana: Ana L. · Por no fallar ni un día», el de ahora');
+  check(C.silenciadoHasta({ silenciado_hasta: '2026-11-06T00:00:00Z' }, ahora) === '2026-11-06T00:00:00Z' && C.silenciadoHasta({ silenciado_hasta: '2026-11-04T00:00:00Z' }, ahora) === null && C.silenciadoHasta(null) === null
+    && C.SILENCIOS.map(([h]) => h).join() === '24,168', 'silenciar 24 h o 7 días (pasado el plazo, ya no)');
+  check(C.normalPalabra('  ¡Ñandú TONTÓ! ') === 'ñandu tonto' && C.palabrasDeTexto('Tonto, idiota\n\nMala   palabra; tonto, x') .join() === 'idiota,mala palabra,tonto'
+    && C.textoFiltrado('Eres un TONTÓ, ¿eh?', ['tonto']) && !C.textoFiltrado('Qué tontería', ['tonto']) && C.textoFiltrado('una mala  palabra', ['mala palabra']) && !C.textoFiltrado('Hola', []) && !C.textoFiltrado(null, ['tonto']),
+    'las palabras filtradas, como en la base: normalizadas (sin mayúsculas ni tildes), palabras enteras («tontería» no salta con «tonto»)');
+  const legal = await import('../web/src/legal.js');
+  const PV = await import('../web/src/logica/privacidad.js');
+  const { NOVEDADES } = await import('../web/src/novedades.js');
+  const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
+  check(legal.VERSION_LEGAL === '2026-12.11' && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.11' && PV.novedadesDesde('2026-12.10', '2026-12.11').length === 1
+    && PV.novedadesDesde('2026-12.10', '2026-12.10').length === 0 && /eventos y quedadas/.test(com) && /recordatorio/.test(com) && /programar/.test(com) && /panel con recuentos/.test(com) && /atleta de la semana/.test(com)
+    && /24 horas o 7 días/.test(com) && /pendiente de revisión/.test(com) && /modo lento/.test(com) && /tus respuestas a los eventos/.test(com),
+    'la política 2026-12.11 cuenta los eventos (quién va y el recordatorio), lo programado, el panel, el atleta de la semana y la moderación; su novedad sale una vez');
+  const v = NOVEDADES['0.72'];
+  check(v.atleta.length <= 3 && v.atleta.every((t) => t.length <= 140) && v.coach.every((t) => t.length <= 140 && /044/.test(t)), 'las novedades de la 0.72: hasta tres frases cortas (y la del coach, con la migración 044)');
+  const ui = readFileSync(new URL('../web/src/ui/ComunidadCoach.jsx', import.meta.url), 'utf8');
+  const sql = readFileSync(new URL('../supabase/migraciones/044_comunidad_coach.sql', import.meta.url), 'utf8');
+  const cr = sql.slice(sql.indexOf('create or replace function public.crear_recordatorios'));
+  check(!/preact\/compat/.test(ui) && (cr.match(/\n  begin\n/g) || []).length === 4 && (cr.match(/exception when others then\n    raise warning/g) || []).length === 4 && /resumen del domingo no creado/.test(cr) && /parejas no creado/.test(cr),
+    'sin preact/compat; crear_recordatorios() de la 044 conserva los bloques de la 041 y la 042 y añade los suyos, cada uno a prueba de fallos');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

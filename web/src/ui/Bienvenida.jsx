@@ -27,9 +27,21 @@ export function useBienvenida(uid, { sesionEnCurso = false } = {}) {
   return [!!uid && decidida.current === true && !cerrada, cerrar];
 }
 
+// (v0.72) ¿Está abierta la bienvenida del día? Para que otra hoja (la de las medallas nuevas) espere a que se cierre y no se
+// le ponga encima quitándole el foco
+let abiertaAhora = false;
+const oyentes = new Set();
+const avisarAbierta = (v) => { abiertaAhora = v; oyentes.forEach((f) => f(v)); };
+export function useBienvenidaAbierta() {
+  const [v, setV] = useState(abiertaAhora);
+  useEffect(() => { oyentes.add(setV); setV(abiertaAhora); return () => oyentes.delete(setV); }, []);
+  return v;
+}
+
 // datos: null mientras carga; luego lo de mensajeBienvenida (sin el nombre ni el rol, que van aparte)
 export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = null, alCerrar }) {
   const boton = useRef(null);
+  useEffect(() => { avisarAbierta(true); return () => avisarAbierta(false); }, []);
   const [esperaLarga, setEsperaLarga] = useState(false);
   // (si tarda más de 4 s en cargar, «Empezar» igual: la bienvenida nunca te deja esperando)
   useEffect(() => { const t = setTimeout(() => setEsperaLarga(true), 4000); return () => clearTimeout(t); }, []);

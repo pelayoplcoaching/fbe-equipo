@@ -22,7 +22,9 @@ export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atlet
   // v0.70 (migración 042): el reparto de los retos por equipos
   comunidad_reto_equipos: 'reto_id,atleta_id',
   // v0.71 (migración 043): lo guardado de cada uno
-  comunidad_guardados: 'perfil_id,post_id' };
+  comunidad_guardados: 'perfil_id,post_id',
+  // v0.72 (migración 044): quién va a cada evento
+  comunidad_evento_asistentes: 'evento_id,perfil_id' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 

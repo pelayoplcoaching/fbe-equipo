@@ -374,3 +374,72 @@ export function mejorPrimero(hilos = [], mejorId = null) {
   const i = hilos.findIndex((c) => c.id === mejorId || (c.respuestas || []).some((r) => r.id === mejorId));
   return i <= 0 ? hilos : [hilos[i], ...hilos.slice(0, i), ...hilos.slice(i + 1)];
 }
+
+// ---------------------------------------------------------------- v0.72 (migración 044): para ti como coach
+// Eventos y quedadas (como public.comunidad_evento_valido): título hasta 80, sitio o enlace hasta 300, descripción hasta 1000 y
+// plazas de 1 a 500 (opcional)
+export const MAX_TITULO_EVENTO = 80;
+export const MAX_LUGAR_EVENTO = 300;
+export const MAX_DESCRIPCION_EVENTO = 1000;
+export const MAX_PLAZAS_EVENTO = 500;
+export function eventoValido({ titulo, lugar, descripcion = null, plazas = null } = {}) {
+  const t = String(titulo ?? '').trim(), l = String(lugar ?? '').trim(), d = String(descripcion ?? '').trim();
+  if (!t || t.length > MAX_TITULO_EVENTO || !textoVisible(t)) return `El título, de 1 a ${MAX_TITULO_EVENTO} letras`;
+  if (!l || l.length > MAX_LUGAR_EVENTO || !textoVisible(l)) return 'Pon el sitio o el enlace';
+  if (d.length > MAX_DESCRIPCION_EVENTO) return `La descripción, hasta ${MAX_DESCRIPCION_EVENTO} letras`;
+  if (plazas != null && plazas !== '' && !(Number.isInteger(Number(plazas)) && Number(plazas) >= 1 && Number(plazas) <= MAX_PLAZAS_EVENTO)) return `Las plazas, de 1 a ${MAX_PLAZAS_EVENTO} (o sin límite)`;
+  return null;
+}
+// En qué está: cancelado, pasado (ya ha empezado) o próximo
+export const estadoEvento = (e, ahora = Date.now()) => (e?.cancelado_en ? 'cancelado' : Date.parse(e?.empieza_en) <= ahora ? 'pasado' : 'proximo');
+// Los próximos (no cancelados y sin empezar), del más cercano al más lejano
+export const eventosProximos = (lista = [], ahora = Date.now()) =>
+  lista.filter((e) => estadoEvento(e, ahora) === 'proximo').sort((a, b) => Date.parse(a.empieza_en) - Date.parse(b.empieza_en));
+// Plazas libres (null: sin límite)
+export const plazasLibres = (e) => (e?.plazas == null ? null : Math.max(0, Number(e.plazas) - (e.van?.length ?? e.nVan ?? 0)));
+// En el muro, cada evento como una tarjeta más, en su sitio por la fecha en que se creó: los de la última semana o por llegar, solo
+// entre lo que ya se ve (si hay más páginas, los más antiguos esperan a «Ver más»)
+export function mezclarEventos(posts = [], eventos = [], { hayMas = false, ahora = Date.now() } = {}) {
+  const fijadas = posts.filter((p) => p.fijada);
+  const resto = posts.filter((p) => !p.fijada);
+  const desde = hayMas && resto.length ? resto.at(-1).creado_en : '';
+  const ev = eventos.filter((e) => Date.parse(e.empieza_en) > ahora - 7 * 864e5 && e.creado_en >= desde).map((e) => ({ ...e, esEvento: true }));
+  const mezcla = [...resto, ...ev].sort((a, b) => (a.creado_en < b.creado_en ? 1 : a.creado_en > b.creado_en ? -1 : 0));
+  return [...fijadas, ...mezcla];
+}
+// El .ics de un evento (con el día y la hora de Madrid, el sitio y un aviso 2 h antes)
+export function datosICSEvento(e, partes) {
+  const p = partes(e.empieza_en);
+  return { id: `evento-${e.id}`, dia: p.fecha, hora: p.hora, minutos: 90, titulo: e.titulo, descripcion: [e.descripcion, e.lugar].filter(Boolean).join('\n\n'),
+    lugar: e.lugar, aviso: `En 2 horas: ${e.titulo}`, avisoMin: 120 };
+}
+
+// Avisos programados y plantillas (como la 044): como mucho a 90 días; 30 plantillas
+export const MAX_PLANTILLAS = 30;
+export const programadoValido = (iso, ahora = Date.now()) => !!iso && Date.parse(iso) > ahora + 30000 && Date.parse(iso) <= ahora + 90 * 864e5;
+
+// El atleta de la semana: una línea de hasta 140 letras, 7 días
+export const MAX_MOTIVO_DESTACADO = 140;
+export const DIAS_DESTACADO = 7;
+export const textoDestacado = (nombre, motivo) => `Atleta de la semana: ${nombre}${String(motivo || '').trim() ? ` · ${String(motivo).trim()}` : ''}`;
+export const destacadoActivo = (lista = [], ahora = Date.now()) => lista.find((d) => Date.parse(d.desde) <= ahora && Date.parse(d.hasta) > ahora) || null;
+
+// Moderación: silenciar 24 h o 7 días; el modo lento (minutos); las palabras filtradas, como las guarda la base
+export const SILENCIOS = [[24, '24 h'], [168, '7 días']];
+export const MODOS_LENTO = [[0, 'Apagado'], [5, '5 min'], [10, '10 min'], [30, '30 min'], [60, '1 hora']];
+export const MAX_PALABRAS = 100;
+export const silenciadoHasta = (miembro, ahora = Date.now()) => (miembro?.silenciado_hasta && Date.parse(miembro.silenciado_hasta) > ahora ? miembro.silenciado_hasta : null);
+// Como fbe_privado.comunidad_normal: minúsculas, sin tildes y solo letras y cifras, separadas por un espacio
+// (las letras con tilde, escritas como \u: el empaquetado tiene que quedar en ASCII puro, también dentro de una expresión regular)
+const CON_TILDE = '\u00e1\u00e0\u00e4\u00e2\u00e9\u00e8\u00eb\u00ea\u00ed\u00ec\u00ef\u00ee\u00f3\u00f2\u00f6\u00f4\u00fa\u00f9\u00fc\u00fb\u00e7';
+const SIN_TILDE = 'aaaaeeeeiiiioooouuuuc';
+export const normalPalabra = (t) => [...String(t ?? '').toLowerCase()].map((c) => { const i = CON_TILDE.indexOf(c); return i >= 0 ? SIN_TILDE[i] : c; }).join('')
+  .replace(/[^a-z0-9\u00f1]+/g, ' ').trim();
+// Lo escrito por el coach (una por línea o separadas por comas) → la lista que guarda la base (sin repetir, en orden)
+export const palabrasDeTexto = (texto) => [...new Set(String(texto ?? '').split(/[\n,;]+/).map(normalPalabra).filter((w) => w.length >= 2 && w.length <= 40))].sort();
+// ¿Lleva alguna? (palabras enteras: «tonto» no salta con «tontería»)
+export function textoFiltrado(texto, palabras = []) {
+  if (!palabras?.length || texto == null) return false;
+  const t = ` ${normalPalabra(texto)} `;
+  return palabras.some((w) => w && t.includes(` ${w} `));
+}

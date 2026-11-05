@@ -1531,8 +1531,8 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   {
     const uid = bT.auth.sesion().user.id;
     const pv = async (v) => (await bT.upsert('privacidad_vista', [{ usuario_id: uid, version: v }], 'usuario_id'))[0].version;
-    check(VERSION_LEGAL_D === '2026-12.10' && await aT.versionLegal() === '2026-12.10' && await pv('2026-12.10') === '2026-12.10' && await pv('2026-12.9') === '2026-12.10' && await pv('2026-12') === '2026-12.10' && await pv('2026-11') === '2026-12.10',
-      '(M2) en la demo (que tiene la 037 y la 043), la 2026-12.10 (v0.71); nunca hacia atrás, comparando por partes (.10 va después de .9)');
+    check(VERSION_LEGAL_D === '2026-12.11' && await aT.versionLegal() === '2026-12.11' && await pv('2026-12.11') === '2026-12.11' && await pv('2026-12.10') === '2026-12.11' && await pv('2026-12.9') === '2026-12.11' && await pv('2026-12') === '2026-12.11' && await pv('2026-11') === '2026-12.11',
+      '(M2) en la demo (que tiene la 037, la 043 y la 044), la 2026-12.11 (v0.72); nunca hacia atrás, comparando por partes (.11 va después de .10 y de .9)');
     check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.100')) && await lanza(() => pv('2026-12.01')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato (revisión de 1 a 99) y de un mes que ya existe');
   }
   await bT.auth.entrar('pelayo@fbe.demo', 'demo');
@@ -1827,6 +1827,76 @@ console.log('\nv0.71: la comunidad, tercera tanda (las mismas reglas de la 043 e
   const rep = (await a5.reportesComunidad()).find((r) => r.post_id === null && r.copia_texto === 'Dos fotos del gimnasio');
   check(fotos.length === 0 && rep?.fotos.length === 2 && rep.borrado && (await a5.preguntasEquipo()).length === 1,
     'al salir borrando lo suyo, su pregunta frecuente se va; las dos fotos de lo avisado se quedan (el coach las ve en Revisar) hasta resolver el aviso');
+}
+
+console.log('\nv0.72: la comunidad, cuarta tanda (las mismas reglas de la 044 en la demo)');
+{
+  // (la semilla de siempre, con un aviso del coach que «salió» hace un minuto y otro que sale dentro de una hora)
+  const semilla = () => {
+    const db = semillaDemo();
+    const coach = db.perfiles.find((p) => p.rol === 'coach').id;
+    const base = { autor_id: coach, atleta_id: null, tipo: 'aviso', foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, menciones: [], encuesta: null, reto_id: null, tema: 'avisos', fotos: null, mejor_comentario: null, retenida: false };
+    const ya = new Date(Date.now() - 60000).toISOString(), luego = new Date(Date.now() + 3600e3).toISOString();
+    db.comunidad_posts.push({ ...base, id: crypto.randomUUID(), texto: 'Ya salió zz044', publicar_en: ya, creado_en: ya }, { ...base, id: crypto.randomUUID(), texto: 'Sale luego zz044', publicar_en: luego, creado_en: luego });
+    return db;
+  };
+  const b6 = crearBackendMemoria({ semilla, persistir: false });
+  const a6 = crearApi(b6);
+  await b6.auth.entrar('lucia@fbe.demo', 'demo');
+  const lucia = a6.uid();
+  const muro = await a6.muro();
+  check(await a6.comunidad044() === true && await a6.versionLegal() === '2026-12.11' && muro.posts.some((x) => x.texto === 'Ya salió zz044') && !muro.posts.some((x) => x.texto === 'Sale luego zz044')
+    && !(await a6.muro({ buscar: 'luego zz044' })).posts.length, 'la demo tiene la 044: lo programado no se ve hasta su hora (ni buscándolo); lo que ya ha salido, sí');
+  const [ev] = await a6.eventosComunidad();
+  check(ev?.titulo === 'Quedada en el parque: circuito y café' && ev.van.join() === 'Rubén M.' && ev.noVan.join() === 'Carlos V.' && ev.miRespuesta === null && ev.plazas === 12,
+    'una quedada del coach: Rubén va y Carlos no (12 plazas)');
+  check(await a6.responderEvento(ev.id, true) === true && (await a6.eventosComunidad())[0].van.join() === 'Rubén M.,Lucía F.' && await a6.responderEvento(ev.id, null) === null
+    && await lanza(() => b6.insert('comunidad_evento_asistentes', [{ evento_id: ev.id, perfil_id: lucia, va: true }])) && await lanza(() => b6.insert('comunidad_eventos', [{ titulo: 'Mío', empieza_en: new Date(Date.now() + 864e5).toISOString(), lugar: 'Casa' }])),
+    'Lucía se apunta y se quita (no a mano); no crea eventos');
+  check(await lanza(() => a6.panelComunidad()) && (await a6.plantillasComunidad()).length === 0 && await lanza(() => a6.guardarPlantilla('x')) && await lanza(() => a6.silenciarComunidad(lucia, 24)),
+    'ni el panel, ni las plantillas, ni silenciar');
+  await b6.auth.entrar('pelayo@fbe.demo', 'demo');
+  await b6.update('comunidad_eventos', { plazas: 1 }, { eq: { id: ev.id } });
+  const nuevo = await a6.guardarEvento({ titulo: 'Charla online', fecha: sumarDias(hoyISO(), 2), hora: '19:30', lugar: 'https://meet.example/fbe' });
+  check((await a6.eventosComunidad()).length === 2 && nuevo.plazas === null && await lanza(() => a6.guardarEvento({ titulo: 'Ayer', fecha: sumarDias(hoyISO(), -1), hora: '10:00', lugar: 'Retiro' })), 'el coach crea otro (con un enlace) y no en el pasado');
+  check((await a6.programadosComunidad()).map((x) => x.texto).join() === 'Sale luego zz044' && !(await a6.muro()).posts.some((x) => x.texto === 'Sale luego zz044'), 'el coach lo ve en «Programados» (no en el muro)');
+  for (let i = 0; i < 30; i++) await a6.guardarPlantilla(`Plantilla ${i}`);
+  check((await a6.plantillasComunidad()).length === 30 && await lanza(() => b6.insert('comunidad_plantillas', [{ texto: 'La 31' }])), 'hasta 30 plantillas');
+  const panel = await a6.panelComunidad();
+  check(panel.semanas.length === 4 && panel.miembros === 3 && panel.nunca.some((x) => x.nombre === 'Ana López') && panel.activos.length > 0 && !/texto/.test(JSON.stringify(panel)), 'el panel: recuentos, quién no ha entrado (Ana) y los más activos');
+  await b6.auth.entrar('carlos@fbe.demo', 'demo');
+  check(await lanza(() => a6.responderEvento(ev.id, true)), 'con la plaza ocupada por Rubén, Carlos no se apunta');
+  await a6.ajustesComunidad({ sinRanking: true });
+  const carlos = a6.uid();
+  await b6.auth.entrar('pelayo@fbe.demo', 'demo');
+  check(await lanza(() => a6.destacarAtleta(carlos, 'Por volver')), 'quien no sale en el ranking no puede ser el atleta de la semana');
+  await a6.destacarAtleta(lucia, 'Por no fallar ni un día');
+  await a6.cancelarEvento(nuevo.id);
+  await a6.guardarModeracion({ palabras: 'Tonto\nmala palabra', lento: 10 });
+  await a6.silenciarComunidad(carlos, 168);
+  await b6.auth.entrar('carlos@fbe.demo', 'demo');
+  check(await lanza(() => a6.publicarEnComunidad({ texto: 'Hola' })) && await lanza(() => a6.comentarEnComunidad(muro.posts[0].id, 'Hola')) && (await a6.reaccionar(muro.posts[0].id, 'fuerza')) === 'fuerza'
+    && !!(await a6.miembroComunidad()).silenciado_hasta, 'Carlos, silenciado 7 días: lee y reacciona, pero no publica ni comenta');
+  check((await a6.destacadoComunidad()).actual?.nombre === 'Lucía F.' && (await a6.eventosComunidad()).find((x) => x.id === nuevo.id)?.cancelado_en, 've a Lucía como atleta de la semana y el evento cancelado');
+  await b6.auth.entrar('lucia@fbe.demo', 'demo');
+  const r1 = await a6.publicarEnComunidad({ texto: 'Qué TONTO soy' });
+  check(r1.retenida === true && await lanza(() => a6.publicarEnComunidad({ texto: 'Otra seguida' })) && (await a6.comentarEnComunidad(muro.posts[0].id, 'Una mala palabra')).retenido === true
+    && await lanza(() => a6.responderEvento(nuevo.id, true)), 'Lucía: con una palabra filtrada, retenida; con el modo lento, no publica otra seguida; su comentario también se retiene; al evento cancelado no se apunta');
+  await b6.auth.entrar('ruben@fbe.demo', 'demo');
+  check(!(await a6.muro()).posts.some((x) => x.id === r1.id) && !(await a6.comentariosComunidad(muro.posts[0].id)).some((c) => c.retenido), 'Rubén no ve lo retenido');
+  await b6.auth.entrar('pelayo@fbe.demo', 'demo');
+  const ret = await a6.retenidosComunidad();
+  check(ret.length === 2 && ret.every((x) => x.autor === 'Lucía F.'), 'el coach tiene los dos en «Pendiente de revisión»');
+  for (const x of ret) await a6.aprobarComunidad(x.clase === 'post' ? { postId: x.id } : { comentarioId: x.id });
+  await b6.auth.entrar('ruben@fbe.demo', 'demo');
+  check((await a6.muro()).posts.some((x) => x.id === r1.id) && (await a6.comentariosComunidad(muro.posts[0].id)).some((c) => c.texto === 'Una mala palabra'), 'aprobados: ya los ve Rubén');
+  await b6.auth.entrar('lucia@fbe.demo', 'demo');
+  await a6.responderEvento(ev.id, false);
+  const datos = await b6.rpc('comunidad_mis_datos', {});
+  check(datos.eventos.length === 1 && datos.eventos[0].va === false && datos.atleta_de_la_semana.length === 1, '«Descargar mis datos» lleva sus respuestas a los eventos y cuándo fue atleta de la semana');
+  await b6.rpc('comunidad_salir', { p_borrar: true });
+  await b6.auth.entrar('pelayo@fbe.demo', 'demo');
+  check(!(await b6.select('comunidad_evento_asistentes', {})).some((x) => x.perfil_id === lucia) && !(await a6.destacadoComunidad()).actual, 'al salir borrando lo suyo, sus respuestas se van; y el atleta de la semana deja de verse');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
