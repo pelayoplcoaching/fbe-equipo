@@ -256,7 +256,11 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     if (await p.locator('.portada-sesion').count()) await p.locator('.portada-empezar').getByRole('button', { name: 'Empezar', exact: true }).click();
     const sent = p.locator('.ejercicio', { hasText: 'Sentadilla barra alta' }).first();
     await sent.waitFor();
-    if (!(await sent.locator('.ejercicio-cuerpo').count())) await sent.locator('.ejercicio-cab').click();
+    // (la sesión abre sola el primer ejercicio al terminar de cargar: en una CPU lenta, mirar antes de que lo haga y tocar
+    // la cabecera lo volvía a cerrar. Se espera a que se asiente; si no se abrió sola, se abre y se espera a verlo abierto)
+    const cabSent = sent.locator('.ejercicio-cab');
+    const abierta = async () => p.waitForFunction((el) => el.getAttribute('aria-expanded') === 'true', await cabSent.elementHandle(), { timeout: 4000 }).then(() => true, () => false);
+    if (!(await abierta())) { await cabSent.click(); await sent.locator('.ejercicio-cuerpo').waitFor(); }
     const rec = sent.locator('.recuerda', { hasText: 'Recuerda:' });
     await rec.waitFor();
     check((await rec.textContent()).includes('Rodillas hacia fuera al bajar') && await sent.getByRole('button', { name: 'Ver el vídeo modelo' }).count() === 1,
