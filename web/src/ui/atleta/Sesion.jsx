@@ -130,6 +130,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // vuelve a mirar con lo que hay entonces.
   const hechasRef = useRef({});
   hechasRef.current = hechas;
+  // (v0.64, revisión) el descanso de ahora, para «Deshacer» del orden: no se vuelve al de cuando se tocó «Máquina ocupada»
+  const descansoRef = useRef(null);
+  descansoRef.current = descanso;
   const plegar = useRef({});
   const cancelarPlegado = (seId) => { clearTimeout(plegar.current[seId]); delete plegar.current[seId]; };
   useEffect(() => () => { for (const t of Object.values(plegar.current)) clearTimeout(t); plegar.current = {}; }, []);
@@ -498,15 +501,24 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     if (foco && nx) {
       // Se abre lo que toca ahora y se lleva la vista a él
       setAbiertos((a) => new Set([...(a || []), nx.id]));
-      requestAnimationFrame(() => requestAnimationFrame(() => irAEjercicio(nx.id)));
+      // (revisión) con un descanso en marcha, la vista va al temporizador (va con el ejercicio que se acaba de hacer, que puede
+      // haber pasado al final): ahí está la cuenta atrás y «Ahora toca», que lleva a la serie siguiente con un toque
+      const conDescanso = descansoRef.current && !sesion.completada;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const reloj = conDescanso && document.querySelector('.temporizador');
+        if (reloj) reloj.scrollIntoView({ block: 'center', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        else irAEjercicio(nx.id);
+      }));
     }
     if (texto) {
       aviso(texto, 'ok', deshacer ? { texto: 'Deshacer', fn: () => {
         setOrdenSes(antes.orden); setProxima(antes.proxima);
-        if (descanso && !sesion.completada) {
+        // (solo si hay un descanso en marcha ahora: uno saltado o terminado entretanto no vuelve, y uno nuevo se queda)
+        const d = descansoRef.current;
+        if (d && !sesion.completada) {
           const lista0 = aplicarOrden(det.datos.ejercicios, antes.orden);
-          const t = textosSiguiente(lista0, hechasRef.current, antes.proxima, descanso.tras);
-          cambiarDescanso({ ...descanso, texto: t.texto, voz: t.voz, aviso: t.aviso });
+          const t = textosSiguiente(lista0, hechasRef.current, antes.proxima, d.tras);
+          cambiarDescanso({ ...d, texto: t.texto, voz: t.voz, aviso: t.aviso });
         }
       } } : undefined);
     }
