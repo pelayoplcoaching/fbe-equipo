@@ -5714,6 +5714,16 @@ try {
   console.log('  ✗ la comunidad de la v0.73:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.74: «Programar según FBE» en el editor del programa (test/e2e-programar-fbe.mjs)
+console.log('\nv0.74: «Programar según FBE»');
+try {
+  const { probarProgramarFBE } = await import('./e2e-programar-fbe.mjs');
+  await probarProgramarFBE({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ «Programar según FBE» de la v0.74:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
 console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');
