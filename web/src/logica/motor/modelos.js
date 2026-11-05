@@ -3,7 +3,7 @@
 // de partida), doble progresión, triple progresión, lineal y solo repeticiones, más «mantener» y «a mano».
 //
 // Lo que devuelve un modelo:
-//   tipo         'subir' | 'reps' | 'series' | 'mantener' | 'bajar' | 'tope' | 'sin_tocar'
+//   tipo         'subir' | 'reps' | 'series' | 'mantener' | 'bajar' | 'tope' | 'peaking' (menos repeticiones, mismos kilos) | 'sin_tocar'
 //   propuesta    los campos de la pauta nueva (ver CAMPOS)
 //   motivo       una frase para el coach
 //   orientativa  kilos a los que apunta cuando la pauta no lleva carga (el atleta la elige)
@@ -11,8 +11,9 @@
 //   avisos       ['…'] cosas que el coach debería mirar
 import { num, tieneDetalle, limpiarDetalle, agregadosDetalle, esTopBackoff, enReserva } from '../calculos.js';
 import { modoCarga } from '../nivel.js';
-import { saltoDe, SIN_DATOS } from './lectura.js';
+import { saltoDe, objetivoReserva, SIN_DATOS } from './lectura.js';
 import { esBasico } from './reglas.js';
+import { estructuraTop, topPeaking } from './topset.js';
 
 export const CAMPOS = ['series', 'reps_min', 'reps_max', 'rir_objetivo', 'rpe_objetivo', 'carga_sugerida_kg', 'backoff_pct', 'series_detalle'];
 // Los campos de una pauta que el motor puede tocar, copiados (el detalle, serie a serie)
@@ -258,16 +259,21 @@ export function rangoDe({ pauta, ejercicio = null, reglas }) {
   return r.rangos[tipo.includes('basico') ? 'basico' : tipo[0] === 'aislamiento' ? 'aislamiento' : 'multiarticular'];
 }
 const listaSeries = (ns) => (ns.length === 1 ? `serie ${ns[0]}` : `series ${ns.slice(0, -1).join(', ')} y ${ns[ns.length - 1]}`);
+// Con ctx.topSet (un básico con la top primero) las back-off no progresan solas: igual, salvo que vayan fáciles.
+// Con ctx.peaking (la semana que se programa lleva ese foco) la top de los básicos baja una repetición y lleva los
+// kilos que mantienen el esfuerzo (topset.js).
 export function porSerie(l, pauta, ctx) {
+  const { reglas, nombre = '', ejercicio = null, nivel = null } = ctx;
+  const R = reglas.porSerie, T = reglas.topSet;
+  const basico = esBasico(ejercicio);
+  const pico = !!ctx.peaking && basico && T.peaking.cuando === 'foco';
   if (esTopBackoff(pauta)) {
+    if (pico) return picoTopBackoff(l, pauta, ctx);
     const r = doble(l, pauta, ctx);
-    return { ...r, avisos: [...r.avisos, 'Con top + back-off se usa la doble progresión sobre la serie top'] };
+    return ctx.topSet ? r : { ...r, avisos: [...r.avisos, 'Con top + back-off se usa la doble progresión sobre la serie top'] };
   }
   if (['sin_registrar', 'cambiado', 'dato_raro'].includes(l.diagnostico)) return sinDatos(l, pauta);
-  const { reglas, nombre = '', ejercicio = null, nivel = null } = ctx;
-  const R = reglas.porSerie;
   const [suelo, tope] = rangoDe({ pauta, ejercicio, reglas });
-  const basico = esBasico(ejercicio);
   const laEligeEl = R.sinKilos !== 'como_los_demas' && !!nivel && modoCarga(nivel, pauta.prioridad) === 'rpe';
   if (laEligeEl && R.sinKilos === 'no_tocar') return { tipo: 'mantener', propuesta: campos(pauta), orientativa: null, motivo: 'La carga la elige el atleta: no se toca', alternativas: [], avisos: [] };
   const sobradoVale = R.sobradoEn === 'todos' || (R.sobradoEn === 'basicos' && basico);
@@ -287,8 +293,15 @@ export function porSerie(l, pauta, ctx) {
     const kg = Number(h.kg) > 0 ? Number(h.kg) : 0, reserva = enReserva(h);
     return { kg, reps: Number(h.reps), rpe: reserva == null ? null : 10 - reserva, mueveKg: o.kg != null && kg > 0 && !laEligeEl };
   });
+  // Top y back-off: la top es la serie (o series) a la carga más alta; se mira lo que movió y, si falta, lo pautado
+  const est = pico || ctx.topSet ? estructuraTop(objetivos.map((o, i) => (datos[i]?.kg > 0 ? datos[i].kg : o.kg ?? null))) : null;
+  const rol = objetivos.map((_, i) => (!est ? 'normal' : pico ? (est.tops.includes(i) ? 'top' : 'backoff') : est.forma === 'top_primero' && i !== est.tops[0] ? 'backoff' : 'normal'));
+  const objetivoPauta = objetivoReserva(pauta);
+  const pk = pico && est ? topPeaking(est.tops.filter((i) => datos[i]).map((i) => ({ kg: datos[i].kg, reps: datos[i].reps, rpe: datos[i].rpe,
+    pautadas: detalle && objetivos[i].reps != null ? Number(objetivos[i].reps) : null,
+    objetivo: objetivos[i].rpe != null ? Number(objetivos[i].rpe) : objetivoPauta != null ? 10 - objetivoPauta : null })), { nombre, reglas }) : null;
   // Varias series al tope la misma semana: suben todas las que fueron fáciles; de las demás, solo la primera
-  const alTope = datos.map((x, i) => (x && x.mueveKg && x.reps >= tope ? i : -1)).filter((i) => i >= 0);
+  const alTope = datos.map((x, i) => (x && x.mueveKg && x.reps >= tope && rol[i] !== 'backoff' ? i : -1)).filter((i) => i >= 0);
   const sube = (i) => R.variasAlTope === 'todas' || i === alTope[0] || (R.variasAlTope === 'faciles' && datos[i].rpe != null && datos[i].rpe <= R.topeFacilRpe);
   const acciones = [];
   let salto = 0;
@@ -300,6 +313,19 @@ export function porSerie(l, pauta, ctx) {
     const kgBase = o.kg != null && kg > 0 ? kg : o.kg;
     const con = (cambio) => { const f = { ...o, ...cambio }; if (f.kg == null) delete f.kg; return f; };
     const subir = () => { const paso = saltoDe(nombre, kg, reglas); salto = salto || paso; return dos(kg + paso); };
+    // Igual: lo que hizo si cumplió lo pautado; si no, lo pautado
+    const cumplio = (o.reps == null || reps >= Number(o.reps)) && (o.kg == null || kg >= Number(o.kg) - 0.001);
+    const igual = () => (cumplio ? con({ kg: kgBase, reps }) : { ...o });
+    if (rol[i] === 'top' && pk) {
+      if (pk.accion === 'dura') { acciones.push('pk_dura'); return igual(); }
+      if (!mueveKg) { acciones.push('pk_elige'); return con({ kg: kgBase, reps: pk.reps }); }
+      acciones.push(pk.accion === 'suelo' ? (pk.delta > 0 ? 'pk_suelo_sube' : 'pk_suelo') : pk.delta > 0 ? 'pk' : 'pk_mismo');
+      return pk.accion === 'suelo' && !(pk.delta > 0) ? igual() : con({ kg: pk.kg, reps: pk.reps });
+    }
+    if (rol[i] === 'backoff' && T.backoff !== 'solas') {
+      if (T.backoff === 'faciles' && mueveKg && rpe != null && rpe <= T.backoffFacilRpe) { acciones.push('bo_sube'); return con({ kg: subir(), reps }); }
+      acciones.push('bo_igual'); return igual();
+    }
     if (reps >= tope) {
       if (mueveKg && sube(i)) { acciones.push('tope_kg'); return con({ kg: subir(), reps: suelo }); }
       if (mueveKg) { acciones.push('espera'); return con({ kg: kgBase, reps }); }
@@ -308,33 +334,72 @@ export function porSerie(l, pauta, ctx) {
     if (mueveKg && sobradoVale && rpe != null && rpe <= R.sobradoRpe) { acciones.push('sobrada'); return con({ kg: subir(), reps }); }
     if (reps < suelo) { acciones.push('bajo'); return con({ kg: kgBase, reps: Math.max(reps, Number(o.reps ?? reps)) }); }
     if (rpe == null || rpe <= R.rpeSube) { acciones.push('rep'); return con({ kg: kgBase, reps: Math.min(tope, reps + 1) }); }
-    // Igual: lo que hizo si cumplió lo pautado; si no, lo pautado
-    const cumplio = (o.reps == null || reps >= Number(o.reps)) && (o.kg == null || kg >= Number(o.kg) - 0.001);
-    acciones.push('igual'); return cumplio ? con({ kg: kgBase, reps }) : { ...o };
+    acciones.push('igual'); return igual();
   });
   const TEXTO = {
     tope_kg: `al tope (${tope}), sube ${kilos(salto)} y vuelve a ${suelo}`, sobrada: `sobrada (RPE ${num(R.sobradoRpe)} o menos), sube ${kilos(salto)} con las mismas repeticiones`,
     rep: 'una repetición más', igual: `igual (RPE por encima de ${num(R.rpeSube)})`, espera: `al tope (${tope}) pero justa, espera a que suba la primera`,
     tope: `al tope (${tope}): le toca subir de carga, que elige ${laEligeEl ? 'el atleta' : 'tú'}`, bajo: `por debajo del rango (${suelo}–${tope}), igual`, falta: 'sin hacer, igual',
+    bo_sube: `back-off fácil (RPE ${num(T.backoffFacilRpe)} o menos), sube ${kilos(salto)}`, bo_igual: 'back-off, igual',
+    ...(pk && pk.accion !== 'dura' ? (() => {
+      const menos = `${T.peaking.reps === 1 ? 'una repetición menos' : `${T.peaking.reps} repeticiones menos`} por peaking (${pk.reps})`;
+      const ya = `peaking, ya en ${pk.reps} ${pk.reps === 1 ? 'repetición' : 'repeticiones'}`;
+      return { pk: `${menos} y ${kilos(pk.kg)} (+${kilos(pk.delta)}) para mantener el esfuerzo`, pk_mismo: `${menos} con los mismos kilos`,
+        pk_elige: `${menos}; la carga la elige el atleta`, pk_suelo_sube: `${ya}: sube ${kilos(pk.delta)}`, pk_suelo: `${ya} y exigente: igual` };
+    })() : {}),
+    pk_dura: `peaking, pero salió muy dura (RPE por encima de ${num(T.peaking.duraRpe)}): repite tal cual`,
   };
   const grupos = [];
   acciones.forEach((a, i) => { const g = grupos.find((x) => x.a === a); if (g) g.ns.push(i + 1); else grupos.push({ a, ns: [i + 1] }); });
   const frase = (g) => `${grupos.length === 1 && g.ns.length > 1 ? `las ${g.ns.length} series` : listaSeries(g.ns)}: ${TEXTO[g.a]}`;
   const texto = grupos.map(frase).join(' · ');
   const motivo = texto.charAt(0).toUpperCase() + texto.slice(1);
-  const tipo = acciones.some((a) => a === 'tope_kg' || a === 'sobrada') ? 'subir' : acciones.includes('rep') ? 'reps' : 'mantener';
+  const tipo = acciones.some((a) => ['tope_kg', 'sobrada', 'bo_sube', 'pk', 'pk_suelo_sube'].includes(a)) ? 'subir'
+    : acciones.some((a) => a === 'pk_mismo' || a === 'pk_elige') ? 'peaking' : acciones.includes('rep') ? 'reps' : 'mantener';
   // Si nada cambia respecto a lo pautado, la pauta se queda en su formato (no se pasa a serie a serie porque sí)
   const pautado = detalle ? pauta.series_detalle : objetivos.map(() => dePauta);
   // Tampoco si la pauta no era serie a serie y ninguna serie progresa: se deja como la escribió el coach
-  const nadaProgresa = !detalle && acciones.every((a) => ['igual', 'falta', 'bajo', 'espera', 'tope'].includes(a));
+  const nadaProgresa = !detalle && acciones.every((a) => ['igual', 'falta', 'bajo', 'espera', 'tope', 'bo_igual', 'pk_dura', 'pk_suelo'].includes(a));
   const sinCambios = nadaProgresa || JSON.stringify(limpiarDetalle(d)) === JSON.stringify(limpiarDetalle(pautado));
-  return { tipo: sinCambios && tipo !== 'mantener' ? 'mantener' : tipo, propuesta: sinCambios ? campos(pauta) : conDetalle({ ...pauta, backoff_pct: null }, d), orientativa: null, motivo,
-    alternativas: sinCambios ? [] : [alt('mantener', 'Mantener', campos(pauta))],
-    avisos: acciones.includes('tope') ? [`Ha llegado al tope en ${acciones.filter((a) => a === 'tope').length === acciones.length ? 'todas las series' : `la${acciones.filter((a) => a === 'tope').length > 1 ? 's' : ''} ${listaSeries(acciones.map((a, k) => (a === 'tope' ? k + 1 : null)).filter(Boolean))}`}: le toca subir de carga`] : [] };
+  const enPico = !!pk && acciones.some((a) => a.startsWith('pk'));
+  return { tipo: sinCambios && tipo !== 'mantener' ? 'mantener' : tipo, propuesta: sinCambios ? campos(pauta) : conDetalle({ ...pauta, backoff_pct: null }, d), motivo,
+    orientativa: acciones.includes('pk_elige') && pk.delta > 0 ? pk.kg : null, ...(enPico ? { fase: 'peaking' } : {}),
+    alternativas: [...(sinCambios ? [] : [alt('mantener', 'Mantener', campos(pauta))]), ...(enPico ? [alt('sin_peaking', 'Sin peaking', porSerie(l, pauta, { ...ctx, peaking: false }).propuesta)] : [])],
+    avisos: pk?.limitada ? [`La subida calculada pasaba del ${num(T.peaking.maxPct)} %: se ha limitado`] : acciones.includes('tope') ? [`Ha llegado al tope en ${acciones.filter((a) => a === 'tope').length === acciones.length ? 'todas las series' : `la${acciones.filter((a) => a === 'tope').length > 1 ? 's' : ''} ${listaSeries(acciones.map((a, k) => (a === 'tope' ? k + 1 : null)).filter(Boolean))}`}: le toca subir de carga`] : [] };
 }
+
+// Peaking con el «top + back-off» de la app (la top es la serie 1; las back-off salen solas de su %)
+function picoTopBackoff(l, pauta, ctx) {
+  const { reglas, nombre = '' } = ctx;
+  const P = reglas.topSet.peaking;
+  const top = l.trabajo[0];
+  if (!top) return sinDatos(l, pauta);
+  const reserva = enReserva(top), objetivo = objetivoReserva(pauta);
+  const pk = topPeaking([{ kg: Number(top.kg), reps: Number(top.reps), rpe: reserva == null ? null : 10 - reserva,
+    pautadas: pauta.reps_max ?? pauta.reps_min ?? null, objetivo: objetivo == null ? null : 10 - objetivo }], { nombre, reglas });
+  if (!pk) return sinDatos(l, pauta);
+  const sinPico = alt('sin_peaking', 'Sin peaking', doble(l, pauta, ctx).propuesta);
+  if (pk.accion === 'dura') {
+    return { tipo: 'mantener', propuesta: mantenerEn(l, pauta), orientativa: null, fase: 'peaking', alternativas: [sinPico], avisos: [],
+      motivo: `Peaking, pero la top salió muy dura (RPE por encima de ${num(P.duraRpe)}): repite tal cual` };
+  }
+  const max = Number(pauta.reps_max ?? pauta.reps_min ?? top.reps), min = Number(pauta.reps_min ?? max);
+  const llevaKg = pauta.carga_sugerida_kg != null;
+  const propuesta = { ...campos(pauta), reps_max: pk.reps, reps_min: min < max ? Math.max(Math.min(P.suelo, pk.reps), Math.min(pk.reps, min - (max - pk.reps))) : pk.reps,
+    carga_sugerida_kg: llevaKg ? pk.kg : null };
+  const menos = pk.accion === 'suelo' ? `ya en ${pk.reps} ${pk.reps === 1 ? 'repetición' : 'repeticiones'}` : `${P.reps === 1 ? 'una repetición menos' : `${P.reps} repeticiones menos`} en la top (${pk.reps})`;
+  const carga = !llevaKg ? `la carga la elige el atleta${pk.delta > 0 ? ` (orientativo: ${kilos(pk.kg)})` : ''}` : pk.delta > 0 ? `${kilos(pk.kg)} (+${kilos(pk.delta)}) para mantener el esfuerzo` : 'los mismos kilos';
+  return { tipo: llevaKg && pk.delta > 0 ? 'subir' : pk.accion === 'suelo' ? 'mantener' : 'peaking', propuesta, orientativa: !llevaKg && pk.delta > 0 ? pk.kg : null, fase: 'peaking',
+    motivo: `Peaking: ${menos}, ${carga}`, alternativas: [alt('mantener', 'Mantener', mantenerEn(l, pauta)), sinPico],
+    avisos: pk.limitada ? [`La subida calculada pasaba del ${num(P.maxPct)} %: se ha limitado`] : [] };
+}
+
+// ---------- Top set + back-off ----------
+// La progresión serie a serie con la top y las back-off diferenciadas (para pedirlo en un ejercicio que no sea básico)
+export const topSet = (l, pauta, ctx) => porSerie(l, pauta, { ...ctx, topSet: true });
 
 // ---------- Sin regla ----------
 export const mantener = (l, pauta) => ({ tipo: 'mantener', propuesta: campos(pauta), orientativa: null, motivo: 'Modelo «mantener»: se copia la semana', alternativas: [], avisos: [] });
 export const aMano = (l, pauta) => ({ tipo: 'sin_tocar', propuesta: campos(pauta), orientativa: null, motivo: 'A mano: la app no toca este ejercicio', alternativas: [], avisos: [] });
 
-export const MODELO = { por_serie: porSerie, doble, triple, lineal, solo_reps: soloReps, mantener, a_mano: aMano };
+export const MODELO = { por_serie: porSerie, top_set: topSet, doble, triple, lineal, solo_reps: soloReps, mantener, a_mano: aMano };

@@ -1,8 +1,8 @@
-// «Programar según FBE» (fase 0): reglas, lectura, modelos, semana y la propuesta completa. Lógica pura.
+// «Programar según FBE»: reglas, lectura, modelos, semana y la propuesta completa. Lógica pura.
 //   node test/motor.test.mjs
 import { REGLAS_FBE, PERFILES, resolverReglas, fusionar, limpiarReglas, modeloDe, esBasico, MODELOS_DISPONIBLES,
   leerEjercicio, tendencia, textoHecho, saltoDe, cumpleCriterio, SIN_DATOS,
-  porSerie, rangoDe, doble, triple, lineal, soloReps, campos, completoLineal, falloLineal, MODELO_BASE,
+  porSerie, topSet, estructuraTop, topPeaking, rangoDe, doble, triple, lineal, soloReps, campos, completoLineal, falloLineal, MODELO_BASE,
   aplicarDescarga, senalesDescarga, tramoVuelta, aplicarVuelta, aplicarMantenimiento, diasParado, esMalDia,
   proponerSemana, cargaZona, entradaDesdeBloque, emparejar, pautasDeSemana, cambiosDePropuesta, diferencias, textoPauta } from '../web/src/logica/motor/index.js';
 
@@ -42,12 +42,14 @@ console.log('Reglas');
   check(limpiarReglas({ triple: { seriesMin: 5, seriesMax: 3 } }).descartado.includes('triple.seriesMin'), 'limpiar: mínimo de series por encima del máximo, fuera');
   check(esBasico({ tipo: ['basico', 'multiarticular'] }) && !esBasico({ tipo: ['aislamiento'] }) && !esBasico(null), 'básico: por el tipo de la biblioteca');
   check(modeloDe({ ejercicio: { tipo: ['basico'] }, reglas: resolverReglas({ perfil: 'novato_lineal' }) }).modelo === 'lineal' && modeloDe({ ejercicio: { tipo: ['aislamiento'] }, reglas: resolverReglas({ perfil: 'novato_lineal' }) }).modelo === 'doble', 'modelo: según sea básico o no');
-  const m = modeloDe({ ejercicio: { tipo: ['basico'] }, reglas: resolverReglas({ perfil: 'intermedio_fuerza' }) });
-  check(m.modelo === 'por_serie' && m.pedido === 'top_set' && m.pendiente, 'modelo que aún no está: se usa el de partida y se dice');
+  const m = modeloDe({ ejercicio: { tipo: ['basico'] }, reglas: resolverReglas({ atleta: { modelos: { basico: 'apre' } } }) });
+  check(m.modelo === 'por_serie' && m.pedido === 'apre' && m.pendiente, 'modelo que aún no está: se usa el de partida y se dice');
+  const mt = modeloDe({ ejercicio: { tipo: ['basico'] }, reglas: resolverReglas({ perfil: 'intermedio_fuerza' }) });
+  check(mt.modelo === 'top_set' && !mt.pendiente, 'el perfil de fuerza ya usa top set + back-off en los básicos');
   const lp = limpiarReglas({ porSerie: { rango: [6, 8], rangos: { basico: [3, 6], raro: [1, 2], aislamiento: [15, 10] }, rpeSube: 8.5, sinKilos: 'nunca', variasAlTope: 'primera' } });
   check(igual(lp.reglas.porSerie, { rango: [6, 8], rangos: { basico: [3, 6] }, rpeSube: 8.5, variasAlTope: 'primera' }) && lp.descartado.includes('porSerie.sinKilos') && lp.descartado.includes('porSerie.rangos.aislamiento'), 'limpiar: rangos y opciones de la progresión serie a serie');
   check(modeloDe({ ejercicio: { tipo: ['basico'] }, reglas: resolverReglas({ nivel: 'novato', ejercicio: { modelo: 'a_mano' } }) }).modelo === 'a_mano', 'el modelo del ejercicio manda sobre el del perfil');
-  check(MODELOS_DISPONIBLES.every((k) => typeof { por_serie: porSerie, doble, triple, lineal, solo_reps: soloReps, mantener: 1, a_mano: 1 }[k] !== 'undefined'), 'cada modelo disponible tiene su función');
+  check(MODELOS_DISPONIBLES.every((k) => typeof { por_serie: porSerie, top_set: topSet, doble, triple, lineal, solo_reps: soloReps, mantener: 1, a_mano: 1 }[k] !== 'undefined'), 'cada modelo disponible tiene su función');
   check(Object.values(PERFILES).every((p) => p.nombre && p.modelos.basico && p.modelos.resto), 'todos los perfiles traen nombre y modelos');
 }
 
@@ -280,6 +282,103 @@ console.log('\nModelo: solo repeticiones');
   check(soloReps(lee(lastre, [S(1, 10, 5), S(2, 10, 5)]), lastre, ctx).propuesta.series_detalle.every((x) => x.kg === 10), 'la carga no cambia nunca');
 }
 
+console.log('\nTop set + back-off y peaking');
+{
+  const multi = { nombre: 'Press inclinado en máquina', tipo: ['multiarticular'], grupos_musculares: ['pectoral'] };
+  const basico = { nombre: 'Sentadilla barra alta', tipo: ['basico', 'multiarticular'], grupos_musculares: ['cuadriceps'] };
+  const dominadas = { nombre: 'Dominadas pronas', tipo: ['basico', 'multiarticular'], grupos_musculares: ['espalda'] };
+  const D = (d, extra = {}) => P({ series: d.length, series_detalle: d, reps_min: Math.min(...d.map((x) => x.reps)), reps_max: Math.max(...d.map((x) => x.reps)), carga_sugerida_kg: d[0].kg ?? null, rpe_objetivo: null, ...extra });
+  const ps = (pauta, series, extra = {}) => { const reglas = extra.reglas || R, ejercicio = extra.ejercicio || basico;
+    return porSerie(leerEjercicio({ pauta, series, nombre: ejercicio.nombre, reglas }), pauta, { nombre: ejercicio.nombre, ejercicio, nivel: 'novato', topSet: true, ...extra, reglas }); };
+  const forma = (r) => r.propuesta.series_detalle.map((x) => `${x.reps}×${x.kg ?? '–'}`).join(' ');
+  check(igual(estructuraTop([100, 90, 90]), { tops: [0], forma: 'top_primero' }) && igual(estructuraTop([100, 100, 100]), { tops: [0, 1, 2], forma: 'plana' }) && igual(estructuraTop([80, 90, 100]), { tops: [2], forma: 'otra' })
+    && igual(estructuraTop([100, 100, 90]), { tops: [0, 1], forma: 'otra' }) && igual(estructuraTop([null, 100, 90]), { tops: [1], forma: 'top_primero' }) && estructuraTop([null, 0]) === null && igual(estructuraTop([60]), { tops: [0], forma: 'plana' }),
+  'la top es la serie (o series) a la carga más alta; «top primero» si es la primera y las demás bajan');
+
+  // --- semanas normales: la top progresa como siempre, las back-off esperan ---
+  const tb = [{ reps: 6, kg: 100 }, { reps: 8, kg: 90 }, { reps: 8, kg: 90 }];
+  const a = ps(D(tb), [S(1, 100, 6, 8), S(2, 90, 8, 8), S(3, 90, 8, 8.5)]);
+  check(forma(a) === '7×100 8×90 8×90' && a.tipo === 'reps' && a.motivo === 'Serie 1: una repetición más · series 2 y 3: back-off, igual', 'top + back-off: la top suma una repetición y las back-off se quedan igual');
+  check(forma(ps(D(tb), [S(1, 100, 6, 8), S(2, 90, 8, 8), S(3, 90, 8, 8.5)], { topSet: false })) === '7×100 9×90 9×90' && forma(ps(D(tb), [S(1, 100, 6, 8), S(2, 90, 8, 8), S(3, 90, 8, 8.5)], { reglas: conReglas({ topSet: { backoff: 'solas' } }) })) === '7×100 9×90 9×90',
+    'sin top set (o con la regla de que progresen solas), las back-off suman repeticiones como cualquier serie');
+  const b = ps(D(tb), [S(1, 100, 6, 8), S(2, 90, 8, 7), S(3, 90, 8, 6.5)]);
+  check(forma(b) === '7×100 8×92.5 8×92.5' && b.tipo === 'subir' && b.motivo.endsWith('series 2 y 3: back-off fácil (RPE 7 o menos), sube 2,5 kg'), 'back-off fáciles (RPE 7 o menos): suben kilos con las mismas repeticiones');
+  check(forma(ps(D(tb), [S(1, 100, 6, 8), S(2, 90, 8, 7), S(3, 90, 8, 6.5)], { reglas: conReglas({ topSet: { backoff: 'igual' } }) })) === '7×100 8×90 8×90', 'con la regla de no tocarlas nunca, ni siendo fáciles');
+  check(forma(ps(D(tb), [S(1, 100, 10, 9.5), S(2, 90, 10, 8), S(3, 90, 10, 8)])) === '6×102.5 10×90 10×90', 'la top al tope del rango sube kilos y vuelve al suelo; las back-off al tope no suben solas');
+  check(forma(ps(D(tb), [S(1, 100, 6, 6.5), S(2, 90, 8, 8), S(3, 90, 8, 8)])) === '6×102.5 8×90 8×90', 'la top sobrada sube kilos con las mismas repeticiones');
+  check(forma(ps(D([{ reps: 8, kg: 100 }, { reps: 8, kg: 100 }, { reps: 8, kg: 100 }]), [S(1, 100, 8, 8), S(2, 100, 8, 8), S(3, 100, 8, 8)])) === '9×100 9×100 9×100'
+    && forma(ps(D([{ reps: 8, kg: 80 }, { reps: 8, kg: 90 }, { reps: 6, kg: 100 }]), [S(1, 80, 8, 8), S(2, 90, 8, 8), S(3, 100, 6, 8)])) === '9×80 9×90 7×100', 'series planas o en rampa no son top + back-off: todo sigue como siempre');
+  const piramide = P({ series: 3, reps_min: 8, reps_max: 12, carga_sugerida_kg: 80, rpe_objetivo: null });
+  check(forma(ps(piramide, [S(1, 90, 8, 8.5), S(2, 80, 10, 8), S(3, 80, 12, 8)])) === '9×90 10×80 12×80', 'una pauta plana hecha en pirámide (la top primero) también cuenta: la top suma y las demás se quedan en lo que hizo');
+  const quieta = ps(piramide, [S(1, 90, 12, 10), S(2, 80, 10, 8), S(3, 80, 12, 8)], { reglas: conReglas({ porSerie: { rango: [8, 20] } }) });
+  check(quieta.tipo === 'mantener' && igual(quieta.propuesta, campos(piramide)), 'si la top no progresa y las back-off esperan, la pauta se queda como la escribiste');
+  const tm = D([{ reps: 8, kg: 100 }, { reps: 10, kg: 90 }, { reps: 10, kg: 90 }]);
+  check(forma(topSet(leerEjercicio({ pauta: tm, series: [S(1, 100, 8, 8), S(2, 90, 10, 8), S(3, 90, 10, 8)], nombre: multi.nombre, reglas: R }), tm, { nombre: multi.nombre, reglas: R, ejercicio: multi, nivel: 'novato' })) === '9×100 10×90 10×90',
+    'el modelo «top set» pedido en un ejercicio que no es básico hace lo mismo');
+
+  // --- peaking ---
+  const pk = [{ reps: 5, kg: 100 }, { reps: 8, kg: 90 }, { reps: 8, kg: 90 }];
+  const c = ps(D(pk), [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true });
+  check(forma(c) === '4×102.5 8×90 8×90' && c.tipo === 'subir' && c.fase === 'peaking' && c.motivo === 'Serie 1: una repetición menos por peaking (4) y 102,5 kg (+2,5 kg) para mantener el esfuerzo · series 2 y 3: back-off, igual',
+    'peaking: la top baja una repetición y lleva los kilos que mantienen el esfuerzo; las back-off, igual');
+  check(igual(c.alternativas.map((x) => x.id), ['mantener', 'sin_peaking']) && igual(c.alternativas[1].propuesta.series_detalle.map((x) => x.kg), [100, 90, 90]), 'con dos salidas de un toque: mantener o seguir sin peaking');
+  check(forma(ps(D(pk), [S(1, 100, 5, 8), S(2, 90, 8, 7), S(3, 90, 8, 8)], { peaking: true })) === '4×102.5 8×92.5 8×90', 'en peaking las back-off siguen su regla: suben solo si van fáciles');
+  const dura = ps(D(pk), [S(1, 100, 5, 9.5), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true });
+  check(dura.tipo === 'mantener' && igual(dura.propuesta, campos(D(pk))) && dura.fase === 'peaking' && dura.motivo.startsWith('Serie 1: peaking, pero salió muy dura (RPE por encima de 9): repite tal cual'), 'top muy dura (RPE por encima de 9): se repite tal cual');
+  const conRpe = D([{ reps: 5, kg: 100, rpe: 8 }, { reps: 8, kg: 90, rpe: 8 }]);
+  const alPautado = conReglas({ topSet: { peaking: { rpe: 'pauta' } } });
+  check(forma(ps(conRpe, [S(1, 100, 5, 9), S(2, 90, 8, 8)], { peaking: true })) === '4×102.5 8×90'
+    && forma(ps(conRpe, [S(1, 100, 5, 9), S(2, 90, 8, 8)], { peaking: true, reglas: alPautado })) === '4×100 8×90' && ps(conRpe, [S(1, 100, 5, 9), S(2, 90, 8, 8)], { peaking: true, reglas: alPautado }).tipo === 'peaking',
+  'el esfuerzo que se mantiene es el que hizo; con la otra regla, el pautado (si se pasó, baja la repetición con los mismos kilos)');
+  check(forma(ps(conRpe, [S(1, 100, 5, 7), S(2, 90, 8, 8)], { peaking: true })) === '4×105 8×90' && forma(ps(D(pk), [S(1, 100, 5, 6), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true })) === '4×107.5 8×90 8×90'
+    && forma(ps(D(pk), [S(1, 100, 5, 6), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true, reglas: conReglas({ topSet: { peaking: { rpeMin: 6 } } }) })) === '4×102.5 8×90 8×90', 'si la top fue fácil, apunta a RPE 8 como mínimo y la subida es mayor (el mínimo es una regla)');
+  // Con cargas ligeras el redondeo se come la subida de una repetición: baja la repetición y, a la semana siguiente, la cuenta ya da el salto
+  const remo = D([{ reps: 7, kg: 42.5 }, { reps: 7, kg: 42.5 }]);
+  const r1 = ps(remo, [S(1, 42.5, 7, 8.5), S(2, 42.5, 7, 8.5)], { peaking: true });
+  const r2 = ps(D(r1.propuesta.series_detalle), [S(1, 42.5, 6, 7.5), S(2, 42.5, 6, 7.5)], { peaking: true });
+  check(forma(r1) === '6×42.5 6×42.5' && r1.tipo === 'peaking' && r1.motivo.includes('con los mismos kilos') && forma(r2) === '5×45 5×45', 'cargas ligeras: una semana baja la repetición con los mismos kilos y a la siguiente sube');
+  check(forma(ps(D(pk), [S(1, 100, 5), S(2, 90, 8), S(3, 90, 8)], { peaking: true })) === '4×102.5 8×90 8×90', 'sin RPE apuntado se calcula igual (como si fuera RPE 8)');
+  check(forma(ps(D(pk), [S(1, 100, 6, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true })) === '4×105 8×90 8×90', 'si hizo más repeticiones de las pautadas, baja desde las pautadas y los kilos lo recogen');
+  const single = [{ reps: 1, kg: 150 }, { reps: 3, kg: 130 }];
+  const s1 = ps(D(single), [S(1, 150, 1, 8), S(2, 130, 3, 8)], { peaking: true });
+  check(forma(s1) === '1×152.5 3×130' && s1.motivo.startsWith('Serie 1: peaking, ya en 1 repetición: sube 2,5 kg'), 'en el suelo (1 repetición) ya no baja: si fue fácil, sube un salto');
+  const s2 = ps(D(single), [S(1, 150, 1, 9), S(2, 130, 3, 8)], { peaking: true });
+  check(s2.tipo === 'mantener' && igual(s2.propuesta, campos(D(single))) && s2.motivo.startsWith('Serie 1: peaking, ya en 1 repetición y exigente: igual'), 'en el suelo y exigente: igual');
+  check(forma(ps(D([{ reps: 4, kg: 100 }, { reps: 8, kg: 90 }]), [S(1, 100, 4, 8), S(2, 90, 8, 8)], { peaking: true, reglas: conReglas({ topSet: { peaking: { suelo: 3 } } }) })) === '3×102.5 8×90'
+    && forma(ps(D([{ reps: 3, kg: 100 }, { reps: 8, kg: 90 }]), [S(1, 100, 3, 8), S(2, 90, 8, 8)], { peaking: true, reglas: conReglas({ topSet: { peaking: { suelo: 3 } } }) })) === '3×102.5 8×90', 'con otro suelo (3): baja hasta ahí y luego solo kilos');
+  const plana = D([{ reps: 5, kg: 100 }, { reps: 5, kg: 100 }, { reps: 5, kg: 100 }]);
+  const p3 = ps(plana, [S(1, 100, 5, 8), S(2, 100, 5, 8), S(3, 100, 5, 8.5)], { peaking: true });
+  check(forma(p3) === '4×102.5 4×102.5 4×102.5' && p3.motivo === 'Las 3 series: una repetición menos por peaking (4) y 102,5 kg (+2,5 kg) para mantener el esfuerzo', 'series planas en peaking: bajan todas juntas, desde la más exigente');
+  check(forma(ps(plana, [S(1, 100, 5, 8), S(2, 100, 5, 8), S(3, 100, 5, 9.5)], { peaking: true })) === '5×100 5×100 5×100', 'y si alguna salió muy dura, se repiten todas');
+  check(forma(ps(D([{ reps: 8, kg: 80 }, { reps: 6, kg: 90 }, { reps: 4, kg: 100 }]), [S(1, 80, 8, 8), S(2, 90, 6, 8), S(3, 100, 4, 8)], { peaking: true })) === '8×80 6×90 3×102.5', 'en rampa, la top es la última: baja ella y las de antes se quedan');
+  check(forma(ps(D(pk), [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true, ejercicio: multi })) === '5×100 8×90 8×90'
+    && forma(ps(D(pk), [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true, topSet: false, ejercicio: multi })) === '5×100 9×90 9×90', 'el peaking es solo para los básicos');
+  const dom = ps(D([{ reps: 6 }, { reps: 6 }]), [S(1, 0, 6, 8), S(2, 0, 6, 8)], { peaking: true, ejercicio: dominadas });
+  check(forma(dom) === '7×– 7×–' && !dom.fase, 'un básico sin kilos (dominadas) no entra en peaking');
+  check(forma(ps(D(pk), [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true, reglas: conReglas({ topSet: { peaking: { cuando: 'nunca' } } }) })) === '5×100 8×90 8×90', 'con la regla «nunca», la semana de peaking se trata como cualquier otra');
+  check(forma(ps(D(pk), [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true, reglas: conReglas({ topSet: { peaking: { kilos: 'salto' } } }) })) === '4×102.5 8×90 8×90'
+    && forma(ps(D(pk), [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true, reglas: conReglas({ topSet: { peaking: { reps: 2 } } }) })) === '3×105 8×90 8×90', 'las otras reglas: un salto fijo, o dos repeticiones menos');
+  const elige = ps(D(pk, { prioridad: 'baja' }), [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true, nivel: 'intermedio' });
+  check(forma(elige) === '4×100 8×90 8×90' && elige.tipo === 'peaking' && elige.orientativa === 102.5 && elige.motivo.includes('la carga la elige el atleta'), 'donde la carga la elige el atleta: baja la repetición y la carga queda como orientativa');
+  const ligera = ps(D([{ reps: 5, kg: 40, rpe: 9 }, { reps: 8, kg: 35, rpe: 8 }]), [S(1, 40, 5, 6), S(2, 35, 8, 8)], { peaking: true, reglas: alPautado });
+  check(forma(ligera) === '4×42.5 8×35' && ligera.avisos[0] === 'La subida calculada pasaba del 10 %: se ha limitado', 'la subida de una semana a otra tiene tope (10 %) y se avisa');
+  check(topPeaking([], { reglas: R }) === null && igual(topPeaking([{ kg: 100, reps: 5, rpe: 8, pautadas: 5, objetivo: null }], { nombre: 'Sentadilla barra alta', reglas: R }), { accion: 'baja', reps: 4, kg: 102.5, delta: 2.5, rpe: 8, limitada: false }), 'la cuenta del peaking, suelta');
+  // Con el «top + back-off» de la app
+  const topP = P({ series: 4, reps_min: 4, reps_max: 6, backoff_pct: 10, carga_sugerida_kg: 100 });
+  const hechasTop = [S(1, 100, 6, 8), S(2, 90, 5, 8), S(3, 90, 4, 8), S(4, 90, 4, 9)];
+  const t = ps(topP, hechasTop, { peaking: true });
+  check(t.propuesta.reps_max === 5 && t.propuesta.reps_min === 3 && t.propuesta.carga_sugerida_kg === 102.5 && t.propuesta.backoff_pct === 10 && t.propuesta.series === 4 && t.fase === 'peaking'
+    && t.motivo === 'Peaking: una repetición menos en la top (5), 102,5 kg (+2,5 kg) para mantener el esfuerzo' && igual(t.alternativas.map((x) => x.id), ['mantener', 'sin_peaking']), 'con el top + back-off de la app: baja el rango de la top y sube su carga; las back-off salen de su %');
+  check(ps(topP, [S(1, 100, 6, 9.5), S(2, 90, 5, 8)], { peaking: true }).tipo === 'mantener' && ps(topP, [], { peaking: true }).tipo === 'mantener', 'y si la top salió muy dura o no se hizo, se mantiene');
+  const sinAviso = ps(topP, hechasTop), conAviso = ps(topP, hechasTop, { topSet: false });
+  check(sinAviso.propuesta.carga_sugerida_kg === 102.5 && sinAviso.avisos.length === 0 && conAviso.avisos.length === 1, 'en semanas normales la top sigue la doble progresión (sin aviso si es un básico)');
+  check(igual(D(pk).series_detalle, pk), 'la pauta original no se toca');
+  // Reglas guardadas
+  const lim = limpiarReglas({ topSet: { backoff: 'solas', backoffFacilRpe: 12, raro: 1, peaking: { suelo: 3, reps: 5, kilos: 'salto', otra: true } } });
+  check(igual(lim.reglas, { topSet: { backoff: 'solas', peaking: { suelo: 3, kilos: 'salto' } } }) && igual(lim.descartado.sort(), ['topSet.backoffFacilRpe', 'topSet.peaking.otra', 'topSet.peaking.reps', 'topSet.raro']), 'las reglas de top set y peaking se validan al guardarlas');
+  check(resolverReglas({ atleta: { topSet: { peaking: { suelo: 2 } } } }).topSet.peaking.reps === 1 && resolverReglas({ atleta: { topSet: { peaking: { suelo: 2 } } } }).topSet.peaking.suelo === 2 && R.topSet.peaking.suelo === 1, 'y se heredan clave a clave');
+}
+
 console.log('\nSemana: descarga, parón y mantenimiento');
 {
   const p = P({ series: 4, carga_sugerida_kg: 100 });
@@ -461,9 +560,9 @@ const entrada = (extra = {}) => entradaBase({ ...extra, reglas: fusionar({ atlet
   check(a(proponerSemana({ ...e, contexto: { diasSinEntrenar: 30 } })).tipo === 'sin_tocar' && a(proponerSemana({ ...e, contexto: { focoSiguiente: 'descarga' } })).tipo === 'sin_tocar', 'a mano: tampoco en una vuelta ni en una descarga');
 }
 {
-  const r = proponerSemana(entradaBase({ atleta: { perfil: 'intermedio_fuerza' } }));
+  const r = proponerSemana(entradaBase({ reglas: { atleta: { modelos: { basico: 'apre' } } } }));
   const a = r.filas.find((x) => x.pauta_id === 'a');
-  check(a.modelo === 'por_serie' && a.modeloPedido === 'top_set' && a.confianza === 'media' && a.avisos.some((x) => x.texto.includes('Top set')), 'modelo que aún no está: el de partida, avisado y con confianza media');
+  check(a.modelo === 'por_serie' && a.modeloPedido === 'apre' && a.confianza === 'media' && a.avisos.some((x) => x.texto.includes('APRE')), 'modelo que aún no está: el de partida, avisado y con confianza media');
   const nov = proponerSemana(entradaBase({ atleta: { perfil: 'novato_lineal' } }));
   check(nov.filas.find((x) => x.pauta_id === 'a').modelo === 'lineal' && nov.filas.find((x) => x.pauta_id === 'b').modelo === 'doble', 'perfil lineal: lineal en el básico y doble en el resto');
 }
@@ -493,6 +592,29 @@ const entrada = (extra = {}) => entradaBase({ ...extra, reglas: fusionar({ atlet
   e.series.c = [S(1, 100, 5, 8), S(2, 100, 5, 8), S(3, 100, 5, 8)];
   const r = proponerSemana(e);
   check(r.filas.find((x) => x.pauta_id === 'a').tendencia === 'bajando' && r.descarga.senales.some((x) => x.id === 'rendimiento'), 'dos obligatorios a la baja: señal de descarga');
+}
+
+console.log('\nPeaking en la semana entera');
+{
+  const sem = (focoSiguiente) => {
+    const e = entradaBase({ contexto: { focoSiguiente } });
+    e.pautas = e.pautas.map((p) => (p.id === 'c' ? { ...p, series: 3, reps_min: 5, reps_max: 8, series_detalle: [{ reps: 5, kg: 100, rpe: 8 }, { reps: 8, kg: 90, rpe: 8 }, { reps: 8, kg: 90, rpe: 8 }] } : p));
+    e.series = { ...e.series, c: [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], a: [S(1, 80, 8, 8), S(2, 80, 8, 8), S(3, 80, 8, 8.5)] };
+    return proponerSemana(congelar(e));
+  };
+  const normal = sem(null), pico = sem('peaking');
+  const fila = (r, id) => r.filas.find((x) => x.pauta_id === id);
+  check(!('peaking' in normal.semana) && normal.filas.every((x) => !x.fase) && igual(fila(normal, 'c').propuesta.series_detalle.map((x) => `${x.reps}×${x.kg}`), ['5×100', '8×90', '8×90']),
+    'semana normal: la sentadilla con top + back-off (top bajo el rango, back-off a RPE 8) se queda igual');
+  check(pico.semana.tipo === 'normal' && pico.semana.peaking === 2 && fila(pico, 'c').fase === 'peaking' && igual(fila(pico, 'c').propuesta.series_detalle.map((x) => `${x.reps}×${x.kg}`), ['4×102.5', '8×90', '8×90']) && fila(pico, 'c').tipo === 'subir',
+    'semana con foco peaking: la top de la sentadilla baja una repetición y sube kilos');
+  check(fila(pico, 'a').fase === 'peaking' && igual(fila(pico, 'a').propuesta.series_detalle.map((x) => `${x.reps}×${x.kg}`), ['7×82.5', '7×82.5', '7×82.5']), 'el press banca (series planas) baja entero');
+  check(['b', 'd', 'e'].every((id) => !fila(pico, id).fase && igual(fila(pico, id).propuesta, fila(normal, id).propuesta)), 'los que no son básicos siguen como en una semana normal');
+  check(pico.semana.resumen.suben === pico.filas.filter((x) => ['subir', 'series'].includes(x.tipo)).length && pico.filas.every((x) => x.alternativas.length <= 2), 'el resumen cuadra y no hay más de dos alternativas');
+  const desc = proponerSemana(entradaBase({ contexto: { focoSiguiente: 'descarga' } }));
+  check(desc.semana.tipo === 'descarga' && !('peaking' in desc.semana), 'una semana marcada como descarga no es de peaking');
+  const fuerza = proponerSemana(entradaBase({ atleta: { perfil: 'intermedio_fuerza' } }));
+  check(fuerza.filas.find((x) => x.pauta_id === 'a').modelo === 'top_set' && !fuerza.filas.find((x) => x.pauta_id === 'a').modeloPedido && fuerza.filas.find((x) => x.pauta_id === 'b').modelo === 'por_serie', 'el perfil de fuerza usa top set en los básicos y serie a serie en el resto');
 }
 
 console.log('\nDel editor al motor');
@@ -571,7 +693,7 @@ console.log('\nMil semanas al azar');
     const sesiones = Array.from({ length: nSes }, (_, i) => ({ id: `s${i}`, orden: i + 1, completada: azar() < 0.8, preparacion: azar() < 0.5 ? { sueno: entre(1, 3), energia: entre(1, 3), molestias: entre(1, 3) } : null }));
     const pautas = [], series = {}, hist = {};
     for (let i = 0; i < entre(1, 8); i++) {
-      const id = `p${i}`, ejercicio_id = uno(ids), nSeries = entre(1, 5), min = entre(3, 12), max = min + entre(0, 5), kg = azar() < 0.2 ? null : entre(2, 60) * 2.5;
+      const id = `p${i}`, ejercicio_id = uno(ids), nSeries = entre(1, 5), min = entre(1, 12), max = min + entre(0, 5), kg = azar() < 0.2 ? null : entre(2, 60) * 2.5;
       const forma = azar();
       const pauta = P({ id, sesion_id: uno(sesiones).id, ejercicio_id, orden: i, prioridad: uno(['alta', 'media', 'baja', 'muy_baja']), series: nSeries, reps_min: azar() < 0.05 ? null : min, reps_max: azar() < 0.05 ? null : max,
         carga_sugerida_kg: kg, rpe_objetivo: azar() < 0.6 ? entre(12, 19) / 2 : null, rir_objetivo: azar() < 0.15 ? entre(0, 4) : null });
@@ -583,10 +705,10 @@ console.log('\nMil semanas al azar');
       series[id] = hechas();
       if (azar() < 0.7) hist[ejercicio_id] = Array.from({ length: entre(1, 4) }, () => ({ foco: uno(['volumen', 'intensidad', 'descarga']), pauta: { ...pauta, carga_sugerida_kg: kg == null ? null : kg + entre(-2, 1) * 2.5 }, series: hechas(), malDia: azar() < 0.1 }));
     }
-    const porEjercicio = Object.fromEntries(ids.filter(() => azar() < 0.3).map((k) => [k, { modelo: uno(['por_serie', 'doble', 'triple', 'lineal', 'solo_reps', 'mantener', 'a_mano', 'apre']) }]));
+    const porEjercicio = Object.fromEntries(ids.filter(() => azar() < 0.3).map((k) => [k, { modelo: uno(['por_serie', 'top_set', 'doble', 'triple', 'lineal', 'solo_reps', 'mantener', 'a_mano', 'apre']) }]));
     const e = congelar({ pautas, sesiones, series, ejercicios, historial: hist, atleta: { nivel: uno(['novato', 'novato_intermedio', 'intermedio', 'avanzado', null]), perfil: azar() < 0.1 ? uno(['casa', 'readaptacion', 'mantenimiento']) : null },
       reglas: { porEjercicio, atleta: azar() < 0.3 ? { doble: { criterio: uno(['todas', 'todas_menos_una', 'primera', 'suma']), sobrado: uno([1, 2]) }, molestias: uno(['avisar', 'moderada']), soloReps: { sube: uno(['una_total', 'una_cada_serie']) }, porSerie: { variasAlTope: uno(['todas', 'primera', 'faciles']), sinKilos: uno(['no_tocar', 'solo_reps', 'como_los_demas']), sobradoEn: uno(['basicos', 'todos', 'ninguno']) } } : null },
-      contexto: { diasSinEntrenar: azar() < 0.1 ? entre(0, 40) : null, focoAnterior: azar() < 0.1 ? 'descarga' : 'volumen', focoSiguiente: azar() < 0.1 ? 'descarga' : null, carga: azar() < 0.2 ? { ratio: 1.6 } : null,
+      contexto: { diasSinEntrenar: azar() < 0.1 ? entre(0, 40) : null, focoAnterior: azar() < 0.1 ? 'descarga' : 'volumen', focoSiguiente: ((x) => (x < 0.1 ? 'descarga' : x < 0.3 ? 'peaking' : null))(azar()), carga: azar() < 0.2 ? { ratio: 1.6 } : null,
         molestias: azar() < 0.3 ? [{ zona: uno(['hombros', 'cuadriceps', 'zona_lumbar', 'otra']), intensidad: entre(0, 3) }] : [], checkins: azar() < 0.4 ? [{ semana_inicio: '2026-10-19', energia: entre(1, 5), recuperacion: entre(1, 5) }, { semana_inicio: '2026-10-26', energia: entre(1, 5), recuperacion: entre(1, 5) }] : [] } });
     let r;
     try { r = proponerSemana(e); } catch (err) { problemas.push(`semana ${n}: ${err.stack.split('\n').slice(0, 3).join(' | ')}`); continue; }
@@ -599,6 +721,9 @@ console.log('\nMil semanas al azar');
         if (f.alternativas.length > 2) problemas.push(`semana ${n}, ${f.pauta_id}: más de dos alternativas`);
         if (f.modelo === 'a_mano' && (f.cambia || f.tipo !== 'sin_tocar')) problemas.push(`semana ${n}, ${f.pauta_id}: toca un ejercicio a mano`);
         if (f.cambia !== (f.cambios.length > 0)) problemas.push(`semana ${n}, ${f.pauta_id}: «cambia» no cuadra`);
+        // El peaking solo aparece en semanas con ese foco y en básicos, y nunca deja una serie sin repeticiones
+        if (f.fase === 'peaking' && (e.contexto.focoSiguiente !== 'peaking' || !ejercicios[f.ejercicio_id].tipo.includes('basico'))) problemas.push(`semana ${n}, ${f.pauta_id}: peaking donde no toca`);
+        if (f.fase === 'peaking' && ((f.propuesta.series_detalle || []).some((x) => x.reps != null && x.reps < 1) || (f.propuesta.reps_min != null && f.propuesta.reps_min < 1))) problemas.push(`semana ${n}, ${f.pauta_id}: peaking por debajo de una repetición`);
         const mas = (c) => f.propuesta[c] != null && f.antes[c] != null && f.propuesta[c] > f.antes[c] + 0.001;
         // Nunca sube dos cosas a la vez sobre lo que hizo (se compara con la carga de trabajo, no con la pautada)
         if (r.semana.tipo === 'normal' && !r.semana.retoma && lista === r.filas && mas('series') && f.tipo !== 'series') problemas.push(`semana ${n}, ${f.pauta_id}: suben las series sin ser ese el cambio (${f.tipo})`);

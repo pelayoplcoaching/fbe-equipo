@@ -6,11 +6,11 @@
 import { useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, Cargando } from '../comunes.jsx';
 import { sumarDias } from '../../logica/fechas.js';
-import { proponerSemana, entradaDesdeBloque, pautasDeSemana, emparejar, cambiosDePropuesta, diferencias, textoPauta, NOMBRE_DESCARGA } from '../../logica/motor/index.js';
+import { proponerSemana, entradaDesdeBloque, pautasDeSemana, emparejar, cambiosDePropuesta, diferencias, textoPauta, esBasico, NOMBRE_DESCARGA } from '../../logica/motor/index.js';
 
 const TIPO = {
   subir: ['Sube kilos', 'ok'], reps: ['Más repeticiones', 'morado'], series: ['Una serie más', 'morado'], mantener: ['Igual', ''], bajar: ['Baja kilos', 'aviso'],
-  tope: ['Al tope', 'aviso'], sin_tocar: ['A mano', ''], descarga: ['Descarga', 'aviso'], vuelta: ['Vuelta', 'aviso'], mantenimiento: ['Mantenimiento', ''],
+  tope: ['Al tope', 'aviso'], peaking: ['Menos repeticiones', 'morado'], sin_tocar: ['A mano', ''], descarga: ['Descarga', 'aviso'], vuelta: ['Vuelta', 'aviso'], mantenimiento: ['Mantenimiento', ''],
 };
 const CONFIANZA = { alta: ['Confianza alta', 'ok'], media: ['Confianza media', 'aviso'], baja: ['Confianza baja', ''] };
 
@@ -39,13 +39,17 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
     return { checkins: [previa?.checkin, esa?.checkin].filter(Boolean), molestias: (esa?.molestias || []).map((m) => ({ ...m, semana_inicio: lunes })) };
   }, [atleta?.id, base.id]);
 
+  // Peaking: de partida, lo que diga el foco de la semana que se programa; se puede probar aquí sin cambiar el foco
+  const [pico, setPico] = useState(destino.foco === 'peaking');
   const calculo = useMemo(() => {
     if (!contexto.datos) return null;
-    const entrada = entradaDesdeBloque({ d, base, destino, ejercicios, atleta: { nivel: atleta?.nivel ?? null, volumen_objetivo: atleta?.volumen_objetivo ?? null }, checkins: contexto.datos.checkins, molestias: contexto.datos.molestias });
+    const leida = entradaDesdeBloque({ d, base, destino, ejercicios, atleta: { nivel: atleta?.nivel ?? null, volumen_objetivo: atleta?.volumen_objetivo ?? null }, checkins: contexto.datos.checkins, molestias: contexto.datos.molestias });
+    const foco = leida.contexto.focoSiguiente;
+    const entrada = { ...leida, contexto: { ...leida.contexto, focoSiguiente: pico ? (foco === 'descarga' ? foco : 'peaking') : foco === 'peaking' ? null : foco } };
     const r = proponerSemana(entrada);
     const dest = pautasDeSemana(d, destino);
     return { r, entrada, dest, pares: emparejar(entrada.pautas, entrada.sesiones, dest.pautas, dest.sesiones) };
-  }, [contexto.datos, d, base.id, destino.id]);
+  }, [contexto.datos, d, base.id, destino.id, pico]);
 
   // otra: la versión alternativa de la semana (la de descarga si hay señales; la normal si la semana está marcada como descarga)
   const [otra, setOtra] = useState(false);
@@ -73,6 +77,9 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
   const sinPareja = dest.pautas.filter((p) => !Object.values(pares).some((q) => q.id === p.id));
   const publicada = destino.programacion === 'programada';
   const cambiarVersion = () => { setOtra((x) => !x); setEleccion({}); setMarcas(null); };
+  // El peaking solo tiene sentido si hay básicos con kilos y la semana no es de descarga, vuelta ni a medias
+  const puedePico = r.semana.tipo === 'normal' && entrada.pautas.some((p) => esBasico(ejercicios[p.ejercicio_id]));
+  const cambiarPico = () => { setPico((x) => !x); setOtra(false); setEleccion({}); setMarcas(null); };
 
   return (
     <Hoja titulo={`Programar la semana ${destino.numero} según FBE`} alCerrar={alCerrar} ancho={760}>
@@ -89,17 +96,31 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
           </div>
         </div>
       )}
-      {hayOtra && (
-        <button type="button" class="btn btn-peq" style="justify-self:start" aria-pressed={otra ? 'true' : 'false'} onClick={cambiarVersion}>
-          <Icono n="intercambiar" /> {esDescarga ? 'Ver la semana sin descarga' : 'Ver la semana como descarga'}
-        </button>
+      {r.semana.peaking != null && !otra && (
+        <p class="nota-coach" role="note"><Icono n="diana" /><span><strong>Semana de peaking.</strong> {r.semana.peaking
+          ? 'En los básicos, la serie top baja una repetición y lleva los kilos que mantienen el esfuerzo; las back-off y el resto de ejercicios siguen como siempre.'
+          : 'No hay ningún básico con kilos registrados del que partir: la propuesta es la de una semana normal.'}{destino.foco !== 'peaking' ? ` El foco de la semana ${destino.numero} no cambia: si quieres que conste, márcalo en el editor.` : ''}</span></p>
+      )}
+      {(hayOtra || puedePico) && (
+        <div class="fila-envolver">
+          {hayOtra && (
+            <button type="button" class="btn btn-peq" aria-pressed={otra ? 'true' : 'false'} onClick={cambiarVersion}>
+              <Icono n="intercambiar" /> {esDescarga ? 'Ver la semana sin descarga' : 'Ver la semana como descarga'}
+            </button>
+          )}
+          {puedePico && (
+            <button type="button" class="btn btn-peq" aria-pressed={pico ? 'true' : 'false'} onClick={cambiarPico}>
+              <Icono n="intercambiar" /> {pico ? 'Ver la semana sin peaking' : 'Ver la semana como peaking'}
+            </button>
+          )}
+        </div>
       )}
 
       {!filas.length ? <p class="peq">La semana {base.numero} no tiene ejercicios de fuerza de los que partir.</p> : (
         <>
           <div class="fila-envolver" style="align-items:center">
             <span class="chip ok num">{cuenta(['subir', 'series'])} suben</span>
-            <span class="chip num">{cuenta(['reps', 'mantener', 'tope', 'sin_tocar'])} siguen con su carga</span>
+            <span class="chip num">{cuenta(['reps', 'mantener', 'tope', 'peaking', 'sin_tocar'])} siguen con su carga</span>
             {cuenta(['bajar', 'descarga', 'vuelta', 'mantenimiento']) > 0 && <span class="chip aviso num">{cuenta(['bajar', 'descarga', 'vuelta', 'mantenimiento'])} bajan</span>}
           </div>
           <div class="selector-chips" role="group" aria-label="Qué marcar">
@@ -127,6 +148,7 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
                           <span class="fila-envolver" style="align-items:center;gap:6px">
                             <strong>{f.ejercicio}</strong>
                             <span class={`chip ${cTipo}`}>{tTipo}</span>
+                            {f.fase === 'peaking' && <span class="chip morado">Peaking</span>}
                             <span class={`chip ${cConf}`}>{tConf}</span>
                           </span>
                           <span class="mini secundario">Hizo: {f.hecho || 'sin registrar'}</span>

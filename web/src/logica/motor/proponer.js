@@ -11,7 +11,7 @@
 //   reglas     { fbe, atleta, bloque, porEjercicio: { ejercicio_id: {…} }, porPauta: { pauta_id: {…} } } capas ya limpias
 //   contexto   { checkins, molestias, carga: { ratio }, diasSinEntrenar, focoAnterior, focoSiguiente, semanasDesdeDescarga }
 import { seriesPautadasPorGrupo, rangoVolumen, esBarra, NOMBRE_ZONA } from '../calculos.js';
-import { resolverReglas, fusionar, modeloDe, NOMBRE_MODELO } from './reglas.js';
+import { resolverReglas, fusionar, modeloDe, esBasico, NOMBRE_MODELO } from './reglas.js';
 import { leerEjercicio, tendencia, SIN_DATOS } from './lectura.js';
 import { MODELO, CAMPOS, campos, falloLineal } from './modelos.js';
 import { senalesDescarga, aplicarDescarga, motivoDescarga, tramoVuelta, aplicarVuelta, motivoVuelta, aplicarMantenimiento, esMalDia, NOMBRE_DESCARGA } from './semana.js';
@@ -77,6 +77,8 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
   const tramo = dias != null && dias >= generales.frenos.paron ? tramoVuelta(dias, generales) : null;
   const modo = tramo ? 'vuelta' : generales.mantenimiento.activo ? 'mantenimiento' : total > 0 && hechas / total < generales.frenos.semanaAMedias ? 'repetir' : 'normal';
   const retoma = modo === 'normal' && contexto.focoAnterior === 'descarga';
+  // Peaking: lo marca el coach con el foco de la semana que se programa
+  const pico = modo === 'normal' && contexto.focoSiguiente === 'peaking';
   const ultimoCheckin = [...(contexto.checkins || [])].filter((c) => c?.semana_inicio).sort((a, b) => (a.semana_inicio < b.semana_inicio ? -1 : 1)).pop() || null;
   const umbral = generales.frenos.checkinBajo;
   const checkinBajo = !!ultimoCheckin && ((ultimoCheckin.energia != null && ultimoCheckin.energia <= umbral) || (ultimoCheckin.recuperacion != null && ultimoCheckin.recuperacion <= umbral));
@@ -127,7 +129,8 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
       const todasLasSeries = [...previas.map((h) => Number(h.pauta.series) || 0), Number(pautaBase.series) || 0].filter((x) => x > 0);
       const seriesMin = R.triple.seriesMin ?? (todasLasSeries.length ? Math.min(...todasLasSeries) : null);
       const seriesMax = R.triple.seriesMax ?? (seriesMin != null ? seriesMin + R.triple.seriesExtra : null);
-      r = MODELO[modelo](l, pautaBase, { nombre, reglas: R, previa, fallosPrevios, bajadasPrevias, seriesMin, seriesMax, ejercicio: ej, nivel: atleta.nivel ?? null });
+      r = MODELO[modelo](l, pautaBase, { nombre, reglas: R, previa, fallosPrevios, bajadasPrevias, seriesMin, seriesMax, ejercicio: ej, nivel: atleta.nivel ?? null,
+        peaking: pico, topSet: modelo === 'top_set' || (modelo === 'por_serie' && R.topSet.detectar && esBasico(ej)) });
       if (retoma) { r = { ...r, motivo: `Tras la descarga, sigue desde la última semana normal. ${r.motivo}` }; frenos.push({ id: 'tras_descarga', texto: 'Tras una descarga' }); }
       if (pendiente) r = { ...r, avisos: [...r.avisos, `El modelo «${NOMBRE_MODELO[pedido]}» aún no está disponible: se usa «${NOMBRE_MODELO[modelo]}»`] };
       const volver = () => r.alternativas.find((a) => a.id === 'mantener')?.propuesta || campos(pautaBase);
@@ -188,7 +191,7 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
     const cambios = cambiosDe(f.antes, propuesta);
     propuesta = r.tipo === 'sin_tocar' ? propuesta : enEscala(propuesta, R.escala);
     const { _l, _r, _R, _p, _previa, _pendiente, _sinHistorial, ...publica } = f;
-    return { ...publica, tipo: r.tipo, propuesta, cambios, cambia: cambios.length > 0, motivo: r.motivo, orientativa: r.orientativa ?? null,
+    return { ...publica, tipo: r.tipo, ...(r.fase ? { fase: r.fase } : {}), propuesta, cambios, cambia: cambios.length > 0, motivo: r.motivo, orientativa: r.orientativa ?? null,
       confianza: confianzaDe({ modo, l: _l, r, frenos, previa: _previa, pendiente: _pendiente, sinHistorial: _sinHistorial }), frenos,
       alternativas: (r.alternativas || []).slice(0, 2).map((a) => ({ ...a, propuesta: r.tipo === 'sin_tocar' ? a.propuesta : enEscala(conTope(a.propuesta, R.rpeMax ?? null)[0], R.escala) })) };
   };
@@ -217,10 +220,11 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
     semana: {
       tipo: esDescarga ? 'descarga' : modo,
       ...(retoma ? { retoma: true } : {}),
+      ...(pico && !esDescarga ? { peaking: finales.filter((f) => f.fase === 'peaking').length } : {}),
       motivo: esDescarga ? (pedida ? 'La semana está marcada como descarga' : `Toca descarga programada (cada ${d.cadaSemanas} semanas)`)
         : modo === 'vuelta' ? `Parón de ${dias} días` : modo === 'repetir' ? `Hizo ${hechas} de ${total} sesiones` : modo === 'mantenimiento' ? 'Mantenimiento activo' : null,
       resumen: {
-        suben: cuenta(finales, ['subir', 'series']), mantienen: cuenta(finales, ['reps', 'mantener', 'tope', 'sin_tocar']), bajan: cuenta(finales, ['bajar', 'descarga', 'vuelta', 'mantenimiento']),
+        suben: cuenta(finales, ['subir', 'series']), mantienen: cuenta(finales, ['reps', 'mantener', 'tope', 'peaking', 'sin_tocar']), bajan: cuenta(finales, ['bajar', 'descarga', 'vuelta', 'mantenimiento']),
         confianza: { alta: finales.filter((f) => f.confianza === 'alta').length, media: finales.filter((f) => f.confianza === 'media').length, baja: finales.filter((f) => f.confianza === 'baja').length },
         seriesPorGrupo: { antes, despues: seriesPautadasPorGrupo(finales.map((f) => ({ ejercicio_id: f.ejercicio_id, series: f.propuesta.series })), ejercicios) },
       },

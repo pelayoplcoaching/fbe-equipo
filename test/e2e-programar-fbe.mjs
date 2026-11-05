@@ -1,6 +1,6 @@
 // «Programar según FBE» (fase 1a), en la demo: el coach abre el programa de una atleta, pide la propuesta para la
 // semana en borrador, la revisa (lo que hizo, lo propuesto, el motivo, la confianza), elige una alternativa, aplica y
-// comprueba que la semana sigue en borrador con las pautas cambiadas. En escritorio y a 360 px en oscuro, sin errores
+// comprueba que la semana sigue en borrador con las pautas cambiadas. También la vista de peaking. En escritorio y a 360 px en oscuro, sin errores
 // de consola, sin desbordes y sin fallos de accesibilidad.
 //   Suelta:  npm run build && node test/e2e-programar-fbe.mjs   (CHROME_PATH si Chrome no está en /opt/google/chrome/chrome)
 //   Dentro de e2e.test.mjs:  const { probarProgramarFBE } = await import('./e2e-programar-fbe.mjs'); await probarProgramarFBE({ navegador, check });
@@ -74,6 +74,21 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     check(await hoja.locator('.carga-sug input[type=checkbox]').count() >= 1 && /→/.test(texto), 'las filas que cambian se pueden marcar y enseñan el antes y el después');
     await foto('fbe-1-hoja-escritorio');
     await revisar('hoja-escritorio');
+
+    // Ver la semana como peaking: en los básicos baja la top y se dice; al quitarlo, vuelve la propuesta normal
+    const comoPico = hoja.getByRole('button', { name: 'Ver la semana como peaking', exact: true });
+    check(await comoPico.count() === 1, 'con básicos en la semana, se puede ver como peaking');
+    if (await comoPico.count()) {
+      await comoPico.click();
+      const enPico = await hay(hoja.getByText('Semana de peaking.'), 1);
+      const chips = await hoja.locator('.carga-sug .chip', { hasText: /^Peaking$/ }).count();
+      check(enPico && chips >= 1 && /por peaking/.test(await hoja.textContent()), `en peaking, los básicos lo dicen en su fila y en el motivo (${chips})`);
+      check(await hoja.getByRole('button', { name: 'Sin peaking', exact: true }).count() >= 1, 'y cada uno se puede dejar sin peaking de un toque');
+      await foto('fbe-4-peaking');
+      await revisar('hoja-peaking');
+      await hoja.getByRole('button', { name: 'Ver la semana sin peaking', exact: true }).click();
+      check(await hay(hoja.locator('.carga-sug .chip', { hasText: /^Peaking$/ }), 0) && await hoja.getByText('Semana de peaking.').count() === 0, 'al quitarlo vuelve la propuesta normal');
+    }
 
     // Marcar todas, elegir «Mantener» en una fila (deja de contar como cambio) y volver a la propuesta
     await hoja.getByRole('button', { name: 'Todas', exact: true }).click();

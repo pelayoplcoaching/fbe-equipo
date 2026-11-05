@@ -1,4 +1,4 @@
-// «Programar según FBE» (motor de progresión, fase 0): las reglas.
+// «Programar según FBE» (motor de progresión): las reglas.
 // Todo lo que el motor decide sale de aquí. Son valores de partida («reglas FBE») que el coach puede cambiar
 // para un atleta, un bloque o un ejercicio; manda siempre lo más cercano al ejercicio:
 //   reglas FBE → perfil del atleta (por su nivel) → atleta → bloque → ejercicio
@@ -13,7 +13,7 @@ export const MODELOS = [
 export const NOMBRE_MODELO = Object.fromEntries(MODELOS);
 // Los que ya decide el motor. El resto llega en fases posteriores: mientras tanto se usa el modelo de partida
 // y la fila lo dice (modelo pedido y modelo usado).
-export const MODELOS_DISPONIBLES = ['por_serie', 'doble', 'triple', 'lineal', 'solo_reps', 'mantener', 'a_mano'];
+export const MODELOS_DISPONIBLES = ['por_serie', 'top_set', 'doble', 'triple', 'lineal', 'solo_reps', 'mantener', 'a_mano'];
 // El modelo de partida, y el que se usa mientras el pedido no esté disponible
 export const MODELO_BASE = 'por_serie';
 
@@ -38,6 +38,23 @@ export const REGLAS_FBE = Object.freeze({
     variasAlTope: 'faciles', // 'todas' | 'primera' | 'faciles' (todas las de RPE ≤ topeFacilRpe; del resto, solo la primera)
     topeFacilRpe: 8,
     sinKilos: 'solo_reps',  // donde por el nivel la carga la elige el atleta: 'no_tocar' | 'solo_reps' | 'como_los_demas'
+  },
+  // Serie top + back-off y peaking en los básicos (decisiones de Pelayo del 5/11/2026, con sus datos delante; ver
+  // topset.js). Top = la serie o series a la carga más alta; back-off = las demás.
+  topSet: {
+    detectar: true,       // un básico cuya primera serie es la más pesada se trata como top + back-off sin pedirlo
+    backoff: 'faciles',   // 'faciles' (igual, salvo RPE ≤ backoffFacilRpe: suben kilos) | 'solas' (como cualquier serie) | 'igual' (nunca se tocan)
+    backoffFacilRpe: 7,
+    peaking: {
+      cuando: 'foco',      // 'foco' (las semanas con foco «peaking») | 'nunca'
+      reps: 1,             // repeticiones que baja la top cada semana
+      suelo: 1,            // hasta cuántas repeticiones baja; al llegar, solo se ajustan los kilos
+      kilos: 'calculados', // 'calculados' (los que mantienen el esfuerzo, desde el 1RM estimado) | 'salto' (un salto fijo)
+      rpe: 'hecho',        // el esfuerzo que se mantiene: 'hecho' (el RPE al que le salió la top) | 'pauta' (el pautado; si no lo hay, el que hizo)
+      rpeMin: 8,           // … que nunca baja de aquí: una top fácil no se queda fácil
+      duraRpe: 9,          // por encima, la top se repite tal cual
+      maxPct: 10,          // tope de subida de kilos de una semana a otra
+    },
   },
   // Salto de carga: el del ejercicio (2,5 kg barra, 2 kg mancuernas, 2,5 o 5 kg máquinas), unos kilos fijos o un %
   salto: { tipo: 'ejercicio', valor: null },
@@ -131,6 +148,7 @@ const ESQUEMA = {
   modelo: UNO_DE(IDS_MODELO),
   salto: { tipo: UNO_DE(['ejercicio', 'kg', 'pct']), valor: NUM(0.25, 20) },
   porSerie: { rangoDeLaPauta: (v) => typeof v === 'boolean', sobradoRpe: NUM(5, 8.5), sobradoEn: UNO_DE(['basicos', 'todos', 'ninguno']), rpeSube: NUM(6, 10), variasAlTope: UNO_DE(['todas', 'primera', 'faciles']), topeFacilRpe: NUM(6, 10), sinKilos: UNO_DE(['no_tocar', 'solo_reps', 'como_los_demas']) },
+  topSet: { detectar: (v) => typeof v === 'boolean', backoff: UNO_DE(['faciles', 'solas', 'igual']), backoffFacilRpe: NUM(5, 8.5) },
   doble: { criterio: UNO_DE(CRITERIOS_SUBIDA), margen: NUM(0, 1), sobrado: UNO_DE([1, 2]), porDebajo: UNO_DE(['mantener', 'bajar_segunda', 'bajar_pct']), bajarPct: NUM(2.5, 20) },
   triple: { seriesMin: NUM(1, 10), seriesMax: NUM(1, 12), seriesExtra: NUM(1, 4) },
   lineal: { fallosAntesDeBajar: NUM(1, 3), bajadaPct: NUM(5, 15), bajadasParaSalir: NUM(1, 5) },
@@ -144,6 +162,7 @@ const ESQUEMA = {
   escala: UNO_DE(['rpe', 'rir', 'pauta']),
   rpeMax: NUM(5, 10),
 };
+const PEAKING = { cuando: UNO_DE(['foco', 'nunca']), reps: UNO_DE([1, 2]), suelo: UNO_DE([1, 2, 3, 4, 5]), kilos: UNO_DE(['calculados', 'salto']), rpe: UNO_DE(['pauta', 'hecho']), rpeMin: NUM(6, 9.5), duraRpe: NUM(8, 10), maxPct: NUM(2.5, 20) };
 const tramoVale = (t) => esObjeto(t) && NUM(1, 365)(t.desde) && NUM(0, 50)(t.kgPct) && NUM(0, 3)(t.series) && (t.rpeMax == null || NUM(5, 10)(t.rpeMax));
 
 // Limpia una capa de reglas (lo que escribe el coach o lo que viene de la base): se queda solo con lo que el motor
@@ -174,6 +193,21 @@ export function limpiarReglas(capa) {
       for (const [k2, v2] of Object.entries(v)) {
         if (v2 == null || k2 === 'rango' || k2 === 'rangos') continue;
         if (regla[k2] && regla[k2](v2)) dentro[k2] = v2; else descartado.push(`${k}.${k2}`);
+      }
+      if (Object.keys(dentro).length) reglas[k] = dentro;
+      continue;
+    }
+    // El peaking va un nivel más adentro
+    if (k === 'topSet' && esObjeto(v)) {
+      const dentro = {};
+      for (const [k2, v2] of Object.entries(v)) {
+        if (v2 == null) continue;
+        if (k2 === 'peaking') {
+          const pk = {};
+          if (esObjeto(v2)) for (const [k3, v3] of Object.entries(v2)) { if (v3 == null) continue; if (PEAKING[k3] && PEAKING[k3](v3)) pk[k3] = v3; else descartado.push(`topSet.peaking.${k3}`); }
+          else descartado.push('topSet.peaking');
+          if (Object.keys(pk).length) dentro.peaking = pk;
+        } else if (regla[k2] && regla[k2](v2)) dentro[k2] = v2; else descartado.push(`${k}.${k2}`);
       }
       if (Object.keys(dentro).length) reglas[k] = dentro;
       continue;
