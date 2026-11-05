@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.76': {
+    coach: [
+      '«Programar según FBE»: guarda reglas propias de cada atleta y de cada ejercicio desde la hoja de revisión. Necesita la migración 046.',
+    ],
+  },
   '0.75': {
     atleta: [
       'La barra de abajo ahora tiene cinco botones. Comidas, Check-in, Equipo y tu perfil están en «Más».',

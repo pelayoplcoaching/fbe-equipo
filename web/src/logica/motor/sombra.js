@@ -13,7 +13,8 @@ import { cargaBackoff, esTopBackoff, tieneDetalle, enReserva, num } from '../cal
 import { sumarDias } from '../fechas.js';
 import { proponerSemana } from './proponer.js';
 import { entradaDesdeBloque, pautasDeSemana, emparejar } from './adaptador.js';
-import { limpiarReglas } from './reglas.js';
+import { limpiarReglas, fusionar } from './reglas.js';
+import { leerGuardadas } from './guardadas.js';
 
 export const CLASES = ['sube_kilos', 'sube_reps', 'igual', 'baja'];
 export const NOMBRE_CLASE = { sube_kilos: 'Más kilos', sube_reps: 'Más repeticiones', igual: 'Igual', baja: 'Baja' };
@@ -92,7 +93,9 @@ const tipoDe = (ej) => { const t = Array.isArray(ej?.tipo) ? ej.tipo : []; retur
 // La prueba entera sobre una copia completa.
 //   reglas: capas { fbe, atleta, bloque, porEjercicio } (se limpian aquí) · soloAtletas: ids, para acotar
 //   ejemplos: cuántas diferencias de muestra guardar (sin nombres de atletas)
-export function sombraDeCopia(copia, { reglas = {}, soloAtletas = null, ejemplos = 0 } = {}) {
+//   sinGuardadas: no usar las reglas que cada atleta tenga guardadas en su ficha (de partida sí se usan, como en el
+//   editor; las de `reglas` mandan sobre ellas)
+export function sombraDeCopia(copia, { reglas = {}, soloAtletas = null, ejemplos = 0, sinGuardadas = false } = {}) {
   const capas = Object.fromEntries(['fbe', 'atleta', 'bloque'].filter((k) => reglas[k]).map((k) => [k, limpiarReglas(reglas[k]).reglas]));
   if (reglas.porEjercicio) capas.porEjercicio = Object.fromEntries(Object.entries(reglas.porEjercicio).map(([k, v]) => [k, limpiarReglas(v).reglas]));
   const ejercicios = Object.fromEntries((copia.ejercicios || []).map((e) => [e.id, e]));
@@ -109,6 +112,8 @@ export function sombraDeCopia(copia, { reglas = {}, soloAtletas = null, ejemplos
     if (soloAtletas && !soloAtletas.includes(at.id)) continue;
     const suyo = vacio();
     let paresSuyos = 0;
+    const g = sinGuardadas ? leerGuardadas(null) : leerGuardadas(at.reglas_motor);
+    const suyas = { ...capas, atleta: fusionar(g.atleta, capas.atleta), porEjercicio: { ...g.porEjercicio, ...(capas.porEjercicio || {}) } };
     for (const bloque of (copia.bloques || []).filter((b) => b.atleta_id === at.id && !b.es_plantilla)) {
       const d = bloqueDeCopia(copia, bloque, indices);
       for (let i = 0; i + 1 < d.semanas.length; i++) {
@@ -118,7 +123,7 @@ export function sombraDeCopia(copia, { reglas = {}, soloAtletas = null, ejemplos
         // Se mira como se habría visto al programar: solo lo anterior a la semana de destino, y «hoy» es su lunes
         const antes = { ...d, semanas: d.semanas.filter((w) => w.numero <= base.numero) };
         const hoy = destino.fecha_inicio || (base.fecha_inicio ? sumarDias(base.fecha_inicio, 7) : undefined);
-        const entrada = entradaDesdeBloque({ d: antes, base, destino, ejercicios, atleta: { nivel: at.nivel ?? null, volumen_objetivo: at.volumen_objetivo ?? null }, reglas: capas,
+        const entrada = entradaDesdeBloque({ d: antes, base, destino, ejercicios, atleta: { nivel: at.nivel ?? null, perfil: g.perfil, volumen_objetivo: at.volumen_objetivo ?? null }, reglas: suyas,
           checkins: checkins[at.id] || [], molestias: molestias[at.id] || [], ...(hoy ? { hoy } : {}) });
         const r = proponerSemana(entrada);
         pares.tipos[r.semana.tipo] = (pares.tipos[r.semana.tipo] || 0) + 1;
