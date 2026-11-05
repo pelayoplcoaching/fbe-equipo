@@ -4,12 +4,15 @@
 // (que sigue como estaba: en borrador, si lo era). Nunca publica nada.
 // Las reglas son las de partida (por nivel) más las que el coach guarde para ese atleta y para cada ejercicio suyo
 // (fase 1b: `atletas.reglas_motor`; se cambian aquí mismo y la propuesta se recalcula al guardar).
+// Al aplicar se guarda también la nota de la semana, si se ha cambiado (con un borrador de lo que cambia), y queda
+// apuntado en la semana qué propuso el motor y qué se aplicó (`semanas.propuesta_motor`), para medir el acuerdo real.
 import { useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, Cargando } from '../comunes.jsx';
-import { sumarDias } from '../../logica/fechas.js';
+import { sumarDias, fmtCorta } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
 import { proponerSemana, entradaDesdeBloque, pautasDeSemana, emparejar, cambiosDePropuesta, diferencias, textoPauta, esBasico, compararVolumen, pautasConPropuestas, NOMBRE_DESCARGA,
-  leerGuardadas, paraGuardar, paraElMotor, tieneRegla, resumenRegla } from '../../logica/motor/index.js';
+  leerGuardadas, paraGuardar, paraElMotor, tieneRegla, resumenRegla,
+  notaDeSemana, claseParaNota, registroDePropuesta, fusionarRegistro, leerRegistro, acuerdoDeRegistro, textoAcuerdo } from '../../logica/motor/index.js';
 import { ReglasAtleta, ReglaEjercicio } from './ReglasFBE.jsx';
 
 const TIPO = {
@@ -51,6 +54,7 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
   const guardadas = useMemo(() => propias || leerGuardadas(contexto.datos?.reglas), [propias, contexto.datos]);
   const [ocupado, setOcupado] = useState(false);
   const [editando, setEditando] = useState(null); // la fila cuya regla se está cambiando
+  const [nota, setNota] = useState(null);         // la nota de la semana; null: la que ya tiene
 
   // Peaking: de partida, lo que diga el foco de la semana que se programa; se puede probar aquí sin cambiar el foco
   const [pico, setPico] = useState(destino.foco === 'peaking');
@@ -98,6 +102,27 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
   // El peaking solo tiene sentido si hay básicos con kilos y la semana no es de descarga, vuelta ni a medias
   const puedePico = r.semana.tipo === 'normal' && entrada.pautas.some((p) => esBasico(ejercicios[p.ejercicio_id]));
   const cambiarPico = () => { setPico((x) => !x); setOtra(false); setEleccion({}); setMarcas(null); };
+  // La nota de la semana para el atleta: la que tenga, con un borrador de lo que cambia según lo marcado
+  const notaGuardada = destino.nota_coach || '';
+  const textoNota = nota ?? notaGuardada;
+  const notaCambiada = textoNota.trim() !== notaGuardada.trim();
+  const borrador = notaDeSemana({ semana: esDescarga ? 'descarga' : r.semana.tipo, descarga: r.descarga.tipo, total: dest.pautas.length,
+    filas: vistas.filter((v) => marcadas.has(v.f.pauta_id)).map((v) => ({ ejercicio: v.f.ejercicio, clase: claseParaNota({ fila: v.f, alternativa: v.alternativa, propuesta: v.propuesta, hechas: entrada.series[v.f.pauta_id] }) })).filter((x) => x.clase) });
+  // Lo que ya se aplicó en esta semana, si quedó apuntado
+  const registro = leerRegistro(destino.propuesta_motor);
+  const aplicar = async () => {
+    setOcupado(true);
+    try {
+      const lista = vistas.filter((v) => marcadas.has(v.f.pauta_id)).map((v) => ({ id: v.actual.id, cambios: cambiosDePropuesta(v.propuesta) }));
+      if (notaCambiada) await api.actualizar('semanas', destino.id, { nota_coach: textoNota.trim() || null });
+      // Qué se propuso y qué se aplicó: si la base aún no tiene esa columna, no pasa nada
+      if (lista.length) {
+        const nuevo = registroDePropuesta({ vistas, marcadas, base, semana: r.semana, descarga: esDescarga, guardadas });
+        await api.actualizar('semanas', destino.id, { propuesta_motor: fusionarRegistro(registro, nuevo) }).catch(() => {});
+      }
+      await alAplicar(lista, { nota: notaCambiada });
+    } catch (e) { aviso(e?.message || 'No se ha podido guardar', 'error'); } finally { setOcupado(false); }
+  };
   // Guardar las reglas en la ficha del atleta: la propuesta se recalcula con ellas y se vuelve a marcar de partida
   const guardarReglas = async (nuevas) => {
     setOcupado(true);
@@ -117,6 +142,7 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
     <Hoja titulo={`Programar la semana ${destino.numero} según FBE`} alCerrar={alCerrar} ancho={760}>
       <p class="peq secundario">A partir de lo que registró en la semana {base.numero}. Marca lo que quieras aplicar; lo demás se queda como está en la semana {destino.numero}.
         {publicada ? ' ' : ' La semana sigue en borrador: el atleta no ve nada hasta que la publiques.'}</p>
+      {registro && <p class="mini secundario">Ya aplicaste una propuesta en esta semana el {fmtCorta(registro.en.slice(0, 10))}. {textoAcuerdo(acuerdoDeRegistro(registro, Object.fromEntries(dest.pautas.map((p) => [p.id, p]))))}</p>}
       {publicada && <p class="banda-conexion" role="note"><Icono n="alerta" /><span>La semana {destino.numero} ya está publicada: lo que apliques lo verá el atleta en cuanto se guarde.</span></p>}
       {r.semana.motivo && r.semana.tipo !== 'normal' && !otra && (
         <p class="nota-coach" role="note"><Icono n="diana" /><span><strong>{{ descarga: 'Semana de descarga', vuelta: 'Vuelta tras un parón', repetir: 'Semana a medias: se repite', mantenimiento: 'Mantenimiento' }[r.semana.tipo]}.</strong> {r.semana.motivo}.</span></p>
@@ -231,10 +257,22 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
           {r.semana.avisos.map((a) => <p key={a.texto} class="mini secundario">{a.texto}.</p>)}
         </>
       )}
+      {filas.length > 0 && (
+        <div class="campo">
+          <label for="fbe-nota">Nota de la semana {destino.numero} para {contexto.datos?.nombre || 'el atleta'}</label>
+          <textarea id="fbe-nota" class="area" style="min-height:76px" maxLength={1000} value={textoNota} placeholder="Aparece arriba en su pantalla de hoy" onInput={(e) => setNota(e.currentTarget.value)} />
+          <span class="ayuda">Borrador con lo marcado: «{borrador}»</span>
+          <div class="fila-envolver">
+            <button type="button" class="btn btn-peq" disabled={textoNota.trim() === borrador} onClick={() => setNota(borrador)}>Usar el borrador</button>
+            {notaCambiada && <button type="button" class="btn btn-peq" onClick={() => setNota(null)}>{notaGuardada ? 'Volver a la nota que tenía' : 'Dejarla vacía'}</button>}
+          </div>
+          <span class="ayuda">{notaCambiada ? `La nota se guarda con el botón de abajo${publicada ? ' y el atleta la ve al momento.' : '; el atleta la verá cuando publiques la semana.'}` : 'Si la cambias, se guarda con el botón de abajo.'}</span>
+        </div>
+      )}
       <div class="fila-envolver">
         <button class="btn" onClick={alCerrar}>Cancelar</button>
-        <button class="btn btn-primario" disabled={!marcadas.size} onClick={() => alAplicar(vistas.filter((v) => marcadas.has(v.f.pauta_id)).map((v) => ({ id: v.actual.id, cambios: cambiosDePropuesta(v.propuesta) })))}>
-          <Icono n="hecho" /> {marcadas.size ? `Aplicar ${marcadas.size} ${marcadas.size === 1 ? 'cambio' : 'cambios'}` : 'Marca lo que quieras aplicar'}
+        <button class="btn btn-primario" disabled={ocupado || (!marcadas.size && !notaCambiada)} onClick={aplicar}>
+          <Icono n="hecho" /> {marcadas.size ? `Aplicar ${marcadas.size} ${marcadas.size === 1 ? 'cambio' : 'cambios'}${notaCambiada ? ' y guardar la nota' : ''}` : notaCambiada ? 'Guardar la nota' : 'Marca lo que quieras aplicar'}
         </button>
       </div>
     </Hoja>

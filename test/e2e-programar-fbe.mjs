@@ -180,6 +180,17 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     await p.setViewportSize({ width: 1280, height: 900 });
     await p.emulateMedia({ colorScheme: null, reducedMotion: null });
 
+    // La nota de la semana: el borrador dice lo que cambia con lo marcado, se puede editar y se guarda al aplicar
+    const campoNota = hoja.getByLabel(/^Nota de la semana \d+ para Ana López$/);
+    check(await campoNota.count() === 1 && /Borrador con lo marcado: «Esta semana subes kilos en /.test(await hoja.textContent()), 'la hoja trae un borrador de la nota de la semana con lo que cambia');
+    await hoja.getByRole('button', { name: 'Usar el borrador', exact: true }).click();
+    const textoBorrador = await campoNota.inputValue();
+    await campoNota.fill(`${textoBorrador} Y descansa bien.`);
+    check(/^Esta semana subes kilos en .+\. El resto, igual que la semana pasada\.$/.test(textoBorrador) && /y guardar la nota$/.test((await aplicar.textContent()).trim()), 'el borrador se usa de un toque, se edita y el botón dice que también guarda la nota');
+    await campoNota.scrollIntoViewIfNeeded();
+    await foto('fbe-9-nota');
+    await revisar('hoja-nota');
+
     // Aplicar: la hoja se cierra, la semana sigue siendo la misma y en borrador, y hay pautas serie a serie nuevas
     const n = Number((await aplicar.textContent()).match(/\d+/)?.[0] || 0);
     await aplicar.click();
@@ -189,12 +200,24 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     check(ahora === antes && /Borrador/.test(ahora), `la semana sigue en borrador tras aplicar ${n} cambios (${ahora})`);
     check(await p.getByText('Borrador: el atleta no verá esta semana hasta que la publiques.').count() === 1, 'nada se ha publicado');
     await foto('fbe-3-editor-despues');
+    check(await p.getByLabel('Nota para el atleta').inputValue() === `${textoBorrador} Y descansa bien.`, 'la nota queda guardada en la semana y el editor la enseña');
     // Volver a abrir: lo aplicado ya no sale como cambio
     await boton.click();
     await hoja.locator('.carga-sug').first().waitFor();
     await hoja.getByRole('button', { name: 'Todas', exact: true }).click();
     const quedan = Number((await hoja.locator('.btn-primario').textContent()).match(/\d+/)?.[0] || 0);
     check(quedan === 0, `al volver a abrir no queda nada por aplicar (${quedan})`);
+    check(new RegExp(`Ya aplicaste una propuesta en esta semana el .+\\. Aplicaste ${n} de ${n} propuestas`).test(await hoja.textContent()) || /Ya aplicaste una propuesta en esta semana el .+\. Aplicaste \d+ de \d+ propuestas/.test(await hoja.textContent()),
+      'queda apuntado qué se propuso y qué se aplicó, y la hoja lo recuerda');
+    // Solo la nota: sin nada marcado, el botón guarda la nota y nada más
+    await hoja.getByLabel(/^Nota de la semana \d+ para Ana López$/).fill('Semana tranquila.');
+    check((await hoja.locator('.btn-primario').textContent()).trim() === 'Guardar la nota', 'sin cambios que aplicar, se puede guardar solo la nota');
+    await hoja.locator('.btn-primario').click();
+    check(await hay(p.getByRole('dialog'), 0) && await hay(p.getByText(/Nota guardada en la semana \d+/), 1), 'y lo dice al guardarla');
+    await p.waitForTimeout(600);
+    check(await p.getByLabel('Nota para el atleta').inputValue() === 'Semana tranquila.', 'el editor enseña la nota nueva');
+    await boton.click();
+    await hoja.locator('.carga-sug').first().waitFor();
     await hoja.getByRole('button', { name: 'Cancelar', exact: true }).click();
 
     // En una semana hecha y con la siguiente ya creada, el botón lleva a la siguiente
