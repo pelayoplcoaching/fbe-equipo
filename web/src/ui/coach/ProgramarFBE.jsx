@@ -2,12 +2,15 @@
 // que el atleta hizo en la semana `base`; aquí se ve, ejercicio a ejercicio, lo que hizo, lo que se propone, el motivo,
 // la confianza y las alternativas, y se elige qué aplicar. Aplicar solo cambia las pautas de la semana de destino
 // (que sigue como estaba: en borrador, si lo era). Nunca publica nada.
-// Usa las reglas FBE de partida (por nivel); las reglas por atleta y por ejercicio llegan con su migración.
+// Las reglas son las de partida (por nivel) más las que el coach guarde para ese atleta y para cada ejercicio suyo
+// (fase 1b: `atletas.reglas_motor`; se cambian aquí mismo y la propuesta se recalcula al guardar).
 import { useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, Cargando } from '../comunes.jsx';
 import { sumarDias } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
-import { proponerSemana, entradaDesdeBloque, pautasDeSemana, emparejar, cambiosDePropuesta, diferencias, textoPauta, esBasico, compararVolumen, pautasConPropuestas, NOMBRE_DESCARGA } from '../../logica/motor/index.js';
+import { proponerSemana, entradaDesdeBloque, pautasDeSemana, emparejar, cambiosDePropuesta, diferencias, textoPauta, esBasico, compararVolumen, pautasConPropuestas, NOMBRE_DESCARGA,
+  leerGuardadas, paraGuardar, paraElMotor, tieneRegla, resumenRegla } from '../../logica/motor/index.js';
+import { ReglasAtleta, ReglaEjercicio } from './ReglasFBE.jsx';
 
 const TIPO = {
   subir: ['Sube kilos', 'ok'], reps: ['Más repeticiones', 'morado'], series: ['Una serie más', 'morado'], mantener: ['Igual', ''], bajar: ['Baja kilos', 'aviso'],
@@ -31,26 +34,37 @@ export function semanasParaProgramar(d, semana) {
 }
 
 export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, alAplicar }) {
-  const { api } = useApp();
-  // El check-in y las molestias de la semana hecha (y el check-in de la anterior, para las señales de descarga)
+  const { api, aviso } = useApp();
+  // El check-in y las molestias de la semana hecha (y el check-in de la anterior, para las señales de descarga), y la
+  // ficha del atleta, de donde salen su nombre y sus reglas guardadas
   const contexto = useCarga(async () => {
     const lunes = base.fecha_inicio;
-    if (!atleta?.id || !lunes) return { checkins: [], molestias: [] };
+    const ficha = atleta?.id ? await api.ficha(atleta.id).then((x) => x?.atleta || null).catch(() => null) : null;
+    const suyo = { nombre: ficha?.nombre || null, reglas: ficha?.reglas_motor ?? null };
+    if (!atleta?.id || !lunes) return { checkins: [], molestias: [], ...suyo };
     const [esa, previa] = await Promise.all([api.checkin(atleta.id, lunes).catch(() => null), api.checkin(atleta.id, sumarDias(lunes, -7)).catch(() => null)]);
-    return { checkins: [previa?.checkin, esa?.checkin].filter(Boolean), molestias: (esa?.molestias || []).map((m) => ({ ...m, semana_inicio: lunes })) };
+    return { checkins: [previa?.checkin, esa?.checkin].filter(Boolean), molestias: (esa?.molestias || []).map((m) => ({ ...m, semana_inicio: lunes })), ...suyo };
   }, [atleta?.id, base.id]);
+
+  // Las reglas guardadas del atleta: las de su ficha hasta que se cambien aquí
+  const [propias, setPropias] = useState(null);
+  const guardadas = useMemo(() => propias || leerGuardadas(contexto.datos?.reglas), [propias, contexto.datos]);
+  const [ocupado, setOcupado] = useState(false);
+  const [editando, setEditando] = useState(null); // la fila cuya regla se está cambiando
 
   // Peaking: de partida, lo que diga el foco de la semana que se programa; se puede probar aquí sin cambiar el foco
   const [pico, setPico] = useState(destino.foco === 'peaking');
   const calculo = useMemo(() => {
     if (!contexto.datos) return null;
-    const leida = entradaDesdeBloque({ d, base, destino, ejercicios, atleta: { nivel: atleta?.nivel ?? null, volumen_objetivo: atleta?.volumen_objetivo ?? null }, checkins: contexto.datos.checkins, molestias: contexto.datos.molestias });
+    const suyas = paraElMotor(guardadas);
+    const leida = entradaDesdeBloque({ d, base, destino, ejercicios, atleta: { nivel: atleta?.nivel ?? null, perfil: suyas.perfil, volumen_objetivo: atleta?.volumen_objetivo ?? null }, reglas: suyas.reglas,
+      checkins: contexto.datos.checkins, molestias: contexto.datos.molestias });
     const foco = leida.contexto.focoSiguiente;
     const entrada = { ...leida, contexto: { ...leida.contexto, focoSiguiente: pico ? (foco === 'descarga' ? foco : 'peaking') : foco === 'peaking' ? null : foco } };
     const r = proponerSemana(entrada);
     const dest = pautasDeSemana(d, destino);
     return { r, entrada, dest, pares: emparejar(entrada.pautas, entrada.sesiones, dest.pautas, dest.sesiones) };
-  }, [contexto.datos, d, base.id, destino.id, pico]);
+  }, [contexto.datos, d, base.id, destino.id, pico, guardadas]);
 
   // otra: la versión alternativa de la semana (la de descarga si hay señales; la normal si la semana está marcada como descarga)
   const [otra, setOtra] = useState(false);
@@ -84,6 +98,20 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
   // El peaking solo tiene sentido si hay básicos con kilos y la semana no es de descarga, vuelta ni a medias
   const puedePico = r.semana.tipo === 'normal' && entrada.pautas.some((p) => esBasico(ejercicios[p.ejercicio_id]));
   const cambiarPico = () => { setPico((x) => !x); setOtra(false); setEleccion({}); setMarcas(null); };
+  // Guardar las reglas en la ficha del atleta: la propuesta se recalcula con ellas y se vuelve a marcar de partida
+  const guardarReglas = async (nuevas) => {
+    setOcupado(true);
+    try {
+      const valor = paraGuardar(nuevas);
+      await api.actualizar('atletas', atleta.id, { reglas_motor: valor });
+      setPropias(leerGuardadas(valor)); setEleccion({}); setMarcas(null);
+      aviso(valor ? 'Reglas guardadas' : 'Reglas de partida');
+      return true;
+    } catch (e) {
+      aviso(/reglas_motor|schema cache|column|columna/i.test(e?.message || '') ? 'Para guardar reglas falta aplicar en la base la migración de las reglas del motor' : (e?.message || 'No se han podido guardar las reglas'), 'error');
+      return false;
+    } finally { setOcupado(false); }
+  };
 
   return (
     <Hoja titulo={`Programar la semana ${destino.numero} según FBE`} alCerrar={alCerrar} ancho={760}>
@@ -120,6 +148,8 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
         </div>
       )}
 
+      {atleta?.id && <ReglasAtleta nombre={contexto.datos?.nombre} nivel={atleta?.nivel ?? null} guardadas={guardadas} ocupado={ocupado} alGuardar={guardarReglas} />}
+
       {!filas.length ? <p class="peq">La semana {base.numero} no tiene ejercicios de fuerza de los que partir.</p> : (
         <>
           <div class="fila-envolver" style="align-items:center">
@@ -154,6 +184,7 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
                             <span class={`chip ${cTipo}`}>{tTipo}</span>
                             {f.fase === 'peaking' && <span class="chip morado">Peaking</span>}
                             <span class={`chip ${cConf}`}>{tConf}</span>
+                            {tieneRegla(guardadas, f.ejercicio_id) && <span class="chip morado">Regla propia</span>}
                           </span>
                           <span class="mini secundario">Hizo: {f.hecho || 'sin registrar'}</span>
                           {!actual ? <span class="mini secundario">Este ejercicio ya no está en la semana {destino.numero}: no se aplica.</span>
@@ -161,6 +192,10 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
                               : <span class="mini secundario">Sin cambios: {textoPauta(actual)}</span>}
                           <span class="mini secundario">{f.motivo}{f.orientativa != null ? ` (carga orientativa: ${String(f.orientativa).replace('.', ',')} kg)` : ''}</span>
                           {notas.length > 0 && <span class="fila-envolver" style="gap:6px">{notas.map((t) => <span key={t} class="chip aviso">{t}</span>)}</span>}
+                          {tieneRegla(guardadas, f.ejercicio_id) && editando !== f.pauta_id && <span class="mini secundario">Regla propia: {resumenRegla(guardadas, f.ejercicio_id)}.</span>}
+                          {atleta?.id && (editando === f.pauta_id
+                            ? <ReglaEjercicio clave={f.pauta_id} ejercicioId={f.ejercicio_id} nombre={f.ejercicio} guardadas={guardadas} ocupado={ocupado} alGuardar={guardarReglas} alCerrar={() => setEditando(null)} />
+                            : <button type="button" class="btn-texto" style="justify-self:start;min-height:28px;padding-block:2px" aria-label={`${tieneRegla(guardadas, f.ejercicio_id) ? 'Cambiar la regla' : 'Poner una regla propia'} de ${f.ejercicio}`} onClick={() => setEditando(f.pauta_id)}>{tieneRegla(guardadas, f.ejercicio_id) ? 'Cambiar la regla' : 'Regla propia'}</button>)}
                           {actual && f.alternativas.length > 0 && (
                             <div class="selector-chips" role="group" aria-label={`Qué hacer con ${f.ejercicio}`}>
                               <button type="button" aria-pressed={!eleccion[f.pauta_id] ? 'true' : 'false'} onClick={() => setEleccion((e) => ({ ...e, [f.pauta_id]: null }))}>Propuesta</button>

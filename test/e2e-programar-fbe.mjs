@@ -1,6 +1,7 @@
 // «Programar según FBE» (fase 1a), en la demo: el coach abre el programa de una atleta, pide la propuesta para la
 // semana en borrador, la revisa (lo que hizo, lo propuesto, el motivo, la confianza), elige una alternativa, aplica y
-// comprueba que la semana sigue en borrador con las pautas cambiadas. También la vista de peaking. En escritorio y a 360 px en oscuro, sin errores
+// comprueba que la semana sigue en borrador con las pautas cambiadas. También la vista de peaking, el volumen por
+// músculo y las reglas guardadas del atleta y de un ejercicio (fase 1b). En escritorio y a 360 px en oscuro, sin errores
 // de consola, sin desbordes y sin fallos de accesibilidad.
 //   Suelta:  npm run build && node test/e2e-programar-fbe.mjs   (CHROME_PATH si Chrome no está en /opt/google/chrome/chrome)
 //   Dentro de e2e.test.mjs:  const { probarProgramarFBE } = await import('./e2e-programar-fbe.mjs'); await probarProgramarFBE({ navegador, check });
@@ -75,6 +76,48 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     await foto('fbe-1-hoja-escritorio');
     await revisar('hoja-escritorio');
 
+    // Reglas del atleta (fase 1b): un perfil cambia la propuesta entera, se guarda en su ficha y se puede deshacer
+    const reglas = hoja.getByRole('region', { name: 'Reglas de este atleta' });
+    check(await hay(reglas, 1) && /Reglas de Ana López/.test(await reglas.textContent()) && /Las de partida para su nivel/.test(await reglas.textContent()), 'la hoja enseña las reglas del atleta: de partida, las de su nivel');
+    const suben = () => hoja.locator('.carga-sug .chip', { hasText: /^Sube kilos$/ }).count();
+    const subenAntes = await suben();
+    await reglas.getByRole('button', { name: 'Cambiar', exact: true }).click();
+    await reglas.getByLabel('Perfil').selectOption({ label: 'En casa o de viaje' });
+    await foto('fbe-6-reglas-atleta');
+    await revisar('reglas-atleta');
+    await reglas.getByRole('button', { name: 'Guardar reglas', exact: true }).click();
+    check(await hay(reglas.getByText('Perfil En casa o de viaje.'), 1) && subenAntes >= 1 && await suben() === 0, `con el perfil «En casa o de viaje» ya no se proponen kilos (antes subían ${subenAntes})`);
+    await reglas.getByRole('button', { name: 'Cambiar', exact: true }).click();
+    await reglas.getByLabel('Básicos: mínimo de repeticiones').fill('9');
+    await reglas.getByLabel('Básicos: máximo de repeticiones').fill('5');
+    await reglas.getByRole('button', { name: 'Guardar reglas', exact: true }).click();
+    check(await hay(reglas.getByRole('alert'), 1) && /Básicos: el rango/.test(await reglas.getByRole('alert').textContent()), 'un rango al revés no se guarda y dice por qué');
+    await reglas.getByRole('button', { name: 'Volver a las de partida', exact: true }).click();
+    check(await hay(reglas.getByText(/Las de partida para su nivel/), 1) && await suben() === subenAntes, 'al volver a las de partida, la propuesta es la de antes');
+
+    // Regla propia de un ejercicio: se pone en su fila, cambia solo esa fila y sigue ahí al volver a abrir la hoja
+    const filaSube = hoja.locator('.carga-sug', { has: p.locator('.chip', { hasText: /^Sube kilos$/ }) }).first();
+    const ejercicio = (await filaSube.locator('strong').first().textContent()).trim();
+    const fila = () => hoja.locator('.carga-sug', { has: p.locator('strong', { hasText: new RegExp(`^${ejercicio.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }) }).first();
+    await fila().getByRole('button', { name: `Poner una regla propia de ${ejercicio}`, exact: true }).click();
+    const editor = hoja.getByRole('group', { name: `Regla propia de ${ejercicio}` });
+    await editor.getByLabel('Cómo progresa').selectOption({ label: 'Mantener como está' });
+    await editor.getByLabel('Salto de carga (kg)').fill('1,25');
+    await foto('fbe-7-regla-ejercicio');
+    await revisar('regla-ejercicio');
+    await editor.getByRole('button', { name: 'Guardar regla', exact: true }).click();
+    check(await hay(fila().locator('.chip', { hasText: /^Regla propia$/ }), 1) && await fila().locator('.chip', { hasText: /^Sube kilos$/ }).count() === 0 && /Regla propia: Mantener · sube de 1,25 kg en 1,25 kg\./.test(await fila().textContent()) && await suben() === subenAntes - 1,
+      `la regla propia de ${ejercicio} cambia su fila y solo la suya`);
+    check(await hay(reglas.getByText('1 ejercicio con regla propia.'), 1), 'y cuenta en el resumen de las reglas del atleta');
+    await hoja.getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await hay(p.getByRole('dialog'), 0);
+    await boton.click();
+    await hoja.locator('.carga-sug').first().waitFor();
+    check(await hay(fila().locator('.chip', { hasText: /^Regla propia$/ }), 1), 'la regla está guardada en la ficha: sigue ahí al volver a abrir la hoja');
+    await fila().getByRole('button', { name: `Cambiar la regla de ${ejercicio}`, exact: true }).click();
+    await editor.getByRole('button', { name: 'Quitar regla', exact: true }).click();
+    check(await hay(hoja.locator('.carga-sug .chip', { hasText: /^Regla propia$/ }), 0) && await suben() === subenAntes && await hay(reglas.getByText(/Las de partida para su nivel/), 1), 'al quitarla, todo vuelve a como estaba');
+
     // El volumen por músculo de la semana que quedaría: plegado, con el recuento y el rango de cada músculo
     const resumenVol = hoja.locator('details.vol-desglose summary');
     check(await resumenVol.count() === 1 && /Series por músculo en la semana \d+ con lo marcado/.test(await resumenVol.textContent()), 'la hoja resume las series por músculo de la semana que quedaría');
@@ -126,6 +169,14 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     await p.waitForTimeout(400);
     await foto('fbe-2-hoja-360-oscuro');
     await revisar('hoja-360-oscuro');
+    // Los dos formularios de reglas, también en estrecho y en oscuro
+    await hoja.locator('.carga-sug').first().getByRole('button', { name: /^Poner una regla propia de / }).click();
+    await hoja.getByRole('region', { name: 'Reglas de este atleta' }).getByRole('button', { name: 'Cambiar', exact: true }).click();
+    await hoja.getByRole('group', { name: /^Regla propia de / }).scrollIntoViewIfNeeded();
+    await foto('fbe-8-reglas-360-oscuro');
+    await revisar('reglas-360-oscuro');
+    await hoja.getByRole('group', { name: /^Regla propia de / }).getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await hoja.getByRole('region', { name: 'Reglas de este atleta' }).getByRole('button', { name: 'Cerrar', exact: true }).click();
     await p.setViewportSize({ width: 1280, height: 900 });
     await p.emulateMedia({ colorScheme: null, reducedMotion: null });
 
