@@ -17,6 +17,7 @@ Diseño completo: «Programar según FBE: diseño detallado del motor» (documen
 | `proponer.js` | 4 y 5 | Frenos, confianza, alternativas y `proponerSemana()` |
 | `volumen.js` | 3 | Las series por músculo de la semana propuesta frente a la anterior y al rango del atleta: solo enseña y avisa |
 | `adaptador.js` | — | Del bloque que carga el editor a la entrada del motor, y de la propuesta a lo que se guarda |
+| `guardadas.js` | — | Las reglas que el coach guarda para un atleta (fase 1b): leerlas, validarlas y pasarlas al motor |
 | `sombra.js` | — | La prueba en sombra: el motor frente a lo que programó el coach, sobre una copia completa |
 
 ## Cómo se usa
@@ -116,6 +117,31 @@ las reglas tal como salen, que sí lo respetan, son 53 % y 42 %. La regla de top
 muestra, que tiene pocos básicos con la top primero: la serie idéntica pasa del 42 % al 43 % (del 44 % al 45 % sin
 respetar el rango) y la dirección no cambia.
 
+## Reglas por atleta y por ejercicio (fase 1b, 5/11/2026)
+
+Decisiones de Pelayo: por atleta se cambia el **perfil**, **hasta qué RPE suma repeticiones** y los **rangos de
+repeticiones** de cada tipo de ejercicio; por ejercicio, **cómo progresa** (el modelo), su **rango**, su **salto de
+carga** y ese mismo RPE; y la regla de un ejercicio vale **solo para ese atleta**.
+
+- Se guardan en una columna nueva, `atletas.reglas_motor` (jsonb), con la forma
+  `{ v: 1, perfil, atleta: { porSerie: { rpeSube, rangos } }, porEjercicio: { <id>: { modelo, porSerie: { rango, rpeSube }, salto: { tipo: 'kg', valor } } } }`.
+  Es la migración `supabase/migraciones/046_motor_reglas.sql` (v0.76). Solo el coach escribe esa columna (el atleta
+  solo lee su ficha).
+- `guardadas.js`: `leerGuardadas(valor)` (nunca falla: con algo roto devuelve reglas vacías y dice qué descartó; solo
+  deja pasar lo que la pantalla edita), `paraGuardar`, `paraElMotor` (el perfil va en `atleta.perfil` y las capas en
+  `reglas.atleta` y `reglas.porEjercicio`), `conReglasDeAtleta` y `conReglaDeEjercicio` (del formulario a lo guardado,
+  con sus errores), `resumenGuardadas` y `resumenRegla`. Perfiles elegibles: Fuerza, Novato lineal en básicos, En casa o
+  de viaje, Readaptación y Mantenimiento; sin perfil, sale el del nivel. Como mucho 200 ejercicios con regla propia.
+- En la hoja de revisión (`ReglasFBE.jsx`, sin estilos nuevos): un panel «Reglas de <atleta>» con su resumen y el
+  formulario, y en cada fila «Regla propia» / «Cambiar la regla». Al guardar se escribe con
+  `api.actualizar('atletas', id, { reglas_motor })`, la propuesta se recalcula y las marcas vuelven a las de partida.
+  La hoja lee las reglas con `api.ficha(id)`: no ha hecho falta tocar `api.js`, `Editor.jsx` ni `Ficha.jsx`.
+- Qué manda sobre qué: regla del ejercicio > rango de la pauta (si trae mínimo y máximo) > rangos del atleta > los de
+  partida. El RPE del ejercicio manda sobre el del atleta.
+- Sin la migración aplicada, todo sigue funcionando con las reglas de partida y, al guardar, la hoja dice que falta
+  la migración. En la demo funciona sin ella.
+- La prueba en sombra usa las reglas guardadas de cada atleta, como el editor (`sinGuardadas: true` las ignora).
+
 ## Prueba en sombra repetible
 
 `sombra.js` hace la comparación de arriba sobre cualquier copia completa de la app (Cuenta → Copia completa), con todos
@@ -164,7 +190,7 @@ repeticiones; antes se quedaba igual, como las series con kilos de intensificaci
 node test/motor.test.mjs
 ```
 
-287 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
+310 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
 la base (series 1–20, RPE 1–10, rango ordenado, detalle válido), los ejercicios «a mano» no se tocan y la misma entrada
 da siempre la misma salida.
 
@@ -182,8 +208,8 @@ da siempre la misma salida.
   «Programar según FBE»; en una semana hecha, «Programar la siguiente según FBE» (si la siguiente no existe la crea como
   copia con `api.prepararSemanas`). Las reglas son las de partida (`REGLAS_FBE` + perfil del nivel del atleta): todavía
   no se guardan reglas por atleta ni la propuesta.
-- `test/e2e-programar-fbe.mjs`: 21 comprobaciones en la demo con Chrome (abrir, revisar, volumen por músculo, ver como
-  peaking, alternativa,
+- `test/e2e-programar-fbe.mjs`: 29 comprobaciones en la demo con Chrome (abrir, revisar, reglas del atleta y de un
+  ejercicio, volumen por músculo, ver como peaking, alternativa,
   aplicar, sigue en borrador, reabrir sin cambios, programar la siguiente; escritorio y 360 px en oscuro; consola, desbordes y axe).
   Se ejecuta suelta (`npm run build && node test/e2e-programar-fbe.mjs`) o desde `e2e.test.mjs` con
   `probarProgramarFBE({ navegador, check, base })`.

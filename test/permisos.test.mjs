@@ -6604,6 +6604,28 @@ console.log('\nLa comunidad, quinta tanda: aniversarios, el mes en el equipo, hi
   await sin44.close();
 }
 
+console.log('\nLas reglas del motor «Programar según FBE» por atleta (migración 046)');
+{
+  await su();
+  const [aR] = await q(`insert into atletas (nombre, perfil_id) values ('Reglas', null) returning id`);
+  await como(pelayo, 'aal2');
+  const reglas = { v: 1, perfil: 'intermedio_fuerza', atleta: { porSerie: { rpeSube: 8.5 } }, porEjercicio: {} };
+  await q(`update atletas set reglas_motor = $1 where id = $2`, [JSON.stringify(reglas), aR.id]);
+  check((await q(`select reglas_motor r from atletas where id = $1`, [aR.id]))[0].r?.perfil === 'intermedio_fuerza', 'el coach guarda las reglas del motor de un atleta');
+  check(await falla(`update atletas set reglas_motor = '[1, 2]'::jsonb where id = $1`, [aR.id])
+    && await falla(`update atletas set reglas_motor = $1 where id = $2`, [JSON.stringify({ x: 'a'.repeat(70000) }), aR.id]),
+    'solo un objeto, y de tamaño razonable');
+  await como(luis);
+  await q(`update atletas set reglas_motor = '{"perfil":"novato_lineal"}'::jsonb where id = $1`, [aLuis.id]).catch(() => {});
+  const propias = await q(`update atletas set reglas_motor = '{"perfil":"novato_lineal"}'::jsonb where id = $1 returning id`, [aLuis.id]).catch(() => []);
+  await como(ana);
+  const ajenas = await q(`select reglas_motor from atletas where id = $1`, [aLuis.id]);
+  await su();
+  check(!propias.length && (await q(`select reglas_motor r from atletas where id = $1`, [aLuis.id]))[0].r === null && !ajenas.length,
+    'el atleta no puede cambiarlas, y otro atleta no las ve');
+  await q(`delete from atletas where id = $1`, [aR.id]);
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

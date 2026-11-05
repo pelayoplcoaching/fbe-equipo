@@ -1048,7 +1048,11 @@ console.log('\nRecuperar una atleta borrada desde la copia completa (v0.23)');
   await b.guion(sql);
   check(JSON.stringify(await cuenta()) === JSON.stringify(antes), 'repetirlo no duplica nada');
   // Algo suyo borrado y vuelto a crear con otro id: lo de la copia no entra, pero el resto sí y no falla a medias
-  const [w] = await b.sql(`select w.id, w.bloque_id, w.numero, w.fecha_inicio from semanas w join bloques k on k.id = w.bloque_id where k.atleta_id = $1 order by w.numero limit 1`, [ana.id]);
+  // (v0.76) una semana sin series suyas y siempre la misma: con «order by numero» sin más, el orden entre bloques no estaba
+  // fijado y, al cambiar la tabla atletas (migración 046), salía la semana con sus series y las pruebas siguientes se quedaban sin ellas
+  const [w] = await b.sql(`select w.id, w.bloque_id, w.numero, w.fecha_inicio from semanas w join bloques k on k.id = w.bloque_id where k.atleta_id = $1
+    and not exists (select 1 from sesiones s join sesion_ejercicios p on p.sesion_id = s.id join series x on x.sesion_ejercicio_id = p.id where s.semana_id = w.id)
+    order by w.numero, w.fecha_inicio, w.id limit 1`, [ana.id]);
   const seriesAntes = (await b.sql(`select count(*)::int n from series where atleta_id = $1`, [ana.id]))[0].n;
   await b.sql(`delete from semanas where id = $1`, [w.id]);
   await b.sql(`insert into semanas (bloque_id, numero, fecha_inicio) values ($1, $2, $3)`, [w.bloque_id, w.numero, w.fecha_inicio]);
