@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import './estilos.css';
+import './diseno.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';
 
