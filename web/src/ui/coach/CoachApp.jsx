@@ -12,6 +12,7 @@ import { Conversaciones } from './Conversaciones.jsx';
 import { EquipoCoach } from './EquipoCoach.jsx';
 import { RecibirCompartidoCoach } from '../Compartido.jsx';
 import { ponerInsignia } from '../insignia-app.js';
+import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
 
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
 // Modo atleta (v0.37): el coach entrena con la app de atleta, con su propia ficha (solo entrenamiento)
@@ -25,6 +26,8 @@ const chatDeRuta = (h) => (RUTA_CHAT.exec(h) || [])[1] || null;
 
 export function CoachApp() {
   const { api, propioCoach, entrarModoAtleta, pedidoCoach, consumirPedidoCoach } = useApp();
+  // (v0.65) «Novedades» tras actualizar la app: al coach, solo lo que es para él
+  useState(() => prepararVersionVista(api.uid()));
   const comunidad = useCarga(() => api.comunidad(), []);
   const pestanas = comunidad.datos?.activa ? TODAS : TABS;
   const pestanasRef = useRef(pestanas);
@@ -149,6 +152,7 @@ export function CoachApp() {
       </main>
     </div>
     {buscar && <Buscador alCerrar={cerrarBuscar} ir={ir} />}
+    {!buscar && <AvisoNovedades uid={api.uid()} rol="coach" />}
     </>
   );
 }

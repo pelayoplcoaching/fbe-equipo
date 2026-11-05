@@ -451,6 +451,12 @@ body:has(.pildora-descanso) .toast { bottom: calc(76px + env(safe-area-inset-bot
 .toast.error { background: var(--alerta); color: #fff; }
 .banda-conexion { background: var(--aviso-suave); color: var(--aviso); font-weight: 600; font-size: 0.875rem; padding: 8px 12px; border-radius: 10px; display: flex; gap: 8px; align-items: center; }
 .banda-conexion svg { width: 18px; height: 18px; flex: none; }
+/* v0.65: sin conexión, una línea tranquila (lo de la pantalla sale del móvil y lo que apuntes se guarda), no un aviso */
+.banda-conexion.sin-red { background: var(--hoja-2); color: var(--tinta-2); font-weight: 500; }
+.banda-conexion.sin-red svg { color: var(--tinta-3); }
+.banda-cuenta { white-space: nowrap; }
+.nota-sin-red { display: flex; gap: 8px; align-items: center; }
+.nota-sin-red svg { width: 18px; height: 18px; flex: none; }
 .banda-demo { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; justify-content: space-between; color: var(--tinta-2); border-radius: var(--r-s); padding: 6px 4px 6px 12px; font-size: 0.8125rem; background: var(--hoja-2); box-shadow: inset 0 0 0 1px var(--borde); margin-top: -6px; }
 .banda-demo .fila { gap: 2px; }
 .banda-demo .btn-peq { min-height: 30px; padding: 0 10px; font-size: 0.8125rem; border-radius: 8px; background: none; border-color: transparent; color: var(--morado); }
@@ -4070,6 +4076,11 @@ body:has(.visor) .chat-barra, body:has(.visor) .chat-abajo { display: none; }
 .lista-novedades-privacidad li > svg { width: 22px; height: 22px; color: var(--morado); margin-top: 2px; }
 .lista-novedades-privacidad p { margin: 2px 0 0; }
 .hoja-aviso-privacidad .btn-grande { width: 100%; margin-top: 8px; }
+/* v0.65: «Novedades» tras actualizar la app */
+.lista-novedades-app { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lista-novedades-app li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; }
+.lista-novedades-app li > svg { width: 20px; height: 20px; color: var(--morado); margin-top: 1px; }
+.hoja-novedades .btn-grande { width: 100%; margin-top: 8px; }
 .chat-de-fuera { display: flex; gap: 6px; align-items: flex-start; }
 .chat-de-fuera svg { flex: none; width: 16px; height: 16px; }
 

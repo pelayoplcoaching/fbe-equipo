@@ -53,10 +53,13 @@ import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js
 import { resumenPautas } from '../../logica/diseno.js';
 import { Portada } from './Portada.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
+import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { api, atleta, cola, aviso, propio } = useApp();
-  const det = useCarga(() => api.sesion(id, atleta.id), [id]);
+  // (v0.65) sin cobertura, de la copia del móvil; y en los dos casos, con lo que espera en la cola encima (lo apuntado sin
+  // conexión sigue ahí al volver a abrir la sesión, aunque se haya cerrado la app)
+  const det = useCarga(() => api.sesion(id, atleta.id).then((d) => sesionConCola(d, cola.operaciones())), [id]);
   // Mejores marcas hasta hoy (sin esta sesión): para avisar de un récord en cuanto se registra la serie
   const previas = useCarga(() => api.marcasPrevias(atleta.id, id).catch(() => null), [id]);
   const [hechas, setHechas] = useState({});        // sesion_ejercicio_id → { numero → serie }
@@ -242,6 +245,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     const m = {};
     for (const e of det.datos.ejercicios) m[e.id] = Object.fromEntries(e.hechas.map((s) => [s.numero, s]));
     setHechas(m);
+    setEnCola(enColaDe(det.datos, cola.operaciones()));
     seriesListas.current = true;
     // Si ya hay series hechas con una alternativa, esa es la que se está usando
     const desdeSeries = {};

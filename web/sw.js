@@ -2,6 +2,8 @@
 const VERSION = '__VERSION__';
 const ARCHIVOS = __ARCHIVOS__;
 const CACHE = `fbe-atletas-${VERSION}`;
+// (v0.65) lo que se espera a la red al abrir la app si ya hay una página guardada
+const ESPERA_RED_MS = 1500;
 // v0.58: el modelo de los puntos del cuerpo (modelos/pose-<versión>/, unos 12 MB): no se descarga al instalar la app,
 // sino la primera vez que se usa, y entonces se guarda aquí (una caché por versión del modelo, que sobrevive a las
 // actualizaciones de la app)
@@ -76,12 +78,19 @@ self.addEventListener('fetch', (e) => {
   }
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   // La página y la configuración: primero red, para coger siempre la última versión
+  // (v0.65) pero sin esperarla más de ESPERA_RED_MS si ya hay una guardada: con una cobertura que va y viene (la del gimnasio),
+  // la app abre con la guardada al momento y la de la red, si llega, se queda para la próxima vez
   if (e.request.mode === 'navigate' || url.pathname.endsWith('/config.js')) {
-    e.respondWith(fetch(e.request).then((r) => {
-      const copia = r.clone();
-      caches.open(CACHE).then((c) => c.put(e.request.mode === 'navigate' ? './' : e.request, copia));
+    const clave = e.request.mode === 'navigate' ? './' : e.request;
+    const red = fetch(e.request).then((r) => {
+      if (r.ok) { const copia = r.clone(); caches.open(CACHE).then((c) => c.put(clave, copia)).catch(() => {}); }
       return r;
-    }).catch(() => caches.open(CACHE).then((c) => c.match(e.request.mode === 'navigate' ? './' : e.request))));
+    });
+    e.waitUntil(red.then(() => {}, () => {}));
+    e.respondWith(caches.open(CACHE).then((c) => c.match(clave)).then((guardada) => {
+      if (!guardada) return red;
+      return Promise.race([red.catch(() => guardada), new Promise((ok) => { setTimeout(() => ok(guardada), ESPERA_RED_MS); })]);
+    }));
     return;
   }
   // (v0.58) El modelo de los puntos del cuerpo: de su caché si ya está; si no, de la red, y se guarda para la próxima vez

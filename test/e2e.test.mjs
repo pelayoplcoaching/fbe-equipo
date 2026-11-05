@@ -5614,6 +5614,18 @@ try {
   console.log('  ✗ la sesión de la v0.64:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.65: abrir sin cobertura (con el service worker de verdad): Hoy y la sesión desde la copia del móvil, «Sin conexión · se
+// guardará al volver», una serie apuntada sin red que sigue ahí al volver a abrir y llega una sola vez; y «Novedades» una vez
+// tras cambiar de versión (nunca la primera vez), a 360 px en oscuro (test/e2e-sinred-065.mjs)
+console.log('\nv0.65: abrir sin cobertura y «Novedades»');
+try {
+  const { probarSinRed065 } = await import('./e2e-sinred-065.mjs');
+  await probarSinRed065({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ sin cobertura de la v0.65:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
 console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');

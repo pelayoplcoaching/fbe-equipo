@@ -552,7 +552,7 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
 }
 
 // Carga asíncrona con estado
-export function useCarga(fn, deps = []) {
+export function useCarga(fn, deps = [], opciones = {}) {
   const [estado, setEstado] = useState({ datos: null, error: null, cargando: true });
   const vivo = useRef(true);
   const ultima = useRef(0); // solo vale la respuesta de la última petición (si llegan desordenadas, las viejas se tiran)
@@ -568,6 +568,20 @@ export function useCarga(fn, deps = []) {
     }
   }, deps);
   useEffect(() => { vivo.current = true; cargar(); return () => { vivo.current = false; }; }, [cargar]);
+  // (v0.65) copia: la clave de la copia del móvil de lo que se carga (datos/copia.js). Si se enseñó la copia porque la base
+  // tardaba, lo de la base llega luego con «fbe-copia» y se pone en su sitio, sin recargar. transformar: lo mismo que haría fn
+  // con lo que llega de la base (lo que espera en la cola, encima)
+  const { copia = null, transformar = null } = opciones;
+  useEffect(() => {
+    if (!copia) return undefined;
+    const al = (e) => {
+      if (e.detail?.clave !== copia || !vivo.current) return;
+      ultima.current++;
+      setEstado({ datos: transformar ? transformar(e.detail.datos) : e.detail.datos, error: null, cargando: false });
+    };
+    window.addEventListener('fbe-copia', al);
+    return () => window.removeEventListener('fbe-copia', al);
+  }, [copia]);
   return { ...estado, recargar: cargar };
 }
 

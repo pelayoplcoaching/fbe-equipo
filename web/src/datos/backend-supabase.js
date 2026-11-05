@@ -127,11 +127,33 @@ export function subirPorTrozos({ endpoint, token, anonKey, ruta, archivo, tipo, 
   });
 }
 
+// (v0.65) La sesión que Supabase guarda en el móvil (la de su clave en localStorage), si tiene con qué renovarse: { user }
+export function sesionGuardada(clave, almacen = (() => { try { return globalThis.localStorage; } catch { return null; } })()) {
+  try {
+    const x = JSON.parse(almacen?.getItem(clave) || 'null');
+    const s = x?.currentSession || x;
+    return s && typeof s.refresh_token === 'string' && s.refresh_token && /^[0-9a-f-]{36}$/.test(String(s.user?.id || '')) ? { ...s, user: { id: s.user.id, email: s.user.email || null } } : null;
+  } catch { return null; }
+}
+
 export function crearBackendSupabase({ url, anonKey }) {
   const sb = createClient(url, anonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   let sesion = null;
   let recuperando = false;
   const oyentes = new Set();
+  // (v0.65) la sesión guardada en el móvil, sin renovar por falta de cobertura (ver iniciar)
+  let provisional = false;
+  // (renovarla puede quedarse colgado con una cobertura que va y viene: como mucho ESPERA_SESION_MS, y si no, «sin conexión»)
+  const ESPERA_SESION_MS = 2500;
+  const sesionCon = () => Promise.race([sb.auth.getSession().catch(() => null), new Promise((ok) => { setTimeout(() => ok(null), ESPERA_SESION_MS); })]);
+  async function conSesion() {
+    if (!provisional) return;
+    const data = (await sesionCon())?.data;
+    if (data?.session) { sesion = data.session; provisional = false; return; }
+    const e = new Error('Sin conexión.');
+    e.sinConexion = true;
+    throw e;
+  }
 
   async function sel(tabla, f = {}) {
     // PostgREST limita las listas de 'in' por longitud de URL: se trocean.
@@ -322,13 +344,26 @@ export function crearBackendSupabase({ url, anonKey }) {
       chats.clear();
     },
     async iniciar() {
-      const { data } = await sb.auth.getSession();
+      // (v0.65) con la sesión caducada y poca cobertura, renovarla puede tardar mucho: la app no la espera más de ESPERA_SESION_MS
+      const r = await sesionCon();
+      const data = r?.data || { session: null };
+      const error = r ? r.error : { name: 'AuthRetryableFetchError' };
       sesion = data.session;
+      // (v0.65) Sin cobertura y con el permiso de la sesión caducado (dura una hora), Supabase no puede renovarlo y dice «sin
+      // sesión», aunque la guarda (o tarda en contestar). La app no te saca por eso: entra con lo guardado en el móvil (provisional) y, en cuanto
+      // vuelve la red, Supabase la renueva sola. Mientras, nada sale a la base (ni se lee sin permiso: daría listas vacías).
+      if (!sesion && error?.name === 'AuthRetryableFetchError') {
+        const g = sesionGuardada(sb.auth.storageKey);
+        if (g) { sesion = g; provisional = true; }
+      }
       // Al abrir el enlace de "he olvidado mi contraseña", Supabase inicia sesión y avisa con PASSWORD_RECOVERY
       if (/type=recovery/.test(location.hash)) recuperando = true;
       escucharMensajes();
       sb.auth.onAuthStateChange((evento, s) => {
         if (evento === 'PASSWORD_RECOVERY') recuperando = true;
+        // (v0.65) con la provisional, el primer aviso («sin sesión», por no poder renovarla) no cuenta
+        if (provisional && !s && evento === 'INITIAL_SESSION') return;
+        provisional = false;
         sesion = s;
         if (s) escucharMensajes(); else dejarDeEscuchar();
         oyentes.forEach((f) => f(s));
@@ -349,7 +384,16 @@ export function crearBackendSupabase({ url, anonKey }) {
         sesion = data.session; // null si el proyecto pide confirmar el email
         return { confirmarEmail: !data.session };
       },
-      async salir() { await sb.auth.signOut(); sesion = null; },
+      // (v0.65, revisión) sin red y con el permiso caducado, signOut no consigue renovarlo y se va sin borrar la sesión guardada: al
+      // volver a abrir sin red (o al volver la red) entraba otra vez la cuenta que había salido (un móvil compartido). Se borra en
+      // el móvil pase lo que pase.
+      async salir() {
+        provisional = false;
+        try { await sb.auth.signOut(); } catch { /* sin red */ }
+        try { await sb.auth.signOut({ scope: 'local' }); } catch { /* */ }
+        try { const ls = globalThis.localStorage; if (ls) { ls.removeItem(sb.auth.storageKey); ls.removeItem(`${sb.auth.storageKey}-code-verifier`); } } catch { /* */ }
+        sesion = null;
+      },
       async recuperar(email) {
         const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
         if (error) throw traducir(error);
@@ -397,6 +441,7 @@ export function crearBackendSupabase({ url, anonKey }) {
       // sola petición que el iPhone cortaba con «timed out» y había que empezar de cero). alProgreso(0…1).
       // bucket: «archivos» (de siempre) o «comunidad» (v0.43, las fotos del muro: pequeñas, de una vez)
       async subir(ruta, archivo, tipo, { alProgreso = null, senal = null, bucket = 'archivos', urlSubida = null, alUrlSubida = null } = {}) {
+        await conSesion();
         if (!archivo || archivo.size <= TROZO || bucket !== 'archivos') {
           // (v0.56) «Cancelar» también en una pequeña (de una vez): deja de esperarla; si llega a subirse, su fila se borra
           // y su archivo va a la cola de Storage (lo hace la base)
@@ -421,6 +466,7 @@ export function crearBackendSupabase({ url, anonKey }) {
       },
       // descargar (v0.55): el nombre con que se guarda («Guardar», que la persona pide)
       async url(ruta, segundos = 3600, bucket = 'archivos', { descargar = null } = {}) {
+        await conSesion();
         const { data, error } = await sb.storage.from(bucket).createSignedUrl(ruta, segundos, descargar ? { download: descargar } : undefined);
         if (error) throw traducir(error);
         return data.signedUrl;
@@ -454,33 +500,39 @@ export function crearBackendSupabase({ url, anonKey }) {
         }
       },
     },
-    select: sel,
+    async select(tabla, f) { await conSesion(); return sel(tabla, f); },
     async insert(tabla, filas) {
+      await conSesion();
       const { data, error } = await sb.from(tabla).insert(filas).select();
       if (error) throw traducir(error);
       return data;
     },
     async update(tabla, cambios, f) {
+      await conSesion();
       const { data, error } = await aplicarFiltro(sb.from(tabla).update(cambios), f).select();
       if (error) throw traducir(error);
       return data;
     },
     async upsert(tabla, filas, onConflict) {
+      await conSesion();
       const { data, error } = await sb.from(tabla).upsert(filas, { onConflict }).select();
       if (error) throw traducir(error);
       return data;
     },
     async delete(tabla, f) {
+      await conSesion();
       const { error } = await aplicarFiltro(sb.from(tabla).delete(), f);
       if (error) throw traducir(error);
     },
     async rpc(nombre, args) {
+      await conSesion();
       const { data, error } = await sb.rpc(nombre, args);
       if (error) throw traducir(error);
       return data;
     },
     // Funciones de Supabase (Edge Functions), con la sesión de quien llama
     async funcion(nombre, cuerpo = {}) {
+      await conSesion();
       // En la región de la base (Frankfurt): lo que se procesa se queda en la UE
       const { data, error } = await sb.functions.invoke(nombre, { body: cuerpo, headers: { 'x-region': 'eu-central-1' } });
       if (error) throw error;

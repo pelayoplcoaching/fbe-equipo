@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.6' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.7' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -3954,9 +3954,116 @@ console.log('\nv0.64: «Máquina ocupada» y el orden de la sesión');
   const legal7 = await import('../web/src/legal.js');
   const PV6 = await import('../web/src/logica/privacidad.js');
   const mov7 = legal7.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
-  check(legal7.VERSION_LEGAL === '2026-12.6' && PV6.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.6' && PV6.novedadesDesde('2026-12.5', '2026-12.6').length === 1 && PV6.formatoVersion('2026-12.6')
-    && /orden de los ejercicios de una sesión/.test(mov7) && /la pauta de tu coach no cambia/.test(mov7) && /hora de cada serie/.test(mov7) && /solo en tu móvil/.test(PV6.NOVEDADES_PRIVACIDAD[0][2]),
+  check(PV6.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.6') && PV6.novedadesDesde('2026-12.5', '2026-12.6').length === 1 && PV6.formatoVersion('2026-12.6')
+    && /orden de los ejercicios de una sesión/.test(mov7) && /la pauta de tu coach no cambia/.test(mov7) && /hora de cada serie/.test(mov7) && /solo en tu móvil/.test(PV6.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.6')[2]),
     'la política 2026-12.6: el orden de hoy se queda en el móvil (la pauta no cambia); el coach ve el orden por la hora de cada serie');
+}
+
+
+console.log('\nv0.65: abrir sin cobertura y «Novedades» tras actualizar');
+{
+  const SR = await import('../web/src/logica/sin-red.js');
+  const { crearCopia } = await import('../web/src/datos/copia.js');
+  const DIA = 86400000, T0 = Date.UTC(2026, 10, 5, 9);
+  // ---------- la copia de la semana: qué vale y qué se poda
+  const e = (uid, clave, t, datos = 1) => ({ uid, clave, t, datos });
+  check(SR.copiaVale(e('u1', 'perfil', T0), 'u1', T0 + DIA) && !SR.copiaVale(e('u1', 'perfil', T0), 'u2', T0) && !SR.copiaVale(e('u1', 'perfil', T0 - 15 * DIA), 'u1', T0)
+    && !SR.copiaVale(e('u1', 'perfil', T0 + DIA), 'u1', T0) && !SR.copiaVale({ uid: 'u1', t: T0 }, 'u1', T0) && !SR.copiaVale(null, 'u1', T0) && SR.copiaVale(e('u1', 'x', T0, null), 'u1', T0),
+    'una entrada de la copia vale solo para su cuenta, con su hora (no del futuro) y durante dos semanas');
+  const ents = [['u1|perfil', e('u1', 'perfil', T0)], ['u1|vieja', e('u1', 'programa:a', T0 - 20 * DIA)], ['raro', { x: 1 }]];
+  for (let i = 0; i < 10; i++) ents.push([`u1|sesion:s${i}`, e('u1', `sesion:s${i}`, T0 - i * 1000)], [`u1|marcas:s${i}`, e('u1', `marcas:s${i}`, T0 - i * 1000)]);
+  ents.push(['u2|sesion:z', e('u2', 'sesion:z', T0 - 99999)]);
+  const fuera = SR.clavesAPodar(ents, T0);
+  check(fuera.includes('u1|vieja') && fuera.includes('raro') && !fuera.includes('u1|perfil') && fuera.includes('u1|sesion:s8') && fuera.includes('u1|marcas:s9') && !fuera.includes('u1|sesion:s7') && !fuera.includes('u1|marcas:s0') && !fuera.includes('u2|sesion:z')
+    && fuera.length === 6, `se podan lo caducado o mal formado y, por cuenta, las sesiones (y sus marcas) más allá de las ${SR.MAX_SESIONES_COPIA} últimas`);
+  // Con un almacén en memoria: guarda por cuenta, lee solo lo de esa cuenta y nada con la sesión cerrada
+  const mem = new Map();
+  const alm = { leer: async (k) => mem.get(k), guardar: async (k, v) => { mem.set(k, v); }, borrar: async (k) => { mem.delete(k); }, todo: async () => [...mem] };
+  let ahora = T0, cerrada = false;
+  const cp = crearCopia({ almacen: alm, ahora: () => ahora, estaCerrada: () => cerrada });
+  await cp.guardar('u1', 'programa:a', { bloque: 1 });
+  check((await cp.leer('u1', 'programa:a'))?.datos.bloque === 1 && await cp.leer('u2', 'programa:a') === null && await cp.leer('u1', 'programa:b') === null, 'la copia: se lee lo guardado de esa cuenta (de otra, nada)');
+  ahora = T0 + 15 * DIA;
+  check(await cp.leer('u1', 'programa:a') === null && await cp.podar() === 1 && mem.size === 0, 'a las dos semanas sin ponerse al día no vale y se poda');
+  cerrada = true;
+  check(await cp.guardar('u1', 'perfil', {}) === false && mem.size === 0 && await cp.leer('u1', 'perfil') === null, 'con la sesión cerrada, ni se guarda ni se lee');
+  check(await crearCopia({ almacen: null }).leer('u1', 'perfil') === null && await crearCopia({ almacen: null }).guardar('u1', 'perfil', 1) === false, 'sin IndexedDB, no hay copia (la app espera a la base, como antes)');
+  // ---------- lo que espera en la cola, encima de lo que trae la copia (o la base)
+  const det = { sesion: { id: 'S', completada: false }, ejercicios: [
+    { id: 'p', series: 3, hechas: [{ id: 'db1', numero: 1, kg: 60, reps: 8 }] },
+    { id: 'r', series: 3, hechas: [{ id: 'db2', numero: 1, kg: 40, reps: 10 }, { id: 'db3', numero: 2, kg: 40, reps: 10 }] }] };
+  const ops = [
+    { tipo: 'serie', datos: { sesion_ejercicio_id: 'p', numero: 2, kg: 62.5, reps: 8, registrada_en: 'x' }, atletaId: 'A' },
+    { tipo: 'serie', datos: { sesion_ejercicio_id: 'p', numero: 1, kg: 61, reps: 8 }, atletaId: 'A' },
+    { tipo: 'borrarSerie', datos: { sesion_ejercicio_id: 'r', numero: 2 }, atletaId: 'A' },
+    { tipo: 'serie', datos: { sesion_ejercicio_id: 'otra', numero: 1, kg: 1, reps: 1 }, atletaId: 'A' },
+    { tipo: 'sesion', datos: { id: 'S', cambios: { completada: true, fecha_realizada: '2026-11-05' } }, atletaId: 'A' }];
+  const d2 = SR.sesionConCola(det, ops);
+  check(igual(d2.ejercicios[0].hechas.map((x) => [x.id, x.numero, x.kg]), [['db1', 1, 61], ['local-p-2', 2, 62.5]]) && igual(d2.ejercicios[1].hechas.map((x) => x.numero), [1])
+    && d2.sesion.completada === true && det.ejercicios[0].hechas.length === 1 && det.sesion.completada === false,
+    'lo apuntado sin conexión sale encima de la copia: una serie nueva se añade, una corregida conserva su id, un borrado la quita y la sesión terminada sale terminada (sin tocar lo original)');
+  check(SR.sesionConCola(det, []) === det && SR.sesionConCola(det, [ops[3]]) === det && SR.sesionConCola(null, ops) === null, 'sin nada de esa sesión en la cola, la misma');
+  check(igual(SR.enColaDe(det, ops), { 'p-2': true, 'p-1': true }) && igual(SR.enColaDe(det, [ops[0], { tipo: 'borrarSerie', datos: { sesion_ejercicio_id: 'p', numero: 2 } }]), {}),
+    'y esas series llevan su marca de «guardada en el móvil» (las borradas, no)');
+  const prog = { actual: { id: 'w1' }, bloque: { atleta_id: 'A' }, sesiones: { w1: [{ id: 'S', completada: false }, { id: 'T', completada: false }, { id: 'U', completada: true }, { id: 'V', completada: false }, { id: 'X', completada: false }] } };
+  const p2 = SR.programaConCola(prog, ops);
+  check(p2.sesiones.w1[0].completada === true && p2.sesiones.w1[1].completada === false && prog.sesiones.w1[0].completada === false && SR.programaConCola(prog, []) === prog,
+    'en el programa (Hoy y Semana), la sesión terminada sin conexión sale terminada');
+  check(igual(SR.sesionesAPreparar(prog), ['S', 'T', 'V']) && igual(SR.sesionesAPreparar(prog, 2), ['S', 'T']) && igual(SR.sesionesAPreparar({ actual: null }), []),
+    'tras una visita con conexión se dejan en el móvil las sesiones que quedan de la semana (hoy y lo que viene), como mucho 3');
+  // La cola dice lo que espera (copias: tocarlas no cambia la cola)
+  const colaV = crearCola({ guardarSerie: async () => { const x = new Error('Sin conexión.'); x.sinConexion = true; throw x; } }, { clave: 'prueba-065' });
+  colaV.fijarAtleta('A');
+  await colaV.enviar({ tipo: 'serie', datos: { sesion_ejercicio_id: 'p', numero: 1, kg: 50, reps: 5 }, atletaId: 'A' });
+  const opsV = colaV.operaciones();
+  opsV[0].datos.kg = 999;
+  check(opsV.length === 1 && colaV.operaciones()[0].datos.kg === 50 && colaV.pendientes() === 1, 'la cola enseña lo que espera de ese atleta, en orden (copias)');
+  colaV.fijarAtleta(null);
+  // ---------- el código: la copia solo de lo tuyo, la sesión provisional sin red, el service worker sin esperar
+  const apiSrc = readFileSync(new URL('../web/src/datos/api.js', import.meta.url), 'utf8');
+  const supaSrc = readFileSync(new URL('../web/src/datos/backend-supabase.js', import.meta.url), 'utf8');
+  const swSrc = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8');
+  check(/propia\(atletaId\) \? conCopia/.test(apiSrc) && /ESPERA_RED_MS = 1200/.test(apiSrc) && /esTemporal\(r\.e\)\) throw r\.e/.test(apiSrc) && /if \(v === null\) throw sinConexion\(\)/.test(apiSrc),
+    'la copia solo guarda lo de tu propia ficha (nunca lo de otros atletas que ve el coach), espera a la base como mucho 1,2 s y un error de verdad no se tapa con la copia');
+  check(/AuthRetryableFetchError/.test(supaSrc) && (supaSrc.match(/await conSesion\(\);/g) || []).length >= 8 && /INITIAL_SESSION/.test(supaSrc),
+    'sin red y con el permiso caducado, la sesión guardada sigue (provisional) y nada sale a la base sin renovarla (no lee listas vacías ni rechaza series)');
+  const { sesionGuardada } = await import('../web/src/datos/backend-supabase.js');
+  const almS = (v) => ({ getItem: () => v });
+  check(sesionGuardada('k', almS(JSON.stringify({ refresh_token: 'r', access_token: 'a', user: { id: '0f6b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d', email: 'ana@x' } })))?.user.id === '0f6b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d'
+    && sesionGuardada('k', almS(JSON.stringify({ access_token: 'a', user: { id: '0f6b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d' } }))) === null && sesionGuardada('k', almS('basura')) === null && sesionGuardada('k', almS(null)) === null,
+    'la sesión guardada solo vale con su cuenta y con qué renovarse');
+  check(/ESPERA_RED_MS = 1500/.test(swSrc) && /Promise\.race\(\[red\.catch\(\(\) => guardada\)/.test(swSrc), 'el service worker no espera a la red más de 1,5 s para abrir la app si ya tiene la página guardada');
+  // ---------- «Novedades»
+  const NA = await import('../web/src/logica/novedades-app.js');
+  const { NOVEDADES } = await import('../web/src/novedades.js');
+  check(NA.versionCorta('0.65.0') === '0.65' && NA.versionCorta('0.63.1') === '0.63' && NA.versionCorta('1.2') === '1.2' && NA.versionCorta('x') === null && NA.versionCorta(null) === null
+    && NA.compararApp('0.9.0', '0.10.0') === -1 && NA.compararApp('0.65.1', '0.65.0') === 0 && NA.compararApp('1.0', '0.99') === 1 && NA.compararApp('x', '0.1') === null,
+    'las versiones de la app se comparan por mayor y menor, como números (0.9 < 0.10); los arreglos no cuentan');
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  const nov65 = NA.novedadesQueVer(NOVEDADES, { vista: '0.64.0', actual: pkg.version });
+  check(pkg.version === '0.65.0' && nov65.length === 2 && nov65.length <= 3 && /sin cobertura/i.test(nov65[0]) && NA.novedadesQueVer(NOVEDADES, { vista: '0.64.0', actual: '0.65.0', rol: 'coach' }).length === 1,
+    'de la 0.64 a la 0.65: las frases de la 0.65 para el atleta (como mucho tres) y la del coach');
+  const salto = NA.novedadesQueVer(NOVEDADES, { vista: '0.62.0', actual: '0.65.0' });
+  check(salto.length === 5 && /sin cobertura/i.test(salto[0]) && /Máquina ocupada/.test(salto[2]) && /Teclado propio/.test(salto[3]) && !salto.some((t) => /Ahora toca/.test(t)),
+    'si se han saltado versiones, las de todas juntas, de la más nueva a la más antigua, como mucho 5');
+  check(NA.novedadesQueVer(NOVEDADES, { vista: null, actual: '0.65.0' }).length === 0 && NA.novedadesQueVer(NOVEDADES, { vista: '0.65.0', actual: '0.65.0' }).length === 0
+    && NA.novedadesQueVer(NOVEDADES, { vista: '0.65.0', actual: '0.65.3' }).length === 0 && NA.novedadesQueVer(NOVEDADES, { vista: '0.66.0', actual: '0.65.0' }).length === 0
+    && NA.novedadesQueVer(NOVEDADES, { vista: '0.64.0', actual: '0.65.0', rol: 'nadie' }).length === 0 && NA.novedadesQueVer(NOVEDADES, { vista: '0.62.0', actual: '0.63.0', rol: 'coach' }).length === 0,
+    'nada la primera vez, con la misma versión (o un arreglo), hacia atrás, ni al coach si no hay nada para él');
+  check(Object.entries(NOVEDADES).every(([v, x]) => NA.versionCorta(v) === v && (x.atleta || []).length <= 3 && [...(x.atleta || []), ...(x.coach || [])].every((t) => typeof t === 'string' && t.length <= 140)),
+    'el archivo de novedades: por versión, hasta tres frases cortas para el atleta');
+  check(NA.versionVistaInicial({ guardada: '0.64.0', politicaVista: '2026-12.4', actual: '0.65.0' }) === '0.64.0' && NA.versionVistaInicial({ politicaVista: '2026-12.5', actual: '0.65.0' }) === '0.63'
+    && NA.versionVistaInicial({ politicaVista: '2026-12', actual: '0.65.0' }) === '0.64' && NA.versionVistaInicial({ politicaVista: null, actual: '0.65.0' }) === '0.65.0' && NA.claveVersionVista('u') === 'fbe-version-vista-u',
+    'desde qué versión se mira: la guardada; quien ya usaba la app, por la política que vio; la primera vez en el móvil o una cuenta nueva, la actual (no sale nada)');
+  // ---------- la política 2026-12.7
+  const legal8 = await import('../web/src/legal.js');
+  const PV7 = await import('../web/src/logica/privacidad.js');
+  const mov8 = legal8.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
+  check(legal8.VERSION_LEGAL === '2026-12.7' && PV7.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.7' && PV7.novedadesDesde('2026-12.6', '2026-12.7').length === 1 && PV7.formatoVersion('2026-12.7')
+    && /copia de tu semana/.test(mov8) && /sin cobertura/.test(mov8) && /al cerrar la sesión/.test(mov8) && /última versión de la app/.test(mov8) && /sin cobertura|sin señal|no tengas señal/.test(PV7.NOVEDADES_PRIVACIDAD[0][2]),
+    'la política 2026-12.7: la copia de tu semana en el móvil (para abrir sin cobertura) y la última versión vista');
+  const appSrc = readFileSync(new URL('../web/src/ui/App.jsx', import.meta.url), 'utf8');
+  check(/Sin conexión · se guardará al volver/.test(appSrc), 'sin conexión, una línea tranquila: «Sin conexión · se guardará al volver»');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

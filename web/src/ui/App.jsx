@@ -3,6 +3,7 @@ import { borrarTodoEnCurso } from './en-curso.js';
 import { borrarBorradores } from '../logica/mensajes.js';
 import { salidaDe, borrarSalida } from '../datos/salida.js';
 import { borrarCacheChat, reabrirCacheChat, cacheChat } from '../datos/cacheChat.js';
+import { copia } from '../datos/copia.js';
 import { olvidarAnalisis } from './tecnica/capas.js';
 import { olvidarTiras } from './tecnica/Tira.jsx';
 import { podarEntendidos, olvidarEntendidos } from './tecnica/entendidos.js';
@@ -67,6 +68,8 @@ export function App({ backend, api, cola }) {
     }
     // (revisión) con una cuenta dentro, la copia del chat vuelve a funcionar (y se limpia lo caducado)
     reabrirCacheChat(); cacheChat().purgar(uid).catch(() => {});
+    // (v0.65) y la copia de la semana (lo caducado y las sesiones de más)
+    copia().podar().catch(() => {});
     // (v0.59) los «Entendido» de otros días ya no valen
     podarEntendidos();
     if (backend.auth.enRecuperacion?.()) { setEstado({ fase: 'nueva-password' }); return; }
@@ -129,11 +132,14 @@ export function App({ backend, api, cola }) {
       setToast({ texto: e.reason?.sinConexion ? 'Sin conexión: no se ha podido hacer. Prueba de nuevo cuando vuelva.' : `No se ha podido hacer: ${m}`, tipo: 'error', id: Date.now() });
     };
     window.addEventListener('unhandledrejection', sinRecoger);
-    const on = () => setEnLinea(true), off = () => setEnLinea(false);
+    // (v0.65) si no se pudo abrir la cuenta por falta de cobertura (sin copia en el móvil), se vuelve a probar sola al volver
+    const on = () => { setEnLinea(true); if (fase.current === 'error') resolver(true); }, off = () => setEnLinea(false);
     window.addEventListener('online', on);
     window.addEventListener('offline', off);
     return () => { quitar(); quitarCola(); quitarRechazo(); window.removeEventListener('unhandledrejection', sinRecoger); window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
+  const fase = useRef(estado.fase);
+  fase.current = estado.fase;
   // El coach en modo atleta (v0.37): la app de atleta con su propia ficha
   const enModoAtleta = estado.fase === 'coach' && modoAtleta && !!estado.propio;
   // La cola solo envía lo del atleta con la sesión abierta
@@ -217,7 +223,9 @@ export function App({ backend, api, cola }) {
   else if (estado.fase === 'atleta') vista = <AtletaApp />;
   else vista = (
     <div class="acceso"><div class="acceso-caja">
-      <div class="error" role="alert">No se ha podido cargar tu cuenta: {estado.error?.message}</div>
+      {estado.error?.sinConexion
+        ? <div class="nota nota-sin-red" role="status"><Icono n="sinred" /> Sin conexión. Tu cuenta se abrirá en cuanto vuelva la cobertura.</div>
+        : <div class="error" role="alert">No se ha podido cargar tu cuenta: {estado.error?.message}</div>}
       <button class="btn" onClick={() => resolver(true)}>Reintentar</button>
       <button class="btn-texto" onClick={ctx.salir}>Cerrar sesión</button>
     </div></div>
@@ -261,14 +269,15 @@ function AvisoVersion() {
 }
 
 // Banda de estado: sin conexión o con series pendientes de enviar
+// (v0.65) sin conexión, una línea tranquila (no un error): lo de la pantalla sale del móvil y lo que apuntes se guarda
 export function BandaConexion() {
   const { enLinea, pendientes } = useAppCtx();
   if (enLinea && !pendientes) return null;
   return (
-    <div class="banda-conexion" role="status">
+    <div class={`banda-conexion ${enLinea ? '' : 'sin-red'}`} role="status">
       <Icono n="sinred" />
       {!enLinea
-        ? `Sin conexión. Lo que registres se guarda en el móvil${pendientes ? ` (${pendientes} pendiente${pendientes > 1 ? 's' : ''})` : ''} y se enviará solo.`
+        ? <span>Sin conexión · se guardará al volver{pendientes ? <span class="banda-cuenta">{` · ${pendientes} pendiente${pendientes > 1 ? 's' : ''}`}</span> : ''}</span>
         : `Enviando ${pendientes} registro${pendientes > 1 ? 's' : ''} guardado${pendientes > 1 ? 's' : ''} sin conexión…`}
     </div>
   );

@@ -35,6 +35,7 @@ import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
 import { estadoHoy, sugerenciaDescanso, urlSegura } from '../../logica/diseno.js';
 import { Diales } from './Diales.jsx';
 import { semanasObjetivo, semanaEnCurso } from '../../logica/semana-natural.js';
+import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 
 // Minutos aproximados: cada serie ~40 s de trabajo más su descanso
 export { duracionEstimada };
@@ -305,7 +306,7 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
 }
 
 function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos, recargar, entre = null }) {
-  const { api, propio } = useApp();
+  const { api, propio, cola } = useApp();
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id, p]);
   const [planAbierto, setPlanAbierto] = useState(false);
   const [bloqueAbierto, setBloqueAbierto] = useState(false);
@@ -318,7 +319,10 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const sesiones = semana ? (p.sesiones[semana.id] || []) : [];
   const toca = semana ? queToca(sesiones, semana, hoy) : { siguiente: null };
   const siguiente = toca.siguiente;
-  const det = useCarga(() => (siguiente ? api.sesion(siguiente.id, atleta.id) : Promise.resolve(null)), [siguiente?.id]);
+  // (v0.65) con lo apuntado sin conexión encima («Continuar sesión» y las series hechas, también sin cobertura)
+  const conCola = (d) => sesionConCola(d, cola.operaciones());
+  const det = useCarga(() => (siguiente ? api.sesion(siguiente.id, atleta.id).then(conCola) : Promise.resolve(null)), [siguiente?.id],
+    { copia: siguiente ? CLAVES_COPIA.sesion(siguiente.id) : null, transformar: conCola });
   // v0.50: la tarjeta de arriba según cómo va el día (entreno, descanso, hecha, semana completa o sin semana)
   const e0 = estadoHoy({ bloque: p.bloque, semana, sesiones, hoy });
   // v0.53: con objetivo de días por semana (microciclos), la semana de lunes a domingo con ese objetivo: la de la

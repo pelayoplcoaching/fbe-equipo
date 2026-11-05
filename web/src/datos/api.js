@@ -29,6 +29,8 @@ import { panelNegocio } from '../logica/negocio.js';
 import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
+import { copia as copiaDelMovil } from './copia.js';
+import { CLAVES_COPIA, sesionesAPreparar, sesionConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
 import { VERSION_LEGAL } from '../legal.js';
@@ -4040,5 +4042,111 @@ export function crearApi(backend) {
       await Promise.all(pautas.map((p, k) => (p.orden !== k + 1 ? b.update('sesion_ejercicios', { orden: k + 1 }, { eq: { id: p.id } }) : null)));
     },
   };
+
+  // ------------------------------------------------------------ v0.65: abrir sin cobertura
+  // Lo que hace falta para abrir Hoy y la sesión (tu perfil y tu ficha, los consentimientos, el programa, cada sesión con «ant.»
+  // y las notas, tus marcas y los «Recuerda») se guarda en el móvil al llegar de la base (datos/copia.js, por cuenta; solo lo
+  // tuyo: lo de otros atletas que ve el coach, nunca). Al pedirlo otra vez, la base tiene ESPERA_RED_MS para contestar; si no
+  // contesta (o no hay red), sale la copia, y lo de la base, cuando llega, se guarda y se avisa a la pantalla («fbe-copia») para
+  // que se ponga al día sola. Si la red acaba de fallar, durante un rato ni se espera: la copia, al momento.
+  const ESPERA_RED_MS = 1200;
+  let redFlojaHasta = 0;
+  let miAtletaId = null;
+  const sinRedAhora = () => typeof navigator !== 'undefined' && navigator.onLine === false;
+  const sinConexion = () => { const e = new Error('Sin conexión.'); e.sinConexion = true; return e; };
+  async function conCopia(clave, pedir) {
+    const id = uid();
+    const red = Promise.resolve().then(pedir);
+    if (!id) return red;
+    const almacen = copiaDelMovil();
+    red.then((d) => { redFlojaHasta = 0; if (uid() === id) almacen.guardar(id, clave, d); }, (e) => { if (esTemporal(e)) redFlojaHasta = Date.now() + 20000; });
+    const guardada = await almacen.leer(id, clave);
+    if (!guardada) return red;
+    let deCopia = false;
+    red.then((d) => { if (deCopia && uid() === id && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('fbe-copia', { detail: { clave, datos: d } })); }, () => {});
+    const espera = sinRedAhora() || Date.now() < redFlojaHasta ? 0 : ESPERA_RED_MS;
+    const r = await Promise.race([red.then((d) => ({ d }), (e) => ({ e })), new Promise((ok) => { setTimeout(() => ok(null), espera); })]);
+    if (r && 'd' in r) return r.d;
+    if (r && !esTemporal(r.e)) throw r.e;
+    if (!r) redFlojaHasta = Date.now() + 20000;
+    deCopia = true;
+    return guardada.datos;
+  }
+  const propia = (atletaId) => !!atletaId && atletaId === miAtletaId;
+  const sinCopia = { perfil: api.perfil, miAtleta: api.miAtleta, consentimientos: api.consentimientos, programa: api.programa, sesion: api.sesion, marcasPrevias: api.marcasPrevias, recordatoriosActivos: api.recordatoriosActivos };
+  Object.assign(api, {
+    perfil: () => conCopia(CLAVES_COPIA.perfil(), sinCopia.perfil),
+    async miAtleta() {
+      const a = await conCopia(CLAVES_COPIA.atleta(), sinCopia.miAtleta);
+      miAtletaId = a?.id || null;
+      return a;
+    },
+    consentimientos: () => conCopia(CLAVES_COPIA.consentimientos(), sinCopia.consentimientos),
+    programa: (atletaId, opciones) => (opciones === undefined && propia(atletaId) ? conCopia(CLAVES_COPIA.programa(atletaId), () => sinCopia.programa(atletaId)) : sinCopia.programa(atletaId, opciones)),
+    sesion: (sesionId, atletaId) => (propia(atletaId) ? conCopia(CLAVES_COPIA.sesion(sesionId), () => sinCopia.sesion(sesionId, atletaId)) : sinCopia.sesion(sesionId, atletaId)),
+    marcasPrevias: (atletaId, sesionId = null) => (propia(atletaId) && sesionId ? conCopia(CLAVES_COPIA.marcas(sesionId), () => sinCopia.marcasPrevias(atletaId, sesionId)) : sinCopia.marcasPrevias(atletaId, sesionId)),
+    // (con la copia, sin red no vale «ninguno»: la de antes no se pisa con una lista vacía)
+    recordatoriosActivos: (atletaId) => (!propia(atletaId) ? sinCopia.recordatoriosActivos(atletaId) : conCopia(CLAVES_COPIA.recordatorios(atletaId), async () => {
+      const v = await api.video037();
+      if (v === null) throw sinConexion();
+      return v ? (await b.rpc('recordatorios_activos', { p_atleta: atletaId })) || [] : [];
+    })),
+    // Tras una visita con conexión: las sesiones que quedan de esta semana (hoy y lo que viene) se dejan en el móvil, con sus
+    // marcas y los recordatorios; solo lo que no se ha puesto al día en la última media hora (para no cargar la base)
+    async prepararSinRed(p, { n = 3, hace = 30 * 60000 } = {}) {
+      const id = uid();
+      if (!id || !propia(p?.bloque?.atleta_id) || sinRedAhora()) return 0;
+      const almacen = copiaDelMovil();
+      const viejo = async (clave) => { const x = await almacen.leer(id, clave); return !x || Date.now() - x.t > hace; };
+      let hechas = 0;
+      for (const s of sesionesAPreparar(p, n)) {
+        if (sinRedAhora() || uid() !== id) break;
+        try {
+          if (await viejo(CLAVES_COPIA.sesion(s))) { await api.sesion(s, miAtletaId); hechas++; }
+          if (await viejo(CLAVES_COPIA.marcas(s))) await api.marcasPrevias(miAtletaId, s);
+        } catch { break; }
+      }
+      if (hechas && await viejo(CLAVES_COPIA.recordatorios(miAtletaId))) await api.recordatoriosActivos(miAtletaId).catch(() => {});
+      return hechas;
+    },
+  });
+
+  // (v0.65, revisión) lo que se apunta (directo o desde la cola) se pone también en la copia de su sesión: si no, al volver a
+  // abrir la app sin red (o con la red lenta) la sesión salía de una copia sin esas series, proponía otra vez la serie 1 y
+  // la nueva pisaba la de verdad en la base. Se usa la misma mezcla que pone encima lo que espera en la cola.
+  const sesionDeEjercicio = new Map(); // sesion_ejercicio_id → sesion id (de las sesiones propias que se han abierto)
+  const anotarSesion = (sesionId, d) => { for (const e of d?.ejercicios || []) sesionDeEjercicio.set(e.id, sesionId); };
+  const leerSesion = api.sesion;
+  api.sesion = async (sesionId, atletaId) => { const d = await leerSesion(sesionId, atletaId); if (propia(atletaId)) anotarSesion(sesionId, d); return d; };
+  let ponerAlDia = Promise.resolve();
+  const enLaCopia = (sesionId, op) => {
+    const id = uid();
+    if (!id || !sesionId) return;
+    // (una detrás de otra: dos series seguidas no se pisan al leer y guardar la copia)
+    ponerAlDia = ponerAlDia.then(async () => {
+      const almacen = copiaDelMovil();
+      const clave = CLAVES_COPIA.sesion(sesionId);
+      const x = await almacen.leer(id, clave);
+      if (x?.datos && uid() === id) await almacen.guardar(id, clave, sesionConCola(x.datos, [op]));
+    }).catch(() => {});
+  };
+  const originales = { guardarSerie: api.guardarSerie, borrarSerie: api.borrarSerie, marcarSesion: api.marcarSesion };
+  Object.assign(api, {
+    async guardarSerie(datos, atletaId) {
+      const fila = await originales.guardarSerie(datos, atletaId);
+      enLaCopia(sesionDeEjercicio.get(datos.sesion_ejercicio_id), { tipo: 'serie', datos: { ...datos, ...(fila || {}) } });
+      return fila;
+    },
+    async borrarSerie(sesionEjercicioId, numero) {
+      const r = await originales.borrarSerie(sesionEjercicioId, numero);
+      enLaCopia(sesionDeEjercicio.get(sesionEjercicioId), { tipo: 'borrarSerie', datos: { sesion_ejercicio_id: sesionEjercicioId, numero } });
+      return r;
+    },
+    async marcarSesion(sesionId, cambios) {
+      const r = await originales.marcarSesion(sesionId, cambios);
+      enLaCopia(sesionId, { tipo: 'sesion', datos: { id: sesionId, cambios } });
+      return r;
+    },
+  });
   return api;
 }

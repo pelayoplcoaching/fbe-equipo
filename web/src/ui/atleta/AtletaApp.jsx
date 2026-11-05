@@ -13,6 +13,8 @@ import { Equipo, leerVistoEquipo } from '../Comunidad.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { AvisoPrivacidad } from '../AvisoPrivacidad.jsx';
+import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
+import { programaConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 import { usePendientesArchivos, BandaPendientes, PildoraSubida } from '../Pendientes.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { hoyISO, semanaCheckin, diaDeCheckin } from '../../logica/fechas.js';
@@ -46,7 +48,11 @@ function tabInicial(tabs) {
 }
 
 export function AtletaApp() {
-  const { api, atleta, aviso, propio, salirModoAtleta } = useApp();
+  const { api, atleta, aviso, propio, salirModoAtleta, cola } = useApp();
+  // (v0.65) la versión de la app que vio esta cuenta en este móvil (para «Novedades»), antes de nada; y el aviso de privacidad
+  // va primero: las novedades esperan a que no esté (y a estar en Hoy, fuera de una sesión)
+  useState(() => { if (!propio) prepararVersionVista(api.uid()); });
+  const [privacidadLista, setPrivacidadLista] = useState(false);
   // Vídeos guardados en el móvil sin cobertura: se envían solos (en cualquier pestaña)
   const pendientesArchivos = usePendientesArchivos(api, atleta?.id, aviso);
   // La comunidad (v0.43): la pestaña Equipo solo si está abierta (sin la migración 027, nunca). El coach la puede
@@ -92,7 +98,10 @@ export function AtletaApp() {
   // Si la app se queda abierta de un día para otro (o se vuelve a ella por la mañana), todo se recalcula con el día nuevo
   const [dia, setDia] = useState(hoyISO);
   useCambioDeDia(setDia);
-  const programa = useCarga(() => api.programa(atleta.id), [atleta.id, dia]);
+  // (v0.65) con lo marcado sin conexión encima (una sesión terminada sin cobertura sale terminada); sin red, de la copia del móvil,
+  // y lo de la base, en cuanto llega
+  const conCola = (p) => programaConCola(p, cola.operaciones());
+  const programa = useCarga(() => api.programa(atleta.id).then(conCola), [atleta.id, dia], { copia: CLAVES_COPIA.programa(atleta.id), transformar: conCola });
   const checkinSemana = useCarga(() => (propio ? Promise.resolve(null) : api.checkin(atleta.id, semanaCheckin(hoyISO()))), [atleta.id, dia]);
   const noLeidos = useCarga(() => (propio ? Promise.resolve([]) : api.noLeidos(atleta.id).catch(() => [])), [atleta.id, dia]);
   // v0.48: las tareas del coach que ya tocan (para el número del icono de la app)
@@ -113,6 +122,19 @@ export function AtletaApp() {
     const sig = p.actual ? queToca(p.sesiones[p.actual.id] || [], p.actual).siguiente : null;
     if (sig && conEntrenamiento(atleta)) setSesionId(sig.id);
   }, [programa.datos]);
+
+  // (v0.65) Tras una visita con conexión, la semana se queda en el móvil (las sesiones que quedan, con «ant.», marcas y
+  // recordatorios), sin estorbar a lo que se está pintando; al volver la cobertura, Hoy se pone al día solo
+  useEffect(() => {
+    if (!programa.datos) return undefined;
+    const t = setTimeout(() => { Promise.resolve(api.prepararSinRed?.(programa.datos)).catch(() => {}); }, 3000);
+    return () => clearTimeout(t);
+  }, [programa.datos]);
+  useEffect(() => {
+    const vuelve = () => { programa.recargar(true); noLeidos.recargar(true); };
+    window.addEventListener('online', vuelve);
+    return () => window.removeEventListener('online', vuelve);
+  }, []);
 
   useEffect(() => {
     try { history.replaceState(null, '', `#${tab}`); } catch { /* */ }
@@ -173,7 +195,9 @@ export function AtletaApp() {
       <Pantallas {...{ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia, atletaId: atleta.id }} />
       {videoEnlace && <VideoEnlazado key={`${videoEnlace.id}@${videoEnlace.t}`} id={videoEnlace.id} t={videoEnlace.t} alCerrar={() => setVideoEnlace(null)} />}
       {/* (v0.56) las novedades de la política, una vez (el coach en su modo atleta, no) */}
-      {!propio && <AvisoPrivacidad />}
+      {!propio && <AvisoPrivacidad alTerminar={() => setPrivacidadLista(true)} />}
+      {/* (v0.65) y después, las de la app tras actualizarla: en Hoy, nunca en mitad de una sesión */}
+      {!propio && privacidadLista && !sesionId && tab === 'hoy' && <AvisoNovedades uid={api.uid()} rol="atleta" />}
     </>
   );
 }

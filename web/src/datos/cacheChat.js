@@ -29,37 +29,40 @@ let epoca = 0;
 export const cacheCerrada = () => cerrada;
 
 // El almacén de IndexedDB (o nada, si el navegador no deja: entonces el chat abre como siempre, esperando a la base)
-function almacenIdb() {
-  let db = null;
-  const abrir = () => {
-    if (cerrada) return Promise.reject(new Error('cerrada'));
-    if (db) return db;
-    db = new Promise((ok, mal) => {
-      try {
-        const r = indexedDB.open(BASE, 1);
-        r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(ALMACEN)) r.result.createObjectStore(ALMACEN); };
-        r.onsuccess = () => {
-          const d = r.result;
-          // (revisión) otra pestaña la borra o la cambia de versión: se suelta para no bloquearla
-          d.onversionchange = () => { try { d.close(); } catch { /* */ } db = null; };
-          if (cerrada) { try { d.close(); } catch { /* */ } mal(new Error('cerrada')); return; }
-          ok(d);
-        };
-        r.onerror = () => mal(r.error);
-        r.onblocked = () => mal(new Error('bloqueada'));
-      } catch (e) { mal(e); }
-    });
-    db.catch(() => { db = null; });
-    return db;
-  };
+// (v0.65) La misma base guarda también la copia de tu semana (datos/copia.js, su almacén «copia»): una sola conexión para
+// los dos, y se borra entera (las dos copias) al cerrar la sesión.
+export const ALMACEN_COPIA = 'copia';
+let conexion = null;
+function abrirBase() {
+  if (cerrada) return Promise.reject(new Error('cerrada'));
+  if (conexion) return conexion;
+  conexion = new Promise((ok, mal) => {
+    try {
+      const r = indexedDB.open(BASE, 2);
+      r.onupgradeneeded = () => { for (const n of [ALMACEN, ALMACEN_COPIA]) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n); };
+      r.onsuccess = () => {
+        const d = r.result;
+        // (revisión) otra pestaña la borra o la cambia de versión: se suelta para no bloquearla
+        d.onversionchange = () => { try { d.close(); } catch { /* */ } conexion = null; };
+        if (cerrada) { try { d.close(); } catch { /* */ } mal(new Error('cerrada')); return; }
+        ok(d);
+      };
+      r.onerror = () => mal(r.error);
+      r.onblocked = () => mal(new Error('bloqueada'));
+    } catch (e) { mal(e); }
+  });
+  conexion.catch(() => { conexion = null; });
+  return conexion;
+}
+export function almacenIdb(nombre = ALMACEN) {
   const tx = async (modo, f) => {
     const e = epoca;
-    const d = await abrir();
+    const d = await abrirBase();
     // (por si se ha salido mientras se abría)
     if (cerrada || e !== epoca) throw new Error('cerrada');
     return new Promise((ok, mal) => {
-      const t = d.transaction(ALMACEN, modo);
-      const r = f(t.objectStore(ALMACEN));
+      const t = d.transaction(nombre, modo);
+      const r = f(t.objectStore(nombre));
       t.oncomplete = () => ok(r?.result);
       t.onerror = () => mal(t.error);
       t.onabort = () => mal(t.error);
@@ -77,13 +80,13 @@ function almacenIdb() {
       return { get result() { return out; } };
     }),
     async borrarTodo() {
-      try { const d = await db; d?.close?.(); } catch { /* */ }
-      db = null;
+      try { const d = await conexion; d?.close?.(); } catch { /* */ }
+      conexion = null;
       await new Promise((ok) => { try { const r = indexedDB.deleteDatabase(BASE); r.onsuccess = r.onerror = r.onblocked = () => ok(); } catch { ok(); } });
     },
   };
 }
-const hayIdb = () => { try { return typeof indexedDB !== 'undefined' && !!indexedDB; } catch { return false; } };
+export const hayIdb = () => { try { return typeof indexedDB !== 'undefined' && !!indexedDB; } catch { return false; } };
 
 // almacen: { leer(clave), guardar(clave, valor), borrar(clave), todo(), borrarTodo() } (en las pruebas, uno en memoria)
 // estaCerrada: en la app, la marca de arriba (en las pruebas, la que se quiera)

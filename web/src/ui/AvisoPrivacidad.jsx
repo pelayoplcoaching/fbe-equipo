@@ -6,7 +6,8 @@ import { debeAvisarPrivacidad, novedadesDesde } from '../logica/privacidad.js';
 // (v0.56) Las novedades de la política, UNA vez por versión (Pelayo: «que lo pregunte una vez, no cada vez que se abre»).
 // Cerrarla de cualquier forma (Entendido, Escape, fuera o la X) cuenta como vista, en todos sus móviles (va a la base).
 // No pide aceptar nada: lo que necesita permiso (el micro) se pide al usarlo.
-export function AvisoPrivacidad() {
+// (v0.65) alTerminar: cuando ya no hay aviso (no tocaba o se ha cerrado), para que la hoja de novedades salga después y nunca a la vez
+export function AvisoPrivacidad({ alTerminar = null }) {
   const { api } = useApp();
   const [ver, setVer] = useState(false);
   const [vista, setVista] = useState(null);
@@ -17,8 +18,11 @@ export function AvisoPrivacidad() {
   useEffect(() => {
     let vivo = true;
     Promise.all([api.privacidadVista(), api.versionLegal()]).then(([v, a]) => {
-      if (vivo && debeAvisarPrivacidad(v?.version, a)) { setActual(a); setVista(v?.version || null); setVer(true); }
-    }).catch(() => {});
+      if (!vivo) return;
+      // (v0.65) sin conexión y sin saber qué vio (la base no contesta y en este móvil no hay nada), no se avisa: ya se sabrá
+      const sinSaber = !v?.enBase && !v?.version && typeof navigator !== 'undefined' && navigator.onLine === false;
+      if (!sinSaber && debeAvisarPrivacidad(v?.version, a)) { setActual(a); setVista(v?.version || null); setVer(true); } else alTerminar?.();
+    }).catch(() => { if (vivo) alTerminar?.(); });
     return () => { vivo = false; };
   }, []);
   if (!ver) return null;
@@ -27,6 +31,7 @@ export function AvisoPrivacidad() {
     hecho.current = true;
     setVer(false);
     api.marcarPrivacidadVista(actual).catch(() => {});
+    alTerminar?.();
   };
   return (
     <Hoja titulo="Novedades de privacidad" alCerrar={cerrar} clase="hoja-aviso-privacidad">

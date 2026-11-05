@@ -163,6 +163,17 @@ function leerLocal(clave) {
   try { const v = localStorage.getItem(clave); return v ? JSON.parse(v) : null; } catch { return null; }
 }
 
+// (v0.65, para probar «abrir sin cobertura» en la demo: localStorage «fbe-demo-sin-red» = 1) sin conexión, la demo tampoco
+// llega a la «base»: ni lee ni escribe, como el de verdad (si no, sin red sigue funcionando entera, que es lo que hace siempre)
+function sinRedDemo() {
+  try {
+    if (typeof navigator === 'undefined' || navigator.onLine !== false || localStorage.getItem('fbe-demo-sin-red') !== '1') return;
+  } catch { return; }
+  const e = new Error('Sin conexión.');
+  e.sinConexion = true;
+  throw e;
+}
+
 export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir = true } = {}) {
   let db = (persistir && leerLocal(clave)) || semilla();
   let sesion = (persistir && leerLocal(clave + '-sesion')) || null;
@@ -1881,6 +1892,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       },
     },
     async select(t, f = {}) {
+      sinRedDemo();
       // Para ver las siluetas de carga en la demo: localStorage «fbe-demo-retraso» = milisegundos por consulta
       const retraso = (() => { try { return Math.min(5000, Number(localStorage.getItem('fbe-demo-retraso')) || 0); } catch { return 0; } })();
       if (retraso) await new Promise((r) => setTimeout(r, retraso));
@@ -1903,6 +1915,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(filas);
     },
     async insert(t, filas) {
+      sinRedDemo();
       // Sin conexión (el navegador lo dice), los mensajes no salen (como en el de verdad): así la demo enseña la bandeja de
       // salida (⏱) y cómo se envían solos al volver la cobertura
       if (t === 'comentarios' && typeof navigator !== 'undefined' && navigator.onLine === false) { const e = new Error('Sin conexión.'); e.sinConexion = true; throw e; }
@@ -1914,6 +1927,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async update(t, cambios, f) {
+      sinRedDemo();
       if (['cobros_atletas', 'pagos', 'recetas', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad'].includes(t) && !esCoach()) return [];
       // Como la 037: recordatorios, frases y vídeos modelo (el coach, con sus triggers); la valoración, el atleta de la suya
       if (['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'umbrales_velocidad'].includes(t)) {
@@ -2085,6 +2099,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async upsert(t, filas, onConflict) {
+      sinRedDemo();
       soloCoach(t);
       // Como la 037: la valoración del atleta (una por vídeo)
       if (t === 'video_autoevaluacion') {
@@ -2196,6 +2211,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return copia(res);
     },
     async delete(t, f) {
+      sinRedDemo();
       if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad'].includes(t) && !esCoach()) return [];
       // Como la 037: la valoración la quita su atleta (el coach solo la lee)
       if (t === 'video_autoevaluacion') {
@@ -2243,6 +2259,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       persistirYa();
     },
     async rpc(nombre, args) {
+      sinRedDemo();
       const uid = sesion?.user.id;
       const perfil = tabla('perfiles').find((p) => p.id === uid);
       // Migración 021: el resumen de los pagos del atleta con la sesión abierta (solo eso)

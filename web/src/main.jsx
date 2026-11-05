@@ -32,7 +32,9 @@ async function arrancar() {
   const cola = crearCola(api);
   render(<App backend={backend} api={api} cola={cola} />, document.getElementById('app'));
 
-  if (!__DEMO__ && 'serviceWorker' in navigator && location.protocol === 'https:') {
+  // (v0.65) en localhost solo si se pide (localStorage «fbe-sw-local» = 1): para probar «abrir sin cobertura» con la app empaquetada
+  const swLocal = location.hostname === 'localhost' && (() => { try { return localStorage.getItem('fbe-sw-local') === '1'; } catch { return false; } })();
+  if (!__DEMO__ && 'serviceWorker' in navigator && (location.protocol === 'https:' || swLocal)) {
     // Versiones nuevas (v0.19): la nueva se instala en segundo plano y espera. Al abrir la app de cero ya se carga
     // la última (la página va primero a la red), así que la que espera se activa sin más. Con la app abierta (lo
     // normal en el móvil: días sin cerrarla), se comprueba al volver a ella y cada media hora, y se ofrece

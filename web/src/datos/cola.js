@@ -100,6 +100,8 @@ export function crearCola(api, { clave = 'fbe-cola-v1', claveRechazos = 'fbe-col
 
   return {
     pendientes: () => mias().length,
+    // (v0.65) lo que espera de este atleta, en orden (copias): para enseñarlo encima de la copia del móvil o de la base
+    operaciones: () => mias().map((o) => ({ ...o, datos: { ...o.datos } })),
     alCambiar(f) { oyentes.add(f); return () => oyentes.delete(f); },
     alRechazo(f) { oyentesRechazo.add(f); return () => oyentesRechazo.delete(f); },
     rechazadas: () => leer(claveRechazos),
