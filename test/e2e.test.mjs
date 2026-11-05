@@ -5701,6 +5701,17 @@ try {
   console.log('  ✗ la comunidad de la v0.72:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.73: la comunidad, quinta tanda (aniversarios, el mes en el equipo, hitos, reacciones y pegatinas, momentos de 24 h)
+// (test/e2e-comunidad-073.mjs)
+console.log('\nv0.73: la comunidad, quinta tanda');
+try {
+  const { probarComunidad073 } = await import('./e2e-comunidad-073.mjs');
+  await probarComunidad073({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la comunidad de la v0.73:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
 console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');

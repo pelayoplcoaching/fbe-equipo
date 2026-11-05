@@ -4788,3 +4788,55 @@ html[data-teclado] .pildora-descanso { display: none; }
 .pc-activos li { gap: 8px; flex-wrap: wrap; }
 .pc-historial ul { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 4px; }
 .pc-historial li, .pc-activos li span { overflow-wrap: anywhere; }
+
+/* ---------------------------------------------------------------- v0.73: aniversarios, el mes en el equipo, hitos, reacciones y pegatinas, momentos */
+.aniversario { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: start; background: var(--morado-suave); border: 1.5px solid var(--morado); }
+.aniversario-ico { font-size: 1.75rem; line-height: 1.2; }
+.aniversario-t { font-size: 1.0625rem; font-weight: 800; line-height: 1.25; margin: 0; overflow-wrap: anywhere; }
+.aniversario-cerrar { margin: -6px -6px 0 0; }
+.aniversario-post { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border-radius: 12px; background: var(--morado-suave); }
+.ap-ico { font-size: 2rem; text-align: center; }
+.ap-titulo { font-size: 1.0625rem; line-height: 1.3; overflow-wrap: anywhere; }
+.mes-equipo { display: grid; gap: 8px; }
+.mes-equipo-t { font-size: 1rem; font-weight: 800; margin: 0; overflow-wrap: anywhere; }
+.mes-mio { background: var(--hoja-2); }
+.mes-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.mes-cifras > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; padding: 8px; border-radius: 10px; background: var(--hoja-2); min-width: 0; }
+.mes-mio .mes-cifras > div { background: var(--hoja); }
+.mes-cifras dd { margin: 0; font-size: 1.375rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mes-cifras dt { font-size: 0.7188rem; line-height: 1.25; color: var(--tinta-2); overflow-wrap: break-word; hyphens: auto; }
+.hitos-t { font-size: 0.9375rem; font-weight: 800; margin: 0; }
+.hitos-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.hitos-lista li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; align-items: center; color: var(--tinta-2); }
+.hitos-lista li.hecho { color: var(--tinta); font-weight: 650; }
+.he-ico { text-align: center; }
+.he-texto { overflow-wrap: anywhere; }
+.reaccion-mas { color: var(--tinta-2); }
+.reaccion-mas svg { width: 18px; height: 18px; }
+.pegatina { display: block; width: 84px; height: 84px; }
+.pegatina-comentario { margin: 2px 0; }
+.comentar-botones { gap: 8px; }
+.elegir-pegatina { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.btn-pegatina { display: grid; place-items: center; min-height: 84px; padding: 4px; border-radius: 14px; border: 1px solid var(--linea); background: var(--hoja-2); cursor: pointer; }
+.btn-pegatina .pegatina { width: 76px; height: 76px; }
+.btn-pegatina:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; }
+.tira-momentos { margin-bottom: 12px; min-width: 0; }
+.tm-lista { list-style: none; margin: 0; padding: 2px 2px 4px; display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.tm-lista::-webkit-scrollbar { display: none; }
+.tm-item { display: grid; justify-items: center; gap: 4px; width: 68px; padding: 0; border: 0; background: none; color: var(--tinta); cursor: pointer; font: inherit; }
+.tm-item:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; border-radius: 12px; }
+.tm-circulo { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; padding: 3px; background: conic-gradient(var(--disco-rojo), var(--disco-amarillo), var(--disco-verde), var(--disco-azul), var(--morado), var(--disco-rojo)); overflow: hidden; }
+.tm-circulo > * { width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--tiza); background: var(--hoja-2); object-fit: cover; }
+.tm-nuevo .tm-circulo { background: var(--hoja-2); border: 2px dashed var(--morado); padding: 0; }
+.tm-nuevo .tm-circulo > svg { width: 24px; height: 24px; border: 0; background: none; color: var(--morado); }
+.tm-item.retenido .tm-circulo { background: var(--aviso); }
+.tm-nombre { font-size: 0.75rem; max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-vacio { margin: 2px 0 0; }
+.foto-momento { display: block; object-fit: cover; }
+.foto-momento.vacia { background: var(--hoja-2); }
+.vm-foto { width: 100%; max-height: 60vh; border-radius: 14px; object-fit: contain; background: var(--hoja-2); }
+.vm-foto.vacia { aspect-ratio: 4 / 3; }
+.nm-previa { display: grid; gap: 8px; justify-items: start; }
+.nm-previa img { width: 100%; max-height: 45vh; object-fit: contain; border-radius: 12px; background: var(--hoja-2); }
+.nm-norma { display: flex; gap: 6px; align-items: flex-start; color: var(--tinta-2); }
+.nm-norma svg { flex: none; width: 16px; height: 16px; margin-top: 1px; }

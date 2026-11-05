@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.11' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.12' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -4211,7 +4211,7 @@ console.log('\nv0.70: compañeros de racha, retos por equipos, de cardio y de se
   const PV = await import('../web/src/logica/privacidad.js');
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
-  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.9') > 0 && PV.NOVEDADES_PRIVACIDAD[2][3] === '2026-12.9' && PV.novedadesDesde('2026-12.8', '2026-12.9').length === 1 && PV.formatoVersion('2026-12.9')
+  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.9') > 0 && PV.NOVEDADES_PRIVACIDAD[3][3] === '2026-12.9' && PV.novedadesDesde('2026-12.8', '2026-12.9').length === 1 && PV.formatoVersion('2026-12.9')
     && /compañeros de racha/.test(com) && /No salir en el ranking/.test(com) && /retos por equipos/.test(com) && /Contar mis minutos de cardio en los retos/.test(com) && /apagado de entrada/.test(com) && /insignias/i.test(com),
     'la política 2026-12.9: compañeros de racha y su racha, retos por equipos, minutos de cardio (si lo enciendes) e insignias');
   const v = NOVEDADES['0.70'];
@@ -4253,7 +4253,7 @@ console.log('\nv0.71: la comunidad, tercera tanda (temas, preguntas, varias foto
     && PV.versionMayor('2026-12.9', '2026-12.10') === '2026-12.10' && PV.versionSinRevision('2026-12.10') === '2026-12' && PV.debeAvisarPrivacidad('2026-12.9', '2026-12.10'),
     '(v0.71) revisiones de una o dos cifras (2026-12.10 sí; .100, .0 y .01 no), comparadas como números: 2026-12.9 < 2026-12.10 < 2027-01');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
-  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.10') > 0 && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && legal.VERSION_LEGAL_SIN_043 === '2026-12.9' && PV.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.10' && PV.novedadesDesde('2026-12.9', '2026-12.10').length === 1
+  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.10') > 0 && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && legal.VERSION_LEGAL_SIN_043 === '2026-12.9' && PV.NOVEDADES_PRIVACIDAD[2][3] === '2026-12.10' && PV.novedadesDesde('2026-12.9', '2026-12.10').length === 1
     && PV.novedadesDesde('2026-12.9', '2026-12.9').length === 0 && /tema/.test(com) && /hasta 4 fotos/.test(com) && /Pregunta para el coach/.test(com) && /sin tu nombre/.test(com)
     && /solo lo ves tú/.test(com) && /búsqueda/.test(com) && /Mejor respuesta/.test(com),
     'la política 2026-12.10 cuenta los temas, las preguntas y su copia sin nombre, las fotos, lo guardado (solo para ti), la búsqueda y la mejor respuesta; su novedad sale una vez');
@@ -4303,7 +4303,7 @@ console.log('\nv0.72: la comunidad, cuarta tanda (eventos, programados, atleta d
   const PV = await import('../web/src/logica/privacidad.js');
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
-  check(legal.VERSION_LEGAL === '2026-12.11' && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.11' && PV.novedadesDesde('2026-12.10', '2026-12.11').length === 1
+  check(legal.VERSION_LEGAL_SIN_045 === '2026-12.11' && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && PV.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.11' && PV.novedadesDesde('2026-12.10', '2026-12.11').length === 1
     && PV.novedadesDesde('2026-12.10', '2026-12.10').length === 0 && /eventos y quedadas/.test(com) && /recordatorio/.test(com) && /programar/.test(com) && /panel con recuentos/.test(com) && /atleta de la semana/.test(com)
     && /24 horas o 7 días/.test(com) && /pendiente de revisión/.test(com) && /modo lento/.test(com) && /tus respuestas a los eventos/.test(com),
     'la política 2026-12.11 cuenta los eventos (quién va y el recordatorio), lo programado, el panel, el atleta de la semana y la moderación; su novedad sale una vez');
@@ -4314,6 +4314,78 @@ console.log('\nv0.72: la comunidad, cuarta tanda (eventos, programados, atleta d
   const cr = sql.slice(sql.indexOf('create or replace function public.crear_recordatorios'));
   check(!/preact\/compat/.test(ui) && (cr.match(/\n  begin\n/g) || []).length === 4 && (cr.match(/exception when others then\n    raise warning/g) || []).length === 4 && /resumen del domingo no creado/.test(cr) && /parejas no creado/.test(cr),
     'sin preact/compat; crear_recordatorios() de la 044 conserva los bloques de la 041 y la 042 y añade los suyos, cada uno a prueba de fallos');
+}
+
+console.log('\nv0.73: la comunidad, quinta tanda (aniversarios, el mes en el equipo, hitos, reacciones y pegatinas, momentos)');
+{
+  const M = await import('../web/src/logica/celebracion.js');
+  check(M.sumarMesesFecha('2026-01-31', 1) === '2026-02-28' && M.sumarMesesFecha('2024-01-31', 1) === '2024-02-29' && M.sumarMesesFecha('2026-03-31', 1) === '2026-04-30'
+    && M.sumarMesesFecha('2024-02-29', 12) === '2025-02-28' && M.sumarMesesFecha('2026-11-05', 2) === '2027-01-05' && M.sumarMesesFecha('2026-08-31', 6) === '2027-02-28',
+    'sumar meses a una fecha como la base: el día que no existe en ese mes, el último (31 de enero → 28 o 29 de febrero)');
+  check(M.mesesCumplidos('2026-10-05', '2026-11-05') === 1 && M.mesesCumplidos('2026-10-06', '2026-11-05') === null && M.mesesCumplidos('2026-11-05', '2026-11-05') === null
+    && M.mesesCumplidos('2026-01-31', '2026-02-28') === 1 && M.mesesCumplidos('2026-01-30', '2026-02-28') === 1 && M.mesesCumplidos('2026-01-29', '2026-02-28') === 1 && M.mesesCumplidos('2026-01-31', '2026-02-27') === null
+    && M.mesesCumplidos('2024-01-31', '2024-02-29') === 1 && M.mesesCumplidos('2024-01-31', '2024-02-28') === null && M.mesesCumplidos('2026-03-31', '2026-04-30') === 1
+    && M.mesesCumplidos('2024-02-29', '2025-02-28') === 12 && M.mesesCumplidos('2024-02-29', '2028-02-29') === 48 && M.mesesCumplidos(null, '2026-11-05') === null && M.mesesCumplidos('ayer', '2026-11-05') === null,
+    'los meses cumplidos justo hoy (meses de 29, 30 y 31 días, febrero bisiesto); si hoy no es el día, null');
+  check(M.aniversarioDe('2026-10-05', '2026-11-05')?.texto === '1 mes' && M.aniversarioDe('2026-05-05', '2026-11-05')?.texto === '6 meses' && M.aniversarioDe('2025-11-05', '2026-11-05')?.texto === '1 año'
+    && M.aniversarioDe('2023-11-05', '2026-11-05')?.meses === 36 && M.aniversarioDe('2026-08-05', '2026-11-05') === null && M.aniversarioDe('2025-05-05', '2026-11-05') === null,
+    'se celebra al mes, a los 6 meses, al año y cada año más (a los 3 o 18 meses, no)');
+  check(M.tituloAniversario(12) === '¡Hoy hace 1 año que entrenas con FBE!' && M.tituloAniversario(1) === '¡Hoy hace 1 mes que entrenas con FBE!' && M.textoAniversario(24) === '2 años'
+    && M.textoAniversarioMuro('Ana L.', 12) === 'Ana L. cumple 1 año en FBE 🎉', '«¡Hoy hace 1 año que entrenas con FBE!» y «Ana L. cumple 1 año en FBE 🎉»');
+  const me = M.mesEquipoDe('2026-11-05');
+  check(me?.mes === '2026-10' && me.desde === '2026-10-01' && me.hasta === '2026-10-31' && me.nombre === 'Octubre' && M.mesEquipoDe('2026-11-01')?.mes === '2026-10' && M.mesEquipoDe('2026-11-08') === null
+    && M.mesEquipoDe('2027-01-03')?.mes === '2026-12' && M.mesEquipoDe('2026-03-07')?.hasta === '2026-02-28' && M.tituloMesEquipo('2026-10') === 'Octubre en el equipo',
+    '«Octubre en el equipo»: del 1 al 7 del mes, el mes que acaba de terminar (también de diciembre a enero y en febrero)');
+  check(M.reaccionMasUsada(['fuego', 'risa', 'risa', 'fuego', 'corazon']) === 'fuego' && M.reaccionMasUsada(['trofeo', 'trofeo', 'fuerza']) === 'trofeo' && M.reaccionMasUsada([]) === null && M.reaccionMasUsada(['x']) === null,
+    'la reacción más usada (en empate, la que va antes; sin ninguna, nada)');
+  const r = { mes: '2026-10', equipo: { sesiones: 1234, semanas_completas: 21, records: 1, retos: 2, reaccion: 'risa', racha: 9 }, yo: { sesiones: 14, records: 2, racha: 3, animos_dados: 1, animos_recibidos: 0 } };
+  const c = M.cifrasMesEquipo(r.equipo);
+  check(c.map((x) => x[1]).join('|') === '1.234|21|1|2|9|😂' && c[2][2] === 'récord compartido' && /racha más larga/.test(c[4][2]) && M.cifrasMesEquipo({}).length === 4
+    && M.cifrasMiMes(r.yo).map((x) => `${x[1]} ${x[2]}`).join('|') === '14 sesiones|2 récords compartidos|3 semanas de racha|1 ánimo dado|0 ánimos recibidos',
+    'las cifras del mes: las del equipo (sin la racha ni la reacción si no hay) y las tuyas, solo recuentos');
+  const im = M.datosImagenMes(r), mi = M.datosImagenMes(r, { mio: true });
+  check(im.nombre === 'Octubre en el equipo' && im.etiquetaFecha === 'Octubre de 2026' && im.cifras.length === 3 && im.cifras[0][0] === '1.234' && im.mejores.length === 3 && im.records.length === 0
+    && mi.nombre === 'Mi octubre en FBE' && mi.cifras.map((x) => x[0]).join() === '14,2,3' && !/peso|kg|cintura/i.test(JSON.stringify([im, mi])),
+    'la imagen para compartir (la tarjeta de siempre): la del equipo y la tuya, sin nada de peso, cuerpo ni salud');
+  const h = M.hitosDe({ sesiones: 1200, records: 50, retos: 3 });
+  check(h.length === 8 && h.filter((x) => x.alcanzado).map((x) => x.clave).join() === 'sesiones_100,sesiones_500,sesiones_1000,records_50' && h[2].titulo === '1.000 sesiones' && M.miles(5000) === '5.000'
+    && M.textoHito('records', 50) === '¡50 récords compartidos entre todo el equipo!', 'los hitos del equipo: 100 a 5.000 sesiones, 50 y 100 récords y 10 retos');
+  const p1 = M.hitoPorCelebrar(h, []);
+  const p2 = M.hitoPorCelebrar(h, p1.marcar);
+  const p3 = M.hitoPorCelebrar(M.hitosDe({ sesiones: 2600, records: 50, retos: 3 }), p1.marcar);
+  check(p1.hito.clave === 'records_50' && p1.marcar.length === 4 && p2 === null && p3.hito.clave === 'sesiones_2500' && M.hitoPorCelebrar(M.hitosDe({}), []) === null,
+    'se celebra una vez: al entrar, el último conseguido y se marcan todos (a quien llega tarde no le salen varios seguidos); el siguiente, cuando llegue');
+  check(M.REACCIONES_TODAS.map((x) => x[1]).join('') === '💪🔥👏❤️😂🏆' && M.PEGATINAS.length === 6 && M.pegatinaValida('dia_pierna') && !M.pegatinaValida('otra') && M.textoPegatina('a_tope') === 'A tope',
+    'seis reacciones (💪 🔥 👏 ❤️ 😂 🏆) y seis pegatinas de FBE con su texto (como la base)');
+  const ahora = Date.parse('2026-11-05T12:00:00Z');
+  const ms = [{ id: 'a', autor_id: 'yo', creado_en: '2026-11-05T09:00:00Z' }, { id: 'b', autor_id: 'otro', creado_en: '2026-11-05T11:00:00Z' }, { id: 'c', autor_id: 'otro', creado_en: '2026-11-04T11:59:00Z' },
+    { id: 'd', autor_id: 'otra', creado_en: '2026-11-04T13:00:00Z' }];
+  check(M.ordenarMomentos(ms, 'yo', ahora).map((x) => x.id).join() === 'a,b,d' && M.momentoVigente(ms[3], ahora) && !M.momentoVigente(ms[2], ahora)
+    && M.textoQueda(ms[3], ahora) === 'Quedan 1 h' && M.textoQueda({ creado_en: '2026-11-04T12:10:00Z' }, ahora) === 'Quedan 10 min',
+    'los momentos: 24 horas (el de ayer a esta hora, ya no); el tuyo primero y después del más nuevo; lo que les queda');
+  check(M.limpiarMomento('  Atardecer   tras\nla sesión ').texto === 'Atardecer tras la sesión' && M.limpiarMomento('   ').texto === null && /140/.test(M.limpiarMomento('x'.repeat(141)).error)
+    && M.limpiarMomento('x'.repeat(140)).texto.length === 140 && /cuerpo, el peso o el físico/.test(M.NORMA_MOMENTO), 'la línea de un momento: una sola, hasta 140 letras; y la norma de una línea');
+  const sql = readFileSync(new URL('../supabase/migraciones/045_comunidad_momentos.sql', import.meta.url), 'utf8');
+  const cr = sql.slice(sql.indexOf('create or replace function public.crear_recordatorios'));
+  const cr44 = readFileSync(new URL('../supabase/migraciones/044_comunidad_coach.sql', import.meta.url), 'utf8');
+  const antes = cr44.slice(cr44.indexOf('create or replace function public.crear_recordatorios'), cr44.indexOf('  return v_n;\nend $$;', cr44.indexOf('create or replace function public.crear_recordatorios')));
+  check(cr.startsWith(antes) && (cr.match(/\n  begin\n/g) || []).length === 7 && (cr.match(/exception when others then\n    raise warning/g) || []).length === 7 && /aniversarios del muro no puestos/.test(cr) && /momentos caducados no borrados/.test(cr),
+    'crear_recordatorios() de la 045 empieza exactamente como la de la 044 y añade sus tres bloques, cada uno a prueba de fallos');
+  check(["'fuerza', 'fuego', 'aplauso', 'corazon', 'risa', 'trofeo'"].every((x) => sql.includes(x)) && M.PEGATINAS.every(([k, t]) => sql.includes(`when '${k}' then '${t}'`)),
+    'las reacciones y las pegatinas, las mismas en la base y en la app');
+  const legal = await import('../web/src/legal.js');
+  const PV = await import('../web/src/logica/privacidad.js');
+  const { NOVEDADES } = await import('../web/src/novedades.js');
+  const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
+  check(legal.VERSION_LEGAL === '2026-12.12' && legal.VERSION_LEGAL_SIN_045 === '2026-12.11' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.12' && PV.novedadesDesde('2026-12.11', '2026-12.12').length === 1
+    && PV.novedadesDesde('2026-12.12', '2026-12.12').length === 0 && /desde tu alta en FBE/.test(com) && /el día antes/.test(com) && /en el equipo» enseña los recuentos/.test(com)
+    && /solo a ti/.test(com) && /hitos del equipo/.test(com) && /❤️, 😂 y 🏆/.test(com) && /pegatina/.test(com) && /durante 24 horas/.test(com) && /lo borra con su foto/.test(com) && /tus momentos/.test(com),
+    'la política 2026-12.12 cuenta los aniversarios (y el aviso al coach), el mes en el equipo (lo tuyo, solo para ti), los hitos, las reacciones y pegatinas y los momentos (24 horas y su borrado); su novedad sale una vez');
+  const v = NOVEDADES['0.73'];
+  check(v.atleta.length <= 3 && v.atleta.every((x) => x.length <= 140) && v.coach.every((x) => x.length <= 140) && v.coach.some((x) => /045/.test(x)), 'las novedades de la 0.73: hasta tres frases cortas (y la del coach, con la migración 045)');
+  const ui = readFileSync(new URL('../web/src/ui/Celebracion.jsx', import.meta.url), 'utf8');
+  check(!/preact\/compat/.test(ui) && /lanzarConfeti/.test(ui) && /sinMovimiento/.test(readFileSync(new URL('../web/src/ui/confeti.js', import.meta.url), 'utf8')),
+    'sin preact/compat; el confeti del aniversario es el de siempre (que nunca sale con «reducir movimiento»)');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

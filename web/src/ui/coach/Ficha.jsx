@@ -663,7 +663,7 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
   const vistaPrivacidad = useCarga(() => (atleta.perfil_id ? api.privacidadVistaDe(atleta.perfil_id) : Promise.resolve(null)), [atleta.perfil_id]);
   // (v0.59) la vigente para esta base (2026-12.1 con la 037; sin ella, 2026-12)
   const versionVigente = useCarga(() => api.versionLegal().catch(() => VERSION_LEGAL), []);
-  const [f, setF] = useState({ nombre: atleta.nombre, email: atleta.email || '', objetivo: atleta.objetivo || '', notion_url: atleta.notion_url || '', estado: atleta.estado, progresion_auto: atleta.progresion_auto !== false });
+  const [f, setF] = useState({ nombre: atleta.nombre, email: atleta.email || '', objetivo: atleta.objetivo || '', notion_url: atleta.notion_url || '', estado: atleta.estado, progresion_auto: atleta.progresion_auto !== false, fecha_alta: atleta.fecha_alta || '' });
   const [borrar, setBorrar] = useState(false);
   const [confirmacion, setConfirmacion] = useState('');
   const [exportado, setExportado] = useState(null);
@@ -679,7 +679,7 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
         e.preventDefault();
         try {
           // El estado solo se envía si se ha cambiado aquí (si el atleta activó su cuenta mientras tanto, no se pisa)
-          await api.actualizarAtleta(atleta.id, { nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null, ...(f.estado !== atleta.estado ? { estado: f.estado } : {}), progresion_auto: f.progresion_auto });
+          await api.actualizarAtleta(atleta.id, { nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null, ...(f.estado !== atleta.estado ? { estado: f.estado } : {}), ...(f.fecha_alta && f.fecha_alta !== atleta.fecha_alta ? { fecha_alta: f.fecha_alta } : {}), progresion_auto: f.progresion_auto });
           aviso('Datos guardados'); recargar();
         } catch (err) { aviso(err.message, 'error'); }
       }}>
@@ -692,6 +692,9 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
               <option value="activo">Activo</option><option value="pausado">Pausado</option><option value="baja">Baja</option>
             </select></div>
         </div>
+        <div class="campo"><label for="d-alta">Cliente de FBE desde</label>
+          <input id="d-alta" class="entrada" type="date" required max={fecha} value={f.fecha_alta} onInput={cambiar('fecha_alta')} aria-describedby="d-alta-ayuda" />
+          <span id="d-alta-ayuda" class="peq terciario">El día que contrató el servicio. Cuenta para sus aniversarios en FBE (1 mes, 6 meses, 1 año…) y su carnet.</span></div>
         <div class="campo"><label for="d-obj">Objetivo</label><input id="d-obj" class="entrada" value={f.objetivo} onInput={cambiar('objetivo')} /></div>
         <div class="campo"><label for="d-notion">Página de Notion</label><input id="d-notion" class="entrada" type="url" value={f.notion_url} onInput={cambiar('notion_url')} /></div>
         <label class="casilla"><input type="checkbox" checked={f.progresion_auto} onChange={(e) => setF({ ...f, progresion_auto: e.currentTarget.checked })} />

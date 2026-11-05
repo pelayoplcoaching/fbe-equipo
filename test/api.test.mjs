@@ -2345,7 +2345,7 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     const enBase = async () => (await b.sql(`select version from privacidad_vista where usuario_id = $1`, [anaUid]))[0]?.version || null;
     await b.sql(`delete from privacidad_vista where usuario_id = $1`, [anaUid]);
     // Sin la 037
-    check(VL === '2026-12.11' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.11', '(v0.72) la vigente: 2026-12.11 con la 037, la 043 y la 044 (la misma detección); sin la 037, 2026-12');
+    check(VL === '2026-12.12' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.12', '(v0.73) la vigente: 2026-12.12 con la 037, la 043, la 044 y la 045 (la misma detección); sin la 037, 2026-12');
     check(PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()) && await sin.marcarPrivacidadVista() === true && await enBase() === '2026-12',
       'sin la 037: quien no ha visto la 2026-12 la ve y, al cerrarla, la base guarda 2026-12 (lo que admite)');
     local.clear();
@@ -2359,14 +2359,14 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     // Con la 037: quien vio la 2026-12 ve solo lo nuevo, una vez
     const v = (await api.privacidadVista()).version;
     check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal())
-      && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.11,2026-12.10,2026-12.9,2026-12.8,2026-12.7,2026-12.6,2026-12.5,2026-12.4,2026-12.3,2026-12.2,2026-12.1',
-      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 a la 2026-12.11)');
-    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.11', 'al cerrarlo, la base guarda la 2026-12.11 (con la 043, revisiones de dos cifras; con la 044, la .11)');
+      && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.12,2026-12.11,2026-12.10,2026-12.9,2026-12.8,2026-12.7,2026-12.6,2026-12.5,2026-12.4,2026-12.3,2026-12.2,2026-12.1',
+      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 a la 2026-12.12)');
+    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.12', 'al cerrarlo, la base guarda la 2026-12.12 (con la 043, revisiones de dos cifras; con la 045, la .12)');
     local.clear();
-    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.11', 'y ya no vuelve a salir (en ningún móvil)');
-    check(await api.marcarPrivacidadVista('2026-12.9') === true && await enBase() === '2026-12.11' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.11', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.9 ni a la 2026-12)');
+    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.12', 'y ya no vuelve a salir (en ningún móvil)');
+    check(await api.marcarPrivacidadVista('2026-12.9') === true && await enBase() === '2026-12.12' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.12', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.9 ni a la 2026-12)');
     await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
-    check(/vigente \(2026-12\.11\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
+    check(/vigente \(2026-12\.12\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
     globalThis.localStorage = previo;
   }
   await b.sql(`delete from recordatorios_tecnica`); await b.sql(`delete from frases_correccion`); await b.sql(`delete from chat_cupos`);
@@ -2677,7 +2677,7 @@ console.log('\nv0.71: la comunidad, tercera tanda (migración 043), con la capa 
   const ms = await sin043.muro({ buscar: 'zz043' });
   let msg = null;
   try { await sin043.publicarEnComunidad({ texto: 'Dos fotos', fotos: [new Blob(['a']), new Blob(['b'])] }); } catch (e) { msg = e.message; }
-  check(await sin043.versionLegal() === '2026-12.9' && await api.versionLegal() === '2026-12.11', 'la política: con la 037 pero sin la 043, la 2026-12.9 (la más nueva que admite esa base); con la 043 y la 044, la 2026-12.11');
+  check(await sin043.versionLegal() === '2026-12.9' && await api.versionLegal() === '2026-12.12', 'la política: con la 037 pero sin la 043, la 2026-12.9 (la más nueva que admite esa base); con la 043, la 044 y la 045, la 2026-12.12');
   check(await sin043.comunidad043() === false && !ms.con043 && ms.posts.length > 1 && ms.posts.every((x) => !x.guardado) && /disponible tras la migración 043/i.test(msg || ''),
     'sin la 043: el muro como antes (sin buscar ni guardados) y varias fotos dicen «Disponible tras la migración 043»');
   await api.borrarDeComunidad(p1);
@@ -2742,6 +2742,53 @@ console.log('\nv0.72: la comunidad, cuarta tanda (migración 044), con la capa d
   check(await sin044.comunidad044() === false && await sin044.versionLegal() === '2026-12.10' && await sin044.eventosComunidad() === null && await sin044.panelComunidad() === null
     && await sin044.plantillasComunidad() === null && await sin044.destacadoComunidad() === null && !(await sin044.muro()).con044 && /disponible tras la migración 044/i.test(msg2 || ''),
     'sin la 044: la política sigue en la 2026-12.10, no hay eventos, panel, plantillas ni atleta de la semana, el muro como antes y programar dice «Disponible tras la migración 044»');
+}
+
+console.log('\nv0.73: la comunidad, quinta tanda (migración 045), con la capa de datos');
+{
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  check(await api.comunidad045() === true, 'la app sabe que la base tiene la 045');
+  const anaUid = api.uid();
+  const p = await api.publicarEnComunidad({ texto: 'Pierna hecha zz045' });
+  const mom = await api.publicarMomento({ foto: new Blob(['jpeg'], { type: 'image/jpeg' }), texto: '  Atardecer   tras la sesión ' });
+  check(mom.tipo === 'momento' && mom.texto === 'Atardecer tras la sesión' && await lanza(() => api.publicarMomento({ foto: new Blob(['x']), texto: 'x'.repeat(141) })) && await lanza(() => api.publicarMomento({ texto: 'Sin foto' })),
+    'Ana publica un momento (una foto y una línea limpia); sin foto o con más de 140 letras, no');
+  await b.auth.entrar('luis@test', 'contraseña-luis-1');
+  const ms = await api.momentosComunidad();
+  check(ms.some((x) => x.id === mom.id && x.autor.nombre === 'Ana L.' && !x.mio) && !(await api.muro()).posts.some((x) => x.id === mom.id), 'Luis lo ve en la tira de momentos, no en el muro');
+  check(await api.reaccionar(mom.id, 'corazon') === 'corazon' && await api.reaccionar(p.id, 'trofeo') === 'trofeo' && (await api.momentosComunidad()).find((x) => x.id === mom.id).reacciones.corazon.length === 1,
+    'reacciona con ❤️ al momento y con 🏆 a la publicación (con quién)');
+  const c = await api.pegatinaEnComunidad(p.id, 'a_tope');
+  const cs = await api.comentariosComunidad(p.id);
+  check(c.texto === 'A tope' && cs.find((x) => x.id === c.id)?.pegatina === 'a_tope' && cs[0].con045 && await lanza(() => api.pegatinaEnComunidad(p.id, 'inventada'))
+    && await lanza(() => api.comentarEnComunidad(mom.id, 'Qué bonito')), 'una pegatina como comentario (con su texto); un momento no se comenta');
+  const m = await api.muro();
+  check(m.con045 && m.posts.find((x) => x.id === p.id).reacciones.trofeo.length === 1, 'el muro sabe que hay reacciones nuevas');
+  const mes = await api.mesEquipoComunidad();
+  const hitos = await api.hitosComunidad();
+  check(/^\d{4}-\d{2}$/.test(mes.mes) && Number.isInteger(mes.equipo.sesiones) && Number.isInteger(mes.yo.animos_recibidos) && hitos.length === 8 && hitos.every((x) => typeof x.alcanzado === 'boolean'),
+    'el mes en el equipo (del equipo y el suyo) y los hitos');
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  for (const x of [p, mom]) await api.borrarDeComunidad(x);
+  check(!(await api.momentosComunidad()).some((x) => x.id === mom.id) && anaUid, 'Ana borra su momento');
+  // Sin la 045
+  const sin045 = crearApi({ ...b, auth: b.auth, storage: b.storage, insert: b.insert.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b),
+    select: async (t, f) => { if (t === 'comunidad_comentarios' && /pegatina/.test(f?.cols || '')) throw new Error('column comunidad_comentarios.pegatina does not exist'); return b.select(t, f); },
+    rpc: async (n, a) => { if (['comunidad_mes_equipo', 'comunidad_hitos'].includes(n)) throw new Error(`Could not find the function public.${n} in the schema cache`); return b.rpc(n, a); } });
+  check(await sin045.comunidad045() === false && await sin045.versionLegal() === '2026-12.11' && await sin045.momentosComunidad() === null && await sin045.mesEquipoComunidad() === null
+    && await sin045.hitosComunidad() === null && !(await sin045.muro()).con045,
+    'sin la 045: la política sigue en la 2026-12.11, sin momentos, mes del equipo ni hitos, y el muro con las reacciones de siempre');
+}
+
+console.log('\nFecha de contratación en Datos (v0.73)');
+{
+  await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
+  const x = await api.crearAtleta({ nombre: 'Prueba Alta' });
+  const r = await api.actualizarAtleta(x.id, { fecha_alta: '2025-03-14' });
+  check(r.fecha_alta === '2025-03-14' && (await api.ficha(x.id)).atleta.fecha_alta === '2025-03-14', 'el coach pone el día que contrató el servicio');
+  check(await lanza(() => api.actualizarAtleta(x.id, { fecha_alta: '2999-01-01' })) && await lanza(() => api.actualizarAtleta(x.id, { fecha_alta: '' }))
+    && await lanza(() => api.actualizarAtleta(x.id, { fecha_alta: '14/03/2025' })), 'ni futura, ni vacía, ni con otro formato');
+  await api.borrarAtleta(x.id);
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

@@ -40,6 +40,23 @@ begin
   if not exists (select 1 from public.fbe_migraciones where numero = 26) then
     raise exception 'Antes de la 027 hace falta la 026: ejecútala primero (o usa supabase/instalar.sql en una base nueva).';
   end if;
+  -- (v0.73) Con datos de la 045 (momentos, aniversarios, las reacciones ❤️ 😂 🏆, pegatinas o fotos de la comunidad en la cola de
+  -- Storage), las reglas de la 027 no caben: repetirla se quedaría a medias. Se para antes de tocar nada.
+  if to_regclass('public.comunidad_posts') is not null then
+    if exists (select 1 from public.comunidad_posts x where x.tipo in ('momento', 'aniversario'))
+       or exists (select 1 from public.comunidad_reacciones r where r.tipo not in ('fuerza', 'fuego', 'aplauso'))
+       or exists (select 1 from public.comunidad_reportes r where r.copia_tipo in ('momento', 'aniversario'))
+       or exists (select 1 from public.comunidad_comentarios k where to_jsonb(k) ->> 'pegatina' is not null) then
+      raise exception 'Esta base tiene momentos, aniversarios, reacciones nuevas o pegatinas de la 045: repetir la 027 los dejaría fuera de sus reglas. No la repitas sola.'
+        using hint = 'Si de verdad hace falta: borra antes esas publicaciones, reacciones y pegatinas (o restaura la copia) y ejecuta la 027 y todas las siguientes en orden, en la misma consulta del SQL Editor (una sola transacción).';
+    end if;
+  end if;
+  if to_regclass('fbe_privado.storage_por_borrar') is not null then
+    if exists (select 1 from fbe_privado.storage_por_borrar s where s.bucket = 'comunidad') then
+      raise exception 'Esta base tiene fotos de la comunidad esperando a borrarse de Storage (de la 045): repetir la 027 las dejaría fuera de sus reglas. No la repitas sola.'
+        using hint = 'Abre antes la app como coach (vacía la cola de Storage) y después ejecuta la 027 y todas las siguientes en orden, en la misma consulta del SQL Editor.';
+    end if;
+  end if;
   -- (v0.47) Con datos de la 029 (logros, encuestas, retos de equipo de más de 100 sesiones o avisos de ellos), las
   -- reglas de la 027 no caben: repetirla se quedaría a medias. Se para antes de tocar nada.
   if to_regclass('public.comunidad_posts') is not null then

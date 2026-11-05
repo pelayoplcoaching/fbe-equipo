@@ -3,12 +3,14 @@
 // v0.47: el resumen de la semana, encuestas, retos de equipo, el podio con las rachas, ánimos y el perfil de cada uno.
 // v0.71: las preguntas del equipo (las que contesta y guarda como preguntas frecuentes).
 // v0.72: «Próximos» (eventos y quedadas) arriba, y las pestañas Panel (recuentos y el atleta de la semana) y Moderar.
+// v0.73: los momentos de 24 horas arriba (los suyos también); el mes en el equipo (en el muro) y los hitos (en Ranking).
 import { useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, Pestanas, Cargando } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
 import { Muro, Retos, Ranking, ListaNormas, ConPerfiles, AvatarEquipo, NotaHoy, EntrenandoAhora, PreguntasEquipo } from '../Comunidad.jsx';
 import { fmtCorta } from '../../logica/fechas.js';
 import { Proximos, PanelComunidad, ModerarComunidad } from '../ComunidadCoach.jsx';
+import { TiraMomentos } from '../Celebracion.jsx';
 
 const VISTAS = [['muro', 'Muro'], ['panel', 'Panel'], ['retos', 'Retos'], ['ranking', 'Ranking'], ['preguntas', 'Preguntas'], ['moderar', 'Moderar'], ['miembros', 'Quién está'], ['normas', 'Normas']];
 
@@ -20,6 +22,7 @@ export function EquipoCoach() {
       <CabeceraGrande><div class="titulo"><h1>Equipo</h1><div class="sub">El muro de tus atletas: avisos, encuestas, retos y constancia</div></div></CabeceraGrande>
       <BandaDemo />
       <ConPerfiles>
+      <TiraMomentos coach />
       <Proximos coach cambios={eventos} alCambiar={() => setEventos((v) => v + 1)} />
       <EntrenandoAhora />
       <Pestanas opciones={VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eqc" clase="pestanas-justas" />

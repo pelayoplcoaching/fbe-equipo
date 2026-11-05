@@ -1531,8 +1531,8 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   {
     const uid = bT.auth.sesion().user.id;
     const pv = async (v) => (await bT.upsert('privacidad_vista', [{ usuario_id: uid, version: v }], 'usuario_id'))[0].version;
-    check(VERSION_LEGAL_D === '2026-12.11' && await aT.versionLegal() === '2026-12.11' && await pv('2026-12.11') === '2026-12.11' && await pv('2026-12.10') === '2026-12.11' && await pv('2026-12.9') === '2026-12.11' && await pv('2026-12') === '2026-12.11' && await pv('2026-11') === '2026-12.11',
-      '(M2) en la demo (que tiene la 037, la 043 y la 044), la 2026-12.11 (v0.72); nunca hacia atrás, comparando por partes (.11 va después de .10 y de .9)');
+    check(VERSION_LEGAL_D === '2026-12.12' && await aT.versionLegal() === '2026-12.12' && await pv('2026-12.12') === '2026-12.12' && await pv('2026-12.11') === '2026-12.12' && await pv('2026-12.9') === '2026-12.12' && await pv('2026-12') === '2026-12.12' && await pv('2026-11') === '2026-12.12',
+      '(M2) en la demo (que tiene la 037, la 043, la 044 y la 045), la 2026-12.12 (v0.73); nunca hacia atrás, comparando por partes (.12 va después de .11 y de .9)');
     check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.100')) && await lanza(() => pv('2026-12.01')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato (revisión de 1 a 99) y de un mes que ya existe');
   }
   await bT.auth.entrar('pelayo@fbe.demo', 'demo');
@@ -1845,7 +1845,7 @@ console.log('\nv0.72: la comunidad, cuarta tanda (las mismas reglas de la 044 en
   await b6.auth.entrar('lucia@fbe.demo', 'demo');
   const lucia = a6.uid();
   const muro = await a6.muro();
-  check(await a6.comunidad044() === true && await a6.versionLegal() === '2026-12.11' && muro.posts.some((x) => x.texto === 'Ya salió zz044') && !muro.posts.some((x) => x.texto === 'Sale luego zz044')
+  check(await a6.comunidad044() === true && await a6.versionLegal() === '2026-12.12' && muro.posts.some((x) => x.texto === 'Ya salió zz044') && !muro.posts.some((x) => x.texto === 'Sale luego zz044')
     && !(await a6.muro({ buscar: 'luego zz044' })).posts.length, 'la demo tiene la 044: lo programado no se ve hasta su hora (ni buscándolo); lo que ya ha salido, sí');
   const [ev] = await a6.eventosComunidad();
   check(ev?.titulo === 'Quedada en el parque: circuito y café' && ev.van.join() === 'Rubén M.' && ev.noVan.join() === 'Carlos V.' && ev.miRespuesta === null && ev.plazas === 12,
@@ -1897,6 +1897,63 @@ console.log('\nv0.72: la comunidad, cuarta tanda (las mismas reglas de la 044 en
   await b6.rpc('comunidad_salir', { p_borrar: true });
   await b6.auth.entrar('pelayo@fbe.demo', 'demo');
   check(!(await b6.select('comunidad_evento_asistentes', {})).some((x) => x.perfil_id === lucia) && !(await a6.destacadoComunidad()).actual, 'al salir borrando lo suyo, sus respuestas se van; y el atleta de la semana deja de verse');
+}
+
+console.log('\nv0.73: la comunidad, quinta tanda (las mismas reglas de la 045 en la demo)');
+{
+  const C = await import('../web/src/logica/celebracion.js');
+  const { fechaMadrid } = await import('../web/src/logica/fechas.js');
+  const hoy = fechaMadrid();
+  const alta = [1, 12, 24].map((n) => C.sumarMesesFecha(hoy, -n)).find((a) => C.aniversarioDe(a, hoy));
+  // (Lucía cumple hoy su aniversario; Rubén tiene un momento de hace 25 horas y Carlos uno de hace una hora)
+  const semilla = () => {
+    const db = semillaDemo();
+    const lucia = db.atletas.find((a) => a.nombre === 'Lucía Ferrer');
+    lucia.fecha_alta = alta;
+    const mom = (nombre, horas, foto) => {
+      const a = db.atletas.find((x) => x.nombre.startsWith(nombre));
+      db.comunidad_posts.push({ id: crypto.randomUUID(), autor_id: a.perfil_id, atleta_id: a.id, tipo: 'momento', texto: `Momento de ${nombre}`, foto_ruta: `${a.id}/${foto}.jpg`, sesion_id: null, resumen: null,
+        fijada: false, oculta: false, creado_en: new Date(Date.now() - horas * 3600e3).toISOString(), menciones: [], encuesta: null, reto_id: null, tema: null, fotos: null, mejor_comentario: null, publicar_en: null, retenida: false });
+    };
+    mom('Rubén', 25, 'MomentoViejo1');
+    mom('Carlos', 1, 'MomentoNuevo1');
+    return db;
+  };
+  const b7 = crearBackendMemoria({ semilla, persistir: false });
+  const a7 = crearApi(b7);
+  await b7.auth.entrar('lucia@fbe.demo', 'demo');
+  const muro = await a7.muro();
+  await a7.muro();
+  const anis = muro.posts.filter((x) => x.tipo === 'aniversario');
+  check(!!alta && anis.length === 1 && anis[0].mio && anis[0].resumen.meses === C.mesesCumplidos(alta, hoy) && (await a7.muro()).posts.filter((x) => x.tipo === 'aniversario').length === 1,
+    'el día de su aniversario, la demo pone en el muro, una vez, «Lucía F. cumple … en FBE» (como crear_recordatorios)');
+  const ms = await a7.momentosComunidad();
+  check(ms.map((x) => x.texto).join() === 'Momento de Carlos' && !muro.posts.some((x) => x.tipo === 'momento') && await lanza(() => a7.comentarEnComunidad(ms[0].id, 'Hola')),
+    'los momentos: el de hace una hora, en su tira (no en el muro, ni se comenta); el de hace 25 horas, ya no');
+  await b7.auth.entrar('pelayo@fbe.demo', 'demo');
+  check(!(await b7.select('comunidad_posts', { eq: { tipo: 'momento' } })).some((x) => x.texto === 'Momento de Rubén')
+    && (await b7.rpc('storage_pendiente_cubos', { p_limite: 100 })).some((x) => x.bucket === 'comunidad' && /MomentoViejo1/.test(x.ruta)),
+    'el caducado se borra y su foto va a la cola de Storage del bucket «comunidad» (la vacía el coach)');
+  await b7.auth.entrar('ruben@fbe.demo', 'demo');
+  check(await a7.reaccionar(anis[0].id, 'trofeo') === 'trofeo' && (await a7.pegatinaEnComunidad(anis[0].id, 'constancia')).texto === 'Constancia'
+    && (await a7.comentariosComunidad(anis[0].id)).some((c) => c.pegatina === 'constancia') && await lanza(() => a7.reaccionar(anis[0].id, 'pulgar')),
+    'Rubén felicita a Lucía: 🏆 y la pegatina «Constancia» (una reacción que no existe, no)');
+  await b7.auth.entrar('lucia@fbe.demo', 'demo');
+  await a7.borrarDeComunidad(anis[0]);
+  check(!(await a7.muro()).posts.some((x) => x.tipo === 'aniversario'), 'si Lucía lo borra, no vuelve a salir');
+  await b7.auth.entrar('pelayo@fbe.demo', 'demo');
+  await a7.guardarModeracion({ palabras: 'agujetazo', lento: 0 });
+  await b7.auth.entrar('lucia@fbe.demo', 'demo');
+  const mL = await a7.publicarMomento({ foto: new Blob(['x'], { type: 'image/jpeg' }), texto: 'Menudo agujetazo' });
+  check(mL.retenida === true && (await a7.momentosComunidad()).some((x) => x.id === mL.id && x.mio && x.retenida), 'su momento con una palabra filtrada queda retenido (ella lo ve primero, pendiente)');
+  await b7.auth.entrar('ruben@fbe.demo', 'demo');
+  check(!(await a7.momentosComunidad()).some((x) => x.id === mL.id), 'Rubén no lo ve');
+  const mes = await a7.mesEquipoComunidad();
+  const hitos = await a7.hitosComunidad();
+  check(/^\d{4}-\d{2}$/.test(mes.mes) && mes.equipo.miembros === 3 && mes.yo && Number.isInteger(mes.yo.sesiones) && hitos.length === 8, 'el mes en el equipo (del equipo y el de Rubén) y los hitos');
+  await a7.ajustesComunidad({ sinRanking: true });
+  check((await a7.mesEquipoComunidad()).equipo.miembros === 2 && (await a7.hitosComunidad()).find((x) => x.clave === 'sesiones_100').valor <= hitos.find((x) => x.clave === 'sesiones_100').valor
+    && !!(await a7.mesEquipoComunidad()).yo, 'con «No salir en el ranking», lo suyo no cuenta en el equipo ni en los hitos (lo suyo lo sigue viendo)');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

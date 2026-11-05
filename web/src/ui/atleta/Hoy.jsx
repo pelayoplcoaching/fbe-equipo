@@ -28,6 +28,7 @@ import { TarjetaCardio } from './Sesion.jsx';
 import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '../../logica/cardio.js';
 import { HojaTarea } from '../Tareas.jsx';
 import { TarjetaMes } from './TuMes.jsx';
+import { TarjetaAniversario } from '../Celebracion.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { PantallaRacha, HitoRacha, useHitoRacha } from './Racha.jsx';
 import { lanzarConfeti } from '../confeti.js';
@@ -89,6 +90,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       <BandaDemo />
       <BandaConexion />
       <ErrorCaja error={error} reintentar={recargar} />
+      {/* v0.73: el día de su aniversario en FBE (1 mes, 6 meses, 1 año…), con su confeti */}
+      {!verBienvenida && <TarjetaAniversario />}
       {atleta.estado !== 'baja' && !propio && <AvisoCobro irA={irA} />}
       {atleta.estado === 'baja' && (
         <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>

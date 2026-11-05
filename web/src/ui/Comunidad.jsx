@@ -11,13 +11,15 @@
 // y buscar en el muro, y la mejor respuesta. Sin la 043, el muro va como antes (y el coach ve «Disponible tras la migración 043»).
 // v0.72 (migración 044, lo nuevo en ComunidadCoach.jsx): eventos y quedadas («Próximos» y su tarjeta en el muro), avisos
 // programados y plantillas, el atleta de la semana arriba del muro y la moderación (silenciar, lo retenido y el modo lento).
+// v0.73 (migración 045, lo nuevo en Celebracion.jsx): el aniversario en FBE (arriba y en el muro), «<Mes> en el equipo», los hitos del
+// equipo, las reacciones nuevas y las pegatinas, y los momentos de 24 horas en una tira arriba de Equipo.
 import { createContext, Fragment } from 'preact';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando } from './comunes.jsx';
 import { Interruptor } from './Ajustes.jsx';
 import { reducirFoto } from './FotoPerfil.jsx';
 import {
-  REACCIONES, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_PREGUNTA, MAX_OPCION, RETO_MAX, FILTROS_MURO, MEDALLAS, nombreEquipo, nombreValido, estadoReto, textoReto,
+  MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_PREGUNTA, MAX_OPCION, RETO_MAX, FILTROS_MURO, MEDALLAS, nombreEquipo, nombreValido, estadoReto, textoReto,
   ordenarRanking, posicionesRanking, quienes, textoRacha, mencionEnCurso, sugerenciasMencion, insertarMencion, mencionesDeTexto, trozosConMenciones, encuestaCerrada,
   hilosComentarios, DIAS_BIENVENIDA,
   MAX_COMPANEROS, MEDIDAS_RETO, MODOS_RETO, retoMaximo, unidadReto, EQUIPOS_DE_ENTRADA, PLANTILLAS_RETO, plantillaReto, plantillaCon042, repartirEquipos, siguienteInsignia,
@@ -26,6 +28,8 @@ import {
 } from '../logica/comunidad.js';
 import { Proximos, TarjetaEvento, Programados, HojaPlantillas, TarjetaDestacado, HojaDestacar, HojaSilenciar, LineaSilencio } from './ComunidadCoach.jsx';
 import { HojaProgramar } from './Programar.jsx';
+import { TarjetaAniversario, TarjetaAniversarioPost, resumenAniversario, MesEnEquipo, HitosEquipo, CelebrarHito, ReaccionesPost, Pegatina, ElegirPegatina, TiraMomentos } from './Celebracion.jsx';
+import { REACCIONES_TODAS } from '../logica/celebracion.js';
 import { fmtConDia, fmtCorta, hoyISO, sumarDias, lunesDe, aISO, fmtProgramado } from '../logica/fechas.js';
 import { num } from '../logica/calculos.js';
 import { Pictograma } from './Pictograma.jsx';
@@ -173,6 +177,8 @@ function DentroDelEquipo({ m, alCambiar }) {
         </div>
         <button class="btn btn-icono plano" aria-label="Ajustes de la comunidad" onClick={() => setAjustes(true)}><Icono n="ajustes" /></button>
       </CabeceraGrande>
+      <TarjetaAniversario />
+      <TiraMomentos silencio={silenciadoHasta(m)} cambios={cambios} />
       {deBienvenida.length > 0 && (
         <p class="animos-recibidos peq"><span class="animos-ico" aria-hidden="true">👋</span><span>Te han dado la bienvenida: <strong>{quienes(deBienvenida.map((x) => x.nombre), 3)}</strong></span></p>
       )}
@@ -191,6 +197,8 @@ function DentroDelEquipo({ m, alCambiar }) {
       </div>
       {ajustes && <HojaAjustesComunidad miembro={m} alCerrar={() => setAjustes(false)} alCambiar={alCambiar} />}
       {celebrar && <HojaCelebracion reto={celebrar.reto} celebracion={celebrar.celebracion} alCerrar={() => cerrarCelebracion(false)} alCompartir={() => cerrarCelebracion(true)} />}
+      {/* v0.73: los hitos del equipo, uno a la vez y nunca encima de la celebración de un logro */}
+      <CelebrarHito pausado={!!celebrar || !logros.datos} alCompartir={() => setCambios((c) => c + 1)} />
     </div>
   );
 }
@@ -351,6 +359,7 @@ export function Muro({ coach = false, cambios = 0, miembro = null, eventos = 0, 
     <SilencioCtx.Provider value={silencio}>
     <div class="pila muro">
       {enTodo && destacado.datos?.actual && <TarjetaDestacado d={destacado.datos.actual} alAbrirPerfil={abrirPerfil} />}
+      {enTodo && <MesEnEquipo cambios={cambios} />}
       <ResumenSemana cambios={cambios} />
       {filtro === 'todo' && !buscar && <BienvenidaNuevos />}
       {silencio ? <LineaSilencio hasta={silencio} /> : <Compositor coach={coach} personas={d?.personas || {}} con043={con043} con044={!!d?.con044} alPublicar={recargar} />}
@@ -838,7 +847,7 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPu
   );
 }
 
-const TIPOS_POST = { aviso: 'Aviso del coach', entreno: 'Entreno compartido', logro: 'Logro', encuesta: 'Encuesta' };
+const TIPOS_POST = { aviso: 'Aviso del coach', entreno: 'Entreno compartido', logro: 'Logro', encuesta: 'Encuesta', aniversario: 'Aniversario en FBE' };
 
 function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
   const { api, aviso } = useApp();
@@ -898,23 +907,14 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
         <div class="post-cuerpo" onClick={tocar}>
           {post.tipo === 'entreno' && <TarjetaEntreno r={post.resumen} />}
           {post.tipo === 'logro' && <TarjetaLogro r={post.resumen} />}
+          {post.tipo === 'aniversario' && <TarjetaAniversarioPost post={post} />}
           {post.texto && <TextoConMenciones texto={post.texto} mencionados={post.mencionados} />}
           {(post.fotos || []).length > 0 ? <GaleriaPost rutas={post.fotos} autor={post.autor.nombre} /> : post.foto_ruta && <FotoPost ruta={post.foto_ruta} autor={post.autor.nombre} />}
           {pop > 0 && <span class="pop-fuerza" key={pop} aria-hidden="true">💪</span>}
         </div>
       )}
       <div class="post-pie">
-        <div class="reacciones" role="group" aria-label="Reacciones">
-          {REACCIONES.map(([k, emoji, nombre]) => {
-            const lista = post.reacciones[k] || [];
-            return (
-              <button key={k} type="button" class="reaccion" aria-pressed={post.miReaccion === k ? 'true' : 'false'} disabled={ocupado}
-                aria-label={`${nombre}: ${lista.length}${lista.length ? ` (${lista.join(', ')})` : ''}`} onClick={() => reaccionar(k)}>
-                <span aria-hidden="true">{emoji}</span>{lista.length > 0 && <span class="num" aria-hidden="true">{lista.length}</span>}
-              </button>
-            );
-          })}
-        </div>
+        <ReaccionesPost post={post} con045={!!post.con045} ocupado={ocupado} alReaccionar={reaccionar} />
         <span class="post-pie-der">
           <button type="button" class="btn btn-peq plano post-comentar" onClick={() => setHoja('comentarios')}>
             <Icono n="mensaje" /> {post.comentarios ? `${post.comentarios} ${post.comentarios === 1 ? 'comentario' : 'comentarios'}` : 'Comentar'}
@@ -1110,7 +1110,7 @@ function HojaQuien({ post, alCerrar }) {
   return (
     <Hoja titulo="Reacciones" alCerrar={alCerrar}>
       <ul class="lista">
-        {REACCIONES.filter(([k]) => post.reacciones[k]?.length).map(([k, emoji, nombre]) => (
+        {REACCIONES_TODAS.filter(([k]) => post.reacciones[k]?.length).map(([k, emoji, nombre]) => (
           <li key={k} class="panel-pad pila-xs"><span><span aria-hidden="true">{emoji}</span> {nombre} ({post.reacciones[k].length})</span><span class="peq secundario">{post.reacciones[k].join(', ')}</span></li>
         ))}
       </ul>
@@ -1193,6 +1193,7 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
   const [mejor, setMejor] = useState(post.mejor_comentario || null);
   const [frecuente, setFrecuente] = useState(null); // el comentario del coach que se guarda
   const [silenciar, setSilenciar] = useState(null); // v0.72: { perfilId, nombre }
+  const [pegatinas, setPegatinas] = useState(false); // v0.73: elegir una pegatina
   const silencio = useContext(SilencioCtx);
   const yo = api.uid();
   const [ocupado, una] = useUnaVez();
@@ -1229,7 +1230,7 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
       <div class="pila-xs">
         <span class="peq"><BotonPersona perfilId={c.autor_id} nombre={c.autor.nombre} avatar={false} clase="comentario-nombre"><strong>{c.autor.nombre}</strong></BotonPersona>{c.autor.coach && <span class="chip morado chip-mini">Coach</span>} <span class="mini terciario">{cuando(c.creado_en)}</span></span>
         {c.id === mejor && <span class="chip chip-mini ok insignia-mejor"><Icono n="hecho" />{etiquetaMejor(post, c)}</span>}
-        <TextoConMenciones texto={c.texto} mencionados={c.mencionados} clase="post-texto peq" como="span" />
+        {c.pegatina ? <Pegatina k={c.pegatina} clase="pegatina-comentario" /> : <TextoConMenciones texto={c.texto} mencionados={c.mencionados} clase="post-texto peq" como="span" />}
         {c.oculto && <span class="mini terciario">Oculto: los atletas no lo ven.</span>}
         {c.retenido && (coach ? <span class="mini terciario">Pendiente de revisión: los atletas no lo ven.</span>
           : c.mio && <span class="mini terciario retenida-linea">Tu comentario está pendiente de revisión: lo verán cuando tu coach lo apruebe.</span>)}
@@ -1277,7 +1278,21 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
           <AreaConMenciones id="eq-comentario" etiqueta={respondiendo ? `Tu respuesta a ${respondiendo.nombre}` : 'Tu comentario'} valor={texto} alCambiar={setTexto} personas={personas}
             alMencionar={(p) => setElegidas((l) => [...l.filter((x) => x.perfil_id !== p.perfil_id), p])} maxLength={MAX_COMENTARIO} rows={2}
             placeholder={respondiendo ? 'Escribe tu respuesta…' : 'Escribe un comentario… (@ para mencionar)'} />
-          <button class="btn btn-primario" disabled={ocupado || !texto.trim()}><Icono n="enviar" /> {respondiendo ? 'Responder' : 'Comentar'}</button>
+          <span class="fila-envolver comentar-botones">
+            <button class="btn btn-primario" disabled={ocupado || !texto.trim()}><Icono n="enviar" /> {respondiendo ? 'Responder' : 'Comentar'}</button>
+            {post.con045 && (
+              <button type="button" class="btn" aria-expanded={pegatinas ? 'true' : 'false'} onClick={() => setPegatinas(!pegatinas)}><span aria-hidden="true">✨</span> Pegatina</button>
+            )}
+          </span>
+          {pegatinas && post.con045 && (
+            <ElegirPegatina ocupado={ocupado} alElegir={(k) => una(async () => {
+              try {
+                const c = await api.pegatinaEnComunidad(post.id, k, respondiendo?.id || null);
+                setPegatinas(false); setRespondiendo(null); await recargar();
+                if (c?.retenido) aviso('Tu comentario está pendiente de revisión');
+              } catch (err) { aviso(err.message, 'error'); }
+            })} />
+          )}
         </form>
         )}
       </div>
@@ -1694,6 +1709,7 @@ export function Ranking({ miembro = null }) {
             )}
           </>
         )}
+      <HitosEquipo />
     </div>
   );
 }
@@ -1761,7 +1777,7 @@ function HojaPerfilEquipo({ perfilId, alCerrar }) {
   const conPareja = (parejas.datos || []).filter((c) => c.estado === 'aceptada');
   const yaConmigo = (mias.datos || []).some((c) => c.perfil_id === perfilId);
   const libres = mias.datos ? MAX_COMPANEROS - mias.datos.filter((c) => c.estado === 'aceptada' || c.invito).length : 0;
-  const resumen = (q) => q.texto || (q.tipo === 'entreno' ? q.resumen?.nombre : q.tipo === 'logro' ? q.resumen?.titulo : '') || (q.foto_ruta ? 'Una foto' : '');
+  const resumen = (q) => q.texto || (q.tipo === 'entreno' ? q.resumen?.nombre : q.tipo === 'logro' ? q.resumen?.titulo : resumenAniversario(q) || '') || (q.foto_ruta ? 'Una foto' : '');
   return (
     <Hoja titulo="Perfil en el equipo" alCerrar={alCerrar}>
       <ErrorCaja error={p.error} reintentar={() => p.recargar()} />

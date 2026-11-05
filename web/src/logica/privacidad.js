@@ -32,8 +32,10 @@ export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) &&
 // respuestas y los 💪 a comentarios, el resumen del domingo y compartir los entrenos sin preguntar) y la 2026-12.9 (v0.70: los
 // compañeros de racha, los retos por equipos, los minutos de cardio en los retos y las insignias) y la 2026-12.10 (v0.71: los temas,
 // las preguntas al coach y las del equipo, varias fotos, lo guardado, la búsqueda y la mejor respuesta) y la 2026-12.11 (v0.72: los
-// eventos, el atleta de la semana, el panel del coach y la moderación)
+// eventos, el atleta de la semana, el panel del coach y la moderación) y la 2026-12.12 (v0.73: los aniversarios, el mes en el equipo,
+// los hitos, las reacciones y pegatinas y los momentos de 24 horas)
 export const NOVEDADES_PRIVACIDAD = [
+  ['equipo', 'Aniversarios, tu mes y momentos de 24 h', 'Tu aniversario en FBE sale en el muro (salvo con «No salir en el ranking»). Del 1 al 7, los recuentos del mes del equipo y, solo para ti, los tuyos. Los momentos se ven 24 horas y después se borran con su foto.', '2026-12.12'],
   ['equipo', 'Eventos, atleta de la semana y moderación', 'Si te apuntas a un evento del equipo, los de dentro ven que vas y te llega un recordatorio dos horas antes. Tu coach puede elegirte atleta de la semana (si sales en el ranking) y ve un panel con recuentos, sin contenido. Puede pausar tus publicaciones un tiempo, y lo que lleve una palabra filtrada queda pendiente de revisión: solo lo veis tú y él.', '2026-12.11'],
   ['equipo', 'Preguntas, fotos y guardados en el equipo', 'Las publicaciones llevan un tema y hasta 4 fotos. Si tu coach guarda tu «Pregunta para el coach» como pregunta frecuente, todo el equipo ve una copia sin tu nombre. Lo que guardas solo lo ves tú. Quien publica o tu coach pueden marcar tu comentario como mejor respuesta: te llega un aviso.', '2026-12.10'],
   ['equipo', 'Compañeros de racha, equipos e insignias', 'Si aceptas ser compañeros de racha, la pareja y vuestra racha las veis los dos, tu coach y el equipo (salvo si uno no sale en el ranking); tu compañero ve si has completado tu semana. En los retos por equipos sumas a tu equipo (sin ranking, no). Tus minutos de cardio solo cuentan en los retos si lo enciendes. Las insignias salen de lo que ya se comparte.', '2026-12.9'],

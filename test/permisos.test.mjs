@@ -1789,7 +1789,7 @@ console.log('\nLa comunidad del equipo (migración 027)');
   await q(`select comunidad_reaccionar($1, 'fuego')`, [pAna.id]);
   await q(`select comunidad_reaccionar($1, 'aplauso')`, [pAna.id]);
   check((await q(`select tipo from comunidad_reacciones where post_id = $1`, [pAna.id])).map((x) => x.tipo).join() === 'aplauso', 'tocar otra la cambia: una por persona');
-  check(await falla(`select comunidad_reaccionar($1, 'corazon')`, [pAna.id]), 'solo 💪 🔥 👏');
+  check(await falla(`select comunidad_reaccionar($1, 'pulgar')`, [pAna.id]), 'solo las reacciones que hay (💪 🔥 👏; con la 045, también ❤️ 😂 🏆)');
   // Notificaciones: Luis tiene el móvil activado; Ana no (a ella no se le acumula nada)
   await como(ana);
   await q(`select comunidad_reaccionar($1, 'fuego')`, [pLuis.id]);
@@ -3884,7 +3884,7 @@ console.log('\nNotas de voz, encuestas, «escuchado» y reacciones a elegir (mig
     // La cola de Storage sabe de los dos buckets; una ruta en la cola no se vuelve a registrar
     await su();
     await q(`insert into fbe_privado.storage_por_borrar (ruta, bucket) values ($1, 'voz'), ($2, 'archivos')`, [`${aAna.id}/audio-${hoy}-reusada.webm`, `${aAna.id}/adjunto-video-${hoy}-reusado.mp4.jpg`]);
-    check(await falla(`insert into fbe_privado.storage_por_borrar (ruta, bucket) values ('x/y.jpg', 'comunidad')`), 'la cola de Storage: «archivos» o «voz»');
+    check(await falla(`insert into fbe_privado.storage_por_borrar (ruta, bucket) values ('x/y.jpg', 'otro')`), 'la cola de Storage: «archivos» o «voz» (y, con la 045, «comunidad»)');
     await como(ana);
     let errReuso = '';
     try { await insArch(voz({ ruta: `${aAna.id}/audio-${hoy}-reusada.webm` })); } catch (e) { errReuso = e.message; }
@@ -6285,6 +6285,323 @@ console.log('\nLa comunidad, cuarta tanda: eventos, programados y plantillas, el
   try { await sin43.exec(sql44); } catch (e) { e44b = e.message; }
   check(/ya tiene la migración 045/.test(e44b || ''), 'ni en una base que ya tiene una posterior');
   await sin43.close();
+}
+
+console.log('\nLa comunidad, quinta tanda: aniversarios, el mes en el equipo, hitos, reacciones y pegatinas, y momentos de 24 h (migración 045)');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  await su();
+  await q(`update comunidad_ajustes set activa = true`);
+  await q(`update comunidad_miembros set sin_ranking = false, silenciado_hasta = null where perfil_id in ($1, $2)`, [ana, luis]);
+  await q(`delete from comunidad_cupos`); await q(`delete from notificaciones`);
+  await q(`select comunidad_moderacion_guardar('{}', 0)`).catch(() => {});
+  await q(`update comunidad_moderacion set palabras = '{}', lento_min = 0`);
+  const nuevas045 = ['comunidad_reaccion_valida', 'comunidad_pegatina_texto', 'comunidad_pegatina_valida', 'comunidad_meses_aniversario', 'comunidad_post_momento', 'comunidad_comentario_045',
+    'comunidad_records_entre', 'comunidad_mes_equipo', 'comunidad_hitos_valores', 'comunidad_hitos', 'comunidad_crear_aniversarios', 'comunidad_limpiar_momentos',
+    'comunidad_fuera_del_ranking', 'storage_borrado_cubo'];
+  check(!(await q(`select 1 from pg_proc p where p.proname = any($1) and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`, [nuevas045])).length
+    && (await q(`select count(distinct proname)::int n from pg_proc where proname = any($1)`, [nuevas045]))[0].n === nuevas045.length
+    && !(await q(`select 1 from pg_proc where proname = any($1) and (has_function_privilege('anon', oid, 'execute') or (pronamespace = 'fbe_privado'::regnamespace and has_function_privilege('authenticated', oid, 'execute')))`, [nuevas045])).length
+    && (await q(`select relrowsecurity r from pg_class where oid = 'fbe_privado.comunidad_aniversarios'::regclass`))[0].r
+    && !(await q(`select 1 from information_schema.role_table_grants where table_schema = 'fbe_privado' and table_name = 'comunidad_aniversarios' and grantee in ('anon', 'authenticated', 'PUBLIC')`)).length,
+    'sus funciones, con search_path vacío, ninguna para anon y las internas solo para la base; los aniversarios ya puestos, en una tabla interna');
+  check((await q(`select comunidad_reaccion_valida('corazon') a, comunidad_reaccion_valida('trofeo') b, comunidad_reaccion_valida('pulgar') c, comunidad_reaccion_valida(null) d,
+      comunidad_pegatina_valida('dia_pierna') e, comunidad_pegatina_texto('dia_pierna') f, comunidad_pegatina_valida('otra') g, comunidad_pegatina_valida(null) h`))
+    .map((x) => [x.a, x.b, x.c, x.d, x.e, x.f, x.g, x.h].join()).join() === 'true,true,false,false,true,Día de pierna,false,false',
+    'los validadores: las seis reacciones y las seis pegatinas (con su texto), nunca un error');
+  const meses = async (alta, hoy) => (await q(`select comunidad_meses_aniversario($1::date, $2::date) m`, [alta, hoy]))[0].m;
+  check(await meses('2026-10-05', '2026-11-05') === 1 && await meses('2026-05-05', '2026-11-05') === 6 && await meses('2025-11-05', '2026-11-05') === 12 && await meses('2023-11-05', '2026-11-05') === 36
+    && await meses('2026-09-05', '2026-11-05') === null && await meses('2026-10-06', '2026-11-05') === null && await meses('2026-11-05', '2026-11-05') === null
+    && await meses('2026-01-31', '2026-02-28') === 1 && await meses('2026-01-30', '2026-02-28') === 1 && await meses('2026-01-31', '2026-02-27') === null
+    && await meses('2024-02-29', '2025-02-28') === 12 && await meses('2023-08-31', '2024-02-29') === 6 && await meses('2026-03-31', '2026-04-30') === 1 && await meses(null, '2026-11-05') === null,
+    'los meses de un aniversario: 1, 6, 12 y cada año; el día que no existe en ese mes, el último (31 de enero → 28 de febrero; 29 de febrero → 28 al año)');
+
+  console.log('  · Reacciones nuevas y pegatinas');
+  await como(pelayo, 'aal2');
+  const [aviso45] = await q(`insert into comunidad_posts (tipo, texto) values ('aviso', 'Aviso de la tanda 5') returning id`);
+  await como(luis);
+  const [pLuis] = await q(`insert into comunidad_posts (texto) values ('Hoy pierna, mañana no me levanto') returning id`);
+  await como(ana);
+  check((await q(`select comunidad_reaccionar($1, 'corazon') r`, [pLuis.id]))[0].r === 'corazon' && (await q(`select comunidad_reaccionar($1, 'risa') r`, [pLuis.id]))[0].r === 'risa'
+    && await n(`select count(*)::int n from comunidad_reacciones where post_id = $1`, [pLuis.id]) === 1 && await falla(`select comunidad_reaccionar($1, 'pulgar')`, [pLuis.id]),
+    'Ana reacciona con ❤️ y la cambia por 😂 (una por persona, como siempre); una que no existe, no');
+  await su();
+  check(await n(`select count(*)::int n from notificaciones where usuario_id = $1 and clave like 'comunidad:' || $2 || ':%' and titulo like '% ha reaccionado a tu publicación'`, [luis, pLuis.id]) === 1,
+    'a Luis le llega el aviso de siempre («… ha reaccionado a tu publicación»)');
+  await como(intruso);
+  check(await falla(`select comunidad_reaccionar($1, 'trofeo')`, [pLuis.id]), 'alguien de fuera no reacciona');
+  await como(ana);
+  const [peg] = await q(`insert into comunidad_comentarios (post_id, texto, pegatina, menciones) values ($1, 'lo que sea', 'dia_pierna', $2) returning texto, pegatina, menciones`, [pLuis.id, [luis]]);
+  check(peg.texto === 'Día de pierna' && peg.pegatina === 'dia_pierna' && peg.menciones.length === 0 && await falla(`insert into comunidad_comentarios (post_id, texto, pegatina) values ($1, 'x', 'inventada')`, [pLuis.id]),
+    'Ana manda una pegatina como comentario: la base pone su texto («Día de pierna») y ninguna mención; una que no existe, no');
+  await como(luis);
+  check((await q(`select pegatina from comunidad_comentarios where post_id = $1`, [pLuis.id])).map((x) => x.pegatina).join() === 'dia_pierna', 'Luis la ve (como cualquier comentario)');
+  await como(intruso);
+  check(!(await q(`select * from comunidad_comentarios where post_id = $1`, [pLuis.id])).length && await falla(`insert into comunidad_comentarios (post_id, texto, pegatina) values ($1, 'x', 'pr')`, [pLuis.id]),
+    'alguien de fuera ni la ve ni manda pegatinas');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_silenciar($1, 24)`, [ana]);
+  await como(ana);
+  check(await falla(`insert into comunidad_comentarios (post_id, texto, pegatina) values ($1, 'x', 'vamos')`, [pLuis.id]), 'silenciada, tampoco manda pegatinas');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_silenciar($1, 0)`, [ana]);
+
+  console.log('  · Momentos de 24 horas');
+  const ruta = (k) => `${aAna.id}/Momento${k}abcd.jpg`;
+  await como(ana);
+  const [mom] = await q(`insert into comunidad_posts (tipo, texto, foto_ruta, tema, menciones) values ('momento', '  Atardecer   tras la sesión  ', $1, 'tecnica', $2) returning *`, [ruta(1), [luis]]);
+  check(mom.tipo === 'momento' && mom.texto === 'Atardecer tras la sesión' && mom.tema === null && mom.menciones.length === 0 && mom.retenida === false,
+    'Ana publica un momento: una foto y una línea (sin espacios de más, sin tema ni menciones)');
+  check(await falla(`insert into comunidad_posts (tipo, texto) values ('momento', 'Sin foto')`) && await falla(`insert into comunidad_posts (tipo, texto, foto_ruta) values ('momento', $1, $2)`, ['x'.repeat(141), ruta(2)])
+    && await falla(`insert into comunidad_posts (tipo, foto_ruta) values ('momento', $1)`, [`${aLuis.id}/Momento9abcd.jpg`]) && await falla(`insert into comunidad_posts (tipo, resumen) values ('aniversario', '{"meses": 1}')`),
+    'sin foto, con más de 140 letras o con la foto de otro, no; un aniversario a mano, tampoco');
+  await como(luis);
+  const luisVe = (await q(`select id from comunidad_posts where id = $1`, [mom.id])).length;
+  const luisFoto = (await q(`select comunidad_foto_visible($1) v`, [ruta(1)]))[0].v;
+  check(luisVe === 1 && luisFoto && (await q(`select comunidad_reaccionar($1, 'fuego') r`, [mom.id]))[0].r === 'fuego'
+    && /no llevan comentarios/.test(await mensaje(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Qué bonito')`, [mom.id]) || ''),
+    'Luis lo ve (y su foto) y reacciona; comentarlo, no (solo reacciones)');
+  await como(intruso);
+  check(!(await q(`select id from comunidad_posts where id = $1`, [mom.id])).length && !(await q(`select comunidad_foto_visible($1) v`, [ruta(1)]))[0].v, 'alguien de fuera no lo ve, ni su foto');
+  // Con una palabra filtrada, retenido (solo su autora y el coach); oculto, solo el coach
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderacion_guardar(array['agujetazo'], 0)`);
+  await como(ana);
+  const [momRet] = await q(`insert into comunidad_posts (tipo, texto, foto_ruta) values ('momento', 'Menudo agujetazo', $1) returning id, retenida`, [ruta(3)]);
+  const anaRet = (await q(`select id from comunidad_posts where id = $1`, [momRet.id])).length;
+  await como(luis);
+  const luisRet = (await q(`select id from comunidad_posts where id = $1`, [momRet.id])).length;
+  check(momRet.retenida && anaRet === 1 && luisRet === 0, 'con una palabra filtrada, el momento queda retenido: lo ve Ana (pendiente de revisión), Luis no');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderacion_guardar('{}', 0)`);
+  await q(`select comunidad_moderar($1, null, true)`, [mom.id]);
+  await como(luis);
+  const luisOculto = (await q(`select id from comunidad_posts where id = $1`, [mom.id])).length;
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderar($1, null, false)`, [mom.id]);
+  await q(`select comunidad_silenciar($1, 24)`, [ana]);
+  await como(ana);
+  const silMom = await mensaje(`insert into comunidad_posts (tipo, foto_ruta) values ('momento', $1)`, [ruta(4)]);
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_silenciar($1, 0)`, [ana]);
+  check(luisOculto === 0 && /pausado tus publicaciones/.test(silMom || ''), 'oculto por el coach, Luis no lo ve; silenciada, Ana no publica momentos');
+  await como(luis);
+  const [rep] = await q(`select comunidad_avisar_coach($1, null, 'No me gusta') id`, [mom.id]);
+  await su();
+  check(!!rep.id && (await q(`select copia_tipo, copia_foto from comunidad_reportes where id = $1`, [rep.id])).map((x) => `${x.copia_tipo}|${x.copia_foto}`).join() === `momento|${ruta(1)}`,
+    '«Avisar al coach» de un momento guarda su copia (con la foto)');
+  // Pasan 24 horas: nadie más lo ve (la base), y crear_recordatorios() lo borra; su foto, a la cola de Storage (salvo la que guarda un aviso abierto)
+  const [mom2] = await q(`insert into comunidad_posts (autor_id, atleta_id, tipo, foto_ruta) values ($1, $2, 'momento', $3) returning id`, [ana, aAna.id, ruta(5)]);
+  await q(`update comunidad_posts set creado_en = now() - interval '24 hours 5 minutes' where id = any($1::uuid[])`, [[mom.id, mom2.id]]);
+  await como(luis);
+  const luisTarde = (await q(`select id from comunidad_posts where id = any($1::uuid[])`, [[mom.id, mom2.id]])).length + (await q(`select post_id from comunidad_reacciones where post_id = $1`, [mom.id])).length;
+  const fotoTarde = (await q(`select comunidad_foto_visible($1) v`, [ruta(5)]))[0].v;
+  const reacTarde = await falla(`select comunidad_reaccionar($1, 'risa')`, [mom2.id]);
+  await como(ana);
+  const anaTarde = (await q(`select id from comunidad_posts where id = any($1::uuid[])`, [[mom.id, mom2.id]])).length;
+  await como(pelayo, 'aal2');
+  const coachTarde = (await q(`select id from comunidad_posts where id = any($1::uuid[])`, [[mom.id, mom2.id]])).length;
+  check(luisTarde === 0 && !fotoTarde && reacTarde && anaTarde === 0 && coachTarde === 2, 'pasadas 24 horas, ni Luis ni Ana lo ven (ni la foto ni sus reacciones, ni se reacciona); el coach, hasta que se borre');
+  await su();
+  await q(`select crear_recordatorios(now())`);
+  const cola = (await q(`select ruta, bucket from fbe_privado.storage_por_borrar where ruta like $1 order by ruta`, [`${aAna.id}/Momento%`])).map((x) => `${x.ruta.split('/')[1]}:${x.bucket}`).join();
+  check(!(await q(`select id from comunidad_posts where id = any($1::uuid[])`, [[mom.id, mom2.id]])).length && cola === 'Momento5abcd.jpg:comunidad'
+    && (await q(`select post_id from comunidad_reportes where id = $1`, [rep.id]))[0].post_id === null && (await q(`select id from comunidad_posts where id = $1`, [momRet.id])).length === 1,
+    'crear_recordatorios() borra los momentos caducados (los de ahora, no) y pone su foto en la cola de Storage del bucket «comunidad» (la del aviso abierto, no: se borra al resolverlo)');
+  await como(ana);
+  check(/ya está en otra publicación/.test(await mensaje(`insert into comunidad_posts (texto, foto_ruta) values ('La de mi momento', $1)`, [ruta(5)]) || ''),
+    '(revisión) la foto de un momento caducado que espera a borrarse no se reutiliza en otra publicación');
+  await su();
+  await q(`insert into fbe_privado.storage_por_borrar (ruta, bucket) values ($1, 'archivos')`, [ruta(5)]);
+  const dosCubos = await n(`select count(*)::int n from fbe_privado.storage_por_borrar where ruta = $1`, [ruta(5)]);
+  const archivoPorBorrar = (await q(`select ruta_por_borrar($1) v`, [ruta(5)]))[0].v;
+  await q(`delete from fbe_privado.storage_por_borrar where ruta = $1 and bucket = 'archivos'`, [ruta(5)]);
+  const soloComunidad = (await q(`select ruta_por_borrar($1) v`, [ruta(5)]))[0].v;
+  check(dosCubos === 2 && archivoPorBorrar === true && soloComunidad === false, '(revisión) la cola va por bucket y ruta: una ruta de «archivos» no quita el sitio a la misma de la comunidad (ruta_por_borrar mira solo las suyas)');
+  await como(pelayo, 'aal2');
+  check((await q(`select bucket from storage_pendiente_cubos(1000)`)).some((x) => x.bucket === 'comunidad') && (await q(`select storage_borrado_cubo('archivos', array[$1]) n`, [ruta(5)]))[0].n === 0
+    && (await q(`select storage_borrado_cubo('comunidad', array[$1]) n`, [ruta(5)]))[0].n === 1,
+    'el coach la ve en la cola (con su bucket) y la quita al borrarla (solo de su bucket)');
+  await como(ana);
+  check(await falla(`select storage_borrado_cubo('comunidad', array['x'])`), 'un atleta no toca la cola');
+  // (revisión) el modo lento también cuenta los momentos
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderacion_guardar('{}', 10)`);
+  await como(ana);
+  const lentoMom = await mensaje(`insert into comunidad_posts (tipo, foto_ruta) values ('momento', $1)`, [ruta(6)]);
+  await su(); await q(`update comunidad_posts set creado_en = now() - interval '11 minutes' where autor_id = $1 and tipo in ('post', 'momento')`, [ana]);
+  await como(ana);
+  const [momL] = await q(`insert into comunidad_posts (tipo, foto_ruta) values ('momento', $1) returning id`, [ruta(7)]);
+  const lentoPost = await mensaje(`insert into comunidad_posts (texto) values ('Justo después')`);
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderacion_guardar('{}', 0)`);
+  await su(); await q(`delete from comunidad_posts where id = $1`, [momL.id]);
+  check(/Modo lento/.test(lentoMom || '') && !!momL && /Modo lento/.test(lentoPost || ''), '(revisión) con el modo lento, un momento cuenta como una publicación (ni momento justo después de publicar, ni al revés)');
+  await su();
+  await q(`delete from comunidad_posts where id = $1`, [momRet.id]);
+  await q(`delete from comunidad_reportes where id = $1`, [rep.id]);
+
+  console.log('  · Aniversarios en FBE');
+  await su();
+  await q(`delete from notificaciones`);
+  const hoyM = (await q(`select (now() at time zone 'Europe/Madrid')::date::text d`))[0].d;
+  const [{ alta: altaAntes }] = await q(`select fecha_alta::text alta from atletas where id = $1`, [aAna.id]);
+  const [{ alta: altaLuis }] = await q(`select fecha_alta::text alta from atletas where id = $1`, [aLuis.id]);
+  await q(`update atletas set fecha_alta = ($1::date - interval '1 month')::date where id = $2`, [hoyM, aAna.id]);
+  // (Luis: hoy no; mañana cumple 6 meses)
+  await q(`update atletas set fecha_alta = ($1::date + 1 - interval '6 months')::date where id = $2`, [hoyM, aLuis.id]);
+  const aniversarioDeLuisHoy = (await q(`select comunidad_meses_aniversario(fecha_alta, $1::date) m from atletas where id = $2`, [hoyM, aLuis.id]))[0].m;
+  await q(`select crear_recordatorios(now())`);
+  await q(`select crear_recordatorios(now())`);
+  const anis = await q(`select autor_id, atleta_id, texto, tema, resumen, retenida from comunidad_posts where tipo = 'aniversario'`);
+  check(aniversarioDeLuisHoy === null && anis.length === 1 && anis[0].autor_id === ana && anis[0].atleta_id === aAna.id && anis[0].resumen.meses === 1 && anis[0].texto === null && anis[0].tema === null && !anis[0].retenida,
+    'el día que Ana cumple 1 mes, crear_recordatorios() pone en el muro, una vez, su aniversario (a su nombre, con los meses)');
+  await como(luis);
+  const [aniL] = await q(`select id from comunidad_posts where tipo = 'aniversario'`);
+  await su();
+  await q(`update comunidad_miembros set sin_ranking = true where perfil_id = $1`, [ana]);
+  await como(luis);
+  const luisSin = (await q(`select id from comunidad_posts where tipo = 'aniversario'`)).length + (await q(`select comunidad_post_visible($1) v`, [aniL.id]))[0].v;
+  await como(ana);
+  const anaSin = (await q(`select id from comunidad_posts where tipo = 'aniversario'`)).length;
+  await como(pelayo, 'aal2');
+  const coachSin = (await q(`select id from comunidad_posts where tipo = 'aniversario'`)).length;
+  await su();
+  await q(`update comunidad_miembros set sin_ranking = false where perfil_id = $1`, [ana]);
+  check(luisSin === 0 && anaSin === 1 && coachSin === 1, '(revisión) si después elige «No salir en el ranking», su aniversario deja de verse para los demás (ella y el coach, sí)');
+  const insignia = async () => (await q(`select valor from fbe_privado.comunidad_insignias_de($1, $2) where clave = 'primera_publicacion'`, [aAna.id, ana]))[0].valor;
+  const conAni = await insignia();
+  await q(`update comunidad_posts set tipo = 'post', resumen = null, texto = 'temporal' where id = $1`, [aniL.id]).catch(() => null);
+  const sinAni = await insignia();
+  await q(`update comunidad_posts set tipo = 'aniversario', resumen = '{"meses": 1}', texto = null where id = $1`, [aniL.id]);
+  await como(pelayo, 'aal2');
+  const panelPub = (await q(`select comunidad_panel() p`))[0].p.semanas.reduce((a, s) => a + s.publicaciones, 0);
+  await su();
+  await q(`update comunidad_posts set tipo = 'post', resumen = null, texto = 'temporal' where id = $1`, [aniL.id]);
+  await como(pelayo, 'aal2');
+  const panelPub2 = (await q(`select comunidad_panel() p`))[0].p.semanas.reduce((a, s) => a + s.publicaciones, 0);
+  await su();
+  await q(`update comunidad_posts set tipo = 'aniversario', resumen = '{"meses": 1}', texto = null where id = $1`, [aniL.id]);
+  check(conAni === sinAni - 1 && panelPub === panelPub2 - 1, '(revisión) el aniversario no cuenta para la insignia «primera publicación» ni en las publicaciones del panel del coach');
+  await como(luis);
+  check(!!aniL && (await q(`select comunidad_reaccionar($1, 'trofeo') r`, [aniL.id]))[0].r === 'trofeo'
+    && (await q(`insert into comunidad_comentarios (post_id, texto) values ($1, '¡Felicidades, Ana!') returning id`, [aniL.id])).length === 1,
+    'Luis lo ve, reacciona y comenta (como cualquier publicación)');
+  await como(intruso);
+  check(!(await q(`select id from comunidad_posts where tipo = 'aniversario'`)).length, 'alguien de fuera no lo ve');
+  await como(ana);
+  await q(`delete from comunidad_posts where id = $1`, [aniL.id]);
+  await su();
+  await q(`select crear_recordatorios(now())`);
+  check(!(await q(`select id from comunidad_posts where tipo = 'aniversario'`)).length, 'si Ana lo borra, no vuelve a salir');
+  // Quien no sale en el ranking: su tarjeta de Hoy sí (la app), en el muro no
+  await q(`delete from fbe_privado.comunidad_aniversarios`);
+  await q(`update comunidad_miembros set sin_ranking = true where perfil_id = $1`, [ana]);
+  await q(`select crear_recordatorios(now())`);
+  const sinRankingAni = (await q(`select id from comunidad_posts where tipo = 'aniversario'`)).length;
+  await q(`update comunidad_miembros set sin_ranking = false where perfil_id = $1`, [ana]);
+  check(sinRankingAni === 0, 'quien ha elegido «No salir en el ranking» no sale en el muro por su aniversario');
+  const madrid = (h) => `(($1::date + time '${h}') at time zone 'Europe/Madrid')`;
+  await q(`delete from notificaciones`);
+  await q(`select crear_recordatorios(${madrid('08:30')})`, [hoyM]);
+  const antes9 = await n(`select count(*)::int n from notificaciones where clave like 'comunidad_aniversario:%'`);
+  await q(`select crear_recordatorios(${madrid('10:00')})`, [hoyM]);
+  await q(`select crear_recordatorios(${madrid('11:00')})`, [hoyM]);
+  const avCoach = await q(`select usuario_id, titulo, url from notificaciones where clave like 'comunidad_aniversario:%'`);
+  check(antes9 === 0 && avCoach.length === 1 && avCoach[0].usuario_id === pelayo && avCoach[0].titulo === 'Mañana Luis cumple 6 meses en FBE 🎉' && avCoach[0].url === `#mensajes/${aLuis.id}`,
+    'al coach, el día antes (desde las 9:00), una vez: «Mañana Luis cumple 6 meses en FBE 🎉», que lleva a su chat');
+  await q(`update atletas set fecha_alta = $1 where id = $2`, [altaAntes, aAna.id]);
+  await q(`update atletas set fecha_alta = $1 where id = $2`, [altaLuis, aLuis.id]);
+  await q(`delete from comunidad_posts where tipo = 'aniversario'`); await q(`delete from fbe_privado.comunidad_aniversarios`); await q(`delete from notificaciones`);
+
+  console.log('  · «<Mes> en el equipo» y los hitos');
+  // Un entreno de Luis del mes pasado con dos récords, y tres 🏆 del mes pasado en una publicación
+  const mesPasado = `(date_trunc('month', now() at time zone 'Europe/Madrid') - interval '5 days') at time zone 'Europe/Madrid'`;
+  const [entL] = await q(`insert into comunidad_posts (autor_id, atleta_id, tipo, texto, resumen, creado_en) values ($1, $2, 'entreno', 'Entreno zz045',
+    '{"nombre": "Pierna", "ejercicios": [{"nombre": "Sentadilla", "record": true}, {"nombre": "Prensa", "record": true}]}', ${mesPasado}) returning id`, [luis, aLuis.id]);
+  await q(`insert into comunidad_reacciones (post_id, autor_id, tipo, creado_en) values ($1, $2, 'trofeo', ${mesPasado}), ($1, $3, 'trofeo', ${mesPasado}), ($1, $4, 'trofeo', ${mesPasado})`, [entL.id, ana, luis, pelayo]);
+  await como(ana);
+  const m1 = (await q(`select comunidad_mes_equipo() m`))[0].m;
+  check(/^\d{4}-\d{2}$/.test(m1.mes) && ['sesiones', 'semanas_completas', 'records', 'retos', 'racha', 'miembros'].every((k) => Number.isInteger(m1.equipo[k])) && m1.equipo.records >= 2 && m1.equipo.reaccion === 'trofeo'
+    && ['sesiones', 'records', 'racha', 'animos_dados', 'animos_recibidos'].every((k) => Number.isInteger(m1.yo[k])) && !/zz045|Sentadilla|Ana|Luis/.test(JSON.stringify(m1)),
+    'el mes pasado en el equipo: sesiones, semanas completas, récords, retos, la reacción más usada y la racha más larga, y lo de Ana (solo recuentos, sin nombres)');
+  await su(); await q(`update comunidad_posts set retenida = true where id = $1`, [entL.id]);
+  await como(ana);
+  const m2 = (await q(`select comunidad_mes_equipo() m`))[0].m;
+  await su(); await q(`update comunidad_posts set retenida = false, oculta = true where id = $1`, [entL.id]);
+  await como(ana);
+  const m3 = (await q(`select comunidad_mes_equipo() m`))[0].m;
+  await su(); await q(`update comunidad_posts set oculta = false where id = $1`, [entL.id]); await q(`update comunidad_miembros set sin_ranking = true where perfil_id = $1`, [luis]);
+  await como(ana);
+  const m4 = (await q(`select comunidad_mes_equipo() m`))[0].m;
+  await su(); await q(`update comunidad_miembros set sin_ranking = false where perfil_id = $1`, [luis]);
+  check(m2.equipo.records === m1.equipo.records - 2 && m3.equipo.records === m1.equipo.records - 2 && m2.equipo.reaccion !== 'trofeo' && m3.equipo.reaccion !== 'trofeo'
+    && m4.equipo.records === m1.equipo.records - 2 && m4.equipo.miembros === m1.equipo.miembros - 1 && m4.equipo.reaccion !== 'trofeo',
+    'lo retenido u oculto no cuenta (ni sus récords ni sus reacciones), ni lo de quien no sale en el ranking (ni las reacciones a lo suyo)');
+  await su(); await q(`update comunidad_miembros set salido_en = now() where perfil_id = $1`, [luis]);
+  await como(ana);
+  const m5 = (await q(`select comunidad_mes_equipo() m`))[0].m;
+  await su(); await q(`update comunidad_miembros set salido_en = null where perfil_id = $1`, [luis]);
+  check(m5.equipo.records === m1.equipo.records - 2 && m5.equipo.reaccion !== 'trofeo', 'ni lo de quien ha salido (ni sus reacciones)');
+  await como(pelayo, 'aal2');
+  const mc = (await q(`select comunidad_mes_equipo() m`))[0].m;
+  await como(intruso);
+  const mi = (await q(`select comunidad_mes_equipo() m`))[0].m;
+  check(mc?.equipo && mc.yo === null && mi === null, 'el coach ve lo del equipo; alguien de fuera, nada');
+  // (la comunidad se abrió hace 60 días: el primero que entró)
+  await su();
+  const [{ c: entradaAna }] = await q(`select creado_en c from comunidad_miembros where perfil_id = $1`, [ana]);
+  await q(`update comunidad_miembros set creado_en = now() - interval '60 days' where perfil_id = $1`, [ana]);
+  await como(ana);
+  const h1 = await q(`select clave, medida, meta, valor from comunidad_hitos()`);
+  check(h1.map((x) => x.clave).join() === 'sesiones_100,sesiones_500,sesiones_1000,sesiones_2500,sesiones_5000,records_50,records_100,retos_10' && h1.every((x) => Number.isInteger(x.valor)),
+    'los hitos del equipo: 100 a 5.000 sesiones, 50 y 100 récords y 10 retos, con lo que llevan');
+  const recH = (l) => l.find((x) => x.clave === 'records_50').valor;
+  await su(); await q(`update comunidad_posts set retenida = true where id = $1`, [entL.id]);
+  await como(ana);
+  const h2 = await q(`select clave, valor from comunidad_hitos()`);
+  await su(); await q(`update comunidad_posts set retenida = false where id = $1`, [entL.id]); await q(`update comunidad_miembros set sin_ranking = true where perfil_id = $1`, [luis]);
+  await como(ana);
+  const h3 = await q(`select clave, valor from comunidad_hitos()`);
+  await su(); await q(`update comunidad_miembros set sin_ranking = false where perfil_id = $1`, [luis]);
+  await como(intruso);
+  const hi = (await q(`select * from comunidad_hitos()`)).length;
+  await su(); await q(`update comunidad_miembros set creado_en = $2 where perfil_id = $1`, [ana, entradaAna]);
+  check(recH(h1) >= 2 && recH(h2) === recH(h1) - 2 && recH(h3) === recH(h1) - 2 && hi === 0, 'en los hitos tampoco cuenta lo retenido ni lo de quien no sale en el ranking; alguien de fuera no los ve');
+  await su();
+  await q(`delete from comunidad_posts where id = any($1::uuid[])`, [[entL.id, pLuis.id, aviso45.id]]);
+
+  console.log('  · La 045 sin la 044, repetida y sobre una base que ya va por delante');
+  const sin44 = new PGlite();
+  await sin44.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin44.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '044')) await sin44.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  const sql45 = readFileSync(new URL('../supabase/migraciones/045_comunidad_momentos.sql', import.meta.url), 'utf8');
+  let e45a = null;
+  try { await sin44.exec(sql45); } catch (e) { e45a = e.message; }
+  check(/Antes de la 045 hace falta la 044/.test(e45a || '') && !(await sin44.query(`select 1 from information_schema.columns where table_name = 'comunidad_comentarios' and column_name = 'pegatina'`)).rows.length,
+    'la 045 no se aplica sin la 044 (y no deja nada a medias)');
+  await sin44.exec(readFileSync(new URL('../supabase/migraciones/044_comunidad_coach.sql', import.meta.url), 'utf8'));
+  await sin44.exec(sql45);
+  await sin44.exec(sql45);
+  check((await sin44.query(`select count(*)::int n from fbe_migraciones where numero = 45`)).rows[0].n === 1, 'con la 044, se aplica; repetida, queda apuntada una vez');
+  await sin44.exec(`insert into public.fbe_migraciones (numero) values (46)`);
+  let e45b = null;
+  try { await sin44.exec(sql45); } catch (e) { e45b = e.message; }
+  check(/ya tiene la migración 046/.test(e45b || ''), 'ni en una base que ya tiene una posterior');
+  // (revisión) repetir la 027, la 029 o la 034 con datos de la 045 se para con un aviso claro (y no deja nada a medias)
+  const sqlDe45 = (m) => readFileSync(new URL(`../supabase/migraciones/${migraciones().find((x) => x.startsWith(m))}`, import.meta.url), 'utf8');
+  const repetir = async (m) => { await sin44.exec(`delete from public.fbe_migraciones where numero > ${Number(m) - 1}`); try { await sin44.exec(sqlDe45(m)); return null; } catch (e) { return e.message; } };
+  await sin44.exec(`insert into fbe_privado.storage_por_borrar (ruta, bucket) values ('coach/Fotomomento1.jpg', 'comunidad')`);
+  const e34 = await repetir('034');
+  await sin44.exec(`delete from fbe_privado.storage_por_borrar; insert into auth.users (email) values ('m@test');
+    insert into public.comunidad_posts (autor_id, tipo, foto_ruta) select id, 'momento', 'coach/Fotomomento2.jpg' from public.perfiles limit 1;`);
+  const e29 = await repetir('029');
+  const e27 = await repetir('027');
+  check(/fotos de la comunidad esperando a borrarse/.test(e34 || '') && /momentos, aniversarios, reacciones nuevas o pegatinas de la 045: repetir la 029/.test(e29 || '')
+    && /de la 045: repetir la 027/.test(e27 || '') && (await sin44.query(`select count(*)::int n from public.comunidad_posts where tipo = 'momento'`)).rows[0].n === 1,
+    '(revisión) repetir la 027, la 029 o la 034 con momentos, aniversarios, reacciones nuevas, pegatinas o fotos de la comunidad en la cola se para con un aviso claro');
+  await sin44.close();
 }
 
 console.log('\nLa verificación en dos pasos falla cerrada');
