@@ -4,7 +4,8 @@ import { REGLAS_FBE, PERFILES, resolverReglas, fusionar, limpiarReglas, modeloDe
   leerEjercicio, tendencia, textoHecho, saltoDe, cumpleCriterio, SIN_DATOS,
   porSerie, topSet, estructuraTop, topPeaking, rangoDe, doble, triple, lineal, soloReps, campos, completoLineal, falloLineal, MODELO_BASE,
   aplicarDescarga, senalesDescarga, tramoVuelta, aplicarVuelta, aplicarMantenimiento, diasParado, esMalDia,
-  proponerSemana, cargaZona, entradaDesdeBloque, emparejar, pautasDeSemana, cambiosDePropuesta, diferencias, textoPauta } from '../web/src/logica/motor/index.js';
+  proponerSemana, cargaZona, entradaDesdeBloque, emparejar, pautasDeSemana, cambiosDePropuesta, diferencias, textoPauta,
+  sombraDeCopia, compararFila, claseDeSerie, seriesPautadas, compararInformes, textoInforme } from '../web/src/logica/motor/index.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -353,6 +354,8 @@ console.log('\nTop set + back-off y peaking');
   check(forma(ps(D([{ reps: 8, kg: 80 }, { reps: 6, kg: 90 }, { reps: 4, kg: 100 }]), [S(1, 80, 8, 8), S(2, 90, 6, 8), S(3, 100, 4, 8)], { peaking: true })) === '8×80 6×90 3×102.5', 'en rampa, la top es la última: baja ella y las de antes se quedan');
   check(forma(ps(D(pk), [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true, ejercicio: multi })) === '5×100 8×90 8×90'
     && forma(ps(D(pk), [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true, topSet: false, ejercicio: multi })) === '5×100 9×90 9×90', 'el peaking es solo para los básicos');
+  check(forma(ps(D([{ reps: 4 }, { reps: 4 }]), [S(1, 0, 4, 6), S(2, 0, 3, 9.5)], { ejercicio: dominadas })) === '5×– 4×–'
+    && forma(ps(D([{ reps: 4, kg: 140 }, { reps: 4, kg: 140 }]), [S(1, 140, 4, 8), S(2, 140, 4, 8)])) === '4×140 4×140', 'por debajo del rango sin kilos (dominadas) sí suma repeticiones; con kilos, no se empujan');
   const dom = ps(D([{ reps: 6 }, { reps: 6 }]), [S(1, 0, 6, 8), S(2, 0, 6, 8)], { peaking: true, ejercicio: dominadas });
   check(forma(dom) === '7×– 7×–' && !dom.fase, 'un básico sin kilos (dominadas) no entra en peaking');
   check(forma(ps(D(pk), [S(1, 100, 5, 8), S(2, 90, 8, 8), S(3, 90, 8, 8)], { peaking: true, reglas: conReglas({ topSet: { peaking: { cuando: 'nunca' } } }) })) === '5×100 8×90 8×90', 'con la regla «nunca», la semana de peaking se trata como cualquier otra');
@@ -664,6 +667,64 @@ console.log('\nDel editor al motor');
   // Historial por pauta en el motor: el del hueco manda sobre el del ejercicio
   const porPauta = proponerSemana({ ...entradaBase(), historial: { a: [], banca: historial.banca } });
   check(porPauta.filas.find((x) => x.pauta_id === 'a').confianza === 'baja' && proponerSemana(entradaBase()).filas.find((x) => x.pauta_id === 'a').confianza === 'alta', 'el motor acepta el historial por pauta');
+}
+
+console.log('\nPrueba en sombra');
+{
+  check(claseDeSerie({ reps: 8, kg: 62.5 }, { reps: 10, kg: 60 }) === 'sube_kilos' && claseDeSerie({ reps: 11, kg: 60 }, { reps: 10, kg: 60 }) === 'sube_reps' && claseDeSerie({ reps: 10, kg: 60 }, { reps: 10, kg: 60 }) === 'igual'
+    && claseDeSerie({ reps: 12, kg: 57.5 }, { reps: 10, kg: 60 }) === 'baja' && claseDeSerie({ reps: 9, kg: 60 }, { reps: 10, kg: 60 }) === 'baja' && claseDeSerie({ reps: 12, kg: null }, { reps: 10, kg: 20 }) === 'sube_reps' && claseDeSerie({ reps: null, kg: 60 }, { reps: 10, kg: 60 }) === 'igual',
+  'qué le pasa a una serie: más kilos, más repeticiones, igual o baja (sin kilos pautados, solo las repeticiones)');
+  check(igual(seriesPautadas(P({ series: 2, reps_min: 8, reps_max: 12, carga_sugerida_kg: 80 })), [{ reps: 12, kg: 80 }, { reps: 12, kg: 80 }]) && igual(seriesPautadas(P({ series_detalle: [{ reps: 5, kg: 100, rpe: 8 }, { reps: 8 }] })), [{ reps: 5, kg: 100 }, { reps: 8, kg: null }])
+    && igual(seriesPautadas(P({ series: 3, reps_min: 5, reps_max: 5, carga_sugerida_kg: 100, backoff_pct: 10 }), 'Sentadilla barra alta'), [{ reps: 5, kg: 100 }, { reps: 5, kg: 90 }, { reps: 5, kg: 90 }]) && igual(seriesPautadas(null), []),
+  'lo pautado serie a serie: el detalle, las series de la pauta o la top con sus back-off');
+  const filaM = { tipo: 'reps', propuesta: campos(P({ series: 2, series_detalle: [{ reps: 11, kg: 80 }, { reps: 11, kg: 80 }] })) };
+  const cf = compararFila({ fila: filaM, real: P({ series: 2, series_detalle: [{ reps: 11, kg: 80 }, { reps: 10, kg: 82.5 }] }), hechas: [S(1, 80, 10, 8), S(2, 80, 10, 8), S(3, 80, 10, 8, { sustituto_id: 'x' })] });
+  check(cf.series.length === 2 && cf.series[0].identica && cf.series[0].coach === 'sube_reps' && cf.series[0].motor === 'sube_reps' && !cf.series[1].identica && cf.series[1].coach === 'sube_kilos' && cf.series[1].motor === 'sube_reps' && !cf.pautaIdentica && cf.series[0].hecha.rpe === 8,
+    'una fila frente a lo que programó el coach: serie a serie, dirección e identidad');
+  check(compararFila({ fila: filaM, real: null, hechas: [S(1, 80, 10)] }) === null && compararFila({ fila: filaM, real: P(), hechas: [] }) === null
+    && compararFila({ fila: { tipo: 'subir', propuesta: campos(P({ carga_sugerida_kg: 82.5 })) }, real: P({ carga_sugerida_kg: 82.5 }), hechas: [S(1, 80, 12, 8)] }).series[0].motor === 'sube_kilos',
+  'sin pareja o sin series no hay comparación; con una propuesta que no es serie a serie vale el tipo de la fila');
+
+  // Una copia de mentira: dos atletas, tres bloques (uno, plantilla), una semana de descarga
+  const copia = {
+    exportado_en: '2026-11-05T10:00:00.000Z',
+    atletas: [{ id: 'at1', nombre: 'Nombre Secreto', nivel: 'novato', volumen_objetivo: null }, { id: 'at2', nombre: 'Otra Persona', nivel: 'intermedio' }],
+    ejercicios: Object.values(ejercicios),
+    bloques: [{ id: 'b1', atleta_id: 'at1' }, { id: 'b2', atleta_id: 'at2' }, { id: 'b3', atleta_id: 'at1', es_plantilla: true }],
+    semanas: [{ id: 'w1', bloque_id: 'b1', numero: 1, fecha_inicio: '2026-10-19', foco: 'volumen' }, { id: 'w2', bloque_id: 'b1', numero: 2, fecha_inicio: '2026-10-26', foco: 'volumen' }, { id: 'w3', bloque_id: 'b1', numero: 3, fecha_inicio: '2026-11-02', foco: 'descarga' },
+      { id: 'w4', bloque_id: 'b2', numero: 1, fecha_inicio: '2026-10-19', foco: null }, { id: 'w5', bloque_id: 'b2', numero: 2, fecha_inicio: '2026-10-26', foco: null },
+      { id: 'w6', bloque_id: 'b3', numero: 1, fecha_inicio: null, foco: null }, { id: 'w7', bloque_id: 'b3', numero: 2, fecha_inicio: null, foco: null }],
+    sesiones: [['s1', 'w1', '2026-10-20'], ['s2', 'w2', '2026-10-27'], ['s3', 'w3', null], ['s4', 'w4', '2026-10-21'], ['s5', 'w5', null], ['s6', 'w6', '2026-10-21'], ['s7', 'w7', null]]
+      .map(([id, semana_id, fecha]) => ({ id, semana_id, orden: 1, tipo: 'fuerza', nombre: 'Día 1', completada: !!fecha, fecha_realizada: fecha, preparacion: null })),
+    sesion_ejercicios: [
+      P({ id: 'pa', sesion_id: 's1', ejercicio_id: 'remo', orden: 1, carga_sugerida_kg: 50 }),
+      P({ id: 'pb', sesion_id: 's1', ejercicio_id: 'lat', orden: 2, series: 2, reps_min: 12, reps_max: 15, carga_sugerida_kg: 8 }),
+      P({ id: 'qa', sesion_id: 's2', ejercicio_id: 'remo', orden: 1, series: 3, series_detalle: [{ reps: 11, kg: 50 }, { reps: 11, kg: 50 }, { reps: 11, kg: 50 }] }),
+      P({ id: 'qb', sesion_id: 's2', ejercicio_id: 'lat', orden: 2, series: 2, reps_min: 12, reps_max: 15, carga_sugerida_kg: 8 }),
+      P({ id: 'ra', sesion_id: 's3', ejercicio_id: 'remo', orden: 1 }),
+      P({ id: 'pc', sesion_id: 's4', ejercicio_id: 'curl', orden: 1, carga_sugerida_kg: null }), P({ id: 'qc', sesion_id: 's5', ejercicio_id: 'banca', orden: 1 }),
+      P({ id: 'pd', sesion_id: 's6', ejercicio_id: 'remo', orden: 1 }), P({ id: 'qd', sesion_id: 's7', ejercicio_id: 'remo', orden: 1 }),
+    ],
+    series: [['pa', 1, 50, 10], ['pa', 2, 50, 10], ['pa', 3, 50, 10], ['pb', 1, 8, 15], ['pb', 2, 8, 14], ['qa', 1, 50, 11], ['pc', 1, 12, 12], ['pd', 1, 50, 10]]
+      .map(([sesion_ejercicio_id, numero, kg, reps], i) => ({ id: `x${i}`, sesion_ejercicio_id, numero, kg, reps, rpe: 8, rir: null, sustituto_id: null })),
+    checkins: [], molestias: [],
+  };
+  congelar(copia);
+  const inf = sombraDeCopia(copia, { ejemplos: 5 });
+  check(igual(inf.pares, { comparados: 2, descarga: 1, noNormal: 0, sinPareja: 0, tipos: { normal: 2 } }), 'compara cada par de semanas seguidas con series y pautas; las de descarga y las plantillas quedan fuera');
+  check(inf.series.series === 5 && inf.series.direccion === 4 && inf.series.identicas === 4 && inf.series.direccionPct === 80 && inf.conKilos.series === 5 && inf.sinKilos.series === 0, 'cinco series comparadas: cuatro en la misma dirección e idénticas');
+  check(inf.matriz.sube_reps.sube_reps === 4 && inf.matriz.igual.sube_kilos === 1 && igual(inf.diferencias, [{ tipo: 'aislamiento', coach: 'igual', motor: 'sube_kilos', series: 1 }]), 'la matriz y las diferencias dicen dónde no coinciden');
+  check(inf.ejercicios.comparados === 2 && inf.ejercicios.identicos === 1 && inf.ejercicios.sinPareja === 1 && inf.cortes.tipo.multiarticular.identicasPct === 100 && inf.cortes.tipo.aislamiento.direccionPct === 50 && inf.cortes.nivel.novato.series === 5 && inf.cortes.foco.volumen.series === 5,
+    'por ejercicio y por cortes (tipo, nivel, foco…)');
+  check(inf.atletas.length === 1 && inf.atletas[0].id === 'at1' && inf.atletas[0].pares === 1 && !JSON.stringify(inf).includes('Secreto') && inf.ejemplos.length === 1 && inf.ejemplos[0].ejercicio === 'Elevaciones laterales con mancuernas',
+    'el informe no lleva nombres de atletas: solo su id y cifras');
+  const texto = textoInforme(inf);
+  check(texto.includes('Semanas comparadas: 2') && texto.includes('Atleta 1 (Novato)') && !texto.includes('Secreto') && texto.includes('Aislamiento: el coach «igual», el motor «más kilos»') && textoInforme(inf, { nombres: { at1: 'Nombre Secreto' } }).includes('Nombre Secreto (Novato)'),
+    'el informe en texto: sin nombres salvo que se pidan');
+  const quieto = sombraDeCopia(copia, { reglas: { atleta: { modelos: { basico: 'mantener', resto: 'mantener' }, inventada: 1 } } });
+  const c = compararInformes(inf, quieto);
+  check(quieto.series.direccion === 1 && igual(c.series.direccion, [80, 20, -60]) && igual(c.cortes.tipo.multiarticular.identicas, [100, 0, -100]) && textoInforme(inf, { otro: quieto }).includes('(-60)'), 'dos juegos de reglas sobre la misma copia, lado a lado');
+  check(sombraDeCopia(copia, { soloAtletas: ['at2'] }).series.series === 0 && igual(sombraDeCopia(copia), sombraDeCopia(copia)) && sombraDeCopia({}).pares.comparados === 0, 'se puede acotar a unos atletas, es determinista y no falla con una copia vacía');
 }
 
 console.log('\nMil semanas al azar');

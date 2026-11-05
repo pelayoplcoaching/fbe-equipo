@@ -15,6 +15,8 @@ Diseño completo: «Programar según FBE: diseño detallado del motor» (documen
 | `topset.js` | 2 | Las cuentas de la serie top y del peaking: qué series son la top y qué kilos mantienen el esfuerzo con una repetición menos |
 | `semana.js` | 3 | Señales de descarga y sus cuatro tipos, vuelta tras un parón, mantenimiento |
 | `proponer.js` | 4 y 5 | Frenos, confianza, alternativas y `proponerSemana()` |
+| `adaptador.js` | — | Del bloque que carga el editor a la entrada del motor, y de la propuesta a lo que se guarda |
+| `sombra.js` | — | La prueba en sombra: el motor frente a lo que programó el coach, sobre una copia completa |
 
 ## Cómo se usa
 
@@ -97,13 +99,55 @@ las reglas tal como salen, que sí lo respetan, son 53 % y 42 %. La regla de top
 muestra, que tiene pocos básicos con la top primero: la serie idéntica pasa del 42 % al 43 % (del 44 % al 45 % sin
 respetar el rango) y la dirección no cambia.
 
+## Prueba en sombra repetible
+
+`sombra.js` hace la comparación de arriba sobre cualquier copia completa de la app (Cuenta → Copia completa), con todos
+los atletas y todos los pares de semanas seguidas de un bloque (la primera con series, la segunda con pautas). Usa el
+mismo camino que el editor (`entradaDesdeBloque` → `proponerSemana` → `emparejar`), mirando solo lo anterior a la semana
+que se programa. Quedan fuera las semanas de descarga, las plantillas y las que el motor trata como vuelta, repetición o
+mantenimiento.
+
+```
+node scripts/sombra-motor.mjs <copia.json>                                   # el informe, sin nombres
+node scripts/sombra-motor.mjs <copia.json> --comparar '{"fbe":{"porSerie":{"rpeSube":8.5}}}'   # reglas de siempre frente a esas
+node scripts/sombra-motor.mjs <copia.json> --ejemplos 20 --json informe.json
+```
+
+El informe trae: series comparadas, misma dirección y serie idéntica (en total, donde se pautan kilos y donde no); los
+mismos datos por nivel, tipo de ejercicio, prioridad, confianza, modelo y foco; la matriz coach × motor; las diferencias
+más frecuentes; y una fila por atleta con su id (nunca el nombre; `--nombres` los pone solo en la salida de pantalla).
+`--comparar` pasa otro juego de reglas y enseña cuántos puntos cambia cada cifra: es la forma de afinar una regla con
+datos. Las reglas van por capas (`fbe`, `atleta`, `bloque`); el modelo hay que cambiarlo en `atleta`, porque el perfil
+del nivel manda sobre `fbe`.
+
+La copia lleva datos de salud: no se sube al repositorio ni a sitios compartidos, y la salida con `--nombres` tampoco.
+
+Sobre la copia del 5/11/2026 (38 pares de semanas de 25 atletas, 873 ejercicios, 2700 series; 2267 con kilos pautados):
+
+| | Misma dirección | Serie idéntica |
+| --- | --- | --- |
+| Reglas de partida | 49,8 % | 38,1 % |
+| Con la doble progresión por ejercicio | 27,0 % | 10,4 % |
+| Sin la regla de top + back-off (solo básicos) | 45,5 % (51,4 % con ella) | 26,1 % (30,0 % con ella) |
+| Sobrada en todos los ejercicios, no solo en básicos | 42,1 % | 30,6 % |
+| Sin tocar los ejercicios donde la carga la elige el atleta | 55,3 % | 43,0 % |
+
+Por atleta va del 30 % al 70 % en dirección (mediana 49 %). La muestra de cinco atletas de la primera prueba salía algo
+mejor que el conjunto (53 % y 42 %). La confianza de la propuesta no predice el acuerdo (51 % en alta, 50 % en baja):
+casi todos los bloques de la copia tienen dos semanas y no hay historial. Las diferencias más frecuentes: el coach deja
+igual y el motor suma una repetición (427 series en aislamiento y multiarticulares), el coach suma repeticiones y el
+motor sube kilos (110, multiarticulares) y el coach deja igual y el motor sube kilos (156).
+
+De esta pasada salió un cambio: una serie sin kilos por debajo del rango (dominadas a 4 repeticiones) ya suma
+repeticiones; antes se quedaba igual, como las series con kilos de intensificación.
+
 ## Pruebas
 
 ```
 node test/motor.test.mjs
 ```
 
-263 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
+276 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
 la base (series 1–20, RPE 1–10, rango ordenado, detalle válido), los ejercicios «a mano» no se tocan y la misma entrada
 da siempre la misma salida.
 

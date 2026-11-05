@@ -332,7 +332,9 @@ export function porSerie(l, pauta, ctx) {
       acciones.push('tope'); return con({ kg: kgBase, reps: Math.max(tope, Number(o.reps ?? tope)) });
     }
     if (mueveKg && sobradoVale && rpe != null && rpe <= R.sobradoRpe) { acciones.push('sobrada'); return con({ kg: subir(), reps }); }
-    if (reps < suelo) { acciones.push('bajo'); return con({ kg: kgBase, reps: Math.max(reps, Number(o.reps ?? reps)) }); }
+    // Por debajo del suelo con kilos (básicos en intensificación o peaking) no se empujan las repeticiones; sin kilos
+    // (dominadas, peso corporal) sí: ahí sumar repeticiones es la única forma de progresar
+    if (reps < suelo && (kg > 0 || o.kg != null)) { acciones.push('bajo'); return con({ kg: kgBase, reps: Math.max(reps, Number(o.reps ?? reps)) }); }
     if (rpe == null || rpe <= R.rpeSube) { acciones.push('rep'); return con({ kg: kgBase, reps: Math.min(tope, reps + 1) }); }
     acciones.push('igual'); return igual();
   });
