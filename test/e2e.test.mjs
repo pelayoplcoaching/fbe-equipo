@@ -2734,7 +2734,7 @@ try {
   await hojaPerfil.getByRole('button', { name: 'Cerrar' }).click();
   await hojaPerfil.waitFor({ state: 'detached' });
   // Doble toque en una publicación: 💪
-  const deCarlos = p.getByRole('article', { name: 'Publicación de Carlos V.' });
+  const deCarlos = p.getByRole('article', { name: 'Publicación de Carlos V.' }).filter({ hasText: 'Vuelvo después de dos semanas' });
   await deCarlos.locator('.post-texto').dblclick();
   await p.waitForFunction(() => [...document.querySelectorAll('article[aria-label="Publicación de Carlos V."] .reaccion')].some((b) => b.getAttribute('aria-pressed') === 'true' && /^Fuerza: 2/.test(b.getAttribute('aria-label'))));
   check(true, 'con doble toque en la publicación de Carlos, le da 💪');
@@ -2778,7 +2778,7 @@ try {
   check(await hojaCom.locator('.comentario-equipo').count() === 3, 'comenta en el entreno de Rubén (con los dos que había)');
   await revisar('equipo-comentarios');
   await hojaCom.getByRole('button', { name: 'Cerrar' }).click();
-  await p.getByRole('article', { name: 'Publicación de Carlos V.' }).getByRole('button', { name: 'Opciones de la publicación' }).click();
+  await p.getByRole('article', { name: 'Publicación de Carlos V.' }).filter({ hasText: 'Vuelvo después de dos semanas' }).getByRole('button', { name: 'Opciones de la publicación' }).click();
   await p.getByRole('dialog', { name: 'Publicación' }).getByRole('button', { name: 'Avisar al coach' }).click();
   const hojaAvisar = p.getByRole('dialog', { name: 'Avisar al coach' });
   await hojaAvisar.getByLabel('Por qué (si quieres)').fill('Prueba de aviso');
@@ -5676,6 +5676,17 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ la comunidad de la v0.70:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.71: la comunidad, tercera tanda (temas, preguntas al coach y preguntas del equipo, varias fotos, guardar y buscar, la mejor
+// respuesta) (test/e2e-comunidad-071.mjs)
+console.log('\nv0.71: la comunidad, tercera tanda');
+try {
+  const { probarComunidad071 } = await import('./e2e-comunidad-071.mjs');
+  await probarComunidad071({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la comunidad de la v0.71:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):

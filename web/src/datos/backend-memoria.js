@@ -19,7 +19,7 @@ import { repsManualValidas } from '../logica/repeticiones.js';
 import { compararVersiones } from '../logica/privacidad.js';
 import { dosAngulosValido } from '../logica/angulos.js';
 import { umbralValido } from '../logica/cargaVelocidad.js';
-import { retoMaximo, rachaPareja } from '../logica/comunidad.js';
+import { retoMaximo, rachaPareja, TEMAS, temaAlPublicar } from '../logica/comunidad.js';
 // Como la 033: lo que no lleva el nombre de un documento (control, invisibles y de dirección del texto, barras y <>:"|?*)
 const NOMBRE_PROHIBIDO = new RegExp('[/\\\\\\u0000-\\u001f\\u007f-\\u009f\\u200b-\\u200f\\u202a-\\u202e\\u2066-\\u2069\\ufeff<>:"|?*]');
 
@@ -94,7 +94,7 @@ const DEFECTOS = {
   menu_comidas: () => ({ receta_id: null, raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, hecho: false, orden: 0, creado_en: ahora() }),
   preguntas_checkin: () => ({ atleta_id: null, tipo: 'escala', unidad: null, ayuda: null, etiqueta_min: null, etiqueta_max: null, orden: 0, activa: true, creado_en: ahora() }),
   // Migración 027: la comunidad del equipo
-  comunidad_posts: () => ({ tipo: 'post', texto: null, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, atleta_id: null, creado_en: ahora(), menciones: [], encuesta: null, reto_id: null }),
+  comunidad_posts: () => ({ tipo: 'post', texto: null, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, atleta_id: null, creado_en: ahora(), menciones: [], encuesta: null, reto_id: null, tema: null, fotos: null, mejor_comentario: null }),
   comunidad_comentarios: () => ({ oculto: false, atleta_id: null, creado_en: ahora(), menciones: [], responde_a: null }),
   comunidad_retos: () => ({ descripcion: null, modo: 'individual', medida: 'sesiones', equipos: null, creado_en: ahora() }),
 };
@@ -121,7 +121,8 @@ const CASCADA = {
   // Como la 034: el voto se va con su encuesta
   encuestas_chat: [['encuesta_votos', 'encuesta_id']],
   listas_difusion: [['listas_difusion_miembros', 'lista_id']],
-  comunidad_posts: [['comunidad_comentarios', 'post_id'], ['comunidad_reacciones', 'post_id'], ['comunidad_votos', 'post_id']],
+  // (043: lo guardado y la pregunta frecuente se van con su publicación)
+  comunidad_posts: [['comunidad_comentarios', 'post_id'], ['comunidad_reacciones', 'post_id'], ['comunidad_votos', 'post_id'], ['comunidad_guardados', 'post_id'], ['comunidad_preguntas', 'post_id']],
   // Como la 041: los 💪 se van con su comentario
   comunidad_comentarios: [['comunidad_comentario_reacciones', 'comentario_id']],
   // Como la 042: el reparto de un reto por equipos se va con el reto
@@ -134,7 +135,7 @@ const CASCADA = {
   sesion_ejercicios: [['series', 'sesion_ejercicio_id']],
 };
 // Al borrar estas filas, los comentarios se quedan sin el enlace (on delete set null)
-const ANULAR = { comentarios: [['comentarios', 'responde_a']], comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id'], ['comunidad_comentarios', 'responde_a']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id'], ['archivos', 'repite_de'], ['video_revisiones', 'voz_archivo_id'], ['recordatorios_tecnica', 'archivo_id'], ['comentarios', 'video_respuesta_id'], ['archivos', 'angulo_de']], ejercicios: [['objetivos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
+const ANULAR = { comentarios: [['comentarios', 'responde_a']], comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id'], ['comunidad_comentarios', 'responde_a'], ['comunidad_posts', 'mejor_comentario'], ['comunidad_preguntas', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id'], ['archivos', 'repite_de'], ['video_revisiones', 'voz_archivo_id'], ['recordatorios_tecnica', 'archivo_id'], ['comentarios', 'video_respuesta_id'], ['archivos', 'angulo_de']], ejercicios: [['objetivos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
 
 const cumple = (fila, f = {}) => {
   for (const [k, v] of Object.entries(f.eq || {})) if ((fila[k] ?? null) !== v) return false;
@@ -149,7 +150,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos',
+const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
   'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
@@ -244,6 +245,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // Como la 042: las parejas, cada uno las suyas (con quien sigue dentro; el coach, todas); el reparto de los equipos, solo el coach
     comunidad_companeros: (x) => esCoach() || (soyMiembro() && ((x.de === sesion?.user.id && autorVisible(x.para)) || (x.para === sesion?.user.id && autorVisible(x.de)))),
     comunidad_reto_equipos: () => esCoach(),
+    // Como la 043: lo guardado, solo su dueño; las preguntas frecuentes, los de dentro y el coach
+    comunidad_guardados: (x) => x.perfil_id === sesion?.user.id,
+    comunidad_preguntas: () => esCoach() || soyMiembro(),
     // Como la 030: los mensajes y avisos programados no los ve el atleta hasta su hora; las tareas, el coach y su atleta
     // (y, como en la base, cada atleta solo ve sus mensajes y los avisos para todos o para él)
     comentarios: (x) => esCoach() || (x.atleta_id === miAtletaId() && (!x.enviar_en || Date.parse(x.enviar_en) <= Date.now())),
@@ -344,10 +348,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const DEL_CHAT = ['adjunto', 'documento', 'audio'];
   const deBajaYo = () => !esCoach() && deBaja();
   const miAtletaId = () => tabla('atletas').find((a) => a.perfil_id === sesion?.user.id)?.id || null;
-  const fotoVisible = (ruta) => esCoach() || (!!miAtletaId() && ruta.split('/')[0] === miAtletaId()) || tabla('comunidad_posts').some((x) => x.foto_ruta === ruta && postVisible(x.id));
-  const fotoRegistrada = (ruta) => tabla('comunidad_posts').some((x) => x.foto_ruta === ruta && x.autor_id === sesion?.user.id && !x.oculta && Date.parse(x.creado_en) > Date.now() - 15 * 60000 && veComunidad());
-  const fotoBorrable = (ruta) => !!miAtletaId() && ruta.split('/')[0] === miAtletaId() && !tabla('comunidad_posts').some((x) => x.foto_ruta === ruta)
-    && !tabla('comunidad_reportes').some((r) => r.copia_foto === ruta && !r.resuelto_en);
+  // (043: también las de comunidad_posts.fotos)
+  const usaFoto = (x, ruta) => x.foto_ruta === ruta || (Array.isArray(x.fotos) && x.fotos.includes(ruta));
+  const fotoVisible = (ruta) => esCoach() || (!!miAtletaId() && ruta.split('/')[0] === miAtletaId()) || tabla('comunidad_posts').some((x) => usaFoto(x, ruta) && postVisible(x.id));
+  const fotoRegistrada = (ruta) => tabla('comunidad_posts').some((x) => usaFoto(x, ruta) && x.autor_id === sesion?.user.id && !x.oculta && Date.parse(x.creado_en) > Date.now() - 15 * 60000 && veComunidad());
+  const fotoBorrable = (ruta) => !!miAtletaId() && ruta.split('/')[0] === miAtletaId() && !tabla('comunidad_posts').some((x) => usaFoto(x, ruta))
+    && !tabla('comunidad_reportes').some((r) => usaCopia(r, ruta) && !r.resuelto_en);
+  // (043, revisión) el aviso al coach guarda todas las fotos de lo avisado (copia_fotos) hasta que se resuelve
+  function usaCopia(r, ruta) { return r.copia_foto === ruta || (Array.isArray(r.copia_fotos) && r.copia_fotos.includes(ruta)); }
   const sinPermiso = () => new Error('new row violates row-level security policy');
   // Cupos diarios (comunidad_cupos: no se borra con lo publicado)
   function gastarCupo(tipo) {
@@ -397,6 +405,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (f.foto_ruta && !String(f.foto_ruta).startsWith(`${f.atleta_id}/`)) throw new Error('La foto no va en su sitio');
     }
     f.menciones = limpiarMenciones(f.menciones, uid);
+    // Como la 043 (comunidad_post_tema): el tema que toca, las fotos en la carpeta de la primera y sin mejor respuesta
+    f.mejor_comentario = null;
+    if (f.tipo === 'post' && f.tema === 'avisos') throw new Error('Los avisos son del coach: elige otro tema');
+    f.tema = temaAlPublicar(f.tipo, f.tema, esCoach());
+    if (f.fotos != null && (!Array.isArray(f.fotos) || f.fotos.some((x) => !x || String(x).split('/')[0] !== String(f.foto_ruta || '').split('/')[0]))) throw new Error('La foto no va en su sitio');
+    // (revisión) una foto, en una sola publicación (aunque la otra esté oculta) y no la de un aviso abierto al coach
+    const rutas = [f.foto_ruta, ...(Array.isArray(f.fotos) ? f.fotos : [])].filter(Boolean);
+    if (rutas.some((r) => tabla('comunidad_posts').some((x) => x.id !== f.id && usaFoto(x, r)) || tabla('comunidad_reportes').some((k) => !k.resuelto_en && usaCopia(k, r)))) throw new Error('Esa foto ya está en otra publicación');
     gastarCupo('post');
   }
   function prepararComentarioComunidad(f) {
@@ -813,6 +829,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   // Como public.comunidad_equipos_validos (042): dos nombres distintos, de 1 a 30 letras, sin espacios sobrantes
   const equiposValidos = (e) => Array.isArray(e) && e.length === 2 && e.every((t) => typeof t === 'string' && t.length >= 1 && t.length <= 30 && t === t.trim() && textoVisible(t))
     && e[0].trim().toLowerCase() !== e[1].trim().toLowerCase();
+  // Como public.comunidad_fotos_validas (043): de 2 a 4, sin repetir, con la ruta de siempre y la primera es foto_ruta
+  const fotosValidas = (fotos, primera) => fotos == null || (Array.isArray(fotos) && fotos.length >= 2 && fotos.length <= 4 && fotos[0] === primera && new Set(fotos).size === fotos.length
+    && fotos.every((x) => typeof x === 'string' && /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|coach)\/[A-Za-z0-9]{8,40}\.jpg$/.test(x)));
   const FOTO_OK = (v, max) => v == null || (String(v).length <= max && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(String(v)));
   // Como tareas_validas (030)
   const tareaValida = (f) => ['foto', 'medida', 'video', 'texto'].includes(f.tipo) && textoCorto(f.titulo, 120) && f.titulo != null && textoCorto(f.detalle, 600)
@@ -826,7 +845,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && (f.tipo !== 'encuesta' || String(f.texto).length <= 300)
       && (f.tipo !== 'post' || f.texto != null || f.foto_ruta != null) && ['entreno', 'logro'].includes(f.tipo) === (f.resumen != null) && (!f.fijada || ['aviso', 'encuesta'].includes(f.tipo))
       && (f.tipo === 'logro' || f.reto_id == null) && (['post', 'aviso'].includes(f.tipo) || f.foto_ruta == null)
-      && (f.tipo === 'encuesta') === (f.encuesta != null) && (f.encuesta == null || encuestaValida(f.encuesta)) && Array.isArray(f.menciones) && f.menciones.length <= 5,
+      && (f.tipo === 'encuesta') === (f.encuesta != null) && (f.encuesta == null || encuestaValida(f.encuesta)) && Array.isArray(f.menciones) && f.menciones.length <= 5
+      // (043: el tema y las fotos, como comunidad_posts_043_validos)
+      && (f.tema == null || TEMAS.some(([k]) => k === f.tema)) && (f.tema !== 'pregunta' || f.tipo === 'post') && (f.tema !== 'avisos' || ['aviso', 'encuesta'].includes(f.tipo))
+      && (f.fotos == null || ['post', 'aviso'].includes(f.tipo)) && fotosValidas(f.fotos, f.foto_ruta),
+    comunidad_preguntas: (f) => f.pregunta != null && textoCorto(f.pregunta, 2000) && f.respuesta != null && textoCorto(f.respuesta, 2000),
     comunidad_comentarios: (f) => f.texto != null && textoCorto(f.texto, 1000) && Array.isArray(f.menciones) && f.menciones.length <= 5,
     comunidad_retos: (f) => textoCorto(f.titulo, 80) && f.titulo != null && textoCorto(f.descripcion, 500) && esFecha(f.desde) && esFecha(f.hasta) && f.hasta >= f.desde
       && diasEntreIso(f.desde, f.hasta) <= 366 && ['individual', 'equipo', 'equipos'].includes(f.modo ?? 'individual') && ['sesiones', 'cardio', 'semanas'].includes(f.medida ?? 'sesiones')
@@ -1264,7 +1287,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (!f.usuario_id) throw new Error('Necesitas iniciar sesión');
     if (antes && f.usuario_id !== antes.usuario_id) throw new Error('Solo la tuya');
     // (como la 037: «AAAA-MM» o con su revisión, «AAAA-MM.n»; el mes, como mucho el que viene; se compara por partes)
-    if (!/^20[0-9]{2}-(0[1-9]|1[0-2])(\.[1-9])?$/.test(String(f.version ?? ''))) throw new Error('Algún valor está fuera de rango.');
+    // (como la 043: la revisión, de una o dos cifras)
+    if (!/^20[0-9]{2}-(0[1-9]|1[0-2])(\.[1-9][0-9]?)?$/.test(String(f.version ?? ''))) throw new Error('Algún valor está fuera de rango.');
     const [y, m] = fMadrid(new Date()).split('-').map(Number);
     const tope = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
     if (f.version.slice(0, 7) > tope) throw new Error('Esa versión de la política aún no existe');
@@ -1288,7 +1312,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     soloCoach(t);
     if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
-    if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos'].includes(t)) throw sinPermiso();
+    if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas'].includes(t)) throw sinPermiso();
     if (t === 'comunidad_retos' && !esCoach()) throw sinPermiso();
     if (t === 'recetas_atleta' && !esCoach()) throw new Error('new row violates row-level security policy');
     const nueva = { ...(SIN_ID.includes(t) ? {} : { id: uuid() }), ...(DEFECTOS[t]?.() || {}), ...copia(fila) };
@@ -1499,7 +1523,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       for (const m of tabla('comunidad_miembros')) if (m.perfil_id === uid && !m.salido_en) { m.salido_en = ahora(); m.ver_entrenando = false; }
       let fotos = [];
       if (args.p_borrar && !coach) {
-        fotos = tabla('comunidad_posts').filter((x) => x.autor_id === uid && x.foto_ruta && !tabla('comunidad_reportes').some((r) => r.copia_foto === x.foto_ruta && !r.resuelto_en)).map((x) => x.foto_ruta);
+        // (043: también las de varias fotos, y lo que ha guardado)
+        fotos = [...new Set(tabla('comunidad_posts').filter((x) => x.autor_id === uid).flatMap((x) => (Array.isArray(x.fotos) && x.fotos.length ? x.fotos : [x.foto_ruta]))
+          .filter((r) => r && !tabla('comunidad_reportes').some((k) => usaCopia(k, r) && !k.resuelto_en)))];
+        db.comunidad_guardados = tabla('comunidad_guardados').filter((x) => x.perfil_id !== uid);
         db.comunidad_reacciones = tabla('comunidad_reacciones').filter((x) => x.autor_id !== uid);
         // (029) también sus votos y los ánimos que ha mandado
         db.comunidad_votos = tabla('comunidad_votos').filter((x) => x.autor_id !== uid);
@@ -1588,7 +1615,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         id: uuid(), post_id: x.id, comentario_id: c?.id || null, autor_id: uid, motivo, creado_en: ahora(), resuelto_en: null, de_comentario: !!c,
         copia_tipo: c ? 'comentario' : x.tipo, copia_texto: c ? c.texto : x.tipo === 'entreno' ? ['Entreno compartido', x.resumen?.nombre, x.texto].filter(Boolean).join(': ')
           : x.tipo === 'logro' ? ['Logro', x.resumen?.titulo, x.texto].filter(Boolean).join(': ') : x.texto,
-        copia_foto: c ? null : x.foto_ruta, copia_autor_id: de.autor_id, copia_autor_nombre: nombreDe(de.autor_id), copia_atleta_id: de.atleta_id, copia_creado_en: de.creado_en,
+        copia_foto: c ? null : x.foto_ruta, copia_fotos: c ? null : x.fotos || null, copia_autor_id: de.autor_id, copia_autor_nombre: nombreDe(de.autor_id), copia_atleta_id: de.atleta_id, copia_creado_en: de.creado_en,
       };
       tabla('comunidad_reportes').push(r);
       return r.id;
@@ -1687,6 +1714,51 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (!veComunidad()) return [];
       return tabla('comunidad_retos').map((r) => ({ reto_id: r.id, modo: r.modo || 'individual', total: totalReto(r) }));
     }
+    // Como la 043: guardar, buscar, la mejor respuesta y las preguntas frecuentes
+    if (nombre === 'comunidad_guardar') {
+      if (!uid || !veComunidad()) throw new Error('Para guardar publicaciones tienes que estar en la comunidad');
+      if (args.p_guardar === false) { db.comunidad_guardados = tabla('comunidad_guardados').filter((x) => !(x.perfil_id === uid && x.post_id === args.p_post)); return false; }
+      if (!postVisible(args.p_post)) throw new Error('Esa publicación ya no está');
+      if (!tabla('comunidad_guardados').some((x) => x.perfil_id === uid && x.post_id === args.p_post)) tabla('comunidad_guardados').push({ perfil_id: uid, post_id: args.p_post, creado_en: ahora() });
+      return true;
+    }
+    if (nombre === 'comunidad_buscar') {
+      const t = String(args.p_texto ?? '').trim();
+      if (!uid || !veComunidad() || t.length < 2 || t.length > 100) return [];
+      const q = normal(t);
+      return tabla('comunidad_posts').filter((x) => postVisible(x.id) && (!args.p_antes || x.creado_en < args.p_antes)
+        && normal([x.texto, x.resumen?.nombre, x.resumen?.titulo, nombreDe(x.autor_id)].filter(Boolean).join(' ')).includes(q))
+        .sort((a, b2) => (a.creado_en < b2.creado_en ? 1 : -1)).slice(0, Math.min(101, Math.max(1, Number(args.p_limite) || 20))).map((x) => ({ id: x.id, creado_en: x.creado_en }));
+    }
+    if (nombre === 'comunidad_mejor_respuesta') {
+      if (!uid) throw new Error('Necesitas iniciar sesión');
+      const x = postVisible(args.p_post) ? buscar('comunidad_posts', args.p_post) : null;
+      if (!x) throw new Error('Esa publicación ya no está');
+      if (!(coach || (x.autor_id === uid && soyMiembro()))) throw new Error('La mejor respuesta la elige quien ha publicado (o el coach)');
+      if (args.p_comentario) {
+        const k = buscar('comunidad_comentarios', args.p_comentario);
+        if (!k || k.post_id !== x.id || k.oculto || !comentarioEquipoVisible(k.id)) throw new Error('Ese comentario ya no está');
+        if (k.autor_id === x.autor_id) throw new Error('La mejor respuesta tiene que ser de otra persona');
+      }
+      x.mejor_comentario = args.p_comentario || null;
+      return x.mejor_comentario;
+    }
+    if (nombre === 'comunidad_guardar_pregunta') {
+      if (!coach) throw new Error('Las preguntas frecuentes las guarda el coach');
+      const x = buscar('comunidad_posts', args.p_post);
+      if (!x) throw new Error('Esa publicación ya no está');
+      if (x.tema !== 'pregunta') throw new Error('Solo las preguntas para el coach se guardan como preguntas frecuentes');
+      const k = buscar('comunidad_comentarios', args.p_comentario);
+      if (!k || k.post_id !== x.id || perfilDe(k.autor_id)?.rol !== 'coach') throw new Error('La respuesta tiene que ser un comentario tuyo en esa pregunta');
+      const pregunta = String(args.p_pregunta ?? '').trim() || x.texto, respuesta = String(args.p_respuesta ?? '').trim() || k.texto;
+      if (!pregunta || !textoCorto(pregunta, 2000)) throw new Error('Escribe la pregunta (hasta 2000 letras)');
+      if (!textoCorto(respuesta, 2000)) throw new Error('Escribe la respuesta (hasta 2000 letras)');
+      let q = tabla('comunidad_preguntas').find((y) => y.post_id === x.id);
+      if (q) Object.assign(q, { comentario_id: k.id, pregunta, respuesta, actualizado_en: ahora() });
+      else { q = { id: uuid(), post_id: x.id, comentario_id: k.id, pregunta, respuesta, creado_en: ahora(), actualizado_en: ahora() }; tabla('comunidad_preguntas').push(q); }
+      x.mejor_comentario = k.id;
+      return q.id;
+    }
     if (nombre === 'comunidad_version') return VERSION_COMUNIDAD;
     if (nombre === 'comunidad_rachas') {
       if (!veComunidad()) return [];
@@ -1732,7 +1804,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const modo = r.modo || 'individual';
       const post = {
         id: uuid(), autor_id: uid, atleta_id: yo.id, tipo: 'logro', texto: String(args.p_texto || '').trim() || null, foto_ruta: null, sesion_id: null, reto_id: r.id, menciones: [], encuesta: null,
-        fijada: false, oculta: false, creado_en: ahora(),
+        fijada: false, oculta: false, creado_en: ahora(), tema: 'logros', fotos: null, mejor_comentario: null, // (043: con su tema)
         // (como la 042: con lo que cuenta el reto y, por equipos, el total y el nombre de su equipo)
         resumen: { titulo: r.titulo, modo, medida: r.medida || 'sesiones', objetivo: r.objetivo, desde: r.desde, hasta: r.hasta,
           hechas: modo === 'equipo' ? totalReto(r) : modo === 'equipos' ? totalEquipo(r, equipoDe(r, yo.id)) : valorReto(r, yo.id),
@@ -1848,6 +1920,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         bienvenidas_dadas: tabla('comunidad_bienvenidas').filter((x) => x.de === uid).map((b2) => (esMiembro(b2.para)
           ? { para: b2.para, para_nombre: nombreDe(b2.para), creado_en: b2.creado_en } : { para_nombre: 'Alguien del equipo', creado_en: b2.creado_en })),
         bienvenidas_recibidas: tabla('comunidad_bienvenidas').filter((x) => x.para === uid).map((b2) => ({ creado_en: b2.creado_en })),
+        // (como la 043: lo que ha guardado y las preguntas frecuentes que salen de sus preguntas)
+        guardados: tabla('comunidad_guardados').filter((x) => x.perfil_id === uid).map((g) => ({ post_id: g.post_id, creado_en: g.creado_en })),
+        preguntas_frecuentes: tabla('comunidad_preguntas').filter((q) => buscar('comunidad_posts', q.post_id)?.autor_id === uid).map((q) => ({ post_id: q.post_id, pregunta: q.pregunta, respuesta: q.respuesta, creado_en: q.creado_en })),
         avisos_al_coach: tabla('comunidad_reportes').filter((x) => x.autor_id === uid).map((r) => ({ id: r.id, post_id: r.post_id, comentario_id: r.comentario_id, motivo: r.motivo, creado_en: r.creado_en, resuelto_en: r.resuelto_en })),
       };
     }
@@ -1890,7 +1965,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       });
       const texto = String(args.p_texto || '').trim() || null;
       const post = {
-        id: uuid(), autor_id: uid, atleta_id: yo.id, tipo: 'entreno', texto, foto_ruta: null, sesion_id: s.id, fijada: false, oculta: false, creado_en: ahora(), menciones: [], encuesta: null, reto_id: null,
+        id: uuid(), autor_id: uid, atleta_id: yo.id, tipo: 'entreno', texto, foto_ruta: null, sesion_id: s.id, fijada: false, oculta: false, creado_en: ahora(), menciones: [], encuesta: null, reto_id: null, tema: null, fotos: null, mejor_comentario: null,
         resumen: { nombre: s.nombre, tipo: s.tipo, fecha: s.fecha_realizada || hoyISO(), ...(s.duracion_min != null ? { minutos: s.duracion_min } : {}), series: hechas.length, con_kilos: kilos, ejercicios },
       };
       comprobarChecks('comunidad_posts', post);
@@ -2475,7 +2550,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // Como la 027: cada uno borra lo suyo (que ve); el coach, cualquier publicación o comentario, sus retos y avisos
       if (t.startsWith('comunidad_')) {
-        if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_companeros', 'comunidad_reto_equipos'].includes(t)) return [];
+        if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados'].includes(t)) return [];
         if (t === 'comunidad_retos' && !esCoach()) return [];
         const ids = tabla(t).filter((x) => cumple(x, f) && (esCoach() || (x.autor_id === sesion?.user.id && VISIBLE[t](x)))).map((x) => x.id);
         borrarCascada(t, ids);

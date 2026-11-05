@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.71': {
+    atleta: [
+      'En el muro: elige un tema, sube hasta 4 fotos y busca por texto o nombre.',
+      '¿Una duda? Publícala como «Pregunta para el coach»: las que conteste salen en «Preguntas».',
+      'Guarda lo que te sirva («Guardados») y marca la mejor respuesta en tus publicaciones.',
+    ],
+    coach: [
+      'Equipo: temas, preguntas y «Preguntas del equipo», varias fotos, guardados, búsqueda y mejor respuesta. Necesita la migración 043.',
+    ],
+  },
   '0.70': {
     atleta: [
       'Compañeros de racha: invita a hasta 3 del equipo y sumad semanas completas juntos 🤝.',

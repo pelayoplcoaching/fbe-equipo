@@ -4702,3 +4702,40 @@ html[data-teclado] .pildora-descanso { display: none; }
 .reparto-fila > .pila-xs { min-width: 0; overflow-wrap: anywhere; }
 .segmentos.segmentos-peq button { min-height: 36px; font-size: 0.8125rem; padding: 0 10px; white-space: normal; }
 .reto-cardio-optin { padding: 10px; border-radius: var(--r-s); background: var(--morado-suave); }
+
+/* ---------------------------------------------------------------- v0.71: temas, preguntas, varias fotos, guardar, buscar y la mejor respuesta */
+.filtros-muro { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.filtros-muro::-webkit-scrollbar { display: none; }
+.filtros-muro .chip-filtro { flex: none; }
+.buscar-muro { display: flex; gap: 6px; align-items: center; }
+.buscar-muro .entrada { flex: 1; min-width: 0; }
+.busqueda-activa { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; justify-content: space-between; margin: 0; }
+.compositor-tema { display: flex; align-items: center; gap: 8px; }
+.compositor-tema select { width: auto; max-width: 100%; min-height: 36px; padding-top: 4px; padding-bottom: 4px; }
+.compositor-nota { margin: 0; }
+.compositor-fotos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.compositor-fotos .compositor-foto { position: relative; display: block; }
+.compositor-fotos img { width: 100%; aspect-ratio: 1; max-height: none; object-fit: cover; border-radius: 10px; display: block; }
+.compositor-fotos .quitar-foto { position: absolute; top: 2px; right: 2px; min-width: 32px; min-height: 32px; width: 32px; height: 32px; padding: 0; border-radius: 999px; background: var(--hoja); box-shadow: 0 0 0 1px var(--linea); }
+.post-pregunta { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.post-pie-der { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; }
+.post-guardar.guardado { color: var(--morado); }
+.post-guardar.guardado svg path { fill: currentColor; }
+.galeria-post { display: grid; gap: 4px; }
+.galeria-pista { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; border-radius: 12px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.galeria-pista::-webkit-scrollbar { display: none; }
+.galeria-pista:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; }
+.galeria-foto { flex: 0 0 100%; min-width: 0; scroll-snap-align: center; }
+.galeria-foto .post-foto { border-radius: 0; height: 320px; max-height: 60vh; }
+.galeria-pie { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.galeria-puntos { display: inline-flex; gap: 6px; }
+.galeria-puntos span { width: 7px; height: 7px; border-radius: 50%; background: var(--linea); }
+.galeria-puntos span.activo { background: var(--morado); }
+@media (prefers-reduced-motion: no-preference) { .galeria-pista { scroll-behavior: smooth; } }
+.comentario-equipo.mejor > .pila-xs { padding: 8px 10px; border-radius: var(--r-s); box-shadow: inset 0 0 0 1.5px var(--ok); }
+.insignia-mejor { justify-self: start; }
+.preguntas-t { font-size: 1.0625rem; font-weight: 700; margin: 0; }
+.preguntas-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pregunta-equipo details > summary { cursor: pointer; padding: 12px 14px; font-weight: 650; list-style-position: outside; overflow-wrap: anywhere; min-height: 44px; }
+.pregunta-equipo .pe-respuesta { padding: 0 14px 14px; }
+.pregunta-equipo .pe-respuesta .post-texto { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }

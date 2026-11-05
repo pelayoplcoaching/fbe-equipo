@@ -7,6 +7,8 @@
 // responder a un comentario y 💪 a un comentario. Sin la 041, lo que la necesita no sale (o lo dice).
 // v0.70 (migración 042): compañeros de racha, plantillas de retos, retos por equipos, retos de minutos de cardio y de semanas
 // completas, e insignias. Sin la 042, lo del atleta no sale y el coach ve «Disponible tras la migración 042».
+// v0.71 (migración 043): temas en el muro, preguntas al coach y «Preguntas del equipo», varias fotos con su galería, guardar
+// y buscar en el muro, y la mejor respuesta. Sin la 043, el muro va como antes (y el coach ve «Disponible tras la migración 043»).
 import { createContext, Fragment } from 'preact';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando } from './comunes.jsx';
@@ -17,16 +19,19 @@ import {
   ordenarRanking, posicionesRanking, quienes, textoRacha, mencionEnCurso, sugerenciasMencion, insertarMencion, mencionesDeTexto, trozosConMenciones, encuestaCerrada,
   hilosComentarios, DIAS_BIENVENIDA,
   MAX_COMPANEROS, MEDIDAS_RETO, MODOS_RETO, retoMaximo, unidadReto, EQUIPOS_DE_ENTRADA, PLANTILLAS_RETO, plantillaReto, plantillaCon042, repartirEquipos, siguienteInsignia,
+  nombreTema, temasPara, temaPorDefecto, FILTROS_MURO_043, MAX_FOTOS, busquedaValida, puedeElegirMejor, etiquetaMejor, mejorPrimero,
 } from '../logica/comunidad.js';
 import { fmtConDia, fmtCorta, hoyISO, sumarDias, lunesDe, aISO } from '../logica/fechas.js';
 import { num } from '../logica/calculos.js';
 import { Pictograma } from './Pictograma.jsx';
 import { patronEjercicio } from '../logica/diseno.js';
-import { VERSION_COMUNIDAD, AVISO_041, AVISO_042 } from '../datos/api.js';
+import { VERSION_COMUNIDAD, AVISO_041, AVISO_042, AVISO_043 } from '../datos/api.js';
 import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
+// v0.71: con la 043, también las preguntas del equipo
+const VISTAS_043 = [...VISTAS, ['preguntas', 'Preguntas']];
 
 // ---------------------------------------------------------------- lo que recuerda este móvil (v0.47)
 // La última vez que vio el muro (para «Nuevo» y la insignia de Equipo) y los logros ya celebrados. Si el navegador
@@ -122,6 +127,7 @@ function DentroDelEquipo({ m, alCambiar }) {
   const yo = api.uid();
   const [vista, setVista] = useState('muro');
   const [ajustes, setAjustes] = useState(false);
+  const con043 = useCarga(() => api.comunidad043().catch(() => null), []);
   // Al compartir un logro, el muro, los retos y la racha se vuelven a leer
   const [cambios, setCambios] = useState(0);
   const racha = useCarga(() => api.rachasComunidad().then((r) => r[yo] || null).catch(() => null), [cambios]);
@@ -166,11 +172,12 @@ function DentroDelEquipo({ m, alCambiar }) {
       )}
       <EntrenandoAhora />
       <CompanerosRacha cambios={cambios} />
-      <Pestanas opciones={VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eq" />
+      <Pestanas opciones={con043.datos ? VISTAS_043 : VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eq" clase={con043.datos ? 'pestanas-justas' : ''} />
       <div class="pestana-panel" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista}>
         {vista === 'muro' && <Muro cambios={cambios} />}
         {vista === 'retos' && <Retos miembro={m} cambios={cambios} alCompartirLogro={(r) => setCelebrar({ reto: r, celebracion: false })} />}
         {vista === 'ranking' && <Ranking miembro={m} />}
+        {vista === 'preguntas' && <PreguntasEquipo />}
       </div>
       {ajustes && <HojaAjustesComunidad miembro={m} alCerrar={() => setAjustes(false)} alCambiar={alCambiar} />}
       {celebrar && <HojaCelebracion reto={celebrar.reto} celebracion={celebrar.celebracion} alCerrar={() => cerrarCelebracion(false)} alCompartir={() => cerrarCelebracion(true)} />}
@@ -289,15 +296,18 @@ function EntrarComunidad({ antes, cambio = null, alEntrar }) {
 // v0.47: arriba, el resumen de la semana; filtros (en la propia consulta, así «Ver más» sigue funcionando); y, para
 // el atleta, «Nuevo» en lo publicado por los demás desde su última visita (este móvil lo recuerda).
 export function Muro({ coach = false, cambios = 0 }) {
-  const { api } = useApp();
+  const { api, aviso } = useApp();
   const yo = api.uid();
   const [filtro, setFiltro] = useState('todo');
   const [paginas, setPaginas] = useState(1);
-  const muro = useCarga(() => api.muro({ limite: 20 * paginas, filtro }), [paginas, filtro, cambios]);
+  // v0.71: la búsqueda que se ha lanzado (la del cuadro, al darle a Buscar o a Intro)
+  const [buscar, setBuscar] = useState('');
+  const [escrito, setEscrito] = useState('');
+  const muro = useCarga(() => api.muro({ limite: 20 * paginas, filtro, buscar }), [paginas, filtro, cambios, buscar]);
   const visto = useRef(coach ? null : leerVistoEquipo(yo)); // la visita anterior (al abrir el muro)
   const d = muro.datos;
   useEffect(() => {
-    if (coach || !d || filtro !== 'todo') return;
+    if (coach || !d || filtro !== 'todo' || buscar) return;
     const ultima = d.posts.filter((x) => !x.mio).map((x) => x.creado_en).sort().at(-1);
     const previo = leerVistoEquipo(yo);
     guardarVistoEquipo(yo, [previo, ultima].filter(Boolean).sort().at(-1) || new Date().toISOString());
@@ -308,19 +318,44 @@ export function Muro({ coach = false, cambios = 0 }) {
   const primera = posts.findIndex(esNueva);
   const ultima = posts.map(esNueva).lastIndexOf(true);
   const cambiarFiltro = (f) => { setFiltro(f); setPaginas(1); };
+  const con043 = !!d?.con043;
+  const filtros = con043 ? FILTROS_MURO_043 : FILTROS_MURO;
+  const lanzarBusqueda = (e) => {
+    e.preventDefault();
+    const t = escrito.trim();
+    if (t && !busquedaValida(t)) { aviso('Escribe al menos 2 letras para buscar.', 'error'); return; }
+    setBuscar(t); setPaginas(1);
+  };
+  const quitarBusqueda = () => { setEscrito(''); setBuscar(''); setPaginas(1); };
   return (
     <div class="pila muro">
       <ResumenSemana cambios={cambios} />
-      {filtro === 'todo' && <BienvenidaNuevos />}
-      <Compositor coach={coach} personas={d?.personas || {}} alPublicar={recargar} />
+      {filtro === 'todo' && !buscar && <BienvenidaNuevos />}
+      <Compositor coach={coach} personas={d?.personas || {}} con043={con043} alPublicar={recargar} />
+      {con043 && (
+        <form class="buscar-muro" role="search" aria-label="Buscar en el muro" onSubmit={lanzarBusqueda}>
+          <label class="sr" for="eq-buscar">Buscar en el muro</label>
+          <input id="eq-buscar" type="search" class="entrada" maxLength={100} placeholder="Buscar por texto o nombre" value={escrito}
+            onInput={(e) => { setEscrito(e.currentTarget.value); if (!e.currentTarget.value && buscar) quitarBusqueda(); }} />
+          <button class="btn btn-icono" aria-label="Buscar"><Icono n="buscar" /></button>
+        </form>
+      )}
       <div class="filtros-muro" role="group" aria-label="Qué ver en el muro">
-        {FILTROS_MURO.map(([k, t]) => <button key={k} type="button" class="chip-filtro" aria-pressed={filtro === k ? 'true' : 'false'} onClick={() => cambiarFiltro(k)}>{t}</button>)}
+        {filtros.map(([k, t]) => <button key={k} type="button" class="chip-filtro" aria-pressed={filtro === k ? 'true' : 'false'} onClick={() => cambiarFiltro(k)}>{t}</button>)}
       </div>
+      {buscar && (
+        <p class="busqueda-activa peq" role="status"><span>Resultados de «<strong>{buscar}</strong>»</span>
+          <button type="button" class="btn-texto mini" onClick={quitarBusqueda}>Quitar la búsqueda</button></p>
+      )}
       <ErrorCaja error={muro.error} reintentar={() => muro.recargar()} />
       {!d ? <Siluetas forma="tarjetas" n={3} texto="Cargando el muro" />
-        : !posts.length ? (filtro === 'todo'
-          ? <Vacio icono="equipo" titulo="Aún no hay nada en el muro">{coach ? 'Publica un aviso para darles la bienvenida.' : 'Sé el primero: cuenta qué tal tu semana o comparte tu próximo entreno.'}</Vacio>
-          : <Vacio icono="equipo" titulo="Nada por aquí">No hay publicaciones con este filtro. Prueba con «Todo».</Vacio>
+        : !posts.length ? (buscar
+          ? <Vacio icono="buscar" titulo="Nada por aquí">No hay publicaciones con «{buscar}»{filtro !== 'todo' ? ' en este filtro' : ''}. Prueba con otras palabras.</Vacio>
+          : filtro === 'guardados'
+            ? <Vacio icono="guardar" titulo="Aún no has guardado nada">Toca «Guardar» en una publicación para tenerla aquí (solo la ves tú, en todos tus móviles).</Vacio>
+            : filtro === 'todo'
+              ? <Vacio icono="equipo" titulo="Aún no hay nada en el muro">{coach ? 'Publica un aviso para darles la bienvenida.' : 'Sé el primero: cuenta qué tal tu semana o comparte tu próximo entreno.'}</Vacio>
+              : <Vacio icono="equipo" titulo="Nada por aquí">No hay publicaciones con este filtro. Prueba con «Todo».</Vacio>
         ) : posts.map((p, i) => (
           <Fragment key={p.id}>
             {i === primera && <div class="muro-separa nuevo"><span>Nuevo<span class="sr"> desde tu última visita</span></span></div>}
@@ -631,26 +666,38 @@ function TextoConMenciones({ texto, mencionados = [], clase = 'post-texto', como
   );
 }
 
-function Compositor({ coach, personas = {}, alPublicar }) {
+// v0.71 (043): con un tema (el de entrada, charla; el del coach, avisos) y hasta 4 fotos, reducidas en el móvil. Sin la 043,
+// sin tema y con una foto.
+function Compositor({ coach, personas = {}, con043 = false, alPublicar }) {
   const { api, aviso } = useApp();
   const [modo, setModo] = useState('aviso'); // el coach: aviso o encuesta (v0.47)
   const [texto, setTexto] = useState('');
   const [elegidas, setElegidas] = useState([]);
-  const [foto, setFoto] = useState(null); // { blob, url }
+  const [fotos, setFotos] = useState([]); // [{ blob, url }]
+  const [tema, setTema] = useState(temaPorDefecto(coach));
   const [fijada, setFijada] = useState(false);
   const [pregunta, setPregunta] = useState('');
   const [opciones, setOpciones] = useState(['', '']);
   const [cierre, setCierre] = useState('');
   const [ocupado, una] = useUnaVez();
   const input = useRef(null);
-  useEffect(() => () => { if (foto) URL.revokeObjectURL(foto.url); }, [foto]);
+  const urls = useRef([]);
+  useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
   const encuesta = coach && modo === 'encuesta';
+  const maxFotos = con043 ? MAX_FOTOS : 1;
   const elegir = async (e) => {
-    const f = e.currentTarget.files?.[0];
+    const lista = [...(e.currentTarget.files || [])];
     e.currentTarget.value = '';
-    if (!f) return;
-    try { const blob = await reducirFoto(f); setFoto({ blob, url: URL.createObjectURL(blob) }); } catch (err) { aviso(err.message, 'error'); }
+    if (!lista.length) return;
+    const caben = Math.max(0, maxFotos - fotos.length);
+    if (lista.length > caben) aviso(`Como mucho ${maxFotos} ${maxFotos === 1 ? 'foto' : 'fotos'} por publicación.`, 'error');
+    const nuevas = [];
+    for (const f of lista.slice(0, caben)) {
+      try { const blob = await reducirFoto(f); const url = URL.createObjectURL(blob); urls.current.push(url); nuevas.push({ blob, url }); } catch (err) { aviso(err.message, 'error'); }
+    }
+    if (nuevas.length) setFotos((l) => [...l, ...nuevas].slice(0, maxFotos));
   };
+  const quitarFoto = (i) => setFotos((l) => l.filter((_, k) => k !== i));
   const publicar = (e) => {
     e.preventDefault();
     una(async () => {
@@ -660,17 +707,19 @@ function Compositor({ coach, personas = {}, alPublicar }) {
           setPregunta(''); setOpciones(['', '']); setCierre(''); setFijada(false);
           aviso('Encuesta publicada en el muro');
         } else {
-          await api.publicarEnComunidad({ texto, foto: foto?.blob || null, fijada, menciones: mencionesDeTexto(texto, elegidas) });
-          setTexto(''); setFoto(null); setFijada(false); setElegidas([]);
-          aviso(coach ? 'Aviso publicado en el muro' : 'Publicado en el equipo');
+          await api.publicarEnComunidad({ texto, fotos: fotos.map((f) => f.blob), tema: con043 ? tema : null, fijada, menciones: mencionesDeTexto(texto, elegidas) });
+          setTexto(''); setFotos([]); setFijada(false); setElegidas([]);
+          aviso(coach ? 'Aviso publicado en el muro' : tema === 'pregunta' && con043 ? 'Pregunta publicada: tu coach te contesta en los comentarios' : 'Publicado en el equipo');
+          setTema(temaPorDefecto(coach));
         }
         alPublicar();
       } catch (err) { aviso(err.message, 'error'); }
     });
   };
-  const vacio = !texto.trim() && !foto;
+  const vacio = !texto.trim() && !fotos.length;
   const encuestaLista = pregunta.trim() && opciones.filter((o) => o.trim()).length >= 2;
   const ahoraLocal = (() => { const d = new Date(Date.now() + 10 * 60000); return `${aISO(d)}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; })();
+  const esPregunta = con043 && !coach && tema === 'pregunta';
   return (
     <form class="panel panel-pad pila-s compositor" onSubmit={publicar}>
       {coach && (
@@ -697,24 +746,45 @@ function Compositor({ coach, personas = {}, alPublicar }) {
             <span class="ayuda">Hasta entonces, cada uno puede cambiar su voto. Sin cierre, siempre abierta.</span></div>
         </div>
       ) : (
-        <AreaConMenciones id="eq-texto" etiqueta={coach ? 'Aviso para el equipo' : 'Tu publicación'} valor={texto} alCambiar={setTexto} personas={personas}
+        <AreaConMenciones id="eq-texto" etiqueta={coach ? 'Aviso para el equipo' : esPregunta ? 'Tu pregunta para el coach' : 'Tu publicación'} valor={texto} alCambiar={setTexto} personas={personas}
           alMencionar={(p) => setElegidas((l) => [...l.filter((x) => x.perfil_id !== p.perfil_id), p])} maxLength={MAX_POST} rows={2}
-          placeholder={coach ? 'Un aviso para todo el equipo…' : '¿Qué tal tu semana? Anima al equipo… (@ para mencionar)'} />
+          placeholder={coach ? 'Un aviso para todo el equipo…' : esPregunta ? '¿Qué le quieres preguntar a tu coach?' : '¿Qué tal tu semana? Anima al equipo… (@ para mencionar)'} />
       )}
-      {!encuesta && foto && (
-        <div class="compositor-foto">
-          <img src={foto.url} alt="La foto que vas a publicar" />
-          <button type="button" class="btn btn-peq" onClick={() => setFoto(null)}><Icono n="cerrar" /> Quitar la foto</button>
+      {!encuesta && con043 && (
+        <div class="compositor-tema">
+          <label for="eq-tema" class="peq">Tema</label>
+          <select id="eq-tema" class="entrada entrada-peq" value={tema} onChange={(e) => setTema(e.currentTarget.value)}>
+            {temasPara(coach).map(([k, t]) => <option key={k} value={k}>{t}</option>)}
+          </select>
         </div>
+      )}
+      {!encuesta && con043 && !coach && (
+        <p class="mini terciario compositor-nota">{esPregunta
+          ? 'Te contesta tu coach en los comentarios: aquí van las dudas de salud, lesiones, fármacos, suplementos o dieta.'
+          : 'Dudas de salud, lesiones, fármacos, suplementos o dieta: al coach, con el tema «Pregunta para el coach».'}</p>
+      )}
+      {!encuesta && fotos.length > 0 && (
+        <ul class="compositor-fotos" aria-label={fotos.length === 1 ? 'La foto que vas a publicar' : `Las ${fotos.length} fotos que vas a publicar`}>
+          {fotos.map((f, i) => (
+            <li key={f.url} class="compositor-foto">
+              <img src={f.url} alt={`Foto ${i + 1} que vas a publicar`} />
+              <button type="button" class="btn btn-icono btn-peq quitar-foto" aria-label={`Quitar la foto ${i + 1}`} onClick={() => quitarFoto(i)}><Icono n="cerrar" /></button>
+            </li>
+          ))}
+        </ul>
       )}
       <div class="separa compositor-pie">
         <span class="fila-envolver">
-          {!encuesta && <input ref={input} type="file" accept="image/*" class="sr" tabIndex={-1} aria-label="Foto para la publicación" onChange={elegir} />}
-          {!encuesta && !foto && <button type="button" class="btn btn-peq plano" onClick={() => input.current?.click()}><Icono n="imagen" /> Foto</button>}
+          {!encuesta && <input ref={input} type="file" accept="image/*" multiple={maxFotos > 1} class="sr" tabIndex={-1} aria-label={maxFotos > 1 ? 'Fotos para la publicación' : 'Foto para la publicación'} onChange={elegir} />}
+          {!encuesta && fotos.length < maxFotos && (
+            <button type="button" class="btn btn-peq plano" onClick={() => input.current?.click()}>
+              <Icono n="imagen" /> {maxFotos > 1 ? (fotos.length ? 'Otra foto' : 'Fotos') : 'Foto'}
+            </button>
+          )}
           {coach && <label class="casilla casilla-peq"><input type="checkbox" checked={fijada} onChange={(e) => setFijada(e.currentTarget.checked)} /><span>Fijar arriba</span></label>}
         </span>
         <button class="btn btn-peq btn-primario" disabled={ocupado || (encuesta ? !encuestaLista : coach ? !texto.trim() : vacio)}>
-          {ocupado ? 'Publicando…' : encuesta ? 'Publicar encuesta' : coach ? 'Publicar aviso' : 'Publicar'}
+          {ocupado ? 'Publicando…' : encuesta ? 'Publicar encuesta' : coach ? 'Publicar aviso' : esPregunta ? 'Preguntar' : 'Publicar'}
         </button>
       </div>
       {!encuesta && texto.length > MAX_POST - 200 && <span class="mini terciario">{MAX_POST - texto.length} letras más como mucho</span>}
@@ -744,27 +814,42 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
       if (post.miReaccion !== 'fuerza') reaccionar('fuerza');
     } else toque.current = t;
   };
+  // v0.71 (043): guardar (solo lo ve quien guarda)
+  const [guardado, setGuardado] = useState(!!post.guardado);
+  useEffect(() => setGuardado(!!post.guardado), [post.guardado]);
+  const guardar = () => una(async () => {
+    try {
+      const v = await api.guardarPost(post.id, !guardado);
+      setGuardado(!!v);
+      aviso(v ? 'Guardada: la tienes en «Guardados»' : 'Ya no está en «Guardados»');
+      alCambiar();
+    } catch (e) { aviso(e.message, 'error'); }
+  });
   const todos = Object.values(post.reacciones).flat();
   const tipo = TIPOS_POST[post.tipo] || null;
+  // El tema (v0.71): el de una publicación, o el de un aviso que no es «Avisos»
+  const tema = post.tipo === 'post' || (post.tipo === 'aviso' && post.tema && post.tema !== 'avisos') ? nombreTema(post.tema) : null;
+  const meta = [tipo, tema].filter(Boolean).join(' · ');
   return (
     <article class={`panel panel-pad pila-s post post-${post.tipo} ${post.fijada ? 'fijada' : ''} ${post.oculta ? 'oculta' : ''}`} aria-label={`${tipo || 'Publicación'} de ${post.autor.nombre}`}>
       <header class="post-cab">
         <BotonPersona perfilId={post.autor_id} nombre={post.autor.nombre} foto={post.autor.foto} clase="post-autor" claseAvatar="">
           <span class="post-quien">
             <span class="fila-envolver"><strong>{post.autor.nombre}</strong>{post.autor.coach && <span class="chip morado">Coach</span>}</span>
-            <span class="mini terciario">{tipo ? `${tipo} · ` : ''}{cuando(post.creado_en)}</span>
+            <span class="mini terciario">{meta ? `${meta} · ` : ''}{cuando(post.creado_en)}</span>
           </span>
         </BotonPersona>
         {post.fijada && <span class="chip post-fijado"><Icono n="chincheta" />Fijado</span>}
         {(coach || post.mio || !post.autor.coach) && <button class="btn btn-icono plano" aria-label="Opciones de la publicación" onClick={() => setHoja('opciones')}><Icono n="opciones" stroke-width="3" /></button>}
       </header>
       {post.oculta && <p class="nota peq">Oculta: los atletas no la ven.</p>}
+      {post.tema === 'pregunta' && post.respondidaCoach && <p class="post-pregunta mini"><span class="chip chip-mini ok"><Icono n="hecho" />Respondida por el coach</span></p>}
       {post.tipo === 'encuesta' ? <EncuestaPost post={post} coach={coach} alCambiar={alCambiar} alVerVotos={() => setHoja('votos')} /> : (
         <div class="post-cuerpo" onClick={tocar}>
           {post.tipo === 'entreno' && <TarjetaEntreno r={post.resumen} />}
           {post.tipo === 'logro' && <TarjetaLogro r={post.resumen} />}
           {post.texto && <TextoConMenciones texto={post.texto} mencionados={post.mencionados} />}
-          {post.foto_ruta && <FotoPost ruta={post.foto_ruta} autor={post.autor.nombre} />}
+          {(post.fotos || []).length > 0 ? <GaleriaPost rutas={post.fotos} autor={post.autor.nombre} /> : post.foto_ruta && <FotoPost ruta={post.foto_ruta} autor={post.autor.nombre} />}
           {pop > 0 && <span class="pop-fuerza" key={pop} aria-hidden="true">💪</span>}
         </div>
       )}
@@ -780,9 +865,15 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
             );
           })}
         </div>
-        <button type="button" class="btn btn-peq plano post-comentar" onClick={() => setHoja('comentarios')}>
-          <Icono n="mensaje" /> {post.comentarios ? `${post.comentarios} ${post.comentarios === 1 ? 'comentario' : 'comentarios'}` : 'Comentar'}
-        </button>
+        <span class="post-pie-der">
+          <button type="button" class="btn btn-peq plano post-comentar" onClick={() => setHoja('comentarios')}>
+            <Icono n="mensaje" /> {post.comentarios ? `${post.comentarios} ${post.comentarios === 1 ? 'comentario' : 'comentarios'}` : 'Comentar'}
+          </button>
+          {post.con043 && (
+            <button type="button" class={`btn btn-icono plano post-guardar ${guardado ? 'guardado' : ''}`} aria-label="Guardar" aria-pressed={guardado ? 'true' : 'false'}
+              title={guardado ? 'Guardada (solo la ves tú)' : 'Guardar'} disabled={ocupado} onClick={guardar}><Icono n="guardar" /></button>
+          )}
+        </span>
       </div>
       {todos.length > 0 && <button type="button" class="btn-texto mini quien-reacciona" onClick={() => setHoja('quien')}>{quienes(todos)}</button>}
       {hoja === 'comentarios' && <HojaComentarios post={post} coach={coach} personas={personas} alCerrar={() => setHoja(null)} alCambiar={alCambiar} />}
@@ -913,7 +1004,44 @@ function HojaVotantes({ post, alCerrar }) {
   );
 }
 
-function FotoPost({ ruta, autor }) {
+// v0.71 (043): de 2 a 4 fotos, una detrás de otra: se pasan con el dedo (con el teclado, o con «Anterior» y «Siguiente»)
+function GaleriaPost({ rutas = [], autor }) {
+  const pista = useRef(null);
+  const [i, setI] = useState(0);
+  if (rutas.length < 2) return rutas[0] ? <FotoPost ruta={rutas[0]} autor={autor} /> : null;
+  const ir = (n) => {
+    const el = pista.current;
+    const j = Math.max(0, Math.min(rutas.length - 1, n));
+    if (el) el.scrollTo({ left: j * el.clientWidth });
+    setI(j);
+  };
+  // (solo cuando se queda en una foto: mientras se desliza hacia la que toca, no cambia)
+  const alDeslizar = () => {
+    const el = pista.current;
+    if (!el || !el.clientWidth) return;
+    const j = Math.round(el.scrollLeft / el.clientWidth);
+    if (Math.abs(el.scrollLeft - j * el.clientWidth) < 2) setI(Math.max(0, Math.min(rutas.length - 1, j)));
+  };
+  const tecla = (e) => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); ir(i + 1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); ir(i - 1); }
+  };
+  return (
+    <div class="galeria-post">
+      <div class="galeria-pista" ref={pista} role="group" aria-roledescription="galería" aria-label={`${rutas.length} fotos de ${autor}: desliza para verlas`}
+        tabIndex={0} onScroll={alDeslizar} onKeyDown={tecla}>
+        {rutas.map((r, k) => <div key={r} class="galeria-foto"><FotoPost ruta={r} autor={autor} n={k + 1} total={rutas.length} /></div>)}
+      </div>
+      <div class="galeria-pie">
+        <button type="button" class="btn btn-icono plano btn-peq" aria-label="Foto anterior" disabled={i === 0} onClick={() => ir(i - 1)}><Icono n="atras" /></button>
+        <span class="galeria-puntos" aria-hidden="true">{rutas.map((r, k) => <span key={r} class={k === i ? 'activo' : ''} />)}</span>
+        <span class="sr" aria-live="polite">Foto {i + 1} de {rutas.length}</span>
+        <button type="button" class="btn btn-icono plano btn-peq" aria-label="Foto siguiente" disabled={i === rutas.length - 1} onClick={() => ir(i + 1)}><Icono n="derecha" /></button>
+      </div>
+    </div>
+  );
+}
+
+function FotoPost({ ruta, autor, n = 0, total = 0 }) {
   const { api } = useApp();
   const [url, setUrl] = useState(null);
   const [error, setError] = useState(false);
@@ -924,7 +1052,7 @@ function FotoPost({ ruta, autor }) {
   }, [ruta]);
   if (error) return <p class="mini terciario">La foto no está disponible.</p>;
   if (!url) return <div class="post-foto post-foto-cargando" aria-hidden="true" />;
-  return <img class="post-foto" src={url} alt={`Foto de ${autor}`} loading="lazy" />;
+  return <img class="post-foto" src={url} alt={total > 1 ? `Foto ${n} de ${total} de ${autor}` : `Foto de ${autor}`} loading="lazy" />;
 }
 
 function HojaQuien({ post, alCerrar }) {
@@ -1001,6 +1129,10 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
   const [elegidas, setElegidas] = useState([]);
   const [avisar, setAvisar] = useState(null);
   const [respondiendo, setRespondiendo] = useState(null); // { id, nombre }
+  // v0.71 (043): la mejor respuesta (primero, con su distintivo) y, en una pregunta, guardarla como pregunta frecuente
+  const [mejor, setMejor] = useState(post.mejor_comentario || null);
+  const [frecuente, setFrecuente] = useState(null); // el comentario del coach que se guarda
+  const yo = api.uid();
   const [ocupado, una] = useUnaVez();
   const recargar = async () => { await lista.recargar(true); alCambiar(); };
   const enviar = (e) => {
@@ -1017,13 +1149,23 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
     setRespondiendo({ id: c.responde_a || c.id, nombre: c.autor.nombre });
     requestAnimationFrame(() => document.getElementById('eq-comentario')?.focus());
   };
-  const hilos = hilosComentarios(lista.datos || []);
+  const elegirMejor = (c) => una(async () => {
+    const quitar = mejor === c.id;
+    try {
+      await api.mejorRespuesta(post.id, quitar ? null : c.id);
+      setMejor(quitar ? null : c.id);
+      aviso(quitar ? 'Ya no está marcada' : `Marcada como ${etiquetaMejor(post, c).toLowerCase()}`);
+      await recargar();
+    } catch (err) { aviso(err.message, 'error'); }
+  });
+  const hilos = mejorPrimero(hilosComentarios(lista.datos || []), mejor);
   const item = (c, respuesta = false) => (
-    <li key={c.id} class={`comentario-equipo ${respuesta ? 'respuesta' : ''}`}>
+    <li key={c.id} class={`comentario-equipo ${respuesta ? 'respuesta' : ''} ${c.id === mejor ? 'mejor' : ''}`}>
       {/* (la foto también abre el perfil, con el dedo; con el teclado, el nombre) */}
       <BotonFoto c={c} />
       <div class="pila-xs">
         <span class="peq"><BotonPersona perfilId={c.autor_id} nombre={c.autor.nombre} avatar={false} clase="comentario-nombre"><strong>{c.autor.nombre}</strong></BotonPersona>{c.autor.coach && <span class="chip morado chip-mini">Coach</span>} <span class="mini terciario">{cuando(c.creado_en)}</span></span>
+        {c.id === mejor && <span class="chip chip-mini ok insignia-mejor"><Icono n="hecho" />{etiquetaMejor(post, c)}</span>}
         <TextoConMenciones texto={c.texto} mencionados={c.mencionados} clase="post-texto peq" como="span" />
         {c.oculto && <span class="mini terciario">Oculto: los atletas no lo ven.</span>}
         <span class="fila-envolver comentario-acciones">
@@ -1034,6 +1176,15 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
             </button>
           )}
           {c.con041 && !c.oculto && <button type="button" class="btn-texto mini" onClick={() => responder(c)} aria-label={`Responder a ${c.autor.nombre}`}>Responder</button>}
+          {post.con043 && puedeElegirMejor({ post, comentario: c, coach, yo }) && (
+            <button type="button" class="btn-texto mini" disabled={ocupado} aria-pressed={c.id === mejor ? 'true' : 'false'} onClick={() => elegirMejor(c)}
+              aria-label={c.id === mejor ? `Quitar «${etiquetaMejor(post, c)}» al comentario de ${c.autor.nombre}` : `Marcar el comentario de ${c.autor.nombre} como ${etiquetaMejor(post, c).toLowerCase()}`}>
+              {c.id === mejor ? 'Quitar la marca' : etiquetaMejor(post, c)}
+            </button>
+          )}
+          {post.con043 && coach && post.tema === 'pregunta' && c.autor.coach && !c.oculto && (
+            <button type="button" class="btn-texto mini" disabled={ocupado} onClick={() => setFrecuente(c)}>Guardar como pregunta frecuente</button>
+          )}
           {(coach || c.mio) && <button class="btn-texto mini peligro" disabled={ocupado} onClick={() => accion(() => api.borrarComentarioComunidad(c.id), 'Comentario borrado')}>Borrar</button>}
           {coach && !c.mio && <button class="btn-texto mini" disabled={ocupado} onClick={() => accion(() => api.ocultarComentarioComunidad(c.id, !c.oculto), c.oculto ? 'Vuelve a verse' : 'Comentario oculto')}>{c.oculto ? 'Mostrar' : 'Ocultar'}</button>}
           {!coach && !c.mio && !c.autor.coach && <button class="btn-texto mini" onClick={() => setAvisar(c.id)}>Avisar al coach</button>}
@@ -1062,7 +1213,84 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
         </form>
       </div>
       {avisar && <HojaAvisar comentarioId={avisar} alCerrar={() => setAvisar(null)} />}
+      {frecuente && <HojaPreguntaFrecuente post={post} comentario={frecuente} alCerrar={() => setFrecuente(null)}
+        alGuardar={async () => { setFrecuente(null); setMejor(frecuente.id); await recargar(); }} />}
     </Hoja>
+  );
+}
+
+// v0.71 (043): el coach guarda una pregunta y su respuesta como pregunta frecuente (puede retocar los dos textos). Se guarda sin el
+// nombre de quien preguntó y la ven todos los de dentro en «Preguntas».
+function HojaPreguntaFrecuente({ post, comentario, alCerrar, alGuardar }) {
+  const { api, aviso } = useApp();
+  const [pregunta, setPregunta] = useState(post.texto || '');
+  const [respuesta, setRespuesta] = useState(comentario.texto || '');
+  const [ocupado, una] = useUnaVez();
+  const guardar = (e) => {
+    e.preventDefault();
+    una(async () => {
+      try {
+        await api.guardarPreguntaFrecuente({ postId: post.id, comentarioId: comentario.id, pregunta, respuesta });
+        aviso('Guardada en «Preguntas del equipo»');
+        await alGuardar();
+      } catch (err) { aviso(err.message, 'error'); }
+    });
+  };
+  return (
+    <Hoja titulo="Guardar como pregunta frecuente" alCerrar={alCerrar}>
+      <form class="pila" onSubmit={guardar}>
+        <p class="peq secundario">La verán todos los del equipo en «Preguntas», sin el nombre de quien preguntó. Puedes retocar los textos (por ejemplo, quitar algo personal).</p>
+        <div class="campo"><label for="eq-faq-pregunta">Pregunta</label>
+          <textarea id="eq-faq-pregunta" class="area" rows={3} maxLength={MAX_POST} value={pregunta} onInput={(e) => setPregunta(e.currentTarget.value)} /></div>
+        <div class="campo"><label for="eq-faq-respuesta">Respuesta</label>
+          <textarea id="eq-faq-respuesta" class="area" rows={4} maxLength={MAX_POST} value={respuesta} onInput={(e) => setRespuesta(e.currentTarget.value)} /></div>
+        <button class="btn btn-primario" disabled={ocupado || !pregunta.trim() || !respuesta.trim()}><Icono n="hecho" /> Guardar como pregunta frecuente</button>
+      </form>
+    </Hoja>
+  );
+}
+
+// v0.71 (043): las preguntas del equipo, las que el coach ha contestado en el muro y ha guardado. El coach las puede quitar.
+// Sin la 043, el coach ve «Disponible tras la migración 043» (al atleta no le sale la pestaña).
+export function PreguntasEquipo({ coach = false }) {
+  const { api, aviso } = useApp();
+  const [vuelta, setVuelta] = useState(0);
+  const lista = useCarga(() => api.preguntasEquipo(), [vuelta]);
+  const [ocupado, una] = useUnaVez();
+  if (lista.datos === null && lista.cargando) return <Siluetas forma="tarjetas" n={2} texto="Cargando las preguntas" />;
+  if (lista.datos === null) return <Vacio icono="pregunta" titulo="Preguntas del equipo">{AVISO_043}.</Vacio>;
+  const filas = lista.datos || [];
+  const quitar = (q) => una(async () => {
+    try { await api.borrarPreguntaFrecuente(q.id); aviso('Pregunta quitada de la lista'); setVuelta((v) => v + 1); } catch (e) { aviso(e.message, 'error'); }
+  });
+  return (
+    <section class="pila preguntas-equipo" aria-labelledby="eq-preguntas-t">
+      <div class="pila-xs">
+        <h2 id="eq-preguntas-t" class="preguntas-t">Preguntas del equipo</h2>
+        <p class="peq secundario">{coach
+          ? 'Las preguntas del muro que has contestado y guardado. Las ven todos los del equipo, sin el nombre de quien preguntó.'
+          : 'Lo que tu coach ha contestado en el muro, a mano para todos. ¿Tienes otra? Publícala en el muro con el tema «Pregunta para el coach».'}</p>
+      </div>
+      {!filas.length ? (
+        <Vacio icono="pregunta" titulo="Aún no hay preguntas guardadas">{coach ? 'En una pregunta del muro, en tu respuesta: «Guardar como pregunta frecuente».' : 'Cuando tu coach conteste y guarde alguna, saldrá aquí.'}</Vacio>
+      ) : (
+        <ul class="lista preguntas-lista">
+          {filas.map((q) => (
+            <li key={q.id} class="panel pregunta-equipo">
+              <details>
+                <summary><span class="pe-pregunta">{q.pregunta}</span></summary>
+                <div class="pila-xs pe-respuesta">
+                  <span class="mini le-k">Respuesta del coach</span>
+                  <p class="post-texto peq">{q.respuesta}</p>
+                  <span class="mini terciario">{fmtConDia(aISO(new Date(q.actualizado_en || q.creado_en)))}</span>
+                  {coach && <button type="button" class="btn btn-peq btn-peligro" style="justify-self:start" disabled={ocupado} onClick={() => quitar(q)}><Icono n="basura" /> Quitar de la lista</button>}
+                </div>
+              </details>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 // La foto de quien comenta, que abre su perfil (fuera del orden del teclado: con él, el nombre)

@@ -1,8 +1,9 @@
 // El aviso de privacidad (v0.56): cuando la política cambia, se avisa UNA vez (no cada vez que se abre la app). La versión
 // vista se guarda por cuenta en la base (migración 034; antes, en este móvil).
 // (v0.59) Una versión es «AAAA-MM» o, para añadir algo dentro del mismo mes, «AAAA-MM.n» (de 1 a 9; la 037 lo admite en la
-// base). Se comparan por partes (año-mes y luego la revisión), nunca como texto: 2026-12 < 2026-12.1 < 2026-12.2 < 2027-01.
-const RE_VERSION = /^(20\d{2})-(0[1-9]|1[0-2])(?:\.([1-9]))?$/;
+// base). Se comparan por partes (año-mes y luego la revisión), nunca como texto: 2026-12 < 2026-12.1 < 2026-12.2 < … < 2026-12.9 < 2026-12.10 < 2027-01 (v0.71: de una o dos cifras).
+// (v0.71, 043) La revisión, de una o dos cifras (de 1 a 99): 2026-12.9 < 2026-12.10
+const RE_VERSION = /^(20\d{2})-(0[1-9]|1[0-2])(?:\.([1-9]\d?))?$/;
 export const formatoVersion = (v) => typeof v === 'string' && RE_VERSION.test(v);
 // La versión sin su revisión («2026-12.1» → «2026-12»): la que entiende una base sin la 037
 export const versionSinRevision = (v) => (formatoVersion(v) ? v.slice(0, 7) : null);
@@ -29,8 +30,10 @@ export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) &&
 // de la app y tus discos, en el móvil) y la 2026-12.6 (v0.64: el orden de hoy de una sesión, en el móvil) y la 2026-12.7 (v0.65:
 // la copia de tu semana en el móvil, para abrir sin cobertura) y la 2026-12.8 (v0.69: «Entrenando ahora», la bienvenida, las
 // respuestas y los 💪 a comentarios, el resumen del domingo y compartir los entrenos sin preguntar) y la 2026-12.9 (v0.70: los
-// compañeros de racha, los retos por equipos, los minutos de cardio en los retos y las insignias)
+// compañeros de racha, los retos por equipos, los minutos de cardio en los retos y las insignias) y la 2026-12.10 (v0.71: los temas,
+// las preguntas al coach y las del equipo, varias fotos, lo guardado, la búsqueda y la mejor respuesta)
 export const NOVEDADES_PRIVACIDAD = [
+  ['equipo', 'Preguntas, fotos y guardados en el equipo', 'Las publicaciones llevan un tema y hasta 4 fotos. Si tu coach guarda tu «Pregunta para el coach» como pregunta frecuente, todo el equipo ve una copia sin tu nombre. Lo que guardas solo lo ves tú. Quien publica o tu coach pueden marcar tu comentario como mejor respuesta: te llega un aviso.', '2026-12.10'],
   ['equipo', 'Compañeros de racha, equipos e insignias', 'Si aceptas ser compañeros de racha, la pareja y vuestra racha las veis los dos, tu coach y el equipo (salvo si uno no sale en el ranking); tu compañero ve si has completado tu semana. En los retos por equipos sumas a tu equipo (sin ranking, no). Tus minutos de cardio solo cuentan en los retos si lo enciendes. Las insignias salen de lo que ya se comparte.', '2026-12.9'],
   ['equipo', 'Novedades del equipo', 'En la comunidad, «Que el equipo vea cuándo estoy entrenando» (apagado de entrada) enseña tu nombre y tu foto mientras entrenas, nunca la hora ni lo que haces. Puedes dar la bienvenida a quien entra, responder a un comentario y darle 💪, y el domingo te puede llegar el resumen de la semana del equipo (solo recuentos). «Compartir mis entrenos sin preguntar» se guarda solo en tu móvil.', '2026-12.8'],
   ['sinred', 'Tu semana, también sin cobertura', 'Para que Hoy y tu sesión abran al momento aunque no tengas señal, el móvil guarda una copia de tu semana (tu programa y las sesiones que te quedan, con lo que hiciste la última vez y las notas de tu coach). Solo para tu cuenta: se pone al día con conexión y se borra al cerrar la sesión. También la última versión de la app que has abierto, para enseñarte sus novedades una vez.', '2026-12.7'],

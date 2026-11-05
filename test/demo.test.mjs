@@ -440,7 +440,7 @@ console.log('\nLa comunidad del equipo en la demo (v0.43)');
   check(Object.keys(await api.personasComunidad()).length === 5, 'los de la demo ya tienen leídas las normas vigentes: los ve a todos (con el coach)');
   const entrenoR = muro.posts.find((x) => x.tipo === 'entreno' && x.autor.nombre === 'Rubén M.');
   check(entrenoR?.autor.nombre === 'Rubén M.' && entrenoR.resumen.ejercicios.length >= 3 && entrenoR.comentarios === 2 && Object.values(entrenoR.reacciones).flat().length === 3, 'el entreno compartido de Rubén, con reacciones y comentarios');
-  check(muro.posts.length === 7 && muro.posts.some((x) => x.tipo === 'encuesta') && muro.posts.some((x) => x.tipo === 'logro'), 'y las publicaciones de Carlos y Lucía, la encuesta del coach y el logro de Carlos (v0.47)');
+  check(muro.posts.length === 9 && muro.posts.some((x) => x.tipo === 'encuesta') && muro.posts.some((x) => x.tipo === 'logro'), 'y las publicaciones de Carlos, Lucía y Rubén, la encuesta del coach y el logro de Carlos (v0.47; v0.71: un truco de técnica y una pregunta al coach)');
   // v0.51: Carlos ha compartido hoy su último entreno (su foto lleva el aro): sale de lo que ya se ve en el muro
   const entrenoC = muro.posts.find((x) => x.tipo === 'entreno' && x.autor.nombre === 'Carlos V.');
   const hoyEq = await api.compartieronHoyComunidad();
@@ -1531,9 +1531,9 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   {
     const uid = bT.auth.sesion().user.id;
     const pv = async (v) => (await bT.upsert('privacidad_vista', [{ usuario_id: uid, version: v }], 'usuario_id'))[0].version;
-    check(VERSION_LEGAL_D === '2026-12.9' && await aT.versionLegal() === '2026-12.9' && await pv('2026-12.9') === '2026-12.9' && await pv('2026-12.8') === '2026-12.9' && await pv('2026-12') === '2026-12.9' && await pv('2026-11') === '2026-12.9',
-      '(M2) en la demo (que tiene la 037), la 2026-12.9 (v0.70); nunca hacia atrás, comparando por partes');
-    check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.10')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato y de un mes que ya existe');
+    check(VERSION_LEGAL_D === '2026-12.10' && await aT.versionLegal() === '2026-12.10' && await pv('2026-12.10') === '2026-12.10' && await pv('2026-12.9') === '2026-12.10' && await pv('2026-12') === '2026-12.10' && await pv('2026-11') === '2026-12.10',
+      '(M2) en la demo (que tiene la 037 y la 043), la 2026-12.10 (v0.71); nunca hacia atrás, comparando por partes (.10 va después de .9)');
+    check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.100')) && await lanza(() => pv('2026-12.01')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato (revisión de 1 a 99) y de un mes que ya existe');
   }
   await bT.auth.entrar('pelayo@fbe.demo', 'demo');
 }
@@ -1772,6 +1772,61 @@ console.log('\nv0.70: la comunidad, segunda tanda (las mismas reglas de la 042 e
   await b4.auth.entrar('pelayo@fbe.demo', 'demo');
   const rec = await a4.recientesComunidad();
   check(rec.length >= 3 && rec.every((x) => Number.isInteger(x.sesiones)) && (await a4.equiposDeReto(rq.id)).b.length === 2, 'el coach: sesiones recientes de cada uno y el reparto de los equipos');
+}
+
+console.log('\nv0.71: la comunidad, tercera tanda (las mismas reglas de la 043 en la demo)');
+{
+  const b5 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a5 = crearApi(b5);
+  await b5.auth.entrar('lucia@fbe.demo', 'demo');
+  const muro = await a5.muro();
+  check(await a5.comunidad043() === true && muro.con043 && muro.posts.every((x) => (x.tipo === 'entreno' ? x.tema == null : !!x.tema))
+    && muro.posts.some((x) => x.tema === 'pregunta' && x.respondidaCoach) && muro.posts.some((x) => x.tema === 'tecnica'),
+    'la demo tiene la 043: cada publicación con su tema (los entrenos, sin), un truco de técnica y una pregunta ya respondida por el coach');
+  const preg = await a5.muro({ filtro: 'preguntas' }), tec = await a5.muro({ filtro: 'tecnica' }), avisos = await a5.muro({ filtro: 'avisos' }), logros = await a5.muro({ filtro: 'logros' });
+  check(preg.posts.length === 1 && tec.posts.length === 1 && avisos.posts.every((x) => ['aviso', 'encuesta'].includes(x.tipo)) && avisos.posts.length === 2 && logros.posts.every((x) => x.tema === 'logros'),
+    'los filtros de los temas (preguntas, técnica, avisos —también la encuesta— y logros), en la propia consulta');
+  check(await lanza(() => b5.insert('comunidad_posts', [{ texto: 'Aviso falso', tema: 'avisos' }])), 'un atleta no publica con «Avisos»');
+  const pq = await a5.publicarEnComunidad({ texto: '¿Cuánto descanso entre series de sentadilla?', tema: 'pregunta' });
+  const jpg = () => new Blob([new Uint8Array([255, 216, 255, 217])], { type: 'image/jpeg' });
+  const pf = await a5.publicarEnComunidad({ texto: 'Dos fotos del gimnasio', fotos: [jpg(), jpg()], tema: 'charla' });
+  check(pq.tema === 'pregunta' && pf.fotos?.length === 2 && pf.fotos[0] === pf.foto_ruta && (await a5.muro()).posts.find((x) => x.id === pf.id)?.fotos.length === 2,
+    'Lucía pregunta al coach y publica dos fotos (la primera es foto_ruta)');
+  check(await lanza(() => a5.publicarEnComunidad({ texto: 'Cinco', fotos: [jpg(), jpg(), jpg(), jpg(), jpg()] }))
+    && await lanza(() => b5.insert('comunidad_posts', [{ texto: 'x', foto_ruta: pf.foto_ruta, fotos: [pf.foto_ruta, 'coach/abcdefgh.jpg'] }])), 'como mucho 4, y todas en su carpeta');
+  const idTec = tec.posts[0].id;
+  check(await a5.guardarPost(idTec) === true && (await a5.muro({ filtro: 'guardados' })).posts.map((x) => x.id).join() === idTec && (await a5.muro()).posts.find((x) => x.id === idTec).guardado
+    && await lanza(() => b5.insert('comunidad_guardados', [{ perfil_id: a5.uid(), post_id: pf.id }])), 'guarda el truco de Rubén: sale en «Guardados» (y no se escribe a mano)');
+  const r1 = await a5.muro({ buscar: 'PRESS banca' }), r2 = await a5.muro({ buscar: 'ruben' }), r3 = await a5.muro({ buscar: 'press', filtro: 'guardados' }), r4 = await a5.muro({ buscar: 'x' });
+  check(r1.posts.map((x) => x.id).join() === idTec && r2.posts.length >= 2 && r2.posts.every((x) => x.autor.nombre === 'Rubén M.') && r3.posts.length === 1 && r4.posts.length > 2,
+    'buscar por el texto o el nombre (sin mayúsculas ni tildes), también dentro de un filtro; con una letra, no busca');
+  const pL = muro.posts.find((x) => x.autor.nombre === 'Lucía F.' && x.tipo === 'post');
+  const comL = await a5.comentariosComunidad(pL.id);
+  const deCarlos = comL.find((c) => c.autor.nombre === 'Carlos V.');
+  check(!!pL.mejor_comentario && comL.find((c) => c.id === pL.mejor_comentario)?.autor.nombre === 'Rubén M.' && await a5.mejorRespuesta(pL.id, deCarlos.id) === deCarlos.id
+    && (await a5.muro()).posts.find((x) => x.id === pL.id).mejor_comentario === deCarlos.id, 'en su publicación, la mejor respuesta era la de Rubén; Lucía la cambia por la de Carlos');
+  await b5.auth.entrar('carlos@fbe.demo', 'demo');
+  check(await lanza(() => a5.mejorRespuesta(pL.id, null)) && !(await b5.select('comunidad_guardados', {})).length && (await a5.preguntasEquipo()).length === 1,
+    'Carlos no la toca ni ve lo que ha guardado Lucía; ve la pregunta del equipo que guardó el coach');
+  await b5.auth.entrar('pelayo@fbe.demo', 'demo');
+  const resp = await a5.comentarEnComunidad(pq.id, 'Entre 2 y 3 minutos en las series pesadas.');
+  check(await lanza(() => a5.guardarPreguntaFrecuente({ postId: pf.id, comentarioId: resp.id })) && !(await b5.select('comunidad_guardados', {})).length, 'el coach: solo preguntas para el coach (y tampoco ve lo guardado)');
+  await a5.guardarPreguntaFrecuente({ postId: pq.id, comentarioId: resp.id, pregunta: '¿Cuánto descanso entre series pesadas?' });
+  const faqs = await a5.preguntasEquipo();
+  check(faqs.length === 2 && faqs[0].pregunta === '¿Cuánto descanso entre series pesadas?' && faqs[0].respuesta === 'Entre 2 y 3 minutos en las series pesadas.'
+    && (await a5.muro({ filtro: 'preguntas' })).posts.find((x) => x.id === pq.id)?.respondidaCoach, 'guarda la de Lucía como pregunta frecuente (retocada): su respuesta queda como «Respuesta del coach»');
+  await b5.auth.entrar('carlos@fbe.demo', 'demo');
+  await a5.avisarAlCoach({ postId: pf.id, motivo: 'Prueba' });
+  await b5.auth.entrar('lucia@fbe.demo', 'demo');
+  check(await lanza(() => b5.insert('comunidad_posts', [{ texto: 'Repetida', foto_ruta: pf.fotos[1].replace(/[A-Za-z0-9]+\.jpg$/, 'otraFoto1.jpg'), fotos: [pf.fotos[1].replace(/[A-Za-z0-9]+\.jpg$/, 'otraFoto1.jpg'), pf.fotos[1]] }])),
+    '(revisión) una foto, en una sola publicación');
+  const datos = await b5.rpc('comunidad_mis_datos', {});
+  check(datos.guardados.length === 1 && datos.preguntas_frecuentes.length === 1, '«Descargar mis datos» lleva lo guardado y las preguntas frecuentes de sus preguntas');
+  const fotos = await b5.rpc('comunidad_salir', { p_borrar: true });
+  await b5.auth.entrar('pelayo@fbe.demo', 'demo');
+  const rep = (await a5.reportesComunidad()).find((r) => r.post_id === null && r.copia_texto === 'Dos fotos del gimnasio');
+  check(fotos.length === 0 && rep?.fotos.length === 2 && rep.borrado && (await a5.preguntasEquipo()).length === 1,
+    'al salir borrando lo suyo, su pregunta frecuente se va; las dos fotos de lo avisado se quedan (el coach las ve en Revisar) hasta resolver el aviso');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

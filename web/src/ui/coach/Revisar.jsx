@@ -555,7 +555,7 @@ function TarjetaReporte({ r, recargar }) {
       </div>
       {r.borrado && <p class="mini terciario"><strong>Borrado por su autor</strong> después del aviso: esto es lo que había.</p>}
       {r.texto && <p class="cita">«{r.texto.length > 300 ? `${r.texto.slice(0, 300)}…` : r.texto}»</p>}
-      {r.foto && <FotoAvisada ruta={r.foto} />}
+      {(r.fotos || (r.foto ? [r.foto] : [])).map((f, i, l) => <FotoAvisada key={f} ruta={f} n={l.length > 1 ? i + 1 : 0} total={l.length} />)}
       {r.motivo && <p class="peq"><strong>Por qué:</strong> {r.motivo}</p>}
       {oculto && <p class="mini terciario">Ya está oculto.</p>}
       <div class="fila-envolver">
@@ -568,7 +568,7 @@ function TarjetaReporte({ r, recargar }) {
 }
 
 // La foto de lo avisado (el coach la puede ver mientras el aviso esté abierto, aunque su autor la haya borrado)
-function FotoAvisada({ ruta }) {
+function FotoAvisada({ ruta, n = 0, total = 0 }) {
   const { api } = useApp();
   const [url, setUrl] = useState(null);
   const [error, setError] = useState(false);
@@ -578,7 +578,7 @@ function FotoAvisada({ ruta }) {
     return () => { vivo = false; };
   }, [ruta]);
   if (error) return <p class="mini terciario">La foto ya no está disponible.</p>;
-  return url ? <img class="post-foto" src={url} alt="La foto de lo avisado" loading="lazy" /> : null;
+  return url ? <img class="post-foto" src={url} alt={n ? `Foto ${n} de ${total} de lo avisado` : 'La foto de lo avisado'} loading="lazy" /> : null;
 }
 
 // Bandeja vacía (v0.50): «Todo al día», con la barra en su soporte en línea y el lobo

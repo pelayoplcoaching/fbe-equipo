@@ -1,13 +1,14 @@
 // El equipo, visto por el coach (v0.43): el muro (avisos, fijar, ocultar, borrar, comentar y reaccionar como
 // «Coach»), los retos, el ranking de la semana y quién ha entrado. Se abre y se cierra en Cuenta → Comunidad.
 // v0.47: el resumen de la semana, encuestas, retos de equipo, el podio con las rachas, ánimos y el perfil de cada uno.
+// v0.71: las preguntas del equipo (las que contesta y guarda como preguntas frecuentes).
 import { useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, Pestanas, Cargando } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
-import { Muro, Retos, Ranking, ListaNormas, ConPerfiles, AvatarEquipo, NotaHoy, EntrenandoAhora } from '../Comunidad.jsx';
+import { Muro, Retos, Ranking, ListaNormas, ConPerfiles, AvatarEquipo, NotaHoy, EntrenandoAhora, PreguntasEquipo } from '../Comunidad.jsx';
 import { fmtCorta } from '../../logica/fechas.js';
 
-const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking'], ['miembros', 'Quién está'], ['normas', 'Normas']];
+const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking'], ['preguntas', 'Preguntas'], ['miembros', 'Quién está'], ['normas', 'Normas']];
 
 export function EquipoCoach() {
   const [vista, setVista] = useState('muro');
@@ -22,6 +23,7 @@ export function EquipoCoach() {
         {vista === 'muro' && <Muro coach />}
         {vista === 'retos' && <Retos coach />}
         {vista === 'ranking' && <Ranking />}
+        {vista === 'preguntas' && <PreguntasEquipo coach />}
         {vista === 'miembros' && <Miembros />}
         {vista === 'normas' && (
           <div class="panel panel-pad pila">

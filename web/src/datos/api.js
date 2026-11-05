@@ -33,11 +33,11 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043 } from '../legal.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
 import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida } from '../logica/notasVoz.js';
-import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido, nuevosParaBienvenida, retoMaximo, insigniasDe } from '../logica/comunidad.js';
+import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido, nuevosParaBienvenida, retoMaximo, insigniasDe, MAX_FOTOS, fotosDe, busquedaValida } from '../logica/comunidad.js';
 import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
 import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
@@ -148,6 +148,15 @@ const falta042 = (e) => {
   const m = e?.message || '';
   if (/comunidad_|medida|equipos|cardio_en_retos/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna|PGRST20/i.test(m)) {
     throw new Error(`${AVISO_042} en Supabase (supabase/migraciones/042_comunidad_constancia.sql).`);
+  }
+  throw e;
+};
+// La tercera tanda de mejoras de la comunidad (v0.71) sin la migración 043
+export const AVISO_043 = 'Disponible tras la migración 043';
+const falta043 = (e) => {
+  const m = e?.message || '';
+  if (/comunidad_|tema|fotos|mejor_comentario/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna|PGRST20/i.test(m)) {
+    throw new Error(`${AVISO_043} en Supabase (supabase/migraciones/043_comunidad_conversacion.sql).`);
   }
   throw e;
 };
@@ -289,11 +298,15 @@ const CAMPOS_SE = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'series',
 
 // La comunidad del equipo (v0.43, migración 027)
 const TABLAS_COMUNIDAD = ['comunidad_ajustes', 'comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_retos',
-  'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos'];
+  'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_preguntas'];
 // Lo que la app lee de una publicación del muro (sin la ficha ni la sesión de su autor)
 const COLS_POST = 'id,autor_id,tipo,texto,foto_ruta,resumen,fijada,oculta,creado_en,menciones,encuesta,reto_id';
 // Los filtros del muro (v0.47), en la propia consulta: así «Ver más» sigue funcionando
 const FILTRO_MURO = { entrenos: { in: { tipo: ['entreno'] } }, logros: { in: { tipo: ['logro'] } }, avisos: { in: { tipo: ['aviso', 'encuesta'] } } };
+// (v0.71, 043) Con los temas: cada publicación lleva el suyo (los logros, logros; los avisos y las encuestas, avisos)
+const COLS_POST_043 = `${COLS_POST},tema,fotos,mejor_comentario`;
+const FILTRO_MURO_043 = { entrenos: { in: { tipo: ['entreno'] } }, logros: { in: { tema: ['logros'] } }, avisos: { in: { tema: ['avisos'] } },
+  tecnica: { in: { tema: ['tecnica'] } }, charla: { in: { tema: ['charla'] } }, preguntas: { in: { tema: ['pregunta'] } } };
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
@@ -507,9 +520,12 @@ export function crearApi(backend) {
     // (v0.59) La versión de la política vigente para esta base: la de legal.js (2026-12.1) si la base tiene la 037 (que admite
     // revisiones, «AAAA-MM.n»); sin la 037 (la app se publica antes de que Pelayo la ejecute) o si no se sabe, la del mes
     // (2026-12), exactamente como antes: así la base no rechaza lo visto y el aviso no vuelve a salir en cada visita.
+    // (v0.71) La 2026-12.10 (revisión de dos cifras) solo con la 043; con la 037 pero sin la 043 (o si no se sabe), la 2026-12.9,
+    // la más nueva que admite esa base
     async versionLegal() {
       if (versionSinRevision(VERSION_LEGAL) === VERSION_LEGAL) return VERSION_LEGAL;
-      return (await api.video037().catch(() => null)) === true ? VERSION_LEGAL : versionSinRevision(VERSION_LEGAL);
+      if ((await api.video037().catch(() => null)) !== true) return versionSinRevision(VERSION_LEGAL);
+      return (await api.comunidad043().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_043;
     },
     async privacidadVista() {
       const id = uid();
@@ -519,7 +535,9 @@ export function crearApi(backend) {
       const enBase = filas ? filas[0]?.version || null : null;
       if (filas && formatoVersion(local) && (!enBase || compararVersiones(local, enBase) > 0)) {
         // (lo de este móvil, a la base; sin la 037, sin su revisión, que la base no la admite)
-        const subir = (await api.versionLegal()) === VERSION_LEGAL ? local : versionSinRevision(local);
+        // (y nunca una más nueva que la que admite esta base: sin la 043, como mucho la 2026-12.9)
+        const admitida = await api.versionLegal();
+        const subir = versionSinRevision(admitida) === admitida ? versionSinRevision(local) : versionMayor(local, admitida) === local ? admitida : local;
         if (!enBase || compararVersiones(subir, enBase) > 0) api.marcarPrivacidadVista(subir).catch(() => {});
       }
       return { version: versionMayor(enBase, local), enBase: !!filas };
@@ -3145,37 +3163,68 @@ export function crearApi(backend) {
     // último que ya se ve). Cada publicación con su autor, sus reacciones (con quién), cuántos comentarios y la mía.
     // v0.47: con un filtro (todo, entrenos, logros, avisos —también las encuestas— o lo mío), en la propia
     // consulta; las menciones (con su nombre) y, en las encuestas, sus resultados con los votos que se ven.
-    async muro({ limite = 20, antes = null, filtro = 'todo' } = {}) {
+    // v0.71 (043): cada publicación con su tema, sus fotos (varias), su mejor respuesta y si la he guardado; los filtros de
+    // los temas, «Guardados» y una búsqueda (buscar: por el texto y el nombre, en la base, con la misma paginación). Sin la
+    // 043, como antes (con043: false).
+    async muro({ limite = 20, antes = null, filtro = 'todo', buscar = '' } = {}) {
       const yo = uid();
-      const f = filtro === 'mio' ? { eq: { autor_id: yo } } : FILTRO_MURO[filtro] || {};
-      const [fijadas, sueltas, personas] = await Promise.all([
-        antes ? [] : b.select('comunidad_posts', { ...f, eq: { ...(f.eq || {}), fijada: true }, order: [['creado_en', 'desc']], limit: 20, cols: COLS_POST }),
-        b.select('comunidad_posts', { ...f, eq: { ...(f.eq || {}), fijada: false }, order: [['creado_en', 'desc']], limit: limite + 1, cols: COLS_POST, ...(antes ? { lte: { creado_en: antes } } : {}) }),
-        api.personasComunidad(),
-      ]).catch(falta029);
-      const resto = sueltas.filter((x) => !antes || x.creado_en < antes);
+      const con043 = (await api.comunidad043()) === true;
+      const cols = con043 ? COLS_POST_043 : COLS_POST;
+      let f = filtro === 'mio' ? { eq: { autor_id: yo } } : (con043 ? FILTRO_MURO_043 : FILTRO_MURO)[filtro] || {};
+      if (con043 && filtro === 'guardados') {
+        const g = await b.select('comunidad_guardados', { eq: { perfil_id: yo }, cols: 'post_id' }).catch(() => []);
+        f = { in: { id: g.map((x) => x.post_id) } };
+      }
+      const busca = con043 && busquedaValida(buscar);
+      let fijadas, sueltas, personas, hayMas;
+      if (busca) {
+        // (la base da los que coinciden, de limite en limite; después se leen como siempre, con el filtro encima)
+        const halladas = (await b.rpc('comunidad_buscar', { p_texto: String(buscar).trim(), p_limite: limite + 1, p_antes: antes }).catch(falta043)) || [];
+        hayMas = halladas.length > limite;
+        const ids = halladas.slice(0, limite).map((x) => x.id);
+        const inIds = f.in?.id ? ids.filter((x) => f.in.id.includes(x)) : ids;
+        [sueltas, personas] = await Promise.all([
+          b.select('comunidad_posts', { ...f, in: { ...(f.in || {}), id: inIds }, order: [['creado_en', 'desc']], cols }),
+          api.personasComunidad(),
+        ]);
+        fijadas = [];
+      } else {
+        [fijadas, sueltas, personas] = await Promise.all([
+          antes ? [] : b.select('comunidad_posts', { ...f, eq: { ...(f.eq || {}), fijada: true }, order: [['creado_en', 'desc']], limit: 20, cols }),
+          b.select('comunidad_posts', { ...f, eq: { ...(f.eq || {}), fijada: false }, order: [['creado_en', 'desc']], limit: limite + 1, cols, ...(antes ? { lte: { creado_en: antes } } : {}) }),
+          api.personasComunidad(),
+        ]).catch(falta029);
+      }
+      const resto = busca ? sueltas : sueltas.filter((x) => !antes || x.creado_en < antes);
+      if (!busca) hayMas = resto.length > limite;
       const posts = [...fijadas, ...resto.slice(0, limite)];
       const ids = posts.map((x) => x.id);
       const encuestas = posts.filter((x) => x.tipo === 'encuesta').map((x) => x.id);
-      const [reacciones, comentarios, votos] = ids.length ? await Promise.all([
+      const [reacciones, comentarios, votos, guardados] = ids.length ? await Promise.all([
         b.select('comunidad_reacciones', { in: { post_id: ids }, cols: 'post_id,autor_id,tipo' }),
-        b.select('comunidad_comentarios', { in: { post_id: ids }, cols: 'id,post_id' }),
+        b.select('comunidad_comentarios', { in: { post_id: ids }, cols: 'id,post_id,autor_id' }),
         encuestas.length ? b.select('comunidad_votos', { in: { post_id: encuestas }, cols: 'post_id,autor_id,opcion' }) : [],
-      ]) : [[], [], []];
+        con043 ? b.select('comunidad_guardados', { eq: { perfil_id: yo }, in: { post_id: ids }, cols: 'post_id' }).catch(() => []) : [],
+      ]) : [[], [], [], []];
       const R = agrupar(reacciones, 'post_id');
       const C = agrupar(comentarios, 'post_id');
       const V = agrupar(votos, 'post_id');
+      const G = new Set(guardados.map((x) => x.post_id));
       const autorDe = (id) => personas[id] || { nombre: 'Alguien del equipo', foto: null, coach: false };
       return {
         personas,
-        hayMas: resto.length > limite,
+        hayMas,
+        con043,
         posts: posts.map((x) => {
           const rs = R[x.id] || [];
           const porTipo = {};
           for (const r of rs) (porTipo[r.tipo] ||= []).push(autorDe(r.autor_id).nombre);
+          const mejor = x.mejor_comentario ? (C[x.id] || []).find((c) => c.id === x.mejor_comentario) : null;
           return {
             ...x, autor: autorDe(x.autor_id), mio: x.autor_id === yo, reacciones: porTipo, miReaccion: rs.find((r) => r.autor_id === yo)?.tipo || null, comentarios: (C[x.id] || []).length,
-            mencionados: mencionadosDe(x.menciones, personas),
+            mencionados: mencionadosDe(x.menciones, personas), con043, fotos: fotosDe(x), guardado: G.has(x.id),
+            // (la mejor respuesta, si se ve; en una pregunta, si es del coach: «Respondida por el coach»)
+            mejor_comentario: mejor ? mejor.id : null, respondidaCoach: !!mejor && x.tema === 'pregunta' && !!personas[mejor.autor_id]?.coach,
             ...(x.tipo === 'encuesta' ? { resultados: resultadosEncuesta(x.encuesta, V[x.id] || [], yo, (id) => autorDe(id).nombre) } : {}),
           };
         }),
@@ -3192,7 +3241,9 @@ export function crearApi(backend) {
     // fijar arriba). Primero se registra y después se sube la foto (Storage solo acepta las ya registradas).
     // v0.47: con menciones (perfil_id de quien se ve, como mucho 5: la base deja solo las válidas) y, el coach, una
     // encuesta ({ pregunta, opciones, cierre }) en lugar del aviso
-    async publicarEnComunidad({ texto = '', foto = null, fijada = false, menciones = [], encuesta = null } = {}) {
+    // v0.71 (043): con su tema (sin él, el de entrada que pone la base) y hasta 4 fotos (fotos: varios JPEG ya reducidos; foto
+    // sigue valiendo para una). Sin la 043, sin tema y con una foto como mucho.
+    async publicarEnComunidad({ texto = '', foto = null, fotos = [], tema = null, fijada = false, menciones = [], encuesta = null } = {}) {
       const yo = await api.perfil();
       const coach = yo?.rol === 'coach';
       const m = { menciones: [...new Set(menciones || [])].slice(0, MAX_MENCIONES) };
@@ -3202,17 +3253,30 @@ export function crearApi(backend) {
         if (e.error) throw new Error(e.error);
         return (await b.insert('comunidad_posts', [{ tipo: 'encuesta', texto: e.pregunta, encuesta: e.encuesta, ...(fijada ? { fijada: true } : {}), ...m }]).catch(falta029))[0];
       }
+      const blobs = [...(foto ? [foto] : []), ...(fotos || [])].filter(Boolean);
+      if (blobs.length > MAX_FOTOS) throw new Error(`Hasta ${MAX_FOTOS} fotos por publicación.`);
+      const con043 = (await api.comunidad043()) === true;
+      if (blobs.length > 1 && !con043) throw new Error(`Varias fotos: ${AVISO_043.toLowerCase()} (de momento, una).`);
       const t = String(texto || '').trim();
       if (t.length > MAX_POST) throw new Error(`Hasta ${MAX_POST} letras.`);
-      if (!t && !(foto && !coach)) throw new Error(coach ? 'Escribe el aviso.' : 'Escribe algo o elige una foto.');
-      let foto_ruta = null;
-      if (foto) {
+      if (!t && !(blobs.length && !coach)) throw new Error(coach ? 'Escribe el aviso.' : 'Escribe algo o elige una foto.');
+      let rutas = [];
+      if (blobs.length) {
         const atleta = coach ? null : await api.miAtleta();
-        foto_ruta = coach ? `coach/${aleatorio()}.jpg` : `${atleta.id}/${aleatorio()}.jpg`;
+        rutas = blobs.map(() => (coach ? `coach/${aleatorio()}.jpg` : `${atleta.id}/${aleatorio()}.jpg`));
       }
-      const [post] = await b.insert('comunidad_posts', [{ tipo: coach ? 'aviso' : 'post', texto: t || null, foto_ruta, ...(coach && fijada ? { fijada: true } : {}), ...(m.menciones.length ? m : {}) }]).catch(falta027);
-      if (foto) {
-        try { await b.storage.subir(foto_ruta, foto, 'image/jpeg', { bucket: 'comunidad' }); } catch (e) { await b.delete('comunidad_posts', { eq: { id: post.id } }).catch(() => {}); throw e; }
+      const fila = { tipo: coach ? 'aviso' : 'post', texto: t || null, foto_ruta: rutas[0] || null, ...(coach && fijada ? { fijada: true } : {}), ...(m.menciones.length ? m : {}),
+        ...(con043 && tema ? { tema } : {}), ...(rutas.length > 1 ? { fotos: rutas } : {}) };
+      const [post] = await b.insert('comunidad_posts', [fila]).catch(con043 ? falta043 : falta027);
+      if (blobs.length) {
+        const subidas = [];
+        try {
+          for (let i = 0; i < blobs.length; i++) { await b.storage.subir(rutas[i], blobs[i], 'image/jpeg', { bucket: 'comunidad' }); subidas.push(rutas[i]); }
+        } catch (e) {
+          await b.delete('comunidad_posts', { eq: { id: post.id } }).catch(() => {});
+          if (subidas.length) await b.storage.borrar(subidas, 'comunidad').catch(() => {});
+          throw e;
+        }
       }
       return post;
     },
@@ -3227,7 +3291,8 @@ export function crearApi(backend) {
     // aviso abierto al coach: entonces se queda hasta que el coach lo resuelva)
     async borrarDeComunidad(post) {
       await b.delete('comunidad_posts', { eq: { id: post.id } });
-      if (post.foto_ruta) await b.storage.borrar([post.foto_ruta], 'comunidad').catch(() => {});
+      const rutas = fotosDe(post);
+      if (rutas.length) await b.storage.borrar(rutas, 'comunidad').catch(() => {});
     },
     // Las fotos del muro, con enlaces que caducan en 5 minutos (la pantalla los pide al abrirla)
     async urlFotoComunidad(ruta) { return b.storage.url(ruta, 300, 'comunidad'); },
@@ -3305,6 +3370,8 @@ export function crearApi(backend) {
             : post.tipo === 'logro' ? ['Logro', post.resumen?.titulo, post.texto].filter(Boolean).join(': ') : post.texto;
         return {
           ...r, post, comentario, borrado, texto: texto || (r.copia_foto ? 'Una foto' : ''), foto: r.copia_foto || null,
+          // (v0.71, 043) todas las fotos que guardó la base al avisar (las de varias, en copia_fotos)
+          fotos: r.copia_fotos?.length ? r.copia_fotos : r.copia_foto ? [r.copia_foto] : [],
           quienAvisa: nombreDe(r.autor_id) || 'Alguien del equipo',
           autor: nombreDe(r.copia_autor_id) || r.copia_autor_nombre || 'Alguien del equipo',
         };
@@ -3314,7 +3381,8 @@ export function crearApi(backend) {
     async resolverReporte(r) {
       const id = typeof r === 'object' ? r.id : r;
       const fila = (await b.update('comunidad_reportes', { resuelto_en: new Date().toISOString() }, { eq: { id } }))[0] || null;
-      if (fila?.copia_foto && !fila.post_id) await b.storage.borrar([fila.copia_foto], 'comunidad').catch(() => {});
+      const copias = [...new Set([fila?.copia_foto, ...(fila?.copia_fotos || [])].filter(Boolean))];
+      if (copias.length && !fila.post_id) await b.storage.borrar(copias, 'comunidad').catch(() => {});
       return fila;
     },
     // El coach saca a alguien de la comunidad (y no le deja volver) o le vuelve a admitir
@@ -3528,6 +3596,44 @@ export function crearApi(backend) {
         pr.then((x) => { if (x == null && api._v042 === pr) api._v042 = null; });
       }
       return api._v042;
+    },
+    // ------------------------------------------------------------ v0.71 (migración 043)
+    // ¿Está la 043? true / false / null (no se sabe: un corte). Como comunidad042
+    async comunidad043() {
+      if (!api._v043) {
+        const pr = (async () => {
+          try { await b.rpc('comunidad_buscar', { p_texto: '' }); return true; } catch (e) {
+            const m = `${e?.message || ''} ${e?.code || ''}`;
+            if (/comunidad_buscar|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v043 = pr;
+        pr.then((x) => { if (x == null && api._v043 === pr) api._v043 = null; });
+      }
+      return api._v043;
+    },
+    // Guardar (o dejar de guardar) una publicación: solo lo ve quien la guarda, en todos sus móviles. Devuelve cómo queda
+    async guardarPost(postId, guardar = true) {
+      return b.rpc('comunidad_guardar', { p_post: postId, p_guardar: !!guardar }).catch(falta043);
+    },
+    // La mejor respuesta de una publicación (comentarioId null: la quita). Solo quien la publicó o el coach
+    async mejorRespuesta(postId, comentarioId) {
+      return b.rpc('comunidad_mejor_respuesta', { p_post: postId, p_comentario: comentarioId || null }).catch(falta043);
+    },
+    // Las preguntas del equipo (preguntas frecuentes que guarda el coach): las más nuevas primero. null sin la 043
+    async preguntasEquipo() {
+      try { return await b.select('comunidad_preguntas', { order: [['creado_en', 'desc']], cols: 'id,post_id,comentario_id,pregunta,respuesta,creado_en,actualizado_en' }); } catch { return null; }
+    },
+    // El coach guarda una pregunta (y su respuesta en ella) como pregunta frecuente; pregunta y respuesta, retocadas (si no, las
+    // de la publicación y el comentario)
+    async guardarPreguntaFrecuente({ postId, comentarioId, pregunta = '', respuesta = '' } = {}) {
+      const p = String(pregunta || '').trim(), r = String(respuesta || '').trim();
+      if (p.length > MAX_POST || r.length > MAX_POST) throw new Error(`Hasta ${MAX_POST} letras.`);
+      return b.rpc('comunidad_guardar_pregunta', { p_post: postId, p_comentario: comentarioId, p_pregunta: p || null, p_respuesta: r || null }).catch(falta043);
+    },
+    async borrarPreguntaFrecuente(id) {
+      return b.delete('comunidad_preguntas', { eq: { id } }).catch(falta043);
     },
     // Los compañeros de racha de alguien (sin perfilId, los míos, también las invitaciones pendientes): [{ id, perfil_id, nombre,
     // foto, estado, invito, racha, mi_semana, su_semana }]. null sin la 042.

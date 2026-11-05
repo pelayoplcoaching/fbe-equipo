@@ -854,4 +854,19 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   enEquipo(ruben, 0);
   enEquipo(carlos, 1);
   enEquipo(lucia, 1);
+  // v0.71 (043): cada publicación con su tema; un truco de técnica de Rubén; Carlos pregunta al coach, que le responde y la
+  // guarda como pregunta frecuente; y en la publicación de Lucía, ella elige la respuesta de Rubén como la mejor
+  Object.assign(db, { comunidad_guardados: [], comunidad_preguntas: [] });
+  for (const p of db.comunidad_posts) {
+    Object.assign(p, { tema: p.tipo === 'entreno' ? null : p.tipo === 'logro' ? 'logros' : ['aviso', 'encuesta'].includes(p.tipo) ? 'avisos' : 'charla', fotos: null, mejor_comentario: null });
+  }
+  post(ruben.perfil_id, ruben, 'post', 'Lo que más me ha ayudado en el press banca: apretar la barra y juntar las escápulas antes de sacarla. Se nota estable desde la primera repetición.', 60 * 7, { tema: 'tecnica', fotos: null, mejor_comentario: null });
+  const pregunta = post(carlos.perfil_id, carlos, 'post', '¿El cardio mejor antes o después de las pesas, si lo hago el mismo día?', 60 * 24 * 2, { tema: 'pregunta', fotos: null, mejor_comentario: null });
+  comentario(pregunta, coachId, 'Después, salvo que ese día el objetivo sea el cardio. Así llegas fresco a las series pesadas, que son las que más cuentan.', 60 * 24 * 2 - 90);
+  const respuesta = db.comunidad_comentarios.find((c) => c.post_id === pregunta.id && c.autor_id === coachId);
+  if (respuesta) {
+    pregunta.mejor_comentario = respuesta.id;
+    db.comunidad_preguntas.push({ id: crypto.randomUUID(), post_id: pregunta.id, comentario_id: respuesta.id, pregunta: pregunta.texto, respuesta: respuesta.texto, creado_en: hace(60 * 24 * 2 - 100), actualizado_en: hace(60 * 24 * 2 - 100) });
+  }
+  if (pLucia && deRubenALucia) pLucia.mejor_comentario = deRubenALucia.id;
 }

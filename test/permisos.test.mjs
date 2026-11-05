@@ -4698,8 +4698,8 @@ console.log('\nLos vídeos de técnica, tanda A (migración 037)');
   const pvR = async (v) => (await q(`insert into privacidad_vista (version) values ($1) on conflict (usuario_id) do update set version = excluded.version returning version`, [v]))[0].version;
   check(await pvR('2026-12') === '2026-12' && await pvR('2026-12.1') === '2026-12.1', 'Ana pasa de la 2026-12 a la 2026-12.1');
   check(await pvR('2026-12') === '2026-12.1' && await pvR('2026-11') === '2026-12.1', 'nunca hacia atrás (ni a la del mes sin revisión)');
-  check(await falla(`update privacidad_vista set version = '2026-12.0'`) && await falla(`update privacidad_vista set version = '2026-12.10'`) && await falla(`update privacidad_vista set version = '2026-12.'`)
-    && await falla(`update privacidad_vista set version = '2026-12-1'`) && await falla(`update privacidad_vista set version = '2099-01.1'`), 'solo con su formato (de 1 a 9) y nunca de un mes que aún no ha llegado');
+  check(await falla(`update privacidad_vista set version = '2026-12.0'`) && await falla(`update privacidad_vista set version = '2026-12.100'`) && await falla(`update privacidad_vista set version = '2026-12.'`)
+    && await falla(`update privacidad_vista set version = '2026-12-1'`) && await falla(`update privacidad_vista set version = '2099-01.1'`), 'solo con su formato (de 1 a 9; con la 043, hasta 99) y nunca de un mes que aún no ha llegado');
   const proximaR = (await q(`select to_char((now() at time zone 'Europe/Madrid') + interval '1 month', 'YYYY-MM') v`))[0].v;
   const pasadaR = (await q(`select to_char((now() at time zone 'Europe/Madrid') + interval '2 month', 'YYYY-MM') v`))[0].v;
   check(await pvR(`${proximaR}.2`) === `${proximaR}.2` && await falla(`update privacidad_vista set version = $1`, [`${pasadaR}.1`]), 'el mes, el de los siete primeros caracteres: hasta el que viene (con su revisión), no después');
@@ -5742,6 +5742,255 @@ console.log('\nLa comunidad, segunda tanda: compañeros de racha, retos por equi
   try { await sin41.exec(sql42); } catch (e) { e42b = e.message; }
   check(/ya tiene la migración 043/.test(e42b || ''), 'ni en una base que ya tiene una posterior');
   await sin41.close();
+}
+
+console.log('\nLa comunidad, tercera tanda: temas, preguntas al coach, varias fotos, guardar y buscar, la mejor respuesta (migración 043)');
+{
+  const n = async (sql, params = []) => (await q(sql, params))[0].n;
+  await su();
+  check((await q(`select relname from pg_class where relname in ('comunidad_guardados', 'comunidad_preguntas') and relrowsecurity and relnamespace = 'public'::regnamespace`)).length === 2
+    && (await q(`select 1 from information_schema.role_table_grants where table_name in ('comunidad_guardados', 'comunidad_preguntas') and grantee in ('anon', 'PUBLIC')`)).length === 0
+    && (await q(`select privilege_type p from information_schema.role_table_grants where table_name = 'comunidad_guardados' and grantee = 'authenticated'`)).map((x) => x.p).join() === 'SELECT'
+    && (await q(`select privilege_type p from information_schema.role_table_grants where table_name = 'comunidad_preguntas' and grantee = 'authenticated' order by 1`)).map((x) => x.p).join() === 'DELETE,SELECT',
+    'las tablas nuevas: con sus permisos por fila; lo guardado, solo lectura (se escribe con su función); las preguntas frecuentes, leer y quitar; nada para anon');
+  const nuevas043 = ['comunidad_tema_valido', 'comunidad_fotos_validas', 'comunidad_post_tema', 'comunidad_al_preguntar', 'comunidad_mejor_retirar', 'comunidad_guardar', 'comunidad_buscar',
+    'comunidad_mejor_respuesta', 'comunidad_guardar_pregunta'];
+  check(!(await q(`select 1 from pg_proc p where p.proname = any($1) and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`, [nuevas043])).length
+    && (await q(`select count(distinct proname)::int n from pg_proc where proname = any($1)`, [nuevas043]))[0].n === nuevas043.length
+    && !(await q(`select 1 from pg_proc where proname = any($1) and (has_function_privilege('anon', oid, 'execute') or (pronamespace = 'fbe_privado'::regnamespace and has_function_privilege('authenticated', oid, 'execute')))`, [nuevas043])).length,
+    'sus funciones, con search_path vacío, ninguna para anon y las internas solo para la base');
+  check((await q(`select comunidad_tema_valido('tecnica') a, comunidad_tema_valido('pregunta') b, comunidad_tema_valido('otro') c, comunidad_tema_valido(null) d,
+      comunidad_fotos_validas(null, null) e, comunidad_fotos_validas(array['coach/abcdefgh.jpg', 'coach/abcdefgi.jpg'], 'coach/abcdefgh.jpg') f,
+      comunidad_fotos_validas(array['coach/abcdefgh.jpg'], 'coach/abcdefgh.jpg') g, comunidad_fotos_validas(array['coach/abcdefgh.jpg', 'coach/abcdefgh.jpg'], 'coach/abcdefgh.jpg') h,
+      comunidad_fotos_validas(array['coach/abcdefgh.jpg', 'coach/abcdefgi.jpg'], 'coach/zzzzzzzz.jpg') i, comunidad_fotos_validas(array['coach/abcdefgh.jpg', '../x.jpg'], 'coach/abcdefgh.jpg') j,
+      comunidad_fotos_validas(array['coach/a1111111.jpg', 'coach/a2222222.jpg', 'coach/a3333333.jpg', 'coach/a4444444.jpg', 'coach/a5555555.jpg'], 'coach/a1111111.jpg') k,
+      comunidad_fotos_validas(array[array['coach/abcdefgh.jpg', 'coach/abcdefgi.jpg'], array['coach/abcdefgj.jpg', 'coach/abcdefgk.jpg']], 'coach/abcdefgh.jpg') l`))
+    .map((x) => [x.a, x.b, x.c, x.d, x.e, x.f, x.g, x.h, x.i, x.j, x.k, x.l].join()).join() === 'true,true,false,false,true,true,false,false,false,false,false,false',
+    'los validadores: los temas y las fotos (de 2 a 4, sin repetir, con su ruta y la primera es foto_ruta), nunca un error');
+  await q(`delete from notificaciones`);
+
+  console.log('  · Temas');
+  await como(ana);
+  check(await falla(`insert into comunidad_posts (texto, tema) values ('Aviso falso', 'avisos')`), 'un atleta no publica con el tema «Avisos»');
+  const [pCharla] = await q(`insert into comunidad_posts (texto) values ('Hola equipo, charla 043') returning id, tema, mejor_comentario`);
+  const [pRaro] = await q(`insert into comunidad_posts (texto, tema) values ('Tema raro 043', 'otro') returning id, tema`);
+  const [pPreg] = await q(`insert into comunidad_posts (texto, tema) values ('¿Cuántas series de calentamiento antes de la sentadilla? zz043', 'pregunta') returning id, tema`);
+  check(pCharla.tema === 'charla' && pRaro.tema === 'charla' && pPreg.tema === 'pregunta' && pCharla.mejor_comentario === null, 'sin tema (o con uno que no vale), charla; la pregunta, con el suyo');
+  await como(pelayo, 'aal2');
+  const [aCoach] = await q(`insert into comunidad_posts (tipo, texto) values ('aviso', 'Aviso 043') returning id, tema`);
+  const [aCoachT] = await q(`insert into comunidad_posts (tipo, texto, tema) values ('aviso', 'Técnica 043', 'tecnica') returning id, tema`);
+  const [aCoachP] = await q(`insert into comunidad_posts (tipo, texto, tema) values ('aviso', 'Pregunta 043', 'pregunta') returning id, tema`);
+  check(aCoach.tema === 'avisos' && aCoachT.tema === 'tecnica' && aCoachP.tema === 'avisos', 'el aviso del coach, «Avisos» de entrada (o técnica, logros o charla; una pregunta, no)');
+  await su();
+  check(await n(`select count(*)::int n from notificaciones where usuario_id = $1 and titulo = 'Ana L. te ha hecho una pregunta en el equipo' and url = '#equipo' and clave = $2`, [pelayo, `comunidad:${pPreg.id}:pregunta`]) === 1
+    && await n(`select count(*)::int n from notificaciones where clave like '%:pregunta'`) === 1, 'al coach le llega «Ana L. te ha hecho una pregunta en el equipo» (sin el texto; solo por la pregunta)');
+  check(await n(`select count(*)::int n from comunidad_posts where tema is null and tipo <> 'entreno'`) === 0, 'las publicaciones de antes de la 043 quedan con su tema');
+
+  console.log('  · Varias fotos');
+  await como(ana);
+  const f1 = `${aAna.id}/fotoUno043.jpg`, f2 = `${aAna.id}/fotoDos043.jpg`;
+  check(await falla(`insert into comunidad_posts (texto, foto_ruta, fotos) values ('x', $1, array[$1, $2])`, [f1, `${aLuis.id}/fotoAjena043.jpg`])
+    && await falla(`insert into comunidad_posts (texto, foto_ruta, fotos) values ('x', $1, array[$2, $1])`, [f1, f2])
+    && await falla(`insert into comunidad_posts (texto, foto_ruta, fotos) values ('x', null, array[$1, $2])`, [f1, f2])
+    && await falla(`insert into comunidad_posts (texto, foto_ruta, fotos) values ('x', $1, array[$1, $2, $3, $4, $5])`, [f1, f2, `${aAna.id}/fotoTres043.jpg`, `${aAna.id}/fotoCuatro043.jpg`, `${aAna.id}/fotoCinco043.jpg`]),
+    'las fotos: todas en su carpeta, la primera es foto_ruta y como mucho 4');
+  const [pFotos] = await q(`insert into comunidad_posts (texto, foto_ruta, fotos, tema) values ('Dos fotos 043', $1, array[$1, $2], 'logros') returning id, fotos`, [f1, f2]);
+  check(pFotos.fotos.length === 2 && (await q(`select comunidad_foto_registrada($1) a, comunidad_foto_borrable($1) b`, [f2]))[0].a === true && (await q(`select comunidad_foto_borrable($1) b`, [f2]))[0].b === false,
+    'Ana publica dos fotos: la segunda se puede subir (está registrada) y no se puede borrar mientras se use');
+  await como(luis);
+  const visLuis = (await q(`select comunidad_foto_visible($1) v`, [f2]))[0].v;
+  await como(intruso);
+  const visIntruso = (await q(`select comunidad_foto_visible($1) v`, [f2]))[0].v;
+  check(visLuis === true && visIntruso === false, 'la segunda foto la ven los de dentro (Luis), no una cuenta de fuera');
+  // (revisión) Una foto, en una sola publicación: aunque el coach oculte la suya, Ana no la vuelve a enseñar en otra
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderar($1, null, true)`, [pFotos.id]);
+  await como(ana);
+  check(await falla(`insert into comunidad_posts (texto, foto_ruta, fotos) values ('Otra vez', $1, array[$1, $2])`, [`${aAna.id}/fotoNueva043.jpg`, f2])
+    && await falla(`insert into comunidad_posts (texto, foto_ruta) values ('Otra vez', $1)`, [f2]),
+    '(revisión) una foto de una publicación oculta no se puede poner en otra (ni como primera ni entre las demás)');
+  await como(luis);
+  const visOculta = (await q(`select comunidad_foto_visible($1) v`, [f2]))[0].v;
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderar($1, null, false)`, [pFotos.id]);
+  check(visOculta === false, 'y la de la publicación oculta no la ve Luis');
+  // (revisión) El aviso al coach guarda todas las fotos hasta que se resuelve
+  await como(ana);
+  const f3 = `${aAna.id}/fotoTres043.jpg`, f4 = `${aAna.id}/fotoCuatro043.jpg`;
+  const [pAvisada] = await q(`insert into comunidad_posts (texto, foto_ruta, fotos) values ('Para avisar 043', $1, array[$1, $2]) returning id`, [f3, f4]);
+  await como(luis);
+  const idRep = (await q(`select comunidad_avisar_coach($1, null, 'Prueba 043') id`, [pAvisada.id]))[0].id;
+  await como(ana);
+  await q(`delete from comunidad_posts where id = $1`, [pAvisada.id]);
+  const borrableAvisada = (await q(`select comunidad_foto_borrable($1) b`, [f4]))[0].b;
+  check(borrableAvisada === false && await falla(`insert into comunidad_posts (texto, foto_ruta, fotos) values ('x', $1, array[$1, $2])`, [`${aAna.id}/fotoOtra043.jpg`, f4]),
+    '(revisión) con un aviso abierto, la segunda foto de lo avisado no se borra aunque Ana borre la publicación (ni se pone en otra)');
+  await como(pelayo, 'aal2');
+  const [rep] = await q(`select copia_foto, copia_fotos from comunidad_reportes where id = $1`, [idRep]);
+  check(rep.copia_foto === f3 && rep.copia_fotos?.join() === [f3, f4].join(), '(revisión) el aviso guarda las dos fotos (copia_fotos), que el coach ve en Revisar');
+
+  console.log('  · Guardar');
+  await como(luis);
+  check((await q(`select comunidad_guardar($1, true) v`, [pPreg.id]))[0].v === true && (await q(`select comunidad_guardar($1) v`, [pPreg.id]))[0].v === true
+    && (await q(`select post_id from comunidad_guardados`)).length === 1, 'Luis guarda la pregunta de Ana (dos veces: una fila)');
+  check(await falla(`insert into comunidad_guardados (perfil_id, post_id) values ($1, $2)`, [luis, pCharla.id]), 'nadie escribe lo guardado a mano');
+  await como(ana);
+  const deAna = (await q(`select * from comunidad_guardados`)).length;
+  await como(pelayo, 'aal2');
+  const delCoach = (await q(`select * from comunidad_guardados`)).length;
+  await como(intruso);
+  check(deAna === 0 && delCoach === 0 && await falla(`select comunidad_guardar($1, true)`, [pPreg.id]), 'lo guardado solo lo ve su dueño (ni Ana, ni el coach); una cuenta de fuera no guarda');
+  await como(pelayo, 'aal2');
+  await q(`select comunidad_moderar($1, null, true)`, [pCharla.id]);
+  await como(luis);
+  check(await falla(`select comunidad_guardar($1, true)`, [pCharla.id]), 'ni lo que no se ve (oculto por el coach)');
+
+  console.log('  · Buscar');
+  await como(luis);
+  const busca = async (t, lim = 20) => (await q(`select id from comunidad_buscar($1, $2)`, [t, lim])).map((x) => x.id);
+  check((await busca('ZZ043')).includes(pPreg.id) && (await busca('calentamiento antes')).join() === pPreg.id && (await busca('cuantas series')).includes(pPreg.id),
+    'buscar por el texto (sin distinguir mayúsculas ni tildes)');
+  check((await busca('Ana L')).includes(pFotos.id) && (await busca('Ana L')).includes(pPreg.id), 'y por el nombre de quien lo publica');
+  check(!(await busca('charla 043')).length && !(await busca('a')).length && !(await busca('%%')).length && !(await busca('__')).length && (await busca('043', 1)).length === 1,
+    'solo en lo que se ve (no lo oculto); de 2 letras en adelante; «%» y «_» no son comodines; con su límite');
+  await como(intruso);
+  check(!(await busca('043')).length, 'una cuenta de fuera no encuentra nada');
+  await como(pelayo, 'aal2');
+  check((await busca('charla 043')).includes(pCharla.id), 'el coach, también lo oculto');
+  await q(`select comunidad_moderar($1, null, false)`, [pCharla.id]);
+
+  console.log('  · La mejor respuesta');
+  await como(luis);
+  const [cLuis] = await q(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Yo hago dos o tres') returning id`, [pPreg.id]);
+  await como(pelayo, 'aal2');
+  const [cCoach] = await q(`insert into comunidad_comentarios (post_id, texto) values ($1, 'Dos o tres series subiendo de carga, hasta llegar a la de trabajo.') returning id`, [pPreg.id]);
+  await como(ana);
+  const [cAna] = await q(`insert into comunidad_comentarios (post_id, texto) values ($1, '¡Gracias!') returning id`, [pPreg.id]);
+  await su(); await q(`delete from notificaciones`);
+  await como(luis);
+  check(await falla(`select comunidad_mejor_respuesta($1, $2)`, [pPreg.id, cLuis.id]), 'Luis no elige la mejor respuesta de una publicación de Ana');
+  await como(ana);
+  check(await falla(`select comunidad_mejor_respuesta($1, $2)`, [pPreg.id, cAna.id]) && await falla(`select comunidad_mejor_respuesta($1, $2)`, [pCharla.id, cLuis.id]),
+    'Ana, ni la suya ni un comentario de otra publicación');
+  check((await q(`select comunidad_mejor_respuesta($1, $2) v`, [pPreg.id, cLuis.id]))[0].v === cLuis.id
+    && (await q(`select mejor_comentario from comunidad_posts where id = $1`, [pPreg.id]))[0].mejor_comentario === cLuis.id, 'Ana elige la de Luis');
+  await su();
+  check(await n(`select count(*)::int n from notificaciones where usuario_id = $1 and titulo = 'Ana L. ha elegido tu comentario como mejor respuesta' and url = '#equipo' and tipo = 'comunidad'`, [luis]) === 1,
+    'a Luis le llega «Ana L. ha elegido tu comentario como mejor respuesta» (preferencia «Equipo», sin el texto)');
+  await como(pelayo, 'aal2');
+  check((await q(`select comunidad_mejor_respuesta($1, $2) v`, [pPreg.id, cCoach.id]))[0].v === cCoach.id, 'el coach la cambia por la suya («Respuesta del coach»)');
+  await su();
+  check(await n(`select count(*)::int n from notificaciones where usuario_id = $1 and clave like 'comunidad_mejor:%' and estado = 'pendiente'`, [luis]) === 0
+    && await n(`select count(*)::int n from notificaciones where usuario_id = $1 and clave like 'comunidad_mejor:%'`, [pelayo]) === 0,
+    'el aviso pendiente a Luis se retira al cambiarla, y al coach no le llega el suyo');
+  await como(intruso);
+  check(await falla(`select comunidad_mejor_respuesta($1, null)`, [pPreg.id]), 'una cuenta de fuera no la toca');
+  // (revisión) ocultar la publicación retira el aviso pendiente de su mejor respuesta
+  await como(luis);
+  const [cLuisF] = await q(`insert into comunidad_comentarios (post_id, texto) values ($1, '¡Qué buenas!') returning id`, [pFotos.id]);
+  await como(ana); await q(`select comunidad_mejor_respuesta($1, $2)`, [pFotos.id, cLuisF.id]);
+  await su();
+  const antesOcultar = await n(`select count(*)::int n from notificaciones where clave like $1 and estado = 'pendiente'`, [`comunidad_mejor:${cLuisF.id}:%`]);
+  await como(pelayo, 'aal2'); await q(`select comunidad_moderar($1, null, true)`, [pFotos.id]);
+  await su();
+  check(antesOcultar === 1 && await n(`select count(*)::int n from notificaciones where clave like $1`, [`comunidad_mejor:${cLuisF.id}:%`]) === 0,
+    '(revisión) si el coach oculta la publicación, su aviso de mejor respuesta pendiente se retira');
+  await como(pelayo, 'aal2'); await q(`select comunidad_moderar($1, null, false)`, [pFotos.id]);
+  await como(ana);
+  check(await falla(`update comunidad_posts set mejor_comentario = $2 where id = $1`, [pPreg.id, cLuis.id]) || (await q(`select mejor_comentario from comunidad_posts where id = $1`, [pPreg.id]))[0].mejor_comentario === cCoach.id,
+    'ni se cambia a mano');
+
+  console.log('  · Preguntas frecuentes');
+  await como(ana);
+  check(await falla(`select comunidad_guardar_pregunta($1, $2)`, [pPreg.id, cCoach.id]), 'un atleta no guarda preguntas frecuentes');
+  await como(pelayo, 'aal2');
+  check(await falla(`select comunidad_guardar_pregunta($1, $2)`, [pPreg.id, cLuis.id]) && await falla(`select comunidad_guardar_pregunta($1, $2)`, [pCharla.id, cCoach.id]),
+    'el coach, con un comentario suyo y en una pregunta para el coach');
+  // (revisión) si la mejor era otra, su aviso pendiente se retira al guardarla
+  await como(ana); await q(`select comunidad_mejor_respuesta($1, $2)`, [pPreg.id, cLuis.id]);
+  await su();
+  const pendLuis = await n(`select count(*)::int n from notificaciones where usuario_id = $1 and clave like 'comunidad_mejor:%' and estado = 'pendiente'`, [luis]);
+  await como(pelayo, 'aal2');
+  const faq = (await q(`select comunidad_guardar_pregunta($1, $2, '¿Cuántas series de calentamiento antes de la sentadilla?', null) id`, [pPreg.id, cCoach.id]))[0].id;
+  await su();
+  check(pendLuis === 1 && await n(`select count(*)::int n from notificaciones where usuario_id = $1 and clave like 'comunidad_mejor:%' and estado = 'pendiente'`, [luis]) === 0,
+    '(revisión) guardarla como pregunta frecuente retira el aviso pendiente de la mejor respuesta de antes');
+  await como(pelayo, 'aal2');
+  check((await q(`select pregunta, respuesta, comentario_id from comunidad_preguntas where id = $1`, [faq])).map((x) => [x.pregunta, x.respuesta, x.comentario_id === cCoach.id].join('|')).join()
+    === '¿Cuántas series de calentamiento antes de la sentadilla?|Dos o tres series subiendo de carga, hasta llegar a la de trabajo.|true'
+    && (await q(`select comunidad_guardar_pregunta($1, $2) id`, [pPreg.id, cCoach.id]))[0].id === faq && await n(`select count(*)::int n from comunidad_preguntas`) === 1,
+    'el coach la guarda (con la pregunta retocada y su respuesta); otra vez, la misma (una por pregunta)');
+  check(!Object.keys((await q(`select to_jsonb(q) j from comunidad_preguntas q`))[0].j).some((k) => /autor|atleta|perfil/.test(k)), 'sin el nombre (ni nada) de quien preguntó');
+  await como(luis);
+  const vLuis = (await q(`select pregunta from comunidad_preguntas`)).length;
+  const borraLuis = (await q(`delete from comunidad_preguntas returning id`)).length;
+  await como(intruso);
+  check(vLuis === 1 && borraLuis === 0 && !(await q(`select * from comunidad_preguntas`)).length, 'la ven los de dentro (Luis), que no la quitan; una cuenta de fuera, nada');
+  await como(ana);
+  const datosAna = (await q(`select comunidad_mis_datos() d`))[0].d;
+  await como(luis);
+  const datosLuis = (await q(`select comunidad_mis_datos() d`))[0].d;
+  check(datosAna.preguntas_frecuentes?.length === 1 && datosAna.publicaciones.some((x) => x.tema === 'pregunta' && x.mejor_comentario === cCoach.id) && datosAna.publicaciones.some((x) => x.fotos?.length === 2)
+    && datosLuis.guardados?.length === 1 && datosLuis.guardados[0].post_id === pPreg.id && !datosAna.guardados?.length,
+    '«Descargar mis datos» lleva sus temas, fotos y mejores respuestas, lo que ha guardado y las preguntas frecuentes de sus preguntas');
+  await como(ana);
+  await q(`delete from comunidad_posts where id = $1`, [pPreg.id]);
+  await su();
+  check(await n(`select count(*)::int n from comunidad_preguntas`) === 0 && await n(`select count(*)::int n from comunidad_guardados`) === 0,
+    'si Ana borra su pregunta, se van con ella la pregunta frecuente y lo guardado');
+  await como(pelayo, 'aal2');
+  check((await q(`delete from comunidad_preguntas returning id`)).length === 0, '(y el coach puede quitarlas: con DELETE)');
+  await como(ana);
+  const fotosSalir = (await q(`select comunidad_salir(true) f`))[0].f;
+  check(fotosSalir.includes(f1) && fotosSalir.includes(f2) && !fotosSalir.includes(f4), 'salir y borrar lo suyo devuelve también las fotos de las publicaciones de varias (no las de un aviso abierto)');
+  await como(pelayo, 'aal2');
+  await q(`update comunidad_reportes set resuelto_en = now() where id = $1`, [idRep]);
+  await como(ana);
+  await q(`select comunidad_unirme('Ana L.', $1, $2)`, [(await import('../web/src/datos/api.js')).VERSION_COMUNIDAD, (await import('../web/src/datos/api.js')).VERSION_NORMAS]);
+  check((await q(`select comunidad_foto_borrable($1) b`, [f4]))[0].b === true, '(revisión) resuelto el aviso, ya se puede borrar');
+  await como(pelayo, 'aal2');
+  await q(`delete from comunidad_posts where id = any($1::uuid[])`, [[aCoach.id, aCoachT.id, aCoachP.id]]);
+  await su(); await q(`delete from notificaciones`);
+
+  console.log('  · La política con revisiones de dos cifras');
+  await como(ana);
+  const pv = (v) => q(`insert into privacidad_vista (usuario_id, version) values ($1, $2) on conflict (usuario_id) do update set version = excluded.version returning version`, [ana, v]);
+  await su(); await q(`delete from privacidad_vista where usuario_id = $1`, [ana]);
+  await como(ana);
+  check((await pv('2026-12.9'))[0].version === '2026-12.9' && (await pv('2026-12.10'))[0].version === '2026-12.10' && (await pv('2026-12.9'))[0].version === '2026-12.10',
+    'con la 043, la base admite la 2026-12.10 (después de la 2026-12.9, comparando como números: nunca vuelve atrás)');
+  check(await falla(`insert into privacidad_vista (usuario_id, version) values ($1, '2026-12.100') on conflict (usuario_id) do update set version = excluded.version`, [ana])
+    && await falla(`insert into privacidad_vista (usuario_id, version) values ($1, '2026-12.0') on conflict (usuario_id) do update set version = excluded.version`, [ana])
+    && await falla(`insert into privacidad_vista (usuario_id, version) values ($1, '2026-12.01') on conflict (usuario_id) do update set version = excluded.version`, [ana]),
+    'y rechaza la 2026-12.100, la 2026-12.0 y la 2026-12.01');
+  await su();
+  check(await falla(`insert into privacidad_vista (usuario_id, version) values ($1, '2026-12.100') on conflict (usuario_id) do update set version = excluded.version`, [luis])
+    && (await q(`select 1 from pg_constraint where conname = 'privacidad_vista_version_valida' and pg_get_constraintdef(oid) like '%[1-9][0-9]?%'`)).length === 1,
+    'la restricción también (ni desde el SQL Editor)');
+  // (como las pruebas de la 037: sin filas con revisión al final, para repetir la 034 más abajo)
+  await q(`delete from privacidad_vista where usuario_id = $1`, [ana]);
+
+  console.log('  · La 043 sin la 042, repetida y sobre una base que ya va por delante');
+  const sin42 = new PGlite();
+  await sin42.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));
+  await sin42.exec(readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  for (const m of migraciones().filter((m) => m < '042')) await sin42.exec(readFileSync(new URL(`../supabase/migraciones/${m}`, import.meta.url), 'utf8'));
+  const sql43 = readFileSync(new URL('../supabase/migraciones/043_comunidad_conversacion.sql', import.meta.url), 'utf8');
+  let e43a = null;
+  try { await sin42.exec(sql43); } catch (e) { e43a = e.message; }
+  check(/Antes de la 043 hace falta la 042/.test(e43a || '') && !(await sin42.query(`select 1 from pg_class where relname = 'comunidad_guardados'`)).rows.length, 'la 043 no se aplica sin la 042 (y no deja nada a medias)');
+  await sin42.exec(readFileSync(new URL('../supabase/migraciones/042_comunidad_constancia.sql', import.meta.url), 'utf8'));
+  await sin42.exec(`insert into auth.users (email) values ('a@x');
+    insert into public.comunidad_posts (autor_id, tipo, texto) select id, 'aviso', 'Antes de la 043' from auth.users where email = 'a@x'`);
+  await sin42.exec(sql43);
+  await sin42.exec(sql43);
+  check((await sin42.query(`select count(*)::int n from fbe_migraciones where numero = 43`)).rows[0].n === 1 && (await sin42.query(`select tema from comunidad_posts`)).rows.map((x) => x.tema).join() === 'avisos',
+    'con la 042, se aplica (lo de antes, con su tema); repetida, queda apuntada una vez y no toca lo guardado');
+  await sin42.exec(`insert into public.fbe_migraciones (numero) values (44)`);
+  let e43b = null;
+  try { await sin42.exec(sql43); } catch (e) { e43b = e.message; }
+  check(/ya tiene la migración 044/.test(e43b || ''), 'ni en una base que ya tiene una posterior');
+  await sin42.close();
 }
 
 console.log('\nLa verificación en dos pasos falla cerrada');

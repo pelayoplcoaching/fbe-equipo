@@ -2345,7 +2345,7 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     const enBase = async () => (await b.sql(`select version from privacidad_vista where usuario_id = $1`, [anaUid]))[0]?.version || null;
     await b.sql(`delete from privacidad_vista where usuario_id = $1`, [anaUid]);
     // Sin la 037
-    check(VL === '2026-12.9' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.9', '(v0.70) la vigente: 2026-12.9 con la 037 (la misma detección); sin ella, 2026-12');
+    check(VL === '2026-12.10' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.10', '(v0.71) la vigente: 2026-12.10 con la 037 y la 043 (la misma detección); sin la 037, 2026-12');
     check(PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()) && await sin.marcarPrivacidadVista() === true && await enBase() === '2026-12',
       'sin la 037: quien no ha visto la 2026-12 la ve y, al cerrarla, la base guarda 2026-12 (lo que admite)');
     local.clear();
@@ -2358,14 +2358,15 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     local.clear();
     // Con la 037: quien vio la 2026-12 ve solo lo nuevo, una vez
     const v = (await api.privacidadVista()).version;
-    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.9,2026-12.8,2026-12.7,2026-12.6,2026-12.5,2026-12.4,2026-12.3,2026-12.2,2026-12.1',
-      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 a la 2026-12.9)');
-    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.9', 'al cerrarlo, la base guarda la 2026-12.9');
+    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal())
+      && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.10,2026-12.9,2026-12.8,2026-12.7,2026-12.6,2026-12.5,2026-12.4,2026-12.3,2026-12.2,2026-12.1',
+      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 a la 2026-12.10)');
+    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.10', 'al cerrarlo, la base guarda la 2026-12.10 (con la 043, revisiones de dos cifras)');
     local.clear();
-    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.9', 'y ya no vuelve a salir (en ningún móvil)');
-    check(await api.marcarPrivacidadVista('2026-12.1') === true && await enBase() === '2026-12.9' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.9', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.1 ni a la 2026-12)');
+    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.10', 'y ya no vuelve a salir (en ningún móvil)');
+    check(await api.marcarPrivacidadVista('2026-12.9') === true && await enBase() === '2026-12.10' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.10', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.9 ni a la 2026-12)');
     await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
-    check(/vigente \(2026-12\.9\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
+    check(/vigente \(2026-12\.10\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
     globalThis.localStorage = previo;
   }
   await b.sql(`delete from recordatorios_tecnica`); await b.sql(`delete from frases_correccion`); await b.sql(`delete from chat_cupos`);
@@ -2659,6 +2660,27 @@ console.log('\nv0.69: la comunidad, primera tanda (041)');
     && await sin041.comunidad041() === false && /Disponible tras la migración 041/.test(msg041 || ''),
     'sin la 041: los comentarios como antes, sin nuevos ni «entrenando ahora», y lo nuevo dice «Disponible tras la migración 041»');
   await api.borrarDeComunidad(post);
+}
+
+console.log('\nv0.71: la comunidad, tercera tanda (migración 043), con la capa de datos');
+{
+  await b.auth.entrar('ana@test', 'contraseña-ana-1');
+  const p1 = await api.publicarEnComunidad({ texto: 'Una pregunta zz043 para el coach', tema: 'pregunta' });
+  const m = await api.muro({ filtro: 'preguntas' });
+  check(await api.comunidad043() === true && p1.tema === 'pregunta' && m.con043 && m.posts.some((x) => x.id === p1.id && x.fotos.length === 0 && x.guardado === false),
+    'con la 043: publica una pregunta para el coach y sale en el filtro «Preguntas»');
+  check(await api.guardarPost(p1.id) === true && (await api.muro({ filtro: 'guardados' })).posts.map((x) => x.id).join() === p1.id
+    && (await api.muro({ buscar: 'ZZ043' })).posts.map((x) => x.id).join() === p1.id && (await api.muro()).posts.find((x) => x.id === p1.id)?.guardado === true,
+    'guardar, «Guardados» y buscar, contra la base con sus permisos');
+  const sin043 = crearApi({ ...b, auth: b.auth, storage: b.storage, insert: b.insert.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b), select: b.select.bind(b),
+    rpc: async (n, a) => { if (n === 'comunidad_buscar') throw new Error('Could not find the function public.comunidad_buscar(p_texto) in the schema cache'); return b.rpc(n, a); } });
+  const ms = await sin043.muro({ buscar: 'zz043' });
+  let msg = null;
+  try { await sin043.publicarEnComunidad({ texto: 'Dos fotos', fotos: [new Blob(['a']), new Blob(['b'])] }); } catch (e) { msg = e.message; }
+  check(await sin043.versionLegal() === '2026-12.9' && await api.versionLegal() === '2026-12.10', 'la política: con la 037 pero sin la 043, la 2026-12.9 (la más nueva que admite esa base); con la 043, la 2026-12.10');
+  check(await sin043.comunidad043() === false && !ms.con043 && ms.posts.length > 1 && ms.posts.every((x) => !x.guardado) && /disponible tras la migración 043/i.test(msg || ''),
+    'sin la 043: el muro como antes (sin buscar ni guardados) y varias fotos dicen «Disponible tras la migración 043»');
+  await api.borrarDeComunidad(p1);
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

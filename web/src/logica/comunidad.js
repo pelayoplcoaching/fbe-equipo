@@ -339,3 +339,38 @@ export function siguienteInsignia(lista = []) {
   if (!faltan.length) return null;
   return [...faltan].sort((a, b) => b.valor / b.meta - a.valor / a.meta)[0];
 }
+
+// ---------------------------------------------------------------- v0.71 (migración 043): conversación útil
+// Los temas del muro (como public.comunidad_tema_valido): [clave, nombre]. «Avisos» es solo del coach y «Pregunta para el
+// coach», solo de los atletas.
+export const TEMAS = [['charla', 'Charla'], ['tecnica', 'Técnica'], ['logros', 'Logros'], ['pregunta', 'Pregunta para el coach'], ['avisos', 'Avisos']];
+export const nombreTema = (k) => TEMAS.find(([t]) => t === k)?.[1] || null;
+export const temasPara = (coach) => (coach ? ['avisos', 'tecnica', 'logros', 'charla'] : ['charla', 'tecnica', 'logros', 'pregunta']).map((k) => [k, nombreTema(k)]);
+export const temaPorDefecto = (coach) => (coach ? 'avisos' : 'charla');
+// El tema que pone la base (comunidad_post_tema, 043): el de entrada si no vale para quien publica
+export function temaAlPublicar(tipo, tema, coach) {
+  if (tipo === 'entreno') return null;
+  if (tipo === 'logro') return 'logros';
+  if (tipo === 'encuesta') return 'avisos';
+  const validos = temasPara(coach).map(([k]) => k);
+  return validos.includes(tema) ? tema : temaPorDefecto(coach);
+}
+// Los filtros del muro con la 043: los de antes y los temas, lo guardado y lo mío
+export const FILTROS_MURO_043 = [['todo', 'Todo'], ['entrenos', 'Entrenos'], ['logros', 'Logros'], ['tecnica', 'Técnica'], ['charla', 'Charla'],
+  ['preguntas', 'Preguntas'], ['avisos', 'Avisos'], ['guardados', 'Guardados'], ['mio', 'Lo mío']];
+// Varias fotos por publicación (con la 043): hasta 4. Las de una publicación (las de antes, la única que tenían)
+export const MAX_FOTOS = 4;
+export const fotosDe = (post) => (Array.isArray(post?.fotos) && post.fotos.length ? post.fotos : post?.foto_ruta ? [post.foto_ruta] : []);
+// Buscar en el muro: de 2 a 100 letras (como comunidad_buscar)
+export const busquedaValida = (t) => { const v = String(t || '').trim(); return v.length >= 2 && v.length <= 100; };
+// La mejor respuesta: la eligen quien publicó o el coach, de un comentario de otra persona (como comunidad_mejor_respuesta)
+export const puedeElegirMejor = ({ post, comentario, coach = false, yo = null }) =>
+  !!post && !!comentario && !comentario.oculto && (coach || post.autor_id === yo) && comentario.autor_id !== post.autor_id;
+// Cómo se llama: en una pregunta, la del coach es la «Respuesta del coach»
+export const etiquetaMejor = (post, comentario) => (post?.tema === 'pregunta' && comentario?.autor?.coach ? 'Respuesta del coach' : 'Mejor respuesta');
+// Los hilos de comentarios con el de la mejor respuesta primero (si es una respuesta, su hilo entero)
+export function mejorPrimero(hilos = [], mejorId = null) {
+  if (!mejorId) return hilos;
+  const i = hilos.findIndex((c) => c.id === mejorId || (c.respuestas || []).some((r) => r.id === mejorId));
+  return i <= 0 ? hilos : [hilos[i], ...hilos.slice(0, i), ...hilos.slice(i + 1)];
+}
