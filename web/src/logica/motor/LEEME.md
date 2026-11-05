@@ -69,13 +69,35 @@ los datos casi no se tocaban, y de cargas ligeras donde se siguió sumando repet
 node test/motor.test.mjs
 ```
 
-202 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
+216 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
 la base (series 1–20, RPE 1–10, rango ordenado, detalle válido), los ejercicios «a mano» no se tocan y la misma entrada
 da siempre la misma salida.
 
+## En el editor (fase 1a, sin migración)
+
+- `adaptador.js` pasa de lo que carga el editor (`api.bloqueCompleto`) a la entrada del motor: `pautasDeSemana`,
+  `emparejar` (cada pauta de la semana hecha con la suya de la semana que se programa: misma sesión y ejercicio; si no,
+  el mismo ejercicio en otra sesión), `entradaDesdeBloque` (historial de las semanas anteriores del bloque, check-ins,
+  molestias, carga y días sin entrenar), `cambiosDePropuesta` y `diferencias`.
+- `web/src/ui/coach/ProgramarFBE.jsx` es la hoja de revisión: lo que hizo, lo que hay, lo propuesto, el motivo, la
+  confianza, los frenos y las alternativas de un toque; «Solo confianza alta / Todas / Ninguna»; ver la semana como
+  descarga; y «Aplicar N cambios», que escribe solo las pautas marcadas de la semana destino. No publica: la semana se
+  queda como estaba (si ya estaba publicada, la hoja lo avisa). Usa solo clases que ya existen; no toca `estilos.css`.
+- `Editor.jsx` (28 líneas): el botón junto a «Cargas sugeridas». En una semana sin registrar que sigue a una hecha,
+  «Programar según FBE»; en una semana hecha, «Programar la siguiente según FBE» (si la siguiente no existe la crea como
+  copia con `api.prepararSemanas`). Las reglas son las de partida (`REGLAS_FBE` + perfil del nivel del atleta): todavía
+  no se guardan reglas por atleta ni la propuesta.
+- `test/e2e-programar-fbe.mjs`: 15 comprobaciones en la demo con Chrome (abrir, revisar, alternativa, aplicar, sigue en
+  borrador, reabrir sin cambios, programar la siguiente; escritorio y 360 px en oscuro; consola, desbordes y axe).
+  Se ejecuta suelta (`npm run build && node test/e2e-programar-fbe.mjs`) o desde `e2e.test.mjs` con
+  `probarProgramarFBE({ navegador, check, base })`.
+- Sin probar en el navegador: crear la semana siguiente cuando no existe (la demo no tiene ese caso).
+
 ## Pendiente al integrar (lo hace la conversación principal)
 
-- Añadir `node test/motor.test.mjs` al script `test` de `package.json`.
+- Añadir `node test/motor.test.mjs` al script `test` de `package.json` y llamar a `probarProgramarFBE` desde
+  `test/e2e.test.mjs`.
+- Línea de «Novedades» y versión al publicar.
 - `sugerenciaProgresion` (lo que ve el atleta en la sesión) y `sugerirCargas` siguen con la doble progresión por ejercicio
   y el criterio «todas las series al tope»; el motor parte de la progresión serie a serie. Conviene alinearlos.
 - Guardar reglas y propuestas necesita una migración (perfiles, reglas por atleta y por pauta, propuestas, motivo

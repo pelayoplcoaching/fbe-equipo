@@ -4,7 +4,7 @@ import { REGLAS_FBE, PERFILES, resolverReglas, fusionar, limpiarReglas, modeloDe
   leerEjercicio, tendencia, textoHecho, saltoDe, cumpleCriterio, SIN_DATOS,
   porSerie, rangoDe, doble, triple, lineal, soloReps, campos, completoLineal, falloLineal, MODELO_BASE,
   aplicarDescarga, senalesDescarga, tramoVuelta, aplicarVuelta, aplicarMantenimiento, diasParado, esMalDia,
-  proponerSemana, cargaZona } from '../web/src/logica/motor/index.js';
+  proponerSemana, cargaZona, entradaDesdeBloque, emparejar, pautasDeSemana, cambiosDePropuesta, diferencias, textoPauta } from '../web/src/logica/motor/index.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -493,6 +493,55 @@ const entrada = (extra = {}) => entradaBase({ ...extra, reglas: fusionar({ atlet
   e.series.c = [S(1, 100, 5, 8), S(2, 100, 5, 8), S(3, 100, 5, 8)];
   const r = proponerSemana(e);
   check(r.filas.find((x) => x.pauta_id === 'a').tendencia === 'bajando' && r.descarga.senales.some((x) => x.id === 'rendimiento'), 'dos obligatorios a la baja: señal de descarga');
+}
+
+console.log('\nDel editor al motor');
+{
+  // Un bloque como lo carga el editor: tres semanas (la 1 y la 2 hechas, la 3 en borrador), dos sesiones de fuerza y una de cardio
+  const sem = (n, extra = {}) => ({ id: `w${n}`, bloque_id: 'b', numero: n, fecha_inicio: ['2026-10-19', '2026-10-26', '2026-11-02'][n - 1], foco: 'volumen', programacion: n < 3 ? 'programada' : 'en_programacion', ...extra });
+  const ses = (n, orden, extra = {}) => ({ id: `w${n}s${orden}`, semana_id: `w${n}`, orden, nombre: `Día ${orden}`, tipo: 'fuerza', completada: n < 3, fecha_realizada: n < 3 ? ['2026-10-20', '2026-10-27'][n - 1] : null, preparacion: null, ...extra });
+  const pa = (n, orden, i, ejercicio_id, extra = {}) => P({ id: `w${n}s${orden}p${i}`, sesion_id: `w${n}s${orden}`, ejercicio_id, orden: i, ...extra });
+  const hechas = (kg, reps, rpe = 8) => reps.map((r, i) => S(i + 1, kg, r, rpe));
+  const d = {
+    bloque: { id: 'b', atleta_id: 'a', es_plantilla: false },
+    semanas: [sem(1), sem(2), sem(3)],
+    sesiones: { w1: [ses(1, 1), ses(1, 2)], w2: [ses(2, 2), ses(2, 1), ses(2, 3, { tipo: 'cardio' })], w3: [ses(3, 1), ses(3, 2)] },
+    pautas: {
+      w1s1: [pa(1, 1, 1, 'banca', { carga_sugerida_kg: 77.5 })], w1s2: [pa(1, 2, 1, 'sent', { carga_sugerida_kg: 95 }), pa(1, 2, 2, 'banca', { carga_sugerida_kg: 60 })],
+      w2s1: [pa(2, 1, 2, 'lat', { carga_sugerida_kg: 8 }), pa(2, 1, 1, 'banca', { carga_sugerida_kg: '80.00', rpe_objetivo: '8.0' })], w2s2: [pa(2, 2, 1, 'sent', { carga_sugerida_kg: 100 }), pa(2, 2, 2, 'banca', { carga_sugerida_kg: 62.5 })], w2s3: [pa(2, 3, 1, 'remo')],
+      w3s1: [pa(3, 1, 1, 'banca', { carga_sugerida_kg: 80 }), pa(3, 1, 2, 'curl', { carga_sugerida_kg: 10 })], w3s2: [pa(3, 2, 1, 'banca', { carga_sugerida_kg: 62.5 }), pa(3, 2, 2, 'sent', { carga_sugerida_kg: 100 })],
+    },
+    series: { w1s1p1: hechas(77.5, [12, 12, 11]), w1s2p1: hechas(95, [8, 8, 8]), w1s2p2: hechas(60, [10, 10, 9]), w2s1p1: hechas('80.00', [12, 12, 12]), w2s1p2: hechas(8, [14, 13, 12]), w2s2p1: hechas(100, [8, 7, 6], 9), w2s2p2: hechas(62.5, [10, 10, 10]) },
+  };
+  const ck = [{ semana_inicio: '2026-10-19', energia: 4, recuperacion: 4 }, { semana_inicio: '2026-10-26', energia: '2', recuperacion: 3 }, { semana_inicio: '2026-11-02', energia: 1, recuperacion: 1 }];
+  const mol = [{ semana_inicio: '2026-10-26', zona: 'hombros', intensidad: 2 }, { semana_inicio: '2026-10-19', zona: 'cuadriceps', intensidad: 3 }];
+  const e = entradaDesdeBloque({ d: congelar(d), base: d.semanas[1], destino: d.semanas[2], ejercicios, atleta: { nivel: 'novato' }, checkins: ck, molestias: mol, hoy: '2026-11-01' });
+  check(e.sesiones.map((s) => s.id).join() === 'w2s1,w2s2' && e.pautas.map((p) => p.id).join() === 'w2s1p1,w2s1p2,w2s2p1,w2s2p2', 'solo las sesiones de fuerza, y las pautas en su orden');
+  check(e.pautas[0].carga_sugerida_kg === 80 && e.pautas[0].rpe_objetivo === 8 && e.series.w2s1p1[0].kg === 80, 'los números que llegan como texto pasan a número');
+  check(e.historial.w2s1p1.length === 1 && e.historial.w2s1p1[0].pauta.id === 'w1s1p1' && e.historial.w2s2p2[0].pauta.id === 'w1s2p2' && e.historial.w2s1p2.length === 0, 'historial por hueco: el press banca de cada día con el suyo de la semana anterior');
+  check(e.contexto.checkins.length === 2 && e.contexto.checkins[1].energia === 2 && igual(e.contexto.molestias, [{ zona: 'hombros', intensidad: 2 }]), 'check-in hasta la semana hecha y molestias de esa semana');
+  check(e.contexto.diasSinEntrenar === 5 && e.contexto.focoAnterior === 'volumen' && e.contexto.focoSiguiente === 'volumen', 'días sin entrenar y focos de la semana');
+  const r = proponerSemana(e);
+  const f = Object.fromEntries(r.filas.map((x) => [x.pauta_id, x]));
+  check(r.semana.tipo === 'normal' && f.w2s1p1.tipo === 'subir' && f.w2s1p1.confianza === 'alta' && f.w2s1p2.confianza === 'baja', 'la propuesta sale con confianza alta donde hay semana anterior y baja donde el ejercicio es nuevo');
+  check(f.w2s1p1.avisos.some((x) => x.tipo === 'molestia'), 'la molestia de hombros se avisa en el press banca');
+  // Con la semana 3 de destino
+  const destino = pautasDeSemana(d, d.semanas[2]);
+  const pares = emparejar(e.pautas, e.sesiones, destino.pautas, destino.sesiones);
+  check(pares.w2s1p1.id === 'w3s1p1' && pares.w2s2p2.id === 'w3s2p1' && pares.w2s2p1.id === 'w3s2p2' && !pares.w2s1p2, 'emparejar: misma sesión y ejercicio aunque cambie el orden; lo que ya no está, sin pareja');
+  const sinSesion = emparejar([pa(2, 1, 1, 'curl')], [ses(2, 1)], [pa(3, 2, 1, 'curl')], [ses(3, 2)]);
+  check(sinSesion.w2s1p1.id === 'w3s2p1', 'emparejar: si cambió de día, el mismo ejercicio en otra sesión');
+  const cambios = cambiosDePropuesta(f.w2s1p1.propuesta);
+  check(Object.keys(cambios).length === 8 && cambios.series_detalle.length === 3 && cambios.backoff_pct === null, 'lo que se guarda: los ocho campos de la pauta');
+  check(diferencias(pares.w2s1p1, f.w2s1p1.propuesta).includes('series_detalle') && diferencias(pares.w2s1p1, campos(pares.w2s1p1)).length === 0 && diferencias({ ...pares.w2s1p1, carga_sugerida_kg: '80.00' }, campos(pares.w2s1p1)).length === 0, 'diferencias con la pauta de destino (sin falsos cambios por el formato)');
+  check(textoPauta(f.w2s1p1.propuesta) === '8×82,5 · 8×82,5 · 8×82,5 kg · RPE 8' && textoPauta(P()) === '3 × 8–12 · 80 kg · RPE 8' && textoPauta(P({ series: 4, reps_min: 4, reps_max: 6, backoff_pct: 10, rpe_objetivo: null })) === '1 × 4–6 + 3 × −10 % · 80 kg'
+    && textoPauta(P({ series_detalle: [{ reps: 10, rpe: 8 }, { reps: 9, rpe: 9 }] })) === '10 @8 · 9 @9 rep', 'la pauta en una línea');
+  // Sin datos de más: un bloque recién creado
+  const vacio = entradaDesdeBloque({ d: { bloque: {}, semanas: [sem(1)], sesiones: {}, pautas: {}, series: {} }, base: sem(1) });
+  check(vacio.pautas.length === 0 && vacio.contexto.diasSinEntrenar === null && proponerSemana(vacio).filas.length === 0, 'un bloque vacío no falla');
+  // Historial por pauta en el motor: el del hueco manda sobre el del ejercicio
+  const porPauta = proponerSemana({ ...entradaBase(), historial: { a: [], banca: historial.banca } });
+  check(porPauta.filas.find((x) => x.pauta_id === 'a').confianza === 'baja' && proponerSemana(entradaBase()).filas.find((x) => x.pauta_id === 'a').confianza === 'alta', 'el motor acepta el historial por pauta');
 }
 
 console.log('\nMil semanas al azar');

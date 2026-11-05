@@ -9,6 +9,7 @@ import { progresarPauta } from '../../logica/progresion.js';
 import { revisarVariante, equivalentes } from '../../logica/variantes.js';
 import { MODALIDADES, limpiarCardio, textoCardio, palabrasEsfuerzo } from '../../logica/cardio.js';
 import { teclaEnRejilla } from '../rejilla.js';
+import { ProgramarFBE, semanasParaProgramar } from './ProgramarFBE.jsx';
 
 const DESCANSOS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
 const ESTADOS_BLOQUE = [['planificado', 'Planificado'], ['activo', 'Activo'], ['ajustado', 'Ajustado'], ['finalizado', 'Finalizado'], ['cancelado', 'Cancelado']];
@@ -30,6 +31,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   const [sugerir, setSugerir] = useState(false);
   const [version, setVersion] = useState(0); // cambia al aplicar cambios en bloque, para refrescar los campos
   const [publicarEn, setPublicarEn] = useState(null); // semana a publicar en un bloque que aún no es el activo
+  const [fbe, setFbe] = useState(null); // «Programar según FBE»: { base, destino } (ids de semana)
 
   useEffect(() => {
     if (!carga.datos) return;
@@ -68,6 +70,9 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   const conKg = (p) => bloque.es_plantilla || modoCarga(nivel, p.prioridad) !== 'rpe' || p.carga_sugerida_kg != null;
   const conDatos = !bloque.es_plantilla && sesionesAnt.some((x) => (d.pautas[x.id] || []).some((p) => (d.series[p.id] || []).length))
     && sesiones.some((x) => (d.pautas[x.id] || []).some(conKg));
+
+  // «Programar según FBE»: de qué semana se parte y cuál se programa (la siguiente se crea si aún no existe)
+  const paraFbe = semanasParaProgramar(d, semana);
 
   // Guarda un campo y lo refleja en local sin recargar (los inputs no pierden el foco)
   async function guardar(tabla, id, cambios) {
@@ -179,6 +184,18 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
                 }}><Icono n="enviar" /> Publicar al atleta</button>)}
               <button class="btn btn-peq" onClick={() => setDuplicar(true)}><Icono n="duplicar" /> Preparar las siguientes</button>
               {conDatos && <button class="btn btn-peq" onClick={() => setSugerir(true)}><Icono n="rayo" /> Cargas sugeridas</button>}
+              {paraFbe && <button class="btn btn-peq" onClick={async () => {
+                let destino = paraFbe.destino;
+                if (!destino) {
+                  // La semana siguiente aún no existe: se crea igual que esta, en borrador, y sobre ella va la propuesta
+                  const nuevas = await estructura(() => api.prepararSemanas(paraFbe.base.id, { n: 1, kg: 'igual', rpe: 0, rir: 0, reps: 0 }));
+                  destino = nuevas?.[0] || null;
+                  if (!destino) return;
+                  aviso(`Semana ${destino.numero} creada en borrador`);
+                }
+                setSemanaId(destino.id);
+                setFbe({ base: paraFbe.base.id, destino: destino.id });
+              }}><Icono n="diana" /> {paraFbe.base.id === semana.id ? 'Programar la siguiente según FBE' : 'Programar según FBE'}</button>}
               <button class="btn btn-peq btn-icono btn-peligro" aria-label={`Borrar semana ${semana.numero}`} onClick={() => setConfirmarBorrado({ tipo: 'semana', id: semana.id })}><Icono n="basura" /></button>
             </div>
           </div>
@@ -231,6 +248,17 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
             setSugerir(false);
             await estructura(async () => { for (const [id, kg] of cambios) await api.actualizar('sesion_ejercicios', id, { carga_sugerida_kg: kg }); },
               `${cambios.length} ${cambios.length === 1 ? 'carga actualizada' : 'cargas actualizadas'}`);
+            setVersion((v) => v + 1);
+          }} />
+      )}
+      {fbe && d.semanas.some((w) => w.id === fbe.base) && d.semanas.some((w) => w.id === fbe.destino) && (
+        <ProgramarFBE d={d} base={d.semanas.find((w) => w.id === fbe.base)} destino={d.semanas.find((w) => w.id === fbe.destino)} ejercicios={ejercicios}
+          atleta={{ id: atletaId, nivel, volumen_objetivo: volumenObjetivo }} alCerrar={() => setFbe(null)}
+          alAplicar={async (lista) => {
+            const w = d.semanas.find((x) => x.id === fbe.destino);
+            setFbe(null);
+            await estructura(async () => { for (const { id, cambios } of lista) await api.actualizar('sesion_ejercicios', id, cambios); },
+              `${lista.length} ${lista.length === 1 ? 'ejercicio actualizado' : 'ejercicios actualizados'} en la semana ${w.numero}${w.programacion === 'programada' ? '' : ', en borrador'}`);
             setVersion((v) => v + 1);
           }} />
       )}

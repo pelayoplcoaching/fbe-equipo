@@ -6,7 +6,7 @@
 // Entrada:
 //   pautas     [sesion_ejercicios] de la semana hecha       sesiones  [sesiones] de esa semana
 //   series     { pauta_id: [series] } lo hecho              ejercicios { id: { nombre, grupos_musculares, tipo } }
-//   historial  { ejercicio_id: [{ foco, pauta, series, malDia }] } semanas anteriores, de la más antigua a la más reciente
+//   historial  { pauta_id o ejercicio_id: [{ foco, pauta, series, malDia }] } semanas anteriores, de la más antigua a la más reciente
 //   atleta     { nivel, perfil, volumen_objetivo }
 //   reglas     { fbe, atleta, bloque, porEjercicio: { ejercicio_id: {…} }, porPauta: { pauta_id: {…} } } capas ya limpias
 //   contexto   { checkins, molestias, carga: { ratio }, diasSinEntrenar, focoAnterior, focoSiguiente, semanasDesdeDescarga }
@@ -87,7 +87,8 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
     const nombre = ej.nombre || '';
     const R = reglasDe(p);
     const { modelo, pedido, pendiente } = modeloDe({ ejercicio: ej, reglas: R });
-    const normales = (historial[p.ejercicio_id] || []).filter((h) => h?.pauta && h.foco !== 'descarga');
+    // (el historial puede venir por pauta —lo más fino: mismo hueco de la semana— o por ejercicio)
+    const normales = (historial[p.id] || historial[p.ejercicio_id] || []).filter((h) => h?.pauta && h.foco !== 'descarga');
     // Tras una descarga se parte de la última semana normal, no de la de descarga
     const base = retoma ? normales[normales.length - 1] || null : { pauta: p, series: series[p.id] || [], malDia: esMalDia(sesionDe[p.sesion_id]) };
     const previas = retoma ? normales.slice(0, -1) : normales;
