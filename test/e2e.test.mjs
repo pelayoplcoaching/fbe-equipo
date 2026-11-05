@@ -5626,6 +5626,16 @@ try {
   console.log('  ✗ sin cobertura de la v0.65:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.66: modo gimnasio (cifras y ✓ más grandes en la sesión) y «Bien hecho» del coach desde la Actividad (test/e2e-v066.mjs)
+console.log('\nv0.66: modo gimnasio y «Bien hecho»');
+try {
+  const { probarV066 } = await import('./e2e-v066.mjs');
+  await probarV066({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la v0.66:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
 console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');

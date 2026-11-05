@@ -22,6 +22,8 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   difuminarCara: false,
   // v0.61: «Subir los vídeos solo con wifi» (solo sale donde el navegador dice si es wifi: Chrome de Android)
   soloWifi: false,
+  // v0.66: «Modo gimnasio» (en la sesión, cifras y botones más grandes y más contraste)
+  gimnasio: false,
   // v0.62: «Avisar aunque bloquees el móvil» (la pista del descanso, ui/pista-descanso.js): apagado de serie, porque en el
   // iPhone (y en Android) pausa la música de otras apps mientras dura el descanso. Solo sale donde puede funcionar
   vozBloqueo: false,
@@ -98,6 +100,8 @@ export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) 
   if (oled) r.setAttribute('data-oled', ''); else r.removeAttribute('data-oled');
   // v0.50: el tamaño de la letra, en la raíz (estilos.css lo traduce a su font-size)
   if (a.letra && a.letra !== 'normal' && LETRAS.includes(a.letra)) r.setAttribute('data-letra', a.letra); else r.removeAttribute('data-letra');
+  // v0.66: el modo gimnasio (las reglas, en estilos.css, solo tocan la sesión y el descanso)
+  if (a.gimnasio) r.setAttribute('data-gimnasio', ''); else r.removeAttribute('data-gimnasio');
   // El acento: sus variables en una hoja propia al final del <head> (con los mismos selectores que el tema)
   let hoja = document.getElementById('fbe-acento');
   const css = cssAcento(a.acento);

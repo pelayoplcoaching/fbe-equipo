@@ -200,12 +200,12 @@ export async function probarSinRed065({ navegador, check, base = 'http://localho
     await volverAHoy();
 
     // ---------------------------------------------------------------- «Novedades» tras actualizar
-    await p.evaluate((u) => localStorage.setItem(`fbe-version-vista-${u}`, '0.63.0'), uid);
+    await p.evaluate((u) => localStorage.setItem(`fbe-version-vista-${u}`, '0.64.0'), uid);
     await p.reload();
     await novedades.waitFor({ timeout: 10000 });
     const texto = await novedades.textContent();
-    check(/sin cobertura/i.test(texto) && /Máquina ocupada/.test(texto) && !/Teclado propio/.test(texto) && await novedades.locator('li').count() === 3 && await novedades.getByRole('button', { name: 'Vale' }).count() === 1,
-      'tras cambiar de versión (de la 0.63 a esta), «Novedades» sale con lo nuevo de las versiones que no ha visto y «Vale»');
+    check(/sin cobertura/i.test(texto) && !/Máquina ocupada/.test(texto) && await novedades.locator('li').count() >= 2 && await novedades.getByRole('button', { name: 'Vale' }).count() === 1,
+      'tras cambiar de versión (de la 0.64 a esta), «Novedades» sale con lo nuevo de las versiones que no ha visto (no lo de la 0.64) y «Vale»');
     await revisar('novedades');
     check(await estrecho('novedades', '.hoja-novedades li, .hoja-novedades .btn'), '«Novedades» cabe a 360 px en oscuro');
     await novedades.getByRole('button', { name: 'Vale' }).click();
@@ -213,7 +213,7 @@ export async function probarSinRed065({ navegador, check, base = 'http://localho
     await p.reload();
     await p.locator('.hero-dia').waitFor();
     await p.waitForTimeout(1200);
-    check(await novedades.count() === 0 && await p.evaluate((u) => localStorage.getItem(`fbe-version-vista-${u}`), uid) !== '0.63.0', 'y no vuelve a salir');
+    check(await novedades.count() === 0 && await p.evaluate((u) => localStorage.getItem(`fbe-version-vista-${u}`), uid) !== '0.64.0', 'y no vuelve a salir');
   } catch (e) {
     check(false, `sin cobertura (v0.65): ${e.message.split('\n').slice(0, 6).join(' ')} | en: ${(e.stack || '').split('\n').find((l) => l.includes('e2e-sinred-065')) || '?'}`);
     await p.screenshot({ path: new URL('./e2e-fallo-065.png', import.meta.url).pathname }).catch(() => {});

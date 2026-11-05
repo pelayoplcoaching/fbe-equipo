@@ -1,3 +1,5 @@
+import { compararVersiones } from './privacidad.js';
+
 // v0.65: «Novedades» tras una actualización de la app (los textos, en web/src/novedades.js). Lo puro: comparar versiones,
 // qué frases tocan y desde qué versión se mira la primera vez.
 
@@ -29,11 +31,16 @@ export function novedadesQueVer(novedades, { vista, actual, rol = 'atleta', max 
 export const claveVersionVista = (uid) => `fbe-version-vista-${uid}`;
 // Las hojas de novedades empiezan en la 0.65: quien ya usaba la app no tiene nada guardado. La política de privacidad que vio
 // (también en el móvil, por cuenta) dice desde qué versión viene; con otra (o sin la 037), la 0.64.
-const POR_POLITICA = { '2026-12.4': '0.62', '2026-12.5': '0.63', '2026-12.6': '0.64', '2026-12.7': '0.65' };
+const POR_POLITICA = { '2026-12.4': '0.62', '2026-12.5': '0.63', '2026-12.6': '0.64' };
+// (v0.66) Desde la 2026-12.7 (la de la 0.65, con la que llegaron las «Novedades») la política vista ya no dice nada de versiones
+// anteriores: quien la tiene y no tiene versión guardada es una cuenta nueva (la aceptó al entrar) o un móvil nuevo; para ellos,
+// la actual (no sale nada). Antes, con la 2026-12.7 se miraba desde la 0.65 y a una cuenta nueva le salían las de la 0.66.
+const PRIMERA_CON_NOVEDADES = '2026-12.7';
 // Desde qué versión mirar: la guardada; si no hay, la que dice la política vista; sin nada (la primera vez en este móvil con
 // esta cuenta, o una cuenta nueva), la actual (no sale nada)
 export function versionVistaInicial({ guardada = null, politicaVista = null, actual }) {
   if (versionCorta(guardada)) return guardada;
-  if (politicaVista) return POR_POLITICA[politicaVista] || '0.64';
+  if (politicaVista && POR_POLITICA[politicaVista]) return POR_POLITICA[politicaVista];
+  if (politicaVista && compararVersiones(politicaVista, PRIMERA_CON_NOVEDADES) < 0) return '0.64';
   return actual;
 }

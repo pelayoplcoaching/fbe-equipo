@@ -4040,9 +4040,9 @@ console.log('\nv0.65: abrir sin cobertura y «Novedades» tras actualizar');
     && NA.compararApp('0.9.0', '0.10.0') === -1 && NA.compararApp('0.65.1', '0.65.0') === 0 && NA.compararApp('1.0', '0.99') === 1 && NA.compararApp('x', '0.1') === null,
     'las versiones de la app se comparan por mayor y menor, como números (0.9 < 0.10); los arreglos no cuentan');
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-  const nov65 = NA.novedadesQueVer(NOVEDADES, { vista: '0.64.0', actual: pkg.version });
-  check(pkg.version === '0.65.0' && nov65.length === 2 && nov65.length <= 3 && /sin cobertura/i.test(nov65[0]) && NA.novedadesQueVer(NOVEDADES, { vista: '0.64.0', actual: '0.65.0', rol: 'coach' }).length === 1,
-    'de la 0.64 a la 0.65: las frases de la 0.65 para el atleta (como mucho tres) y la del coach');
+  const nov65 = NA.novedadesQueVer(NOVEDADES, { vista: '0.64.0', actual: '0.65.0' });
+  check(NOVEDADES[NA.versionCorta(pkg.version)] != null && nov65.length === 2 && nov65.length <= 3 && /sin cobertura/i.test(nov65[0]) && NA.novedadesQueVer(NOVEDADES, { vista: '0.64.0', actual: '0.65.0', rol: 'coach' }).length === 1,
+    'de la 0.64 a la 0.65: las frases de la 0.65 para el atleta (como mucho tres) y la del coach (y la versión de package.json tiene las suyas)');
   const salto = NA.novedadesQueVer(NOVEDADES, { vista: '0.62.0', actual: '0.65.0' });
   check(salto.length === 5 && /sin cobertura/i.test(salto[0]) && /Máquina ocupada/.test(salto[2]) && /Teclado propio/.test(salto[3]) && !salto.some((t) => /Ahora toca/.test(t)),
     'si se han saltado versiones, las de todas juntas, de la más nueva a la más antigua, como mucho 5');
@@ -4053,7 +4053,8 @@ console.log('\nv0.65: abrir sin cobertura y «Novedades» tras actualizar');
   check(Object.entries(NOVEDADES).every(([v, x]) => NA.versionCorta(v) === v && (x.atleta || []).length <= 3 && [...(x.atleta || []), ...(x.coach || [])].every((t) => typeof t === 'string' && t.length <= 140)),
     'el archivo de novedades: por versión, hasta tres frases cortas para el atleta');
   check(NA.versionVistaInicial({ guardada: '0.64.0', politicaVista: '2026-12.4', actual: '0.65.0' }) === '0.64.0' && NA.versionVistaInicial({ politicaVista: '2026-12.5', actual: '0.65.0' }) === '0.63'
-    && NA.versionVistaInicial({ politicaVista: '2026-12', actual: '0.65.0' }) === '0.64' && NA.versionVistaInicial({ politicaVista: null, actual: '0.65.0' }) === '0.65.0' && NA.claveVersionVista('u') === 'fbe-version-vista-u',
+    && NA.versionVistaInicial({ politicaVista: '2026-12', actual: '0.65.0' }) === '0.64' && NA.versionVistaInicial({ politicaVista: null, actual: '0.65.0' }) === '0.65.0' && NA.claveVersionVista('u') === 'fbe-version-vista-u'
+    && NA.versionVistaInicial({ politicaVista: '2026-12.7', actual: '0.66.0' }) === '0.66.0' && NA.versionVistaInicial({ politicaVista: '2026-12.9', actual: '0.66.0' }) === '0.66.0' && NA.versionVistaInicial({ politicaVista: '2026-12.2', actual: '0.66.0' }) === '0.64',
     'desde qué versión se mira: la guardada; quien ya usaba la app, por la política que vio; la primera vez en el móvil o una cuenta nueva, la actual (no sale nada)');
   // ---------- la política 2026-12.7
   const legal8 = await import('../web/src/legal.js');

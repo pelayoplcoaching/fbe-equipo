@@ -1204,6 +1204,11 @@ kbd { font: 600 0.6875rem/1 var(--f); font-variant-numeric: tabular-nums; paddin
 .actividad-item { width: 100%; display: grid; grid-template-columns: 34px minmax(0, 1fr) 18px; gap: 12px; align-items: center; padding: 12px 14px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .actividad-item:hover { background: var(--hoja-2); }
 .actividad-item > svg:last-child { width: 16px; height: 16px; color: var(--tinta-3); }
+/* v0.66: «Bien hecho» del coach, debajo del entreno */
+.actividad-kudos { justify-self: start; margin: -4px 0 10px 60px; }
+.actividad-kudos.hecho { display: inline-flex; align-items: center; gap: 6px; }
+.actividad-kudos.hecho svg { width: 14px; height: 14px; color: var(--ok, currentColor); }
+.lista > li:has(> .actividad-kudos) { display: grid; }
 .actividad-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--hoja-2); color: var(--tinta-2); }
 .actividad-ico svg { width: 18px; height: 18px; }
 .act-record .actividad-ico { background: var(--morado-suave); color: var(--morado); }
@@ -4574,3 +4579,22 @@ html[data-teclado] .pildora-descanso { display: none; }
 .orden-real-cab { display: flex; align-items: center; gap: 6px; color: var(--tinta); }
 .orden-real-cab svg { width: 16px; height: 16px; color: var(--morado); }
 .orden-real ol { margin: 0; padding-left: 22px; display: grid; gap: 1px; }
+
+/* ---------------------------------------------------------------- v0.66: modo gimnasio
+   Solo en la sesión y el descanso: el texto secundario en la tinta principal (más contraste; lo propuesto sigue en gris), bordes que se ven, y las filas de
+   series, sus botones y los botones de la sesión más grandes (para leer de lejos, con poca luz o con el móvil en el banco) */
+:root[data-gimnasio] .sesion-vista, :root[data-gimnasio] .temporizador { --tinta-2: var(--tinta); --linea: color-mix(in srgb, var(--tinta) 45%, transparent); }
+:root[data-gimnasio] .sesion-vista .ejercicio-cab .nombre { font-size: 1.1875rem; font-weight: 750; }
+:root[data-gimnasio] .sesion-vista .serie, :root[data-gimnasio] .sesion-vista .series-cab { grid-template-columns: 26px minmax(0, 1.3fr) minmax(0, 1fr) 68px 60px; }
+:root[data-gimnasio] .sesion-vista .serie .celda, :root[data-gimnasio] .sesion-vista .serie .rpe { height: 64px; border-width: 2px; }
+:root[data-gimnasio] .sesion-vista .serie .celda { font-size: 1.875rem; font-weight: 750; }
+:root[data-gimnasio] .sesion-vista .serie .hecho-btn { width: 60px; height: 64px; border-width: 3px; }
+:root[data-gimnasio] .sesion-vista .serie .hecho-btn svg { width: 30px; height: 30px; }
+:root[data-gimnasio] .sesion-vista .serie .n { font-size: 1.125rem; }
+:root[data-gimnasio] .sesion-vista .series-cab, :root[data-gimnasio] .sesion-vista .ultima-vez { font-size: 0.9375rem; }
+:root[data-gimnasio] .sesion-vista .btn { min-height: 52px; font-size: 1.0625rem; }
+@media (max-width: 380px) {
+  :root[data-gimnasio] .sesion-vista .serie, :root[data-gimnasio] .sesion-vista .series-cab { grid-template-columns: 22px minmax(0, 1.45fr) minmax(0, 1fr) 60px 54px; gap: 6px; }
+  :root[data-gimnasio] .sesion-vista .serie .celda { font-size: 1.625rem; }
+  :root[data-gimnasio] .sesion-vista .serie .hecho-btn { width: 54px; }
+}

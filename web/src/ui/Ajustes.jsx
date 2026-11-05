@@ -65,6 +65,9 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
       {/* v0.50: el tamaño de la letra de toda la app (se guarda en este móvil, como el tema) */}
       <FilaIos icono="letra" titulo="Tamaño de la letra" detalle="Para toda la app. Las cifras y los botones crecen con ella."
         bloque={<Segmentos clase="segmentos-letra" opciones={TAMANOS_LETRA.map(([k, t]) => [k, t])} valor={a.letra || 'normal'} etiqueta="Tamaño de la letra" alCambiar={(v) => cambiar('letra', v || 'normal')} />} />
+      {/* v0.66: modo gimnasio */}
+      {!coach && <Interruptor id="aj-gimnasio" icono="hoy" texto="Modo gimnasio" valor={!!a.gimnasio} alCambiar={(v) => cambiar('gimnasio', v)}
+        ayuda="En la sesión: cifras y botones más grandes y más contraste, para leer con poca luz o con el móvil en el banco." />}
       {!coach && (
         <>
           <FilaIos icono="altavoz" titulo="Sonido y vibración" detalle={resumenSonido} alTocar={() => setSonido(true)} etiqueta={`Sonido y vibración: ${resumenSonido}`} />

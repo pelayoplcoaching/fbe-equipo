@@ -14,8 +14,21 @@ const FILTROS = [['todo', 'Todo'], ['sesion', 'Sesiones'], ['record', 'Récords'
 
 // Lo que ha hecho el atleta, día a día (como el feed de actividad de Trainerize o TrueCoach)
 export function Actividad({ atleta, irA }) {
-  const { api } = useApp();
+  const { api, aviso } = useApp();
   const [dias, setDias] = useState(30);
+  // v0.66: «Bien hecho» con un toque (un mensaje en el hilo de esa sesión; le llega el aviso)
+  const [felicitadas, setFelicitadas] = useState(() => new Set());
+  const [enviando, setEnviando] = useState(null);
+  const felicitar = async (e) => {
+    if (enviando) return;
+    setEnviando(e.sesionId);
+    try {
+      await api.felicitar(atleta.id, e.sesionId, e.nombreSesion);
+      setFelicitadas((f) => new Set([...f, e.sesionId]));
+      aviso(`«Bien hecho» enviado a ${atleta.nombre?.split(' ')[0] || 'tu atleta'}`, 'ok');
+    } catch (err) { aviso(err?.message || 'No se ha podido enviar: vuelve a intentarlo', 'error'); }
+    setEnviando(null);
+  };
   const [filtro, setFiltro] = useState('todo');
   const res = useCarga(() => api.actividad(atleta.id, dias), [atleta.id, dias]);
   const hoy = hoyISO();
@@ -43,6 +56,9 @@ export function Actividad({ atleta, irA }) {
                         {e.detalle && <span class="peq secundario">{e.detalle}</span>}</span>
                       <Icono n="derecha" />
                     </button>
+                    {e.tipo === 'sesion' && e.sesionId && (e.comentada || felicitadas.has(e.sesionId)
+                      ? <span class="actividad-kudos hecho peq secundario"><Icono n="hecho" /> {felicitadas.has(e.sesionId) ? '«Bien hecho» enviado' : 'Ya le has escrito'}</span>
+                      : <button class="btn btn-peq actividad-kudos" disabled={enviando === e.sesionId} onClick={() => felicitar(e)} aria-label={`Decirle «Bien hecho» por ${e.nombreSesion || 'este entreno'}`}>💪 Bien hecho</button>)}
                   </li>
                 ))}
               </ul>

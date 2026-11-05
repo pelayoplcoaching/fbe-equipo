@@ -1371,12 +1371,15 @@ export function crearApi(backend) {
         b.select('archivos', { eq: { atleta_id: atletaId }, gte: { fecha: desde } }),
         b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'atleta' }, gte: { creado_en: `${desde}T00:00:00` } }).then((xs) => xs.filter((c) => !c.eliminado_en)),
       ]);
+      // (v0.66) las sesiones a las que ya le has dicho «Bien hecho» (o le has escrito algo en su hilo)
+      const conTuyo = new Set(await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, gte: { creado_en: `${desde}T00:00:00` }, cols: 'sesion_id,eliminado_en' })
+        .then((xs) => xs.filter((c) => c.sesion_id && !c.eliminado_en).map((c) => c.sesion_id)).catch(() => []));
       const recordsPorSesion = {};
       for (const e of eventosRecord(series).eventos) if (e.sesion_id) (recordsPorSesion[e.sesion_id] ||= []).push(e);
       const ev = [];
       for (const x of entrenos.filter((e) => e.fecha && e.fecha >= desde)) {
         const rec = recordsPorSesion[x.id] || [];
-        ev.push({ tipo: 'sesion', fecha: x.fecha, cuando: `${x.fecha}T20:00`, icono: 'hoy', pestana: 'registro',
+        ev.push({ tipo: 'sesion', fecha: x.fecha, cuando: `${x.fecha}T20:00`, icono: 'hoy', pestana: 'registro', sesionId: x.id, nombreSesion: x.nombre, comentada: conTuyo.has(x.id),
           titulo: `Hizo ${x.nombre}`, detalle: [x.series ? `${x.series} series` : null, x.tonelaje ? `${num(Math.round(x.tonelaje / 100) / 10, 1)} t` : null, cardioHechoValido(x.cardio_hecho) ? `${NOMBRE_MODALIDAD[x.cardio_hecho.modalidad].toLowerCase()}: ${textoCardioHecho(x.cardio_hecho)}` : x.duracion_min ? `${x.duracion_min} min` : null, x.rpe_sesion ? `esfuerzo ${num(x.rpe_sesion)}/10` : null].filter(Boolean).join(', ') });
         for (const r of rec) ev.push({ tipo: 'record', fecha: x.fecha, cuando: `${x.fecha}T19:59`, icono: 'trofeo', pestana: 'seguimiento', titulo: `Récord en ${r.ejercicio}`, detalle: r.record.texto });
       }
@@ -1582,6 +1585,11 @@ export function crearApi(backend) {
     // cobertura cuya respuesta no llegó), devuelve el que ya está, sin repetirlo. Sin la 033, se envía sin él.
     // videoRespuestaId (v0.60, 038): el vídeo de una respuesta en el hilo de un vídeo (ver responderConVideo)
     // resumenSesion (v0.61, 039): el resumen de una sesión (uno por sesión, lo marca y lo comprueba la base)
+    // v0.66: «Bien hecho» del coach a un entreno terminado, con un toque: un mensaje en el hilo de esa sesión (le llega el aviso
+    // de siempre de un comentario del coach)
+    async felicitar(atletaId, sesionId, nombreSesion = '') {
+      return api.comentar({ atletaId, sesionId, autor: 'coach', texto: `💪 ¡Bien hecho${nombreSesion ? ` en ${nombreSesion}` : ''}! He visto tu entreno.` });
+    },
     async comentar({ atletaId, sesionId = null, checkinId = null, archivoId = null, texto, autor, dibujo = null, respondeA = null, clienteId = null, videoRespuestaId = null, resumenSesion = false }) {
       const fila = { atleta_id: atletaId, sesion_id: sesionId, checkin_id: checkinId, archivo_id: archivoId, texto: texto.trim(), autor };
       if (videoRespuestaId) fila.video_respuesta_id = videoRespuestaId;
