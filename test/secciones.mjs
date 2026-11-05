@@ -35,3 +35,11 @@ export async function esperarSinSeccion(p, nombre, ms = 6000) {
     await p.waitForTimeout(250);
   }
 }
+
+// Progreso tiene cuatro sub-pestañas (resumen, fuerza, cuerpo, logros): pasa a una, si no es ya la que se ve.
+// Lo que está en otra sub-pestaña sigue en la página pero no se ve: antes de pulsarlo o esperarlo, hay que pasar a la suya.
+export async function subProgreso(p, sub) {
+  const b = p.locator(`#prog-${sub}`);
+  await b.waitFor();
+  if ((await b.getAttribute('aria-selected')) !== 'true') await b.click();
+}

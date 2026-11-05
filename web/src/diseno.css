@@ -207,3 +207,22 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .hoja-mas .fila-ios-titulo { font-size: 1.0312rem; font-weight: 650; }
 .hoja-mas .mas-actual .fila-ios-titulo { color: var(--morado); }
 .hoja-mas .mas-actual .ios-ico { background: var(--morado); color: var(--sobre-morado); }
+
+/* ---------- 9. Progreso en cuatro sub-pestañas ---------------------------------------------------------------
+   Resumen · Fuerza · Cuerpo · Logros (ui/atleta/Progreso.jsx). Todas las secciones siguen en la página, cada una con
+   su data-grupo; aquí solo se decide cuáles se ven. Sin data-sub (a quien solo se le lleva la nutrición, o en la
+   ficha del coach) se ve todo, como antes. */
+.progreso-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.prog-grupo { display: contents; }
+.progreso-panel[data-sub="resumen"] > [data-grupo]:not([data-grupo~="resumen"]),
+.progreso-panel[data-sub="fuerza"] > [data-grupo]:not([data-grupo~="fuerza"]),
+.progreso-panel[data-sub="cuerpo"] > [data-grupo]:not([data-grupo~="cuerpo"]),
+.progreso-panel[data-sub="logros"] > [data-grupo]:not([data-grupo~="logros"]) { display: none; }
+.pestanas-progreso { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: -8px; }
+.pestanas-progreso button { text-align: center; padding-inline: 4px; }
+/* La explicación de cada gráfica, plegada bajo «Cómo se calcula» */
+.nota-grafica summary { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding-right: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--tinta-2); cursor: pointer; list-style: none; border-radius: 8px; }
+.nota-grafica summary::-webkit-details-marker { display: none; }
+.nota-grafica summary svg { width: 16px; height: 16px; flex: none; }
+.nota-grafica summary:hover, .nota-grafica[open] summary { color: var(--tinta); }
+.nota-grafica p { padding-bottom: 2px; }

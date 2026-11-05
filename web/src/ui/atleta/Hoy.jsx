@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { pedirSubProgreso } from './sub-progreso.js';
 import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar } from '../comunes.jsx';
 import { resumenDia } from '../../logica/dia.js';
 import { BandaConexion, BandaDemo } from '../App.jsx';
@@ -519,7 +520,7 @@ function PesoHoy({ irA }) {
   const e = estadoPeso(ritmo, planVigente(planes.datos || [], hoy), ult ? diasEntre(ult.fecha, hoy) : 0);
   return (
     <section class="seccion">
-      <div class="seccion-cab"><h2>Tu peso</h2>{serie.length > 1 && <button class="btn-texto" onClick={() => irA('progreso')}>Ver la gráfica</button>}</div>
+      <div class="seccion-cab"><h2>Tu peso</h2>{serie.length > 1 && <button class="btn-texto" onClick={() => { pedirSubProgreso('cuerpo'); irA('progreso'); }}>Ver la gráfica</button>}</div>
       <div class="panel panel-pad peso-hoy">
         {pesos.datos == null || planes.datos == null ? <span class="peso-cargando" aria-hidden="true" />
           : !ult ? <p class="peq secundario">Pésate por la mañana, en ayunas, y apúntalo aquí. Con unos días verás tu tendencia, que es lo que importa.</p>

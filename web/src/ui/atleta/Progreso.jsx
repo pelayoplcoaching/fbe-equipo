@@ -1,10 +1,11 @@
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { mapaConstancia } from '../../logica/visual.js';
 import { Logros } from '../Logros.jsx';
 import { AnillosSemana } from './Anillos.jsx';
 import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
-import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro } from '../comunes.jsx';
+import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, Pestanas } from '../comunes.jsx';
+import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
 import { RANGOS_GRAFICA, filtrarRango, rangoConDatos } from '../../logica/rangos.js';
 import { destacados as calcularDestacados, tonelajePorSemana } from '../../logica/destacados.js';
 import { calendarioRacha } from '../../logica/racha.js';
@@ -24,6 +25,13 @@ import { num, signo, GRUPOS, MEDIDAS, e1rm, rangoVolumen, estadoVolumen, tendenc
 import { historiaRecords } from '../../logica/diseno.js';
 import { fmtCorta, hoyISO, diasEntre, fmtConDia, fechaMadrid, lunesDe, sumarDias } from '../../logica/fechas.js';
 
+
+// La explicación de una gráfica, plegada bajo «Cómo se calcula» (antes, un párrafo fijo debajo de cada una)
+function NotaGrafica({ titulo = 'Cómo se calcula', children }) {
+  return <details class="nota-grafica"><summary><Icono n="pregunta" />{titulo}</summary><p class="mini terciario">{children}</p></details>;
+}
+// Un trozo de Progreso con su sub-pestaña (o varias, separadas por espacios): no pinta caja, solo lo agrupa
+function Grupo({ g, children }) { return <div class="prog-grupo" data-grupo={g}>{children}</div>; }
 
 // Contenido de progreso, reutilizado en la ficha del atleta del panel del coach
 // entrenamiento: false a quien solo le llevas la nutrición (v0.26): sin fuerza, series, constancia ni cardio
@@ -82,7 +90,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
   return (
     <>
       {objActivos.length > 0 && (
-        <section class="seccion">
+        <section class="seccion" data-grupo="logros">
           <h2>{esCoach ? 'Objetivos' : 'Tus objetivos'}</h2>
           <div class="panel"><ul class="lista">
             {objActivos.map((o) => <TarjetaObjetivo key={o.id} o={o} esCoach={esCoach} />)}
@@ -90,7 +98,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
         </section>
       )}
 
-      <section class="seccion">
+      <section class="seccion" data-grupo="cuerpo">
         <h2>Peso corporal</h2>
         <div class="panel panel-pad pila">
           {!ultPeso ? <p class="secundario">Aún no hay pesos registrados. Se apuntan desde Hoy o en el check-in semanal.</p> : (
@@ -102,14 +110,14 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
               {cambioPeso != null && <p class="cambio-rango peq secundario"><Odometro texto={`${conSigno(cambioPeso)} kg`} clase="num" /> de tendencia en {nombreRango(rP)}</p>}
               <GraficaPeso serie={ventanaPeso} clave={rP} etiqueta={`Peso: tendencia ${num(ultPeso.tendencia)} kg${ritmo ? `, ${signo(ritmo.kgSemana, 2)} kg por semana` : ''}`} />
               {seriePeso.length > 1 && <SelectorRango valor={rP} alCambiar={setRangoPeso} etiqueta="Rango de la gráfica del peso" />}
-              <p class="mini terciario">Cada punto es una pesada; la línea, la tendencia (media que suaviza el agua y la sal del día a día). El ritmo sale de las pesadas de las últimas 3 semanas.</p>
+              <NotaGrafica>Cada punto es una pesada; la línea, la tendencia (media que suaviza el agua y la sal del día a día). El ritmo sale de las pesadas de las últimas 3 semanas.</NotaGrafica>
             </>
           )}
         </div>
       </section>
 
       {conMedida.length > 0 && (
-        <section class="seccion">
+        <section class="seccion" data-grupo="cuerpo">
           <h2>Medidas</h2>
           <div class="panel panel-pad pila">
             <div class="selector-chips" role="group" aria-label="Medida">
@@ -128,7 +136,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
       )}
 
       {entrenamiento && (<>
-      <section class="seccion">
+      <section class="seccion" data-grupo="fuerza">
         <h2>Fuerza (1RM estimado)</h2>
         {!ejercicios.length ? <div class="panel"><Vacio icono="progreso" titulo="Sin datos todavía">Cuando registres series, aquí verás tu 1RM estimado semana a semana.</Vacio></div> : (
           <div class="panel panel-pad pila">
@@ -156,13 +164,13 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
               );
             })()}
             <button class="btn-texto" style="justify-self:start" onClick={() => setHistorial(ej)}><Icono n="historial" /> Gráficas, récords e historial</button>
-            <p class="mini terciario">Mejor serie de cada semana, con la fórmula de Epley y contando las repeticiones en recámara (RIR = 10 − RPE).</p>
+            <NotaGrafica>Mejor serie de cada semana, con la fórmula de Epley y contando las repeticiones en recámara (RIR = 10 − RPE).</NotaGrafica>
           </div>
         )}
       </section>
 
       {semanasTon.length > 1 && (
-        <section class="seccion">
+        <section class="seccion" data-grupo="fuerza">
           <h2>Tonelaje por semana</h2>
           <div class="panel panel-pad pila">
             <div class="cifra">
@@ -172,7 +180,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
             {ventanaTon.length > 1 ? <Grafica records clave={rT} puntos={ventanaTon.map((w) => ({ x: w.semana, y: Math.round(w.valor / 100) / 10 }))} unidad="t" etiqueta="Tonelaje por semana" />
               : <p class="peq secundario">En este rango hay menos de dos semanas con datos: prueba uno más amplio.</p>}
             <SelectorRango valor={rT} alCambiar={setRangoTon} etiqueta="Rango de la gráfica del tonelaje" />
-            <p class="mini terciario">Toneladas movidas cada semana: carga × repeticiones de todas tus series.</p>
+            <NotaGrafica>Toneladas movidas cada semana: carga × repeticiones de todas tus series.</NotaGrafica>
           </div>
         </section>
       )}
@@ -181,7 +189,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
 
       <Marcas atletaId={atletaId} ejercicios={ejercicios} esCoach={esCoach} />
 
-      <section class="seccion">
+      <section class="seccion" data-grupo="fuerza">
         <h2>Series por músculo esta semana</h2>
         <div class="panel panel-pad pila">
           {grupos.length > 0 && <MapaMuscular series={volumen.estaSemana} etiqueta="Series por músculo esta semana" />}
@@ -209,7 +217,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
       </section>
 
       {(constanciaTotal.datos || constancia) && (
-        <section class="seccion">
+        <section class="seccion" data-grupo="logros">
           <div class="seccion-cab">
             <h2>Constancia</h2>
             {constanciaTotal.datos?.racha > 0 && <span class="racha"><Icono n="llama" />{constanciaTotal.datos.racha === 1 ? '1 semana completa' : `${constanciaTotal.datos.racha} semanas completas seguidas`}</span>}
@@ -235,12 +243,12 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
         </section>
       )}
       {cardio.datos?.some((w) => w.sesiones > 0) && (
-        <section class="seccion">
+        <section class="seccion" data-grupo="fuerza">
           <h2>Cardio</h2>
           <div class="panel panel-pad pila">
             <GraficaCardio semanas={cardio.datos} />
             <TotalesCardio semanas={cardio.datos} />
-            <p class="mini terciario">Minutos de cardio por semana (y los kilómetros, si los apuntas), de lo que registras al terminar cada sesión.</p>
+            <NotaGrafica>Minutos de cardio por semana (y los kilómetros, si los apuntas), de lo que registras al terminar cada sesión.</NotaGrafica>
           </div>
         </section>
       )}
@@ -349,7 +357,7 @@ function Vitrina({ datos, esCoach, atletaId, abrirHistorial, irA }) {
   if (!datos) return null;
   if (!datos.ejercicios.length) {
     return (
-      <section class="seccion">
+      <section class="seccion" data-grupo="fuerza">
         <h2>Vitrina de récords</h2>
         <div class="panel"><Vacio ilustracion="records" titulo={esCoach ? 'Aún no tiene récords' : 'Aún no tienes récords'}
           accion={!esCoach && irA ? <button class="btn btn-peq" onClick={() => irA('hoy')}><Icono n="play" /> Ir a tu sesión de hoy</button> : null}>
@@ -361,7 +369,7 @@ function Vitrina({ datos, esCoach, atletaId, abrirHistorial, irA }) {
   const hace30 = new Set(datos.recientes.map((r) => r.ejercicio_id));
   const lista = todas ? datos.ejercicios : datos.ejercicios.slice(0, 6);
   return (
-    <section class="seccion">
+    <section class="seccion" data-grupo="fuerza">
       <div class="seccion-cab">
         <h2>Vitrina de récords</h2>
         {datos.recientes.length > 0 && <span class="chip morado num">{datos.recientes.length} {datos.recientes.length === 1 ? 'récord' : 'récords'} en 30 días</span>}
@@ -438,7 +446,7 @@ function Marcas({ atletaId, ejercicios, esCoach }) {
   const lista = marcas.datos || [];
   if (!lista.length && !ejercicios.length && esCoach) return null;
   return (
-    <section class="seccion">
+    <section class="seccion" data-grupo="fuerza">
       <div class="seccion-cab"><h2>Marcas</h2><button class="btn-texto" onClick={() => setNueva(true)}><Icono n="mas" /> Apuntar marca</button></div>
       <div class="panel">
         {!lista.length ? <p class="panel-pad peq secundario">Los tests y las competiciones van aquí: lo que levantas de verdad a 1, 3 o 5 repeticiones.</p> : (
@@ -566,23 +574,41 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
   // v0.52: lo de Progreso se carga una vez para la vista y para los destacados
   const progreso = useCarga(() => api.progreso(atleta.id), [atleta.id]);
   const semanas = useCarga(() => (entrena ? api.resumenesSemanales(atleta.id, 4).catch(() => []) : Promise.resolve([])), [atleta.id, entrena]);
+  // La sub-pestaña: Resumen, salvo que se haya pedido otra al venir («Ver la gráfica» del peso, «Ver mis logros»)
+  const [sub, setSub] = useState(() => tomarSubProgreso() || 'resumen');
+  useEffect(() => {
+    const al = (e) => { const pedida = tomarSubProgreso() || e.detail; if (SUBS_PROGRESO.some(([k]) => k === pedida)) { setSub(pedida); window.scrollTo(0, 0); } };
+    window.addEventListener(EVENTO_SUB_PROGRESO, al);
+    return () => window.removeEventListener(EVENTO_SUB_PROGRESO, al);
+  }, []);
   return (
     <div class="contenido">
       <CabeceraGrande><div class="titulo"><h1>Tu progreso</h1></div></CabeceraGrande>
       {entrena ? <Pista id="progreso" icono="progreso">Todo lo de aquí sale solo de lo que apuntas en cada sesión y en el check-in. No tienes que rellenar nada: entra de vez en cuando a ver cómo vas.</Pista>
         : <Pista id="progreso-nutricion" icono="progreso">Aquí ves tu peso, tus medidas y tu nutrición: sale de lo que apuntas en Hoy y en el check-in.</Pista>}
-      {entrena && <Destacados progreso={progreso.datos} constancia={constancia.datos} programa={programa.datos} />}
-      {entrena && <AnillosSemana programa={programa} salud={salud} checkinSemana={checkinSemana} constancia={constancia} />}
-      {entrena && <Cifras constancia={constancia} semanas={semanas} />}
-      {entrena && <TusSemanas salud={salud} lista={semanas} />}
-      <TusMeses salud={salud} />
-      {entrena && <TusBloques salud={salud} />}
-      {entrena && <Logros salud={salud} />}
-      <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} progresoDado={progreso} entrenamiento={entrena} irA={irA} />
-      {salud && <HabitosMes />}
-      {salud && conNutricion(atleta) && <NutricionProgreso />}
-      {entrena && <MiTecnica atletaId={atleta.id} nombreAtleta={atleta.nombre} />}
-      <Diario atletaId={atleta.id} nombreAtleta={atleta.nombre} salud={salud} />
+      {/* Cuatro sub-pestañas en lugar de una página de once pantallas. Todo sigue pintado (las cifras y las gráficas ya
+          están cargadas): la sub-pestaña solo decide qué grupo se ve (diseno.css). A quien solo se le lleva la nutrición
+          le queda una página corta, sin sub-pestañas. */}
+      {entrena && <Pestanas opciones={SUBS_PROGRESO} valor={sub} alCambiar={setSub} etiqueta="Qué ver de tu progreso" idBase="prog" clase="pestanas-progreso pestanas-justas" />}
+      <div class="progreso-panel" id="prog-panel" role={entrena ? 'tabpanel' : undefined} aria-labelledby={entrena ? `prog-${sub}` : undefined} data-sub={entrena ? sub : undefined}>
+        <Grupo g="resumen">
+          {entrena && <Destacados progreso={progreso.datos} constancia={constancia.datos} programa={programa.datos} />}
+          {entrena && <AnillosSemana programa={programa} salud={salud} checkinSemana={checkinSemana} constancia={constancia} />}
+          {entrena && <Cifras constancia={constancia} semanas={semanas} />}
+          {entrena && <TusSemanas salud={salud} lista={semanas} />}
+          <TusMeses salud={salud} />
+          {entrena && <TusBloques salud={salud} />}
+        </Grupo>
+        <Grupo g="logros">{entrena && <Logros salud={salud} />}</Grupo>
+        <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} progresoDado={progreso} entrenamiento={entrena} irA={irA} />
+        <Grupo g="cuerpo">
+          {salud && <HabitosMes />}
+          {salud && conNutricion(atleta) && <NutricionProgreso />}
+        </Grupo>
+        <Grupo g="fuerza">{entrena && <MiTecnica atletaId={atleta.id} nombreAtleta={atleta.nombre} />}</Grupo>
+        {/* El diario lleva los vídeos de técnica y las fotos de progreso: se ve en Fuerza y en Cuerpo */}
+        <Grupo g="fuerza cuerpo"><Diario atletaId={atleta.id} nombreAtleta={atleta.nombre} salud={salud} /></Grupo>
+      </div>
     </div>
   );
 }

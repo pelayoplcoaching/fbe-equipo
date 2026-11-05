@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { pedirSubProgreso } from './atleta/sub-progreso.js';
 import { useApp, useCarga, Icono, Hoja, usePreferencia } from './comunes.jsx';
 import { num } from '../logica/calculos.js';
 import { logrosNuevos, nivelesVistos } from '../logica/logros.js';
@@ -150,7 +151,7 @@ export function AvisoLogros({ salud, irA, pausado = false }) {
   const ver = !pausado && !bienvenida && !cerrado && nuevos.length > 0;
   useEffect(() => { if (ver) celebrar(); }, [ver]);
   if (!ver) return null;
-  const terminar = (ir) => { setVistos(nivelesVistos(lista)); setCerrado(true); if (ir) irA('progreso'); };
+  const terminar = (ir) => { setVistos(nivelesVistos(lista)); setCerrado(true); if (ir) { pedirSubProgreso('logros'); irA('progreso'); } };
   const principal = [...nuevos].sort((a, b) => b.nivel - a.nivel)[0];
   const nivelP = principal.nivel;
   const umbralP = lista.find((l) => l.id === principal.id).niveles[nivelP - 1].umbral;
