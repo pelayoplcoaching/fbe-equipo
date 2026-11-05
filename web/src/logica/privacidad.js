@@ -26,8 +26,9 @@ export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) &&
 // (v0.56: el chat), la 2026-12 (v0.57 y v0.58: los vídeos de técnica y su análisis automático) y la 2026-12.1 (v0.59, con
 // la 037: cómo lo has notado, los recordatorios y los vídeos modelo) y la 2026-12.2 (v0.60: las respuestas en vídeo, exportar
 // y difuminar la cara en el móvil) y la 2026-12.4 (v0.62: avisar aunque bloquees el móvil) y la 2026-12.5 (v0.63: el teclado
-// de la app y tus discos, en el móvil)
+// de la app y tus discos, en el móvil) y la 2026-12.6 (v0.64: el orden de hoy de una sesión, en el móvil)
 export const NOVEDADES_PRIVACIDAD = [
+  ['ordenar', 'El orden de tu sesión', 'Si cambias el orden de los ejercicios de una sesión (con la máquina ocupada, por ejemplo), se guarda solo en tu móvil y para esa sesión: la pauta de tu coach no cambia. Tu coach ve en qué orden los hiciste por la hora de cada serie, que ya se guardaba.', '2026-12.6'],
   ['teclado', 'El teclado de la app y tus discos', 'Si apuntas las series con el teclado de la app o con el del móvil, y el disco más pequeño que tienes en cada sitio (para los −/+ de los kilos), se guarda solo en tu móvil.', '2026-12.5'],
   ['candado', 'Avisar aunque bloquees el móvil', 'Si lo enciendes (se guarda solo en ese móvil), la pantalla de bloqueo enseña tu descanso y la serie siguiente con sus kilos mientras descansas: lo ve quien mire tu móvil, sin desbloquearlo (y puede salir en el coche o el reloj, si están conectados). El aviso del fin del descanso dice también la carga que te toca.', '2026-12.4'],
   ['video', 'Resumen de la sesión, informe del mes y solo con wifi', 'Tu coach puede mandarte un resumen de toda una sesión y el informe de técnica de cada mes: te llegan al chat con un aviso sin el texto. El informe y el 1RM estimado por la velocidad se calculan en el móvil al abrirlos, sin guardarse aparte. «Subir los vídeos solo con wifi» se guarda solo en tu móvil.', '2026-12.3'],

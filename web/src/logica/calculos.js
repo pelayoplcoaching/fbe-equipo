@@ -271,15 +271,17 @@ export function textoObjetivo(o) {
 // Ejercicios seguidos con la misma letra se hacen alternando (A1, A2, A1, A2…) y se descansa al acabar
 // cada ronda. Una letra con un solo ejercicio no es superserie.
 export const LETRAS_SUPERSERIE = ['A', 'B', 'C', 'D', 'E'];
+// (v0.64) Con la sesión reordenada por el atleta (logica/orden-sesion.js), cada ejercicio lleva el bloque al que pertenecía
+// en lo pautado (_bloque): dos bloques con la misma letra que se quedan seguidos al reordenar no se juntan en uno
 export function gruposSuperserie(ejercicios) {
   const grupos = [];
   for (const e of ejercicios) {
     const letra = e.superserie || null;
     const ultimo = grupos[grupos.length - 1];
-    if (letra && ultimo?.letra === letra) ultimo.items.push(e);
-    else grupos.push({ letra, items: [e] });
+    if (letra && ultimo?.letra === letra && ultimo.bloque === (e._bloque ?? null)) ultimo.items.push(e);
+    else grupos.push({ letra, bloque: e._bloque ?? null, items: [e] });
   }
-  return grupos.flatMap((g) => (g.letra && g.items.length < 2 ? [{ letra: null, items: g.items }] : [g]));
+  return grupos.map((g) => (g.letra && g.items.length < 2 ? { letra: null, items: g.items } : { letra: g.letra, items: g.items }));
 }
 export function etiquetasSuperserie(ejercicios) {
   const m = {};

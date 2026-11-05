@@ -192,7 +192,8 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
     // (un momento después: con varios +15 seguidos, solo el último). v0.62: con la carga propuesta, si se sabe
     const t = setTimeout(() => { programado.current = true; api.programarDescanso(fin, aviso || texto); }, 700);
     return () => clearTimeout(t);
-  }, [fin, pausado]);
+    // (v0.64: también si cambia lo que viene después, p. ej. al dejar un ejercicio para luego en mitad del descanso)
+  }, [fin, pausado, aviso || texto]);
   // Al quitarse el temporizador (saltar, cerrar), fuera el aviso. v0.52: si se sale de la sesión con el descanso en
   // marcha, lo sigue llevando la píldora «Sesión en curso» (y el aviso al móvil se queda)
   useEffect(() => () => { if (programado.current && !descansoEnCurso(atleta?.id, finRef.current)) api?.cancelarDescanso?.(); }, []);

@@ -118,6 +118,9 @@ export const P = {
   deshacer: 'M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
   // v0.63: borrar en el teclado de la serie (la tecla de retroceso)
   retroceso: 'M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7zM12.5 9.5l5 5M17.5 9.5l-5 5',
+  // v0.64: cambiar el orden de la sesión (flechas arriba y abajo) y el asa para arrastrar (seis puntos)
+  ordenar: 'M7 4v16M3.5 7.5L7 4l3.5 3.5M17 20V4M13.5 16.5L17 20l3.5-3.5',
+  asa: 'M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01',
   hd: 'M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5zM8 9v6M8 12h3M11 9v6M14 9v6h1a3 3 0 0 0 0-6z',
 };
 

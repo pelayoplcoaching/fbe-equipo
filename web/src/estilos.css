@@ -4537,3 +4537,29 @@ html[data-teclado] .pildora-descanso { display: none; }
 .ahora-nota svg { width: 16px; height: 16px; margin-top: 2px; }
 .ahora-nota > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .temporizador.en-enfoque .ahora-carga { font-size: clamp(1.875rem, 9vw, 2.25rem); }
+
+/* ---------- v0.64: máquina ocupada y el orden de la sesión ---------- */
+/* (4) «Máquina ocupada · hacerlo luego» y la hoja «Cambiar el orden» (el asa para el dedo o el ratón; «Subir» y «Bajar» para
+   el teclado y el lector de pantalla) */
+.btn-luego { color: var(--tinta-2); }
+.btn-luego svg { color: var(--tinta-3); }
+.ord-lista { border: 1px solid var(--linea); border-radius: 12px; overflow: visible; }
+.ord-fila { display: grid; grid-template-columns: 36px 18px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 4px 6px 4px 2px; background: var(--hoja); position: relative; border-radius: 0; }
+.ord-fila + .ord-fila { border-top: 1px solid var(--linea); }
+.ord-fila:first-child { border-radius: 12px 12px 0 0; }
+.ord-fila:last-child { border-radius: 0 0 12px 12px; }
+.ord-fila.levantada { z-index: 2; border-radius: 12px; box-shadow: var(--sombra), 0 8px 24px -10px rgba(0, 0, 0, .35); }
+.ord-asa { display: grid; place-items: center; width: 36px; height: 48px; color: var(--tinta-3); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.ord-lista.arrastrando .ord-asa { cursor: grabbing; }
+.ord-asa svg { width: 22px; height: 22px; stroke-width: 3.2; }
+.ord-pos { font-weight: 750; color: var(--tinta-2); text-align: center; font-size: 0.875rem; }
+.ord-nombre { display: grid; gap: 2px; font-weight: 650; font-size: 0.9375rem; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+.ord-nombre .ss-etq { justify-self: start; }
+.ord-flechas { display: flex; gap: 2px; }
+.ord-flechas .btn-icono[aria-disabled="true"] { opacity: .38; cursor: default; }
+
+/* (4) El coach: «Hecho en otro orden», con el orden de verdad (de la hora de cada serie) */
+.orden-real { display: grid; gap: 4px; padding: 8px 10px; border-radius: 10px; background: var(--hoja-2); font-size: 0.8438rem; color: var(--tinta-2); }
+.orden-real-cab { display: flex; align-items: center; gap: 6px; color: var(--tinta); }
+.orden-real-cab svg { width: 16px; height: 16px; color: var(--morado); }
+.orden-real ol { margin: 0; padding-left: 22px; display: grid; gap: 1px; }

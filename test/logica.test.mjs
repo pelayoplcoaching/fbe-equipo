@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.5' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.6' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -3876,9 +3876,87 @@ console.log('\nv0.63: el teclado de la app, el cambio que pasa a las series sigu
   const legal6 = await import('../web/src/legal.js');
   const PV5 = await import('../web/src/logica/privacidad.js');
   const mov6 = legal6.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
-  check(legal6.VERSION_LEGAL === '2026-12.5' && PV5.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.5' && PV5.novedadesDesde('2026-12.4', '2026-12.5').length === 1
-    && /teclado de la app/.test(mov6) && /disco más pequeño/.test(mov6) && /no se guarda en ningún sitio hasta que la marcas/.test(mov6) && /solo en tu móvil/.test(PV5.NOVEDADES_PRIVACIDAD[0][2]),
+  const nov5 = PV5.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.5');
+  check(nov5 && PV5.novedadesDesde('2026-12.4', '2026-12.5').length === 1
+    && /teclado de la app/.test(mov6) && /disco más pequeño/.test(mov6) && /no se guarda en ningún sitio hasta que la marcas/.test(mov6) && /solo en tu móvil/.test(nov5[2]),
     'la política 2026-12.5: el teclado elegido y el disco más pequeño de cada sitio se quedan en el móvil (lo escrito sin marcar, en ningún sitio)');
+}
+
+// ---------------------------------------------------------------- v0.64: «Máquina ocupada» y el orden de la sesión
+console.log('\nv0.64: «Máquina ocupada» y el orden de la sesión');
+{
+  const OR = await import('../web/src/logica/orden-sesion.js');
+  const AT = await import('../web/src/logica/ahora-toca.js');
+  const { gruposSuperserie, etiquetasSuperserie, trasSerie } = await import('../web/src/logica/calculos.js');
+  const { tramosSesion } = await import('../web/src/logica/tablero.js');
+  const ids = (l) => l.map((e) => e.id).join(',');
+  // ---------- 4. el orden: la superserie se mueve entera
+  const SES = [
+    { id: 'p', series: 3, ejercicio: { nombre: 'Press banca' } },
+    { id: 'a1', series: 3, superserie: 'A', ejercicio: { nombre: 'Leg curl' } }, { id: 'a2', series: 3, superserie: 'A', ejercicio: { nombre: 'Gemelo' } },
+    { id: 'r', series: 3, ejercicio: { nombre: 'Remo con barra' } },
+    { id: 'c', series: 2, ejercicio: { nombre: 'Curl' } },
+  ];
+  const h0 = {};
+  const o1 = OR.moverAlFinal(SES, h0, 'p');
+  const l1 = OR.aplicarOrden(SES, o1);
+  check(ids(l1) === 'a1,a2,r,c,p' && igual(etiquetasSuperserie(l1), { a1: 'A1', a2: 'A2' }) && SES[0].id === 'p' && !('_bloque' in SES[0]),
+    '«Máquina ocupada»: el press pasa detrás de lo que queda; la superserie sigue entera (A1, A2) y la pauta del coach no se toca');
+  const o2 = OR.moverAlFinal(SES, h0, 'a2');
+  check(ids(OR.aplicarOrden(SES, o2)) === 'p,r,c,a1,a2', 'dejar para luego un ejercicio de una superserie mueve la superserie entera (nunca se parte)');
+  // Con lo ya hecho: los bloques acabados se quedan en su sitio
+  const hP = { p: { 1: {}, 2: {}, 3: {} }, a1: { 1: {} } };
+  const o3 = OR.moverAlFinal(SES, hP, 'a1');
+  check(ids(OR.aplicarOrden(SES, o3)) === 'p,r,c,a1,a2' && OR.moverAlFinal(SES, hP, 'p') === null && OR.moverAlFinal(SES, { p: { 1: 1, 2: 1, 3: 1 }, a1: { 1: 1, 2: 1, 3: 1 }, a2: { 1: 1, 2: 1, 3: 1 }, r: { 1: 1, 2: 1, 3: 1 } }, 'c') === null,
+    'una superserie empezada también se puede dejar para luego; lo acabado no se mueve y el último que queda no tiene a dónde ir');
+  check(OR.puedeDejarLuego(SES, hP, 'a1') && !OR.puedeDejarLuego(SES, hP, 'p'), 'se ofrece en lo que queda (con otro bloque por hacer), no en lo acabado');
+  // Subir / bajar (la alternativa a arrastrar), entre lo que queda
+  const b1 = OR.moverBloque(SES, h0, 'r', -1);
+  check(ids(OR.aplicarOrden(SES, b1)) === 'p,r,a1,a2,c' && OR.moverBloque(SES, h0, 'p', -1) === null && OR.moverBloque(SES, h0, 'c', 1) === null && ids(OR.aplicarOrden(SES, OR.moverBloque(SES, h0, 'a1', 1))) === 'p,r,a1,a2,c',
+    '«Subir» y «Bajar» mueven el bloque un puesto (la superserie, entera); arriba del todo no sube ni abajo del todo baja');
+  check(ids(OR.aplicarOrden(SES, OR.moverBloque(SES, hP, 'r', -1))) === 'p,r,a1,a2,c', 'con lo hecho, «Subir» salta por encima de lo que queda, no de lo acabado');
+  const orden = OR.reordenarPendientes(SES, h0, ['c', 'r', 'a1', 'p']);
+  check(ids(OR.aplicarOrden(SES, orden)) === 'c,r,a1,a2,p' && OR.reordenarPendientes(SES, h0, ['c', 'r']) === null && OR.reordenarPendientes(SES, h0, ['p', 'a1', 'r', 'c']) === null,
+    'arrastrar: los bloques que quedan en el orden nuevo; una lista que no son los que quedan, o el mismo orden, no cambia nada');
+  // Dos superseries con la misma letra que se quedan seguidas no se juntan; una letra sola sigue sin ser superserie
+  const RARO = [{ id: 'x1', series: 2, superserie: 'B' }, { id: 'x2', series: 2, superserie: 'B' }, { id: 'y', series: 2 }, { id: 'z1', series: 2, superserie: 'B' }, { id: 'z2', series: 2, superserie: 'B' }, { id: 's', series: 1, superserie: 'C' }];
+  const lr = OR.aplicarOrden(RARO, ['x1', 'x2', 'z1', 'z2', 'y', 's']);
+  check(gruposSuperserie(lr).length === 4 && gruposSuperserie(lr).map((g) => g.items.length).join() === '2,2,1,1' && gruposSuperserie(RARO).length === 4,
+    'dos superseries B que se quedan seguidas al reordenar siguen siendo dos (y una letra sola, un ejercicio suelto)');
+  check(OR.aplicarOrden(SES, null) === SES && OR.aplicarOrden(SES, ['p', 'a1', 'a2', 'r', 'c']) === SES && OR.aplicarOrden(SES, ['p', 'p']) === SES && OR.aplicarOrden(SES, 'p') === SES
+    && ids(OR.aplicarOrden([...SES, { id: 'nuevo', series: 1 }], o1)) === 'a1,a2,r,c,p,nuevo',
+    'sin orden, con el mismo o con uno raro, la lista tal cual; un ejercicio que el coach añade después va detrás');
+  // Lo que sigue al orden nuevo: la serie que toca, «Ahora toca», los tramos y lo que viene tras una serie
+  check(igual(AT.serieQueToca(l1, h0), { id: 'a1', numero: 1 }) && AT.ahoraToca({ ejercicios: l1, hechas: h0 }).id === 'a1' && tramosSesion(l1, h0)[0].ids.join() === 'a1,a2'
+    && trasSerie(l1, { a1: 1, a2: 1, r: 3 }, 'r').siguiente.id === 'c' && trasSerie(l1, { a1: 3, a2: 3, r: 3, c: 2 }, 'c').siguiente.id === 'p',
+    'con el orden nuevo, la serie que toca (la de «Ahora toca», la píldora y la pantalla de bloqueo), los tramos y lo que viene tras cada serie lo siguen');
+  check(OR.ordenValido(['a', 'b']) && !OR.ordenValido([]) && !OR.ordenValido(['a', 'a']) && !OR.ordenValido([1]) && !OR.ordenValido(['x'.repeat(65)]) && !OR.ordenValido(null),
+    'lo que se guarda en el móvil, comprobado (ids sin repetir)');
+  // ---------- el coach: el orden de verdad, por la hora de cada serie
+  const t = (m) => ({ registrada_en: new Date(Date.UTC(2026, 10, 5, 18, m)).toISOString() });
+  const enOrden = { p: [t(0), t(3), t(6)], a1: [t(9), t(12)], a2: [t(10), t(13)], r: [t(16)] };
+  check(OR.ordenReal(SES, enOrden) === null && OR.ordenReal(SES, { p: [t(0)] }) === null && OR.ordenReal(SES, {}) === null, 'hecho en el orden pautado (o un solo ejercicio), nada que decir');
+  const otro = { p: [t(30), t(33), t(36)], a1: [t(1), t(4)], a2: [t(2), t(5)], r: [t(10), t(13), t(16)], c: [t(20), t(22)] };
+  const real = OR.ordenReal(SES, otro);
+  check(real && real.map((b) => b.clave).join() === 'a1,r,c,p' && real[0].ids.join() === 'a1,a2' && real[0].letra === 'A', 'hecho en otro orden: la superserie, el remo, el curl y el press al final (la superserie, un bloque)');
+  // Una serie suelta antes de dejarlo para luego no lo adelanta (la mediana de sus horas)
+  const suelta = { p: [t(0), t(40), t(43)], a1: [t(5), t(8)], a2: [t(6), t(9)], r: [t(15), t(18)], c: [t(25)] };
+  check(OR.ordenReal(SES, suelta)?.map((b) => b.clave).join() === 'a1,r,c,p', 'una serie del press antes de que la máquina se ocupara no lo cuenta como el primero: va donde se hizo la mayor parte');
+  check(OR.ordenReal(SES, { p: [t(0)], a1: [{ registrada_en: 'mal' }], r: [t(2)] }) === null, 'sin hora válida, no cuenta');
+
+  // La serie que dijo la última marcada, tras reordenar: se queda a mitad de una ronda de superserie, se olvida si se deja para luego
+  const SSr = [{ id: 'a1', series: 2, superserie: 'A' }, { id: 'a2', series: 2, superserie: 'A' }, { id: 'z', series: 2 }];
+  const hR = { a1: { 1: {} } };
+  check(igual(OR.proximaTrasReordenar(SSr, hR, { id: 'a2', numero: 1 }), { id: 'a2', numero: 1 }) && OR.proximaTrasReordenar(OR.aplicarOrden(SSr, OR.moverAlFinal(SSr, hR, 'a1')), hR, { id: 'a2', numero: 1 }) === null
+    && OR.proximaTrasReordenar(SSr, hR, null) === null,
+    'tras reordenar, la serie que tocaba se queda si su bloque sigue el primero (a mitad de una ronda); si se ha dejado para luego, manda el orden nuevo');
+  // ---------- la política
+  const legal7 = await import('../web/src/legal.js');
+  const PV6 = await import('../web/src/logica/privacidad.js');
+  const mov7 = legal7.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
+  check(legal7.VERSION_LEGAL === '2026-12.6' && PV6.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.6' && PV6.novedadesDesde('2026-12.5', '2026-12.6').length === 1 && PV6.formatoVersion('2026-12.6')
+    && /orden de los ejercicios de una sesión/.test(mov7) && /la pauta de tu coach no cambia/.test(mov7) && /hora de cada serie/.test(mov7) && /solo en tu móvil/.test(PV6.NOVEDADES_PRIVACIDAD[0][2]),
+    'la política 2026-12.6: el orden de hoy se queda en el móvil (la pauta no cambia); el coach ve el orden por la hora de cada serie');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

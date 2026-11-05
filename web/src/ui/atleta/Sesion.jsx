@@ -19,6 +19,8 @@ import { useTecladoApp } from './Teclado.jsx';
 import { pasoKg, tipoCarga, pideRpe, discoMinimoValido, DISCO_MINIMO_DEFECTO, discosCon } from '../../logica/teclado.js';
 import { propagarCambio, aplicarPropagacion, deshacerPropagacion, textoPropagacion } from '../../logica/propagar.js';
 import { ahoraToca, serieQueToca } from '../../logica/ahora-toca.js';
+import { aplicarOrden, moverAlFinal, moverBloque, reordenarPendientes, puedeDejarLuego, bloquesPendientes, proximaTrasReordenar } from '../../logica/orden-sesion.js';
+import { OrdenarSesion } from './OrdenarSesion.jsx';
 import { Enfoque } from './Enfoque.jsx';
 import { Metronomo } from './Metronomo.jsx';
 import { Intervalos } from './Intervalos.jsx';
@@ -110,6 +112,10 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // v0.63: el teclado de la app (un ajuste del móvil) y el disco más pequeño de cada sitio (gimnasio, casa, viaje), en el móvil
   const tecladoApp = useTecladoApp();
   const [discosLugar, setDiscosLugar] = usePreferencia(`fbe-discos-${atleta.id}`, {});
+  // v0.64 (4): el orden de los ejercicios de esta sesión, si el atleta lo ha cambiado («Máquina ocupada · hacerlo luego» o
+  // «Cambiar el orden»): solo en este móvil y para esta sesión (la pauta del coach no cambia); null = el del coach
+  const [ordenSes, setOrdenSes] = usePreferencia(`fbe-orden-${id}`, null);
+  const [ordenando, setOrdenando] = useState(false);
   // Ejercicios elegidos fuera de las alternativas (de la biblioteca) y su «última vez»
   const [extra, setExtra] = useState({ ejercicios: {}, ultimas: {} });
   // Notas fijadas del atleta por ejercicio (se cargan con la sesión y se guardan al momento)
@@ -245,14 +251,18 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     const ec = leerEnCurso(atleta.id);
     if (ec?.id === id && ec.descanso && ((!Number.isFinite(ec.descanso.pausa) && ec.descanso.fin > Date.now() - 6000) || pausaVigente(ec.descanso)) && !det.datos.sesion.completada && det.datos.ejercicios.some((x) => x.hechas.length)) setDescanso(ec.descanso);
     if (abiertos === null) {
-      const primero = det.datos.ejercicios.find((e) => e.hechas.length < e.series) || det.datos.ejercicios[0];
+      const lista = aplicarOrden(det.datos.ejercicios, ordenSes);
+      const primero = lista.find((e) => e.hechas.length < e.series) || lista[0];
       setAbiertos(new Set(primero ? [primero.id] : []));
     }
   }, [det.datos]);
 
   if (det.cargando && !det.datos) return <div class="contenido"><Siluetas forma="sesion" texto="Cargando la sesión" /></div>;
   if (det.error) return <div class="contenido"><ErrorCaja error={det.error} reintentar={det.recargar} /><button class="btn" onClick={alCerrar}>Volver</button></div>;
-  const { sesion, ejercicios, semana, progresionAuto } = det.datos;
+  const { sesion, semana, progresionAuto } = det.datos;
+  // v0.64 (4): todo lo de la sesión sale de esta lista, en el orden de hoy (la serie que toca, «Ahora toca», la píldora, la
+  // pantalla de bloqueo, los tramos y el modo enfoque)
+  const ejercicios = aplicarOrden(det.datos.ejercicios, ordenSes);
   const ejerciciosPorId = { ...det.datos.ejerciciosPorId, ...extra.ejercicios };
   const ultimas = { ...det.datos.ultimas, ...extra.ultimas };
   if (resumen) return <Resumen resumen={resumen} sesion={sesion} alCerrar={alCerrar} />;
@@ -429,21 +439,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       // contando esta): así la pantalla de bloqueo, el aviso al móvil y la voz dicen la misma serie que la tarjeta (antes, al
       // saltarse una, contaban las hechas y decían otra). El descanso y la ronda, como siempre (trasSerie)
       const hechasTras = { ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } };
-      const nx = serieQueToca(ejercicios, hechasTras, rP.siguiente);
-      const sig = nx && ejercicios.find((x) => x.id === nx.id);
-      const texto = !sig ? 'terminar la sesión' : sig.id === e.id || nx.numero > 1 ? `serie ${nx.numero} de ${nombreCon(sig)}` : nombreCon(sig);
-      // v0.48: lo que dirá el entrenador por voz al acabar el descanso («Serie 3 de press banca: 80 kilos por 6»)
-      let voz = '¡Sesión terminada! Buen trabajo.';
-      // v0.62: el aviso al móvil y la pantalla de bloqueo, con la carga que le propone («serie 3 de press banca · 80 kg × 6»)
-      let avisoMovil = texto;
-      if (sig) {
-        try {
-          const a = actualDe(sig);
-          const prop = propuestaDe(sig, nx.numero, hechasTras[sig.id] || {});
-          voz = fraseSerie({ numero: nx.numero, series: sig.series, nombre: a.nombre, kg: prop?.kg, reps: prop?.reps });
-          avisoMovil = textoAviso({ texto, kg: prop?.kg, reps: prop?.reps }) || texto;
-        } catch { voz = `Ahora, ${texto}.`; }
-      }
+      const { sig, texto, voz, aviso: avisoMovil } = textosSiguiente(ejercicios, hechasTras, rP.siguiente, e.id);
       // v0.50: el temporizador sale en la página, debajo de este ejercicio (o de su superserie)
       if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, aviso: avisoMovil, tras: e.id, inicio: Date.now() });
       else if (r.enRonda) { cambiarDescanso(null); avisoConCambio(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); }
@@ -461,6 +457,70 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       cancelarPlegado(e.id);
       setHechas((h) => { const m = { ...h[e.id] }; if (previa) m[numero] = previa; else delete m[numero]; return { ...h, [e.id]: m }; });
     }
+  }
+
+  // Lo que viene tras una serie (o tras reordenar en un descanso): la serie que toca y lo que dicen el temporizador
+  // («Después: …»), la voz al acabar el descanso, el aviso al móvil y la pantalla de bloqueo. lista: los ejercicios en el orden
+  // de ahora; sugerida: la que dijo trasSerie; tras: el ejercicio tras el que se descansa
+  function textosSiguiente(lista, hechasTras, sugerida, tras) {
+    const nx = serieQueToca(lista, hechasTras, sugerida);
+    const sig = nx && lista.find((x) => x.id === nx.id);
+    const texto = !sig ? 'terminar la sesión' : sig.id === tras || nx.numero > 1 ? `serie ${nx.numero} de ${nombreCon(sig)}` : nombreCon(sig);
+    // v0.48: lo que dirá el entrenador por voz al acabar el descanso («Serie 3 de press banca: 80 kilos por 6»)
+    let voz = '¡Sesión terminada! Buen trabajo.';
+    // v0.62: el aviso al móvil y la pantalla de bloqueo, con la carga que le propone («serie 3 de press banca · 80 kg × 6»)
+    let avisoMovil = texto;
+    if (sig) {
+      try {
+        const a = actualDe(sig);
+        const prop = propuestaDe(sig, nx.numero, hechasTras[sig.id] || {});
+        voz = fraseSerie({ numero: nx.numero, series: sig.series, nombre: a.nombre, kg: prop?.kg, reps: prop?.reps });
+        avisoMovil = textoAviso({ texto, kg: prop?.kg, reps: prop?.reps }) || texto;
+      } catch { voz = `Ahora, ${texto}.`; }
+    }
+    return { nx, sig, texto, voz, aviso: avisoMovil };
+  }
+
+  // v0.64 (4): cambiar el orden de lo que queda (nunca la pauta del coach). La serie que había dicho la última marcada se
+  // olvida si su ejercicio ya no es el primero de lo que queda; con un descanso en marcha, lo que dice que viene después (el
+  // temporizador, la voz, el aviso al móvil y la pantalla de bloqueo) pasa a ser lo del orden nuevo
+  function cambiarOrden(nuevoOrden, { texto = null, deshacer = true, foco = false } = {}) {
+    const antes = { orden: ordenSes, proxima };
+    const lista = aplicarOrden(det.datos.ejercicios, nuevoOrden);
+    const prox2 = proximaTrasReordenar(lista, hechas, proxima);
+    setOrdenSes(nuevoOrden);
+    setProxima(prox2);
+    if (descanso && !sesion.completada) {
+      const t = textosSiguiente(lista, hechas, prox2, descanso.tras);
+      cambiarDescanso({ ...descanso, texto: t.texto, voz: t.voz, aviso: t.aviso });
+    }
+    const nx = serieQueToca(lista, hechas, prox2);
+    if (foco && nx) {
+      // Se abre lo que toca ahora y se lleva la vista a él
+      setAbiertos((a) => new Set([...(a || []), nx.id]));
+      requestAnimationFrame(() => requestAnimationFrame(() => irAEjercicio(nx.id)));
+    }
+    if (texto) {
+      aviso(texto, 'ok', deshacer ? { texto: 'Deshacer', fn: () => {
+        setOrdenSes(antes.orden); setProxima(antes.proxima);
+        if (descanso && !sesion.completada) {
+          const lista0 = aplicarOrden(det.datos.ejercicios, antes.orden);
+          const t = textosSiguiente(lista0, hechasRef.current, antes.proxima, descanso.tras);
+          cambiarDescanso({ ...descanso, texto: t.texto, voz: t.voz, aviso: t.aviso });
+        }
+      } } : undefined);
+    }
+  }
+  // «Máquina ocupada · hacerlo luego»: el ejercicio (o su superserie) pasa detrás de lo que queda
+  function dejarLuego(e) {
+    const o = moverAlFinal(ejercicios, hechas, e.id);
+    if (!o) return;
+    const lista = aplicarOrden(det.datos.ejercicios, o);
+    const nx = serieQueToca(lista, hechas, proximaTrasReordenar(lista, hechas, proxima));
+    const sig = nx && lista.find((x) => x.id === nx.id);
+    // La tarjeta que se deja para luego se cierra (si no tiene series): así lo siguiente queda a la vista
+    if (!Object.keys(hechas[e.id] || {}).length) setAbiertos((a) => { const n = new Set(a || []); n.delete(e.id); return n; });
+    cambiarOrden(o, { texto: `${actualDe(e).nombre}, para luego${sig ? `. Ahora: ${nombreCon(sig)}` : ''}`, foco: true });
   }
 
   async function quitar(e, numero) {
@@ -605,6 +665,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
               sinMaterial={lugar !== 'gimnasio' && sinAlternativa.includes(e.id) && !cambiado ? lugar : null}
               videos={videos.enviados[e.id] || 0} videosPendientes={videos.pendientes[e.id] || 0} alSubirVideo={() => setRecontarVideos((n) => n + 1)}
               hechas={hechas[e.id] || {}} enCola={enCola} abierto={abiertos?.has(e.id)} siguiente={prox?.id === e.id ? prox.numero : null} teclado={teclado} avisarCambio={avisarCambio}
+              luego={!sesion.completada && atleta.estado !== 'baja' && puedeDejarLuego(ejercicios, hechas, e.id) ? () => dejarLuego(e) : null}
+              ordenar={!sesion.completada && atleta.estado !== 'baja' && bloquesPendientes(ejercicios, hechas).length > 1 ? () => setOrdenando(true) : null}
               alternar={() => alternar(e.id)} guardar={(n, v) => guardar(e, n, v)} quitar={(n) => quitar(e, n)}
               cambiar={(ej) => {
                 setSustitutos({ ...sustitutos, [e.id]: ej.id === e.ejercicio.id ? null : ej.id });
@@ -657,6 +719,12 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         }} />}
       {calculadora && <Calculadora inicial={calculadora.kg ? { kg: calculadora.kg, reps: 5, rpe: 8 } : ultimaHecha ? { kg: Number(ultimaHecha.kg) || 60, reps: ultimaHecha.reps || 5, rpe: ultimaHecha.rpe ? Math.round(ultimaHecha.rpe) : 8 } : {}}
         discos={discosCon(discoMinimo)} alCerrar={() => setCalculadora(false)} />}
+      {ordenando && (
+        <OrdenarSesion ejercicios={ejercicios} hechas={hechas} etiquetas={etiquetas} nombreDe={(x) => actualDe(x).nombre}
+          alMover={(o) => cambiarOrden(o, { deshacer: false })}
+          reordenar={(claves) => reordenarPendientes(ejercicios, hechas, claves)} subir={(seId, d) => moverBloque(ejercicios, hechas, seId, d)}
+          alCerrar={() => setOrdenando(false)} />
+      )}
       {terminando && (
         <Terminar sesion={sesion} semana={semana} inicio={inicio} minutosSugeridos={minutosHechos} conEjercicios={ejercicios.length > 0} alCerrar={() => { setTerminando(false); setMinutosHechos(null); }}
           alGuardar={async (cambios) => {
@@ -697,7 +765,8 @@ function Cronometro({ inicio, minutos, hechas, total }) {
 }
 
 function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
-  descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null, avisarCambio = null }) {
+  descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null, avisarCambio = null,
+  luego = null, ordenar = null }) {
   const { atleta, propio, aviso } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
   const [editandoNota, setEditandoNota] = useState(false);
@@ -772,6 +841,9 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   const detalleDescanso = delCoach ? `Te lo ha puesto tu coach: ${textoDescanso(descanso.seg, { delCoach: true })}`
     : descanso.origen === 'propio' ? `Tuyo: ${textoDescanso(descanso.seg)}` : `Por defecto: ${textoDescanso(descanso.seg)}`;
   const herramientas = [
+    // v0.64 (4): dejarlo para luego y cambiar el orden de lo que queda (solo hoy: la pauta de tu coach no cambia)
+    luego && !completo && { id: 'luego', ico: 'reloj', texto: 'Máquina ocupada · hacerlo luego', detalle: etiqueta ? 'La superserie entera pasa detrás de lo que te queda' : 'Pasa detrás de lo que te queda; tu coach verá el orden en que lo hiciste' },
+    ordenar && { id: 'orden', ico: 'ordenar', texto: 'Cambiar el orden', detalle: 'De lo que te queda de la sesión, solo hoy' },
     { id: 'cambiar', ico: 'intercambiar', texto: 'Cambiar', detalle: 'Por una alternativa, si la máquina está ocupada o algo no te sienta bien' },
     { id: 'historial', ico: 'historial', texto: 'Historial', detalle: 'Tus series, gráficas y récords de este ejercicio' },
     { id: 'descanso', ico: 'reloj', texto: 'Descanso', detalle: detalleDescanso, fijo: delCoach },
@@ -784,6 +856,8 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   const usar = (h) => {
     if (h.id === 'tempo') prepararAudio();
     if (h.id === 'nota') { setHoja(null); setEditandoNota(true); return; }
+    if (h.id === 'luego') { setHoja(null); luego?.(); return; }
+    if (h.id === 'orden') { setHoja(null); ordenar?.(); return; }
     // v0.52: el nombre y el pictograma del ejercicio pasan a la cabecera de su ficha (elemento compartido)
     // (si la cabecera de la tarjeta se ha quedado fuera de la pantalla, el nombre sale del título de la hoja «Más»)
     if (h.id === 'historial') {
@@ -872,6 +946,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
             );
           })}
           <div class="series-acciones">
+            {luego && !completo && <button class="btn-texto btn-luego" onClick={luego} aria-label={`Máquina ocupada: hacer ${etiqueta ? 'la superserie' : ej.nombre} luego`}><Icono n="reloj" /> Máquina ocupada · hacerlo luego</button>}
             <button class="btn-texto" onClick={() => setExtra(filas - e.series + 1)}><Icono n="mas" /> Añadir serie</button>
             {quitable && <button class="btn-texto btn-quitar-serie" onClick={() => { setExtra(Math.max(0, quitable - 1 - e.series)); setBorr((b) => { const n = { ...b }; delete n[quitable]; return n; }); }} aria-label={`Quitar la serie ${quitable}, la añadida`}><Icono n="menos" /> Quitar serie {quitable}</button>}
           </div>
