@@ -25,6 +25,8 @@ import { tareasDelDia } from '../../logica/tareas.js';
 import { ActividadSesion, useEnCurso, comprobarEnCurso } from './EnCurso.jsx';
 import { estadoActividad } from '../../logica/actividad.js';
 import { leerEnlaceVideo } from '../../logica/tecnica.js';
+import { repartirPestanas, PREFERIDAS_ATLETA } from '../../logica/pestanas.js';
+import { useEstrecha, BotonMas, HojaMas } from '../BarraMas.jsx';
 import { VideoEnlazado } from '../tecnica/MiTecnica.jsx';
 
 // Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
@@ -204,7 +206,14 @@ export function AtletaApp() {
 
 // La pantalla: la sesión abierta o la pestaña elegida con la barra de abajo (aparte, para la píldora de la barra)
 function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSesion, releer, salud, tab, dia, TABS, checkinPendiente, respuestasSueltas, mensajesSinLeer, nuevasEquipo, irAPestana, salirModoAtleta, insignia, atletaId }) {
-  const barra = usePildora(sesionId ? null : `${tab}:${TABS.length}`);
+  // En el móvil la barra tiene cinco huecos: las cuatro de cada día y «Más» con el resto (en pantallas anchas caben todas)
+  const estrecha = useEstrecha();
+  const reparto = repartirPestanas(TABS, PREFERIDAS_ATLETA, { estrecha });
+  const [verMas, setVerMas] = useState(false);
+  useEffect(() => { if (!estrecha) setVerMas(false); }, [estrecha]);   // al ensanchar la pantalla, «Más» deja de existir
+  const enMas = (id) => reparto.mas.some(([t]) => t === id);
+  const nuevasEnMas = enMas('equipo') && tab !== 'equipo' ? nuevasEquipo : 0;
+  const barra = usePildora(sesionId ? null : `${tab}:${reparto.barra.length}:${reparto.mas.length}`);
   // v0.52: «Sesión en curso» (fuera de la sesión, con series hechas y sin terminar): la píldora de arriba
   const enCurso = useEnCurso(atletaId);
   const programa = compartido.programa.datos;
@@ -232,9 +241,9 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
             {tab === 'perfil' && <Perfil {...compartido} />}
           </main>
           <nav class="tabs" aria-label="Secciones">
-            <div ref={barra} class={`tabs-in ${TABS.filter(([t]) => t !== 'perfil').length >= 7 ? 'tabs-muchas' : ''}`}>
+            <div ref={barra} class={`tabs-in ${reparto.barra.filter(([t]) => t !== 'perfil').length >= 7 ? 'tabs-muchas' : ''}`}>
               <span class="tabs-pildora" aria-hidden="true" />
-              {TABS.map(([id, texto, icono]) => (
+              {reparto.barra.map(([id, texto, icono]) => (
                 <button key={id} class={`tab ${id === 'perfil' ? 'tab-perfil' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => irAPestana(id)}>
                   <span class={`tab-ico ${(id === 'checkin' && checkinPendiente) || (id === 'hoy' && respuestasSueltas) ? 'punto' : ''}`}>
                     <Icono n={icono} class={`ico-${icono}`} />{id === 'mensajes' && <Insignia n={mensajesSinLeer} etiqueta={`${mensajesSinLeer} mensajes sin leer`} />}
@@ -243,6 +252,10 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
                   {texto}
                 </button>
               ))}
+              {reparto.mas.length > 0 && (
+                <BotonMas activa={enMas(tab)} abierta={verMas} n={nuevasEnMas} punto={enMas('checkin') && checkinPendiente}
+                  etiqueta={`${nuevasEnMas} ${nuevasEnMas === 1 ? 'publicación nueva' : 'publicaciones nuevas'} en el equipo`} alAbrir={() => setVerMas(true)} />
+              )}
               {propio && (
                 <button class="tab" onClick={() => salirModoAtleta()}>
                   <span class="tab-ico"><Icono n="atletas" /></span>Entrenador
@@ -250,6 +263,14 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
               )}
             </div>
           </nav>
+          {verMas && reparto.mas.length > 0 && (
+            <HojaMas pestanas={reparto.mas} actual={tab} alCerrar={() => setVerMas(false)} alElegir={(id) => { setVerMas(false); irAPestana(id); }}
+              detalles={{ comidas: 'Tu menú de la semana y tus recetas', checkin: 'Tu repaso de la semana para tu coach', equipo: 'El muro de los atletas de FBE', perfil: 'Tu cuenta y los ajustes de este móvil' }}
+              valores={{
+                checkin: checkinPendiente ? <span class="chip aviso">Pendiente</span> : null,
+                equipo: nuevasEnMas ? <span class="chip morado num">{nuevasEnMas > 99 ? '99+' : nuevasEnMas} {nuevasEnMas === 1 ? 'nueva' : 'nuevas'}</span> : null,
+              }} />
+          )}
         </>
       )}
     </div>

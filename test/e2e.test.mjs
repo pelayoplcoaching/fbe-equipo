@@ -4,6 +4,7 @@
 // Uso: npm run build && node test/e2e.test.mjs
 import { chromium } from 'playwright';
 import { servir } from './servidor.mjs';
+import { irASeccion, haySeccion, esperarSinSeccion } from './secciones.mjs';
 import { createRequire } from 'node:module';
 import { readFileSync as leerArchivo, readdirSync } from 'node:fs';
 import { VERSION_LEGAL } from '../web/src/legal.js';
@@ -931,7 +932,7 @@ try {
   check(!/\d/.test(await p.locator('.peso-hoy').textContent()), 'apunta su peso de hoy en un toque; en Hoy, sin la cifra (a un atleta no le gustaba verla siempre)');
 
   console.log('\nAtleta: check-in');
-  await p.locator('.tab', { hasText: 'Check-in' }).click();
+  await irASeccion(p, 'Check-in');
   // v0.49: una pregunta por pantalla, con su progreso («1 de N») y el foco en la pregunta
   await p.locator('#ck-titulo').waitFor();
   const progresoCk = await p.locator('.ck-barra').getAttribute('aria-valuetext');
@@ -1265,7 +1266,7 @@ try {
   await avisoDesl.getByRole('button', { name: 'Deshacer' }).click();
   check(await hay(p.locator('.tarjeta-revisar'), antesDesl), 'con el «Deshacer» de siempre');
   // v0.50: los estados vacíos, con su dibujo de línea: la biblioteca sin resultados (y sus pictogramas)
-  await p.locator('.tab', { hasText: 'Biblioteca' }).click();
+  await irASeccion(p, 'Biblioteca');
   await p.getByLabel('Buscar ejercicio').fill('zzzz');
   const vacioBib = p.locator('.vacio.con-ilustracion', { hasText: 'Ningún ejercicio coincide' });
   await vacioBib.waitFor();
@@ -1311,7 +1312,7 @@ try {
   await filaAviso.waitFor();
   check((await filaAviso.textContent()).includes('Para Lucía Prueba'), 'publica un aviso solo para Lucía');
   await p.getByRole('button', { name: 'Cerrar' }).click();
-  await p.locator('.tab', { hasText: 'Plantillas' }).click();
+  await irASeccion(p, 'Plantillas');
   await p.getByRole('button', { name: 'Asignar Full body 2 días a atletas' }).click();
   for (const n of ['Rubén Martín', 'Carlos Vera']) await p.getByRole('checkbox', { name: n }).check();
   await revisar('asignar');
@@ -1960,7 +1961,7 @@ try {
   check((await hojaFin.textContent()).includes('No hace falta que te vea un médico'), 'al enviarlo, ve la recomendación (sin síntomas ni enfermedad: no hace falta valoración médica)');
   await revisar('cuestionario-enviado');
   await hojaFin.getByRole('button', { name: 'Hecho' }).click();
-  await p.locator('.tab', { hasText: 'Check-in' }).click();
+  await irASeccion(p, 'Check-in');
   await pasoCheckin('Estrés en el trabajo o los estudios');
   check(await p.locator('.ck-de-coach').count() === 1, 'la pregunta de su coach sale en su propia pantalla, marcada como suya');
   await revisar('checkin-preguntas');
@@ -2012,7 +2013,7 @@ try {
   await p.locator('.tu-dia').waitFor();
   check(await p.locator('.tu-dia .fila-dia', { hasText: 'Tu peso' }).count() === 0 && await p.locator('.tu-dia .fila-dia').count() > 0,
     'y a Ana ya no le sale «Tu peso» como pendiente en «Tu día»');
-  await p.locator('.tab', { hasText: 'Check-in' }).click();
+  await irASeccion(p, 'Check-in');
   await repasoCheckin();
   check(await p.locator('.ck-repaso-fila', { hasText: 'Horas de sueño entre semana' }).count() === 1 && await p.locator('.ck-repaso-fila', { hasText: 'Datos de reloj o app' }).count() === 0
     && await p.locator('.ck-repaso-fila', { hasText: 'Estrés en el trabajo' }).count() === 1,
@@ -2218,7 +2219,7 @@ try {
 
   console.log('\nNivel y servicio (v0.22)');
   check(await p.locator('.seccion-nutricion').count() === 0 && !(await p.locator('.contenido').textContent()).includes('Nutrición'), 'a Carlos solo le llevas el entrenamiento: en su Progreso no hay nada de nutrición');
-  await p.locator('.tab', { hasText: 'Check-in' }).click();
+  await irASeccion(p, 'Check-in');
   await repasoCheckin();
   check(await p.locator('.ck-repaso-fila', { hasText: 'Alimentación' }).count() === 0 && await p.locator('.ck-repaso-fila', { hasText: 'Motivación' }).count() + await p.locator('.ck-repaso-fila', { hasText: 'motivación' }).count() >= 1,
     'ni el check-in le pregunta por su alimentación');
@@ -2500,7 +2501,7 @@ try {
   await p.locator('.seccion-menu-hoy').waitFor();
   check(await p.getByRole('button', { name: /^(Empezar|Continuar) sesión$/ }).count() === 0, 'y su Hoy empieza por su menú (ni sesión ni bloque)');
   await revisar('lucia-hoy');
-  await p.locator('.tab', { hasText: 'Comidas' }).click();
+  await irASeccion(p, 'Comidas');
   await p.getByRole('heading', { name: 'Comidas' }).waitFor();
   await p.getByRole('tab', { name: 'Tu semana' }).click();
   const anadirCena = p.getByRole('button', { name: 'Añadir a cena' });
@@ -2608,7 +2609,7 @@ try {
   await p.getByRole('heading', { name: 'Atletas' }).waitFor();
   const nAtletas = await p.locator('.tarjeta-atleta').count();
   await revisar('coach-con-modo-atleta');
-  await p.locator('.tab', { hasText: 'Modo atleta' }).click();
+  await irASeccion(p, 'Modo atleta');
   await p.getByRole('heading', { name: 'Modo atleta' }).waitFor();
   await revisar('empezar-modo-atleta');
   await p.getByRole('button', { name: 'Crear mi ficha y entrar' }).click();
@@ -2624,10 +2625,10 @@ try {
   await p.getByRole('button', { name: 'Volver a atletas' }).click();
   await p.getByRole('heading', { name: 'Atletas' }).waitFor();
   check(await hay(p.locator('.tarjeta-atleta'), nAtletas), 'su ficha no sale en la lista de atletas');
-  await p.locator('.tab', { hasText: 'Modo atleta' }).click();
+  await irASeccion(p, 'Modo atleta');
   await banda.waitFor();
   check(true, 'con la ficha ya creada, la pestaña entra directamente');
-  check(await p.locator('.tab', { hasText: 'Equipo' }).count() === 0, 'en su modo atleta no sale la pestaña Equipo (su ficha nunca entra en la comunidad)');
+  check(!(await haySeccion(p, 'Equipo')), 'en su modo atleta no sale la sección Equipo (su ficha nunca entra en la comunidad)');
   await p.locator('.tab', { hasText: 'Semana' }).click();
   await revisar('modo-atleta-semana');
   await p.locator('.tab', { hasText: 'Entrenador' }).click();
@@ -2672,9 +2673,10 @@ try {
   await p.getByRole('button', { name: 'Sí, reiniciar' }).click();
   await p.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor();
   await entrarComo('Ana López');
-  const tabEquipo = p.locator('.tab', { hasText: 'Equipo' });
-  check(await tabEquipo.isVisible(), 'con la comunidad abierta, Ana ve la pestaña Equipo (cabe con las demás en 390 px)');
-  await tabEquipo.click();
+  // (diseño 8) en el móvil, Equipo está en «Más»; lo nuevo del muro se avisa en el botón «Más»
+  const tabMas = p.locator('nav.tabs .tab-mas');
+  check(await haySeccion(p, 'Equipo'), 'con la comunidad abierta, Ana tiene la sección Equipo (en el móvil, dentro de «Más»)');
+  await irASeccion(p, 'Equipo');
   await p.getByRole('heading', { name: 'Antes de entrar' }).waitFor();
   const textoEntrada = await p.locator('.entrar-equipo').textContent();
   check(textoEntrada.includes('Es voluntario') && textoEntrada.includes('Lo que nunca se comparte') && (await p.getByLabel('Tu nombre en el equipo').inputValue()) === 'Ana L.' && await p.locator('.post').count() === 0,
@@ -2865,7 +2867,7 @@ try {
   await p.locator('nav.tabs').waitFor();
   await p.waitForTimeout(800);
   await cerrarDialogos();
-  await tabEquipo.click();
+  await irASeccion(p, 'Equipo');
   await p.locator('.post', { hasText: 'Torso B hecho' }).waitFor();
   const misEntrenos = p.locator('.post.post-entreno', { hasText: 'Ana L.' });
   check(await misEntrenos.count() === 2 && !(await p.locator('.post', { hasText: 'Torso B hecho' }).textContent()).includes(' kg ×')
@@ -2897,7 +2899,7 @@ try {
   await p.getByRole('heading', { name: '¿Vuelves al equipo?' }).waitFor();
   check(true, 'sale de la comunidad (y la pestaña ofrece volver)');
   await entrarComo('Rubén Martín');
-  await tabEquipo.click();
+  await irASeccion(p, 'Equipo');
   // v0.47: Rubén consiguió un reto la semana pasada: al entrar, lo celebra
   const hojaLogro = p.getByRole('dialog', { name: '¡Reto conseguido!' });
   await hojaLogro.waitFor();
@@ -2919,7 +2921,7 @@ try {
 
   // El coach: avisos fijados, Revisar y el interruptor
   await entrarComo('Pelayo');
-  await p.locator('.tab', { hasText: 'Equipo' }).click();
+  await irASeccion(p, 'Equipo');
   await p.getByRole('heading', { name: 'Equipo', exact: true }).waitFor();
   await p.getByLabel('Aviso para el equipo').fill('El sábado hay quedada en el gimnasio a las 10');
   await p.getByLabel('Fijar arriba').check();
@@ -2970,7 +2972,7 @@ try {
   await rep.getByRole('button', { name: 'Ocultar' }).click();
   await p.locator('.toast', { hasText: 'Publicación oculta' }).waitFor();
   await rep.waitFor({ state: 'detached' });
-  await p.locator('.tab', { hasText: 'Equipo' }).click();
+  await irASeccion(p, 'Equipo');
   await p.locator('.post.oculta', { hasText: 'Carlos V.' }).waitFor();
   check(true, 'oculta la publicación avisada (él la sigue viendo, marcada)');
   await p.getByRole('tab', { name: 'Quién está' }).click();
@@ -2990,9 +2992,9 @@ try {
   await p.locator('.tab', { hasText: 'Atletas' }).click(); // (si no, Rubén abriría la app ya en #equipo)
   await entrarComo('Rubén Martín');
   // v0.47: lo nuevo desde su última visita, en la pestaña y en el muro
-  await tabEquipo.locator('.insignia').waitFor();
-  check(/publicaciones? nuevas? en el equipo/.test(await tabEquipo.locator('.insignia').getAttribute('aria-label')), `la pestaña Equipo dice cuántas publicaciones nuevas hay (${await tabEquipo.locator('.insignia').textContent()})`);
-  await tabEquipo.click();
+  await tabMas.locator('.insignia').waitFor();
+  check(/publicaciones? nuevas? en el equipo/.test(await tabMas.locator('.insignia').getAttribute('aria-label')), `«Más» dice cuántas publicaciones nuevas hay en el equipo (${await tabMas.locator('.insignia').textContent()})`);
+  await irASeccion(p, 'Equipo');
   await p.locator('.post').first().waitFor();
   await p.locator('.muro-separa.nuevo').waitFor();
   check(await p.locator('.muro-separa.nuevo + .post', { hasText: '¿Qué os parece entrenar juntos' }).count() === 1, '«Nuevo» antes de lo publicado desde su última visita');
@@ -3001,16 +3003,16 @@ try {
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   await p.waitForTimeout(800);
   await cerrarDialogos();
-  check(await tabEquipo.locator('.insignia').count() === 0, 'visto el muro, la insignia se va');
+  check(await tabMas.locator('.insignia').count() === 0, 'visto el muro, la insignia se va');
   await entrarComo('Pelayo');
   await abrirPestana(p, 'Cuenta');
   const interruptor = p.getByRole('switch', { name: /Comunidad del equipo/ });
   await interruptor.uncheck();
   await p.locator('.toast', { hasText: 'Comunidad cerrada' }).waitFor();
-  await p.locator('.tab', { hasText: 'Equipo' }).waitFor({ state: 'detached' });
+  check(await esperarSinSeccion(p, 'Equipo'), 'al cerrar la comunidad, el coach deja de tener la sección Equipo');
   await revisar('cuenta-comunidad');
   await entrarComo('Rubén Martín');
-  check(await p.locator('.tab', { hasText: 'Equipo' }).count() === 0, 'con la comunidad cerrada, los atletas no ven la pestaña');
+  check(!(await haySeccion(p, 'Equipo')), 'con la comunidad cerrada, los atletas no ven la sección');
   }
 
   console.log('\nv0.48: tareas, programados, negocio, tu mes, tu bloque, dónde entrenas, voz y compartir un vídeo');

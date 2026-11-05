@@ -7,6 +7,7 @@
 //   · un momento de 24 h (y que uno caducado ya no sale: se simula en la demo);
 //   · 360 px en oscuro, sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
+import { irASeccion } from './secciones.mjs';
 import { readFileSync } from 'node:fs';
 import { sumarMesesFecha, aniversarioDe, mesEquipoDe, tituloMesEquipo, textoAniversario } from '../web/src/logica/celebracion.js';
 import { fechaMadrid, sumarDias } from '../web/src/logica/fechas.js';
@@ -81,7 +82,7 @@ export async function probarComunidad073({ navegador, check, base = 'http://loca
     await cerrarDialogos();
   };
   const irAEquipo = async () => {
-    await p.locator('.tab', { hasText: 'Equipo' }).first().click();
+    await irASeccion(p, 'Equipo');
     await p.locator('.post').first().waitFor();
     await p.waitForTimeout(800);
   };

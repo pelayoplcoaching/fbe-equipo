@@ -195,3 +195,15 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .grafica text.valor { font-size: 12px; font-weight: 720; fill: var(--tinta); }
 .grafica .punto { stroke-width: 2.25; }
 .grafica-carga .barra, .grafica-cardio .barra, .grafica-ingesta .barra-dia, .grafica-negocio .barra { rx: 3px; ry: 3px; }
+
+/* ---------- 8. Barra de abajo de cinco huecos (móvil) -------------------------------------------------------
+   El reparto lo hace logica/pestanas.js: cuatro secciones de cada día y «Más» (ui/BarraMas.jsx) con el resto.
+   Perfil y Cuenta ya no se esconden por CSS en el móvil: van en «Más» (y siguen en el avatar de arriba). */
+@media (max-width: 699px) { .tab-perfil, .tab-cuenta { display: grid; } }
+.tab-mas .tab-ico svg { stroke-width: 3.4; }
+.tab-mas[aria-current="page"] .tab-ico svg path { fill: none; }
+/* La hoja de «Más»: filas grandes; la sección en la que estás, en morado */
+.hoja-mas .fila-ios-nav { min-height: 3.75rem; }
+.hoja-mas .fila-ios-titulo { font-size: 1.0312rem; font-weight: 650; }
+.hoja-mas .mas-actual .fila-ios-titulo { color: var(--morado); }
+.hoja-mas .mas-actual .ios-ico { background: var(--morado); color: var(--sobre-morado); }

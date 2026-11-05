@@ -6,6 +6,7 @@
 //   · silenciar a Carlos 24 h (ve la línea, sin compositor) y una palabra filtrada (Lucía: «pendiente de revisión»);
 //   · 360 px en oscuro, sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
+import { irASeccion } from './secciones.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -68,7 +69,7 @@ export async function probarComunidad072({ navegador, check, base = 'http://loca
     await cerrarDialogos();
   };
   const abrirEquipo = async () => {
-    await p.locator('.tab', { hasText: 'Equipo' }).first().click();
+    await irASeccion(p, 'Equipo');
     await p.locator('.post').first().waitFor();
     await p.waitForTimeout(800);
     await cerrarDialogos();
