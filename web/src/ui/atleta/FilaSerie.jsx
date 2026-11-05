@@ -134,36 +134,41 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
   const [arrastre, setArrastre] = useState(null); // null | { pasado }
   const bloquearClic = useRef(0);
   const poner = (x) => { const el = fila.current; if (el) el.style.transform = x ? `translateX(${x}px)` : ''; };
-  const soltarGesto = () => { const g = gesto.current; if (g) clearTimeout(g.largo); gesto.current = null; };
+  const pararLarga = (g) => { if (g.raf) cancelAnimationFrame(g.largo); else clearTimeout(g.largo); };
+  const soltarGesto = () => { const g = gesto.current; if (g) pararLarga(g); gesto.current = null; };
   useEffect(() => () => soltarGesto(), []);
   const alBajar = (e) => {
     if (bloquearClic.current === Infinity) bloquearClic.current = 0; // (por si no llegó el levantar del dedo de la pulsación larga)
     if (e.pointerType === 'mouse' || !e.isPrimary || gesto.current) return;
     const g = { id: e.pointerId, x: e.clientX, y: e.clientY, eje: null, pasado: false, ancho: fila.current?.getBoundingClientRect().width || 320 };
-    g.largo = setTimeout(() => {
-      if (gesto.current !== g || g.eje) return;
-      g.hecho = true;
-      vibrar('toque');
-      // (revisión M1) el clic que llega al levantar el dedo (en el iPhone, tras un toque largo, puede caer en ✓) no cuenta:
-      // se bloquea mientras siga pulsado y hasta 400 ms después de soltar, se suelte donde se suelte
-      bloquearClic.current = Infinity;
-      const soltar = (ev) => {
-        if (ev.pointerId !== g.id) return;
-        window.removeEventListener('pointerup', soltar, true); window.removeEventListener('pointercancel', soltar, true);
-        bloquearClic.current = Date.now() + 400;
-      };
-      window.addEventListener('pointerup', soltar, true); window.addEventListener('pointercancel', soltar, true);
-      // Con el teclado de la app, se abre en los kilos; con el del móvil, el campo queda enfocado (en el iPhone, el teclado
-      // del sistema solo sale si se enfoca dentro de un toque: hace falta tocar el campo otra vez; en Android sale)
-      enfocar('kg');
-    }, LARGA_MS);
+    // (v0.63.1) la pulsación larga se decide en el siguiente fotograma: si el móvil va cargado (justo tras saltar un descanso,
+    // p. ej.), el temporizador puede vencer con los movimientos del dedo aún en cola; Chrome los entrega antes del fotograma,
+    // así que un deslizamiento que empezó a tiempo se queda como deslizamiento y no abre el teclado por error
+    g.largo = setTimeout(() => { g.largo = requestAnimationFrame(() => largaVencida(g)); g.raf = true; }, LARGA_MS);
     gesto.current = g;
+  };
+  const largaVencida = (g) => {
+    if (gesto.current !== g || g.eje) return;
+    g.hecho = true;
+    vibrar('toque');
+    // (revisión M1) el clic que llega al levantar el dedo (en el iPhone, tras un toque largo, puede caer en ✓) no cuenta:
+    // se bloquea mientras siga pulsado y hasta 400 ms después de soltar, se suelte donde se suelte
+    bloquearClic.current = Infinity;
+    const soltar = (ev) => {
+      if (ev.pointerId !== g.id) return;
+      window.removeEventListener('pointerup', soltar, true); window.removeEventListener('pointercancel', soltar, true);
+      bloquearClic.current = Date.now() + 400;
+    };
+    window.addEventListener('pointerup', soltar, true); window.addEventListener('pointercancel', soltar, true);
+    // Con el teclado de la app, se abre en los kilos; con el del móvil, el campo queda enfocado (en el iPhone, el teclado
+    // del sistema solo sale si se enfoca dentro de un toque: hace falta tocar el campo otra vez; en Android sale)
+    enfocar('kg');
   };
   const alMover = (e) => {
     const g = gesto.current;
     if (!g || e.pointerId !== g.id) return;
     const dx = e.clientX - g.x, dy = e.clientY - g.y;
-    if (!sigueLarga(dx, dy)) clearTimeout(g.largo);
+    if (!sigueLarga(dx, dy)) pararLarga(g);
     if (!g.eje) {
       g.eje = ejeGesto(dx, dy);
       if (!g.eje) return;

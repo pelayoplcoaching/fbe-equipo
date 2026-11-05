@@ -85,8 +85,18 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
   // Un dedo que se desliza en horizontal por la fila (pasos: los dx de cada movimiento)
   async function deslizar(fila, pasos) {
     await fila.scrollIntoViewIfNeeded();
-    const r = await fila.boundingBox();
+    // (en una CPU lenta la página aún puede estar moviéndose: al cerrarse el teclado o el descanso cambia el relleno de abajo.
+    // Se espera a que la fila esté quieta y se comprueba que el dedo cae en ella, para no deslizar sobre otra cosa)
+    let r = await fila.boundingBox();
+    for (let i = 0; i < 40; i++) {
+      await p.waitForTimeout(100);
+      const r2 = await fila.boundingBox();
+      if (r2 && r && Math.abs(r2.y - r.y) < 0.5 && Math.abs(r2.x - r.x) < 0.5) { r = r2; break; }
+      r = r2;
+    }
     const x0 = r.x + 12, y = r.y + r.height / 2;
+    const enLaFila = await fila.evaluate((el, [x, yy]) => el.contains(document.elementFromPoint(x, yy)), [x0, y]);
+    if (!enLaFila) throw new Error(`deslizar: el dedo no cae en la fila (${Math.round(x0)}, ${Math.round(y)})`);
     await toque('touchStart', x0, y);
     for (const dx of pasos) { await toque('touchMove', x0 + dx, y); await p.waitForTimeout(16); }
     await toque('touchEnd');
@@ -216,7 +226,9 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
       'deslizar y volver atrás antes de soltar no marca nada');
     await p.evaluate(() => { window.__vib = []; });
     await deslizar(fila2, [12, 40, 80, 120, 160, 200]);
-    await p.locator('.temporizador').waitFor();
+    await p.locator('.temporizador').waitFor({ timeout: 15000 }).catch(async () => {
+      throw new Error(`deslizar no arrancó el descanso (teclado abierto: ${await teclado.count()}; serie 2 hecha: ${await ej.getByRole('button', { name: 'Quitar la serie 2' }).count()}; vibraciones: ${await p.evaluate(() => JSON.stringify(window.__vib))})`);
+    });
     check(await ej.getByRole('button', { name: 'Quitar la serie 2' }).count() === 1 && await p.evaluate(() => window.__vib.includes(8) && window.__vib.includes(14))
       && (await fila2.locator('.celda').first().inputValue()) === kgSig && (await fila2.locator('.celda').nth(1).inputValue()) === repsSig,
       `deslizar a la derecha marca la serie con lo propuesto (${kgSig} × ${repsSig}), con un toque al pasar el umbral, y arranca el descanso`);

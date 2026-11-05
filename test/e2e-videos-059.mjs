@@ -226,7 +226,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     const { VIDEO_EJEMPLO } = await import('../web/src/datos/video-demo.js');
     await tec.getByLabel('Ángulo del vídeo nuevo').selectOption('De frente');
     await tec.locator('input[aria-label="Elegir el vídeo modelo"]').setInputFiles({ name: 'modelo.mp4', mimeType: 'video/mp4', buffer: Buffer.from(VIDEO_EJEMPLO.split(',')[1], 'base64') });
-    await p.locator('.toast', { hasText: 'Vídeo modelo guardado' }).waitFor({ timeout: 15000 });
+    await p.locator('.toast', { hasText: 'Vídeo modelo guardado' }).waitFor({ timeout: 30000 });
     check(await hay(tec.locator('.modelo-fila'), antes + 1) && await enDemo((d) => d.videos_modelo?.some((m) => m.angulo === 'De frente' && /^modelos\//.test(m.ruta))), '(6) el coach sube su vídeo modelo de la sentadilla (de frente)');
     await revisar('videos-modelo');
     await tec.getByRole('button', { name: 'Cerrar' }).first().click();
