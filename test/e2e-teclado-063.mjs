@@ -82,11 +82,11 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
   };
   const cdp = await ctx.newCDPSession(p);
   const toque = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
-  // Un dedo que se desliza en horizontal por la fila (pasos: los dx de cada movimiento)
-  async function deslizar(fila, pasos) {
-    await fila.scrollIntoViewIfNeeded();
-    // (en una CPU lenta la página aún puede estar moviéndose: al cerrarse el teclado o el descanso cambia el relleno de abajo.
-    // Se espera a que la fila esté quieta y se comprueba que el dedo cae en ella, para no deslizar sobre otra cosa)
+  // La fila, al centro de la pantalla y quieta, y el punto donde poner el dedo (comprobado: cae en la fila). (Si se deja
+  // donde la sube Playwright, puede quedar bajo la cabecera fija de la sesión y el dedo tocaría la cabecera; y en una CPU
+  // lenta la página aún puede moverse al cerrarse el teclado o el descanso.)
+  async function dedoEn(fila, dx = 12) {
+    await fila.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
     let r = await fila.boundingBox();
     for (let i = 0; i < 40; i++) {
       await p.waitForTimeout(100);
@@ -94,17 +94,21 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
       if (r2 && r && Math.abs(r2.y - r.y) < 0.5 && Math.abs(r2.x - r.x) < 0.5) { r = r2; break; }
       r = r2;
     }
-    const x0 = r.x + 12, y = r.y + r.height / 2;
-    const enLaFila = await fila.evaluate((el, [x, yy]) => el.contains(document.elementFromPoint(x, yy)), [x0, y]);
-    if (!enLaFila) throw new Error(`deslizar: el dedo no cae en la fila (${Math.round(x0)}, ${Math.round(y)})`);
+    const x = dx == null ? r.x + r.width / 2 : r.x + dx, y = r.y + r.height / 2;
+    const enLaFila = await fila.evaluate((el, [px, py]) => el.contains(document.elementFromPoint(px, py)), [x, y]);
+    if (!enLaFila) throw new Error(`el dedo no cae en la fila (${Math.round(x)}, ${Math.round(y)})`);
+    return { x, y };
+  }
+  // Un dedo que se desliza en horizontal por la fila (pasos: los dx de cada movimiento)
+  async function deslizar(fila, pasos) {
+    const { x: x0, y } = await dedoEn(fila);
     await toque('touchStart', x0, y);
     for (const dx of pasos) { await toque('touchMove', x0 + dx, y); await p.waitForTimeout(16); }
     await toque('touchEnd');
   }
   async function pulsarLargo(fila) {
-    await fila.scrollIntoViewIfNeeded();
-    const r = await fila.boundingBox();
-    await toque('touchStart', r.x + 12, r.y + r.height / 2);
+    const { x, y } = await dedoEn(fila);
+    await toque('touchStart', x, y);
     await p.waitForTimeout(700);
     await toque('touchEnd');
   }
@@ -237,9 +241,9 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
     await p.locator('.toast', { hasText: 'Serie 2 quitada' }).waitFor();
     check(await ej.getByRole('button', { name: 'Marcar la serie 2 como hecha' }).count() === 1, 'y se deshace como siempre (✓ otra vez)');
     // (al subir la página con el dedo, la fila no se mueve)
-    const r2 = await fila2.boundingBox();
-    await toque('touchStart', r2.x + 30, r2.y + r2.height / 2);
-    for (let i = 1; i <= 8; i++) { await toque('touchMove', r2.x + 30 + i * 2, r2.y + r2.height / 2 - i * 14); await p.waitForTimeout(16); }
+    const d2 = await dedoEn(fila2, 30);
+    await toque('touchStart', d2.x, d2.y);
+    for (let i = 1; i <= 8; i++) { await toque('touchMove', d2.x + i * 2, d2.y - i * 14); await p.waitForTimeout(16); }
     await toque('touchEnd');
     await p.waitForTimeout(300);
     check(await ej.getByRole('button', { name: 'Marcar la serie 2 como hecha' }).count() === 1 && await p.locator('.serie-fondo').count() === 0, 'en vertical es la página: la fila no se desliza ni se marca');
@@ -251,9 +255,8 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
     // (revisión M1) mantener pulsado más de un segundo sobre ✓ y soltar: el clic de detrás no marca ni desmarca nada
     for (const [n, hecha] of [[1, true], [3, false]]) {
       const b = ej.locator(`.serie[data-n="${n}"] .hecho-btn`);
-      await b.scrollIntoViewIfNeeded();
-      const rb = await b.boundingBox();
-      await toque('touchStart', rb.x + rb.width / 2, rb.y + rb.height / 2);
+      const db = await dedoEn(b, null);
+      await toque('touchStart', db.x, db.y);
       await p.waitForTimeout(1500);
       await toque('touchEnd');
       await p.waitForTimeout(800);
