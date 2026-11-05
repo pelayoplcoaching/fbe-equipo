@@ -1224,8 +1224,11 @@ export function crearApi(backend) {
       const diasEntrenados = mapaCalor(dias, hoy).flatMap((w) => w.dias).filter((d) => d.nivel > 0).length;
       // v0.50: también cuántas semanas completas lleva en total (la cabecera de su perfil)
       // v0.52: y cada semana (lunes, programadas y hechas), para el calendario de la pantalla de la racha
+      // v0.68 (la bienvenida): el último día que entrenó (de las últimas 11 semanas) y si ha entrenado alguna vez
+      const ultimoDia = Object.keys(dias).filter((d) => d <= hoy).sort().at(-1) || null;
+      const algunaVez = !!ultimoDia || sesiones.some((x) => x.completada);
       return { racha: racha(lista, hoy), diasEntrenados, semanasCompletas: semanasCompletas(lista, hoy), semanas: lista,
-        diasSemana, actual: semanaEnCurso(objetivo, hoy) };
+        diasSemana, actual: semanaEnCurso(objetivo, hoy), ultimoDia, algunaVez };
     },
     // Cardio hecho por semana (minutos, km y sesiones) en las últimas n semanas, para la gráfica de Progreso
     async cardioSemanas(atletaId, n = 8, hoy = hoyISO()) {

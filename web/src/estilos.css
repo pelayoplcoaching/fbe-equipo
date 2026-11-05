@@ -4622,3 +4622,31 @@ html[data-teclado] .pildora-descanso { display: none; }
 .revision-acciones .btn svg { width: 16px; height: 16px; }
 .revision-acciones .btn svg { flex: none; }
 @media (prefers-reduced-motion: reduce) { .barra-revision span, .barra-sesiones span { transition: none; } }
+
+/* ---------------------------------------------------------------- v0.68: la bienvenida del día
+   Sigue a la portada de arranque: el mismo fondo de noche (#1E1548, como la barra del sistema mientras se ve) con el morado
+   de la marca en una luz de abajo; un solo aspecto, claro u oscuro, porque continúa la portada. El nombre, en grande y
+   ancho, es lo único que llama la atención; el resto, tranquilo. */
+.bdia {
+  --bv-fondo: #1E1548; --bv-tinta: #FFFFFF; --bv-tinta-2: #CFC8F5; --bv-boton: #FFFFFF; --bv-sobre-boton: #2A1E6E;
+  position: fixed; inset: 0; z-index: 1000; display: grid; grid-template-rows: 1fr auto; gap: 24px;
+  padding: calc(env(safe-area-inset-top, 0px) + 32px) max(24px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 28px) max(24px, env(safe-area-inset-left, 0px));
+  background: radial-gradient(120% 60% at 50% 110%, rgba(84, 56, 216, .55), transparent 70%), var(--bv-fondo); color: var(--bv-tinta);
+  color-scheme: dark;
+}
+.bdia-cuerpo { align-self: center; display: grid; gap: 14px; max-width: 34rem; width: 100%; margin: 0 auto; }
+.bdia h1 { margin: 0; display: grid; gap: 4px; }
+.bdia-saludo { font-size: 1.25rem; font-weight: 600; color: var(--bv-tinta-2); }
+.bdia-nombre { font-size: clamp(2.5rem, 13vw, 4rem); font-weight: 850; font-stretch: var(--ancho-expandido, 125%); line-height: 1; letter-spacing: -0.02em; overflow-wrap: anywhere; text-wrap: balance; }
+.bdia-mensaje { margin: 6px 0 0; color: var(--bv-tinta); font-size: 1.1875rem; line-height: 1.45; max-width: 26ch; text-wrap: pretty; }
+.bdia-detalle { margin: 0; font-size: 1rem; line-height: 1.45; color: var(--bv-tinta-2); }
+.bdia-empezar {
+  width: 100%; max-width: 34rem; margin: 0 auto; min-height: 56px; border: 0; border-radius: 16px; font: inherit; font-size: 1.0625rem; font-weight: 750;
+  background: var(--bv-boton); color: var(--bv-sobre-boton); cursor: pointer;
+}
+.bdia-empezar:disabled { background: rgba(255, 255, 255, .16); color: var(--bv-tinta-2); cursor: default; }
+.bdia-empezar:focus-visible { outline: 3px solid var(--bv-tinta-2); outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) {
+  .bdia-cuerpo { animation: bdia-entra .5s cubic-bezier(.2, .8, .2, 1) both; }
+  @keyframes bdia-entra { from { opacity: 0; transform: translateY(12px); } }
+}

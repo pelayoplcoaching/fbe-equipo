@@ -53,6 +53,7 @@ import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js
 import { resumenPautas } from '../../logica/diseno.js';
 import { Portada } from './Portada.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
+import { apuntarRecord } from '../Bienvenida.jsx';
 import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
@@ -431,7 +432,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     }
     if (!previa && previas.datos) {
       const r = recordsDeSesion(enOrden({ ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } }), previas.datos, claveSerie)[`${e.id}-${numero}`];
-      if (r) { celebrar(); avisoConCambio(`¡Récord en ${actualDe(e).nombre}!`, 'record'); }
+      if (r) { celebrar(); avisoConCambio(`¡Récord en ${actualDe(e).nombre}!`, 'record'); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
     }
     if (!previa) {
       // Qué toca ahora: en una superserie se pasa al siguiente ejercicio de la ronda sin descanso

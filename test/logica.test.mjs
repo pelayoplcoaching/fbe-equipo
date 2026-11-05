@@ -4090,5 +4090,31 @@ console.log('\nv0.67: «Revisión semanal» del coach');
   check(RV.ordenRevision([]).length === 0 && RV.ordenRevision(null).length === 0, 'sin atletas, lista vacía');
 }
 
+console.log('\nv0.68: la bienvenida del día');
+{
+  const BV = await import('../web/src/logica/bienvenida.js');
+  const hoyB = '2026-11-05';
+  check(BV.tocaBienvenida({ vista: null, hoy: hoyB }) && BV.tocaBienvenida({ vista: '2026-11-04', hoy: hoyB }) && !BV.tocaBienvenida({ vista: hoyB, hoy: hoyB })
+    && !BV.tocaBienvenida({ vista: null, hoy: hoyB, sesionEnCurso: true }) && !BV.tocaBienvenida({ vista: null, hoy: null }),
+    'sale una vez al día (la primera vez que se abre ese día), nunca con una sesión a medias');
+  check(BV.nombreDePila('  Ana   López ') === 'Ana' && BV.nombreDePila('') === '' && BV.nombreDePila(null) === '', 'el nombre de pila');
+  const m = (x) => BV.mensajeBienvenida({ nombre: 'Ana López', hoy: hoyB, ...x });
+  const c = BV.mensajeBienvenida({ rol: 'coach', nombre: 'Pelayo' });
+  check(`${c.saludo} ${c.nombre}` === 'Valar morghulis, coach supremo', 'al coach: «Valar morghulis, coach supremo»');
+  check(m({ primeraVez: true, toca: 'Torso A' }).mensaje === 'Tu primera sesión te espera: Torso A.' && m({ primeraVez: true }).saludo === 'Hola,', 'si aún no ha entrenado: su primera sesión le espera');
+  check(m({ ultimoDia: '2026-10-27', toca: 'Pierna A' }).mensaje === 'Llevas 9 días sin entrenar. ¿Retomamos hoy?' && m({ ultimoDia: '2026-10-27', toca: 'Pierna A' }).detalle === 'Te espera Pierna A.',
+    '9 días sin entrenar: «¿Retomamos hoy?»');
+  check(/^Hace 5 días de tu último entreno/.test(m({ ultimoDia: '2026-10-31' }).mensaje) && m({ haceMucho: true }).mensaje === 'Hace tiempo de tu último entreno. ¿Retomamos hoy?',
+    'de 4 a 6 días, un empujón suave; más de 11 semanas, «hace tiempo»');
+  const r = m({ ultimoDia: '2026-11-04', record: { ejercicio: 'Sentadilla', fecha: '2026-11-04' }, toca: 'Torso B' });
+  check(r.mensaje === 'Vienes de un récord en Sentadilla. ¡A por más!' && r.detalle === 'Hoy toca Torso B.' && !/récord/.test(m({ ultimoDia: '2026-11-04', record: { ejercicio: 'Sentadilla', fecha: '2026-11-01' } }).mensaje),
+    'tras un récord (de los dos últimos días), el récord; uno más antiguo, no');
+  const t = m({ ultimoDia: '2026-11-03', estado: 'entreno', toca: 'Pierna A', racha: 3 });
+  check(t.saludo === 'Hola de nuevo,' && t.nombre === 'Ana' && t.mensaje === 'Hoy toca Pierna A.' && t.detalle === 'Llevas 3 semanas completas seguidas.', 'si hoy toca: cuál, con su racha');
+  check(m({ ultimoDia: hoyB, estado: 'hecha' }).mensaje === 'La sesión de hoy ya está hecha. ¡Buen trabajo!' && m({ ultimoDia: '2026-11-03', estado: 'descanso' }).mensaje === 'Hoy toca descanso: recupera bien.'
+    && m({ ultimoDia: '2026-11-03', estado: 'semana' }).mensaje === 'Semana completa. ¡Enhorabuena!' && m({ ultimoDia: '2026-11-03' }).mensaje === '¿Qué toca hoy?',
+    'hecha, descanso, semana completa y lo de siempre');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

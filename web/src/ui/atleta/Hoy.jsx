@@ -10,6 +10,8 @@ import { AvisoLogros } from '../Logros.jsx';
 import { AvisosCoach } from '../Avisos.jsx';
 import { InformeBloque, TarjetaBloque } from '../InformeBloque.jsx';
 import { NOMBRE_GRUPO, pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
+import { Bienvenida as BienvenidaDia, useBienvenida } from '../Bienvenida.jsx';
+import { leerEnCurso } from '../en-curso.js';
 import { diaDeCheckin, fmtConDia, hoyISO, desdeISO, rangoSemana, diasEntre, sumarDias } from '../../logica/fechas.js';
 import { queToca, diaPrevistoValido, cuandoDia } from '../../logica/plan.js';
 import { PlanSemana } from './Plan.jsx';
@@ -106,6 +108,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
           )} />
       ) : cargando && !p ? <Siluetas forma="hoy" texto="Cargando tu programa" /> : p && (
         <Contenido p={p} atleta={atleta} abrirSesion={abrirSesion} irA={irA} checkinSemana={checkinSemana} salud={salud} noLeidos={noLeidos} recargar={() => recargar(true)}
+          sinBienvenida={propio || !hechos.datos || verBienvenida}
           entre={(
             <>
               {!verPasos && !propio && <AvisosCoach />}
@@ -305,9 +308,11 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
   );
 }
 
-function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos, recargar, entre = null }) {
+function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos, recargar, entre = null, sinBienvenida = false }) {
   const { api, propio, cola } = useApp();
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id, p]);
+  // v0.68: la bienvenida del día (la primera vez que abre la app hoy; nunca con una sesión a medias ni en el modo atleta del coach)
+  const [verDia, cerrarDia] = useBienvenida(sinBienvenida ? null : api.uid(), { sesionEnCurso: !!leerEnCurso(atleta.id) });
   const [planAbierto, setPlanAbierto] = useState(false);
   const [bloqueAbierto, setBloqueAbierto] = useState(false);
   // v0.52: la pantalla de la racha y, al llegar a un hito (4, 8, 12, 26 o 52 semanas), su momento, una vez en este móvil
@@ -353,8 +358,14 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const ejercicios = det.datos?.ejercicios || [];
   const empezada = ejercicios.some((e) => e.hechas.length);
 
+  // (la bienvenida del día: con lo que ya carga Hoy, sin consultas nuevas)
+  const datosDia = constancia.datos ? {
+    primeraVez: !constancia.datos.algunaVez, ultimoDia: constancia.datos.ultimoDia || null, haceMucho: !!constancia.datos.algunaVez && !constancia.datos.ultimoDia,
+    racha: constancia.datos.racha || 0, estado: e.tipo, toca: e.tipo === 'entreno' ? (e.siguiente?.nombre || siguiente?.nombre || null) : null,
+  } : null;
   return (
     <>
+      {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} alCerrar={cerrarDia} />}
       <section class={`hero-dia hero-${e.tipo}`} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
         {e.tipo !== 'entreno' && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
         <div class="titular">

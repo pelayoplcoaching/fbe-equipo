@@ -5646,6 +5646,16 @@ try {
   console.log('  ✗ la revisión semanal de la v0.67:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.68: la bienvenida del día (atleta y coach) (test/e2e-bienvenida-068.mjs)
+console.log('\nv0.68: la bienvenida del día');
+try {
+  const { probarBienvenida068 } = await import('./e2e-bienvenida-068.mjs');
+  await probarBienvenida068({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la bienvenida de la v0.68:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
 console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');

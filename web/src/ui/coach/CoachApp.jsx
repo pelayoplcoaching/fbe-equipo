@@ -4,6 +4,7 @@ import { conTransicion } from '../transiciones.js';
 import { Panel } from './Panel.jsx';
 import { Ficha } from './Ficha.jsx';
 import { Revisar } from './Revisar.jsx';
+import { Bienvenida, useBienvenida } from '../Bienvenida.jsx';
 import { RevisionSemanal } from './RevisionSemanal.jsx';
 import { Plantillas } from './Plantillas.jsx';
 import { Biblioteca } from './Biblioteca.jsx';
@@ -29,6 +30,8 @@ export function CoachApp() {
   const { api, propioCoach, entrarModoAtleta, pedidoCoach, consumirPedidoCoach } = useApp();
   // (v0.65) «Novedades» tras actualizar la app: al coach, solo lo que es para él
   useState(() => prepararVersionVista(api.uid()));
+  // v0.68: la bienvenida del día, para ti: «Valar morghulis, coach supremo» (una vez al día, en este dispositivo)
+  const [verDia, cerrarDia] = useBienvenida(api.uid());
   const comunidad = useCarga(() => api.comunidad(), []);
   const pestanas = comunidad.datos?.activa ? TODAS : TABS;
   const pestanasRef = useRef(pestanas);
@@ -154,7 +157,7 @@ export function CoachApp() {
       </main>
     </div>
     {buscar && <Buscador alCerrar={cerrarBuscar} ir={ir} />}
-    {!buscar && <AvisoNovedades uid={api.uid()} rol="coach" />}
+    {verDia ? <Bienvenida rol="coach" alCerrar={cerrarDia} /> : !buscar && <AvisoNovedades uid={api.uid()} rol="coach" />}
     </>
   );
 }
