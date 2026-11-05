@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.8' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.9' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -4146,12 +4146,76 @@ console.log('\nv0.69: la comunidad, primera tanda (bienvenida, entrenando ahora,
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
   const mov = legal.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
-  check(legal.VERSION_LEGAL === '2026-12.8' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.8' && PV.novedadesDesde('2026-12.7', '2026-12.8').length === 1
+  check(PV.NOVEDADES_PRIVACIDAD.some((x) => x[3] === '2026-12.8') && PV.novedadesDesde('2026-12.7', '2026-12.8').length === 1
     && /Entrenando ahora/.test(com) && /apagado de entrada/.test(com) && /nunca la hora/.test(com) && /bienvenida/.test(com) && /responder a un comentario/.test(com) && /domingo/.test(com)
     && /Compartir mis entrenos sin preguntar/.test(mov) && /solo en ese móvil/.test(mov) && /Deshacer/.test(mov),
     'la política 2026-12.8: «Entrenando ahora» (apagado de entrada, sin horas), la bienvenida, las respuestas, el resumen del domingo y compartir sin preguntar (en el móvil)');
   const v = NOVEDADES['0.69'];
   check(v.atleta.length <= 3 && v.atleta.every((t) => t.length <= 140) && v.coach.every((t) => t.length <= 140), 'las novedades de la 0.69: hasta tres frases cortas para los atletas (y una para el coach)');
+}
+
+// ---------- v0.70: constancia en compañía (compañeros de racha, retos, insignias)
+console.log('\nv0.70: compañeros de racha, retos por equipos, de cardio y de semanas, e insignias');
+{
+  const C = await import('../web/src/logica/comunidad.js');
+  const { racha: rachaSola } = await import('../web/src/logica/calculos.js');
+  const L = '2026-11-02'; // el lunes de «esta semana»
+  const sem = (lunes, previstas, hechas) => ({ lunes, previstas, hechas });
+  const a = [sem('2026-10-05', 3, 3), sem('2026-10-12', 3, 3), sem('2026-10-19', 3, 3), sem('2026-10-26', 3, 3), sem(L, 3, 1)];
+  const b = [sem('2026-10-05', 2, 1), sem('2026-10-12', 2, 2), sem('2026-10-26', 2, 2), sem(L, 2, 2)];
+  // 10-05: B incompleta (rompe) · 10-12: los dos (1) · 10-19: B sin nada (ni suma ni rompe) · 10-26: los dos (2) · esta: A aún no (no rompe)
+  check(C.rachaPareja(a, b, { lunesHoy: L }).racha === 2 && C.rachaPareja(a, b, { lunesHoy: L }).mejor === 2,
+    'la racha de dos: solo suman las semanas que los dos completan; la semana sin nada de uno no suma ni rompe; la de esta semana sin completar no rompe');
+  const a2 = a.map((x) => (x.lunes === L ? { ...x, hechas: 3 } : x));
+  check(C.rachaPareja(a2, b, { lunesHoy: L }).racha === 3, 'si esta semana los dos la completan, suma');
+  const b2 = b.map((x) => (x.lunes === '2026-10-26' ? { ...x, hechas: 1 } : x));
+  check(C.rachaPareja(a2, b2, { lunesHoy: L }).racha === 1 && C.rachaPareja(a2, b2, { lunesHoy: L }).mejor === 1, 'una semana pasada sin completar de uno la rompe (la mejor se recuerda)');
+  check(C.rachaPareja(a2, b, { lunesHoy: L, desde: '2026-10-28' }).racha === 2 && C.rachaPareja(a2, b, { lunesHoy: L, desde: '2026-10-28' }).mejor === 2,
+    'solo cuenta desde la semana en que aceptaron (desde un miércoles: desde su lunes)');
+  check(C.rachaPareja([], [], { lunesHoy: L }).racha === 0 && C.rachaPareja(a2, [], { lunesHoy: L }).racha === 0, 'sin semanas de los dos, 0');
+  const conTotal = a.map((x) => ({ fecha_inicio: x.lunes, total: x.previstas, hechas: x.hechas }));
+  check(C.rachaPareja(a, a, { lunesHoy: L }).racha === rachaSola(conTotal, '2026-11-05') && C.rachaPareja(a, a, { lunesHoy: L }).racha === 4,
+    'con las mismas semanas dos veces, la racha de siempre (como racha() de calculos.js)');
+  check(C.textoPareja('Rubén M.', 4) === 'Tú y Rubén M. · 🔥 4 semanas' && C.textoPareja('Rubén M.', 1) === 'Tú y Rubén M. · 🔥 1 semana' && C.textoPareja('Rubén M.', 0) === 'Tú y Rubén M.',
+    '«Tú y Rubén M. · 🔥 4 semanas»');
+  // Insignias
+  const ins = C.insigniasDe([{ clave: 'primera_publicacion', valor: 1, meta: 1 }, { clave: 'animos_10', valor: 7, meta: 10 }, { clave: 'reacciones_25', valor: 40, meta: 25 }, { clave: 'racha_4', valor: 1, meta: 4 }]);
+  check(ins.length === 6 && ins.map((x) => x.clave).join() === C.INSIGNIAS.map((x) => x[0]).join() && ins[0].conseguida && !ins[1].conseguida && ins[2].conseguida && ins[2].valor === 25
+    && ins.find((x) => x.clave === 'retos_5').valor === 0 && !ins.find((x) => x.clave === 'pareja_4').conseguida,
+    'las insignias, en su orden: conseguidas las que llegan a la meta (el progreso, como mucho la meta; las que no vienen, sin progreso)');
+  check(C.siguienteInsignia(ins).clave === 'animos_10' && C.siguienteInsignia(C.insigniasDe(C.INSIGNIAS.map(([clave, , , , meta]) => ({ clave, valor: meta, meta })))) === null
+    && C.siguienteInsignia(C.insigniasDe([])).clave === 'primera_publicacion', 'la siguiente: la que tiene más hecho de las que faltan (con todas, ninguna; sin nada, la primera)');
+  // Retos
+  check(C.retoMaximo('individual', 'sesiones') === 100 && C.retoMaximo('equipo', 'sesiones') === 5000 && C.retoMaximo('equipos', 'cardio') === 30000 && C.retoMaximo('individual', 'semanas') === 52
+    && C.retoMaximo('otro', 'sesiones') === 0 && C.retoMaximo('individual', 'otra') === 0, 'el objetivo más alto según cómo se consigue y qué cuenta');
+  check(C.unidadReto('sesiones', 1) === 'sesión' && C.unidadReto('cardio', 30) === 'minutos de cardio' && C.unidadReto('semanas', 1) === 'semana completa' && C.unidadReto('cardio', 2, { corta: true }) === 'minutos',
+    'las unidades: sesiones, minutos de cardio y semanas completas');
+  const hoy = '2026-11-05';
+  const pl = Object.fromEntries(C.PLANTILLAS_RETO.map(([k]) => [k, C.plantillaReto(k, hoy)]));
+  check(C.PLANTILLAS_RETO.length === 5 && pl.semana_perfecta.desde === L && pl.semana_perfecta.hasta === '2026-11-08' && pl.semana_perfecta.medida === 'semanas' && pl.semana_perfecta.objetivo === 1
+    && pl.tres_por_semana.objetivo === 12 && pl.tres_por_semana.hasta === '2026-11-29' && pl.mil_entre_todos.modo === 'equipo' && pl.mil_entre_todos.objetivo === 1000
+    && pl.mil_entre_todos.desde === '2026-11-01' && pl.mil_entre_todos.hasta === '2026-11-30' && pl.cuatro_semanas.objetivo === 4 && pl.cuatro_semanas.medida === 'semanas'
+    && pl.cardio.medida === 'cardio' && C.plantillaReto('x', hoy) === null && C.plantillaReto('mil_entre_todos', '2026-12-10').hasta === '2026-12-31',
+    'las cinco plantillas rellenan el reto con sus fechas (esta semana, cuatro semanas desde el lunes o este mes)');
+  check(Object.values(pl).every((p) => p.objetivo <= C.retoMaximo(p.modo, p.medida) && p.titulo.length <= 80) && !C.plantillaCon042(pl.tres_por_semana) && !C.plantillaCon042(pl.mil_entre_todos)
+    && C.plantillaCon042(pl.cardio) && C.plantillaCon042(pl.semana_perfecta), 'todas caben en sus límites; las de sesiones salen también sin la 042');
+  const rep = C.repartirEquipos([{ perfil_id: 'a', sesiones: 12 }, { perfil_id: 'b', sesiones: 10 }, { perfil_id: 'c', sesiones: 6 }, { perfil_id: 'd', sesiones: 5 }, { perfil_id: 'e', sesiones: 0 }]);
+  const suma = (l) => l.reduce((n, id) => n + { a: 12, b: 10, c: 6, d: 5, e: 0 }[id], 0);
+  check(rep.a.length + rep.b.length === 5 && Math.abs(suma(rep.a) - suma(rep.b)) <= 3 && Math.abs(rep.a.length - rep.b.length) <= 1 && !rep.a.some((x) => rep.b.includes(x))
+    && C.repartirEquipos([]).a.length === 0, `repartir igualados por las sesiones recientes (${suma(rep.a)} contra ${suma(rep.b)})`);
+  const rq = { modo: 'equipos', objetivo: 10, hasta: '2026-11-30' };
+  check(C.retoConseguido(rq, { totalEquipo: 10 }) && !C.retoConseguido(rq, { totalEquipo: 9 }) && !C.retoConseguido(rq, { hechas: 50, total: 50 })
+    && C.retoConseguido({ modo: 'equipo', objetivo: 5, hasta: '2026-11-30' }, { total: 5 }), 'por equipos, conseguido si su equipo llega (sin equipo, no)');
+  // La política 2026-12.9 y las novedades de la 0.70
+  const legal = await import('../web/src/legal.js');
+  const PV = await import('../web/src/logica/privacidad.js');
+  const { NOVEDADES } = await import('../web/src/novedades.js');
+  const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
+  check(legal.VERSION_LEGAL === '2026-12.9' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.9' && PV.novedadesDesde('2026-12.8', '2026-12.9').length === 1 && PV.formatoVersion('2026-12.9')
+    && /compañeros de racha/.test(com) && /No salir en el ranking/.test(com) && /retos por equipos/.test(com) && /Contar mis minutos de cardio en los retos/.test(com) && /apagado de entrada/.test(com) && /insignias/i.test(com),
+    'la política 2026-12.9: compañeros de racha y su racha, retos por equipos, minutos de cardio (si lo enciendes) e insignias');
+  const v = NOVEDADES['0.70'];
+  check(v.atleta.length <= 3 && v.atleta.every((t) => t.length <= 140) && v.coach.every((t) => t.length <= 140), 'las novedades de la 0.70: hasta tres frases cortas para los atletas (y una para el coach)');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

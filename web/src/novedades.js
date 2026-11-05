@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.70': {
+    atleta: [
+      'Compañeros de racha: invita a hasta 3 del equipo y sumad semanas completas juntos 🤝.',
+      'Insignias en tu perfil del equipo, con la siguiente que te queda y cuánto te falta.',
+      'Retos nuevos: por equipos, de minutos de cardio y de semanas completas.',
+    ],
+    coach: [
+      'Retos: plantillas de un toque, por equipos (repartidos igualados), de minutos de cardio y de semanas completas. Necesita la migración 042.',
+    ],
+  },
   '0.69': {
     atleta: [
       'En Equipo: da la bienvenida a quien entra, responde a un comentario y dale 💪.',

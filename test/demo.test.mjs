@@ -448,7 +448,7 @@ console.log('\nLa comunidad del equipo en la demo (v0.43)');
   check(!!entrenoC && entrenoC.resumen.con_kilos === false && hoyEq instanceof Set && hoyEq.has(carlosP) && hoyEq.size === 1, 'Carlos ha compartido hoy su último entreno (sin kilos): es el único con el aro de «hoy»');
   const retos = await api.retosComunidad();
   const reto8 = retos.find((r) => r.titulo === 'Reto de constancia: 8 sesiones');
-  check(retos.length === 4 && reto8?.progreso.length === 4 && reto8.progreso.some((x) => x.yo && x.nombre === 'Ana L.'), `un reto con el progreso de los cuatro (${reto8?.progreso.map((x) => `${x.nombre} ${x.hechas}`).join(', ')})`);
+  check(retos.length === 6 && reto8?.progreso.length === 4 && reto8.progreso.some((x) => x.yo && x.nombre === 'Ana L.'), `un reto con el progreso de los cuatro (${reto8?.progreso.map((x) => `${x.nombre} ${x.hechas}`).join(', ')})`);
   check((await api.logrosComunidad()).length === 0, 'Ana acaba de entrar: los retos que acabaron antes no los celebra');
   const rk = await api.rankingComunidad();
   check(rk.some((x) => x.nombre === 'Rubén M.' && x.previstas >= 3) && rk.some((x) => x.yo) && !rk.some((x) => x.nombre === 'Lucía F.'), `el ranking de la semana (sin Lucía, que solo lleva nutrición): ${rk.map((x) => `${x.nombre} ${x.hechas}/${x.previstas}`).join(', ')}`);
@@ -515,7 +515,7 @@ console.log('\nLas mejoras de la comunidad en la demo (v0.47, como la 029)');
   check(miembros.length === 3 && miembros.every((m) => m.version === VERSION_COMUNIDAD) && VERSION_COMUNIDAD === 'comunidad-2026-11-b', 'los de la demo ya han aceptado el texto nuevo (comunidad-2026-11-b)');
   const pid = Object.fromEntries(miembros.map((m) => [m.nombre, m.perfil_id]));
   const retosC = await a2.retosComunidad();
-  check(retosC.length === 4 && retosC.some((r) => r.modo === 'equipo' && r.total > 0 && r.total < r.objetivo), `los retos de la demo, uno de equipo en marcha (${retosC.map((r) => `${r.titulo} ${r.modo}`).join(' · ')})`);
+  check(retosC.length === 6 && retosC.some((r) => r.modo === 'equipo' && r.total > 0 && r.total < r.objetivo), `los retos de la demo, uno de equipo en marcha (${retosC.map((r) => `${r.titulo} ${r.modo}`).join(' · ')})`);
   check(await lanza(() => a2.guardarReto({ titulo: 'Mucho', desde: hoyISO(), hasta: sumarDias(hoyISO(), 7), objetivo: 101 }))
     && !!(await a2.guardarReto({ titulo: 'Mucho equipo', desde: hoyISO(), hasta: sumarDias(hoyISO(), 7), objetivo: 101, modo: 'equipo' })), 'como en la base: individual hasta 100, de equipo hasta 5000');
   check(await lanza(() => a2.publicarEnComunidad({ encuesta: { pregunta: '¿Una?', opciones: ['Sola'] } })) && await lanza(() => b2.insert('comunidad_posts', [{ tipo: 'encuesta', texto: '¿Iguales?', encuesta: { opciones: ['Sí', 'sí'] } }])),
@@ -1531,8 +1531,8 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   {
     const uid = bT.auth.sesion().user.id;
     const pv = async (v) => (await bT.upsert('privacidad_vista', [{ usuario_id: uid, version: v }], 'usuario_id'))[0].version;
-    check(VERSION_LEGAL_D === '2026-12.8' && await aT.versionLegal() === '2026-12.8' && await pv('2026-12.8') === '2026-12.8' && await pv('2026-12.7') === '2026-12.8' && await pv('2026-12') === '2026-12.8' && await pv('2026-11') === '2026-12.8',
-      '(M2) en la demo (que tiene la 037), la 2026-12.8 (v0.69); nunca hacia atrás, comparando por partes');
+    check(VERSION_LEGAL_D === '2026-12.9' && await aT.versionLegal() === '2026-12.9' && await pv('2026-12.9') === '2026-12.9' && await pv('2026-12.8') === '2026-12.9' && await pv('2026-12') === '2026-12.9' && await pv('2026-11') === '2026-12.9',
+      '(M2) en la demo (que tiene la 037), la 2026-12.9 (v0.70); nunca hacia atrás, comparando por partes');
     check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.10')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato y de un mes que ya existe');
   }
   await bT.auth.entrar('pelayo@fbe.demo', 'demo');
@@ -1741,6 +1741,37 @@ console.log('\nv0.69: la comunidad, primera tanda (las mismas reglas de la 041 e
   check((await a3.entrenandoAhora()).length === 0, 'al apagarlo, ya no sale');
   const datos = await b3.rpc('comunidad_mis_datos', {});
   check(Array.isArray(datos.bienvenidas_dadas) && datos.bienvenidas_dadas.length === 1 && Array.isArray(datos.reacciones_comentarios), '«Descargar mis datos» lleva sus bienvenidas y sus 💪 a comentarios');
+}
+
+console.log('\nv0.70: la comunidad, segunda tanda (las mismas reglas de la 042 en la demo)');
+{
+  const b4 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  const a4 = crearApi(b4);
+  await b4.auth.entrar('ruben@fbe.demo', 'demo');
+  const cp = await a4.companerosComunidad();
+  check(await a4.comunidad042() === true && cp.length === 1 && cp[0].nombre === 'Carlos V.' && cp[0].estado === 'aceptada' && Number.isInteger(cp[0].racha) && 'mi_semana' in cp[0],
+    'Rubén y Carlos son compañeros de racha en la demo (con su racha y cómo va la semana de cada uno)');
+  const lucia = Object.entries(await a4.personasComunidad()).find(([, x]) => x.nombre === 'Lucía F.')[0];
+  const id = await a4.invitarCompanero(lucia);
+  check(await lanza(() => a4.invitarCompanero(lucia)) && await lanza(() => a4.invitarCompanero(a4.uid())) && await lanza(() => b4.insert('comunidad_companeros', [{ de: a4.uid(), para: lucia }])),
+    'invita a Lucía (una vez; ni a sí mismo ni a mano)');
+  await b4.auth.entrar('lucia@fbe.demo', 'demo');
+  check((await a4.companerosComunidad()).some((x) => x.id === id && x.estado === 'pendiente' && !x.invito) && await a4.responderCompanero(id, true) === true
+    && (await a4.companerosComunidad()).find((x) => x.id === id).estado === 'aceptada', 'Lucía la ve y acepta');
+  const retos = await a4.retosComunidad();
+  const rq = retos.find((r) => r.modo === 'equipos');
+  const rc = retos.find((r) => r.medida === 'cardio');
+  check(rq?.equiposReto.length === 2 && rq.equiposReto[1].mio && rq.equiposReto.map((e) => e.nombre).join() === 'Rojos,Azules' && rc?.total > 0 && rc.progreso.every((x) => x.yo || x.nombre === 'Carlos V.'),
+    'un reto por equipos (Lucía en Azules) y uno de cardio que solo cuenta a quien cuenta sus minutos (Carlos)');
+  const ins = await a4.insigniasComunidad(a4.uid());
+  check(ins[a4.uid()]?.length === 6 && ins[a4.uid()].find((x) => x.clave === 'primera_publicacion').conseguida, 'sus insignias (con la de la primera publicación)');
+  await a4.ajustesComunidad({ sinRanking: true });
+  await b4.auth.entrar('carlos@fbe.demo', 'demo');
+  check(!Object.keys(await a4.insigniasComunidad(lucia)).length && !(await a4.companerosComunidad(lucia)).length && (await a4.companerosComunidad()).length === 1,
+    'de quien no sale en el ranking, ni insignias ni parejas para los demás (las suyas con él, sí)');
+  await b4.auth.entrar('pelayo@fbe.demo', 'demo');
+  const rec = await a4.recientesComunidad();
+  check(rec.length >= 3 && rec.every((x) => Number.isInteger(x.sesiones)) && (await a4.equiposDeReto(rq.id)).b.length === 2, 'el coach: sesiones recientes de cada uno y el reparto de los equipos');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

@@ -2345,7 +2345,7 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     const enBase = async () => (await b.sql(`select version from privacidad_vista where usuario_id = $1`, [anaUid]))[0]?.version || null;
     await b.sql(`delete from privacidad_vista where usuario_id = $1`, [anaUid]);
     // Sin la 037
-    check(VL === '2026-12.8' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.8', '(v0.69) la vigente: 2026-12.8 con la 037 (la misma detección); sin ella, 2026-12');
+    check(VL === '2026-12.9' && await sin.versionLegal() === '2026-12' && await api.versionLegal() === '2026-12.9', '(v0.70) la vigente: 2026-12.9 con la 037 (la misma detección); sin ella, 2026-12');
     check(PV.debeAvisarPrivacidad((await sin.privacidadVista()).version, await sin.versionLegal()) && await sin.marcarPrivacidadVista() === true && await enBase() === '2026-12',
       'sin la 037: quien no ha visto la 2026-12 la ve y, al cerrarla, la base guarda 2026-12 (lo que admite)');
     local.clear();
@@ -2358,14 +2358,14 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     local.clear();
     // Con la 037: quien vio la 2026-12 ve solo lo nuevo, una vez
     const v = (await api.privacidadVista()).version;
-    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.8,2026-12.7,2026-12.6,2026-12.5,2026-12.4,2026-12.3,2026-12.2,2026-12.1',
-      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 a la 2026-12.8)');
-    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.8', 'al cerrarlo, la base guarda la 2026-12.8');
+    check(v === '2026-12' && PV.debeAvisarPrivacidad(v, await api.versionLegal()) && PV.novedadesDesde(v, await api.versionLegal()).map((x) => x[3]).join() === '2026-12.9,2026-12.8,2026-12.7,2026-12.6,2026-12.5,2026-12.4,2026-12.3,2026-12.2,2026-12.1',
+      'con la 037, quien vio la 2026-12 ve el aviso con solo lo nuevo (lo de la 2026-12.1 a la 2026-12.9)');
+    check(await api.marcarPrivacidadVista() === true && await enBase() === '2026-12.9', 'al cerrarlo, la base guarda la 2026-12.9');
     local.clear();
-    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.8', 'y ya no vuelve a salir (en ningún móvil)');
-    check(await api.marcarPrivacidadVista('2026-12.1') === true && await enBase() === '2026-12.8' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.8', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.1 ni a la 2026-12)');
+    check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.9', 'y ya no vuelve a salir (en ningún móvil)');
+    check(await api.marcarPrivacidadVista('2026-12.1') === true && await enBase() === '2026-12.9' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.9', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.1 ni a la 2026-12)');
     await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
-    check(/vigente \(2026-12\.8\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
+    check(/vigente \(2026-12\.9\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
     globalThis.localStorage = previo;
   }
   await b.sql(`delete from recordatorios_tecnica`); await b.sql(`delete from frases_correccion`); await b.sql(`delete from chat_cupos`);

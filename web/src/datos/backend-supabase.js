@@ -18,7 +18,9 @@ export const CLAVE_TABLA = { cobros_atletas: 'atleta_id', comidas_atleta: 'atlet
   // v0.67 (migración 040): la revisión semanal del coach
   revisiones_semanales: 'atleta_id,lunes',
   // v0.69 (migración 041): 💪 a un comentario y las bienvenidas a los nuevos
-  comunidad_comentario_reacciones: 'comentario_id,autor_id', comunidad_bienvenidas: 'de,para' };
+  comunidad_comentario_reacciones: 'comentario_id,autor_id', comunidad_bienvenidas: 'de,para',
+  // v0.70 (migración 042): el reparto de los retos por equipos
+  comunidad_reto_equipos: 'reto_id,atleta_id' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 

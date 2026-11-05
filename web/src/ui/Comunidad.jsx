@@ -5,6 +5,8 @@
 // filtros y novedades del muro, encuestas del coach y ánimos.
 // v0.69 (migración 041): bienvenida a los nuevos, «Entrenando ahora», compartir los entrenos sin preguntar (en el móvil),
 // responder a un comentario y 💪 a un comentario. Sin la 041, lo que la necesita no sale (o lo dice).
+// v0.70 (migración 042): compañeros de racha, plantillas de retos, retos por equipos, retos de minutos de cardio y de semanas
+// completas, e insignias. Sin la 042, lo del atleta no sale y el coach ve «Disponible tras la migración 042».
 import { createContext, Fragment } from 'preact';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando } from './comunes.jsx';
@@ -14,12 +16,13 @@ import {
   REACCIONES, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_PREGUNTA, MAX_OPCION, RETO_MAX, FILTROS_MURO, MEDALLAS, nombreEquipo, nombreValido, estadoReto, textoReto,
   ordenarRanking, posicionesRanking, quienes, textoRacha, mencionEnCurso, sugerenciasMencion, insertarMencion, mencionesDeTexto, trozosConMenciones, encuestaCerrada,
   hilosComentarios, DIAS_BIENVENIDA,
+  MAX_COMPANEROS, MEDIDAS_RETO, MODOS_RETO, retoMaximo, unidadReto, EQUIPOS_DE_ENTRADA, PLANTILLAS_RETO, plantillaReto, plantillaCon042, repartirEquipos, siguienteInsignia,
 } from '../logica/comunidad.js';
 import { fmtConDia, fmtCorta, hoyISO, sumarDias, lunesDe, aISO } from '../logica/fechas.js';
 import { num } from '../logica/calculos.js';
 import { Pictograma } from './Pictograma.jsx';
 import { patronEjercicio } from '../logica/diseno.js';
-import { VERSION_COMUNIDAD, AVISO_041 } from '../datos/api.js';
+import { VERSION_COMUNIDAD, AVISO_041, AVISO_042 } from '../datos/api.js';
 import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 
@@ -162,6 +165,7 @@ function DentroDelEquipo({ m, alCambiar }) {
         <p class="animos-recibidos peq"><span class="animos-ico" aria-hidden="true">🙌</span><span>Te han animado esta semana: <strong>{quienes(recibidos.map((x) => x.nombre), 3)}</strong></span></p>
       )}
       <EntrenandoAhora />
+      <CompanerosRacha cambios={cambios} />
       <Pestanas opciones={VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eq" />
       <div class="pestana-panel" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista}>
         {vista === 'muro' && <Muro cambios={cambios} />}
@@ -396,6 +400,150 @@ export function EntrenandoAhora() {
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- v0.70: compañeros de racha e insignias
+// Arriba en Equipo: tus parejas («Tú y Rubén M. · 🔥 4 semanas», con cómo va la semana de cada uno), las invitaciones que te
+// llegan (Aceptar / Ahora no) y las que has mandado. Sin la 042, nada.
+const estadoSemana = (v) => (v === true ? '✓ completa' : v === false ? 'aún no' : 'sin sesiones');
+function CompanerosRacha({ cambios = 0 }) {
+  const { api, aviso } = useApp();
+  const [vuelta, setVuelta] = useState(0);
+  const lista = useCarga(() => api.companerosComunidad(), [vuelta, cambios]);
+  const [invitar, setInvitar] = useState(false);
+  const [terminar, setTerminar] = useState(null);
+  const [ocupado, una] = useUnaVez();
+  const filas = lista.datos;
+  if (!filas) return null;
+  const hacer = (fn, texto) => una(async () => {
+    try { await fn(); if (texto) aviso(texto); setTerminar(null); setVuelta((v) => v + 1); } catch (e) { aviso(e.message, 'error'); }
+  });
+  const aceptadas = filas.filter((x) => x.estado === 'aceptada');
+  const recibidas = filas.filter((x) => x.estado === 'pendiente' && !x.invito);
+  const enviadas = filas.filter((x) => x.estado === 'pendiente' && x.invito);
+  const libres = MAX_COMPANEROS - aceptadas.length - enviadas.length;
+  const confirmar = (x, texto, fn) => (terminar === x.id ? (
+    <span class="fila-envolver cp-confirmar">
+      <span class="mini">{texto}</span>
+      <button type="button" class="btn btn-peq btn-peligro" disabled={ocupado} onClick={fn}>Sí</button>
+      <button type="button" class="btn btn-peq" onClick={() => setTerminar(null)}>No</button>
+    </span>
+  ) : null);
+  return (
+    <section class="panel panel-pad pila-s companeros" aria-labelledby="eq-companeros-t">
+      <div class="separa">
+        <h2 id="eq-companeros-t" class="cp-t"><span aria-hidden="true">🤝 </span>Compañeros de racha</h2>
+        {libres > 0 && <button type="button" class="btn btn-peq" onClick={() => setInvitar(true)}><Icono n="mas" /> Invitar</button>}
+      </div>
+      {!filas.length && <p class="peq secundario">Invita a hasta {MAX_COMPANEROS} del equipo: cada semana que los dos completéis la vuestra, sumáis racha juntos.</p>}
+      {recibidas.map((x) => (
+        <div key={x.id} class="cp-invitacion pila-xs">
+          <span class="peq"><BotonPersona perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} avatar={false}><strong class="btn-persona-nombre">{x.nombre}</strong></BotonPersona> te invita a ser compañeros de racha</span>
+          <span class="fila-envolver">
+            <button type="button" class="btn btn-peq btn-primario" disabled={ocupado} aria-label={`Aceptar a ${x.nombre} como compañero de racha`}
+              onClick={() => hacer(() => api.responderCompanero(x.id, true), `${x.nombre} y tú ya sois compañeros de racha`)}>Aceptar</button>
+            <button type="button" class="btn btn-peq" disabled={ocupado} aria-label={`Rechazar la invitación de ${x.nombre}`}
+              onClick={() => hacer(() => api.responderCompanero(x.id, false), 'Invitación rechazada')}>Ahora no</button>
+          </span>
+        </div>
+      ))}
+      {(aceptadas.length > 0 || enviadas.length > 0) && (
+        <ul class="lista cp-lista">
+          {aceptadas.map((x) => (
+            <li key={x.id} class="cp-fila">
+              <AvatarEquipo perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} clase="peq" />
+              <span class="pila-xs cp-texto">
+                <span class="cp-pareja">Tú y <BotonPersona perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} avatar={false}><strong class="btn-persona-nombre">{x.nombre}</strong></BotonPersona>
+                  {x.racha > 0 && <> · <span aria-hidden="true">🔥</span> {x.racha} {x.racha === 1 ? 'semana' : 'semanas'}<span class="sr"> seguidas los dos</span></>}</span>
+                <span class="mini terciario">Esta semana: tú {estadoSemana(x.mi_semana)} · {x.nombre} {estadoSemana(x.su_semana)}</span>
+                {confirmar(x, `¿Dejar de ser compañeros con ${x.nombre}?`, () => hacer(() => api.dejarCompanero(x.id), 'Ya no sois compañeros de racha'))}
+              </span>
+              {terminar !== x.id && <button type="button" class="btn btn-icono plano" aria-label={`Dejar de ser compañeros de racha con ${x.nombre}`} onClick={() => setTerminar(x.id)}><Icono n="cerrar" /></button>}
+            </li>
+          ))}
+          {enviadas.map((x) => (
+            <li key={x.id} class="cp-fila cp-enviada">
+              <AvatarEquipo perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} clase="peq" />
+              <span class="pila-xs cp-texto">
+                <span class="peq">Invitación enviada a <strong>{x.nombre}</strong></span>
+                {confirmar(x, '¿Retirar la invitación?', () => hacer(() => api.dejarCompanero(x.id), 'Invitación retirada'))}
+              </span>
+              {terminar !== x.id && <button type="button" class="btn btn-icono plano" aria-label={`Retirar la invitación a ${x.nombre}`} onClick={() => setTerminar(x.id)}><Icono n="cerrar" /></button>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {invitar && <HojaInvitarCompanero ya={filas.map((x) => x.perfil_id)} alCerrar={() => setInvitar(false)} alInvitar={() => { setInvitar(false); setVuelta((v) => v + 1); }} />}
+    </section>
+  );
+}
+
+// Elegir a quién invitar: los del equipo (ni uno mismo, ni el coach, ni con quien ya hay pareja o invitación)
+function HojaInvitarCompanero({ ya = [], alCerrar, alInvitar }) {
+  const { api, aviso } = useApp();
+  const personas = useCarga(() => api.personasComunidad(), []);
+  const [ocupado, una] = useUnaVez();
+  const lista = Object.entries(personas.datos || {}).map(([perfil_id, p]) => ({ perfil_id, ...p }))
+    .filter((p) => !p.coach && p.perfil_id !== api.uid() && !ya.includes(p.perfil_id))
+    .sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), 'es'));
+  const invitar = (p) => una(async () => {
+    try { await api.invitarCompanero(p.perfil_id); aviso(`Invitación enviada a ${p.nombre}`); alInvitar(); } catch (e) { aviso(e.message, 'error'); }
+  });
+  return (
+    <Hoja titulo="Invitar a un compañero de racha" alCerrar={alCerrar}>
+      <div class="pila">
+        <p class="peq secundario">Si acepta, cada semana que los dos completéis la vuestra sumáis racha juntos. La pareja la veis los dos, tu coach y el equipo (salvo si uno de los dos no sale en el ranking). Cualquiera la puede terminar.</p>
+        {personas.cargando && !personas.datos ? <Cargando texto="Cargando el equipo" /> : !lista.length ? <p class="secundario">No hay nadie más a quien invitar ahora mismo.</p> : (
+          <ul class="lista cp-invitar">
+            {lista.map((p) => (
+              <li key={p.perfil_id} class="cp-fila">
+                <Avatar nombre={p.nombre} foto={p.foto} clase="peq" />
+                <span class="cp-texto">{p.nombre}</span>
+                <button type="button" class="btn btn-peq btn-primario" disabled={ocupado} aria-label={`Invitar a ${p.nombre}`} onClick={() => invitar(p)}>Invitar</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Hoja>
+  );
+}
+
+// Las insignias conseguidas, en pequeño (junto al nombre en el ranking): emojis con su nombre para los lectores de pantalla
+function InsigniasMini({ lista = [] }) {
+  const ok = lista.filter((x) => x.conseguida);
+  if (!ok.length) return null;
+  return (
+    <span class="insignias-mini" role="img" aria-label={`Insignias: ${ok.map((x) => x.nombre).join(', ')}`} title={ok.map((x) => x.nombre).join(' · ')}>
+      {ok.map((x) => <span key={x.clave} aria-hidden="true">{x.emoji}</span>)}
+    </span>
+  );
+}
+
+// En el perfil: las conseguidas y, en el tuyo, la siguiente con su progreso
+function InsigniasPerfil({ lista = [], yo = false }) {
+  const ok = lista.filter((x) => x.conseguida);
+  const sig = yo ? siguienteInsignia(lista) : null;
+  if (!ok.length && !sig) return null;
+  return (
+    <section class="pila-s insignias-perfil" aria-labelledby="pe-insignias-t">
+      <h3 id="pe-insignias-t" class="pe-sub">Insignias</h3>
+      {ok.length > 0 ? (
+        <ul class="pe-insignias">
+          {ok.map((x) => <li key={x.clave} class="chip insignia"><span aria-hidden="true">{x.emoji}</span>{x.nombre}</li>)}
+        </ul>
+      ) : <p class="peq terciario">{yo ? 'Aún ninguna: la primera está cerca.' : 'Aún ninguna.'}</p>}
+      {sig && (
+        <div class="pila-xs insignia-siguiente">
+          <span class="peq"><span aria-hidden="true">{sig.emoji} </span>Siguiente: <strong>{sig.nombre}</strong> · {sig.como.toLowerCase()}</span>
+          <span class="barra-equipo" role="progressbar" aria-valuemin="0" aria-valuemax={sig.meta} aria-valuenow={sig.valor} aria-label={`${sig.nombre}: ${sig.valor} de ${sig.meta}`}>
+            <span style={{ width: `${Math.max(sig.valor ? 4 : 0, Math.round((sig.valor / sig.meta) * 100))}%` }} />
+          </span>
+          <span class="mini terciario num">{sig.valor} de {sig.meta}</span>
+        </div>
+      )}
     </section>
   );
 }
@@ -686,14 +834,18 @@ export function TarjetaEntreno({ r }) {
 export function TarjetaLogro({ r }) {
   if (!r) return null;
   const equipo = r.modo === 'equipo';
+  const equipos = r.modo === 'equipos';
+  const u = (n) => unidadReto(r.medida || 'sesiones', n);
   return (
     <div class="logro-equipo">
       <span class="le-ico" aria-hidden="true"><Icono n="trofeo" /></span>
       <div class="pila-xs">
-        <span class="mini le-k">{equipo ? 'Reto de equipo conseguido' : 'Reto conseguido'}</span>
+        <span class="mini le-k">{equipos ? `Reto por equipos conseguido${r.equipo ? ` · ${r.equipo}` : ''}` : equipo ? 'Reto de equipo conseguido' : 'Reto conseguido'}</span>
         <strong class="le-titulo">{r.titulo}</strong>
         <span class="mini secundario">
-          {equipo ? `${r.hechas} sesiones entre todo el equipo (el objetivo era ${r.objetivo})` : `${r.hechas} de ${r.objetivo} ${r.objetivo === 1 ? 'sesión' : 'sesiones'}`}
+          {equipo ? `${r.hechas} ${u(r.hechas)} entre todo el equipo (el objetivo era ${r.objetivo})`
+            : equipos ? `${r.hechas} ${u(r.hechas)} su equipo (el objetivo era ${r.objetivo})`
+              : `${r.hechas} de ${r.objetivo} ${u(r.objetivo)}`}
           {r.desde && r.hasta ? ` · ${fmtCorta(r.desde)} – ${fmtCorta(r.hasta)}` : ''}
         </span>
       </div>
@@ -926,8 +1078,12 @@ function BotonFoto({ c }) {
 // ---------------------------------------------------------------- retos
 export function Retos({ coach = false, miembro = null, cambios = 0, alCompartirLogro = null }) {
   const { api } = useApp();
-  const retos = useCarga(() => api.retosComunidad(), [cambios]);
+  const [vuelta, setVuelta] = useState(0);
+  const retos = useCarga(() => api.retosComunidad(), [cambios, vuelta]);
+  const con042 = useCarga(() => api.comunidad042().catch(() => null), []);
   const [editar, setEditar] = useState(null); // {} nuevo · reto
+  // (v0.70) al encender «Contar mis minutos» desde un reto, ya cuentan en todos (aunque el miembro aún no se haya vuelto a leer)
+  const [cardioYa, setCardioYa] = useState(false);
   const hoy = hoyISO();
   const lista = retos.datos || [];
   const orden = { en_marcha: 0, proximo: 1, terminado: 2 };
@@ -937,42 +1093,53 @@ export function Retos({ coach = false, miembro = null, cambios = 0, alCompartirL
       {coach && <button class="btn" style="justify-self:start" onClick={() => setEditar({})}><Icono n="mas" /> Nuevo reto</button>}
       <ErrorCaja error={retos.error} reintentar={() => retos.recargar()} />
       {retos.cargando && !retos.datos ? <Siluetas forma="tarjetas" n={2} texto="Cargando los retos" />
-        : !ordenados.length ? <Vacio icono="diana" titulo="Aún no hay retos">{coach ? 'Crea uno: un número de sesiones entre dos fechas, para cada uno o entre todo el equipo.' : 'Cuando tu coach proponga uno, lo verás aquí.'}</Vacio>
-          : ordenados.map((r) => <TarjetaReto key={r.id} r={r} hoy={hoy} coach={coach} miembro={miembro} alEditar={() => setEditar(r)} alCompartirLogro={alCompartirLogro} />)}
-      {editar && <HojaReto reto={editar.id ? editar : null} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); retos.recargar(true); }} />}
+        : !ordenados.length ? <Vacio icono="diana" titulo="Aún no hay retos">{coach ? 'Crea uno: sesiones, minutos de cardio o semanas completas entre dos fechas, para cada uno, entre todo el equipo o por equipos.' : 'Cuando tu coach proponga uno, lo verás aquí.'}</Vacio>
+          : ordenados.map((r) => <TarjetaReto key={r.id} r={r} hoy={hoy} coach={coach} miembro={miembro} alEditar={() => setEditar(r)} alCompartirLogro={alCompartirLogro} cardioYa={cardioYa} alContarCardio={() => { setCardioYa(true); setVuelta((v) => v + 1); }} />)}
+      {editar && <HojaReto reto={editar.id ? editar : null} con042={con042.datos === true} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); retos.recargar(true); }} />}
     </div>
   );
 }
 
-function TarjetaReto({ r, hoy, coach, miembro, alEditar, alCompartirLogro }) {
+function TarjetaReto({ r, hoy, coach, miembro, alEditar, alCompartirLogro, cardioYa = false, alContarCardio }) {
+  const { api, aviso } = useApp();
+  const [ocupado, una] = useUnaVez();
+  const medida = r.medida || 'sesiones';
+  const u = (n) => unidadReto(medida, n);
   const equipo = r.modo === 'equipo';
+  const equipos = r.modo === 'equipos';
   const yo = r.progreso.find((x) => x.yo);
   const conseguido = r.progreso.filter((x) => x.hechas >= r.objetivo).length;
   const estado = estadoReto(r, hoy);
-  // En un reto de equipo, mis sesiones no cuentan si no salgo en el ranking (como en la base)
-  const fueraDelTotal = !!yo && !!miembro?.sin_ranking;
-  const top = r.progreso.filter((x) => x.hechas > 0 && !(x.yo && fueraDelTotal)).slice(0, 3);
+  // En un reto «Entre todos», lo mío no cuenta si no salgo en el ranking (como en la base); por equipos, sí
+  const fueraDelTotal = !!yo && !!miembro?.sin_ranking && (equipo || equipos);
+  // En uno de cardio, mis minutos solo cuentan si lo he encendido (v0.70)
+  const sinCardio = medida === 'cardio' && !!yo && !!miembro && !miembro.cardio_en_retos && !cardioYa;
+  const top = r.progreso.filter((x) => x.hechas > 0 && !(x.yo && (fueraDelTotal || sinCardio))).slice(0, 3);
   const pct = r.objetivo ? Math.min(100, Math.round((r.total / r.objetivo) * 100)) : 0;
+  const contarCardio = () => una(async () => {
+    try { await api.cardioEnRetos(true); aviso('Tus minutos de cardio ya cuentan en los retos'); alContarCardio?.(); } catch (e) { aviso(e.message, 'error'); }
+  });
+  const modoTexto = equipos ? 'Por equipos · ' : equipo ? 'De equipo · ' : '';
   return (
-    <article class={`panel panel-pad pila-s reto ${equipo ? 'reto-de-equipo' : ''}`} aria-label={`Reto: ${r.titulo}`}>
+    <article class={`panel panel-pad pila-s reto ${equipo || equipos ? 'reto-de-equipo' : ''} ${equipos ? 'reto-equipos' : ''}`} aria-label={`Reto: ${r.titulo}`}>
       <div class="separa">
         <div class="pila-xs">
           <h2 class="reto-titulo">{r.titulo}</h2>
-          <span class="mini terciario">{equipo ? 'De equipo · ' : ''}{fmtCorta(r.desde)} – {fmtCorta(r.hasta)} · {r.objetivo} {r.objetivo === 1 ? 'sesión' : 'sesiones'}{equipo ? ' entre todos' : ''}</span>
+          <span class="mini terciario">{modoTexto}{fmtCorta(r.desde)} – {fmtCorta(r.hasta)} · {r.objetivo} {u(r.objetivo)}{equipo ? ' entre todos' : equipos ? ' por equipo' : ''}</span>
         </div>
         <span class={`chip ${estado === 'en_marcha' ? 'morado' : ''}`}>{textoReto(r, hoy)}</span>
       </div>
       {r.descripcion && <p class="peq secundario post-texto">{r.descripcion}</p>}
-      {equipo ? (
+      {equipos ? <><MarcadorEquipos r={r} u={u} />{fueraDelTotal && <p class="peq reto-yo">No sales en el ranking: sigues en tu equipo, pero lo tuyo no suma a su total.</p>}</> : equipo ? (
         <div class="reto-equipo pila-s">
           <div class="separa re-cifra">
-            <span><strong class="num re-total">{r.total}</strong> <span class="secundario">de {r.objetivo} sesiones entre todo el equipo</span></span>
+            <span><strong class="num re-total">{r.total}</strong> <span class="secundario">de {r.objetivo} {u(r.objetivo)} entre todo el equipo</span></span>
             {r.total >= r.objetivo && <span class="chip ok"><Icono n="trofeo" /> ¡Conseguido!</span>}
           </div>
-          <span class="barra-equipo barra-grande" role="progressbar" aria-valuemin="0" aria-valuemax={r.objetivo} aria-valuenow={Math.min(r.total, r.objetivo)} aria-label={`El equipo: ${r.total} de ${r.objetivo} sesiones`}>
+          <span class="barra-equipo barra-grande" role="progressbar" aria-valuemin="0" aria-valuemax={r.objetivo} aria-valuenow={Math.min(r.total, r.objetivo)} aria-label={`El equipo: ${r.total} de ${r.objetivo} ${u(r.objetivo)}`}>
             <span style={{ width: `${Math.max(pct ? 3 : 0, pct)}%` }} class={r.total >= r.objetivo ? 'lleno' : ''} />
           </span>
-          {yo && <p class="peq reto-yo">{fueraDelTotal ? 'No sales en el ranking: tus sesiones no cuentan en el total del equipo.' : <>Tú has sumado <strong class="num">{yo.hechas}</strong></>}</p>}
+          {yo && !sinCardio && <p class="peq reto-yo">{fueraDelTotal ? `No sales en el ranking: lo tuyo no cuenta en el total del equipo.` : <>Tú has sumado <strong class="num">{yo.hechas}</strong></>}</p>}
           {top.length > 0 && (
             <div class="pila-xs">
               <span class="mini terciario">Los que más suman</span>
@@ -989,70 +1156,180 @@ function TarjetaReto({ r, hoy, coach, miembro, alEditar, alCompartirLogro }) {
         </div>
       ) : (
         <>
-          {yo && <p class="peq reto-yo">{yo.hechas >= r.objetivo ? <><Icono n="trofeo" /> ¡Conseguido! {yo.hechas} de {r.objetivo}</> : <>Llevas <strong class="num">{yo.hechas}</strong> de {r.objetivo}</>}</p>}
-          {r.progreso.length > 0 && (
+          {yo && !sinCardio && <p class="peq reto-yo">{yo.hechas >= r.objetivo ? <><Icono n="trofeo" /> ¡Conseguido! {yo.hechas} de {r.objetivo}</> : <>Llevas <strong class="num">{yo.hechas}</strong> de {r.objetivo}</>}</p>}
+          {r.progreso.filter((x) => !(x.yo && sinCardio)).length > 0 && (
             <ul class="lista progreso-equipo">
-              {r.progreso.map((x) => <FilaProgreso key={x.perfil_id} perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} yo={x.yo} hechas={x.hechas} total={r.objetivo} texto={`${Math.min(x.hechas, r.objetivo)}/${r.objetivo}`} />)}
+              {r.progreso.filter((x) => !(x.yo && sinCardio)).map((x) => <FilaProgreso key={x.perfil_id} perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} yo={x.yo} hechas={x.hechas} total={r.objetivo} texto={`${Math.min(x.hechas, r.objetivo)}/${r.objetivo}`} unidad={u(r.objetivo)} />)}
             </ul>
           )}
         </>
+      )}
+      {sinCardio && (
+        <div class="reto-cardio-optin pila-xs">
+          <p class="peq">Tus minutos de cardio no cuentan en los retos. Si los cuentas, el equipo verá cuántos minutos llevas en los retos de cardio (nada más de tus sesiones).</p>
+          <button type="button" class="btn btn-peq btn-primario" style="justify-self:start" disabled={ocupado} onClick={contarCardio}>Contar mis minutos</button>
+        </div>
       )}
       {!coach && r.conseguido && !r.compartido && alCompartirLogro && (
         <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => alCompartirLogro(r)}><Icono n="trofeo" /> Compartir el logro</button>
       )}
       <div class="separa">
-        <span class="mini terciario">{equipo ? (miembro || coach ? 'Suman las sesiones terminadas de todos (menos de quien no sale en el ranking).' : '')
-          : conseguido ? `${conseguido} ${conseguido === 1 ? 'lo ha conseguido' : 'lo han conseguido'}` : 'Cuentan las sesiones terminadas entre esas fechas.'}</span>
+        <span class="mini terciario">{equipos ? 'Cada equipo suma lo de los suyos (menos de quien no sale en el ranking).'
+          : equipo ? (miembro || coach ? `Suman ${medida === 'cardio' ? 'los minutos de cardio' : medida === 'semanas' ? 'las semanas completas' : 'las sesiones terminadas'} de todos (menos de quien no sale en el ranking).` : '')
+          : conseguido ? `${conseguido} ${conseguido === 1 ? 'lo ha conseguido' : 'lo han conseguido'}`
+            : medida === 'cardio' ? 'Cuentan los minutos de cardio de las sesiones terminadas entre esas fechas.' : medida === 'semanas' ? 'Cuentan las semanas con todas tus sesiones hechas.' : 'Cuentan las sesiones terminadas entre esas fechas.'}</span>
         {coach && <button class="btn btn-peq" onClick={alEditar}><Icono n="editar" /> Cambiar</button>}
       </div>
     </article>
   );
 }
 
-function FilaProgreso({ perfilId, nombre, foto, yo, hechas, total, texto }) {
+// v0.70: el marcador de un reto por equipos: el total de cada uno con su barra, quién suma más de cada equipo y el tuyo
+function MarcadorEquipos({ r, u }) {
+  const eqs = r.equiposReto || [];
+  if (eqs.length < 2) return <p class="peq terciario">Los equipos aún no están hechos.</p>;
+  const hechas = Object.fromEntries(r.progreso.map((x) => [x.perfil_id, x]));
+  const max = Math.max(r.objetivo, ...eqs.map((e) => e.total)) || 1;
+  const terminado = estadoReto(r, hoyISO()) === 'terminado';
+  const gana = eqs[0].total === eqs[1].total ? null : eqs[0].total > eqs[1].total ? eqs[0] : eqs[1];
+  return (
+    <div class="marcador-equipos pila-s">
+      {eqs.map((e) => {
+        const quien = e.personas.map((id) => hechas[id]).filter((x) => x && x.hechas > 0).sort((a, b) => b.hechas - a.hechas)[0];
+        const pct = Math.min(100, Math.round((e.total / max) * 100));
+        return (
+          <div key={e.equipo} class={`me-equipo me-${e.equipo} ${e.mio ? 'mio' : ''} pila-xs`}>
+            <div class="separa">
+              <strong class="me-nombre">{e.nombre}{e.mio ? ' (el tuyo)' : ''}</strong>
+              <span><strong class="num">{e.total}</strong> <span class="mini secundario">{u(e.total)}</span>{e.total >= r.objetivo && <span class="sr"> (objetivo conseguido)</span>}</span>
+            </div>
+            <span class="barra-equipo barra-grande" role="progressbar" aria-valuemin="0" aria-valuemax={r.objetivo} aria-valuenow={Math.min(e.total, r.objetivo)} aria-label={`${e.nombre}: ${e.total} de ${r.objetivo} ${u(r.objetivo)}`}>
+              <span style={{ width: `${Math.max(pct ? 3 : 0, pct)}%` }} class={e.total >= r.objetivo ? 'lleno' : ''} />
+            </span>
+            <span class="mini terciario">{quien ? <>Quien más suma: <BotonPersona perfilId={quien.perfil_id} nombre={quien.nombre} foto={quien.foto} avatar={false}><span class="btn-persona-nombre">{quien.nombre}{quien.yo ? ' (tú)' : ''}</span></BotonPersona> ({quien.hechas})</> : 'Aún nadie ha sumado'}</span>
+          </div>
+        );
+      })}
+      {terminado && <p class="peq reto-yo"><Icono n="trofeo" /> {gana ? `Gana ${gana.nombre}` : 'Empate'}</p>}
+    </div>
+  );
+}
+
+function FilaProgreso({ perfilId, nombre, foto, yo, hechas, total, texto, unidad = '' }) {
   const pct = total ? Math.min(100, Math.round((hechas / total) * 100)) : 0;
   return (
     <li class={`fila-progreso ${yo ? 'yo' : ''}`}>
       <BotonPersona perfilId={perfilId} nombre={nombre} foto={foto}><span class="btn-persona-nombre nombre">{nombre}{yo ? ' (tú)' : ''}</span></BotonPersona>
-      <span class="barra-equipo" role="progressbar" aria-valuemin="0" aria-valuemax={total} aria-valuenow={Math.min(hechas, total)} aria-label={`${nombre}: ${hechas} de ${total}`}><span style={{ width: `${Math.max(pct ? 4 : 0, pct)}%` }} class={hechas >= total ? 'lleno' : ''} /></span>
+      <span class="barra-equipo" role="progressbar" aria-valuemin="0" aria-valuemax={total} aria-valuenow={Math.min(hechas, total)} aria-label={`${nombre}: ${hechas} de ${total}${unidad ? ` ${unidad}` : ''}`}><span style={{ width: `${Math.max(pct ? 4 : 0, pct)}%` }} class={hechas >= total ? 'lleno' : ''} /></span>
       <span class="num peq">{texto}</span>
     </li>
   );
 }
 
-function HojaReto({ reto, alCerrar, alGuardar }) {
+// El formulario del reto (el coach). v0.70: plantillas de un toque, qué cuenta (sesiones, minutos de cardio o semanas
+// completas) y «Por equipos» con sus dos nombres y el reparto (igualado por las sesiones recientes, cambiable). Sin la 042,
+// solo sesiones (y lo nuevo dice que falta la migración).
+function HojaReto({ reto, con042 = false, alCerrar, alGuardar }) {
   const { api, aviso } = useApp();
   const lunes = lunesDe(hoyISO());
-  const [f, setF] = useState(() => reto ? { titulo: reto.titulo, descripcion: reto.descripcion || '', desde: reto.desde, hasta: reto.hasta, objetivo: reto.objetivo, modo: reto.modo || 'individual' }
-    : { titulo: '', descripcion: '', desde: lunes, hasta: sumarDias(lunes, 27), objetivo: 10, modo: 'individual' });
+  const [f, setF] = useState(() => reto ? { titulo: reto.titulo, descripcion: reto.descripcion || '', desde: reto.desde, hasta: reto.hasta, objetivo: reto.objetivo, modo: reto.modo || 'individual', medida: reto.medida || 'sesiones', equipos: reto.equipos || [...EQUIPOS_DE_ENTRADA] }
+    : { titulo: '', descripcion: '', desde: lunes, hasta: sumarDias(lunes, 27), objetivo: 10, modo: 'individual', medida: 'sesiones', equipos: [...EQUIPOS_DE_ENTRADA] });
+  const [reparto, setReparto] = useState(null); // { a: [perfil_id], b: [perfil_id] }
   const [borrar, setBorrar] = useState(false);
   const [ocupado, una] = useUnaVez();
+  const equipos = f.modo === 'equipos';
+  const recientes = useCarga(() => (con042 && equipos ? api.recientesComunidad().catch(() => []) : Promise.resolve(null)), [con042, equipos]);
+  // El reparto: el guardado (al cambiar un reto por equipos) o, si no, uno igualado
+  useEffect(() => {
+    if (!equipos || reparto || !recientes.datos) return;
+    if (reto?.id && reto.modo === 'equipos') api.equiposDeReto(reto.id).then((x) => setReparto(x.a.length || x.b.length ? x : repartirEquipos(recientes.datos))).catch(() => setReparto(repartirEquipos(recientes.datos)));
+    else setReparto(repartirEquipos(recientes.datos));
+  }, [equipos, recientes.datos]);
   const c = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
-  const equipo = f.modo === 'equipo';
+  const max = con042 ? retoMaximo(f.modo, f.medida) : RETO_MAX[f.modo] || 100;
+  const cosa = { sesiones: 'Sesiones terminadas', cardio: 'Minutos de cardio', semanas: 'Semanas completas' }[f.medida] || 'Sesiones terminadas';
+  const cambiarModo = (k) => setF({ ...f, modo: k, objetivo: k !== 'individual' && Number(f.objetivo) <= retoMaximo('individual', f.medida) && !reto ? (f.medida === 'cardio' ? 1000 : f.medida === 'semanas' ? 20 : 60) : f.objetivo });
+  const usarPlantilla = (clave) => {
+    const p = plantillaReto(clave, hoyISO());
+    if (p) setF({ ...f, ...p, equipos: f.equipos });
+  };
+  const mover = (id, a) => setReparto((r) => ({ a: a === 'a' ? [...r.a.filter((x) => x !== id), id] : r.a.filter((x) => x !== id), b: a === 'b' ? [...r.b.filter((x) => x !== id), id] : r.b.filter((x) => x !== id) }));
   const guardar = (e) => {
     e.preventDefault();
-    una(async () => { try { await api.guardarReto({ ...f, objetivo: Number(f.objetivo) }, reto?.id || null); aviso(reto ? 'Reto guardado' : 'Reto creado'); alGuardar(); } catch (err) { aviso(err.message, 'error'); } });
+    una(async () => {
+      try { await api.guardarReto({ ...f, objetivo: Number(f.objetivo), reparto }, reto?.id || null); aviso(reto ? 'Reto guardado' : 'Reto creado'); alGuardar(); } catch (err) { aviso(err.message, 'error'); }
+    });
   };
+  const plantillas = PLANTILLAS_RETO.filter(([k]) => con042 || !plantillaCon042(plantillaReto(k, hoyISO())));
   return (
     <Hoja titulo={reto ? 'Cambiar el reto' : 'Nuevo reto'} alCerrar={alCerrar}>
       <form class="pila" onSubmit={guardar}>
-        <div class="campo"><label for="reto-titulo">Título</label><input id="reto-titulo" class="entrada" maxLength={80} required value={f.titulo} onInput={c('titulo')} placeholder={equipo ? 'Entre todos: 100 sesiones' : 'Noviembre constante'} /></div>
+        {!reto && (
+          <div class="campo">
+            <span class="etiqueta" id="reto-plantillas-t">Plantillas de un toque</span>
+            <div class="plantillas-reto" role="group" aria-labelledby="reto-plantillas-t">
+              {plantillas.map(([k, t]) => <button key={k} type="button" class="chip-filtro" onClick={() => usarPlantilla(k)}>{t}</button>)}
+            </div>
+            <span class="ayuda">Rellenan el formulario: puedes cambiar las fechas y todo lo demás antes de crearlo.</span>
+          </div>
+        )}
+        <div class="campo"><label for="reto-titulo">Título</label><input id="reto-titulo" class="entrada" maxLength={80} required value={f.titulo} onInput={c('titulo')} placeholder={f.modo === 'equipo' ? 'Entre todos: 100 sesiones' : 'Noviembre constante'} /></div>
+        <div class="campo">
+          <span class="etiqueta" id="reto-medida-t">Qué cuenta</span>
+          <div class="segmentos" role="group" aria-labelledby="reto-medida-t">
+            {MEDIDAS_RETO.map(([k, t]) => <button key={k} type="button" aria-pressed={f.medida === k ? 'true' : 'false'} disabled={!con042 && k !== 'sesiones'} onClick={() => setF({ ...f, medida: k, objetivo: Math.min(Number(f.objetivo) || 1, retoMaximo(f.modo, k)) })}>{t}</button>)}
+          </div>
+          {!con042 && <span class="ayuda">Minutos de cardio y semanas completas: {AVISO_042}.</span>}
+        </div>
         <div class="campo">
           <span class="etiqueta" id="reto-modo-t">Cómo se consigue</span>
           <div class="segmentos" role="group" aria-labelledby="reto-modo-t">
-            {[['individual', 'Cada uno'], ['equipo', 'Entre todos']].map(([k, t]) => <button key={k} type="button" aria-pressed={f.modo === k ? 'true' : 'false'} onClick={() => setF({ ...f, modo: k, objetivo: k === 'equipo' && Number(f.objetivo) <= RETO_MAX.individual && !reto ? 60 : f.objetivo })}>{t}</button>)}
+            {MODOS_RETO.map(([k, t]) => <button key={k} type="button" aria-pressed={f.modo === k ? 'true' : 'false'} disabled={!con042 && k === 'equipos'} onClick={() => cambiarModo(k)}>{t}</button>)}
           </div>
+          {!con042 && <span class="ayuda">Por equipos: {AVISO_042}.</span>}
         </div>
         <div class="campo"><label for="reto-desc">Descripción (opcional)</label><textarea id="reto-desc" class="area" maxLength={500} value={f.descripcion} onInput={c('descripcion')} /></div>
         <div class="fila-envolver">
           <div class="campo"><label for="reto-desde">Desde</label><input id="reto-desde" type="date" class="entrada" required value={f.desde} onInput={c('desde')} /></div>
           <div class="campo"><label for="reto-hasta">Hasta</label><input id="reto-hasta" type="date" class="entrada" required value={f.hasta} onInput={c('hasta')} /></div>
         </div>
-        <div class="campo"><label for="reto-obj">{equipo ? 'Sesiones terminadas entre todo el equipo' : 'Sesiones terminadas para conseguirlo'}</label>
-          <input id="reto-obj" type="number" inputMode="numeric" min="1" max={RETO_MAX[f.modo]} class="entrada entrada-num" required value={f.objetivo} onInput={c('objetivo')} /></div>
-        <p class="mini terciario">{equipo
-          ? 'Una barra para todo el equipo: suman las sesiones de todos (menos de quien ha elegido no salir en el ranking). Salen por su nombre los que más suman.'
-          : 'Lo puede conseguir todo el equipo. Cada uno ve cuántas lleva cada miembro (solo el número de sesiones), menos quien ha elegido no salir en el ranking.'}</p>
+        <div class="campo"><label for="reto-obj">{`${cosa} ${f.modo === 'equipo' ? 'entre todo el equipo' : equipos ? 'que tiene que sumar cada equipo' : 'para conseguirlo'}`}</label>
+          <input id="reto-obj" type="number" inputMode="numeric" min="1" max={max} class="entrada entrada-num" required value={f.objetivo} onInput={c('objetivo')} /></div>
+        {equipos && con042 && (
+          <div class="pila-s reparto-equipos">
+            <div class="fila-envolver">
+              {[0, 1].map((i) => (
+                <div class="campo" key={i}><label for={`reto-equipo-${i}`}>Nombre del equipo {i + 1}</label>
+                  <input id={`reto-equipo-${i}`} class="entrada" maxLength={30} required value={f.equipos[i]} onInput={(e) => { const n = [...f.equipos]; n[i] = e.currentTarget.value; setF({ ...f, equipos: n }); }} /></div>
+              ))}
+            </div>
+            <div class="separa">
+              <span class="etiqueta">Quién va en cada uno</span>
+              <button type="button" class="btn btn-peq" disabled={!recientes.datos} onClick={() => setReparto(repartirEquipos(recientes.datos || []))}>Repartir igualados</button>
+            </div>
+            {!recientes.datos || !reparto ? <Cargando texto="Cargando el equipo" /> : (
+              <ul class="lista reparto-lista">
+                {recientes.datos.map((p) => {
+                  const en = reparto.a.includes(p.perfil_id) ? 'a' : reparto.b.includes(p.perfil_id) ? 'b' : null;
+                  return (
+                    <li key={p.perfil_id} class="reparto-fila">
+                      <span class="pila-xs"><span>{p.nombre}</span><span class="mini terciario">{p.sesiones} {p.sesiones === 1 ? 'sesión' : 'sesiones'} en 4 semanas</span></span>
+                      <span class="segmentos segmentos-peq" role="group" aria-label={`Equipo de ${p.nombre}`}>
+                        {[['a', f.equipos[0] || 'Equipo 1'], ['b', f.equipos[1] || 'Equipo 2']].map(([k, t]) => <button key={k} type="button" aria-pressed={en === k ? 'true' : 'false'} onClick={() => mover(p.perfil_id, k)}>{t}</button>)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+        <p class="mini terciario">{equipos
+          ? 'Dos barras, una por equipo: cada uno suma lo de los suyos. Quien ha elegido no salir en el ranking puede estar en un equipo, pero lo suyo no suma (ni sale por su nombre).'
+          : f.modo === 'equipo'
+            ? 'Una barra para todo el equipo: suma lo de todos (menos de quien ha elegido no salir en el ranking). Salen por su nombre los que más suman.'
+            : `Lo puede conseguir todo el equipo. Cada uno ve cuánto lleva cada miembro (solo el número), menos quien ha elegido no salir en el ranking.`}
+          {f.medida === 'cardio' ? ' Solo cuentan los minutos de cardio de quien los cuenta en los retos (cada atleta lo enciende).' : ''}</p>
         <button class="btn btn-primario" disabled={ocupado}>{reto ? 'Guardar' : 'Crear el reto'}</button>
         {reto && (borrar ? (
           <div class="fila-envolver"><span class="peq">¿Borrar este reto?</span><button type="button" class="btn btn-peq" onClick={() => setBorrar(false)}>No</button>
@@ -1070,9 +1347,11 @@ export function Ranking({ miembro = null }) {
   const { api, aviso } = useApp();
   const ranking = useCarga(() => api.rankingComunidad(), []);
   const animos = useCarga(() => api.animosComunidad().catch(() => null), []);
+  // v0.70 (042): las insignias conseguidas, junto al nombre (sin la 042, ninguna)
+  const insignias = useCarga(() => api.insigniasComunidad().catch(() => ({})), []);
   const [nuevos, setNuevos] = useState([]);
   const [ocupado, una] = useUnaVez();
-  const filas = ranking.datos || [];
+  const filas = (ranking.datos || []).map((x) => ({ ...x, insignias: insignias.datos?.[x.perfil_id] || [] }));
   const yo = filas.find((x) => x.yo);
   const fuera = !!miembro?.sin_ranking;
   const lista = ordenarRanking(filas.filter((x) => !(fuera && x.yo)));
@@ -1126,6 +1405,7 @@ function Distintivos({ x }) {
     <>
       {x.racha > 0 && <span class="chip racha"><span aria-hidden="true">🔥</span> {x.racha}<span class="sr"> {x.racha === 1 ? 'semana seguida' : 'semanas seguidas'} con todo hecho</span></span>}
       {x.previstas > 0 && x.hechas >= x.previstas && <span class="chip ok chip-completa"><Icono n="hecho" />Semana completa</span>}
+      <InsigniasMini lista={x.insignias} />
     </>
   );
 }
@@ -1163,13 +1443,25 @@ function BotonAnimar({ nombre, animado, ocupado, alAnimar, grande = false }) {
 // ---------------------------------------------------------------- el perfil en el equipo (v0.47)
 function HojaPerfilEquipo({ perfilId, alCerrar }) {
   const { api, aviso } = useApp();
+  const { perfil } = useApp();
   const p = useCarga(() => api.perfilComunidad(perfilId), [perfilId]);
+  // v0.70 (042): sus compañeros de racha, sus insignias y si le puedo invitar (sin la 042, nada)
+  const [vuelta, setVuelta] = useState(0);
+  const parejas = useCarga(() => api.companerosComunidad(perfilId).catch(() => null), [perfilId, vuelta]);
+  const mias = useCarga(() => (perfil?.rol === 'coach' ? Promise.resolve(null) : api.companerosComunidad().catch(() => null)), [vuelta]);
+  const insignias = useCarga(() => api.insigniasComunidad(perfilId).catch(() => ({})), [perfilId]);
   const [animadoAhora, setAnimadoAhora] = useState(false);
   const [ocupado, una] = useUnaVez();
   const x = p.datos;
   const animar = () => una(async () => {
     try { await api.animar(perfilId); setAnimadoAhora(true); aviso(`Le has mandado ánimo a ${x.nombre} 🙌`); } catch (e) { aviso(e.message, 'error'); }
   });
+  const invitar = () => una(async () => {
+    try { await api.invitarCompanero(perfilId); aviso(`Invitación enviada a ${x.nombre}`); setVuelta((v) => v + 1); } catch (e) { aviso(e.message, 'error'); }
+  });
+  const conPareja = (parejas.datos || []).filter((c) => c.estado === 'aceptada');
+  const yaConmigo = (mias.datos || []).some((c) => c.perfil_id === perfilId);
+  const libres = mias.datos ? MAX_COMPANEROS - mias.datos.filter((c) => c.estado === 'aceptada' || c.invito).length : 0;
   const resumen = (q) => q.texto || (q.tipo === 'entreno' ? q.resumen?.nombre : q.tipo === 'logro' ? q.resumen?.titulo : '') || (q.foto_ruta ? 'Una foto' : '');
   return (
     <Hoja titulo="Perfil en el equipo" alCerrar={alCerrar}>
@@ -1196,7 +1488,21 @@ function HojaPerfilEquipo({ perfilId, alCerrar }) {
               {x.retos_titulos.map((t) => <li key={t} class="chip aviso"><Icono n="trofeo" />{t}</li>)}
             </ul>
           )}
+          <InsigniasPerfil lista={insignias.datos?.[perfilId] || []} yo={x.yo} />
+          {conPareja.length > 0 && (
+            <div class="pila-s">
+              <h3 class="pe-sub">Compañeros de racha</h3>
+              <ul class="lista pe-parejas">
+                {conPareja.map((c) => (
+                  <li key={c.id} class="peq">{x.yo ? 'Tú y ' : 'Con '}<strong>{c.nombre}</strong>{c.racha > 0 ? <> · <span aria-hidden="true">🔥</span> {c.racha} {c.racha === 1 ? 'semana' : 'semanas'}</> : ''}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {!x.yo && !x.coach && <BotonAnimar grande nombre={x.nombre} animado={x.animado || animadoAhora} ocupado={ocupado} alAnimar={animar} />}
+          {!x.yo && !x.coach && mias.datos && !yaConmigo && libres > 0 && (
+            <button type="button" class="btn" disabled={ocupado} onClick={invitar}><span aria-hidden="true">🤝</span> Invitar a ser compañeros de racha</button>
+          )}
           <section class="pila-s">
             <h3 class="pe-sub">{x.yo ? 'Lo último que has publicado' : 'Lo último que ha publicado'}</h3>
             {!x.posts.length ? <p class="peq terciario">Nada todavía.</p> : (
@@ -1241,12 +1547,14 @@ function HojaCelebracion({ reto, celebracion = true, alCerrar, alCompartir }) {
         </div>
         <p class="celebracion-titulo">{reto.titulo}</p>
         <p class="secundario celebracion-texto">
-          {equipo ? `Entre todo el equipo habéis hecho ${reto.total} sesiones (el objetivo era ${reto.objetivo}).` : `Has hecho ${yo?.hechas ?? reto.objetivo} de ${reto.objetivo} ${reto.objetivo === 1 ? 'sesión' : 'sesiones'}.`}
+          {equipo ? `Entre todo el equipo lleváis ${reto.total} ${unidadReto(reto.medida, reto.total)} (el objetivo era ${reto.objetivo}).`
+            : reto.modo === 'equipos' ? `Tu equipo ha llegado a ${reto.objetivo} ${unidadReto(reto.medida, reto.objetivo)}.`
+              : `Llevas ${yo?.hechas ?? reto.objetivo} de ${reto.objetivo} ${unidadReto(reto.medida, reto.objetivo)}.`}
           {celebracion ? ' ¡Enhorabuena!' : ''}
         </p>
         <div class="campo"><label for="eq-logro-texto">Unas palabras (opcional)</label>
           <textarea id="eq-logro-texto" class="area" rows={2} maxLength={MAX_POST} placeholder="¿Cómo lo has vivido?" value={texto} onInput={(e) => setTexto(e.currentTarget.value)} /></div>
-        <p class="mini terciario">En el muro sale el reto, las sesiones y las fechas, con tu comentario. Nada más.</p>
+        <p class="mini terciario">En el muro sale el reto, lo conseguido y las fechas, con tu comentario. Nada más.</p>
         <button class="btn btn-primario btn-grande" disabled={ocupado}><Icono n="trofeo" /> {ocupado ? 'Compartiendo…' : 'Compartirlo en el muro'}</button>
         <button type="button" class="btn" onClick={alCerrar}>Ahora no</button>
       </form>
@@ -1264,6 +1572,8 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
   const [auto, setAuto] = useState(() => leerAutoCompartir(api.uid()));
   // (la columna llega con la 041: sin ella, «Entrenando ahora» dice que falta)
   const con041 = 'ver_entrenando' in miembro;
+  // (y v0.70: «Contar mis minutos de cardio en los retos», con la 042)
+  const con042 = 'cardio_en_retos' in miembro;
   const [ocupado, una] = useUnaVez();
   const hacer = (fn, texto, cerrar = false) => una(async () => {
     try { await fn(); aviso(texto); if (cerrar) alCerrar(); alCambiar(); } catch (e) { aviso(e.message, 'error'); }
@@ -1277,7 +1587,7 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
           <button class="btn btn-peq" style="justify-self:start" disabled={ocupado || !nombreValido(nombre) || nombre.trim() === miembro.nombre}>Guardar el nombre</button>
         </form>
         <div class="panel"><ul class="lista">
-          <Interruptor id="eq-sin-ranking" texto="No salir en el ranking" ayuda="Ni en el ranking ni en su podio, ni en los retos de los demás (tus sesiones no suman en los de equipo), ni tu racha ni tus retos en tu perfil. Tú sigues viendo lo tuyo." valor={!!miembro.sin_ranking} desactivado={ocupado}
+          <Interruptor id="eq-sin-ranking" texto="No salir en el ranking" ayuda="Ni en el ranking ni en su podio, ni en los retos de los demás (lo tuyo no suma en los de «Entre todos» ni en los de «Por equipos»), ni tu racha, tus retos, tus insignias ni tus compañeros de racha en tu perfil. Tú sigues viendo lo tuyo." valor={!!miembro.sin_ranking} desactivado={ocupado}
             alCambiar={(v) => hacer(() => api.ajustesComunidad({ sinRanking: v }), v ? 'Ya no sales en el ranking' : 'Vuelves a salir en el ranking')} />
           {/* v0.69 (041): «Entrenando ahora», voluntario y apagado de entrada; sin la 041 en la base, lo dice */}
           <Interruptor id="eq-entrenando" texto="Que el equipo vea cuándo estoy entrenando"
@@ -1287,6 +1597,10 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
           <Interruptor id="eq-autocompartir" texto="Compartir mis entrenos sin preguntar"
             ayuda="Al terminar una sesión, se comparte sola con el equipo, sin los kilos (con «Deshacer» por si acaso). Se guarda en este móvil."
             valor={auto} alCambiar={(v) => { guardarAutoCompartir(api.uid(), v); setAuto(v); aviso(v ? 'Tus entrenos se compartirán solos al terminarlos' : 'Te volveremos a preguntar al terminar'); }} />
+          <Interruptor id="eq-cardio-retos" texto="Contar mis minutos de cardio en los retos"
+            ayuda={con042 ? 'En los retos de cardio, el equipo ve cuántos minutos de cardio llevas entre sus fechas (solo el número). Apagado, no cuentan.' : AVISO_042}
+            valor={!!miembro.cardio_en_retos} desactivado={ocupado || !con042}
+            alCambiar={(v) => hacer(() => api.cardioEnRetos(v), v ? 'Tus minutos de cardio cuentan en los retos' : 'Tus minutos de cardio ya no cuentan en los retos')} />
         </ul></div>
         <details class="pila-s que-se-comparte"><summary>Qué se comparte y con quién</summary><QueSeComparte /></details>
         <button class="btn" style="justify-self:start" onClick={() => setNormas(true)}><Icono n="escudo" /> Normas del equipo</button>

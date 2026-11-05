@@ -1,6 +1,6 @@
 // La comunidad del equipo (v0.43): lo que no depende de la pantalla ni de la base.
 import { textoVisible } from './texto.js';
-import { diasEntre } from './fechas.js';
+import { diasEntre, lunesDe, sumarDias } from './fechas.js';
 import { e1rm } from './calculos.js';
 
 // [clave en la base, emoji, nombre]
@@ -183,8 +183,10 @@ export function limpiarEncuesta({ pregunta, opciones, cierre = null }, ahora = D
 
 // ¿Ha conseguido el reto? Como la base (comunidad_reto_conseguido): individual, su objetivo; de equipo, el total
 // del equipo; y no cuenta uno que ya había acabado cuando entró por primera vez (desde: su fecha de entrada).
-export function retoConseguido(r, { hechas = 0, total = 0, desde = null } = {}) {
+// v0.70: por equipos, el total de su equipo (totalEquipo; sin equipo, no)
+export function retoConseguido(r, { hechas = 0, total = 0, desde = null, totalEquipo = null } = {}) {
   if (desde && r.hasta < desde) return false;
+  if (r.modo === 'equipos') return totalEquipo != null && totalEquipo >= r.objetivo;
   return (r.modo === 'equipo' ? total : hechas) >= r.objetivo;
 }
 
@@ -226,4 +228,114 @@ export function hilosComentarios(lista = []) {
     else raiz.push({ ...c, respuestas: [] });
   }
   return raiz;
+}
+
+// ---------------------------------------------------------------- v0.70 (migración 042): constancia en compañía
+// Compañeros de racha: hasta 3 (contando las invitaciones que has mandado)
+export const MAX_COMPANEROS = 3;
+// Qué cuenta un reto: [clave, nombre en el formulario]
+export const MEDIDAS_RETO = [['sesiones', 'Sesiones'], ['cardio', 'Minutos de cardio'], ['semanas', 'Semanas completas']];
+// Cómo se consigue: [clave, nombre]
+export const MODOS_RETO = [['individual', 'Cada uno'], ['equipo', 'Entre todos'], ['equipos', 'Por equipos']];
+// El objetivo más alto (como public.comunidad_reto_maximo de la 042)
+export function retoMaximo(modo = 'individual', medida = 'sesiones') {
+  if (!['individual', 'equipo', 'equipos'].includes(modo)) return 0;
+  const uno = modo === 'individual';
+  return { sesiones: uno ? 100 : 5000, cardio: uno ? 3000 : 30000, semanas: uno ? 52 : 1000 }[medida] || 0;
+}
+// «12 sesiones», «1 minuto de cardio», «4 semanas completas»
+export function unidadReto(medida = 'sesiones', n = 2, { corta = false } = {}) {
+  const uno = Number(n) === 1;
+  if (medida === 'cardio') return corta ? (uno ? 'minuto' : 'minutos') : uno ? 'minuto de cardio' : 'minutos de cardio';
+  if (medida === 'semanas') return corta ? (uno ? 'semana' : 'semanas') : uno ? 'semana completa' : 'semanas completas';
+  return uno ? 'sesión' : 'sesiones';
+}
+// Los nombres de los equipos de entrada
+export const EQUIPOS_DE_ENTRADA = ['Equipo rojo', 'Equipo azul'];
+// Plantillas de un toque para el coach: rellenan el formulario (las fechas se pueden cambiar). con042: las que necesitan la 042
+// (cardio, semanas completas o por equipos) solo salen con ella.
+export const PLANTILLAS_RETO = [
+  ['semana_perfecta', 'Semana perfecta'],
+  ['tres_por_semana', '3 por semana durante el mes'],
+  ['mil_entre_todos', '1.000 sesiones entre todos este mes'],
+  ['cuatro_semanas', 'Semana completa 4 semanas seguidas'],
+  ['cardio', 'Minutos de cardio'],
+];
+export function plantillaReto(clave, hoy) {
+  const lunes = lunesDe(hoy);
+  const [y, m] = hoy.split('-').map(Number);
+  const inicioMes = `${y}-${String(m).padStart(2, '0')}-01`;
+  const finMes = sumarDias(m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`, -1);
+  const base = { descripcion: '', modo: 'individual', medida: 'sesiones', equipos: null };
+  switch (clave) {
+    case 'semana_perfecta': return { ...base, titulo: 'Semana perfecta', descripcion: 'Esta semana, todas tus sesiones hechas.', desde: lunes, hasta: sumarDias(lunes, 6), objetivo: 1, medida: 'semanas' };
+    case 'tres_por_semana': return { ...base, titulo: '3 por semana durante el mes', descripcion: 'Tres sesiones cada semana durante cuatro semanas: 12 en total.', desde: lunes, hasta: sumarDias(lunes, 27), objetivo: 12 };
+    case 'mil_entre_todos': return { ...base, titulo: '1.000 sesiones entre todos', descripcion: 'Sumamos las sesiones de todo el equipo este mes. Cada una cuenta.', desde: inicioMes, hasta: finMes, objetivo: 1000, modo: 'equipo' };
+    case 'cuatro_semanas': return { ...base, titulo: 'Semana completa 4 semanas seguidas', descripcion: 'Cuatro semanas seguidas con todo lo que tienes publicado hecho.', desde: lunes, hasta: sumarDias(lunes, 27), objetivo: 4, medida: 'semanas' };
+    case 'cardio': return { ...base, titulo: 'Minutos de cardio', descripcion: 'Entre todos, 1.000 minutos de cardio en cuatro semanas (de quien cuenta sus minutos).', desde: lunes, hasta: sumarDias(lunes, 27), objetivo: 1000, modo: 'equipo', medida: 'cardio' };
+    default: return null;
+  }
+}
+export const plantillaCon042 = (p) => !!p && (p.medida !== 'sesiones' || p.modo === 'equipos');
+// Repartir en dos equipos igualados por las sesiones recientes: de más a menos, cada uno al equipo que suma menos (si suman
+// igual, al que tiene menos gente). personas: [{ perfil_id, sesiones }]. Devuelve { a: [perfil_id], b: [perfil_id] }.
+export function repartirEquipos(personas = []) {
+  const orden = [...personas].sort((x, y) => (Number(y.sesiones) || 0) - (Number(x.sesiones) || 0) || String(x.nombre || '').localeCompare(String(y.nombre || ''), 'es'));
+  const a = [], b = [];
+  let sa = 0, sb = 0;
+  for (const p of orden) {
+    const n = Number(p.sesiones) || 0;
+    if (sa < sb || (sa === sb && a.length <= b.length)) { a.push(p.perfil_id); sa += n; } else { b.push(p.perfil_id); sb += n; }
+  }
+  return { a, b };
+}
+// La racha de dos (como fbe_privado.comunidad_rachas_pareja de la 042): semanas en las que los dos han completado la suya,
+// desde la semana de «desde». La semana sin nada publicado de uno no suma ni rompe; la de esta semana suma si los dos la tienen
+// completa y, si no, no rompe. semanas: [{ lunes, previstas, hechas }] (solo las que tienen algo publicado). Con las mismas
+// semanas dos veces, la racha de siempre. Devuelve { racha, mejor }.
+export function rachaPareja(semanasA = [], semanasB = [], { lunesHoy, desde = null } = {}) {
+  const desdeL = desde ? lunesDe(desde) : '0000-00-00';
+  const porLunes = new Map();
+  const poner = (lista, k) => {
+    for (const s of lista) {
+      if (!s?.lunes || !(s.previstas > 0) || s.lunes < desdeL || (lunesHoy && s.lunes > lunesHoy)) continue;
+      const x = porLunes.get(s.lunes) || {};
+      x[k] = s.hechas >= s.previstas;
+      porLunes.set(s.lunes, x);
+    }
+  };
+  poner(semanasA, 'a');
+  poner(semanasB, 'b');
+  let racha = 0, mejor = 0;
+  for (const [l, x] of [...porLunes.entries()].sort((p, q) => (p[0] < q[0] ? -1 : 1))) {
+    if (x.a === false || x.b === false) { if (!lunesHoy || l < lunesHoy) racha = 0; continue; }
+    if (x.a && x.b) { racha++; mejor = Math.max(mejor, racha); }
+  }
+  return { racha, mejor };
+}
+// «Tú y Rubén M. · 🔥 4 semanas»
+export const textoPareja = (nombre, racha = 0) => `Tú y ${nombre}${racha > 0 ? ` · 🔥 ${racha} ${racha === 1 ? 'semana' : 'semanas'}` : ''}`;
+// Las insignias del equipo: [clave, emoji, nombre, cómo se consigue, meta] (las calcula la base: comunidad_insignias, 042)
+export const INSIGNIAS = [
+  ['primera_publicacion', '✍️', 'Primera publicación', 'Publica algo en el muro', 1],
+  ['animos_10', '🙌', '10 ánimos', 'Manda 10 ánimos a los del equipo', 10],
+  ['reacciones_25', '💪', '25 reacciones', 'Reacciona 25 veces a lo del equipo', 25],
+  ['retos_5', '🏆', '5 retos', 'Consigue 5 retos', 5],
+  ['racha_4', '🔥', 'Racha de 4', 'Completa 4 semanas seguidas', 4],
+  ['pareja_4', '🤝', 'Pareja de 4', 'Llega a 4 semanas seguidas con un compañero de racha', 4],
+];
+// Las de alguien, en el orden de INSIGNIAS: [{ clave, emoji, nombre, como, meta, valor, conseguida }]. filas: lo que da la base
+// ([{ clave, valor, meta }]); las que no vienen, sin progreso.
+export function insigniasDe(filas = []) {
+  const por = new Map((filas || []).map((f) => [f.clave, f]));
+  return INSIGNIAS.map(([clave, emoji, nombre, como, meta]) => {
+    const valor = Math.min(meta, Math.max(0, Number(por.get(clave)?.valor) || 0));
+    return { clave, emoji, nombre, como, meta, valor, conseguida: valor >= meta };
+  });
+}
+// La siguiente que puede conseguir: la que tiene más hecho (en proporción) de las que le faltan; si las tiene todas, null
+export function siguienteInsignia(lista = []) {
+  const faltan = lista.filter((x) => !x.conseguida);
+  if (!faltan.length) return null;
+  return [...faltan].sort((a, b) => b.valor / b.meta - a.valor / a.meta)[0];
 }

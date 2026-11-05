@@ -838,4 +838,20 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   if (lucia) db.comunidad_bienvenidas.push({ de: ruben.perfil_id, para: lucia.perfil_id, atleta_id: ruben.id, para_atleta_id: lucia.id, creado_en: hace(60 * 24 * 2) });
   const deRubenALucia = pLucia && db.comunidad_comentarios.find((c) => c.post_id === pLucia.id && c.autor_id === ruben.perfil_id);
   if (deRubenALucia) db.comunidad_comentario_reacciones.push({ comentario_id: deRubenALucia.id, autor_id: coachId, atleta_id: null, creado_en: hace(60 * 20) });
+  // v0.70 (042): Rubén y Carlos son compañeros de racha desde hace cuatro semanas; Carlos cuenta sus minutos de cardio en los
+  // retos; un reto de cardio entre todos y uno por equipos (Rojos: Rubén; Azules: Carlos y Lucía)
+  Object.assign(db, { comunidad_companeros: [], comunidad_reto_equipos: [] });
+  for (const r of db.comunidad_retos) Object.assign(r, { medida: 'sesiones', equipos: null });
+  db.comunidad_companeros.push({ id: crypto.randomUUID(), de: ruben.perfil_id, para: carlos.perfil_id, de_atleta_id: ruben.id, para_atleta_id: carlos.id, estado: 'aceptada', creado_en: hace(60 * 24 * 29), aceptado_en: hace(60 * 24 * 28) });
+  const mCarlos = db.comunidad_miembros.find((m) => m.atleta_id === carlos.id);
+  if (mCarlos) mCarlos.cardio_en_retos = true;
+  for (const m of db.comunidad_miembros) m.cardio_en_retos ??= false;
+  const rCardio = reto('Mes de cardio: 400 minutos entre todos', 'Suman los minutos de cardio de quien los cuenta en los retos (se enciende en el propio reto o en los ajustes del equipo).', sumarDias(lunesHoy, -28), sumarDias(lunesHoy, 13), 400, 'equipo', 28);
+  rCardio.medida = 'cardio';
+  const rEquipos = reto('Rojos contra azules: 15 sesiones', 'Dos equipos: el primero en llegar a 15 sesiones gana.', sumarDias(lunesHoy, -7), sumarDias(lunesHoy, 13), 15, 'equipos', 7);
+  rEquipos.equipos = ['Rojos', 'Azules'];
+  const enEquipo = (a, equipo) => a && db.comunidad_reto_equipos.push({ reto_id: rEquipos.id, atleta_id: a.id, perfil_id: a.perfil_id, equipo });
+  enEquipo(ruben, 0);
+  enEquipo(carlos, 1);
+  enEquipo(lucia, 1);
 }

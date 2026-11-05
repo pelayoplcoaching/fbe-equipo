@@ -4675,3 +4675,30 @@ html[data-teclado] .pildora-descanso { display: none; }
   .bdia-cuerpo { animation: bdia-entra .5s cubic-bezier(.2, .8, .2, 1) both; }
   @keyframes bdia-entra { from { opacity: 0; transform: translateY(12px); } }
 }
+
+/* ---------------------------------------------------------------- v0.70: compañeros de racha, retos por equipos e insignias */
+.companeros { margin-bottom: 12px; }
+.cp-t { font-size: 0.875rem; font-weight: 700; color: var(--tinta-2); }
+.cp-lista, .cp-invitar, .pe-parejas { list-style: none; margin: 0; padding: 0; }
+.cp-fila { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 0; }
+.cp-texto { min-width: 0; overflow-wrap: anywhere; }
+.cp-pareja { font-size: 0.9375rem; }
+.cp-pareja .btn-persona, .cp-invitacion .btn-persona { display: inline; min-height: 24px; }
+.cp-invitacion { padding: 10px; border-radius: var(--r-s); background: var(--morado-suave); box-shadow: inset 0 0 0 1px var(--borde); }
+.cp-confirmar { align-items: center; }
+.insignias-mini { display: inline-flex; gap: 2px; font-size: 0.9375rem; line-height: 1; }
+.pe-insignias { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip.insignia { gap: 5px; }
+.insignia-siguiente { padding: 10px; border-radius: var(--r-s); background: var(--hoja-2); }
+.plantillas-reto { display: flex; flex-wrap: wrap; gap: 6px; }
+.plantillas-reto .chip-filtro { min-height: 40px; text-align: left; }
+.marcador-equipos .me-equipo { padding: 10px; border-radius: var(--r-s); background: var(--hoja-2); }
+.marcador-equipos .me-equipo.mio { box-shadow: inset 0 0 0 2px var(--morado); }
+.marcador-equipos .me-1 .barra-equipo span:not(.lleno) { background: var(--aviso, var(--morado)); }
+.me-nombre { overflow-wrap: anywhere; }
+.marcador-equipos .btn-persona { display: inline; min-height: 24px; }
+.reparto-lista { list-style: none; margin: 0; padding: 0; }
+.reparto-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 6px 0; border-top: 1px solid var(--linea); }
+.reparto-fila > .pila-xs { min-width: 0; overflow-wrap: anywhere; }
+.segmentos.segmentos-peq button { min-height: 36px; font-size: 0.8125rem; padding: 0 10px; white-space: normal; }
+.reto-cardio-optin { padding: 10px; border-radius: var(--r-s); background: var(--morado-suave); }

@@ -37,7 +37,7 @@ import { VERSION_LEGAL } from '../legal.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
 import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida } from '../logica/notasVoz.js';
-import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido, nuevosParaBienvenida } from '../logica/comunidad.js';
+import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido, nuevosParaBienvenida, retoMaximo, insigniasDe } from '../logica/comunidad.js';
 import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
 import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
@@ -139,6 +139,15 @@ const falta041 = (e) => {
   const m = e?.message || '';
   if (/comunidad_|responde_a|ver_entrenando/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna|PGRST20/i.test(m)) {
     throw new Error(`${AVISO_041} en Supabase (supabase/migraciones/041_comunidad_animo.sql).`);
+  }
+  throw e;
+};
+// La segunda tanda de mejoras de la comunidad (v0.70) sin la migración 042
+export const AVISO_042 = 'Disponible tras la migración 042';
+const falta042 = (e) => {
+  const m = e?.message || '';
+  if (/comunidad_|medida|equipos|cardio_en_retos/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna|PGRST20/i.test(m)) {
+    throw new Error(`${AVISO_042} en Supabase (supabase/migraciones/042_comunidad_constancia.sql).`);
   }
   throw e;
 };
@@ -280,7 +289,7 @@ const CAMPOS_SE = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'series',
 
 // La comunidad del equipo (v0.43, migración 027)
 const TABLAS_COMUNIDAD = ['comunidad_ajustes', 'comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_retos',
-  'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas'];
+  'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos'];
 // Lo que la app lee de una publicación del muro (sin la ficha ni la sesión de su autor)
 const COLS_POST = 'id,autor_id,tipo,texto,foto_ruta,resumen,fijada,oculta,creado_en,menciones,encuesta,reto_id';
 // Los filtros del muro (v0.47), en la propia consulta: así «Ver más» sigue funcionando
@@ -3316,14 +3325,17 @@ export function crearApi(backend) {
     // v0.47: cada reto con su modo (individual o de equipo) y, en los de equipo, el total de todos (sin quien no sale
     // en el ranking); y si lo he conseguido (conseguido) y ya lo he compartido (compartido)
     async retosComunidad() {
-      const [retos, progreso, totales, personas, miembro, logros] = await Promise.all([
+      const [retos, progreso, totales, personas, miembro, logros, equipos] = await Promise.all([
         b.select('comunidad_retos', { order: [['hasta', 'desc'], ['desde', 'desc']] }),
         b.rpc('comunidad_retos_progreso', {}).catch(() => []),
         b.rpc('comunidad_retos_totales', {}).catch(() => []),
         api.personasComunidad(),
         api.miembroComunidad(),
         b.select('comunidad_posts', { eq: { tipo: 'logro', autor_id: uid() }, cols: 'id,reto_id' }).catch(() => []),
+        // v0.70 (042): los dos equipos de cada reto por equipos (sin la 042, ninguno)
+        b.rpc('comunidad_retos_equipos', {}).catch(() => []),
       ]);
+      const E = agrupar(equipos || [], 'reto_id');
       const G = agrupar(progreso || [], 'reto_id');
       const T = Object.fromEntries((totales || []).map((x) => [x.reto_id, x.total]));
       // (como la base: desde la última vez que entró o volvió, en Madrid)
@@ -3334,11 +3346,14 @@ export function crearApi(backend) {
         const filas = G[r.id] || [];
         const yo = filas.find((x) => x.yo);
         const reto = {
-          ...r, modo: r.modo || 'individual', total: T[r.id] ?? 0,
+          ...r, modo: r.modo || 'individual', medida: r.medida || 'sesiones', total: T[r.id] ?? 0,
           progreso: filas.map((x) => ({ ...x, foto: personas[x.perfil_id]?.foto || null }))
             .sort((a, b2) => b2.hechas - a.hechas || String(a.nombre).localeCompare(String(b2.nombre), 'es')),
+          // (v0.70) por equipos: [{ equipo, nombre, total, personas, mio }], el 0 y el 1
+          equiposReto: (E[r.id] || []).sort((a, b2) => a.equipo - b2.equipo).map((x) => ({ ...x, personas: x.personas || [], mio: (x.personas || []).includes(uid()) })),
         };
-        reto.conseguido = !!yo && retoConseguido(reto, { hechas: yo.hechas, total: reto.total, desde });
+        const miEquipo = reto.equiposReto.find((x) => x.mio);
+        reto.conseguido = !!yo && retoConseguido(reto, { hechas: yo.hechas, total: reto.total, desde, totalEquipo: miEquipo ? miEquipo.total : null });
         reto.compartido = compartidos.has(r.id);
         return reto;
       });
@@ -3353,15 +3368,37 @@ export function crearApi(backend) {
       if (t.length > MAX_POST) throw new Error(`Hasta ${MAX_POST} letras.`);
       return b.rpc('comunidad_compartir_logro', { p_reto: retoId, p_texto: t || null }).catch(falta029);
     },
-    async guardarReto({ titulo, descripcion = null, desde, hasta, objetivo, modo = 'individual' }, id = null) {
+    // v0.70 (042): medida (sesiones, cardio o semanas), el modo «equipos» con los nombres de los dos equipos (equipos) y su
+    // reparto ({ a: [perfil_id], b: [perfil_id] }). Sin la 042, como antes (solo sesiones, cada uno o entre todos).
+    async guardarReto({ titulo, descripcion = null, desde, hasta, objetivo, modo = 'individual', medida = 'sesiones', equipos = null, reparto = null }, id = null) {
+      const con042 = await api.comunidad042();
       const fila = { titulo: String(titulo || '').trim(), descripcion: String(descripcion || '').trim() || null, desde, hasta, objetivo: Number(objetivo), modo };
-      const max = RETO_MAX[modo];
-      if (!max) throw new Error('El reto, individual o de equipo.');
+      if (!con042 && (medida !== 'sesiones' || modo === 'equipos')) throw new Error(`${AVISO_042} en Supabase (supabase/migraciones/042_comunidad_constancia.sql).`);
+      if (con042) Object.assign(fila, { medida, equipos: modo === 'equipos' ? (equipos || []).map((t) => limpiarNombre(t)) : null });
+      const max = con042 ? retoMaximo(modo, medida) : RETO_MAX[modo];
+      if (!max) throw new Error('El reto: cada uno, entre todos o por equipos.');
       if (!fila.titulo) throw new Error('Ponle un título al reto.');
       if (!desde || !hasta || hasta < desde) throw new Error('El final del reto, el mismo día que el principio o después.');
-      if (!Number.isInteger(fila.objetivo) || fila.objetivo < 1 || fila.objetivo > max) throw new Error(`El objetivo, de 1 a ${max} sesiones${modo === 'equipo' ? ' entre todo el equipo' : ''}.`);
+      const unidad = { sesiones: 'sesiones', cardio: 'minutos de cardio', semanas: 'semanas completas' }[medida] || 'sesiones';
+      if (!Number.isInteger(fila.objetivo) || fila.objetivo < 1 || fila.objetivo > max) throw new Error(`El objetivo, de 1 a ${max} ${unidad}${modo === 'equipo' ? ' entre todo el equipo' : modo === 'equipos' ? ' por equipo' : ''}.`);
+      if (modo === 'equipos') {
+        const [x, y] = fila.equipos;
+        if (fila.equipos.length !== 2 || !x || !y || x.length > 30 || y.length > 30 || x.toLowerCase() === y.toLowerCase()) throw new Error('Ponle a cada equipo un nombre distinto (hasta 30 letras).');
+        if (!reparto?.a?.length || !reparto?.b?.length) throw new Error('Pon al menos a una persona en cada equipo.');
+      }
       const sinModo = (e) => { if (/modo/.test(e?.message || '')) return falta029(e); throw e; };
-      return id ? (await b.update('comunidad_retos', fila, { eq: { id } }).catch(sinModo))[0] : (await b.insert('comunidad_retos', [fila]).catch(sinModo).catch(falta027))[0];
+      const guardado = id ? (await b.update('comunidad_retos', fila, { eq: { id } }).catch(sinModo))[0] : (await b.insert('comunidad_retos', [fila]).catch(sinModo).catch(falta027))[0];
+      if (modo === 'equipos' && guardado?.id) await b.rpc('comunidad_reto_equipos_guardar', { p_reto: guardado.id, p_equipo_a: reparto.a, p_equipo_b: reparto.b }).catch(falta042);
+      return guardado;
+    },
+    // (v0.70, el coach) El reparto de un reto por equipos: { a: [perfil_id], b: [perfil_id] }
+    async equiposDeReto(retoId) {
+      const filas = await b.select('comunidad_reto_equipos', { eq: { reto_id: retoId }, cols: 'perfil_id,equipo' }).catch(() => []);
+      return { a: filas.filter((x) => x.equipo === 0).map((x) => x.perfil_id), b: filas.filter((x) => x.equipo === 1).map((x) => x.perfil_id) };
+    },
+    // (v0.70, el coach) Para repartir los equipos igualados: las sesiones de las últimas 4 semanas de cada uno de dentro
+    async recientesComunidad() {
+      return (await b.rpc('comunidad_sesiones_recientes', {}).catch(falta042)) || [];
     },
     async borrarReto(id) { return b.delete('comunidad_retos', { eq: { id } }); },
     // Ranking de constancia de esta semana (solo recuentos)
@@ -3474,6 +3511,50 @@ export function crearApi(backend) {
     // «Que el equipo vea cuándo estoy entrenando»
     async verEntrenandoComunidad(visible) {
       await b.rpc('comunidad_entrenando_visible', { p_visible: !!visible }).catch(falta041);
+      return api.miembroComunidad();
+    },
+    // ------------------------------------------------------------ v0.70 (migración 042)
+    // ¿Está la 042? true / false / null (no se sabe: un corte). Como comunidad041
+    async comunidad042() {
+      if (!api._v042) {
+        const pr = (async () => {
+          try { await b.rpc('comunidad_companeros', {}); return true; } catch (e) {
+            const m = `${e?.message || ''} ${e?.code || ''}`;
+            if (/comunidad_companeros|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v042 = pr;
+        pr.then((x) => { if (x == null && api._v042 === pr) api._v042 = null; });
+      }
+      return api._v042;
+    },
+    // Los compañeros de racha de alguien (sin perfilId, los míos, también las invitaciones pendientes): [{ id, perfil_id, nombre,
+    // foto, estado, invito, racha, mi_semana, su_semana }]. null sin la 042.
+    async companerosComunidad(perfilId = null) {
+      let filas;
+      try { filas = await b.rpc('comunidad_companeros', perfilId ? { p_perfil: perfilId } : {}); } catch { return null; }
+      const personas = filas?.length ? await api.personasComunidad() : {};
+      return (filas || []).map((x) => ({ ...x, foto: x.foto || personas[x.perfil_id]?.foto || null }));
+    },
+    async invitarCompanero(perfilId) {
+      return b.rpc('comunidad_invitar_companero', { p_perfil: perfilId }).catch(falta042);
+    },
+    async responderCompanero(id, aceptar) {
+      return b.rpc('comunidad_responder_companero', { p_id: id, p_aceptar: !!aceptar }).catch(falta042);
+    },
+    async dejarCompanero(id) {
+      return b.rpc('comunidad_dejar_companero', { p_id: id }).catch(falta042);
+    },
+    // Las insignias: perfil_id → [{ clave, emoji, nombre, como, meta, valor, conseguida }] (de los demás, solo las conseguidas
+    // vienen de la base; las que faltan salen sin progreso). Sin perfilId, de todos los que se ven. {} sin la 042.
+    async insigniasComunidad(perfilId = null) {
+      const filas = await b.rpc('comunidad_insignias', perfilId ? { p_perfil: perfilId } : {}).catch(() => []);
+      return Object.fromEntries(Object.entries(agrupar(filas || [], 'perfil_id')).map(([k, v]) => [k, insigniasDe(v)]));
+    },
+    // «Contar mis minutos de cardio en los retos» (apagado de entrada)
+    async cardioEnRetos(contar) {
+      await b.rpc('comunidad_cardio_en_retos', { p_contar: !!contar }).catch(falta042);
       return api.miembroComunidad();
     },
     async sesionCompartida(sesionId) {

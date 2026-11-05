@@ -2944,7 +2944,7 @@ try {
   await p.getByRole('tab', { name: 'Retos' }).click();
   await p.getByRole('button', { name: 'Nuevo reto' }).click();
   const hojaRetoC = p.getByRole('dialog', { name: 'Nuevo reto' });
-  await hojaRetoC.getByRole('button', { name: 'Entre todos' }).click();
+  await hojaRetoC.getByRole('button', { name: 'Entre todos', exact: true }).click();
   await hojaRetoC.getByLabel('Título').fill('Diciembre entre todos');
   check(await hojaRetoC.getByLabel('Sesiones terminadas entre todo el equipo').getAttribute('max') === '5000', 'un reto de equipo: el objetivo es el total de todos (hasta 5000)');
   await revisar('equipo-coach-reto-equipo');
@@ -5665,6 +5665,17 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ la comunidad de la v0.69:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.70: la comunidad, segunda tanda (compañeros de racha, plantillas de retos, retos por equipos y de cardio, insignias)
+// (test/e2e-comunidad-070.mjs)
+console.log('\nv0.70: la comunidad, segunda tanda');
+try {
+  const { probarComunidad070 } = await import('./e2e-comunidad-070.mjs');
+  await probarComunidad070({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la comunidad de la v0.70:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
