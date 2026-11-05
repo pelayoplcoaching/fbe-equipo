@@ -47,3 +47,14 @@ export async function subProgreso(p, sub) {
   if (!(await b.count())) return;
   if ((await b.getAttribute('aria-selected')) !== 'true') await b.click();
 }
+
+// En Hoy, las secciones secundarias («Lo que vas a hacer», «Esta semana», el menú, la nutrición, los hábitos y el peso)
+// van plegadas en filas: abre una antes de pulsar o esperar algo de dentro. ids: sesion, semana, menu, nutricion,
+// habitos, peso. Si esa fila no existe (otra pantalla, quien solo lleva la nutrición), no hace nada.
+export async function abrirEnHoy(p, id) {
+  const d = p.locator(`details[data-plegable="${id}"]`);
+  if (!(await p.locator('nav.tabs .tab', { hasText: 'Hoy' }).count())) return;
+  await d.waitFor({ state: 'attached', timeout: 4000 }).catch(() => {});
+  if (!(await d.count())) return;
+  await d.evaluate((el) => { el.open = true; });
+}

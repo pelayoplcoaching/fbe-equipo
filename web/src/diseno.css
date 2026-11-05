@@ -223,3 +223,24 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .nota-grafica summary svg { width: 16px; height: 16px; flex: none; }
 .nota-grafica summary:hover, .nota-grafica[open] summary { color: var(--tinta); }
 .nota-grafica p { padding-bottom: 2px; }
+
+/* ---------- 9b. Hoy más corta: lo secundario, plegado -------------------------------------------------------
+   Debajo de la tarjeta del día, los diales, lo del coach y «Tu día», cada sección es una fila (ui/atleta/Hoy.jsx,
+   Plegable) que se abre al tocarla. Cerrada es una tarjeta con icono, título y una línea; abierta, el título de
+   siempre con su flecha y, debajo, la sección tal cual estaba (su título propio se esconde: manda el de la fila). */
+.plegable-hoy[hidden] { display: none; }
+.plegable-hoy > summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 3.75rem; padding: 10px 16px; border-radius: var(--r); background: var(--hoja); box-shadow: var(--sombra); cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; }
+.plegable-hoy > summary::-webkit-details-marker { display: none; }
+.plegable-hoy > summary:active { transform: scale(.985); }
+.plegable-texto { display: grid; gap: 1px; min-width: 0; }
+.plegable-hoy > summary h2 { font-size: 1.0312rem; font-weight: 680; line-height: 1.25; letter-spacing: -0.004em; }
+.plegable-flecha { width: 20px; height: 20px; flex: none; color: var(--tinta-3); transition: transform .2s ease; }
+.plegable-hoy[open] > summary .plegable-flecha { transform: rotate(180deg); }
+.plegable-hoy[open] > summary { min-height: 2.75rem; padding: 0 4px 0 2px; margin-bottom: 8px; background: none; box-shadow: none; border-radius: 10px; grid-template-columns: minmax(0, 1fr) auto; }
+.plegable-hoy[open] > summary .ios-ico, .plegable-hoy[open] > summary .mini { display: none; }
+.plegable-hoy[open] > summary h2 { font-size: var(--tipo-titular); line-height: var(--tipo-titular-lh); font-weight: 760; font-stretch: 112%; letter-spacing: var(--tipo-titular-tr); }
+.plegable-cuerpo > .seccion > h2, .plegable-cuerpo > .seccion > .seccion-cab > h2 { display: none; }
+.plegable-cuerpo > .seccion > .seccion-cab { justify-content: flex-end; margin-top: -6px; }
+.plegable-cuerpo > .seccion > .seccion-cab:not(:has(> :not(h2))) { display: none; }
+.plegable-hoy + .plegable-hoy { margin-top: -10px; }
+@media (prefers-reduced-motion: reduce) { .plegable-flecha { transition: none; } .plegable-hoy > summary:active { transform: none; } }

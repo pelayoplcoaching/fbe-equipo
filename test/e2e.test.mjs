@@ -4,7 +4,7 @@
 // Uso: npm run build && node test/e2e.test.mjs
 import { chromium } from 'playwright';
 import { servir } from './servidor.mjs';
-import { irASeccion, haySeccion, esperarSinSeccion, subProgreso } from './secciones.mjs';
+import { irASeccion, haySeccion, esperarSinSeccion, subProgreso, abrirEnHoy } from './secciones.mjs';
 import { createRequire } from 'node:module';
 import { readFileSync as leerArchivo, readdirSync } from 'node:fs';
 import { VERSION_LEGAL } from '../web/src/legal.js';
@@ -342,6 +342,7 @@ try {
 
   console.log('\nAtleta: hábitos y plan de la semana');
   const tilePasos = p.locator('.habito-tile', { hasText: 'Pasos' });
+  await abrirEnHoy(p, 'habitos');   // (diseño 9) en Hoy, esta sección va plegada
   await tilePasos.click();
   const hojaPasos = p.getByRole('dialog', { name: 'Pasos' });
   // Con punto de miles, como se escribe en español: «8.000» son ocho mil (antes se guardaban 8)
@@ -387,6 +388,7 @@ try {
 
   console.log('\nAtleta: nutrición');
   const tarjetaNut = p.locator('button.nutricion-hoy');
+  await abrirEnHoy(p, 'nutricion');   // (diseño 9) en Hoy, esta sección va plegada
   await tarjetaNut.waitFor();
   await tarjetaNut.click();
   const hojaNut = p.getByRole('dialog', { name: 'Apuntar la nutrición' });
@@ -924,6 +926,7 @@ try {
   await p.locator('.hero-dia .hero-siguiente', { hasText: 'Pierna A' }).waitFor();
 
   console.log('\nAtleta: peso de hoy');
+  await abrirEnHoy(p, 'peso');   // (diseño 9) en Hoy, esta sección va plegada
   await p.getByRole('button', { name: 'Apuntar el de hoy' }).click();
   await p.locator('#peso-hoy').fill('70,4');
   await p.locator('#peso-hoy').blur();
@@ -1685,6 +1688,7 @@ try {
     const NOMBRES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     await p.locator('.toca-hoy').waitFor();
     // (en el centro: arriba la taparía la cabecera pegada)
+    await abrirEnHoy(p, 'semana');   // (diseño 9) en Hoy, esta sección va plegada
     await p.getByRole('button', { name: 'Tu plan', exact: true }).evaluate((b) => b.scrollIntoView({ block: 'center' }));
     await p.getByRole('button', { name: 'Tu plan', exact: true }).click();
     const hojaPlanA = p.getByRole('dialog', { name: /^Tu plan,/ });
