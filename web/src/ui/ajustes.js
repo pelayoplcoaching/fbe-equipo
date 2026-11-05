@@ -8,6 +8,7 @@
 // v0.52.2: el descanso si el coach no lo pone (de serie, 2:00; 0 = sin descanso automático).
 // v0.54: el fondo del chat («Con dibujos», de serie, o «Liso»).
 // v0.62: «Avisar aunque bloquees el móvil», apagado de serie.
+// v0.63: el teclado de la app para apuntar las series (encendido de serie; apagado, el del móvil, como antes).
 import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
 import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 
@@ -23,7 +24,9 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   soloWifi: false,
   // v0.62: «Avisar aunque bloquees el móvil» (la pista del descanso, ui/pista-descanso.js): apagado de serie, porque en el
   // iPhone (y en Android) pausa la música de otras apps mientras dura el descanso. Solo sale donde puede funcionar
-  vozBloqueo: false };
+  vozBloqueo: false,
+  // v0.63: «Teclado de la app al apuntar las series» (ui/atleta/Teclado.jsx): de serie, sí
+  tecladoApp: true };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -57,6 +60,7 @@ export function normalizarAjustes(guardado = {}) {
   a.difuminarCara = a.difuminarCara === true;
   a.soloWifi = a.soloWifi === true;
   a.vozBloqueo = a.vozBloqueo === true;
+  a.tecladoApp = a.tecladoApp !== false;
   return a;
 }
 export function leerAjustes() {
@@ -73,7 +77,10 @@ export function guardarAjustes(a) {
   enMemoria = { ...a };
   try { localStorage.setItem(CLAVE, JSON.stringify(a)); } catch { /* sin almacenamiento: vale para esta visita */ }
   aplicarTema(a.tema, a);
+  // v0.63: para lo que ya está en pantalla y depende de un ajuste (el teclado de la sesión)
+  try { window.dispatchEvent(new Event(EVENTO_AJUSTES)); } catch { /* sin ventana */ }
 }
+export const EVENTO_AJUSTES = 'fbe-ajustes';
 
 // El tema usa el mismo atributo que el visor que aloja la demo (data-theme); con «sistema» se respeta lo que hubiera.
 let temaPrevio;

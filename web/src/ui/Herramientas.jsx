@@ -5,8 +5,9 @@ import { e1rm, tablaRpe, RPE_TABLA, discosPorLado, aproximaciones, num } from '.
 const COLOR_PLACA = { 25: 'var(--disco-rojo)', 20: 'var(--disco-azul)', 15: 'var(--disco-amarillo)', 10: 'var(--disco-verde)' };
 
 // Discos por lado, con los colores de los discos de competición
-export function Placas({ kg, barra = 20, etiqueta = 'Por lado' }) {
-  const lado = discosPorLado(kg, barra);
+// v0.63: discos, los que hay (con el disco más pequeño de ese gimnasio); de serie, los de siempre
+export function Placas({ kg, barra = 20, etiqueta = 'Por lado', discos = undefined }) {
+  const lado = discosPorLado(kg, barra, discos);
   if (!lado) return null;
   return (
     <span class="discos-ayuda" role="img" aria-label={lado.length ? `Por lado: ${lado.map((d) => num(d, 2)).join(' más ')} kilos, con barra de ${barra}` : `Solo la barra de ${barra} kilos`}>
@@ -19,7 +20,7 @@ export function Placas({ kg, barra = 20, etiqueta = 'Por lado' }) {
 }
 
 // Calculadora: 1RM estimado de una serie, tabla de cargas por repeticiones y RPE, y discos para una carga
-export function Calculadora({ inicial = {}, alCerrar }) {
+export function Calculadora({ inicial = {}, alCerrar, discos = undefined }) {
   const [kg, setKg] = useState(inicial.kg ?? 60);
   const [reps, setReps] = useState(inicial.reps ?? 5);
   const [rpe, setRpe] = useState(inicial.rpe ?? 8);
@@ -54,7 +55,7 @@ export function Calculadora({ inicial = {}, alCerrar }) {
       <section class="pila-s">
         <h3 class="peq secundario">Discos para una carga (barra de 20 kg)</h3>
         <Paso id="calc-carga" valor={carga} paso={2.5} min={20} max={500} dec={2} etiqueta="carga total en la barra" alCambiar={(v) => setCarga(v ?? 20)} />
-        {discosPorLado(carga) ? <Placas kg={carga} /> : <p class="peq secundario">Con discos estándar no se puede cargar exacto: prueba con un múltiplo de 2,5 kg.</p>}
+        {discosPorLado(carga, 20, discos) ? <Placas kg={carga} discos={discos} /> : <p class="peq secundario">Con discos estándar no se puede cargar exacto: prueba con un múltiplo de 2,5 kg.</p>}
       </section>
     </Hoja>
   );

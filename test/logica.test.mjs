@@ -2754,7 +2754,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.4' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.5' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -3732,10 +3732,153 @@ console.log('\nv0.62: avisar aunque bloquees el móvil (la pista del descanso) y
   const PV4 = await import('../web/src/logica/privacidad.js');
   const mov5 = legal5.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
   const not5 = legal5.PRIVACIDAD.find((x) => x[0] === 'Notificaciones')[1];
-  check(legal5.VERSION_LEGAL === '2026-12.4' && PV4.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.4' && PV4.novedadesDesde('2026-12.3', '2026-12.4').length === 1
+  check(PV4.compararVersiones(legal5.VERSION_LEGAL, '2026-12.4') >= 0 && PV4.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.4') && PV4.novedadesDesde('2026-12.3', '2026-12.4').length === 1
     && /Avisar aunque bloquees el móvil/.test(mov5) && /pantalla de bloqueo/.test(mov5) && /a la vista de cualquiera/.test(mov5) && /no sale de él/.test(mov5) && /carga que te propone/.test(not5)
-    && /lo ve quien mire tu móvil/.test(PV4.NOVEDADES_PRIVACIDAD[0][2]) && /pantalla del coche, el reloj u otro aparato Bluetooth/.test(mov5),
+    && /lo ve quien mire tu móvil/.test(PV4.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.4')[2]) && /pantalla del coche, el reloj u otro aparato Bluetooth/.test(mov5),
     'la política 2026-12.4: el ajuste se queda en el móvil, la pantalla de bloqueo enseña el descanso y la serie siguiente (a la vista de quien mire el móvil) y el aviso lleva la carga');
+}
+
+// ---------------------------------------------------------------- v0.63: apuntar las series (teclado, propagar, deslizar, «Ahora toca»)
+console.log('\nv0.63: el teclado de la app, el cambio que pasa a las series siguientes, deslizar y «Ahora toca»');
+{
+  const TE = await import('../web/src/logica/teclado.js');
+  const PR = await import('../web/src/logica/propagar.js');
+  const DE = await import('../web/src/logica/deslizar.js');
+  const AT = await import('../web/src/logica/ahora-toca.js');
+  const { discosPorLado, trasSerie } = await import('../web/src/logica/calculos.js');
+  const { normalizarAjustes, AJUSTES_DEFECTO } = await import('../web/src/ui/ajustes.js');
+  // ---------- el salto de −/+ por el material y los discos de ese gimnasio
+  check(TE.tipoCarga('Press banca') === 'discos' && TE.tipoCarga('Sentadilla trasera con barra') === 'discos' && TE.tipoCarga('Prensa de piernas') === 'discos' && TE.tipoCarga('Sentadilla en multipower') === 'discos'
+    && TE.tipoCarga('Press inclinado con mancuernas') === 'mancuernas' && TE.tipoCarga('Sentadilla búlgara') === 'mancuernas' && TE.tipoCarga('Swing con kettlebell') === 'kettlebell'
+    && TE.tipoCarga('Jalón al pecho') === 'maquina' && TE.tipoCarga('Remo en polea baja') === 'maquina' && TE.tipoCarga('Curl femoral tumbado') === 'maquina' && TE.tipoCarga('Dominadas pronas') === null && TE.tipoCarga('') === null,
+    'cómo se carga cada ejercicio, por su nombre: con discos (barra, multipower, prensa), mancuernas, kettlebell, máquina o polea; si no se sabe, nada');
+  check(TE.pasoKg({ nombre: 'Press banca' }) === 2.5 && TE.pasoKg({ nombre: 'Press banca', discoMinimo: 0.5 }) === 1 && TE.pasoKg({ nombre: 'Press banca', discoMinimo: 1 }) === 2
+    && TE.pasoKg({ nombre: 'Press banca', discoMinimo: 2.5 }) === 5 && TE.pasoKg({ nombre: 'Press banca', discoMinimo: 3 }) === 2.5 && TE.pasoKg({ nombre: 'Prensa de piernas', discoMinimo: 1.25 }) === 2.5,
+    'con discos, −/+ es dos veces el disco más pequeño de ese gimnasio (uno por lado): ±2,5 con discos de 1,25; ±1 con fraccionados de 0,5; un disco que no es de la lista, el de serie');
+  check(TE.pasoKg({ nombre: 'Curl con mancuernas', kg: 8 }) === 1 && TE.pasoKg({ nombre: 'Curl con mancuernas', kg: 20 }) === 2 && TE.pasoKg({ nombre: 'Swing con kettlebell', kg: 16 }) === 4
+    && TE.pasoKg({ nombre: 'Jalón al pecho', kg: 40 }) === 2.5 && TE.pasoKg({ nombre: 'Jalón al pecho', kg: 60 }) === 5 && TE.pasoKg({ nombre: 'Dominadas lastradas', kg: 10 }) === 2.5 && TE.pasoKg() === 2.5,
+    'mancuernas de 2 en 2 (de 1 en 1 por debajo de 10 kg), kettlebells de 4 en 4, máquinas y poleas como propone la app (2,5; 5 desde 50 kg) y, sin saber qué es, ±2,5');
+  check(igual(TE.discosCon(1.25), [25, 20, 15, 10, 5, 2.5, 1.25]) && igual(TE.discosCon(2.5), [25, 20, 15, 10, 5, 2.5]) && TE.discosCon(0.5).includes(0.5) && TE.discosCon(0.5).includes(1)
+    && igual(discosPorLado(101, 20, TE.discosCon(0.5)), [25, 15, 0.5]) && discosPorLado(101) === null && discosPorLado(100, 20, TE.discosCon(2.5)) && discosPorLado(102.5, 20, TE.discosCon(2.5)) === null
+    && igual(discosPorLado(62.5), [20, 1.25]),
+    'los discos por lado, con los que hay en ese gimnasio: 101 kg con fraccionados (25 + 15 + 0,5), que con los de siempre no se puede; sin los de 1,25, 102,5 tampoco (los de siempre, igual que antes)');
+  check(TE.DISCOS_MINIMOS.every(TE.discoMinimoValido) && !TE.discoMinimoValido(0.25) && !TE.discoMinimoValido('x') && TE.DISCO_MINIMO_DEFECTO === 1.25,
+    'el disco más pequeño, de una lista (0,5, 1, 1,25 o 2,5); de serie, 1,25');
+  // ---------- el orden de «Siguiente»
+  check(igual(TE.ordenCampos(), ['kg', 'reps', 'hecho']) && igual(TE.ordenCampos({ conRpe: true }), ['kg', 'reps', 'rpe', 'hecho'])
+    && TE.siguienteCampo('kg') === 'reps' && TE.siguienteCampo('reps') === 'hecho' && TE.siguienteCampo('reps', { conRpe: true }) === 'rpe' && TE.siguienteCampo('rpe', { conRpe: true }) === 'hecho'
+    && TE.siguienteCampo('rpe') === 'hecho' && TE.siguienteCampo('hecho', { conRpe: true }) === 'hecho',
+    '«Siguiente»: kilos → repeticiones → RPE (solo si tu coach lo pide) → marcar la serie; el RPE abierto a mano, a marcar');
+  check(TE.pideRpe({ rpe_objetivo: 8 }) && TE.pideRpe({ rir_objetivo: 2 }) && TE.pideRpe({}, { rpe: 7.5 }) && !TE.pideRpe({}) && !TE.pideRpe(null) && !TE.pideRpe({ rpe_objetivo: null }, { reps: 8 }),
+    'tu coach pide el esfuerzo si pone un RPE o un RIR objetivo (en la pauta o en esa serie)');
+  // ---------- las teclas
+  const K = (t, k, o) => TE.pulsarTecla(t, k, o);
+  check(K('', '4') === '4' && K('42', '5') === '425' && K('42', ',') === '42,' && K('42,5', ',') === '42,5' && K('42,55', '1') === '42,55' && K('', ',') === '0,' && K('0', '5') === '5'
+    && K('150', '1') === '150' && K('1500', '0') === '1500' && K('9999', '9') === '9999' && K('42,5', 'x') === '42,5' && K(null, '7') === '7',
+    'los kilos: cifras, una sola coma y hasta dos decimales, sin pasar de 1500 (lo que no vale no se escribe)');
+  check(K('8', ',', { campo: 'reps' }) === '8' && K('20', '0', { campo: 'reps' }) === '200' && K('200', '1', { campo: 'reps' }) === '200' && K('201', '', { campo: 'reps' }) === '201' && K('12', '3', { campo: 'reps' }) === '123' && K('123', '4', { campo: 'reps' }) === '123',
+    'las repeticiones: enteras (sin coma) y hasta 200');
+  check(K('42,5', '7', { nuevo: true }) === '7' && K('42,5', 'borrar', { nuevo: true }) === '' && K('42,5', 'borrar') === '42,' && K('', 'borrar') === '' && K('8', ',', { campo: 'reps', nuevo: true }) === '8'
+    && K('42,5', ',', { nuevo: true }) === '0,',
+    'al abrir el campo (o tras −/+), lo que se teclea sustituye a lo que hay, como al seleccionarlo; borrar lo deja vacío');
+  check(TE.sumarPaso('', 60, 2.5) === '62,5' && TE.sumarPaso('60', null, -2.5) === '57,5' && TE.sumarPaso('1', null, -2.5) === '0' && TE.sumarPaso('42,5', 0, 2.5) === '45' && TE.sumarPaso('', null, 2.5) === '2,5'
+    && TE.sumarPaso('1499', null, 5) === '1500' && TE.sumarPaso('', 8, 1, 'reps') === '9' && TE.sumarPaso('', null, -1, 'reps') === '0' && TE.sumarPaso('8', 10, -1, 'reps') === '7' && TE.sumarPaso('', 16, 2) === '18',
+    '−/+ suman a lo escrito o, si está vacío, a lo que te propone (el gris); nunca por debajo de 0 ni por encima del tope; con coma');
+  check(TE.anuncioValor('kg', '42,5') === 'Kilos: 42,5' && TE.anuncioValor('reps', '') === 'Repeticiones: vacío' && TE.anuncioValor('rpe', 8.5) === 'RPE: 8,5' && TE.anuncioValor('rpe', '') === 'RPE: vacío'
+    && igual(TE.RPE_TECLADO, [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10]),
+    'cada cambio se anuncia al lector de pantalla («Kilos: 42,5»); el RPE, del 6 al 10 de medio en medio');
+  check(AJUSTES_DEFECTO.tecladoApp === true && normalizarAjustes({}).tecladoApp === true && normalizarAjustes({ tecladoApp: false }).tecladoApp === false && normalizarAjustes({ tecladoApp: 'no' }).tecladoApp === true,
+    'el teclado de la app, encendido de serie en cada móvil (apagado, el del móvil, como antes)');
+  // ---------- el cambio que pasa a las series siguientes
+  const F = (over = {}) => [1, 2, 3, 4].map((n) => ({ numero: n, hecha: false, pautada: true, tipo: null, prescrito: 60, texto: '', ...(over[n] || {}) }));
+  const nums = (cs) => cs.map((c) => c.numero).join();
+  const c1 = PR.propagarCambio(F(), 1, '', '62,5');
+  check(nums(c1) === '2,3,4' && c1.every((c) => c.antes === '' && c.despues === '62,5'), 'subir la primera serie (3 × 60 kg → 62,5) pasa a las siguientes sin hacer que llevaban lo mismo');
+  check(nums(PR.propagarCambio(F({ 2: { hecha: true } }), 1, '', '62,5')) === '3,4' && nums(PR.propagarCambio(F({ 3: { texto: '65' } }), 1, '', '62,5')) === '2,4'
+    && nums(PR.propagarCambio(F({ 4: { prescrito: 55 } }), 1, '', '62,5')) === '2,3' && nums(PR.propagarCambio(F({ 4: { pautada: false } }), 1, '', '62,5')) === '2,3',
+    'nunca toca las hechas, las que ya habías cambiado a otra cosa, las que tienen otra pauta (otros kilos) ni las de más');
+  check(PR.propagarCambio(F({ 1: { tipo: 'top' }, 2: { tipo: 'backoff' }, 3: { tipo: 'backoff' }, 4: { tipo: 'backoff' } }), 1, '', '62,5').length === 0
+    && nums(PR.propagarCambio(F({ 1: { tipo: 'top' }, 2: { tipo: 'backoff', prescrito: 54 }, 3: { tipo: 'backoff', prescrito: 54 } }), 2, '', '55')) === '3',
+    'la top no cambia sus back-off (otra pauta); una back-off sí cambia las siguientes back-off iguales');
+  check(nums(PR.propagarCambio(F(), 2, '', '62,5')) === '3,4' && PR.propagarCambio(F({ 1: { hecha: true } }), 1, '60', '62,5').length === 0 && PR.propagarCambio(F(), 1, '', '60').length === 0
+    && PR.propagarCambio(F(), 1, '60', '').length === 0 && PR.propagarCambio(F(), 9, '', '1').length === 0 && PR.propagarCambio(F({ 1: { pautada: false } }), 1, '', '62,5').length === 0,
+    'solo hacia delante; nada si la cambiada ya está hecha, si el valor no cambia (escribir lo mismo que el gris) o si es una de más');
+  const conProp = F({ 2: { texto: '62,5' }, 3: { texto: '62,5' }, 4: { texto: '62,5' } });
+  check(nums(PR.propagarCambio(conProp, 1, '62,5', '')) === '2,3,4' && PR.propagarCambio(conProp, 1, '62,5', '').every((c) => c.despues === '')
+    && nums(PR.propagarCambio(F({ 1: { prescrito: 8 }, 2: { prescrito: 8 }, 3: { prescrito: 10 } }), 1, '', '6')) === '2',
+    'volver la primera a lo propuesto (vaciarla) también vuelve las que había cambiado; con las repeticiones, lo mismo (3 × 8 → 6, no la de 10)');
+  const b0 = { 1: { kg: '62,5', reps: '' }, 2: { kg: '', reps: '8' }, 3: { kg: '', reps: '' } };
+  const cambios = PR.propagarCambio(F(), 1, '', '62,5');
+  const b1 = PR.aplicarPropagacion(b0, 'kg', cambios);
+  check(b1[2].kg === '62,5' && b1[2].reps === '8' && b1[3].kg === '62,5' && b1[4].kg === '62,5' && b1[1].kg === '62,5' && b0[2].kg === '' && b0[3].kg === '',
+    'aplicarla cambia solo ese campo de esas series (las repeticiones escritas se quedan) y no toca lo de antes');
+  const b2 = PR.deshacerPropagacion(b1, 'kg', cambios);
+  check(b2[2].kg === '' && b2[3].kg === '' && b2[4].kg === '' && b2[2].reps === '8' && b2[1].kg === '62,5',
+    '«Deshacer» vuelve cada serie exactamente a lo que tenía (también vacío) y deja la cambiada como la dejaste');
+  const b3 = PR.deshacerPropagacion({ ...b1, 3: { ...b1[3], kg: '70' } }, 'kg', cambios);
+  check(b3[3].kg === '70' && b3[2].kg === '' && b3[4].kg === '', 'y no pisa una serie que has vuelto a cambiar después');
+  check(PR.textoPropagacion([3, 4]) === 'También en las series 3 y 4' && PR.textoPropagacion([3]) === 'También en la serie 3' && PR.textoPropagacion([4, 2, 3]) === 'También en las series 2, 3 y 4' && PR.textoPropagacion([]) === '',
+    'el aviso: «También en las series 3 y 4 · Deshacer»');
+  // ---------- deslizar
+  check(DE.ejeGesto(3, 4) === null && DE.ejeGesto(12, 2) === 'x' && DE.ejeGesto(2, 12) === 'y' && DE.ejeGesto(12, 11) === 'y' && DE.ejeGesto(-15, 3) === 'x' && DE.BLOQUEO_PX === 10,
+    'hasta 10 px no se sabe; luego se fija el eje (en diagonal, gana la página)');
+  check(DE.umbralDeslizar(360) === 126 && DE.umbralDeslizar(100) === 72 && DE.umbralDeslizar(600) === 140 && DE.umbralDeslizar(0) === 112,
+    'el umbral: el 35 % del ancho de la fila, entre 72 y 140 px');
+  const d1 = DE.estadoDeslizar(50, 360), d2 = DE.estadoDeslizar(130, 360), d3 = DE.estadoDeslizar(-40, 360), d4 = DE.estadoDeslizar(1000, 360);
+  check(d1.x === 50 && !d1.pasado && d2.pasado && d2.progreso === 1 && d3.x === 0 && !d3.pasado && d4.x <= 288 && d4.x > 126 && DE.estadoDeslizar(100, 360).progreso < 1,
+    'la fila sigue al dedo hasta el umbral y luego con resistencia (sin salirse); hacia la izquierda no se mueve');
+  check(DE.cruceUmbral(false, true) === 'entra' && DE.cruceUmbral(true, false) === 'sale' && DE.cruceUmbral(true, true) === null && DE.cruceUmbral(false, false) === null,
+    'un toque de vibración al cruzar el umbral (y volviendo atrás se cancela)');
+  check(DE.sigueLarga(3, 4) && !DE.sigueLarga(6, 6) && DE.LARGA_MS === 500, 'la pulsación larga: medio segundo sin moverse más de 8 px');
+  // ---------- «Ahora toca»
+  const EJ = [{ id: 'a', series: 3, ejercicio: { nombre: 'Press banca' }, rpe_objetivo: 8 }, { id: 'b', series: 2, ejercicio: { nombre: 'Remo con barra' }, rir_objetivo: 2, notas_coach: 'Pausa abajo' }];
+  check(igual(AT.serieQueToca(EJ, { a: { 1: {}, 2: {} } }), { id: 'a', numero: 3 }) && igual(AT.serieQueToca(EJ, { a: { 1: {} } }, { id: 'b', numero: 1 }), { id: 'b', numero: 1 })
+    && igual(AT.serieQueToca(EJ, { a: { 1: {} }, b: { 1: {} } }, { id: 'b', numero: 1 }), { id: 'a', numero: 2 }) && igual(AT.serieQueToca(EJ, {}, { id: 'a', numero: 4 }), { id: 'a', numero: 1 })
+    && AT.serieQueToca(EJ, {}, null, { completada: true }) === null && AT.serieQueToca(EJ, { a: { 1: 1, 2: 1, 3: 1 }, b: { 1: 1, 2: 1 } }) === null,
+    'la serie que toca, la misma regla que la sesión y la píldora: la que dijo la última marcada si sigue sin hacer; si no, la primera sin hacer; nada al acabar');
+  const opc = (o = {}) => ({ ejercicios: EJ, hechas: { a: { 1: {}, 2: {} } }, tras: 'a', propuestaDe: (se, k) => (se.id === 'a' ? { kg: 80, reps: 6 } : { kg: 60, reps: 10 }),
+    ultimasDe: (se) => (se.id === 'a' ? { series: [{ numero: 3, kg: 77.5, reps: 6, rpe: 8 }] } : null), recordatoriosDe: (se) => (se.id === 'a' ? [{ texto: 'Codos a 45°' }] : []), barraDe: () => true, ...o });
+  const t1 = AT.ahoraToca(opc());
+  check(t1.id === 'a' && t1.numero === 3 && t1.serie === 'Serie 3 de 3' && t1.kg === 80 && t1.reps === 6 && t1.carga === '80 kg × 6' && t1.esfuerzo === 'RPE 8' && t1.anterior === '77,5×6 @8'
+    && t1.nota === 'Codos a 45°' && t1.notaRecuerda && t1.discos && !t1.otroEjercicio && t1.nombre === 'Press banca'
+    && t1.texto === 'Press banca, serie 3 de 3. 80 kg × 6. RPE 8. La última vez, 77,5×6 @8. Recuerda: Codos a 45°',
+    `lo que viene: la serie, los kilos × repeticiones propuestos, el RPE objetivo, la última vez en esa serie, el «Recuerda» de tu coach y los discos («${t1.texto}»)`);
+  const t2 = AT.ahoraToca(opc({ hechas: { a: { 1: {}, 2: {}, 3: {} } } }));
+  check(t2.id === 'b' && t2.numero === 1 && t2.otroEjercicio && t2.esfuerzo === 'RIR 2' && t2.nota === 'Pausa abajo' && !t2.notaRecuerda && t2.anterior === null && /^Siguiente ejercicio, Remo con barra, serie 1 de 2/.test(t2.texto),
+    'cuando lo siguiente es otro ejercicio, lo dice; con su RIR objetivo y, sin «Recuerda», la nota de tu coach');
+  check(AT.ahoraToca(opc({ hechas: { a: { 1: 1, 2: 1, 3: 1 }, b: { 1: 1, 2: 1 } } })) === null && AT.ahoraToca(opc({ completada: true })) === null,
+    'tras la última serie (o con la sesión terminada) no hay tarjeta');
+  const t3 = AT.ahoraToca(opc({ propuestaDe: () => ({ kg: null, reps: 12, rpe: 7.5 }), barraDe: () => false }));
+  check(t3.carga === '12 repeticiones' && t3.kg === null && t3.esfuerzo === 'RPE 7,5' && !t3.discos && AT.ahoraToca(opc({ propuestaDe: () => ({ kg: 20, reps: 5 }) })).discos === false
+    && AT.ahoraToca(opc({ propuestaDe: () => { throw new Error('x'); } })).carga === null,
+    'sin kilos (peso corporal), las repeticiones; el RPE de la serie pautada serie a serie manda; los discos solo con barra y más de 20 kg; si la propuesta falla, sin cifras');
+  check(AT.nombreSerie({ series: 4, backoff_pct: 10 }, 1) === 'Serie top' && AT.nombreSerie({ series: 4, backoff_pct: 10 }, 3) === 'Back-off 2 de 3' && AT.nombreSerie({ series: 3 }, 4) === 'Serie 4 (de más)'
+    && AT.objetivoEsfuerzo({ rir_objetivo: 1, rpe_objetivo: 9 }) === 'RIR 1' && AT.objetivoEsfuerzo({}) === null,
+    'la top y sus back-off por su nombre; el RIR antes que el RPE de la pauta');
+  // Superserie: la ronda A1 → A2 va sin descanso; al cerrarla, el descanso y «Ahora toca» vuelve a A1, serie 2
+  const SS = [{ id: 'a1', series: 3, superserie: 'A', descanso_seg: 90, ejercicio: { nombre: 'Press militar' } }, { id: 'a2', series: 3, superserie: 'A', descanso_seg: 90, ejercicio: { nombre: 'Dominadas' } },
+    { id: 'c', series: 2, descanso_seg: 60, ejercicio: { nombre: 'Curl' } }];
+  const r1 = trasSerie(SS, { a1: 1, a2: 0, c: 0 }, 'a1');
+  const r2 = trasSerie(SS, { a1: 1, a2: 1, c: 0 }, 'a2');
+  const s2 = AT.ahoraToca({ ejercicios: SS, hechas: { a1: { 1: {} }, a2: { 1: {} } }, proxima: r2.siguiente, tras: 'a2', etiquetas: { a1: 'A1', a2: 'A2' }, propuestaDe: () => ({ kg: 40, reps: 8 }) });
+  check(r1.enRonda && r1.descanso === 0 && r2.descanso === 90 && s2.id === 'a1' && s2.numero === 2 && s2.etiqueta === 'A1' && s2.otroEjercicio && /^Siguiente ejercicio, A1 Press militar, serie 2 de 3/.test(s2.texto),
+    'en una superserie, tras la ronda (A1 y A2) el descanso y «Ahora toca» vuelve a A1, serie 2, con su etiqueta');
+  const s3 = AT.ahoraToca({ ejercicios: SS, hechas: { a1: { 1: 1, 2: 1, 3: 1 }, a2: { 1: 1, 2: 1, 3: 1 } }, proxima: trasSerie(SS, { a1: 3, a2: 3, c: 0 }, 'a2').siguiente, tras: 'a2', propuestaDe: () => ({ kg: 12, reps: 12 }) });
+  check(s3.id === 'c' && s3.numero === 1 && s3.otroEjercicio, 'acabada la superserie, el siguiente ejercicio');
+  // (revisión L1) saltarse una serie: marcar la 1 y la 3 de 4. Contando las hechas, trasSerie diría la «3» (ya hecha); la regla
+  // de la sesión dice la 2, y es la que usan ahora también la pantalla de bloqueo, el aviso al móvil y la voz
+  const EJ4 = [{ id: 'x', series: 4, ejercicio: { nombre: 'Press banca' } }];
+  const hSalto = { x: { 1: {}, 3: {} } };
+  const tS = trasSerie(EJ4, { x: 2 }, 'x');
+  check(tS.siguiente.numero === 3 && igual(AT.serieQueToca(EJ4, hSalto, tS.siguiente), { id: 'x', numero: 2 }) && AT.ahoraToca({ ejercicios: EJ4, hechas: hSalto, proxima: tS.siguiente }).numero === 2,
+    'saltándose una serie (1 y 3 de 4), la siguiente es la 2 para la tarjeta, la píldora, la pantalla de bloqueo, el aviso y la voz (no la «3» de contar las hechas)');
+  // ---------- la política
+  const legal6 = await import('../web/src/legal.js');
+  const PV5 = await import('../web/src/logica/privacidad.js');
+  const mov6 = legal6.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
+  check(legal6.VERSION_LEGAL === '2026-12.5' && PV5.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.5' && PV5.novedadesDesde('2026-12.4', '2026-12.5').length === 1
+    && /teclado de la app/.test(mov6) && /disco más pequeño/.test(mov6) && /no se guarda en ningún sitio hasta que la marcas/.test(mov6) && /solo en tu móvil/.test(PV5.NOVEDADES_PRIVACIDAD[0][2]),
+    'la política 2026-12.5: el teclado elegido y el disco más pequeño de cada sitio se quedan en el móvil (lo escrito sin marcar, en ningún sitio)');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

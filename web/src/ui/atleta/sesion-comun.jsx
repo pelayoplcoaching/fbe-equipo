@@ -12,6 +12,9 @@ import { descansoEnCurso } from '../en-curso.js';
 import { lanzarConfeti } from '../confeti.js';
 import { pistaManda, pistaSono, pistaFinal, prepararPista, pistaActiva } from '../pista-descanso.js';
 import { ajustarDescanso, reanudarDescanso, fraseTrasPista, avisoTrasCambio } from '../../logica/pista.js';
+import { Placas } from '../Herramientas.jsx';
+import { num } from '../../logica/calculos.js';
+import { discosCon } from '../../logica/teclado.js';
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
 
@@ -162,7 +165,9 @@ export function aNumero(t) {
 // delante. Desde la pantalla de bloqueo se puede pausar el descanso (pausa: los ms que quedaban): aquí sale «en pausa» y
 // «Seguir».
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
-export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '' }) {
+// v0.63: toca (logica/ahora-toca.js): con el descanso en marcha, la tarjeta «Ahora toca» con lo que viene; al tocarla,
+// alToca(id, numero) lleva a esa serie (con el teclado en los kilos)
+export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined }) {
   const { api, atleta } = useApp() || {};
   const ahora = useAhora(250);
   const finRef = useRef(fin);
@@ -277,7 +282,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
     <div ref={caja} class={`temporizador ${clase} ${quedan <= 0 ? 'fin' : ''}`} role="timer" aria-live="off" aria-label="Descanso" style={{ '--c-disco': color }}>
       <div class="temporizador-cab">
         <span class="temporizador-etq">{quedan > 0 ? (pausado ? 'Descanso en pausa' : 'Descanso') : 'Descanso terminado'}</span>
-        <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>
+        {!(quedan > 0 && toca) && <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>}
       </div>
       <div class={`reloj-descanso ${fase ? 'respirando' : ''}`}>
         {fase && !quietoRespira && <span key={inicioR} ref={ponerRetraso} class="respira-circulo" aria-hidden="true" />}
@@ -291,6 +296,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
           {fase && <div class={`respira-texto ${fase.fase}`} aria-hidden="true">{fase.texto}</div>}
         </div>
       </div>
+      {quedan > 0 && toca && <AhoraToca ahora={toca} alTocar={alToca} discoMinimo={discoMinimo} />}
       {conPista && <p class="pista-activa peq"><Icono n="candado" />{pausado ? 'En pausa desde la pantalla de bloqueo' : 'Te avisa aunque bloquees el móvil'}</p>}
       {quedan > 0 && !pausado && (
         <button type="button" class="respira-boton" aria-pressed={respira ? 'true' : 'false'} onClick={cambiarRespira} title="Un círculo para acompasar la respiración mientras descansas">
@@ -320,6 +326,29 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
         </button>
       )}
     </>
+  );
+}
+
+// v0.63 (8): «Ahora toca», en el descanso: lo que viene, para leerlo de lejos (cifras grandes y mucho contraste). Es un
+// botón: lleva a esa serie y abre el teclado en los kilos
+export function AhoraToca({ ahora, alTocar, discoMinimo = undefined }) {
+  const a = ahora;
+  return (
+    <button type="button" class={`ahora-toca ${a.otroEjercicio ? 'otro' : ''}`} onClick={() => alTocar?.(a.id, a.numero)} aria-label={`Ahora toca: ${a.texto}. Toca para ir a esa serie`}>
+      <span class="ahora-cab"><span class="ahora-etq">{a.otroEjercicio ? 'Siguiente ejercicio' : 'Ahora toca'}</span><span class="ahora-serie">{a.serie}</span></span>
+      <span class="ahora-nombre">{a.etiqueta && <span class="ss-etq">{a.etiqueta}</span>}{a.nombre}</span>
+      {a.kg != null ? (
+        <span class="ahora-carga num">{num(a.kg, 2)}<small> kg</small>{a.reps != null && <><span class="ahora-por"> × </span>{a.reps}</>}</span>
+      ) : a.reps != null && <span class="ahora-carga num">{a.reps}<small> reps</small></span>}
+      {(a.esfuerzo || a.anterior) && (
+        <span class="ahora-meta">
+          {a.esfuerzo && <span class="ahora-esfuerzo">{a.esfuerzo}</span>}
+          {a.anterior && <span><small>ant.</small> <span class="num">{a.anterior}</span></span>}
+        </span>
+      )}
+      {a.discos && <span class="ahora-discos"><Placas kg={a.kg} discos={discosCon(discoMinimo)} /></span>}
+      {a.nota && <span class="ahora-nota"><Icono n={a.notaRecuerda ? 'chincheta' : 'mensaje'} /><span>{a.notaRecuerda ? 'Recuerda: ' : ''}{a.nota}</span></span>}
+    </button>
   );
 }
 

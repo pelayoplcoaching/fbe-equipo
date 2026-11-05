@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Disco, useApp, Capa } from '../comunes.jsx';
 import { Placas } from '../Herramientas.jsx';
-import { pauta, num, mmss, textoSerie, incrementoCarga, trasSerie, duracionEstimada, NOMBRE_PRIORIDAD, textoObjetivo } from '../../logica/calculos.js';
+import { pauta, num, mmss, textoSerie, trasSerie, duracionEstimada, NOMBRE_PRIORIDAD, textoObjetivo } from '../../logica/calculos.js';
+import { Teclado, usarTecladoMovil } from './Teclado.jsx';
+import { pasoKg, pideRpe, siguienteCampo, discosCon, tipoCarga } from '../../logica/teclado.js';
 import { fmtCorta } from '../../logica/fechas.js';
 import { aNumero, problemaSerie, prepararEjercicio, NotaFijada, Temporizador, useAhora, prepararAudio } from './sesion-comun.jsx';
 import { Metronomo } from './Metronomo.jsx';
@@ -16,7 +18,7 @@ const RPE_ENFOQUE = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 export function Enfoque(props) { return <Capa><EnfoquePantalla {...props} /></Capa>; }
 function EnfoquePantalla({
   ejercicios, hechas, records, etiquetas, actualDe, ultimasDe, foco, progresionAuto, notas, guardarNota,
-  guardar, quitar, descanso, setDescanso, seId, setSeId, inicio, alSalir, alTerminar,
+  guardar, quitar, descanso, setDescanso, seId, setSeId, inicio, alSalir, alTerminar, ahora = null, teclado = null,
 }) {
   const { aviso } = useApp();
   const e = ejercicios.find((x) => x.id === seId) || ejercicios[0];
@@ -46,10 +48,25 @@ function EnfoquePantalla({
     if (!numero) return;
     setKg(fmtKg(prop?.kg)); setReps(prop?.reps == null ? '' : String(prop.reps)); setRpe(previa?.rpe ?? '');
   }, [e.id, numero, previa?.id, previa?.registrada_en]);
-  useEffect(() => { setSel(null); setEditandoNota(false); setMetro(false); titulo.current?.focus(); }, [e.id]);
+  // v0.63: el teclado de la app en los kilos y las repeticiones (como en la lista); «Ahora toca» lleva aquí con el teclado en los kilos
+  const app = !!teclado?.app;
+  const [campoT, setCampoT] = useState(null);
+  const campoTRef = useRef(null);
+  campoTRef.current = campoT;
+  const refKg = useRef(null), refReps = useRef(null);
+  const pedirKg = useRef(false);
+  useEffect(() => {
+    setSel(null); setEditandoNota(false); setMetro(false); setCampoT(null);
+    if (pedirKg.current) { pedirKg.current = false; refKg.current?.focus({ preventScroll: true }); } else titulo.current?.focus();
+  }, [e.id]);
+  const irAhora = (id) => {
+    if (id === e.id) { setSel(null); refKg.current?.focus({ preventScroll: true }); return; }
+    pedirKg.current = true; setSeId(id);
+  };
   useEffect(() => {
     const tecla = (ev) => {
       if (metro || document.querySelector('.velo')) return; // con una hoja abierta (el metrónomo), las teclas son suyas
+      if (ev.defaultPrevented || document.querySelector('.teclado-serie')) return; // y con el teclado abierto, Escape lo cierra a él
       if (ev.key === 'Escape') alSalir();
       if (/input|textarea|select/i.test(ev.target?.tagName || '')) return;
       if (ev.key === 'ArrowRight') ir(1);
@@ -70,7 +87,30 @@ function EnfoquePantalla({
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) ir(dx < 0 ? 1 : -1);
   };
 
-  const paso = incrementoCarga(info.ej.nombre, aNumero(kg) ?? prop?.kg ?? 0);
+  const paso = pasoKg({ nombre: info.ej.nombre, kg: aNumero(kg) ?? prop?.kg ?? 0, discoMinimo: teclado?.discoMinimo });
+  const conRpe = prop?.rpe != null || pideRpe(info.prescripcion);
+  const dentroT = (el) => !!el && (el === refKg.current || el === refReps.current);
+  const entrarT = (c) => (ev) => { if (app) setCampoT(c); else ev.currentTarget.select(); };
+  const salirT = (ev) => {
+    if (!app || dentroT(ev.relatedTarget)) return;
+    setTimeout(() => { if (!dentroT(document.activeElement) && !document.activeElement?.closest?.('.teclado-serie')) setCampoT(null); }, 0);
+  };
+  const cerrarT = () => { const a = document.activeElement; setCampoT(null); if (dentroT(a)) a.blur(); };
+  const siguienteT = () => {
+    const s2 = siguienteCampo(campoTRef.current, { conRpe });
+    if (s2 === 'reps') { refReps.current?.focus({ preventScroll: true }); setCampoT('reps'); return; }
+    if (s2 === 'rpe') { setCampoT('rpe'); return; }
+    cerrarT(); hecha();
+  };
+  const teclaT = (ev) => { if (app && ev.key === 'Enter') { ev.preventDefault(); siguienteT(); } };
+  const movilT = () => {
+    const c = campoTRef.current;
+    usarTecladoMovil(); setCampoT(null);
+    const el = c === 'reps' ? refReps.current : refKg.current;
+    if (el) { el.inputMode = c === 'reps' ? 'numeric' : 'decimal'; el.blur(); el.focus(); }
+    aviso('Vuelve el teclado del móvil. Lo puedes cambiar en Perfil, en «Este móvil».');
+  };
+  useEffect(() => { if (!app && campoT) setCampoT(null); }, [app]);
   const sumarKg = (d) => setKg(fmtKg(Math.max(0, Math.round(((aNumero(kg) ?? prop?.kg ?? 0) + d) * 100) / 100)));
   const sumarReps = (d) => setReps(String(Math.max(0, (aNumero(reps) ?? prop?.reps ?? 0) + d)));
 
@@ -122,7 +162,7 @@ function EnfoquePantalla({
       </div>
 
       <div class="enfoque-cuerpo" onTouchStart={alTocar} onTouchEnd={alSoltar}>
-        {descanso && <Temporizador {...descanso} alCambiar={setDescanso} clase="en-enfoque" />}
+        {descanso && <Temporizador {...descanso} alCambiar={setDescanso} clase="en-enfoque" toca={ahora} alToca={irAhora} discoMinimo={teclado?.discoMinimo} />}
 
         <div class="enfoque-titulo">
           <div class="fila" style="gap:8px">
@@ -164,17 +204,19 @@ function EnfoquePantalla({
             <div class="paso-grande">
               <span class="etq">Kilos</span>
               <button type="button" onClick={() => sumarKg(-paso)} aria-label={`Quitar ${num(paso, 2)} kilos`}><Icono n="menos" /></button>
-              <input inputMode="decimal" aria-label="Kilos" value={kg} placeholder={fmtKg(prop?.kg) || '0'} onInput={(ev) => setKg(ev.currentTarget.value)} onFocus={(ev) => ev.currentTarget.select()} />
+              <input ref={refKg} inputMode={app ? 'none' : 'decimal'} autoComplete="off" class={campoT === 'kg' ? 'en-teclado' : ''} aria-label="Kilos" value={kg} placeholder={fmtKg(prop?.kg) || '0'} onInput={(ev) => setKg(ev.currentTarget.value)}
+                onFocus={entrarT('kg')} onBlur={salirT} onKeyDown={teclaT} />
               <button type="button" onClick={() => sumarKg(paso)} aria-label={`Añadir ${num(paso, 2)} kilos`}><Icono n="mas" /></button>
             </div>
             {info.prescripcion.carga_sugerida_kg == null && pesoAnterior(ultimas, numero) != null && (
               <div class="enfoque-anterior">La última vez, en esta serie: <b class="num">{num(pesoAnterior(ultimas, numero), 2)} kg</b></div>
             )}
-            {info.barra && (aNumero(kg) ?? prop?.kg) > 20 && <div class="enfoque-discos"><Placas kg={aNumero(kg) ?? prop?.kg} /></div>}
+            {info.barra && (aNumero(kg) ?? prop?.kg) > 20 && <div class="enfoque-discos"><Placas kg={aNumero(kg) ?? prop?.kg} discos={teclado ? discosCon(teclado.discoMinimo) : undefined} /></div>}
             <div class="paso-grande">
               <span class="etq">Repeticiones</span>
               <button type="button" onClick={() => sumarReps(-1)} aria-label="Una repetición menos"><Icono n="menos" /></button>
-              <input inputMode="numeric" aria-label="Repeticiones" value={reps} placeholder={prop?.reps == null ? '0' : String(prop.reps)} onInput={(ev) => setReps(ev.currentTarget.value)} onFocus={(ev) => ev.currentTarget.select()} />
+              <input ref={refReps} inputMode={app ? 'none' : 'numeric'} autoComplete="off" class={campoT === 'reps' ? 'en-teclado' : ''} aria-label="Repeticiones" value={reps} placeholder={prop?.reps == null ? '0' : String(prop.reps)} onInput={(ev) => setReps(ev.currentTarget.value)}
+                onFocus={entrarT('reps')} onBlur={salirT} onKeyDown={teclaT} />
               <button type="button" onClick={() => sumarReps(1)} aria-label="Una repetición más"><Icono n="mas" /></button>
             </div>
             <div class="rpe-fila" role="group" aria-label="RPE de la serie">
@@ -205,6 +247,14 @@ function EnfoquePantalla({
         {!notas[actual.id] && !editandoNota && <button class="btn-texto" style="justify-self:start" onClick={() => setEditandoNota(true)}><Icono n="chincheta" /> Añadir una nota a este ejercicio</button>}
       </div>
 
+      {app && campoT && numero && (
+        <Teclado campo={campoT} clave={`${e.id}-${numero}`} texto={campoT === 'kg' ? kg : campoT === 'reps' ? reps : ''} rpe={rpe} base={campoT === 'kg' ? prop?.kg ?? null : prop?.reps ?? null}
+          paso={paso} serie={`Serie ${numero}`} anterior={info.prescripcion.carga_sugerida_kg == null && pesoAnterior(ultimas, numero) != null ? `${num(pesoAnterior(ultimas, numero), 2)} kg` : null}
+          objetivo={prop?.rpe != null ? `RPE ${num(prop.rpe)}` : pa.esfuerzo} final={siguienteCampo(campoT, { conRpe }) === 'hecho' ? (previa ? 'guardar' : 'hecha') : null}
+          alTexto={(t) => (campoT === 'kg' ? setKg(t) : setReps(t))} alRpe={(v) => setRpe(v)} alSiguiente={siguienteT} alCerrar={cerrarT}
+          ancla={() => (campoT === 'reps' ? refReps.current : refKg.current)?.closest('.paso-grande')} dentro={dentroT}
+          barra={info.barra} discoMinimo={teclado.discoMinimo} alDisco={tipoCarga(info.ej.nombre) === 'discos' ? teclado.alDisco : null} lugar={teclado.lugar} alCalculadora={info.barra ? teclado.alCalculadora : null} alMovil={movilT} />
+      )}
       {metro && tempo && <Metronomo tempo={tempo} nombre={info.ej.nombre} reps={e.reps_max ?? e.reps_min ?? 8} alCerrar={() => setMetro(false)} />}
       <footer class="enfoque-pie">
         <button class="btn btn-icono" onClick={() => ir(-1)} disabled={idx === 0} aria-label="Ejercicio anterior"><Icono n="atras" /></button>
