@@ -8,6 +8,7 @@
 //   · la atleta ve «Recuerda: …» en su sesión y abre el momento corregido;
 //   · el coach pasa el vídeo a otro atleta (como desde el SQL Editor): ella deja de ver su hilo y su recordatorio.
 import { createRequire } from 'node:module';
+import { subProgreso } from './secciones.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -97,6 +98,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     // ---------------------------------------------------------------- 10 y 12: la atleta envía su vídeo
     await entrarComo('Ana López');
     await p.locator('.tab', { hasText: 'Progreso' }).first().click();
+    await subProgreso(p, 'fuerza');
     await p.locator('.diario').getByRole('button', { name: 'Subir vídeo' }).click();
     const hojaSub = p.getByRole('dialog', { name: 'Subir un vídeo' });
     await hojaSub.getByLabel('Ejercicio (opcional)').fill('Sentadilla barra');

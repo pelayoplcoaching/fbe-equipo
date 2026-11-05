@@ -38,12 +38,12 @@ export async function esperarSinSeccion(p, nombre, ms = 6000) {
 
 // Progreso tiene cuatro sub-pestañas (resumen, fuerza, cuerpo, logros): pasa a una, si no es ya la que se ve.
 // Lo que está en otra sub-pestaña sigue en la página pero no se ve: antes de pulsarlo o esperarlo, hay que pasar a la
-// suya. Fuera de Progreso (o en la de quien solo lleva la nutrición, que no tiene sub-pestañas) no hace nada.
+// suya. En la app del coach no hace nada; en la del atleta espera un momento a que Progreso se pinte (recién pulsada
+// la pestaña, tarda lo que dura la transición) y, si no hay sub-pestañas (solo nutrición, otra pantalla), sigue.
 export async function subProgreso(p, sub) {
+  if (!(await p.locator('nav.tabs .tab', { hasText: 'Progreso' }).count())) return;
   const b = p.locator(`#prog-${sub}`);
-  const enProgreso = () => p.locator('nav.tabs .tab[aria-current="page"]', { hasText: 'Progreso' }).count();
-  // (recién pulsada la pestaña, Progreso puede tardar un momento en pintarse)
-  for (let i = 0; i < 20 && !(await b.count()) && (await enProgreso()); i++) await p.waitForTimeout(150);
+  await b.waitFor({ timeout: 4000 }).catch(() => {});
   if (!(await b.count())) return;
   if ((await b.getAttribute('aria-selected')) !== 'true') await b.click();
 }

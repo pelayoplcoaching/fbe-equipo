@@ -98,7 +98,7 @@ export function Logros({ salud }) {
   const medallas = lista.reduce((t, l) => t + l.nivel, 0), total = lista.length * 4;
   return (
     <section class="seccion" aria-labelledby="logros-titulo">
-      <div class="seccion-cab"><h3 id="logros-titulo">Logros</h3><span class="peq secundario num">{medallas} de {total} medallas</span></div>
+      <div class="seccion-cab"><h2 id="logros-titulo">Logros</h2><span class="peq secundario num">{medallas} de {total} medallas</span></div>
       <div class="panel panel-pad">
         <ul class="logros">
           {lista.map((l) => (
