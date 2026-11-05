@@ -15,6 +15,7 @@ Diseño completo: «Programar según FBE: diseño detallado del motor» (documen
 | `topset.js` | 2 | Las cuentas de la serie top y del peaking: qué series son la top y qué kilos mantienen el esfuerzo con una repetición menos |
 | `semana.js` | 3 | Señales de descarga y sus cuatro tipos, vuelta tras un parón, mantenimiento |
 | `proponer.js` | 4 y 5 | Frenos, confianza, alternativas y `proponerSemana()` |
+| `volumen.js` | 3 | Las series por músculo de la semana propuesta frente a la anterior y al rango del atleta: solo enseña y avisa |
 | `adaptador.js` | — | Del bloque que carga el editor a la entrada del motor, y de la propuesta a lo que se guarda |
 | `sombra.js` | — | La prueba en sombra: el motor frente a lo que programó el coach, sobre una copia completa |
 
@@ -85,6 +86,22 @@ movieron cuando iban a RPE 7.
   kilos (mediana +3,6 %, entre +1,8 y +8,3 %), 15 la bajan con los mismos kilos, 10 la bajan con la carga a elección del
   atleta, 9 se repiten por duras y 1 ya está en el suelo.
 
+## Volumen por músculo: solo enseñar y avisar (decisión del 5/11/2026)
+
+El diseño preveía un «volumen guiado» que añadiera una serie por semana en los músculos prioritarios. No se ha hecho,
+porque no es como se programa: en la copia, de 1061 ejercicios emparejados entre una semana y la siguiente de un bloque,
+1058 llevan las mismas series y ninguno gana una (tampoco en las semanas «Volumen»); ningún atleta tiene un objetivo de
+volumen propio; y con el rango general de 10 a 20 la mitad de los músculos sale «bajo» cada semana (358 de 740;
+abdominales y gemelo siempre).
+
+Lo que hay (`volumen.js`): `compararVolumen({ antes, despues, ejercicios, objetivo, semana })` cuenta las series por
+músculo como la app (principal entero, secundarios a medias) y devuelve cada músculo con sus series antes y después,
+su rango y su estado, más unos avisos. De partida (`volumen.avisar: 'cambios'`) avisa de cada músculo que cambia
+respecto a la semana anterior, de lo que pasa del máximo y, si es un recorte de toda la semana (descarga, vuelta,
+mantenimiento), de cuánto recorta en una sola línea. Quedarse por debajo del mínimo se ve pero no se avisa (`'todo'` lo
+avisa; `'nada'` no avisa de nada). `proponerSemana` lo trae en `semana.volumen` (y en `descarga.volumen`). La hoja de
+revisión lo enseña plegado, calculado sobre la semana de destino con lo que esté marcado.
+
 ## Prueba en sombra (5/11/2026)
 
 Se comparó lo que propone el motor con lo que programó el coach a mano: cinco atletas de tres niveles, una semana hecha
@@ -147,7 +164,7 @@ repeticiones; antes se quedaba igual, como las series con kilos de intensificaci
 node test/motor.test.mjs
 ```
 
-276 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
+287 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
 la base (series 1–20, RPE 1–10, rango ordenado, detalle válido), los ejercicios «a mano» no se tocan y la misma entrada
 da siempre la misma salida.
 
@@ -165,7 +182,8 @@ da siempre la misma salida.
   «Programar según FBE»; en una semana hecha, «Programar la siguiente según FBE» (si la siguiente no existe la crea como
   copia con `api.prepararSemanas`). Las reglas son las de partida (`REGLAS_FBE` + perfil del nivel del atleta): todavía
   no se guardan reglas por atleta ni la propuesta.
-- `test/e2e-programar-fbe.mjs`: 19 comprobaciones en la demo con Chrome (abrir, revisar, ver como peaking, alternativa,
+- `test/e2e-programar-fbe.mjs`: 21 comprobaciones en la demo con Chrome (abrir, revisar, volumen por músculo, ver como
+  peaking, alternativa,
   aplicar, sigue en borrador, reabrir sin cambios, programar la siguiente; escritorio y 360 px en oscuro; consola, desbordes y axe).
   Se ejecuta suelta (`npm run build && node test/e2e-programar-fbe.mjs`) o desde `e2e.test.mjs` con
   `probarProgramarFBE({ navegador, check, base })`.
@@ -183,4 +201,4 @@ da siempre la misma salida.
 - Guardar reglas y propuestas necesita una migración (perfiles, reglas por atleta y por pauta, propuestas, motivo
   visible). El motor no la necesita.
 - Sin hacer: RIR progresivo, carga calculada, APRE, porcentajes, ondulante, fases del bloque,
-  volumen guiado, tope de minutos por sesión y proyección a cuatro semanas.
+  sugerencias de volumen al cambiar de bloque, tope de minutos por sesión y proyección a cuatro semanas.

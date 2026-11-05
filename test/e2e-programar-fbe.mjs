@@ -75,6 +75,18 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     await foto('fbe-1-hoja-escritorio');
     await revisar('hoja-escritorio');
 
+    // El volumen por músculo de la semana que quedaría: plegado, con el recuento y el rango de cada músculo
+    const resumenVol = hoja.locator('details.vol-desglose summary');
+    check(await resumenVol.count() === 1 && /Series por músculo en la semana \d+ con lo marcado/.test(await resumenVol.textContent()), 'la hoja resume las series por músculo de la semana que quedaría');
+    if (await resumenVol.count()) {
+      await resumenVol.click();
+      const chipsVol = await hoja.locator('.vol-chips .vol-chip').count();
+      check(chipsVol >= 4 && /\d+–\d+/.test(await hoja.locator('.vol-chips').textContent()), `al abrirlo, cada músculo con sus series y su rango (${chipsVol})`);
+      await hoja.locator('details.vol-desglose').scrollIntoViewIfNeeded();
+      await foto('fbe-5-volumen');
+      await revisar('hoja-volumen');
+    }
+
     // Ver la semana como peaking: en los básicos baja la top y se dice; al quitarlo, vuelve la propuesta normal
     const comoPico = hoja.getByRole('button', { name: 'Ver la semana como peaking', exact: true });
     check(await comoPico.count() === 1, 'con básicos en la semana, se puede ver como peaking');

@@ -5,7 +5,7 @@ import { REGLAS_FBE, PERFILES, resolverReglas, fusionar, limpiarReglas, modeloDe
   porSerie, topSet, estructuraTop, topPeaking, rangoDe, doble, triple, lineal, soloReps, campos, completoLineal, falloLineal, MODELO_BASE,
   aplicarDescarga, senalesDescarga, tramoVuelta, aplicarVuelta, aplicarMantenimiento, diasParado, esMalDia,
   proponerSemana, cargaZona, entradaDesdeBloque, emparejar, pautasDeSemana, cambiosDePropuesta, diferencias, textoPauta,
-  sombraDeCopia, compararFila, claseDeSerie, seriesPautadas, compararInformes, textoInforme } from '../web/src/logica/motor/index.js';
+  compararVolumen, pautasConPropuestas, sombraDeCopia, compararFila, claseDeSerie, seriesPautadas, compararInformes, textoInforme } from '../web/src/logica/motor/index.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -667,6 +667,36 @@ console.log('\nDel editor al motor');
   // Historial por pauta en el motor: el del hueco manda sobre el del ejercicio
   const porPauta = proponerSemana({ ...entradaBase(), historial: { a: [], banca: historial.banca } });
   check(porPauta.filas.find((x) => x.pauta_id === 'a').confianza === 'baja' && proponerSemana(entradaBase()).filas.find((x) => x.pauta_id === 'a').confianza === 'alta', 'el motor acepta el historial por pauta');
+}
+
+console.log('\nVolumen por músculo');
+{
+  const sem5 = (n = {}) => ['banca', 'lat', 'sent', 'curl', 'remo'].map((id) => ({ ejercicio_id: id, series: n[id] ?? 3 }));
+  const v = compararVolumen({ antes: sem5(), despues: sem5(), ejercicios });
+  const de = (r, g) => r.grupos.find((x) => x.grupo === g);
+  check(igual(v.grupos.map((x) => x.grupo), ['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'biceps', 'triceps']) && de(v, 'deltoides').antes === 4.5 && de(v, 'gluteo').despues === 1.5 && igual(de(v, 'pectoral').rango, [10, 20]) && de(v, 'pectoral').estado === 'bajo'
+    && igual(v.total, { antes: 15, despues: 15 }), 'las series por músculo de la semana, con el recuento de la app (principal entero, secundarios a medias) y el rango del atleta');
+  check(!v.cambia && v.avisos.length === 0, 'si nada cambia no avisa de nada, aunque haya músculos por debajo del mínimo');
+  check(compararVolumen({ antes: sem5(), despues: sem5(), ejercicios, reglas: conReglas({ volumen: { avisar: 'todo' } }) }).avisos.length === 7 && compararVolumen({ antes: sem5(), despues: sem5({ banca: 5 }), ejercicios, reglas: conReglas({ volumen: { avisar: 'nada' } }) }).avisos.length === 0,
+    'con las otras reglas: avisar también de cada músculo bajo, o no avisar de nada');
+  const mas = compararVolumen({ antes: sem5(), despues: sem5({ banca: 4 }), ejercicios });
+  check(mas.cambia && igual(mas.avisos.map((x) => x.texto), ['Pectoral: de 3 a 4 series', 'Deltoides: de 4,5 a 5 series', 'Tríceps: de 1,5 a 2 series']) && mas.avisos[0].grupo === 'pectoral' && de(mas, 'pectoral').cambio === 1 && de(mas, 'triceps').cambio === 0.5,
+    'una serie más en un ejercicio: avisa de cada músculo que cambia');
+  check(igual(compararVolumen({ antes: sem5(), despues: sem5({ banca: 4 }), ejercicios, objetivo: { pectoral: [2, 3] } }).avisos.map((x) => x.texto).filter((t) => t.startsWith('Pectoral')), ['Pectoral: de 3 a 4 series', 'Pectoral: 4 series, por encima de su máximo (3)'])
+    && igual(compararVolumen({ antes: sem5(), despues: sem5(), ejercicios, objetivo: { pectoral: [1, 2] } }).avisos.map((x) => x.texto), ['Pectoral: 3 series, por encima de su máximo (2)']), 'pasarse del máximo se avisa siempre, haya cambiado o no');
+  check(compararVolumen({ antes: sem5(), despues: sem5({ banca: 2 }), ejercicios, objetivo: { pectoral: [3, 6] } }).avisos[0].texto === 'Pectoral: de 3 a 2 series, por debajo de su mínimo (3)', 'si un cambio deja un músculo por debajo de su mínimo, lo dice');
+  const rec = compararVolumen({ antes: sem5(), despues: sem5({ banca: 2, lat: 2, sent: 2, curl: 2, remo: 2 }), ejercicios, semana: 'descarga', objetivo: { deltoides: [1, 2] } });
+  check(igual(rec.avisos.map((x) => x.texto), ['La semana pasa de 15 series a 10 (−33 %)']) && rec.cambia, 'un recorte de toda la semana (descarga, vuelta, mantenimiento) se cuenta de una vez');
+  check(igual(pautasConPropuestas([{ id: 'x', ejercicio_id: 'banca', series: 3 }, { id: 'y', ejercicio_id: 'lat', series: 3 }], { x: { series: 4 } }), [{ ejercicio_id: 'banca', series: 4 }, { ejercicio_id: 'lat', series: 3 }]) && igual(compararVolumen().grupos, []),
+    'lo que quedaría en la semana de destino al aplicar unas propuestas');
+  const r = proponerSemana(congelar(entradaBase()));
+  check(de(r.semana.volumen, 'deltoides').antes === 4.5 && !r.semana.volumen.cambia && r.semana.volumen.avisos.length === 0 && igual(r.semana.volumen.total, { antes: 15, despues: 15 }), 'la propuesta de la semana trae su volumen: la progresión serie a serie no cambia las series');
+  const eTri = entrada({ reglas: { porEjercicio: { lat: { modelo: 'triple' } } } });
+  eTri.series.b = [S(1, 8, 15, 8), S(2, 8, 15, 8), S(3, 8, 15, 8)];
+  const tri = proponerSemana(eTri);
+  check(tri.semana.volumen.avisos.some((x) => x.texto === 'Deltoides: de 4,5 a 5,5 series'), 'con la triple progresión, la serie de más se avisa');
+  const desc = proponerSemana(entradaBase({ contexto: { focoSiguiente: 'descarga' } }));
+  check(desc.semana.volumen.avisos.length === 1 && desc.semana.volumen.avisos[0].texto.startsWith('La semana pasa de 15 series a ') && desc.semana.volumen.total.despues < 15, 'una semana de descarga dice cuánto recorta');
 }
 
 console.log('\nPrueba en sombra');

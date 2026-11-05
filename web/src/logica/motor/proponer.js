@@ -14,6 +14,7 @@ import { seriesPautadasPorGrupo, rangoVolumen, esBarra, NOMBRE_ZONA } from '../c
 import { resolverReglas, fusionar, modeloDe, esBasico, NOMBRE_MODELO } from './reglas.js';
 import { leerEjercicio, tendencia, SIN_DATOS } from './lectura.js';
 import { MODELO, CAMPOS, campos, falloLineal } from './modelos.js';
+import { compararVolumen } from './volumen.js';
 import { senalesDescarga, aplicarDescarga, motivoDescarga, tramoVuelta, aplicarVuelta, motivoVuelta, aplicarMantenimiento, esMalDia, NOMBRE_DESCARGA } from './semana.js';
 
 const RANGO_PRIORIDAD = { alta: 0, media: 1, baja: 2, muy_baja: 3 };
@@ -212,6 +213,9 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
   const propuestaDescarga = esDescarga || senales.length ? conDescarga() : null;
   const finales = esDescarga ? propuestaDescarga : normales;
 
+  // ---- el volumen por músculo: solo se enseña y se avisa ----
+  const volumenDe = (fs, tipo) => compararVolumen({ antes: pautas, despues: fs.map((f) => ({ ejercicio_id: f.ejercicio_id, series: f.propuesta.series })), ejercicios, objetivo: atleta.volumen_objetivo ?? null, semana: tipo, reglas: generales });
+
   // ---- la semana de un vistazo ----
   const cuenta = (fs, tipos) => fs.filter((f) => tipos.includes(f.tipo)).length;
   const zonasSueltas = molestias.filter((m) => !ZONA_GRUPOS[m.zona] && m.zona !== 'zona_lumbar');
@@ -228,12 +232,14 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
         confianza: { alta: finales.filter((f) => f.confianza === 'alta').length, media: finales.filter((f) => f.confianza === 'media').length, baja: finales.filter((f) => f.confianza === 'baja').length },
         seriesPorGrupo: { antes, despues: seriesPautadasPorGrupo(finales.map((f) => ({ ejercicio_id: f.ejercicio_id, series: f.propuesta.series })), ejercicios) },
       },
+      volumen: volumenDe(finales, esDescarga ? 'descarga' : modo),
       avisos: zonasSueltas.map((m) => ({ tipo: 'molestia', zona: m.zona, intensidad: Number(m.intensidad), texto: `Molestia ${NIVEL_MOLESTIA[Number(m.intensidad)] || ''} en ${(NOMBRE_ZONA[m.zona] || m.zona).toLowerCase()}: no se puede asignar a ejercicios concretos` })),
     },
     descarga: {
       senales, propuesta: !esDescarga && senales.length >= 1, recomendada: !esDescarga && senales.length >= 2,
       tipo: NOMBRE_DESCARGA[d.tipo] ? d.tipo : 'ligera',
       filas: esDescarga ? null : propuestaDescarga,
+      ...(!esDescarga && propuestaDescarga ? { volumen: volumenDe(propuestaDescarga, 'descarga') } : {}),
     },
     ...(esDescarga ? { sinDescarga: normales } : {}),
   };

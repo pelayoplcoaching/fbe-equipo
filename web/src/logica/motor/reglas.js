@@ -97,6 +97,9 @@ export const REGLAS_FBE = Object.freeze({
   // Molestias del check-in (0–3): 'avisar' no frena nada; 'leve' | 'moderada' | 'grave' frenan desde ese nivel
   molestias: 'avisar',
   semana: { maxSeriesPorMusculo: 2, maxSeriesPct: 10 },
+  // Volumen por músculo: el motor solo enseña y avisa (volumen.js). 'cambios': lo que cambia respecto a la semana
+  // anterior y lo que pasa del máximo · 'todo': además, cada músculo por debajo de su mínimo · 'nada'
+  volumen: { avisar: 'cambios' },
   tendencia: { sube: 1, semanasEstancado: 3 },
   escala: 'rpe', // 'rpe' | 'rir' | 'pauta' (la que traiga cada pauta)
 });
@@ -158,6 +161,7 @@ const ESQUEMA = {
   frenos: { semanaAMedias: NUM(0, 1), paron: NUM(3, 60), pasadoDeEsfuerzo: NUM(0.5, 3), sobrado: NUM(1, 4), datoRaroPct: NUM(10, 100), datoRaroSaltos: NUM(1, 10), datoRaroReps: NUM(1.5, 5), checkinBajo: NUM(1, 4), detalleCorta: NUM(1, 5) },
   molestias: UNO_DE(['avisar', 'leve', 'moderada', 'grave']),
   semana: { maxSeriesPorMusculo: NUM(0, 6), maxSeriesPct: NUM(0, 50) },
+  volumen: { avisar: UNO_DE(['cambios', 'todo', 'nada']) },
   tendencia: { sube: NUM(0.25, 5), semanasEstancado: NUM(2, 6) },
   escala: UNO_DE(['rpe', 'rir', 'pauta']),
   rpeMax: NUM(5, 10),

@@ -6,7 +6,8 @@
 import { useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, Cargando } from '../comunes.jsx';
 import { sumarDias } from '../../logica/fechas.js';
-import { proponerSemana, entradaDesdeBloque, pautasDeSemana, emparejar, cambiosDePropuesta, diferencias, textoPauta, esBasico, NOMBRE_DESCARGA } from '../../logica/motor/index.js';
+import { num } from '../../logica/calculos.js';
+import { proponerSemana, entradaDesdeBloque, pautasDeSemana, emparejar, cambiosDePropuesta, diferencias, textoPauta, esBasico, compararVolumen, pautasConPropuestas, NOMBRE_DESCARGA } from '../../logica/motor/index.js';
 
 const TIPO = {
   subir: ['Sube kilos', 'ok'], reps: ['Más repeticiones', 'morado'], series: ['Una serie más', 'morado'], mantener: ['Igual', ''], bajar: ['Baja kilos', 'aviso'],
@@ -77,6 +78,9 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
   const sinPareja = dest.pautas.filter((p) => !Object.values(pares).some((q) => q.id === p.id));
   const publicada = destino.programacion === 'programada';
   const cambiarVersion = () => { setOtra((x) => !x); setEleccion({}); setMarcas(null); };
+  // El volumen por músculo de la semana de destino con lo marcado, frente a la semana hecha (solo se enseña y se avisa)
+  const volumen = compararVolumen({ antes: entrada.pautas, ejercicios, objetivo: atleta?.volumen_objetivo ?? null, semana: esDescarga ? 'descarga' : r.semana.tipo,
+    despues: pautasConPropuestas(dest.pautas, Object.fromEntries(vistas.filter((v) => v.actual && marcadas.has(v.f.pauta_id)).map((v) => [v.actual.id, v.propuesta]))) });
   // El peaking solo tiene sentido si hay básicos con kilos y la semana no es de descarga, vuelta ni a medias
   const puedePico = r.semana.tipo === 'normal' && entrada.pautas.some((p) => esBasico(ejercicios[p.ejercicio_id]));
   const cambiarPico = () => { setPico((x) => !x); setOtra(false); setEleccion({}); setMarcas(null); };
@@ -173,6 +177,21 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
               </section>
             );
           })}
+          {volumen.grupos.length > 0 && (
+            <div class="pila-xs">
+              <details class="vol-desglose">
+                <summary class="mini terciario">Series por músculo en la semana {destino.numero} con lo marcado: {volumen.cambia ? `cambian frente a la semana ${base.numero}` : `las mismas que en la semana ${base.numero}`}</summary>
+                <div class="vol-chips" style="margin-top:6px">
+                  {volumen.grupos.map((x) => (
+                    <span key={x.grupo} class={`vol-chip vol-${x.estado}`} title={x.estado === 'bajo' ? 'Por debajo del rango' : x.estado === 'alto' ? 'Por encima del rango' : 'Dentro del rango'}>
+                      {x.nombre} <strong>{x.cambio ? `${num(x.antes)} → ${num(x.despues)}` : num(x.despues)}</strong><span class="mini">{x.rango[0]}–{x.rango[1]}</span>
+                    </span>
+                  ))}
+                </div>
+              </details>
+              {volumen.avisos.length > 0 && <span class="fila-envolver" style="gap:6px">{volumen.avisos.map((a) => <span key={a.texto} class="chip aviso">{a.texto}</span>)}</span>}
+            </div>
+          )}
           {sinPareja.length > 0 && <p class="mini secundario">{sinPareja.length === 1 ? 'Hay un ejercicio' : `Hay ${sinPareja.length} ejercicios`} en la semana {destino.numero} que no {sinPareja.length === 1 ? 'estaba' : 'estaban'} en la {base.numero}: {sinPareja.length === 1 ? 'se queda' : 'se quedan'} como {sinPareja.length === 1 ? 'está' : 'están'}.</p>}
           {r.semana.avisos.map((a) => <p key={a.texto} class="mini secundario">{a.texto}.</p>)}
         </>
