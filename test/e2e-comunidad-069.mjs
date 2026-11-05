@@ -5,6 +5,7 @@
 //   · «Compartir mis entrenos sin preguntar»: al terminar la sesión se comparte sola, con «Deshacer» (que la quita del muro);
 //   · 360 px en oscuro, sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
+import { irASeccion } from './secciones.mjs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
@@ -66,7 +67,7 @@ export async function probarComunidad069({ navegador, check, base = 'http://loca
     await cerrarDialogos();
   };
   const abrirEquipo = async () => {
-    await p.locator('.tab', { hasText: 'Equipo' }).first().click();
+    await irASeccion(p, 'Equipo');
     await p.locator('.post').first().waitFor();
     // (Rubén celebra al entrar un reto conseguido: «Ahora no»)
     await p.waitForTimeout(800);
@@ -78,7 +79,7 @@ export async function probarComunidad069({ navegador, check, base = 'http://loca
     await p.goto(`${base}/?demo`);
     // ---------------- Ana entra en el equipo
     await entrarComo('Ana López');
-    await p.locator('.tab', { hasText: 'Equipo' }).first().click();
+    await irASeccion(p, 'Equipo');
     await p.getByRole('button', { name: 'Leer las normas' }).click();
     await p.getByRole('dialog', { name: 'Normas del equipo' }).getByRole('button', { name: 'He leído las normas' }).click();
     await p.getByRole('button', { name: 'Sí, quiero entrar' }).click();

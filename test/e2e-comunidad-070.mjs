@@ -5,6 +5,7 @@
 //   · el coach: un reto de una plantilla de un toque y uno por equipos repartido igualado;
 //   · 360 px en oscuro, sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
+import { irASeccion } from './secciones.mjs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
@@ -66,7 +67,7 @@ export async function probarComunidad070({ navegador, check, base = 'http://loca
     await cerrarDialogos();
   };
   const abrirEquipo = async () => {
-    await p.locator('.tab', { hasText: 'Equipo' }).first().click();
+    await irASeccion(p, 'Equipo');
     await p.locator('.post').first().waitFor();
     // (Rubén celebra al entrar un reto conseguido: «Ahora no»)
     await p.waitForTimeout(800);
@@ -78,7 +79,7 @@ export async function probarComunidad070({ navegador, check, base = 'http://loca
     await p.goto(`${base}/?demo`);
     // ---------------- Ana entra en el equipo e invita a Rubén a ser compañeros de racha
     await entrarComo('Ana López');
-    await p.locator('.tab', { hasText: 'Equipo' }).first().click();
+    await irASeccion(p, 'Equipo');
     await p.getByRole('button', { name: 'Leer las normas' }).click();
     await p.getByRole('dialog', { name: 'Normas del equipo' }).getByRole('button', { name: 'He leído las normas' }).click();
     await p.getByRole('button', { name: 'Sí, quiero entrar' }).click();
@@ -168,7 +169,7 @@ export async function probarComunidad070({ navegador, check, base = 'http://loca
     await p.locator('nav.tabs').waitFor();
     await p.waitForTimeout(600);
     await cerrarDialogos();
-    await p.locator('.tab', { hasText: 'Equipo' }).first().click();
+    await irASeccion(p, 'Equipo');
     await p.getByRole('tab', { name: 'Retos' }).click();
     await p.getByRole('button', { name: 'Nuevo reto' }).click();
     let hojaReto = p.getByRole('dialog', { name: 'Nuevo reto' });

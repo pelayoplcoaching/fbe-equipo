@@ -14,6 +14,8 @@ import { Conversaciones } from './Conversaciones.jsx';
 import { EquipoCoach } from './EquipoCoach.jsx';
 import { RecibirCompartidoCoach } from '../Compartido.jsx';
 import { ponerInsignia } from '../insignia-app.js';
+import { repartirPestanas, PREFERIDAS_COACH } from '../../logica/pestanas.js';
+import { useEstrecha, BotonMas, HojaMas } from '../BarraMas.jsx';
 import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
 
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
@@ -21,6 +23,8 @@ import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
 // Equipo (v0.43): el muro de la comunidad, solo con ella abierta (se abre en Cuenta → Comunidad)
 const TODAS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['revision', 'Revisión semanal', 'hecho'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
 const TABS = TODAS.filter(([t]) => t !== 'equipo');
+// En la barra del móvil, el nombre corto (el completo lo sigue leyendo el lector de pantalla)
+const CORTAS = { revision: 'Semanal' };
 
 // v0.55: «#mensajes/<atleta>» (al tocar la notificación de un mensaje): Mensajes, con esa conversación abierta
 const RUTA_CHAT = /^mensajes\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
@@ -115,32 +119,44 @@ export function CoachApp() {
   };
   const pide = (t) => (peticion?.tab === t ? peticion : null);
   const mac = typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent);
-  const barra = usePildora(`${tab}:${pestanas.length}`);
+  // En el móvil la barra tiene cinco huecos: las cuatro de cada día y «Más» con el resto (en pantallas anchas caben todas)
+  const estrecha = useEstrecha();
+  const reparto = repartirPestanas(pestanas, PREFERIDAS_COACH, { estrecha });
+  const [verMas, setVerMas] = useState(false);
+  useEffect(() => { if (!estrecha) setVerMas(false); }, [estrecha]);   // al ensanchar la pantalla, «Más» deja de existir
+  const barra = usePildora(`${tab}:${reparto.barra.length}:${reparto.mas.length}`);
+  const elegirPestana = (id) => {
+    // Con su ficha ya creada, la pestaña entra directamente en el modo atleta
+    if (id === 'modo-atleta' && propioCoach) { entrarModoAtleta(); return; }
+    if (id === tab && !ficha) return;
+    const orden = pestanas.map(([t]) => t);
+    conTransicion(() => { setTab(id); setFicha(null); setPeticion(null); }, orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : id === tab ? 'cerrar' : 'adelante');
+  };
 
   return (
     <>
     <RecibirCompartidoCoach alAbrirChat={(id) => { setFicha(null); setTab('mensajes'); setPeticion({ tab: 'mensajes', atletaId: id, id: Date.now() }); }} />
     <div class="app coach" inert={buscar ? '' : undefined} aria-hidden={buscar ? 'true' : undefined}>
       <nav class="tabs" aria-label="Secciones">
-        <div ref={barra} class={`tabs-in ${pestanas.filter(([t]) => t !== 'cuenta').length >= 7 ? 'tabs-muchas' : ''}`}>
+        <div ref={barra} class={`tabs-in ${reparto.barra.filter(([t]) => t !== 'cuenta').length >= 7 ? 'tabs-muchas' : ''}`}>
           <span class="tabs-pildora" aria-hidden="true" />
           <Marca />
           <button class="tab-buscar" onClick={abrirBuscar} aria-keyshortcuts={mac ? 'Meta+K' : 'Control+K'}>
             <Icono n="buscar" /><span>Buscar</span><kbd>{mac ? '⌘' : 'Ctrl'} K</kbd>
           </button>
-          {pestanas.map(([id, texto, icono]) => (
-            <button key={id} class={`tab ${id === 'cuenta' ? 'tab-cuenta' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => {
-              // Con su ficha ya creada, la pestaña entra directamente en el modo atleta
-              if (id === 'modo-atleta' && propioCoach) { entrarModoAtleta(); return; }
-              if (id === tab && !ficha) return;
-              const orden = pestanas.map(([t]) => t);
-              conTransicion(() => { setTab(id); setFicha(null); setPeticion(null); }, orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : id === tab ? 'cerrar' : 'adelante');
-            }}>
-              <span class="tab-ico"><Icono n={icono} class={`ico-${icono}`} />{id === 'revisar' && <Insignia n={total} etiqueta={`${total} por revisar`} />}{id === 'mensajes' && <Insignia n={sinLeer.datos || 0} etiqueta={`${sinLeer.datos || 0} mensajes sin leer`} />}</span>{texto}
+          {reparto.barra.map(([id, texto, icono]) => (
+            <button key={id} class={`tab ${id === 'cuenta' ? 'tab-cuenta' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => elegirPestana(id)}>
+              <span class="tab-ico"><Icono n={icono} class={`ico-${icono}`} />{id === 'revisar' && <Insignia n={total} etiqueta={`${total} por revisar`} />}{id === 'mensajes' && <Insignia n={sinLeer.datos || 0} etiqueta={`${sinLeer.datos || 0} mensajes sin leer`} />}</span>{estrecha && CORTAS[id] ? <><span class="sr">{texto}</span><span aria-hidden="true">{CORTAS[id]}</span></> : texto}
             </button>
           ))}
+          {reparto.mas.length > 0 && <BotonMas activa={reparto.mas.some(([t]) => t === tab)} abierta={verMas} alAbrir={() => setVerMas(true)} />}
         </div>
       </nav>
+      {verMas && reparto.mas.length > 0 && (
+        <HojaMas pestanas={reparto.mas} actual={tab} alCerrar={() => setVerMas(false)} alElegir={(id) => { setVerMas(false); elegirPestana(id); }}
+          detalles={{ revision: 'Tus atletas, uno a uno, cada semana', equipo: 'El muro de la comunidad', plantillas: 'Bloques para reutilizar', biblioteca: 'Ejercicios, recetas y recursos',
+            'modo-atleta': 'Entrena con tu propia ficha', cuenta: 'Tu cuenta, los cobros y los ajustes' }} />
+      )}
       <main key={tab} class="vista">
       {tab === 'atletas' && (ficha
         ? <Ficha key={`${ficha.atletaId}:${ficha.n || 0}`} atletaId={ficha.atletaId} pestanaInicial={ficha.pestana} resumenInicial={resumenesPanel.current?.find((r) => r.atleta_id === ficha.atletaId) || null} alVolver={cerrarFicha} alCambiar={() => bandeja.recargar(true)} />

@@ -7,6 +7,7 @@
 //   · la mejor respuesta (Lucía la cambia en su publicación: sale primero, con su distintivo);
 //   · 360 px en oscuro, sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
+import { irASeccion } from './secciones.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -70,7 +71,7 @@ export async function probarComunidad071({ navegador, check, base = 'http://loca
     await cerrarDialogos();
   };
   const abrirEquipo = async () => {
-    await p.locator('.tab', { hasText: 'Equipo' }).first().click();
+    await irASeccion(p, 'Equipo');
     await p.locator('.post').first().waitFor();
     await p.waitForTimeout(800);
     await cerrarDialogos();
@@ -83,7 +84,7 @@ export async function probarComunidad071({ navegador, check, base = 'http://loca
     await p.goto(`${base}/?demo`);
     // ---------------- Ana entra y publica con un tema
     await entrarComo('Ana López');
-    await p.locator('.tab', { hasText: 'Equipo' }).first().click();
+    await irASeccion(p, 'Equipo');
     await p.getByRole('button', { name: 'Leer las normas' }).click();
     await p.getByRole('dialog', { name: 'Normas del equipo' }).getByRole('button', { name: 'He leído las normas' }).click();
     await p.getByRole('button', { name: 'Sí, quiero entrar' }).click();
@@ -174,7 +175,7 @@ export async function probarComunidad071({ navegador, check, base = 'http://loca
     await post('Mi truco para la sentadilla').waitFor();
     // ---------------- El coach contesta y la guarda como pregunta frecuente
     await entrarComo('Pelayo');
-    await p.locator('.tab', { hasText: 'Equipo' }).first().click();
+    await irASeccion(p, 'Equipo');
     await p.locator('.post').first().waitFor();
     await filtro('Preguntas').click();
     const pregCoach = post('series de aproximación');

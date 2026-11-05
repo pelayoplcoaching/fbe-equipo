@@ -1,0 +1,206 @@
+/* ==========================================================================================================
+   Capa de diseño (rama «diseno»). Se carga DESPUÉS de estilos.css y solo lleva estilos: no cambia marcado,
+   lógica ni datos. Cada bloque corrige una incoherencia visual concreta y dice qué regla de estilos.css pisa.
+   Para quitar una mejora, basta borrar su bloque. Notas de la línea de trabajo: claude/diseno-estado.md.
+
+   Reglas de la capa:
+   · El color significa una sola cosa: morado = marca, acción y dato; verde = hecho; ámbar = aviso;
+     rojo = alerta o pendiente. Los discos de prioridad conservan sus colores de competición (son un código aparte
+     y siempre van con forma de disco).
+   · Lo elegido se rellena; nunca se marca con un borde morado grueso (eso es el foco del teclado).
+   · Tres niveles de superficie: plano (tinte, sin sombra), tarjeta (blanca, filo y sombra corta) y destacado
+     (la tarjeta del día, la única oscura).
+   ========================================================================================================== */
+
+:root {
+  --seg-activo: #FFFFFF;                 /* la pastilla del segmento elegido */
+  --seg-sombra: 0 0 0 1px rgba(27, 23, 48, .06), 0 1px 2px rgba(27, 23, 48, .1), 0 3px 8px -3px rgba(27, 23, 48, .16);
+  --elegido: var(--tinta);               /* chips de filtro elegidos: tinta sobre tiza */
+  --sobre-elegido: var(--tiza);
+  --casilla-marca: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.3 4.3L18.5 8'/%3E%3C/svg%3E");
+  --selector-flecha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23524E6B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
+  --selector-flecha-clara: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
+  /* Nivel «tarjeta»: el filo de 1 px y una sombra corta (antes, 28 px de desenfoque en cada tarjeta) */
+  --sombra: 0 0 0 1px var(--borde), 0 1px 2px rgba(27, 23, 48, .05), 0 6px 14px -10px rgba(27, 23, 48, .18);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --seg-activo: #3D3859;
+    --seg-sombra: 0 0 0 1px rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .45);
+    --casilla-marca: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F0E17' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.3 4.3L18.5 8'/%3E%3C/svg%3E");
+    --selector-flecha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B1ACC9' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
+  }
+}
+:root[data-theme="dark"] {
+  --seg-activo: #3D3859;
+  --seg-sombra: 0 0 0 1px rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .45);
+  --casilla-marca: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F0E17' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.3 4.3L18.5 8'/%3E%3C/svg%3E");
+  --selector-flecha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B1ACC9' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
+}
+
+/* ---------- 1. Títulos que no se parten ----------------------------------------------------------------------
+   El título grande iba a 30 px y al 124 % de ancho aunque tuviera un botón al lado: «Bloque 2: Fuerza base» ocupaba
+   tres líneas. Ahora el tamaño sale del sitio que le queda al título (unidades de contenedor): entero cuando está
+   solo, más pequeño cuando comparte la fila. Sin soporte (Safari 15), se queda con el tamaño por ancho de pantalla. */
+.cabecera-grande:not(.compacta) .titulo { container-type: inline-size; }
+.cabecera-grande:not(.compacta) .titulo h1 {
+  font-size: clamp(1.25rem, 6.4vw, 1.875rem);
+  font-size: clamp(1.25rem, 9.5cqi, 1.875rem);
+  font-stretch: 116%; font-weight: 800; line-height: 1.08; letter-spacing: -0.022em;
+}
+.cabecera-grande:not(.compacta) .sub { text-wrap: pretty; }
+
+/* ---------- 2. Una sola forma de marcar lo elegido ------------------------------------------------------------
+   a) Segmentos: pastilla rellena y elevada sobre la pista (antes, borde morado de 2 px). */
+.segmentos { padding: 3px; gap: 2px; }
+.segmentos button { transition: background-color .15s ease, color .15s ease, box-shadow .15s ease; }
+.segmentos button[aria-pressed="true"] { background: var(--seg-activo); color: var(--tinta); font-weight: 720; box-shadow: var(--seg-sombra); }
+.segmentos.dolor button[aria-pressed="true"][data-v="1"] { box-shadow: var(--seg-sombra); }
+.segmentos.dolor button[aria-pressed="true"][data-v="2"] { background: var(--aviso-suave); color: var(--tinta); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--aviso) 40%, transparent); }
+.segmentos.dolor button[aria-pressed="true"][data-v="3"] { background: var(--alerta-suave); color: var(--tinta); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alerta) 40%, transparent); }
+@media (prefers-reduced-motion: reduce) { .segmentos button { transition: none; } }
+
+/* b) Chips de filtro: todos con el mismo relleno de tinta (antes: negro en unos, morado en el muro, lavanda en
+      las subpestañas). */
+.selector-chips button[aria-pressed="true"],
+.chip-filtro[aria-pressed="true"],
+.pestanas-sub button[aria-selected="true"] { background: var(--elegido); border-color: var(--elegido); color: var(--sobre-elegido); box-shadow: none; }
+
+/* c) Opciones en tarjeta (semanas, días, opciones del cuestionario): relleno lavanda con un filo fino del mismo
+      tono, en lugar de un marco morado de 2 px sobre blanco. */
+.semanas-tabs button[aria-pressed="true"],
+.semana-habito button[aria-pressed="true"],
+.elegir-dia button[aria-pressed="true"],
+.opciones button[aria-pressed="true"],
+.chip-serie.actual {
+  background: var(--morado-suave); color: var(--tinta);
+  border-color: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 55%, transparent);
+}
+.chip-serie.actual { border-width: 1px; }
+.tira-dia.hoy { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 55%, transparent); }
+/* «La que toca» (la sesión siguiente, la semana en curso del bloque): el mismo filo fino, no un marco de 2 px */
+.dia.actual { box-shadow: var(--sombra), inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 55%, transparent); }
+.bloque-semana.actual { box-shadow: var(--sombra), inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 55%, transparent); }
+
+/* d) Pestañas de vista: el subrayado es de las pestañas y solo de ellas; más grueso y redondeado para que no
+      parezca una línea de tabla. */
+.pestanas button { position: relative; border-bottom-color: transparent; }
+.pestanas button[aria-selected="true"] { border-bottom-color: transparent; font-weight: 720; }
+.pestanas:not(.pestanas-sub) button[aria-selected="true"]::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--morado); }
+
+/* ---------- 3. Controles del navegador con el aspecto de la app -------------------------------------------- */
+/* Casillas: caja redondeada que se rellena de morado (antes, la del sistema). Los interruptores tienen su estilo. */
+input[type="checkbox"]:not(.interruptor) {
+  appearance: none; -webkit-appearance: none; flex: none; display: inline-block; vertical-align: middle;
+  width: 22px; height: 22px; margin: 0; border-radius: 7px; cursor: pointer;
+  background: var(--hoja) center / 16px 16px no-repeat; box-shadow: inset 0 0 0 1.5px var(--tinta-3);
+  transition: background-color .12s ease, box-shadow .12s ease, transform .08s ease;
+}
+input[type="checkbox"]:not(.interruptor):hover { box-shadow: inset 0 0 0 1.5px var(--morado); }
+input[type="checkbox"]:not(.interruptor):active { transform: scale(.92); }
+input[type="checkbox"]:not(.interruptor):checked { background-color: var(--morado); background-image: var(--casilla-marca); box-shadow: none; }
+input[type="checkbox"]:not(.interruptor):disabled { opacity: .45; cursor: not-allowed; }
+input[type="checkbox"]:not(.interruptor):focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.casilla input { margin-top: 1px; }
+@media (forced-colors: active) { input[type="checkbox"]:not(.interruptor) { appearance: auto; -webkit-appearance: auto; } }
+@media (prefers-reduced-motion: reduce) { input[type="checkbox"]:not(.interruptor) { transition: none; } }
+
+/* Desplegables: misma caja que los campos de texto y una flecha propia (antes, la del sistema). */
+select.selector, select.entrada {
+  appearance: none; -webkit-appearance: none;
+  background-image: var(--selector-flecha); background-repeat: no-repeat; background-position: right 10px center; background-size: 20px 20px;
+  padding-right: 38px; text-overflow: ellipsis; cursor: pointer;
+}
+select.selector:hover, select.entrada:hover { border-color: var(--tinta-3); }
+select.seguida-orden, select.selector-peq, .campo-linea select.selector { padding-right: 30px; background-position: right 6px center; background-size: 18px 18px; }
+select.seguida-orden { max-width: min(100%, 17rem); }
+.pauta-cardio select.selector { padding-right: 34px; }
+/* Sobre la cámara el desplegable es oscuro: su flecha, clara */
+.camara-parar select.selector { background-image: var(--selector-flecha-clara); background-repeat: no-repeat; background-position: right 6px center; background-size: 18px 18px; padding-right: 30px; }
+/* En la tabla del editor las celdas son estrechas: se quedan con el desplegable del sistema */
+.tabla-pauta select.selector, .tabla-pauta select.entrada { appearance: auto; -webkit-appearance: auto; background-image: none; padding-right: 8px; }
+@media (forced-colors: active) { select.selector, select.entrada { appearance: auto; -webkit-appearance: auto; background-image: none; padding-right: 14px; } }
+
+/* ---------- 4. Tres niveles de superficie -------------------------------------------------------------------
+   Plano: lo que el coach dice (lavanda) y las notas de la app (tinte gris), sin sombra ni marcos.
+   Tarjeta: blanca con filo y sombra corta (--sombra, arriba).
+   Destacado: solo la tarjeta del día. */
+
+/* El aviso del coach y sus respuestas: la misma voz lavanda que la nota del coach (antes, una barra morada a la
+   izquierda con sombra y un marco morado de 2 px). */
+.aviso-coach { background: var(--morado-suave); box-shadow: none; padding-left: 14px; }
+.respuestas { box-shadow: var(--sombra); }
+.respuestas > .panel-pad { background: var(--morado-suave); border-radius: var(--r) var(--r) 0 0; padding-bottom: 12px; }
+.respuestas > .panel-pad + .lista > li:first-child > * { border-top-left-radius: 0; border-top-right-radius: 0; }
+
+/* «Tu semana» y «Tu mes» en Hoy: tarjeta clara como las demás (antes, negras: competían con la tarjeta del día). */
+.tarjeta-semana { background: var(--hoja); color: var(--tinta); }
+.tarjeta-semana-abrir .mini { color: var(--tinta-2); }
+.tarjeta-semana-abrir > svg { color: var(--morado); }
+.tarjeta-semana-quitar { color: var(--tinta-3); }
+.tarjeta-semana-disco,
+.tarjeta-mes .tarjeta-semana-disco { background: radial-gradient(circle, var(--hoja) 0 17%, var(--morado) 18% 30%, var(--morado-suave) 31% 100%); box-shadow: none; }
+
+/* ---------- 5. El color significa una sola cosa -------------------------------------------------------------
+   Rojo = alerta o pendiente (y el disco «obligatorio», que siempre lleva forma de disco). Fuera de eso, los datos
+   van en morado y lo conseguido en verde. */
+
+/* Proteína: violeta de marca (antes, frambuesa: al lado de una alerta parecía un aviso de «te has pasado»). Desde la
+   v0.75 está en estilos.css (--macro-proteina) y en COLORES_MACRO de logica/diseno.js. */
+
+/* Hábitos: el anillo avanza en morado y se pone verde al cumplirse (antes, cada hábito tomaba un color de los discos
+   de prioridad: rojo para la proteína, azul para el agua...). */
+.anillo-habito .pista, .anillo-habito .lleno { stroke: var(--morado); }
+.anillo-habito > svg:not(:first-child) { color: var(--morado); }
+.anillo-habito.cumple .pista, .anillo-habito.cumple .lleno { stroke: var(--ok); }
+.anillo-habito.cumple > svg:not(:first-child) { color: var(--ok); }
+.anillo-habito .marca-cumple { background: var(--ok); }
+.semana-habito .apuntado .punto-dia { border-color: var(--morado); }
+.semana-habito .cumple .punto-dia { background: var(--ok); border-color: var(--ok); }
+
+/* Cardio y días de nutrición: barras en la paleta de datos y de estados (antes, azul y amarillo de los discos). */
+.grafica-cardio .barra { fill: color-mix(in srgb, var(--morado) 55%, var(--hoja)); }
+.grafica-cardio .barra.ultima { fill: var(--morado); }
+.grafica-ingesta .barra-dia.casi { fill: var(--aviso); fill-opacity: .8; }
+
+/* Avatares: seis tonos fríos de la familia de la marca (antes incluía un marrón y un frambuesa que, junto a los
+   avisos, se leían como estados). Texto >= 4,5:1 sobre su fondo en los dos temas. */
+:root { --av-4: #7A2E8E; --av-5: #46527A; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --av-4: #D69AEC; --av-5: #AEB9DA; } }
+:root[data-theme="dark"] { --av-4: #D69AEC; --av-5: #AEB9DA; }
+
+/* ---------- 6. Sesión más limpia ----------------------------------------------------------------------------
+   La serie que toca: una sola señal (fila tintada y el botón de hecho relleno), no un marco en la fila y otro en el
+   botón. */
+.serie.siguiente { box-shadow: none; background: color-mix(in srgb, var(--morado-suave) 78%, var(--hoja)); }
+.serie.siguiente .hecho-btn { background: var(--morado); border-color: var(--morado); color: var(--sobre-morado); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 70%, transparent); }
+.serie.siguiente.hecha .hecho-btn { background: var(--ok); border-color: var(--ok); color: var(--hoja); }
+
+/* Las ayudas de la tarjeta (qué carga poner, cómo salen las back-off): una línea con su icono, sin caja gris. Tres
+   cajas seguidas pesaban más que las propias series. */
+.sugerencia, .backoff-nota { background: none; padding: 2px 4px; border-radius: 0; }
+.sugerencia.subir { background: none; color: var(--tinta); }
+.backoff-nota { margin: 0; }
+
+/* ---------- 7. Gráficas con un estilo único -----------------------------------------------------------------
+   Rejilla punteada y fina, una sola anchura de línea, barras con las esquinas suavizadas y etiquetas con halo del
+   color de la tarjeta para que no las pise la línea («8,5 t», «72,6 cm»). */
+.grafica .eje { stroke: var(--linea); stroke-width: 1; stroke-dasharray: 2 4; stroke-linecap: round; }
+.grafica .linea, .grafica-peso .linea { stroke-width: 2.5; }
+.grafica text { font-size: 11px; fill: var(--tinta-3); font-weight: 560; }
+.grafica text.valor, .grafica-cardio text.v { paint-order: stroke fill; stroke: var(--hoja); stroke-width: 4px; stroke-linejoin: round; }
+.grafica text.valor { font-size: 12px; font-weight: 720; fill: var(--tinta); }
+.grafica .punto { stroke-width: 2.25; }
+.grafica-carga .barra, .grafica-cardio .barra, .grafica-ingesta .barra-dia, .grafica-negocio .barra { rx: 3px; ry: 3px; }
+
+/* ---------- 8. Barra de abajo de cinco huecos (móvil) -------------------------------------------------------
+   El reparto lo hace logica/pestanas.js: cuatro secciones de cada día y «Más» (ui/BarraMas.jsx) con el resto.
+   Perfil y Cuenta ya no se esconden por CSS en el móvil: van en «Más» (y siguen en el avatar de arriba). */
+@media (max-width: 699px) { .tab-perfil, .tab-cuenta { display: grid; } }
+.tab-mas .tab-ico svg { stroke-width: 3.4; }
+.tab-mas[aria-current="page"] .tab-ico svg path { fill: none; }
+/* La hoja de «Más»: filas grandes; la sección en la que estás, en morado */
+.hoja-mas .fila-ios-nav { min-height: 3.75rem; }
+.hoja-mas .fila-ios-titulo { font-size: 1.0312rem; font-weight: 650; }
+.hoja-mas .mas-actual .fila-ios-titulo { color: var(--morado); }
+.hoja-mas .mas-actual .ios-ico { background: var(--morado); color: var(--sobre-morado); }
