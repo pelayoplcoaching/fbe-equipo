@@ -126,9 +126,9 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
       const todasLasSeries = [...previas.map((h) => Number(h.pauta.series) || 0), Number(pautaBase.series) || 0].filter((x) => x > 0);
       const seriesMin = R.triple.seriesMin ?? (todasLasSeries.length ? Math.min(...todasLasSeries) : null);
       const seriesMax = R.triple.seriesMax ?? (seriesMin != null ? seriesMin + R.triple.seriesExtra : null);
-      r = MODELO[modelo](l, pautaBase, { nombre, reglas: R, previa, fallosPrevios, bajadasPrevias, seriesMin, seriesMax });
+      r = MODELO[modelo](l, pautaBase, { nombre, reglas: R, previa, fallosPrevios, bajadasPrevias, seriesMin, seriesMax, ejercicio: ej, nivel: atleta.nivel ?? null });
       if (retoma) { r = { ...r, motivo: `Tras la descarga, sigue desde la última semana normal. ${r.motivo}` }; frenos.push({ id: 'tras_descarga', texto: 'Tras una descarga' }); }
-      if (pendiente) r = { ...r, avisos: [...r.avisos, `El modelo «${NOMBRE_MODELO[pedido]}» aún no está disponible: se usa la doble progresión`] };
+      if (pendiente) r = { ...r, avisos: [...r.avisos, `El modelo «${NOMBRE_MODELO[pedido]}» aún no está disponible: se usa «${NOMBRE_MODELO[modelo]}»`] };
       const volver = () => r.alternativas.find((a) => a.id === 'mantener')?.propuesta || campos(pautaBase);
       // Freno: con el check-in bajo no se añaden series
       if (r.tipo === 'series' && checkinBajo) {

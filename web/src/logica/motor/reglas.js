@@ -6,22 +6,39 @@
 // la proponen solo las señales (sin calendario); las molestias se avisan y no frenan; el esfuerzo va siempre en RPE.
 
 export const MODELOS = [
-  ['doble', 'Doble progresión'], ['triple', 'Triple progresión'], ['lineal', 'Lineal'], ['solo_reps', 'Solo repeticiones'],
+  ['por_serie', 'Progresión serie a serie'], ['doble', 'Doble progresión'], ['triple', 'Triple progresión'], ['lineal', 'Lineal'], ['solo_reps', 'Solo repeticiones'],
   ['porcentajes', 'Porcentajes'], ['top_set', 'Top set + back-off por RPE'], ['rir_progresivo', 'RIR progresivo'],
   ['carga_calculada', 'Carga calculada'], ['apre', 'APRE'], ['mantener', 'Mantener'], ['a_mano', 'A mano'],
 ];
 export const NOMBRE_MODELO = Object.fromEntries(MODELOS);
-// Los que ya decide el motor. El resto llega en fases posteriores: mientras tanto se usa la doble progresión
+// Los que ya decide el motor. El resto llega en fases posteriores: mientras tanto se usa el modelo de partida
 // y la fila lo dice (modelo pedido y modelo usado).
-export const MODELOS_DISPONIBLES = ['doble', 'triple', 'lineal', 'solo_reps', 'mantener', 'a_mano'];
+export const MODELOS_DISPONIBLES = ['por_serie', 'doble', 'triple', 'lineal', 'solo_reps', 'mantener', 'a_mano'];
+// El modelo de partida, y el que se usa mientras el pedido no esté disponible
+export const MODELO_BASE = 'por_serie';
 
 export const CRITERIOS_SUBIDA = ['todas', 'todas_menos_una', 'primera', 'suma'];
 export const TIPOS_DESCARGA = ['ligera', 'volumen', 'intensidad', 'tecnica'];
 
 export const REGLAS_FBE = Object.freeze({
   // Modelo de partida según el tipo de ejercicio; `modelo` (a nivel de ejercicio) manda sobre los dos
-  modelos: { basico: 'doble', resto: 'doble' },
+  modelos: { basico: 'por_serie', resto: 'por_serie' },
   modelo: null,
+  // Progresión serie a serie (reglas de Pelayo tras la prueba en sombra del 5/11/2026): cada serie progresa sola.
+  //   · llega al tope del rango → sube kilos y vuelve al suelo del rango
+  //   · va sobrada (RPE ≤ sobradoRpe; de partida solo en básicos) → sube kilos con las mismas repeticiones
+  //   · RPE ≤ rpeSube → una repetición más · por encima → igual
+  porSerie: {
+    rangos: { basico: [6, 10], multiarticular: [8, 12], aislamiento: [10, 15] },
+    rango: null,            // [mín, máx] propio de un ejercicio (manda sobre todo lo demás)
+    rangoDeLaPauta: true,   // si la pauta (no serie a serie) trae un rango mín–máx, se respeta
+    sobradoRpe: 7,
+    sobradoEn: 'basicos',   // 'basicos' | 'todos' | 'ninguno'
+    rpeSube: 9,
+    variasAlTope: 'faciles', // 'todas' | 'primera' | 'faciles' (todas las de RPE ≤ topeFacilRpe; del resto, solo la primera)
+    topeFacilRpe: 8,
+    sinKilos: 'solo_reps',  // donde por el nivel la carga la elige el atleta: 'no_tocar' | 'solo_reps' | 'como_los_demas'
+  },
   // Salto de carga: el del ejercicio (2,5 kg barra, 2 kg mancuernas, 2,5 o 5 kg máquinas), unos kilos fijos o un %
   salto: { tipo: 'ejercicio', valor: null },
   doble: {
@@ -67,15 +84,17 @@ export const REGLAS_FBE = Object.freeze({
   escala: 'rpe', // 'rpe' | 'rir' | 'pauta' (la que traiga cada pauta)
 });
 
-// Perfiles preparados. Los cuatro primeros son los de cada nivel de la app.
+// Perfiles preparados. Los cuatro primeros son los de cada nivel de la app: todos parten de la progresión serie
+// a serie (decisión del 5/11/2026 tras la prueba en sombra).
 export const PERFILES = Object.freeze({
-  novato: { nombre: 'Novato', modelos: { basico: 'lineal', resto: 'doble' } },
-  novato_intermedio: { nombre: 'Novato/intermedio', modelos: { basico: 'doble', resto: 'doble' } },
-  intermedio: { nombre: 'Intermedio, hipertrofia', modelos: { basico: 'doble', resto: 'doble' } },
-  intermedio_fuerza: { nombre: 'Intermedio, fuerza', modelos: { basico: 'top_set', resto: 'doble' }, descarga: { tipo: 'volumen' } },
-  avanzado: { nombre: 'Avanzado', modelos: { basico: 'top_set', resto: 'rir_progresivo' } },
+  novato: { nombre: 'Novato', modelos: { basico: 'por_serie', resto: 'por_serie' } },
+  novato_intermedio: { nombre: 'Novato/intermedio', modelos: { basico: 'por_serie', resto: 'por_serie' } },
+  intermedio: { nombre: 'Intermedio', modelos: { basico: 'por_serie', resto: 'por_serie' } },
+  avanzado: { nombre: 'Avanzado', modelos: { basico: 'por_serie', resto: 'por_serie' } },
+  intermedio_fuerza: { nombre: 'Fuerza', modelos: { basico: 'top_set', resto: 'por_serie' }, descarga: { tipo: 'volumen' } },
+  novato_lineal: { nombre: 'Novato, lineal en básicos', modelos: { basico: 'lineal', resto: 'doble' } },
   casa: { nombre: 'En casa o de viaje', modelos: { basico: 'solo_reps', resto: 'solo_reps' } },
-  readaptacion: { nombre: 'Readaptación', modelos: { basico: 'doble', resto: 'doble' }, rpeMax: 7, descarga: { tipo: 'intensidad' } },
+  readaptacion: { nombre: 'Readaptación', modelos: { basico: 'por_serie', resto: 'por_serie' }, rpeMax: 7, descarga: { tipo: 'intensidad' } },
   mantenimiento: { nombre: 'Mantenimiento', modelos: { basico: 'mantener', resto: 'mantener' }, mantenimiento: { activo: true } },
 });
 export const perfilDeNivel = (nivel) => (nivel && PERFILES[nivel] ? nivel : 'novato_intermedio');
@@ -111,6 +130,7 @@ const ESQUEMA = {
   modelos: { basico: UNO_DE(IDS_MODELO), resto: UNO_DE(IDS_MODELO) },
   modelo: UNO_DE(IDS_MODELO),
   salto: { tipo: UNO_DE(['ejercicio', 'kg', 'pct']), valor: NUM(0.25, 20) },
+  porSerie: { rangoDeLaPauta: (v) => typeof v === 'boolean', sobradoRpe: NUM(5, 8.5), sobradoEn: UNO_DE(['basicos', 'todos', 'ninguno']), rpeSube: NUM(6, 10), variasAlTope: UNO_DE(['todas', 'primera', 'faciles']), topeFacilRpe: NUM(6, 10), sinKilos: UNO_DE(['no_tocar', 'solo_reps', 'como_los_demas']) },
   doble: { criterio: UNO_DE(CRITERIOS_SUBIDA), margen: NUM(0, 1), sobrado: UNO_DE([1, 2]), porDebajo: UNO_DE(['mantener', 'bajar_segunda', 'bajar_pct']), bajarPct: NUM(2.5, 20) },
   triple: { seriesMin: NUM(1, 10), seriesMax: NUM(1, 12), seriesExtra: NUM(1, 4) },
   lineal: { fallosAntesDeBajar: NUM(1, 3), bajadaPct: NUM(5, 15), bajadasParaSalir: NUM(1, 5) },
@@ -140,6 +160,24 @@ export function limpiarReglas(capa) {
     }
     const regla = ESQUEMA[k];
     if (!regla) { descartado.push(k); continue; }
+    // Los rangos de repeticiones van aparte: [mín, máx] con mín ≤ máx
+    if (k === 'porSerie' && esObjeto(v)) {
+      const rangoVale = (r) => Array.isArray(r) && r.length === 2 && r.every((x) => Number.isInteger(x) && x >= 1 && x <= 50) && r[0] <= r[1];
+      const dentro = {};
+      if (v.rango != null) { if (rangoVale(v.rango)) dentro.rango = [...v.rango]; else descartado.push('porSerie.rango'); }
+      if (v.rangos != null) {
+        const rs = {};
+        if (esObjeto(v.rangos)) for (const [t, r] of Object.entries(v.rangos)) { if (['basico', 'multiarticular', 'aislamiento'].includes(t) && rangoVale(r)) rs[t] = [...r]; else descartado.push(`porSerie.rangos.${t}`); }
+        else descartado.push('porSerie.rangos');
+        if (Object.keys(rs).length) dentro.rangos = rs;
+      }
+      for (const [k2, v2] of Object.entries(v)) {
+        if (v2 == null || k2 === 'rango' || k2 === 'rangos') continue;
+        if (regla[k2] && regla[k2](v2)) dentro[k2] = v2; else descartado.push(`${k}.${k2}`);
+      }
+      if (Object.keys(dentro).length) reglas[k] = dentro;
+      continue;
+    }
     if (typeof regla === 'function') { if (regla(v)) reglas[k] = v; else descartado.push(k); continue; }
     if (!esObjeto(v)) { descartado.push(k); continue; }
     const dentro = {};
@@ -163,7 +201,7 @@ export const esBasico = (ejercicio) => (Array.isArray(ejercicio?.tipo) ? ejercic
 // El modelo de un ejercicio: el suyo si lo tiene; si no, el del perfil según sea básico o no.
 // { modelo: el que se usa, pedido: el que tocaba, pendiente: true si el pedido aún no está y se usa otro }
 export function modeloDe({ ejercicio = null, reglas = REGLAS_FBE } = {}) {
-  const pedido = reglas.modelo || (esBasico(ejercicio) ? reglas.modelos?.basico : reglas.modelos?.resto) || 'doble';
+  const pedido = reglas.modelo || (esBasico(ejercicio) ? reglas.modelos?.basico : reglas.modelos?.resto) || MODELO_BASE;
   if (MODELOS_DISPONIBLES.includes(pedido)) return { modelo: pedido, pedido, pendiente: false };
-  return { modelo: 'doble', pedido, pendiente: true };
+  return { modelo: MODELO_BASE, pedido, pendiente: true };
 }
