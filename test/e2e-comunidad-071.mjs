@@ -101,6 +101,8 @@ export async function probarComunidad071({ navegador, check, base = 'http://loca
     check(await tema.inputValue() === 'charla', 'publicada (y el tema vuelve a «Charla»)');
     await filtro('Técnica').click();
     await p.locator('article.post', { hasText: 'press banca' }).waitFor();
+    // (en una máquina lenta, la lista filtrada sustituye a la de antes un poco después: se espera a que quede solo lo filtrado)
+    await p.waitForFunction(() => { const xs = [...document.querySelectorAll('article.post .post-quien .mini')].map((x) => x.textContent); return xs.length === 2 && xs.every((t) => t.startsWith('Técnica · ')); }, null, { timeout: 10000 }).catch(() => {});
     const metas = await p.locator('article.post .post-quien .mini').allTextContents();
     check(await post('Mi truco para la sentadilla').count() === 1 && metas.length === 2 && metas.every((t) => t.startsWith('Técnica · ')) && await filtro('Técnica').getAttribute('aria-pressed') === 'true',
       'el filtro «Técnica»: la suya y el truco de Rubén, con su tema');
