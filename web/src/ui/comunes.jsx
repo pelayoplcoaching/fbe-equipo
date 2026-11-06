@@ -125,14 +125,23 @@ export const P = {
   hd: 'M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5zM8 9v6M8 12h3M11 9v6M14 9v6h1a3 3 0 0 0 0-6z',
 };
 
+// (diseño, tanda 15) El degradado de los anillos y los diales: del color del aro (--c o --dial, o el morado) a un tono más
+// claro, a lo largo del trazo. Va dentro del propio SVG (hereda su color) y se usa con style={{ stroke: `url(#id)` }};
+// los colores de las dos paradas, en diseno.css (.aro-ini y .aro-fin).
+export function DegradadoAro({ id }) {
+  return <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop class="aro-ini" offset="0" /><stop class="aro-fin" offset="1" /></linearGradient></defs>;
+}
+
 // Anillo de la semana: un segmento por sesión programada; los hechos, en morado
 export function Anillo({ hechas, total, tam = 68 }) {
   const n = Math.max(1, total), R = 26, C = 2 * Math.PI * R;
   const seg = C / n, hueco = n > 1 ? Math.min(5, seg * 0.18) : 0;
+  const deg = `aro-${useId()}`;
   return (
-    <svg class="anillo" viewBox="0 0 64 64" width={tam} height={tam} role="img" aria-label={`${hechas} de ${total} sesiones hechas esta semana`}>
+    <svg class={`anillo ${total > 0 && hechas >= total ? 'completo' : ''}`} viewBox="0 0 64 64" width={tam} height={tam} role="img" aria-label={`${hechas} de ${total} sesiones hechas esta semana`}>
+      <DegradadoAro id={deg} />
       {Array.from({ length: n }, (_, i) => (
-        <circle key={i} cx="32" cy="32" r={R} fill="none" stroke-width="8" class={i < hechas ? 'lleno' : 'vacio'}
+        <circle key={i} cx="32" cy="32" r={R} fill="none" stroke-width="8" class={i < hechas ? 'lleno' : 'vacio'} style={i < hechas ? { stroke: `url(#${deg})` } : undefined}
           stroke-dasharray={`${seg - hueco} ${C - seg + hueco}`} stroke-dashoffset={-i * seg - hueco / 2} transform="rotate(-90 32 32)" />
       ))}
       <text x="32" y="37" text-anchor="middle" class="anillo-num">{hechas}/{total}</text>

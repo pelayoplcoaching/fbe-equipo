@@ -781,3 +781,12 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 @keyframes serie-barrido { 0% { clip-path: inset(0 0 0 100% round 12px); opacity: 1; } 55% { clip-path: inset(0 round 12px); opacity: 1; } 100% { clip-path: inset(0 round 12px); opacity: 0; } }
 @keyframes serie-trazo { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) { .barra-sesion span { transition: none; } }
+
+/* ── 29 · Anillos y diales con degradado (tanda 15) ───────────────────────────────────────────────────────────────────
+   El aro lleno ya no es un color plano: va de un tono más claro a su color (comunes.jsx: DegradadoAro, que cada SVG
+   lleva dentro y hereda su --c / --dial), y al completarse deja un brillo leve de su mismo color. Las pistas, igual. */
+.aro-ini { stop-color: color-mix(in srgb, var(--c, var(--dial, var(--morado))) 62%, #fff); }
+.aro-fin { stop-color: var(--c, var(--dial, var(--morado))); }
+.anillo { --c: var(--morado); }
+.hero-dia .anillo { --c: #C9BEFF; }
+.anillo.completo, .dial-esfera.completo svg, .anillo-macro.cumple .anillo-macro-dibujo svg { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--c, var(--dial, var(--morado))) 45%, transparent)); }
