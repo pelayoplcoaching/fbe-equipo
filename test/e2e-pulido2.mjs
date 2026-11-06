@@ -390,9 +390,8 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       await p.waitForTimeout(600);
       await p.evaluate(() => localStorage.setItem('fbe-demo-retraso', '700'));
       await p.goto('about:blank'); await p.goto(`${base}/?demo`);
-      const t0 = Date.now();
-      const boton = p.getByRole('button', { name: /Pelayo/ }).first();
-      await Promise.race([boton.waitFor({ timeout: 15000 }).then(() => boton.tap()).catch(() => {}), p.locator('nav.tabs').waitFor({ timeout: 15000 }).catch(() => {})]);
+      // (la demo sigue dentro al recargar; si no, se entra otra vez)
+      if (!(await p.locator('nav.tabs').first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false))) await p.getByRole('button', { name: /Pelayo/ }).first().tap();
       await p.locator('nav.tabs').waitFor();
       const tNav = Date.now();
       await p.locator('button.tarjeta-atleta:visible').first().waitFor({ timeout: 8000 });
@@ -403,11 +402,12 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       check(alMomento.viejo && alDia, 'y se pone al día sola en cuanto llega la de ahora (un nombre cambiado mientras tanto aparece sin tocar nada)');
       // Al cerrar la sesión, la copia se borra del dispositivo
       await p.evaluate(() => localStorage.removeItem('fbe-demo-retraso'));
-      const quedaAntes = await p.evaluate(async () => { const bases = await indexedDB.databases(); let n = 0; for (const b of bases) { await new Promise((ok) => { const r = indexedDB.open(b.name); r.onsuccess = () => { const d = r.result; if (![...d.objectStoreNames].includes('copia')) { d.close(); ok(); return; } const c = d.transaction('copia').objectStore('copia').getAllKeys(); c.onsuccess = () => { n += c.result.filter((k) => String(k).includes('lista-atletas')).length; d.close(); ok(); }; c.onerror = () => { d.close(); ok(); }; }; r.onerror = () => ok(); }); } return n; });
+      const copias = () => p.evaluate(async () => { const bases = await indexedDB.databases(); let n = 0; for (const b of bases) { await new Promise((ok) => { const r = indexedDB.open(b.name); r.onsuccess = () => { const d = r.result; if (![...d.objectStoreNames].includes('copia')) { d.close(); ok(); return; } const c = d.transaction('copia').objectStore('copia').getAllKeys(); c.onsuccess = () => { n += c.result.filter((k) => String(k).includes('lista-atletas')).length; d.close(); ok(); }; c.onerror = () => { d.close(); ok(); }; }; r.onerror = () => ok(); r.onblocked = () => ok(); }); } return n; });
+      const quedaAntes = await copias();
       await p.getByRole('button', { name: 'Cambiar de cuenta' }).first().tap();
       await p.getByRole('button', { name: /Ana López/ }).first().waitFor();
-      await p.waitForTimeout(500);
-      const quedaDespues = await p.evaluate(async () => { const bases = await indexedDB.databases(); let n = 0; for (const b of bases) { await new Promise((ok) => { const r = indexedDB.open(b.name); r.onsuccess = () => { const d = r.result; if (![...d.objectStoreNames].includes('copia')) { d.close(); ok(); return; } const c = d.transaction('copia').objectStore('copia').getAllKeys(); c.onsuccess = () => { n += c.result.filter((k) => String(k).includes('lista-atletas')).length; d.close(); ok(); }; c.onerror = () => { d.close(); ok(); }; }; r.onerror = () => ok(); }); } return n; });
+      let quedaDespues = 1;
+      for (let k = 0; k < 12 && quedaDespues; k++) { await p.waitForTimeout(300); quedaDespues = await copias(); }
       check(quedaAntes === 1 && quedaDespues === 0, `la copia de la lista está en el dispositivo mientras dura la sesión y se borra al cerrarla (${quedaAntes} → ${quedaDespues})`);
       await ctx.close();
     }
