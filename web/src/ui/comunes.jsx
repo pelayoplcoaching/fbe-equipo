@@ -553,22 +553,42 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
 }
 
 // Carga asíncrona con estado
+// (pulido 4) recuerdo: una clave para recordar, mientras la app esté abierta, lo último que se cargó. Al volver a esa
+// pantalla se enseña al momento lo recordado y se pone al día por detrás, sin esqueletos (como hacen las apps del
+// móvil al volver a una lista). Solo en memoria: no se guarda nada en el dispositivo y se olvida al salir de la cuenta.
+const recuerdos = new Map();
+export function olvidarRecuerdos() { recuerdos.clear(); }
 export function useCarga(fn, deps = [], opciones = {}) {
-  const [estado, setEstado] = useState({ datos: null, error: null, cargando: true });
+  const { recuerdo = null } = opciones;
+  const recordado = () => (recuerdo && recuerdos.has(recuerdo) ? recuerdos.get(recuerdo) : null);
+  const [estado, setEstado] = useState(() => { const datos = recordado(); return { datos, error: null, cargando: datos == null }; });
   const vivo = useRef(true);
   const ultima = useRef(0); // solo vale la respuesta de la última petición (si llegan desordenadas, las viejas se tiran)
+  const claveRecuerdo = useRef(recuerdo);
+  claveRecuerdo.current = recuerdo;
   const cargar = useCallback(async (silencioso = false) => {
     const n = ++ultima.current;
+    const clave = claveRecuerdo.current;
     if (!silencioso) setEstado((e) => ({ ...e, cargando: true, error: null }));
     try {
       const datos = await fn();
+      if (clave && datos != null) recuerdos.set(clave, datos);
       if (vivo.current && n === ultima.current) setEstado({ datos, error: null, cargando: false });
     } catch (error) {
       reportarError(error, 'carga');
       if (vivo.current && n === ultima.current) setEstado((e) => ({ ...e, error, cargando: false }));
     }
   }, deps);
-  useEffect(() => { vivo.current = true; cargar(); return () => { vivo.current = false; }; }, [cargar]);
+  const primera = useRef(true);
+  useEffect(() => {
+    vivo.current = true;
+    // Con algo recordado, se pone al día en silencio; si lo que se pide cambia (otra clave), se enseña lo de la nueva
+    const datos = recordado();
+    if (!primera.current && recuerdo) setEstado({ datos, error: null, cargando: datos == null });
+    primera.current = false;
+    cargar(datos != null);
+    return () => { vivo.current = false; };
+  }, [cargar]);
   // (v0.65) copia: la clave de la copia del móvil de lo que se carga (datos/copia.js). Si se enseñó la copia porque la base
   // tardaba, lo de la base llega luego con «fbe-copia» y se pone en su sitio, sin recargar. transformar: lo mismo que haría fn
   // con lo que llega de la base (lo que espera en la cola, encima)

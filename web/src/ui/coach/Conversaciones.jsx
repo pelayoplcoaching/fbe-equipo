@@ -25,7 +25,8 @@ const almacen = () => { try { return window.localStorage; } catch { return null;
 
 export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
   const { api, perfil, aviso } = useApp();
-  const lista = useCarga(() => api.conversaciones(), []);
+  // (pulido 4) al volver a Mensajes se enseña al momento la última lista y se pone al día por detrás
+  const lista = useCarga(() => api.conversaciones(), [], { recuerdo: `conversaciones:${api.uid()}` });
   const [abierta, setAbierta] = useState(null); // { atleta, saltarA }
   const [buscar, setBuscar] = useState('');
   const [filtro, setFiltro] = useState('todos');

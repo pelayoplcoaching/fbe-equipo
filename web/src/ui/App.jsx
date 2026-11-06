@@ -10,7 +10,7 @@ import { podarEntendidos, olvidarEntendidos } from './tecnica/entendidos.js';
 import { borrarCompartido } from './Compartido.jsx';
 import { borrarPendientes } from '../datos/pendientes.js';
 const almacenLocal = () => { try { return window.localStorage; } catch { return null; } };
-import { Ctx, Cargando, Icono } from './comunes.jsx';
+import { Ctx, Cargando, Icono, olvidarRecuerdos } from './comunes.jsx';
 import { Acceso, Vincular, NuevaPassword, SegundoPaso } from './Acceso.jsx';
 import { AtletaApp } from './atleta/AtletaApp.jsx';
 import { CoachApp } from './coach/CoachApp.jsx';
@@ -187,8 +187,8 @@ export function App({ backend, api, cola }) {
     fijarPerfil: (p) => setEstado((e) => ({ ...e, perfil: p })),
     // Al cerrar sesión, este móvil deja de recibir las notificaciones de esa cuenta
     // (v0.54) y los borradores de los mensajes de este móvil
-    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); borrarBorradores(almacenLocal()); borrarSalida(api); borrarCacheChat().catch(() => {}); olvidarAnalisis(); olvidarTiras(); olvidarEntendidos(); borrarCompartido(); borrarPendientes(); backend.reiniciarChats?.(); await backend.auth.salir(); resolver(true); },
-    reiniciarDemo: () => { backend.reiniciar?.(); ultimoUid.current = undefined; resolver(true); },
+    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); borrarBorradores(almacenLocal()); borrarSalida(api); borrarCacheChat().catch(() => {}); olvidarAnalisis(); olvidarTiras(); olvidarEntendidos(); borrarCompartido(); borrarPendientes(); olvidarRecuerdos(); backend.reiniciarChats?.(); await backend.auth.salir(); resolver(true); },
+    reiniciarDemo: () => { backend.reiniciar?.(); olvidarRecuerdos(); ultimoUid.current = undefined; resolver(true); },
     // Modo atleta del coach (v0.37)
     propioCoach: estado.fase === 'coach' ? estado.propio || null : null,
     entrarModoAtleta: (propio = null) => {

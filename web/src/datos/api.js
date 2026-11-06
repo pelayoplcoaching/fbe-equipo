@@ -4044,39 +4044,80 @@ export function crearApi(backend) {
       const atletas = (await api.atletas()).filter((a) => !soloAtleta || a.id === soloAtleta);
       if (!atletas.length) return [];
       const ids = atletas.map((a) => a.id);
-      // El bloque de cada atleta: el activo (o ajustado); si no tiene, el planificado más reciente (como lo que ve el atleta)
-      const candidatos = await b.select('bloques', { in: { atleta_id: ids, estado: ['activo', 'ajustado', 'planificado'] }, eq: { es_plantilla: false } });
-      const bloques = ids.map((id) => bloqueActual(candidatos.filter((x) => x.atleta_id === id))).filter(Boolean);
-      const semanas = await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) } });
-      const semanasPorBloque = agrupar(semanas, 'bloque_id');
-      const actuales = {};
-      for (const bl of bloques) {
-        const visibles = (semanasPorBloque[bl.id] || []).filter((s) => s.programacion === 'programada');
-        const act = semanaActual(visibles, hoy);
-        if (act) actuales[bl.id] = act;
-      }
-      const sesiones = agrupar(await b.select('sesiones', { in: { semana_id: Object.values(actuales).map((s) => s.id) } }), 'semana_id');
+      // (pulido 4) Todo lo que solo depende de la lista de atletas se pide a la vez (antes, una consulta detrás de otra:
+      // unas veinte esperas seguidas; ahora, las cinco de la cadena más larga). Los cálculos son los mismos.
       const desde = sumarDias(lunesDe(hoy), -63);
-      const [pesos, checkins, molestias, ultimas] = await Promise.all([
+      const lunesHoy = lunesDe(hoy);
+      // El bloque de cada atleta: el activo (o ajustado); si no tiene, el planificado más reciente (como lo que ve el atleta)
+      const delPrograma = (async () => {
+        const candidatos = await b.select('bloques', { in: { atleta_id: ids, estado: ['activo', 'ajustado', 'planificado'] }, eq: { es_plantilla: false } });
+        const bloques = ids.map((id) => bloqueActual(candidatos.filter((x) => x.atleta_id === id))).filter(Boolean);
+        const semanas = await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) } });
+        const semanasPorBloque = agrupar(semanas, 'bloque_id');
+        const actuales = {};
+        for (const bl of bloques) {
+          const visibles = (semanasPorBloque[bl.id] || []).filter((s) => s.programacion === 'programada');
+          const act = semanaActual(visibles, hoy);
+          if (act) actuales[bl.id] = act;
+        }
+        const sesiones = agrupar(await b.select('sesiones', { in: { semana_id: Object.values(actuales).map((s) => s.id) } }), 'semana_id');
+        return { bloques, semanasPorBloque, actuales, sesiones };
+      })();
+      const delSeguimiento = Promise.all([
         b.select('pesos', { in: { atleta_id: ids }, gte: { fecha: desde }, order: [['fecha', 'desc']] }),
         b.select('checkins', { in: { atleta_id: ids }, gte: { semana_inicio: desde }, order: [['semana_inicio', 'desc']] }),
         b.select('molestias', { in: { atleta_id: ids }, gte: { semana_inicio: sumarDias(lunesDe(hoy), -14) } }),
         // la última serie de cada atleta: una consulta pequeña por atleta, en paralelo
         Promise.all(ids.map((id) => b.select('series', { eq: { atleta_id: id }, order: [['registrada_en', 'desc']], limit: 1, cols: 'atleta_id,registrada_en' }))),
       ]);
-      // Sesiones hechas en las últimas 6 semanas (para la carga), de todos sus bloques
-      const todosBloques = await b.select('bloques', { in: { atleta_id: ids }, eq: { es_plantilla: false }, cols: COLS_BLOQUE });
-      const todasSemanas = todosBloques.length ? await b.select('semanas', { in: { bloque_id: todosBloques.map((x) => x.id) }, cols: 'id,bloque_id,fecha_inicio,programacion,numero' }) : [];
-      const recientes = todasSemanas.length ? await b.select('sesiones', { in: { semana_id: todasSemanas.map((x) => x.id) }, eq: { completada: true }, gte: { fecha_realizada: sumarDias(lunesDe(hoy), -42) } }) : [];
-      // Cumplimiento de las 4 últimas semanas acabadas: sesiones, series pautadas hechas y esfuerzo frente a la pauta
-      const lunesHoy = lunesDe(hoy);
-      // v0.49: las minigráficas del panel: sesiones hechas de las programadas en las 6 últimas semanas (con la actual)
-      const sem6 = semanasQueCuentan(todasSemanas, todosBloques).filter((w) => lunesDe(w.fecha_inicio) >= sumarDias(lunesHoy, -35) && lunesDe(w.fecha_inicio) <= lunesHoy);
-      const ses6 = sem6.length ? await b.select('sesiones', { in: { semana_id: sem6.map((w) => w.id) }, cols: 'id,semana_id,completada' }) : [];
-      const sem4 = semanasQueCuentan(todasSemanas, todosBloques).filter((w) => lunesDe(w.fecha_inicio) >= sumarDias(lunesHoy, -28) && lunesDe(w.fecha_inicio) < lunesHoy);
-      const ses4 = sem4.length ? await b.select('sesiones', { in: { semana_id: sem4.map((w) => w.id) }, cols: 'id,semana_id,completada' }) : [];
-      const pau4 = ses4.length ? await b.select('sesion_ejercicios', { in: { sesion_id: ses4.map((x) => x.id) }, cols: 'id,sesion_id,series,rpe_objetivo,rir_objetivo' }) : [];
-      const ser4 = pau4.length ? await b.select('series', { in: { sesion_ejercicio_id: pau4.map((x) => x.id) }, cols: 'sesion_ejercicio_id,reps,rpe,rir', limit: 20000 }) : [];
+      const delHistorial = (async () => {
+        // Sesiones hechas en las últimas 6 semanas (para la carga), de todos sus bloques
+        const todosBloques = await b.select('bloques', { in: { atleta_id: ids }, eq: { es_plantilla: false }, cols: COLS_BLOQUE });
+        const todasSemanas = todosBloques.length ? await b.select('semanas', { in: { bloque_id: todosBloques.map((x) => x.id) }, cols: 'id,bloque_id,fecha_inicio,programacion,numero' }) : [];
+        // v0.49: las minigráficas del panel: sesiones hechas de las programadas en las 6 últimas semanas (con la actual)
+        const sem6 = semanasQueCuentan(todasSemanas, todosBloques).filter((w) => lunesDe(w.fecha_inicio) >= sumarDias(lunesHoy, -35) && lunesDe(w.fecha_inicio) <= lunesHoy);
+        // Cumplimiento de las 4 últimas semanas acabadas: sesiones, series pautadas hechas y esfuerzo frente a la pauta
+        const sem4 = semanasQueCuentan(todasSemanas, todosBloques).filter((w) => lunesDe(w.fecha_inicio) >= sumarDias(lunesHoy, -28) && lunesDe(w.fecha_inicio) < lunesHoy);
+        const [recientes, ses6, cuatro, NAT] = await Promise.all([
+          todasSemanas.length ? b.select('sesiones', { in: { semana_id: todasSemanas.map((x) => x.id) }, eq: { completada: true }, gte: { fecha_realizada: sumarDias(lunesDe(hoy), -42) } }) : [],
+          sem6.length ? b.select('sesiones', { in: { semana_id: sem6.map((w) => w.id) }, cols: 'id,semana_id,completada' }) : [],
+          (async () => {
+            const ses4 = sem4.length ? await b.select('sesiones', { in: { semana_id: sem4.map((w) => w.id) }, cols: 'id,semana_id,completada' }) : [];
+            const pau4 = ses4.length ? await b.select('sesion_ejercicios', { in: { sesion_id: ses4.map((x) => x.id) }, cols: 'id,sesion_id,series,rpe_objetivo,rir_objetivo' }) : [];
+            const ser4 = pau4.length ? await b.select('series', { in: { sesion_ejercicio_id: pau4.map((x) => x.id) }, cols: 'sesion_ejercicio_id,reps,rpe,rir', limit: 20000 }) : [];
+            return { ses4, pau4, ser4 };
+          })(),
+          // v0.53: quien tiene objetivo de días por semana (microciclos) se mide por semanas de lunes a domingo con ese
+          // objetivo: la de hoy (sus sesiones), las 6 de la minigráfica y el cumplimiento de las 4 últimas acabadas (de lo
+          // hecho en ellas y, por lo que faltó hasta su objetivo, las siguientes pendientes de su programa, en su orden)
+          semanasNaturalesPanel(atletas, { todosBloques, todasSemanas, hoy }),
+        ]);
+        return { todosBloques, todasSemanas, sem6, sem4, recientes, ses6, ...cuatro, NAT };
+      })();
+      // Hábitos: cumplimiento de la última semana (7 días hasta hoy) de cada atleta
+      const delosHabitos = (async () => {
+        const habitosTodos = await b.select('habitos', { in: { atleta_id: ids }, eq: { activo: true } });
+        const regsHab = habitosTodos.length ? await b.select('registros_habito', { in: { habito_id: habitosTodos.map((h) => h.id) }, gte: { fecha: sumarDias(hoy, -7) } }) : [];
+        return { habitosTodos, regsHab };
+      })();
+      const [
+        { bloques, semanasPorBloque, actuales, sesiones },
+        [pesos, checkins, molestias, ultimas],
+        { todosBloques, todasSemanas, sem6, sem4, recientes, ses6, ses4, pau4, ser4, NAT },
+        { habitosTodos, regsHab },
+        planesN, regsN, cambiosR, cuestionarios, pagosTodos,
+      ] = await Promise.all([
+        delPrograma, delSeguimiento, delHistorial, delosHabitos,
+        // Nutrición: sus planes y qué días ha apuntado en la última semana
+        b.select('planes_nutricion', { in: { atleta_id: ids } }).catch(() => []),
+        b.select('registros_nutricion', { in: { atleta_id: ids }, gte: { fecha: sumarDias(hoy, -7) }, cols: 'atleta_id,fecha' }).catch(() => []),
+        // Recetas que piden cambiar (v0.26; sin la migración 022, ninguna)
+        b.select('recetas_atleta', { in: { atleta_id: ids }, nonulo: ['cambio_pedido_en'], cols: 'atleta_id' }).catch(() => []),
+        // Cuestionarios con algo de salud que revisar
+        b.select('cuestionarios', { in: { atleta_id: ids }, cols: 'atleta_id,resultado,otras,completado_en,revisado_en' }).catch(() => []),
+        // Cobros (v0.25, solo el coach; sin la migración 020, sin columna): cómo va cada uno, para verlo en el panel
+        b.select('pagos', { in: { atleta_id: ids } }).catch(() => null),
+      ]);
       const lunesSem4 = Object.fromEntries(sem4.map((w) => [w.id, lunesDe(w.fecha_inicio)]));
       const bloqueDeSemana = Object.fromEntries(todasSemanas.map((w) => [w.id, w.bloque_id]));
       const atletaDeBloque = Object.fromEntries(todosBloques.map((x) => [x.id, x.atleta_id]));
@@ -4087,26 +4128,10 @@ export function crearApi(backend) {
       for (const [s] of ultimas) if (s) ultima[s.atleta_id] = fechaDe(s.registrada_en);
       const S4 = {};
       for (const x of ses4) (S4[atletaDeBloque[bloqueDeSemana[x.semana_id]]] ||= []).push({ ...x, semana_lunes: lunesSem4[x.semana_id] });
-      // v0.53: quien tiene objetivo de días por semana (microciclos) se mide por semanas de lunes a domingo con ese
-      // objetivo: la de hoy (sus sesiones), las 6 de la minigráfica y el cumplimiento de las 4 últimas acabadas (de lo
-      // hecho en ellas y, por lo que faltó hasta su objetivo, las siguientes pendientes de su programa, en su orden)
-      const NAT = await semanasNaturalesPanel(atletas, { todosBloques, todasSemanas, hoy });
-      // Hábitos: cumplimiento de la última semana (7 días hasta hoy) de cada atleta
-      const habitosTodos = await b.select('habitos', { in: { atleta_id: ids }, eq: { activo: true } });
-      const regsHab = habitosTodos.length ? await b.select('registros_habito', { in: { habito_id: habitosTodos.map((h) => h.id) }, gte: { fecha: sumarDias(hoy, -7) } }) : [];
       const regsPorHabito = agrupar(regsHab, 'habito_id');
       const habitosPorAtleta = agrupar(habitosTodos, 'atleta_id');
-      // Nutrición: sus planes y qué días ha apuntado en la última semana
-      const [planesN, regsN] = await Promise.all([
-        b.select('planes_nutricion', { in: { atleta_id: ids } }).catch(() => []),
-        b.select('registros_nutricion', { in: { atleta_id: ids }, gte: { fecha: sumarDias(hoy, -7) }, cols: 'atleta_id,fecha' }).catch(() => []),
-      ]);
       const PN = agrupar(planesN, 'atleta_id'), RN = agrupar(regsN, 'atleta_id');
-      // Recetas que piden cambiar (v0.26; sin la migración 022, ninguna)
-      const cambiosR = await b.select('recetas_atleta', { in: { atleta_id: ids }, nonulo: ['cambio_pedido_en'], cols: 'atleta_id' }).catch(() => []);
       const CR = agrupar(cambiosR, 'atleta_id');
-      // Cuestionarios con algo de salud que revisar
-      const cuestionarios = await b.select('cuestionarios', { in: { atleta_id: ids }, cols: 'atleta_id,resultado,otras,completado_en,revisado_en' }).catch(() => []);
       const Q = Object.fromEntries(cuestionarios.map((c) => [c.atleta_id, c]));
       const res = atletas.map((a) => {
         const s4 = S4[a.id] || [];
@@ -4141,8 +4166,6 @@ export function crearApi(backend) {
           diasSemana: nat ? nat.diasSemana : null, semanaNatural: nat ? nat.actual : null,
         }, hoy), chispas };
       });
-      // Cobros (v0.25, solo el coach; sin la migración 020, sin columna): cómo va cada uno, para verlo en el panel
-      const pagosTodos = await b.select('pagos', { in: { atleta_id: ids } }).catch(() => null);
       if (pagosTodos) {
         const PG = agrupar(pagosTodos, 'atleta_id');
         for (const r of res) r.cobro = PG[r.atleta_id]?.length ? resumenCobros(PG[r.atleta_id], hoy) : null;
@@ -4198,10 +4221,13 @@ export function crearApi(backend) {
       return b.rpc('crear_invitacion', { p_atleta: atletaId });
     },
     async ficha(atletaId) {
-      const [ficha] = await b.select('atletas', { eq: { id: atletaId } });
-      const fotoDe = ficha?.perfil_id ? (await b.select('perfiles', { eq: { id: ficha.perfil_id }, cols: 'id,foto' }).catch(() => []))[0]?.foto || null : null;
-      const atleta = ficha ? { ...ficha, foto: fotoDe } : ficha;
-      const [checkins, pesos, molestias, notas] = await Promise.all([
+      // (pulido 4) la ficha y lo suyo se piden a la vez; la foto, que sale de su perfil, a la vez que lo demás
+      const [atleta, checkins, pesos, molestias, notas] = await Promise.all([
+        (async () => {
+          const [ficha] = await b.select('atletas', { eq: { id: atletaId } });
+          const fotoDe = ficha?.perfil_id ? (await b.select('perfiles', { eq: { id: ficha.perfil_id }, cols: 'id,foto' }).catch(() => []))[0]?.foto || null : null;
+          return ficha ? { ...ficha, foto: fotoDe } : ficha;
+        })(),
         b.select('checkins', { eq: { atleta_id: atletaId }, order: [['semana_inicio', 'desc']], limit: 26 }),
         b.select('pesos', { eq: { atleta_id: atletaId }, order: [['fecha', 'asc']] }),
         b.select('molestias', { eq: { atleta_id: atletaId }, order: [['semana_inicio', 'desc']], limit: 100 }),
@@ -4298,18 +4324,67 @@ export function crearApi(backend) {
         api.atletas(),
       ]);
       const A = porId(atletas);
-      const semanas = porId(await b.select('semanas', { in: { id: unicos(sesiones.map((s) => s.semana_id)) } }));
-      const bloques = porId(await b.select('bloques', { in: { id: unicos(Object.values(semanas).map((w) => w.bloque_id)) } }));
-      const pautas = await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((s) => s.id) } });
-      const series = await b.select('series', { in: { sesion_ejercicio_id: pautas.map((p) => p.id) } });
+      // (pulido 4) Lo que sale de esa primera tanda se pide a la vez (antes, una consulta detrás de otra: unas quince
+      // esperas seguidas; ahora, dos). Lo que se arma con ello es lo mismo.
+      const vids = archivos.map((a) => ({ ...a, atleta: A[a.atleta_id] || null })).filter((a) => a.atleta);
+      const [
+        [semanas, bloques], [pautas, series], molestias, sesionesAdj, preguntas, deVideos, deRecetas, comunidad, deTareas,
+      ] = await Promise.all([
+        (async () => {
+          const semanas = porId(await b.select('semanas', { in: { id: unicos(sesiones.map((s) => s.semana_id)) } }));
+          const bloques = porId(await b.select('bloques', { in: { id: unicos(Object.values(semanas).map((w) => w.bloque_id)) } }));
+          return [semanas, bloques];
+        })(),
+        (async () => {
+          const pautas = await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((s) => s.id) } });
+          const series = await b.select('series', { in: { sesion_ejercicio_id: pautas.map((p) => p.id) } });
+          return [pautas, series];
+        })(),
+        checkins.length ? b.select('molestias', { in: { atleta_id: unicos(checkins.map((c) => c.atleta_id)) }, gte: { semana_inicio: desde } }) : [],
+        b.select('sesiones', { in: { id: unicos(comentarios.map((c) => c.sesion_id)).filter((id) => !sesiones.some((s) => s.id === id)) } }).then(porId),
+        // Las preguntas del coach que se han respondido en esos check-ins
+        checkins.some((c) => c.respuestas) ? b.select('preguntas_checkin', {}).catch(() => []).then(porId) : {},
+        // (v0.57) los vídeos, con su ejercicio, su serie y su corrección (para «Revisar seguidos»)
+        (async () => {
+          // (v0.61) de todos los que van con un ejercicio de una sesión: su sesión y su orden en ella (para «Revisar la sesión»)
+          const seIds = unicos(vids.filter((a) => a.sesion_ejercicio_id).map((a) => a.sesion_ejercicio_id));
+          const [PA, extra, autos] = await Promise.all([
+            seIds.length ? b.select('sesion_ejercicios', { in: { id: seIds }, cols: 'id,ejercicio_id,sesion_id,orden' }).catch(() => []).then(porId) : {},
+            api.extrasVideos(vids),
+            // (v0.59, 037) y lo que nota el atleta (su valoración al enviarlo)
+            api.autoevaluaciones(vids.filter((a) => a.tipo === 'video_tecnica').map((a) => a.id)).catch(() => ({})),
+          ]);
+          const sIds = unicos(Object.values(PA).map((x) => x.sesion_id).filter(Boolean));
+          const ejDe = (a) => a.ejercicio_id || PA[a.sesion_ejercicio_id]?.ejercicio_id || null;
+          const ejIds = unicos(vids.map(ejDe));
+          const [SV, EJ] = await Promise.all([
+            sIds.length ? b.select('sesiones', { in: { id: sIds }, cols: 'id,nombre,fecha_realizada' }).catch(() => []).then(porId) : {},
+            ejIds.length ? b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre,grupos_musculares,tipo' }).catch(() => []).then(porId) : {},
+          ]);
+          return { PA, SV, EJ, extra, autos, ejDe };
+        })(),
+        // Recetas que un atleta pide cambiar (v0.26; sin la migración 022, ninguna)
+        (async () => {
+          const cambios = await b.select('recetas_atleta', { nonulo: ['cambio_pedido_en'], order: [['cambio_pedido_en', 'desc']] }).catch(() => []);
+          const R = cambios.length ? porId(await b.select('recetas', { in: { id: unicos(cambios.map((c) => c.receta_id)) }, cols: 'id,nombre,foto_mini' })) : {};
+          return { cambios, R };
+        })(),
+        // Avisos de la comunidad (v0.43; sin la migración 027, ninguno)
+        api.reportesComunidad().catch(() => []),
+        // Tareas hechas por revisar (v0.48; sin la migración 030, ninguna)
+        (async () => {
+          const tareas = await b.select('tareas', { nonulo: ['hecha_en'], nulo: ['revisada_en'], order: [['hecha_en', 'desc']] }).catch(() => []);
+          const ejT = unicos(tareas.map((t) => t.ejercicio_id));
+          const arT = unicos(tareas.map((t) => t.archivo_id));
+          const [EJ, AR] = await Promise.all([
+            ejT.length ? b.select('ejercicios', { in: { id: ejT }, cols: 'id,nombre' }).then(porId).catch(() => ({})) : {},
+            arT.length ? b.select('archivos', { in: { id: arT } }).then(porId).catch(() => ({})) : {},
+          ]);
+          return { tareas, EJ, AR };
+        })(),
+      ]);
       const seriesPorPauta = agrupar(series, 'sesion_ejercicio_id');
       const pautasPorSesion = agrupar(pautas, 'sesion_id');
-      const molestias = checkins.length
-        ? await b.select('molestias', { in: { atleta_id: unicos(checkins.map((c) => c.atleta_id)) }, gte: { semana_inicio: desde } })
-        : [];
-      const sesionesAdj = porId(await b.select('sesiones', { in: { id: unicos(comentarios.map((c) => c.sesion_id)).filter((id) => !sesiones.some((s) => s.id === id)) } }));
-      // Las preguntas del coach que se han respondido en esos check-ins
-      const preguntas = checkins.some((c) => c.respuestas) ? porId(await b.select('preguntas_checkin', {}).catch(() => [])) : {};
       const todasSesiones = { ...porId(sesiones), ...sesionesAdj };
       const items = {
         sesiones: sesiones.map((s) => {
@@ -4327,23 +4402,11 @@ export function crearApi(backend) {
         checkins: checkins.map((c) => ({ ...c, atleta: A[c.atleta_id] || null, molestias: molestias.filter((m) => m.atleta_id === c.atleta_id && m.semana_inicio === c.semana_inicio && m.intensidad > 0),
           respuestasLeidas: respuestasDe(c, preguntas) })).filter((c) => c.atleta),
         comentarios: comentarios.map((c) => ({ ...c, atleta: A[c.atleta_id] || null, sesion: c.sesion_id ? todasSesiones[c.sesion_id] || null : null })).filter((c) => c.atleta),
-        archivos: archivos.map((a) => ({ ...a, atleta: A[a.atleta_id] || null })).filter((a) => a.atleta),
+        archivos: vids,
         recetas: [],
       };
-      // (v0.57) los vídeos, con su ejercicio, su serie y su corrección (para «Revisar seguidos»)
       {
-        const vids = items.archivos;
-        // (v0.61) de todos los que van con un ejercicio de una sesión: su sesión y su orden en ella (para «Revisar la sesión»)
-        const seIds = unicos(vids.filter((a) => a.sesion_ejercicio_id).map((a) => a.sesion_ejercicio_id));
-        const PA = seIds.length ? porId(await b.select('sesion_ejercicios', { in: { id: seIds }, cols: 'id,ejercicio_id,sesion_id,orden' }).catch(() => [])) : {};
-        const sIds = unicos(Object.values(PA).map((x) => x.sesion_id).filter(Boolean));
-        const SV = sIds.length ? porId(await b.select('sesiones', { in: { id: sIds }, cols: 'id,nombre,fecha_realizada' }).catch(() => [])) : {};
-        const ejDe = (a) => a.ejercicio_id || PA[a.sesion_ejercicio_id]?.ejercicio_id || null;
-        const ejIds = unicos(vids.map(ejDe));
-        const EJ = ejIds.length ? porId(await b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre,grupos_musculares,tipo' }).catch(() => [])) : {};
-        const extra = await api.extrasVideos(vids);
-        // (v0.59, 037) y lo que nota el atleta (su valoración al enviarlo)
-        const autos = await api.autoevaluaciones(vids.filter((a) => a.tipo === 'video_tecnica').map((a) => a.id)).catch(() => ({}));
+        const { PA, SV, EJ, extra, autos, ejDe } = deVideos;
         items.archivos = vids.map((a) => {
           const pa = a.sesion_ejercicio_id ? PA[a.sesion_ejercicio_id] || null : null;
           const se = pa?.sesion_id ? SV[pa.sesion_id] || null : null;
@@ -4351,23 +4414,15 @@ export function crearApi(backend) {
             pauta: pa ? { sesion_id: pa.sesion_id, orden: pa.orden } : null, sesionVideo: se ? { id: se.id, nombre: se.nombre, fecha: se.fecha_realizada || a.fecha } : null };
         });
       }
-      // Recetas que un atleta pide cambiar (v0.26; sin la migración 022, ninguna)
-      const cambios = await b.select('recetas_atleta', { nonulo: ['cambio_pedido_en'], order: [['cambio_pedido_en', 'desc']] }).catch(() => []);
-      if (cambios.length) {
-        const R = porId(await b.select('recetas', { in: { id: unicos(cambios.map((c) => c.receta_id)) }, cols: 'id,nombre,foto_mini' }));
-        items.recetas = cambios.map((c) => ({ ...c, receta: R[c.receta_id] || null, atleta: A[c.atleta_id] || null })).filter((c) => c.atleta && c.receta);
+      {
+        const { cambios, R } = deRecetas;
+        if (cambios.length) items.recetas = cambios.map((c) => ({ ...c, receta: R[c.receta_id] || null, atleta: A[c.atleta_id] || null })).filter((c) => c.atleta && c.receta);
       }
-      // Avisos de la comunidad (v0.43; sin la migración 027, ninguno)
-      items.comunidad = await api.reportesComunidad().catch(() => []);
-      // Tareas hechas por revisar (v0.48; sin la migración 030, ninguna)
-      const tareas = await b.select('tareas', { nonulo: ['hecha_en'], nulo: ['revisada_en'], order: [['hecha_en', 'desc']] }).catch(() => []);
-      const ejT = unicos(tareas.map((t) => t.ejercicio_id));
-      const arT = unicos(tareas.map((t) => t.archivo_id));
-      const [EJ, AR] = await Promise.all([
-        ejT.length ? b.select('ejercicios', { in: { id: ejT }, cols: 'id,nombre' }).then(porId).catch(() => ({})) : {},
-        arT.length ? b.select('archivos', { in: { id: arT } }).then(porId).catch(() => ({})) : {},
-      ]);
-      items.tareas = tareas.map((t) => ({ ...t, atleta: A[t.atleta_id] || null, ejercicio: EJ[t.ejercicio_id] || null, archivo: AR[t.archivo_id] || null })).filter((t) => t.atleta);
+      items.comunidad = comunidad;
+      {
+        const { tareas, EJ, AR } = deTareas;
+        items.tareas = tareas.map((t) => ({ ...t, atleta: A[t.atleta_id] || null, ejercicio: EJ[t.ejercicio_id] || null, archivo: AR[t.archivo_id] || null })).filter((t) => t.atleta);
+      }
       // Los mensajes cuentan por conversación (como se ven en Revisar), no uno a uno
       const hilo = (c) => c.sesion_id || c.checkin_id || c.archivo_id || `general-${c.atleta_id}`;
       const unicosHilos = [...new Map(items.comentarios.map((c) => [hilo(c), c])).values()];
@@ -4382,9 +4437,12 @@ export function crearApi(backend) {
 
     // ------------------------------------------------------------ coach: programar
     async bloqueCompleto(bloqueId) {
-      const [bloque] = await b.select('bloques', { eq: { id: bloqueId } });
+      // (pulido 4) el bloque y sus semanas, a la vez (una espera menos al abrir el editor)
+      const [[bloque], semanas] = await Promise.all([
+        b.select('bloques', { eq: { id: bloqueId } }),
+        b.select('semanas', { eq: { bloque_id: bloqueId }, order: [['numero', 'asc']] }),
+      ]);
       if (!bloque) throw new Error('No se encuentra el bloque.');
-      const semanas = await b.select('semanas', { eq: { bloque_id: bloqueId }, order: [['numero', 'asc']] });
       const sesiones = await b.select('sesiones', { in: { semana_id: semanas.map((s) => s.id) }, order: [['orden', 'asc']] });
       const pautas = await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((s) => s.id) }, order: [['orden', 'asc']] });
       const series = bloque.es_plantilla ? [] : await b.select('series', { in: { sesion_ejercicio_id: pautas.map((p) => p.id) }, order: [['numero', 'asc']] });

@@ -43,7 +43,8 @@ export const pestanasFicha = (a) => PESTANAS.filter(([k]) => (conNutricion(a) ||
 
 export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambiar, resumenInicial = null }) {
   const { api } = useApp();
-  const ficha = useCarga(() => api.ficha(atletaId), [atletaId]);
+  // (pulido 4) una ficha que ya se abrió se enseña al momento y se pone al día por detrás
+  const ficha = useCarga(() => api.ficha(atletaId), [atletaId], { recuerdo: `ficha:${api.uid()}:${atletaId}` });
   // v0.49: su resumen del panel (bloque, cumplimiento, peso y última actividad) para la cabecera; solo el coach. Se
   // reutiliza el que ya cargó el panel; si no lo hay (búsqueda, notificación), se piden solo las filas de este atleta
   const resumen = useCarga(() => (resumenInicial ? Promise.resolve(resumenInicial) : api.resumenes(undefined, { soloAtleta: atletaId }).then((x) => x[0] || null).catch(() => null)), [atletaId]);
@@ -118,7 +119,7 @@ function ChipsFicha({ r, cargando }) {
 
 function Programa({ atleta }) {
   const { api } = useApp();
-  const bloques = useCarga(() => api.bloquesDe(atleta.id), [atleta.id]);
+  const bloques = useCarga(() => api.bloquesDe(atleta.id), [atleta.id], { recuerdo: `bloques:${api.uid()}:${atleta.id}` });
   const [bloqueId, setBloqueId] = useState(null);
   const [nuevo, setNuevo] = useState(false);
   useEffect(() => {

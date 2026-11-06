@@ -242,6 +242,47 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
         await ctx.close();
       }
     }
+    // ---------- 4. Al volver a una lista se ve al momento (lo último cargado) y se pone al día por detrás
+    {
+      const { ctx, p } = await abrir(/Pelayo/);
+      const filas = p.locator('tr:visible, button.tarjeta-atleta:visible');
+      await filas.first().waitFor();
+      await p.evaluate(() => localStorage.setItem('fbe-demo-retraso', '250'));   // (cada consulta, 250 ms: una red de móvil)
+      await irASeccion(p, 'Mensajes');
+      await p.locator('main').getByText(/Ana López/).first().waitFor();
+      // Mientras se está en otra sección, algo cambia en la base (otro dispositivo, el propio atleta…)
+      await p.evaluate(async () => { const b = globalThis.__fbeDemo; const [a] = await b.select('atletas', { eq: { nombre: 'Rubén Martín' } }); await b.update('atletas', { nombre: 'Rubén Martín Soler' }, { eq: { id: a.id } }); });
+      await irASeccion(p, 'Atletas');
+      await p.waitForTimeout(350);   // (la transición; con la red a 250 ms por consulta, la lista entera tardaría más de un segundo)
+      const alVolver = await p.evaluate(() => ({ filas: document.querySelectorAll('tr, button.tarjeta-atleta').length, cargando: document.querySelectorAll('main .siluetas').length, texto: document.querySelector('main')?.textContent || '' }));
+      check(alVolver.filas >= 5 && alVolver.cargando === 0 && /Rubén Martín/.test(alVolver.texto), `coach: al volver a Atletas la lista está al momento, sin pantalla de carga (${alVolver.filas} filas)`);
+      const alDia = await p.waitForFunction(() => /Rubén Martín Soler/.test(document.querySelector('main')?.textContent || ''), null, { timeout: 8000 }).then(() => true).catch(() => false);
+      check(alDia, 'y se pone al día por detrás: el cambio hecho mientras tanto aparece solo');
+      // Una ficha ya abierta, igual
+      await p.locator('tr:visible, button.tarjeta-atleta:visible', { hasText: 'Ana López' }).first().dispatchEvent('click');
+      await p.locator('.pestanas [role=tab]').first().waitFor({ timeout: 8000 });
+      await p.getByRole('button', { name: 'Volver a atletas' }).tap();
+      await filas.first().waitFor();
+      await p.waitForTimeout(400);
+      await p.locator('tr:visible, button.tarjeta-atleta:visible', { hasText: 'Ana López' }).first().dispatchEvent('click');
+      await p.waitForTimeout(350);
+      const ficha2 = await p.evaluate(() => ({ pestanas: document.querySelectorAll('.pestanas [role=tab]').length, cargandoFicha: [...document.querySelectorAll('.siluetas')].filter((e) => /la ficha/.test(e.textContent)).length }));
+      check(ficha2.pestanas > 3 && ficha2.cargandoFicha === 0, 'una ficha que ya se abrió vuelve a abrirse al momento');
+      await ctx.close();
+    }
+    {
+      // Al cambiar de cuenta no queda nada de la anterior
+      const { ctx, p } = await abrir(/Pelayo/);
+      await p.locator('tr:visible, button.tarjeta-atleta:visible').first().waitFor();
+      await p.getByRole('button', { name: 'Cambiar de cuenta' }).first().tap();
+      await p.getByRole('button', { name: /Pelayo/ }).first().waitFor();
+      await p.evaluate(() => localStorage.setItem('fbe-demo-retraso', '300'));
+      await p.getByRole('button', { name: /Pelayo/ }).first().tap();
+      await p.locator('nav.tabs').waitFor();
+      const cargando = await p.locator('main .siluetas').first().waitFor({ timeout: 3000 }).then(() => true).catch(() => false);
+      check(cargando, 'al cambiar de cuenta se empieza de cero: la lista se carga de nuevo (no se enseña la de la cuenta anterior)');
+      await ctx.close();
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     check(false, `Pulido: ${e.message.split('\n')[0]}${errores.length ? ` · ${errores.slice(0, 3).join(' ## ')}` : ''}`);
