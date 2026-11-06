@@ -5784,6 +5784,16 @@ try {
   console.log('  ✗ el pulido de fluidez:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// Pulido de fluidez, segunda tanda: fotos ligeras, consultas compartidas, sin saltos al cargar… (test/e2e-pulido2.mjs)
+console.log('\nPulido de fluidez, segunda tanda');
+try {
+  const { probarPulido2 } = await import('./e2e-pulido2.mjs');
+  await probarPulido2({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el pulido de fluidez, segunda tanda:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.74: «Programar según FBE» en el editor del programa (test/e2e-programar-fbe.mjs)
 console.log('\nv0.74: «Programar según FBE»');
 try {

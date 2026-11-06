@@ -6637,6 +6637,47 @@ console.log('\n«Programar según FBE», fase 1b: reglas por atleta y propuestas
   await q(`update semanas set propuesta_motor = null where id = $1`, [wR.id]);
 }
 
+console.log('\nFotos de perfil ligeras: la miniatura en foto y la grande aparte (migración 047)');
+{
+  const mini = `data:image/jpeg;base64,${'A'.repeat(400)}`, grande = `data:image/jpeg;base64,${'B'.repeat(4000)}`;
+  await como(ana);
+  await q(`update perfiles set foto = $1, foto_grande = $2 where id = $3`, [mini, grande, ana]);
+  check((await q(`select foto from perfiles where id = $1`, [ana]))[0].foto === mini && (await q(`select foto_grande_de($1) f`, [ana]))[0].f === grande,
+    'cada uno guarda su miniatura y su foto grande, y ve la suya en grande');
+  check(await falla(`update perfiles set foto_grande = 'x' where id = $1`, [ana])
+    && await falla(`update perfiles set foto_grande = $1 where id = $2`, [`data:image/jpeg;base64,${'A'.repeat(80001)}`, ana]),
+    'la foto grande tiene que ser una imagen (JPEG o WebP en base64) y no pasar del tamaño máximo');
+  await q(`update perfiles set foto_grande = $1 where id = $2`, [grande, luis]).catch(() => {});
+  await db.exec('reset role;');
+  check((await q(`select foto_grande from perfiles where id = $1`, [luis]))[0].foto_grande == null, 'y no puede cambiar la de otra persona');
+  await como(pelayo, 'aal2');
+  check((await q(`select foto_grande_de($1) f`, [ana]))[0].f === grande, 'el coach ve en grande la de sus atletas');
+  // El coach, sin aligerar todavía: su foto de siempre sigue en «foto» y es la que se enseña en grande
+  await q(`update perfiles set foto = $1, foto_grande = null where id = $2`, [grande, pelayo]);
+  // (y puede aligerar la de un atleta: pasa la actual a foto_grande y deja la miniatura en foto)
+  await q(`update perfiles set foto = $1, foto_grande = $2 where id = $3`, [mini, grande, luis]);
+  check((await q(`select foto, foto_grande from perfiles where id = $1`, [luis]))[0].foto === mini, 'y puede aligerar la de un atleta (la app lo hace sola la primera vez)');
+  await como(luis);
+  check((await q(`select foto_grande_de() f`))[0].f === grande && (await q(`select foto_grande_de($1) f`, [pelayo]))[0].f === grande,
+    'un atleta ve en grande la del coach (sin decir de quién: la del coach), también si aún no se ha aligerado');
+  // Entre atletas, solo si los dos están dentro de la comunidad (lo mismo que ya pasa con la foto pequeña)
+  await db.exec('reset role;');
+  const activa = (await q(`select public.comunidad_activa() a`).catch(() => [{ a: false }]))[0].a;
+  const dentro = (await q(`select perfil_id from fbe_privado.comunidad_dentro`)).map((x) => x.perfil_id);
+  const seVen = !!activa && dentro.includes(luis) && dentro.includes(ana);
+  await como(luis);
+  const deAna = (await q(`select foto_grande_de($1) f`, [ana]))[0]?.f ?? null;
+  check((deAna === grande) === seVen, `entre atletas, solo si los dos están dentro de la comunidad (aquí ${seVen ? 'lo están: la ve' : 'no lo están: no la ve'})`);
+  await como(intruso);
+  check(((await q(`select foto_grande_de($1) f`, [ana]))[0]?.f ?? null) === null, 'una cuenta que no es de nadie del equipo no ve la de un atleta');
+  await db.exec('reset role; set role anon;');
+  check(await falla(`select foto_grande_de($1)`, [ana]), 'y sin sesión no se puede ni llamar');
+  await como(ana);
+  await q(`update perfiles set foto = null, foto_grande = null where id = $1`, [ana]);
+  await como(pelayo, 'aal2');
+  await q(`update perfiles set foto = null, foto_grande = null where id in ($1, $2)`, [pelayo, luis]);
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

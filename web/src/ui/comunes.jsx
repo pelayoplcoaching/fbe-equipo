@@ -168,8 +168,18 @@ export function iniciales(nombre) {
 }
 // Con foto de perfil (v0.19), la foto; sin ella, las iniciales en el color de su nombre
 // ampliable: con foto, tocarla la abre en grande (v0.25). No usarlo dentro de otro botón.
-export function Avatar({ nombre, clase = '', lleno = false, foto = null, ampliable = false }) {
+// perfilId o deCoach (pulido 2.1): de quién es, para pedir su foto grande al ampliarla (en las listas va la miniatura)
+export function Avatar({ nombre, clase = '', lleno = false, foto = null, ampliable = false, perfilId = null, deCoach = false }) {
   const [grande, setGrande] = useState(false);
+  const [entera, setEntera] = useState(null);
+  const app = useContext(Ctx);
+  useEffect(() => {
+    if (!grande || !(perfilId || deCoach) || !app?.api?.fotoGrande) return undefined;
+    let vivo = true;
+    Promise.resolve(app.api.fotoGrande(deCoach ? null : perfilId)).then((g) => { if (vivo && g) setEntera(g); }).catch(() => {});
+    return () => { vivo = false; };
+  }, [grande, perfilId, deCoach]);
+  useEffect(() => { setEntera(null); }, [foto]);
   let h = 0;
   for (const ch of String(nombre || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const n = (h % 6) + 1;
@@ -185,7 +195,7 @@ export function Avatar({ nombre, clase = '', lleno = false, foto = null, ampliab
       <button type="button" class="avatar-ampliable" onClick={() => setGrande(true)} aria-label={`Ver en grande la foto de ${nombre || 'perfil'}`}>{circulo}</button>
       {grande && (
         <Hoja titulo={nombre || 'Foto de perfil'} alCerrar={() => setGrande(false)}>
-          <img class="foto-ampliada" src={foto} alt={`Foto de perfil de ${nombre || ''}`} />
+          <img class="foto-ampliada" src={entera || foto} alt={`Foto de perfil de ${nombre || ''}`} />
         </Hoja>
       )}
     </>

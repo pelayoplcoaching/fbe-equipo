@@ -64,7 +64,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
     <div class="contenido coach">
       <CabeceraGrande>
         <button class="btn btn-icono plano" onClick={alVolver} aria-label="Volver a atletas"><Icono n="atras" /></button>
-        {a && <span class={`avatar-estado estado-${r ? estadoAtleta(r) : 'cargando'}`}><Avatar nombre={a.nombre} foto={a.foto} ampliable /></span>}
+        {a && <span class={`avatar-estado estado-${r ? estadoAtleta(r) : 'cargando'}`}><Avatar nombre={a.nombre} foto={a.foto} ampliable perfilId={a.perfil_id || null} /></span>}
         <div class="titulo">
           <h1>{a?.nombre || 'Atleta'}</h1>
           <div class="sub">{r?.semana ? `${r.bloque?.nombre ? `${r.bloque.nombre} · ` : ''}Semana ${r.semana.numero} de ${r.semana.total}` : a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : '')}</div>

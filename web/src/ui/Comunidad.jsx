@@ -1784,7 +1784,7 @@ function HojaPerfilEquipo({ perfilId, alCerrar }) {
       {p.cargando && !x ? <Cargando texto="Cargando el perfil" /> : !x ? (!p.error && <p class="secundario">Esta persona ya no está en el equipo.</p>) : (
         <div class="pila perfil-equipo">
           <div class="perfil-equipo-cab">
-            <Avatar nombre={x.nombre} foto={x.foto} clase="grande" ampliable />
+            <Avatar nombre={x.nombre} foto={x.foto} clase="grande" ampliable perfilId={perfilId} />
             <div class="pila-xs">
               <span class="fila-envolver"><strong class="pe-nombre">{x.nombre}{x.yo ? ' (tú)' : ''}</strong>{x.coach && <span class="chip morado">Coach</span>}</span>
               {x.desde && <span class="peq secundario">En el equipo desde el {fmtCorta(aISO(new Date(x.desde)))}</span>}

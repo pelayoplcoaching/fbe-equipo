@@ -12,6 +12,7 @@ import { borrarPendientes } from '../datos/pendientes.js';
 const almacenLocal = () => { try { return window.localStorage; } catch { return null; } };
 import { Ctx, Cargando, Icono, olvidarRecuerdos } from './comunes.jsx';
 import { vibrar } from './hapticos.js';
+import { aligerarFotos } from './fotos-ligeras.js';
 import { Acceso, Vincular, NuevaPassword, SegundoPaso } from './Acceso.jsx';
 import { AtletaApp } from './atleta/AtletaApp.jsx';
 import { quitarPortada } from './portada.js';
@@ -235,6 +236,15 @@ export function App({ backend, api, cola }) {
   const ctxAtleta = enModoAtleta ? { ...ctx, atleta: estado.propio, propio: true } : ctx;
 
   useEffect(() => { if (estado.fase === 'atleta') { try { localStorage.setItem(CLAVE_ROL, 'atleta'); } catch { /* */ } } }, [estado.fase]);
+  // (pulido 2.1) Las fotos de perfil que aún van enteras se aligeran una vez, en segundo plano (el coach, las de todos;
+  // un atleta, la suya). Sin la migración 047 no hace nada. Si aligera alguna, el perfil propio se vuelve a leer
+  useEffect(() => {
+    if (estado.fase !== 'atleta' && estado.fase !== 'coach') return undefined;
+    const t = setTimeout(() => {
+      aligerarFotos(api).then(async (n) => { if (n) { const p = await api.perfil().catch(() => null); if (p) setEstado((e) => (e.perfil?.id === p.id ? { ...e, perfil: p } : e)); } }).catch(() => {});
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [estado.fase, ultimoUid.current]);
   // La portada de arranque se va cuando hay algo que enseñar: el acceso enseguida; la cuenta, con sus datos
   useEffect(() => {
     if (estado.fase !== 'cargando') quitarPortada({ esperarDatos: estado.fase === 'atleta' || estado.fase === 'coach' });

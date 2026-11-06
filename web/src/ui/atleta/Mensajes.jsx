@@ -15,7 +15,7 @@ export function Mensajes({ abrirSesion, irA, releer }) {
     if (ctx.tipo === 'sesion' && ctx.id) abrirSesion(ctx.id);
     else if (ctx.tipo === 'checkin') irA('checkin');
   };
-  const avatar = fotoCoach.datos ? <Avatar nombre="Tu coach" foto={fotoCoach.datos} clase="avatar-coach" ampliable /> : <img class="avatar-coach" src={LOBO} alt="" width="40" height="40" aria-hidden="true" />;
+  const avatar = fotoCoach.datos ? <Avatar nombre="Tu coach" foto={fotoCoach.datos} clase="avatar-coach" ampliable deCoach /> : <img class="avatar-coach" src={LOBO} alt="" width="40" height="40" aria-hidden="true" />;
   return (
     <div class="contenido chat-pagina">
       <Chat atletaId={atleta.id} nombreAtleta={atleta.nombre} nombreCoach="tu coach" fotoOtro={fotoCoach.datos} irContexto={irContexto} alLeer={() => { releer?.(); setN((x) => x + 1); }} alCambiar={() => releer?.()}

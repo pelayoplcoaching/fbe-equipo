@@ -352,6 +352,8 @@ const REVISION = { sesion: ['sesiones', 'revisada_en'], checkin: ['checkins', 'r
 export const LIMITE_ARCHIVO_MB = 200;
 // Foto de perfil: tamaño máximo del texto base64 (como la base, perfiles_foto_valida)
 export const FOTO_MAX = 80000;
+// (pulido 2.1) y la miniatura para las listas (128 px: unos 6 KB)
+export const FOTO_MINI_MAX = 16000;
 
 // Funciones de la base que solo consultan (no cambian nada): no invalidan lo que las pantallas recuerdan. Si falta
 // alguna, solo pasa que esa pantalla vuelve a cargar en vez de salir al momento
@@ -365,6 +367,7 @@ export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
   let generacion = 0;
   const escribe = (f) => (...a) => { generacion++; return f(...a); };
+  let olvidarFotos = () => {};   // (se define más abajo, con el recuerdo de las fotos de perfil)
   const b = Object.create(backend);
   // Notificaciones: después de algo que avisa a otra persona (un comentario, un aviso, un check-in, una semana
   // publicada, una sesión terminada), se pide al servidor que envíe ya lo que haya en la cola, para que llegue
@@ -387,6 +390,8 @@ export function crearApi(backend) {
       // (pulido 4) Lo que las pantallas recuerdan para enseñarlo al volver (useCarga, «recuerdo») deja de valer en
       // cuanto se escribe algo desde aquí: lo que acabas de cambiar nunca se enseña como estaba antes. Se avisa al
       // pedirlo y al acabar (por lo que se estuviera cargando mientras). Las funciones que solo consultan no cuentan
+      // (pulido 2.1) un perfil que cambia, o quién está dentro del equipo: las fotos recordadas dejan de valer
+      if (a[0] === 'perfiles' || (m === 'rpc' && /^comunidad_(unirme|salir|expulsar|ajustar)$/.test(a[0]))) Promise.resolve(r).then(() => olvidarFotos(), () => olvidarFotos());
       // (ni marcar como leídos los mensajes que se están viendo: pasa solo al abrir un chat)
       const soloLeido = m === 'update' && a[0] === 'comentarios' && Object.keys(a[1] || {}).join() === 'leido_en';
       if (typeof window !== 'undefined' && !soloLeido && (m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]))) {
@@ -469,6 +474,37 @@ export function crearApi(backend) {
     return out;
   }
 
+  // (pulido 2.1) Las fotos de perfil van dentro de la fila del perfil y viajaban enteras en cada lista (29 fotos, 1,6 MB
+  // cada vez). Ahora se piden una vez y se recuerdan un rato en memoria: las de los atletas del coach, la del coach para
+  // sus atletas y las de la gente del equipo. Se olvidan al cambiar de cuenta y al cambiar cualquier perfil desde aquí.
+  // (Con la migración 047, además, lo que viaja en «foto» es una miniatura y la grande se pide solo al ampliarla.)
+  const FOTOS_VALEN = 10 * 60 * 1000;
+  const sinFotos = () => ({ de: uid(), mapa: new Map(), cuando: new Map(), gordas: new Set(), coach: undefined, coachT: 0, personas: null, personasT: 0, fuera: new Set(), grandes: new Map() });
+  let fotos = null;
+  const misFotos = () => { if (!fotos || fotos.de !== uid()) fotos = sinFotos(); return fotos; };
+  olvidarFotos = () => { fotos = null; };
+  // Una foto «gorda» es la de siempre (384 px) aún en «foto»: pendiente de aligerar
+  const FOTO_GORDA = 20000;
+  async function fotosDePerfiles(ids) {
+    const f = misFotos(), ahora = Date.now();
+    const faltan = ids.filter((id) => !(ahora - (f.cuando.get(id) || 0) < FOTOS_VALEN));
+    if (faltan.length) {
+      const filas = await b.select('perfiles', { in: { id: faltan }, cols: 'id,foto' }).catch(() => null);
+      // (si la consulta falla no se apunta nada: se vuelve a pedir la próxima vez)
+      if (filas && fotos === f) {
+        const P = porId(filas);
+        for (const id of faltan) {
+          const foto = P[id]?.foto || null;
+          f.mapa.set(id, foto); f.cuando.set(id, ahora);
+          if (foto && foto.length > FOTO_GORDA) f.gordas.add(id); else f.gordas.delete(id);
+        }
+      } else if (filas) return new Map(filas.map((x) => [x.id, x.foto || null]));
+    }
+    return f.mapa;
+  }
+  const fotoValida = (x, max) => typeof x === 'string' && x.length <= max && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(x);
+  const falta047 = (e) => /foto_grande/.test(`${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`);
+
   const api = {
     backend: b,
     uid,
@@ -480,11 +516,40 @@ export function crearApi(backend) {
       return (await b.select('perfiles', { eq: { id } }))[0] || null;
     },
     // Foto de perfil propia (v0.19): una imagen ya recortada y comprimida (data:image/jpeg;base64,…) o null para quitarla
-    async cambiarFoto(foto) {
+    async cambiarFoto(foto, mini = null) {
       if (foto != null && (typeof foto !== 'string' || foto.length > FOTO_MAX || !/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(foto))) {
         throw new Error('La foto no es válida. Prueba con otra (JPEG o PNG).');
       }
+      // (pulido 2.1, migración 047) con miniatura: en «foto» va la miniatura y la de siempre pasa a «foto_grande». Sin la
+      // 047 (o sin miniatura), como antes: la de siempre en «foto»
+      if (foto && mini != null && !fotoValida(mini, FOTO_MINI_MAX)) throw new Error('La foto no es válida. Prueba con otra (JPEG o PNG).');
+      const como047 = foto ? (mini ? { foto: mini, foto_grande: foto } : null) : { foto: null, foto_grande: null };
+      if (como047) {
+        try { return (await b.update('perfiles', como047, { eq: { id: uid() } }))[0] || null; } catch (e) { if (!falta047(e)) throw e; }
+      }
       return (await b.update('perfiles', { foto: foto || null }, { eq: { id: uid() } }))[0] || null;
+    },
+    // La foto de alguien en grande (al ampliarla). Sin perfilId, la del coach. Sin la 047, null (se enseña la que hay)
+    async fotoGrande(perfilId = null) {
+      const f = misFotos(), clave = perfilId || 'coach';
+      if (f.grandes.has(clave)) return f.grandes.get(clave);
+      const g = (await b.rpc('foto_grande_de', perfilId ? { p_perfil: perfilId } : {}).catch(() => null)) || null;
+      if (fotos === f && g) f.grandes.set(clave, g);
+      return g;
+    },
+    // Los perfiles cuya «foto» aún es la de siempre (sin aligerar): el coach, los de todos; un atleta, el suyo. Sin la
+    // 047, null (no hay dónde guardar la grande: no se toca nada)
+    async fotosPorAligerar() {
+      const filas = await b.select('perfiles', { nulo: ['foto_grande'], nonulo: ['foto'], cols: 'id,foto' }).catch(() => null);
+      if (!filas) return null;
+      // (y las que una versión antigua de la app haya vuelto a guardar enteras: se ven al pedir las de la lista)
+      const f = misFotos();
+      const mas = [...f.gordas].filter((id) => !filas.some((x) => x.id === id) && f.mapa.get(id)).map((id) => ({ id, foto: f.mapa.get(id) }));
+      return [...filas, ...mas].filter((x) => fotoValida(x.foto, FOTO_MAX));
+    },
+    async guardarFotoLigera(perfilId, mini, grande) {
+      if (!fotoValida(mini, FOTO_MINI_MAX) || !fotoValida(grande, FOTO_MAX)) throw new Error('La foto no es válida.');
+      return (await b.update('perfiles', { foto: mini, foto_grande: grande }, { eq: { id: perfilId } }))[0] || null;
     },
     // El nombre propio (el coach: el que ven sus atletas en el chat y en las notificaciones)
     async cambiarNombre(nombre) {
@@ -517,7 +582,12 @@ export function crearApi(backend) {
       return (await b.rpc('nombre_coach', {}).catch(() => null)) || null;
     },
     async fotoCoach() {
-      return (await b.rpc('foto_coach', {}).catch(() => null)) || null;
+      const f = misFotos();
+      if (f.coach !== undefined && Date.now() - f.coachT < FOTOS_VALEN) return f.coach;
+      const foto = await b.rpc('foto_coach', {}).then((x) => x || null, () => undefined);
+      if (foto === undefined) return null;   // (no se ha podido pedir: no se recuerda)
+      if (fotos === f) { f.coach = foto; f.coachT = Date.now(); }
+      return foto;
     },
     async miAtleta() {
       const id = uid();
@@ -3209,9 +3279,20 @@ export function crearApi(backend) {
       return api.miembroComunidad();
     },
     // Quién se ve (el coach y los que están dentro): perfil_id → { nombre, foto, coach }
-    async personasComunidad() {
-      const filas = await b.rpc('comunidad_personas', {}).catch(() => []);
-      return Object.fromEntries((filas || []).map((x) => [x.perfil_id, { nombre: x.nombre, foto: x.foto || null, coach: !!x.coach }]));
+    // (pulido 2.1) se recuerdan un rato (traen la foto de cada uno). con: perfiles que tienen que estar; si falta alguno
+    // (alguien que acaba de entrar), se vuelven a pedir
+    async personasComunidad({ con = null } = {}) {
+      const f = misFotos();
+      // (quien ya se buscó y no está —alguien que salió del equipo— no hace que se pidan otra vez)
+      const vale = f.personas && Date.now() - f.personasT < FOTOS_VALEN && !(con || []).some((id) => id && !f.personas[id] && !f.fuera.has(id));
+      if (vale) return f.personas;
+      const filas = await b.rpc('comunidad_personas', {}).catch(() => null);
+      const personas = Object.fromEntries((filas || []).map((x) => [x.perfil_id, { nombre: x.nombre, foto: x.foto || null, coach: !!x.coach }]));
+      if (filas && fotos === f) {
+        f.personas = personas; f.personasT = Date.now(); f.fuera = new Set();
+        for (const id of con || []) if (id && !personas[id]) f.fuera.add(id);
+      }
+      return personas;
     },
     // El muro: los avisos fijados arriba y después lo más nuevo, de `limite` en `limite` (antes: el creado_en del
     // último que ya se ve). Cada publicación con su autor, sus reacciones (con quién), cuántos comentarios y la mía.
@@ -3258,6 +3339,7 @@ export function crearApi(backend) {
           api.personasComunidad(),
         ]).catch(falta029);
       }
+      if ([...(fijadas || []), ...(sueltas || [])].some((x) => x.autor_id && !personas[x.autor_id])) personas = await api.personasComunidad({ con: [...(fijadas || []), ...(sueltas || [])].map((x) => x.autor_id) });
       const resto = busca ? sueltas : sueltas.filter((x) => !antes || x.creado_en < antes);
       if (!busca) hayMas = resto.length > limite;
       const posts = [...fijadas, ...resto.slice(0, limite)];
@@ -4054,8 +4136,8 @@ export function crearApi(backend) {
       const atletas = (await b.select('atletas', { order: [['nombre', 'asc']] })).filter((a) => !yo || a.perfil_id !== yo);
       const ids = unicos(atletas.map((a) => a.perfil_id).filter(Boolean));
       if (!ids.length) return atletas;
-      const perfiles = porId(await b.select('perfiles', { in: { id: ids }, cols: 'id,foto' }).catch(() => []));
-      return atletas.map((a) => ({ ...a, foto: (a.perfil_id && perfiles[a.perfil_id]?.foto) || null }));
+      const deCada = await fotosDePerfiles(ids);
+      return atletas.map((a) => ({ ...a, foto: (a.perfil_id && deCada.get(a.perfil_id)) || null }));
     },
     // soloAtleta (v0.49): el de un atleta (la cabecera de su ficha), con los mismos cálculos que el panel
     async resumenes(hoy = hoyISO(), { soloAtleta = null } = {}) {
@@ -4243,7 +4325,7 @@ export function crearApi(backend) {
       const [atleta, checkins, pesos, molestias, notas] = await Promise.all([
         (async () => {
           const [ficha] = await b.select('atletas', { eq: { id: atletaId } });
-          const fotoDe = ficha?.perfil_id ? (await b.select('perfiles', { eq: { id: ficha.perfil_id }, cols: 'id,foto' }).catch(() => []))[0]?.foto || null : null;
+          const fotoDe = ficha?.perfil_id ? (await fotosDePerfiles([ficha.perfil_id])).get(ficha.perfil_id) || null : null;
           return ficha ? { ...ficha, foto: fotoDe } : ficha;
         })(),
         b.select('checkins', { eq: { atleta_id: atletaId }, order: [['semana_inicio', 'desc']], limit: 26 }),
