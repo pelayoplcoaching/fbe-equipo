@@ -1,5 +1,5 @@
 -- =====================================================================
--- FBE Equipo, migración 048: listas ligeras (conversaciones, última serie y biblioteca)
+-- FBE Equipo, migración 048: listas ligeras (conversaciones, última serie, biblioteca e historial)
 --
 -- Por qué: dos listas del coach bajaban mucho más de lo que enseñan, y cada semana más.
 --   * La de conversaciones pedía los últimos 2.000 mensajes con su texto para sacar el último de cada atleta y
@@ -8,14 +8,18 @@
 --   * La lista de atletas hacía una consulta por atleta para saber cuándo registró su última serie (34 consultas).
 --   * La biblioteca de ejercicios (unos 385 KB con sus instrucciones) se bajaba entera cada vez que se abría la
 --     biblioteca, Revisar, el editor del programa o el buscador, aunque no hubiera cambiado.
+--   * El historial de series de un atleta (todo lo que ha registrado) se bajaba entero en cada visita a Hoy, a
+--     Semana y a Progreso: con dos semanas de uso ya eran cientos de KB por visita, y crece cada semana.
 --
--- Qué hace: tres funciones de solo lectura, sin tablas ni columnas nuevas. Corren con los permisos de quien
+-- Qué hace: cuatro funciones de solo lectura, sin tablas ni columnas nuevas. Corren con los permisos de quien
 -- llama (security invoker): cada uno ve exactamente lo que ya veía (el coach, todo; un atleta, lo suyo).
 --   * conversaciones_resumen(): por atleta, el último mensaje que ya ha salido (texto recortado a 300 letras),
 --     cuántos del atleta están sin leer y cuántos hay programados.
 --   * ultimas_series(atletas): cuándo registró su última serie cada uno.
 --   * biblioteca_huella(): una huella de la biblioteca de ejercicios (cuántos hay y un resumen de su contenido).
 --     La app guarda la biblioteca en el dispositivo y solo la vuelve a bajar cuando la huella cambia.
+--   * historial_huella(atleta, antes): lo mismo para las series de un atleta anteriores a un momento. La app guarda
+--     el historial antiguo en el dispositivo y, si la huella es la de lo guardado, solo pide las series recientes.
 -- Sin esta migración, la app sigue pidiéndolo como hasta ahora.
 --
 -- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 047 (o con instalar.sql en una
@@ -85,6 +89,24 @@ language sql stable security invoker set search_path = '' as $$
 $$;
 comment on function public.biblioteca_huella() is
   'Cuántos ejercicios ve quien llama y un resumen de su contenido: cambia si se añade, se quita o se cambia alguno.';
+
+-- ---------------------------------------------------------------------
+-- 4. La huella del historial antiguo de un atleta (para pedir solo las series recientes)
+-- ---------------------------------------------------------------------
+-- Entra todo lo que la app enseña de cada serie: la serie entera, en qué sesión y de qué ejercicio era (por si se
+-- cambia la pauta) y el día de la sesión. Si algo de eso cambia en una serie antigua, la huella cambia.
+create or replace function public.historial_huella(p_atleta uuid, p_antes timestamptz) returns text
+language sql stable security invoker set search_path = '' as $$
+  select count(*)::text || ':' || coalesce(md5(string_agg(
+    md5(s::text || '|' || coalesce(p.sesion_id::text, '') || '|' || coalesce(p.ejercicio_id::text, '') || '|' || coalesce(x.fecha_realizada::text, '')),
+    '' order by s.id)), '')
+  from public.series s
+  left join public.sesion_ejercicios p on p.id = s.sesion_ejercicio_id
+  left join public.sesiones x on x.id = p.sesion_id
+  where s.atleta_id = p_atleta and s.registrada_en < p_antes;
+$$;
+comment on function public.historial_huella(uuid, timestamptz) is
+  'Cuántas series registró el atleta antes de ese momento y un resumen de su contenido. Con los permisos de quien llama.';
 
 -- Permisos (como al final de 003 a 047)
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;

@@ -2900,6 +2900,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           };
         });
       }
+      if (nombre === 'historial_huella') {
+        const antes = Date.parse(args?.p_antes);
+        const P = new Map(veo048('sesion_ejercicios').map((p) => [p.id, p])), S = new Map(veo048('sesiones').map((x) => [x.id, x]));
+        const filas = veo048('series').filter((x) => x.atleta_id === args?.p_atleta && Date.parse(x.registrada_en) < antes).sort((x, y) => String(x.id).localeCompare(String(y.id)))
+          .map((x) => { const p = P.get(x.sesion_ejercicio_id); return [x, p?.sesion_id || '', p?.ejercicio_id || '', S.get(p?.sesion_id)?.fecha_realizada || '']; });
+        let h = 5381; for (const ch of JSON.stringify(filas)) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0;
+        return `${filas.length}:${h.toString(16)}`;
+      }
       if (nombre === 'biblioteca_huella') {
         const filas = veo048('ejercicios').slice().sort((x, y) => String(x.id).localeCompare(String(y.id)));
         let h = 5381; for (const ch of JSON.stringify(filas)) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0;   // (un resumen cualquiera de su contenido)

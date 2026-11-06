@@ -122,7 +122,7 @@ const falta031 = (e) => {
 // (pulido 3) Sin la migración 048 (las listas ligeras), la app lo pide como antes: no es un error
 const falta048 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
-  return /conversaciones_resumen|ultimas_series|biblioteca_huella/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
+  return /conversaciones_resumen|ultimas_series|biblioteca_huella|historial_huella/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
 };
 // La comunidad (v0.43) sin la migración 027
 const falta027 = (e) => {
@@ -369,7 +369,7 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
-  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella']);
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -477,6 +477,8 @@ export function crearApi(backend) {
   }
   // (pulido 3, migración 048) ¿Están las funciones de las listas ligeras? Se sabe al primer intento (null: aún no)
   let con048 = null;
+  const CLAVE_HISTORIAL = (atletaId) => `historial:${atletaId}`;
+  const historialesGuardados = new Map();   // «cuenta:atleta» → { corte, huella, filas } (los últimos que se han visto)
   const CLAVE_BIBLIOTECA = 'biblioteca';
   let bibliotecaGuardada = null;   // { de: cuenta, huella, filas }
   async function ultimasSeries(ids) {
@@ -1461,24 +1463,59 @@ export function crearApi(backend) {
       p.catch(() => { if (historiales.get(clave) === entrada) historiales.delete(clave); });
       return (await p).map((s) => ({ ...s }));
     },
+    // (pulido 3.1) El historial ya no se baja entero en cada visita. Lo antiguo (las series anteriores a un «corte»)
+    // se guarda en el dispositivo, con la copia de siempre (por cuenta, se borra al cerrar la sesión), y cada vez se
+    // pregunta a la base por su huella (migración 048: una respuesta de unas letras). Si es la de lo guardado, solo
+    // se piden las series desde el corte; si no (se cambió o se borró algo antiguo), se baja todo otra vez. El corte
+    // se va adelantando solo. Sin la migración, se baja entero como hasta ahora (ya sin las columnas que no se usan).
     async historialSinCompartir(atletaId) {
-      // Todas (el adaptador de Supabase pagina de 1000 en 1000): con un tope, a los pocos años se perderían las más nuevas
-      const series = await b.select('series', { eq: { atleta_id: atletaId }, order: [['registrada_en', 'asc']] });
-      const pautas = porId(await b.select('sesion_ejercicios', { in: { id: unicos(series.map((s) => s.sesion_ejercicio_id)) } }));
-      const [sesiones, ejercicios] = await Promise.all([
-        b.select('sesiones', { in: { id: unicos(Object.values(pautas).map((p) => p.sesion_id)) } }).then(porId),
-        b.select('ejercicios', { in: { id: unicos([...Object.values(pautas).map((p) => p.ejercicio_id), ...series.map((s) => s.sustituto_id)]) } }).then(porId),
-      ]);
-      return series.map((s) => {
-        const p = pautas[s.sesion_ejercicio_id] || {};
-        const ef = s.sustituto_id || p.ejercicio_id;
+      const yo = uid();
+      let g = null;
+      if (yo && atletaId && con048 !== false) {
+        g = historialesGuardados.get(`${yo}:${atletaId}`) || (await copiaDelMovil().leer(yo, CLAVE_HISTORIAL(atletaId)).catch(() => null))?.datos || null;
+        if (g && !(typeof g.corte === 'string' && typeof g.huella === 'string' && Array.isArray(g.filas))) g = null;
+        if (g) {
+          try { if ((await b.rpc('historial_huella', { p_atleta: atletaId, p_antes: g.corte })) === g.huella) con048 = true; else g = null; } catch (e) { if (!falta048(e)) throw e; con048 = false; g = null; }
+        }
+      }
+      // Lo nuevo (o todo): las series con, de su pauta, la sesión y el ejercicio, y el día de la sesión
+      // (todas: el adaptador de Supabase pagina de 1000 en 1000; con un tope, a los pocos años se perderían las más nuevas)
+      const series = await b.select('series', { eq: { atleta_id: atletaId }, ...(g ? { gte: { registrada_en: g.corte } } : {}), order: [['registrada_en', 'asc']] });
+      const pautas = porId(series.length ? await b.select('sesion_ejercicios', { in: { id: unicos(series.map((s) => s.sesion_ejercicio_id)) }, cols: 'id,sesion_id,ejercicio_id' }) : []);
+      const sesIds = unicos(Object.values(pautas).map((p) => p.sesion_id));
+      const sesiones = porId(sesIds.length ? await b.select('sesiones', { in: { id: sesIds }, cols: 'id,fecha_realizada' }) : []);
+      const nuevas = series.map((s) => { const p = pautas[s.sesion_ejercicio_id] || {}; return { ...s, _sesion: p.sesion_id || null, _pautado: p.ejercicio_id || null, _dia: sesiones[p.sesion_id]?.fecha_realizada || null }; });
+      const todas = g ? [...g.filas, ...nuevas] : nuevas;
+      // Los nombres de los ejercicios, siempre de ahora (son pocos y pueden cambiar)
+      const ejIds = unicos(todas.flatMap((s) => [s._pautado, s.sustituto_id]));
+      const ejercicios = porId(ejIds.length ? await b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre,grupos_musculares' }) : []);
+      // Adelantar el corte: la primera vez, cuando lo nuevo ya es mucho o cuando el corte se queda viejo. Lo de la última
+      // semana se pide siempre (es lo que se corrige); lo anterior queda guardado con la huella que da la base ahora
+      if (yo && atletaId && con048 !== false && todas.length && (!g || nuevas.length > 250 || Date.now() - Date.parse(g.corte) > 21 * 86400000)) {
+        const corte = new Date(Date.now() - 7 * 86400000).toISOString();
+        const antiguas = todas.filter((s) => Date.parse(s.registrada_en) < Date.parse(corte));
+        try {
+          const huella = await b.rpc('historial_huella', { p_atleta: atletaId, p_antes: corte });
+          con048 = true;
+          // (solo si cuadra con lo que hay aquí: si alguien registró o borró algo entre medias, ya se guardará a la siguiente)
+          if (uid() === yo && Number(String(huella).split(':')[0]) === antiguas.length) {
+            const nuevo = { corte, huella, filas: antiguas };
+            historialesGuardados.delete(`${yo}:${atletaId}`);
+            historialesGuardados.set(`${yo}:${atletaId}`, nuevo);
+            for (const k of [...historialesGuardados.keys()].slice(0, Math.max(0, historialesGuardados.size - 6))) historialesGuardados.delete(k);
+            copiaDelMovil().guardar(yo, CLAVE_HISTORIAL(atletaId), nuevo).catch(() => {});
+          }
+        } catch (e) { if (!falta048(e)) throw e; con048 = false; }
+      } else if (g && yo) historialesGuardados.set(`${yo}:${atletaId}`, g);
+      return todas.map(({ _sesion, _pautado, _dia, ...s }) => {
+        const ef = s.sustituto_id || _pautado;
         const e = ejercicios[ef] || {};
         return {
           ...s,
-          fecha: sesiones[p.sesion_id]?.fecha_realizada || fechaDe(s.registrada_en),
-          sesion_id: p.sesion_id || null,
+          fecha: _dia || fechaDe(s.registrada_en),
+          sesion_id: _sesion,
           ejercicio_id: ef, ejercicio: e.nombre, grupos: e.grupos_musculares || [],
-          sustituto: !!s.sustituto_id, pautado: ejercicios[p.ejercicio_id]?.nombre || null,
+          sustituto: !!s.sustituto_id, pautado: ejercicios[_pautado]?.nombre || null,
         };
       });
     },
