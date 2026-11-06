@@ -320,7 +320,7 @@ export function App({ backend, api, cola }) {
     <Ctx.Provider value={ctx}>
       {estado.fase === 'coach' || estado.fase === 'atleta' ? vista : <main>{vista}</main>}
       <AvisoVersion />
-      {toast && <div class={`toast ${toast.tipo === 'error' || toast.tipo === 'record' ? toast.tipo : ''}${toastFuera ? ' saliendo' : ''}`} role="status" key={toast.id}>{toast.tipo === 'record' && <Icono n="trofeo" />}{toast.texto}
+      {toast && <div class={`toast ${toast.tipo === 'error' || toast.tipo === 'record' ? toast.tipo : ''}${toastFuera ? ' saliendo' : ''}`} role="status" key={toast.id}>{toast.tipo === 'record' && <Icono n="trofeo" />}{toast.tipo === 'error' && <Icono n="alerta" />}{toast.texto}
         {toast.accion && <button class="toast-accion" onClick={() => { const a = toast.accion; setToast(null); a.fn(); }}>{toast.accion.texto}</button>}</div>}
     </Ctx.Provider>
   );

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { faseRespira, retrasoRespira } from '../../logica/respira.js';
 import { sinMovimiento } from '../transiciones.js';
-import { Icono, useApp } from '../comunes.jsx';
+import { Icono, useApp, DegradadoAro } from '../comunes.jsx';
 import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, propuestaBackoff, tieneDetalle, objetivoSerie } from '../../logica/calculos.js';
 import { hablar, prepararVoz } from '../voz.js';
 import { fraseCuenta } from '../../logica/voz.js';
@@ -334,7 +334,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   const r2 = 9, c2 = 2 * Math.PI * r2;
   return (
     <>
-    <div ref={caja} class={`temporizador ${clase} ${quedan <= 0 ? 'fin' : ''}`} role="timer" aria-live="off" aria-label="Descanso" style={{ '--c-disco': color }}>
+    <div ref={caja} class={`temporizador ${clase} ${quedan <= 0 ? 'fin' : ''} ${quedan > 0 && segundo <= 3 && !pausado ? 'ultimos' : ''}`} role="timer" aria-live="off" aria-label="Descanso" style={{ '--c-disco': color }}>
       <div class="temporizador-cab">
         <span class="temporizador-etq">{quedan > 0 ? (pausado ? 'Descanso en pausa' : 'Descanso') : 'Descanso terminado'}</span>
         {!(quedan > 0 && toca) && <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>}
@@ -342,8 +342,9 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
       <div class={`reloj-descanso ${fase ? 'respirando' : ''}`}>
         {fase && !quietoRespira && <span key={inicioR} ref={ponerRetraso} class="respira-circulo" aria-hidden="true" />}
         <svg viewBox="0 0 200 200" aria-hidden="true">
+          <DegradadoAro id="aro-descanso" gira />
           <circle class="carril" cx="100" cy="100" r={R} />
-          <circle class="arco" cx="100" cy="100" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - frac)} transform="rotate(-90 100 100)" />
+          <circle class="arco" style={{ stroke: 'url(#aro-descanso)' }} cx="100" cy="100" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - frac)} transform="rotate(-90 100 100)" />
         </svg>
         <div class="reloj-centro">
           <div class="cuenta num" role="timer" aria-label={quedan > 0 ? `Descanso${pausado ? ' en pausa' : ''}: quedan ${Math.ceil(quedan)} segundos` : 'Descanso terminado'}>{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</div>

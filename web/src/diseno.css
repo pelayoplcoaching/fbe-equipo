@@ -861,3 +861,84 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .chat-dia-flotante { box-shadow: inset 0 0 0 1px var(--borde), var(--sombra-flotante); }
 /* Lo que se abre encima (estilos.css: .paleta; la hoja conserva su brillo de vidrio de arriba) */
 .paleta { box-shadow: var(--sombra-hoja); }
+
+/* ══ TANDA 17 · lo de cada día ════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 32 · La barra de abajo, con vida (tanda 17) ──────────────────────────────────────────────────────────────────────
+   Sobre la píldora que ya se desliza (estilos.css 2505-2512): el icono de la pestaña elegida da un pequeño salto al
+   llegar y su nombre se asienta. Solo transform: no cambia el tamaño de nada. */
+@media (prefers-reduced-motion: no-preference) {
+  .tab[aria-current="page"] .tab-ico svg { animation: tab-salta var(--mov-lento) var(--curva-rebote); }
+  .tab[aria-current="page"] > span:last-child:not(.tab-ico) { animation: tab-nombre var(--mov-medio) var(--curva-casa); }
+}
+@keyframes tab-salta { 0% { transform: translateY(1px) scale(.84); } 55% { transform: translateY(-2.5px) scale(1.1); } 100% { transform: translateY(-1px) scale(1); } }
+@keyframes tab-nombre { from { transform: translateY(2px); opacity: .55; } }
+
+/* ── 33 · La cabecera se recoge con el dedo (tanda 17) ────────────────────────────────────────────────────────────────
+   El título grande saltaba de 30 px a la barra compacta al pasar de 56 px de página (comunes.jsx: CabeceraGrande). Ahora,
+   en esos primeros 56 px, el título encoge y el subtítulo se va apagando ligados al desplazamiento, de modo que el salto
+   a la barra compacta ya casi no se nota. Solo transform y opacidad (la caja no cambia: nada de lo de abajo se mueve), y
+   solo donde el navegador sabe ligar una animación al desplazamiento; en los demás, como antes. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .cabecera-grande:not(.compacta) .titulo h1 { transform-origin: left bottom; animation: titulo-recoge linear both; animation-timeline: scroll(root); animation-range: 0 56px; }
+    .cabecera-grande:not(.compacta) :is(.sub, .cab-extra) { animation: titulo-apaga linear both; animation-timeline: scroll(root); animation-range: 0 44px; }
+  }
+}
+@keyframes titulo-recoge { to { transform: scale(.72); } }
+@keyframes titulo-apaga { to { opacity: 0; } }
+
+/* ── 34 · El descanso, protagonista (tanda 17) ────────────────────────────────────────────────────────────────────────
+   El arco lleva el degradado de los aros (sesion-comun.jsx; ya se vaciaba de forma continua, estilos.css 379); en los
+   tres últimos segundos la cifra late con cada segundo (clase «ultimos») y, al terminar, «¡Vamos!» entra con un salto
+   y el aro se enciende entero. */
+.reloj-descanso { --c: var(--c-disco, var(--morado)); }
+.temporizador.fin .reloj-descanso svg { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c) 55%, transparent)); }
+@media (prefers-reduced-motion: no-preference) {
+  .temporizador.ultimos .cuenta { animation: cuenta-late 1s var(--curva-casa) infinite; }
+  .temporizador.fin .cuenta { animation: cuenta-vamos var(--mov-lento) var(--curva-rebote); }
+}
+@keyframes cuenta-late { 0% { transform: scale(1.09); } 45% { transform: scale(1); } }
+@keyframes cuenta-vamos { from { transform: scale(.7); opacity: 0; } }
+
+/* ── 35 · Avisos con carácter (tanda 17) ──────────────────────────────────────────────────────────────────────────────
+   El aviso flotante (estilos.css 445) pasa a ser una píldora, el de error lleva su icono (App.jsx) y entra con un
+   pequeño muelle desde abajo (desde arriba si hay una hoja abierta). La salida es de la línea de fluidez (pulido.css). */
+.toast { border-radius: 16px; padding: 12px 18px; display: flex; align-items: center; gap: 10px; text-align: left; }
+.toast > svg { width: 20px; height: 20px; flex: none; }
+.toast .toast-accion { margin-left: 4px; flex: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .toast:not(.saliendo) { animation: toast-entra var(--mov-lento) var(--curva-rebote); }
+  body[data-hojas] .toast:not(.saliendo) { animation-name: toast-entra-arriba; }
+}
+@keyframes toast-entra { from { transform: translateX(-50%) translateY(18px) scale(.94); opacity: 0; } }
+@keyframes toast-entra-arriba { from { transform: translateX(-50%) translateY(-18px) scale(.94); opacity: 0; } }
+
+/* ── 36 · La tarjeta de Hoy, con una escena para cada día (tanda 17) ──────────────────────────────────────────────────
+   El día de entreno lleva el dibujo de su sesión (bloque 26). Los demás tenían solo un degradado y su ilustración
+   (estilos.css 2755-2761); ahora cada uno tiene su cielo: el descanso, una noche con estrellas; la sesión hecha, un
+   amanecer verde que sube desde abajo; la semana completa, anillos y un resplandor dorado (el dorado de los logros).
+   Solo fondos: el contenido y sus contrastes no cambian. */
+.hero-descanso {
+  /* (las estrellas, solo arriba a la derecha, alrededor de la luna: donde no hay texto que una estrella pueda parecer un punto) */
+  background:
+    radial-gradient(2.4px 2.4px at calc(100% - 12px) 14px, rgba(255, 255, 255, .9) 45%, transparent 55%), radial-gradient(1.8px 1.8px at calc(100% - 126px) 12px, rgba(255, 255, 255, .7) 45%, transparent 55%),
+    radial-gradient(2px 2px at calc(100% - 20px) 96px, rgba(214, 226, 255, .75) 45%, transparent 55%), radial-gradient(1.6px 1.6px at calc(100% - 58px) 8px, rgba(255, 255, 255, .6) 45%, transparent 55%),
+    radial-gradient(1.8px 1.8px at calc(100% - 132px) 62px, rgba(255, 255, 255, .5) 45%, transparent 55%), radial-gradient(1.6px 1.6px at calc(100% - 8px) 56px, rgba(255, 255, 255, .55) 45%, transparent 55%),
+    radial-gradient(1.6px 1.6px at calc(100% - 92px) 118px, rgba(255, 255, 255, .4) 45%, transparent 55%), radial-gradient(1.4px 1.4px at calc(100% - 44px) 122px, rgba(255, 255, 255, .35) 45%, transparent 55%),
+    linear-gradient(165deg, #101F45 0%, var(--hero) 74%);
+}
+.hero-hecha {
+  background:
+    radial-gradient(125% 62% at 50% 114%, rgba(79, 203, 137, .5) 0%, rgba(79, 203, 137, .17) 45%, transparent 70%),
+    linear-gradient(165deg, #0E3A30 0%, var(--hero) 74%);
+}
+.hero-semana {
+  background:
+    repeating-radial-gradient(circle at 92% -6%, transparent 0 38px, rgba(233, 212, 154, .09) 38px 39.5px),
+    radial-gradient(95% 62% at 92% -6%, rgba(233, 212, 154, .3) 0%, rgba(233, 212, 154, .08) 46%, transparent 70%),
+    var(--hero);
+}
+.hero-semana::before { background: radial-gradient(circle, rgba(233, 212, 154, .3) 0%, rgba(233, 212, 154, .09) 42%, transparent 70%); }
+.hero-semana .toca-hoy.hecha { background: rgba(233, 212, 154, .2); }
+.hero-semana .toca-hoy.hecha svg { color: #E9D49A; }
