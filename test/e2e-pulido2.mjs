@@ -50,8 +50,8 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
     return { ctx, p, cdp: await ctx.newCDPSession(p) };
   };
   const entrar = async (p, quien) => {
-    await p.getByRole('button', { name: quien }).first().tap();
-    await p.locator('nav.tabs').waitFor();
+    await p.getByRole('button', { name: quien }).first().click();
+    await p.locator('nav.tabs, nav').first().waitFor();
     await cerrarAvisos(p);
   };
   // Los avisos de primera vez (bienvenida, novedades…), fuera
@@ -60,7 +60,7 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       const d = p.locator('[role=dialog]').last();
       if (!(await d.isVisible().catch(() => false))) break;
       let hecho = false;
-      for (const n of ['Entendido', 'Cerrar', 'Ahora no', 'Seguir', 'Empezar', 'Luego']) { const b = d.getByRole('button', { name: n, exact: true }).first(); if (await b.isVisible().catch(() => false)) { await b.tap(); hecho = true; break; } }
+      for (const n of ['Entendido', 'Cerrar', 'Ahora no', 'Seguir', 'Empezar', 'Luego']) { const b = d.getByRole('button', { name: n, exact: true }).first(); if (await b.isVisible().catch(() => false)) { await b.click(); hecho = true; break; } }
       if (!hecho) await p.keyboard.press('Escape');
       await p.waitForTimeout(250);
     }
@@ -287,6 +287,67 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       check(!suelto.sinNada && suelto.guardando && suelto.enseguida && !suelto.luego && !suelto.activo,
         'un botón que se desactiva sin nada guardándose no lleva rueda; con algo guardándose, sí, hasta que acaba o el botón vuelve a estar activo');
       await ctx.close();
+    }
+    // ---------- 7. Teclado y formularios
+    {
+      // Un visualViewport de mentira (el de verdad no cambia sin un teclado de verdad): window.__vv.pon(alto) lo encoge
+      const conTeclado = (p) => p.addInitScript(() => {
+        const vv = new EventTarget(); vv.height = window.innerHeight; vv.offsetTop = 0; vv.scale = 1; vv.width = window.innerWidth;
+        vv.pon = (tapa) => { vv.height = window.innerHeight - tapa; vv.dispatchEvent(new Event('resize')); };
+        Object.defineProperty(window, 'visualViewport', { configurable: true, value: vv }); window.__vv = vv;
+      });
+      const { ctx, p } = await abrir(/Pelayo/, {}, { antes: conTeclado });
+      await p.locator('button.tarjeta-atleta:visible').first().waitFor();
+      await p.getByRole('button', { name: 'Añadir atleta' }).first().tap();
+      const hoja = p.locator('[aria-modal="true"]');
+      await hoja.waitFor();
+      await p.waitForTimeout(500);
+      // La tecla Intro dice lo que hace y pasa de campo en campo; en el último, envía
+      await p.locator('#na-nombre').focus();
+      const pista1 = await p.locator('#na-nombre').getAttribute('enterkeyhint');
+      await p.locator('#na-nombre').fill('Prueba Pulido');
+      await p.keyboard.press('Enter');
+      const tras1 = await p.evaluate(() => document.activeElement?.id);
+      await p.keyboard.press('Enter');
+      const tras2 = await p.evaluate(() => document.activeElement?.id);
+      await p.keyboard.press('Enter');
+      const tras3 = await p.evaluate(() => ({ id: document.activeElement?.id, pista: document.activeElement?.getAttribute('enterkeyhint') }));
+      check(pista1 === 'next' && tras1 === 'na-email' && tras2 === 'na-obj' && tras3.id === 'na-notion' && tras3.pista === 'done' && await p.locator('#na-nombre').count() === 1,
+        'en el móvil, Intro pasa al campo siguiente (la tecla dice «Siguiente») sin enviar el formulario a medias; en el último dice «Hecho»');
+      // Con el teclado abierto, la hoja sube encima de él y el botón de guardar queda a la vista
+      const alto = await p.evaluate(() => window.innerHeight);
+      const antes = await hoja.evaluate((h) => Math.round(h.getBoundingClientRect().bottom));
+      await p.evaluate(() => window.__vv.pon(320));
+      await p.waitForTimeout(250);
+      const con = await hoja.evaluate((h) => { const r = h.getBoundingClientRect(); const c = document.activeElement.getBoundingClientRect(); return { abajo: Math.round(r.bottom), arriba: Math.round(r.top), campoAbajo: Math.round(c.bottom), campoArriba: Math.round(c.top), v: getComputedStyle(document.documentElement).getPropertyValue('--teclado-hoja').trim() }; });
+      check(antes === alto && con.v === '320px' && con.abajo === alto - 320 && con.arriba >= 0 && con.campoAbajo <= alto - 320 && con.campoArriba >= con.arriba,
+        `con el teclado abierto (320 px), la hoja queda entera encima de él y el campo en el que se escribe, a la vista (la hoja acaba en ${con.abajo} de ${alto} px)`);
+      await p.evaluate(() => window.__vv.pon(0));
+      await p.waitForTimeout(250);
+      check(await hoja.evaluate((h) => Math.round(h.getBoundingClientRect().bottom)) === alto && await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--teclado-hoja').trim()) === '', 'al cerrarse el teclado, la hoja vuelve a su sitio');
+      // En el último campo, Intro envía (como siempre)
+      await p.keyboard.press('Enter');
+      const creado = await p.locator('[aria-modal="true"]').getByText(/código/i).first().waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
+      check(creado && await p.locator('#na-nombre').count() === 0, 'y en el último campo, Intro envía el formulario');
+      await ctx.close();
+      // Con teclado de verdad (ordenador), Intro sigue enviando desde cualquier campo
+      const o = await abrir(/Pelayo/, { viewport: { width: 1280, height: 800 }, isMobile: false, hasTouch: false });
+      await o.p.getByRole('button', { name: 'Añadir atleta' }).first().click();
+      await o.p.locator('#na-nombre').fill('Prueba Ordenador');
+      await o.p.locator('#na-nombre').press('Enter');
+      const enviado = await o.p.locator('[aria-modal="true"]').getByText(/código/i).first().waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
+      check(enviado, 'en el ordenador no cambia nada: Intro envía desde el primer campo');
+      const metaPc = await o.p.evaluate(() => document.querySelector('meta[name="viewport"]').content);
+      await o.ctx.close();
+      // En el iPhone, entrar en un campo pequeño ya no amplía la página (y en Android se puede seguir ampliando con los dedos)
+      const i = await abrir(null, { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' });
+      const metaIos = await i.p.evaluate(() => document.querySelector('meta[name="viewport"]').content);
+      await i.ctx.close();
+      const a = await abrir(null, { userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36' });
+      const metaAndroid = await a.p.evaluate(() => document.querySelector('meta[name="viewport"]').content);
+      await a.ctx.close();
+      check(/maximum-scale=1/.test(metaIos) && !/user-scalable/.test(metaIos) && !/maximum-scale/.test(metaAndroid) && !/maximum-scale/.test(metaPc),
+        'en el iPhone, la página ya no se amplía sola al entrar en un campo pequeño (maximum-scale=1, solo en iOS: en Android y en el ordenador no se toca)');
     }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {

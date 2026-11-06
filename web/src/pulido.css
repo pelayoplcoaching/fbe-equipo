@@ -120,3 +120,8 @@ button[data-guardando]::before {
 .btn-peq[data-guardando]::before, .btn-texto[data-guardando]::before, .btn-icono[data-guardando]::before { width: 16px; height: 16px; margin: -8px 0 0 -8px; border-width: 2px; }
 @keyframes guardando-sale { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { button[data-guardando]::before { animation: guardando-sale .01s linear .25s both, tirar-gira 1.6s linear infinite; } }
+
+/* ---------- (pulido 2.7) Las hojas, encima del teclado (ui/pulido.js pone --teclado-hoja) ---------- */
+.velo { padding-bottom: var(--teclado-hoja, 0px); }
+.hoja-dialogo { max-height: calc(92dvh - var(--teclado-hoja, 0px)); }
+.hoja-dialogo.en-medio { max-height: min(var(--alto-medio, 55dvh), calc(92dvh - var(--teclado-hoja, 0px))); }
