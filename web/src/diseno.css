@@ -961,3 +961,45 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 }
 @keyframes medalla-aro { from { box-shadow: 0 0 0 0 rgba(255, 255, 255, .5); } to { box-shadow: 0 0 0 26px rgba(255, 255, 255, 0); } }
 @keyframes mini-asoma { from { transform: translateY(14px) rotate(-18deg) scale(.6); opacity: 0; } }
+
+/* ── 38 · La semana, día a día (tanda 17) ─────────────────────────────────────────────────────────────────────────────
+   La tira de siete días del plan (estilos.css 1322-1331): hoy lleva su número en un disco morado (como el calendario del
+   móvil), los días entran uno detrás de otro y el ✓ de las sesiones hechas se dibuja, también en la lista de sesiones
+   (.dia.hecha, estilos.css 313). El cambio de semana ya se deslizaba de lado (.dias-deslizar). */
+.tira-num { display: grid; place-items: center; min-width: 28px; height: 28px; padding: 0 4px; border-radius: 14px; }
+.tira-dia.hoy { background: var(--morado-suave); box-shadow: none; }
+.tira-dia.hoy .tira-num { background: var(--morado); color: var(--sobre-morado); }
+.tira-dia.hoy .tira-letra { color: var(--morado); }
+@media (prefers-reduced-motion: no-preference) {
+  .tira-dia { animation: tira-entra var(--mov-medio) var(--curva-casa) backwards; }
+  .tira-dia:nth-child(2) { animation-delay: 25ms; } .tira-dia:nth-child(3) { animation-delay: 50ms; } .tira-dia:nth-child(4) { animation-delay: 75ms; }
+  .tira-dia:nth-child(5) { animation-delay: 100ms; } .tira-dia:nth-child(6) { animation-delay: 125ms; } .tira-dia:nth-child(7) { animation-delay: 150ms; }
+  .tira-chip.hecha svg path, .dia.hecha .marca-dia svg path { stroke-dasharray: 20; animation: serie-trazo var(--mov-lento) var(--curva-casa) .2s backwards; }
+}
+@keyframes tira-entra { from { opacity: 0; transform: translateY(5px); } }
+
+/* ── 39 · Controles de la casa (tanda 17) ─────────────────────────────────────────────────────────────────────────────
+   Segmentos: la pastilla de la opción elegida es una sola pieza que se desliza de una a otra (ui/pastilla.js mide dónde
+   está y lo deja en --seg-x/y/w/h; sin esas medidas, cada botón conserva su fondo, como en el bloque 3). Interruptor
+   (estilos.css 1121): la bola se estira al pulsar y llega con un pequeño muelle. Casilla (bloque 3): al marcarse, salta. */
+/* (siempre, no solo con la pastilla puesta: es la referencia con la que pastilla.js mide dónde está cada opción) */
+.segmentos { position: relative; }
+.segmentos[data-pastilla]::before {
+  content: ""; position: absolute; left: 0; top: 0; width: var(--seg-w); height: var(--seg-h); transform: translate(var(--seg-x), var(--seg-y));
+  border-radius: 9px; background: var(--seg-activo); box-shadow: var(--seg-sombra); pointer-events: none;
+}
+.segmentos[data-pastilla] > button { position: relative; z-index: 1; }
+.segmentos[data-pastilla] > button[aria-pressed="true"] { background: transparent; box-shadow: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .segmentos[data-pastilla][data-lista]::before { transition: transform var(--mov-medio) var(--curva-casa), width var(--mov-medio) var(--curva-casa), height var(--mov-medio) var(--curva-casa); }
+  .interruptor { transition: background-color var(--mov-medio) var(--curva-casa); }
+  .interruptor::after { transition: transform var(--mov-medio) var(--curva-rebote), width var(--mov-rapido) var(--curva-casa); }
+  input[type="checkbox"]:not(.interruptor):checked { animation: casilla-salta var(--mov-medio) var(--curva-rebote); }
+}
+.interruptor:active::after { width: 29px; }
+.interruptor:checked:active::after { transform: translateX(15px); }
+@keyframes casilla-salta { from { transform: scale(.78); } }
+@media (forced-colors: active) {
+  .segmentos[data-pastilla]::before { display: none; }
+  .segmentos[data-pastilla] > button[aria-pressed="true"] { background: Highlight; color: HighlightText; }
+}
