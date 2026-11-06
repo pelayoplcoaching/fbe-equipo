@@ -12,7 +12,7 @@ import { BandaDemo } from '../App.jsx';
 export function Comidas({ salud, recargarConsentimientos, irA }) {
   const { api, atleta } = useApp();
   const [vista, setVista] = usePreferencia('fbe-comidas-vista', 'menu');
-  const recetario = useCarga(() => api.recetario(atleta.id), [atleta.id]);
+  const recetario = useCarga(() => api.recetario(atleta.id), [atleta.id], { recuerdo: `recetario:${api.uid()}:${atleta.id}` });
   const planes = useCarga(() => api.planesNutricion(atleta.id).catch(() => []), [atleta.id]);
   const [receta, setReceta] = useState(null); // asignación abierta
   const [anadir, setAnadir] = useState(null); // { a, raciones }
@@ -65,7 +65,8 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
   const { api, atleta, aviso } = useApp();
   const hoy = hoyISO();
   const menu = useCarga(() => (salud ? api.menuSemana(atleta.id, hoy).catch(() => []) : Promise.resolve([])), [atleta.id, salud]);
-  const recetario = useCarga(() => api.recetario(atleta.id).catch(() => null), [atleta.id]);
+  // (pulido 2.4) aquí basta con saber qué comidas hace y si tiene recetas: el recetario entero (hasta 1,4 MB) no se baja
+  const recetario = useCarga(() => api.recetarioDeHoy(atleta.id).catch(() => null), [atleta.id]);
   const planes = useCarga(() => (compacto ? Promise.resolve([]) : api.planesNutricion(atleta.id).catch(() => [])), [atleta.id]);
   const [ocupado, una] = useUnaVez();
   const deHoy = (menu.datos || []).filter((e) => e.fecha === hoy);

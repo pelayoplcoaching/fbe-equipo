@@ -345,6 +345,9 @@ const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta
   'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales'];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
+// (pulido 2.4) y sin la miniatura (unos 14 kB por receta: el 85 % de lo que pesa un recetario): las miniaturas se piden
+// aparte y se recuerdan mientras la receta no cambie (recetasConMini)
+const COLS_RECETA_SIN_MINI = COLS_RECETA.replace(',foto_mini', '');
 
 // Qué columna marca la revisión del coach en cada cosa revisable
 const REVISION = { sesion: ['sesiones', 'revisada_en'], checkin: ['checkins', 'revisado_en'], archivo: ['archivos', 'revisado_en'], tarea: ['tareas', 'revisada_en'] };
@@ -552,6 +555,40 @@ export function crearApi(backend) {
       } else if (filas) return new Map(filas.map((x) => [x.id, x.foto || null]));
     }
     return f.mapa;
+  }
+  // (pulido 2.4) Las recetas de una lista, con su miniatura. La miniatura de cada receta se pide una vez y se recuerda
+  // en memoria mientras la receta no cambie (su «actualizada_en»): un recetario de 80 recetas pesaba 1,4 MB cada vez
+  // que se abría Comidas (y Hoy lo pedía en cada visita); ahora, la primera vez de la sesión.
+  // Además se guardan en el dispositivo (con la copia de la semana: por cuenta, se borra al cerrar la sesión), para que
+  // tampoco haya que bajarlas la primera vez que se abre Comidas cada día.
+  const minis = new Map();   // id de receta → { v: actualizada_en, foto_mini }
+  let minisDe = null, minisLeidas = null;
+  const CLAVE_MINIS = 'minis-recetas';
+  const traerMinis = () => {
+    const yo = uid();
+    if (minisDe !== yo) { minis.clear(); minisDe = yo; minisLeidas = null; }
+    return (minisLeidas ||= (async () => {
+      try {
+        const x = yo ? await copiaDelMovil().leer(yo, CLAVE_MINIS) : null;
+        if (minisDe === yo && Array.isArray(x?.datos)) for (const [id, m] of x.datos) if (!minis.has(id) && m && typeof m === 'object') minis.set(id, m);
+      } catch { /* sin copia, se piden */ }
+    })());
+  };
+  async function recetasConMini(filtro) {
+    const [filas] = await Promise.all([b.select('recetas', { ...filtro, cols: COLS_RECETA_SIN_MINI }), traerMinis()]);
+    const alDia = (r) => { const m = minis.get(r.id); return !!m && m.v === (r.actualizada_en || null); };
+    const faltan = filas.filter((r) => !alDia(r)).map((r) => r.id);
+    if (faltan.length) {
+      const fotos = await b.select('recetas', { in: { id: faltan }, cols: 'id,foto_mini' }).catch(() => null);
+      if (fotos) {
+        const F = porId(fotos);
+        if (minis.size > 900) for (const k of [...minis.keys()].slice(0, 300)) minis.delete(k);
+        for (const r of filas) if (!alDia(r)) minis.set(r.id, { v: r.actualizada_en || null, foto_mini: F[r.id]?.foto_mini || null });
+        const yo = uid();
+        if (yo && minisDe === yo) copiaDelMovil().guardar(yo, CLAVE_MINIS, [...minis]).catch(() => {});
+      }
+    }
+    return filas.map((r) => ({ ...r, foto_mini: alDia(r) ? minis.get(r.id).foto_mini : null }));
   }
   const fotoValida = (x, max) => typeof x === 'string' && x.length <= max && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(x);
   const falta047 = (e) => /foto_grande/.test(`${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`);
@@ -1084,7 +1121,7 @@ export function crearApi(backend) {
     // Tu recetario (coach): todas las recetas, sin la foto grande, y a cuántos atletas tiene asignada cada una
     async recetas() {
       const [recetas, asignadas] = await Promise.all([
-        b.select('recetas', { cols: COLS_RECETA, order: [['nombre', 'asc']] }).catch(falta022),
+        recetasConMini({ order: [['nombre', 'asc']] }).catch(falta022),
         b.select('recetas_atleta', { cols: 'id,receta_id,atleta_id,toma' }).catch(() => []),
       ]);
       const A = agrupar(asignadas, 'receta_id');
@@ -1116,7 +1153,7 @@ export function crearApi(backend) {
         b.select('recetas_atleta', { eq: { atleta_id: atletaId }, order: [['orden', 'asc']] }).catch(falta022),
         b.select('comidas_atleta', { eq: { atleta_id: atletaId } }).catch(() => []),
       ]);
-      const recetas = asignaciones.length ? await b.select('recetas', { in: { id: unicos(asignaciones.map((a) => a.receta_id)) }, cols: COLS_RECETA }) : [];
+      const recetas = asignaciones.length ? await recetasConMini({ in: { id: unicos(asignaciones.map((a) => a.receta_id)) } }) : [];
       const tomas = tomasDe(comidas[0]);
       const porToma = recetarioPorToma(asignaciones, recetas);
       // Tomas con recetas que no están entre sus comidas (p. ej. le asignaste una merienda y él quitó la merienda)
@@ -1124,6 +1161,14 @@ export function crearApi(backend) {
       // La comida que algunos días no hace (v0.27), si sigue entre sus comidas
       const opcional = comidas[0]?.opcional && tomas.includes(comidas[0].opcional) && tomas.length >= 2 ? comidas[0].opcional : null;
       return { tomas, opcional, eligio: !!comidas[0], conRecetas, porToma, asignaciones, recetas, cambios: asignaciones.filter((a) => a.cambio_pedido_en).length };
+    },
+    // (pulido 2.4) Lo que «Tu menú de hoy» necesita del recetario, sin bajarlo: qué comidas hace y si tiene recetas
+    async recetarioDeHoy(atletaId) {
+      const [asignaciones, comidas] = await Promise.all([
+        b.select('recetas_atleta', { eq: { atleta_id: atletaId }, cols: 'id,receta_id,toma' }).catch(falta022),
+        b.select('comidas_atleta', { eq: { atleta_id: atletaId } }).catch(() => []),
+      ]);
+      return { tomas: tomasDe(comidas[0]), asignaciones };
     },
     // Cuántas comidas hace al día (las elige el atleta o el coach). opcional (solo el coach; undefined = no se
     // toca): la que algunos días no hace

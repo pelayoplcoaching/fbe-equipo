@@ -152,5 +152,62 @@ console.log('\n2. Lecturas idénticas, compartidas');
   check(trasLatido === a3 + 1 && n('atletas') === a3 + 2, 'el latido de presencia no invalida nada; cambiar «en línea», sí');
 }
 
+console.log('3. El recetario, ligero');
+{
+  const { b, api, n } = montar();
+  await b.auth.entrar('ana@fbe.demo', 'demo');
+  const ana = await api.miAtleta();
+  // Hoy solo pregunta qué comidas hace y si tiene recetas: no baja ninguna receta
+  const r0 = n('recetas');
+  const deHoy = await api.recetarioDeHoy(ana.id);
+  const entero = await api.recetario(ana.id);
+  check(n('recetas') > r0 && deHoy.asignaciones.length === entero.asignaciones.length && deHoy.asignaciones.length > 0
+    && JSON.stringify(deHoy.tomas) === JSON.stringify(entero.tomas), `«Tu menú de hoy» sabe qué comidas hace y cuántas recetas tiene (${deHoy.asignaciones.length}) igual que el recetario entero`);
+  const { api: api2, n: n2, b: b2 } = montar();
+  await b2.auth.entrar('ana@fbe.demo', 'demo');
+  await api2.recetarioDeHoy((await api2.miAtleta()).id);
+  check(n2('recetas') === 0, 'y sin pedir una sola receta');
+
+  // Las miniaturas se piden una vez y se recuerdan mientras la receta no cambie
+  const conMini = entero.recetas.filter((r) => r.foto_mini).length;
+  check(conMini > 0 && entero.recetas.every((r) => 'foto_mini' in r && r.ingredientes), `el recetario entero trae sus recetas con miniatura (${conMini} de ${entero.recetas.length})`);
+  const r1 = n('recetas');
+  await new Promise((r) => setTimeout(r, 2100));   // fuera de la ventana de consultas compartidas
+  const otra = await api.recetario(ana.id);
+  check(n('recetas') === r1 + 1 && otra.recetas.filter((r) => r.foto_mini).length === conMini,
+    `la segunda vez solo se piden las recetas, sin miniaturas (${n('recetas') - r1} lectura en vez de 2), y salen con las recordadas`);
+
+  // Si el coach cambia la foto de una receta, se vuelve a pedir solo esa
+  const una = entero.recetas.find((r) => r.foto_mini);
+  await b.auth.entrar('pelayo@fbe.demo', 'demo');
+  const NUEVA = img('C', 3000);
+  await b.update('recetas', { foto_mini: NUEVA }, { eq: { id: una.id } });
+  await b.auth.entrar('ana@fbe.demo', 'demo');
+  const pedidas = [];
+  const sel = b.select.bind(b);
+  b.select = (t, f, ...r) => { if (t === 'recetas' && f?.cols === 'id,foto_mini') pedidas.push(f.in?.id || []); return sel(t, f, ...r); };
+  const tras = await api.recetario(ana.id);
+  check(tras.recetas.find((r) => r.id === una.id).foto_mini === NUEVA && pedidas.length === 1 && pedidas[0].length === 1 && pedidas[0][0] === una.id,
+    'al cambiar la foto de una receta se vuelve a pedir solo la suya');
+  // Si las miniaturas no llegan (sin conexión a medias), el recetario sale igual, sin fotos, y no se queda así
+  const { api: api3, b: b3 } = montar();
+  await b3.auth.entrar('ana@fbe.demo', 'demo');
+  const ana3 = await api3.miAtleta();
+  const sel3 = b3.select.bind(b3);
+  let falla = true;
+  b3.select = async (t, f, ...r) => { if (t === 'recetas' && f?.cols === 'id,foto_mini' && falla) throw new Error('Sin conexión.'); return sel3(t, f, ...r); };
+  const sinFotos = await api3.recetario(ana3.id);
+  falla = false;
+  await new Promise((r) => setTimeout(r, 2100));
+  const conFotos = await api3.recetario(ana3.id);
+  check(sinFotos.recetas.length > 0 && sinFotos.recetas.every((r) => r.foto_mini == null) && conFotos.recetas.some((r) => r.foto_mini),
+    'si las miniaturas no llegan, el recetario sale sin fotos y a la siguiente se vuelven a pedir');
+  // El coach: su biblioteca entera, igual
+  await b.auth.entrar('pelayo@fbe.demo', 'demo');
+  b.select = sel;
+  const todo = await api.recetas();
+  check(todo.length >= entero.recetas.length && todo.some((r) => r.foto_mini), `la biblioteca del coach también (${todo.length} recetas)`);
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

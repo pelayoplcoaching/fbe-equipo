@@ -141,6 +141,32 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       } else check(false, 'no hay un hábito sin marcar en la demo para probarlo');
       await ctx.close();
     }
+    // ---------- 4. El recetario, ligero
+    {
+      const { ctx, p } = await abrir(/Ana López/);
+      await p.locator('.hero-dia').waitFor();
+      await p.waitForTimeout(2500);
+      const enHoy = await lecturas(p, '^recetas ');
+      check(enHoy === 0 && await lecturas(p, '^recetas_atleta ') > 0, `Hoy ya no baja el recetario: mira qué recetas tienes, sin traerlas (${enHoy} lecturas de recetas)`);
+      const aRecetas = async () => {
+        await irASeccion(p, 'Comidas');
+        const pestana = p.locator('main button', { hasText: 'Tus recetas' }).first();
+        await pestana.waitFor();
+        if (!(await p.locator('.tarjeta-receta').first().isVisible().catch(() => false))) await pestana.tap();
+        await p.locator('.tarjeta-receta').first().waitFor();
+      };
+      await aRecetas();
+      const conFoto = () => p.evaluate(() => [...document.querySelectorAll('.tarjeta-receta img')].filter((i) => i.getAttribute('src')?.startsWith('data:image')).length);
+      const fotos1 = await conFoto();
+      const minis1 = await lecturas(p, '^recetas .*"cols":"id,foto_mini"');
+      check(fotos1 > 0 && minis1 === 1, `la primera vez, Comidas pide las miniaturas una vez y las recetas salen con su foto (${fotos1} con foto)`);
+      await irASeccion(p, 'Hoy'); await p.waitForTimeout(2300);
+      await p.evaluate(() => { window.__q = []; });
+      await aRecetas();
+      await p.waitForTimeout(600);
+      check(await conFoto() === fotos1 && await lecturas(p, '"cols":"id,foto_mini"') === 0, 'al volver, las fotos de las recetas no se vuelven a bajar y siguen ahí');
+      await ctx.close();
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     if (process.env.DEPURAR) console.log(e.stack.split('\n').slice(0, 12).join('\n'));
