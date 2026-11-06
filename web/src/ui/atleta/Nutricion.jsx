@@ -37,7 +37,10 @@ export function NutricionHoy({ entrenaHoy = false }) {
       ) : sinContar ? (
         <div class="panel panel-pad pila-s">
           <p class="peq">¿Has seguido tu plan hoy?</p>
-          <SiCasiNo valor={reg?.cumplido ?? null} alElegir={async (v) => { try { await api.apuntarNutricion(atleta.id, hoy, { cumplido: v }); aviso(v === 2 ? '¡Bien!' : 'Apuntado'); recargar(); } catch (e) { aviso(e.message, 'error'); } }} />
+          <SiCasiNo valor={reg?.cumplido ?? null} alElegir={async (v) => {
+            // (pulido 5) lo elegido se marca al momento y se guarda por detrás (si no se puede guardar, se desmarca y se avisa)
+            try { await res.alMomento((x) => ({ ...x, hoy: { ...(x.hoy || {}), cumplido: v } }), () => api.apuntarNutricion(atleta.id, hoy, { cumplido: v })); aviso(v === 2 ? '¡Bien!' : 'Apuntado'); } catch (e) { aviso(e.message, 'error'); }
+          }} />
           <span class="fila-envolver">
             <button class="btn-texto" onClick={() => setHoja('apuntar')}><Icono n="calendario" /> Otro día o una nota</button>
             <button class="btn-texto" onClick={() => setHoja('plan')}>Ver tus pautas</button>

@@ -54,13 +54,13 @@ export function HabitosHoy() {
           );
         })}
       </div>
-      {abiertoAhora && <HojaHabito r={abiertoAhora} alCerrar={() => setAbierto(null)} alGuardar={() => res.recargar(true)} />}
+      {abiertoAhora && <HojaHabito r={abiertoAhora} alCerrar={() => setAbierto(null)} alMomento={res.alMomento} />}
     </section>
   );
 }
 
 // Apuntar un día (hoy o uno anterior de esta semana) y ver cómo va
-function HojaHabito({ r, alCerrar, alGuardar }) {
+function HojaHabito({ r, alCerrar, alMomento }) {
   const { api, aviso } = useApp();
   const h = r.habito;
   const hoy = hoyISO();
@@ -69,14 +69,21 @@ function HojaHabito({ r, alCerrar, alGuardar }) {
   const [valor, setValor] = useState(delDia?.valor ?? null);
   const [ocupado, setOcupado] = useState(false);
   const elegirDia = (iso) => { setDia(iso); setValor(r.semana.dias.find((d) => d.iso === iso)?.valor ?? null); };
+  // (pulido 5) al apuntar, la hoja se cierra y el anillo cambia al momento; se guarda por detrás (si no se puede
+  // guardar, el anillo vuelve a como estaba y se avisa)
   const guardar = async (v) => {
     setOcupado(true);
+    const d = dia, cumple = cumpleHabito(h, v);
+    const cambio = (lista) => lista.map((x) => (x.habito.id !== h.id ? x : {
+      ...x,
+      ...(d === hoy ? { hoy: v, cumpleHoy: cumple, fraccionHoy: fraccionHabito(h, v) } : {}),
+      semana: { ...x.semana, dias: x.semana.dias.map((y) => (y.iso === d ? { ...y, valor: v, cumple } : y)) },
+    }));
+    alCerrar();
     try {
-      await api.apuntarHabito(h.id, dia, v);
-      aviso(v == null ? 'Borrado' : cumpleHabito(h, v) ? `${h.nombre}: ¡hecho!` : 'Apuntado');
-      alGuardar();
-      alCerrar();
-    } catch (e) { aviso(e.message, 'error'); setOcupado(false); }
+      await alMomento(cambio, () => api.apuntarHabito(h.id, d, v));
+      aviso(v == null ? 'Borrado' : cumple ? `${h.nombre}: ¡hecho!` : 'Apuntado');
+    } catch (e) { aviso(e.message, 'error'); }
   };
   // Racha: en días si se pide a diario; si no, en semanas llegando a los días pedidos
   const racha = h.dias_semana === 7

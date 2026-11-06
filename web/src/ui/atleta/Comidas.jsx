@@ -80,7 +80,8 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
   const tomas = ordenarTomas([...(recetario.datos?.tomas || []), ...deHoy.map((e) => e.toma)]);
   const t = totalesDia(deHoy);
   const obj = objetivoDelDia(planVigente(planes.datos || [], hoy), true);
-  const marcar = (e) => una(async () => { try { await api.cambiarMenu(e, { hecho: !e.hecho }); menu.recargar(true); } catch (err) { aviso(err.message, 'error'); } });
+  // (pulido 5) la casilla se marca al tocarla y se guarda por detrás (si no se puede guardar, se desmarca y se avisa)
+  const marcar = (e) => { const hecho = !e.hecho; menu.alMomento((xs) => xs.map((x) => (x.id === e.id ? { ...x, hecho } : x)), () => api.cambiarMenu(e, { hecho })).catch((err) => aviso(err.message, 'error')); };
   return (
     <section class="seccion seccion-menu-hoy">
       <div class="seccion-cab"><h2>Tu menú de hoy</h2><button class="btn-texto" onClick={() => irA('comidas')}><Icono n="calendario" /> Tu semana</button></div>
@@ -98,7 +99,7 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
                 <span class="etq">{NOMBRE_TOMA[x]}</span>
                 {deHoy.filter((e) => e.toma === x).map((e) => (
                   <div class={`entrada-menu ${e.hecho ? 'hecha' : ''}`} key={e.id}>
-                    <button type="button" class="casilla-redonda" aria-pressed={e.hecho ? 'true' : 'false'} aria-label={`${e.texto}: ${e.hecho ? 'comida' : 'sin comer'}`} disabled={ocupado} onClick={() => marcar(e)}>{e.hecho && <Icono n="hecho" />}</button>
+                    <button type="button" class="casilla-redonda" aria-pressed={e.hecho ? 'true' : 'false'} aria-label={`${e.texto}: ${e.hecho ? 'comida' : 'sin comer'}`} onClick={() => marcar(e)}>{e.hecho && <Icono n="hecho" />}</button>
                     <span class="entrada-texto"><span class={e.hecho ? 'tachado' : ''}>{e.texto}{Number(e.raciones) !== 1 ? <span class="terciario num"> ×{num(e.raciones, 2)}</span> : ''}</span>{e.kcal != null && <span class="mini terciario num">{textoMacros(e, true)}</span>}</span>
                   </div>
                 ))}

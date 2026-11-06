@@ -566,6 +566,11 @@ export function useCarga(fn, deps = [], opciones = {}) {
   const ultima = useRef(0); // solo vale la respuesta de la última petición (si llegan desordenadas, las viejas se tiran)
   const claveRecuerdo = useRef(recuerdo);
   claveRecuerdo.current = recuerdo;
+  // (pulido 5) alMomento: un cambio que se ve al instante mientras se guarda por detrás. base: lo último que dijo la
+  // base; pendientes: los cambios en pantalla que aún se están guardando (se vuelven a poner encima de lo que llegue)
+  const base = useRef(estado.datos);
+  const pendientes = useRef([]);
+  const conPendientes = (datos) => (datos == null ? datos : pendientes.current.reduce((d, c) => c(d), datos));
   const cargar = useCallback(async (silencioso = false) => {
     const n = ++ultima.current;
     const clave = claveRecuerdo.current;
@@ -573,7 +578,7 @@ export function useCarga(fn, deps = [], opciones = {}) {
     try {
       const datos = await fn();
       if (clave && datos != null) recuerdos.set(clave, datos);
-      if (vivo.current && n === ultima.current) setEstado({ datos, error: null, cargando: false });
+      if (vivo.current && n === ultima.current) { base.current = datos; setEstado({ datos: conPendientes(datos), error: null, cargando: false }); }
     } catch (error) {
       reportarError(error, 'carga');
       if (vivo.current && n === ultima.current) setEstado((e) => ({ ...e, error, cargando: false }));
@@ -584,7 +589,7 @@ export function useCarga(fn, deps = [], opciones = {}) {
     vivo.current = true;
     // Con algo recordado, se pone al día en silencio; si lo que se pide cambia (otra clave), se enseña lo de la nueva
     const datos = recordado();
-    if (!primera.current && recuerdo) setEstado({ datos, error: null, cargando: datos == null });
+    if (!primera.current && recuerdo) { base.current = datos; setEstado({ datos, error: null, cargando: datos == null }); }
     primera.current = false;
     cargar(datos != null);
     return () => { vivo.current = false; };
@@ -598,12 +603,30 @@ export function useCarga(fn, deps = [], opciones = {}) {
     const al = (e) => {
       if (e.detail?.clave !== copia || !vivo.current) return;
       ultima.current++;
-      setEstado({ datos: transformar ? transformar(e.detail.datos) : e.detail.datos, error: null, cargando: false });
+      base.current = transformar ? transformar(e.detail.datos) : e.detail.datos;
+      setEstado({ datos: conPendientes(base.current), error: null, cargando: false });
     };
     window.addEventListener('fbe-copia', al);
     return () => window.removeEventListener('fbe-copia', al);
   }, [copia]);
-  return { ...estado, recargar: cargar };
+  // alMomento(cambio, guardar): `cambio` (lo cargado → lo cargado con el cambio hecho) se ve ya; `guardar` lo manda a
+  // la base. Si falla, se deshace solo ese cambio y el error sigue hacia quien llamó (que avisa); cuando no queda
+  // ninguno guardándose, se recarga en silencio para quedarse con lo que diga la base. El cambio tiene que dar lo
+  // mismo si se aplica dos veces (poner un valor, no «darle la vuelta»): se repone encima de lo que vaya llegando.
+  const alMomento = useCallback(async (cambio, guardar) => {
+    pendientes.current = [...pendientes.current, cambio];
+    setEstado((e) => (e.datos == null ? e : { ...e, datos: cambio(e.datos) }));
+    let guardado = false;
+    try { const r = await guardar(); guardado = true; return r; } finally {
+      pendientes.current = pendientes.current.filter((c) => c !== cambio);
+      if (guardado && base.current != null) base.current = cambio(base.current);
+      if (vivo.current) {
+        setEstado((e) => (e.datos == null ? e : { ...e, datos: conPendientes(base.current) }));
+        if (!pendientes.current.length) cargar(true);
+      }
+    }
+  }, [cargar]);
+  return { ...estado, recargar: cargar, alMomento };
 }
 
 // Evita el doble envío (dos toques seguidos en «Guardar» o «Crear»): mientras la acción está en marcha no se repite

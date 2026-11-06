@@ -7,11 +7,26 @@ import { irASeccion } from './secciones.mjs';
 
 export async function probarPulido({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
-  const abrir = async (quien, opciones = {}) => {
+  // escrituras: las de la demo pasan por un envoltorio que las puede hacer lentas (window.__espera, en ms) o que
+  // fallen (window.__falla), y las cuenta (window.__escritas). Se pone antes de entrar: la app se queda con ellas al entrar
+  const abrir = async (quien, opciones = {}, { escrituras = false } = {}) => {
     const ctx = await navegador.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, locale: 'es-ES', ...opciones });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errores.push(e.message));
-    p.on('console', (m) => { if (m.type() === 'error') errores.push(`${m.text()} ${m.location()?.url || ''}`); });
+    p.on('console', (m) => { if (m.type() === 'error' && !/Sin conexi/.test(m.text())) errores.push(`${m.text()} ${m.location()?.url || ''}`); });
+    if (escrituras) {
+      // (la app se queda con las escrituras del backend al arrancar: el envoltorio se pone en cuanto el backend existe)
+      await p.addInitScript(() => {
+        window.__escritas = 0; window.__falla = false; window.__espera = 0;
+        Object.defineProperty(globalThis, '__fbeDemo', { configurable: true, get() { return undefined; }, set(b) {
+          for (const m of ['insert', 'update', 'upsert', 'delete']) {
+            const o = b[m].bind(b);
+            b[m] = async (...a) => { if (window.__espera) await new Promise((r) => setTimeout(r, window.__espera)); if (window.__falla) throw new Error('Sin conexión: no se ha podido guardar'); const r = await o(...a); window.__escritas++; return r; };
+          }
+          Object.defineProperty(globalThis, '__fbeDemo', { configurable: true, writable: true, value: b });
+        } });
+      });
+    }
     await p.goto(`${base}/?demo`);
     await p.getByRole('button', { name: quien }).first().tap();
     await p.locator('nav.tabs').waitFor();
@@ -282,6 +297,92 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
       const cargando = await p.locator('main .siluetas').first().waitFor({ timeout: 3000 }).then(() => true).catch(() => false);
       check(cargando, 'al cambiar de cuenta se empieza de cero: la lista se carga de nuevo (no se enseña la de la cuenta anterior)');
       await ctx.close();
+    }
+    // ---------- 5. Lo que se marca se ve al momento (se guarda por detrás; si no se puede guardar, se deshace y se avisa)
+    {
+      // (la demo guarda al instante: aquí cada escritura tarda 1,5 s, como una red mala, o falla)
+      const lenta = (p, ms) => p.evaluate((t) => { window.__espera = t; window.__escritas = 0; }, ms);
+      {
+        const { ctx, p } = await abrir(/Lucía Ferrer/, {}, { escrituras: true });
+        await irASeccion(p, 'Comidas');
+        const semana = p.getByRole('tab', { name: 'Tu semana' });
+        if (await semana.isVisible().catch(() => false)) await semana.tap();
+        const casillas = p.locator('.entrada-menu .casilla-redonda');
+        await casillas.first().waitFor();
+        await lenta(p, 1500);
+        const antes = await casillas.first().getAttribute('aria-pressed');
+        await casillas.first().tap();
+        await p.waitForTimeout(250);
+        const alMomento = { pulsada: await casillas.first().getAttribute('aria-pressed'), escritas: await p.evaluate(() => window.__escritas) };
+        await p.waitForFunction(() => window.__escritas >= 1, null, { timeout: 6000 });
+        await p.waitForTimeout(500);
+        const despues = await casillas.first().getAttribute('aria-pressed');
+        check(alMomento.pulsada !== antes && alMomento.escritas === 0 && despues === alMomento.pulsada, `una comida se marca al tocarla, antes de que la base conteste, y así se queda (${antes} → ${alMomento.pulsada})`);
+        // Varias seguidas, sin esperar a ninguna
+        const n = Math.min(3, await casillas.count());
+        const previas = [];
+        for (let i = 0; i < n; i++) previas.push(await casillas.nth(i).getAttribute('aria-pressed'));
+        for (let i = 0; i < n; i++) await casillas.nth(i).tap();
+        await p.waitForTimeout(200);
+        const seguidas = [];
+        for (let i = 0; i < n; i++) seguidas.push(await casillas.nth(i).getAttribute('aria-pressed'));
+        await p.waitForFunction((k) => window.__escritas >= 1 + k, n, { timeout: 8000 });
+        await p.waitForTimeout(600);
+        const finales = [];
+        for (let i = 0; i < n; i++) finales.push(await casillas.nth(i).getAttribute('aria-pressed'));
+        check(n >= 2 && seguidas.every((x, i) => x !== previas[i]) && finales.join() === seguidas.join(), `se pueden marcar ${n} seguidas sin esperar, y quedan como se dejaron`);
+        // Si no se puede guardar, se deshace y se avisa
+        await p.evaluate(() => { window.__falla = true; });
+        const a0 = await casillas.first().getAttribute('aria-pressed');
+        await casillas.first().tap();
+        await p.waitForTimeout(250);
+        const a1 = await casillas.first().getAttribute('aria-pressed');
+        await p.locator('.toast.error, .toast[role=alert]').first().waitFor({ timeout: 6000 }).catch(() => {});
+        await p.waitForTimeout(400);
+        const a2 = await casillas.first().getAttribute('aria-pressed');
+        check(a1 !== a0 && a2 === a0 && await p.locator('.toast').filter({ hasText: /no se ha podido guardar/i }).count() >= 1, 'si no se puede guardar, la casilla vuelve a como estaba y se avisa');
+        await ctx.close();
+      }
+      {
+        const { ctx, p } = await abrir(/Ana López/, {}, { escrituras: true });
+        // (los hábitos van en un plegable de Hoy)
+        await p.locator('details.plegable-hoy[data-plegable="habitos"]').waitFor({ state: 'attached' });
+        await p.evaluate(() => { document.querySelector('details.plegable-hoy[data-plegable="habitos"]').open = true; });
+        const teselas = p.locator('.habito-tile');
+        await teselas.first().waitFor();
+        await lenta(p, 1500);
+        const sinMarcar = p.locator('.habito-tile', { hasText: 'Sin marcar' }).first();
+        const hay = await sinMarcar.count();
+        if (hay) {
+          const nombre = (await sinMarcar.locator('.habito-nombre').textContent()).trim();
+          await sinMarcar.tap();
+          await p.locator('[aria-modal="true"] .si-no button', { hasText: 'Hecho' }).tap();
+          await p.waitForTimeout(450);
+          const t = p.locator('.habito-tile', { hasText: nombre }).first();
+          const r = { hoja: await p.locator('[aria-modal="true"]').count(), texto: (await t.locator('.habito-valor').textContent()).trim(), cumple: await t.locator('.anillo-habito.cumple').count(), escritas: await p.evaluate(() => window.__escritas) };
+          await p.waitForFunction(() => window.__escritas >= 1, null, { timeout: 6000 });
+          await p.locator('.toast').filter({ hasText: /hecho/i }).first().waitFor({ timeout: 4000 }).catch(() => {});
+          check(r.hoja === 0 && r.cumple === 1 && !/Sin marcar/.test(r.texto) && r.escritas === 0 && await t.locator('.anillo-habito.cumple').count() === 1,
+            `un hábito apuntado cierra su hoja y llena su anillo al momento, antes de que la base conteste («${r.texto}»)`);
+        } else check(false, 'no hay un hábito de sí o no sin marcar en la demo para probarlo');
+        await ctx.close();
+      }
+      {
+        const { ctx, p } = await abrir(/Pelayo/, {}, { escrituras: true });
+        await irASeccion(p, 'Revisar');
+        const botones = p.locator('.tarjeta-revisar button.revisar-hecho[data-deshacer]');
+        await botones.first().waitFor();
+        await lenta(p, 1500);
+        const n0 = await p.locator('.tarjeta-revisar').count();
+        await botones.first().tap();
+        await p.waitForTimeout(300);
+        const r = { tarjetas: await p.locator('.tarjeta-revisar').count(), escritas: await p.evaluate(() => window.__escritas) };
+        await p.waitForFunction(() => window.__escritas >= 1, null, { timeout: 6000 });
+        await p.locator('.toast').filter({ hasText: /revisad/i }).first().waitFor({ timeout: 4000 }).catch(() => {});
+        await p.waitForTimeout(500);
+        check(r.tarjetas === n0 - 1 && r.escritas === 0 && await p.locator('.tarjeta-revisar').count() === n0 - 1, `coach: lo que se marca como revisado sale de la lista al momento (${n0} → ${r.tarjetas})`);
+        await ctx.close();
+      }
     }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {

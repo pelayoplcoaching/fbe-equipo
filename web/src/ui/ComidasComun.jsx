@@ -239,9 +239,11 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
   const tomas = tomasDelDia(ordenarTomas([...recetario.tomas, ...Object.keys(delDia)]), op, sin, Object.keys(delDia));
   const plan = planVigente(planes, dia);
   const recargar = () => { menu.recargar(true); diasSin.recargar(true); };
-  const cambiarSin = () => una(async () => { try { await api.marcarDiaSin(atletaId, dia, !sin); diasSin.recargar(true); } catch (err) { aviso(err.message, 'error'); } });
+  // (pulido 5) el interruptor y las casillas cambian al tocarlos y se guardan por detrás (si no se puede guardar, se
+  // deshace y se avisa)
+  const cambiarSin = () => { const pon = !sin, d = dia; diasSin.alMomento((xs) => (pon ? [...xs.filter((x) => x !== d), d] : xs.filter((x) => x !== d)), () => api.marcarDiaSin(atletaId, d, pon)).catch((err) => aviso(err.message, 'error')); };
   const cambiarSemana = (l) => { setLunes(l); setDia(l === lunesDe(hoy) ? hoy : l); };
-  const marcar = (e) => una(async () => { try { await api.cambiarMenu(e, { hecho: !e.hecho }); recargar(); } catch (err) { aviso(err.message, 'error'); } });
+  const marcar = (e) => { const hecho = !e.hecho; menu.alMomento((xs) => xs.map((x) => (x.id === e.id ? { ...x, hecho } : x)), () => api.cambiarMenu(e, { hecho })).catch((err) => aviso(err.message, 'error')); };
   return (
     <div class="pila menu-semana">
       <NavSemana lunes={lunes} setLunes={cambiarSemana} />
@@ -255,7 +257,7 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
             <TotalesDia entradas={Object.values(delDia).flat()} plan={plan} />
             {op && (
               <label class="interruptor-fila interruptor-dia"><span class="peq">{dia === hoy ? 'Hoy' : 'Este día'} sin {NOMBRE_TOMA[op].toLowerCase()}</span>
-                <input type="checkbox" role="switch" class="interruptor" checked={sin} disabled={ocupado || diasSin.cargando} onChange={cambiarSin} /></label>
+                <input type="checkbox" role="switch" class="interruptor" checked={sin} disabled={diasSin.cargando && !diasSin.datos} onChange={cambiarSin} /></label>
             )}
             {sin && <span class="mini terciario">{(delDia[op] || []).length ? `Tienes algo apuntado en ${NOMBRE_TOMA[op].toLowerCase()}: quítalo si al final no la haces. ` : ''}Al añadir, te enseñamos las recetas para los días sin {NOMBRE_TOMA[op].toLowerCase()}.</span>}
           </div>
@@ -267,7 +269,7 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
                 </div>
                 {(delDia[t] || []).map((e) => (
                   <div class={`entrada-menu ${e.hecho ? 'hecha' : ''}`} key={e.id}>
-                    <button type="button" class="casilla-redonda" aria-pressed={e.hecho ? 'true' : 'false'} aria-label={`${e.texto}: ${e.hecho ? 'comida' : 'sin comer'}`} disabled={ocupado} onClick={() => marcar(e)}>{e.hecho && <Icono n="hecho" />}</button>
+                    <button type="button" class="casilla-redonda" aria-pressed={e.hecho ? 'true' : 'false'} aria-label={`${e.texto}: ${e.hecho ? 'comida' : 'sin comer'}`} onClick={() => marcar(e)}>{e.hecho && <Icono n="hecho" />}</button>
                     <button type="button" class="entrada-texto" onClick={() => setHoja({ tipo: 'entrada', e })}>
                       <span class={e.hecho ? 'tachado' : ''}>{e.texto}{Number(e.raciones) !== 1 ? <span class="terciario num"> ×{num(e.raciones, 2)}</span> : ''}</span>
                       {(e.kcal != null || e.proteina_g != null) && <span class="mini terciario num">{textoMacros(e, true)}</span>}
