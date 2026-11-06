@@ -590,10 +590,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .bdia-semanas i.parcial { background: rgba(255, 255, 255, .42); }
 .bdia-semanas i.sin { background: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
 .bdia-semanas i.actual { outline: 1.5px solid var(--bv-oro); outline-offset: 2px; }
-<<<<<<< HEAD
 .bdia-semanas.bdia-dias { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; } /* (tanda 14) quien solo lleva nutrición: su semana, día a día */
-=======
->>>>>>> origin/main
 .bdia-animo { margin: 6px 0 0; font-size: 0.9375rem; line-height: 1.4; font-weight: 600; color: var(--bv-oro); text-wrap: pretty; }
 /* En pantallas bajas, lo primero que se va es la tira de las 12 semanas; el resto se desliza si hace falta */
 @media (max-height: 719px) { .bdia-doce { display: none; } .bdia-tablero { margin-top: 16px; } .bdia h1 { margin-top: 18px; } .bdia-nombre { font-size: clamp(2rem, 10.5vw, 2.5rem); } }
@@ -601,7 +598,6 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 /* En pantallas anchas y altas (tableta, ordenador), el bloque entero centrado */
 @media (min-width: 700px) and (min-height: 760px) { .bdia-cuerpo { align-self: center; overflow: visible; } }
 @media (prefers-reduced-motion: no-preference) { .bdia-tablero { animation: bdia-entra .45s cubic-bezier(.2, .8, .2, 1) both; } }
-<<<<<<< HEAD
 
 /* ---------- 21. La sesión: menos antes de empezar, la serie que toca y el descanso ---------------------------------
    (ui/atleta/Sesion.jsx, Preparacion.jsx, DondeEntrenas.jsx y sesion-comun.jsx, sin tocar: solo estilos)
@@ -735,5 +731,3 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    Solo cambia el aviso que lleva botón: los errores de un formulario (.error sin botón) siguen igual. */
 .error:has(> .btn-texto) { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; padding: 10px 10px 10px 14px; }
 .error > .btn-texto { flex: none; min-height: 36px; padding: 0 12px; border-radius: 10px; background: var(--hoja); color: var(--alerta); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alerta) 30%, transparent); }
-=======
->>>>>>> origin/main

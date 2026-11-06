@@ -141,7 +141,6 @@ export function panelCoach({ bandeja = null, sinLeer = null, equipo = null, aten
   }
   return { sesion: null, cifras, semanas: [], completas: 0, animo };
 }
-<<<<<<< HEAD
 
 // Quien solo lleva nutrición (tanda 14): su menú de hoy, las comidas hechas, los días en objetivo de la semana y la
 // semana día a día. menu: las comidas de hoy de su menú ([{ hecho }]); objetivo: el del día ({ kcal, proteina }) o null
@@ -173,5 +172,3 @@ export function panelNutricion({ menu = [], objetivo = null, semana = null } = {
   else animo = 'Cada comida que marcas le dice a tu coach cómo vas.';
   return { sesion, cifras, semanas: [], completas: 0, dias, enObjetivo, animo };
 }
-=======
->>>>>>> origin/main
