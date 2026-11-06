@@ -757,9 +757,15 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   // v0.54: lo del menú de cada mensaje
   const responder = (c) => { setMenu(null); setEditando(null); setSeleccion(null); setCitando(c); setTimeout(() => area.current?.focus(), 0); };
   const editar = (c) => { setMenu(null); setCitando(null); setAdjuntos([]); setEditando(c); setTexto(c.texto); setTimeout(() => { if (area.current) { ajustarAlto(area.current); area.current.focus(); } }, 0); };
+  // (pulido 5) la reacción se ve al tocarla y se guarda por detrás (si no se puede guardar, se quita y se avisa)
   async function reaccionar(c, emoji) {
     setMenu(null);
-    try { await api.reaccionarMensaje(c.id, emoji); await conv.recargar(true); avisarCambio(); } catch (err) { aviso(err.message, 'error'); }
+    const mia = (c.reacciones || []).find((r) => r.usuario_id === miId)?.emoji || null;
+    const queda = mia === emoji ? null : emoji;
+    const cambio = (lista) => (Array.isArray(lista) ? lista.map((x) => (x.id !== c.id ? x : {
+      ...x, reacciones: [...(x.reacciones || []).filter((r) => r.usuario_id !== miId), ...(queda ? [{ comentario_id: c.id, usuario_id: miId, emoji: queda }] : [])],
+    })) : lista);
+    try { await conv.alMomento(cambio, () => api.reaccionarMensaje(c.id, emoji)); avisarCambio(); } catch (err) { aviso(err.message, 'error'); }
   }
   async function destacar(cs, si = null) {
     setMenu(null);

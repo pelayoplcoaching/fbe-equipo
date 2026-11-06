@@ -3351,6 +3351,9 @@ try {
     await c.put('https://fbe-compartido.invalid/lista', new Response(JSON.stringify({ n: xs.length }), { headers: { 'content-type': 'application/json' } }));
   }, archivos);
   await compartir([{ bytes: pngCompartido, tipo: 'image/png', nombre: 'captura.png' }, { bytes: [...new TextEncoder().encode('%PDF-1.4\n<< /Type /Pages /Count 1 >>')], tipo: 'application/pdf', nombre: 'plan.pdf' }]);
+  // (v0.85) al cerrar la hoja, «atrás» retira sus entradas del historial 250 ms después (atras.js): si se navega
+  // antes, ese retroceso corta la carga (ERR_ABORTED)
+  await p.waitForTimeout(600);
   await p.goto('http://localhost:4174/?demo&compartido=1#hoy');
   await p.locator('.chat-adjunto').waitFor();
   check(await hay(p.locator('.chat-adjunto-item'), 2) && await p.locator('.chat-adjunto-item.es-pdf').count() === 1 && !(await p.evaluate(() => location.search)).includes('compartido'),
@@ -5759,6 +5762,16 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ «Rellenar la semana» de la v0.79:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// Pulido de fluidez: respuesta al pulsar, no perder el sitio, «atrás»… (test/e2e-pulido.mjs)
+console.log('\nPulido de fluidez');
+try {
+  const { probarPulido } = await import('./e2e-pulido.mjs');
+  await probarPulido({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el pulido de fluidez:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.74: «Programar según FBE» en el editor del programa (test/e2e-programar-fbe.mjs)

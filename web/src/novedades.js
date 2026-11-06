@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.85': {
+    atleta: [
+      'Todo responde al pulsar, no pierdes el sitio al volver y «atrás» cierra lo último que abriste.',
+      'Tira hacia abajo para recargar. Al marcar una serie suena un tic suave (se quita en Ajustes → Sonido al marcar una serie).',
+    ],
+    coach: [
+      'Las listas (atletas, Revisar, mensajes) salen al momento al volver a ellas, y se ponen al día solas.',
+    ],
+  },
   '0.84': {
     atleta: [
       'El muro del equipo va más prieto: las publicaciones quedan más arriba.',

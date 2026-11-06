@@ -100,6 +100,51 @@ export function tono(frecuencia = 880, duracion = 0.08, volumen = 0.18) {
     o.start(t); o.stop(t + duracion + 0.02);
   } catch { /* sin audio */ }
 }
+// (pulido 7) Al marcar una serie, un «tic» corto y suave que sube; al terminar la sesión, cuatro notas que suben. Con
+// su interruptor (Ajustes → «Sonido al marcar una serie») y por el mismo canal que el aviso del descanso («ambient»:
+// se mezcla con la música, no la corta). Sin audio preparado (prepararAudio, en un toque), no suena y no pasa nada.
+const avisarSonido = (tipo) => { try { globalThis.dispatchEvent?.(new CustomEvent('fbe-sonido', { detail: { tipo } })); } catch { /* */ } };
+export function sonarSerie() {
+  const a = leerAjustes();
+  if (a.sonidoSerie === false) return false;
+  avisarSonido('serie');   // (para las pruebas: que se pidió el sonido, suene o no en este navegador)
+  if (!audio) return false;
+  try {
+    if (audio.state === 'suspended') audio.resume().catch(() => {});
+    const vol = 0.13 * Math.min(1, Math.max(0.1, Number(a.volumen) || 1));
+    const t = audio.currentTime + 0.005, o = audio.createOscillator(), g = audio.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(880, t);
+    o.frequency.exponentialRampToValueAtTime(1480, t + 0.05);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    o.connect(g).connect(audio.destination);
+    o.start(t); o.stop(t + 0.13);
+    return true;
+  } catch { return false; }
+}
+export function sonarFinSesion() {
+  const a = leerAjustes();
+  if (a.sonidoSerie === false) return false;
+  avisarSonido('fin-sesion');
+  if (!audio) return false;
+  try {
+    if (audio.state === 'suspended') audio.resume().catch(() => {});
+    const vol = 0.16 * Math.min(1, Math.max(0.1, Number(a.volumen) || 1));
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+      const t = audio.currentTime + 0.01 + i * 0.09, largo = i === 3 ? 0.5 : 0.16;
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + largo);
+      o.connect(g).connect(audio.destination);
+      o.start(t); o.stop(t + largo + 0.03);
+    });
+    return true;
+  } catch { return false; }
+}
 // La vibración del aviso, sola (v0.62: cuando el sonido ya lo pone la pista del descanso)
 export function vibrarAviso() { if (leerAjustes().vibracion) try { navigator.vibrate?.([200, 100, 200, 100, 400]); } catch { /* */ } }
 export function vibrarCorto(ms = 30) { if (leerAjustes().vibracion) try { navigator.vibrate?.(ms); } catch { /* */ } }

@@ -13,7 +13,7 @@ import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herram
 import { HojaCompartir } from '../Compartir.jsx';
 import { HojaCompartirEquipo, leerAutoCompartir } from '../Comunidad.jsx';
 import { PictoEjercicio } from '../Pictograma.jsx';
-import { prepararAudio, celebrar, usePantallaEncendida, useAhora, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
+import { prepararAudio, celebrar, sonarSerie, sonarFinSesion, usePantallaEncendida, useAhora, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
 import { FilaSerie } from './FilaSerie.jsx';
 import { useTecladoApp } from './Teclado.jsx';
 import { pasoKg, tipoCarga, pideRpe, discoMinimoValido, DISCO_MINIMO_DEFECTO, discosCon } from '../../logica/teclado.js';
@@ -422,7 +422,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       registrada_en: previa?.registrada_en || new Date().toISOString() };
     const local = { ...datos, id: previa?.id || `local-${e.id}-${numero}` };
     setHechas((h) => ({ ...h, [e.id]: { ...h[e.id], [numero]: local } }));
-    if (!previa) vibrar('serie');
+    if (!previa) { vibrar('serie'); sonarSerie(); }   // (pulido 7: y un tic suave)
     if (!previa) quitarPrepAntigua();
     // v0.49: al completar las series pautadas (las de «Añadir serie» no cuentan), la tarjeta se pliega en una línea
     // un momento después, para ver el check
@@ -756,6 +756,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
               res = { series: Object.values(hechas).reduce((n, h) => n + Object.keys(h || {}).length, 0), tonelaje: 0, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cambios.cardio_hecho || null, records: [], enCola: r.enCola, musculos: {}, tarjeta: null };
             }
             setResumen(res);
+            sonarFinSesion();   // (pulido 7)
           }} />
       )}
     </div>

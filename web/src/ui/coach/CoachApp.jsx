@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, Icono, Marca, Insignia, usePildora } from '../comunes.jsx';
 import { conTransicion } from '../transiciones.js';
+import { usePosicion, subirArriba } from '../posiciones.js';
+import { useAtras, ponerRuta } from '../atras.js';
 import { Panel } from './Panel.jsx';
 import { Ficha } from './Ficha.jsx';
 import { Revisar } from './Revisar.jsx';
@@ -23,6 +25,8 @@ import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
 // Equipo (v0.43): el muro de la comunidad, solo con ella abierta (se abre en Cuenta → Comunidad)
 const TODAS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['revision', 'Revisión semanal', 'hecho'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
 const TABS = TODAS.filter(([t]) => t !== 'equipo');
+// Pulido 9: las secciones de consulta, donde tirar hacia abajo pone al día lo que se ve (ui/tirar.js)
+const TIRAR = ['atletas', 'revisar', 'mensajes', 'equipo'];
 // En la barra del móvil, el nombre corto (el completo lo sigue leyendo el lector de pantalla)
 const CORTAS = { revision: 'Semanal' };
 
@@ -54,7 +58,9 @@ export function CoachApp() {
   useEffect(() => { if (bandeja.datos) ponerInsignia((bandeja.datos.total || 0) + (sinLeer.datos || 0)); }, [bandeja.datos, sinLeer.datos]);
   // (v0.56) «Compartir → FBE Equipo» desde la cuenta del coach: fotos, vídeos y PDF a la conversación que elija
   // (RecibirCompartidoCoach, abajo)
-  useEffect(() => { try { history.replaceState(null, '', `#${tab}`); } catch { /* */ } window.scrollTo(0, 0); }, [tab, ficha?.atletaId]);
+  useEffect(() => { ponerRuta(`#${tab}`); }, [tab, ficha?.atletaId]);
+  // Pulido 2: cada sección recuerda por dónde iba (al volver de otra o al cerrar una ficha); la ficha y el chat, no
+  usePosicion(ficha ? `ficha:${ficha.atletaId}` : tab, !ficha && tab !== 'mensajes');
   // La bandeja se refresca al cambiar de sección (no al montar: ya se carga sola)
   const montado = useRef(false);
   useEffect(() => { if (montado.current) { bandeja.recargar(true); sinLeer.recargar(true); } montado.current = true; }, [tab, ficha?.atletaId]);
@@ -70,7 +76,7 @@ export function CoachApp() {
       const h = location.hash.slice(1);
       const chat = chatDeRuta(h);
       // (el #hash vuelve a «#mensajes»: así la siguiente de esa misma conversación también la abre)
-      if (chat) { setFicha(null); setTab('mensajes'); setPeticion({ tab: 'mensajes', atletaId: chat, id: Date.now() }); sinLeer.recargar(true); try { history.replaceState(null, '', '#mensajes'); } catch { /* */ } return; }
+      if (chat) { setFicha(null); setTab('mensajes'); setPeticion({ tab: 'mensajes', atletaId: chat, id: Date.now() }); sinLeer.recargar(true); ponerRuta('#mensajes'); return; }
       if (pestanasRef.current.some(([t]) => t === h)) { setFicha(null); setTab(h); bandeja.recargar(true); }
     };
     const llega = () => { bandeja.recargar(true); sinLeer.recargar(true); };
@@ -128,10 +134,15 @@ export function CoachApp() {
   const elegirPestana = (id) => {
     // Con su ficha ya creada, la pestaña entra directamente en el modo atleta
     if (id === 'modo-atleta' && propioCoach) { entrarModoAtleta(); return; }
-    if (id === tab && !ficha) return;
+    if (id === tab && !ficha) { subirArriba(); return; }   // tocar la sección en la que ya se está: arriba
     const orden = pestanas.map(([t]) => t);
     conTransicion(() => { setTab(id); setFicha(null); setPeticion(null); }, orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : id === tab ? 'cerrar' : 'adelante');
   };
+
+  // Pulido 3: «atrás» en el móvil cierra la ficha abierta y, si no, vuelve a Atletas (las ventanas se cierran solas
+  // antes: atras.js)
+  useAtras(!ficha && tab !== 'atletas', () => elegirPestana('atletas'), 0);
+  useAtras(!!ficha, cerrarFicha, 1);
 
   return (
     <>
@@ -157,7 +168,7 @@ export function CoachApp() {
           detalles={{ revision: 'Tus atletas, uno a uno, cada semana', equipo: 'El muro de la comunidad', plantillas: 'Bloques para reutilizar', biblioteca: 'Ejercicios, recetas y recursos',
             'modo-atleta': 'Entrena con tu propia ficha', cuenta: 'Tu cuenta, los cobros y los ajustes' }} />
       )}
-      <main key={tab} class="vista">
+      <main key={tab} class="vista" data-tirar={!ficha && TIRAR.includes(tab) ? '' : undefined}>
       {tab === 'atletas' && (ficha
         ? <Ficha key={`${ficha.atletaId}:${ficha.n || 0}`} atletaId={ficha.atletaId} pestanaInicial={ficha.pestana} resumenInicial={resumenesPanel.current?.find((r) => r.atleta_id === ficha.atletaId) || null} alVolver={cerrarFicha} alCambiar={() => bandeja.recargar(true)} />
         : <Panel abrir={abrirAtleta} pendientes={bandeja.datos?.porAtleta || {}} porRevisar={bandeja.datos ? total : null}

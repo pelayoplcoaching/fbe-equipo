@@ -64,7 +64,8 @@ const MOLESTIA = ['Sin dolor', 'Leve', 'Moderada', 'Grave'];
 
 export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = null, peticion = null, alBuscar, abrirCuenta, alCargar }) {
   const { api, perfil } = useApp();
-  const res = useCarga(() => api.resumenes(), []);
+  // (pulido 4) al volver a la lista se enseña al momento la última cargada y se pone al día por detrás
+  const res = useCarga(() => api.resumenes(), [], { recuerdo: `resumenes:${api.uid()}` });
   // v0.49: lo cargado se queda en CoachApp para la cabecera de la ficha (sin volver a pedirlo)
   useEffect(() => { if (res.datos) alCargar?.(res.datos); }, [res.datos]);
   const [filtro, setFiltro] = useState('todos');
@@ -252,7 +253,7 @@ function NuevoAtleta({ alCerrar }) {
 
 export function Invitacion({ atleta, alCerrar }) {
   const { api, aviso, modo } = useApp();
-  const codigo = useCarga(() => api.crearInvitacion(atleta.id), [atleta.id]);
+  const codigo = useCarga(() => api.crearInvitacion(atleta.id), [atleta.id], { tirar: false });   // (no es una consulta: crea el código)
   const url = typeof location !== 'undefined' ? location.origin + location.pathname : '';
   const nombre = atleta.nombre.split(' ')[0];
   const mensaje = codigo.datos

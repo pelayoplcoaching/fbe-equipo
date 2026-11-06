@@ -19,7 +19,8 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 // esCoach: la misma pantalla en la ficha, con «Marcar revisado».
 export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, salud = true, alCambiar }) {
   const { api, aviso } = useApp();
-  const datos = useCarga(() => api.diario(atletaId), [atletaId]);
+  // (pulido 4) al volver, el diario que ya se cargó se enseña al momento y se pone al día por detrás
+  const datos = useCarga(() => api.diario(atletaId), [atletaId], { recuerdo: `diario:${api.uid()}:${atletaId}` });
   const [filtro, setFiltro] = useState('todo'); // todo | videos | fotos | destacados | <ejercicioId>
   const [abierto, setAbierto] = useState(null);
   const [subir, setSubir] = useState(false);

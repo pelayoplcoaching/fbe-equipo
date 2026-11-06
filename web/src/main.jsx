@@ -1,10 +1,13 @@
 import { render } from 'preact';
 import './estilos.css';
 import './diseno.css';
+import './pulido.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';
+import { instalarPulido } from './ui/pulido.js';
 
 aplicarTema();
+instalarPulido();
 import { crearApi } from './datos/api.js';
 import { crearCola } from './datos/cola.js';
 import { instalarRegistro } from './registro-errores.js';

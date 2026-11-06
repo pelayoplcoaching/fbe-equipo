@@ -6,6 +6,7 @@ import { BandaDemo } from '../App.jsx';
 import { ordenarConversaciones, filtrarConversaciones, vistaPrevia, leerBorrador, resaltar, normalLetras } from '../../logica/mensajes.js';
 import { silenciado, textoSilencio } from '../../logica/chat.js';
 import { conTransicion } from '../transiciones.js';
+import { useAtras } from '../atras.js';
 import { HojaDifusion } from './Difusion.jsx';
 import { HojaSilenciar } from '../chat/InfoContacto.jsx';
 import { useEstrecha } from '../BarraMas.jsx';
@@ -24,7 +25,8 @@ const almacen = () => { try { return window.localStorage; } catch { return null;
 
 export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
   const { api, perfil, aviso } = useApp();
-  const lista = useCarga(() => api.conversaciones(), []);
+  // (pulido 4) al volver a Mensajes se enseña al momento la última lista y se pone al día por detrás
+  const lista = useCarga(() => api.conversaciones(), [], { recuerdo: `conversaciones:${api.uid()}` });
   const [abierta, setAbierta] = useState(null); // { atleta, saltarA }
   const [buscar, setBuscar] = useState('');
   const [filtro, setFiltro] = useState('todos');
@@ -36,6 +38,9 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
   // (diseño) En un ordenador con la ventana ancha, la lista a la izquierda y la conversación abierta a la derecha, a la
   // vez. En el móvil y en ventanas estrechas, como siempre: la conversación sustituye a la lista.
   const dos = !useEstrecha(1099);
+  // Pulido 3: en el móvil, «atrás» con una conversación abierta vuelve a la lista
+  const volverRef = useRef(null);
+  useAtras(!!abierta && !dos, () => volverRef.current?.(), 2);
   const silencios = useCarga(() => api.silencios(), [vuelta]);
   const recargar = useRef(null);
   recargar.current = lista.recargar;
@@ -93,6 +98,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
   if (abierta) {
     const a = abierta.atleta;
     const volver = () => { conTransicion(() => setAbierta(null), 'cerrar'); setVuelta((v) => v + 1); lista.recargar(true); alCambiar?.(); };
+    volverRef.current = volver;
     chat = (
       <Chat key={a.id} atletaId={a.id} nombreAtleta={a.nombre} fotoOtro={a.foto} perfilOtro={a.perfil_id || null} saltarA={abierta.saltarA}
         alCambiar={() => { lista.recargar(true); alCambiar?.(); }} alLeer={() => { lista.recargar(true); alCambiar?.(); }}

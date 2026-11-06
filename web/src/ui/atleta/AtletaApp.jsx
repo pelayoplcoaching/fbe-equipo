@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia, usePildora } from '../comunes.jsx';
 import { conTransicion } from '../transiciones.js';
+import { usePosicion, subirArriba } from '../posiciones.js';
+import { useAtras, ponerRuta } from '../atras.js';
 import { Mensajes } from './Mensajes.jsx';
 import { Hoy } from './Hoy.jsx';
 import { Sesion } from './Sesion.jsx';
@@ -32,6 +34,8 @@ import { VideoEnlazado } from '../tecnica/MiTecnica.jsx';
 // Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
 // Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento. Equipo (v0.43), solo con
 // la comunidad abierta y a quien no está de baja.
+// Pulido 9: las pestañas de consulta, donde tirar hacia abajo pone al día lo que se ve (ui/tirar.js)
+const TIRAR = ['hoy', 'semana', 'progreso', 'comidas', 'equipo'];
 const TODAS = [
   ['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], ['comidas', 'Comidas', 'receta'], ['checkin', 'Check-in', 'checkin'],
   ['progreso', 'Progreso', 'progreso'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['perfil', 'Perfil', 'perfil'],
@@ -139,9 +143,15 @@ export function AtletaApp() {
   }, []);
 
   useEffect(() => {
-    try { history.replaceState(null, '', `#${tab}`); } catch { /* */ }
-    window.scrollTo(0, 0);
+    ponerRuta(`#${tab}`);
   }, [tab]);
+  // Pulido 2: cada pestaña recuerda por dónde iba (al volver de otra o al cerrar una sesión); la sesión y el chat, no
+  usePosicion(sesionId ? `sesion:${sesionId}` : tab, !sesionId && tab !== 'mensajes');
+  // Pulido 3: «atrás» en el móvil cierra la sesión abierta y, si no, vuelve a la primera pestaña (las ventanas se
+  // cierran solas antes: atras.js). (Lo que hace cada uno se define más abajo, tras los retornos tempranos)
+  const alAtras = useRef({});
+  useAtras(!sesionId && tab !== TABS[0]?.[0], () => alAtras.current.inicio?.(), 0);
+  useAtras(!!sesionId, () => alAtras.current.sesion?.(), 1);
   // Al tocar una notificación con la app abierta, se va a su pestaña; si llega una, se ponen al día las respuestas
   useEffect(() => {
     // (con una sesión abierta no se sale de ella: la pestaña queda elegida para cuando la cierre)
@@ -176,11 +186,12 @@ export function AtletaApp() {
   };
   const cerrarSesion = () => { conTransicion(() => setSesionId(null), 'cerrar'); programa.recargar(true); noLeidos.recargar(true); };
   const irAPestana = (id) => {
-    if (id === tab) return;
+    if (id === tab) { subirArriba(); return; }   // tocar la pestaña en la que ya se está: arriba
     const orden = TABS.map(([t]) => t);
     conTransicion(() => setTab(id), orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : 'adelante');
   };
   const releer = () => noLeidos.recargar(true);
+  alAtras.current = { inicio: () => irAPestana(TABS[0][0]), sesion: cerrarSesion };
 
   // Los mensajes sueltos del coach cuentan en Mensajes; los de sesiones, check-ins y vídeos, en Hoy
   const mensajesSinLeer = (noLeidos.datos || []).filter((c) => api.esMensaje(c)).length;
@@ -228,7 +239,7 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
       {!propio && <RecibirCompartido programa={compartido.programa} />}
       {sesionId ? <main><BandaPendientes pendientes={pendientesArchivos} /><Sesion id={sesionId} alCerrar={cerrarSesion} alLeer={releer} salud={salud} /></main> : (
         <>
-          <main key={`${tab}:${dia}`} class="vista">
+          <main key={`${tab}:${dia}`} class="vista" data-tirar={TIRAR.includes(tab) ? '' : undefined}>
             <BandaPendientes pendientes={pendientesArchivos} />
             {propio && <BandaModoAtleta />}
             {tab === 'hoy' && <Hoy {...compartido} />}
