@@ -411,6 +411,40 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       check(quedaAntes === 1 && quedaDespues === 0, `la copia de la lista está en el dispositivo mientras dura la sesión y se borra al cerrarla (${quedaAntes} → ${quedaDespues})`);
       await ctx.close();
     }
+    // ---------- 10. Arranque: lo que no hace falta para abrir se carga después
+    {
+      const pedidos = [];
+      const { ctx, p } = await abrir(null, {}, { antes: (pg) => { pg.on('request', (r) => { const m = /\/chunks\/([A-Za-z-]+)-[A-Z0-9]+\.js/.exec(r.url()); if (m) pedidos.push(m[1]); }); } });
+      await entrar(p, /Ana López/);
+      await p.locator('.hero-dia').waitFor();
+      const alAbrir = [...pedidos];
+      check(!alAbrir.includes('Comunidad') && !alAbrir.includes('Checkin') && !alAbrir.includes('sonidos-descanso') && !alAbrir.includes('CoachApp'),
+        'al abrir la app, el atleta no descarga ni procesa la pantalla Equipo, el check-in, los sonidos del descanso ni la app del coach');
+      // Con la app quieta, se traen por detrás: al tocar la pestaña ya están
+      let enReposo = false;
+      for (let k = 0; k < 40 && !enReposo; k++) { await p.waitForTimeout(250); enReposo = pedidos.includes('Comunidad') && pedidos.includes('Checkin'); }
+      check(enReposo, 'unos segundos después, con la app quieta, Equipo y el check-in se traen por detrás');
+      await cerrarAvisos(p);
+      await irASeccion(p, 'Equipo');
+      const equipo = await p.locator('main h1', { hasText: 'Equipo' }).first().waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
+      check(equipo && await p.locator('main .error').count() === 0, 'la pestaña Equipo abre como siempre');
+      await irASeccion(p, 'Check-in');
+      const checkin = await p.locator('main h1', { hasText: /Check-in/i }).first().waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
+      check(checkin, 'y el check-in');
+      // Los sonidos del descanso llegan al entrar en una sesión, con el primer toque
+      await irASeccion(p, 'Hoy');
+      await p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).tap();
+      await p.locator('.portada-sesion, .ejercicio').first().waitFor();
+      if (await p.locator('.portada-sesion').count()) await p.locator('.portada-empezar').getByRole('button', { name: 'Empezar', exact: true }).tap();
+      await p.locator('.ejercicio').first().waitFor();
+      let sonidos = false;
+      for (let k = 0; k < 20 && !sonidos; k++) { await p.waitForTimeout(200); sonidos = pedidos.includes('sonidos-descanso'); }
+      check(sonidos, 'los sonidos del descanso se traen al entrar en la sesión, antes del primer descanso');
+      // El service worker guarda esos trozos con lo demás (abren sin conexión)
+      const sw = await p.evaluate(() => fetch('sw.js').then((r) => r.text()));
+      check(/chunks\/Comunidad-/.test(sw) && /chunks\/Checkin-/.test(sw) && /chunks\/sonidos-descanso-/.test(sw), 'y el service worker los guarda con lo demás: también abren sin conexión');
+      await ctx.close();
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     if (process.env.DEPURAR) console.log(e.stack.split('\n').slice(0, 12).join('\n'));

@@ -35,7 +35,7 @@ import { num } from '../logica/calculos.js';
 import { Pictograma } from './Pictograma.jsx';
 import { patronEjercicio } from '../logica/diseno.js';
 import { VERSION_COMUNIDAD, AVISO_041, AVISO_042, AVISO_043 } from '../datos/api.js';
-import { leerPreferencia, guardarPreferencia } from './preferencias.js';
+import { leerVistoEquipo, guardarVistoEquipo, leerCelebrados, marcarCelebrado, leerAutoCompartir, guardarAutoCompartir } from './comunidad-local.js';
 import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
@@ -43,31 +43,8 @@ const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
 const VISTAS_043 = [...VISTAS, ['preguntas', 'Preguntas']];
 
 // ---------------------------------------------------------------- lo que recuerda este móvil (v0.47)
-// La última vez que vio el muro (para «Nuevo» y la insignia de Equipo) y los logros ya celebrados. Si el navegador
-// no deja guardar (sin almacenamiento o lleno), se recuerda mientras la app está abierta.
-const claveVisto = (uid) => `fbe-equipo-visto:${uid || ''}`;
-const claveCelebrados = (uid) => `fbe-equipo-celebrados:${uid || ''}`;
-const enMemoria = new Map();
-const leerLocal = (k) => { try { const v = localStorage.getItem(k); if (v != null) return v; } catch { /* */ } return enMemoria.get(k) ?? null; };
-const guardarLocal = (k, v) => { enMemoria.set(k, v); try { localStorage.setItem(k, v); } catch { /* sin almacenamiento: queda en memoria */ } };
-export function leerVistoEquipo(uid) {
-  return leerLocal(claveVisto(uid)) || null;
-}
-function guardarVistoEquipo(uid, iso) {
-  guardarLocal(claveVisto(uid), iso);
-  try { window.dispatchEvent(new Event('fbe-equipo-visto')); } catch { /* */ }
-}
-function leerCelebrados(uid) {
-  try { const v = JSON.parse(leerLocal(claveCelebrados(uid)) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
-}
-function marcarCelebrado(uid, id) {
-  guardarLocal(claveCelebrados(uid), JSON.stringify([...new Set([...leerCelebrados(uid), id])].slice(-200)));
-}
-
-// v0.69: «Compartir mis entrenos sin preguntar», un ajuste de este móvil (por cuenta). Lo lee el resumen de la sesión
-const claveAutoCompartir = (uid) => `fbe-equipo-autocompartir:${uid || ''}`;
-export const leerAutoCompartir = (uid) => leerPreferencia(claveAutoCompartir(uid), false) === true;
-const guardarAutoCompartir = (uid, v) => guardarPreferencia(claveAutoCompartir(uid), !!v);
+// (pulido 2.10: en ui/comunidad-local.js, para que la app lo lea al arrancar sin cargar esta pantalla)
+export { leerVistoEquipo, leerAutoCompartir };
 
 // ---------------------------------------------------------------- el perfil en el equipo (v0.47)
 // Tocar a alguien (su foto o su nombre en una publicación, un comentario, el ranking, un reto o una mención) abre su
