@@ -49,7 +49,8 @@ li > a[href]:active { opacity: .5; }
 
 /* ---------- 3. Más zona de toque en lo pequeño (sin cambiar su tamaño) ---------- */
 :where(.pista-mas, .burbuja-ctx, .tira-chip, .btn-avatar, .burbuja-mas, .quien-reacciona) { position: relative; }
-.pista-mas::after, .tira-chip::after, .btn-avatar::after, .quien-reacciona::after { content: ""; position: absolute; inset: -8px -4px; }
+.pista-mas::after, .btn-avatar::after, .quien-reacciona::after { content: ""; position: absolute; inset: -8px -4px; }
+.tira-chip::after { content: ""; position: absolute; inset: -10px -7px; }
 .burbuja-ctx::after, .burbuja-mas::after { content: ""; position: absolute; inset: -11px -6px; }
 
 /* ---------- Pulido 9: tirar para recargar (ui/tirar.js) ----------
@@ -85,3 +86,22 @@ html { overscroll-behavior-y: contain; }
 @media (prefers-reduced-motion: reduce) { .reserva-hueco[data-hueco="entero"] { animation: none; } }
 /* Las filas plegables de Hoy van seguidas, más juntas (diseno.css: .plegable-hoy + .plegable-hoy): envueltas, igual */
 .reserva-plegable + .reserva-plegable > * { margin-top: -10px; }
+
+/* ---------- (pulido 2.5) Zonas de toque de 44 px ----------
+   Los botones pequeños (los de 38 y 30 px de alto, los de solo texto, los de icono, los chips de filtro, las casillas
+   de 26 px) se quedan como están a la vista, pero se pulsan en una zona de 44 × 44 px como mínimo (lo que piden iOS y
+   Android): una zona invisible alrededor, centrada, que solo crece lo que le falta a cada uno (a un botón de 44 o más
+   no le añade nada). No ocupa sitio: no mueve nada. Con :where() no pesa: cualquier ::after propio manda sobre este.
+   Fuera quedan las rejillas apretadas (el calendario de constancia de la ficha): ahí las zonas se pisarían. */
+:where(.btn, .btn-texto, .casilla-redonda, .pista-cerrar, .selector-chips button, .segmentos button, .zonas button, .paso button, button.chip, button.mini) { position: relative; }
+:where(.btn, .btn-texto, .casilla-redonda, .pista-cerrar, .selector-chips button, .segmentos button, .zonas button, .paso button, button.chip, button.mini)::after {
+  content: ""; position: absolute;
+  top: min(0px, calc((100% - 44px) / 2)); bottom: min(0px, calc((100% - 44px) / 2));
+  left: min(0px, calc((100% - 44px) / 2)); right: min(0px, calc((100% - 44px) / 2));
+}
+/* Las filas que se despliegan (las preguntas frecuentes, «Cómo se calcula») y las de un interruptor: lo mismo, con
+   ::before (algunas usan ::after para su signo) */
+:where(details > summary, label.interruptor-fila) { position: relative; }
+:where(details > summary, label.interruptor-fila)::before { content: ""; position: absolute; left: 0; right: 0; top: min(0px, calc((100% - 44px) / 2)); bottom: min(0px, calc((100% - 44px) / 2)); }
+/* La casilla de «comido» va pegada al texto de la comida (que también se pulsa): su zona va por encima */
+.casilla-redonda { z-index: 1; }

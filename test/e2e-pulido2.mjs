@@ -213,6 +213,33 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       check(await conFoto() === fotos1 && await lecturas(p, '"cols":"id,foto_mini"') === 0, 'al volver, las fotos de las recetas no se vuelven a bajar y siguen ahí');
       await ctx.close();
     }
+    // ---------- 5. Zonas de toque de 44 px
+    {
+      // De cada cosa pequeña que se pulsa: lo que mide a la vista y la zona en la que responde (con su ampliación invisible)
+      const zonas = (p, sel) => p.evaluate((s) => [...document.querySelectorAll(s)].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 && !e.closest('[inert]'); }).map((e) => {
+        const r = e.getBoundingClientRect(); let w = r.width, h = r.height;
+        for (const ps of ['::after', '::before']) { const c = getComputedStyle(e, ps); if (c.content !== 'none' && c.position === 'absolute') { w = Math.max(w, parseFloat(c.width) || 0); h = Math.max(h, parseFloat(c.height) || 0); } }
+        return { w: Math.round(w), h: Math.round(h), rw: Math.round(r.width), rh: Math.round(r.height) };
+      }), sel);
+      const PEQUENOS = '.btn-peq, .btn-icono, .btn-texto, .casilla-redonda, .pista-cerrar, .selector-chips button, .segmentos button, .tira-chip';
+      const { ctx, p } = await abrir(/Lucía Ferrer/);
+      await p.locator('.seccion-menu-hoy .casilla-redonda').first().waitFor();
+      const hoy = await zonas(p, PEQUENOS);
+      const cas = await zonas(p, '.casilla-redonda');
+      check(hoy.length >= 8 && hoy.every((z) => z.w >= 44 && z.h >= 44), `en Hoy, todo lo pequeño que se pulsa responde en 44 × 44 px o más (${hoy.length} botones; el menor, ${Math.min(...hoy.map((z) => Math.min(z.w, z.h)))} px)`);
+      check(cas.length > 0 && cas.every((z) => z.rw === 26 && z.rh === 26 && z.w >= 44 && z.h >= 44), 'la casilla de «comido» sigue midiendo 26 px a la vista y se pulsa en 44');
+      // Y de verdad: un toque 7 px por fuera de la casilla (arriba y a su izquierda) le da a la casilla
+      const fuera = await p.evaluate(() => { const e = document.querySelector('.seccion-menu-hoy .casilla-redonda'); e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect();
+        const en = (x, y) => document.elementFromPoint(x, y) === e; return { arriba: en(r.left + r.width / 2, r.top - 7), izquierda: en(r.left - 7, r.top + r.height / 2), derecha: en(r.right + 7, r.top + r.height / 2), lejos: en(r.left + r.width / 2, r.top - 14) }; });
+      check(fuera.arriba && fuera.izquierda && fuera.derecha && !fuera.lejos, 'un toque 7 px por fuera de la casilla (arriba, a la izquierda o hacia el texto) la marca; uno a 14 px, no');
+      await ctx.close();
+      const c = await abrir(/Pelayo/);
+      await c.p.locator('button.tarjeta-atleta:visible').first().waitFor();
+      const panel = await zonas(c.p, PEQUENOS);
+      const chips = await zonas(c.p, '.selector-chips button');
+      check(panel.length >= 6 && panel.every((z) => z.w >= 44 && z.h >= 44) && chips.every((z) => z.rh < 44), `en la lista del coach, lo mismo: los filtros miden ${chips[0]?.rh} px de alto y se pulsan en 44 (${panel.length} botones pequeños)`);
+      await c.ctx.close();
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     if (process.env.DEPURAR) console.log(e.stack.split('\n').slice(0, 12).join('\n'));
