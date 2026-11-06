@@ -312,3 +312,38 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .rejilla-secciones button.actual .ios-ico { background: var(--morado); color: var(--sobre-morado); }
 .rejilla-secciones .ios-ico { background: var(--hoja); }
 @media (prefers-reduced-motion: reduce) { .rejilla-secciones button:active { transform: none; } }
+
+/* ---------- 13. Mensajes del coach a dos paneles (ventanas anchas) ------------------------------------------
+   ui/coach/Conversaciones.jsx pinta .mensajes-dos solo desde 1100 px de ventana: la lista de conversaciones a la
+   izquierda, fija y con su propio desplazamiento, y la conversación abierta a la derecha. El chat sigue moviéndose
+   con la página, como siempre (no se ha tocado Chat.jsx): por eso lo que se fija es la lista, y aquí solo se corre
+   hacia la derecha lo que el chat coloca fijo en la ventana (el cuadro de escribir, el fondo, la píldora del día y el
+   aviso de mensajes nuevos; pisa 1877, 3576 y 3842 de estilos.css). */
+:root { --lista-conv: 22.5rem; }
+.mensajes-dos { display: grid; grid-template-columns: var(--lista-conv) minmax(0, 1fr); margin-left: calc(-1 * max(24px, env(safe-area-inset-left, 0px))); }
+.mensajes-dos > .contenido { position: sticky; top: 0; z-index: 6; align-self: start; align-content: start; height: 100vh; height: 100dvh; max-width: none; margin: 0; padding: 20px 12px 24px; gap: 12px; overflow-y: auto; overscroll-behavior: contain; border-right: 1px solid var(--linea); background: var(--tiza); }
+.mensajes-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px; }
+.mensajes-cab h1 { font-size: 1.5rem; font-stretch: var(--ancho-expandido); font-weight: 820; line-height: 1.15; letter-spacing: var(--tipo-titulo-tr); }
+.mensajes-cab .sub { margin-top: 2px; font-size: 0.875rem; color: var(--tinta-2); }
+.mensajes-dos .conversacion { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; padding: 10px 4px 10px 12px; }
+.mensajes-dos .conversacion .avatar { width: 44px; height: 44px; font-size: 0.9375rem; }
+.mensajes-dos .conversacion.actual, .mensajes-dos .conv-fila:has(> .conversacion.actual) { background: var(--morado-suave); }
+.mensajes-dos .conv-fila > .conv-opciones { margin-right: 2px; width: 36px; }
+.mensajes-dos .conversaciones > li:first-child:has(> .actual) { border-radius: var(--r) var(--r) 0 0; }
+.mensajes-dos .conversaciones > li:last-child:has(> .actual) { border-radius: 0 0 var(--r) var(--r); }
+.mensajes-chat { min-width: 0; padding-left: max(24px, env(safe-area-inset-left, 0px)); }
+.mensajes-vacio { display: grid; place-content: center; min-height: calc(100vh - 160px); }
+.app.coach:has(.mensajes-dos) .chat-barra { left: calc(220px + var(--lista-conv) + max(24px, env(safe-area-inset-left, 0px))); }
+.app.coach:has(.mensajes-dos) .chat-fondo { left: calc(220px + var(--lista-conv)); }
+.app.coach:has(.mensajes-dos) .chat-dia-flotante, .app.coach:has(.mensajes-dos) .chat-nuevos { left: calc(50% + 110px + var(--lista-conv) / 2); }
+
+/* ---------- 14. Biblioteca de ejercicios en columnas (ventanas anchas) --------------------------------------
+   ui/coach/Biblioteca.jsx. Cada ejercicio era una fila a todo lo ancho con el nombre a la izquierda y el resto
+   vacío: 148 ejercicios, casi 10 000 px de página. Desde 1100 px van en dos columnas y desde 1400 en tres (se leen
+   de izquierda a derecha y luego hacia abajo). Solo estilos. */
+@media (min-width: 1100px) {
+  .lista:has(> li > .fila-biblioteca) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lista:has(> li > .fila-biblioteca) > li { display: grid; border-top: 0; box-shadow: 1px 0 0 var(--linea), 0 1px 0 var(--linea); }
+  .lista:has(> li > .fila-biblioteca) { overflow: hidden; border-radius: var(--r); }
+}
+@media (min-width: 1400px) { .lista:has(> li > .fila-biblioteca) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

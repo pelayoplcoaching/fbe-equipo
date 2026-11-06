@@ -8,6 +8,7 @@ import { silenciado, textoSilencio } from '../../logica/chat.js';
 import { conTransicion } from '../transiciones.js';
 import { HojaDifusion } from './Difusion.jsx';
 import { HojaSilenciar } from '../chat/InfoContacto.jsx';
+import { useEstrecha } from '../BarraMas.jsx';
 import { cacheChat } from '../../datos/cacheChat.js';
 
 // Mensajes del coach (v0.18): una conversación por atleta, como la lista de chats de WhatsApp.
@@ -32,6 +33,9 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
   const [vuelta, setVuelta] = useState(0);        // para releer los borradores al volver de un chat
   const [difusion, setDifusion] = useState(false);
   const [silenciar, setSilenciar] = useState(null); // la fila a silenciar (elegir cuánto)
+  // (diseño) En un ordenador con la ventana ancha, la lista a la izquierda y la conversación abierta a la derecha, a la
+  // vez. En el móvil y en ventanas estrechas, como siempre: la conversación sustituye a la lista.
+  const dos = !useEstrecha(1099);
   const silencios = useCarga(() => api.silencios(), [vuelta]);
   const recargar = useRef(null);
   recargar.current = lista.recargar;
@@ -58,7 +62,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
 
   // «escribiendo…» en cada fila (el canal privado de cada conversación; sin él, nada)
   const filasTodas = useMemo(() => ordenarConversaciones(lista.datos || []), [lista.datos]);
-  const escribiendo = useEscribiendo(abierta ? [] : filasTodas.map((x) => x.atleta.id).slice(0, 40));
+  const escribiendo = useEscribiendo(abierta && !dos ? [] : filasTodas.map((x) => x.atleta.id).filter((id) => id !== abierta?.atleta.id).slice(0, 40));
 
   // Buscar en los mensajes (en la base, solo el coach), con una pausa al escribir
   const q = buscar.trim();
@@ -70,7 +74,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
   }, [q]);
 
   async function abrir(atleta, saltarA = null) {
-    conTransicion(() => setAbierta({ atleta, saltarA }), 'abrir');
+    if (dos) { setAbierta({ atleta, saltarA }); setVuelta((v) => v + 1); } else conTransicion(() => setAbierta({ atleta, saltarA }), 'abrir');
     const e = (lista.datos || []).find((x) => x.atleta.id === atleta.id)?.estado;
     if (e?.no_leida) api.cambiarEstadoConversacion(atleta.id, { noLeida: false }).then(() => lista.recargar(true)).catch(() => {});
   }
@@ -85,21 +89,21 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
     catch (err) { aviso(err.message, 'error'); }
   }
 
+  let chat = null;
   if (abierta) {
     const a = abierta.atleta;
     const volver = () => { conTransicion(() => setAbierta(null), 'cerrar'); setVuelta((v) => v + 1); lista.recargar(true); alCambiar?.(); };
-    return (
-      <div class="contenido coach chat-pagina">
-        <Chat atletaId={a.id} nombreAtleta={a.nombre} fotoOtro={a.foto} perfilOtro={a.perfil_id || null} saltarA={abierta.saltarA}
-          alCambiar={() => { lista.recargar(true); alCambiar?.(); }} alLeer={() => { lista.recargar(true); alCambiar?.(); }}
-          irContexto={(ctx) => abrirAtleta(a.id, ctx.tipo === 'sesion' ? 'registro' : ctx.tipo === 'checkin' ? 'seguimiento' : 'videos')}
-          cabecera={{
-            izquierda: <><button class="btn btn-icono plano" onClick={volver} aria-label="Volver a mensajes"><Icono n="atras" /></button><Avatar nombre={a.nombre} foto={a.foto} ampliable /></>,
-            titulo: a.nombre, sub: a.objetivo || '', verFicha: () => abrirAtleta(a.id, 'programa'),
-            derecha: <button class="btn btn-peq" onClick={() => abrirAtleta(a.id, 'programa')}>Ficha</button>,
-          }} />
-      </div>
+    chat = (
+      <Chat key={a.id} atletaId={a.id} nombreAtleta={a.nombre} fotoOtro={a.foto} perfilOtro={a.perfil_id || null} saltarA={abierta.saltarA}
+        alCambiar={() => { lista.recargar(true); alCambiar?.(); }} alLeer={() => { lista.recargar(true); alCambiar?.(); }}
+        irContexto={(ctx) => abrirAtleta(a.id, ctx.tipo === 'sesion' ? 'registro' : ctx.tipo === 'checkin' ? 'seguimiento' : 'videos')}
+        cabecera={{
+          izquierda: <>{!dos && <button class="btn btn-icono plano" onClick={volver} aria-label="Volver a mensajes"><Icono n="atras" /></button>}<Avatar nombre={a.nombre} foto={a.foto} ampliable /></>,
+          titulo: a.nombre, sub: a.objetivo || '', verFicha: () => abrirAtleta(a.id, 'programa'),
+          derecha: <button class="btn btn-peq" onClick={() => abrirAtleta(a.id, 'programa')}>Ficha</button>,
+        }} />
     );
+    if (!dos) return <div class="contenido coach chat-pagina">{chat}</div>;
   }
 
   const nq = normalLetras(q);
@@ -110,12 +114,16 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
   const sinLeer = (lista.datos || []).reduce((t, x) => t + x.sinLeer, 0);
   const A = Object.fromEntries((lista.datos || []).map((x) => [x.atleta.id, x.atleta]));
   const mensajesEncontrados = enMensajes.q && enMensajes.q === q ? enMensajes.filas.filter((m) => A[m.atleta_id]) : [];
-  return (
+  const titulo = (
+    <>
+      <div class="titulo"><h1>{archivadas ? 'Archivados' : 'Mensajes'}</h1><div class="sub">{archivadas ? `${nArchivadas} ${nArchivadas === 1 ? 'conversación' : 'conversaciones'}` : sinLeer ? `${sinLeer} sin leer` : 'Al día'}</div></div>
+      {archivadas && <button type="button" class="btn btn-peq" onClick={() => setArchivadas(false)}><Icono n="atras" /> Todas</button>}
+    </>
+  );
+  const pantalla = (
     <div class="contenido coach">
-      <CabeceraGrande>
-        <div class="titulo"><h1>{archivadas ? 'Archivados' : 'Mensajes'}</h1><div class="sub">{archivadas ? `${nArchivadas} ${nArchivadas === 1 ? 'conversación' : 'conversaciones'}` : sinLeer ? `${sinLeer} sin leer` : 'Al día'}</div></div>
-        {archivadas && <button type="button" class="btn btn-peq" onClick={() => setArchivadas(false)}><Icono n="atras" /> Todas</button>}
-      </CabeceraGrande>
+      {/* A dos paneles, la cabecera de la lista no es la de la página (la del chat sí: es la que el chat mide) */}
+      {dos ? <div class="mensajes-cab">{titulo}</div> : <CabeceraGrande>{titulo}</CabeceraGrande>}
       <BandaDemo />
       <ErrorCaja error={lista.error} reintentar={lista.recargar} />
       <div class="buscador"><Icono n="buscar" /><input class="entrada" type="search" placeholder="Buscar atleta o mensaje" aria-label="Buscar atleta o mensaje" value={buscar} onInput={(e) => setBuscar(e.currentTarget.value)} /></div>
@@ -146,7 +154,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
               <ul class="lista conversaciones">
                 {filas.map((fila) => (
                   <FilaConversacion key={fila.atleta.id} fila={fila} perfilId={perfil?.id} escribiendo={escribiendo.has(fila.atleta.id)} vuelta={vuelta} consulta={q} silencio={silencios.datos?.[fila.atleta.id] || null}
-                    alAbrir={() => abrir(fila.atleta)} alOpciones={() => setOpciones(fila)} />
+                    actual={dos && abierta?.atleta.id === fila.atleta.id} alAbrir={() => abrir(fila.atleta)} alOpciones={() => setOpciones(fila)} />
                 ))}
               </ul>
             </div>
@@ -204,10 +212,19 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
       )}
     </div>
   );
+  if (!dos) return pantalla;
+  return (
+    <div class="mensajes-dos">
+      {pantalla}
+      <div class="chat-pagina mensajes-chat">
+        {chat || <div class="mensajes-vacio"><Vacio icono="mensaje" titulo="Elige una conversación">Se abre aquí, con la lista siempre a la vista.</Vacio></div>}
+      </div>
+    </div>
+  );
 }
 
 // Una fila de la lista: tocarla abre el chat; mantenerla pulsada (o el botón derecho, o «Opciones») abre sus opciones
-function FilaConversacion({ fila, perfilId, escribiendo, vuelta, consulta, silencio = null, alAbrir, alOpciones }) {
+function FilaConversacion({ fila, perfilId, escribiendo, vuelta, consulta, silencio = null, actual = false, alAbrir, alOpciones }) {
   const { atleta, ultimo, sinLeer: n, estado } = fila;
   const borrador = useMemo(() => leerBorrador(almacen(), perfilId, atleta.id)?.texto || null, [perfilId, atleta.id, vuelta]);
   const prev = vistaPrevia(ultimo, { borrador });
@@ -219,7 +236,7 @@ function FilaConversacion({ fila, perfilId, escribiendo, vuelta, consulta, silen
   const nombre = consulta ? resaltar(atleta.nombre, consulta).map((p, i) => (p.marca ? <mark key={i} class="chat-marca">{p.v}</mark> : <Fragment key={i}>{p.v}</Fragment>)) : atleta.nombre;
   return (
     <li class="conv-fila">
-      <button class={`conversacion ${noLeida ? 'sin-leer' : ''} ${estado?.fijada_en ? 'fijada' : ''}`} onClick={() => { if (suprimir.current) { suprimir.current = false; return; } alAbrir(); }}
+      <button class={`conversacion ${noLeida ? 'sin-leer' : ''} ${estado?.fijada_en ? 'fijada' : ''}${actual ? ' actual' : ''}`} aria-current={actual ? 'true' : undefined} onClick={() => { if (suprimir.current) { suprimir.current = false; return; } alAbrir(); }}
         onPointerDown={bajar} onPointerUp={cancelar} onPointerCancel={cancelar} onPointerMove={(e) => { if (Math.abs(e.movementY) > 4) cancelar(); }}
         onContextMenu={(e) => { e.preventDefault(); cancelar(); alOpciones(); }}>
         <Avatar nombre={atleta.nombre} foto={atleta.foto} clase="grande" />
