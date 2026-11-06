@@ -77,6 +77,14 @@ function Tablero({ panel }) {
           </div>
         </div>
       )}
+      {panel.dias?.length > 0 && (
+        <div class="bdia-doce">
+          <div class="bdia-doce-cab"><span class="bdia-sobre">Esta semana</span><span class="bdia-doce-n">{panel.enObjetivo} {panel.enObjetivo === 1 ? 'día' : 'días'} en objetivo</span></div>
+          <div class="bdia-semanas bdia-dias" role="img" aria-label={`Tu semana, de lunes a domingo: ${panel.enObjetivo} ${panel.enObjetivo === 1 ? 'día' : 'días'} en objetivo`}>
+            {panel.dias.map((d) => <i key={d.lunes} class={`${d.estado}${d.actual ? ' actual' : ''}`} />)}
+          </div>
+        </div>
+      )}
       {animo && <p class="bdia-animo">{animo}</p>}
     </div>
   );

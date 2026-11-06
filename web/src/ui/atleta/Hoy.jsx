@@ -37,7 +37,7 @@ import { TextoConEnlaces } from '../Enlaces.jsx';
 import { Ilustracion } from '../Ilustraciones.jsx';
 import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
 import { estadoHoy, sugerenciaDescanso, urlSegura, resumenPautas } from '../../logica/diseno.js';
-import { panelBienvenida } from '../../logica/bienvenida.js';
+import { panelBienvenida, panelNutricion } from '../../logica/bienvenida.js';
 import { Diales } from './Diales.jsx';
 import { semanasObjetivo, semanaEnCurso } from '../../logica/semana-natural.js';
 import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
@@ -102,6 +102,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       {!propio && (verPasos || (!p && !cargando) || !entrena) && <AvisosCoach />}
       {!entrena ? (
         <ContenidoNutricion irA={irA} checkinSemana={checkinSemana} salud={salud} recargarConsentimientos={recargarConsentimientos}
+          sinBienvenida={propio || !hechos.datos || verBienvenida}
           entre={(
             <>
               {!verPasos && atleta.estado !== 'baja' && <TuDia p={null} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} />}
@@ -293,11 +294,21 @@ function AvisoInstalar() {
 }
 
 // Hoy de quien solo lleva la nutrición (v0.26): su menú de hoy, su nutrición, hábitos y peso
-function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos, entre = null }) {
+function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos, entre = null, sinBienvenida = false }) {
   const { api, atleta } = useApp();
   const checkinHecho = !!checkinSemana.datos?.checkin;
+  // (diseño, tanda 14) la bienvenida del día también para quien solo lleva nutrición: su menú de hoy, las comidas hechas
+  // y la semana. Pide lo mismo que piden «Tu menú de hoy» y «Nutrición de hoy» (solo el día que sale la bienvenida).
+  const [verDia, cerrarDia] = useBienvenida(sinBienvenida ? null : api.uid());
+  const hoy = hoyISO();
+  const conPanel = verDia && !!salud;
+  const paraDia = useCarga(() => (conPanel ? Promise.all([api.menuSemana(atleta.id, hoy).catch(() => []), api.resumenNutricion(atleta.id, hoy, { entrenaHoy: false }).catch(() => null)]) : Promise.resolve(null)), [atleta.id, conPanel]);
+  const panelDia = conPanel && paraDia.datos ? panelNutricion({
+    menu: (paraDia.datos[0] || []).filter((e) => e.fecha === hoy), objetivo: paraDia.datos[1]?.objetivoHoy || null, semana: paraDia.datos[1]?.semana || null,
+  }) : null;
   return (
     <>
+      {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={{ estado: 'nutricion' }} panel={panelDia} alCerrar={cerrarDia} />}
       <MenuHoy irA={irA} salud={salud} darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }} />
       {entre}
       {salud && <NutricionHoy />}

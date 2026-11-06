@@ -4149,6 +4149,23 @@ console.log('\nDiseño, tanda 11: el panel de la bienvenida');
     'el panel del coach: por revisar, mensajes sin leer, quién ha entrenado hoy y quién necesita atención; lo que no ha cargado no sale');
 }
 
+console.log('\nDiseño, tanda 14: la bienvenida de quien solo lleva nutrición');
+{
+  const BV = await import('../web/src/logica/bienvenida.js');
+  const d = (iso, estado, extra = {}) => ({ iso, estado, obj: { kcal: 1750 }, reg: estado ? {} : null, futuro: false, hoy: false, ...extra });
+  const semana = { dias: [d('2026-11-02', 'no'), d('2026-11-03', 'si'), d('2026-11-04', 'casi'), d('2026-11-05', 'si'), d('2026-11-06', 'en_curso', { hoy: true }), d('2026-11-07', null, { futuro: true }), d('2026-11-08', null, { futuro: true })], enObjetivo: 2, transcurridos: 5, registrados: 5 };
+  const n = BV.panelNutricion({ menu: [{ hecho: true }, { hecho: false }, { hecho: false }, { hecho: false }], objetivo: { kcal: 1750, proteina: 115 }, semana });
+  check(n.sesion.sobre === 'Tu menú de hoy' && n.sesion.titulo === '4 comidas' && n.sesion.meta === 'Objetivo: 1750 kcal · 115 g de proteína'
+    && n.cifras.map((c) => `${c.id}:${c.valor}/${c.de}`).join() === 'comidas:1/4,objetivo:2/5' && n.dias.map((x) => x.estado[0]).join('') === 'vcpcpss' && n.dias[4].actual
+    && n.animo === '2 días en objetivo esta semana. Sigue así.',
+    'su menú de hoy, las comidas hechas, los días en objetivo y la semana día a día');
+  const sin = BV.panelNutricion({ menu: [], objetivo: null, semana: { dias: [{ iso: '2026-11-02', obj: null }], enObjetivo: 0, transcurridos: 1, registrados: 0 } });
+  const hecho = BV.panelNutricion({ menu: [{ hecho: true }, { hecho: true }], objetivo: null, semana: null });
+  check(sin.sesion === null && sin.cifras.length === 0 && sin.dias.length === 0 && hecho.animo === 'Menú de hoy completo. Buen trabajo.' && hecho.sesion.meta === null
+    && BV.mensajeBienvenida({ nombre: 'Lucía Ferrer', hoy: '2026-11-06', estado: 'nutricion' }).mensaje === 'Este es tu día de hoy.',
+    'sin menú ni plan con cifras no sale nada; con el menú hecho se lo dice; y su saludo no habla de sesiones');
+}
+
 console.log('\nv0.69: la comunidad, primera tanda (bienvenida, entrenando ahora, respuestas, 💪 a comentarios, el resumen del domingo)');
 {
   const C = await import('../web/src/logica/comunidad.js');

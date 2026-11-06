@@ -35,6 +35,8 @@ export function mensajeBienvenida({ rol = 'atleta', nombre = '', primeraVez = fa
   if (estado === 'hecha') return { saludo, nombre: pila, mensaje: 'La sesión de hoy ya está hecha. ¡Buen trabajo!', detalle: conRacha };
   if (estado === 'descanso') return { saludo, nombre: pila, mensaje: 'Hoy toca descanso: recupera bien.', detalle: conRacha };
   if (estado === 'semana') return { saludo, nombre: pila, mensaje: 'Semana completa. ¡Enhorabuena!', detalle: conRacha };
+  // (diseño, tanda 14) quien solo lleva nutrición: no hay sesión que anunciar
+  if (estado === 'nutricion') return { saludo, nombre: pila, mensaje: 'Este es tu día de hoy.' };
   if (toca) return { saludo, nombre: pila, mensaje: `Hoy toca ${toca}.`, detalle: conRacha };
   return { saludo, nombre: pila, mensaje: conRacha || '¿Qué toca hoy?' };
 }
@@ -138,4 +140,35 @@ export function panelCoach({ bandeja = null, sinLeer = null, equipo = null, aten
     animo = semana >= equipo.activos ? 'Todos tus atletas han entrenado en la última semana.' : `${semana} de tus ${equipo.activos} atletas han entrenado en la última semana.`;
   }
   return { sesion: null, cifras, semanas: [], completas: 0, animo };
+}
+
+// Quien solo lleva nutrición (tanda 14): su menú de hoy, las comidas hechas, los días en objetivo de la semana y la
+// semana día a día. menu: las comidas de hoy de su menú ([{ hecho }]); objetivo: el del día ({ kcal, proteina }) o null
+// (plan sin contar o sin plan); semana: la de semanaNutricion ({ dias: [{ iso, estado, futuro, hoy, reg }], enObjetivo,
+// transcurridos, registrados }) o null. Lo que no hay, no sale.
+export function panelNutricion({ menu = [], objetivo = null, semana = null } = {}) {
+  const total = (menu || []).length;
+  const hechas = (menu || []).filter((e) => e?.hecho).length;
+  const kcal = objetivo?.kcal > 0 ? `${new Intl.NumberFormat('es-ES').format(Math.round(objetivo.kcal))} kcal` : null;
+  const prote = objetivo?.proteina > 0 ? `${Math.round(objetivo.proteina)} g de proteína` : null;
+  const sesion = total || kcal ? {
+    sobre: total ? 'Tu menú de hoy' : 'Tu plan de hoy',
+    titulo: total ? `${total} ${total === 1 ? 'comida' : 'comidas'}` : kcal,
+    meta: total ? ([kcal, prote].filter(Boolean).join(' · ') ? `Objetivo: ${[kcal, prote].filter(Boolean).join(' · ')}` : null) : prote,
+  } : null;
+  const cifras = [];
+  if (total) cifras.push({ id: 'comidas', etiqueta: 'Comidas', valor: hechas, de: total, puntos: total <= 7 ? total : 0, barra: total > 7 ? hechas / total : null });
+  const cuenta = !!semana && (semana.dias || []).some((d) => d.obj);
+  if (cuenta && semana.transcurridos > 0) cifras.push({ id: 'objetivo', etiqueta: 'En objetivo', valor: semana.enObjetivo || 0, de: semana.transcurridos, detalle: 'días esta semana' });
+  const dias = cuenta ? (semana.dias || []).map((d) => ({
+    lunes: d.iso, actual: !!d.hoy,
+    estado: d.futuro || !d.reg ? 'sin' : d.estado === 'si' ? 'completa' : d.estado === 'casi' || d.estado === 'en_curso' ? 'parcial' : 'vacia',
+  })) : [];
+  const enObjetivo = cuenta ? semana.enObjetivo || 0 : 0;
+  let animo;
+  if (total && hechas === total) animo = 'Menú de hoy completo. Buen trabajo.';
+  else if (enObjetivo >= 2) animo = `${enObjetivo} días en objetivo esta semana. Sigue así.`;
+  else if (cuenta && !semana.registrados && semana.transcurridos > 1) animo = 'Apunta lo de hoy y la semana empieza a contar.';
+  else animo = 'Cada comida que marcas le dice a tu coach cómo vas.';
+  return { sesion, cifras, semanas: [], completas: 0, dias, enObjetivo, animo };
 }
