@@ -1,0 +1,53 @@
+/* Pulido: que la app responda al dedo. Va después de estilos.css y diseno.css y solo añade; no cambia colores, tamaños
+   ni la disposición de nada. Tres cosas:
+   1. Todo lo que se puede pulsar responde al pulsarlo, de forma que se vea (antes, la mitad no cambiaba nada y el botón
+      de siempre se encogía un 1,5 %, menos de 2 px).
+   2. Sin espera de «doble toque» en lo pulsable (touch-action: manipulation).
+   3. Los botones más pequeños ganan zona de toque sin cambiar de tamaño.
+   Medido con la auditoría de fluidez (claude/pulido-fluidez-auditoria.md en el proyecto). */
+
+/* ---------- 1. Respuesta al pulsar ---------- */
+/* De base, para cualquier cosa pulsable que no tenga la suya: se atenúa al momento (como en iOS). Con :where() no pesa
+   nada: cualquier regla propia de un componente manda sobre esta. */
+:where(button, [role="button"], [role="tab"], summary, a[href], label.interruptor-fila):where(:not(:disabled, [aria-disabled="true"])):active { opacity: .55; }
+/* Los que ya tenían su respuesta (se encogen o cambian de fondo) no se atenúan además */
+.btn:active, .tab:active, .dia:active, .tarjeta-atleta:active, .fila-dia:active, .respuesta:active, .entreno:active, .vitrina-fila:active, .fila-semana:active,
+.paso button:active, .paso-grande button:active, .btn-avatar:active, .accion-fila:active, .opciones-grandes button:active, .trofeo-tarjeta:active, .dial:active,
+.chat-micro:active, .hoja-cab:active, .plegable-hoy > summary:active, .rejilla-secciones button:active { opacity: 1; }
+
+/* El botón de siempre: se encoge lo bastante para notarse y se oscurece un punto */
+.btn:active { transform: scale(.96); filter: brightness(.94); }
+.btn-grande:active, .btn-ancho:active, .btn-hecha:active { transform: scale(.975); }
+.btn-icono:active { transform: scale(.88); filter: none; }
+.btn-icono.plano:active { background: var(--hoja-2); }
+.btn-texto:active { transform: none; opacity: .5; }
+.btn, .btn-texto { transition: transform .09s ease, background-color .15s ease, border-color .15s ease, filter .09s ease, opacity .09s ease; }
+
+/* Pestañas, segmentos, chips y días: se hunden un poco bajo el dedo */
+.pestanas button:active, .segmentos button:active, .selector-chips button:active, .semanas-tabs button:active, .tira-chip:active { opacity: 1; transform: scale(.94); }
+.tira-chip:active { opacity: .65; transform: scale(.88); }
+.pestanas button, .segmentos button, .selector-chips button, .semanas-tabs button, .tira-chip { transition: transform .09s ease, background-color .15s ease, color .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.pestanas button:active { color: var(--tinta); }
+.segmentos button:active:not([aria-pressed="true"]), .selector-chips button:active:not([aria-pressed="true"]), .semanas-tabs button:active:not([aria-pressed="true"]) { background: var(--hoja-2); }
+/* Los botones pequeños del chat y de las pistas: crecen un poco (ya van atenuados de serie) */
+.burbuja-mas:active { opacity: 1; transform: scale(1.25); }
+.pista-cerrar:active, .burbuja-ctx:active, .pista-mas:active { opacity: .5; }
+/* Tarjetas y filas enteras que se pulsan */
+.tarjeta-intervalos:active, .racha-boton:active, .ficha-todas:active, .medio-chat:active { opacity: .7; }
+/* Enlaces dentro de listas */
+li > a[href]:active { opacity: .5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:active, .btn-grande:active, .btn-ancho:active, .btn-hecha:active, .btn-icono:active, .pestanas button:active, .segmentos button:active, .selector-chips button:active,
+  .semanas-tabs button:active, .tira-chip:active, .burbuja-mas:active { transform: none; }
+  .btn:active, .pestanas button:active, .segmentos button:active, .selector-chips button:active, .semanas-tabs button:active, .tira-chip:active { opacity: .6; }
+  .segmentos button { transition: none; }
+}
+
+/* ---------- 2. Sin espera de doble toque ---------- */
+:where(button, a, [role="button"], [role="tab"], summary, label, input, select, textarea) { touch-action: manipulation; }
+
+/* ---------- 3. Más zona de toque en lo pequeño (sin cambiar su tamaño) ---------- */
+:where(.pista-mas, .burbuja-ctx, .tira-chip, .btn-avatar, .burbuja-mas, .quien-reacciona) { position: relative; }
+.pista-mas::after, .tira-chip::after, .btn-avatar::after, .quien-reacciona::after { content: ""; position: absolute; inset: -8px -4px; }
+.burbuja-ctx::after, .burbuja-mas::after { content: ""; position: absolute; inset: -11px -6px; }
