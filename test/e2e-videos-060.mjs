@@ -10,6 +10,7 @@
 //   · la atleta ve las dos respuestas en vídeo en su hilo y responde con la suya;
 //   · todo a 360 px, en oscuro, con el teclado y sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
+import { subProgreso } from './secciones.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -116,6 +117,7 @@ export async function probarVideos060({ navegador, check, base = 'http://localho
     await entrarComo('Ana López');
     await p.locator('.tab', { hasText: 'Progreso' }).first().click();
     const abrirCamara = async () => {
+      await subProgreso(p, 'fuerza');
       await p.locator('.diario').getByRole('button', { name: 'Subir vídeo' }).click();
       const hs = p.getByRole('dialog', { name: 'Subir un vídeo' });
       await hs.getByRole('button', { name: 'Elegir o grabar el vídeo' }).click();
@@ -203,6 +205,7 @@ export async function probarVideos060({ navegador, check, base = 'http://localho
     await p.locator('.tarjeta-atleta', { hasText: 'Ana López' }).first().click();
     await p.getByRole('tab', { name: 'Vídeos y fotos' }).click();
     const abrirVideo = async (id) => {
+      await subProgreso(p, 'fuerza');
       await p.locator(`.diario-item[data-id="${id}"]`).first().click();
       const d = p.getByRole('dialog').filter({ has: p.locator('video.medio') }).last();
       await d.locator('video.medio').first().waitFor();

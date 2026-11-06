@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { pedirSubProgreso } from './sub-progreso.js';
 import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar } from '../comunes.jsx';
 import { resumenDia } from '../../logica/dia.js';
 import { BandaConexion, BandaDemo } from '../App.jsx';
@@ -67,7 +68,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       ayuda: ios ? 'En Safari, toca Compartir y luego «Añadir a pantalla de inicio».' : 'En Chrome, toca el menú ⋮ y luego «Instalar aplicación».' },
     ...(entrena ? [{ id: 'sesion', texto: 'Haz tu primera sesión', hecho: hechos.datos.sesion, etiqueta: 'Empezar', accion: siguienteId ? () => abrirSesion(siguienteId) : null }] : []),
     ...(salud ? [
-      { id: 'peso', texto: 'Apunta tu peso', hecho: hechos.datos.peso, etiqueta: 'Apuntar', accion: () => { const el = document.querySelector('.peso-hoy button'); el?.scrollIntoView({ block: 'center' }); el?.click(); } },
+      { id: 'peso', texto: 'Apunta tu peso', hecho: hechos.datos.peso, etiqueta: 'Apuntar', accion: () => { abrirPlegableHoy('peso'); const el = document.querySelector('.peso-hoy button'); el?.scrollIntoView({ block: 'center' }); el?.click(); } },
       { id: 'checkin', texto: 'Envía tu primer check-in', hecho: hechos.datos.checkin, etiqueta: 'Ir', accion: () => irA('checkin') },
     ] : []),
     { id: 'faq', texto: 'Echa un vistazo a las preguntas frecuentes', hecho: faqVista, etiqueta: 'Ver', accion: () => { setFaqVista(true); irA('perfil'); } },
@@ -157,10 +158,10 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
   const bajarA = (sel) => { const el = document.querySelector(sel); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.focus?.({ preventScroll: true }); } };
   const ir = (x) => {
     if (x.accion === 'sesion' && x.sesionId) abrirSesion(x.sesionId);
-    else if (x.accion === 'sesion' || x.accion === 'semana' || x.accion === 'plan') bajarA('.semana-dias');
-    else if (x.accion === 'habitos') bajarA('.seccion-habitos');
-    else if (x.accion === 'nutricion') bajarA('.seccion-nutricion');
-    else if (x.accion === 'peso') { const el = document.querySelector('.peso-hoy button'); el?.scrollIntoView({ block: 'center' }); if (!items.find((y) => y.id === 'peso' && y.estado === 'hecho')) el?.click(); }
+    else if (x.accion === 'sesion' || x.accion === 'semana' || x.accion === 'plan') { abrirPlegableHoy('semana'); bajarA('.semana-dias'); }
+    else if (x.accion === 'habitos') { abrirPlegableHoy('habitos'); bajarA('.seccion-habitos'); }
+    else if (x.accion === 'nutricion') { abrirPlegableHoy('nutricion'); bajarA('.seccion-nutricion'); }
+    else if (x.accion === 'peso') { abrirPlegableHoy('peso'); const el = document.querySelector('.peso-hoy button'); el?.scrollIntoView({ block: 'center' }); if (!items.find((y) => y.id === 'peso' && y.estado === 'hecho')) el?.click(); }
     else if (x.accion === 'checkin') irA('checkin');
     else if (x.accion === 'comidas') irA('comidas');
     else if (x.accion === 'cuestionario') abrirCuestionario();
@@ -431,8 +432,14 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {!propio && <TarjetaMes salud={salud} />}
       <BloqueTerminado salud={salud} />
       <SemanaPasada salud={salud} />
-      {e.tipo === 'entreno' && siguiente && <SiguienteSesion sesion={siguiente} ejercicios={ejercicios} cargando={det.cargando && !det.datos} />}
+      {/* (diseño 9) Lo de debajo es detalle: va plegado en filas que se abren al tocarlas (y «Tu día» las abre al ir a ellas) */}
+      {e.tipo === 'entreno' && siguiente && (
+        <Plegable id="sesion" titulo="Lo que vas a hacer" icono="hoy" detalle={ejercicios.length ? `${ejercicios.length} ${ejercicios.length === 1 ? 'ejercicio' : 'ejercicios'}, uno a uno` : 'La sesión que te toca'}>
+          <SiguienteSesion sesion={siguiente} ejercicios={ejercicios} cargando={det.cargando && !det.datos} />
+        </Plegable>
+      )}
 
+      <Plegable id="semana" titulo="Esta semana" icono="semana" detalle={`${dias && natural ? natural.hechas : hechas} de ${dias && natural ? natural.objetivo : sesiones.length} sesiones hechas`}>
       <section class="seccion">
         <div class="seccion-cab">
           <h2>Esta semana</h2>
@@ -445,6 +452,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} actual={e.tipo === 'entreno' && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
         </div>
       </section>
+      </Plegable>
       {verRacha && <PantallaRacha racha={constancia.datos?.racha || 0} semanas={constancia.datos?.semanas || []} diasSemana={constancia.datos?.diasSemana || null} hoy={hoy} alCerrar={() => setVerRacha(false)} />}
       {hito && !verRacha && <HitoRacha hito={hito} alCerrar={hitoVisto} />}
       {bloqueAbierto && <HojaBloque alCerrar={() => setBloqueAbierto(false)} abrirSesion={(id) => { setBloqueAbierto(false); abrirSesion(id); }} />}
@@ -454,12 +462,16 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         </Hoja>
       )}
 
-      {salud && conNutricion(atleta) && <MenuHoy irA={irA} salud={salud} compacto />}
-      {salud && conNutricion(atleta) && <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />}
+      {salud && conNutricion(atleta) && <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Lo que tienes para comer hoy"><MenuHoy irA={irA} salud={salud} compacto /></Plegable>}
+      {salud && conNutricion(atleta) && (
+        <Plegable id="nutricion" titulo="Nutrición de hoy" icono="nutricion" detalle="Apunta lo que has comido">
+          <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />
+        </Plegable>
+      )}
 
-      {salud && <HabitosHoy />}
+      {salud && <Plegable id="habitos" titulo="Tus hábitos" icono="llama" detalle="Márcalos según los vas haciendo"><HabitosHoy /></Plegable>}
 
-      {salud && <PesoHoy irA={irA} />}
+      {salud && <Plegable id="peso" titulo="Tu peso" icono="bascula" detalle="Apúntalo y mira cómo va tu tendencia"><PesoHoy irA={irA} /></Plegable>}
 
       {salud && !propio && !checkinHecho && siguiente && diaDeCheckin() && (
         <button class="nota-coach" style="border:0;text-align:left;cursor:pointer" onClick={() => irA('checkin')}>
@@ -468,6 +480,40 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       )}
     </>
   );
+}
+
+// (diseño 9) Una sección secundaria de Hoy, plegada en una fila: se abre al tocarla y este móvil recuerda las que dejas
+// abiertas. Si lo de dentro no pinta nada (sin hábitos, sin menú), la fila no sale. El título de dentro se esconde
+// (diseno.css): manda el de la fila, que es el que se ve abierta y cerrada.
+function Plegable({ id, titulo, icono, detalle = null, children }) {
+  const [abierta, setAbierta] = usePreferencia(`fbe-hoy-abierta-${id}`, false);
+  const cuerpo = useRef(null);
+  const [vacia, setVacia] = useState(true);
+  useLayoutEffect(() => {
+    const el = cuerpo.current;
+    if (!el) return undefined;
+    const mirar = () => setVacia(el.childElementCount === 0);
+    mirar();
+    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(mirar) : null;
+    mo?.observe(el, { childList: true });
+    return () => mo?.disconnect();
+  }, []);
+  return (
+    <details class="plegable-hoy" data-plegable={id} open={abierta} hidden={vacia} onToggle={(ev) => { const o = ev.currentTarget.open; if (o !== abierta) setAbierta(o); }}>
+      <summary>
+        <span class="ios-ico" aria-hidden="true"><Icono n={icono} /></span>
+        <span class="plegable-texto"><h2>{titulo}</h2>{detalle && <span class="mini terciario">{detalle}</span>}</span>
+        <Icono n="abajo" class="plegable-flecha" />
+      </summary>
+      <div class="plegable-cuerpo" ref={cuerpo}>{children}</div>
+    </details>
+  );
+}
+// Abre una de esas filas desde fuera («Tu día», los primeros pasos) antes de bajar a ella
+function abrirPlegableHoy(id) {
+  const d = typeof document !== 'undefined' ? document.querySelector(`details[data-plegable="${id}"]`) : null;
+  if (d && !d.open) d.open = true;
+  return d;
 }
 
 // La semana pasada en una tarjeta, hasta que la ves o la ocultas
@@ -519,7 +565,7 @@ function PesoHoy({ irA }) {
   const e = estadoPeso(ritmo, planVigente(planes.datos || [], hoy), ult ? diasEntre(ult.fecha, hoy) : 0);
   return (
     <section class="seccion">
-      <div class="seccion-cab"><h2>Tu peso</h2>{serie.length > 1 && <button class="btn-texto" onClick={() => irA('progreso')}>Ver la gráfica</button>}</div>
+      <div class="seccion-cab"><h2>Tu peso</h2>{serie.length > 1 && <button class="btn-texto" onClick={() => { pedirSubProgreso('cuerpo'); irA('progreso'); }}>Ver la gráfica</button>}</div>
       <div class="panel panel-pad peso-hoy">
         {pesos.datos == null || planes.datos == null ? <span class="peso-cargando" aria-hidden="true" />
           : !ult ? <p class="peq secundario">Pésate por la mañana, en ayunas, y apúntalo aquí. Con unos días verás tu tendencia, que es lo que importa.</p>

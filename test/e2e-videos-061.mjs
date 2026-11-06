@@ -13,6 +13,7 @@
 //     «cellular» de prueba, sale, y un vídeo espera («Esperando wifi») hasta «Subir ahora»;
 //   · a 360 px en oscuro, con el teclado y sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
+import { subProgreso } from './secciones.mjs';
 import { readFileSync } from 'node:fs';
 import { centroEn, W as VW, H as VH, DURACION } from '../scripts/video-barra-demo.mjs';
 
@@ -341,6 +342,7 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     check(await infA.getByRole('button', { name: /Mandárselo/ }).count() === 0, 'él no lo manda a nadie');
     await cerrarDialogos();
     await p.locator('.tab', { hasText: 'Progreso' }).first().click();
+    await subProgreso(p, 'fuerza');
     await p.locator('.mi-tecnica .perfil-e1rm-cifra').waitFor({ timeout: 15000 });
     check((await p.locator('.mi-tecnica .perfil-e1rm-cifra').textContent()).trim() === e1b && /la de tu coach para este ejercicio/.test(await p.locator('.mi-tecnica .perfil-velocidad').textContent())
       && await p.locator('.mi-tecnica .perfil-velocidad').getByRole('button', { name: 'Cambiarla' }).count() === 0,
@@ -381,6 +383,7 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     check(await q.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes') || '{}').soloWifi === true), 'y se guarda en este móvil');
     await revisar('ajuste-solo-wifi', q);
     await q.locator('.tab', { hasText: 'Progreso' }).first().click();
+    await subProgreso(q, 'fuerza');
     await q.locator('.diario').getByRole('button', { name: 'Subir vídeo' }).click();
     const hojaSub = q.getByRole('dialog', { name: 'Subir un vídeo' });
     await hojaSub.locator('input[type=file]').setInputFiles({ name: 'serie-wifi.webm', mimeType: 'video/webm', buffer: VIDEO });

@@ -4,7 +4,7 @@
 // Uso: npm run build && node test/e2e.test.mjs
 import { chromium } from 'playwright';
 import { servir } from './servidor.mjs';
-import { irASeccion, haySeccion, esperarSinSeccion } from './secciones.mjs';
+import { irASeccion, haySeccion, esperarSinSeccion, subProgreso, abrirEnHoy } from './secciones.mjs';
 import { createRequire } from 'node:module';
 import { readFileSync as leerArchivo, readdirSync } from 'node:fs';
 import { VERSION_LEGAL } from '../web/src/legal.js';
@@ -342,6 +342,7 @@ try {
 
   console.log('\nAtleta: hábitos y plan de la semana');
   const tilePasos = p.locator('.habito-tile', { hasText: 'Pasos' });
+  await abrirEnHoy(p, 'habitos');   // (diseño 9) en Hoy, esta sección va plegada
   await tilePasos.click();
   const hojaPasos = p.getByRole('dialog', { name: 'Pasos' });
   // Con punto de miles, como se escribe en español: «8.000» son ocho mil (antes se guardaban 8)
@@ -387,6 +388,7 @@ try {
 
   console.log('\nAtleta: nutrición');
   const tarjetaNut = p.locator('button.nutricion-hoy');
+  await abrirEnHoy(p, 'nutricion');   // (diseño 9) en Hoy, esta sección va plegada
   await tarjetaNut.waitFor();
   await tarjetaNut.click();
   const hojaNut = p.getByRole('dialog', { name: 'Apuntar la nutrición' });
@@ -924,6 +926,7 @@ try {
   await p.locator('.hero-dia .hero-siguiente', { hasText: 'Pierna A' }).waitFor();
 
   console.log('\nAtleta: peso de hoy');
+  await abrirEnHoy(p, 'peso');   // (diseño 9) en Hoy, esta sección va plegada
   await p.getByRole('button', { name: 'Apuntar el de hoy' }).click();
   await p.locator('#peso-hoy').fill('70,4');
   await p.locator('#peso-hoy').blur();
@@ -993,11 +996,13 @@ try {
   check(await p.evaluate(() => JSON.stringify(window.__vib?.slice(-1))) === '[[16,70,32]]', 'con su vibración');
   await revisar('checkin-enviado');
   await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await subProgreso(p, 'cuerpo');
   await p.getByRole('heading', { name: 'Peso corporal' }).waitFor();
   check((await p.locator('.cifra .v').first().textContent()) === '58,4', 'el peso aparece en su progreso');
   check(await p.getByRole('heading', { name: 'Medidas' }).count() === 1, 'y sus medidas');
   // v0.51: los anillos de la semana (sesiones, hábitos y check-in); el del check-in se acaba de cerrar: se celebra una vez
   const anillos = p.locator('.anillos-semana');
+  await subProgreso(p, 'resumen');
   await anillos.waitFor();
   const datosAn = await p.evaluate(() => ({ ids: [...document.querySelectorAll('.anillos-svg [data-anillo]')].map((g) => g.dataset.anillo), celebra: [...document.querySelectorAll('.anillos-svg .celebra')].map((g) => g.dataset.anillo),
     leyenda: document.querySelector('.anillos-leyenda').textContent, etiqueta: document.querySelector('.anillos-svg').getAttribute('aria-label') }));
@@ -1523,6 +1528,7 @@ try {
   await revisar('constancia');
   // v0.49: gráficas táctiles: arrastrar el dedo enseña la fecha y el valor; con el teclado, un deslizador
   const graf = p.locator('.grafica-tactil').first();
+  await subProgreso(p, 'cuerpo');
   await graf.scrollIntoViewIfNeeded();
   const cajaG = await graf.boundingBox();
   await p.mouse.move(cajaG.x + cajaG.width * 0.3, cajaG.y + cajaG.height / 2);
@@ -1556,7 +1562,9 @@ try {
   const bajo = await p.waitForFunction(() => { const t = document.querySelector('.seccion-habitos')?.getBoundingClientRect().top; return t < 200 || (scrollY > 800 && scrollY + innerHeight >= document.documentElement.scrollHeight - 2); }, null, { timeout: 4000 }).then(() => true).catch(() => false);
   check(bajo, 'tocar una fila baja a esa parte de la pantalla');
   await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await subProgreso(p, 'logros');
   await p.locator('.logros').waitFor();
+  await subProgreso(p, 'resumen');
   await p.getByRole('heading', { name: 'Tus bloques' }).waitFor();
   await p.locator('.fila-semana', { hasText: 'Bloque 2' }).click();
   await p.locator('.informe').waitFor();
@@ -1565,6 +1573,7 @@ try {
   await p.getByRole('button', { name: 'Cerrar' }).click();
   // v0.50: la vitrina de récords en trofeos («Nuevo» si es de los últimos 30 días); al tocar uno, cómo ha ido subiendo
   const trofeos = p.locator('.trofeo-tarjeta');
+  await subProgreso(p, 'fuerza');
   await trofeos.first().waitFor();
   check(await trofeos.count() === 6 && await p.locator('.trofeo-tarjeta .trofeo-nuevo').count() >= 1 && /\d/.test(await trofeos.first().locator('.trofeo-valor').textContent())
     && /Ver cómo ha ido$/.test(await trofeos.first().getAttribute('aria-label')), 'la vitrina: un trofeo por ejercicio, con su mejor marca, la serie, el día y «Nuevo»');
@@ -1679,6 +1688,7 @@ try {
     const NOMBRES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     await p.locator('.toca-hoy').waitFor();
     // (en el centro: arriba la taparía la cabecera pegada)
+    await abrirEnHoy(p, 'semana');   // (diseño 9) en Hoy, esta sección va plegada
     await p.getByRole('button', { name: 'Tu plan', exact: true }).evaluate((b) => b.scrollIntoView({ block: 'center' }));
     await p.getByRole('button', { name: 'Tu plan', exact: true }).click();
     const hojaPlanA = p.getByRole('dialog', { name: /^Tu plan,/ });
@@ -1762,8 +1772,10 @@ try {
     await p.getByRole('button', { name: 'Volver' }).first().click();
   } else check(true, 'sin sesiones pendientes esta semana: no hay portada que mirar');
   await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await subProgreso(p, 'logros');
   await p.locator('.logros').waitFor();
   await p.setViewportSize({ width: 360, height: 780 });
+  await subProgreso(p, 'resumen');
   await p.locator('.anillos-semana').scrollIntoViewIfNeeded().catch(() => {});
   await revisar('progreso-letra-muy-grande-360');
   check(await p.evaluate(() => document.documentElement.scrollWidth) <= 360, 'a 125 % y 360 px, los anillos y las medallas caben');
@@ -1829,6 +1841,7 @@ try {
   await intv.waitFor({ state: 'detached' });
   await p.getByRole('button', { name: 'Volver' }).first().click();
   await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await subProgreso(p, 'fuerza');
   await p.getByRole('button', { name: 'Foto de progreso' }).click();
   const nuevaFoto = p.getByRole('dialog', { name: 'Nueva foto de progreso' });
   await nuevaFoto.getByRole('button', { name: /^Frente/ }).click();
@@ -1857,6 +1870,7 @@ try {
   check(await p.locator('.diario-item', { hasText: 'Frente' }).count() === 4, 'la foto se guarda con su pose (4 de frente en el diario)');
 
   console.log('\nDemo: nutrición');
+  await subProgreso(p, 'cuerpo');
   await p.locator('.grafica-ingesta').scrollIntoViewIfNeeded();
   check((await p.locator('.grafica-ingesta').getAttribute('aria-label')).includes('apuntados') && (await p.locator('.gasto-atleta').textContent()).includes('gasto estimado'), 'en Progreso, Ana ve cada día frente a su objetivo y su gasto estimado');
   await revisar('nutricion-progreso');
@@ -2089,6 +2103,7 @@ try {
   await p.locator('.hero-dia').waitFor();
   check(await p.locator('.btn-avatar .avatar.con-foto').count() === 1, 'y sale en el botón de arriba de Hoy');
   await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await subProgreso(p, 'fuerza');
   await p.getByRole('heading', { name: 'Tu diario' }).waitFor();
   // El título sale antes que la cuadrícula: esperar a que estén todos (en una máquina lenta tarda)
   await p.locator('.diario-item').nth(5).waitFor().catch(() => {});
@@ -2213,6 +2228,7 @@ try {
   await revisar('cardio-resumen');
   await p.getByRole('button', { name: 'Volver a hoy' }).click();
   await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await subProgreso(p, 'fuerza');
   await p.getByRole('heading', { name: 'Cardio' }).waitFor();
   check((await p.locator('.cardio-totales').textContent()).includes('Esta semana: 34 min'), 'en Progreso, la gráfica de cardio ya suma los 34 minutos de esta semana');
   await revisar('cardio-progreso');
@@ -3448,6 +3464,7 @@ try {
 
   // (5) y (6) Progreso: destacados arriba; las gráficas con su rango, la línea que se transforma y la cifra que rueda
   await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await subProgreso(p, 'logros');
   await p.locator('.logros').waitFor();
   const dest = p.locator('.destacados .destacado');
   await hay(dest, await dest.count() || 1, 4000);
@@ -3456,9 +3473,11 @@ try {
   check(nDest >= 1 && nDest <= 4 && textosDest.every((t) => t.trim().endsWith('.')) && !textosDest.some((t) => /peso corporal|kcal|kg de tendencia|sueño/i.test(t)) && await dest.locator('.mini-grafica').count() === nDest,
     `destacados: ${nDest} frases con su gráfica pequeña, solo de entrenamiento (${textosDest.map((t) => `«${t}»`).join(' ')})`);
   check(await p.evaluate(() => { const d = document.querySelector('.destacados'); const a = document.querySelector('.anillos-semana'); return !!d && !!a && (d.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING) > 0; }), 'van arriba, antes de los anillos de la semana');
+  await subProgreso(p, 'resumen');
   await p.locator('.destacados').scrollIntoViewIfNeeded();
   await revisar('destacados');
   const seccionF = p.locator('.seccion', { has: p.getByRole('heading', { name: 'Fuerza (1RM estimado)' }) });
+  await subProgreso(p, 'fuerza');
   await seccionF.scrollIntoViewIfNeeded();
   const rangoF = seccionF.getByRole('group', { name: 'Rango de la gráfica del 1RM estimado' });
   await rangoF.waitFor();
@@ -3487,8 +3506,11 @@ try {
   await grafF.focus();
   await p.keyboard.press('Home');
   check(await grafF.getAttribute('aria-valuenow') === '1' && /kg/.test(await grafF.getAttribute('aria-valuetext')), 'y la gráfica sigue siendo un deslizador con el teclado (y táctil)');
-  check(await p.locator('.seccion', { has: p.getByRole('heading', { name: 'Tonelaje por semana' }) }).getByRole('group', { name: 'Rango de la gráfica del tonelaje' }).count() === 1
-    && await p.locator('.seccion', { has: p.getByRole('heading', { name: 'Peso corporal' }) }).getByRole('group', { name: 'Rango de la gráfica del peso' }).count() === 1, 'el tonelaje (nuevo) y el peso también tienen su rango');
+  const rangoTonelaje = await p.locator('.seccion', { has: p.getByRole('heading', { name: 'Tonelaje por semana' }) }).getByRole('group', { name: 'Rango de la gráfica del tonelaje' }).count();
+  await subProgreso(p, 'cuerpo');   // (diseño 9) el peso está en la sub-pestaña Cuerpo
+  const rangoDelPeso = await p.locator('.seccion', { has: p.getByRole('heading', { name: 'Peso corporal' }) }).getByRole('group', { name: 'Rango de la gráfica del peso' }).count();
+  await subProgreso(p, 'fuerza');
+  check(rangoTonelaje === 1 && rangoDelPeso === 1, 'el tonelaje (nuevo) y el peso también tienen su rango');
   await revisar('graficas-rango');
   await p.setViewportSize({ width: 360, height: 780 });
   await p.emulateMedia({ colorScheme: 'dark' });
@@ -3590,7 +3612,9 @@ try {
   await hojaDial.waitFor({ state: 'detached' });
   check(await p.evaluate(() => document.activeElement?.classList.contains('dial')), 'y al cerrarla vuelve al dial');
   await p.locator('.tab', { hasText: 'Progreso' }).click();
+  await subProgreso(p, 'logros');
   await p.locator('.logros').waitFor();
+  await subProgreso(p, 'fuerza');
   await seccionF.scrollIntoViewIfNeeded();
 
   // (7) El carné en Perfil: nombre, nivel, bloque y desde cuándo (nada de peso); se inclina con el dedo; se comparte como imagen
@@ -3768,6 +3792,7 @@ try {
     const hitoVisto = hitos[hitos.length - 1];
     check(await p.evaluate((h) => Object.keys(localStorage).some((k) => { try { return k.startsWith('fbe-hitos-racha-') && JSON.parse(localStorage.getItem(k)).includes(h); } catch { return false; } }), hitoVisto), 'lo celebrado se guarda en el móvil, por atleta');
     await p.locator('.tab', { hasText: 'Progreso' }).click();
+    await subProgreso(p, 'logros');
     await p.locator('.logros').waitFor();
     await cerrarDialogos();
     await p.locator('.tab', { hasText: 'Hoy' }).click();
@@ -5239,6 +5264,7 @@ try {
   // «Mi técnica» en Progreso: por ejercicio, su nota en el tiempo y comparar dos
   await p.locator('.tab', { hasText: 'Progreso' }).first().click();
   const mt = p.locator('.mi-tecnica');
+  await subProgreso(p, 'fuerza');
   await mt.waitFor();
   await mt.scrollIntoViewIfNeeded();
   await hay(mt.locator('.tecnica-item'), 3);
@@ -5522,6 +5548,7 @@ try {
   await detC.waitFor({ state: 'detached' });
   await p.locator('.tab', { hasText: 'Progreso' }).first().click();
   const vel = p.locator('.mi-tecnica-velocidad');
+  await subProgreso(p, 'fuerza');
   await vel.waitFor();
   check(/m\/s/.test(await vel.textContent()) && /±10–15 %/.test(await vel.textContent()), '«Mi técnica»: la velocidad de su mejor repetición en ese ejercicio (estimada)');
   await revisar('mi-tecnica-velocidad');
