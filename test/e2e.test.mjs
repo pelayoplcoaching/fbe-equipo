@@ -144,7 +144,7 @@ try {
         // el lobo, grande y centrado, entero dentro de la pantalla
         lobo: l.width >= Math.min(200, innerWidth * 0.6) && Math.abs(l.left + l.width / 2 - innerWidth / 2) < 2 && l.top >= 0 && l.bottom <= innerHeight,
         sinImagen: !document.querySelector('#portada img, #portada .estandarte') && !performance.getEntriesByType('resource').some((x) => /estandarte/.test(x.name)),
-        carga: getComputedStyle(el.querySelector('.portada-carga span')).animationName === 'portada-barra',
+        carga: getComputedStyle(el.querySelector('.portada-carga span')).animationName === 'portada-carga',
         lema: /Confianza, esfuerzo, compromiso/.test(t) && /Confianza . Esfuerzo . Compromiso/.test(el.querySelector('.portada-lema').textContent),
         firma: t.includes('By Pelayo Fern\u00e1ndez Cid\u00f3n') && t.includes('CEO de Fuerza Basada en Evidencia'),
         nombre: el.getAttribute('aria-label') === 'Abriendo FBE Equipo', rol: el.getAttribute('role'), color: document.querySelector('meta[name=theme-color]').content,
