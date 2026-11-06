@@ -5,9 +5,11 @@ import './pulido.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';
 import { instalarPulido } from './ui/pulido.js';
+import { instalarLlegada } from './ui/llegada.js';
 
 aplicarTema();
 instalarPulido();
+instalarLlegada();
 import { crearApi } from './datos/api.js';
 import { crearCola } from './datos/cola.js';
 import { instalarRegistro } from './registro-errores.js';

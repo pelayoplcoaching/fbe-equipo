@@ -938,7 +938,7 @@ function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, chi
   const { sel, eventos, caja } = raspado;
   const i = sel ?? n - 1;
   const izq = sel == null ? 0 : Math.max(0, Math.min(100, (xs[sel] / W) * 100));
-  // (diseño, tanda 15) la gráfica se dibuja la primera vez que entra en la pantalla (la clase «vista»; el dibujo, en diseno.css)
+  // (diseño, tanda 15) la gráfica se dibuja la primera vez que entra en la pantalla (la clase «trazada»; el dibujo, en diseno.css)
   const [vista, setVista] = useState(typeof IntersectionObserver === 'undefined');
   useEffect(() => {
     const el = caja.current;
@@ -948,7 +948,7 @@ function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, chi
     return () => io.disconnect();
   }, [vista]);
   return (
-    <div class={`grafica-caja${vista ? ' vista' : ''}`} ref={caja}>
+    <div class={`grafica-caja${vista ? ' trazada' : ''}`} ref={caja}>
       <div class="grafica-tactil" role="slider" tabIndex={0} aria-label={etiqueta} aria-valuemin="1" aria-valuemax={n} aria-valuenow={i + 1}
         aria-valuetext={textoPunto(i)} {...eventos}>
         {children}

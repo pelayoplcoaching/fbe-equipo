@@ -750,14 +750,14 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 
 /* ── 27 · Las gráficas se dibujan (tanda 15) ──────────────────────────────────────────────────────────────────────────
    La línea es ya una curva suave (logica/visual.js: trazoSuave) y, la primera vez que la gráfica entra en la pantalla
-   (comunes.jsx: CajaGrafica pone «vista»), se traza de izquierda a derecha; el relleno y los puntos llegan detrás.
+   (comunes.jsx: CajaGrafica pone «trazada»), se traza de izquierda a derecha; el relleno y los puntos llegan detrás.
    Solo la línea de datos (la que lleva pathLength): las pautadas, a rayas, no se tocan. Con «reducir movimiento», nada. */
 @media (prefers-reduced-motion: no-preference) {
-  .grafica-caja:not(.vista) .linea[pathLength] { stroke-dasharray: 1; stroke-dashoffset: 1; }
-  .grafica-caja:not(.vista) :is(.area-deg, .punto, .pesada, text.valor) { opacity: 0; }
-  .grafica-caja.vista .linea[pathLength] { animation: grafica-traza .9s cubic-bezier(.3, .1, .2, 1) backwards; }
-  .grafica-caja.vista .area-deg { animation: grafica-asoma .6s ease-out .3s backwards; }
-  .grafica-caja.vista :is(.punto, .pesada, text.valor) { animation: grafica-asoma .35s ease-out .6s backwards; }
+  .grafica-caja:not(.trazada) .linea[pathLength] { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .grafica-caja:not(.trazada) :is(.area-deg, .punto, .pesada, text.valor) { opacity: 0; }
+  .grafica-caja.trazada .linea[pathLength] { animation: grafica-traza .9s cubic-bezier(.3, .1, .2, 1) backwards; }
+  .grafica-caja.trazada .area-deg { animation: grafica-asoma .6s ease-out .3s backwards; }
+  .grafica-caja.trazada :is(.punto, .pesada, text.valor) { animation: grafica-asoma .35s ease-out .6s backwards; }
 }
 @keyframes grafica-traza { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
 @keyframes grafica-asoma { from { opacity: 0; } }
@@ -790,3 +790,38 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .anillo { --c: var(--morado); }
 .hero-dia .anillo { --c: #C9BEFF; }
 .anillo.completo, .dial-esfera.completo svg, .anillo-macro.cumple .anillo-macro-dibujo svg { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--c, var(--dial, var(--morado))) 45%, transparent)); }
+
+/* ── 30 · Un solo lenguaje de movimiento (tanda 16) ───────────────────────────────────────────────────────────────────
+   La app acumulaba 30 duraciones y 23 curvas distintas. La regla desde ahora: tres duraciones y tres curvas.
+     --mov-rapido  lo que responde al dedo (color, pulsado, un interruptor)
+     --mov-medio   lo que cambia dentro de la pantalla (pestañas, tarjetas que llegan, un panel que se abre)
+     --mov-lento   lo que entra entero (una hoja, la tarjeta de Hoy, un dibujo)
+     --curva-casa    la de siempre: sale decidida y frena suave (la más usada ya en estilos.css)
+     --curva-llega   para lo que entra desde fuera: llega rápido y se posa
+     --curva-rebote  solo para celebrar (un récord, una medalla)
+   Se aplica aquí a lo que más se ve: las hojas, las pestañas y las tarjetas. Lo demás de estilos.css conserva sus
+   valores (no se reescribe en masa); lo nuevo, con estas variables. Las salidas no son de esta línea (pulido 3). */
+:root {
+  --mov-rapido: .14s; --mov-medio: .26s; --mov-lento: .42s;
+  --curva-casa: cubic-bezier(.2, .8, .2, 1); --curva-llega: cubic-bezier(.16, 1, .3, 1); --curva-rebote: cubic-bezier(.2, 1.3, .35, 1);
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Hojas (estilos.css 427 y 436): el velo funde y la hoja sube entera desde abajo, como las del sistema; en pantallas
+     anchas, donde es un cuadro centrado, se abre desde un poco más pequeño. Con data-vt="morph" siguen sin animación. */
+  .velo { animation: aparecer var(--mov-medio) var(--curva-casa); }
+  .hoja-dialogo { animation: hoja-sube var(--mov-lento) var(--curva-llega); }
+  @media (min-width: 700px) { .hoja-dialogo { animation: hoja-abre var(--mov-medio) var(--curva-llega); } }
+  /* Pestañas (estilos.css 1282, 2507 y 194): el panel, la píldora de la barra y el fondo del icono, al mismo paso */
+  .vista, .pestana-panel { animation-duration: var(--mov-medio); animation-timing-function: var(--curva-casa); }
+  .tabs-pildora[data-lista] { transition: transform var(--mov-medio) var(--curva-casa), width var(--mov-medio) var(--curva-casa), opacity var(--mov-rapido) var(--curva-casa); }
+  .tab > span:first-child, .tab > .tab-ico { transition: background-color var(--mov-rapido) var(--curva-casa), color var(--mov-rapido) var(--curva-casa); }
+  /* Tarjetas (estilos.css 1714, 2591 y 3433): la de Hoy, las del resumen de la sesión y los destacados */
+  .hero-dia .titular h2, .hero-dia .hero-acciones, .hero-dia .semana-resumen { animation-duration: var(--mov-lento); }
+  .resumen-sesion > :not(.resumen-medalla), .resumen-num > div, .resumen-pr { animation-duration: var(--mov-medio); animation-delay: calc(var(--i, 0) * 45ms); }
+  .destacados-lista > .destacado { animation-duration: var(--mov-lento); animation-delay: calc(var(--i, 0) * 45ms); }
+  /* Lo que llega tras una carga (ui/llegada.js): se funde, pieza a pieza. Solo opacidad: no mueve nada de sitio */
+  .llega { animation: llega var(--mov-medio) var(--curva-casa) calc(var(--orden, 0) * 30ms) backwards; }
+}
+@keyframes hoja-sube { from { transform: translateY(100%); } }
+@keyframes hoja-abre { from { transform: scale(.96); opacity: 0; } }
+@keyframes llega { from { opacity: 0; } }
