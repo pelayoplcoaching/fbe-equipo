@@ -731,3 +731,33 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    Solo cambia el aviso que lleva botón: los errores de un formulario (.error sin botón) siguen igual. */
 .error:has(> .btn-texto) { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; padding: 10px 10px 10px 14px; }
 .error > .btn-texto { flex: none; min-height: 36px; padding: 0 12px; border-radius: 10px; background: var(--hoja); color: var(--alerta); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alerta) 30%, transparent); }
+
+/* ---------- 26. La tarjeta de Hoy, con el dibujo de la sesión -------------------------------------------------------
+   (ui/atleta/Hoy.jsx: ArteSesion con la clase .hero-arte) La tarjeta del día era un bloque oscuro liso, igual todos los
+   días. Ahora lleva al fondo el dibujo de líneas de la sesión que toca (el mismo de su portada, que sale de su nombre y
+   de su patrón principal): cada sesión se reconoce por su dibujo, como las portadas de Ladder. Va a la derecha y se
+   desvanece hacia el texto, para que el nombre y el botón se lean igual. Aparece con un fundido cuando se sabe qué
+   ejercicios lleva. Los colores, los de .portada-arte (estilos.css 3172–3176). */
+.hero-dia .hero-arte { position: absolute; z-index: -1; top: 0; right: 0; width: 78%; height: 100%; pointer-events: none; opacity: .62;
+  -webkit-mask-image: linear-gradient(to left, #000 18%, rgba(0, 0, 0, .55) 52%, transparent 96%), linear-gradient(to bottom, #000 38%, transparent 92%); -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to left, #000 18%, rgba(0, 0, 0, .55) 52%, transparent 96%), linear-gradient(to bottom, #000 38%, transparent 92%); mask-composite: intersect; }
+.hero-arte .acento { stroke: color-mix(in srgb, var(--morado) 55%, #fff); }
+.hero-arte .claro { stroke: #E7E3FF; }
+.hero-arte .tenue { stroke: #8F88C0; }
+.hero-arte .relleno-punto.tenue { fill: #8F88C0; stroke: none; }
+@media (prefers-reduced-motion: no-preference) { .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both; } }
+@keyframes hero-arte-entra { from { opacity: 0; } }
+
+/* ── 27 · Las gráficas se dibujan (tanda 15) ──────────────────────────────────────────────────────────────────────────
+   La línea es ya una curva suave (logica/visual.js: trazoSuave) y, la primera vez que la gráfica entra en la pantalla
+   (comunes.jsx: CajaGrafica pone «vista»), se traza de izquierda a derecha; el relleno y los puntos llegan detrás.
+   Solo la línea de datos (la que lleva pathLength): las pautadas, a rayas, no se tocan. Con «reducir movimiento», nada. */
+@media (prefers-reduced-motion: no-preference) {
+  .grafica-caja:not(.vista) .linea[pathLength] { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .grafica-caja:not(.vista) :is(.area-deg, .punto, .pesada, text.valor) { opacity: 0; }
+  .grafica-caja.vista .linea[pathLength] { animation: grafica-traza .9s cubic-bezier(.3, .1, .2, 1) backwards; }
+  .grafica-caja.vista .area-deg { animation: grafica-asoma .6s ease-out .3s backwards; }
+  .grafica-caja.vista :is(.punto, .pesada, text.valor) { animation: grafica-asoma .35s ease-out .6s backwards; }
+}
+@keyframes grafica-traza { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
+@keyframes grafica-asoma { from { opacity: 0; } }

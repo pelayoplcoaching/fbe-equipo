@@ -115,6 +115,31 @@ export function mapaConstancia(sesiones = [], hoy, semanas = 16) {
   return { semanas: cols, meses, diasActivos: dias.length, total: dias.reduce((t, d) => t + d.n, 0) };
 }
 
+// (diseño, tanda 15) El trazo de una gráfica, en curva suave en vez de quebrado: una curva cúbica que pasa por todos los
+// puntos y no se sale entre ellos (interpolación monótona de Fritsch y Carlson: entre dos valores no inventa ni un pico
+// ni un valle que los datos no tengan). pts: [[x, y]] en píxeles, con x creciente. Con uno o dos puntos, rectas.
+export function trazoSuave(pts = []) {
+  const p = (pts || []).filter((q) => Number.isFinite(q?.[0]) && Number.isFinite(q?.[1]));
+  const f = (v) => v.toFixed(1);
+  if (!p.length) return '';
+  if (p.length < 3) return p.map(([x, y], i) => `${i ? 'L' : 'M'}${f(x)} ${f(y)}`).join(' ');
+  const n = p.length, dx = [], m = [], t = new Array(n);
+  for (let i = 0; i < n - 1; i++) { dx[i] = p[i + 1][0] - p[i][0]; m[i] = dx[i] > 0 ? (p[i + 1][1] - p[i][1]) / dx[i] : 0; }
+  t[0] = m[0]; t[n - 1] = m[n - 2];
+  for (let i = 1; i < n - 1; i++) t[i] = m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2;
+  for (let i = 0; i < n - 1; i++) {
+    if (m[i] === 0) { t[i] = 0; t[i + 1] = 0; continue; }
+    const a = t[i] / m[i], b = t[i + 1] / m[i], c = a * a + b * b;
+    if (c > 9) { const k = 3 / Math.sqrt(c); t[i] = k * a * m[i]; t[i + 1] = k * b * m[i]; }
+  }
+  let d = `M${f(p[0][0])} ${f(p[0][1])}`;
+  for (let i = 0; i < n - 1; i++) {
+    const h = dx[i] / 3;
+    d += ` C${f(p[i][0] + h)} ${f(p[i][1] + t[i] * h)} ${f(p[i + 1][0] - h)} ${f(p[i + 1][1] - t[i + 1] * h)} ${f(p[i + 1][0])} ${f(p[i + 1][1])}`;
+  }
+  return d;
+}
+
 // ---------- panel del coach ----------
 // El color de la franja de cada atleta, con los mismos avisos del panel: gris sin activar o de baja; rojo si se está
 // quedando atrás (días sin entrenar, poco cumplimiento) o hay algo grave; ámbar si necesita atención; verde si va bien.

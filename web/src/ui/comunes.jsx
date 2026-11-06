@@ -1,7 +1,7 @@
 import { createContext, Component, render as pintarEn, h } from 'preact';
 import { reportarError } from '../registro-errores.js';
 import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { escalaGrafica, puntoMasCercano, indicesRecord } from '../logica/visual.js';
+import { escalaGrafica, puntoMasCercano, indicesRecord, trazoSuave } from '../logica/visual.js';
 import { num, leerNumero } from '../logica/calculos.js';
 import { LOBO } from './marca-lobo.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
@@ -929,8 +929,17 @@ function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, chi
   const { sel, eventos, caja } = raspado;
   const i = sel ?? n - 1;
   const izq = sel == null ? 0 : Math.max(0, Math.min(100, (xs[sel] / W) * 100));
+  // (diseño, tanda 15) la gráfica se dibuja la primera vez que entra en la pantalla (la clase «vista»; el dibujo, en diseno.css)
+  const [vista, setVista] = useState(typeof IntersectionObserver === 'undefined');
+  useEffect(() => {
+    const el = caja.current;
+    if (vista || !el) return undefined;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setVista(true); io.disconnect(); } }, { threshold: 0.35 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [vista]);
   return (
-    <div class="grafica-caja" ref={caja}>
+    <div class={`grafica-caja${vista ? ' vista' : ''}`} ref={caja}>
       <div class="grafica-tactil" role="slider" tabIndex={0} aria-label={etiqueta} aria-valuemin="1" aria-valuemax={n} aria-valuenow={i + 1}
         aria-valuetext={textoPunto(i)} {...eventos}>
         {children}
@@ -1017,7 +1026,8 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
   const raspado = useRaspado(n, xs);
   const morph = useMorph(clave, (puntos || []).map((p, i) => [X(i), Y(p.y)]), H - abj);
   if (!n) return null;
-  const d = puntos.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(' ');
+  // (diseño, tanda 15) en curva suave que pasa por cada punto (logica/visual.js: trazoSuave)
+  const d = trazoSuave(puntos.map((p, i) => [X(i), Y(p.y)]));
   const area = `${d} L${X(n - 1).toFixed(1)} ${H - abj} L${X(0).toFixed(1)} ${H - abj}Z`;
   morph.finales.current = { linea: d, area };
   const etiquetasX = n <= 2 ? puntos.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
@@ -1040,7 +1050,7 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
           </g>
         ))}
         <path class="area-deg" ref={morph.relleno} d={area} fill={`url(#deg-${id})`} />
-        <path class="linea" ref={morph.linea} d={d} />
+        <path class="linea" ref={morph.linea} d={d} pathLength="1" />
         {sel != null && <line class="guia" x1={X(sel)} x2={X(sel)} y1={arr - 6} y2={H - abj} />}
         {puntos.map((p, i) => <circle key={i} class={`punto ${i === n - 1 ? 'ultimo' : ''} ${prs.includes(i) ? 'record' : ''} ${i === sel ? 'elegido' : ''}`} cx={X(i)} cy={Y(p.y)} r={i === sel ? 5.5 : prs.includes(i) ? 4.5 : i === n - 1 ? 4.5 : 3} />)}
         {sel == null && <text class="valor" x={Math.min(X(n - 1), W - der)} y={Y(ultimo.y) - 10} text-anchor="end">{conU(ultimo.y)}</text>}
@@ -1070,7 +1080,7 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave }) {
   const raspado = useRaspado(n, xs);
   const morph = useMorph(clave, (serie || []).map((p) => [X(p.fecha), Y(p.tendencia)]), H - abj);
   if (!n) return null;
-  const linea = serie.map((p, i) => `${i ? 'L' : 'M'}${X(p.fecha).toFixed(1)} ${Y(p.tendencia).toFixed(1)}`).join(' ');
+  const linea = trazoSuave(serie.map((p) => [X(p.fecha), Y(p.tendencia)]));
   const area = `${linea} L${X(dN).toFixed(1)} ${H - abj} L${X(d0).toFixed(1)} ${H - abj}Z`;
   morph.finales.current = { linea, area };
   const paso = hi - lo > 6 ? 1 : 0.5;
@@ -1089,7 +1099,7 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave }) {
         ))}
         <path class="area-deg" ref={morph.relleno} d={area} fill={`url(#deg-${id})`} />
         {serie.map((p) => <circle key={p.fecha} class="pesada" cx={X(p.fecha)} cy={Y(p.kg)} r="2.6" />)}
-        <path class="linea" ref={morph.linea} d={linea} />
+        <path class="linea" ref={morph.linea} d={linea} pathLength="1" />
         {sel != null && <line class="guia" x1={xs[sel]} x2={xs[sel]} y1={arr - 6} y2={H - abj} />}
         {sel != null && <circle class="punto elegido" cx={xs[sel]} cy={Y(serie[sel].tendencia)} r="5.5" />}
         <circle class="punto ultimo" cx={X(ult.fecha)} cy={Y(ult.tendencia)} r="4.5" />
