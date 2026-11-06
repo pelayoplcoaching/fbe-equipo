@@ -214,7 +214,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
               }} /></div>}
           </div>
           <div class="campo"><label for={`s-nota-${semana.id}`}>Nota para el atleta</label>
-            <textarea id={`s-nota-${semana.id}`} class="area" style="min-height:64px" defaultValue={semana.nota_coach || ''} placeholder="Aparece arriba en su pantalla de hoy" onChange={(e) => guardar('semanas', semana.id, { nota_coach: nulo(e.currentTarget.value.trim()) })} /></div>
+            <textarea key={`s-nota-${semana.id}-${version}`} id={`s-nota-${semana.id}`} class="area" style="min-height:64px" defaultValue={semana.nota_coach || ''} placeholder="Aparece arriba en su pantalla de hoy" onChange={(e) => guardar('semanas', semana.id, { nota_coach: nulo(e.currentTarget.value.trim()) })} /></div>
         </div>
       )}
 
@@ -254,11 +254,13 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       {fbe && d.semanas.some((w) => w.id === fbe.base) && d.semanas.some((w) => w.id === fbe.destino) && (
         <ProgramarFBE d={d} base={d.semanas.find((w) => w.id === fbe.base)} destino={d.semanas.find((w) => w.id === fbe.destino)} ejercicios={ejercicios}
           atleta={{ id: atletaId, nivel, volumen_objetivo: volumenObjetivo }} alCerrar={() => setFbe(null)}
-          alAplicar={async (lista) => {
+          alAplicar={async (lista, extra = {}) => {
             const w = d.semanas.find((x) => x.id === fbe.destino);
             setFbe(null);
+            // La hoja guarda ella misma la nota de la semana (extra.nota): aquí solo se dice y se recarga
+            const hecho = [lista.length ? `${lista.length} ${lista.length === 1 ? 'ejercicio actualizado' : 'ejercicios actualizados'}` : null, extra.nota ? (lista.length ? 'nota guardada' : 'Nota guardada') : null].filter(Boolean).join(' y ');
             await estructura(async () => { for (const { id, cambios } of lista) await api.actualizar('sesion_ejercicios', id, cambios); },
-              `${lista.length} ${lista.length === 1 ? 'ejercicio actualizado' : 'ejercicios actualizados'} en la semana ${w.numero}${w.programacion === 'programada' ? '' : ', en borrador'}`);
+              `${hecho} en la semana ${w.numero}${w.programacion === 'programada' ? '' : ', en borrador'}`);
             setVersion((v) => v + 1);
           }} />
       )}

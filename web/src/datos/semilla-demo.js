@@ -769,10 +769,10 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   // «ha compartido un entreno hoy». Siempre dentro de hoy, sea la hora que sea (como mucho, hace 40 minutos).
   const bloquesC = new Set(db.bloques.filter((x) => x.atleta_id === carlos.id).map((x) => x.id));
   const semanasC = new Set(db.semanas.filter((w) => bloquesC.has(w.bloque_id)).map((w) => w.id));
-  // (la última con ejercicios: de viernes a domingo la última hecha es el rodaje, que no lleva ninguno, y el entreno
-  // compartido salía sin pictogramas: la prueba de navegador de la comunidad fallaba esos días)
-  const ultimaC = db.sesiones.filter((x) => semanasC.has(x.semana_id) && x.completada && db.sesion_ejercicios.some((q) => q.sesion_id === x.id))
-    .sort((x, y) => (x.fecha_realizada < y.fecha_realizada ? 1 : -1))[0];
+  // (v0.76) su última sesión hecha CON SERIES: según el día de la semana, la última hecha podía ser un rodaje de cardio
+  // (sin ejercicios ni series), y el entreno compartido salía vacío
+  const conSeries = (ses) => db.sesion_ejercicios.some((p) => p.sesion_id === ses.id && db.series.some((x) => x.sesion_ejercicio_id === p.id && Number(x.reps) > 0));
+  const ultimaC = db.sesiones.filter((x) => semanasC.has(x.semana_id) && x.completada && conSeries(x)).sort((x, y) => (x.fecha_realizada < y.fecha_realizada ? 1 : -1))[0];
   if (ultimaC) {
     const [hh, mm] = partesMadrid().hora.split(':').map(Number);
     const minutosHoy = Math.max(0.2, Math.min(40, (hh * 60 + mm) / 2));

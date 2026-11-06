@@ -8,7 +8,7 @@
 export const NOVEDADES = {
   '0.76': {
     coach: [
-      '«Programar según FBE»: guarda reglas propias de cada atleta y de cada ejercicio desde la hoja de revisión. Necesita la migración 046.',
+      '«Programar según FBE»: reglas propias por atleta y por ejercicio, borrador de la nota de la semana y registro de lo aplicado. Migración 046.',
     ],
   },
   '0.75': {
