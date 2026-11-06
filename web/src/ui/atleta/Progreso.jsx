@@ -570,10 +570,12 @@ function Cifras({ constancia, semanas }) {
 export function Progreso({ programa, salud, irA, checkinSemana }) {
   const { api, atleta } = useApp();
   const entrena = conEntrenamiento(atleta);
-  const constancia = useCarga(() => (entrena ? api.constancia(atleta.id).catch(() => null) : Promise.resolve(null)), [atleta.id, entrena]);
+  // (pulido 4) al volver a Progreso se enseña al momento lo último cargado y se pone al día por detrás
+  const rec = (que) => ({ recuerdo: `progreso:${api.uid()}:${atleta.id}:${que}:${entrena ? 1 : 0}` });
+  const constancia = useCarga(() => (entrena ? api.constancia(atleta.id).catch(() => null) : Promise.resolve(null)), [atleta.id, entrena], rec('constancia'));
   // v0.52: lo de Progreso se carga una vez para la vista y para los destacados
-  const progreso = useCarga(() => api.progreso(atleta.id), [atleta.id]);
-  const semanas = useCarga(() => (entrena ? api.resumenesSemanales(atleta.id, 4).catch(() => []) : Promise.resolve([])), [atleta.id, entrena]);
+  const progreso = useCarga(() => api.progreso(atleta.id), [atleta.id], rec('progreso'));
+  const semanas = useCarga(() => (entrena ? api.resumenesSemanales(atleta.id, 4).catch(() => []) : Promise.resolve([])), [atleta.id, entrena], rec('semanas'));
   // La sub-pestaña: Resumen, salvo que se haya pedido otra al venir («Ver la gráfica» del peso, «Ver mis logros»)
   const [sub, setSub] = useState(() => tomarSubProgreso() || 'resumen');
   useEffect(() => {

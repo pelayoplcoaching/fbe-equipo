@@ -10,14 +10,46 @@ import { podarEntendidos, olvidarEntendidos } from './tecnica/entendidos.js';
 import { borrarCompartido } from './Compartido.jsx';
 import { borrarPendientes } from '../datos/pendientes.js';
 const almacenLocal = () => { try { return window.localStorage; } catch { return null; } };
-import { Ctx, Cargando, Icono } from './comunes.jsx';
+import { Ctx, Cargando, Icono, olvidarRecuerdos } from './comunes.jsx';
+import { vibrar } from './hapticos.js';
 import { Acceso, Vincular, NuevaPassword, SegundoPaso } from './Acceso.jsx';
 import { AtletaApp } from './atleta/AtletaApp.jsx';
-import { CoachApp } from './coach/CoachApp.jsx';
 import { quitarPortada } from './portada.js';
 import { desactivarPush, desactivarPushLocal, sincronizarPush } from '../datos/push.js';
 import { fichaCambiada } from '../logica/nivel.js';
 import { quitarInsignia } from './insignia-app.js';
+
+// (pulido 10) La app del coach (el panel, la ficha, el editor del programa, el motor…: una cuarta parte del código) va
+// en su propio trozo: quien entra como atleta no la espera ni la procesa al abrir. El service worker la guarda con
+// lo demás (por detrás), así que también abre sin conexión. En el dispositivo de un coach se empieza a pedir nada más arrancar
+// (a la vez que se abre su sesión), para que no se note.
+const CLAVE_ROL = 'fbe-ultimo-rol';
+let CoachCargada = null;
+let pidiendoCoach = null;
+const cargarCoach = () => {
+  pidiendoCoach ||= import('./coach/CoachApp.jsx').then((m) => { CoachCargada = m.CoachApp; return CoachCargada; }).catch((e) => { pidiendoCoach = null; throw e; });
+  return pidiendoCoach;
+};
+try { if (localStorage.getItem(CLAVE_ROL) === 'coach') cargarCoach().catch(() => {}); } catch { /* */ }
+function CoachApp() {
+  const [C, setC] = useState(() => CoachCargada);
+  const [error, setError] = useState(null);
+  const pedir = () => { setError(null); cargarCoach().then((x) => setC(() => x)).catch(setError); };
+  useEffect(() => {
+    try { localStorage.setItem(CLAVE_ROL, 'coach'); } catch { /* */ }
+    if (!C) pedir();
+  }, []);
+  if (C) return <C />;
+  if (error) {
+    return (
+      <div class="acceso"><div class="acceso-caja pila">
+        <div class="error" role="alert">No se ha podido cargar la app. Comprueba la conexión y vuelve a intentarlo.</div>
+        <button class="btn" onClick={pedir}>Reintentar</button>
+      </div></div>
+    );
+  }
+  return <div class="acceso"><Cargando /></div>;
+}
 
 const CLAVE_ACTIVACION = 'fbe-activacion-pendiente';
 export function guardarActivacionPendiente(datos) { try { localStorage.setItem(CLAVE_ACTIVACION, JSON.stringify(datos)); } catch { /* */ } }
@@ -38,7 +70,8 @@ export function App({ backend, api, cola }) {
   const [pedidoCoach, setPedidoCoach] = useState(null); // al volver del modo atleta: abrir algo en la vista de coach
 
   // accion: { texto, fn } añade un botón al aviso (p. ej. «Deshacer»)
-  const aviso = (texto, tipo = 'ok', accion = null) => setToast({ texto, tipo, accion, id: Date.now() });
+  // (pulido 6) un aviso de error, además, se nota en la mano
+  const aviso = (texto, tipo = 'ok', accion = null) => { if (tipo === 'error') vibrar('error'); setToast({ texto, tipo, accion, id: Date.now() }); };
   useEffect(() => {
     if (!toast) return undefined;
     const t = setTimeout(() => setToast(null), toast.accion ? 6000 : toast.tipo === 'error' || toast.tipo === 'record' ? 5000 : 2800);
@@ -187,8 +220,8 @@ export function App({ backend, api, cola }) {
     fijarPerfil: (p) => setEstado((e) => ({ ...e, perfil: p })),
     // Al cerrar sesión, este móvil deja de recibir las notificaciones de esa cuenta
     // (v0.54) y los borradores de los mensajes de este móvil
-    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); borrarBorradores(almacenLocal()); borrarSalida(api); borrarCacheChat().catch(() => {}); olvidarAnalisis(); olvidarTiras(); olvidarEntendidos(); borrarCompartido(); borrarPendientes(); backend.reiniciarChats?.(); await backend.auth.salir(); resolver(true); },
-    reiniciarDemo: () => { backend.reiniciar?.(); ultimoUid.current = undefined; resolver(true); },
+    salir: async () => { if (backend.modo === 'supabase') await desactivarPush(api); quitarInsignia(); borrarTodoEnCurso(); borrarBorradores(almacenLocal()); borrarSalida(api); borrarCacheChat().catch(() => {}); olvidarAnalisis(); olvidarTiras(); olvidarEntendidos(); borrarCompartido(); borrarPendientes(); olvidarRecuerdos(); backend.reiniciarChats?.(); await backend.auth.salir(); resolver(true); },
+    reiniciarDemo: () => { backend.reiniciar?.(); olvidarRecuerdos(); ultimoUid.current = undefined; resolver(true); },
     // Modo atleta del coach (v0.37)
     propioCoach: estado.fase === 'coach' ? estado.propio || null : null,
     entrarModoAtleta: (propio = null) => {
@@ -201,6 +234,7 @@ export function App({ backend, api, cola }) {
   // Dentro del modo atleta, para la app de atleta: su ficha es «el atleta» y propio = true
   const ctxAtleta = enModoAtleta ? { ...ctx, atleta: estado.propio, propio: true } : ctx;
 
+  useEffect(() => { if (estado.fase === 'atleta') { try { localStorage.setItem(CLAVE_ROL, 'atleta'); } catch { /* */ } } }, [estado.fase]);
   // La portada de arranque se va cuando hay algo que enseñar: el acceso enseguida; la cuenta, con sus datos
   useEffect(() => {
     if (estado.fase !== 'cargando') quitarPortada({ esperarDatos: estado.fase === 'atleta' || estado.fase === 'coach' });

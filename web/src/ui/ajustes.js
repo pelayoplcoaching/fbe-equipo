@@ -28,7 +28,10 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   // iPhone (y en Android) pausa la música de otras apps mientras dura el descanso. Solo sale donde puede funcionar
   vozBloqueo: false,
   // v0.63: «Teclado de la app al apuntar las series» (ui/atleta/Teclado.jsx): de serie, sí
-  tecladoApp: true };
+  tecladoApp: true,
+  // pulido 7: «Sonido al marcar una serie» (un tic suave, y unas notas al terminar la sesión). De serie, como tenga
+  // puesto el sonido del descanso: quien lo tenía apagado no oye nada nuevo
+  sonidoSerie: true };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -58,6 +61,8 @@ export function normalizarAjustes(guardado = {}) {
   // v0.54: el fondo del chat, con dibujos o liso
   if (!['dibujos', 'liso'].includes(a.fondoChat)) a.fondoChat = AJUSTES_DEFECTO.fondoChat;
   a.sonidosChat = a.sonidosChat !== false;
+  // pulido 7: sin elegirlo, el sonido de la serie sigue al del descanso
+  a.sonidoSerie = 'sonidoSerie' in g ? g.sonidoSerie !== false : a.sonido !== false;
   a.fotosHd = a.fotosHd === true;
   a.difuminarCara = a.difuminarCara === true;
   a.soloWifi = a.soloWifi === true;

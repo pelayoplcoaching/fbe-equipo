@@ -553,22 +553,63 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
 }
 
 // Carga asíncrona con estado
+// (pulido 4) recuerdo: una clave para recordar, mientras la app esté abierta, lo último que se cargó. Al volver a esa
+// pantalla se enseña al momento lo recordado y se pone al día por detrás, sin esqueletos (como hacen las apps del
+// móvil al volver a una lista). Solo en memoria: no se guarda nada en el dispositivo y se olvida al salir de la cuenta.
+// Lo recordado deja de valer en cuanto se escribe algo desde este dispositivo («fbe-escritura», de datos/api.js): lo
+// que se acaba de cambiar no se enseña como estaba antes, se vuelve a cargar. (Lo que cambie otra persona llega con la
+// puesta al día de detrás.)
+const recuerdos = new Map();
+let escrituras = 0;
+export function olvidarRecuerdos() { escrituras++; recuerdos.clear(); }
+if (typeof window !== 'undefined') window.addEventListener('fbe-escritura', olvidarRecuerdos);
 export function useCarga(fn, deps = [], opciones = {}) {
-  const [estado, setEstado] = useState({ datos: null, error: null, cargando: true });
+  const { recuerdo = null } = opciones;
+  const recordado = () => (recuerdo && recuerdos.has(recuerdo) ? recuerdos.get(recuerdo) : null);
+  const [estado, setEstado] = useState(() => { const datos = recordado(); return { datos, error: null, cargando: datos == null }; });
   const vivo = useRef(true);
   const ultima = useRef(0); // solo vale la respuesta de la última petición (si llegan desordenadas, las viejas se tiran)
+  const claveRecuerdo = useRef(recuerdo);
+  claveRecuerdo.current = recuerdo;
+  // (pulido 5) alMomento: un cambio que se ve al instante mientras se guarda por detrás. base: lo último que dijo la
+  // base; pendientes: los cambios en pantalla que aún se están guardando (se vuelven a poner encima de lo que llegue)
+  const base = useRef(estado.datos);
+  const pendientes = useRef([]);
+  const conPendientes = (datos) => (datos == null ? datos : pendientes.current.reduce((d, c) => c(d), datos));
   const cargar = useCallback(async (silencioso = false) => {
     const n = ++ultima.current;
+    const clave = claveRecuerdo.current;
+    const antes = escrituras;
     if (!silencioso) setEstado((e) => ({ ...e, cargando: true, error: null }));
     try {
       const datos = await fn();
-      if (vivo.current && n === ultima.current) setEstado({ datos, error: null, cargando: false });
+      // (solo se recuerda lo que se cargó entero sin que se escribiera nada mientras)
+      if (clave && datos != null && antes === escrituras) recuerdos.set(clave, datos);
+      if (vivo.current && n === ultima.current) { base.current = datos; setEstado({ datos: conPendientes(datos), error: null, cargando: false }); }
     } catch (error) {
       reportarError(error, 'carga');
       if (vivo.current && n === ultima.current) setEstado((e) => ({ ...e, error, cargando: false }));
     }
   }, deps);
-  useEffect(() => { vivo.current = true; cargar(); return () => { vivo.current = false; }; }, [cargar]);
+  const primera = useRef(true);
+  useEffect(() => {
+    vivo.current = true;
+    // Con algo recordado, se pone al día en silencio; si lo que se pide cambia (otra clave), se enseña lo de la nueva
+    const datos = recordado();
+    if (!primera.current && recuerdo) { base.current = datos; setEstado({ datos, error: null, cargando: datos == null }); }
+    primera.current = false;
+    cargar(datos != null);
+    return () => { vivo.current = false; };
+  }, [cargar]);
+  // (pulido 9) «tirar para recargar» (ui/tirar.js) pide a todas las cargas montadas que se repitan en silencio, y espera
+  // a que acaben. tirar: false deja fuera una carga que no es una simple consulta (p. ej., la que crea una invitación)
+  const conTirar = opciones.tirar !== false;
+  useEffect(() => {
+    if (!conTirar) return undefined;
+    const al = (e) => { const pr = cargar(true); e.detail?.esperas?.push(pr); };
+    window.addEventListener('fbe-recargar', al);
+    return () => window.removeEventListener('fbe-recargar', al);
+  }, [cargar, conTirar]);
   // (v0.65) copia: la clave de la copia del móvil de lo que se carga (datos/copia.js). Si se enseñó la copia porque la base
   // tardaba, lo de la base llega luego con «fbe-copia» y se pone en su sitio, sin recargar. transformar: lo mismo que haría fn
   // con lo que llega de la base (lo que espera en la cola, encima)
@@ -578,12 +619,30 @@ export function useCarga(fn, deps = [], opciones = {}) {
     const al = (e) => {
       if (e.detail?.clave !== copia || !vivo.current) return;
       ultima.current++;
-      setEstado({ datos: transformar ? transformar(e.detail.datos) : e.detail.datos, error: null, cargando: false });
+      base.current = transformar ? transformar(e.detail.datos) : e.detail.datos;
+      setEstado({ datos: conPendientes(base.current), error: null, cargando: false });
     };
     window.addEventListener('fbe-copia', al);
     return () => window.removeEventListener('fbe-copia', al);
   }, [copia]);
-  return { ...estado, recargar: cargar };
+  // alMomento(cambio, guardar): `cambio` (lo cargado → lo cargado con el cambio hecho) se ve ya; `guardar` lo manda a
+  // la base. Si falla, se deshace solo ese cambio y el error sigue hacia quien llamó (que avisa); cuando no queda
+  // ninguno guardándose, se recarga en silencio para quedarse con lo que diga la base. El cambio tiene que dar lo
+  // mismo si se aplica dos veces (poner un valor, no «darle la vuelta»): se repone encima de lo que vaya llegando.
+  const alMomento = useCallback(async (cambio, guardar) => {
+    pendientes.current = [...pendientes.current, cambio];
+    setEstado((e) => (e.datos == null ? e : { ...e, datos: cambio(e.datos) }));
+    let guardado = false;
+    try { const r = await guardar(); guardado = true; return r; } finally {
+      pendientes.current = pendientes.current.filter((c) => c !== cambio);
+      if (guardado && base.current != null) base.current = cambio(base.current);
+      if (vivo.current) {
+        setEstado((e) => (e.datos == null ? e : { ...e, datos: conPendientes(base.current) }));
+        if (!pendientes.current.length) cargar(true);
+      }
+    }
+  }, [cargar]);
+  return { ...estado, recargar: cargar, alMomento };
 }
 
 // Evita el doble envío (dos toques seguidos en «Guardar» o «Crear»): mientras la acción está en marcha no se repite

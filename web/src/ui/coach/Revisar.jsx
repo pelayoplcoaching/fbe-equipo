@@ -80,6 +80,12 @@ export function Revisar({ bandeja, abrirAtleta }) {
   const caja = useRef(null);
   useAtajos(caja, d?.total || 0, `${filtro}|${[...plegados].sort().join(',')}`);
   const recargar = () => bandeja.recargar(true);
+  // (pulido 5) lo que se marca como revisado sale de la lista al momento y se guarda por detrás (si no se puede
+  // guardar, vuelve a la lista y se avisa)
+  const quitar = (lista, id, guardar) => bandeja.alMomento((x) => {
+    const queda = (x[lista] || []).filter((i) => i.id !== id);
+    return queda.length === (x[lista] || []).length ? x : { ...x, [lista]: queda, total: Math.max(0, (x.total || 0) - 1) };
+  }, guardar);
   if (bandeja.cargando && !d) return <div class="contenido coach"><Siluetas forma="tarjetas" n={3} texto="Cargando lo que tienes por revisar" /></div>;
 
   // Los mensajes se agrupan por conversación
@@ -107,10 +113,10 @@ export function Revisar({ bandeja, abrirAtleta }) {
   const alternar = (id) => setPlegados((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const tarjeta = (x) => {
     if (x.tipo === 'mensajes') return <TarjetaMensaje h={x.h} recargar={recargar} abrirAtleta={abrirAtleta} />;
-    if (x.tipo === 'sesiones') return <TarjetaSesion s={x.s} recargar={recargar} abrirAtleta={abrirAtleta} />;
-    if (x.tipo === 'checkins') return <TarjetaCheckin c={x.c} recargar={recargar} abrirAtleta={abrirAtleta} />;
+    if (x.tipo === 'sesiones') return <TarjetaSesion s={x.s} recargar={recargar} quitar={quitar} abrirAtleta={abrirAtleta} />;
+    if (x.tipo === 'checkins') return <TarjetaCheckin c={x.c} recargar={recargar} quitar={quitar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'videos' && x.g) return <TarjetaSesionVideos g={x.g} recargar={recargar} abrirAtleta={abrirAtleta} objetivo={objetivo} separar={() => setSeparadas((s) => new Set(s).add(x.g.sesionId))} />;
-    if (x.tipo === 'videos') return <TarjetaVideo a={x.a} recargar={recargar} abrirAtleta={abrirAtleta} objetivo={objetivo} />;
+    if (x.tipo === 'videos') return <TarjetaVideo a={x.a} recargar={recargar} quitar={quitar} abrirAtleta={abrirAtleta} objetivo={objetivo} />;
     if (x.tipo === 'tareas') return <TarjetaTarea t={x.t} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'recetas') return <TarjetaCambioReceta r={x.r} recargar={recargar} abrirAtleta={abrirAtleta} />;
     return <TarjetaReporte r={x.r} recargar={recargar} />;
@@ -310,10 +316,10 @@ function TarjetaMensaje({ h, recargar, abrirAtleta }) {
   );
 }
 
-function TarjetaSesion({ s, recargar, abrirAtleta }) {
+function TarjetaSesion({ s, recargar, quitar, abrirAtleta }) {
   const { api, aviso } = useApp();
   const [abierto, setAbierto] = useState(false);
-  const revisar = async () => { try { await api.marcarRevisado('sesion', s.id); aviso('Sesión revisada', 'ok', deshacer(api, 'sesion', s.id, recargar)); recargar(); } catch (e) { aviso(e.message, 'error'); } };
+  const revisar = async () => { try { await quitar('sesiones', s.id, () => api.marcarRevisado('sesion', s.id)); aviso('Sesión revisada', 'ok', deshacer(api, 'sesion', s.id, recargar)); } catch (e) { aviso(e.message, 'error'); } };
   return (
     <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar">
       <Cabecera atleta={s.atleta} tipo={`S${s.semana?.numero ?? '?'}`} cuando={fmtConDia(s.fecha_realizada)} abrirAtleta={abrirAtleta} pestana="registro" />
@@ -333,10 +339,10 @@ function TarjetaSesion({ s, recargar, abrirAtleta }) {
   );
 }
 
-function TarjetaCheckin({ c, recargar, abrirAtleta }) {
+function TarjetaCheckin({ c, recargar, quitar, abrirAtleta }) {
   const { api, aviso } = useApp();
   const [abierto, setAbierto] = useState(false);
-  const revisar = async () => { try { await api.marcarRevisado('checkin', c.id); aviso('Check-in revisado', 'ok', deshacer(api, 'checkin', c.id, recargar)); recargar(); } catch (e) { aviso(e.message, 'error'); } };
+  const revisar = async () => { try { await quitar('checkins', c.id, () => api.marcarRevisado('checkin', c.id)); aviso('Check-in revisado', 'ok', deshacer(api, 'checkin', c.id, recargar)); } catch (e) { aviso(e.message, 'error'); } };
   const adh = [c.adherencia_desayuno, c.adherencia_comida, c.adherencia_merienda, c.adherencia_cena].filter(Boolean);
   const mediaAdh = adh.length ? Math.round(adh.reduce((a, b) => a + b, 0) / adh.length) : null;
   return (
@@ -359,13 +365,13 @@ function TarjetaCheckin({ c, recargar, abrirAtleta }) {
   );
 }
 
-function TarjetaVideo({ a, recargar, abrirAtleta, objetivo = OBJETIVO_REVISION }) {
+function TarjetaVideo({ a, recargar, quitar, abrirAtleta, objetivo = OBJETIVO_REVISION }) {
   const { api, aviso } = useApp();
   const [abierto, setAbierto] = useState(false);
   // (v0.57) una repetición de un vídeo corregido: lado a lado con el original
   const [comparar, setComparar] = useState(null);
   const verOriginal = async () => { try { const o = await api.archivo(a.repite_de); if (!o) { aviso('El original ya no está', 'error'); return; } setComparar([o, a]); } catch (e) { aviso(e.message, 'error'); } };
-  const revisar = async () => { try { await api.marcarRevisado('archivo', a.id); aviso('Vídeo revisado', 'ok', deshacer(api, 'archivo', a.id, recargar)); recargar(); } catch (e) { aviso(e.message, 'error'); } };
+  const revisar = async () => { try { await quitar('archivos', a.id, () => api.marcarRevisado('archivo', a.id)); aviso('Vídeo revisado', 'ok', deshacer(api, 'archivo', a.id, recargar)); } catch (e) { aviso(e.message, 'error'); } };
   return (
     <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar">
       <Cabecera atleta={a.atleta} tipo={a.tipo === 'foto_progreso' ? 'Foto de progreso' : a.ejercicio?.nombre ? `Vídeo: ${a.ejercicio.nombre}` : 'Vídeo de técnica'} cuando={fmtConDia(a.fecha)} abrirAtleta={abrirAtleta} pestana="videos" />
