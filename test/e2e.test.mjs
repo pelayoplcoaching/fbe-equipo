@@ -5741,6 +5741,16 @@ try {
   console.log('  ✗ la comunidad de la v0.73:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.81: comprobar el recetario con el plan (test/e2e-recetario.mjs)
+console.log('\nv0.81: «Comprobar con el plan» del recetario');
+try {
+  const { probarRecetario } = await import('./e2e-recetario.mjs');
+  await probarRecetario({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ «Comprobar con el plan» de la v0.81:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.79: «Rellenar la semana» en el menú semanal (test/e2e-rellenar.mjs)
 console.log('\nv0.79: «Rellenar la semana»');
 try {

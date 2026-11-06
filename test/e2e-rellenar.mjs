@@ -145,7 +145,7 @@ export async function probarRellenar({ navegador, check, base = 'http://localhos
     await p.getByRole('button', { name: 'Rellenar la semana' }).click();
     await filas().first().waitFor();
     check(await filas().count() === 28 && /de tu recetario/.test(await hoja().textContent()), 'la atleta también lo tiene, y le habla de su recetario');
-    check(!/revisa el factor/.test(await hoja().textContent()), 'a la atleta no se le habla de factores ni de descuadres');
+    check(!/por (encima|debajo) de su plan/.test(await hoja().textContent()), 'a la atleta no se le habla de descuadres con el plan');
     await revisar('movil');
     await foto('rellenar-3-movil');
     await hoja().getByRole('group', { name: 'Cómo repartir comidas y cenas' }).getByRole('button', { name: 'Cocinar para dos días' }).click();
