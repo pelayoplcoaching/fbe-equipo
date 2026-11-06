@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { HojaAvisos } from '../Avisos.jsx';
 import { useEstrecha } from '../BarraMas.jsx';
 import { CabeceraGrande, useUnaVez, Siluetas, Reserva, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos } from '../comunes.jsx';
@@ -67,6 +67,20 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
   const { api, perfil } = useApp();
   // (pulido 4) al volver a la lista se enseña al momento la última cargada y se pone al día por detrás
   const res = useCarga(() => api.resumenes(), [], { recuerdo: `resumenes:${api.uid()}` });
+  // (pulido 3.10) Al poner el dedo sobre un atleta (unas décimas antes de que se abra su ficha) se empieza a pedir:
+  // cuando la pantalla se abre, la respuesta ya está de camino (las consultas iguales se comparten). Solo si el dedo
+  // se queda quieto un instante (si es para desplazar la lista, no se pide nada) y una vez por atleta cada pocos segundos
+  const adelanto = useRef({ t: null, x: 0, y: 0, hechos: new Map() });
+  const soltarAdelanto = () => { clearTimeout(adelanto.current.t); adelanto.current.t = null; };
+  const adelantar = (id, e) => {
+    const a = adelanto.current;
+    soltarAdelanto();
+    if (Date.now() - (a.hechos.get(id) || 0) < 8000) return;
+    a.x = e.clientX; a.y = e.clientY;
+    a.t = setTimeout(() => { a.t = null; a.hechos.set(id, Date.now()); api.ficha(id).catch(() => {}); api.bloquesDe(id).catch(() => {}); }, 80);
+  };
+  const moverAdelanto = (e) => { const a = adelanto.current; if (a.t && Math.hypot(e.clientX - a.x, e.clientY - a.y) > 6) soltarAdelanto(); };
+  useEffect(() => soltarAdelanto, []);
   // (pulido 2.9) al abrir la app, mientras llega la lista de ahora se enseña la última que se cargó en este
   // dispositivo (datos/api.js, resumenesGuardados): la lista sale al momento y se pone al día sola
   const guardada = useCarga(() => (res.datos ? Promise.resolve(null) : api.resumenesGuardados().catch(() => null)), [], { tirar: false });
@@ -129,7 +143,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
                 <thead><tr><th>Atleta</th><th>Avisos</th>{conCobros && <th>Pagos</th>}<th>Semana</th><th>Sesiones</th><th>Peso</th><th class="col-extra">Sueño</th><th class="col-extra">Motivación</th><th>Molestias</th><th>Último registro</th></tr></thead>
                 <tbody>
                   {vista.map((r) => (
-                    <tr key={r.atleta_id} data-estado={estadoAtleta(r)} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar')); }}>
+                    <tr key={r.atleta_id} data-estado={estadoAtleta(r)} onPointerDown={(e) => adelantar(r.atleta_id, e)} onPointerMove={moverAdelanto} onPointerCancel={soltarAdelanto} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar')); }}>
                       <td class="celda-estado"><div class="nombre"><Avatar nombre={r.nombre} foto={r.foto} /><span>{r.nombre}<span class="sr">. {NOMBRE_ESTADO[estadoAtleta(r)]}</span></span></div></td>
                       <td class="celda-avisos">{r.alertas.length || pendientes[r.atleta_id] ? <Alertas r={r} pendientes={pendientes[r.atleta_id]} max={2} /> : <span class="terciario">—</span>}</td>
                       {conCobros && <td><CobroPanel c={r.cobro} /></td>}
@@ -154,7 +168,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
           </div>}
           {estrecha && <div class="pila solo-estrecho">
             {vista.map((r) => (
-              <button class="tarjeta-atleta" key={r.atleta_id} data-estado={estadoAtleta(r)} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))}>
+              <button class="tarjeta-atleta" key={r.atleta_id} data-estado={estadoAtleta(r)} onPointerDown={(e) => adelantar(r.atleta_id, e)} onPointerMove={moverAdelanto} onPointerCancel={soltarAdelanto} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))}>
                 <div class="cab">
                   <Avatar nombre={r.nombre} foto={r.foto} />
                   <span><strong>{r.nombre}</strong><span class="sr">. {NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>

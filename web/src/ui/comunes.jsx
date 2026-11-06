@@ -442,6 +442,37 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
   const cerrarRef = useRef(alCerrarProp);
   cerrarRef.current = alCerrarProp;
   const alCerrar = () => cerrarRef.current?.();
+  // (pulido 3.10) Al cerrarla con su botón, con Escape o tocando fuera, la hoja se va (baja en el móvil, se desvanece
+  // en el ordenador) en vez de desaparecer de golpe; después se avisa a quien la abrió. Si quien la abrió no la cierra
+  // (p. ej., mientras sube un vídeo), vuelve a su sitio. Con «reducir movimiento», como antes: al momento.
+  const saliendo = useRef(false);
+  const cerrarSuave = () => {
+    if (saliendo.current) return;
+    const hoja = ref.current, velo = hoja?.parentElement;
+    if (!hoja || !velo || animacion.current || arrastre.current || sinMovimiento() || typeof hoja.animate !== 'function') { alCerrar(); return; }
+    saliendo.current = true;
+    let a1 = null, a2 = null;
+    const deshacer = () => { try { a1?.cancel(); a2?.cancel(); } catch { /* */ } saliendo.current = false; };
+    try {
+      const desde = leerY(hoja);
+      const opciones = { duration: 160, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards' };
+      a1 = movil() ? hoja.animate([{ transform: `translateY(${desde}px)` }, { transform: `translateY(${Math.max(hoja.offsetHeight, 200)}px)` }], opciones)
+        : hoja.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.98)' }], opciones);
+      a2 = velo.animate([{ opacity: 1 }, { opacity: 0 }], opciones);
+      let hecho = false;
+      const fin = () => {
+        if (hecho) return;
+        hecho = true;
+        alCerrar();
+        // (si sigue ahí un momento después, es que no se ha cerrado: se deja como estaba)
+        setTimeout(() => { if (ref.current === hoja && hoja.isConnected) deshacer(); }, 80);
+      };
+      a1.onfinish = fin; a1.oncancel = () => { if (!hecho) { saliendo.current = false; } };
+      setTimeout(fin, 400);   // (por si la animación no llega a avisar: pestaña en segundo plano)
+    } catch { deshacer(); alCerrar(); }
+  };
+  const cerrarSuaveRef = useRef(cerrarSuave);
+  cerrarSuaveRef.current = cerrarSuave;
   // En cuanto se monta (no tras pintar), para que el foco y Escape funcionen desde el primer instante
   useLayoutEffect(() => {
     const previo = document.activeElement;
@@ -451,7 +482,7 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
       // Solo la ventana de encima: la última abierta (otra hoja, la búsqueda rápida…) se cierra antes
       const modales = document.querySelectorAll('[aria-modal="true"]');
       if (modales.length && modales[modales.length - 1] !== ref.current) return;
-      alCerrar();
+      cerrarSuaveRef.current();
     };
     document.addEventListener('keydown', tecla);
     // El primer control (que no sea «Cerrar»); si no hay otro, el propio diálogo (tabIndex −1)
@@ -547,13 +578,13 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
     asentar(hoja, desde, destinoHoja({ y: desde, velocidad, alto: a.alto, pantalla: window.innerHeight, medio }), velocidad);
   };
   return (
-    <div class="velo" onClick={(e) => { if (e.target === e.currentTarget) alCerrar(); }}>
+    <div class="velo" onClick={(e) => { if (e.target === e.currentTarget) cerrarSuave(); }}>
       <div class={`hoja-dialogo${clase ? ` ${clase}` : ''}`} role="dialog" aria-modal="true" aria-label={titulo} ref={ponerRef} tabIndex={-1} style={ancho ? { width: `min(${ancho}px, 100%)` } : undefined}>
         <div class="hoja-cab" onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar}>
           <div class="asa" aria-hidden="true" />
           <div class="separa">
             <h2>{titulo}</h2>
-            <button class="btn btn-icono plano cerrar-hoja" onClick={alCerrar} aria-label="Cerrar"><Icono n="cerrar" /></button>
+            <button class="btn btn-icono plano cerrar-hoja" onClick={cerrarSuave} aria-label="Cerrar"><Icono n="cerrar" /></button>
           </div>
         </div>
         {children}

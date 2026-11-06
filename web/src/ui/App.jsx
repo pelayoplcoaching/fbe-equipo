@@ -74,10 +74,15 @@ export function App({ backend, api, cola }) {
   // accion: { texto, fn } añade un botón al aviso (p. ej. «Deshacer»)
   // (pulido 6) un aviso de error, además, se nota en la mano
   const aviso = (texto, tipo = 'ok', accion = null) => { if (tipo === 'error') vibrar('error'); setToast({ texto, tipo, accion, id: Date.now() }); };
+  // (pulido 3.10) al acabar su tiempo se va desvaneciéndose (clase «saliendo»), no de golpe
+  const [toastFuera, setToastFuera] = useState(false);
   useEffect(() => {
     if (!toast) return undefined;
-    const t = setTimeout(() => setToast(null), toast.accion ? 6000 : toast.tipo === 'error' || toast.tipo === 'record' ? 5000 : 2800);
-    return () => clearTimeout(t);
+    setToastFuera(false);
+    const ms = toast.accion ? 6000 : toast.tipo === 'error' || toast.tipo === 'record' ? 5000 : 2800;
+    const t = setTimeout(() => setToastFuera(true), ms);
+    const t2 = setTimeout(() => setToast(null), ms + 180);
+    return () => { clearTimeout(t); clearTimeout(t2); };
   }, [toast]);
 
   // Decide qué pantalla toca según la sesión. Serializado: los avisos de Auth y las recargas pueden llegar a la vez.
@@ -315,7 +320,7 @@ export function App({ backend, api, cola }) {
     <Ctx.Provider value={ctx}>
       {estado.fase === 'coach' || estado.fase === 'atleta' ? vista : <main>{vista}</main>}
       <AvisoVersion />
-      {toast && <div class={`toast ${toast.tipo === 'error' || toast.tipo === 'record' ? toast.tipo : ''}`} role="status" key={toast.id}>{toast.tipo === 'record' && <Icono n="trofeo" />}{toast.texto}
+      {toast && <div class={`toast ${toast.tipo === 'error' || toast.tipo === 'record' ? toast.tipo : ''}${toastFuera ? ' saliendo' : ''}`} role="status" key={toast.id}>{toast.tipo === 'record' && <Icono n="trofeo" />}{toast.texto}
         {toast.accion && <button class="toast-accion" onClick={() => { const a = toast.accion; setToast(null); a.fn(); }}>{toast.accion.texto}</button>}</div>}
     </Ctx.Provider>
   );

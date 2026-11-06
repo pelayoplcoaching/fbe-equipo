@@ -142,3 +142,8 @@ button[data-guardando]::before {
 /* (pulido 3.6) Listas largas por tramos: el botón del final («Ver 40 recetas más»), que se pulsa solo al acercarse */
 .ver-mas-tramo { display: flex; width: 100%; justify-content: center; margin-top: 12px; min-height: 44px; color: var(--tinta-2); }
 .panel > .ver-mas-tramo { margin-top: 0; border-top: 1px solid var(--linea); border-radius: 0; }
+
+/* (pulido 3.10) Lo que se va, se va con suavidad: el aviso flotante al acabar su tiempo */
+.toast.saliendo { animation: toast-fuera .18s ease-in forwards; pointer-events: none; }
+@keyframes toast-fuera { to { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { .toast.saliendo { animation: none; opacity: 0; } }

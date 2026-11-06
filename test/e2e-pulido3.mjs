@@ -418,6 +418,82 @@ export async function probarPulido3({ navegador, check, base = 'http://localhost
       check(trasReabrir === 1 && (!hayHabito || habitoDespues === valorHabito), 'y al reabrir la app, el peso y el hábito siguen apuntados');
       await ctx.close();
     }
+    // ---------- 10. Lo que se va, se va con suavidad; y la ficha se empieza a pedir al poner el dedo
+    {
+      const { ctx, p } = await abrir(/Pelayo/);
+      await filasAtletas(p).first().waitFor();
+      const hojas = () => p.evaluate(() => document.querySelectorAll('[role=dialog][aria-modal="true"]').length);
+      const abrirHoja = async () => { await p.getByRole('button', { name: 'Avisos para tus atletas' }).click(); await p.locator('[role=dialog]').first().waitFor(); await p.waitForTimeout(450); };
+      // Con Escape y con su botón: la hoja sigue un instante (saliendo) y luego ya no está
+      await abrirHoja();
+      await p.keyboard.press('Escape');
+      const trasEscape = await p.evaluate(() => { const h = document.querySelector('[role=dialog]'); return { hay: !!h, animando: h ? h.getAnimations().length : 0 }; });
+      await p.locator('[role=dialog]').first().waitFor({ state: 'detached', timeout: 3000 });
+      await abrirHoja();
+      await p.locator('[role=dialog] .cerrar-hoja').click();
+      const trasBoton = await p.evaluate(() => { const h = document.querySelector('[role=dialog]'); return { hay: !!h, animando: h ? h.getAnimations().length : 0 }; });
+      await p.locator('[role=dialog]').first().waitFor({ state: 'detached', timeout: 3000 });
+      check(trasEscape.hay && trasEscape.animando >= 1 && trasBoton.hay && trasBoton.animando >= 1 && await hojas() === 0, 'una hoja cerrada con Escape o con su botón se va con una animación corta, y después ya no está');
+      // Con «reducir movimiento», al momento, como siempre
+      await p.emulateMedia({ reducedMotion: 'reduce' });
+      await abrirHoja();
+      await p.keyboard.press('Escape');
+      await p.waitForTimeout(40);
+      check(await hojas() === 0, 'con «reducir movimiento», la hoja se cierra al momento');
+      await p.emulateMedia({ reducedMotion: 'no-preference' });
+      // Al poner el dedo sobre un atleta, su ficha se empieza a pedir; si el dedo se mueve (desplazar la lista), no
+      const tarjeta = p.locator('button.tarjeta-atleta:visible').nth(2);
+      const caja = await tarjeta.boundingBox();
+      const punto = { clientX: caja.x + 40, clientY: caja.y + 20, pointerId: 7, pointerType: 'touch', bubbles: true };
+      await p.waitForTimeout(COMPARTIDAS);
+      await vaciar(p);
+      await tarjeta.dispatchEvent('pointerdown', punto);
+      await tarjeta.dispatchEvent('pointermove', { ...punto, clientY: punto.clientY + 30 });
+      await p.waitForTimeout(300);
+      const alDesplazar = await lecturas(p, '.');
+      const otra = p.locator('button.tarjeta-atleta:visible').nth(3);
+      const caja2 = await otra.boundingBox();
+      await otra.dispatchEvent('pointerdown', { ...punto, clientX: caja2.x + 40, clientY: caja2.y + 20 });
+      await p.waitForTimeout(400);
+      const alTocar = await lecturas(p, '.');
+      check(alDesplazar === 0 && alTocar >= 3, `al poner el dedo sobre un atleta, su ficha se empieza a pedir antes de soltar (${alTocar} consultas); si el dedo se mueve para desplazar la lista, no se pide nada (${alDesplazar})`);
+      // En Revisar, la tarjeta revisada se encoge antes de quitarse, y el aviso se desvanece al acabar su tiempo
+      await irASeccion(p, 'Revisar');
+      const boton = p.locator('.tarjeta-revisar button.revisar-hecho[data-deshacer]').first();
+      await boton.waitFor();
+      const n0 = await p.locator('.tarjeta-revisar').count();
+      await boton.evaluate((el) => { el.closest('[data-item]').dataset.prueba = '1'; el.click(); });
+      const encoge = await p.evaluate(() => { const el = document.querySelector('[data-prueba="1"]'); return el ? el.getAnimations().length : -1; });
+      await p.locator('[data-prueba="1"]').waitFor({ state: 'detached', timeout: 3000 });
+      check(encoge >= 1 && await p.locator('.tarjeta-revisar').count() === n0 - 1, `en Revisar, la tarjeta revisada se encoge y se quita (${n0} → ${n0 - 1})`);
+      // (se apunta cada cambio de clase del aviso: la salida dura menos de dos décimas)
+      const clases = await p.evaluate(() => new Promise((ok) => {
+        const vistas = []; const mirar = () => { const t = document.querySelector('.toast'); const c = t ? t.className.trim().replace(/\s+/g, ' ') : '(nada)'; if (vistas.at(-1) !== c) vistas.push(c); };
+        mirar();
+        const o = new MutationObserver(() => { mirar(); if (vistas.at(-1) === '(nada)' && vistas.length > 1) { o.disconnect(); ok(vistas); } });
+        o.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+        setTimeout(() => { o.disconnect(); ok(vistas); }, 10000);
+      }));
+      check(clases.includes('toast saliendo') && clases.at(-1) === '(nada)', `el aviso flotante se desvanece al acabar su tiempo, en vez de desaparecer de golpe (${clases.join(' → ')})`);
+      await ctx.close();
+    }
+    {
+      // Cerrar una ventana ya no devuelve la pantalla a donde estaba al abrirla (lo hacía el navegador, un cuarto de segundo después)
+      const { ctx, p } = await abrir(/Ana López/);
+      await p.locator('.hero-dia').waitFor();
+      await abrirEnHoy(p, 'peso');
+      await p.evaluate(() => window.scrollTo(0, 300)); await p.waitForTimeout(200);
+      await p.locator('.peso-hoy .btn, .peso-hoy .chip').last().evaluate((el) => el.click());
+      await p.getByRole('dialog', { name: 'Peso de hoy' }).waitFor();
+      await p.waitForTimeout(450);
+      await p.keyboard.press('Escape');
+      await p.getByRole('dialog', { name: 'Peso de hoy' }).waitFor({ state: 'detached' });
+      await p.evaluate(() => window.scrollTo(0, 700));
+      await p.waitForTimeout(900);
+      const y = await p.evaluate(() => Math.round(scrollY));
+      check(Math.abs(y - 700) <= 5, `tras cerrar una ventana y mover la pantalla, se queda donde se ha puesto (${y}); antes volvía sola a donde estaba al abrirla`);
+      await ctx.close();
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     if (process.env.DEPURAR) console.log(e.stack.split('\n').slice(0, 14).join('\n'));
