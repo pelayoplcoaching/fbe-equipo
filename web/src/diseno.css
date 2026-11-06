@@ -942,3 +942,22 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .hero-semana::before { background: radial-gradient(circle, rgba(233, 212, 154, .3) 0%, rgba(233, 212, 154, .09) 42%, transparent 70%); }
 .hero-semana .toca-hoy.hecha { background: rgba(233, 212, 154, .2); }
 .hero-semana .toca-hoy.hecha svg { color: #E9D49A; }
+
+/* ── 37 · El final de la sesión (tanda 17) ────────────────────────────────────────────────────────────────────────────
+   El resumen ya entraba pieza a pieza (estilos.css 2591). Ahora, además: la cabecera lleva de fondo el dibujo de la
+   sesión, la medalla deja un aro que se abre, con récord la medalla y su etiqueta van en dorado (el color de los
+   logros), las cifras suben (Sesion.jsx: CifraSube) y en el botón de compartir asoma la tarjeta en pequeño. */
+.resumen-hero .hero-arte { position: absolute; z-index: -1; top: 0; right: 0; width: 70%; height: 100%; pointer-events: none; opacity: .5;
+  -webkit-mask-image: linear-gradient(to left, #000 10%, transparent 92%); mask-image: linear-gradient(to left, #000 10%, transparent 92%); }
+.resumen-hero.con-record .resumen-medalla { background: #E9D49A; color: #2A2154; box-shadow: 0 0 0 6px rgba(233, 212, 154, .22); }
+.resumen-hero.con-record .resumen-pr { background: rgba(233, 212, 154, .18); }
+.resumen-hero.con-record .resumen-pr svg { color: #E9D49A; }
+.resumen-medalla { position: relative; }
+.btn-compartir-sesion { position: relative; }
+.resumen-mini { position: absolute; left: 14px; top: 50%; width: 36px; height: 45px; margin-top: -22px; border-radius: 5px; object-fit: cover; transform: rotate(-7deg); box-shadow: var(--sombra-flotante); }
+@media (prefers-reduced-motion: no-preference) {
+  .resumen-medalla::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); animation: medalla-aro .9s var(--curva-casa) .45s backwards; pointer-events: none; }
+  .resumen-mini { animation: mini-asoma var(--mov-lento) var(--curva-rebote) backwards; }
+}
+@keyframes medalla-aro { from { box-shadow: 0 0 0 0 rgba(255, 255, 255, .5); } to { box-shadow: 0 0 0 26px rgba(255, 255, 255, 0); } }
+@keyframes mini-asoma { from { transform: translateY(14px) rotate(-18deg) scale(.6); opacity: 0; } }

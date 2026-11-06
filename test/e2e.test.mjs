@@ -809,7 +809,7 @@ try {
   await p.getByLabel('Nota para tu coach').fill('Me he notado fuerte en el press');
   await p.getByRole('button', { name: 'Guardar y terminar' }).click();
   await p.getByRole('heading', { name: 'Sesión terminada' }).waitFor();
-  check((await p.locator('.resumen-num [data-k="series"] .v').textContent()) === '4', 'resumen: 4 series (3 de press y 1 del ejercicio cambiado)');
+  check((await p.locator('.resumen-num [data-k="series"] .v .sr').textContent()) === '4', 'resumen: 4 series (3 de press y 1 del ejercicio cambiado)');
   // v0.49: duración, series y tonelaje (sin peso ni nada de salud) y la comparación con la última vez
   const resumenTxt = await p.locator('.resumen-sesion').textContent();
   check(await p.locator('.resumen-num > div').count() === 3 && /Duración/.test(resumenTxt) && /Tonelaje/.test(resumenTxt) && !/kg de peso|Peso corporal/.test(resumenTxt), 'el resumen dice la duración, las series y el tonelaje (y nada de peso corporal)');
