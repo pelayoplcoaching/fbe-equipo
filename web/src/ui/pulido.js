@@ -13,8 +13,9 @@ let instalado = false;
 
 // (pulido 2.7) Teclado y formularios, para toda la app a la vez:
 // 1. En el iPhone, al entrar en un campo con letra de menos de 16 px (casi todos los del editor del coach), Safari
-//    amplía la página y la deja ampliada. Con maximum-scale=1 no lo hace, y pellizcar para ampliar sigue funcionando
-//    (iOS no hace caso de ese límite para el pellizco). Solo en iOS: en Android sí impediría ampliar con los dedos.
+//    amplía la página y la deja ampliada. Mientras se escribe en él, ese campo pasa a 16 px (y vuelve a su tamaño al
+//    salir): así Safari no amplía. Solo en iOS y solo el campo en el que se está. No se toca el «viewport» (limitar
+//    la ampliación con maximum-scale quitaría el pellizco para ampliar en la app instalada: no es accesible).
 // 2. La tecla Intro del teclado del móvil dice lo que va a hacer («Siguiente» o «Hecho») y, en un formulario con
 //    varios campos, pasa al siguiente en vez de enviarlo a medias; en el último, lo envía, como siempre. Con teclado
 //    de verdad (ordenador) no cambia nada: Intro envía.
@@ -34,8 +35,23 @@ export function campoSiguiente(el) {
 export function instalarTecladoYFormularios(d = typeof document !== 'undefined' ? document : null) {
   if (!d || typeof window === 'undefined') return;
   if (esIOS()) {
-    const m = d.querySelector('meta[name="viewport"]');
-    if (m && !/maximum-scale/.test(m.content)) m.content = `${m.content}, maximum-scale=1`;
+    const DE_ESCRIBIR = (el) => !!el && (esCampoDeTexto(el) || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el.tagName === 'INPUT' && /^(date|time|datetime-local|month|week)$/.test(el.type)));
+    const crecer = (e) => {
+      const el = e.target;
+      if (!DE_ESCRIBIR(el) || el.hasAttribute('data-letra')) return;
+      const px = parseFloat(getComputedStyle(el).fontSize);
+      if (!(px > 0) || px >= 16) return;
+      el.setAttribute('data-letra', el.style.fontSize || '');
+      el.style.fontSize = '16px';
+    };
+    // (al tocarlo, antes de que entre el cursor; y al entrar, por si llega con el tabulador o desde «Siguiente»)
+    d.addEventListener('touchstart', crecer, { passive: true, capture: true });
+    d.addEventListener('focusin', crecer);
+    const volver = (el) => { if (el?.hasAttribute?.('data-letra')) { el.style.fontSize = el.getAttribute('data-letra'); el.removeAttribute('data-letra'); } };
+    d.addEventListener('focusout', (e) => volver(e.target));
+    // (un toque que no acaba entrando en el campo, p. ej. al desplazar la pantalla con el dedo encima)
+    d.addEventListener('touchend', (e) => { const el = e.target; setTimeout(() => { if (d.activeElement !== el) volver(el); }, 400); }, { passive: true, capture: true });
+    d.addEventListener('touchcancel', (e) => { if (d.activeElement !== e.target) volver(e.target); }, { passive: true, capture: true });
   }
   d.addEventListener('focusin', (e) => {
     const el = e.target;

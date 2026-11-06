@@ -337,17 +337,24 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       await o.p.locator('#na-nombre').press('Enter');
       const enviado = await o.p.locator('[aria-modal="true"]').getByText(/código/i).first().waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
       check(enviado, 'en el ordenador no cambia nada: Intro envía desde el primer campo');
+      const letraPc = { marca: await o.p.evaluate(() => document.querySelectorAll('[data-letra]').length > 0) };
       const metaPc = await o.p.evaluate(() => document.querySelector('meta[name="viewport"]').content);
       await o.ctx.close();
-      // En el iPhone, entrar en un campo pequeño ya no amplía la página (y en Android se puede seguir ampliando con los dedos)
-      const i = await abrir(null, { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' });
+      // En el iPhone, el campo pequeño en el que se escribe pasa a 16 px mientras tanto (Safari ya no amplía la página) y
+      // vuelve a su tamaño al salir; el «viewport» no se toca (se puede seguir ampliando con los dedos)
+      const i = await abrir(/Pelayo/, { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' });
+      await i.p.locator('button.tarjeta-atleta:visible', { hasText: 'Ana López' }).first().tap();
+      await i.p.locator('input.n').first().waitFor();
+      const campo = i.p.locator('input.n').first();
+      const antesPx = await campo.evaluate((c) => parseFloat(getComputedStyle(c).fontSize));
+      await campo.focus();
+      const dentroPx = await campo.evaluate((c) => parseFloat(getComputedStyle(c).fontSize));
+      await campo.evaluate((c) => c.blur());
+      const fueraPx = await campo.evaluate((c) => ({ px: parseFloat(getComputedStyle(c).fontSize), estilo: c.style.fontSize, marca: c.hasAttribute('data-letra') }));
       const metaIos = await i.p.evaluate(() => document.querySelector('meta[name="viewport"]').content);
       await i.ctx.close();
-      const a = await abrir(null, { userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36' });
-      const metaAndroid = await a.p.evaluate(() => document.querySelector('meta[name="viewport"]').content);
-      await a.ctx.close();
-      check(/maximum-scale=1/.test(metaIos) && !/user-scalable/.test(metaIos) && !/maximum-scale/.test(metaAndroid) && !/maximum-scale/.test(metaPc),
-        'en el iPhone, la página ya no se amplía sola al entrar en un campo pequeño (maximum-scale=1, solo en iOS: en Android y en el ordenador no se toca)');
+      check(antesPx < 16 && dentroPx === 16 && fueraPx.px === antesPx && fueraPx.estilo === '' && !fueraPx.marca && !/maximum-scale|user-scalable/.test(metaIos) && !/maximum-scale|user-scalable/.test(metaPc) && !letraPc.marca,
+        `en el iPhone, un campo del editor de ${antesPx} px pasa a 16 px mientras se escribe en él (Safari no amplía la página) y vuelve a ${fueraPx.px} px al salir; fuera de iOS no cambia nada, y no se limita la ampliación con los dedos`);
     }
     // ---------- 8. Sin lupa ni menú de copiar en lo que se pulsa
     {
