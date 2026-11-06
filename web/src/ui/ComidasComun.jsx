@@ -10,6 +10,7 @@ import { planVigente, objetivoDelDia, fmtKcal } from '../logica/nutricion.js';
 import { hoyISO, lunesDe, sumarDias, fmtConDia, rangoSemana } from '../logica/fechas.js';
 import { LETRAS_DIA } from '../logica/plan.js';
 import { num } from '../logica/calculos.js';
+import { HojaRellenar } from './RellenarSemana.jsx';
 
 const mayus = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -280,12 +281,14 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
         </section>
       )}
       <div class="fila-envolver">
+        <button class="btn" onClick={() => setHoja('rellenar')} disabled={menu.cargando && !menu.datos}><Icono n="mas" /> Rellenar la semana</button>
         <button class="btn" onClick={() => setHoja('compra')} disabled={!entradas.length}><Icono n="carrito" /> Lista de la compra</button>
         <button class="btn plano" onClick={() => setHoja('copiar')}><Icono n="copiar" /> Copiar o vaciar</button>
         {alCambiarComidas && <button class="btn plano" onClick={alCambiarComidas}><Icono n="ajustes" /> {recetario.tomas.length} comidas al día</button>}
       </div>
       {hoja?.tipo === 'anadir' && <HojaAnadir atletaId={atletaId} fecha={dia} toma={hoja.toma} recetario={recetario} sin={sin} alCerrar={() => setHoja(null)} alGuardado={recargar} />}
       {hoja?.tipo === 'entrada' && <HojaEntrada e={hoja.e} recetario={recetario} esCoach={esCoach} alCerrar={() => setHoja(null)} alCambiar={recargar} />}
+      {hoja === 'rellenar' && <HojaRellenar atletaId={atletaId} lunes={lunes} entradas={entradas} recetario={recetario} diasSin={diasSin.datos || []} planes={planes} esCoach={esCoach} alCerrar={() => setHoja(null)} alGuardado={recargar} />}
       {hoja === 'compra' && <HojaCompra entradas={entradas} recetario={recetario} lunes={lunes} alCerrar={() => setHoja(null)} />}
       {hoja === 'copiar' && <HojaCopiar atletaId={atletaId} lunes={lunes} entradas={entradas} alCerrar={() => setHoja(null)} alCambiar={recargar} />}
     </div>
