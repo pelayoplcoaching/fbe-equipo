@@ -17,7 +17,7 @@ export function NutricionHoy({ entrenaHoy = false }) {
   const hoy = hoyISO();
   const [elegido, setElegido] = usePreferencia(`fbe-nut-dia-${hoy}`, null);
   const entrena = elegido ? elegido === 'entreno' : entrenaHoy;
-  const res = useCarga(() => api.resumenNutricion(atleta.id, hoy, { entrenaHoy: entrena }).catch(() => null), [atleta.id, entrena]);
+  const res = useCarga(() => api.resumenNutricion(atleta.id, hoy, { entrenaHoy: entrena }).catch(() => null), [atleta.id, entrena], { recuerdo: `nutricion-hoy:${atleta.id}:${hoy}:${entrena}` });
   const [hoja, setHoja] = useState(null); // null | 'apuntar' | 'plan'
   const r = res.datos;
   if (!r || (!r.plan && !r.siguiente)) return null;

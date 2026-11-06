@@ -345,6 +345,9 @@ const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta
   'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales'];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
+// (pulido 2.4) y sin la miniatura (unos 14 kB por receta: el 85 % de lo que pesa un recetario): las miniaturas se piden
+// aparte y se recuerdan mientras la receta no cambie (recetasConMini)
+const COLS_RECETA_SIN_MINI = COLS_RECETA.replace(',foto_mini', '');
 
 // Qué columna marca la revisión del coach en cada cosa revisable
 const REVISION = { sesion: ['sesiones', 'revisada_en'], checkin: ['checkins', 'revisado_en'], archivo: ['archivos', 'revisado_en'], tarea: ['tareas', 'revisada_en'] };
@@ -352,6 +355,8 @@ const REVISION = { sesion: ['sesiones', 'revisada_en'], checkin: ['checkins', 'r
 export const LIMITE_ARCHIVO_MB = 200;
 // Foto de perfil: tamaño máximo del texto base64 (como la base, perfiles_foto_valida)
 export const FOTO_MAX = 80000;
+// (pulido 2.1) y la miniatura para las listas (128 px: unos 6 KB)
+export const FOTO_MINI_MAX = 16000;
 
 // Funciones de la base que solo consultan (no cambian nada): no invalidan lo que las pantallas recuerdan. Si falta
 // alguna, solo pasa que esa pantalla vuelve a cargar en vez de salir al momento
@@ -359,12 +364,15 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
-  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_cardio_en_retos']);
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de']);
+// ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
+// presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
+const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
 
 export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
   let generacion = 0;
-  const escribe = (f) => (...a) => { generacion++; return f(...a); };
+  let olvidarFotos = () => {};   // (se define más abajo, con el recuerdo de las fotos de perfil)
   const b = Object.create(backend);
   // Notificaciones: después de algo que avisa a otra persona (un comentario, un aviso, un check-in, una semana
   // publicada, una sesión terminada), se pide al servidor que envíe ya lo que haya en la cola, para que llegue
@@ -379,17 +387,80 @@ export function crearApi(backend) {
     || (m === 'update' && t === 'video_revisiones')
     || (m === 'rpc' && ['comunidad_reaccionar', 'comunidad_avisar_coach', 'comunidad_animar', 'tarea_completar'].includes(t))
     || (m === 'update' && ((t === 'semanas' && c?.programacion === 'programada') || (t === 'sesiones' && c?.completada === true) || (t === 'avisos' && 'texto' in (c || {}))));
+  // (pulido 2.2) Lecturas idénticas, compartidas. Al abrir una pantalla, varias piezas piden lo mismo por separado (la
+  // ficha del atleta, sus bloques, su plan…): una de cada tres consultas era repetida. Si se pide una lectura igual a
+  // otra que está en marcha, o que acabó hace menos de COMPARTIR_MS, y entre medias no se ha escrito nada desde aquí,
+  // se reutiliza su respuesta (cada uno recibe sus propias filas, copiadas). Un error no se comparte más allá de quien
+  // ya lo esperaba, y nada sobrevive a una escritura ni a un cambio de cuenta.
+  const COMPARTIR_MS = 2000;
+  const lecturas = new Map();   // clave → { gen, p, pendiente, t }
+  // (se llama al backend en el momento, no a una copia de su función: las pruebas la envuelven para contar consultas)
+  const leer = (...a) => backend.select(...a);
+  // Las escrituras hechas directamente con el backend (algunas pantallas lo usan sin pasar por la API) también cuentan
+  // como «se ha escrito algo»: si no, una lectura compartida podría enseñar lo de antes de ese cambio
+  // Tampoco sobrevive a un cambio en la sesión: entrar, salir o pasar el segundo paso cambia lo que la base deja ver
+  // con la misma cuenta (un coach sin el segundo paso no ve nada; justo después de pasarlo, todo)
+  try { backend.auth?.alCambiar?.(() => { generacion++; }); } catch { /* */ }
+  // (pulido 2.6) Cuántas cosas se están guardando ahora mismo (escrituras, subidas de archivos, entrar o salir): se
+  // avisa con «fbe-guardando» (detail: cuántas) para que el botón que se acaba de pulsar enseñe que está en ello
+  // (ui/pulido.js). No cambia nada de lo que se guarda ni cuándo.
+  let guardando = 0;
+  const enVuelo = (r) => {
+    if (typeof window === 'undefined' || typeof CustomEvent === 'undefined') return r;
+    const avisar = (d) => { guardando = Math.max(0, guardando + d); try { window.dispatchEvent(new CustomEvent('fbe-guardando', { detail: guardando })); } catch { /* */ } };
+    avisar(1);
+    Promise.resolve(r).then(() => avisar(-1), () => avisar(-1));
+    return r;
+  };
+  for (const caja of [backend.auth, backend.auth?.mfa]) {
+    for (const k of Object.keys(caja || {})) {
+      if (typeof caja[k] !== 'function' || k === 'sesion' || k === 'alCambiar') continue;
+      const directo = caja[k].bind(caja);
+      caja[k] = (...a) => { const r = directo(...a); Promise.resolve(r).then(() => { generacion++; }, () => { generacion++; }); return enVuelo(r); };
+    }
+  }
+  // Ni a nada que pida datos frescos a propósito: llega un mensaje o una notificación, se vuelve a la app, vuelve la
+  // conexión o se tira para recargar. Compartir es solo para la ráfaga de consultas de abrir una pantalla
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    const fresco = () => { generacion++; };
+    for (const ev of ['fbe-mensaje', 'fbe-notificacion', 'fbe-recargar', 'fbe-copia', 'fbe-hilo', 'fbe-salida-enviado', 'online', 'focus', 'pageshow']) window.addEventListener(ev, fresco);
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', fresco);
+  }
+  // (sql: solo lo tiene el backend de las pruebas, que escribe con él por debajo de la app)
+  for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc', 'sql']) {
+    if (typeof backend[m] !== 'function') continue;
+    const directo = backend[m].bind(backend);
+    backend[m] = (...a) => { if (!esEscritura(m, a)) return directo(...a); generacion++; return enVuelo(directo(...a)); };
+  }
+  if (typeof backend.storage?.subir === 'function') { const subir = backend.storage.subir.bind(backend.storage); backend.storage.subir = (...a) => enVuelo(subir(...a)); }
+  const copiarFilas = (r) => (Array.isArray(r) ? r.map((x) => (x && typeof x === 'object' && !Array.isArray(x) ? { ...x } : x)) : r);
+  b.select = (t, f, ...resto) => {
+    if (resto.length) return leer(t, f, ...resto);
+    let clave;
+    try { clave = `${uid() || ''}|${t}|${JSON.stringify(f || {})}`; } catch { return leer(t, f); }
+    const ya = lecturas.get(clave);
+    if (ya && ya.gen === generacion && (ya.pendiente || Date.now() - ya.t < COMPARTIR_MS)) return ya.p.then(copiarFilas);
+    if (lecturas.size > 150) for (const [k, e] of lecturas) if (!e.pendiente && Date.now() - e.t >= COMPARTIR_MS) lecturas.delete(k);
+    const e = { gen: generacion, pendiente: true, t: 0, p: null };
+    let pedida;
+    try { pedida = Promise.resolve(leer(t, f)); } catch (err) { pedida = Promise.reject(err); }
+    e.p = pedida.then((r) => { e.pendiente = false; e.t = Date.now(); return r; }, (err) => { if (lecturas.get(clave) === e) lecturas.delete(clave); throw err; });
+    lecturas.set(clave, e);
+    return e.p.then(copiarFilas);
+  };
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc']) {
-    const f = escribe(backend[m].bind(backend));
+    const f = (...a) => backend[m](...a);   // (ya cuenta la escritura, arriba)
     b[m] = (...a) => {
       const r = f(...a);
       if (avisa(m, a[0], a[1])) Promise.resolve(r).then(() => empujar(), () => {});
       // (pulido 4) Lo que las pantallas recuerdan para enseñarlo al volver (useCarga, «recuerdo») deja de valer en
       // cuanto se escribe algo desde aquí: lo que acabas de cambiar nunca se enseña como estaba antes. Se avisa al
       // pedirlo y al acabar (por lo que se estuviera cargando mientras). Las funciones que solo consultan no cuentan
+      // (pulido 2.1) un perfil que cambia, o quién está dentro del equipo: las fotos recordadas dejan de valer
+      if (a[0] === 'perfiles' || (m === 'rpc' && /^comunidad_(unirme|salir|expulsar|ajustar)$/.test(a[0]))) Promise.resolve(r).then(() => olvidarFotos(), () => olvidarFotos());
       // (ni marcar como leídos los mensajes que se están viendo: pasa solo al abrir un chat)
       const soloLeido = m === 'update' && a[0] === 'comentarios' && Object.keys(a[1] || {}).join() === 'leido_en';
-      if (typeof window !== 'undefined' && !soloLeido && (m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]))) {
+      if (typeof window !== 'undefined' && !soloLeido && esEscritura(m, a)) {
         const avisar = () => { try { window.dispatchEvent(new Event('fbe-escritura')); } catch { /* */ } };
         avisar();
         Promise.resolve(r).then(avisar, avisar);
@@ -469,6 +540,71 @@ export function crearApi(backend) {
     return out;
   }
 
+  // (pulido 2.1) Las fotos de perfil van dentro de la fila del perfil y viajaban enteras en cada lista (29 fotos, 1,6 MB
+  // cada vez). Ahora se piden una vez y se recuerdan un rato en memoria: las de los atletas del coach, la del coach para
+  // sus atletas y las de la gente del equipo. Se olvidan al cambiar de cuenta y al cambiar cualquier perfil desde aquí.
+  // (Con la migración 047, además, lo que viaja en «foto» es una miniatura y la grande se pide solo al ampliarla.)
+  const FOTOS_VALEN = 10 * 60 * 1000;
+  const sinFotos = () => ({ de: uid(), mapa: new Map(), cuando: new Map(), gordas: new Set(), coach: undefined, coachT: 0, personas: null, personasT: 0, fuera: new Set(), grandes: new Map() });
+  let fotos = null;
+  const misFotos = () => { if (!fotos || fotos.de !== uid()) fotos = sinFotos(); return fotos; };
+  olvidarFotos = () => { fotos = null; };
+  // Una foto «gorda» es la de siempre (384 px) aún en «foto»: pendiente de aligerar
+  const FOTO_GORDA = 20000;
+  async function fotosDePerfiles(ids) {
+    const f = misFotos(), ahora = Date.now();
+    const faltan = ids.filter((id) => !(ahora - (f.cuando.get(id) || 0) < FOTOS_VALEN));
+    if (faltan.length) {
+      const filas = await b.select('perfiles', { in: { id: faltan }, cols: 'id,foto' }).catch(() => null);
+      // (si la consulta falla no se apunta nada: se vuelve a pedir la próxima vez)
+      if (filas && fotos === f) {
+        const P = porId(filas);
+        for (const id of faltan) {
+          const foto = P[id]?.foto || null;
+          f.mapa.set(id, foto); f.cuando.set(id, ahora);
+          if (foto && foto.length > FOTO_GORDA) f.gordas.add(id); else f.gordas.delete(id);
+        }
+      } else if (filas) return new Map(filas.map((x) => [x.id, x.foto || null]));
+    }
+    return f.mapa;
+  }
+  // (pulido 2.4) Las recetas de una lista, con su miniatura. La miniatura de cada receta se pide una vez y se recuerda
+  // en memoria mientras la receta no cambie (su «actualizada_en»): un recetario de 80 recetas pesaba 1,4 MB cada vez
+  // que se abría Comidas (y Hoy lo pedía en cada visita); ahora, la primera vez de la sesión.
+  // Además se guardan en el dispositivo (con la copia de la semana: por cuenta, se borra al cerrar la sesión), para que
+  // tampoco haya que bajarlas la primera vez que se abre Comidas cada día.
+  const minis = new Map();   // id de receta → { v: actualizada_en, foto_mini }
+  let minisDe = null, minisLeidas = null;
+  const CLAVE_MINIS = 'minis-recetas';
+  const traerMinis = () => {
+    const yo = uid();
+    if (minisDe !== yo) { minis.clear(); minisDe = yo; minisLeidas = null; }
+    return (minisLeidas ||= (async () => {
+      try {
+        const x = yo ? await copiaDelMovil().leer(yo, CLAVE_MINIS) : null;
+        if (minisDe === yo && Array.isArray(x?.datos)) for (const [id, m] of x.datos) if (!minis.has(id) && m && typeof m === 'object') minis.set(id, m);
+      } catch { /* sin copia, se piden */ }
+    })());
+  };
+  async function recetasConMini(filtro) {
+    const [filas] = await Promise.all([b.select('recetas', { ...filtro, cols: COLS_RECETA_SIN_MINI }), traerMinis()]);
+    const alDia = (r) => { const m = minis.get(r.id); return !!m && m.v === (r.actualizada_en || null); };
+    const faltan = filas.filter((r) => !alDia(r)).map((r) => r.id);
+    if (faltan.length) {
+      const fotos = await b.select('recetas', { in: { id: faltan }, cols: 'id,foto_mini' }).catch(() => null);
+      if (fotos) {
+        const F = porId(fotos);
+        if (minis.size > 900) for (const k of [...minis.keys()].slice(0, 300)) minis.delete(k);
+        for (const r of filas) if (!alDia(r)) minis.set(r.id, { v: r.actualizada_en || null, foto_mini: F[r.id]?.foto_mini || null });
+        const yo = uid();
+        if (yo && minisDe === yo) copiaDelMovil().guardar(yo, CLAVE_MINIS, [...minis]).catch(() => {});
+      }
+    }
+    return filas.map((r) => ({ ...r, foto_mini: alDia(r) ? minis.get(r.id).foto_mini : null }));
+  }
+  const fotoValida = (x, max) => typeof x === 'string' && x.length <= max && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(x);
+  const falta047 = (e) => /foto_grande/.test(`${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`);
+
   const api = {
     backend: b,
     uid,
@@ -480,11 +616,42 @@ export function crearApi(backend) {
       return (await b.select('perfiles', { eq: { id } }))[0] || null;
     },
     // Foto de perfil propia (v0.19): una imagen ya recortada y comprimida (data:image/jpeg;base64,…) o null para quitarla
-    async cambiarFoto(foto) {
+    async cambiarFoto(foto, mini = null) {
       if (foto != null && (typeof foto !== 'string' || foto.length > FOTO_MAX || !/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(foto))) {
         throw new Error('La foto no es válida. Prueba con otra (JPEG o PNG).');
       }
+      // (pulido 2.1, migración 047) con miniatura: en «foto» va la miniatura y la de siempre pasa a «foto_grande». Sin la
+      // 047 (o sin miniatura), como antes: la de siempre en «foto»
+      if (foto && mini != null && !fotoValida(mini, FOTO_MINI_MAX)) throw new Error('La foto no es válida. Prueba con otra (JPEG o PNG).');
+      const como047 = foto ? (mini ? { foto: mini, foto_grande: foto } : null) : { foto: null, foto_grande: null };
+      if (como047) {
+        try { return (await b.update('perfiles', como047, { eq: { id: uid() } }))[0] || null; } catch (e) { if (!falta047(e)) throw e; }
+      }
       return (await b.update('perfiles', { foto: foto || null }, { eq: { id: uid() } }))[0] || null;
+    },
+    // La foto de alguien en grande (al ampliarla). Sin perfilId, la del coach. Sin la 047, null (se enseña la que hay)
+    async fotoGrande(perfilId = null) {
+      const f = misFotos(), clave = perfilId || 'coach';
+      if (f.grandes.has(clave)) return f.grandes.get(clave);
+      const g = (await b.rpc('foto_grande_de', perfilId ? { p_perfil: perfilId } : {}).catch(() => null)) || null;
+      if (fotos === f && g) f.grandes.set(clave, g);
+      return g;
+    },
+    // Los perfiles cuya «foto» aún es la de siempre (sin aligerar): el coach, los de todos; un atleta, el suyo. Sin la
+    // 047, null (no hay dónde guardar la grande: no se toca nada)
+    async fotosPorAligerar() {
+      const filas = await b.select('perfiles', { nulo: ['foto_grande'], nonulo: ['foto'], cols: 'id,foto' }).catch(() => null);
+      if (!filas) return null;
+      // (y las que una versión antigua de la app haya vuelto a guardar enteras: se ven al pedir las de la lista)
+      const f = misFotos();
+      const mas = [...f.gordas].filter((id) => !filas.some((x) => x.id === id) && f.mapa.get(id)).map((id) => ({ id, foto: f.mapa.get(id) }));
+      return [...filas, ...mas].filter((x) => fotoValida(x.foto, FOTO_MAX));
+    },
+    async guardarFotoLigera(perfilId, mini, grande) {
+      if (!fotoValida(mini, FOTO_MINI_MAX) || !fotoValida(grande, FOTO_MAX)) throw new Error('La foto no es válida.');
+      // (revisión de la 047) en la base, solo si la foto sigue siendo la que se leyó (si la quitó o la cambió, nada)
+      if (b.modo === 'demo') return (await b.update('perfiles', { foto: mini, foto_grande: grande }, { eq: { id: perfilId } }))[0] || null;
+      return b.rpc('aligerar_foto', { p_perfil: perfilId, p_mini: mini, p_grande: grande });
     },
     // El nombre propio (el coach: el que ven sus atletas en el chat y en las notificaciones)
     async cambiarNombre(nombre) {
@@ -517,7 +684,12 @@ export function crearApi(backend) {
       return (await b.rpc('nombre_coach', {}).catch(() => null)) || null;
     },
     async fotoCoach() {
-      return (await b.rpc('foto_coach', {}).catch(() => null)) || null;
+      const f = misFotos();
+      if (f.coach !== undefined && Date.now() - f.coachT < FOTOS_VALEN) return f.coach;
+      const foto = await b.rpc('foto_coach', {}).then((x) => x || null, () => undefined);
+      if (foto === undefined) return null;   // (no se ha podido pedir: no se recuerda)
+      if (fotos === f) { f.coach = foto; f.coachT = Date.now(); }
+      return foto;
     },
     async miAtleta() {
       const id = uid();
@@ -963,7 +1135,7 @@ export function crearApi(backend) {
     // Tu recetario (coach): todas las recetas, sin la foto grande, y a cuántos atletas tiene asignada cada una
     async recetas() {
       const [recetas, asignadas] = await Promise.all([
-        b.select('recetas', { cols: COLS_RECETA, order: [['nombre', 'asc']] }).catch(falta022),
+        recetasConMini({ order: [['nombre', 'asc']] }).catch(falta022),
         b.select('recetas_atleta', { cols: 'id,receta_id,atleta_id,toma' }).catch(() => []),
       ]);
       const A = agrupar(asignadas, 'receta_id');
@@ -995,7 +1167,7 @@ export function crearApi(backend) {
         b.select('recetas_atleta', { eq: { atleta_id: atletaId }, order: [['orden', 'asc']] }).catch(falta022),
         b.select('comidas_atleta', { eq: { atleta_id: atletaId } }).catch(() => []),
       ]);
-      const recetas = asignaciones.length ? await b.select('recetas', { in: { id: unicos(asignaciones.map((a) => a.receta_id)) }, cols: COLS_RECETA }) : [];
+      const recetas = asignaciones.length ? await recetasConMini({ in: { id: unicos(asignaciones.map((a) => a.receta_id)) } }) : [];
       const tomas = tomasDe(comidas[0]);
       const porToma = recetarioPorToma(asignaciones, recetas);
       // Tomas con recetas que no están entre sus comidas (p. ej. le asignaste una merienda y él quitó la merienda)
@@ -1003,6 +1175,14 @@ export function crearApi(backend) {
       // La comida que algunos días no hace (v0.27), si sigue entre sus comidas
       const opcional = comidas[0]?.opcional && tomas.includes(comidas[0].opcional) && tomas.length >= 2 ? comidas[0].opcional : null;
       return { tomas, opcional, eligio: !!comidas[0], conRecetas, porToma, asignaciones, recetas, cambios: asignaciones.filter((a) => a.cambio_pedido_en).length };
+    },
+    // (pulido 2.4) Lo que «Tu menú de hoy» necesita del recetario, sin bajarlo: qué comidas hace y si tiene recetas
+    async recetarioDeHoy(atletaId) {
+      const [asignaciones, comidas] = await Promise.all([
+        b.select('recetas_atleta', { eq: { atleta_id: atletaId }, cols: 'id,receta_id,toma' }).catch(falta022),
+        b.select('comidas_atleta', { eq: { atleta_id: atletaId } }).catch(() => []),
+      ]);
+      return { tomas: tomasDe(comidas[0]), asignaciones };
     },
     // Cuántas comidas hace al día (las elige el atleta o el coach). opcional (solo el coach; undefined = no se
     // toca): la que algunos días no hace
@@ -3209,9 +3389,20 @@ export function crearApi(backend) {
       return api.miembroComunidad();
     },
     // Quién se ve (el coach y los que están dentro): perfil_id → { nombre, foto, coach }
-    async personasComunidad() {
-      const filas = await b.rpc('comunidad_personas', {}).catch(() => []);
-      return Object.fromEntries((filas || []).map((x) => [x.perfil_id, { nombre: x.nombre, foto: x.foto || null, coach: !!x.coach }]));
+    // (pulido 2.1) se recuerdan un rato (traen la foto de cada uno). con: perfiles que tienen que estar; si falta alguno
+    // (alguien que acaba de entrar), se vuelven a pedir
+    async personasComunidad({ con = null } = {}) {
+      const f = misFotos();
+      // (quien ya se buscó y no está —alguien que salió del equipo— no hace que se pidan otra vez)
+      const vale = f.personas && Date.now() - f.personasT < FOTOS_VALEN && !(con || []).some((id) => id && !f.personas[id] && !f.fuera.has(id));
+      if (vale) return f.personas;
+      const filas = await b.rpc('comunidad_personas', {}).catch(() => null);
+      const personas = Object.fromEntries((filas || []).map((x) => [x.perfil_id, { nombre: x.nombre, foto: x.foto || null, coach: !!x.coach }]));
+      if (filas && fotos === f) {
+        f.personas = personas; f.personasT = Date.now(); f.fuera = new Set();
+        for (const id of con || []) if (id && !personas[id]) f.fuera.add(id);
+      }
+      return personas;
     },
     // El muro: los avisos fijados arriba y después lo más nuevo, de `limite` en `limite` (antes: el creado_en del
     // último que ya se ve). Cada publicación con su autor, sus reacciones (con quién), cuántos comentarios y la mía.
@@ -3258,6 +3449,7 @@ export function crearApi(backend) {
           api.personasComunidad(),
         ]).catch(falta029);
       }
+      if ([...(fijadas || []), ...(sueltas || [])].some((x) => x.autor_id && !personas[x.autor_id])) personas = await api.personasComunidad({ con: [...(fijadas || []), ...(sueltas || [])].map((x) => x.autor_id) });
       const resto = busca ? sueltas : sueltas.filter((x) => !antes || x.creado_en < antes);
       if (!busca) hayMas = resto.length > limite;
       const posts = [...fijadas, ...resto.slice(0, limite)];
@@ -4054,8 +4246,8 @@ export function crearApi(backend) {
       const atletas = (await b.select('atletas', { order: [['nombre', 'asc']] })).filter((a) => !yo || a.perfil_id !== yo);
       const ids = unicos(atletas.map((a) => a.perfil_id).filter(Boolean));
       if (!ids.length) return atletas;
-      const perfiles = porId(await b.select('perfiles', { in: { id: ids }, cols: 'id,foto' }).catch(() => []));
-      return atletas.map((a) => ({ ...a, foto: (a.perfil_id && perfiles[a.perfil_id]?.foto) || null }));
+      const deCada = await fotosDePerfiles(ids);
+      return atletas.map((a) => ({ ...a, foto: (a.perfil_id && deCada.get(a.perfil_id)) || null }));
     },
     // soloAtleta (v0.49): el de un atleta (la cabecera de su ficha), con los mismos cálculos que el panel
     async resumenes(hoy = hoyISO(), { soloAtleta = null } = {}) {
@@ -4243,7 +4435,7 @@ export function crearApi(backend) {
       const [atleta, checkins, pesos, molestias, notas] = await Promise.all([
         (async () => {
           const [ficha] = await b.select('atletas', { eq: { id: atletaId } });
-          const fotoDe = ficha?.perfil_id ? (await b.select('perfiles', { eq: { id: ficha.perfil_id }, cols: 'id,foto' }).catch(() => []))[0]?.foto || null : null;
+          const fotoDe = ficha?.perfil_id ? (await fotosDePerfiles([ficha.perfil_id])).get(ficha.perfil_id) || null : null;
           return ficha ? { ...ficha, foto: fotoDe } : ficha;
         })(),
         b.select('checkins', { eq: { atleta_id: atletaId }, order: [['semana_inicio', 'desc']], limit: 26 }),
@@ -4804,6 +4996,28 @@ export function crearApi(backend) {
       }
       if (hechas && await viejo(CLAVES_COPIA.recordatorios(miAtletaId))) await api.recordatoriosActivos(miAtletaId).catch(() => {});
       return hechas;
+    },
+  });
+
+  // ------------------------------------------------------------ (pulido 2.9) la lista del coach, al abrir
+  // La última lista de atletas que cargó el coach se queda en su dispositivo (con la copia de arriba: por cuenta, se
+  // borra entera al cerrar la sesión y caduca a los 14 días sin usarse), para enseñarla al abrir la app mientras llega
+  // la de ahora. Es lo mismo que enseña la lista (nombre, estado, avisos, cumplimiento, la tendencia de peso), nada más.
+  const CLAVE_LISTA = 'lista-atletas';
+  const resumenesDeLaBase = api.resumenes;
+  Object.assign(api, {
+    async resumenes(hoy, opciones) {
+      const id = uid();
+      const lista = await resumenesDeLaBase(hoy, opciones);
+      if (id && hoy === undefined && !opciones?.soloAtleta && uid() === id && Array.isArray(lista)) copiaDelMovil().guardar(id, CLAVE_LISTA, lista).catch(() => {});
+      return lista;
+    },
+    // La guardada (o null): solo para enseñarla mientras llega la de ahora
+    async resumenesGuardados() {
+      const id = uid();
+      if (!id) return null;
+      const x = await copiaDelMovil().leer(id, CLAVE_LISTA).catch(() => null);
+      return Array.isArray(x?.datos) && uid() === id ? x.datos : null;
     },
   });
 

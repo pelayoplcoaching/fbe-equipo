@@ -102,6 +102,8 @@ export async function probarChatIphone({ navegador, check, base = 'http://localh
   await p.locator('.chat-anteriores').waitFor();
   await p.evaluate(() => { location.hash = '#hoy'; });
   await p.locator('.chat-lista').waitFor({ state: 'detached' });
+  // (pulido 2.2: una consulta idéntica a otra de hace menos de 2 s se comparte; aquí se quiere ver la base lenta de verdad)
+  await p.waitForTimeout(2300);
   await p.evaluate(() => { localStorage.setItem('fbe-demo-retraso', '5000'); location.hash = '#mensajes'; });
   await p.locator('.chat-lista .burbuja').first().waitFor({ timeout: 4000 });
   await p.waitForTimeout(300);

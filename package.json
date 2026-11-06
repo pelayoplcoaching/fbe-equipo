@@ -1,11 +1,11 @@
 {
   "name": "fbe-atletas",
-  "version": "0.89.0",
+  "version": "0.90.0",
   "description": "App de atletas de FBE Coaching",
   "scripts": {
     "build": "node scripts/build.mjs",
     "demo": "node scripts/build.mjs --demo",
-    "test": "node test/logica.test.mjs && node test/permisos.test.mjs && node test/api.test.mjs && node test/demo.test.mjs && node test/envio.test.mjs && node test/motor.test.mjs && node test/rellenar.test.mjs && node test/recetario.test.mjs && node test/radar.test.mjs",
+    "test": "node test/logica.test.mjs && node test/permisos.test.mjs && node test/api.test.mjs && node test/demo.test.mjs && node test/envio.test.mjs && node test/motor.test.mjs && node test/rellenar.test.mjs && node test/recetario.test.mjs && node test/radar.test.mjs && node test/pulido2.test.mjs",
     "e2e": "node test/e2e.test.mjs",
     "biblioteca": "node scripts/biblioteca.mjs",
     "instalador": "node scripts/instalador.mjs",

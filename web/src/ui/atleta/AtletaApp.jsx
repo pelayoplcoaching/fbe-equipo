@@ -7,11 +7,11 @@ import { Mensajes } from './Mensajes.jsx';
 import { Hoy } from './Hoy.jsx';
 import { Sesion } from './Sesion.jsx';
 import { Semana } from './Semana.jsx';
-import { Checkin } from './Checkin.jsx';
 import { Progreso } from './Progreso.jsx';
 import { Perfil } from './Perfil.jsx';
 import { Comidas } from './Comidas.jsx';
-import { Equipo, leerVistoEquipo } from '../Comunidad.jsx';
+import { leerVistoEquipo } from '../comunidad-local.js';
+import { perezoso, precargarEnReposo } from '../perezoso.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { AvisoPrivacidad } from '../AvisoPrivacidad.jsx';
@@ -30,6 +30,11 @@ import { leerEnlaceVideo } from '../../logica/tecnica.js';
 import { repartirPestanas, PREFERIDAS_ATLETA } from '../../logica/pestanas.js';
 import { useEstrecha, BotonMas, HojaMas } from '../BarraMas.jsx';
 import { VideoEnlazado } from '../tecnica/MiTecnica.jsx';
+
+// (pulido 2.10) Equipo (el muro, los retos, el ranking: lo más grande después del chat) y el check-in de la semana se
+// cargan al abrirlos, y por detrás en cuanto la app se queda quieta: no hacen falta para arrancar
+const Equipo = perezoso(() => import('../Comunidad.jsx'), 'Equipo');
+const Checkin = perezoso(() => import('./Checkin.jsx'), 'Checkin');
 
 // Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
 // Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento. Equipo (v0.43), solo con
@@ -64,6 +69,8 @@ export function AtletaApp() {
   // La comunidad (v0.43): la pestaña Equipo solo si está abierta (sin la migración 027, nunca). El coach la puede
   // cerrar con la app abierta: se vuelve a mirar al volver a la app.
   const comunidad = useCarga(() => (propio || atleta.estado === 'baja' ? Promise.resolve({ activa: false }) : api.comunidad()), [atleta.id, atleta.estado]);
+  // (pulido 2.10) con la app ya quieta, se van trayendo por detrás las pantallas que se cargan al abrirlas
+  useEffect(() => precargarEnReposo([...(comunidad.datos?.activa ? [Equipo] : []), Checkin]), [!!comunidad.datos?.activa]);
   useEffect(() => {
     const al = () => { if (document.visibilityState === 'visible') comunidad.recargar(true); };
     document.addEventListener('visibilitychange', al);

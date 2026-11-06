@@ -3,6 +3,7 @@
 import { useRef, useState } from 'preact/hooks';
 import { useApp, Icono, Avatar } from './comunes.jsx';
 import { FOTO_MAX } from '../datos/api.js';
+import { miniaturaDe } from './fotos-ligeras.js';
 
 const LADO = 384; // v0.25: más grande para poder ampliarla (antes 256; cabe igual en el límite de la base)
 
@@ -86,8 +87,10 @@ export function FilaFoto({ nombre, coach = false }) {
   async function guardar(nueva) {
     setGuardando(true);
     try {
-      const p = await api.cambiarFoto(nueva);
-      fijarPerfil?.({ ...perfil, ...(p || {}), foto: nueva });
+      // (pulido 2.1) con su miniatura para las listas (si no se puede sacar, se guarda como antes)
+      const mini = nueva ? await miniaturaDe(nueva).catch(() => null) : null;
+      const p = await api.cambiarFoto(nueva, mini);
+      fijarPerfil?.({ ...perfil, foto: mini || nueva, foto_grande: mini ? nueva : null, ...(p || {}) });
       aviso(nueva ? 'Foto de perfil guardada' : 'Foto de perfil quitada');
     } catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }
   }
@@ -102,7 +105,7 @@ export function FilaFoto({ nombre, coach = false }) {
   return (
     <li class="panel-pad separa fila-foto">
       <div class="fila-foto-izq">
-        <Avatar nombre={nombre} foto={foto} ampliable />
+        <Avatar nombre={nombre} foto={foto} ampliable perfilId={perfil?.id} />
         <div><div>Foto de perfil</div><div class="peq terciario">{foto ? (coach ? 'La ven tus atletas' : 'La ve tu coach') : 'Ahora, tus iniciales'}</div></div>
       </div>
       <div class="fila-acciones">

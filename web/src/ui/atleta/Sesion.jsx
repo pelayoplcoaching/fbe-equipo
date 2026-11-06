@@ -11,7 +11,8 @@ import { textoSerieVideo } from '../../logica/tecnica.js';
 import { EVENTO_PENDIENTES, listarPendientes } from '../../datos/pendientes.js';
 import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herramientas.jsx';
 import { HojaCompartir } from '../Compartir.jsx';
-import { HojaCompartirEquipo, leerAutoCompartir } from '../Comunidad.jsx';
+import { leerAutoCompartir } from '../comunidad-local.js';
+import { perezoso } from '../perezoso.jsx';
 import { PictoEjercicio } from '../Pictograma.jsx';
 import { prepararAudio, celebrar, sonarSerie, sonarFinSesion, usePantallaEncendida, useAhora, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
 import { FilaSerie } from './FilaSerie.jsx';
@@ -55,6 +56,9 @@ import { Portada } from './Portada.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
 import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
+
+// (pulido 2.10) «Compartir con el equipo», al terminar: es de la pantalla Equipo, que se carga cuando hace falta
+const HojaCompartirEquipo = perezoso(() => import('../Comunidad.jsx'), 'HojaCompartirEquipo', { mientras: null });
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { api, atleta, cola, aviso, propio } = useApp();

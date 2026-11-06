@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.90': {
+    atleta: [
+      'La app abre y cambia de pantalla más rápido, y gasta menos datos: las fotos de perfil van en pequeño y se amplían al tocarlas.',
+    ],
+    coach: [
+      'Listas y fichas más rápidas. Con la migración 047, las fotos de perfil se aligeran solas la primera vez que abres la app.',
+    ],
+  },
   '0.89': {
     atleta: [
       'Nueva portada al abrir la app.',

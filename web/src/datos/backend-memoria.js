@@ -2874,6 +2874,15 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return [{ pagado_hasta: r.pagadoHasta, debe: r.debe, debe_desde: debeDesde, estado: r.estado === 'sin_datos' ? 'al_dia' : r.estado }];
       }
       if (nombre === 'nombre_coach') return uid && (esCoach() || miAtletaId()) ? String(tabla('perfiles').filter((p) => p.rol === 'coach').sort((a, b) => String(a.creado_en).localeCompare(String(b.creado_en)))[0]?.nombre || '').trim().split(/\s+/)[0].slice(0, 30) || null : null;
+      // (047) la foto de alguien en grande, para quien ya puede ver su foto (sin p_perfil, la del coach)
+      if (nombre === 'foto_grande_de') {
+        if (!uid) return null;
+        const coach = tabla('perfiles').filter((p) => p.rol === 'coach').sort((a, b) => String(a.creado_en).localeCompare(String(b.creado_en)))[0];
+        const p = tabla('perfiles').find((x) => x.id === (args.p_perfil || coach?.id));
+        if (!p) return null;
+        const puede = p.id === uid || esCoach() || p.rol === 'coach' || (soyMiembro() && esMiembro(p.id));
+        return puede ? p.foto_grande || p.foto || null : null;
+      }
       if (nombre === 'foto_coach') return uid ? tabla('perfiles').filter((p) => p.rol === 'coach').sort((a, b) => String(a.creado_en).localeCompare(String(b.creado_en)))[0]?.foto || null : null;
       if (nombre === 'crear_invitacion') {
         if (perfil?.rol !== 'coach') throw new Error('Solo el coach puede crear invitaciones');

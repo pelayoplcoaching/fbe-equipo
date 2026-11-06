@@ -17,7 +17,7 @@ export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
   const [preparando, setPreparando] = useState(false);
   return (
     <div class="contenido coach">
-      <CabeceraGrande><Avatar nombre={perfil?.nombre || 'Coach'} foto={perfil?.foto} clase="grande" lleno ampliable /><div class="titulo"><h1>{perfil?.nombre || 'Cuenta'}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div></CabeceraGrande>
+      <CabeceraGrande><Avatar nombre={perfil?.nombre || 'Coach'} foto={perfil?.foto} clase="grande" lleno ampliable perfilId={perfil?.id} /><div class="titulo"><h1>{perfil?.nombre || 'Cuenta'}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div></CabeceraGrande>
       <BandaDemo />
       <div class="panel">
         <ul class="lista">
