@@ -19,6 +19,7 @@ import { quitarPortada } from './portada.js';
 import { desactivarPush, desactivarPushLocal, sincronizarPush } from '../datos/push.js';
 import { fichaCambiada } from '../logica/nivel.js';
 import { CLAVES_COPIA } from '../logica/sin-red.js';
+import { rendimientoDe, sinArranque } from '../rendimiento.js';
 import { quitarInsignia } from './insignia-app.js';
 
 // (pulido 10) La app del coach (el panel, la ficha, el editor del programa, el motor…: una cuarta parte del código) va
@@ -96,6 +97,9 @@ export function App({ backend, api, cola }) {
     const uid = s?.user.id || null;
     if (!forzar && uid === ultimoUid.current) return;
     ultimoUid.current = uid;
+    // (pulido 4) lo que se mide en este dispositivo es de la cuenta que lo usa: con otra, se empieza de cero
+    rendimientoDe(uid);
+    if (!s) sinArranque();   // (entrar con la contraseña no es «lo que tarda en abrir»)
     if (!s) {
       // Sin sesión, este móvil no debe seguir recibiendo las notificaciones de nadie
       if (backend.modo === 'supabase') desactivarPushLocal();

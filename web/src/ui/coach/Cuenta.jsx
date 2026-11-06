@@ -10,6 +10,7 @@ import { SeccionNegocio } from './Negocio.jsx';
 /* global __APP_VERSION__ */
 import { FilaFoto, FilaNombre } from '../FotoPerfil.jsx';
 import { AvisoAlmacenamiento, LimpiarVideos } from '../tecnica/Limpieza.jsx';
+import { RendimientoApp } from './Rendimiento.jsx';
 
 export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
   const { perfil, backend, salir, api, aviso } = useApp();
@@ -35,6 +36,7 @@ export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
       <SeccionNegocio abrirAtleta={abrirAtleta} />
       <Espacio />
       <ErroresApp />
+      <RendimientoApp />
       <section class="seccion">
         <h2>Copia de seguridad</h2>
         <div class="panel panel-pad pila-s">

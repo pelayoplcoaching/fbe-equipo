@@ -6770,6 +6770,66 @@ console.log('\nListas ligeras: el resumen de cada conversación y la última ser
   await como(pelayo, 'aal2');
 }
 
+console.log('\nCómo va la app en cada dispositivo: cada uno apunta lo suyo y el coach lo ve sin nombres (migración 049)');
+{
+  const D1 = '11111111-1111-4111-8111-111111111111', D2 = '22222222-2222-4222-8222-222222222222';
+  const medida = (n) => ({ n, h: [n, 0, 0, 0, 0, 0, 0, 0, 0, 0], max: 40 });
+  const apuntar = (disp, dia, datos, entorno = { so: 'ios', instalada: true }, version = '0.92') =>
+    q(`select rendimiento_apuntar($1::uuid, ${dia}, $2, $3::jsonb, $4::jsonb)`, [disp, version, JSON.stringify(entorno), JSON.stringify(datos)]);
+  await db.exec('reset role;');
+  await q(`delete from rendimiento_app`);
+  await como(ana);
+  await apuntar(D1, 'current_date', { arranque: medida(3), consulta: medida(40) }, { so: 'ios', instalada: true, red: '4g', memoria: 4, nucleos: 6, modelo: 'no se guarda', ua: 'tampoco' });
+  await apuntar(D1, 'current_date', { arranque: medida(5), consulta: medida(60) });   // (la misma fila, más tarde: se sustituye)
+  await apuntar(D1, 'current_date - 1', { arranque: medida(2) });
+  await apuntar(D1, 'current_date - 9', { arranque: medida(9) });   // (demasiado antiguo: no se apunta)
+  await apuntar(D1, 'current_date + 5', { arranque: medida(9) });   // (del futuro: tampoco)
+  await apuntar(D1, 'current_date', {});                             // (vacío: no borra lo que había)
+  await apuntar(D1, 'current_date', { x: 'y'.repeat(13000) });       // (enorme: no se guarda)
+  check(await falla(`select * from rendimiento_app`) && await falla(`insert into rendimiento_app (perfil_id, dispositivo, dia) values ($1, $2::uuid, current_date)`, [ana, D2])
+    && await falla(`delete from rendimiento_app`), 'nadie lee ni escribe la tabla directamente: solo con las funciones');
+  check((await q(`select * from rendimiento_resumen(14)`)).length === 0 && await falla(`select rendimiento_borrar()`), 'un atleta no ve las medidas de nadie (ni las suyas) ni las puede borrar');
+  await como(pelayo, 'aal2');
+  await apuntar(D2, 'current_date', { arranque: medida(1) }, { so: 'otro', instalada: false });
+  const filas = await q(`select * from rendimiento_resumen(14) order by rol, dia desc`);
+  const deAna = filas.filter((x) => x.rol === 'atleta'), mias = filas.filter((x) => x.rol === 'coach');
+  check(filas.length === 3 && deAna.length === 2 && mias.length === 1 && deAna[0].datos.arranque.n === 5 && deAna[0].datos.consulta.n === 60 && deAna[1].datos.arranque.n === 2,
+    `el coach ve una fila por dispositivo y día (${filas.length}); la del mismo día se sustituye, no se suma; lo antiguo, lo futuro, lo vacío y lo enorme no entran`);
+  check(Object.keys(filas[0]).sort().join() === 'datos,dia,dispositivo,entorno,rol,version' && filas.every((x) => /^[0-9a-f]{8}$/.test(x.dispositivo) && !JSON.stringify(x).includes(ana) && !JSON.stringify(x).includes(D1))
+    && deAna[0].dispositivo === deAna[1].dispositivo && deAna[0].dispositivo !== mias[0].dispositivo,
+    'las filas no dicen de quién son: cada dispositivo sale con un código (el mismo para sus días), sin el identificador de la persona ni el del dispositivo');
+  check(JSON.stringify(deAna[1].entorno) === JSON.stringify({ so: 'ios', instalada: true }) && deAna[0].entorno.so === 'ios' && mias[0].entorno.so === 'otro' && mias[0].entorno.instalada === false && deAna[0].version === '0.92',
+    'del dispositivo solo se guarda el tipo (sistema, si está instalada, la red, la memoria y los núcleos): lo demás que llegue se tira');
+  await db.exec('reset role;');
+  const cruda = (await q(`select entorno from rendimiento_app where perfil_id = $1 and dia = current_date - 1`, [ana]))[0];
+  const primera = await q(`select entorno from rendimiento_app where perfil_id = $1 and dispositivo = $2::uuid`, [ana, D1]);
+  check(!!cruda && primera.every((x) => !('modelo' in x.entorno) && !('ua' in x.entorno)), 'ni el modelo del móvil ni el navegador quedan guardados');
+  // Como mucho 8 dispositivos por persona; los que ya tiene siguen apuntando
+  await como(ana);
+  for (let i = 0; i < 10; i++) await apuntar(`3333333${i}-3333-4333-8333-333333333333`, 'current_date', { arranque: medida(1) });
+  await apuntar(D1, 'current_date', { arranque: medida(7) });
+  await db.exec('reset role;');
+  const nDisp = (await q(`select count(distinct dispositivo)::int n from rendimiento_app where perfil_id = $1`, [ana]))[0].n;
+  const d1 = (await q(`select datos from rendimiento_app where perfil_id = $1 and dispositivo = $2::uuid and dia = current_date`, [ana, D1]))[0];
+  check(nDisp === 8 && d1.datos.arranque.n === 7, `una persona puede apuntar desde 8 dispositivos como mucho (${nDisp}); los que ya tenía siguen apuntando`);
+  // Lo de hace más de 60 días se borra solo al apuntar
+  await q(`insert into rendimiento_app (perfil_id, dispositivo, dia, datos) values ($1, $2::uuid, current_date - 70, '{"arranque":{"n":1}}'::jsonb)`, [ana, D1]);
+  await como(ana);
+  await apuntar(D1, 'current_date', { arranque: medida(8) });
+  await db.exec('reset role;');
+  check((await q(`select count(*)::int n from rendimiento_app where dia < current_date - 60`))[0].n === 0, 'lo de hace más de 60 días se borra solo');
+  // Una cuenta que no es del equipo y quien no ha entrado
+  await como(intruso);
+  check((await q(`select * from rendimiento_resumen(14)`)).length === 0 && await falla(`select rendimiento_borrar()`), 'una cuenta que no es el coach no lee ni borra nada');
+  await db.exec('reset role; set role anon;');
+  check(await falla(`select rendimiento_apuntar($1::uuid, current_date, null, '{}'::jsonb, '{"a":1}'::jsonb)`, [D1]) && await falla(`select * from rendimiento_resumen(14)`), 'sin sesión, ni llamarlas');
+  // El coach sin el segundo paso no lo ve; con él, lo borra todo
+  await como(pelayo, 'aal2');
+  const antes = (await q(`select * from rendimiento_resumen(60)`)).length;
+  await q(`select rendimiento_borrar()`);
+  check(antes > 3 && (await q(`select * from rendimiento_resumen(60)`)).length === 0, `el coach puede borrar todas las medidas (${antes} filas)`);
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

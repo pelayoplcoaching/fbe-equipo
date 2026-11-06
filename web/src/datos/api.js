@@ -29,6 +29,7 @@ import { panelNegocio } from '../logica/negocio.js';
 import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
+import { medir } from '../rendimiento.js';
 import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
@@ -120,6 +121,11 @@ const falta031 = (e) => {
   throw e;
 };
 // (pulido 3) Sin la migración 048 (las listas ligeras), la app lo pide como antes: no es un error
+// (pulido 4, migración 049) ¿El error es que la base aún no tiene las funciones del rendimiento?
+const falta049 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
+  return /rendimiento_(apuntar|resumen|borrar)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
+};
 const falta048 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
   return /conversaciones_resumen|ultimas_series|biblioteca_huella|historial_huella/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
@@ -369,7 +375,7 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
-  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella']);
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella', 'rendimiento_apuntar', 'rendimiento_resumen']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -400,7 +406,15 @@ export function crearApi(backend) {
   const COMPARTIR_MS = 2000;
   const lecturas = new Map();   // clave → { gen, p, pendiente, t }
   // (se llama al backend en el momento, no a una copia de su función: las pruebas la envuelven para contar consultas)
-  const leer = (...a) => backend.select(...a);
+  // (pulido 4) Cuánto tarda la base en contestar una consulta y en guardar algo, y cuántas fallan por la conexión
+  // (rendimiento.js: se resume en el dispositivo y el coach lo ve en Cuenta). Solo se mira; lo que se devuelve no cambia
+  const ahoraMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const cronometrar = (nombre, r) => {
+    const t0 = ahoraMs();
+    Promise.resolve(r).then(() => medir(nombre, ahoraMs() - t0), (e) => { if (e?.sinConexion) medir('sin-red', ahoraMs() - t0); });
+    return r;
+  };
+  const leer = (...a) => cronometrar('consulta', backend.select(...a));
   // Las escrituras hechas directamente con el backend (algunas pantallas lo usan sin pasar por la API) también cuentan
   // como «se ha escrito algo»: si no, una lectura compartida podría enseñar lo de antes de ese cambio
   // Tampoco sobrevive a un cambio en la sesión: entrar, salir o pasar el segundo paso cambia lo que la base deja ver
@@ -436,9 +450,10 @@ export function crearApi(backend) {
     if (typeof backend[m] !== 'function') continue;
     const directo = backend[m].bind(backend);
     backend[m] = (...a) => {
-      if (!esEscritura(m, a)) return directo(...a);
+      // (las que apuntan el propio rendimiento no se miden: cada envío dejaría algo nuevo que enviar)
+      if (!esEscritura(m, a)) return m === 'rpc' && /^rendimiento_/.test(a[0]) ? directo(...a) : cronometrar('consulta', directo(...a));
       generacion++;
-      const r = enVuelo(directo(...a));
+      const r = enVuelo(cronometrar('guardar', directo(...a)));
       // (pulido 3.4) también lo que se escribe directo en el backend (algunas pantallas lo usan así) avisa a las pantallas
       // de que lo recordado ya no vale; menos marcar como leídos los mensajes que se están viendo (pasa solo al abrir un chat)
       if (typeof window !== 'undefined' && !(m === 'update' && a[0] === 'comentarios' && Object.keys(a[1] || {}).join() === 'leido_en')) {
@@ -491,6 +506,7 @@ export function crearApi(backend) {
   }
   // (pulido 3, migración 048) ¿Están las funciones de las listas ligeras? Se sabe al primer intento (null: aún no)
   let con048 = null;
+  let con049 = null;   // (pulido 4) lo mismo para las funciones del rendimiento
   const CLAVE_HISTORIAL = (atletaId) => `historial:${atletaId}`;
   const historialesGuardados = new Map();   // «cuenta:atleta» → { corte, huella, filas } (los últimos que se han visto)
   // De quién hay historial guardado en este dispositivo: una nota a mano (localStorage) para no abrir la base del
@@ -715,6 +731,22 @@ export function crearApi(backend) {
     async borrarErroresApp() {
       return b.delete('errores_app', { gte: { creado_en: '2000-01-01' } });
     },
+    // (pulido 4) Cómo va la app en cada dispositivo (rendimiento.js): el resumen del día de este dispositivo, a la base.
+    // Devuelve si se guardó. Sin la migración 049 no se guarda nada (y no se vuelve a intentar hasta abrir la app otra vez)
+    async apuntarRendimiento({ dia, dispositivo, version = '', entorno = {}, datos = {} }) {
+      if (!uid() || con049 === false) return false;
+      try {
+        await b.rpc('rendimiento_apuntar', { p_dispositivo: dispositivo, p_dia: dia, p_version: version, p_entorno: entorno, p_datos: datos });
+        con049 = true;
+        return true;
+      } catch (e) { if (falta049(e)) con049 = false; return false; }
+    },
+    // Lo de todos los dispositivos en los últimos días (solo el coach), sin nombres: una fila por dispositivo y día.
+    // null si falta la migración 049
+    async rendimientoEquipo(dias = 14) {
+      try { return (await b.rpc('rendimiento_resumen', { p_dias: dias })) || []; } catch (e) { if (falta049(e)) return null; throw e; }
+    },
+    async borrarRendimiento() { return b.rpc('rendimiento_borrar'); },
     // La foto del coach, para el chat del atleta (la base solo deja ver eso del perfil del coach)
     // v0.55: el nombre corto del coach («Info del contacto» del atleta); sin la 033, null
     async nombreCoach() {

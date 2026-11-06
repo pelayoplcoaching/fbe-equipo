@@ -13,6 +13,7 @@ instalarLlegada();
 import { crearApi } from './datos/api.js';
 import { crearCola } from './datos/cola.js';
 import { instalarRegistro } from './registro-errores.js';
+import { instalarRendimiento, enviarRendimiento } from './rendimiento.js';
 
 /* global __DEMO__, __APP_VERSION__ */
 // Android/Chrome avisa de que la app se puede instalar: se guarda para ofrecer el botón «Instalar»
@@ -30,11 +31,15 @@ async function arrancar() {
     backend = crearBackendMemoria({ semilla: () => semillaDemo() });
     // (solo en la demo, para las pruebas: lo que haría el coach desde el SQL Editor, como pasar un vídeo a otro atleta)
     globalThis.__fbeDemo = backend;
+    // (y mandar ya lo medido en este dispositivo: en la demo no se manda solo)
+    globalThis.__fbeRendimiento = enviarRendimiento;
   }
   await backend.iniciar();
   const api = crearApi(backend);
   // Los errores que se escapen se apuntan en la base (Cuenta → Errores de la app); en la demo, no
   instalarRegistro((d) => api.registrarError(d), String(__APP_VERSION__));
+  // (pulido 4) y cómo va la app en este dispositivo (Cuenta → Cómo va la app); en la demo solo se manda al abrir esa pantalla
+  instalarRendimiento((fila) => api.apuntarRendimiento(fila), String(__APP_VERSION__), { automatico: backend.modo !== 'demo' });
   const cola = crearCola(api);
   // (pulido 3.9) lo apuntado sin conexión se ve encima de lo que diga la base hasta que se envía
   api.usarCola(() => cola.operaciones());

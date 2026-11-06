@@ -10,6 +10,7 @@ import { fmtCorta, aISO, diasEntre, hoyISO } from '../logica/fechas.js';
 import { FRACCION_MEDIA, fotogramasMuelle, MUELLE, arrastreVisible, velocidadDe, destinoHoja } from '../logica/muelle.js';
 import { remuestrear, mezclarPuntos, trazo as trazoDe, area as areaDe, salidaSuave, columnasCifra, seleccionValida } from '../logica/rangos.js';
 import { sinMovimiento } from './transiciones.js';
+import { cronometro } from '../rendimiento.js';
 import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 
 export const Ctx = createContext(null);
@@ -633,6 +634,45 @@ export function usePorTramos(total, { tramo = 40, reinicio = '', clave = null, n
   };
 }
 
+// (pulido 4, rendimiento) Cuánto tarda en verse una pantalla: desde que se toca hasta que no queda nada cargándose
+// a la vista (las cargas que enseñan siluetas; lo que se pone al día por detrás no cuenta, porque no se espera).
+// cargaVisible(): la llama quien empieza una carga a la vista; devuelve cómo decir que ha acabado.
+let cargasVisibles = 0;
+const alQuedarQuieta = new Set();
+export function cargaVisible() {
+  cargasVisibles++;
+  let hecho = false;
+  return () => {
+    if (hecho) return;
+    hecho = true;
+    cargasVisibles = Math.max(0, cargasVisibles - 1);
+    if (!cargasVisibles) for (const f of [...alQuedarQuieta]) f();
+  };
+}
+// medirPantalla('hoy'): se llama al tocar. Apunta «pantalla:hoy» cuando la pantalla nueva está pintada y quieta.
+// Si antes se va a otra, se deja la app o pasa medio minuto, no se apunta nada.
+let pantallaEnCurso = 0;
+export function medirPantalla(nombre) {
+  if (typeof window === 'undefined' || typeof requestAnimationFrame !== 'function' || document.visibilityState !== 'visible') return;
+  const mia = ++pantallaEnCurso;
+  const fin = cronometro(`pantalla:${String(nombre).toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24) || 'otra'}`);
+  let tope = null;
+  const dejar = () => { alQuedarQuieta.delete(mirar); clearTimeout(tope); document.removeEventListener('visibilitychange', dejar); };
+  // (dos fotogramas: uno para que Preact pinte la pantalla nueva y sus cargas arranquen, otro para verla pintada)
+  function mirar() {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (mia !== pantallaEnCurso) { dejar(); return; }
+      if (cargasVisibles > 0) return;   // (sigue cargando: se volverá a mirar cuando se quede quieta)
+      dejar();
+      fin();
+    }));
+  }
+  alQuedarQuieta.add(mirar);
+  tope = setTimeout(dejar, 30000);
+  document.addEventListener('visibilitychange', dejar);
+  mirar();
+}
+
 // (pulido 4) recuerdo: una clave para recordar, mientras la app esté abierta, lo último que se cargó. Al volver a esa
 // pantalla se enseña al momento lo recordado y se pone al día por detrás, sin esqueletos (como hacen las apps del
 // móvil al volver a una lista). Solo en memoria: no se guarda nada en el dispositivo y se olvida al salir de la cuenta.
@@ -754,6 +794,8 @@ export function useCarga(fn, deps = [], opciones = {}) {
     const clave = claveRecuerdo.current;
     const antes = escrituras, epocaAntes = epoca;
     if (!silencioso) setEstado((e) => ({ ...e, cargando: true, error: null }));
+    // (pulido 4, rendimiento) una carga a la vista: la pantalla no está «lista» hasta que acabe
+    const lista = silencioso ? null : cargaVisible();
     try {
       const datos = await fn();
       // (solo se recuerda lo que se cargó entero sin que se escribiera nada mientras)
@@ -762,7 +804,7 @@ export function useCarga(fn, deps = [], opciones = {}) {
     } catch (error) {
       reportarError(error, 'carga');
       if (vivo.current && n === ultima.current) setEstado((e) => ({ ...e, error, cargando: false }));
-    }
+    } finally { lista?.(); }
   }, deps);
   const primera = useRef(true);
   useEffect(() => {
