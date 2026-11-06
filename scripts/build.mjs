@@ -129,7 +129,16 @@ ${marcadoPortada}
   const listar = (d) => readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? listar(join(d, f)) : [join(d, f)]));
   const archivos = listar(salida).map((f) => relative(salida, f)).filter((f) => !f.endsWith('.map'));
   const version = createHash('sha256').update(archivos.filter((f) => f !== 'config.js').map((f) => readFileSync(join(salida, f))).join('')).digest('hex').slice(0, 10);
+  // (pulido 10) Lo que app.js importa nada más arrancar (el trozo común, desde que la app del coach va aparte) se pide a
+  // la vez que él, sin esperar a leerlo: una espera menos en el primer arranque
+  const claveApp = Object.keys(r.metafile.outputs).find((f) => /(^|\/)app\.js$/.test(f));
+  const alArrancar = new Set();
+  for (const pila = [claveApp]; pila.length;) {
+    for (const im of r.metafile.outputs[pila.pop()]?.imports || []) if (im.kind === 'import-statement' && !alArrancar.has(im.path)) { alArrancar.add(im.path); pila.push(im.path); }
+  }
+  const precargas = [...alArrancar].map((f) => `  <link rel="modulepreload" href="${relative(salida, join(process.cwd(), f))}">\n`).join('');
   writeFileSync(join(salida, 'index.html'), readFileSync(join(raiz, 'web/index.html'), 'utf8').replaceAll('__VERSION__', version)
+    .replace('  <script type="module" src="app.js', () => `${precargas}  <script type="module" src="app.js`)
     .replace('<!--PORTADA-ESTILO-->', () => estiloPortada('estandarte.webp')).replace('<!--PORTADA-->', () => marcadoPortada));
   // (v0.58) los modelos, no: se guardan en su propia caché la primera vez que se usan
   // (revisión de seguridad v0.58) ni los vídeos de ejemplo de la demo (solo los pide la demo, al verlos)

@@ -568,6 +568,37 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
       check(girando && fin.lecturas > 5 && fin.hero && fin.siluetas === 0, `atleta: tirar hacia abajo en Hoy pone al día el día sin pantalla de carga (${fin.lecturas} consultas)`);
       await ctx.close();
     }
+    // ---------- 10. Arranque más ligero: la app del coach va aparte y el atleta no la carga
+    {
+      const pedidos = (p) => { const lista = []; p.on('request', (r) => { if (/\.js(\?|$)/.test(r.url())) lista.push(r.url().replace(/^.*\/(chunks\/)?/, '').replace(/\?.*$/, '')); }); return lista; };
+      const ctxA = await navegador.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, locale: 'es-ES' });
+      const pa = await ctxA.newPage();
+      const deAtleta = pedidos(pa);
+      await pa.goto(`${base}/?demo`);
+      await pa.getByRole('button', { name: /Ana López/ }).first().tap();
+      await pa.locator('.hero-dia').waitFor();
+      await pa.waitForTimeout(600);
+      const precargas = await pa.evaluate(() => [...document.querySelectorAll('link[rel="modulepreload"]')].map((l) => l.getAttribute('href')));
+      check(deAtleta.length > 0 && !deAtleta.some((f) => /^CoachApp-/.test(f)), `el atleta arranca sin cargar la app del coach (${deAtleta.length} archivos de código)`);
+      check(precargas.length >= 1 && precargas.every((h) => /^chunks\/[\w-]+\.js$/.test(h)), `lo que la app necesita para arrancar se pide a la vez, sin esperas en cadena (${precargas.length} precargas)`);
+      await ctxA.close();
+      const ctxC = await navegador.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, locale: 'es-ES' });
+      const pc = await ctxC.newPage();
+      pc.on('pageerror', (e) => errores.push(e.message));
+      const deCoach = pedidos(pc);
+      await pc.goto(`${base}/?demo`);
+      await pc.getByRole('button', { name: /Pelayo/ }).first().tap();
+      await pc.locator('tr:visible, button.tarjeta-atleta:visible').first().waitFor();
+      const rol = await pc.evaluate(() => localStorage.getItem('fbe-ultimo-rol'));
+      // La próxima vez, en el dispositivo de un coach, su app se pide nada más arrancar (antes de saber quién entra)
+      const deCoach2 = [];
+      pc.on('request', (r) => { if (/CoachApp-/.test(r.url())) deCoach2.push(Date.now()); });
+      await pc.reload();
+      await pc.locator('nav.tabs, .acceso, button').first().waitFor();
+      await pc.waitForTimeout(500);
+      check(deCoach.some((f) => /^CoachApp-/.test(f)) && rol === 'coach' && deCoach2.length >= 1, 'el coach carga su app al entrar y, la siguiente vez, se pide nada más arrancar');
+      await ctxC.close();
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     check(false, `Pulido: ${e.message.split('\n')[0]}${errores.length ? ` · ${errores.slice(0, 3).join(' ## ')}` : ''}`);
