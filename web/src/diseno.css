@@ -362,7 +362,9 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .tabla-pauta tbody td { vertical-align: top; padding: 8px 4px 10px; border-top: 1px solid var(--linea); }
 .tabla-pauta td.resumen-detalle { line-height: 40px; }
 /* La prioridad se lee entera («Muy importante»): el sitio sale de los tres botones del final, algo más pequeños */
-.tabla-pauta .sel-prioridad select { min-width: 7.875rem; }
+.tabla-pauta .sel-prioridad select { min-width: 8.375rem; }
+.tabla-pauta select[aria-label="Descanso"] { min-width: 4.875rem; }
+.tabla-pauta .col-ejercicio { min-width: 13rem; }
 .tabla-pauta td > .fila > .btn-icono { width: 36px; height: 40px; }
 .tabla-pauta .col-ejercicio { --sale: 24rem; position: relative; z-index: 1; white-space: nowrap; }
 .tabla-pauta .col-ejercicio > * { white-space: normal; }
