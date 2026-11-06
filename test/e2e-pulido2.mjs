@@ -22,6 +22,8 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
         const s = b.select.bind(b), f = b.rpc.bind(b);
         b.select = (t, x, ...a) => { window.__q.push(`${t} ${JSON.stringify(x || {})}`); return s(t, x, ...a); };
         b.rpc = (n, ...a) => { window.__q.push(`rpc:${n}`); return f(n, ...a); };
+        // (6) window.__lento: ms que tarda cada escritura (para ver el botón mientras guarda)
+        for (const m of ['insert', 'update', 'upsert', 'delete']) { const w = b[m].bind(b); b[m] = async (...a) => { if (window.__lento) await new Promise((r) => setTimeout(r, window.__lento)); return w(...a); }; }
       } });
     }, retraso);
     // (3) cada fotograma: cuánto se mueve, sin desplazar la pantalla, lo que ya se estaba viendo (window.__mov, en px)
@@ -239,6 +241,52 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       const chips = await zonas(c.p, '.selector-chips button');
       check(panel.length >= 6 && panel.every((z) => z.w >= 44 && z.h >= 44) && chips.every((z) => z.rh < 44), `en la lista del coach, lo mismo: los filtros miden ${chips[0]?.rh} px de alto y se pulsan en 44 (${panel.length} botones pequeños)`);
       await c.ctx.close();
+    }
+    // ---------- 6. El botón pulsado enseña que está guardando
+    {
+      const { ctx, p } = await abrir(/Lucía Ferrer/);
+      const abrirPeso = p.locator('.peso-hoy button').first();
+      await abrirPeso.waitFor();
+      await abrirPeso.scrollIntoViewIfNeeded();
+      await abrirPeso.tap();
+      const guardar = p.locator('[aria-modal="true"]').getByRole('button', { name: 'Guardar', exact: true });
+      await guardar.waitFor();
+      await p.waitForTimeout(400);
+      const antes = await guardar.evaluate((b) => { const r = b.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; });
+      await p.evaluate(() => { window.__lento = 1500; });
+      await guardar.tap();
+      await p.waitForTimeout(120);
+      const pronto = await guardar.evaluate((b) => ({ marca: b.hasAttribute('data-guardando'), ocupado: b.getAttribute('aria-busy'), desactivado: b.disabled, texto: getComputedStyle(b).webkitTextFillColor }));
+      check(pronto.marca && pronto.desactivado && pronto.ocupado === 'true' && !/rgba\(0, 0, 0, 0\)/.test(pronto.texto), 'al pulsar «Guardar», el botón queda marcado como guardando; en el primer cuarto de segundo aún no cambia a la vista');
+      await p.waitForTimeout(450);
+      const mientras = await guardar.evaluate((b) => { const r = b.getBoundingClientRect(); const c = getComputedStyle(b, '::before'); return { w: Math.round(r.width), h: Math.round(r.height), texto: getComputedStyle(b).webkitTextFillColor, rueda: c.content !== 'none' && parseFloat(c.width) >= 16 && c.animationName.includes('tirar-gira'), opacidad: c.opacity, dice: b.textContent.trim() }; });
+      check(mientras.rueda && Number(mientras.opacidad) === 1 && /rgba\(0, 0, 0, 0\)/.test(mientras.texto) && mientras.w === antes.w && mientras.h === antes.h && mientras.dice === 'Guardar',
+        `si tarda, el texto deja paso a una rueda que gira y el botón no cambia de tamaño (${antes.w} × ${antes.h} px)`);
+      await p.locator('.toast').filter({ hasText: /Peso guardado/ }).first().waitFor({ timeout: 6000 });
+      check(await p.locator('button[data-guardando]').count() === 0, 'al guardarse, no queda ninguna rueda');
+      // Un botón que se desactiva sin que se esté guardando nada (un «−» en su mínimo, «Enviar» sin texto) no la lleva
+      await p.evaluate(() => { window.__lento = 0; });
+      const suelto = await p.evaluate(async () => {
+        const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+        const b = document.createElement('button'); b.textContent = 'Prueba'; document.body.appendChild(b);
+        b.click(); b.disabled = true; await espera(60);
+        const sinNada = b.hasAttribute('data-guardando');
+        window.dispatchEvent(new CustomEvent('fbe-guardando', { detail: 1 })); await espera(30);
+        const guardando = b.hasAttribute('data-guardando');
+        window.dispatchEvent(new CustomEvent('fbe-guardando', { detail: 0 })); await espera(60);
+        const enseguida = b.hasAttribute('data-guardando');   // (entre dos pasos de un guardado no parpadea)
+        await espera(250);
+        const luego = b.hasAttribute('data-guardando');
+        window.dispatchEvent(new CustomEvent('fbe-guardando', { detail: 1 })); await espera(30);
+        b.disabled = false; await espera(60);
+        const activo = b.hasAttribute('data-guardando');
+        window.dispatchEvent(new CustomEvent('fbe-guardando', { detail: 0 }));
+        b.remove();
+        return { sinNada, guardando, enseguida, luego, activo };
+      });
+      check(!suelto.sinNada && suelto.guardando && suelto.enseguida && !suelto.luego && !suelto.activo,
+        'un botón que se desactiva sin nada guardándose no lleva rueda; con algo guardándose, sí, hasta que acaba o el botón vuelve a estar activo');
+      await ctx.close();
     }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {

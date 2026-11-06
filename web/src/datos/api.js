@@ -401,11 +401,22 @@ export function crearApi(backend) {
   // Tampoco sobrevive a un cambio en la sesión: entrar, salir o pasar el segundo paso cambia lo que la base deja ver
   // con la misma cuenta (un coach sin el segundo paso no ve nada; justo después de pasarlo, todo)
   try { backend.auth?.alCambiar?.(() => { generacion++; }); } catch { /* */ }
+  // (pulido 2.6) Cuántas cosas se están guardando ahora mismo (escrituras, subidas de archivos, entrar o salir): se
+  // avisa con «fbe-guardando» (detail: cuántas) para que el botón que se acaba de pulsar enseñe que está en ello
+  // (ui/pulido.js). No cambia nada de lo que se guarda ni cuándo.
+  let guardando = 0;
+  const enVuelo = (r) => {
+    if (typeof window === 'undefined' || typeof CustomEvent === 'undefined') return r;
+    const avisar = (d) => { guardando = Math.max(0, guardando + d); try { window.dispatchEvent(new CustomEvent('fbe-guardando', { detail: guardando })); } catch { /* */ } };
+    avisar(1);
+    Promise.resolve(r).then(() => avisar(-1), () => avisar(-1));
+    return r;
+  };
   for (const caja of [backend.auth, backend.auth?.mfa]) {
     for (const k of Object.keys(caja || {})) {
       if (typeof caja[k] !== 'function' || k === 'sesion' || k === 'alCambiar') continue;
       const directo = caja[k].bind(caja);
-      caja[k] = (...a) => { const r = directo(...a); Promise.resolve(r).then(() => { generacion++; }, () => { generacion++; }); return r; };
+      caja[k] = (...a) => { const r = directo(...a); Promise.resolve(r).then(() => { generacion++; }, () => { generacion++; }); return enVuelo(r); };
     }
   }
   // Ni a nada que pida datos frescos a propósito: llega un mensaje o una notificación, se vuelve a la app, vuelve la
@@ -419,8 +430,9 @@ export function crearApi(backend) {
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc', 'sql']) {
     if (typeof backend[m] !== 'function') continue;
     const directo = backend[m].bind(backend);
-    backend[m] = (...a) => { if (esEscritura(m, a)) generacion++; return directo(...a); };
+    backend[m] = (...a) => { if (!esEscritura(m, a)) return directo(...a); generacion++; return enVuelo(directo(...a)); };
   }
+  if (typeof backend.storage?.subir === 'function') { const subir = backend.storage.subir.bind(backend.storage); backend.storage.subir = (...a) => enVuelo(subir(...a)); }
   const copiarFilas = (r) => (Array.isArray(r) ? r.map((x) => (x && typeof x === 'object' && !Array.isArray(x) ? { ...x } : x)) : r);
   b.select = (t, f, ...resto) => {
     if (resto.length) return leer(t, f, ...resto);

@@ -105,3 +105,18 @@ html { overscroll-behavior-y: contain; }
 :where(details > summary, label.interruptor-fila)::before { content: ""; position: absolute; left: 0; right: 0; top: min(0px, calc((100% - 44px) / 2)); bottom: min(0px, calc((100% - 44px) / 2)); }
 /* La casilla de «comido» va pegada al texto de la comida (que también se pulsa): su zona va por encima */
 .casilla-redonda { z-index: 1; }
+
+/* ---------- (pulido 2.6) El botón pulsado enseña que está guardando (ui/pulido.js) ----------
+   Mientras se guarda, el botón que se pulsó (ya desactivado) cambia su texto por una rueda, sin cambiar de tamaño.
+   Solo si tarda: en el primer cuarto de segundo no cambia nada (un guardado rápido no parpadea). */
+button[data-guardando] { position: relative; cursor: progress; -webkit-text-fill-color: transparent; transition: -webkit-text-fill-color 0s .25s, opacity 0s .25s; }
+button[data-guardando]:disabled { opacity: .8; }
+button[data-guardando] > * { visibility: hidden; transition: visibility 0s .25s; }
+button[data-guardando]::before {
+  content: ""; position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; box-sizing: border-box;
+  border: 2.5px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  animation: guardando-sale .01s linear .25s both, tirar-gira .7s linear infinite;
+}
+.btn-peq[data-guardando]::before, .btn-texto[data-guardando]::before, .btn-icono[data-guardando]::before { width: 16px; height: 16px; margin: -8px 0 0 -8px; border-width: 2px; }
+@keyframes guardando-sale { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { button[data-guardando]::before { animation: guardando-sale .01s linear .25s both, tirar-gira 1.6s linear infinite; } }
