@@ -433,7 +433,7 @@ export async function probarPulido3({ navegador, check, base = 'http://localhost
       await p.locator('[role=dialog] .cerrar-hoja').click();
       const trasBoton = await p.evaluate(() => { const h = document.querySelector('[role=dialog]'); return { hay: !!h, animando: h ? h.getAnimations().length : 0 }; });
       await p.locator('[role=dialog]').first().waitFor({ state: 'detached', timeout: 3000 });
-      check(trasEscape.hay && trasEscape.animando >= 1 && trasBoton.hay && trasBoton.animando >= 1 && await hojas() === 0, 'una hoja cerrada con Escape o con su botón se va con una animación corta, y después ya no está');
+      check(trasEscape.hay && trasEscape.animando >= 1 && trasBoton.hay && trasBoton.animando >= 1 && await hojas() === 0, 'en el móvil, una hoja cerrada con Escape o con su botón baja antes de quitarse, y después ya no está');
       // Con «reducir movimiento», al momento, como siempre
       await p.emulateMedia({ reducedMotion: 'reduce' });
       await abrirHoja();
@@ -474,7 +474,7 @@ export async function probarPulido3({ navegador, check, base = 'http://localhost
         o.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
         setTimeout(() => { o.disconnect(); ok(vistas); }, 10000);
       }));
-      check(clases.includes('toast saliendo') && clases.at(-1) === '(nada)', `el aviso flotante se desvanece al acabar su tiempo, en vez de desaparecer de golpe (${clases.join(' → ')})`);
+      check(clases.includes('toast saliendo') && clases.at(-1) === '(nada)', `el aviso flotante sale por abajo al acabar su tiempo, en vez de desaparecer de golpe (${clases.join(' → ')})`);
       await ctx.close();
     }
     {

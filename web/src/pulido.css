@@ -143,7 +143,11 @@ button[data-guardando]::before {
 .ver-mas-tramo { display: flex; width: 100%; justify-content: center; margin-top: 12px; min-height: 44px; color: var(--tinta-2); }
 .panel > .ver-mas-tramo { margin-top: 0; border-top: 1px solid var(--linea); border-radius: 0; }
 
-/* (pulido 3.10) Lo que se va, se va con suavidad: el aviso flotante al acabar su tiempo */
-.toast.saliendo { animation: toast-fuera .18s ease-in forwards; pointer-events: none; }
-@keyframes toast-fuera { to { opacity: 0; transform: translateX(-50%) translateY(10px); } }
-@media (prefers-reduced-motion: reduce) { .toast.saliendo { animation: none; opacity: 0; } }
+/* (pulido 3.10) Lo que se va, se va con suavidad: el aviso flotante, al acabar su tiempo, baja y sale por abajo
+   (solo se mueve, no se desvanece: el texto no pierde contraste mientras sale) */
+.toast.saliendo { animation: toast-fuera .18s cubic-bezier(.4, 0, 1, 1) forwards; pointer-events: none; }
+@keyframes toast-fuera { to { transform: translateX(-50%) translateY(calc(100% + 150px + env(safe-area-inset-bottom, 0px))); } }
+/* (con una hoja abierta el aviso va arriba: sale por arriba) */
+body[data-hojas] .toast.saliendo { animation-name: toast-fuera-arriba; }
+@keyframes toast-fuera-arriba { to { transform: translateX(-50%) translateY(calc(-100% - 40px - env(safe-area-inset-top, 0px))); } }
+@media (prefers-reduced-motion: reduce) { .toast.saliendo { animation: none; visibility: hidden; } }

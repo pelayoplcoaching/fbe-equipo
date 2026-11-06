@@ -74,7 +74,7 @@ export function App({ backend, api, cola }) {
   // accion: { texto, fn } añade un botón al aviso (p. ej. «Deshacer»)
   // (pulido 6) un aviso de error, además, se nota en la mano
   const aviso = (texto, tipo = 'ok', accion = null) => { if (tipo === 'error') vibrar('error'); setToast({ texto, tipo, accion, id: Date.now() }); };
-  // (pulido 3.10) al acabar su tiempo se va desvaneciéndose (clase «saliendo»), no de golpe
+  // (pulido 3.10) al acabar su tiempo baja y sale por abajo (clase «saliendo»), no desaparece de golpe
   const [toastFuera, setToastFuera] = useState(false);
   useEffect(() => {
     if (!toast) return undefined;

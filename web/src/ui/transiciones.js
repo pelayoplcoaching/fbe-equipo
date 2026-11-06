@@ -70,8 +70,8 @@ export function conTransicion(cambio, tipo = 'adelante', compartidos = null) {
   });
 }
 
-// (pulido 3.10) Una pieza que se va de una lista (una tarjeta ya revisada): se encoge y se desvanece antes de quitarla,
-// y lo de debajo sube a su sitio en vez de saltar. Devuelve { fin, deshacer }: `fin` se cumple al acabar (al momento
+// (pulido 3.10) Una pieza que se va de una lista (una tarjeta ya revisada): se encoge antes de quitarla, y lo de debajo
+// sube a su sitio en vez de saltar (solo cambia de alto, recortada: el texto no pierde contraste mientras sale). Devuelve { fin, deshacer }: `fin` se cumple al acabar (al momento
 // con «reducir movimiento» o si la pieza no está); `deshacer` la deja como estaba (si al final no se quita).
 export function salirSuave(el, ms = 140) {
   if (!el || !el.isConnected || sinMovimiento() || typeof el.animate !== 'function') return { fin: Promise.resolve(), deshacer() {} };
@@ -83,8 +83,8 @@ export function salirSuave(el, ms = 140) {
       const cs = getComputedStyle(el);
       const caja = el.getBoundingClientRect();
       anim = el.animate([
-        { height: `${caja.height}px`, opacity: 1, marginTop: cs.marginTop, marginBottom: cs.marginBottom, overflow: 'hidden' },
-        { height: '0px', opacity: 0, marginTop: '0px', marginBottom: '0px', overflow: 'hidden' },
+        { height: `${caja.height}px`, marginTop: cs.marginTop, marginBottom: cs.marginBottom, overflow: 'hidden' },
+        { height: '0px', marginTop: '0px', marginBottom: '0px', overflow: 'hidden' },
       ], { duration: ms, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
       anim.onfinish = ya; anim.oncancel = ya;
       setTimeout(ya, ms + 150);
