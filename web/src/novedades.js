@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.83': {
+    atleta: [
+      'La pantalla de entrada tiene los colores de la portada.',
+    ],
+  },
   '0.82': {
     atleta: [
       'Los dibujos de cada ejercicio son más grandes.',

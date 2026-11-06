@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { useApp, Marca, Icono, Hoja } from './comunes.jsx';
 import { guardarActivacionPendiente } from './App.jsx';
 import { PRIVACIDAD, TEXTO_CONSENTIMIENTO_SALUD } from '../legal.js';
@@ -12,7 +12,19 @@ const PERSONAS_DEMO = [
   ['ivan@fbe.demo', 'Iván Prieto', 'Atleta: microciclos de 4 sesiones, 3 días por semana', 'I'],
 ];
 
+// (diseño) Mientras se ve una pantalla de entrada, la barra del sistema sigue del color de la noche de la portada de
+// arranque (la franja de arriba de estas pantallas, en diseno.css, bloque 17): va la primera, que es la que manda
+function useBarraNoche() {
+  useEffect(() => {
+    const m = document.createElement('meta');
+    m.name = 'theme-color'; m.content = '#1E1548'; m.id = 'tc-entrada';
+    document.head.prepend(m);
+    return () => m.remove();
+  }, []);
+}
+
 export function Acceso() {
+  useBarraNoche();
   const { backend, modo } = useApp();
   const [vista, setVista] = useState('entrar'); // entrar | activar | recuperar
   const [error, setError] = useState(null);
@@ -201,6 +213,7 @@ function Activar({ volver }) {
 
 // Cuenta creada pero sin vincular a una ficha de atleta (el código falló o se confirmó el email en otro dispositivo)
 export function Vincular() {
+  useBarraNoche();
   const { recargar, salir, perfil, codigoFallido } = useApp();
   const [f, setF] = useState({ codigo: '', privacidad: false, salud: false });
   const [error, setError] = useState(codigoFallido ? 'El código no es válido o ha caducado. Pide uno nuevo a tu coach.' : null);
@@ -242,6 +255,7 @@ export function Vincular() {
 
 // Tras abrir el enlace de recuperación: crear la contraseña nueva
 export function NuevaPassword() {
+  useBarraNoche();
   const { backend, recargar, aviso } = useApp();
   const [pass, setPass] = useState('');
   const [error, setError] = useState(null);
@@ -267,6 +281,7 @@ export function NuevaPassword() {
 
 // Segundo paso al entrar, para cuentas con la verificación en dos pasos activada
 export function SegundoPaso() {
+  useBarraNoche();
   const { backend, recargar, salir, modo } = useApp();
   const [codigo, setCodigo] = useState('');
   const [error, setError] = useState(null);
