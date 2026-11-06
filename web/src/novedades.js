@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.84': {
+    atleta: [
+      'El muro del equipo va más prieto: las publicaciones quedan más arriba.',
+    ],
+  },
   '0.83': {
     atleta: [
       'La pantalla de entrada tiene los colores de la portada.',
