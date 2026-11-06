@@ -81,6 +81,83 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
       check(x.t === 'none' && Number(x.o) < 1, 'con «reducir movimiento» el botón no se encoge, pero sí se atenúa');
       await ctx.close();
     }
+    // ---------- 2. No se pierde el sitio al volver
+    {
+      const { ctx, p } = await abrir(/Ana López/);
+      const y = () => p.evaluate(() => Math.round(scrollY));
+      // (antes de bajar, que la pantalla haya acabado de cargar: su alto deja de cambiar)
+      const quieta = () => p.evaluate(() => new Promise((r) => { let h = -1, n = 0; const t = setInterval(() => { const a = document.documentElement.scrollHeight; if (a === h) n++; else { h = a; n = 0; } if (n >= 4) { clearInterval(t); r(); } }, 60); }));
+      const bajar = async (n) => { await quieta(); await p.evaluate((v) => window.scrollTo(0, v), n); await p.waitForTimeout(150); return y(); };
+      // (se espera a que la pantalla llegue a su sitio y se quede quieta; cerca: a menos de 30 px, lo que puede
+      // empujar una tarjeta que llega tarde por encima sin que lo que se mira se mueva)
+      const en = async (n) => { await p.waitForFunction((v) => Math.abs(scrollY - v) <= 30, n, { timeout: 4000 }).catch(() => {}); await p.waitForTimeout(450); return y(); };
+      const cerca = (a, b) => Math.abs(a - b) <= 30;
+      const hoy = await bajar(600);
+      await irASeccion(p, 'Semana');
+      await p.locator('.semana-vista').first().waitFor();
+      check(hoy > 300 && await en(0) === 0, `una pestaña que no se había visitado empieza arriba (Hoy estaba en ${hoy})`);
+      const semana = await bajar(240);
+      await irASeccion(p, 'Hoy');
+      const hoy2 = await en(hoy);
+      check(cerca(hoy2, hoy), `al volver a Hoy, la pantalla está donde se dejó (${hoy} → ${hoy2})`);
+      await irASeccion(p, 'Semana');
+      const semana2 = await en(semana);
+      check(semana > 100 && cerca(semana2, semana), `y Semana, donde se dejó (${semana} → ${semana2})`);
+      // Tocar la pestaña en la que ya se está: arriba
+      await p.waitForTimeout(350);   // (que acabe la transición de la pestaña)
+      await p.locator('nav.tabs .tab[aria-current="page"]').tap();
+      const arriba0 = await en(0);
+      check(arriba0 === 0, `tocar la pestaña en la que ya se está sube arriba (${semana} → ${arriba0})`);
+      // Abrir una sesión y cerrarla: Hoy sigue donde estaba, y la sesión empieza arriba
+      await irASeccion(p, 'Hoy');
+      await en(hoy);
+      const abrirS = p.locator('.sesion-hoy .btn, .tarjeta-sesion .btn, main .btn', { hasText: /Empezar|Continuar|Ver sesi|Abrir/ }).first();
+      if (await abrirS.isVisible().catch(() => false)) {
+        const yAntes = await y();
+        await abrirS.dispatchEvent('click');   // (sin el «traer a la vista» de Playwright, que movería la pantalla)
+        await p.locator('.app.en-sesion').waitFor();
+        const arriba = await en(0);
+        await p.getByRole('button', { name: 'Volver', exact: true }).first().tap();
+        await p.locator('nav.tabs').waitFor();
+        check(arriba === 0 && cerca(await en(yAntes), yAntes), `la sesión se abre arriba y, al cerrarla, Hoy sigue donde estaba (${yAntes})`);
+      } else check(false, 'no hay sesión que abrir en Hoy para probar la vuelta');
+      await ctx.close();
+    }
+    {
+      const { ctx, p } = await abrir(/Pelayo/);
+      const y = () => p.evaluate(() => Math.round(scrollY));
+      const en = async (n) => { await p.waitForFunction((v) => Math.abs(scrollY - v) <= 30, n, { timeout: 4000 }).catch(() => {}); await p.waitForTimeout(450); return y(); };
+      await p.locator('tr:visible, button.tarjeta-atleta:visible').first().waitFor();
+      await p.evaluate(() => window.scrollTo(0, 400)); await p.waitForTimeout(150);
+      const lista = await y();
+      await p.locator('tr:visible, button.tarjeta-atleta:visible').nth(3).dispatchEvent('click');
+      await p.getByRole('button', { name: 'Volver a atletas' }).waitFor();
+      const ficha = await en(0);
+      await p.evaluate(() => window.scrollTo(0, 300)); await p.waitForTimeout(150);
+      await p.getByRole('button', { name: 'Volver a atletas' }).tap();
+      await p.locator('tr:visible, button.tarjeta-atleta:visible').first().waitFor();
+      check(lista > 100 && ficha === 0 && Math.abs(await en(lista) - lista) <= 30, `coach: la ficha se abre arriba y, al volver, la lista está donde se dejó (${lista})`);
+      await p.locator('tr:visible, button.tarjeta-atleta:visible').nth(1).dispatchEvent('click');
+      await p.getByRole('button', { name: 'Volver a atletas' }).waitFor();
+      check(await en(0) === 0, 'coach: otra ficha empieza arriba (no hereda la posición de la anterior)');
+      await ctx.close();
+    }
+    {
+      // Con la red lenta, la posición llega cuando la pantalla ya da para tanto; y si se toca antes, manda quien toca
+      const { ctx, p } = await abrir(/Ana López/);
+      const y = () => p.evaluate(() => Math.round(scrollY));
+      await p.evaluate(() => window.scrollTo(0, 600)); await p.waitForTimeout(150);
+      const hoy = await y();
+      await irASeccion(p, 'Semana');
+      await p.locator('.semana-vista').first().waitFor();
+      await p.waitForTimeout(400);
+      await p.evaluate(() => localStorage.setItem('fbe-demo-retraso', '250'));
+      await irASeccion(p, 'Hoy');
+      await p.waitForFunction((v) => Math.abs(scrollY - v) <= 30, hoy, { timeout: 6000 }).catch(() => {});
+      await p.waitForTimeout(450);
+      check(Math.abs(await y() - hoy) <= 30, `con la red lenta, Hoy vuelve a su sitio en cuanto ha cargado (${hoy})`);
+      await ctx.close();
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     check(false, `Pulido: ${e.message.split('\n')[0]}${errores.length ? ` · ${errores.slice(0, 3).join(' ## ')}` : ''}`);

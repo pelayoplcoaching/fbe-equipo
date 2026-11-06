@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia, usePildora } from '../comunes.jsx';
 import { conTransicion } from '../transiciones.js';
+import { usePosicion, subirArriba } from '../posiciones.js';
 import { Mensajes } from './Mensajes.jsx';
 import { Hoy } from './Hoy.jsx';
 import { Sesion } from './Sesion.jsx';
@@ -140,8 +141,9 @@ export function AtletaApp() {
 
   useEffect(() => {
     try { history.replaceState(null, '', `#${tab}`); } catch { /* */ }
-    window.scrollTo(0, 0);
   }, [tab]);
+  // Pulido 2: cada pestaña recuerda por dónde iba (al volver de otra o al cerrar una sesión); la sesión y el chat, no
+  usePosicion(sesionId ? `sesion:${sesionId}` : tab, !sesionId && tab !== 'mensajes');
   // Al tocar una notificación con la app abierta, se va a su pestaña; si llega una, se ponen al día las respuestas
   useEffect(() => {
     // (con una sesión abierta no se sale de ella: la pestaña queda elegida para cuando la cierre)
@@ -176,7 +178,7 @@ export function AtletaApp() {
   };
   const cerrarSesion = () => { conTransicion(() => setSesionId(null), 'cerrar'); programa.recargar(true); noLeidos.recargar(true); };
   const irAPestana = (id) => {
-    if (id === tab) return;
+    if (id === tab) { subirArriba(); return; }   // tocar la pestaña en la que ya se está: arriba
     const orden = TABS.map(([t]) => t);
     conTransicion(() => setTab(id), orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : 'adelante');
   };
