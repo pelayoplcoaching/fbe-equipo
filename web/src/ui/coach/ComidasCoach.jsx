@@ -10,6 +10,7 @@ import { TOMAS, NOMBRE_TOMA, ordenarTomas, ETIQUETAS_SUGERIDAS, leerIngredientes
 import { kcalDeMacros } from '../../logica/nutricion.js';
 import { conNutricion } from '../../logica/nivel.js';
 import { num } from '../../logica/calculos.js';
+import { HojaComprobarRecetario, HojaRecetariosEquipo } from './ComprobarRecetario.jsx';
 
 const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 // Fotos de las recetas: la grande (800 × 600) y la miniatura de las listas (240 × 180), como las admite la base
@@ -48,6 +49,7 @@ function RecetarioCoach({ atleta }) {
         <span class="peq" style="flex:1;min-width:200px"><strong>{r.tomas.length} comidas al día:</strong> {r.tomas.map((t) => NOMBRE_TOMA[t]).join(', ')}{r.eligio ? '' : <span class="terciario"> (las de siempre: aún no las ha elegido)</span>}{r.opcional ? <span class="terciario">. Algunos días, sin {NOMBRE_TOMA[r.opcional].toLowerCase()}</span> : ''}</span>
         <span class="fila-envolver">
           <button class="btn btn-peq plano" onClick={() => setHoja('comidas')}>Cambiar</button>
+          <button class="btn btn-peq plano" onClick={() => setHoja('comprobar')}>Comprobar con el plan</button>
           <button class="btn btn-peq btn-primario" onClick={() => setHoja('anadir')}><Icono n="mas" /> Añadir recetas</button>
         </span>
       </div>
@@ -76,6 +78,7 @@ function RecetarioCoach({ atleta }) {
       )} />
       {hoja === 'anadir' && <HojaAsignar atleta={atleta} recetario={r} alCerrar={() => setHoja(null)} alGuardado={recargar} />}
       {hoja === 'comidas' && <HojaTusComidas atletaId={atleta.id} tomas={r.tomas} opcional={r.opcional} esCoach alCerrar={() => setHoja(null)} alGuardado={recargar} />}
+      {hoja === 'comprobar' && <HojaComprobarRecetario atleta={atleta} alCerrar={() => setHoja(null)} alCambiar={recargar} />}
       {hoja?.editar && <HojaAsignacion a={hoja.editar} opcional={r.opcional} alCerrar={() => setHoja(null)} alCambiar={recargar} verReceta={() => setHoja({ ver: hoja.editar })} />}
       {hoja?.ver && <HojaReceta a={hoja.ver} esCoach opcional={r.opcional} alCerrar={() => setHoja(null)} />}
     </div>
@@ -209,6 +212,7 @@ export function RecetasBiblioteca() {
   const [q, setQ] = useState('');
   const [toma, setToma] = useState(null);
   const [editar, setEditar] = useState(null);
+  const [equipo, setEquipo] = useState(false);
   const todas = lista.datos || [];
   const vistas = todas.filter((r) => (!toma || r.tomas.includes(toma)) && (!q || normal(r.nombre).includes(normal(q)) || (r.etiquetas || []).some((e) => normal(e).includes(normal(q)))
     || (r.ingredientes || []).some((i) => normal(i.nombre).includes(normal(q)))));
@@ -216,8 +220,10 @@ export function RecetasBiblioteca() {
     <>
       <div class="separa" style="flex-wrap:wrap">
         <p class="peq secundario" style="flex:1;min-width:220px">Escríbelas una vez y asígnalas a cada atleta desde su ficha (Nutrición → Recetario), con el factor que le toque. Sustituyen a las bases de datos de comidas de Notion.</p>
+        <button class="btn" onClick={() => setEquipo(true)}>Comprobar recetarios</button>
         <button class="btn btn-primario" onClick={() => setEditar({})}><Icono n="mas" /> Nueva receta</button>
       </div>
+      {equipo && <HojaRecetariosEquipo alCerrar={() => setEquipo(false)} alCambiar={() => lista.recargar(true)} />}
       <ErrorCaja error={lista.error} reintentar={() => lista.recargar(true)} />
       {todas.length > 0 && (
         <>

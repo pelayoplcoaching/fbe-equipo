@@ -12,8 +12,10 @@ medirlo en una copia (5 nov 2026, solo cifras agregadas) resultó que **no hay n
   desviación típica dentro de una comida va de 0 a 10 kcal en la mayoría).
 - Con 3.000 días al azar por atleta (una receta por comida), en 9 de 11 atletas cualquier combinación cae a un 1 % de
   sus kcal y a 1 g de su proteína.
-- En los otros 2, **todas** las combinaciones se pasan lo mismo (un 12 % y un 5,5 %): el recetario está calculado para
-  más kcal que el plan. Eso no se arregla eligiendo recetas, sino con el factor de las recetas.
+- En los otros 2, **todas** las combinaciones se pasan lo mismo (un 12 % y un 5,5 %). Eso no se arregla eligiendo
+  recetas. Mirado después con más detalle: sus macros sí cuadran con el plan; lo que está mal son las kcal apuntadas en
+  sus recetas, un 9–10 % por encima de lo que dan sus macros (ver `logica/recetario/LEEME.md`, en la rama
+  `recetario-plan`).
 
 Lo que sí faltaba: de 11 atletas con recetario, 5 no habían usado nunca el menú semanal y 3 solo un día. Elegir 28
 recetas una a una es el freno; solo existía «copiar la semana anterior».
@@ -40,8 +42,8 @@ Y, sin preguntar:
 - Una comida **sin recetas** en el recetario se queda sin rellenar, y lo dice.
 - La misma entrada da siempre la misma propuesta; **«Otra propuesta»** la cambia. **«Cambiar»** pasa por todas las
   recetas de esa comida antes de repetir, empezando por las que no salen en el resto de la semana.
-- Solo al **coach**: si los días completos se alejan un 5 % o más de las kcal del plan, lo avisa («revisa el factor de
-  sus recetas»). Al atleta no se le enseña.
+- Solo al **coach**: si los días completos se alejan un 5 % o más de las kcal del plan, lo avisa y le manda a
+  comprobarlo en el recetario del atleta. Al atleta no se le enseña.
 
 ## Lo medido con los recetarios de la copia
 
@@ -82,8 +84,7 @@ Para la semana siguiente de los 11 atletas con recetario:
   estructurada.
 - No rellena los días anteriores a hoy ni toca lo marcado como comido.
 
-## Siguiente pieza posible: el recetario al día con el plan
+## La pieza siguiente: el recetario al día con el plan
 
-Cuando el coach cambie las kcal de un plan, el recetario se queda calculado para el plan viejo y hoy hay que cambiar
-el factor receta por receta (de 30 a 83 por atleta). `descuadreDePlan` ya mide el desvío; faltaría proponer el factor
-nuevo de todas las recetas de una vez.
+Hecha en la rama `recetario-plan` (`logica/recetario/`): comprueba el recetario de cada atleta frente a su plan, corrige
+las kcal de las recetas que no coinciden con sus macros y reescala con un factor enseñando antes cómo quedan los macros.

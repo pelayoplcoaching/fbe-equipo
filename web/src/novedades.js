@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.81': {
+    coach: [
+      'Recetario: «Comprobar con el plan» (ficha) y «Comprobar recetarios» (Biblioteca) dicen si el día cuadra con su plan y qué corregir.',
+    ],
+  },
   '0.80': {
     atleta: [
       'Equipo: la tarjeta de bienvenida de quien entra se queda 24 horas en el muro, no una semana.',
