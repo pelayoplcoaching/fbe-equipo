@@ -4,7 +4,7 @@ import { Logros } from '../Logros.jsx';
 import { AnillosSemana } from './Anillos.jsx';
 import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
-import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, Pestanas } from '../comunes.jsx';
+import { CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, Pestanas } from '../comunes.jsx';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
 import { RANGOS_GRAFICA, filtrarRango, rangoConDatos } from '../../logica/rangos.js';
 import { destacados as calcularDestacados, tonelajePorSemana } from '../../logica/destacados.js';
@@ -576,6 +576,7 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
   // v0.52: lo de Progreso se carga una vez para la vista y para los destacados
   const progreso = useCarga(() => api.progreso(atleta.id), [atleta.id], rec('progreso'));
   const semanas = useCarga(() => (entrena ? api.resumenesSemanales(atleta.id, 4).catch(() => []) : Promise.resolve([])), [atleta.id, entrena], rec('semanas'));
+  const llegando = [progreso, constancia, semanas].some((c) => c.cargando && !c.datos);
   // La sub-pestaña: Resumen, salvo que se haya pedido otra al venir («Ver la gráfica» del peso, «Ver mis logros»)
   const [sub, setSub] = useState(() => tomarSubProgreso() || 'resumen');
   useEffect(() => {
@@ -594,12 +595,14 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
       {entrena && <Pestanas opciones={SUBS_PROGRESO} valor={sub} alCambiar={setSub} etiqueta="Qué ver de tu progreso" idBase="prog" clase="pestanas-progreso pestanas-justas" />}
       <div class="progreso-panel" id="prog-panel" role={entrena ? 'tabpanel' : undefined} aria-labelledby={entrena ? `prog-${sub}` : undefined} data-sub={entrena ? sub : undefined}>
         <Grupo g="resumen">
-          {entrena && <Destacados progreso={progreso.datos} constancia={constancia.datos} programa={programa.datos} />}
-          {entrena && <AnillosSemana programa={programa} salud={salud} checkinSemana={checkinSemana} constancia={constancia} />}
-          {entrena && <Cifras constancia={constancia} semanas={semanas} />}
-          {entrena && <TusSemanas salud={salud} lista={semanas} />}
-          <TusMeses salud={salud} />
-          {entrena && <TusBloques salud={salud} />}
+          {/* (pulido 2.3) cada bloque del resumen guarda, mientras llega, el sitio que ocupó la última vez: ya no se van
+              empujando unos a otros según cargan */}
+          {entrena && <Reserva id="prog-destacados" cargando={llegando}><Destacados progreso={progreso.datos} constancia={constancia.datos} programa={programa.datos} /></Reserva>}
+          {entrena && <Reserva id="prog-anillos" cargando={llegando}><AnillosSemana programa={programa} salud={salud} checkinSemana={checkinSemana} constancia={constancia} /></Reserva>}
+          {entrena && <Reserva id="prog-cifras" cargando={llegando}><Cifras constancia={constancia} semanas={semanas} /></Reserva>}
+          {entrena && <Reserva id="prog-semanas" cargando={llegando}><TusSemanas salud={salud} lista={semanas} /></Reserva>}
+          <Reserva id="prog-meses"><TusMeses salud={salud} /></Reserva>
+          {entrena && <Reserva id="prog-bloques"><TusBloques salud={salud} /></Reserva>}
         </Grupo>
         <Grupo g="logros">{entrena && <Logros salud={salud} />}</Grupo>
         <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} progresoDado={progreso} entrenamiento={entrena} irA={irA} />

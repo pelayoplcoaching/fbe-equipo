@@ -77,6 +77,7 @@ function Tablero({ panel }) {
           </div>
         </div>
       )}
+<<<<<<< HEAD
       {panel.dias?.length > 0 && (
         <div class="bdia-doce">
           <div class="bdia-doce-cab"><span class="bdia-sobre">Esta semana</span><span class="bdia-doce-n">{panel.enObjetivo} {panel.enObjetivo === 1 ? 'día' : 'días'} en objetivo</span></div>
@@ -85,6 +86,8 @@ function Tablero({ panel }) {
           </div>
         </div>
       )}
+=======
+>>>>>>> origin/main
       {animo && <p class="bdia-animo">{animo}</p>}
     </div>
   );

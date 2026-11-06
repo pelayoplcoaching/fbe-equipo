@@ -112,7 +112,7 @@ function CabezaPerfil({ p, correo }) {
   const bloque = p?.bloque ? `Bloque ${p.bloque.numero}: ${p.bloque.nombre}${p.actual ? ` · Semana ${p.actual.numero}` : ''}` : null;
   return (
     <section class="perfil-cabeza" aria-label={`${atleta.nombre}${bloque ? `, ${bloque}` : ''}`}>
-      <Avatar nombre={atleta.nombre} foto={perfil?.foto} clase="enorme" lleno ampliable />
+      <Avatar nombre={atleta.nombre} foto={perfil?.foto_grande || perfil?.foto} clase="enorme" lleno ampliable />
       <div class="perfil-quien">
         <p class="perfil-nombre">{atleta.nombre}</p>
         {correo && <p class="peq secundario perfil-correo">{correo}</p>}

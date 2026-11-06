@@ -12,8 +12,8 @@ import { BandaDemo } from '../App.jsx';
 export function Comidas({ salud, recargarConsentimientos, irA }) {
   const { api, atleta } = useApp();
   const [vista, setVista] = usePreferencia('fbe-comidas-vista', 'menu');
-  const recetario = useCarga(() => api.recetario(atleta.id), [atleta.id]);
-  const planes = useCarga(() => api.planesNutricion(atleta.id).catch(() => []), [atleta.id]);
+  const recetario = useCarga(() => api.recetario(atleta.id), [atleta.id], { recuerdo: `recetario:${api.uid()}:${atleta.id}` });
+  const planes = useCarga(() => api.planesNutricion(atleta.id).catch(() => []), [atleta.id], { recuerdo: `planes-comidas:${atleta.id}` });
   const [receta, setReceta] = useState(null); // asignación abierta
   const [anadir, setAnadir] = useState(null); // { a, raciones }
   const [comidas, setComidas] = useState(false);
@@ -23,7 +23,9 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
     <div class="contenido">
       <CabeceraGrande>
         <div class="titulo"><h1>Comidas</h1><div class="sub">{vista === 'menu' ? 'Organiza lo que vas a comer cada día' : 'Las opciones de tu coach para cada comida'}</div></div>
-        {r && <button class="btn btn-peq plano" onClick={() => setComidas(true)} aria-label={`Tus comidas del día: ${r.tomas.length}`}><Icono n="ajustes" /> {r.tomas.length} al día</button>}
+        {r ? <button class="btn btn-peq plano" onClick={() => setComidas(true)} aria-label={`Tus comidas del día: ${r.tomas.length}`}><Icono n="ajustes" /> {r.tomas.length} al día</button>
+          /* (pulido 2.3) mientras carga, su sitio ya está: la cabecera no cambia de alto al llegar */
+          : !recetario.error && <span class="btn btn-peq plano" style="visibility:hidden" aria-hidden="true"><Icono n="ajustes" /> 4 al día</span>}
       </CabeceraGrande>
       <BandaDemo />
       <Pestanas opciones={[['menu', 'Tu semana'], ['recetas', 'Tus recetas']]} valor={vista} alCambiar={setVista} etiqueta="Comidas" idBase="comidas" />
@@ -64,9 +66,10 @@ function SinConsentimiento({ darConsentimiento }) {
 export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
   const { api, atleta, aviso } = useApp();
   const hoy = hoyISO();
-  const menu = useCarga(() => (salud ? api.menuSemana(atleta.id, hoy).catch(() => []) : Promise.resolve([])), [atleta.id, salud]);
-  const recetario = useCarga(() => api.recetario(atleta.id).catch(() => null), [atleta.id]);
-  const planes = useCarga(() => (compacto ? Promise.resolve([]) : api.planesNutricion(atleta.id).catch(() => [])), [atleta.id]);
+  const menu = useCarga(() => (salud ? api.menuSemana(atleta.id, hoy).catch(() => []) : Promise.resolve([])), [atleta.id, salud], { recuerdo: `menu-hoy:${atleta.id}:${hoy}:${!!salud}` });
+  // (pulido 2.4) aquí basta con saber qué comidas hace y si tiene recetas: el recetario entero (hasta 1,4 MB) no se baja
+  const recetario = useCarga(() => api.recetarioDeHoy(atleta.id).catch(() => null), [atleta.id], { recuerdo: `recetario-hoy:${atleta.id}` });
+  const planes = useCarga(() => (compacto ? Promise.resolve([]) : api.planesNutricion(atleta.id).catch(() => [])), [atleta.id], { recuerdo: `planes-menu:${atleta.id}:${!!compacto}` });
   const [ocupado, una] = useUnaVez();
   const deHoy = (menu.datos || []).filter((e) => e.fecha === hoy);
   if (compacto && !deHoy.length) return null;

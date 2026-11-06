@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { faseRespira, retrasoRespira } from '../../logica/respira.js';
 import { sinMovimiento } from '../transiciones.js';
-import { SONIDOS } from '../../datos/sonidos-descanso.js';
 import { Icono, useApp } from '../comunes.jsx';
 import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, propuestaBackoff, tieneDetalle, objetivoSerie } from '../../logica/calculos.js';
 import { hablar, prepararVoz } from '../voz.js';
@@ -31,17 +30,27 @@ export const COLOR_DISCO = { alta: 'var(--disco-rojo)', media: 'var(--disco-azul
 export const SONIDOS_DESCANSO = [['tres-beeps', 'Tres beeps'], ['estadio', 'Beep estadio'], ['boxeo', 'Campana de boxeo'], ['silbato', 'Silbato'], ['motivador', 'Tono motivador'], ['suave', 'Pitido suave']];
 let audio = null;
 const buffers = {}; // sonido → Promise<AudioBuffer>
+// (pulido 2.10) Los sonidos (casi 100 kB) ya no van en lo que se carga al arrancar: se traen al entrar en una sesión
+// (prepararAudio, en el primer toque), con tiempo de sobra antes del primer descanso, y el service worker los guarda
+// con lo demás. Si no llegaran (sin conexión y sin guardar), suena el pitido suave, como con cualquier fallo.
+let SONIDOS = null, trayendo = null;
+const traerSonidos = () => {
+  trayendo ||= import('../../datos/sonidos-descanso.js').then((m) => { SONIDOS = m.SONIDOS; return SONIDOS; }).catch((e) => { trayendo = null; throw e; });
+  return trayendo;
+};
+const CON_ARCHIVO = new Set(['tres-beeps', 'estadio', 'boxeo', 'silbato', 'motivador']);   // («suave» es el pitido de siempre, sin archivo)
 function cargar(k) {
-  if (!audio || !SONIDOS[k]) return null;
+  if (!audio || !CON_ARCHIVO.has(k)) return null;
   if (!buffers[k]) {
-    try {
-      const b64 = SONIDOS[k].slice(SONIDOS[k].indexOf(',') + 1);
+    buffers[k] = traerSonidos().then((S) => {
+      if (!S?.[k]) throw new Error('sin sonido');
+      const b64 = S[k].slice(S[k].indexOf(',') + 1);
       const bin = atob(b64), bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       // (decodeAudioData con callbacks: Safari antiguo no devuelve promesa)
-      buffers[k] = new Promise((ok, mal) => { const r = audio.decodeAudioData(bytes.buffer, ok, mal); r?.then?.(ok, mal); });
-      buffers[k].catch(() => { delete buffers[k]; });
-    } catch { return null; }
+      return new Promise((ok, mal) => { const r = audio.decodeAudioData(bytes.buffer, ok, mal); r?.then?.(ok, mal); });
+    });
+    buffers[k].catch(() => { delete buffers[k]; });
   }
   return buffers[k];
 }

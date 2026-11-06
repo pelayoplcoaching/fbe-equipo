@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { ChipLlegada } from '../atleta/Preparacion.jsx';
-import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, ErrorCaja, cuando, Avatar, Hoja, usePreferencia, Vacio } from '../comunes.jsx';
+import { CabeceraGrande, Siluetas, Reserva, useApp, useCarga, Icono, ErrorCaja, cuando, Avatar, Hoja, usePreferencia, Vacio } from '../comunes.jsx';
 import { agruparPorAtleta, textoTipos, esDeslizar, duracionCorta } from '../../logica/diseno.js';
 import { vibrar } from '../hapticos.js';
 import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
@@ -134,7 +134,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
           <button key={k} aria-pressed={filtro === k ? 'true' : 'false'} onClick={() => setFiltro(k)}>{t}{k !== 'todo' ? ` (${cuentas[k]})` : ''}</button>
         ))}
       </div>
-      {filtro === 'todo' && <VariantesPorRevisar abrirAtleta={abrirAtleta} />}
+      {filtro === 'todo' && <Reserva id="revisar-variantes"><VariantesPorRevisar abrirAtleta={abrirAtleta} /></Reserva>}
       {/* v0.57: los vídeos por revisar, uno detrás de otro */}
       {(d?.archivos || []).some((a) => a.tipo === 'video_tecnica') && (filtro === 'todo' || filtro === 'videos') && (
         <button type="button" class="btn btn-peq revisar-seguidos" onClick={() => setSeguidos(true)} aria-haspopup="dialog">
@@ -230,7 +230,7 @@ function Deslizable({ children }) {
 // «Dejar así» se recuerda en este dispositivo.
 function VariantesPorRevisar({ abrirAtleta }) {
   const { api, aviso } = useApp();
-  const lista = useCarga(() => api.variantesPorRevisar(), []);
+  const lista = useCarga(() => api.variantesPorRevisar(), [], { recuerdo: `variantes-revisar:${api.uid()}` });
   const [ignoradas, setIgnoradas] = usePreferencia('fbe-variantes-ignoradas', []);
   const [abierto, setAbierto] = useState(false);
   const [ocupado, setOcupado] = useState(false);

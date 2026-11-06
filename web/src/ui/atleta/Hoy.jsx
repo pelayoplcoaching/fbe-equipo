@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { pedirSubProgreso } from './sub-progreso.js';
-import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar } from '../comunes.jsx';
+import { Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar } from '../comunes.jsx';
 import { resumenDia } from '../../logica/dia.js';
 import { BandaConexion, BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
@@ -51,9 +51,9 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
   // Solo nutrición (v0.26): sin nada de entrenamiento
   const entrena = conEntrenamiento(atleta);
   // Atleta nuevo: bienvenida (una vez) y primeros pasos hasta completarlos u ocultarlos
-  const hechos = useCarga(() => api.primerosPasos(atleta.id).catch(() => null), [atleta.id, p, checkinSemana.datos]);
+  const hechos = useCarga(() => api.primerosPasos(atleta.id).catch(() => null), [atleta.id, p, checkinSemana.datos], { recuerdo: `pasos:${atleta.id}` });
   // Cuestionario inicial: un paso de los primeros pasos y, si el coach lo pide, una tarjeta
-  const cuestionario = useCarga(() => api.cuestionario(atleta.id).catch(() => null), [atleta.id]);
+  const cuestionario = useCarga(() => api.cuestionario(atleta.id).catch(() => null), [atleta.id], { recuerdo: `cuestionario:${atleta.id}` });
   const [verCuestionario, setVerCuestionario] = useState(false);
   const [bienvenidaVista, setBienvenidaVista] = usePreferencia('fbe-bienvenida-vista', false);
   const [pasosOcultos, setPasosOcultos] = usePreferencia('fbe-primeros-pasos-oculto', false);
@@ -99,14 +99,14 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
         <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>
       )}
       {verPasos ? <PrimerosPasos pasos={pasos} alOcultar={() => setPasosOcultos(true)} /> : !propio && <AvisoInstalar />}
-      {!propio && (verPasos || (!p && !cargando) || !entrena) && <AvisosCoach />}
+      {!propio && (verPasos || (!p && !cargando) || !entrena) && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
       {!entrena ? (
         <ContenidoNutricion irA={irA} checkinSemana={checkinSemana} salud={salud} recargarConsentimientos={recargarConsentimientos}
           sinBienvenida={propio || !hechos.datos || verBienvenida}
           entre={(
             <>
-              {!verPasos && atleta.estado !== 'baja' && <TuDia p={null} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} />}
-              {!propio && <TarjetaMes salud={salud} />}
+              {!verPasos && atleta.estado !== 'baja' && <Reserva id="hoy-tu-dia"><TuDia p={null} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} /></Reserva>}
+              {!propio && <Reserva id="hoy-mes"><TarjetaMes salud={salud} /></Reserva>}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
               {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
               {!verPasos && <TarjetaNotificaciones />}
@@ -117,8 +117,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
           sinBienvenida={propio || !hechos.datos || verBienvenida}
           entre={(
             <>
-              {!verPasos && !propio && <AvisosCoach />}
-              {!verPasos && atleta.estado !== 'baja' && <TuDia p={p} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} />}
+              {!verPasos && !propio && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
+              {!verPasos && atleta.estado !== 'baja' && <Reserva id="hoy-tu-dia"><TuDia p={p} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} /></Reserva>}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
               {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
               {!verPasos && !propio && hechos.datos?.sesion && <TarjetaNotificaciones />}
@@ -142,7 +142,7 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
   const { api, atleta } = useApp();
   // v0.48: la tarea del coach abierta
   const [tarea, setTarea] = useState(null);
-  const dia = useCarga(() => api.tuDia(atleta.id, { programa: p, checkin: checkinSemana.datos, salud, nutricion: conNutricion(atleta), entrenamiento: conEntrenamiento(atleta), pesoDiario: atleta.peso_frecuencia !== 'semanal' }).catch(() => null), [atleta.id, p, checkinSemana.datos, salud, version, atleta.peso_frecuencia]);
+  const dia = useCarga(() => api.tuDia(atleta.id, { programa: p, checkin: checkinSemana.datos, salud, nutricion: conNutricion(atleta), entrenamiento: conEntrenamiento(atleta), pesoDiario: atleta.peso_frecuencia !== 'semanal' }).catch(() => null), [atleta.id, p, checkinSemana.datos, salud, version, atleta.peso_frecuencia], { recuerdo: `tu-dia:${atleta.id}` });
   // Tras apuntar algo en cualquier parte de la pantalla (un hábito, la nutrición, el peso), la lista se pone al día
   const recargarRef = useRef(null);
   recargarRef.current = dia.recargar;
@@ -309,11 +309,11 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
   return (
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={{ estado: 'nutricion' }} panel={panelDia} alCerrar={cerrarDia} />}
-      <MenuHoy irA={irA} salud={salud} darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }} />
+      <Reserva id="hoy-menu"><MenuHoy irA={irA} salud={salud} darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }} /></Reserva>
       {entre}
-      {salud && <NutricionHoy />}
-      {salud && <HabitosHoy />}
-      {salud && <PesoHoy irA={irA} />}
+      {salud && <Reserva id="hoy-nutricion"><NutricionHoy /></Reserva>}
+      {salud && <Reserva id="hoy-habitos"><HabitosHoy /></Reserva>}
+      {salud && <Reserva id="hoy-peso"><PesoHoy irA={irA} /></Reserva>}
       {salud && !checkinHecho && diaDeCheckin() && (
         <button class="nota-coach" style="border:0;text-align:left;cursor:pointer" onClick={() => irA('checkin')}>
           <Icono n="checkin" /><div><strong>Check-in semanal pendiente.</strong> Un minuto: peso, sueño, energía y cómo vas.</div>
@@ -326,7 +326,7 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
 
 function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos, recargar, entre = null, sinBienvenida = false }) {
   const { api, propio, cola } = useApp();
-  const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id, p]);
+  const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id, p], { recuerdo: `constancia:${atleta.id}` });
   // v0.68: la bienvenida del día (la primera vez que abre la app hoy; nunca con una sesión a medias ni en el modo atleta del coach)
   const [verDia, cerrarDia] = useBienvenida(sinBienvenida ? null : api.uid(), { sesionEnCurso: !!leerEnCurso(atleta.id) });
   const [planAbierto, setPlanAbierto] = useState(false);
@@ -433,8 +433,9 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           </div>
         ) : siguiente ? (
           <>
-            {(ejercicios.length > 0 || siguiente.dinamica || cardioValido(siguiente.cardio)) && (
+            {(ejercicios.length > 0 || siguiente.dinamica || cardioValido(siguiente.cardio) || (det.cargando && !det.datos)) && (
               <div class="hero-meta">
+                {det.cargando && !det.datos && !cardioValido(siguiente.cardio) && <span aria-hidden="true">&nbsp;</span>}
                 {cardioValido(siguiente.cardio) && <span><b>{textoCardio(siguiente.cardio)}</b></span>}
                 {ejercicios.length > 0 && <><span><b>{ejercicios.length}</b> ejercicios</span><span>unos <b>{duracionEstimada(ejercicios)}</b> min</span></>}
                 {empezada && <span><b>{ejercicios.reduce((n, x) => n + x.hechas.length, 0)}</b> series ya hechas</span>}
@@ -447,15 +448,14 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
             </div>
           </>
         ) : null}
-        {(dias ? !!natural : sesiones.length > 0) && <ResumenSemana hechas={dias ? natural.hechas : hechas} total={dias ? natural.objetivo : sesiones.length} objetivo={dias} racha={constancia.datos?.racha ?? null} abrirRacha={constancia.datos ? () => setVerRacha(true) : null} />}
+        {(dias ? !!natural : sesiones.length > 0) && <ResumenSemana hechas={dias ? natural.hechas : hechas} total={dias ? natural.objetivo : sesiones.length} objetivo={dias} racha={constancia.datos?.racha ?? null} cargando={constancia.cargando && !constancia.datos} abrirRacha={constancia.datos ? () => setVerRacha(true) : null} />}
       </section>
       <Diales sesiones={sesiones} semana={semana} siguiente={siguiente} previstaHoy={enSemana ? toca.hoy : null} ejerciciosSiguiente={ejercicios} bloques={p.bloques || []} salud={salud} hoy={hoy} alContestar={recargar}
         natural={dias ? { semana: natural, dias, semanas: p.semanas || [], sesionesPorSemana: p.sesiones || {} } : null} />
 
       {entre}
-      {!propio && <TarjetaMes salud={salud} />}
-      <BloqueTerminado salud={salud} />
-      <SemanaPasada salud={salud} />
+      {!propio && <Reserva id="hoy-mes"><TarjetaMes salud={salud} /></Reserva>}
+      <Reserva id="hoy-informes"><BloqueTerminado salud={salud} /><SemanaPasada salud={salud} /></Reserva>
       {/* (diseño 9) Lo de debajo es detalle: va plegado en filas que se abren al tocarlas (y «Tu día» las abre al ir a ellas) */}
       {e.tipo === 'entreno' && siguiente && (
         <Plegable id="sesion" titulo="Lo que vas a hacer" icono="hoy" detalle={ejercicios.length ? `${ejercicios.length} ${ejercicios.length === 1 ? 'ejercicio' : 'ejercicios'}, uno a uno` : 'La sesión que te toca'}>
@@ -523,6 +523,7 @@ function Plegable({ id, titulo, icono, detalle = null, children }) {
     return () => mo?.disconnect();
   }, []);
   return (
+    <Reserva id={`hoy-plegable-${id}`} clase="reserva-plegable">
     <details class="plegable-hoy" data-plegable={id} open={abierta} hidden={vacia} onToggle={(ev) => { const o = ev.currentTarget.open; if (o !== abierta) setAbierta(o); }}>
       <summary>
         <span class="ios-ico" aria-hidden="true"><Icono n={icono} /></span>
@@ -531,8 +532,10 @@ function Plegable({ id, titulo, icono, detalle = null, children }) {
       </summary>
       <div class="plegable-cuerpo" ref={cuerpo}>{children}</div>
     </details>
+    </Reserva>
   );
 }
+
 // Abre una de esas filas desde fuera («Tu día», los primeros pasos) antes de bajar a ella
 function abrirPlegableHoy(id) {
   const d = typeof document !== 'undefined' ? document.querySelector(`details[data-plegable="${id}"]`) : null;
@@ -546,7 +549,7 @@ function BloqueTerminado({ salud }) {
   const { api, atleta } = useApp();
   const [visto, setVisto] = usePreferencia('fbe-informe-visto', null);
   const [abierto, setAbierto] = useState(false);
-  const res = useCarga(() => api.informes(atleta.id, { salud }).catch(() => []), [atleta.id]);
+  const res = useCarga(() => api.informes(atleta.id, { salud }).catch(() => []), [atleta.id], { recuerdo: `informes-hoy:${atleta.id}` });
   const r = (res.datos || []).find((x) => x.terminado && !x.vacio && diasEntre(x.fin, hoyISO()) <= 21);
   if (!r || (visto === r.bloque.id && !abierto)) return null;
   return (
@@ -561,7 +564,7 @@ function SemanaPasada({ salud }) {
   const { api, atleta } = useApp();
   const [vista, setVista] = usePreferencia('fbe-tu-semana-vista', null);
   const [abierta, setAbierta] = useState(false);
-  const res = useCarga(() => api.resumenesSemanales(atleta.id, 1).catch(() => []), [atleta.id]);
+  const res = useCarga(() => api.resumenesSemanales(atleta.id, 1).catch(() => []), [atleta.id], { recuerdo: `semana-pasada:${atleta.id}` });
   const r = res.datos?.[0];
   if (!r || (vista === r.lunes && !abierta)) return null;
   return (
@@ -575,9 +578,9 @@ function SemanaPasada({ salud }) {
 // Peso de hoy en un toque y la tendencia de las últimas semanas
 function PesoHoy({ irA }) {
   const { api, atleta, aviso } = useApp();
-  const pesos = useCarga(() => api.pesos(atleta.id, 60).catch(() => []), [atleta.id]);
+  const pesos = useCarga(() => api.pesos(atleta.id, 60).catch(() => []), [atleta.id], { recuerdo: `pesos-hoy:${atleta.id}` });
   const nutri = conNutricion(atleta);
-  const planes = useCarga(() => (nutri ? api.planesNutricion(atleta.id).catch(() => []) : Promise.resolve([])), [atleta.id, nutri]);
+  const planes = useCarga(() => (nutri ? api.planesNutricion(atleta.id).catch(() => []) : Promise.resolve([])), [atleta.id, nutri], { recuerdo: `planes-hoy:${atleta.id}:${nutri}` });
   const [abierto, setAbierto] = useState(false);
   // La cifra, solo para quien la quiere ver (Ajustes): de serie, cómo va respecto a su objetivo, sin números
   const conCifra = !!ajuste('pesoCifra');
@@ -704,7 +707,7 @@ function HeroEspera({ bloque, notion, irA, propio }) {
 // Lo que queda de la semana y la racha de semanas completas (v0.51: el anillo pasa al dial «Constancia», justo debajo)
 // v0.52: la racha es un botón que abre su pantalla (como en Duolingo)
 // v0.53: objetivo (días por semana, si lo tiene): las que le quedan para llegar a él, de lunes a domingo
-function ResumenSemana({ hechas, total, racha, abrirRacha = null, objetivo = null }) {
+function ResumenSemana({ hechas, total, racha, abrirRacha = null, objetivo = null, cargando = false }) {
   const quedan = Math.max(0, total - hechas);
   const empezar = objetivo ? `Llega a ${total} esta semana para empezar una racha de semanas completas.` : 'Termínalas todas para empezar una racha de semanas completas.';
   const texto = racha === 1 ? '1 semana completa' : `${racha} semanas completas seguidas`;
@@ -712,6 +715,8 @@ function ResumenSemana({ hechas, total, racha, abrirRacha = null, objetivo = nul
     <div class="semana-resumen sin-anillo">
       <div class="pila-xs">
         <strong>{quedan ? `Te ${quedan === 1 ? 'queda 1 sesión' : `quedan ${quedan} sesiones`}` : 'Semana completa'}</strong>
+        {/* (pulido 2.3) la racha llega después (con la constancia): su línea ya tiene sitio */}
+        <Reserva id="hoy-racha" liso cargando={cargando}>
         {racha > 0 ? (
           abrirRacha
             ? <button type="button" class="racha racha-boton" onClick={abrirRacha} aria-label={`${texto}. Ver tu racha`}><Icono n="llama" />{texto}<Icono n="derecha" class="racha-chevron" /></button>
@@ -721,16 +726,26 @@ function ResumenSemana({ hechas, total, racha, abrirRacha = null, objetivo = nul
             ? <button type="button" class="racha-boton racha-cero" onClick={abrirRacha}>{empezar}</button>
             : <span class="peq secundario">{empezar}</span>
         )}
+        </Reserva>
       </div>
     </div>
   );
 }
 
 // resumen (v0.50, en Semana): los músculos que más trabaja, los minutos estimados y los pictogramas de sus ejercicios
-export function DiaSesion({ sesion, semana = null, actual, abrir, mensajes, resumen = null }) {
+export function DiaSesion({ sesion, semana = null, actual, abrir, mensajes, resumen = null, llegando = null }) {
   const hecha = sesion.completada;
   const previsto = !hecha && semana ? diaPrevistoValido(sesion, semana) : null;
   const conResumen = resumen && resumen.ejercicios > 0;
+  const cuerpoResumen = conResumen && (
+    <span class="dia-resumen">
+      <span class="dia-pictos">{resumen.patrones.map((pt) => <Pictograma key={pt} patron={pt} />)}</span>
+      <span class="dia-chips">
+        {resumen.grupos.map((g) => <span key={g} class="chip-musculo">{NOMBRE_GRUPO[g] || g}</span>)}
+        <span class="chip-min num"><Icono n="reloj" />{resumen.minutos ? `unos ${resumen.minutos} min` : `${resumen.ejercicios} ejercicios`}</span>
+      </span>
+    </span>
+  );
   return (
     <button class={`dia ${hecha ? 'hecha' : ''} ${actual ? 'actual' : ''} ${conResumen ? 'con-resumen' : ''}`} onClick={abrir}>
       <span class="marca-dia">{hecha ? <Icono n="hecho" /> : sesion.orden}</span>
@@ -741,15 +756,9 @@ export function DiaSesion({ sesion, semana = null, actual, abrir, mensajes, resu
             : previsto ? `${actual ? 'Siguiente, prevista' : 'Prevista'} ${cuandoDia(previsto)}`
             : actual ? 'Siguiente' : sesion.tipo && sesion.tipo !== 'fuerza' ? NOMBRE_TIPO_SESION[sesion.tipo] : NOMBRE_INTENCION[sesion.intencion] || 'Pendiente'}
         </span>
-        {conResumen && (
-          <span class="dia-resumen">
-            <span class="dia-pictos">{resumen.patrones.map((pt) => <Pictograma key={pt} patron={pt} />)}</span>
-            <span class="dia-chips">
-              {resumen.grupos.map((g) => <span key={g} class="chip-musculo">{NOMBRE_GRUPO[g] || g}</span>)}
-              <span class="chip-min num"><Icono n="reloj" />{resumen.minutos ? `unos ${resumen.minutos} min` : `${resumen.ejercicios} ejercicios`}</span>
-            </span>
-          </span>
-        )}
+        {/* (pulido 2.3) lo que trae la sesión llega después (en Semana; llegando dice si aún se espera): su sitio ya
+            está, por el puesto de la sesión en la semana, y los días de debajo no bajan */}
+        {llegando == null ? cuerpoResumen : <Reserva id={`dia-resumen-${sesion.orden}`} liso cargando={llegando}>{cuerpoResumen}</Reserva>}
       </span>
       {mensajes ? <span class="chip morado"><Icono n="mensaje" />Nuevo</span> : <Icono n="derecha" width="20" height="20" class="terciario" />}
     </button>

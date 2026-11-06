@@ -92,10 +92,17 @@ export async function probarRellenar({ navegador, check, base = 'http://localhos
     check(tras.length === 28 && tras.filter((x, i) => x !== antes[i]).length === 1, '«Cambiar» pone otra receta en esa comida y deja las demás');
     await hoja().getByRole('button', { name: /^Quitar cena/ }).first().click();
     check(await hay(filas(), 27) && await botonApuntar().textContent().then((t) => /Apuntar 27 comidas/.test(t)), '«Quitar» la saca de la propuesta: quedan 27');
-    await hoja().getByRole('button', { name: 'Otra propuesta' }).click();
-    await p.waitForTimeout(200);
-    const otra = await nombres();
-    check(otra.length === 28 && otra.filter((x, i) => x !== tras[i]).length >= 5, '«Otra propuesta» vuelve a las 28 con otras recetas');
+    // (cada propuesta sale de una semilla distinta, pero con pocas recetas por comida a veces coincide casi entera con la
+    // anterior: unas veces cambian 18 comidas y otras 3 o ninguna. Se pide otra hasta cinco veces y tiene que cambiar algo)
+    let otra = [], cambian = 0;
+    for (let k = 0; k < 5 && cambian < 2; k++) {
+      await hoja().getByRole('button', { name: 'Otra propuesta' }).click();
+      await hay(filas(), 28);
+      await p.waitForTimeout(200);
+      otra = await nombres();
+      cambian = Math.max(cambian, otra.filter((x, i) => x !== tras[i]).length);
+    }
+    check(otra.length === 28 && cambian >= 2, '«Otra propuesta» vuelve a las 28 con otras recetas');
     await revisar('cambios');
 
     // Apuntar

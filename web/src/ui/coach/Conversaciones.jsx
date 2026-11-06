@@ -104,7 +104,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
         alCambiar={() => { lista.recargar(true); alCambiar?.(); }} alLeer={() => { lista.recargar(true); alCambiar?.(); }}
         irContexto={(ctx) => abrirAtleta(a.id, ctx.tipo === 'sesion' ? 'registro' : ctx.tipo === 'checkin' ? 'seguimiento' : 'videos')}
         cabecera={{
-          izquierda: <>{!dos && <button class="btn btn-icono plano" onClick={volver} aria-label="Volver a mensajes"><Icono n="atras" /></button>}<Avatar nombre={a.nombre} foto={a.foto} ampliable /></>,
+          izquierda: <>{!dos && <button class="btn btn-icono plano" onClick={volver} aria-label="Volver a mensajes"><Icono n="atras" /></button>}<Avatar nombre={a.nombre} foto={a.foto} ampliable perfilId={a.perfil_id || null} /></>,
           titulo: a.nombre, sub: a.objetivo || '', verFicha: () => abrirAtleta(a.id, 'programa'),
           derecha: <button class="btn btn-peq" onClick={() => abrirAtleta(a.id, 'programa')}>Ficha</button>,
         }} />

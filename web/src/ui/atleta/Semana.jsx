@@ -19,7 +19,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
   const sesiones = semana ? p.sesiones[semana.id] || [] : [];
   // Lo que trae cada sesión (músculos, minutos, pictogramas): solo de la semana que se ve
   const ids = sesiones.map((s) => s.id).join(',');
-  const pautas = useCarga(() => (ids ? api.pautasSemana(ids.split(',')).catch(() => ({})) : Promise.resolve({})), [ids]);
+  const pautas = useCarga(() => (ids ? api.pautasSemana(ids.split(',')).catch(() => ({})) : Promise.resolve({})), [ids], { recuerdo: ids ? `pautas:${ids}` : null });
   const idx = semana ? p.semanas.findIndex((s) => s.id === semana.id) : -1;
   const irA = (d) => { const j = idx + d; if (j >= 0 && j < p.semanas.length) { setDir(d); setElegida(p.semanas[j].id); } };
   const gesto = useDeslizar(irA);
@@ -87,7 +87,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
                 </div>
               )}
               <div class="semana-dias">
-                {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} resumen={pautas.datos?.[s.id] || null} actual={semana.id === p.actual?.id && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
+                {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} resumen={pautas.datos?.[s.id] || null} llegando={pautas.cargando && !pautas.datos} actual={semana.id === p.actual?.id && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
               </div>
               {semana.id !== p.actual?.id && <p class="peq secundario">Puedes abrir cualquier sesión para repasarla o registrar una que hiciste otro día.</p>}
             </section>

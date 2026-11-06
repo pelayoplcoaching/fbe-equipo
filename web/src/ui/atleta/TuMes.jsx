@@ -16,7 +16,7 @@ export function TarjetaMes({ salud }) {
   const mes = mesAnterior();
   const [visto, setVisto] = usePreferencia('fbe-tu-mes-visto', null);
   const [abierta, setAbierta] = useState(false);
-  const r = useCarga(() => (visto === mes ? Promise.resolve(null) : api.resumenMes(atleta.id, mes, { salud, nutricion: conNutricion(atleta), entrenamiento: conEntrenamiento(atleta) }).catch(() => null)), [atleta.id, mes, salud]);
+  const r = useCarga(() => (visto === mes ? Promise.resolve(null) : api.resumenMes(atleta.id, mes, { salud, nutricion: conNutricion(atleta), entrenamiento: conEntrenamiento(atleta) }).catch(() => null)), [atleta.id, mes, salud], { recuerdo: `tu-mes:${atleta.id}:${mes}:${visto === mes}` });
   const res = r.datos;
   if (!res || res.vacio || (visto === mes && !abierta)) return null;
   const linea = res.conEntreno ? `${res.sesiones.hechas} ${res.sesiones.hechas === 1 ? 'sesión' : 'sesiones'}, ${res.dias} ${res.dias === 1 ? 'día' : 'días'} entrenando${res.records.length ? `, ${res.records.length} ${res.records.length === 1 ? 'récord' : 'récords'}` : ''}`

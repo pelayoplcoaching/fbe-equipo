@@ -3,7 +3,7 @@
 // día, con los totales frente a su plan, copiar semanas y la lista de la compra). Sustituye a las bases de datos
 // de Desayuno, Comida, Merienda y Cena y al «Planificador semanal» de Notion.
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos } from './comunes.jsx';
+import { useApp, useCarga, Reserva, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos } from './comunes.jsx';
 import { COLOR_MACRO, MacrosDia } from './NutricionComun.jsx';
 import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, porSecciones, valeParaDia, textoVariante, tomasDelDia, paraElDia } from '../logica/comidas.js';
 import { planVigente, objetivoDelDia, fmtKcal } from '../logica/nutricion.js';
@@ -227,9 +227,10 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
   const hoy = hoyISO();
   const [lunes, setLunes] = useState(lunesDe(hoy));
   const [dia, setDia] = useState(hoy);
-  const menu = useCarga(() => api.menuSemana(atletaId, lunes), [atletaId, lunes]);
+  // (pulido 2.3) al volver a Comidas, el menú ya cargado sale al momento (y se pone al día por detrás)
+  const menu = useCarga(() => api.menuSemana(atletaId, lunes), [atletaId, lunes], { recuerdo: `menu:${atletaId}:${lunes}` });
   const op = recetario.opcional;
-  const diasSin = useCarga(() => (op ? api.diasSin(atletaId, lunes) : Promise.resolve([])), [atletaId, lunes, op]);
+  const diasSin = useCarga(() => (op ? api.diasSin(atletaId, lunes) : Promise.resolve([])), [atletaId, lunes, op], { recuerdo: `dias-sin:${atletaId}:${lunes}:${op || ''}` });
   const [hoja, setHoja] = useState(null); // { tipo: 'anadir', toma } | { tipo: 'entrada', e } | 'compra' | 'copiar' | 'receta'
   const [ocupado, una] = useUnaVez();
   const entradas = menu.datos || [];
@@ -249,6 +250,8 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
       <NavSemana lunes={lunes} setLunes={cambiarSemana} />
       <DiasSemana lunes={lunes} dia={dia} setDia={setDia} conDatos={(iso) => Object.keys(porDia[iso] || {}).length > 0} />
       <ErrorCaja error={menu.error} reintentar={recargar} />
+      {/* (pulido 2.3) mientras carga, el día guarda el sitio que ocupó la última vez: los botones de debajo no se mueven */}
+      <Reserva id="menu-dia" inicial={460} cargando={menu.cargando && !menu.datos}>
       {menu.cargando && !menu.datos ? <Siluetas forma="lista" n={3} texto="Cargando el menú" /> : (
         <section class="panel" aria-labelledby="menu-dia">
           <div class="panel-pad pila-s">
@@ -282,6 +285,7 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
           </ul>
         </section>
       )}
+      </Reserva>
       <div class="fila-envolver">
         <button class="btn" onClick={() => setHoja('rellenar')} disabled={menu.cargando && !menu.datos}><Icono n="mas" /> Rellenar la semana</button>
         <button class="btn" onClick={() => setHoja('compra')} disabled={!entradas.length}><Icono n="carrito" /> Lista de la compra</button>

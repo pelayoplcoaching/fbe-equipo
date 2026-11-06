@@ -4149,6 +4149,7 @@ console.log('\nDiseño, tanda 11: el panel de la bienvenida');
     'el panel del coach: por revisar, mensajes sin leer, quién ha entrenado hoy y quién necesita atención; lo que no ha cargado no sale');
 }
 
+<<<<<<< HEAD
 console.log('\nDiseño, tanda 14: la bienvenida de quien solo lleva nutrición');
 {
   const BV = await import('../web/src/logica/bienvenida.js');
@@ -4166,6 +4167,8 @@ console.log('\nDiseño, tanda 14: la bienvenida de quien solo lleva nutrición')
     'sin menú ni plan con cifras no sale nada; con el menú hecho se lo dice; y su saludo no habla de sesiones');
 }
 
+=======
+>>>>>>> origin/main
 console.log('\nv0.69: la comunidad, primera tanda (bienvenida, entrenando ahora, respuestas, 💪 a comentarios, el resumen del domingo)');
 {
   const C = await import('../web/src/logica/comunidad.js');

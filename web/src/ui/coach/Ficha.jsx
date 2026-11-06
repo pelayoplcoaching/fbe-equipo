@@ -9,7 +9,7 @@ import { Actividad } from './Actividad.jsx';
 import { SeccionesFicha } from './SeccionesFicha.jsx';
 import { CompararFotos } from '../CompararFotos.jsx';
 import { CompararVideos } from '../Archivos.jsx';
-import { CabeceraGrande, useUnaVez, useAncho, Siluetas, useApp, useCarga, Icono, ErrorCaja, Hoja, Vacio, Paso, Segmentos, HojaExportar, Avatar } from '../comunes.jsx';
+import { CabeceraGrande, useUnaVez, useAncho, Siluetas, Reserva, useApp, useCarga, Icono, ErrorCaja, Hoja, Vacio, Paso, Segmentos, HojaExportar, Avatar } from '../comunes.jsx';
 import { EditorBloque, ElegirEjercicio } from './Editor.jsx';
 import { textoMarca, REPS_MAX_OBJETIVO } from '../../logica/objetivos.js';
 import { Invitacion } from './Panel.jsx';
@@ -64,16 +64,20 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
     <div class="contenido coach">
       <CabeceraGrande>
         <button class="btn btn-icono plano" onClick={alVolver} aria-label="Volver a atletas"><Icono n="atras" /></button>
-        {a && <span class={`avatar-estado estado-${r ? estadoAtleta(r) : 'cargando'}`}><Avatar nombre={a.nombre} foto={a.foto} ampliable /></span>}
+        {a ? <span class={`avatar-estado estado-${r ? estadoAtleta(r) : 'cargando'}`}><Avatar nombre={a.nombre} foto={a.foto} ampliable perfilId={a.perfil_id || null} /></span>
+          /* (pulido 2.3) mientras llega la ficha, la foto y la línea de debajo del nombre ya tienen su sitio */
+          : !ficha.error && <span class="avatar-estado estado-cargando" aria-hidden="true"><Avatar nombre="" /></span>}
         <div class="titulo">
           <h1>{a?.nombre || 'Atleta'}</h1>
-          <div class="sub">{r?.semana ? `${r.bloque?.nombre ? `${r.bloque.nombre} · ` : ''}Semana ${r.semana.numero} de ${r.semana.total}` : a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : '')}</div>
+          <div class="sub">{r?.semana ? `${r.bloque?.nombre ? `${r.bloque.nombre} · ` : ''}Semana ${r.semana.numero} de ${r.semana.total}` : a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : !a || (resumen.cargando && !r) ? '\u00a0' : '')}</div>
+          {!a && !ficha.error && <div class="mini terciario" aria-hidden="true">&nbsp;</div>}
           {a && (a.nivel || servicioDe(a) !== 'completo' || (conEntrenamiento(a) && diasSemanaValido(a.dias_semana))) && <div class="mini terciario">{[conEntrenamiento(a) && a.nivel && `Nivel ${NOMBRE_NIVEL[a.nivel].toLowerCase()}`, conEntrenamiento(a) && diasSemanaValido(a.dias_semana) && textoDiasSemana(diasSemanaValido(a.dias_semana)), servicioDe(a) !== 'completo' && Object.fromEntries(SERVICIOS)[servicioDe(a)]].filter(Boolean).join(' · ')}</div>}
         </div>
         {/* Sin cuenta vinculada (aunque se haya cambiado su estado a mano), siempre se le puede dar un código */}
         {a && !a.perfil_id && a.estado !== 'baja' && <button class="btn btn-primario btn-peq" onClick={() => setInvitar(true)}><Icono n="enviar" /> Código</button>}
       </CabeceraGrande>
-      {a && <ChipsFicha r={r} cargando={resumen.cargando && !r} />}
+      {/* (pulido 2.3) las cifras de arriba guardan su sitio mientras llega la ficha: las pestañas no bajan */}
+      <Reserva id="ficha-chips" cargando={!a && !ficha.error}>{a && <ChipsFicha r={r} cargando={resumen.cargando && !r} />}</Reserva>
       <ErrorCaja error={ficha.error} reintentar={ficha.recargar} />
       <SeccionesFicha opciones={a ? pestanasFicha(a) : PESTANAS} valor={pest} alCambiar={setPest} />
       {!a ? <Siluetas forma="tarjetas" n={3} texto="Cargando la ficha" /> : (
@@ -133,7 +137,7 @@ function Programa({ atleta }) {
   const lista = bloques.datos || [];
   return (
     <div class="pila">
-      <ParaProgramar atleta={atleta} />
+      <Reserva id="ficha-para-programar"><ParaProgramar atleta={atleta} /></Reserva>
       <div class="separa" style="flex-wrap:wrap">
         {lista.length > 0 && (
           <select class="selector" style="max-width:420px" aria-label="Bloque" value={bloqueId || ''} onChange={(e) => setBloqueId(e.currentTarget.value)}>
@@ -414,13 +418,14 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
   const [comparar, setComparar] = useState(false);
   return (
     <div class="pila">
-      <TareasCoach atleta={atleta} alCambiar={alCambiar} />
-      {conEntrenamiento(atleta) && <CumplimientoYBloques atletaId={atleta.id} diasSemana={diasSemanaValido(atleta.dias_semana)} />}
-      <HabitosCoach atleta={atleta} />
-      <VistaProgreso key={versionVol} atletaId={atleta.id} esCoach entrenamiento={conEntrenamiento(atleta)} />
-      {conEntrenamiento(atleta) && <CargaEntreno atletaId={atleta.id} />}
-      {conEntrenamiento(atleta) && <VolumenObjetivo atleta={atleta} alGuardar={() => { setVersionVol((v) => v + 1); recargarFicha?.(); }} />}
-      <CheckinAMedida atleta={atleta} preguntas={preguntas} checkins={lista} recargarFicha={recargarFicha} />
+      {/* (pulido 2.3) cada bloque guarda, mientras carga, el sitio que ocupó la última vez: no se empujan al llegar */}
+      <Reserva id="seg-tareas"><TareasCoach atleta={atleta} alCambiar={alCambiar} /></Reserva>
+      {conEntrenamiento(atleta) && <Reserva id="seg-cumplimiento"><CumplimientoYBloques atletaId={atleta.id} diasSemana={diasSemanaValido(atleta.dias_semana)} /></Reserva>}
+      <Reserva id="seg-habitos"><HabitosCoach atleta={atleta} /></Reserva>
+      <Reserva id="seg-progreso"><VistaProgreso key={versionVol} atletaId={atleta.id} esCoach entrenamiento={conEntrenamiento(atleta)} /></Reserva>
+      {conEntrenamiento(atleta) && <Reserva id="seg-carga"><CargaEntreno atletaId={atleta.id} /></Reserva>}
+      {conEntrenamiento(atleta) && <Reserva id="seg-volumen"><VolumenObjetivo atleta={atleta} alGuardar={() => { setVersionVol((v) => v + 1); recargarFicha?.(); }} /></Reserva>}
+      <Reserva id="seg-checkin" cargando={preguntas.cargando && !preguntas.datos}><CheckinAMedida atleta={atleta} preguntas={preguntas} checkins={lista} recargarFicha={recargarFicha} /></Reserva>
       <section class="seccion">
         <div class="seccion-cab">
           <h2>Check-ins</h2>
