@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.86': {
+    coach: [
+      '«A quién escribir»: cuánto contacto llevas con cada atleta, a quién toca escribir hoy y por qué, con un borrador corto.',
+    ],
+  },
   '0.85': {
     atleta: [
       'Todo responde al pulsar, no pierdes el sitio al volver y «atrás» cierra lo último que abriste.',
