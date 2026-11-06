@@ -5397,8 +5397,8 @@ try {
     const swDist = leerArchivo(new URL('sw.js', dist), 'utf8');
     const deDemo = readdirSync(new URL('chunks/', dist)).filter((f) => /^video(-barra)?-demo-/.test(f));
     const precache = JSON.parse(/const ARCHIVOS = (\[[^\]]*\]);/.exec(swDist)[1]);
-    check(deDemo.length === 2 && deDemo.every((f) => !precache.includes(f)) && precache.some((f) => f.startsWith('chunks/semilla-demo-')) && !precache.some((f) => f.startsWith('modelos/')),
-      `el service worker no precarga los vídeos de ejemplo de la demo (${deDemo.join(', ')}) ni el modelo: solo se piden al usarlos`);
+    check(deDemo.length === 2 && deDemo.every((f) => !precache.includes(f)) && !precache.some((f) => f.startsWith('chunks/semilla-demo-')) && /const DEMO = typeof \[[^\]]*chunks\/semilla-demo-/.test(swDist) && !precache.some((f) => f.startsWith('modelos/')),
+      `el service worker no precarga los vídeos de ejemplo de la demo (${deDemo.join(', ')}) ni el modelo: solo se piden al usarlos; y el código de la demo (pulido 3.7), al abrirla`);
   }
   // El vídeo de la barra de Carlos (en la demo viene revisado): por revisar, para analizarlo en Revisar
   const idBarra = await p.evaluate(() => {
@@ -5793,6 +5793,16 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ el pulido de fluidez, segunda tanda:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// Pulido de fluidez, tercera tanda: historial y biblioteca guardados, no volver a pedir lo recién pedido… (test/e2e-pulido3.mjs)
+console.log('\nPulido de fluidez, tercera tanda');
+try {
+  const { probarPulido3 } = await import('./e2e-pulido3.mjs');
+  await probarPulido3({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el pulido de fluidez, tercera tanda:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.74: «Programar según FBE» en el editor del programa (test/e2e-programar-fbe.mjs)

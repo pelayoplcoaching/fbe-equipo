@@ -2491,6 +2491,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         });
       }
       if (f.limit) filas = filas.slice(0, f.limit);
+      // (pulido 3) Como en Supabase, solo viajan las columnas que se piden: así las pruebas notan si una pantalla usa
+      // una columna que su consulta no pide (antes la demo las daba todas y el fallo solo salía con la base de verdad)
+      if (f.cols && typeof f.cols === 'string' && f.cols !== '*') {
+        const cols = f.cols.split(',').map((c) => c.trim()).filter(Boolean);
+        return copia(filas.map((x) => Object.fromEntries(cols.filter((c) => c in x).map((c) => [c, x[c]]))));
+      }
       return copia(filas);
     },
     async insert(t, filas) {
@@ -2874,6 +2880,45 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return [{ pagado_hasta: r.pagadoHasta, debe: r.debe, debe_desde: debeDesde, estado: r.estado === 'sin_datos' ? 'al_dia' : r.estado }];
       }
       if (nombre === 'nombre_coach') return uid && (esCoach() || miAtletaId()) ? String(tabla('perfiles').filter((p) => p.rol === 'coach').sort((a, b) => String(a.creado_en).localeCompare(String(b.creado_en)))[0]?.nombre || '').trim().split(/\s+/)[0].slice(0, 30) || null : null;
+      // (048) el resumen de cada conversación y la última serie de cada atleta: con lo que ve quien llama
+      // (lo que deja ver la base, sin pasar por select: el coach sin el segundo paso no ve nada)
+      const veo048 = (t) => (esCoach() && sesion?.aal !== 'aal2' && (miPerfil()?.exige_2fa || (usuario()?.mfa || []).some((x) => x.estado === 'verified')) ? [] : tabla(t).filter((x) => !VISIBLE[t] || VISIBLE[t](x)));
+      if (nombre === 'conversaciones_resumen') {
+        const visibles = veo048('comentarios');
+        const futuro = (x) => !!x.enviar_en && Date.parse(x.enviar_en) > Date.now();
+        const por = new Map();
+        for (const x of visibles) { if (!por.has(x.atleta_id)) por.set(x.atleta_id, []); por.get(x.atleta_id).push(x); }
+        return [...por].map(([atleta_id, xs]) => {
+          const salidos = xs.filter((x) => !futuro(x)).sort((x, y) => String(y.creado_en).localeCompare(String(x.creado_en)) || String(y.id).localeCompare(String(x.id)));
+          const u = salidos[0];
+          return {
+            atleta_id,
+            sin_leer: salidos.filter((x) => x.autor === 'atleta' && !x.leido_en && !x.eliminado_en).length,
+            programados: xs.filter(futuro).length,
+            ultimo: u ? { id: u.id, atleta_id: u.atleta_id, autor: u.autor, texto: String(u.texto ?? '').slice(0, 300), creado_en: u.creado_en, leido_en: u.leido_en ?? null, sesion_id: u.sesion_id ?? null, checkin_id: u.checkin_id ?? null,
+              archivo_id: u.archivo_id ?? null, enviar_en: u.enviar_en ?? null, adjunto: !!u.adjunto, eliminado_en: u.eliminado_en ?? null, editado_en: u.editado_en ?? null, entregado_en: u.entregado_en ?? null } : null,
+          };
+        });
+      }
+      if (nombre === 'historial_huella') {
+        const antes = Date.parse(args?.p_antes);
+        const P = new Map(veo048('sesion_ejercicios').map((p) => [p.id, p])), S = new Map(veo048('sesiones').map((x) => [x.id, x]));
+        const filas = veo048('series').filter((x) => x.atleta_id === args?.p_atleta && Date.parse(x.registrada_en) < antes).sort((x, y) => String(x.id).localeCompare(String(y.id)))
+          .map((x) => { const p = P.get(x.sesion_ejercicio_id); return [x, p?.sesion_id || '', p?.ejercicio_id || '', S.get(p?.sesion_id)?.fecha_realizada || '']; });
+        let h = 5381; for (const ch of JSON.stringify(filas)) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0;
+        return `${filas.length}:${h.toString(16)}`;
+      }
+      if (nombre === 'biblioteca_huella') {
+        const filas = veo048('ejercicios').slice().sort((x, y) => String(x.id).localeCompare(String(y.id)));
+        let h = 5381; for (const ch of JSON.stringify(filas)) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0;   // (un resumen cualquiera de su contenido)
+        return `${filas.length}:${h.toString(16)}`;
+      }
+      if (nombre === 'ultimas_series') {
+        const ids = new Set(args?.p_atletas || []);
+        const ult = new Map();
+        for (const x of veo048('series')) if (ids.has(x.atleta_id) && (!ult.has(x.atleta_id) || String(x.registrada_en) > String(ult.get(x.atleta_id)))) ult.set(x.atleta_id, x.registrada_en);
+        return [...ult].map(([atleta_id, registrada_en]) => ({ atleta_id, registrada_en }));
+      }
       // (047) la foto de alguien en grande, para quien ya puede ver su foto (sin p_perfil, la del coach)
       if (nombre === 'foto_grande_de') {
         if (!uid) return null;

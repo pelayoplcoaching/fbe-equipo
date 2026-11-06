@@ -6694,6 +6694,82 @@ console.log('\nFotos de perfil ligeras: la miniatura en foto y la grande aparte 
   await q(`update perfiles set foto = null, foto_grande = null where id in ($1, $2)`, [pelayo, luis]);
 }
 
+console.log('\nListas ligeras: el resumen de cada conversación y la última serie de cada atleta (migración 048)');
+{
+  await como(pelayo, 'aal2');
+  // Lo que la app contaba a mano con todos los mensajes, calculado aquí igual para comparar
+  const todos = await q(`select id, atleta_id, autor, left(texto, 300) texto, creado_en, leido_en, eliminado_en, enviar_en from comentarios order by creado_en desc, id desc`);
+  const futuro = (x) => x.enviar_en && new Date(x.enviar_en) > new Date();
+  const esperado = {};
+  for (const c of todos) {
+    const x = (esperado[c.atleta_id] ||= { ultimo: null, sinLeer: 0, programados: 0 });
+    if (futuro(c)) { x.programados++; continue; }
+    x.ultimo ||= c.id;
+    if (c.autor === 'atleta' && !c.leido_en && !c.eliminado_en) x.sinLeer++;
+  }
+  const res = await q(`select * from conversaciones_resumen()`);
+  const iguales = res.length === Object.keys(esperado).length && res.every((r) => esperado[r.atleta_id] && (r.ultimo?.id || null) === esperado[r.atleta_id].ultimo
+    && r.sin_leer === esperado[r.atleta_id].sinLeer && r.programados === esperado[r.atleta_id].programados);
+  check(todos.length > 0 && iguales, `el coach recibe, por atleta, el último mensaje, los no leídos y los programados: lo mismo que contando los ${todos.length} mensajes uno a uno (${res.length} conversaciones)`);
+  const conUltimo = res.find((r) => r.ultimo);
+  check(!!conUltimo && ['id', 'atleta_id', 'autor', 'texto', 'creado_en', 'leido_en', 'sesion_id', 'checkin_id', 'archivo_id', 'enviar_en', 'adjunto', 'eliminado_en', 'editado_en', 'entregado_en'].every((k) => k in conUltimo.ultimo),
+    'el último mensaje lleva lo que enseña la lista (y nada más)');
+  // Un mensaje programado no cuenta como último ni como no leído; uno largo llega recortado
+  const { atleta_id: unAtleta } = conUltimo;
+  const antes = res.find((r) => r.atleta_id === unAtleta);
+  await q(`insert into comentarios (atleta_id, autor, texto, enviar_en) values ($1, 'coach', 'Para mañana', now() + interval '1 day')`, [unAtleta]);
+  await q(`insert into comentarios (atleta_id, autor, texto) values ($1, 'coach', $2)`, [unAtleta, 'x'.repeat(900)]);
+  const tras = (await q(`select * from conversaciones_resumen() where atleta_id = $1`, [unAtleta]))[0];
+  check(tras.programados === antes.programados + 1 && tras.ultimo.texto.length === 300 && tras.ultimo.enviar_en == null && tras.sin_leer === antes.sin_leer,
+    'un mensaje programado se cuenta aparte (no es el último ni un no leído) y el texto del último llega recortado a 300 letras');
+  await q(`delete from comentarios where atleta_id = $1 and (texto = 'Para mañana' or texto = $2)`, [unAtleta, 'x'.repeat(900)]);
+  // La última serie de cada atleta, en una consulta
+  const ids = (await q(`select id from atletas`)).map((x) => x.id);
+  const ult = await q(`select * from ultimas_series($1::uuid[])`, [ids]);
+  const maximos = await q(`select atleta_id, max(registrada_en) m from series group by atleta_id`);
+  check(maximos.length > 0 && ult.length === maximos.length && maximos.every((m) => { const u = ult.find((x) => x.atleta_id === m.atleta_id); return u && new Date(u.registrada_en).getTime() === new Date(m.m).getTime(); }),
+    `la última serie de cada atleta sale en una sola consulta (${ult.length} atletas con series)`);
+  check((await q(`select * from ultimas_series($1::uuid[])`, [[]])).length === 0, 'sin atletas, nada');
+  // La huella de la biblioteca: la misma mientras no cambie nada; otra en cuanto cambia un ejercicio
+  const h1 = (await q(`select biblioteca_huella() h`))[0].h, h1b = (await q(`select biblioteca_huella() h`))[0].h;
+  const unEj = (await q(`select id, nombre from ejercicios order by id limit 1`))[0];
+  await q(`update ejercicios set nombre = nombre || ' (prueba)' where id = $1`, [unEj.id]);
+  const h2 = (await q(`select biblioteca_huella() h`))[0].h;
+  await q(`update ejercicios set nombre = $2 where id = $1`, [unEj.id, unEj.nombre]);
+  const h3 = (await q(`select biblioteca_huella() h`))[0].h;
+  check(/^\d+:[0-9a-f]{32}$/.test(h1) && h1 === h1b && h2 !== h1 && h3 === h1, 'la huella de la biblioteca es la misma mientras no cambie nada, cambia con un ejercicio y vuelve si se deshace');
+  // La huella del historial antiguo de un atleta: cambia si cambia una serie, su pauta o el día de su sesión
+  const conSeries = maximos[0].atleta_id;
+  const hh = async () => (await q(`select historial_huella($1, now() + interval '1 day') h`, [conSeries]))[0].h;
+  const nSeries = (await q(`select count(*)::int n from series where atleta_id = $1`, [conSeries]))[0].n;
+  const hA = await hh();
+  const unaSerie = (await q(`select s.id, s.kg, s.sesion_ejercicio_id, p.ejercicio_id, p.sesion_id from series s join sesion_ejercicios p on p.id = s.sesion_ejercicio_id where s.atleta_id = $1 limit 1`, [conSeries]))[0];
+  await q(`update series set kg = coalesce(kg, 0) + 1 where id = $1`, [unaSerie.id]);
+  const hB = await hh();
+  await q(`update series set kg = $2 where id = $1`, [unaSerie.id, unaSerie.kg]);
+  const hC = await hh();
+  const otroEjercicio = (await q(`select id from ejercicios where id <> $1 limit 1`, [unaSerie.ejercicio_id]))[0].id;
+  await q(`update sesion_ejercicios set ejercicio_id = $2 where id = $1`, [unaSerie.sesion_ejercicio_id, otroEjercicio]);
+  const hD = await hh();
+  await q(`update sesion_ejercicios set ejercicio_id = $2 where id = $1`, [unaSerie.sesion_ejercicio_id, unaSerie.ejercicio_id]);
+  check(hA.startsWith(`${nSeries}:`) && hB !== hA && hC === hA && hD !== hA && (await hh()) === hA,
+    `la huella del historial lleva cuántas series son (${nSeries}) y cambia si se corrige una serie o el ejercicio de su pauta (y vuelve al deshacerlo)`);
+  check((await q(`select historial_huella($1, now() - interval '50 years') h`, [conSeries]))[0].h === '0:', 'antes de que hubiera series, la huella es la de «ninguna»');
+  // Cada uno ve lo que ya veía: un atleta, solo lo suyo; una cuenta ajena, nada; sin sesión, ni llamarlas
+  await como(ana);
+  const mio = (await q(`select id from atletas where perfil_id = $1`, [ana]))[0]?.id;
+  const deAna = await q(`select * from conversaciones_resumen()`);
+  const seriesAna = await q(`select * from ultimas_series($1::uuid[])`, [ids]);
+  const ajeno = ids.find((x) => x !== mio && maximos.some((m) => m.atleta_id === x));
+  const huellaAjena = ajeno ? (await q(`select historial_huella($1, now() + interval '1 day') h`, [ajeno]))[0].h : '0:';
+  check(deAna.every((r) => r.atleta_id === mio) && seriesAna.every((r) => r.atleta_id === mio) && huellaAjena === '0:', 'un atleta solo recibe lo suyo, pida lo que pida (del historial de otro, la huella de «ninguna»)');
+  await como(intruso);
+  check((await q(`select * from conversaciones_resumen()`)).length === 0 && (await q(`select * from ultimas_series($1::uuid[])`, [ids])).length === 0, 'una cuenta que no es de nadie del equipo no recibe nada');
+  await db.exec('reset role; set role anon;');
+  check(await falla(`select * from conversaciones_resumen()`) && await falla(`select * from ultimas_series($1::uuid[])`, [ids]) && await falla(`select biblioteca_huella()`) && await falla(`select historial_huella($1, now())`, [ids[0]]), 'y sin sesión no se pueden ni llamar');
+  await como(pelayo, 'aal2');
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

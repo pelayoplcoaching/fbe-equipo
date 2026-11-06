@@ -2,7 +2,7 @@
 // (ficha → Nutrición). Una receta se escribe una vez y se asigna a quien quieras, en las comidas que quieras y
 // con un factor (×1,5 = una vez y media las cantidades y los macros), en vez de copiar bases de datos en Notion.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, Pestanas, usePreferencia, cuando, Segmentos } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, Pestanas, usePreferencia, cuando, Segmentos, usePorTramos } from '../comunes.jsx';
 import { recortarImagen } from '../FotoPerfil.jsx';
 import { NutricionCoach } from './NutricionCoach.jsx';
 import { FotoReceta, VistaRecetario, HojaReceta, MenuSemana, HojaTusComidas } from '../ComidasComun.jsx';
@@ -139,6 +139,8 @@ function HojaAsignar({ atleta, recetario, alCerrar, alGuardado }) {
   const ya = new Set(recetario.asignaciones.map((a) => `${a.receta_id}|${a.toma}`));
   const todas = lista.datos || [];
   const vistas = todas.filter((r) => !q || normal(r.nombre).includes(normal(q)) || (r.etiquetas || []).some((e) => normal(e).includes(normal(q))));
+  // (pulido 3.6) por tramos: las primeras y, al bajar, las siguientes (al buscar se vuelve al principio)
+  const tramos = usePorTramos(vistas.length, { tramo: 30, reinicio: q, nombre: 'recetas más' });
   const tomaDe = (r) => toma || ordenarTomas(r.tomas).find((t) => recetario.tomas.includes(t)) || r.tomas[0] || recetario.tomas[0];
   const alternar = (id) => setElegidas(elegidas.includes(id) ? elegidas.filter((x) => x !== id) : [...elegidas, id]);
   const guardar = () => una(async () => {
@@ -157,7 +159,7 @@ function HojaAsignar({ atleta, recetario, alCerrar, alGuardado }) {
       </div>
       {lista.cargando && !lista.datos ? <Siluetas forma="lista" n={3} /> : !todas.length ? <p class="peq secundario">Aún no tienes recetas en tu biblioteca: crea la primera.</p> : (
         <div class="panel"><ul class="lista lista-alta">
-          {vistas.map((r) => {
+          {vistas.slice(0, tramos.hasta).map((r) => {
             const marcada = elegidas.includes(r.id);
             const esta = ya.has(`${r.id}|${tomaDe(r)}`);
             return (
@@ -172,7 +174,7 @@ function HojaAsignar({ atleta, recetario, alCerrar, alGuardado }) {
               </li>
             );
           })}
-        </ul></div>
+        </ul>{tramos.mas}</div>
       )}
       {elegidas.length > 0 && (
         <div class="panel panel-pad pila-s sticky-abajo">
@@ -216,6 +218,8 @@ export function RecetasBiblioteca() {
   const todas = lista.datos || [];
   const vistas = todas.filter((r) => (!toma || r.tomas.includes(toma)) && (!q || normal(r.nombre).includes(normal(q)) || (r.etiquetas || []).some((e) => normal(e).includes(normal(q)))
     || (r.ingredientes || []).some((i) => normal(i.nombre).includes(normal(q)))));
+  // (pulido 3.6) por tramos: las primeras y, al bajar, las siguientes (al buscar o filtrar se vuelve al principio)
+  const tramos = usePorTramos(vistas.length, { tramo: 40, reinicio: `${toma || ''}|${q}`, clave: 'biblioteca-recetas', nombre: 'recetas más' });
   return (
     <>
       <div class="separa" style="flex-wrap:wrap">
@@ -239,8 +243,8 @@ export function RecetasBiblioteca() {
           Nombre, foto, comidas en las que encaja, kcal y macros por ración, ingredientes (pégalos de Notion, uno por línea) y preparación.
         </Vacio></div>
       ) : !vistas.length ? <p class="peq secundario">Ninguna receta con eso.</p> : (
-        <div class="rejilla-recetas">
-          {vistas.map((r) => (
+        <><div class="rejilla-recetas">
+          {vistas.slice(0, tramos.hasta).map((r) => (
             <button type="button" class="tarjeta-receta" key={r.id} onClick={() => setEditar(r)}>
               <FotoReceta receta={r} />
               <span class="pila-xs tarjeta-receta-texto">
@@ -253,7 +257,7 @@ export function RecetasBiblioteca() {
               </span>
             </button>
           ))}
-        </div>
+        </div>{tramos.mas}</>
       )}
       {editar && <EditarReceta receta={editar} alCerrar={(cambio) => { setEditar(null); if (cambio) lista.recargar(true); }} />}
     </>

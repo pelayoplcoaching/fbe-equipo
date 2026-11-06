@@ -20,7 +20,7 @@ export function textoCobro(c) {
 // Hoy: solo si hay algo que hacer
 export function AvisoCobro({ irA }) {
   const { api, atleta } = useApp();
-  const c = useCarga(() => api.miCobro(), [atleta?.id]).datos;
+  const c = useCarga(() => api.miCobro(), [atleta?.id], { recuerdo: `cobro:${atleta?.id}` }).datos;
   const [oculto, setOculto] = usePreferencia('fbe-cobro-oculto', null);
   if (!c || !['retrasado', 'pendiente', 'vencido', 'vence_pronto'].includes(c.estado)) return null;
   // «Ahora no»: hasta mañana (o hasta que cambie lo que debe o la fecha)
@@ -45,7 +45,7 @@ export function AvisoCobro({ irA }) {
 // Perfil → Tu asesoría: una fila con cómo va
 export function FilaCobro() {
   const { api, atleta } = useApp();
-  const c = useCarga(() => api.miCobro(), [atleta?.id]).datos;
+  const c = useCarga(() => api.miCobro(), [atleta?.id], { recuerdo: `cobro:${atleta?.id}` }).datos;
   const t = textoCobro(c);
   if (!t) return null;
   return (
