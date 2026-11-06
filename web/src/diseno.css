@@ -444,3 +444,50 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    quede lo más cerca posible del primer vistazo */
 .app:has(> .acceso > .acceso-caja #act-codigo) { --aire: 0.5rem; }
 .acceso-caja:has(#act-codigo) { padding-top: 22px; }
+
+/* ---------- 18. El muro del equipo --------------------------------------------------------------------------
+   ui/Comunidad.jsx (sin tocar). En el móvil, la primera publicación quedaba a más de 1200 px de arriba (y a 1900 la
+   primera semana del mes, con las tarjetas del mes): antes iban el momento, los ánimos, «Próximos», «Compañeros de
+   racha», las pestañas, tres tarjetas de recuentos, la bienvenida, el cuadro de publicar, el buscador y los filtros.
+   No se quita ni se pliega nada (las pruebas lo usan todo tal cual): cada pieza ocupa menos. Pisa .muro (2110),
+   .animos-recibidos (2191), .resumen-equipo (2195–2201), .bienvenida-nuevo (2216–2221), .reaccion (2128),
+   .cp-fila (4683), .pr-item (4746), .mes-cifras (4803–4807) y .tira-momentos (4823) de estilos.css. */
+.contenido.equipo { gap: 14px; }
+.equipo .tira-momentos, .equipo .animos-recibidos { margin-bottom: 0; }
+.equipo .animos-recibidos { padding: 8px 14px; }
+/* «Próximos» y «Compañeros de racha»: tarjetas más bajas */
+.equipo .proximos, .equipo .companeros { padding: 12px 14px 10px; gap: 2px; }
+.equipo .pr-t, .equipo .cp-t { font-size: 0.8438rem; font-weight: 700; color: var(--tinta-2); }
+.equipo .pr-item { min-height: 44px; padding-block: 4px; }
+.equipo .companeros > .separa > .btn { min-height: 34px; padding-block: 4px; }
+.equipo .cp-fila { padding: 2px 0; }
+/* Los recuentos: los del mes, más prietos; los de la semana, sin tarjeta (son un dato, no una acción) */
+.muro .mes-equipo { padding: 12px 14px; gap: 6px; }
+.muro .mes-cifras > div { padding: 6px 8px; }
+.muro .mes-cifras dd { font-size: 1.25rem; }
+.muro .resumen-equipo { padding: 0 2px; background: none; box-shadow: none; border-radius: 0; gap: 6px; }
+.muro .resumen-equipo-t { font-size: 0.8125rem; }
+.muro .resumen-equipo-num > div { background: var(--hoja); box-shadow: var(--sombra); padding: 7px 8px; }
+/* La bienvenida a quien acaba de entrar, más baja */
+.muro .bienvenida-nuevo { padding: 10px 14px; gap: 2px 12px; }
+.muro .bn-ico { font-size: 1.5rem; }
+.muro .bn-boton { min-height: 34px; margin-top: 4px; }
+/* El cuadro de publicar del atleta: el tema va en la misma fila que «Fotos» y «Publicar» (el desplegable mide lo que el tema elegido, con field-sizing; si con un tema largo no caben, o el navegador no
+   lo admite, «Fotos» y «Publicar» bajan a su fila, como antes); la nota de las dudas de salud queda debajo, siempre
+   a la vista. El del coach, con sus
+   plantillas y su aviso o encuesta, se queda como estaba. */
+.compositor:not(:has(.compositor-modo)) { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.compositor:not(:has(.compositor-modo)) > * { flex: 1 1 100%; min-width: 0; }
+.compositor:not(:has(.compositor-modo)) > .compositor-tema { flex: 0 0 auto; max-width: 100%; }
+.compositor:not(:has(.compositor-modo)) > .compositor-tema select { padding-inline: 10px 32px; field-sizing: content; }
+.compositor:not(:has(.compositor-modo)) > .compositor-pie { flex: 1 1 auto; flex-wrap: nowrap; gap: 2px; }
+.compositor:not(:has(.compositor-modo)) > .compositor-pie .btn.plano { padding-inline: 8px; }
+.compositor:not(:has(.compositor-modo)) > .compositor-nota { order: 3; }
+/* El cuadro de publicar, el buscador y los filtros, al mismo paso que el resto (los formularios traían 16 px de más
+   por debajo), y los filtros pegados a su buscador */
+.muro > form { margin-bottom: 0; }
+.muro .buscar-muro + .filtros-muro { margin-top: -4px; }
+/* Las publicaciones: el pie más prieto */
+.post .reaccion { min-height: 34px; }
+.post .post-pie { gap: 4px 8px; }
+.post .quien-reacciona { min-height: 24px; padding-block: 0; margin-top: -4px; }
