@@ -5761,6 +5761,16 @@ try {
   console.log('  ✗ «Rellenar la semana» de la v0.79:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// Pulido de fluidez: respuesta al pulsar, no perder el sitio, «atrás»… (test/e2e-pulido.mjs)
+console.log('\nPulido de fluidez');
+try {
+  const { probarPulido } = await import('./e2e-pulido.mjs');
+  await probarPulido({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el pulido de fluidez:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.74: «Programar según FBE» en el editor del programa (test/e2e-programar-fbe.mjs)
 console.log('\nv0.74: «Programar según FBE»');
 try {
