@@ -63,7 +63,8 @@ function PantallaRachaDentro({ racha = 0, semanas = [], alCerrar, hoy = hoyISO()
     <div class="racha-pantalla" role="dialog" aria-modal="true" aria-labelledby="racha-titulo" ref={ref} tabIndex={-1}>
       <button class="btn btn-icono plano racha-cerrar" onClick={alCerrar} aria-label="Cerrar la racha"><Icono n="cerrar" /></button>
       <div class="racha-cuerpo">
-        <div class={`racha-fuego ${racha ? '' : 'apagada'}`}><Llama /></div>
+        {/* (diseño, tanda 18) la llama crece con la racha: --nivel de 0 a 4 (1, 2, 4, 8 y 12 semanas o más) */}
+        <div class={`racha-fuego ${racha ? '' : 'apagada'}`} style={{ '--nivel': racha >= 12 ? 4 : racha >= 8 ? 3 : racha >= 4 ? 2 : racha >= 2 ? 1 : 0 }}><Llama /></div>
         <p class="racha-cifra marcador" aria-hidden="true">{racha}</p>
         <h2 id="racha-titulo">{racha ? `${racha === 1 ? 'semana completa' : 'semanas completas'} seguidas` : 'Aún sin racha'}<span class="sr">: {textoSemanas(racha)}</span></h2>
         <p class="racha-sub">{diasSemana
@@ -72,8 +73,8 @@ function PantallaRachaDentro({ racha = 0, semanas = [], alCerrar, hoy = hoyISO()
         <section class="racha-bloque" aria-labelledby="racha-cal-t">
           <h3 id="racha-cal-t">Las últimas 12 semanas</h3>
           <ol class="racha-calendario">
-            {cal.map((w) => (
-              <li key={w.lunes} class={`racha-semana ${w.estado}`}>
+            {cal.map((w, i) => (
+              <li key={w.lunes} class={`racha-semana ${w.estado}`} style={{ '--i': i }}>
                 <span class="racha-marca" aria-hidden="true">{w.estado === 'completa' ? <Icono n="llama" /> : w.estado === 'incompleta' ? <Icono n="cerrar" /> : w.estado === 'en_curso' ? <span class="num">{w.hechas}/{w.total}</span> : '–'}</span>
                 <span class="racha-fecha" aria-hidden="true">{fmtCorta(w.lunes)}</span>
                 <span class="sr">Semana del {fmtCorta(w.lunes)}: {NOMBRE_ESTADO_SEMANA[w.estado]}{w.total ? `, ${w.hechas} de ${w.total} sesiones` : ''}</span>

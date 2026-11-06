@@ -181,6 +181,17 @@ export function trazoChispa(valores, W = 64, H = 20, m = 2) {
   return valores.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ');
 }
 
+// (diseño, tanda 18) La misma minigráfica, en curva suave (trazoSuave) y con dónde cae su último punto, para marcarlo
+export function chispaSuave(valores, W = 64, H = 20, m = 2) {
+  if (!valores.length) return { d: '', fin: null };
+  const lo = Math.min(...valores), hi = Math.max(...valores);
+  const r = hi - lo || 1;
+  const X = (i) => (valores.length === 1 ? W / 2 : m + (i * (W - 2 * m)) / (valores.length - 1));
+  const Y = (v) => (hi === lo ? H / 2 : m + (1 - (v - lo) / r) * (H - 2 * m));
+  const pts = valores.map((v, i) => [X(i), Y(v)]);
+  return { d: trazoSuave(pts), fin: pts[pts.length - 1] };
+}
+
 // ---------- chat ----------
 // Mensajes seguidos de la misma persona, el mismo día y con menos de 5 minutos entre uno y otro, van juntos: solo el
 // último del grupo lleva el pico de la burbuja y la hora. Los programados y los que llevan etiqueta (de una sesión,

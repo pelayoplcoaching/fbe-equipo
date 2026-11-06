@@ -10,6 +10,7 @@ import { fmtCorta, aISO, diasEntre, hoyISO } from '../logica/fechas.js';
 import { FRACCION_MEDIA, fotogramasMuelle, MUELLE, arrastreVisible, velocidadDe, destinoHoja } from '../logica/muelle.js';
 import { remuestrear, mezclarPuntos, trazo as trazoDe, area as areaDe, salidaSuave, columnasCifra, seleccionValida } from '../logica/rangos.js';
 import { sinMovimiento } from './transiciones.js';
+import { vibrar } from './hapticos.js';
 import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 
 export const Ctx = createContext(null);
@@ -999,6 +1000,7 @@ export function useAncho(inicial = 340) {
 function useRaspado(n, xs) {
   const [sel, setSel] = useState(null);
   const tocando = useRef(false);
+  const ultimo = useRef(null);
   const caja = useRef(null);
   useEffect(() => { if (sel != null && sel >= n) setSel(null); }, [n]);
   // v0.52 (revisión): si la gráfica cambia a menos puntos (otro rango) con un punto elegido, en este mismo pintado ese
@@ -1010,7 +1012,11 @@ function useRaspado(n, xs) {
     const r = svg.getBoundingClientRect();
     const vb = svg.viewBox.baseVal;
     const x = ((e.clientX - r.left) / Math.max(1, r.width)) * (vb?.width || r.width);
-    setSel(puntoMasCercano(xs, x));
+    const cerca = puntoMasCercano(xs, x);
+    // (diseño, tanda 18) con el dedo, un toque al pasar de un punto a otro (como al deslizar por una gráfica de bolsa)
+    if (e.pointerType === 'touch' && cerca !== ultimo.current) vibrar('toque');
+    ultimo.current = cerca;
+    setSel(cerca);
   };
   const eventos = {
     onPointerDown: (e) => { tocando.current = true; try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* */ } desde(e); },
@@ -1049,6 +1055,8 @@ function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, chi
       <div class="grafica-tactil" role="slider" tabIndex={0} aria-label={etiqueta} aria-valuemin="1" aria-valuemax={n} aria-valuenow={i + 1}
         aria-valuetext={textoPunto(i)} {...eventos}>
         {children}
+        {/* (diseño, tanda 18) la guía vertical del punto elegido */}
+        {sel != null && <span class="grafica-guia" style={{ left: `${izq}%` }} aria-hidden="true" />}
         {sel != null && (
           <div class={`grafica-globo ${izq > 70 ? 'a-la-izq' : izq < 30 ? 'a-la-der' : ''}`} style={{ left: `${izq}%`, top: `${Math.max(0, ys[sel] - 8)}px` }} aria-hidden="true">
             {textoPunto(sel)}

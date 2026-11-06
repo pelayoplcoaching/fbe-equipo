@@ -189,6 +189,27 @@ const DIBUJOS = {
       <Suelo y={104} />
     </>
   ),
+  // (diseño, tanda 18) Sin conexión: el lobo bajo las ondas, con la de arriba cortada
+  sinred: () => (
+    <>
+      <path class="ilu-tenue ilu-discontinuo" d="M44 34c20-18 52-18 72 0" />
+      <path class="ilu-trazo" d="M56 46c14-12 34-12 48 0" />
+      <path class="ilu-acento" d="M68 58c7-6 17-6 24 0" />
+      <Lobo x={66} y={62} w={28} />
+      <path class="ilu-acento" d="M118 20l12 12M130 20l-12 12" />
+      <Suelo y={102} />
+    </>
+  ),
+  // Algo ha fallado al cargar: la ficha con su aviso y el lobo al lado, para volver a intentarlo
+  fallo: () => (
+    <>
+      <rect class="ilu-relleno ilu-trazo" x="30" y="24" width="70" height="68" rx="8" />
+      <path class="ilu-tenue" d="M42 40h30M42 52h46M42 64h22" />
+      <circle class="ilu-acento" cx="96" cy="78" r="13" /><path class="ilu-acento" d="M96 71v8M96 84v.5" />
+      <Lobo x={112} y={48} w={30} clase="ilu-tenue" />
+      <Suelo y={104} />
+    </>
+  ),
 };
 
 export const ILUSTRACIONES = Object.keys(DIBUJOS);

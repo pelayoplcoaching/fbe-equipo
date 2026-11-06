@@ -1567,6 +1567,11 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
       && tramos[1][1] === 20 && tramos[1][3] === 20, 'y no inventa picos ni valles: entre dos puntos se queda entre sus valores (y entre dos iguales, recto)');
     check(trazoSuave([[0, 5], [10, 8]]) === 'M0.0 5.0 L10.0 8.0' && trazoSuave([[3, 4]]) === 'M3.0 4.0' && trazoSuave([]) === '' && trazoSuave([[0, 1], [NaN, 2], [10, 3]]) === 'M0.0 1.0 L10.0 3.0',
       'con uno o dos puntos, una recta; sin puntos, nada; y un punto sin valor no rompe el trazo');
+    // (diseño, tanda 18) la minigráfica en curva: los mismos puntos que trazoChispa, con el último aparte
+    const { chispaSuave } = await import('../web/src/logica/visual.js');
+    const ch = chispaSuave([1, 2, 3], 64, 20, 2);
+    check(ch.d.startsWith('M2.0 18.0') && /62\.0 2\.0$/.test(ch.d) && ch.fin[0] === 62 && ch.fin[1] === 2 && chispaSuave([]).d === '' && chispaSuave([]).fin === null && chispaSuave([5, 5]).d === 'M2.0 10.0 L62.0 10.0',
+      'la minigráfica suave empieza y acaba donde la quebrada, da su último punto y aguanta sin datos o con dos iguales');
   }
 
   console.log('\nv0.49: grupos del chat');
@@ -1748,7 +1753,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const textoLegal = fs.readFileSync(new URL('../web/src/legal.js', import.meta.url), 'utf8');
   check(/el tamaño de la letra/.test(fila ? fila[1] : textoLegal) && /^\d{4}-\d{2}(\.[1-9]\d?)?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice también el tamaño de la letra (sin cambiar la versión de la política)');
   const ilus = fs.readFileSync(new URL('../web/src/ui/Ilustraciones.jsx', import.meta.url), 'utf8');
-  check(['mensajes', 'diario', 'records', 'checkins', 'tareas', 'todo', 'filtro', 'descanso', 'hecha', 'semana', 'espera', 'progreso', 'recetas', 'equipo', 'atletas', 'plantillas'].every((k) => new RegExp(`\\n  ${k}: \\(\\) =>`).test(ilus)) && !/#[0-9a-fA-F]{3,6}/.test(ilus), 'las ilustraciones: una por estado vacío y por día de Hoy, sin colores escritos (los pone el tema)');
+  check(['mensajes', 'diario', 'records', 'checkins', 'tareas', 'todo', 'filtro', 'descanso', 'hecha', 'semana', 'espera', 'progreso', 'recetas', 'equipo', 'atletas', 'plantillas', 'sinred', 'fallo'].every((k) => new RegExp(`\\n  ${k}: \\(\\) =>`).test(ilus)) && !/#[0-9a-fA-F]{3,6}/.test(ilus), 'las ilustraciones: una por estado vacío y por día de Hoy, sin colores escritos (los pone el tema)');
 }
 // ---------- v0.51: piezas visuales ----------
 {
