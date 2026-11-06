@@ -5741,6 +5741,16 @@ try {
   console.log('  ✗ la comunidad de la v0.73:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.79: «Rellenar la semana» en el menú semanal (test/e2e-rellenar.mjs)
+console.log('\nv0.79: «Rellenar la semana»');
+try {
+  const { probarRellenar } = await import('./e2e-rellenar.mjs');
+  await probarRellenar({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ «Rellenar la semana» de la v0.79:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.74: «Programar según FBE» en el editor del programa (test/e2e-programar-fbe.mjs)
 console.log('\nv0.74: «Programar según FBE»');
 try {

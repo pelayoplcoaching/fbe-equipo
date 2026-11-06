@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.79': {
+    atleta: [
+      'Comidas: «Rellenar la semana» te propone el menú de lo que falta con tus recetas. Lo revisas, cambias lo que quieras y lo apuntas.',
+    ],
+    coach: [
+      'Menú semanal (atleta y ficha): «Rellenar la semana» propone lo que falta con su recetario. Solo rellena huecos; nunca borra nada.',
+      'En la ficha de un atleta, un botón al final de las pestañas las enseña todas a la vez.',
+      'En el ordenador, Mensajes enseña la lista y la conversación a la vez, y la biblioteca de ejercicios va en columnas.',
+    ],
+  },
   '0.78': {
     atleta: [
       'Los avisos de la primera vez ocupan menos: una nota pequeña que se quita con la equis.',
