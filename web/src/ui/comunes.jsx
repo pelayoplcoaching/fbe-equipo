@@ -569,6 +569,75 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
 // Lo recordado deja de valer en cuanto se escribe algo desde este dispositivo («fbe-escritura», de datos/api.js): lo
 // que se acaba de cambiar no se enseña como estaba antes, se vuelve a cargar. (Lo que cambie otra persona llega con la
 // puesta al día de detrás.)
+// (pulido 2.3) Reserva: el hueco de lo que llega tarde. Un bloque que no pinta nada hasta que carga (los avisos del
+// coach, «Tu día», una tarjeta) empujaba hacia abajo todo lo que ya se estaba viendo. Envuelto en <Reserva id="…">,
+// este dispositivo recuerda cuánto ocupó la última vez y, mientras carga, le guarda ese sitio (una silueta si aún no
+// hay nada; solo el espacio que falta si ya hay algo y va a crecer): lo de debajo no se mueve. Con lo cargado, el
+// hueco se quita y se apunta lo que ocupa ahora (0 si al final no pinta nada: la próxima vez no se le guarda sitio).
+// La envoltura no tiene caja (display: contents): los hijos siguen siendo hijos, a efectos de diseño, de quien los
+// contenía. Sabe que algo carga por las cargas (useCarga) de dentro, o porque se le dice (cargando).
+const CtxReserva = createContext(null);
+const CLAVE_ALTOS = 'fbe-altos';
+const MAX_ALTOS = 160;
+let altos = null, guardarAltosT = null;
+const altosGuardados = () => {
+  if (!altos) { try { altos = JSON.parse(localStorage.getItem(CLAVE_ALTOS) || '{}') || {}; } catch { altos = {}; } if (typeof altos !== 'object' || Array.isArray(altos)) altos = {}; }
+  return altos;
+};
+const apuntarAlto = (clave, alto, conCero = false) => {
+  const a = altosGuardados();
+  if (a[clave] === alto || (!alto && !conCero && !(clave in a))) return;
+  delete a[clave];
+  if (alto > 0 || conCero) a[clave] = alto;   // (lo último apuntado, al final: al podar se van los más viejos)
+  clearTimeout(guardarAltosT);
+  guardarAltosT = setTimeout(() => {
+    try {
+      const claves = Object.keys(a);
+      for (const k of claves.slice(0, Math.max(0, claves.length - MAX_ALTOS))) delete a[k];
+      localStorage.setItem(CLAVE_ALTOS, JSON.stringify(a));
+    } catch { /* sin sitio: no se recuerda */ }
+  }, 600);
+};
+// liso: el hueco no pinta silueta (para dentro de una tarjeta de color). inicial: el sitio que se guarda la primera
+// vez, cuando aún no se sabe cuánto ocupa (solo para lo que siempre sale y siempre ocupa más o menos lo mismo).
+export function Reserva({ id, cargando = false, liso = false, inicial = 0, clase = '', children }) {
+  const app = useContext(Ctx);
+  const clave = `${String(app?.api?.uid?.() || '').slice(0, 8)}:${id}`;
+  const caja = useRef(null);
+  const reg = useRef(null);
+  if (!reg.current) reg.current = { cargas: new Map(), revisar: () => {} };
+  reg.current.revisar = () => {
+    const el = caja.current;
+    const hueco = el?.lastElementChild;
+    if (!el || !hueco) return;
+    let arriba = Infinity, abajo = -Infinity;
+    for (const h of el.children) {
+      if (h === hueco) continue;
+      const r = h.getBoundingClientRect();
+      if (r.height > 0) { arriba = Math.min(arriba, r.top); abajo = Math.max(abajo, r.bottom); }
+    }
+    const actual = abajo > arriba ? Math.round(abajo - arriba) : 0;
+    const carga = cargando || [...reg.current.cargas.values()].some(Boolean);
+    let falta = 0;
+    if (carga) {
+      // (el hueco, con algo ya pintado, es un hijo más de la rejilla o la pila que lo contiene: lleva su separación.
+      // Se busca el primer antepasado con caja: los de display: contents no cuentan)
+      let caja0 = el.parentElement;
+      while (caja0 && caja0.parentElement && getComputedStyle(caja0).display === 'contents') caja0 = caja0.parentElement;
+      const separa = actual > 0 && caja0 ? parseFloat(getComputedStyle(caja0).rowGap) || 0 : 0;
+      falta = (altosGuardados()[clave] ?? inicial) - actual - separa;
+    } else apuntarAlto(clave, actual, inicial > 0);
+    if (falta > 8) { hueco.style.height = `${Math.round(falta)}px`; hueco.dataset.hueco = actual > 0 || liso ? 'resto' : 'entero'; }
+    else if (hueco.dataset.hueco) { hueco.style.height = ''; delete hueco.dataset.hueco; }
+  };
+  useLayoutEffect(() => { reg.current.revisar(); });
+  return (
+    <CtxReserva.Provider value={reg.current}>
+      <div class={clase ? `reserva ${clase}` : 'reserva'} ref={caja}>{children}<div class="reserva-hueco" aria-hidden="true" /></div>
+    </CtxReserva.Provider>
+  );
+}
+
 const recuerdos = new Map();
 let escrituras = 0;
 export function olvidarRecuerdos() { escrituras++; recuerdos.clear(); }
@@ -586,6 +655,13 @@ export function useCarga(fn, deps = [], opciones = {}) {
   const base = useRef(estado.datos);
   const pendientes = useRef([]);
   const conPendientes = (datos) => (datos == null ? datos : pendientes.current.reduce((d, c) => c(d), datos));
+  // (pulido 2.3) dentro de una <Reserva>, le dice si está cargando (para que guarde el sitio) y cuándo llega algo
+  const reserva = useContext(CtxReserva);
+  const yo = useRef(null);
+  if (!yo.current) yo.current = {};
+  if (reserva) reserva.cargas.set(yo.current, estado.cargando);
+  useLayoutEffect(() => { reserva?.revisar(); }, [reserva, estado.datos, estado.cargando, estado.error]);
+  useEffect(() => () => { reserva?.cargas.delete(yo.current); }, [reserva]);
   const cargar = useCallback(async (silencioso = false) => {
     const n = ++ultima.current;
     const clave = claveRecuerdo.current;
@@ -1048,7 +1124,8 @@ export function Pista({ id, children, icono = 'pregunta' }) {
   const [entera, setEntera] = useState(() => typeof ResizeObserver === 'undefined');
   const [larga, setLarga] = useState(false);
   const texto = useRef(null);
-  useEffect(() => {
+  // (pulido 2.3) se mide antes de pintar: «Leer más» sale a la vez que la nota, sin empujar después lo de debajo
+  useLayoutEffect(() => {
     const p = texto.current;
     if (!p || entera) return undefined;
     const medir = () => {

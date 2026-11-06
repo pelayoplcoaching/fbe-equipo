@@ -91,7 +91,7 @@ export function LoQueUsa({ atleta }) {
 // Programa: lo que importa para programarle, de un vistazo (tiempo, material, lesiones que limitan y la recomendación)
 export function ParaProgramar({ atleta }) {
   const { api } = useApp();
-  const c = useCarga(() => api.cuestionario(atleta.id).catch(() => null), [atleta.id]);
+  const c = useCarga(() => api.cuestionario(atleta.id).catch(() => null), [atleta.id], { recuerdo: `cuestionario:${api.uid()}:${atleta.id}` });
   const d = c.datos;
   if (!d?.completado_en && !d?.resultado) return null;
   const lesiones = (d.lesiones || []).filter((l) => l.limita > 0);

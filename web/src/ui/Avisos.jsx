@@ -14,7 +14,7 @@ export function textoVigencia(a, hoy = hoyISO()) {
 // Atleta: los avisos en vigor de su coach, fijados arriba en Hoy hasta que los cierra (en este móvil)
 export function AvisosCoach() {
   const { api, atleta } = useApp();
-  const res = useCarga(() => api.avisos(atleta.id).catch(() => []), [atleta.id]);
+  const res = useCarga(() => api.avisos(atleta.id).catch(() => []), [atleta.id], { recuerdo: `avisos:${atleta.id}` });
   const [cerrados, setCerrados] = usePreferencia(`fbe-avisos-cerrados-${atleta.id}`, []);
   const lista = (res.datos || []).filter((a) => !cerrados.includes(a.id));
   if (!lista.length) return null;

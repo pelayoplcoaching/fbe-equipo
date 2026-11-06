@@ -27,7 +27,7 @@ export function AnilloHabito({ h, fraccion, cumple, tam = 58 }) {
 
 export function HabitosHoy() {
   const { api, atleta } = useApp();
-  const res = useCarga(() => api.resumenHabitos(atleta.id).catch(() => []), [atleta.id]);
+  const res = useCarga(() => api.resumenHabitos(atleta.id).catch(() => []), [atleta.id], { recuerdo: `habitos-hoy:${atleta.id}` });
   const [abierto, setAbierto] = useState(null);
   const lista = res.datos || [];
   if (!lista.length) return null;

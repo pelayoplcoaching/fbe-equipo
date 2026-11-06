@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { HojaAvisos } from '../Avisos.jsx';
-import { CabeceraGrande, useUnaVez, Siluetas, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos } from '../comunes.jsx';
+import { CabeceraGrande, useUnaVez, Siluetas, Reserva, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos } from '../comunes.jsx';
 import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO } from '../../logica/nivel.js';
 import { BandaDemo } from '../App.jsx';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
@@ -97,7 +97,8 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
       <BandaDemo />
       <AvisoAlmacenamientoPanel abrirCuenta={abrirCuenta} />
       <ErrorCaja error={res.error} reintentar={res.recargar} />
-      {eq && eq.activos > 0 && <EquipoHoy eq={eq} porRevisar={porRevisar} irARevisar={irARevisar} filtro={filtro} alFiltrar={setFiltro} />}
+      {/* (pulido 2.3) el resumen del equipo guarda su sitio mientras llega la lista: los filtros no bajan */}
+      <Reserva id="panel-equipo-hoy" cargando={res.cargando && !res.datos}>{eq && eq.activos > 0 && <EquipoHoy eq={eq} porRevisar={porRevisar} irARevisar={irARevisar} filtro={filtro} alFiltrar={setFiltro} />}</Reserva>
       <div class="selector-chips" role="group" aria-label="Filtrar atletas">
         <button aria-pressed={filtro === 'todos' ? 'true' : 'false'} onClick={() => setFiltro('todos')}>Todos</button>
         <button aria-pressed={filtro === 'atencion' ? 'true' : 'false'} onClick={() => setFiltro('atencion')}>Necesitan atención ({atencion.length})</button>

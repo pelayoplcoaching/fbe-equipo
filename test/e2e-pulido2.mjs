@@ -24,6 +24,24 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
         b.rpc = (n, ...a) => { window.__q.push(`rpc:${n}`); return f(n, ...a); };
       } });
     }, retraso);
+    // (3) cada fotograma: cuánto se mueve, sin desplazar la pantalla, lo que ya se estaba viendo (window.__mov, en px)
+    await p.addInitScript(() => {
+      window.__mov = 0; window.__huecos = 0;
+      const antes = new WeakMap(); let sy = 0;
+      const bloques = () => { const m = document.querySelector('main'); const out = []; if (!m) return out;
+        const baja = (n, prof) => { for (const h of n.children) { if (h.classList.contains('reserva')) { baja(h, prof); continue; } if (h.classList.contains('reserva-hueco')) continue; out.push(h); if (prof < 3 && h.children.length && !/^(svg|button|ul|table)$/i.test(h.tagName)) baja(h, prof + 1); } };
+        baja(m, 0); return out; };
+      const paso = () => {
+        const y = window.scrollY, alto = window.innerHeight; let max = 0;
+        for (const el of bloques()) { const r = el.getBoundingClientRect(); if (!r.width && !r.height) { antes.delete(el); continue; } const a = antes.get(el);
+          if (a && y === sy && a.top < alto && a.top + a.h > 0) max = Math.max(max, Math.abs(r.top - a.top));
+          antes.set(el, { top: r.top, h: r.height }); }
+        if (max > 3) window.__mov += Math.round(max);
+        window.__huecos = Math.max(window.__huecos, document.querySelectorAll('.reserva-hueco[data-hueco]').length);
+        sy = y; requestAnimationFrame(paso);
+      };
+      requestAnimationFrame(paso);
+    });
     if (antes) await antes(p);
     await p.goto(`${base}/?demo`);
     if (quien) await entrar(p, quien);
@@ -141,6 +159,34 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       } else check(false, 'no hay un hábito sin marcar en la demo para probarlo');
       await ctx.close();
     }
+    // ---------- 3. Pantallas que no se mueven al cargar
+    {
+      const quieta = (p) => p.evaluate(() => new Promise((r) => { let h = -1, n = 0; const i = setInterval(() => { const a = document.documentElement.scrollHeight + document.querySelectorAll('.siluetas, .reserva-hueco[data-hueco]').length * 100000; if (a === h) n++; else { h = a; n = 0; } if (n >= 10) { clearInterval(i); r(); } }, 80); }));
+      const medir = async (p, accion) => { await p.evaluate(() => { window.__mov = 0; window.__huecos = 0; }); await accion(); await p.waitForTimeout(300); await quieta(p); return p.evaluate(() => ({ px: window.__mov, huecos: window.__huecos, quedan: document.querySelectorAll('.reserva-hueco[data-hueco]').length })); };
+      for (const [quien, listo, otras] of [[/Ana López/, '.hero-dia', ['Semana', 'Comidas', 'Progreso']], [/Pelayo/, 'button.tarjeta-atleta:visible', ['Revisar']]]) {
+        const { ctx, p } = await abrir(null, {}, { retraso: 200 });
+        // La primera vez en este dispositivo no se sabe cuánto ocupa cada cosa: se pasa por las pantallas y se apunta
+        const primera = await medir(p, async () => { await entrar(p, quien); await p.locator(listo).first().waitFor(); });
+        await p.waitForTimeout(1200); await cerrarAvisos(p);
+        for (const s of otras) { await irASeccion(p, s); await quieta(p); }
+        const altos = await p.evaluate(() => new Promise((r) => setTimeout(() => r(Object.keys(JSON.parse(localStorage.getItem('fbe-altos') || '{}')).length), 900)));
+        check(altos >= (otras.length > 1 ? 8 : 2), `${quien.source}: el dispositivo apunta cuánto ocupa cada bloque que llega tarde (${altos} apuntados; la primera vez se movieron ${primera.px} px)`);
+        // Al volver a abrir la app, lo que llega tarde ya tiene su sitio: nada de lo que se ve se mueve
+        await p.goto('about:blank'); await p.goto(`${base}/?demo`);
+        const dentro = await p.locator('nav.tabs').first().waitFor({ timeout: 2500 }).then(() => true).catch(() => false);
+        const segunda = await medir(p, async () => { if (!dentro) { await p.getByRole('button', { name: quien }).first().tap(); await p.locator('nav.tabs').waitFor(); } await p.locator(listo).first().waitFor(); });
+        check(segunda.px <= 24 && segunda.huecos > 0 && segunda.quedan === 0, `${quien.source}: al volver a abrir la app, lo que llega tarde ya tiene su sitio guardado y nada se mueve al cargar (${segunda.px} px; antes ${primera.px}; ${segunda.huecos} huecos reservados, ninguno al acabar)`);
+        await p.waitForTimeout(1200); await cerrarAvisos(p);
+        for (const s of otras) {
+          const r = await medir(p, () => irASeccion(p, s));
+          check(r.px <= 12 && r.quedan === 0, `${quien.source}: ${s} tampoco se mueve al cargar (${r.px} px)`);
+        }
+        const hoy = await medir(p, () => irASeccion(p, quien.source.includes('Ana') ? 'Hoy' : 'Atletas'));
+        check(hoy.px === 0, `${quien.source}: y al volver a la primera pantalla sale entera al momento (${hoy.px} px)`);
+        await ctx.close();
+      }
+    }
+
     // ---------- 4. El recetario, ligero
     {
       const { ctx, p } = await abrir(/Ana López/);

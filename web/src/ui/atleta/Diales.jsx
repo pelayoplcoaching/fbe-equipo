@@ -33,7 +33,7 @@ function Esfera({ frac, banda = null, aguja = false, children }) {
 export function Diales({ sesiones = [], semana = null, siguiente = null, previstaHoy = null, ejerciciosSiguiente = [], bloques = [], salud = false, hoy, alContestar, natural = null }) {
   const { api, atleta, aviso } = useApp();
   const [abierto, setAbierto] = useState(null);
-  const carga = useCarga(() => api.cargaHoy(atleta.id, { bloques, hoy }).catch(() => null), [atleta.id, hoy, sesiones.filter((s) => s.completada).length]);
+  const carga = useCarga(() => api.cargaHoy(atleta.id, { bloques, hoy }).catch(() => null), [atleta.id, hoy, sesiones.filter((s) => s.completada).length], { recuerdo: `carga-hoy:${atleta.id}:${hoy}` });
   const c = natural ? dialConstancia(sesiones, natural.semana) : dialConstancia(sesiones);
   const k = carga.datos ? dialCarga(carga.datos, hoy, 4) : null;
   // La regla de «de hoy» (la misma que la sesión): hecha hoy, con series de hoy o contestada hoy en este móvil
