@@ -133,25 +133,25 @@ try {
     const q = await ctx.newPage();
     await q.route('**/app.js*', () => {});
     await q.goto('http://localhost:4174/?demo', { waitUntil: 'commit' });
-    await q.waitForSelector('#portada .estandarte-pano');
-    // v0.38: el estandarte es la imagen de Pelayo (estandarte.webp), a toda la pantalla y ondeando
-    await q.waitForFunction(() => { const i = new Image(); i.src = 'estandarte.webp'; return i.complete && i.naturalWidth === 941; });
+    await q.waitForSelector('#portada .portada-lobo');
+    // tanda 11 de diseño: la marca limpia (el lobo en vectorial, el lema y la firma con la letra de la app), sin imagen
     const portada = await q.evaluate(() => {
       const el = document.getElementById('portada'); const r = el.getBoundingClientRect();
-      const e = el.querySelector('.estandarte').getBoundingClientRect();
-      const pano = getComputedStyle(el.querySelector('.estandarte-pano'));
+      const l = el.querySelector('.portada-lobo').getBoundingClientRect();
       const t = el.textContent;
       return {
         tapa: r.width >= innerWidth && r.height >= innerHeight,
-        // tan alto como la pantalla (o casi todo su ancho), centrado
-        grande: (e.height >= innerHeight - 1 || e.width >= innerWidth - 1) && Math.abs(e.left + e.width / 2 - innerWidth / 2) < 2,
-        imagen: /estandarte\.webp/.test(pano.backgroundImage), ondea: pano.animationName === 'estandarte-ondea',
-        lema: /Confianza, esfuerzo, compromiso/.test(t), firma: t.includes('By Pelayo Fern\u00e1ndez Cid\u00f3n') && t.includes('CEO de Fuerza Basada en Evidencia'),
+        // el lobo, grande y centrado, entero dentro de la pantalla
+        lobo: l.width >= Math.min(200, innerWidth * 0.6) && Math.abs(l.left + l.width / 2 - innerWidth / 2) < 2 && l.top >= 0 && l.bottom <= innerHeight,
+        sinImagen: !document.querySelector('#portada img, #portada .estandarte') && !performance.getEntriesByType('resource').some((x) => /estandarte/.test(x.name)),
+        carga: getComputedStyle(el.querySelector('.portada-carga span')).animationName === 'portada-carga',
+        lema: /Confianza, esfuerzo, compromiso/.test(t) && /Confianza . Esfuerzo . Compromiso/.test(el.querySelector('.portada-lema').textContent),
+        firma: t.includes('By Pelayo Fern\u00e1ndez Cid\u00f3n') && t.includes('CEO de Fuerza Basada en Evidencia'),
         nombre: el.getAttribute('aria-label') === 'Abriendo FBE Equipo', rol: el.getAttribute('role'), color: document.querySelector('meta[name=theme-color]').content,
       };
     });
-    check(portada.tapa && portada.grande && portada.imagen && portada.ondea && portada.lema && portada.firma && portada.nombre && portada.rol === 'status' && portada.color === '#1E1548',
-      `al abrir, el estandarte (la imagen) tapa toda la pantalla y ondea mientras llega la app ${JSON.stringify(portada)}`);
+    check(portada.tapa && portada.lobo && portada.sinImagen && portada.carga && portada.lema && portada.firma && portada.nombre && portada.rol === 'status' && portada.color === '#1E1548',
+      `al abrir, la portada (el lobo, el lema y la firma, sin imagen) tapa toda la pantalla mientras llega la app ${JSON.stringify(portada)}`);
     await q.close();
     // Con el tema elegido a mano, la barra del sistema sigue en morado mientras está la portada
     const q2 = await ctx.newPage();

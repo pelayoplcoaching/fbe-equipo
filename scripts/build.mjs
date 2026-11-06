@@ -5,14 +5,12 @@ import * as esbuild from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
-import { estiloPortada, marcadoPortada, FONDO_PORTADA, IMAGEN_PORTADA } from './portada.mjs';
+import { estiloPortada, marcadoPortada, FONDO_PORTADA } from './portada.mjs';
 
 const raiz = new URL('..', import.meta.url).pathname;
 const demo = process.argv.includes('--demo');
 const salida = join(raiz, demo ? 'dist-demo' : 'dist');
 const fuente = join(raiz, 'node_modules/@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2');
-// El estandarte de la portada de arranque (v0.38: la imagen de Pelayo)
-const imagenPortada = join(raiz, IMAGEN_PORTADA);
 
 rmSync(salida, { recursive: true, force: true });
 mkdirSync(salida, { recursive: true });
@@ -80,7 +78,7 @@ if (demo) {
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Demo de la app de atletas de FBE Coaching con datos de ejemplo">
 <style>${fontFace(`data:font/woff2;base64,${fuente64}`)}${css}</style>
-${estiloPortada(`data:image/webp;base64,${readFileSync(imagenPortada).toString('base64')}`)}
+${estiloPortada()}
 ${marcadoPortada}
 <div id="app"></div>
 <script>window.FBE_CONFIG = {};</script>
@@ -94,7 +92,6 @@ ${marcadoPortada}
   for (const f of Object.keys(r.metafile.outputs)) if (/\.(js|css)$/.test(f)) soloAscii(readFileSync(f, 'utf8'), f);
   mkdirSync(join(salida, 'fonts'), { recursive: true });
   copyFileSync(fuente, join(salida, 'fonts/archivo-latin.woff2'));
-  copyFileSync(imagenPortada, join(salida, 'estandarte.webp'));
   const cssRuta = join(salida, 'app.css');
   writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + readFileSync(cssRuta, 'utf8'));
 
@@ -139,7 +136,7 @@ ${marcadoPortada}
   const precargas = [...alArrancar].map((f) => `  <link rel="modulepreload" href="${relative(salida, join(process.cwd(), f))}">\n`).join('');
   writeFileSync(join(salida, 'index.html'), readFileSync(join(raiz, 'web/index.html'), 'utf8').replaceAll('__VERSION__', version)
     .replace('  <script type="module" src="app.js', () => `${precargas}  <script type="module" src="app.js`)
-    .replace('<!--PORTADA-ESTILO-->', () => estiloPortada('estandarte.webp')).replace('<!--PORTADA-->', () => marcadoPortada));
+    .replace('<!--PORTADA-ESTILO-->', () => estiloPortada()).replace('<!--PORTADA-->', () => marcadoPortada));
   // (v0.58) los modelos, no: se guardan en su propia caché la primera vez que se usan
   // (revisión de seguridad v0.58) ni los vídeos de ejemplo de la demo (solo los pide la demo, al verlos)
   const soloDemo = (f) => /^chunks\/video(-barra)?-demo-[A-Z0-9]+\.js$/.test(f);

@@ -38,3 +38,104 @@ export function mensajeBienvenida({ rol = 'atleta', nombre = '', primeraVez = fa
   if (toca) return { saludo, nombre: pila, mensaje: `Hoy toca ${toca}.`, detalle: conRacha };
   return { saludo, nombre: pila, mensaje: conRacha || '¿Qué toca hoy?' };
 }
+
+// ---------- Tanda 11 de diseño: el panel de la bienvenida ----------
+// Debajo del saludo, cómo va: lo que toca (o lo siguiente), tres cifras (la semana, la racha y el bloque), sus últimas
+// 12 semanas y una frase de ánimo. Todo con lo que Hoy ya ha cargado (la constancia, el programa y la sesión que
+// sigue): ni una consulta más. Lo puro: qué sale y qué dice.
+const lista = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs.at(-1)}`);
+const lunesISO = (iso) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
+const masDias = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+
+// Las últimas n semanas (de lunes a domingo), de la más antigua a la de hoy. semanas: [{ fecha_inicio, total, hechas }]
+// (las de la constancia). Cada una: 'completa', 'parcial', 'vacia' (tenía sesiones y no hizo ninguna) o 'sin' (nada programado).
+export function ultimasSemanas(semanas = [], hoy, n = 12) {
+  if (!hoy) return [];
+  const por = new Map();
+  for (const s of semanas || []) {
+    if (!s?.fecha_inicio || !(s.total > 0)) continue;
+    const k = lunesISO(s.fecha_inicio);
+    const x = por.get(k) || { total: 0, hechas: 0 };
+    x.total += s.total; x.hechas += s.hechas || 0;
+    por.set(k, x);
+  }
+  const actual = lunesISO(hoy);
+  return Array.from({ length: n }, (_, i) => {
+    const lunes = masDias(actual, -7 * (n - 1 - i));
+    const x = por.get(lunes);
+    return { lunes, actual: lunes === actual, estado: !x ? 'sin' : x.hechas >= x.total ? 'completa' : x.hechas > 0 ? 'parcial' : 'vacia' };
+  });
+}
+
+// La racha más larga de semanas completas seguidas (la semana de hoy, a medias, no la rompe)
+export function mejorRacha(semanas = [], hoy) {
+  let max = 0, n = 0;
+  for (const s of ultimasSemanas(semanas, hoy, 104)) {
+    if (s.estado === 'completa') { n++; max = Math.max(max, n); } else if (s.estado !== 'sin' && !s.actual) n = 0;
+  }
+  return max;
+}
+
+// estado: 'entreno' | 'descanso' | 'hecha' | 'semana' (como la tarjeta de Hoy). sigue: la sesión de hoy o la siguiente
+// ({ nombre, minutos, ejercicios, grupos }) o null. semana: { hechas, objetivo } o null. bloque: { semana, de } o null
+// (de: las semanas del bloque si se saben por sus fechas; si no, null y sale solo por cuál va).
+// Devuelve { sesion: { sobre, titulo, meta } | null, cifras: [{ id, etiqueta, valor, de, detalle, puntos, barra }],
+// semanas: [...12] (vacío si aún no hay historia), completas, animo }.
+export function panelBienvenida({ hoy, estado = null, sigue = null, semana = null, racha = 0, semanas = [], bloque = null, ultimoDia = null, primeraVez = false, haceMucho = false } = {}) {
+  const dias = ultimoDia && hoy ? diasEntre(ultimoDia, hoy) : null;
+  const lejos = (dias != null && dias >= 4) || (haceMucho && dias == null);
+  const hoyToca = estado === 'entreno';
+  const sesion = sigue?.nombre ? {
+    sobre: !hoyToca ? 'Lo siguiente' : primeraVez ? 'Tu primera sesión' : lejos ? 'Te espera' : 'Hoy',
+    titulo: sigue.nombre,
+    meta: [sigue.minutos > 0 ? `Unos ${sigue.minutos} min` : null,
+      sigue.ejercicios > 0 ? `${sigue.ejercicios} ${sigue.ejercicios === 1 ? 'ejercicio' : 'ejercicios'}` : null,
+      sigue.grupos?.length ? lista(sigue.grupos.map((g, i) => (i ? g.toLowerCase() : g))) : null].filter(Boolean).join(' · ') || null,
+  } : null;
+  const mejor = mejorRacha(semanas, hoy);
+  const cifras = [];
+  const objetivo = semana?.objetivo > 0 ? semana.objetivo : 0;
+  const hechas = objetivo ? Math.min(semana.hechas || 0, objetivo) : 0;
+  if (objetivo) cifras.push({ id: 'semana', etiqueta: 'Semana', valor: hechas, de: objetivo, puntos: objetivo <= 7 ? objetivo : 0, barra: objetivo > 7 ? hechas / objetivo : null });
+  if (racha >= 1 || mejor < 1) cifras.push({ id: 'racha', etiqueta: 'Racha', valor: racha, detalle: racha === 1 ? 'semana completa' : racha > 1 ? 'semanas completas' : 'empieza esta semana' });
+  else cifras.push({ id: 'racha', etiqueta: 'Mejor racha', valor: mejor, detalle: mejor === 1 ? 'semana completa' : 'semanas completas' });
+  if (bloque?.semana > 0 && bloque.de >= bloque.semana) cifras.push({ id: 'bloque', etiqueta: 'Bloque', valor: bloque.semana, de: bloque.de, barra: bloque.semana / bloque.de });
+  else if (bloque?.semana > 0) cifras.push({ id: 'bloque', etiqueta: 'Bloque', valor: bloque.semana, detalle: 'semana en curso' });
+  const doce = ultimasSemanas(semanas, hoy, 12);
+  const conHistoria = doce.filter((s) => s.estado !== 'sin').length >= 2;
+  const completas = doce.filter((s) => s.estado === 'completa').length;
+  const faltan = objetivo ? objetivo - hechas : 0;
+  let animo;
+  if (primeraVez) animo = 'Tu historial empieza hoy: cada sesión cuenta desde aquí.';
+  else if (estado === 'semana' || (objetivo && !faltan)) animo = racha >= 2 ? `Semana completa: ya van ${racha} seguidas.` : 'Semana completa. Así se construye una racha.';
+  else if (lejos) animo = 'Una sesión hoy y esta semana ya cuenta.';
+  else if (hoyToca && faltan === 1) animo = racha >= 1 ? `Con la de hoy completas la semana: serían ${racha + 1} seguidas.` : 'Con la de hoy completas la semana.';
+  else if (estado === 'hecha' && faltan > 0) animo = `Hecha la de hoy. Te ${faltan === 1 ? 'queda una' : `quedan ${faltan}`} para completar la semana.`;
+  else if (estado === 'descanso' && faltan > 0) animo = `Te ${faltan === 1 ? 'queda una sesión' : `quedan ${faltan} sesiones`} para completar la semana.`;
+  else if (hoyToca && objetivo && hechas === 0) animo = 'La primera de la semana: la que lo pone todo en marcha.';
+  else if (hoyToca && objetivo) animo = `Llevas ${hechas} de ${objetivo} esta semana. A por la siguiente.`;
+  else if (completas >= 8) animo = `${completas} de tus últimas 12 semanas, completas. Eso es constancia.`;
+  else animo = 'Cada sesión que apuntas suma.';
+  return { sesion, cifras, semanas: conHistoria ? doce : [], completas, animo };
+}
+
+// El panel del coach, con lo que su app ya ha cargado: la bandeja de Revisar ({ total, sesiones, checkins, archivos… }),
+// los mensajes sin leer y, si la lista de atletas ya está, cuántos han entrenado hoy y cuántos necesitan atención.
+// Lo que aún no ha llegado (null) no sale.
+export function panelCoach({ bandeja = null, sinLeer = null, equipo = null, atencion = null } = {}) {
+  const cifras = [];
+  if (bandeja) {
+    const partes = [[bandeja.sesiones?.length, 'sesión', 'sesiones'], [bandeja.checkins?.length, 'check-in', 'check-ins'], [bandeja.archivos?.length, 'vídeo', 'vídeos'], [bandeja.comentarios?.length, 'mensaje', 'mensajes'], [bandeja.tareas?.length, 'tarea', 'tareas'], [bandeja.recetas?.length, 'receta', 'recetas']]
+      .filter(([n]) => n > 0).slice(0, 3).map(([n, uno, varios]) => `${n} ${n === 1 ? uno : varios}`);
+    cifras.push({ id: 'revisar', etiqueta: 'Por revisar', valor: bandeja.total || 0, detalle: bandeja.total ? lista(partes) || 'esperan tu respuesta' : 'todo al día' });
+  }
+  if (sinLeer != null) cifras.push({ id: 'mensajes', etiqueta: 'Mensajes sin leer', valor: sinLeer, detalle: sinLeer ? 'en tus conversaciones' : 'ninguno pendiente' });
+  if (equipo?.activos > 0) cifras.push({ id: 'hoy', etiqueta: 'Han entrenado hoy', valor: equipo.entrenaron || 0, de: equipo.activos, barra: (equipo.entrenaron || 0) / equipo.activos });
+  if (atencion != null) cifras.push({ id: 'atencion', etiqueta: 'Necesitan atención', valor: atencion, detalle: atencion ? 'mira sus avisos en Atletas' : 'nadie por ahora' });
+  let animo = null;
+  if (equipo?.activos > 0) {
+    const semana = equipo.activos - (equipo.inactivos?.length || 0);
+    animo = semana >= equipo.activos ? 'Todos tus atletas han entrenado en la última semana.' : `${semana} de tus ${equipo.activos} atletas han entrenado en la última semana.`;
+  }
+  return { sesion: null, cifras, semanas: [], completas: 0, animo };
+}

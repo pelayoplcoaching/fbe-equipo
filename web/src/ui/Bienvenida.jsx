@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { fechaMadrid } from '../logica/fechas.js';
+import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
+import { Icono } from './comunes.jsx';
 import { tocaBienvenida, mensajeBienvenida } from '../logica/bienvenida.js';
 
 // v0.68: la bienvenida personalizada, una vez al día (la primera vez que se abre la app ese día, en este móvil y con esta
@@ -38,8 +40,52 @@ export function useBienvenidaAbierta() {
   return v;
 }
 
+// Tanda 11 de diseño: el panel de debajo del saludo (logica/bienvenida.js: panelBienvenida y panelCoach). Solo pinta.
+const ESTADO_SEMANA = { completa: 'completa', parcial: 'a medias', vacia: 'sin entrenar', sin: 'sin programa' };
+function Cifra({ c }) {
+  return (
+    <div class={`bdia-cifra bdia-cifra-${c.id}`}>
+      <dt>{c.etiqueta}</dt>
+      <dd>
+        <span class="bdia-cifra-v"><span class="num">{c.valor}</span>{c.de != null && <small>de {c.de}</small>}{c.id === 'racha' && c.valor > 0 && <Icono n="llama" />}</span>
+        {c.puntos > 0 && <span class="bdia-puntos" aria-hidden="true">{Array.from({ length: c.puntos }, (_, i) => <i key={i} class={i < c.valor ? 'on' : ''} />)}</span>}
+        {!c.puntos && c.barra != null && <span class="bdia-barra" aria-hidden="true"><i style={{ width: `${Math.round(Math.max(0, Math.min(1, c.barra)) * 100)}%` }} /></span>}
+        {c.detalle && <span class="bdia-cifra-d">{c.detalle}</span>}
+      </dd>
+    </div>
+  );
+}
+function Tablero({ panel }) {
+  const { sesion, cifras, semanas, completas, animo } = panel;
+  const cuenta = (e) => semanas.filter((s) => s.estado === e).length;
+  const resumen = semanas.length ? ['completa', 'parcial', 'vacia'].map((e) => [cuenta(e), ESTADO_SEMANA[e]]).filter(([n]) => n > 0).map(([n, t]) => `${n} ${t}${n > 1 && t === 'completa' ? 's' : ''}`).join(', ') : '';
+  return (
+    <div class="bdia-tablero">
+      {sesion && (
+        <div class="bdia-sesion">
+          <span class="bdia-sobre">{sesion.sobre}</span>
+          <strong>{sesion.titulo}</strong>
+          {sesion.meta && <span class="bdia-sesion-meta">{sesion.meta}</span>}
+        </div>
+      )}
+      {cifras.length > 0 && <dl class={`bdia-cifras bdia-cifras-${cifras.length}`}>{cifras.map((c) => <Cifra key={c.id} c={c} />)}</dl>}
+      {semanas.length > 0 && (
+        <div class="bdia-doce">
+          <div class="bdia-doce-cab"><span class="bdia-sobre">Últimas 12 semanas</span><span class="bdia-doce-n">{completas} {completas === 1 ? 'completa' : 'completas'}</span></div>
+          <div class="bdia-semanas" role="img" aria-label={`Tus últimas 12 semanas: ${resumen || 'sin sesiones'}`}>
+            {semanas.map((s) => <i key={s.lunes} class={`${s.estado}${s.actual ? ' actual' : ''}`} />)}
+          </div>
+        </div>
+      )}
+      {animo && <p class="bdia-animo">{animo}</p>}
+    </div>
+  );
+}
+const fechaCorta = () => { try { return new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Madrid' }).format(new Date()).replace(/[.,]/g, ''); } catch { return ''; } };
+
 // datos: null mientras carga; luego lo de mensajeBienvenida (sin el nombre ni el rol, que van aparte)
-export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = null, alCerrar }) {
+// panel: lo de panelBienvenida o panelCoach (o null: entonces, solo el saludo y el mensaje, como hasta la v0.87)
+export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = null, panel = null, alCerrar }) {
   const boton = useRef(null);
   useEffect(() => { avisarAbierta(true); return () => avisarAbierta(false); }, []);
   const [esperaLarga, setEsperaLarga] = useState(false);
@@ -47,6 +93,21 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
   useEffect(() => { const t = setTimeout(() => setEsperaLarga(true), 4000); return () => clearTimeout(t); }, []);
   const listo = rol === 'coach' || !!datos || esperaLarga;
   const m = mensajeBienvenida({ rol, nombre, hoy: fechaMadrid(), record: atletaId ? leerRecord(atletaId) : null, ...(datos || {}) });
+  const conPanel = listo && !!panel && (panel.cifras?.length > 0 || !!panel.sesion);
+  // En una pantalla baja el cuerpo se desliza (con «Empezar» siempre a la vista): entonces tiene que poder recibir el
+  // foco, para deslizarlo con el teclado
+  const cuerpo = useRef(null);
+  const [desliza, setDesliza] = useState(false);
+  useEffect(() => {
+    const el = cuerpo.current;
+    if (!el) return undefined;
+    const mirar = () => setDesliza(el.scrollHeight > el.clientHeight + 1);
+    mirar();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(mirar);
+    ro?.observe(el);
+    for (const h of el.children) ro?.observe(h);
+    return () => ro?.disconnect();
+  }, [conPanel]);
   useEffect(() => { if (listo) boton.current?.focus(); }, [listo]);
   useEffect(() => {
     const al = (e) => { if (e.key === 'Escape' && listo) alCerrar(); };
@@ -54,11 +115,17 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
     return () => document.removeEventListener('keydown', al);
   }, [listo]);
   return (
-    <div class="bdia" role="dialog" aria-modal="true" aria-labelledby="bdia-titulo" aria-describedby="bdia-mensaje">
-      <div class="bdia-cuerpo">
+    <div class={`bdia${conPanel ? ' bdia-con-panel' : ''}`} role="dialog" aria-modal="true" aria-labelledby="bdia-titulo" aria-describedby="bdia-mensaje">
+      <div class="bdia-cuerpo" ref={cuerpo} {...(desliza ? { tabIndex: 0, role: 'group', 'aria-label': 'Tu resumen de hoy' } : {})}>
+        <div class="bdia-arriba">
+          <span class="bdia-marca"><svg viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path fill-rule="evenodd" d={LOBO_D} /></svg>FBE Equipo</span>
+          <span class="bdia-fecha">{fechaCorta()}</span>
+        </div>
         <h1 id="bdia-titulo"><span class="bdia-saludo">{m.saludo}</span> <span class="bdia-nombre">{m.nombre}</span></h1>
         <p id="bdia-mensaje" class="bdia-mensaje" aria-live="polite">{listo ? m.mensaje : 'Preparando tu día…'}</p>
-        {listo && m.detalle && <p class="bdia-detalle">{m.detalle}</p>}
+        {/* (con el panel, la racha y lo que toca ya van en él: el detalle sobraría) */}
+        {listo && !conPanel && m.detalle && <p class="bdia-detalle">{m.detalle}</p>}
+        {conPanel && <Tablero panel={panel} />}
       </div>
       <button ref={boton} class="bdia-empezar" disabled={!listo} onClick={alCerrar}>{listo ? 'Empezar' : 'Cargando…'}</button>
     </div>

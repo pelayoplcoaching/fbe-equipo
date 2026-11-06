@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.89': {
+    atleta: [
+      'Nueva portada al abrir la app.',
+      'La bienvenida del día ahora te enseña cómo vas: lo que toca, tu semana, tu racha y tus últimas 12 semanas.',
+    ],
+  },
   '0.88': {
     atleta: [
       'Los títulos de las pantallas tienen todos el mismo tamaño.',

@@ -4116,6 +4116,39 @@ console.log('\nv0.68: la bienvenida del día');
     'hecha, descanso, semana completa y lo de siempre');
 }
 
+console.log('\nDiseño, tanda 11: el panel de la bienvenida');
+{
+  const BV = await import('../web/src/logica/bienvenida.js');
+  const hoyP = '2026-11-06';
+  const w = (l, total, hechas) => ({ fecha_inicio: l, total, hechas });
+  const sem = [w('2026-08-17', 4, 4), w('2026-08-24', 4, 2), w('2026-08-31', 4, 4), w('2026-09-07', 4, 4), w('2026-09-14', 4, 0), w('2026-10-12', 4, 4), w('2026-10-19', 4, 4), w('2026-10-26', 4, 4), w('2026-11-02', 4, 3)];
+  const doce = BV.ultimasSemanas(sem, hoyP);
+  check(doce.length === 12 && doce.map((x) => x.estado[0]).join('') === 'cpccvsssccc' + 'p' && doce.at(-1).actual && doce.at(-1).lunes === '2026-11-02' && doce.filter((x) => x.actual).length === 1 && BV.ultimasSemanas(sem, null).length === 0,
+    'sus últimas 12 semanas, de la más antigua a la de hoy: completa, a medias, sin entrenar o sin programa');
+  check(BV.mejorRacha(sem, hoyP) === 3 && BV.mejorRacha([], hoyP) === 0 && BV.mejorRacha([w('2026-10-26', 3, 3), w('2026-11-02', 3, 1)], hoyP) === 1,
+    'la mejor racha: semanas completas seguidas (las semanas sin programa y la de hoy a medias no la rompen)');
+  const p = BV.panelBienvenida({ hoy: hoyP, estado: 'entreno', sigue: { nombre: 'Torso B', minutos: 55, ejercicios: 6, grupos: ['Pecho', 'Espalda', 'Hombro'] }, semana: { hechas: 3, objetivo: 4 }, racha: 3, semanas: sem, bloque: { semana: 4, de: 6 }, ultimoDia: '2026-11-05' });
+  check(p.sesion.sobre === 'Hoy' && p.sesion.titulo === 'Torso B' && p.sesion.meta === 'Unos 55 min · 6 ejercicios · Pecho, espalda y hombro'
+    && p.cifras.map((c) => `${c.id}:${c.valor}/${c.de ?? ''}`).join() === 'semana:3/4,racha:3/,bloque:4/6' && p.cifras[0].puntos === 4 && p.cifras[2].barra === 4 / 6
+    && p.semanas.length === 12 && p.completas === 6 && p.animo === 'Con la de hoy completas la semana: serían 4 seguidas.',
+    'quien va bien: lo de hoy, la semana, la racha y el bloque, y a una sesión de completar la semana se lo dice');
+  const l = BV.panelBienvenida({ hoy: hoyP, estado: 'entreno', sigue: { nombre: 'Full body A' }, semana: { hechas: 0, objetivo: 3 }, racha: 0, semanas: sem, bloque: { semana: 2, de: null }, ultimoDia: '2026-10-24' });
+  check(l.sesion.sobre === 'Te espera' && l.sesion.meta === null && l.cifras[1].etiqueta === 'Mejor racha' && l.cifras[1].valor === 3 && l.cifras[2].de == null && l.cifras[2].detalle === 'semana en curso'
+    && l.animo === 'Una sesión hoy y esta semana ya cuenta.' && !/sin entrenar|llevas/i.test(l.animo),
+    'quien lleva días sin venir: su mejor racha en vez de un cero y una frase en positivo; sin fechas de bloque, solo por qué semana va');
+  const completa = BV.panelBienvenida({ hoy: hoyP, estado: 'semana', semana: { hechas: 4, objetivo: 4 }, racha: 4, semanas: sem, ultimoDia: hoyP });
+  const nueva = BV.panelBienvenida({ hoy: hoyP, estado: 'entreno', primeraVez: true, sigue: { nombre: 'Día 1' }, semana: { hechas: 0, objetivo: 3 } });
+  const descanso = BV.panelBienvenida({ hoy: hoyP, estado: 'descanso', sigue: { nombre: 'Pierna' }, semana: { hechas: 2, objetivo: 4 }, racha: 2, semanas: sem, ultimoDia: '2026-11-05' });
+  check(completa.animo === 'Semana completa: ya van 4 seguidas.' && completa.sesion === null
+    && nueva.sesion.sobre === 'Tu primera sesión' && nueva.semanas.length === 0 && nueva.cifras[1].detalle === 'empieza esta semana' && nueva.animo === 'Tu historial empieza hoy: cada sesión cuenta desde aquí.'
+    && descanso.sesion.sobre === 'Lo siguiente' && descanso.animo === 'Te quedan 2 sesiones para completar la semana.' && BV.panelBienvenida({}).cifras.length === 1,
+    'semana completa, primera vez (sin tira de semanas) y día de descanso (lo siguiente)');
+  const c = BV.panelCoach({ bandeja: { total: 9, sesiones: [1, 2, 3], checkins: [1, 2], archivos: [1], comentarios: [1], tareas: [1], recetas: [1] }, sinLeer: 1, equipo: { activos: 5, entrenaron: 2, inactivos: ['a', 'b'] }, atencion: 5 });
+  check(c.cifras.map((x) => `${x.id}:${x.valor}`).join() === 'revisar:9,mensajes:1,hoy:2,atencion:5' && c.cifras[0].detalle === '3 sesiones, 2 check-ins y 1 vídeo' && c.cifras[2].de === 5
+    && c.animo === '3 de tus 5 atletas han entrenado en la última semana.' && BV.panelCoach({}).cifras.length === 0 && BV.panelCoach({ bandeja: { total: 0 } }).cifras[0].detalle === 'todo al día',
+    'el panel del coach: por revisar, mensajes sin leer, quién ha entrenado hoy y quién necesita atención; lo que no ha cargado no sale');
+}
+
 console.log('\nv0.69: la comunidad, primera tanda (bienvenida, entrenando ahora, respuestas, 💪 a comentarios, el resumen del domingo)');
 {
   const C = await import('../web/src/logica/comunidad.js');
