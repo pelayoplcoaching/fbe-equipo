@@ -3,7 +3,12 @@
 // la copia al instante, apuntar sin conexión y salidas suaves.
 //   Suelta:  npm run build && node test/e2e-pulido3.mjs   (CHROME_PATH si Chrome no está en /opt/google/chrome/chrome)
 //   Dentro de e2e.test.mjs:  const { probarPulido3 } = await import('./e2e-pulido3.mjs'); await probarPulido3({ navegador, check });
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
+import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync, existsSync, statSync, cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, extname } from 'node:path';
 import { irASeccion } from './secciones.mjs';
 
 export async function probarPulido3({ navegador, check, base = 'http://localhost:4174' }) {
@@ -237,6 +242,110 @@ export async function probarPulido3({ navegador, check, base = 'http://localhost
       await p.locator('.ver-mas-tramo').evaluate((el) => el.click());
       await p.waitForTimeout(300);
       check((await mirar()).n >= 80, 'y el botón «Ver 40 recetas más» también las trae');
+      await ctx.close();
+    }
+    // ---------- 7. Actualizar la app: solo se descarga lo que ha cambiado (con el service worker de verdad)
+    {
+      const dist = fileURLToPath(new URL('../dist/', import.meta.url));
+      // Una «versión siguiente» de la app en la que solo cambia el icono (y, claro, el propio service worker)
+      const otra = mkdtempSync(join(tmpdir(), 'fbe-v2-'));
+      cpSync(dist, otra, { recursive: true });
+      const icono = `${readFileSync(join(dist, 'icono.svg'), 'utf8')}\n<!-- version siguiente -->\n`;
+      writeFileSync(join(otra, 'icono.svg'), icono);
+      const sha = (t) => createHash('sha256').update(t).digest('hex');
+      const swA = readFileSync(join(dist, 'sw.js'), 'utf8');
+      const vA = /const VERSION = '([^']+)'/.exec(swA)[1];
+      const hA = sha(readFileSync(join(dist, 'icono.svg')));
+      writeFileSync(join(otra, 'sw.js'), swA.replace(`const VERSION = '${vA}'`, "const VERSION = 'siguiente'").replaceAll(hA, sha(icono)));
+      const precarga = JSON.parse(/const ARCHIVOS = (\[[^\]]*\]);/.exec(swA)[1]);
+      const deDemo = JSON.parse(/const DEMO = typeof (\[[^\]]*\]) !==/.exec(swA)[1]);
+      // Un servidor aparte, que apunta lo que se le pide y puede pasar de una versión a la otra
+      const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2' };
+      let raiz = dist; let pedidas = [];
+      const srv = createServer((req, res) => {
+        const ruta = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+        pedidas.push(ruta);
+        let fich = join(raiz, ruta);
+        if (existsSync(fich) && statSync(fich).isDirectory()) fich = join(fich, 'index.html');
+        if (!existsSync(fich)) { res.writeHead(404); res.end('no'); return; }
+        res.writeHead(200, { 'content-type': TIPOS[extname(fich)] || 'application/octet-stream', 'cache-control': 'no-cache' });
+        res.end(readFileSync(fich));
+      });
+      await new Promise((ok) => srv.listen(0, ok));
+      const aqui = `http://localhost:${srv.address().port}`;
+      const ctx = await navegador.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, locale: 'es-ES' });
+      try {
+        const p = await ctx.newPage();
+        p.on('pageerror', (e) => errores.push(e.message));
+        await p.goto(`${aqui}/manifest.webmanifest`);
+        await p.evaluate(() => localStorage.setItem('fbe-sw-local', '1'));
+        await p.goto(`${aqui}/?demo`);
+        await p.getByRole('button', { name: /Ana López/ }).first().waitFor();
+        const lleva = await p.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 20000 }).then(() => true, () => false);
+        // Lo que hay guardado de la app: por caché, sus claves (rutas) y, de una, su texto
+        const guardado = () => p.evaluate(async () => { const out = {}; for (const k of (await caches.keys()).filter((x) => x.startsWith('fbe-atletas-'))) out[k] = (await (await caches.open(k)).keys()).map((r) => new URL(r.url).pathname + new URL(r.url).search); return out; });
+        const esperar = async (f, ms = 15000) => { const fin = Date.now() + ms; for (;;) { const v = await f(); if (v || Date.now() > fin) return v; await p.waitForTimeout(250); } };
+        const conDemo = await esperar(async () => { const g = (await guardado())[`fbe-atletas-${vA}`] || []; return deDemo.every((u) => g.includes(`/${u}`)) ? g : null; });
+        check(lleva && deDemo.length >= 3 && deDemo.every((u) => !precarga.includes(u)) && !!conDemo, `el código de la demo (${deDemo.length} archivos) ya no va en la instalación: se guarda al abrir la demo`);
+        // Sale la versión siguiente
+        raiz = otra; pedidas = [];
+        const instalada = await p.evaluate(async () => {
+          const reg = await navigator.serviceWorker.getRegistration();
+          await reg.update();
+          const fin = Date.now() + 20000;
+          while (!reg.waiting && Date.now() < fin) await new Promise((r) => setTimeout(r, 200));
+          return !!reg.waiting;
+        });
+        const bajadas = pedidas.filter((x) => x !== '/sw.js');
+        check(instalada && bajadas.includes('/icono.svg') && bajadas.length <= 3 && !bajadas.some((x) => x.startsWith('/chunks/')),
+          `al salir una versión en la que solo cambia un archivo, la actualización descarga ${bajadas.length} de ${precarga.length} (${bajadas.join(', ')}); antes, todos`);
+        // Se activa («Actualizar») y la app queda entera con lo nuevo
+        await p.evaluate(async () => { const reg = await navigator.serviceWorker.getRegistration(); reg.waiting?.postMessage('activar'); });
+        const trasActivar = await esperar(async () => { const g = await guardado(); return Object.keys(g).length === 1 && g['fbe-atletas-siguiente'] ? g['fbe-atletas-siguiente'] : null; });
+        const iconoGuardado = await p.evaluate(async () => { const r = await (await caches.open('fbe-atletas-siguiente')).match('icono.svg'); return r ? r.text() : ''; });
+        const falta = trasActivar ? precarga.map((u) => (u === './' ? '/' : `/${u}`)).filter((u) => !trasActivar.includes(u)) : ['todo'];
+        check(falta.length === 0 && iconoGuardado === icono, `la versión nueva queda guardada entera (${trasActivar ? trasActivar.length : 0} archivos${falta.length ? `; faltan ${falta.join(', ')}` : ''}), con el archivo cambiado, y la anterior se borra`);
+        // Y abre sin conexión (la demo, tras guardarse su código en la versión nueva)
+        await p.reload();
+        await p.getByRole('button', { name: /Ana López/ }).first().waitFor();
+        await esperar(async () => { const g = (await guardado())['fbe-atletas-siguiente'] || []; return deDemo.every((u) => g.includes(`/${u}`)); });
+        await ctx.setOffline(true);
+        pedidas = [];
+        await p.reload();
+        const abre = await p.getByRole('button', { name: /Ana López/ }).first().waitFor({ timeout: 10000 }).then(() => true, () => false);
+        check(abre, 'tras actualizar así, la app abre sin conexión');
+        await ctx.setOffline(false);
+      } finally {
+        await ctx.close();
+        srv.close();
+        rmSync(otra, { recursive: true, force: true });
+      }
+    }
+    // ---------- 8. Al abrir la app, la copia del móvil sale al instante; lo de la base llega después y se pone en su sitio
+    {
+      const { ctx, p } = await abrir(/Ana López/);
+      await p.locator('.hero-dia').waitFor();
+      await p.waitForTimeout(2500);   // (la copia de la semana se guarda al llegar de la base)
+      const titulo = (await p.locator('.hero-dia .titular h2').textContent()).trim();
+      // Con la base lenta (0,7 s por consulta), reabrir la app
+      await p.evaluate(() => localStorage.setItem('fbe-demo-retraso', '700'));
+      const t0 = Date.now();
+      await p.reload();
+      await p.locator('.hero-dia .titular h2').waitFor();
+      const tarda = Date.now() - t0;
+      const titulo2 = (await p.locator('.hero-dia .titular h2').textContent()).trim();
+      check(tarda < 1500 && titulo2 === titulo, `con la base lenta (0,7 s por consulta), al reabrir la app Hoy se ve a los ${tarda} ms, con la sesión de la copia («${titulo2}»); antes esperaba 1,2 s por cada dato`);
+      // Mientras tanto el coach cambia el nombre de esa sesión: al reabrir sale la copia y, al llegar lo de la base, el nombre nuevo
+      await p.waitForTimeout(4000);
+      await p.evaluate(async (t) => { const b = globalThis.__fbeDemo; const ss = await b.select('sesiones', { eq: { nombre: t } }); for (const x of ss) await b.update('sesiones', { nombre: 'Sesión renombrada' }, { eq: { id: x.id } }); }, titulo);
+      await p.waitForTimeout(600);
+      await p.reload();
+      await p.locator('.hero-dia .titular h2').waitFor();
+      const alAbrir = (await p.locator('.hero-dia .titular h2').textContent()).trim();
+      const llega = await p.locator('.hero-dia .titular h2', { hasText: 'Sesión renombrada' }).waitFor({ timeout: 15000 }).then(() => true, () => false);
+      check(llega, `lo que ha cambiado en la base llega solo unos segundos después, sin recargar (al abrir: «${alAbrir}»; después: «Sesión renombrada»)`);
+      // Dentro de la app, lo de siempre: tras guardar algo se espera a la base (no se enseña lo de antes)
+      await p.evaluate(() => localStorage.setItem('fbe-demo-retraso', '0'));
       await ctx.close();
     }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);

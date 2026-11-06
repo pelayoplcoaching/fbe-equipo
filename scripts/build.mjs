@@ -140,8 +140,14 @@ ${marcadoPortada}
   // (v0.58) los modelos, no: se guardan en su propia caché la primera vez que se usan
   // (revisión de seguridad v0.58) ni los vídeos de ejemplo de la demo (solo los pide la demo, al verlos)
   const soloDemo = (f) => /^chunks\/video(-barra)?-demo-[A-Z0-9]+\.js$/.test(f);
-  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && !soloDemo(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
+  // (pulido 3.7) ni el código que solo usa la demo (sus datos de ejemplo y su «base» en memoria): el service worker
+  // lo guarda la primera vez que se abre la demo, no en cada instalación y actualización de todo el mundo
+  const deLaDemo = (f) => /^chunks\/(semilla-demo|backend-memoria|fotos-demo|poster-demo)-[A-Z0-9]+\.js$/.test(f);
+  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && !soloDemo(f) && !deLaDemo(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
+  // (pulido 3.7) y la huella de cada archivo, para que al actualizar no se vuelva a descargar lo que no ha cambiado
+  const huellas = Object.fromEntries(precache.filter((u) => u !== 'config.js').map((u) => [u, createHash('sha256').update(readFileSync(join(salida, u === './' ? 'index.html' : u.split('?')[0]))).digest('hex')]));
   writeFileSync(join(salida, 'sw.js'), aAscii(readFileSync(join(raiz, 'web/sw.js'), 'utf8').replace('__VERSION__', version).replace('__ARCHIVOS__', JSON.stringify(precache))
+    .replaceAll('__HUELLAS__', JSON.stringify(huellas)).replaceAll('__DEMO_ARCHIVOS__', JSON.stringify(archivos.filter(deLaDemo)))
     .replaceAll('__MODELOS__', JSON.stringify(`fbe-modelos-pose-${POSE_VERSION}`)).replaceAll('__MODELO_DIR__', JSON.stringify(POSE_DIR)).replaceAll('__MODELO_ARCHIVOS__', JSON.stringify(POSE_ARCHIVOS))));
   for (const f of ['sw.js', 'config.js']) soloAscii(readFileSync(join(salida, f), 'utf8'), f);
   writeFileSync(join(salida, '.nojekyll'), '');

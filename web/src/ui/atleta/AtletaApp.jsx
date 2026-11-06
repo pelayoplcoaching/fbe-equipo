@@ -107,7 +107,8 @@ export function AtletaApp() {
     return () => { vivo = false; window.removeEventListener('fbe-equipo-visto', contar); document.removeEventListener('visibilitychange', al); };
   }, [equipo, propio, tab]);
   const [sesionId, setSesionId] = useState(null);
-  const consentimientos = useCarga(() => api.consentimientos(), []);
+  // (pulido 3.8) al abrir la app salen de la copia del móvil; lo de la base llega enseguida («fbe-copia») y se pone en su sitio
+  const consentimientos = useCarga(() => api.consentimientos(), [], { copia: CLAVES_COPIA.consentimientos() });
   // Si la app se queda abierta de un día para otro (o se vuelve a ella por la mañana), todo se recalcula con el día nuevo
   const [dia, setDia] = useState(hoyISO);
   useCambioDeDia(setDia);

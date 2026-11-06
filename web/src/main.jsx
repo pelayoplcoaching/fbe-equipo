@@ -43,6 +43,8 @@ async function arrancar() {
     // la última (la página va primero a la red), así que la que espera se activa sin más. Con la app abierta (lo
     // normal en el móvil: días sin cerrarla), se comprueba al volver a ella y cada media hora, y se ofrece
     // «Actualizar» (AvisoVersion, en App.jsx).
+    // (pulido 3.7) el código de la demo no va en la instalación: si esto es la demo, se le pide que lo guarde ahora
+    if (!conSupabase) navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage('guardar-demo')).catch(() => {});
     navigator.serviceWorker.register('./sw.js').then((reg) => {
       const ofrecer = (sw) => { window.__fbeVersionNueva = sw; window.dispatchEvent(new CustomEvent('fbe-version', { detail: sw })); };
       const vigilar = (sw) => sw?.addEventListener('statechange', () => { if (sw.state === 'installed' && navigator.serviceWorker.controller) ofrecer(sw); });

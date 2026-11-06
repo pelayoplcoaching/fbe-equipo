@@ -4032,7 +4032,7 @@ console.log('\nv0.65: abrir sin cobertura y «Novedades» tras actualizar');
   check(sesionGuardada('k', almS(JSON.stringify({ refresh_token: 'r', access_token: 'a', user: { id: '0f6b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d', email: 'ana@x' } })))?.user.id === '0f6b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d'
     && sesionGuardada('k', almS(JSON.stringify({ access_token: 'a', user: { id: '0f6b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d' } }))) === null && sesionGuardada('k', almS('basura')) === null && sesionGuardada('k', almS(null)) === null,
     'la sesión guardada solo vale con su cuenta y con qué renovarse');
-  check(/ESPERA_RED_MS = 1500/.test(swSrc) && /Promise\.race\(\[red\.catch\(\(\) => guardada\)/.test(swSrc), 'el service worker no espera a la red más de 1,5 s para abrir la app si ya tiene la página guardada');
+  check(/ESPERA_RED_MS = 700/.test(swSrc) && /Promise\.race\(\[red\.catch\(\(\) => guardada\)/.test(swSrc), 'el service worker no espera a la red más de 0,7 s para abrir la app si ya tiene la página guardada');
   // ---------- «Novedades»
   const NA = await import('../web/src/logica/novedades-app.js');
   const { NOVEDADES } = await import('../web/src/novedades.js');

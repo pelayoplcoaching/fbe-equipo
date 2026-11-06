@@ -5060,35 +5060,47 @@ export function crearApi(backend) {
   let miAtletaId = null;
   const sinRedAhora = () => typeof navigator !== 'undefined' && navigator.onLine === false;
   const sinConexion = () => { const e = new Error('Sin conexión.'); e.sinConexion = true; return e; };
-  async function conCopia(clave, pedir) {
+  // (pulido 3.8) alInstante: lo de abrir la app (tu perfil, tu ficha, los consentimientos y el programa). La primera vez
+  // que se pide desde que se abrió la app, si hay copia, sale la copia sin esperar a la base (antes se le daban 1,2 s
+  // a cada una, una detrás de otra: con una cobertura regular, Hoy tardaba 2 o 3 segundos en verse); lo de la base llega
+  // enseguida por «fbe-copia» y la pantalla se pone al día sola. Las veces siguientes (tras guardar algo, al cambiar de
+  // día), como siempre: primero la base. vale: si esa copia sirve para enseñarla sin esperar.
+  const abiertas = new Set();
+  async function conCopia(clave, pedir, { alInstante = false, vale = null } = {}) {
     const id = uid();
     const red = Promise.resolve().then(pedir);
     if (!id) return red;
     const almacen = copiaDelMovil();
     red.then((d) => { redFlojaHasta = 0; if (uid() === id) almacen.guardar(id, clave, d); }, (e) => { if (esTemporal(e)) redFlojaHasta = Date.now() + 20000; });
     const guardada = await almacen.leer(id, clave);
+    const primera = !abiertas.has(`${id}|${clave}`);
+    abiertas.add(`${id}|${clave}`);
     if (!guardada) return red;
     let deCopia = false;
     red.then((d) => { if (deCopia && uid() === id && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('fbe-copia', { detail: { clave, datos: d } })); }, () => {});
-    const espera = sinRedAhora() || Date.now() < redFlojaHasta ? 0 : ESPERA_RED_MS;
+    let instante = false;
+    try { instante = alInstante && primera && (!vale || !!vale(guardada.datos)); } catch { instante = false; }
+    const espera = instante || sinRedAhora() || Date.now() < redFlojaHasta ? 0 : ESPERA_RED_MS;
     const r = await Promise.race([red.then((d) => ({ d }), (e) => ({ e })), new Promise((ok) => { setTimeout(() => ok(null), espera); })]);
     if (r && 'd' in r) return r.d;
     if (r && !esTemporal(r.e)) throw r.e;
-    if (!r) redFlojaHasta = Date.now() + 20000;
+    // (enseñar la copia al instante no quiere decir que la red vaya mal)
+    if (!r && !instante) redFlojaHasta = Date.now() + 20000;
     deCopia = true;
     return guardada.datos;
   }
   const propia = (atletaId) => !!atletaId && atletaId === miAtletaId;
   const sinCopia = { perfil: api.perfil, miAtleta: api.miAtleta, consentimientos: api.consentimientos, programa: api.programa, sesion: api.sesion, marcasPrevias: api.marcasPrevias, recordatoriosActivos: api.recordatoriosActivos };
   Object.assign(api, {
-    perfil: () => conCopia(CLAVES_COPIA.perfil(), sinCopia.perfil),
+    // (al instante solo para atletas: la cuenta de coach comprueba su verificación en dos pasos con lo que diga la base)
+    perfil: () => conCopia(CLAVES_COPIA.perfil(), sinCopia.perfil, { alInstante: true, vale: (p) => !!p?.id && p.rol !== 'coach' }),
     async miAtleta() {
-      const a = await conCopia(CLAVES_COPIA.atleta(), sinCopia.miAtleta);
+      const a = await conCopia(CLAVES_COPIA.atleta(), sinCopia.miAtleta, { alInstante: true, vale: (x) => !!x?.id });
       miAtletaId = a?.id || null;
       return a;
     },
-    consentimientos: () => conCopia(CLAVES_COPIA.consentimientos(), sinCopia.consentimientos),
-    programa: (atletaId, opciones) => (opciones === undefined && propia(atletaId) ? conCopia(CLAVES_COPIA.programa(atletaId), () => sinCopia.programa(atletaId)) : sinCopia.programa(atletaId, opciones)),
+    consentimientos: () => conCopia(CLAVES_COPIA.consentimientos(), sinCopia.consentimientos, { alInstante: true, vale: (x) => Array.isArray(x) }),
+    programa: (atletaId, opciones) => (opciones === undefined && propia(atletaId) ? conCopia(CLAVES_COPIA.programa(atletaId), () => sinCopia.programa(atletaId), { alInstante: true, vale: (x) => !!x }) : sinCopia.programa(atletaId, opciones)),
     sesion: (sesionId, atletaId) => (propia(atletaId) ? conCopia(CLAVES_COPIA.sesion(sesionId), () => sinCopia.sesion(sesionId, atletaId)) : sinCopia.sesion(sesionId, atletaId)),
     marcasPrevias: (atletaId, sesionId = null) => (propia(atletaId) && sesionId ? conCopia(CLAVES_COPIA.marcas(sesionId), () => sinCopia.marcasPrevias(atletaId, sesionId)) : sinCopia.marcasPrevias(atletaId, sesionId)),
     // (con la copia, sin red no vale «ninguno»: la de antes no se pisa con una lista vacía)

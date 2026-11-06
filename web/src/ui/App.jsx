@@ -18,6 +18,7 @@ import { AtletaApp } from './atleta/AtletaApp.jsx';
 import { quitarPortada } from './portada.js';
 import { desactivarPush, desactivarPushLocal, sincronizarPush } from '../datos/push.js';
 import { fichaCambiada } from '../logica/nivel.js';
+import { CLAVES_COPIA } from '../logica/sin-red.js';
 import { quitarInsignia } from './insignia-app.js';
 
 // (pulido 10) La app del coach (el panel, la ficha, el editor del programa, el motor…: una cuarta parte del código) va
@@ -174,6 +175,41 @@ export function App({ backend, api, cola }) {
   }, []);
   const fase = useRef(estado.fase);
   fase.current = estado.fase;
+  // (pulido 3.8) Al abrir la app, tu perfil y tu ficha salen de la copia del móvil sin esperar a la base; lo que diga la
+  // base llega enseguida («fbe-copia») y se pone aquí en su sitio. Si lo que llega no cuadra con lo que se enseñó (otra
+  // cuenta, otro papel, ya sin ficha), se vuelve a resolver la entrada entera.
+  const frescos = useRef({});
+  const ponerFrescos = useRef(() => {});
+  ponerFrescos.current = () => {
+    const { perfil: pf, atleta: at } = frescos.current;
+    frescos.current = {};
+    if (estado.fase !== 'atleta' && estado.fase !== 'coach') return;
+    const mia0 = estado.fase === 'atleta' ? estado.atleta : estado.propio;
+    const otroPerfil = pf !== undefined && !!estado.perfil && (!pf || pf.id !== estado.perfil.id || pf.rol !== estado.perfil.rol);
+    const otraFicha = at !== undefined && estado.fase === 'atleta' && (!at || at.id !== mia0?.id);
+    if (otroPerfil || otraFicha) { resolver(true); return; }
+    setEstado((e) => {
+      if (e.fase !== 'atleta' && e.fase !== 'coach') return e;
+      let s = e;
+      if (pf && s.perfil && pf.id === s.perfil.id && pf.rol === s.perfil.rol && JSON.stringify(pf) !== JSON.stringify(s.perfil)) s = { ...s, perfil: pf };
+      const mia = s.fase === 'atleta' ? s.atleta : s.propio;
+      if (at && mia && at.id === mia.id && fichaCambiada(mia, at)) s = s.fase === 'atleta' ? { ...s, atleta: { ...mia, ...at } } : { ...s, propio: { ...mia, ...at } };
+      return s;
+    });
+  };
+  useEffect(() => {
+    const al = (e) => {
+      const { clave, datos } = e.detail || {};
+      if (clave === CLAVES_COPIA.perfil()) frescos.current.perfil = datos ?? null;
+      else if (clave === CLAVES_COPIA.atleta()) frescos.current.atleta = datos ?? null;
+      else return;
+      if (fase.current === 'atleta' || fase.current === 'coach') ponerFrescos.current();
+    };
+    window.addEventListener('fbe-copia', al);
+    return () => window.removeEventListener('fbe-copia', al);
+  }, []);
+  // (si lo de la base llegó antes de que la app terminara de entrar, se pone al entrar)
+  useEffect(() => { if ((estado.fase === 'atleta' || estado.fase === 'coach') && Object.keys(frescos.current).length) ponerFrescos.current(); }, [estado.fase]);
   // El coach en modo atleta (v0.37): la app de atleta con su propia ficha
   const enModoAtleta = estado.fase === 'coach' && modoAtleta && !!estado.propio;
   // La cola solo envía lo del atleta con la sesión abierta

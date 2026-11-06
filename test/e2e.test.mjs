@@ -5396,8 +5396,8 @@ try {
     const swDist = leerArchivo(new URL('sw.js', dist), 'utf8');
     const deDemo = readdirSync(new URL('chunks/', dist)).filter((f) => /^video(-barra)?-demo-/.test(f));
     const precache = JSON.parse(/const ARCHIVOS = (\[[^\]]*\]);/.exec(swDist)[1]);
-    check(deDemo.length === 2 && deDemo.every((f) => !precache.includes(f)) && precache.some((f) => f.startsWith('chunks/semilla-demo-')) && !precache.some((f) => f.startsWith('modelos/')),
-      `el service worker no precarga los vídeos de ejemplo de la demo (${deDemo.join(', ')}) ni el modelo: solo se piden al usarlos`);
+    check(deDemo.length === 2 && deDemo.every((f) => !precache.includes(f)) && !precache.some((f) => f.startsWith('chunks/semilla-demo-')) && /const DEMO = typeof \[[^\]]*chunks\/semilla-demo-/.test(swDist) && !precache.some((f) => f.startsWith('modelos/')),
+      `el service worker no precarga los vídeos de ejemplo de la demo (${deDemo.join(', ')}) ni el modelo: solo se piden al usarlos; y el código de la demo (pulido 3.7), al abrirla`);
   }
   // El vídeo de la barra de Carlos (en la demo viene revisado): por revisar, para analizarlo en Revisar
   const idBarra = await p.evaluate(() => {

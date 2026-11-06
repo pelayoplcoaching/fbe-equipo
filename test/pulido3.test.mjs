@@ -138,5 +138,88 @@ console.log('5. La biblioteca de ejercicios, solo si ha cambiado');
   check(Array.isArray(v1) && v1.length === v2.length, `«variantes por revisar» sale igual con las columnas justas (${v1.length})`);
 }
 
+console.log('\n7. Actualizar la app sin volver a descargar lo que no ha cambiado (el service worker)');
+{
+  const { readFileSync } = await import('node:fs');
+  const { createHash, webcrypto } = await import('node:crypto');
+  const sha = (t) => createHash('sha256').update(t).digest('hex');
+  // Un navegador de mentira: cachés con nombre, una red que apunta lo que se le pide y el service worker de verdad
+  const montarSw = ({ archivos, huellas, demo = [], red, guardado = {}, sinHuellas = false, criptoRota = false }) => {
+    const almacenes = new Map(Object.entries(guardado).map(([k, v]) => [k, new Map(Object.entries(v))]));
+    const pedidas = [];
+    const resp = (texto, ok = true) => ({ ok, status: ok ? 200 : 404, texto, clone() { return resp(texto, ok); }, async arrayBuffer() { return new TextEncoder().encode(texto).buffer; } });
+    const clave = (x) => (typeof x === 'string' ? x : x.url);
+    const cache = (m) => ({
+      async match(x) { return m.has(clave(x)) ? resp(m.get(clave(x))) : undefined; },
+      async put(x, r) { m.set(clave(x), r.texto); },
+      async addAll(xs) { const rs = await Promise.all(xs.map((x) => fetch(x))); if (rs.some((r) => !r.ok)) throw new TypeError('addAll'); xs.forEach((x, i) => m.set(clave(x), rs[i].texto)); },
+    });
+    const caches = { async open(k) { if (!almacenes.has(k)) almacenes.set(k, new Map()); return cache(almacenes.get(k)); }, async keys() { return [...almacenes.keys()]; }, async delete(k) { return almacenes.delete(k); } };
+    const fetch = async (x) => { const u = clave(x); pedidas.push(u); if (!(u in red)) return resp('', false); return resp(red[u]); };
+    class Request { constructor(u, o) { this.url = u; this.cache = o?.cache; } }
+    const oyentes = {};
+    const self = { addEventListener: (t, fn) => { oyentes[t] = fn; }, registration: { scope: 'https://fbe.test/' }, clients: { claim: async () => {} }, skipWaiting: () => {}, location: { origin: 'https://fbe.test' } };
+    let codigo = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8').replace('__VERSION__', 'nueva').replace('__ARCHIVOS__', JSON.stringify(archivos)).replaceAll('__DEMO_ARCHIVOS__', JSON.stringify(demo));
+    if (!sinHuellas) codigo = codigo.replaceAll('__HUELLAS__', JSON.stringify(huellas));
+    const crypto = criptoRota ? { subtle: { digest: async () => { throw new Error('sin crypto'); } } } : webcrypto;
+    new Function('self', 'caches', 'fetch', 'Request', 'crypto', codigo)(self, caches, fetch, Request, crypto);
+    const lanzar = async (tipo, datos = {}) => { let pr = Promise.resolve(); oyentes[tipo]({ ...datos, waitUntil: (x) => { pr = x; } }); return pr; };
+    return { almacenes, pedidas, lanzar };
+  };
+  const NUEVO = { './': '<html>v2</html>', 'app.js?v=2': 'app v2', 'chunks/a-AAAA1111.js': 'trozo a', 'chunks/b-BBBB2222.js': 'trozo b NUEVO', 'icono.svg': '<svg/>', 'fonts/letra.woff2': 'letra', 'config.js': 'config' };
+  const archivos = Object.keys(NUEVO);
+  const huellas = Object.fromEntries(archivos.filter((u) => u !== 'config.js').map((u) => [u, sha(NUEVO[u])]));
+  const VIEJO = { './': '<html>v1</html>', 'app.js?v=1': 'app v1', 'chunks/a-AAAA1111.js': 'trozo a', 'chunks/b-BBBB2222.js': 'trozo b', 'icono.svg': '<svg/>', 'fonts/letra.woff2': 'letra', 'config.js': 'config' };
+  {
+    const sw = montarSw({ archivos, huellas, red: NUEVO, guardado: { 'fbe-atletas-vieja': VIEJO, 'fbe-compartido': { x: 'y' } } });
+    await sw.lanzar('install');
+    const nueva = sw.almacenes.get('fbe-atletas-nueva');
+    check(archivos.every((u) => nueva.get(u) === NUEVO[u]), 'tras actualizar, la versión nueva tiene todos sus archivos, con el contenido nuevo');
+    check(sw.pedidas.slice().sort().join() === ['./', 'app.js?v=2', 'chunks/b-BBBB2222.js', 'config.js'].sort().join(), `solo se descarga lo que ha cambiado; lo idéntico (un trozo, el icono, la letra) se copia de la versión anterior (descargas: ${sw.pedidas.join(', ')})`);
+    check(sw.almacenes.get('fbe-atletas-vieja').get('./') === '<html>v1</html>' && sw.almacenes.get('fbe-compartido').get('x') === 'y', 'la versión anterior sigue entera hasta que se active la nueva, y las otras cachés no se tocan');
+    await sw.lanzar('activate');
+    check(!sw.almacenes.has('fbe-atletas-vieja') && sw.almacenes.has('fbe-atletas-nueva'), 'al activarse la nueva, la anterior se borra');
+  }
+  {
+    // Un archivo con el mismo nombre pero otro contenido (o estropeado) no se aprovecha
+    const sw = montarSw({ archivos, huellas, red: NUEVO, guardado: { 'fbe-atletas-vieja': { ...VIEJO, 'chunks/a-AAAA1111.js': 'trozo a ESTROPEADO' } } });
+    await sw.lanzar('install');
+    check(sw.pedidas.includes('chunks/a-AAAA1111.js') && sw.almacenes.get('fbe-atletas-nueva').get('chunks/a-AAAA1111.js') === 'trozo a', 'lo guardado que no coincide byte a byte con lo de esta versión no se aprovecha: se descarga');
+  }
+  {
+    // La primera instalación (nada guardado) y un navegador que no deja comprobar el contenido: todo de la red, como siempre
+    const primera = montarSw({ archivos, huellas, red: NUEVO });
+    await primera.lanzar('install');
+    const rota = montarSw({ archivos, huellas, red: NUEVO, guardado: { 'fbe-atletas-vieja': VIEJO }, criptoRota: true });
+    await rota.lanzar('install');
+    const antigua = montarSw({ archivos, huellas, red: NUEVO, guardado: { 'fbe-atletas-vieja': VIEJO }, sinHuellas: true });
+    await antigua.lanzar('install');
+    check([primera, rota, antigua].every((x) => x.pedidas.length === archivos.length && archivos.every((u) => x.almacenes.get('fbe-atletas-nueva').get(u) === NUEVO[u])),
+      'la primera instalación, o si no se puede comprobar el contenido, lo descarga todo como hasta ahora');
+  }
+  {
+    // Si falta algo en la red, la instalación falla entera (y se reintenta más tarde): nunca queda una versión a medias activa
+    const { 'chunks/b-BBBB2222.js': _, ...sinUno } = NUEVO;
+    const sw = montarSw({ archivos, huellas, red: sinUno, guardado: { 'fbe-atletas-vieja': VIEJO } });
+    const fallo = await sw.lanzar('install').then(() => false, () => true);
+    check(fallo && sw.almacenes.get('fbe-atletas-vieja').get('chunks/b-BBBB2222.js') === 'trozo b', 'si un archivo no se puede descargar, la actualización no se instala y la versión anterior sigue sirviendo');
+  }
+  {
+    // El código de la demo no va en la instalación; se guarda cuando la página dice que es la demo
+    const demo = ['chunks/semilla-demo-CCCC3333.js', 'chunks/backend-memoria-DDDD4444.js'];
+    const sw = montarSw({ archivos, huellas, demo, red: { ...NUEVO, [demo[0]]: 'semilla', [demo[1]]: 'memoria' } });
+    await sw.lanzar('install');
+    const antes = demo.filter((u) => sw.almacenes.get('fbe-atletas-nueva').has(u)).length;
+    await sw.lanzar('message', { data: 'guardar-demo' });
+    const despues = demo.filter((u) => sw.almacenes.get('fbe-atletas-nueva').has(u)).length;
+    const n = sw.pedidas.length;
+    await sw.lanzar('message', { data: 'guardar-demo' });
+    check(antes === 0 && despues === 2 && sw.pedidas.length === n, 'el código de la demo no se descarga al instalar; se guarda al abrir la demo, y una sola vez');
+  }
+  // Y la construcción escribe las huellas de verdad y deja fuera de la instalación lo de la demo
+  const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+  check(/__HUELLAS__/.test(build) && /__DEMO_ARCHIVOS__/.test(build) && /semilla-demo\|backend-memoria\|fotos-demo\|poster-demo/.test(build), 'la construcción escribe la huella de cada archivo y la lista de lo que es solo de la demo');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);
