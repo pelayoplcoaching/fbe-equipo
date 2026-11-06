@@ -8,6 +8,7 @@ import { Ficha } from './Ficha.jsx';
 import { Revisar } from './Revisar.jsx';
 import { Bienvenida, useBienvenida } from '../Bienvenida.jsx';
 import { RevisionSemanal } from './RevisionSemanal.jsx';
+import { RadarContacto } from './RadarContacto.jsx';
 import { Plantillas } from './Plantillas.jsx';
 import { Biblioteca } from './Biblioteca.jsx';
 import { Cuenta } from './Cuenta.jsx';
@@ -23,12 +24,12 @@ import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
 // Modo atleta (v0.37): el coach entrena con la app de atleta, con su propia ficha (solo entrenamiento)
 // Equipo (v0.43): el muro de la comunidad, solo con ella abierta (se abre en Cuenta → Comunidad)
-const TODAS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['revision', 'Revisión semanal', 'hecho'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
+const TODAS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['revision', 'Revisión semanal', 'hecho'], ['radar', 'A quién escribir', 'mensaje'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
 const TABS = TODAS.filter(([t]) => t !== 'equipo');
 // Pulido 9: las secciones de consulta, donde tirar hacia abajo pone al día lo que se ve (ui/tirar.js)
 const TIRAR = ['atletas', 'revisar', 'mensajes', 'equipo'];
 // En la barra del móvil, el nombre corto (el completo lo sigue leyendo el lector de pantalla)
-const CORTAS = { revision: 'Semanal' };
+const CORTAS = { revision: 'Semanal', radar: 'Escribir' };
 
 // v0.55: «#mensajes/<atleta>» (al tocar la notificación de un mensaje): Mensajes, con esa conversación abierta
 const RUTA_CHAT = /^mensajes\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
@@ -165,7 +166,7 @@ export function CoachApp() {
       </nav>
       {verMas && reparto.mas.length > 0 && (
         <HojaMas pestanas={reparto.mas} actual={tab} alCerrar={() => setVerMas(false)} alElegir={(id) => { setVerMas(false); elegirPestana(id); }}
-          detalles={{ revision: 'Tus atletas, uno a uno, cada semana', equipo: 'El muro de la comunidad', plantillas: 'Bloques para reutilizar', biblioteca: 'Ejercicios, recetas y recursos',
+          detalles={{ revision: 'Tus atletas, uno a uno, cada semana', radar: 'El contacto con cada atleta y a quién toca hoy', equipo: 'El muro de la comunidad', plantillas: 'Bloques para reutilizar', biblioteca: 'Ejercicios, recetas y recursos',
             'modo-atleta': 'Entrena con tu propia ficha', cuenta: 'Tu cuenta, los cobros y los ajustes' }} />
       )}
       <main key={tab} class="vista" data-tirar={!ficha && TIRAR.includes(tab) ? '' : undefined}>
@@ -175,6 +176,7 @@ export function CoachApp() {
             irARevisar={() => conTransicion(() => { setTab('revisar'); setFicha(null); setPeticion(null); }, 'adelante')} peticion={pide('atletas')} alBuscar={abrirBuscar} abrirCuenta={() => { setTab('cuenta'); setFicha(null); }} alCargar={(l) => { resumenesPanel.current = l; }} />)}
       {tab === 'revisar' && <Revisar bandeja={bandeja} abrirAtleta={abrirAtleta} />}
       {tab === 'revision' && <RevisionSemanal abrirAtleta={abrirAtleta} />}
+      {tab === 'radar' && <RadarContacto abrirAtleta={abrirAtleta} />}
       {tab === 'mensajes' && <Conversaciones abrirAtleta={abrirAtleta} alCambiar={() => { bandeja.recargar(true); sinLeer.recargar(true); }} peticion={pide('mensajes')} />}
       {tab === 'plantillas' && <Plantillas peticion={pide('plantillas')} />}
       {tab === 'biblioteca' && <Biblioteca peticion={pide('biblioteca')} />}

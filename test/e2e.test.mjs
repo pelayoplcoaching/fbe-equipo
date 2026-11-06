@@ -5744,6 +5744,16 @@ try {
   console.log('  ✗ la comunidad de la v0.73:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.86: «A quién escribir», el radar de contacto del coach (test/e2e-radar.mjs)
+console.log('\nv0.86: «A quién escribir»');
+try {
+  const { probarRadar } = await import('./e2e-radar.mjs');
+  await probarRadar({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ «A quién escribir» de la v0.86:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.81: comprobar el recetario con el plan (test/e2e-recetario.mjs)
 console.log('\nv0.81: «Comprobar con el plan» del recetario');
 try {
