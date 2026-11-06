@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.77': {
+    atleta: [
+      'Progreso ahora se reparte en cuatro pestañas: Resumen, Fuerza, Cuerpo y Logros.',
+      'Hoy es más corta: el detalle va en filas que se abren al tocarlas, y se quedan abiertas las que tú dejes.',
+    ],
+  },
   '0.76': {
     coach: [
       '«Programar según FBE»: reglas propias por atleta y por ejercicio, borrador de la nota de la semana y registro de lo aplicado. Migración 046.',
