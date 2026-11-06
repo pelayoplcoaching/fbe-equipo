@@ -361,12 +361,14 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
-  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_cardio_en_retos']);
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de']);
+// ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
+// presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
+const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
 
 export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
   let generacion = 0;
-  const escribe = (f) => (...a) => { generacion++; return f(...a); };
   let olvidarFotos = () => {};   // (se define más abajo, con el recuerdo de las fotos de perfil)
   const b = Object.create(backend);
   // Notificaciones: después de algo que avisa a otra persona (un comentario, un aviso, un check-in, una semana
@@ -382,8 +384,57 @@ export function crearApi(backend) {
     || (m === 'update' && t === 'video_revisiones')
     || (m === 'rpc' && ['comunidad_reaccionar', 'comunidad_avisar_coach', 'comunidad_animar', 'tarea_completar'].includes(t))
     || (m === 'update' && ((t === 'semanas' && c?.programacion === 'programada') || (t === 'sesiones' && c?.completada === true) || (t === 'avisos' && 'texto' in (c || {}))));
+  // (pulido 2.2) Lecturas idénticas, compartidas. Al abrir una pantalla, varias piezas piden lo mismo por separado (la
+  // ficha del atleta, sus bloques, su plan…): una de cada tres consultas era repetida. Si se pide una lectura igual a
+  // otra que está en marcha, o que acabó hace menos de COMPARTIR_MS, y entre medias no se ha escrito nada desde aquí,
+  // se reutiliza su respuesta (cada uno recibe sus propias filas, copiadas). Un error no se comparte más allá de quien
+  // ya lo esperaba, y nada sobrevive a una escritura ni a un cambio de cuenta.
+  const COMPARTIR_MS = 2000;
+  const lecturas = new Map();   // clave → { gen, p, pendiente, t }
+  // (se llama al backend en el momento, no a una copia de su función: las pruebas la envuelven para contar consultas)
+  const leer = (...a) => backend.select(...a);
+  // Las escrituras hechas directamente con el backend (algunas pantallas lo usan sin pasar por la API) también cuentan
+  // como «se ha escrito algo»: si no, una lectura compartida podría enseñar lo de antes de ese cambio
+  // Tampoco sobrevive a un cambio en la sesión: entrar, salir o pasar el segundo paso cambia lo que la base deja ver
+  // con la misma cuenta (un coach sin el segundo paso no ve nada; justo después de pasarlo, todo)
+  try { backend.auth?.alCambiar?.(() => { generacion++; }); } catch { /* */ }
+  for (const caja of [backend.auth, backend.auth?.mfa]) {
+    for (const k of Object.keys(caja || {})) {
+      if (typeof caja[k] !== 'function' || k === 'sesion' || k === 'alCambiar') continue;
+      const directo = caja[k].bind(caja);
+      caja[k] = (...a) => { const r = directo(...a); Promise.resolve(r).then(() => { generacion++; }, () => { generacion++; }); return r; };
+    }
+  }
+  // Ni a nada que pida datos frescos a propósito: llega un mensaje o una notificación, se vuelve a la app, vuelve la
+  // conexión o se tira para recargar. Compartir es solo para la ráfaga de consultas de abrir una pantalla
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    const fresco = () => { generacion++; };
+    for (const ev of ['fbe-mensaje', 'fbe-notificacion', 'fbe-recargar', 'fbe-copia', 'fbe-hilo', 'fbe-salida-enviado', 'online', 'focus', 'pageshow']) window.addEventListener(ev, fresco);
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', fresco);
+  }
+  // (sql: solo lo tiene el backend de las pruebas, que escribe con él por debajo de la app)
+  for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc', 'sql']) {
+    if (typeof backend[m] !== 'function') continue;
+    const directo = backend[m].bind(backend);
+    backend[m] = (...a) => { if (esEscritura(m, a)) generacion++; return directo(...a); };
+  }
+  const copiarFilas = (r) => (Array.isArray(r) ? r.map((x) => (x && typeof x === 'object' && !Array.isArray(x) ? { ...x } : x)) : r);
+  b.select = (t, f, ...resto) => {
+    if (resto.length) return leer(t, f, ...resto);
+    let clave;
+    try { clave = `${uid() || ''}|${t}|${JSON.stringify(f || {})}`; } catch { return leer(t, f); }
+    const ya = lecturas.get(clave);
+    if (ya && ya.gen === generacion && (ya.pendiente || Date.now() - ya.t < COMPARTIR_MS)) return ya.p.then(copiarFilas);
+    if (lecturas.size > 150) for (const [k, e] of lecturas) if (!e.pendiente && Date.now() - e.t >= COMPARTIR_MS) lecturas.delete(k);
+    const e = { gen: generacion, pendiente: true, t: 0, p: null };
+    let pedida;
+    try { pedida = Promise.resolve(leer(t, f)); } catch (err) { pedida = Promise.reject(err); }
+    e.p = pedida.then((r) => { e.pendiente = false; e.t = Date.now(); return r; }, (err) => { if (lecturas.get(clave) === e) lecturas.delete(clave); throw err; });
+    lecturas.set(clave, e);
+    return e.p.then(copiarFilas);
+  };
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc']) {
-    const f = escribe(backend[m].bind(backend));
+    const f = (...a) => backend[m](...a);   // (ya cuenta la escritura, arriba)
     b[m] = (...a) => {
       const r = f(...a);
       if (avisa(m, a[0], a[1])) Promise.resolve(r).then(() => empujar(), () => {});
@@ -394,7 +445,7 @@ export function crearApi(backend) {
       if (a[0] === 'perfiles' || (m === 'rpc' && /^comunidad_(unirme|salir|expulsar|ajustar)$/.test(a[0]))) Promise.resolve(r).then(() => olvidarFotos(), () => olvidarFotos());
       // (ni marcar como leídos los mensajes que se están viendo: pasa solo al abrir un chat)
       const soloLeido = m === 'update' && a[0] === 'comentarios' && Object.keys(a[1] || {}).join() === 'leido_en';
-      if (typeof window !== 'undefined' && !soloLeido && (m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]))) {
+      if (typeof window !== 'undefined' && !soloLeido && esEscritura(m, a)) {
         const avisar = () => { try { window.dispatchEvent(new Event('fbe-escritura')); } catch { /* */ } };
         avisar();
         Promise.resolve(r).then(avisar, avisar);

@@ -32,6 +32,10 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
   const entrar = async (p, quien) => {
     await p.getByRole('button', { name: quien }).first().tap();
     await p.locator('nav.tabs').waitFor();
+    await cerrarAvisos(p);
+  };
+  // Los avisos de primera vez (bienvenida, novedades…), fuera
+  const cerrarAvisos = async (p) => {
     for (let i = 0; i < 6; i++) {
       const d = p.locator('[role=dialog]').last();
       if (!(await d.isVisible().catch(() => false))) break;
@@ -83,10 +87,12 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       await irASeccion(p, 'Revisar'); await p.waitForTimeout(500);
       await irASeccion(p, 'Atletas');
       await p.locator('button.tarjeta-atleta:visible .avatar.con-foto img').first().waitFor({ timeout: 8000 });
+      // (con pausas de más de dos segundos: si no, las consultas se comparten y casi no hay ninguna que mirar)
+      await p.waitForTimeout(2300);
       await p.evaluate(() => { window.__q = []; });
-      await irASeccion(p, 'Revisar'); await p.waitForTimeout(400);
-      await irASeccion(p, 'Mensajes'); await p.waitForTimeout(400);
-      await irASeccion(p, 'Atletas'); await p.waitForTimeout(600);
+      await irASeccion(p, 'Revisar'); await p.waitForTimeout(2300);
+      await irASeccion(p, 'Mensajes'); await p.waitForTimeout(2300);
+      await irASeccion(p, 'Atletas'); await p.waitForTimeout(800);
       const total = await lecturas(p, '.'), deFotos = await lecturas(p, '^perfiles .*"cols":"id,foto"');
       check(total > 20 && deFotos === 0, `al pasar por Revisar, Mensajes y Atletas las fotos no se vuelven a bajar (${total} consultas, ${deFotos} de fotos)`);
       // Al ampliarla, la grande
@@ -96,6 +102,43 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       await p.locator('.avatar-ampliable').first().tap();
       const enGrande = await p.waitForFunction((n) => { const i = document.querySelector('.foto-ampliada'); return i && i.src.length > n * 2 ? i.src.length : false; }, mini, { timeout: 5000 }).then((h) => h.jsonValue()).catch(() => 0);
       check(mini < 16000 && enGrande > 20000, `en la ficha se ve la miniatura (${Math.round(mini / 1024)} kB) y, al tocarla, la foto grande (${Math.round(enGrande / 1024)} kB)`);
+      await ctx.close();
+    }
+    // ---------- 2. Las consultas idénticas se comparten
+    {
+      const repetidas = (p) => p.evaluate(() => { const c = {}; for (const q of window.__q) if (!q.startsWith('rpc:')) c[q] = (c[q] || 0) + 1; return { total: window.__q.filter((q) => !q.startsWith('rpc:')).length, repetidas: Object.values(c).reduce((s, n) => s + n - 1, 0) }; });
+      const { ctx, p } = await abrir(null, {}, { retraso: 120 });
+      await p.evaluate(() => { window.__q = []; });
+      await entrar(p, /Ana López/);
+      await p.locator('.hero-dia').waitFor();
+      await p.waitForTimeout(2500);
+      const alAbrir = await repetidas(p);
+      await cerrarAvisos(p);
+      check(alAbrir.total > 30 && alAbrir.repetidas <= 8, `al abrir la app, el atleta ya casi no repite consultas (${alAbrir.total} consultas, ${alAbrir.repetidas} repetidas; antes, 116 y 37)`);
+      // Ir y volver deprisa entre pestañas no vuelve a pedir lo que se acaba de pedir
+      await p.evaluate(() => { localStorage.removeItem('fbe-demo-retraso'); });
+      await irASeccion(p, 'Semana'); await p.waitForTimeout(300);
+      await p.evaluate(() => { window.__q = []; });
+      await irASeccion(p, 'Hoy'); await p.waitForTimeout(250);
+      await irASeccion(p, 'Semana'); await p.waitForTimeout(250);
+      await irASeccion(p, 'Hoy'); await p.waitForTimeout(600);
+      const idaYVuelta = await repetidas(p);
+      check(idaYVuelta.repetidas === 0, `ir y volver deprisa entre dos pestañas no repite ninguna consulta (${idaYVuelta.total} consultas, ${idaYVuelta.repetidas} repetidas)`);
+      // Y lo que se cambia se ve: tras marcar algo, se vuelve a leer de verdad
+      const abrirHabitos = async () => { await p.locator('details.plegable-hoy[data-plegable="habitos"]').waitFor({ state: 'attached' }); await p.evaluate(() => { document.querySelector('details.plegable-hoy[data-plegable="habitos"]').open = true; }); await p.locator('.habito-tile').first().waitFor(); };
+      await abrirHabitos();
+      const tesela = p.locator('.habito-tile', { hasText: 'Sin marcar' }).first();
+      if (await tesela.count()) {
+        const nombre = (await tesela.locator('.habito-nombre').textContent()).trim();
+        await tesela.tap();
+        await p.locator('[aria-modal="true"] .si-no button', { hasText: 'Hecho' }).tap();
+        await p.locator('.toast').filter({ hasText: /hecho/i }).first().waitFor({ timeout: 5000 });
+        await irASeccion(p, 'Semana'); await p.waitForTimeout(200);
+        await irASeccion(p, 'Hoy');
+        await abrirHabitos();
+        const sigue = await p.locator('.habito-tile', { hasText: nombre }).first().locator('.anillo-habito.cumple').waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+        check(sigue, 'tras marcar un hábito e ir y volver enseguida, sigue marcado (lo cambiado nunca se lee de una consulta compartida anterior)');
+      } else check(false, 'no hay un hábito sin marcar en la demo para probarlo');
       await ctx.close();
     }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);

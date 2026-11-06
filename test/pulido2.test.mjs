@@ -98,5 +98,59 @@ console.log('1. Fotos de perfil ligeras');
   check(n('perfiles') > antes, 'al cambiar de cuenta, lo recordado no vale');
 }
 
+console.log('\n2. Lecturas idénticas, compartidas');
+{
+  const { b, api, cuenta, n } = montar();
+  await b.auth.entrar('pelayo@fbe.demo', 'demo');
+  const total = () => Object.entries(cuenta).filter(([k]) => !k.startsWith('rpc:')).reduce((s, [, v]) => s + v, 0);
+  const t0 = n('atletas');
+  const [x, y, z] = await Promise.all([api.atletas(), api.atletas(), api.atletas()]);
+  check(n('atletas') === t0 + 1 && x.length === y.length && x.length === z.length, 'tres piezas que piden lo mismo a la vez hacen una sola consulta');
+  x[0].nombre = 'CAMBIADO';
+  check(y[0].nombre !== 'CAMBIADO' && z[0].nombre !== 'CAMBIADO', 'y cada una recibe sus propias filas (cambiar las de una no toca las de otra)');
+  await api.atletas();
+  check(n('atletas') === t0 + 1, 'pedirlo otra vez enseguida tampoco repite la consulta');
+  // Una pantalla entera: el panel y la bandeja a la vez (lo que hace la app del coach al abrir)
+  const antes = total();
+  await Promise.all([api.resumenes(), api.bandeja(), api.conversaciones(), api.mensajesSinLeer?.().catch(() => 0)]);
+  const juntas = total() - antes;
+  check(juntas > 0, `el panel, la bandeja y las conversaciones a la vez: ${juntas} consultas`);
+  // Tras escribir algo, nada compartido: se vuelve a leer
+  const a0 = n('atletas');
+  const ana = (await api.atletas()).find((q) => q.nombre === 'Ana López');
+  await api.actualizarAtleta(ana.id, { objetivo: 'Otro objetivo' });
+  const tras = await api.atletas();
+  check(n('atletas') === a0 + 1 && tras.find((q) => q.id === ana.id).objetivo === 'Otro objetivo', 'tras escribir algo desde la app se vuelve a leer: nunca se enseña lo de antes del cambio');
+  // También si la escritura va directa al backend (algunas pantallas lo usan así)
+  const a1 = n('atletas');
+  await b.update('atletas', { objetivo: 'Directo' }, { eq: { id: ana.id } });
+  check((await api.atletas()).find((q) => q.id === ana.id).objetivo === 'Directo' && n('atletas') === a1 + 1, 'y también si la escritura va directa al backend');
+  // Pedir datos frescos a propósito (tirar para recargar, un mensaje que llega) no reutiliza nada
+  // (sin ventana, aquí se comprueba con un cambio de sesión, que hace lo mismo)
+  const a2 = n('atletas');
+  await api.atletas();
+  await b.auth.entrar('pelayo@fbe.demo', 'demo');
+  await api.atletas();
+  check(n('atletas') === a2 + 1, 'un cambio en la sesión (entrar, salir, el segundo paso) tampoco deja nada compartido');
+  // Un error no se queda guardado
+  const sel = b.select.bind(b);
+  let falla = true;
+  b.select = async (t, ...r) => { if (t === 'objetivos' && falla) throw new Error('Sin conexión.'); return sel(t, ...r); };
+  let e1 = null; try { await api.objetivos(ana.id); } catch (e) { e1 = e.message; }
+  falla = false;
+  let bien = null; try { bien = await api.objetivos(ana.id); } catch { /* */ }
+  check(/Sin conexi/.test(e1 || '') && Array.isArray(bien), 'una consulta que falla no se queda guardada: la siguiente se vuelve a pedir');
+  // El latido de presencia (cada minuto) no cuenta como cambio; cambiar si se me ve en línea, sí
+  await b.auth.entrar('pelayo@fbe.demo', 'demo');
+  const a3 = n('atletas');
+  await api.atletas();
+  await b.rpc('presencia_marcar', {}).catch(() => {});
+  await api.atletas();
+  const trasLatido = n('atletas');
+  await b.rpc('presencia_marcar', { p_visible: false }).catch(() => {});
+  await api.atletas();
+  check(trasLatido === a3 + 1 && n('atletas') === a3 + 2, 'el latido de presencia no invalida nada; cambiar «en línea», sí');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);
