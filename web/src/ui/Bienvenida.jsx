@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { fechaMadrid } from '../logica/fechas.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
-import { Icono } from './comunes.jsx';
+import { Icono, CifraSube } from './comunes.jsx';
 import { tocaBienvenida, mensajeBienvenida } from '../logica/bienvenida.js';
 
 // v0.68: la bienvenida personalizada, una vez al día (la primera vez que se abre la app ese día, en este móvil y con esta
@@ -47,7 +47,7 @@ function Cifra({ c }) {
     <div class={`bdia-cifra bdia-cifra-${c.id}`}>
       <dt>{c.etiqueta}</dt>
       <dd>
-        <span class="bdia-cifra-v"><span class="num">{c.valor}</span>{c.de != null && <small>de {c.de}</small>}{c.id === 'racha' && c.valor > 0 && <Icono n="llama" />}</span>
+        <span class="bdia-cifra-v"><CifraSube texto={c.valor} clase="num" espera={420} />{c.de != null && <small>de {c.de}</small>}{c.id === 'racha' && c.valor > 0 && <Icono n="llama" />}</span>
         {c.puntos > 0 && <span class="bdia-puntos" aria-hidden="true">{Array.from({ length: c.puntos }, (_, i) => <i key={i} class={i < c.valor ? 'on' : ''} />)}</span>}
         {!c.puntos && c.barra != null && <span class="bdia-barra" aria-hidden="true"><i style={{ width: `${Math.round(Math.max(0, Math.min(1, c.barra)) * 100)}%` }} /></span>}
         {c.detalle && <span class="bdia-cifra-d">{c.detalle}</span>}

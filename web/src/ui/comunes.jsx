@@ -1004,13 +1004,13 @@ function useMorph(clave, pts, base) {
 
 // v0.52: una cifra que rueda como un cuentakilómetros al cambiar (cada dígito en su columna, que se desliza; solo
 // transform). Para los lectores de pantalla, el texto tal cual; con «reducir movimiento», sin rodar.
-export function Odometro({ texto, clase = '' }) {
+export function Odometro({ texto, clase = '', desde = null, caja = null }) {
   const t = String(texto ?? '');
   return (
-    <span class={`odometro ${clase}`}>
+    <span class={`odometro ${clase}`} ref={caja}>
       <span class="sr">{t}</span>
       <span class="odo-cifras" aria-hidden="true">
-        {columnasCifra(t).map((c) => (c.digito == null
+        {columnasCifra(desde ?? t).map((c) => (c.digito == null
           ? <span key={`c${c.clave}`} class="odo-c">{c.c}</span>
           : <span key={`d${c.clave}`} class="odo-col"><span class="odo-tira" style={{ transform: `translateY(${-c.digito * 10}%)` }}>{DIGITOS.map((d) => <span key={d}>{d}</span>)}</span></span>))}
       </span>
@@ -1018,6 +1018,24 @@ export function Odometro({ texto, clase = '' }) {
   );
 }
 const DIGITOS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+// (diseño, tanda 16) Una cifra que sube: la primera vez que entra en la pantalla rueda desde cero hasta su valor (es el
+// mismo cuentakilómetros, que empieza con los dígitos a cero); después se comporta como Odometro. El texto de verdad
+// está desde el principio para los lectores de pantalla, y con «reducir movimiento» sale ya puesta.
+export function CifraSube({ texto, clase = '', espera = 120 }) {
+  const t = String(texto ?? '');
+  const ref = useRef(null);
+  const [puesta, setPuesta] = useState(() => typeof IntersectionObserver === 'undefined' || sinMovimiento() || !/[1-9]/.test(t));
+  useEffect(() => {
+    const el = ref.current;
+    if (puesta || !el) return undefined;
+    let reloj = 0;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); reloj = setTimeout(() => setPuesta(true), espera); } }, { threshold: 0.6 });
+    io.observe(el);
+    return () => { io.disconnect(); clearTimeout(reloj); };
+  }, [puesta]);
+  return <Odometro texto={t} clase={clase} desde={puesta ? null : t.replace(/\d/g, '0')} caja={ref} />;
+}
 
 // puntos: [{x: 'YYYY-MM-DD', y: número}]
 // rangoMin: el eje y abarca como poco esto (para que 2000 → 2080 kcal no parezca una montaña)
