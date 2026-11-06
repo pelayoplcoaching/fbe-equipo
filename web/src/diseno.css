@@ -449,6 +449,13 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    quede lo más cerca posible del primer vistazo */
 .app:has(> .acceso > .acceso-caja #act-codigo) { --aire: 0.5rem; }
 .acceso-caja:has(#act-codigo) { padding-top: 22px; }
+/* (tanda 12) Y un poco más: los dos consentimientos, un paso más pequeños (13 px), y menos aire entre campos. En un móvil
+   de 390 x 844 con la app instalada cabe entero; en el navegador, con sus barras, hay que deslizar (son cuatro campos y
+   dos consentimientos), pero siempre se empieza por el título (Acceso.jsx sube arriba al cambiar de formulario). */
+.acceso-caja:has(#act-codigo) form { gap: 10px; }
+.acceso-caja:has(#act-codigo) .casilla { font-size: 0.8125rem; line-height: 1.4; }
+.app > .acceso > .acceso-caja:has(#act-codigo) { margin-top: 3.5rem; padding-bottom: 12px; }
+.app > .acceso > .acceso-caja:has(#act-codigo) > .marca:first-child { bottom: calc(100% + 12px); }
 
 /* ---------- 18. El muro del equipo --------------------------------------------------------------------------
    ui/Comunidad.jsx (sin tocar). En el móvil, la primera publicación quedaba a más de 1200 px de arriba (y a 1900 la
@@ -590,3 +597,40 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 /* En pantallas anchas y altas (tableta, ordenador), el bloque entero centrado */
 @media (min-width: 700px) and (min-height: 760px) { .bdia-cuerpo { align-self: center; overflow: visible; } }
 @media (prefers-reduced-motion: no-preference) { .bdia-tablero { animation: bdia-entra .45s cubic-bezier(.2, .8, .2, 1) both; } }
+
+/* ---------- 21. La sesión: menos antes de empezar, la serie que toca y el descanso ---------------------------------
+   (ui/atleta/Sesion.jsx, Preparacion.jsx, DondeEntrenas.jsx y sesion-comun.jsx, sin tocar: solo estilos)
+   a) Antes del primer ejercicio había más de una pantalla (la ayuda, la nota del coach, «¿Cómo llegas hoy?», los
+      intervalos y «¿Dónde entrenas hoy?»: el primer ejercicio empezaba a 1066 px). No se quita ni se pliega nada (las
+      pruebas pulsan esos botones tal cual): «¿Cómo llegas hoy?» y «¿Dónde entrenas hoy?» van más prietos, y la nota de
+      «¿Dónde entrenas hoy?» solo sale fuera del gimnasio (en el gimnasio no cambia nada: no hay nada que explicar).
+      Pisa .preparacion y .prep-fila (estilos.css 1101–1103). */
+.sesion-vista .preparacion { gap: 10px; padding: 12px 14px 14px; }
+.sesion-vista .preparacion > .separa { align-items: center; }
+.sesion-vista .prep-fila { gap: 4px; }
+.sesion-vista .prep-fila > .peq { font-size: 0.8125rem; color: var(--tinta-2); }
+.sesion-vista .donde-entrenas { padding: 12px 14px; gap: 8px; }
+.sesion-vista .donde-entrenas:has(.segmentos button:first-child[aria-pressed="true"]) > .mini { display: none; }
+/* b) Dentro del ejercicio, lo que hay que hacer hoy (la propuesta de la app) se lee antes que la letra pequeña: en
+      tinta y seminegrita; «la última vez» se queda de referencia. Y la fila que toca: sus casillas en blanco sobre el
+      tinte, con filo morado, para que se vea de un vistazo cuál es. Pisa el bloque 6 (.sugerencia) y .serie .celda. */
+.ejercicio-cuerpo .sugerencia { font-size: 0.875rem; font-weight: 600; color: var(--tinta); }
+.ejercicio-cuerpo .sugerencia svg { color: var(--morado); }
+.ejercicio-cuerpo .sugerencia.subir svg { color: var(--ok); }
+.serie.siguiente:not(.hecha) .celda, .serie.siguiente:not(.hecha) .rpe { background: var(--hoja); border-color: color-mix(in srgb, var(--morado) 38%, var(--linea)); }
+/* c) El descanso, cuando el temporizador queda fuera de la vista: antes, una píldora de 135 px en el centro; ahora una
+      barra de lado a lado con el tiempo en grande y su etiqueta, que se toca igual para volver al temporizador. Mismo
+      botón y mismo texto (el nombre accesible no cambia); la etiqueta es de adorno. Pisa .pildora-descanso (401–410). */
+.pildora-descanso {
+  left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); transform: none; width: auto; max-width: 30rem; margin-inline: auto;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px)); justify-content: flex-start; gap: 12px; min-height: 56px; padding: 6px 16px 6px 12px; border-radius: 18px; text-align: left;
+  font-size: 1.625rem; font-stretch: var(--ancho-marcador, 78%); font-weight: 750; line-height: 1; animation: barra-descanso-entra .22s cubic-bezier(.2, .9, .3, 1);
+}
+.pildora-descanso > svg:first-child { width: 38px; height: 38px; }
+.pildora-descanso .num { display: grid; gap: 3px; }
+.pildora-descanso .num::before { content: "Descanso"; font-size: 0.6875rem; font-stretch: 100%; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; opacity: .72; }
+.pildora-descanso.fin .num::before { content: "Descanso terminado"; }
+.pildora-descanso > svg:last-child { margin-left: auto; width: 20px; height: 20px; }
+.pildora-descanso.fin { border-color: color-mix(in srgb, var(--sobre-flota) 55%, transparent); }
+@keyframes barra-descanso-entra { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) { .pildora-descanso { animation: none; } }
