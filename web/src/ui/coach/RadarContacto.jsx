@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Siluetas, Vacio, Avatar, Icono, CabeceraGrande } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Siluetas, Vacio, Avatar, Icono, CabeceraGrande, ErrorCaja } from '../comunes.jsx';
 import { fechaMadrid } from '../../logica/fechas.js';
 import { leerBorrador, guardarBorrador } from '../../logica/mensajes.js';
 import { contactosPorAtleta, radar, textoResumenRadar, textoContacto, borradorDe, varianteInicial, cuantasFrases, cuandoFue,
@@ -62,7 +62,7 @@ export function RadarContacto({ abrirAtleta }) {
         <div class="titulo"><h1>A quién escribir</h1>{x && <div class="sub">Objetivo: {x.objetivo} días de contacto por semana con cada atleta</div>}</div>
       </CabeceraGrande>
       {res.cargando && !datos ? <Siluetas forma="lista" n={6} texto="Cargando el contacto con tus atletas" /> : res.error ? (
-        <div class="panel panel-pad"><p>No se ha podido cargar: {res.error.message || 'vuelve a intentarlo'}</p><button class="btn" onClick={() => res.recargar()}>Reintentar</button></div>
+        <ErrorCaja error={res.error} reintentar={() => res.recargar()} />
       ) : !filas.length ? (
         <div class="panel"><Vacio icono="atletas" titulo="Aún no tienes atletas activos">Cuando alguien active su cuenta, saldrá aquí con el contacto que lleváis.</Vacio></div>
       ) : (
@@ -126,7 +126,7 @@ function FilaRadar({ f, hoy, abierta, conGrupo, alAbrir, alHablado, alDejar, alE
       </div>
       <ul class="revision-avisos" aria-label={`Lo que pasa con ${f.primerNombre}`}>
         {conGrupo && <li class={`chip ${f.grupo === 'hoy' ? 'morado' : f.grupo === 'al_dia' ? 'ok' : 'info'}`}>{NOMBRE_GRUPO_RADAR[f.grupo]}</li>}
-        {f.teEscribio && <li class="chip aviso">Te escribió {cuandoFue(f.teEscribio.dia, hoy)}</li>}
+        {f.teEscribio && <li class="chip morado">Te escribió {cuandoFue(f.teEscribio.dia, hoy)}</li>}
         {chips.map((m) => <li key={m.id} class={`chip ${m.nivel}`}>{m.etiqueta}</li>)}
       </ul>
       <p class="peq secundario" style={{ margin: 0 }}>{f.porque}</p>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Siluetas, Vacio, Avatar, Icono, CabeceraGrande } from '../comunes.jsx';
+import { useApp, useCarga, Siluetas, Vacio, Avatar, Icono, CabeceraGrande, ErrorCaja } from '../comunes.jsx';
 import { fechaMadrid, sumarDias, desdeISO } from '../../logica/fechas.js';
 import { ordenRevision, avisosRevision } from '../../logica/revision.js';
 
@@ -40,7 +40,7 @@ export function RevisionSemanal({ abrirAtleta }) {
         <div class="titulo"><h1>Revisión semanal</h1>{datos && <div class="sub">Semana del {rango(datos.lunes)}</div>}</div>
       </CabeceraGrande>
       {res.cargando && !datos ? <Siluetas forma="lista" n={6} texto="Cargando la revisión" /> : res.error ? (
-        <div class="panel panel-pad"><p>No se ha podido cargar: {res.error.message || 'vuelve a intentarlo'}</p><button class="btn" onClick={() => res.recargar()}>Reintentar</button></div>
+        <ErrorCaja error={res.error} reintentar={() => res.recargar()} />
       ) : !filas.length ? (
         <div class="panel"><Vacio icono="atletas" titulo="Aún no tienes atletas">Cuando des de alta a alguien, saldrá aquí para tu revisión de cada semana.</Vacio></div>
       ) : (

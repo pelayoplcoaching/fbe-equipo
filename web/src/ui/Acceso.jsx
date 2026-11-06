@@ -29,6 +29,9 @@ export function Acceso() {
   const [vista, setVista] = useState('entrar'); // entrar | activar | recuperar
   const [error, setError] = useState(null);
   const [ocupado, setOcupado] = useState(false);
+  // (diseño, tanda 12) al cambiar de formulario se empieza arriba: si no, viniendo de una pantalla más larga, el título
+  // del nuevo quedaba cortado
+  useEffect(() => { try { window.scrollTo(0, 0); } catch { /* */ } }, [vista]);
 
   async function comoDemo(email) {
     setError(null);

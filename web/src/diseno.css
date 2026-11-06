@@ -449,6 +449,13 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    quede lo más cerca posible del primer vistazo */
 .app:has(> .acceso > .acceso-caja #act-codigo) { --aire: 0.5rem; }
 .acceso-caja:has(#act-codigo) { padding-top: 22px; }
+/* (tanda 12) Y un poco más: los dos consentimientos, un paso más pequeños (13 px), y menos aire entre campos. En un móvil
+   de 390 x 844 con la app instalada cabe entero; en el navegador, con sus barras, hay que deslizar (son cuatro campos y
+   dos consentimientos), pero siempre se empieza por el título (Acceso.jsx sube arriba al cambiar de formulario). */
+.acceso-caja:has(#act-codigo) form { gap: 10px; }
+.acceso-caja:has(#act-codigo) .casilla { font-size: 0.8125rem; line-height: 1.4; }
+.app > .acceso > .acceso-caja:has(#act-codigo) { margin-top: 3.5rem; padding-bottom: 12px; }
+.app > .acceso > .acceso-caja:has(#act-codigo) > .marca:first-child { bottom: calc(100% + 12px); }
 
 /* ---------- 18. El muro del equipo --------------------------------------------------------------------------
    ui/Comunidad.jsx (sin tocar). En el móvil, la primera publicación quedaba a más de 1200 px de arriba (y a 1900 la
@@ -583,6 +590,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .bdia-semanas i.parcial { background: rgba(255, 255, 255, .42); }
 .bdia-semanas i.sin { background: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
 .bdia-semanas i.actual { outline: 1.5px solid var(--bv-oro); outline-offset: 2px; }
+.bdia-semanas.bdia-dias { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; } /* (tanda 14) quien solo lleva nutrición: su semana, día a día */
 .bdia-animo { margin: 6px 0 0; font-size: 0.9375rem; line-height: 1.4; font-weight: 600; color: var(--bv-oro); text-wrap: pretty; }
 /* En pantallas bajas, lo primero que se va es la tira de las 12 semanas; el resto se desliza si hace falta */
 @media (max-height: 719px) { .bdia-doce { display: none; } .bdia-tablero { margin-top: 16px; } .bdia h1 { margin-top: 18px; } .bdia-nombre { font-size: clamp(2rem, 10.5vw, 2.5rem); } }
@@ -590,3 +598,136 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 /* En pantallas anchas y altas (tableta, ordenador), el bloque entero centrado */
 @media (min-width: 700px) and (min-height: 760px) { .bdia-cuerpo { align-self: center; overflow: visible; } }
 @media (prefers-reduced-motion: no-preference) { .bdia-tablero { animation: bdia-entra .45s cubic-bezier(.2, .8, .2, 1) both; } }
+
+/* ---------- 21. La sesión: menos antes de empezar, la serie que toca y el descanso ---------------------------------
+   (ui/atleta/Sesion.jsx, Preparacion.jsx, DondeEntrenas.jsx y sesion-comun.jsx, sin tocar: solo estilos)
+   a) Antes del primer ejercicio había más de una pantalla (la ayuda, la nota del coach, «¿Cómo llegas hoy?», los
+      intervalos y «¿Dónde entrenas hoy?»: el primer ejercicio empezaba a 1066 px). No se quita ni se pliega nada (las
+      pruebas pulsan esos botones tal cual): «¿Cómo llegas hoy?» y «¿Dónde entrenas hoy?» van más prietos, y la nota de
+      «¿Dónde entrenas hoy?» solo sale fuera del gimnasio (en el gimnasio no cambia nada: no hay nada que explicar).
+      Pisa .preparacion y .prep-fila (estilos.css 1101–1103). */
+.sesion-vista .preparacion { gap: 10px; padding: 12px 14px 14px; }
+.sesion-vista .preparacion > .separa { align-items: center; }
+.sesion-vista .prep-fila { gap: 4px; }
+.sesion-vista .prep-fila > .peq { font-size: 0.8125rem; color: var(--tinta-2); }
+.sesion-vista .donde-entrenas { padding: 12px 14px; gap: 8px; }
+.sesion-vista .donde-entrenas:has(.segmentos button:first-child[aria-pressed="true"]) > .mini { display: none; }
+/* b) Dentro del ejercicio, lo que hay que hacer hoy (la propuesta de la app) se lee antes que la letra pequeña: en
+      tinta y seminegrita; «la última vez» se queda de referencia. Y la fila que toca: sus casillas en blanco sobre el
+      tinte, con filo morado, para que se vea de un vistazo cuál es. Pisa el bloque 6 (.sugerencia) y .serie .celda. */
+.ejercicio-cuerpo .sugerencia { font-size: 0.875rem; font-weight: 600; color: var(--tinta); }
+.ejercicio-cuerpo .sugerencia svg { color: var(--morado); }
+.ejercicio-cuerpo .sugerencia.subir svg { color: var(--ok); }
+.serie.siguiente:not(.hecha) .celda, .serie.siguiente:not(.hecha) .rpe { background: var(--hoja); border-color: color-mix(in srgb, var(--morado) 38%, var(--linea)); }
+/* c) El descanso, cuando el temporizador queda fuera de la vista: la píldora de abajo solo llevaba la hora
+      (a 18 px). Ahora dice qué es («Descanso») y lleva el tiempo más grande, con el mismo alto. Sigue en el centro y sin llegar a los lados:
+      de lado a lado tapaba «Más» y «Vídeo para tu coach» del ejercicio (probado y descartado). Mismo botón y mismo
+      texto (el nombre accesible no cambia); la etiqueta es de adorno. Pisa .pildora-descanso (401–410). */
+.pildora-descanso { gap: 10px; min-height: 48px; padding: 4px 14px 4px 8px; border-radius: 16px; text-align: left; font-size: 1.375rem; font-stretch: var(--ancho-marcador, 78%); line-height: 1; }
+.pildora-descanso > svg:first-child { width: 36px; height: 36px; }
+.pildora-descanso .num { display: grid; gap: 2px; }
+.pildora-descanso .num::before { content: "Descanso"; font-size: 0.6875rem; font-stretch: 100%; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; opacity: .72; }
+.pildora-descanso.fin .num::before { content: "Terminado"; }
+.pildora-descanso.fin { border-color: color-mix(in srgb, var(--sobre-flota) 55%, transparent); }
+
+/* ---------- 22. «A quién escribir» y Revisión semanal ----------------------------------------------------------
+   (ui/coach/RadarContacto.jsx y RevisionSemanal.jsx comparten marcado: .revision-fila, .revision-acciones…)
+   a) Una acción principal por atleta. Los tres botones de cada tarjeta eran iguales (blancos con filo): ahora solo
+      resalta el que toca («Escribirle» en morado cuando hoy le debes un mensaje, «Enviar» en el borrador); los demás
+      van planos sobre tinte, y el que está marcado («Ya hablamos») se rellena, como todo lo elegido en la app.
+   b) El color significa una cosa: «Te escribió hoy» no es un aviso (ámbar), es un dato que pide acción: morado
+      (el cambio de clase está en RadarContacto.jsx). Los avisos de verdad siguen en ámbar y las alertas en rojo.
+   c) «Cómo se cuenta» era un desplegable sin estilo (el triángulo del navegador): ahora es una línea morada con su
+      flecha, como los demás desplegables de la app.
+   Pisa .revision-acciones .btn (4646) y .revision-progreso de estilos.css. */
+.revision-acciones .btn:not(.btn-primario) { background: var(--hoja-2); border-color: transparent; box-shadow: none; }
+.revision-fila.hecha .revision-acciones .btn:not(.btn-primario) { background: var(--hoja); }
+.revision-acciones .btn:not(.btn-primario):hover { border-color: var(--linea); }
+.revision-acciones .btn[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: var(--hoja); }
+.revision-acciones .btn:disabled { opacity: .5; }
+.revision-progreso strong { font-size: 0.9375rem; line-height: 1.35; font-weight: 700; text-wrap: pretty; }
+.revision-progreso details > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; cursor: pointer; list-style: none; color: var(--morado); font-weight: 650; border-radius: 8px; }
+.revision-progreso details > summary::-webkit-details-marker { display: none; }
+.revision-progreso details > summary::after { content: ""; width: 7px; height: 7px; margin: -3px 0 0 2px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .2s ease; }
+.revision-progreso details[open] > summary::after { transform: rotate(-135deg); margin-top: 3px; }
+.revision-progreso details > p { color: var(--tinta-2); text-wrap: pretty; }
+@media (prefers-reduced-motion: reduce) { .revision-progreso details > summary::after { transition: none; } }
+/* La línea de las cuatro últimas semanas y el porqué, un punto más tranquilos; los cuadritos del contacto, arriba */
+.radar .revision-cab { align-items: start; }
+.radar .revision-cab .pips { margin-top: 4px; }
+.radar .revision-fila > p.peq { color: var(--tinta-2); text-wrap: pretty; }
+
+/* ---------- 23. El editor del programa en el móvil: una tarjeta por ejercicio ------------------------------------
+   (ui/coach/Editor.jsx, sin tocar) Por debajo de 700 px la tabla de ejercicios medía 980 px y había que deslizarla de
+   lado para llegar a las series, las repeticiones y el descanso. Ahora cada ejercicio es una tarjeta: el nombre arriba
+   (con subir, bajar y quitar a su derecha), sus opciones debajo, las cifras en una fila con su etiqueta encima y, al
+   final, prioridad, superserie y descanso. Los mismos campos, en el mismo orden de teclado; solo cambia dónde caen.
+   Las etiquetas salen de la posición de cada celda (las tres primeras cifras siempre son la 4.ª, 5.ª y 6.ª) o de lo
+   que llevan dentro; el reparto de las cifras, de cuántas celdas tiene la fila (8 a 11, según haya RIR, RPE y kilos).
+   Va en una rejilla de 60 columnas sin separación (cada celda lleva su margen) para poder repartir 3, 4, 5 o 6 cifras
+   a partes iguales. Pisa .tabla-pauta (estilos.css 529–537) y el bloque 15 de esta capa, solo en pantallas estrechas. */
+@media (max-width: 699px) {
+  .tabla-pauta-env { overflow: visible; margin-inline: 0; }
+  .tabla-pauta { display: block; min-width: 0; width: 100%; }
+  .tabla-pauta thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tabla-pauta tbody { display: block; }
+  .tabla-pauta tr[data-fila] { position: relative; display: grid; grid-template-columns: repeat(60, minmax(0, 1fr)); row-gap: 10px; align-items: end; margin-inline: -3px; padding: 12px 0 14px; border-top: 1px solid var(--linea); }
+  .tabla-pauta tbody td { display: block; min-width: 0; padding: 0 3px; border-top: 0; vertical-align: baseline; }
+  .tabla-pauta tbody td::before { display: block; margin: 0 0 3px 2px; font-size: 0.6875rem; line-height: 1.2; font-weight: 650; color: var(--tinta-3); white-space: nowrap; }
+  .tabla-pauta tr[data-fila] > td:nth-child(n+4):not(:nth-last-child(-n+2))::before { margin-left: 0; text-align: center; }
+  /* 1.ª fila: el ejercicio, de lado a lado, con sus opciones debajo (ya no salen de la celda) */
+  .tabla-pauta td.col-ejercicio { order: 1; grid-column: 1 / -1; min-width: 0; white-space: normal; --sale: 0px; }
+  .tabla-pauta .col-ejercicio > .btn-ejercicio { margin-right: 118px; width: auto; }
+  .tabla-pauta .col-ejercicio > .equivalentes { display: block; width: 100%; margin: 6px 0 0; }
+  .tabla-pauta .col-ejercicio > .variante-tempo, .tabla-pauta .col-ejercicio > .equivalentes + .variante-tempo { display: grid; contain: none; grid-template-columns: minmax(0, 1fr) 76px; width: 100%; margin: 6px 0 0; }
+  .tabla-pauta .variante-tempo .backoff { grid-column: 1 / -1; }
+  .tabla-pauta .col-ejercicio > .detalle-series, .tabla-pauta .col-ejercicio > .mini:not(.nota-pauta), .tabla-pauta .col-ejercicio > .aviso-variante, .tabla-pauta .col-ejercicio > input.variante { contain: none; width: 100%; margin-right: 0; }
+  /* Subir, bajar y quitar: arriba a la derecha, en la línea del nombre */
+  .tabla-pauta tr[data-fila] > td:last-child { position: absolute; top: 12px; right: 0; padding: 0; }
+  /* 2.ª fila: las cifras, a partes iguales */
+  .tabla-pauta tr[data-fila] > td:nth-child(n+4):not(:nth-last-child(-n+2)) { order: 2; grid-column: span 10; }
+  .tabla-pauta tr[data-fila]:has(> td:nth-child(10):last-child) > td:nth-child(n+4):not(:nth-last-child(-n+2)) { grid-column: span 12; }
+  .tabla-pauta tr[data-fila]:has(> td:nth-child(9):last-child) > td:nth-child(n+4):not(:nth-last-child(-n+2)) { grid-column: span 15; }
+  .tabla-pauta tr[data-fila]:has(> td:nth-child(8):last-child) > td:nth-child(n+4):not(:nth-last-child(-n+2)) { grid-column: span 20; }
+  .tabla-pauta td:nth-child(4)::before { content: "Series"; }
+  .tabla-pauta td:nth-child(5)::before { content: "Reps de"; }
+  .tabla-pauta td:nth-child(6)::before { content: "a"; }
+  .tabla-pauta td:has(> [data-celda="rir"])::before { content: "RIR"; }
+  .tabla-pauta td:has(> [data-celda="rpe"])::before, .tabla-pauta td.resumen-detalle[title^="El RPE"]::before { content: "RPE"; }
+  .tabla-pauta td:has(> [data-celda="kg"])::before, .tabla-pauta td.resumen-detalle[title^="Los kilos"]::before { content: "Kg"; }
+  .tabla-pauta input.n { min-width: 0; padding-inline: 2px; }
+  .tabla-pauta td.resumen-detalle { line-height: 40px; text-align: center; border-radius: 9px; }
+  /* 3.ª fila: prioridad, superserie y descanso */
+  .tabla-pauta tr[data-fila] > td:nth-child(1) { order: 3; grid-column: span 30; }
+  .tabla-pauta tr[data-fila] > td:nth-child(2) { order: 3; grid-column: span 12; }
+  .tabla-pauta tr[data-fila] > td:nth-last-child(2) { order: 3; grid-column: span 18; }
+  .tabla-pauta td:nth-child(1)::before { content: "Prioridad"; }
+  .tabla-pauta td:nth-child(2)::before { content: "Súper."; }
+  .tabla-pauta td:nth-last-child(2)::before { content: "Descanso"; }
+  .tabla-pauta .sel-prioridad select, .tabla-pauta select[aria-label="Descanso"] { min-width: 0; }
+}
+
+/* ---------- 24. Los primeros pasos del atleta nuevo, con la noche de la portada ----------------------------------
+   (ui/atleta/Bienvenida.jsx, sin tocar) Las cuatro pantallas de «Hola, …» iban sobre el gris de la app, con otro
+   aspecto que la portada y la bienvenida del día que las rodean. Ahora comparten su noche morada: el texto en claro,
+   el dibujo en su tarjeta, los puntos en claro (el de la pantalla actual, en dorado) y el botón blanco, como
+   «Empezar» de la bienvenida del día. Pisa .bienvenida (estilos.css 948–959). */
+.bienvenida { background: radial-gradient(120% 60% at 50% 110%, rgba(84, 56, 216, .55), transparent 70%), #1E1548; color: #fff; }
+.bienvenida h2 { color: #fff; }
+.bienvenida p { color: #CFC8F5; }
+.bienvenida .bienvenida-saltar { color: #CFC8F5; }
+.bienvenida-dibujo { box-shadow: 0 24px 60px -30px rgba(8, 4, 34, .8), inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.bienvenida-puntos span { background: rgba(255, 255, 255, .28); }
+.bienvenida-puntos span.actual { background: #E9D49A; }
+.bienvenida-pie .btn { border-color: rgba(255, 255, 255, .3); background: none; color: #fff; box-shadow: none; }
+.bienvenida-pie .btn-primario { background: #fff; border-color: #fff; color: #2A1E6E; font-weight: 750; }
+.bienvenida-pie .btn-primario:hover { background: #F1EEFF; border-color: #F1EEFF; }
+.bienvenida :focus-visible { outline-color: #CFC8F5; }
+
+/* ---------- 25. Cuando una pantalla no carga: el mismo aviso en toda la app ----------------------------------------
+   (ErrorCaja, en ui/comunes.jsx) El aviso de «no se ha podido cargar» llevaba «Reintentar» como un enlace suelto dentro
+   del texto rojo, y dos pantallas («A quién escribir» y Revisión semanal) pintaban el suyo a mano con un botón blanco.
+   Ahora las dos usan ErrorCaja y el aviso es uno: el texto a la izquierda y «Reintentar» como botón a la derecha.
+   Solo cambia el aviso que lleva botón: los errores de un formulario (.error sin botón) siguen igual. */
+.error:has(> .btn-texto) { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; padding: 10px 10px 10px 14px; }
+.error > .btn-texto { flex: none; min-height: 36px; padding: 0 12px; border-radius: 10px; background: var(--hoja); color: var(--alerta); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alerta) 30%, transparent); }
