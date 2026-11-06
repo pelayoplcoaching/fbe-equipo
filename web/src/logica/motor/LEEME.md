@@ -17,6 +17,9 @@ Diseño completo: «Programar según FBE: diseño detallado del motor» (documen
 | `proponer.js` | 4 y 5 | Frenos, confianza, alternativas y `proponerSemana()` |
 | `volumen.js` | 3 | Las series por músculo de la semana propuesta frente a la anterior y al rango del atleta: solo enseña y avisa |
 | `adaptador.js` | — | Del bloque que carga el editor a la entrada del motor, y de la propuesta a lo que se guarda |
+| `guardadas.js` | — | Las reglas que el coach guarda para un atleta (fase 1b): leerlas, validarlas y pasarlas al motor |
+| `nota.js` | — | El borrador de la nota de la semana para el atleta: solo lo que cambia |
+| `registro.js` | — | Las propuestas guardadas: qué propuso el motor, qué aplicó el coach y el acuerdo real |
 | `sombra.js` | — | La prueba en sombra: el motor frente a lo que programó el coach, sobre una copia completa |
 
 ## Cómo se usa
@@ -116,6 +119,58 @@ las reglas tal como salen, que sí lo respetan, son 53 % y 42 %. La regla de top
 muestra, que tiene pocos básicos con la top primero: la serie idéntica pasa del 42 % al 43 % (del 44 % al 45 % sin
 respetar el rango) y la dirección no cambia.
 
+## Reglas por atleta y por ejercicio (fase 1b, 5/11/2026)
+
+Decisiones de Pelayo: por atleta se cambia el **perfil**, **hasta qué RPE suma repeticiones** y los **rangos de
+repeticiones** de cada tipo de ejercicio; por ejercicio, **cómo progresa** (el modelo), su **rango**, su **salto de
+carga** y ese mismo RPE; y la regla de un ejercicio vale **solo para ese atleta**.
+
+- Se guardan en una columna nueva, `atletas.reglas_motor` (jsonb), con la forma
+  `{ v: 1, perfil, atleta: { porSerie: { rpeSube, rangos } }, porEjercicio: { <id>: { modelo, porSerie: { rango, rpeSube }, salto: { tipo: 'kg', valor } } } }`.
+  Es la migración `supabase/migraciones/046_motor_fase_1b.sql` (v0.76), con `semanas.propuesta_motor`. Solo el coach
+  escribe esa columna (el atleta solo lee su ficha).
+- `guardadas.js`: `leerGuardadas(valor)` (nunca falla: con algo roto devuelve reglas vacías y dice qué descartó; solo
+  deja pasar lo que la pantalla edita), `paraGuardar`, `paraElMotor` (el perfil va en `atleta.perfil` y las capas en
+  `reglas.atleta` y `reglas.porEjercicio`), `conReglasDeAtleta` y `conReglaDeEjercicio` (del formulario a lo guardado,
+  con sus errores), `resumenGuardadas` y `resumenRegla`. Perfiles elegibles: Fuerza, Novato lineal en básicos, En casa o
+  de viaje, Readaptación y Mantenimiento; sin perfil, sale el del nivel. Como mucho 200 ejercicios con regla propia.
+- En la hoja de revisión (`ReglasFBE.jsx`, sin estilos nuevos): un panel «Reglas de <atleta>» con su resumen y el
+  formulario, y en cada fila «Regla propia» / «Cambiar la regla». Al guardar se escribe con
+  `api.actualizar('atletas', id, { reglas_motor })`, la propuesta se recalcula y las marcas vuelven a las de partida.
+  La hoja lee las reglas con `api.ficha(id)`: no ha hecho falta tocar `api.js`, `Editor.jsx` ni `Ficha.jsx`.
+- Qué manda sobre qué: regla del ejercicio > rango de la pauta (si trae mínimo y máximo) > rangos del atleta > los de
+  partida. El RPE del ejercicio manda sobre el del atleta.
+- Sin la migración aplicada, todo sigue funcionando con las reglas de partida y, al guardar, la hoja dice que falta
+  la migración. En la demo funciona sin ella.
+- La prueba en sombra usa las reglas guardadas de cada atleta, como el editor (`sinGuardadas: true` las ignora).
+
+## Nota de la semana y propuestas guardadas (fase 1b, 5/11/2026)
+
+**Nota de la semana.** Decisión de Pelayo: el borrador dice **solo lo que cambia**, en dos o tres frases y sin
+motivos. `nota.js`: `notaDeSemana({ filas, semana, descarga, total })` y `claseParaNota` (de la fila de la hoja a
+«kilos», «reps», «series», «peaking» o «baja»). Solo cuenta lo marcado, con la opción elegida en cada fila; descarga,
+vuelta, repetición y mantenimiento tienen su propia frase; como mucho tres ejercicios por frase («y 2 más»). En la hoja
+va en un campo con la nota que ya tenga la semana (`semanas.nota_coach`, que existía), el borrador debajo y «Usar el
+borrador». No se guarda nada sin tocarlo: si la nota cambia, se guarda con el botón de aplicar (que pasa a decir «y
+guardar la nota», o «Guardar la nota» si no hay nada marcado). No necesita migración.
+
+**Propuestas guardadas.** Decisión de Pelayo: se guardan **en la propia semana** (`semanas.propuesta_motor`, jsonb;
+segunda columna de la migración 046). Como el atleta puede leer la fila de sus semanas publicadas, el
+registro NO lleva motivos, señales de descarga ni nada del check-in o las molestias: por cada ejercicio, lo propuesto
+en corto (series, repeticiones y kilos), el tipo, el modelo, la confianza y la decisión (`aplicada`, `alternativa`,
+`no`, `igual`, `fuera`). La app no se lo enseña al atleta.
+- `registro.js`: `registroDePropuesta` (al aplicar), `fusionarRegistro` (volver a aplicar desde la misma semana no borra
+  lo decidido antes), `leerRegistro` (nunca falla), `acuerdoDeRegistro` (lo guardado frente a cómo está ahora la semana:
+  aplicadas, con otra opción, no aplicadas, cambiadas después a mano, borradas y cuántas siguen como dijo el motor),
+  `textoAcuerdo`, y `acuerdoDeCopia` / `textoAcuerdoDeCopia` (toda una copia: por confianza, tipo, modelo, con o sin
+  regla propia y por atleta, solo con ids). Solo cuentan como propuesta los cambios de series, repeticiones o kilos:
+  pasar una pauta de RIR a RPE no lo es.
+- La hoja lo guarda al aplicar, sin avisar si falla (una base sin la migración sigue aplicando igual), y al volver a
+  abrirla dice «Ya aplicaste una propuesta en esta semana el…» con el recuento.
+- `scripts/sombra-motor.mjs` añade al final el acuerdo real de la copia.
+- En `Editor.jsx` cambian dos cosas pequeñas: el aviso al aplicar dice también «nota guardada», y el campo «Nota para
+  el atleta» lleva una clave con la versión para que se refresque cuando la hoja guarda la nota.
+
 ## Prueba en sombra repetible
 
 `sombra.js` hace la comparación de arriba sobre cualquier copia completa de la app (Cuenta → Copia completa), con todos
@@ -164,7 +219,7 @@ repeticiones; antes se quedaba igual, como las series con kilos de intensificaci
 node test/motor.test.mjs
 ```
 
-287 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
+334 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
 la base (series 1–20, RPE 1–10, rango ordenado, detalle válido), los ejercicios «a mano» no se tocan y la misma entrada
 da siempre la misma salida.
 
@@ -182,8 +237,8 @@ da siempre la misma salida.
   «Programar según FBE»; en una semana hecha, «Programar la siguiente según FBE» (si la siguiente no existe la crea como
   copia con `api.prepararSemanas`). Las reglas son las de partida (`REGLAS_FBE` + perfil del nivel del atleta): todavía
   no se guardan reglas por atleta ni la propuesta.
-- `test/e2e-programar-fbe.mjs`: 21 comprobaciones en la demo con Chrome (abrir, revisar, volumen por músculo, ver como
-  peaking, alternativa,
+- `test/e2e-programar-fbe.mjs`: 36 comprobaciones en la demo con Chrome (abrir, revisar, reglas del atleta y de un
+  ejercicio, volumen por músculo, ver como peaking, alternativa, nota de la semana, propuesta guardada,
   aplicar, sigue en borrador, reabrir sin cambios, programar la siguiente; escritorio y 360 px en oscuro; consola, desbordes y axe).
   Se ejecuta suelta (`npm run build && node test/e2e-programar-fbe.mjs`) o desde `e2e.test.mjs` con
   `probarProgramarFBE({ navegador, check, base })`.

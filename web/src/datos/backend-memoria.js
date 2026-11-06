@@ -33,12 +33,12 @@ export const CODIGO_MFA_DEMO = '123456';
 
 const DEFECTOS = {
   perfiles: () => ({ rol: 'atleta', creado_en: ahora(), exige_2fa: false, foto: null }),
-  atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null, nutricion: true, entrenamiento: true, nivel: null, peso_frecuencia: 'diario', baja_en: null, dias_semana: null }),
+  atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null, nutricion: true, entrenamiento: true, nivel: null, peso_frecuencia: 'diario', baja_en: null, dias_semana: null, reglas_motor: null }),
   invitaciones: () => ({ creada_en: ahora(), usada_en: null }),
   consentimientos: () => ({ aceptado_en: ahora(), revocado_en: null }),
   ejercicios: () => ({ grupos_musculares: [], activo: true, variante: null, video_url: null, instrucciones: null, errores: null, alternativas: [], tipo: [], rango_reps: null, creado_en: ahora() }),
   bloques: () => ({ es_plantilla: false, estado: 'planificado', atleta_id: null, numero: null, foco: null, objetivo: null, descripcion: null, fecha_inicio: null, fecha_fin: null, creado_en: ahora() }),
-  semanas: () => ({ programacion: 'no_iniciada', foco: null, fecha_inicio: null, nota_coach: null }),
+  semanas: () => ({ programacion: 'no_iniciada', foco: null, fecha_inicio: null, nota_coach: null, propuesta_motor: null }),
   sesiones: () => ({ tipo: 'fuerza', completada: false, intencion: null, dinamica: null, fecha_realizada: null, nota_atleta: null, duracion_min: null, rpe_sesion: null, revisada_en: null, preparacion: null, dia_previsto: null, cardio: null, cardio_hecho: null }),
   sesion_ejercicios: () => ({ prioridad: 'media', superserie: null, reps_min: null, reps_max: null, rir_objetivo: null, rpe_objetivo: null, carga_sugerida_kg: null, descanso_seg: null, tempo: null, notas_coach: null, variante: null, backoff_pct: null, series_detalle: null }),
   series: () => ({ registrada_en: ahora(), kg: null, reps: null, rpe: null, rir: null, nota: null, sustituto_id: null }),

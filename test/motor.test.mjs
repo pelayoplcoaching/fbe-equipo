@@ -5,6 +5,8 @@ import { REGLAS_FBE, PERFILES, resolverReglas, fusionar, limpiarReglas, modeloDe
   porSerie, topSet, estructuraTop, topPeaking, rangoDe, doble, triple, lineal, soloReps, campos, completoLineal, falloLineal, MODELO_BASE,
   aplicarDescarga, senalesDescarga, tramoVuelta, aplicarVuelta, aplicarMantenimiento, diasParado, esMalDia,
   proponerSemana, cargaZona, entradaDesdeBloque, emparejar, pautasDeSemana, cambiosDePropuesta, diferencias, textoPauta,
+  leerGuardadas, paraGuardar, paraElMotor, hayGuardadas, conReglasDeAtleta, conReglaDeEjercicio, reglasDeAtleta, reglaDeEjercicio, tieneRegla, resumenGuardadas, resumenRegla,
+  notaDeSemana, claseParaNota, enumerar, registroDePropuesta, fusionarRegistro, leerRegistro, acuerdoDeRegistro, textoAcuerdo, acuerdoDeCopia, textoAcuerdoDeCopia, pautaCompacta,
   compararVolumen, pautasConPropuestas, sombraDeCopia, compararFila, claseDeSerie, seriesPautadas, compararInformes, textoInforme } from '../web/src/logica/motor/index.js';
 
 let ok = 0, fallos = 0;
@@ -669,6 +671,135 @@ console.log('\nDel editor al motor');
   check(porPauta.filas.find((x) => x.pauta_id === 'a').confianza === 'baja' && proponerSemana(entradaBase()).filas.find((x) => x.pauta_id === 'a').confianza === 'alta', 'el motor acepta el historial por pauta');
 }
 
+console.log('\nReglas guardadas por atleta');
+{
+  const vacias = leerGuardadas(null);
+  check(!hayGuardadas(vacias) && vacias.perfil === null && igual(vacias.atleta, {}) && igual(vacias.porEjercicio, {}) && paraGuardar(vacias) === null && !hayGuardadas(leerGuardadas('texto')) && !hayGuardadas(leerGuardadas([1])) && paraGuardar(null) === null,
+    'sin nada guardado (o con algo roto) salen unas reglas vacías y no se guarda nada');
+  const sucio = { v: 1, perfil: 'intermedio_fuerza', otra: 1,
+    atleta: { porSerie: { rpeSube: 8.5, sobradoRpe: 6, rangos: { basico: [5, 8], aislamiento: [20, 10] } }, doble: { criterio: 'todas' } },
+    porEjercicio: { x: { modelo: 'doble', porSerie: { rango: [12, 20], rpeSube: 8, variasAlTope: 'todas' }, salto: { tipo: 'kg', valor: 1 }, frenos: {} }, y: { modelo: 'apre' }, z: { salto: { tipo: 'pct', valor: 5 } }, w: 'texto' } };
+  const g = leerGuardadas(congelar(sucio));
+  check(g.perfil === 'intermedio_fuerza' && igual(g.atleta, { porSerie: { rpeSube: 8.5, rangos: { basico: [5, 8] } } }) && igual(g.porEjercicio, { x: { modelo: 'doble', porSerie: { rango: [12, 20], rpeSube: 8 }, salto: { tipo: 'kg', valor: 1 } } }),
+    'al leer se queda solo con lo que la pantalla edita y con valores dentro de rango');
+  check(['otra', 'atleta.doble', 'atleta.porSerie.sobradoRpe', 'atleta.porSerie.rangos.aislamiento', 'porEjercicio.x.frenos', 'porEjercicio.x.porSerie.variasAlTope', 'porEjercicio.y.modelo', 'porEjercicio.z.salto', 'porEjercicio.w'].every((k) => g.descartado.includes(k)), 'y dice qué ha descartado');
+  check(leerGuardadas({ perfil: 'novato' }).perfil === null && leerGuardadas({ perfil: 'inventado' }).descartado.includes('perfil'), 'los perfiles de nivel no se eligen a mano: salen solos del nivel');
+  const guardado = paraGuardar(g);
+  check(guardado.v === 1 && igual(leerGuardadas(guardado), { ...g, descartado: [] }) && igual(Object.keys(guardado), ['v', 'perfil', 'atleta', 'porEjercicio']) && igual(Object.keys(paraGuardar({ perfil: 'casa' })), ['v', 'perfil']), 'lo que se guarda vuelve igual al leerlo, sin claves vacías');
+  check(igual(reglasDeAtleta(g), { perfil: 'intermedio_fuerza', rpeSube: 8.5, rangos: { basico: [5, 8], multiarticular: null, aislamiento: null } }) && igual(reglaDeEjercicio(g, 'x'), { modelo: 'doble', rango: [12, 20], salto: 1, rpeSube: 8 })
+    && igual(reglaDeEjercicio(g, 'nada'), { modelo: null, rango: null, salto: null, rpeSube: null }) && tieneRegla(g, 'x') && !tieneRegla(g, 'y'), 'las reglas tal como se editan, del atleta y de un ejercicio');
+  check(resumenGuardadas(g) === 'Perfil Fuerza · suma repeticiones hasta RPE 8,5 · básicos 5–8 · 1 ejercicio con regla propia' && resumenGuardadas(vacias) === 'Las de partida para su nivel'
+    && resumenRegla(g, 'x') === 'Doble progresión · 12–20 repeticiones · sube de 1 kg en 1 kg · suma repeticiones hasta RPE 8' && resumenRegla(g, 'nada') === '' && resumenGuardadas(leerGuardadas({ atleta: { porSerie: { rpeSube: 8 } } })) === 'Suma repeticiones hasta RPE 8',
+    'el resumen en una línea');
+
+  // El formulario del atleta
+  const a1 = conReglasDeAtleta(g, { perfil: 'readaptacion', rpeSube: '8', rangos: { basico: ['', ''], multiarticular: ['10', '15'], aislamiento: ['12', '20'] } });
+  check(a1.guardadas.perfil === 'readaptacion' && igual(a1.guardadas.atleta, { porSerie: { rpeSube: 8, rangos: { multiarticular: [10, 15], aislamiento: [12, 20] } } }) && igual(a1.guardadas.porEjercicio, g.porEjercicio), 'guardar las reglas del atleta: perfil, RPE y rangos; las de sus ejercicios se quedan');
+  check(igual(conReglasDeAtleta(g, {}).guardadas, { perfil: null, atleta: {}, porEjercicio: g.porEjercicio }) && paraGuardar(conReglasDeAtleta(vacias, {}).guardadas) === null, 'con todo vacío vuelven las de partida');
+  check(conReglasDeAtleta(g, { rangos: { basico: ['8', '5'] } }).errores[0].startsWith('Básicos:') && conReglasDeAtleta(g, { rangos: { aislamiento: ['12', ''] } }).errores.length === 1 && conReglasDeAtleta(g, { rangos: { basico: ['0', '5'] } }).errores.length === 1
+    && conReglasDeAtleta(g, { rangos: { basico: ['5,5', '8'] } }).errores.length === 1 && conReglasDeAtleta(g, { rpeSube: '8.2' }).errores.length === 1 && conReglasDeAtleta(g, { perfil: 'novato' }).errores.length === 1, 'un rango al revés, a medias o fuera de 1–50, un RPE raro o un perfil que no existe no se guardan');
+  // El formulario de un ejercicio
+  const e1 = conReglaDeEjercicio(g, 'lat', { modelo: 'triple', rango: ['12', '20'], salto: '2,5', rpeSube: '9.5' });
+  check(igual(e1.guardadas.porEjercicio.lat, { modelo: 'triple', porSerie: { rango: [12, 20], rpeSube: 9.5 }, salto: { tipo: 'kg', valor: 2.5 } }) && !!e1.guardadas.porEjercicio.x && e1.guardadas.perfil === g.perfil && igual(g.porEjercicio.lat, undefined), 'poner la regla de un ejercicio (el salto admite coma) sin tocar lo demás ni lo recibido');
+  check(igual(conReglaDeEjercicio(g, 'x', {}).guardadas.porEjercicio, {}) && igual(conReglaDeEjercicio(g, 'x', { rango: ['', ''], salto: ' ', rpeSube: '' }).guardadas.porEjercicio, {}), 'con todo vacío, la regla del ejercicio se quita');
+  check(conReglaDeEjercicio(g, 'x', { rango: ['20', '12'] }).errores.length === 1 && conReglaDeEjercicio(g, 'x', { salto: '0' }).errores.length === 1 && conReglaDeEjercicio(g, 'x', { salto: 'abc' }).errores.length === 1 && conReglaDeEjercicio(g, 'x', { modelo: 'apre' }).errores.length === 1
+    && conReglaDeEjercicio(g, '', { modelo: 'doble' }).errores.length === 1, 'y los valores imposibles se rechazan con su motivo');
+  const lleno = { perfil: null, atleta: {}, porEjercicio: Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`e${i}`, { modelo: 'doble' }])) };
+  check(conReglaDeEjercicio(lleno, 'nuevo', { modelo: 'doble' }).errores.length === 1 && !conReglaDeEjercicio(lleno, 'e3', { modelo: 'triple' }).errores && Object.keys(leerGuardadas({ porEjercicio: { ...lleno.porEjercicio, mas: { modelo: 'doble' } } }).porEjercicio).length === 200, 'hay un tope de ejercicios con regla propia');
+
+  // Y lo que hace el motor con ellas
+  const con = (guardadas) => { const m = paraElMotor(leerGuardadas(guardadas)); return proponerSemana(congelar(entradaBase({ atleta: { nivel: 'intermedio', perfil: m.perfil }, reglas: m.reglas }))); };
+  const fila = (r, id) => r.filas.find((x) => x.pauta_id === id);
+  const base = con(null);
+  check(igual(base, proponerSemana(congelar(entradaBase()))), 'sin reglas guardadas, la propuesta es la de siempre');
+  check(con({ perfil: 'casa' }).filas.every((x) => x.modelo === 'solo_reps') && fila(con({ perfil: 'intermedio_fuerza' }), 'a').modelo === 'top_set' && fila(con({ perfil: 'intermedio_fuerza' }), 'b').modelo === 'por_serie', 'el perfil cambia el modelo de todos sus ejercicios');
+  const rango = con({ porEjercicio: { banca: { porSerie: { rango: [8, 15] } } } });
+  check(fila(base, 'a').tipo === 'subir' && fila(rango, 'a').tipo === 'reps' && igual(fila(rango, 'a').propuesta.series_detalle.map((x) => `${x.reps}×${x.kg}`), ['13×80', '13×80', '13×80']) && igual(fila(rango, 'b').propuesta, fila(base, 'b').propuesta),
+    'un rango propio en un ejercicio: el press banca ya no está al tope y suma una repetición; los demás, igual');
+  check(igual(fila(con({ porEjercicio: { banca: { salto: { tipo: 'kg', valor: 5 } } } }), 'a').propuesta.series_detalle.map((x) => x.kg), [85, 85, 85]), 'un salto propio: sube de 5 en 5');
+  const modelo = con({ porEjercicio: { banca: { modelo: 'mantener' }, lat: { modelo: 'a_mano' } } });
+  check(fila(modelo, 'a').modelo === 'mantener' && !fila(modelo, 'a').cambia && fila(modelo, 'b').modelo === 'a_mano' && fila(modelo, 'b').tipo === 'sin_tocar', 'un modelo propio: mantener, o no tocarlo');
+  const rpe = con({ atleta: { porSerie: { rpeSube: 7 } } });
+  check(fila(base, 'b').tipo === 'reps' && fila(rpe, 'b').tipo === 'mantener' && fila(rpe, 'a').tipo === 'subir', 'con un RPE más bajo para sumar repeticiones, las series a RPE 8 se quedan igual (y lo que está al tope sigue subiendo)');
+  check(fila(con({ atleta: { porSerie: { rpeSube: 7 } }, porEjercicio: { lat: { porSerie: { rpeSube: 9 } } } }), 'b').tipo === 'reps', 'la regla del ejercicio manda sobre la del atleta');
+  check(igual(resolverReglas({ atleta: paraElMotor(g).reglas.atleta }).porSerie.rangos, { basico: [5, 8], multiarticular: [8, 12], aislamiento: [10, 15] }), 'los rangos del atleta sustituyen solo los tipos que cambia');
+}
+
+console.log('\nNota de la semana');
+{
+  check(enumerar(['Press banca']) === 'press banca' && enumerar(['Press banca', 'RDL con barra']) === 'press banca y RDL con barra' && enumerar(['Curl', 'Remo', 'Fondos']) === 'curl, remo y fondos'
+    && enumerar(['Uno a', 'Dos b', 'Tres c', 'Cuatro d', 'Cinco e', 'Seis f']) === 'uno a, dos b, tres c y 3 más' && enumerar(['Curl', 'Curl']) === 'curl' && enumerar([]) === '', 'los ejercicios, en una frase: en minúscula (salvo siglas), sin repetir y sin listas eternas');
+  const F = (ejercicio, clase) => ({ ejercicio, clase });
+  check(notaDeSemana({ filas: [F('Press banca', 'kilos'), F('Remo con barra', 'kilos'), F('Dominadas', 'reps'), F('Curl con mancuernas', 'reps')], total: 8 })
+    === 'Esta semana subes kilos en press banca y remo con barra. Busca una repetición más en dominadas y curl con mancuernas. El resto, igual que la semana pasada.', 'el borrador dice solo lo que cambia: kilos, repeticiones y que el resto sigue igual');
+  check(notaDeSemana({ filas: [F('Dominadas', 'reps')], total: 1 }) === 'Esta semana busca una repetición más en dominadas.' && notaDeSemana({ filas: [F('Laterales', 'series'), F('Sentadilla', 'baja')], total: 2 })
+    === 'Esta semana haces una serie más en laterales. Bajas un poco la carga en sentadilla para que salgan bien las repeticiones.', 'sin «el resto» si no queda resto, y con series o bajadas si las hay');
+  check(notaDeSemana({ filas: [F('Sentadilla', 'peaking_kilos'), F('Press banca', 'peaking'), F('Remo', 'kilos')], total: 5 })
+    === 'Semana de peaking: en sentadilla y press banca haces menos repeticiones en la serie pesada, con más carga. Subes kilos en remo. El resto, igual que la semana pasada.', 'en peaking lo dice primero');
+  check(notaDeSemana({ filas: [], total: 6 }).startsWith('Esta semana repites lo de la anterior') && notaDeSemana().startsWith('Esta semana repites'), 'si no cambia nada, lo dice');
+  check(notaDeSemana({ semana: 'descarga', descarga: 'volumen', filas: [F('Press banca', 'kilos')] }) === 'Semana de descarga: mismas cargas con menos series. Quédate lejos del fallo.' && notaDeSemana({ semana: 'descarga', descarga: 'rara' }).startsWith('Semana de descarga: menos carga y menos series')
+    && notaDeSemana({ semana: 'vuelta' }).startsWith('Vuelves después de unos días') && notaDeSemana({ semana: 'repetir' }).startsWith('Repetimos la semana pasada') && notaDeSemana({ semana: 'mantenimiento' }).startsWith('Semana de mantenimiento'),
+  'descarga (según su tipo), vuelta, repetición y mantenimiento tienen su propia frase');
+  check(Math.max(...[notaDeSemana({ filas: Array.from({ length: 12 }, (_, i) => F(`Ejercicio largo número ${i}`, ['kilos', 'reps', 'series'][i % 3])), total: 20 })].map((t) => t.length)) < 420, 'aunque cambien muchos ejercicios, la nota no se alarga');
+  // De la fila de la hoja a su clase
+  const fila = (tipo, extra = {}) => ({ tipo, ejercicio: 'Press banca', ...extra });
+  check(claseParaNota({ fila: fila('subir') }) === 'kilos' && claseParaNota({ fila: fila('subir', { fase: 'peaking' }) }) === 'peaking_kilos' && claseParaNota({ fila: fila('peaking') }) === 'peaking' && claseParaNota({ fila: fila('reps') }) === 'reps'
+    && claseParaNota({ fila: fila('series') }) === 'series' && claseParaNota({ fila: fila('bajar') }) === 'baja' && ['mantener', 'tope', 'sin_tocar', 'descarga', 'vuelta'].every((t) => claseParaNota({ fila: fila(t) }) === null), 'la clase de cada fila sale de lo que propone el motor');
+  const hechas = [S(1, 100, 5, 8), S(2, 90, 8, 8)];
+  check(claseParaNota({ fila: fila('subir'), alternativa: { id: 'mantener' }, propuesta: campos(P()) }) === null
+    && claseParaNota({ fila: fila('peaking', { fase: 'peaking' }), alternativa: { id: 'sin_peaking' }, propuesta: campos(P({ series_detalle: [{ reps: 6, kg: 100 }, { reps: 8, kg: 90 }] })), hechas }) === 'reps'
+    && claseParaNota({ fila: fila('peaking'), alternativa: { id: 'otra' }, propuesta: campos(P({ series_detalle: [{ reps: 5, kg: 102.5 }, { reps: 8, kg: 90 }] })), hechas }) === 'kilos'
+    && claseParaNota({ fila: fila('subir'), alternativa: { id: 'otra' }, propuesta: campos(P({ series_detalle: [{ reps: 5, kg: 100 }, { reps: 8, kg: 90 }] })), hechas }) === null, 'y con otra opción elegida, de lo que esa opción hace con cada serie');
+}
+
+console.log('\nPropuestas guardadas');
+{
+  check(igual(pautaCompacta(P({ series: 3, reps_min: 8, reps_max: 12, carga_sugerida_kg: 80 })), { s: 3, r: [8, 12], k: 80 }) && igual(pautaCompacta(P({ series_detalle: [{ reps: 5, kg: 100, rpe: 8 }, { reps: 8 }] })), { d: [[5, 100], [8, null]] })
+    && igual(pautaCompacta(P({ series: 4, reps_min: 5, reps_max: 5, carga_sugerida_kg: 100, backoff_pct: 10 })), { s: 4, r: [5, 5], k: 100, b: 10 }) && pautaCompacta(null) === null, 'una pauta en corto: series, repeticiones y kilos (sin esfuerzo ni notas)');
+  // Una semana propuesta y aplicada a medias
+  const e = entradaBase();
+  const r = proponerSemana(congelar(e));
+  const destino = Object.fromEntries(e.pautas.map((p) => [p.id, { ...p, id: `d-${p.id}` }]));
+  const vistas = r.filas.map((f) => ({ f, actual: f.pauta_id === 'e' ? null : destino[f.pauta_id], propuesta: f.pauta_id === 'b' ? f.alternativas[0].propuesta : f.propuesta, alternativa: f.pauta_id === 'b' ? f.alternativas[0] : null }));
+  const reg = registroDePropuesta({ vistas, marcadas: new Set(['a']), base: { id: 'w1' }, semana: r.semana, guardadas: leerGuardadas({ porEjercicio: { banca: { modelo: 'por_serie' } } }), ahora: '2026-11-05T21:00:00.000Z' });
+  const fr = Object.fromEntries(reg.filas.map((x) => [x.e, x]));
+  check(reg.v === 1 && reg.en === '2026-11-05T21:00:00.000Z' && reg.base === 'w1' && reg.tipo === 'normal' && reg.filas.length === 5, 'el registro de una aplicación: cuándo, de qué semana parte y una fila por ejercicio');
+  check(fr.banca.d === 'aplicada' && fr.banca.p === 'd-a' && fr.banca.t === 'subir' && fr.banca.c === r.filas[0].confianza && fr.banca.r === 1 && igual(fr.banca.pr, { d: [[8, 82.5], [8, 82.5], [8, 82.5]] }) && !('ap' in fr.banca), 'lo marcado queda como aplicado, con lo que se propuso en corto y si llevaba regla propia');
+  check(fr.lat.d === 'alternativa' && fr.lat.a === 'mantener' && igual(fr.lat.ap, pautaCompacta(e.pautas[1])) && !('r' in fr.lat) && fr.sent.d === 'igual' && fr.curl.d === 'igual' && fr.remo.d === 'fuera' && fr.remo.p === null,
+    'otra opción elegida, lo que no proponía cambios (pasar de RIR a RPE no cuenta) y lo que ya no está en la semana');
+  check(!JSON.stringify(reg).includes('motivo') && !JSON.stringify(reg).includes('Press') && Object.keys(fr.banca).every((k) => ['e', 'p', 't', 'm', 'c', 'f', 'r', 'd', 'pr', 'a', 'ap'].includes(k)), 'sin motivos, sin nombres y sin nada del check-in: solo qué se propuso y qué se hizo');
+  check(igual(leerRegistro(JSON.parse(JSON.stringify(reg))), reg) && leerRegistro(null) === null && leerRegistro({ v: 2, en: reg.en, filas: [] }) === null && leerRegistro({ ...reg, en: 'ayer' }) === null && leerRegistro('x') === null
+    && leerRegistro({ ...reg, filas: [...reg.filas, { e: 1 }, { ...reg.filas[0], d: 'rara' }, { ...reg.filas[0], pr: 'x' }] }).filas.length === 5, 'lo guardado se comprueba al leerlo: lo que no se entiende se descarta y nunca falla');
+  // El acuerdo, según cómo esté ahora la semana
+  const aplicada = { 'd-a': { ...destino.a, ...r.filas[0].propuesta }, 'd-b': destino.b, 'd-c': destino.c, 'd-d': destino.d };
+  const a1 = acuerdoDeRegistro(reg, aplicada);
+  check(a1.propuestas === 2 && a1.aplicadas === 1 && a1.alternativas === 1 && a1.noAplicadas === 0 && a1.retocadas === 0 && a1.comoElMotor === 1 && a1.comoElMotorPct === 50 && textoAcuerdo(a1) === 'Aplicaste 2 de 2 propuestas (1 con otra opción).',
+    'el acuerdo de una semana: cuántas propuestas se aplicaron y cuántas siguen como dijo el motor');
+  const retocada = { ...aplicada, 'd-a': { ...aplicada['d-a'], series_detalle: [{ reps: 8, kg: 85 }, { reps: 8, kg: 82.5 }, { reps: 8, kg: 82.5 }] } };
+  delete retocada['d-b'];
+  const a2 = acuerdoDeRegistro(reg, retocada);
+  check(a2.retocadas === 1 && a2.borradas === 1 && a2.comoElMotor === 0 && textoAcuerdo(a2) === 'Aplicaste 2 de 2 propuestas (1 con otra opción). Después has cambiado 1 a mano. Un ejercicio ya no está en la semana.', 'si luego se cambia a mano o se borra un ejercicio, también lo cuenta');
+  check(acuerdoDeRegistro(reg, { ...aplicada, 'd-a': { ...aplicada['d-a'], rpe_objetivo: 9, notas_coach: 'ojo' } }).retocadas === 0, 'cambiar solo el esfuerzo o las notas no cuenta como retoque');
+  check(textoAcuerdo(acuerdoDeRegistro({ filas: [] })) === 'No había nada que cambiar.' && acuerdoDeRegistro(null).propuestas === 0 && acuerdoDeRegistro(null).comoElMotorPct === null, 'sin propuestas no hay porcentaje');
+  const desc = registroDePropuesta({ vistas, marcadas: new Set(), base: { id: 'w1' }, semana: { tipo: 'normal', peaking: 2 }, descarga: true });
+  check(desc.tipo === 'descarga' && desc.pk === 2 && Object.fromEntries(desc.filas.map((x) => [x.e, x.d])).banca === 'no' && !Number.isNaN(Date.parse(desc.en)), 'apunta si se aplicó como descarga o en peaking');
+  const nada = acuerdoDeRegistro(desc, Object.fromEntries(Object.values(destino).map((p) => [p.id, p])));
+  check(nada.propuestas === 2 && nada.noAplicadas === 1 && nada.alternativas === 1 && nada.comoElMotor === 0 && textoAcuerdo(nada) === 'Aplicaste 1 de 2 propuestas (1 con otra opción).', 'lo que no se aplica cuenta como propuesta no aplicada');
+  // Volver a aplicar en la misma semana no borra lo decidido la primera vez
+  const segunda = registroDePropuesta({ vistas: vistas.map((v) => (v.f.pauta_id === 'a' ? { ...v, actual: { ...v.actual, ...v.f.propuesta } } : { ...v, alternativa: null, propuesta: v.f.propuesta })), marcadas: new Set(['b']), base: { id: 'w1' }, semana: r.semana, ahora: '2026-11-06T09:00:00.000Z' });
+  const junta = Object.fromEntries(fusionarRegistro(reg, segunda).filas.map((x) => [x.e, x]));
+  check(Object.fromEntries(segunda.filas.map((x) => [x.e, x.d])).banca === 'igual' && junta.banca.d === 'aplicada' && junta.banca.r === 1 && junta.lat.d === 'aplicada' && fusionarRegistro(reg, segunda).en === '2026-11-06T09:00:00.000Z'
+    && igual(fusionarRegistro(reg, { ...segunda, base: 'otra' }), { ...segunda, base: 'otra' }) && igual(fusionarRegistro(null, segunda), segunda), 'al aplicar otra vez desde la misma semana, lo ya aplicado conserva su decisión y lo nuevo se actualiza');
+  // Toda una copia
+  const copia = { atletas: [{ id: 'at1', nombre: 'Nombre Secreto' }], bloques: [{ id: 'b1', atleta_id: 'at1' }], semanas: [{ id: 'w2', bloque_id: 'b1', propuesta_motor: reg }, { id: 'w3', bloque_id: 'b1', propuesta_motor: null }, { id: 'w4', bloque_id: 'b1', propuesta_motor: { roto: 1 } }],
+    sesion_ejercicios: Object.entries(aplicada).map(([id, p]) => ({ ...p, id })) };
+  const ac = acuerdoDeCopia(congelar(copia));
+  check(ac.semanas === 1 && ac.atletas === 1 && ac.total.propuestas === 2 && ac.total.comoElMotor === 1 && ac.cortes.confianza[fr.banca.c].propuestas >= 1 && ac.cortes.regla['con regla propia'].propuestas === 1 && ac.porAtleta[0].id === 'at1' && ac.porAtleta[0].semanas === 1
+    && !JSON.stringify(ac).includes('Secreto'), 'el acuerdo real de una copia: por confianza, por tipo, por modelo y por atleta (solo ids)');
+  const txt = textoAcuerdoDeCopia(ac);
+  check(txt.includes('Semanas con propuesta guardada: 1 (de 1 atleta)') && txt.includes('Atleta 1 (1 sem.)') && !txt.includes('Secreto') && textoAcuerdoDeCopia(ac, { nombres: { at1: 'Nombre Secreto' } }).includes('Nombre Secreto') && textoAcuerdoDeCopia(acuerdoDeCopia({})).includes('no tiene todavía'), 'y su informe en texto');
+}
+
 console.log('\nVolumen por músculo');
 {
   const sem5 = (n = {}) => ['banca', 'lat', 'sent', 'curl', 'remo'].map((id) => ({ ejercicio_id: id, series: n[id] ?? 3 }));
@@ -741,6 +872,7 @@ console.log('\nPrueba en sombra');
   };
   congelar(copia);
   const inf = sombraDeCopia(copia, { ejemplos: 5 });
+  const inf0 = sombraDeCopia(copia);
   check(igual(inf.pares, { comparados: 2, descarga: 1, noNormal: 0, sinPareja: 0, tipos: { normal: 2 } }), 'compara cada par de semanas seguidas con series y pautas; las de descarga y las plantillas quedan fuera');
   check(inf.series.series === 5 && inf.series.direccion === 4 && inf.series.identicas === 4 && inf.series.direccionPct === 80 && inf.conKilos.series === 5 && inf.sinKilos.series === 0, 'cinco series comparadas: cuatro en la misma dirección e idénticas');
   check(inf.matriz.sube_reps.sube_reps === 4 && inf.matriz.igual.sube_kilos === 1 && igual(inf.diferencias, [{ tipo: 'aislamiento', coach: 'igual', motor: 'sube_kilos', series: 1 }]), 'la matriz y las diferencias dicen dónde no coinciden');
@@ -754,6 +886,9 @@ console.log('\nPrueba en sombra');
   const quieto = sombraDeCopia(copia, { reglas: { atleta: { modelos: { basico: 'mantener', resto: 'mantener' }, inventada: 1 } } });
   const c = compararInformes(inf, quieto);
   check(quieto.series.direccion === 1 && igual(c.series.direccion, [80, 20, -60]) && igual(c.cortes.tipo.multiarticular.identicas, [100, 0, -100]) && textoInforme(inf, { otro: quieto }).includes('(-60)'), 'dos juegos de reglas sobre la misma copia, lado a lado');
+  const conSuyas = { ...copia, atletas: [{ ...copia.atletas[0], reglas_motor: { v: 1, porEjercicio: { remo: { modelo: 'mantener' } } } }, copia.atletas[1]] };
+  check(sombraDeCopia(conSuyas).series.direccion === 1 && igual(sombraDeCopia(conSuyas, { sinGuardadas: true }), inf0) && sombraDeCopia(conSuyas, { reglas: { porEjercicio: { remo: { modelo: 'por_serie' } } } }).series.direccion === 4,
+    'usa las reglas guardadas de cada atleta, como el editor (se pueden ignorar, y las que se pasan mandan)');
   check(sombraDeCopia(copia, { soloAtletas: ['at2'] }).series.series === 0 && igual(sombraDeCopia(copia), sombraDeCopia(copia)) && sombraDeCopia({}).pares.comparados === 0, 'se puede acotar a unos atletas, es determinista y no falla con una copia vacía');
 }
 

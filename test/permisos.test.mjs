@@ -6604,6 +6604,39 @@ console.log('\nLa comunidad, quinta tanda: aniversarios, el mes en el equipo, hi
   await sin44.close();
 }
 
+console.log('\n«Programar según FBE», fase 1b: reglas por atleta y propuestas guardadas (migración 046)');
+{
+  await su();
+  const [aR] = await q(`insert into atletas (nombre, perfil_id) values ('Reglas', null) returning id`);
+  await como(pelayo, 'aal2');
+  const reglas = { v: 1, perfil: 'intermedio_fuerza', atleta: { porSerie: { rpeSube: 8.5 } }, porEjercicio: {} };
+  await q(`update atletas set reglas_motor = $1 where id = $2`, [JSON.stringify(reglas), aR.id]);
+  check((await q(`select reglas_motor r from atletas where id = $1`, [aR.id]))[0].r?.perfil === 'intermedio_fuerza', 'el coach guarda las reglas del motor de un atleta');
+  check(await falla(`update atletas set reglas_motor = '[1, 2]'::jsonb where id = $1`, [aR.id])
+    && await falla(`update atletas set reglas_motor = $1 where id = $2`, [JSON.stringify({ x: 'a'.repeat(70000) }), aR.id]),
+    'solo un objeto, y de tamaño razonable');
+  await como(luis);
+  await q(`update atletas set reglas_motor = '{"perfil":"novato_lineal"}'::jsonb where id = $1`, [aLuis.id]).catch(() => {});
+  const propias = await q(`update atletas set reglas_motor = '{"perfil":"novato_lineal"}'::jsonb where id = $1 returning id`, [aLuis.id]).catch(() => []);
+  await como(ana);
+  const ajenas = await q(`select reglas_motor from atletas where id = $1`, [aLuis.id]);
+  await su();
+  check(!propias.length && (await q(`select reglas_motor r from atletas where id = $1`, [aLuis.id]))[0].r === null && !ajenas.length,
+    'el atleta no puede cambiarlas, y otro atleta no las ve');
+  await q(`delete from atletas where id = $1`, [aR.id]);
+  // Lo que propuso el motor, en la semana: lo escribe el coach; el atleta no
+  const [wR] = await q(`select w.id from semanas w join bloques k on k.id = w.bloque_id where k.atleta_id = $1 order by w.numero limit 1`, [aAna.id]);
+  await como(pelayo, 'aal2');
+  await q(`update semanas set propuesta_motor = $1 where id = $2`, [JSON.stringify({ v: 1, filas: [] }), wR.id]);
+  const objeto = await falla(`update semanas set propuesta_motor = '"x"'::jsonb where id = $1`, [wR.id]);
+  await como(ana);
+  const cambia = await q(`update semanas set propuesta_motor = null where id = $1 returning id`, [wR.id]).catch(() => []);
+  await su();
+  check(objeto && !cambia.length && (await q(`select propuesta_motor p from semanas where id = $1`, [wR.id]))[0].p?.v === 1,
+    'el coach apunta en la semana lo que propuso el motor (solo un objeto); el atleta no puede cambiarlo');
+  await q(`update semanas set propuesta_motor = null where id = $1`, [wR.id]);
+}
+
 console.log('\nLa verificación en dos pasos falla cerrada');
 await como(pelayo, 'aal2');
 await q(`update perfiles set exige_2fa = true where id = $1`, [pelayo]);

@@ -22,6 +22,9 @@ jobs:
     # Imagen fija: «ubuntu-latest» pasa a Ubuntu 26 desde octubre de 2026 y puede cambiar la ruta de Chrome o las fuentes
     runs-on: ubuntu-24.04
     env:
+      # En hora de España, como los móviles de los atletas y la base («Europe/Madrid»): en UTC, de 0:00 a 1:00 (o 2:00 en
+      # verano) las pruebas y la base estaban en días distintos y fallaban las que dependen de «hoy»
+      TZ: Europe/Madrid
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       CHROME_PATH: /usr/bin/google-chrome
     steps:
