@@ -353,6 +353,14 @@ export const LIMITE_ARCHIVO_MB = 200;
 // Foto de perfil: tamaño máximo del texto base64 (como la base, perfiles_foto_valida)
 export const FOTO_MAX = 80000;
 
+// Funciones de la base que solo consultan (no cambian nada): no invalidan lo que las pantallas recuerdan. Si falta
+// alguna, solo pasa que esa pantalla vuelve a cargar en vez de salir al momento
+const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
+  'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
+  'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
+  'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_cardio_en_retos']);
+
 export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
   let generacion = 0;
@@ -376,6 +384,16 @@ export function crearApi(backend) {
     b[m] = (...a) => {
       const r = f(...a);
       if (avisa(m, a[0], a[1])) Promise.resolve(r).then(() => empujar(), () => {});
+      // (pulido 4) Lo que las pantallas recuerdan para enseñarlo al volver (useCarga, «recuerdo») deja de valer en
+      // cuanto se escribe algo desde aquí: lo que acabas de cambiar nunca se enseña como estaba antes. Se avisa al
+      // pedirlo y al acabar (por lo que se estuviera cargando mientras). Las funciones que solo consultan no cuentan
+      // (ni marcar como leídos los mensajes que se están viendo: pasa solo al abrir un chat)
+      const soloLeido = m === 'update' && a[0] === 'comentarios' && Object.keys(a[1] || {}).join() === 'leido_en';
+      if (typeof window !== 'undefined' && !soloLeido && (m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]))) {
+        const avisar = () => { try { window.dispatchEvent(new Event('fbe-escritura')); } catch { /* */ } };
+        avisar();
+        Promise.resolve(r).then(avisar, avisar);
+      }
       // Las pantallas que resumen varias cosas («Tu día») se ponen al día tras cualquier escritura
       if (typeof window !== 'undefined') Promise.resolve(r).then(() => window.dispatchEvent(new Event('fbe-cambio')), () => {});
       return r;

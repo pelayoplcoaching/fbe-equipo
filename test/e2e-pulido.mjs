@@ -284,6 +284,15 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
       await p.waitForTimeout(350);
       const ficha2 = await p.evaluate(() => ({ pestanas: document.querySelectorAll('.pestanas [role=tab]').length, cargandoFicha: [...document.querySelectorAll('.siluetas')].filter((e) => /la ficha/.test(e.textContent)).length }));
       check(ficha2.pestanas > 3 && ficha2.cargandoFicha === 0, 'una ficha que ya se abrió vuelve a abrirse al momento');
+      // Pero lo que se cambia desde aquí no se enseña como estaba antes: tras escribir algo, la lista se carga de nuevo
+      await p.getByRole('button', { name: 'Volver a atletas' }).tap();
+      await filas.first().waitFor();
+      await irASeccion(p, 'Revisar');
+      await p.locator('.tarjeta-revisar button.revisar-hecho[data-deshacer]').first().tap();
+      await p.locator('.toast').filter({ hasText: /revisad/i }).first().waitFor({ timeout: 8000 });
+      await irASeccion(p, 'Atletas');
+      const recarga = await p.locator('main .siluetas').first().waitFor({ timeout: 2500 }).then(() => true).catch(() => false);
+      check(recarga, 'tras cambiar algo desde este dispositivo (marcar una sesión como revisada), la lista se vuelve a cargar: no se enseña la de antes');
       await ctx.close();
     }
     {

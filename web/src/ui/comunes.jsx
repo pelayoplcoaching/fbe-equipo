@@ -556,8 +556,13 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
 // (pulido 4) recuerdo: una clave para recordar, mientras la app esté abierta, lo último que se cargó. Al volver a esa
 // pantalla se enseña al momento lo recordado y se pone al día por detrás, sin esqueletos (como hacen las apps del
 // móvil al volver a una lista). Solo en memoria: no se guarda nada en el dispositivo y se olvida al salir de la cuenta.
+// Lo recordado deja de valer en cuanto se escribe algo desde este dispositivo («fbe-escritura», de datos/api.js): lo
+// que se acaba de cambiar no se enseña como estaba antes, se vuelve a cargar. (Lo que cambie otra persona llega con la
+// puesta al día de detrás.)
 const recuerdos = new Map();
-export function olvidarRecuerdos() { recuerdos.clear(); }
+let escrituras = 0;
+export function olvidarRecuerdos() { escrituras++; recuerdos.clear(); }
+if (typeof window !== 'undefined') window.addEventListener('fbe-escritura', olvidarRecuerdos);
 export function useCarga(fn, deps = [], opciones = {}) {
   const { recuerdo = null } = opciones;
   const recordado = () => (recuerdo && recuerdos.has(recuerdo) ? recuerdos.get(recuerdo) : null);
@@ -574,10 +579,12 @@ export function useCarga(fn, deps = [], opciones = {}) {
   const cargar = useCallback(async (silencioso = false) => {
     const n = ++ultima.current;
     const clave = claveRecuerdo.current;
+    const antes = escrituras;
     if (!silencioso) setEstado((e) => ({ ...e, cargando: true, error: null }));
     try {
       const datos = await fn();
-      if (clave && datos != null) recuerdos.set(clave, datos);
+      // (solo se recuerda lo que se cargó entero sin que se escribiera nada mientras)
+      if (clave && datos != null && antes === escrituras) recuerdos.set(clave, datos);
       if (vivo.current && n === ultima.current) { base.current = datos; setEstado({ datos: conPendientes(datos), error: null, cargando: false }); }
     } catch (error) {
       reportarError(error, 'carga');
