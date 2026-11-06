@@ -2,8 +2,8 @@
 // semana frente a lo que sueles llevar a estas alturas) y Cómo llegas (lo que contestaste hoy en «¿Cómo llegas hoy?»).
 // Tocar uno abre una hoja con lo que lo alimenta y una explicación corta. Solo los ve el atleta (en su Hoy): «Cómo
 // llegas» es dato de salud y solo sale con su consentimiento.
-import { useState } from 'preact/hooks';
-import { useApp, useCarga, Hoja, Icono } from '../comunes.jsx';
+import { useId, useState } from 'preact/hooks';
+import { useApp, useCarga, Hoja, Icono, DegradadoAro } from '../comunes.jsx';
 import { prepMarcadas, marcarPrepHoy } from './prep-hoy.js';
 import { Preparacion } from './Preparacion.jsx';
 import { dialConstancia, dialCarga, dialComoLlegas, preparacionDeHoy, sesionParaContestar, conSeriesDeHoy, arcoDial, BANDA_CARGA } from '../../logica/tablero.js';
@@ -16,12 +16,14 @@ import { sesionesDeLaSemana, textoDiasSemana } from '../../logica/semana-natural
 function Esfera({ frac, banda = null, aguja = false, children }) {
   const T = 64, G = 7;
   const a = arcoDial(frac, T, G);
+  const deg = `aro-${useId()}`;
   return (
-    <span class="dial-esfera" aria-hidden="true">
+    <span class={`dial-esfera ${!aguja && frac >= 1 ? 'completo' : ''}`} aria-hidden="true">
       <svg viewBox={`0 0 ${T} ${T}`}>
+        <DegradadoAro id={deg} />
         <path class="dial-pista" d={a.d} stroke-width={G} />
         {banda && <path class="dial-banda" d={a.d} stroke-width={G} stroke-dasharray={`0 ${a.largo * banda[0]} ${a.largo * (banda[1] - banda[0])} ${a.largo}`} />}
-        {!aguja && frac > 0 && <path class="dial-arco" d={a.d} stroke-width={G} stroke-dasharray={`${a.lleno} ${a.largo + 10}`} />}
+        {!aguja && frac > 0 && <path class="dial-arco" style={{ stroke: `url(#${deg})` }} d={a.d} stroke-width={G} stroke-dasharray={`${a.lleno} ${a.largo + 10}`} />}
         {aguja && <circle class="dial-aguja" cx={a.punto.x} cy={a.punto.y} r="5.5" />}
       </svg>
       <span class="dial-centro marcador">{children}</span>

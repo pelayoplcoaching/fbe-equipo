@@ -26,6 +26,7 @@ import { ajuste } from '../ajustes.js';
 import { AvisoCobro } from './Cobro.jsx';
 import { HojaCuestionario, TarjetaCuestionario, pendiente } from './Cuestionario.jsx';
 import { TarjetaCardio } from './Sesion.jsx';
+import { ArteSesion } from './Portada.jsx';
 import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '../../logica/cardio.js';
 import { HojaTarea } from '../Tareas.jsx';
 import { TarjetaMes } from './TuMes.jsx';
@@ -396,6 +397,9 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} panel={panelDia} alCerrar={cerrarDia} />}
       <section class={`hero-dia hero-${e.tipo}`} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
         {e.tipo !== 'entreno' && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
+        {/* (diseño, tanda 15) el dibujo de la sesión (el mismo de su portada), al fondo de la tarjeta: cada día, el suyo.
+            Sale cuando ya se sabe qué ejercicios lleva (su patrón principal decide el dibujo): así es el mismo que verá al abrirla */}
+        {e.tipo === 'entreno' && siguiente && det.datos && <ArteSesion nombre={siguiente.nombre} tipo={siguiente.tipo || 'fuerza'} patron={resumenSigue?.patrones?.[0] || null} clase="hero-arte" />}
         <div class="titular">
           <div class="contexto">
             <span>Bloque {p.bloque.numero}: {p.bloque.nombre}</span>

@@ -1556,6 +1556,18 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(sp.length === 6 && sp[0].lunes === '2026-09-21' && igual(sp[4], { lunes: '2026-10-19', hechas: 2, total: 3 }) && igual(sp[5], { lunes: '2026-10-26', hechas: 1, total: 1 }) && sp[1].total === 0,
     'sesiones: hechas de las programadas en cada una de las 6 últimas semanas');
   check(trazoChispa([1, 2, 3], 64, 20, 2) === 'M2.0 18.0 L32.0 10.0 L62.0 2.0' && trazoChispa([5, 5], 64, 20, 2) === 'M2.0 10.0 L62.0 10.0' && trazoChispa([]) === '', 'la línea de la minigráfica, de izquierda a derecha');
+  // (diseño, tanda 15) El trazo suave de las gráficas: pasa por todos los puntos y entre dos de ellos no se sale de sus valores
+  {
+    const { trazoSuave } = await import('../web/src/logica/visual.js');
+    const pts = [[0, 50], [10, 20], [20, 20], [30, 60], [40, 10], [50, 12]];
+    const d = trazoSuave(pts);
+    const tramos = [...d.matchAll(/C([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+)/g)].map((m) => m.slice(1).map(Number));
+    check(d.startsWith('M0.0 50.0') && tramos.length === pts.length - 1 && tramos.every((t, i) => t[4] === pts[i + 1][0] && t[5] === pts[i + 1][1]), 'el trazo suave pasa por cada punto, con un tramo por cada par');
+    check(tramos.every((t, i) => { const a = Math.min(pts[i][1], pts[i + 1][1]) - 0.11, b = Math.max(pts[i][1], pts[i + 1][1]) + 0.11; return t[1] >= a && t[1] <= b && t[3] >= a && t[3] <= b; })
+      && tramos[1][1] === 20 && tramos[1][3] === 20, 'y no inventa picos ni valles: entre dos puntos se queda entre sus valores (y entre dos iguales, recto)');
+    check(trazoSuave([[0, 5], [10, 8]]) === 'M0.0 5.0 L10.0 8.0' && trazoSuave([[3, 4]]) === 'M3.0 4.0' && trazoSuave([]) === '' && trazoSuave([[0, 1], [NaN, 2], [10, 3]]) === 'M0.0 1.0 L10.0 3.0',
+      'con uno o dos puntos, una recta; sin puntos, nada; y un punto sin valor no rompe el trazo');
+  }
 
   console.log('\nv0.49: grupos del chat');
   const t0 = Date.parse('2026-11-01T10:00:00Z');

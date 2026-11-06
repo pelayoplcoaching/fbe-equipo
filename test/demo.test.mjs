@@ -833,7 +833,8 @@ console.log('\nDías de entreno por semana en la demo (v0.53, como la 031)');
   check(c.racha === (hechasHoy === 3 ? 3 : 2) && c.semanasCompletas === (hechasHoy === 3 ? 5 : 4), `racha de ${c.racha} semanas completas seguidas (la de hace 3 se quedó en 2) y ${c.semanasCompletas} en total`);
   const sem = await a6.resumenesSemanales(ivan.id, 2);
   check(sem[0].sesiones.total === 3 && sem[0].sesiones.completa && sem[0].objetivoSemanal === 3, '«Tu semana»: la pasada, 3 de 3, completa');
-  check((await a6.logros(ivan.id)).cuentas.racha === 2, 'el logro «Semanas completas», con su objetivo (2 seguidas como mucho)');
+  // (v0.93) los sábados y domingos su semana ya está completa (3 de 3) y la racha llega a 3, como en la constancia
+  check((await a6.logros(ivan.id)).cuentas.racha === (hechasHoy === 3 ? 3 : 2), 'el logro «Semanas completas», con su objetivo (las seguidas como mucho)');
   check(await lanza(() => b6.update('atletas', { dias_semana: 7 }, { eq: { id: ivan.id } }).then((r) => { if (r.length) throw new Error('cambiado'); })) === false
     && (await a6.miAtleta()).dias_semana === 3, 'Iván no puede cambiarse el objetivo (como la base)');
   check(pend.length > 0, 'le quedan sesiones de su bloque');

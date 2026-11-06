@@ -1,7 +1,7 @@
 import { createContext, Component, render as pintarEn, h } from 'preact';
 import { reportarError } from '../registro-errores.js';
 import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { escalaGrafica, puntoMasCercano, indicesRecord } from '../logica/visual.js';
+import { escalaGrafica, puntoMasCercano, indicesRecord, trazoSuave } from '../logica/visual.js';
 import { num, leerNumero } from '../logica/calculos.js';
 import { LOBO } from './marca-lobo.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
@@ -125,14 +125,26 @@ export const P = {
   hd: 'M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5zM8 9v6M8 12h3M11 9v6M14 9v6h1a3 3 0 0 0 0-6z',
 };
 
+// (diseño, tanda 15) El degradado de los anillos y los diales: del color del aro (--c o --dial, o el morado) a un tono más
+// claro, a lo largo del trazo. Va dentro del propio SVG (hereda su color) y se usa con style={{ stroke: `url(#id)` }};
+// los colores de las dos paradas, en diseno.css (.aro-ini y .aro-fin).
+// gira: para los aros que van girados un cuarto de vuelta (los que empiezan arriba): así el tono claro queda al principio
+// del trazo y su color entero en la punta, que es la que avanza.
+export function DegradadoAro({ id, gira = false }) {
+  const [a, b] = gira ? ['1', '0'] : ['0', '1'];
+  return <defs><linearGradient id={id} x1={a} y1={a} x2={b} y2={b}><stop class="aro-ini" offset="0" /><stop class="aro-fin" offset="1" /></linearGradient></defs>;
+}
+
 // Anillo de la semana: un segmento por sesión programada; los hechos, en morado
 export function Anillo({ hechas, total, tam = 68 }) {
   const n = Math.max(1, total), R = 26, C = 2 * Math.PI * R;
   const seg = C / n, hueco = n > 1 ? Math.min(5, seg * 0.18) : 0;
+  const deg = `aro-${useId()}`;
   return (
-    <svg class="anillo" viewBox="0 0 64 64" width={tam} height={tam} role="img" aria-label={`${hechas} de ${total} sesiones hechas esta semana`}>
+    <svg class={`anillo ${total > 0 && hechas >= total ? 'completo' : ''}`} viewBox="0 0 64 64" width={tam} height={tam} role="img" aria-label={`${hechas} de ${total} sesiones hechas esta semana`}>
+      <DegradadoAro id={deg} gira />
       {Array.from({ length: n }, (_, i) => (
-        <circle key={i} cx="32" cy="32" r={R} fill="none" stroke-width="8" class={i < hechas ? 'lleno' : 'vacio'}
+        <circle key={i} cx="32" cy="32" r={R} fill="none" stroke-width="8" class={i < hechas ? 'lleno' : 'vacio'} style={i < hechas ? { stroke: `url(#${deg})` } : undefined}
           stroke-dasharray={`${seg - hueco} ${C - seg + hueco}`} stroke-dashoffset={-i * seg - hueco / 2} transform="rotate(-90 32 32)" />
       ))}
       <text x="32" y="37" text-anchor="middle" class="anillo-num">{hechas}/{total}</text>
@@ -1023,8 +1035,17 @@ function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, chi
   const { sel, eventos, caja } = raspado;
   const i = sel ?? n - 1;
   const izq = sel == null ? 0 : Math.max(0, Math.min(100, (xs[sel] / W) * 100));
+  // (diseño, tanda 15) la gráfica se dibuja la primera vez que entra en la pantalla (la clase «trazada»; el dibujo, en diseno.css)
+  const [vista, setVista] = useState(typeof IntersectionObserver === 'undefined');
+  useEffect(() => {
+    const el = caja.current;
+    if (vista || !el) return undefined;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setVista(true); io.disconnect(); } }, { threshold: 0.35 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [vista]);
   return (
-    <div class="grafica-caja" ref={caja}>
+    <div class={`grafica-caja${vista ? ' trazada' : ''}`} ref={caja}>
       <div class="grafica-tactil" role="slider" tabIndex={0} aria-label={etiqueta} aria-valuemin="1" aria-valuemax={n} aria-valuenow={i + 1}
         aria-valuetext={textoPunto(i)} {...eventos}>
         {children}
@@ -1080,13 +1101,13 @@ function useMorph(clave, pts, base) {
 
 // v0.52: una cifra que rueda como un cuentakilómetros al cambiar (cada dígito en su columna, que se desliza; solo
 // transform). Para los lectores de pantalla, el texto tal cual; con «reducir movimiento», sin rodar.
-export function Odometro({ texto, clase = '' }) {
+export function Odometro({ texto, clase = '', desde = null, caja = null }) {
   const t = String(texto ?? '');
   return (
-    <span class={`odometro ${clase}`}>
+    <span class={`odometro ${clase}`} ref={caja}>
       <span class="sr">{t}</span>
       <span class="odo-cifras" aria-hidden="true">
-        {columnasCifra(t).map((c) => (c.digito == null
+        {columnasCifra(desde ?? t).map((c) => (c.digito == null
           ? <span key={`c${c.clave}`} class="odo-c">{c.c}</span>
           : <span key={`d${c.clave}`} class="odo-col"><span class="odo-tira" style={{ transform: `translateY(${-c.digito * 10}%)` }}>{DIGITOS.map((d) => <span key={d}>{d}</span>)}</span></span>))}
       </span>
@@ -1094,6 +1115,24 @@ export function Odometro({ texto, clase = '' }) {
   );
 }
 const DIGITOS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+// (diseño, tanda 16) Una cifra que sube: la primera vez que entra en la pantalla rueda desde cero hasta su valor (es el
+// mismo cuentakilómetros, que empieza con los dígitos a cero); después se comporta como Odometro. El texto de verdad
+// está desde el principio para los lectores de pantalla, y con «reducir movimiento» sale ya puesta.
+export function CifraSube({ texto, clase = '', espera = 120 }) {
+  const t = String(texto ?? '');
+  const ref = useRef(null);
+  const [puesta, setPuesta] = useState(() => typeof IntersectionObserver === 'undefined' || sinMovimiento() || !/[1-9]/.test(t));
+  useEffect(() => {
+    const el = ref.current;
+    if (puesta || !el) return undefined;
+    let reloj = 0;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); reloj = setTimeout(() => setPuesta(true), espera); } }, { threshold: 0.6 });
+    io.observe(el);
+    return () => { io.disconnect(); clearTimeout(reloj); };
+  }, [puesta]);
+  return <Odometro texto={t} clase={clase} desde={puesta ? null : t.replace(/\d/g, '0')} caja={ref} />;
+}
 
 // puntos: [{x: 'YYYY-MM-DD', y: número}]
 // rangoMin: el eje y abarca como poco esto (para que 2000 → 2080 kcal no parezca una montaña)
@@ -1111,7 +1150,8 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
   const raspado = useRaspado(n, xs);
   const morph = useMorph(clave, (puntos || []).map((p, i) => [X(i), Y(p.y)]), H - abj);
   if (!n) return null;
-  const d = puntos.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(' ');
+  // (diseño, tanda 15) en curva suave que pasa por cada punto (logica/visual.js: trazoSuave)
+  const d = trazoSuave(puntos.map((p, i) => [X(i), Y(p.y)]));
   const area = `${d} L${X(n - 1).toFixed(1)} ${H - abj} L${X(0).toFixed(1)} ${H - abj}Z`;
   morph.finales.current = { linea: d, area };
   const etiquetasX = n <= 2 ? puntos.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
@@ -1134,7 +1174,7 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
           </g>
         ))}
         <path class="area-deg" ref={morph.relleno} d={area} fill={`url(#deg-${id})`} />
-        <path class="linea" ref={morph.linea} d={d} />
+        <path class="linea" ref={morph.linea} d={d} pathLength="1" />
         {sel != null && <line class="guia" x1={X(sel)} x2={X(sel)} y1={arr - 6} y2={H - abj} />}
         {puntos.map((p, i) => <circle key={i} class={`punto ${i === n - 1 ? 'ultimo' : ''} ${prs.includes(i) ? 'record' : ''} ${i === sel ? 'elegido' : ''}`} cx={X(i)} cy={Y(p.y)} r={i === sel ? 5.5 : prs.includes(i) ? 4.5 : i === n - 1 ? 4.5 : 3} />)}
         {sel == null && <text class="valor" x={Math.min(X(n - 1), W - der)} y={Y(ultimo.y) - 10} text-anchor="end">{conU(ultimo.y)}</text>}
@@ -1164,7 +1204,7 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave }) {
   const raspado = useRaspado(n, xs);
   const morph = useMorph(clave, (serie || []).map((p) => [X(p.fecha), Y(p.tendencia)]), H - abj);
   if (!n) return null;
-  const linea = serie.map((p, i) => `${i ? 'L' : 'M'}${X(p.fecha).toFixed(1)} ${Y(p.tendencia).toFixed(1)}`).join(' ');
+  const linea = trazoSuave(serie.map((p) => [X(p.fecha), Y(p.tendencia)]));
   const area = `${linea} L${X(dN).toFixed(1)} ${H - abj} L${X(d0).toFixed(1)} ${H - abj}Z`;
   morph.finales.current = { linea, area };
   const paso = hi - lo > 6 ? 1 : 0.5;
@@ -1183,7 +1223,7 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave }) {
         ))}
         <path class="area-deg" ref={morph.relleno} d={area} fill={`url(#deg-${id})`} />
         {serie.map((p) => <circle key={p.fecha} class="pesada" cx={X(p.fecha)} cy={Y(p.kg)} r="2.6" />)}
-        <path class="linea" ref={morph.linea} d={linea} />
+        <path class="linea" ref={morph.linea} d={linea} pathLength="1" />
         {sel != null && <line class="guia" x1={xs[sel]} x2={xs[sel]} y1={arr - 6} y2={H - abj} />}
         {sel != null && <circle class="punto elegido" cx={xs[sel]} cy={Y(serie[sel].tendencia)} r="5.5" />}
         <circle class="punto ultimo" cx={X(ult.fecha)} cy={Y(ult.tendencia)} r="4.5" />

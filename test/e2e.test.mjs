@@ -3491,7 +3491,7 @@ try {
   const morfa = await p.waitForFunction(() => document.querySelector('.grafica.morfando'), null, { timeout: 1500 }).then(() => true).catch(() => false);
   await p.waitForFunction(() => !document.querySelector('.grafica.morfando'), null, { timeout: 3000 }).catch(() => {});
   check(morfa && (await rangoF.locator('button[aria-pressed="true"]').textContent()) === 'Todo', 'al cambiar de rango, la línea se transforma en la nueva');
-  // Con otro ejercicio (otros datos), la línea pasa de una forma a la otra y acaba en el trazo de verdad (con una esquina en cada punto)
+  // Con otro ejercicio (otros datos), la línea pasa de una forma a la otra y acaba en el trazo de verdad (que pasa por cada punto)
   const dAntes = await lineaF.getAttribute('d');
   const valorAntes = (await seccionF.locator('.cifra .odometro.v .sr').textContent()).trim();
   await seccionF.getByRole('group', { name: 'Ejercicio' }).locator('button[aria-pressed="false"]').first().click();
@@ -3499,8 +3499,9 @@ try {
   await p.waitForFunction(() => !document.querySelector('.grafica.morfando'), null, { timeout: 3000 }).catch(() => {});
   const dDespues = await lineaF.getAttribute('d');
   const valorDespues = (await seccionF.locator('.cifra .odometro.v .sr').textContent()).trim();
-  check(morfa2 && dDespues !== dAntes && /^M[\d.]+ [\d.]+( L[\d.]+ [\d.]+)+$/.test(dDespues) && (dDespues.match(/L/g) || []).length + 1 === await seccionF.locator('svg.grafica .punto').count(),
-    'al cambiar de ejercicio, la línea se transforma en la del otro y acaba en el trazo de verdad (una esquina por punto)');
+  // (diseño, tanda 15) el trazo de verdad es ya una curva suave que pasa por cada punto: un tramo (C, o L si solo hay dos puntos) por cada par
+  check(morfa2 && dDespues !== dAntes && /^M[\d.]+ [\d.]+(( C[-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ [\d.]+ [\d.]+)+|( L[\d.]+ [\d.]+)+)$/.test(dDespues) && (dDespues.match(/[CL]/g) || []).length + 1 === await seccionF.locator('svg.grafica .punto').count(),
+    'al cambiar de ejercicio, la línea se transforma en la del otro y acaba en el trazo de verdad (un tramo por cada par de puntos)');
   check(valorAntes !== valorDespues && await seccionF.locator('.cifra .odometro.v .odo-col').count() >= 2, `y su cifra rueda como un cuentakilómetros (${valorAntes} → ${valorDespues} kg)`);
   const chipDespues = (await seccionF.locator('.cifra .chip .sr').first().textContent().catch(() => '')).trim();
   check(/kg$/.test(chipDespues) && await seccionF.locator('.cifra .chip .odo-col .odo-tira').count() >= 1 && (await seccionF.locator('.cifra .chip').first().textContent()).includes('en todo'),

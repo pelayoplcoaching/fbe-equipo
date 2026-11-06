@@ -2,7 +2,7 @@
 // check-in (el de la semana). Al cerrarse uno, una sola celebración (el trazo se completa y brilla, y vibra si está
 // activado), una vez por anillo y semana en este móvil. Con «reducir movimiento», quietos.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Icono } from '../comunes.jsx';
+import { useApp, useCarga, Icono, DegradadoAro } from '../comunes.jsx';
 import { anillosSemana, anillosPorCelebrar } from '../../logica/tablero.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { vibrar } from '../hapticos.js';
@@ -51,9 +51,10 @@ export function AnillosSemana({ programa, salud, checkinSemana, constancia = nul
             const fiesta = celebrar.includes(a.id);
             return (
               <g key={a.id} data-anillo={a.id} class={fiesta ? 'celebra' : ''} transform={`rotate(-90 ${T / 2} ${T / 2})`} style={{ '--desde': `${C * 0.3}px` }}>
+                <DegradadoAro id={`aro-semana-${a.id}`} gira />
                 <circle class="pista" cx={T / 2} cy={T / 2} r={r} stroke-width={G} />
                 {a.frac > 0 && <circle class="brillo" cx={T / 2} cy={T / 2} r={r} stroke-width={G} stroke-dasharray={`${C} ${C}`} />}
-                {a.frac > 0 && <circle class="lleno" cx={T / 2} cy={T / 2} r={r} stroke-width={G} stroke-dasharray={`${C} ${C}`} stroke-dashoffset={resto} />}
+                {a.frac > 0 && <circle class="lleno" style={{ stroke: `url(#aro-semana-${a.id})` }} cx={T / 2} cy={T / 2} r={r} stroke-width={G} stroke-dasharray={`${C} ${C}`} stroke-dashoffset={resto} />}
               </g>
             );
           })}

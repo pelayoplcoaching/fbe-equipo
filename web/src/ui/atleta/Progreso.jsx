@@ -4,7 +4,7 @@ import { Logros } from '../Logros.jsx';
 import { AnillosSemana } from './Anillos.jsx';
 import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
-import { CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, Pestanas } from '../comunes.jsx';
+import { CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
 import { RANGOS_GRAFICA, filtrarRango, rangoConDatos } from '../../logica/rangos.js';
 import { destacados as calcularDestacados, tonelajePorSemana } from '../../logica/destacados.js';
@@ -154,7 +154,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
               return (
                 <>
                   <div class="cifra">
-                    <Odometro texto={num(ult.valor)} clase="v num" /><span class="u">kg, semana del {fmtCorta(ult.semana)}</span>
+                    <CifraSube texto={num(ult.valor)} clase="v num" /><span class="u">kg, semana del {fmtCorta(ult.semana)}</span>
                     {ganado != null && <span class={`chip num ${ganado > 0 ? 'ok' : ''}`}><Odometro texto={`${conSigno(ganado)} kg`} /> en {nombreRango(rF)}</span>}
                   </div>
                   {pts.length > 1 ? <Grafica records clave={`${rF}:${ej.id}`} puntos={pts.map((p) => ({ x: p.semana, y: p.valor }))} unidad="kg" etiqueta={`1RM estimado en ${ej.nombre}`} />
@@ -174,7 +174,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
           <h2>Tonelaje por semana</h2>
           <div class="panel panel-pad pila">
             <div class="cifra">
-              <Odometro texto={num(mediaTon, 1)} clase="v num" /><span class="u">t de media por semana en {nombreRango(rT)}</span>
+              <CifraSube texto={num(mediaTon, 1)} clase="v num" /><span class="u">t de media por semana en {nombreRango(rT)}</span>
               {ventanaTon.length > 1 && <span class="chip num">Mejor semana: <Odometro texto={`${num(mejorTon, 1)} t`} /></span>}
             </div>
             {ventanaTon.length > 1 ? <Grafica records clave={rT} puntos={ventanaTon.map((w) => ({ x: w.semana, y: Math.round(w.valor / 100) / 10 }))} unidad="t" etiqueta="Tonelaje por semana" />
@@ -559,7 +559,7 @@ function Cifras({ constancia, semanas }) {
     <dl class="cifras panel" aria-label="Tus cifras">
       {celdas.map((x) => (
         <div key={x.k} class={x.destaca ? 'destaca' : ''}>
-          <dd class="num">{x.v}</dd>
+          <dd class="num"><CifraSube texto={x.v} /></dd>
           <dt><Icono n={x.ico} />{x.k}</dt>
         </div>
       ))}

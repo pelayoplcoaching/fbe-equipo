@@ -731,3 +731,133 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    Solo cambia el aviso que lleva botón: los errores de un formulario (.error sin botón) siguen igual. */
 .error:has(> .btn-texto) { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; padding: 10px 10px 10px 14px; }
 .error > .btn-texto { flex: none; min-height: 36px; padding: 0 12px; border-radius: 10px; background: var(--hoja); color: var(--alerta); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alerta) 30%, transparent); }
+
+/* ---------- 26. La tarjeta de Hoy, con el dibujo de la sesión -------------------------------------------------------
+   (ui/atleta/Hoy.jsx: ArteSesion con la clase .hero-arte) La tarjeta del día era un bloque oscuro liso, igual todos los
+   días. Ahora lleva al fondo el dibujo de líneas de la sesión que toca (el mismo de su portada, que sale de su nombre y
+   de su patrón principal): cada sesión se reconoce por su dibujo, como las portadas de Ladder. Va a la derecha y se
+   desvanece hacia el texto, para que el nombre y el botón se lean igual. Aparece con un fundido cuando se sabe qué
+   ejercicios lleva. Los colores, los de .portada-arte (estilos.css 3172–3176). */
+.hero-dia .hero-arte { position: absolute; z-index: -1; top: 0; right: 0; width: 78%; height: 100%; pointer-events: none; opacity: .62;
+  -webkit-mask-image: linear-gradient(to left, #000 18%, rgba(0, 0, 0, .55) 52%, transparent 96%), linear-gradient(to bottom, #000 38%, transparent 92%); -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to left, #000 18%, rgba(0, 0, 0, .55) 52%, transparent 96%), linear-gradient(to bottom, #000 38%, transparent 92%); mask-composite: intersect; }
+.hero-arte .acento { stroke: color-mix(in srgb, var(--morado) 55%, #fff); }
+.hero-arte .claro { stroke: #E7E3FF; }
+.hero-arte .tenue { stroke: #8F88C0; }
+.hero-arte .relleno-punto.tenue { fill: #8F88C0; stroke: none; }
+@media (prefers-reduced-motion: no-preference) { .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both; } }
+@keyframes hero-arte-entra { from { opacity: 0; } }
+
+/* ── 27 · Las gráficas se dibujan (tanda 15) ──────────────────────────────────────────────────────────────────────────
+   La línea es ya una curva suave (logica/visual.js: trazoSuave) y, la primera vez que la gráfica entra en la pantalla
+   (comunes.jsx: CajaGrafica pone «trazada»), se traza de izquierda a derecha; el relleno y los puntos llegan detrás.
+   Solo la línea de datos (la que lleva pathLength): las pautadas, a rayas, no se tocan. Con «reducir movimiento», nada. */
+@media (prefers-reduced-motion: no-preference) {
+  .grafica-caja:not(.trazada) .linea[pathLength] { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .grafica-caja:not(.trazada) :is(.area-deg, .punto, .pesada, text.valor) { opacity: 0; }
+  .grafica-caja.trazada .linea[pathLength] { animation: grafica-traza .9s cubic-bezier(.3, .1, .2, 1) backwards; }
+  .grafica-caja.trazada .area-deg { animation: grafica-asoma .6s ease-out .3s backwards; }
+  .grafica-caja.trazada :is(.punto, .pesada, text.valor) { animation: grafica-asoma .35s ease-out .6s backwards; }
+}
+@keyframes grafica-traza { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
+@keyframes grafica-asoma { from { opacity: 0; } }
+
+/* ── 28 · Marcar una serie con gusto (tanda 16) ───────────────────────────────────────────────────────────────────────
+   Sobre el «pop» que ya tenía el botón (estilos.css 766 y 2558): el ✓ se dibuja de un trazo, la fila recibe un barrido
+   de verde que viene desde el botón y se queda en un velo muy leve (verde = hecho), y la barra de la sesión avanza con
+   la curva de la casa en vez de a tirones. Todo cabe en los 600 ms que dura «recien» (FilaSerie.jsx). */
+.serie.hecha { background: color-mix(in srgb, var(--ok) 7%, transparent); }
+.serie-desliza.arrastrando > .serie.hecha { background: var(--hoja); }
+.barra-sesion span { transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: no-preference) {
+  .serie.recien.hecha { isolation: isolate; }
+  .serie.recien.hecha::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(to left, color-mix(in srgb, var(--ok) 26%, transparent), color-mix(in srgb, var(--ok) 10%, transparent));
+    animation: serie-barrido .55s cubic-bezier(.2, .8, .2, 1) both;
+  }
+  .serie.recien.hecha .hecho-btn svg path { stroke-dasharray: 20; animation: serie-trazo .34s cubic-bezier(.3, .1, .2, 1) .08s backwards; }
+}
+@keyframes serie-barrido { 0% { clip-path: inset(0 0 0 100% round 12px); opacity: 1; } 55% { clip-path: inset(0 round 12px); opacity: 1; } 100% { clip-path: inset(0 round 12px); opacity: 0; } }
+@keyframes serie-trazo { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .barra-sesion span { transition: none; } }
+
+/* ── 29 · Anillos y diales con degradado (tanda 15) ───────────────────────────────────────────────────────────────────
+   El aro lleno ya no es un color plano: va de un tono más claro a su color (comunes.jsx: DegradadoAro, que cada SVG
+   lleva dentro y hereda su --c / --dial), y al completarse deja un brillo leve de su mismo color. Las pistas, igual. */
+.aro-ini { stop-color: color-mix(in srgb, var(--c, var(--dial, var(--morado))) 62%, #fff); }
+.aro-fin { stop-color: var(--c, var(--dial, var(--morado))); }
+.anillo { --c: var(--morado); }
+.hero-dia .anillo { --c: #C9BEFF; }
+.anillo.completo, .dial-esfera.completo svg, .anillo-macro.cumple .anillo-macro-dibujo svg { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--c, var(--dial, var(--morado))) 45%, transparent)); }
+
+/* ── 30 · Un solo lenguaje de movimiento (tanda 16) ───────────────────────────────────────────────────────────────────
+   La app acumulaba 30 duraciones y 23 curvas distintas. La regla desde ahora: tres duraciones y tres curvas.
+     --mov-rapido  lo que responde al dedo (color, pulsado, un interruptor)
+     --mov-medio   lo que cambia dentro de la pantalla (pestañas, tarjetas que llegan, un panel que se abre)
+     --mov-lento   lo que entra entero (una hoja, la tarjeta de Hoy, un dibujo)
+     --curva-casa    la de siempre: sale decidida y frena suave (la más usada ya en estilos.css)
+     --curva-llega   para lo que entra desde fuera: llega rápido y se posa
+     --curva-rebote  solo para celebrar (un récord, una medalla)
+   Se aplica aquí a lo que más se ve: las hojas, las pestañas y las tarjetas. Lo demás de estilos.css conserva sus
+   valores (no se reescribe en masa); lo nuevo, con estas variables. Las salidas no son de esta línea (pulido 3). */
+:root {
+  --mov-rapido: .14s; --mov-medio: .26s; --mov-lento: .42s;
+  --curva-casa: cubic-bezier(.2, .8, .2, 1); --curva-llega: cubic-bezier(.16, 1, .3, 1); --curva-rebote: cubic-bezier(.2, 1.3, .35, 1);
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Hojas (estilos.css 427 y 436): el velo funde y la hoja sube entera desde abajo, como las del sistema; en pantallas
+     anchas, donde es un cuadro centrado, se abre desde un poco más pequeño. Con data-vt="morph" siguen sin animación. */
+  .velo { animation: aparecer var(--mov-medio) var(--curva-casa); }
+  .hoja-dialogo { animation: hoja-sube var(--mov-lento) var(--curva-llega); }
+  @media (min-width: 700px) { .hoja-dialogo { animation: hoja-abre var(--mov-medio) var(--curva-llega); } }
+  /* Pestañas (estilos.css 1282, 2507 y 194): el panel, la píldora de la barra y el fondo del icono, al mismo paso */
+  .vista, .pestana-panel { animation-duration: var(--mov-medio); animation-timing-function: var(--curva-casa); }
+  .tabs-pildora[data-lista] { transition: transform var(--mov-medio) var(--curva-casa), width var(--mov-medio) var(--curva-casa), opacity var(--mov-rapido) var(--curva-casa); }
+  .tab > span:first-child, .tab > .tab-ico { transition: background-color var(--mov-rapido) var(--curva-casa), color var(--mov-rapido) var(--curva-casa); }
+  /* Tarjetas (estilos.css 1714, 2591 y 3433): la de Hoy, las del resumen de la sesión y los destacados */
+  .hero-dia .titular h2, .hero-dia .hero-acciones, .hero-dia .semana-resumen { animation-duration: var(--mov-lento); }
+  .resumen-sesion > :not(.resumen-medalla), .resumen-num > div, .resumen-pr { animation-duration: var(--mov-medio); animation-delay: calc(var(--i, 0) * 45ms); }
+  .destacados-lista > .destacado { animation-duration: var(--mov-lento); animation-delay: calc(var(--i, 0) * 45ms); }
+  /* Lo que llega tras una carga (ui/llegada.js): se funde, pieza a pieza. Solo opacidad: no mueve nada de sitio */
+  .llega { animation: llega var(--mov-medio) var(--curva-casa) calc(var(--orden, 0) * 30ms) backwards; }
+}
+@keyframes hoja-sube { from { transform: translateY(100%); } }
+@keyframes hoja-abre { from { transform: scale(.96); opacity: 0; } }
+@keyframes llega { from { opacity: 0; } }
+
+/* ── 31 · Cuatro niveles de sombra (tanda 15) ─────────────────────────────────────────────────────────────────────────
+   Había 105 sombras distintas, casi todas en gris negro. La regla desde ahora: cuatro niveles, más suaves y con un
+   punto del morado de la marca (en oscuro, donde una sombra de color no se ve, negras):
+     plano     sin sombra (lo que va dentro de una tarjeta)
+     tarjeta   --sombra-tarjeta   el filo de 1 px y una sombra corta        (es --sombra: los paneles y las tarjetas)
+     flotante  --sombra-flotante  lo que flota sobre la página, sin filo    (avisos, el descanso, la fecha del chat)
+     hoja      --sombra-hoja      lo que se abre encima de todo             (es --sombra-alta: hojas, cuadros, paleta)
+   --sombra y --sombra-alta (estilos.css 44, 45, 75 y 91; aquí, línea 28) pasan a ser los niveles 1 y 3, así que todo lo
+   que ya las usaba cambia a la vez. Los brillos de color de un botón (primario, serie hecha) y las sombras hacia arriba
+   de lo que va pegado abajo no son niveles de altura: se quedan como están. */
+:root {
+  --sombra-tarjeta: 0 0 0 1px var(--borde), 0 1px 2px rgba(46, 32, 120, .05), 0 8px 18px -12px rgba(46, 32, 120, .17);
+  --sombra-flotante: 0 3px 8px -3px rgba(46, 32, 120, .12), 0 16px 34px -14px rgba(36, 24, 100, .34);
+  --sombra-hoja: 0 0 0 1px var(--borde), 0 -4px 14px -8px rgba(46, 32, 120, .12), 0 28px 60px -22px rgba(30, 20, 90, .42);
+  --sombra: var(--sombra-tarjeta); --sombra-alta: var(--sombra-hoja);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sombra-tarjeta: 0 0 0 1px var(--borde), 0 1px 2px rgba(0, 0, 0, .3), 0 10px 24px -14px rgba(0, 0, 0, .55);
+    --sombra-flotante: 0 3px 8px -3px rgba(0, 0, 0, .4), 0 16px 34px -14px rgba(0, 0, 0, .7);
+    --sombra-hoja: 0 0 0 1px var(--borde), 0 28px 60px -22px rgba(0, 0, 0, .8);
+    --sombra: var(--sombra-tarjeta); --sombra-alta: var(--sombra-hoja);
+  }
+}
+:root[data-theme="dark"] {
+  --sombra-tarjeta: 0 0 0 1px var(--borde), 0 1px 2px rgba(0, 0, 0, .3), 0 10px 24px -14px rgba(0, 0, 0, .55);
+  --sombra-flotante: 0 3px 8px -3px rgba(0, 0, 0, .4), 0 16px 34px -14px rgba(0, 0, 0, .7);
+  --sombra-hoja: 0 0 0 1px var(--borde), 0 28px 60px -22px rgba(0, 0, 0, .8);
+  --sombra: var(--sombra-tarjeta); --sombra-alta: var(--sombra-hoja);
+}
+/* Lo que flota (estilos.css: .toast, .pildora-descanso, .temporizador, .pildora-subida, .chat-dia-flotante, .chat-sep) */
+.toast, .pildora-descanso, .temporizador, .pildora-subida { box-shadow: var(--sombra-flotante); }
+.chat-dia-flotante { box-shadow: inset 0 0 0 1px var(--borde), var(--sombra-flotante); }
+/* Lo que se abre encima (estilos.css: .paleta; la hoja conserva su brillo de vidrio de arriba) */
+.paleta { box-shadow: var(--sombra-hoja); }

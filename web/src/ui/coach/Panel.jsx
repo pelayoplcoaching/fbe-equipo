@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { HojaAvisos } from '../Avisos.jsx';
 import { useEstrecha } from '../BarraMas.jsx';
-import { CabeceraGrande, useUnaVez, Siluetas, Reserva, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos } from '../comunes.jsx';
+import { CabeceraGrande, useUnaVez, Siluetas, Reserva, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos, DegradadoAro } from '../comunes.jsx';
 import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO } from '../../logica/nivel.js';
 import { BandaDemo } from '../App.jsx';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
@@ -205,7 +205,7 @@ function EquipoHoy({ eq, porRevisar, irARevisar, filtro, alFiltrar }) {
     <section class="panel equipo-hoy" aria-label="Hoy en tu equipo">
       <div role="img" aria-label={`Han entrenado hoy ${eq.entrenaron} de ${eq.activos} activos`} class="eh-dial">
         <span class="dial-esfera" aria-hidden="true">
-          <svg viewBox="0 0 64 64"><path class="dial-pista" d={a.d} stroke-width="7" />{eq.entrenaron > 0 && <path class="dial-arco" d={a.d} stroke-width="7" stroke-dasharray={`${a.lleno} ${a.largo + 10}`} />}</svg>
+          <svg viewBox="0 0 64 64"><DegradadoAro id="aro-equipo-hoy" /><path class="dial-pista" d={a.d} stroke-width="7" />{eq.entrenaron > 0 && <path class="dial-arco" style={{ stroke: 'url(#aro-equipo-hoy)' }} d={a.d} stroke-width="7" stroke-dasharray={`${a.lleno} ${a.largo + 10}`} />}</svg>
           <span class="dial-centro marcador"><span>{eq.entrenaron}<span class="u">/{eq.activos}</span></span></span>
         </span>
         <span class="eh-k" aria-hidden="true">Entrenaron hoy</span>

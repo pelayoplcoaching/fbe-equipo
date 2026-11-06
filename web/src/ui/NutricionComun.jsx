@@ -1,6 +1,7 @@
 // Piezas de nutrición que comparten el atleta y el coach: el plan en una tarjeta, las barras de macros y la
 // gráfica de lo comido cada día frente a lo que tocaba.
-import { useAncho, Icono } from './comunes.jsx';
+import { useId } from 'preact/hooks';
+import { useAncho, Icono, DegradadoAro } from './comunes.jsx';
 import { fmtCorta, fmtConDia, diasEntre } from '../logica/fechas.js';
 import { NOMBRE_FASE, fmtKcal, kcalMediaPlan } from '../logica/nutricion.js';
 import { macrosDia } from '../logica/diseno.js';
@@ -73,12 +74,14 @@ export function MacrosDia({ reg, obj, titulo = null }) {
 function AnilloMacro({ x }) {
   const R = 26, C = 2 * Math.PI * R;
   const f = Math.min(1, x.frac);
+  const deg = `aro-${useId()}`;
   return (
     <li class={`anillo-macro m-${x.id} ${x.estado}`}>
       <span class="anillo-macro-dibujo" role="img" aria-label={`${x.nombre}: ${x.valor == null ? 'sin apuntar' : `${num(x.valor, 0)} de ${num(x.objetivo, 0)} g`}`}>
         <svg viewBox="0 0 64 64" aria-hidden="true">
+          <DegradadoAro id={deg} gira />
           <circle class="carril" cx="32" cy="32" r={R} />
-          {x.valor != null && f > 0 && <circle class="lleno" cx="32" cy="32" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - f)} transform="rotate(-90 32 32)" />}
+          {x.valor != null && f > 0 && <circle class="lleno" style={{ stroke: `url(#${deg})` }} cx="32" cy="32" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - f)} transform="rotate(-90 32 32)" />}
         </svg>
         <span class="anillo-macro-v num" aria-hidden="true">{x.valor == null ? '—' : num(x.valor, 0)}</span>
       </span>
