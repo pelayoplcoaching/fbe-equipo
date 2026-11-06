@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.88': {
+    atleta: [
+      'Los títulos de las pantallas tienen todos el mismo tamaño.',
+    ],
+  },
+  '0.87': {
+    atleta: [
+      'El muro del equipo empieza por las publicaciones: Próximos, Compañeros de racha y los resúmenes se abren tocando su pastilla.',
+      'El cuadro de publicar se despliega al tocarlo.',
+    ],
+  },
   '0.86': {
     coach: [
       '«A quién escribir»: cuánto contacto llevas con cada atleta, a quién toca escribir hoy y por qué, con un borrador corto.',
