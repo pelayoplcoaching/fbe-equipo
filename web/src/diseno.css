@@ -761,3 +761,23 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 }
 @keyframes grafica-traza { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
 @keyframes grafica-asoma { from { opacity: 0; } }
+
+/* ── 28 · Marcar una serie con gusto (tanda 16) ───────────────────────────────────────────────────────────────────────
+   Sobre el «pop» que ya tenía el botón (estilos.css 766 y 2558): el ✓ se dibuja de un trazo, la fila recibe un barrido
+   de verde que viene desde el botón y se queda en un velo muy leve (verde = hecho), y la barra de la sesión avanza con
+   la curva de la casa en vez de a tirones. Todo cabe en los 600 ms que dura «recien» (FilaSerie.jsx). */
+.serie.hecha { background: color-mix(in srgb, var(--ok) 7%, transparent); }
+.serie-desliza.arrastrando > .serie.hecha { background: var(--hoja); }
+.barra-sesion span { transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: no-preference) {
+  .serie.recien.hecha { isolation: isolate; }
+  .serie.recien.hecha::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(to left, color-mix(in srgb, var(--ok) 26%, transparent), color-mix(in srgb, var(--ok) 10%, transparent));
+    animation: serie-barrido .55s cubic-bezier(.2, .8, .2, 1) both;
+  }
+  .serie.recien.hecha .hecho-btn svg path { stroke-dasharray: 20; animation: serie-trazo .34s cubic-bezier(.3, .1, .2, 1) .08s backwards; }
+}
+@keyframes serie-barrido { 0% { clip-path: inset(0 0 0 100% round 12px); opacity: 1; } 55% { clip-path: inset(0 round 12px); opacity: 1; } 100% { clip-path: inset(0 round 12px); opacity: 0; } }
+@keyframes serie-trazo { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .barra-sesion span { transition: none; } }
