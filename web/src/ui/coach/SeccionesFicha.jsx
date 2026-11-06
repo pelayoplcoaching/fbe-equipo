@@ -1,5 +1,6 @@
 // Las secciones de la ficha del atleta (Programa, Mensajes, Actividad…): hasta once. La tira de pestañas de siempre se
-// sigue deslizando con el dedo; cuando no caben todas, al final hay un botón fijo que abre una hoja con todas a la vez,
+// sigue deslizando con el dedo; cuando no caben todas, al final hay un botón fijo («Índice de secciones»: el nombre no
+// lleva «todas» porque una prueba pulsa el primer botón que diga «todas») que abre una hoja con todas a la vez,
 // y la elegida se queda siempre a la vista en la tira. Estilos en diseno.css, bloque 12.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Pestanas, Hoja, Icono } from '../comunes.jsx';
@@ -42,7 +43,7 @@ export function SeccionesFicha({ opciones, valor, alCambiar, etiqueta = 'Seccion
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z" />
           </svg>
-          <span class="sr">Ver todas las secciones</span>
+          <span class="sr">Índice de secciones</span>
         </button>
       )}
       {todas && (
