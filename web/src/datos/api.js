@@ -30,7 +30,7 @@ import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { copia as copiaDelMovil } from './copia.js';
-import { CLAVES_COPIA, sesionesAPreparar, sesionConCola } from '../logica/sin-red.js';
+import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
 import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045 } from '../legal.js';
@@ -118,6 +118,11 @@ const falta031 = (e) => {
     throw new Error(`Para los días de entreno por semana falta ejecutar la migración 031 en Supabase (supabase/migraciones/031_dias_semana.sql). Detalle: ${m}`);
   }
   throw e;
+};
+// (pulido 3) Sin la migración 048 (las listas ligeras), la app lo pide como antes: no es un error
+const falta048 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
+  return /conversaciones_resumen|ultimas_series|biblioteca_huella|historial_huella/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
 };
 // La comunidad (v0.43) sin la migración 027
 const falta027 = (e) => {
@@ -364,7 +369,7 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
-  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de']);
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -430,7 +435,19 @@ export function crearApi(backend) {
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc', 'sql']) {
     if (typeof backend[m] !== 'function') continue;
     const directo = backend[m].bind(backend);
-    backend[m] = (...a) => { if (!esEscritura(m, a)) return directo(...a); generacion++; return enVuelo(directo(...a)); };
+    backend[m] = (...a) => {
+      if (!esEscritura(m, a)) return directo(...a);
+      generacion++;
+      const r = enVuelo(directo(...a));
+      // (pulido 3.4) también lo que se escribe directo en el backend (algunas pantallas lo usan así) avisa a las pantallas
+      // de que lo recordado ya no vale; menos marcar como leídos los mensajes que se están viendo (pasa solo al abrir un chat)
+      if (typeof window !== 'undefined' && !(m === 'update' && a[0] === 'comentarios' && Object.keys(a[1] || {}).join() === 'leido_en')) {
+        const avisar = () => { try { window.dispatchEvent(new Event('fbe-escritura')); } catch { /* */ } };
+        avisar();
+        Promise.resolve(r).then(avisar, avisar);
+      }
+      return r;
+    };
   }
   if (typeof backend.storage?.subir === 'function') { const subir = backend.storage.subir.bind(backend.storage); backend.storage.subir = (...a) => enVuelo(subir(...a)); }
   const copiarFilas = (r) => (Array.isArray(r) ? r.map((x) => (x && typeof x === 'object' && !Array.isArray(x) ? { ...x } : x)) : r);
@@ -466,9 +483,29 @@ export function crearApi(backend) {
         Promise.resolve(r).then(avisar, avisar);
       }
       // Las pantallas que resumen varias cosas («Tu día») se ponen al día tras cualquier escritura
-      if (typeof window !== 'undefined') Promise.resolve(r).then(() => window.dispatchEvent(new Event('fbe-cambio')), () => {});
+      // (pulido 3.4: las funciones que solo consultan no avisan; antes, cada una hacía recargar «Tu día», las tareas y
+      // la insignia de mensajes sin que hubiera cambiado nada)
+      if (typeof window !== 'undefined' && esEscritura(m, a)) Promise.resolve(r).then(() => window.dispatchEvent(new Event('fbe-cambio')), () => {});
       return r;
     };
+  }
+  // (pulido 3, migración 048) ¿Están las funciones de las listas ligeras? Se sabe al primer intento (null: aún no)
+  let con048 = null;
+  const CLAVE_HISTORIAL = (atletaId) => `historial:${atletaId}`;
+  const historialesGuardados = new Map();   // «cuenta:atleta» → { corte, huella, filas } (los últimos que se han visto)
+  // De quién hay historial guardado en este dispositivo: una nota a mano (localStorage) para no abrir la base del
+  // navegador cuando no hay nada que leer (la primera vez, eso solo retrasaría lo que se va a pedir de todos modos)
+  const NOTA_HISTORIAL = 'fbe-historial-hay', NOTA_BIBLIOTECA = 'fbe-biblioteca-hay';
+  const notaHistorial = () => { try { const x = JSON.parse(localStorage.getItem(NOTA_HISTORIAL) || '[]'); return Array.isArray(x) ? x : []; } catch { return []; } };
+  const apuntarHistorial = (k) => { try { localStorage.setItem(NOTA_HISTORIAL, JSON.stringify([k, ...notaHistorial().filter((x) => x !== k)].slice(0, 80))); } catch { /* sin almacenamiento */ } };
+  const guardandoHistorial = new Map();   // «cuenta:atleta» → lo que se está guardando (para no pedir entero dos veces seguidas)
+  const CLAVE_BIBLIOTECA = 'biblioteca';
+  let bibliotecaGuardada = null;   // { de: cuenta, huella, filas }
+  async function ultimasSeries(ids) {
+    if (con048 !== false) {
+      try { const r = await b.rpc('ultimas_series', { p_atletas: ids }); con048 = true; return (r || []).map((x) => [x]); } catch (e) { if (!falta048(e)) throw e; con048 = false; }
+    }
+    return Promise.all(ids.map((id) => b.select('series', { eq: { atleta_id: id }, order: [['registrada_en', 'desc']], limit: 1, cols: 'atleta_id,registrada_en' })));
   }
   // El historial completo lo piden a la vez varias partes de una pantalla (gráficas, récords, actividad…):
   // se descarga una vez y se reparte, mientras no haya escrituras y durante unos segundos como mucho
@@ -1446,24 +1483,65 @@ export function crearApi(backend) {
       p.catch(() => { if (historiales.get(clave) === entrada) historiales.delete(clave); });
       return (await p).map((s) => ({ ...s }));
     },
+    // (pulido 3.1) El historial ya no se baja entero en cada visita. Lo antiguo (las series anteriores a un «corte»)
+    // se guarda en el dispositivo, con la copia de siempre (por cuenta, se borra al cerrar la sesión), y cada vez se
+    // pregunta a la base por su huella (migración 048: una respuesta de unas letras). Si es la de lo guardado, solo
+    // se piden las series desde el corte; si no (se cambió o se borró algo antiguo), se baja todo otra vez. El corte
+    // se va adelantando solo. Sin la migración, se baja entero como hasta ahora (ya sin las columnas que no se usan).
     async historialSinCompartir(atletaId) {
-      // Todas (el adaptador de Supabase pagina de 1000 en 1000): con un tope, a los pocos años se perderían las más nuevas
-      const series = await b.select('series', { eq: { atleta_id: atletaId }, order: [['registrada_en', 'asc']] });
-      const pautas = porId(await b.select('sesion_ejercicios', { in: { id: unicos(series.map((s) => s.sesion_ejercicio_id)) } }));
-      const [sesiones, ejercicios] = await Promise.all([
-        b.select('sesiones', { in: { id: unicos(Object.values(pautas).map((p) => p.sesion_id)) } }).then(porId),
-        b.select('ejercicios', { in: { id: unicos([...Object.values(pautas).map((p) => p.ejercicio_id), ...series.map((s) => s.sustituto_id)]) } }).then(porId),
-      ]);
-      return series.map((s) => {
-        const p = pautas[s.sesion_ejercicio_id] || {};
-        const ef = s.sustituto_id || p.ejercicio_id;
+      const yo = uid();
+      let g = null;
+      const k = `${yo}:${atletaId}`;
+      if (guardandoHistorial.has(k)) await guardandoHistorial.get(k);
+      if (yo && atletaId && con048 !== false) {
+        g = historialesGuardados.get(k) || (notaHistorial().includes(k) ? (await copiaDelMovil().leer(yo, CLAVE_HISTORIAL(atletaId)).catch(() => null))?.datos : null) || null;
+        if (g && !(typeof g.corte === 'string' && typeof g.huella === 'string' && Array.isArray(g.filas))) g = null;
+        if (g) {
+          try { if ((await b.rpc('historial_huella', { p_atleta: atletaId, p_antes: g.corte })) === g.huella) con048 = true; else g = null; } catch (e) { if (!falta048(e)) throw e; con048 = false; g = null; }
+        }
+      }
+      // Lo nuevo (o todo): las series con, de su pauta, la sesión y el ejercicio, y el día de la sesión
+      // (todas: el adaptador de Supabase pagina de 1000 en 1000; con un tope, a los pocos años se perderían las más nuevas)
+      const series = await b.select('series', { eq: { atleta_id: atletaId }, ...(g ? { gte: { registrada_en: g.corte } } : {}), order: [['registrada_en', 'asc']] });
+      const pautas = porId(series.length ? await b.select('sesion_ejercicios', { in: { id: unicos(series.map((s) => s.sesion_ejercicio_id)) }, cols: 'id,sesion_id,ejercicio_id' }) : []);
+      const sesIds = unicos(Object.values(pautas).map((p) => p.sesion_id));
+      const sesiones = porId(sesIds.length ? await b.select('sesiones', { in: { id: sesIds }, cols: 'id,fecha_realizada' }) : []);
+      const nuevas = series.map((s) => { const p = pautas[s.sesion_ejercicio_id] || {}; return { ...s, _sesion: p.sesion_id || null, _pautado: p.ejercicio_id || null, _dia: sesiones[p.sesion_id]?.fecha_realizada || null }; });
+      const todas = g ? [...g.filas, ...nuevas] : nuevas;
+      // Los nombres de los ejercicios, siempre de ahora (son pocos y pueden cambiar)
+      const ejIds = unicos(todas.flatMap((s) => [s._pautado, s.sustituto_id]));
+      const ejercicios = porId(ejIds.length ? await b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre,grupos_musculares' }) : []);
+      // Adelantar el corte: la primera vez, cuando lo nuevo ya es mucho o cuando el corte se queda viejo. Lo de la última
+      // semana se pide siempre (es lo que se corrige); lo anterior queda guardado con la huella que da la base ahora
+      if (yo && atletaId && con048 !== false && todas.length && (!g || nuevas.length > 250 || Date.now() - Date.parse(g.corte) > 21 * 86400000)) {
+        const corte = new Date(Date.now() - 7 * 86400000).toISOString();
+        const antiguas = todas.filter((s) => Date.parse(s.registrada_en) < Date.parse(corte));
+        // (sin esperar: lo que se va a enseñar ya está; guardar para la próxima vez no tiene por qué retrasarlo)
+        const guardar = (async () => {
+          try {
+            const huella = await b.rpc('historial_huella', { p_atleta: atletaId, p_antes: corte });
+            con048 = true;
+            // (solo si cuadra con lo que hay aquí: si alguien registró o borró algo entre medias, ya se guardará a la siguiente)
+            if (uid() === yo && Number(String(huella).split(':')[0]) === antiguas.length) {
+              const nuevo = { corte, huella, filas: antiguas };
+              historialesGuardados.delete(k);
+              historialesGuardados.set(k, nuevo);
+              for (const x of [...historialesGuardados.keys()].slice(0, Math.max(0, historialesGuardados.size - 6))) historialesGuardados.delete(x);
+              if (await copiaDelMovil().guardar(yo, CLAVE_HISTORIAL(atletaId), nuevo).catch(() => false)) apuntarHistorial(k);
+            }
+          } catch (e) { if (falta048(e)) con048 = false; }
+        })().finally(() => { if (guardandoHistorial.get(k) === guardar) guardandoHistorial.delete(k); });
+        guardandoHistorial.set(k, guardar);
+      } else if (g && yo) historialesGuardados.set(k, g);
+      return todas.map(({ _sesion, _pautado, _dia, ...s }) => {
+        const ef = s.sustituto_id || _pautado;
         const e = ejercicios[ef] || {};
         return {
           ...s,
-          fecha: sesiones[p.sesion_id]?.fecha_realizada || fechaDe(s.registrada_en),
-          sesion_id: p.sesion_id || null,
+          fecha: _dia || fechaDe(s.registrada_en),
+          sesion_id: _sesion,
           ejercicio_id: ef, ejercicio: e.nombre, grupos: e.grupos_musculares || [],
-          sustituto: !!s.sustituto_id, pautado: ejercicios[p.ejercicio_id]?.nombre || null,
+          sustituto: !!s.sustituto_id, pautado: ejercicios[_pautado]?.nombre || null,
         };
       });
     },
@@ -2323,22 +2401,37 @@ export function crearApi(backend) {
     // lo eliminado como sin leer. El orden fino (las fijadas arriba) lo pone la pantalla (ordenarConversaciones).
     async conversaciones() {
       const COLS = 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id,enviar_en';
-      const [atletas, comentarios, estado] = await Promise.all([
-        api.atletas(),
-        b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: `${COLS},adjunto,eliminado_en,editado_en,entregado_en` })
+      // (pulido 3) Con la migración 048, la base da el resumen de cada conversación (el último mensaje, los no leídos y
+      // los programados de cada atleta: unos 10 kB). Sin ella, como antes: los últimos 2.000 mensajes con su texto,
+      // contados aquí (y, pasados los 2.000, quien lleve tiempo sin escribir sale sin su último mensaje)
+      const resumida = async () => {
+        if (con048 === false) return null;
+        try {
+          const filas = await b.rpc('conversaciones_resumen');
+          con048 = true;
+          return Object.fromEntries((filas || []).map((f) => [f.atleta_id, { ultimo: f.ultimo || null, sinLeer: Number(f.sin_leer) || 0, programados: Number(f.programados) || 0 }]));
+        } catch (e) { if (!falta048(e)) throw e; con048 = false; return null; }
+      };
+      const contada = async () => {
+        const comentarios = await b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: `${COLS},adjunto,eliminado_en,editado_en,entregado_en` })
           .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: `${COLS},adjunto,eliminado_en,editado_en` }))
           .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: COLS }))
-          .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id' })),
+          .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id' }));
+        // (v0.48) El último mensaje es el último que ya ha salido; los programados se cuentan aparte
+        const p = {};
+        for (const c of comentarios) {
+          const x = (p[c.atleta_id] ||= { ultimo: null, sinLeer: 0, programados: 0 });
+          if (programado(c)) { x.programados++; continue; }
+          x.ultimo ||= c;
+          if (c.autor === 'atleta' && !c.leido_en && !c.eliminado_en) x.sinLeer++;
+        }
+        return p;
+      };
+      const [atletas, por, estado] = await Promise.all([
+        api.atletas(),
+        resumida().then((r) => r || contada()),
         api.estadoConversaciones(),
       ]);
-      // (v0.48) El último mensaje es el último que ya ha salido; los programados se cuentan aparte
-      const por = {};
-      for (const c of comentarios) {
-        const x = (por[c.atleta_id] ||= { ultimo: null, sinLeer: 0, programados: 0 });
-        if (programado(c)) { x.programados++; continue; }
-        x.ultimo ||= c;
-        if (c.autor === 'atleta' && !c.leido_en && !c.eliminado_en) x.sinLeer++;
-      }
       // Qué lleva el último de cada uno (foto, vídeo o archivo)
       const arcIds = unicos(Object.values(por).map((x) => x.ultimo?.archivo_id));
       const A = arcIds.length ? porId(await b.select('archivos', { in: { id: arcIds }, cols: 'id,tipo,mime' }).catch(() => [])) : {};
@@ -4277,8 +4370,9 @@ export function crearApi(backend) {
         b.select('pesos', { in: { atleta_id: ids }, gte: { fecha: desde }, order: [['fecha', 'desc']] }),
         b.select('checkins', { in: { atleta_id: ids }, gte: { semana_inicio: desde }, order: [['semana_inicio', 'desc']] }),
         b.select('molestias', { in: { atleta_id: ids }, gte: { semana_inicio: sumarDias(lunesDe(hoy), -14) } }),
-        // la última serie de cada atleta: una consulta pequeña por atleta, en paralelo
-        Promise.all(ids.map((id) => b.select('series', { eq: { atleta_id: id }, order: [['registrada_en', 'desc']], limit: 1, cols: 'atleta_id,registrada_en' }))),
+        // la última serie de cada atleta: (pulido 3) con la migración 048, una sola consulta; sin ella, una pequeña
+        // por atleta, en paralelo, como antes
+        ultimasSeries(ids),
       ]);
       const delHistorial = (async () => {
         // Sesiones hechas en las últimas 6 semanas (para la carga), de todos sus bloques
@@ -4669,8 +4763,31 @@ export function crearApi(backend) {
     async plantillas() {
       return b.select('bloques', { eq: { es_plantilla: true }, order: [['nombre', 'asc']] });
     },
+    // (pulido 3.5) La biblioteca de ejercicios (unos 385 kB con sus instrucciones) se guarda en el dispositivo y solo
+    // se vuelve a bajar cuando cambia: con la migración 048, la base da una huella de su contenido (una respuesta de
+    // unas letras) y, si es la de lo guardado, no se baja nada. Sin la migración, se baja entera como hasta ahora.
     async biblioteca() {
-      return b.select('ejercicios', { order: [['nombre', 'asc']] });
+      const entera = () => b.select('ejercicios', { order: [['nombre', 'asc']] });
+      const yo = uid();
+      if (!yo || con048 === false) return entera();
+      let huella;
+      try { huella = await b.rpc('biblioteca_huella'); con048 = true; } catch (e) { if (!falta048(e)) throw e; con048 = false; return entera(); }
+      const copias = (filas) => filas.map((x) => (typeof structuredClone === 'function' ? structuredClone(x) : JSON.parse(JSON.stringify(x))));
+      if (bibliotecaGuardada && bibliotecaGuardada.de === yo && bibliotecaGuardada.huella === huella) return copias(bibliotecaGuardada.filas);
+      // (la base del navegador solo se abre si hay nota de que se guardó: la primera vez no hay nada que leer)
+      let nota = null; try { nota = localStorage.getItem(NOTA_BIBLIOTECA); } catch { /* sin almacenamiento */ }
+      const delMovil = nota === yo ? await copiaDelMovil().leer(yo, CLAVE_BIBLIOTECA).catch(() => null) : null;
+      if (delMovil?.datos?.huella === huella && Array.isArray(delMovil.datos.filas)) {
+        bibliotecaGuardada = { de: yo, huella, filas: delMovil.datos.filas };
+        return copias(bibliotecaGuardada.filas);
+      }
+      const filas = await entera();
+      // (si cambiara justo entre la huella y la descarga, la huella siguiente ya no coincide y se vuelve a bajar)
+      if (uid() === yo) {
+        bibliotecaGuardada = { de: yo, huella, filas };
+        copiaDelMovil().guardar(yo, CLAVE_BIBLIOTECA, { huella, filas }).then((ok) => { if (ok) { try { localStorage.setItem(NOTA_BIBLIOTECA, yo); } catch { /* */ } } }, () => {});
+      }
+      return copias(filas);
     },
     async ejerciciosPorIds(ids) {
       return ids.length ? b.select('ejercicios', { in: { id: ids } }) : [];
@@ -4723,9 +4840,10 @@ export function crearApi(backend) {
       const A = porId(atletas), E = porId(biblioteca);
       const vivos = bloques.filter((x) => A[x.atleta_id] && A[x.atleta_id].estado !== 'baja');
       if (!vivos.length) return [];
-      const semanas = await b.select('semanas', { in: { bloque_id: vivos.map((x) => x.id) } });
-      const sesiones = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) } }) : [];
-      const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, nonulo: ['variante'] }) : [];
+      // (pulido 3.3) solo las columnas que hacen falta: las pautas enteras de todos los bloques vivos eran 430 kB
+      const semanas = await b.select('semanas', { in: { bloque_id: vivos.map((x) => x.id) }, cols: 'id,bloque_id' });
+      const sesiones = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) }, cols: 'id,semana_id,nombre' }) : [];
+      const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, nonulo: ['variante'], cols: 'id,sesion_id,ejercicio_id,variante' }) : [];
       const S = porId(sesiones), W = porId(semanas), B = porId(vivos);
       const grupos = new Map();
       for (const p of pautas) {
@@ -4942,35 +5060,58 @@ export function crearApi(backend) {
   let miAtletaId = null;
   const sinRedAhora = () => typeof navigator !== 'undefined' && navigator.onLine === false;
   const sinConexion = () => { const e = new Error('Sin conexión.'); e.sinConexion = true; return e; };
-  async function conCopia(clave, pedir) {
+  // (pulido 3.8) alInstante: lo de abrir la app (tu perfil, tu ficha, los consentimientos y el programa). La primera vez
+  // que se pide desde que se abrió la app, si hay copia, sale la copia sin esperar a la base (antes se le daban 1,2 s
+  // a cada una, una detrás de otra: con una cobertura regular, Hoy tardaba 2 o 3 segundos en verse); lo de la base llega
+  // enseguida por «fbe-copia» y la pantalla se pone al día sola. Las veces siguientes (tras guardar algo, al cambiar de
+  // día), como siempre: primero la base. vale: si esa copia sirve para enseñarla sin esperar.
+  const abiertas = new Set();
+  async function conCopia(clave, pedir, { alInstante = false, vale = null } = {}) {
     const id = uid();
     const red = Promise.resolve().then(pedir);
     if (!id) return red;
     const almacen = copiaDelMovil();
     red.then((d) => { redFlojaHasta = 0; if (uid() === id) almacen.guardar(id, clave, d); }, (e) => { if (esTemporal(e)) redFlojaHasta = Date.now() + 20000; });
     const guardada = await almacen.leer(id, clave);
+    const primera = !abiertas.has(`${id}|${clave}`);
+    abiertas.add(`${id}|${clave}`);
     if (!guardada) return red;
     let deCopia = false;
     red.then((d) => { if (deCopia && uid() === id && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('fbe-copia', { detail: { clave, datos: d } })); }, () => {});
-    const espera = sinRedAhora() || Date.now() < redFlojaHasta ? 0 : ESPERA_RED_MS;
+    let instante = false;
+    try { instante = alInstante && primera && (!vale || !!vale(guardada.datos)); } catch { instante = false; }
+    const espera = instante || sinRedAhora() || Date.now() < redFlojaHasta ? 0 : ESPERA_RED_MS;
     const r = await Promise.race([red.then((d) => ({ d }), (e) => ({ e })), new Promise((ok) => { setTimeout(() => ok(null), espera); })]);
     if (r && 'd' in r) return r.d;
     if (r && !esTemporal(r.e)) throw r.e;
-    if (!r) redFlojaHasta = Date.now() + 20000;
+    // (enseñar la copia al instante no quiere decir que la red vaya mal)
+    if (!r && !instante) redFlojaHasta = Date.now() + 20000;
     deCopia = true;
     return guardada.datos;
   }
+  // (pulido 3.9) Lo apuntado en Hoy sin conexión (una comida, un hábito, el peso: datos/cola.js) se ve encima de lo que
+  // diga la base hasta que se envía: si la pantalla se vuelve a cargar antes, no «se desmarca». usarCola: main.jsx le
+  // da aquí lo que espera en la cola
+  let enCola = () => [];
+  const leido = { menuSemana: api.menuSemana, registrosHabitos: api.registrosHabitos, pesos: api.pesos };
+  Object.assign(api, {
+    usarCola(fn) { enCola = typeof fn === 'function' ? fn : () => []; },
+    menuSemana: async (atletaId, lunes) => menuConCola(await leido.menuSemana(atletaId, lunes), enCola(), atletaId),
+    registrosHabitos: async (atletaId, desde, hasta = null) => registrosHabitoConCola(await leido.registrosHabitos(atletaId, desde, hasta), enCola(), atletaId, { desde, hasta }),
+    pesos: async (atletaId, dias = 120) => pesosConCola(await leido.pesos(atletaId, dias), enCola(), atletaId, { desde: sumarDias(hoyISO(), -dias) }),
+  });
   const propia = (atletaId) => !!atletaId && atletaId === miAtletaId;
   const sinCopia = { perfil: api.perfil, miAtleta: api.miAtleta, consentimientos: api.consentimientos, programa: api.programa, sesion: api.sesion, marcasPrevias: api.marcasPrevias, recordatoriosActivos: api.recordatoriosActivos };
   Object.assign(api, {
-    perfil: () => conCopia(CLAVES_COPIA.perfil(), sinCopia.perfil),
+    // (al instante solo para atletas: la cuenta de coach comprueba su verificación en dos pasos con lo que diga la base)
+    perfil: () => conCopia(CLAVES_COPIA.perfil(), sinCopia.perfil, { alInstante: true, vale: (p) => !!p?.id && p.rol !== 'coach' }),
     async miAtleta() {
-      const a = await conCopia(CLAVES_COPIA.atleta(), sinCopia.miAtleta);
+      const a = await conCopia(CLAVES_COPIA.atleta(), sinCopia.miAtleta, { alInstante: true, vale: (x) => !!x?.id });
       miAtletaId = a?.id || null;
       return a;
     },
-    consentimientos: () => conCopia(CLAVES_COPIA.consentimientos(), sinCopia.consentimientos),
-    programa: (atletaId, opciones) => (opciones === undefined && propia(atletaId) ? conCopia(CLAVES_COPIA.programa(atletaId), () => sinCopia.programa(atletaId)) : sinCopia.programa(atletaId, opciones)),
+    consentimientos: () => conCopia(CLAVES_COPIA.consentimientos(), sinCopia.consentimientos, { alInstante: true, vale: (x) => Array.isArray(x) }),
+    programa: (atletaId, opciones) => (opciones === undefined && propia(atletaId) ? conCopia(CLAVES_COPIA.programa(atletaId), () => sinCopia.programa(atletaId), { alInstante: true, vale: (x) => !!x }) : sinCopia.programa(atletaId, opciones)),
     sesion: (sesionId, atletaId) => (propia(atletaId) ? conCopia(CLAVES_COPIA.sesion(sesionId), () => sinCopia.sesion(sesionId, atletaId)) : sinCopia.sesion(sesionId, atletaId)),
     marcasPrevias: (atletaId, sesionId = null) => (propia(atletaId) && sesionId ? conCopia(CLAVES_COPIA.marcas(sesionId), () => sinCopia.marcasPrevias(atletaId, sesionId)) : sinCopia.marcasPrevias(atletaId, sesionId)),
     // (con la copia, sin red no vale «ninguno»: la de antes no se pisa con una lista vacía)

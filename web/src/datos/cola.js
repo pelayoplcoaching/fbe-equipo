@@ -1,5 +1,7 @@
 // Cola de escrituras sin conexión: si el gimnasio no tiene cobertura, las series se guardan en el móvil
 // y se envían en orden al recuperarla. Los upserts por (sesión-ejercicio, número) hacen que reenviar sea seguro.
+// (pulido 3.9) También lo que se apunta en Hoy con un toque: una comida marcada, un hábito y el peso del día (todas
+// se pueden repetir sin daño: cambian o ponen un valor, no suman).
 //  · Todo pasa por una sola cadena: una corrección y un borrado de la misma serie nunca llegan desordenados.
 //  · Cada operación lleva su atleta: solo se envían con la sesión de ese atleta abierta (si en el móvil entra
 //    otra persona, lo de la primera espera a que vuelva).
@@ -26,12 +28,19 @@ export function crearCola(api, { clave = 'fbe-cola-v1', claveRechazos = 'fbe-col
   let cadena = Promise.resolve();
 
   const mias = () => ops.filter((o) => o.atletaId === atleta);
-  const avisar = () => { guardar(clave, ops); const n = mias().length; oyentes.forEach((f) => f(n)); };
+  // (pulido 3.4) lo apuntado sin conexión también es «escribir»: lo que las pantallas recuerdan deja de valer
+  const avisar = () => {
+    guardar(clave, ops); const n = mias().length; oyentes.forEach((f) => f(n));
+    if (typeof window !== 'undefined' && typeof Event === 'function') { try { window.dispatchEvent(new Event('fbe-escritura')); } catch { /* */ } }
+  };
 
   async function ejecutar(op) {
     if (op.tipo === 'serie') return api.guardarSerie(op.datos, op.atletaId);
     if (op.tipo === 'borrarSerie') return api.borrarSerie(op.datos.sesion_ejercicio_id, op.datos.numero);
     if (op.tipo === 'sesion') return api.marcarSesion(op.datos.id, op.datos.cambios);
+    if (op.tipo === 'comida') return api.cambiarMenu({ id: op.datos.id }, { hecho: !!op.datos.hecho });
+    if (op.tipo === 'habito') return api.apuntarHabito(op.datos.habito_id, op.datos.fecha, op.datos.valor ?? null);
+    if (op.tipo === 'peso') return api.guardarPeso(op.atletaId, op.datos.fecha, op.datos.kg);
     throw new Error('Operación desconocida');
   }
 
@@ -100,6 +109,8 @@ export function crearCola(api, { clave = 'fbe-cola-v1', claveRechazos = 'fbe-col
 
   return {
     pendientes: () => mias().length,
+    // (pulido 3.9) quién tiene la sesión abierta (lo de otro —el coach mirando a un atleta— no pasa por la cola)
+    atleta: () => atleta,
     // (v0.65) lo que espera de este atleta, en orden (copias): para enseñarlo encima de la copia del móvil o de la base
     operaciones: () => mias().map((o) => ({ ...o, datos: { ...o.datos } })),
     alCambiar(f) { oyentes.add(f); return () => oyentes.delete(f); },

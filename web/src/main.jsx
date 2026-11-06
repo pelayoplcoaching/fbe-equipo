@@ -34,6 +34,8 @@ async function arrancar() {
   // Los errores que se escapen se apuntan en la base (Cuenta → Errores de la app); en la demo, no
   instalarRegistro((d) => api.registrarError(d), String(__APP_VERSION__));
   const cola = crearCola(api);
+  // (pulido 3.9) lo apuntado sin conexión se ve encima de lo que diga la base hasta que se envía
+  api.usarCola(() => cola.operaciones());
   render(<App backend={backend} api={api} cola={cola} />, document.getElementById('app'));
 
   // (v0.65) en localhost solo si se pide (localStorage «fbe-sw-local» = 1): para probar «abrir sin cobertura» con la app empaquetada
@@ -43,6 +45,8 @@ async function arrancar() {
     // la última (la página va primero a la red), así que la que espera se activa sin más. Con la app abierta (lo
     // normal en el móvil: días sin cerrarla), se comprueba al volver a ella y cada media hora, y se ofrece
     // «Actualizar» (AvisoVersion, en App.jsx).
+    // (pulido 3.7) el código de la demo no va en la instalación: si esto es la demo, se le pide que lo guarde ahora
+    if (!conSupabase) navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage('guardar-demo')).catch(() => {});
     navigator.serviceWorker.register('./sw.js').then((reg) => {
       const ofrecer = (sw) => { window.__fbeVersionNueva = sw; window.dispatchEvent(new CustomEvent('fbe-version', { detail: sw })); };
       const vigilar = (sw) => sw?.addEventListener('statechange', () => { if (sw.state === 'installed' && navigator.serviceWorker.controller) ofrecer(sw); });

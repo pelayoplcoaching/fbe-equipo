@@ -96,6 +96,41 @@ export function programaConCola(p, ops = []) {
   return { ...p, sesiones };
 }
 
+// (pulido 3.9) Lo apuntado en Hoy sin conexión (cola: { tipo: 'comida' | 'habito' | 'peso', atletaId, datos }), encima de lo
+// que da la base, en su orden. Sin nada de ese atleta en la cola, lo mismo que llegó.
+// Una comida marcada (o desmarcada): datos { id, hecho }
+export function menuConCola(menu, ops = [], atletaId = null) {
+  const mias = (ops || []).filter((o) => o?.tipo === 'comida' && o.atletaId === atletaId && o.datos?.id);
+  if (!Array.isArray(menu) || !mias.length) return menu;
+  return menu.map((e) => mias.filter((o) => o.datos.id === e.id).reduce((x, o) => ({ ...x, hecho: !!o.datos.hecho }), e));
+}
+// Un hábito apuntado (valor null: borrado): datos { habito_id, fecha, valor }. Solo lo que cae entre desde y hasta
+export function registrosHabitoConCola(filas, ops = [], atletaId = null, { desde = null, hasta = null } = {}) {
+  const mias = (ops || []).filter((o) => o?.tipo === 'habito' && o.atletaId === atletaId && o.datos?.habito_id && o.datos.fecha
+    && (!desde || o.datos.fecha >= desde) && (!hasta || o.datos.fecha <= hasta));
+  if (!Array.isArray(filas) || !mias.length) return filas;
+  let out = [...filas];
+  for (const o of mias) {
+    const { habito_id: h, fecha, valor } = o.datos;
+    const previa = out.find((x) => x.habito_id === h && x.fecha === fecha);
+    out = out.filter((x) => x !== previa);
+    if (valor != null) out.push({ ...(previa || { id: `local-${h}-${fecha}`, atleta_id: atletaId, habito_id: h, fecha }), valor });
+  }
+  return out.sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
+}
+// El peso de un día: datos { fecha, kg }
+export function pesosConCola(filas, ops = [], atletaId = null, { desde = null } = {}) {
+  const mias = (ops || []).filter((o) => o?.tipo === 'peso' && o.atletaId === atletaId && o.datos?.fecha && Number.isFinite(Number(o.datos.kg)) && (!desde || o.datos.fecha >= desde));
+  if (!Array.isArray(filas) || !mias.length) return filas;
+  let out = [...filas];
+  for (const o of mias) {
+    const previa = out.find((x) => x.fecha === o.datos.fecha);
+    out = out.filter((x) => x !== previa);
+    out.push({ ...(previa || { id: `local-peso-${o.datos.fecha}`, atleta_id: atletaId, fecha: o.datos.fecha }), kg: Number(o.datos.kg) });
+  }
+  return out.sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
+}
+
 // Las sesiones que se dejan preparadas en el móvil tras una visita con conexión: las que quedan por hacer de la semana
 // actual, en su orden (hoy y lo que viene), como mucho n
 export function sesionesAPreparar(p, n = 3) {

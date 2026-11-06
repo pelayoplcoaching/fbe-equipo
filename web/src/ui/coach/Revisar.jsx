@@ -3,6 +3,7 @@ import { ChipLlegada } from '../atleta/Preparacion.jsx';
 import { CabeceraGrande, Siluetas, Reserva, useApp, useCarga, Icono, ErrorCaja, cuando, Avatar, Hoja, usePreferencia, Vacio } from '../comunes.jsx';
 import { agruparPorAtleta, textoTipos, esDeslizar, duracionCorta } from '../../logica/diseno.js';
 import { vibrar } from '../hapticos.js';
+import { salirSuave } from '../transiciones.js';
 import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
 import { BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
@@ -82,10 +83,17 @@ export function Revisar({ bandeja, abrirAtleta }) {
   const recargar = () => bandeja.recargar(true);
   // (pulido 5) lo que se marca como revisado sale de la lista al momento y se guarda por detrás (si no se puede
   // guardar, vuelve a la lista y se avisa)
-  const quitar = (lista, id, guardar) => bandeja.alMomento((x) => {
-    const queda = (x[lista] || []).filter((i) => i.id !== id);
-    return queda.length === (x[lista] || []).length ? x : { ...x, [lista]: queda, total: Math.max(0, (x.total || 0) - 1) };
-  }, guardar);
+  // (pulido 3.10) y se va encogiéndose (lo de debajo sube a su sitio), en vez de desaparecer de golpe
+  const quitar = async (lista, id, guardar) => {
+    const salida = salirSuave(caja.current?.querySelector(`[data-item$="-${id}"]`));
+    await salida.fin;
+    try {
+      return await bandeja.alMomento((x) => {
+        const queda = (x[lista] || []).filter((i) => i.id !== id);
+        return queda.length === (x[lista] || []).length ? x : { ...x, [lista]: queda, total: Math.max(0, (x.total || 0) - 1) };
+      }, guardar);
+    } catch (e) { salida.deshacer(); throw e; }
+  };
   if (bandeja.cargando && !d) return <div class="contenido coach"><Siluetas forma="tarjetas" n={3} texto="Cargando lo que tienes por revisar" /></div>;
 
   // Los mensajes se agrupan por conversación
@@ -147,7 +155,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
         <div class="rejilla-revisar" ref={caja}>
           {grupos.map((g) => (
             <GrupoRevisar key={g.id} g={g} abierto={!plegados.has(g.id)} alternar={() => alternar(g.id)}>
-              {g.items.map((x) => <Deslizable key={x.clave}>{tarjeta(x)}</Deslizable>)}
+              {g.items.map((x) => <Deslizable key={x.clave} clave={x.clave}>{tarjeta(x)}</Deslizable>)}
             </GrupoRevisar>
           ))}
         </div>
@@ -183,7 +191,7 @@ function GrupoRevisar({ g, abierto, alternar, children }) {
 // tiene «Deshacer» (data-deshacer: sesiones, check-ins, vídeos y tareas; no las recetas ni los avisos del equipo), y
 // lo que hace es pulsar ese botón, así el aviso y el «Deshacer» son los de siempre. Nada de lo que pasa dentro de una
 // hoja cuenta (ya van en su capa, pero por si acaso).
-function Deslizable({ children }) {
+function Deslizable({ children, clave = null }) {
   const ref = useRef(null);
   const g = useRef(null);
   const [dx, setDx] = useState(0);
@@ -203,7 +211,7 @@ function Deslizable({ children }) {
     } else setDx(0);
   };
   return (
-    <div ref={ref} class={`deslizable ${dx ? 'moviendo' : ''} ${hecho ? 'hecho' : ''} ${g.current?.activo ? 'arrastrando' : ''}`} style={{ '--dx': `${dx}px` }}
+    <div ref={ref} data-item={clave} class={`deslizable ${dx ? 'moviendo' : ''} ${hecho ? 'hecho' : ''} ${g.current?.activo ? 'arrastrando' : ''}`} style={{ '--dx': `${dx}px` }}
       onPointerDown={(e) => {
         if (e.pointerType === 'mouse' || e.button > 0 || !boton() || e.target.closest('textarea, input, select, video, .reproductor, .rep-lienzo, .velo, [aria-modal="true"]')) return;
         g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, activo: false };

@@ -442,6 +442,36 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
   const cerrarRef = useRef(alCerrarProp);
   cerrarRef.current = alCerrarProp;
   const alCerrar = () => cerrarRef.current?.();
+  // (pulido 3.10) En el móvil, al cerrarla con su botón, con Escape o tocando fuera, la hoja baja y el fondo se
+  // aclara (lo mismo que al cerrarla arrastrando), en vez de desaparecer de golpe; después se avisa a quien la abrió.
+  // Si quien la abrió no la cierra (p. ej., mientras sube un vídeo), vuelve a su sitio. Solo se mueve (nada se
+  // desvanece: el texto no pierde contraste mientras sale). En pantallas anchas y con «reducir movimiento», al momento.
+  const saliendo = useRef(false);
+  const cerrarSuave = () => {
+    if (saliendo.current) return;
+    const hoja = ref.current, velo = hoja?.parentElement;
+    if (!hoja || !velo || !movil() || animacion.current || arrastre.current || sinMovimiento() || typeof hoja.animate !== 'function') { alCerrar(); return; }
+    saliendo.current = true;
+    let anim = null;
+    const deshacer = () => { try { anim?.cancel(); } catch { /* */ } velo.classList.remove('cerrando'); saliendo.current = false; };
+    try {
+      anim = hoja.animate([{ transform: `translateY(${leerY(hoja)}px)` }, { transform: `translateY(${Math.max(hoja.offsetHeight, 200)}px)` }], { duration: 160, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards' });
+      velo.classList.add('cerrando');
+      let hecho = false;
+      const fin = () => {
+        if (hecho) return;
+        hecho = true;
+        alCerrar();
+        // (si sigue ahí un momento después, es que no se ha cerrado: se deja como estaba)
+        setTimeout(() => { if (ref.current === hoja && hoja.isConnected) deshacer(); }, 80);
+      };
+      anim.onfinish = fin;
+      anim.oncancel = () => { if (!hecho) { velo.classList.remove('cerrando'); saliendo.current = false; } };
+      setTimeout(fin, 400);   // (por si la animación no llega a avisar: pestaña en segundo plano)
+    } catch { deshacer(); alCerrar(); }
+  };
+  const cerrarSuaveRef = useRef(cerrarSuave);
+  cerrarSuaveRef.current = cerrarSuave;
   // En cuanto se monta (no tras pintar), para que el foco y Escape funcionen desde el primer instante
   useLayoutEffect(() => {
     const previo = document.activeElement;
@@ -451,7 +481,7 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
       // Solo la ventana de encima: la última abierta (otra hoja, la búsqueda rápida…) se cierra antes
       const modales = document.querySelectorAll('[aria-modal="true"]');
       if (modales.length && modales[modales.length - 1] !== ref.current) return;
-      alCerrar();
+      cerrarSuaveRef.current();
     };
     document.addEventListener('keydown', tecla);
     // El primer control (que no sea «Cerrar»); si no hay otro, el propio diálogo (tabIndex −1)
@@ -547,13 +577,13 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
     asentar(hoja, desde, destinoHoja({ y: desde, velocidad, alto: a.alto, pantalla: window.innerHeight, medio }), velocidad);
   };
   return (
-    <div class="velo" onClick={(e) => { if (e.target === e.currentTarget) alCerrar(); }}>
+    <div class="velo" onClick={(e) => { if (e.target === e.currentTarget) cerrarSuave(); }}>
       <div class={`hoja-dialogo${clase ? ` ${clase}` : ''}`} role="dialog" aria-modal="true" aria-label={titulo} ref={ponerRef} tabIndex={-1} style={ancho ? { width: `min(${ancho}px, 100%)` } : undefined}>
         <div class="hoja-cab" onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar}>
           <div class="asa" aria-hidden="true" />
           <div class="separa">
             <h2>{titulo}</h2>
-            <button class="btn btn-icono plano cerrar-hoja" onClick={alCerrar} aria-label="Cerrar"><Icono n="cerrar" /></button>
+            <button class="btn btn-icono plano cerrar-hoja" onClick={cerrarSuave} aria-label="Cerrar"><Icono n="cerrar" /></button>
           </div>
         </div>
         {children}
@@ -563,6 +593,34 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
 }
 
 // Carga asíncrona con estado
+// (pulido 3.6) Listas largas por tramos: se pintan las primeras y, al acercarse al final, las siguientes (antes, las
+// 574 recetas de la biblioteca se pintaban de golpe: una página de 65.000 px y 4.700 piezas). total: cuántas hay;
+// reinicio: lo que, al cambiar (el filtro, lo buscado), devuelve la lista al primer tramo; clave: para que, al volver a
+// la pantalla, estén pintadas las mismas que se dejaron (y la pantalla pueda quedarse donde estaba).
+// Devuelve { hasta, mas }: pinta lista.slice(0, hasta) y pon {mas} justo después (un botón «Ver más», que además se
+// pulsa solo al acercarse: quien use teclado o lector de pantalla lo tiene a mano).
+const tramosVistos = new Map();
+export function usePorTramos(total, { tramo = 40, reinicio = '', clave = null, nombre = 'más' } = {}) {
+  const [n, setN] = useState(() => Math.max(tramo, (clave && tramosVistos.get(clave)?.[0] === reinicio && tramosVistos.get(clave)[1]) || 0));
+  const de = useRef(reinicio);
+  useEffect(() => { if (de.current !== reinicio) { de.current = reinicio; setN(tramo); } }, [reinicio, tramo]);
+  useEffect(() => { if (clave) tramosVistos.set(clave, [reinicio, n]); }, [clave, reinicio, n]);
+  const ref = useRef(null);
+  const quedan = Math.max(0, total - n);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || quedan <= 0) return undefined;
+    if (typeof IntersectionObserver !== 'function') { setN(total); return undefined; }
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) setN((x) => x + tramo); }, { rootMargin: '1200px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [n, quedan > 0, tramo]);
+  return {
+    hasta: Math.min(n, total),
+    mas: quedan > 0 ? <button type="button" ref={ref} class="btn plano ver-mas-tramo" onClick={() => setN((x) => x + tramo)}>Ver {Math.min(tramo, quedan)} {nombre} ({quedan} sin mostrar)</button> : null,
+  };
+}
+
 // (pulido 4) recuerdo: una clave para recordar, mientras la app esté abierta, lo último que se cargó. Al volver a esa
 // pantalla se enseña al momento lo recordado y se pone al día por detrás, sin esqueletos (como hacen las apps del
 // móvil al volver a una lista). Solo en memoria: no se guarda nada en el dispositivo y se olvida al salir de la cuenta.
@@ -640,8 +698,25 @@ export function Reserva({ id, cargando = false, liso = false, inicial = 0, clase
 
 const recuerdos = new Map();
 let escrituras = 0;
-export function olvidarRecuerdos() { escrituras++; recuerdos.clear(); }
-if (typeof window !== 'undefined') window.addEventListener('fbe-escritura', olvidarRecuerdos);
+// (pulido 3.4) No volver a pedir lo recién pedido. Al volver a una pantalla, lo recordado que se cargó hace menos de
+// FRESCO_MS se enseña sin pedirlo otra vez (antes se volvía a pedir todo en cada visita: en un rato de ir y volver,
+// tres de cada cuatro consultas eran repeticiones). Deja de valer, y se vuelve a pedir, si se ha escrito algo desde
+// aquí, si llega un mensaje o una notificación, si se vuelve a la app, si vuelve la conexión o si se tira para recargar.
+export const FRESCO_MS = 20000;
+const cargados = new Map();   // clave del recuerdo → { t: cuándo se cargó, epoca }
+let epoca = 0;
+const envejecer = () => { epoca++; };
+const estaFresco = (clave) => { const c = clave ? cargados.get(clave) : null; return !!c && c.epoca === epoca && Date.now() - c.t < FRESCO_MS && recuerdos.has(clave); };
+export function olvidarRecuerdos() { escrituras++; recuerdos.clear(); cargados.clear(); }
+// Lo mismo para lo que no pasa por useCarga con recuerdo (p. ej., la bandeja del coach, que se refresca al cambiar de
+// sección): una marca al pedir y, antes de volver a pedir, si sigue valiendo
+export const marcaFresca = () => ({ t: Date.now(), epoca, escrituras });
+export const sigueFresca = (m) => !!m && m.epoca === epoca && m.escrituras === escrituras && Date.now() - m.t < FRESCO_MS;
+if (typeof window !== 'undefined') {
+  window.addEventListener('fbe-escritura', olvidarRecuerdos);
+  for (const ev of ['fbe-mensaje', 'fbe-notificacion', 'fbe-recargar', 'fbe-copia', 'fbe-hilo', 'fbe-salida-enviado', 'online', 'focus', 'pageshow']) window.addEventListener(ev, envejecer);
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', envejecer);
+}
 export function useCarga(fn, deps = [], opciones = {}) {
   const { recuerdo = null } = opciones;
   const recordado = () => (recuerdo && recuerdos.has(recuerdo) ? recuerdos.get(recuerdo) : null);
@@ -665,12 +740,12 @@ export function useCarga(fn, deps = [], opciones = {}) {
   const cargar = useCallback(async (silencioso = false) => {
     const n = ++ultima.current;
     const clave = claveRecuerdo.current;
-    const antes = escrituras;
+    const antes = escrituras, epocaAntes = epoca;
     if (!silencioso) setEstado((e) => ({ ...e, cargando: true, error: null }));
     try {
       const datos = await fn();
       // (solo se recuerda lo que se cargó entero sin que se escribiera nada mientras)
-      if (clave && datos != null && antes === escrituras) recuerdos.set(clave, datos);
+      if (clave && datos != null && antes === escrituras) { recuerdos.set(clave, datos); cargados.set(clave, { t: Date.now(), epoca: epocaAntes }); }
       if (vivo.current && n === ultima.current) { base.current = datos; setEstado({ datos: conPendientes(datos), error: null, cargando: false }); }
     } catch (error) {
       reportarError(error, 'carga');
@@ -682,9 +757,11 @@ export function useCarga(fn, deps = [], opciones = {}) {
     vivo.current = true;
     // Con algo recordado, se pone al día en silencio; si lo que se pide cambia (otra clave), se enseña lo de la nueva
     const datos = recordado();
-    if (!primera.current && recuerdo) { base.current = datos; setEstado({ datos, error: null, cargando: datos == null }); }
+    const alMontar = primera.current;
+    if (!alMontar && recuerdo) { base.current = datos; setEstado({ datos, error: null, cargando: datos == null }); }
     primera.current = false;
-    cargar(datos != null);
+    // (pulido 3.4) al volver a la pantalla, lo recién cargado no se pide otra vez
+    if (!(alMontar && datos != null && estaFresco(recuerdo))) cargar(datos != null);
     return () => { vivo.current = false; };
   }, [cargar]);
   // (pulido 9) «tirar para recargar» (ui/tirar.js) pide a todas las cargas montadas que se repitan en silencio, y espera
@@ -706,6 +783,8 @@ export function useCarga(fn, deps = [], opciones = {}) {
       if (e.detail?.clave !== copia || !vivo.current) return;
       ultima.current++;
       base.current = transformar ? transformar(e.detail.datos) : e.detail.datos;
+      // (lo que se recuerda para la vuelta es lo de la base, no la copia que se enseñó mientras llegaba)
+      if (claveRecuerdo.current && base.current != null) recuerdos.set(claveRecuerdo.current, base.current);
       setEstado({ datos: conPendientes(base.current), error: null, cargando: false });
     };
     window.addEventListener('fbe-copia', al);
@@ -718,17 +797,32 @@ export function useCarga(fn, deps = [], opciones = {}) {
   const alMomento = useCallback(async (cambio, guardar) => {
     pendientes.current = [...pendientes.current, cambio];
     setEstado((e) => (e.datos == null ? e : { ...e, datos: cambio(e.datos) }));
-    let guardado = false;
-    try { const r = await guardar(); guardado = true; return r; } finally {
+    let guardado = false, enCola = false;
+    try { const r = await guardar(); guardado = true; enCola = r?.enCola === true; return r; } finally {
       pendientes.current = pendientes.current.filter((c) => c !== cambio);
       if (guardado && base.current != null) base.current = cambio(base.current);
       if (vivo.current) {
         setEstado((e) => (e.datos == null ? e : { ...e, datos: conPendientes(base.current) }));
-        if (!pendientes.current.length) cargar(true);
+        // (pulido 3.9) si quedó guardado en el móvil (sin conexión), no hay base a la que preguntar: se queda lo apuntado
+        if (!pendientes.current.length && !enCola) cargar(true);
       }
     }
   }, [cargar]);
   return { ...estado, recargar: cargar, alMomento };
+}
+
+// (pulido 3.9) Apuntar algo de Hoy con un toque (una comida marcada, un hábito, el peso). El atleta con su sesión
+// abierta lo manda por la cola (datos/cola.js): si no hay conexión, se guarda en el móvil y se envía solo al volver
+// (antes fallaba y había que repetirlo). Quien apunta lo de otro (el coach), directo, como siempre.
+// apuntar(atletaId, tipo, datos, directo) → lo que devuelva `directo`, o { enCola } si fue por la cola
+export function useApuntar() {
+  const { cola, aviso } = useApp();
+  return useCallback(async (atletaId, tipo, datos, directo) => {
+    if (!cola?.atleta || !atletaId || cola.atleta() !== atletaId) return directo();
+    const r = await cola.enviar({ tipo, atletaId, datos });
+    if (r?.enCola) aviso('Sin conexión: guardado en el móvil. Se enviará solo al volver.');
+    return r;
+  }, [cola, aviso]);
 }
 
 // Evita el doble envío (dos toques seguidos en «Guardar» o «Crear»): mientras la acción está en marcha no se repite

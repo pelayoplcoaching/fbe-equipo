@@ -104,6 +104,10 @@ function alCambiarRuta(e) {
 export function instalarAtras() {
   if (instalado || !hay()) return;
   instalado = true;
+  // (pulido 3.10) La posición de cada pantalla la lleva la app (posiciones.js). Sin esto, al retirar las entradas de
+  // sobra del historial (un cuarto de segundo después de cerrar una ventana), el navegador devolvía la pantalla a
+  // donde estaba cuando se abrió la ventana: si entre tanto se había movido, daba un salto
+  try { history.scrollRestoration = 'manual'; } catch { /* */ }
   // (también al recargar la página se parte de cero: las entradas de antes son de la página anterior y no avisan)
   nivel = 0;
   try { history.replaceState(estado(0), ''); } catch { /* */ }

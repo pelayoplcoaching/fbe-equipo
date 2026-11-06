@@ -3,7 +3,7 @@
 // día, con los totales frente a su plan, copiar semanas y la lista de la compra). Sustituye a las bases de datos
 // de Desayuno, Comida, Merienda y Cena y al «Planificador semanal» de Notion.
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, Reserva, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos } from './comunes.jsx';
+import { useApp, useCarga, Reserva, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos, usePorTramos, useApuntar } from './comunes.jsx';
 import { COLOR_MACRO, MacrosDia } from './NutricionComun.jsx';
 import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, porSecciones, valeParaDia, textoVariante, tomasDelDia, paraElDia } from '../logica/comidas.js';
 import { planVigente, objetivoDelDia, fmtKcal } from '../logica/nutricion.js';
@@ -65,12 +65,23 @@ export function VistaRecetario({ recetario, alAbrir, esCoach = false, vacio = nu
           <section class="seccion" key={t} aria-labelledby={`toma-${t}`}>
             <div class="seccion-cab"><h2 id={`toma-${t}`}>{NOMBRE_TOMA[t]}</h2><span class="mini terciario">{xs.length === 1 ? '1 opción' : `${xs.length} opciones`}{!recetario.tomas.includes(t) ? ' · no está entre sus comidas' : ''}</span></div>
             {xs.length ? (
-              <div class="rejilla-recetas">{xs.map((a) => <TarjetaReceta key={a.id} a={a} alAbrir={alAbrir} mostrarFactor={esCoach} opcional={op} />)}</div>
+              <RejillaRecetas xs={xs} toma={t} filtro={filtro} alAbrir={alAbrir} esCoach={esCoach} opcional={op} />
             ) : <p class="peq terciario">{esCoach ? 'Sin recetas para esta comida.' : `Tu coach aún no te ha puesto opciones para ${NOMBRE_TOMA[t].toLowerCase()}.`}</p>}
           </section>
         );
       })}
     </div>
+  );
+}
+
+// Las opciones de una comida, por tramos (pulido 3.6): las primeras y, al bajar, las demás (hay comidas con casi 50)
+function RejillaRecetas({ xs, toma, filtro, alAbrir, esCoach, opcional }) {
+  const tramos = usePorTramos(xs.length, { tramo: 12, reinicio: filtro || '', clave: `recetario-${esCoach ? 'coach' : 'atleta'}-${toma}`, nombre: 'opciones más' });
+  return (
+    <>
+      <div class="rejilla-recetas">{xs.slice(0, tramos.hasta).map((a) => <TarjetaReceta key={a.id} a={a} alAbrir={alAbrir} mostrarFactor={esCoach} opcional={opcional} />)}</div>
+      {tramos.mas}
+    </>
   );
 }
 
@@ -244,7 +255,9 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
   // deshace y se avisa)
   const cambiarSin = () => { const pon = !sin, d = dia; diasSin.alMomento((xs) => (pon ? [...xs.filter((x) => x !== d), d] : xs.filter((x) => x !== d)), () => api.marcarDiaSin(atletaId, d, pon)).catch((err) => aviso(err.message, 'error')); };
   const cambiarSemana = (l) => { setLunes(l); setDia(l === lunesDe(hoy) ? hoy : l); };
-  const marcar = (e) => { const hecho = !e.hecho; menu.alMomento((xs) => xs.map((x) => (x.id === e.id ? { ...x, hecho } : x)), () => api.cambiarMenu(e, { hecho })).catch((err) => aviso(err.message, 'error')); };
+  // (pulido 3.9) sin conexión, lo marcado se guarda en el móvil y se envía al volver
+  const apuntar = useApuntar();
+  const marcar = (e) => { const hecho = !e.hecho; menu.alMomento((xs) => xs.map((x) => (x.id === e.id ? { ...x, hecho } : x)), () => apuntar(atletaId, 'comida', { id: e.id, hecho }, () => api.cambiarMenu(e, { hecho }))).catch((err) => aviso(err.message, 'error')); };
   return (
     <div class="pila menu-semana">
       <NavSemana lunes={lunes} setLunes={cambiarSemana} />

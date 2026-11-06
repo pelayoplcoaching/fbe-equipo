@@ -110,9 +110,11 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       // (con pausas de más de dos segundos: si no, las consultas se comparten y casi no hay ninguna que mirar)
       await p.waitForTimeout(2300);
       await p.evaluate(() => { window.__q = []; });
-      await irASeccion(p, 'Revisar'); await p.waitForTimeout(2300);
-      await irASeccion(p, 'Mensajes'); await p.waitForTimeout(2300);
-      await irASeccion(p, 'Atletas'); await p.waitForTimeout(800);
+      // (y como si se volviera a la app cada vez: desde el pulido 3.4, lo cargado hace menos de 20 s no se vuelve a pedir)
+      const fresco = () => p.evaluate(() => window.dispatchEvent(new Event('focus')));
+      await fresco(); await irASeccion(p, 'Revisar'); await p.waitForTimeout(2300);
+      await fresco(); await irASeccion(p, 'Mensajes'); await p.waitForTimeout(2300);
+      await fresco(); await irASeccion(p, 'Atletas'); await p.waitForTimeout(800);
       const total = await lecturas(p, '.'), deFotos = await lecturas(p, '^perfiles .*"cols":"id,foto"');
       check(total > 20 && deFotos === 0, `al pasar por Revisar, Mensajes y Atletas las fotos no se vuelven a bajar (${total} consultas, ${deFotos} de fotos)`);
       // Al ampliarla, la grande

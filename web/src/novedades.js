@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.92': {
+    atleta: [
+      'La app abre al instante con lo último que viste y se pone al día sola; ya no vuelve a cargar lo que acabas de ver.',
+      'El peso, los hábitos y las comidas se pueden apuntar sin cobertura.',
+      'Las actualizaciones pesan mucho menos.',
+    ],
+    coach: [
+      'Mensajes, la lista de atletas, Revisar y la biblioteca cargan mucho menos (con la migración 048).',
+      'La biblioteca de recetas ya no pinta todas de golpe.',
+    ],
+  },
   '0.91': {
     atleta: [
       'La sesión es más clara: la propuesta de cada ejercicio y la serie que toca se ven mejor, y el descanso lleva su etiqueta.',
