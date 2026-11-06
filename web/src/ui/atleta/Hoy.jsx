@@ -343,7 +343,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   // (v0.65) con lo apuntado sin conexión encima («Continuar sesión» y las series hechas, también sin cobertura)
   const conCola = (d) => sesionConCola(d, cola.operaciones());
   const det = useCarga(() => (siguiente ? api.sesion(siguiente.id, atleta.id).then(conCola) : Promise.resolve(null)), [siguiente?.id],
-    { copia: siguiente ? CLAVES_COPIA.sesion(siguiente.id) : null, transformar: conCola });
+    { copia: siguiente ? CLAVES_COPIA.sesion(siguiente.id) : null, transformar: conCola, recuerdo: siguiente ? `sesion-hoy:${atleta.id}:${siguiente.id}` : null });
   // v0.50: la tarjeta de arriba según cómo va el día (entreno, descanso, hecha, semana completa o sin semana)
   const e0 = estadoHoy({ bloque: p.bloque, semana, sesiones, hoy });
   // v0.53: con objetivo de días por semana (microciclos), la semana de lunes a domingo con ese objetivo: la de la

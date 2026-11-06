@@ -5794,6 +5794,16 @@ try {
   console.log('  ✗ el pulido de fluidez, segunda tanda:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// Pulido de fluidez, tercera tanda: historial y biblioteca guardados, no volver a pedir lo recién pedido… (test/e2e-pulido3.mjs)
+console.log('\nPulido de fluidez, tercera tanda');
+try {
+  const { probarPulido3 } = await import('./e2e-pulido3.mjs');
+  await probarPulido3({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el pulido de fluidez, tercera tanda:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.74: «Programar según FBE» en el editor del programa (test/e2e-programar-fbe.mjs)
 console.log('\nv0.74: «Programar según FBE»');
 try {

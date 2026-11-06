@@ -435,7 +435,19 @@ export function crearApi(backend) {
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc', 'sql']) {
     if (typeof backend[m] !== 'function') continue;
     const directo = backend[m].bind(backend);
-    backend[m] = (...a) => { if (!esEscritura(m, a)) return directo(...a); generacion++; return enVuelo(directo(...a)); };
+    backend[m] = (...a) => {
+      if (!esEscritura(m, a)) return directo(...a);
+      generacion++;
+      const r = enVuelo(directo(...a));
+      // (pulido 3.4) también lo que se escribe directo en el backend (algunas pantallas lo usan así) avisa a las pantallas
+      // de que lo recordado ya no vale; menos marcar como leídos los mensajes que se están viendo (pasa solo al abrir un chat)
+      if (typeof window !== 'undefined' && !(m === 'update' && a[0] === 'comentarios' && Object.keys(a[1] || {}).join() === 'leido_en')) {
+        const avisar = () => { try { window.dispatchEvent(new Event('fbe-escritura')); } catch { /* */ } };
+        avisar();
+        Promise.resolve(r).then(avisar, avisar);
+      }
+      return r;
+    };
   }
   if (typeof backend.storage?.subir === 'function') { const subir = backend.storage.subir.bind(backend.storage); backend.storage.subir = (...a) => enVuelo(subir(...a)); }
   const copiarFilas = (r) => (Array.isArray(r) ? r.map((x) => (x && typeof x === 'object' && !Array.isArray(x) ? { ...x } : x)) : r);
@@ -471,7 +483,9 @@ export function crearApi(backend) {
         Promise.resolve(r).then(avisar, avisar);
       }
       // Las pantallas que resumen varias cosas («Tu día») se ponen al día tras cualquier escritura
-      if (typeof window !== 'undefined') Promise.resolve(r).then(() => window.dispatchEvent(new Event('fbe-cambio')), () => {});
+      // (pulido 3.4: las funciones que solo consultan no avisan; antes, cada una hacía recargar «Tu día», las tareas y
+      // la insignia de mensajes sin que hubiera cambiado nada)
+      if (typeof window !== 'undefined' && esEscritura(m, a)) Promise.resolve(r).then(() => window.dispatchEvent(new Event('fbe-cambio')), () => {});
       return r;
     };
   }
@@ -479,6 +493,12 @@ export function crearApi(backend) {
   let con048 = null;
   const CLAVE_HISTORIAL = (atletaId) => `historial:${atletaId}`;
   const historialesGuardados = new Map();   // «cuenta:atleta» → { corte, huella, filas } (los últimos que se han visto)
+  // De quién hay historial guardado en este dispositivo: una nota a mano (localStorage) para no abrir la base del
+  // navegador cuando no hay nada que leer (la primera vez, eso solo retrasaría lo que se va a pedir de todos modos)
+  const NOTA_HISTORIAL = 'fbe-historial-hay', NOTA_BIBLIOTECA = 'fbe-biblioteca-hay';
+  const notaHistorial = () => { try { const x = JSON.parse(localStorage.getItem(NOTA_HISTORIAL) || '[]'); return Array.isArray(x) ? x : []; } catch { return []; } };
+  const apuntarHistorial = (k) => { try { localStorage.setItem(NOTA_HISTORIAL, JSON.stringify([k, ...notaHistorial().filter((x) => x !== k)].slice(0, 80))); } catch { /* sin almacenamiento */ } };
+  const guardandoHistorial = new Map();   // «cuenta:atleta» → lo que se está guardando (para no pedir entero dos veces seguidas)
   const CLAVE_BIBLIOTECA = 'biblioteca';
   let bibliotecaGuardada = null;   // { de: cuenta, huella, filas }
   async function ultimasSeries(ids) {
@@ -1471,8 +1491,10 @@ export function crearApi(backend) {
     async historialSinCompartir(atletaId) {
       const yo = uid();
       let g = null;
+      const k = `${yo}:${atletaId}`;
+      if (guardandoHistorial.has(k)) await guardandoHistorial.get(k);
       if (yo && atletaId && con048 !== false) {
-        g = historialesGuardados.get(`${yo}:${atletaId}`) || (await copiaDelMovil().leer(yo, CLAVE_HISTORIAL(atletaId)).catch(() => null))?.datos || null;
+        g = historialesGuardados.get(k) || (notaHistorial().includes(k) ? (await copiaDelMovil().leer(yo, CLAVE_HISTORIAL(atletaId)).catch(() => null))?.datos : null) || null;
         if (g && !(typeof g.corte === 'string' && typeof g.huella === 'string' && Array.isArray(g.filas))) g = null;
         if (g) {
           try { if ((await b.rpc('historial_huella', { p_atleta: atletaId, p_antes: g.corte })) === g.huella) con048 = true; else g = null; } catch (e) { if (!falta048(e)) throw e; con048 = false; g = null; }
@@ -1494,19 +1516,23 @@ export function crearApi(backend) {
       if (yo && atletaId && con048 !== false && todas.length && (!g || nuevas.length > 250 || Date.now() - Date.parse(g.corte) > 21 * 86400000)) {
         const corte = new Date(Date.now() - 7 * 86400000).toISOString();
         const antiguas = todas.filter((s) => Date.parse(s.registrada_en) < Date.parse(corte));
-        try {
-          const huella = await b.rpc('historial_huella', { p_atleta: atletaId, p_antes: corte });
-          con048 = true;
-          // (solo si cuadra con lo que hay aquí: si alguien registró o borró algo entre medias, ya se guardará a la siguiente)
-          if (uid() === yo && Number(String(huella).split(':')[0]) === antiguas.length) {
-            const nuevo = { corte, huella, filas: antiguas };
-            historialesGuardados.delete(`${yo}:${atletaId}`);
-            historialesGuardados.set(`${yo}:${atletaId}`, nuevo);
-            for (const k of [...historialesGuardados.keys()].slice(0, Math.max(0, historialesGuardados.size - 6))) historialesGuardados.delete(k);
-            copiaDelMovil().guardar(yo, CLAVE_HISTORIAL(atletaId), nuevo).catch(() => {});
-          }
-        } catch (e) { if (!falta048(e)) throw e; con048 = false; }
-      } else if (g && yo) historialesGuardados.set(`${yo}:${atletaId}`, g);
+        // (sin esperar: lo que se va a enseñar ya está; guardar para la próxima vez no tiene por qué retrasarlo)
+        const guardar = (async () => {
+          try {
+            const huella = await b.rpc('historial_huella', { p_atleta: atletaId, p_antes: corte });
+            con048 = true;
+            // (solo si cuadra con lo que hay aquí: si alguien registró o borró algo entre medias, ya se guardará a la siguiente)
+            if (uid() === yo && Number(String(huella).split(':')[0]) === antiguas.length) {
+              const nuevo = { corte, huella, filas: antiguas };
+              historialesGuardados.delete(k);
+              historialesGuardados.set(k, nuevo);
+              for (const x of [...historialesGuardados.keys()].slice(0, Math.max(0, historialesGuardados.size - 6))) historialesGuardados.delete(x);
+              if (await copiaDelMovil().guardar(yo, CLAVE_HISTORIAL(atletaId), nuevo).catch(() => false)) apuntarHistorial(k);
+            }
+          } catch (e) { if (falta048(e)) con048 = false; }
+        })().finally(() => { if (guardandoHistorial.get(k) === guardar) guardandoHistorial.delete(k); });
+        guardandoHistorial.set(k, guardar);
+      } else if (g && yo) historialesGuardados.set(k, g);
       return todas.map(({ _sesion, _pautado, _dia, ...s }) => {
         const ef = s.sustituto_id || _pautado;
         const e = ejercicios[ef] || {};
@@ -4748,14 +4774,19 @@ export function crearApi(backend) {
       try { huella = await b.rpc('biblioteca_huella'); con048 = true; } catch (e) { if (!falta048(e)) throw e; con048 = false; return entera(); }
       const copias = (filas) => filas.map((x) => (typeof structuredClone === 'function' ? structuredClone(x) : JSON.parse(JSON.stringify(x))));
       if (bibliotecaGuardada && bibliotecaGuardada.de === yo && bibliotecaGuardada.huella === huella) return copias(bibliotecaGuardada.filas);
-      const delMovil = await copiaDelMovil().leer(yo, CLAVE_BIBLIOTECA).catch(() => null);
+      // (la base del navegador solo se abre si hay nota de que se guardó: la primera vez no hay nada que leer)
+      let nota = null; try { nota = localStorage.getItem(NOTA_BIBLIOTECA); } catch { /* sin almacenamiento */ }
+      const delMovil = nota === yo ? await copiaDelMovil().leer(yo, CLAVE_BIBLIOTECA).catch(() => null) : null;
       if (delMovil?.datos?.huella === huella && Array.isArray(delMovil.datos.filas)) {
         bibliotecaGuardada = { de: yo, huella, filas: delMovil.datos.filas };
         return copias(bibliotecaGuardada.filas);
       }
       const filas = await entera();
       // (si cambiara justo entre la huella y la descarga, la huella siguiente ya no coincide y se vuelve a bajar)
-      if (uid() === yo) { bibliotecaGuardada = { de: yo, huella, filas }; copiaDelMovil().guardar(yo, CLAVE_BIBLIOTECA, { huella, filas }).catch(() => {}); }
+      if (uid() === yo) {
+        bibliotecaGuardada = { de: yo, huella, filas };
+        copiaDelMovil().guardar(yo, CLAVE_BIBLIOTECA, { huella, filas }).then((ok) => { if (ok) { try { localStorage.setItem(NOTA_BIBLIOTECA, yo); } catch { /* */ } } }, () => {});
+      }
       return copias(filas);
     },
     async ejerciciosPorIds(ids) {

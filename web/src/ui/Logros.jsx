@@ -91,7 +91,7 @@ const medallaDe = (nivel) => (metalDe(nivel) ? `medalla de ${metalDe(nivel).nomb
 // Cuadrícula de logros (en Progreso)
 export function Logros({ salud }) {
   const { api, atleta } = useApp();
-  const res = useCarga(() => api.logros(atleta.id, { salud }).catch(() => null), [atleta.id, salud]);
+  const res = useCarga(() => api.logros(atleta.id, { salud }).catch(() => null), [atleta.id, salud], { recuerdo: `logros:${atleta.id}:${salud ? 1 : 0}` });
   const [abierto, setAbierto] = useState(null);
   const lista = res.datos?.lista;
   if (!lista) return null;
@@ -141,7 +141,7 @@ function HojaLogro({ logro: l, alCerrar }) {
 // Celebración en Hoy cuando hay discos nuevos desde la última vez que se vieron (en este móvil).
 export function AvisoLogros({ salud, irA, pausado = false }) {
   const { api, atleta } = useApp();
-  const res = useCarga(() => api.logros(atleta.id, { salud }).catch(() => null), [atleta.id, salud]);
+  const res = useCarga(() => api.logros(atleta.id, { salud }).catch(() => null), [atleta.id, salud], { recuerdo: `logros:${atleta.id}:${salud ? 1 : 0}` });
   const [vistos, setVistos] = usePreferencia(`fbe-logros-${atleta.id}`, null);
   const [cerrado, setCerrado] = useState(false);
   const lista = res.datos?.lista;

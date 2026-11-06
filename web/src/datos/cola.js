@@ -26,7 +26,11 @@ export function crearCola(api, { clave = 'fbe-cola-v1', claveRechazos = 'fbe-col
   let cadena = Promise.resolve();
 
   const mias = () => ops.filter((o) => o.atletaId === atleta);
-  const avisar = () => { guardar(clave, ops); const n = mias().length; oyentes.forEach((f) => f(n)); };
+  // (pulido 3.4) lo apuntado sin conexión también es «escribir»: lo que las pantallas recuerdan deja de valer
+  const avisar = () => {
+    guardar(clave, ops); const n = mias().length; oyentes.forEach((f) => f(n));
+    if (typeof window !== 'undefined' && typeof Event === 'function') { try { window.dispatchEvent(new Event('fbe-escritura')); } catch { /* */ } }
+  };
 
   async function ejecutar(op) {
     if (op.tipo === 'serie') return api.guardarSerie(op.datos, op.atletaId);

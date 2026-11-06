@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { CabeceraGrande, useApp, useCarga, Icono, Marca, Insignia, usePildora } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, Icono, Marca, Insignia, usePildora, marcaFresca, sigueFresca } from '../comunes.jsx';
 import { conTransicion } from '../transiciones.js';
 import { usePosicion, subirArriba } from '../posiciones.js';
 import { useAtras, ponerRuta } from '../atras.js';
@@ -66,8 +66,14 @@ export function CoachApp() {
   // Pulido 2: cada sección recuerda por dónde iba (al volver de otra o al cerrar una ficha); la ficha y el chat, no
   usePosicion(ficha ? `ficha:${ficha.atletaId}` : tab, !ficha && tab !== 'mensajes');
   // La bandeja se refresca al cambiar de sección (no al montar: ya se carga sola)
+  // (pulido 3.4) salvo que se acabe de pedir (menos de 20 s) y no haya pasado nada desde entonces
   const montado = useRef(false);
-  useEffect(() => { if (montado.current) { bandeja.recargar(true); sinLeer.recargar(true); } montado.current = true; }, [tab, ficha?.atletaId]);
+  const pedida = useRef(null);
+  useEffect(() => {
+    if (montado.current && !sigueFresca(pedida.current)) { bandeja.recargar(true); sinLeer.recargar(true); pedida.current = marcaFresca(); }
+    if (!montado.current) pedida.current = marcaFresca();
+    montado.current = true;
+  }, [tab, ficha?.atletaId]);
   // La insignia de Mensajes se pone al día al momento (Realtime) y al leer
   useEffect(() => {
     const al = () => sinLeer.recargar(true);

@@ -640,8 +640,25 @@ export function Reserva({ id, cargando = false, liso = false, inicial = 0, clase
 
 const recuerdos = new Map();
 let escrituras = 0;
-export function olvidarRecuerdos() { escrituras++; recuerdos.clear(); }
-if (typeof window !== 'undefined') window.addEventListener('fbe-escritura', olvidarRecuerdos);
+// (pulido 3.4) No volver a pedir lo recién pedido. Al volver a una pantalla, lo recordado que se cargó hace menos de
+// FRESCO_MS se enseña sin pedirlo otra vez (antes se volvía a pedir todo en cada visita: en un rato de ir y volver,
+// tres de cada cuatro consultas eran repeticiones). Deja de valer, y se vuelve a pedir, si se ha escrito algo desde
+// aquí, si llega un mensaje o una notificación, si se vuelve a la app, si vuelve la conexión o si se tira para recargar.
+export const FRESCO_MS = 20000;
+const cargados = new Map();   // clave del recuerdo → { t: cuándo se cargó, epoca }
+let epoca = 0;
+const envejecer = () => { epoca++; };
+const estaFresco = (clave) => { const c = clave ? cargados.get(clave) : null; return !!c && c.epoca === epoca && Date.now() - c.t < FRESCO_MS && recuerdos.has(clave); };
+export function olvidarRecuerdos() { escrituras++; recuerdos.clear(); cargados.clear(); }
+// Lo mismo para lo que no pasa por useCarga con recuerdo (p. ej., la bandeja del coach, que se refresca al cambiar de
+// sección): una marca al pedir y, antes de volver a pedir, si sigue valiendo
+export const marcaFresca = () => ({ t: Date.now(), epoca, escrituras });
+export const sigueFresca = (m) => !!m && m.epoca === epoca && m.escrituras === escrituras && Date.now() - m.t < FRESCO_MS;
+if (typeof window !== 'undefined') {
+  window.addEventListener('fbe-escritura', olvidarRecuerdos);
+  for (const ev of ['fbe-mensaje', 'fbe-notificacion', 'fbe-recargar', 'fbe-copia', 'fbe-hilo', 'fbe-salida-enviado', 'online', 'focus', 'pageshow']) window.addEventListener(ev, envejecer);
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', envejecer);
+}
 export function useCarga(fn, deps = [], opciones = {}) {
   const { recuerdo = null } = opciones;
   const recordado = () => (recuerdo && recuerdos.has(recuerdo) ? recuerdos.get(recuerdo) : null);
@@ -665,12 +682,12 @@ export function useCarga(fn, deps = [], opciones = {}) {
   const cargar = useCallback(async (silencioso = false) => {
     const n = ++ultima.current;
     const clave = claveRecuerdo.current;
-    const antes = escrituras;
+    const antes = escrituras, epocaAntes = epoca;
     if (!silencioso) setEstado((e) => ({ ...e, cargando: true, error: null }));
     try {
       const datos = await fn();
       // (solo se recuerda lo que se cargó entero sin que se escribiera nada mientras)
-      if (clave && datos != null && antes === escrituras) recuerdos.set(clave, datos);
+      if (clave && datos != null && antes === escrituras) { recuerdos.set(clave, datos); cargados.set(clave, { t: Date.now(), epoca: epocaAntes }); }
       if (vivo.current && n === ultima.current) { base.current = datos; setEstado({ datos: conPendientes(datos), error: null, cargando: false }); }
     } catch (error) {
       reportarError(error, 'carga');
@@ -682,9 +699,11 @@ export function useCarga(fn, deps = [], opciones = {}) {
     vivo.current = true;
     // Con algo recordado, se pone al día en silencio; si lo que se pide cambia (otra clave), se enseña lo de la nueva
     const datos = recordado();
-    if (!primera.current && recuerdo) { base.current = datos; setEstado({ datos, error: null, cargando: datos == null }); }
+    const alMontar = primera.current;
+    if (!alMontar && recuerdo) { base.current = datos; setEstado({ datos, error: null, cargando: datos == null }); }
     primera.current = false;
-    cargar(datos != null);
+    // (pulido 3.4) al volver a la pantalla, lo recién cargado no se pide otra vez
+    if (!(alMontar && datos != null && estaFresco(recuerdo))) cargar(datos != null);
     return () => { vivo.current = false; };
   }, [cargar]);
   // (pulido 9) «tirar para recargar» (ui/tirar.js) pide a todas las cargas montadas que se repitan en silencio, y espera
@@ -706,6 +725,8 @@ export function useCarga(fn, deps = [], opciones = {}) {
       if (e.detail?.clave !== copia || !vivo.current) return;
       ultima.current++;
       base.current = transformar ? transformar(e.detail.datos) : e.detail.datos;
+      // (lo que se recuerda para la vuelta es lo de la base, no la copia que se enseñó mientras llegaba)
+      if (claveRecuerdo.current && base.current != null) recuerdos.set(claveRecuerdo.current, base.current);
       setEstado({ datos: conPendientes(base.current), error: null, cargando: false });
     };
     window.addEventListener('fbe-copia', al);
