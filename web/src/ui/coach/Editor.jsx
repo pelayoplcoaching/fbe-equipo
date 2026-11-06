@@ -108,7 +108,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
 
   return (
     <div class="pila">
-      <div class="panel panel-pad pila">
+      <div class="panel panel-pad pila editor-bloque">
         <div class="separa">
           <strong>{bloque.es_plantilla ? 'Plantilla' : `Bloque ${bloque.numero ?? ''}`}</strong>
           <span class={`guardado ${estado === 'Guardado' ? 'ok' : ''}`} role="status">{estado === 'Guardado' && <Icono n="hecho" width="16" height="16" />}{estado}</span>
@@ -163,7 +163,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       )}
 
       {semana && (
-        <div class="panel panel-pad pila" key={semana.id}>
+        <div class="panel panel-pad pila editor-semana" key={semana.id}>
           <div class="separa" style="flex-wrap:wrap">
             <div>
               <strong style="font-size:1.125rem">Semana {semana.numero}</strong>
