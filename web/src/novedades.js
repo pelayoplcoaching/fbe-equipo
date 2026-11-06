@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.78': {
+    atleta: [
+      'Los avisos de la primera vez ocupan menos: una nota pequeña que se quita con la equis.',
+    ],
+    coach: [
+      'La lista de atletas en el ordenador tiene una columna de avisos y todas las filas miden lo mismo.',
+    ],
+  },
   '0.77': {
     atleta: [
       'Progreso ahora se reparte en cuatro pestañas: Resumen, Fuerza, Cuerpo y Logros.',

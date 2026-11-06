@@ -244,3 +244,53 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .plegable-cuerpo > .seccion > .seccion-cab:not(:has(> :not(h2))) { display: none; }
 .plegable-hoy + .plegable-hoy { margin-top: -10px; }
 @media (prefers-reduced-motion: reduce) { .plegable-flecha { transition: none; } .plegable-hoy > summary:active { transform: none; } }
+
+/* ---------- 10. Tabla de atletas (escritorio) ---------------------------------------------------------------
+   ui/coach/Panel.jsx. Antes los avisos iban apilados bajo el nombre y cada fila medía lo que sus avisos (de 110 a
+   370 px). Ahora tienen su columna: los dos primeros y un «+N»; todas las filas miden lo mismo y lo de cada celda va
+   centrado. Pisa .atletas-tabla th/td (500–508), .alertas (508), .alertas .chip (1116) y .chispa (2700) de estilos.css.
+   Para que la columna nueva quepa sin mover la tabla de lado, por debajo de 1400 px de ventana no se ven «Sueño» ni
+   «Motivación» (.col-extra): siguen en la ficha y en la revisión semanal. Quitar esa regla las devuelve. */
+.atletas-tabla th { padding: 10px 8px; }
+.atletas-tabla td { padding: 8px; height: 4.5rem; vertical-align: middle; line-height: 1.3; }
+.atletas-tabla th:first-child, .atletas-tabla td:first-child { padding-left: 16px; }
+.atletas-tabla th:last-child, .atletas-tabla td:last-child { padding-right: 16px; }
+.atletas-tabla .nombre { min-width: 8.75rem; }
+.atletas-tabla .nombre > span:not(.avatar) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; line-height: 1.2; }
+.atletas-tabla .mini { line-height: 1.3; }
+.atletas-tabla .chispa { width: 52px; }
+.atletas-tabla tbody tr:focus-visible { outline: 2px solid var(--morado); outline-offset: -2px; }
+@media (max-width: 1399px) { .atletas-tabla .col-extra { display: none; } }
+/* Los avisos: dos como mucho, cada uno en una línea (si no cabe, puntos suspensivos y el texto entero al pasar el ratón) */
+/* La columna se queda con el sitio que sobre (hasta el 30 %): el «width: 0; min-width: 100 %» hace que los avisos
+   llenen la celda sin ensancharla ellos */
+.celda-avisos { width: 30%; min-width: 11.5rem; }
+.celda-avisos .alertas { width: 0; min-width: 100%; margin: 0; gap: 4px 6px; align-items: center; }
+.celda-avisos .chip { min-width: 0; max-width: 100%; min-height: 24px; padding: 1px 9px; gap: 5px; font-size: 0.7812rem; white-space: nowrap; }
+.celda-avisos .chip svg { width: 13px; height: 13px; flex: none; }
+.celda-avisos .chip-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.celda-avisos .alertas[data-max] > .chip:nth-child(n+3):not(.mas) { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); }
+.celda-avisos .alertas:has(> .mas) > .chip:nth-child(2) { max-width: calc(100% - 44px); }
+.celda-avisos .chip.mas { padding: 1px 7px; background: none; border-color: var(--linea); color: var(--tinta-2); cursor: help; }
+/* «Último registro» puede ir en dos líneas, como el resto de las celdas */
+.atletas-tabla th:last-child { white-space: normal; line-height: 1.15; vertical-align: bottom; }
+.atletas-tabla td.num-c:last-child { white-space: normal; min-width: 4.25rem; }
+/* Sesiones: los cuadritos y la minigráfica en una línea; debajo, el cumplimiento */
+.celda-sesiones { display: grid; grid-template-columns: auto auto; justify-content: start; align-items: center; gap: 2px 8px; }
+.celda-sesiones .cumple { grid-column: 1 / -1; grid-row: 2; margin-top: 0; }
+.celda-sesiones .chispa { margin-left: 0; }
+
+/* ---------- 11. Avisos de primera vez, más ligeros ----------------------------------------------------------
+   ui/comunes.jsx, Pista. Antes era un bloque lila con el texto a tamaño normal y un botón «Entendido» debajo: en la
+   sesión se juntaba con la nota del coach, que es otro bloque lila. Ahora es una nota: letra pequeña sin caja, tres
+   líneas como mucho («Leer más» abre el resto) y una equis para quitarla (para los lectores de pantalla sigue
+   llamándose «Entendido»). Pisa .pista y sus variantes (1655–1659 de estilos.css). */
+.pista, .seccion > .pista, .contenido > .pista { grid-template-columns: 18px minmax(0, 1fr) auto; align-items: start; gap: 8px; padding: 4px 0 4px 4px; border: 0; border-radius: 0; background: none; font-size: 0.8125rem; line-height: 1.45; color: var(--tinta-2); }
+.pista > svg { width: 16px; height: 16px; margin-top: 2px; color: var(--morado); }
+/* Al pie de una tarjeta («Tu día»): con el margen de la tarjeta y su raya */
+.panel > .pista { padding: 10px 12px 10px 16px; border-top: 1px solid var(--linea); }
+.pista p.corta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.pista-mas { display: block; min-height: 28px; padding: 2px 8px 2px 0; border: 0; background: none; font: inherit; font-weight: 650; color: var(--morado); cursor: pointer; }
+.pista-cerrar { position: relative; display: grid; place-items: center; width: 40px; height: 40px; margin: -10px -8px -10px -4px; border: 0; border-radius: 12px; background: none; color: var(--tinta-3); cursor: pointer; }
+.pista-cerrar svg { width: 16px; height: 16px; color: inherit; }
+.pista-cerrar:hover { color: var(--tinta); background: var(--hoja-2); }

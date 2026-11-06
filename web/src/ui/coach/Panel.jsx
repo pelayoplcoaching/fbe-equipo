@@ -43,12 +43,18 @@ function Pips({ hechas, total }) {
   return <span class="pips" role="img" aria-label={`${hechas} de ${total} sesiones`}>{Array.from({ length: total }, (_, i) => <i key={i} class={i < hechas ? 'hecha' : ''} />)}</span>;
 }
 
-function Alertas({ r, pendientes }) {
+// Los avisos de un atleta. En la tabla del escritorio van en su columna con max={2}: se ven los dos primeros (lo que
+// hay por revisar y lo más urgente, que es como llegan ordenados) y un «+N» con el resto al pasar el ratón; los demás
+// siguen en la página para los lectores de pantalla (diseno.css, bloque 10). En las tarjetas del móvil, todos.
+function Alertas({ r, pendientes, max = 0 }) {
   if (!r.alertas.length && !pendientes) return null;
+  const textos = [...(pendientes > 0 ? [`${pendientes} por revisar`] : []), ...r.alertas.map((a) => a.texto)];
+  const resto = max > 0 ? textos.slice(max) : [];
   return (
-    <div class="alertas">
-      {pendientes > 0 && <span class="chip morado"><Icono n="bandeja" />{pendientes} por revisar</span>}
-      {r.alertas.map((a) => <span key={a.tipo} class={`chip ${a.nivel}`}>{a.nivel !== 'info' && <Icono n="alerta" />}{a.texto}</span>)}
+    <div class="alertas" data-max={max || undefined}>
+      {pendientes > 0 && <span class="chip morado" title={max ? textos[0] : undefined}><Icono n="bandeja" /><span class="chip-txt">{pendientes} por revisar</span></span>}
+      {r.alertas.map((a) => <span key={a.tipo} class={`chip ${a.nivel}`} title={max ? a.texto : undefined}>{a.nivel !== 'info' && <Icono n="alerta" />}<span class="chip-txt">{a.texto}</span></span>)}
+      {resto.length > 0 && <span class="chip mas num" aria-hidden="true" title={resto.join(' · ')}>+{resto.length}</span>}
     </div>
   );
 }
@@ -109,23 +115,24 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
           <div class="panel solo-ancho">
             <div class="tabla-env">
               <table class="atletas-tabla">
-                <thead><tr><th>Atleta</th>{conCobros && <th>Pagos</th>}<th>Semana</th><th>Sesiones</th><th>Peso</th><th>Sueño</th><th>Motivación</th><th>Molestias</th><th>Último registro</th></tr></thead>
+                <thead><tr><th>Atleta</th><th>Avisos</th>{conCobros && <th>Pagos</th>}<th>Semana</th><th>Sesiones</th><th>Peso</th><th class="col-extra">Sueño</th><th class="col-extra">Motivación</th><th>Molestias</th><th>Último registro</th></tr></thead>
                 <tbody>
                   {vista.map((r) => (
                     <tr key={r.atleta_id} data-estado={estadoAtleta(r)} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar')); }}>
-                      <td class="celda-estado"><div class="nombre"><Avatar nombre={r.nombre} foto={r.foto} /><span>{r.nombre}<span class="sr">. {NOMBRE_ESTADO[estadoAtleta(r)]}</span></span></div><Alertas r={r} pendientes={pendientes[r.atleta_id]} /></td>
+                      <td class="celda-estado"><div class="nombre"><Avatar nombre={r.nombre} foto={r.foto} /><span>{r.nombre}<span class="sr">. {NOMBRE_ESTADO[estadoAtleta(r)]}</span></span></div></td>
+                      <td class="celda-avisos">{r.alertas.length || pendientes[r.atleta_id] ? <Alertas r={r} pendientes={pendientes[r.atleta_id]} max={2} /> : <span class="terciario">—</span>}</td>
                       {conCobros && <td><CobroPanel c={r.cobro} /></td>}
                       {r.servicio === 'nutricion' ? (
                         <td colSpan={2}><span class="chip morado">Solo nutrición</span>{r.diasNutricion != null && <div class="mini terciario">{r.diasNutricion}/7 días apuntados</div>}</td>
                       ) : (
                         <>
                           <td class="num-c">{r.semana ? <>S{r.semana.numero}/{r.semana.total}<div class="mini terciario">{r.semana.foco ? NOMBRE_FOCO[r.semana.foco] : r.bloque?.nombre}</div></> : '—'}</td>
-                          <td><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /><ChispaSesiones semanas={r.chispas?.sesiones} /></td>
+                          <td><div class="celda-sesiones"><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /><ChispaSesiones semanas={r.chispas?.sesiones} /></div></td>
                         </>
                       )}
                       <td class="num-c">{r.peso ? <>{num(r.peso.kg)} kg<ChispaPeso puntos={r.chispas?.peso} />{r.peso.ritmo ? <div class="mini terciario">{signo(r.peso.ritmo.kgSemana, 2)}/sem</div> : r.peso.cambio != null && <div class="mini terciario">{signo(r.peso.cambio)}</div>}</> : '—'}</td>
-                      <td class="num-c">{sueno(r.checkin?.horas_sueno)}</td>
-                      <td>{r.checkin?.motivacion ? ESCALAS.motivacion[r.checkin.motivacion - 1] : '—'}</td>
+                      <td class="num-c col-extra">{sueno(r.checkin?.horas_sueno)}</td>
+                      <td class="col-extra">{r.checkin?.motivacion ? ESCALAS.motivacion[r.checkin.motivacion - 1] : '—'}</td>
                       <td>{r.maxMolestia ? <span class={`chip ${r.maxMolestia >= 2 ? 'aviso' : 'info'}`}>{MOLESTIA[r.maxMolestia]}</span> : <span class="terciario">—</span>}</td>
                       <td class="num-c">{r.ultimaSerie ? hace(r.ultimaSerie) : '—'}</td>
                     </tr>
