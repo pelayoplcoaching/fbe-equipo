@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.91': {
+    atleta: [
+      'La sesión es más clara: la propuesta de cada ejercicio y la serie que toca se ven mejor, y el descanso lleva su etiqueta.',
+      'Quien solo lleva nutrición tiene su bienvenida del día.',
+    ],
+    coach: [
+      'El editor del programa en el móvil va en tarjetas, sin deslizar de lado.',
+      '«A quién escribir» y la Revisión semanal resaltan una sola acción por atleta.',
+    ],
+  },
   '0.90': {
     atleta: [
       'La app abre y cambia de pantalla más rápido, y gasta menos datos: las fotos de perfil van en pequeño y se amplían al tocarlas.',
