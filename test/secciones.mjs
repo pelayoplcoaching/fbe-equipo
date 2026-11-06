@@ -58,3 +58,20 @@ export async function abrirEnHoy(p, id) {
   if (!(await d.count())) return;
   await d.evaluate((el) => { el.open = true; });
 }
+
+// En el Equipo, «Próximos», «Compañeros de racha» y los recuentos («Esta semana en el equipo», «Resumen del mes») van
+// plegados en pastillas (web/src/ui/PlegableEquipo.jsx; ids: proximos, companeros, semana, mes). Lo de dentro sigue en
+// la página aunque la pastilla esté cerrada, pero no se ve: antes de pulsarlo o esperarlo, hay que abrirla. Se queda
+// abierta para el resto de la prueba (el navegador lo recuerda).
+export async function abrirEnEquipo(p, id) {
+  const d = p.locator(`details[data-plegable-eq="${id}"]`).first();
+  await d.waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
+  await d.evaluate((el) => { el.open = true; }, null, { timeout: 2000 }).catch(() => {});
+}
+
+// El cuadro de publicar del atleta empieza plegado en una línea: el tema, las fotos y «Publicar» salen al tocarlo.
+// Escribir en él ya lo abre; esto es para lo que toca antes el tema o las fotos.
+export async function abrirCompositor(p) {
+  await p.locator('#eq-texto').first().focus({ timeout: 5000 }).catch(() => {});
+}
+
