@@ -80,7 +80,7 @@ export function HojaRellenar({ atletaId, lunes, entradas = [], recetario, diasSi
           ))}
           {r.sinRecetas.length > 0 && <p class="mini terciario" style={{ margin: 0 }}>Sin recetas en el recetario para {r.sinRecetas.map((t) => NOMBRE_TOMA[t].toLowerCase()).join(', ')}: {r.sinRecetas.length === 1 ? 'esa comida se queda' : 'esas comidas se quedan'} sin rellenar.</p>}
           {descuadre && Math.abs(descuadre.pct) >= DESCUADRE_AVISO && (
-            <p class="peq aviso-t" style={{ margin: 0 }}>Con su recetario, los días completos salen un {String(Math.abs(descuadre.pct)).replace('.', ',')} % por {descuadre.pct > 0 ? 'encima' : 'debajo'} de su plan ({fmtKcal(descuadre.kcal)} frente a {fmtKcal(descuadre.objetivo)} kcal): revisa el factor de sus recetas.</p>
+            <p class="peq aviso-t" style={{ margin: 0 }}>Con su recetario, los días completos salen un {String(Math.abs(descuadre.pct)).replace('.', ',')} % por {descuadre.pct > 0 ? 'encima' : 'debajo'} de su plan ({fmtKcal(descuadre.kcal)} frente a {fmtKcal(descuadre.objetivo)} kcal): compruébalo en su recetario (Nutrición → Recetario).</p>
           )}
         </>
       )}
