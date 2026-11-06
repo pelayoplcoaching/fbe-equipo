@@ -294,3 +294,21 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .pista-cerrar { position: relative; display: grid; place-items: center; width: 40px; height: 40px; margin: -10px -8px -10px -4px; border: 0; border-radius: 12px; background: none; color: var(--tinta-3); cursor: pointer; }
 .pista-cerrar svg { width: 16px; height: 16px; color: inherit; }
 .pista-cerrar:hover { color: var(--tinta); background: var(--hoja-2); }
+
+/* ---------- 12. Las secciones de la ficha del atleta --------------------------------------------------------
+   ui/coach/SeccionesFicha.jsx. Son hasta once pestañas: en el móvil se veían tres y media y en un portátil se
+   quedaba fuera la última. La tira sigue igual (se desliza), pero cuando no caben todas lleva al final un botón fijo
+   que abre una hoja con todas en una rejilla; en pantallas anchas las pestañas van algo más juntas para que quepan. */
+.ficha-secciones { display: flex; align-items: stretch; min-width: 0; }
+.ficha-secciones > .pestanas { flex: 1 1 auto; min-width: 0; }
+.ficha-todas { flex: none; display: grid; place-items: center; width: 44px; padding: 0; border: 0; border-bottom: 1px solid var(--linea); border-radius: 10px 10px 0 0; background: none; color: var(--tinta-2); cursor: pointer; }
+.ficha-todas svg { width: 20px; height: 20px; }
+.ficha-todas:hover, .ficha-todas[aria-expanded="true"] { color: var(--morado); }
+@media (min-width: 900px) { .pestanas-atleta button { padding-inline: 8px; } }
+.rejilla-secciones { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rejilla-secciones button { display: grid; justify-items: center; align-content: center; gap: 8px; width: 100%; min-height: 5.5rem; padding: 10px 6px; border: 0; box-shadow: inset 0 0 0 1px var(--linea); border-radius: var(--r-s); background: var(--hoja-2); font: inherit; font-size: 0.8438rem; font-weight: 650; line-height: 1.2; color: var(--tinta); text-align: center; cursor: pointer; }
+.rejilla-secciones button:active { transform: scale(.97); }
+.rejilla-secciones button.actual { background: var(--morado-suave); color: var(--morado); box-shadow: none; }
+.rejilla-secciones button.actual .ios-ico { background: var(--morado); color: var(--sobre-morado); }
+.rejilla-secciones .ios-ico { background: var(--hoja); }
+@media (prefers-reduced-motion: reduce) { .rejilla-secciones button:active { transform: none; } }

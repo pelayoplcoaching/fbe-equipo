@@ -6,9 +6,10 @@ import { useEffect, useState } from 'preact/hooks';
 import { ChipLlegada } from '../atleta/Preparacion.jsx';
 import { CumplimientoYBloques } from './Cumplimiento.jsx';
 import { Actividad } from './Actividad.jsx';
+import { SeccionesFicha } from './SeccionesFicha.jsx';
 import { CompararFotos } from '../CompararFotos.jsx';
 import { CompararVideos } from '../Archivos.jsx';
-import { CabeceraGrande, useUnaVez, Pestanas, useAncho, Siluetas, useApp, useCarga, Icono, ErrorCaja, Hoja, Vacio, Paso, Segmentos, HojaExportar, Avatar } from '../comunes.jsx';
+import { CabeceraGrande, useUnaVez, useAncho, Siluetas, useApp, useCarga, Icono, ErrorCaja, Hoja, Vacio, Paso, Segmentos, HojaExportar, Avatar } from '../comunes.jsx';
 import { EditorBloque, ElegirEjercicio } from './Editor.jsx';
 import { textoMarca, REPS_MAX_OBJETIVO } from '../../logica/objetivos.js';
 import { Invitacion } from './Panel.jsx';
@@ -73,7 +74,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
       </CabeceraGrande>
       {a && <ChipsFicha r={r} cargando={resumen.cargando && !r} />}
       <ErrorCaja error={ficha.error} reintentar={ficha.recargar} />
-      <Pestanas opciones={a ? pestanasFicha(a) : PESTANAS} valor={pest} alCambiar={setPest} etiqueta="Secciones de la ficha" />
+      <SeccionesFicha opciones={a ? pestanasFicha(a) : PESTANAS} valor={pest} alCambiar={setPest} />
       {!a ? <Siluetas forma="tarjetas" n={3} texto="Cargando la ficha" /> : (
         <div class="pestana-panel" role="tabpanel" id="pest-panel" aria-labelledby={`pest-${pest}`} key={pest}>
           {pest === 'programa' && <Programa atleta={a} />}
