@@ -347,3 +347,62 @@ select.seguida-orden { max-width: min(100%, 17rem); }
   .lista:has(> li > .fila-biblioteca) { overflow: hidden; border-radius: var(--r); }
 }
 @media (min-width: 1400px) { .lista:has(> li > .fila-biblioteca) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ---------- 15. El editor del programa ----------------------------------------------------------------------
+   ui/coach/Editor.jsx (solo se le han puesto dos clases: .editor-bloque y .editor-semana). Pisa .tabla-pauta
+   (530–537), .variante-tempo (1240, 1318) y .equivalentes (2064) de estilos.css.
+   a) La tabla de ejercicios. Antes cada ejercicio era una fila de 220 a 250 px: bajo el nombre se apilaban cuatro
+      controles en una columna de 230 px y las cifras quedaban centradas a media altura, lejos del nombre. Ahora todo
+      va arriba, en la línea del nombre, con una raya entre ejercicios; y las opciones del ejercicio (equivalente,
+      variante, tempo y back-off) van en una sola línea que sale de su celda hacia la derecha, por el hueco que queda
+      libre debajo de las cifras (--sale: cuánto sale). La columna no se ensancha: «contain: inline-size» hace que
+      lo que sale no cuente para el ancho de la celda. */
+.tabla-pauta { border-spacing: 0; }
+.tabla-pauta th { padding-bottom: 8px; }
+.tabla-pauta tbody td { vertical-align: top; padding: 8px 4px 10px; border-top: 1px solid var(--linea); }
+.tabla-pauta td.resumen-detalle { line-height: 40px; }
+/* La prioridad se lee entera («Muy importante»): el sitio sale de los tres botones del final, algo más pequeños */
+.tabla-pauta .sel-prioridad select { min-width: 8.375rem; }
+.tabla-pauta select[aria-label="Descanso"] { min-width: 4.875rem; }
+.tabla-pauta .col-ejercicio { min-width: 13rem; }
+.tabla-pauta td > .fila > .btn-icono { width: 36px; height: 40px; }
+.tabla-pauta .col-ejercicio { --sale: 24rem; position: relative; z-index: 1; white-space: nowrap; }
+.tabla-pauta .col-ejercicio > * { white-space: normal; }
+.tabla-pauta .col-ejercicio select { white-space: nowrap; }
+.tabla-pauta .col-ejercicio > .btn-ejercicio { display: flex; min-height: 40px; }
+.tabla-pauta .col-ejercicio > .equivalentes { display: inline-block; width: 10.5rem; min-height: 34px; margin: 6px 6px 0 0; vertical-align: top; }
+.tabla-pauta .col-ejercicio > .variante-tempo { display: inline-grid; contain: inline-size; grid-template-columns: minmax(0, 1fr) 76px 10.5rem; width: calc(100% + var(--sale)); margin: 6px calc(-1 * var(--sale)) 0 0; vertical-align: top; }
+.tabla-pauta .col-ejercicio > .equivalentes + .variante-tempo { width: calc(100% + var(--sale) - 10.5rem - 6px); }
+.tabla-pauta .variante-tempo input.variante, .tabla-pauta .variante-tempo input.tempo { margin-top: 0; }
+.tabla-pauta .variante-tempo .backoff { grid-column: auto; }
+.tabla-pauta .col-ejercicio > .nota-pauta { display: flex; }
+.tabla-pauta .col-ejercicio > .detalle-series { contain: inline-size; width: 17.5rem; margin-right: calc(-1 * var(--sale)); }
+.tabla-pauta input.n { min-width: 2.75rem; }
+.tabla-pauta .col-ejercicio > input.variante { display: block; }
+.tabla-pauta .col-ejercicio > .mini:not(.nota-pauta), .tabla-pauta .col-ejercicio > .aviso-variante, .tabla-pauta .col-ejercicio > input.variante { contain: inline-size; width: calc(100% + var(--sale)); margin-right: calc(-1 * var(--sale)); }
+/* b) Las tarjetas del bloque y de la semana, más bajas en ventanas anchas: los botones del bloque suben a la línea
+      del título, y la nota de la semana se pone al lado del foco y la fecha en vez de debajo. */
+@media (min-width: 1100px) {
+  .editor-bloque { grid-template-columns: minmax(0, 1fr) auto; }
+  .editor-bloque > * { grid-column: 1 / -1; }
+  .editor-bloque > .separa:first-child { grid-column: 1; }
+  .editor-bloque > .fila-envolver { grid-column: 2; grid-row: 1; }
+  .editor-semana { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; }
+  .editor-semana > * { grid-column: 1 / -1; }
+  .editor-semana > .rejilla-campos { grid-column: 1; }
+  .editor-semana > .rejilla-campos + .campo { grid-column: 2; }
+  .editor-semana > .rejilla-campos + .campo > textarea { min-height: 48px; height: 48px; }
+}
+
+/* ---------- 16. Pictogramas más grandes ---------------------------------------------------------------------
+   ui/Pictograma.jsx: el monigote de cada patrón de movimiento. Iba en una cajita de 30 a 36 px con el dibujo al 72 %
+   (unos 23–26 px): se veía que había un icono, pero no qué movimiento era. Ahora la caja base es de 40 px y el dibujo
+   la llena más; en el ejercicio abierto de la sesión, que es donde más se mira, 48 px. Pisa .picto y sus variantes
+   (2782–2792 y 2817 de estilos.css). Solo estilos. */
+.picto { width: 2.5rem; height: 2.5rem; border-radius: 11px; }
+.picto svg { width: 80%; height: 80%; }
+.picto.picto-grande { width: 3.25rem; height: 3.25rem; border-radius: 14px; }
+.ejercicio:not(.plegado) .ejercicio-cab .picto { width: 3rem; height: 3rem; border-radius: 13px; }
+.ejercicio.plegado .ejercicio-cab .picto { width: 2.25rem; height: 2.25rem; }
+.lista-ejercicios-hoy .ej-fila .picto { width: 2.5rem; height: 2.5rem; }
+.dia-pictos .picto { width: 2rem; height: 2rem; }

@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.82': {
+    atleta: [
+      'Los dibujos de cada ejercicio son más grandes.',
+    ],
+    coach: [
+      'El editor del programa es más compacto: cada ejercicio en una línea con sus opciones debajo.',
+    ],
+  },
   '0.81': {
     coach: [
       'Recetario: «Comprobar con el plan» (ficha) y «Comprobar recetarios» (Biblioteca) dicen si el día cuadra con su plan y qué corregir.',
