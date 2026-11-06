@@ -973,12 +973,35 @@ export function HojaExportar({ titulo, nombre, contenido, tipo, alCerrar }) {
 // con todo lo que hace, se entienda sola.
 export function Pista({ id, children, icono = 'pregunta' }) {
   const [vista, setVista] = usePreferencia(`fbe-pista-${id}`, false);
+  // Como mucho tres líneas; si el texto es más largo, «Leer más» lo abre entero (si solo se pasa por una línea se
+  // enseña entero: «Leer más» ocuparía lo mismo). Se mide con el tamaño real, también cuando la nota aparece después
+  // (dentro de una fila plegada, en otra pestaña). Sin ResizeObserver, entero siempre.
+  const [entera, setEntera] = useState(() => typeof ResizeObserver === 'undefined');
+  const [larga, setLarga] = useState(false);
+  const texto = useRef(null);
+  useEffect(() => {
+    const p = texto.current;
+    if (!p || entera) return undefined;
+    const medir = () => {
+      const sobra = p.scrollHeight - p.clientHeight;
+      if (sobra <= 2) setLarga(false);
+      else if (sobra <= (parseFloat(getComputedStyle(p).lineHeight) || 20) + 2) setEntera(true);
+      else setLarga(true);
+    };
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(p);
+    return () => ro.disconnect();
+  }, [entera, vista]);
   if (vista) return null;
   return (
     <div class="pista" role="note">
       <Icono n={icono} />
-      <p>{children}</p>
-      <button type="button" class="btn btn-peq" onClick={() => setVista(true)}>Entendido</button>
+      <div class="pista-texto">
+        <p ref={texto} class={entera ? undefined : 'corta'}>{children}</p>
+        {larga && !entera && <button type="button" class="pista-mas" onClick={() => setEntera(true)}>Leer más</button>}
+      </div>
+      <button type="button" class="pista-cerrar" onClick={() => setVista(true)}><Icono n="cerrar" /><span class="sr">Entendido</span></button>
     </div>
   );
 }
