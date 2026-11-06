@@ -722,8 +722,35 @@ export function CabeceraGrande({ clase = '', children }) {
     const t = setTimeout(() => { raiz.style.overflowAnchor = antes; }, 400);
     return () => { clearTimeout(t); raiz.style.overflowAnchor = antes; };
   }, [compacta]);
+  // Diseño, tanda 10: el título va grande si cabe en una línea en el sitio que le deja la fila; si no, al tamaño de las
+  // demás cabeceras (clase `titulo-justo`). Solo esos dos tamaños. Se mide antes de pintar con una copia invisible a
+  // tamaño grande (`.titulo-medida`, fuera de la cabecera), y otra vez cuando cambia la fila, el texto o la ventana.
+  const [justo, setJusto] = useState(false);
+  useLayoutEffect(() => {
+    const h = cab.current;
+    if (!h || compacta) return undefined;
+    const medir = () => {
+      const h1 = h.querySelector('.titulo h1');
+      if (!h1 || !h1.clientWidth) return;
+      const copia = document.createElement('span');
+      copia.className = 'titulo-medida';
+      copia.setAttribute('aria-hidden', 'true');
+      copia.textContent = h1.textContent;
+      document.body.appendChild(copia);
+      const ancho = copia.getBoundingClientRect().width;
+      copia.remove();
+      setJusto(ancho > h1.clientWidth + 0.5);
+    };
+    medir();
+    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(medir);
+    mo?.observe(h, { childList: true, subtree: true, characterData: true });
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(medir);
+    ro?.observe(h);
+    document.fonts?.ready?.then(medir).catch(() => {});
+    return () => { mo?.disconnect(); ro?.disconnect(); };
+  }, [compacta]);
   return (
-    <header ref={cab} class={`cabecera cabecera-grande${compacta ? ' compacta' : ''}${clase ? ` ${clase}` : ''}`}>{children}</header>
+    <header ref={cab} class={`cabecera cabecera-grande${compacta ? ' compacta' : ''}${justo ? ' titulo-justo' : ''}${clase ? ` ${clase}` : ''}`}>{children}</header>
   );
 }
 
