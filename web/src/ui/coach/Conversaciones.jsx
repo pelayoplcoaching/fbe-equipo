@@ -223,7 +223,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
     <div class="mensajes-dos">
       {pantalla}
       <div class="chat-pagina mensajes-chat">
-        {chat || <div class="mensajes-vacio"><Vacio icono="mensaje" titulo="Elige una conversación">Se abre aquí, con la lista siempre a la vista.</Vacio></div>}
+        {chat || <div class="mensajes-vacio"><Vacio ilustracion="mensajes" titulo="Elige una conversación">Se abre aquí, con la lista siempre a la vista.</Vacio></div>}
       </div>
     </div>
   );

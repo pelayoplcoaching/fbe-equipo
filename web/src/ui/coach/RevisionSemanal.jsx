@@ -42,7 +42,7 @@ export function RevisionSemanal({ abrirAtleta }) {
       {res.cargando && !datos ? <Siluetas forma="lista" n={6} texto="Cargando la revisión" /> : res.error ? (
         <ErrorCaja error={res.error} reintentar={() => res.recargar()} />
       ) : !filas.length ? (
-        <div class="panel"><Vacio icono="atletas" titulo="Aún no tienes atletas">Cuando des de alta a alguien, saldrá aquí para tu revisión de cada semana.</Vacio></div>
+        <div class="panel"><Vacio ilustracion="atletas" titulo="Aún no tienes atletas">Cuando des de alta a alguien, saldrá aquí para tu revisión de cada semana.</Vacio></div>
       ) : (
         <div class="pila">
           <div class="panel panel-pad revision-progreso">
@@ -56,7 +56,7 @@ export function RevisionSemanal({ abrirAtleta }) {
             ))}
           </div>
           {!vista.length ? (
-            <div class="panel"><Vacio icono="hecho" titulo={filtro === 'pendientes' ? '¡Revisión terminada!' : 'Nadie revisado aún'}>{filtro === 'pendientes' ? 'Has revisado a todos esta semana.' : 'Marca a cada atleta cuando acabes con él.'}</Vacio></div>
+            <div class="panel"><Vacio icono="hecho" ilustracion={filtro === 'pendientes' ? 'todo' : null} titulo={filtro === 'pendientes' ? '¡Revisión terminada!' : 'Nadie revisado aún'}>{filtro === 'pendientes' ? 'Has revisado a todos esta semana.' : 'Marca a cada atleta cuando acabes con él.'}</Vacio></div>
           ) : (
             <ul class="revision-lista">
               {vista.map((f) => <FilaRevision key={f.atleta_id} f={f} con040={datos.revisiones} guardar={(c) => guardar(f, c)} abrirAtleta={abrirAtleta} />)}

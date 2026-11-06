@@ -1748,7 +1748,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const textoLegal = fs.readFileSync(new URL('../web/src/legal.js', import.meta.url), 'utf8');
   check(/el tamaño de la letra/.test(fila ? fila[1] : textoLegal) && /^\d{4}-\d{2}(\.[1-9]\d?)?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice también el tamaño de la letra (sin cambiar la versión de la política)');
   const ilus = fs.readFileSync(new URL('../web/src/ui/Ilustraciones.jsx', import.meta.url), 'utf8');
-  check(['mensajes', 'diario', 'records', 'checkins', 'tareas', 'todo', 'filtro', 'descanso', 'hecha', 'semana', 'espera'].every((k) => new RegExp(`\\n  ${k}: \\(\\) =>`).test(ilus)) && !/#[0-9a-fA-F]{3,6}/.test(ilus), 'las ilustraciones: una por estado vacío y por día de Hoy, sin colores escritos (los pone el tema)');
+  check(['mensajes', 'diario', 'records', 'checkins', 'tareas', 'todo', 'filtro', 'descanso', 'hecha', 'semana', 'espera', 'progreso', 'recetas', 'equipo', 'atletas', 'plantillas'].every((k) => new RegExp(`\\n  ${k}: \\(\\) =>`).test(ilus)) && !/#[0-9a-fA-F]{3,6}/.test(ilus), 'las ilustraciones: una por estado vacío y por día de Hoy, sin colores escritos (los pone el tema)');
 }
 // ---------- v0.51: piezas visuales ----------
 {

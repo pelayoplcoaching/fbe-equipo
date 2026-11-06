@@ -64,7 +64,7 @@ export function RadarContacto({ abrirAtleta }) {
       {res.cargando && !datos ? <Siluetas forma="lista" n={6} texto="Cargando el contacto con tus atletas" /> : res.error ? (
         <ErrorCaja error={res.error} reintentar={() => res.recargar()} />
       ) : !filas.length ? (
-        <div class="panel"><Vacio icono="atletas" titulo="Aún no tienes atletas activos">Cuando alguien active su cuenta, saldrá aquí con el contacto que lleváis.</Vacio></div>
+        <div class="panel"><Vacio ilustracion="atletas" titulo="Aún no tienes atletas activos">Cuando alguien active su cuenta, saldrá aquí con el contacto que lleváis.</Vacio></div>
       ) : (
         <div class="pila">
           <div class="panel panel-pad revision-progreso">
@@ -83,7 +83,7 @@ export function RadarContacto({ abrirAtleta }) {
             ))}
           </div>
           {!vista.length ? (
-            <div class="panel"><Vacio icono="hecho" titulo={actual === 'hoy' ? 'Hoy no le debes un mensaje a nadie' : 'Nadie aquí'}>{actual === 'hoy' ? 'Todos han sabido de ti hace poco o ya van al día esta semana.' : 'Cambia de vista para ver al resto.'}</Vacio></div>
+            <div class="panel"><Vacio icono="hecho" ilustracion={actual === 'hoy' ? 'todo' : null} titulo={actual === 'hoy' ? 'Hoy no le debes un mensaje a nadie' : 'Nadie aquí'}>{actual === 'hoy' ? 'Todos han sabido de ti hace poco o ya van al día esta semana.' : 'Cambia de vista para ver al resto.'}</Vacio></div>
           ) : (
             <ul class="revision-lista" aria-label="Atletas">
               {vista.map((f) => (

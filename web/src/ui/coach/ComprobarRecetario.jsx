@@ -142,7 +142,7 @@ export function HojaRecetariosEquipo({ alCerrar, alCambiar }) {
     <Hoja titulo="Los recetarios y sus planes" alCerrar={alCerrar}>
       <ErrorCaja error={equipo.error} reintentar={() => equipo.recargar(true)} />
       {equipo.cargando && !equipo.datos ? <Siluetas forma="lista" n={5} texto="Comprobando los recetarios" /> : !lista.length ? (
-        !equipo.error && <Vacio icono="receta" titulo="Ningún atleta con recetario">Cuando le pongas recetas a alguien, aquí verás si cuadran con su plan.</Vacio>
+        !equipo.error && <Vacio ilustracion="recetas" titulo="Ningún atleta con recetario">Cuando le pongas recetas a alguien, aquí verás si cuadran con su plan.</Vacio>
       ) : (
         <>
           <p class="peq" style={{ margin: 0 }}><strong>{bien} de {lista.length} recetarios cuadran con su plan.</strong> Toca uno para ver el detalle y corregirlo.</p>

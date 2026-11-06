@@ -1003,3 +1003,22 @@ select.seguida-orden { max-width: min(100%, 17rem); }
   .segmentos[data-pastilla]::before { display: none; }
   .segmentos[data-pastilla] > button[aria-pressed="true"] { background: Highlight; color: HighlightText; }
 }
+
+/* ── 40 · Estados vacíos con escena (tanda 17) ────────────────────────────────────────────────────────────────────────
+   De los 53 vacíos solo diez llevaban dibujo. Los más vistos estrenan escena (Ilustraciones.jsx: progreso, recetas,
+   equipo, atletas y plantillas); los demás, que siguen con su icono (estilos.css 566), lo llevan ahora en un pequeño
+   escenario: un disco del color de la marca con dos aros que se apagan. */
+.vacio:not(.con-ilustracion) > svg:first-child {
+  width: 60px; height: 60px; padding: 15px; border-radius: 50%; color: var(--morado); background: var(--morado-suave);
+  box-shadow: 0 0 0 9px color-mix(in srgb, var(--morado) 7%, transparent), 0 0 0 19px color-mix(in srgb, var(--morado) 3.5%, transparent);
+  margin: 14px 0 12px;
+}
+@media (prefers-reduced-motion: no-preference) { .vacio:not(.con-ilustracion) > svg:first-child { animation: ilu-entra var(--mov-lento) var(--curva-casa) both; } }
+
+/* ── 41 · Fotos y avatares que se funden (tanda 17) ───────────────────────────────────────────────────────────────────
+   Una foto que aún no ha cargado no aparece de golpe: al llegar pasa de borrosa a nítida (ui/llegada.js pone las
+   clases). Y el avatar con foto lleva un aro fino de su color, separado por un filo del fondo (como los de las historias). */
+img.img-llega { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) { img.img-llegada { animation: img-funde var(--mov-lento) var(--curva-casa); } }
+@keyframes img-funde { from { opacity: 0; filter: blur(10px); } }
+.avatar.con-foto:not(.podio-persona .avatar) { box-shadow: 0 0 0 1.5px var(--hoja), 0 0 0 3px color-mix(in srgb, var(--av, var(--morado)) 62%, transparent); }

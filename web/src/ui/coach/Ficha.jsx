@@ -147,7 +147,7 @@ function Programa({ atleta }) {
         {lista.length > 0 && <button class="btn" onClick={() => setNuevo(true)}><Icono n="mas" /> Nuevo bloque</button>}
       </div>
       {!lista.length ? (
-        <div class="panel"><Vacio icono="plantillas" titulo="Sin bloques todavía" accion={<button class="btn btn-primario" onClick={() => setNuevo(true)}>Crear su primer bloque</button>}>
+        <div class="panel"><Vacio ilustracion="plantillas" titulo="Sin bloques todavía" accion={<button class="btn btn-primario" onClick={() => setNuevo(true)}>Crear su primer bloque</button>}>
           Crea un bloque desde una plantilla o desde cero. El atleta verá las semanas que publiques.
         </Vacio></div>
       ) : bloqueId && <EditorBloque key={bloqueId} bloqueId={bloqueId} volumenObjetivo={atleta.volumen_objetivo} nivel={atleta.nivel || null} alBorrar={() => { setBloqueId(null); bloques.recargar(true); }} alCambiarBloque={() => bloques.recargar(true)} />}
