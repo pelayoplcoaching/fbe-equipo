@@ -79,7 +79,7 @@ function AnilloMacro({ x }) {
     <li class={`anillo-macro m-${x.id} ${x.estado}`}>
       <span class="anillo-macro-dibujo" role="img" aria-label={`${x.nombre}: ${x.valor == null ? 'sin apuntar' : `${num(x.valor, 0)} de ${num(x.objetivo, 0)} g`}`}>
         <svg viewBox="0 0 64 64" aria-hidden="true">
-          <DegradadoAro id={deg} />
+          <DegradadoAro id={deg} gira />
           <circle class="carril" cx="32" cy="32" r={R} />
           {x.valor != null && f > 0 && <circle class="lleno" style={{ stroke: `url(#${deg})` }} cx="32" cy="32" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - f)} transform="rotate(-90 32 32)" />}
         </svg>

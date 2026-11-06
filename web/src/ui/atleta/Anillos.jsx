@@ -51,7 +51,7 @@ export function AnillosSemana({ programa, salud, checkinSemana, constancia = nul
             const fiesta = celebrar.includes(a.id);
             return (
               <g key={a.id} data-anillo={a.id} class={fiesta ? 'celebra' : ''} transform={`rotate(-90 ${T / 2} ${T / 2})`} style={{ '--desde': `${C * 0.3}px` }}>
-                <DegradadoAro id={`aro-semana-${a.id}`} />
+                <DegradadoAro id={`aro-semana-${a.id}`} gira />
                 <circle class="pista" cx={T / 2} cy={T / 2} r={r} stroke-width={G} />
                 {a.frac > 0 && <circle class="brillo" cx={T / 2} cy={T / 2} r={r} stroke-width={G} stroke-dasharray={`${C} ${C}`} />}
                 {a.frac > 0 && <circle class="lleno" style={{ stroke: `url(#aro-semana-${a.id})` }} cx={T / 2} cy={T / 2} r={r} stroke-width={G} stroke-dasharray={`${C} ${C}`} stroke-dashoffset={resto} />}
