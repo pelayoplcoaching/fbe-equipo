@@ -440,3 +440,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 }
 /* La casilla de la política: que el punto final no se quede solo en una línea */
 .acceso-caja .casilla > span { text-wrap: pretty; }
+/* El formulario de activar la cuenta es el más largo: sube todo lo que puede y va algo más prieto, para que el botón
+   quede lo más cerca posible del primer vistazo */
+.app:has(> .acceso > .acceso-caja #act-codigo) { --aire: 0.5rem; }
+.acceso-caja:has(#act-codigo) { padding-top: 22px; }
