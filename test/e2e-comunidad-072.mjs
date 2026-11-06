@@ -6,7 +6,7 @@
 //   · silenciar a Carlos 24 h (ve la línea, sin compositor) y una palabra filtrada (Lucía: «pendiente de revisión»);
 //   · 360 px en oscuro, sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
-import { irASeccion } from './secciones.mjs';
+import { irASeccion, abrirEnEquipo } from './secciones.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -159,6 +159,7 @@ export async function probarComunidad072({ navegador, check, base = 'http://loca
     check(/Atleta de la semana/.test(await tarjeta.textContent()) && /Lucía F\./.test(await tarjeta.textContent()) && /Por no fallar ni un día/.test(await tarjeta.textContent())
       && (await tarjeta.getAttribute('aria-label')) === 'Atleta de la semana: Lucía F. · Por no fallar ni un día', 'arriba del muro, la tarjeta «Atleta de la semana: Lucía F. · Por no fallar ni un día»');
     check(await post(PROGRAMADO).count() === 0, 'lo programado no lo ve hasta su hora');
+    await abrirEnEquipo(p, 'proximos'); // (diseño) va plegado en una pastilla
     await p.locator('section.proximos').getByRole('button', { name: /Movilidad en el Retiro/ }).click();
     const hojaVer = p.getByRole('dialog', { name: 'Evento' });
     await hojaVer.getByRole('button', { name: 'Me apunto' }).click();

@@ -7,7 +7,7 @@
 //   · la mejor respuesta (Lucía la cambia en su publicación: sale primero, con su distintivo);
 //   · 360 px en oscuro, sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
-import { irASeccion } from './secciones.mjs';
+import { irASeccion, abrirCompositor } from './secciones.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -90,6 +90,7 @@ export async function probarComunidad071({ navegador, check, base = 'http://loca
     await p.getByRole('button', { name: 'Sí, quiero entrar' }).click();
     await p.locator('.post').first().waitFor();
     const tema = p.getByLabel('Tema', { exact: true });
+    await abrirCompositor(p); // (diseño) el cuadro de publicar empieza plegado en una línea
     await tema.waitFor();
     check(await tema.inputValue() === 'charla' && (await tema.locator('option').allTextContents()).join() === 'Charla,Técnica,Logros,Pregunta para el coach'
       && /Pregunta para el coach/.test(await p.locator('.compositor-nota').textContent()),

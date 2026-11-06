@@ -37,6 +37,7 @@ import { patronEjercicio } from '../logica/diseno.js';
 import { VERSION_COMUNIDAD, AVISO_041, AVISO_042, AVISO_043 } from '../datos/api.js';
 import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
+import { PlegableEquipo } from './PlegableEquipo.jsx';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
 // v0.71: con la 043, también las preguntas del equipo
@@ -185,9 +186,12 @@ function DentroDelEquipo({ m, alCambiar }) {
       {recibidos.length > 0 && (
         <p class="animos-recibidos peq"><span class="animos-ico" aria-hidden="true">🙌</span><span>Te han animado esta semana: <strong>{quienes(recibidos.map((x) => x.nombre), 3)}</strong></span></p>
       )}
-      <Proximos cambios={eventos} alCambiar={() => setEventos((v) => v + 1)} />
       <EntrenandoAhora />
-      <CompanerosRacha cambios={cambios} />
+      {/* (diseño) plegados en pastillas, para que el muro empiece por las publicaciones */}
+      <div class="equipo-filas">
+        <PlegableEquipo id="proximos" titulo="Próximos" icono="calendario" cuenta=".pr-item"><Proximos cambios={eventos} alCambiar={() => setEventos((v) => v + 1)} /></PlegableEquipo>
+        <PlegableEquipo id="companeros" titulo="Compañeros de racha" icono="equipo" cuenta=".cp-fila"><CompanerosRacha cambios={cambios} /></PlegableEquipo>
+      </div>
       <Pestanas opciones={con043.datos ? VISTAS_043 : VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eq" clase={con043.datos ? 'pestanas-justas' : ''} />
       <div class="pestana-panel" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista}>
         {vista === 'muro' && <Muro cambios={cambios} miembro={m} eventos={eventos} alEventos={() => setEventos((v) => v + 1)} />}
@@ -359,8 +363,11 @@ export function Muro({ coach = false, cambios = 0, miembro = null, eventos = 0, 
     <SilencioCtx.Provider value={silencio}>
     <div class="pila muro">
       {enTodo && destacado.datos?.actual && <TarjetaDestacado d={destacado.datos.actual} alAbrirPerfil={abrirPerfil} />}
-      {enTodo && <MesEnEquipo cambios={cambios} />}
-      <ResumenSemana cambios={cambios} />
+      {/* (diseño) los recuentos, plegados; los del mes (solo salen del 1 al 7) vienen abiertos hasta que se cierran */}
+      <div class="equipo-filas">
+        {enTodo && <PlegableEquipo id="mes" titulo="Resumen del mes" icono="trofeo" abiertaDeEntrada><MesEnEquipo cambios={cambios} /></PlegableEquipo>}
+        <PlegableEquipo id="semana" titulo="Resumen de la semana" icono="progreso"><ResumenSemana cambios={cambios} /></PlegableEquipo>
+      </div>
       {filtro === 'todo' && !buscar && <BienvenidaNuevos />}
       {silencio ? <LineaSilencio hasta={silencio} /> : <Compositor coach={coach} personas={d?.personas || {}} con043={con043} con044={!!d?.con044} alPublicar={recargar} />}
       {coach && d?.con044 && <Programados cambios={cambios + vProg} alCambiar={() => muro.recargar(true)} />}
@@ -719,6 +726,8 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPu
   const input = useRef(null);
   const urls = useRef([]);
   useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
+  // (diseño) El del atleta empieza plegado en una línea; al tocarlo se abre y ya se queda abierto mientras siga en el muro
+  const [abierto, setAbierto] = useState(coach);
   const encuesta = coach && modo === 'encuesta';
   const maxFotos = con043 ? MAX_FOTOS : 1;
   const elegir = async (e) => {
@@ -761,8 +770,9 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPu
   const encuestaLista = pregunta.trim() && opciones.filter((o) => o.trim()).length >= 2;
   const ahoraLocal = (() => { const d = new Date(Date.now() + 10 * 60000); return `${aISO(d)}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; })();
   const esPregunta = con043 && !coach && tema === 'pregunta';
+  const plegado = !coach && !abierto && vacio;
   return (
-    <form class="panel panel-pad pila-s compositor" onSubmit={publicar}>
+    <form class={`panel panel-pad pila-s compositor${plegado ? ' compositor-plegado' : ''}`} onSubmit={publicar} onFocusCapture={() => { if (!abierto) setAbierto(true); }} onClick={() => { if (!abierto) setAbierto(true); }}>
       {coach && (
         <div class="segmentos compositor-modo" role="group" aria-label="Qué publicas">
           {[['aviso', 'Aviso'], ['encuesta', 'Encuesta']].map(([k, t]) => <button key={k} type="button" aria-pressed={modo === k ? 'true' : 'false'} onClick={() => setModo(k)}>{t}</button>)}
@@ -788,8 +798,8 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPu
         </div>
       ) : (
         <AreaConMenciones id="eq-texto" etiqueta={coach ? 'Aviso para el equipo' : esPregunta ? 'Tu pregunta para el coach' : 'Tu publicación'} valor={texto} alCambiar={setTexto} personas={personas}
-          alMencionar={(p) => setElegidas((l) => [...l.filter((x) => x.perfil_id !== p.perfil_id), p])} maxLength={MAX_POST} rows={2}
-          placeholder={coach ? 'Un aviso para todo el equipo…' : esPregunta ? '¿Qué le quieres preguntar a tu coach?' : '¿Qué tal tu semana? Anima al equipo… (@ para mencionar)'} />
+          alMencionar={(p) => setElegidas((l) => [...l.filter((x) => x.perfil_id !== p.perfil_id), p])} maxLength={MAX_POST} rows={plegado ? 1 : 2}
+          placeholder={coach ? 'Un aviso para todo el equipo…' : esPregunta ? '¿Qué le quieres preguntar a tu coach?' : plegado ? '¿Qué tal tu semana?' : '¿Qué tal tu semana? Anima al equipo… (@ para mencionar)'} />
       )}
       {coach && con044 && !encuesta && (
         <div class="fila-envolver compositor-plantillas">

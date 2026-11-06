@@ -5,7 +5,7 @@
 //   · el coach: un reto de una plantilla de un toque y uno por equipos repartido igualado;
 //   · 360 px en oscuro, sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
-import { irASeccion } from './secciones.mjs';
+import { irASeccion, abrirEnEquipo } from './secciones.mjs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
@@ -85,6 +85,7 @@ export async function probarComunidad070({ navegador, check, base = 'http://loca
     await p.getByRole('button', { name: 'Sí, quiero entrar' }).click();
     await p.locator('.post').first().waitFor();
     const companeros = p.getByRole('region', { name: 'Compañeros de racha' });
+    await abrirEnEquipo(p, 'companeros'); // (diseño) va plegado en una pastilla
     await companeros.waitFor();
     check(/Invita a hasta 3/.test(await companeros.textContent()), 'arriba en Equipo, «Compañeros de racha» (sin ninguno aún: «Invita a hasta 3…»)');
     await companeros.getByRole('button', { name: 'Invitar', exact: true }).click();
