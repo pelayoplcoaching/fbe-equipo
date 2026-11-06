@@ -349,6 +349,36 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       check(/maximum-scale=1/.test(metaIos) && !/user-scalable/.test(metaIos) && !/maximum-scale/.test(metaAndroid) && !/maximum-scale/.test(metaPc),
         'en el iPhone, la página ya no se amplía sola al entrar en un campo pequeño (maximum-scale=1, solo en iOS: en Android y en el ordenador no se toca)');
     }
+    // ---------- 8. Sin lupa ni menú de copiar en lo que se pulsa
+    {
+      const sel = (p, lista) => p.evaluate((ss) => Object.fromEntries(ss.map((s) => { const e = [...document.querySelectorAll(s)].find((x) => x.getClientRects().length); return [s, e ? getComputedStyle(e).userSelect || getComputedStyle(e).webkitUserSelect : null]; })), lista);
+      const PULSABLE = ['nav.tabs .tab', '.hero-dia .btn-hero', '.cabecera .sub', '.tu-dia .fila-dia', '.plegable-hoy > summary', '.chip'];
+      const CONTENIDO = ['.hero-dia .nota-coach', '.aviso-coach p', '.tu-dia .mini'];
+      const { ctx, p } = await abrir(/Ana López/);
+      await p.locator('.tu-dia').waitFor();
+      const pul = await sel(p, PULSABLE);
+      const con = await sel(p, CONTENIDO);
+      check(Object.values(pul).every((v) => v === 'none'), `en el móvil, lo que se pulsa no se selecciona al dejar el dedo: pestañas, botones, cabecera, filas, chips (${Object.entries(pul).filter(([, v]) => v !== 'none').map(([k, v]) => `${k}: ${v}`).join(', ') || 'todo'})`);
+      check(con['.hero-dia .nota-coach'] !== 'none' && con['.aviso-coach p'] !== 'none' && Object.values(con).some((v) => v), `el contenido sí se puede seleccionar y copiar: la nota del coach, sus avisos (${JSON.stringify(con)})`);
+      await irASeccion(p, 'Comidas');
+      await p.getByRole('tab', { name: 'Tus recetas' }).tap();
+      await p.locator('.tarjeta-receta').first().tap();
+      await p.locator('[aria-modal="true"]').waitFor();
+      const receta = await p.evaluate(() => { const h = document.querySelector('[aria-modal="true"]'); const t = [...h.querySelectorAll('li, p')].find((x) => x.textContent.trim().length > 8 && !x.closest('button')); return t ? getComputedStyle(t).userSelect : null; });
+      check(receta && receta !== 'none', 'los ingredientes y los pasos de una receta también');
+      await ctx.close();
+      const o = await abrir(/Pelayo/, { viewport: { width: 1280, height: 800 }, isMobile: false, hasTouch: false });
+      await o.p.locator('tr:visible, button.tarjeta-atleta:visible').first().waitFor();
+      const pc = await sel(o.p, ['.cabecera h1', '.chip']);
+      check(pc['.cabecera h1'] !== 'none', 'con ratón no cambia nada: los títulos y los chips se siguen pudiendo seleccionar');
+      await o.ctx.close();
+      // Y en los campos se sigue pudiendo seleccionar siempre
+      const c = await abrir(/Pelayo/);
+      await c.p.getByRole('button', { name: 'Añadir atleta' }).first().tap();
+      await c.p.locator('#na-nombre').waitFor();
+      check(await c.p.locator('#na-nombre').evaluate((e) => getComputedStyle(e).userSelect) !== 'none', 'en los campos de escribir se selecciona como siempre');
+      await c.ctx.close();
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     if (process.env.DEPURAR) console.log(e.stack.split('\n').slice(0, 12).join('\n'));

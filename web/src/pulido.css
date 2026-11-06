@@ -125,3 +125,16 @@ button[data-guardando]::before {
 .velo { padding-bottom: var(--teclado-hoja, 0px); }
 .hoja-dialogo { max-height: calc(92dvh - var(--teclado-hoja, 0px)); }
 .hoja-dialogo.en-medio { max-height: min(var(--alto-medio, 55dvh), calc(92dvh - var(--teclado-hoja, 0px))); }
+
+/* ---------- (pulido 2.8) Sin lupa ni menú de copiar en lo que se pulsa ----------
+   En el móvil, dejar el dedo un momento sobre un botón, una pestaña, un chip o una cabecera sacaba la lupa de
+   selección de texto o el menú de «Copiar · Buscar» (y, en el iPhone, la vista previa). Eso es de páginas web, no de
+   una app: aquí no se selecciona. El contenido sí se sigue pudiendo seleccionar y copiar: las notas, los mensajes
+   del coach, las recetas, los textos de ayuda, los códigos. Solo con pantalla táctil: con ratón no cambia nada.
+   Con :where() no pesa: quien ya decide su selección (el código de invitación, las burbujas del chat) manda. */
+@media (hover: none) and (pointer: coarse) {
+  :where(button, [role="button"], [role="tab"], [role="switch"], summary, label, a.btn, nav, .tabs, .cabecera, .pestanas, .segmentos, .selector-chips, .semanas-tabs,
+    .chip, .etq, .seccion-cab, .hoja-cab, .toast, .banda-conexion, .pista-cerrar, .sil, .reserva-hueco) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  /* Donde se escribe, siempre se puede seleccionar (por si va dentro de algo de lo de arriba) */
+  input, textarea, select, [contenteditable="true"] { -webkit-user-select: text; user-select: text; }
+}
