@@ -2,11 +2,11 @@
 import { useEffect, useState } from 'preact/hooks';
 import { Segmentos, Icono, useApp, Hoja, GrupoIos, FilaIos, IcoIos } from './comunes.jsx';
 import { leerAjustes, guardarAjustes, TAMANOS_LETRA } from './ajustes.js';
-import { prepararAudio, pitar, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
+import { prepararAudio, pitar, sonarSerie, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
 import { hayVoz, hablar } from './voz.js';
 import { plataformaPistaAqui, prepararPista, probarPista, frasesDelCoach, pararPista, descansoSonando } from './pista-descanso.js';
 import { ACENTOS } from '../logica/acentos.js';
-import { puedeVibrar, vibrar } from './hapticos.js';
+import { puedeVibrar, puedeTocar, vibrar } from './hapticos.js';
 import { DESCANSOS_ATLETA, mmss } from '../logica/calculos.js';
 import { puedeDifuminar } from './tecnica/Difuminar.jsx';
 import { leerRed, mostrarOpcionWifi } from '../logica/red.js';
@@ -109,6 +109,9 @@ function HojaSonido({ a, cambiar, alCerrar }) {
             <span class="peq terciario" id="aj-descanso-defecto-ayuda">Arranca solo al marcar una serie de un ejercicio en el que tu coach no te ha puesto descanso. Para un ejercicio en concreto, elige otro en su «Más», en «Descanso».</span>
           </li>
           <Interruptor id="aj-sonido" icono="altavoz" texto="Sonido al acabar el descanso" ayuda="Y al batir un récord o ganar un disco" valor={a.sonido} alCambiar={(v) => cambiar('sonido', v)} />
+          {/* pulido 7 */}
+          <Interruptor id="aj-sonido-serie" icono="altavoz" texto="Sonido al marcar una serie" ayuda="Un tic suave, y unas notas al terminar la sesión. No corta tu música" valor={a.sonidoSerie !== false}
+            alCambiar={(v) => { cambiar('sonidoSerie', v); if (v) { prepararAudio(); sonarSerie(); } }} />
           {a.sonido && (
             <li class="panel-pad pila-s">
               <label for="aj-sonido-descanso">Qué suena</label>
@@ -153,9 +156,12 @@ function HojaSonido({ a, cambiar, alCerrar }) {
           })()}
           <Interruptor id="aj-vibracion" icono="vibrar" texto="Vibración al acabar el descanso" ayuda="Y en el metrónomo y los intervalos, en los móviles que la permiten" valor={a.vibracion} alCambiar={(v) => cambiar('vibracion', v)} />
           {/* v0.49: la vibración al tocar, con su propio interruptor (de serie, encendida) */}
-          <Interruptor id="aj-hapticos" icono="vibrar" texto="Vibración al tocar" desactivado={!puedeVibrar()}
-            ayuda={puedeVibrar() ? 'Un toque corto al marcar una serie, al batir un récord y al enviar el check-in.' : 'Este navegador no deja vibrar a las webs (en iPhone, Safari no lo permite).'}
-            valor={a.hapticos !== false && puedeVibrar()} alCambiar={(v) => { cambiar('hapticos', v); if (v) setTimeout(() => vibrar('serie'), 0); }} />
+          {/* pulido 6: también en los interruptores, las casillas y los «+» y «−»; en iPhone, donde iOS lo deja */}
+          <Interruptor id="aj-hapticos" icono="vibrar" texto="Vibración al tocar" desactivado={!puedeTocar()}
+            ayuda={puedeVibrar() ? 'Un toque corto al marcar una serie o una casilla, al cambiar un interruptor, al batir un récord y al enviar el check-in.'
+              : puedeTocar() ? 'Un toque corto al marcar una serie o una casilla y al cambiar un interruptor. En iPhone depende de la versión de iOS: si no lo notas, tu iPhone no lo permite.'
+                : 'Este navegador no deja vibrar a las webs (en iPhone, Safari no lo permite).'}
+            valor={a.hapticos !== false && puedeTocar()} alCambiar={(v) => { cambiar('hapticos', v); if (v) vibrar('serie'); }} />
           <li class="panel-pad separa">
             <span class="peq secundario">¿Se oye y vibra bien?</span>
             <button class="btn btn-peq" onClick={() => probar()}>Probar el aviso</button>

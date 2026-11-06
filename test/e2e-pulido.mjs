@@ -9,7 +9,7 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
   const errores = [];
   // escrituras: las de la demo pasan por un envoltorio que las puede hacer lentas (window.__espera, en ms) o que
   // fallen (window.__falla), y las cuenta (window.__escritas). Se pone antes de entrar: la app se queda con ellas al entrar
-  const abrir = async (quien, opciones = {}, { escrituras = false } = {}) => {
+  const abrir = async (quien, opciones = {}, { escrituras = false, antes = null } = {}) => {
     const ctx = await navegador.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, locale: 'es-ES', ...opciones });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errores.push(e.message));
@@ -27,6 +27,7 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
         } });
       });
     }
+    if (antes) await antes(p);
     await p.goto(`${base}/?demo`);
     await p.getByRole('button', { name: quien }).first().tap();
     await p.locator('nav.tabs').waitFor();
@@ -381,6 +382,114 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
         await p.locator('.toast').filter({ hasText: /revisad/i }).first().waitFor({ timeout: 4000 }).catch(() => {});
         await p.waitForTimeout(500);
         check(r.tarjetas === n0 - 1 && r.escritas === 0 && await p.locator('.tarjeta-revisar').count() === n0 - 1, `coach: lo que se marca como revisado sale de la lista al momento (${n0} → ${r.tarjetas})`);
+        await ctx.close();
+      }
+    }
+    // ---------- 6 y 7. Vibración al tocar (también en iPhone, donde iOS lo deja) y sonido al marcar una serie
+    {
+      // (el navegador de las pruebas no vibra: se apunta lo que la app pide)
+      const espiar = (p) => p.addInitScript(() => { window.__vib = []; try { Object.defineProperty(Navigator.prototype, 'vibrate', { configurable: true, value(x) { window.__vib.push(JSON.stringify(x)); return true; } }); } catch { /* */ } });
+      {
+        const ctx0 = await abrir(/Lucía Ferrer/, {}, { escrituras: true, antes: espiar });
+        const { ctx, p } = ctx0;
+        await irASeccion(p, 'Comidas');
+        const semana = p.getByRole('tab', { name: 'Tu semana' });
+        if (await semana.isVisible().catch(() => false)) await semana.tap();
+        const casillas = p.locator('.entrada-menu .casilla-redonda');
+        await casillas.first().waitFor();
+        await p.evaluate(() => { window.__vib = []; });
+        await casillas.first().tap();
+        await p.waitForTimeout(200);
+        const v1 = await p.evaluate(() => window.__vib.slice());
+        // un fallo, además, se nota: dos golpes
+        await p.evaluate(() => { window.__vib = []; window.__falla = true; });
+        await casillas.first().tap();
+        await p.locator('.toast').filter({ hasText: /no se ha podido guardar/i }).first().waitFor({ timeout: 5000 }).catch(() => {});
+        const v2 = await p.evaluate(() => window.__vib.slice());
+        check(v1.includes('8') && v2.includes('[28,60,28]'), `marcar una casilla da un toque corto, y un error, dos golpes (${v1.join(' ')} · ${v2.join(' ')})`);
+        // Con «Vibración al tocar» apagada, nada
+        await p.evaluate(() => { const a = JSON.parse(localStorage.getItem('fbe-ajustes') || '{}'); localStorage.setItem('fbe-ajustes', JSON.stringify({ ...a, hapticos: false })); window.__falla = false; });
+        await p.reload();
+        await p.locator('nav.tabs').waitFor();
+        await irASeccion(p, 'Comidas');
+        if (await semana.isVisible().catch(() => false)) await semana.tap();
+        await casillas.first().waitFor();
+        await p.evaluate(() => { window.__vib = []; });
+        await casillas.first().tap();
+        await p.waitForTimeout(250);
+        check((await p.evaluate(() => window.__vib.length)) === 0, 'con «Vibración al tocar» apagada, no vibra');
+        await ctx.close();
+      }
+      {
+        // En un iPhone (sin vibración para las webs), el toque sale del interruptor del sistema, sin que la app se entere
+        const iphone = (p) => p.addInitScript(() => {
+          try { Object.defineProperty(Navigator.prototype, 'vibrate', { configurable: true, value: undefined }); } catch { /* */ }
+          Object.defineProperty(HTMLInputElement.prototype, 'switch', { configurable: true, get() { return this.hasAttribute('switch'); } });
+          window.__toques = 0; window.__clicsFuera = 0;
+          const clic = HTMLLabelElement.prototype.click;
+          HTMLLabelElement.prototype.click = function (...a) { if (this.querySelector('input[switch]')) window.__toques++; return clic.apply(this, a); };
+          document.addEventListener('click', (e) => { if (e.target?.matches?.('label[aria-hidden], input[switch]')) window.__clicsFuera++; });
+        });
+        const { ctx, p } = await abrir(/Lucía Ferrer/, { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1' }, { antes: iphone });
+        await irASeccion(p, 'Comidas');
+        const semana = p.getByRole('tab', { name: 'Tu semana' });
+        if (await semana.isVisible().catch(() => false)) await semana.tap();
+        const casillas = p.locator('.entrada-menu .casilla-redonda');
+        await casillas.first().waitFor();
+        await p.evaluate(() => { window.__toques = 0; });
+        await casillas.first().tap();
+        await p.waitForTimeout(250);
+        const r = await p.evaluate(() => ({ toques: window.__toques, fuera: window.__clicsFuera, restos: document.querySelectorAll('head label, input[switch]').length }));
+        check(r.toques === 1 && r.fuera === 0 && r.restos === 0, `en iPhone, marcar una casilla pide un toque al interruptor del sistema, sin dejar rastro en la página (${r.toques} toque, ${r.fuera} clics fuera, ${r.restos} restos)`);
+        await ctx.close();
+      }
+      {
+        const sonidos = (p) => p.addInitScript(() => { window.__son = []; window.addEventListener('fbe-sonido', (e) => window.__son.push(e.detail?.tipo)); });
+        const { ctx, p } = await abrir(/Ana López/, {}, { antes: sonidos });
+        const entrar = async () => {
+          await p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).dispatchEvent('click');
+          await p.locator('.portada-sesion, .ejercicio').first().waitFor();
+          if (await p.locator('.portada-sesion').count()) await p.locator('.portada-empezar').getByRole('button', { name: 'Empezar', exact: true }).click();
+          await p.locator('.ejercicio').first().waitFor();
+          if (await p.locator('.preparacion').getByRole('button', { name: 'Ahora no' }).count()) await p.locator('.preparacion').getByRole('button', { name: 'Ahora no' }).click();
+          await p.waitForTimeout(400);
+          for (const b of await p.locator('.pista').getByRole('button', { name: 'Entendido' }).all()) await b.click().catch(() => {});
+        };
+        const marcar = async (n) => {
+          const ej = p.locator('.sesion-vista .ejercicio').first();
+          if (await ej.locator('.ejercicio-cab').getAttribute('aria-expanded') !== 'true') await ej.locator('.ejercicio-cab').click();
+          await ej.getByRole('button', { name: `Marcar la serie ${n} como hecha` }).click();
+          await ej.getByRole('button', { name: `Quitar la serie ${n}` }).waitFor();
+        };
+        await entrar();
+        await p.evaluate(() => { window.__son = []; });
+        await marcar(1);
+        const s1 = await p.evaluate(() => window.__son.slice());
+        check(s1.filter((x) => x === 'serie').length === 1, `al marcar una serie suena un tic (${s1.join(', ') || 'nada'})`);
+        // Con su interruptor apagado, no
+        await p.evaluate(() => { const a = JSON.parse(localStorage.getItem('fbe-ajustes') || '{}'); localStorage.setItem('fbe-ajustes', JSON.stringify({ ...a, sonidoSerie: false })); window.dispatchEvent(new Event('fbe-ajustes')); });
+        await p.reload();
+        await p.locator('.hero-dia').waitFor();
+        await entrar();
+        await p.evaluate(() => { window.__son = []; });
+        await marcar(2);
+        check((await p.evaluate(() => window.__son.filter((x) => x === 'serie').length)) === 0, 'con «Sonido al marcar una serie» apagado, no suena');
+        await ctx.close();
+      }
+      {
+        // Quien tenía apagado el sonido del descanso no oye nada nuevo; y el ajuste está en su sitio
+        const { ctx, p } = await abrir(/Ana López/);
+        const r = await p.evaluate(async () => {
+          localStorage.setItem('fbe-ajustes', JSON.stringify({ sonido: false }));
+          return true;
+        });
+        await p.reload();
+        await p.locator('nav.tabs').waitFor();
+        await irASeccion(p, 'Perfil');
+        await p.getByRole('button', { name: /Sonido y vibración/ }).first().tap();
+        const interruptor = p.locator('#aj-sonido-serie');
+        await interruptor.waitFor({ state: 'attached' });
+        check(r && await interruptor.isChecked() === false, 'el ajuste «Sonido al marcar una serie» está en Sonido y vibración, y sale apagado para quien tenía apagado el sonido del descanso');
         await ctx.close();
       }
     }

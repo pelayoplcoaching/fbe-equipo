@@ -11,6 +11,7 @@ import { borrarCompartido } from './Compartido.jsx';
 import { borrarPendientes } from '../datos/pendientes.js';
 const almacenLocal = () => { try { return window.localStorage; } catch { return null; } };
 import { Ctx, Cargando, Icono, olvidarRecuerdos } from './comunes.jsx';
+import { vibrar } from './hapticos.js';
 import { Acceso, Vincular, NuevaPassword, SegundoPaso } from './Acceso.jsx';
 import { AtletaApp } from './atleta/AtletaApp.jsx';
 import { CoachApp } from './coach/CoachApp.jsx';
@@ -38,7 +39,8 @@ export function App({ backend, api, cola }) {
   const [pedidoCoach, setPedidoCoach] = useState(null); // al volver del modo atleta: abrir algo en la vista de coach
 
   // accion: { texto, fn } añade un botón al aviso (p. ej. «Deshacer»)
-  const aviso = (texto, tipo = 'ok', accion = null) => setToast({ texto, tipo, accion, id: Date.now() });
+  // (pulido 6) un aviso de error, además, se nota en la mano
+  const aviso = (texto, tipo = 'ok', accion = null) => { if (tipo === 'error') vibrar('error'); setToast({ texto, tipo, accion, id: Date.now() }); };
   useEffect(() => {
     if (!toast) return undefined;
     const t = setTimeout(() => setToast(null), toast.accion ? 6000 : toast.tipo === 'error' || toast.tipo === 'record' ? 5000 : 2800);
