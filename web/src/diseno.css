@@ -825,3 +825,39 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 @keyframes hoja-sube { from { transform: translateY(100%); } }
 @keyframes hoja-abre { from { transform: scale(.96); opacity: 0; } }
 @keyframes llega { from { opacity: 0; } }
+
+/* ── 31 · Cuatro niveles de sombra (tanda 15) ─────────────────────────────────────────────────────────────────────────
+   Había 105 sombras distintas, casi todas en gris negro. La regla desde ahora: cuatro niveles, más suaves y con un
+   punto del morado de la marca (en oscuro, donde una sombra de color no se ve, negras):
+     plano     sin sombra (lo que va dentro de una tarjeta)
+     tarjeta   --sombra-tarjeta   el filo de 1 px y una sombra corta        (es --sombra: los paneles y las tarjetas)
+     flotante  --sombra-flotante  lo que flota sobre la página, sin filo    (avisos, el descanso, la fecha del chat)
+     hoja      --sombra-hoja      lo que se abre encima de todo             (es --sombra-alta: hojas, cuadros, paleta)
+   --sombra y --sombra-alta (estilos.css 44, 45, 75 y 91; aquí, línea 28) pasan a ser los niveles 1 y 3, así que todo lo
+   que ya las usaba cambia a la vez. Los brillos de color de un botón (primario, serie hecha) y las sombras hacia arriba
+   de lo que va pegado abajo no son niveles de altura: se quedan como están. */
+:root {
+  --sombra-tarjeta: 0 0 0 1px var(--borde), 0 1px 2px rgba(46, 32, 120, .05), 0 8px 18px -12px rgba(46, 32, 120, .17);
+  --sombra-flotante: 0 3px 8px -3px rgba(46, 32, 120, .12), 0 16px 34px -14px rgba(36, 24, 100, .34);
+  --sombra-hoja: 0 0 0 1px var(--borde), 0 -4px 14px -8px rgba(46, 32, 120, .12), 0 28px 60px -22px rgba(30, 20, 90, .42);
+  --sombra: var(--sombra-tarjeta); --sombra-alta: var(--sombra-hoja);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sombra-tarjeta: 0 0 0 1px var(--borde), 0 1px 2px rgba(0, 0, 0, .3), 0 10px 24px -14px rgba(0, 0, 0, .55);
+    --sombra-flotante: 0 3px 8px -3px rgba(0, 0, 0, .4), 0 16px 34px -14px rgba(0, 0, 0, .7);
+    --sombra-hoja: 0 0 0 1px var(--borde), 0 28px 60px -22px rgba(0, 0, 0, .8);
+    --sombra: var(--sombra-tarjeta); --sombra-alta: var(--sombra-hoja);
+  }
+}
+:root[data-theme="dark"] {
+  --sombra-tarjeta: 0 0 0 1px var(--borde), 0 1px 2px rgba(0, 0, 0, .3), 0 10px 24px -14px rgba(0, 0, 0, .55);
+  --sombra-flotante: 0 3px 8px -3px rgba(0, 0, 0, .4), 0 16px 34px -14px rgba(0, 0, 0, .7);
+  --sombra-hoja: 0 0 0 1px var(--borde), 0 28px 60px -22px rgba(0, 0, 0, .8);
+  --sombra: var(--sombra-tarjeta); --sombra-alta: var(--sombra-hoja);
+}
+/* Lo que flota (estilos.css: .toast, .pildora-descanso, .temporizador, .pildora-subida, .chat-dia-flotante, .chat-sep) */
+.toast, .pildora-descanso, .temporizador, .pildora-subida { box-shadow: var(--sombra-flotante); }
+.chat-dia-flotante { box-shadow: inset 0 0 0 1px var(--borde), var(--sombra-flotante); }
+/* Lo que se abre encima (estilos.css: .paleta; la hoja conserva su brillo de vidrio de arriba) */
+.paleta { box-shadow: var(--sombra-hoja); }
