@@ -7,6 +7,9 @@ import { Panel } from './Panel.jsx';
 import { Ficha } from './Ficha.jsx';
 import { Revisar } from './Revisar.jsx';
 import { Bienvenida, useBienvenida } from '../Bienvenida.jsx';
+import { panelCoach } from '../../logica/bienvenida.js';
+import { equipoHoy } from '../../logica/tablero.js';
+import { hoyISO } from '../../logica/fechas.js';
 import { RevisionSemanal } from './RevisionSemanal.jsx';
 import { RadarContacto } from './RadarContacto.jsx';
 import { Plantillas } from './Plantillas.jsx';
@@ -95,6 +98,14 @@ export function CoachApp() {
   // v0.49: los resúmenes que ya cargó el panel, para la cabecera de la ficha (si se abre desde otro sitio, la ficha
   // pide solo los de ese atleta)
   const resumenesPanel = useRef(null);
+  // (tanda 11 de diseño) el panel de tu bienvenida, con lo que ya está cargado: la bandeja, los mensajes sin leer y, si
+  // la lista de atletas ha llegado, cuántos han entrenado hoy y cuántos necesitan atención. Ni una consulta más.
+  const [resumenesDia, setResumenesDia] = useState(null);
+  const panelDia = verDia ? panelCoach({
+    bandeja: bandeja.datos || null, sinLeer: typeof sinLeer.datos === 'number' ? sinLeer.datos : null,
+    equipo: resumenesDia ? equipoHoy(resumenesDia, hoyISO()) : null,
+    atencion: resumenesDia ? resumenesDia.filter((r) => (r.alertas || []).some((a) => a.nivel !== 'info')).length : null,
+  }) : null;
   const cerrarFicha = () => conTransicion(() => { setFicha(null); setPeticion(null); }, 'cerrar');
   const total = bandeja.datos?.total || 0;
 
@@ -173,7 +184,7 @@ export function CoachApp() {
       {tab === 'atletas' && (ficha
         ? <Ficha key={`${ficha.atletaId}:${ficha.n || 0}`} atletaId={ficha.atletaId} pestanaInicial={ficha.pestana} resumenInicial={resumenesPanel.current?.find((r) => r.atleta_id === ficha.atletaId) || null} alVolver={cerrarFicha} alCambiar={() => bandeja.recargar(true)} />
         : <Panel abrir={abrirAtleta} pendientes={bandeja.datos?.porAtleta || {}} porRevisar={bandeja.datos ? total : null}
-            irARevisar={() => conTransicion(() => { setTab('revisar'); setFicha(null); setPeticion(null); }, 'adelante')} peticion={pide('atletas')} alBuscar={abrirBuscar} abrirCuenta={() => { setTab('cuenta'); setFicha(null); }} alCargar={(l) => { resumenesPanel.current = l; }} />)}
+            irARevisar={() => conTransicion(() => { setTab('revisar'); setFicha(null); setPeticion(null); }, 'adelante')} peticion={pide('atletas')} alBuscar={abrirBuscar} abrirCuenta={() => { setTab('cuenta'); setFicha(null); }} alCargar={(l) => { resumenesPanel.current = l; if (verDia) setResumenesDia(l); }} />)}
       {tab === 'revisar' && <Revisar bandeja={bandeja} abrirAtleta={abrirAtleta} />}
       {tab === 'revision' && <RevisionSemanal abrirAtleta={abrirAtleta} />}
       {tab === 'radar' && <RadarContacto abrirAtleta={abrirAtleta} />}
@@ -186,7 +197,7 @@ export function CoachApp() {
       </main>
     </div>
     {buscar && <Buscador alCerrar={cerrarBuscar} ir={ir} />}
-    {verDia ? <Bienvenida rol="coach" alCerrar={cerrarDia} /> : !buscar && <AvisoNovedades uid={api.uid()} rol="coach" />}
+    {verDia ? <Bienvenida rol="coach" panel={panelDia} alCerrar={cerrarDia} /> : !buscar && <AvisoNovedades uid={api.uid()} rol="coach" />}
     </>
   );
 }

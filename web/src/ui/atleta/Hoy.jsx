@@ -36,7 +36,8 @@ import { lanzarConfeti } from '../confeti.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { Ilustracion } from '../Ilustraciones.jsx';
 import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
-import { estadoHoy, sugerenciaDescanso, urlSegura } from '../../logica/diseno.js';
+import { estadoHoy, sugerenciaDescanso, urlSegura, resumenPautas } from '../../logica/diseno.js';
+import { panelBienvenida } from '../../logica/bienvenida.js';
 import { Diales } from './Diales.jsx';
 import { semanasObjetivo, semanaEnCurso } from '../../logica/semana-natural.js';
 import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
@@ -367,9 +368,21 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
     primeraVez: !constancia.datos.algunaVez, ultimoDia: constancia.datos.ultimoDia || null, haceMucho: !!constancia.datos.algunaVez && !constancia.datos.ultimoDia,
     racha: constancia.datos.racha || 0, estado: e.tipo, toca: e.tipo === 'entreno' ? (e.siguiente?.nombre || siguiente?.nombre || null) : null,
   } : null;
+  // (tanda 11 de diseño) y su panel: lo que toca o lo siguiente, la semana, la racha, el bloque y sus últimas 12 semanas
+  const sigue = e.tipo === 'semana' ? (e.siguienteMicrociclo || null) : (e.siguiente || siguiente || null);
+  const resumenSigue = sigue && det.datos && siguiente?.id === sigue.id ? resumenPautas(ejercicios) : null;
+  // (el atleta solo ve las semanas ya publicadas: cuántas tiene el bloque sale de sus fechas, si las tiene)
+  const semanasBloque = p.bloque?.fecha_inicio && p.bloque?.fecha_fin && p.bloque.fecha_fin >= p.bloque.fecha_inicio ? Math.ceil((diasEntre(p.bloque.fecha_inicio, p.bloque.fecha_fin) + 1) / 7) : null;
+  const panelDia = verDia && constancia.datos ? panelBienvenida({
+    hoy, estado: e.tipo, racha: constancia.datos.racha || 0, semanas: constancia.datos.semanas || [],
+    ultimoDia: constancia.datos.ultimoDia || null, primeraVez: !constancia.datos.algunaVez, haceMucho: !!constancia.datos.algunaVez && !constancia.datos.ultimoDia,
+    sigue: sigue ? { nombre: sigue.nombre, minutos: resumenSigue?.minutos || 0, ejercicios: resumenSigue?.ejercicios || 0, grupos: (resumenSigue?.grupos || []).map((g) => NOMBRE_GRUPO[g] || g) } : null,
+    semana: natural ? { hechas: natural.hechas, objetivo: natural.objetivo } : { hechas, objetivo: sesiones.length },
+    bloque: semana?.numero ? { semana: semana.numero, de: semanasBloque } : null,
+  }) : null;
   return (
     <>
-      {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} alCerrar={cerrarDia} />}
+      {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} panel={panelDia} alCerrar={cerrarDia} />}
       <section class={`hero-dia hero-${e.tipo}`} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
         {e.tipo !== 'entreno' && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
         <div class="titular">
