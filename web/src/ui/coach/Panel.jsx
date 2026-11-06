@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { HojaAvisos } from '../Avisos.jsx';
+import { useEstrecha } from '../BarraMas.jsx';
 import { CabeceraGrande, useUnaVez, Siluetas, Reserva, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos } from '../comunes.jsx';
 import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO } from '../../logica/nivel.js';
 import { BandaDemo } from '../App.jsx';
@@ -74,6 +75,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
   // v0.49: lo cargado se queda en CoachApp para la cabecera de la ficha (sin volver a pedirlo)
   useEffect(() => { if (datos) alCargar?.(datos); }, [datos]);
   const [filtro, setFiltro] = useState('todos');
+  const estrecha = useEstrecha(899);   // (el mismo corte que .solo-ancho / .solo-estrecho en estilos.css)
   const [nuevo, setNuevo] = useState(false);
   const [avisos, setAvisos] = useState(false);
   useEffect(() => { if (peticion?.nuevo) setNuevo(true); if (peticion?.avisos) setAvisos(true); }, [peticion?.id]);
@@ -119,7 +121,9 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
         </Vacio></div>
       ) : (
         <>
-          <div class="panel solo-ancho">
+          {/* (pulido 3.3) solo se pinta la que se ve: la tabla en pantalla ancha, las tarjetas en el móvil (antes, las dos
+              a la vez y una escondida: el doble de elementos en la lista) */}
+          {!estrecha && <div class="panel solo-ancho">
             <div class="tabla-env">
               <table class="atletas-tabla">
                 <thead><tr><th>Atleta</th><th>Avisos</th>{conCobros && <th>Pagos</th>}<th>Semana</th><th>Sesiones</th><th>Peso</th><th class="col-extra">Sueño</th><th class="col-extra">Motivación</th><th>Molestias</th><th>Último registro</th></tr></thead>
@@ -147,8 +151,8 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
                 </tbody>
               </table>
             </div>
-          </div>
-          <div class="pila solo-estrecho">
+          </div>}
+          {estrecha && <div class="pila solo-estrecho">
             {vista.map((r) => (
               <button class="tarjeta-atleta" key={r.atleta_id} data-estado={estadoAtleta(r)} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))}>
                 <div class="cab">
@@ -169,7 +173,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
                 {r.cobro && <div class="cobro-tarjeta"><span class="k">Pagos</span><CobroPanel c={r.cobro} enLinea /></div>}
               </button>
             ))}
-          </div>
+          </div>}
         </>
       )}
       {avisos && <HojaAvisos alCerrar={() => setAvisos(false)} />}

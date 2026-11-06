@@ -6730,6 +6730,14 @@ console.log('\nListas ligeras: el resumen de cada conversación y la última ser
   check(maximos.length > 0 && ult.length === maximos.length && maximos.every((m) => { const u = ult.find((x) => x.atleta_id === m.atleta_id); return u && new Date(u.registrada_en).getTime() === new Date(m.m).getTime(); }),
     `la última serie de cada atleta sale en una sola consulta (${ult.length} atletas con series)`);
   check((await q(`select * from ultimas_series($1::uuid[])`, [[]])).length === 0, 'sin atletas, nada');
+  // La huella de la biblioteca: la misma mientras no cambie nada; otra en cuanto cambia un ejercicio
+  const h1 = (await q(`select biblioteca_huella() h`))[0].h, h1b = (await q(`select biblioteca_huella() h`))[0].h;
+  const unEj = (await q(`select id, nombre from ejercicios order by id limit 1`))[0];
+  await q(`update ejercicios set nombre = nombre || ' (prueba)' where id = $1`, [unEj.id]);
+  const h2 = (await q(`select biblioteca_huella() h`))[0].h;
+  await q(`update ejercicios set nombre = $2 where id = $1`, [unEj.id, unEj.nombre]);
+  const h3 = (await q(`select biblioteca_huella() h`))[0].h;
+  check(/^\d+:[0-9a-f]{32}$/.test(h1) && h1 === h1b && h2 !== h1 && h3 === h1, 'la huella de la biblioteca es la misma mientras no cambie nada, cambia con un ejercicio y vuelve si se deshace');
   // Cada uno ve lo que ya veía: un atleta, solo lo suyo; una cuenta ajena, nada; sin sesión, ni llamarlas
   await como(ana);
   const mio = (await q(`select id from atletas where perfil_id = $1`, [ana]))[0]?.id;
@@ -6739,7 +6747,7 @@ console.log('\nListas ligeras: el resumen de cada conversación y la última ser
   await como(intruso);
   check((await q(`select * from conversaciones_resumen()`)).length === 0 && (await q(`select * from ultimas_series($1::uuid[])`, [ids])).length === 0, 'una cuenta que no es de nadie del equipo no recibe nada');
   await db.exec('reset role; set role anon;');
-  check(await falla(`select * from conversaciones_resumen()`) && await falla(`select * from ultimas_series($1::uuid[])`, [ids]), 'y sin sesión no se pueden ni llamar');
+  check(await falla(`select * from conversaciones_resumen()`) && await falla(`select * from ultimas_series($1::uuid[])`, [ids]) && await falla(`select biblioteca_huella()`), 'y sin sesión no se pueden ni llamar');
   await como(pelayo, 'aal2');
 }
 

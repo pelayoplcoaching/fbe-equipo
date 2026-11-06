@@ -122,7 +122,7 @@ const falta031 = (e) => {
 // (pulido 3) Sin la migración 048 (las listas ligeras), la app lo pide como antes: no es un error
 const falta048 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
-  return /conversaciones_resumen|ultimas_series/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
+  return /conversaciones_resumen|ultimas_series|biblioteca_huella/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
 };
 // La comunidad (v0.43) sin la migración 027
 const falta027 = (e) => {
@@ -369,7 +369,7 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
-  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series']);
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -477,6 +477,8 @@ export function crearApi(backend) {
   }
   // (pulido 3, migración 048) ¿Están las funciones de las listas ligeras? Se sabe al primer intento (null: aún no)
   let con048 = null;
+  const CLAVE_BIBLIOTECA = 'biblioteca';
+  let bibliotecaGuardada = null;   // { de: cuenta, huella, filas }
   async function ultimasSeries(ids) {
     if (con048 !== false) {
       try { const r = await b.rpc('ultimas_series', { p_atletas: ids }); con048 = true; return (r || []).map((x) => [x]); } catch (e) { if (!falta048(e)) throw e; con048 = false; }
@@ -4698,8 +4700,26 @@ export function crearApi(backend) {
     async plantillas() {
       return b.select('bloques', { eq: { es_plantilla: true }, order: [['nombre', 'asc']] });
     },
+    // (pulido 3.5) La biblioteca de ejercicios (unos 385 kB con sus instrucciones) se guarda en el dispositivo y solo
+    // se vuelve a bajar cuando cambia: con la migración 048, la base da una huella de su contenido (una respuesta de
+    // unas letras) y, si es la de lo guardado, no se baja nada. Sin la migración, se baja entera como hasta ahora.
     async biblioteca() {
-      return b.select('ejercicios', { order: [['nombre', 'asc']] });
+      const entera = () => b.select('ejercicios', { order: [['nombre', 'asc']] });
+      const yo = uid();
+      if (!yo || con048 === false) return entera();
+      let huella;
+      try { huella = await b.rpc('biblioteca_huella'); con048 = true; } catch (e) { if (!falta048(e)) throw e; con048 = false; return entera(); }
+      const copias = (filas) => filas.map((x) => (typeof structuredClone === 'function' ? structuredClone(x) : JSON.parse(JSON.stringify(x))));
+      if (bibliotecaGuardada && bibliotecaGuardada.de === yo && bibliotecaGuardada.huella === huella) return copias(bibliotecaGuardada.filas);
+      const delMovil = await copiaDelMovil().leer(yo, CLAVE_BIBLIOTECA).catch(() => null);
+      if (delMovil?.datos?.huella === huella && Array.isArray(delMovil.datos.filas)) {
+        bibliotecaGuardada = { de: yo, huella, filas: delMovil.datos.filas };
+        return copias(bibliotecaGuardada.filas);
+      }
+      const filas = await entera();
+      // (si cambiara justo entre la huella y la descarga, la huella siguiente ya no coincide y se vuelve a bajar)
+      if (uid() === yo) { bibliotecaGuardada = { de: yo, huella, filas }; copiaDelMovil().guardar(yo, CLAVE_BIBLIOTECA, { huella, filas }).catch(() => {}); }
+      return copias(filas);
     },
     async ejerciciosPorIds(ids) {
       return ids.length ? b.select('ejercicios', { in: { id: ids } }) : [];
@@ -4752,9 +4772,10 @@ export function crearApi(backend) {
       const A = porId(atletas), E = porId(biblioteca);
       const vivos = bloques.filter((x) => A[x.atleta_id] && A[x.atleta_id].estado !== 'baja');
       if (!vivos.length) return [];
-      const semanas = await b.select('semanas', { in: { bloque_id: vivos.map((x) => x.id) } });
-      const sesiones = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) } }) : [];
-      const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, nonulo: ['variante'] }) : [];
+      // (pulido 3.3) solo las columnas que hacen falta: las pautas enteras de todos los bloques vivos eran 430 kB
+      const semanas = await b.select('semanas', { in: { bloque_id: vivos.map((x) => x.id) }, cols: 'id,bloque_id' });
+      const sesiones = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) }, cols: 'id,semana_id,nombre' }) : [];
+      const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, nonulo: ['variante'], cols: 'id,sesion_id,ejercicio_id,variante' }) : [];
       const S = porId(sesiones), W = porId(semanas), B = porId(vivos);
       const grupos = new Map();
       for (const p of pautas) {

@@ -1,17 +1,21 @@
 -- =====================================================================
--- FBE Equipo, migración 048: listas ligeras (conversaciones y última serie)
+-- FBE Equipo, migración 048: listas ligeras (conversaciones, última serie y biblioteca)
 --
 -- Por qué: dos listas del coach bajaban mucho más de lo que enseñan, y cada semana más.
 --   * La de conversaciones pedía los últimos 2.000 mensajes con su texto para sacar el último de cada atleta y
 --     cuántos tiene sin leer (416 KB con 583 mensajes). Pasados los 2.000, quien llevara tiempo sin escribir
 --     salía sin último mensaje y sin su cuenta de no leídos.
 --   * La lista de atletas hacía una consulta por atleta para saber cuándo registró su última serie (34 consultas).
+--   * La biblioteca de ejercicios (unos 385 KB con sus instrucciones) se bajaba entera cada vez que se abría la
+--     biblioteca, Revisar, el editor del programa o el buscador, aunque no hubiera cambiado.
 --
--- Qué hace: dos funciones de solo lectura, sin tablas ni columnas nuevas. Las dos corren con los permisos de quien
+-- Qué hace: tres funciones de solo lectura, sin tablas ni columnas nuevas. Corren con los permisos de quien
 -- llama (security invoker): cada uno ve exactamente lo que ya veía (el coach, todo; un atleta, lo suyo).
 --   * conversaciones_resumen(): por atleta, el último mensaje que ya ha salido (texto recortado a 300 letras),
 --     cuántos del atleta están sin leer y cuántos hay programados.
 --   * ultimas_series(atletas): cuándo registró su última serie cada uno.
+--   * biblioteca_huella(): una huella de la biblioteca de ejercicios (cuántos hay y un resumen de su contenido).
+--     La app guarda la biblioteca en el dispositivo y solo la vuelve a bajar cuando la huella cambia.
 -- Sin esta migración, la app sigue pidiéndolo como hasta ahora.
 --
 -- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 047 (o con instalar.sql en una
@@ -70,6 +74,17 @@ language sql stable security invoker set search_path = '' as $$
 $$;
 comment on function public.ultimas_series(uuid[]) is
   'Cuándo registró su última serie cada atleta de la lista. Con los permisos de quien llama.';
+
+-- ---------------------------------------------------------------------
+-- 3. La huella de la biblioteca de ejercicios (para no bajarla entera si no ha cambiado)
+-- ---------------------------------------------------------------------
+create or replace function public.biblioteca_huella() returns text
+language sql stable security invoker set search_path = '' as $$
+  select count(*)::text || ':' || coalesce(md5(string_agg(md5(e::text), '' order by e.id)), '')
+  from public.ejercicios e;
+$$;
+comment on function public.biblioteca_huella() is
+  'Cuántos ejercicios ve quien llama y un resumen de su contenido: cambia si se añade, se quita o se cambia alguno.';
 
 -- Permisos (como al final de 003 a 047)
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;

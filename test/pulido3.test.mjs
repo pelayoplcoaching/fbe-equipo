@@ -61,5 +61,29 @@ console.log('3. La lista del coach: la última serie de todos en una consulta');
   check(con.n('rpc:ultimas_series') === 1 && sin.n('series') >= con.n('series') + atletas - 1, `con la migración, ${atletas} consultas de «última serie» pasan a ser una (${sin.n('series')} lecturas de series → ${con.n('series')})`);
 }
 
+console.log('5. La biblioteca de ejercicios, solo si ha cambiado');
+{
+  const con = montar(), sin = montar({ sin048: true });
+  sin.b.rpc = ((orig) => (n, ...a) => (n === 'biblioteca_huella' ? Promise.reject(new Error('Could not find the function public.biblioteca_huella in the schema cache')) : orig(n, ...a)))(sin.b.rpc);
+  for (const m of [con, sin]) await m.b.auth.entrar('pelayo@fbe.demo', 'demo');
+  const b1 = await con.api.biblioteca();
+  const e1 = con.n('ejercicios');
+  await espera(2100);
+  const b2 = await con.api.biblioteca();
+  await con.api.variantesPorRevisar();
+  check(b1.length > 20 && JSON.stringify(b1) === JSON.stringify(b2) && con.n('ejercicios') === e1, `pedida otra vez (y desde Revisar), la biblioteca no se vuelve a bajar: se pregunta su huella y es la misma (${b1.length} ejercicios)`);
+  b2[0].nombre = 'Tocado por una pantalla';
+  check((await con.api.biblioteca())[0].nombre === b1[0].nombre, 'cada pantalla recibe su copia: lo que una cambie en la suya no llega a las demás');
+  await con.api.actualizar('ejercicios', b1[3].id, { nombre: 'Nombre nuevo de prueba' });
+  const b3 = await con.api.biblioteca();
+  check(con.n('ejercicios') === e1 + 1 && b3.some((x) => x.nombre === 'Nombre nuevo de prueba'), 'en cuanto cambia un ejercicio, la huella cambia y se baja de nuevo');
+  await con.b.sql?.(`select 1`).catch(() => {});
+  const s1 = await sin.api.biblioteca(); await espera(2100); await sin.api.biblioteca();
+  check(sin.n('ejercicios') === 2 && s1.length === b1.length, 'sin la migración, se baja entera cada vez, como hasta ahora');
+  // Las pautas de Revisar, con las columnas justas, dan lo mismo
+  const v1 = await con.api.variantesPorRevisar(), v2 = await sin.api.variantesPorRevisar();
+  check(Array.isArray(v1) && v1.length === v2.length, `«variantes por revisar» sale igual con las columnas justas (${v1.length})`);
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

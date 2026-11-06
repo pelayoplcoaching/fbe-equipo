@@ -2900,6 +2900,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           };
         });
       }
+      if (nombre === 'biblioteca_huella') {
+        const filas = veo048('ejercicios').slice().sort((x, y) => String(x.id).localeCompare(String(y.id)));
+        let h = 5381; for (const ch of JSON.stringify(filas)) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0;   // (un resumen cualquiera de su contenido)
+        return `${filas.length}:${h.toString(16)}`;
+      }
       if (nombre === 'ultimas_series') {
         const ids = new Set(args?.p_atletas || []);
         const ult = new Map();
