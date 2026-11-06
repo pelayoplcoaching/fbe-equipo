@@ -4997,6 +4997,28 @@ export function crearApi(backend) {
     },
   });
 
+  // ------------------------------------------------------------ (pulido 2.9) la lista del coach, al abrir
+  // La última lista de atletas que cargó el coach se queda en su dispositivo (con la copia de arriba: por cuenta, se
+  // borra entera al cerrar la sesión y caduca a los 14 días sin usarse), para enseñarla al abrir la app mientras llega
+  // la de ahora. Es lo mismo que enseña la lista (nombre, estado, avisos, cumplimiento, la tendencia de peso), nada más.
+  const CLAVE_LISTA = 'lista-atletas';
+  const resumenesDeLaBase = api.resumenes;
+  Object.assign(api, {
+    async resumenes(hoy, opciones) {
+      const id = uid();
+      const lista = await resumenesDeLaBase(hoy, opciones);
+      if (id && hoy === undefined && !opciones?.soloAtleta && uid() === id && Array.isArray(lista)) copiaDelMovil().guardar(id, CLAVE_LISTA, lista).catch(() => {});
+      return lista;
+    },
+    // La guardada (o null): solo para enseñarla mientras llega la de ahora
+    async resumenesGuardados() {
+      const id = uid();
+      if (!id) return null;
+      const x = await copiaDelMovil().leer(id, CLAVE_LISTA).catch(() => null);
+      return Array.isArray(x?.datos) && uid() === id ? x.datos : null;
+    },
+  });
+
   // (v0.65, revisión) lo que se apunta (directo o desde la cola) se pone también en la copia de su sesión: si no, al volver a
   // abrir la app sin red (o con la red lenta) la sesión salía de una copia sin esas series, proponía otra vez la serie 1 y
   // la nueva pisaba la de verdad en la base. Se usa la misma mezcla que pone encima lo que espera en la cola.

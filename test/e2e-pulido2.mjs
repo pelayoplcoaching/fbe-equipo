@@ -177,7 +177,7 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
         await p.goto('about:blank'); await p.goto(`${base}/?demo`);
         const dentro = await p.locator('nav.tabs').first().waitFor({ timeout: 2500 }).then(() => true).catch(() => false);
         const segunda = await medir(p, async () => { if (!dentro) { await p.getByRole('button', { name: quien }).first().tap(); await p.locator('nav.tabs').waitFor(); } await p.locator(listo).first().waitFor(); });
-        check(segunda.px <= 24 && segunda.huecos > 0 && segunda.quedan === 0, `${quien.source}: al volver a abrir la app, lo que llega tarde ya tiene su sitio guardado y nada se mueve al cargar (${segunda.px} px; antes ${primera.px}; ${segunda.huecos} huecos reservados, ninguno al acabar)`);
+        check(segunda.px <= 24 && (segunda.huecos > 0 || otras.length === 1) && segunda.quedan === 0, `${quien.source}: al volver a abrir la app, lo que llega tarde ya tiene su sitio guardado y nada se mueve al cargar (${segunda.px} px; antes ${primera.px}; ${segunda.huecos} huecos reservados, ninguno al acabar)`);
         await p.waitForTimeout(1200); await cerrarAvisos(p);
         for (const s of otras) {
           const r = await medir(p, () => irASeccion(p, s));
@@ -378,6 +378,38 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       await c.p.locator('#na-nombre').waitFor();
       check(await c.p.locator('#na-nombre').evaluate((e) => getComputedStyle(e).userSelect) !== 'none', 'en los campos de escribir se selecciona como siempre');
       await c.ctx.close();
+    }
+    // ---------- 9. La lista del coach sale al momento al abrir la app
+    {
+      const { ctx, p } = await abrir(/Pelayo/);
+      await filasAtletas(p).first().waitFor();
+      await p.waitForTimeout(800);
+      const nombres = await p.locator('button.tarjeta-atleta:visible').count();
+      // Otro día: la red va lenta (700 ms por consulta) y, mientras, alguien ha cambiado algo
+      await p.evaluate(() => { const b = globalThis.__fbeDemo; return b.select('atletas', {}).then((l) => { const a = l.find((x) => x.nombre === 'Marta Gil'); return b.update('atletas', { nombre: 'Marta Gil Ruiz' }, { eq: { id: a.id } }); }); });
+      await p.waitForTimeout(600);
+      await p.evaluate(() => localStorage.setItem('fbe-demo-retraso', '700'));
+      await p.goto('about:blank'); await p.goto(`${base}/?demo`);
+      const t0 = Date.now();
+      const boton = p.getByRole('button', { name: /Pelayo/ }).first();
+      await Promise.race([boton.waitFor({ timeout: 15000 }).then(() => boton.tap()).catch(() => {}), p.locator('nav.tabs').waitFor({ timeout: 15000 }).catch(() => {})]);
+      await p.locator('nav.tabs').waitFor();
+      const tNav = Date.now();
+      await p.locator('button.tarjeta-atleta:visible').first().waitFor({ timeout: 8000 });
+      const tLista = Date.now() - tNav;
+      const alMomento = await p.evaluate(() => ({ n: [...document.querySelectorAll('button.tarjeta-atleta')].filter((x) => x.getClientRects().length).length, viejo: document.body.innerText.includes('Marta Gil') && !document.body.innerText.includes('Marta Gil Ruiz'), siluetas: document.querySelectorAll('.siluetas').length }));
+      check(tLista < 1200 && alMomento.n === nombres && alMomento.siluetas === 0, `al volver a abrir la app con la red lenta, la lista del coach sale al momento con lo último que se cargó (${tLista} ms; con la red sola tardaría varios segundos), sin siluetas`);
+      const alDia = await p.locator('button.tarjeta-atleta:visible', { hasText: 'Marta Gil Ruiz' }).first().waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+      check(alMomento.viejo && alDia, 'y se pone al día sola en cuanto llega la de ahora (un nombre cambiado mientras tanto aparece sin tocar nada)');
+      // Al cerrar la sesión, la copia se borra del dispositivo
+      await p.evaluate(() => localStorage.removeItem('fbe-demo-retraso'));
+      const quedaAntes = await p.evaluate(async () => { const bases = await indexedDB.databases(); let n = 0; for (const b of bases) { await new Promise((ok) => { const r = indexedDB.open(b.name); r.onsuccess = () => { const d = r.result; if (![...d.objectStoreNames].includes('copia')) { d.close(); ok(); return; } const c = d.transaction('copia').objectStore('copia').getAllKeys(); c.onsuccess = () => { n += c.result.filter((k) => String(k).includes('lista-atletas')).length; d.close(); ok(); }; c.onerror = () => { d.close(); ok(); }; }; r.onerror = () => ok(); }); } return n; });
+      await p.getByRole('button', { name: 'Cambiar de cuenta' }).first().tap();
+      await p.getByRole('button', { name: /Ana López/ }).first().waitFor();
+      await p.waitForTimeout(500);
+      const quedaDespues = await p.evaluate(async () => { const bases = await indexedDB.databases(); let n = 0; for (const b of bases) { await new Promise((ok) => { const r = indexedDB.open(b.name); r.onsuccess = () => { const d = r.result; if (![...d.objectStoreNames].includes('copia')) { d.close(); ok(); return; } const c = d.transaction('copia').objectStore('copia').getAllKeys(); c.onsuccess = () => { n += c.result.filter((k) => String(k).includes('lista-atletas')).length; d.close(); ok(); }; c.onerror = () => { d.close(); ok(); }; }; r.onerror = () => ok(); }); } return n; });
+      check(quedaAntes === 1 && quedaDespues === 0, `la copia de la lista está en el dispositivo mientras dura la sesión y se borra al cerrarla (${quedaAntes} → ${quedaDespues})`);
+      await ctx.close();
     }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {

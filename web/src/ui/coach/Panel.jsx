@@ -66,19 +66,24 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
   const { api, perfil } = useApp();
   // (pulido 4) al volver a la lista se enseña al momento la última cargada y se pone al día por detrás
   const res = useCarga(() => api.resumenes(), [], { recuerdo: `resumenes:${api.uid()}` });
+  // (pulido 2.9) al abrir la app, mientras llega la lista de ahora se enseña la última que se cargó en este
+  // dispositivo (datos/api.js, resumenesGuardados): la lista sale al momento y se pone al día sola
+  const guardada = useCarga(() => (res.datos ? Promise.resolve(null) : api.resumenesGuardados().catch(() => null)), [], { tirar: false });
+  const datos = res.datos || guardada.datos || null;   // (si la de ahora no llega, sin conexión, la guardada sigue ahí, con el aviso)
+  const cargando = res.cargando && !datos;
   // v0.49: lo cargado se queda en CoachApp para la cabecera de la ficha (sin volver a pedirlo)
-  useEffect(() => { if (res.datos) alCargar?.(res.datos); }, [res.datos]);
+  useEffect(() => { if (datos) alCargar?.(datos); }, [datos]);
   const [filtro, setFiltro] = useState('todos');
   const [nuevo, setNuevo] = useState(false);
   const [avisos, setAvisos] = useState(false);
   useEffect(() => { if (peticion?.nuevo) setNuevo(true); if (peticion?.avisos) setAvisos(true); }, [peticion?.id]);
-  const lista = res.datos || [];
+  const lista = datos || [];
   const atencion = lista.filter((r) => r.alertas.some((a) => a.nivel !== 'info'));
   const invitados = lista.filter((r) => r.estado === 'invitado');
   const deBaja = lista.filter((r) => r.estado === 'baja');
   // Columna de pagos solo si hay alguno apuntado (v0.25)
   // v0.51: «Hoy en tu equipo» con lo que ya ha cargado el panel (sin consultas nuevas)
-  const eq = res.datos ? equipoHoy(lista, hoyISO()) : null;
+  const eq = datos ? equipoHoy(lista, hoyISO()) : null;
   const inactivos = eq ? lista.filter((r) => eq.inactivos.includes(r.atleta_id)) : [];
   const vista = filtro === 'atencion' ? atencion : filtro === 'invitados' ? invitados : filtro === 'baja' ? deBaja : filtro === 'inactivos' ? inactivos : lista.filter((r) => r.estado !== 'baja');
   const conCobros = lista.some((r) => r.cobro);
@@ -98,7 +103,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
       <AvisoAlmacenamientoPanel abrirCuenta={abrirCuenta} />
       <ErrorCaja error={res.error} reintentar={res.recargar} />
       {/* (pulido 2.3) el resumen del equipo guarda su sitio mientras llega la lista: los filtros no bajan */}
-      <Reserva id="panel-equipo-hoy" cargando={res.cargando && !res.datos}>{eq && eq.activos > 0 && <EquipoHoy eq={eq} porRevisar={porRevisar} irARevisar={irARevisar} filtro={filtro} alFiltrar={setFiltro} />}</Reserva>
+      <Reserva id="panel-equipo-hoy" cargando={cargando}>{eq && eq.activos > 0 && <EquipoHoy eq={eq} porRevisar={porRevisar} irARevisar={irARevisar} filtro={filtro} alFiltrar={setFiltro} />}</Reserva>
       <div class="selector-chips" role="group" aria-label="Filtrar atletas">
         <button aria-pressed={filtro === 'todos' ? 'true' : 'false'} onClick={() => setFiltro('todos')}>Todos</button>
         <button aria-pressed={filtro === 'atencion' ? 'true' : 'false'} onClick={() => setFiltro('atencion')}>Necesitan atención ({atencion.length})</button>
@@ -107,7 +112,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
         {inactivos.length > 0 && <button aria-pressed={filtro === 'inactivos' ? 'true' : 'false'} onClick={() => setFiltro('inactivos')}>Sin actividad ({inactivos.length})</button>}
       </div>
 
-      {res.cargando && !res.datos ? <Siluetas forma="lista" n={4} texto="Cargando tus atletas" /> : !vista.length ? (
+      {cargando ? <Siluetas forma="lista" n={4} texto="Cargando tus atletas" /> : !vista.length ? (
         <div class="panel"><Vacio ilustracion="filtro" titulo={lista.length ? 'Nadie en esta lista' : 'Aún no hay atletas'}
           accion={!lista.length ? <button class="btn btn-primario" onClick={() => setNuevo(true)}>Añadir el primero</button> : <button class="btn btn-peq" onClick={() => setFiltro('todos')}>Ver a todos</button>}>
           {lista.length ? 'Nadie cumple este filtro: todo en orden por aquí.' : 'Dales de alta y envíales su código de invitación.'}
