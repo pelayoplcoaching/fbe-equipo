@@ -2624,7 +2624,8 @@ console.log('\nv0.69: la comunidad, primera tanda (041)');
     const m = await api.miembroComunidad();
     if (!api.dentroDeComunidad(m)) await api.entrarComunidad(nombre);
   }
-  await b.sql(`update comunidad_miembros set creado_en = now() - interval '1 day' where nombre = 'Luis M.'`);
+  // (v0.80) la tarjeta de bienvenida dura 24 horas: Luis entró hace 12
+  await b.sql(`update comunidad_miembros set creado_en = now() - interval '12 hours' where nombre = 'Luis M.'`);
   await b.sql(`update comunidad_miembros set creado_en = now() - interval '30 days' where nombre = 'Ana L.'`);
   await b.auth.entrar('ana@test', 'contraseña-ana-1');
   check(await api.comunidad041() === true, 'la app sabe que la base tiene la 041');

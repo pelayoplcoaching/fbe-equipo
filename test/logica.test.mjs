@@ -4130,7 +4130,12 @@ console.log('\nv0.69: la comunidad, primera tanda (bienvenida, entrenando ahora,
     { perfil_id: 'a', desde: '2026-11-01T10:00:00Z' }, { perfil_id: 'yo', desde: '2026-11-04T10:00:00Z' },
     { perfil_id: 'b', desde: '2026-11-04T10:00:00Z' }, { perfil_id: 'c', desde: '2026-10-28T10:00:00Z' }, null,
   ], 'yo', ahora);
-  check(n.map((x) => x.perfil_id).join() === 'b,a' && C.DIAS_BIENVENIDA === 7, 'la bienvenida: los de su primera semana (7 días), los más nuevos primero, nunca uno mismo');
+  const n24 = C.nuevosParaBienvenida([
+    { perfil_id: 'a', desde: '2026-11-05T02:00:00Z' }, { perfil_id: 'yo', desde: '2026-11-05T10:00:00Z' },
+    { perfil_id: 'b', desde: '2026-11-05T09:00:00Z' }, { perfil_id: 'c', desde: '2026-11-04T11:59:00Z' },
+  ], 'yo', ahora);
+  check(!n.length && n24.map((x) => x.perfil_id).join() === 'b,a' && C.HORAS_TARJETA_BIENVENIDA === 24 && C.DIAS_BIENVENIDA === 7,
+    'la tarjeta de bienvenida: solo sus primeras 24 horas (v0.80), los más nuevos primero, nunca uno mismo');
   const L = [
     { id: '1', responde_a: null }, { id: '2', responde_a: null }, { id: '3', responde_a: '1' }, { id: '4', responde_a: '3' },
     { id: '5', responde_a: 'oculto' }, { id: '6', responde_a: '2' },

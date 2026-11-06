@@ -84,7 +84,7 @@ export async function probarComunidad069({ navegador, check, base = 'http://loca
     await p.getByRole('dialog', { name: 'Normas del equipo' }).getByRole('button', { name: 'He leído las normas' }).click();
     await p.getByRole('button', { name: 'Sí, quiero entrar' }).click();
     await p.locator('.post').first().waitFor();
-    // La bienvenida: Lucía entró hace tres días
+    // La bienvenida: Lucía acaba de entrar (la tarjeta dura 24 horas)
     const tarjetaLucia = p.getByRole('region', { name: 'Lucía F. se ha unido al equipo' });
     await tarjetaLucia.waitFor();
     check(await tarjetaLucia.getByRole('button', { name: 'Dar la bienvenida a Lucía F.' }).isEnabled() && await p.getByRole('region', { name: /^Ana L\. se ha unido/ }).count() === 0,

@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.80': {
+    atleta: [
+      'Equipo: la tarjeta de bienvenida de quien entra se queda 24 horas en el muro, no una semana.',
+    ],
+  },
   '0.79': {
     atleta: [
       'Comidas: «Rellenar la semana» te propone el menú de lo que falta con tus recetas. Lo revisas, cambias lo que quieras y lo apuntas.',

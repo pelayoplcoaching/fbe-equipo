@@ -191,13 +191,16 @@ export function retoConseguido(r, { hechas = 0, total = 0, desde = null, totalEq
 }
 
 // ---------------------------------------------------------------- v0.69 (migración 041)
-// Bienvenida a los nuevos: la tarjeta sale 7 días desde que entró por primera vez
+// Bienvenida a los nuevos: «nuevo» en su perfil 7 días desde que entró por primera vez; la tarjeta del muro, solo sus
+// primeras 24 horas (v0.80, Pelayo: con varias altas seguidas ocupaban medio muro durante una semana)
 export const DIAS_BIENVENIDA = 7;
+export const HORAS_TARJETA_BIENVENIDA = 24;
 // «Entrenando ahora»: una serie apuntada en los últimos 20 minutos de una sesión sin terminar (lo decide la base)
 export const MINUTOS_ENTRENANDO = 20;
-// Los que se ven en la tarjeta de bienvenida: de los demás, en su primera semana, los más nuevos primero (como la base)
+// Los que se ven en la tarjeta de bienvenida: de los demás, en sus primeras 24 horas, los más nuevos primero (la base
+// los da de su primera semana, y la bienvenida se puede dar toda esa semana desde su perfil o su primera publicación)
 export function nuevosParaBienvenida(filas = [], yo = null, ahora = Date.now()) {
-  return (filas || []).filter((x) => x && x.perfil_id !== yo && Date.parse(x.desde) > ahora - DIAS_BIENVENIDA * 864e5)
+  return (filas || []).filter((x) => x && x.perfil_id !== yo && Date.parse(x.desde) > ahora - HORAS_TARJETA_BIENVENIDA * 3600e3)
     .sort((a, b) => Date.parse(b.desde) - Date.parse(a.desde));
 }
 // El resumen del domingo (como public.comunidad_texto_resumen de la 041): sin sesiones, nada
