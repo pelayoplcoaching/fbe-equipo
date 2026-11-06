@@ -119,6 +119,11 @@ const falta031 = (e) => {
   }
   throw e;
 };
+// (pulido 3) Sin la migración 048 (las listas ligeras), la app lo pide como antes: no es un error
+const falta048 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
+  return /conversaciones_resumen|ultimas_series/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
+};
 // La comunidad (v0.43) sin la migración 027
 const falta027 = (e) => {
   const m = e?.message || '';
@@ -364,7 +369,7 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
-  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de']);
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -469,6 +474,14 @@ export function crearApi(backend) {
       if (typeof window !== 'undefined') Promise.resolve(r).then(() => window.dispatchEvent(new Event('fbe-cambio')), () => {});
       return r;
     };
+  }
+  // (pulido 3, migración 048) ¿Están las funciones de las listas ligeras? Se sabe al primer intento (null: aún no)
+  let con048 = null;
+  async function ultimasSeries(ids) {
+    if (con048 !== false) {
+      try { const r = await b.rpc('ultimas_series', { p_atletas: ids }); con048 = true; return (r || []).map((x) => [x]); } catch (e) { if (!falta048(e)) throw e; con048 = false; }
+    }
+    return Promise.all(ids.map((id) => b.select('series', { eq: { atleta_id: id }, order: [['registrada_en', 'desc']], limit: 1, cols: 'atleta_id,registrada_en' })));
   }
   // El historial completo lo piden a la vez varias partes de una pantalla (gráficas, récords, actividad…):
   // se descarga una vez y se reparte, mientras no haya escrituras y durante unos segundos como mucho
@@ -2323,22 +2336,37 @@ export function crearApi(backend) {
     // lo eliminado como sin leer. El orden fino (las fijadas arriba) lo pone la pantalla (ordenarConversaciones).
     async conversaciones() {
       const COLS = 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id,enviar_en';
-      const [atletas, comentarios, estado] = await Promise.all([
-        api.atletas(),
-        b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: `${COLS},adjunto,eliminado_en,editado_en,entregado_en` })
+      // (pulido 3) Con la migración 048, la base da el resumen de cada conversación (el último mensaje, los no leídos y
+      // los programados de cada atleta: unos 10 kB). Sin ella, como antes: los últimos 2.000 mensajes con su texto,
+      // contados aquí (y, pasados los 2.000, quien lleve tiempo sin escribir sale sin su último mensaje)
+      const resumida = async () => {
+        if (con048 === false) return null;
+        try {
+          const filas = await b.rpc('conversaciones_resumen');
+          con048 = true;
+          return Object.fromEntries((filas || []).map((f) => [f.atleta_id, { ultimo: f.ultimo || null, sinLeer: Number(f.sin_leer) || 0, programados: Number(f.programados) || 0 }]));
+        } catch (e) { if (!falta048(e)) throw e; con048 = false; return null; }
+      };
+      const contada = async () => {
+        const comentarios = await b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: `${COLS},adjunto,eliminado_en,editado_en,entregado_en` })
           .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: `${COLS},adjunto,eliminado_en,editado_en` }))
           .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: COLS }))
-          .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id' })),
+          .catch(() => b.select('comentarios', { order: [['creado_en', 'desc']], limit: 2000, cols: 'id,atleta_id,autor,texto,creado_en,leido_en,sesion_id,checkin_id,archivo_id' }));
+        // (v0.48) El último mensaje es el último que ya ha salido; los programados se cuentan aparte
+        const p = {};
+        for (const c of comentarios) {
+          const x = (p[c.atleta_id] ||= { ultimo: null, sinLeer: 0, programados: 0 });
+          if (programado(c)) { x.programados++; continue; }
+          x.ultimo ||= c;
+          if (c.autor === 'atleta' && !c.leido_en && !c.eliminado_en) x.sinLeer++;
+        }
+        return p;
+      };
+      const [atletas, por, estado] = await Promise.all([
+        api.atletas(),
+        resumida().then((r) => r || contada()),
         api.estadoConversaciones(),
       ]);
-      // (v0.48) El último mensaje es el último que ya ha salido; los programados se cuentan aparte
-      const por = {};
-      for (const c of comentarios) {
-        const x = (por[c.atleta_id] ||= { ultimo: null, sinLeer: 0, programados: 0 });
-        if (programado(c)) { x.programados++; continue; }
-        x.ultimo ||= c;
-        if (c.autor === 'atleta' && !c.leido_en && !c.eliminado_en) x.sinLeer++;
-      }
       // Qué lleva el último de cada uno (foto, vídeo o archivo)
       const arcIds = unicos(Object.values(por).map((x) => x.ultimo?.archivo_id));
       const A = arcIds.length ? porId(await b.select('archivos', { in: { id: arcIds }, cols: 'id,tipo,mime' }).catch(() => [])) : {};
@@ -4277,8 +4305,9 @@ export function crearApi(backend) {
         b.select('pesos', { in: { atleta_id: ids }, gte: { fecha: desde }, order: [['fecha', 'desc']] }),
         b.select('checkins', { in: { atleta_id: ids }, gte: { semana_inicio: desde }, order: [['semana_inicio', 'desc']] }),
         b.select('molestias', { in: { atleta_id: ids }, gte: { semana_inicio: sumarDias(lunesDe(hoy), -14) } }),
-        // la última serie de cada atleta: una consulta pequeña por atleta, en paralelo
-        Promise.all(ids.map((id) => b.select('series', { eq: { atleta_id: id }, order: [['registrada_en', 'desc']], limit: 1, cols: 'atleta_id,registrada_en' }))),
+        // la última serie de cada atleta: (pulido 3) con la migración 048, una sola consulta; sin ella, una pequeña
+        // por atleta, en paralelo, como antes
+        ultimasSeries(ids),
       ]);
       const delHistorial = (async () => {
         // Sesiones hechas en las últimas 6 semanas (para la carga), de todos sus bloques
