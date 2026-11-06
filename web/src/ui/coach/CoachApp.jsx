@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, Icono, Marca, Insignia, usePildora } from '../comunes.jsx';
 import { conTransicion } from '../transiciones.js';
 import { usePosicion, subirArriba } from '../posiciones.js';
+import { useAtras, ponerRuta } from '../atras.js';
 import { Panel } from './Panel.jsx';
 import { Ficha } from './Ficha.jsx';
 import { Revisar } from './Revisar.jsx';
@@ -55,7 +56,7 @@ export function CoachApp() {
   useEffect(() => { if (bandeja.datos) ponerInsignia((bandeja.datos.total || 0) + (sinLeer.datos || 0)); }, [bandeja.datos, sinLeer.datos]);
   // (v0.56) «Compartir → FBE Equipo» desde la cuenta del coach: fotos, vídeos y PDF a la conversación que elija
   // (RecibirCompartidoCoach, abajo)
-  useEffect(() => { try { history.replaceState(null, '', `#${tab}`); } catch { /* */ } }, [tab, ficha?.atletaId]);
+  useEffect(() => { ponerRuta(`#${tab}`); }, [tab, ficha?.atletaId]);
   // Pulido 2: cada sección recuerda por dónde iba (al volver de otra o al cerrar una ficha); la ficha y el chat, no
   usePosicion(ficha ? `ficha:${ficha.atletaId}` : tab, !ficha && tab !== 'mensajes');
   // La bandeja se refresca al cambiar de sección (no al montar: ya se carga sola)
@@ -73,7 +74,7 @@ export function CoachApp() {
       const h = location.hash.slice(1);
       const chat = chatDeRuta(h);
       // (el #hash vuelve a «#mensajes»: así la siguiente de esa misma conversación también la abre)
-      if (chat) { setFicha(null); setTab('mensajes'); setPeticion({ tab: 'mensajes', atletaId: chat, id: Date.now() }); sinLeer.recargar(true); try { history.replaceState(null, '', '#mensajes'); } catch { /* */ } return; }
+      if (chat) { setFicha(null); setTab('mensajes'); setPeticion({ tab: 'mensajes', atletaId: chat, id: Date.now() }); sinLeer.recargar(true); ponerRuta('#mensajes'); return; }
       if (pestanasRef.current.some(([t]) => t === h)) { setFicha(null); setTab(h); bandeja.recargar(true); }
     };
     const llega = () => { bandeja.recargar(true); sinLeer.recargar(true); };
@@ -135,6 +136,11 @@ export function CoachApp() {
     const orden = pestanas.map(([t]) => t);
     conTransicion(() => { setTab(id); setFicha(null); setPeticion(null); }, orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : id === tab ? 'cerrar' : 'adelante');
   };
+
+  // Pulido 3: «atrás» en el móvil cierra la ficha abierta y, si no, vuelve a Atletas (las ventanas se cierran solas
+  // antes: atras.js)
+  useAtras(!ficha && tab !== 'atletas', () => elegirPestana('atletas'), 0);
+  useAtras(!!ficha, cerrarFicha, 1);
 
   return (
     <>

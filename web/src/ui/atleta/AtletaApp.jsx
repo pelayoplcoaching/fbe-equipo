@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia, usePildora } from '../comunes.jsx';
 import { conTransicion } from '../transiciones.js';
 import { usePosicion, subirArriba } from '../posiciones.js';
+import { useAtras, ponerRuta } from '../atras.js';
 import { Mensajes } from './Mensajes.jsx';
 import { Hoy } from './Hoy.jsx';
 import { Sesion } from './Sesion.jsx';
@@ -140,10 +141,15 @@ export function AtletaApp() {
   }, []);
 
   useEffect(() => {
-    try { history.replaceState(null, '', `#${tab}`); } catch { /* */ }
+    ponerRuta(`#${tab}`);
   }, [tab]);
   // Pulido 2: cada pestaña recuerda por dónde iba (al volver de otra o al cerrar una sesión); la sesión y el chat, no
   usePosicion(sesionId ? `sesion:${sesionId}` : tab, !sesionId && tab !== 'mensajes');
+  // Pulido 3: «atrás» en el móvil cierra la sesión abierta y, si no, vuelve a la primera pestaña (las ventanas se
+  // cierran solas antes: atras.js). (Lo que hace cada uno se define más abajo, tras los retornos tempranos)
+  const alAtras = useRef({});
+  useAtras(!sesionId && tab !== TABS[0]?.[0], () => alAtras.current.inicio?.(), 0);
+  useAtras(!!sesionId, () => alAtras.current.sesion?.(), 1);
   // Al tocar una notificación con la app abierta, se va a su pestaña; si llega una, se ponen al día las respuestas
   useEffect(() => {
     // (con una sesión abierta no se sale de ella: la pestaña queda elegida para cuando la cierre)
@@ -183,6 +189,7 @@ export function AtletaApp() {
     conTransicion(() => setTab(id), orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : 'adelante');
   };
   const releer = () => noLeidos.recargar(true);
+  alAtras.current = { inicio: () => irAPestana(TABS[0][0]), sesion: cerrarSesion };
 
   // Los mensajes sueltos del coach cuentan en Mensajes; los de sesiones, check-ins y vídeos, en Hoy
   const mensajesSinLeer = (noLeidos.datos || []).filter((c) => api.esMensaje(c)).length;

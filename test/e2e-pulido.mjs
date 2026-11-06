@@ -158,6 +158,90 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
       check(Math.abs(await y() - hoy) <= 30, `con la red lenta, Hoy vuelve a su sitio en cuanto ha cargado (${hoy})`);
       await ctx.close();
     }
+    // ---------- 3. «Atrás» cierra lo último que se abrió en vez de sacar de la app
+    {
+      const mirar = (p) => p.evaluate(() => ({ modales: document.querySelectorAll('[aria-modal="true"]').length, tab: document.querySelector('nav.tabs [aria-current="page"]')?.textContent.replace(/^\d+/, '').trim() || '',
+        sesion: !!document.querySelector('.app.en-sesion'), ficha: !!document.querySelector('[aria-label="Volver a atletas"]'), chat: !!document.querySelector('[aria-label="Volver a mensajes"]'),
+        nivel: history.state?.fbe ?? null, app: !!document.querySelector('nav.tabs'), ruta: location.hash }));
+      const atras = async (p) => { await p.goBack({ timeout: 3000 }).catch(() => {}); await p.waitForTimeout(650); return mirar(p); };
+      {
+        const { ctx, p } = await abrir(/Ana López/);
+        await irASeccion(p, 'Semana');
+        await p.locator('.semana-vista').first().waitFor();
+        await p.waitForTimeout(350);
+        const a = await mirar(p);
+        const b = await atras(p);
+        check(a.tab === 'Semana' && a.nivel === 1 && b.app && b.tab === 'Hoy' && b.ruta === '#hoy', `atleta: desde otra pestaña, «atrás» vuelve a Hoy sin salir de la app (${a.tab} → ${b.tab} ${b.ruta})`);
+        // Una sesión abierta
+        await p.locator('main .btn', { hasText: /Empezar sesi|Continuar|Ver sesi/ }).first().dispatchEvent('click');
+        await p.locator('.app.en-sesion').waitFor();
+        await p.waitForTimeout(400);
+        const c = await atras(p);
+        check(c.app && !c.sesion && c.tab === 'Hoy', '«atrás» con una sesión abierta la cierra y deja en Hoy');
+        // Una ventana encima de otra pestaña: primero la ventana, luego la pestaña
+        await irASeccion(p, 'Progreso');
+        await p.locator('.pestanas [role=tab]').first().waitFor();
+        await p.waitForTimeout(350);
+        await p.locator('nav.tabs .tab-mas').tap();
+        await p.locator('[aria-modal="true"]').first().waitFor();
+        await p.waitForTimeout(300);
+        const d = await mirar(p);
+        const e = await atras(p);
+        const f = await atras(p);
+        check(d.modales === 1 && d.nivel === 2 && e.modales === 0 && e.tab === 'Progreso' && f.tab === 'Hoy' && f.app, `con una ventana abierta, «atrás» cierra la ventana y se queda en la pestaña; otra vez, a Hoy (${d.modales}→${e.modales} ${e.tab} → ${f.tab})`);
+        // Lo que se cierra con su botón no deja toques muertos: en Hoy y sin nada abierto, «atrás» sale a la primera
+        await p.locator('nav.tabs .tab-mas').tap();
+        await p.locator('[aria-modal="true"]').first().waitFor();
+        await p.keyboard.press('Escape');
+        await p.locator('[aria-modal="true"]').first().waitFor({ state: 'detached' });
+        await p.waitForTimeout(600);
+        const g = await mirar(p);
+        const h = await atras(p);
+        check(g.nivel === 0 && g.tab === 'Hoy' && !h.app, `en Hoy y sin nada abierto, «atrás» sale de la app al primer toque (entradas de sobra: ${g.nivel})`);
+        await ctx.close();
+      }
+      {
+        const { ctx, p } = await abrir(/Pelayo/);
+        const filas = p.locator('tr:visible, button.tarjeta-atleta:visible');
+        await filas.first().waitFor();
+        await p.evaluate(() => window.scrollTo(0, 400)); await p.waitForTimeout(150);
+        const y0 = await p.evaluate(() => Math.round(scrollY));
+        await p.locator('tr:visible, button.tarjeta-atleta:visible', { hasText: 'Ana López' }).first().dispatchEvent('click');
+        await p.getByRole('button', { name: 'Volver a atletas' }).waitFor();
+        await p.waitForTimeout(400);
+        // Una hoja dentro de la ficha
+        await p.getByRole('button', { name: 'Nuevo bloque' }).first().tap();
+        await p.locator('[aria-modal="true"]').first().waitFor();
+        await p.waitForTimeout(300);
+        const a = await mirar(p);
+        const b = await atras(p);
+        const c = await atras(p);
+        const y1 = await p.evaluate(() => Math.round(scrollY));
+        check(a.modales === 1 && a.ficha && b.modales === 0 && b.ficha && !c.ficha && c.app && c.tab === 'Atletas', `coach: «atrás» cierra la hoja y deja la ficha; otra vez, cierra la ficha (${a.modales}→${b.modales}, ficha ${b.ficha}→${c.ficha})`);
+        check(Math.abs(y1 - y0) <= 30, `y la lista sigue donde estaba (${y0} → ${y1})`);
+        // Mensajes: conversación → lista → Atletas
+        await irASeccion(p, 'Mensajes');
+        await p.locator('.conv-fila, .fila-conversacion, main li button, main [role=listitem] button').first().tap();
+        await p.getByRole('button', { name: 'Volver a mensajes' }).waitFor();
+        await p.waitForTimeout(400);
+        const d = await atras(p);
+        const e = await atras(p);
+        check(!d.chat && d.tab === 'Mensajes' && e.tab === 'Atletas' && e.app, `en Mensajes, «atrás» vuelve de la conversación a la lista, y de ahí a Atletas (${d.tab} → ${e.tab})`);
+        // Una notificación tocada con la app abierta sigue llevando a su sección (y «atrás» vuelve)
+        await p.evaluate(() => { location.hash = '#revisar'; });
+        await p.waitForTimeout(600);
+        const f = await mirar(p);
+        const g = await atras(p);
+        check(f.tab === 'Revisar' && g.tab === 'Atletas' && g.app, `una dirección nueva (#revisar) sigue llevando a su sección, y «atrás» vuelve a Atletas (${f.tab} → ${g.tab})`);
+        // El buscador (otra ventana, no una hoja) también se cierra con «atrás»
+        await p.getByRole('button', { name: 'Buscar' }).first().tap();
+        await p.locator('.paleta').waitFor();
+        await p.waitForTimeout(300);
+        const h = await atras(p);
+        check(h.modales === 0 && h.app && h.tab === 'Atletas', '«atrás» cierra también el buscador (cualquier ventana, sin que tenga que hacer nada)');
+        await ctx.close();
+      }
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     check(false, `Pulido: ${e.message.split('\n')[0]}${errores.length ? ` · ${errores.slice(0, 3).join(' ## ')}` : ''}`);

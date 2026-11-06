@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, Cargando, Hoja, Vacio, Paso } from '../comunes.jsx';
+import { useAtras } from '../atras.js';
 import { EditorBloque } from './Editor.jsx';
 import { BandaDemo } from '../App.jsx';
 import { NOMBRE_FOCO } from '../../logica/calculos.js';
@@ -12,6 +13,8 @@ export function Plantillas({ peticion = null } = {}) {
   const [nueva, setNueva] = useState(false);
   const [asignar, setAsignar] = useState(null); // plantilla que se asigna a varios atletas
   useEffect(() => { if (peticion?.nueva) { setAbierta(null); setNueva(true); } else if (peticion?.plantillaId) setAbierta(peticion.plantillaId); }, [peticion?.id]);
+  // Pulido 3: en el móvil, «atrás» con una plantilla abierta vuelve a la lista
+  useAtras(!!abierta, () => { setAbierta(null); lista.recargar(true); }, 2);
 
   if (abierta) {
     return (
