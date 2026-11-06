@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, statSync, cpSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, extname } from 'node:path';
-import { irASeccion } from './secciones.mjs';
+import { irASeccion, abrirEnHoy } from './secciones.mjs';
 
 export async function probarPulido3({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
@@ -18,7 +18,7 @@ export async function probarPulido3({ navegador, check, base = 'http://localhost
     const ctx = await navegador.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, locale: 'es-ES', ...opciones });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errores.push(e.message));
-    p.on('console', (m) => { if (m.type() === 'error' && !/Sin conexi/.test(m.text())) errores.push(`${m.text()} ${m.location()?.url || ''}`); });
+    p.on('console', (m) => { if (m.type() === 'error' && !/Sin conexi|ERR_INTERNET_DISCONNECTED/.test(m.text())) errores.push(`${m.text()} ${m.location()?.url || ''}`); });
     await p.addInitScript((r) => {
       if (r) { try { localStorage.setItem('fbe-demo-retraso', String(r)); } catch { /* */ } }
       window.__q = [];
@@ -346,6 +346,76 @@ export async function probarPulido3({ navegador, check, base = 'http://localhost
       check(llega, `lo que ha cambiado en la base llega solo unos segundos después, sin recargar (al abrir: «${alAbrir}»; después: «Sesión renombrada»)`);
       // Dentro de la app, lo de siempre: tras guardar algo se espera a la base (no se enseña lo de antes)
       await p.evaluate(() => localStorage.setItem('fbe-demo-retraso', '0'));
+      await ctx.close();
+    }
+    // ---------- 9. Sin conexión, la comida, el hábito y el peso se guardan en el móvil y se envían al volver
+    {
+      const { ctx, p } = await abrir(/Ana López/);
+      await p.locator('.hero-dia').waitFor();
+      await p.evaluate(() => localStorage.setItem('fbe-demo-sin-red', '1'));   // (sin conexión, la demo tampoco llega a su «base»)
+      const hoy = await p.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+      const enCola = () => p.evaluate(() => JSON.parse(localStorage.getItem('fbe-cola-v1') || '[]').map((o) => o.tipo));
+      // En la base (la demo guarda sus datos en el navegador): el peso de hoy y los hábitos apuntados hoy
+      const enBase = () => p.evaluate((h) => { const d = JSON.parse(localStorage.getItem('fbe-demo-v2') || '{}'); const yo = (d.atletas || []).find((x) => x.nombre === 'Ana López')?.id; const mio = (x) => x.atleta_id === yo;
+        return { peso: (d.pesos || []).filter((x) => mio(x) && x.fecha === h).map((x) => Number(x.kg)), habitos: (d.registros_habito || []).filter((x) => mio(x) && x.fecha === h).length, comidas: (d.menu_comidas || []).filter((x) => mio(x) && x.fecha === h && x.hecho).length }; }, hoy);
+      for (const id of ['peso', 'habitos', 'menu']) await abrirEnHoy(p, id);
+      const antes = await enBase();
+      await ctx.setOffline(true);
+      // El peso
+      const botonPeso = p.locator('.peso-hoy .btn, .peso-hoy .chip').last();
+      await botonPeso.scrollIntoViewIfNeeded();
+      await botonPeso.click();
+      const hojaPeso = p.getByRole('dialog', { name: 'Peso de hoy' });
+      await hojaPeso.locator('#peso-hoy').fill('81.3');
+      await hojaPeso.getByRole('button', { name: 'Guardar', exact: true }).click();
+      const avisoMovil = await p.getByText('guardado en el móvil').first().waitFor({ timeout: 5000 }).then(() => true, () => false);
+      await hojaPeso.waitFor({ state: 'detached' });
+      const chipPeso = await p.locator('.peso-hoy .chip.ok').count();
+      // Un hábito
+      const habito = p.locator('.habitos-hoy .habito-tile').first();
+      const hayHabito = await habito.count() > 0;
+      let valorHabito = '';
+      if (hayHabito) {
+        await habito.scrollIntoViewIfNeeded();
+        const etiqueta0 = await habito.getAttribute('aria-label');
+        await habito.click();
+        const hoja = p.locator('[role=dialog]').last();
+        const hecho = hoja.getByRole('button', { name: 'Hecho', exact: true });
+        if (await hecho.count()) await hecho.click();
+        else { await hoja.locator('#habito-valor').fill('7'); await hoja.getByRole('button', { name: 'Guardar', exact: true }).click(); }
+        await hoja.waitFor({ state: 'detached' });
+        await p.waitForTimeout(300);
+        valorHabito = await habito.getAttribute('aria-label');
+        check(valorHabito !== etiqueta0 && !/sin apuntar hoy/.test(valorHabito), `sin conexión, el hábito queda apuntado en la pantalla (${valorHabito.split('.')[0]})`);
+      }
+      // Una comida del menú de hoy (si la demo tiene)
+      const casilla = p.locator('.seccion-menu-hoy .casilla-redonda[aria-pressed="false"]').first();
+      const hayComida = await casilla.count() > 0;
+      if (hayComida) { await casilla.scrollIntoViewIfNeeded(); await casilla.click(); await p.waitForTimeout(300); }
+      const cola = await enCola();
+      const sinEnviar = await enBase();
+      const esperadas = 1 + (hayHabito ? 1 : 0) + (hayComida ? 1 : 0);
+      check(avisoMovil && chipPeso === 1 && cola.length === esperadas && cola.includes('peso') && JSON.stringify(sinEnviar) === JSON.stringify(antes),
+        `sin conexión, lo apuntado en Hoy (${cola.join(', ')}) se guarda en el móvil y se avisa; a la base aún no ha llegado nada`);
+      // Ir a otra pestaña y volver, todavía sin conexión: no se pierde de la vista lo que se pueda enseñar ni se rompe nada
+      await irASeccion(p, 'Semana'); await p.waitForTimeout(300);
+      await irASeccion(p, 'Hoy'); await p.waitForTimeout(500);
+      check((await enCola()).length === esperadas, 'al moverse por la app sin conexión, sigue guardado');
+      // Vuelve la conexión: se envía solo
+      await ctx.setOffline(false);
+      let vacia = false;
+      for (let i = 0; i < 40 && !vacia; i++) { await p.waitForTimeout(250); vacia = (await enCola()).length === 0; }
+      await p.waitForTimeout(600);
+      const enviado = await enBase();
+      check(vacia && enviado.peso.join() === '81.3' && (!hayHabito || enviado.habitos >= Math.max(1, antes.habitos)) && (!hayComida || enviado.comidas === antes.comidas + 1),
+        `al volver la conexión se envía solo: en la base, el peso de hoy es ${enviado.peso.join()} kg${hayHabito ? `, ${enviado.habitos} hábitos apuntados hoy` : ''}${hayComida ? ` y ${enviado.comidas} comidas marcadas` : ''}`);
+      // Y al reabrir la app, sigue ahí
+      await recargar(p, /Ana López/);
+      for (const id of ['peso', 'habitos']) await abrirEnHoy(p, id);
+      await p.locator('.peso-hoy .chip.ok').first().waitFor({ timeout: 8000 }).catch(() => {});
+      const trasReabrir = await p.locator('.peso-hoy .chip.ok').count();
+      const habitoDespues = hayHabito ? await p.locator('.habitos-hoy .habito-tile').first().getAttribute('aria-label') : '';
+      check(trasReabrir === 1 && (!hayHabito || habitoDespues === valorHabito), 'y al reabrir la app, el peso y el hábito siguen apuntados');
       await ctx.close();
     }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);

@@ -30,7 +30,7 @@ import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { copia as copiaDelMovil } from './copia.js';
-import { CLAVES_COPIA, sesionesAPreparar, sesionConCola } from '../logica/sin-red.js';
+import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
 import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045 } from '../legal.js';
@@ -5089,6 +5089,17 @@ export function crearApi(backend) {
     deCopia = true;
     return guardada.datos;
   }
+  // (pulido 3.9) Lo apuntado en Hoy sin conexión (una comida, un hábito, el peso: datos/cola.js) se ve encima de lo que
+  // diga la base hasta que se envía: si la pantalla se vuelve a cargar antes, no «se desmarca». usarCola: main.jsx le
+  // da aquí lo que espera en la cola
+  let enCola = () => [];
+  const leido = { menuSemana: api.menuSemana, registrosHabitos: api.registrosHabitos, pesos: api.pesos };
+  Object.assign(api, {
+    usarCola(fn) { enCola = typeof fn === 'function' ? fn : () => []; },
+    menuSemana: async (atletaId, lunes) => menuConCola(await leido.menuSemana(atletaId, lunes), enCola(), atletaId),
+    registrosHabitos: async (atletaId, desde, hasta = null) => registrosHabitoConCola(await leido.registrosHabitos(atletaId, desde, hasta), enCola(), atletaId, { desde, hasta }),
+    pesos: async (atletaId, dias = 120) => pesosConCola(await leido.pesos(atletaId, dias), enCola(), atletaId, { desde: sumarDias(hoyISO(), -dias) }),
+  });
   const propia = (atletaId) => !!atletaId && atletaId === miAtletaId;
   const sinCopia = { perfil: api.perfil, miAtleta: api.miAtleta, consentimientos: api.consentimientos, programa: api.programa, sesion: api.sesion, marcasPrevias: api.marcasPrevias, recordatoriosActivos: api.recordatoriosActivos };
   Object.assign(api, {

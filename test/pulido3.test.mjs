@@ -221,5 +221,53 @@ console.log('\n7. Actualizar la app sin volver a descargar lo que no ha cambiado
   check(/__HUELLAS__/.test(build) && /__DEMO_ARCHIVOS__/.test(build) && /semilla-demo\|backend-memoria\|fotos-demo\|poster-demo/.test(build), 'la construcción escribe la huella de cada archivo y la lista de lo que es solo de la demo');
 }
 
+console.log('\n9. Apuntar sin conexión una comida, un hábito y el peso');
+{
+  const { menuConCola, registrosHabitoConCola, pesosConCola } = await import('../web/src/logica/sin-red.js');
+  const { crearCola } = await import('../web/src/datos/cola.js');
+  const A = 'atleta-1';
+  // Encima de lo que da la base, en su orden; lo de otro atleta o de otro tipo no cuenta
+  const menu = [{ id: 'm1', hecho: false }, { id: 'm2', hecho: true }];
+  const ops = [{ tipo: 'comida', atletaId: A, datos: { id: 'm1', hecho: true } }, { tipo: 'comida', atletaId: 'otro', datos: { id: 'm2', hecho: false } }, { tipo: 'comida', atletaId: A, datos: { id: 'm1', hecho: false } }, { tipo: 'comida', atletaId: A, datos: { id: 'm1', hecho: true } }];
+  const m = menuConCola(menu, ops, A);
+  check(m[0].hecho === true && m[1].hecho === true && menuConCola(menu, [], A) === menu && menu[0].hecho === false, 'una comida marcada sin conexión se ve marcada (vale lo último que se tocó; lo de otro atleta no cuenta)');
+  const regs = [{ id: 'r1', habito_id: 'h1', fecha: '2026-11-03', valor: 1 }, { id: 'r2', habito_id: 'h1', fecha: '2026-11-04', valor: 1 }];
+  const opsH = [{ tipo: 'habito', atletaId: A, datos: { habito_id: 'h1', fecha: '2026-11-05', valor: 3 } }, { tipo: 'habito', atletaId: A, datos: { habito_id: 'h1', fecha: '2026-11-04', valor: null } },
+    { tipo: 'habito', atletaId: A, datos: { habito_id: 'h1', fecha: '2026-11-03', valor: 2 } }, { tipo: 'habito', atletaId: A, datos: { habito_id: 'h1', fecha: '2026-01-01', valor: 9 } }];
+  const h = registrosHabitoConCola(regs, opsH, A, { desde: '2026-10-01' });
+  check(h.length === 2 && h[0].fecha === '2026-11-03' && h[0].valor === 2 && h[0].id === 'r1' && h[1].fecha === '2026-11-05' && h[1].valor === 3 && h[1].atleta_id === A,
+    'un hábito apuntado, corregido o borrado sin conexión se ve así (y lo de fuera de las fechas pedidas, no)');
+  const pesos = [{ id: 'p1', fecha: '2026-11-04', kg: 80 }];
+  const p = pesosConCola(pesos, [{ tipo: 'peso', atletaId: A, datos: { fecha: '2026-11-05', kg: '79.4' } }, { tipo: 'peso', atletaId: A, datos: { fecha: '2026-11-04', kg: 80.2 } }], A);
+  check(p.length === 2 && p[0].kg === 80.2 && p[0].id === 'p1' && p[1].fecha === '2026-11-05' && p[1].kg === 79.4, 'el peso apuntado sin conexión sale en su día (y corrige el que hubiera)');
+  // La cola: sin conexión se quedan en el móvil, en orden; al volver se envían una vez cada una; lo que la base rechaza se avisa
+  globalThis.localStorage = { m: new Map(), getItem(k) { return this.m.has(k) ? this.m.get(k) : null; }, setItem(k, v) { this.m.set(k, String(v)); }, removeItem(k) { this.m.delete(k); } };
+  let conRed = false; const hechas = [];
+  const sinRed = () => { const e = new Error('Sin conexión.'); e.sinConexion = true; return e; };
+  const apiFalsa = {
+    cambiarMenu: async (e, c) => { if (!conRed) throw sinRed(); hechas.push(['comida', e.id, c.hecho]); },
+    apuntarHabito: async (id, f, v) => { if (!conRed) throw sinRed(); if (id === 'malo') throw new Error('no es tuyo'); hechas.push(['habito', id, f, v]); },
+    guardarPeso: async (a, f, kg) => { if (!conRed) throw sinRed(); hechas.push(['peso', a, f, kg]); },
+  };
+  const cola = crearCola(apiFalsa, { clave: 'cola-prueba', claveRechazos: 'cola-prueba-rechazos' });
+  cola.fijarAtleta(A);
+  const rechazos = []; cola.alRechazo((op) => rechazos.push(op.tipo));
+  const r1 = await cola.enviar({ tipo: 'comida', atletaId: A, datos: { id: 'm1', hecho: true } });
+  const r2 = await cola.enviar({ tipo: 'habito', atletaId: A, datos: { habito_id: 'h1', fecha: '2026-11-05', valor: 2 } });
+  const r3 = await cola.enviar({ tipo: 'peso', atletaId: A, datos: { fecha: '2026-11-05', kg: 79.4 } });
+  const r4 = await cola.enviar({ tipo: 'habito', atletaId: A, datos: { habito_id: 'malo', fecha: '2026-11-05', valor: 1 } });
+  check(r1.enCola && r2.enCola && r3.enCola && r4.enCola && cola.pendientes() === 4 && hechas.length === 0 && cola.atleta() === A, 'sin conexión, la comida, el hábito y el peso se quedan guardados en el móvil (4 en la cola)');
+  check(menuConCola(menu, cola.operaciones(), A)[0].hecho === true, 'y mientras esperan se ven encima de lo que diga la base');
+  const guardadas = JSON.parse(globalThis.localStorage.getItem('cola-prueba'));
+  check(guardadas.length === 4 && guardadas.map((o) => o.tipo).join() === 'comida,habito,peso,habito', 'y quedan escritas en el móvil: si se cierra la app sin conexión, siguen ahí al abrirla');
+  conRed = true;
+  await cola.vaciar();
+  check(cola.pendientes() === 0 && JSON.stringify(hechas) === JSON.stringify([['comida', 'm1', true], ['habito', 'h1', '2026-11-05', 2], ['peso', A, '2026-11-05', 79.4]]) && rechazos.join() === 'habito',
+    'al volver la conexión se envían en su orden, una vez cada una; lo que la base rechaza se avisa y no bloquea lo demás');
+  const r5 = await cola.enviar({ tipo: 'peso', atletaId: A, datos: { fecha: '2026-11-06', kg: 79 } });
+  check(r5.enCola === false && hechas.length === 4 && cola.pendientes() === 0, 'con conexión, se guarda al momento, sin pasar por la cola');
+  delete globalThis.localStorage;
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

@@ -767,17 +767,32 @@ export function useCarga(fn, deps = [], opciones = {}) {
   const alMomento = useCallback(async (cambio, guardar) => {
     pendientes.current = [...pendientes.current, cambio];
     setEstado((e) => (e.datos == null ? e : { ...e, datos: cambio(e.datos) }));
-    let guardado = false;
-    try { const r = await guardar(); guardado = true; return r; } finally {
+    let guardado = false, enCola = false;
+    try { const r = await guardar(); guardado = true; enCola = r?.enCola === true; return r; } finally {
       pendientes.current = pendientes.current.filter((c) => c !== cambio);
       if (guardado && base.current != null) base.current = cambio(base.current);
       if (vivo.current) {
         setEstado((e) => (e.datos == null ? e : { ...e, datos: conPendientes(base.current) }));
-        if (!pendientes.current.length) cargar(true);
+        // (pulido 3.9) si quedó guardado en el móvil (sin conexión), no hay base a la que preguntar: se queda lo apuntado
+        if (!pendientes.current.length && !enCola) cargar(true);
       }
     }
   }, [cargar]);
   return { ...estado, recargar: cargar, alMomento };
+}
+
+// (pulido 3.9) Apuntar algo de Hoy con un toque (una comida marcada, un hábito, el peso). El atleta con su sesión
+// abierta lo manda por la cola (datos/cola.js): si no hay conexión, se guarda en el móvil y se envía solo al volver
+// (antes fallaba y había que repetirlo). Quien apunta lo de otro (el coach), directo, como siempre.
+// apuntar(atletaId, tipo, datos, directo) → lo que devuelva `directo`, o { enCola } si fue por la cola
+export function useApuntar() {
+  const { cola, aviso } = useApp();
+  return useCallback(async (atletaId, tipo, datos, directo) => {
+    if (!cola?.atleta || !atletaId || cola.atleta() !== atletaId) return directo();
+    const r = await cola.enviar({ tipo, atletaId, datos });
+    if (r?.enCola) aviso('Sin conexión: guardado en el móvil. Se enviará solo al volver.');
+    return r;
+  }, [cola, aviso]);
 }
 
 // Evita el doble envío (dos toques seguidos en «Guardar» o «Crear»): mientras la acción está en marcha no se repite

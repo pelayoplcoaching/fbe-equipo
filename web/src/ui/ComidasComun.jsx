@@ -3,7 +3,7 @@
 // día, con los totales frente a su plan, copiar semanas y la lista de la compra). Sustituye a las bases de datos
 // de Desayuno, Comida, Merienda y Cena y al «Planificador semanal» de Notion.
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, Reserva, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos, usePorTramos } from './comunes.jsx';
+import { useApp, useCarga, Reserva, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos, usePorTramos, useApuntar } from './comunes.jsx';
 import { COLOR_MACRO, MacrosDia } from './NutricionComun.jsx';
 import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, porSecciones, valeParaDia, textoVariante, tomasDelDia, paraElDia } from '../logica/comidas.js';
 import { planVigente, objetivoDelDia, fmtKcal } from '../logica/nutricion.js';
@@ -255,7 +255,9 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
   // deshace y se avisa)
   const cambiarSin = () => { const pon = !sin, d = dia; diasSin.alMomento((xs) => (pon ? [...xs.filter((x) => x !== d), d] : xs.filter((x) => x !== d)), () => api.marcarDiaSin(atletaId, d, pon)).catch((err) => aviso(err.message, 'error')); };
   const cambiarSemana = (l) => { setLunes(l); setDia(l === lunesDe(hoy) ? hoy : l); };
-  const marcar = (e) => { const hecho = !e.hecho; menu.alMomento((xs) => xs.map((x) => (x.id === e.id ? { ...x, hecho } : x)), () => api.cambiarMenu(e, { hecho })).catch((err) => aviso(err.message, 'error')); };
+  // (pulido 3.9) sin conexión, lo marcado se guarda en el móvil y se envía al volver
+  const apuntar = useApuntar();
+  const marcar = (e) => { const hecho = !e.hecho; menu.alMomento((xs) => xs.map((x) => (x.id === e.id ? { ...x, hecho } : x)), () => apuntar(atletaId, 'comida', { id: e.id, hecho }, () => api.cambiarMenu(e, { hecho }))).catch((err) => aviso(err.message, 'error')); };
   return (
     <div class="pila menu-semana">
       <NavSemana lunes={lunes} setLunes={cambiarSemana} />

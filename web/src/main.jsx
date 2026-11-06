@@ -34,6 +34,8 @@ async function arrancar() {
   // Los errores que se escapen se apuntan en la base (Cuenta → Errores de la app); en la demo, no
   instalarRegistro((d) => api.registrarError(d), String(__APP_VERSION__));
   const cola = crearCola(api);
+  // (pulido 3.9) lo apuntado sin conexión se ve encima de lo que diga la base hasta que se envía
+  api.usarCola(() => cola.operaciones());
   render(<App backend={backend} api={api} cola={cola} />, document.getElementById('app'));
 
   // (v0.65) en localhost solo si se pide (localStorage «fbe-sw-local» = 1): para probar «abrir sin cobertura» con la app empaquetada

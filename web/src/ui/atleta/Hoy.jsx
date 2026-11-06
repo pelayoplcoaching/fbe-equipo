@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { pedirSubProgreso } from './sub-progreso.js';
-import { Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar } from '../comunes.jsx';
+import { Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar, useApuntar } from '../comunes.jsx';
 import { resumenDia } from '../../logica/dia.js';
 import { BandaConexion, BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
@@ -578,6 +578,7 @@ function SemanaPasada({ salud }) {
 // Peso de hoy en un toque y la tendencia de las últimas semanas
 function PesoHoy({ irA }) {
   const { api, atleta, aviso } = useApp();
+  const apuntar = useApuntar();
   const pesos = useCarga(() => api.pesos(atleta.id, 60).catch(() => []), [atleta.id], { recuerdo: `pesos-hoy:${atleta.id}` });
   const nutri = conNutricion(atleta);
   const planes = useCarga(() => (nutri ? api.planesNutricion(atleta.id).catch(() => []) : Promise.resolve([])), [atleta.id, nutri], { recuerdo: `planes-hoy:${atleta.id}:${nutri}` });
@@ -612,8 +613,13 @@ function PesoHoy({ irA }) {
       </div>
       {abierto && (
         <HojaPeso inicial={deHoy?.kg ?? ult?.kg ?? null} alCerrar={() => setAbierto(false)} alGuardar={async (kg) => {
-          try { await api.guardarPeso(atleta.id, hoy, kg); aviso('Peso guardado'); setAbierto(false); pesos.recargar(true); }
-          catch (e) { aviso(e.message, 'error'); }
+          // (pulido 3.9) sin conexión, se guarda en el móvil y se envía al volver (el aviso lo da useApuntar)
+          const cambio = (xs) => [...xs.filter((x) => x.fecha !== hoy), { ...(xs.find((x) => x.fecha === hoy) || { id: `local-peso-${hoy}`, atleta_id: atleta.id, fecha: hoy }), kg: Number(kg) }].sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+          try {
+            const r = await pesos.alMomento(cambio, () => apuntar(atleta.id, 'peso', { fecha: hoy, kg: Number(kg) }, () => api.guardarPeso(atleta.id, hoy, kg)));
+            if (!r?.enCola) aviso('Peso guardado');
+            setAbierto(false);
+          } catch (e) { aviso(e.message, 'error'); }
         }} />
       )}
     </section>

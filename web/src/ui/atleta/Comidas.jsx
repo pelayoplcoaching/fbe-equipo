@@ -1,7 +1,7 @@
 // Comidas del atleta (v0.26): su semana (el menú que organiza él) y sus recetas (las que le pone su coach para
 // cada comida del día). En Hoy, lo de hoy en una tarjeta.
 import { useState } from 'preact/hooks';
-import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Pestanas, Vacio, Siluetas, ErrorCaja, Pista, usePreferencia } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Pestanas, Vacio, Siluetas, ErrorCaja, Pista, usePreferencia, useApuntar } from '../comunes.jsx';
 import { MenuSemana, VistaRecetario, HojaReceta, HojaElegirDia, HojaTusComidas, FotoReceta } from '../ComidasComun.jsx';
 import { NOMBRE_TOMA, ordenarTomas, totalesDia, textoMacros } from '../../logica/comidas.js';
 import { planVigente, objetivoDelDia, fmtKcal } from '../../logica/nutricion.js';
@@ -84,7 +84,9 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
   const t = totalesDia(deHoy);
   const obj = objetivoDelDia(planVigente(planes.datos || [], hoy), true);
   // (pulido 5) la casilla se marca al tocarla y se guarda por detrás (si no se puede guardar, se desmarca y se avisa)
-  const marcar = (e) => { const hecho = !e.hecho; menu.alMomento((xs) => xs.map((x) => (x.id === e.id ? { ...x, hecho } : x)), () => api.cambiarMenu(e, { hecho })).catch((err) => aviso(err.message, 'error')); };
+  // (pulido 3.9) sin conexión, lo marcado se guarda en el móvil y se envía al volver
+  const apuntar = useApuntar();
+  const marcar = (e) => { const hecho = !e.hecho; menu.alMomento((xs) => xs.map((x) => (x.id === e.id ? { ...x, hecho } : x)), () => apuntar(atleta.id, 'comida', { id: e.id, hecho }, () => api.cambiarMenu(e, { hecho }))).catch((err) => aviso(err.message, 'error')); };
   return (
     <section class="seccion seccion-menu-hoy">
       <div class="seccion-cab"><h2>Tu menú de hoy</h2><button class="btn-texto" onClick={() => irA('comidas')}><Icono n="calendario" /> Tu semana</button></div>

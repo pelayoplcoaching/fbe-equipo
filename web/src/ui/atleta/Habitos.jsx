@@ -1,6 +1,6 @@
 // Hábitos diarios del atleta: anillos en Hoy (como los de Apple), apuntar en dos toques y el mes en Progreso.
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Hoja, Paso } from '../comunes.jsx';
+import { useApp, useCarga, Icono, Hoja, Paso, useApuntar } from '../comunes.jsx';
 import { textoObjetivo, textoValor, pasoHabito, cumpleHabito, fraccionHabito, decimalesHabito } from '../../logica/habitos.js';
 import { hoyISO, fmtConDia } from '../../logica/fechas.js';
 import { LETRAS_DIA } from '../../logica/plan.js';
@@ -61,7 +61,8 @@ export function HabitosHoy() {
 
 // Apuntar un día (hoy o uno anterior de esta semana) y ver cómo va
 function HojaHabito({ r, alCerrar, alMomento }) {
-  const { api, aviso } = useApp();
+  const { api, atleta, aviso } = useApp();
+  const apuntar = useApuntar();
   const h = r.habito;
   const hoy = hoyISO();
   const [dia, setDia] = useState(hoy);
@@ -81,8 +82,9 @@ function HojaHabito({ r, alCerrar, alMomento }) {
     }));
     alCerrar();
     try {
-      await alMomento(cambio, () => api.apuntarHabito(h.id, d, v));
-      aviso(v == null ? 'Borrado' : cumple ? `${h.nombre}: ¡hecho!` : 'Apuntado');
+      // (pulido 3.9) sin conexión, se guarda en el móvil y se envía al volver (el aviso lo da useApuntar)
+      const r = await alMomento(cambio, () => apuntar(atleta.id, 'habito', { habito_id: h.id, fecha: d, valor: v }, () => api.apuntarHabito(h.id, d, v)));
+      if (!r?.enCola) aviso(v == null ? 'Borrado' : cumple ? `${h.nombre}: ¡hecho!` : 'Apuntado');
     } catch (e) { aviso(e.message, 'error'); }
   };
   // Racha: en días si se pide a diario; si no, en semanas llegando a los días pedidos
