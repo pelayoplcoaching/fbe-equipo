@@ -206,6 +206,39 @@ export async function probarPulido3({ navegador, check, base = 'http://localhost
       check(trasCambio >= 1 && await p.getByText('AAA Ejercicio cambiado').count() >= 1, `si un ejercicio cambia, se vuelve a bajar y se ve el cambio (${trasCambio} descarga)`);
       await ctx.close();
     }
+    // ---------- 6. Las listas largas se pintan por tramos
+    {
+      const { ctx, p } = await abrir(/Pelayo/);
+      await filasAtletas(p).first().waitFor();
+      // 150 recetas de más en la biblioteca (la de verdad tiene más de 500)
+      await p.evaluate(async () => { const b = globalThis.__fbeDemo; const r = (await b.select('recetas', {}))[0]; const filas = []; for (let i = 0; i < 150; i++) { const { id, ...x } = r; filas.push({ ...x, nombre: `Receta de prueba ${String(i).padStart(3, '0')}` }); } await b.insert('recetas', filas); });
+      await irASeccion(p, 'Biblioteca');
+      await p.locator('#bib-recetas').click();
+      await p.locator('.rejilla-recetas .tarjeta-receta').first().waitFor();
+      await p.waitForTimeout(500);
+      const mirar = () => p.evaluate(() => ({ n: document.querySelectorAll('.rejilla-recetas .tarjeta-receta').length, alto: document.documentElement.scrollHeight, boton: document.querySelector('.ver-mas-tramo')?.textContent || '' }));
+      const total = await p.evaluate(async () => (await globalThis.__fbeDemo.select('recetas', {})).length);
+      const alAbrir = await mirar();
+      check(total >= 150 && alAbrir.n === 40 && /sin mostrar/.test(alAbrir.boton), `de ${total} recetas, al abrir la biblioteca se pintan las 40 primeras (${alAbrir.boton})`);
+      // Al bajar, llegan las siguientes solas, hasta la última
+      let bajando = alAbrir;
+      for (let i = 0; i < 8 && bajando.n < total; i++) { await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight)); await p.waitForTimeout(400); bajando = await mirar(); }
+      check(bajando.n === total && !bajando.boton, `al bajar van llegando las demás, hasta la última (${bajando.n})`);
+      // Buscar mira en todas, no solo en las pintadas; y al borrar lo buscado se vuelve al primer tramo
+      await p.evaluate(() => window.scrollTo(0, 0));
+      await p.locator('main input[type=search]').first().fill('prueba 149');
+      await p.waitForTimeout(400);
+      const buscando = await mirar();
+      await p.locator('main input[type=search]').first().fill('');
+      await p.waitForTimeout(400);
+      const sinBuscar = await mirar();
+      check(buscando.n === 1 && sinBuscar.n === 40, `el buscador encuentra también las que aún no se habían pintado (${buscando.n}); al borrarlo, vuelta a las 40 primeras`);
+      // Con el botón también se puede (teclado, lector de pantalla)
+      await p.locator('.ver-mas-tramo').evaluate((el) => el.click());
+      await p.waitForTimeout(300);
+      check((await mirar()).n >= 80, 'y el botón «Ver 40 recetas más» también las trae');
+      await ctx.close();
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     if (process.env.DEPURAR) console.log(e.stack.split('\n').slice(0, 14).join('\n'));

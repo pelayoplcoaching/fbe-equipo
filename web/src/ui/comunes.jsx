@@ -563,6 +563,34 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
 }
 
 // Carga asíncrona con estado
+// (pulido 3.6) Listas largas por tramos: se pintan las primeras y, al acercarse al final, las siguientes (antes, las
+// 574 recetas de la biblioteca se pintaban de golpe: una página de 65.000 px y 4.700 piezas). total: cuántas hay;
+// reinicio: lo que, al cambiar (el filtro, lo buscado), devuelve la lista al primer tramo; clave: para que, al volver a
+// la pantalla, estén pintadas las mismas que se dejaron (y la pantalla pueda quedarse donde estaba).
+// Devuelve { hasta, mas }: pinta lista.slice(0, hasta) y pon {mas} justo después (un botón «Ver más», que además se
+// pulsa solo al acercarse: quien use teclado o lector de pantalla lo tiene a mano).
+const tramosVistos = new Map();
+export function usePorTramos(total, { tramo = 40, reinicio = '', clave = null, nombre = 'más' } = {}) {
+  const [n, setN] = useState(() => Math.max(tramo, (clave && tramosVistos.get(clave)?.[0] === reinicio && tramosVistos.get(clave)[1]) || 0));
+  const de = useRef(reinicio);
+  useEffect(() => { if (de.current !== reinicio) { de.current = reinicio; setN(tramo); } }, [reinicio, tramo]);
+  useEffect(() => { if (clave) tramosVistos.set(clave, [reinicio, n]); }, [clave, reinicio, n]);
+  const ref = useRef(null);
+  const quedan = Math.max(0, total - n);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || quedan <= 0) return undefined;
+    if (typeof IntersectionObserver !== 'function') { setN(total); return undefined; }
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) setN((x) => x + tramo); }, { rootMargin: '1200px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [n, quedan > 0, tramo]);
+  return {
+    hasta: Math.min(n, total),
+    mas: quedan > 0 ? <button type="button" ref={ref} class="btn plano ver-mas-tramo" onClick={() => setN((x) => x + tramo)}>Ver {Math.min(tramo, quedan)} {nombre} ({quedan} sin mostrar)</button> : null,
+  };
+}
+
 // (pulido 4) recuerdo: una clave para recordar, mientras la app esté abierta, lo último que se cargó. Al volver a esa
 // pantalla se enseña al momento lo recordado y se pone al día por detrás, sin esqueletos (como hacen las apps del
 // móvil al volver a una lista). Solo en memoria: no se guarda nada en el dispositivo y se olvida al salir de la cuenta.

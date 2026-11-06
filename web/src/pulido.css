@@ -138,3 +138,7 @@ button[data-guardando]::before {
   /* Donde se escribe, siempre se puede seleccionar (por si va dentro de algo de lo de arriba) */
   input, textarea, select, [contenteditable="true"] { -webkit-user-select: text; user-select: text; }
 }
+
+/* (pulido 3.6) Listas largas por tramos: el botón del final («Ver 40 recetas más»), que se pulsa solo al acercarse */
+.ver-mas-tramo { display: flex; width: 100%; justify-content: center; margin-top: 12px; min-height: 44px; color: var(--tinta-2); }
+.panel > .ver-mas-tramo { margin-top: 0; border-top: 1px solid var(--linea); border-radius: 0; }
