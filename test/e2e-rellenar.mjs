@@ -93,8 +93,9 @@ export async function probarRellenar({ navegador, check, base = 'http://localhos
     await hoja().getByRole('button', { name: /^Quitar cena/ }).first().click();
     check(await hay(filas(), 27) && await botonApuntar().textContent().then((t) => /Apuntar 27 comidas/.test(t)), '«Quitar» la saca de la propuesta: quedan 27');
     await hoja().getByRole('button', { name: 'Otra propuesta' }).click();
-    await p.waitForTimeout(200);
-    const otra = await nombres();
+    // (hasta que la propuesta nueva está pintada: con la máquina cargada, 200 ms a veces no bastaban)
+    let otra = [];
+    for (let k = 0; k < 15; k++) { await p.waitForTimeout(200); otra = await nombres(); if (otra.length === 28 && otra.filter((x, i) => x !== tras[i]).length >= 5) break; }
     check(otra.length === 28 && otra.filter((x, i) => x !== tras[i]).length >= 5, '«Otra propuesta» vuelve a las 28 con otras recetas');
     await revisar('cambios');
 
