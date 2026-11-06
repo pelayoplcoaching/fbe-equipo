@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { LOBO } from './marca-lobo.js';
+import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { useApp, Hoja, Icono, Cargando, descargar, P } from './comunes.jsx';
 import { num } from '../logica/calculos.js';
 import { arteSesion, cifrasTarjeta, cifraHeroe, encajarFoto, PLANTILLAS_TARJETA } from '../logica/arte.js';
@@ -11,10 +11,46 @@ import { arteSesion, cifrasTarjeta, cifraHeroe, encajarFoto, PLANTILLAS_TARJETA 
 // se pinta aquí, en el lienzo del móvil, y no se sube a ningún sitio. Ninguna lleva peso corporal, salud ni nutrición.
 
 const W = 1080, H = 1350, M = 80;
+// (diseño, tanda 15) Los colores de la marca nueva: la noche morada de la portada y de la bienvenida (no el negro de
+// antes), el lobo en blanco y el dorado solo para los récords. Los cuatro colores de los discos ya no van en el pie.
 const C = {
-  fondo: '#13111C', disco: '#221D3F', discoBorde: '#2E2757', tinta: '#EDEBF7', tinta2: '#ADA8C4', tinta3: '#7D7996',
-  morado: '#A08CFF', linea: '#2F2B43', rojo: '#F0495C', azul: '#5B8FF2', amarillo: '#F2C230', verde: '#3DC27B',
+  fondo: '#150F36', noche: '#221957', tinta: '#FFFFFF', tinta2: '#CFC8F4', tinta3: '#A79FD8',
+  morado: '#B9ADFF', linea: 'rgba(255, 255, 255, .14)', oro: '#E9D49A',
 };
+// El fondo: la noche, con el resplandor morado de la portada arriba a la derecha y abajo a la izquierda
+function fondoNoche(x) {
+  let g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, C.noche); g.addColorStop(1, C.fondo);
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  for (const [cx, cy, r, a] of [[W * 0.88, H * 0.06, 780, 0.5], [W * 0.06, H * 1.02, 720, 0.4]]) {
+    g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, `rgba(104, 78, 236, ${a})`); g.addColorStop(1, 'rgba(104, 78, 236, 0)');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+  }
+}
+// El lobo de la marca, en vectorial (ui/lobo-trazo.js), con la esquina de arriba a la izquierda en (px, py) y el alto
+// dado. Devuelve el ancho que ocupa.
+export function dibujarLobo(x, px, py, alto, color = '#FFFFFF', opacidad = 1) {
+  const [cx, cy, cw, ch] = LOBO_CAJA.split(' ').map(Number);
+  const e = alto / ch;
+  x.save();
+  x.globalAlpha = opacidad; x.translate(px, py); x.scale(e, e); x.translate(-cx, -cy);
+  x.fillStyle = color; x.fill(new Path2D(LOBO_D), 'evenodd');
+  x.restore();
+  return cw * e;
+}
+// La marca arriba a la izquierda (el lobo y «FBE Equipo») y el pie (un filo y la firma)
+function marca(x, letra) {
+  const w = dibujarLobo(x, M, M - 4, 64);
+  letra(800, 34, 'expanded'); x.fillStyle = C.tinta; x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+  x.fillText('FBE Equipo', M + w + 18, M + 40);
+}
+function pie(x, letra, color = C.tinta3) {
+  x.fillStyle = C.linea; x.fillRect(M, H - 132, W - 2 * M, 2);
+  const w = dibujarLobo(x, M, H - 98, 34, color);
+  letra(500, 30); x.fillStyle = color; x.textAlign = 'left';
+  x.fillText('Entrenado con FBE Coaching', M + w + 14, H - 72);
+}
 export const FUENTE = '"Archivo Variable", "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif';
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -64,32 +100,18 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null } =
     x.restore();
   };
 
-  const lobo = await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = LOBO; });
   const aBlob = () => new Promise((ok, mal) => cv.toBlob((b) => (b ? ok(b) : mal(new Error('No se ha podido crear la imagen.'))), 'image/png'));
   if (plantilla !== 'clasica') {
-    dibujarPlantilla({ x, d, plantilla, foto, lobo, letra, cortar, lineas, icono });
+    dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono });
     return aBlob();
   }
 
-  // Fondo con un disco grande, como el de la marca
-  x.fillStyle = C.fondo; x.fillRect(0, 0, W, H);
-  const dx = W - 150, dy = H + 40;
-  x.fillStyle = C.disco; x.beginPath(); x.arc(dx, dy, 520, 0, Math.PI * 2); x.fill();
-  x.strokeStyle = C.discoBorde; x.lineWidth = 3;
-  for (const r of [440, 330]) { x.beginPath(); x.arc(dx, dy, r, 0, Math.PI * 2); x.stroke(); }
-  x.fillStyle = C.fondo; x.beginPath(); x.arc(dx, dy, 110, 0, Math.PI * 2); x.fill();
-  x.fillStyle = C.disco; x.beginPath(); x.arc(dx, dy, 40, 0, Math.PI * 2); x.fill();
+  // Fondo: la noche de la marca y, abajo a la derecha, el lobo en grande y muy tenue
+  fondoNoche(x);
+  dibujarLobo(x, W - 560, H - 640, 760, '#FFFFFF', 0.055);
 
   // Marca y fecha
-  // El lobo de la app (si la imagen no carga, el disco de siempre)
-  if (lobo) x.drawImage(lobo, M, M, 56, 56);
-  else {
-    x.fillStyle = C.morado; x.beginPath(); x.arc(M + 28, M + 28, 28, 0, Math.PI * 2); x.fill();
-    x.fillStyle = C.fondo; x.beginPath(); x.arc(M + 28, M + 28, 11, 0, Math.PI * 2); x.fill();
-    x.fillStyle = C.morado; x.beginPath(); x.arc(M + 28, M + 28, 4, 0, Math.PI * 2); x.fill();
-  }
-  letra(800, 34, 'expanded'); x.fillStyle = C.tinta; x.textBaseline = 'alphabetic';
-  x.fillText('FBE Equipo', M + 74, M + 40);
+  marca(x, letra);
   letra(500, 30); x.fillStyle = C.tinta2; x.textAlign = 'right';
   x.fillText(d.etiquetaFecha || fechaLarga(d.fecha), W - M, M + 40);
   x.textAlign = 'left';
@@ -119,8 +141,8 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null } =
   const limite = H - 190 - altoCal;
   // Récords
   if (d.records.length) {
-    icono('trofeo', M + 18, y - 12, 36, C.morado);
-    letra(700, 34); x.fillStyle = C.morado;
+    icono('trofeo', M + 18, y - 12, 36, C.oro);
+    letra(700, 34); x.fillStyle = C.oro;
     x.fillText(d.records.length === 1 ? 'Récord' : `${d.records.length} récords`, M + 50, y);
     y += 64;
     for (const r of d.records.slice(0, 3)) {
@@ -159,15 +181,8 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null } =
       x.beginPath(); x.arc(cx, yy, celda / 2, 0, Math.PI * 2); x.fill();
     }));
   }
-  // Pie: los colores de los discos y la firma
-  const anchoBarra = (W - 2 * M - 3 * 14) / 4;
-  [C.rojo, C.azul, C.amarillo, C.verde].forEach((c, i) => {
-    x.fillStyle = c;
-    x.beginPath();
-    x.roundRect ? x.roundRect(M + i * (anchoBarra + 14), H - 130, anchoBarra, 14, 7) : x.rect(M + i * (anchoBarra + 14), H - 130, anchoBarra, 14);
-    x.fill();
-  });
-  letra(500, 30); x.fillStyle = C.tinta3; x.fillText('Entrenado con FBE Coaching', M, H - 66);
+  // Pie: un filo y la firma, con el lobo
+  pie(x, letra);
 
   return aBlob();
 }
@@ -176,7 +191,7 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null } =
 // El dibujo de la portada de la sesión (logica/arte.js), escalado a la tarjeta y con los colores de la tarjeta
 function dibujarArte(x, d, { escala = 2.7, dx = 0, dy = 0, opacidad = 1 } = {}) {
   const a = arteSesion({ nombre: d.nombre, tipo: d.tipo || 'fuerza', patron: d.patron || null }, 400, 300);
-  const tono = { acento: C.morado, claro: '#E7E3FF', tenue: '#6F68A0' };
+  const tono = { acento: C.morado, claro: '#FFFFFF', tenue: '#8F88C0' };
   x.save();
   x.translate(dx, dy); x.scale(escala, escala);
   x.lineCap = 'round';
@@ -194,10 +209,10 @@ function dibujarArte(x, d, { escala = 2.7, dx = 0, dy = 0, opacidad = 1 } = {}) 
   x.restore();
   x.globalAlpha = 1;
 }
-function dibujarPlantilla({ x, d, plantilla, foto, lobo, letra, cortar, lineas, icono }) {
+function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono }) {
   const espaciado = (px) => { try { x.letterSpacing = `${px}px`; } catch { /* sin letterSpacing */ } };
-  // Fondo: la foto (cubriendo, con un degradado que deja leer) o el fondo de la marca con el dibujo de la sesión
-  x.fillStyle = C.fondo; x.fillRect(0, 0, W, H);
+  // Fondo: la foto (cubriendo, con un degradado que deja leer) o la noche de la marca con el dibujo de la sesión
+  fondoNoche(x);
   const r = plantilla === 'foto' && foto ? encajarFoto(foto.naturalWidth || foto.width, foto.naturalHeight || foto.height, W, H) : null;
   if (r) {
     x.drawImage(foto, r.sx, r.sy, r.sw, r.sh, 0, 0, W, H);
@@ -210,17 +225,15 @@ function dibujarPlantilla({ x, d, plantilla, foto, lobo, letra, cortar, lineas, 
   } else if (plantilla === 'minima') {
     dibujarArte(x, d, { escala: 3.4, dx: -180, dy: -60, opacidad: 0.9 });
     const g = x.createLinearGradient(0, H * 0.35, 0, H);
-    g.addColorStop(0, 'rgba(19, 17, 28, 0)'); g.addColorStop(0.5, 'rgba(19, 17, 28, .85)'); g.addColorStop(1, C.fondo);
+    g.addColorStop(0, 'rgba(21, 15, 54, 0)'); g.addColorStop(0.5, 'rgba(21, 15, 54, .85)'); g.addColorStop(1, C.fondo);
     x.fillStyle = g; x.fillRect(0, H * 0.35, W, H * 0.65);
   } else {
     dibujarArte(x, d, { escala: 2.2, dx: 330, dy: -60, opacidad: 0.4 });
   }
   // La marca: el lobo y «FBE Equipo»; la fecha a la derecha
-  if (lobo) x.drawImage(lobo, M, M, 60, 60);
-  letra(800, 34, 'expanded'); x.fillStyle = C.tinta; x.textBaseline = 'alphabetic'; x.textAlign = 'left';
-  x.fillText('FBE Equipo', M + 78, M + 42);
+  marca(x, letra);
   letra(500, 30); x.fillStyle = r ? '#E4E1F2' : C.tinta2; x.textAlign = 'right';
-  x.fillText(fechaLarga(d.fecha), W - M, M + 42);
+  x.fillText(fechaLarga(d.fecha), W - M, M + 40);
   x.textAlign = 'left';
   const cifras = cifrasTarjeta(d);
   const etiqueta = (t, cx, cy, color = C.tinta2) => { letra(750, 28); espaciado(3); x.fillStyle = color; x.fillText(t.toUpperCase(), cx, cy); espaciado(0); };
@@ -261,15 +274,8 @@ function dibujarPlantilla({ x, d, plantilla, foto, lobo, letra, cortar, lineas, 
       fila.forEach((c, i) => { etiqueta(c.t, M + i * ancho, y + 20, '#D2CEE6'); cifra(c, M + i * ancho - 4, y + 168, 150); });
     }
   }
-  // Pie: los colores de los discos y la firma
-  const anchoBarra = 56;
-  [C.rojo, C.azul, C.amarillo, C.verde].forEach((col, i) => {
-    x.fillStyle = col; x.beginPath();
-    x.roundRect ? x.roundRect(M + i * (anchoBarra + 10), H - 102, anchoBarra, 12, 6) : x.rect(M + i * (anchoBarra + 10), H - 102, anchoBarra, 12);
-    x.fill();
-  });
-  letra(500, 30); x.fillStyle = r ? '#D2CEE6' : C.tinta3; x.textAlign = 'right';
-  x.fillText('Entrenado con FBE Coaching', W - M, H - 86);
+  // Pie: un filo y la firma, con el lobo
+  pie(x, letra, r ? '#E4E1F2' : C.tinta3);
   x.textAlign = 'left';
 }
 
