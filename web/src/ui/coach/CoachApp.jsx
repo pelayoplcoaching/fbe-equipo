@@ -25,6 +25,8 @@ import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
 // Equipo (v0.43): el muro de la comunidad, solo con ella abierta (se abre en Cuenta → Comunidad)
 const TODAS = [['atletas', 'Atletas', 'atletas'], ['revisar', 'Revisar', 'bandeja'], ['revision', 'Revisión semanal', 'hecho'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['plantillas', 'Plantillas', 'plantillas'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['modo-atleta', 'Modo atleta', 'hoy'], ['cuenta', 'Cuenta', 'perfil']];
 const TABS = TODAS.filter(([t]) => t !== 'equipo');
+// Pulido 9: las secciones de consulta, donde tirar hacia abajo pone al día lo que se ve (ui/tirar.js)
+const TIRAR = ['atletas', 'revisar', 'mensajes', 'equipo'];
 // En la barra del móvil, el nombre corto (el completo lo sigue leyendo el lector de pantalla)
 const CORTAS = { revision: 'Semanal' };
 
@@ -166,7 +168,7 @@ export function CoachApp() {
           detalles={{ revision: 'Tus atletas, uno a uno, cada semana', equipo: 'El muro de la comunidad', plantillas: 'Bloques para reutilizar', biblioteca: 'Ejercicios, recetas y recursos',
             'modo-atleta': 'Entrena con tu propia ficha', cuenta: 'Tu cuenta, los cobros y los ajustes' }} />
       )}
-      <main key={tab} class="vista">
+      <main key={tab} class="vista" data-tirar={!ficha && TIRAR.includes(tab) ? '' : undefined}>
       {tab === 'atletas' && (ficha
         ? <Ficha key={`${ficha.atletaId}:${ficha.n || 0}`} atletaId={ficha.atletaId} pestanaInicial={ficha.pestana} resumenInicial={resumenesPanel.current?.find((r) => r.atleta_id === ficha.atletaId) || null} alVolver={cerrarFicha} alCambiar={() => bandeja.recargar(true)} />
         : <Panel abrir={abrirAtleta} pendientes={bandeja.datos?.porAtleta || {}} porRevisar={bandeja.datos ? total : null}

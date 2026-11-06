@@ -253,7 +253,7 @@ function NuevoAtleta({ alCerrar }) {
 
 export function Invitacion({ atleta, alCerrar }) {
   const { api, aviso, modo } = useApp();
-  const codigo = useCarga(() => api.crearInvitacion(atleta.id), [atleta.id]);
+  const codigo = useCarga(() => api.crearInvitacion(atleta.id), [atleta.id], { tirar: false });   // (no es una consulta: crea el código)
   const url = typeof location !== 'undefined' ? location.origin + location.pathname : '';
   const nombre = atleta.nombre.split(' ')[0];
   const mensaje = codigo.datos

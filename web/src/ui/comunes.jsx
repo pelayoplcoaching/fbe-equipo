@@ -594,6 +594,15 @@ export function useCarga(fn, deps = [], opciones = {}) {
     cargar(datos != null);
     return () => { vivo.current = false; };
   }, [cargar]);
+  // (pulido 9) «tirar para recargar» (ui/tirar.js) pide a todas las cargas montadas que se repitan en silencio, y espera
+  // a que acaben. tirar: false deja fuera una carga que no es una simple consulta (p. ej., la que crea una invitación)
+  const conTirar = opciones.tirar !== false;
+  useEffect(() => {
+    if (!conTirar) return undefined;
+    const al = (e) => { const pr = cargar(true); e.detail?.esperas?.push(pr); };
+    window.addEventListener('fbe-recargar', al);
+    return () => window.removeEventListener('fbe-recargar', al);
+  }, [cargar, conTirar]);
   // (v0.65) copia: la clave de la copia del móvil de lo que se carga (datos/copia.js). Si se enseñó la copia porque la base
   // tardaba, lo de la base llega luego con «fbe-copia» y se pone en su sitio, sin recargar. transformar: lo mismo que haría fn
   // con lo que llega de la base (lo que espera en la cola, encima)

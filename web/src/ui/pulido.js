@@ -3,6 +3,7 @@
 
 import { instalarAtras } from './atras.js';
 import { vibrar } from './hapticos.js';
+import { instalarTirar } from './tirar.js';
 
 // Lo que da un toque háptico al tocarlo (además de lo que ya lo daba: las series, el teclado de la app, los récords):
 // interruptores, casillas, «+» y «−», grupos de opciones y «Revisado»
@@ -18,6 +19,18 @@ export function instalarPulido(d = typeof document !== 'undefined' ? document : 
   d.addEventListener('touchstart', () => {}, { passive: true });
   // El botón «atrás» cierra lo último que se abrió en vez de sacar de la app (atras.js)
   instalarAtras();
+  // Tirar para recargar en las pantallas de consulta (tirar.js)
+  instalarTirar(d);
+  // (pulido 8) Al entrar en un campo de números que ya tiene algo, se selecciona: lo que se teclea lo sustituye (como
+  // en la sesión y en los «+» y «−», que ya lo hacían). Un segundo toque coloca el cursor donde se quiera.
+  d.addEventListener('focusin', (e) => {
+    const el = e.target;
+    if (!el || el.tagName !== 'INPUT' || el.readOnly || el.disabled || !el.value) return;
+    const modo = el.getAttribute('inputmode');
+    if (!(el.type === 'number' || modo === 'decimal' || modo === 'numeric') || el.getAttribute('autocomplete') === 'one-time-code') return;
+    // (tras el toque: en el iPhone, el propio toque deja el cursor donde cayó y desharía la selección)
+    setTimeout(() => { if (d.activeElement === el) { try { el.select(); } catch { /* */ } } }, 0);
+  });
   // Un toque háptico al tocar los controles de cada día (hapticos.js; con su ajuste)
   d.addEventListener('click', (e) => {
     const el = e.target?.closest?.(CON_TOQUE);

@@ -493,6 +493,81 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
         await ctx.close();
       }
     }
+    // ---------- 8. Al entrar en un campo de números, se selecciona lo que hay
+    {
+      const { ctx, p } = await abrir(/Pelayo/);
+      await p.locator('tr:visible, button.tarjeta-atleta:visible', { hasText: 'Ana López' }).first().dispatchEvent('click');
+      const celda = p.locator('input.n[data-celda="series"]').first();
+      await celda.waitFor();
+      await celda.scrollIntoViewIfNeeded();
+      await celda.tap();
+      await p.waitForTimeout(150);
+      const sel = await celda.evaluate((el) => ({ valor: el.value, de: el.selectionStart, a: el.selectionEnd, foco: document.activeElement === el }));
+      check(sel.foco && sel.valor.length > 0 && sel.de === 0 && sel.a === sel.valor.length, `en el editor del coach, al tocar una celda con número queda seleccionado entero («${sel.valor}»: lo que se teclee lo sustituye)`);
+      await ctx.close();
+    }
+    // ---------- 9. Tirar para recargar
+    {
+      const { ctx, p, cdp } = await abrir(/Pelayo/);
+      const filas = p.locator('tr:visible, button.tarjeta-atleta:visible');
+      await filas.first().waitFor();
+      // (el dedo: toca en x, y y baja `cuanto` píxeles en pasos)
+      const tirar = async (cuanto, { x = 196, y = 300, soltar = true } = {}) => {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+        for (let i = 1; i <= 8; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y + (cuanto * i) / 8 }] }); await p.waitForTimeout(16); }
+        if (soltar) await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      };
+      await p.evaluate(() => { const b = globalThis.__fbeDemo; const s = b.select.bind(b); window.__lecturas = 0; b.select = (...a) => { window.__lecturas++; return s(...a); }; });
+      // Un tirón corto no hace nada
+      await p.evaluate(() => { window.__lecturas = 0; });
+      await tirar(60);
+      await p.waitForTimeout(400);
+      const corto = await p.evaluate(() => ({ lecturas: window.__lecturas, girando: document.querySelectorAll('.tirar.girando').length }));
+      // Uno largo: la rueda gira, se vuelve a pedir lo que se ve y, al acabar, desaparece
+      await p.evaluate(async () => { localStorage.setItem('fbe-demo-retraso', '120'); const b = globalThis.__fbeDemo; const [a] = await b.select('atletas', { eq: { nombre: 'Carlos Vera' } }); await b.update('atletas', { nombre: 'Carlos Vera Ruiz' }, { eq: { id: a.id } }); window.__lecturas = 0; });
+      await tirar(260, { soltar: false });
+      const lista = await p.evaluate(() => document.querySelector('.tirar')?.classList.contains('lista'));
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      const girando = await p.locator('.tirar.girando').waitFor({ timeout: 2000 }).then(() => true).catch(() => false);
+      const alDia = await p.waitForFunction(() => /Carlos Vera Ruiz/.test(document.querySelector('main')?.textContent || ''), null, { timeout: 8000 }).then(() => true).catch(() => false);
+      await p.locator('.tirar.girando').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+      const fin = await p.evaluate(() => ({ lecturas: window.__lecturas, girando: document.querySelectorAll('.tirar.girando').length, y: scrollY, siluetas: document.querySelectorAll('main .siluetas').length }));
+      check(corto.lecturas === 0 && corto.girando === 0, 'un tirón corto no recarga nada');
+      check(lista && girando && alDia && fin.lecturas > 10 && fin.girando === 0 && fin.siluetas === 0, `tirar hacia abajo en la lista del coach la pone al día sin pantalla de carga: la rueda gira, llega el cambio y se va (${fin.lecturas} consultas)`);
+      // Dentro de una ficha (se está editando) no hay tirar para recargar; ni con una ventana abierta
+      await p.evaluate(() => localStorage.removeItem('fbe-demo-retraso'));
+      await p.locator('tr:visible, button.tarjeta-atleta:visible', { hasText: 'Ana López' }).first().dispatchEvent('click');
+      await p.getByRole('button', { name: 'Volver a atletas' }).waitFor();
+      await p.waitForTimeout(900);
+      await p.evaluate(() => { window.scrollTo(0, 0); window.__lecturas = 0; });
+      await tirar(260);
+      await p.waitForTimeout(500);
+      const enFicha = await p.evaluate(() => ({ lecturas: window.__lecturas, girando: document.querySelectorAll('.tirar.girando').length }));
+      await p.getByRole('button', { name: 'Volver a atletas' }).tap();
+      await filas.first().waitFor();
+      await p.getByRole('button', { name: 'Buscar' }).first().tap();
+      await p.locator('.paleta').waitFor();
+      await p.waitForTimeout(600);
+      await p.evaluate(() => { window.__lecturas = 0; });
+      await tirar(260, { y: 500 });
+      await p.waitForTimeout(500);
+      const conVentana = await p.evaluate(() => ({ lecturas: window.__lecturas, girando: document.querySelectorAll('.tirar.girando').length }));
+      check(enFicha.girando === 0 && enFicha.lecturas === 0 && conVentana.girando === 0 && conVentana.lecturas === 0, `no actúa dentro de una ficha ni con una ventana abierta (${enFicha.lecturas} y ${conVentana.lecturas} consultas)`);
+      await ctx.close();
+    }
+    {
+      const { ctx, p, cdp } = await abrir(/Ana López/);
+      await p.locator('.hero-dia').waitFor();
+      await p.evaluate(() => { const b = globalThis.__fbeDemo; const s = b.select.bind(b); window.__lecturas = 0; b.select = (...a) => { window.__lecturas++; return s(...a); }; localStorage.setItem('fbe-demo-retraso', '100'); });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 196, y: 320 }] });
+      for (let i = 1; i <= 8; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 196, y: 320 + 32 * i }] }); await p.waitForTimeout(16); }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      const girando = await p.locator('.tirar.girando').waitFor({ timeout: 2000 }).then(() => true).catch(() => false);
+      await p.locator('.tirar.girando').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+      const fin = await p.evaluate(() => ({ lecturas: window.__lecturas, hero: !!document.querySelector('.hero-dia'), siluetas: document.querySelectorAll('main .siluetas').length }));
+      check(girando && fin.lecturas > 5 && fin.hero && fin.siluetas === 0, `atleta: tirar hacia abajo en Hoy pone al día el día sin pantalla de carga (${fin.lecturas} consultas)`);
+      await ctx.close();
+    }
     check(errores.length === 0, `sin errores de consola${errores.length ? `: ${errores.slice(0, 3).join(' ## ')}` : ''}`);
   } catch (e) {
     check(false, `Pulido: ${e.message.split('\n')[0]}${errores.length ? ` · ${errores.slice(0, 3).join(' ## ')}` : ''}`);

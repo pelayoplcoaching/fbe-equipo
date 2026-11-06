@@ -51,3 +51,24 @@ li > a[href]:active { opacity: .5; }
 :where(.pista-mas, .burbuja-ctx, .tira-chip, .btn-avatar, .burbuja-mas, .quien-reacciona) { position: relative; }
 .pista-mas::after, .tira-chip::after, .btn-avatar::after, .quien-reacciona::after { content: ""; position: absolute; inset: -8px -4px; }
 .burbuja-ctx::after, .burbuja-mas::after { content: ""; position: absolute; inset: -11px -6px; }
+
+/* ---------- Pulido 9: tirar para recargar (ui/tirar.js) ----------
+   El navegador no recarga la app entera al tirar (en Android lo haría): lo hace la app, solo lo que se ve. */
+html { overscroll-behavior-y: contain; }
+.tirar {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) - 44px); left: 50%; z-index: 30; width: 36px; height: 36px; margin-left: -18px;
+  border-radius: 50%; background: var(--hoja); box-shadow: var(--sombra-alta); display: grid; place-items: center; pointer-events: none;
+  transform: translateY(var(--tirar, 0px)); opacity: min(1, calc(var(--tirar, 0px) / 40px));
+}
+.tirar.soltando { transition: transform .22s cubic-bezier(.2, .8, .2, 1), opacity .22s linear; }
+.tirar-rueda {
+  width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--linea); border-top-color: var(--morado);
+  transform: rotate(var(--giro, 0deg));
+}
+.tirar.lista .tirar-rueda { border-color: var(--morado); border-top-color: transparent; }
+.tirar.girando .tirar-rueda { animation: tirar-gira .7s linear infinite; border-color: var(--linea); border-top-color: var(--morado); }
+@keyframes tirar-gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .tirar.soltando { transition: opacity .15s linear; }
+  .tirar.girando .tirar-rueda { animation-duration: 1.4s; }
+}

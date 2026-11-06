@@ -34,6 +34,8 @@ import { VideoEnlazado } from '../tecnica/MiTecnica.jsx';
 // Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
 // Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento. Equipo (v0.43), solo con
 // la comunidad abierta y a quien no está de baja.
+// Pulido 9: las pestañas de consulta, donde tirar hacia abajo pone al día lo que se ve (ui/tirar.js)
+const TIRAR = ['hoy', 'semana', 'progreso', 'comidas', 'equipo'];
 const TODAS = [
   ['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], ['comidas', 'Comidas', 'receta'], ['checkin', 'Check-in', 'checkin'],
   ['progreso', 'Progreso', 'progreso'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['perfil', 'Perfil', 'perfil'],
@@ -237,7 +239,7 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
       {!propio && <RecibirCompartido programa={compartido.programa} />}
       {sesionId ? <main><BandaPendientes pendientes={pendientesArchivos} /><Sesion id={sesionId} alCerrar={cerrarSesion} alLeer={releer} salud={salud} /></main> : (
         <>
-          <main key={`${tab}:${dia}`} class="vista">
+          <main key={`${tab}:${dia}`} class="vista" data-tirar={TIRAR.includes(tab) ? '' : undefined}>
             <BandaPendientes pendientes={pendientesArchivos} />
             {propio && <BandaModoAtleta />}
             {tab === 'hoy' && <Hoy {...compartido} />}
