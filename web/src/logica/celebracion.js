@@ -86,6 +86,8 @@ export function datosImagenMes(r, { mio = false } = {}) {
     etiquetaFecha: capital(`${nombreMes(r.mes)} de ${r.mes.slice(0, 4)}`),
     cifras: [a, b, d].map(([, v, t]) => [v, t]), series: 0, tonelaje: 0, minutos: null, records: [],
     mejores: resto.map(([, v, t]) => ({ nombre: capital(t), serie: v })), tituloMejores: 'Y además',
+    // (imágenes) el fondo de la tarjeta: las lunas para el mes del equipo; para el tuyo, las llamas (tu constancia)
+    fondo: mio ? 'racha' : 'mes',
   };
 }
 
