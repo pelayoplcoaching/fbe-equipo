@@ -1,4 +1,269 @@
 {
+  "comida-cena": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/comida/comida-cena-320.b9c5d98c.webp",
+      "640": "imagenes/comida/comida-cena-640.aa68f270.webp"
+    }
+  },
+  "comida-comida": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/comida/comida-comida-320.8141669b.webp",
+      "640": "imagenes/comida/comida-comida-640.9935c2c7.webp"
+    }
+  },
+  "comida-desayuno": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/comida/comida-desayuno-320.331a7b09.webp",
+      "640": "imagenes/comida/comida-desayuno-640.f6c9fb19.webp"
+    }
+  },
+  "comida-media-manana": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/comida/comida-media-manana-320.3d948987.webp",
+      "640": "imagenes/comida/comida-media-manana-640.66742333.webp"
+    }
+  },
+  "comida-merienda": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/comida/comida-merienda-320.c15bd71b.webp",
+      "640": "imagenes/comida/comida-merienda-640.8398f339.webp"
+    }
+  },
+  "compartir-bloque": {
+    "proporcion": [
+      4,
+      5
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-bloque-1024.b7f94d30.webp"
+    }
+  },
+  "compartir-mes": {
+    "proporcion": [
+      4,
+      5
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-mes-1024.b3d03a69.webp"
+    }
+  },
+  "compartir-racha": {
+    "proporcion": [
+      4,
+      5
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-racha-1024.e7709cfb.webp"
+    }
+  },
+  "compartir-record": {
+    "proporcion": [
+      4,
+      5
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-record-1024.3c0ea125.webp"
+    }
+  },
+  "compartir-sesion": {
+    "proporcion": [
+      4,
+      5
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-sesion-1024.53249527.webp"
+    }
+  },
+  "grupo-abdominales": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-abdominales-320.b7e3c9bb.webp",
+      "640": "imagenes/grupo/grupo-abdominales-640.bccef87f.webp"
+    }
+  },
+  "grupo-biceps": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-biceps-320.f93b1de9.webp",
+      "640": "imagenes/grupo/grupo-biceps-640.44bce6b8.webp"
+    }
+  },
+  "grupo-cuadriceps": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-cuadriceps-320.7cebc3fc.webp",
+      "640": "imagenes/grupo/grupo-cuadriceps-640.123406fd.webp"
+    }
+  },
+  "grupo-deltoides": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-deltoides-320.74d7dbce.webp",
+      "640": "imagenes/grupo/grupo-deltoides-640.6d1eb81f.webp"
+    }
+  },
+  "grupo-espalda": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-espalda-320.ac2e0ed8.webp",
+      "640": "imagenes/grupo/grupo-espalda-640.aef8cb0f.webp"
+    }
+  },
+  "grupo-gemelo": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-gemelo-320.4f88aee4.webp",
+      "640": "imagenes/grupo/grupo-gemelo-640.30918a54.webp"
+    }
+  },
+  "grupo-gluteo": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-gluteo-320.0d99f1ca.webp",
+      "640": "imagenes/grupo/grupo-gluteo-640.7c4ddc12.webp"
+    }
+  },
+  "grupo-isquiotibiales": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-isquiotibiales-320.baf7020d.webp",
+      "640": "imagenes/grupo/grupo-isquiotibiales-640.6652a432.webp"
+    }
+  },
+  "grupo-pectoral": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-pectoral-320.63158baa.webp",
+      "640": "imagenes/grupo/grupo-pectoral-640.ca04a71f.webp"
+    }
+  },
+  "grupo-triceps": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-triceps-320.096583cb.webp",
+      "640": "imagenes/grupo/grupo-triceps-640.41a3fa8f.webp"
+    }
+  },
+  "habito-agua": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/habito/habito-agua-256.cf1d01a2.webp",
+      "512": "imagenes/habito/habito-agua-512.e0657592.webp"
+    }
+  },
+  "habito-movilidad": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/habito/habito-movilidad-256.2d4e145b.webp",
+      "512": "imagenes/habito/habito-movilidad-512.c38d4904.webp"
+    }
+  },
+  "habito-otro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/habito/habito-otro-256.33ec2056.webp",
+      "512": "imagenes/habito/habito-otro-512.51bc8100.webp"
+    }
+  },
+  "habito-pasos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/habito/habito-pasos-256.4bbafb35.webp",
+      "512": "imagenes/habito/habito-pasos-512.8c7bc78a.webp"
+    }
+  },
+  "habito-proteina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/habito/habito-proteina-256.35a40fcb.webp",
+      "512": "imagenes/habito/habito-proteina-512.7389d83d.webp"
+    }
+  },
+  "habito-sueno": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/habito/habito-sueno-256.6d394462.webp",
+      "512": "imagenes/habito/habito-sueno-512.c3ff08b1.webp"
+    }
+  },
+  "habito-verdura": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/habito/habito-verdura-256.bd352a4c.webp",
+      "512": "imagenes/habito/habito-verdura-512.ef42f857.webp"
+    }
+  },
   "sesion-cardio": {
     "proporcion": [
       16,

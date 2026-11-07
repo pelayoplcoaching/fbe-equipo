@@ -11,3 +11,31 @@
 img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .resumen-hero img.hero-foto { object-fit: cover; object-position: 85% 50%; opacity: .62; }
 @media (forced-colors: active) { img.portada-foto, .resumen-hero img.hero-foto { opacity: .35; } }
+
+/* ── 2 · La cabecera ilustrada (pieza común) ──────────────────────────────────────────────────────────────────────────
+   Una franja oscura como la tarjeta de Hoy: el texto a la izquierda y la ilustración a la derecha, fundida hacia el
+   texto. Altura fija (nada se mueve al cargar). La usan la hoja de cada hábito (Habitos.jsx), la ficha de un ejercicio
+   (FichaEjercicio.jsx) y la biblioteca del coach con un grupo elegido (Biblioteca.jsx). */
+.cab-ilu { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; min-height: 8.25rem; padding: 14px 16px; border-radius: var(--r);
+  background: var(--hero); color: var(--sobre-hero); box-shadow: var(--sombra-tarjeta, var(--sombra)); }
+.cab-ilu > p, .cab-ilu > .cab-ilu-texto { position: relative; z-index: 1; margin: 0; max-width: 58%; font-size: 1.0625rem; line-height: 1.35; font-weight: 650; text-wrap: pretty; }
+.cab-ilu .cab-ilu-img { position: absolute; z-index: 0; top: 0; right: 0; height: 100%; width: auto; aspect-ratio: var(--proporcion, 1); object-fit: cover; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 38%); mask-image: linear-gradient(to right, transparent 0%, #000 38%); }
+.cab-ilu .cab-ilu-icono { display: grid; place-items: center; color: var(--c); -webkit-mask-image: none; mask-image: none; width: 8.25rem; }
+.cab-ilu .cab-ilu-icono svg { width: 44px; height: 44px; }
+@media (forced-colors: active) { .cab-ilu .cab-ilu-img { opacity: .35; } }
+
+/* La hoja de cada hábito: ilustraciones cuadradas */
+.habito-cab { --proporcion: 1; }
+
+/* La ficha de un ejercicio y la biblioteca: las estatuas, en 4:3 y algo más bajas; el pictograma va en claro */
+.ficha-ej-ilu, .biblioteca-grupo-ilu { --proporcion: 4 / 3; min-height: 7rem; }
+.ficha-ej-ilu { margin-top: 0; }
+.ficha-ej-ilu > p { display: flex; align-items: center; gap: 10px; font-size: var(--tipo-pie, .875rem); }
+.ficha-ej-ilu .picto { color: var(--sobre-hero); background: rgba(255, 255, 255, .1); }
+.biblioteca-grupo-ilu > p, .toma-ilu > .cab-ilu-texto { display: grid; gap: 2px; }
+.toma-ilu { --proporcion: 4 / 3; min-height: 6.5rem; }
+.toma-ilu h2 { margin: 0; color: var(--sobre-hero); font-size: 1.375rem; font-stretch: var(--ancho-titulo, 112%); font-weight: 800; line-height: 1.15; }
+.toma-ilu .cab-ilu-texto > span { color: var(--sobre-hero-2); font-size: var(--tipo-pie, .875rem); font-weight: 600; }
+.biblioteca-grupo-ilu > p strong { font-size: 1.375rem; font-stretch: var(--ancho-titulo, 112%); font-weight: 800; line-height: 1.15; }
+.biblioteca-grupo-ilu > p span { color: var(--sobre-hero-2); font-size: var(--tipo-pie, .875rem); font-weight: 600; }

@@ -5,6 +5,8 @@ import { textoSerie, num, NOMBRE_GRUPO } from '../logica/calculos.js';
 import { serieSemanal, recortarRango, metricasDe, tablaRecords, RANGOS } from '../logica/ejercicio.js';
 import { fmtCorta, hoyISO } from '../logica/fechas.js';
 import { BotonModelo } from './tecnica/Modelos.jsx';
+import { Imagen, hayImagen } from './Imagen.jsx';
+import { imagenGrupo } from '../logica/imagenes.js';
 
 // Ficha de un ejercicio (como en Strong o Hevy): gráficas por semana con rango, récords de 1 a 12
 // repeticiones (real frente a estimado), historial completo y la técnica si la hay.
@@ -17,11 +19,19 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
   const tecnica = !!(ejercicio.instrucciones || ejercicio.errores || ejercicio.video_url || modelos.datos?.length);
   const [vista, setVista] = useState(inicial);
   const pestanas = [['graficas', 'Gráficas'], ['records', 'Récords'], ['historial', 'Historial'], ...(tecnica ? [['tecnica', 'Técnica']] : [])];
-  const grupos = (ejercicio.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).filter(Boolean).join(', ');
+  // (imágenes) si el ejercicio llega sin sus grupos (desde la vitrina de récords), los de sus series
+  const gruposEj = ejercicio.grupos_musculares?.length ? ejercicio.grupos_musculares : (d?.series?.find((s) => s.grupos?.length)?.grupos || []);
+  const grupos = gruposEj.map((g) => NOMBRE_GRUPO[g]).filter(Boolean).join(', ');
   return (
     <Hoja titulo={ejercicio.nombre} alCerrar={alCerrar} ancho={680} medio clase="ficha-ejercicio">
       {/* v0.50: su pictograma (el patrón de movimiento) junto a los músculos */}
-      <p class="ficha-ej-cab peq secundario"><PictoEjercicio ejercicio={ejercicio} clase="picto-grande" /><span>{grupos || 'Sin grupo muscular'}</span></p>
+      {/* (imágenes) con grupo principal conocido, la cabecera oscura con la estatua de ese grupo a la derecha */}
+      {hayImagen(imagenGrupo(gruposEj)) ? (
+        <div class="cab-ilu ficha-ej-cab ficha-ej-ilu">
+          <p><PictoEjercicio ejercicio={ejercicio} clase="picto-grande" /><span>{grupos}</span></p>
+          <Imagen key={imagenGrupo(gruposEj)} id={imagenGrupo(gruposEj)} clase="cab-ilu-img" tamanos="10rem" />
+        </div>
+      ) : <p class="ficha-ej-cab peq secundario"><PictoEjercicio ejercicio={ejercicio} clase="picto-grande" /><span>{grupos || 'Sin grupo muscular'}</span></p>}
       <Pestanas opciones={pestanas} valor={vista} alCambiar={setVista} etiqueta="Ficha del ejercicio" clase="pestanas-ficha" idBase="fej" />
       <div class="pestana-panel" role="tabpanel" id="fej-panel" aria-labelledby={`fej-${vista}`} key={vista}>
         {vista === 'tecnica' ? <Tecnica ejercicio={ejercicio} modelos={modelos.datos || []} />

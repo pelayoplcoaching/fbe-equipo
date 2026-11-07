@@ -36,6 +36,33 @@ export function familiaPortada({ tipo = 'fuerza', pautas = [], cardio = false } 
   return ['empuje', 'tiron', 'pierna', 'core'].reduce((a, b) => (series[b] > series[a] ? b : a));
 }
 
+// ---------- Los hábitos ----------
+// Una por icono de hábito (logica/habitos.js: ICONOS_HABITO); «Otro» (libre) y lo que no se conozca, la de las piedras
+const HABITOS = ['pasos', 'proteina', 'agua', 'sueno', 'movilidad', 'verdura'];
+export function imagenHabito(icono) { return `habito-${HABITOS.includes(icono) ? icono : 'otro'}`; }
+
+// ---------- Los grupos musculares ----------
+// La estatua de su grupo principal (el primero de grupos_musculares, el que cuenta 1 serie); sin grupo conocido, nada
+const GRUPOS_IMG = ['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'isquiotibiales', 'biceps', 'triceps', 'abdominales', 'gemelo'];
+export function imagenGrupo(grupo) {
+  const g = Array.isArray(grupo) ? grupo[0] : grupo;
+  return GRUPOS_IMG.includes(g) ? `grupo-${g}` : null;
+}
+
+// ---------- Las comidas ----------
+// Una por toma (logica/comidas.js: TOMAS); «Antes de dormir», la de la cena
+const COMIDAS = { desayuno: 'desayuno', media_manana: 'media-manana', comida: 'comida', merienda: 'merienda', cena: 'cena', recena: 'cena' };
+export function imagenComida(toma) { return COMIDAS[toma] ? `comida-${COMIDAS[toma]}` : null; }
+
+// ---------- Las tarjetas para compartir ----------
+// La de la propia tarjeta (d.fondo: el bloque, el mes del equipo o el tuyo) o, en la de una sesión, la del récord si lo
+// hubo y la de la barra si no
+export const FONDOS_TARJETA = ['sesion', 'record', 'mes', 'bloque', 'racha'];
+export function fondoTarjeta(d = {}) {
+  if (FONDOS_TARJETA.includes(d.fondo)) return `compartir-${d.fondo}`;
+  return d.records?.length ? 'compartir-record' : 'compartir-sesion';
+}
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.

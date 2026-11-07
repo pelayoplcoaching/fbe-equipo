@@ -2,6 +2,8 @@
 // macros ya ajustados a él, los ingredientes y la preparación) y el menú de la semana (lo que va a comer cada
 // día, con los totales frente a su plan, copiar semanas y la lista de la compra). Sustituye a las bases de datos
 // de Desayuno, Comida, Merienda y Cena y al «Planificador semanal» de Notion.
+import { Imagen, hayImagen } from './Imagen.jsx';
+import { imagenComida } from '../logica/imagenes.js';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Reserva, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos, usePorTramos, useApuntar } from './comunes.jsx';
 import { COLOR_MACRO, MacrosDia } from './NutricionComun.jsx';
@@ -66,7 +68,13 @@ export function VistaRecetario({ recetario, alAbrir, esCoach = false, vacio = nu
         const xs = filtro ? paraElDia(recetario.porToma[t] || [], filtro === 'sin') : !op && !esCoach ? paraElDia(recetario.porToma[t] || [], false) : recetario.porToma[t] || [];
         return (
           <section class="seccion" key={t} aria-labelledby={`toma-${t}`}>
-            <div class="seccion-cab"><h2 id={`toma-${t}`}>{NOMBRE_TOMA[t]}</h2><span class="mini terciario">{xs.length === 1 ? '1 opción' : `${xs.length} opciones`}{!recetario.tomas.includes(t) ? ' · no está entre sus comidas' : ''}</span></div>
+            {/* (imágenes) con ilustración de su comida, la cabecera ilustrada; si no, el título de siempre */}
+            {hayImagen(imagenComida(t)) ? (
+              <div class="cab-ilu toma-ilu">
+                <div class="cab-ilu-texto"><h2 id={`toma-${t}`}>{NOMBRE_TOMA[t]}</h2><span>{xs.length === 1 ? '1 opción' : `${xs.length} opciones`}{!recetario.tomas.includes(t) ? ' · no está entre sus comidas' : ''}</span></div>
+                <Imagen key={t} id={imagenComida(t)} clase="cab-ilu-img" tamanos="10rem" />
+              </div>
+            ) : <div class="seccion-cab"><h2 id={`toma-${t}`}>{NOMBRE_TOMA[t]}</h2><span class="mini terciario">{xs.length === 1 ? '1 opción' : `${xs.length} opciones`}{!recetario.tomas.includes(t) ? ' · no está entre sus comidas' : ''}</span></div>}
             {xs.length ? (
               <RejillaRecetas xs={xs} toma={t} filtro={filtro} alAbrir={alAbrir} esCoach={esCoach} opcional={op} />
             ) : <p class="peq terciario">{esCoach ? 'Sin recetas para esta comida.' : `Tu coach aún no te ha puesto opciones para ${NOMBRE_TOMA[t].toLowerCase()}.`}</p>}

@@ -1911,7 +1911,8 @@ export function crearApi(backend) {
       const porEjercicio = agrupar(series.filter((s) => s.ejercicio_id), 'ejercicio_id');
       const ejercicios = Object.entries(porEjercicio).map(([id, ss]) => {
         const puntos = e1rmPorSemana(ss);
-        return { id, nombre: ss[0].ejercicio, puntos, series: ss.length, mejor: Math.max(0, ...puntos.map((p) => p.valor)) };
+        // (imágenes) con sus grupos, para que su ficha diga los músculos (y lleve la estatua del principal)
+        return { id, nombre: ss[0].ejercicio, grupos_musculares: ss[0].grupos || [], puntos, series: ss.length, mejor: Math.max(0, ...puntos.map((p) => p.valor)) };
       }).filter((e) => e.puntos.length).sort((a, c) => c.series - a.series);
       const lunes = lunesDe(hoyISO());
       return {

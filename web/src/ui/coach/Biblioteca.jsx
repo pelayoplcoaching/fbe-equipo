@@ -2,6 +2,8 @@ import { PictoEjercicio } from '../Pictograma.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useUnaVez, Pestanas, Siluetas, useApp, useCarga, Icono, Cargando, Hoja, Vacio, usePreferencia } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenGrupo } from '../../logica/imagenes.js';
 import { GRUPOS, NOMBRE_GRUPO, conPrincipal, TIPOS_EJERCICIO, CATEGORIAS_RECURSO, NOMBRE_CATEGORIA } from '../../logica/calculos.js';
 import { FAQ } from '../../datos/faq.js';
 import { RecetasBiblioteca } from './ComidasCoach.jsx';
@@ -53,6 +55,13 @@ function Ejercicios({ peticion = null }) {
         <button aria-pressed={!grupo ? 'true' : 'false'} onClick={() => setGrupo(null)}>Todos</button>
         {GRUPOS.map(([g, n]) => <button key={g} aria-pressed={grupo === g ? 'true' : 'false'} onClick={() => setGrupo(g)}>{n}</button>)}
       </div>
+      {/* (imágenes) con un grupo elegido, su estatua y cuántos ejercicios tiene */}
+      {grupo && lista.datos && hayImagen(imagenGrupo(grupo)) && (
+        <div class="cab-ilu biblioteca-grupo-ilu">
+          <p><strong>{NOMBRE_GRUPO[grupo]}</strong><span>{vista.length === 1 ? '1 ejercicio' : `${vista.length} ejercicios`}{q ? ' con esa búsqueda' : ' como grupo principal'}</span></p>
+          <Imagen key={grupo} id={imagenGrupo(grupo)} clase="cab-ilu-img" tamanos="12rem" />
+        </div>
+      )}
       {lista.cargando && !lista.datos ? <Siluetas forma="lista" n={8} texto="Cargando la biblioteca" /> : (
         <div class="panel"><ul class="lista">
           {vista.map((e) => (

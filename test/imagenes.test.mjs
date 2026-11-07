@@ -3,7 +3,10 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
+import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
+import { GRUPOS } from '../web/src/logica/calculos.js';
+import { TOMAS } from '../web/src/logica/comidas.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -35,6 +38,34 @@ check(familiaPortada({ pautas: [], cardio: true }) === 'cardio', 'una «de fuerz
 check(familiaPortada({ pautas: [p(BANCA, 0), p(SENTADILLA, 3)] }) === 'pierna', 'lo que no lleva series no cuenta');
 check(familiaPortada({ pautas: [{ series: 3, ejercicio: null }, p(REMO, 3)] }) === 'tiron', 'una pauta sin ejercicio no rompe nada');
 check(familiaPortada({ pautas: [{ series: 3, nombre: 'Press banca', grupos_musculares: ['pectoral'], tipo: [] }] }) === 'empuje', 'vale también con el ejercicio en la propia pauta');
+
+console.log('\nLos hábitos');
+check(imagenHabito('pasos') === 'habito-pasos' && imagenHabito('sueno') === 'habito-sueno' && imagenHabito('verdura') === 'habito-verdura', 'cada icono de hábito, su imagen');
+check(imagenHabito('libre') === 'habito-otro' && imagenHabito(null) === 'habito-otro' && imagenHabito('inventado') === 'habito-otro', '«Otro», sin icono o uno desconocido: la de «otro»');
+check(ICONOS_HABITO.every(([i]) => IMAGENES.includes(imagenHabito(i))), `hay imagen para los ${ICONOS_HABITO.length} iconos que puede elegir el coach`);
+
+console.log('\nLos grupos musculares');
+check(imagenGrupo(['pectoral', 'triceps']) === 'grupo-pectoral' && imagenGrupo('gemelo') === 'grupo-gemelo', 'la estatua del grupo principal (el primero), con lista o con uno solo');
+check(imagenGrupo([]) === null && imagenGrupo(null) === null && imagenGrupo(['antebrazo']) === null, 'sin grupo o con uno desconocido, ninguna (la ficha queda como antes)');
+check(GRUPOS.every(([g]) => IMAGENES.includes(imagenGrupo(g))), `hay estatua para los ${GRUPOS.length} grupos de la app`);
+
+console.log('\nLas comidas');
+check(imagenComida('desayuno') === 'comida-desayuno' && imagenComida('media_manana') === 'comida-media-manana', 'cada toma, su ilustración (media mañana con guion en el archivo)');
+check(imagenComida('recena') === 'comida-cena' && imagenComida('otra') === null && imagenComida(null) === null, '«Antes de dormir», la de la cena; una toma desconocida, ninguna');
+check(TOMAS.every(([t]) => IMAGENES.includes(imagenComida(t))), `hay ilustración para las ${TOMAS.length} tomas`);
+
+console.log('\nLas tarjetas para compartir');
+check(fondoTarjeta({ records: [] }) === 'compartir-sesion' && fondoTarjeta({ records: [{ nombre: 'Banca' }] }) === 'compartir-record' && fondoTarjeta() === 'compartir-sesion', 'una sesión: la de la barra, o la del récord si lo hubo');
+check(fondoTarjeta({ fondo: 'bloque', records: [{}] }) === 'compartir-bloque' && fondoTarjeta({ fondo: 'mes' }) === 'compartir-mes' && fondoTarjeta({ fondo: 'racha' }) === 'compartir-racha', 'el bloque y el mes llevan la suya aunque haya récords');
+check(fondoTarjeta({ fondo: 'inventado' }) === 'compartir-sesion', 'un fondo desconocido, el de la sesión');
+check(FONDOS_TARJETA.every((f) => IMAGENES.includes(`compartir-${f}`)), 'están los cinco fondos');
+{
+  const { datosImagenMes } = await import('../web/src/logica/celebracion.js');
+  const r = { mes: '2026-10', yo: {}, equipo: {} };
+  let mio = null, equipo = null;
+  try { mio = datosImagenMes(r, { mio: true }); equipo = datosImagenMes(r); } catch { /* datos de ejemplo incompletos */ }
+  check(!mio || (mio.fondo === 'racha' && equipo.fondo === 'mes'), 'tu mes lleva las llamas y el del equipo, las lunas');
+}
 
 console.log('\nLos archivos que se sirven');
 {
