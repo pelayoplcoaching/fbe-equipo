@@ -1199,3 +1199,78 @@ img.img-llega { opacity: 0; }
 @keyframes sin-red-late { 50% { opacity: .45; } }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) { .aviso-version { background: #1E1548 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; } }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .aviso-version { background: #1E1548; } }
+
+/* ══ TANDA 19 · pasar de un sitio a otro ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 52 · Pestañas con dirección y elementos que viajan (tanda 19) ────────────────────────────────────────────────────
+   Las pestañas ya entraban por el lado hacia el que se va (estilos.css 2486-2490, 18 px) y el título de la sesión y el
+   avatar del atleta ya viajaban (3285-3289). Aquí se afinan al paso de la casa: más recorrido (28 px), la curva
+   --curva-casa, la pantalla que se va se apaga antes de que entre la nueva; y viaja también el dibujo de la sesión, de
+   la tarjeta de Hoy a la portada de la sesión (AtletaApp.jsx: vt-arte-sesion). */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--mov-medio); animation-timing-function: var(--curva-casa); }
+  :root[data-vt="adelante"]::view-transition-old(root) { animation-name: vt-sale-izq-casa; animation-duration: .18s; }
+  :root[data-vt="adelante"]::view-transition-new(root) { animation-name: vt-entra-der-casa; }
+  :root[data-vt="atras"]::view-transition-old(root) { animation-name: vt-sale-der-casa; animation-duration: .18s; }
+  :root[data-vt="atras"]::view-transition-new(root) { animation-name: vt-entra-izq-casa; }
+  :root[data-vt="abrir"]::view-transition-new(root) { animation-timing-function: var(--curva-llega); animation-duration: var(--mov-lento); }
+  ::view-transition-group(vt-arte-sesion) { animation-duration: var(--mov-lento); animation-timing-function: var(--curva-llega); }
+  ::view-transition-old(vt-arte-sesion) { animation: vt-funde-fuera var(--mov-medio) ease-out both; }
+  ::view-transition-new(vt-arte-sesion) { animation: vt-funde-dentro var(--mov-lento) ease-out both; }
+  ::view-transition-group(vt-titulo-sesion), ::view-transition-group(vt-avatar) { animation-timing-function: var(--curva-llega); }
+  /* De la portada a la app (ui/portada.js): el lobo viaja hasta la marca de la bienvenida y la noche se levanta */
+  :root[data-vt="portada"]::view-transition-old(root) { animation: vt-noche-sube .46s var(--curva-casa) both; }
+  :root[data-vt="portada"]::view-transition-new(root) { animation: vt-funde-dentro .3s ease-out .08s both; }
+  ::view-transition-group(vt-lobo) { animation-duration: .52s; animation-timing-function: var(--curva-llega); }
+  ::view-transition-old(vt-lobo) { animation: vt-funde-fuera .3s ease-out .1s both; }
+  ::view-transition-new(vt-lobo) { animation: vt-funde-dentro .3s ease-out both; }
+}
+@keyframes vt-sale-izq-casa { to { opacity: 0; transform: translateX(-28px); } }
+@keyframes vt-entra-der-casa { from { opacity: 0; transform: translateX(28px); } }
+@keyframes vt-sale-der-casa { to { opacity: 0; transform: translateX(28px); } }
+@keyframes vt-entra-izq-casa { from { opacity: 0; transform: translateX(-28px); } }
+@keyframes vt-noche-sube { to { opacity: 0; transform: translateY(-6%) scale(1.02); } }
+
+/* ── 53 · Plegar y desplegar sin saltos (tanda 19) ────────────────────────────────────────────────────────────────────
+   Los <details> (las secciones de Hoy, las pastillas del equipo, las notas de las gráficas, los desgloses) abrían y
+   cerraban de golpe. Donde el navegador sabe animar «height: auto» (interpolate-size, Chrome 129+), el contenido
+   crece y se recoge con la curva de la casa y la flecha gira a la vez; en los demás, como antes. Los ejercicios hechos
+   de la sesión no se tocan: su cuerpo no está en la página cuando están recogidos (Sesion.jsx). */
+@supports (interpolate-size: allow-keywords) {
+  :root { interpolate-size: allow-keywords; }
+  @media (prefers-reduced-motion: no-preference) {
+    details::details-content { height: 0; overflow: clip; transition: height var(--mov-medio) var(--curva-casa), content-visibility var(--mov-medio) allow-discrete; }
+    details[open]::details-content { height: auto; }
+  }
+}
+.plegable-flecha { transition: transform var(--mov-medio) var(--curva-casa); }
+
+/* ── 54 · Tiras que se desvanecen en los bordes (tanda 19) ────────────────────────────────────────────────────────────
+   Lo que se desliza de lado (chips, pestañas de semanas, filtros del muro, fotos, menú de la semana) se funde en el
+   borde por el que sigue habiendo cosas, y solo por ese: ligado al propio desplazamiento (scroll-driven), de modo que
+   al principio solo se funde la derecha y al final solo la izquierda. Las tiras de fotos y del menú se detienen en cada
+   elemento (scroll-snap, sin obligar). Sin animaciones ligadas al desplazamiento, nada cambia. */
+@supports (animation-timeline: scroll(self inline)) {
+  @media (prefers-reduced-motion: no-preference) {
+    .selector-chips, .semanas-tabs, .filtros-muro, .tira-fotos, .tm-lista, .pestanas, .chat-busqueda-tipos {
+      animation: tira-bordes linear both; animation-timeline: scroll(self inline);
+    }
+  }
+}
+@keyframes tira-bordes {
+  0% { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  8%, 92% { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+  100% { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px); mask-image: linear-gradient(to right, transparent, #000 28px); }
+}
+.tira-fotos, .tm-lista { scroll-snap-type: x proximity; scroll-padding-inline: 2px; }
+.tira-fotos > *, .tm-lista > * { scroll-snap-align: start; }
+
+/* ── 55 · Esqueletos con la forma de lo que llega (tanda 19) ──────────────────────────────────────────────────────────
+   Las siluetas de carga ya tenían una forma por pantalla (comunes.jsx: Siluetas). Ahora brillan en morado tenue en vez
+   de en gris, y la de Hoy lleva la tarjeta grande con sus líneas y su botón, en la noche de la marca, para que lo que
+   llega caiga exactamente encima. */
+.sil { background: linear-gradient(90deg, var(--hoja-2) 0%, color-mix(in srgb, var(--morado) 9%, var(--hoja-2)) 45%, var(--hoja-2) 90%); background-size: 220% 100%; }
+.sil-hero { display: grid; align-content: end; gap: 10px; height: 214px; padding: 22px 20px; border-radius: 22px;
+  background: linear-gradient(90deg, var(--hero) 0%, color-mix(in srgb, var(--hero) 80%, #fff) 45%, var(--hero) 90%); background-size: 220% 100%; }
+.sil-hero .sil-hero-linea { background: rgba(255, 255, 255, .14); border-radius: 6px; animation: none; }
+.sil-hero .sil-hero-boton { display: block; width: 100%; height: 48px; margin-top: 8px; border-radius: 14px; background: rgba(255, 255, 255, .2); animation: none; }

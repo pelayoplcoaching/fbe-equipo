@@ -446,7 +446,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
               </div>
             )}
             <div class="hero-acciones">
-              <button class="btn btn-grande btn-hero" onClick={(ev) => abrirSesion(siguiente.id, ev.currentTarget.closest('.hero-dia')?.querySelector('.titular h2'))}>
+              <button class="btn btn-grande btn-hero" onClick={(ev) => { const h = ev.currentTarget.closest('.hero-dia'); abrirSesion(siguiente.id, h?.querySelector('.titular h2'), h?.querySelector('.hero-arte')); }}>
                 <Icono n="play" /> {empezada ? 'Continuar sesión' : 'Empezar sesión'}
               </button>
             </div>

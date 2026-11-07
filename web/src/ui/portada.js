@@ -14,6 +14,21 @@ function quitarYa() {
   document.getElementById('tc-portada')?.remove();
   if (!el) return;
   const quieto = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  // (diseño, tanda 19) Si debajo hay ya una marca con el lobo (la bienvenida del día), el lobo de la portada viaja hasta
+  // ella y la noche se levanta; si no, o sin transiciones de vista, la portada se funde como siempre.
+  const lobo = el.querySelector('.portada-lobo');
+  const destino = !quieto && document.startViewTransition && lobo && document.querySelector('.bdia-marca svg, .acceso-marca svg');
+  if (destino && document.visibilityState !== 'hidden') {
+    try {
+      lobo.style.viewTransitionName = 'vt-lobo';
+      document.documentElement.dataset.vt = 'portada';
+      const t = document.startViewTransition(() => { el.remove(); destino.style.viewTransitionName = 'vt-lobo'; });
+      const fin = () => { destino.style.viewTransitionName = ''; if (document.documentElement.dataset.vt === 'portada') delete document.documentElement.dataset.vt; };
+      t.finished.catch(() => {}).then(fin);
+      setTimeout(() => { try { t.skipTransition(); } catch { /* */ } }, 1500);
+      return;
+    } catch { lobo.style.viewTransitionName = ''; delete document.documentElement.dataset.vt; }
+  }
   el.classList.add('fuera');
   setTimeout(() => el.remove(), quieto ? 0 : 380);
 }

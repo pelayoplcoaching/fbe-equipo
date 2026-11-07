@@ -2,7 +2,7 @@
 // estar en un elemento a la vez (si dos lo llevan, el navegador cancela la transición entera). Por eso los nombres se
 // ponen solo a la pareja que se transforma, en el momento de la transición, y se quitan después. Aquí, la regla pura.
 
-export const NOMBRES_COMPARTIDOS = ['vt-ej-nombre', 'vt-ej-picto', 'vt-avatar', 'vt-titulo-sesion'];
+export const NOMBRES_COMPARTIDOS = ['vt-ej-nombre', 'vt-ej-picto', 'vt-avatar', 'vt-titulo-sesion', 'vt-arte-sesion'];
 const VALIDO = /^vt-[a-z0-9-]{1,40}$/;
 
 // Las parejas que se pueden usar: nombre válido, de la lista, con origen y destino, y sin repetir nombre (la primera vale)
