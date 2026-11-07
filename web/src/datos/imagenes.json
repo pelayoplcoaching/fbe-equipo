@@ -304,6 +304,46 @@
       "512": "imagenes/medalla/medalla-constancia-plata-512.61fe101b.webp"
     }
   },
+  "medalla-records-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-records-bronce-256.db842fe6.webp",
+      "512": "imagenes/medalla/medalla-records-bronce-512.bcdc3f25.webp"
+    }
+  },
+  "medalla-records-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-records-diamante-256.ea9d7dfe.webp",
+      "512": "imagenes/medalla/medalla-records-diamante-512.cabf9220.webp"
+    }
+  },
+  "medalla-records-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-records-oro-256.4ef836b7.webp",
+      "512": "imagenes/medalla/medalla-records-oro-512.ca22efa7.webp"
+    }
+  },
+  "medalla-records-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-records-plata-256.39f9c3e0.webp",
+      "512": "imagenes/medalla/medalla-records-plata-512.f8eeaa1c.webp"
+    }
+  },
   "medalla-semanas-bronce": {
     "proporcion": [
       1,
