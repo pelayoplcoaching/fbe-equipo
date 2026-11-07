@@ -9,6 +9,10 @@ export const NOVEDADES = {
   '0.101': {
     atleta: [
       'Cada hábito tiene su ilustración al abrirlo.',
+      'La ficha de cada ejercicio lleva la estatua de su músculo principal.',
+    ],
+    coach: [
+      'La ficha de cada ejercicio lleva la estatua de su músculo principal y la biblioteca, al filtrar por grupo, la suya.',
     ],
   },
   '0.100': {
