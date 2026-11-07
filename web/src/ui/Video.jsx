@@ -398,7 +398,7 @@ export function Reproductor({ src, archivoId = null, serie = null, capas = null,
                 ))}
               </div>
             )}
-            <input type="range" class="rep-tiempo" min="0" max={dur || 0} step="0.01" value={t} aria-label="Momento del vídeo" aria-valuetext={textoMomento(t, true)}
+            <input type="range" class="rep-tiempo" min="0" max={dur || 0} step="0.01" value={t} style={{ '--v': `${dur > 0 ? Math.min(100, (t / dur) * 100) : 0}%` }} aria-label="Momento del vídeo" aria-valuetext={textoMomento(t, true)}
               onInput={(e) => { const x = el(); if (x) { x.pause(); x.currentTime = Number(e.currentTarget.value); } }} disabled={!listo} />
             {marcas.length > 0 && dur > 0 && (
               <div class="rep-marcas" role="group" aria-label={`Correcciones en el vídeo (${marcas.length})`}>

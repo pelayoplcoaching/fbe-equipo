@@ -11,15 +11,17 @@ import { hoyISO, lunesDe, sumarDias, fmtConDia, rangoSemana } from '../logica/fe
 import { LETRAS_DIA } from '../logica/plan.js';
 import { num } from '../logica/calculos.js';
 import { HojaRellenar } from './RellenarSemana.jsx';
+import { Ilustracion, iluDeToma } from './Ilustraciones.jsx';
 
 const mayus = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // La foto de una receta (o un hueco con el icono, si no tiene)
-export function FotoReceta({ receta, grande = false, src = null }) {
+// (diseño, tanda 21) sin foto, la escena de su toma del día (Ilustraciones.jsx) en vez del icono del plato
+export function FotoReceta({ receta, grande = false, src = null, toma = null }) {
   const foto = src || (grande ? receta?.foto || receta?.foto_mini : receta?.foto_mini);
   return foto
     ? <img class={`receta-foto ${grande ? 'grande' : ''}`} src={foto} alt="" loading="lazy" decoding="async" />
-    : <span class={`receta-foto vacia ${grande ? 'grande' : ''}`} aria-hidden="true"><Icono n="receta" /></span>;
+    : <span class={`receta-foto vacia ${grande ? 'grande' : ''} toma-${toma || 'sin'}`} aria-hidden="true"><Ilustracion n={iluDeToma(toma)} clase="receta-escena" /></span>;
 }
 
 // Una receta del recetario, en tarjeta: foto, nombre y sus macros (ya con el factor del atleta)
@@ -28,7 +30,7 @@ export function TarjetaReceta({ a, alAbrir, mostrarFactor = false, opcional = nu
   const m = macrosDe(r, a.factor);
   return (
     <button type="button" class="tarjeta-receta" onClick={() => alAbrir(a)}>
-      <FotoReceta receta={r} />
+      <FotoReceta receta={r} toma={a.toma} />
       <span class="pila-xs tarjeta-receta-texto">
         <span class="nombre">{a.favorita && <Icono n="estrella" class="favorita" titulo="Favorita" />}{r.nombre}</span>
         <span class="mini secundario num">{textoMacros(m, true) || 'Sin macros'}</span>
@@ -101,7 +103,7 @@ export function HojaReceta({ a, esCoach = false, opcional = null, alCerrar, alCa
   return (
     <Hoja titulo={r.nombre} alCerrar={alCerrar} ancho>
       <div class="pila receta-detalle">
-        <FotoReceta receta={r} grande />
+        <FotoReceta receta={r} grande toma={a.toma} />
         <div class="fila-chips">
           <span class="chip morado">{NOMBRE_TOMA[a.toma]}</span>
           {textoVariante(a.variante, opcional) && <span class="chip morado">{textoVariante(a.variante, opcional)}</span>}
@@ -335,7 +337,7 @@ function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, a
   const fila = (a) => (
     <li key={a.id}>
       <button type="button" class={`respuesta opcion-receta ${elegida?.id === a.id ? 'elegida' : ''}`} aria-pressed={elegida?.id === a.id ? 'true' : 'false'} onClick={() => { setElegida(a); setRaciones(1); }}>
-        <FotoReceta receta={a.receta} />
+        <FotoReceta receta={a.receta} toma={a.toma || toma} />
         <span class="pila-xs"><span class="nombre">{a.favorita && <Icono n="estrella" class="favorita" titulo="Favorita" />}{a.receta.nombre}</span><span class="mini terciario num">{textoMacros(macrosDe(a.receta, a.factor), true)}</span></span>
       </button>
     </li>

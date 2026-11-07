@@ -1340,29 +1340,30 @@ button[data-hecho]::before {
 
 /* ── 60 · Deslizadores de la casa (tanda 20, en lugar del sonido del descanso, que ya existía) ─────────────────────────
    Los deslizadores (volumen, opacidad, recorte) dejan el control del sistema: una pista fina que se llena de morado
-   hasta donde está (ui/tacto.js deja la proporción en --v) y un tirador redondo que crece bajo el dedo. Los que
-   siguen al tiempo (vídeo, dos ángulos, nota de voz) solo cambian el tirador: su valor lo mueve el reproductor y aquí
-   no se mide. Con un --v que no está, la pista se queda sin llenar (nunca mal llena). (Sobre estilos.css 2061) */
-input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra) {
+   hasta donde está (ui/tacto.js deja la proporción en --v; los del vídeo y los dos ángulos la ponen ellos al pintarse,
+   tanda 21) y un tirador redondo que crece bajo el dedo. La nota de voz del chat es de otra conversación: se queda como
+   estaba, solo con el tirador. Con un --v que no está, la pista se queda sin llenar (nunca mal llena). (Sobre
+   estilos.css 2061) */
+input[type="range"]:not(.voz-barra) {
   appearance: none; -webkit-appearance: none; height: 28px; margin: 0; background: transparent; cursor: pointer;
   --pista: linear-gradient(to right, var(--morado) var(--v, 0%), var(--linea) var(--v, 0%));
 }
-input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--pista); }
-input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-moz-range-track { height: 4px; border-radius: 2px; background: var(--linea); }
-input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--morado); }
-input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-webkit-slider-thumb {
+input[type="range"]:not(.voz-barra)::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--pista); }
+input[type="range"]:not(.voz-barra)::-moz-range-track { height: 4px; border-radius: 2px; background: var(--linea); }
+input[type="range"]:not(.voz-barra)::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--morado); }
+input[type="range"]:not(.voz-barra)::-webkit-slider-thumb {
   appearance: none; -webkit-appearance: none; width: 22px; height: 22px; margin-top: -9px; border-radius: 50%;
   background: #fff; border: 1.5px solid color-mix(in srgb, var(--morado) 40%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
   transition: transform var(--mov-rapido) var(--curva-rebote), box-shadow var(--mov-rapido) var(--curva-casa);
 }
-input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-moz-range-thumb {
+input[type="range"]:not(.voz-barra)::-moz-range-thumb {
   width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 1.5px solid color-mix(in srgb, var(--morado) 40%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
 }
-input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra):active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: 0 2px 8px rgba(0, 0, 0, .28), 0 0 0 6px color-mix(in srgb, var(--morado) 14%, transparent); }
-input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra):focus-visible { outline: none; }
-input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra):focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 5px var(--foco); }
-input[type="range"]:is(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-webkit-slider-thumb { transition: transform var(--mov-rapido) var(--curva-rebote); }
-input[type="range"]:is(.rep-tiempo, .dos-angulos-tiempo, .voz-barra):active::-webkit-slider-thumb { transform: scale(1.2); }
+input[type="range"]:not(.voz-barra):active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: 0 2px 8px rgba(0, 0, 0, .28), 0 0 0 6px color-mix(in srgb, var(--morado) 14%, transparent); }
+input[type="range"]:not(.voz-barra):focus-visible { outline: none; }
+input[type="range"]:not(.voz-barra):focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 5px var(--foco); }
+input[type="range"]:is(.voz-barra)::-webkit-slider-thumb { transition: transform var(--mov-rapido) var(--curva-rebote); }
+input[type="range"]:is(.voz-barra):active::-webkit-slider-thumb { transform: scale(1.2); }
 @media (forced-colors: active) { input[type="range"] { appearance: auto; -webkit-appearance: auto; } }
 
 /* ── 61 · La app instalada sin costuras (tanda 20) ────────────────────────────────────────────────────────────────────
@@ -1439,3 +1440,79 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 .paso-odo { position: absolute; left: 40px; right: 40px; top: 0; bottom: 0; display: grid; place-items: center; pointer-events: none;
   font-size: 1.3125rem; font-variant-numeric: tabular-nums; font-stretch: 118%; font-weight: 720; color: var(--tinta); }
 .paso-odo .odo-tira { transition-duration: var(--mov-medio); }
+
+/* ── 67 · Nutrición con apetito (tanda 21) ────────────────────────────────────────────────────────────────────────────
+   Las recetas sin foto llevan la escena de su toma del día (Ilustraciones.jsx: desayuno, media mañana, comida,
+   merienda, cena, antes de dormir) en vez del icono del plato, sobre un fondo tenue del tema; en la hoja de la receta,
+   en grande. Las elipses de esas escenas se pintan como el resto de trazos (estilos.css 2728 solo cubre path, rect y
+   circle). */
+.ilustracion ellipse { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.receta-foto.vacia { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 7%, var(--hoja-2)), var(--hoja-2)); box-shadow: none; overflow: hidden; }
+.receta-foto.vacia .receta-escena { width: 86%; height: auto; aspect-ratio: 160 / 112; }
+.receta-foto.vacia.grande .receta-escena { width: min(52%, 220px); height: auto; }
+.receta-foto.vacia.grande { aspect-ratio: 16 / 9; }
+@media (prefers-reduced-motion: no-preference) {
+  .receta-foto.vacia.grande .receta-escena { animation: ilu-entra var(--mov-lento) var(--curva-casa) both; }
+}
+
+/* ── 68 · Las fotos del muro se abren desde su sitio (tanda 21, en lugar del «descanso respira», que ya existía) ─────
+   Tocar una foto de una publicación la abre a pantalla completa sobre la noche de la marca (Comunidad.jsx:
+   FotoGrande), y la miniatura viaja hasta su sitio grande con una transición de vista (vt-foto); al cerrar, vuelve.
+   Las dos imágenes se recortan al cuadro del grupo mientras viajan (si no, se estirarían: la miniatura va recortada
+   y la grande entera). */
+.post-foto-boton { display: block; width: 100%; padding: 0; border: 0; background: none; border-radius: 12px; cursor: zoom-in; -webkit-tap-highlight-color: transparent; }
+.post-foto-boton:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.galeria-foto .post-foto-boton { border-radius: 0; }
+.foto-grande { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: #0E0B1E; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); cursor: zoom-out; }
+.foto-grande img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; cursor: default; }
+.foto-grande .foto-grande-cerrar { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); color: #fff; background: rgba(255, 255, 255, .14); border-color: transparent; cursor: pointer; z-index: 1; }
+.foto-grande .foto-grande-cerrar:hover { background: rgba(255, 255, 255, .24); }
+:root[data-vt="foto"]::view-transition-old(root), :root[data-vt="foto"]::view-transition-new(root) { animation-duration: var(--mov-medio); animation-timing-function: ease-in-out; }
+:root[data-vt="foto"]::view-transition-group(vt-foto) { animation-duration: var(--mov-lento); animation-timing-function: var(--curva-llega); z-index: 1; }
+:root[data-vt="foto"]::view-transition-old(vt-foto), :root[data-vt="foto"]::view-transition-new(vt-foto) { width: 100%; height: 100%; object-fit: cover; animation: none; mix-blend-mode: normal; }
+:root[data-vt="foto"]::view-transition-old(vt-foto) { display: none; }
+
+/* ── 69 · Equipo con vida (tanda 21) ──────────────────────────────────────────────────────────────────────────────────
+   Las reacciones saltan al tocarlas (el emoji, con el muelle de la casa; la elegida se queda un punto más grande), el
+   punto de la galería que está activo se estira como una píldora, y el cuadro de publicar crece con lo que se escribe
+   (field-sizing, donde existe) en vez de ir con barra. (Sobre estilos.css 2128 .reaccion, 4732 .galeria-puntos) */
+.reaccion { transition: background-color var(--mov-rapido) var(--curva-casa), border-color var(--mov-rapido) var(--curva-casa), transform var(--mov-rapido) var(--curva-casa); }
+.reaccion > span:first-child { display: inline-block; }
+@media (prefers-reduced-motion: no-preference) {
+  .reaccion:active { transform: scale(.94); }
+  .reaccion[aria-pressed="true"] > span:first-child { animation: reaccion-salta var(--mov-lento) var(--curva-rebote) both; }
+}
+@keyframes reaccion-salta { 0% { transform: scale(.6); } 60% { transform: scale(1.35) rotate(-8deg); } 100% { transform: scale(1.12); } }
+.galeria-puntos span { transition: width var(--mov-medio) var(--curva-casa), background-color var(--mov-rapido) var(--curva-casa); }
+.galeria-puntos span.activo { width: 18px; border-radius: 4px; }
+.compositor .area, .area-menciones .area { field-sizing: content; min-height: 88px; max-height: 40dvh; resize: none; }
+
+/* ── 70 · El reproductor de la casa (tanda 21) ────────────────────────────────────────────────────────────────────────
+   El reproductor de técnica y el de dos ángulos ya tenían sus controles (Video.jsx); ahora son de la casa: el botón de
+   reproducir es un disco morado, la barra de tiempo es la pista de los deslizadores (bloque 60, llena hasta el momento
+   del vídeo, con --v puesto al pintarse), el reloj va en una píldora y el cuadro del vídeo lleva un filo tenue. Las
+   marcas de repeticiones y correcciones no se tocan. (Sobre estilos.css 1130 a 1137) */
+.rep-barra > .btn-icono.plano:first-child { width: 40px; height: 40px; border-radius: 50%; background: var(--morado); color: var(--sobre-morado); transition: transform var(--mov-rapido) var(--curva-rebote), background-color var(--mov-rapido) var(--curva-casa); }
+.rep-barra > .btn-icono.plano:first-child:hover { background: var(--morado-hover); }
+.rep-barra > .btn-icono.plano:first-child:active { transform: scale(.92); }
+.rep-barra > .btn-icono.plano:first-child:disabled { background: var(--linea); color: var(--tinta-3); }
+.rep-barra > .btn-icono.plano:first-child svg { width: 20px; height: 20px; }
+.rep-reloj { padding: 3px 9px; border-radius: 999px; background: var(--hoja-2); min-width: 0; }
+.reproductor video.medio { border-radius: var(--r-s); }
+.rep-marco { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tinta) 8%, transparent); }
+.dos-angulos-tiempo { min-height: 32px; }
+
+/* ── 71 · El carné con la marca nueva (tanda 21) ──────────────────────────────────────────────────────────────────────
+   La noche de la portada con sus resplandores (en vez del gris morado), el lobo en blanco y vectorial en la cabecera,
+   el lobo en grande y muy tenue al fondo, el número en el dorado de los logros. La inclinación y el brillo holográfico
+   siguen igual. La imagen que se comparte (Carnet.jsx: dibujarCarnet) va a juego. (Sobre estilos.css 3457) */
+.carnet {
+  background: radial-gradient(620px 620px at 90% 5%, rgba(104, 78, 236, .5), rgba(104, 78, 236, 0) 70%),
+    radial-gradient(560px 560px at 5% 105%, rgba(104, 78, 236, .4), rgba(104, 78, 236, 0) 70%),
+    linear-gradient(180deg, #221957, #150F36);
+}
+.carnet-lobo { flex: none; }
+.carnet-lobo path { fill: #fff; }
+.carnet-lobo-fondo { position: absolute; right: -6%; bottom: -14%; width: 46%; height: auto; }
+.carnet-lobo-fondo path { fill: rgba(255, 255, 255, .06); }
+.carnet-numero { color: var(--oro-claro, #E9D49A); }

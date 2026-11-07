@@ -210,9 +210,80 @@ const DIBUJOS = {
       <Suelo y={104} />
     </>
   ),
+  // (diseño, tanda 21) Las comidas del día, una escena por toma, para las recetas que no tienen foto (ComidasComun.jsx)
+  // El desayuno: la taza humeante y el sol que sale
+  desayuno: () => (
+    <>
+      <path class="ilu-tenue" d="M98 70a22 22 0 0 1 44 0" />
+      <path class="ilu-tenue" d="M120 36v8M100 44l4 4M140 44l-4 4" />
+      <path class="ilu-trazo" d="M28 50h52v24a14 14 0 0 1-14 14H42a14 14 0 0 1-14-14z" />
+      <path class="ilu-trazo" d="M80 56h8a8 8 0 0 1 0 16h-8" />
+      <path class="ilu-acento" d="M44 40c0-5 4-5 4-10s-4-5-4-10M58 40c0-5 4-5 4-10s-4-5-4-10" />
+      <Suelo y={100} />
+    </>
+  ),
+  // Media mañana: la manzana con su hoja y una nuez
+  media_manana: () => (
+    <>
+      <path class="ilu-relleno ilu-trazo" d="M64 44c-14-8-30 2-30 20s12 34 24 34c4 0 6-2 10-2s6 2 10 2c12 0 24-16 24-34s-16-28-30-20c-3 2-5 2-8 0z" />
+      <path class="ilu-trazo" d="M68 44c0-8 4-14 10-16" />
+      <path class="ilu-acento" d="M70 40c8-10 18-10 22-4-8 8-16 8-22 4z" />
+      <circle class="ilu-tenue" cx="124" cy="80" r="12" />
+      <path class="ilu-tenue" d="M118 74c4 4 8 4 12 0M118 86c4-4 8-4 12 0" />
+      <Suelo y={100} />
+    </>
+  ),
+  // La comida: el plato con cubiertos y el vaso
+  comida: () => (
+    <>
+      <circle class="ilu-relleno ilu-trazo" cx="76" cy="60" r="30" />
+      <circle class="ilu-tenue" cx="76" cy="60" r="19" />
+      <path class="ilu-acento" d="M62 62c6-10 22-10 28 0" />
+      <path class="ilu-trazo" d="M28 32v16a6 6 0 0 0 12 0V32M34 32v58" />
+      <path class="ilu-trazo" d="M120 32h18l-3 56h-12z" />
+      <path class="ilu-tenue" d="M122 48h14" />
+      <Suelo y={102} />
+    </>
+  ),
+  // La merienda: el bol de yogur con la cuchara y la fruta encima
+  merienda: () => (
+    <>
+      <path class="ilu-relleno ilu-trazo" d="M38 56h84a42 42 0 0 1-84 0z" />
+      <path class="ilu-tenue" d="M50 56c10-6 22-6 30 0s20 6 30 0" />
+      <path class="ilu-trazo" d="M110 40l22-18" />
+      <circle class="ilu-acento" cx="70" cy="46" r="6" />
+      <circle class="ilu-acento" cx="88" cy="48" r="5" />
+      <Suelo y={104} />
+    </>
+  ),
+  // La cena: el plato bajo la luna y dos estrellas
+  cena: () => (
+    <>
+      <path class="ilu-tenue" d="M118 22a14 14 0 1 0 14 18 11 11 0 0 1-14-18z" />
+      <path class="ilu-tenue" d="M34 22v8M30 26h8M96 34v6M93 37h6" />
+      <ellipse class="ilu-relleno ilu-trazo" cx="80" cy="74" rx="44" ry="16" />
+      <ellipse class="ilu-tenue" cx="80" cy="74" rx="28" ry="9" />
+      <path class="ilu-acento" d="M66 72c8-6 20-6 28 0" />
+      <Suelo y={102} />
+    </>
+  ),
+  // Antes de dormir: la taza caliente, la luna y el sueño
+  recena: () => (
+    <>
+      <path class="ilu-tenue" d="M126 24a12 12 0 1 0 12 16 9 9 0 0 1-12-16z" />
+      <path class="ilu-tenue" d="M22 34h12l-12 12h12" />
+      <path class="ilu-trazo" d="M40 54h48v22a12 12 0 0 1-12 12H52a12 12 0 0 1-12-12z" />
+      <path class="ilu-trazo" d="M88 60h8a7 7 0 0 1 0 14h-8" />
+      <path class="ilu-acento" d="M56 46c0-4 3-4 3-8s-3-4-3-8M70 46c0-4 3-4 3-8s-3-4-3-8" />
+      <Suelo y={100} />
+    </>
+  ),
 };
 
 export const ILUSTRACIONES = Object.keys(DIBUJOS);
+// (diseño, tanda 21) la escena de cada toma del día; sin toma conocida, la del plato
+export const ILU_TOMA = { desayuno: 'desayuno', media_manana: 'media_manana', comida: 'comida', merienda: 'merienda', cena: 'cena', recena: 'recena' };
+export const iluDeToma = (toma) => ILU_TOMA[toma] || 'comida';
 
 export function Ilustracion({ n, clase = '' }) {
   const Dibujo = DIBUJOS[n];
