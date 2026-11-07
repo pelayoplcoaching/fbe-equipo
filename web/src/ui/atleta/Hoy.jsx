@@ -354,6 +354,17 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const natural = !dias ? null : constancia.datos ? constancia.datos.actual
     : semanaEnCurso(semanasObjetivo({ diasSemana: dias, sesiones: Object.values(p.sesiones || {}).flat(), semanas: p.semanas || [], hoy }), hoy);
   const e = natural?.completa && !['sin_semana', 'semana'].includes(e0.tipo) ? { ...e0, tipo: 'semana', siguienteMicrociclo: e0.siguiente || toca.siguiente } : e0;
+  // (diseño, tanda 20) La semana completa se celebra una vez: confeti la primera vez que Hoy la enseña (y la tarjeta
+  // lo recuerda, por atleta y semana), no cada vez que se vuelve. Con «reducir movimiento», el confeti no sale.
+  const [semanaCelebrada, setSemanaCelebrada] = usePreferencia('fbe-semana-celebrada', null);
+  // (con objetivo de días por semana, se espera a la constancia: la clave lleva el lunes de la semana natural)
+  const claveSemana = e.tipo === 'semana' && semana && (!dias || constancia.datos) ? `${atleta.id}:${semana.id}:${natural?.lunes || semana.fecha_inicio || ''}` : null;
+  useEffect(() => {
+    if (!claveSemana || semanaCelebrada === claveSemana) return;
+    setSemanaCelebrada(claveSemana);
+    const t = setTimeout(() => lanzarConfeti({ vibracion: 'anillo' }), 420);
+    return () => clearTimeout(t);
+  }, [claveSemana]);
   if (e.tipo === 'sin_semana') {
     return (
       <>

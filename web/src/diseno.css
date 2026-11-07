@@ -818,6 +818,9 @@ select.seguida-orden { max-width: min(100%, 17rem); }
   /* Tarjetas (estilos.css 1714, 2591 y 3433): la de Hoy, las del resumen de la sesión y los destacados */
   .hero-dia .titular h2, .hero-dia .hero-acciones, .hero-dia .semana-resumen { animation-duration: var(--mov-lento); }
   .resumen-sesion > :not(.resumen-medalla), .resumen-num > div, .resumen-pr { animation-duration: var(--mov-medio); animation-delay: calc(var(--i, 0) * 45ms); }
+  /* (tanda 20) y entran solo con transform: su `resumen-entra` (estilos.css 2594) fundía la opacidad, y a medio entrar las
+     etiquetas no cumplían el contraste (lo cazó axe en «resumen, recién abierto») */
+  .resumen-sesion > :not(.resumen-medalla), .resumen-num > div, .resumen-pr { animation-name: resumen-sube; }
   .destacados-lista > .destacado { animation-duration: var(--mov-lento); animation-delay: calc(var(--i, 0) * 45ms); }
   /* Lo que llega tras una carga (ui/llegada.js): se funde, pieza a pieza. Solo opacidad: no mueve nada de sitio */
   .llega { animation: llega var(--mov-medio) var(--curva-casa) calc(var(--orden, 0) * 30ms) backwards; }
@@ -1274,3 +1277,102 @@ img.img-llega { opacity: 0; }
   background: linear-gradient(90deg, var(--hero) 0%, color-mix(in srgb, var(--hero) 80%, #fff) 45%, var(--hero) 90%); background-size: 220% 100%; }
 .sil-hero .sil-hero-linea { background: rgba(255, 255, 255, .14); border-radius: 6px; animation: none; }
 .sil-hero .sil-hero-boton { display: block; width: 100%; height: 48px; margin-top: 8px; border-radius: 14px; background: rgba(255, 255, 255, .2); animation: none; }
+
+/* ── 56 · Botones que cuentan lo que pasa (tanda 20) ──────────────────────────────────────────────────────────────────
+   El botón principal lleva un filo de luz arriba (como un objeto, no una mancha plana) y, al terminar de guardar
+   (ui/tacto.js pone data-hecho cuando pulido.js quita data-guardando), enseña una marca de «hecho» un momento, en el
+   mismo sitio y con el mismo tamaño: el texto se vuelve transparente, no desaparece, así nada se mueve. Sin
+   «reducir movimiento», la marca llega con un rebote corto. (Sobre estilos.css 232 .btn-primario) */
+.btn-primario:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 6px 16px -8px color-mix(in srgb, var(--morado) 70%, transparent); }
+.btn-primario:not(:disabled):active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 8px -6px color-mix(in srgb, var(--morado) 70%, transparent); }
+button[data-hecho] { position: relative; -webkit-text-fill-color: transparent; }
+button[data-hecho] > * { visibility: hidden; }
+button[data-hecho]::after {
+  content: ""; position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+  background: currentColor; -webkit-mask: var(--marca-hecho) center / contain no-repeat; mask: var(--marca-hecho) center / contain no-repeat;
+  animation: hecho-llega var(--mov-medio) var(--curva-rebote) both;
+}
+.btn-peq[data-hecho]::after, .btn-texto[data-hecho]::after, .btn-icono[data-hecho]::after { width: 16px; height: 16px; margin: -8px 0 0 -8px; }
+:root { --marca-hecho: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+@keyframes hecho-llega { from { transform: scale(.4); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { button[data-hecho]::after { animation: none; } }
+
+/* ── 57 · Campos que responden (tanda 20) ──────────────────────────────────────────────────────────────────────────────
+   Al entrar en un campo, el borde se vuelve morado y un halo tenue crece alrededor (en vez del contorno seco); el
+   contorno de foco de teclado se mantiene para quien navega con Tab (:focus-visible). Un campo que pasa a inválido
+   (aria-invalid) tiembla una vez, de lado y poco (ui/tacto.js pone data-tiembla), y su texto de error entra deslizándose
+   desde arriba, sin cambiar de opacidad. (Sobre estilos.css 253) */
+.entrada, .selector, .area { transition: border-color var(--mov-rapido) var(--curva-casa), box-shadow var(--mov-medio) var(--curva-casa); }
+.entrada:focus, .selector:focus, .area:focus { outline: none; border-color: var(--morado); box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 16%, transparent); }
+.entrada:focus-visible, .selector:focus-visible, .area:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; box-shadow: none; }
+@media (hover: none) { .entrada:focus-visible, .selector:focus-visible, .area:focus-visible { outline: none; border-color: var(--morado); box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 16%, transparent); } }
+[aria-invalid="true"]:is(.entrada, .selector, .area) { border-color: var(--alerta); }
+[aria-invalid="true"]:is(.entrada, .selector, .area):focus { box-shadow: 0 0 0 4px color-mix(in srgb, var(--alerta) 18%, transparent); }
+[data-tiembla] { animation: campo-tiembla .4s cubic-bezier(.36, .07, .19, .97) both; }
+@keyframes campo-tiembla { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-3px); } 40%, 60% { transform: translateX(3px); } }
+.error-campo { animation: error-baja var(--mov-medio) var(--curva-llega) both; }
+@keyframes error-baja { from { transform: translateY(-6px); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { [data-tiembla], .error-campo { animation: none; } .entrada, .selector, .area { transition: none; } }
+
+/* ── 58 · Iconos con sentido (tanda 20) ────────────────────────────────────────────────────────────────────────────────
+   Los iconos cuentan lo que hacen: los tres puntos de «Más» se ponen en vertical mientras su hoja está abierta; la
+   campana de las notificaciones se balancea una vez al aparecer; la flecha de enviar despega al pulsar; la marca de
+   «hecho» de los chips salta al llegar. Todo con transform, nada con opacidad. */
+@media (prefers-reduced-motion: no-preference) {
+  .tab-mas .ico-opciones { transition: transform var(--mov-medio) var(--curva-rebote); }
+  .tab-mas[aria-expanded="true"] .ico-opciones { transform: rotate(90deg); }
+  .btn .ico-campana, .ios-ico .ico-campana { transform-origin: 50% 12%; animation: campana-balancea 1.1s var(--curva-casa) .3s both; }
+  .chat-enviar:not(:disabled) svg { transition: transform var(--mov-rapido) var(--curva-casa); }
+  .chat-enviar:not(:disabled):active svg { transform: translate(3px, -3px) scale(.92); }
+  .chip.hecha svg, .toca-hoy.hecha svg { animation: marca-salta var(--mov-lento) var(--curva-rebote) .1s both; }
+}
+@keyframes campana-balancea { 0% { transform: rotate(0); } 15% { transform: rotate(14deg); } 30% { transform: rotate(-11deg); } 45% { transform: rotate(8deg); } 60% { transform: rotate(-5deg); } 75% { transform: rotate(2deg); } 100% { transform: rotate(0); } }
+@keyframes marca-salta { from { transform: scale(.5) rotate(-20deg); } to { transform: none; } }
+
+/* ── 59 · La semana completa se celebra una vez (tanda 20) ────────────────────────────────────────────────────────────
+   El confeti sale la primera vez que Hoy enseña la semana completa (Hoy.jsx) y la tarjeta lo acompaña: su chip de
+   «Semana completa» late dos veces al llegar, en el dorado de la tarjeta. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-semana .toca-hoy.hecha { animation: chip-late 1.6s var(--curva-casa) .5s 2; }
+}
+@keyframes chip-late { 0%, 100% { transform: none; } 30% { transform: scale(1.06); } 60% { transform: scale(.99); } }
+
+/* ── 60 · Deslizadores de la casa (tanda 20, en lugar del sonido del descanso, que ya existía) ─────────────────────────
+   Los deslizadores (volumen, opacidad, recorte) dejan el control del sistema: una pista fina que se llena de morado
+   hasta donde está (ui/tacto.js deja la proporción en --v) y un tirador redondo que crece bajo el dedo. Los que
+   siguen al tiempo (vídeo, dos ángulos, nota de voz) solo cambian el tirador: su valor lo mueve el reproductor y aquí
+   no se mide. Con un --v que no está, la pista se queda sin llenar (nunca mal llena). (Sobre estilos.css 2061) */
+input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra) {
+  appearance: none; -webkit-appearance: none; height: 28px; margin: 0; background: transparent; cursor: pointer;
+  --pista: linear-gradient(to right, var(--morado) var(--v, 0%), var(--linea) var(--v, 0%));
+}
+input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--pista); }
+input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-moz-range-track { height: 4px; border-radius: 2px; background: var(--linea); }
+input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--morado); }
+input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-webkit-slider-thumb {
+  appearance: none; -webkit-appearance: none; width: 22px; height: 22px; margin-top: -9px; border-radius: 50%;
+  background: #fff; border: 1.5px solid color-mix(in srgb, var(--morado) 40%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
+  transition: transform var(--mov-rapido) var(--curva-rebote), box-shadow var(--mov-rapido) var(--curva-casa);
+}
+input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 1.5px solid color-mix(in srgb, var(--morado) 40%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
+}
+input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra):active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: 0 2px 8px rgba(0, 0, 0, .28), 0 0 0 6px color-mix(in srgb, var(--morado) 14%, transparent); }
+input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra):focus-visible { outline: none; }
+input[type="range"]:not(.rep-tiempo, .dos-angulos-tiempo, .voz-barra):focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 5px var(--foco); }
+input[type="range"]:is(.rep-tiempo, .dos-angulos-tiempo, .voz-barra)::-webkit-slider-thumb { transition: transform var(--mov-rapido) var(--curva-rebote); }
+input[type="range"]:is(.rep-tiempo, .dos-angulos-tiempo, .voz-barra):active::-webkit-slider-thumb { transform: scale(1.2); }
+@media (forced-colors: active) { input[type="range"] { appearance: auto; -webkit-appearance: auto; } }
+
+/* ── 61 · La app instalada sin costuras (tanda 20) ────────────────────────────────────────────────────────────────────
+   El color de la barra del sistema ya sigue al tema (ajustes.js) y la pantalla de arranque ya es la noche de la marca
+   (manifest, build.mjs). Lo que faltaba: el fondo de la raíz del mismo color que la app, para que al tirar más allá
+   del borde (el rebote de iOS) no asome blanco; y las esquinas de abajo de las hojas y la barra, limpias sobre el
+   borde del móvil. */
+html { background: var(--tiza); }
+html:has(#portada) { background: #1E1548; }
+@media (display-mode: standalone) {
+  html { overscroll-behavior-y: none; }
+  body { min-height: 100dvh; }
+}
+@keyframes resumen-sube { from { transform: translateY(12px); } }

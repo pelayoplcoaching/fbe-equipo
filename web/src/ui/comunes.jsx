@@ -1338,7 +1338,7 @@ export function GrupoIos({ titulo, pie = null, children, clase = '', id }) {
 // tono: '' (el acento), 'ok', 'aviso' o 'alerta'. Con alTocar o href, la fila entera es el botón (o el enlace) y
 // lleva el chevrón; si no, children va a la derecha. bloque: el control debajo, a todo el ancho (unos segmentos).
 export function IcoIos({ n, tono = '' }) {
-  return <span class={`ios-ico${tono ? ` ${tono}` : ''}`} aria-hidden="true"><Icono n={n} /></span>;
+  return <span class={`ios-ico${tono ? ` ${tono}` : ''}`} aria-hidden="true"><Icono n={n} class={`ico-${n}`} /></span>;
 }
 // dentro: lo que va en la fila pero no se ve en ella (la hoja que abre), para que la lista solo tenga filas
 export function FilaIos({ icono, tono = '', titulo, detalle = null, valor = null, alTocar = null, href = null, etiqueta, children, bloque = null, clase = '', dentro = null }) {
