@@ -107,7 +107,7 @@ function HojaAsignacion({ a, opcional = null, alCerrar, alCambiar, verReceta }) 
   const hacer = (fn, texto) => una(async () => { try { await fn(); aviso(texto); alCambiar(); alCerrar(); } catch (e) { aviso(e.message, 'error'); } });
   return (
     <Hoja titulo={a.receta.nombre} alCerrar={alCerrar}>
-      <div class="separa"><FotoReceta receta={a.receta} /><span class="peq secundario" style="flex:1">{NOMBRE_TOMA[a.toma]}. Le salen <strong class="num">{textoMacros(macrosDe(a.receta, factor)) || 'sin macros'}</strong> por ración.</span></div>
+      <div class="separa"><FotoReceta receta={a.receta} toma={a.toma} /><span class="peq secundario" style="flex:1">{NOMBRE_TOMA[a.toma]}. Le salen <strong class="num">{textoMacros(macrosDe(a.receta, factor)) || 'sin macros'}</strong> por ración.</span></div>
       {a.cambio_pedido_en && <div class="nota-coach"><Icono n="intercambiar" /><div><strong>Te pide cambiarla</strong>{a.cambio_nota ? `: «${a.cambio_nota}»` : '.'}</div></div>}
       <div class="campo"><label for="asig-factor">Factor de las cantidades</label>
         <Paso id="asig-factor" valor={factor} paso={0.25} min={0.25} max={5} dec={2} etiqueta="factor" alCambiar={(v) => v && setFactor(v)} />

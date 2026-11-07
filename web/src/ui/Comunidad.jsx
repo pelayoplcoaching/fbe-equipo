@@ -14,9 +14,11 @@
 // v0.73 (migración 045, lo nuevo en Celebracion.jsx): el aniversario en FBE (arriba y en el muro), «<Mes> en el equipo», los hitos del
 // equipo, las reacciones nuevas y las pegatinas, y los momentos de 24 horas en una tira arriba de Equipo.
 import { createContext, Fragment } from 'preact';
-import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando } from './comunes.jsx';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando, Capa, useAtraparFoco } from './comunes.jsx';
 import { Interruptor } from './Ajustes.jsx';
+import { usePestanasDeslizables } from './deslizar.js';
+import { sinMovimiento } from './transiciones.js';
 import { reducirFoto } from './FotoPerfil.jsx';
 import {
   MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_PREGUNTA, MAX_OPCION, RETO_MAX, FILTROS_MURO, MEDALLAS, nombreEquipo, nombreValido, estadoReto, textoReto,
@@ -117,6 +119,7 @@ function DentroDelEquipo({ m, alCambiar }) {
   const [vista, setVista] = useState('muro');
   const [ajustes, setAjustes] = useState(false);
   const con043 = useCarga(() => api.comunidad043().catch(() => null), []);
+  const desliz = usePestanasDeslizables(con043.datos ? VISTAS_043 : VISTAS, vista, setVista);
   // Al compartir un logro, el muro, los retos y la racha se vuelven a leer
   const [cambios, setCambios] = useState(0);
   // v0.72: al apuntarse a un evento (en «Próximos» o en el muro), los dos se vuelven a leer
@@ -169,8 +172,8 @@ function DentroDelEquipo({ m, alCambiar }) {
         <PlegableEquipo id="proximos" titulo="Próximos" icono="calendario" cuenta=".pr-item"><Proximos cambios={eventos} alCambiar={() => setEventos((v) => v + 1)} /></PlegableEquipo>
         <PlegableEquipo id="companeros" titulo="Compañeros de racha" icono="equipo" cuenta=".cp-fila"><CompanerosRacha cambios={cambios} /></PlegableEquipo>
       </div>
-      <Pestanas opciones={con043.datos ? VISTAS_043 : VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eq" clase={con043.datos ? 'pestanas-justas' : ''} />
-      <div class="pestana-panel" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista}>
+      <Pestanas opciones={con043.datos ? VISTAS_043 : VISTAS} valor={vista} alCambiar={desliz.cambiar} etiqueta="Equipo" idBase="eq" clase={con043.datos ? 'pestanas-justas' : ''} />
+      <div class="pestana-panel deslizable" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista} ref={desliz.panel} {...desliz.gesto}>
         {vista === 'muro' && <Muro cambios={cambios} miembro={m} eventos={eventos} alEventos={() => setEventos((v) => v + 1)} />}
         {vista === 'retos' && <Retos miembro={m} cambios={cambios} alCompartirLogro={(r) => setCelebrar({ reto: r, celebracion: false })} />}
         {vista === 'ranking' && <Ranking miembro={m} />}
@@ -1083,6 +1086,7 @@ function FotoPost({ ruta, autor, n = 0, total = 0 }) {
   const { api } = useApp();
   const [url, setUrl] = useState(null);
   const [error, setError] = useState(false);
+  const [grande, setGrande] = useState(false);
   useEffect(() => {
     let vivo = true;
     api.urlFotoComunidad(ruta).then((u) => vivo && setUrl(u)).catch(() => vivo && setError(true));
@@ -1090,7 +1094,75 @@ function FotoPost({ ruta, autor, n = 0, total = 0 }) {
   }, [ruta]);
   if (error) return <p class="mini terciario">La foto no está disponible.</p>;
   if (!url) return <div class="post-foto post-foto-cargando" aria-hidden="true" />;
-  return <img class="post-foto" src={url} alt={total > 1 ? `Foto ${n} de ${total} de ${autor}` : `Foto de ${autor}`} loading="lazy" />;
+  const alt = total > 1 ? `Foto ${n} de ${total} de ${autor}` : `Foto de ${autor}`;
+  // (diseño, tanda 21) la foto se abre en grande desde su sitio (FotoGrande): la miniatura viaja hasta la pantalla
+  return (
+    <>
+      <button type="button" class="post-foto-boton" aria-label={`Ver en grande: ${alt.toLowerCase()}`} onClick={(e) => abrirGrande(e.currentTarget.querySelector('img'), url, alt, setGrande)}>
+        <img class="post-foto" src={url} alt={alt} loading="lazy" />
+      </button>
+      {grande && <FotoGrande src={url} alt={alt} alCerrar={() => cerrarGrande(setGrande)} />}
+    </>
+  );
+}
+
+// (diseño, tanda 21) Una foto del muro a pantalla completa, sobre la noche de la marca. Se abre con una transición de
+// vista en la que la miniatura viaja hasta su sitio grande (vt-foto) y vuelve al cerrarse; sin soporte o con «reducir
+// movimiento», aparece y se va sin más. Escape, el velo y el botón cierran; el foco vuelve a la miniatura.
+let miniaturaGrande = null;
+function conVista(cambio) {
+  const r = typeof document !== 'undefined' ? document.documentElement : null;
+  if (!r || typeof document.startViewTransition !== 'function' || sinMovimiento() || r.dataset.vt) { cambio(); return; }
+  r.dataset.vt = 'foto';
+  let vt;
+  try { vt = document.startViewTransition(() => { cambio(); return new Promise((ok) => setTimeout(ok, 0)); }); } catch { delete r.dataset.vt; cambio(); return; }
+  const fin = () => { if (r.dataset.vt === 'foto') delete r.dataset.vt; if (miniaturaGrande) { miniaturaGrande.style.viewTransitionName = ''; } };
+  vt.finished.then(fin, fin);
+}
+// (el nombre compartido solo puede estar en un elemento a la vez: en la miniatura antes de abrir y después de cerrar,
+// en la grande mientras está abierta)
+function abrirGrande(img, url, alt, setGrande) {
+  miniaturaGrande = img || null;
+  if (img) img.style.viewTransitionName = 'vt-foto';
+  conVista(() => { setGrande(true); if (img) img.style.viewTransitionName = ''; });
+}
+function cerrarGrande(setGrande) {
+  const img = miniaturaGrande;
+  conVista(() => { setGrande(false); if (img?.isConnected) img.style.viewTransitionName = 'vt-foto'; });
+}
+function FotoGrande({ src, alt, alCerrar }) {
+  return <Capa><FotoGrandeDentro src={src} alt={alt} alCerrar={alCerrar} /></Capa>;
+}
+function FotoGrandeDentro({ src, alt, alCerrar }) {
+  const ref = useRef(null);
+  useAtraparFoco(ref);
+  useLayoutEffect(() => {
+    const previo = document.activeElement;
+    ref.current?.querySelector('.foto-grande-cerrar')?.focus({ preventScroll: true });
+    const cuerpo = document.body;
+    cuerpo.dataset.hojas = String(Number(cuerpo.dataset.hojas || 0) + 1);
+    cuerpo.style.overflow = 'hidden';
+    return () => {
+      const quedan = Math.max(0, Number(cuerpo.dataset.hojas || 1) - 1);
+      if (quedan) cuerpo.dataset.hojas = String(quedan); else { delete cuerpo.dataset.hojas; cuerpo.style.overflow = ''; }
+      previo?.focus?.({ preventScroll: true });
+    };
+  }, []);
+  useEffect(() => {
+    const tecla = (e) => {
+      const modales = document.querySelectorAll('[aria-modal="true"]');
+      if (modales.length && modales[modales.length - 1] !== ref.current) return;
+      if (e.key === 'Escape') { e.preventDefault(); alCerrar(); }
+    };
+    document.addEventListener('keydown', tecla);
+    return () => document.removeEventListener('keydown', tecla);
+  });
+  return (
+    <div class="foto-grande" ref={ref} role="dialog" aria-modal="true" aria-label={alt} onClick={(e) => { if (e.target === e.currentTarget) alCerrar(); }}>
+      <button type="button" class="btn btn-icono foto-grande-cerrar" aria-label="Cerrar" onClick={alCerrar}><Icono n="cerrar" /></button>
+      <img src={src} alt={alt} style={{ viewTransitionName: 'vt-foto' }} />
+    </div>
+  );
 }
 
 function HojaQuien({ post, alCerrar }) {

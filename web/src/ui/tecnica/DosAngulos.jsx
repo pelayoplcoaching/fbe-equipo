@@ -128,7 +128,7 @@ export function DosAngulos({ a, b, revision = null, esCoach = false, alCerrar })
             {[[0.25, '0,25×'], [0.5, '0,5×'], [1, '1×']].map(([r, txt]) => <button key={r} type="button" aria-pressed={vel === r ? 'true' : 'false'} onClick={() => fijarVel(r)}>{txt}</button>)}
           </div>
         </div>
-        <input type="range" class="dos-angulos-tiempo" min="0" max={dur || 0} step="0.01" value={t} aria-label="Momento de los dos vídeos" aria-valuetext={textoMomento(t, true)} onInput={(e) => ir(Number(e.currentTarget.value))} />
+        <input type="range" class="dos-angulos-tiempo" min="0" max={dur || 0} step="0.01" value={t} style={{ '--v': `${dur > 0 ? Math.min(100, (t / dur) * 100) : 0}%` }} aria-label="Momento de los dos vídeos" aria-valuetext={textoMomento(t, true)} onInput={(e) => ir(Number(e.currentTarget.value))} />
         <div class="campo">
           <label for={`desfase-${a.id}`} class="etq">Desfase del ángulo 2: <b class="num">{textoDesfase(desfase)}</b></label>
           <div class="fila-envolver dos-angulos-desfase">

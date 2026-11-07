@@ -4,8 +4,8 @@
 // «reducir movimiento». Se comparte o se guarda como imagen con la hoja de siempre. Nada de peso, salud ni nutrición.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono } from '../comunes.jsx';
-import { HojaCompartir, FUENTE } from '../Compartir.jsx';
-import { LOBO } from '../marca-lobo.js';
+import { HojaCompartir, FUENTE, dibujarLobo } from '../Compartir.jsx';
+import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { datosCarnet, datosImagenCarnet, inclinacion, inclinacionMovil } from '../../logica/carnet.js';
 import { sinMovimiento } from '../transiciones.js';
 import { hoyISO } from '../../logica/fechas.js';
@@ -71,14 +71,17 @@ export function Carnet({ bloque }) {
       <h2 id="carnet-t">Tu carné</h2>
       <div class="carnet-escena">
         <figure class="carnet" ref={ref} aria-labelledby="carnet-nombre" aria-describedby="carnet-datos">
+          {/* (diseño, tanda 21) la marca nueva: la noche de la portada con sus resplandores, el lobo en blanco y vectorial
+              y, en grande y muy tenue, el lobo al fondo (como en las tarjetas para compartir) */}
           <div class="carnet-fondo" aria-hidden="true">
             <svg class="carnet-lineas" viewBox="0 0 340 214" preserveAspectRatio="xMidYMid slice" focusable="false">
-              {[0, 1, 2, 3, 4, 5].map((i) => <circle key={i} cx="300" cy="-10" r={50 + i * 34} />)}
+              {[0, 1, 2, 3].map((i) => <circle key={i} cx="300" cy="-10" r={70 + i * 40} />)}
             </svg>
+            <svg class="carnet-lobo-fondo" viewBox={LOBO_CAJA} focusable="false"><path d={LOBO_D} fill-rule="evenodd" /></svg>
             <div class="carnet-brillo" />
           </div>
           <div class="carnet-cab">
-            <img src={LOBO} alt="" width="36" height="36" aria-hidden="true" />
+            <svg class="carnet-lobo" viewBox={LOBO_CAJA} width="36" height="36" aria-hidden="true" focusable="false"><path d={LOBO_D} fill-rule="evenodd" /></svg>
             <span class="carnet-marca">FBE Coaching</span>
             <span class="carnet-numero num">{d.numero}</span>
           </div>
@@ -112,24 +115,29 @@ export async function dibujarCarnet(d) {
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const x = cv.getContext('2d');
-  const acento = getComputedStyle(document.documentElement).getPropertyValue('--morado').trim() || '#5438D8';
   const letra = (peso, tam, ancho = 'normal') => { x.font = `${peso} ${tam}px ${FUENTE}`; try { x.fontStretch = ancho; } catch { /* */ } };
   x.beginPath(); x.roundRect ? x.roundRect(0, 0, W, H, R) : x.rect(0, 0, W, H); x.clip();
-  const g = x.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, '#1A1633'); g.addColorStop(1, '#2A2154');
+  // (diseño, tanda 21) la noche de la portada con sus dos resplandores (como las tarjetas para compartir)
+  let g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#221957'); g.addColorStop(1, '#150F36');
   x.fillStyle = g; x.fillRect(0, 0, W, H);
-  x.globalAlpha = 0.35; x.fillStyle = acento; x.beginPath(); x.arc(W - 80, -40, 520, 0, Math.PI * 2); x.fill(); x.globalAlpha = 1;
-  x.strokeStyle = 'rgba(231, 227, 255, .14)'; x.lineWidth = 3;
-  for (let i = 0; i < 6; i++) { x.beginPath(); x.arc(W - 140, -30, 180 + i * 120, 0, Math.PI * 2); x.stroke(); }
+  for (const [cx, cy, r, a] of [[W * 0.9, H * 0.05, 620, 0.5], [W * 0.05, H * 1.05, 560, 0.4]]) {
+    g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, `rgba(104, 78, 236, ${a})`); g.addColorStop(1, 'rgba(104, 78, 236, 0)');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+  }
+  x.strokeStyle = 'rgba(231, 227, 255, .12)'; x.lineWidth = 3;
+  for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(W - 140, -30, 250 + i * 140, 0, Math.PI * 2); x.stroke(); }
+  // el lobo en grande y muy tenue, abajo a la derecha
+  dibujarLobo(x, W - 430, H - 470, 560, '#FFFFFF', 0.06);
   // El brillo holográfico, una banda en diagonal
   const h = x.createLinearGradient(W * 0.2, 0, W * 0.8, H);
   for (const [o, c] of [[0, 'rgba(255,255,255,0)'], [0.42, 'rgba(120,220,255,.16)'], [0.5, 'rgba(255,170,240,.22)'], [0.58, 'rgba(255,230,140,.16)'], [1, 'rgba(255,255,255,0)']]) h.addColorStop(o, c);
   x.fillStyle = h; x.fillRect(0, 0, W, H);
-  const lobo = await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = LOBO; });
-  if (lobo) x.drawImage(lobo, 72, 64, 92, 92);
-  x.fillStyle = '#F3F1FB'; letra(800, 46, 'expanded'); x.fillText('FBE Coaching', 188, 126);
-  x.fillStyle = '#D7D2EE'; letra(650, 30, 'condensed'); x.textAlign = 'right'; x.fillText(d.numero, W - 72, 122); x.textAlign = 'left';
-  letra(700, 26); x.fillText('ATLETA', 72, 392);
+  const wLobo = dibujarLobo(x, 72, 60, 92);
+  x.fillStyle = '#F3F1FB'; letra(800, 46, 'expanded'); x.fillText('FBE Coaching', 72 + wLobo + 24, 126);
+  x.fillStyle = '#E9D49A'; letra(650, 30, 'condensed'); x.textAlign = 'right'; x.fillText(d.numero, W - 72, 122); x.textAlign = 'left';
+  x.fillStyle = '#D7D2EE'; letra(700, 26); x.fillText('ATLETA', 72, 392);
   x.fillStyle = '#FFFFFF'; letra(820, 84, 'expanded');
   let nombre = d.nombre;
   while (x.measureText(nombre).width > W - 144 && nombre.length > 3) nombre = `${nombre.slice(0, -2)}…`;

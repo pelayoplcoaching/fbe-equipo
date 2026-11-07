@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.97': {
+    atleta: [
+      'Puedes deslizar con el dedo entre las pestañas de Progreso, Equipo y Comidas, y las cifras ruedan al sumar y restar.',
+      'Las fotos del equipo se abren en grande desde su sitio y las recetas sin foto llevan su dibujo.',
+      'El tema se funde al cambiarlo y el carné estrena la marca nueva.',
+    ],
+    coach: [
+      'El reproductor de vídeo es el de la casa.',
+    ],
+  },
   '0.96': {
     atleta: [
       'Pasar de un sitio a otro es más suave: el dibujo de la sesión viaja de Hoy a su portada y el lobo se dibuja al arrancar.',

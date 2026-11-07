@@ -1049,10 +1049,13 @@ try {
   `la cabecera: su nombre, su bloque y su semana, y tres cifras (${cifrasPerfil.map((x) => x.join(' ')).join(', ')})`);
   check(await p.locator('.grupo-ios .ios-ico').count() >= 10 && await p.locator('.grupo-ios .fila-ios-chevron').count() >= 3, 'cada fila con su icono; las que llevan a otra parte, con su chevrón');
   await revisar('perfil');
+  // (diseño, tanda 21: el tema cambia dentro de una transición de vista, un fotograma después del toque: se espera)
   await p.getByRole('group', { name: 'Tema' }).getByRole('button', { name: 'Oscuro' }).click();
-  check(await p.evaluate(() => document.documentElement.dataset.theme) === 'dark', 'elige el tema oscuro en este móvil');
+  check(await p.waitForFunction(() => document.documentElement.dataset.theme === 'dark', null, { timeout: 3000 }).then(() => true, () => false), 'elige el tema oscuro en este móvil');
+  await p.waitForFunction(() => !document.documentElement.dataset.vt, null, { timeout: 3000 }).catch(() => {});
   await p.getByRole('group', { name: 'Tema' }).getByRole('button', { name: 'Sistema' }).click();
-  check(await p.evaluate(() => !document.documentElement.hasAttribute('data-theme')), 'y vuelve al del sistema');
+  check(await p.waitForFunction(() => !document.documentElement.hasAttribute('data-theme'), null, { timeout: 3000 }).then(() => true, () => false), 'y vuelve al del sistema');
+  await p.waitForFunction(() => !document.documentElement.dataset.vt, null, { timeout: 3000 }).catch(() => {});
   // v0.50: el sonido, la voz y la vibración, en su hoja («Sonido y vibración»)
   await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
   const hojaSonido = p.getByRole('dialog', { name: 'Sonido y vibración' });
@@ -4192,6 +4195,9 @@ try {
   const hojaDest = p.getByRole('dialog', { name: 'Mensajes destacados' });
   await hojaDest.locator('.chat-destacado').first().waitFor();
   check(await hojaDest.locator('.chat-destacado').count() === 1 && (await hojaDest.textContent()).includes('Hoy toca pierna'), '«Mensajes destacados», con el suyo (sin las marcas de formato)');
+  // (la píldora del día del chat aparece y se va fundiéndose: si axe la mira a medio fundido, su contraste no llega; se espera
+  // a que esté entera o ida)
+  await p.waitForFunction(() => { const x = document.querySelector('.chat-dia-flotante'); return !x || ['0', '1'].includes(getComputedStyle(x).opacity); }, null, { timeout: 5000 }).catch(() => {});
   await revisar('chat-destacados');
   await p.evaluate(() => window.scrollTo(0, 0));
   await hojaDest.locator('.chat-destacado').first().click();
@@ -4470,7 +4476,7 @@ try {
   // (el texto se lee en el mismo momento en que se encuentra el aviso: el aviso dura poco y, si se busca y luego se lee, a
   // veces ya se ha ido y la lectura espera 30 s y corta el resto del flujo)
   const textoCopia = await p.waitForFunction(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent)
-    .find((t) => /mensajes copiados|No se ha podido copiar/.test(t)) || null, null, { timeout: 10000 }).then((h) => h.jsonValue()).catch(() => '');
+    .find((t) => /mensajes copiados|No se ha podido copiar/.test(t)) || null, null, { timeout: 30000 }).then((h) => h.jsonValue()).catch(() => '');
   check(textoCopia.includes('2 mensajes copiados'), `copia los dos (${textoCopia.trim() || 'sin aviso'})`);
   const copiado = await p.evaluate(() => navigator.clipboard.readText());
   check(/^\[\d\d\/\d\d\/\d\d, \d{1,2}:\d\d\] Tú: Mañana a las 9/.test(copiado) && copiado.split('\n').length === 2, 'Copiar, como WhatsApp: «[12/10/26, 18:42] Tú: …»');

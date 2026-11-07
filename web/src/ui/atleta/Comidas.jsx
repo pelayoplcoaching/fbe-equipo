@@ -1,6 +1,7 @@
 // Comidas del atleta (v0.26): su semana (el menú que organiza él) y sus recetas (las que le pone su coach para
 // cada comida del día). En Hoy, lo de hoy en una tarjeta.
 import { useState } from 'preact/hooks';
+import { usePestanasDeslizables } from '../deslizar.js';
 import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Pestanas, Vacio, Siluetas, ErrorCaja, Pista, usePreferencia, useApuntar } from '../comunes.jsx';
 import { MenuSemana, VistaRecetario, HojaReceta, HojaElegirDia, HojaTusComidas, FotoReceta } from '../ComidasComun.jsx';
 import { NOMBRE_TOMA, ordenarTomas, totalesDia, textoMacros } from '../../logica/comidas.js';
@@ -8,10 +9,12 @@ import { planVigente, objetivoDelDia, fmtKcal } from '../../logica/nutricion.js'
 import { hoyISO } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
 import { BandaDemo } from '../App.jsx';
+const VISTAS_COMIDAS = [['menu', 'Tu semana'], ['recetas', 'Tus recetas']];
 
 export function Comidas({ salud, recargarConsentimientos, irA }) {
   const { api, atleta } = useApp();
   const [vista, setVista] = usePreferencia('fbe-comidas-vista', 'menu');
+  const desliz = usePestanasDeslizables(VISTAS_COMIDAS, vista, setVista);
   const recetario = useCarga(() => api.recetario(atleta.id), [atleta.id], { recuerdo: `recetario:${api.uid()}:${atleta.id}` });
   const planes = useCarga(() => api.planesNutricion(atleta.id).catch(() => []), [atleta.id], { recuerdo: `planes-comidas:${atleta.id}` });
   const [receta, setReceta] = useState(null); // asignación abierta
@@ -28,8 +31,8 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
           : !recetario.error && <span class="btn btn-peq plano" style="visibility:hidden" aria-hidden="true"><Icono n="ajustes" /> 4 al día</span>}
       </CabeceraGrande>
       <BandaDemo />
-      <Pestanas opciones={[['menu', 'Tu semana'], ['recetas', 'Tus recetas']]} valor={vista} alCambiar={setVista} etiqueta="Comidas" idBase="comidas" />
-      <div class="pestana-panel" role="tabpanel" id="comidas-panel" aria-labelledby={`comidas-${vista}`} key={vista}>
+      <Pestanas opciones={VISTAS_COMIDAS} valor={vista} alCambiar={desliz.cambiar} etiqueta="Comidas" idBase="comidas" />
+      <div class="pestana-panel deslizable" role="tabpanel" id="comidas-panel" aria-labelledby={`comidas-${vista}`} key={vista} ref={desliz.panel} {...desliz.gesto}>
         <ErrorCaja error={recetario.error} reintentar={() => recetario.recargar(true)} />
         {!r ? (!recetario.error && <Siluetas forma="tarjetas" n={3} texto="Cargando tus comidas" />) : vista === 'menu' ? (
           !salud ? <SinConsentimiento darConsentimiento={darConsentimiento} /> : (
