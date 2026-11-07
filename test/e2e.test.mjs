@@ -1049,10 +1049,13 @@ try {
   `la cabecera: su nombre, su bloque y su semana, y tres cifras (${cifrasPerfil.map((x) => x.join(' ')).join(', ')})`);
   check(await p.locator('.grupo-ios .ios-ico').count() >= 10 && await p.locator('.grupo-ios .fila-ios-chevron').count() >= 3, 'cada fila con su icono; las que llevan a otra parte, con su chevrón');
   await revisar('perfil');
+  // (diseño, tanda 21: el tema cambia dentro de una transición de vista, un fotograma después del toque: se espera)
   await p.getByRole('group', { name: 'Tema' }).getByRole('button', { name: 'Oscuro' }).click();
-  check(await p.evaluate(() => document.documentElement.dataset.theme) === 'dark', 'elige el tema oscuro en este móvil');
+  check(await p.waitForFunction(() => document.documentElement.dataset.theme === 'dark', null, { timeout: 3000 }).then(() => true, () => false), 'elige el tema oscuro en este móvil');
+  await p.waitForFunction(() => !document.documentElement.dataset.vt, null, { timeout: 3000 }).catch(() => {});
   await p.getByRole('group', { name: 'Tema' }).getByRole('button', { name: 'Sistema' }).click();
-  check(await p.evaluate(() => !document.documentElement.hasAttribute('data-theme')), 'y vuelve al del sistema');
+  check(await p.waitForFunction(() => !document.documentElement.hasAttribute('data-theme'), null, { timeout: 3000 }).then(() => true, () => false), 'y vuelve al del sistema');
+  await p.waitForFunction(() => !document.documentElement.dataset.vt, null, { timeout: 3000 }).catch(() => {});
   // v0.50: el sonido, la voz y la vibración, en su hoja («Sonido y vibración»)
   await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
   const hojaSonido = p.getByRole('dialog', { name: 'Sonido y vibración' });

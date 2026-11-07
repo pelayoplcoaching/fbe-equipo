@@ -1389,7 +1389,7 @@ p, li, dd, dt, figcaption, label, .peq, .sub, .ayuda, .cita, .nota-coach, .pista
 h4, h5, .hero-dia .titular h2, .titular h2, dialog h2, .hoja h2, .vacio h3, .vacio strong { text-wrap: balance; }
 .cita, .cita-coach, blockquote { hanging-punctuation: first last; }
 :root { quotes: "«" "»" "“" "”"; }
-table td, table th, dl dd, time, .fecha, .hora, .resumen-num, .cifra { font-variant-numeric: tabular-nums; }
+table td, table th { font-variant-numeric: tabular-nums; }   /* (solo en tablas: en listas y cifras ya decide cada una, y las cifras tabulares son más anchas) */
 body { font-kerning: normal; font-optical-sizing: auto; }
 
 /* ── 63 · Deslizar entre pestañas con el dedo (tanda 21) ──────────────────────────────────────────────────────────────
@@ -1399,6 +1399,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    tiras de dentro que se desplazan de lado implementan su propio gesto y no se ven afectadas. */
 .deslizable { touch-action: pan-y; transition: transform var(--mov-rapido) var(--curva-casa); }
 .deslizable.arrastrando { transition: none; cursor: grabbing; }
+.recorta-x { overflow-x: clip; }   /* (lo pone ui/deslizar.js en quien contiene el panel mientras se mueve) */
 
 /* ── 64 · Cambiar de tema sin parpadeo (tanda 21) ─────────────────────────────────────────────────────────────────────
    Al elegir claro u oscuro en Ajustes, todo el documento se funde del uno al otro (transición de vista «tema»,

@@ -10,7 +10,7 @@ export const SIN_DESLIZAR = '.grafica-caja, .selector-chips, .semanas-tabs, .fil
 
 export function useDeslizar(alPasar, { ignorar = SIN_DESLIZAR } = {}) {
   const g = useRef(null);
-  const soltar = (el) => { el.style.transform = ''; el.classList.remove('arrastrando'); };
+  const soltar = (el) => { el.style.transform = ''; el.classList.remove('arrastrando'); setTimeout(() => el.parentElement?.classList.remove('recorta-x'), 200); };
   return {
     onPointerDown: (e) => { if (e.button > 0 || (ignorar && e.target.closest?.(ignorar))) return; g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, activo: false }; },
     onPointerMove: (e) => {
@@ -21,6 +21,7 @@ export function useDeslizar(alPasar, { ignorar = SIN_DESLIZAR } = {}) {
         s.activo = true;
         try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* */ }
         e.currentTarget.classList.add('arrastrando');
+        e.currentTarget.parentElement?.classList.add('recorta-x');
       }
       if (s.activo && !sinMovimiento()) e.currentTarget.style.transform = `translateX(${Math.round(dx * 0.35)}px)`;
     },
@@ -51,7 +52,14 @@ export function usePestanasDeslizables(opciones, valor, alCambiar) {
     dir.current = 0;
     const el = panel.current;
     if (!d || !el || sinMovimiento() || typeof el.animate !== 'function') return;
-    try { el.animate([{ transform: `translateX(${d * 32}px)` }, { transform: 'none' }], { duration: 260, easing: 'cubic-bezier(.2, .8, .2, 1)' }); } catch { /* */ }
+    // (mientras entra, quien lo contiene recorta de lado: lo que asoma por el borde no ensancha la página)
+    const padre = el.parentElement;
+    padre?.classList.add('recorta-x');
+    try {
+      const a = el.animate([{ transform: `translateX(${d * 32}px)` }, { transform: 'none' }], { duration: 260, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+      const fin = () => padre?.classList.remove('recorta-x');
+      a.finished.then(fin, fin);
+    } catch { padre?.classList.remove('recorta-x'); }
   }, [valor]);
   return { gesto, cambiar, panel };
 }
