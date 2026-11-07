@@ -18,6 +18,8 @@ export const estiloPortada = () => `<style>
 #portada{position:fixed;inset:0;z-index:2147483000;overflow:hidden;display:grid;grid-template-rows:1fr auto;justify-items:center;padding:calc(env(safe-area-inset-top,0px) + 24px) 24px calc(env(safe-area-inset-bottom,0px) + 30px);background:radial-gradient(64% 44% at 50% 40%,rgba(96,68,228,.5),transparent 72%) ${FONDO_PORTADA};color:#fff;font-family:${LETRA};text-align:center;transition:opacity .34s ease}
 #portada .portada-centro{align-self:center;display:grid;justify-items:center;margin-top:-4vh;transition:transform .38s cubic-bezier(.3,0,.2,1)}
 #portada .portada-lobo{display:block;width:min(256px,68vw,34vh);height:auto;fill:#fff;filter:drop-shadow(0 18px 40px rgba(10,6,40,.55));animation:portada-lobo .5s cubic-bezier(.2,.8,.2,1) both}
+#portada .portada-lobo-trazo{stroke:#fff;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:portada-traza .8s cubic-bezier(.3,.1,.2,1) .05s both}
+#portada .portada-lobo-relleno{animation:portada-rellena .5s ease-out .45s both}
 #portada .portada-nombre{margin-top:26px;font-size:25px;line-height:1.1;font-weight:820;font-stretch:125%;letter-spacing:.01em}
 #portada .portada-filo{width:34px;height:2px;border-radius:2px;background:${ORO};margin:18px 0 16px}
 #portada .portada-lema{font-size:11.5px;line-height:1.3;font-weight:650;letter-spacing:.24em;text-transform:uppercase;color:${ORO};white-space:nowrap}
@@ -33,17 +35,19 @@ export const estiloPortada = () => `<style>
 #portada.fuera{opacity:0;pointer-events:none}
 #portada.fuera .portada-centro{transform:scale(1.04)}
 @keyframes portada-lobo{from{opacity:0;transform:scale(.94)}}
+@keyframes portada-traza{to{stroke-dashoffset:0}}
+@keyframes portada-rellena{from{opacity:0}}
 @keyframes portada-texto{from{opacity:0;transform:translateY(8px)}}
 @keyframes portada-carga{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
 @keyframes portada-lento{to{visibility:visible}}
 @media (max-width:380px){#portada .portada-lema{letter-spacing:.2em}}@media (max-width:340px){#portada .portada-lema{letter-spacing:.13em}}
 @media (max-height:520px){#portada .portada-centro{margin-top:0}#portada .portada-nombre{margin-top:14px;font-size:21px}#portada .portada-filo{margin:10px 0 9px}#portada .portada-carga{margin-bottom:10px}}
-@media (prefers-reduced-motion:reduce){#portada,#portada .portada-centro{transition:none}#portada .portada-lobo,#portada .portada-nombre,#portada .portada-filo,#portada .portada-lema,#portada .portada-firma,#portada .portada-firma-2{animation:none}#portada .portada-carga span{animation:none;width:100%;opacity:.55}}
+@media (prefers-reduced-motion:reduce){#portada,#portada .portada-centro{transition:none}#portada .portada-lobo,#portada .portada-lobo-relleno,#portada .portada-nombre,#portada .portada-filo,#portada .portada-lema,#portada .portada-firma,#portada .portada-firma-2{animation:none}#portada .portada-lobo-trazo{display:none}#portada .portada-carga span{animation:none;width:100%;opacity:.55}}
 </style>`;
 
 export const marcadoPortada = `<div id="portada" role="status" aria-label="Abriendo FBE Equipo">
 <div class="portada-centro" aria-hidden="true">
-<svg class="portada-lobo" viewBox="${LOBO_CAJA}" focusable="false"><path fill-rule="evenodd" d="${LOBO_D}"/></svg>
+<svg class="portada-lobo" viewBox="${LOBO_CAJA}" focusable="false"><path class="portada-lobo-trazo" pathLength="1" fill="none" d="${LOBO_D}"/><path class="portada-lobo-relleno" fill-rule="evenodd" d="${LOBO_D}"/></svg>
 <div class="portada-nombre">FBE Equipo</div>
 <div class="portada-filo"></div>
 <div class="portada-lema">Confianza &middot; Esfuerzo &middot; Compromiso</div>

@@ -190,11 +190,14 @@ export function AtletaApp() {
   // A quien solo lleva la nutrición no se le abren sesiones (una respuesta antigua en una sesión se lee en Mensajes)
   // v0.49: abrir y cerrar la sesión, y cambiar de pestaña, con una transición corta (donde se puede)
   // v0.52: desde la tarjeta de Hoy, su título pasa al de la portada (o al de la sesión, si ya está empezada)
-  const abrirSesion = (id, titulo = null) => {
+  // (diseño, tanda 19) desde la tarjeta de Hoy viajan el título y el dibujo de la sesión (arte: el .hero-arte de la tarjeta)
+  const abrirSesion = (id, titulo = null, arte = null) => {
     if (!conEntrenamiento(atleta)) { setTab('mensajes'); return; }
     medirPantalla('sesion');
-    conTransicion(() => { setSesionId(id); window.scrollTo(0, 0); }, 'abrir',
-      titulo ? [{ nombre: 'vt-titulo-sesion', desde: titulo, hasta: '.portada-sesion h1, .sesion-vista > .cabecera h1' }] : null);
+    const compartidos = [];
+    if (titulo) compartidos.push({ nombre: 'vt-titulo-sesion', desde: titulo, hasta: '.portada-sesion h1, .sesion-vista > .cabecera h1' });
+    if (arte) compartidos.push({ nombre: 'vt-arte-sesion', desde: arte, hasta: '.portada-sesion .portada-arte' });
+    conTransicion(() => { setSesionId(id); window.scrollTo(0, 0); }, 'abrir', compartidos.length ? compartidos : null);
   };
   const cerrarSesion = () => { conTransicion(() => setSesionId(null), 'cerrar'); programa.recargar(true); noLeidos.recargar(true); };
   const irAPestana = (id) => {

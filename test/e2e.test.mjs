@@ -4467,9 +4467,11 @@ try {
   // a ratos; y si falla, que se diga, no que se espere al aviso 30 s)
   await p.bringToFront();
   await barraSel.getByRole('button', { name: 'Copiar' }).click();
-  const avisoCopia = p.locator('.toast', { hasText: /mensajes copiados|No se ha podido copiar/ }).first();
-  await avisoCopia.waitFor();
-  check((await avisoCopia.textContent()).includes('2 mensajes copiados'), `copia los dos (${(await avisoCopia.textContent()).trim()})`);
+  // (el texto se lee en el mismo momento en que se encuentra el aviso: el aviso dura poco y, si se busca y luego se lee, a
+  // veces ya se ha ido y la lectura espera 30 s y corta el resto del flujo)
+  const textoCopia = await p.waitForFunction(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent)
+    .find((t) => /mensajes copiados|No se ha podido copiar/.test(t)) || null, null, { timeout: 10000 }).then((h) => h.jsonValue()).catch(() => '');
+  check(textoCopia.includes('2 mensajes copiados'), `copia los dos (${textoCopia.trim() || 'sin aviso'})`);
   const copiado = await p.evaluate(() => navigator.clipboard.readText());
   check(/^\[\d\d\/\d\d\/\d\d, \d{1,2}:\d\d\] Tú: Mañana a las 9/.test(copiado) && copiado.split('\n').length === 2, 'Copiar, como WhatsApp: «[12/10/26, 18:42] Tú: …»');
   await menuDe(p.locator('.burbuja.mia', { hasText: 'Mañana a las 9' }).last()).then((m) => m.getByRole('button', { name: 'Seleccionar' }).click());
@@ -4749,6 +4751,7 @@ try {
   await avisoPriv.waitFor({ state: 'detached' });
   const vistaGuardada = async () => { for (let i = 0; i < 30; i++) { const ok = await p.evaluate(([u, v]) => (JSON.parse(localStorage.getItem('fbe-demo-v2')).privacidad_vista || []).some((x) => x.usuario_id === u && x.version === v), [uidAna, VERSION_LEGAL]); if (ok) return true; await p.waitForTimeout(100); } return false; };
   check(await vistaGuardada(), 'cerrarla con Escape cuenta como vista (se guarda en la base, para todos sus móviles)');
+  await p.waitForTimeout(600);   // (atras.js retira la entrada de la hoja del historial 250 ms después de cerrarla)
   await p.reload();
   await p.locator('.hero-dia').waitFor();
   await p.waitForTimeout(1200);

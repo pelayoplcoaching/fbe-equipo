@@ -63,7 +63,7 @@ export function SeccionNotificaciones({ coach = false, fila = false }) {
         <ul class="lista">
           <li class="panel-pad separa">
             <div><div>{titulo}</div><div class="peq terciario">{resumenTipos(local || prefs.datos, coach, atleta, equipo)}</div></div>
-            <button class="btn btn-peq" onClick={() => setAbierta(true)}><Icono n="campana" /> {estado === 'ok' && aqui === false ? 'Activar' : 'Ajustes'}</button>
+            <button class="btn btn-peq" onClick={() => setAbierta(true)}><Icono n="campana" class="ico-campana" /> {estado === 'ok' && aqui === false ? 'Activar' : 'Ajustes'}</button>
           </li>
         </ul>
       </div>

@@ -258,9 +258,11 @@ function TarjetaSilueta({ i = 0, barra = false, filas = 2 }) {
 export function Siluetas({ forma = 'lista', n = 5, texto = 'Cargando' }) {
   let cuerpo;
   if (forma === 'hoy') {
+    // (diseño, tanda 19) con la forma de la pantalla de verdad: la tarjeta grande de Hoy y, debajo, sus secciones plegadas
     cuerpo = (
       <>
         <div class="sil-col"><Linea w="45%" h={12} /><Linea w="38%" h={34} r="8px" /></div>
+        <div class="sil sil-hero"><span class="sil sil-hero-linea" style={{ width: '34%', height: '12px' }} /><span class="sil sil-hero-linea" style={{ width: '62%', height: '28px' }} /><span class="sil sil-hero-linea" style={{ width: '48%', height: '12px' }} /><span class="sil sil-hero-boton" /></div>
         <div class="panel">{Array.from({ length: 5 }, (_, i) => <FilaSilueta key={i} i={i} cola={false} />)}</div>
         <Linea w="100%" h={54} r="14px" />
         <TarjetaSilueta i={1} />
@@ -1352,7 +1354,7 @@ export function GrupoIos({ titulo, pie = null, children, clase = '', id }) {
 // tono: '' (el acento), 'ok', 'aviso' o 'alerta'. Con alTocar o href, la fila entera es el botón (o el enlace) y
 // lleva el chevrón; si no, children va a la derecha. bloque: el control debajo, a todo el ancho (unos segmentos).
 export function IcoIos({ n, tono = '' }) {
-  return <span class={`ios-ico${tono ? ` ${tono}` : ''}`} aria-hidden="true"><Icono n={n} /></span>;
+  return <span class={`ios-ico${tono ? ` ${tono}` : ''}`} aria-hidden="true"><Icono n={n} class={`ico-${n}`} /></span>;
 }
 // dentro: lo que va en la fila pero no se ve en ella (la hoja que abre), para que la lista solo tenga filas
 export function FilaIos({ icono, tono = '', titulo, detalle = null, valor = null, alTocar = null, href = null, etiqueta, children, bloque = null, clase = '', dentro = null }) {

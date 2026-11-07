@@ -8,6 +8,13 @@ import { leerAjustes } from './ajustes.js';
 // toque (v0.55): el más suave, al deslizar una burbuja hasta responder y al mantener pulsado un mensaje
 // error (pulido 6): dos golpes secos, cuando algo no se ha podido hacer
 export const PATRONES = { toque: 8, serie: 14, record: [18, 50, 18, 50, 70], checkin: [16, 70, 32], anillo: [22, 60, 22, 60, 48], error: [28, 60, 28] };
+// (diseño, tanda 20) El vocabulario de cuatro palabras, por encima de los patrones: cada cosa que responde al dedo usa
+// una y solo una, para que la mano aprenda qué significa cada toque.
+//   elegir   un toque mínimo (cambiar de pestaña o de opción, desplegar)
+//   hecho    un poco más, al marcar algo como hecho
+//   aviso    dos golpes secos, cuando algo no se ha podido hacer
+//   celebrar la secuencia larga, al batir un récord o cerrar la semana
+Object.assign(PATRONES, { elegir: PATRONES.toque, hecho: PATRONES.serie, aviso: PATRONES.error, celebrar: PATRONES.record });
 export const puedeVibrar = () => typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
 
 // (pulido 6) En iPhone, Safari no deja vibrar a las webs (no hay navigator.vibrate). Desde iOS 17.4 hay un resquicio

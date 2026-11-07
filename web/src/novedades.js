@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.96': {
+    atleta: [
+      'Pasar de un sitio a otro es más suave: el dibujo de la sesión viaja de Hoy a su portada y el lobo se dibuja al arrancar.',
+      'Las filas se abren sin saltos, las tiras se funden por el borde por el que sigue habiendo cosas y la semana completa se celebra una vez.',
+      'Y responde a las manos: un toque al cambiar de pestaña (en Android), botones que enseñan cuándo han terminado y campos que avisan.',
+    ],
+    coach: [
+      'Pasar de un sitio a otro es más suave, los botones enseñan cuándo han terminado y los campos avisan si algo no vale.',
+    ],
+  },
   '0.95': {
     atleta: [
       'Las hojas vuelven a cerrarse al momento.',
