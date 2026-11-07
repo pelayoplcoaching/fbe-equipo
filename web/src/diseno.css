@@ -1640,7 +1640,8 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 .ejercicio:not(.plegado) > .ejercicio-cab { transition: none; }
 /* Pegada, la cabecera se ve en lo justo (el pictograma, el nombre y la cuenta de series) para no tapar las series que
    se están apuntando. Sin cambiar de alto (eso movería la página y la volvería a despegar): se recorta por abajo con
-   clip-path, que también deja pasar los toques a lo que queda debajo, y lo de debajo del nombre se oculta. Lo decide
+   clip-path, que también deja pasar los toques a lo que queda debajo, y lo de debajo del nombre se vuelve transparente
+   (sigue ahí para quien lo lee y para las pruebas; el cambio es instantáneo, nunca a medio fundir). Lo decide
    el desplazamiento del propio ejercicio (view-timeline): empieza justo cuando su borde de arriba llega a la cabecera
    de la sesión. Donde no hay línea de tiempo de vista, se pega entera. */
 @supports (animation-timeline: view()) {
@@ -1649,7 +1650,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
   .ejercicio:not(.plegado) > .ejercicio-cab > span:nth-child(2) > :not(.nombre) { animation: cab-ej-oculta linear both; animation-timeline: --ej; animation-range: exit-crossing 0% exit-crossing 0.5%; }
 }
 @keyframes cab-ej-compacta { to { clip-path: inset(0 0 calc(100% - 76px) 0); box-shadow: 0 1px 0 var(--linea); } }
-@keyframes cab-ej-oculta { to { visibility: hidden; } }
+@keyframes cab-ej-oculta { to { opacity: 0; } }
 
 /* ── 80 · La página se hunde detrás de las hojas (tanda 23) ───────────────────────────────────────────────────────────
    Con una hoja abierta (body[data-hojas]), lo de detrás se encoge un poco hacia el centro de lo que se ve (--hunde-y,
