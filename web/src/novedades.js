@@ -10,9 +10,11 @@ export const NOVEDADES = {
     atleta: [
       'Cada hábito tiene su ilustración al abrirlo.',
       'La ficha de cada ejercicio lleva la estatua de su músculo principal.',
+      'Tu recetario, con una ilustración para cada comida.',
     ],
     coach: [
       'La ficha de cada ejercicio lleva la estatua de su músculo principal y la biblioteca, al filtrar por grupo, la suya.',
+      'El recetario, con una ilustración para cada comida.',
     ],
   },
   '0.100': {
