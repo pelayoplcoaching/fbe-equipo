@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.99': {
+    atleta: [
+      'Cada sesión tiene su ilustración en la portada y al terminar: empuje, tirón, pierna, full body…',
+    ],
+  },
   '0.98': {
     atleta: [
       'Las pestañas siguen al dedo, las cifras se cambian arrastrándolas o manteniendo pulsado y los interruptores se arrastran.',
