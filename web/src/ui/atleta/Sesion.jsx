@@ -715,7 +715,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       {/* (un descanso sin su ejercicio en la lista, por si acaso: antes de terminar) */}
       {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} />}
 
-      <button class="btn btn-primario btn-grande btn-ancho" onClick={() => setTerminando(true)}>
+      <button class={`btn btn-primario btn-grande btn-ancho btn-terminar${!sesion.completada && totalPautadas > 0 && todas.length >= totalPautadas ? ' lista' : ''}`} onClick={() => setTerminando(true)}>
         <Icono n="hecho" /> {sesion.completada ? 'Cambiar la valoración' : 'Terminar sesión'}
       </button>
       {sesion.completada && todas.length > 0 && (

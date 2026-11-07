@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Icono, Anillo, Capa } from '../comunes.jsx';
+import { Icono, Anillo, Capa, PortadaHistoria } from '../comunes.jsx';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { num, signo, textoSerie, NOMBRE_GRUPO } from '../../logica/calculos.js';
 import { desdeISO } from '../../logica/fechas.js';
@@ -21,7 +21,7 @@ export function TarjetaSemana({ resumen, alAbrir, alQuitar }) {
   return (
     <section class="tarjeta-semana" aria-label="Tu semana pasada">
       <button class="tarjeta-semana-abrir" onClick={alAbrir}>
-        <span class="tarjeta-semana-disco" aria-hidden="true" />
+        <PortadaHistoria />
         <span class="pila-xs">
           <span class="mini">Tu semana {rangoLargo(r.lunes, r.domingo)}</span>
           <strong>{r.sesiones.hechas} de {r.sesiones.total} sesiones, {toneladas(r.tonelaje)} t{r.records.length ? `, ${r.records.length} ${r.records.length === 1 ? 'récord' : 'récords'}` : ''}</strong>
