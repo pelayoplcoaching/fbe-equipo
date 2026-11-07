@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.101': {
+    atleta: [
+      'Cada hábito tiene su ilustración al abrirlo.',
+    ],
+  },
   '0.100': {
     atleta: [
       'En Hoy cada cosa tiene su color y lo que haces se marca con un ✓; los resúmenes de la semana y del mes tienen portada.',
