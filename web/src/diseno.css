@@ -1520,3 +1520,74 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 .carnet-lobo-fondo { position: absolute; right: -6%; bottom: -14%; width: 46%; height: auto; }
 .carnet-lobo-fondo path { fill: rgba(255, 255, 255, .06); }
 .carnet-numero { color: var(--oro-claro, #E9D49A); }
+
+/* ══ TANDA 22 · lo que se siente al tocar ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 72 · El panel sigue al dedo (tanda 22) ──────────────────────────────────────────────────────────────────────────
+   Mientras se arrastra entre pestañas o semanas (ui/deslizar.js), en el borde por el que entraría lo siguiente asoma su
+   nombre en una píldora de vidrio, que se acerca con el recorrido (--f, de 0 a 1) y se enciende en morado cuando soltar
+   ya cambia. Es decorativa (aria-hidden) y desaparece al soltar. Las semanas siguen al dedo con la misma goma. */
+.asoma {
+  position: fixed; z-index: 40; top: 50%; margin-top: -18px; height: 36px; display: flex; align-items: center; padding: 0 14px;
+  border-radius: 999px; font-size: 0.875rem; font-weight: 700; white-space: nowrap; pointer-events: none;
+  color: var(--tinta); background: var(--vidrio-flota, var(--hoja)); -webkit-backdrop-filter: var(--vidrio-filtro); backdrop-filter: var(--vidrio-filtro);
+  box-shadow: var(--sombra-flotante); transition: background-color var(--mov-rapido) var(--curva-casa), color var(--mov-rapido) var(--curva-casa);
+}
+.asoma[data-lado="der"] { right: 10px; transform: translateX(calc((1 - var(--f, 0)) * 120%)); }
+.asoma[data-lado="izq"] { left: 10px; transform: translateX(calc((1 - var(--f, 0)) * -120%)); }
+.asoma[data-lado="der"]::after { content: "›"; margin-left: 6px; font-size: 1.1em; }
+.asoma[data-lado="izq"]::before { content: "‹"; margin-right: 6px; font-size: 1.1em; }
+.asoma.listo { background: var(--morado); color: var(--sobre-morado); }
+.dias-deslizar.arrastrando { transition: none; }
+
+/* ── 73 · Cifras que se arrastran, repiten y topan (tanda 22) ─────────────────────────────────────────────────────────
+   En los campos con «+» y «−» (Paso, comunes.jsx): arrastrar de lado sobre la cifra la cambia paso a paso (la cifra
+   se agranda un poco mientras); mantener pulsado «+» o «−» repite cada vez más deprisa; al llegar al mínimo o al
+   máximo, la cifra rebota hacia ese lado (data-tope) con el toque de aviso. (Sobre estilos.css 272 .paso) */
+.paso input { touch-action: pan-y; cursor: ew-resize; }
+.paso input:focus { cursor: text; }
+.paso button { touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.paso-odo { transition: transform var(--mov-rapido) var(--curva-rebote); }
+.paso-arrastre .paso-odo { transform: scale(1.12); }
+.paso-arrastre { outline: 2px solid color-mix(in srgb, var(--morado) 40%, transparent); outline-offset: -1px; }
+@media (prefers-reduced-motion: no-preference) {
+  .paso[data-tope] .paso-odo, .paso[data-tope] input { animation: paso-topa .34s var(--curva-casa); }
+}
+@keyframes paso-topa { 0%, 100% { transform: none; } 30% { transform: translateX(-5px); } 60% { transform: translateX(3px); } }
+
+/* ── 74 · Interruptores y pastillas que se arrastran (tanda 22) ───────────────────────────────────────────────────────
+   La bola del interruptor sigue al dedo (--bola, de 0 a 20 px; ui/tacto.js) y el fondo se tiñe en cuanto pasa de la
+   mitad (data-casi); la pastilla de los segmentos (bloque 39) sigue al dedo de una opción a otra sin transición y, al
+   soltar, se coloca con la curva de siempre. Los dos dejan pasar el desplazamiento vertical de la página. */
+.interruptor { touch-action: pan-y; }
+.interruptor.arrastrando-bola { transition: none; }
+.interruptor.arrastrando-bola::after { transform: translateX(var(--bola, 0px)); transition: none; width: 28px; }
+.interruptor.arrastrando-bola[data-casi] { background: var(--morado); }
+.interruptor.arrastrando-bola:not([data-casi]) { background: var(--linea); }
+.segmentos[data-pastilla] > button { touch-action: pan-y; }
+.segmentos.arrastrando-pastilla::before { transition: width var(--mov-rapido) var(--curva-casa) !important; box-shadow: var(--sombra-flotante); }
+
+/* ── 75 · Lo desactivado dice «no», el reloj se desliza y las comidas se deslizan (tanda 22) ───────────────────────────
+   Un botón que aún no se puede usar, al tocarlo, se mueve un poco de lado dos veces (data-no; ui/tacto.js) con un roce
+   doble. El reloj del descanso se agranda un punto mientras se desliza para ajustarlo (sesion-comun.jsx: «girando»).
+   Una comida del menú, al deslizarla a la derecha, deja ver el verde con la marca (ui/deslizar.js: deslizarHecho);
+   pasado el umbral, la marca crece (data-listo). */
+@media (prefers-reduced-motion: no-preference) {
+  [data-no] { animation: dice-no .36s var(--curva-casa); }
+}
+@keyframes dice-no { 0%, 100% { transform: none; } 20% { transform: translateX(-4px); } 45% { transform: translateX(4px); } 70% { transform: translateX(-2px); } }
+.reloj-descanso.con-dial { touch-action: pan-y; cursor: ew-resize; }
+.reloj-descanso { transition: transform var(--mov-rapido) var(--curva-rebote); }
+.reloj-descanso.girando { transform: scale(1.04); }
+.entrada-menu { position: relative; touch-action: pan-y; border-radius: 12px; }
+.entrada-menu.deslizando > * { transform: translateX(var(--dx, 0px)); }
+.entrada-menu.deslizando::before {
+  content: ""; position: absolute; inset: -2px -4px; border-radius: 12px; z-index: 0; opacity: var(--f, 0);
+  background: color-mix(in srgb, var(--ok) 22%, transparent) var(--marca-ok) 12px center / 18px no-repeat;
+}
+.entrada-menu.deslizando[data-listo]::before { background-color: color-mix(in srgb, var(--ok) 34%, transparent); background-size: 22px; }
+.entrada-menu > * { position: relative; z-index: 1; }
+
+:root { --marca-ok: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23176D3F' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+:root[data-theme="dark"] { --marca-ok: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234FCB89' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --marca-ok: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234FCB89' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); } }

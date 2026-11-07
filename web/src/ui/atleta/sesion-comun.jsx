@@ -329,6 +329,36 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   const frac = total ? Math.min(1, quedan / total) : 0;
   const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, ...(pausado ? { pausa, pausadoEn } : {}) });
   const ajustar = (s) => alCambiar(ajustarDescanso(este(), s));
+  // (diseño, tanda 22) Deslizar el dedo de lado sobre el reloj suma tiempo (a la derecha) o lo quita (a la izquierda):
+  // 15 s cada 28 px, con un toque en cada salto. De arriba abajo la página sigue desplazándose como siempre. Lo que se
+  // va ajustando se encadena aquí mismo (entre dos pintados, este() aún no lo sabe). «−15 s» y «+15 s» siguen ahí.
+  const dial = useRef(null);
+  const gestoDial = quedan > 0 ? {
+    onPointerDown: (e) => {
+      if (e.button > 0 || e.target.closest?.('button')) return;
+      dial.current = { id: e.pointerId, x: e.clientX, y: e.clientY, pasos: 0, activo: false, ultimo: este() };
+    },
+    onPointerMove: (e) => {
+      const g = dial.current;
+      if (!g || g.id !== e.pointerId) return;
+      const dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (!g.activo) {
+        if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+        g.activo = true;
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* */ }
+        e.currentTarget.classList.add('girando');
+      }
+      const pasos = Math.trunc(dx / 28);
+      if (pasos === g.pasos) return;
+      const s = (pasos - g.pasos) * 15;
+      g.pasos = pasos;
+      g.ultimo = ajustarDescanso(g.ultimo, s);
+      alCambiar(g.ultimo);
+      vibrar('elegir');
+    },
+    onPointerUp: (e) => { dial.current = null; e.currentTarget.classList.remove('girando'); },
+    onPointerCancel: (e) => { dial.current = null; e.currentTarget.classList.remove('girando'); },
+  } : {};
   const conPista = quedan > 0 && pistaManda(fin);
   const color = COLOR_DISCO[prioridad] || 'var(--morado)';
   const r2 = 9, c2 = 2 * Math.PI * r2;
@@ -339,7 +369,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
         <span class="temporizador-etq">{quedan > 0 ? (pausado ? 'Descanso en pausa' : 'Descanso') : 'Descanso terminado'}</span>
         {!(quedan > 0 && toca) && <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>}
       </div>
-      <div class={`reloj-descanso ${fase ? 'respirando' : ''}`}>
+      <div class={`reloj-descanso ${fase ? 'respirando' : ''} ${quedan > 0 ? 'con-dial' : ''}`} {...gestoDial}>
         {fase && !quietoRespira && <span key={inicioR} ref={ponerRetraso} class="respira-circulo" aria-hidden="true" />}
         <svg viewBox="0 0 200 200" aria-hidden="true">
           <DegradadoAro id="aro-descanso" gira />

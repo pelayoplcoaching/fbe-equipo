@@ -338,12 +338,87 @@ export function Paso({ valor, alCambiar, paso = 1, min = 0, max = 9999, dec = 1,
   // pero lo escrito no se reescribe hasta salir de él
   const tecleando = useRef(false);
   useEffect(() => { if (montado.current && !tecleando.current) setTexto(valor == null ? '' : num(valor, dec)); montado.current = true; }, [valor]);
-  const fijar = (v) => {
-    if (v === null || Number.isNaN(v)) { setTexto(''); alCambiar(null); return; }
+  const [enfocado, setEnfocado] = useState(false);
+  // (diseño, tanda 22) la raíz, el valor de ahora (para lo que repite o se arrastra entre dos pintados) y el tope
+  const raiz = useRef(null);
+  const actual = useRef(valor);
+  actual.current = valor;
+  const rebotar = () => {
+    const el = raiz.current;
+    if (el) { el.removeAttribute('data-tope'); void el.offsetWidth; el.setAttribute('data-tope', ''); }
+    vibrar('aviso');
+  };
+  const fijar = (v, { tope = true } = {}) => {
+    if (v === null || Number.isNaN(v)) { setTexto(''); alCambiar(null); return null; }
     const f = 10 ** dec;
-    const c = Math.min(max, Math.max(min, Math.round(v * f) / f));
+    const r = Math.round(v * f) / f;
+    const c = Math.min(max, Math.max(min, r));
+    if (tope && c !== r) rebotar();
     setTexto(num(c, dec));
+    actual.current = c;
     alCambiar(c);
+    return c;
+  };
+  // (diseño, tanda 22) Mantener pulsado «+» o «−» repite, cada vez más deprisa, con un toque por paso; al llegar al
+  // tope, rebota y para. El clic que llega al soltar no suma otra vez.
+  const rep = useRef(null);
+  const pararRepetir = () => { if (rep.current) clearTimeout(rep.current.t); };
+  const repetir = (signo) => (e) => {
+    if (e.button > 0) return;
+    pararRepetir();
+    const r = { n: 0, hecho: false };
+    const uno = () => {
+      r.n++; r.hecho = true;
+      const antes = actual.current;
+      const c = fijar((antes ?? 0) + signo * paso);
+      if (c === antes) return;   // (en el tope: ya ha rebotado)
+      vibrar('elegir');
+      r.t = setTimeout(uno, Math.max(40, 150 - r.n * 12));
+    };
+    r.t = setTimeout(uno, 420);
+    rep.current = r;
+  };
+  const tocar = (signo) => () => {
+    if (rep.current?.hecho) { rep.current = null; return; }
+    rep.current = null;
+    fijar((actual.current ?? 0) + signo * paso);
+  };
+  // (diseño, tanda 22) Arrastrar sobre la cifra (sin estar escribiendo) la sube o la baja un paso cada 16 px, con un
+  // toque por paso, como una rueda. Un toque sin arrastrar entra en el campo como siempre.
+  const arr = useRef(null);
+  const arrastre = {
+    onPointerDown: (e) => {
+      if (enfocado || e.button > 0) return;
+      arr.current = { x: e.clientX, id: e.pointerId, v0: actual.current ?? 0, pasos: 0, activo: false, fuera: false };
+      if (e.pointerType === 'mouse') e.preventDefault();   // (el ratón no entra en el campo hasta soltar sin arrastrar)
+    },
+    onPointerMove: (e) => {
+      const a = arr.current;
+      if (!a || a.id !== e.pointerId) return;
+      const dx = e.clientX - a.x;
+      if (!a.activo) {
+        if (Math.abs(dx) < 8) return;
+        a.activo = true;
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* */ }
+        raiz.current?.classList.add('paso-arrastre');
+      }
+      const pasos = Math.round(dx / 16);
+      if (pasos === a.pasos) return;
+      a.pasos = pasos;
+      const pedido = a.v0 + pasos * paso;
+      const fuera = pedido < min || pedido > max;
+      const antes = actual.current;
+      const c = fijar(pedido, { tope: false });
+      if (fuera && !a.fuera) rebotar(); else if (c !== antes) vibrar('elegir');
+      a.fuera = fuera;
+    },
+    onPointerUp: (e) => {
+      const a = arr.current;
+      arr.current = null;
+      raiz.current?.classList.remove('paso-arrastre');
+      if (a && !a.activo && e.pointerType === 'mouse') e.currentTarget.focus();
+    },
+    onPointerCancel: () => { arr.current = null; raiz.current?.classList.remove('paso-arrastre'); },
   };
   const alTeclear = (t) => {
     setTexto(t);
@@ -354,18 +429,19 @@ export function Paso({ valor, alCambiar, paso = 1, min = 0, max = 9999, dec = 1,
   // (diseño, tanda 21) Mientras no se teclea, la cifra se ve en un cuentakilómetros encima del campo: con «+» y «−»
   // rueda en vez de cambiar a golpe. El campo sigue ahí (con su valor, para quien lo lee y para las pruebas), solo con
   // el texto transparente; al entrar en él, vuelve el texto y se va el cuentakilómetros.
-  const [enfocado, setEnfocado] = useState(false);
   const rueda = !enfocado && texto !== '' && !sinMovimiento();
   return (
-    <div class={`paso ${rueda ? 'paso-rueda' : ''}`}>
-      <button type="button" aria-label={`Restar ${num(paso)} a ${etiqueta}`} onClick={() => fijar((valor ?? 0) - paso)}>−</button>
-      <input id={id} inputMode="decimal" aria-label={etiqueta} value={texto} enterKeyHint="done"
+    <div class={`paso ${rueda ? 'paso-rueda' : ''}`} ref={raiz}>
+      <button type="button" aria-label={`Restar ${num(paso)} a ${etiqueta}`} onClick={tocar(-1)}
+        onPointerDown={repetir(-1)} onPointerUp={pararRepetir} onPointerLeave={pararRepetir} onPointerCancel={pararRepetir} onContextMenu={(e) => e.preventDefault()}>−</button>
+      <input id={id} inputMode="decimal" aria-label={etiqueta} value={texto} enterKeyHint="done" {...arrastre}
         onInput={(e) => alTeclear(e.currentTarget.value)}
         onBlur={() => { tecleando.current = false; setEnfocado(false); fijar(leerNumero(texto)); }}
         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
         onFocus={(e) => { setEnfocado(true); e.currentTarget.select(); }} />
       {rueda && <span class="paso-odo" aria-hidden="true"><Odometro texto={texto} /></span>}
-      <button type="button" aria-label={`Sumar ${num(paso)} a ${etiqueta}`} onClick={() => fijar((valor ?? 0) + paso)}>+</button>
+      <button type="button" aria-label={`Sumar ${num(paso)} a ${etiqueta}`} onClick={tocar(1)}
+        onPointerDown={repetir(1)} onPointerUp={pararRepetir} onPointerLeave={pararRepetir} onPointerCancel={pararRepetir} onContextMenu={(e) => e.preventDefault()}>+</button>
     </div>
   );
 }
