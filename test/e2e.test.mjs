@@ -1224,8 +1224,12 @@ try {
   await vid.locator('button[aria-label="Enviar"]').click();
   await p.locator('.tarjeta-revisar', { hasText: '¿Bajo bien la barra?' }).waitFor({ state: 'detached' });
   const ck = p.locator('.tarjeta-revisar', { hasText: 'Check-in' }).filter({ hasText: 'Lucía' });
+  // (antes, que se vaya el aviso del envío de la respuesta: si llega tarde, sustituye al de «Check-in revisado» y su «Deshacer»;
+  // y el aviso se vigila desde antes del toque, para no buscarlo cuando en una máquina lenta ya se ha ido)
+  await p.locator('.toast').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+  const vioRevisado = p.waitForFunction(() => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('Check-in revisado')), null, { polling: 'raf', timeout: 30000 });
   await ck.getByRole('button', { name: 'Revisado' }).click();
-  await p.locator('.toast', { hasText: 'Check-in revisado' }).waitFor();
+  await vioRevisado;
   await ck.waitFor({ state: 'detached' });
   await p.locator('.toast').getByRole('button', { name: 'Deshacer' }).click();
   await ck.waitFor();
