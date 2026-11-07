@@ -1,4 +1,104 @@
 {
+  "grupo-abdominales": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-abdominales-320.b7e3c9bb.webp",
+      "640": "imagenes/grupo/grupo-abdominales-640.bccef87f.webp"
+    }
+  },
+  "grupo-biceps": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-biceps-320.f93b1de9.webp",
+      "640": "imagenes/grupo/grupo-biceps-640.44bce6b8.webp"
+    }
+  },
+  "grupo-cuadriceps": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-cuadriceps-320.7cebc3fc.webp",
+      "640": "imagenes/grupo/grupo-cuadriceps-640.123406fd.webp"
+    }
+  },
+  "grupo-deltoides": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-deltoides-320.74d7dbce.webp",
+      "640": "imagenes/grupo/grupo-deltoides-640.6d1eb81f.webp"
+    }
+  },
+  "grupo-espalda": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-espalda-320.ac2e0ed8.webp",
+      "640": "imagenes/grupo/grupo-espalda-640.aef8cb0f.webp"
+    }
+  },
+  "grupo-gemelo": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-gemelo-320.4f88aee4.webp",
+      "640": "imagenes/grupo/grupo-gemelo-640.30918a54.webp"
+    }
+  },
+  "grupo-gluteo": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-gluteo-320.0d99f1ca.webp",
+      "640": "imagenes/grupo/grupo-gluteo-640.7c4ddc12.webp"
+    }
+  },
+  "grupo-isquiotibiales": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-isquiotibiales-320.baf7020d.webp",
+      "640": "imagenes/grupo/grupo-isquiotibiales-640.6652a432.webp"
+    }
+  },
+  "grupo-pectoral": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-pectoral-320.63158baa.webp",
+      "640": "imagenes/grupo/grupo-pectoral-640.ca04a71f.webp"
+    }
+  },
+  "grupo-triceps": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-triceps-320.096583cb.webp",
+      "640": "imagenes/grupo/grupo-triceps-640.41a3fa8f.webp"
+    }
+  },
   "habito-agua": {
     "proporcion": [
       1,

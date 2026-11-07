@@ -97,9 +97,9 @@ function HojaHabito({ r, alCerrar, alMomento }) {
     <Hoja titulo={h.nombre} alCerrar={alCerrar}>
       {/* (imágenes) arriba, el objetivo sobre la ilustración del hábito; si no se puede, el objetivo como siempre */}
       {hayImagen(imagenHabito(h.icono)) ? (
-        <div class="habito-cab" style={{ '--c': COLOR_HABITO[h.icono] || 'var(--morado)' }}>
+        <div class="cab-ilu habito-cab" style={{ '--c': COLOR_HABITO[h.icono] || 'var(--morado)' }}>
           <p>{textoObjetivo(h)}.</p>
-          <Imagen key={h.icono} id={imagenHabito(h.icono)} clase="habito-ilu" tamanos="9rem" alternativa={<span class="habito-ilu habito-ilu-icono" aria-hidden="true"><Icono n={h.icono || 'libre'} /></span>} />
+          <Imagen key={h.icono} id={imagenHabito(h.icono)} clase="cab-ilu-img" tamanos="9rem" alternativa={<span class="cab-ilu-img cab-ilu-icono" aria-hidden="true"><Icono n={h.icono || 'libre'} /></span>} />
         </div>
       ) : <p class="peq secundario">{textoObjetivo(h)}.</p>}
       <div class="semana-habito" role="group" aria-label="Día que apuntas">
