@@ -5,6 +5,7 @@ import { Icono, Segmentos, Paso, usePreferencia, useAtraparFoco, Capa } from '..
 import { fases, duracionTotal, enCurso, normalizar, textoIntervalos, MODOS_INTERVALOS, POR_DEFECTO } from '../../logica/intervalos.js';
 import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
 import { mmss } from '../../logica/calculos.js';
+import { tenirBarra } from '../barra-color.js';
 
 const NOMBRE_FASE = { preparar: 'Prepárate', trabajo: 'Trabajo', descanso: 'Descanso' };
 
@@ -131,6 +132,11 @@ function EnMarcha({ config, alParar, alCerrar, alTerminar }) {
   const saltar = () => { if (!e.fin) { r.extra += e.quedan + 0.01; setAhora(performance.now()); } };
   const siguiente = !e.fin ? lista[e.i + 1] : null;
   const fase = e.fin ? 'fin' : e.fase.tipo;
+  // (diseño, tanda 23) la barra del sistema, del color de la fase (y la de siempre al salir)
+  useEffect(() => {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(`--int-${fase}`).trim();
+    return tenirBarra(v);
+  }, [fase]);
   const minutos = Math.max(1, Math.round(hecho / 60));
   const frac = e.fin ? 1 : e.fase.s ? e.transcurrido / e.fase.s : 0;
   const R = 46, C = 2 * Math.PI * R;

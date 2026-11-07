@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.99': {
+    atleta: [
+      'Cada sesión tiene su ilustración en la portada y al terminar: empuje, tirón, pierna, full body…',
+    ],
+  },
+  '0.98': {
+    atleta: [
+      'Las pestañas siguen al dedo, las cifras se cambian arrastrándolas o manteniendo pulsado y los interruptores se arrastran.',
+      'El descanso se alarga o acorta deslizando sobre el reloj y una comida se marca deslizándola.',
+      'La tarjeta de Hoy tiene profundidad y su luz cambia con la hora, y la sesión deja arriba el ejercicio en curso.',
+    ],
+  },
   '0.97': {
     atleta: [
       'Puedes deslizar con el dedo entre las pestañas de Progreso, Equipo y Comidas, y las cifras ruedan al sumar y restar.',

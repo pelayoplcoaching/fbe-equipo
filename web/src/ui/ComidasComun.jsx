@@ -12,6 +12,7 @@ import { LETRAS_DIA } from '../logica/plan.js';
 import { num } from '../logica/calculos.js';
 import { HojaRellenar } from './RellenarSemana.jsx';
 import { Ilustracion, iluDeToma } from './Ilustraciones.jsx';
+import { deslizarHecho } from './deslizar.js';
 
 const mayus = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -286,7 +287,7 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
                   <button type="button" class="btn-texto" onClick={() => setHoja({ tipo: 'anadir', toma: t })} aria-label={`Añadir a ${NOMBRE_TOMA[t].toLowerCase()}`}><Icono n="mas" /> Añadir</button>
                 </div>
                 {(delDia[t] || []).map((e) => (
-                  <div class={`entrada-menu ${e.hecho ? 'hecha' : ''}`} key={e.id}>
+                  <div class={`entrada-menu ${e.hecho ? 'hecha' : ''}`} key={e.id} {...deslizarHecho(() => marcar(e))}>
                     <button type="button" class="casilla-redonda" aria-pressed={e.hecho ? 'true' : 'false'} aria-label={`${e.texto}: ${e.hecho ? 'comida' : 'sin comer'}`} onClick={() => marcar(e)}>{e.hecho && <Icono n="hecho" />}</button>
                     <button type="button" class="entrada-texto" onClick={() => setHoja({ tipo: 'entrada', e })}>
                       <span class={e.hecho ? 'tachado' : ''}>{e.texto}{Number(e.raciones) !== 1 ? <span class="terciario num"> ×{num(e.raciones, 2)}</span> : ''}</span>
