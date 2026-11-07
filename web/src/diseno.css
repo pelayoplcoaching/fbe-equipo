@@ -1658,7 +1658,9 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    de las pantallas. Sin «reducir movimiento»; con «reducir transparencia», sin desenfoque. */
 @media (prefers-reduced-motion: no-preference) {
   .contenido { transition: scale var(--mov-medio) var(--curva-casa); transform-origin: 50% var(--hunde-y, 50vh); }
-  body[data-hojas] .contenido { scale: .965; }
+  /* (no en las páginas que llevan algo fijo dentro, como el chat o la sesión con su píldora: al encogerse la página, lo
+     fijo se colocaría respecto a ella y se iría de su sitio) */
+  body[data-hojas] .contenido:not(:has(.pildora-descanso, .chat-barra, .chat-fondo, .chat-dia-flotante, .chat-abajo, .chat-nuevos, .chat-soltar, .encurso, .teclado-serie, .pildora-subida, .enfoque, .camara, .intervalos, .seguida, .grabar-revision-camara, .tabs, .toast)) { scale: .965; }
 }
 .velo { -webkit-backdrop-filter: blur(calc(5px * var(--velo, 1))); backdrop-filter: blur(calc(5px * var(--velo, 1))); }
 .velo.cerrando { -webkit-backdrop-filter: none; backdrop-filter: none; }
