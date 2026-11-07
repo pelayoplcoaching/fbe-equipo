@@ -4,6 +4,7 @@ import { Logros } from '../Logros.jsx';
 import { AnillosSemana } from './Anillos.jsx';
 import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
+import { usePestanasDeslizables } from '../deslizar.js';
 import { CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
 import { RANGOS_GRAFICA, filtrarRango, rangoConDatos } from '../../logica/rangos.js';
@@ -579,6 +580,7 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
   const llegando = [progreso, constancia, semanas].some((c) => c.cargando && !c.datos);
   // La sub-pestaña: Resumen, salvo que se haya pedido otra al venir («Ver la gráfica» del peso, «Ver mis logros»)
   const [sub, setSub] = useState(() => tomarSubProgreso() || 'resumen');
+  const desliz = usePestanasDeslizables(SUBS_PROGRESO, sub, setSub);
   useEffect(() => {
     const al = (e) => { const pedida = tomarSubProgreso() || e.detail; if (SUBS_PROGRESO.some(([k]) => k === pedida)) { setSub(pedida); window.scrollTo(0, 0); } };
     window.addEventListener(EVENTO_SUB_PROGRESO, al);
@@ -592,8 +594,9 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
       {/* Cuatro sub-pestañas en lugar de una página de once pantallas. Todo sigue pintado (las cifras y las gráficas ya
           están cargadas): la sub-pestaña solo decide qué grupo se ve (diseno.css). A quien solo se le lleva la nutrición
           le queda una página corta, sin sub-pestañas. */}
-      {entrena && <Pestanas opciones={SUBS_PROGRESO} valor={sub} alCambiar={setSub} etiqueta="Qué ver de tu progreso" idBase="prog" clase="pestanas-progreso pestanas-justas" />}
-      <div class="progreso-panel" id="prog-panel" role={entrena ? 'tabpanel' : undefined} aria-labelledby={entrena ? `prog-${sub}` : undefined} data-sub={entrena ? sub : undefined}>
+      {entrena && <Pestanas opciones={SUBS_PROGRESO} valor={sub} alCambiar={desliz.cambiar} etiqueta="Qué ver de tu progreso" idBase="prog" clase="pestanas-progreso pestanas-justas" />}
+      {/* (diseño, tanda 21) deslizar el panel a los lados cambia de sub-pestaña (ui/deslizar.js) */}
+      <div class={`progreso-panel ${entrena ? 'deslizable' : ''}`} id="prog-panel" role={entrena ? 'tabpanel' : undefined} aria-labelledby={entrena ? `prog-${sub}` : undefined} data-sub={entrena ? sub : undefined} ref={desliz.panel} {...(entrena ? desliz.gesto : {})}>
         <Grupo g="resumen">
           {/* (pulido 2.3) cada bloque del resumen guarda, mientras llega, el sitio que ocupó la última vez: ya no se van
               empujando unos a otros según cargan */}

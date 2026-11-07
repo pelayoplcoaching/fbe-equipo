@@ -7,11 +7,13 @@ import { hayVoz, hablar } from './voz.js';
 import { plataformaPistaAqui, prepararPista, probarPista, frasesDelCoach, pararPista, descansoSonando } from './pista-descanso.js';
 import { ACENTOS } from '../logica/acentos.js';
 import { puedeVibrar, puedeTocar, vibrar } from './hapticos.js';
+import { sinMovimiento } from './transiciones.js';
 import { DESCANSOS_ATLETA, mmss } from '../logica/calculos.js';
 import { puedeDifuminar } from './tecnica/Difuminar.jsx';
 import { leerRed, mostrarOpcionWifi } from '../logica/red.js';
 
-const TEMAS = [['sistema', 'Sistema'], ['claro', 'Claro'], ['oscuro', 'Oscuro']];
+// (diseño, tanda 21) con su icono: el sol y la luna giran al elegirse (diseno.css, bloque 64)
+const TEMAS = [['sistema', <><Icono n="movil" class="seg-ico" /> Sistema</>], ['claro', <><Icono n="sol" class="seg-ico" /> Claro</>], ['oscuro', <><Icono n="luna" class="seg-ico" /> Oscuro</>]];
 export const VERSION_APP = typeof __APP_VERSION__ === 'undefined' ? '' : String(__APP_VERSION__);
 
 // icono (v0.50): con él, la fila lleva su cuadrito a la izquierda, como el resto de la lista agrupada
@@ -33,6 +35,16 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
   const [a, setA] = useState(leerAjustes);
   const [sonido, setSonido] = useState(false);
   const cambiar = (k, v) => { const n = { ...a, [k]: v }; setA(n); guardarAjustes(n); };
+  // (diseño, tanda 21) el tema cambia fundiéndose (transición de vista de todo el documento), no a golpe
+  const cambiarTema = (t) => {
+    const r = typeof document !== 'undefined' ? document.documentElement : null;
+    if (!r || typeof document.startViewTransition !== 'function' || sinMovimiento() || r.dataset.vt) { cambiar('tema', t); return; }
+    r.dataset.vt = 'tema';
+    let vt;
+    try { vt = document.startViewTransition(() => cambiar('tema', t)); } catch { delete r.dataset.vt; cambiar('tema', t); return; }
+    const fin = () => { if (r.dataset.vt === 'tema') delete r.dataset.vt; };
+    vt.finished.then(fin, fin);
+  };
   const resumenSonido = [a.sonido ? 'Sonido' : 'Sin sonido', a.voz && hayVoz() ? 'voz' : null, a.sonido && a.vozBloqueo && plataformaPistaAqui() ? 'avisa con el móvil bloqueado' : null, a.vibracion ? 'vibración' : null,
     a.descansoDefecto ? `descanso ${mmss(a.descansoDefecto)}` : 'sin descanso automático'].filter(Boolean).join(', ');
   return (
@@ -40,7 +52,7 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
     <GrupoIos titulo={`Este ${coach ? 'dispositivo' : 'móvil'}`} id="grupo-este-movil">
       {antes}
       <FilaIos icono="tema" titulo="Tema" detalle="Con «Sistema», claro u oscuro según tu móvil u ordenador."
-        bloque={<Segmentos opciones={TEMAS} valor={a.tema} etiqueta="Tema" alCambiar={(v) => cambiar('tema', v || 'sistema')} />} />
+        bloque={<Segmentos opciones={TEMAS} valor={a.tema} etiqueta="Tema" alCambiar={(v) => cambiarTema(v || 'sistema')} />} />
       {/* v0.49: negro puro para pantallas OLED, cuando se ve el tema oscuro */}
       {a.tema !== 'claro' && (
         <Interruptor id="aj-oled" icono="sueno" texto="Negro puro (OLED)" valor={!!a.oled} alCambiar={(v) => cambiar('oled', v)}

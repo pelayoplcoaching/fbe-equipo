@@ -1377,3 +1377,65 @@ html:has(#portada) { background: #1E1548; }
   body { min-height: 100dvh; }
 }
 @keyframes resumen-sube { from { transform: translateY(12px); } }
+
+/* ══ TANDA 21 · los rincones y los detalles finos ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 62 · Tipografía fina (tanda 21) ──────────────────────────────────────────────────────────────────────────────────
+   Los títulos ya se equilibraban (estilos.css 120). Ahora los párrafos y las líneas cortas evitan la última palabra
+   suelta (`text-wrap: pretty`), las citas cuelgan la puntuación donde el navegador sabe (Safari), las comillas son las
+   de la casa, y en las tablas y listas de definición las cifras van tabulares para que se alineen de fila a fila. */
+p, li, dd, dt, figcaption, label, .peq, .sub, .ayuda, .cita, .nota-coach, .pista p, summary { text-wrap: pretty; }
+h4, h5, .hero-dia .titular h2, .titular h2, dialog h2, .hoja h2, .vacio h3, .vacio strong { text-wrap: balance; }
+.cita, .cita-coach, blockquote { hanging-punctuation: first last; }
+:root { quotes: "«" "»" "“" "”"; }
+table td, table th, dl dd, time, .fecha, .hora, .resumen-num, .cifra { font-variant-numeric: tabular-nums; }
+body { font-kerning: normal; font-optical-sizing: auto; }
+
+/* ── 63 · Deslizar entre pestañas con el dedo (tanda 21) ──────────────────────────────────────────────────────────────
+   El panel de Progreso, del Equipo y de Comidas (ui/deslizar.js) se mueve un poco con el dedo mientras se arrastra y,
+   al soltar, la pestaña nueva entra desde el lado por el que se ha pedido (animación en el propio módulo). Aquí, lo
+   que hace falta para que el gesto llegue: desplazamiento vertical libre (pan-y), y el arrastre sin transición. Las
+   tiras de dentro que se desplazan de lado implementan su propio gesto y no se ven afectadas. */
+.deslizable { touch-action: pan-y; transition: transform var(--mov-rapido) var(--curva-casa); }
+.deslizable.arrastrando { transition: none; cursor: grabbing; }
+
+/* ── 64 · Cambiar de tema sin parpadeo (tanda 21) ─────────────────────────────────────────────────────────────────────
+   Al elegir claro u oscuro en Ajustes, todo el documento se funde del uno al otro (transición de vista «tema»,
+   Ajustes.jsx), también la barra de abajo, que en las transiciones de pantalla se queda quieta a propósito. Y las
+   opciones llevan su icono: el sol y la luna giran al elegirse. */
+:root[data-vt="tema"]::view-transition-old(root), :root[data-vt="tema"]::view-transition-new(root) { animation-duration: var(--mov-lento); animation-timing-function: ease-in-out; }
+:root[data-vt="tema"]::view-transition-old(barra-pestanas) { display: block; animation: vt-se-va var(--mov-lento) ease-in-out both; }
+:root[data-vt="tema"]::view-transition-new(barra-pestanas) { animation: vt-llega var(--mov-lento) ease-in-out both; }
+@keyframes vt-se-va { to { opacity: 0; } }
+@keyframes vt-llega { from { opacity: 0; } }
+.segmentos .seg-ico { width: 16px; height: 16px; vertical-align: -3px; margin-right: 1px; }
+@media (prefers-reduced-motion: no-preference) {
+  .segmentos .seg-ico { transition: transform var(--mov-lento) var(--curva-rebote); }
+  .segmentos button[aria-pressed="true"] .seg-ico { animation: seg-ico-gira var(--mov-lento) var(--curva-rebote) both; }
+}
+@keyframes seg-ico-gira { from { transform: rotate(-90deg) scale(.6); } to { transform: none; } }
+
+/* ── 65 · Intervalos con color de fase (tanda 21) ─────────────────────────────────────────────────────────────────────
+   La pantalla ya tomaba un color por fase (estilos.css 1450); ahora pasa de uno a otro fundiéndose, el nombre de la
+   fase entra con un salto cada vez que cambia (Intervalos.jsx le cambia la clave), el aro lleva el degradado de los
+   aros de la casa y, en los tres últimos segundos de cada fase, la cuenta late como en el descanso (clase «ultimos»).
+   Sin «reducir movimiento», nada de esto se mueve. */
+.intervalos-marcha { transition: background-color var(--mov-lento) ease-in-out; }
+@media (prefers-reduced-motion: no-preference) {
+  .intervalos-fase { animation: fase-salta var(--mov-lento) var(--curva-rebote) both; }
+  .intervalos-marcha.ultimos .intervalos-cuenta { animation: cuenta-late 1s var(--curva-casa) infinite; }
+  .intervalos-marcha.ultimos .intervalos-reloj .avance { stroke-width: 6.5; transition: stroke-dashoffset .12s linear, stroke-width var(--mov-medio) var(--curva-casa); }
+}
+@keyframes fase-salta { from { transform: translateY(10px) scale(.92); } to { transform: none; } }
+.intervalos-reloj .pista { stroke-opacity: .16; }
+
+/* ── 66 · Cifras que ruedan bajo el dedo (tanda 21) ───────────────────────────────────────────────────────────────────
+   En los campos con «+» y «−» (Paso, comunes.jsx), mientras no se teclea la cifra se ve en un cuentakilómetros encima
+   del campo, con la misma letra; el campo sigue debajo con su texto transparente (su color no cambia: lo que lee la
+   accesibilidad es el campo). Al entrar en él, el texto vuelve y el cuentakilómetros se va. Más rápido que el de las
+   cifras grandes: responde al dedo. (Sobre estilos.css 272 .paso) */
+.paso { position: relative; }
+.paso-rueda input { -webkit-text-fill-color: transparent; }
+.paso-odo { position: absolute; left: 40px; right: 40px; top: 0; bottom: 0; display: grid; place-items: center; pointer-events: none;
+  font-size: 1.3125rem; font-variant-numeric: tabular-nums; font-stretch: 118%; font-weight: 720; color: var(--tinta); }
+.paso-odo .odo-tira { transition-duration: var(--mov-medio); }

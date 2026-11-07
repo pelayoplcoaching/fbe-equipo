@@ -99,6 +99,8 @@ export const P = {
   carrito:'M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.2M9.5 20h.01M17 20h.01',
   // v0.50: los ajustes del perfil
   tema: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 3v18M12 7.5h3.6M12 12h5M12 16.5h3.6',
+  sol: 'M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.5 1.5M17.2 17.2l1.5 1.5M5.3 18.7l1.5-1.5M17.2 6.8l1.5-1.5',
+  luna: 'M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z',
   letra: 'M3 19 8 5h1l5 14M4.8 14.5h7.4M15 19l2.6-7h.8L21 19M15.9 16.6h4.2',
   paleta: 'M12 3.5a8.5 8.5 0 1 0 0 17c1.1 0 1.6-.7 1.6-1.5 0-1.2-1.1-1.5-1.1-2.6 0-.9.7-1.4 1.6-1.4h2.4A4.5 4.5 0 0 0 21 10.5c0-3.9-4-7-9-7zM7.5 12h.01M9.5 8h.01M14.5 8h.01',
   vibrar: 'M9 4h6a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM4.5 9v6M19.5 9v6M2 11v2M22 11v2',
@@ -348,14 +350,20 @@ export function Paso({ valor, alCambiar, paso = 1, min = 0, max = 9999, dec = 1,
     const v = leerNumero(t);
     alCambiar(v !== null && v >= min && v <= max ? Math.round(v * 10 ** dec) / 10 ** dec : null);
   };
+  // (diseño, tanda 21) Mientras no se teclea, la cifra se ve en un cuentakilómetros encima del campo: con «+» y «−»
+  // rueda en vez de cambiar a golpe. El campo sigue ahí (con su valor, para quien lo lee y para las pruebas), solo con
+  // el texto transparente; al entrar en él, vuelve el texto y se va el cuentakilómetros.
+  const [enfocado, setEnfocado] = useState(false);
+  const rueda = !enfocado && texto !== '' && !sinMovimiento();
   return (
-    <div class="paso">
+    <div class={`paso ${rueda ? 'paso-rueda' : ''}`}>
       <button type="button" aria-label={`Restar ${num(paso)} a ${etiqueta}`} onClick={() => fijar((valor ?? 0) - paso)}>−</button>
       <input id={id} inputMode="decimal" aria-label={etiqueta} value={texto} enterKeyHint="done"
         onInput={(e) => alTeclear(e.currentTarget.value)}
-        onBlur={() => { tecleando.current = false; fijar(leerNumero(texto)); }}
+        onBlur={() => { tecleando.current = false; setEnfocado(false); fijar(leerNumero(texto)); }}
         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-        onFocus={(e) => e.currentTarget.select()} />
+        onFocus={(e) => { setEnfocado(true); e.currentTarget.select(); }} />
+      {rueda && <span class="paso-odo" aria-hidden="true"><Odometro texto={texto} /></span>}
       <button type="button" aria-label={`Sumar ${num(paso)} a ${etiqueta}`} onClick={() => fijar((valor ?? 0) + paso)}>+</button>
     </div>
   );

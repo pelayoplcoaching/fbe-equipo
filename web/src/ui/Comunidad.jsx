@@ -17,6 +17,7 @@ import { createContext, Fragment } from 'preact';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando } from './comunes.jsx';
 import { Interruptor } from './Ajustes.jsx';
+import { usePestanasDeslizables } from './deslizar.js';
 import { reducirFoto } from './FotoPerfil.jsx';
 import {
   MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_PREGUNTA, MAX_OPCION, RETO_MAX, FILTROS_MURO, MEDALLAS, nombreEquipo, nombreValido, estadoReto, textoReto,
@@ -117,6 +118,7 @@ function DentroDelEquipo({ m, alCambiar }) {
   const [vista, setVista] = useState('muro');
   const [ajustes, setAjustes] = useState(false);
   const con043 = useCarga(() => api.comunidad043().catch(() => null), []);
+  const desliz = usePestanasDeslizables(con043.datos ? VISTAS_043 : VISTAS, vista, setVista);
   // Al compartir un logro, el muro, los retos y la racha se vuelven a leer
   const [cambios, setCambios] = useState(0);
   // v0.72: al apuntarse a un evento (en «Próximos» o en el muro), los dos se vuelven a leer
@@ -169,8 +171,8 @@ function DentroDelEquipo({ m, alCambiar }) {
         <PlegableEquipo id="proximos" titulo="Próximos" icono="calendario" cuenta=".pr-item"><Proximos cambios={eventos} alCambiar={() => setEventos((v) => v + 1)} /></PlegableEquipo>
         <PlegableEquipo id="companeros" titulo="Compañeros de racha" icono="equipo" cuenta=".cp-fila"><CompanerosRacha cambios={cambios} /></PlegableEquipo>
       </div>
-      <Pestanas opciones={con043.datos ? VISTAS_043 : VISTAS} valor={vista} alCambiar={setVista} etiqueta="Equipo" idBase="eq" clase={con043.datos ? 'pestanas-justas' : ''} />
-      <div class="pestana-panel" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista}>
+      <Pestanas opciones={con043.datos ? VISTAS_043 : VISTAS} valor={vista} alCambiar={desliz.cambiar} etiqueta="Equipo" idBase="eq" clase={con043.datos ? 'pestanas-justas' : ''} />
+      <div class="pestana-panel deslizable" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista} ref={desliz.panel} {...desliz.gesto}>
         {vista === 'muro' && <Muro cambios={cambios} miembro={m} eventos={eventos} alEventos={() => setEventos((v) => v + 1)} />}
         {vista === 'retos' && <Retos miembro={m} cambios={cambios} alCompartirLogro={(r) => setCelebrar({ reto: r, celebracion: false })} />}
         {vista === 'ranking' && <Ranking miembro={m} />}

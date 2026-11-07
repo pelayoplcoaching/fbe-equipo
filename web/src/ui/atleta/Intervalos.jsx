@@ -135,7 +135,7 @@ function EnMarcha({ config, alParar, alCerrar, alTerminar }) {
   const frac = e.fin ? 1 : e.fase.s ? e.transcurrido / e.fase.s : 0;
   const R = 46, C = 2 * Math.PI * R;
   return (
-    <div class={`intervalos-marcha fase-${fase}`}>
+    <div class={`intervalos-marcha fase-${fase} ${!e.fin && e.quedan <= 3 && e.fase.s >= 6 ? 'ultimos' : ''}`}>
       <div class="intervalos-cab">
         <button class="btn btn-icono plano" aria-label="Parar y volver a la configuración" onClick={alParar}><Icono n="cerrar" /></button>
         <span class="num">{mmss(Math.min(t, total))} / {mmss(total)}</span>
@@ -152,7 +152,8 @@ function EnMarcha({ config, alParar, alCerrar, alTerminar }) {
       ) : (
         <>
           <div class="intervalos-centro">
-            <span class="intervalos-fase">{NOMBRE_FASE[fase]}</span>
+            {/* (diseño, tanda 21) la clave cambia con la fase: el nombre entra de nuevo cada vez */}
+            <span class="intervalos-fase" key={`${fase}-${e.i}`}>{NOMBRE_FASE[fase]}</span>
             <div class="intervalos-reloj">
               <svg viewBox="0 0 100 100" aria-hidden="true">
                 <circle cx="50" cy="50" r={R} class="pista" />
