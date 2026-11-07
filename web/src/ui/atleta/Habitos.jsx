@@ -1,6 +1,8 @@
 // Hábitos diarios del atleta: anillos en Hoy (como los de Apple), apuntar en dos toques y el mes en Progreso.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Paso, useApuntar } from '../comunes.jsx';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenHabito } from '../../logica/imagenes.js';
 import { textoObjetivo, textoValor, pasoHabito, cumpleHabito, fraccionHabito, decimalesHabito } from '../../logica/habitos.js';
 import { hoyISO, fmtConDia } from '../../logica/fechas.js';
 import { LETRAS_DIA } from '../../logica/plan.js';
@@ -93,7 +95,13 @@ function HojaHabito({ r, alCerrar, alMomento }) {
     : (r.rachaSemanas ? { t: 'Semanas llegando', v: r.rachaSemanas } : null);
   return (
     <Hoja titulo={h.nombre} alCerrar={alCerrar}>
-      <p class="peq secundario">{textoObjetivo(h)}.</p>
+      {/* (imágenes) arriba, el objetivo sobre la ilustración del hábito; si no se puede, el objetivo como siempre */}
+      {hayImagen(imagenHabito(h.icono)) ? (
+        <div class="habito-cab" style={{ '--c': COLOR_HABITO[h.icono] || 'var(--morado)' }}>
+          <p>{textoObjetivo(h)}.</p>
+          <Imagen key={h.icono} id={imagenHabito(h.icono)} clase="habito-ilu" tamanos="9rem" alternativa={<span class="habito-ilu habito-ilu-icono" aria-hidden="true"><Icono n={h.icono || 'libre'} /></span>} />
+        </div>
+      ) : <p class="peq secundario">{textoObjetivo(h)}.</p>}
       <div class="semana-habito" role="group" aria-label="Día que apuntas">
         {r.semana.dias.map((d, i) => (
           <button key={d.iso} type="button" disabled={d.futuro || ocupado} aria-pressed={d.iso === dia ? 'true' : 'false'} onClick={() => elegirDia(d.iso)}

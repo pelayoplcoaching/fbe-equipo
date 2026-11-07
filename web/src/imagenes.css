@@ -11,3 +11,16 @@
 img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .resumen-hero img.hero-foto { object-fit: cover; object-position: 85% 50%; opacity: .62; }
 @media (forced-colors: active) { img.portada-foto, .resumen-hero img.hero-foto { opacity: .35; } }
+
+/* ── 2 · La hoja de cada hábito ───────────────────────────────────────────────────────────────────────────────────────
+   (atleta/Habitos.jsx: HojaHabito) Arriba, una cabecera oscura como la tarjeta de Hoy: el objetivo a la izquierda y la
+   ilustración del hábito a la derecha, fundida hacia el texto. Altura fija (nada se mueve al cargar). Si la imagen no
+   carga, en su sitio el icono del hábito en su color. Las ilustraciones son cuadradas: no se recortan. */
+.habito-cab { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; min-height: 8.25rem; padding: 14px 16px; border-radius: var(--r);
+  background: var(--hero); color: var(--sobre-hero); box-shadow: var(--sombra-tarjeta, var(--sombra)); }
+.habito-cab p { position: relative; z-index: 1; margin: 0; max-width: 58%; font-size: 1.0625rem; line-height: 1.35; font-weight: 650; text-wrap: pretty; }
+.habito-cab .habito-ilu { position: absolute; z-index: 0; top: 0; right: 0; height: 100%; width: auto; aspect-ratio: 1; object-fit: cover; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 38%); mask-image: linear-gradient(to right, transparent 0%, #000 38%); }
+.habito-cab .habito-ilu-icono { display: grid; place-items: center; color: var(--c); -webkit-mask-image: none; mask-image: none; width: 8.25rem; }
+.habito-cab .habito-ilu-icono svg { width: 44px; height: 44px; }
+@media (forced-colors: active) { .habito-cab .habito-ilu { opacity: .35; } }

@@ -3,7 +3,8 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
+import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -35,6 +36,11 @@ check(familiaPortada({ pautas: [], cardio: true }) === 'cardio', 'una «de fuerz
 check(familiaPortada({ pautas: [p(BANCA, 0), p(SENTADILLA, 3)] }) === 'pierna', 'lo que no lleva series no cuenta');
 check(familiaPortada({ pautas: [{ series: 3, ejercicio: null }, p(REMO, 3)] }) === 'tiron', 'una pauta sin ejercicio no rompe nada');
 check(familiaPortada({ pautas: [{ series: 3, nombre: 'Press banca', grupos_musculares: ['pectoral'], tipo: [] }] }) === 'empuje', 'vale también con el ejercicio en la propia pauta');
+
+console.log('\nLos hábitos');
+check(imagenHabito('pasos') === 'habito-pasos' && imagenHabito('sueno') === 'habito-sueno' && imagenHabito('verdura') === 'habito-verdura', 'cada icono de hábito, su imagen');
+check(imagenHabito('libre') === 'habito-otro' && imagenHabito(null) === 'habito-otro' && imagenHabito('inventado') === 'habito-otro', '«Otro», sin icono o uno desconocido: la de «otro»');
+check(ICONOS_HABITO.every(([i]) => IMAGENES.includes(imagenHabito(i))), `hay imagen para los ${ICONOS_HABITO.length} iconos que puede elegir el coach`);
 
 console.log('\nLos archivos que se sirven');
 {
