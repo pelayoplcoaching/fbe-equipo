@@ -1637,22 +1637,19 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    desplazamiento (overflow: clip en vez de hidden). (Sobre estilos.css 323 .ejercicio y 324 .ejercicio-cab) */
 .ejercicio { overflow: clip; }
 .ejercicio:not(.plegado) > .ejercicio-cab { position: sticky; top: calc(var(--alto-cab, 64px) + env(safe-area-inset-top, 0px)); z-index: 3; background: var(--hoja); }
-.ejercicio:not(.plegado) > .ejercicio-cab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: var(--linea); opacity: 0; transition: opacity var(--mov-rapido); pointer-events: none; }
+.ejercicio:not(.plegado) > .ejercicio-cab { transition: none; }
+/* Pegada, la cabecera se ve en lo justo (el pictograma, el nombre y la cuenta de series) para no tapar las series que
+   se están apuntando. Sin cambiar de alto (eso movería la página y la volvería a despegar): se recorta por abajo con
+   clip-path, que también deja pasar los toques a lo que queda debajo, y lo de debajo del nombre se oculta. Lo decide
+   el desplazamiento del propio ejercicio (view-timeline): empieza justo cuando su borde de arriba llega a la cabecera
+   de la sesión. Donde no hay línea de tiempo de vista, se pega entera. */
 @supports (animation-timeline: view()) {
-  .ejercicio:not(.plegado) > .ejercicio-cab::after { animation: cab-ej-filo linear both; animation-timeline: view(); animation-range: exit-crossing 0% exit-crossing 10%; }
+  .ejercicio:not(.plegado) { view-timeline: --ej block; view-timeline-inset: calc(var(--alto-cab, 64px) + env(safe-area-inset-top, 0px)) 0px; }
+  .ejercicio:not(.plegado) > .ejercicio-cab { animation: cab-ej-compacta linear both; animation-timeline: --ej; animation-range: exit-crossing 0% exit-crossing 0.5%; }
+  .ejercicio:not(.plegado) > .ejercicio-cab > span:nth-child(2) > :not(.nombre) { animation: cab-ej-oculta linear both; animation-timeline: --ej; animation-range: exit-crossing 0% exit-crossing 0.5%; }
 }
-@keyframes cab-ej-filo { to { opacity: 1; } }
-/* Pegada, la cabecera se queda en lo justo (el pictograma más pequeño, el nombre y la cuenta de series): así no tapa
-   las series que se están apuntando. Solo donde el navegador sabe si algo está pegado (container-type: scroll-state);
-   en el resto, se pega entera. */
-@supports (container-type: scroll-state) {
-  .ejercicio:not(.plegado) > .ejercicio-cab { container-type: scroll-state; }
-  @container scroll-state(stuck: top) {
-    .ejercicio-cab > span:nth-child(2) > :not(.nombre) { display: none; }
-    .ejercicio-cab .ej-marca { scale: .72; transform-origin: left center; }
-    .ejercicio-cab .nombre { font-size: 0.9688rem; }
-  }
-}
+@keyframes cab-ej-compacta { to { clip-path: inset(0 0 calc(100% - 76px) 0); box-shadow: 0 1px 0 var(--linea); } }
+@keyframes cab-ej-oculta { to { visibility: hidden; } }
 
 /* ── 80 · La página se hunde detrás de las hojas (tanda 23) ───────────────────────────────────────────────────────────
    Con una hoja abierta (body[data-hojas]), lo de detrás se encoge un poco hacia el centro de lo que se ve (--hunde-y,
