@@ -330,6 +330,16 @@ export function ErrorCaja({ error, reintentar }) {
 
 // Número con − y +; acepta coma decimal y punto de miles al teclear («8.000» son ocho mil). Al salir del
 // campo, lo escrito se ordena: «80,55» con un decimal queda «80,6», que es lo que se guarda.
+// (diseño, tanda 23) Una firma al final de las pantallas largas (Hoy, Progreso): el lobo pequeño y una línea corta.
+export function FinDePagina({ texto }) {
+  return (
+    <p class="fin-pagina">
+      <svg class="fin-lobo" viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path d={LOBO_D} fill-rule="evenodd" /></svg>
+      <span>{texto}</span>
+    </p>
+  );
+}
+
 export function Paso({ valor, alCambiar, paso = 1, min = 0, max = 9999, dec = 1, etiqueta, id }) {
   const [texto, setTexto] = useState(valor == null ? '' : num(valor, dec));
   // Solo cuando el valor cambia desde fuera (no al montar: si se escribe nada más abrir, se borraría lo escrito)

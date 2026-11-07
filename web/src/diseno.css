@@ -1591,3 +1591,122 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 :root { --marca-ok: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23176D3F' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
 :root[data-theme="dark"] { --marca-ok: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234FCB89' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --marca-ok: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234FCB89' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); } }
+
+/* ══ TANDA 23 · lo que se ve en pantalla y al moverla ════════════════════════════════════════════════════════════════ */
+
+/* ── 76 · Paralaje en Hoy (tanda 23) ──────────────────────────────────────────────────────────────────────────────────
+   Al desplazar la página, el dibujo de la tarjeta de Hoy (el de la sesión, o la escena de los otros días) baja un poco
+   respecto al texto: se queda atrás, como si estuviera más lejos. Con la propiedad translate, que no pisa la entrada
+   que ya tenían (opacidad y transform). Solo donde hay animaciones ligadas al desplazamiento. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both, hero-paralaje linear both; animation-timeline: auto, scroll(root); animation-range: normal, 0 520px; }
+    .hero-dia .hero-ilu { animation: ilu-entra .6s cubic-bezier(.2, .8, .2, 1) .05s both, hero-paralaje-ilu linear both; animation-timeline: auto, scroll(root); animation-range: normal, 0 520px; }
+  }
+}
+@keyframes hero-paralaje { to { translate: 0 96px; } }
+@keyframes hero-paralaje-ilu { to { translate: 0 48px; } }
+
+/* ── 77 · Lo que entra al desplazar se asienta (tanda 23) ─────────────────────────────────────────────────────────────
+   Las fotos del muro, las escenas de las recetas sin foto y las medallas de la lista de logros suben un poco y se
+   aclaran al entrar en la pantalla por abajo, ligado al propio desplazamiento (view()). Nunca el texto ni los
+   controles; con translate y scale, que no pisan sus transform. A media entrada ya están en su sitio. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .post-foto-boton, .galeria-pista, .receta-foto.vacia, .logros-lista .medalla-metal:not(.entra) { animation: entra-al-ver linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+  }
+}
+@keyframes entra-al-ver { from { opacity: .2; translate: 0 22px; scale: .96; } }
+
+/* ── 78 · La barra de arriba se despega (tanda 23) ────────────────────────────────────────────────────────────────────
+   La cabecera pegada (de vidrio) estaba igual arriba del todo que a mitad de página. Ahora, según se baja, le crecen un
+   filo abajo y una sombra suave: se ve que la página pasa por debajo. Ligado al desplazamiento, los primeros 96 px. */
+@supports (animation-timeline: scroll()) {
+  .cabecera { animation: cab-despega linear both; animation-timeline: scroll(root); animation-range: 0 96px; }
+}
+@keyframes cab-despega {
+  from { box-shadow: 0 1px 0 transparent, 0 10px 22px -20px transparent; }
+  to { box-shadow: 0 1px 0 var(--linea), 0 10px 22px -18px rgba(20, 14, 50, .32); }
+}
+
+/* ── 79 · Cabeceras que se empujan en la sesión (tanda 23) ────────────────────────────────────────────────────────────
+   Al desplazar la sesión, la cabecera del ejercicio en el que se está se queda pegada debajo de la de la sesión
+   (--alto-cab, que ya mide Sesion.jsx) mientras se ven sus series; al llegar el siguiente, lo empuja hacia arriba (cada
+   cabecera solo se pega dentro de su ejercicio). Para que se pueda pegar, el ejercicio recorta sin hacerse contenedor de
+   desplazamiento (overflow: clip en vez de hidden). (Sobre estilos.css 323 .ejercicio y 324 .ejercicio-cab) */
+.ejercicio { overflow: clip; }
+.ejercicio:not(.plegado) > .ejercicio-cab { position: sticky; top: calc(var(--alto-cab, 64px) + env(safe-area-inset-top, 0px)); z-index: 3; background: var(--hoja); }
+.ejercicio:not(.plegado) > .ejercicio-cab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: var(--linea); opacity: 0; transition: opacity var(--mov-rapido); pointer-events: none; }
+@supports (animation-timeline: view()) {
+  .ejercicio:not(.plegado) > .ejercicio-cab::after { animation: cab-ej-filo linear both; animation-timeline: view(); animation-range: exit-crossing 0% exit-crossing 10%; }
+}
+@keyframes cab-ej-filo { to { opacity: 1; } }
+/* Pegada, la cabecera se queda en lo justo (el pictograma más pequeño, el nombre y la cuenta de series): así no tapa
+   las series que se están apuntando. Solo donde el navegador sabe si algo está pegado (container-type: scroll-state);
+   en el resto, se pega entera. */
+@supports (container-type: scroll-state) {
+  .ejercicio:not(.plegado) > .ejercicio-cab { container-type: scroll-state; }
+  @container scroll-state(stuck: top) {
+    .ejercicio-cab > span:nth-child(2) > :not(.nombre) { display: none; }
+    .ejercicio-cab .ej-marca { scale: .72; transform-origin: left center; }
+    .ejercicio-cab .nombre { font-size: 0.9688rem; }
+  }
+}
+
+/* ── 80 · La página se hunde detrás de las hojas (tanda 23) ───────────────────────────────────────────────────────────
+   Con una hoja abierta (body[data-hojas]), lo de detrás se encoge un poco hacia el centro de lo que se ve (--hunde-y,
+   ui/pantalla.js) y el velo lo desenfoca, como en iOS. Con la propiedad scale, que no pisa las animaciones de entrada
+   de las pantallas. Sin «reducir movimiento»; con «reducir transparencia», sin desenfoque. */
+@media (prefers-reduced-motion: no-preference) {
+  .contenido { transition: scale var(--mov-medio) var(--curva-casa); transform-origin: 50% var(--hunde-y, 50vh); }
+  body[data-hojas] .contenido { scale: .965; }
+}
+.velo { -webkit-backdrop-filter: blur(calc(5px * var(--velo, 1))); backdrop-filter: blur(calc(5px * var(--velo, 1))); }
+.velo.cerrando { -webkit-backdrop-filter: none; backdrop-filter: none; }
+@media (prefers-reduced-transparency: reduce) { .velo { -webkit-backdrop-filter: none; backdrop-filter: none; } }
+
+/* ── 81 · Aros continuos (tanda 23) ───────────────────────────────────────────────────────────────────────────────────
+   El aro del descanso (cada 250 ms) y el de los intervalos (cada 100 ms) ya avanzaban sin saltos. El de «en curso»
+   (la píldora de la sesión empezada, que se pinta cada segundo) avanzaba medio segundo y paraba otro medio: ahora su
+   transición dura lo mismo que el tic, así que no para nunca. (Sobre estilos.css 3312) */
+.encurso-anillo .arco { transition: stroke-dashoffset 1s linear; }
+
+/* ── 82 · Fondos sin bandas (tanda 23) ────────────────────────────────────────────────────────────────────────────────
+   Los degradados grandes y oscuros (la tarjeta de Hoy, la bienvenida del día, el carné, la foto en grande, los
+   intervalos) dejaban ver escalones de color en algunas pantallas. Un grano finísimo encima los rompe (--grano, un
+   ruido en SVG al 6 %). La portada de arranque no lo lleva: es sin imágenes a propósito. */
+:root { --grano: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); }
+.hero-dia.hero-entreno, .intervalos-marcha, .foto-grande { background-image: var(--grano); }
+.bdia { background: var(--grano), radial-gradient(120% 60% at 50% 110%, rgba(84, 56, 216, .55), transparent 70%), var(--bv-fondo); }
+.carnet {
+  background: var(--grano), radial-gradient(620px 620px at 90% 5%, rgba(104, 78, 236, .5), rgba(104, 78, 236, 0) 70%),
+    radial-gradient(560px 560px at 5% 105%, rgba(104, 78, 236, .4), rgba(104, 78, 236, 0) 70%), linear-gradient(180deg, #221957, #150F36);
+}
+
+/* ── 83 · El cielo según la hora (tanda 23) ───────────────────────────────────────────────────────────────────────────
+   El resplandor de la tarjeta de Hoy (sus dos círculos de luz, estilos.css 1674 y 1676) cambia con la franja del día
+   (data-franja, ui/pantalla.js): por la mañana, un amanecer cálido arriba; a mediodía, más claro y azulado; por la
+   tarde, el rosa del atardecer con un poco de oro abajo; de noche, el morado de siempre. Solo el día de entreno (los
+   otros días ya tienen su escena: bloque 36). Detrás del texto y tenue: el contraste no cambia. */
+:root[data-franja="manana"] .hero-entreno::before { background: radial-gradient(circle, rgba(255, 168, 122, .42) 0%, rgba(240, 120, 110, .16) 40%, transparent 68%); }
+:root[data-franja="dia"] .hero-entreno::before { background: radial-gradient(circle, color-mix(in srgb, #7FB2FF 52%, var(--hero)) 0%, color-mix(in srgb, #7FB2FF 20%, var(--hero)) 38%, transparent 68%); }
+:root[data-franja="tarde"] .hero-entreno::before { background: radial-gradient(circle, rgba(255, 112, 150, .4) 0%, rgba(190, 80, 170, .16) 40%, transparent 68%); }
+:root[data-franja="tarde"] .hero-entreno::after { background: radial-gradient(circle, rgba(233, 180, 100, .38) 0%, transparent 65%); }
+:root[data-franja="manana"] .hero-entreno::after { background: radial-gradient(circle, rgba(255, 200, 150, .22) 0%, transparent 65%); }
+
+/* ── 84 · La barra del sistema se tiñe (tanda 23) ─────────────────────────────────────────────────────────────────────
+   (solo código: ui/barra-color.js) En la app instalada, la barra de arriba del sistema toma el color de la fase en
+   los intervalos y la noche con una foto en grande; al salir, vuelve el color del tema. */
+
+/* ── 85 · Una firma al final (tanda 23) ───────────────────────────────────────────────────────────────────────────────
+   Al llegar al fondo de Hoy y de Progreso, el lobo pequeño en trazo tenue y una línea corta (FinDePagina, comunes.jsx):
+   la pantalla se acaba en algo, no en un hueco. Se acerca un poco al llegar a ella. */
+.fin-pagina { display: grid; justify-items: center; gap: 8px; margin: 18px 0 4px; color: var(--tinta-2); font-size: 0.8438rem; font-weight: 600; text-align: center; }
+.fin-lobo { width: 30px; height: auto; }
+.fin-lobo path { fill: color-mix(in srgb, var(--tinta-3) 45%, transparent); }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .fin-lobo { animation: fin-llega linear both; animation-timeline: view(); animation-range: entry 0% entry 100%; }
+  }
+}
+@keyframes fin-llega { from { translate: 0 14px; scale: .8; } }
