@@ -6,6 +6,7 @@ import { HojaBloque } from './TuBloque.jsx';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { NOMBRE_FOCO, NOMBRE_GRUPO, NOMBRE_TIPO_SESION, num } from '../../logica/calculos.js';
 import { rangoSemana, desdeISO, fmtConDia, hoyISO, sumarDias } from '../../logica/fechas.js';
+import { useDeslizar } from '../deslizar.js';
 
 export function Semana({ programa, abrirSesion, noLeidos = [] }) {
   const { api } = useApp();
@@ -22,7 +23,8 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
   const pautas = useCarga(() => (ids ? api.pautasSemana(ids.split(',')).catch(() => ({})) : Promise.resolve({})), [ids], { recuerdo: ids ? `pautas:${ids}` : null });
   const idx = semana ? p.semanas.findIndex((s) => s.id === semana.id) : -1;
   const irA = (d) => { const j = idx + d; if (j >= 0 && j < p.semanas.length) { setDir(d); setElegida(p.semanas[j].id); } };
-  const gesto = useDeslizar(irA);
+  // (diseño, tanda 22) el gesto de la casa (ui/deslizar.js): sigue al dedo, asoma la semana de al lado y se puede lanzar
+  const gesto = useDeslizar(irA, { ignorar: '.velo, [aria-modal="true"]', hay: (d) => !!p?.semanas?.[idx + d], nombre: (d) => (p?.semanas?.[idx + d] ? `Semana ${p.semanas[idx + d].numero}` : null) });
 
   if (cargando && !p) return <div class="contenido"><Siluetas forma="lista" n={4} texto="Cargando tu programa" /></div>;
   const siguiente = sesiones.find((s) => !s.completada);
@@ -99,34 +101,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
   );
 }
 
-// v0.50: deslizar a los lados (con el dedo o el ratón) para pasar de semana: solo un gesto claramente horizontal, y
-// sin capturar el puntero hasta que lo es (así los toques en los días y los botones siguen siendo toques)
-function useDeslizar(alPasar) {
-  const g = useRef(null);
-  const soltar = (el) => { el.style.transform = ''; el.classList.remove('arrastrando'); };
-  return {
-    // (lo de dentro de una hoja, como la de cambiar el día, no es un gesto de la tira: ya va en su capa, pero por si acaso)
-    onPointerDown: (e) => { if (e.button > 0 || e.target.closest?.('.velo, [aria-modal="true"]')) return; g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, activo: false }; },
-    onPointerMove: (e) => {
-      const s = g.current;
-      if (!s || s.id !== e.pointerId) return;
-      const dx = e.clientX - s.x, dy = e.clientY - s.y;
-      if (!s.activo && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.4) {
-        s.activo = true;
-        try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* */ }
-        e.currentTarget.classList.add('arrastrando');
-      }
-      if (s.activo && !matchMedia('(prefers-reduced-motion: reduce)').matches) e.currentTarget.style.transform = `translateX(${Math.round(dx * 0.35)}px)`;
-    },
-    onPointerUp: (e) => {
-      const s = g.current;
-      g.current = null;
-      soltar(e.currentTarget);
-      if (s?.activo && Math.abs(e.clientX - s.x) > 56) alPasar(e.clientX < s.x ? 1 : -1);
-    },
-    onPointerCancel: (e) => { g.current = null; soltar(e.currentTarget); },
-  };
-}
+// (el gesto de deslizar entre semanas, desde la tanda 22 de diseño, es el de ui/deslizar.js)
 
 // Todas las sesiones hechas, de todos los bloques, agrupadas por meses (como el historial de Hevy)
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];

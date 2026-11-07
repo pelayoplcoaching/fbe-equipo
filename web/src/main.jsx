@@ -8,12 +8,14 @@ import { instalarPulido } from './ui/pulido.js';
 import { instalarLlegada } from './ui/llegada.js';
 import { instalarPastilla } from './ui/pastilla.js';
 import { instalarTacto } from './ui/tacto.js';
+import { instalarPantalla } from './ui/pantalla.js';
 
 aplicarTema();
 instalarPulido();
 instalarLlegada();
 instalarPastilla();
 instalarTacto();
+instalarPantalla();
 import { crearApi } from './datos/api.js';
 import { crearCola } from './datos/cola.js';
 import { instalarRegistro } from './registro-errores.js';

@@ -148,7 +148,8 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
     await kg1.click();
     await teclado.waitFor();
     // (cuando acaba de subir: sin «reducir movimiento», entra con una animación corta)
-    await p.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))));
+    // (solo las de tiempo, como en esperarAnimaciones: las ligadas al desplazamiento no «terminan» nunca)
+    await p.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline === document.timeline && a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished.catch(() => {}))));
     await p.waitForTimeout(400);
     const t0 = await p.evaluate(() => {
       const t = document.querySelector('.teclado-serie').getBoundingClientRect(), f = document.querySelector('.ejercicio .serie[data-n="1"]').getBoundingClientRect();

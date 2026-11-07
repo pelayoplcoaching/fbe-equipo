@@ -19,6 +19,7 @@ import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Silue
 import { Interruptor } from './Ajustes.jsx';
 import { usePestanasDeslizables } from './deslizar.js';
 import { sinMovimiento } from './transiciones.js';
+import { tenirBarra } from './barra-color.js';
 import { reducirFoto } from './FotoPerfil.jsx';
 import {
   MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_PREGUNTA, MAX_OPCION, RETO_MAX, FILTROS_MURO, MEDALLAS, nombreEquipo, nombreValido, estadoReto, textoReto,
@@ -1136,6 +1137,8 @@ function FotoGrande({ src, alt, alCerrar }) {
 function FotoGrandeDentro({ src, alt, alCerrar }) {
   const ref = useRef(null);
   useAtraparFoco(ref);
+  // (diseño, tanda 23) la barra del sistema, de la noche de la foto
+  useEffect(() => tenirBarra('#0E0B1E'), []);
   useLayoutEffect(() => {
     const previo = document.activeElement;
     ref.current?.querySelector('.foto-grande-cerrar')?.focus({ preventScroll: true });

@@ -5,7 +5,7 @@ import { AnillosSemana } from './Anillos.jsx';
 import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
 import { usePestanasDeslizables } from '../deslizar.js';
-import { CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
+import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
 import { RANGOS_GRAFICA, filtrarRango, rangoConDatos } from '../../logica/rangos.js';
 import { destacados as calcularDestacados, tonelajePorSemana } from '../../logica/destacados.js';
@@ -617,6 +617,7 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
         {/* El diario lleva los vídeos de técnica y las fotos de progreso: se ve en Fuerza y en Cuerpo */}
         <Grupo g="fuerza cuerpo"><Diario atletaId={atleta.id} nombreAtleta={atleta.nombre} salud={salud} /></Grupo>
       </div>
+      <FinDePagina texto="Hasta aquí, de momento." />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { pedirSubProgreso } from './sub-progreso.js';
-import { Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar, useApuntar } from '../comunes.jsx';
+import { FinDePagina, Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar, useApuntar } from '../comunes.jsx';
 import { resumenDia } from '../../logica/dia.js';
 import { BandaConexion, BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
@@ -126,6 +126,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
             </>
           )} />
       )}
+      {p && <FinDePagina texto="Eso es todo por hoy." />}
     </div>
     {verBienvenida && <Bienvenida nombre={(perfil?.nombre || atleta.nombre || '').split(' ')[0]} alTerminar={() => setBienvenidaVista(true)} />}
     {verCuestionario && (

@@ -15,6 +15,8 @@ export const PATRONES = { toque: 8, serie: 14, record: [18, 50, 18, 50, 70], che
 //   aviso    dos golpes secos, cuando algo no se ha podido hacer
 //   celebrar la secuencia larga, al batir un récord o cerrar la semana
 Object.assign(PATRONES, { elegir: PATRONES.toque, hecho: PATRONES.serie, aviso: PATRONES.error, celebrar: PATRONES.record });
+// (tanda 22) y «no»: dos roces muy cortos, al tocar algo que aún no se puede usar
+PATRONES.no = [6, 50, 6];
 export const puedeVibrar = () => typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
 
 // (pulido 6) En iPhone, Safari no deja vibrar a las webs (no hay navigator.vibrate). Desde iOS 17.4 hay un resquicio
