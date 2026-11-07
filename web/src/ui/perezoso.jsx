@@ -5,7 +5,7 @@
 //   const Equipo = perezoso(() => import('./Comunidad.jsx'), 'Equipo');
 //   <Equipo …/>   ·   Equipo.precargar()
 import { useEffect, useState } from 'preact/hooks';
-import { Siluetas } from './comunes.jsx';
+import { Siluetas, cargaVisible } from './comunes.jsx';
 
 // cargar: () => import(…); nombre: lo que exporta el módulo; mientras: lo que se pinta mientras llega (de serie, unas
 // siluetas de pantalla; null para una hoja o algo que sale encima de otra cosa)
@@ -19,7 +19,8 @@ export function perezoso(cargar, nombre, { mientras } = {}) {
   function Perezoso(props) {
     const [C, setC] = useState(() => Cargado);
     const [error, setError] = useState(null);
-    const traer = () => { setError(null); pedir().then((x) => setC(() => x)).catch(setError); };
+    // (pulido 4, rendimiento) mientras llega el trozo, la pantalla aún no está lista
+    const traer = () => { setError(null); const lista = mientras === null ? null : cargaVisible(); pedir().then((x) => setC(() => x)).catch(setError).finally(() => lista?.()); };
     useEffect(() => { if (!C) traer(); }, []);
     if (C) return <C {...props} />;
     if (mientras === null) return null;

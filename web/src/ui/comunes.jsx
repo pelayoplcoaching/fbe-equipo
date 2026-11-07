@@ -11,6 +11,7 @@ import { FRACCION_MEDIA, fotogramasMuelle, MUELLE, arrastreVisible, velocidadDe,
 import { remuestrear, mezclarPuntos, trazo as trazoDe, area as areaDe, salidaSuave, columnasCifra, seleccionValida } from '../logica/rangos.js';
 import { sinMovimiento } from './transiciones.js';
 import { vibrar } from './hapticos.js';
+import { cronometro } from '../rendimiento.js';
 import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 
 export const Ctx = createContext(null);
@@ -455,36 +456,10 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
   const cerrarRef = useRef(alCerrarProp);
   cerrarRef.current = alCerrarProp;
   const alCerrar = () => cerrarRef.current?.();
-  // (pulido 3.10) En el móvil, al cerrarla con su botón, con Escape o tocando fuera, la hoja baja y el fondo se
-  // aclara (lo mismo que al cerrarla arrastrando), en vez de desaparecer de golpe; después se avisa a quien la abrió.
-  // Si quien la abrió no la cierra (p. ej., mientras sube un vídeo), vuelve a su sitio. Solo se mueve (nada se
-  // desvanece: el texto no pierde contraste mientras sale). En pantallas anchas y con «reducir movimiento», al momento.
-  const saliendo = useRef(false);
-  const cerrarSuave = () => {
-    if (saliendo.current) return;
-    const hoja = ref.current, velo = hoja?.parentElement;
-    if (!hoja || !velo || !movil() || animacion.current || arrastre.current || sinMovimiento() || typeof hoja.animate !== 'function') { alCerrar(); return; }
-    saliendo.current = true;
-    let anim = null;
-    const deshacer = () => { try { anim?.cancel(); } catch { /* */ } velo.classList.remove('cerrando'); saliendo.current = false; };
-    try {
-      anim = hoja.animate([{ transform: `translateY(${leerY(hoja)}px)` }, { transform: `translateY(${Math.max(hoja.offsetHeight, 200)}px)` }], { duration: 160, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards' });
-      velo.classList.add('cerrando');
-      let hecho = false;
-      const fin = () => {
-        if (hecho) return;
-        hecho = true;
-        alCerrar();
-        // (si sigue ahí un momento después, es que no se ha cerrado: se deja como estaba)
-        setTimeout(() => { if (ref.current === hoja && hoja.isConnected) deshacer(); }, 80);
-      };
-      anim.onfinish = fin;
-      anim.oncancel = () => { if (!hecho) { velo.classList.remove('cerrando'); saliendo.current = false; } };
-      setTimeout(fin, 400);   // (por si la animación no llega a avisar: pestaña en segundo plano)
-    } catch { deshacer(); alCerrar(); }
-  };
-  const cerrarSuaveRef = useRef(cerrarSuave);
-  cerrarSuaveRef.current = cerrarSuave;
+  // (pulido 3.10, retirado en el pulido 4) Aquí hubo una salida animada al cerrarla con su botón, con Escape o tocando
+  // fuera: la hoja seguía 160 ms en la página después de pedir que se cerrara. En ese rato se podía volver a pulsar su
+  // «Cerrar» o abrir otra en su sitio, y las pruebas de navegador (que hacen las dos cosas) se cortaban a ratos. Se
+  // cierra al momento, como siempre; arrastrándola sí baja con su muelle.
   // En cuanto se monta (no tras pintar), para que el foco y Escape funcionen desde el primer instante
   useLayoutEffect(() => {
     const previo = document.activeElement;
@@ -494,7 +469,7 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
       // Solo la ventana de encima: la última abierta (otra hoja, la búsqueda rápida…) se cierra antes
       const modales = document.querySelectorAll('[aria-modal="true"]');
       if (modales.length && modales[modales.length - 1] !== ref.current) return;
-      cerrarSuaveRef.current();
+      alCerrar();
     };
     document.addEventListener('keydown', tecla);
     // El primer control (que no sea «Cerrar»); si no hay otro, el propio diálogo (tabIndex −1)
@@ -590,13 +565,13 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
     asentar(hoja, desde, destinoHoja({ y: desde, velocidad, alto: a.alto, pantalla: window.innerHeight, medio }), velocidad);
   };
   return (
-    <div class="velo" onClick={(e) => { if (e.target === e.currentTarget) cerrarSuave(); }}>
+    <div class="velo" onClick={(e) => { if (e.target === e.currentTarget) alCerrar(); }}>
       <div class={`hoja-dialogo${clase ? ` ${clase}` : ''}`} role="dialog" aria-modal="true" aria-label={titulo} ref={ponerRef} tabIndex={-1} style={ancho ? { width: `min(${ancho}px, 100%)` } : undefined}>
         <div class="hoja-cab" onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar}>
           <div class="asa" aria-hidden="true" />
           <div class="separa">
             <h2>{titulo}</h2>
-            <button class="btn btn-icono plano cerrar-hoja" onClick={cerrarSuave} aria-label="Cerrar"><Icono n="cerrar" /></button>
+            <button class="btn btn-icono plano cerrar-hoja" onClick={alCerrar} aria-label="Cerrar"><Icono n="cerrar" /></button>
           </div>
         </div>
         {children}
@@ -632,6 +607,45 @@ export function usePorTramos(total, { tramo = 40, reinicio = '', clave = null, n
     hasta: Math.min(n, total),
     mas: quedan > 0 ? <button type="button" ref={ref} class="btn plano ver-mas-tramo" onClick={() => setN((x) => x + tramo)}>Ver {Math.min(tramo, quedan)} {nombre} ({quedan} sin mostrar)</button> : null,
   };
+}
+
+// (pulido 4, rendimiento) Cuánto tarda en verse una pantalla: desde que se toca hasta que no queda nada cargándose
+// a la vista (las cargas que enseñan siluetas; lo que se pone al día por detrás no cuenta, porque no se espera).
+// cargaVisible(): la llama quien empieza una carga a la vista; devuelve cómo decir que ha acabado.
+let cargasVisibles = 0;
+const alQuedarQuieta = new Set();
+export function cargaVisible() {
+  cargasVisibles++;
+  let hecho = false;
+  return () => {
+    if (hecho) return;
+    hecho = true;
+    cargasVisibles = Math.max(0, cargasVisibles - 1);
+    if (!cargasVisibles) for (const f of [...alQuedarQuieta]) f();
+  };
+}
+// medirPantalla('hoy'): se llama al tocar. Apunta «pantalla:hoy» cuando la pantalla nueva está pintada y quieta.
+// Si antes se va a otra, se deja la app o pasa medio minuto, no se apunta nada.
+let pantallaEnCurso = 0;
+export function medirPantalla(nombre) {
+  if (typeof window === 'undefined' || typeof requestAnimationFrame !== 'function' || document.visibilityState !== 'visible') return;
+  const mia = ++pantallaEnCurso;
+  const fin = cronometro(`pantalla:${String(nombre).toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24) || 'otra'}`);
+  let tope = null;
+  const dejar = () => { alQuedarQuieta.delete(mirar); clearTimeout(tope); document.removeEventListener('visibilitychange', dejar); };
+  // (dos fotogramas: uno para que Preact pinte la pantalla nueva y sus cargas arranquen, otro para verla pintada)
+  function mirar() {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (mia !== pantallaEnCurso) { dejar(); return; }
+      if (cargasVisibles > 0) return;   // (sigue cargando: se volverá a mirar cuando se quede quieta)
+      dejar();
+      fin();
+    }));
+  }
+  alQuedarQuieta.add(mirar);
+  tope = setTimeout(dejar, 30000);
+  document.addEventListener('visibilitychange', dejar);
+  mirar();
 }
 
 // (pulido 4) recuerdo: una clave para recordar, mientras la app esté abierta, lo último que se cargó. Al volver a esa
@@ -755,6 +769,8 @@ export function useCarga(fn, deps = [], opciones = {}) {
     const clave = claveRecuerdo.current;
     const antes = escrituras, epocaAntes = epoca;
     if (!silencioso) setEstado((e) => ({ ...e, cargando: true, error: null }));
+    // (pulido 4, rendimiento) una carga a la vista: la pantalla no está «lista» hasta que acabe
+    const lista = silencioso ? null : cargaVisible();
     try {
       const datos = await fn();
       // (solo se recuerda lo que se cargó entero sin que se escribiera nada mientras)
@@ -763,7 +779,7 @@ export function useCarga(fn, deps = [], opciones = {}) {
     } catch (error) {
       reportarError(error, 'carga');
       if (vivo.current && n === ultima.current) setEstado((e) => ({ ...e, error, cargando: false }));
-    }
+    } finally { lista?.(); }
   }, deps);
   const primera = useRef(true);
   useEffect(() => {

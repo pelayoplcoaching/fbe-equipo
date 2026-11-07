@@ -84,15 +84,22 @@ export function Revisar({ bandeja, abrirAtleta }) {
   // (pulido 5) lo que se marca como revisado sale de la lista al momento y se guarda por detrás (si no se puede
   // guardar, vuelve a la lista y se avisa)
   // (pulido 3.10) y se va encogiéndose (lo de debajo sube a su sitio), en vez de desaparecer de golpe
-  const quitar = async (lista, id, guardar) => {
-    const salida = salirSuave(caja.current?.querySelector(`[data-item$="-${id}"]`));
-    await salida.fin;
-    try {
-      return await bandeja.alMomento((x) => {
-        const queda = (x[lista] || []).filter((i) => i.id !== id);
-        return queda.length === (x[lista] || []).length ? x : { ...x, [lista]: queda, total: Math.max(0, (x.total || 0) - 1) };
-      }, guardar);
-    } catch (e) { salida.deshacer(); throw e; }
+  // (mientras se encoge sigue en la página: un segundo toque en ese rato no la marca dos veces, espera a la primera)
+  const saliendo = useRef(new Map());
+  const quitar = (lista, id, guardar) => {
+    if (saliendo.current.has(id)) return saliendo.current.get(id);
+    const hecho = (async () => {
+      const salida = salirSuave(caja.current?.querySelector(`[data-item$="-${id}"]`));
+      await salida.fin;
+      try {
+        return await bandeja.alMomento((x) => {
+          const queda = (x[lista] || []).filter((i) => i.id !== id);
+          return queda.length === (x[lista] || []).length ? x : { ...x, [lista]: queda, total: Math.max(0, (x.total || 0) - 1) };
+        }, guardar);
+      } catch (e) { salida.deshacer(); throw e; }
+    })().finally(() => { saliendo.current.delete(id); });
+    saliendo.current.set(id, hecho);
+    return hecho;
   };
   if (bandeja.cargando && !d) return <div class="contenido coach"><Siluetas forma="tarjetas" n={3} texto="Cargando lo que tienes por revisar" /></div>;
 

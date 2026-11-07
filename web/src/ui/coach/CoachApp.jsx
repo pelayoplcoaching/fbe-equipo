@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { CabeceraGrande, useApp, useCarga, Icono, Marca, Insignia, usePildora, marcaFresca, sigueFresca } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, Icono, Marca, Insignia, usePildora, marcaFresca, sigueFresca, medirPantalla } from '../comunes.jsx';
+import { hitoArranque } from '../../rendimiento.js';
 import { conTransicion } from '../transiciones.js';
 import { usePosicion, subirArriba } from '../posiciones.js';
 import { useAtras, ponerRuta } from '../atras.js';
@@ -57,6 +58,9 @@ export function CoachApp() {
   // v0.54 (revisión): al abrir, lo que quedó en la cola de Storage (fotos y vídeos ya quitados de la tabla) se borra
   useEffect(() => { Promise.resolve(api.limpiarAlmacenamiento?.()).catch(() => {}); }, []);
   const bandeja = useCarga(() => api.bandeja(), []);
+  // (pulido 4, rendimiento) la app del coach ha arrancado cuando sabe lo que hay por revisar (lo pide siempre, se abra
+  // por la pestaña que se abra): de abrir la página a aquí, «arranque»
+  useEffect(() => { if (!bandeja.cargando) hitoArranque(); }, [bandeja.cargando]);
   const sinLeer = useCarga(() => api.mensajesSinLeer().catch(() => 0), []);
   // v0.48: el número del icono de la app (lo que espera tu respuesta y los mensajes sin leer)
   useEffect(() => { if (bandeja.datos) ponerInsignia((bandeja.datos.total || 0) + (sinLeer.datos || 0)); }, [bandeja.datos, sinLeer.datos]);
@@ -98,6 +102,7 @@ export function CoachApp() {
   // v0.49: abrir y cerrar una ficha, y cambiar de sección, con una transición corta (donde se puede)
   // v0.52: desde el panel, su foto pasa a la de la cabecera de la ficha (elemento compartido)
   const abrirAtleta = (atletaId, pestana = 'programa', foto = null) => {
+    medirPantalla('ficha');
     conTransicion(() => { setTab('atletas'); setFicha({ atletaId, pestana }); setPeticion(null); }, 'abrir',
       foto ? [{ nombre: 'vt-avatar', desde: foto, hasta: '.avatar-estado .avatar' }] : null);
   };
@@ -154,6 +159,7 @@ export function CoachApp() {
     if (id === 'modo-atleta' && propioCoach) { entrarModoAtleta(); return; }
     if (id === tab && !ficha) { subirArriba(); return; }   // tocar la sección en la que ya se está: arriba
     const orden = pestanas.map(([t]) => t);
+    medirPantalla(id);
     conTransicion(() => { setTab(id); setFicha(null); setPeticion(null); }, orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : id === tab ? 'cerrar' : 'adelante');
   };
 

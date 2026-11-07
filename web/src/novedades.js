@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.95': {
+    atleta: [
+      'Las hojas vuelven a cerrarse al momento.',
+    ],
+    coach: [
+      'La app mide cuánto tarda en cada móvil y lo ves en Cuenta → «Cómo va la app», sin nombres. Necesita la migración 049.',
+    ],
+  },
   '0.94': {
     atleta: [
       'La app tiene más vida: la barra responde al tocarla, el título se recoge al deslizar y cada día tiene su cielo en la tarjeta de Hoy.',

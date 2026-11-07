@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia, usePildora } from '../comunes.jsx';
+import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia, usePildora, medirPantalla } from '../comunes.jsx';
+import { hitoArranque } from '../../rendimiento.js';
 import { conTransicion } from '../transiciones.js';
 import { usePosicion, subirArriba } from '../posiciones.js';
 import { useAtras, ponerRuta } from '../atras.js';
@@ -116,6 +117,8 @@ export function AtletaApp() {
   // y lo de la base, en cuanto llega
   const conCola = (p) => programaConCola(p, cola.operaciones());
   const programa = useCarga(() => api.programa(atleta.id).then(conCola), [atleta.id, dia], { copia: CLAVES_COPIA.programa(atleta.id), transformar: conCola });
+  // (pulido 4, rendimiento) la app ha arrancado cuando el programa está: de abrir la página a aquí, «arranque»
+  useEffect(() => { if (!programa.cargando) hitoArranque(); }, [programa.cargando]);
   const checkinSemana = useCarga(() => (propio ? Promise.resolve(null) : api.checkin(atleta.id, semanaCheckin(hoyISO()))), [atleta.id, dia]);
   const noLeidos = useCarga(() => (propio ? Promise.resolve([]) : api.noLeidos(atleta.id).catch(() => [])), [atleta.id, dia]);
   // v0.48: las tareas del coach que ya tocan (para el número del icono de la app)
@@ -189,6 +192,7 @@ export function AtletaApp() {
   // v0.52: desde la tarjeta de Hoy, su título pasa al de la portada (o al de la sesión, si ya está empezada)
   const abrirSesion = (id, titulo = null) => {
     if (!conEntrenamiento(atleta)) { setTab('mensajes'); return; }
+    medirPantalla('sesion');
     conTransicion(() => { setSesionId(id); window.scrollTo(0, 0); }, 'abrir',
       titulo ? [{ nombre: 'vt-titulo-sesion', desde: titulo, hasta: '.portada-sesion h1, .sesion-vista > .cabecera h1' }] : null);
   };
@@ -196,6 +200,7 @@ export function AtletaApp() {
   const irAPestana = (id) => {
     if (id === tab) { subirArriba(); return; }   // tocar la pestaña en la que ya se está: arriba
     const orden = TABS.map(([t]) => t);
+    medirPantalla(id);
     conTransicion(() => setTab(id), orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : 'adelante');
   };
   const releer = () => noLeidos.recargar(true);
