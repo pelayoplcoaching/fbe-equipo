@@ -37,7 +37,7 @@ export function Plantillas({ peticion = null } = {}) {
       </CabeceraGrande>
       <BandaDemo />
       {lista.cargando && !lista.datos ? <Siluetas forma="lista" n={3} texto="Cargando las plantillas" /> : !lista.datos?.length ? (
-        <div class="panel"><Vacio icono="plantillas" titulo="Sin plantillas" accion={<button class="btn btn-primario" onClick={() => setNueva(true)}>Crear una</button>}>
+        <div class="panel"><Vacio ilustracion="plantillas" titulo="Sin plantillas" accion={<button class="btn btn-primario" onClick={() => setNueva(true)}>Crear una</button>}>
           También puedes guardar como plantilla cualquier bloque desde la ficha de un atleta.
         </Vacio></div>
       ) : (

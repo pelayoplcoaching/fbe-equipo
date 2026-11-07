@@ -138,7 +138,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
       {entrenamiento && (<>
       <section class="seccion" data-grupo="fuerza">
         <h2>Fuerza (1RM estimado)</h2>
-        {!ejercicios.length ? <div class="panel"><Vacio icono="progreso" titulo="Sin datos todavía">Cuando registres series, aquí verás tu 1RM estimado semana a semana.</Vacio></div> : (
+        {!ejercicios.length ? <div class="panel"><Vacio ilustracion="progreso" titulo="Sin datos todavía">Cuando registres series, aquí verás tu 1RM estimado semana a semana.</Vacio></div> : (
           <div class="panel panel-pad pila">
             <div class="selector-chips" role="group" aria-label="Ejercicio">
               {ejercicios.slice(0, 12).map((e) => (

@@ -72,7 +72,7 @@ function RecetarioCoach({ atleta }) {
         </section>
       )}
       <VistaRecetario recetario={r} esCoach alAbrir={(a) => setHoja({ editar: a })} vacio={(
-        <div class="panel"><Vacio icono="receta" titulo="Sin recetas todavía" accion={<button class="btn btn-primario" onClick={() => setHoja('anadir')}><Icono n="mas" /> Añadir recetas</button>}>
+        <div class="panel"><Vacio ilustracion="recetas" titulo="Sin recetas todavía" accion={<button class="btn btn-primario" onClick={() => setHoja('anadir')}><Icono n="mas" /> Añadir recetas</button>}>
           Elige de tu biblioteca las opciones para cada comida (las ve en su app, con sus cantidades). Si a él le tocan más o menos kcal, ajusta el factor.
         </Vacio></div>
       )} />
@@ -239,7 +239,7 @@ export function RecetasBiblioteca() {
         </>
       )}
       {lista.cargando && !lista.datos ? <Siluetas forma="tarjetas" n={3} texto="Cargando tus recetas" /> : !todas.length ? (
-        <div class="panel"><Vacio icono="receta" titulo="Sin recetas todavía" accion={<button class="btn btn-primario" onClick={() => setEditar({})}>Crear la primera</button>}>
+        <div class="panel"><Vacio ilustracion="recetas" titulo="Sin recetas todavía" accion={<button class="btn btn-primario" onClick={() => setEditar({})}>Crear la primera</button>}>
           Nombre, foto, comidas en las que encaja, kcal y macros por ración, ingredientes (pégalos de Notion, uno por línea) y preparación.
         </Vacio></div>
       ) : !vistas.length ? <p class="peq secundario">Ninguna receta con eso.</p> : (

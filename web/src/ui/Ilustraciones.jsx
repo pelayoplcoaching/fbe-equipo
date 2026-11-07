@@ -134,6 +134,82 @@ const DIBUJOS = {
       <Suelo y={104} />
     </>
   ),
+  // (diseño, tanda 17) Cinco escenas más, para los estados vacíos que más se ven y solo llevaban un icono
+  // Sin datos de progreso: los ejes, la curva que va a subir y el lobo mirándola
+  progreso: () => (
+    <>
+      <path class="ilu-trazo" d="M28 20v68h108" />
+      <path class="ilu-tenue ilu-discontinuo" d="M34 70h96M34 52h96M34 34h96" />
+      <path class="ilu-acento" d="M34 80c14-2 20-14 32-16s16 6 28-6 18-22 34-26" />
+      <circle class="ilu-relleno ilu-acento" cx="128" cy="32" r="4.5" />
+      <Lobo x={42} y={22} w={24} clase="ilu-tenue" />
+      <Suelo y={102} />
+    </>
+  ),
+  // Sin recetas: el plato con el lobo, el tenedor y el cuchillo
+  recetas: () => (
+    <>
+      <circle class="ilu-relleno ilu-trazo" cx="80" cy="56" r="31" />
+      <circle class="ilu-tenue" cx="80" cy="56" r="21" />
+      <Lobo x={68} y={42} w={24} />
+      <path class="ilu-trazo" d="M32 26v16a6 6 0 0 0 12 0V26M38 26v64" />
+      <path class="ilu-trazo" d="M126 26c-8 7-9 24-2 32v32" />
+      <Suelo y={104} />
+    </>
+  ),
+  // El muro del equipo, vacío: la manada
+  equipo: () => (
+    <>
+      <Lobo x={18} y={44} w={34} clase="ilu-tenue" />
+      <Lobo x={56} y={26} w={48} />
+      <Lobo x={108} y={44} w={34} clase="ilu-tenue" />
+      <path class="ilu-acento" d="M68 18l-4-7M80 15V6M92 18l4-7" />
+      <Suelo y={96} />
+    </>
+  ),
+  // Sin atletas todavía: la lista con sus fichas y el hueco para el primero
+  atletas: () => (
+    <>
+      <rect class="ilu-relleno ilu-trazo" x="30" y="18" width="100" height="24" rx="8" />
+      <circle class="ilu-acento" cx="44" cy="30" r="6" /><path class="ilu-trazo" d="M58 30h38" /><path class="ilu-tenue" d="M108 30h12" />
+      <rect class="ilu-trazo" x="30" y="48" width="100" height="24" rx="8" />
+      <circle class="ilu-tenue" cx="44" cy="60" r="6" /><path class="ilu-tenue" d="M58 60h30M108 60h12" />
+      <rect class="ilu-tenue ilu-discontinuo" x="30" y="78" width="100" height="22" rx="8" />
+      <path class="ilu-acento" d="M80 83v12M74 89h12" />
+    </>
+  ),
+  // Sin plantillas ni bloques: las hojas apiladas, por escribir
+  plantillas: () => (
+    <>
+      <rect class="ilu-tenue" x="54" y="16" width="62" height="76" rx="8" transform="rotate(7 85 54)" />
+      <rect class="ilu-relleno ilu-trazo" x="44" y="20" width="62" height="76" rx="8" />
+      <path class="ilu-acento" d="M56 36h26" /><path class="ilu-trazo" d="M56 50h38M56 60h38M56 70h24" />
+      <path class="ilu-tenue" d="M56 82h14" />
+      <Lobo x={116} y={64} w={24} clase="ilu-tenue" />
+      <Suelo y={104} />
+    </>
+  ),
+  // (diseño, tanda 18) Sin conexión: el lobo bajo las ondas, con la de arriba cortada
+  sinred: () => (
+    <>
+      <path class="ilu-tenue ilu-discontinuo" d="M44 34c20-18 52-18 72 0" />
+      <path class="ilu-trazo" d="M56 46c14-12 34-12 48 0" />
+      <path class="ilu-acento" d="M68 58c7-6 17-6 24 0" />
+      <Lobo x={66} y={62} w={28} />
+      <path class="ilu-acento" d="M118 20l12 12M130 20l-12 12" />
+      <Suelo y={102} />
+    </>
+  ),
+  // Algo ha fallado al cargar: la ficha con su aviso y el lobo al lado, para volver a intentarlo
+  fallo: () => (
+    <>
+      <rect class="ilu-relleno ilu-trazo" x="30" y="24" width="70" height="68" rx="8" />
+      <path class="ilu-tenue" d="M42 40h30M42 52h46M42 64h22" />
+      <circle class="ilu-acento" cx="96" cy="78" r="13" /><path class="ilu-acento" d="M96 71v8M96 84v.5" />
+      <Lobo x={112} y={48} w={30} clase="ilu-tenue" />
+      <Suelo y={104} />
+    </>
+  ),
 };
 
 export const ILUSTRACIONES = Object.keys(DIBUJOS);

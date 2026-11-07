@@ -40,7 +40,7 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
           )
         ) : (
           <VistaRecetario recetario={r} alAbrir={setReceta} vacio={(
-            <div class="panel"><Vacio icono="receta" titulo="Aún no tienes recetas">Tu coach te pondrá aquí las opciones para cada comida, con sus cantidades y cómo se preparan.</Vacio></div>
+            <div class="panel"><Vacio ilustracion="recetas" titulo="Aún no tienes recetas">Tu coach te pondrá aquí las opciones para cada comida, con sus cantidades y cómo se preparan.</Vacio></div>
           )} />
         )}
       </div>

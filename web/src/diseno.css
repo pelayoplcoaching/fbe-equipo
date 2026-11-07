@@ -823,7 +823,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
   .llega { animation: llega var(--mov-medio) var(--curva-casa) calc(var(--orden, 0) * 30ms) backwards; }
 }
 @keyframes hoja-sube { from { transform: translateY(100%); } }
-@keyframes hoja-abre { from { transform: scale(.96); opacity: 0; } }
+@keyframes hoja-abre { from { transform: scale(.94) translateY(12px); } }
 @keyframes llega { from { opacity: 0; } }
 
 /* ── 31 · Cuatro niveles de sombra (tanda 15) ─────────────────────────────────────────────────────────────────────────
@@ -861,3 +861,341 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .chat-dia-flotante { box-shadow: inset 0 0 0 1px var(--borde), var(--sombra-flotante); }
 /* Lo que se abre encima (estilos.css: .paleta; la hoja conserva su brillo de vidrio de arriba) */
 .paleta { box-shadow: var(--sombra-hoja); }
+
+/* REGLA (tandas 17 y 18): lo que lleva texto no entra cambiando la opacidad. A medio aparecer, un texto no cumple el
+   contraste y las pruebas de accesibilidad lo cazan si miran justo entonces (pasó con el subtítulo de la cabecera).
+   Las entradas de texto, con transform (desplazar, escalar); la opacidad, solo para dibujos, fotos y fondos. La única
+   excepción es «.llega» (bloque 30), que funde lo que llega tras una carga. */
+
+/* ══ TANDA 17 · lo de cada día ════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 32 · La barra de abajo, con vida (tanda 17) ──────────────────────────────────────────────────────────────────────
+   Sobre la píldora que ya se desliza (estilos.css 2505-2512): el icono de la pestaña elegida da un pequeño salto al
+   llegar y su nombre se asienta. Solo transform: no cambia el tamaño de nada. */
+@media (prefers-reduced-motion: no-preference) {
+  .tab[aria-current="page"] .tab-ico svg { animation: tab-salta var(--mov-lento) var(--curva-rebote); }
+  .tab[aria-current="page"] > span:last-child:not(.tab-ico) { animation: tab-nombre var(--mov-medio) var(--curva-casa); }
+}
+@keyframes tab-salta { 0% { transform: translateY(1px) scale(.84); } 55% { transform: translateY(-2.5px) scale(1.1); } 100% { transform: translateY(-1px) scale(1); } }
+@keyframes tab-nombre { from { transform: translateY(2.5px); } }
+
+/* ── 33 · La cabecera se recoge con el dedo (tanda 17) ────────────────────────────────────────────────────────────────
+   El título grande saltaba de 30 px a la barra compacta al pasar de 56 px de página (comunes.jsx: CabeceraGrande). Ahora,
+   en esos primeros 56 px, el título encoge ligado al desplazamiento, de modo que el salto a la barra compacta ya casi no
+   se nota. Solo transform (la caja no cambia: nada de lo de abajo se mueve), y solo donde el navegador sabe ligar una
+   animación al desplazamiento; en los demás, como antes. El subtítulo NO se apaga poco a poco: a medio apagar no
+   cumple el contraste (lo detectó la prueba de accesibilidad del check-in); se va de una vez, con la barra compacta. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .cabecera-grande:not(.compacta) .titulo h1 { transform-origin: left bottom; animation: titulo-recoge linear both; animation-timeline: scroll(root); animation-range: 0 56px; }
+  }
+}
+@keyframes titulo-recoge { to { transform: scale(.72); } }
+
+/* ── 34 · El descanso, protagonista (tanda 17) ────────────────────────────────────────────────────────────────────────
+   El arco lleva el degradado de los aros (sesion-comun.jsx; ya se vaciaba de forma continua, estilos.css 379); en los
+   tres últimos segundos la cifra late con cada segundo (clase «ultimos») y, al terminar, «¡Vamos!» entra con un salto
+   y el aro se enciende entero. */
+.reloj-descanso { --c: var(--c-disco, var(--morado)); }
+.temporizador.fin .reloj-descanso svg { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c) 55%, transparent)); }
+@media (prefers-reduced-motion: no-preference) {
+  .temporizador.ultimos .cuenta { animation: cuenta-late 1s var(--curva-casa) infinite; }
+  .temporizador.fin .cuenta { animation: cuenta-vamos var(--mov-lento) var(--curva-rebote); }
+}
+@keyframes cuenta-late { 0% { transform: scale(1.09); } 45% { transform: scale(1); } }
+@keyframes cuenta-vamos { from { transform: scale(.7); } }
+
+/* ── 35 · Avisos con carácter (tanda 17) ──────────────────────────────────────────────────────────────────────────────
+   El aviso flotante (estilos.css 445) pasa a ser una píldora, el de error lleva su icono (App.jsx) y entra con un
+   pequeño muelle desde abajo (desde arriba si hay una hoja abierta). La salida es de la línea de fluidez (pulido.css). */
+.toast { border-radius: 16px; padding: 12px 18px; display: flex; align-items: center; gap: 10px; text-align: left; }
+.toast > svg { width: 20px; height: 20px; flex: none; }
+.toast .toast-accion { margin-left: 4px; flex: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .toast:not(.saliendo) { animation: toast-entra var(--mov-lento) var(--curva-rebote); }
+  body[data-hojas] .toast:not(.saliendo) { animation-name: toast-entra-arriba; }
+}
+@keyframes toast-entra { from { transform: translateX(-50%) translateY(26px) scale(.92); } }
+@keyframes toast-entra-arriba { from { transform: translateX(-50%) translateY(-26px) scale(.92); } }
+
+/* ── 36 · La tarjeta de Hoy, con una escena para cada día (tanda 17) ──────────────────────────────────────────────────
+   El día de entreno lleva el dibujo de su sesión (bloque 26). Los demás tenían solo un degradado y su ilustración
+   (estilos.css 2755-2761); ahora cada uno tiene su cielo: el descanso, una noche con estrellas; la sesión hecha, un
+   amanecer verde que sube desde abajo; la semana completa, anillos y un resplandor dorado (el dorado de los logros).
+   Solo fondos: el contenido y sus contrastes no cambian. */
+.hero-descanso {
+  /* (las estrellas, solo arriba a la derecha, alrededor de la luna: donde no hay texto que una estrella pueda parecer un punto) */
+  background:
+    radial-gradient(2.4px 2.4px at calc(100% - 12px) 14px, rgba(255, 255, 255, .9) 45%, transparent 55%), radial-gradient(1.8px 1.8px at calc(100% - 126px) 12px, rgba(255, 255, 255, .7) 45%, transparent 55%),
+    radial-gradient(2px 2px at calc(100% - 20px) 96px, rgba(214, 226, 255, .75) 45%, transparent 55%), radial-gradient(1.6px 1.6px at calc(100% - 58px) 8px, rgba(255, 255, 255, .6) 45%, transparent 55%),
+    radial-gradient(1.8px 1.8px at calc(100% - 132px) 62px, rgba(255, 255, 255, .5) 45%, transparent 55%), radial-gradient(1.6px 1.6px at calc(100% - 8px) 56px, rgba(255, 255, 255, .55) 45%, transparent 55%),
+    radial-gradient(1.6px 1.6px at calc(100% - 92px) 118px, rgba(255, 255, 255, .4) 45%, transparent 55%), radial-gradient(1.4px 1.4px at calc(100% - 44px) 122px, rgba(255, 255, 255, .35) 45%, transparent 55%),
+    linear-gradient(165deg, #101F45 0%, var(--hero) 74%);
+}
+.hero-hecha {
+  background:
+    radial-gradient(125% 62% at 50% 114%, rgba(79, 203, 137, .5) 0%, rgba(79, 203, 137, .17) 45%, transparent 70%),
+    linear-gradient(165deg, #0E3A30 0%, var(--hero) 74%);
+}
+.hero-semana {
+  background:
+    repeating-radial-gradient(circle at 92% -6%, transparent 0 38px, rgba(233, 212, 154, .09) 38px 39.5px),
+    radial-gradient(95% 62% at 92% -6%, rgba(233, 212, 154, .3) 0%, rgba(233, 212, 154, .08) 46%, transparent 70%),
+    var(--hero);
+}
+.hero-semana::before { background: radial-gradient(circle, rgba(233, 212, 154, .3) 0%, rgba(233, 212, 154, .09) 42%, transparent 70%); }
+.hero-semana .toca-hoy.hecha { background: rgba(233, 212, 154, .2); }
+.hero-semana .toca-hoy.hecha svg { color: #E9D49A; }
+
+/* ── 37 · El final de la sesión (tanda 17) ────────────────────────────────────────────────────────────────────────────
+   El resumen ya entraba pieza a pieza (estilos.css 2591). Ahora, además: la cabecera lleva de fondo el dibujo de la
+   sesión, la medalla deja un aro que se abre, con récord la medalla y su etiqueta van en dorado (el color de los
+   logros), las cifras suben (Sesion.jsx: CifraSube) y en el botón de compartir asoma la tarjeta en pequeño. */
+.resumen-hero .hero-arte { position: absolute; z-index: -1; top: 0; right: 0; width: 70%; height: 100%; pointer-events: none; opacity: .5;
+  -webkit-mask-image: linear-gradient(to left, #000 10%, transparent 92%); mask-image: linear-gradient(to left, #000 10%, transparent 92%); }
+.resumen-hero.con-record .resumen-medalla { background: #E9D49A; color: #2A2154; box-shadow: 0 0 0 6px rgba(233, 212, 154, .22); }
+.resumen-hero.con-record .resumen-pr { background: rgba(233, 212, 154, .18); }
+.resumen-hero.con-record .resumen-pr svg { color: #E9D49A; }
+.resumen-medalla { position: relative; }
+.btn-compartir-sesion { position: relative; }
+.resumen-mini { position: absolute; left: 14px; top: 50%; width: 36px; height: 45px; margin-top: -22px; border-radius: 5px; object-fit: cover; transform: rotate(-7deg); box-shadow: var(--sombra-flotante); }
+@media (prefers-reduced-motion: no-preference) {
+  .resumen-medalla::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); animation: medalla-aro .9s var(--curva-casa) .45s backwards; pointer-events: none; }
+  .resumen-mini { animation: mini-asoma var(--mov-lento) var(--curva-rebote) backwards; }
+}
+@keyframes medalla-aro { from { box-shadow: 0 0 0 0 rgba(255, 255, 255, .5); } to { box-shadow: 0 0 0 26px rgba(255, 255, 255, 0); } }
+@keyframes mini-asoma { from { transform: translateY(14px) rotate(-18deg) scale(.6); opacity: 0; } }
+
+/* ── 38 · La semana, día a día (tanda 17) ─────────────────────────────────────────────────────────────────────────────
+   La tira de siete días del plan (estilos.css 1322-1331): hoy lleva su número en un disco morado (como el calendario del
+   móvil), los días entran uno detrás de otro y el ✓ de las sesiones hechas se dibuja, también en la lista de sesiones
+   (.dia.hecha, estilos.css 313). El cambio de semana ya se deslizaba de lado (.dias-deslizar). */
+.tira-num { display: grid; place-items: center; min-width: 28px; height: 28px; padding: 0 4px; border-radius: 14px; }
+.tira-dia.hoy { background: var(--morado-suave); box-shadow: none; }
+.tira-dia.hoy .tira-num { background: var(--morado); color: var(--sobre-morado); }
+.tira-dia.hoy .tira-letra { color: var(--morado); }
+@media (prefers-reduced-motion: no-preference) {
+  .tira-dia { animation: tira-entra var(--mov-medio) var(--curva-casa) backwards; }
+  .tira-dia:nth-child(2) { animation-delay: 25ms; } .tira-dia:nth-child(3) { animation-delay: 50ms; } .tira-dia:nth-child(4) { animation-delay: 75ms; }
+  .tira-dia:nth-child(5) { animation-delay: 100ms; } .tira-dia:nth-child(6) { animation-delay: 125ms; } .tira-dia:nth-child(7) { animation-delay: 150ms; }
+  .tira-chip.hecha svg path, .dia.hecha .marca-dia svg path { stroke-dasharray: 20; animation: serie-trazo var(--mov-lento) var(--curva-casa) .2s backwards; }
+}
+@keyframes tira-entra { from { transform: translateY(7px) scale(.96); } }
+
+/* ── 39 · Controles de la casa (tanda 17) ─────────────────────────────────────────────────────────────────────────────
+   Segmentos: la pastilla de la opción elegida es una sola pieza que se desliza de una a otra (ui/pastilla.js mide dónde
+   está y lo deja en --seg-x/y/w/h; sin esas medidas, cada botón conserva su fondo, como en el bloque 3). Interruptor
+   (estilos.css 1121): la bola se estira al pulsar y llega con un pequeño muelle. Casilla (bloque 3): al marcarse, salta. */
+/* (siempre, no solo con la pastilla puesta: es la referencia con la que pastilla.js mide dónde está cada opción) */
+.segmentos { position: relative; }
+.segmentos[data-pastilla]::before {
+  content: ""; position: absolute; left: 0; top: 0; width: var(--seg-w); height: var(--seg-h); transform: translate(var(--seg-x), var(--seg-y));
+  border-radius: 9px; background: var(--seg-activo); box-shadow: var(--seg-sombra); pointer-events: none;
+}
+.segmentos[data-pastilla] > button { position: relative; z-index: 1; }
+.segmentos[data-pastilla] > button[aria-pressed="true"] { background: transparent; box-shadow: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .segmentos[data-pastilla][data-lista]::before { transition: transform var(--mov-medio) var(--curva-casa), width var(--mov-medio) var(--curva-casa), height var(--mov-medio) var(--curva-casa); }
+  .interruptor { transition: background-color var(--mov-medio) var(--curva-casa); }
+  .interruptor::after { transition: transform var(--mov-medio) var(--curva-rebote), width var(--mov-rapido) var(--curva-casa); }
+  input[type="checkbox"]:not(.interruptor):checked { animation: casilla-salta var(--mov-medio) var(--curva-rebote); }
+}
+.interruptor:active::after { width: 29px; }
+.interruptor:checked:active::after { transform: translateX(15px); }
+@keyframes casilla-salta { from { transform: scale(.78); } }
+@media (forced-colors: active) {
+  .segmentos[data-pastilla]::before { display: none; }
+  .segmentos[data-pastilla] > button[aria-pressed="true"] { background: Highlight; color: HighlightText; }
+}
+
+/* ── 40 · Estados vacíos con escena (tanda 17) ────────────────────────────────────────────────────────────────────────
+   De los 53 vacíos solo diez llevaban dibujo. Los más vistos estrenan escena (Ilustraciones.jsx: progreso, recetas,
+   equipo, atletas y plantillas); los demás, que siguen con su icono (estilos.css 566), lo llevan ahora en un pequeño
+   escenario: un disco del color de la marca con dos aros que se apagan. */
+.vacio:not(.con-ilustracion) > svg:first-child {
+  width: 60px; height: 60px; padding: 15px; border-radius: 50%; color: var(--morado); background: var(--morado-suave);
+  box-shadow: 0 0 0 9px color-mix(in srgb, var(--morado) 7%, transparent), 0 0 0 19px color-mix(in srgb, var(--morado) 3.5%, transparent);
+  margin: 14px 0 12px;
+}
+@media (prefers-reduced-motion: no-preference) { .vacio:not(.con-ilustracion) > svg:first-child { animation: ilu-entra var(--mov-lento) var(--curva-casa) both; } }
+
+/* ── 41 · Fotos y avatares que se funden (tanda 17) ───────────────────────────────────────────────────────────────────
+   Una foto que aún no ha cargado no aparece de golpe: al llegar pasa de borrosa a nítida (ui/llegada.js pone las
+   clases). Y el avatar con foto lleva un aro fino de su color, separado por un filo del fondo (como los de las historias). */
+img.img-llega { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) { img.img-llegada { animation: img-funde var(--mov-lento) var(--curva-casa); } }
+@keyframes img-funde { from { opacity: 0; filter: blur(10px); } }
+.avatar.con-foto:not(.podio-persona .avatar) { box-shadow: 0 0 0 1.5px var(--hoja), 0 0 0 3px color-mix(in srgb, var(--av, var(--morado)) 62%, transparent); }
+
+/* ══ TANDA 18 · momentos y acabado ════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 42 · El modo oscuro, con luz (tanda 18) ──────────────────────────────────────────────────────────────────────────
+   El oscuro ya iba en morado noche (estilos.css 69-96), pero sus tarjetas eran planas: sobre negro una sombra no se ve.
+   Ahora la altura se dice con luz, como en las apps oscuras bien hechas: un filo claro arriba de cada tarjeta y de cada
+   hoja (va en los niveles de sombra del bloque 31, así que lo lleva todo lo que usa --sombra) y un velo de luz muy leve
+   en la parte alta de los paneles. En claro, nada cambia. */
+:root { --luz-tarjeta: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sombra-tarjeta: inset 0 1px 0 rgba(255, 255, 255, .06), 0 0 0 1px var(--borde), 0 1px 2px rgba(0, 0, 0, .3), 0 10px 24px -14px rgba(0, 0, 0, .55);
+    --sombra-hoja: inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 0 1px var(--borde), 0 28px 60px -22px rgba(0, 0, 0, .8);
+    --luz-tarjeta: linear-gradient(180deg, rgba(255, 255, 255, .028) 0%, transparent 64px);
+  }
+}
+:root[data-theme="dark"] {
+  --sombra-tarjeta: inset 0 1px 0 rgba(255, 255, 255, .06), 0 0 0 1px var(--borde), 0 1px 2px rgba(0, 0, 0, .3), 0 10px 24px -14px rgba(0, 0, 0, .55);
+  --sombra-hoja: inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 0 1px var(--borde), 0 28px 60px -22px rgba(0, 0, 0, .8);
+  --luz-tarjeta: linear-gradient(180deg, rgba(255, 255, 255, .028) 0%, transparent 64px);
+}
+.panel, .dia, .resumen-num > div, .tarjeta-atleta { background-image: var(--luz-tarjeta); }
+
+/* ── 43 · Un solo vidrio (tanda 18) ───────────────────────────────────────────────────────────────────────────────────
+   La barra de abajo, la cabecera y las hojas ya compartían vidrio (--vidrio-*, estilos.css 3010-3046). Lo que flota
+   sobre la página iba por libre: la píldora del descanso y la de subida, opacas; la de «en curso», con otro desenfoque;
+   el aviso, opaco. Ahora todo usa el mismo desenfoque (--vidrio-filtro) y el mismo filo de luz. Sin desenfoque, con
+   «reducir transparencia» o con «más contraste», opacos como antes. */
+:root { --vidrio-flota: color-mix(in srgb, var(--flota) 84%, transparent); --vidrio-luz: inset 0 1px 0 rgba(255, 255, 255, .14); }
+.pildora-descanso, .encurso-pildora, .encurso-tarjeta { background: var(--vidrio-flota); backdrop-filter: var(--vidrio-filtro); -webkit-backdrop-filter: var(--vidrio-filtro); }
+.pildora-descanso { box-shadow: var(--vidrio-luz), var(--sombra-flotante); }
+.encurso-pildora, .encurso-tarjeta { box-shadow: var(--vidrio-luz), 0 0 0 1px var(--borde-flota), var(--sombra-flotante); }
+.toast:not(.error):not(.record), .pildora-subida { background: color-mix(in srgb, var(--tinta) 88%, transparent); backdrop-filter: var(--vidrio-filtro); -webkit-backdrop-filter: var(--vidrio-filtro); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .pildora-descanso, .encurso-pildora, .encurso-tarjeta { background: var(--flota); }
+  .toast:not(.error):not(.record), .pildora-subida { background: var(--tinta); }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  .pildora-descanso, .encurso-pildora, .encurso-tarjeta, .toast, .pildora-subida { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .pildora-descanso, .encurso-pildora, .encurso-tarjeta { background: var(--flota) !important; }
+  .toast:not(.error):not(.record), .pildora-subida { background: var(--tinta) !important; }
+}
+
+/* ── 44 · La racha, con vida (tanda 18) ───────────────────────────────────────────────────────────────────────────────
+   La pantalla de la racha ya tenía su llama, sus doce semanas y sus hitos (estilos.css 3345-3410). Ahora la llama crece
+   con la racha (Racha.jsx: --nivel, de 0 a 4) y brilla más cuanto más larga, las doce semanas se encienden una detrás
+   de otra y la barra hacia la próxima meta se llena al abrir. */
+.racha-fuego { transform: scale(calc(.82 + var(--nivel, 2) * .1)); transform-origin: 50% 85%; margin-top: calc(var(--nivel, 2) * 5px);
+  filter: drop-shadow(0 0 calc(4px + var(--nivel, 2) * 7px) rgba(255, 138, 61, calc(.12 + var(--nivel, 2) * .07))); }
+.racha-fuego.apagada { filter: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .racha-marca { animation: racha-enciende var(--mov-medio) var(--curva-rebote) calc(.25s + var(--i, 0) * 45ms) backwards; }
+  .racha-barra span { animation: racha-llena .9s var(--curva-casa) .5s backwards; }
+}
+@keyframes racha-enciende { from { transform: scale(.55); } }
+@keyframes racha-llena { from { transform: scaleX(0); } }
+
+/* ── 45 · El récord, momento grande (tanda 18) ────────────────────────────────────────────────────────────────────────
+   Un récord se celebraba en morado, como cualquier dato (estilos.css 726-732 y 2561). Ahora lleva el dorado de los
+   logros, el mismo de las medallas, la bienvenida y las tarjetas para compartir: un destello dorado recorre la fila de
+   la serie, el trofeo se dibuja, el aviso va en noche y oro y, en el resumen, los récords llevan su icono dorado.
+   --oro es el dorado para trazos sobre claro (pasa de 3:1 sobre blanco); en oscuro, el dorado claro de la marca. */
+:root { --oro: #9A6C12; --oro-claro: #E9D49A; --oro-suave: #FBF2D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --oro: #E9D49A; --oro-suave: #3A2F14; } }
+:root[data-theme="dark"] { --oro: #E9D49A; --oro-suave: #3A2F14; }
+.record-serie { background: var(--oro-suave); position: relative; overflow: hidden; }
+.record-serie svg, .record-serie strong { color: var(--oro); }
+.resumen-records .record .ico { background: var(--oro-suave); color: var(--oro); }
+.toast.record { background: #1E1548; color: #fff; box-shadow: inset 0 0 0 1px rgba(233, 212, 154, .35), var(--sombra-flotante); }
+.toast.record svg { color: var(--oro-claro); }
+@media (prefers-reduced-motion: no-preference) {
+  .serie.con-record { animation: record-oro .9s ease-out; }
+  .serie.con-record::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(105deg, transparent 38%, rgba(233, 212, 154, .7) 50%, transparent 62%) no-repeat; background-size: 260% 100%; animation: record-destello .6s var(--curva-casa) both; }
+  .record-serie svg path { stroke-dasharray: 90; animation: record-trofeo .8s var(--curva-casa) .15s backwards; }
+  .record-serie::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%) no-repeat; background-size: 260% 100%; animation: record-destello .9s var(--curva-casa) .3s both; }
+}
+@keyframes record-oro { 0% { box-shadow: inset 0 0 0 2px #C9A227, 0 0 0 0 rgba(201, 162, 39, .45); } 60% { box-shadow: inset 0 0 0 2px #C9A227, 0 0 0 9px rgba(201, 162, 39, 0); } }
+@keyframes record-destello { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+@keyframes record-trofeo { from { stroke-dashoffset: 90; } to { stroke-dashoffset: 0; } }
+
+/* ── 46 · Medallas que responden (tanda 18) ───────────────────────────────────────────────────────────────────────────
+   Las medallas ya eran de metal con relieve y un reflejo al revelarse (estilos.css 3141-3154). Ahora, en la lista, cada
+   medalla conseguida deja pasar su reflejo una vez al aparecer; y al pasar el dedo por una (Logros.jsx: --mm-x, --mm-y
+   y «tocada»), se inclina un poco hacia el dedo y el reflejo lo sigue. Sin inclinar el móvil (en iPhone pide permiso). */
+.medalla-metal:not(.fantasma) { touch-action: pan-y; }
+.medalla-metal:not(.fantasma):not(.entra) { transition: transform var(--mov-medio) var(--curva-casa); }
+.medalla-metal .mm-barrido { transition: opacity var(--mov-medio) var(--curva-casa); }
+.medalla-metal.tocada:not(.entra) { transform: perspective(380px) rotateY(calc(var(--mm-x, 0) * 16deg)) rotateX(calc(var(--mm-y, 0) * -13deg)) scale(1.05); transition-duration: .08s; }
+.medalla-metal.tocada .mm-barrido { opacity: .9; animation: none !important; transform: translateX(calc(27px + var(--mm-x, 0) * 44px)); }
+@media (prefers-reduced-motion: no-preference) {
+  .logros-lista .medalla-metal:not(.fantasma):not(.brilla):not(.tocada) .mm-barrido, .logro .medalla-metal:not(.fantasma):not(.brilla):not(.tocada) .mm-barrido { animation: mm-barrido 1.3s cubic-bezier(.4, 0, .2, 1) .5s both; }
+}
+@media (prefers-reduced-motion: reduce) { .medalla-metal.tocada:not(.entra) { transform: none; } }
+
+/* ── 47 · El check-in, una conversación (tanda 18) ────────────────────────────────────────────────────────────────────
+   El check-in ya iba pregunta a pregunta (estilos.css 2597-2632). Se afina el paso: la barra de progreso es más alta, con
+   degradado, y avanza con la curva de la casa; las opciones de cada pregunta entran una detrás de otra; al elegir una,
+   su ✓ se dibuja; y al enviarlo, el ✓ final también. */
+.ck-barra { height: 8px; border-radius: 4px; }
+.ck-barra span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 62%, #fff), var(--morado)); transition: width var(--mov-lento) var(--curva-casa); }
+@media (prefers-reduced-motion: no-preference) {
+  .ck-paso { animation-duration: var(--mov-medio); animation-timing-function: var(--curva-casa); }
+  .ck-paso .opciones-grandes button { animation: ck-opcion var(--mov-medio) var(--curva-casa) backwards; }
+  .ck-paso .opciones-grandes button:nth-child(2) { animation-delay: 30ms; } .ck-paso .opciones-grandes button:nth-child(3) { animation-delay: 60ms; }
+  .ck-paso .opciones-grandes button:nth-child(4) { animation-delay: 90ms; } .ck-paso .opciones-grandes button:nth-child(5) { animation-delay: 120ms; }
+  .ck-paso .opciones-grandes button:nth-child(n + 6) { animation-delay: 150ms; }
+  .opciones-grandes button[aria-pressed="true"] .op-check svg path, .ck-enviado-ico svg path { stroke-dasharray: 20; animation: serie-trazo var(--mov-lento) var(--curva-casa) .08s backwards; }
+}
+@keyframes ck-opcion { from { transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .ck-barra span { transition: none; } }
+
+/* ── 48 · Cifras de marcador en toda la app (tanda 18) ────────────────────────────────────────────────────────────────
+   Las cifras grandes ya compartían estilo (.marcador, .cifra .v, .cifras dd: condensadas, tabulares). Quedaban fuera
+   unas cuantas con otra letra: el informe del bloque (estilos.css 1070 y 4473), las del plan de nutrición (1510), la de
+   cada anillo de macros (2975) y el día de «Tus entrenamientos» (941). Ahora todas son la misma cifra, y su unidad, la
+   misma unidad pequeña. */
+.informe-cifra b, .informe-cifras dd, .cifras-plan dd, .anillo-macro-v, .entreno-dia b, .entreno-rpe {
+  font-stretch: var(--ancho-marcador); font-weight: var(--cifra-peso); letter-spacing: var(--cifra-tr); font-variant-numeric: tabular-nums;
+}
+.informe-cifra b { font-size: var(--cifra-m); line-height: 1; }
+.informe-cifras dd, .cifras-plan dd { font-size: var(--cifra-s); line-height: 1.1; }
+.anillo-macro-v { font-size: var(--cifra-s); }
+.entreno-dia b { font-size: 1.25rem; }
+.cifra .u, .resumen-num .u, .hero-cifras dd .u { font-size: 0.8125rem; font-weight: 650; }
+
+/* ── 49 · Gráficas que responden al dedo (tanda 18) ───────────────────────────────────────────────────────────────────
+   Al arrastrar por una gráfica (comunes.jsx: useRaspado) ya salía el globo con el valor. Ahora, además: una guía
+   vertical cruza la gráfica por el punto, el punto elegido lleva un halo, el globo se mueve sin saltos y, con el dedo, hay un
+   toque al pasar de un punto a otro. */
+.grafica-guia { position: absolute; top: 4px; bottom: 22px; width: 0; border-left: 1.5px dashed color-mix(in srgb, var(--morado) 55%, transparent); pointer-events: none; transform: translateX(-0.75px); }
+.grafica .punto.elegido { stroke: color-mix(in srgb, var(--morado) 28%, transparent); stroke-width: 13; paint-order: stroke; }
+@media (prefers-reduced-motion: no-preference) {
+  .grafica-globo { transition: left .09s linear, top .09s linear; }
+  .grafica-guia { transition: left .09s linear; }
+}
+
+/* ── 50 · El panel del coach, con el mismo mimo (tanda 18) ────────────────────────────────────────────────────────────
+   La minigráfica del peso va en curva suave y marca su último punto (Panel.jsx: chispaSuave); el avatar de cada
+   atleta lleva un aro del color de su estado (el mismo de la barra de la izquierda: estilos.css 2693-2699); y las
+   filas y las tarjetas responden al pasar el ratón. */
+.chispa-peso .chispa-fin { fill: var(--tinta-2); stroke: var(--hoja); stroke-width: 1.2; }
+.chispa-peso.baja .chispa-fin, .chispa-peso.sube .chispa-fin { fill: var(--morado); }
+.tarjeta-atleta[data-estado] .avatar, .atletas-tabla tr[data-estado] .avatar { box-shadow: 0 0 0 2px var(--hoja), 0 0 0 4px color-mix(in srgb, var(--estado) 78%, transparent); }
+@media (hover: hover) {
+  .atletas-tabla tbody tr { transition: background-color var(--mov-rapido) var(--curva-casa); }
+  .atletas-tabla tbody tr:hover { background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
+  .tarjeta-atleta { transition: transform var(--mov-rapido) var(--curva-casa), box-shadow var(--mov-rapido) var(--curva-casa); }
+  .tarjeta-atleta:hover { transform: translateY(-1px); box-shadow: var(--sombra-flotante), 0 0 0 1px var(--borde); }
+}
+@media (prefers-reduced-motion: reduce) { .atletas-tabla tbody tr, .tarjeta-atleta { transition: none; } .tarjeta-atleta:hover { transform: none; } }
+
+/* ── 51 · Pantallas de paso con marca (tanda 18) ──────────────────────────────────────────────────────────────────────
+   Cuando la cuenta no se puede abrir (sin conexión o por un fallo), la pantalla lleva su escena y su título (App.jsx:
+   las ilustraciones «sinred» y «fallo»), no solo una nota; el aviso de versión nueva es una píldora de vidrio con el
+   lobo; y la banda de «sin conexión» de dentro de la app lleva un punto que late, tranquilo. */
+.acceso-paso { justify-items: center; text-align: center; gap: 14px; }
+.acceso-paso .paso-ilu { width: min(10rem, 56%); height: auto; }
+.acceso-paso .nota, .acceso-paso .error { justify-self: stretch; text-align: left; }
+.acceso-paso .btn { justify-self: stretch; }
+.aviso-version { border-radius: 999px; padding: 8px 8px 8px 14px; background: color-mix(in srgb, #1E1548 86%, transparent); backdrop-filter: var(--vidrio-filtro); -webkit-backdrop-filter: var(--vidrio-filtro);
+  box-shadow: var(--vidrio-luz), var(--sombra-flotante); }
+.aviso-version-lobo { width: 22px; height: 26px; flex: none; fill: #fff; }
+.aviso-version .btn { border-radius: 999px; }
+.banda-conexion.sin-red svg { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .aviso-version { animation: toast-entra-arriba var(--mov-lento) var(--curva-rebote); }
+  .banda-conexion.sin-red svg { animation: sin-red-late 2.4s ease-in-out infinite; }
+}
+@keyframes sin-red-late { 50% { opacity: .45; } }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) { .aviso-version { background: #1E1548 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .aviso-version { background: #1E1548; } }

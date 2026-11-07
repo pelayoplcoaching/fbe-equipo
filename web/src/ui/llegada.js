@@ -23,18 +23,38 @@ const piezasDe = (nodos) => {
   return els;
 };
 
+// (diseño, tanda 17) Las fotos también llegan: una imagen que entra en la página sin haber cargado aún no aparece de golpe
+// al terminar de cargar, se funde de borrosa a nítida (clases «img-llega» mientras carga e «img-llegada» al llegar; el
+// fundido, en diseno.css, bloque 41). Si ya estaba cargada, o falla, se queda como siempre. El chat no se toca.
+const FUERA_FOTOS = '.chat, .burbuja, .tarjeta-previa, .portada';
+function fotos(nodo) {
+  const imgs = nodo.tagName === 'IMG' ? [nodo] : nodo.querySelectorAll ? nodo.querySelectorAll('img') : [];
+  for (const img of imgs) {
+    if (img.complete || img.classList.contains('img-llega') || img.closest(FUERA_FOTOS)) continue;
+    img.classList.add('img-llega');
+    const fin = (ok) => () => { img.classList.remove('img-llega'); if (ok) img.classList.add('img-llegada'); };
+    img.addEventListener('load', fin(true), { once: true });
+    img.addEventListener('error', fin(false), { once: true });
+  }
+}
+
 export function instalarLlegada() {
   if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return;
   new MutationObserver((cambios) => {
     if (sinMovimiento()) return;
     const llegados = new Map();   // contenedor → nodos que han entrado en esta tanda
     const conEsqueleto = new Set();
+    // (los nodos que han entrado en esta tanda: un hijo de otro que también ha entrado no se mira aparte, que su
+    // padre ya lo cubre; sin esto, una pantalla grande recién pintada costaba una pasada por cada nodo)
+    const entrados = new Set();
+    for (const c of cambios) if (c.type === 'childList') for (const n of c.addedNodes) if (n instanceof HTMLElement) entrados.add(n);
     for (const c of cambios) {
       if (c.type === 'attributes') {
         // el hueco de una Reserva deja de ser una silueta entera: lo demás de la Reserva es lo que ha llegado
         if (c.oldValue === 'entero' && !c.target.dataset.hueco && c.target.parentElement) marcar(piezasDe([...c.target.parentElement.children].filter((e) => e !== c.target)));
         continue;
       }
+      for (const n of c.addedNodes) if (n instanceof HTMLElement && !entrados.has(n.parentNode)) fotos(n);
       for (const n of c.removedNodes) if (n instanceof HTMLElement && n.classList.contains('siluetas')) conEsqueleto.add(c.target);
       if (c.addedNodes.length) llegados.set(c.target, [...(llegados.get(c.target) || []), ...c.addedNodes]);
     }

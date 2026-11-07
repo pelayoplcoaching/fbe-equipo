@@ -1,4 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
+import { Ilustracion } from './Ilustraciones.jsx';
+import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { borrarTodoEnCurso } from './en-curso.js';
 import { borrarBorradores } from '../logica/mensajes.js';
 import { salidaDe, borrarSalida } from '../datos/salida.js';
@@ -307,7 +309,10 @@ export function App({ backend, api, cola }) {
   else if (estado.fase === 'coach') vista = enModoAtleta ? <Ctx.Provider value={ctxAtleta}><AtletaApp key="modo-atleta" /></Ctx.Provider> : <CoachApp />;
   else if (estado.fase === 'atleta') vista = <AtletaApp />;
   else vista = (
-    <div class="acceso"><div class="acceso-caja">
+    <div class="acceso"><div class="acceso-caja acceso-paso">
+      {/* (diseño, tanda 18) una pantalla de paso también es de la casa: su escena y un título, además del aviso */}
+      <Ilustracion n={estado.error?.sinConexion ? 'sinred' : 'fallo'} clase="paso-ilu" />
+      <h1 class="peq">{estado.error?.sinConexion ? 'Sin conexión' : 'No hemos podido abrir tu cuenta'}</h1>
       {estado.error?.sinConexion
         ? <div class="nota nota-sin-red" role="status"><Icono n="sinred" /> Sin conexión. Tu cuenta se abrirá en cuanto vuelva la cobertura.</div>
         : <div class="error" role="alert">No se ha podido cargar tu cuenta: {estado.error?.message}</div>}
@@ -320,7 +325,7 @@ export function App({ backend, api, cola }) {
     <Ctx.Provider value={ctx}>
       {estado.fase === 'coach' || estado.fase === 'atleta' ? vista : <main>{vista}</main>}
       <AvisoVersion />
-      {toast && <div class={`toast ${toast.tipo === 'error' || toast.tipo === 'record' ? toast.tipo : ''}${toastFuera ? ' saliendo' : ''}`} role="status" key={toast.id}>{toast.tipo === 'record' && <Icono n="trofeo" />}{toast.texto}
+      {toast && <div class={`toast ${toast.tipo === 'error' || toast.tipo === 'record' ? toast.tipo : ''}${toastFuera ? ' saliendo' : ''}`} role="status" key={toast.id}>{toast.tipo === 'record' && <Icono n="trofeo" />}{toast.tipo === 'error' && <Icono n="alerta" />}{toast.texto}
         {toast.accion && <button class="toast-accion" onClick={() => { const a = toast.accion; setToast(null); a.fn(); }}>{toast.accion.texto}</button>}</div>}
     </Ctx.Provider>
   );
@@ -340,6 +345,7 @@ function AvisoVersion() {
   if (!nueva) return null;
   return (
     <div class="aviso-version" role="status">
+      <svg class="aviso-version-lobo" viewBox={LOBO_CAJA} aria-hidden="true"><path fill-rule="evenodd" d={LOBO_D} /></svg>
       <span>Hay una versión nueva de FBE Equipo.</span>
       <button class="btn btn-peq btn-primario" disabled={actualizando} onClick={() => {
         setActualizando(true);

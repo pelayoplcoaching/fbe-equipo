@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.94': {
+    atleta: [
+      'La app tiene más vida: la barra responde al tocarla, el título se recoge al deslizar y cada día tiene su cielo en la tarjeta de Hoy.',
+      'El descanso late al final y terminar una sesión se celebra.',
+      'Las gráficas responden al dedo, la racha crece con la llama y los récords van en dorado.',
+    ],
+    coach: [
+      'El panel lleva la minigráfica del peso en curva y el estado de cada atleta en su avatar.',
+    ],
+  },
   '0.93': {
     atleta: [
       'La app se mueve mejor: las gráficas se dibujan, las cifras suben, lo que carga aparece con suavidad y marcar una serie se nota.',

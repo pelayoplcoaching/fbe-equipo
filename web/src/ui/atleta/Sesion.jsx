@@ -1,6 +1,6 @@
 import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos, usePreferencia, Pista } from '../comunes.jsx';
+import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos, usePreferencia, Pista, CifraSube } from '../comunes.jsx';
 import { BandaConexion } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { SubirArchivo } from '../Archivos.jsx';
@@ -10,7 +10,7 @@ import { recordatoriosPorEjercicio } from '../../logica/correccion.js';
 import { textoSerieVideo } from '../../logica/tecnica.js';
 import { EVENTO_PENDIENTES, listarPendientes } from '../../datos/pendientes.js';
 import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herramientas.jsx';
-import { HojaCompartir } from '../Compartir.jsx';
+import { HojaCompartir, dibujarTarjeta } from '../Compartir.jsx';
 import { leerAutoCompartir } from '../comunidad-local.js';
 import { perezoso } from '../perezoso.jsx';
 import { PictoEjercicio } from '../Pictograma.jsx';
@@ -52,7 +52,7 @@ import { textoAviso, pausaVigente } from '../../logica/pista.js';
 import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, seriesPautadasHechas } from '../../logica/visual.js';
 import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
 import { resumenPautas } from '../../logica/diseno.js';
-import { Portada } from './Portada.jsx';
+import { Portada, ArteSesion } from './Portada.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
 import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
@@ -1271,6 +1271,20 @@ function datosTarjeta(sesion, ejercicios, hechas, records, ejerciciosPorId, minu
 // v0.69: las sesiones compartidas solas que se han deshecho (para no volver a compartirlas al volver a este resumen)
 const deshechasEquipo = new Set();
 
+// (diseño, tanda 17) La tarjeta para compartir, en pequeño, asomando en su botón: se pinta en el móvil con lo mismo que la
+// hoja de compartir (no sale de él) un momento después de abrir el resumen. Si no se puede pintar, no sale y ya está.
+function MiniTarjeta({ datos }) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    let vivo = true, hecha = null;
+    const t = setTimeout(() => {
+      dibujarTarjeta(datos, { plantilla: 'cifras' }).then((blob) => { if (!vivo) return; hecha = URL.createObjectURL(blob); setUrl(hecha); }).catch(() => {});
+    }, 700);
+    return () => { vivo = false; clearTimeout(t); if (hecha) URL.revokeObjectURL(hecha); };
+  }, []);
+  return url ? <img class="resumen-mini" src={url} alt="" aria-hidden="true" width="36" height="45" /> : null;
+}
+
 function Resumen({ resumen, sesion, alCerrar }) {
   const { api, atleta, propio, aviso } = useApp();
   const [compartir, setCompartir] = useState(false);
@@ -1316,7 +1330,9 @@ function Resumen({ resumen, sesion, alCerrar }) {
   const nRecords = resumen.records.length;
   return (
     <div class="contenido resumen-sesion">
-      <section class="resumen-hero" aria-labelledby="resumen-titulo" style={{ '--i': 0 }}>
+      <section class={`resumen-hero ${nRecords ? 'con-record' : ''}`} aria-labelledby="resumen-titulo" style={{ '--i': 0 }}>
+        {/* (diseño, tanda 17) el dibujo de la sesión, de fondo, como en la tarjeta de Hoy */}
+        {sesion?.nombre && <ArteSesion nombre={sesion.nombre} tipo={sesion.tipo || (cardio ? 'cardio' : 'fuerza')} patron={null} clase="hero-arte" />}
         <span class="resumen-medalla" aria-hidden="true"><Icono n={nRecords ? 'trofeo' : 'hecho'} /></span>
         <div class="pila-xs">
           <h1 id="resumen-titulo">Sesión terminada</h1>
@@ -1328,7 +1344,7 @@ function Resumen({ resumen, sesion, alCerrar }) {
         {cifras.filter(Boolean).map((c, i) => (
           <div key={c.k} data-k={c.k} style={{ '--i': i + 2 }}>
             <dt>{c.t}</dt>
-            <dd><span class="v num">{c.v}</span>{c.u && <span class="u">{c.u}</span>}</dd>
+            <dd><span class="v num"><CifraSube texto={c.v} espera={380 + i * 90} /></span>{c.u && <span class="u">{c.u}</span>}</dd>
           </div>
         ))}
       </dl>
@@ -1364,7 +1380,7 @@ function Resumen({ resumen, sesion, alCerrar }) {
       )}
       {resumen.enCola && <div class="banda-conexion"><Icono n="sinred" />Guardado en el móvil. Se enviará a tu coach cuando vuelva la conexión.</div>}
       <div class="resumen-acciones pila" style={{ '--i': 8 }}>
-        {resumen.series > 0 && resumen.tarjeta && <button class="btn btn-grande" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir la sesión</button>}
+        {resumen.series > 0 && resumen.tarjeta && <button class="btn btn-grande btn-compartir-sesion" onClick={() => setCompartir(true)}><MiniTarjeta datos={resumen.tarjeta} /><Icono n="compartir" /> Compartir la sesión</button>}
         {compartida ? <p class="nota peq compartida-equipo"><Icono n="hecho" /> Compartida con el equipo</p>
           : estadoEquipo.datos === true && <button class="btn btn-grande" onClick={() => setEquipo(true)}><Icono n="equipo" /> Compartir con el equipo</button>}
         <button class="btn btn-primario btn-grande" onClick={alCerrar}>Volver a hoy</button>

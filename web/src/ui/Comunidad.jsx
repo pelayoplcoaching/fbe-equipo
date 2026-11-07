@@ -370,7 +370,7 @@ export function Muro({ coach = false, cambios = 0, miembro = null, eventos = 0, 
           : filtro === 'guardados'
             ? <Vacio icono="guardar" titulo="Aún no has guardado nada">Toca «Guardar» en una publicación para tenerla aquí (solo la ves tú, en todos tus móviles).</Vacio>
             : filtro === 'todo'
-              ? <Vacio icono="equipo" titulo="Aún no hay nada en el muro">{coach ? 'Publica un aviso para darles la bienvenida.' : 'Sé el primero: cuenta qué tal tu semana o comparte tu próximo entreno.'}</Vacio>
+              ? <Vacio ilustracion="equipo" titulo="Aún no hay nada en el muro">{coach ? 'Publica un aviso para darles la bienvenida.' : 'Sé el primero: cuenta qué tal tu semana o comparte tu próximo entreno.'}</Vacio>
               : <Vacio icono="equipo" titulo="Nada por aquí">No hay publicaciones con este filtro. Prueba con «Todo».</Vacio>
         ) : posts.map((p, i) => (
           <Fragment key={p.id}>

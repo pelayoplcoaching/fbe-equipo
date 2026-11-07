@@ -809,7 +809,7 @@ try {
   await p.getByLabel('Nota para tu coach').fill('Me he notado fuerte en el press');
   await p.getByRole('button', { name: 'Guardar y terminar' }).click();
   await p.getByRole('heading', { name: 'Sesión terminada' }).waitFor();
-  check((await p.locator('.resumen-num [data-k="series"] .v').textContent()) === '4', 'resumen: 4 series (3 de press y 1 del ejercicio cambiado)');
+  check((await p.locator('.resumen-num [data-k="series"] .v .sr').textContent()) === '4', 'resumen: 4 series (3 de press y 1 del ejercicio cambiado)');
   // v0.49: duración, series y tonelaje (sin peso ni nada de salud) y la comparación con la última vez
   const resumenTxt = await p.locator('.resumen-sesion').textContent();
   check(await p.locator('.resumen-num > div').count() === 3 && /Duración/.test(resumenTxt) && /Tonelaje/.test(resumenTxt) && !/kg de peso|Peso corporal/.test(resumenTxt), 'el resumen dice la duración, las series y el tonelaje (y nada de peso corporal)');
@@ -2511,7 +2511,9 @@ try {
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).first().click();
   await p.getByRole('button', { name: /Lucía Ferrer/ }).click();
   await p.locator('nav.tabs').waitFor();
-  for (let i = 0; i < 3; i++) { const d = p.locator('[role=dialog]').first(); if (!(await d.isVisible().catch(() => false))) break; const b2 = d.getByRole('button', { name: /^Seguir$|^Cerrar$|^Empezar$|Ver mis logros/ }).first(); if (await b2.isVisible().catch(() => false)) await b2.click(); else await p.keyboard.press('Escape'); await p.waitForTimeout(200); }
+  // (diseño, tanda 18) un diálogo que se está yendo (las salidas del pulido 3) aún se ve un momento: pulsar con un plazo corto y
+  // esperar a que se vaya, en vez de esperar 30 s a un botón que ya no está
+  for (let i = 0; i < 3; i++) { const d = p.locator('[role=dialog]').first(); if (!(await d.isVisible().catch(() => false))) break; const b2 = d.getByRole('button', { name: /^Seguir$|^Cerrar$|^Empezar$|Ver mis logros/ }).first(); if (await b2.isVisible().catch(() => false)) await b2.click({ timeout: 2500 }).catch(() => {}); else await p.keyboard.press('Escape'); await d.waitFor({ state: 'hidden', timeout: 2500 }).catch(() => {}); await p.waitForTimeout(200); }
   const tabsLucia = await p.locator('nav.tabs .tab').allTextContents();
   check(!tabsLucia.some((t) => /Semana/.test(t)) && tabsLucia.some((t) => /Comidas/.test(t)), `Lucía no ve nada de entrenamiento: su barra es ${tabsLucia.map((t) => t.trim()).join(', ')}`);
   await p.locator('.seccion-menu-hoy').waitFor();

@@ -28,8 +28,19 @@ export function MedallaMetal({ nivel = 0, cifra = null, progreso = null, tam = 7
   const R = 46, C = 2 * Math.PI * R;
   const texto = cifra != null ? abreviar(cifra) : null;
   const tamCifra = texto && texto.length > 3 ? 20 : 25;
+  // (diseño, tanda 18) al pasar el dedo (o el ratón) por una medalla conseguida, se inclina un poco hacia él y el reflejo
+  // lo sigue: dónde está el dedo va en --mm-x y --mm-y (de -1 a 1) y la clase «tocada»; el resto, en diseno.css
+  const seguir = m ? (e) => {
+    const el = e.currentTarget, r = el.getBoundingClientRect();
+    if (!r.width) return;
+    el.style.setProperty('--mm-x', (Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1))).toFixed(2));
+    el.style.setProperty('--mm-y', (Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1))).toFixed(2));
+    el.classList.add('tocada');
+  } : undefined;
+  const soltar = m ? (e) => e.currentTarget.classList.remove('tocada') : undefined;
   return (
-    <svg class={`medalla-metal ${m ? `metal-${m.id}` : 'fantasma'} ${clase}`} viewBox="0 0 100 100" width={tam} height={tam} aria-hidden="true">
+    <svg class={`medalla-metal ${m ? `metal-${m.id}` : 'fantasma'} ${clase}`} viewBox="0 0 100 100" width={tam} height={tam} aria-hidden="true"
+      onPointerDown={seguir} onPointerMove={seguir} onPointerUp={soltar} onPointerLeave={soltar} onPointerCancel={soltar}>
       {progreso != null && (
         <>
           <circle class="mm-aro" cx="50" cy="50" r={R} />

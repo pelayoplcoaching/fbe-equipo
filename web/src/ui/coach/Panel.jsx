@@ -7,7 +7,7 @@ import { BandaDemo } from '../App.jsx';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
 import { hace, fmtCorta } from '../../logica/fechas.js';
 import { fmtEuros } from '../../logica/cobros.js';
-import { estadoAtleta, NOMBRE_ESTADO, trazoChispa } from '../../logica/visual.js';
+import { estadoAtleta, NOMBRE_ESTADO, chispaSuave } from '../../logica/visual.js';
 import { equipoHoy, arcoDial } from '../../logica/tablero.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { AvisoAlmacenamientoPanel } from '../tecnica/Limpieza.jsx';
@@ -21,7 +21,7 @@ export function ChispaPeso({ puntos = [] }) {
   return (
     <svg class={`chispa chispa-peso ${dif < -0.05 ? 'baja' : dif > 0.05 ? 'sube' : ''}`} viewBox="0 0 64 20" width="64" height="20" role="img"
       aria-label={`Peso en ${puntos.length} semanas: de ${num(ys[0])} a ${num(ys[ys.length - 1])} kg`}>
-      <path d={trazoChispa(ys, 64, 20, 3)} />
+      {(() => { const c = chispaSuave(ys, 64, 20, 3); return <><path d={c.d} />{c.fin && <circle class="chispa-fin" cx={c.fin[0]} cy={c.fin[1]} r="2.4" />}</>; })()}
     </svg>
   );
 }
