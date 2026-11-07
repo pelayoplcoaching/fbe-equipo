@@ -36,7 +36,7 @@ export function HojaMas({ pestanas, actual, detalles = {}, valores = {}, alElegi
       <div class="panel grupo-ios-hoja">
         <ul class="lista">
           {pestanas.map(([id, texto, icono]) => (
-            <FilaIos key={id} icono={icono} titulo={texto} detalle={detalles[id]} valor={valores[id] ?? null} alTocar={() => alElegir(id)} clase={`mas-fila ${id === actual ? 'mas-actual' : ''}`} />
+            <FilaIos key={id} icono={icono} titulo={texto} detalle={detalles[id]} valor={valores[id] ?? null} alTocar={() => alElegir(id)} clase={`mas-fila mas-${id} ${id === actual ? 'mas-actual' : ''}`} />
           ))}
         </ul>
       </div>

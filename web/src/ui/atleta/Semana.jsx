@@ -8,6 +8,9 @@ import { NOMBRE_FOCO, NOMBRE_GRUPO, NOMBRE_TIPO_SESION, num } from '../../logica
 import { rangoSemana, desdeISO, fmtConDia, hoyISO, sumarDias } from '../../logica/fechas.js';
 import { useDeslizar } from '../deslizar.js';
 
+// (diseño, tanda 26) El día de la semana en la hoja de calendario de «Tus entrenamientos»
+const DIA_CORTO = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
 export function Semana({ programa, abrirSesion, noLeidos = [] }) {
   const { api } = useApp();
   const { datos: p, cargando, error, recargar } = programa;
@@ -55,7 +58,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
               const ss = p.sesiones[s.id] || [];
               const hechas = ss.filter((x) => x.completada).length;
               return (
-                <button key={s.id} aria-pressed={s.id === semana?.id ? 'true' : 'false'} class={hechas === ss.length && ss.length ? 'programada' : ''} onClick={() => { setDir(i > idx ? 1 : -1); setElegida(s.id); }}>
+                <button key={s.id} aria-pressed={s.id === semana?.id ? 'true' : 'false'} class={hechas === ss.length && ss.length ? 'programada' : ''} style={{ '--f': ss.length ? hechas / ss.length : 0 }} onClick={() => { setDir(i > idx ? 1 : -1); setElegida(s.id); }}>
                   S{s.numero}
                   <span class="est">{hechas}/{ss.length}{s.id === p.actual?.id ? ' ahora' : ''}</span>
                 </button>
@@ -131,7 +134,7 @@ function Entrenamientos({ abrirSesion }) {
               {m.items.map((e) => (
                 <li key={e.id}>
                   <button class="entreno" onClick={() => abrirSesion(e.id)}>
-                    <span class="entreno-dia num" aria-hidden="true"><b>{e.fecha ? desdeISO(e.fecha).getDate() : '—'}</b></span>
+                    <span class="entreno-dia num" aria-hidden="true">{e.fecha && <i>{DIA_CORTO[desdeISO(e.fecha).getDay()]}</i>}<b>{e.fecha ? desdeISO(e.fecha).getDate() : '—'}</b></span>
                     <span class="pila-xs">
                       <span class="entreno-nombre">{e.nombre}{e.records > 0 && <span class="chip morado"><Icono n="trofeo" />{e.records}</span>}</span>
                       <span class="peq secundario">

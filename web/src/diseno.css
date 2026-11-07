@@ -1874,3 +1874,160 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
 .qsc-nunca .qsc-ico { background: var(--ok-suave); color: var(--ok); }
 .qsc > p { margin-left: 38px; }
 .qsc > .puntos { margin-left: 18px; }
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   TANDA 26 · Que se vea de primera (7/11, noche)
+   ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 104 · Récords en dorado en toda la app (tanda 26) ────────────────────────────────────────────────────────────────
+   El récord ya era dorado al batirse y en el resumen (bloque 45), pero en las listas seguía en morado, como un dato
+   más. Ahora también: el trofeo de cada entrenamiento en «Tus entrenamientos» y en la ficha del ejercicio, la cuenta
+   de récords del mes y, en la vitrina, el trofeo de los recientes y su «Nuevo». --oro pasa de 3:1 sobre claro. */
+.entreno-nombre .chip.morado, .seccion[data-grupo="fuerza"] > .seccion-cab .chip.morado { background: var(--oro-suave); color: var(--oro); }
+:root:not([data-theme="dark"]) .entreno-nombre .chip.morado, :root:not([data-theme="dark"]) .seccion[data-grupo="fuerza"] > .seccion-cab .chip.morado { color: #7A5410; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .entreno-nombre .chip.morado, :root:not([data-theme="light"]) .seccion[data-grupo="fuerza"] > .seccion-cab .chip.morado { color: var(--oro); } }
+.trofeo-tarjeta.reciente::before { background: linear-gradient(180deg, var(--oro-claro), var(--oro)); }
+.reciente .trofeo-ico, .record-cab.reciente .trofeo-ico { background: var(--oro-suave); color: var(--oro); }
+.trofeo-nuevo { background: linear-gradient(135deg, #F3E2AE, #D9B65E); color: #3A2A06; }
+
+/* ── 105 · «Tus entrenamientos» como hojas de calendario (tanda 26) ───────────────────────────────────────────────────
+   Como en Calendario: arriba, pequeño y en el acento, el día de la semana (Semana.jsx); debajo, el número grande, en
+   una hoja blanca con su filo. Es decorativo (aria-hidden): la fecha entera sigue en el texto de la fila. */
+.entreno { grid-template-columns: 44px minmax(0, 1fr) auto; }
+.entreno-dia { width: 44px; height: 46px; border-radius: 11px; display: grid; grid-template-rows: auto 1fr; place-items: center; align-content: stretch; overflow: hidden; padding: 0; background: var(--hoja); color: var(--tinta); box-shadow: 0 0 0 1px var(--linea), 0 2px 5px -2px color-mix(in srgb, var(--tinta) 18%, transparent); }
+.entreno-dia > i { align-self: stretch; justify-self: stretch; display: grid; place-items: center; height: 15px; font-style: normal; font-size: 0.625rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-stretch: 110%; background: var(--morado); color: var(--sobre-morado); }
+.entreno-dia > b { align-self: center; font-size: 1.1875rem; line-height: 1; }
+
+/* ── 106 · Pestañas con raya que se desliza (tanda 26) ────────────────────────────────────────────────────────────────
+   En las pestañas subrayadas (Progreso, Comidas, Equipo…), la raya de la elegida es una sola pieza que viaja de una a
+   otra con la curva de la casa, como en iOS o en Material. La mide ui/pastilla.js (--raya-x, --raya-w, data-raya);
+   mientras no la ha medido, la raya de cada botón de siempre (bloque 4). */
+.pestanas[data-raya] { position: relative; }
+.pestanas[data-raya] > [role="tab"][aria-selected="true"]::after { content: none; }
+.pestanas[data-raya]::after { content: ""; position: absolute; bottom: 0; left: 0; width: max(0px, calc(var(--raya-w) - 20px)); height: 3px; border-radius: 3px 3px 0 0; background: var(--morado); transform: translateX(calc(var(--raya-x) + 10px)); pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) { .pestanas[data-raya][data-lista]::after { transition: transform var(--mov-medio) var(--curva-casa), width var(--mov-medio) var(--curva-casa); } }
+@media (forced-colors: active) { .pestanas[data-raya]::after { background: Highlight; } }
+
+/* ── 107 · Meses que se quedan arriba (tanda 26) ──────────────────────────────────────────────────────────────────────
+   En «Tus entrenamientos» (Semana) y en el diario (Progreso), el nombre del mes se pega bajo la cabecera mientras se
+   recorre ese mes, en una pastilla de vidrio, y el siguiente lo releva. Sin cambiar de alto (bloque 79). */
+.pila-s > .mes-etq, .diario-mes > .mes-etq { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--cab-pegada, 3.875rem) + 6px); z-index: 2; justify-self: start; width: max-content; margin: 0; padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--hoja) 84%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); box-shadow: 0 0 0 1px var(--linea), 0 4px 12px -6px color-mix(in srgb, var(--tinta) 25%, transparent); color: var(--tinta); }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .pila-s > .mes-etq, .diario-mes > .mes-etq { background: var(--hoja); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+
+/* ── 108 · Miniaturas del diario con su fondo (tanda 26) ──────────────────────────────────────────────────────────────
+   Mientras una foto o un vídeo del diario carga (o si no tiene miniatura), su hueco era un recuadro gris claro. Ahora
+   lleva la noche de la marca con su grano y, en medio, el icono de lo que es: cuando llega la imagen, la tapa. */
+.diario-medio { background: var(--grano), radial-gradient(120% 80% at 80% 0%, rgba(160, 140, 255, .45), transparent 70%), linear-gradient(165deg, #2A2068, #150F36); }
+.diario-medio::before { content: ""; position: absolute; inset: 0; margin: auto; width: 34px; height: 34px; background: rgba(246, 242, 255, .5); -webkit-mask: var(--ico-diario) center / contain no-repeat; mask: var(--ico-diario) center / contain no-repeat; }
+.diario-medio > img, .diario-medio > video { position: relative; }
+:root { --ico-diario: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='3'/%3E%3Cpath d='M10 9.5v5l4.5-2.5z'/%3E%3C/svg%3E"); }
+
+/* ── 109 · Constancia más fina (tanda 26) ─────────────────────────────────────────────────────────────────────────────
+   En el mapa de constancia, hoy lleva un aro del acento suave (era un recuadro negro, que gritaba más que los días
+   entrenados) y las casillas son un punto más redondas. El día elegido sigue en el acento entero. */
+.cr-celda { border-radius: 4px; }
+.cr-celda.hoy:not(.elegida) { outline: 2px solid color-mix(in srgb, var(--morado) 55%, var(--hoja)); outline-offset: 1px; }
+
+/* ── 110 · La marca de arriba como icono de app (tanda 26) ────────────────────────────────────────────────────────────
+   El lobo de la cabecera de Hoy se apoya con una sombra de su color, como un icono en la pantalla de inicio. */
+.cabecera .marca img, .cabecera .marca svg { border-radius: 8px; box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--morado) 70%, transparent), 0 0 0 1px color-mix(in srgb, var(--morado) 18%, transparent); }
+
+/* ── 111 · Pictogramas de ejercicio con volumen (tanda 26) ────────────────────────────────────────────────────────────
+   Las casillas de los pictogramas (la sesión, la semana, la ficha) eran planas: ahora un degradado suave hacia abajo y
+   un filo de luz arriba; la del ejercicio en curso, en el acento. */
+.picto { background-image: linear-gradient(180deg, color-mix(in srgb, var(--hoja) 55%, transparent), transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--tinta) 5%, transparent); }
+.ejercicio.en-curso .ejercicio-cab .picto { background-image: linear-gradient(180deg, color-mix(in srgb, var(--hoja) 40%, transparent), transparent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .picto { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 0 0 1px rgba(255, 255, 255, .04); } }
+:root[data-theme="dark"] .picto { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 0 0 1px rgba(255, 255, 255, .04); }
+
+/* ── 112 · La hoja «Más» con sus colores (tanda 26) ───────────────────────────────────────────────────────────────────
+   Los iconos de la hoja «Más» llevan el color de lo que son, los mismos de «Tu día» (bloque 87): comidas en ámbar,
+   check-in en rosa, equipo en azul, nutrición en verde, hábitos en naranja (BarraMas.jsx: clase mas-<sección>). */
+.mas-comidas { --t: var(--t-menu); }
+.mas-checkin { --t: var(--t-checkin); }
+.mas-equipo { --t: var(--t-tarea); }
+.mas-nutricion { --t: var(--t-nutricion); }
+.mas-habitos { --t: var(--t-habitos); }
+.mas-fila[class*="mas-"]:not(.mas-actual) .ios-ico { background: color-mix(in srgb, var(--t, var(--morado)) 14%, var(--hoja)); color: var(--t, var(--morado)); }
+
+/* ── 113 · «Empezar sesión» con un destello (tanda 26) ────────────────────────────────────────────────────────────────
+   Al abrir Hoy, un brillo recorre una vez el botón de la tarjeta (sin pseudo-elementos: el ::after de los botones es
+   la zona de toque de pulido.css). Solo el fondo: el texto no cambia. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-dia .btn-hero { background-image: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, .85) 50%, transparent 62%); background-size: 260% 100%; background-repeat: no-repeat; background-position: 130% 0; animation: hero-destello 1.3s var(--curva-casa) .9s 1 both; }
+}
+@keyframes hero-destello { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   TANDA 27 · Más cuerpo y más luz (7/11, noche)
+   ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 114 · Destacados de Progreso con su color (tanda 27) ─────────────────────────────────────────────────────────────
+   Cada destacado del resumen lleva el color de lo que cuenta en su etiqueta y un resplandor muy tenue en la esquina:
+   récords en oro, fuerza en el acento, racha en naranja, tonelaje en azul y constancia en verde. */
+.destacado[data-tipo] { --t: var(--morado); }
+.destacados-lista > .destacado[data-tipo] { position: relative; overflow: hidden; isolation: isolate; }
+.destacado[data-tipo="records"] { --t: var(--oro); }
+.destacado[data-tipo="racha"] { --t: var(--t-habitos); }
+.destacado[data-tipo="tonelaje"] { --t: var(--t-tarea); }
+.destacado[data-tipo="bloque"] { --t: var(--t-nutricion); }
+.destacados-lista > .destacado[data-tipo] .destacado-sobre { color: var(--t); }
+.destacados-lista > .destacado[data-tipo]::before { content: ""; position: absolute; z-index: -1; top: -60px; right: -60px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--t) 13%, transparent), transparent 70%); pointer-events: none; }
+
+/* ── 115 · Botones principales con luz (tanda 27) ─────────────────────────────────────────────────────────────────────
+   Un degradado finísimo de arriba abajo (más claro arriba) da cuerpo al botón principal, como los de iOS. El texto, el
+   mismo (y con algo más de contraste en oscuro, donde el botón es claro). */
+.btn-primario:not(:disabled) { background-image: linear-gradient(180deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, 0) 62%); }
+@media (forced-colors: active), (prefers-contrast: more) { .btn-primario { background-image: none; } }
+
+/* ── 116 · Sombra de color bajo la tarjeta de Hoy (tanda 27) ──────────────────────────────────────────────────────────
+   La tarjeta grande de Hoy proyectaba una sombra gris oscura; ahora, un resplandor del morado de su noche. */
+.hero-dia { box-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 0 26px 48px -24px color-mix(in srgb, var(--morado) 62%, rgba(27, 23, 48, .7)), 0 10px 20px -14px rgba(27, 23, 48, .35); }
+
+/* ── 117 · Los globos de la barra (tanda 27) ──────────────────────────────────────────────────────────────────────────
+   El globo rojo de mensajes sin leer entra con un salto al aparecer y lleva una sombra de su color. */
+nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insignia, var(--alerta)) 70%, transparent); }
+@media (prefers-reduced-motion: no-preference) { nav.tabs .insignia { animation: insignia-llega .45s var(--curva-rebote) both; } }
+@keyframes insignia-llega { from { scale: .3; } 60% { scale: 1.15; } to { scale: 1; } }
+
+/* ── 118 · El cronómetro de la sesión en una píldora (tanda 27) ───────────────────────────────────────────────────────
+   El tiempo de la sesión va en una píldora suave del acento y, mientras corre, con un punto verde que late (Sesion.jsx:
+   clase corre). Terminada la sesión (los minutos), sin punto. */
+.crono-reloj { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--morado-suave); color: var(--tinta); }
+.crono-reloj.corre::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 50%, transparent); }
+@media (prefers-reduced-motion: no-preference) { .crono-reloj.corre::before { animation: crono-late 2s ease-out infinite; } }
+@keyframes crono-late { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) 0%, transparent); } }
+
+/* ── 119 · El último punto de las gráficas late (tanda 27) ────────────────────────────────────────────────────────────
+   Como en Robinhood: el último punto de la curva de fuerza y de peso (el de hoy) lleva un halo que se abre despacio,
+   cada pocos segundos. Mientras se elige otro punto con el dedo, el elegido manda (bloque 49). */
+@media (prefers-reduced-motion: no-preference) {
+  .grafica circle.punto.ultimo:not(.elegido) { paint-order: stroke; animation: punto-late 2.6s ease-out 1.2s infinite; }
+}
+@keyframes punto-late { 0% { stroke: var(--morado); stroke-width: 0; stroke-opacity: .5; } 75%, 100% { stroke: var(--morado); stroke-width: 14px; stroke-opacity: 0; } }
+
+/* ── 120 · La barra de la sesión con brillo (tanda 27) ────────────────────────────────────────────────────────────────
+   Los tramos de arriba de la sesión se llenan con un degradado del acento (claro a la izquierda) y el del ejercicio en
+   curso lleva un brillo en la punta de lo hecho. */
+.tramo-lleno { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 45%, var(--hoja)), color-mix(in srgb, var(--morado) 70%, var(--hoja))); }
+.tramos a.completo .tramo-lleno, .tramos a[aria-current="step"] .tramo-lleno { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 62%, #fff), var(--morado)); }
+.tramos a[aria-current="step"] .tramo-lleno { box-shadow: 2px 0 8px color-mix(in srgb, var(--morado) 60%, transparent); }
+
+/* ── 121 · El check-in con barra por pasos (tanda 27) ─────────────────────────────────────────────────────────────────
+   Como las historias: la barra del check-in se parte en tantos tramos como preguntas (Checkin.jsx: --pasos), con un
+   hueco de 3 px entre ellos. */
+.ck-barra[style*="--pasos"] { box-shadow: none; background: color-mix(in srgb, var(--tinta) 9%, var(--hoja)); -webkit-mask: repeating-linear-gradient(90deg, #000 0 calc(100% / var(--pasos) - 3px), transparent calc(100% / var(--pasos) - 3px) calc(100% / var(--pasos))); mask: repeating-linear-gradient(90deg, #000 0 calc(100% / var(--pasos) - 3px), transparent calc(100% / var(--pasos) - 3px) calc(100% / var(--pasos))); width: calc(100% + 3px); }
+
+/* ── 122 · Las semanas del bloque con su barrita (tanda 27) ───────────────────────────────────────────────────────────
+   Cada botón S1, S2… de la Semana lleva debajo una barrita con lo hecho de esa semana (Semana.jsx: --f): verde si está
+   completa, en el acento si va a medias. */
+.semanas-tabs button { position: relative; padding-bottom: 12px; }
+.semanas-tabs button::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 5px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--morado) calc(var(--f, 0) * 100%), color-mix(in srgb, var(--tinta) 10%, transparent) 0); }
+.semanas-tabs button.programada::after { background: var(--ok); }
+
+/* ── 123 · Recetas con la foto a sangre (tanda 27) ────────────────────────────────────────────────────────────────────
+   En la lista de recetas, la foto ocupa todo el lado izquierdo de la tarjeta, de arriba abajo y hasta el borde (como en
+   las apps de recetas y en Airbnb), en vez de ir en un recuadro con margen. */
+.tarjeta-receta { grid-template-columns: 104px minmax(0, 1fr); padding: 0 12px 0 0; overflow: hidden; align-items: stretch; min-height: 92px; }
+.tarjeta-receta > .receta-foto { width: 104px; height: 100%; min-height: 92px; aspect-ratio: auto; border-radius: 0; outline: none; }
+.tarjeta-receta > .tarjeta-receta-texto { align-self: center; padding-block: 12px; }

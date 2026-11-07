@@ -372,7 +372,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
           <span class="peq secundario num" aria-hidden="true">{enRevision ? 'Repaso' : `${paso + 1} de ${total}`}</span>
           {!enRevision && <button type="button" class="btn-texto mini" onClick={() => ir(total)}>Ir al repaso</button>}
         </div>
-        <div class="ck-barra" role="progressbar" aria-label="Progreso del check-in" aria-valuemin="0" aria-valuemax={total} aria-valuenow={Math.min(paso + 1, total)}
+        <div class="ck-barra" style={{ '--pasos': total }} role="progressbar" aria-label="Progreso del check-in" aria-valuemin="0" aria-valuemax={total} aria-valuenow={Math.min(paso + 1, total)}
           aria-valuetext={enRevision ? 'Repaso de las respuestas' : `${paso + 1} de ${total}`}>
           <span style={{ width: `${(Math.min(paso + 1, total) / total) * 100}%` }} />
         </div>
