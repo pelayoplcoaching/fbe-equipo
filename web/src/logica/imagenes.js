@@ -49,6 +49,11 @@ export function imagenGrupo(grupo) {
   return GRUPOS_IMG.includes(g) ? `grupo-${g}` : null;
 }
 
+// ---------- Las comidas ----------
+// Una por toma (logica/comidas.js: TOMAS); «Antes de dormir», la de la cena
+const COMIDAS = { desayuno: 'desayuno', media_manana: 'media-manana', comida: 'comida', merienda: 'merienda', cena: 'cena', recena: 'cena' };
+export function imagenComida(toma) { return COMIDAS[toma] ? `comida-${COMIDAS[toma]}` : null; }
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.

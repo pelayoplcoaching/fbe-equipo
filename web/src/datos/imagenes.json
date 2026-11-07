@@ -1,4 +1,54 @@
 {
+  "comida-cena": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/comida/comida-cena-320.b9c5d98c.webp",
+      "640": "imagenes/comida/comida-cena-640.aa68f270.webp"
+    }
+  },
+  "comida-comida": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/comida/comida-comida-320.8141669b.webp",
+      "640": "imagenes/comida/comida-comida-640.9935c2c7.webp"
+    }
+  },
+  "comida-desayuno": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/comida/comida-desayuno-320.331a7b09.webp",
+      "640": "imagenes/comida/comida-desayuno-640.f6c9fb19.webp"
+    }
+  },
+  "comida-media-manana": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/comida/comida-media-manana-320.3d948987.webp",
+      "640": "imagenes/comida/comida-media-manana-640.66742333.webp"
+    }
+  },
+  "comida-merienda": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/comida/comida-merienda-320.c15bd71b.webp",
+      "640": "imagenes/comida/comida-merienda-640.8398f339.webp"
+    }
+  },
   "grupo-abdominales": {
     "proporcion": [
       4,
