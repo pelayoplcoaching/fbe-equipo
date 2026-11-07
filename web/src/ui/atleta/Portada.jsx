@@ -10,6 +10,8 @@ import { arteSesion } from '../../logica/arte.js';
 import { resumenPautas } from '../../logica/diseno.js';
 import { pauta, NOMBRE_GRUPO, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_TIPO_SESION } from '../../logica/calculos.js';
 import { cardioValido } from '../../logica/cardio.js';
+import { familiaPortada } from '../../logica/imagenes.js';
+import { Imagen } from '../Imagen.jsx';
 
 // El dibujo: solo geometría (logica/arte.js); los colores, del tema (el acento, claro y tenue sobre la tarjeta oscura)
 export function ArteSesion({ nombre, tipo, patron, clase = 'portada-arte' }) {
@@ -36,6 +38,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
   const sobre = [tipo !== 'fuerza' ? NOMBRE_TIPO_SESION[tipo] : NOMBRE_INTENCION[sesion.intencion] || 'Sesión de fuerza', semana?.numero ? `Semana ${semana.numero}` : null].filter(Boolean).join(' · ');
   const nota = (sesion.dinamica || semana?.nota_coach || '').trim();
   const cardio = cardioValido(sesion.cardio) ? sesion.cardio : null;
+  const familia = familiaPortada({ tipo, pautas: ejercicios, cardio: !!cardio });
   return (
     <div class="contenido portada-vista">
       {/* v0.52: la barra de arriba: el botón de volver y, al bajar, la portada se recoge en ella con el nombre (con las
@@ -45,7 +48,10 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
         <span class="portada-barra-titulo" aria-hidden="true"><span>{sesion.nombre}</span></span>
       </div>
       <header class="portada-sesion">
-        <ArteSesion nombre={sesion.nombre} tipo={tipo} patron={r.patrones[0] || null} />
+        {/* (imágenes) la ilustración de su familia (empuje, tirón, pierna, core, full body, cardio o movilidad); si no
+            se puede cargar, el dibujo de líneas de siempre */}
+        <Imagen key={familia} id={`sesion-${familia}`} clase="portada-arte portada-foto" tamanos="(min-width: 600px) 600px, 150vw" prioridad
+          alternativa={<ArteSesion nombre={sesion.nombre} tipo={tipo} patron={r.patrones[0] || null} />} />
         <span />
         <div class="portada-texto">
           <span class="t-sobre">{sobre}</span>

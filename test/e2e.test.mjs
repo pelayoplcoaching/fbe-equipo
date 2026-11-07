@@ -440,12 +440,14 @@ try {
   await portada.waitFor();
   const datosPortada = await p.evaluate(() => {
     const h = document.querySelector('.portada-sesion h1'); const r = document.querySelector('.portada-sesion').getBoundingClientRect();
-    return { nombre: h.textContent, ancho: getComputedStyle(h).fontStretch, arte: document.querySelectorAll('.portada-arte > *').length, deBordeABorde: r.left <= 0.5 && Math.abs(r.right - innerWidth) < 1,
+    // (imágenes) la ilustración de su familia; sin ella (no carga, ahorro de datos), el dibujo de líneas
+    const foto = document.querySelector('.portada-sesion img.portada-foto');
+    return { nombre: h.textContent, ancho: getComputedStyle(h).fontStretch, arte: document.querySelectorAll('svg.portada-arte > *').length, foto: foto?.dataset.imagen || null, deBordeABorde: r.left <= 0.5 && Math.abs(r.right - innerWidth) < 1,
       meta: document.querySelector('.portada-meta').textContent, pictos: document.querySelectorAll('.portada-lista .picto').length, filas: document.querySelectorAll('.portada-lista .ej-fila').length,
       empezar: !!document.querySelector('.portada-empezar .btn-primario'), sinSeries: !document.querySelector('.ejercicio') };
   });
-  check(datosPortada.nombre === 'Torso A' && parseFloat(datosPortada.ancho) >= 115 && datosPortada.arte > 10 && datosPortada.deBordeABorde && /unos \d+ min/.test(datosPortada.meta) && datosPortada.pictos === datosPortada.filas && datosPortada.filas > 0 && datosPortada.empezar && datosPortada.sinSeries,
-    `antes de empezar, la portada de la sesión: el dibujo de borde a borde, el nombre en ancho (${datosPortada.ancho}), minutos y músculos, los ejercicios con su pictograma y «Empezar» ${JSON.stringify(datosPortada)}`);
+  check(datosPortada.nombre === 'Torso A' && parseFloat(datosPortada.ancho) >= 115 && (/^sesion-[a-z]+$/.test(datosPortada.foto || '') || datosPortada.arte > 10) && datosPortada.deBordeABorde && /unos \d+ min/.test(datosPortada.meta) && datosPortada.pictos === datosPortada.filas && datosPortada.filas > 0 && datosPortada.empezar && datosPortada.sinSeries,
+    `antes de empezar, la portada de la sesión: su ilustración (o el dibujo) de borde a borde, el nombre en ancho (${datosPortada.ancho}), minutos y músculos, los ejercicios con su pictograma y «Empezar» ${JSON.stringify(datosPortada)}`);
   check(await p.locator('.portada-arte').getAttribute('aria-hidden') === 'true', 'el dibujo es decorativo');
   await revisar('portada');
   await p.setViewportSize({ width: 360, height: 780 });
