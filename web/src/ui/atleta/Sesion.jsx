@@ -779,8 +779,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
 function Cronometro({ inicio, minutos, hechas, total }) {
   const ahora = useAhora(1000);
   return (
-    <div style="text-align:right">
-      <div class="num" style="font-size:1.0625rem">{minutos != null ? `${minutos} min` : inicio ? mmss((ahora - inicio) / 1000) : '0:00'}</div>
+    <div class="crono" style="text-align:right">
+      <div class={`num crono-reloj${minutos == null && inicio ? ' corre' : ''}`} style="font-size:1.0625rem">{minutos != null ? `${minutos} min` : inicio ? mmss((ahora - inicio) / 1000) : '0:00'}</div>
       <div class="sesion-cab-num">{hechas}/{total} series</div>
     </div>
   );

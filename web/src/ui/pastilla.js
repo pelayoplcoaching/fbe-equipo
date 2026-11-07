@@ -5,11 +5,26 @@
 // de diseno.css (bloque 39). No toca los componentes: mira el DOM. Sin opción elegida, con varias (los grupos de elegir
 // varias) o en los de colores propios (.dolor), el grupo se queda como estaba.
 const VALE = '.segmentos:not(.dolor)';
+// (tanda 26) Y la raya de las pestañas subrayadas (.pestanas, no las de píldora): una sola raya (el ::after del grupo,
+// diseno.css bloque 106) que viaja de la pestaña de antes a la nueva. Se mide igual: --raya-x, --raya-w y data-raya.
+const RAYA = '.pestanas:not(.pestanas-sub)';
+const TODO = `${VALE}, ${RAYA}`;
 const grupos = new Set();
 let mirador = null;
 
+function colocarRaya(g) {
+  const b = g.querySelector(':scope > [role="tab"][aria-selected="true"]');
+  if (!b || !b.offsetWidth) { if (g.dataset.raya != null) { delete g.dataset.raya; delete g.dataset.lista; } return; }
+  g.style.setProperty('--raya-x', `${b.offsetLeft}px`);
+  g.style.setProperty('--raya-w', `${b.offsetWidth}px`);
+  if (g.dataset.raya == null) {
+    g.dataset.raya = '';
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (g.dataset.raya != null) g.dataset.lista = ''; }));
+  }
+}
 function colocar(g) {
   if (!g.isConnected) { grupos.delete(g); mirador?.unobserve(g); return; }
+  if (g.matches(RAYA)) { colocarRaya(g); return; }
   const elegidas = g.querySelectorAll(':scope > button[aria-pressed="true"]');
   const b = elegidas.length === 1 ? elegidas[0] : null;
   if (!b || !b.offsetWidth) { if (g.dataset.pastilla != null) { delete g.dataset.pastilla; delete g.dataset.lista; } return; }
@@ -37,16 +52,16 @@ export function instalarPastilla() {
     const entrados = new Set();
     for (const c of cambios) if (c.type === 'childList') for (const n of c.addedNodes) if (n instanceof HTMLElement) entrados.add(n);
     for (const c of cambios) {
-      if (c.type === 'attributes') { const g = c.target.closest?.(VALE); if (g) tocados.add(g); continue; }
-      const g0 = c.target.closest?.(VALE);
+      if (c.type === 'attributes') { const g = c.target.closest?.(TODO); if (g) tocados.add(g); continue; }
+      const g0 = c.target.closest?.(TODO);
       if (g0) tocados.add(g0);
       for (const n of c.addedNodes) {
         if (!(n instanceof HTMLElement) || entrados.has(n.parentNode)) continue;
-        if (n.matches(VALE)) tocados.add(n);
-        for (const g of n.querySelectorAll(VALE)) tocados.add(g);
+        if (n.matches(TODO)) tocados.add(n);
+        for (const g of n.querySelectorAll(TODO)) tocados.add(g);
       }
     }
     for (const g of tocados) apuntar(g);
-  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
-  for (const g of document.querySelectorAll(VALE)) apuntar(g);
+  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-pressed', 'aria-selected'] });
+  for (const g of document.querySelectorAll(TODO)) apuntar(g);
 }
