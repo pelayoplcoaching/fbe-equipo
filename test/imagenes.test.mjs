@@ -3,7 +3,7 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
 import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 import { GRUPOS } from '../web/src/logica/calculos.js';
 import { TOMAS } from '../web/src/logica/comidas.js';
@@ -53,6 +53,19 @@ console.log('\nLas comidas');
 check(imagenComida('desayuno') === 'comida-desayuno' && imagenComida('media_manana') === 'comida-media-manana', 'cada toma, su ilustración (media mañana con guion en el archivo)');
 check(imagenComida('recena') === 'comida-cena' && imagenComida('otra') === null && imagenComida(null) === null, '«Antes de dormir», la de la cena; una toma desconocida, ninguna');
 check(TOMAS.every(([t]) => IMAGENES.includes(imagenComida(t))), `hay ilustración para las ${TOMAS.length} tomas`);
+
+console.log('\nLas tarjetas para compartir');
+check(fondoTarjeta({ records: [] }) === 'compartir-sesion' && fondoTarjeta({ records: [{ nombre: 'Banca' }] }) === 'compartir-record' && fondoTarjeta() === 'compartir-sesion', 'una sesión: la de la barra, o la del récord si lo hubo');
+check(fondoTarjeta({ fondo: 'bloque', records: [{}] }) === 'compartir-bloque' && fondoTarjeta({ fondo: 'mes' }) === 'compartir-mes' && fondoTarjeta({ fondo: 'racha' }) === 'compartir-racha', 'el bloque y el mes llevan la suya aunque haya récords');
+check(fondoTarjeta({ fondo: 'inventado' }) === 'compartir-sesion', 'un fondo desconocido, el de la sesión');
+check(FONDOS_TARJETA.every((f) => IMAGENES.includes(`compartir-${f}`)), 'están los cinco fondos');
+{
+  const { datosImagenMes } = await import('../web/src/logica/celebracion.js');
+  const r = { mes: '2026-10', yo: {}, equipo: {} };
+  let mio = null, equipo = null;
+  try { mio = datosImagenMes(r, { mio: true }); equipo = datosImagenMes(r); } catch { /* datos de ejemplo incompletos */ }
+  check(!mio || (mio.fondo === 'racha' && equipo.fondo === 'mes'), 'tu mes lleva las llamas y el del equipo, las lunas');
+}
 
 console.log('\nLos archivos que se sirven');
 {

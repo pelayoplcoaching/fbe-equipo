@@ -55,6 +55,7 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
   const c = r.cumplimiento;
   const tu = coach ? 'sus' : 'tus';
   const datosTarjeta = {
+    fondo: 'bloque',   // (imágenes) las montañas
     nombre: tituloBloque(r.bloque), subtitulo: `${r.semanasTotal} semanas, ${rangoLargo(r.inicio, r.fin)}`, fecha: r.fin,
     etiquetaFecha: r.terminado ? 'Bloque terminado' : 'Bloque en curso',
     cifras: [[String(r.sesiones.hechas), r.sesiones.hechas === 1 ? 'sesión' : 'sesiones'], [toneladas(r.tonelaje), 'toneladas'], [String(r.records.length), r.records.length === 1 ? 'récord' : 'récords']],

@@ -3,6 +3,8 @@ import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { useApp, Hoja, Icono, Cargando, descargar, P } from './comunes.jsx';
 import { num } from '../logica/calculos.js';
 import { arteSesion, cifrasTarjeta, cifraHeroe, encajarFoto, PLANTILLAS_TARJETA } from '../logica/arte.js';
+import { fondoTarjeta, fuenteImagen } from '../logica/imagenes.js';
+import { hayImagen } from './Imagen.jsx';
 
 // Tarjeta de la sesión para compartir (Instagram, WhatsApp…): 1080 × 1350, sin datos de salud.
 // d: { nombre, subtitulo, fecha (ISO), series, tonelaje (kg), minutos, records: [{ nombre, texto }], mejores: [{ nombre, serie }] }
@@ -28,6 +30,33 @@ function fondoNoche(x) {
     x.fillStyle = g; x.fillRect(0, 0, W, H);
   }
 }
+// (imágenes) La ilustración de fondo de la tarjeta (logica/imagenes.js: fondoTarjeta): se carga del móvil o de la red
+// (es de la misma app, así que el lienzo se puede exportar) y, si no llega en 2,5 s o falla, la tarjeta sale con la
+// noche de siempre
+async function cargarFondo(id) {
+  if (!id || !hayImagen(id)) return null;
+  const f = fuenteImagen(id);
+  const url = f.srcset.split(', ').pop().split(' ')[0];
+  try {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+    await Promise.race([img.decode(), new Promise((_, mal) => { setTimeout(() => mal(new Error('tarde')), 2500); })]);
+    return img.naturalWidth ? img : null;
+  } catch { return null; }
+}
+// La noche y, encima, la ilustración pegada abajo (cubriendo el ancho), con un velo que la apaga hacia abajo: las
+// letras (blancas y lilas) siguen leyéndose sobre el resplandor
+function fondoIlustrado(x, img) {
+  fondoNoche(x);
+  const e = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+  const w = img.naturalWidth * e, h = img.naturalHeight * e;
+  x.drawImage(img, (W - w) / 2, H - h, w, h);
+  const g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(21, 15, 54, 0.15)'); g.addColorStop(0.45, 'rgba(21, 15, 54, 0.25)'); g.addColorStop(0.86, 'rgba(21, 15, 54, 0.6)'); g.addColorStop(1, 'rgba(21, 15, 54, 0.74)');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+}
+
 // El lobo de la marca, en vectorial (ui/lobo-trazo.js), con la esquina de arriba a la izquierda en (px, py) y el alto
 // dado. Devuelve el ancho que ocupa.
 export function dibujarLobo(x, px, py, alto, color = '#FFFFFF', opacidad = 1) {
@@ -101,14 +130,16 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null } =
   };
 
   const aBlob = () => new Promise((ok, mal) => cv.toBlob((b) => (b ? ok(b) : mal(new Error('No se ha podido crear la imagen.'))), 'image/png'));
+  // (imágenes) la ilustración de fondo, salvo con la foto del atleta
+  const ilu = plantilla === 'foto' && foto ? null : await cargarFondo(fondoTarjeta(d));
   if (plantilla !== 'clasica') {
-    dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono });
+    dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono, ilu });
     return aBlob();
   }
 
-  // Fondo: la noche de la marca y, abajo a la derecha, el lobo en grande y muy tenue
-  fondoNoche(x);
-  dibujarLobo(x, W - 560, H - 640, 760, '#FFFFFF', 0.055);
+  // Fondo: la ilustración o, sin ella, la noche de la marca y, abajo a la derecha, el lobo en grande y muy tenue
+  if (ilu) fondoIlustrado(x, ilu);
+  else { fondoNoche(x); dibujarLobo(x, W - 560, H - 640, 760, '#FFFFFF', 0.055); }
 
   // Marca y fecha
   marca(x, letra);
@@ -181,8 +212,8 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null } =
       x.beginPath(); x.arc(cx, yy, celda / 2, 0, Math.PI * 2); x.fill();
     }));
   }
-  // Pie: un filo y la firma, con el lobo
-  pie(x, letra);
+  // Pie: un filo y la firma, con el lobo (sobre la ilustración, en claro)
+  pie(x, letra, ilu ? '#EDEAFB' : C.tinta3);
 
   return aBlob();
 }
@@ -209,7 +240,7 @@ function dibujarArte(x, d, { escala = 2.7, dx = 0, dy = 0, opacidad = 1 } = {}) 
   x.restore();
   x.globalAlpha = 1;
 }
-function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono }) {
+function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono, ilu = null }) {
   const espaciado = (px) => { try { x.letterSpacing = `${px}px`; } catch { /* sin letterSpacing */ } };
   // Fondo: la foto (cubriendo, con un degradado que deja leer) o la noche de la marca con el dibujo de la sesión
   fondoNoche(x);
@@ -222,6 +253,9 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono 
     g = x.createLinearGradient(0, H * 0.4, 0, H);
     g.addColorStop(0, 'rgba(10, 8, 24, 0)'); g.addColorStop(0.45, 'rgba(10, 8, 24, .72)'); g.addColorStop(1, 'rgba(10, 8, 24, .94)');
     x.fillStyle = g; x.fillRect(0, H * 0.4, W, H * 0.6);
+  } else if (ilu) {
+    // (imágenes) la ilustración en lugar del dibujo de líneas
+    fondoIlustrado(x, ilu);
   } else if (plantilla === 'minima') {
     dibujarArte(x, d, { escala: 3.4, dx: -180, dy: -60, opacidad: 0.9 });
     const g = x.createLinearGradient(0, H * 0.35, 0, H);
@@ -275,7 +309,7 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono 
     }
   }
   // Pie: un filo y la firma, con el lobo
-  pie(x, letra, r ? '#E4E1F2' : C.tinta3);
+  pie(x, letra, r ? '#E4E1F2' : ilu ? '#EDEAFB' : C.tinta3);
   x.textAlign = 'left';
 }
 

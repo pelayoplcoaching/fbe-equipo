@@ -49,6 +49,51 @@
       "640": "imagenes/comida/comida-merienda-640.8398f339.webp"
     }
   },
+  "compartir-bloque": {
+    "proporcion": [
+      4,
+      5
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-bloque-1024.b7f94d30.webp"
+    }
+  },
+  "compartir-mes": {
+    "proporcion": [
+      4,
+      5
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-mes-1024.b3d03a69.webp"
+    }
+  },
+  "compartir-racha": {
+    "proporcion": [
+      4,
+      5
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-racha-1024.e7709cfb.webp"
+    }
+  },
+  "compartir-record": {
+    "proporcion": [
+      4,
+      5
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-record-1024.3c0ea125.webp"
+    }
+  },
+  "compartir-sesion": {
+    "proporcion": [
+      4,
+      5
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-sesion-1024.53249527.webp"
+    }
+  },
   "grupo-abdominales": {
     "proporcion": [
       4,

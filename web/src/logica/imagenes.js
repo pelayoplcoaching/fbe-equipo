@@ -54,6 +54,15 @@ export function imagenGrupo(grupo) {
 const COMIDAS = { desayuno: 'desayuno', media_manana: 'media-manana', comida: 'comida', merienda: 'merienda', cena: 'cena', recena: 'cena' };
 export function imagenComida(toma) { return COMIDAS[toma] ? `comida-${COMIDAS[toma]}` : null; }
 
+// ---------- Las tarjetas para compartir ----------
+// La de la propia tarjeta (d.fondo: el bloque, el mes del equipo o el tuyo) o, en la de una sesión, la del récord si lo
+// hubo y la de la barra si no
+export const FONDOS_TARJETA = ['sesion', 'record', 'mes', 'bloque', 'racha'];
+export function fondoTarjeta(d = {}) {
+  if (FONDOS_TARJETA.includes(d.fondo)) return `compartir-${d.fondo}`;
+  return d.records?.length ? 'compartir-record' : 'compartir-sesion';
+}
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.
