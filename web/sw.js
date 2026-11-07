@@ -28,6 +28,24 @@ function claveModelo(url) {
   return MODELO_ARCHIVOS.includes(nombre) ? base.href + nombre : null;
 }
 
+// (imágenes) Las ilustraciones (imagenes/<bloque>/…webp): no se descargan al instalar; cada una se guarda aquí la primera
+// vez que se ve y desde entonces sale del móvil. Llevan su huella en el nombre (no cambian nunca), así que la caché
+// sobrevive a las actualizaciones; al activar una versión se quitan las que ya no usa. Solo las de la lista y solo si
+// llegan como WebP.
+const IMAGENES = 'fbe-imagenes';
+const IMAGENES_ARCHIVOS = typeof __IMAGENES_ARCHIVOS__ !== 'undefined' ? __IMAGENES_ARCHIVOS__ : [];
+function claveImagen(url) {
+  const base = new URL('./', self.registration.scope);
+  if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) return null;
+  const ruta = url.pathname.slice(base.pathname.length);
+  return IMAGENES_ARCHIVOS.includes(ruta) ? base.href + ruta : null;
+}
+async function podarImagenes() {
+  const c = await caches.open(IMAGENES);
+  const vale = new Set(IMAGENES_ARCHIVOS.map((r) => new URL(r, self.registration.scope).href));
+  for (const k of await c.keys()) if (!vale.has(k.url)) await c.delete(k);
+}
+
 // (pulido 3.7) ¿Es esta respuesta guardada, byte a byte, el archivo de esta versión?
 async function igualQueAhora(r, u) {
   const esperada = HUELLAS[u];
@@ -76,6 +94,7 @@ self.addEventListener('message', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => (k.startsWith('fbe-atletas-') && k !== CACHE) || (k.startsWith('fbe-modelos-') && k !== MODELOS)).map((k) => caches.delete(k))))
+    .then(() => podarImagenes().catch(() => {}))
     .then(() => self.clients.claim()));
 });
 
@@ -144,6 +163,15 @@ self.addEventListener('fetch', (e) => {
   if (clave) {
     e.respondWith(caches.open(MODELOS).then((c) => c.match(clave).then((r) => r || fetch(clave, { credentials: 'same-origin' }).then((x) => {
       if (x.ok && x.status === 200 && TIPO_MODELO.test(x.headers.get('content-type') || '')) c.put(clave, x.clone()).catch(() => {});
+      return x;
+    }))));
+    return;
+  }
+  // (imágenes) Las ilustraciones: de su caché si ya está; si no, de la red, y se guarda para la próxima vez
+  const claveImg = claveImagen(url);
+  if (claveImg) {
+    e.respondWith(caches.open(IMAGENES).then((c) => c.match(claveImg).then((r) => r || fetch(claveImg, { credentials: 'same-origin' }).then((x) => {
+      if (x.ok && x.status === 200 && /^image\/webp\s*(;|$)/i.test(x.headers.get('content-type') || '')) c.put(claveImg, x.clone()).catch(() => {});
       return x;
     }))));
     return;

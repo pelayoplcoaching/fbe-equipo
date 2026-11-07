@@ -1,0 +1,13 @@
+/* Las ilustraciones de la app (ui/Imagen.jsx, logica/imagenes.js). Se carga después de pulido.css.
+   Cada imagen llena el hueco que ya tenía su sitio (el del dibujo de líneas al que sustituye): nada se mueve al cargar.
+   Las ilustraciones están pintadas en la noche de la casa con el lado izquierdo oscuro y vacío (ahí va el texto);
+   el foco, a la derecha. */
+
+/* ── 1 · La portada de la sesión y el resumen al terminar ─────────────────────────────────────────────────────────────
+   (Portada.jsx, Sesion.jsx) La imagen ocupa el sitio de .portada-arte y hereda su entrada, su paralaje y su viaje
+   desde la tarjeta de Hoy (vt-arte-sesion). En el móvil la portada es casi cuadrada: se recorta por los lados
+   guardando la parte derecha, donde está el material. El velo de .portada-sesion::before oscurece arriba (el botón de
+   volver) y abajo (el título), así que el texto se lee igual que con el dibujo. */
+img.portada-foto { object-fit: cover; object-position: 78% 50%; }
+.resumen-hero img.hero-foto { object-fit: cover; object-position: 85% 50%; opacity: .62; }
+@media (forced-colors: active) { img.portada-foto, .resumen-hero img.hero-foto { opacity: .35; } }

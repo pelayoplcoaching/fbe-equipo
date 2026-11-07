@@ -1,0 +1,79 @@
+{
+  "sesion-cardio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-cardio-720.45a08957.webp",
+      "1080": "imagenes/sesion/sesion-cardio-1080.15099a2c.webp",
+      "1440": "imagenes/sesion/sesion-cardio-1440.40ba0aff.webp"
+    }
+  },
+  "sesion-core": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-core-720.4d3d0390.webp",
+      "1080": "imagenes/sesion/sesion-core-1080.03673680.webp",
+      "1440": "imagenes/sesion/sesion-core-1440.9e217dfd.webp"
+    }
+  },
+  "sesion-empuje": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-empuje-720.22508bef.webp",
+      "1080": "imagenes/sesion/sesion-empuje-1080.54ee2b07.webp",
+      "1440": "imagenes/sesion/sesion-empuje-1440.d0f1c080.webp"
+    }
+  },
+  "sesion-fullbody": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-fullbody-720.73205e39.webp",
+      "1080": "imagenes/sesion/sesion-fullbody-1080.70d9c4eb.webp",
+      "1440": "imagenes/sesion/sesion-fullbody-1440.df9e8623.webp"
+    }
+  },
+  "sesion-movilidad": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-movilidad-720.e5bf6ecf.webp",
+      "1080": "imagenes/sesion/sesion-movilidad-1080.6b4e6e0f.webp",
+      "1440": "imagenes/sesion/sesion-movilidad-1440.9a811100.webp"
+    }
+  },
+  "sesion-pierna": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-pierna-720.06a4e488.webp",
+      "1080": "imagenes/sesion/sesion-pierna-1080.56579667.webp",
+      "1440": "imagenes/sesion/sesion-pierna-1440.f94697b0.webp"
+    }
+  },
+  "sesion-tiron": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-tiron-720.c06eff48.webp",
+      "1080": "imagenes/sesion/sesion-tiron-1080.b54824e9.webp",
+      "1440": "imagenes/sesion/sesion-tiron-1440.692c0ab7.webp"
+    }
+  }
+}
