@@ -41,6 +41,14 @@ export function familiaPortada({ tipo = 'fuerza', pautas = [], cardio = false } 
 const HABITOS = ['pasos', 'proteina', 'agua', 'sueno', 'movilidad', 'verdura'];
 export function imagenHabito(icono) { return `habito-${HABITOS.includes(icono) ? icono : 'otro'}`; }
 
+// ---------- Los grupos musculares ----------
+// La estatua de su grupo principal (el primero de grupos_musculares, el que cuenta 1 serie); sin grupo conocido, nada
+const GRUPOS_IMG = ['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'isquiotibiales', 'biceps', 'triceps', 'abdominales', 'gemelo'];
+export function imagenGrupo(grupo) {
+  const g = Array.isArray(grupo) ? grupo[0] : grupo;
+  return GRUPOS_IMG.includes(g) ? `grupo-${g}` : null;
+}
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.
