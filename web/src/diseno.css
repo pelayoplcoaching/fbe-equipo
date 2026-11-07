@@ -1580,9 +1580,10 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 .reloj-descanso { transition: transform var(--mov-rapido) var(--curva-rebote); }
 .reloj-descanso.girando { transform: scale(1.04); }
 .entrada-menu { position: relative; touch-action: pan-y; border-radius: 12px; }
+.entrada-menu.deslizando { overflow: clip; }
 .entrada-menu.deslizando > * { transform: translateX(var(--dx, 0px)); }
 .entrada-menu.deslizando::before {
-  content: ""; position: absolute; inset: -2px -4px; border-radius: 12px; z-index: 0; opacity: var(--f, 0);
+  content: ""; position: absolute; inset: 0; border-radius: 12px; z-index: 0; opacity: var(--f, 0);
   background: color-mix(in srgb, var(--ok) 22%, transparent) var(--marca-ok) 12px center / 18px no-repeat;
 }
 .entrada-menu.deslizando[data-listo]::before { background-color: color-mix(in srgb, var(--ok) 34%, transparent); background-size: 22px; }
