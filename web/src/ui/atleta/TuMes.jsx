@@ -218,7 +218,7 @@ export function TusMeses({ atletaId = null, atleta: deQuien = null, salud = true
                   <strong>{capital(mesConAnio(r.mes))}</strong>
                   <span class="peq secundario">{r.conEntreno ? `${r.sesiones.hechas} de ${r.sesiones.previstas || r.sesiones.hechas} sesiones, ${r.dias} días entrenando${r.records.length ? `, ${r.records.length} ${r.records.length === 1 ? 'récord' : 'récords'}` : ''}` : r.nutricion?.dias ? `${r.nutricion.dias} días de nutrición apuntados` : 'Hábitos del mes'}</span>
                 </span>
-                <Icono n="play" />
+                <PortadaHistoria tono="mes peq" />
               </button>
             </li>
           ))}

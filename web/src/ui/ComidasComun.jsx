@@ -283,7 +283,7 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
           <ul class="lista tomas-dia">
             {tomas.map((t) => (
               <li key={t} class="toma-dia">
-                <div class="separa toma-cab"><span class="etq">{NOMBRE_TOMA[t]}</span>
+                <div class="separa toma-cab"><span class="etq"><Ilustracion n={iluDeToma(t)} clase="toma-ilu" />{NOMBRE_TOMA[t]}</span>
                   <button type="button" class="btn-texto" onClick={() => setHoja({ tipo: 'anadir', toma: t })} aria-label={`Añadir a ${NOMBRE_TOMA[t].toLowerCase()}`}><Icono n="mas" /> Añadir</button>
                 </div>
                 {(delDia[t] || []).map((e) => (
