@@ -4,10 +4,12 @@ import { useApp, useCarga, Icono, Hoja, usePreferencia } from './comunes.jsx';
 import { num } from '../logica/calculos.js';
 import { logrosNuevos, nivelesVistos } from '../logica/logros.js';
 import { metalDe } from '../logica/tablero.js';
+import { imagenMedalla, archivoPara } from '../logica/imagenes.js';
+import { hayImagen } from './Imagen.jsx';
 import { celebrar } from './atleta/sesion-comun.jsx';
 import { useBienvenidaAbierta } from './Bienvenida.jsx';
 
-// v0.51: medallas de metal. Los cuatro niveles de siempre (los mismos umbrales) son bronce, plata, oro y platino: la
+// v0.51: medallas de metal. Los cuatro niveles de siempre (los mismos umbrales) son bronce, plata, oro y diamante: la
 // cara con un degradado radial (la luz arriba a la izquierda), el canto con su degradado y su dibujo (liso, perlado,
 // estriado o doble, para distinguirlos sin el color), la cifra del hito grabada y, al conseguirla, un brillo que la
 // cruza (quieto con «reducir movimiento»). Sin nivel, una medalla fantasma. El aro exterior marca lo que falta.
@@ -19,12 +21,18 @@ const METAL = {
   platino: { luz: '#F7FCFF', medio: '#C6D8E4', sombra: '#8AA5B8', cantoLuz: '#F4FBFF', cantoSombra: '#4E6577', tinta: '#1E2C38', relieve: 'rgba(255, 255, 255, .8)' },
 };
 let contador = 0;
-export function MedallaMetal({ nivel = 0, cifra = null, progreso = null, tam = 76, clase = '' }) {
+// (imágenes) con `logro`, la medalla conseguida es la ilustración de ese logro en su metal (bronce, plata, oro, diamante),
+// recortada a su disco; encima siguen el aro de lo que falta y el brillo que la cruza. Si no hay imagen o no carga, la
+// medalla dibujada de siempre. Sin nivel, la fantasma con su cifra, como siempre.
+export function MedallaMetal({ nivel = 0, cifra = null, progreso = null, tam = 76, clase = '', logro = null }) {
   const id = useRef(null);
   if (!id.current) id.current = `mm${++contador}`;
   const k = id.current;
   const m = metalDe(nivel);
   const c = m ? METAL[m.id] : null;
+  const idImg = m ? imagenMedalla(logro, nivel) : null;
+  const [falla, setFalla] = useState(null);
+  const img = idImg && falla !== idImg && hayImagen(idImg) ? archivoPara(idImg, tam) : null;
   const R = 46, C = 2 * Math.PI * R;
   const texto = cifra != null ? abreviar(cifra) : null;
   const tamCifra = texto && texto.length > 3 ? 20 : 25;
@@ -47,7 +55,21 @@ export function MedallaMetal({ nivel = 0, cifra = null, progreso = null, tam = 7
           <circle class="mm-avance" cx="50" cy="50" r={R} stroke-dasharray={`${C * progreso} ${C}`} transform="rotate(-90 50 50)" />
         </>
       )}
-      {!m ? (
+      {m && img ? (
+        <>
+          <defs>
+            <linearGradient id={`${k}b`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#fff" stop-opacity="0" /><stop offset=".5" stop-color="#fff" stop-opacity=".6" /><stop offset="1" stop-color="#fff" stop-opacity="0" />
+            </linearGradient>
+            <clipPath id={`${k}r`}><circle cx="50" cy="50" r="40" /></clipPath>
+          </defs>
+          {/* el disco ocupa el 94 % de la imagen: así su borde cae en r = 39,5, como el de la dibujada */}
+          <image class="mm-img" href={img} x="8.1" y="8.1" width="83.8" height="83.8" clip-path={`url(#${k}r)`} preserveAspectRatio="xMidYMid slice" onError={() => setFalla(idImg)} />
+          <g clip-path={`url(#${k}r)`}>
+            <g transform="rotate(22 50 50)"><rect class="mm-barrido" x="10" y="-20" width="26" height="140" fill={`url(#${k}b)`} /></g>
+          </g>
+        </>
+      ) : !m ? (
         <>
           <circle class="mm-cara" cx="50" cy="50" r="37" />
           {texto && <text class="mm-cifra" x="50" y="50" dy="0.35em" text-anchor="middle" font-size={tamCifra}>{texto}</text>}
@@ -116,7 +138,7 @@ export function Logros({ salud }) {
             <li key={l.id}>
               <button class="logro" onClick={() => setAbierto(l)}
                 aria-label={`${l.titulo}: ${l.nivel ? `${medallaDe(l.nivel)}, ${l.conseguido}` : 'aún sin medalla'}${l.siguiente ? `. Siguiente: ${l.siguiente.texto}` : '. Todas las medallas'}`}>
-                <MedallaMetal nivel={l.nivel} cifra={l.nivel ? l.niveles[l.nivel - 1].umbral : l.niveles[0].umbral} progreso={l.siguiente ? l.progreso : null} />
+                <MedallaMetal nivel={l.nivel} logro={l.id} cifra={l.nivel ? l.niveles[l.nivel - 1].umbral : l.niveles[0].umbral} progreso={l.siguiente ? l.progreso : null} />
                 <span class="logro-metal" aria-hidden="true">{nombreMetal(l.nivel)}</span>
                 <span class="logro-titulo">{l.titulo}</span>
                 <span class="mini terciario num">{l.siguiente ? `${abreviar(l.valor)} de ${abreviar(l.siguiente.umbral)}` : 'Completo'}</span>
@@ -138,7 +160,7 @@ function HojaLogro({ logro: l, alCerrar }) {
       <ol class="logro-niveles">
         {l.niveles.map((n) => (
           <li key={n.n} class={n.conseguido ? 'conseguido' : ''}>
-            <MedallaMetal nivel={n.conseguido ? n.n : 0} cifra={n.umbral} tam={64} />
+            <MedallaMetal nivel={n.conseguido ? n.n : 0} logro={l.id} cifra={n.umbral} tam={64} />
             <span class="pila-xs"><strong>{nombreMetal(n.n)}</strong><span class="peq secundario">{n.texto}</span></span>
             <span class="sr">{n.conseguido ? 'Conseguido' : 'Pendiente'}</span>
             {n.conseguido && <Icono n="hecho" />}
@@ -169,14 +191,14 @@ export function AvisoLogros({ salud, irA, pausado = false }) {
   return (
     <Hoja titulo={nuevos.length === 1 ? 'Nueva medalla' : `${nuevos.length} medallas nuevas`} alCerrar={() => terminar(false)}>
       <div class="medalla-revela" data-metal={metalDe(nivelP)?.id}>
-        <MedallaMetal nivel={nivelP} cifra={umbralP} tam={176} clase="entra brilla" />
+        <MedallaMetal nivel={nivelP} logro={principal.id} cifra={umbralP} tam={176} clase="entra brilla" />
         <span class="t-sobre">Medalla de {nombreMetal(nivelP).toLowerCase()}</span>
         <h3>{principal.titulo}</h3>
         <p class="secundario">{principal.texto}</p>
         {nuevos.length > 1 && (
           <ul class="logro-nuevos-resto">
             {nuevos.filter((x) => x !== principal).map((x) => (
-              <li key={x.id}><MedallaMetal nivel={x.nivel} tam={30} /><span><strong>{x.titulo}</strong>: {medallaDe(x.nivel)}, {x.texto}</span></li>
+              <li key={x.id}><MedallaMetal nivel={x.nivel} logro={x.id} tam={30} /><span><strong>{x.titulo}</strong>: {medallaDe(x.nivel)}, {x.texto}</span></li>
             ))}
           </ul>
         )}

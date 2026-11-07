@@ -264,6 +264,46 @@
       "512": "imagenes/habito/habito-verdura-512.ef42f857.webp"
     }
   },
+  "medalla-constancia-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-constancia-bronce-256.bf612c4c.webp",
+      "512": "imagenes/medalla/medalla-constancia-bronce-512.0b0a32eb.webp"
+    }
+  },
+  "medalla-constancia-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-constancia-diamante-256.62d2cb21.webp",
+      "512": "imagenes/medalla/medalla-constancia-diamante-512.57cce014.webp"
+    }
+  },
+  "medalla-constancia-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-constancia-oro-256.cdb1efc2.webp",
+      "512": "imagenes/medalla/medalla-constancia-oro-512.9194654e.webp"
+    }
+  },
+  "medalla-constancia-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-constancia-plata-256.d5d42d1f.webp",
+      "512": "imagenes/medalla/medalla-constancia-plata-512.61fe101b.webp"
+    }
+  },
   "sesion-cardio": {
     "proporcion": [
       16,

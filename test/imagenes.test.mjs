@@ -3,7 +3,7 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
 import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 import { GRUPOS } from '../web/src/logica/calculos.js';
 import { TOMAS } from '../web/src/logica/comidas.js';
@@ -65,6 +65,17 @@ check(FONDOS_TARJETA.every((f) => IMAGENES.includes(`compartir-${f}`)), 'están 
   let mio = null, equipo = null;
   try { mio = datosImagenMes(r, { mio: true }); equipo = datosImagenMes(r); } catch { /* datos de ejemplo incompletos */ }
   check(!mio || (mio.fondo === 'racha' && equipo.fondo === 'mes'), 'tu mes lleva las llamas y el del equipo, las lunas');
+}
+
+console.log('\nLas medallas');
+{
+  const { LOGROS } = await import('../web/src/logica/logros.js');
+  check(imagenMedalla('sesiones', 1) === 'medalla-constancia-bronce' && imagenMedalla('sesiones', 4) === 'medalla-constancia-diamante' && imagenMedalla('peso', 3) === 'medalla-bascula-oro', 'cada logro y nivel, su medalla (el cuarto nivel, diamante)');
+  check(imagenMedalla('sesiones', 0) === null && imagenMedalla('inventado', 2) === null && imagenMedalla('sesiones', 5) === null, 'sin nivel, con un logro desconocido o un nivel que no existe, ninguna (la dibujada)');
+  check(!LOGROS || LOGROS.every((l) => imagenMedalla(l.id, 1)), 'todos los logros de la app tienen nombre de medalla');
+  check(['bronce', 'plata', 'oro', 'diamante'].every((m) => IMAGENES.includes(`medalla-constancia-${m}`)), 'están las cuatro medallas de Constancia');
+  const lista = { a: { proporcion: [1, 1], archivos: { 256: 'p', 512: 'g' } } };
+  check(archivoPara('a', 30, lista) === 'p' && archivoPara('a', 76, lista) === 'p' && archivoPara('a', 176, lista) === 'g' && archivoPara('nada', 76, lista) === null, 'el archivo según el tamaño: el pequeño hasta 85 px, el grande por encima');
 }
 
 console.log('\nLos archivos que se sirven');

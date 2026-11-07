@@ -1824,7 +1824,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(T.anillosPorCelebrar(an, { lunes: '2026-11-02', cerrados: 'x' }, '2026-11-02').celebrar.length === 2 && T.anillosPorCelebrar(an, { lunes: '2026-11-02', cerrados: [{}] }, '2026-11-02').celebrar.length === 2, 'lo guardado raro no rompe nada');
 
   console.log('\nv0.51: medallas, tramos, equipo y comunidad');
-  check(T.METALES.map((m) => `${m.nombre}:${m.canto}`).join() === 'Bronce:liso,Plata:perlado,Oro:estriado,Platino:doble' && T.metalDe(3).id === 'oro' && T.metalDe(0) === null, 'los cuatro niveles son bronce, plata, oro y platino, cada uno con su canto (se distinguen sin el color)');
+  check(T.METALES.map((m) => `${m.nombre}:${m.canto}`).join() === 'Bronce:liso,Plata:perlado,Oro:estriado,Diamante:doble' && T.metalDe(3).id === 'oro' && T.metalDe(0) === null, 'los cuatro niveles son bronce, plata, oro y diamante, cada uno con su canto (se distinguen sin el color)');
   const ejs = [{ id: 'e1', series: 3 }, { id: 'e2', series: 2, superserie: 'A' }, { id: 'e3', series: 2, superserie: 'A' }, { id: 'e4', series: 3 }];
   const tr = T.tramosSesion(ejs, { e1: { 1: {}, 2: {}, 3: {}, 4: {} }, e2: { 1: {} }, e3: { 1: {} } }, 'e3');
   check(tr.length === 3 && tr[0].completo && tr[0].hechas === 3 && tr[1].letra === 'A' && tr[1].series === 4 && tr[1].hechas === 2 && tr[1].actual && !tr[2].actual && tr[2].frac === 0, 'un tramo por ejercicio y uno por superserie; las series de más no cuentan; el de la serie que toca, resaltado');

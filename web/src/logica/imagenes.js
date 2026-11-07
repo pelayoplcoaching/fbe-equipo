@@ -63,6 +63,22 @@ export function fondoTarjeta(d = {}) {
   return d.records?.length ? 'compartir-record' : 'compartir-sesion';
 }
 
+// ---------- Las medallas ----------
+// Una por logro (logica/logros.js) y nivel: bronce, plata, oro y diamante (el cuarto nivel)
+const MEDALLA_DE = { sesiones: 'constancia', racha: 'semanas', toneladas: 'toneladas', records: 'records', videos: 'tecnica', checkins: 'checkins', peso: 'bascula' };
+const NIVEL_IMG = [null, 'bronce', 'plata', 'oro', 'diamante'];
+export function imagenMedalla(logro, nivel) {
+  return MEDALLA_DE[logro] && NIVEL_IMG[nivel] ? `medalla-${MEDALLA_DE[logro]}-${NIVEL_IMG[nivel]}` : null;
+}
+// El archivo para un tamaño en pantalla (en px): el más pequeño que llegue a tres veces ese tamaño, o el mayor
+export function archivoPara(id, tam, lista = LISTA) {
+  const x = id && Object.prototype.hasOwnProperty.call(lista, id) ? lista[id] : null;
+  if (!x?.archivos) return null;
+  const anchos = Object.keys(x.archivos).map(Number).filter((n) => n > 0).sort((a, b) => a - b);
+  if (!anchos.length) return null;
+  return x.archivos[anchos.find((a) => a >= tam * 3) || anchos[anchos.length - 1]];
+}
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.
