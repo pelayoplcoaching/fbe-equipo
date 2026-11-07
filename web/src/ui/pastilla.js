@@ -33,12 +33,15 @@ export function instalarPastilla() {
   if (typeof ResizeObserver !== 'undefined') mirador = new ResizeObserver((es) => { for (const e of es) colocar(e.target); });
   new MutationObserver((cambios) => {
     const tocados = new Set();
+    // (un nodo cuyo padre también ha entrado en esta tanda no se recorre aparte: su padre ya lo cubre)
+    const entrados = new Set();
+    for (const c of cambios) if (c.type === 'childList') for (const n of c.addedNodes) if (n instanceof HTMLElement) entrados.add(n);
     for (const c of cambios) {
       if (c.type === 'attributes') { const g = c.target.closest?.(VALE); if (g) tocados.add(g); continue; }
       const g0 = c.target.closest?.(VALE);
       if (g0) tocados.add(g0);
       for (const n of c.addedNodes) {
-        if (!(n instanceof HTMLElement)) continue;
+        if (!(n instanceof HTMLElement) || entrados.has(n.parentNode)) continue;
         if (n.matches(VALE)) tocados.add(n);
         for (const g of n.querySelectorAll(VALE)) tocados.add(g);
       }

@@ -44,13 +44,17 @@ export function instalarLlegada() {
     if (sinMovimiento()) return;
     const llegados = new Map();   // contenedor → nodos que han entrado en esta tanda
     const conEsqueleto = new Set();
+    // (los nodos que han entrado en esta tanda: un hijo de otro que también ha entrado no se mira aparte, que su
+    // padre ya lo cubre; sin esto, una pantalla grande recién pintada costaba una pasada por cada nodo)
+    const entrados = new Set();
+    for (const c of cambios) if (c.type === 'childList') for (const n of c.addedNodes) if (n instanceof HTMLElement) entrados.add(n);
     for (const c of cambios) {
       if (c.type === 'attributes') {
         // el hueco de una Reserva deja de ser una silueta entera: lo demás de la Reserva es lo que ha llegado
         if (c.oldValue === 'entero' && !c.target.dataset.hueco && c.target.parentElement) marcar(piezasDe([...c.target.parentElement.children].filter((e) => e !== c.target)));
         continue;
       }
-      for (const n of c.addedNodes) if (n instanceof HTMLElement) fotos(n);
+      for (const n of c.addedNodes) if (n instanceof HTMLElement && !entrados.has(n.parentNode)) fotos(n);
       for (const n of c.removedNodes) if (n instanceof HTMLElement && n.classList.contains('siluetas')) conEsqueleto.add(c.target);
       if (c.addedNodes.length) llegados.set(c.target, [...(llegados.get(c.target) || []), ...c.addedNodes]);
     }

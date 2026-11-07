@@ -526,7 +526,9 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
         for (let i = 1; i <= 8; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y + (cuanto * i) / 8 }] }); await p.waitForTimeout(16); }
         if (soltar) await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
       };
-      await p.evaluate(() => { const b = globalThis.__fbeDemo; const s = b.select.bind(b); window.__lecturas = 0; b.select = (...a) => { window.__lecturas++; return s(...a); }; });
+      // (diseño, tanda 17) la lectura de «fotos por aligerar» (App.jsx, a los 4 s de entrar, en segundo plano) no cuenta: no la
+      // provoca ningún tirón y, según lo que tarde el flujo, caía justo en la ventana de «dentro de una ficha»
+      await p.evaluate(() => { const b = globalThis.__fbeDemo; const s = b.select.bind(b); window.__lecturas = 0; b.select = (...a) => { if (!(a[0] === 'perfiles' && a[1]?.nulo)) window.__lecturas++; return s(...a); }; });
       // Un tirón corto no hace nada
       await p.evaluate(() => { window.__lecturas = 0; });
       await tirar(60);
