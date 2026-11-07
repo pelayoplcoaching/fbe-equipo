@@ -264,6 +264,46 @@
       "512": "imagenes/habito/habito-verdura-512.ef42f857.webp"
     }
   },
+  "medalla-checkins-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-checkins-bronce-256.3d90e747.webp",
+      "512": "imagenes/medalla/medalla-checkins-bronce-512.672d6fb2.webp"
+    }
+  },
+  "medalla-checkins-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-checkins-diamante-256.06825969.webp",
+      "512": "imagenes/medalla/medalla-checkins-diamante-512.00144f2d.webp"
+    }
+  },
+  "medalla-checkins-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-checkins-oro-256.107b26db.webp",
+      "512": "imagenes/medalla/medalla-checkins-oro-512.60b3a758.webp"
+    }
+  },
+  "medalla-checkins-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-checkins-plata-256.8f4d3d70.webp",
+      "512": "imagenes/medalla/medalla-checkins-plata-512.381bab4b.webp"
+    }
+  },
   "medalla-constancia-bronce": {
     "proporcion": [
       1,
