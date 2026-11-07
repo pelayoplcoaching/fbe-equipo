@@ -263,7 +263,10 @@ try {
   const x = radar({ ...d, contactos: contactosPorAtleta(d.comentarios, { hoy: d.hoy }) });
   const g = Object.fromEntries(x.filas.map((f) => [f.nombre, f]));
   check(x.filas.length === 5 && !g['Marta Gil'] && !g['Sergio Rey'], 'los cinco atletas activos (ni la invitada ni el de baja)');
-  check(g['Ana López'].grupo === 'al_dia' && g['Rubén Martín'].grupo === 'hoy' && !!g['Rubén Martín'].teEscribio && g['Carlos Vera'].motivo.id === 'parado' && g['Lucía Ferrer'].motivo.datos.nutricion === true, 'Ana al día; Rubén te escribió; Carlos lleva días parado; a Lucía (solo nutrición), saludo de nutrición');
+  // (entre las 23 y las 24, el mensaje «de ayer» de la demo —hace 23 horas— cae en el día de hoy: Ana tiene entonces un
+  // solo día de contacto en la semana y sale «en unos días» en vez de «al día»; las dos cosas están bien)
+  const ana = g['Ana López'];
+  check((ana.contacto.en7 >= 2 ? ana.grupo === 'al_dia' : ana.grupo === 'pronto') && g['Rubén Martín'].grupo === 'hoy' && !!g['Rubén Martín'].teEscribio && g['Carlos Vera'].motivo.id === 'parado' && g['Lucía Ferrer'].motivo.datos.nutricion === true, 'Ana al día; Rubén te escribió; Carlos lleva días parado; a Lucía (solo nutrición), saludo de nutrición');
   const rec = await recordsRecientes({ api }, g['Ana López'].atleta_id, { hoy: d.hoy });
   check(rec.length > 0 && rec.every((r) => r.ejercicio && !/^Récord/.test(r.ejercicio) && r.fecha), 'los récords recientes de una atleta, con su ejercicio');
   check(JSON.stringify(await b.select('comentarios', {})) === antes, 'no escribe nada');

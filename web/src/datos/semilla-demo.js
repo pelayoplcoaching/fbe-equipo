@@ -326,22 +326,30 @@ export function semillaDemo(hoy = hoyISO()) {
     return db.sesiones.filter((x) => semanas.has(x.semana_id) && x.completada).sort((x, y) => (x.fecha_realizada < y.fecha_realizada ? 1 : -1))[0];
   };
   const hace = (min) => new Date(Date.now() - min * 60000).toISOString();
+  // (pulido 4) A una hora de hoy o de ayer, en la hora local: lo que es «de hoy» y «de ayer» lo sigue siendo a cualquier
+  // hora (con «hace N minutos», entre las 23 y las 2 cambiaba de día y las pruebas del radar fallaban). Si esa hora de
+  // hoy aún no ha llegado, se pone hace un rato, guardando el orden
+  const enDia = (diasAtras, h, m = 0) => {
+    const d = new Date(); d.setDate(d.getDate() - diasAtras); d.setHours(h, m, 0, 0);
+    const tope = Date.now() - 5 * 60000;
+    return new Date(d.getTime() > tope ? tope - (23 * 60 - (h * 60 + m)) * 1000 : d.getTime()).toISOString();
+  };
   // Mensajes de Ana con su coach fuera de las sesiones (v0.17): la respuesta del coach sigue sin leer
   db.comentarios.push(
-    { id: uuid(), atleta_id: ana.id, sesion_id: null, checkin_id: null, archivo_id: null, autor: 'atleta', texto: 'La semana que viene estoy de viaje de trabajo de martes a jueves, con un gimnasio de hotel pequeño (mancuernas hasta 20 kg y poleas). ¿Hago las dos sesiones que pueda y la tercera la cambio por algo con mancuernas?', creado_en: hace(1500), leido_en: hace(1400) },
-    { id: uuid(), atleta_id: ana.id, sesion_id: null, checkin_id: null, archivo_id: null, autor: 'coach', texto: 'Perfecto. Haz Torso A y Pierna A como están, y para la tercera te dejo una versión con mancuernas en la semana. Si solo hay 20 kg, sube repeticiones hasta 15 y acércate más al fallo (RIR 1).', creado_en: hace(1380), leido_en: null },
+    { id: uuid(), atleta_id: ana.id, sesion_id: null, checkin_id: null, archivo_id: null, autor: 'atleta', texto: 'La semana que viene estoy de viaje de trabajo de martes a jueves, con un gimnasio de hotel pequeño (mancuernas hasta 20 kg y poleas). ¿Hago las dos sesiones que pueda y la tercera la cambio por algo con mancuernas?', creado_en: enDia(1, 9, 50), leido_en: enDia(1, 10, 0) },
+    { id: uuid(), atleta_id: ana.id, sesion_id: null, checkin_id: null, archivo_id: null, autor: 'coach', texto: 'Perfecto. Haz Torso A y Pierna A como están, y para la tercera te dejo una versión con mancuernas en la semana. Si solo hay 20 kg, sube repeticiones hasta 15 y acércate más al fallo (RIR 1).', creado_en: enDia(1, 10, 5), leido_en: null },
   );
   // Una foto enviada en el chat (v0.18): el gimnasio del hotel
   const adjAna = uuid();
   db.archivos.push({ id: adjAna, atleta_id: ana.id, tipo: 'adjunto', ruta: `${ana.id}/ejemplo-foto-2.jpg`, fecha: hoy, sesion_ejercicio_id: null, ejercicio_id: null, nota_atleta: null,
     comentario_coach: null, mime: 'image/jpeg', bytes: 16500, revisado_en: hace(1370), creado_en: hace(1375), pose: null });
-  db.comentarios.push({ id: uuid(), atleta_id: ana.id, sesion_id: null, checkin_id: null, archivo_id: adjAna, autor: 'atleta', texto: 'Este es el gimnasio del hotel, por si te sirve para la tercera.', creado_en: hace(1375), leido_en: hace(1370), adjunto: true });
+  db.comentarios.push({ id: uuid(), atleta_id: ana.id, sesion_id: null, checkin_id: null, archivo_id: adjAna, autor: 'atleta', texto: 'Este es el gimnasio del hotel, por si te sirve para la tercera.', creado_en: enDia(1, 10, 8), leido_en: enDia(1, 10, 12), adjunto: true });
   const sAna = ultimaSesion(ana.id);
   if (sAna) {
     sAna.nota_atleta = 'Buena sesión. La última serie de press me ha costado bastante.';
     db.comentarios.push(
-      { id: uuid(), atleta_id: ana.id, sesion_id: sAna.id, checkin_id: null, archivo_id: null, autor: 'atleta', texto: '¿Bajo un poco el press la semana que viene o lo mantengo?', creado_en: hace(600), leido_en: hace(300) },
-      { id: uuid(), atleta_id: ana.id, sesion_id: sAna.id, checkin_id: null, archivo_id: null, autor: 'coach', texto: 'Mantenlo. Si la última serie vuelve a salir a RPE 9,5 o más, quita 2,5 kg solo en esa.', creado_en: hace(290), leido_en: null },
+      { id: uuid(), atleta_id: ana.id, sesion_id: sAna.id, checkin_id: null, archivo_id: null, autor: 'atleta', texto: '¿Bajo un poco el press la semana que viene o lo mantengo?', creado_en: enDia(0, 8, 0), leido_en: enDia(0, 8, 30) },
+      { id: uuid(), atleta_id: ana.id, sesion_id: sAna.id, checkin_id: null, archivo_id: null, autor: 'coach', texto: 'Mantenlo. Si la última serie vuelve a salir a RPE 9,5 o más, quita 2,5 kg solo en esa.', creado_en: enDia(0, 8, 35), leido_en: null },
     );
     sAna.revisada_en = hace(290);
     sAna.preparacion = { sueno: 1, energia: 2, molestias: 3 };
@@ -349,7 +357,7 @@ export function semillaDemo(hoy = hoyISO()) {
   const sRuben = ultimaSesion(ruben.id);
   if (sRuben) {
     sRuben.preparacion = { sueno: 2, energia: 2, molestias: 1 };
-    db.comentarios.push({ id: uuid(), atleta_id: ruben.id, sesion_id: sRuben.id, checkin_id: null, archivo_id: null, autor: 'atleta', texto: 'En el peso muerto rumano he notado la lumbar en la última serie. He bajado a 85 kg.', creado_en: hace(120), leido_en: null });
+    db.comentarios.push({ id: uuid(), atleta_id: ruben.id, sesion_id: sRuben.id, checkin_id: null, archivo_id: null, autor: 'atleta', texto: 'En el peso muerto rumano he notado la lumbar en la última serie. He bajado a 85 kg.', creado_en: enDia(0, 9, 0), leido_en: null });
   }
 
   // Vídeos de técnica (la demo trae un clip esquemático): uno de Ana por revisar y uno de Rubén ya corregido

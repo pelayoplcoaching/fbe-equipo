@@ -424,23 +424,23 @@ export async function probarPulido3({ navegador, check, base = 'http://localhost
       await filasAtletas(p).first().waitFor();
       const hojas = () => p.evaluate(() => document.querySelectorAll('[role=dialog][aria-modal="true"]').length);
       const abrirHoja = async () => { await p.getByRole('button', { name: 'Avisos para tus atletas' }).click(); await p.locator('[role=dialog]').first().waitFor(); await p.waitForTimeout(450); };
-      // Con Escape y con su botón: la hoja sigue un instante (saliendo) y luego ya no está
+      // Las hojas se cierran al momento (su salida animada se retiró: dejaba la hoja 160 ms en la página, y en ese rato
+      // se podía volver a pulsar «Cerrar» o abrir otra en su sitio)
       await abrirHoja();
       await p.keyboard.press('Escape');
-      const trasEscape = await p.evaluate(() => { const h = document.querySelector('[role=dialog]'); return { hay: !!h, animando: h ? h.getAnimations().length : 0 }; });
-      await p.locator('[role=dialog]').first().waitFor({ state: 'detached', timeout: 3000 });
+      const trasEscape = await p.evaluate(() => document.querySelectorAll('.hoja-dialogo, .velo').length);
       await abrirHoja();
       await p.locator('[role=dialog] .cerrar-hoja').click();
-      const trasBoton = await p.evaluate(() => { const h = document.querySelector('[role=dialog]'); return { hay: !!h, animando: h ? h.getAnimations().length : 0 }; });
-      await p.locator('[role=dialog]').first().waitFor({ state: 'detached', timeout: 3000 });
-      check(trasEscape.hay && trasEscape.animando >= 1 && trasBoton.hay && trasBoton.animando >= 1 && await hojas() === 0, 'en el móvil, una hoja cerrada con Escape o con su botón baja antes de quitarse, y después ya no está');
-      // Con «reducir movimiento», al momento, como siempre
-      await p.emulateMedia({ reducedMotion: 'reduce' });
-      await abrirHoja();
+      const trasBoton = await p.evaluate(() => document.querySelectorAll('.hoja-dialogo, .velo').length);
+      // Cerrar y abrir otra vez sin esperar: la segunda se abre
+      await p.getByRole('button', { name: 'Avisos para tus atletas' }).click();
+      await p.locator('[role=dialog]').first().waitFor();
       await p.keyboard.press('Escape');
-      await p.waitForTimeout(40);
-      check(await hojas() === 0, 'con «reducir movimiento», la hoja se cierra al momento');
-      await p.emulateMedia({ reducedMotion: 'no-preference' });
+      await p.getByRole('button', { name: 'Avisos para tus atletas' }).dispatchEvent('click');
+      const reabierta = await p.locator('[role=dialog]').first().waitFor({ timeout: 3000 }).then(() => true, () => false);
+      await p.waitForTimeout(400);
+      check(trasEscape === 0 && trasBoton === 0 && reabierta && await hojas() === 1, 'una hoja se cierra al momento con Escape o con su botón, y si se vuelve a abrir enseguida, se abre');
+      await p.keyboard.press('Escape');
       // Al poner el dedo sobre un atleta, su ficha se empieza a pedir; si el dedo se mueve (desplazar la lista), no
       const tarjeta = p.locator('button.tarjeta-atleta:visible').nth(2);
       const caja = await tarjeta.boundingBox();

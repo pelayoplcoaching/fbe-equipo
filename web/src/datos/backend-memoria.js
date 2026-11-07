@@ -11,6 +11,7 @@ import { cardioValido, cardioHechoValido } from '../logica/cardio.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
 import { fechaMadrid as fMadrid, instanteMadrid, partesMadrid } from '../logica/fechas.js';
 import { emojiValido } from '../logica/emojis.js';
+import { leerDatos as leerDatosRendimiento, leerEntorno as leerEntornoRendimiento } from '../logica/rendimiento.js';
 import { opcionesEncuesta } from '../logica/encuestas.js';
 import { checklistValido, tempoValido, plantillaValida, videosViejos } from '../logica/tecnica.js';
 import { analisisValido } from '../logica/analisis.js';
@@ -2883,6 +2884,36 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // (048) el resumen de cada conversación y la última serie de cada atleta: con lo que ve quien llama
       // (lo que deja ver la base, sin pasar por select: el coach sin el segundo paso no ve nada)
       const veo048 = (t) => (esCoach() && sesion?.aal !== 'aal2' && (miPerfil()?.exige_2fa || (usuario()?.mfa || []).some((x) => x.estado === 'verified')) ? [] : tabla(t).filter((x) => !VISIBLE[t] || VISIBLE[t](x)));
+      // (049) cómo va la app en cada dispositivo: cada uno apunta lo suyo (una fila por dispositivo y día, que se
+      // sustituye entera); el coach lo lee sin nombres (un código por dispositivo) y lo puede borrar
+      if (nombre === 'rendimiento_apuntar') {
+        if (!uid) return null;
+        const dia = String(args?.p_dia || ''), disp = String(args?.p_dispositivo || '');
+        const hoy = hoyISO();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dia) || dia < sumar(hoy, -2) || dia > sumar(hoy, 1) || !/^[0-9a-f-]{36}$/.test(disp)) return null;
+        const datos = leerDatosRendimiento(args?.p_datos), entorno = leerEntornoRendimiento(args?.p_entorno);
+        if (!Object.keys(datos).length || JSON.stringify(datos).length > 12000) return null;
+        const t = tabla('rendimiento_app');
+        const mios = new Set(t.filter((x) => x.perfil_id === uid).map((x) => x.dispositivo));
+        if (!mios.has(disp) && mios.size >= 8) return null;
+        db.rendimiento_app = t.filter((x) => x.dia >= sumar(hoy, -60) && !(x.perfil_id === uid && x.dispositivo === disp && x.dia === dia));
+        tabla('rendimiento_app').push({ perfil_id: uid, dispositivo: disp, dia, rol: esCoach() ? 'coach' : 'atleta', version: String(args?.p_version || '').slice(0, 40), entorno, datos, actualizado_en: ahora() });
+        persistirYa();
+        return null;
+      }
+      if (nombre === 'rendimiento_resumen') {
+        if (!esCoach() || !veo048('perfiles').length) return [];
+        const desde = sumar(hoyISO(), -Math.min(60, Math.max(1, Number(args?.p_dias) || 14)));
+        const codigo = (x) => { let h = 5381; for (const ch of `${x.perfil_id}${x.dispositivo}`) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0; return h.toString(16).padStart(8, '0'); };
+        return tabla('rendimiento_app').filter((x) => x.dia >= desde).map((x) => ({ dispositivo: codigo(x), dia: x.dia, rol: x.rol, version: x.version, entorno: structuredClone(x.entorno), datos: structuredClone(x.datos) }))
+          .sort((x, y) => (x.dia < y.dia ? 1 : x.dia > y.dia ? -1 : x.dispositivo.localeCompare(y.dispositivo)));
+      }
+      if (nombre === 'rendimiento_borrar') {
+        if (!esCoach() || !veo048('perfiles').length) throw new Error('Solo el coach puede borrar las medidas');
+        db.rendimiento_app = [];
+        persistirYa();
+        return null;
+      }
       if (nombre === 'conversaciones_resumen') {
         const visibles = veo048('comentarios');
         const futuro = (x) => !!x.enviar_en && Date.parse(x.enviar_en) > Date.now();

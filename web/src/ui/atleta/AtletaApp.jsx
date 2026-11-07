@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia, usePildora } from '../comunes.jsx';
+import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia, usePildora, medirPantalla } from '../comunes.jsx';
+import { hitoArranque } from '../../rendimiento.js';
 import { conTransicion } from '../transiciones.js';
 import { usePosicion, subirArriba } from '../posiciones.js';
 import { useAtras, ponerRuta } from '../atras.js';
@@ -116,6 +117,8 @@ export function AtletaApp() {
   // y lo de la base, en cuanto llega
   const conCola = (p) => programaConCola(p, cola.operaciones());
   const programa = useCarga(() => api.programa(atleta.id).then(conCola), [atleta.id, dia], { copia: CLAVES_COPIA.programa(atleta.id), transformar: conCola });
+  // (pulido 4, rendimiento) la app ha arrancado cuando el programa está: de abrir la página a aquí, «arranque»
+  useEffect(() => { if (!programa.cargando) hitoArranque(); }, [programa.cargando]);
   const checkinSemana = useCarga(() => (propio ? Promise.resolve(null) : api.checkin(atleta.id, semanaCheckin(hoyISO()))), [atleta.id, dia]);
   const noLeidos = useCarga(() => (propio ? Promise.resolve([]) : api.noLeidos(atleta.id).catch(() => [])), [atleta.id, dia]);
   // v0.48: las tareas del coach que ya tocan (para el número del icono de la app)
@@ -190,6 +193,7 @@ export function AtletaApp() {
   // (diseño, tanda 19) desde la tarjeta de Hoy viajan el título y el dibujo de la sesión (arte: el .hero-arte de la tarjeta)
   const abrirSesion = (id, titulo = null, arte = null) => {
     if (!conEntrenamiento(atleta)) { setTab('mensajes'); return; }
+    medirPantalla('sesion');
     const compartidos = [];
     if (titulo) compartidos.push({ nombre: 'vt-titulo-sesion', desde: titulo, hasta: '.portada-sesion h1, .sesion-vista > .cabecera h1' });
     if (arte) compartidos.push({ nombre: 'vt-arte-sesion', desde: arte, hasta: '.portada-sesion .portada-arte' });
@@ -199,6 +203,7 @@ export function AtletaApp() {
   const irAPestana = (id) => {
     if (id === tab) { subirArriba(); return; }   // tocar la pestaña en la que ya se está: arriba
     const orden = TABS.map(([t]) => t);
+    medirPantalla(id);
     conTransicion(() => setTab(id), orden.indexOf(id) < orden.indexOf(tab) ? 'atras' : 'adelante');
   };
   const releer = () => noLeidos.recargar(true);

@@ -5810,6 +5810,16 @@ try {
   console.log('  ✗ el pulido de fluidez, tercera tanda:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// Pulido 4: cómo va la app en cada dispositivo (test/e2e-rendimiento.mjs)
+console.log('\nCómo va la app en cada dispositivo');
+try {
+  const { probarRendimiento } = await import('./e2e-rendimiento.mjs');
+  await probarRendimiento({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ cómo va la app en cada dispositivo:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.74: «Programar según FBE» en el editor del programa (test/e2e-programar-fbe.mjs)
 console.log('\nv0.74: «Programar según FBE»');
 try {
