@@ -4470,9 +4470,9 @@ try {
   // a ratos; y si falla, que se diga, no que se espere al aviso 30 s)
   await p.bringToFront();
   await barraSel.getByRole('button', { name: 'Copiar' }).click();
-  const avisoCopia = p.locator('.toast', { hasText: /mensajes copiados|No se ha podido copiar/ }).first();
-  await avisoCopia.waitFor();
-  check((await avisoCopia.textContent()).includes('2 mensajes copiados'), `copia los dos (${(await avisoCopia.textContent()).trim()})`);
+  // (diseño, tanda 23: el texto del aviso se lee de una vez; leerlo dos veces podía caer justo cuando el aviso se iba)
+  const textoCopia = await p.waitForFunction(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent.trim()).find((t) => /mensajes copiados|No se ha podido copiar/.test(t)) || null, null, { timeout: 10000 }).then((h) => h.jsonValue(), () => '(sin aviso)');
+  check(textoCopia.includes('2 mensajes copiados'), `copia los dos (${textoCopia})`);
   const copiado = await p.evaluate(() => navigator.clipboard.readText());
   check(/^\[\d\d\/\d\d\/\d\d, \d{1,2}:\d\d\] Tú: Mañana a las 9/.test(copiado) && copiado.split('\n').length === 2, 'Copiar, como WhatsApp: «[12/10/26, 18:42] Tú: …»');
   await menuDe(p.locator('.burbuja.mia', { hasText: 'Mañana a las 9' }).last()).then((m) => m.getByRole('button', { name: 'Seleccionar' }).click());
