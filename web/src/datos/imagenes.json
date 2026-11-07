@@ -344,6 +344,46 @@
       "512": "imagenes/medalla/medalla-semanas-plata-512.0e7c01f5.webp"
     }
   },
+  "medalla-toneladas-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-toneladas-bronce-256.3d74fa52.webp",
+      "512": "imagenes/medalla/medalla-toneladas-bronce-512.219c6946.webp"
+    }
+  },
+  "medalla-toneladas-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-toneladas-diamante-256.b351b03b.webp",
+      "512": "imagenes/medalla/medalla-toneladas-diamante-512.dae6f022.webp"
+    }
+  },
+  "medalla-toneladas-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-toneladas-oro-256.3a5f9e72.webp",
+      "512": "imagenes/medalla/medalla-toneladas-oro-512.968d1804.webp"
+    }
+  },
+  "medalla-toneladas-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-toneladas-plata-256.f5534ca5.webp",
+      "512": "imagenes/medalla/medalla-toneladas-plata-512.78c2a9ef.webp"
+    }
+  },
   "sesion-cardio": {
     "proporcion": [
       16,
