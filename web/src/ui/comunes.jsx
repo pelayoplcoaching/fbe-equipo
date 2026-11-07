@@ -331,6 +331,17 @@ export function ErrorCaja({ error, reintentar }) {
 // Número con − y +; acepta coma decimal y punto de miles al teclear («8.000» son ocho mil). Al salir del
 // campo, lo escrito se ordena: «80,55» con un decimal queda «80,6», que es lo que se guarda.
 // (diseño, tanda 23) Una firma al final de las pantallas largas (Hoy, Progreso): el lobo pequeño y una línea corta.
+// (tanda 24) Portada de historia: la miniatura de «Tu semana», «Tu mes» y el bloque terminado, con la noche de la
+// marca, las tres barras de una historia y el lobo (antes, un disco: la marca de antes).
+export function PortadaHistoria({ tono = '' }) {
+  return (
+    <span class={`portada-historia${tono ? ` ${tono}` : ''}`} aria-hidden="true">
+      <span class="ph-barras"><i /><i /><i /></span>
+      <svg viewBox={LOBO_CAJA} focusable="false"><path d={LOBO_D} fill-rule="evenodd" /></svg>
+    </span>
+  );
+}
+
 export function FinDePagina({ texto }) {
   return (
     <p class="fin-pagina">

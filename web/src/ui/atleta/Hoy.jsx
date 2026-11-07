@@ -13,6 +13,8 @@ import { InformeBloque, TarjetaBloque } from '../InformeBloque.jsx';
 import { NOMBRE_GRUPO, pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
 import { Bienvenida as BienvenidaDia, useBienvenida } from '../Bienvenida.jsx';
 import { leerEnCurso } from '../en-curso.js';
+import { sinMovimiento } from '../transiciones.js';
+import { LOBO } from '../marca-lobo.js';
 import { diaDeCheckin, fmtConDia, hoyISO, desdeISO, rangoSemana, diasEntre, sumarDias } from '../../logica/fechas.js';
 import { queToca, diaPrevistoValido, cuandoDia } from '../../logica/plan.js';
 import { PlanSemana } from './Plan.jsx';
@@ -156,10 +158,24 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
     window.addEventListener('fbe-cambio', alCambiar);
     return () => { clearTimeout(t); window.removeEventListener('fbe-cambio', alCambiar); };
   }, []);
+  // (tanda 24) Lo que acaba de pasar a hecho (no lo que ya lo estaba al llegar) da un salto con su ✓
+  const estados = useRef(null), recien = useRef({});
+  if (dia.datos && estados.current) for (const x of dia.datos) if (x.estado === 'hecho' && estados.current[x.id] && estados.current[x.id] !== 'hecho' && !recien.current[x.id]) recien.current[x.id] = Date.now();
+  useEffect(() => {
+    if (!dia.datos) return;
+    estados.current = Object.fromEntries(dia.datos.map((x) => [x.id, x.estado]));
+    for (const x of dia.datos) if (x.estado !== 'hecho') delete recien.current[x.id];
+  });
   const items = dia.datos;
   if (!items || !items.length) return null;
   const r = resumenDia(items);
-  const bajarA = (sel) => { const el = document.querySelector(sel); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.focus?.({ preventScroll: true }); } };
+  // (tanda 25) La sección se abre creciendo (bloque 53 de diseno.css): el desplazamiento empezaba con la página aún corta
+  // y se quedaba a medias. Se desplaza al abrirse y otra vez al acabar de crecer, que continúa el mismo movimiento.
+  const bajarA = (sel) => {
+    const ir = (enfocar) => { const el = document.querySelector(sel); if (!el) return; el.scrollIntoView({ behavior: sinMovimiento() ? 'auto' : 'smooth', block: 'start' }); if (enfocar) el.focus?.({ preventScroll: true }); };
+    requestAnimationFrame(() => requestAnimationFrame(() => ir(true)));
+    if (!sinMovimiento()) setTimeout(() => ir(false), 320);
+  };
   const ir = (x) => {
     if (x.accion === 'sesion' && x.sesionId) abrirSesion(x.sesionId);
     else if (x.accion === 'sesion' || x.accion === 'semana' || x.accion === 'plan') { abrirPlegableHoy('semana'); bajarA('.semana-dias'); }
@@ -187,7 +203,7 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
       {(!r?.todo || verHecho) && <ul class="lista">
         {items.map((x) => (
           <li key={x.id}>
-            <button class={`fila-dia ${x.estado}`} onClick={() => ir(x)}>
+            <button class={`fila-dia ${x.estado}${Date.now() - (recien.current[x.id] || 0) < 1500 ? ' recien' : ''}`} data-tipo={x.accion === 'tarea' ? 'tarea' : x.id} onClick={() => ir(x)}>
               <span class="dia-marca" aria-hidden="true">{x.estado === 'hecho' ? <Icono n="hecho" /> : <Icono n={x.icono || ICONO_DIA[x.id] || 'hoy'} />}</span>
               <span class="pila-xs"><span class={x.estado === 'hecho' ? 'tachado' : ''}>{x.texto}</span><span class="mini terciario">{x.detalle}</span></span>
               <span class="sr">{x.estado === 'hecho' ? 'hecho' : x.estado === 'toca' ? 'pendiente' : ''}</span>
@@ -241,6 +257,7 @@ function Respuestas({ noLeidos, programa, releer, abrirSesion }) {
         {grupos.map(({ clave, c, n }) => (
           <li key={clave}>
             <button class="respuesta respuesta-coach" onClick={() => setAbierta(c)}>
+              <img class="respuesta-lobo" src={LOBO} alt="" width="36" height="36" aria-hidden="true" />
               <span class="respuesta-cab"><span class="nombre">{titulo(c)}</span><span class="mini terciario">{cuando(c.creado_en)}</span></span>
               <span class="detalle">«{c.texto.length > 90 ? c.texto.slice(0, 88) + '…' : c.texto}»{n > 1 ? ` y ${n - 1} más` : ''}</span>
             </button>

@@ -1647,9 +1647,11 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 @supports (animation-timeline: view()) {
   .ejercicio:not(.plegado) { view-timeline: --ej block; view-timeline-inset: calc(var(--alto-cab, 64px) + env(safe-area-inset-top, 0px)) 0px; }
   .ejercicio:not(.plegado) > .ejercicio-cab { animation: cab-ej-compacta linear both; animation-timeline: --ej; animation-range: exit-crossing 0% exit-crossing 0.5%; }
-  .ejercicio:not(.plegado) > .ejercicio-cab > span:nth-child(2) > :not(.nombre) { animation: cab-ej-oculta linear both; animation-timeline: --ej; animation-range: exit-crossing 0% exit-crossing 0.5%; }
+  .ejercicio:not(.plegado) > .ejercicio-cab > span:nth-child(2) > :not(.nombre) { animation: cab-ej-oculta step-end both; animation-timeline: --ej; animation-range: exit-crossing 0% exit-crossing 0.5%; }
 }
 @keyframes cab-ej-compacta { to { clip-path: inset(0 0 calc(100% - 76px) 0); box-shadow: 0 1px 0 var(--linea); } }
+/* (tanda 25: de golpe, step-end: a medio apagar no llega al contraste; con el scroll-padding del bloque 96 la batería de
+   axe del descanso cayó justo en ese medio píxel) */
 @keyframes cab-ej-oculta { to { opacity: 0; } }
 
 /* ── 80 · La página se hunde detrás de las hojas (tanda 23) ───────────────────────────────────────────────────────────
@@ -1711,3 +1713,164 @@ body { font-kerning: normal; font-optical-sizing: auto; }
   }
 }
 @keyframes fin-llega { from { translate: 0 14px; scale: .8; } }
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   TANDA 24 · Belleza: lo sencillo que más se ve (7/11, noche)
+   ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 86 · Lo hecho, sin tachar (tanda 24) ─────────────────────────────────────────────────────────────────────────────
+   Como en Things o Recordatorios: lo hecho se suaviza y lo dice su ✓ (o su casilla), no una raya que cruza el texto.
+   Vale para «Tu día», el menú, la bienvenida y la lista de la compra (.tachado; el ~tachado~ del chat es otra cosa). */
+.tachado { text-decoration: none; color: var(--tinta-3); transition: color var(--mov-medio) var(--curva-casa); }
+
+/* ── 87 · Cada cosa con su color en Hoy (tanda 24) ────────────────────────────────────────────────────────────────────
+   Los iconos de «Tu día» (data-tipo, Hoy.jsx) y de las secciones plegadas de Hoy (data-plegable) llevan el color de lo
+   que son, como los anillos y las categorías de Apple Fitness: el entreno en el acento, las tareas del coach en azul,
+   los hábitos en naranja, la nutrición en verde, el menú en ámbar, el peso en verde azulado y el check-in en rosa.
+   Lo hecho sigue en el verde de «hecho». Los tonos pasan de 3:1 sobre su fondo, en claro y en oscuro. */
+:root { --t-tarea: #1E5BCF; --t-habitos: #C2410C; --t-nutricion: #15803D; --t-menu: #A16207; --t-peso: #0B6A5B; --t-checkin: #9E2468; --t-cuestionario: #3B4FA8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --t-tarea: #6FA0FF; --t-habitos: #FB923C; --t-nutricion: #4ADE80; --t-menu: #FACC15; --t-peso: #3FC8B0; --t-checkin: #F07AB8; --t-cuestionario: #8C9EFF; } }
+:root[data-theme="dark"] { --t-tarea: #6FA0FF; --t-habitos: #FB923C; --t-nutricion: #4ADE80; --t-menu: #FACC15; --t-peso: #3FC8B0; --t-checkin: #F07AB8; --t-cuestionario: #8C9EFF; }
+.fila-dia[data-tipo], .plegable-hoy[data-plegable] { --t: var(--morado); }
+.fila-dia[data-tipo="tarea"] { --t: var(--t-tarea); }
+.fila-dia[data-tipo="habitos"], .plegable-hoy[data-plegable="habitos"] { --t: var(--t-habitos); }
+.fila-dia[data-tipo="nutricion"], .plegable-hoy[data-plegable="nutricion"] { --t: var(--t-nutricion); }
+.fila-dia[data-tipo="menu"], .plegable-hoy[data-plegable="menu"] { --t: var(--t-menu); }
+.fila-dia[data-tipo="peso"], .plegable-hoy[data-plegable="peso"] { --t: var(--t-peso); }
+.fila-dia[data-tipo="checkin"] { --t: var(--t-checkin); }
+.fila-dia[data-tipo="cuestionario"] { --t: var(--t-cuestionario); }
+.fila-dia[data-tipo]:not(.hecho) .dia-marca,
+.plegable-hoy[data-plegable] > summary .ios-ico { background: color-mix(in srgb, var(--t) 14%, var(--hoja)); color: var(--t); }
+.fila-dia[data-tipo] .punto-dia { background: var(--t); }
+
+/* ── 88 · Portadas de historia (tanda 24) ─────────────────────────────────────────────────────────────────────────────
+   «Tu semana», «Tu mes» y el bloque terminado abren una historia; su miniatura era un disco (la marca de antes). Ahora
+   es la portada de esa historia en pequeño (PortadaHistoria, comunes.jsx): la noche de la marca con su grano, las tres
+   barras de arriba de una historia y el lobo. El mes, con resplandor dorado; el bloque, con el rojo de su informe. */
+.portada-historia { position: relative; justify-self: center; display: grid; place-items: center; width: 44px; height: 60px; border-radius: 10px; overflow: hidden;
+  background: var(--grano), radial-gradient(64px 64px at 88% 4%, rgba(160, 140, 255, .62), transparent 72%), radial-gradient(56px 56px at 0% 100%, rgba(104, 78, 236, .45), transparent 70%), linear-gradient(170deg, #2A2068, #150F36);
+  box-shadow: 0 8px 16px -8px rgba(30, 21, 72, .6), inset 0 0 0 1px rgba(255, 255, 255, .1); transition: transform var(--mov-medio) var(--curva-rebote); }
+.portada-historia.mes { background: var(--grano), radial-gradient(64px 64px at 88% 4%, rgba(233, 212, 154, .6), transparent 72%), radial-gradient(56px 56px at 0% 100%, rgba(104, 78, 236, .45), transparent 70%), linear-gradient(170deg, #2A2068, #150F36); }
+.portada-historia.bloque { background: var(--grano), radial-gradient(64px 64px at 88% 4%, rgba(255, 120, 120, .5), transparent 72%), radial-gradient(56px 56px at 0% 100%, rgba(201, 204, 216, .3), transparent 70%), linear-gradient(170deg, #2A2068, #150F36); }
+.portada-historia svg { width: 24px; height: auto; margin-top: 7px; fill: #F6F2FF; }
+.ph-barras { position: absolute; top: 5px; left: 5px; right: 5px; display: flex; gap: 2px; }
+.ph-barras i { flex: 1; height: 2px; border-radius: 1px; background: rgba(255, 255, 255, .34); }
+.ph-barras i:first-child { background: #fff; }
+@media (hover: hover) { .tarjeta-semana-abrir:hover .portada-historia { transform: rotate(-4deg) scale(1.04); } }
+
+/* ── 89 · Perfil con portada (tanda 24) ───────────────────────────────────────────────────────────────────────────────
+   Como en Strava o Apple Fitness: la cabecera del perfil lleva arriba una franja con la noche de la marca y el avatar
+   se apoya en su borde, con un aro del color de la tarjeta. Detrás del avatar, sin texto encima. */
+.perfil-cabeza { position: relative; isolation: isolate; overflow: hidden; padding-top: 44px; }
+.perfil-cabeza::before { content: ""; position: absolute; inset: 0 0 auto; height: 92px; z-index: -1;
+  background: var(--grano), radial-gradient(260px 150px at 88% 0%, rgba(160, 140, 255, .55), transparent 70%), radial-gradient(220px 120px at 4% 110%, rgba(104, 78, 236, .5), transparent 70%), linear-gradient(165deg, #2A2068, #1E1548); }
+.perfil-cabeza .avatar.enorme, .perfil-cabeza .avatar.enorme.con-foto { box-shadow: 0 0 0 4px var(--hoja), 0 10px 24px -10px rgba(30, 21, 72, .55); }
+
+/* ── 90 · Avatares de iniciales con volumen (tanda 24) ────────────────────────────────────────────────────────────────
+   Las iniciales iban sobre un círculo plano. Ahora, un degradado suave de su color (más claro arriba a la izquierda),
+   y los llenos, un filo de luz arriba: parecen una pieza, no un recorte. El texto, igual (y con el mismo contraste). */
+.avatar:not(.con-foto) { background-image: linear-gradient(155deg, color-mix(in srgb, var(--av) 7%, var(--hoja)), color-mix(in srgb, var(--av) 21%, var(--hoja))); }
+.avatar.lleno:not(.con-foto) { background-image: linear-gradient(155deg, color-mix(in srgb, var(--av) 80%, #fff), var(--av) 72%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(0, 0, 0, .12); }
+
+/* ── 91 · «Tu coach te ha respondido» como un mensaje (tanda 24) ──────────────────────────────────────────────────────
+   Cada respuesta lleva el lobo del coach y su texto en una burbuja, como un aviso de mensaje: se lee como lo que es. */
+.respuesta.respuesta-coach { grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; row-gap: 5px; align-items: start; }
+.respuesta-coach > .respuesta-lobo { grid-row: 1 / span 2; width: 36px; height: 36px; border-radius: 50%; margin-top: 1px; }
+.respuesta-coach > .respuesta-cab, .respuesta-coach > .detalle { grid-column: 2; }
+.respuesta-coach > .detalle { justify-self: start; max-width: 100%; padding: 8px 12px; border-radius: 4px 16px 16px 16px; background: var(--hoja-2); color: var(--tinta); font-size: 0.875rem; line-height: 1.4; }
+
+/* ── 92 · Separadores con sangría (tanda 24) ──────────────────────────────────────────────────────────────────────────
+   Como en iOS (y como ya iban los grupos del perfil): en las listas con icono, la línea entre filas empieza donde
+   empieza el texto, no debajo del icono. «Tu día» y las respuestas del coach. */
+.tu-dia .lista > li, .respuestas .lista > li { position: relative; }
+.tu-dia .lista > li + li, .respuestas .lista > li + li { border-top: 0; }
+.tu-dia .lista > li + li::before, .respuestas .lista > li + li::before { content: ""; position: absolute; z-index: 1; top: 0; left: 60px; right: 0; height: 1px; background: var(--linea); pointer-events: none; }
+.respuestas .lista > li + li::before { left: 64px; }
+
+/* ── 93 · Fondo con luz (tanda 24) ────────────────────────────────────────────────────────────────────────────────────
+   Un resplandor muy tenue del acento arriba de cada pantalla (como Apple Fitness o Gentler Streak), que se va con la
+   página al bajar. El fondo de la raíz sigue siendo el de siempre (bloque 61). */
+body { background: radial-gradient(150% 380px at 50% -70px, color-mix(in srgb, var(--morado) 9%, transparent), transparent 72%) no-repeat, var(--tiza); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body { background: radial-gradient(150% 380px at 50% -70px, color-mix(in srgb, var(--morado) 15%, transparent), transparent 72%) no-repeat, var(--tiza); } }
+:root[data-theme="dark"] body { background: radial-gradient(150% 380px at 50% -70px, color-mix(in srgb, var(--morado) 15%, transparent), transparent 72%) no-repeat, var(--tiza); }
+@media (prefers-contrast: more), (forced-colors: active) { body, :root body { background: var(--tiza); } }
+
+/* ── 94 · Casillas de la serie más ligeras (tanda 24) ─────────────────────────────────────────────────────────────────
+   Como en Hevy o Strong: las casillas de kilos, repeticiones y esfuerzo van rellenas de un tono suave y sin borde
+   (eran recuadros con filo); en la serie que toca, blancas y apenas levantadas. Al escribir, el contorno de siempre. */
+.serie .celda, .serie .rpe { border-color: transparent; background: color-mix(in srgb, var(--tinta) 5%, var(--hoja)); transition: background-color var(--mov-rapido) var(--curva-casa), box-shadow var(--mov-rapido) var(--curva-casa); }
+.serie.activa .celda, .serie.activa .rpe { background: var(--hoja); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 12%, transparent), 0 0 0 1px color-mix(in srgb, var(--tinta) 6%, transparent); }
+.serie.hecha .celda { background: transparent; box-shadow: none; }
+/* (el peso anterior de una serie hecha se apagaba con opacidad y no llegaba al contraste: lo cazó axe; ahora, sin filo) */
+.serie.hecha .peso-anterior { opacity: 1; border-color: transparent; }
+@media (prefers-contrast: more), (forced-colors: active) { .serie .celda, .serie .rpe { border-color: var(--linea); } }
+
+/* ── 95 · «Terminar sesión» se ilumina (tanda 24) ─────────────────────────────────────────────────────────────────────
+   Con todas las series de la sesión hechas (clase lista, Sesion.jsx), el botón de terminar lleva un halo del acento y
+   late dos veces: es lo siguiente. */
+.btn-terminar.lista { box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 20%, transparent), 0 12px 28px -12px color-mix(in srgb, var(--morado) 75%, transparent); }
+@media (prefers-reduced-motion: no-preference) { .btn-terminar.lista { animation: terminar-llama 1.6s var(--curva-casa) 2; } }
+@keyframes terminar-llama { 50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--morado) 10%, transparent), 0 12px 28px -12px color-mix(in srgb, var(--morado) 75%, transparent); } }
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   TANDA 25 · Comodidad y suavidad (7/11, noche)
+   ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 96 · Lo que tocas no queda tapado (tanda 25) ─────────────────────────────────────────────────────────────────────
+   Al saltar a un campo o a una sección (Tab, «Siguiente», «Tu día»), el navegador lo deja por debajo de la cabecera
+   pegada y por encima de la barra de abajo, no detrás (scroll-padding). En la sesión cuenta la cabecera de la sesión
+   y la del ejercicio pegada (bloque 79). */
+html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 4.5rem); }
+html:has(nav.tabs) { scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5.5rem); }
+html:has(.sesion-vista) { scroll-padding-top: calc(var(--alto-cab, 64px) + env(safe-area-inset-top, 0px) + 5.25rem); scroll-padding-bottom: 1rem; }
+
+/* ── 97 · Las tiras de lado no sacan de la pantalla (tanda 25) ────────────────────────────────────────────────────────
+   Al llegar al final de una tira que se desliza de lado (chips, semanas, pestañas, fotos, menú, galería), seguir
+   empujando ya no hace que el navegador vuelva atrás ni que rebote la página: la tira se queda en su sitio. */
+.selector-chips, .pestanas, .semanas-tabs, .filtros-muro, .tira-fotos, .tm-lista, .galeria-pista, .panel-emojis-cats { overscroll-behavior-x: contain; }
+
+/* ── 98 · Títulos de grupo que se quedan arriba (tanda 25) ────────────────────────────────────────────────────────────
+   En el perfil, que es largo, el título de cada grupo («Tu asesoría», «Este móvil», «Mensajes»…) se queda bajo la
+   cabecera mientras se recorre su grupo, y el siguiente lo releva, como en Ajustes del iPhone. Sin cambiar de alto.
+   Solo en la página (en una hoja, la cuenta sería otra). */
+.contenido > .grupo-ios > h2 { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--cab-pegada, 3.875rem)); z-index: 2; margin-inline: -4px; padding: 8px 4px 6px 20px; background: var(--tiza); }
+
+/* ── 99 · «Tu día» avanza con suavidad (tanda 25) ─────────────────────────────────────────────────────────────────────
+   Lo que acaba de pasar a hecho (clase recien, Hoy.jsx: no lo que ya lo estaba al llegar) da un salto con su ✓ y su
+   texto se suaviza poco a poco (bloque 86); el anillo de arriba ya avanzaba con transición. */
+@media (prefers-reduced-motion: no-preference) {
+  .fila-dia.recien .dia-marca { animation: dia-hecho .55s var(--curva-rebote); }
+  .fila-dia.recien .dia-marca svg { animation: marca-salta .4s var(--curva-llega) .08s backwards; }
+}
+@keyframes dia-hecho { 0% { scale: .7; } 55% { scale: 1.16; } 100% { scale: 1; } }
+
+/* ── 100 · Escribir con la marca (tanda 25) ───────────────────────────────────────────────────────────────────────────
+   El cursor de escritura va en el acento, y los campos que rellena el navegador (correo y contraseña guardados) ya no
+   se pintan de su azul o amarillo: quedan con un tinte del acento y el texto de siempre. */
+input, textarea { caret-color: var(--morado); }
+.entrada:-webkit-autofill, .entrada:-webkit-autofill:hover { -webkit-text-fill-color: var(--tinta); box-shadow: inset 0 0 0 100px color-mix(in srgb, var(--morado) 7%, var(--hoja)); transition: background-color 600000s 0s, color 600000s 0s; }
+.entrada:-webkit-autofill:focus { -webkit-text-fill-color: var(--tinta); box-shadow: inset 0 0 0 100px color-mix(in srgb, var(--morado) 7%, var(--hoja)), 0 0 0 4px color-mix(in srgb, var(--morado) 16%, transparent); }
+
+/* ── 101 · Fotos con su filo (tanda 25) ───────────────────────────────────────────────────────────────────────────────
+   Un filo finísimo por dentro (como las fotos en iOS) para que una foto clara no se funda con la tarjeta blanca. */
+img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista img, .compositor-foto img, .compositor-fotos img { outline: 1px solid color-mix(in srgb, var(--tinta) 9%, transparent); outline-offset: -1px; }
+
+/* ── 102 · El escritorio del coach (tanda 25) ─────────────────────────────────────────────────────────────────────────
+   Con ratón: barras de desplazamiento finas y del tono de la app (no las grises del sistema) y la mano en todo lo que
+   se pulsa, también en casillas, opciones y filas que se despliegan. */
+@media (hover: hover) and (pointer: fine) {
+  html { scrollbar-color: color-mix(in srgb, var(--tinta-3) 60%, transparent) transparent; }
+  :where(html, .hoja-cuerpo, .paleta-lista, .enfoque-cuerpo, .seguida-cuerpo, .tabla-scroll) { scrollbar-width: thin; }
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]), .casilla, summary, select, [role="button"], [role="tab"] { cursor: pointer; }
+}
+
+/* ── 103 · La entrada al Equipo, con escena (tanda 25) ────────────────────────────────────────────────────────────────
+   «Antes de entrar» era un muro de texto con un icono. Lleva la escena del equipo (Ilustraciones.jsx) y los dos
+   apartados con su icono: el equipo para lo que ven los demás y el candado, en verde, para lo que nunca se comparte. */
+.entrar-equipo > .entrar-equipo-ilu { justify-self: center; width: min(220px, 72%); height: auto; margin: -6px 0 0; }
+.qsc > strong { display: flex; align-items: center; gap: 10px; }
+.qsc-ico { width: 28px; height: 28px; border-radius: 8px; display: inline-grid; place-items: center; flex: none; background: var(--morado-suave); color: var(--morado); }
+.qsc-ico svg { width: 16px; height: 16px; }
+.qsc-nunca .qsc-ico { background: var(--ok-suave); color: var(--ok); }
+.qsc > p { margin-left: 38px; }
+.qsc > .puntos { margin-left: 18px; }

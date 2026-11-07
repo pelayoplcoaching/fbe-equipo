@@ -21,6 +21,7 @@ import { usePestanasDeslizables } from './deslizar.js';
 import { sinMovimiento } from './transiciones.js';
 import { tenirBarra } from './barra-color.js';
 import { reducirFoto } from './FotoPerfil.jsx';
+import { Ilustracion } from './Ilustraciones.jsx';
 import {
   MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_PREGUNTA, MAX_OPCION, RETO_MAX, FILTROS_MURO, MEDALLAS, nombreEquipo, nombreValido, estadoReto, textoReto,
   ordenarRanking, posicionesRanking, quienes, textoRacha, mencionEnCurso, sugerenciasMencion, insertarMencion, mencionesDeTexto, trozosConMenciones, encuestaCerrada,
@@ -192,8 +193,8 @@ function DentroDelEquipo({ m, alCambiar }) {
 function QueSeComparte() {
   return (
     <>
-      <div class="pila-s">
-        <strong>Qué ven los demás</strong>
+      <div class="pila-s qsc qsc-ven">
+        <strong><span class="qsc-ico" aria-hidden="true"><Icono n="equipo" /></span>Qué ven los demás</strong>
         <ul class="puntos secundario">
           <li>Tu nombre en el equipo y tu foto de perfil.</li>
           <li>Lo que publiques, comentes o compartas, tus reacciones, tus votos en las encuestas del coach, los ánimos que mandas y a quién mencionas.</li>
@@ -201,8 +202,8 @@ function QueSeComparte() {
           <li>Tu perfil del equipo: desde cuándo estás, tu racha, cuántos retos has conseguido (y cuáles) y cuántos entrenos has compartido.</li>
         </ul>
       </div>
-      <div class="pila-s">
-        <strong>Lo que nunca se comparte</strong>
+      <div class="pila-s qsc qsc-nunca">
+        <strong><span class="qsc-ico" aria-hidden="true"><Icono n="candado" /></span>Lo que nunca se comparte</strong>
         <p class="secundario">Tu peso, tus medidas, la nutrición, los check-ins, las molestias, los vídeos de técnica ni lo que hablas con tu coach. Los kilos de un entreno, solo si tú lo eliges al compartirlo.</p>
       </div>
     </>
@@ -262,7 +263,7 @@ function EntrarComunidad({ antes, cambio = null, alEntrar }) {
     <div class="contenido">
       <CabeceraGrande><div class="titulo"><h1>Equipo</h1><div class="sub">Para animaros entre los atletas de FBE</div></div></CabeceraGrande>
       <section class="panel panel-pad pila entrar-equipo">
-        <Icono n="equipo" class="entrar-equipo-ico" />
+        <Ilustracion n="equipo" clase="entrar-equipo-ilu" />
         <h2>{cambio === 'texto' ? 'Hemos cambiado lo que se comparte' : cambio === 'normas' ? 'Hemos actualizado las normas' : antes ? '¿Vuelves al equipo?' : 'Antes de entrar'}</h2>
         {cambio === 'texto' && <p class="nota peq">Para seguir en el equipo, lee lo que se comparte ahora (tu racha, tu perfil del equipo, tus votos, los ánimos y las menciones) y acéptalo. Mientras tanto, lo tuyo no se ve.</p>}
         {cambio === 'normas' && <p class="nota peq">Para seguir en el equipo, lee las normas y márcalas como leídas. Mientras tanto, lo tuyo no se ve.</p>}

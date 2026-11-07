@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { Hoja, Icono, Anillo } from './comunes.jsx';
+import { Hoja, Icono, Anillo, PortadaHistoria } from './comunes.jsx';
 import { MapaMuscular } from './MapaMuscular.jsx';
 import { HojaCompartir } from './Compartir.jsx';
 import { rangoLargo } from './atleta/TuSemana.jsx';
@@ -171,7 +171,7 @@ export function TarjetaBloque({ informe: r, alAbrir, alQuitar }) {
   return (
     <section class="tarjeta-semana tarjeta-bloque" aria-label="Bloque terminado">
       <button class="tarjeta-semana-abrir" onClick={alAbrir}>
-        <span class="tarjeta-semana-disco" aria-hidden="true" />
+        <PortadaHistoria tono="bloque" />
         <span class="pila-xs">
           <span class="mini">Has terminado el {tituloBloque(r.bloque)}</span>
           <strong>{r.sesiones.hechas} de {r.sesiones.total} sesiones{r.principales[0]?.cambio != null ? `, ${r.principales[0].nombre.toLowerCase()} ${signo(r.principales[0].cambio, 1)} %` : ''}</strong>
