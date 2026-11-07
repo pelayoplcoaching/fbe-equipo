@@ -304,6 +304,46 @@
       "512": "imagenes/medalla/medalla-constancia-plata-512.61fe101b.webp"
     }
   },
+  "medalla-semanas-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-semanas-bronce-256.bdb29d8a.webp",
+      "512": "imagenes/medalla/medalla-semanas-bronce-512.69d679a2.webp"
+    }
+  },
+  "medalla-semanas-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-semanas-diamante-256.0f7efcae.webp",
+      "512": "imagenes/medalla/medalla-semanas-diamante-512.83673ad0.webp"
+    }
+  },
+  "medalla-semanas-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-semanas-oro-256.736d8fe2.webp",
+      "512": "imagenes/medalla/medalla-semanas-oro-512.5bdc409c.webp"
+    }
+  },
+  "medalla-semanas-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-semanas-plata-256.e5dce8d4.webp",
+      "512": "imagenes/medalla/medalla-semanas-plata-512.0e7c01f5.webp"
+    }
+  },
   "sesion-cardio": {
     "proporcion": [
       16,
