@@ -36,6 +36,11 @@ export function familiaPortada({ tipo = 'fuerza', pautas = [], cardio = false } 
   return ['empuje', 'tiron', 'pierna', 'core'].reduce((a, b) => (series[b] > series[a] ? b : a));
 }
 
+// ---------- Los hábitos ----------
+// Una por icono de hábito (logica/habitos.js: ICONOS_HABITO); «Otro» (libre) y lo que no se conozca, la de las piedras
+const HABITOS = ['pasos', 'proteina', 'agua', 'sueno', 'movilidad', 'verdura'];
+export function imagenHabito(icono) { return `habito-${HABITOS.includes(icono) ? icono : 'otro'}`; }
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.

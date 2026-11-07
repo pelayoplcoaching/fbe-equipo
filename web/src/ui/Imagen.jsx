@@ -9,6 +9,9 @@ import { fuenteImagen } from '../logica/imagenes.js';
 const CON_IMAGENES = typeof __IMAGENES__ === 'undefined' || __IMAGENES__;
 const ahorroDatos = () => typeof navigator !== 'undefined' && !!navigator.connection?.saveData;
 
+// ¿Se pintará la imagen? (para elegir el diseño del sitio que la lleva; si luego no carga, sale `alternativa`)
+export const hayImagen = (id) => CON_IMAGENES && !ahorroDatos() && !!fuenteImagen(id);
+
 export function Imagen({ id, clase = '', tamanos = '100vw', prioridad = false, alternativa = null }) {
   const [falla, setFalla] = useState(null);
   const f = CON_IMAGENES && falla !== id && !ahorroDatos() ? fuenteImagen(id) : null;
