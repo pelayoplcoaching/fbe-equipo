@@ -1405,6 +1405,9 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    Ajustes.jsx), también la barra de abajo, que en las transiciones de pantalla se queda quieta a propósito. Y las
    opciones llevan su icono: el sol y la luna giran al elegirse. */
 :root[data-vt="tema"]::view-transition-old(root), :root[data-vt="tema"]::view-transition-new(root) { animation-duration: var(--mov-lento); animation-timing-function: ease-in-out; }
+/* (mientras se funde, lo de debajo no transiciona por su cuenta: la instantánea nueva se toma ya con los colores finales,
+   y nada queda a medio color debajo del fundido) */
+:root[data-vt="tema"] *, :root[data-vt="tema"] *::before, :root[data-vt="tema"] *::after { transition: none !important; }
 :root[data-vt="tema"]::view-transition-old(barra-pestanas) { display: block; animation: vt-se-va var(--mov-lento) ease-in-out both; }
 :root[data-vt="tema"]::view-transition-new(barra-pestanas) { animation: vt-llega var(--mov-lento) ease-in-out both; }
 @keyframes vt-se-va { to { opacity: 0; } }
