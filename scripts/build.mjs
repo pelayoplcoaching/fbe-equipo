@@ -47,7 +47,9 @@ const comun = {
   jsxImportSource: 'preact',
   loader: { '.json': 'json' },
   define: { __DEMO__: demo ? 'true' : 'false', __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(join(raiz, 'package.json'), 'utf8')).version),
-    __WORKER_ANALISIS__: JSON.stringify(rutaWorker), __POSE__: JSON.stringify(demo ? null : POSE_DIR) },
+    __WORKER_ANALISIS__: JSON.stringify(rutaWorker), __POSE__: JSON.stringify(demo ? null : POSE_DIR),
+    // (imágenes) la demo de un solo archivo no lleva las ilustraciones (no caben): sale el dibujo de líneas de siempre
+    __IMAGENES__: demo ? 'false' : 'true' },
   // La demo privada lleva tu biblioteca real (vídeos y técnica) si está en tu ordenador; la web pública, solo nombres
   plugins: demo && existsSync(join(raiz, 'web/src/datos/biblioteca-fbe.json')) ? [{
     name: 'biblioteca-real',
@@ -94,6 +96,15 @@ ${marcadoPortada}
   copyFileSync(fuente, join(salida, 'fonts/archivo-latin.woff2'));
   const cssRuta = join(salida, 'app.css');
   writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + readFileSync(cssRuta, 'utf8'));
+
+  // (imágenes) Las ilustraciones (web/imagenes/<bloque>/<id>-<ancho>.<huella>.webp, las de datos/imagenes.json): se copian
+  // tal cual. No se precargan: el service worker guarda cada una la primera vez que se ve (caché fbe-imagenes)
+  const listaImagenes = Object.values(JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.json'), 'utf8'))).flatMap((x) => Object.values(x.archivos));
+  for (const f of listaImagenes) {
+    if (!/^imagenes\/[a-z0-9-]+\/[a-z0-9-]+-\d+\.[0-9a-f]{8}\.webp$/.test(f)) throw new Error(`Imagen con un nombre que no toca: ${f}`);
+    mkdirSync(join(salida, f, '..'), { recursive: true });
+    copyFileSync(join(raiz, 'web', f), join(salida, f));
+  }
 
   // Iconos de la app (disco morado sobre tiza), en web/iconos/
   for (const n of ['icono.svg', 'icono-180.png', 'icono-192.png', 'icono-512.png', 'insignia-96.png']) copyFileSync(join(raiz, 'web/iconos', n), join(salida, n));
@@ -143,12 +154,12 @@ ${marcadoPortada}
   // (pulido 3.7) ni el código que solo usa la demo (sus datos de ejemplo y su «base» en memoria): el service worker
   // lo guarda la primera vez que se abre la demo, no en cada instalación y actualización de todo el mundo
   const deLaDemo = (f) => /^chunks\/(semilla-demo|backend-memoria|fotos-demo|poster-demo)-[A-Z0-9]+\.js$/.test(f);
-  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && !soloDemo(f) && !deLaDemo(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
+  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && !f.startsWith('imagenes/') && !soloDemo(f) && !deLaDemo(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
   // (pulido 3.7) y la huella de cada archivo, para que al actualizar no se vuelva a descargar lo que no ha cambiado
   const huellas = Object.fromEntries(precache.filter((u) => u !== 'config.js').map((u) => [u, createHash('sha256').update(readFileSync(join(salida, u === './' ? 'index.html' : u.split('?')[0]))).digest('hex')]));
   writeFileSync(join(salida, 'sw.js'), aAscii(readFileSync(join(raiz, 'web/sw.js'), 'utf8').replace('__VERSION__', version).replace('__ARCHIVOS__', JSON.stringify(precache))
     .replaceAll('__HUELLAS__', JSON.stringify(huellas)).replaceAll('__DEMO_ARCHIVOS__', JSON.stringify(archivos.filter(deLaDemo)))
-    .replaceAll('__MODELOS__', JSON.stringify(`fbe-modelos-pose-${POSE_VERSION}`)).replaceAll('__MODELO_DIR__', JSON.stringify(POSE_DIR)).replaceAll('__MODELO_ARCHIVOS__', JSON.stringify(POSE_ARCHIVOS))));
+    .replaceAll('__IMAGENES_ARCHIVOS__', JSON.stringify(listaImagenes)).replaceAll('__MODELOS__', JSON.stringify(`fbe-modelos-pose-${POSE_VERSION}`)).replaceAll('__MODELO_DIR__', JSON.stringify(POSE_DIR)).replaceAll('__MODELO_ARCHIVOS__', JSON.stringify(POSE_ARCHIVOS))));
   for (const f of ['sw.js', 'config.js']) soloAscii(readFileSync(join(salida, f), 'utf8'), f);
   writeFileSync(join(salida, '.nojekyll'), '');
 
@@ -157,4 +168,6 @@ ${marcadoPortada}
   for (const f of archivos.sort()) console.log(`  ${f.padEnd(44)} ${tam(f).padStart(5)} KB`);
   const modelos = archivos.filter((f) => f.startsWith('modelos/')).reduce((t, f) => t + statSync(join(salida, f)).size, 0);
   console.log(`  (modelos/, que no se precarga: ${(modelos / 1048576).toFixed(1)} MB)`);
+  const imagenes = archivos.filter((f) => f.startsWith('imagenes/')).reduce((t, f) => t + statSync(join(salida, f)).size, 0);
+  console.log(`  (imagenes/, que no se precarga: ${(imagenes / 1048576).toFixed(1)} MB)`);
 }

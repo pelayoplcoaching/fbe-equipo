@@ -53,6 +53,8 @@ import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, s
 import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
 import { resumenPautas } from '../../logica/diseno.js';
 import { Portada, ArteSesion } from './Portada.jsx';
+import { familiaPortada } from '../../logica/imagenes.js';
+import { Imagen } from '../Imagen.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
 import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
@@ -277,7 +279,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const ejercicios = aplicarOrden(det.datos.ejercicios, ordenSes);
   const ejerciciosPorId = { ...det.datos.ejerciciosPorId, ...extra.ejercicios };
   const ultimas = { ...det.datos.ultimas, ...extra.ultimas };
-  if (resumen) return <Resumen resumen={resumen} sesion={sesion} alCerrar={alCerrar} />;
+  if (resumen) return <Resumen resumen={resumen} sesion={sesion} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} />;
 
 
   const todas = Object.values(hechas).flatMap((m) => Object.values(m));
@@ -1285,7 +1287,7 @@ function MiniTarjeta({ datos }) {
   return url ? <img class="resumen-mini" src={url} alt="" aria-hidden="true" width="36" height="45" /> : null;
 }
 
-function Resumen({ resumen, sesion, alCerrar }) {
+function Resumen({ resumen, sesion, familia, alCerrar }) {
   const { api, atleta, propio, aviso } = useApp();
   const [compartir, setCompartir] = useState(false);
   // v0.43: «Compartir con el equipo», si la comunidad está abierta y está dentro (y la sesión no está ya compartida)
@@ -1332,7 +1334,9 @@ function Resumen({ resumen, sesion, alCerrar }) {
     <div class="contenido resumen-sesion">
       <section class={`resumen-hero ${nRecords ? 'con-record' : ''}`} aria-labelledby="resumen-titulo" style={{ '--i': 0 }}>
         {/* (diseño, tanda 17) el dibujo de la sesión, de fondo, como en la tarjeta de Hoy */}
-        {sesion?.nombre && <ArteSesion nombre={sesion.nombre} tipo={sesion.tipo || (cardio ? 'cardio' : 'fuerza')} patron={null} clase="hero-arte" />}
+        {/* (imágenes) la ilustración de la sesión, la misma de su portada; si no se puede, el dibujo */}
+        {sesion?.nombre && <Imagen key={familia} id={familia ? `sesion-${familia}` : null} clase="hero-arte hero-foto" tamanos="(min-width: 600px) 420px, 70vw"
+          alternativa={<ArteSesion nombre={sesion.nombre} tipo={sesion.tipo || (cardio ? 'cardio' : 'fuerza')} patron={null} clase="hero-arte" />} />}
         <span class="resumen-medalla" aria-hidden="true"><Icono n={nRecords ? 'trofeo' : 'hecho'} /></span>
         <div class="pila-xs">
           <h1 id="resumen-titulo">Sesión terminada</h1>
