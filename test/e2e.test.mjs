@@ -2651,7 +2651,7 @@ try {
   check(await p.locator('.banda-modo-atleta').count() === 0, '«Programarlo» vuelve a la vista de coach y abre su ficha en Programa');
   await p.getByRole('button', { name: 'Volver a atletas' }).click();
   await p.getByRole('heading', { name: 'Atletas' }).waitFor();
-  check(await hay(p.locator('.tarjeta-atleta'), nAtletas), 'su ficha no sale en la lista de atletas');
+  check(await hay(p.locator('.tarjeta-atleta'), nAtletas, 15000), 'su ficha no sale en la lista de atletas');   // (en GitHub, 6 s se quedaban cortos)
   await irASeccion(p, 'Modo atleta');
   await banda.waitFor();
   check(true, 'con la ficha ya creada, la pestaña entra directamente');

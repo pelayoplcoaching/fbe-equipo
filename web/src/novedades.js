@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.100': {
+    atleta: [
+      'En Hoy cada cosa tiene su color y lo que haces se marca con un ✓; los resúmenes de la semana y del mes tienen portada.',
+      'Tu perfil estrena cabecera, las respuestas de tu coach se leen como un mensaje y la entrada al Equipo tiene su dibujo.',
+      'En la sesión, las casillas son más ligeras y «Terminar sesión» se ilumina cuando lo tienes todo.',
+    ],
+    coach: [
+      'En el ordenador, barras de desplazamiento más finas.',
+    ],
+  },
   '0.99': {
     atleta: [
       'Cada sesión tiene su ilustración en la portada y al terminar: empuje, tirón, pierna, full body…',
