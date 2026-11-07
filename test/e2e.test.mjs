@@ -1743,6 +1743,7 @@ try {
   await p.setViewportSize({ width: 360, height: 780 });
   await revisar('hoy-letra-muy-grande-360');
   await p.setViewportSize({ width: 390, height: 844 });
+  await abrirEnHoy(p, 'semana');   // (los domingos no se ha abierto arriba: el bloque del descanso no se hace)
   await p.locator('.semana-dias .dia.hecha').first().click();
   await sesionAbierta();
   // (una sesión hecha: sus ejercicios, plegados en una línea; se espera a que acaben de plegarse)
