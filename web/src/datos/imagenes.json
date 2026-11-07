@@ -384,6 +384,46 @@
       "512": "imagenes/medalla/medalla-semanas-plata-512.0e7c01f5.webp"
     }
   },
+  "medalla-tecnica-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-tecnica-bronce-256.56e0ca60.webp",
+      "512": "imagenes/medalla/medalla-tecnica-bronce-512.de8e7c02.webp"
+    }
+  },
+  "medalla-tecnica-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-tecnica-diamante-256.e5e0ea1a.webp",
+      "512": "imagenes/medalla/medalla-tecnica-diamante-512.bc5c6f0a.webp"
+    }
+  },
+  "medalla-tecnica-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-tecnica-oro-256.2172e91e.webp",
+      "512": "imagenes/medalla/medalla-tecnica-oro-512.b6fe83cb.webp"
+    }
+  },
+  "medalla-tecnica-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-tecnica-plata-256.f534019a.webp",
+      "512": "imagenes/medalla/medalla-tecnica-plata-512.902ab1d4.webp"
+    }
+  },
   "medalla-toneladas-bronce": {
     "proporcion": [
       1,
