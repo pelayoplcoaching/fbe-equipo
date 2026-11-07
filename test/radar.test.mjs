@@ -235,7 +235,18 @@ console.log('Lo apuntado a mano (en el dispositivo)');
 }
 
 console.log('Con la demo (lo que lee de la base)');
+// (v0.93) la demo siembra el contacto «hace N horas» y el radar cuenta por días de Madrid: de noche lo de hace unas
+// horas caía en el día anterior. Esta parte corre con el reloj a mediodía de hoy (Madrid); al acabar, el de verdad
+const RelojReal = Date;
 {
+  const hoyM = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new RelojReal());
+  const desfase = RelojReal.parse(`${hoyM}T12:00:00+01:00`) - RelojReal.now();
+  globalThis.Date = class extends RelojReal {
+    constructor(...a) { super(...(a.length ? a : [RelojReal.now() + desfase])); }
+    static now() { return RelojReal.now() + desfase; }
+  };
+}
+try {
   const { crearBackendMemoria } = await import('../web/src/datos/backend-memoria.js');
   const { semillaDemo } = await import('../web/src/datos/semilla-demo.js');
   const { crearApi } = await import('../web/src/datos/api.js');
@@ -261,7 +272,7 @@ console.log('Con la demo (lo que lee de la base)');
   await b.auth.entrar('ana@fbe.demo', 'demo');
   const suyos = await b.select('comentarios', { cols: 'id,atleta_id' });
   check(new Set(suyos.map((c) => c.atleta_id)).size <= 1, 'una atleta solo alcanza sus propios mensajes');
-}
+} finally { globalThis.Date = RelojReal; }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

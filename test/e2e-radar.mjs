@@ -12,7 +12,11 @@ const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
 export async function probarRadar({ navegador, check, base = 'http://localhost:4174', capturas = null }) {
   const errores = [];
-  const ctx = await navegador.newContext({ viewport: { width: 1280, height: 900 }, locale: 'es-ES', bypassCSP: true });
+  const ctx = await navegador.newContext({ viewport: { width: 1280, height: 900 }, locale: 'es-ES', timezoneId: 'Europe/Madrid', bypassCSP: true });
+  // (v0.93) la demo siembra el contacto «hace N horas» y el radar cuenta por días de Madrid: de noche, lo de hace unas
+  // horas caía en el día anterior y cambiaban las cuentas. Con el reloj del navegador a mediodía de hoy, siempre igual
+  const hoyMadrid = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date());
+  await ctx.clock.install({ time: new Date(`${hoyMadrid}T12:00:00+01:00`) });
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errores.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') errores.push(`${m.text()} ${m.location()?.url || ''}`); });

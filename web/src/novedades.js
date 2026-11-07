@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.93': {
+    atleta: [
+      'La app se mueve mejor: las gráficas se dibujan, las cifras suben, lo que carga aparece con suavidad y marcar una serie se nota.',
+      'La tarjeta de Hoy lleva el dibujo de tu sesión y las tarjetas para compartir estrenan la marca nueva.',
+    ],
+  },
   '0.92': {
     atleta: [
       'La app abre al instante con lo último que viste y se pone al día sola; ya no vuelve a cargar lo que acabas de ver.',
