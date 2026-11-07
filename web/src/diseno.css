@@ -1282,20 +1282,21 @@ img.img-llega { opacity: 0; }
    El botón principal lleva un filo de luz arriba (como un objeto, no una mancha plana) y, al terminar de guardar
    (ui/tacto.js pone data-hecho cuando pulido.js quita data-guardando), enseña una marca de «hecho» un momento, en el
    mismo sitio y con el mismo tamaño: el texto se vuelve transparente, no desaparece, así nada se mueve. Sin
-   «reducir movimiento», la marca llega con un rebote corto. (Sobre estilos.css 232 .btn-primario) */
+   «reducir movimiento», la marca llega con un rebote corto. Va en ::before (libre en cuanto se quita data-guardando);
+   el ::after de los botones es la zona de toque de pulido.css y no se toca. (Sobre estilos.css 232 .btn-primario) */
 .btn-primario:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 6px 16px -8px color-mix(in srgb, var(--morado) 70%, transparent); }
 .btn-primario:not(:disabled):active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 8px -6px color-mix(in srgb, var(--morado) 70%, transparent); }
 button[data-hecho] { position: relative; -webkit-text-fill-color: transparent; }
 button[data-hecho] > * { visibility: hidden; }
-button[data-hecho]::after {
+button[data-hecho]::before {
   content: ""; position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px;
   background: currentColor; -webkit-mask: var(--marca-hecho) center / contain no-repeat; mask: var(--marca-hecho) center / contain no-repeat;
   animation: hecho-llega var(--mov-medio) var(--curva-rebote) both;
 }
-.btn-peq[data-hecho]::after, .btn-texto[data-hecho]::after, .btn-icono[data-hecho]::after { width: 16px; height: 16px; margin: -8px 0 0 -8px; }
+.btn-peq[data-hecho]::before, .btn-texto[data-hecho]::before, .btn-icono[data-hecho]::before { width: 16px; height: 16px; margin: -8px 0 0 -8px; }
 :root { --marca-hecho: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
 @keyframes hecho-llega { from { transform: scale(.4); } to { transform: none; } }
-@media (prefers-reduced-motion: reduce) { button[data-hecho]::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) { button[data-hecho]::before { animation: none; } }
 
 /* ── 57 · Campos que responden (tanda 20) ──────────────────────────────────────────────────────────────────────────────
    Al entrar en un campo, el borde se vuelve morado y un halo tenue crece alrededor (en vez del contorno seco); el
