@@ -56,6 +56,7 @@ import { Portada, ArteSesion } from './Portada.jsx';
 import { familiaPortada, selloSesion, imagenCelebracion } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso } from './Personal.jsx';
+import { Cadencia, CancionRecord } from './Musica.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
 import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
@@ -1130,6 +1131,8 @@ export function TarjetaCardio({ pauta, hecho, completada }) {
         {pauta.nota && <p class="peq secundario">{pauta.nota}</p>}
         {h ? <span class="chip ok"><Icono n="hecho" />Hecho: {NOMBRE_MODALIDAD[h.modalidad].toLowerCase()}, {textoCardioHecho(h)}</span>
           : !completada && <p class="mini terciario">Al terminar, apunta los minutos, los kilómetros y cuánto te ha costado.</p>}
+        {/* (v0.104) el metrónomo de cadencia: pasos, pedaladas, zancadas, paladas o saltos por minuto */}
+        {!h && !completada && <Cadencia modalidad={pauta.modalidad} />}
       </div>
     </div>
   );
@@ -1382,6 +1385,8 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
           <p class="peq secundario">1RM estimado con la fórmula de Epley, contando las repeticiones que te quedaban en recámara.</p>
           {/* (v0.104) lo que tu coach dejó escrito para un récord */}
           <MensajeCoach momento="record" ejercicio={resumen.records[0]?.nombre || ''} />
+          {/* (v0.104) y su canción de récord, si la eligió */}
+          <CancionRecord />
         </section>
       )}
       {/* (v0.104) «Hace seis meses…»: el ejercicio de hoy que más ha subido desde entonces */}

@@ -7,6 +7,7 @@ import {
   repartirComoSiempre, textoDias, personalVacio,
 } from '../web/src/logica/personal.js';
 import { anioParaResumen, resumenAnio, datosCompartirAnio } from '../web/src/logica/anio.js';
+import { spotify, urlIncrustar, claveValida, musicaDeLaSesion, etiquetaOrigen, CADENCIAS, ajustarCadencia, aperturasDe, esCancion } from '../web/src/logica/musica.js';
 import { sumarDias, lunesDe } from '../web/src/logica/fechas.js';
 
 let ok = 0, fallos = 0;
@@ -107,6 +108,22 @@ check(resumenAnio({ series: [], sesiones: [] }, 2026, '2026-12-20').vacio, 'sin 
 const dc = datosCompartirAnio(ra2);
 check(dc.fondo === 'bloque' && dc.cifras.length === 3 && dc.mejores.length <= 3 && !JSON.stringify(dc).match(/peso|kg corporal|nutric|hábit/i), 'la imagen para compartir: solo entrenamiento');
 
+console.log('\nLa música');
+check(igual(spotify('https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP?si=abc'), { tipo: 'playlist', id: '37i9dQZF1DX76Wlfdnj7AP' }) && spotify('https://open.spotify.com/intl-es/track/4uLU6hMCjMI75M1A2tKUQC')?.tipo === 'track' && spotify('https://music.apple.com/x') === null, 'reconoce listas, canciones (también con intl-es) y lo que no es Spotify');
+check(urlIncrustar('https://open.spotify.com/episode/0Q86acNRm6V9GYx55SXKwf') === 'https://open.spotify.com/embed/episode/0Q86acNRm6V9GYx55SXKwf?utm_source=fbe-equipo' && urlIncrustar('https://youtu.be/x') === null, 'el reproductor incrustado, solo de Spotify');
+check(esCancion('https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC') && !esCancion('https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP') && esCancion('https://music.apple.com/es/song/x/1'), 'una canción (de Spotify, solo track)');
+check(lanza(() => limpiarPersonal({ cancion_url: 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP' })) && limpiarPersonal({ cancion_url: 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC' }).cancion_url, 'la canción de récord no puede ser una lista');
+check(claveValida('familia:pierna') && claveValida('descarga') && claveValida('equipo') && claveValida('ritmo:carrera') && claveValida('sesion:11111111-1111-4111-8111-111111111111') && !claveValida('familia:brazos') && !claveValida('sesion:x'), 'las claves de lo que enlaza el coach');
+const S = '11111111-1111-4111-8111-111111111111', Bq = '21111111-1111-4111-8111-111111111111';
+const coachM = { [`sesion:${S}`]: 'https://open.spotify.com/playlist/AAAAAAAAAAAAAAAAAAAAAA', [`bloque:${Bq}`]: 'https://open.spotify.com/playlist/BBBBBBBBBBBBBBBBBBBBBB', 'familia:pierna': 'https://open.spotify.com/playlist/CCCCCCCCCCCCCCCCCCCCCC', descarga: 'https://open.spotify.com/playlist/DDDDDDDDDDDDDDDDDDDDDD', 'ritmo:carrera': 'https://open.spotify.com/playlist/EEEEEEEEEEEEEEEEEEEEEE' };
+const ms = musicaDeLaSesion({ coach: coachM, personal: { musica_url: 'https://open.spotify.com/playlist/FFFFFFFFFFFFFFFFFFFFFF' }, familia: 'pierna', foco: 'descarga', sesionId: S, bloqueId: Bq });
+check(igual(ms.map((x) => x.origen), ['sesion', 'bloque', 'propia', 'descarga', 'familia']), 'orden: la de la sesión, la del bloque, la suya, la de descarga y la de su tipo de sesión');
+check(igual(musicaDeLaSesion({ coach: coachM, familia: 'pierna' }).map((x) => x.origen), ['familia']) && musicaDeLaSesion({ coach: coachM, modalidad: 'carrera' })[0].origen === 'ritmo' && musicaDeLaSesion({}).length === 0, 'sin lo suyo, la lista FBE; en carrera, la de su ritmo; sin nada, nada');
+check(musicaDeLaSesion({ coach: { 'familia:pierna': 'https://x.com/a' }, familia: 'pierna' }).length === 0 && musicaDeLaSesion({ coach: { 'familia:pierna': coachM.descarga, descarga: coachM.descarga }, foco: 'descarga', familia: 'pierna' }).length === 1, 'sin enlaces raros ni repetidos');
+check(etiquetaOrigen({ origen: 'familia', familia: 'pierna' }) === 'Lista FBE · Pierna' && etiquetaOrigen({ origen: 'sesion' }) === 'Tu coach, para hoy', 'cómo se presenta cada una');
+check(Object.keys(CADENCIAS).length === 6 && ajustarCadencia('carrera', 171) === 172 && ajustarCadencia('carrera', 300) === 190 && ajustarCadencia('remo', 'x') === 24 && ajustarCadencia('nadar', 50) === null, 'cadencias: dentro de su rango y en sus pasos (nadar no tiene)');
+check(aperturasDe({ '2026-10': 4, '2026-11': 3, '2025-12': 9, malo: 5 }, '2026') === 7 && aperturasDe({ '2026-11': 3 }, '2026-11') === 3 && aperturasDe(null, '2026') === 0, 'cuántas veces abrió su música en un mes o un año');
+
 // ---------- La migración 050 en un Postgres local ----------
 console.log('\nLa migración 050 (PGlite)');
 const { PGlite } = await import('@electric-sql/pglite');
@@ -147,9 +164,37 @@ await q(`select public.mensaje_coach_guardar('bloque', '  ')`);
 await como(ub);
 const lista = (await q(`select public.mensajes_coach() as r`))[0].r || [];
 check(lista.length === 1 && lista[0].momento === 'record' && lista[0].texto === '¡Ese récord, {nombre}!', 'el atleta lee los mensajes; guardar uno vacío lo quita');
+
+// La música en la base
+await como(ub);
+await q(`select public.personal_musica_abierta()`); await q(`select public.personal_musica_abierta()`);
+const mia = (await q(`select public.personal_mio() as r`))[0].r;
+check(Object.values(mia?.musica_aperturas || {})[0] === 2, 'cada vez que abre su música suma una al mes (y crea su fila si no la tenía)');
+check(await falla(`select public.personal_guardar($1::jsonb)`, [JSON.stringify({ cancion_url: 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP' })]) && !(await falla(`select public.personal_guardar($1::jsonb)`, [JSON.stringify({ cancion_url: 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC' })])), 'la canción de récord, una canción (no una lista)');
+check(Object.values((await q(`select public.personal_mio() as r`))[0].r?.musica_aperturas || {})[0] === 2, 'guardar lo suyo no borra la cuenta de aperturas');
+check(await falla(`select public.musica_coach_guardar('familia:pierna', 'https://open.spotify.com/playlist/1')`) && await falla(`select public.musica_coach_lista()`), 'un atleta no enlaza ni lee lo del coach entero');
+await como(coach, 'aal2');
+await su();
+const [blB] = await q(`insert into public.bloques (atleta_id, nombre, numero) values ($1, 'B', 1) returning id`, [ab]).catch(() => [null]);
+await como(coach, 'aal2');
+await q(`select public.musica_coach_guardar('familia:pierna', 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP')`);
+await q(`select public.musica_coach_guardar('equipo', 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP')`);
+if (blB) await q(`select public.musica_coach_guardar($1, 'https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy')`, [`bloque:${blB.id}`]);
+check(await falla(`select public.musica_coach_guardar('familia:brazos', 'https://open.spotify.com/playlist/1')`) && await falla(`select public.musica_coach_guardar('equipo', 'https://malo.example/x')`), 'claves y enlaces válidos');
+const listaC = (await q(`select public.musica_coach_lista() as r`))[0].r;
+check(listaC['familia:pierna'] && listaC.equipo, 'el coach ve todo lo enlazado');
+await como(ub);
+const paraB = (await q(`select public.musica_para(null, $1) as r`, [blB?.id || null]))[0].r;
+check(paraB['familia:pierna'] && paraB.equipo && (!blB || paraB[`bloque:${blB.id}`]), 'el atleta ve lo general y lo de su bloque');
+await como(ua);
+const paraA = (await q(`select public.musica_para(null, $1) as r`, [blB?.id || null]))[0].r;
+check(paraA['familia:pierna'] && !Object.keys(paraA).some((k) => k.startsWith('bloque:')), 'lo del bloque de otro, no');
+await como(coach, 'aal2');
+await q(`select public.musica_coach_guardar('equipo', '')`);
+check(!(await q(`select public.musica_coach_lista() as r`))[0].r.equipo, 'vacío, se quita');
 await su();
 await q(`delete from public.atletas where id = $1`, [aa]);
-check((await q(`select count(*)::int as n from public.personal_atleta`))[0].n === 0, 'al borrar la ficha del atleta, lo suyo se va con ella');
+check((await q(`select count(*)::int as n from public.personal_atleta where atleta_id = $1`, [aa]))[0].n === 0, 'al borrar la ficha del atleta, lo suyo se va con ella');
 void ab;
 
 // ---------- La api con el modo demo ----------
@@ -169,6 +214,11 @@ const mens = await api.mensajesCoach();
 check(Array.isArray(mens) && mens.length >= 1, 'lee los mensajes del coach (la demo trae unos)');
 let noCoach = false; try { await api.guardarMensajeCoach('record', 'x'); } catch { noCoach = true; }
 check(noCoach, 'el atleta no escribe mensajes del coach');
+await api.musicaAbierta();
+check(Object.values((await (async () => { await new Promise((r) => setTimeout(r, 10)); return api.personal(); })())?.musica_aperturas || {}).reduce((a, b) => a + b, 0) >= 1, 'abrir su música suma una');
+check(typeof (await api.musicaPara(null, null)) === 'object', 'lee la música del coach para su sesión');
+let noMus = false; try { await api.guardarMusicaCoach('equipo', 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP'); } catch { noMus = true; }
+check(noMus, 'el atleta no enlaza música del coach');
 const ex = await api.exportar((await api.miAtleta?.())?.id || (await b.select('atletas', {}))[0].id).catch(() => null);
 check(!ex || 'personal' in ex, 'lo suyo sale en «Descargar mis datos»');
 await b.auth.salir();
@@ -177,6 +227,11 @@ const deTodos = await api.personalAtletas();
 check(Array.isArray(deTodos) && deTodos.some((x) => x.apodo === 'Ani'), 'el coach ve lo de Ana');
 await api.guardarMensajeCoach('vuelta', 'Qué bien verte, {nombre}');
 check(mensajeDe(await api.mensajesCoach(), 'vuelta') === 'Qué bien verte, {nombre}', 'el coach guarda un mensaje');
+
+await api.guardarMusicaCoach('familia:pierna', 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP');
+check((await api.musicaCoach())['familia:pierna'], 'el coach enlaza una lista por tipo de sesión');
+let malEnlace = null; try { await api.guardarMusicaCoach('equipo', 'https://malo.example/x'); } catch (e) { malEnlace = e.message; }
+check(/Spotify/.test(malEnlace || ''), 'un enlace raro, con su motivo');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);
