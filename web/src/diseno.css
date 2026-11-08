@@ -3341,8 +3341,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 @media (forced-colors: active) { .podio-sitio .podio-peana { background: CanvasText; color: Canvas; } }
 
 /* ── 264 · El aviso fijado y el coach (tanda 37) ──────────────────────────────────────────────────────────────────────
-   «Fijado» con la chincheta en el acento lleno (texto en --sobre-morado: en oscuro el acento es claro), y el chip «Coach» de cada publicación y comentario con el lobo
+   «Fijado» con la chincheta en el acento lleno (texto en --sobre-morado: en oscuro el acento es claro), y el chip «Coach» de cada publicación, comentario y perfil con el lobo
    de la marca (Comunidad.jsx: Muro pone --lobo en la raíz, porque las hojas de comentarios van fuera del muro). */
 .post-fijado { background: var(--morado); border-color: transparent; color: var(--sobre-morado); }
-.post-quien .chip.morado, .comentario-equipo .chip.morado { display: inline-flex; align-items: center; gap: 4px; padding-left: 4px; }
-.post-quien .chip.morado::before, .comentario-equipo .chip.morado::before { content: ""; width: 16px; height: 16px; flex: none; border-radius: 50%; background: var(--lobo) center / cover no-repeat, var(--morado); }
+.post-quien .chip.morado, .comentario-equipo .chip.morado, .perfil-equipo-cab .chip.morado { display: inline-flex; align-items: center; gap: 4px; padding-left: 4px; }
+.post-quien .chip.morado::before, .comentario-equipo .chip.morado::before, .perfil-equipo-cab .chip.morado::before { content: ""; width: 16px; height: 16px; flex: none; border-radius: 50%; background: var(--lobo) center / cover no-repeat, var(--morado); }
