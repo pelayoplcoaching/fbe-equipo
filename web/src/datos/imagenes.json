@@ -506,6 +506,17 @@
       "1080": "imagenes/herr/herr-camara-1080.3fa559b1.webp"
     }
   },
+  "herr-comparar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/herr/herr-comparar-480.83dbe72f.webp",
+      "720": "imagenes/herr/herr-comparar-720.6bb88dbb.webp",
+      "1080": "imagenes/herr/herr-comparar-1080.2e9b51f4.webp"
+    }
+  },
   "herr-intervalos": {
     "proporcion": [
       16,
