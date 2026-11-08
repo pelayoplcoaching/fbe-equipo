@@ -1937,6 +1937,7 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
    un filo de luz arriba; la del ejercicio en curso, en el acento. */
 .picto { background-image: linear-gradient(180deg, color-mix(in srgb, var(--hoja) 55%, transparent), transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--tinta) 5%, transparent); }
 .ejercicio.en-curso .ejercicio-cab .picto { background-image: linear-gradient(180deg, color-mix(in srgb, var(--hoja) 40%, transparent), transparent); }
+.cab-ilu .picto { background-image: none; box-shadow: none; }   /* (sobre la cabecera ilustrada, oscura, de imagenes.css: como estaba) */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .picto { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 0 0 1px rgba(255, 255, 255, .04); } }
 :root[data-theme="dark"] .picto { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 0 0 1px rgba(255, 255, 255, .04); }
 
@@ -2131,9 +2132,10 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 
 /* ── 137 · Cada comida con su dibujo (tanda 28) ───────────────────────────────────────────────────────────────────────
    En el menú del día, «Desayuno», «Comida», «Merienda»… llevan su escena pequeña delante (Ilustraciones.jsx: las de
-   la tanda 21), recortada en su tarjeta. */
+   la tanda 21), recortada en su tarjeta. (Clase toma-escena: toma-ilu es la cabecera ilustrada del recetario, de
+   imagenes.css.) */
 .toma-cab .etq { display: inline-flex; align-items: center; gap: 10px; }
-.toma-cab .toma-ilu { width: 38px; height: 27px; flex: none; border-radius: 8px; background: var(--hoja-2); box-shadow: inset 0 0 0 1px var(--linea); }
+.toma-cab .toma-escena { width: 38px; height: 27px; flex: none; border-radius: 8px; background: var(--hoja-2); box-shadow: inset 0 0 0 1px var(--linea); }
 
 /* ── 138 · Las gráficas con sombra de color (tanda 28) ────────────────────────────────────────────────────────────────
    La línea de las gráficas de fuerza y de peso deja un resplandor suave del acento debajo, como en las apps de salud. */
