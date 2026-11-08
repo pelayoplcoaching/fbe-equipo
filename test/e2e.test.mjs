@@ -101,6 +101,9 @@ async function temporizadorAlSonar(p) {
   });
 }
 async function revisar(paso) {
+  // (la píldora del día del chat aparece y se va fundiéndose: si axe la mira a medio fundido, su contraste no llega. Antes
+  // de cualquier revisión se espera a que esté entera o ida; ha salido en «chat-destacados» y en «encuesta-crear»)
+  await p.waitForFunction(() => [...document.querySelectorAll('.chat-dia-flotante')].every((x) => ['0', '1'].includes(getComputedStyle(x).opacity)), null, { timeout: 5000 }).catch(() => {});
   // En emulación de móvil el navegador ensancha la página para que quepa lo que se sale: se compara con los 390 px reales
   const vista = p.viewportSize()?.width || 390;
   const ancho = await p.evaluate(() => document.documentElement.scrollWidth);
