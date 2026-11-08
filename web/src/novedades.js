@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.113': {
+    coach: [
+      'La actividad de cada atleta, como una línea del tiempo con el color de cada cosa; el registro, con el color del esfuerzo.',
+      'Las sesiones por revisar, resaltadas; los objetivos con su barra, las notas privadas como pósits y los cobros con su estado.',
+      'En Cuenta, mensajes y música con iconos; cargas sugeridas y «Programar según FBE», más claros; grupos musculares con color.',
+    ],
+  },
   '0.112': {
     atleta: [
       '¿Tus discos van en libras? En tu perfil, «Este móvil» → «Unidad de las cargas»: apuntas y ves las cargas en libras.',
