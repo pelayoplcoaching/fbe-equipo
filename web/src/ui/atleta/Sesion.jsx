@@ -53,6 +53,7 @@ import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, s
 import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
 import { resumenPautas } from '../../logica/diseno.js';
 import { Portada, ArteSesion } from './Portada.jsx';
+import { LOBO } from '../marca-lobo.js';
 import { familiaPortada } from '../../logica/imagenes.js';
 import { Imagen } from '../Imagen.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
@@ -641,8 +642,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       <BandaConexion />
 
       {sesion.dinamica && (
-        <div class="nota-coach">
-          <Icono n="mensaje" />
+        <div class="nota-coach con-lobo">
+          <img class="nota-lobo" src={LOBO} alt="" width="24" height="24" aria-hidden="true" />
           <div>
             <button class="btn-texto" style="padding:0;min-height:0;color:var(--tinta);font-weight:700" onClick={() => setVerDinamica(!verDinamica)} aria-expanded={verDinamica}>Cómo es la sesión</button>
             {verDinamica && <p style="margin-top:4px;white-space:pre-line">{sesion.dinamica}</p>}

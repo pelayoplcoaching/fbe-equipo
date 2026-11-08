@@ -450,7 +450,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           )}
         </div>
         {semana.nota_coach && (
-          <div class="nota-coach"><Icono n="mensaje" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>
+          <div class="nota-coach con-lobo"><img class="nota-lobo" src={LOBO} alt="" width="24" height="24" aria-hidden="true" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>
         )}
         {e.tipo === 'descanso' ? (
           <HeroDescanso proxima={e.proxima} hoy={hoy} abrirSesion={abrirSesion} abrirPlan={enSemana && sesiones.some((s) => !s.completada) ? () => setPlanAbierto(true) : null} />
