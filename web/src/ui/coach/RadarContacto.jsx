@@ -5,6 +5,7 @@ import { leerBorrador, guardarBorrador } from '../../logica/mensajes.js';
 import { contactosPorAtleta, radar, textoResumenRadar, textoContacto, borradorDe, varianteInicial, cuantasFrases, cuandoFue,
   leerLocal, marcarHablado, posponer, NOMBRE_GRUPO_RADAR, MAX_BORRADOR } from '../../logica/radar/index.js';
 import { datosRadar, recordsRecientes } from '../../datos/radar.js';
+import { useContactos, BotonWhatsApp } from './Integraciones.jsx';
 
 const almacen = () => { try { return window.localStorage; } catch { return null; } };
 const uuid = () => globalThis.crypto?.randomUUID?.() || `radar-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -152,6 +153,7 @@ function Borrador({ id, f, hoy, alEnviar, abrirAtleta }) {
   const [texto, setTexto] = useState(() => borradorDe(motivo, { hoy, variante: base }));
   const [ocupado, una] = useUnaVez();
   const area = useRef(null);
+  const contactos = useContactos([f.atleta_id]);   // (v0.105, 051) su teléfono, para escribirle por WhatsApp
   const enChat = useMemo(() => leerBorrador(almacen(), perfil?.id, f.atleta_id)?.texto || null, [perfil?.id, f.atleta_id]);
   useEffect(() => { area.current?.focus({ preventScroll: true }); }, []);
 
@@ -187,6 +189,7 @@ function Borrador({ id, f, hoy, alEnviar, abrirAtleta }) {
         <button class="btn btn-peq btn-primario" onClick={enviar} disabled={ocupado || !limpio}><Icono n="mensaje" /> {ocupado ? 'Enviando…' : 'Enviar'}</button>
         <button class="btn btn-peq" onClick={otra} disabled={cuantasFrases(motivo) < 2}>Otra frase</button>
         <button class="btn btn-peq" onClick={alChat} disabled={!abrirAtleta}>Abrir en su chat</button>
+        {contactos.datos && contactos.datos[f.atleta_id] && <BotonWhatsApp telefono={contactos.datos[f.atleta_id]} texto={limpio} />}
       </div>
     </div>
   );

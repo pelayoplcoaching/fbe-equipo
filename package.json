@@ -5,7 +5,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "demo": "node scripts/build.mjs --demo",
-    "test": "node test/logica.test.mjs && node test/permisos.test.mjs && node test/api.test.mjs && node test/demo.test.mjs && node test/envio.test.mjs && node test/motor.test.mjs && node test/rellenar.test.mjs && node test/recetario.test.mjs && node test/radar.test.mjs && node test/pulido2.test.mjs && node test/pulido3.test.mjs && node test/rendimiento.test.mjs && node test/imagenes.test.mjs && node test/personalizacion.test.mjs",
+    "test": "node test/logica.test.mjs && node test/permisos.test.mjs && node test/api.test.mjs && node test/demo.test.mjs && node test/envio.test.mjs && node test/motor.test.mjs && node test/rellenar.test.mjs && node test/recetario.test.mjs && node test/radar.test.mjs && node test/pulido2.test.mjs && node test/pulido3.test.mjs && node test/rendimiento.test.mjs && node test/imagenes.test.mjs && node test/personalizacion.test.mjs && node test/integraciones.test.mjs",
     "e2e": "node test/e2e.test.mjs",
     "biblioteca": "node scripts/biblioteca.mjs",
     "instalador": "node scripts/instalador.mjs",

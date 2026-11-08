@@ -108,3 +108,42 @@
 .cancion-record { display: grid; gap: 8px; margin-top: 12px; background: linear-gradient(135deg, color-mix(in srgb, #E9D49A 18%, var(--hoja)) 0%, var(--hoja) 70%); }
 .lista-equipo { margin-bottom: 4px; }
 .campo-musica svg { width: 16px; height: 16px; }
+
+/* ---------- (v0.105, migración 051) Conexiones: Salud del iPhone, el calendario y WhatsApp ---------- */
+.conexion-pasos { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.conexion-paso { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; }
+.conexion-paso .pila-s { min-width: 0; }
+.conexion-paso .btn { justify-self: start; }
+.conexion-num { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--morado-suave); color: var(--morado); font-weight: 750; font-size: .875rem; }
+.conexion-paso.hecho .conexion-num { background: var(--ok-suave); color: var(--ok); }
+.conexion-num svg { width: 16px; height: 16px; }
+.conexion-enlace { font-size: .75rem; word-break: break-all; line-height: 1.35; }
+.conexion-check { align-items: flex-start; gap: 10px; }
+.conexion-check input { margin-top: 2px; width: 18px; height: 18px; flex: none; accent-color: var(--morado); }
+.conexion-otra { padding-top: 14px; border-top: 1px solid var(--linea); }
+.conexiones h3 { margin: 0; }
+.conexiones .btn-texto { justify-self: start; }
+.conexiones .peligro { color: var(--alerta); }
+.tabla-salud-caja { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tabla-salud { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+.tabla-salud th, .tabla-salud td { padding: 6px 6px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--linea); }
+.tabla-salud th:first-child { text-align: left; }
+.tabla-salud thead th { color: var(--tinta-3); font-weight: 600; font-size: .75rem; }
+.tabla-salud tbody th { font-weight: 600; color: var(--tinta-2); }
+.tabla-salud tr:last-child th, .tabla-salud tr:last-child td { border-bottom: 0; }
+.resumen-salud { display: grid; justify-items: center; gap: 6px; margin: 14px 0 0; text-align: center; }
+.plan-suscripcion { margin-bottom: 4px; }
+.plan-suscripcion .btn { justify-self: start; }
+.checkin-salud { display: flex; gap: 6px; align-items: center; margin: 10px 0 0; }
+.checkin-salud svg { width: 15px; height: 15px; color: var(--ok); flex: none; }
+.salud-cifras { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 12px; }
+.salud-cifra dt { font-size: .75rem; color: var(--tinta-3); }
+.salud-cifra dd { margin: 2px 0 0; font-weight: 700; font-size: 1.125rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; }
+.salud-cifra .u { font-size: .8125rem; font-weight: 500; color: var(--tinta-2); }
+.salud-dif { font-weight: 600; color: var(--tinta-3); }
+.salud-movil .btn-texto { justify-self: start; }
+.cumples-wa { margin-top: 8px; display: flex; }
+.atajos-coach .fila-boton { grid-template-columns: minmax(0, 1fr) auto; padding: 12px 14px; }
+.atajos-coach .fila-boton > svg { width: 18px; height: 18px; color: var(--tinta-3); }
+.atajos-coach .fila-ios-texto { display: grid; gap: 2px; }
+.contacto-atleta .fila-entre { gap: 12px; flex-wrap: wrap; }

@@ -9,6 +9,7 @@ import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombre
 import { FAMILIAS_MUSICA } from '../../logica/musica.js';
 import { MESES_LARGOS } from '../../logica/mes.js';
 import { hoyISO } from '../../logica/fechas.js';
+import { useContactos, BotonWhatsApp } from './Integraciones.jsx';
 
 const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de ${MESES_LARGOS[p.cumple_mes - 1]}` : null);
 
@@ -18,7 +19,16 @@ export function CumplesHoy({ lista = [], abrir }) {
   const hoy = hoyISO();
   const activos = new Map(lista.filter((r) => r.estado !== 'baja').map((r) => [r.atleta_id, r]));
   const cumplen = (personal.datos || []).filter((p) => activos.has(p.atleta_id) && esCumple(p, hoy)).map((p) => activos.get(p.atleta_id));
+  // (v0.105) con su teléfono, felicitarle por WhatsApp con un toque (con tu mensaje de cumpleaños, si lo escribiste)
+  const contactos = useContactos([cumplen.length > 0]);
+  const mensajes = useCarga(() => (cumplen.length ? api.mensajesCoach().catch(() => []) : Promise.resolve([])), [cumplen.length > 0]);
   if (!cumplen.length) return null;
+  const felicitar = (r) => {
+    const p = (personal.datos || []).find((x) => x.atleta_id === r.atleta_id);
+    const nombre = p?.apodo || (r.nombre || '').split(' ')[0];
+    return textoMensajeCoach(mensajeDe(mensajes.datos, 'cumple') || '¡Feliz cumpleaños, {nombre}!', { nombre });
+  };
+  const conTel = cumplen.filter((r) => contactos.datos?.[r.atleta_id]);
   return (
     <div class="nota cumples-hoy" role="status">
       <Icono n="estrella" />
@@ -26,6 +36,7 @@ export function CumplesHoy({ lista = [], abrir }) {
         {cumplen.map((r, i) => (
           <span key={r.atleta_id}>{i > 0 && (i === cumplen.length - 1 ? ' y ' : ', ')}<button class="btn-texto" onClick={() => abrir?.(r.atleta_id)}>{r.nombre}</button></span>
         ))}. La app ya le felicita; si quieres, escríbele.
+        {conTel.length > 0 && <span class="fila-envolver cumples-wa">{conTel.map((r) => <BotonWhatsApp key={r.atleta_id} telefono={contactos.datos[r.atleta_id]} texto={felicitar(r)} etiqueta={conTel.length > 1 ? `Felicitar a ${(r.nombre || '').split(' ')[0]}` : 'Felicitarle por WhatsApp'} />)}</span>}
       </span>
     </div>
   );

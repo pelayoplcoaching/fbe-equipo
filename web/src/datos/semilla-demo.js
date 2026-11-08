@@ -617,6 +617,17 @@ export function semillaDemo(hoy = hoyISO()) {
   // (v0.104, 050) los mensajes del coach para los momentos importantes: en la demo, los de ejemplo
   db.mensajes_coach = MOMENTOS_COACH.map(([momento, , texto]) => ({ momento, texto, actualizado_en: new Date().toISOString() }));
   db.personal_atleta = [];
+  // (v0.105, 051) Ana trae de Salud del iPhone sus pasos, su sueño, su FC en reposo, su HRV y su peso (datos inventados,
+  // sin azar para no cambiar lo de antes); los atajos del coach y los teléfonos, vacíos (se ponen en Cuenta y en la ficha)
+  db.integraciones = [{ atleta_id: ana.id, salud: true, salud_desde: hace(60 * 24 * 12), salud_ultimo: hace(60 * 3), calendario: false, calendario_desde: null, calendario_ultimo: null, cal_hora: '18:00', cal_minutos: 75, cal_aviso: 30 }];
+  // (el peso, el de sus pesos de ese día: el atajo los habría apuntado ahí)
+  const pesoAna = new Map(db.pesos.filter((x) => x.atleta_id === ana.id).map((x) => [x.fecha, Number(x.kg)]));
+  db.salud_diaria = Array.from({ length: 12 }, (_, i) => {
+    const fecha = sumarDias(hoy, -i);
+    return { atleta_id: ana.id, fecha, pasos: i === 0 ? null : 7200 + ((i * 1373) % 4100), sueno_min: 395 + ((i * 37) % 80), fc_reposo: 56 + ((i * 3) % 5), hrv: 48 + ((i * 7) % 13), peso_kg: pesoAna.get(fecha) ?? null, actualizado_en: ahoraISO };
+  });
+  db.atajos_coach = [];
+  db.contacto_atleta = [];
   return db;
 
   // v0.53 (al final: no cambia lo aleatorio de lo anterior): Iván va por microciclos de 4 sesiones (torso-pierna A y B)
