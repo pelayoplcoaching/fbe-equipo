@@ -5,6 +5,8 @@ import { Icono, Segmentos, Paso, usePreferencia, useAtraparFoco, Capa } from '..
 import { fases, duracionTotal, enCurso, normalizar, textoIntervalos, MODOS_INTERVALOS, POR_DEFECTO } from '../../logica/intervalos.js';
 import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
 import { mmss } from '../../logica/calculos.js';
+import { Imagen } from '../Imagen.jsx';
+import { imagenHerramienta } from '../../logica/imagenes.js';
 import { tenirBarra } from '../barra-color.js';
 
 const NOMBRE_FASE = { preparar: 'Prepárate', trabajo: 'Trabajo', descanso: 'Descanso' };
@@ -50,6 +52,7 @@ function IntervalosPantalla({ inicial = null, alCerrar, alTerminar = null }) {
             <button class="btn btn-icono plano" aria-label="Cerrar el temporizador" onClick={() => cerrar.current()} autoFocus><Icono n="cerrar" /></button>
             <h2>Temporizador de intervalos</h2>
           </div>
+          <Imagen id={imagenHerramienta('intervalos')} clase="franja-ilu franja-herr" tamanos="(min-width: 640px) 560px, 92vw" />
           {inicial && <p class="peq secundario">Configurado con lo que pone tu coach: <strong>{textoIntervalos(inicial)}</strong>.</p>}
           <Segmentos etiqueta="Tipo" valor={modo} opciones={MODOS_INTERVALOS} alCambiar={(v) => v && setConfig(normalizar({ ...POR_DEFECTO[v], preparar: config.preparar }))} />
           <div class="intervalos-campos">

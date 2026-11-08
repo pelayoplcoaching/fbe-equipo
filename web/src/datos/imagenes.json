@@ -1,4 +1,48 @@
 {
+  "bienvenida-manana": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-manana-720.96e5b805.webp",
+      "1080": "imagenes/bienvenida/bienvenida-manana-1080.62c9aead.webp",
+      "1440": "imagenes/bienvenida/bienvenida-manana-1440.e8934cb1.webp"
+    }
+  },
+  "bienvenida-noche": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-noche-720.a55e6d08.webp",
+      "1080": "imagenes/bienvenida/bienvenida-noche-1080.9c4a1e3f.webp",
+      "1440": "imagenes/bienvenida/bienvenida-noche-1440.0a552591.webp"
+    }
+  },
+  "bienvenida-tarde": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-tarde-720.e90c4efc.webp",
+      "1080": "imagenes/bienvenida/bienvenida-tarde-1080.38dcc8e1.webp",
+      "1440": "imagenes/bienvenida/bienvenida-tarde-1440.82d3ea82.webp"
+    }
+  },
+  "carne-fondo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/carne/carne-fondo-480.79f3d151.webp",
+      "720": "imagenes/carne/carne-fondo-720.d739ed1e.webp",
+      "1080": "imagenes/carne/carne-fondo-1080.c2adc0ae.webp"
+    }
+  },
   "celebra-bloque": {
     "proporcion": [
       1,
@@ -226,6 +270,61 @@
       "1024": "imagenes/compartir/compartir-sesion-1024.53249527.webp"
     }
   },
+  "donde-casa": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/donde/donde-casa-480.6dd062e0.webp",
+      "720": "imagenes/donde/donde-casa-720.1670ca41.webp",
+      "1080": "imagenes/donde/donde-casa-1080.4ab96502.webp"
+    }
+  },
+  "donde-gimnasio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/donde/donde-gimnasio-480.14fc33ab.webp",
+      "720": "imagenes/donde/donde-gimnasio-720.b41534b4.webp",
+      "1080": "imagenes/donde/donde-gimnasio-1080.1364bedd.webp"
+    }
+  },
+  "donde-viaje": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/donde/donde-viaje-480.11540e62.webp",
+      "720": "imagenes/donde/donde-viaje-720.eaad189a.webp",
+      "1080": "imagenes/donde/donde-viaje-1080.266c7112.webp"
+    }
+  },
+  "equipo-manada": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/equipo/equipo-manada-480.4aac1d41.webp",
+      "720": "imagenes/equipo/equipo-manada-720.386f024f.webp",
+      "1080": "imagenes/equipo/equipo-manada-1080.9616de3b.webp"
+    }
+  },
+  "equipo-reto": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/equipo/equipo-reto-480.39ae977a.webp",
+      "720": "imagenes/equipo/equipo-reto-720.b7cbb71c.webp",
+      "1080": "imagenes/equipo/equipo-reto-1080.41c9369e.webp"
+    }
+  },
   "grupo-abdominales": {
     "proporcion": [
       4,
@@ -394,6 +493,39 @@
     "archivos": {
       "256": "imagenes/habito/habito-verdura-256.bd352a4c.webp",
       "512": "imagenes/habito/habito-verdura-512.ef42f857.webp"
+    }
+  },
+  "herr-camara": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/herr/herr-camara-480.34857a14.webp",
+      "720": "imagenes/herr/herr-camara-720.b676de3f.webp",
+      "1080": "imagenes/herr/herr-camara-1080.3fa559b1.webp"
+    }
+  },
+  "herr-intervalos": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/herr/herr-intervalos-480.5569a81a.webp",
+      "720": "imagenes/herr/herr-intervalos-720.76f0c768.webp",
+      "1080": "imagenes/herr/herr-intervalos-1080.c3b68892.webp"
+    }
+  },
+  "herr-metronomo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/herr/herr-metronomo-480.5080d5a6.webp",
+      "720": "imagenes/herr/herr-metronomo-720.11149cba.webp",
+      "1080": "imagenes/herr/herr-metronomo-1080.78181f85.webp"
     }
   },
   "medalla-bascula-bronce": {
@@ -818,6 +950,39 @@
       "720": "imagenes/mes/mes-12-720.ff740776.webp",
       "1080": "imagenes/mes/mes-12-1080.f398fb1b.webp",
       "1440": "imagenes/mes/mes-12-1440.fe0b454b.webp"
+    }
+  },
+  "primeros-checkin": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/primeros/primeros-checkin-480.4f4a0bad.webp",
+      "720": "imagenes/primeros/primeros-checkin-720.61697aa2.webp",
+      "1080": "imagenes/primeros/primeros-checkin-1080.3b84c6ee.webp"
+    }
+  },
+  "primeros-programa": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/primeros/primeros-programa-480.969d952d.webp",
+      "720": "imagenes/primeros/primeros-programa-720.9d90b00b.webp",
+      "1080": "imagenes/primeros/primeros-programa-1080.bcb1f507.webp"
+    }
+  },
+  "primeros-sesion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/primeros/primeros-sesion-480.408a167e.webp",
+      "720": "imagenes/primeros/primeros-sesion-720.42f7688e.webp",
+      "1080": "imagenes/primeros/primeros-sesion-1080.00cb17cc.webp"
     }
   },
   "sesion-cardio": {

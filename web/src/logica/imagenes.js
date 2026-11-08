@@ -111,6 +111,21 @@ export function selloSesion({ records = 0, primera = false } = {}) {
   return records > 0 ? 'celebra-record' : primera ? 'celebra-primera' : null;
 }
 
+// ---------- Dónde entrenas, bienvenida, primeros pasos, herramientas, equipo y carné ----------
+const LUGARES = ['gimnasio', 'casa', 'viaje'];
+export function imagenLugar(lugar) { return LUGARES.includes(lugar) ? `donde-${lugar}` : 'donde-gimnasio'; }
+// La bienvenida del día: de 6 a 13:59, la mañana; de 14 a 20:59, la tarde; si no, la noche (hora de Madrid)
+export function imagenBienvenida(hora) {
+  const h = Number(hora);
+  if (!Number.isFinite(h)) return null;
+  return h >= 6 && h < 14 ? 'bienvenida-manana' : h >= 14 && h < 21 ? 'bienvenida-tarde' : 'bienvenida-noche';
+}
+// Las pantallas de la primera vez (atleta/Bienvenida.jsx): la de instalar sigue con su dibujo
+const PRIMEROS = { programa: 'programa', serie: 'sesion', coach: 'checkin' };
+export function imagenPrimerosPasos(dibujo) { return PRIMEROS[dibujo] ? `primeros-${PRIMEROS[dibujo]}` : null; }
+export const HERRAMIENTAS = ['camara', 'metronomo', 'intervalos', 'comparar'];
+export function imagenHerramienta(que) { return HERRAMIENTAS.includes(que) ? `herr-${que}` : null; }
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.

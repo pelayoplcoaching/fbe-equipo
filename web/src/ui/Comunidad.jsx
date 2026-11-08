@@ -42,6 +42,7 @@ import { VERSION_COMUNIDAD, AVISO_041, AVISO_042, AVISO_043 } from '../datos/api
 import { leerVistoEquipo, guardarVistoEquipo, leerCelebrados, marcarCelebrado, leerAutoCompartir, guardarAutoCompartir } from './comunidad-local.js';
 import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 import { PlegableEquipo } from './PlegableEquipo.jsx';
+import { Imagen } from './Imagen.jsx';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
 // v0.71: con la 043, también las preguntas del equipo
@@ -263,6 +264,8 @@ function EntrarComunidad({ antes, cambio = null, alEntrar }) {
     <div class="contenido">
       <CabeceraGrande><div class="titulo"><h1>Equipo</h1><div class="sub">Para animaros entre los atletas de FBE</div></div></CabeceraGrande>
       <section class="panel panel-pad pila entrar-equipo">
+        {/* (imágenes) la manada en fila bajo la luna */}
+        <Imagen id="equipo-manada" clase="franja-ilu franja-pegada franja-manada" tamanos="(min-width: 720px) 640px, 100vw" prioridad />
         <Ilustracion n="equipo" clase="entrar-equipo-ilu" />
         <h2>{cambio === 'texto' ? 'Hemos cambiado lo que se comparte' : cambio === 'normas' ? 'Hemos actualizado las normas' : antes ? '¿Vuelves al equipo?' : 'Antes de entrar'}</h2>
         {cambio === 'texto' && <p class="nota peq">Para seguir en el equipo, lee lo que se comparte ahora (tu racha, tu perfil del equipo, tus votos, los ánimos y las menciones) y acéptalo. Mientras tanto, lo tuyo no se ve.</p>}
@@ -1470,13 +1473,13 @@ export function Retos({ coach = false, miembro = null, cambios = 0, alCompartirL
       <ErrorCaja error={retos.error} reintentar={() => retos.recargar()} />
       {retos.cargando && !retos.datos ? <Siluetas forma="tarjetas" n={2} texto="Cargando los retos" />
         : !ordenados.length ? <Vacio icono="diana" titulo="Aún no hay retos">{coach ? 'Crea uno: sesiones, minutos de cardio o semanas completas entre dos fechas, para cada uno, entre todo el equipo o por equipos.' : 'Cuando tu coach proponga uno, lo verás aquí.'}</Vacio>
-          : ordenados.map((r) => <TarjetaReto key={r.id} r={r} hoy={hoy} coach={coach} miembro={miembro} alEditar={() => setEditar(r)} alCompartirLogro={alCompartirLogro} cardioYa={cardioYa} alContarCardio={() => { setCardioYa(true); setVuelta((v) => v + 1); }} />)}
+          : ordenados.map((r, i) => <TarjetaReto key={r.id} ilu={i === 0} r={r} hoy={hoy} coach={coach} miembro={miembro} alEditar={() => setEditar(r)} alCompartirLogro={alCompartirLogro} cardioYa={cardioYa} alContarCardio={() => { setCardioYa(true); setVuelta((v) => v + 1); }} />)}
       {editar && <HojaReto reto={editar.id ? editar : null} con042={con042.datos === true} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); retos.recargar(true); }} />}
     </div>
   );
 }
 
-function TarjetaReto({ r, hoy, coach, miembro, alEditar, alCompartirLogro, cardioYa = false, alContarCardio }) {
+function TarjetaReto({ ilu = false, r, hoy, coach, miembro, alEditar, alCompartirLogro, cardioYa = false, alContarCardio }) {
   const { api, aviso } = useApp();
   const [ocupado, una] = useUnaVez();
   const medida = r.medida || 'sesiones';
@@ -1498,6 +1501,8 @@ function TarjetaReto({ r, hoy, coach, miembro, alEditar, alCompartirLogro, cardi
   const modoTexto = equipos ? 'Por equipos · ' : equipo ? 'De equipo · ' : '';
   return (
     <article class={`panel panel-pad pila-s reto ${equipo || equipos ? 'reto-de-equipo' : ''} ${equipos ? 'reto-equipos' : ''}`} aria-label={`Reto: ${r.titulo}`}>
+      {/* (imágenes) el primero de la lista (el que está en marcha), con la montaña y su camino */}
+      {ilu && <Imagen id="equipo-reto" clase="franja-ilu franja-pegada franja-reto" tamanos="(min-width: 720px) 640px, 100vw" />}
       <div class="separa">
         <div class="pila-xs">
           <h2 class="reto-titulo">{r.titulo}</h2>

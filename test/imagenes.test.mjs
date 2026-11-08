@@ -3,7 +3,7 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, imagenLugar, imagenBienvenida, imagenPrimerosPasos, imagenHerramienta, HERRAMIENTAS, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
 import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 import { GRUPOS } from '../web/src/logica/calculos.js';
 import { TOMAS } from '../web/src/logica/comidas.js';
@@ -88,6 +88,12 @@ check(imagenPasoCheckin('reloj') === 'checkin-inicio' && imagenPasoCheckin('nota
 check(imagenPasoCheckin('molestias') === 'checkin-molestias', 'las molestias, la bolsa de frío y la venda');
 check(imagenPasoCheckin('otra') === null && imagenPasoCheckin(null) === null, 'lo desconocido, ninguna');
 check(imagenPasoCheckin(null, { revision: true }) === 'checkin-inicio' && imagenPasoCheckin('peso', { revision: true, enviado: true }) === 'checkin-enviado', 'el repaso y lo ya enviado');
+// Dónde entrenas, bienvenida, primeros pasos y herramientas
+check(imagenLugar('casa') === 'donde-casa' && imagenLugar('viaje') === 'donde-viaje' && imagenLugar('gimnasio') === 'donde-gimnasio' && imagenLugar(undefined) === 'donde-gimnasio', 'cada sitio de entreno, su imagen (y lo desconocido, el gimnasio)');
+check(imagenBienvenida(6) === 'bienvenida-manana' && imagenBienvenida(13) === 'bienvenida-manana' && imagenBienvenida(14) === 'bienvenida-tarde' && imagenBienvenida(20) === 'bienvenida-tarde', 'la bienvenida: mañana de 6 a 14, tarde de 14 a 21');
+check(imagenBienvenida(21) === 'bienvenida-noche' && imagenBienvenida(0) === 'bienvenida-noche' && imagenBienvenida(5) === 'bienvenida-noche' && imagenBienvenida('x') === null, 'y la noche el resto');
+check(imagenPrimerosPasos('programa') === 'primeros-programa' && imagenPrimerosPasos('serie') === 'primeros-sesion' && imagenPrimerosPasos('coach') === 'primeros-checkin' && imagenPrimerosPasos('instalar') === null, 'primera vez: programa, sesión y check-in; instalar, con su dibujo');
+check(HERRAMIENTAS.every((h) => imagenHerramienta(h) === `herr-${h}`) && imagenHerramienta('otra') === null, 'cada herramienta, su imagen');
 // Las celebraciones
 check(CELEBRACIONES.every((c) => imagenCelebracion(c) === `celebra-${c}`) && imagenCelebracion('otra') === null, 'cada celebración, su imagen');
 check(selloSesion({ records: 2, primera: true }) === 'celebra-record' && selloSesion({ primera: true }) === 'celebra-primera' && selloSesion({}) === null, 'el sello: récord antes que primera vez; si no, ninguno');
@@ -120,6 +126,9 @@ console.log('\nLa lista y la carpeta');
   const pasosCk = ['peso', 'sueno', 'motivacion', 'molestias', 'adherencia', 'reloj'].map((p) => imagenPasoCheckin(p)).concat(imagenPasoCheckin(null, { revision: true, enviado: true }));
   check(pasosCk.every((id) => IMAGENES.includes(id)), 'están las imágenes del check-in');
   check(CELEBRACIONES.every((c) => IMAGENES.includes(`celebra-${c}`)), 'y las cinco celebraciones');
+  check(['gimnasio', 'casa', 'viaje'].every((l) => IMAGENES.includes(imagenLugar(l))), 'están las tres de dónde entrenas');
+  check([3, 15, 22].every((h) => IMAGENES.includes(imagenBienvenida(h))) && ['programa', 'serie', 'coach'].every((d) => IMAGENES.includes(imagenPrimerosPasos(d))), 'las tres de bienvenida y las tres de la primera vez');
+  check(['camara', 'metronomo', 'intervalos'].every((h) => IMAGENES.includes(imagenHerramienta(h))) && ['equipo-manada', 'equipo-reto', 'carne-fondo'].every((id) => IMAGENES.includes(id)), 'las herramientas (salvo comparar, que falta), el equipo y el carné');
   check(FAMILIAS_PORTADA.every((fa) => IMAGENES.includes(`sesion-${fa}`)), 'están las siete portadas de sesión');
   check(Object.entries(lista).every(([id, x]) => Object.values(x.archivos).every((f) => f.split('/').pop().startsWith(`${id}-`))), 'cada archivo lleva el nombre de su imagen');
 }
