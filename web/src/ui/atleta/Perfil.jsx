@@ -14,6 +14,7 @@ import { FilaCobro } from './Cobro.jsx';
 import { FilaFoto } from '../FotoPerfil.jsx';
 import { Carnet } from './Carnet.jsx';
 import { LoTuyo } from './LoTuyo.jsx';
+import { Conexiones } from './Conexiones.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -56,6 +57,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
 
       {/* v0.104: lo que elige para su app (cómo le llamamos, su porqué, sus ejercicios, su música y su cumpleaños) */}
       <LoTuyo />
+      {/* v0.105: Salud del iPhone y el calendario que se actualiza solo */}
+      <Conexiones salud={salud} />
 
       <AjustesDispositivo antes={<SeccionNotificaciones fila />} />
       <AjustesMensajes />

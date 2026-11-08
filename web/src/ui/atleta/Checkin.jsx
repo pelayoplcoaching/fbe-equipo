@@ -9,6 +9,7 @@ import { pregunta, limpiarRespuestas, respuestasNoValidas } from '../../logica/p
 import { vibrar } from '../hapticos.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenPasoCheckin } from '../../logica/imagenes.js';
+import { semanaSalud } from '../../logica/integraciones.js';
 
 // v0.49: las respuestas de una sola opción, en filas grandes (número y frase), fáciles de tocar con el pulgar
 function OpcionesGrandes({ etiqueta, opciones, valor, alCambiar }) {
@@ -68,6 +69,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
   const [verMedidas, setVerMedidas] = useState(false);
   const [verOpcionales, setVerOpcionales] = useState(false);
   const [pasosHabito, setPasosHabito] = useState(null);
+  const [deSalud, setDeSalud] = useState(null);   // (v0.105) lo que llegó de Salud del iPhone esa semana
   const [kcalNutricion, setKcalNutricion] = useState(null);
   const [resp, setResp] = useState({});
   const [guardando, setGuardando] = useState(false);
@@ -114,6 +116,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
     setVerMedidas(!ultima || diasEntre(ultima.fecha, hoyISO()) >= 25);
     setVerOpcionales(!!(c.fc_reposo || c.hrv || c.pasos_media || c.calorias_media));
     setPasosHabito(null);
+    setDeSalud(null);
     setKcalNutricion(null);
     // Si apunta lo que come, la media de kcal de esa semana ya está hecha (solo los días completos)
     if (!c.calorias_media && salud && ver('reloj') && conNut) {
@@ -145,6 +148,30 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
           setPasosHabito({ media, dias: regs.length });
           setVerOpcionales(true);
         } catch { /* sin hábitos: nada que proponer */ }
+      })();
+    }
+    // (v0.105) Si su iPhone manda los datos de Salud: el sueño, el pulso, la HRV y los pasos de esa semana, ya puestos
+    if (salud && !datos.datos.checkin) {
+      (async () => {
+        try {
+          const pedido = lunes;
+          const r = await api.saludDiaria(atleta.id, lunes, sumarDias(lunes, 6));
+          if (!r?.dias?.length || pedido !== lunesActual.current) return;
+          const m = semanaSalud(r.dias, lunes, hoyISO());
+          if (!m.hay) return;
+          const puestos = {};
+          setF((x) => {
+            if (!x) return x;
+            const y = { ...x };
+            if (ver('descanso') && !y.horas_sueno && m.horas_sueno) { y.horas_sueno = m.horas_sueno; puestos.sueno = m.dias_sueno; }
+            if (ver('reloj') && !y.fc_reposo && m.fc_reposo) { y.fc_reposo = m.fc_reposo; puestos.fc = true; }
+            if (ver('reloj') && !y.hrv && m.hrv) { y.hrv = m.hrv; puestos.hrv = true; }
+            if (ver('reloj') && !y.pasos_media && m.pasos_media) { y.pasos_media = m.pasos_media; puestos.pasos = m.dias_pasos; }
+            return y;
+          });
+          setDeSalud({ ...m, puestos });
+          if (m.fc_reposo || m.hrv || m.pasos_media) setVerOpcionales(true);
+        } catch { /* sin la 051 o sin datos: nada que proponer */ }
       })();
     }
   }, [datos.datos]);
@@ -224,7 +251,10 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       ),
     },
     ver('descanso') && { id: 'sueno', titulo: '¿Cuánto duermes por noche?', auto: true, resumen: f.horas_sueno ? `${f.horas_sueno.replace('-', '–')} h` : null,
-      cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Horas de sueño" valor={f.horas_sueno ?? null} opciones={HORAS_SUENO.map((h) => [h, `${h.replace('-', '–')} h`])} alCambiar={(v, ev, t) => { set('horas_sueno')(v); avanzar(v, ev, t); }} /> },
+      cuerpo: (avanzar) => <>
+        <OpcionesGrandes etiqueta="Horas de sueño" valor={f.horas_sueno ?? null} opciones={HORAS_SUENO.map((h) => [h, `${h.replace('-', '–')} h`])} alCambiar={(v, ev, t) => { set('horas_sueno')(v); avanzar(v, ev, t); }} />
+        {deSalud?.puestos?.sueno && f.horas_sueno === deSalud.horas_sueno && <p class="ayuda checkin-salud"><Icono n="pasos" /> Desde Salud del iPhone: de media, {Math.floor(deSalud.sueno_min / 60)} h {String(deSalud.sueno_min % 60).padStart(2, '0')} ({deSalud.puestos.sueno} {deSalud.puestos.sueno === 1 ? 'noche' : 'noches'}).</p>}
+      </> },
     ver('descanso') && { id: 'energia', titulo: '¿Cómo vas de energía?', auto: true, resumen: frase(ESCALAS.energia, f.energia),
       cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Energía (cansancio)" valor={f.energia ?? null} opciones={escala(ESCALAS.energia)} alCambiar={(v, ev, t) => { set('energia')(v); avanzar(v, ev, t); }} /> },
     ver('descanso') && { id: 'recuperacion', titulo: '¿Cómo te recuperas?', auto: true, resumen: frase(ESCALAS.recuperacion, f.recuperacion),
@@ -313,6 +343,8 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
                   <label for={`ck-${k}`}>{t}</label>
                   <Paso id={`ck-${k}`} valor={f[k] ?? null} paso={paso} min={min} max={max} dec={dec} etiqueta={t} alCambiar={set(k)} />
                   {k === 'pasos_media' && pasosHabito && <span class="ayuda">Media de los {pasosHabito.dias} días que apuntaste en tus hábitos.</span>}
+                  {k === 'pasos_media' && !pasosHabito && deSalud?.puestos?.pasos && f.pasos_media === deSalud.pasos_media && <span class="ayuda">Media de {deSalud.puestos.pasos} {deSalud.puestos.pasos === 1 ? 'día' : 'días'}, desde Salud del iPhone.</span>}
+                  {(k === 'fc_reposo' || k === 'hrv') && deSalud?.puestos?.[k === 'fc_reposo' ? 'fc' : 'hrv'] && f[k] === deSalud[k] && <span class="ayuda">Media de la semana, desde Salud del iPhone.</span>}
                   {k === 'calorias_media' && kcalNutricion && <span class="ayuda">Media de los {kcalNutricion.dias} días completos que apuntaste en tu nutrición.</span>}
                 </div>
               ))}

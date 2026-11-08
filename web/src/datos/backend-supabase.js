@@ -1,7 +1,7 @@
 // Backend de producción: Supabase (Auth + PostgREST). Los permisos los impone la base de datos (RLS).
 
 // Tablas cuya clave no es «id» (para ordenar al paginar)
-export const CLAVE_TABLA = { personal_atleta: 'atleta_id', mensajes_coach: 'momento', musica_coach: 'clave', cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id', menu_dias: 'atleta_id,fecha',
+export const CLAVE_TABLA = { personal_atleta: 'atleta_id', mensajes_coach: 'momento', musica_coach: 'clave', integraciones: 'atleta_id', salud_diaria: 'atleta_id,fecha', atajos_coach: 'clave', contacto_atleta: 'atleta_id', cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id', menu_dias: 'atleta_id,fecha',
   comunidad_miembros: 'atleta_id', comunidad_reacciones: 'post_id,autor_id', comunidad_votos: 'post_id,autor_id', comunidad_animos: 'de,para,semana',
   // v0.54 (migración 032): el chat como WhatsApp
   comentario_reacciones: 'comentario_id,usuario_id', comentario_destacados: 'usuario_id,comentario_id', conversacion_estado: 'atleta_id', presencia: 'usuario_id',

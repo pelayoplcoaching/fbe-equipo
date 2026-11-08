@@ -84,10 +84,13 @@ function plegar(linea) {
   out.push(actual);
   return out.join('\r\n');
 }
-export function calendarioICS(eventos, { hora = '18:00', minutos = 60, avisoMin = 30, url = '' } = {}) {
+// (v0.105) Con «nombre» y «refrescoMin», para la suscripción: el nombre del calendario y cada cuánto conviene que lo revise
+export function calendarioICS(eventos, { hora = '18:00', minutos = 60, avisoMin = 30, url = '', nombre = '', refrescoMin = 0 } = {}) {
   const hhmm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}${String(m % 60).padStart(2, '0')}00`;
   const sello = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
   const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FBE Coaching//FBE Equipo//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+  if (nombre) lineas.push(`X-WR-CALNAME:${escapar(nombre)}`, `NAME:${escapar(nombre)}`);
+  if (refrescoMin > 0) lineas.push(`REFRESH-INTERVAL;VALUE=DURATION:PT${Math.round(refrescoMin)}M`, `X-PUBLISHED-TTL:PT${Math.round(refrescoMin)}M`);
   for (const e of eventos) {
     // (v0.72) un evento puede traer su hora, su duración, su título, su sitio y su aviso (los eventos del equipo)
     const [hh, mm] = String(e.hora || hora).split(':').map((x) => Number(x) || 0);
@@ -102,7 +105,8 @@ export function calendarioICS(eventos, { hora = '18:00', minutos = 60, avisoMin 
       `DESCRIPTION:${escapar(e.descripcion || 'Sesión de FBE Equipo.')}`,
       ...(e.lugar ? [`LOCATION:${escapar(e.lugar)}`] : []),
       ...(url ? [`URL:${escapar(url)}`] : []),
-      'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${escapar(e.aviso || `Hoy entrenas: ${e.nombre}`)}`, `TRIGGER:-PT${Math.max(0, e.avisoMin ?? avisoMin)}M`, 'END:VALARM',
+      // (v0.105) avisoMin: null, sin aviso (una sesión ya hecha, en la suscripción)
+      ...(e.avisoMin === null ? [] : ['BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${escapar(e.aviso || `Hoy entrenas: ${e.nombre}`)}`, `TRIGGER:-PT${Math.max(0, e.avisoMin ?? avisoMin)}M`, 'END:VALARM']),
       'END:VEVENT');
   }
   lineas.push('END:VCALENDAR');

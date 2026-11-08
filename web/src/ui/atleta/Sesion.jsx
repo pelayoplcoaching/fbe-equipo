@@ -58,6 +58,7 @@ import { familiaPortada, selloSesion, imagenCelebracion } from '../../logica/ima
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso } from './Personal.jsx';
 import { Cadencia, CancionRecord } from './Musica.jsx';
+import { AnadirASalud } from './Conexiones.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
 import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
@@ -1392,6 +1393,8 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
       )}
       {/* (v0.104) «Hace seis meses…»: el ejercicio de hoy que más ha subido desde entonces */}
       {!cardio && resumen.series > 0 && !resumen.enCola && <div style={{ '--i': 6 }} class="resumen-recuerdo"><RecuerdoProgreso sesionId={sesion.id} /></div>}
+      {/* (v0.105) apuntar el entreno en Salud del iPhone, con su atajo */}
+      <AnadirASalud sesion={sesion} resumen={resumen} />
       {Object.keys(resumen.musculos || {}).length > 0 && (
         <section class="seccion resumen-musculos" style={{ '--i': 7 }}>
           <h2>Músculos de hoy</h2>

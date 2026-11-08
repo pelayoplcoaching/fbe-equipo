@@ -15,6 +15,7 @@ import { leerDatos as leerDatosRendimiento, leerEntorno as leerEntornoRendimient
 import { opcionesEncuesta } from '../logica/encuestas.js';
 import { limpiarPersonal, MOMENTO_VALIDO, LIMITES as LIMITES_PERSONAL, urlMusica } from '../logica/personal.js';
 import { claveValida as claveMusica } from '../logica/musica.js';
+import { URL_ATAJO } from '../logica/integraciones.js';
 import { checklistValido, tempoValido, plantillaValida, videosViejos } from '../logica/tecnica.js';
 import { analisisValido } from '../logica/analisis.js';
 import { recordatorioValido, fraseValida, autoevaluacionValida, MAX_RECORDATORIOS } from '../logica/correccion.js';
@@ -120,7 +121,8 @@ const CASCADA = {
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
     ['comunidad_companeros', 'de_atleta_id'], ['comunidad_companeros', 'para_atleta_id'], ['comunidad_reto_equipos', 'atleta_id'], ['comunidad_evento_asistentes', 'atleta_id'], ['comunidad_destacados', 'atleta_id'], ['tareas', 'atleta_id'], ['conversacion_estado', 'atleta_id'],
     ['conversacion_fijado', 'atleta_id'], ['chat_silencios', 'atleta_id'], ['listas_difusion_miembros', 'atleta_id'], ['encuestas_chat', 'atleta_id'], ['encuesta_votos', 'atleta_id'], ['video_revisiones', 'atleta_id'],
-    ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id'], ['revisiones_semanales', 'atleta_id']],
+    ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id'], ['revisiones_semanales', 'atleta_id'],
+    ['integraciones', 'atleta_id'], ['salud_diaria', 'atleta_id'], ['contacto_atleta', 'atleta_id']],
   // Como la 035: la corrección se va con su vídeo; la lista de puntos clave, con su ejercicio
   archivos: [['video_revisiones', 'archivo_id'], ['video_autoevaluacion', 'archivo_id']],
   ejercicios: [['tecnica_plantillas', 'ejercicio_id'], ['recordatorios_tecnica', 'ejercicio_id'], ['frases_correccion', 'ejercicio_id'], ['videos_modelo', 'ejercicio_id'], ['umbrales_velocidad', 'ejercicio_id']],
@@ -278,6 +280,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     personal_atleta: () => false,
     mensajes_coach: () => false,
     musica_coach: () => false,
+    // (051) las integraciones, solo por sus funciones
+    integraciones: () => false,
+    salud_diaria: () => false,
+    atajos_coach: () => false,
+    contacto_atleta: () => false,
     // Como la 030: los mensajes y avisos programados no los ve el atleta hasta su hora; las tareas, el coach y su atleta
     // (y, como en la base, cada atleta solo ve sus mensajes y los avisos para todos o para él)
     comentarios: (x) => esCoach() || (x.atleta_id === miAtletaId() && (!x.enviar_en || Date.parse(x.enviar_en) <= Date.now())),
@@ -1422,7 +1429,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   }
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
-    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach'].includes(t)) throw sinPermisoTabla(t);
+    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas',
       'comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw sinPermiso();
@@ -2952,6 +2959,100 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'mensajes_coach') {
         if (!esCoach() && !miAtletaId()) return [];
         return tabla('mensajes_coach').map((m) => ({ momento: m.momento, texto: m.texto, actualizado_en: m.actualizado_en })).sort((x, y) => x.momento.localeCompare(y.momento));
+      }
+      // (051) las integraciones: Salud del iPhone y el calendario (en la demo, el enlace no lleva a ninguna parte)
+      const hex64 = () => Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+      const integ = (a) => tabla('integraciones').find((x) => x.atleta_id === a);
+      const integNueva = (a) => { let i = integ(a); if (!i) { i = { atleta_id: a, salud: false, salud_desde: null, salud_ultimo: null, calendario: false, calendario_desde: null, calendario_ultimo: null, cal_hora: '18:00', cal_minutos: 75, cal_aviso: 30 }; tabla('integraciones').push(i); } return i; };
+      const opcionesCal = (i, o) => {
+        if (!o || typeof o !== 'object') return;
+        if ('hora' in o) { if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(o.hora || ''))) throw new Error('Hora no válida (HH:MM)'); i.cal_hora = o.hora; }
+        if (o.minutos != null && o.minutos !== '') { const m = Number(o.minutos); if (!(m >= 15 && m <= 240)) throw new Error('La duración va de 15 a 240 minutos'); i.cal_minutos = m; }
+        if (o.aviso != null && o.aviso !== '') { const v = Number(o.aviso); if (!(v >= 0 && v <= 1440)) throw new Error('El aviso va de 0 a 1440 minutos'); i.cal_aviso = v; }
+      };
+      if (nombre === 'integraciones_mias') {
+        const a = miAtletaId();
+        if (!a) return null;
+        const i = integ(a) || {};
+        return { salud: { activa: !!i.salud, desde: i.salud_desde || null, ultimo: i.salud_ultimo || null },
+          calendario: { activo: !!i.calendario, desde: i.calendario_desde || null, ultimo: i.calendario_ultimo || null, hora: i.cal_hora || '18:00', minutos: i.cal_minutos || 75, aviso: i.cal_aviso ?? 30 },
+          atajos: Object.fromEntries(tabla('atajos_coach').map((x) => [x.clave, x.url])) };
+      }
+      if (nombre === 'integracion_crear') {
+        const a = miAtletaId();
+        if (!a) throw new Error('Solo el atleta conecta lo suyo');
+        const tipo = args?.p_tipo;
+        if (!['salud', 'calendario'].includes(tipo)) throw new Error('Tipo no válido');
+        if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        if (tipo === 'salud' && !consentimientoDe(a)) throw new Error('Para traer datos de Salud hace falta tu consentimiento de datos de salud');
+        const i = integNueva(a);
+        if (tipo === 'salud') { i.salud = true; i.salud_desde = i.salud_desde || ahora(); } else { opcionesCal(i, args?.p_opciones); i.calendario = true; i.calendario_desde = i.calendario_desde || ahora(); }
+        persistirYa();
+        return hex64();
+      }
+      if (nombre === 'calendario_opciones') {
+        const a = miAtletaId();
+        if (!a) throw new Error('Solo el atleta cambia lo suyo');
+        if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        const i = integNueva(a);
+        opcionesCal(i, args?.p_opciones);
+        persistirYa();
+        return { hora: i.cal_hora, minutos: i.cal_minutos, aviso: i.cal_aviso };
+      }
+      if (nombre === 'integracion_quitar') {
+        const a = miAtletaId();
+        if (!a) throw new Error('Solo el atleta desconecta lo suyo');
+        const i = integ(a);
+        if (args?.p_tipo === 'salud') {
+          if (i) Object.assign(i, { salud: false, salud_desde: null, salud_ultimo: null });
+          if (args?.p_borrar) db.salud_diaria = tabla('salud_diaria').filter((x) => x.atleta_id !== a);
+        } else if (args?.p_tipo === 'calendario') {
+          if (i) Object.assign(i, { calendario: false, calendario_desde: null, calendario_ultimo: null });
+        } else throw new Error('Tipo no válido');
+        persistirYa();
+        return null;
+      }
+      if (nombre === 'salud_diaria_de') {
+        const at = args?.p_atleta;
+        if (!at || !(esCoach() || at === miAtletaId())) return { conectada: false, ultimo: null, dias: [] };
+        const hoyM = fMadrid();
+        const desde = args?.p_desde || sumar(hoyM, -13), hasta = args?.p_hasta || sumar(hoyM, 1);
+        const i = integ(at);
+        return { conectada: !!i?.salud, ultimo: i?.salud_ultimo || null,
+          dias: tabla('salud_diaria').filter((x) => x.atleta_id === at && x.fecha >= desde && x.fecha <= hasta).sort((x, y) => y.fecha.localeCompare(x.fecha))
+            .map((x) => ({ fecha: x.fecha, pasos: x.pasos ?? null, sueno_min: x.sueno_min ?? null, fc_reposo: x.fc_reposo ?? null, hrv: x.hrv ?? null, peso_kg: x.peso_kg ?? null })) };
+      }
+      if (nombre === 'salud_recibir' || nombre === 'calendario_de') throw new Error(`permission denied for function ${nombre}`);
+      if (nombre === 'atajos_lista') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        return Object.fromEntries(tabla('atajos_coach').map((x) => [x.clave, x.url]));
+      }
+      if (nombre === 'atajo_guardar') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        const k = args?.p_clave, u = String(args?.p_url ?? '').trim();
+        if (!['salud', 'entreno'].includes(k)) throw new Error('Atajo no válido');
+        if (u && !URL_ATAJO.test(u)) throw new Error('new row for relation "atajos_coach" violates check constraint "atajos_coach_valido"');
+        db.atajos_coach = tabla('atajos_coach').filter((x) => x.clave !== k);
+        if (u) tabla('atajos_coach').push({ clave: k, url: u, actualizado_en: ahora() });
+        persistirYa();
+        return null;
+      }
+      if (nombre === 'contactos') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        return Object.fromEntries(tabla('contacto_atleta').filter((x) => buscar('atletas', x.atleta_id)).map((x) => [x.atleta_id, x.telefono]));
+      }
+      if (nombre === 'contacto_guardar') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        if (!buscar('atletas', args?.p_atleta)) throw new Error('Ese atleta no existe');
+        let t = String(args?.p_telefono ?? '').replace(/[\s().-]/g, '');
+        db.contacto_atleta = tabla('contacto_atleta').filter((x) => x.atleta_id !== args.p_atleta);
+        if (t) {
+          if (t.startsWith('00')) t = `+${t.slice(2)}`;
+          if (!/^\+?\d{6,15}$/.test(t)) throw new Error('Teléfono no válido');
+          tabla('contacto_atleta').push({ atleta_id: args.p_atleta, telefono: t, actualizado_en: ahora() });
+        }
+        persistirYa();
+        return null;
       }
       if (nombre === 'mensaje_coach_guardar') {
         if (!esCoach()) throw new Error('Solo el coach');
