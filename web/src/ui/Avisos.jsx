@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Cargando, usePreferencia } from './comunes.jsx';
 import { hoyISO, desdeISO, instanteMadrid, fmtProgramado, sumarDias, fechaMadrid } from '../logica/fechas.js';
 import { TextoConEnlaces } from './Enlaces.jsx';
+import { LOBO } from './marca-lobo.js';
 import { HojaProgramar } from './Programar.jsx';
 
 const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -22,7 +23,7 @@ export function AvisosCoach() {
     <div class="pila-s">
       {lista.map((a) => (
         <section key={a.id} class="aviso-coach" aria-label="Aviso de tu coach">
-          <Icono n="altavoz" />
+          <img class="aviso-lobo" src={LOBO} alt="" width="36" height="36" aria-hidden="true" />
           <div class="pila-xs">
             <span class="mini aviso-de">De tu coach{a.atleta_id ? ', para ti' : ''}</span>
             <TextoConEnlaces texto={a.texto} />

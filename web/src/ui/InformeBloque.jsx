@@ -157,7 +157,7 @@ export function ListaInformes({ informes, alAbrir, coach = false }) {
                 <strong>{tituloBloque(r.bloque)}</strong>
                 <span class="peq secundario">{r.terminado ? 'Terminado' : 'En curso'}, {r.sesiones.hechas} de {r.sesiones.total} sesiones{r.cumplimiento.series.pct != null ? `, ${r.cumplimiento.series.pct} % de las series` : ''}{r.records.length ? `, ${r.records.length} ${r.records.length === 1 ? 'récord' : 'récords'}` : ''}</span>
               </span>
-              <Icono n="derecha" />
+              <PortadaHistoria tono="bloque peq" />
             </button>
           </li>
         ))}

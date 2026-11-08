@@ -1937,6 +1937,7 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
    un filo de luz arriba; la del ejercicio en curso, en el acento. */
 .picto { background-image: linear-gradient(180deg, color-mix(in srgb, var(--hoja) 55%, transparent), transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--tinta) 5%, transparent); }
 .ejercicio.en-curso .ejercicio-cab .picto { background-image: linear-gradient(180deg, color-mix(in srgb, var(--hoja) 40%, transparent), transparent); }
+.cab-ilu .picto { background-image: none; box-shadow: none; }   /* (sobre la cabecera ilustrada, oscura, de imagenes.css: como estaba) */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .picto { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 0 0 1px rgba(255, 255, 255, .04); } }
 :root[data-theme="dark"] .picto { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 0 0 1px rgba(255, 255, 255, .04); }
 
@@ -2031,3 +2032,112 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .tarjeta-receta { grid-template-columns: 104px minmax(0, 1fr); padding: 0 12px 0 0; overflow: hidden; align-items: stretch; min-height: 92px; }
 .tarjeta-receta > .receta-foto { width: 104px; height: 100%; min-height: 92px; aspect-ratio: auto; border-radius: 0; outline: none; }
 .tarjeta-receta > .tarjeta-receta-texto { align-self: center; padding-block: 12px; }
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   TANDA 28 · La última ronda: lo que más se ve (7/11, noche)
+   ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 124 · Ajustes del perfil con iconos de colores (tanda 28) ────────────────────────────────────────────────────────
+   Como Ajustes del iPhone: en los grupos del perfil, cada icono va en blanco sobre un cuadrado de color sólido, según
+   lo que es (rojo para objetivos, calendario y avisos; añil para el tema y el sueño; azul para lo de ver y leer; verde
+   para mensajes y privacidad; rosa para sonidos y color…). Los de estado (al día, pendiente, alerta) siguen como estaban.
+   Solo en la página del perfil (no en las hojas). El color lo da la clase ico-<nombre> que IcoIos pone a su icono. */
+.contenido > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) { background: linear-gradient(180deg, color-mix(in srgb, var(--io, #8E8E93) 82%, #fff), var(--io, #8E8E93)); color: #fff; box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+.contenido > .grupo-ios .ios-ico svg { stroke-width: 2.1; }
+.ios-ico:has(> .ico-diana, > .ico-semana, > .ico-calendario, > .ico-campana) { --io: #E5484D; }
+.ios-ico:has(> .ico-hoy, > .ico-biblioteca) { --io: #E8730C; }
+.ios-ico:has(> .ico-bascula) { --io: #0E9384; }
+.ios-ico:has(> .ico-mensaje, > .ico-imagen, > .ico-escudo) { --io: #22A04B; }
+.ios-ico:has(> .ico-pregunta, > .ico-letra, > .ico-ojo, > .ico-movil, > .ico-privacidad, > .ico-descargar) { --io: #2E7CF6; }
+.ios-ico:has(> .ico-tema, > .ico-sueno) { --io: #5856D6; }
+.ios-ico:has(> .ico-paleta, > .ico-altavoz) { --io: #E5407F; }
+.ios-ico:has(> .ico-teclado, > .ico-salir) { --io: #7C7C86; }
+@media (forced-colors: active) { .contenido > .grupo-ios .ios-ico { background: Canvas; color: CanvasText; } }
+
+/* ── 125 · La píldora de la barra de abajo, que no se veía (tanda 28) ─────────────────────────────────────────────────
+   La barra tiene desde la v0.49 una píldora que se desliza bajo el icono de la sección elegida (usePildora, comunes.jsx),
+   pero su CSS la dejaba a opacidad 0 y el código, al colocarla, solo quitaba su opacidad en línea: nunca llegaba a
+   verse. Ya medida (data-lista), se ve; sin icono que marcar, el código sigue poniéndole 0 en línea. */
+.tabs-pildora[data-lista] { opacity: 1; }
+
+/* ── 126 · El aviso del coach como un mensaje (tanda 28) ──────────────────────────────────────────────────────────────
+   El aviso de Hoy («De tu coach…») lleva el lobo del coach (Avisos.jsx) y su texto en una burbuja blanca con colita,
+   como sus respuestas (bloque 91). */
+.aviso-coach { grid-template-columns: 36px minmax(0, 1fr) auto; background: color-mix(in srgb, var(--morado) 8%, var(--tiza)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 14%, transparent); }
+.aviso-coach > .aviso-lobo { width: 36px; height: 36px; border-radius: 50%; }
+.aviso-coach > .pila-xs { padding: 9px 12px; border-radius: 4px 16px 16px 16px; background: var(--hoja); box-shadow: var(--sombra-tarjeta, var(--sombra)); }
+
+/* ── 127 · Portadas de historia también en Progreso (tanda 28) ────────────────────────────────────────────────────────
+   «Tus semanas», «Tus meses» y los bloques abren su historia: llevan su portada en pequeño (PortadaHistoria con «peq»,
+   bloque 88) en lugar del ▷ o la flecha. */
+.fila-semana { grid-template-columns: minmax(0, 1fr) 30px; }
+.portada-historia.peq { width: 30px; height: 40px; border-radius: 7px; box-shadow: 0 5px 10px -5px rgba(30, 21, 72, .55), inset 0 0 0 1px rgba(255, 255, 255, .1); }
+.fila-semana .portada-historia.peq svg { width: 16px; height: auto; margin-top: 5px; color: inherit; }
+.portada-historia.peq .ph-barras { top: 3px; left: 3px; right: 3px; gap: 1.5px; }
+.portada-historia.peq .ph-barras i { height: 1.5px; }
+
+/* ── 128 · Hábitos con los colores de la casa (tanda 28) ──────────────────────────────────────────────────────────────
+   Los cuadritos de los últimos 28 días de cada hábito (Progreso, Cuerpo) iban en el color de los discos de prioridad
+   (rojo para la proteína: parecía una alerta). Como los anillos desde la tanda 1: lo cumplido en verde y lo apuntado
+   sin llegar, en morado tenue. */
+.mes-habito i.si { background: var(--ok); }
+.mes-habito i.casi { background: color-mix(in srgb, var(--morado) 32%, transparent); }
+
+/* ── 129 · El nombre de la sesión con brillo (tanda 28) ───────────────────────────────────────────────────────────────
+   El nombre grande de la sesión, en la tarjeta de Hoy y en la portada de la sesión, lleva un degradado de luz de
+   arriba abajo (blanco a lavanda), como un rótulo iluminado. Claro sobre la noche: el contraste no baja de 9:1. */
+.hero-dia .titular h2, .portada-sesion h1 { background: linear-gradient(180deg, #FFFFFF 35%, #D7CCFF); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+@media (forced-colors: active) { .hero-dia .titular h2, .portada-sesion h1 { background: none; -webkit-text-fill-color: currentColor; } }
+
+/* ── 130 · Títulos de pantalla con tinta de degradado (tanda 28) ──────────────────────────────────────────────────────
+   El título grande de cada pantalla va de la tinta a un toque del acento, muy sutil. Sigue muy por encima de 4,5:1. */
+.cabecera-grande .titulo h1 { background: linear-gradient(100deg, var(--tinta) 40%, color-mix(in srgb, var(--morado) 50%, var(--tinta))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+@media (forced-colors: active), (prefers-contrast: more) { .cabecera-grande .titulo h1 { background: none; -webkit-text-fill-color: currentColor; } }
+
+/* ── 131 · La racha con su llama (tanda 28) ───────────────────────────────────────────────────────────────────────────
+   En la tarjeta de Hoy, la llama de «N semanas completas seguidas» va en naranja con un resplandor, encendida. */
+.hero-dia .racha-boton:not(.racha-cero) > svg:first-child { color: #FFB46B; filter: drop-shadow(0 0 5px rgba(255, 140, 60, .65)); }
+
+/* ── 132 · El avatar de arriba con su aro (tanda 28) ──────────────────────────────────────────────────────────────────
+   El avatar de la cabecera de Hoy (el botón del perfil) lleva un aro de degradado de la marca, separado por un filo. */
+.cabecera .btn-avatar { padding: 2.5px; background: conic-gradient(from 210deg, var(--morado), #8F7BFF, #E9C77A, #8F7BFF, var(--morado)); }
+.cabecera .btn-avatar > .avatar { box-shadow: 0 0 0 1.5px var(--tiza); }
+
+/* ── 133 · «Cómo llegas» sin contestar invita (tanda 28) ──────────────────────────────────────────────────────────────
+   En los diales de Hoy, «Cómo llegas» sin contestar tenía su aro gris y un «?» gris: ahora el aro va punteado en el
+   acento y el «?» en un disco suave del acento. */
+.dial[data-estado="sin_respuesta"] .dial-pista { stroke: color-mix(in srgb, var(--morado) 55%, var(--hoja)); stroke-width: 3px; stroke-dasharray: 0.1 6; stroke-linecap: round; }
+.dial[data-estado="sin_respuesta"] .dial-centro svg { color: var(--morado); background: var(--morado-suave); border-radius: 50%; padding: 5px; width: 2rem; height: 2rem; box-sizing: border-box; }
+
+/* ── 134 · «Todo hecho por hoy» como celebración (tanda 28) ───────────────────────────────────────────────────────────
+   Con todo lo de «Tu día» hecho, su línea es una banda verde con el ✓ lleno, que salta al aparecer. */
+.tu-dia-hecho { background: linear-gradient(100deg, color-mix(in srgb, var(--ok) 15%, var(--hoja)), color-mix(in srgb, var(--ok) 4%, var(--hoja))); }
+.tu-dia-hecho .dia-marca { background: var(--ok); color: #fff; box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--ok) 70%, transparent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tu-dia-hecho .dia-marca { color: #0F2A1B; } }
+:root[data-theme="dark"] .tu-dia-hecho .dia-marca { color: #0F2A1B; }
+@media (prefers-reduced-motion: no-preference) { .tu-dia-hecho .dia-marca { animation: dia-hecho .6s var(--curva-rebote) .1s both; } }
+
+/* ── 135 · La barra de calorías con degradado (tanda 28) ──────────────────────────────────────────────────────────────
+   Lo comido se llena con un degradado (claro a la izquierda) en el acento, o en verde si se cumple; la marca del
+   objetivo es una píldora con filo, que se lee sobre la barra llena. */
+.kcal-comido { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, #fff), var(--morado)); }
+.kcal-dia.cumple .kcal-comido { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 55%, #fff), var(--ok)); }
+.kcal-objetivo { width: 5px; margin-left: -2.5px; border-radius: 3px; box-shadow: 0 0 0 2px var(--hoja); }
+
+/* ── 136 · La tira de días de Comidas (tanda 28) ──────────────────────────────────────────────────────────────────────
+   El día elegido va en una píldora llena del acento (era un borde) y los números de los días son más grandes. */
+.dias-menu .punto-dia { font-size: 0.8125rem; width: 26px; height: 26px; }
+.dias-menu button[aria-pressed="true"] { background: var(--morado); border-color: var(--morado); color: var(--sobre-morado); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
+.dias-menu button[aria-pressed="true"] .punto-dia:not(.cumple .punto-dia) { background: color-mix(in srgb, #fff 22%, transparent); border-color: transparent; color: var(--sobre-morado); }
+
+/* ── 137 · Cada comida con su dibujo (tanda 28) ───────────────────────────────────────────────────────────────────────
+   En el menú del día, «Desayuno», «Comida», «Merienda»… llevan su escena pequeña delante (Ilustraciones.jsx: las de
+   la tanda 21), recortada en su tarjeta. (Clase toma-escena: toma-ilu es la cabecera ilustrada del recetario, de
+   imagenes.css.) */
+.toma-cab .etq { display: inline-flex; align-items: center; gap: 10px; }
+.toma-cab .toma-escena { width: 38px; height: 27px; flex: none; border-radius: 8px; background: var(--hoja-2); box-shadow: inset 0 0 0 1px var(--linea); }
+
+/* ── 138 · Las gráficas con sombra de color (tanda 28) ────────────────────────────────────────────────────────────────
+   La línea de las gráficas de fuerza y de peso deja un resplandor suave del acento debajo, como en las apps de salud. */
+.grafica path.linea { filter: drop-shadow(0 5px 5px color-mix(in srgb, var(--morado) 35%, transparent)); }
+@media (forced-colors: active) { .grafica path.linea { filter: none; } }
