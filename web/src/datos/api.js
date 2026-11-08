@@ -6,6 +6,7 @@ import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjer
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { progresoObjetivo, mejorReciente } from '../logica/objetivos.js';
+import { limpiarPersonal, MOMENTO_VALIDO, LIMITES } from '../logica/personal.js';
 import { resumenHabito, cumplimientoHabitos } from '../logica/habitos.js';
 import { progresarPauta, opcionesDe } from '../logica/progresion.js';
 import { resumenCobros, cobradoEnMes, sumarMeses } from '../logica/cobros.js';
@@ -122,6 +123,11 @@ const falta031 = (e) => {
 };
 // (pulido 3) Sin la migración 048 (las listas ligeras), la app lo pide como antes: no es un error
 // (pulido 4, migración 049) ¿El error es que la base aún no tiene las funciones del rendimiento?
+// (050) sin la migración de la personalización, no hay nada de eso (y no se rompe nada)
+const falta050 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
+  return /personal_(mio|guardar|atletas)|mensajes?_coach/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
+};
 const falta049 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
   return /rendimiento_(apuntar|resumen|borrar)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
@@ -375,7 +381,7 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
-  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella', 'rendimiento_apuntar', 'rendimiento_resumen']);
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella', 'rendimiento_apuntar', 'rendimiento_resumen', 'personal_mio', 'personal_atletas', 'mensajes_coach']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -383,6 +389,7 @@ const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0]
 export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
   let generacion = 0;
+  let personalMemo = null, mensajesMemo = null;  // (050) lo de personal_mio y mensajes_coach, un minuto
   let olvidarFotos = () => {};   // (se define más abajo, con el recuerdo de las fotos de perfil)
   const b = Object.create(backend);
   // Notificaciones: después de algo que avisa a otra persona (un comentario, un aviso, un check-in, una semana
@@ -747,6 +754,45 @@ export function crearApi(backend) {
       try { return (await b.rpc('rendimiento_resumen', { p_dias: dias })) || []; } catch (e) { if (falta049(e)) return null; throw e; }
     },
     async borrarRendimiento() { return b.rpc('rendimiento_borrar'); },
+    // ------------------------------------------------------------ personalización (v0.104, migración 050)
+    // Lo que el atleta elige (apodo, porqué, sus tres ejercicios, su música y su cumpleaños): null si no hay nada;
+    // undefined sin la 050 (así «Lo tuyo» no sale). Se recuerda un minuto por cuenta (lo piden la bienvenida, la portada y Progreso).
+    async personal() {
+      const k = uid();
+      if (personalMemo && personalMemo.k === k && Date.now() - personalMemo.t < 60000) return personalMemo.p;
+      const p = b.rpc('personal_mio', {}).then((r) => r || null).catch((e) => { if (falta050(e)) return undefined; throw e; });
+      personalMemo = { k, t: Date.now(), p };
+      p.catch(() => { if (personalMemo?.p === p) personalMemo = null; });
+      return p;
+    },
+    async guardarPersonal(datos) {
+      const limpio = limpiarPersonal(datos);
+      try {
+        const r = await b.rpc('personal_guardar', { p_datos: limpio });
+        personalMemo = { k: uid(), t: Date.now(), p: Promise.resolve(r || null) };
+        return r || null;
+      } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app'); throw e; }
+    },
+    // Lo de cada atleta, para el coach ([{ atleta_id, apodo, porque, favoritos, musica_url, cumple_mes, cumple_dia }])
+    async personalAtletas() {
+      try { return (await b.rpc('personal_atletas', {})) || []; } catch (e) { if (falta050(e)) return []; throw e; }
+    },
+    // Los mensajes del coach para cada momento ([{ momento, texto }]); se recuerdan un minuto
+    async mensajesCoach() {
+      const k = uid();
+      if (mensajesMemo && mensajesMemo.k === k && Date.now() - mensajesMemo.t < 60000) return mensajesMemo.p;
+      const p = b.rpc('mensajes_coach', {}).then((r) => (Array.isArray(r) ? r : [])).catch((e) => { if (falta050(e)) return []; throw e; });
+      mensajesMemo = { k, t: Date.now(), p };
+      p.catch(() => { if (mensajesMemo?.p === p) mensajesMemo = null; });
+      return p;
+    },
+    async guardarMensajeCoach(momento, texto) {
+      if (!MOMENTO_VALIDO.has(momento)) throw new Error('Momento no válido');
+      const t = String(texto ?? '').trim();
+      if (t.length > LIMITES.mensaje) throw new Error(`Como mucho ${LIMITES.mensaje} caracteres`);
+      try { await b.rpc('mensaje_coach_guardar', { p_momento: momento, p_texto: t }); } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e; }
+      mensajesMemo = null;
+    },
     // La foto del coach, para el chat del atleta (la base solo deja ver eso del perfil del coach)
     // v0.55: el nombre corto del coach («Info del contacto» del atleta); sin la 033, null
     async nombreCoach() {
@@ -4301,6 +4347,8 @@ export function crearApi(backend) {
       out.comentarios = out.comentarios.filter((c) => !programado(c));
       out.avisos = out.avisos.filter((a) => !programado(a));
       out.tareas = await b.select('tareas', { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)
+      out.personal = (await api.personal().catch(() => null)) ?? ((await api.personalAtletas().catch(() => [])).find((x) => x.atleta_id === atletaId) || null);
       // (v0.57) la corrección de sus vídeos de técnica (con días, como la ve en la app; sin la 035, ninguna)
       const vids = out.archivos.filter((a) => a.tipo === 'video_tecnica').map((a) => a.id);
       out.video_correcciones = vids.length && await api.video035().catch(() => false) ? await api.correccionesDe(vids).catch(() => []) : [];

@@ -35,6 +35,7 @@ import { CompararCheckins } from './CompararCheckins.jsx';
 import { ChispaPeso } from './Panel.jsx';
 import { estadoAtleta, NOMBRE_ESTADO } from '../../logica/visual.js';
 import { ordenReal } from '../../logica/orden-sesion.js';
+import { LoSuyo } from './PersonalCoach.jsx';
 
 // Las de entrenamiento, fuera a quien solo le llevas la nutrición (v0.26); Nutrición, a quien solo el entrenamiento
 const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
@@ -94,7 +95,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           {pest === 'seguimiento' && <Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} />}
           {pest === 'nutricion' && (conNutricion(a) ? <NutricionFicha atleta={a} /> : <SinNutricion irADatos={() => setPest('datos')} />)}
           {pest === 'videos' && <><MiTecnica atletaId={a.id} nombreAtleta={a.nombre} esCoach /><Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} /></>}
-          {pest === 'objetivos' && <Objetivos atleta={a} />}
+          {pest === 'objetivos' && <><LoSuyo atletaId={a.id} /><Objetivos atleta={a} /></>}
           {pest === 'cobros' && <CobrosAtleta atleta={a} />}
           {pest === 'notas' && <Notas atleta={a} notas={ficha.datos.notas} recargar={() => ficha.recargar(true)} />}
           {pest === 'datos' && <Datos atleta={a} recargar={() => ficha.recargar(true)} alBorrar={alVolver} invitar={() => setInvitar(true)} alCambiar={alCambiar} />}

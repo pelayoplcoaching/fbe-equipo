@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { fechaMadrid } from '../logica/fechas.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
-import { Icono, CifraSube } from './comunes.jsx';
+import { Icono, CifraSube, useApp, useCarga } from './comunes.jsx';
+import { esCumple, porqueParaHoy, momentoBienvenida, textoMensajeCoach, mensajeDe } from '../logica/personal.js';
 import { tocaBienvenida, mensajeBienvenida } from '../logica/bienvenida.js';
 import { Imagen } from './Imagen.jsx';
 import { imagenBienvenida } from '../logica/imagenes.js';
@@ -104,6 +105,19 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
   useEffect(() => { const t = setTimeout(() => setEsperaLarga(true), 4000); return () => clearTimeout(t); }, []);
   const listo = rol === 'coach' || !!datos || esperaLarga;
   const m = mensajeBienvenida({ rol, nombre, hoy: fechaMadrid(), record: atletaId ? leerRecord(atletaId) : null, ...(datos || {}) });
+  // (v0.104) lo suyo: cómo quiere que le llamemos, su cumpleaños, su porqué (al volver tras unos días) y lo que su coach
+  // dejó escrito para la vuelta o el cumpleaños. Sin nada de eso (o sin la 050), la de siempre.
+  const { api } = useApp() || {};
+  const conPersonal = rol === 'atleta' && !!atletaId && !!api;
+  const extra = useCarga(() => (conPersonal ? Promise.all([api.personal().catch(() => null), api.mensajesCoach().catch(() => [])]) : Promise.resolve([null, []])), [atletaId, conPersonal]);
+  const [personal, mensajesCoach] = extra.datos || [null, []];
+  const hoyM = fechaMadrid();
+  const cumple = esCumple(personal, hoyM);
+  const nombreVisible = personal?.apodo || m.nombre;
+  const saludo = cumple ? '¡Feliz cumpleaños,' : m.saludo;
+  const porque = listo ? porqueParaHoy({ porque: personal?.porque, ultimoDia: datos?.ultimoDia, hoy: hoyM, haceMucho: !!datos?.haceMucho }) : null;
+  const momento = listo ? momentoBienvenida({ cumple, ultimoDia: datos?.ultimoDia, hoy: hoyM, haceMucho: !!datos?.haceMucho }) : null;
+  const delCoach = momento ? textoMensajeCoach(mensajeDe(mensajesCoach, momento), { nombre: nombreVisible }) : null;
   const conPanel = listo && !!panel && (panel.cifras?.length > 0 || !!panel.sesion);
   // En una pantalla baja el cuerpo se desliza (con «Empezar» siempre a la vista): entonces tiene que poder recibir el
   // foco, para deslizarlo con el teclado
@@ -134,8 +148,10 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
           <span class="bdia-marca"><svg viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path fill-rule="evenodd" d={LOBO_D} /></svg>FBE Equipo</span>
           <span class="bdia-fecha">{fechaCorta()}</span>
         </div>
-        <h1 id="bdia-titulo"><span class="bdia-saludo">{m.saludo}</span> <span class="bdia-nombre">{m.nombre}</span></h1>
+        <h1 id="bdia-titulo"><span class="bdia-saludo">{saludo}</span> <span class="bdia-nombre">{nombreVisible}</span></h1>
         <p id="bdia-mensaje" class="bdia-mensaje" aria-live="polite">{listo ? m.mensaje : 'Preparando tu día…'}</p>
+        {delCoach && <p class="bdia-coach"><span class="bdia-sobre">Tu coach</span>{delCoach}</p>}
+        {porque && <p class="bdia-porque"><span class="bdia-sobre">Tu porqué</span>«{porque}»</p>}
         {/* (con el panel, la racha y lo que toca ya van en él: el detalle sobraría) */}
         {listo && !conPanel && m.detalle && <p class="bdia-detalle">{m.detalle}</p>}
         {conPanel && <Tablero panel={panel} />}

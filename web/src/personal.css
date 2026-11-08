@@ -1,0 +1,88 @@
+/* =====================================================================================================================
+   Personalización (v0.104). Lo nuevo reutiliza piezas de la casa (la cita del coach, los paneles, las historias); aquí
+   solo lo que cambia:
+   1. El mensaje del coach (la cita con su foto) donde no había: el resumen de la sesión, el informe del bloque y, sobre
+      la noche, el hito de la racha.
+   2. La portada de la sesión: el récord al alcance (con el dorado de los récords) y el botón de su música.
+   3. El resumen: «Hace seis meses…», antes → hoy.
+   4. Progreso: la cifra de su objetivo y sus tres ejercicios.
+   5. La bienvenida del día: lo de su coach y su porqué.
+   6. «Tu año»: las barras de los meses.
+   7. El coach: los cumpleaños de hoy y «Lo suyo» en la ficha.
+   ===================================================================================================================== */
+
+/* 1 · El mensaje del coach */
+.mensaje-coach { margin-top: 12px; }
+.resumen-records .mensaje-coach { margin-top: 14px; }
+.mensaje-coach.mensaje-oscuro { background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); color: #F6F2FF; text-align: left; width: 100%; }
+.mensaje-coach.mensaje-oscuro figcaption { color: #CFC8F5; }
+.mensaje-coach.mensaje-oscuro .avatar, .mensaje-coach.mensaje-oscuro .avatar-coach { box-shadow: 0 0 0 2px #140F24, 0 0 0 4px #FFB057; }
+.mensaje-coach.mensaje-oscuro::before { color: #FFB057; }
+.mensaje-coach.muestra { grid-template-columns: minmax(0, 1fr); }
+
+/* 2 · La portada: récord al alcance y su música */
+.record-alcance { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 12px; align-items: start;
+  background: linear-gradient(135deg, color-mix(in srgb, #E9D49A 22%, var(--hoja)) 0%, var(--hoja) 70%); }
+.record-alcance-ico { width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; background: #E9D49A; color: #2A2154; }
+.record-alcance-ico svg { width: 20px; height: 20px; stroke-width: 2.2; }
+.record-alcance strong { font-size: 1rem; }
+.record-alcance-lista { list-style: none; margin: 2px 0 4px; padding: 0; display: grid; gap: 4px; }
+.record-alcance-lista b { font-weight: 780; }
+.boton-musica { justify-content: center; gap: 8px; margin-bottom: 4px; }
+.boton-musica svg { width: 18px; height: 18px; }
+
+/* 3 · «Hace seis meses…» */
+.resumen-recuerdo { display: grid; }
+.recuerdo-progreso { display: grid; gap: 6px; }
+.recuerdo-linea { margin: 0; font-size: 1.0625rem; }
+.recuerdo-cifras { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.recuerdo-cifras > svg { width: 18px; height: 18px; color: var(--tinta-3); }
+.recuerdo-antes, .recuerdo-hoy { display: grid; gap: 1px; }
+.recuerdo-antes .num { font-size: 1.125rem; color: var(--tinta-2); font-weight: 650; }
+.recuerdo-hoy .num { font-size: 1.375rem; font-weight: 800; color: var(--morado); font-stretch: var(--ancho-titulo, 112%); }
+.recuerdo-hoy .mini { color: var(--morado); font-weight: 700; }
+
+/* 4 · Progreso: la cifra de su objetivo y sus ejercicios */
+.cifra-objetivo { display: grid; gap: 4px; justify-items: start; }
+.cifra-objetivo-v { margin: 2px 0; font-size: 2.25rem; line-height: 1.05; font-weight: 800; font-stretch: var(--ancho-titulo, 112%); }
+.cifra-objetivo-v small { font-size: 1rem; font-weight: 650; color: var(--tinta-2); }
+.cifra-objetivo-cambio svg { width: 14px; height: 14px; }
+.tus-ejercicios-rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 10px; }
+.tu-ejercicio { display: grid; gap: 2px; align-content: start; }
+.tu-ejercicio-nombre { font-weight: 650; color: var(--tinta); line-height: 1.25; }
+.tu-ejercicio-v { font-size: 1.625rem; font-weight: 800; font-stretch: var(--ancho-titulo, 112%); line-height: 1.1; margin-top: 4px; }
+.tu-ejercicio-v small { font-size: .875rem; font-weight: 650; color: var(--tinta-2); }
+.ok-texto { color: var(--ok); font-weight: 650; }
+
+/* 5 · La bienvenida del día */
+.bdia-coach, .bdia-porque { margin: 14px 0 0; display: grid; gap: 4px; max-width: 30ch; font-size: 1rem; line-height: 1.45; color: var(--bv-tinta-2, #CFC8F5); text-wrap: pretty; }
+.bdia-coach { padding: 10px 12px; border-radius: 14px; background: var(--bv-tarjeta, rgba(255, 255, 255, .07)); box-shadow: inset 0 0 0 1px var(--bv-filo, rgba(255, 255, 255, .1)); color: var(--bv-tinta, #fff); }
+.bdia-porque { font-style: italic; }
+.bdia-porque .bdia-sobre { font-style: normal; }
+
+/* 6 · «Tu año»: las barras de los meses */
+.anio-barras { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; align-items: end; height: 9rem; width: 100%; max-width: 26rem; margin-top: 8px; }
+.anio-barras span { display: grid; grid-template-rows: minmax(0, 1fr) auto; height: 100%; gap: 4px; }
+.anio-barras i { align-self: end; height: max(4px, var(--h)); border-radius: 6px 6px 3px 3px; background: rgba(255, 255, 255, .18); }
+.anio-barras span.si i { background: linear-gradient(180deg, #B9A9FF, #7C64F0); }
+.anio-barras b { font-size: .6875rem; font-weight: 700; text-align: center; color: rgba(255, 255, 255, .6); }
+.fila-anio { grid-template-columns: minmax(0, 1fr) auto; }
+
+/* 7 · El coach */
+.cumples-hoy { display: flex; gap: 10px; align-items: flex-start; }
+.cumples-hoy > svg { flex: none; width: 20px; height: 20px; color: #C9A13B; margin-top: 1px; }
+.lo-suyo-porque { margin: 0; display: grid; gap: 4px; font-size: 1.0625rem; line-height: 1.4; font-style: italic; }
+.lo-suyo-porque .t-sobre { font-style: normal; }
+.lo-suyo-datos { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; font-size: .9375rem; }
+.lo-suyo-datos dt { color: var(--tinta-2); }
+.lo-suyo-datos dd { margin: 0; font-weight: 650; }
+.mensajes-automaticos .fila-boton { grid-template-columns: minmax(0, 1fr) auto; padding: 12px 14px; }
+.mensajes-automaticos .fila-boton > svg { width: 18px; height: 18px; color: var(--tinta-3); }
+.mensajes-automaticos .fila-ios-texto { display: grid; gap: 2px; }
+.mensajes-automaticos .fila-ios-texto .peq { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+@media (forced-colors: active) { .record-alcance-ico, .anio-barras i { forced-color-adjust: none; } }
+
+/* «Lo tuyo»: la lista de ejercicios sin el marco del fieldset */
+.lo-tuyo-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.lo-tuyo-form fieldset .ayuda { font-size: .8125rem; }

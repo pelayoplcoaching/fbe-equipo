@@ -7,6 +7,7 @@ import { RESPUESTAS_EJEMPLO } from './respuestas.js';
 import { sembrarComidas } from './semilla-comidas.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
 import { VERSION_LEGAL } from '../legal.js';
+import { MOMENTOS_COACH } from '../logica/personal.js';
 
 const uuid = () => crypto.randomUUID();
 
@@ -613,6 +614,9 @@ export function semillaDemo(hoy = hoyISO()) {
   sembrarMicrociclos();
   // v0.56: todos han visto ya el aviso de la política actual (en la demo no sale al entrar; las pruebas lo quitan)
   db.privacidad_vista = db.perfiles.map((x) => ({ usuario_id: x.id, version: VERSION_LEGAL, vista_en: ahoraISO }));
+  // (v0.104, 050) los mensajes del coach para los momentos importantes: en la demo, los de ejemplo
+  db.mensajes_coach = MOMENTOS_COACH.map(([momento, , texto]) => ({ momento, texto, actualizado_en: new Date().toISOString() }));
+  db.personal_atleta = [];
   return db;
 
   // v0.53 (al final: no cambia lo aleatorio de lo anterior): Iván va por microciclos de 4 sesiones (torso-pierna A y B)
