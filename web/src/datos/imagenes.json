@@ -1,4 +1,136 @@
 {
+  "celebra-bloque": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/celebra/celebra-bloque-256.a9a7c28a.webp",
+      "512": "imagenes/celebra/celebra-bloque-512.ccb5d65b.webp",
+      "1080": "imagenes/celebra/celebra-bloque-1080.886738c5.webp"
+    }
+  },
+  "celebra-primera": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/celebra/celebra-primera-256.2b9fd627.webp",
+      "512": "imagenes/celebra/celebra-primera-512.513cb098.webp",
+      "1080": "imagenes/celebra/celebra-primera-1080.4514770b.webp"
+    }
+  },
+  "celebra-racha": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/celebra/celebra-racha-256.c2975222.webp",
+      "512": "imagenes/celebra/celebra-racha-512.2d252350.webp",
+      "1080": "imagenes/celebra/celebra-racha-1080.0b1d1756.webp"
+    }
+  },
+  "celebra-record": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/celebra/celebra-record-256.c4e40074.webp",
+      "512": "imagenes/celebra/celebra-record-512.4c3af1cb.webp",
+      "1080": "imagenes/celebra/celebra-record-1080.b7f81f3f.webp"
+    }
+  },
+  "celebra-semana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/celebra/celebra-semana-256.f41558c8.webp",
+      "512": "imagenes/celebra/celebra-semana-512.97c30903.webp",
+      "1080": "imagenes/celebra/celebra-semana-1080.66b1fe32.webp"
+    }
+  },
+  "checkin-alimentacion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-alimentacion-480.a128bada.webp",
+      "720": "imagenes/checkin/checkin-alimentacion-720.ae90069e.webp",
+      "1080": "imagenes/checkin/checkin-alimentacion-1080.9b68a9ce.webp"
+    }
+  },
+  "checkin-animo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-animo-480.841a70de.webp",
+      "720": "imagenes/checkin/checkin-animo-720.e1d56d81.webp",
+      "1080": "imagenes/checkin/checkin-animo-1080.c835e0f5.webp"
+    }
+  },
+  "checkin-descanso": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-descanso-480.1854817b.webp",
+      "720": "imagenes/checkin/checkin-descanso-720.b27c77a6.webp",
+      "1080": "imagenes/checkin/checkin-descanso-1080.7c63d3a6.webp"
+    }
+  },
+  "checkin-enviado": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-enviado-480.e58f0b85.webp",
+      "720": "imagenes/checkin/checkin-enviado-720.633fa2d3.webp",
+      "1080": "imagenes/checkin/checkin-enviado-1080.fb63b461.webp"
+    }
+  },
+  "checkin-inicio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-inicio-480.bc999591.webp",
+      "720": "imagenes/checkin/checkin-inicio-720.8ce472f2.webp",
+      "1080": "imagenes/checkin/checkin-inicio-1080.f592d50a.webp"
+    }
+  },
+  "checkin-medidas": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-medidas-480.937d8330.webp",
+      "720": "imagenes/checkin/checkin-medidas-720.e4efc8eb.webp",
+      "1080": "imagenes/checkin/checkin-medidas-1080.18ea78a6.webp"
+    }
+  },
+  "checkin-molestias": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-molestias-480.02b745e2.webp",
+      "720": "imagenes/checkin/checkin-molestias-720.557db827.webp",
+      "1080": "imagenes/checkin/checkin-molestias-1080.3922d01c.webp"
+    }
+  },
   "comida-cena": {
     "proporcion": [
       4,

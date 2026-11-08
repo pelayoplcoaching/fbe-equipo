@@ -7,6 +7,8 @@ import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { conNutricion } from '../../logica/nivel.js';
 import { pregunta, limpiarRespuestas, respuestasNoValidas } from '../../logica/preguntas.js';
 import { vibrar } from '../hapticos.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenPasoCheckin } from '../../logica/imagenes.js';
 
 // v0.49: las respuestas de una sola opción, en filas grandes (número y frase), fáciles de tocar con el pulgar
 function OpcionesGrandes({ etiqueta, opciones, valor, alCambiar }) {
@@ -389,12 +391,14 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
 
       {!enRevision ? (
         <section class="ck-paso panel panel-pad pila" key={actual.id} aria-labelledby="ck-titulo">
+          {hayImagen(imagenPasoCheckin(actual.id)) && <Imagen id={imagenPasoCheckin(actual.id)} clase="ck-ilu" tamanos="(min-width: 720px) 640px, 100vw" />}
           {actual.deCoach && <span class="mini terciario ck-de-coach"><Icono n="mensaje" /> Pregunta de tu coach</span>}
           <h2 id="ck-titulo" tabIndex={-1} ref={tituloRef}>{actual.titulo}</h2>
           {actual.cuerpo(avanzarSolo)}
         </section>
       ) : (
         <section class="ck-paso pila" key="revision" aria-labelledby="ck-titulo">
+          {hayImagen(imagenPasoCheckin(null, { revision: true, enviado: yaEnviado })) && <Imagen id={imagenPasoCheckin(null, { revision: true, enviado: yaEnviado })} clase="ck-ilu ck-ilu-suelta" tamanos="(min-width: 720px) 640px, 100vw" />}
           <h2 id="ck-titulo" tabIndex={-1} ref={tituloRef}>{yaEnviado ? 'Tus respuestas' : 'Repasa y envía'}</h2>
           <div class="panel">
             <ul class="lista ck-repaso">

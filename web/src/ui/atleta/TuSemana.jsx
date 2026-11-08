@@ -4,6 +4,8 @@ import { MapaMuscular } from '../MapaMuscular.jsx';
 import { num, signo, textoSerie, NOMBRE_GRUPO } from '../../logica/calculos.js';
 import { desdeISO } from '../../logica/fechas.js';
 import { ajuste } from '../ajustes.js';
+import { Imagen } from '../Imagen.jsx';
+import { imagenCelebracion } from '../../logica/imagenes.js';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 export function rangoLargo(lunes, domingo) {
@@ -43,7 +45,8 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
     { id: 'portada', render: () => (
       <>
         <span class="historia-etq">Tu semana {rangoLargo(r.lunes, r.domingo)}</span>
-        <div class="historia-anillo"><Anillo hechas={r.sesiones.hechas} total={r.sesiones.total || r.sesiones.hechas || 1} tam={150} /></div>
+        {/* (imágenes) semana completa: el anillo verde de la casa, de halo detrás del suyo */}
+        <div class={`historia-anillo ${r.sesiones.completa ? 'con-halo' : ''}`}>{r.sesiones.completa && <Imagen id={imagenCelebracion('semana')} clase="historia-halo" tamanos="320px" />}<Anillo hechas={r.sesiones.hechas} total={r.sesiones.total || r.sesiones.hechas || 1} tam={150} /></div>
         <h2>{r.sesiones.completa ? 'Semana completa' : `${r.sesiones.hechas} de ${r.sesiones.total} sesiones`}</h2>
         {r.racha > 0 && <p class="historia-racha"><Icono n="llama" />{r.racha === 1 ? '1 semana completa' : `${r.racha} semanas completas seguidas`}</p>}
       </>

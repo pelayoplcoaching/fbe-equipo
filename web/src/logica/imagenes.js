@@ -86,6 +86,31 @@ export function imagenMes(mes) {
   return m && Number(m[1]) >= 1 && Number(m[1]) <= 12 ? `mes-${m[1]}` : null;
 }
 
+// ---------- El check-in ----------
+// Una franja por apartado del paso que se está contestando (molestias: la bolsa de frío, la cinta y la venda); el repaso,
+// la de inicio; las respuestas ya enviadas, el avión de papel.
+const CHECKIN_DE = {
+  peso: 'medidas', medidas: 'medidas',
+  sueno: 'descanso', energia: 'descanso', recuperacion: 'descanso',
+  motivacion: 'animo', molestias: 'molestias',
+  adherencia: 'alimentacion', saciedad: 'alimentacion', satisfaccion: 'alimentacion',
+  reloj: 'inicio', notas: 'inicio',
+};
+export function imagenPasoCheckin(paso, { revision = false, enviado = false } = {}) {
+  if (revision) return enviado ? 'checkin-enviado' : 'checkin-inicio';
+  const id = String(paso || '');
+  if (id.startsWith('p-')) return 'checkin-inicio'; // las preguntas de su coach
+  return CHECKIN_DE[id] ? `checkin-${CHECKIN_DE[id]}` : null;
+}
+
+// ---------- Las celebraciones ----------
+export const CELEBRACIONES = ['record', 'semana', 'bloque', 'primera', 'racha'];
+export function imagenCelebracion(que) { return CELEBRACIONES.includes(que) ? `celebra-${que}` : null; }
+// El sello del resumen de una sesión: récord si lo ha habido; si no, la primera vez que hace esa sesión; si no, nada
+export function selloSesion({ records = 0, primera = false } = {}) {
+  return records > 0 ? 'celebra-record' : primera ? 'celebra-primera' : null;
+}
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.

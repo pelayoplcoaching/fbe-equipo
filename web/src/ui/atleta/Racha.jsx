@@ -7,6 +7,8 @@ import { Capa, Icono, useAtraparFoco, usePreferencia } from '../comunes.jsx';
 import { calendarioRacha, proximoHito, hitoPorCelebrar, marcarHitos, NOMBRE_ESTADO_SEMANA, textoSemanas } from '../../logica/racha.js';
 import { fmtCorta, hoyISO } from '../../logica/fechas.js';
 import { lanzarConfeti } from '../confeti.js';
+import { Imagen } from '../Imagen.jsx';
+import { imagenCelebracion } from '../../logica/imagenes.js';
 
 // La llama: tres capas que titilan a destiempo (transform desde la base). Sus colores son el fuego, no el tema.
 export function Llama({ clase = '' }) {
@@ -110,6 +112,8 @@ function HitoRachaDentro({ hito, alCerrar }) {
   useEffect(() => { const t = setTimeout(() => lanzarConfeti({ vibracion: 'record' }), 250); return () => clearTimeout(t); }, []);
   return (
     <div class="hito-pantalla" role="dialog" aria-modal="true" aria-labelledby="hito-titulo" aria-describedby="hito-texto" ref={ref} tabIndex={-1}>
+      {/* (imágenes) la hoguera, abajo, fundida con el fondo */}
+      <Imagen id={imagenCelebracion('racha')} clase="hito-fondo" tamanos="100vw" prioridad />
       <div class="hito-cuerpo">
         <div class="hito-fuego"><Llama /><span class="hito-num marcador" aria-hidden="true">{hito}</span></div>
         <p class="t-sobre hito-sobre">Nuevo hito</p>

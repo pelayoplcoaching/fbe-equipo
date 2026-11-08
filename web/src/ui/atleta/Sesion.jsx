@@ -53,8 +53,8 @@ import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, s
 import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
 import { resumenPautas } from '../../logica/diseno.js';
 import { Portada, ArteSesion } from './Portada.jsx';
-import { familiaPortada } from '../../logica/imagenes.js';
-import { Imagen } from '../Imagen.jsx';
+import { familiaPortada, selloSesion, imagenCelebracion } from '../../logica/imagenes.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
 import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
@@ -1330,6 +1330,9 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
     { k: 'tonelaje', v: num(Math.round(resumen.tonelaje / 10) / 100, 1), u: 't', t: 'Tonelaje' },
   ];
   const nRecords = resumen.records.length;
+  // (imágenes) el sello: la copa si hay récord; el farol la primera vez que hace esta sesión (lo mismo que dice abajo)
+  const primera = !cardio && resumen.series > 0 && !resumen.enCola && !anteriores.cargando && !!anteriores.datos && !comparacion;
+  const sello = selloSesion({ records: nRecords, primera });
   return (
     <div class="contenido resumen-sesion">
       <section class={`resumen-hero ${nRecords ? 'con-record' : ''}`} aria-labelledby="resumen-titulo" style={{ '--i': 0 }}>
@@ -1337,7 +1340,9 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
         {/* (imágenes) la ilustración de la sesión, la misma de su portada; si no se puede, el dibujo */}
         {sesion?.nombre && <Imagen key={familia} id={familia ? `sesion-${familia}` : null} clase="hero-arte hero-foto" tamanos="(min-width: 600px) 420px, 70vw"
           alternativa={<ArteSesion nombre={sesion.nombre} tipo={sesion.tipo || (cardio ? 'cardio' : 'fuerza')} patron={null} clase="hero-arte" />} />}
-        <span class="resumen-medalla" aria-hidden="true"><Icono n={nRecords ? 'trofeo' : 'hecho'} /></span>
+        <span class={`resumen-medalla ${hayImagen(sello) ? 'con-ilu' : ''}`} aria-hidden="true">
+          <Imagen key={sello} id={sello} clase="resumen-medalla-img" tamanos="72px" alternativa={<Icono n={nRecords ? 'trofeo' : 'hecho'} />} />
+        </span>
         <div class="pila-xs">
           <h1 id="resumen-titulo">Sesión terminada</h1>
           <p class="resumen-sub">{sesion.nombre}{resumen.tarjeta?.fecha ? ` · ${fmtCorta(resumen.tarjeta.fecha)}` : ''}</p>

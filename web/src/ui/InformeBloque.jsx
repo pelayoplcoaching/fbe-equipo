@@ -4,7 +4,7 @@ import { MapaMuscular } from './MapaMuscular.jsx';
 import { HojaCompartir } from './Compartir.jsx';
 import { rangoLargo } from './atleta/TuSemana.jsx';
 import { num, signo, NOMBRE_FOCO } from '../logica/calculos.js';
-import { imagenMes } from '../logica/imagenes.js';
+import { imagenMes, imagenCelebracion } from '../logica/imagenes.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
 
 // Informe de un bloque: lo que se hizo de lo pautado, cómo subió la fuerza estimada de los ejercicios
@@ -65,14 +65,16 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
     mejores: r.principales.filter((p) => p.cambio != null).map((p) => ({ nombre: p.nombre, serie: `${signo(p.cambio, 1)} %` })),
     series: r.series, tonelaje: r.tonelaje, minutos: r.minutos,
   };
+  // (imágenes) terminado, la cumbre; en curso, el paisaje del mes en que acaba
+  const ilu = r.terminado ? imagenCelebracion('bloque') : imagenMes(r.fin);
   return (
     <Hoja titulo={tituloBloque(r.bloque)} alCerrar={alCerrar} ancho={760}>
       <div class="informe">
-        {/* (imágenes) arriba, las semanas y las fechas sobre el paisaje del mes en que acaba el bloque */}
-        {hayImagen(imagenMes(r.fin)) ? (
+        {/* (imágenes) arriba, las semanas y las fechas junto a la ilustración */}
+        {hayImagen(ilu) ? (
           <div class="cab-ilu informe-ilu">
             <p>{r.semanasTotal} semanas, {rangoLargo(r.inicio, r.fin)}. <span class={`chip ${r.terminado ? 'ok' : 'morado'}`}>{r.terminado ? 'Terminado' : 'En curso'}</span></p>
-            <Imagen key={imagenMes(r.fin)} id={imagenMes(r.fin)} clase="cab-ilu-img" tamanos="16rem" />
+            <Imagen key={ilu} id={ilu} clase={`cab-ilu-img ${r.terminado ? 'informe-cumbre' : ''}`} tamanos="16rem" />
           </div>
         ) : <p class="secundario">{r.semanasTotal} semanas, {rangoLargo(r.inicio, r.fin)}. <span class={`chip ${r.terminado ? 'ok' : 'morado'}`}>{r.terminado ? 'Terminado' : 'En curso'}</span></p>}
         {r.bloque.objetivo && <p class="peq">{r.bloque.objetivo}</p>}
