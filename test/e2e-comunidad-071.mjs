@@ -148,14 +148,15 @@ export async function probarComunidad071({ navegador, check, base = 'http://loca
       '«Foto siguiente» pasa a la segunda (y se anuncia «Foto 2 de 2»)');
     await revisar('galeria-071');
     // ---------------- Guardar y buscar
-    const truco = post('press banca');
+    // (el truco de Rubén por una frase solo suya: algunos días el entreno compartido de Carlos también lleva press banca)
+    const truco = post('juntar las escápulas');
     const guardar = truco.getByRole('button', { name: 'Guardar', exact: true });
     check(await guardar.getAttribute('aria-pressed') === 'false', 'cada publicación con «Guardar»');
     await guardar.click();
     await toast('Guardada');
-    await p.waitForFunction(() => [...document.querySelectorAll('article.post')].some((a) => /press banca/.test(a.textContent) && a.querySelector('.post-guardar[aria-pressed="true"]')));
+    await p.waitForFunction(() => [...document.querySelectorAll('article.post')].some((a) => /juntar las escápulas/.test(a.textContent) && a.querySelector('.post-guardar[aria-pressed="true"]')));
     await filtro('Guardados').click();
-    await p.waitForFunction(() => document.querySelectorAll('article.post').length === 1 && /press banca/.test(document.querySelector('article.post').textContent));
+    await p.waitForFunction(() => document.querySelectorAll('article.post').length === 1 && /juntar las escápulas/.test(document.querySelector('article.post').textContent));
     check(true, '«Guardar» en el truco de Rubén: es lo único que sale en «Guardados»');
     await filtro('Todo').click();
     await post('Dos fotos del gimnasio nuevo').waitFor();
