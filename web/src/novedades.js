@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.111': {
+    coach: [
+      'La barra lateral con iconos de colores, «Hoy en tu equipo» en tres tarjetas y, en Revisar, cada tarjeta con el color de lo que es.',
+      'En la ficha, el halo del estado, chips con color y pestañas con icono; la Revisión semanal, con su casilla verde y su sello.',
+      'Las semanas del editor dicen si están publicadas o en borrador; el buscador (Ctrl K), como Spotlight; la biblioteca, con color por grupo.',
+    ],
+  },
   '0.110': {
     atleta: [
       'Nuevo en tu perfil, «Conexiones»: trae de Salud del iPhone tus pasos, sueño, pulso, HRV y peso, y tu check-in vendrá relleno.',
