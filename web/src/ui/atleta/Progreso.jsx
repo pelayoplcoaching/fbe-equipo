@@ -603,13 +603,12 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
           {/* (pulido 2.3) cada bloque del resumen guarda, mientras llega, el sitio que ocupó la última vez: ya no se van
               empujando unos a otros según cargan */}
           {/* (v0.104) lo de su objetivo del cuestionario (la cifra que le importa) y sus tres ejercicios */}
-          {entrena && <CifraObjetivo progreso={progreso.datos} constancia={constancia.datos} salud={salud} />}
-          {entrena && <TusEjercicios progreso={progreso.datos} />}
+          {entrena && <Reserva id="prog-personal" cargando={llegando}><CifraObjetivo progreso={progreso.datos} constancia={constancia.datos} salud={salud} /><TusEjercicios progreso={progreso.datos} /></Reserva>}
           {entrena && <Reserva id="prog-destacados" cargando={llegando}><Destacados progreso={progreso.datos} constancia={constancia.datos} programa={programa.datos} /></Reserva>}
           {entrena && <Reserva id="prog-anillos" cargando={llegando}><AnillosSemana programa={programa} salud={salud} checkinSemana={checkinSemana} constancia={constancia} /></Reserva>}
           {entrena && <Reserva id="prog-cifras" cargando={llegando}><Cifras constancia={constancia} semanas={semanas} /></Reserva>}
           {entrena && <Reserva id="prog-semanas" cargando={llegando}><TusSemanas salud={salud} lista={semanas} /></Reserva>}
-          {entrena && <FilaTuAnio />}
+          {entrena && <Reserva id="prog-tu-anio"><FilaTuAnio /></Reserva>}
           <Reserva id="prog-meses"><TusMeses salud={salud} /></Reserva>
           {entrena && <Reserva id="prog-bloques"><TusBloques salud={salud} /></Reserva>}
         </Grupo>
