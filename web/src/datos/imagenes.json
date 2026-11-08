@@ -264,6 +264,46 @@
       "512": "imagenes/habito/habito-verdura-512.ef42f857.webp"
     }
   },
+  "medalla-bascula-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-bascula-bronce-256.9edaba66.webp",
+      "512": "imagenes/medalla/medalla-bascula-bronce-512.3e08b2ea.webp"
+    }
+  },
+  "medalla-bascula-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-bascula-diamante-256.f33124ea.webp",
+      "512": "imagenes/medalla/medalla-bascula-diamante-512.0bf8ced5.webp"
+    }
+  },
+  "medalla-bascula-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-bascula-oro-256.a58d68fc.webp",
+      "512": "imagenes/medalla/medalla-bascula-oro-512.53e66360.webp"
+    }
+  },
+  "medalla-bascula-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-bascula-plata-256.184c08e6.webp",
+      "512": "imagenes/medalla/medalla-bascula-plata-512.8b128271.webp"
+    }
+  },
   "medalla-checkins-bronce": {
     "proporcion": [
       1,
