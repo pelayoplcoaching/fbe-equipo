@@ -399,6 +399,7 @@ export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
   let generacion = 0;
   let personalMemo = null, mensajesMemo = null, personalAtletasMemo = null;  // (050) lo de personal_mio, mensajes_coach y personal_atletas, un minuto
+  let contactosMemo = null;  // (051) los teléfonos de los atletas, un minuto
   let musicaMemo = new Map();  // (050) lo de musica_para y musica_coach_lista, un minuto
   let olvidarFotos = () => {};   // (se define más abajo, con el recuerdo de las fotos de perfil)
   const b = Object.create(backend);
@@ -877,12 +878,19 @@ export function crearApi(backend) {
       try { await b.rpc('atajo_guardar', { p_clave: clave, p_url: u }); } catch (e) { if (falta051(e)) throw new Error(AVISO_051); throw e; }
     },
     // El teléfono de cada atleta ({ atleta_id: teléfono }), solo el coach; sin la 051, null
+    // (se recuerdan un minuto, como los cumpleaños: la lista de Atletas y «A quién escribir» los piden cada vez)
     async contactos() {
-      try { return (await b.rpc('contactos', {})) || {}; } catch (e) { if (falta051(e)) return null; throw e; }
+      const k = uid();
+      if (contactosMemo && contactosMemo.k === k && Date.now() - contactosMemo.t < 60000) return contactosMemo.p;
+      const p = b.rpc('contactos', {}).then((r) => r || {}).catch((e) => { if (falta051(e)) return null; throw e; });
+      contactosMemo = { k, t: Date.now(), p };
+      p.catch(() => { if (contactosMemo?.p === p) contactosMemo = null; });
+      return p;
     },
     async guardarContacto(atletaId, telefono) {
       const t = limpiarTelefono(telefono);
       try { await b.rpc('contacto_guardar', { p_atleta: atletaId, p_telefono: t }); } catch (e) { if (falta051(e)) throw new Error(AVISO_051); throw e; }
+      contactosMemo = null;
     },
     // La foto del coach, para el chat del atleta (la base solo deja ver eso del perfil del coach)
     // v0.55: el nombre corto del coach («Info del contacto» del atleta); sin la 033, null
