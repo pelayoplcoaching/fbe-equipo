@@ -168,7 +168,9 @@ export async function probarSinRed065({ navegador, check, base = 'http://localho
     // Se cierra la app y se vuelve a abrir, aún sin conexión: la serie sigue ahí
     await p.reload();
     await p.locator('.hero-dia').waitFor();
-    check(await p.locator('.hero-dia').getByRole('button', { name: /Continuar sesión/ }).count() === 1, 'al volver a abrir la app sin conexión, Hoy sabe que la sesión está empezada');
+    // (v0.113) se espera al botón: la tarjeta sale antes de que la copia del móvil diga que la sesión está empezada
+    const continuar = await p.locator('.hero-dia').getByRole('button', { name: /Continuar sesión/ }).waitFor({ timeout: 10000 }).then(() => true, () => false);
+    check(continuar && await p.locator('.hero-dia').getByRole('button', { name: /Continuar sesión/ }).count() === 1, 'al volver a abrir la app sin conexión, Hoy sabe que la sesión está empezada');
     await entrarSesion();
     if (await ej1.locator('.ejercicio-cab').getAttribute('aria-expanded') !== 'true') await ej1.locator('.ejercicio-cab').click();
     check(await ej1.getByRole('button', { name: 'Quitar la serie 1' }).count() === 1 && await ej1.locator('.pendiente-envio', { hasText: 'Serie 1 guardada en el móvil' }).count() === 1,
