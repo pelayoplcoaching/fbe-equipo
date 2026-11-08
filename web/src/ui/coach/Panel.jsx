@@ -154,7 +154,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
                         <td colSpan={2}><span class="chip morado">Solo nutrición</span>{r.diasNutricion != null && <div class="mini terciario">{r.diasNutricion}/7 días apuntados</div>}</td>
                       ) : (
                         <>
-                          <td class="num-c">{r.semana ? <>S{r.semana.numero}/{r.semana.total}<div class="mini terciario">{r.semana.foco ? NOMBRE_FOCO[r.semana.foco] : r.bloque?.nombre}</div></> : '—'}</td>
+                          <td class="num-c">{r.semana ? <><span class="semana-pill" style={{ '--f': Math.min(1, r.semana.numero / (r.semana.total || 1)) }}>S{r.semana.numero}/{r.semana.total}</span><div class="mini terciario">{r.semana.foco ? NOMBRE_FOCO[r.semana.foco] : r.bloque?.nombre}</div></> : '—'}</td>
                           <td><div class="celda-sesiones"><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /><ChispaSesiones semanas={r.chispas?.sesiones} /></div></td>
                         </>
                       )}
@@ -175,7 +175,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
                 <div class="cab">
                   <Avatar nombre={r.nombre} foto={r.foto} />
                   <span><strong>{r.nombre}</strong><span class="sr">. {NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
-                  {r.semana && <span class="peq secundario num">S{r.semana.numero}/{r.semana.total}</span>}
+                  {r.semana && <span class="peq secundario num semana-pill" style={{ '--f': Math.min(1, r.semana.numero / (r.semana.total || 1)) }}>S{r.semana.numero}/{r.semana.total}</span>}
                 </div>
                 <Alertas r={r} pendientes={pendientes[r.atleta_id]} />
                 {r.estado === 'activo' && (

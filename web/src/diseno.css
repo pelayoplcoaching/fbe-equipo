@@ -2836,3 +2836,199 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    Se probó con las sesiones de la semana y «Tus entrenamientos» (línea de tiempo de vista, como el bloque 199), pero la
    prueba de «pantallas que no se mueven al cargar» (e2e-pulido2) mide la posición en pantalla con transform incluido: al
    llegar los datos, la línea de tiempo se recalcula y las tarjetas se desplazaban 13 px. Retirado: Semana carga quieta. */
+
+/* ══ Tandas 34 y 35 (8/11): la parte del coach ═══════════════════════════════════════════════════════════════════════
+   Veinte mejoras en lo que usa el coach cada día: el panel, la ficha, Revisar, la Revisión semanal, A quién escribir,
+   el editor, las plantillas, la biblioteca y el buscador. El chat queda fuera (es de la rama chat-scroll). */
+:root {
+  --ico-semana: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4%206.5A1.5%201.5%200%200%201%205.5%205h13A1.5%201.5%200%200%201%2020%206.5v12a1.5%201.5%200%200%201-1.5%201.5h-13A1.5%201.5%200%200%201%204%2018.5zM4%2010h16M8.5%203v4M15.5%203v4'/%3E%3C/svg%3E");
+  --ico-mensaje: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5%205h14a1%201%200%200%201%201%201v10a1%201%200%200%201-1%201H10l-4%203v-3H5a1%201%200%200%201-1-1V6a1%201%200%200%201%201-1z'/%3E%3C/svg%3E");
+  --ico-documento: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14%203H7a2%202%200%200%200-2%202v14a2%202%200%200%200%202%202h10a2%202%200%200%200%202-2V8zM14%203v5h5M9%2013h6M9%2017h6'/%3E%3C/svg%3E");
+  --ico-progreso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4%2019h16M5%2015l4.5-4.5%203.5%203.5L19%208M15%208h4v4'/%3E%3C/svg%3E");
+  --ico-nutricion: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13%2018.5a6%206%200%201%200%200-12%206%206%200%200%200%200%2012zM13%2015.5a3%203%200%201%200%200-6%203%203%200%200%200%200%206zM3%204v4.5a1.5%201.5%200%200%200%203%200V4M4.5%209v11M21.5%204c-1.2.8-1.8%202.6-1.8%204.3V12h1.8v8'/%3E%3C/svg%3E");
+  --ico-video: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4%207.5A1.5%201.5%200%200%201%205.5%206h9A1.5%201.5%200%200%201%2016%207.5v9a1.5%201.5%200%200%201-1.5%201.5h-9A1.5%201.5%200%200%201%204%2016.5zM16%2010.5l4-2.5v8l-4-2.5'/%3E%3C/svg%3E");
+  --ico-diana: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%2021a9%209%200%201%200%200-18%209%209%200%200%200%200%2018zM12%2016.5a4.5%204.5%200%201%200%200-9%204.5%204.5%200%200%200%200%209zM12%2012h.01'/%3E%3C/svg%3E");
+  --ico-chincheta: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9%203h6l-1%206%203%203H7l3-3zM12%2012v9'/%3E%3C/svg%3E");
+  --ico-euro: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17.5%206.8A6.5%206.5%200%201%200%2017.5%2017.2M4%2010.3h9M4%2013.7h9'/%3E%3C/svg%3E");
+  --ico-perfil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%2012a4%204%200%201%200%200-8%204%204%200%200%200%200%208zM4.5%2020a7.5%207.5%200%200%201%2015%200'/%3E%3C/svg%3E");
+  --ico-alerta: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%204%202.5%2020h19zM12%2010v4.5M12%2017.5v.5'/%3E%3C/svg%3E");
+}
+
+/* ── 215 · La barra lateral del coach con iconos de colores (tanda 34) ────────────────────────────────────────────────
+   En el escritorio, cada sección lleva su icono blanco en un cuadrado de color, como Ajustes del iPhone (y el perfil
+   del atleta, bloque 124), según el icono (CoachApp.jsx ya pone ico-<icono>). La marcada sigue con su fondo lavanda. */
+@media (min-width: 900px) {
+  .app.coach .tab { grid-template-columns: 30px 1fr; }
+  .app.coach .tab .tab-ico > svg { width: 30px; height: 30px; padding: 6px; border-radius: 9px; background: linear-gradient(180deg, color-mix(in srgb, var(--ti, #7C7C86) 80%, #fff), var(--ti, #7C7C86)); color: #fff; box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+  .app.coach .tab .tab-ico:has(> .ico-atletas) { --ti: #5856D6; }
+  .app.coach .tab .tab-ico:has(> .ico-bandeja) { --ti: #E8730C; }
+  .app.coach .tab .tab-ico:has(> .ico-hecho) { --ti: #22A04B; }
+  .app.coach .tab .tab-ico:has(> .ico-mensaje) { --ti: #2E7CF6; }
+  .app.coach .tab .tab-ico:has(> .ico-equipo) { --ti: #E5407F; }
+  .app.coach .tab .tab-ico:has(> .ico-plantillas) { --ti: #0E9384; }
+  .app.coach .tab .tab-ico:has(> .ico-biblioteca) { --ti: #C98A00; }
+  .app.coach .tab .tab-ico:has(> .ico-hoy) { --ti: #7A5AF8; }
+  .app.coach .tab .tab-ico:has(> .ico-perfil) { --ti: #7C7C86; }
+  .app.coach .tab[data-tab="radar"] .tab-ico.tab-ico { --ti: #0A94B0; } /* A quién escribir, en cian, para no confundirse con Mensajes */
+}
+@media (min-width: 900px) and (forced-colors: active) { .app.coach .tab .tab-ico > svg { background: none; color: CanvasText; } }
+
+/* ── 216 · «Hoy en tu equipo» en tres tarjetas (tanda 34) ─────────────────────────────────────────────────────────────
+   Entrenaron hoy, Por revisar y Sin actividad, cada uno en su tarjeta (sin las rayas de entre medias); «Por revisar» con
+   algo, con un baño del acento, y «Sin actividad» con alguien, con uno rojo suave. */
+.panel.equipo-hoy { gap: 10px; padding: 0; background: none; box-shadow: none; }
+.equipo-hoy > * { background: var(--hoja); box-shadow: var(--sombra-tarjeta); border-radius: var(--r); padding: 14px 8px; }
+.equipo-hoy > * + *::before { content: none; }
+.equipo-hoy > button:has(> .eh-cifra:not(.cero):not(.alerta)) { background: linear-gradient(160deg, var(--morado-suave), var(--hoja) 72%); }
+.equipo-hoy > button:has(> .eh-cifra:not(.cero):not(.alerta)) .eh-cifra { color: var(--morado); }
+.equipo-hoy > button:has(> .eh-cifra.alerta) { background: linear-gradient(160deg, var(--alerta-suave), var(--hoja) 72%); }
+.equipo-hoy button:hover { filter: brightness(.98); }
+.equipo-hoy button[aria-pressed="true"] { box-shadow: var(--sombra-tarjeta), inset 0 0 0 1.5px color-mix(in srgb, var(--alerta) 45%, transparent); }
+
+/* ── 217 · Los pagos con su icono (tanda 34) ──────────────────────────────────────────────────────────────────────────
+   En la tabla y en las tarjetas: ✓ si va al día, un reloj si está pendiente o vence pronto y ! si va retrasado. */
+.cobro-panel .chip:is(.ok, .aviso, .alerta) { display: inline-flex; align-items: center; gap: 4px; }
+.cobro-panel .chip:is(.ok, .aviso, .alerta)::before { content: ""; width: 12px; height: 12px; flex: none; background: currentColor; -webkit-mask: var(--ico-c) center / contain no-repeat; mask: var(--ico-c) center / contain no-repeat; }
+.cobro-panel .chip.ok { --ico-c: var(--ico-hecho); }
+.cobro-panel .chip.aviso { --ico-c: var(--ico-reloj); }
+.cobro-panel .chip.alerta { --ico-c: var(--ico-alerta); }
+
+/* ── 218 · La semana del bloque en una pastilla con su barrita (tanda 34) ─────────────────────────────────────────────
+   «S4/6» en la tabla y en las tarjetas del móvil (Panel.jsx: semana-pill, --f = semana / total) va en una pastilla
+   lavanda con una barrita de lo que va del bloque. */
+.semana-pill { display: inline-flex; flex-direction: column; gap: 3px; padding: 2px 8px 4px; border-radius: 8px; background: var(--morado-suave); color: var(--tinta); font-weight: 760; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.semana-pill::after { content: ""; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--morado) calc(var(--f, 0) * 100%), color-mix(in srgb, var(--morado) 18%, transparent) 0); }
+@media (forced-colors: active) { .semana-pill { border: 1px solid CanvasText; } .semana-pill::after { background: CanvasText; } }
+
+/* ── 219 · La cabecera de la ficha con el halo de su estado (tanda 34) ────────────────────────────────────────────────
+   El aro de color del avatar (verde, ámbar, rojo) suma un halo suave de su color; si necesita atención, late dos veces
+   al abrir la ficha. */
+.avatar-estado:is(.estado-verde, .estado-ambar, .estado-rojo) { box-shadow: 0 0 0 2.5px var(--estado-av), 0 0 0 7px color-mix(in srgb, var(--estado-av) 16%, transparent); }
+@media (prefers-reduced-motion: no-preference) { .avatar-estado:is(.estado-ambar, .estado-rojo) { animation: halo-estado 1.6s var(--curva-casa) .4s 2; } }
+@keyframes halo-estado { 50% { box-shadow: 0 0 0 2.5px var(--estado-av), 0 0 0 11px color-mix(in srgb, var(--estado-av) 6%, transparent); } }
+
+/* ── 220 · Los chips de la ficha con color (tanda 34) ─────────────────────────────────────────────────────────────────
+   «Necesita atención» (o «Alerta») con el chip teñido de su color y el punto que late; los iconos del resto en el acento
+   (el cumplimiento, en verde cuando va bien). */
+.ficha-chips .chip { gap: 5px; }
+.ficha-chips .chip > svg { color: var(--morado); }
+.ficha-chips .chip.ok > svg { color: inherit; }
+.estado-chip:is(.estado-ambar, .estado-rojo) { background: color-mix(in srgb, var(--estado-c) 13%, var(--hoja)); border-color: transparent; }
+@media (prefers-reduced-motion: no-preference) { .estado-chip:is(.estado-ambar, .estado-rojo) .punto-estado { animation: estado-late 2s ease-out 3; } }
+@keyframes estado-late { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--estado-c) 60%, transparent); } to { box-shadow: 0 0 0 7px color-mix(in srgb, var(--estado-c) 0%, transparent); } }
+
+/* ── 221 · Las pestañas de la ficha con icono (tanda 34) ──────────────────────────────────────────────────────────────
+   Cada pestaña de la ficha del atleta lleva delante su icono (por su id: pest-programa, pest-mensajes…). El subrayado
+   sigue siendo su ::after (bloque 2d). */
+:is(#pest-programa, #pest-mensajes, #pest-actividad, #pest-registro, #pest-seguimiento, #pest-nutricion, #pest-videos, #pest-objetivos, #pest-notas, #pest-cobros, #pest-datos) { display: inline-flex; align-items: center; gap: 6px; }
+:is(#pest-programa, #pest-mensajes, #pest-actividad, #pest-registro, #pest-seguimiento, #pest-nutricion, #pest-videos, #pest-objetivos, #pest-notas, #pest-cobros, #pest-datos)::before { content: ""; width: 16px; height: 16px; flex: none; background: currentColor; -webkit-mask: var(--ico-p) center / contain no-repeat; mask: var(--ico-p) center / contain no-repeat; }
+#pest-programa { --ico-p: var(--ico-semana); }
+#pest-mensajes { --ico-p: var(--ico-mensaje); }
+#pest-actividad { --ico-p: var(--ico-intervalos); }
+#pest-registro { --ico-p: var(--ico-documento); }
+#pest-seguimiento { --ico-p: var(--ico-progreso); }
+#pest-nutricion { --ico-p: var(--ico-nutricion); }
+#pest-videos { --ico-p: var(--ico-video); }
+#pest-objetivos { --ico-p: var(--ico-diana); }
+#pest-notas { --ico-p: var(--ico-chincheta); }
+#pest-cobros { --ico-p: var(--ico-euro); }
+#pest-datos { --ico-p: var(--ico-perfil); }
+
+/* ── 222 · Cada tarjeta de Revisar con el color de lo que es (tanda 34) ───────────────────────────────────────────────
+   Por el prefijo de su clave (Revisar.jsx: data-item): sesiones en el acento, check-ins en rosa, vídeos en rojo,
+   mensajes en azul, tareas en naranja, recetas en ámbar y lo del equipo en verde azulado; un filo a la izquierda y un
+   baño muy suave de su color arriba. */
+.deslizable > .tarjeta-revisar { --rt: var(--morado); background: linear-gradient(135deg, color-mix(in srgb, var(--rt) 6%, var(--hoja)), var(--hoja) 45%); box-shadow: var(--sombra), inset 3px 0 0 var(--rt); }
+.deslizable[data-item^="c-"] > .tarjeta-revisar { --rt: var(--t-checkin); }
+.deslizable:is([data-item^="v-"], [data-item^="sv-"]) > .tarjeta-revisar { --rt: var(--alerta); }
+.deslizable[data-item^="m-"] > .tarjeta-revisar { --rt: var(--t-tarea); }
+.deslizable[data-item^="t-"] > .tarjeta-revisar { --rt: var(--t-habitos); }
+.deslizable[data-item^="r-"] > .tarjeta-revisar { --rt: var(--t-menu); }
+.deslizable[data-item^="e-"] > .tarjeta-revisar { --rt: var(--t-peso); }
+.deslizable > .tarjeta-revisar:focus-visible { box-shadow: 0 0 0 3px var(--morado), var(--sombra); }
+@media (forced-colors: active) { .deslizable > .tarjeta-revisar { background: Canvas; border-left: 3px solid CanvasText; } }
+
+/* ── 223 · «Revisado» en verde suave (tanda 34) ───────────────────────────────────────────────────────────────────────
+   El botón de dar por revisado de cada tarjeta, en el verde de lo hecho con su ✓. */
+.revisar-hecho { background: var(--ok-suave); border-color: transparent; color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); }
+.revisar-hecho svg { color: var(--ok); }
+
+/* ── 224 · Los grupos de Revisar con el contador en un disco del acento (tanda 34) ────────────────────────────────────
+   El número de pendientes de cada atleta, con el brillo del acento de la sesión que toca (bloque 164). */
+.grupo-revisar-n { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, #fff), var(--morado)); box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+
+/* ── 225 · El avance de la Revisión semanal con brillo (tanda 35) ─────────────────────────────────────────────────────
+   La barra de «N de M revisados», más gruesa, con degradado verde y brillo. */
+.barra-revision { height: 10px; }
+.barra-revision span { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, #fff), var(--ok)); box-shadow: 0 0 10px color-mix(in srgb, var(--ok) 45%, transparent); }
+
+/* ── 226 · La casilla «Revisado» redonda y verde (tanda 35) ───────────────────────────────────────────────────────────
+   Como las de Recordatorios (bloque 150): un círculo con filo que se llena de verde con su ✓. */
+.revision-casilla input[type="checkbox"] { border-radius: 50%; }
+.revision-casilla input[type="checkbox"]:checked { background: var(--ok) var(--marca-blanca) center / 17px no-repeat; }
+
+/* ── 227 · Los atletas ya revisados con su sello verde (tanda 35) ─────────────────────────────────────────────────────
+   La tarjeta de quien ya está revisado lleva un baño verde que se funde y un filo verde fino (antes, solo gris). */
+.revision-fila.hecha { background: linear-gradient(135deg, var(--ok-suave), var(--hoja) 55%); box-shadow: var(--sombra), inset 0 0 0 1px color-mix(in srgb, var(--ok) 28%, transparent); }
+
+/* ── 228 · Chat, Programar y Seguimiento con sus iconos de color (tanda 35) ───────────────────────────────────────────
+   En cada tarjeta de la revisión, el chat en azul, programar en el acento y seguimiento en verde (el «Escribirle» relleno
+   de A quién escribir conserva su icono blanco). */
+.revision-acciones .btn:not(.btn-primario):nth-child(1) svg { color: var(--t-tarea); }
+.revision-acciones .btn:not(.btn-primario):nth-child(2) svg { color: var(--morado); }
+.revision-acciones .btn:not(.btn-primario):nth-child(3) svg { color: var(--ok); }
+
+/* ── 229 · La barra de sesiones de cada atleta con degradado (tanda 35) ───────────────────────────────────────────────
+   Del acento claro al acento; con la semana completa, en verde. */
+.barra-sesiones span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, #fff), var(--morado)); }
+.barra-sesiones span[style*="width: 100%"] { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, #fff), var(--ok)); }
+
+/* ── 230 · «A quién escribir»: los días de contacto en pastillas con brillo (tanda 35) ────────────────────────────────
+   Cada día de contacto es una pastilla: los hechos con el brillo del acento y, con el objetivo cumplido, en verde. */
+.mini-grafica.pips i { width: 16px; height: 10px; border-radius: 999px; }
+.mini-grafica.pips .pip-lleno { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, #fff), var(--morado)); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--morado) 70%, transparent); }
+.mini-grafica.pips:not(:has(.pip-vacio)) .pip-lleno { background: linear-gradient(160deg, color-mix(in srgb, var(--ok) 80%, #fff), var(--ok)); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--ok) 70%, transparent); }
+
+/* ── 231 · Las plantillas como tarjetas (tanda 35) ────────────────────────────────────────────────────────────────────
+   El icono de capas de cada plantilla en un cuadrado verde azulado con brillo, la fila que se ilumina al pasar y
+   «Asignar» en el lavanda del acento. */
+.fila-plantilla .marca-dia { background: linear-gradient(160deg, color-mix(in srgb, var(--t-peso) 78%, #fff), var(--t-peso)); color: #fff; box-shadow: 0 6px 14px -7px color-mix(in srgb, var(--t-peso) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.fila-plantilla:hover { background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
+.fila-plantilla > .btn { background: var(--morado-suave); border-color: transparent; color: var(--tinta); }
+
+/* ── 232 · Las semanas del editor con su estado a la vista (tanda 35) ─────────────────────────────────────────────────
+   Editor.jsx: data-est. Publicadas con un baño verde abajo; borradores con borde punteado del acento; sin empezar, en
+   gris. La elegida sigue rellena de lavanda. */
+.semanas-tabs button[data-est="programada"] { background: linear-gradient(180deg, var(--hoja) 40%, var(--ok-suave)); }
+.semanas-tabs button[data-est="en_programacion"] { border-style: dashed; border-color: color-mix(in srgb, var(--morado) 50%, var(--linea)); }
+.semanas-tabs button[data-est="no_iniciada"] { background: var(--hoja-2); }
+
+/* ── 233 · El buscador como Spotlight (tanda 35) ──────────────────────────────────────────────────────────────────────
+   Ctrl K aparece con un pequeño zoom desde arriba y cada resultado lleva su icono blanco en un cuadrado de su color
+   (Buscador.jsx: data-tipo, el prefijo del resultado): atletas en añil, secciones en azul, acciones en verde. */
+.paleta-op[data-tipo] .paleta-ico { background: linear-gradient(180deg, color-mix(in srgb, var(--pt, #7C7C86) 80%, #fff), var(--pt, #7C7C86)); color: #fff; }
+.paleta-op[data-tipo="a"] { --pt: #5856D6; }
+.paleta-op[data-tipo="s"] { --pt: #2E7CF6; }
+.paleta-op[data-tipo="x"] { --pt: #22A04B; }
+.paleta-op[data-tipo="e"] { --pt: #C98A00; }
+.paleta-op[data-tipo="p"] { --pt: #0E9384; }
+@media (prefers-reduced-motion: no-preference) { .paleta { animation: paleta-zoom .2s var(--curva-llega); } }
+@keyframes paleta-zoom { from { transform: translateY(-8px) scale(.97); } }
+@media (forced-colors: active) { .paleta-op[data-tipo] .paleta-ico { background: Canvas; color: CanvasText; } }
+
+/* ── 234 · La biblioteca con el color de cada grupo muscular (tanda 35) ───────────────────────────────────────────────
+   Cada ejercicio lleva un punto del color de su primer grupo muscular (Biblioteca.jsx: data-g) y su pictograma teñido
+   de ese color. */
+.fila-biblioteca:has(.detalle[data-g="pectoral"]) { --g: #E5484D; }
+.fila-biblioteca:has(.detalle[data-g="espalda"]) { --g: #2E7CF6; }
+.fila-biblioteca:has(.detalle[data-g="deltoides"]) { --g: #E8730C; }
+.fila-biblioteca:has(.detalle[data-g="cuadriceps"]) { --g: #22A04B; }
+.fila-biblioteca:has(.detalle[data-g="gluteo"]) { --g: #E5407F; }
+.fila-biblioteca:has(.detalle[data-g="isquiotibiales"]) { --g: #0E9384; }
+.fila-biblioteca:has(.detalle[data-g="biceps"]) { --g: #7A5AF8; }
+.fila-biblioteca:has(.detalle[data-g="triceps"]) { --g: #5856D6; }
+.fila-biblioteca:has(.detalle[data-g="abdominales"]) { --g: #C98A00; }
+.fila-biblioteca:has(.detalle[data-g="gemelo"]) { --g: #8E6E53; }
+.fila-biblioteca .detalle[data-g]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: 1px; border-radius: 50%; background: var(--g); }
+.fila-biblioteca:has(.detalle[data-g]) .picto { background: color-mix(in srgb, var(--g) 13%, var(--hoja)); color: color-mix(in srgb, var(--g) 68%, var(--tinta)); }
+@media (forced-colors: active) { .fila-biblioteca .detalle[data-g]::before { background: CanvasText; } }

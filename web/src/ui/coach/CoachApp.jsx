@@ -180,7 +180,7 @@ export function CoachApp() {
             <Icono n="buscar" /><span>Buscar</span><kbd>{mac ? '⌘' : 'Ctrl'} K</kbd>
           </button>
           {reparto.barra.map(([id, texto, icono]) => (
-            <button key={id} class={`tab ${id === 'cuenta' ? 'tab-cuenta' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => elegirPestana(id)}>
+            <button key={id} data-tab={id} class={`tab ${id === 'cuenta' ? 'tab-cuenta' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => elegirPestana(id)}>
               <span class="tab-ico"><Icono n={icono} class={`ico-${icono}`} />{id === 'revisar' && <Insignia n={total} etiqueta={`${total} por revisar`} />}{id === 'mensajes' && <Insignia n={sinLeer.datos || 0} etiqueta={`${sinLeer.datos || 0} mensajes sin leer`} />}</span>{estrecha && CORTAS[id] ? <><span class="sr">{texto}</span><span aria-hidden="true">{CORTAS[id]}</span></> : texto}
             </button>
           ))}

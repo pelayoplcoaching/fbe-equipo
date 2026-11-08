@@ -70,7 +70,7 @@ function Ejercicios({ peticion = null }) {
                 <PictoEjercicio ejercicio={e} />
                 <span>
                   <span class="nombre" style={e.activo === false ? 'color:var(--tinta-3)' : ''}>{e.nombre}{e.activo === false ? ' (oculto)' : ''}</span><br />
-                  <span class="detalle">{(e.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(', ') || 'Sin grupo'}{(e.alternativas || []).length ? `; ${e.alternativas.length} alternativa${e.alternativas.length > 1 ? 's' : ''}` : ''}</span>
+                  <span class="detalle" data-g={(e.grupos_musculares || [])[0] || undefined}>{(e.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(', ') || 'Sin grupo'}{(e.alternativas || []).length ? `; ${e.alternativas.length} alternativa${e.alternativas.length > 1 ? 's' : ''}` : ''}</span>
                 </span>
                 {e.video_url ? <Icono n="video" width="20" height="20" titulo="Tiene vídeo" /> : <span />}
               </button>
