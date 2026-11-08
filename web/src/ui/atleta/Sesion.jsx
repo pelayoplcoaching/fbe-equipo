@@ -607,7 +607,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
 
   return (
     <>
-    <div class={`contenido sesion-vista ${recienEmpezada ? 'sesion-tras-portada' : ''}`} inert={verEnfoque ? '' : undefined} aria-hidden={verEnfoque ? 'true' : undefined}>
+    <div class={`contenido sesion-vista ${recienEmpezada ? 'sesion-tras-portada' : ''} ${sesion.completada ? 'sesion-hecha' : ''}`} inert={verEnfoque ? '' : undefined} aria-hidden={verEnfoque ? 'true' : undefined}>
       <header class={`cabecera ${tramos.length ? 'con-tramos' : ''}`}>
         <button class="btn btn-icono plano" onClick={alCerrar} aria-label="Volver"><Icono n="atras" /></button>
         <div class="titulo">
@@ -912,7 +912,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
           {!plegado && actual && <span class="cambiado">{lugar ? `Por tu material ${lugar === 'viaje' ? 'de viaje' : 'de casa'}: en lugar de` : 'En lugar de'} {e.ejercicio.nombre}</span>}
           {!plegado && sinMaterial && <span class="video-aviso pendiente"><Icono n="alerta" />Sin alternativa con tu material {sinMaterial === 'viaje' ? 'de viaje' : 'de casa'}</span>}
           {!plegado && e.variante && <span class="variante">{e.variante}</span>}
-          {!plegado && e.tempo && tempo && <span class="variante">Tempo {tempo.texto}</span>}
+          {!plegado && e.tempo && tempo && <span class="variante variante-tempo">Tempo {tempo.texto}</span>}
           {!plegado && <span class="pauta">
             <span class="num">{pa.series}</span>
             {pa.detalle && <span>serie a serie</span>}

@@ -106,7 +106,7 @@ function Historial({ d }) {
       <ul class="lista historial">
         {d.sesiones.slice(0, cuantas).map((s) => (
           <li key={s.sesion_id || s.fecha} class="historial-fila">
-            <span class="peq secundario">{fmtCorta(s.fecha)}</span>
+            <span class="historial-fecha num">{(() => { const [dia, mes] = fmtCorta(s.fecha).split(' '); return <><b>{dia}</b> <i>{mes}</i></>; })()}</span>
             <span class="registro-serie">{s.series.map((x) => textoSerie(x)).join(', ')}</span>
             <span class="num peq">{s.record ? <span class="chip ok"><Icono n="trofeo" />{num(s.mejor)}</span> : s.mejor ? num(s.mejor) : '—'}</span>
           </li>

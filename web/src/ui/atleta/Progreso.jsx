@@ -178,7 +178,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
           <div class="panel panel-pad pila">
             <div class="cifra">
               <CifraSube texto={num(mediaTon, 1)} clase="v num" /><span class="u">t de media por semana en {nombreRango(rT)}</span>
-              {ventanaTon.length > 1 && <span class="chip num">Mejor semana: <Odometro texto={`${num(mejorTon, 1)} t`} /></span>}
+              {ventanaTon.length > 1 && <span class="chip num chip-mejor">Mejor semana: <Odometro texto={`${num(mejorTon, 1)} t`} /></span>}
             </div>
             {ventanaTon.length > 1 ? <Grafica records clave={rT} puntos={ventanaTon.map((w) => ({ x: w.semana, y: Math.round(w.valor / 100) / 10 }))} unidad="t" etiqueta="Tonelaje por semana" />
               : <p class="peq secundario">En este rango hay menos de dos semanas con datos: prueba uno más amplio.</p>}
