@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.106': {
+    atleta: [
+      'El ejercicio en curso brilla y su progreso se llena en un aro; la pauta va en chips y la serie top y las back-off llevan insignia.',
+      'La sugerencia de carga es una tarjeta de color, el descanso tiene luz y, al terminar, el esfuerzo se elige en una escala de color.',
+      'En la semana, la sesión que toca destaca y cada entreno lleva el color de su esfuerzo; los récords, en dorado también en tus marcas.',
+    ],
+  },
   '0.105': {
     atleta: [
       'Tu coach te habla con su lobo en Hoy y en la sesión, la fecha va en una pastilla y la cabecera brilla al bajar.',
