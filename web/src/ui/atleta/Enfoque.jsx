@@ -23,6 +23,16 @@ function EnfoquePantalla({
   const { aviso } = useApp();
   const e = ejercicios.find((x) => x.id === seId) || ejercicios[0];
   const idx = ejercicios.indexOf(e);
+  // (diseño, tanda 31) al pasar de ejercicio, el cuerpo entra deslizándose desde el lado al que se va (sin rehacerlo:
+  // el temporizador de dentro sigue igual)
+  const cuerpo = useRef(null);
+  const idxAntes = useRef(idx);
+  useEffect(() => {
+    const antes = idxAntes.current; idxAntes.current = idx;
+    if (antes === idx || antes < 0 || idx < 0 || !cuerpo.current?.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const d = idx > antes ? 1 : -1;
+    cuerpo.current.animate([{ transform: `translateX(${d * 32}px)` }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+  }, [idx]);
   const actual = actualDe(e);
   const cambiado = actual.id !== e.ejercicio.id;
   const ultimas = ultimasDe(e);
@@ -161,7 +171,7 @@ function EnfoquePantalla({
         })}
       </div>
 
-      <div class="enfoque-cuerpo" onTouchStart={alTocar} onTouchEnd={alSoltar}>
+      <div ref={cuerpo} class="enfoque-cuerpo" onTouchStart={alTocar} onTouchEnd={alSoltar}>
         {descanso && <Temporizador {...descanso} alCambiar={setDescanso} clase="en-enfoque" toca={ahora} alToca={irAhora} discoMinimo={teclado?.discoMinimo} />}
 
         <div class="enfoque-titulo">
@@ -222,7 +232,7 @@ function EnfoquePantalla({
             <div class="rpe-fila" role="group" aria-label="RPE de la serie">
               <span class="etq">RPE</span>
               {RPE_ENFOQUE.map((x) => (
-                <button key={x} type="button" aria-pressed={Number(rpe) === x ? 'true' : 'false'} onClick={() => setRpe(Number(rpe) === x ? '' : x)}>{num(x)}</button>
+                <button key={x} type="button" data-v={x} aria-pressed={Number(rpe) === x ? 'true' : 'false'} onClick={() => setRpe(Number(rpe) === x ? '' : x)}>{num(x)}</button>
               ))}
             </div>
             <button class="btn btn-primario btn-hecha" onClick={hecha} aria-label={previa ? `Guardar los cambios de la serie ${numero}` : `Marcar la serie ${numero} como hecha`}>
