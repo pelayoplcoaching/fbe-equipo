@@ -1,6 +1,6 @@
 import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos, usePreferencia, Pista, CifraSube } from '../comunes.jsx';
+import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos, usePreferencia, Pista, CifraSube, Odometro } from '../comunes.jsx';
 import { BandaConexion } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { SubirArchivo } from '../Archivos.jsx';
@@ -729,7 +729,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
 
       {!propio && (
         <section class="seccion">
-          <h2>Comentarios con tu coach</h2>
+          <h2 class="h2-con-lobo"><img class="h2-lobo" src={LOBO} alt="" />Comentarios con tu coach</h2>
           <div class="panel panel-pad">
             <Hilo atletaId={atleta.id} sesionId={sesion.id} alLeer={alLeer}
               vacio="¿Algo que contarle de esta sesión? Un cambio, una molestia, una duda. Tu coach te responde aquí." />
@@ -786,7 +786,7 @@ function Cronometro({ inicio, minutos, hechas, total }) {
   return (
     <div class="crono" style="text-align:right">
       <div class={`num crono-reloj${minutos == null && inicio ? ' corre' : ''}`} style="font-size:1.0625rem">{minutos != null ? `${minutos} min` : inicio ? mmss((ahora - inicio) / 1000) : '0:00'}</div>
-      <div class="sesion-cab-num">{hechas}/{total} series</div>
+      <div class="sesion-cab-num"><Odometro texto={String(hechas)} />/{total} series</div>
     </div>
   );
 }

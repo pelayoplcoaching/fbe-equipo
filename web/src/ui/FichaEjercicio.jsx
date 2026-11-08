@@ -59,7 +59,7 @@ function Graficas({ d, nombre }) {
       {d.mejor && m.id === 'e1rm' && (
         <div class="cifra">
           <span class="v num">{num(d.mejor.valor)}</span><span class="u">kg de 1RM estimado (tu mejor)</span>
-          <span class="chip morado num">{num(d.mejor.serie.kg, 2)} × {d.mejor.serie.reps}{d.mejor.serie.rpe ? ` @${num(d.mejor.serie.rpe)}` : ''}, {fmtCorta(d.mejor.fecha)}</span>
+          <span class="chip chip-mejor num">{num(d.mejor.serie.kg, 2)} × {d.mejor.serie.reps}{d.mejor.serie.rpe ? ` @${num(d.mejor.serie.rpe)}` : ''}, {fmtCorta(d.mejor.fecha)}</span>
         </div>
       )}
       {metricas.length > 1 && <Segmentos opciones={metricas.map((x) => [x.id, x.corto || x.nombre, x.nombre])} valor={m.id} etiqueta="Qué ver" alCambiar={(v) => v && setMetrica(v)} clase="seg-compacto" />}
