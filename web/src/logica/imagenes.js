@@ -79,6 +79,13 @@ export function archivoPara(id, tam, lista = LISTA) {
   return x.archivos[anchos.find((a) => a >= tam * 3) || anchos[anchos.length - 1]];
 }
 
+// ---------- Los meses ----------
+// Un paisaje por mes del año: «2026-10» (o una fecha «2026-10-31») → mes-10
+export function imagenMes(mes) {
+  const m = /^\d{4}-(\d{2})/.exec(String(mes || ''));
+  return m && Number(m[1]) >= 1 && Number(m[1]) <= 12 ? `mes-${m[1]}` : null;
+}
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.

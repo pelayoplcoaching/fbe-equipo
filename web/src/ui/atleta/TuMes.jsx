@@ -4,6 +4,8 @@ import { HojaCompartir } from '../Compartir.jsx';
 import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { nombreMes, mesConAnio, mesAnterior, calendarioMes, datosCompartirMes } from '../../logica/mes.js';
 import { num } from '../../logica/calculos.js';
+import { imagenMes } from '../../logica/imagenes.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 
 const capital = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 const toneladas = (kg) => num(Math.round(kg / 100) / 10, 1);
@@ -173,7 +175,9 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
     };
   };
   return (
-    <div class="historia historia-mes" role="dialog" aria-modal="true" aria-label={tu} ref={caja} tabIndex={-1} onPointerDown={alBajar} onPointerUp={alSoltar}>
+    <div class={`historia historia-mes ${hayImagen(imagenMes(mes)) ? 'con-fondo' : ''}`} role="dialog" aria-modal="true" aria-label={tu} ref={caja} tabIndex={-1} onPointerDown={alBajar} onPointerUp={alSoltar}>
+      {/* (imágenes) el paisaje de ese mes, de fondo y con un velo, en todas las pantallas */}
+      <Imagen key={mes} id={imagenMes(mes)} clase="historia-fondo" tamanos="150vh" prioridad />
       <div class="historia-barras" aria-hidden="true">
         {pantallas.map((p, k) => <span key={p.id} class={k < i ? 'vista' : k === i ? `actual ${quieto ? '' : 'corre'}` : ''}><i /></span>)}
       </div>
@@ -213,7 +217,9 @@ export function TusMeses({ atletaId = null, atleta: deQuien = null, salud = true
         <ul class="lista">
           {lista.datos.map((r) => (
             <li key={r.mes}>
-              <button class="fila-semana" onClick={() => setAbierto(r)}>
+              <button class={`fila-semana ${hayImagen(imagenMes(r.mes)) ? 'con-mini' : ''}`} onClick={() => setAbierto(r)}>
+                {/* (imágenes) el paisaje del mes, en pequeño */}
+                <Imagen id={imagenMes(r.mes)} clase="mes-mini" tamanos="80px" />
                 <span class="pila-xs">
                   <strong>{capital(mesConAnio(r.mes))}</strong>
                   <span class="peq secundario">{r.conEntreno ? `${r.sesiones.hechas} de ${r.sesiones.previstas || r.sesiones.hechas} sesiones, ${r.dias} días entrenando${r.records.length ? `, ${r.records.length} ${r.records.length === 1 ? 'récord' : 'récords'}` : ''}` : r.nutricion?.dias ? `${r.nutricion.dias} días de nutrición apuntados` : 'Hábitos del mes'}</span>

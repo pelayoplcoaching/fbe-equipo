@@ -3,7 +3,7 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
 import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 import { GRUPOS } from '../web/src/logica/calculos.js';
 import { TOMAS } from '../web/src/logica/comidas.js';
@@ -77,6 +77,11 @@ console.log('\nLas medallas');
   const lista = { a: { proporcion: [1, 1], archivos: { 256: 'p', 512: 'g' } } };
   check(archivoPara('a', 30, lista) === 'p' && archivoPara('a', 76, lista) === 'p' && archivoPara('a', 176, lista) === 'g' && archivoPara('nada', 76, lista) === null, 'el archivo según el tamaño: el pequeño hasta 85 px, el grande por encima');
 }
+
+console.log('\nLos meses');
+check(imagenMes('2026-01') === 'mes-01' && imagenMes('2026-10-31') === 'mes-10' && imagenMes('2025-12') === 'mes-12', 'cada mes (o una fecha de ese mes), su paisaje');
+check(imagenMes('2026-13') === null && imagenMes('') === null && imagenMes(null) === null && imagenMes('octubre') === null, 'lo que no es un mes, ninguno');
+check(Array.from({ length: 12 }, (_, i) => `mes-${String(i + 1).padStart(2, '0')}`).every((id) => IMAGENES.includes(id)), 'están los doce');
 
 console.log('\nLos archivos que se sirven');
 {

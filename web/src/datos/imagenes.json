@@ -544,6 +544,150 @@
       "512": "imagenes/medalla/medalla-toneladas-plata-512.78c2a9ef.webp"
     }
   },
+  "mes-01": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-01-240.3acad4d3.webp",
+      "720": "imagenes/mes/mes-01-720.0a64bc0f.webp",
+      "1080": "imagenes/mes/mes-01-1080.6eebe620.webp",
+      "1440": "imagenes/mes/mes-01-1440.4e6100f2.webp"
+    }
+  },
+  "mes-02": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-02-240.76bb12db.webp",
+      "720": "imagenes/mes/mes-02-720.33de238b.webp",
+      "1080": "imagenes/mes/mes-02-1080.9191c878.webp",
+      "1440": "imagenes/mes/mes-02-1440.f46f0d37.webp"
+    }
+  },
+  "mes-03": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-03-240.d8ac97b5.webp",
+      "720": "imagenes/mes/mes-03-720.c36dd76e.webp",
+      "1080": "imagenes/mes/mes-03-1080.39c2fd70.webp",
+      "1440": "imagenes/mes/mes-03-1440.d5da52d3.webp"
+    }
+  },
+  "mes-04": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-04-240.9cabb5ad.webp",
+      "720": "imagenes/mes/mes-04-720.bd8531f6.webp",
+      "1080": "imagenes/mes/mes-04-1080.06fbdf69.webp",
+      "1440": "imagenes/mes/mes-04-1440.90cfe94b.webp"
+    }
+  },
+  "mes-05": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-05-240.3878d72e.webp",
+      "720": "imagenes/mes/mes-05-720.24e70328.webp",
+      "1080": "imagenes/mes/mes-05-1080.c2c4ddea.webp",
+      "1440": "imagenes/mes/mes-05-1440.9736fa49.webp"
+    }
+  },
+  "mes-06": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-06-240.724e2aa2.webp",
+      "720": "imagenes/mes/mes-06-720.0ee0acc1.webp",
+      "1080": "imagenes/mes/mes-06-1080.c14b0414.webp",
+      "1440": "imagenes/mes/mes-06-1440.de8a9b97.webp"
+    }
+  },
+  "mes-07": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-07-240.8be663d3.webp",
+      "720": "imagenes/mes/mes-07-720.42334f5e.webp",
+      "1080": "imagenes/mes/mes-07-1080.fd96c211.webp",
+      "1440": "imagenes/mes/mes-07-1440.2f3aac4e.webp"
+    }
+  },
+  "mes-08": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-08-240.99f13757.webp",
+      "720": "imagenes/mes/mes-08-720.68cedaea.webp",
+      "1080": "imagenes/mes/mes-08-1080.eb4e2c2e.webp",
+      "1440": "imagenes/mes/mes-08-1440.158f5794.webp"
+    }
+  },
+  "mes-09": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-09-240.6f9847da.webp",
+      "720": "imagenes/mes/mes-09-720.d5ddbdb6.webp",
+      "1080": "imagenes/mes/mes-09-1080.bb64f095.webp",
+      "1440": "imagenes/mes/mes-09-1440.07b2886f.webp"
+    }
+  },
+  "mes-10": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-10-240.03796531.webp",
+      "720": "imagenes/mes/mes-10-720.dc37a178.webp",
+      "1080": "imagenes/mes/mes-10-1080.cac58c86.webp",
+      "1440": "imagenes/mes/mes-10-1440.4ec49e62.webp"
+    }
+  },
+  "mes-11": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-11-240.76911cf0.webp",
+      "720": "imagenes/mes/mes-11-720.553c702f.webp",
+      "1080": "imagenes/mes/mes-11-1080.bb237c32.webp",
+      "1440": "imagenes/mes/mes-11-1440.210c1ca9.webp"
+    }
+  },
+  "mes-12": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-12-240.35cd1c3f.webp",
+      "720": "imagenes/mes/mes-12-720.ff740776.webp",
+      "1080": "imagenes/mes/mes-12-1080.f398fb1b.webp",
+      "1440": "imagenes/mes/mes-12-1440.fe0b454b.webp"
+    }
+  },
   "sesion-cardio": {
     "proporcion": [
       16,

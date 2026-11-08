@@ -4,6 +4,8 @@ import { MapaMuscular } from './MapaMuscular.jsx';
 import { HojaCompartir } from './Compartir.jsx';
 import { rangoLargo } from './atleta/TuSemana.jsx';
 import { num, signo, NOMBRE_FOCO } from '../logica/calculos.js';
+import { imagenMes } from '../logica/imagenes.js';
+import { Imagen, hayImagen } from './Imagen.jsx';
 
 // Informe de un bloque: lo que se hizo de lo pautado, cómo subió la fuerza estimada de los ejercicios
 // principales, semana a semana, músculos, récords y (con consentimiento) el peso. Lo ven el atleta y el coach.
@@ -66,7 +68,13 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
   return (
     <Hoja titulo={tituloBloque(r.bloque)} alCerrar={alCerrar} ancho={760}>
       <div class="informe">
-        <p class="secundario">{r.semanasTotal} semanas, {rangoLargo(r.inicio, r.fin)}. <span class={`chip ${r.terminado ? 'ok' : 'morado'}`}>{r.terminado ? 'Terminado' : 'En curso'}</span></p>
+        {/* (imágenes) arriba, las semanas y las fechas sobre el paisaje del mes en que acaba el bloque */}
+        {hayImagen(imagenMes(r.fin)) ? (
+          <div class="cab-ilu informe-ilu">
+            <p>{r.semanasTotal} semanas, {rangoLargo(r.inicio, r.fin)}. <span class={`chip ${r.terminado ? 'ok' : 'morado'}`}>{r.terminado ? 'Terminado' : 'En curso'}</span></p>
+            <Imagen key={imagenMes(r.fin)} id={imagenMes(r.fin)} clase="cab-ilu-img" tamanos="16rem" />
+          </div>
+        ) : <p class="secundario">{r.semanasTotal} semanas, {rangoLargo(r.inicio, r.fin)}. <span class={`chip ${r.terminado ? 'ok' : 'morado'}`}>{r.terminado ? 'Terminado' : 'En curso'}</span></p>}
         {r.bloque.objetivo && <p class="peq">{r.bloque.objetivo}</p>}
 
         <div class="informe-cifras">
