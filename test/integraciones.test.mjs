@@ -217,6 +217,37 @@ const fin = await uno(`select public.integraciones_mias() as r`);
 check(!fin.salud.activa && !fin.calendario.activo && (await uno(`select public.salud_diaria_de($1) as r`, [aa])).dias.length === 0, 'desconecta los dos y borra lo que llegó de Salud');
 await servicio();
 check((await uno(`select public.calendario_de($1) as r`, [enlaceC])) === null, 'y su calendario ya no recibe nada');
+// (segunda revisión) Lo que el atleta borró no vuelve; consentimientos duplicados; borrar la cuenta
+await como(ua);
+const e3 = await uno(`select public.integracion_crear('salud') as r`);
+const d5 = sumarDias(hoyM, -6), d6 = sumarDias(hoyM, -7);
+await q(`insert into public.registros_habito (habito_id, fecha, valor) values ($1, $2, 3000)`, [hp, d5]);
+await servicio();
+await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [e3, JSON.stringify([{ fecha: d5, pasos: 7000 }, { fecha: d6, sueno_min: 420 }])]);
+await como(ua);
+await q(`delete from public.registros_habito where fecha in ($1, $2) and atleta_id = $3`, [d5, d6, aa]);
+await servicio();
+await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [e3, JSON.stringify([{ fecha: d5, pasos: 6000 }, { fecha: d6, sueno_min: 360 }])]);
+const regDe = async (h, f) => (await q(`select valor::float as v from public.registros_habito where habito_id = $1 and fecha = $2`, [h, f]))[0]?.v ?? null;
+check(await regDe(hp, d5) === 6000 && await regDe(hs, d6) === 6, 'si ella borró el día y el atajo lo vuelve a poner, queda lo del atajo');
+// dos consentimientos de salud a la vez: retirar uno no borra nada; retirar el otro, sí
+await su();
+const cons = await q(`insert into public.consentimientos (perfil_id, tipo, version) values ($1, 'datos_salud', '2026-11') returning id`, [ua]);
+await q(`update public.consentimientos set revocado_en = now() where id = $1`, [cons[0].id]);
+const nSalud = async () => (await q(`select count(*)::int as n from public.salud_diaria where atleta_id = $1`, [aa]))[0].n;
+check(await nSalud() > 0, 'con otro consentimiento de salud aún vigente, retirar uno no borra nada');
+await q(`update public.consentimientos set revocado_en = now() where perfil_id = $1 and tipo = 'datos_salud' and revocado_en is null`, [ua]);
+check(await nSalud() === 0 && await regDe(hp, d5) === null && await regDe(hs, d6) === null, 'al retirar el último, se borra todo, y lo que ella había borrado no vuelve (ni sus 3000 pasos ni el sueño)');
+// borrar la cuenta (la ficha se queda sin cuenta): lo de Salud se va
+await q(`insert into public.consentimientos (perfil_id, tipo, version) values ($1, 'datos_salud', '2026-11')`, [ua]);
+await como(ua);
+const e4 = await uno(`select public.integracion_crear('salud') as r`);
+await servicio();
+await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [e4, JSON.stringify([{ fecha: hoyM, fc_reposo: 56 }])]);
+await su();
+await q(`update public.atletas set perfil_id = null where id = $1`, [aa]);
+check(await nSalud() === 0 && (await q(`select salud_huella from public.integraciones where atleta_id = $1`, [aa]))[0].salud_huella === null, 'si la ficha se queda sin cuenta (se borra la cuenta), lo de Salud y su clave se van');
+await q(`update public.atletas set perfil_id = $1 where id = $2`, [ua, aa]);
 await su();
 await q(`delete from public.atletas where id = $1`, [ab]);
 check((await q(`select count(*)::int as n from public.contacto_atleta where atleta_id = $1`, [ab]))[0].n === 0, 'al borrar la ficha, lo suyo se va con ella');

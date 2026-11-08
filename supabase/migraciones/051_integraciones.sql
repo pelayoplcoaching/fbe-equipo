@@ -116,6 +116,7 @@ create table if not exists public.salud_copias (
   valor_puesto  numeric not null, -- lo que dejó el atajo
   primary key (atleta_id, tipo, fecha)
 );
+create index if not exists salud_copias_habito_idx on public.salud_copias (habito_id);
 comment on table public.salud_copias is 'Lo que el atajo de Salud copió a hábitos y pesos, para poder deshacerlo. Solo por sus funciones.';
 
 -- Borra lo que llegó de Salud y deshace sus copias (lo que siga igual que lo dejó el atajo)
@@ -134,10 +135,12 @@ begin
       elsif c.tipo = 'peso' then
         delete from public.pesos where atleta_id = p_atleta and fecha = c.fecha and kg = c.valor_puesto and notas = 'Desde Salud';
       end if;
-    exception when others then null;  -- (si no se puede deshacer una, las demás sí)
+      delete from public.salud_copias where atleta_id = c.atleta_id and tipo = c.tipo and fecha = c.fecha;
+    exception when others then
+      -- (si una no se puede deshacer, las demás sí; esa se queda apuntada para volver a intentarlo)
+      raise warning 'salud_borrar: no se pudo deshacer % del %: %', c.tipo, c.fecha, sqlerrm;
     end;
   end loop;
-  delete from public.salud_copias where atleta_id = p_atleta;
   delete from public.salud_diaria where atleta_id = p_atleta;
 end $$;
 
@@ -310,7 +313,8 @@ declare
   v_hab_pasos uuid; v_hab_sueno uuid; v_prev numeric;
 begin
   if coalesce(p_enlace, '') !~ '^[0-9a-f]{64}$' then return jsonb_build_object('ok', false, 'error', 'enlace'); end if;
-  select atleta_id into v_atleta from public.integraciones where salud_huella = fbe_privado.huella(p_enlace);
+  -- (for update: si a la vez se retira el consentimiento, uno espera al otro; el que espera ya no encuentra la clave)
+  select atleta_id into v_atleta from public.integraciones where salud_huella = fbe_privado.huella(p_enlace) for update;
   if v_atleta is null then return jsonb_build_object('ok', false, 'error', 'enlace'); end if;
   if exists (select 1 from public.atletas where id = v_atleta and estado = 'baja') then return jsonb_build_object('ok', false, 'error', 'baja'); end if;
   if not exists (select 1 from public.atletas a join public.consentimientos c on c.perfil_id = a.perfil_id
@@ -362,7 +366,11 @@ begin
       -- (se apunta la copia con lo que había antes; si ya había una copia, se queda su «antes», el de él)
       if n > 0 then
         insert into public.salud_copias (atleta_id, tipo, habito_id, fecha, valor_previo, valor_puesto) values (v_atleta, 'pasos', v_hab_pasos, v_fecha, v_prev, v_pasos)
-        on conflict (atleta_id, tipo, fecha) do update set valor_puesto = excluded.valor_puesto, habito_id = excluded.habito_id;
+        -- (su «antes» se queda, salvo que él haya cambiado o borrado el día desde la última copia, o cambie el hábito)
+        on conflict (atleta_id, tipo, fecha) do update set
+          valor_previo = case when public.salud_copias.valor_puesto is distinct from v_prev or public.salud_copias.habito_id is distinct from excluded.habito_id
+                              then excluded.valor_previo else public.salud_copias.valor_previo end,
+          valor_puesto = excluded.valor_puesto, habito_id = excluded.habito_id;
       end if;
     end if;
     -- Las horas de sueño, en su hábito de sueño si ese día no las apuntó él
@@ -372,7 +380,7 @@ begin
       get diagnostics n = row_count; n_habitos := n_habitos + n;
       if n > 0 then
         insert into public.salud_copias (atleta_id, tipo, habito_id, fecha, valor_previo, valor_puesto) values (v_atleta, 'sueno', v_hab_sueno, v_fecha, null, round(v_sueno / 60.0, 1))
-        on conflict (atleta_id, tipo, fecha) do nothing;
+        on conflict (atleta_id, tipo, fecha) do update set valor_puesto = excluded.valor_puesto, habito_id = excluded.habito_id, valor_previo = null;
       end if;
     end if;
     -- El peso, en sus pesos si ese día no hay otro
@@ -483,7 +491,8 @@ create or replace function fbe_privado.salud_al_retirar() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare v_atleta uuid;
 begin
-  if old.tipo = 'datos_salud' and old.revocado_en is null and (tg_op = 'DELETE' or new.revocado_en is not null) then
+  if old.tipo = 'datos_salud' and old.revocado_en is null and (tg_op = 'DELETE' or new.revocado_en is not null)
+     and not exists (select 1 from public.consentimientos c where c.perfil_id = old.perfil_id and c.tipo = 'datos_salud' and c.revocado_en is null and c.id <> old.id) then
     for v_atleta in select a.id from public.atletas a where a.perfil_id = old.perfil_id loop
       update public.integraciones set salud_huella = null, salud_desde = null, salud_ultimo = null, actualizado_en = now() where atleta_id = v_atleta;
       perform fbe_privado.salud_borrar(v_atleta);
@@ -491,6 +500,20 @@ begin
   end if;
   return case when tg_op = 'DELETE' then old else new end;
 end $$;
+-- Al borrar su cuenta, la ficha se queda sin cuenta (perfil_id a null) antes de que se borren sus consentimientos: lo de
+-- Salud se va entonces (si no, una ficha vuelta a vincular con una invitación recuperaría la clave vieja)
+create or replace function fbe_privado.salud_al_desvincular() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if old.perfil_id is not null and new.perfil_id is null then
+    update public.integraciones set salud_huella = null, salud_desde = null, salud_ultimo = null, actualizado_en = now() where atleta_id = old.id;
+    perform fbe_privado.salud_borrar(old.id);
+  end if;
+  return new;
+end $$;
+drop trigger if exists atletas_salud_al_desvincular on public.atletas;
+create trigger atletas_salud_al_desvincular after update of perfil_id on public.atletas
+  for each row execute function fbe_privado.salud_al_desvincular();
 drop trigger if exists consentimientos_salud_al_retirar on public.consentimientos;
 create trigger consentimientos_salud_al_retirar before update or delete on public.consentimientos
   for each row execute function fbe_privado.salud_al_retirar();
