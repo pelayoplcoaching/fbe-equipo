@@ -1510,8 +1510,8 @@ try {
   check(await p.locator('.logro').count() === 7, 'en Progreso, sus 7 logros');
   // v0.51: medallas de metal: el nivel dice el metal (y su canto lo distingue sin el color)
   const metales = await p.locator('.logro .logro-metal').allTextContents();
-  check(metales.length === 7 && metales.every((m) => ['Bronce', 'Plata', 'Oro', 'Platino', 'Sin medalla'].includes(m)) && metales.some((m) => m !== 'Sin medalla')
-    && (await p.locator('.logro').first().getAttribute('aria-label')).match(/medalla de (bronce|plata|oro|platino)|aún sin medalla/), `cada logro, con su medalla y su metal escrito (${metales.join(', ')})`);
+  check(metales.length === 7 && metales.every((m) => ['Bronce', 'Plata', 'Oro', 'Diamante', 'Sin medalla'].includes(m)) && metales.some((m) => m !== 'Sin medalla')
+    && (await p.locator('.logro').first().getAttribute('aria-label')).match(/medalla de (bronce|plata|oro|diamante)|aún sin medalla/), `cada logro, con su medalla y su metal escrito (${metales.join(', ')})`);
   await p.locator('.logros').scrollIntoViewIfNeeded();
   await revisar('logros-medallas');
   await p.setViewportSize({ width: 360, height: 780 });

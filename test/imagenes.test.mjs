@@ -3,7 +3,7 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, imagenLugar, imagenBienvenida, imagenPrimerosPasos, imagenHerramienta, HERRAMIENTAS, FAMILIAS_PORTADA, IMAGENES } from '../web/src/logica/imagenes.js';
 import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 import { GRUPOS } from '../web/src/logica/calculos.js';
 import { TOMAS } from '../web/src/logica/comidas.js';
@@ -67,6 +67,39 @@ check(FONDOS_TARJETA.every((f) => IMAGENES.includes(`compartir-${f}`)), 'están 
   check(!mio || (mio.fondo === 'racha' && equipo.fondo === 'mes'), 'tu mes lleva las llamas y el del equipo, las lunas');
 }
 
+console.log('\nLas medallas');
+{
+  const { LOGROS } = await import('../web/src/logica/logros.js');
+  check(imagenMedalla('sesiones', 1) === 'medalla-constancia-bronce' && imagenMedalla('sesiones', 4) === 'medalla-constancia-diamante' && imagenMedalla('peso', 3) === 'medalla-bascula-oro', 'cada logro y nivel, su medalla (el cuarto nivel, diamante)');
+  check(imagenMedalla('sesiones', 0) === null && imagenMedalla('inventado', 2) === null && imagenMedalla('sesiones', 5) === null, 'sin nivel, con un logro desconocido o un nivel que no existe, ninguna (la dibujada)');
+  check(!LOGROS || LOGROS.every((l) => imagenMedalla(l.id, 1)), 'todos los logros de la app tienen nombre de medalla');
+  check(['bronce', 'plata', 'oro', 'diamante'].every((m) => IMAGENES.includes(`medalla-constancia-${m}`)), 'están las cuatro medallas de Constancia');
+  const lista = { a: { proporcion: [1, 1], archivos: { 256: 'p', 512: 'g' } } };
+  check(archivoPara('a', 30, lista) === 'p' && archivoPara('a', 76, lista) === 'p' && archivoPara('a', 176, lista) === 'g' && archivoPara('nada', 76, lista) === null, 'el archivo según el tamaño: el pequeño hasta 85 px, el grande por encima');
+}
+
+console.log('\nLos meses');
+check(imagenMes('2026-01') === 'mes-01' && imagenMes('2026-10-31') === 'mes-10' && imagenMes('2025-12') === 'mes-12', 'cada mes (o una fecha de ese mes), su paisaje');
+// El check-in
+check(imagenPasoCheckin('peso') === 'checkin-medidas' && imagenPasoCheckin('medidas') === 'checkin-medidas', 'peso y medidas, la báscula');
+check(['sueno', 'energia', 'recuperacion'].every((p) => imagenPasoCheckin(p) === 'checkin-descanso') && imagenPasoCheckin('motivacion') === 'checkin-animo', 'descanso y ánimo');
+check(['adherencia', 'saciedad', 'satisfaccion'].every((p) => imagenPasoCheckin(p) === 'checkin-alimentacion'), 'la alimentación');
+check(imagenPasoCheckin('reloj') === 'checkin-inicio' && imagenPasoCheckin('notas') === 'checkin-inicio' && imagenPasoCheckin('p-abc') === 'checkin-inicio', 'reloj, notas y preguntas del coach, la mesa');
+check(imagenPasoCheckin('molestias') === 'checkin-molestias', 'las molestias, la bolsa de frío y la venda');
+check(imagenPasoCheckin('otra') === null && imagenPasoCheckin(null) === null, 'lo desconocido, ninguna');
+check(imagenPasoCheckin(null, { revision: true }) === 'checkin-inicio' && imagenPasoCheckin('peso', { revision: true, enviado: true }) === 'checkin-enviado', 'el repaso y lo ya enviado');
+// Dónde entrenas, bienvenida, primeros pasos y herramientas
+check(imagenLugar('casa') === 'donde-casa' && imagenLugar('viaje') === 'donde-viaje' && imagenLugar('gimnasio') === 'donde-gimnasio' && imagenLugar(undefined) === 'donde-gimnasio', 'cada sitio de entreno, su imagen (y lo desconocido, el gimnasio)');
+check(imagenBienvenida(6) === 'bienvenida-manana' && imagenBienvenida(13) === 'bienvenida-manana' && imagenBienvenida(14) === 'bienvenida-tarde' && imagenBienvenida(20) === 'bienvenida-tarde', 'la bienvenida: mañana de 6 a 14, tarde de 14 a 21');
+check(imagenBienvenida(21) === 'bienvenida-noche' && imagenBienvenida(0) === 'bienvenida-noche' && imagenBienvenida(5) === 'bienvenida-noche' && imagenBienvenida('x') === null, 'y la noche el resto');
+check(imagenPrimerosPasos('programa') === 'primeros-programa' && imagenPrimerosPasos('serie') === 'primeros-sesion' && imagenPrimerosPasos('coach') === 'primeros-checkin' && imagenPrimerosPasos('instalar') === null, 'primera vez: programa, sesión y check-in; instalar, con su dibujo');
+check(HERRAMIENTAS.every((h) => imagenHerramienta(h) === `herr-${h}`) && imagenHerramienta('otra') === null, 'cada herramienta, su imagen');
+// Las celebraciones
+check(CELEBRACIONES.every((c) => imagenCelebracion(c) === `celebra-${c}`) && imagenCelebracion('otra') === null, 'cada celebración, su imagen');
+check(selloSesion({ records: 2, primera: true }) === 'celebra-record' && selloSesion({ primera: true }) === 'celebra-primera' && selloSesion({}) === null, 'el sello: récord antes que primera vez; si no, ninguno');
+check(imagenMes('2026-13') === null && imagenMes('') === null && imagenMes(null) === null && imagenMes('octubre') === null, 'lo que no es un mes, ninguno');
+check(Array.from({ length: 12 }, (_, i) => `mes-${String(i + 1).padStart(2, '0')}`).every((id) => IMAGENES.includes(id)), 'están los doce');
+
 console.log('\nLos archivos que se sirven');
 {
   const lista = { a: { proporcion: [16, 9], archivos: { 1440: 'imagenes/x/a-1440.00000000.webp', 720: 'imagenes/x/a-720.00000000.webp', 1080: 'imagenes/x/a-1080.00000000.webp' } } };
@@ -90,6 +123,12 @@ console.log('\nLa lista y la carpeta');
   check(enLista.every((f) => /^imagenes\/[a-z0-9-]+\/[a-z0-9-]+-\d+\.[0-9a-f]{8}\.webp$/.test(f)), 'todos con el nombre que espera la construcción (bloque, id, ancho y huella)');
   const pesos = enLista.map((f) => statSync(join(raiz, 'web', f)).size);
   check(Math.max(...pesos) <= 120 * 1024, `ninguno pasa de 120 KB (el mayor, ${(Math.max(...pesos) / 1024).toFixed(0)} KB)`);
+  const pasosCk = ['peso', 'sueno', 'motivacion', 'molestias', 'adherencia', 'reloj'].map((p) => imagenPasoCheckin(p)).concat(imagenPasoCheckin(null, { revision: true, enviado: true }));
+  check(pasosCk.every((id) => IMAGENES.includes(id)), 'están las imágenes del check-in');
+  check(CELEBRACIONES.every((c) => IMAGENES.includes(`celebra-${c}`)), 'y las cinco celebraciones');
+  check(['gimnasio', 'casa', 'viaje'].every((l) => IMAGENES.includes(imagenLugar(l))), 'están las tres de dónde entrenas');
+  check([3, 15, 22].every((h) => IMAGENES.includes(imagenBienvenida(h))) && ['programa', 'serie', 'coach'].every((d) => IMAGENES.includes(imagenPrimerosPasos(d))), 'las tres de bienvenida y las tres de la primera vez');
+  check(HERRAMIENTAS.every((h) => IMAGENES.includes(imagenHerramienta(h))) && ['equipo-manada', 'equipo-reto', 'carne-fondo'].every((id) => IMAGENES.includes(id)), 'las cuatro herramientas, el equipo y el carné');
   check(FAMILIAS_PORTADA.every((fa) => IMAGENES.includes(`sesion-${fa}`)), 'están las siete portadas de sesión');
   check(Object.entries(lista).every(([id, x]) => Object.values(x.archivos).every((f) => f.split('/').pop().startsWith(`${id}-`))), 'cada archivo lleva el nombre de su imagen');
 }

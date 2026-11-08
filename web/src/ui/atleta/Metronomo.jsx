@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, Paso } from '../comunes.jsx';
 import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
+import { Imagen } from '../Imagen.jsx';
+import { imagenHerramienta } from '../../logica/imagenes.js';
 import { explicarTempo, posicionTempo } from '../../logica/tempo.js';
 
 // Metrónomo de tempo: cuenta atrás de 3 s y, en cada repetición, un pitido grave por segundo al bajar,
@@ -53,6 +55,7 @@ export function Metronomo({ tempo, nombre, reps = 8, alCerrar }) {
   return (
     <Hoja titulo={`Tempo ${tempo.texto}`} alCerrar={() => { parar(); alCerrar(); }}>
       <div class="metronomo pila">
+        <Imagen id={imagenHerramienta('metronomo')} clase="franja-ilu franja-herr" tamanos="(min-width: 640px) 560px, 92vw" />
         <p class="peq secundario">{nombre}: {explicarTempo(tempo).toLowerCase()}.</p>
         <div class={`metro-pantalla ${fase ? `fase-${pos.fase}` : ''}`} aria-live="polite">
           {inicio == null ? <span class="metro-grande">Listo</span>

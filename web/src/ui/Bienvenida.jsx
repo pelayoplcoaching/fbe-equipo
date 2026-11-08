@@ -3,6 +3,9 @@ import { fechaMadrid } from '../logica/fechas.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { Icono, CifraSube } from './comunes.jsx';
 import { tocaBienvenida, mensajeBienvenida } from '../logica/bienvenida.js';
+import { Imagen } from './Imagen.jsx';
+import { imagenBienvenida } from '../logica/imagenes.js';
+const horaMadrid = () => { try { return Number(new Intl.DateTimeFormat('es-ES', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Europe/Madrid' }).format(new Date())); } catch { return new Date().getHours(); } };
 
 // v0.68: la bienvenida personalizada, una vez al día (la primera vez que se abre la app ese día, en este móvil y con esta
 // cuenta). Sigue a la portada de arranque (el mismo fondo) y dice algo según cómo va: la primera vez, un récord reciente,
@@ -124,6 +127,8 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
   }, [listo]);
   return (
     <div class={`bdia${conPanel ? ' bdia-con-panel' : ''}`} role="dialog" aria-modal="true" aria-labelledby="bdia-titulo" aria-describedby="bdia-mensaje">
+      {/* (imágenes) de fondo, muy tenue, la mañana, la tarde o la noche según la hora */}
+      <Imagen id={imagenBienvenida(horaMadrid())} clase="bdia-fondo" tamanos="100vw" />
       <div class="bdia-cuerpo" ref={cuerpo} {...(desliza ? { tabIndex: 0, role: 'group', 'aria-label': 'Tu resumen de hoy' } : {})}>
         <div class="bdia-arriba">
           <span class="bdia-marca"><svg viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path fill-rule="evenodd" d={LOBO_D} /></svg>FBE Equipo</span>

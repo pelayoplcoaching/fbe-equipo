@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Capa } from '../comunes.jsx';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenPrimerosPasos } from '../../logica/imagenes.js';
 
 // ---------- Bienvenida: cuatro pantallas la primera vez que entra un atleta nuevo ----------
 const DIBUJOS = {
@@ -77,7 +79,10 @@ function BienvenidaPantalla({ nombre, alTerminar }) {
     <div class="bienvenida" role="dialog" aria-modal="true" aria-label="Bienvenida a FBE Equipo" tabIndex={-1} ref={caja}>
       <button class="btn-texto bienvenida-saltar" onClick={alTerminar}>Saltar</button>
       <div class="bienvenida-cuerpo" key={i}>
-        <div class="bienvenida-dibujo">{DIBUJOS[p.dibujo]}</div>
+        {/* (imágenes) el programa, la puerta del gimnasio y la mesa del check-in; la de instalar, con su dibujo */}
+        <div class={`bienvenida-dibujo ${hayImagen(imagenPrimerosPasos(p.dibujo)) ? 'con-foto' : ''}`}>
+          <Imagen id={imagenPrimerosPasos(p.dibujo)} clase="bienvenida-foto" tamanos="(min-width: 500px) 460px, 92vw" prioridad alternativa={DIBUJOS[p.dibujo]} />
+        </div>
         <h2>{p.titulo}</h2>
         <p>{p.texto}</p>
       </div>

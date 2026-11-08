@@ -17,6 +17,8 @@ import { velocidadInicial, esLenta } from '../logica/angulos.js';
 import { DifuminarCara, puedeDifuminar } from './tecnica/Difuminar.jsx';
 import { ajuste } from './ajustes.js';
 import { leerRed, motivoEspera, TEXTO_ESPERA } from '../logica/red.js';
+import { Imagen } from './Imagen.jsx';
+import { imagenHerramienta } from '../logica/imagenes.js';
 import { subidaEmpieza, subidaProgreso, subidaAcaba } from '../datos/subidas.js';
 
 // Botón que abre la cámara o la galería y envía el vídeo (o la foto) a la carpeta privada del atleta.
@@ -252,6 +254,7 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
       )}
       {elegir && (
         <Hoja titulo={titulo || 'Vídeo de técnica'} alCerrar={() => setElegir(false)}>
+          <Imagen id={imagenHerramienta('camara')} clase="franja-ilu franja-herr" tamanos="(min-width: 640px) 560px, 92vw" />
           <p class="peq secundario"><b>{enc.titulo}.</b> {enc.texto}</p>
           <button type="button" class="btn btn-primario btn-grande" onClick={() => { setElegir(false); setCamara(true); }}><Icono n="camara" /> Grabar con guía</button>
           <button type="button" class="btn btn-grande" onClick={() => { setElegir(false); input.current?.click(); }}><Icono n="imagen" /> Elegir de la galería</button>

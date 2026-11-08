@@ -63,6 +63,69 @@ export function fondoTarjeta(d = {}) {
   return d.records?.length ? 'compartir-record' : 'compartir-sesion';
 }
 
+// ---------- Las medallas ----------
+// Una por logro (logica/logros.js) y nivel: bronce, plata, oro y diamante (el cuarto nivel)
+const MEDALLA_DE = { sesiones: 'constancia', racha: 'semanas', toneladas: 'toneladas', records: 'records', videos: 'tecnica', checkins: 'checkins', peso: 'bascula' };
+const NIVEL_IMG = [null, 'bronce', 'plata', 'oro', 'diamante'];
+export function imagenMedalla(logro, nivel) {
+  return MEDALLA_DE[logro] && NIVEL_IMG[nivel] ? `medalla-${MEDALLA_DE[logro]}-${NIVEL_IMG[nivel]}` : null;
+}
+// El archivo para un tamaño en pantalla (en px): el más pequeño que llegue a tres veces ese tamaño, o el mayor
+export function archivoPara(id, tam, lista = LISTA) {
+  const x = id && Object.prototype.hasOwnProperty.call(lista, id) ? lista[id] : null;
+  if (!x?.archivos) return null;
+  const anchos = Object.keys(x.archivos).map(Number).filter((n) => n > 0).sort((a, b) => a - b);
+  if (!anchos.length) return null;
+  return x.archivos[anchos.find((a) => a >= tam * 3) || anchos[anchos.length - 1]];
+}
+
+// ---------- Los meses ----------
+// Un paisaje por mes del año: «2026-10» (o una fecha «2026-10-31») → mes-10
+export function imagenMes(mes) {
+  const m = /^\d{4}-(\d{2})/.exec(String(mes || ''));
+  return m && Number(m[1]) >= 1 && Number(m[1]) <= 12 ? `mes-${m[1]}` : null;
+}
+
+// ---------- El check-in ----------
+// Una franja por apartado del paso que se está contestando (molestias: la bolsa de frío, la cinta y la venda); el repaso,
+// la de inicio; las respuestas ya enviadas, el avión de papel.
+const CHECKIN_DE = {
+  peso: 'medidas', medidas: 'medidas',
+  sueno: 'descanso', energia: 'descanso', recuperacion: 'descanso',
+  motivacion: 'animo', molestias: 'molestias',
+  adherencia: 'alimentacion', saciedad: 'alimentacion', satisfaccion: 'alimentacion',
+  reloj: 'inicio', notas: 'inicio',
+};
+export function imagenPasoCheckin(paso, { revision = false, enviado = false } = {}) {
+  if (revision) return enviado ? 'checkin-enviado' : 'checkin-inicio';
+  const id = String(paso || '');
+  if (id.startsWith('p-')) return 'checkin-inicio'; // las preguntas de su coach
+  return CHECKIN_DE[id] ? `checkin-${CHECKIN_DE[id]}` : null;
+}
+
+// ---------- Las celebraciones ----------
+export const CELEBRACIONES = ['record', 'semana', 'bloque', 'primera', 'racha'];
+export function imagenCelebracion(que) { return CELEBRACIONES.includes(que) ? `celebra-${que}` : null; }
+// El sello del resumen de una sesión: récord si lo ha habido; si no, la primera vez que hace esa sesión; si no, nada
+export function selloSesion({ records = 0, primera = false } = {}) {
+  return records > 0 ? 'celebra-record' : primera ? 'celebra-primera' : null;
+}
+
+// ---------- Dónde entrenas, bienvenida, primeros pasos, herramientas, equipo y carné ----------
+const LUGARES = ['gimnasio', 'casa', 'viaje'];
+export function imagenLugar(lugar) { return LUGARES.includes(lugar) ? `donde-${lugar}` : 'donde-gimnasio'; }
+// La bienvenida del día: de 6 a 13:59, la mañana; de 14 a 20:59, la tarde; si no, la noche (hora de Madrid)
+export function imagenBienvenida(hora) {
+  const h = Number(hora);
+  if (!Number.isFinite(h)) return null;
+  return h >= 6 && h < 14 ? 'bienvenida-manana' : h >= 14 && h < 21 ? 'bienvenida-tarde' : 'bienvenida-noche';
+}
+// Las pantallas de la primera vez (atleta/Bienvenida.jsx): la de instalar sigue con su dibujo
+const PRIMEROS = { programa: 'programa', serie: 'sesion', coach: 'checkin' };
+export function imagenPrimerosPasos(dibujo) { return PRIMEROS[dibujo] ? `primeros-${PRIMEROS[dibujo]}` : null; }
+export const HERRAMIENTAS = ['camara', 'metronomo', 'intervalos', 'comparar'];
+export function imagenHerramienta(que) { return HERRAMIENTAS.includes(que) ? `herr-${que}` : null; }
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.

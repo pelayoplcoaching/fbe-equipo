@@ -134,13 +134,14 @@ export function anillosPorCelebrar(anillos = [], guardado = null, lunes) {
 }
 
 // ---------- Logros: el metal de cada nivel ----------
-// Los cuatro niveles de siempre (los umbrales no cambian), como medallas: bronce, plata, oro y platino. Cada metal
+// Los cuatro niveles de siempre (los umbrales no cambian), como medallas: bronce, plata, oro y diamante (antes platino; el id
+// sigue siendo «platino», que es el de los estilos). Cada metal
 // tiene además su canto (liso, perlado, estriado y doble), para distinguirlos sin el color.
 export const METALES = [
   { n: 1, id: 'bronce', nombre: 'Bronce', canto: 'liso' },
   { n: 2, id: 'plata', nombre: 'Plata', canto: 'perlado' },
   { n: 3, id: 'oro', nombre: 'Oro', canto: 'estriado' },
-  { n: 4, id: 'platino', nombre: 'Platino', canto: 'doble' },
+  { n: 4, id: 'platino', nombre: 'Diamante', canto: 'doble' },
 ];
 export const metalDe = (nivel) => METALES[Number(nivel) - 1] || null;
 

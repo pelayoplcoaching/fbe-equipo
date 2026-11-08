@@ -1,6 +1,8 @@
 import { useState } from 'preact/hooks';
 import { Hoja, Icono, Segmentos, usePreferencia } from '../comunes.jsx';
 import { LUGARES_ENTRENO, MATERIAL_PERFIL, PERFILES_DEFECTO, textoAdaptacion } from '../../logica/material.js';
+import { Imagen } from '../Imagen.jsx';
+import { imagenLugar } from '../../logica/imagenes.js';
 
 // «¿Dónde entrenas hoy?» (v0.48): Gimnasio (lo de siempre), Casa o Viaje, cada uno con su material (en este móvil)
 export function DondeEntrenas({ atletaId, lugar, cambios = {}, sinAlternativa = [], alElegir }) {
@@ -9,6 +11,8 @@ export function DondeEntrenas({ atletaId, lugar, cambios = {}, sinAlternativa = 
   const nombre = Object.fromEntries(LUGARES_ENTRENO);
   return (
     <section class="panel panel-pad donde-entrenas pila-s" aria-labelledby="donde-entrenas">
+      {/* (imágenes) arriba, el sitio elegido: la sala de racks, el salón con las mancuernas o el gimnasio del hotel */}
+      <Imagen key={imagenLugar(lugar)} id={imagenLugar(lugar)} clase="franja-ilu franja-pegada" tamanos="(min-width: 720px) 640px, 100vw" />
       <div class="separa">
         <strong id="donde-entrenas">¿Dónde entrenas hoy?</strong>
         {lugar !== 'gimnasio' && <button class="btn-texto" onClick={() => setEditar(lugar)}><Icono n="ajustes" /> Tu material</button>}
