@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.109': {
+    atleta: [
+      'La cuenta de series rueda al marcar, el consejo del día tiene su color y el modo enfoque celebra cada ejercicio hecho.',
+      'Al terminar, una barrita te sitúa en la escala del esfuerzo; los récords de hoy y tu mejor marca de cada ejercicio, en dorado.',
+      'En Hoy, el progreso de cada ejercicio en su aro; en la semana, las sesiones hechas con sello verde y la nota de tu coach con su lobo.',
+    ],
+  },
   '0.108': {
     atleta: [
       'Entrenar fluye: el foco pasa de serie a serie con suavidad, la insignia gira a verde al marcarla y el aro se cierra con un salto.',
