@@ -46,6 +46,7 @@ import { Imagen } from './Imagen.jsx';
 import { ListaEquipo } from './atleta/Musica.jsx';
 import { pesoTxt } from '../logica/unidades.js';
 import { PortadaPerfil, FotoConAnillo } from './PerfilVisual.jsx';
+import { LOBO } from './marca-lobo.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
 // v0.71: con la 043, también las preguntas del equipo
@@ -311,6 +312,8 @@ export function Muro({ coach = false, cambios = 0, miembro = null, eventos = 0, 
   const { api, aviso } = useApp();
   const yo = api.uid();
   const abrirPerfil = usePerfil();
+  // (diseño, tanda 37) el lobo de la marca para el chip «Coach» del muro y de sus hojas (que van fuera del muro)
+  useEffect(() => { document.documentElement.style.setProperty('--lobo', `url(${LOBO})`); }, []);
   // v0.72 (044): los eventos (como tarjetas, en su sitio) y el atleta de la semana arriba, en «Todo» y sin búsqueda
   const [vEv, setVEv] = useState(0);
   const listaEventos = useCarga(() => api.eventosComunidad().catch(() => null), [eventos, vEv, cambios]);
@@ -886,7 +889,7 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
   const tema = post.tipo === 'post' || (post.tipo === 'aviso' && post.tema && post.tema !== 'avisos') ? nombreTema(post.tema) : null;
   const meta = [tipo, tema].filter(Boolean).join(' · ');
   return (
-    <article class={`panel panel-pad pila-s post post-${post.tipo} ${post.fijada ? 'fijada' : ''} ${post.oculta ? 'oculta' : ''}`} aria-label={`${tipo || 'Publicación'} de ${post.autor.nombre}`}>
+    <article class={`panel panel-pad pila-s post post-${post.tipo} ${post.fijada ? 'fijada' : ''} ${post.oculta ? 'oculta' : ''}`} data-tema={post.tema || undefined} aria-label={`${tipo || 'Publicación'} de ${post.autor.nombre}`}>
       <header class="post-cab">
         <BotonPersona perfilId={post.autor_id} nombre={post.autor.nombre} foto={post.autor.foto} clase="post-autor" claseAvatar="">
           <span class="post-quien">
@@ -1017,6 +1020,7 @@ function EncuestaPost({ post, coach, alCambiar, alVerVotos }) {
       <div class="encuesta-opciones" role="group" aria-label="Opciones de la encuesta">
         {e.opciones.map((o, i) => {
           const pct = r.porcentajes[i] || 0;
+          const gana = verResultados && pct > 0 && pct === Math.max(...e.opciones.map((_, j) => r.porcentajes[j] || 0));
           const etiqueta = verResultados ? `${o}: ${r.conteos[i] || 0} ${r.conteos[i] === 1 ? 'voto' : 'votos'} (${pct} %)${r.miVoto === i ? ', tu voto' : ''}` : o;
           const dentro = (
             <>
@@ -1026,8 +1030,8 @@ function EncuestaPost({ post, coach, alCambiar, alVerVotos }) {
             </>
           );
           return puede
-            ? <button key={i} type="button" class={`encuesta-opcion ${r.miVoto === i ? 'mia' : ''}`} aria-pressed={r.miVoto === i ? 'true' : 'false'} aria-label={etiqueta} disabled={ocupado} onClick={() => votar(i)}>{dentro}</button>
-            : <div key={i} class={`encuesta-opcion solo ${r.miVoto === i ? 'mia' : ''}`} role="img" aria-label={etiqueta}>{dentro}</div>;
+            ? <button key={i} type="button" class={`encuesta-opcion ${r.miVoto === i ? 'mia' : ''}${gana ? ' gana' : ''}`} aria-pressed={r.miVoto === i ? 'true' : 'false'} aria-label={etiqueta} disabled={ocupado} onClick={() => votar(i)}>{dentro}</button>
+            : <div key={i} class={`encuesta-opcion solo ${r.miVoto === i ? 'mia' : ''}${gana ? ' gana' : ''}`} role="img" aria-label={etiqueta}>{dentro}</div>;
         })}
       </div>
       <div class="separa encuesta-pie">
@@ -1856,9 +1860,9 @@ export function HojaPerfilEquipo({ perfilId, alCerrar }) {
       <ErrorCaja error={p.error} reintentar={() => p.recargar()} />
       {p.cargando && !x ? <Cargando texto="Cargando el perfil" /> : !x ? (!p.error && <p class="secundario">Esta persona ya no está en el equipo.</p>) : (
         <div class="pila perfil-equipo">
-          {/* v0.114: con su portada (un dibujo que sale de su nombre) y el aro de su racha alrededor de la foto */}
-          <PortadaPerfil texto={x.nombre} clase="perfil-equipo-portada" />
+          {/* v0.114: en la franja de arriba (diseño, tanda 37), un dibujo que sale de su nombre; y el aro de su racha alrededor de la foto */}
           <div class="perfil-equipo-cab">
+            <PortadaPerfil texto={x.nombre} clase="perfil-equipo-portada" />
             <FotoConAnillo nombre={x.nombre} foto={x.foto} racha={x.coach ? 0 : x.racha} clase="grande" ampliable perfilId={perfilId} />
             <div class="pila-xs">
               <span class="fila-envolver"><strong class="pe-nombre">{x.nombre}{x.yo ? ' (tú)' : ''}</strong>{x.coach && <span class="chip morado">Coach</span>}</span>

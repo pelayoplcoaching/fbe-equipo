@@ -11,12 +11,9 @@
 .perfil-portada .relleno-punto.claro { fill: #E7E3FF; stroke: none; }
 .perfil-portada .relleno-punto.acento { fill: color-mix(in srgb, var(--morado) 45%, #fff); stroke: none; }
 
-/* En el perfil del equipo (una hoja): la portada arriba, a lo ancho, con la noche de la marca detras */
-.perfil-equipo { position: relative; isolation: isolate; }
-.perfil-equipo-portada { position: relative; inset: auto; height: 84px; margin: -4px 0 -44px; border-radius: var(--r-s);
-  background: radial-gradient(240px 140px at 88% 0%, rgba(160, 140, 255, .5), transparent 70%), linear-gradient(165deg, #2A2068, #1E1548); z-index: 0; }
-.perfil-equipo .perfil-equipo-cab { position: relative; z-index: 1; padding-inline: 10px; align-items: flex-end; }
-.perfil-equipo .perfil-equipo-cab .pe-nombre { font-size: 1.125rem; }
+/* En el perfil del equipo (una hoja): el dibujo, sobre la franja de la noche que pone diseno.css (bloque 261, 64 px) */
+.perfil-equipo-portada { height: 64px; }
+.perfil-equipo-cab > .foto-anillo { flex: none; }
 
 /* -- La foto con el aro de la racha -- */
 .foto-anillo { position: relative; display: inline-grid; place-items: center; padding: 6px; border-radius: 50%; }
@@ -117,8 +114,6 @@
 .pe-galeria .post-foto-cargando { width: 100%; height: 100%; }
 .pe-galeria p { margin: 0; padding: 6px; font-size: 0.6875rem; }
 
-/* El nombre, debajo de la banda (solo la foto se monta sobre ella) */
-.perfil-equipo .perfil-equipo-cab > .pila-xs { padding-top: 46px; min-width: 0; }
 
 /* Las insignias del perfil del equipo, como fichas en su sitio (la clase .insignia es tambien la del globo de las
    pestanas, que va en absoluto: aqui no) */

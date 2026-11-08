@@ -8,12 +8,13 @@
 export const NOVEDADES = {
   '0.114': {
     atleta: [
-      'Tu perfil estrena portada, el aro de tu racha en la foto y tu porqué bajo el nombre.',
-      'Debajo, tus cifras (semana, año y siempre), tus 12 semanas, tu vitrina, tus medallas, tus hitos y tus últimos entrenos.',
-      'Si estás en el equipo: tu racha, quién te ha animado y «Ver cómo te ven tus compañeros».',
+      'Tu perfil estrena portada, el aro de tu racha y tu porqué, con tus cifras, 12 semanas, vitrina, medallas, hitos y últimos entrenos.',
+      'Si estás en el equipo, en tu perfil verás quién te ha animado y «Ver cómo te ven tus compañeros».',
+      'El Equipo, con más vida: momentos con aro, cada publicación con su color, récords en dorado, encuestas en color y el podio.',
     ],
     coach: [
       'El perfil de cada atleta (y el del equipo) se ve más bonito: portada, aro de la racha, cifras, vitrina, hitos y galería de fotos.',
+      'El Equipo, con más vida: momentos con aro, cada publicación con su color, récords en dorado, encuestas en color y el podio.',
     ],
   },
   '0.113': {
