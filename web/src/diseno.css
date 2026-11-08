@@ -2414,3 +2414,176 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    que fue récord, en verde: FichaEjercicio.jsx ya dice «en dorado») y los trofeos de «Marcas» (en morado). */
 .historial-fila .chip.ok { background: var(--oro-suave); color: var(--oro); }
 .marca-fila .ico { background: var(--oro-suave); color: var(--oro); }
+
+/* ══ Tanda 31 (8/11): entrenar con fluidez ═══════════════════════════════════════════════════════════════════════════
+   Quince mejoras más en la parte de entrenamiento, sobre todo de movimiento: que cada gesto de la sesión fluya. Todo lo
+   que se mueve, solo sin «reducir movimiento»; el texto entra con transform o recorte, nunca con opacidad. */
+
+/* ── 170 · El ejercicio se despliega (tanda 31) ───────────────────────────────────────────────────────────────────────
+   Al abrirse un ejercicio (tocarlo o abrirse solo el siguiente), su cuerpo baja desplegándose desde la cabecera en vez
+   de aparecer de golpe: un recorte que se abre y un pequeño descenso. Sin relleno al acabar (no recorta nada después).
+   El teclado de la serie va en su capa de <body>: no le afecta. */
+@media (prefers-reduced-motion: no-preference) {
+  .ejercicio-cuerpo { animation: cuerpo-despliega .34s var(--curva-llega) backwards; }
+}
+@keyframes cuerpo-despliega { from { clip-path: inset(0 0 100% 0); transform: translateY(-10px); } to { clip-path: inset(0 0 0 0); transform: none; } }
+
+/* ── 171 · El foco viaja de serie en serie (tanda 31) ─────────────────────────────────────────────────────────────────
+   El fondo de «la que toca», su ✓ y el resplandor del ejercicio en curso (bloque 155) pasan al siguiente con una
+   transición, en vez de saltar: se ve cómo el foco se va de una fila a la otra. Mantiene la vuelta de la fila al
+   deslizarla (estilos.css 4557). */
+@media (prefers-reduced-motion: no-preference) {
+  .serie-desliza:not(.arrastrando) > .serie { transition: transform .22s cubic-bezier(.2, .9, .3, 1), background-color var(--mov-medio) var(--curva-casa); }
+  .serie .hecho-btn { transition: background-color var(--mov-medio) var(--curva-casa), border-color var(--mov-medio) var(--curva-casa), color var(--mov-medio) var(--curva-casa), box-shadow var(--mov-medio) var(--curva-casa); }
+  .ejercicio { transition: box-shadow var(--mov-lento) var(--curva-casa); }
+}
+
+/* ── 172 · La siguiente serie te llama (tanda 31) ─────────────────────────────────────────────────────────────────────
+   Cuando una serie pasa a ser la que toca, su ✓ suelta una onda del acento una sola vez (la animación empieza al
+   cumplirse el selector, sin código). */
+@media (prefers-reduced-motion: no-preference) {
+  .serie.siguiente:not(.hecha) .hecho-btn { animation: te-llama 1s var(--curva-casa) .3s backwards; }
+}
+@keyframes te-llama {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--morado) 50%, transparent), 0 6px 14px -8px color-mix(in srgb, var(--morado) 70%, transparent); }
+  to { box-shadow: 0 0 0 14px color-mix(in srgb, var(--morado) 0%, transparent), 0 6px 14px -8px color-mix(in srgb, var(--morado) 70%, transparent); }
+}
+
+/* ── 173 · La insignia gira a verde (tanda 31) ────────────────────────────────────────────────────────────────────────
+   Al marcar una serie, su insignia (bloque 157) da media vuelta mientras cambia al verde. */
+@media (prefers-reduced-motion: no-preference) {
+  .serie .n { transition: background-color var(--mov-medio) var(--curva-casa), color var(--mov-medio) var(--curva-casa); }
+  .serie.recien.hecha .n { animation: insignia-gira .5s var(--curva-casa); }
+}
+@keyframes insignia-gira { 0% { transform: perspective(60px) rotateY(0); } 50% { transform: perspective(60px) rotateY(90deg); } 100% { transform: perspective(60px) rotateY(0); } }
+
+/* ── 174 · El aro se cierra con un salto (tanda 31) ───────────────────────────────────────────────────────────────────
+   Al completar un ejercicio, el aro de su cabecera (bloque 156) se convierte en el disco verde con un salto y el ✓ se
+   dibuja de un trazo, como el de la serie (bloque 28). */
+@media (prefers-reduced-motion: no-preference) {
+  .ejercicio-cab .progreso-series.hecho { animation: aro-cierra .5s var(--curva-rebote); }
+  .ejercicio-cab .progreso-series.hecho svg path { stroke-dasharray: 20; animation: serie-trazo .36s var(--curva-casa) .14s backwards; }
+}
+@keyframes aro-cierra { from { transform: scale(.55); } }
+
+/* ── 175 · La barra de arriba celebra cada serie (tanda 31) ───────────────────────────────────────────────────────────
+   Mientras dura el «recién marcada» de una serie (600 ms, FilaSerie.jsx), un destello de luz recorre el tramo del
+   ejercicio en curso en la barra de la sesión. */
+.tramo-lleno { overflow: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+  .sesion-vista:has(.serie.recien.hecha) .tramos a[aria-current="step"] .tramo-lleno::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(100deg, transparent 25%, rgba(255, 255, 255, .8) 50%, transparent 75%); animation: tramo-destello .6s var(--curva-casa) both; }
+}
+@keyframes tramo-destello { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+/* ── 176 · El descanso llega con muelle (tanda 31) ────────────────────────────────────────────────────────────────────
+   El reloj del descanso sube y se asienta con el rebote de la casa al aparecer bajo su ejercicio, en vez de salir de
+   golpe. Al terminar sigue su latido de siempre (estilos.css 396), y en el modo enfoque no se mueve. */
+@media (prefers-reduced-motion: no-preference) {
+  .temporizador:not(.fin, .en-enfoque) { animation: descanso-llega .48s var(--curva-rebote) backwards; }
+}
+@keyframes descanso-llega { from { transform: translateY(22px) scale(.96); } }
+
+/* ── 177 · La portada se monta pieza a pieza (tanda 31) ───────────────────────────────────────────────────────────────
+   En la portada de la sesión, los ejercicios de «Lo que vas a hacer» suben en cascada (solo transform) y «Empezar»
+   llega desde abajo con un pequeño salto. */
+@media (prefers-reduced-motion: no-preference) {
+  .portada-lista .ej-fila { animation: fila-sube .44s var(--curva-llega) backwards; }
+  .portada-lista .ej-fila:nth-child(2) { animation-delay: 45ms; }
+  .portada-lista .ej-fila:nth-child(3) { animation-delay: 90ms; }
+  .portada-lista .ej-fila:nth-child(4) { animation-delay: 135ms; }
+  .portada-lista .ej-fila:nth-child(5) { animation-delay: 180ms; }
+  .portada-lista .ej-fila:nth-child(6) { animation-delay: 225ms; }
+  .portada-lista .ej-fila:nth-child(n+7) { animation-delay: 270ms; }
+  .portada-empezar .btn { animation: empezar-llega .52s var(--curva-rebote) .22s backwards; }
+}
+@keyframes fila-sube { from { transform: translateY(16px); } }
+@keyframes empezar-llega { from { transform: translateY(30px) scale(.96); } }
+
+/* ── 178 · En el modo enfoque, los ejercicios se deslizan (tanda 31) ──────────────────────────────────────────────────
+   Al pasar de ejercicio (flechas, puntos, deslizar o al acabar uno), el cuerpo entra desde el lado al que se va
+   (Enfoque.jsx: animate() sobre .enfoque-cuerpo, sin rehacerlo). Los puntos de arriba cambian con transición. */
+@media (prefers-reduced-motion: no-preference) {
+  .enfoque-puntos .punto span { transition: background-color .25s ease, height var(--mov-medio) var(--curva-casa), box-shadow var(--mov-medio) var(--curva-casa); }
+}
+
+/* ── 179 · Los músculos de hoy se encienden (tanda 31) ────────────────────────────────────────────────────────────────
+   En «Sesión terminada» (Sesion.jsx: resumen-musculos), los músculos trabajados se encienden de menos a más series:
+   primero los de 1 a 4, al final los de 15 o más (opacidad: es un dibujo). */
+@media (prefers-reduced-motion: no-preference) {
+  .resumen-musculos .musculo:is(.m1, .m2, .m3, .m4) { animation: musculo-enciende .6s var(--curva-casa) .55s backwards; }
+  .resumen-musculos .musculo.m2 { animation-delay: .72s; }
+  .resumen-musculos .musculo.m3 { animation-delay: .89s; }
+  .resumen-musculos .musculo.m4 { animation-delay: 1.06s; }
+}
+@keyframes musculo-enciende { from { opacity: .2; } }
+
+/* ── 180 · El esfuerzo de cada serie con su color (tanda 31) ──────────────────────────────────────────────────────────
+   El RPE apuntado de cada serie se tiñe con la escala del esfuerzo (tanda 30: verde cómoda, rojo máxima; FilaSerie.jsx:
+   data-rpe, el entero). En el modo enfoque, el RPE elegido igual (Enfoque.jsx: data-v), con su filo. */
+.serie .rpe[data-rpe] { background: color-mix(in srgb, var(--esf) 16%, var(--hoja)); }
+.serie .rpe:is([data-rpe="1"], [data-rpe="2"], [data-rpe="3"], [data-rpe="4"], [data-rpe="5"]) { --esf: var(--esf-5); }
+.serie .rpe[data-rpe="6"] { --esf: var(--esf-6); }
+.serie .rpe[data-rpe="7"] { --esf: var(--esf-7); }
+.serie .rpe[data-rpe="8"] { --esf: var(--esf-8); }
+.serie .rpe[data-rpe="9"] { --esf: var(--esf-9); }
+.serie .rpe[data-rpe="10"] { --esf: var(--esf-10); }
+.rpe-fila button[aria-pressed="true"][data-v] { background: color-mix(in srgb, var(--esf-e) 22%, var(--hoja)); color: var(--tinta); border-color: var(--esf-e); box-shadow: inset 0 0 0 1px var(--esf-e); }
+.rpe-fila button[data-v="6"] { --esf-e: var(--esf-6); }
+.rpe-fila button[data-v^="7"] { --esf-e: var(--esf-7); }
+.rpe-fila button[data-v^="8"] { --esf-e: var(--esf-8); }
+.rpe-fila button[data-v^="9"] { --esf-e: var(--esf-9); }
+.rpe-fila button[data-v="10"] { --esf-e: var(--esf-10); }
+@media (forced-colors: active) { .rpe-fila button[aria-pressed="true"][data-v] { background: Highlight; color: HighlightText; } }
+
+/* ── 181 · El teclado de la serie como el del iPhone (tanda 31) ───────────────────────────────────────────────────────
+   Fondo de vidrio que deja intuir la sesión, teclas sin borde con su relieve de abajo y «Siguiente» (o «Hecha») con la
+   luz de los botones principales (bloque 115). Con «más contraste» o colores forzados, el de siempre. */
+.teclado-serie { background: color-mix(in srgb, var(--hoja-2) 84%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6); border-top-color: color-mix(in srgb, var(--tinta) 8%, transparent); }
+.teclado-serie .tecla { border-color: transparent; box-shadow: 0 1px 0 color-mix(in srgb, var(--tinta) 24%, transparent), 0 0 0 .5px color-mix(in srgb, var(--tinta) 5%, transparent); }
+.teclado-serie .tecla-paso, .teclado-serie .tecla-siguiente { box-shadow: none; }
+.teclado-serie .tecla-siguiente { background: linear-gradient(180deg, color-mix(in srgb, var(--morado) 84%, #fff), var(--morado)); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22); }
+.teclado-serie .tecla-siguiente.es-hecha { background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 86%, #fff), var(--ok)); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--ok) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22); }
+.teclado-serie .teclado-icono { border-color: transparent; box-shadow: 0 1px 0 color-mix(in srgb, var(--tinta) 20%, transparent); }
+@media (prefers-contrast: more), (forced-colors: active) {
+  .teclado-serie { background: var(--hoja-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .teclado-serie .tecla, .teclado-serie .teclado-icono { border-color: var(--linea); }
+}
+
+/* ── 182 · El modo enfoque con la cara de la sesión (tanda 31) ────────────────────────────────────────────────────────
+   Los «+» y «−» grandes, discos suaves del acento (como los de los Paso, bloque 141); las cifras en su tarjeta sin
+   borde; la serie que estás haciendo, rellena del acento, y las hechas en verde; la sugerencia y «La última vez», como
+   en la tarjeta del ejercicio (bloques 158 y 159). */
+.paso-grande button { border-color: transparent; background: var(--morado-suave); color: var(--morado); box-shadow: none; }
+.paso-grande button:disabled { background: color-mix(in srgb, var(--tinta) 6%, var(--hoja)); color: var(--tinta-3); }
+.paso-grande input { border-color: transparent; box-shadow: var(--sombra-tarjeta); }
+.chip-serie { border-color: transparent; background: color-mix(in srgb, var(--tinta) 6%, var(--hoja)); }
+.chip-serie.actual { border: 1px solid transparent; background: var(--morado); color: var(--sobre-morado); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 75%, transparent); }
+.chip-serie.hecha:not(.actual) { background: var(--ok-suave); color: var(--ok); }
+.enfoque-cuerpo .sugerencia { grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--morado-suave); line-height: 1.35; }
+.enfoque-cuerpo .sugerencia svg { width: 30px; height: 30px; margin: 0; padding: 6px; border-radius: 50%; background: var(--hoja); color: var(--morado); stroke-width: 2.2; }
+.enfoque-cuerpo .sugerencia.subir { background: var(--ok-suave); }
+.enfoque-cuerpo .sugerencia.subir svg { color: var(--ok); }
+.enfoque-cuerpo .ultima-vez { position: relative; padding: 8px 12px 8px 34px; border-radius: 12px; background: var(--hoja-2); line-height: 1.95; }
+.enfoque-cuerpo .ultima-vez::before { content: ""; position: absolute; left: 11px; top: 12px; width: 16px; height: 16px; background: var(--tinta-3); -webkit-mask: var(--ico-historial) center / contain no-repeat; mask: var(--ico-historial) center / contain no-repeat; }
+.enfoque-cuerpo .ultima-vez .num { display: inline-block; padding: 0 7px; border-radius: 7px; background: var(--hoja); box-shadow: inset 0 0 0 1px var(--linea); line-height: 1.6; }
+@media (forced-colors: active) { .paso-grande button, .chip-serie { border: 1px solid ButtonText; } .chip-serie.actual { background: Highlight; color: HighlightText; } }
+
+/* ── 183 · El enfoque con luz (tanda 31) ──────────────────────────────────────────────────────────────────────────────
+   Un resplandor del acento arriba del fondo (como el de las pantallas, bloque 93), el nombre del ejercicio con la
+   tinta de degradado de los títulos (bloque 130) y el pie de vidrio. */
+.enfoque { background: radial-gradient(130% 55% at 50% -12%, color-mix(in srgb, var(--morado) 15%, transparent), transparent 62%), var(--tiza); }
+.enfoque-titulo h2 { background: linear-gradient(100deg, var(--tinta) 40%, color-mix(in srgb, var(--morado) 50%, var(--tinta))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.enfoque-pie { background: color-mix(in srgb, var(--hoja) 82%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); border-top-color: color-mix(in srgb, var(--tinta) 8%, transparent); }
+@media (forced-colors: active), (prefers-contrast: more) {
+  .enfoque { background: var(--tiza); }
+  .enfoque-titulo h2 { background: none; -webkit-text-fill-color: currentColor; }
+  .enfoque-pie { background: var(--hoja); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ── 184 · El hilo de la superserie (tanda 31) ────────────────────────────────────────────────────────────────────────
+   La raya que une los ejercicios de una superserie va del acento a transparente, y su letra va en un cuadrado con el
+   brillo del número de la sesión que toca (bloque 164). */
+.superserie::before { opacity: 1; width: 3px; left: 11.5px; background: linear-gradient(180deg, var(--morado), color-mix(in srgb, var(--morado) 12%, transparent)); }
+.ss-letra { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, #fff), var(--morado)); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+@media (forced-colors: active) { .superserie::before { background: CanvasText; } }

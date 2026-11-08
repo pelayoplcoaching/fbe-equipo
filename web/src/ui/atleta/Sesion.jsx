@@ -1388,7 +1388,7 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
       {/* (v0.104) «Hace seis meses…»: el ejercicio de hoy que más ha subido desde entonces */}
       {!cardio && resumen.series > 0 && !resumen.enCola && <div style={{ '--i': 6 }} class="resumen-recuerdo"><RecuerdoProgreso sesionId={sesion.id} /></div>}
       {Object.keys(resumen.musculos || {}).length > 0 && (
-        <section class="seccion" style={{ '--i': 7 }}>
+        <section class="seccion resumen-musculos" style={{ '--i': 7 }}>
           <h2>Músculos de hoy</h2>
           <div class="panel panel-pad"><MapaMuscular series={resumen.musculos} etiqueta="Series por músculo de hoy" /></div>
         </section>

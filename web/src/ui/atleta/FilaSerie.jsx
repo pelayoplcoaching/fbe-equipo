@@ -225,14 +225,14 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
             placeholder={fmt(propuesta.reps, 0) || '–'} onInput={(e) => escribir('reps', e.currentTarget.value)} autoComplete="off"
             onFocus={alEntrar('reps')} onBlur={alSalir('reps')} onKeyDown={alTecla('reps')} />
           {app ? (
-            <button ref={refs.rpe} type="button" class={`rpe rpe-boton ${propuesta.rpe != null && rpe === '' ? 'rpe-objetivo' : ''} ${campo === 'rpe' ? 'en-teclado' : ''}`}
+            <button ref={refs.rpe} type="button" data-rpe={rpe === '' || rpe == null ? undefined : Math.floor(Number(rpe))} class={`rpe rpe-boton ${propuesta.rpe != null && rpe === '' ? 'rpe-objetivo' : ''} ${campo === 'rpe' ? 'en-teclado' : ''}`}
               aria-label={`${etiquetaRpe}: ${rpe === '' || rpe == null ? 'sin poner' : num(rpe)}`} aria-expanded={campo === 'rpe' ? 'true' : 'false'}
               onFocus={alEntrar('rpe')} onBlur={alSalir('rpe')} onKeyDown={alTecla('rpe')}
               onClick={(e) => { if (document.activeElement !== e.currentTarget) e.currentTarget.focus({ preventScroll: true }); setCampo('rpe'); if (!('rpe' in inicio.current)) inicio.current.rpe = rpe; }}>
               {rpe === '' || rpe == null ? pista : num(rpe)}
             </button>
           ) : (
-            <select ref={refs.rpe} class={`rpe ${propuesta.rpe != null && rpe === '' ? 'rpe-objetivo' : ''}`} aria-label={etiquetaRpe} value={rpe} onChange={(e) => {
+            <select ref={refs.rpe} data-rpe={rpe === '' || rpe == null ? undefined : Math.floor(Number(rpe))} class={`rpe ${propuesta.rpe != null && rpe === '' ? 'rpe-objetivo' : ''}`} aria-label={etiquetaRpe} value={rpe} onChange={(e) => {
               const v = e.currentTarget.value === '' ? '' : Number(e.currentTarget.value);
               elegirRpe(v);
             }}>
