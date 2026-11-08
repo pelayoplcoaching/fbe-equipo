@@ -2241,3 +2241,12 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 
 /* ── 153 · (tanda 29) Lo de esta ronda, sin movimiento con «reducir movimiento» ───────────────────────────────────────
    (solo el punto del «Pendiente» se mueve: va en su @media; lo demás es estático.) */
+
+/* ── 154 · Convivir con las ilustraciones de la v0.103 (tanda 29) ─────────────────────────────────────────────────────
+   imagenes.css trae ya la miniatura del paisaje de cada mes en «Tus meses» (.mes-mini, con .con-mini) y la manada
+   bajo la luna en la entrada al Equipo (.franja-manada). Con ellas, sobran la portada de historia pequeña de esa fila
+   (bloque 127) y la escena de los tres lobos de la entrada (bloque 103; la regla de imagenes.css buscaba el icono de
+   antes, .entrar-equipo-ico). */
+.fila-semana.con-mini { grid-template-columns: 3.5rem minmax(0, 1fr); }
+.fila-semana.con-mini > .portada-historia { display: none; }
+.entrar-equipo > .franja-manada ~ .entrar-equipo-ilu { display: none; }
