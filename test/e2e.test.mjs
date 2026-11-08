@@ -3154,9 +3154,9 @@ try {
   // cabecera que se recoge al desplazarse la va moviendo mientras se intenta pulsar)
   // (si el paso del editor dejó abierta una hoja, la de un ejercicio, se cierra antes: si no, tapa la pestaña)
   for (let i = 0; i < 3 && await p.locator('.capa').first().isVisible().catch(() => false); i++) { await p.keyboard.press('Escape'); await p.waitForTimeout(400); }
-  await p.getByRole('tab', { name: 'Mensajes' }).evaluate((b) => b.scrollIntoView({ block: 'center' }));
-  await p.waitForTimeout(400);
-  await p.getByRole('tab', { name: 'Mensajes' }).click();
+  // (y se pulsa el botón de la pestaña directamente: tras bajar por el editor, el toque por coordenadas a veces cae en una
+  // fila del editor que hay debajo y abre la ficha de ese ejercicio, que luego tapa la pestaña)
+  await p.getByRole('tab', { name: 'Mensajes' }).evaluate((b) => { b.scrollIntoView({ block: 'center' }); b.click(); });
   await p.locator('.burbuja.programada').first().waitFor();
   check((await p.locator('.burbuja.programada').first().textContent()).includes('Programado para el'), 'el coach ve el mensaje de mañana como «Programado para el …»');
   await p.locator('.chat-area').fill('Mira este vídeo antes del lunes: https://youtu.be/gMgvBspQ9lk');
