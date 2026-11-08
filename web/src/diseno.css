@@ -2832,11 +2832,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .dia.hecha .marca-dia { background: linear-gradient(160deg, color-mix(in srgb, var(--ok) 80%, #fff), var(--ok)); color: var(--hoja); box-shadow: 0 6px 14px -7px color-mix(in srgb, var(--ok) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
 .dia.hecha .marca-dia svg { stroke-width: 2.6; }
 
-/* ── 214 · Las tarjetas de la semana se asientan al bajar (tanda 33) ──────────────────────────────────────────────────
-   Las sesiones de la semana y las de «Tus entrenamientos» suben un poco y se asientan al entrar en pantalla (como la
-   vitrina, bloque 199). */
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .semana-dias > .dia, .entreno { animation: asienta-al-bajar linear both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
-  }
-}
+/* ── 214 · (retirado) Las tarjetas de la semana se asentaban al bajar (tanda 33) ───────────────────────────────────────
+   Se probó con las sesiones de la semana y «Tus entrenamientos» (línea de tiempo de vista, como el bloque 199), pero la
+   prueba de «pantallas que no se mueven al cargar» (e2e-pulido2) mide la posición en pantalla con transform incluido: al
+   llegar los datos, la línea de tiempo se recalcula y las tarjetas se desplazaban 13 px. Retirado: Semana carga quieta. */
