@@ -145,7 +145,7 @@ function Entrenamientos({ abrirSesion }) {
                       </span>
                       {e.musculos.length > 0 && <span class="mini terciario">{e.musculos.map((g) => NOMBRE_GRUPO[g]).join(', ')}</span>}
                     </span>
-                    {e.rpe_sesion ? <span class="entreno-rpe num" title="Esfuerzo de la sesión">{e.rpe_sesion}<small>/10</small></span> : <span />}
+                    {e.rpe_sesion ? <span class="entreno-rpe num" data-rpe={Math.round(e.rpe_sesion)} title="Esfuerzo de la sesión">{e.rpe_sesion}<small>/10</small></span> : <span />}
                   </button>
                 </li>
               ))}

@@ -917,13 +917,13 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
             {pa.detalle && <span>serie a serie</span>}
             {pa.esfuerzo && <span>{pa.esfuerzo}</span>}
             {pa.carga && !actual && <span class="num">{pa.carga}</span>}
-            {descanso.seg && !etiqueta && <span>descanso {mmss(descanso.seg)}{delCoach ? '' : ' (tuyo)'}</span>}
+            {descanso.seg && !etiqueta && <span class="pauta-descanso">descanso {mmss(descanso.seg)}{delCoach ? '' : ' (tuyo)'}</span>}
           </span>}
           {videosPendientes > 0
             ? <span class="video-aviso pendiente"><Icono n="reloj" />{videosPendientes === 1 ? 'Vídeo guardado en el móvil, sin enviar' : `${videosPendientes} vídeos guardados en el móvil, sin enviar`}</span>
             : videos > 0 && <span class="video-aviso"><Icono n="hecho" />{videos === 1 ? 'Vídeo enviado' : `${videos} vídeos enviados`}</span>}
         </span>
-        <span class={`progreso-series ${completo ? 'hecho' : ''}`}>{completo ? <Icono n="hecho" width="22" height="22" titulo="Hecho" /> : `${nPautadas}/${e.series}`}</span>
+        <span class={`progreso-series ${completo ? 'hecho' : ''}`} style={{ '--f': Math.min(1, nPautadas / (e.series || 1)) }}>{completo ? <Icono n="hecho" width="22" height="22" titulo="Hecho" /> : `${nPautadas}/${e.series}`}</span>
       </button>
       {abierto && (
         <div class="ejercicio-cuerpo">
@@ -989,7 +989,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
         <Hoja titulo={ej.nombre} alCerrar={() => setHoja(null)}>
           <ul class="lista hoja-acciones">
             {herramientas.map((h) => (
-              <li key={h.id}>
+              <li key={h.id} data-h={h.id}>
                 {h.fijo ? (
                   <div class="accion-fila accion-fija">
                     <span class="ico"><Icono n={h.ico} /></span>

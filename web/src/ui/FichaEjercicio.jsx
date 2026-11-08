@@ -113,7 +113,7 @@ function Historial({ d }) {
         ))}
       </ul>
       {d.sesiones.length > cuantas && <button class="btn btn-peq" style="justify-self:start" onClick={() => setCuantas(cuantas + 30)}>Ver más ({d.sesiones.length - cuantas})</button>}
-      <p class="mini terciario">A la derecha, el 1RM estimado de la mejor serie de cada día; en verde, cuando fue récord.</p>
+      <p class="mini terciario">A la derecha, el 1RM estimado de la mejor serie de cada día; en dorado, cuando fue récord.</p>
     </div>
   );
 }
