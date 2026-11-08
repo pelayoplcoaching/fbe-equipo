@@ -15,6 +15,8 @@ export const NOVEDADES = {
     coach: [
       'En la ficha, «Desde su iPhone» (sueño, pulso, HRV y pasos) y su WhatsApp; en Cuenta, los atajos del iPhone para tus atletas.',
       'Necesita la migración 051 y desplegar la función «integraciones» (sin «Verify JWT»). La guía, en el proyecto.',
+    ],
+  },
   '0.109': {
     atleta: [
       'La cuenta de series rueda al marcar, el consejo del día tiene su color y el modo enfoque celebra cada ejercicio hecho.',
