@@ -8,9 +8,9 @@
 export const NOVEDADES = {
   '0.102': {
     atleta: [
-      'Los récords brillan en dorado, tus entrenamientos parecen hojas de calendario y las pestañas se subrayan con una raya que viaja.',
-      'Las recetas lucen la foto entera, los destacados de tu progreso llevan su color y las semanas del bloque, su barrita.',
-      'En la sesión, el cronómetro en marcha y la barra de arriba brillan; y el check-in va por pasos.',
+      'Los récords brillan en dorado, tus entrenamientos parecen hojas de calendario y cada comida del menú lleva su dibujo.',
+      'Hoy estrena detalles: el aviso de tu coach como un mensaje, la llama de tu racha encendida y una celebración al terminar el día.',
+      'En Progreso, las semanas y los meses tienen portada y los hábitos se ponen en verde; en la sesión, el cronómetro brilla.',
     ],
   },
   '0.101': {
