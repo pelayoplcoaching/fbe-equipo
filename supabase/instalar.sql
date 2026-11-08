@@ -17685,6 +17685,8 @@ create table if not exists public.integraciones (
   cal_aviso          smallint not null default 30,
   actualizado_en     timestamptz not null default now()
 );
+-- (revisión) si el calendario lleva las indicaciones del coach (la dinámica de cada sesión): por defecto, no
+alter table public.integraciones add column if not exists cal_detalle boolean not null default false;
 alter table public.integraciones drop constraint if exists integraciones_valida;
 alter table public.integraciones add constraint integraciones_valida check (
   (salud_huella is null or salud_huella ~ '^[0-9a-f]{64}$')
@@ -17727,6 +17729,43 @@ alter table public.salud_diaria add constraint salud_diaria_valida check (
 );
 comment on table public.salud_diaria is 'Lo que manda el atajo de Salud del iPhone de cada atleta, un día por fila. Datos de salud: solo por sus funciones.';
 
+-- (revisión) Lo que el atajo copió a sus hábitos de pasos y sueño y a sus pesos, con lo que había antes: para que
+-- borrar lo de Salud (al desconectar con «borrar» o al retirar el consentimiento) se lleve también las copias y deje
+-- el día como lo tenía él. Solo se deshace lo que siga igual que lo dejó el atajo: si lo cambió él después, es suyo.
+create table if not exists public.salud_copias (
+  atleta_id     uuid not null references public.atletas(id) on delete cascade,
+  tipo          text not null check (tipo in ('pasos', 'sueno', 'peso')),
+  habito_id     uuid references public.habitos(id) on delete cascade,
+  fecha         date not null,
+  valor_previo  numeric,          -- lo que había apuntado él (null: no había nada)
+  valor_puesto  numeric not null, -- lo que dejó el atajo
+  primary key (atleta_id, tipo, fecha)
+);
+comment on table public.salud_copias is 'Lo que el atajo de Salud copió a hábitos y pesos, para poder deshacerlo. Solo por sus funciones.';
+
+-- Borra lo que llegó de Salud y deshace sus copias (lo que siga igual que lo dejó el atajo)
+create or replace function fbe_privado.salud_borrar(p_atleta uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare c public.salud_copias;
+begin
+  for c in select * from public.salud_copias where atleta_id = p_atleta loop
+    begin
+      if c.tipo in ('pasos', 'sueno') and c.habito_id is not null then
+        if c.valor_previo is null then
+          delete from public.registros_habito where habito_id = c.habito_id and fecha = c.fecha and valor = c.valor_puesto;
+        else
+          update public.registros_habito set valor = c.valor_previo where habito_id = c.habito_id and fecha = c.fecha and valor = c.valor_puesto;
+        end if;
+      elsif c.tipo = 'peso' then
+        delete from public.pesos where atleta_id = p_atleta and fecha = c.fecha and kg = c.valor_puesto and notas = 'Desde Salud';
+      end if;
+    exception when others then null;  -- (si no se puede deshacer una, las demás sí)
+    end;
+  end loop;
+  delete from public.salud_copias where atleta_id = p_atleta;
+  delete from public.salud_diaria where atleta_id = p_atleta;
+end $$;
+
 -- ---------------------------------------------------------------------
 -- 3. Los atajos del coach y el teléfono de cada atleta
 -- ---------------------------------------------------------------------
@@ -17762,7 +17801,7 @@ begin
   return jsonb_build_object(
     'salud', jsonb_build_object('activa', i.salud_huella is not null, 'desde', i.salud_desde, 'ultimo', i.salud_ultimo),
     'calendario', jsonb_build_object('activo', i.calendario_huella is not null, 'desde', i.calendario_desde, 'ultimo', i.calendario_ultimo,
-      'hora', coalesce(i.cal_hora, '18:00'), 'minutos', coalesce(i.cal_minutos, 75), 'aviso', coalesce(i.cal_aviso, 30)),
+      'hora', coalesce(i.cal_hora, '18:00'), 'minutos', coalesce(i.cal_minutos, 75), 'aviso', coalesce(i.cal_aviso, 30), 'detalle', coalesce(i.cal_detalle, false)),
     'atajos', coalesce((select jsonb_object_agg(a.clave, a.url) from public.atajos_coach a), '{}'::jsonb));
 end $$;
 comment on function public.integraciones_mias() is 'Qué tiene conectado el atleta (Salud y calendario, sin los enlaces) y los atajos de su coach.';
@@ -17788,6 +17827,10 @@ begin
   if v_aviso is not null then
     if v_aviso not between 0 and 1440 then raise exception 'El aviso va de 0 a 1440 minutos'; end if;
     r.cal_aviso := v_aviso;
+  end if;
+  if p ? 'detalle' then
+    if jsonb_typeof(p -> 'detalle') <> 'boolean' then raise exception 'Detalle no válido'; end if;
+    r.cal_detalle := (p ->> 'detalle')::boolean;
   end if;
   return r;
 end $$;
@@ -17817,7 +17860,7 @@ begin
   else
     i := fbe_privado.opciones_calendario(p_opciones, i);
     update public.integraciones set calendario_huella = fbe_privado.huella(v_enlace), calendario_desde = coalesce(calendario_desde, now()),
-      cal_hora = i.cal_hora, cal_minutos = i.cal_minutos, cal_aviso = i.cal_aviso, actualizado_en = now()
+      cal_hora = i.cal_hora, cal_minutos = i.cal_minutos, cal_aviso = i.cal_aviso, cal_detalle = i.cal_detalle, actualizado_en = now()
       where atleta_id = v_atleta;
   end if;
   return v_enlace;
@@ -17835,9 +17878,9 @@ begin
   insert into public.integraciones (atleta_id) values (v_atleta) on conflict (atleta_id) do nothing;
   select * into i from public.integraciones where atleta_id = v_atleta for update;
   i := fbe_privado.opciones_calendario(p_opciones, i);
-  update public.integraciones set cal_hora = i.cal_hora, cal_minutos = i.cal_minutos, cal_aviso = i.cal_aviso, actualizado_en = now()
+  update public.integraciones set cal_hora = i.cal_hora, cal_minutos = i.cal_minutos, cal_aviso = i.cal_aviso, cal_detalle = i.cal_detalle, actualizado_en = now()
     where atleta_id = v_atleta;
-  return jsonb_build_object('hora', i.cal_hora, 'minutos', i.cal_minutos, 'aviso', i.cal_aviso);
+  return jsonb_build_object('hora', i.cal_hora, 'minutos', i.cal_minutos, 'aviso', i.cal_aviso, 'detalle', i.cal_detalle);
 end $$;
 comment on function public.calendario_opciones(jsonb) is 'La hora, la duración y el aviso de los entrenos en su calendario (el enlace no cambia).';
 
@@ -17849,7 +17892,7 @@ begin
   if p_tipo = 'salud' then
     update public.integraciones set salud_huella = null, salud_desde = null, salud_ultimo = null, actualizado_en = now() where atleta_id = v_atleta;
     -- Borrar lo que llegó se puede siempre (también de baja)
-    if p_borrar then delete from public.salud_diaria where atleta_id = v_atleta; end if;
+    if p_borrar then perform fbe_privado.salud_borrar(v_atleta); end if;
   elsif p_tipo = 'calendario' then
     update public.integraciones set calendario_huella = null, calendario_desde = null, calendario_ultimo = null, actualizado_en = now() where atleta_id = v_atleta;
   else
@@ -17868,7 +17911,7 @@ begin
   if p_atleta is null or not (public.es_coach() or p_atleta = public.mi_atleta_id()) then
     return jsonb_build_object('conectada', false, 'ultimo', null, 'dias', '[]'::jsonb);
   end if;
-  if v_hasta - v_desde > 400 then v_desde := v_hasta - 400; end if;
+  -- (sin tope: un día por fila; la descarga de sus datos pide todo)
   select * into i from public.integraciones where atleta_id = p_atleta;
   return jsonb_build_object('conectada', coalesce(i.salud_huella is not null, false), 'ultimo', i.salud_ultimo,
     'dias', coalesce((select jsonb_agg(jsonb_build_object('fecha', s.fecha, 'pasos', s.pasos, 'sueno_min', s.sueno_min, 'fc_reposo', s.fc_reposo,
@@ -17889,7 +17932,7 @@ declare
   v_hoy date := (now() at time zone 'Europe/Madrid')::date;
   d jsonb; v_fecha date; v_pasos int; v_sueno int; v_fc int; v_hrv numeric; v_peso numeric;
   n_dias int := 0; n_habitos int := 0; n_pesos int := 0; n int;
-  v_hab_pasos uuid; v_hab_sueno uuid;
+  v_hab_pasos uuid; v_hab_sueno uuid; v_prev numeric;
 begin
   if coalesce(p_enlace, '') !~ '^[0-9a-f]{64}$' then return jsonb_build_object('ok', false, 'error', 'enlace'); end if;
   select atleta_id into v_atleta from public.integraciones where salud_huella = fbe_privado.huella(p_enlace);
@@ -17937,21 +17980,35 @@ begin
 
     -- Los pasos, en su hábito de pasos (sin bajar lo que ya apuntó)
     if v_pasos is not null and v_hab_pasos is not null and v_fecha <= v_hoy then
+      select valor into v_prev from public.registros_habito where habito_id = v_hab_pasos and fecha = v_fecha;
       insert into public.registros_habito as r (habito_id, atleta_id, fecha, valor) values (v_hab_pasos, v_atleta, v_fecha, v_pasos)
       on conflict (habito_id, fecha) do update set valor = greatest(r.valor, excluded.valor) where r.valor < excluded.valor;
       get diagnostics n = row_count; n_habitos := n_habitos + n;
+      -- (se apunta la copia con lo que había antes; si ya había una copia, se queda su «antes», el de él)
+      if n > 0 then
+        insert into public.salud_copias (atleta_id, tipo, habito_id, fecha, valor_previo, valor_puesto) values (v_atleta, 'pasos', v_hab_pasos, v_fecha, v_prev, v_pasos)
+        on conflict (atleta_id, tipo, fecha) do update set valor_puesto = excluded.valor_puesto, habito_id = excluded.habito_id;
+      end if;
     end if;
     -- Las horas de sueño, en su hábito de sueño si ese día no las apuntó él
     if v_sueno is not null and v_hab_sueno is not null and v_fecha <= v_hoy then
       insert into public.registros_habito (habito_id, atleta_id, fecha, valor) values (v_hab_sueno, v_atleta, v_fecha, round(v_sueno / 60.0, 1))
       on conflict (habito_id, fecha) do nothing;
       get diagnostics n = row_count; n_habitos := n_habitos + n;
+      if n > 0 then
+        insert into public.salud_copias (atleta_id, tipo, habito_id, fecha, valor_previo, valor_puesto) values (v_atleta, 'sueno', v_hab_sueno, v_fecha, null, round(v_sueno / 60.0, 1))
+        on conflict (atleta_id, tipo, fecha) do nothing;
+      end if;
     end if;
     -- El peso, en sus pesos si ese día no hay otro
     if v_peso is not null and v_fecha <= v_hoy then
       insert into public.pesos (atleta_id, fecha, kg, notas) values (v_atleta, v_fecha, v_peso, 'Desde Salud')
       on conflict (atleta_id, fecha) do nothing;
       get diagnostics n = row_count; n_pesos := n_pesos + n;
+      if n > 0 then
+        insert into public.salud_copias (atleta_id, tipo, habito_id, fecha, valor_previo, valor_puesto) values (v_atleta, 'peso', null, v_fecha, null, v_peso)
+        on conflict (atleta_id, tipo, fecha) do update set valor_puesto = excluded.valor_puesto;
+      end if;
     end if;
   end loop;
 
@@ -17971,11 +18028,14 @@ begin
   select * into i from public.integraciones where calendario_huella = fbe_privado.huella(p_enlace);
   if not found then return null; end if;
   v_atleta := i.atleta_id;
-  update public.integraciones set calendario_ultimo = now() where atleta_id = v_atleta;
+  -- (la última consulta, como mucho una vez por hora: los calendarios preguntan a menudo)
+  if i.calendario_ultimo is null or i.calendario_ultimo < now() - interval '1 hour' then
+    update public.integraciones set calendario_ultimo = now() where atleta_id = v_atleta;
+  end if;
   return jsonb_build_object('hora', i.cal_hora, 'minutos', i.cal_minutos, 'aviso', i.cal_aviso,
     'eventos', case when exists (select 1 from public.atletas where id = v_atleta and estado = 'baja') then '[]'::jsonb else
       coalesce((select jsonb_agg(jsonb_build_object('id', s.id, 'dia', s.dia_previsto, 'nombre', s.nombre, 'tipo', s.tipo,
-                  'descripcion', coalesce(s.dinamica, ''), 'hecha', s.completada) order by s.dia_previsto, s.orden)
+                  'descripcion', case when i.cal_detalle then coalesce(s.dinamica, '') else '' end, 'hecha', s.completada) order by s.dia_previsto, s.orden)
                 from public.sesiones s
                 join public.semanas w on w.id = s.semana_id
                 join public.bloques b on b.id = w.bloque_id
@@ -18031,12 +18091,60 @@ begin
 end $$;
 comment on function public.contacto_guardar(uuid, text) is 'El coach guarda (o, vacío, quita) el teléfono de un atleta.';
 
+-- ---------------------------------------------------------------------
+-- 7. (revisión) Lo suyo en su descarga, retirar el consentimiento y la copia del coach
+-- ---------------------------------------------------------------------
+-- Su teléfono (el que guardó el coach), para «Descargar mis datos»
+create or replace function public.contacto_mio() returns text
+language sql stable security definer set search_path = '' as $$
+  select c.telefono from public.contacto_atleta c where c.atleta_id = public.mi_atleta_id();
+$$;
+comment on function public.contacto_mio() is 'El teléfono del atleta que lo pide (para su descarga de datos).';
+
+-- Al retirar el consentimiento de datos de salud: Salud del iPhone se desconecta y lo que llegó de ahí se borra (con sus
+-- copias). Lo que escribió él (check-ins, pesos, hábitos) se queda, como siempre: lo de Salud llega solo, sin que lo
+-- escriba, y solo tiene sentido mientras lo tiene conectado. «before»: aún con el consentimiento, por si algo lo pide.
+create or replace function fbe_privado.salud_al_retirar() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare v_atleta uuid;
+begin
+  if old.tipo = 'datos_salud' and old.revocado_en is null and (tg_op = 'DELETE' or new.revocado_en is not null) then
+    for v_atleta in select a.id from public.atletas a where a.perfil_id = old.perfil_id loop
+      update public.integraciones set salud_huella = null, salud_desde = null, salud_ultimo = null, actualizado_en = now() where atleta_id = v_atleta;
+      perform fbe_privado.salud_borrar(v_atleta);
+    end loop;
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end $$;
+drop trigger if exists consentimientos_salud_al_retirar on public.consentimientos;
+create trigger consentimientos_salud_al_retirar before update or delete on public.consentimientos
+  for each row execute function fbe_privado.salud_al_retirar();
+
+-- La copia completa del coach: las tablas que solo se abren con funciones (las de la 050 y la 051), sin las huellas de
+-- los enlaces (no sirven de nada en una copia)
+create or replace function public.copia_privada() returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not public.es_coach() then raise exception 'Solo el coach'; end if;
+  return jsonb_build_object(
+    'personal_atleta', coalesce((select jsonb_agg(to_jsonb(t)) from public.personal_atleta t), '[]'::jsonb),
+    'mensajes_coach', coalesce((select jsonb_agg(to_jsonb(t)) from public.mensajes_coach t), '[]'::jsonb),
+    'musica_coach', coalesce((select jsonb_agg(to_jsonb(t)) from public.musica_coach t), '[]'::jsonb),
+    'integraciones', coalesce((select jsonb_agg(to_jsonb(t) - 'salud_huella' - 'calendario_huella') from public.integraciones t), '[]'::jsonb),
+    'salud_diaria', coalesce((select jsonb_agg(to_jsonb(t)) from public.salud_diaria t), '[]'::jsonb),
+    'salud_copias', coalesce((select jsonb_agg(to_jsonb(t)) from public.salud_copias t), '[]'::jsonb),
+    'atajos_coach', coalesce((select jsonb_agg(to_jsonb(t)) from public.atajos_coach t), '[]'::jsonb),
+    'contacto_atleta', coalesce((select jsonb_agg(to_jsonb(t)) from public.contacto_atleta t), '[]'::jsonb));
+end $$;
+comment on function public.copia_privada() is 'Para la copia completa del coach: las tablas de la 050 y la 051 (sin las huellas de los enlaces). Solo el coach.';
+
 -- Nadie toca las tablas directamente
 alter table public.integraciones enable row level security;
 alter table public.salud_diaria enable row level security;
 alter table public.atajos_coach enable row level security;
 alter table public.contacto_atleta enable row level security;
-revoke all on public.integraciones, public.salud_diaria, public.atajos_coach, public.contacto_atleta from public, anon, authenticated;
+alter table public.salud_copias enable row level security;
+revoke all on public.integraciones, public.salud_diaria, public.atajos_coach, public.contacto_atleta, public.salud_copias from public, anon, authenticated;
 
 -- Permisos (como al final de 003 a 050). salud_recibir y calendario_de, solo la clave de servicio.
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;

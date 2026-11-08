@@ -7,13 +7,15 @@ export const ATAJO_SALUD = 'FBE Salud';
 export const ATAJO_ENTRENO = 'FBE a Salud';
 export const URL_ATAJO = /^https:\/\/www\.icloud\.com\/shortcuts\/[0-9A-Za-z]{16,64}$/;
 export const ENLACE = /^[0-9a-f]{64}$/;
+// (revisión) Ningún valor de verdad es más largo: un texto enorme y raro dejaba las expresiones de abajo segundos pensando
+export const LARGO_VALOR = 32;
 
 // ---------------------------------------------------------------- números y fechas como los manda Atajos
 // Atajos escribe los números como el iPhone: en español, «8.432» son ocho mil y «72,5» es una coma decimal. A veces con
 // la unidad detrás («72,5 kg», «8.432 recuento»). Con entero: true, «8.432» y «8,432» son 8432 (los pasos nunca llevan decimales).
 export function numero(v, { entero = false } = {}) {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-  if (typeof v !== 'string') return null;
+  if (typeof v !== 'string' || v.length > LARGO_VALOR) return null;
   const m = v.trim().replace(/ | /g, ' ').match(/^[+-]?\d[\d.,' ]*/);
   if (!m) return null;
   let t = m[0].replace(/[' ]/g, '');
@@ -36,6 +38,7 @@ export function numero(v, { entero = false } = {}) {
 export function minutosSueno(v, { horas = false } = {}) {
   if (v == null || v === '') return null;
   if (typeof v === 'string') {
+    if (v.length > LARGO_VALOR) return null;
     const s = v.trim().toLowerCase();
     const hm = s.match(/^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?$/);
     if (hm) return Number(hm[1]) * 60 + Number(hm[2]);
@@ -51,7 +54,7 @@ export function minutosSueno(v, { horas = false } = {}) {
 
 // Una fecha: «2026-11-08», «2026-11-08T07:00:00+01:00», «8/11/2026» o «08-11-2026». Si no se entiende, null.
 export function fechaDe(v) {
-  if (typeof v !== 'string') return null;
+  if (typeof v !== 'string' || v.length > LARGO_VALOR) return null;
   const s = v.trim();
   let a, m, d;
   let r = s.match(/^(\d{4})-(\d{2})-(\d{2})/);

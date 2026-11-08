@@ -78,7 +78,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
           </span>
           {confirmarRetirada && (
             <div class="fila-ios-control nota pila-s">
-              <span>Si lo retiras, no podrás registrar peso, check-in, molestias ni cómo llegas a cada sesión, y la app dejará de usar lo que ya apuntaste. Lo ya registrado se conserva hasta que pidas borrarlo.</span>
+              <span>Si lo retiras, no podrás registrar peso, check-in, molestias ni cómo llegas a cada sesión, y la app dejará de usar lo que ya apuntaste. Lo ya registrado se conserva hasta que pidas borrarlo. Si tienes conectada Salud del iPhone, se desconecta y se borra lo que llegó de ahí (y lo que puso en tus hábitos y pesos, si no lo cambiaste tú).</span>
               <span class="fila">
                 <button class="btn btn-peq" onClick={() => setConfirmarRetirada(false)}>Cancelar</button>
                 <button class="btn btn-peq btn-peligro" onClick={async () => { await api.revocarConsentimiento(consSalud.id); setConfirmarRetirada(false); recargarConsentimientos(); consentimientos.recargar(true); aviso('Consentimiento retirado'); }}>Retirar consentimiento</button>

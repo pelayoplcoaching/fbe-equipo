@@ -137,7 +137,11 @@ check(sd.peso_kg == 99 && sd.fc_reposo === 57, 'en lo que llegó de Salud, lo ú
 
 await servicio();
 const cal = await uno(`select public.calendario_de($1) as r`, [enlaceC]);
-check(cal && cal.hora === '19:00' && cal.minutos === 60 && cal.aviso === 15 && cal.eventos.length === 1 && cal.eventos[0].nombre === 'Pierna A' && cal.eventos[0].descripcion === 'Calienta bien', 'el calendario: solo las sesiones con día de semanas publicadas, con su hora');
+check(cal && cal.hora === '19:00' && cal.minutos === 60 && cal.aviso === 15 && cal.eventos.length === 1 && cal.eventos[0].nombre === 'Pierna A' && cal.eventos[0].descripcion === '', 'el calendario: solo las sesiones con día de semanas publicadas, con su hora');
+await como(ua);
+check((await uno(`select public.calendario_opciones('{"detalle":true}'::jsonb) as r`)).detalle === true && await falla(`select public.calendario_opciones('{"detalle":"si"}'::jsonb)`), 'el atleta elige si su calendario lleva las indicaciones del coach (por defecto, no)');
+await servicio();
+check((await uno(`select public.calendario_de($1) as r`, [enlaceC])).eventos[0].descripcion === 'Calienta bien', 'y con eso, el evento las lleva');
 check((await uno(`select public.calendario_de($1) as r`, ['c'.repeat(64)])) === null, 'con otro enlace, nada');
 
 // La otra atleta y el coach
@@ -162,16 +166,44 @@ check(await falla(`select public.integracion_crear('salud')`), 'el coach no crea
 await como(ua);
 check(Object.keys((await uno(`select public.integraciones_mias() as r`)).atajos).includes('salud'), 'Ana ve el atajo de su coach');
 
-// Sin consentimiento o de baja, no se guarda nada nuevo; desconectar y borrar
+// (revisión) Las copias en sus hábitos y pesos se apuntan, con lo que había antes, para poder deshacerlas
+await como(ua);
+check((await uno(`select public.contacto_mio() as r`)) === '612345678', 'Ana ve su teléfono (para su descarga)');
+check(await falla(`select public.copia_privada()`), 'la copia privada, solo el coach');
+const d2 = sumarDias(hoyM, -3), d3 = sumarDias(hoyM, -4);
+await q(`insert into public.registros_habito (habito_id, fecha, valor) values ($1, $2, 3000)`, [hp, d2]);
+await servicio();
+await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [enlaceS, JSON.stringify([{ fecha: d2, pasos: 7000 }, { fecha: d3, pasos: 4000 }])]);
+const paso = async (f) => (await q(`select valor::float as v from public.registros_habito where habito_id = $1 and fecha = $2`, [hp, f]))[0]?.v ?? null;
+check(await paso(d2) === 7000 && await paso(d3) === 4000, 'el atajo sube los pasos (7000 sobre los 3000 que apuntó ella; 4000 un día sin nada)');
+await como(ua);
+await q(`update public.registros_habito set valor = 4500 where habito_id = $1 and fecha = $2`, [hp, d3]);
+await como(coach, 'aal2');
+const cp = await uno(`select public.copia_privada() as r`);
+check(cp.salud_diaria.length >= 2 && cp.salud_copias.length >= 4 && cp.contacto_atleta.length >= 1 && cp.integraciones.every((x) => !('salud_huella' in x) && !('calendario_huella' in x)) && Array.isArray(cp.personal_atleta),
+  'la copia completa del coach lleva las tablas de la 050 y la 051 (sin las huellas de los enlaces)');
+
+// Al retirar el consentimiento: se desconecta Salud y se borra lo que llegó, con sus copias (lo que cambió ella se queda)
 await su();
 await q(`update public.consentimientos set revocado_en = now() where perfil_id = $1`, [ua]);
+const regsTras = await q(`select habito_id, fecha::text as f, valor::float as v from public.registros_habito where atleta_id = $1`, [aa]);
+check(await paso(d2) === 3000 && await paso(d3) === 4500 && await paso(sumarDias(hoyM, -1)) === null && !regsTras.some((x) => x.habito_id === hs),
+  'al retirar el consentimiento, sus pasos vuelven a lo que apuntó ella (3000), lo que cambió ella se queda (4500) y lo que puso solo el atajo se va (pasos y sueño)');
+check((await q(`select count(*)::int as n from public.pesos where atleta_id = $1 and notas = 'Desde Salud'`, [aa]))[0].n === 0
+  && (await q(`select count(*)::int as n from public.salud_diaria where atleta_id = $1`, [aa]))[0].n === 0
+  && (await q(`select count(*)::int as n from public.salud_copias where atleta_id = $1`, [aa]))[0].n === 0
+  && (await q(`select salud_huella from public.integraciones where atleta_id = $1`, [aa]))[0].salud_huella === null,
+  'y se van su peso «Desde Salud», todo lo que llegó de Salud y su clave');
 await servicio();
-check((await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [enlaceS, JSON.stringify(dSalud)]))?.error === 'consentimiento', 'si retira el consentimiento, ya no entra nada');
+check((await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [enlaceS, JSON.stringify(dSalud)]))?.error === 'enlace', 'si retira el consentimiento, ya no entra nada');
 await su();
 await q(`insert into public.consentimientos (perfil_id, tipo, version) values ($1, 'datos_salud', '2026-10')`, [ua]);
+await como(ua);
+const enlaceS2 = await uno(`select public.integracion_crear('salud') as r`);
+await su();
 await q(`update public.atletas set estado = 'baja' where id = $1`, [aa]);
 await servicio();
-check((await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [enlaceS, JSON.stringify(dSalud)]))?.error === 'baja' && (await uno(`select public.calendario_de($1) as r`, [enlaceC])).eventos.length === 0, 'de baja: nada nuevo de Salud y el calendario, vacío');
+check((await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [enlaceS2, JSON.stringify(dSalud)]))?.error === 'baja' && (await uno(`select public.calendario_de($1) as r`, [enlaceC])).eventos.length === 0, 'de baja: nada nuevo de Salud y el calendario, vacío');
 await su();
 await q(`update public.atletas set estado = 'activo' where id = $1`, [aa]);
 await como(ua);
@@ -232,6 +264,19 @@ r = await pedir(`/salud?t=${eSalud}`, { method: 'POST', body: JSON.stringify({ h
 check(r.status === 422, 'sin nada que guardar, 422');
 r = await pedir(`/salud?t=${'e'.repeat(64)}`, { method: 'POST', body: JSON.stringify({ pasos: 1000 }) });
 check(r.status === 401 && /ya no vale/.test((await r.json()).mensaje), 'con un enlace viejo, 401 y cómo arreglarlo');
+r = await pedir('/salud', { method: 'POST', headers: { 'x-fbe-enlace': eSalud }, body: JSON.stringify({ fecha: hoyM, fc_reposo: 54 }) });
+check(r.status === 200 && (await r.json()).ok, 'POST /salud con la clave en la cabecera x-fbe-enlace (la del atajo: así no queda en los registros)');
+r = await pedir('/salud', { method: 'POST', headers: { 'x-fbe-enlace': eSalud, 'content-length': String(20 * 1024) }, body: JSON.stringify({ fecha: hoyM }) });
+check(r.status === 413, 'un cuerpo de más de 16 KB, ni se lee (413)');
+// (revisión) el texto que dejaba la función 4 s pensando antes de mirar la clave: un «sueño» de miles de cifras y una letra
+const raro = '1'.repeat(15000) + 'x';
+let t0 = Date.now();
+r = await pedir('/salud', { method: 'POST', headers: { 'x-fbe-enlace': 'f'.repeat(64) }, body: JSON.stringify({ fecha: hoyM, sueno: raro }) });
+const msRaro = Date.now() - t0;
+t0 = Date.now();
+const sinPensar = minutosSueno('1'.repeat(64 * 1024) + 'x') === null && numero('1'.repeat(64 * 1024)) === null && fechaDe('1'.repeat(64 * 1024)) === null;
+const msDirecto = Date.now() - t0;
+check(r.status === 422 && msRaro < 300 && sinPensar && msDirecto < 50, `el texto que la dejaba 4 s pensando ya no: ${msRaro} ms de punta a punta, ${msDirecto} ms leyéndolo`);
 r = await pedir(`/salud?t=${eSalud}`, { method: 'GET' });
 check(r.status === 405, 'Salud solo con POST');
 r = await pedir('/otra');
@@ -240,6 +285,7 @@ r = await atender(new Request(`${base}/calendario?t=${eCal}`), { env: {}, f: fet
 check(r.status === 500, 'sin la configuración de Supabase, lo dice');
 r = await atender(new Request(`${base}/calendario?t=${eCal}`), { env, f: async () => { throw new Error('caída'); } });
 check(r.status === 503, 'si la base no responde, 503 (el calendario lo reintenta)');
+check(!/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(componerCalendario({ eventos: [{ id: 'y', dia: '2026-11-09', nombre: 'Pier\u0000na\u0007', descripcion: 'a\u001bb', tipo: 'fuerza', hecha: false }] }).replace(/\r\n/g, '')), 'en el calendario no se cuela ningún carácter de control');
 check(componerCalendario({ eventos: [{ id: 'x', dia: '2026-11-09', nombre: 'Remo', tipo: 'cardio', hecha: false }] }).includes('SUMMARY:Cardio: Remo') && fraseGuardado({ dias: 1, habitos: 0, pesos: 1 }) === 'FBE: guardado (1 día, 1 peso).', 'los títulos y la frase');
 
 console.log('\nLa función en un solo archivo, al día');

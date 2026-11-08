@@ -531,6 +531,7 @@ Cosas que dependen de cómo está montado Supabase y que las pruebas locales no 
 26. (v0.95) Que la 049 está: `select numero from public.fbe_migraciones where numero = 49;` da una fila y `select count(*) from pg_proc where proname in ('rendimiento_apuntar', 'rendimiento_resumen', 'rendimiento_borrar');` da 3.
 27. (v0.104) Que la 050 está: `select numero from public.fbe_migraciones where numero = 50;` da una fila y `select count(*) from pg_proc where proname in ('personal_mio', 'personal_guardar', 'personal_atletas', 'mensajes_coach', 'mensaje_coach_guardar');` da 5.
 28. (v0.107) Que la 050 está ampliada (la música): `select count(*) from pg_proc where proname in ('musica_coach_lista', 'musica_coach_guardar', 'musica_para', 'personal_musica_abierta');` da 4.
+29. (v0.110) Que la 051 está: `select numero from public.fbe_migraciones where numero = 51;` da una fila; `select count(*) from pg_proc where proname in ('integraciones_mias', 'integracion_crear', 'salud_recibir', 'calendario_de', 'contacto_mio', 'copia_privada');` da 6; y, en el navegador, `https://TU-PROYECTO.supabase.co/functions/v1/integraciones/calendario` dice «Falta el enlace del calendario».
 
 ## Desarrollo
 

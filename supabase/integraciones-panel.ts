@@ -69,7 +69,7 @@ function sumarDias(iso, n) {
 }
 
 // web/src/logica/plan.js
-var escapar = (t) => String(t || "").replace(/\\/g, "\\\\").replace(/\r\n?|\n/g, "\\n").replace(/([,;])/g, "\\$1");
+var escapar = (t) => String(t || "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").replace(/\\/g, "\\\\").replace(/\r\n?|\n/g, "\\n").replace(/([,;])/g, "\\$1");
 var compacta = (iso) => iso.replace(/-/g, "");
 function plegar(linea) {
   const enc = new TextEncoder();
@@ -119,9 +119,10 @@ function calendarioICS(eventos, { hora = "18:00", minutos = 60, avisoMin = 30, u
 
 // web/src/logica/integraciones.js
 var ENLACE = /^[0-9a-f]{64}$/;
+var LARGO_VALOR = 32;
 function numero(v, { entero = false } = {}) {
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
-  if (typeof v !== "string") return null;
+  if (typeof v !== "string" || v.length > LARGO_VALOR) return null;
   const m = v.trim().replace(/ | /g, " ").match(/^[+-]?\d[\d.,' ]*/);
   if (!m) return null;
   let t = m[0].replace(/[' ]/g, "");
@@ -141,6 +142,7 @@ function numero(v, { entero = false } = {}) {
 function minutosSueno(v, { horas = false } = {}) {
   if (v == null || v === "") return null;
   if (typeof v === "string") {
+    if (v.length > LARGO_VALOR) return null;
     const s = v.trim().toLowerCase();
     const hm = s.match(/^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?$/);
     if (hm) return Number(hm[1]) * 60 + Number(hm[2]);
@@ -153,7 +155,7 @@ function minutosSueno(v, { horas = false } = {}) {
   return Math.round(horas || n <= 24 ? n * 60 : n > 1080 ? n / 60 : n);
 }
 function fechaDe(v) {
-  if (typeof v !== "string") return null;
+  if (typeof v !== "string" || v.length > LARGO_VALOR) return null;
   const s = v.trim();
   let a, m, d;
   let r = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -198,11 +200,11 @@ function limpiarSalud(cuerpo, hoy = hoyISO()) {
 }
 
 // supabase/functions/integraciones/integraciones.js
-var MAX_CUERPO = 64 * 1024;
+var MAX_CUERPO = 16 * 1024;
 var texto = (t, estado = 200, extra = {}) => new Response(t, { status: estado, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...extra } });
 var json = (d, estado = 200) => new Response(JSON.stringify(d), { status: estado, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
 function enlaceDe(req, url) {
-  const t = url.searchParams.get("t") || req.headers.get("x-fbe-enlace") || "";
+  const t = (req.headers.get("x-fbe-enlace") || url.searchParams.get("t") || "").trim();
   return ENLACE.test(t) ? t : null;
 }
 function componerCalendario(datos) {
@@ -217,7 +219,7 @@ function componerCalendario(datos) {
   return calendarioICS(eventos, { hora: datos?.hora || "18:00", minutos: datos?.minutos || 75, avisoMin: datos?.aviso ?? 30, nombre: "FBE · Entrenos", refrescoMin: 360 });
 }
 var MENSAJES = {
-  enlace: "Este enlace ya no vale: copia el nuevo en la app (Perfil → Conexiones → Salud del iPhone) y pégalo en el atajo.",
+  enlace: "Esta clave ya no vale: copia la nueva en la app (Perfil → Conexiones → Salud del iPhone) y pégala en el atajo.",
   baja: "Tu cuenta está de baja: ya no se guardan datos nuevos.",
   consentimiento: "Falta tu consentimiento de datos de salud: dalo en la app (Perfil → Privacidad) y vuelve a probar.",
   datos: "No ha llegado nada que se pueda guardar (revisa el atajo: fecha, pasos, sueño, FC en reposo, HRV o peso).",
@@ -257,6 +259,7 @@ async function atender(req, { env = {}, f = globalThis.fetch, hoy = null } = {})
     if (req.method !== "POST") return texto("Usa POST", 405, { Allow: "POST" });
     const enlace = enlaceDe(req, url);
     if (!enlace) return json({ ok: false, mensaje: MENSAJES.enlace }, 401);
+    if (Number(req.headers.get("content-length") || 0) > MAX_CUERPO) return json({ ok: false, mensaje: "Demasiados datos de una vez" }, 413);
     const crudo = await req.text();
     if (crudo.length > MAX_CUERPO) return json({ ok: false, mensaje: "Demasiados datos de una vez" }, 413);
     let cuerpo;

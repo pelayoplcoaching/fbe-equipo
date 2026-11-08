@@ -69,7 +69,7 @@ export function repartir(sesiones, semana, hoy = hoyISO()) {
 
 // Archivo de calendario (.ics) con las sesiones previstas, a una hora, con aviso antes.
 // Hora «flotante» (sin zona): el móvil la pone en su hora local, que es lo que se quiere.
-const escapar = (t) => String(t || '').replace(/\\/g, '\\\\').replace(/\r\n?|\n/g, '\\n').replace(/([,;])/g, '\\$1');
+const escapar = (t) => String(t || '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').replace(/\\/g, '\\\\').replace(/\r\n?|\n/g, '\\n').replace(/([,;])/g, '\\$1');
 const compacta = (iso) => iso.replace(/-/g, '');
 // Las líneas de más de 75 octetos se parten (RFC 5545), carácter a carácter (por puntos de código: un emoji
 // o una tilde nunca se quedan partidos entre dos líneas)

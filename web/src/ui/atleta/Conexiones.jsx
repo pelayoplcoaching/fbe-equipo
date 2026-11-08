@@ -98,15 +98,16 @@ export function HojaSalud({ estado, salud, alCerrar }) {
             <Paso n={1} titulo={`Instala el atajo «${ATAJO_SALUD}»`}>
               {atajoSalud ? <a class="btn" href={atajoSalud} target="_blank" rel="noopener"><Icono n="descargar" /> Instalar el atajo</a>
                 : <span class="peq secundario">Tu coach aún no lo ha preparado. Pídeselo y vuelve aquí.</span>}
-              <span class="mini terciario">Al instalarlo te pedirá tu enlace personal (el del paso 2) y permiso para leer Salud: deja marcados los datos que quieras compartir.</span>
+              <span class="mini terciario">Al instalarlo te pedirá tu clave personal (la del paso 2) y permiso para leer Salud: deja marcados los datos que quieras compartir.</span>
             </Paso>
-            <Paso n={2} titulo="Copia tu enlace personal" hecho={activa && !enlace}>
-              {enlace ? (url ? <EnlaceNuevo url={url} etiqueta="Enlace" /> : <p class="nota peq">{modo === 'demo' ? 'En la demo no se crea un enlace de verdad: en tu app, aquí saldría el tuyo para copiarlo.' : 'Falta la dirección de Supabase en la configuración de la app.'}</p>)
+            <Paso n={2} titulo="Copia tu clave personal" hecho={activa && !enlace}>
+              {/* (revisión) solo la clave: el atajo ya lleva la dirección y la manda en una cabecera, así no queda en los registros */}
+              {enlace ? (modo !== 'demo' ? <EnlaceNuevo url={enlace} etiqueta="Clave" /> : <p class="nota peq">En la demo no se crea una clave de verdad: en tu app, aquí saldría la tuya para copiarla.</p>)
                 : activa ? (
-                  <span class="peq secundario">Ya tienes uno{estado.salud.ultimo ? ` (último envío ${haceDias(estado.salud.ultimo)})` : ''}. Solo se enseña al crearlo: si lo perdiste o cambias de iPhone, crea otro y pégalo en el atajo.</span>
-                ) : <button type="button" class="btn btn-primario" disabled={ocupado} onClick={crear}><Icono n="enlace" /> Crear mi enlace</button>}
-              {(enlace || !activa) && <span class="mini terciario">Es como una llave: no lo compartas. Si creas otro, este deja de valer.</span>}
-              {activa && !enlace && confirmar !== 'nuevo' && <button type="button" class="btn-texto" onClick={() => setConfirmar('nuevo')}>Crear un enlace nuevo</button>}
+                  <span class="peq secundario">Ya tienes una{estado.salud.ultimo ? ` (último envío ${haceDias(estado.salud.ultimo)})` : ''}. Solo se enseña al crearla: si la perdiste o cambias de iPhone, crea otra y pégala en el atajo.</span>
+                ) : <button type="button" class="btn btn-primario" disabled={ocupado} onClick={crear}><Icono n="enlace" /> Crear mi clave</button>}
+              {(enlace || !activa) && <span class="mini terciario">Es como una llave: no la compartas, ni compartas el atajo después de pegarla. Si creas otra, esta deja de valer.</span>}
+              {activa && !enlace && confirmar !== 'nuevo' && <button type="button" class="btn-texto" onClick={() => setConfirmar('nuevo')}>Crear una clave nueva</button>}
               {confirmar === 'nuevo' && (
                 <div class="nota pila-s">
                   <span class="peq">El que tienes en el atajo dejará de valer: tendrás que pegar el nuevo.</span>
@@ -143,7 +144,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
         {activa && (confirmar === 'quitar' ? (
           <div class="nota pila-s">
             <span class="peq">El atajo dejará de poder mandar nada. Bórralo también de Atajos si ya no lo quieres.</span>
-            <label class="fila conexion-check"><input type="checkbox" checked={borrar} onChange={(e) => setBorrar(e.currentTarget.checked)} /><span class="peq">Borrar también lo que ha llegado de Salud</span></label>
+            <label class="fila conexion-check"><input type="checkbox" checked={borrar} onChange={(e) => setBorrar(e.currentTarget.checked)} /><span class="peq">Borrar también lo que ha llegado de Salud (y lo que puso en tus hábitos y pesos, si no lo has cambiado tú)</span></label>
             <span class="fila"><button type="button" class="btn btn-peq" onClick={() => setConfirmar(null)}>Cancelar</button><button type="button" class="btn btn-peq btn-peligro" disabled={ocupado} onClick={quitar}>Desconectar</button></span>
           </div>
         ) : <button type="button" class="btn btn-plano peligro" onClick={() => setConfirmar('quitar')}>Desconectar Salud</button>)}
@@ -185,13 +186,14 @@ export function HojaSuscripcion({ estado, alCerrar }) {
   const [hora, setHora] = useState(cal.hora || '18:00');
   const [minutos, setMinutos] = useState(cal.minutos || 75);
   const [avisoMin, setAvisoMin] = useState(cal.aviso ?? 30);
+  const [detalle, setDetalle] = useState(!!cal.detalle);
   const [enlace, setEnlace] = useState(null);
   const [activo, setActivo] = useState(!!cal.activo);
   const [ocupado, setOcupado] = useState(false);
   const [confirmar, setConfirmar] = useState(null);
   const base = api.urlIntegraciones();
-  const cambiado = activo && (hora !== cal.hora || minutos !== cal.minutos || avisoMin !== cal.aviso);
-  const opciones = { hora, minutos, aviso: avisoMin };
+  const cambiado = activo && (hora !== cal.hora || minutos !== cal.minutos || avisoMin !== cal.aviso || detalle !== !!cal.detalle);
+  const opciones = { hora, minutos, aviso: avisoMin, detalle };
 
   async function crear() {
     setOcupado(true);
@@ -216,6 +218,8 @@ export function HojaSuscripcion({ estado, alCerrar }) {
         </div>
         <div class="campo"><span class="etq">Duración</span><Segmentos etiqueta="Duración" valor={minutos} alCambiar={(v) => setMinutos(v ?? 75)} opciones={DURACIONES} /></div>
         <div class="campo"><span class="etq">Aviso</span><Segmentos etiqueta="Aviso" valor={avisoMin} alCambiar={(v) => setAvisoMin(v ?? 30)} opciones={AVISOS} /></div>
+        {/* (revisión) las indicaciones del coach, solo si las quiere: las guarda su calendario (Apple, Google…) */}
+        <label class="fila conexion-check"><input type="checkbox" checked={detalle} onChange={(e) => setDetalle(e.currentTarget.checked)} /><span class="peq">Incluir las indicaciones de tu coach en cada evento<span class="mini terciario" style="display:block">Si lo marcas, tu calendario (Apple, Google…) guardará también lo que tu coach escribe en cada sesión. Si no, solo el nombre y la hora.</span></span></label>
 
         {urls ? (
           <div class="pila-s">

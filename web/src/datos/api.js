@@ -133,7 +133,7 @@ const falta050 = (e) => {
 // (051) sin la migración de las integraciones, la app no ofrece nada de eso
 const falta051 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
-  return /integraciones_mias|integracion_(crear|quitar)|calendario_opciones|salud_diaria_de|atajos?_(lista|guardar)|contactos|contacto_guardar/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
+  return /integraciones_mias|integracion_(crear|quitar)|calendario_opciones|salud_diaria_de|atajos?_(lista|guardar)|contactos|contacto_guardar|contacto_mio|copia_privada/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
 };
 const AVISO_051 = 'Esto aún no está disponible: falta poner al día la base (migración 051)';
 const falta049 = (e) => {
@@ -957,10 +957,10 @@ export function crearApi(backend) {
       if ((await api.personal050().catch(() => null)) !== true) return VERSION_LEGAL_SIN_050;
       // (v0.107) la 2026-12.15 solo con la 050 ampliada (tu música); con la de la v0.104, la 2026-12.14
       if ((await api.musica050().catch(() => null)) !== true) return VERSION_LEGAL_SIN_MUSICA;
-      // (v0.109) la 2026-12.16 solo con la 051 (Salud del iPhone, calendario y WhatsApp); sin ella, la 2026-12.15
+      // (v0.110) la 2026-12.16 solo con la 051 (Salud del iPhone, calendario y WhatsApp); sin ella, la 2026-12.15
       return (await api.integraciones051().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_051;
     },
-    // (v0.109) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
+    // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
       if (!api._v051) {
         const pr = b.rpc('integraciones_mias', {}).then(() => true).catch((e) => (falta051(e) ? false : null));
@@ -4477,7 +4477,13 @@ export function crearApi(backend) {
         ? (await api.personal().catch(() => null)) ?? null
         : ((await api.personalAtletas().catch(() => [])).find((x) => x.atleta_id === atletaId) || null);
       // (v0.105, 051) lo que llegó de Salud del iPhone (los 400 últimos días)
-      out.salud_diaria = (await api.saludDiaria(atletaId, sumarDias(hoyISO(), -400), sumarDias(hoyISO(), 1)).catch(() => null))?.dias || [];
+      out.salud_diaria = (await api.saludDiaria(atletaId, '2020-01-01', sumarDias(hoyISO(), 1)).catch(() => null))?.dias || [];
+      // (revisión) lo suyo de las integraciones: desde cuándo tiene conectado cada cosa, su calendario y su teléfono
+      if (perfilId && perfilId === uid()) {
+        out.integraciones = (await b.rpc('integraciones_mias', {}).catch(() => null)) || null;
+        if (out.integraciones) delete out.integraciones.atajos;
+        out.telefono = (await b.rpc('contacto_mio', {}).catch(() => null)) || null;
+      } else out.telefono = (await api.contactos().catch(() => ({})))?.[atletaId] || null;
       // (v0.57) la corrección de sus vídeos de técnica (con días, como la ve en la app; sin la 035, ninguna)
       const vids = out.archivos.filter((a) => a.tipo === 'video_tecnica').map((a) => a.id);
       out.video_correcciones = vids.length && await api.video035().catch(() => false) ? await api.correccionesDe(vids).catch(() => []) : [];
@@ -4538,6 +4544,8 @@ export function crearApi(backend) {
       // nunca parezca completa sin estarlo
       const noExiste = (e) => /schema cache|does not exist|no existe|PGRST205|42P01/i.test(`${e?.message || ''} ${e?.code || ''}`);
       for (const t of TABLAS_COPIA) out[t] = await b.select(t, t === 'recetas' ? { pagina: 50 } : {}).catch((e) => { if (TABLAS_OPCIONALES.includes(t) && noExiste(e)) return []; throw e; });
+      // (revisión) las tablas que solo se abren con funciones (las de la 050 y la 051): sin la 051, nada
+      out.privado = await b.rpc('copia_privada', {}).catch((e) => { if (falta051(e)) return null; throw e; });
       return out;
     },
 

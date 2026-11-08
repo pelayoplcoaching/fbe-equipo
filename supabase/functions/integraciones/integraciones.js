@@ -11,13 +11,15 @@ import { calendarioICS } from '../../../web/src/logica/plan.js';
 import { limpiarSalud, ENLACE } from '../../../web/src/logica/integraciones.js';
 import { fechaMadrid } from '../../../web/src/logica/fechas.js';
 
-const MAX_CUERPO = 64 * 1024;
+// (revisión) lo que manda el atajo son unos cientos de bytes: con 16 KB sobra
+const MAX_CUERPO = 16 * 1024;
 const texto = (t, estado = 200, extra = {}) => new Response(t, { status: estado, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', ...extra } });
 const json = (d, estado = 200) => new Response(JSON.stringify(d), { status: estado, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 
-// El enlace: en la dirección (?t=) o en la cabecera x-fbe-enlace
+// El enlace: en la cabecera x-fbe-enlace (el atajo: así no queda en los registros de peticiones) o en la dirección (?t=,
+// el calendario, que no puede mandar cabeceras)
 export function enlaceDe(req, url) {
-  const t = url.searchParams.get('t') || req.headers.get('x-fbe-enlace') || '';
+  const t = (req.headers.get('x-fbe-enlace') || url.searchParams.get('t') || '').trim();
   return ENLACE.test(t) ? t : null;
 }
 
@@ -33,7 +35,7 @@ export function componerCalendario(datos) {
 }
 
 const MENSAJES = {
-  enlace: 'Este enlace ya no vale: copia el nuevo en la app (Perfil → Conexiones → Salud del iPhone) y pégalo en el atajo.',
+  enlace: 'Esta clave ya no vale: copia la nueva en la app (Perfil → Conexiones → Salud del iPhone) y pégala en el atajo.',
   baja: 'Tu cuenta está de baja: ya no se guardan datos nuevos.',
   consentimiento: 'Falta tu consentimiento de datos de salud: dalo en la app (Perfil → Privacidad) y vuelve a probar.',
   datos: 'No ha llegado nada que se pueda guardar (revisa el atajo: fecha, pasos, sueño, FC en reposo, HRV o peso).',
@@ -70,6 +72,7 @@ export async function atender(req, { env = {}, f = globalThis.fetch, hoy = null 
     if (req.method !== 'POST') return texto('Usa POST', 405, { Allow: 'POST' });
     const enlace = enlaceDe(req, url);
     if (!enlace) return json({ ok: false, mensaje: MENSAJES.enlace }, 401);
+    if (Number(req.headers.get('content-length') || 0) > MAX_CUERPO) return json({ ok: false, mensaje: 'Demasiados datos de una vez' }, 413);
     const crudo = await req.text();
     if (crudo.length > MAX_CUERPO) return json({ ok: false, mensaje: 'Demasiados datos de una vez' }, 413);
     let cuerpo;

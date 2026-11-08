@@ -211,6 +211,20 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     clearTimeout(temporizador);
     temporizador = setTimeout(() => guardarLocal(clave, db), 150);
   };
+  // (051) Como fbe_privado.salud_borrar: lo que llegó de Salud y sus copias (lo que siga igual que lo dejó el atajo)
+  const saludBorrarDemo = (a) => {
+    for (const c of tabla('salud_copias').filter((x) => x.atleta_id === a)) {
+      if (c.tipo === 'peso') db.pesos = tabla('pesos').filter((p) => !(p.atleta_id === a && p.fecha === c.fecha && Number(p.kg) === Number(c.valor_puesto) && p.notas === 'Desde Salud'));
+      else {
+        const r = tabla('registros_habito').find((x) => x.habito_id === c.habito_id && x.fecha === c.fecha && Number(x.valor) === Number(c.valor_puesto));
+        if (r && c.valor_previo == null) db.registros_habito = tabla('registros_habito').filter((x) => x !== r);
+        else if (r) r.valor = c.valor_previo;
+      }
+    }
+    db.salud_copias = tabla('salud_copias').filter((x) => x.atleta_id !== a);
+    db.salud_diaria = tabla('salud_diaria').filter((x) => x.atleta_id !== a);
+    persistirYa();
+  };
   const avisar = () => { guardarLocal(clave + '-sesion', persistir ? sesion : null); oyentes.forEach((f) => f(sesion)); };
   const esCoach = () => tabla('perfiles').find((p) => p.id === sesion?.user.id)?.rol === 'coach';
   const buscar = (t, id) => tabla(t).find((x) => x.id === id);
@@ -2527,6 +2541,17 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async update(t, cambios, f) {
       sinRedDemo();
+      // (051, como su trigger) al retirar el consentimiento de datos de salud, Salud del iPhone se desconecta y lo que
+      // llegó de ahí se borra (lo que escribió él se queda)
+      if (t === 'consentimientos' && cambios?.revocado_en) {
+        for (const c of tabla(t).filter((x) => cumple(x, f) && x.tipo === 'datos_salud' && !x.revocado_en)) {
+          for (const a of tabla('atletas').filter((x) => x.perfil_id === c.perfil_id)) {
+            const i = tabla('integraciones').find((x) => x.atleta_id === a.id);
+            if (i) Object.assign(i, { salud: false, salud_desde: null, salud_ultimo: null });
+            saludBorrarDemo(a.id);
+          }
+        }
+      }
       if (['cobros_atletas', 'pagos', 'recetas', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad'].includes(t) && !esCoach()) return [];
       // Como la 037: recordatorios, frases y vídeos modelo (el coach, con sus triggers); la valoración, el atleta de la suya
       if (['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'umbrales_velocidad'].includes(t)) {
@@ -2969,13 +2994,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if ('hora' in o) { if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(o.hora || ''))) throw new Error('Hora no válida (HH:MM)'); i.cal_hora = o.hora; }
         if (o.minutos != null && o.minutos !== '') { const m = Number(o.minutos); if (!(m >= 15 && m <= 240)) throw new Error('La duración va de 15 a 240 minutos'); i.cal_minutos = m; }
         if (o.aviso != null && o.aviso !== '') { const v = Number(o.aviso); if (!(v >= 0 && v <= 1440)) throw new Error('El aviso va de 0 a 1440 minutos'); i.cal_aviso = v; }
+        if ('detalle' in o) { if (typeof o.detalle !== 'boolean') throw new Error('Detalle no válido'); i.cal_detalle = o.detalle; }
       };
       if (nombre === 'integraciones_mias') {
         const a = miAtletaId();
         if (!a) return null;
         const i = integ(a) || {};
         return { salud: { activa: !!i.salud, desde: i.salud_desde || null, ultimo: i.salud_ultimo || null },
-          calendario: { activo: !!i.calendario, desde: i.calendario_desde || null, ultimo: i.calendario_ultimo || null, hora: i.cal_hora || '18:00', minutos: i.cal_minutos || 75, aviso: i.cal_aviso ?? 30 },
+          calendario: { activo: !!i.calendario, desde: i.calendario_desde || null, ultimo: i.calendario_ultimo || null, hora: i.cal_hora || '18:00', minutos: i.cal_minutos || 75, aviso: i.cal_aviso ?? 30, detalle: !!i.cal_detalle },
           atajos: Object.fromEntries(tabla('atajos_coach').map((x) => [x.clave, x.url])) };
       }
       if (nombre === 'integracion_crear') {
@@ -2997,7 +3023,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const i = integNueva(a);
         opcionesCal(i, args?.p_opciones);
         persistirYa();
-        return { hora: i.cal_hora, minutos: i.cal_minutos, aviso: i.cal_aviso };
+        return { hora: i.cal_hora, minutos: i.cal_minutos, aviso: i.cal_aviso, detalle: !!i.cal_detalle };
       }
       if (nombre === 'integracion_quitar') {
         const a = miAtletaId();
@@ -3005,7 +3031,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const i = integ(a);
         if (args?.p_tipo === 'salud') {
           if (i) Object.assign(i, { salud: false, salud_desde: null, salud_ultimo: null });
-          if (args?.p_borrar) db.salud_diaria = tabla('salud_diaria').filter((x) => x.atleta_id !== a);
+          if (args?.p_borrar) saludBorrarDemo(a);
         } else if (args?.p_tipo === 'calendario') {
           if (i) Object.assign(i, { calendario: false, calendario_desde: null, calendario_ultimo: null });
         } else throw new Error('Tipo no válido');
@@ -3036,6 +3062,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (u) tabla('atajos_coach').push({ clave: k, url: u, actualizado_en: ahora() });
         persistirYa();
         return null;
+      }
+      if (nombre === 'contacto_mio') return tabla('contacto_atleta').find((x) => x.atleta_id === miAtletaId())?.telefono || null;
+      if (nombre === 'copia_privada') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        return Object.fromEntries(['personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'salud_copias', 'atajos_coach', 'contacto_atleta'].map((t) => [t, copia(tabla(t))]));
       }
       if (nombre === 'contactos') {
         if (!esCoach()) throw new Error('Solo el coach');
