@@ -76,7 +76,7 @@ export function MensajesAutomaticos() {
             const t = mensajeDe(lista.datos, k);
             return (
               <li key={k}>
-                <button class="fila-ios fila-boton" onClick={() => setEditar(k)} aria-label={`${titulo}: ${t ? 'cambiar el mensaje' : 'escribir un mensaje'}`}>
+                <button class="fila-ios fila-boton" data-m={k} onClick={() => setEditar(k)} aria-label={`${titulo}: ${t ? 'cambiar el mensaje' : 'escribir un mensaje'}`}>
                   <span class="fila-ios-texto">
                     <span class="fila-ios-titulo">{titulo}</span>
                     <span class="peq terciario">{t || 'Sin mensaje: no sale nada'}</span>
@@ -144,7 +144,7 @@ export function MusicaCoach() {
           <ul class="lista">
             {claves.map(([k, t]) => (
               <li key={k}>
-                <button class="fila-ios fila-boton" onClick={() => setEditar([k, t])} aria-label={`${t}: ${m[k] ? 'cambiar la lista' : 'enlazar una lista'}`}>
+                <button class="fila-ios fila-boton" data-m={k.split(':')[0]} onClick={() => setEditar([k, t])} aria-label={`${t}: ${m[k] ? 'cambiar la lista' : 'enlazar una lista'}`}>
                   <span class="fila-ios-texto"><span class="fila-ios-titulo">{t}</span><span class="peq terciario">{m[k] ? nombreMusica(m[k]) : 'Sin lista'}</span></span>
                   <Icono n={m[k] ? 'editar' : 'mas'} />
                 </button>

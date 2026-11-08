@@ -3032,3 +3032,180 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .fila-biblioteca .detalle[data-g]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: 1px; border-radius: 50%; background: var(--g); }
 .fila-biblioteca:has(.detalle[data-g]) .picto { background: color-mix(in srgb, var(--g) 13%, var(--hoja)); color: color-mix(in srgb, var(--g) 68%, var(--tinta)); }
 @media (forced-colors: active) { .fila-biblioteca .detalle[data-g]::before { background: CanvasText; } }
+
+/* ══ Tanda 36 (8/11, noche): más de la parte del coach ═══════════════════════════════════════════════════════════════
+   Quince mejoras en lo que quedó fuera de las tandas 34 y 35: las pestañas de dentro de la ficha (Actividad, Registro,
+   Seguimiento, Objetivos, Notas, Cobros, Datos), Cuenta y las hojas del editor. */
+:root {
+  --ico-trofeo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8%204h8v5a4%204%200%200%201-8%200zM8%206H5a3%203%200%200%200%203%204M16%206h3a3%203%200%200%201-3%204M12%2013v4M8.5%2020h7M10%2017h4'/%3E%3C/svg%3E");
+  --ico-bandera: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5%2021V4M5.5%204.5h11.5l-2.2%204%202.2%204H5.5'/%3E%3C/svg%3E");
+  --ico-llama: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%203c.8%203%204.5%204.6%204.5%209a4.5%204.5%200%200%201-9%200c0-2.3%201.2-3.6%202.3-4.6.1%201.9%201%203.1%202.2%203.3-.4-3%20.3-5.4%200-7.7z'/%3E%3C/svg%3E");
+  --ico-estrella: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%203.5l2.6%205.3%205.9.9-4.3%204.1%201%205.8-5.2-2.7-5.2%202.7%201-5.8-4.3-4.1%205.9-.9z'/%3E%3C/svg%3E");
+  --ico-escudo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%203l7%202.8v5.4c0%204.6-3%208.3-7%209.8-4-1.5-7-5.2-7-9.8V5.8zM9%2012l2.2%202.2L15.5%2010'/%3E%3C/svg%3E");
+  --ico-candado: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.5%2010.5h11A1.5%201.5%200%200%201%2019%2012v7.5a1.5%201.5%200%200%201-1.5%201.5h-11A1.5%201.5%200%200%201%205%2019.5V12a1.5%201.5%200%200%201%201.5-1.5zM8%2010.5V8a4%204%200%200%201%208%200v2.5'/%3E%3C/svg%3E");
+  --ico-nota-musica: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9%2018V5.5l11-2V16M9%2018a2.5%202.5%200%201%201-5%200%202.5%202.5%200%200%201%205%200zM20%2016a2.5%202.5%200%201%201-5%200%202.5%202.5%200%200%201%205%200zM9%209.5l11-2'/%3E%3C/svg%3E");
+  --ico-volver: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5%2012a8.5%208.5%200%201%200%202.6-6.1L3.5%208.5M3.5%204v4.5H8'/%3E%3C/svg%3E");
+}
+
+/* ── 235 · La actividad con el color de cada cosa (tanda 36) ──────────────────────────────────────────────────────────
+   Cada evento de la pestaña Actividad (Actividad.jsx: act-<tipo>) lleva su icono blanco en un cuadrado de su color,
+   como Revisar (bloque 222): sesiones en verde, récords en dorado, check-ins en rosa, pesos en verde azulado, mensajes
+   en azul, vídeos en rojo y fotos en ámbar. */
+.actividad-item .actividad-ico { --ac: var(--morado); background: linear-gradient(160deg, color-mix(in srgb, var(--ac) 78%, #fff), var(--ac)); color: #fff; box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--ac) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22); }
+.act-sesion .actividad-ico { --ac: #22A04B; }
+.act-record .actividad-ico { --ac: #C98A00; }
+.act-checkin .actividad-ico { --ac: var(--t-checkin); }
+.act-peso .actividad-ico { --ac: var(--t-peso); }
+.act-mensaje .actividad-ico { --ac: var(--t-tarea); }
+.act-video .actividad-ico { --ac: #E5484D; }
+.act-foto .actividad-ico { --ac: var(--t-menu); }
+@media (forced-colors: active) { .actividad-item .actividad-ico { background: Canvas; color: CanvasText; border: 1px solid CanvasText; } }
+
+/* ── 236 · La actividad como una línea del tiempo (tanda 36) ──────────────────────────────────────────────────────────
+   Una raya fina une los iconos de cada día (detrás de ellos, a la altura de su centro) y el día («Hoy», «Ayer»…) va
+   en una pastilla que se queda arriba mientras bajas por sus eventos. */
+.actividad-dia > .lista { background: linear-gradient(color-mix(in srgb, var(--morado) 22%, var(--linea)), color-mix(in srgb, var(--morado) 22%, var(--linea))) 30px 28px / 2px calc(100% - 56px) no-repeat, var(--hoja); }
+.actividad-dia > h2 { position: sticky; top: calc(3.875rem + env(safe-area-inset-top, 0px) + 6px); z-index: 2; justify-self: start; width: fit-content; padding: 4px 11px; border-radius: 999px; background: color-mix(in srgb, var(--hoja) 82%, transparent); -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4); box-shadow: 0 0 0 1px var(--borde), 0 4px 12px -8px rgba(30, 21, 72, .35); color: var(--tinta-2); }
+@media (forced-colors: active) { .actividad-dia > .lista { background: Canvas; } .actividad-dia > h2 { background: Canvas; border: 1px solid CanvasText; } }
+
+/* ── 237 · Cada sesión del registro con el color de su esfuerzo (tanda 36) ────────────────────────────────────────────
+   Ficha.jsx: registro-sesion con data-rpe (el entero del esfuerzo de la sesión, de 5 a 10). Un filo a la izquierda en
+   la escala de la tanda 30 (verde a rojo) y, si está terminada y falta por revisar (por-revisar), un aro del acento. */
+.registro-sesion { box-shadow: var(--sombra), inset 3px 0 0 var(--esf, transparent); }
+.registro-sesion[data-rpe="5"] { --esf: var(--esf-5); }
+.registro-sesion[data-rpe="6"] { --esf: var(--esf-6); }
+.registro-sesion[data-rpe="7"] { --esf: var(--esf-7); }
+.registro-sesion[data-rpe="8"] { --esf: var(--esf-8); }
+.registro-sesion[data-rpe="9"] { --esf: var(--esf-9); }
+.registro-sesion[data-rpe="10"] { --esf: var(--esf-10); }
+.registro-sesion.por-revisar { box-shadow: var(--sombra), inset 3px 0 0 var(--esf, var(--morado)), 0 0 0 1.5px color-mix(in srgb, var(--morado) 40%, transparent); }
+@media (forced-colors: active) { .registro-sesion { border-left: 3px solid CanvasText; } }
+
+/* ── 238 · La tabla del registro más fácil de leer (tanda 36) ─────────────────────────────────────────────────────────
+   Filas a franjas (en el escritorio), lo hecho un poco más marcado y lo que se quedó corto (por debajo del rango o
+   pasado de esfuerzo) en una pastilla ámbar. */
+@media (min-width: 621px) { .tabla-registro tbody tr:nth-child(even) > td { background: color-mix(in srgb, var(--hoja-2) 65%, transparent); } }
+.tabla-registro td[data-etq="Hecho"] { color: var(--tinta); font-weight: 560; }
+.registro-serie .corto { padding: 0 5px; border-radius: 6px; background: color-mix(in srgb, var(--aviso) 14%, var(--hoja)); color: color-mix(in srgb, var(--aviso) 70%, var(--tinta)); }
+
+/* ── 239 · El cumplimiento con barras de luz (tanda 36) ───────────────────────────────────────────────────────────────
+   Las barras de las cuatro últimas semanas, con degradado y brillo de su color; la raya del 90 % en el acento, y las
+   semanas completas (100 %) con un ✓ blanco arriba de su barra. */
+.cumple-barra i { background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 70%, #fff), var(--ok)); box-shadow: 0 0 12px color-mix(in srgb, var(--ok) 40%, transparent), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.cumple-semanas li.medio .cumple-barra i { background: linear-gradient(180deg, color-mix(in srgb, var(--disco-amarillo) 70%, #fff), var(--disco-amarillo)); box-shadow: none; }
+.cumple-semanas li.bajo .cumple-barra i { background: linear-gradient(180deg, color-mix(in srgb, var(--alerta) 70%, #fff), var(--alerta)); box-shadow: none; }
+.cumple-barra::after { border-top-color: var(--morado); opacity: .8; }
+.cumple-barra i[style*="height: 100%"]::before { content: ""; position: absolute; top: 5px; left: 50%; width: 14px; height: 14px; margin-left: -7px; background: var(--marca-blanca) center / contain no-repeat; }
+@media (forced-colors: active) { .cumple-barra i { background: CanvasText; } }
+
+/* ── 240 · Los objetivos con su diana y su barra (tanda 36) ───────────────────────────────────────────────────────────
+   Ficha.jsx: objetivo-fila con --f (lo conseguido, de 0 a 1) y data-hecho. La diana en un disco del acento y una
+   barra de avance bajo el texto; conseguido, todo en verde. */
+.objetivo-fila { grid-template-columns: 36px minmax(0, 1fr) auto; --oc: var(--morado); }
+.objetivo-fila[data-hecho] { --oc: var(--ok); }
+.objetivo-fila::before { content: ""; width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(160deg, color-mix(in srgb, var(--oc) 78%, #fff), var(--oc)); -webkit-mask: none; box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--oc) 80%, transparent); }
+.objetivo-fila > span:first-of-type { position: relative; padding-bottom: 12px; background: linear-gradient(90deg, var(--oc) calc(var(--f, 0) * 100%), color-mix(in srgb, var(--oc) 16%, transparent) 0) left bottom / 100% 5px no-repeat; }
+.objetivo-fila > span:first-of-type::before { content: ""; position: absolute; left: -40px; top: 50%; width: 20px; height: 20px; margin-top: -16px; background: #fff; -webkit-mask: var(--ico-diana) center / contain no-repeat; mask: var(--ico-diana) center / contain no-repeat; }
+.objetivo-fila[data-hecho] > span:first-of-type::before { -webkit-mask-image: var(--ico-trofeo); mask-image: var(--ico-trofeo); }
+@media (forced-colors: active) { .objetivo-fila::before { background: Canvas; border: 1px solid CanvasText; } .objetivo-fila > span:first-of-type { background: none; } .objetivo-fila > span:first-of-type::before { background: CanvasText; } }
+
+/* ── 241 · Las notas privadas como pósits (tanda 36) ──────────────────────────────────────────────────────────────────
+   Cada nota, en el papel amarillo con la esquina doblada de la nota fijada (bloque 192), y el campo de escribir con un
+   candado que recuerda que solo la ves tú. */
+.nota-privada { position: relative; border-top-right-radius: 0; background: linear-gradient(225deg, transparent 14px, color-mix(in srgb, var(--disco-amarillo) 18%, var(--hoja)) 14px); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 8%, transparent), 0 12px 20px -16px color-mix(in srgb, var(--disco-amarillo) 70%, #000); }
+.nota-privada::before { content: ""; position: absolute; top: 0; right: 0; width: 20px; height: 20px; border-bottom-left-radius: 4px; pointer-events: none; background: linear-gradient(45deg, color-mix(in srgb, var(--disco-amarillo) 40%, var(--hoja)) 50%, transparent 50%); box-shadow: -1px 1px 2px color-mix(in srgb, var(--tinta) 14%, transparent); }
+.nota-nueva-form label[for="nota-nueva"] { display: inline-flex; align-items: center; gap: 6px; }
+.nota-nueva-form label[for="nota-nueva"]::before { content: ""; width: 14px; height: 14px; background: var(--morado); -webkit-mask: var(--ico-candado) center / contain no-repeat; mask: var(--ico-candado) center / contain no-repeat; }
+@media (forced-colors: active) { .nota-privada { background: Canvas; border: 1px solid CanvasText; } .nota-privada::before { content: none; } .nota-nueva-form label[for="nota-nueva"]::before { background: CanvasText; } }
+
+/* ── 242 · Los cobros con su estado a la vista (tanda 36) ─────────────────────────────────────────────────────────────
+   «Cómo va» con un baño del color de su estado (verde al día, ámbar pendiente o por vencer, rojo si va retrasado) y
+   cada cobro de la lista con su euro en un disco (verde si está pagado). */
+.cobros > section:has(> .separa > .chip) { --cs: var(--morado); background: linear-gradient(150deg, color-mix(in srgb, var(--cs) 11%, var(--hoja)), var(--hoja) 62%); }
+.cobros > section:has(> .separa > .chip.ok) { --cs: var(--ok); }
+.cobros > section:has(> .separa > .chip.aviso) { --cs: var(--aviso); }
+.cobros > section:has(> .separa > .chip.alerta) { --cs: var(--alerta); }
+.cobros-cifras dd { font-size: 1.25rem; }
+.cobro-cab::before { content: ""; width: 26px; height: 26px; flex: none; border-radius: 50%; background: color-mix(in srgb, var(--cc, var(--tinta-3)) 14%, var(--hoja)); -webkit-mask: none; }
+.cobro-cab { position: relative; --cc: var(--tinta-3); }
+.cobro-cab:has(> .chip.ok) { --cc: var(--ok); }
+.cobro-cab:has(> .chip.alerta) { --cc: var(--alerta); }
+.cobro-cab:has(> .chip.aviso) { --cc: var(--aviso); }
+.cobro-cab::after { content: ""; position: absolute; left: 6px; top: 50%; width: 14px; height: 14px; margin-top: -7px; background: var(--cc); -webkit-mask: var(--ico-euro) center / contain no-repeat; mask: var(--ico-euro) center / contain no-repeat; }
+@media (forced-colors: active) { .cobros > section { background: Canvas; } .cobro-cab::before { border: 1px solid CanvasText; } .cobro-cab::after { background: CanvasText; } }
+
+/* ── 243 · Los datos del atleta más ordenados (tanda 36) ──────────────────────────────────────────────────────────────
+   Los apartados del cuestionario (Salud, Lesiones…) como títulos del acento con su raya; el chip de la valoración
+   médica con un escudo, y «Lo que le pide la app cada día» en baldosas. */
+.datos-cuest h3 { display: flex; align-items: center; gap: 10px; color: var(--morado); text-transform: uppercase; letter-spacing: .05em; font-size: 0.7188rem; }
+.datos-cuest h3::after { content: ""; flex: 1; height: 1px; background: color-mix(in srgb, var(--morado) 22%, var(--linea)); }
+.cuestionario-coach .chip.ok:not(:has(svg)) { display: inline-flex; align-items: center; gap: 5px; }
+.cuestionario-coach .chip.ok:not(:has(svg))::before { content: ""; width: 13px; height: 13px; background: currentColor; -webkit-mask: var(--ico-escudo) center / contain no-repeat; mask: var(--ico-escudo) center / contain no-repeat; }
+section.panel:has(#lo-que-usa) > dl.datos-cuest { grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); }
+section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: minmax(0, 1fr); padding: 10px 12px; border-radius: 12px; background: var(--hoja-2); }
+@media (forced-colors: active) { section.panel:has(#lo-que-usa) > dl.datos-cuest > div { border: 1px solid CanvasText; } }
+
+/* ── 244 · Tu tarjeta de Cuenta con la portada de la marca (tanda 36) ─────────────────────────────────────────────────
+   Como el perfil del atleta (bloque 89): la tarjeta de tu nombre y tu foto lleva arriba una franja con la noche de la
+   marca. Sin texto encima. */
+.panel:has(> .lista > .fila-foto) { position: relative; isolation: isolate; overflow: hidden; padding-top: 30px; }
+.panel:has(> .lista > .fila-foto)::before { content: ""; position: absolute; inset: 0 0 auto; height: 30px; z-index: -1; background: var(--grano), radial-gradient(260px 90px at 88% 0%, rgba(160, 140, 255, .55), transparent 70%), radial-gradient(220px 80px at 4% 110%, rgba(104, 78, 236, .5), transparent 70%), linear-gradient(165deg, #2A2068, #1E1548); }
+@media (forced-colors: active) { .panel:has(> .lista > .fila-foto)::before { content: none; } }
+
+/* ── 245 · Los mensajes automáticos con su icono (tanda 36) ───────────────────────────────────────────────────────────
+   PersonalCoach.jsx: data-m. Al batir un récord, trofeo dorado; al terminar un bloque, bandera del acento; en la
+   racha, llama naranja; al volver tras un parón, la flecha de vuelta en azul; en su cumpleaños, estrella rosa. */
+.mensajes-automaticos .fila-ios[data-m]::before, .musica-coach .fila-ios[data-m]::before { content: ""; position: absolute; left: 16px; top: 50%; margin-top: -15px; width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(180deg, color-mix(in srgb, var(--fm) 80%, #fff), var(--fm)); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+.mensajes-automaticos .fila-ios[data-m]::after, .musica-coach .fila-ios[data-m]::after { content: ""; position: absolute; left: 23px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: #fff; -webkit-mask: var(--ico-m) center / contain no-repeat; mask: var(--ico-m) center / contain no-repeat; pointer-events: none; }
+.mensajes-automaticos .fila-ios[data-m], .musica-coach .fila-ios[data-m] { position: relative; padding-left: 58px; }
+.fila-ios[data-m="record"] { --fm: #C98A00; --ico-m: var(--ico-trofeo); }
+.fila-ios[data-m="bloque"] { --fm: #5856D6; --ico-m: var(--ico-bandera); }
+.fila-ios[data-m="racha"] { --fm: #E8730C; --ico-m: var(--ico-llama); }
+.fila-ios[data-m="vuelta"] { --fm: #2E7CF6; --ico-m: var(--ico-volver); }
+.fila-ios[data-m="cumple"] { --fm: #E5407F; --ico-m: var(--ico-estrella); }
+
+/* ── 246 · La música con su nota de color (tanda 36) ──────────────────────────────────────────────────────────────────
+   Cada lista con una nota musical blanca en un cuadrado del color de su grupo: por tipo de sesión en el acento, la de
+   las descargas en verde azulado, la del equipo en rosa y las del cardio en naranja. */
+.musica-coach .fila-ios[data-m] { --fm: #7A5AF8; --ico-m: var(--ico-nota-musica); }
+.musica-coach .fila-ios[data-m="descarga"] { --fm: #0E9384; }
+.musica-coach .fila-ios[data-m="equipo"] { --fm: #E5407F; }
+.musica-coach .fila-ios[data-m="ritmo"] { --fm: #E8730C; }
+@media (forced-colors: active) { .mensajes-automaticos .fila-ios[data-m]::before, .musica-coach .fila-ios[data-m]::before { background: Canvas; border: 1px solid CanvasText; } .mensajes-automaticos .fila-ios[data-m]::after, .musica-coach .fila-ios[data-m]::after { background: CanvasText; } }
+
+/* ── 247 · Las cargas sugeridas, con la nueva en una pastilla (tanda 36) ──────────────────────────────────────────────
+   La carga de antes en gris y la nueva en una pastilla: verde si sube porque llegó a todo, lavanda en el resto. */
+.carga-sug-kg b { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--morado-suave); color: var(--tinta); }
+.carga-sug-kg b.ok-t { background: var(--ok-suave); color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ok) 25%, transparent); }
+
+/* ── 248 · «Programar según FBE» más claro (tanda 36) ─────────────────────────────────────────────────────────────────
+   ProgramarFBE.jsx: data-d en el chip de lo que propone y data-conf en el de la confianza. «Sube kilos» con su flecha
+   arriba y «Baja kilos» con la de abajo, la confianza con su escudo y lo propuesto (lo de después de la flecha) en una
+   caja lavanda que salta a la vista. */
+.carga-sug .chip:is([data-d="subir"], [data-d="bajar"], [data-conf]) { display: inline-flex; align-items: center; gap: 4px; }
+.carga-sug .chip:is([data-d="subir"], [data-d="bajar"], [data-conf])::before { content: ""; width: 12px; height: 12px; background: currentColor; -webkit-mask: var(--ico-c) center / contain no-repeat; mask: var(--ico-c) center / contain no-repeat; }
+.carga-sug .chip[data-d="subir"] { --ico-c: var(--ico-arriba); }
+.carga-sug .chip[data-d="bajar"] { --ico-c: var(--ico-arriba); }
+.carga-sug .chip[data-d="bajar"]::before { transform: rotate(180deg); }
+.carga-sug .chip[data-conf] { --ico-c: var(--ico-escudo); }
+.carga-sug .pila-xs > span.peq:has(> b.num) { justify-self: start; padding: 5px 10px; border-radius: 10px; background: var(--morado-suave); }
+.carga-sug .pila-xs > span.peq > b.num { color: var(--tinta); }
+
+/* ── 249 · Los grupos musculares con su color en el editor (tanda 36) ─────────────────────────────────────────────────
+   Con los colores de la biblioteca (bloque 234), un punto de su color en las series por músculo de la semana y de
+   «Programar según FBE» (data-g en vol-chip), en «Elegir ejercicio» (el primer grupo) y en los grupos al editar un
+   ejercicio (el principal sigue en el acento). */
+[data-g="pectoral"] { --g: #E5484D; }
+[data-g="espalda"] { --g: #2E7CF6; }
+[data-g="deltoides"] { --g: #E8730C; }
+[data-g="cuadriceps"] { --g: #22A04B; }
+[data-g="gluteo"] { --g: #E5407F; }
+[data-g="isquiotibiales"] { --g: #0E9384; }
+[data-g="biceps"] { --g: #7A5AF8; }
+[data-g="triceps"] { --g: #5856D6; }
+[data-g="abdominales"] { --g: #C98A00; }
+[data-g="gemelo"] { --g: #8E6E53; }
+.vol-chip[data-g]::before, .lista-elegir > button[data-g] > span:first-child::before, .chip[data-g]::before { content: ""; display: inline-block; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--g); align-self: center; }
+.lista-elegir > button[data-g] > span:first-child::before { margin-right: 7px; vertical-align: 1px; }
+.chip[data-g] { gap: 5px; }
+@media (forced-colors: active) { .vol-chip[data-g]::before, .lista-elegir > button[data-g] > span:first-child::before, .chip[data-g]::before { background: CanvasText; } }

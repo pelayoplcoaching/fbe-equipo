@@ -119,7 +119,7 @@ function EditarEjercicio({ ejercicio, todos, porId, alCerrar }) {
           <div class="fila-envolver">
             {GRUPOS.map(([g, n]) => {
               const i = f.grupos.indexOf(g);
-              return <button type="button" key={g} class={`chip ${i === 0 ? 'morado' : ''}`} style="min-height:36px;cursor:pointer" aria-pressed={i >= 0 ? 'true' : 'false'} onClick={() => alternar('grupos', g)}>{i >= 0 && <Icono n="hecho" />}{n}</button>;
+              return <button type="button" key={g} data-g={g} class={`chip ${i === 0 ? 'morado' : ''}`} style="min-height:36px;cursor:pointer" aria-pressed={i >= 0 ? 'true' : 'false'} onClick={() => alternar('grupos', g)}>{i >= 0 && <Icono n="hecho" />}{n}</button>;
             })}
           </div>
           {f.grupos.length > 1 && (
