@@ -11,6 +11,8 @@ import { hoyISO } from '../../logica/fechas.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenCelebracion } from '../../logica/imagenes.js';
 import { usePersonal } from './Personal.jsx';
+import { useFicha } from './Musica.jsx';
+import { aperturasDe } from '../../logica/musica.js';
 
 const toneladas = (kg) => num(Math.round(kg / 100) / 10, 1);
 const horas = (min) => (min >= 60 ? `${Math.round(min / 60)} horas` : `${min} minutos`);
@@ -76,6 +78,9 @@ function HistoriaAnioPantalla({ resumen: r, alCerrar }) {
   const personal = usePersonal();
   const nombre = nombreSaludo(personal.datos, atleta?.nombre);
   const maxMes = Math.max(1, ...r.porMes);
+  // (v0.104) su música: cuántas veces la abrió desde una sesión este año y su canción de récord
+  const veces = aperturasDe(personal.datos?.musica_aperturas, String(r.anio));
+  const cancion = useFicha(personal.datos?.cancion_url || null);
   const pantallas = [
     { id: 'portada', render: () => (
       <>
@@ -123,6 +128,13 @@ function HistoriaAnioPantalla({ resumen: r, alCerrar }) {
         <p class="historia-texto">{r.semanasCompletas} {r.semanasCompletas === 1 ? 'semana' : 'semanas'} con todo lo previsto hecho.</p>
       </>
     ) },
+    ...(veces > 0 || cancion.datos?.titulo ? [{ id: 'musica', render: () => (
+      <>
+        <span class="historia-etq">Tu música</span>
+        {veces > 0 ? <p class="historia-cifra num">{veces}<small>{veces === 1 ? 'sesión con tu música' : 'sesiones con tu música'}</small></p> : <h2>Con banda sonora</h2>}
+        {cancion.datos?.titulo && <p class="historia-texto">Y la canción de tus récords: <strong>{cancion.datos.titulo}</strong>.</p>}
+      </>
+    ) }] : []),
     ...(r.cardio?.sesiones ? [{ id: 'cardio', render: () => (
       <>
         <span class="historia-etq">Cardio</span>

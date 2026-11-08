@@ -76,9 +76,10 @@
 .lo-suyo-datos { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; font-size: .9375rem; }
 .lo-suyo-datos dt { color: var(--tinta-2); }
 .lo-suyo-datos dd { margin: 0; font-weight: 650; }
-.mensajes-automaticos .fila-boton { grid-template-columns: minmax(0, 1fr) auto; padding: 12px 14px; }
-.mensajes-automaticos .fila-boton > svg { width: 18px; height: 18px; color: var(--tinta-3); }
-.mensajes-automaticos .fila-ios-texto { display: grid; gap: 2px; }
+.mensajes-automaticos .fila-boton, .musica-coach .fila-boton { grid-template-columns: minmax(0, 1fr) auto; padding: 12px 14px; }
+.mensajes-automaticos .fila-boton > svg, .musica-coach .fila-boton > svg { width: 18px; height: 18px; color: var(--tinta-3); }
+.mensajes-automaticos .fila-ios-texto, .musica-coach .fila-ios-texto { display: grid; gap: 2px; }
+.musica-coach .panel + .panel { margin-top: 10px; }
 .mensajes-automaticos .fila-ios-texto .peq { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 @media (forced-colors: active) { .record-alcance-ico, .anio-barras i { forced-color-adjust: none; } }
@@ -86,3 +87,24 @@
 /* «Lo tuyo»: la lista de ejercicios sin el marco del fieldset */
 .lo-tuyo-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .lo-tuyo-form fieldset .ayuda { font-size: .8125rem; }
+
+/* 8 · La música: la tarjeta de un enlace (portada y nombre), el reproductor, la cadencia del cardio y el aviso */
+.tarjeta-musica { display: grid; gap: 10px; }
+.tarjeta-musica + .tarjeta-musica { padding-top: 12px; border-top: 1px solid var(--linea); }
+.tarjeta-musica-cab { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; }
+.tarjeta-musica-portada { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: var(--hoja-2); box-shadow: 0 6px 16px -10px rgba(20, 15, 36, .6); }
+.tarjeta-musica-portada.sin { display: grid; place-items: center; color: var(--morado); }
+.tarjeta-musica-portada.sin svg { width: 24px; height: 24px; }
+.tarjeta-musica-titulo { font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
+.tarjeta-musica-botones { gap: 8px; }
+.reproductor-spotify { display: block; width: 100%; border: 0; border-radius: 12px; background: var(--hoja-2); }
+.empezar-musica { justify-content: center; gap: 8px; }
+.musica-aviso { display: grid; gap: 8px; }
+.cadencia { display: grid; gap: 6px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--linea); }
+.cadencia-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cadencia-v { min-width: 7.5rem; text-align: center; }
+.cadencia-v b { font-size: 1.5rem; font-weight: 800; font-stretch: var(--ancho-titulo, 112%); }
+.cadencia-v small { color: var(--tinta-2); font-weight: 650; }
+.cancion-record { display: grid; gap: 8px; margin-top: 12px; background: linear-gradient(135deg, color-mix(in srgb, #E9D49A 18%, var(--hoja)) 0%, var(--hoja) 70%); }
+.lista-equipo { margin-bottom: 4px; }
+.campo-musica svg { width: 16px; height: 16px; }

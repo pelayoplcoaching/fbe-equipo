@@ -41,11 +41,14 @@ export function limpiarPersonal(p = {}) {
   const dia = p.cumple_dia == null || p.cumple_dia === '' ? null : Number(p.cumple_dia);
   if ((mes == null) !== (dia == null)) throw new Error('Para el cumpleaños hacen falta el día y el mes');
   if (mes != null && !cumpleValido(mes, dia)) throw new Error('Ese día no existe en ese mes');
+  const cancion = urlMusica(p.cancion_url);
+  if (cancion === false) throw new Error('Tu canción de récord tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal');
+  if (cancion && /^https:\/\/open\.spotify\.com\//i.test(cancion) && !/\/track\//.test(cancion)) throw new Error('Para tu canción de récord, comparte una canción (no una lista)');
   const favoritos = [...new Set((Array.isArray(p.favoritos) ? p.favoritos : []).filter((x) => UUID.test(String(x))))];
   if (favoritos.length > LIMITES.favoritos) throw new Error(`Como mucho ${LIMITES.favoritos} ejercicios`);
-  return { apodo: texto(p.apodo, LIMITES.apodo), porque: texto(p.porque, LIMITES.porque), favoritos, musica_url: musica, cumple_mes: mes, cumple_dia: dia };
+  return { apodo: texto(p.apodo, LIMITES.apodo), porque: texto(p.porque, LIMITES.porque), favoritos, musica_url: musica, cancion_url: cancion, cumple_mes: mes, cumple_dia: dia };
 }
-export const personalVacio = (p) => !p || (!p.apodo && !p.porque && !p.favoritos?.length && !p.musica_url && p.cumple_mes == null);
+export const personalVacio = (p) => !p || (!p.apodo && !p.porque && !p.favoritos?.length && !p.musica_url && !p.cancion_url && p.cumple_mes == null);
 
 // ---------- La bienvenida del día ----------
 export const nombreSaludo = (personal, nombre) => personal?.apodo || nombreDePila(nombre);

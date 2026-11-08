@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.107': {
+    atleta: [
+      'En la portada, «Tu música de hoy»: la lista de tu coach para esa sesión o la tuya, con su portada, y «Empezar con esta música».',
+      'Pon tu canción de récord en «Lo tuyo»: sale cuando bates uno; y en cardio, un metrónomo para llevar tu cadencia.',
+      '«Tu mes» y «Tu año» cuentan las sesiones con música; y en Equipo está la lista colaborativa del equipo.',
+    ],
+    coach: [
+      'En Cuenta › Música, tus listas por tipo de sesión, de descarga, del equipo y al ritmo de cada cardio.',
+      'En el editor, música para una sesión o un bloque. Necesita la 050 nueva: ejecútala aunque ya ejecutaras la anterior.',
+    ],
+  },
   '0.106': {
     atleta: [
       'El ejercicio en curso brilla y su progreso se llena en un aro; la pauta va en chips y la serie top y las back-off llevan insignia.',

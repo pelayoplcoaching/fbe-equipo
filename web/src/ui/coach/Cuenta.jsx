@@ -11,7 +11,7 @@ import { SeccionNegocio } from './Negocio.jsx';
 import { FilaFoto, FilaNombre } from '../FotoPerfil.jsx';
 import { AvisoAlmacenamiento, LimpiarVideos } from '../tecnica/Limpieza.jsx';
 import { RendimientoApp } from './Rendimiento.jsx';
-import { MensajesAutomaticos } from './PersonalCoach.jsx';
+import { MensajesAutomaticos, MusicaCoach } from './PersonalCoach.jsx';
 
 export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
   const { perfil, backend, salir, api, aviso } = useApp();
@@ -32,6 +32,7 @@ export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
       <SeccionComunidad alCambiar={alCambiarComunidad} />
       {/* (v0.104) lo que les sale a sus atletas en los momentos importantes */}
       <MensajesAutomaticos />
+      <MusicaCoach />
       <SeccionNotificaciones coach />
       <AjustesDispositivo coach />
       <AjustesMensajes coach />

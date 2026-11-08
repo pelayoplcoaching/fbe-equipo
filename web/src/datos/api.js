@@ -6,7 +6,8 @@ import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjer
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { progresoObjetivo, mejorReciente } from '../logica/objetivos.js';
-import { limpiarPersonal, MOMENTO_VALIDO, LIMITES } from '../logica/personal.js';
+import { limpiarPersonal, MOMENTO_VALIDO, LIMITES, urlMusica } from '../logica/personal.js';
+import { claveValida } from '../logica/musica.js';
 import { resumenHabito, cumplimientoHabitos } from '../logica/habitos.js';
 import { progresarPauta, opcionesDe } from '../logica/progresion.js';
 import { resumenCobros, cobradoEnMes, sumarMeses } from '../logica/cobros.js';
@@ -35,7 +36,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -126,7 +127,7 @@ const falta031 = (e) => {
 // (050) sin la migración de la personalización, no hay nada de eso (y no se rompe nada)
 const falta050 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
-  return /personal_(mio|guardar|atletas)|mensajes?_coach/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
+  return /personal_(mio|guardar|atletas|musica_abierta)|mensajes?_coach|musica_(coach|para)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
 };
 const falta049 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
@@ -381,7 +382,7 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
-  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella', 'rendimiento_apuntar', 'rendimiento_resumen', 'personal_mio', 'personal_atletas', 'mensajes_coach']);
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella', 'rendimiento_apuntar', 'rendimiento_resumen', 'personal_mio', 'personal_atletas', 'mensajes_coach', 'musica_coach_lista', 'musica_para']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -390,6 +391,7 @@ export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
   let generacion = 0;
   let personalMemo = null, mensajesMemo = null, personalAtletasMemo = null;  // (050) lo de personal_mio, mensajes_coach y personal_atletas, un minuto
+  let musicaMemo = new Map();  // (050) lo de musica_para y musica_coach_lista, un minuto
   let olvidarFotos = () => {};   // (se define más abajo, con el recuerdo de las fotos de perfil)
   const b = Object.create(backend);
   // Notificaciones: después de algo que avisa a otra persona (un comentario, un aviso, un check-in, una semana
@@ -799,6 +801,37 @@ export function crearApi(backend) {
       try { await b.rpc('mensaje_coach_guardar', { p_momento: momento, p_texto: t }); } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e; }
       mensajesMemo = null;
     },
+    // La música (050): cada vez que abre su música desde una sesión suma una al mes (para «Tu mes» y «Tu año»)
+    async musicaAbierta() {
+      try { await b.rpc('personal_musica_abierta', {}); personalMemo = null; } catch { /* sin la 050 o sin conexión: no se cuenta */ }
+    },
+    // Lo que el coach enlazó para esa sesión: lo general y lo de esa sesión y ese bloque ({ clave: url }; sin la 050, {})
+    async musicaPara(sesionId = null, bloqueId = null) {
+      const k = `${uid()}:${sesionId || ''}:${bloqueId || ''}`;
+      const ya = musicaMemo.get(k);
+      if (ya && Date.now() - ya.t < 60000) return ya.p;
+      const p = b.rpc('musica_para', { p_sesion: sesionId || null, p_bloque: bloqueId || null }).then((r) => (r && typeof r === 'object' ? r : {})).catch((e) => { if (falta050(e)) return {}; throw e; });
+      musicaMemo.set(k, { t: Date.now(), p });
+      p.catch(() => musicaMemo.delete(k));
+      return p;
+    },
+    // Todo lo enlazado (solo el coach); sin la 050, null
+    async musicaCoach() {
+      const k = `${uid()}:lista`;
+      const ya = musicaMemo.get(k);
+      if (ya && Date.now() - ya.t < 60000) return ya.p;
+      const p = b.rpc('musica_coach_lista', {}).then((r) => (r && typeof r === 'object' ? r : {})).catch((e) => { if (falta050(e)) return null; throw e; });
+      musicaMemo.set(k, { t: Date.now(), p });
+      p.catch(() => musicaMemo.delete(k));
+      return p;
+    },
+    async guardarMusicaCoach(clave, url) {
+      if (!claveValida(clave)) throw new Error('No se puede enlazar ahí');
+      const u = String(url ?? '').trim();
+      if (u && !urlMusica(u)) throw new Error('Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal');
+      try { await b.rpc('musica_coach_guardar', { p_clave: clave, p_url: u }); } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e; }
+      musicaMemo = new Map();
+    },
     // La foto del coach, para el chat del atleta (la base solo deja ver eso del perfil del coach)
     // v0.55: el nombre corto del coach («Info del contacto» del atleta); sin la 033, null
     async nombreCoach() {
@@ -869,7 +902,18 @@ export function crearApi(backend) {
       // (v0.95) con la 045, la 2026-12.13 (cómo va la app: se mide en el móvil aunque falte la 049, que solo hace falta para mandarlo)
       if ((await api.comunidad045().catch(() => null)) !== true) return VERSION_LEGAL_SIN_045;
       // (v0.104) la 2026-12.14 solo con la 050 (lo que eliges para tu app); con la 045 pero sin la 050, la 2026-12.13
-      return (await api.personal050().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_050;
+      if ((await api.personal050().catch(() => null)) !== true) return VERSION_LEGAL_SIN_050;
+      // (v0.107) la 2026-12.15 solo con la 050 ampliada (tu música); con la de la v0.104, la 2026-12.14
+      return (await api.musica050().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_MUSICA;
+    },
+    // (v0.107) ¿Está la 050 ampliada (la música)? musica_para() la puede llamar cualquiera con sesión
+    async musica050() {
+      if (!api._vMusica) {
+        const pr = b.rpc('musica_para', { p_sesion: null, p_bloque: null }).then(() => true).catch((e) => (falta050(e) ? false : null));
+        api._vMusica = pr;
+        pr.then((x) => { if (x == null && api._vMusica === pr) api._vMusica = null; });
+      }
+      return api._vMusica;
     },
     // (v0.104) ¿Está la 050? true / false / null (no se sabe: un corte). mensajes_coach() la puede llamar cualquiera con sesión
     async personal050() {
