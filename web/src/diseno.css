@@ -2128,7 +2128,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    El día elegido va en una píldora llena del acento (era un borde) y los números de los días son más grandes. */
 .dias-menu .punto-dia { font-size: 0.8125rem; width: 26px; height: 26px; }
 .dias-menu button[aria-pressed="true"] { background: var(--morado); border-color: var(--morado); color: var(--sobre-morado); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
-.dias-menu button[aria-pressed="true"] .punto-dia:not(.cumple .punto-dia) { background: color-mix(in srgb, #fff 22%, transparent); border-color: transparent; color: var(--sobre-morado); }
+.dias-menu button[aria-pressed="true"] .punto-dia:not(.cumple .punto-dia) { background: color-mix(in srgb, #fff 14%, transparent); border-color: transparent; color: var(--sobre-morado); }
 
 /* ── 137 · Cada comida con su dibujo (tanda 28) ───────────────────────────────────────────────────────────────────────
    En el menú del día, «Desayuno», «Comida», «Merienda»… llevan su escena pequeña delante (Ilustraciones.jsx: las de
@@ -3291,7 +3291,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    apuntarte, «Me apunto» se rellena de verde. */
 .ev-dia { padding: 0 0 4px; min-width: 48px; overflow: hidden; gap: 2px; background: var(--hoja); color: var(--tinta); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 10%, transparent), 0 6px 14px -10px color-mix(in srgb, var(--tinta) 40%, transparent), inset 0 0 0 1px var(--borde); }
 .ev-dia-mes { width: 100%; padding: 2px 0 1px; background: #D92D20; color: #fff; text-align: center; }
-.ev-acciones .btn:first-child[aria-pressed="true"] { background: var(--ok); border-color: transparent; color: #fff; box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--ok) 85%, transparent); }
+.ev-acciones .btn:first-child[aria-pressed="true"] { background: var(--ok); border-color: transparent; color: var(--sobre-morado); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--ok) 85%, transparent); }
 @media (forced-colors: active) { .ev-dia-mes { background: CanvasText; color: Canvas; } }
 
 /* ── 259 · Los logros en oro de verdad (tanda 37) ─────────────────────────────────────────────────────────────────────
