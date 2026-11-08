@@ -8,6 +8,7 @@ import { HojaCompartir, FUENTE, dibujarLobo } from '../Compartir.jsx';
 import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { datosCarnet, datosImagenCarnet, inclinacion, inclinacionMovil } from '../../logica/carnet.js';
 import { sinMovimiento } from '../transiciones.js';
+import { Imagen } from '../Imagen.jsx';
 import { hoyISO } from '../../logica/fechas.js';
 
 const sinPermisoOrientacion = () => typeof window !== 'undefined' && 'DeviceOrientationEvent' in window
@@ -74,6 +75,8 @@ export function Carnet({ bloque }) {
           {/* (diseño, tanda 21) la marca nueva: la noche de la portada con sus resplandores, el lobo en blanco y vectorial
               y, en grande y muy tenue, el lobo al fondo (como en las tarjetas para compartir) */}
           <div class="carnet-fondo" aria-hidden="true">
+            {/* (imágenes) el metal cepillado morado, debajo de los anillos y el lobo */}
+            <Imagen id="carne-fondo" clase="carnet-foto" tamanos="340px" prioridad />
             <svg class="carnet-lineas" viewBox="0 0 340 214" preserveAspectRatio="xMidYMid slice" focusable="false">
               {[0, 1, 2, 3].map((i) => <circle key={i} cx="300" cy="-10" r={70 + i * 40} />)}
             </svg>

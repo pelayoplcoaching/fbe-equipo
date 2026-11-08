@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.103': {
+    atleta: [
+      'Tus medallas son ilustraciones propias, cada una en su metal; el cuarto nivel pasa a llamarse Diamante.',
+      'Tu mes, el check-in, las celebraciones y la bienvenida del día llevan su ilustración.',
+      'También el metrónomo, los intervalos, «¿Dónde entrenas hoy?», la entrada al equipo y tu carné.',
+    ],
+  },
   '0.102': {
     atleta: [
       'Los récords brillan en dorado, tus entrenamientos parecen hojas de calendario y cada comida del menú lleva su dibujo.',

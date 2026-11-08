@@ -9,6 +9,8 @@ import { reproductorDe } from './Video.jsx';
 import { fmtCorta, fmtConDia } from '../logica/fechas.js';
 import { PanelCorreccion, EstadoVideo } from './tecnica/Correccion.jsx';
 import { RecordatoriosAtleta } from './tecnica/Recordatorios.jsx';
+import { Imagen, hayImagen } from './Imagen.jsx';
+import { imagenHerramienta } from '../logica/imagenes.js';
 
 const NOMBRE_POSE = Object.fromEntries(POSES);
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -56,6 +58,13 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
         {videos.length >= 2 && <button class="btn btn-peq" onClick={() => setComparar('videos')}><Icono n="duplicar" /> Comparar dos</button>}
         {fotos.length >= 2 && (esCoach || salud) && <button class="btn btn-peq" onClick={() => setComparar('fotos')}><Icono n="imagen" /> Antes y después</button>}
       </div>
+      {/* (imágenes) con una sola foto de progreso (o un solo vídeo), los dos marcos: lo que podrá comparar con la siguiente */}
+      {!esCoach && hayImagen(imagenHerramienta('comparar')) && ((salud && fotos.length === 1) || (videos.length === 1 && fotos.length !== 1)) && (
+        <div class="cab-ilu diario-comparar">
+          <p>{salud && fotos.length === 1 ? 'Con otra foto de progreso podrás verlas en «Antes y después», lado a lado o con un deslizador.' : 'Con otro vídeo podrás compararlos lado a lado o superpuestos.'}</p>
+          <Imagen id={imagenHerramienta('comparar')} clase="cab-ilu-img" tamanos="16rem" />
+        </div>
+      )}
       {/* v0.59: los recordatorios de técnica que tiene activos (el coach) */}
       {esCoach && <RecordatoriosAtleta atletaId={atletaId} ejercicios={Object.fromEntries(ejercicios.map((e) => [e.id, e]))} />}
       {lista.length > 0 && (

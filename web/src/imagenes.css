@@ -39,3 +39,64 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .toma-ilu .cab-ilu-texto > span { color: var(--sobre-hero-2); font-size: var(--tipo-pie, .875rem); font-weight: 600; }
 .biblioteca-grupo-ilu > p strong { font-size: 1.375rem; font-stretch: var(--ancho-titulo, 112%); font-weight: 800; line-height: 1.15; }
 .biblioteca-grupo-ilu > p span { color: var(--sobre-hero-2); font-size: var(--tipo-pie, .875rem); font-weight: 600; }
+
+/* ── 3 · Los meses ────────────────────────────────────────────────────────────────────────────────────────────────────
+   «Tu mes» (TuMes.jsx: la historia): el paisaje de ese mes de fondo, cubriendo la pantalla y guardando la derecha (el
+   paisaje está pintado a la derecha), con un velo de la noche de la historia encima para que las cifras se lean; los
+   anillos de la marca (::before) dejan de verse. «Tus meses» (la lista de Progreso): el paisaje en pequeño en cada
+   fila. El informe del bloque: la cabecera ilustrada con el paisaje del mes en que acaba (16:9, algo más ancha). */
+.historia-mes .historia-fondo { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: 72% 50%; pointer-events: none; }
+.historia-mes.con-fondo::before { display: none; }
+.historia-mes.con-fondo::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(19, 17, 28, .78) 0%, rgba(19, 17, 28, .58) 38%, rgba(19, 17, 28, .62) 70%, rgba(19, 17, 28, .86) 100%); }
+.fila-semana.con-mini { grid-template-columns: 3.5rem minmax(0, 1fr) 22px; }
+.fila-semana .mes-mini { width: 3.5rem; height: 3.5rem; border-radius: 12px; object-fit: cover; object-position: 75% 50%; }
+.informe-ilu { --proporcion: 16 / 9; min-height: 7rem; margin-bottom: 4px; }
+.informe-ilu > p { font-size: 1rem; }
+@media (forced-colors: active) { .historia-mes .historia-fondo { opacity: .3; } }
+
+/* ── 4 · El check-in y las celebraciones ──────────────────────────────────────────────────────────────────────────────
+   Check-in (Checkin.jsx): una franja arriba de cada pregunta según el apartado (descanso, ánimo, molestias, alimentación, medidas;
+   lo demás, la mesa con la libreta), pegada a los bordes del panel; en el repaso, suelta y con sus esquinas. Las
+   ilustraciones están pintadas a la derecha: se guarda la derecha. Resumen de la sesión (Sesion.jsx): el sello redondo
+   lleva la copa si hay récord o el farol la primera vez que se hace esa sesión. «Tu semana» completa (TuSemana.jsx): el
+   anillo verde, de halo tenue y desenfocado detrás del suyo (fundido con la noche de la historia; nítido tapaba la fecha). Hito de racha (Racha.jsx):
+   la hoguera abajo, fundiéndose hacia arriba. Informe de un bloque terminado: la cumbre, cuadrada. */
+.ck-paso .ck-ilu { display: block; width: calc(100% + 32px); max-width: none; height: auto; aspect-ratio: 3 / 1; margin: -16px -16px 2px; object-fit: cover; object-position: 70% 55%;
+  border-top-left-radius: inherit; border-top-right-radius: inherit; background: #1E1838; }
+.ck-paso .ck-ilu.ck-ilu-suelta { width: 100%; margin: 0; border-radius: var(--r); }
+.resumen-medalla.con-ilu { overflow: hidden; padding: 0; }
+.resumen-medalla .resumen-medalla-img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); }
+.historia-anillo.con-halo { position: relative; isolation: isolate; }
+.historia-anillo .historia-halo { position: absolute; z-index: -1; left: 50%; top: 50%; width: 320px; height: 320px; max-width: none; transform: translate(-50%, -50%);
+  mix-blend-mode: screen; opacity: .34; filter: blur(5px); pointer-events: none; -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent); mask-image: radial-gradient(closest-side, #000 72%, transparent); }
+.hito-pantalla .hito-fondo { position: absolute; z-index: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 62%; max-width: none; object-fit: cover; object-position: 50% 80%;
+  opacity: .6; pointer-events: none; -webkit-mask-image: linear-gradient(to top, #000 25%, transparent 95%); mask-image: linear-gradient(to top, #000 25%, transparent 95%); }
+.hito-pantalla .hito-cuerpo { position: relative; z-index: 1; }
+.informe-ilu .informe-cumbre { aspect-ratio: 1; }
+@media (forced-colors: active) { .ck-ilu, .historia-halo, .hito-fondo { display: none; } }
+
+/* ── 5 · Dónde entrenas, bienvenida, primeros pasos, herramientas, equipo y carné ─────────────────────────────────────
+   `.franja-ilu`: una franja ilustrada. `.franja-pegada`, arriba de un panel con relleno (panel-pad), pegada a sus bordes
+   (dónde entrenas y el primer reto, 3:1; entrar en el equipo, 2,4:1, en lugar de los tres lobos dibujados). `.franja-herr`, suelta y redondeada, 2:1, arriba
+   de las herramientas (metrónomo, intervalos, la hoja de grabar un vídeo de técnica). La bienvenida del día lleva de
+   fondo, muy tenue, la mañana, la tarde o la noche (cubre la pantalla guardando la derecha, donde está la luz). Las
+   pantallas de la primera vez, la ilustración en la tarjeta del dibujo (sin su tercio de abajo, que viene vacío). El
+   carné, el metal cepillado debajo de sus anillos y el lobo (la imagen para compartir, dibujada en el móvil, no cambia). */
+.franja-ilu { display: block; width: 100%; max-width: none; height: auto; object-fit: cover; background: #1E1838; pointer-events: none; }
+.panel-pad > .franja-pegada { width: calc(100% + 32px); margin: -16px -16px 2px; aspect-ratio: 3 / 1; object-position: 50% 62%;
+  border-top-left-radius: inherit; border-top-right-radius: inherit; }
+.panel-pad > .franja-manada { aspect-ratio: 2.4 / 1; object-position: 72% 62%; }
+.panel-pad > .franja-reto { object-position: 70% 35%; }
+.entrar-equipo > .franja-manada ~ svg.entrar-equipo-ico { display: none; } /* (la manada ya está arriba: los tres lobos sobran) */
+.franja-herr { aspect-ratio: 2 / 1; object-position: 50% 50%; border-radius: var(--r); }
+.bdia { isolation: isolate; }
+.bdia > .bdia-fondo { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 75% 50%; opacity: .5; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 75%, transparent 100%); mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 75%, transparent 100%); }
+.bienvenida-dibujo.con-foto { padding: 0; overflow: hidden; }
+.bienvenida-dibujo .bienvenida-foto { display: block; width: 100%; height: auto; aspect-ratio: 16 / 7.5; max-height: 34vh; object-fit: cover; object-position: 50% 0%; }
+.carnet-fondo .carnet-foto { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; pointer-events: none; }
+/* Tu diario con una sola foto de progreso (o un solo vídeo): los dos marcos vacíos, en la cabecera ilustrada común */
+.diario-comparar { --proporcion: 4 / 3; min-height: 7rem; }
+.diario-comparar > p { font-size: .9375rem; font-weight: 600; }
+@media (forced-colors: active) { .franja-ilu, .bdia-fondo, .carnet-foto { display: none; } }

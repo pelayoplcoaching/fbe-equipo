@@ -1,4 +1,180 @@
 {
+  "bienvenida-manana": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-manana-720.96e5b805.webp",
+      "1080": "imagenes/bienvenida/bienvenida-manana-1080.62c9aead.webp",
+      "1440": "imagenes/bienvenida/bienvenida-manana-1440.e8934cb1.webp"
+    }
+  },
+  "bienvenida-noche": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-noche-720.a55e6d08.webp",
+      "1080": "imagenes/bienvenida/bienvenida-noche-1080.9c4a1e3f.webp",
+      "1440": "imagenes/bienvenida/bienvenida-noche-1440.0a552591.webp"
+    }
+  },
+  "bienvenida-tarde": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-tarde-720.e90c4efc.webp",
+      "1080": "imagenes/bienvenida/bienvenida-tarde-1080.38dcc8e1.webp",
+      "1440": "imagenes/bienvenida/bienvenida-tarde-1440.82d3ea82.webp"
+    }
+  },
+  "carne-fondo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/carne/carne-fondo-480.79f3d151.webp",
+      "720": "imagenes/carne/carne-fondo-720.d739ed1e.webp",
+      "1080": "imagenes/carne/carne-fondo-1080.c2adc0ae.webp"
+    }
+  },
+  "celebra-bloque": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/celebra/celebra-bloque-256.a9a7c28a.webp",
+      "512": "imagenes/celebra/celebra-bloque-512.ccb5d65b.webp",
+      "1080": "imagenes/celebra/celebra-bloque-1080.886738c5.webp"
+    }
+  },
+  "celebra-primera": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/celebra/celebra-primera-256.2b9fd627.webp",
+      "512": "imagenes/celebra/celebra-primera-512.513cb098.webp",
+      "1080": "imagenes/celebra/celebra-primera-1080.4514770b.webp"
+    }
+  },
+  "celebra-racha": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/celebra/celebra-racha-256.c2975222.webp",
+      "512": "imagenes/celebra/celebra-racha-512.2d252350.webp",
+      "1080": "imagenes/celebra/celebra-racha-1080.0b1d1756.webp"
+    }
+  },
+  "celebra-record": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/celebra/celebra-record-256.c4e40074.webp",
+      "512": "imagenes/celebra/celebra-record-512.4c3af1cb.webp",
+      "1080": "imagenes/celebra/celebra-record-1080.b7f81f3f.webp"
+    }
+  },
+  "celebra-semana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/celebra/celebra-semana-256.f41558c8.webp",
+      "512": "imagenes/celebra/celebra-semana-512.97c30903.webp",
+      "1080": "imagenes/celebra/celebra-semana-1080.66b1fe32.webp"
+    }
+  },
+  "checkin-alimentacion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-alimentacion-480.a128bada.webp",
+      "720": "imagenes/checkin/checkin-alimentacion-720.ae90069e.webp",
+      "1080": "imagenes/checkin/checkin-alimentacion-1080.9b68a9ce.webp"
+    }
+  },
+  "checkin-animo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-animo-480.841a70de.webp",
+      "720": "imagenes/checkin/checkin-animo-720.e1d56d81.webp",
+      "1080": "imagenes/checkin/checkin-animo-1080.c835e0f5.webp"
+    }
+  },
+  "checkin-descanso": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-descanso-480.1854817b.webp",
+      "720": "imagenes/checkin/checkin-descanso-720.b27c77a6.webp",
+      "1080": "imagenes/checkin/checkin-descanso-1080.7c63d3a6.webp"
+    }
+  },
+  "checkin-enviado": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-enviado-480.e58f0b85.webp",
+      "720": "imagenes/checkin/checkin-enviado-720.633fa2d3.webp",
+      "1080": "imagenes/checkin/checkin-enviado-1080.fb63b461.webp"
+    }
+  },
+  "checkin-inicio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-inicio-480.bc999591.webp",
+      "720": "imagenes/checkin/checkin-inicio-720.8ce472f2.webp",
+      "1080": "imagenes/checkin/checkin-inicio-1080.f592d50a.webp"
+    }
+  },
+  "checkin-medidas": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-medidas-480.937d8330.webp",
+      "720": "imagenes/checkin/checkin-medidas-720.e4efc8eb.webp",
+      "1080": "imagenes/checkin/checkin-medidas-1080.18ea78a6.webp"
+    }
+  },
+  "checkin-molestias": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/checkin/checkin-molestias-480.02b745e2.webp",
+      "720": "imagenes/checkin/checkin-molestias-720.557db827.webp",
+      "1080": "imagenes/checkin/checkin-molestias-1080.3922d01c.webp"
+    }
+  },
   "comida-cena": {
     "proporcion": [
       4,
@@ -92,6 +268,61 @@
     ],
     "archivos": {
       "1024": "imagenes/compartir/compartir-sesion-1024.53249527.webp"
+    }
+  },
+  "donde-casa": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/donde/donde-casa-480.6dd062e0.webp",
+      "720": "imagenes/donde/donde-casa-720.1670ca41.webp",
+      "1080": "imagenes/donde/donde-casa-1080.4ab96502.webp"
+    }
+  },
+  "donde-gimnasio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/donde/donde-gimnasio-480.14fc33ab.webp",
+      "720": "imagenes/donde/donde-gimnasio-720.b41534b4.webp",
+      "1080": "imagenes/donde/donde-gimnasio-1080.1364bedd.webp"
+    }
+  },
+  "donde-viaje": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/donde/donde-viaje-480.11540e62.webp",
+      "720": "imagenes/donde/donde-viaje-720.eaad189a.webp",
+      "1080": "imagenes/donde/donde-viaje-1080.266c7112.webp"
+    }
+  },
+  "equipo-manada": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/equipo/equipo-manada-480.4aac1d41.webp",
+      "720": "imagenes/equipo/equipo-manada-720.386f024f.webp",
+      "1080": "imagenes/equipo/equipo-manada-1080.9616de3b.webp"
+    }
+  },
+  "equipo-reto": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/equipo/equipo-reto-480.39ae977a.webp",
+      "720": "imagenes/equipo/equipo-reto-720.b7cbb71c.webp",
+      "1080": "imagenes/equipo/equipo-reto-1080.41c9369e.webp"
     }
   },
   "grupo-abdominales": {
@@ -262,6 +493,507 @@
     "archivos": {
       "256": "imagenes/habito/habito-verdura-256.bd352a4c.webp",
       "512": "imagenes/habito/habito-verdura-512.ef42f857.webp"
+    }
+  },
+  "herr-camara": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/herr/herr-camara-480.34857a14.webp",
+      "720": "imagenes/herr/herr-camara-720.b676de3f.webp",
+      "1080": "imagenes/herr/herr-camara-1080.3fa559b1.webp"
+    }
+  },
+  "herr-comparar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/herr/herr-comparar-480.83dbe72f.webp",
+      "720": "imagenes/herr/herr-comparar-720.6bb88dbb.webp",
+      "1080": "imagenes/herr/herr-comparar-1080.2e9b51f4.webp"
+    }
+  },
+  "herr-intervalos": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/herr/herr-intervalos-480.5569a81a.webp",
+      "720": "imagenes/herr/herr-intervalos-720.76f0c768.webp",
+      "1080": "imagenes/herr/herr-intervalos-1080.c3b68892.webp"
+    }
+  },
+  "herr-metronomo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/herr/herr-metronomo-480.5080d5a6.webp",
+      "720": "imagenes/herr/herr-metronomo-720.11149cba.webp",
+      "1080": "imagenes/herr/herr-metronomo-1080.78181f85.webp"
+    }
+  },
+  "medalla-bascula-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-bascula-bronce-256.9edaba66.webp",
+      "512": "imagenes/medalla/medalla-bascula-bronce-512.3e08b2ea.webp"
+    }
+  },
+  "medalla-bascula-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-bascula-diamante-256.f33124ea.webp",
+      "512": "imagenes/medalla/medalla-bascula-diamante-512.0bf8ced5.webp"
+    }
+  },
+  "medalla-bascula-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-bascula-oro-256.a58d68fc.webp",
+      "512": "imagenes/medalla/medalla-bascula-oro-512.53e66360.webp"
+    }
+  },
+  "medalla-bascula-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-bascula-plata-256.184c08e6.webp",
+      "512": "imagenes/medalla/medalla-bascula-plata-512.8b128271.webp"
+    }
+  },
+  "medalla-checkins-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-checkins-bronce-256.3d90e747.webp",
+      "512": "imagenes/medalla/medalla-checkins-bronce-512.672d6fb2.webp"
+    }
+  },
+  "medalla-checkins-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-checkins-diamante-256.06825969.webp",
+      "512": "imagenes/medalla/medalla-checkins-diamante-512.00144f2d.webp"
+    }
+  },
+  "medalla-checkins-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-checkins-oro-256.107b26db.webp",
+      "512": "imagenes/medalla/medalla-checkins-oro-512.60b3a758.webp"
+    }
+  },
+  "medalla-checkins-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-checkins-plata-256.8f4d3d70.webp",
+      "512": "imagenes/medalla/medalla-checkins-plata-512.381bab4b.webp"
+    }
+  },
+  "medalla-constancia-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-constancia-bronce-256.bf612c4c.webp",
+      "512": "imagenes/medalla/medalla-constancia-bronce-512.0b0a32eb.webp"
+    }
+  },
+  "medalla-constancia-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-constancia-diamante-256.62d2cb21.webp",
+      "512": "imagenes/medalla/medalla-constancia-diamante-512.57cce014.webp"
+    }
+  },
+  "medalla-constancia-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-constancia-oro-256.cdb1efc2.webp",
+      "512": "imagenes/medalla/medalla-constancia-oro-512.9194654e.webp"
+    }
+  },
+  "medalla-constancia-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-constancia-plata-256.d5d42d1f.webp",
+      "512": "imagenes/medalla/medalla-constancia-plata-512.61fe101b.webp"
+    }
+  },
+  "medalla-records-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-records-bronce-256.db842fe6.webp",
+      "512": "imagenes/medalla/medalla-records-bronce-512.bcdc3f25.webp"
+    }
+  },
+  "medalla-records-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-records-diamante-256.ea9d7dfe.webp",
+      "512": "imagenes/medalla/medalla-records-diamante-512.cabf9220.webp"
+    }
+  },
+  "medalla-records-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-records-oro-256.4ef836b7.webp",
+      "512": "imagenes/medalla/medalla-records-oro-512.ca22efa7.webp"
+    }
+  },
+  "medalla-records-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-records-plata-256.39f9c3e0.webp",
+      "512": "imagenes/medalla/medalla-records-plata-512.f8eeaa1c.webp"
+    }
+  },
+  "medalla-semanas-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-semanas-bronce-256.bdb29d8a.webp",
+      "512": "imagenes/medalla/medalla-semanas-bronce-512.69d679a2.webp"
+    }
+  },
+  "medalla-semanas-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-semanas-diamante-256.0f7efcae.webp",
+      "512": "imagenes/medalla/medalla-semanas-diamante-512.83673ad0.webp"
+    }
+  },
+  "medalla-semanas-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-semanas-oro-256.736d8fe2.webp",
+      "512": "imagenes/medalla/medalla-semanas-oro-512.5bdc409c.webp"
+    }
+  },
+  "medalla-semanas-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-semanas-plata-256.e5dce8d4.webp",
+      "512": "imagenes/medalla/medalla-semanas-plata-512.0e7c01f5.webp"
+    }
+  },
+  "medalla-tecnica-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-tecnica-bronce-256.56e0ca60.webp",
+      "512": "imagenes/medalla/medalla-tecnica-bronce-512.de8e7c02.webp"
+    }
+  },
+  "medalla-tecnica-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-tecnica-diamante-256.e5e0ea1a.webp",
+      "512": "imagenes/medalla/medalla-tecnica-diamante-512.bc5c6f0a.webp"
+    }
+  },
+  "medalla-tecnica-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-tecnica-oro-256.2172e91e.webp",
+      "512": "imagenes/medalla/medalla-tecnica-oro-512.b6fe83cb.webp"
+    }
+  },
+  "medalla-tecnica-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-tecnica-plata-256.f534019a.webp",
+      "512": "imagenes/medalla/medalla-tecnica-plata-512.902ab1d4.webp"
+    }
+  },
+  "medalla-toneladas-bronce": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-toneladas-bronce-256.3d74fa52.webp",
+      "512": "imagenes/medalla/medalla-toneladas-bronce-512.219c6946.webp"
+    }
+  },
+  "medalla-toneladas-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-toneladas-diamante-256.b351b03b.webp",
+      "512": "imagenes/medalla/medalla-toneladas-diamante-512.dae6f022.webp"
+    }
+  },
+  "medalla-toneladas-oro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-toneladas-oro-256.3a5f9e72.webp",
+      "512": "imagenes/medalla/medalla-toneladas-oro-512.968d1804.webp"
+    }
+  },
+  "medalla-toneladas-plata": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "256": "imagenes/medalla/medalla-toneladas-plata-256.f5534ca5.webp",
+      "512": "imagenes/medalla/medalla-toneladas-plata-512.78c2a9ef.webp"
+    }
+  },
+  "mes-01": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-01-240.3acad4d3.webp",
+      "720": "imagenes/mes/mes-01-720.0a64bc0f.webp",
+      "1080": "imagenes/mes/mes-01-1080.6eebe620.webp",
+      "1440": "imagenes/mes/mes-01-1440.4e6100f2.webp"
+    }
+  },
+  "mes-02": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-02-240.76bb12db.webp",
+      "720": "imagenes/mes/mes-02-720.33de238b.webp",
+      "1080": "imagenes/mes/mes-02-1080.9191c878.webp",
+      "1440": "imagenes/mes/mes-02-1440.f46f0d37.webp"
+    }
+  },
+  "mes-03": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-03-240.d8ac97b5.webp",
+      "720": "imagenes/mes/mes-03-720.c36dd76e.webp",
+      "1080": "imagenes/mes/mes-03-1080.39c2fd70.webp",
+      "1440": "imagenes/mes/mes-03-1440.d5da52d3.webp"
+    }
+  },
+  "mes-04": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-04-240.9cabb5ad.webp",
+      "720": "imagenes/mes/mes-04-720.bd8531f6.webp",
+      "1080": "imagenes/mes/mes-04-1080.06fbdf69.webp",
+      "1440": "imagenes/mes/mes-04-1440.90cfe94b.webp"
+    }
+  },
+  "mes-05": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-05-240.3878d72e.webp",
+      "720": "imagenes/mes/mes-05-720.24e70328.webp",
+      "1080": "imagenes/mes/mes-05-1080.c2c4ddea.webp",
+      "1440": "imagenes/mes/mes-05-1440.9736fa49.webp"
+    }
+  },
+  "mes-06": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-06-240.724e2aa2.webp",
+      "720": "imagenes/mes/mes-06-720.0ee0acc1.webp",
+      "1080": "imagenes/mes/mes-06-1080.c14b0414.webp",
+      "1440": "imagenes/mes/mes-06-1440.de8a9b97.webp"
+    }
+  },
+  "mes-07": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-07-240.8be663d3.webp",
+      "720": "imagenes/mes/mes-07-720.42334f5e.webp",
+      "1080": "imagenes/mes/mes-07-1080.fd96c211.webp",
+      "1440": "imagenes/mes/mes-07-1440.2f3aac4e.webp"
+    }
+  },
+  "mes-08": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-08-240.99f13757.webp",
+      "720": "imagenes/mes/mes-08-720.68cedaea.webp",
+      "1080": "imagenes/mes/mes-08-1080.eb4e2c2e.webp",
+      "1440": "imagenes/mes/mes-08-1440.158f5794.webp"
+    }
+  },
+  "mes-09": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-09-240.6f9847da.webp",
+      "720": "imagenes/mes/mes-09-720.d5ddbdb6.webp",
+      "1080": "imagenes/mes/mes-09-1080.bb64f095.webp",
+      "1440": "imagenes/mes/mes-09-1440.07b2886f.webp"
+    }
+  },
+  "mes-10": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-10-240.03796531.webp",
+      "720": "imagenes/mes/mes-10-720.dc37a178.webp",
+      "1080": "imagenes/mes/mes-10-1080.cac58c86.webp",
+      "1440": "imagenes/mes/mes-10-1440.4ec49e62.webp"
+    }
+  },
+  "mes-11": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-11-240.76911cf0.webp",
+      "720": "imagenes/mes/mes-11-720.553c702f.webp",
+      "1080": "imagenes/mes/mes-11-1080.bb237c32.webp",
+      "1440": "imagenes/mes/mes-11-1440.210c1ca9.webp"
+    }
+  },
+  "mes-12": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/mes/mes-12-240.35cd1c3f.webp",
+      "720": "imagenes/mes/mes-12-720.ff740776.webp",
+      "1080": "imagenes/mes/mes-12-1080.f398fb1b.webp",
+      "1440": "imagenes/mes/mes-12-1440.fe0b454b.webp"
+    }
+  },
+  "primeros-checkin": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/primeros/primeros-checkin-480.4f4a0bad.webp",
+      "720": "imagenes/primeros/primeros-checkin-720.61697aa2.webp",
+      "1080": "imagenes/primeros/primeros-checkin-1080.3b84c6ee.webp"
+    }
+  },
+  "primeros-programa": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/primeros/primeros-programa-480.969d952d.webp",
+      "720": "imagenes/primeros/primeros-programa-720.9d90b00b.webp",
+      "1080": "imagenes/primeros/primeros-programa-1080.bcb1f507.webp"
+    }
+  },
+  "primeros-sesion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/primeros/primeros-sesion-480.408a167e.webp",
+      "720": "imagenes/primeros/primeros-sesion-720.42f7688e.webp",
+      "1080": "imagenes/primeros/primeros-sesion-1080.00cb17cc.webp"
     }
   },
   "sesion-cardio": {
