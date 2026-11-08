@@ -7,6 +7,7 @@ import { TextoConEnlaces } from '../Enlaces.jsx';
 import { NOMBRE_FOCO, NOMBRE_GRUPO, NOMBRE_TIPO_SESION, num } from '../../logica/calculos.js';
 import { rangoSemana, desdeISO, fmtConDia, hoyISO, sumarDias } from '../../logica/fechas.js';
 import { useDeslizar } from '../deslizar.js';
+import { LOBO } from '../marca-lobo.js';
 
 // (diseño, tanda 26) El día de la semana en la hoja de calendario de «Tus entrenamientos»
 const DIA_CORTO = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
@@ -88,7 +89,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
               {(semana.foco || semana.nota_coach) && (
                 <div class="pila-s">
                   {semana.foco && <span class="chip morado" style="justify-self:start">Foco: {NOMBRE_FOCO[semana.foco]?.toLowerCase()}</span>}
-                  {semana.nota_coach && <div class="nota-coach"><Icono n="mensaje" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>}
+                  {semana.nota_coach && <div class="nota-coach con-lobo"><img class="nota-lobo" src={LOBO} alt="" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>}
                 </div>
               )}
               <div class="semana-dias">
