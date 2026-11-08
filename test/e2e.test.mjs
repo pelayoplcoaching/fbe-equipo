@@ -3152,6 +3152,8 @@ try {
   // Chat: un mensaje programado (y un enlace de YouTube con su miniatura)
   // (la pestaña se queda muy arriba tras bajar por el editor: primero al centro y un momento, como «Tu plan»; si no, la
   // cabecera que se recoge al desplazarse la va moviendo mientras se intenta pulsar)
+  // (si el paso del editor dejó abierta una hoja, la de un ejercicio, se cierra antes: si no, tapa la pestaña)
+  for (let i = 0; i < 3 && await p.locator('.capa').first().isVisible().catch(() => false); i++) { await p.keyboard.press('Escape'); await p.waitForTimeout(400); }
   await p.getByRole('tab', { name: 'Mensajes' }).evaluate((b) => b.scrollIntoView({ block: 'center' }));
   await p.waitForTimeout(400);
   await p.getByRole('tab', { name: 'Mensajes' }).click();
