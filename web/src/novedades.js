@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.105': {
+    atleta: [
+      'Tu coach te habla con su lobo en Hoy y en la sesión, la fecha va en una pastilla y la cabecera brilla al bajar.',
+      'En «¿Cómo llegas hoy?» cada respuesta tiene su color; los botones + y − son redondos y las casillas, como en Recordatorios.',
+      'El ejercicio terminado se enmarca en verde, las barras de progreso brillan y los músculos más trabajados resaltan en el mapa.',
+    ],
+  },
   '0.104': {
     atleta: [
       'Nuevo en tu perfil, «Lo tuyo»: cómo quieres que te llamemos, tu porqué, tus tres ejercicios, tu música y tu cumpleaños.',
