@@ -4488,5 +4488,52 @@ console.log('\nv0.73: la comunidad, quinta tanda (aniversarios, el mes en el equ
     'sin preact/compat; el confeti del aniversario es el de siempre (que nunca sale con «reducir movimiento»)');
 }
 
+console.log('Libras para las cargas (v0.112)');
+{
+  const U = await import('../web/src/logica/unidades.js');
+  const C2 = await import('../web/src/logica/calculos.js');
+  const TE = await import('../web/src/logica/teclado.js');
+  const { fraseSerie } = await import('../web/src/logica/voz.js');
+  const { textoAviso } = await import('../web/src/logica/pista.js');
+  const { resumenSeries, textoComparacion } = await import('../web/src/logica/visual.js');
+  const { normalizarAjustes } = await import('../web/src/ui/ajustes.js');
+  check(U.unidadPeso() === 'kg' && C2.textoSerie({ kg: 62.5, reps: 5, rpe: 9 }) === '62,5×5 @9' && C2.pauta({ series: 3, reps_min: 6, reps_max: 8, carga_sugerida_kg: 80 }).carga === '80 kg'
+    && TE.pasoPeso({ nombre: 'Press banca', valor: 60 }) === 2.5 && U.redondearCarga(80.3) === 80.3 && U.deVista('42,5'.replace(',', '.')) === 42.5,
+    'de serie, en kilos: los textos, los saltos y lo propuesto, como siempre');
+  check(normalizarAjustes({}).unidadPeso === 'kg' && normalizarAjustes({ unidadPeso: 'lb' }).unidadPeso === 'lb' && normalizarAjustes({ unidadPeso: 'stone' }).unidadPeso === 'kg',
+    'el ajuste de este móvil: kilos de serie; libras si se eligen; cualquier otra cosa, kilos');
+  // lo que se escribe en libras vuelve igual tras guardarlo en kilos (con dos decimales)
+  let vuelve = true;
+  for (let lb = 2.5; lb <= 1100; lb += 2.5) if (U.vista(U.deVista(lb, 'lb'), 'lb') !== lb) { vuelve = false; break; }
+  for (let lb = 0.1; lb <= 50; lb = Math.round((lb + 0.1) * 10) / 10) if (U.vista(U.deVista(lb, 'lb'), 'lb') !== lb) { vuelve = false; break; }
+  check(vuelve && U.deVista(135, 'lb') === 61.23 && U.vista(61.23, 'lb') === 135 && U.vista(100, 'lb') === 220.5 && U.vista(null) === null && U.deVista('') === null,
+    'de 0,1 a 1100 lb, lo escrito vuelve igual tras guardarse en kilos (135 lb → 61,23 kg → 135 lb)');
+  U.fijarUnidadPeso('lb');
+  try {
+    check(U.enLibras() && U.pesoTxt(61.23) === '135 lb' && U.pesoTxt(79.38) === '175 lb' && U.pesoNum(100) === '220,5' && C2.textoSerie({ kg: 61.23, reps: 5, rpe: 9 }) === '135×5 @9',
+      'en libras, los textos: «135 lb», «135×5 @9»');
+    check(U.redondearCarga(80) === 79.38 && U.vista(U.redondearCarga(80)) === 175 && U.vista(U.redondearCarga(5)) === 10 && U.vista(U.redondearCarga(4)) === 10 && U.vista(U.redondearCarga(3)) === 7.5
+      && C2.pauta({ series: 3, reps_min: 6, reps_max: 8, carga_sugerida_kg: 80 }).carga === '175 lb' && C2.textoObjetivo({ reps: 8, kg: 60, rpe: 8 }) === '8 × 130 lb @8',
+      'lo que propone la app, a lo que se carga en libras (80 kg → 175 lb; de 5 en 5, de 2,5 en 2,5 por debajo de 20 lb)');
+    const pr = { series: 3, reps_min: 6, reps_max: 8, rpe_objetivo: 8 };
+    const sube = C2.sugerenciaProgresion(pr, [1, 2, 3].map((n) => ({ numero: n, kg: 60, reps: 8, rpe: 8 })), { nombre: 'Press banca' });
+    check(sube.tipo === 'subir' && sube.kg === 62.5 && /prueba con 140 lb/.test(sube.texto), 'la doble progresión sube en kilos (62,5) y lo dice en libras, redondeado (140 lb)');
+    check(TE.pasoPeso({ nombre: 'Press banca', valor: 135 }) === 5 && TE.pasoPeso({ nombre: 'Curl con mancuernas', valor: 15 }) === 2.5 && TE.pasoPeso({ nombre: 'Jalón', valor: null }) === 5
+      && TE.anuncioValor('kg', '135') === 'Libras: 135',
+      'los −/+ en libras: de 5 en 5 (de 2,5 por debajo de 20 lb), y el lector de pantalla dice «Libras»');
+    check(C2.discosPorLado(135, 45, U.DISCOS_LB).join() === '45' && C2.discosPorLado(225, 45, U.DISCOS_LB).join() === '45,45' && C2.discosPorLado(185, 45, U.DISCOS_LB).join() === '45,25'
+      && C2.discosPorLado(140, 45, U.DISCOS_LB).join() === '45,2.5' && C2.discosPorLado(136, 45, U.DISCOS_LB) === null && U.barraVista() === 45,
+      'los discos por lado en libras: barra de 45 y discos de 45, 35, 25, 10, 5 y 2,5');
+    check(fraseSerie({ numero: 2, series: 3, nombre: 'Press banca', kg: 79.38, reps: 6 }) === 'Serie 2 de press banca: 175 libras por 6.' && textoAviso({ texto: 'serie 2 de press banca', kg: 79.38, reps: 6 }) === 'serie 2 de press banca · 175 lb × 6'
+      && resumenSeries([{ kg: 61.23, reps: 5 }, { kg: 61.23, reps: 5 }]) === '2 × 5 @ 135 lb' && textoComparacion({ tonelaje: 100 }) === '+220 lb de tonelaje que la última vez' && U.pesoTxt(100, 1) === '220,5 lb',
+      'la voz, el aviso al móvil y los resúmenes, en libras');
+  } finally { U.fijarUnidadPeso('kg'); }
+  check(C2.textoSerie({ kg: 61.23, reps: 5 }) === '61,23×5' && U.unidadPeso() === 'kg', 'y de vuelta a kilos (la app del coach siempre en kilos)');
+  const ses = readFileSync(new URL('../web/src/ui/atleta/Sesion.jsx', import.meta.url), 'utf8');
+  check(/deVista\(valoresVista\.kg\)/.test(ses) && /fijarUnidadPeso\('kg'\)/.test(readFileSync(new URL('../web/src/ui/coach/CoachApp.jsx', import.meta.url), 'utf8'))
+    && /fijarUnidadPeso\(propio \? 'kg'/.test(readFileSync(new URL('../web/src/ui/atleta/AtletaApp.jsx', import.meta.url), 'utf8')),
+    'la sesión guarda en kilos; la app del coach (y su modo atleta) van en kilos');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

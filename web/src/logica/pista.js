@@ -5,6 +5,7 @@
 // justo al final. La reproduce el sistema, sin código de la página. Aquí, lo que se puede probar sin navegador: el plan de la
 // pista (qué suena y cuándo), componerla, el título de la pantalla de bloqueo y los cambios del descanso (±15, pausa).
 import { mmss, num } from './calculos.js';
+import { pesoTxt } from './unidades.js';
 
 // El formato de todas las tramas: MPEG-1 capa III, 48 kHz, mono, 48 kbit/s CBR. A 48 kHz una trama mide siempre lo mismo
 // (144 bytes, sin relleno) y dura 24 ms (1152 muestras): una pista de N tramas dura N × 24 ms exactos, y el navegador calcula
@@ -177,7 +178,7 @@ export function fraseTrasPista(voz, final = []) {
 export function textoAviso({ texto, kg = null, reps = null } = {}) {
   const t = String(texto || '').trim();
   if (!t) return '';
-  const k = Number(kg) > 0 ? `${num(Number(kg), 2)} kg` : null;
+  const k = Number(kg) > 0 ? pesoTxt(Number(kg), 2) : null;
   const r = Number(reps) > 0 ? Math.round(Number(reps)) : null;
   const carga = k && r ? ` · ${k} × ${r}` : k ? ` · ${k}` : r ? ` · ${r} reps` : '';
   return `${t}${carga}`.slice(0, 150);

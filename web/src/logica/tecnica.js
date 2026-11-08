@@ -6,6 +6,7 @@ import { patronEjercicio } from './diseno.js';
 import { textoVisible } from './texto.js';
 import { partirMomentos, textoMomento } from './momentos.js';
 import { dibujoValido } from './dibujo.js';
+import { pesoTxt } from './unidades.js';
 import { normal as sinTildes } from './busqueda.js';
 
 // ---------- Cámara guiada: el encuadre de cada ejercicio ----------
@@ -65,7 +66,7 @@ const coma = (x, dec = 2) => String(Math.round(Number(x) * 10 ** dec) / 10 ** de
 // «60 kg × 8 @8» (sin carga: «8 reps @8»; sin esfuerzo, sin @)
 export function textoSerieVideo(s) {
   if (!s || !(Number(s.reps) >= 0) || s.reps == null) return null;
-  const kg = Number(s.kg) > 0 ? `${coma(s.kg)} kg × ${s.reps}` : `${s.reps} reps`;
+  const kg = Number(s.kg) > 0 ? `${pesoTxt(s.kg, 2)} × ${s.reps}` : `${s.reps} reps`;
   return `${kg}${s.rpe != null && Number(s.rpe) > 0 ? ` @${coma(s.rpe, 1)}` : ''}`;
 }
 export const serieValida = (n) => n == null || (Number.isInteger(n) && n >= 1 && n <= 30);

@@ -1,11 +1,14 @@
 // Entrenador por voz (v0.48): lo que se dice en voz alta durante la sesión. Solo el texto (cómo se dice lo decide el
 // móvil con su voz en español); las frases son cortas para no tapar la música.
 import { num } from './calculos.js';
+import { vista, pesoNum, nombrePeso, unidadPeso } from './unidades.js';
 
+// (v0.112: en libras, si el atleta las tiene puestas: «175 libras»)
 const kilos = (kg) => {
   const n = Number(kg);
   if (!(n > 0)) return null;
-  return `${num(n, 2)} ${n === 1 ? 'kilo' : 'kilos'}`;
+  const v = vista(n);
+  return `${pesoNum(n, 2)} ${nombrePeso(unidadPeso(), { singular: v === 1 })}`;
 };
 
 // «Serie 3 de press banca: 80 kilos por 6. Última serie.»

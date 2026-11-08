@@ -4,6 +4,7 @@ import { Pestanas, Siluetas, useApp, useCarga, Icono, Hoja, Segmentos, Grafica, 
 import { textoSerie, num, NOMBRE_GRUPO } from '../logica/calculos.js';
 import { serieSemanal, recortarRango, metricasDe, tablaRecords, RANGOS } from '../logica/ejercicio.js';
 import { fmtCorta, hoyISO } from '../logica/fechas.js';
+import { pesoNum, pesoTxt, etiquetaPeso, difVista } from '../logica/unidades.js';
 import { BotonModelo } from './tecnica/Modelos.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenGrupo } from '../logica/imagenes.js';
@@ -58,13 +59,13 @@ function Graficas({ d, nombre }) {
     <div class="pila">
       {d.mejor && m.id === 'e1rm' && (
         <div class="cifra">
-          <span class="v num">{num(d.mejor.valor)}</span><span class="u">kg de 1RM estimado (tu mejor)</span>
-          <span class="chip chip-mejor num">{num(d.mejor.serie.kg, 2)} × {d.mejor.serie.reps}{d.mejor.serie.rpe ? ` @${num(d.mejor.serie.rpe)}` : ''}, {fmtCorta(d.mejor.fecha)}</span>
+          <span class="v num">{pesoNum(d.mejor.valor, 1)}</span><span class="u">{etiquetaPeso()} de 1RM estimado (tu mejor)</span>
+          <span class="chip chip-mejor num">{pesoNum(d.mejor.serie.kg, 2)} × {d.mejor.serie.reps}{d.mejor.serie.rpe ? ` @${num(d.mejor.serie.rpe)}` : ''}, {fmtCorta(d.mejor.fecha)}</span>
         </div>
       )}
       {metricas.length > 1 && <Segmentos opciones={metricas.map((x) => [x.id, x.corto || x.nombre, x.nombre])} valor={m.id} etiqueta="Qué ver" alCambiar={(v) => v && setMetrica(v)} clase="seg-compacto" />}
       {puntos.length > 1
-        ? <Grafica records puntos={puntos.map((p) => ({ x: p.semana, y: p.valor }))} unidad={m.unidad} dec={m.dec} alto={170} etiqueta={`${m.nombre} por semana en ${nombre}`} />
+        ? <Grafica records puntos={puntos.map((p) => ({ x: p.semana, y: m.unidad === 'kg' ? difVista(p.valor) : p.valor }))} unidad={m.unidad === 'kg' ? etiquetaPeso() : m.unidad} dec={m.dec} alto={170} etiqueta={`${m.nombre} por semana en ${nombre}`} />
         : <p class="peq secundario">{todos.length > 1 ? 'En este rango hay menos de dos semanas con datos: prueba uno más amplio.' : 'Con dos semanas de datos verás aquí la gráfica.'}</p>}
       <div class="separa" style="flex-wrap:wrap">
         <Segmentos opciones={RANGOS.map(([id, t]) => [id, t])} valor={rango} etiqueta="Rango" alCambiar={(v) => v && setRango(v)} clase="seg-compacto" />
@@ -87,8 +88,8 @@ function Records({ d }) {
             {filas.map((f) => (
               <tr key={f.reps} class={f.real && f.estimado && f.real.kg >= f.estimado ? 'supera' : ''}>
                 <th scope="row" class="num">{f.reps} RM</th>
-                <td class="num">{f.real ? <><b>{num(f.real.kg, 2)} kg</b><span class="mini terciario"> {fmtCorta(f.real.fecha)}{f.real.rpe ? `, @${num(f.real.rpe)}` : ''}</span></> : <span class="terciario">—</span>}</td>
-                <td class="num secundario">{f.estimado ? `${num(f.estimado, 1)} kg` : '—'}</td>
+                <td class="num">{f.real ? <><b>{pesoTxt(f.real.kg, 2)}</b><span class="mini terciario"> {fmtCorta(f.real.fecha)}{f.real.rpe ? `, @${num(f.real.rpe)}` : ''}</span></> : <span class="terciario">—</span>}</td>
+                <td class="num secundario">{f.estimado ? pesoTxt(f.estimado, 1) : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -108,7 +109,7 @@ function Historial({ d }) {
           <li key={s.sesion_id || s.fecha} class="historial-fila">
             <span class="historial-fecha num">{(() => { const [dia, mes] = fmtCorta(s.fecha).split(' '); return <><b>{dia}</b> <i>{mes}</i></>; })()}</span>
             <span class="registro-serie">{s.series.map((x) => textoSerie(x)).join(', ')}</span>
-            <span class="num peq">{s.record ? <span class="chip ok"><Icono n="trofeo" />{num(s.mejor)}</span> : s.mejor ? num(s.mejor) : '—'}</span>
+            <span class="num peq">{s.record ? <span class="chip ok"><Icono n="trofeo" />{pesoNum(s.mejor, 1)}</span> : s.mejor ? pesoNum(s.mejor, 1) : '—'}</span>
           </li>
         ))}
       </ul>

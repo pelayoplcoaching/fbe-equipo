@@ -3,6 +3,7 @@
 // RPE (si tu coach lo pide) y a marcar la serie. Aquí, lo que no depende de la pantalla (probado en test/logica.test.mjs).
 import { esBarra, num } from './calculos.js';
 import { normal } from './busqueda.js';
+import { enLibras, pasoLb, nombrePeso } from './unidades.js';
 
 // El RPE, de 6 a 10 de medio en medio
 export const RPE_TECLADO = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
@@ -37,6 +38,12 @@ export function pasoKg({ nombre = '', kg = null, discoMinimo = DISCO_MINIMO_DEFE
   if (t === 'kettlebell') return 4;
   if (t === 'maquina') return Number.isFinite(x) && x >= 50 ? 5 : 2.5;
   return 2.5;
+}
+
+// v0.112: el salto en la unidad de la app: en libras, de 5 en 5 (2,5 por debajo de 20 lb); en kilos, el de pasoKg.
+// valor: lo escrito (o lo propuesto), en esa unidad
+export function pasoPeso({ nombre = '', valor = null, discoMinimo = DISCO_MINIMO_DEFECTO } = {}) {
+  return enLibras() ? pasoLb(valor) : pasoKg({ nombre, kg: valor, discoMinimo });
 }
 
 // Los discos que hay para el cálculo de discos por lado, con el más pequeño de ese gimnasio
@@ -97,5 +104,6 @@ export function sumarPaso(texto, base, delta, campo = 'kg') {
 const NOMBRE = { kg: 'Kilos', reps: 'Repeticiones', rpe: 'RPE' };
 export function anuncioValor(campo, texto) {
   const t = campo === 'rpe' ? (texto === '' || texto == null ? '' : num(texto)) : String(texto ?? '');
-  return `${NOMBRE[campo] || campo}: ${t === '' ? 'vacío' : t}`;
+  const nombre = campo === 'kg' ? nombrePeso(undefined, { mayuscula: true }) : NOMBRE[campo] || campo;
+  return `${nombre}: ${t === '' ? 'vacío' : t}`;
 }

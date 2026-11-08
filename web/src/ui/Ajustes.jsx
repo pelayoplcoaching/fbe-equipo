@@ -86,6 +86,9 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
           <Interruptor id="aj-pantalla" icono="movil" texto="Pantalla encendida durante la sesión" ayuda="Para no tener que desbloquear el móvil entre series" valor={a.pantalla} alCambiar={(v) => cambiar('pantalla', v)} />
           {/* v0.63 (1): el teclado de la app al apuntar las series (apagado, el del móvil, como antes) */}
           <Interruptor id="aj-teclado" icono="teclado" texto="Teclado de la app al apuntar las series" ayuda="Teclas grandes, −/+ con el salto de cada ejercicio y «Siguiente» de los kilos a las repeticiones, al RPE y a marcar la serie. Apagado, sale el teclado del móvil" valor={a.tecladoApp !== false} alCambiar={(v) => cambiar('tecladoApp', v)} />
+          {/* v0.112: kilos o libras para las cargas del entreno (en este móvil; la base y tu coach, en kilos) */}
+          <FilaIos icono="disco" titulo="Unidad de las cargas" detalle={a.unidadPeso === 'lb' ? 'En libras: lo que apuntas se guarda en kilos (tu coach lo ve en kilos). Tu peso corporal sigue en kilos.' : 'Si tus discos y mancuernas van en libras, cámbialo aquí. Tu coach lo seguirá viendo en kilos.'}
+            bloque={<Segmentos opciones={[['kg', 'Kilos (kg)'], ['lb', 'Libras (lb)']]} valor={a.unidadPeso === 'lb' ? 'lb' : 'kg'} etiqueta="Unidad de las cargas" alCambiar={(v) => cambiar('unidadPeso', v || 'kg')} />} />
           {/* v0.60 (13): «Difuminar la cara» encendido de serie al enviar un vídeo (en este móvil) */}
           {puedeDifuminar(modo === 'demo') && <Interruptor id="aj-difuminar" icono="cara" texto="Difuminar la cara al enviar un vídeo" ayuda="Encendido de serie en la hoja de enviar (puedes apagarlo en cada vídeo). Se hace en el móvil: el original no sale de él" valor={!!a.difuminarCara} alCambiar={(v) => cambiar('difuminarCara', v)} />}
           {/* v0.61 (20): solo donde el navegador dice si la conexión es wifi o datos móviles (Chrome de Android); en el iPhone

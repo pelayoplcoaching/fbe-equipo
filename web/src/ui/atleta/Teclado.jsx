@@ -16,6 +16,7 @@ import { leerAjustes, guardarAjustes, EVENTO_AJUSTES } from '../ajustes.js';
 import { vibrar } from '../hapticos.js';
 import { num } from '../../logica/calculos.js';
 import { RPE_TECLADO, DISCOS_MINIMOS, pulsarTecla, sumarPaso, anuncioValor, discosCon } from '../../logica/teclado.js';
+import { enLibras, nombrePeso, barraVista, etiquetaPeso } from '../../logica/unidades.js';
 
 // ¿Teclado de la app? (el ajuste de este móvil; cambia al momento en todas las filas)
 export function useTecladoApp() {
@@ -50,6 +51,8 @@ export function llevarSobreTeclado(el, alto) {
 let abiertos = 0;
 let ultimoCierre = 0;
 const NOMBRE = { kg: 'Kilos', reps: 'Repeticiones', rpe: 'RPE' };
+// (v0.112: «Libras» si el atleta las tiene puestas)
+const nombreDe = (c) => (c === 'kg' ? nombrePeso(undefined, { mayuscula: true }) : NOMBRE[c]);
 
 // campo: 'kg' | 'reps' | 'rpe'; texto: lo escrito en kilos o repeticiones; rpe: el RPE elegido ('' sin él); base: lo que
 // te propone la app (el gris), para −/+ con el campo vacío; paso: el salto de los kilos; serie: «Serie 2», «Top»…;
@@ -65,7 +68,9 @@ export function Teclado(props) {
 }
 
 function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, serie = '', anterior = null, objetivo = null, final = null,
-  alTexto, alRpe, alSiguiente, alCerrar, ancla, dentro, barra = false, discoMinimo = 1.25, alDisco = null, lugar = 'gimnasio', alCalculadora = null, alMovil = null, clave = '' }) {
+  alTexto, alRpe, alSiguiente, alCerrar, ancla, dentro, barra = false, discoMinimo = 1.25, alDisco: alDiscoKg = null, lugar = 'gimnasio', alCalculadora = null, alMovil = null, clave = '' }) {
+  // (v0.112) en libras, los discos son los de libras (el más pequeño, 2,5 lb): sin elegir el disco más pequeño
+  const alDisco = enLibras() ? null : alDiscoKg;
   const raiz = useRef(null);
   const [nuevo, setNuevo] = useState(true);
   const [anuncio, setAnuncio] = useState('');
@@ -135,10 +140,10 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
   );
   const nombreLugar = lugar === 'casa' ? 'en casa' : lugar === 'viaje' ? 'de viaje' : 'en el gimnasio';
   return (
-    <div ref={raiz} class={`teclado-serie ${entrada ? 'entra' : ''}`} role="group" aria-label={`Teclado de ${NOMBRE[campo].toLowerCase()}, ${serie.toLowerCase()}`}
+    <div ref={raiz} class={`teclado-serie ${entrada ? 'entra' : ''}`} role="group" aria-label={`Teclado de ${nombreDe(campo).toLowerCase()}, ${serie.toLowerCase()}`}
       onPointerDown={sinFoco} onMouseDown={sinFoco} data-campo={campo}>
       <div class="teclado-cab">
-        <span class="teclado-titulo"><strong>{NOMBRE[campo]}</strong><span class="terciario"> · {serie}</span>
+        <span class="teclado-titulo"><strong>{nombreDe(campo)}</strong><span class="terciario"> · {serie}</span>
           {campo === 'rpe' && objetivo && <span class="teclado-meta"> · objetivo {objetivo.replace(/^RPE /, '')}</span>}
           {campo !== 'rpe' && anterior && <span class="teclado-meta"> · ant. <span class="num">{anterior}</span></span>}</span>
         {alMovil && <button type="button" tabIndex={-1} class="teclado-icono" aria-label="Usar el teclado del móvil" title="Usar el teclado del móvil" onClick={alMovil}><Icono n="teclado" /></button>}
@@ -146,7 +151,7 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
       </div>
       {campo === 'kg' && (barra || alDisco) && (
         <div class="teclado-discos">
-          {barra && Number.isFinite(kgAhora) && kgAhora > 20 ? <Placas kg={kgAhora} discos={discosCon(discoMinimo)} /> : <span class="terciario mini">{barra ? 'Barra de 20 kg' : ''}</span>}
+          {barra && Number.isFinite(kgAhora) && kgAhora > barraVista() ? <Placas kg={kgAhora} discos={discosCon(discoMinimo)} /> : <span class="terciario mini">{barra ? `Barra de ${barraVista()} ${etiquetaPeso()}` : ''}</span>}
           <span class="teclado-discos-acc">
             {alDisco && <button type="button" tabIndex={-1} class="teclado-chip" aria-expanded={eligeDisco ? 'true' : 'false'} onClick={() => setEligeDisco(!eligeDisco)}
               aria-label={`Tu disco más pequeño ${nombreLugar}: ${num(discoMinimo, 2)} kg. Cambiar`}>Discos de {num(discoMinimo, 2)}</button>}
@@ -173,9 +178,9 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
       ) : (
         <div class="teclado-teclas">
           {T({ k: '1', children: '1' })}{T({ k: '2', children: '2' })}{T({ k: '3', children: '3' })}
-          <button type="button" tabIndex={-1} class="tecla tecla-paso" onClick={() => sumar(-delta)} aria-label={campo === 'kg' ? `Quitar ${num(delta, 2)} kilos` : 'Una repetición menos'}>−{num(delta, 2)}</button>
+          <button type="button" tabIndex={-1} class="tecla tecla-paso" onClick={() => sumar(-delta)} aria-label={campo === 'kg' ? `Quitar ${num(delta, 2)} ${nombrePeso()}` : 'Una repetición menos'}>−{num(delta, 2)}</button>
           {T({ k: '4', children: '4' })}{T({ k: '5', children: '5' })}{T({ k: '6', children: '6' })}
-          <button type="button" tabIndex={-1} class="tecla tecla-paso" onClick={() => sumar(delta)} aria-label={campo === 'kg' ? `Añadir ${num(delta, 2)} kilos` : 'Una repetición más'}>+{num(delta, 2)}</button>
+          <button type="button" tabIndex={-1} class="tecla tecla-paso" onClick={() => sumar(delta)} aria-label={campo === 'kg' ? `Añadir ${num(delta, 2)} ${nombrePeso()}` : 'Una repetición más'}>+{num(delta, 2)}</button>
           {T({ k: '7', children: '7' })}{T({ k: '8', children: '8' })}{T({ k: '9', children: '9' })}
           {T({ k: 'borrar', etiqueta: 'Borrar', clase: 'tecla-borrar', children: <Icono n="retroceso" /> })}
           {campo === 'kg' ? T({ k: ',', etiqueta: 'Coma decimal', children: ',' }) : <span aria-hidden="true" />}

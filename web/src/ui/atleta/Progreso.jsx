@@ -27,6 +27,7 @@ import { historiaRecords } from '../../logica/diseno.js';
 import { fmtCorta, hoyISO, diasEntre, fmtConDia, fechaMadrid, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { CifraObjetivo, TusEjercicios } from './Personal.jsx';
 import { FilaTuAnio } from './TuAnio.jsx';
+import { enLibras, pesoNum, pesoTxt, etiquetaPeso, difVista, deVista, vista, nombrePeso } from '../../logica/unidades.js';
 
 
 // La explicación de una gráfica, plegada bajo «Cómo se calcula» (antes, un párrafo fijo debajo de cada una)
@@ -157,10 +158,10 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
               return (
                 <>
                   <div class="cifra">
-                    <CifraSube texto={num(ult.valor)} clase="v num" /><span class="u">kg, semana del {fmtCorta(ult.semana)}</span>
-                    {ganado != null && <span class={`chip num ${ganado > 0 ? 'ok' : ''}`}><Odometro texto={`${conSigno(ganado)} kg`} /> en {nombreRango(rF)}</span>}
+                    <CifraSube texto={pesoNum(ult.valor, 1)} clase="v num" /><span class="u">{etiquetaPeso()}, semana del {fmtCorta(ult.semana)}</span>
+                    {ganado != null && <span class={`chip num ${ganado > 0 ? 'ok' : ''}`}><Odometro texto={`${conSigno(difVista(ganado))} ${etiquetaPeso()}`} /> en {nombreRango(rF)}</span>}
                   </div>
-                  {pts.length > 1 ? <Grafica records clave={`${rF}:${ej.id}`} puntos={pts.map((p) => ({ x: p.semana, y: p.valor }))} unidad="kg" etiqueta={`1RM estimado en ${ej.nombre}`} />
+                  {pts.length > 1 ? <Grafica records clave={`${rF}:${ej.id}`} puntos={pts.map((p) => ({ x: p.semana, y: difVista(p.valor) }))} unidad={etiquetaPeso()} etiqueta={`1RM estimado en ${ej.nombre}`} />
                     : <p class="peq secundario">{ej.puntos.length > 1 ? 'En este rango hay menos de dos semanas con datos: prueba uno más amplio.' : 'Con dos semanas de datos aparece la gráfica.'}</p>}
                   {ej.puntos.length > 1 && <SelectorRango valor={rF} alCambiar={setRangoFuerza} etiqueta="Rango de la gráfica del 1RM estimado" />}
                 </>
@@ -383,12 +384,12 @@ function Vitrina({ datos, esCoach, atletaId, abrirHistorial, irA }) {
           const fecha = x.e1rm?.fecha || x.ultimoRecord;
           return (
             <li key={x.id}>
-              <button class={`trofeo-tarjeta ${reciente ? 'reciente' : ''}`} onClick={() => setAbierta(x)} aria-label={`${x.nombre}: ${x.e1rm ? `${num(x.e1rm.valor)} kilos de 1RM estimado` : `${x.repsSinCarga} repeticiones`}${reciente ? ', récord nuevo' : ''}. Ver cómo ha ido`}>
+              <button class={`trofeo-tarjeta ${reciente ? 'reciente' : ''}`} onClick={() => setAbierta(x)} aria-label={`${x.nombre}: ${x.e1rm ? `${pesoNum(x.e1rm.valor, 1)} ${nombrePeso()} de 1RM estimado` : `${x.repsSinCarga} repeticiones`}${reciente ? ', récord nuevo' : ''}. Ver cómo ha ido`}>
                 <span class="trofeo-ico" aria-hidden="true"><Icono n="trofeo" /></span>
                 {reciente && <span class="trofeo-nuevo" aria-hidden="true">Nuevo</span>}
                 <span class="trofeo-nombre" aria-hidden="true">{x.nombre}</span>
-                <span class="trofeo-valor num" aria-hidden="true">{x.e1rm ? <>{num(x.e1rm.valor)}<small> kg</small></> : <>{x.repsSinCarga}<small> rep</small></>}</span>
-                <span class="trofeo-detalle num" aria-hidden="true">{x.e1rm ? `${num(x.e1rm.kg, 2)} kg × ${x.e1rm.reps}${x.e1rm.rpe ? ` @${num(x.e1rm.rpe)}` : ''}` : 'Sin carga'}{fecha ? ` · ${fmtCorta(fecha)}` : ''}</span>
+                <span class="trofeo-valor num" aria-hidden="true">{x.e1rm ? <>{pesoNum(x.e1rm.valor, 1)}<small> {etiquetaPeso()}</small></> : <>{x.repsSinCarga}<small> rep</small></>}</span>
+                <span class="trofeo-detalle num" aria-hidden="true">{x.e1rm ? `${pesoTxt(x.e1rm.kg, 2)} × ${x.e1rm.reps}${x.e1rm.rpe ? ` @${num(x.e1rm.rpe)}` : ''}` : 'Sin carga'}{fecha ? ` · ${fmtCorta(fecha)}` : ''}</span>
               </button>
             </li>
           );
@@ -412,14 +413,14 @@ function HojaRecord({ atletaId, x, reciente, alCerrar, abrirHistorial }) {
       <div class={`record-cab ${reciente ? 'reciente' : ''}`}>
         <span class="trofeo-ico" aria-hidden="true"><Icono n="trofeo" /></span>
         <span class="pila-xs">
-          <span class="record-valor num">{x.e1rm ? <>{num(x.e1rm.valor)}<small> kg</small></> : <>{x.repsSinCarga}<small> rep</small></>}</span>
-          <span class="peq secundario">{x.e1rm ? `1RM estimado, de ${num(x.e1rm.kg, 2)} kg × ${x.e1rm.reps}${x.e1rm.rpe ? ` @${num(x.e1rm.rpe)}` : ''}${x.e1rm.fecha ? `, el ${fmtCorta(x.e1rm.fecha)}` : ''}` : 'Máximo de repeticiones sin carga'}</span>
+          <span class="record-valor num">{x.e1rm ? <>{pesoNum(x.e1rm.valor, 1)}<small> {etiquetaPeso()}</small></> : <>{x.repsSinCarga}<small> rep</small></>}</span>
+          <span class="peq secundario">{x.e1rm ? `1RM estimado, de ${pesoTxt(x.e1rm.kg, 2)} × ${x.e1rm.reps}${x.e1rm.rpe ? ` @${num(x.e1rm.rpe)}` : ''}${x.e1rm.fecha ? `, el ${fmtCorta(x.e1rm.fecha)}` : ''}` : 'Máximo de repeticiones sin carga'}</span>
         </span>
         {reciente && <span class="chip morado">Nuevo</span>}
       </div>
       {h.cargando && !d ? <Siluetas forma="grafica" texto="Cargando sus récords" /> : d && (
         <>
-          {d.puntos.length > 1 ? <Grafica records puntos={d.puntos} unidad={d.unidad} etiqueta={`Récord de ${x.nombre}: cómo ha subido`} />
+          {d.puntos.length > 1 ? <Grafica records puntos={d.unidad === 'kg' ? d.puntos.map((p) => ({ ...p, y: difVista(p.y) })) : d.puntos} unidad={d.unidad === 'kg' ? etiquetaPeso() : d.unidad} etiqueta={`Récord de ${x.nombre}: cómo ha subido`} />
             : <p class="peq secundario">Con una sesión más de este ejercicio verás cómo sube.</p>}
           <section class="seccion">
             <h3 class="sub-seccion">{d.veces.length === 1 ? 'La vez que lo batiste' : d.veces.length ? `Las ${d.veces.length} veces que lo batiste` : 'Aún no lo has batido'}</h3>
@@ -458,7 +459,7 @@ function Marcas({ atletaId, ejercicios, esCoach }) {
               <li key={m.id} class="marca-fila">
                 <span class="ico"><Icono n="trofeo" /></span>
                 <span><strong>{m.ejercicio}</strong><br /><span class="peq secundario">{fmtCorta(m.fecha)}{m.tipo === 'competicion' ? ', en competición' : ', test'}{m.notas ? `. ${m.notas}` : ''}</span></span>
-                <span class="num">{num(m.kg, 2)} kg × {m.reps}</span>
+                <span class="num">{pesoTxt(m.kg, 2)} × {m.reps}</span>
                 <button class="btn btn-icono plano" aria-label={`Borrar la marca de ${m.ejercicio}`} onClick={async () => { await api.borrarMarca(m.id); marcas.recargar(true); aviso('Marca borrada'); }}><Icono n="basura" /></button>
               </li>
             ))}
@@ -481,7 +482,7 @@ function NuevaMarca({ atletaId, ejercicios, alCerrar }) {
       <form class="pila" onSubmit={async (e) => {
         e.preventDefault();
         if (!f.kg || !ejercicioId) return;
-        try { await api.guardarMarca({ atleta_id: atletaId, ejercicio_id: ejercicioId, kg: f.kg, reps: f.reps || 1, tipo: f.tipo, fecha: f.fecha, notas: f.notas.trim() || null }); aviso('Marca guardada'); alCerrar(true); }
+        try { await api.guardarMarca({ atleta_id: atletaId, ejercicio_id: ejercicioId, kg: deVista(f.kg), reps: f.reps || 1, tipo: f.tipo, fecha: f.fecha, notas: f.notas.trim() || null }); aviso('Marca guardada'); alCerrar(true); }
         catch (err) { aviso(err.message, 'error'); }
       }}>
         <div class="campo"><label for="mr-ej">Ejercicio</label>
@@ -489,10 +490,10 @@ function NuevaMarca({ atletaId, ejercicios, alCerrar }) {
             {opciones.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
           </select></div>
         <div class="rejilla-campos">
-          <div class="campo"><label for="mr-kg">Kg</label><Paso id="mr-kg" valor={f.kg} paso={2.5} min={0} max={500} dec={2} etiqueta="kilos de la marca" alCambiar={(v) => setF({ ...f, kg: v })} /></div>
+          <div class="campo"><label for="mr-kg">{enLibras() ? 'Lb' : 'Kg'}</label><Paso id="mr-kg" valor={f.kg} paso={enLibras() ? 5 : 2.5} min={0} max={enLibras() ? 1100 : 500} dec={2} etiqueta={`${nombrePeso()} de la marca`} alCambiar={(v) => setF({ ...f, kg: v })} /></div>
           <div class="campo"><label for="mr-reps">Repeticiones</label><Paso id="mr-reps" valor={f.reps} paso={1} min={1} max={20} dec={0} etiqueta="repeticiones de la marca" alCambiar={(v) => setF({ ...f, reps: v || 1 })} /></div>
         </div>
-        {f.kg > 0 && f.reps > 1 && f.reps <= 12 && <p class="peq secundario">Equivale a un 1RM estimado de {num(e1rm({ kg: f.kg, reps: f.reps, rir: 0 }))} kg.</p>}
+        {f.kg > 0 && f.reps > 1 && f.reps <= 12 && <p class="peq secundario">Equivale a un 1RM estimado de {num(e1rm({ kg: f.kg, reps: f.reps, rir: 0 }))} {etiquetaPeso()}.</p>}
         <div class="campo"><span class="etq">Dónde</span><Segmentos etiqueta="Tipo de marca" valor={f.tipo} alCambiar={(v) => setF({ ...f, tipo: v || 'test' })} opciones={[['test', 'Test'], ['competicion', 'Competición']]} /></div>
         <div class="campo"><label for="mr-fecha">Fecha</label><input id="mr-fecha" type="date" class="entrada" value={f.fecha} max={hoyISO()} onInput={(e) => setF({ ...f, fecha: e.currentTarget.value })} /></div>
         <div class="campo"><label for="mr-notas">Nota</label><input id="mr-notas" class="entrada" value={f.notas} onInput={(e) => setF({ ...f, notas: e.currentTarget.value })} placeholder="Con cinturón, en casa, válida…" /></div>

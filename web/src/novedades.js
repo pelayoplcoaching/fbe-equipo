@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.112': {
+    atleta: [
+      '¿Tus discos van en libras? En tu perfil, «Este móvil» → «Unidad de las cargas»: apuntas y ves las cargas en libras.',
+      'Lo que te propone la app sale redondeado a lo que se carga en libras, y los −/+ del teclado suben de 5 en 5.',
+    ],
+    coach: [
+      'Tus atletas pueden ver sus cargas en libras (un ajuste de su móvil). Se guarda en kilos: tú lo ves todo igual, en kilos.',
+    ],
+  },
   '0.111': {
     coach: [
       'La barra lateral con iconos de colores, «Hoy en tu equipo» en tres tarjetas y, en Revisar, cada tarjeta con el color de lo que es.',

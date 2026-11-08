@@ -31,7 +31,9 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   tecladoApp: true,
   // pulido 7: «Sonido al marcar una serie» (un tic suave, y unas notas al terminar la sesión). De serie, como tenga
   // puesto el sonido del descanso: quien lo tenía apagado no oye nada nuevo
-  sonidoSerie: true };
+  sonidoSerie: true,
+  // v0.112: la unidad de las cargas del entreno, kilos o libras (logica/unidades.js); la base guarda siempre kilos
+  unidadPeso: 'kg' };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -68,6 +70,7 @@ export function normalizarAjustes(guardado = {}) {
   a.soloWifi = a.soloWifi === true;
   a.vozBloqueo = a.vozBloqueo === true;
   a.tecladoApp = a.tecladoApp !== false;
+  a.unidadPeso = a.unidadPeso === 'lb' ? 'lb' : 'kg';
   return a;
 }
 export function leerAjustes() {

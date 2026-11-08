@@ -3,7 +3,8 @@ import { Icono, Disco, useApp, Capa } from '../comunes.jsx';
 import { Placas } from '../Herramientas.jsx';
 import { pauta, num, mmss, textoSerie, trasSerie, duracionEstimada, NOMBRE_PRIORIDAD, textoObjetivo } from '../../logica/calculos.js';
 import { Teclado, usarTecladoMovil } from './Teclado.jsx';
-import { pasoKg, pideRpe, siguienteCampo, discosCon, tipoCarga } from '../../logica/teclado.js';
+import { pasoPeso, pideRpe, siguienteCampo, discosCon, tipoCarga } from '../../logica/teclado.js';
+import { enLibras, vista, pesoTxt, nombrePeso, barraVista } from '../../logica/unidades.js';
 import { fmtCorta } from '../../logica/fechas.js';
 import { aNumero, problemaSerie, prepararEjercicio, NotaFijada, Temporizador, useAhora, prepararAudio } from './sesion-comun.jsx';
 import { Metronomo } from './Metronomo.jsx';
@@ -43,7 +44,9 @@ function EnfoquePantalla({
   const [sel, setSel] = useState(null);           // serie elegida para corregir (o una de más)
   const numero = sel ?? pendiente ?? null;          // null = ejercicio completo
   const previa = numero ? h[numero] : null;
-  const prop = numero ? (previa ? { kg: previa.kg, reps: previa.reps } : info.propuesta(numero, h)) : null;
+  // v0.112: en la unidad de la app (en libras, si las tiene puestas); la sesión lo pasa a kilos al guardar
+  const propKg = numero ? (previa ? { kg: previa.kg, reps: previa.reps } : info.propuesta(numero, h)) : null;
+  const prop = propKg && enLibras() && propKg.kg != null && propKg.kg !== '' ? { ...propKg, kg: vista(propKg.kg) } : propKg;
   const fmtKg = (v) => (v == null ? '' : num(v, 2));
   const [kg, setKg] = useState('');
   const [reps, setReps] = useState('');
@@ -97,7 +100,7 @@ function EnfoquePantalla({
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) ir(dx < 0 ? 1 : -1);
   };
 
-  const paso = pasoKg({ nombre: info.ej.nombre, kg: aNumero(kg) ?? prop?.kg ?? 0, discoMinimo: teclado?.discoMinimo });
+  const paso = pasoPeso({ nombre: info.ej.nombre, valor: aNumero(kg) ?? prop?.kg ?? 0, discoMinimo: teclado?.discoMinimo });
   const conRpe = prop?.rpe != null || pideRpe(info.prescripcion);
   const dentroT = (el) => !!el && (el === refKg.current || el === refReps.current);
   const entrarT = (c) => (ev) => { if (app) setCampoT(c); else ev.currentTarget.select(); };
@@ -212,16 +215,16 @@ function EnfoquePantalla({
               : info.top ? `Back-off ${numero - 1} de ${e.series - 1}: ${num(e.backoff_pct)} % menos que tu top` : `Serie ${numero} de ${e.series}`}
               {!previa && prop?.objetivo && textoObjetivo(prop.objetivo) && <span class="enfoque-objetivo">: {textoObjetivo(prop.objetivo)}</span>}</div>
             <div class="paso-grande">
-              <span class="etq">Kilos</span>
-              <button type="button" onClick={() => sumarKg(-paso)} aria-label={`Quitar ${num(paso, 2)} kilos`}><Icono n="menos" /></button>
-              <input ref={refKg} inputMode={app ? 'none' : 'decimal'} autoComplete="off" class={campoT === 'kg' ? 'en-teclado' : ''} aria-label="Kilos" value={kg} placeholder={fmtKg(prop?.kg) || '0'} onInput={(ev) => setKg(ev.currentTarget.value)}
+              <span class="etq">{nombrePeso(undefined, { mayuscula: true })}</span>
+              <button type="button" onClick={() => sumarKg(-paso)} aria-label={`Quitar ${num(paso, 2)} ${nombrePeso()}`}><Icono n="menos" /></button>
+              <input ref={refKg} inputMode={app ? 'none' : 'decimal'} autoComplete="off" class={campoT === 'kg' ? 'en-teclado' : ''} aria-label={nombrePeso(undefined, { mayuscula: true })} value={kg} placeholder={fmtKg(prop?.kg) || '0'} onInput={(ev) => setKg(ev.currentTarget.value)}
                 onFocus={entrarT('kg')} onBlur={salirT} onKeyDown={teclaT} />
-              <button type="button" onClick={() => sumarKg(paso)} aria-label={`Añadir ${num(paso, 2)} kilos`}><Icono n="mas" /></button>
+              <button type="button" onClick={() => sumarKg(paso)} aria-label={`Añadir ${num(paso, 2)} ${nombrePeso()}`}><Icono n="mas" /></button>
             </div>
             {info.prescripcion.carga_sugerida_kg == null && pesoAnterior(ultimas, numero) != null && (
-              <div class="enfoque-anterior">La última vez, en esta serie: <b class="num">{num(pesoAnterior(ultimas, numero), 2)} kg</b></div>
+              <div class="enfoque-anterior">La última vez, en esta serie: <b class="num">{pesoTxt(pesoAnterior(ultimas, numero), 2)}</b></div>
             )}
-            {info.barra && (aNumero(kg) ?? prop?.kg) > 20 && <div class="enfoque-discos"><Placas kg={aNumero(kg) ?? prop?.kg} discos={teclado ? discosCon(teclado.discoMinimo) : undefined} /></div>}
+            {info.barra && (aNumero(kg) ?? prop?.kg) > barraVista() && <div class="enfoque-discos"><Placas kg={aNumero(kg) ?? prop?.kg} discos={teclado ? discosCon(teclado.discoMinimo) : undefined} /></div>}
             <div class="paso-grande">
               <span class="etq">Repeticiones</span>
               <button type="button" onClick={() => sumarReps(-1)} aria-label="Una repetición menos"><Icono n="menos" /></button>
@@ -259,7 +262,7 @@ function EnfoquePantalla({
 
       {app && campoT && numero && (
         <Teclado campo={campoT} clave={`${e.id}-${numero}`} texto={campoT === 'kg' ? kg : campoT === 'reps' ? reps : ''} rpe={rpe} base={campoT === 'kg' ? prop?.kg ?? null : prop?.reps ?? null}
-          paso={paso} serie={`Serie ${numero}`} anterior={info.prescripcion.carga_sugerida_kg == null && pesoAnterior(ultimas, numero) != null ? `${num(pesoAnterior(ultimas, numero), 2)} kg` : null}
+          paso={paso} serie={`Serie ${numero}`} anterior={info.prescripcion.carga_sugerida_kg == null && pesoAnterior(ultimas, numero) != null ? pesoTxt(pesoAnterior(ultimas, numero), 2) : null}
           objetivo={prop?.rpe != null ? `RPE ${num(prop.rpe)}` : pa.esfuerzo} final={siguienteCampo(campoT, { conRpe }) === 'hecho' ? (previa ? 'guardar' : 'hecha') : null}
           alTexto={(t) => (campoT === 'kg' ? setKg(t) : setReps(t))} alRpe={(v) => setRpe(v)} alSiguiente={siguienteT} alCerrar={cerrarT}
           ancla={() => (campoT === 'reps' ? refReps.current : refKg.current)?.closest('.paso-grande')} dentro={dentroT}

@@ -1,3 +1,5 @@
+// v0.112: todo lo de la fila (lo escrito, lo propuesto, la serie hecha y «ant.») va en la unidad de la app; la sesión
+// pasa a kilos al guardar (Sesion.jsx, guardar)
 // Una serie: kilos y repeticiones con lo propuesto como pista gris (lo pautado o lo de la vez anterior).
 // Al marcarla con los campos vacíos se usa la pista, como en un cuaderno.
 // anterior: el peso de esta serie la última vez, en un recuadro pequeño (solo si el coach no ha pautado carga)
@@ -14,6 +16,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, useApp } from '../comunes.jsx';
 import { Placas } from '../Herramientas.jsx';
 import { num } from '../../logica/calculos.js';
+import { nombrePeso, etiquetaPeso } from '../../logica/unidades.js';
 import { RPES, aNumero, problemaSerie } from './sesion-comun.jsx';
 import { vibrar } from '../hapticos.js';
 import { Teclado, usarTecladoMovil } from './Teclado.jsx';
@@ -216,7 +219,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
           onContextMenu={(e) => { if (gesto.current || Date.now() < bloquearClic.current) e.preventDefault(); }}>
           <span class="n" title={tipo === 'top' ? 'Serie top' : tipo === 'backoff' ? 'Back-off' : undefined}>{tipo === 'top' ? 'T' : tipo === 'backoff' ? 'B' : numero}</span>
           <span class="celda-kg">
-            <input ref={refs.kg} class={`celda ${campo === 'kg' ? 'en-teclado' : ''}`} inputMode={app ? 'none' : 'decimal'} enterKeyHint="next" aria-label={`Kilos de la serie ${numero}${anterior != null ? ` (la última vez, ${num(anterior, 2)} kg)` : ''}`} value={kg}
+            <input ref={refs.kg} class={`celda ${campo === 'kg' ? 'en-teclado' : ''}`} inputMode={app ? 'none' : 'decimal'} enterKeyHint="next" aria-label={`${nombrePeso(undefined, { mayuscula: true })} de la serie ${numero}${anterior != null ? ` (la última vez, ${num(anterior, 2)} ${etiquetaPeso()})` : ''}`} value={kg}
               placeholder={fmt(propuesta.kg, 2) || '–'} onInput={(e) => escribir('kg', e.currentTarget.value)} autoComplete="off"
               onFocus={alEntrar('kg')} onBlur={alSalir('kg')} onKeyDown={alTecla('kg')} />
             {anterior != null && <span class="peso-anterior" aria-hidden="true" title="Tu peso de la última vez en esta serie"><small>ant.</small> {num(anterior, 2)}</span>}
@@ -250,7 +253,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
       {pendiente && hecha && <div class="pendiente-envio">Serie {numero} guardada en el móvil; se enviará al volver la conexión.</div>}
       {app && campo && (
         <Teclado enCapa campo={campo} clave={`${numero}`} texto={campo === 'rpe' ? '' : valores[campo]} rpe={rpe} base={campo === 'kg' ? kgBase : propuesta.reps ?? null}
-          paso={paso} serie={serieTxt} anterior={anterior != null ? `${num(anterior, 2)} kg` : null} objetivo={propuesta.rpe != null ? `RPE ${num(propuesta.rpe)}` : objetivoEsfuerzo}
+          paso={paso} serie={serieTxt} anterior={anterior != null ? `${num(anterior, 2)} ${etiquetaPeso()}` : null} objetivo={propuesta.rpe != null ? `RPE ${num(propuesta.rpe)}` : objetivoEsfuerzo}
           final={finalDe(campo)} alTexto={(t) => escribir(campo, t)} alRpe={elegirRpe} alSiguiente={() => siguienteDe(campo)} alCerrar={cerrar}
           ancla={() => fila.current} dentro={dentro} barra={barra} discoMinimo={teclado.discoMinimo} alDisco={teclado.alDisco && conDiscos ? teclado.alDisco : null}
           lugar={teclado.lugar} alCalculadora={barra && teclado.alCalculadora ? teclado.alCalculadora : null} alMovil={alMovil} />
