@@ -207,9 +207,9 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
                         <div class="pila-xs" style="gap:5px">
                           <span class="fila-envolver" style="align-items:center;gap:6px">
                             <strong>{f.ejercicio}</strong>
-                            <span class={`chip ${cTipo}`}>{tTipo}</span>
+                            <span class={`chip ${cTipo}`} data-d={f.tipo}>{tTipo}</span>
                             {f.fase === 'peaking' && <span class="chip morado">Peaking</span>}
-                            <span class={`chip ${cConf}`}>{tConf}</span>
+                            <span class={`chip ${cConf}`} data-conf={f.confianza}>{tConf}</span>
                             {tieneRegla(guardadas, f.ejercicio_id) && <span class="chip morado">Regla propia</span>}
                           </span>
                           <span class="mini secundario">Hizo: {f.hecho || 'sin registrar'}</span>
@@ -244,7 +244,7 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
                 <summary class="mini terciario">Series por músculo en la semana {destino.numero} con lo marcado: {volumen.cambia ? `cambian frente a la semana ${base.numero}` : `las mismas que en la semana ${base.numero}`}</summary>
                 <div class="vol-chips" style="margin-top:6px">
                   {volumen.grupos.map((x) => (
-                    <span key={x.grupo} class={`vol-chip vol-${x.estado}`} title={x.estado === 'bajo' ? 'Por debajo del rango' : x.estado === 'alto' ? 'Por encima del rango' : 'Dentro del rango'}>
+                    <span key={x.grupo} data-g={x.grupo} class={`vol-chip vol-${x.estado}`} title={x.estado === 'bajo' ? 'Por debajo del rango' : x.estado === 'alto' ? 'Por encima del rango' : 'Dentro del rango'}>
                       {x.nombre} <strong>{x.cambio ? `${num(x.antes)} → ${num(x.despues)}` : num(x.despues)}</strong><span class="mini">{x.rango[0]}–{x.rango[1]}</span>
                     </span>
                   ))}

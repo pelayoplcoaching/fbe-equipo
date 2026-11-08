@@ -403,7 +403,7 @@ function VolumenSemana({ pautas, ejercicios, objetivo }) {
           const r = rangoVolumen(objetivo, g);
           const est = estadoVolumen(cuenta[g], r);
           return (
-            <span key={g} class={`vol-chip vol-${est}`} title={est === 'bajo' ? 'Por debajo del rango' : est === 'alto' ? 'Por encima del rango' : 'Dentro del rango'}>
+            <span key={g} data-g={g} class={`vol-chip vol-${est}`} title={est === 'bajo' ? 'Por debajo del rango' : est === 'alto' ? 'Por encima del rango' : 'Dentro del rango'}>
               {n} <strong>{num(cuenta[g])}</strong><span class="mini">{r[0]}–{r[1]}</span>
             </span>
           );
@@ -740,7 +740,7 @@ export function ElegirEjercicio({ biblioteca, alCerrar, alElegir }) {
       {biblioteca.cargando ? <Cargando /> : (
         <div class="lista-elegir">
           {lista.slice(0, 80).map((e) => (
-            <button key={e.id} onClick={() => alElegir(e)}>
+            <button key={e.id} data-g={(e.grupos_musculares || [])[0] || undefined} onClick={() => alElegir(e)}>
               <span style="font-weight:600">{e.nombre}</span>
               <span class="mini terciario">{(e.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(', ') || 'Sin grupo'}{(e.tipo || []).includes('basico') ? '; básico' : ''}{e.rango_reps ? `; ${e.rango_reps.toLowerCase()}` : ''}{e.video_url ? '; con vídeo' : ''}</span>
             </button>

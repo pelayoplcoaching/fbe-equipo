@@ -242,7 +242,7 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, recargar }) {
   return (
     <div class="pila">
       {visibles.map((s) => (
-        <section class="panel panel-pad pila-s" key={s.id}>
+        <section class={`panel panel-pad pila-s registro-sesion${s.completada && !s.revisada_en ? ' por-revisar' : ''}`} data-rpe={s.rpe_sesion ? Math.min(10, Math.max(5, Math.floor(s.rpe_sesion))) : undefined} key={s.id}>
           <div class="separa" style="flex-wrap:wrap">
             <strong>S{s.semana.numero}: {s.nombre}</strong>
             <span class="peq secundario">{s.fecha_realizada ? fmtConDia(s.fecha_realizada) : 'En curso'}{s.rpe_sesion ? `, esfuerzo ${s.rpe_sesion}/10` : ''}{cardioHechoValido(s.cardio_hecho) ? `, ${NOMBRE_MODALIDAD[s.cardio_hecho.modalidad].toLowerCase()}: ${textoCardioHecho(s.cardio_hecho)}` : s.duracion_min ? `, ${s.duracion_min} min` : ''}</span>
@@ -496,7 +496,7 @@ function Objetivos({ atleta }) {
         <div class="panel"><ul class="lista">
           {lista.datos.map((o) => (
             <li key={o.id}>
-              <button class="respuesta" onClick={() => setEditar(o)}>
+              <button class="respuesta objetivo-fila" data-hecho={o.auto?.conseguido || o.estado === 'completado' ? '' : undefined} style={{ '--f': Math.min(1, Math.max(0, (o.auto ? o.auto.pct : o.progreso_pct || 0) / 100)) }} onClick={() => setEditar(o)}>
                 <span><span class="nombre">{o.titulo}</span><br /><span class="detalle">{o.auto?.conseguido ? `Conseguido el ${fmtCorta(o.auto.conseguido.fecha)}` : NOMBRE_ESTADO_OBJETIVO[o.estado]}, {o.auto ? o.auto.pct : o.progreso_pct} %{o.auto ? ' (automático)' : ''}{o.fecha_limite ? `, para el ${fmtCorta(o.fecha_limite)}` : ''}</span></span>
                 <Icono n="editar" />
               </button>
@@ -582,7 +582,7 @@ function Notas({ atleta, notas, recargar }) {
   const [ocupado, una] = useUnaVez();
   return (
     <div class="pila">
-      <form class="panel panel-pad pila" onSubmit={(e) => {
+      <form class="panel panel-pad pila nota-nueva-form" onSubmit={(e) => {
         e.preventDefault();
         if (!texto.trim()) return;
         una(async () => { try { await api.crearNota(atleta.id, texto.trim()); setTexto(''); recargar(); } catch (err) { aviso(err.message, 'error'); } });
@@ -592,7 +592,7 @@ function Notas({ atleta, notas, recargar }) {
         <button class="btn btn-primario" disabled={!texto.trim() || ocupado}>Guardar nota</button>
       </form>
       {notas.map((n) => (
-        <div class="panel panel-pad pila-s" key={n.id}>
+        <div class="panel panel-pad pila-s nota-privada" key={n.id}>
           <div class="separa"><span class="peq terciario">{fmtCorta(aISO(new Date(n.creado_en)))}</span>
             <button class="btn btn-icono plano btn-peligro" aria-label="Borrar nota" onClick={async () => { await api.borrarNota(n.id); recargar(); }}><Icono n="basura" /></button></div>
           <p style="white-space:pre-line">{n.texto}</p>
