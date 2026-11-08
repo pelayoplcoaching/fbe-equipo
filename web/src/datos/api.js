@@ -389,7 +389,7 @@ const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0]
 export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
   let generacion = 0;
-  let personalMemo = null, mensajesMemo = null;  // (050) lo de personal_mio y mensajes_coach, un minuto
+  let personalMemo = null, mensajesMemo = null, personalAtletasMemo = null;  // (050) lo de personal_mio, mensajes_coach y personal_atletas, un minuto
   let olvidarFotos = () => {};   // (se define más abajo, con el recuerdo de las fotos de perfil)
   const b = Object.create(backend);
   // Notificaciones: después de algo que avisa a otra persona (un comentario, un aviso, un check-in, una semana
@@ -775,7 +775,13 @@ export function crearApi(backend) {
     },
     // Lo de cada atleta, para el coach ([{ atleta_id, apodo, porque, favoritos, musica_url, cumple_mes, cumple_dia }])
     async personalAtletas() {
-      try { return (await b.rpc('personal_atletas', {})) || []; } catch (e) { if (falta050(e)) return []; throw e; }
+      // (se recuerda un minuto, como los mensajes del coach: la lista de Atletas lo pide cada vez que se vuelve a ella)
+      const k = uid();
+      if (personalAtletasMemo && personalAtletasMemo.k === k && Date.now() - personalAtletasMemo.t < 60000) return personalAtletasMemo.p;
+      const p = b.rpc('personal_atletas', {}).then((r) => r || []).catch((e) => { if (falta050(e)) return []; throw e; });
+      personalAtletasMemo = { k, t: Date.now(), p };
+      p.catch(() => { if (personalAtletasMemo?.p === p) personalAtletasMemo = null; });
+      return p;
     },
     // Los mensajes del coach para cada momento ([{ momento, texto }]); se recuerdan un minuto
     async mensajesCoach() {
