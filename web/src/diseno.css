@@ -2250,3 +2250,167 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .fila-semana.con-mini { grid-template-columns: 3.5rem minmax(0, 1fr); }
 .fila-semana.con-mini > .portada-historia { display: none; }
 .entrar-equipo > .franja-manada ~ .entrar-equipo-ilu { display: none; }
+
+/* ══ Tanda 30 (8/11): la parte de entrenamiento ══════════════════════════════════════════════════════════════════════
+   Quince mejoras en lo que el atleta ve al entrenar: la sesión, el descanso, el final, la semana y el historial.
+   Iconos de los bloques 159, 160 y 167: los trazos de P (comunes.jsx), como máscara. */
+:root {
+  --ico-reloj: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%2021a8%208%200%201%200%200-16%208%208%200%200%200%200%2016zM12%209v4l2.5%202M10%202.5h4'/%3E%3C/svg%3E");
+  --ico-historial: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5%2012a8.5%208.5%200%201%200%202.6-6.1L3.5%208.5M3.5%204v4.5H8M12%207.5V12l3%202'/%3E%3C/svg%3E");
+  --ico-hecho: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5%2012.5l4.5%204.5L19%207.5'/%3E%3C/svg%3E");
+  --ico-disco: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%2021a9%209%200%201%200%200-18%209%209%200%200%200%200%2018zM12%2015a3%203%200%201%200%200-6%203%203%200%200%200%200%206zM12%206.5v1M12%2016.5v1'/%3E%3C/svg%3E");
+  --ico-rayo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13%203%205%2013h6l-1%208%208-10h-6z'/%3E%3C/svg%3E");
+  --ico-diana: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%2021a9%209%200%201%200%200-18%209%209%200%200%200%200%2018zM12%2016.5a4.5%204.5%200%201%200%200-9%204.5%204.5%200%200%200%200%209zM12%2012h.01'/%3E%3C/svg%3E");
+  /* La escala del esfuerzo (bloques 165 y 166): de cómoda (verde) a máxima (rojo) */
+  --esf-5: var(--ok); --esf-6: color-mix(in srgb, var(--ok) 55%, var(--aviso)); --esf-7: var(--aviso);
+  --esf-8: color-mix(in srgb, var(--aviso) 55%, var(--alerta)); --esf-9: color-mix(in srgb, var(--aviso) 25%, var(--alerta)); --esf-10: var(--alerta);
+}
+
+/* ── 155 · El ejercicio en curso brilla (tanda 30) ────────────────────────────────────────────────────────────────────
+   El abierto lleva, además del filo del acento, un resplandor suave de su color debajo: se ve de un vistazo dónde
+   estás al bajar por la sesión. Pisa estilos.css (2538). */
+.ejercicio.en-curso:not(.plegado) { box-shadow: var(--sombra), 0 0 0 1.5px color-mix(in srgb, var(--morado) 62%, transparent), 0 18px 36px -20px color-mix(in srgb, var(--morado) 60%, transparent); }
+
+/* ── 156 · El progreso de cada ejercicio en un aro (tanda 30) ─────────────────────────────────────────────────────────
+   El «1/3» de la cabecera de cada ejercicio va dentro de un aro que se llena con las series (Sesion.jsx: --f, de 0 a
+   1), como los anillos de Apple Fitness; acabado, un disco verde con su ✓. El aro se dibuja con una máscara (vale con
+   cualquier fondo) y avanza con transición (--aro-f, registrada). */
+@property --aro-f { syntax: "<number>"; inherits: false; initial-value: 0; }
+.ejercicio-cab .progreso-series { position: relative; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; font-size: 0.75rem; font-weight: 760; letter-spacing: -.02em; color: var(--tinta-2); }
+.ejercicio-cab .progreso-series::before { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; --aro-f: var(--f, 0);
+  background: conic-gradient(var(--morado) calc(var(--aro-f) * 1turn), color-mix(in srgb, var(--tinta) 11%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); }
+.ejercicio-cab .progreso-series.hecho { background: var(--ok); color: var(--hoja); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--ok) 80%, transparent); }
+.ejercicio-cab .progreso-series.hecho::before { content: none; }
+.ejercicio-cab .progreso-series.hecho svg { width: 20px; height: 20px; stroke-width: 2.6; }
+@media (prefers-reduced-motion: no-preference) { .ejercicio-cab .progreso-series::before { transition: --aro-f var(--mov-lento) var(--curva-casa); } }
+@media (forced-colors: active) { .ejercicio-cab .progreso-series::before { background: CanvasText; } .ejercicio-cab .progreso-series.hecho { background: Highlight; color: HighlightText; } }
+
+/* ── 157 · T, B y el número de serie con su insignia (tanda 30) ───────────────────────────────────────────────────────
+   La primera columna de cada serie es una insignia: la serie top en el acento lleno, las back-off en gris y las
+   normales en un tono suave; hecha, en verde. Cabe en la columna de siempre (26 px; 22 en pantallas estrechas). */
+.serie .n { justify-self: center; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; font-size: 0.75rem; background: var(--hoja-2); color: var(--tinta-2); }
+.serie.serie-top .n { background: var(--morado); color: var(--sobre-morado); }
+.serie.serie-backoff .n { background: color-mix(in srgb, var(--tinta) 10%, var(--hoja)); color: var(--tinta-2); }
+.serie.hecha .n { background: var(--ok-suave); color: var(--ok); }
+@media (forced-colors: active) { .serie .n { border: 1px solid CanvasText; } }
+
+/* ── 158 · La sugerencia de carga como tarjeta de color (tanda 30) ────────────────────────────────────────────────────
+   «Prueba con 18 kg» en una tarjeta verde con su flecha en un disco; «misma carga e intenta sumar una repetición», en
+   la del acento; «mantener», en ámbar. Pisa los bloques 6 y 49 (.sugerencia). */
+.ejercicio-cuerpo .sugerencia { grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--morado-suave); line-height: 1.35; }
+.ejercicio-cuerpo .sugerencia svg { width: 30px; height: 30px; margin: 0; padding: 6px; border-radius: 50%; background: var(--hoja); color: var(--morado); stroke-width: 2.2; box-shadow: 0 1px 2px rgba(27, 23, 48, .08); }
+.ejercicio-cuerpo .sugerencia.subir { background: var(--ok-suave); }
+.ejercicio-cuerpo .sugerencia.subir svg { color: var(--ok); }
+.ejercicio-cuerpo .sugerencia.mantener { background: color-mix(in srgb, var(--aviso) 14%, var(--hoja)); }
+.ejercicio-cuerpo .sugerencia.mantener svg { color: var(--aviso); }
+
+/* ── 159 · «La última vez» como un recuerdo (tanda 30) ────────────────────────────────────────────────────────────────
+   Lo de la última vez va en una cajita con el reloj de la historia y cada serie en su pastilla, para leerlo de un
+   golpe de vista antes de cargar la barra. */
+.ejercicio-cuerpo .ultima-vez { position: relative; padding: 8px 12px 8px 34px; border-radius: 12px; background: var(--hoja-2); line-height: 1.95; }
+.ejercicio-cuerpo .ultima-vez::before { content: ""; position: absolute; left: 11px; top: 12px; width: 16px; height: 16px; background: var(--tinta-3); -webkit-mask: var(--ico-historial) center / contain no-repeat; mask: var(--ico-historial) center / contain no-repeat; }
+.ejercicio-cuerpo .ultima-vez .num { display: inline-block; padding: 0 7px; border-radius: 7px; background: var(--hoja); box-shadow: inset 0 0 0 1px var(--linea); line-height: 1.6; }
+@media (forced-colors: active) { .ejercicio-cuerpo .ultima-vez::before { background: CanvasText; } }
+
+/* ── 160 · La pauta del ejercicio en chips (tanda 30) ─────────────────────────────────────────────────────────────────
+   Series, esfuerzo, carga y descanso de la cabecera de cada ejercicio, cada uno en su chip, como en Hevy; el descanso
+   con un reloj (Sesion.jsx: pauta-descanso). */
+.ejercicio-cab .pauta { gap: 5px; margin-top: 6px; }
+.ejercicio-cab .pauta > span { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 8px; background: var(--hoja-2); font-size: 0.8125rem; line-height: 1.35; }
+.ejercicio-cab .pauta > .pauta-descanso::before { content: ""; width: 13px; height: 13px; flex: none; background: currentColor; -webkit-mask: var(--ico-reloj) center / contain no-repeat; mask: var(--ico-reloj) center / contain no-repeat; }
+.ejercicio.en-curso .ejercicio-cab .pauta > span { background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
+@media (forced-colors: active) { .ejercicio-cab .pauta > span { border: 1px solid CanvasText; } }
+
+/* ── 161 · El descanso con luz (tanda 30) ─────────────────────────────────────────────────────────────────────────────
+   El aro del reloj brilla con su color y tiene un halo detrás; en los tres últimos segundos el halo late. Los ±15 s y
+   ±1 min son píldoras de vidrio (sin el borde de antes). En la píldora flotante, el aro también brilla. */
+.reloj-descanso svg { filter: drop-shadow(0 0 7px color-mix(in srgb, var(--c) 42%, transparent)); }
+.reloj-descanso::before { content: ""; position: absolute; inset: 10%; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, color-mix(in srgb, var(--c) 24%, transparent) 0%, transparent 70%); }
+.temporizador .ajustes button, .temporizador .respira-boton { border-color: transparent; background: color-mix(in srgb, var(--sobre-flota) 11%, transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sobre-flota) 14%, transparent); }
+.temporizador .ajustes button:hover { background: color-mix(in srgb, var(--sobre-flota) 18%, transparent); }
+.pildora-descanso > svg:first-child { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--c-disco, var(--morado)) 70%, transparent)); }
+@media (prefers-reduced-motion: no-preference) {
+  .temporizador.ultimos .reloj-descanso::before { animation: halo-late .5s ease-in-out infinite alternate; }
+}
+@keyframes halo-late { to { transform: scale(1.12); opacity: .6; } }
+@media (forced-colors: active) { .reloj-descanso::before { content: none; } .temporizador .ajustes button { border-color: ButtonText; } }
+
+/* ── 162 · Las herramientas del ejercicio con iconos de colores (tanda 30) ────────────────────────────────────────────
+   En la hoja «Más» de cada ejercicio, como Ajustes del iPhone (y el perfil, bloque 124): icono blanco sobre un
+   cuadrado de color según lo que es (Sesion.jsx: data-h con el id de la herramienta). */
+.hoja-acciones > li[data-h] .accion-fila .ico { background: linear-gradient(180deg, color-mix(in srgb, var(--h, #7C7C86) 82%, #fff), var(--h, #7C7C86)); color: #fff; box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+.hoja-acciones > li[data-h] .accion-fila .ico svg { stroke-width: 2.1; }
+.hoja-acciones > li[data-h="luego"] { --h: #E8730C; }
+.hoja-acciones > li[data-h="orden"] { --h: #2E7CF6; }
+.hoja-acciones > li[data-h="cambiar"] { --h: #0E9384; }
+.hoja-acciones > li[data-h="historial"] { --h: #5856D6; }
+.hoja-acciones > li[data-h="descanso"] { --h: #22A04B; }
+.hoja-acciones > li[data-h="tempo"] { --h: #E5407F; }
+.hoja-acciones > li[data-h="nota"] { --h: #C98A00; }
+.hoja-acciones > li[data-h="aproximacion"] { --h: #E5484D; }
+.hoja-acciones > li[data-h="tecnica"], .hoja-acciones > li[data-h="tutorial"] { --h: #2E7CF6; }
+@media (forced-colors: active) { .hoja-acciones > li[data-h] .accion-fila .ico { background: Canvas; color: CanvasText; } }
+
+/* ── 163 · «Empezar» sobre un velo (tanda 30) ─────────────────────────────────────────────────────────────────────────
+   En la portada de la sesión, la lista de ejercicios se funde con el fondo bajo el botón, en vez de cortarse a
+   medio nombre detrás de él. */
+.portada-empezar::before { content: ""; position: absolute; z-index: -1; inset: -44px -6px calc(-14px - env(safe-area-inset-bottom, 0px)); pointer-events: none; background: linear-gradient(180deg, color-mix(in srgb, var(--tiza) 0%, transparent), var(--tiza) 62%); }
+
+/* ── 164 · La sesión que toca, destacada en la semana (tanda 30) ──────────────────────────────────────────────────────
+   En Semana (y en «Esta semana» de Hoy), la siguiente sesión lleva un filo de degradado del acento y un resplandor
+   de su color debajo; su número, en un cuadrado con brillo. Pisa estilos.css (310–312) y el bloque 4. */
+.dia.actual { border: 1.5px solid transparent; padding: 10.5px 12.5px; background: linear-gradient(var(--hoja), var(--hoja)) padding-box, linear-gradient(135deg, var(--morado), color-mix(in srgb, var(--morado) 35%, #E5407F)) border-box; box-shadow: var(--sombra), 0 16px 32px -20px color-mix(in srgb, var(--morado) 70%, transparent); }
+.dia.actual .marca-dia { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, #fff), var(--morado)); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+@media (forced-colors: active) { .dia.actual { border-color: Highlight; background: Canvas; } }
+
+/* ── 165 · El esfuerzo de «Tus entrenamientos» con color (tanda 30) ───────────────────────────────────────────────────
+   El «9/10» de cada entrenamiento en una pastilla teñida según lo dura que fue (Semana.jsx: data-rpe), del verde
+   (cómoda) al rojo (máxima). El texto sigue en la tinta. */
+.entreno-rpe[data-rpe] { padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--esf) 17%, var(--hoja)); }
+.entreno-rpe[data-rpe] small { color: var(--tinta); }
+.entreno-rpe[data-rpe="1"], .entreno-rpe[data-rpe="2"], .entreno-rpe[data-rpe="3"], .entreno-rpe[data-rpe="4"], .entreno-rpe[data-rpe="5"] { --esf: var(--esf-5); }
+.entreno-rpe[data-rpe="6"] { --esf: var(--esf-6); }
+.entreno-rpe[data-rpe="7"] { --esf: var(--esf-7); }
+.entreno-rpe[data-rpe="8"] { --esf: var(--esf-8); }
+.entreno-rpe[data-rpe="9"] { --esf: var(--esf-9); }
+.entreno-rpe[data-rpe="10"] { --esf: var(--esf-10); }
+@media (forced-colors: active) { .entreno-rpe[data-rpe] { border: 1px solid CanvasText; } }
+
+/* ── 166 · El RPE de la sesión con escala de color (tanda 30) ─────────────────────────────────────────────────────────
+   Al terminar la sesión (y en la calculadora), la pastilla del esfuerzo elegido se tiñe del verde (5, cómoda) al rojo
+   (10, máxima), como «¿Cómo llegas hoy?» (bloque 140). */
+.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [aria-pressed="true"]) { --seg-activo: color-mix(in srgb, var(--esf-e, var(--morado)) 20%, var(--hoja)); }
+.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="5"][aria-pressed="true"]) { --esf-e: var(--esf-5); }
+.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="6"][aria-pressed="true"]) { --esf-e: var(--esf-6); }
+.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="7"][aria-pressed="true"]) { --esf-e: var(--esf-7); }
+.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="8"][aria-pressed="true"]) { --esf-e: var(--esf-8); }
+.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="9"][aria-pressed="true"]) { --esf-e: var(--esf-9); }
+.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="10"][aria-pressed="true"]) { --esf-e: var(--esf-10); }
+
+/* ── 167 · Las cifras del final con su icono (tanda 30) ───────────────────────────────────────────────────────────────
+   En «Sesión terminada», cada cifra lleva arriba su icono en un disco de color: la duración en el acento, las series
+   en verde y el tonelaje en azul (y en cardio: el tiempo, la distancia y el ritmo). */
+.resumen-num > div[data-k] { position: relative; padding-top: 48px; --k: var(--morado); }
+.resumen-num > div[data-k]::before { content: ""; position: absolute; left: 12px; top: 12px; width: 28px; height: 28px; border-radius: 50%; background: color-mix(in srgb, var(--k) 15%, var(--hoja)); }
+.resumen-num > div[data-k]::after { content: ""; position: absolute; left: 18px; top: 18px; width: 16px; height: 16px; background: var(--k); -webkit-mask: var(--ico, var(--ico-reloj)) center / contain no-repeat; mask: var(--ico, var(--ico-reloj)) center / contain no-repeat; }
+.resumen-num > div[data-k="series"] { --k: var(--ok); --ico: var(--ico-hecho); }
+.resumen-num > div[data-k="tonelaje"] { --k: var(--t-tarea); --ico: var(--ico-disco); }
+.resumen-num > div[data-k="km"] { --k: var(--t-tarea); --ico: var(--ico-diana); }
+.resumen-num > div[data-k="ritmo"] { --k: var(--t-habitos); --ico: var(--ico-rayo); }
+@media (forced-colors: active) { .resumen-num > div[data-k]::after { background: CanvasText; } .resumen-num > div[data-k]::before { border: 1px solid CanvasText; } }
+
+/* ── 168 · La comparación con la vez anterior, con su flecha en un disco (tanda 30) ───────────────────────────────────
+   Debajo de las cifras: si mueves más que la última vez, flecha blanca en un disco verde; si menos, en uno azul
+   (no rojo: un día más corto no es un fallo); la primera vez, la estrella en un disco suave del acento. */
+.resumen-compara svg { width: 32px; height: 32px; padding: 7px; border-radius: 50%; background: color-mix(in srgb, var(--tinta) 8%, var(--hoja)); color: var(--tinta-2); stroke-width: 2.4; }
+.resumen-compara.sube svg { background: var(--ok); color: var(--hoja); }
+.resumen-compara.baja { background: color-mix(in srgb, var(--t-tarea) 9%, var(--hoja)); box-shadow: none; }
+.resumen-compara.baja svg { background: var(--t-tarea); color: var(--hoja); }
+.resumen-compara.vacia svg { background: var(--morado-suave); color: var(--morado); }
+
+/* ── 169 · Los récords en dorado también en el historial y en «Marcas» (tanda 30) ─────────────────────────────────────
+   Desde la tanda 26 los récords son dorados en toda la app; quedaban el historial de cada ejercicio (el 1RM del día
+   que fue récord, en verde: FichaEjercicio.jsx ya dice «en dorado») y los trofeos de «Marcas» (en morado). */
+.historial-fila .chip.ok { background: var(--oro-suave); color: var(--oro); }
+.marca-fila .ico { background: var(--oro-suave); color: var(--oro); }
