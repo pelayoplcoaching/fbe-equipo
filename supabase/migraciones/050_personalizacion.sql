@@ -53,6 +53,8 @@ alter table public.personal_atleta add constraint personal_atleta_valido check (
   and (porque is null or char_length(porque) between 1 and 140)
   and cardinality(favoritos) <= 3
   and (musica_url is null or (char_length(musica_url) <= 300 and musica_url ~* '^https://(open\.spotify\.com|spotify\.link|music\.apple\.com|music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|music\.amazon\.(es|com)|(www\.)?deezer\.com|link\.deezer\.com|(www\.)?tidal\.com|listen\.tidal\.com)/[^[:space:]<>"'']*$'))
+  and array_position(favoritos, null) is null
+  and ((cumple_mes is null) = (cumple_dia is null))
   and ((cumple_mes is null and cumple_dia is null)
        or (cumple_mes between 1 and 12 and cumple_dia between 1 and
            (case when cumple_mes = 2 then 29 when cumple_mes in (4, 6, 9, 11) then 30 else 31 end)))
@@ -61,7 +63,7 @@ comment on table public.personal_atleta is 'Lo que cada atleta elige para su app
 
 -- Lo que devuelven las funciones (sin el atleta_id para el propio atleta)
 create or replace function fbe_privado.personal_json(p public.personal_atleta) returns jsonb
-language sql immutable set search_path = '' as $$
+language sql stable set search_path = '' as $$
   select case when p.atleta_id is null then null else jsonb_build_object(
     'apodo', p.apodo, 'porque', p.porque, 'favoritos', to_jsonb(p.favoritos), 'musica_url', p.musica_url,
     'cumple_mes', p.cumple_mes, 'cumple_dia', p.cumple_dia, 'actualizado_en', p.actualizado_en) end;
@@ -90,6 +92,10 @@ begin
     raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';
   end if;
   if p_datos is null or jsonb_typeof(p_datos) <> 'object' then raise exception 'Faltan los datos'; end if;
+  if coalesce(jsonb_typeof(p_datos -> 'apodo'), 'null') not in ('string', 'null') or coalesce(jsonb_typeof(p_datos -> 'porque'), 'null') not in ('string', 'null')
+     or coalesce(jsonb_typeof(p_datos -> 'musica_url'), 'null') not in ('string', 'null') then
+    raise exception 'Datos no válidos';
+  end if;
   -- textos: sin saltos ni espacios de más; vacíos, nada
   v_apodo := nullif(btrim(regexp_replace(coalesce(p_datos ->> 'apodo', ''), '[[:space:][:cntrl:]]+', ' ', 'g')), '');
   v_porque := nullif(btrim(regexp_replace(coalesce(p_datos ->> 'porque', ''), '[[:space:][:cntrl:]]+', ' ', 'g')), '');
@@ -98,10 +104,23 @@ begin
     v_mes := nullif(p_datos ->> 'cumple_mes', '')::smallint;
     v_dia := nullif(p_datos ->> 'cumple_dia', '')::smallint;
   exception when others then raise exception 'Fecha de cumpleaños no válida'; end;
+  if (v_mes is null) <> (v_dia is null) or (v_mes is not null and (v_mes not between 1 and 12 or v_dia not between 1 and
+      (case when v_mes = 2 then 29 when v_mes in (4, 6, 9, 11) then 30 else 31 end))) then
+    raise exception 'Fecha de cumpleaños no válida: hacen falta el día y el mes';
+  end if;
+  if char_length(v_apodo) > 30 then raise exception 'Cómo quieres que te llamemos: como mucho 30 caracteres'; end if;
+  if char_length(v_porque) > 140 then raise exception 'Tu porqué: como mucho 140 caracteres'; end if;
+  if v_musica is not null and (char_length(v_musica) > 300 or v_musica !~* '^https://(open\.spotify\.com|spotify\.link|music\.apple\.com|music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|music\.amazon\.(es|com)|(www\.)?deezer\.com|link\.deezer\.com|(www\.)?tidal\.com|listen\.tidal\.com)/[^[:space:]<>"'']*$') then
+    raise exception 'Ese enlace de música no vale: pega el de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal';
+  end if;
   if jsonb_typeof(coalesce(p_datos -> 'favoritos', '[]'::jsonb)) <> 'array' then raise exception 'Favoritos no válidos'; end if;
   if jsonb_array_length(coalesce(p_datos -> 'favoritos', '[]'::jsonb)) > 3 then raise exception 'Como mucho 3 ejercicios'; end if;
   begin
-    select coalesce(array_agg(distinct x::uuid), '{}') into v_fav from jsonb_array_elements_text(coalesce(p_datos -> 'favoritos', '[]'::jsonb)) x;
+    -- (sin huecos ni repetidos, en el orden en que vienen)
+    select coalesce(array_agg(u order by o), '{}') into v_fav
+      from (select x::uuid as u, min(n) as o
+              from jsonb_array_elements_text(coalesce(p_datos -> 'favoritos', '[]'::jsonb)) with ordinality as t(x, n)
+             where x is not null group by x::uuid) f;
   exception when others then raise exception 'Favoritos no válidos'; end;
   insert into public.personal_atleta as t (atleta_id, apodo, porque, favoritos, musica_url, cumple_mes, cumple_dia, actualizado_en)
     values (v_atleta, v_apodo, v_porque, v_fav, v_musica, v_mes, v_dia, now())

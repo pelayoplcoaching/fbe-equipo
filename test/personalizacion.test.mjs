@@ -133,6 +133,15 @@ check(g1?.apodo === 'Ani' && g1.cumple_dia === 8, 'el atleta guarda lo suyo');
 check((await q(`select public.personal_mio() as r`))[0].r?.porque === 'Por mis hijos', 'y lo lee');
 check(await falla(`select public.personal_guardar($1::jsonb)`, [JSON.stringify({ musica_url: 'https://malo.example/x' })]) && await falla(`select public.personal_guardar($1::jsonb)`, [JSON.stringify({ cumple_mes: 2, cumple_dia: 30 })])
   && await falla(`select public.personal_guardar($1::jsonb)`, [JSON.stringify({ apodo: 'x'.repeat(31) })]) && await falla(`select public.personal_guardar($1::jsonb)`, [JSON.stringify({ favoritos: ['a', 'b', 'c', 'd'] })]), 'la base rechaza lo que no vale (música, fecha, largo, más de 3 favoritos)');
+// (revisión de la 050) ni medio cumpleaños, ni huecos en los favoritos, ni textos que no son texto; los favoritos, en su orden
+const f1 = 'ffffffff-ffff-4fff-8fff-ffffffffffff', f2 = '11111111-1111-4111-8111-111111111111';
+check(await falla(`select public.personal_guardar($1::jsonb)`, [JSON.stringify({ cumple_mes: 2 })]) && await falla(`select public.personal_guardar($1::jsonb)`, [JSON.stringify({ cumple_dia: 15 })])
+  && await falla(`select public.personal_guardar($1::jsonb)`, [JSON.stringify({ apodo: { a: 1 } })]),
+  'la base rechaza medio cumpleaños (solo el mes o solo el día) y un apodo que no es texto');
+const gOrden = (await q(`select public.personal_guardar($1::jsonb) as r`, [JSON.stringify({ apodo: "Ani", porque: "Por mis hijos", favoritos: [f1, null, f2] })]))[0].r;
+const gRep = (await q(`select public.personal_guardar($1::jsonb) as r`, [JSON.stringify({ apodo: "Ani", porque: "Por mis hijos", favoritos: [f2, f1, f2] })]))[0].r;
+check(JSON.stringify(gOrden?.favoritos) === JSON.stringify([f1, f2]) && JSON.stringify(gRep?.favoritos) === JSON.stringify([f2, f1]), `los favoritos, sin huecos ni repetidos y en su orden (${JSON.stringify(gOrden?.favoritos)}, ${JSON.stringify(gRep?.favoritos)})`);
+check(/no vale/.test(await q(`select public.personal_guardar($1::jsonb)`, [JSON.stringify({ musica_url: 'https://malo.example/x' })]).then(() => '', (e) => e.message)), 'con un enlace que no vale, un mensaje claro');
 await como(ub);
 check((await q(`select public.personal_mio() as r`))[0].r === null, 'otro atleta no ve lo de Ana');
 check(await falla(`select public.personal_atletas()`) && await falla(`select public.mensaje_coach_guardar('record', 'hola')`), 'un atleta no lee lo de todos ni escribe mensajes del coach');

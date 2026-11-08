@@ -35,7 +35,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -861,7 +861,18 @@ export function crearApi(backend) {
       // (v0.73) la 2026-12.12 solo con la 045 (los aniversarios, el mes en el equipo, los hitos, las reacciones y pegatinas y
       // los momentos de 24 horas); con la 044 pero sin la 045, la 2026-12.11
       // (v0.95) con la 045, la 2026-12.13 (cómo va la app: se mide en el móvil aunque falte la 049, que solo hace falta para mandarlo)
-      return (await api.comunidad045().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_045;
+      if ((await api.comunidad045().catch(() => null)) !== true) return VERSION_LEGAL_SIN_045;
+      // (v0.104) la 2026-12.14 solo con la 050 (lo que eliges para tu app); con la 045 pero sin la 050, la 2026-12.13
+      return (await api.personal050().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_050;
+    },
+    // (v0.104) ¿Está la 050? true / false / null (no se sabe: un corte). mensajes_coach() la puede llamar cualquiera con sesión
+    async personal050() {
+      if (!api._v050) {
+        const pr = b.rpc('mensajes_coach', {}).then(() => true).catch((e) => (falta050(e) ? false : null));
+        api._v050 = pr;
+        pr.then((x) => { if (x == null && api._v050 === pr) api._v050 = null; });
+      }
+      return api._v050;
     },
     async privacidadVista() {
       const id = uid();
@@ -4348,7 +4359,10 @@ export function crearApi(backend) {
       out.avisos = out.avisos.filter((a) => !programado(a));
       out.tareas = await b.select('tareas', { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)
-      out.personal = (await api.personal().catch(() => null)) ?? ((await api.personalAtletas().catch(() => [])).find((x) => x.atleta_id === atletaId) || null);
+      // (personal() es siempre lo de quien está dentro: solo vale si exporta lo suyo; el coach, con lo de cada atleta)
+      out.personal = perfilId && perfilId === uid()
+        ? (await api.personal().catch(() => null)) ?? null
+        : ((await api.personalAtletas().catch(() => [])).find((x) => x.atleta_id === atletaId) || null);
       // (v0.57) la corrección de sus vídeos de técnica (con días, como la ve en la app; sin la 035, ninguna)
       const vids = out.archivos.filter((a) => a.tipo === 'video_tecnica').map((a) => a.id);
       out.video_correcciones = vids.length && await api.video035().catch(() => false) ? await api.correccionesDe(vids).catch(() => []) : [];
