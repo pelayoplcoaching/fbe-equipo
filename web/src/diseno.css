@@ -2412,7 +2412,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 169 · Los récords en dorado también en el historial y en «Marcas» (tanda 30) ─────────────────────────────────────
    Desde la tanda 26 los récords son dorados en toda la app; quedaban el historial de cada ejercicio (el 1RM del día
    que fue récord, en verde: FichaEjercicio.jsx ya dice «en dorado») y los trofeos de «Marcas» (en morado). */
-.historial-fila .chip.ok { background: var(--oro-suave); color: var(--oro); }
+.historial-fila .chip.ok { background: var(--oro-suave); color: var(--oro-texto); }
 .marca-fila .ico { background: var(--oro-suave); color: var(--oro); }
 
 /* ══ Tanda 31 (8/11): entrenar con fluidez ═══════════════════════════════════════════════════════════════════════════
@@ -2587,3 +2587,141 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .superserie::before { opacity: 1; width: 3px; left: 11.5px; background: linear-gradient(180deg, var(--morado), color-mix(in srgb, var(--morado) 12%, transparent)); }
 .ss-letra { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, #fff), var(--morado)); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
 @media (forced-colors: active) { .superserie::before { background: CanvasText; } }
+
+/* ══ Tanda 32 (8/11): más del entrenamiento ══════════════════════════════════════════════════════════════════════════
+   Quince mejoras en las partes del entrenamiento que faltaban: intervalos, dónde entrenas, tempo y cambios, el orden,
+   los discos, la calculadora, el historial, la nota, Hoy, la sesión hecha y Fuerza. */
+:root {
+  /* Texto dorado pequeño sobre --oro-suave: --oro (#9A6C12) se queda en 4,15:1 en claro (lo cazó axe en el historial
+     del ejercicio, bloque 169 de la tanda 30, y en la mejor semana); este pasa de 5,5:1. En oscuro, el dorado claro. */
+  --oro-texto: #7A540E;
+  --ico-gimnasio: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.5%207v10M3.5%209.5v5M17.5%207v10M20.5%209.5v5M6.5%2012h11'/%3E%3C/svg%3E");
+  --ico-casa: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5%2011.5%2012%204.5l8.5%207M6%209.5V19.5h12V9.5M10%2019.5v-5h4v5'/%3E%3C/svg%3E");
+  --ico-viaje: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21%2015.5v-2l-8-5V4a1.5%201.5%200%200%200-3%200v4.5l-8%205v2l8-2.5V18l-2%201.5V21l3.5-1%203.5%201v-1.5L13%2018v-5z'/%3E%3C/svg%3E");
+  --ico-altavoz: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4%2010v4h3l5%204V6l-5%204zM16%209.5a3.5%203.5%200%200%201%200%205M18.5%207a7%207%200%200%201%200%2010'/%3E%3C/svg%3E");
+  --ico-intercambiar: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4%208h14l-3.5-3.5M20%2016H6l3.5%203.5'/%3E%3C/svg%3E");
+  --ico-arriba: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%2019V5M5.5%2011.5%2012%205l6.5%206.5'/%3E%3C/svg%3E");
+  --ico-intervalos: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5%2012h3.5l2-5.5%203.5%2011%203-8%202%202.5h5'/%3E%3C/svg%3E");
+  --ico-estrella-oro: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%203.5l2.6%205.3%205.9.9-4.3%204.1%201%205.8L12%2016.9l-5.2%202.7%201-5.8L3.5%209.7l5.9-.9z'/%3E%3C/svg%3E");
+}
+
+/* ── 185 · La tarjeta de intervalos, de noche y con su pulso (tanda 32) ───────────────────────────────────────────────
+   «Intervalos de hoy» va en la noche de la marca (como el descanso), con su icono en un cuadro de vidrio que brilla, la
+   línea del pulso en grande y muy tenue al fondo, y «Abrir» de vidrio. */
+.tarjeta-intervalos { position: relative; isolation: isolate; overflow: hidden; grid-template-columns: 42px minmax(0, 1fr) auto; background: radial-gradient(130% 160% at 0% 0%, #3B2C86, #17123A 62%); color: #fff; box-shadow: var(--sombra-tarjeta), 0 18px 32px -20px color-mix(in srgb, var(--morado) 75%, transparent); }
+.tarjeta-intervalos::after { content: ""; position: absolute; z-index: -1; right: -6%; top: 50%; width: 62%; height: 120%; translate: 0 -50%; background: #fff; opacity: .08; pointer-events: none; -webkit-mask: var(--ico-intervalos) center / contain no-repeat; mask: var(--ico-intervalos) center / contain no-repeat; }
+.tarjeta-intervalos > svg { width: 42px; height: 42px; padding: 9px; border-radius: 13px; background: rgba(255, 255, 255, .1); color: #CBB9FF; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14); filter: drop-shadow(0 0 6px rgba(170, 140, 255, .6)); }
+.tarjeta-intervalos strong { color: #fff; }
+.tarjeta-intervalos .num { color: #DCD5F7; }
+.tarjeta-intervalos .btn-primario { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .24); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22); }
+@media (forced-colors: active) { .tarjeta-intervalos { background: Canvas; color: CanvasText; } .tarjeta-intervalos::after { content: none; } }
+
+/* ── 186 · «¿Dónde entrenas hoy?» con su icono (tanda 32) ─────────────────────────────────────────────────────────────
+   Cada opción lleva delante su dibujo: la mancuerna para el gimnasio, la casa y el avión. */
+.donde-entrenas .segmentos button[data-v] { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.donde-entrenas .segmentos button[data-v]::before { content: ""; width: 17px; height: 17px; flex: none; background: currentColor; -webkit-mask: var(--ico-l) center / contain no-repeat; mask: var(--ico-l) center / contain no-repeat; }
+.donde-entrenas .segmentos button[data-v="gimnasio"] { --ico-l: var(--ico-gimnasio); }
+.donde-entrenas .segmentos button[data-v="casa"] { --ico-l: var(--ico-casa); }
+.donde-entrenas .segmentos button[data-v="viaje"] { --ico-l: var(--ico-viaje); }
+
+/* ── 187 · El tempo en un chip con su metrónomo (tanda 32) ────────────────────────────────────────────────────────────
+   «Tempo 3-0-1» de la cabecera del ejercicio en un chip suave del acento con el altavoz del metrónomo (Sesion.jsx:
+   variante-tempo). */
+.ejercicio-cab .variante-tempo { display: inline-flex; align-items: center; gap: 5px; width: fit-content; margin-top: 4px; padding: 2px 9px 2px 7px; border-radius: 999px; background: var(--morado-suave); color: var(--morado); }
+.ejercicio-cab .variante-tempo::before { content: ""; width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: var(--ico-altavoz) center / contain no-repeat; mask: var(--ico-altavoz) center / contain no-repeat; }
+
+/* ── 188 · La calculadora con su cifra protagonista (tanda 32) ────────────────────────────────────────────────────────
+   El 1RM estimado, grande y con la tinta de degradado (Herramientas.jsx: calc-cifra); en la tabla, la columna del RPE
+   elegido se tiñe y la casilla de tus repeticiones con ese RPE va rellena del acento. */
+.calc-cifra { padding: 12px 16px; border-radius: 16px; background: linear-gradient(135deg, var(--morado-suave), color-mix(in srgb, var(--morado-suave) 40%, var(--hoja))); }
+.calc-cifra .v { font-size: clamp(2.75rem, 13vw, 3.75rem); background: linear-gradient(100deg, var(--tinta) 25%, var(--morado)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+@media (forced-colors: active), (prefers-contrast: more) { .calc-cifra .v { background: none; -webkit-text-fill-color: currentColor; } }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="10"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(2) { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="10"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(2) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: 8px; box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="9"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(3) { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="9"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(3) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: 8px; box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="8"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(4) { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="8"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(4) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: 8px; box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="7"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(5) { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="7"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(5) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: 8px; box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="6"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(6) { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="6"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(6) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: 8px; box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
+
+/* ── 189 · «Cambiar el orden» más claro (tanda 32) ────────────────────────────────────────────────────────────────────
+   El puesto de cada ejercicio va en un disco suave del acento (lleno mientras lo llevas) y el asa, más visible. */
+.ord-fila { grid-template-columns: 36px 26px minmax(0, 1fr) auto; gap: 8px; }
+.ord-pos { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); font-size: 0.8125rem; font-weight: 750; }
+.ord-fila.levantada .ord-pos { background: var(--morado); color: var(--sobre-morado); }
+.ord-asa { color: var(--tinta-2); }
+.ord-asa svg { stroke-width: 3.4; }
+
+/* ── 190 · El historial del ejercicio con hojas de calendario (tanda 32) ──────────────────────────────────────────────
+   La fecha de cada día del historial (FichaEjercicio.jsx: historial-fecha) como las de «Tus entrenamientos» (bloque
+   105): el mes en la franja del acento y el día grande debajo. */
+.historial-fila { grid-template-columns: 44px minmax(0, 1fr) auto; }
+.historial-fecha { display: grid; justify-items: stretch; width: 44px; border-radius: 10px; overflow: hidden; background: var(--hoja); box-shadow: 0 0 0 1px var(--linea), 0 1px 2px color-mix(in srgb, var(--tinta) 10%, transparent); line-height: 1; text-align: center; }
+.historial-fecha i { order: -1; padding: 3px 0 2px; background: var(--morado); color: var(--sobre-morado); font-style: normal; font-size: 0.625rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.historial-fecha b { padding: 4px 0 5px; font-size: 1.0625rem; font-weight: 800; color: var(--tinta); }
+@media (forced-colors: active) { .historial-fecha { border: 1px solid CanvasText; } }
+
+/* ── 191 · Los discos de la barra con brillo metálico (tanda 32) ──────────────────────────────────────────────────────
+   Cada disco de «Discos para una carga» (teclado, calculadora, enfoque) con un degradado de luz arriba y sombra abajo,
+   como un disco de verdad. La letra blanca, con una sombra fina para que se siga leyendo igual. */
+.discos-ayuda .placa { background: linear-gradient(180deg, color-mix(in srgb, var(--c) 82%, #fff) 0%, var(--c) 40%, color-mix(in srgb, var(--c) 84%, #000) 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -1px 0 rgba(0, 0, 0, .22), 0 1px 2px rgba(0, 0, 0, .2); text-shadow: 0 1px 0 color-mix(in srgb, var(--c) 60%, #000); }
+@media (forced-colors: active) { .discos-ayuda .placa { border: 1px solid CanvasText; } }
+
+/* ── 192 · La nota fijada como un pósit (tanda 32) ────────────────────────────────────────────────────────────────────
+   Tu nota de cada ejercicio (en la tarjeta y en el enfoque) con la esquina de arriba doblada y la sombra de un papel. */
+.nota-fijada { position: relative; border-top-right-radius: 0; background: linear-gradient(225deg, transparent 13px, color-mix(in srgb, var(--disco-amarillo) 20%, var(--hoja)) 13px); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 8%, transparent), 0 10px 18px -14px color-mix(in srgb, var(--disco-amarillo) 70%, #000); }
+.nota-fijada::before { content: ""; position: absolute; top: 0; right: 0; width: 18px; height: 18px; border-bottom-left-radius: 4px; pointer-events: none; background: linear-gradient(45deg, color-mix(in srgb, var(--disco-amarillo) 42%, var(--hoja)) 50%, transparent 50%); box-shadow: -1px 1px 2px color-mix(in srgb, var(--tinta) 14%, transparent); }
+@media (forced-colors: active) { .nota-fijada { background: Canvas; border: 1px solid CanvasText; } .nota-fijada::before { content: none; } }
+
+/* ── 193 · «Empezar sesión» con el ▷ en un disco (tanda 32) ───────────────────────────────────────────────────────────
+   El icono de los botones grandes de la tarjeta de Hoy va en un disco del acento con su sombra. */
+.hero-dia .btn-hero > svg { width: 30px; height: 30px; padding: 7px; border-radius: 50%; background: var(--morado); color: var(--sobre-morado); box-shadow: 0 5px 12px -5px color-mix(in srgb, var(--morado) 80%, transparent); }
+@media (forced-colors: active) { .hero-dia .btn-hero > svg { background: none; color: inherit; } }
+
+/* ── 194 · La sesión ya hecha con su sello (tanda 32) ─────────────────────────────────────────────────────────────────
+   Al abrir un entrenamiento terminado (Sesion.jsx: sesion-hecha), la barra de arriba (tramos o la de series) va en verde, el nombre lleva
+   un ✓ en un disco verde y la duración va en su píldora verde. */
+.sesion-hecha .tramos .tramo-lleno, .sesion-hecha .barra-sesion span { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, #fff), var(--ok)); box-shadow: none; }
+.sesion-hecha .cabecera .titulo h1::after { content: ""; display: inline-block; width: 22px; height: 22px; margin-left: 8px; vertical-align: -3px; border-radius: 50%; background: var(--ok) var(--marca-blanca) center / 14px no-repeat; }
+.sesion-hecha .crono-reloj { background: var(--ok-suave); color: var(--tinta); }
+@media (forced-colors: active) { .sesion-hecha .cabecera .titulo h1::after { content: none; } }
+
+/* ── 195 · Los cambios de ejercicio en un chip ámbar (tanda 32) ───────────────────────────────────────────────────────
+   «En lugar de…» y «Por tu material de casa: en lugar de…» (en la tarjeta y en el enfoque) van en un chip ámbar con la
+   flecha de cambiar, como un aviso amable. */
+:is(.ejercicio-cab, .enfoque-titulo) .cambiado { display: inline-flex; align-items: center; gap: 5px; width: fit-content; max-width: 100%; padding: 2px 9px 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--aviso) 14%, var(--hoja)); color: color-mix(in srgb, var(--aviso) 62%, var(--tinta)); }
+:is(.ejercicio-cab, .enfoque-titulo) .cambiado::before { content: ""; width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: var(--ico-intercambiar) center / contain no-repeat; mask: var(--ico-intercambiar) center / contain no-repeat; }
+
+/* ── 196 · Lo ganado en fuerza con su flecha (tanda 32) ───────────────────────────────────────────────────────────────
+   El «+9,1 kg en 3 meses» de la gráfica de fuerza lleva delante una flecha hacia arriba. */
+.cifra .chip.ok { display: inline-flex; align-items: center; gap: 4px; }
+.cifra .chip.ok::before { content: ""; width: 12px; height: 12px; flex: none; background: currentColor; -webkit-mask: var(--ico-arriba) center / contain no-repeat; mask: var(--ico-arriba) center / contain no-repeat; }
+
+/* ── 197 · La mejor semana de tonelaje en dorado (tanda 32) ───────────────────────────────────────────────────────────
+   «Mejor semana: 10,4 t» es una marca: va en el dorado de los récords, con su trofeo (Progreso.jsx: chip-mejor). */
+.chip.chip-mejor { display: inline-flex; align-items: center; gap: 5px; background: var(--oro-suave); color: var(--oro-texto); border-color: transparent; }
+.chip.chip-mejor::before { content: ""; width: 13px; height: 13px; flex: none; background: currentColor; -webkit-mask: var(--ico-estrella-oro) center / contain no-repeat; mask: var(--ico-estrella-oro) center / contain no-repeat; }
+
+/* ── 198 · La vitrina de récords en oro de verdad (tanda 32) ──────────────────────────────────────────────────────────
+   En los récords recientes, el trofeo va en un disco dorado con relieve y la tarjeta tiene un resplandor dorado; la
+   cifra de cada trofeo, algo más grande. */
+.trofeo-tarjeta.reciente .trofeo-ico { background: radial-gradient(circle at 32% 26%, #FFF3C9, #E9C46A 55%, #B8892A); color: #4A3303; box-shadow: 0 6px 14px -6px rgba(184, 137, 42, .75), inset 0 1px 0 rgba(255, 255, 255, .6); }
+.trofeo-tarjeta.reciente { box-shadow: var(--sombra), 0 16px 30px -22px rgba(184, 137, 42, .7); }
+.trofeo-valor { font-size: calc(var(--cifra-m) * 1.12); }
+@media (forced-colors: active) { .trofeo-tarjeta.reciente .trofeo-ico { background: Canvas; color: CanvasText; } }
+
+/* ── 199 · La vitrina y las marcas se asientan al bajar (tanda 32) ────────────────────────────────────────────────────
+   Las tarjetas de la vitrina y las filas de «Marcas» suben un poco y se asientan al entrar en pantalla (línea de
+   tiempo de vista; translate y scale, sin opacidad: llevan texto). Donde no hay `view()`, quietas. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .trofeo-tarjeta, .marca-fila { animation: asienta-al-bajar linear both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
+  }
+}
+@keyframes asienta-al-bajar { from { translate: 0 20px; scale: .97; } }
+.record-serie strong { color: var(--oro-texto); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --oro-texto: #E9D49A; } }
+:root[data-theme="dark"] { --oro-texto: #E9D49A; }
