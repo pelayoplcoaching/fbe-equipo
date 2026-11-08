@@ -4492,12 +4492,20 @@ try {
   // (el portapapeles solo se puede escribir con la página delante: si otra ventana de la prueba le ha quitado el foco, falla
   // a ratos; y si falla, que se diga, no que se espere al aviso 30 s)
   await p.bringToFront();
+  // (los avisos se apuntan desde antes del toque: el aviso dura poco y otro lo puede sustituir enseguida; en GitHub, a
+  // veces, no se llegaba a ver ni esperando 30 s)
+  await p.evaluate(() => {
+    window.__avisos = [];
+    const mirar = () => document.querySelectorAll('.toast').forEach((t) => { const x = t.textContent; if (x && !window.__avisos.includes(x)) window.__avisos.push(x); });
+    window.__mirarAvisos?.disconnect?.();
+    window.__mirarAvisos = new MutationObserver(mirar);
+    window.__mirarAvisos.observe(document.body, { childList: true, subtree: true, characterData: true });
+  });
   await barraSel.getByRole('button', { name: 'Copiar' }).click();
-  // (el texto se lee en el mismo momento en que se encuentra el aviso: el aviso dura poco y, si se busca y luego se lee, a
-  // veces ya se ha ido y la lectura espera 30 s y corta el resto del flujo)
-  const textoCopia = await p.waitForFunction(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent)
-    .find((t) => /mensajes copiados|No se ha podido copiar/.test(t)) || null, null, { timeout: 30000 }).then((h) => h.jsonValue()).catch(() => '');
-  check(textoCopia.includes('2 mensajes copiados'), `copia los dos (${textoCopia.trim() || 'sin aviso'})`);
+  const textoCopia = await p.waitForFunction(() => (window.__avisos || []).find((t) => /mensajes copiados|No se ha podido copiar/.test(t)) || null, null, { timeout: 30000 })
+    .then((h) => h.jsonValue()).catch(async () => `sin aviso; vistos: ${(await p.evaluate(() => window.__avisos || [])).join(' / ') || 'ninguno'}`);
+  await p.evaluate(() => window.__mirarAvisos?.disconnect?.());
+  check(textoCopia.includes('2 mensajes copiados'), `copia los dos (${textoCopia.trim()})`);
   const copiado = await p.evaluate(() => navigator.clipboard.readText());
   check(/^\[\d\d\/\d\d\/\d\d, \d{1,2}:\d\d\] Tú: Mañana a las 9/.test(copiado) && copiado.split('\n').length === 2, 'Copiar, como WhatsApp: «[12/10/26, 18:42] Tú: …»');
   await menuDe(p.locator('.burbuja.mia', { hasText: 'Mañana a las 9' }).last()).then((m) => m.getByRole('button', { name: 'Seleccionar' }).click());
