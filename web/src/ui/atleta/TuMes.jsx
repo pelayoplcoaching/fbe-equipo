@@ -6,6 +6,8 @@ import { nombreMes, mesConAnio, mesAnterior, calendarioMes, datosCompartirMes } 
 import { num } from '../../logica/calculos.js';
 import { imagenMes } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
+import { usePersonal } from './Personal.jsx';
+import { aperturasDe } from '../../logica/musica.js';
 
 const capital = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 const toneladas = (kg) => num(Math.round(kg / 100) / 10, 1);
@@ -59,6 +61,9 @@ export function CalendarioMes({ mes, dias, peq = false }) {
 export function HistoriaMes(props) { return <Capa><HistoriaMesPantalla {...props} /></Capa>; }
 function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true, nombre = null }) {
   const mes = r.mes;
+  // (v0.104) las sesiones en que abrió su música (solo el atleta: el coach no la ve)
+  const personal = usePersonal();
+  const veces = nombre ? 0 : aperturasDe(personal.datos?.musica_aperturas, mes);
   const tu = nombre ? `El ${nombreMes(mes)} de ${nombre}` : `Tu ${nombreMes(mes)}`;
   const pantallas = [
     { id: 'portada', render: () => (
@@ -115,6 +120,13 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
         <span class="historia-etq">Cardio</span>
         <p class="historia-cifra num">{r.cardio.minutos}<small>minutos</small></p>
         <p class="historia-texto">{r.cardio.km ? `${num(r.cardio.km, 1)} km en ` : 'En '}{r.cardio.sesiones} {r.cardio.sesiones === 1 ? 'sesión' : 'sesiones'}</p>
+      </>
+    ) }] : []),
+    ...(veces > 0 ? [{ id: 'musica', render: () => (
+      <>
+        <span class="historia-etq">Tu música</span>
+        <p class="historia-cifra num">{veces}<small>{veces === 1 ? 'sesión con tu música' : 'sesiones con tu música'}</small></p>
+        <p class="historia-texto">Las veces que la abriste al empezar a entrenar.</p>
       </>
     ) }] : []),
     ...(salud && r.habitos ? [{ id: 'habitos', render: () => (

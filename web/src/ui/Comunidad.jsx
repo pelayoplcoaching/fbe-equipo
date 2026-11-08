@@ -43,6 +43,7 @@ import { leerVistoEquipo, guardarVistoEquipo, leerCelebrados, marcarCelebrado, l
 import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 import { PlegableEquipo } from './PlegableEquipo.jsx';
 import { Imagen } from './Imagen.jsx';
+import { ListaEquipo } from './atleta/Musica.jsx';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
 // v0.71: con la 043, también las preguntas del equipo
@@ -170,6 +171,8 @@ function DentroDelEquipo({ m, alCambiar }) {
         <p class="animos-recibidos peq"><span class="animos-ico" aria-hidden="true">🙌</span><span>Te han animado esta semana: <strong>{quienes(recibidos.map((x) => x.nombre), 3)}</strong></span></p>
       )}
       <EntrenandoAhora />
+      {/* (v0.104) la lista colaborativa del equipo, si el coach la ha enlazado */}
+      <ListaEquipo />
       {/* (diseño) plegados en pastillas, para que el muro empiece por las publicaciones */}
       <div class="equipo-filas">
         <PlegableEquipo id="proximos" titulo="Próximos" icono="calendario" cuenta=".pr-item"><Proximos cambios={eventos} alCambiar={() => setEventos((v) => v + 1)} /></PlegableEquipo>

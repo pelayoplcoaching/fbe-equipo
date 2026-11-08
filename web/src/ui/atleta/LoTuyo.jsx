@@ -7,6 +7,7 @@ import { useApp, useCarga, Hoja, Icono, GrupoIos, FilaIos } from '../comunes.jsx
 import { LIMITES, limpiarPersonal, urlMusica, nombreMusica, cumpleValido } from '../../logica/personal.js';
 import { MESES_LARGOS } from '../../logica/mes.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
+import { esCancion } from '../../logica/musica.js';
 
 export const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de ${MESES_LARGOS[p.cumple_mes - 1]}` : null);
 
@@ -25,22 +26,24 @@ export function LoTuyo() {
       <FilaIos icono="diana" titulo="Tu porqué" detalle={p.porque ? `«${p.porque}»` : 'Una frase tuya para los días que cuestan'} alTocar={() => setEditar('porque')} etiqueta="Escribir tu porqué" />
       {entrena && <FilaIos icono="estrella" titulo="Tus tres ejercicios" valor={nFav ? `${nFav} de 3` : 'Elegir'} alTocar={() => setEditar('favoritos')} etiqueta="Elegir tus tres ejercicios" />}
       {entrena && <FilaIos icono="altavoz" titulo="Tu música" valor={p.musica_url ? nombreMusica(p.musica_url) : 'Añadir'} alTocar={() => setEditar('musica')} etiqueta="Poner el enlace a tu música" />}
+      {entrena && <FilaIos icono="trofeo" titulo="Tu canción de récord" valor={p.cancion_url ? nombreMusica(p.cancion_url) : 'Elegir'} alTocar={() => setEditar('cancion')} etiqueta="Elegir tu canción de récord" />}
       <FilaIos icono="calendario" titulo="Tu cumpleaños" valor={textoCumple(p) || 'Añadir'} alTocar={() => setEditar('cumple')} etiqueta="Poner tu cumpleaños" />
       {editar && <HojaLoTuyo campo={editar} actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
     </GrupoIos>
   );
 }
 
-const TITULOS = { apodo: 'Cómo quieres que te llamemos', porque: 'Tu porqué', favoritos: 'Tus tres ejercicios', musica: 'Tu música', cumple: 'Tu cumpleaños' };
+const TITULOS = { apodo: 'Cómo quieres que te llamemos', porque: 'Tu porqué', favoritos: 'Tus tres ejercicios', musica: 'Tu música', cancion: 'Tu canción de récord', cumple: 'Tu cumpleaños' };
 
 function HojaLoTuyo({ campo, actual, alCerrar, alGuardar }) {
   const { api, atleta, aviso } = useApp();
-  const [f, setF] = useState(() => ({ apodo: actual.apodo || '', porque: actual.porque || '', favoritos: [...(actual.favoritos || [])], musica_url: actual.musica_url || '', cumple_mes: actual.cumple_mes || '', cumple_dia: actual.cumple_dia || '' }));
+  const [f, setF] = useState(() => ({ apodo: actual.apodo || '', porque: actual.porque || '', favoritos: [...(actual.favoritos || [])], musica_url: actual.musica_url || '', cancion_url: actual.cancion_url || '', cumple_mes: actual.cumple_mes || '', cumple_dia: actual.cumple_dia || '' }));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const ejercicios = useCarga(() => (campo === 'favoritos' ? api.progreso(atleta.id).then((r) => r.ejercicios || []).catch(() => []) : Promise.resolve([])), [campo]);
   const cambiar = (c) => { setF({ ...f, ...c }); setError(null); };
   const musicaMal = campo === 'musica' && f.musica_url.trim() && urlMusica(f.musica_url) === false;
+  const cancionMal = campo === 'cancion' && f.cancion_url.trim() && !esCancion(f.cancion_url);
   const cumpleMal = campo === 'cumple' && (f.cumple_mes !== '' || f.cumple_dia !== '') && !cumpleValido(Number(f.cumple_mes), Number(f.cumple_dia));
   async function guardar(e) {
     e?.preventDefault();
@@ -95,6 +98,13 @@ function HojaLoTuyo({ campo, actual, alCerrar, alGuardar }) {
             <span class={musicaMal ? 'error-campo' : 'ayuda'}>{musicaMal ? 'Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal.' : 'En tu app de música: Compartir → Copiar enlace. Saldrá un botón para abrirla al empezar cada sesión.'}</span>
           </div>
         )}
+        {campo === 'cancion' && (
+          <div class="campo">
+            <label for="lt-cancion">Enlace a la canción</label>
+            <input id="lt-cancion" class="entrada" type="url" inputMode="url" maxLength={LIMITES.musica} value={f.cancion_url} onInput={(e) => cambiar({ cancion_url: e.currentTarget.value })} placeholder="https://open.spotify.com/track/…" autoFocus aria-invalid={cancionMal ? 'true' : undefined} />
+            <span class={cancionMal ? 'error-campo' : 'ayuda'}>{cancionMal ? 'Tiene que ser una canción (no una lista) de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal.' : 'La que te pondrías al batir un récord: en tu app de música, Compartir → Copiar enlace. Sale en el resumen cuando batas uno.'}</span>
+          </div>
+        )}
         {campo === 'cumple' && (
           <div class="pila-s">
             <div class="rejilla-2">
@@ -117,8 +127,9 @@ function HojaLoTuyo({ campo, actual, alCerrar, alGuardar }) {
           </div>
         )}
         {error && <p class="error" role="alert">{error}</p>}
-        <button class="btn btn-primario btn-grande" disabled={guardando || musicaMal || cumpleMal}><Icono n="hecho" /> {guardando ? 'Guardando…' : 'Guardar'}</button>
+        <button class="btn btn-primario btn-grande" disabled={guardando || musicaMal || cumpleMal || cancionMal}><Icono n="hecho" /> {guardando ? 'Guardando…' : 'Guardar'}</button>
         {campo === 'cumple' && actual.cumple_mes && <button type="button" class="btn plano" disabled={guardando} onClick={() => quitar({ cumple_mes: null, cumple_dia: null })}>Quitar mi cumpleaños</button>}
+        {campo === 'cancion' && actual.cancion_url && <button type="button" class="btn plano" disabled={guardando} onClick={() => quitar({ cancion_url: null })}>Quitar la canción</button>}
         {campo === 'musica' && actual.musica_url && <button type="button" class="btn plano" disabled={guardando} onClick={() => quitar({ musica_url: null })}>Quitar el enlace</button>}
       </form>
     </Hoja>

@@ -1,12 +1,11 @@
 // Piezas de la personalización (v0.104) que salen en varios sitios:
 //   · MensajeCoach: lo que el coach dejó escrito para ese momento, como una cita con su foto (récord, bloque, racha…)
 //   · RecordAlAlcance: en la portada de la sesión, la carga que batiría su récord si lo reciente dice que la tiene
-//   · BotonMusica: en la portada, abrir su lista (lo que eligió en «Lo tuyo»)
 //   · RecuerdoProgreso: al terminar, «En mayo: 60 kg × 8. Hoy: 75 kg × 8»
 //   · CifraObjetivo y TusEjercicios: arriba en Progreso, lo de su objetivo y sus tres ejercicios
 import { useApp, useCarga, Icono, Avatar } from '../comunes.jsx';
 import { LOBO } from '../marca-lobo.js';
-import { textoMensajeCoach, mensajeDe, nombreSaludo, recordAlAlcance, recuerdoProgreso, textoSerieCorta, nombreMusica, cifraObjetivo } from '../../logica/personal.js';
+import { textoMensajeCoach, mensajeDe, nombreSaludo, recordAlAlcance, recuerdoProgreso, textoSerieCorta, cifraObjetivo } from '../../logica/personal.js';
 import { OBJETIVOS } from '../../logica/cuestionario.js';
 import { num } from '../../logica/calculos.js';
 import { hoyISO } from '../../logica/fechas.js';
@@ -57,17 +56,6 @@ export function RecordAlAlcance({ ejercicios = [] }) {
         <span class="mini terciario">Sale de lo que has hecho estas semanas. Si el día no acompaña, no pasa nada: manda tu coach.</span>
       </div>
     </section>
-  );
-}
-
-export function BotonMusica() {
-  const personal = usePersonal();
-  const url = personal.datos?.musica_url;
-  if (!url) return null;
-  return (
-    <a class="btn btn-ancho boton-musica" href={url} target="_blank" rel="noopener noreferrer">
-      <Icono n="altavoz" /> Tu música en {nombreMusica(url)}
-    </a>
   );
 }
 

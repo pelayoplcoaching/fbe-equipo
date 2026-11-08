@@ -10,6 +10,7 @@ import { revisarVariante, equivalentes } from '../../logica/variantes.js';
 import { MODALIDADES, limpiarCardio, textoCardio, palabrasEsfuerzo } from '../../logica/cardio.js';
 import { teclaEnRejilla } from '../rejilla.js';
 import { ProgramarFBE, semanasParaProgramar } from './ProgramarFBE.jsx';
+import { CampoMusica } from './PersonalCoach.jsx';
 
 const DESCANSOS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
 const ESTADOS_BLOQUE = [['planificado', 'Planificado'], ['activo', 'Activo'], ['ajustado', 'Ajustado'], ['finalizado', 'Finalizado'], ['cancelado', 'Cancelado']];
@@ -139,6 +140,8 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         </div>
         <div class="campo"><label for={`b-obj-${bloque.id}`}>Objetivo del bloque</label>
           <input id={`b-obj-${bloque.id}`} class="entrada" defaultValue={bloque.objetivo || ''} placeholder="Lo verá el atleta en su programa" onChange={(e) => guardar('bloques', bloque.id, { objetivo: nulo(e.currentTarget.value.trim()) })} /></div>
+        {/* (v0.104) la música de todo el bloque (en las plantillas, no: se enlaza al bloque de cada atleta) */}
+        {!bloque.es_plantilla && <CampoMusica clave={`bloque:${bloque.id}`} etiqueta="Música del bloque" />}
         <div class="fila-envolver">
           {!bloque.es_plantilla && <button class="btn btn-peq" onClick={async () => { const p = await estructura(() => api.copiarBloque(bloque.id, { nombre: bloque.nombre }), 'Guardado como plantilla'); if (p) alCrearPlantilla?.(p); }}><Icono n="plantillas" /> Guardar como plantilla</button>}
           <button class="btn btn-peq btn-peligro" onClick={() => setConfirmarBorrado({ tipo: 'bloque' })}><Icono n="basura" /> Borrar {bloque.es_plantilla ? 'plantilla' : 'bloque'}</button>
@@ -540,6 +543,8 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
       {!sesion.completada && sesion.dia_previsto && <p class="mini terciario plan-coach"><Icono n="calendario" /> El atleta la tiene prevista el {fmtConDia(sesion.dia_previsto)}.</p>}
       <textarea class="area" style="min-height:56px" aria-label="Dinámica de la sesión" placeholder={sesion.tipo === 'cardio' ? 'Qué hacer: por ejemplo, 30 min en zona 2 (puedes hablar sin ahogarte) o 6 × 2 min fuerte con 2 min suave' : 'Dinámica: calentamiento, orden, indicaciones…'} defaultValue={sesion.dinamica || ''}
         onChange={(e) => guardar('sesiones', sesion.id, { dinamica: nulo(e.currentTarget.value.trim()) })} />
+      {/* (v0.104) la música de esta sesión (una lista, un álbum o un episodio para el cardio largo) */}
+      <CampoMusica clave={`sesion:${sesion.id}`} etiqueta="Música de la sesión" />
       {(sesion.tipo === 'cardio' || sesion.cardio || conCardio) ? <PautaCardio sesion={sesion} guardar={guardar} />
         : <button class="btn-texto" style="justify-self:start" onClick={() => setConCardio(true)}><Icono n="intervalos" /> Añadir cardio al final</button>}
       {pautas.length > 0 && (

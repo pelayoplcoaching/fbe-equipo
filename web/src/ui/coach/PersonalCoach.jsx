@@ -2,9 +2,11 @@
 //   · CumplesHoy: en Atletas, quién cumple años hoy (con un toque, su ficha)
 //   · LoSuyo: en la ficha, cómo quiere que le llamemos, su porqué, su cumpleaños y su música
 //   · MensajesAutomaticos: en su cuenta, lo que les sale a sus atletas en los momentos importantes
+//   · MusicaCoach y CampoMusica: las listas que enlaza (en su cuenta) y la de una sesión o un bloque (en el editor)
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
-import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica } from '../../logica/personal.js';
+import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica, urlMusica } from '../../logica/personal.js';
+import { FAMILIAS_MUSICA } from '../../logica/musica.js';
 import { MESES_LARGOS } from '../../logica/mes.js';
 import { hoyISO } from '../../logica/fechas.js';
 
@@ -105,5 +107,84 @@ function HojaMensaje({ momento, actual, alCerrar, alGuardar }) {
         {actual && <button type="button" class="btn plano" disabled={guardando} onClick={() => guardar('')}>Quitar el mensaje</button>}
       </form>
     </Hoja>
+  );
+}
+
+// ---------- La música que enlaza el coach (en su cuenta) ----------
+// Una lista por tipo de sesión (la app ofrece a cada atleta la que va con su sesión), la de las semanas de descarga,
+// la colaborativa del equipo y una por cada cardio, a su ritmo. Lo de una sesión o un bloque, en el editor.
+const GRUPOS_MUSICA = [
+  ['Por tipo de sesión', FAMILIAS_MUSICA.map(([k, t]) => [`familia:${k}`, t])],
+  ['Otras', [['descarga', 'Semanas de descarga'], ['equipo', 'La lista del equipo (colaborativa)']]],
+  ['Al ritmo de cada cardio', [['ritmo:carrera', 'Carrera'], ['ritmo:andar', 'Andar'], ['ritmo:bici', 'Bici'], ['ritmo:eliptica', 'Elíptica'], ['ritmo:remo', 'Remo'], ['ritmo:cuerda', 'Comba']]],
+];
+export function MusicaCoach() {
+  const { api } = useApp();
+  const lista = useCarga(() => api.musicaCoach().catch(() => null), []);
+  const [editar, setEditar] = useState(null);
+  if (lista.datos === null && !lista.cargando) return null;
+  const m = lista.datos || {};
+  return (
+    <section class="seccion musica-coach">
+      <h2>Música</h2>
+      {GRUPOS_MUSICA.map(([titulo, claves]) => (
+        <div class="panel" key={titulo}>
+          <div class="panel-pad peq secundario recursos-cab">{titulo}</div>
+          <ul class="lista">
+            {claves.map(([k, t]) => (
+              <li key={k}>
+                <button class="fila-ios fila-boton" onClick={() => setEditar([k, t])} aria-label={`${t}: ${m[k] ? 'cambiar la lista' : 'enlazar una lista'}`}>
+                  <span class="fila-ios-texto"><span class="fila-ios-titulo">{t}</span><span class="peq terciario">{m[k] ? nombreMusica(m[k]) : 'Sin lista'}</span></span>
+                  <Icono n={m[k] ? 'editar' : 'mas'} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <p class="mini terciario">Crea las listas en tu Spotify (o Apple Music, YouTube Music…) y pega aquí su enlace. Cada atleta ve en la portada de su sesión la que le toca, después de la suya; la del equipo sale en Equipo. Para una sesión o un bloque concretos, en el editor del programa. Nadie tiene que iniciar sesión con Spotify en la app.</p>
+      {editar && <HojaEnlaceMusica clave={editar[0]} titulo={editar[1]} actual={m[editar[0]] || ''} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); lista.recargar(true); }} />}
+    </section>
+  );
+}
+
+export function HojaEnlaceMusica({ clave, titulo, actual, alCerrar, alGuardar }) {
+  const { api, aviso } = useApp();
+  const [u, setU] = useState(actual);
+  const [guardando, setGuardando] = useState(false);
+  const mal = u.trim() && !urlMusica(u);
+  const guardar = async (url) => {
+    setGuardando(true);
+    try { await api.guardarMusicaCoach(clave, url); aviso(url.trim() ? 'Lista enlazada' : 'Lista quitada'); alGuardar(); } catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }
+  };
+  return (
+    <Hoja titulo={titulo} alCerrar={alCerrar}>
+      <form class="pila" onSubmit={(e) => { e.preventDefault(); if (!mal) guardar(u); }}>
+        <div class="campo">
+          <label for="musica-enlace">Enlace</label>
+          <input id="musica-enlace" class="entrada" type="url" inputMode="url" value={u} onInput={(e) => setU(e.currentTarget.value)} placeholder="https://open.spotify.com/playlist/…" autoFocus aria-invalid={mal ? 'true' : undefined} />
+          <span class={mal ? 'error-campo' : 'ayuda'}>{mal ? 'Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal.' : 'Una lista, un álbum o un episodio de podcast (para el cardio largo).'}</span>
+        </div>
+        <button class="btn btn-primario btn-grande" disabled={guardando || mal}><Icono n="hecho" /> Guardar</button>
+        {actual && <button type="button" class="btn plano" disabled={guardando} onClick={() => guardar('')}>Quitar la lista</button>}
+      </form>
+    </Hoja>
+  );
+}
+
+// En el editor del programa: la música de una sesión o de un bloque (clave sesion:<id> o bloque:<id>)
+export function CampoMusica({ clave, etiqueta = 'Música' }) {
+  const { api } = useApp();
+  const lista = useCarga(() => api.musicaCoach().catch(() => null), []);
+  const [editar, setEditar] = useState(false);
+  if (!lista.datos) return null;
+  const url = lista.datos[clave];
+  return (
+    <>
+      <button type="button" class="btn-texto campo-musica" style="justify-self:start" onClick={() => setEditar(true)}>
+        <Icono n="altavoz" /> {url ? `${etiqueta}: ${nombreMusica(url)}` : `Añadir ${etiqueta.toLowerCase()}`}
+      </button>
+      {editar && <HojaEnlaceMusica clave={clave} titulo={etiqueta} actual={url || ''} alCerrar={() => setEditar(false)} alGuardar={() => { setEditar(false); lista.recargar(true); }} />}
+    </>
   );
 }

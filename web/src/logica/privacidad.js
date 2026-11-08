@@ -33,8 +33,9 @@ export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) &&
 // compañeros de racha, los retos por equipos, los minutos de cardio en los retos y las insignias) y la 2026-12.10 (v0.71: los temas,
 // las preguntas al coach y las del equipo, varias fotos, lo guardado, la búsqueda y la mejor respuesta) y la 2026-12.11 (v0.72: los
 // eventos, el atleta de la semana, el panel del coach y la moderación) y la 2026-12.12 (v0.73: los aniversarios, el mes en el equipo,
-// los hitos, las reacciones y pegatinas y los momentos de 24 horas) y la 2026-12.13 (v0.95: cómo va la app, los fallos y los tiempos) y la 2026-12.14 (v0.104: lo que eliges para tu app)
+// los hitos, las reacciones y pegatinas y los momentos de 24 horas) y la 2026-12.13 (v0.95: cómo va la app, los fallos y los tiempos) y la 2026-12.14 (v0.104: lo que eliges para tu app) y la 2026-12.15 (v0.107: tu música)
 export const NOVEDADES_PRIVACIDAD = [
+  ['estrella', 'Tu música', 'Puedes poner tu canción de récord y la app cuenta cuántas veces abres tu música al mes. Para el nombre y la portada de un enlace, tu móvil se lo pide a Spotify, y su reproductor solo se carga al tocarlo.', '2026-12.15'],
   ['perfil', 'Lo que eliges para tu app', 'Si quieres, en «Lo tuyo» puedes poner tu apodo, tu porqué, tus tres ejercicios, tu música y tu cumpleaños (sin el año). Lo ven solo tú y tu coach, nunca el equipo, y lo borras cuando quieras.', '2026-12.14'],
   ['reloj', 'Cómo va la app', 'Para ver si la app va lenta, cada móvil manda al día cuánto tarda en abrir, en cada pantalla y en guardar, con el tipo de móvil. Tu coach lo ve sin tu nombre y se borra a los 60 días. Si algo falla, se apunta el error técnico, nunca lo que escribes.', '2026-12.13'],
   ['equipo', 'Aniversarios, tu mes y momentos de 24 h', 'Tu aniversario en FBE sale en el muro (salvo con «No salir en el ranking»). Del 1 al 7, los recuentos del mes del equipo y, solo para ti, los tuyos. Los momentos se ven 24 horas y después se borran con su foto.', '2026-12.12'],
