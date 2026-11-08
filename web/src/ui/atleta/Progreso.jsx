@@ -561,7 +561,7 @@ function Cifras({ constancia, semanas }) {
   return (
     <dl class="cifras panel" aria-label="Tus cifras">
       {celdas.map((x) => (
-        <div key={x.k} class={x.destaca ? 'destaca' : ''}>
+        <div key={x.k} class={x.destaca ? 'destaca' : ''} data-ico={x.ico}>
           <dd class="num"><CifraSube texto={x.v} /></dd>
           <dt><Icono n={x.ico} />{x.k}</dt>
         </div>

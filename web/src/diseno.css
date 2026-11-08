@@ -2141,3 +2141,112 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    La línea de las gráficas de fuerza y de peso deja un resplandor suave del acento debajo, como en las apps de salud. */
 .grafica path.linea { filter: drop-shadow(0 5px 5px color-mix(in srgb, var(--morado) 35%, transparent)); }
 @media (forced-colors: active) { .grafica path.linea { filter: none; } }
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   TANDA 29 · Otra ronda de belleza muy visible (8/11, madrugada)
+   ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 139 · El coach con su lobo en sus notas (tanda 29) ───────────────────────────────────────────────────────────────
+   La nota del coach en la tarjeta de Hoy y «Cómo es la sesión» llevan el lobo del coach en lugar del icono de mensaje
+   (Hoy.jsx, Sesion.jsx: clase con-lobo), como sus respuestas y sus avisos (bloques 91 y 126). */
+.nota-coach.con-lobo { grid-template-columns: 26px 1fr; }
+.nota-coach.con-lobo > .nota-lobo { width: 26px; height: 26px; border-radius: 50%; margin-top: -2px; box-shadow: 0 0 0 1.5px color-mix(in srgb, #fff 30%, transparent); }
+
+/* ── 140 · «¿Cómo llegas hoy?» con el color de cada respuesta (tanda 29) ───────────────────────────────────────────────
+   En la preparación de la sesión, la pastilla de la opción elegida se tiñe según la respuesta: la primera (Mal, Baja,
+   Bastantes) en rojo suave, la del medio en ámbar suave y la tercera (Bien, Alta, Ninguna) en verde suave. Como está
+   ordenado (data-v 1 a 3), vale para las tres preguntas. El texto, con el mismo contraste. */
+.preparacion .segmentos[data-pastilla]:has(> [data-v="1"][aria-pressed="true"]) { --seg-activo: color-mix(in srgb, var(--alerta) 16%, var(--hoja)); }
+.preparacion .segmentos[data-pastilla]:has(> [data-v="2"][aria-pressed="true"]) { --seg-activo: color-mix(in srgb, var(--aviso) 18%, var(--hoja)); }
+.preparacion .segmentos[data-pastilla]:has(> [data-v="3"][aria-pressed="true"]) { --seg-activo: color-mix(in srgb, var(--ok) 16%, var(--hoja)); }
+
+/* ── 141 · Los «+» y «−» redondos y del acento (tanda 29) ─────────────────────────────────────────────────────────────
+   En los campos con «+» y «−» (el peso, los hábitos, el check-in…), los botones son discos suaves del acento dentro
+   de la caja, en vez de signos grises sueltos. */
+.paso { padding-inline: 6px; grid-template-columns: 38px minmax(0, 1fr) 38px; }
+.paso > button { width: 38px; height: 38px; align-self: center; border-radius: 50%; background: var(--morado-suave); color: var(--morado); font-weight: 650; transition: background-color var(--mov-rapido) var(--curva-casa), transform var(--mov-rapido) var(--curva-casa); }
+.paso > button:active { background: color-mix(in srgb, var(--morado) 24%, var(--hoja)); }
+.paso > button:disabled { opacity: .45; }
+
+/* ── 142 · Barras de progreso con degradado y brillo (tanda 29) ───────────────────────────────────────────────────────
+   Las barras de los objetivos y de los primeros pasos se llenan con un degradado del acento (claro a la izquierda) y un
+   brillo en la punta; las conseguidas, en verde. */
+.progreso-barra { height: 9px; border-radius: 999px; }
+.progreso-barra span { border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, #fff), var(--morado)); box-shadow: 2px 0 8px color-mix(in srgb, var(--morado) 45%, transparent); }
+.progreso-barra.hecho span { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 55%, #fff), var(--ok)); box-shadow: none; }
+
+/* ── 143 · «Tus cifras» con su icono en un disco de color (tanda 29) ──────────────────────────────────────────────────
+   En Progreso, cada cifra lleva su icono en un disco suave de su color (Progreso.jsx: data-ico): la racha en naranja,
+   los días en el acento, las series en azul y los récords en oro. */
+.cifras > div[data-ico] { --t: var(--morado); }
+.cifras > div[data-ico="llama"] { --t: var(--t-habitos); }
+.cifras > div[data-ico="hoy"] { --t: var(--t-tarea); }
+.cifras > div[data-ico="trofeo"] { --t: var(--oro); }
+.cifras > div[data-ico] dt svg { width: 24px; height: 24px; padding: 5px; box-sizing: border-box; border-radius: 50%; background: color-mix(in srgb, var(--t) 15%, var(--hoja)); color: var(--t); }
+
+/* ── 144 · El ejercicio terminado con su borde verde (tanda 29) ───────────────────────────────────────────────────────
+   En la sesión, un ejercicio con todas sus series hechas (su ✓ arriba a la derecha) lleva un filo verde y un velo muy
+   leve, como la serie hecha (bloque 28). */
+.ejercicio:has(> .ejercicio-cab .progreso-series.hecho) { box-shadow: var(--sombra), 0 0 0 1.5px color-mix(in srgb, var(--ok) 55%, transparent); background-image: linear-gradient(color-mix(in srgb, var(--ok) 4%, transparent), color-mix(in srgb, var(--ok) 4%, transparent)); }
+
+/* ── 145 · Los músculos más trabajados brillan (tanda 29) ─────────────────────────────────────────────────────────────
+   En el mapa de series por músculo, los músculos con 5 series o más dejan un resplandor de su color, más fuerte cuantas
+   más series. */
+.mapa-muscular .musculo.m2 { filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--morado) 35%, transparent)); }
+.mapa-muscular .musculo.m3 { filter: drop-shadow(0 0 2.5px color-mix(in srgb, var(--morado) 45%, transparent)); }
+.mapa-muscular .musculo.m4 { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--morado) 65%, transparent)); }
+
+/* ── 146 · La lista de la compra con las cantidades en píldora (tanda 29) ─────────────────────────────────────────────
+   En la lista de la compra, la cantidad de cada cosa (150 g, 2 uds…) va en una píldora suave del acento. */
+.compra-total { display: inline-block; padding: 0 8px; margin-left: 2px; border-radius: 999px; background: var(--morado-suave); color: var(--morado); font-size: 0.875em; line-height: 1.6; font-variant-numeric: tabular-nums; }
+
+/* ── 147 · El «Pendiente» de la hoja «Más» con un punto que late (tanda 29) ───────────────────────────────────────────
+   El chip «Pendiente» del check-in en «Más» lleva delante un punto de su color que late despacio. */
+.mas-fila .fila-ios-valor .chip.aviso::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--aviso); flex: none; }
+@media (prefers-reduced-motion: no-preference) { .mas-fila .fila-ios-valor .chip.aviso::before { animation: pendiente-late 2s ease-in-out infinite; } }
+@keyframes pendiente-late { 50% { transform: scale(.55); opacity: .55; } }
+
+/* ── 148 · La cabecera pegada con un filo de luz (tanda 29) ───────────────────────────────────────────────────────────
+   Al pegarse arriba en compacto, la cabecera de cada pantalla lleva en su borde de abajo un filo fino del acento que
+   se funde hacia los lados. */
+.cabecera-grande.compacta::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--morado) 55%, transparent) 50%, transparent); pointer-events: none; }
+
+/* ── 149 · La fecha de Hoy en una pastilla (tanda 29) ─────────────────────────────────────────────────────────────────
+   En la cabecera de Hoy, la fecha («dom 8 nov») va en una pastilla suave junto al avatar. */
+.cabecera > .titulo + .sub { padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--hoja) 70%, transparent); box-shadow: inset 0 0 0 1px var(--linea); font-weight: 650; color: var(--tinta-2); }
+
+/* ── 150 · Casillas redondas como en Recordatorios (tanda 29) ─────────────────────────────────────────────────────────
+   Las casillas de marcar (lista de la compra, consentimientos, «elige varias»…) son círculos con filo que se llenan de
+   verde con su ✓ al marcarse (y siguen saltando: bloque 39). Con colores forzados, las del sistema. */
+:root { --marca-blanca: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.2 4.2L18.5 7.8'/%3E%3C/svg%3E"); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --marca-blanca: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F2A1B' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.2 4.2L18.5 7.8'/%3E%3C/svg%3E"); } }
+:root[data-theme="dark"] { --marca-blanca: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F2A1B' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.2 4.2L18.5 7.8'/%3E%3C/svg%3E"); }
+@media not (forced-colors: active) {
+  .casilla input[type="checkbox"]:not(.interruptor) { -webkit-appearance: none; appearance: none; flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--tinta-3) 75%, transparent); background: var(--hoja); cursor: pointer; transition: background-color var(--mov-rapido) var(--curva-casa), border-color var(--mov-rapido) var(--curva-casa); }
+  .casilla input[type="checkbox"]:not(.interruptor):checked { border-color: var(--ok); background: var(--ok) var(--marca-blanca) center / 15px no-repeat; }
+  .casilla input[type="checkbox"]:not(.interruptor):focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+  .casilla input[type="checkbox"]:not(.interruptor):disabled { opacity: .5; cursor: default; }
+  .chat-adjunto .casilla input[type="checkbox"] { width: 16px; height: 16px; border-width: 1.5px; background-size: 11px; }
+}
+
+/* ── 151 · El botón de cerrar de las hojas en un disco (tanda 29) ─────────────────────────────────────────────────────
+   Como en las hojas de iOS: la ✕ de arriba a la derecha va en un disco gris suave, más pequeño y más claro. */
+.hoja-cab .cerrar-hoja { width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: 50%; background: color-mix(in srgb, var(--tinta) 7%, transparent); color: var(--tinta-2); }
+.hoja-cab .cerrar-hoja svg { width: 17px; height: 17px; stroke-width: 2.4; }
+
+/* ── 152 · Los consejos con su icono en un disco (tanda 29) ───────────────────────────────────────────────────────────
+   Los consejos de primera vez (Pista) llevan su icono en un disco suave del acento, en vez de suelto. */
+.pista, .seccion > .pista, .contenido > .pista { grid-template-columns: 26px minmax(0, 1fr) auto; }
+.pista > svg:first-child { width: 26px; height: 26px; padding: 5px; box-sizing: border-box; margin-top: -2px; border-radius: 50%; background: var(--morado-suave); }
+
+/* ── 153 · (tanda 29) Lo de esta ronda, sin movimiento con «reducir movimiento» ───────────────────────────────────────
+   (solo el punto del «Pendiente» se mueve: va en su @media; lo demás es estático.) */
+
+/* ── 154 · Convivir con las ilustraciones de la v0.103 (tanda 29) ─────────────────────────────────────────────────────
+   imagenes.css trae ya la miniatura del paisaje de cada mes en «Tus meses» (.mes-mini, con .con-mini) y la manada
+   bajo la luna en la entrada al Equipo (.franja-manada). Con ellas, sobran la portada de historia pequeña de esa fila
+   (bloque 127) y la escena de los tres lobos de la entrada (bloque 103; la regla de imagenes.css buscaba el icono de
+   antes, .entrar-equipo-ico). */
+.fila-semana.con-mini { grid-template-columns: 3.5rem minmax(0, 1fr); }
+.fila-semana.con-mini > .portada-historia { display: none; }
+.entrar-equipo > .franja-manada ~ .entrar-equipo-ilu { display: none; }
