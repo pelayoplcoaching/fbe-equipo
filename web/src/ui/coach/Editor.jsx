@@ -151,7 +151,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       <div class="separa">
         <div class="semanas-tabs" role="group" aria-label="Semanas">
           {d.semanas.map((s) => (
-            <button key={s.id} class={s.programacion === 'programada' ? 'programada' : ''} aria-pressed={s.id === semanaId ? 'true' : 'false'} onClick={() => setSemanaId(s.id)}>
+            <button key={s.id} data-est={s.programacion} class={s.programacion === 'programada' ? 'programada' : ''} aria-pressed={s.id === semanaId ? 'true' : 'false'} onClick={() => setSemanaId(s.id)}>
               S{s.numero}<span class="est">{bloque.es_plantilla ? `${(d.sesiones[s.id] || []).length} días` : ESTADO_SEMANA[s.programacion]}</span>
             </button>
           ))}

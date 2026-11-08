@@ -47,7 +47,7 @@ function BuscadorPantalla({ alCerrar, ir }) {
               const cab = it.grupo !== grupo ? (grupo = it.grupo) : null;
               return [
                 cab && <li key={`g-${cab}`} class="paleta-grupo" role="presentation">{cab}</li>,
-                <li key={it.id} id={`paleta-op-${i}`} data-i={i} role="option" aria-selected={i === sel ? 'true' : 'false'}
+                <li key={it.id} id={`paleta-op-${i}`} data-i={i} data-tipo={String(it.id).split('-')[0]} role="option" aria-selected={i === sel ? 'true' : 'false'}
                   class={`paleta-op ${i === sel ? 'sel' : ''}`} onMouseMove={() => setSel(i)} onClick={() => elegir(it)}>
                   <span class="paleta-ico"><Icono n={it.icono} /></span>
                   <span class="pila-xs"><span class="paleta-titulo">{it.titulo}</span>{it.detalle && <span class="mini terciario">{it.detalle}</span>}</span>
