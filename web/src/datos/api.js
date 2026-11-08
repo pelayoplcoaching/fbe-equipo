@@ -37,7 +37,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -956,7 +956,18 @@ export function crearApi(backend) {
       // (v0.104) la 2026-12.14 solo con la 050 (lo que eliges para tu app); con la 045 pero sin la 050, la 2026-12.13
       if ((await api.personal050().catch(() => null)) !== true) return VERSION_LEGAL_SIN_050;
       // (v0.107) la 2026-12.15 solo con la 050 ampliada (tu música); con la de la v0.104, la 2026-12.14
-      return (await api.musica050().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_MUSICA;
+      if ((await api.musica050().catch(() => null)) !== true) return VERSION_LEGAL_SIN_MUSICA;
+      // (v0.109) la 2026-12.16 solo con la 051 (Salud del iPhone, calendario y WhatsApp); sin ella, la 2026-12.15
+      return (await api.integraciones051().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_051;
+    },
+    // (v0.109) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
+    async integraciones051() {
+      if (!api._v051) {
+        const pr = b.rpc('integraciones_mias', {}).then(() => true).catch((e) => (falta051(e) ? false : null));
+        api._v051 = pr;
+        pr.then((x) => { if (x == null && api._v051 === pr) api._v051 = null; });
+      }
+      return api._v051;
     },
     // (v0.107) ¿Está la 050 ampliada (la música)? musica_para() la puede llamar cualquiera con sesión
     async musica050() {
