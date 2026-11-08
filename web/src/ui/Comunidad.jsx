@@ -45,6 +45,7 @@ import { PlegableEquipo } from './PlegableEquipo.jsx';
 import { Imagen } from './Imagen.jsx';
 import { ListaEquipo } from './atleta/Musica.jsx';
 import { pesoTxt } from '../logica/unidades.js';
+import { PortadaPerfil, FotoConAnillo } from './PerfilVisual.jsx';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
 // v0.71: con la 043, también las preguntas del equipo
@@ -1827,7 +1828,7 @@ function BotonAnimar({ nombre, animado, ocupado, alAnimar, grande = false }) {
 }
 
 // ---------------------------------------------------------------- el perfil en el equipo (v0.47)
-function HojaPerfilEquipo({ perfilId, alCerrar }) {
+export function HojaPerfilEquipo({ perfilId, alCerrar }) {
   const { api, aviso } = useApp();
   const { perfil } = useApp();
   const p = useCarga(() => api.perfilComunidad(perfilId), [perfilId]);
@@ -1855,8 +1856,10 @@ function HojaPerfilEquipo({ perfilId, alCerrar }) {
       <ErrorCaja error={p.error} reintentar={() => p.recargar()} />
       {p.cargando && !x ? <Cargando texto="Cargando el perfil" /> : !x ? (!p.error && <p class="secundario">Esta persona ya no está en el equipo.</p>) : (
         <div class="pila perfil-equipo">
+          {/* v0.114: con su portada (un dibujo que sale de su nombre) y el aro de su racha alrededor de la foto */}
+          <PortadaPerfil texto={x.nombre} clase="perfil-equipo-portada" />
           <div class="perfil-equipo-cab">
-            <Avatar nombre={x.nombre} foto={x.foto} clase="grande" ampliable perfilId={perfilId} />
+            <FotoConAnillo nombre={x.nombre} foto={x.foto} racha={x.coach ? 0 : x.racha} clase="grande" ampliable perfilId={perfilId} />
             <div class="pila-xs">
               <span class="fila-envolver"><strong class="pe-nombre">{x.nombre}{x.yo ? ' (tú)' : ''}</strong>{x.coach && <span class="chip morado">Coach</span>}</span>
               {x.desde && <span class="peq secundario">En el equipo desde el {fmtCorta(aISO(new Date(x.desde)))}</span>}
@@ -1902,6 +1905,15 @@ function HojaPerfilEquipo({ perfilId, alCerrar }) {
           {hojaCoach === 'silenciar' && <HojaSilenciar perfilId={perfilId} nombre={x.nombre} hasta={silenciadoHasta(x)} alCerrar={() => setHojaCoach(null)} alCambiar={() => p.recargar(true)} />}
           {!x.yo && !x.coach && mias.datos && !yaConmigo && libres > 0 && (
             <button type="button" class="btn" disabled={ocupado} onClick={invitar}><span aria-hidden="true">🤝</span> Invitar a ser compañeros de racha</button>
+          )}
+          {/* v0.114: la galería, las fotos de sus publicaciones (las que ya se ven en el muro) */}
+          {x.fotos?.length > 0 && (
+            <section class="pila-s">
+              <h3 class="pe-sub">Fotos</h3>
+              <ul class="pe-galeria">
+                {x.fotos.map((f, i) => <li key={f.id}><FotoPost ruta={f.ruta} autor={x.nombre} n={i + 1} total={x.fotos.length} /></li>)}
+              </ul>
+            </section>
           )}
           <section class="pila-s">
             <h3 class="pe-sub">{x.yo ? 'Lo último que has publicado' : 'Lo último que ha publicado'}</h3>

@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.114': {
+    atleta: [
+      'Tu perfil estrena portada, el aro de tu racha en la foto y tu porqué bajo el nombre.',
+      'Debajo, tus cifras (semana, año y siempre), tus 12 semanas, tu vitrina, tus medallas, tus hitos y tus últimos entrenos.',
+      'Si estás en el equipo: tu racha, quién te ha animado y «Ver cómo te ven tus compañeros».',
+    ],
+    coach: [
+      'El perfil de cada atleta (y el del equipo) se ve más bonito: portada, aro de la racha, cifras, vitrina, hitos y galería de fotos.',
+    ],
+  },
   '0.113': {
     coach: [
       'La actividad de cada atleta, como una línea del tiempo con el color de cada cosa; el registro, con el color del esfuerzo.',

@@ -1,0 +1,127 @@
+/* v0.114: el perfil del atleta, mas bonito y mas social (ui/PerfilVisual.jsx y ui/atleta/PerfilSocial.jsx).
+   Solo ASCII en este archivo (la demo lo exige). */
+
+/* -- La portada: el dibujo de lineas sobre la banda de la cabecera (la banda la pone diseno.css, bloque 1764) -- */
+.perfil-portada { position: absolute; inset: 0 0 auto; height: 92px; z-index: -1; overflow: hidden; pointer-events: none; }
+.perfil-portada svg { width: 100%; height: 100%; display: block; }
+.perfil-portada .acento { stroke: color-mix(in srgb, var(--morado) 45%, #fff); }
+.perfil-portada .claro { stroke: #E7E3FF; }
+.perfil-portada .tenue { stroke: #9D96CF; }
+.perfil-portada .relleno-punto.tenue { fill: #9D96CF; stroke: none; }
+.perfil-portada .relleno-punto.claro { fill: #E7E3FF; stroke: none; }
+.perfil-portada .relleno-punto.acento { fill: color-mix(in srgb, var(--morado) 45%, #fff); stroke: none; }
+
+/* En el perfil del equipo (una hoja): la portada arriba, a lo ancho, con la noche de la marca detras */
+.perfil-equipo { position: relative; isolation: isolate; }
+.perfil-equipo-portada { position: relative; inset: auto; height: 84px; margin: -4px 0 -44px; border-radius: var(--r-s);
+  background: radial-gradient(240px 140px at 88% 0%, rgba(160, 140, 255, .5), transparent 70%), linear-gradient(165deg, #2A2068, #1E1548); z-index: 0; }
+.perfil-equipo .perfil-equipo-cab { position: relative; z-index: 1; padding-inline: 10px; align-items: flex-end; }
+.perfil-equipo .perfil-equipo-cab .pe-nombre { font-size: 1.125rem; }
+
+/* -- La foto con el aro de la racha -- */
+.foto-anillo { position: relative; display: inline-grid; place-items: center; padding: 6px; border-radius: 50%; }
+.foto-anillo > .avatar, .foto-anillo > .avatar-ampliable { grid-area: 1 / 1; }
+.foto-anillo-aro { grid-area: 1 / 1; width: 100%; height: 100%; position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.foto-anillo-aro circle { fill: none; stroke-width: 4; }
+.foto-anillo-aro .aro-fondo { stroke: color-mix(in srgb, var(--tinta-3) 28%, transparent); }
+.foto-anillo-aro .aro-lleno { stroke-linecap: round; stroke: var(--morado); }
+.foto-anillo.tono-caliente .aro-lleno { stroke: #E8590C; }
+.foto-anillo.tono-fuego .aro-lleno { stroke: #D9480F; }
+.foto-anillo-llama { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 9px 2px 7px; border-radius: 999px; background: var(--hoja); box-shadow: var(--sombra); font-size: 0.8125rem; font-weight: 750; color: var(--tinta); white-space: nowrap; }
+.foto-anillo-llama svg { width: 15px; height: 15px; color: #C2410C; }
+.foto-anillo.tono-templado .foto-anillo-llama svg { color: var(--morado); }
+@media (prefers-reduced-motion: no-preference) {
+  .foto-anillo-aro .aro-lleno { animation: aro-racha 900ms cubic-bezier(.2, .8, .2, 1) both; }
+  @keyframes aro-racha { from { stroke-dasharray: 0 400; } }
+}
+
+/* -- Tu porque, bajo el nombre -- */
+.perfil-frase { margin-top: 6px; font-size: 0.9375rem; font-style: italic; color: var(--tinta-2); text-wrap: balance; max-width: 34ch; justify-self: center; }
+.perfil-apodo { margin-top: -1px; }
+
+/* -- Las pestanas del perfil -- */
+.perfil-social { display: grid; gap: 12px; }
+.perfil-pestanas { justify-self: stretch; }
+.perfil-panel { gap: 18px; }
+.perfil-sec { display: grid; gap: 10px; }
+.perfil-sec > h2, .perfil-sec .seccion-cab h2 { font-size: var(--tipo-titular); }
+
+/* -- Las cifras en baldosas -- */
+.perfil-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.perfil-tiles-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 520px) { .perfil-tiles:not(.perfil-tiles-3) { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.perfil-tile { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; min-width: 0; padding: 12px 12px 11px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra); }
+.perfil-tiles-3 .perfil-tile { background: var(--hoja-2); box-shadow: none; }
+.perfil-tile dt { font-size: 0.75rem; font-weight: 600; color: var(--tinta-2); }
+.perfil-tile dd { margin: 0; font-size: var(--cifra-s); font-weight: 800; font-stretch: var(--ancho-marcador); line-height: 1.1; display: inline-flex; align-items: baseline; gap: 2px; flex-wrap: wrap; overflow-wrap: anywhere; }
+.perfil-tile dd small { font-size: 0.75rem; font-weight: 650; color: var(--tinta-2); }
+.perfil-tile dd svg { width: 16px; height: 16px; color: #C2410C; align-self: center; }
+
+/* -- Las barras de las 12 semanas -- */
+.perfil-barras { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; height: 132px; align-items: end; }
+.pb-col { display: grid; grid-template-rows: 1fr auto; height: 100%; gap: 4px; min-width: 0; }
+.pb-barra { align-self: end; height: var(--h); min-height: 0; border-radius: 6px 6px 3px 3px; background: color-mix(in srgb, var(--morado) 34%, var(--hoja-2)); }
+.pb-col.actual .pb-barra { background: var(--morado); }
+.pb-mes { font-size: 0.6875rem; color: var(--tinta-3); text-align: left; white-space: nowrap; overflow: visible; height: 1em; }
+@media (prefers-reduced-motion: no-preference) {
+  .pb-barra { animation: pb-sube 600ms cubic-bezier(.2, .8, .2, 1) both; transform-origin: bottom; }
+  @keyframes pb-sube { from { transform: scaleY(0); } }
+}
+
+/* -- La vitrina: tus tres mejores records -- */
+.perfil-vitrina { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.perfil-trofeo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "ico nombre valor" "ico detalle detalle"; column-gap: 12px; row-gap: 2px; align-items: center;
+  padding: 12px 14px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra); }
+.perfil-trofeo[data-puesto="1"] { background: linear-gradient(135deg, color-mix(in srgb, #E3AA00 18%, var(--hoja)), var(--hoja) 70%); }
+.pt-puesto { grid-area: ico; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: color-mix(in srgb, #E3AA00 22%, var(--hoja-2)); color: #8A5A00; }
+.pt-puesto svg { width: 20px; height: 20px; }
+.perfil-trofeo[data-puesto="2"] .pt-puesto { background: color-mix(in srgb, #8E9AAF 26%, var(--hoja-2)); color: #4B5466; }
+.perfil-trofeo[data-puesto="3"] .pt-puesto { background: color-mix(in srgb, #B5651D 22%, var(--hoja-2)); color: #7A4210; }
+.pt-nombre { grid-area: nombre; font-weight: 700; overflow-wrap: anywhere; }
+.pt-valor { grid-area: valor; font-size: var(--cifra-s); font-weight: 800; font-stretch: var(--ancho-marcador); }
+.pt-valor small { font-size: 0.75rem; color: var(--tinta-2); }
+.perfil-trofeo > .mini { grid-area: detalle; }
+
+/* -- Los hitos, como una linea del tiempo -- */
+.perfil-hitos { list-style: none; margin: 0; display: grid; gap: 0; }
+.perfil-hitos li { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 8px 0; }
+.perfil-hitos li:not(:last-child)::after { content: ""; position: absolute; left: 15px; top: 40px; bottom: -8px; width: 2px; background: var(--linea); }
+.ph-ico { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); position: relative; z-index: 1; }
+.ph-ico svg { width: 17px; height: 17px; }
+.ph-texto { font-weight: 650; overflow-wrap: anywhere; }
+
+/* -- La actividad: tus entrenos como tarjetas -- */
+.perfil-feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.perfil-entreno { padding: 14px; display: grid; gap: 10px; }
+.pe-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.pe-ico { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--morado-suave); color: var(--morado); }
+.pe-ico svg { width: 20px; height: 20px; }
+.pe-titulo { overflow-wrap: anywhere; }
+.pe-records { white-space: nowrap; }
+.pe-records svg { width: 14px; height: 14px; }
+.pe-cifras { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }
+.pe-cifras > div { display: flex; flex-direction: column-reverse; gap: 1px; }
+.pe-cifras dt { font-size: 0.75rem; color: var(--tinta-2); }
+.pe-cifras dd { margin: 0; font-weight: 750; font-size: 1.0625rem; }
+.pe-musculos { margin: 0; }
+
+/* -- En el equipo -- */
+.perfil-equipo-propio .btn { justify-self: start; }
+
+/* -- La galeria del perfil del equipo (3 x 3, como Instagram) -- */
+.pe-galeria { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.pe-galeria li { aspect-ratio: 1; max-width: 100%; overflow: hidden; border-radius: 8px; background: var(--hoja-2); }
+.pe-galeria .post-foto-boton { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; }
+.pe-galeria .post-foto, .pe-galeria img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 0; max-height: none; }
+.pe-galeria .post-foto-cargando { width: 100%; height: 100%; }
+.pe-galeria p { margin: 0; padding: 6px; font-size: 0.6875rem; }
+
+/* El nombre, debajo de la banda (solo la foto se monta sobre ella) */
+.perfil-equipo .perfil-equipo-cab > .pila-xs { padding-top: 46px; min-width: 0; }
+
+/* Las insignias del perfil del equipo, como fichas en su sitio (la clase .insignia es tambien la del globo de las
+   pestanas, que va en absoluto: aqui no) */
+.pe-insignias .chip.insignia { position: static; top: auto; right: auto; min-width: 0; height: auto; display: inline-flex; align-items: center;
+  padding: 5px 11px; border: 0; border-radius: 999px; background: var(--aviso-suave); color: var(--tinta); font-size: 0.8125rem; font-weight: 650;
+  letter-spacing: 0; line-height: 1.2; box-shadow: none; animation: none; }

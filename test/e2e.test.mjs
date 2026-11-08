@@ -5864,6 +5864,16 @@ try {
   console.log('  ✗ «Programar según FBE» de la v0.74:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.114: el perfil del atleta, más bonito y más social (test/e2e-perfil-114.mjs)
+console.log('\nv0.114: el perfil, más bonito y más social');
+try {
+  const { probarPerfil114 } = await import('./e2e-perfil-114.mjs');
+  await probarPerfil114({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el perfil de la v0.114:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.112: kilos o libras para las cargas (Perfil → Este móvil): la sesión en libras se guarda en kilos (test/e2e-libras-112.mjs)
 console.log('\nv0.112: kilos o libras');
 try {

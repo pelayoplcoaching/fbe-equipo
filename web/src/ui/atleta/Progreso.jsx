@@ -306,7 +306,7 @@ function TotalesCardio({ semanas }) {
 // v0.49: 16 semanas de lunes a domingo, como en GitHub o Strava; cada cuadro, un día, más intenso con más sesiones
 // hechas (ninguna, una, dos o más). Tocar un día dice qué se hizo; con el teclado, las flechas mueven por los días.
 const DIAS_SEMANA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-function MapaConstancia({ atletaId, esCoach = false }) {
+export function MapaConstancia({ atletaId, esCoach = false }) {
   const { api } = useApp();
   const hoy = fechaMadrid();
   // Solo las sesiones de estas 16 semanas (no el historial entero)
