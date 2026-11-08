@@ -1,28 +1,39 @@
-// Genera supabase/enviar-notificaciones-panel.ts: la función «enviar-notificaciones» en UN solo archivo, para
-// desplegarla desde el panel de Supabase (Edge Functions → Deploy a new function → Via Editor) sin instalar
-// nada en el ordenador. Es exactamente el mismo código que supabase/functions/enviar-notificaciones (index.ts,
-// envio.js y webpush.js) empaquetado; las pruebas comprueban que está al día: npm run funcion-panel
+// Genera las funciones de Supabase en UN solo archivo cada una, para desplegarlas desde el panel de Supabase (Edge
+// Functions → Deploy a new function → Via Editor) sin instalar nada en el ordenador:
+//   supabase/enviar-notificaciones-panel.ts  (supabase/functions/enviar-notificaciones: index.ts, envio.js y webpush.js)
+//   supabase/integraciones-panel.ts          (v0.105, supabase/functions/integraciones: el calendario y Salud del iPhone)
+// Es exactamente el mismo código empaquetado; las pruebas comprueban que están al día: npm run funcion-panel
 import { build } from 'esbuild';
 import { writeFileSync, readFileSync } from 'node:fs';
 
-export async function generarFuncionPanel() {
-  const r = await build({
-    entryPoints: [new URL('../supabase/functions/enviar-notificaciones/index.ts', import.meta.url).pathname],
-    bundle: true, format: 'esm', platform: 'neutral', target: 'es2022', write: false, charset: 'utf8',
-    legalComments: 'none', logLevel: 'silent',
-  });
-  const cabecera = [
+const CABECERAS = {
+  'enviar-notificaciones': [
     '// FBE Equipo · función «enviar-notificaciones» en un solo archivo (generado; no lo edites a mano).',
     '// Supabase → Edge Functions → Deploy a new function → Via Editor → nombre: enviar-notificaciones →',
     '// pega TODO este archivo → Deploy. Después, en sus ajustes, desactiva «Verify JWT» (la función comprueba',
     '// ella misma quién la llama). El código fuente está en supabase/functions/enviar-notificaciones.',
-    '',
-  ].join('\n');
-  return cabecera + r.outputFiles[0].text;
+  ],
+  integraciones: [
+    '// FBE Equipo · función «integraciones» en un solo archivo (generado; no lo edites a mano).',
+    '// Supabase → Edge Functions → Deploy a new function → Via Editor → nombre: integraciones → pega TODO este',
+    '// archivo → Deploy. Después, en sus ajustes, desactiva «Verify JWT» (la llaman un calendario o un atajo, con el',
+    '// enlace personal de cada atleta). No necesita secretos. El código fuente está en supabase/functions/integraciones.',
+  ],
+};
+
+export async function generarFuncionPanel(nombre = 'enviar-notificaciones') {
+  const r = await build({
+    entryPoints: [new URL(`../supabase/functions/${nombre}/index.ts`, import.meta.url).pathname],
+    bundle: true, format: 'esm', platform: 'neutral', target: 'es2022', write: false, charset: 'utf8',
+    legalComments: 'none', logLevel: 'silent',
+  });
+  return [...CABECERAS[nombre], ''].join('\n') + r.outputFiles[0].text;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const salida = new URL('../supabase/enviar-notificaciones-panel.ts', import.meta.url);
-  writeFileSync(salida, await generarFuncionPanel());
-  console.log(`supabase/enviar-notificaciones-panel.ts  ${Math.round(readFileSync(salida).length / 1024)} KB`);
+  for (const nombre of Object.keys(CABECERAS)) {
+    const salida = new URL(`../supabase/${nombre}-panel.ts`, import.meta.url);
+    writeFileSync(salida, await generarFuncionPanel(nombre));
+    console.log(`supabase/${nombre}-panel.ts  ${Math.round(readFileSync(salida).length / 1024)} KB`);
+  }
 }

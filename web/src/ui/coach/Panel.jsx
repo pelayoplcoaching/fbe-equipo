@@ -12,6 +12,8 @@ import { equipoHoy, arcoDial } from '../../logica/tablero.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { AvisoAlmacenamientoPanel } from '../tecnica/Limpieza.jsx';
 import { CumplesHoy } from './PersonalCoach.jsx';
+import { useContactos } from './Integraciones.jsx';
+import { enlaceWhatsApp } from '../../logica/integraciones.js';
 
 // v0.49: minigráficas del panel (solo las ve el coach): el peso de las últimas semanas y las sesiones hechas de las
 // programadas en las 6 últimas, con su texto para los lectores de pantalla
@@ -281,6 +283,7 @@ function NuevoAtleta({ alCerrar }) {
 export function Invitacion({ atleta, alCerrar }) {
   const { api, aviso, modo } = useApp();
   const codigo = useCarga(() => api.crearInvitacion(atleta.id), [atleta.id], { tirar: false });   // (no es una consulta: crea el código)
+  const contactos = useContactos([atleta.id]);   // (v0.105) con su teléfono, el WhatsApp va directo a él
   const url = typeof location !== 'undefined' ? location.origin + location.pathname : '';
   const nombre = atleta.nombre.split(' ')[0];
   const mensaje = codigo.datos
@@ -295,7 +298,7 @@ export function Invitacion({ atleta, alCerrar }) {
           <div class="campo"><span class="etq">Mensaje para enviarle</span><div class="nota" style="user-select:all">{mensaje}</div></div>
           <div class="fila-envolver">
             <button class="btn btn-primario" onClick={async () => aviso((await copiar(mensaje)) ? 'Mensaje copiado' : 'Selecciona el texto y cópialo')}><Icono n="copiar" /> Copiar mensaje</button>
-            <a class="btn" href={`https://wa.me/?text=${encodeURIComponent(mensaje)}`} target="_blank" rel="noopener"><Icono n="enviar" /> WhatsApp</a>
+            <a class="btn" href={enlaceWhatsApp(contactos.datos?.[atleta.id], mensaje)} target="_blank" rel="noopener"><Icono n="enviar" /> WhatsApp</a>
           </div>
           {modo === 'demo' && <p class="mini terciario">En la demo, el código funciona en esta misma pestaña: cambia de cuenta y elige «Activa tu cuenta».</p>}
         </div>

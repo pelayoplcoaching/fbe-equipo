@@ -36,6 +36,7 @@ import { ChispaPeso } from './Panel.jsx';
 import { estadoAtleta, NOMBRE_ESTADO } from '../../logica/visual.js';
 import { ordenReal } from '../../logica/orden-sesion.js';
 import { LoSuyo } from './PersonalCoach.jsx';
+import { SaludDelMovil, ContactoAtleta } from './Integraciones.jsx';
 
 // Las de entrenamiento, fuera a quien solo le llevas la nutrición (v0.26); Nutrición, a quien solo el entrenamiento
 const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
@@ -92,12 +93,13 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           )}
           {pest === 'actividad' && <Actividad atleta={a} irA={setPest} />}
           {pest === 'registro' && <Registro atleta={a} alCambiar={alCambiar} />}
-          {pest === 'seguimiento' && <Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} />}
+          {pest === 'seguimiento' && <><SaludDelMovil atleta={a} /><Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} /></>}
           {pest === 'nutricion' && (conNutricion(a) ? <NutricionFicha atleta={a} /> : <SinNutricion irADatos={() => setPest('datos')} />)}
           {pest === 'videos' && <><MiTecnica atletaId={a.id} nombreAtleta={a.nombre} esCoach /><Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} /></>}
           {pest === 'objetivos' && <><LoSuyo atletaId={a.id} /><Objetivos atleta={a} /></>}
           {pest === 'cobros' && <CobrosAtleta atleta={a} />}
           {pest === 'notas' && <Notas atleta={a} notas={ficha.datos.notas} recargar={() => ficha.recargar(true)} />}
+          {pest === 'datos' && <ContactoAtleta atleta={a} />}
           {pest === 'datos' && <Datos atleta={a} recargar={() => ficha.recargar(true)} alBorrar={alVolver} invitar={() => setInvitar(true)} alCambiar={alCambiar} />}
         </div>
       )}

@@ -8,6 +8,7 @@ import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { progresoObjetivo, mejorReciente } from '../logica/objetivos.js';
 import { limpiarPersonal, MOMENTO_VALIDO, LIMITES, urlMusica } from '../logica/personal.js';
 import { claveValida } from '../logica/musica.js';
+import { URL_ATAJO, limpiarTelefono } from '../logica/integraciones.js';
 import { resumenHabito, cumplimientoHabitos } from '../logica/habitos.js';
 import { progresarPauta, opcionesDe } from '../logica/progresion.js';
 import { resumenCobros, cobradoEnMes, sumarMeses } from '../logica/cobros.js';
@@ -36,7 +37,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -129,6 +130,12 @@ const falta050 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
   return /personal_(mio|guardar|atletas|musica_abierta)|mensajes?_coach|musica_(coach|para)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
 };
+// (051) sin la migración de las integraciones, la app no ofrece nada de eso
+const falta051 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
+  return /integraciones_mias|integracion_(crear|quitar)|calendario_opciones|salud_diaria_de|atajos?_(lista|guardar)|contactos|contacto_guardar|contacto_mio|copia_privada/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
+};
+const AVISO_051 = 'Esto aún no está disponible: falta poner al día la base (migración 051)';
 const falta049 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
   return /rendimiento_(apuntar|resumen|borrar)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
@@ -382,7 +389,8 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
-  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella', 'rendimiento_apuntar', 'rendimiento_resumen', 'personal_mio', 'personal_atletas', 'mensajes_coach', 'musica_coach_lista', 'musica_para']);
+  'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella', 'rendimiento_apuntar', 'rendimiento_resumen', 'personal_mio', 'personal_atletas', 'mensajes_coach', 'musica_coach_lista', 'musica_para',
+  'integraciones_mias', 'salud_diaria_de', 'atajos_lista', 'contactos']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -391,6 +399,7 @@ export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
   let generacion = 0;
   let personalMemo = null, mensajesMemo = null, personalAtletasMemo = null;  // (050) lo de personal_mio, mensajes_coach y personal_atletas, un minuto
+  let contactosMemo = null;  // (051) los teléfonos de los atletas, un minuto
   let musicaMemo = new Map();  // (050) lo de musica_para y musica_coach_lista, un minuto
   let olvidarFotos = () => {};   // (se define más abajo, con el recuerdo de las fotos de perfil)
   const b = Object.create(backend);
@@ -832,6 +841,57 @@ export function crearApi(backend) {
       try { await b.rpc('musica_coach_guardar', { p_clave: clave, p_url: u ? urlMusica(u) : '' }); } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e; }
       musicaMemo = new Map();
     },
+    // ------------------------------------------------------------ integraciones (v0.105, migración 051)
+    // La dirección de la función «integraciones» (la de Supabase, o integracionesUrl en config.js); en la demo, null
+    urlIntegraciones() {
+      if (b.modo === 'demo' || typeof window === 'undefined') return null;
+      const c = window.FBE_CONFIG || {};
+      return c.integracionesUrl || c.supabaseUrl || null;
+    },
+    // Qué tiene conectado el atleta ({ salud, calendario, atajos }); sin la 051, undefined
+    async integraciones() {
+      try { return (await b.rpc('integraciones_mias', {})) || null; } catch (e) { if (falta051(e)) return undefined; throw e; }
+    },
+    // Crea su enlace personal (el anterior deja de valer) y lo devuelve una sola vez
+    async crearIntegracion(tipo, opciones = null) {
+      if (!['salud', 'calendario'].includes(tipo)) throw new Error('Tipo no válido');
+      try { return await b.rpc('integracion_crear', { p_tipo: tipo, p_opciones: opciones }); } catch (e) { if (falta051(e)) throw new Error(AVISO_051); throw e; }
+    },
+    async opcionesCalendario(opciones) {
+      try { return await b.rpc('calendario_opciones', { p_opciones: opciones }); } catch (e) { if (falta051(e)) throw new Error(AVISO_051); throw e; }
+    },
+    async quitarIntegracion(tipo, borrar = false) {
+      try { await b.rpc('integracion_quitar', { p_tipo: tipo, p_borrar: !!borrar }); } catch (e) { if (falta051(e)) throw new Error(AVISO_051); throw e; }
+    },
+    // Lo que llegó de Salud ({ conectada, ultimo, dias: [{ fecha, pasos, sueno_min, fc_reposo, hrv, peso_kg }] }); sin la 051, null
+    async saludDiaria(atletaId, desde = null, hasta = null) {
+      if (!atletaId) return null;
+      try { return (await b.rpc('salud_diaria_de', { p_atleta: atletaId, p_desde: desde, p_hasta: hasta })) || null; } catch (e) { if (falta051(e)) return null; throw e; }
+    },
+    // Los atajos del coach ({ salud, entreno }: enlaces de iCloud); sin la 051, null
+    async atajos() {
+      try { return (await b.rpc('atajos_lista', {})) || {}; } catch (e) { if (falta051(e)) return null; throw e; }
+    },
+    async guardarAtajo(clave, url) {
+      const u = String(url ?? '').trim();
+      if (u && !URL_ATAJO.test(u)) throw new Error('Tiene que ser el enlace de iCloud del atajo (https://www.icloud.com/shortcuts/…)');
+      try { await b.rpc('atajo_guardar', { p_clave: clave, p_url: u }); } catch (e) { if (falta051(e)) throw new Error(AVISO_051); throw e; }
+    },
+    // El teléfono de cada atleta ({ atleta_id: teléfono }), solo el coach; sin la 051, null
+    // (se recuerdan un minuto, como los cumpleaños: la lista de Atletas y «A quién escribir» los piden cada vez)
+    async contactos() {
+      const k = uid();
+      if (contactosMemo && contactosMemo.k === k && Date.now() - contactosMemo.t < 60000) return contactosMemo.p;
+      const p = b.rpc('contactos', {}).then((r) => r || {}).catch((e) => { if (falta051(e)) return null; throw e; });
+      contactosMemo = { k, t: Date.now(), p };
+      p.catch(() => { if (contactosMemo?.p === p) contactosMemo = null; });
+      return p;
+    },
+    async guardarContacto(atletaId, telefono) {
+      const t = limpiarTelefono(telefono);
+      try { await b.rpc('contacto_guardar', { p_atleta: atletaId, p_telefono: t }); } catch (e) { if (falta051(e)) throw new Error(AVISO_051); throw e; }
+      contactosMemo = null;
+    },
     // La foto del coach, para el chat del atleta (la base solo deja ver eso del perfil del coach)
     // v0.55: el nombre corto del coach («Info del contacto» del atleta); sin la 033, null
     async nombreCoach() {
@@ -904,7 +964,18 @@ export function crearApi(backend) {
       // (v0.104) la 2026-12.14 solo con la 050 (lo que eliges para tu app); con la 045 pero sin la 050, la 2026-12.13
       if ((await api.personal050().catch(() => null)) !== true) return VERSION_LEGAL_SIN_050;
       // (v0.107) la 2026-12.15 solo con la 050 ampliada (tu música); con la de la v0.104, la 2026-12.14
-      return (await api.musica050().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_MUSICA;
+      if ((await api.musica050().catch(() => null)) !== true) return VERSION_LEGAL_SIN_MUSICA;
+      // (v0.110) la 2026-12.16 solo con la 051 (Salud del iPhone, calendario y WhatsApp); sin ella, la 2026-12.15
+      return (await api.integraciones051().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_051;
+    },
+    // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
+    async integraciones051() {
+      if (!api._v051) {
+        const pr = b.rpc('integraciones_mias', {}).then(() => true).catch((e) => (falta051(e) ? false : null));
+        api._v051 = pr;
+        pr.then((x) => { if (x == null && api._v051 === pr) api._v051 = null; });
+      }
+      return api._v051;
     },
     // (v0.107) ¿Está la 050 ampliada (la música)? musica_para() la puede llamar cualquiera con sesión
     async musica050() {
@@ -4413,6 +4484,14 @@ export function crearApi(backend) {
       out.personal = perfilId && perfilId === uid()
         ? (await api.personal().catch(() => null)) ?? null
         : ((await api.personalAtletas().catch(() => [])).find((x) => x.atleta_id === atletaId) || null);
+      // (v0.105, 051) lo que llegó de Salud del iPhone (los 400 últimos días)
+      out.salud_diaria = (await api.saludDiaria(atletaId, '2020-01-01', sumarDias(hoyISO(), 1)).catch(() => null))?.dias || [];
+      // (revisión) lo suyo de las integraciones: desde cuándo tiene conectado cada cosa, su calendario y su teléfono
+      if (perfilId && perfilId === uid()) {
+        out.integraciones = (await b.rpc('integraciones_mias', {}).catch(() => null)) || null;
+        if (out.integraciones) delete out.integraciones.atajos;
+        out.telefono = (await b.rpc('contacto_mio', {}).catch(() => null)) || null;
+      } else out.telefono = (await api.contactos().catch(() => ({})))?.[atletaId] || null;
       // (v0.57) la corrección de sus vídeos de técnica (con días, como la ve en la app; sin la 035, ninguna)
       const vids = out.archivos.filter((a) => a.tipo === 'video_tecnica').map((a) => a.id);
       out.video_correcciones = vids.length && await api.video035().catch(() => false) ? await api.correccionesDe(vids).catch(() => []) : [];
@@ -4473,6 +4552,8 @@ export function crearApi(backend) {
       // nunca parezca completa sin estarlo
       const noExiste = (e) => /schema cache|does not exist|no existe|PGRST205|42P01/i.test(`${e?.message || ''} ${e?.code || ''}`);
       for (const t of TABLAS_COPIA) out[t] = await b.select(t, t === 'recetas' ? { pagina: 50 } : {}).catch((e) => { if (TABLAS_OPCIONALES.includes(t) && noExiste(e)) return []; throw e; });
+      // (revisión) las tablas que solo se abren con funciones (las de la 050 y la 051): sin la 051, nada
+      out.privado = await b.rpc('copia_privada', {}).catch((e) => { if (falta051(e)) return null; throw e; });
       return out;
     },
 

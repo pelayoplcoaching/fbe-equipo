@@ -3,6 +3,7 @@
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Segmentos, usePreferencia, descargar as descargarArchivo } from '../comunes.jsx';
 import { semanaTipo, repartirComoSiempre, textoDias } from '../../logica/personal.js';
+import { HojaSuscripcion, useIntegraciones } from './Conexiones.jsx';
 import { diaPrevistoValido, cuandoDia, repartir, calendarioICS, LETRAS_DIA } from '../../logica/plan.js';
 import { sumarDias, hoyISO, desdeISO, fmtConDia, rangoSemana } from '../../logica/fechas.js';
 import { NOMBRE_TIPO_SESION, NOMBRE_INTENCION } from '../../logica/calculos.js';
@@ -157,9 +158,21 @@ function HojaCalendario({ semana, sesiones, alCerrar }) {
   const descargar = () => {
     descargarArchivo(`entrenos-${semana.fecha_inicio}.ics`, ics(), 'text/calendar;charset=utf-8');
   };
+  // (v0.105) mejor aún: suscribirse, y el calendario cambia solo cuando cambia el plan (con la 051)
+  const integ = useIntegraciones();
+  const [suscribir, setSuscribir] = useState(false);
+  const conSuscripcion = integ.datos && !integ.datos.sin;
   return (
     <Hoja titulo="Añadir a mi calendario" alCerrar={alCerrar}>
-      <p class="peq secundario">Se crea un evento por sesión ({sesiones.map((s) => `${s.nombre}, ${fmtConDia(diaPrevistoValido(s, semana))}`).join('; ')}) con un aviso antes. Si cambias el plan, vuelve a añadirlo (si tu calendario lo duplica, borra el evento antiguo).</p>
+      {conSuscripcion && (
+        <div class="nota pila-s plan-suscripcion">
+          <strong>{integ.datos.calendario?.activo ? 'Ya estás suscrito' : 'Mejor: que se actualice solo'}</strong>
+          <span class="peq secundario">{integ.datos.calendario?.activo ? 'Tu calendario recibe solo los cambios del plan. No hace falta descargar nada.' : 'Suscríbete una vez y, cada vez que cambie el plan, tu calendario cambia solo.'}</span>
+          <button type="button" class="btn btn-primario" onClick={() => setSuscribir(true)}><Icono n="calendario" /> {integ.datos.calendario?.activo ? 'Ver la suscripción' : 'Suscribirme'}</button>
+        </div>
+      )}
+      {suscribir && <HojaSuscripcion estado={integ.datos} alCerrar={() => { setSuscribir(false); integ.recargar(true); }} />}
+      <p class="peq secundario">{conSuscripcion ? 'O descárgalo una vez: s' : 'S'}e crea un evento por sesión ({sesiones.map((s) => `${s.nombre}, ${fmtConDia(diaPrevistoValido(s, semana))}`).join('; ')}) con un aviso antes. Si cambias el plan, vuelve a añadirlo (si tu calendario lo duplica, borra el evento antiguo).</p>
       <div class="campo">
         <label for="plan-hora">Hora a la que sueles entrenar</label>
         <input id="plan-hora" class="entrada" type="time" value={hora} onInput={(e) => setHora(e.currentTarget.value || '18:00')} />
