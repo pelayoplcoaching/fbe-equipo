@@ -101,6 +101,9 @@ async function temporizadorAlSonar(p) {
   });
 }
 async function revisar(paso) {
+  // (la píldora del día del chat aparece y se va fundiéndose: si axe la mira a medio fundido, su contraste no llega. Antes
+  // de cualquier revisión se espera a que esté entera o ida; ha salido en «chat-destacados» y en «encuesta-crear»)
+  await p.waitForFunction(() => [...document.querySelectorAll('.chat-dia-flotante')].every((x) => ['0', '1'].includes(getComputedStyle(x).opacity)), null, { timeout: 5000 }).catch(() => {});
   // En emulación de móvil el navegador ensancha la página para que quepa lo que se sale: se compara con los 390 px reales
   const vista = p.viewportSize()?.width || 390;
   const ancho = await p.evaluate(() => document.documentElement.scrollWidth);
@@ -120,7 +123,8 @@ async function revisar(paso) {
     new Promise((r) => setTimeout(r, 1500)),
   ]));
   if (!(await p.evaluate(() => !!window.axe))) await p.addScriptTag({ path: AXE });
-  const axe = await p.evaluate(async () => (await window.axe.run(document, {
+  // (con una hoja abierta, la píldora del día del chat queda detrás de su velo difuminado y nadie la lee: fuera de la revisión)
+  const axe = await p.evaluate(async () => (await window.axe.run(document.body.hasAttribute('data-hojas') ? { include: [document], exclude: [['.chat-dia-flotante']] } : document, {
     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] },
     rules: { region: { enabled: false } },
   })).violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`));
@@ -3149,9 +3153,11 @@ try {
   // Chat: un mensaje programado (y un enlace de YouTube con su miniatura)
   // (la pestaña se queda muy arriba tras bajar por el editor: primero al centro y un momento, como «Tu plan»; si no, la
   // cabecera que se recoge al desplazarse la va moviendo mientras se intenta pulsar)
-  await p.getByRole('tab', { name: 'Mensajes' }).evaluate((b) => b.scrollIntoView({ block: 'center' }));
-  await p.waitForTimeout(400);
-  await p.getByRole('tab', { name: 'Mensajes' }).click();
+  // (si el paso del editor dejó abierta una hoja, la de un ejercicio, se cierra antes: si no, tapa la pestaña)
+  for (let i = 0; i < 3 && await p.locator('.capa').first().isVisible().catch(() => false); i++) { await p.keyboard.press('Escape'); await p.waitForTimeout(400); }
+  // (y se pulsa el botón de la pestaña directamente: tras bajar por el editor, el toque por coordenadas a veces cae en una
+  // fila del editor que hay debajo y abre la ficha de ese ejercicio, que luego tapa la pestaña)
+  await p.getByRole('tab', { name: 'Mensajes' }).evaluate((b) => { b.scrollIntoView({ block: 'center' }); b.click(); });
   await p.locator('.burbuja.programada').first().waitFor();
   check((await p.locator('.burbuja.programada').first().textContent()).includes('Programado para el'), 'el coach ve el mensaje de mañana como «Programado para el …»');
   await p.locator('.chat-area').fill('Mira este vídeo antes del lunes: https://youtu.be/gMgvBspQ9lk');
@@ -4486,12 +4492,20 @@ try {
   // (el portapapeles solo se puede escribir con la página delante: si otra ventana de la prueba le ha quitado el foco, falla
   // a ratos; y si falla, que se diga, no que se espere al aviso 30 s)
   await p.bringToFront();
+  // (los avisos se apuntan desde antes del toque: el aviso dura poco y otro lo puede sustituir enseguida; en GitHub, a
+  // veces, no se llegaba a ver ni esperando 30 s)
+  await p.evaluate(() => {
+    window.__avisos = [];
+    const mirar = () => document.querySelectorAll('.toast').forEach((t) => { const x = t.textContent; if (x && !window.__avisos.includes(x)) window.__avisos.push(x); });
+    window.__mirarAvisos?.disconnect?.();
+    window.__mirarAvisos = new MutationObserver(mirar);
+    window.__mirarAvisos.observe(document.body, { childList: true, subtree: true, characterData: true });
+  });
   await barraSel.getByRole('button', { name: 'Copiar' }).click();
-  // (el texto se lee en el mismo momento en que se encuentra el aviso: el aviso dura poco y, si se busca y luego se lee, a
-  // veces ya se ha ido y la lectura espera 30 s y corta el resto del flujo)
-  const textoCopia = await p.waitForFunction(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent)
-    .find((t) => /mensajes copiados|No se ha podido copiar/.test(t)) || null, null, { timeout: 30000 }).then((h) => h.jsonValue()).catch(() => '');
-  check(textoCopia.includes('2 mensajes copiados'), `copia los dos (${textoCopia.trim() || 'sin aviso'})`);
+  const textoCopia = await p.waitForFunction(() => (window.__avisos || []).find((t) => /mensajes copiados|No se ha podido copiar/.test(t)) || null, null, { timeout: 30000 })
+    .then((h) => h.jsonValue()).catch(async () => `sin aviso; vistos: ${(await p.evaluate(() => window.__avisos || [])).join(' / ') || 'ninguno'}`);
+  await p.evaluate(() => window.__mirarAvisos?.disconnect?.());
+  check(textoCopia.includes('2 mensajes copiados'), `copia los dos (${textoCopia.trim()})`);
   const copiado = await p.evaluate(() => navigator.clipboard.readText());
   check(/^\[\d\d\/\d\d\/\d\d, \d{1,2}:\d\d\] Tú: Mañana a las 9/.test(copiado) && copiado.split('\n').length === 2, 'Copiar, como WhatsApp: «[12/10/26, 18:42] Tú: …»');
   await menuDe(p.locator('.burbuja.mia', { hasText: 'Mañana a las 9' }).last()).then((m) => m.getByRole('button', { name: 'Seleccionar' }).click());
