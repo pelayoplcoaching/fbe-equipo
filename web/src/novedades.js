@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.108': {
+    atleta: [
+      'Entrenar fluye: el foco pasa de una serie a otra con suavidad, la insignia gira a verde al marcarla y el aro se cierra con un salto.',
+      'El descanso llega con muelle, el esfuerzo de cada serie sale con su color, el teclado es de vidrio y la superserie lleva su hilo.',
+      'El modo enfoque estrena cara y se desliza entre ejercicios; al terminar, los músculos de hoy se encienden.',
+    ],
+  },
   '0.107': {
     atleta: [
       'En la portada, «Tu música de hoy»: la lista de tu coach para esa sesión o la tuya, con su portada, y «Empezar con esta música».',
