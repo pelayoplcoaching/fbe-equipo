@@ -18,10 +18,21 @@ export const LIMITES = { apodo: 30, porque: 140, musica: 300, mensaje: 400, favo
 // Las listas de música que se abren desde la portada: solo de estos sitios (la app no abre cualquier enlace)
 const MUSICA = /^https:\/\/(open\.spotify\.com|spotify\.link|music\.apple\.com|music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|music\.amazon\.(es|com)|(www\.)?deezer\.com|link\.deezer\.com|(www\.)?tidal\.com|listen\.tidal\.com)\/[^\s<>"']*$/i;
 export function urlMusica(u) {
-  const t = String(u ?? '').trim();
+  const t = sinSeguimiento(String(u ?? '').trim());
   if (!t) return null;
   return t.length <= LIMITES.musica && MUSICA.test(t) ? t : false;
 }
+// (v0.107) Los enlaces que se comparten desde Spotify llevan quién los compartió (?si=…) y de dónde (utm_…): fuera
+export function sinSeguimiento(t) {
+  if (!/^https:\/\/open\.spotify\.com\//i.test(t)) return t;
+  try {
+    const u = new URL(t);
+    for (const k of [...u.searchParams.keys()]) if (k === 'si' || k === 'context' || k.startsWith('utm_')) u.searchParams.delete(k);
+    return u.toString().replace(/\?$/, '');
+  } catch { return t; }
+}
+// (v0.107) En Spotify, la canción de récord tiene que ser una canción (open.spotify.com/{intl-xx/}track/…)
+export const CANCION_SPOTIFY = /^https:\/\/open\.spotify\.com\/(intl-[a-z-]+\/)?track\//;
 export function nombreMusica(u) {
   const h = (/^https:\/\/([^/]+)/i.exec(String(u || '')) || [])[1]?.toLowerCase() || '';
   return /spotify/.test(h) ? 'Spotify' : /apple/.test(h) ? 'Apple Music' : /youtu/.test(h) ? 'YouTube Music' : /amazon/.test(h) ? 'Amazon Music' : /deezer/.test(h) ? 'Deezer' : /tidal/.test(h) ? 'Tidal' : 'tu música';
@@ -43,7 +54,7 @@ export function limpiarPersonal(p = {}) {
   if (mes != null && !cumpleValido(mes, dia)) throw new Error('Ese día no existe en ese mes');
   const cancion = urlMusica(p.cancion_url);
   if (cancion === false) throw new Error('Tu canción de récord tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal');
-  if (cancion && /^https:\/\/open\.spotify\.com\//i.test(cancion) && !/\/track\//.test(cancion)) throw new Error('Para tu canción de récord, comparte una canción (no una lista)');
+  if (cancion && /^https:\/\/open\.spotify\.com\//i.test(cancion) && !CANCION_SPOTIFY.test(cancion)) throw new Error('Para tu canción de récord, comparte una canción (no una lista)');
   const favoritos = [...new Set((Array.isArray(p.favoritos) ? p.favoritos : []).filter((x) => UUID.test(String(x))))];
   if (favoritos.length > LIMITES.favoritos) throw new Error(`Como mucho ${LIMITES.favoritos} ejercicios`);
   return { apodo: texto(p.apodo, LIMITES.apodo), porque: texto(p.porque, LIMITES.porque), favoritos, musica_url: musica, cancion_url: cancion, cumple_mes: mes, cumple_dia: dia };

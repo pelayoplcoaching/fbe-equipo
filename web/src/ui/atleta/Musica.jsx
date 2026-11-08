@@ -23,7 +23,9 @@ async function fichaSpotify(url) {
   const todas = leerFichas();
   const ya = todas[url];
   if (ya && Date.now() - ya.t < 7 * 864e5) return ya;
-  const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+  // (solo el enlace limpio: sin el ?si= de quien lo compartió)
+  const s = spotify(url);
+  const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${s.tipo}/${s.id}`)}`, { credentials: 'omit', referrerPolicy: 'no-referrer' });
   if (!r.ok) return null;
   const j = await r.json();
   const thumb = /^https:\/\/[a-z0-9.-]+\.(scdn\.co|spotifycdn\.com)\//i.test(String(j.thumbnail_url || '')) ? j.thumbnail_url : null;
@@ -42,7 +44,7 @@ export function Reproductor({ url, titulo = 'Spotify' }) {
   const src = urlIncrustar(url);
   if (!src) return null;
   if (!abierto) return <button type="button" class="btn btn-peq" onClick={() => setAbierto(true)}><Icono n="play" /> Escuchar aquí</button>;
-  return <iframe class="reproductor-spotify" title={`Reproductor de Spotify: ${titulo}`} src={src} width="100%" height={altoIncrustado(url)} loading="lazy"
+  return <iframe class="reproductor-spotify" referrerpolicy="no-referrer" title={`Reproductor de Spotify: ${titulo}`} src={src} width="100%" height={altoIncrustado(url)} loading="lazy"
     allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" />;
 }
 

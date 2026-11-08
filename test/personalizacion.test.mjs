@@ -112,6 +112,13 @@ console.log('\nLa música');
 check(igual(spotify('https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP?si=abc'), { tipo: 'playlist', id: '37i9dQZF1DX76Wlfdnj7AP' }) && spotify('https://open.spotify.com/intl-es/track/4uLU6hMCjMI75M1A2tKUQC')?.tipo === 'track' && spotify('https://music.apple.com/x') === null, 'reconoce listas, canciones (también con intl-es) y lo que no es Spotify');
 check(urlIncrustar('https://open.spotify.com/episode/0Q86acNRm6V9GYx55SXKwf') === 'https://open.spotify.com/embed/episode/0Q86acNRm6V9GYx55SXKwf?utm_source=fbe-equipo' && urlIncrustar('https://youtu.be/x') === null, 'el reproductor incrustado, solo de Spotify');
 check(esCancion('https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC') && !esCancion('https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP') && esCancion('https://music.apple.com/es/song/x/1'), 'una canción (de Spotify, solo track)');
+const dice = (fn, re) => { try { fn(); return false; } catch (e) { return re.test(e.message); } };
+// (revisión de la música) el enlace se guarda sin quién lo compartió; la canción de récord no se cuela con /track/ en otro sitio
+check(urlMusica('https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP?si=abc123&utm_source=copy-link') === 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP'
+  && urlMusica('https://music.apple.com/es/playlist/x?si=1') === 'https://music.apple.com/es/playlist/x?si=1',
+  'el ?si= y los utm_ de Spotify se quitan al guardar (de los demás sitios, nada)');
+check(dice(() => limpiarPersonal({ cancion_url: 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP?x=/track/1' }), /canción/) && !!limpiarPersonal({ cancion_url: 'https://open.spotify.com/intl-es/track/4uLU6hMCjMI75M1A2tKUQC' }).cancion_url,
+  'la canción de récord: una lista con /track/ en otro sitio no se cuela; una canción con intl-es, sí');
 check(lanza(() => limpiarPersonal({ cancion_url: 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP' })) && limpiarPersonal({ cancion_url: 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC' }).cancion_url, 'la canción de récord no puede ser una lista');
 check(claveValida('familia:pierna') && claveValida('descarga') && claveValida('equipo') && claveValida('ritmo:carrera') && claveValida('sesion:11111111-1111-4111-8111-111111111111') && !claveValida('familia:brazos') && !claveValida('sesion:x'), 'las claves de lo que enlaza el coach');
 const S = '11111111-1111-4111-8111-111111111111', Bq = '21111111-1111-4111-8111-111111111111';
@@ -190,6 +197,7 @@ await q(`select public.musica_coach_guardar('familia:pierna', 'https://open.spot
 await q(`select public.musica_coach_guardar('equipo', 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP')`);
 if (blB) await q(`select public.musica_coach_guardar($1, 'https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy')`, [`bloque:${blB.id}`]);
 check(await falla(`select public.musica_coach_guardar('familia:brazos', 'https://open.spotify.com/playlist/1')`) && await falla(`select public.musica_coach_guardar('equipo', 'https://malo.example/x')`), 'claves y enlaces válidos');
+check(/Clave no válida/.test(await q(`select public.musica_coach_guardar('familia:brazos', '')`).then(() => '', (e) => e.message)), 'una clave mala, también para quitar: «Clave no válida»');
 const listaC = (await q(`select public.musica_coach_lista() as r`))[0].r;
 check(listaC['familia:pierna'] && listaC.equipo, 'el coach ve todo lo enlazado');
 await como(ub);

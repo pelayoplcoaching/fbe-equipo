@@ -829,7 +829,7 @@ export function crearApi(backend) {
       if (!claveValida(clave)) throw new Error('No se puede enlazar ahí');
       const u = String(url ?? '').trim();
       if (u && !urlMusica(u)) throw new Error('Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal');
-      try { await b.rpc('musica_coach_guardar', { p_clave: clave, p_url: u }); } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e; }
+      try { await b.rpc('musica_coach_guardar', { p_clave: clave, p_url: u ? urlMusica(u) : '' }); } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e; }
       musicaMemo = new Map();
     },
     // La foto del coach, para el chat del atleta (la base solo deja ver eso del perfil del coach)

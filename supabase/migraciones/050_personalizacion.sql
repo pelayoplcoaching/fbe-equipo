@@ -65,7 +65,7 @@ alter table public.personal_atleta add constraint personal_atleta_valido check (
   and array_position(favoritos, null) is null
   and ((cumple_mes is null) = (cumple_dia is null))
   and (cancion_url is null or (char_length(cancion_url) <= 300 and cancion_url ~* '^https://(open\.spotify\.com|spotify\.link|music\.apple\.com|music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|music\.amazon\.(es|com)|(www\.)?deezer\.com|link\.deezer\.com|(www\.)?tidal\.com|listen\.tidal\.com)/[^[:space:]<>"'']*$'
-       and (cancion_url !~* '^https://open\.spotify\.com/' or cancion_url ~* '/track/')))
+       and (cancion_url !~* '^https://open\.spotify\.com/' or cancion_url ~ '^https://open\.spotify\.com/(intl-[a-z-]+/)?track/')))
   and jsonb_typeof(musica_aperturas) = 'object'
   and ((cumple_mes is null and cumple_dia is null)
        or (cumple_mes between 1 and 12 and cumple_dia between 1 and
@@ -128,7 +128,7 @@ begin
     raise exception 'Ese enlace de música no vale: pega el de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal';
   end if;
   if v_cancion is not null and (char_length(v_cancion) > 300 or v_cancion !~* '^https://(open\.spotify\.com|spotify\.link|music\.apple\.com|music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|music\.amazon\.(es|com)|(www\.)?deezer\.com|link\.deezer\.com|(www\.)?tidal\.com|listen\.tidal\.com)/[^[:space:]<>"'']*$'
-      or (v_cancion ~* '^https://open\.spotify\.com/' and v_cancion !~* '/track/')) then
+      or (v_cancion ~* '^https://open\.spotify\.com/' and v_cancion !~ '^https://open\.spotify\.com/(intl-[a-z-]+/)?track/')) then
     raise exception 'Esa canción no vale: pega el enlace de una canción (en Spotify, de una canción, no de una lista)';
   end if;
   if jsonb_typeof(coalesce(p_datos -> 'favoritos', '[]'::jsonb)) <> 'array' then raise exception 'Favoritos no válidos'; end if;
@@ -199,7 +199,8 @@ begin
   if exists (select 1 from public.atletas where id = v_atleta and estado = 'baja') then return; end if;
   insert into public.personal_atleta (atleta_id, musica_aperturas) values (v_atleta, jsonb_build_object(v_mes, 1))
   on conflict (atleta_id) do update set musica_aperturas = public.personal_atleta.musica_aperturas
-    || jsonb_build_object(v_mes, least(500, coalesce((public.personal_atleta.musica_aperturas ->> v_mes)::int, 0) + 1));
+    || jsonb_build_object(v_mes, least(500, coalesce((public.personal_atleta.musica_aperturas ->> v_mes)::int, 0) + 1))
+    where coalesce((public.personal_atleta.musica_aperturas ->> v_mes)::int, 0) < 500;
 end $$;
 comment on function public.personal_musica_abierta() is 'El atleta abre su música desde una sesión: suma una al mes en curso.';
 
@@ -231,6 +232,9 @@ language plpgsql security definer set search_path = '' as $$
 declare v text := nullif(btrim(coalesce(p_url, '')), '');
 begin
   if not public.es_coach() then raise exception 'Solo el coach'; end if;
+  if p_clave is null or p_clave !~ '^(familia:(empuje|tiron|pierna|core|fullbody|cardio|movilidad)|descarga|equipo|ritmo:(carrera|andar|bici|eliptica|remo|nadar|cuerda)|sesion:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|bloque:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$' then
+    raise exception 'Clave no válida';
+  end if;
   if v is null then delete from public.musica_coach where clave = p_clave; return; end if;
   insert into public.musica_coach (clave, url, actualizado_en) values (p_clave, v, now())
     on conflict (clave) do update set url = excluded.url, actualizado_en = now();
