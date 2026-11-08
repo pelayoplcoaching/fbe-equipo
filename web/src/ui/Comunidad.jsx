@@ -44,6 +44,7 @@ import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 import { PlegableEquipo } from './PlegableEquipo.jsx';
 import { Imagen } from './Imagen.jsx';
 import { ListaEquipo } from './atleta/Musica.jsx';
+import { pesoTxt } from '../logica/unidades.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
 // v0.71: con la 043, también las preguntas del equipo
@@ -941,7 +942,7 @@ export function TarjetaEntreno({ r }) {
   if (!r) return null;
   const ejercicios = r.ejercicios || [];
   const records = ejercicios.filter((e) => e.record);
-  const serie = (e) => (e.kg != null ? `${num(e.kg, 2)} kg × ${e.reps}` : e.reps != null ? `${e.reps} rep` : null);
+  const serie = (e) => (e.kg != null ? `${pesoTxt(e.kg, 2)} × ${e.reps}` : e.reps != null ? `${e.reps} rep` : null);
   const cifras = [
     ['min', r.minutos ?? '—', 'Minutos'],
     ['series', r.series ?? 0, 'Series'],
@@ -964,7 +965,7 @@ export function TarjetaEntreno({ r }) {
         </ul>
       )}
       {records.map((e, i) => (
-        <p class="ee-record" key={i}><Icono n="trofeo" /><span>Récord en {e.nombre}{r.con_kilos && e.e1rm ? ` · 1RM estimado ${num(e.e1rm)} kg` : ''}</span></p>
+        <p class="ee-record" key={i}><Icono n="trofeo" /><span>Récord en {e.nombre}{r.con_kilos && e.e1rm ? ` · 1RM estimado ${pesoTxt(e.e1rm, 1)}` : ''}</span></p>
       ))}
     </div>
   );

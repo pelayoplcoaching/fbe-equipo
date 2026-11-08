@@ -13,6 +13,7 @@ import { imagenCelebracion } from '../../logica/imagenes.js';
 import { usePersonal } from './Personal.jsx';
 import { useFicha } from './Musica.jsx';
 import { aperturasDe } from '../../logica/musica.js';
+import { pesoTxt, pesoNum } from '../../logica/unidades.js';
 
 const toneladas = (kg) => num(Math.round(kg / 100) / 10, 1);
 const horas = (min) => (min >= 60 ? `${Math.round(min / 60)} horas` : `${min} minutos`);
@@ -118,7 +119,7 @@ function HistoriaAnioPantalla({ resumen: r, alCerrar }) {
         <span class="historia-etq">Lo que más ha subido</span>
         <h2>{r.progreso.ejercicio}</h2>
         <p class="historia-cifra num">+{num(r.progreso.pct, 1)}<small>% de 1RM estimado</small></p>
-        <p class="historia-texto num">De {num(r.progreso.antes)} a {num(r.progreso.ahora)} kg.</p>
+        <p class="historia-texto num">De {pesoNum(r.progreso.antes, 1)} a {pesoTxt(r.progreso.ahora, 1)}.</p>
       </>
     ) }] : []),
     { id: 'racha', render: () => (

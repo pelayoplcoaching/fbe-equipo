@@ -9,6 +9,7 @@ import { textoMensajeCoach, mensajeDe, nombreSaludo, recordAlAlcance, recuerdoPr
 import { OBJETIVOS } from '../../logica/cuestionario.js';
 import { num } from '../../logica/calculos.js';
 import { hoyISO } from '../../logica/fechas.js';
+import { pesoTxt, pesoNum, etiquetaPeso, difVista } from '../../logica/unidades.js';
 
 // Lo del atleta y los mensajes del coach (los dos se recuerdan un minuto en la api)
 export function usePersonal() {
@@ -48,8 +49,8 @@ export function RecordAlAlcance({ ejercicios = [] }) {
         <ul class="record-alcance-lista">
           {lista.map((r) => (
             <li key={r.id}>
-              <span class="num"><b>{num(r.kg, 2)} kg × {r.reps}</b></span> en {r.ejercicio}
-              <span class="mini terciario"> (tu mejor a {r.reps}: {num(r.antes, 2)} kg)</span>
+              <span class="num"><b>{pesoTxt(r.kg, 2)} × {r.reps}</b></span> en {r.ejercicio}
+              <span class="mini terciario"> (tu mejor a {r.reps}: {pesoTxt(r.antes, 2)})</span>
             </li>
           ))}
         </ul>
@@ -117,9 +118,9 @@ export function TusEjercicios({ progreso }) {
           return (
             <div class="panel panel-pad tu-ejercicio" key={e.id}>
               <span class="peq secundario tu-ejercicio-nombre">{e.nombre}</span>
-              <span class="num tu-ejercicio-v">{num(e.mejor)}<small> kg</small></span>
+              <span class="num tu-ejercicio-v">{pesoNum(e.mejor, 1)}<small> {etiquetaPeso()}</small></span>
               <span class="mini terciario">mejor 1RM estimado</span>
-              {cambio != null && cambio !== 0 && <span class={`mini num ${cambio > 0 ? 'ok-texto' : ''}`}>{cambio > 0 ? '+' : ''}{num(cambio)} kg en 4 semanas</span>}
+              {cambio != null && cambio !== 0 && <span class={`mini num ${cambio > 0 ? 'ok-texto' : ''}`}>{cambio > 0 ? '+' : ''}{num(difVista(cambio))} {etiquetaPeso()} en 4 semanas</span>}
             </div>
           );
         })}

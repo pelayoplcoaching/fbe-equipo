@@ -9,6 +9,7 @@
 //   · recordAlAlcance: «Con 62,5 kg × 8 batirías tu récord», en la portada de la sesión
 //   · semanaTipo / repartirComoSiempre: los días que suele entrenar y el plan de la semana ya relleno
 import { e1rm, mejoresMarcas, tendenciaPeso, num, NOMBRE_GRUPO } from './calculos.js';
+import { pesoTxt, pesoNum, etiquetaPeso, difVista, enLibras, vista, deVista, pasoLb } from './unidades.js';
 import { sumarDias, diasEntre, desdeISO, lunesDe } from './fechas.js';
 import { nombreDePila } from './bienvenida.js';
 import { objetivosDe } from './cuestionario.js';
@@ -125,8 +126,8 @@ function cifraDe(o, { progreso, constancia, salud, hoy }) {
     const antes = [...ej.puntos].reverse().find((p) => p.semana <= limite) || ej.puntos[0];
     const cambio = Math.round((ultimo.valor - antes.valor) * 10) / 10;
     const semanas = Math.max(1, Math.round(diasEntre(antes.semana, ultimo.semana) / 7));
-    return { titulo: o === 'fuerza' ? 'Ganar fuerza' : 'Rendir más', etiqueta: `${ej.nombre}: 1RM estimado`, cifra: num(ultimo.valor), unidad: 'kg',
-      detalle: cambio > 0 ? `+${num(cambio)} kg en ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}` : cambio < 0 ? `${num(cambio)} kg en ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}` : `igual que hace ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}`,
+    return { titulo: o === 'fuerza' ? 'Ganar fuerza' : 'Rendir más', etiqueta: `${ej.nombre}: 1RM estimado`, cifra: pesoNum(ultimo.valor, 1), unidad: etiquetaPeso(),
+      detalle: cambio > 0 ? `+${num(difVista(cambio))} ${etiquetaPeso()} en ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}` : cambio < 0 ? `${num(difVista(cambio))} ${etiquetaPeso()} en ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}` : `igual que hace ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}`,
       sube: cambio > 0 ? true : cambio < 0 ? false : null };
   }
   if (o === 'musculo') {
@@ -193,7 +194,7 @@ export function recuerdoProgreso(hoySeries = [], historial = [], hoy) {
   }
   return mejor;
 }
-export const textoSerieCorta = (x) => `${num(x.kg, 2)} kg × ${x.reps}`;
+export const textoSerieCorta = (x) => `${pesoTxt(x.kg, 2)} × ${x.reps}`;
 
 // ---------- Récord al alcance (portada de la sesión) ----------
 // Para cada ejercicio de hoy con unas repeticiones objetivo, la carga que batiría su mejor marca a esas repeticiones,
@@ -211,7 +212,8 @@ export function recordAlAlcance(ejercicios = [], historial = [], hoy, { max = 2 
     if (!marca || !(marca.kg > 0)) continue;
     const nombre = e.ejercicio?.nombre || suyas[0].ejercicio || '';
     const paso = PASO_MANCUERNA.test(nombre) ? 2 : 2.5;
-    const kg = Math.round((marca.kg + paso) * 100) / 100;
+    // (v0.112: en libras, 5 lb más que su marca, que es lo que se carga con discos en libras)
+    const kg = enLibras() ? deVista(vista(marca.kg) + pasoLb(vista(marca.kg))) : Math.round((marca.kg + paso) * 100) / 100;
     const rir = e.rir_objetivo != null ? Number(e.rir_objetivo) : e.rpe_objetivo != null ? Math.max(0, 10 - Number(e.rpe_objetivo)) : 1;
     const pide = e1rm({ kg, reps, rir });
     // lo reciente, solo con series que dicen cuánto costaron (sin RPE se supondría al fallo y saldría inflado)

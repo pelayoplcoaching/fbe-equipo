@@ -31,6 +31,8 @@ import { leerEnlaceVideo } from '../../logica/tecnica.js';
 import { repartirPestanas, PREFERIDAS_ATLETA } from '../../logica/pestanas.js';
 import { useEstrecha, BotonMas, HojaMas } from '../BarraMas.jsx';
 import { VideoEnlazado } from '../tecnica/MiTecnica.jsx';
+import { leerAjustes, EVENTO_AJUSTES } from '../ajustes.js';
+import { fijarUnidadPeso } from '../../logica/unidades.js';
 
 // (pulido 2.10) Equipo (el muro, los retos, el ranking: lo más grande después del chat) y el check-in de la semana se
 // cargan al abrirlos, y por detrás en cuanto la app se queda quieta: no hacen falta para arrancar
@@ -61,6 +63,15 @@ function tabInicial(tabs) {
 
 export function AtletaApp() {
   const { api, atleta, aviso, propio, salirModoAtleta, cola } = useApp();
+  // v0.112: kilos o libras para las cargas del entreno (el ajuste de este móvil, Perfil → Este móvil); el modo atleta del
+  // coach, en kilos. Al cambiarlo, se vuelve a pintar todo con la unidad nueva
+  const [, setUnidad] = useState(() => fijarUnidadPeso(propio ? 'kg' : leerAjustes().unidadPeso));
+  useEffect(() => {
+    if (propio) return undefined;
+    const leer = () => setUnidad(fijarUnidadPeso(leerAjustes().unidadPeso));
+    window.addEventListener(EVENTO_AJUSTES, leer);
+    return () => window.removeEventListener(EVENTO_AJUSTES, leer);
+  }, [propio]);
   // (v0.65) la versión de la app que vio esta cuenta en este móvil (para «Novedades»), antes de nada; y el aviso de privacidad
   // va primero: las novedades esperan a que no esté (y a estar en Hoy, fuera de una sesión)
   useState(() => { if (!propio) prepararVersionVista(api.uid()); });

@@ -6,6 +6,7 @@ import { desdeISO } from '../../logica/fechas.js';
 import { ajuste } from '../ajustes.js';
 import { Imagen } from '../Imagen.jsx';
 import { imagenCelebracion } from '../../logica/imagenes.js';
+import { pesoTxt } from '../../logica/unidades.js';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 export function rangoLargo(lunes, domingo) {
@@ -72,7 +73,7 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
       ) : (
         <>
           <span class="historia-etq">Tu mejor serie</span>
-          {r.mejor ? <><h2>{r.mejor.ejercicio}</h2><p class="historia-cifra num">{textoSerie(r.mejor.serie)}</p><p class="historia-texto">1RM estimado de {num(r.mejor.e1rm)} kg</p></> : <h2>Semana de constancia</h2>}
+          {r.mejor ? <><h2>{r.mejor.ejercicio}</h2><p class="historia-cifra num">{textoSerie(r.mejor.serie)}</p><p class="historia-texto">1RM estimado de {pesoTxt(r.mejor.e1rm, 1)}</p></> : <h2>Semana de constancia</h2>}
           <p class="historia-texto">Esta semana no ha habido récords. Los récords llegan de sumar semanas como esta.</p>
         </>
       )

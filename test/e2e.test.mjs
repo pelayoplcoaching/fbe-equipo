@@ -5864,6 +5864,16 @@ try {
   console.log('  ✗ «Programar según FBE» de la v0.74:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.112: kilos o libras para las cargas (Perfil → Este móvil): la sesión en libras se guarda en kilos (test/e2e-libras-112.mjs)
+console.log('\nv0.112: kilos o libras');
+try {
+  const { probarLibras112 } = await import('./e2e-libras-112.mjs');
+  await probarLibras112({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ las libras de la v0.112:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
 console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');

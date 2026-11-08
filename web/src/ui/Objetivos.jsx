@@ -1,6 +1,7 @@
 import { NOMBRE_ESTADO_OBJETIVO, num, signo } from '../logica/calculos.js';
 import { textoMarca } from '../logica/objetivos.js';
 import { fmtCorta, hoyISO, diasEntre } from '../logica/fechas.js';
+import { pesoNum, pesoTxt, difVista, etiquetaPeso } from '../logica/unidades.js';
 
 // Un objetivo en Progreso (atleta) o en la ficha (coach). Si está enlazado a un ejercicio, el progreso es automático.
 export function TarjetaObjetivo({ o, esCoach = false }) {
@@ -23,15 +24,15 @@ export function TarjetaObjetivo({ o, esCoach = false }) {
       {a ? (
         <div class="pila-xs">
           <span class="mini secundario num">
-            {pct} %{a.actual != null && a.meta ? `: 1RM estimado de ${num(a.actual)} kg ${Number(o.reps_objetivo) > 1 ? `de los ${num(a.meta)} que supone ${textoMarca(o.kg_objetivo, o.reps_objetivo)}` : `de ${num(a.meta)} kg`}`
+            {pct} %{a.actual != null && a.meta ? `: 1RM estimado de ${pesoTxt(a.actual, 1)} ${Number(o.reps_objetivo) > 1 ? `de los ${pesoNum(a.meta, 1)} que supone ${textoMarca(o.kg_objetivo, o.reps_objetivo)}` : `de ${pesoTxt(a.meta, 1)}`}`
               : a.sinRecientes ? `: sin series de ${o.ejercicio || 'este ejercicio'} en las últimas 6 semanas` : a.actual == null ? `: aún sin series de ${o.ejercicio || 'este ejercicio'}` : ''}
-            {a.inicio != null && a.actual != null && a.meta ? ` (empezó en ${num(a.inicio)})` : ''}
+            {a.inicio != null && a.actual != null && a.meta ? ` (empezó en ${pesoNum(a.inicio, 1)})` : ''}
           </span>
-          {a.conseguido && <span class="mini ok-t">{esCoach ? 'Lo hizo' : 'Lo hiciste'}: {num(Number(a.conseguido.serie.kg), 2)} kg × {a.conseguido.serie.reps}{a.conseguido.serie.rpe ? ` @${num(Number(a.conseguido.serie.rpe))}` : ''}.</span>}
+          {a.conseguido && <span class="mini ok-t">{esCoach ? 'Lo hizo' : 'Lo hiciste'}: {pesoTxt(Number(a.conseguido.serie.kg), 2)} × {a.conseguido.serie.reps}{a.conseguido.serie.rpe ? ` @${num(Number(a.conseguido.serie.rpe))}` : ''}.</span>}
           {a.yaLoPermite && <span class="mini ok-t">{esCoach ? 'Su 1RM estimado ya lo permite: ponle el día para intentarlo.' : 'Tu 1RM estimado ya lo permite: tu coach te dirá el día para intentarlo.'}</span>}
           {a.prevision && (
             <span class={`mini ${a.prevision.aTiempo === false ? 'aviso-t' : 'terciario'}`}>
-              A este ritmo ({signo(a.prevision.ritmo, 1)} kg por semana), hacia el {fmtCorta(a.prevision.fecha)}{a.prevision.aTiempo === true ? ': a tiempo' : a.prevision.aTiempo === false ? ': más tarde de la fecha' : ''}.
+              A este ritmo ({signo(difVista(a.prevision.ritmo), 1)} {etiquetaPeso()} por semana), hacia el {fmtCorta(a.prevision.fecha)}{a.prevision.aTiempo === true ? ': a tiempo' : a.prevision.aTiempo === false ? ': más tarde de la fecha' : ''}.
             </span>
           )}
           {plazo && <span class="mini terciario">Objetivo {plazo}.</span>}

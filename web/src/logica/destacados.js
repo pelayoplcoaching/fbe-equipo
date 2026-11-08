@@ -4,6 +4,7 @@
 // confunda). Los umbrales están en UMBRALES y en el README.
 import { lunesDe, sumarDias, diasEntre } from './fechas.js';
 import { num } from './calculos.js';
+import { difVista, etiquetaPeso } from './unidades.js';
 
 export const UMBRALES = {
   tonelajeSube: 0.10,        // +10 % o más que la media de las 4 semanas anteriores a estas alturas de la semana
@@ -78,10 +79,10 @@ function destacadoFuerza(ejercicios, hoy) {
     if (!mejor || kg / a.valor > mejor.rel) mejor = { e, pts, kg, span, rel: kg / a.valor };
   }
   if (!mejor) return null;
-  const kgTxt = num(Math.round(mejor.kg * 2) / 2, 1);
+  const kgTxt = `${num(Math.round(difVista(mejor.kg) * 2) / 2, 1)} ${etiquetaPeso()}`;
   return {
     id: 'fuerza', icono: 'progreso', sobre: 'Fuerza',
-    texto: `Tu ${minusculaInicial(mejor.e.nombre)} estimado ha subido ${kgTxt} kg en ${mejor.span} semanas.`,
+    texto: `Tu ${minusculaInicial(mejor.e.nombre)} estimado ha subido ${kgTxt} en ${mejor.span} semanas.`,
     grafica: { tipo: 'linea', valores: mejor.pts.map((p) => p.valor) },
     ejercicioId: mejor.e.id, peso: mejor.rel * 4,
   };

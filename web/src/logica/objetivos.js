@@ -1,4 +1,5 @@
 import { e1rm, e1rmPorSemana, num } from './calculos.js';
+import { pesoTxt } from './unidades.js';
 import { sumarDias, diasEntre, lunesDe, aISO } from './fechas.js';
 
 // Objetivos de fuerza enlazados a un ejercicio: «62,5 kg × 1», «80 kg × 3».
@@ -14,7 +15,7 @@ export const REPS_MAX_OBJETIVO = 12;
 export const SEMANAS_REFERENCIA = 6;
 
 export const metaE1rm = (kg, reps) => e1rm({ kg, reps, rir: 0 });
-export const textoMarca = (kg, reps) => `${num(Number(kg), 2)} kg${Number(reps) > 1 ? ` × ${reps}` : ' a una repetición'}`;
+export const textoMarca = (kg, reps) => `${pesoTxt(Number(kg), 2)}${Number(reps) > 1 ? ` × ${reps}` : ' a una repetición'}`;
 
 // Mejor 1RM estimado de las últimas `semanas` (desde el lunes de hace `semanas` semanas hasta `hoy`, incluido)
 export function mejorReciente(series, hoy, semanas = SEMANAS_REFERENCIA) {

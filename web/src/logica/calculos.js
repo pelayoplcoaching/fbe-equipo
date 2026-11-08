@@ -1,13 +1,16 @@
 // Cálculos de entrenamiento y del resumen del coach. Funciones puras, probadas en test/logica.test.mjs.
 import { diasEntre, lunesDe, sumarDias, hoyISO } from './fechas.js';
 import { cardioHechoDe } from './cardio.js';
+import { pesoTxt, pesoNum, redondearCarga } from './unidades.js';
 
 // ---------- Formato numérico (es-ES) ----------
 
 export function num(v, dec = 1) {
   if (v === null || v === undefined || v === '' || Number.isNaN(Number(v))) return '—';
   const n = Number(v);
-  const s = Number.isInteger(n) ? String(n) : n.toFixed(dec).replace(/\.?0+$/, '');
+  // (sin decimales, «220» se queda en 220: solo se quitan los ceros de detrás de la coma)
+  const f = n.toFixed(dec);
+  const s = Number.isInteger(n) ? String(n) : f.includes('.') ? f.replace(/\.?0+$/, '') : f;
   return s.replace('.', ',');
 }
 
@@ -157,7 +160,7 @@ export function seriesPorGrupo(series, lunes) {
 
 // Una serie hecha en texto: «62,5×5 @9»; sin carga (peso corporal), «12 rep @8»
 export function textoSerie(s) {
-  const base = Number(s.kg) > 0 ? `${num(s.kg, 2)}×${s.reps ?? '—'}` : `${s.reps ?? '—'} rep`;
+  const base = Number(s.kg) > 0 ? `${pesoNum(s.kg, 2)}×${s.reps ?? '—'}` : `${s.reps ?? '—'} rep`;
   return s.rpe != null && s.rpe !== '' ? `${base} @${num(s.rpe)}` : base;
 }
 
@@ -212,7 +215,7 @@ export function pauta(se) {
     series: top ? `${reps === '' ? 'Top' : `1 × ${reps}`} + ${se.series - 1} × \u2212${num(se.backoff_pct)} %` : `${se.series} × ${reps}`.trim(),
     top,
     esfuerzo: se.rir_objetivo != null ? `RIR ${num(se.rir_objetivo)}` : se.rpe_objetivo != null ? `RPE ${num(se.rpe_objetivo)}` : null,
-    carga: se.carga_sugerida_kg != null ? `${num(se.carga_sugerida_kg, 2)} kg` : null,
+    carga: se.carga_sugerida_kg != null ? pesoTxt(redondearCarga(se.carga_sugerida_kg), 2) : null,
     descanso: se.descanso_seg ? mmss(se.descanso_seg) : null,
   };
 }
@@ -263,7 +266,7 @@ export const objetivoSerie = (se, k) => (tieneDetalle(se) ? se.series_detalle[k 
 // En texto: «10 × 25 kg @8», «12 reps @7», «25 kg»
 export function textoObjetivo(o) {
   if (!o) return '';
-  const base = o.kg != null ? `${o.reps != null ? `${o.reps} × ` : ''}${num(o.kg, 2)} kg` : o.reps != null ? `${o.reps} reps` : '';
+  const base = o.kg != null ? `${o.reps != null ? `${o.reps} × ` : ''}${pesoTxt(redondearCarga(o.kg), 2)}` : o.reps != null ? `${o.reps} reps` : '';
   return `${base}${o.rpe != null ? `${base ? ' ' : ''}@${num(o.rpe)}` : ''}`;
 }
 
@@ -406,12 +409,12 @@ export function sugerenciaProgresion(se, ultimas, { nombre = '', foco = null, pa
   const min = se.reps_min ?? se.reps_max;
   if (trabajo.length >= (top ? 1 : se.series || 1) && trabajo.every((s) => Number(s.reps) >= se.reps_max) && sinPasarse) {
     const nuevo = Math.round((kg + incrementoCarga(nombre, kg)) * 100) / 100;
-    return { tipo: 'subir', kg: nuevo, texto: `La última vez llegaste a ${se.reps_max} en ${top ? 'la serie top' : 'todas las series'}${reservas.length && objetivo != null ? ' sin pasarte de esfuerzo' : ''}: prueba con ${num(nuevo, 2)} kg${top ? ' en la top' : ''}.` };
+    return { tipo: 'subir', kg: nuevo, texto: `La última vez llegaste a ${se.reps_max} en ${top ? 'la serie top' : 'todas las series'}${reservas.length && objetivo != null ? ' sin pasarte de esfuerzo' : ''}: prueba con ${pesoTxt(redondearCarga(nuevo), 2)}${top ? ' en la top' : ''}.` };
   }
   if (trabajo.some((s) => Number(s.reps) < min)) {
-    return { tipo: 'mantener', kg, texto: `La última vez no llegaste a ${min} en alguna serie: repite ${num(kg, 2)} kg hasta completar el rango.` };
+    return { tipo: 'mantener', kg, texto: `La última vez no llegaste a ${min} en alguna serie: repite ${pesoTxt(kg, 2)} hasta completar el rango.` };
   }
-  return { tipo: 'repetir', kg, texto: `Misma carga (${num(kg, 2)} kg) e intenta sumar una repetición hasta llegar a ${se.reps_max}.` };
+  return { tipo: 'repetir', kg, texto: `Misma carga (${pesoTxt(kg, 2)}) e intenta sumar una repetición hasta llegar a ${se.reps_max}.` };
 }
 
 // Series de aproximación hasta la carga de trabajo. Con barra: empieza con la barra vacía y redondea a 2,5 kg.
@@ -606,11 +609,11 @@ export function recordDe(s, prev) {
   const conEsfuerzo = (s.rpe != null && s.rpe !== '') || (s.rir != null && s.rir !== '');
   const v = conEsfuerzo ? e1rm(s) : null;
   if (v != null && prev.e1rm && v > prev.e1rm.valor) {
-    return { tipo: 'e1rm', valor: v, antes: prev.e1rm.valor, texto: `1RM estimado ${num(v)} kg (antes ${num(prev.e1rm.valor)})` };
+    return { tipo: 'e1rm', valor: v, antes: prev.e1rm.valor, texto: `1RM estimado ${pesoTxt(v, 1)} (antes ${pesoNum(prev.e1rm.valor, 1)})` };
   }
   const ant = r <= 12 ? prev.kgPorReps[r] : null;
   if (ant && k > ant.kg) {
-    return { tipo: 'kg', reps: r, kg: k, antes: ant.kg, texto: `${num(k, 2)} kg a ${r} repeticiones (antes ${num(ant.kg, 2)})` };
+    return { tipo: 'kg', reps: r, kg: k, antes: ant.kg, texto: `${pesoTxt(k, 2)} a ${r} repeticiones (antes ${pesoNum(ant.kg, 2)})` };
   }
   return null;
 }

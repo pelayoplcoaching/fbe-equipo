@@ -7,6 +7,7 @@ import { num, signo, NOMBRE_FOCO } from '../logica/calculos.js';
 import { imagenMes, imagenCelebracion } from '../logica/imagenes.js';
 import { MensajeCoach } from './atleta/Personal.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
+import { pesoTxt, pesoNum } from '../logica/unidades.js';
 
 // Informe de un bloque: lo que se hizo de lo pautado, cómo subió la fuerza estimada de los ejercicios
 // principales, semana a semana, músculos, récords y (con consentimiento) el peso. Lo ven el atleta y el coach.
@@ -96,8 +97,8 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
               {r.principales.map((p) => (
                 <li key={p.ejercicio_id}>
                   <span class="pila-xs"><strong>{p.nombre}</strong>
-                    <span class="mini secundario num">{p.cambio != null ? `${num(p.inicio.e1rm)} → ${num(p.fin.e1rm)} kg (S${p.inicio.semana} a S${p.fin.semana})` : `${num(p.fin.e1rm)} kg`}</span></span>
-                  <Linea valores={p.valores} etiqueta={`1RM estimado por semana: ${p.valores.map((v) => (v == null ? 'sin datos' : `${num(v)} kg`)).join(', ')}`} />
+                    <span class="mini secundario num">{p.cambio != null ? `${pesoNum(p.inicio.e1rm, 1)} → ${pesoTxt(p.fin.e1rm, 1)} (S${p.inicio.semana} a S${p.fin.semana})` : pesoTxt(p.fin.e1rm, 1)}</span></span>
+                  <Linea valores={p.valores} etiqueta={`1RM estimado por semana: ${p.valores.map((v) => (v == null ? 'sin datos' : pesoTxt(v, 1))).join(', ')}`} />
                   {p.cambio != null ? <span class={`chip num ${p.cambio > 0 ? 'ok' : ''}`}>{signo(p.cambio, 1)} %</span> : <span />}
                 </li>
               ))}

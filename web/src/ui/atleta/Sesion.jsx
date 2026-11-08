@@ -17,7 +17,8 @@ import { PictoEjercicio } from '../Pictograma.jsx';
 import { prepararAudio, celebrar, sonarSerie, sonarFinSesion, usePantallaEncendida, useAhora, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
 import { FilaSerie } from './FilaSerie.jsx';
 import { useTecladoApp } from './Teclado.jsx';
-import { pasoKg, tipoCarga, pideRpe, discoMinimoValido, DISCO_MINIMO_DEFECTO, discosCon } from '../../logica/teclado.js';
+import { pasoPeso, tipoCarga, pideRpe, discoMinimoValido, DISCO_MINIMO_DEFECTO, discosCon } from '../../logica/teclado.js';
+import { enLibras, vista, deVista, pesoTxt } from '../../logica/unidades.js';
 import { propagarCambio, aplicarPropagacion, deshacerPropagacion, textoPropagacion } from '../../logica/propagar.js';
 import { ahoraToca, serieQueToca } from '../../logica/ahora-toca.js';
 import { aplicarOrden, moverAlFinal, moverBloque, reordenarPendientes, puedeDejarLuego, bloquesPendientes, proximaTrasReordenar } from '../../logica/orden-sesion.js';
@@ -368,7 +369,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       siguienteTxt = `Serie ${prox.numero} de ${pe.series}`;
       try {
         const prop = propuestaDe(pe, prox.numero);
-        if (prop?.kg) siguienteTxt += `: ${num(prop.kg, 2)} kg × ${prop.reps}`;
+        if (prop?.kg) siguienteTxt += `: ${pesoTxt(prop.kg, 2)} × ${prop.reps}`;
         else if (prop?.reps) siguienteTxt += `: ${prop.reps} repeticiones`;
       } catch { /* sin propuesta: la serie */ }
     }
@@ -421,7 +422,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     if (c && Date.now() - c.t < 2000) aviso(`${texto} · ${c.texto}`, tipo, { texto: 'Deshacer', fn: c.fn });
     else aviso(texto, tipo);
   };
-  async function guardar(e, numero, valores) {
+  async function guardar(e, numero, valoresVista) {
+    // v0.112: lo de la fila y del modo enfoque llega en la unidad de la app (en libras, si las tiene puestas); la base, en kilos
+    const valores = enLibras() && valoresVista.kg != null && valoresVista.kg !== '' ? { ...valoresVista, kg: deVista(valoresVista.kg) } : valoresVista;
     const problema = problemaSerie(valores);
     if (problema) { aviso(problema, 'error'); return; }
     prepararAudio();
@@ -744,7 +747,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           // En una sesión con ejercicios, el temporizador es solo una parte (el «para acabar»): manda el reloj de la sesión
           setIntervalos(null); setMinutosHechos(ejercicios.length ? null : minutos + 5); setTerminando(true);
         }} />}
-      {calculadora && <Calculadora inicial={calculadora.kg ? { kg: calculadora.kg, reps: 5, rpe: 8 } : ultimaHecha ? { kg: Number(ultimaHecha.kg) || 60, reps: ultimaHecha.reps || 5, rpe: ultimaHecha.rpe ? Math.round(ultimaHecha.rpe) : 8 } : {}}
+      {calculadora && <Calculadora inicial={calculadora.kg ? { kg: calculadora.kg, reps: 5, rpe: 8 } : ultimaHecha ? { kg: vista(Number(ultimaHecha.kg)) || (enLibras() ? 135 : 60), reps: ultimaHecha.reps || 5, rpe: ultimaHecha.rpe ? Math.round(ultimaHecha.rpe) : 8 } : {}}
         discos={discosCon(discoMinimo)} alCerrar={() => setCalculadora(false)} />}
       {ordenando && (
         <OrdenarSesion ejercicios={ejercicios} hechas={hechas} etiquetas={etiquetas} nombreDe={(x) => actualDe(x).nombre}
@@ -810,7 +813,9 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   // v0.63: lo escrito en cada serie (lo lleva el ejercicio, no cada fila: un cambio puede pasar a las siguientes). Las hechas
   // se rellenan con lo guardado cada vez que cambia la serie guardada (como antes en cada fila)
   const fmtV = (v, d) => (v == null ? '' : num(v, d));
-  const deHecha = (h) => ({ kg: fmtV(h.kg, 2), reps: fmtV(h.reps, 0), rpe: h.rpe ?? '' });
+  // v0.112: en libras, todo lo que ve y escribe la fila va en libras (enV); se pasa a kilos al guardar
+  const enV = (p) => (!p || !enLibras() || p.kg == null || p.kg === '' ? p : { ...p, kg: vista(p.kg) });
+  const deHecha = (h) => ({ kg: fmtV(enLibras() ? vista(h.kg) : h.kg, 2), reps: fmtV(h.reps, 0), rpe: h.rpe ?? '' });
   const sincronizadas = useRef(null);
   const [borr, setBorr] = useState(() => {
     sincronizadas.current = {};
@@ -837,7 +842,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   function comprometer(k, c, antes, despues) {
     const filasP = Array.from({ length: filas }, (_, i) => i + 1).map((x) => ({
       numero: x, hecha: !!hechas[x], pautada: x <= e.series, tipo: tipoDe(x),
-      prescrito: (() => { try { return propuesta(x, hechas)?.[c] ?? null; } catch { return null; } })(),
+      prescrito: (() => { try { return enV(propuesta(x, hechas))?.[c] ?? null; } catch { return null; } })(),
       texto: x === k ? antes : String(borr[x]?.[c] ?? ''),
     }));
     const cambios = propagarCambio(filasP, k, antes, despues);
@@ -877,7 +882,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
     { id: 'descanso', ico: 'reloj', texto: 'Descanso', detalle: detalleDescanso, fijo: delCoach },
     tempo && { id: 'tempo', ico: 'altavoz', texto: `Tempo ${tempo.texto}`, nombre: `Metrónomo de tempo ${tempo.texto}`, detalle: 'Metrónomo que marca la bajada, la pausa y la subida' },
     !nota && !editandoNota && { id: 'nota', ico: 'chincheta', texto: 'Nota', detalle: 'Una nota fija para ti en este ejercicio (la silla en el 4, el agarre…)' },
-    conAproximacion && kgTrabajo > 0 && { id: 'aproximacion', ico: 'llama', texto: 'Aproximación', detalle: `Series de calentamiento hasta ${num(kgTrabajo, 2)} kg` },
+    conAproximacion && kgTrabajo > 0 && { id: 'aproximacion', ico: 'llama', texto: 'Aproximación', detalle: `Series de calentamiento hasta ${pesoTxt(kgTrabajo, 2)}` },
     (ej.instrucciones || ej.errores) && { id: 'tecnica', ico: 'biblioteca', texto: 'Técnica', detalle: 'Las claves y los errores comunes' },
     ej.video_url && { id: 'tutorial', ico: 'video', texto: 'Tutorial', detalle: 'El vídeo del ejercicio (se abre aparte)', href: ej.video_url },
   ].filter(Boolean);
@@ -950,23 +955,23 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
           {sugerencia && n < e.series && <p class={`sugerencia ${sugerencia.tipo}`}><Icono n={sugerencia.tipo === 'subir' ? 'arriba' : 'reiniciar'} />{sugerencia.texto}</p>}
           {/* v0.63 (3): la primera vez, en el móvil (con el dedo), cómo marcar sin apuntar y cómo abrir el teclado */}
           {siguiente && !completo && tactil() && <Pista id="deslizar-serie" icono="hecho">Desliza una serie a la derecha para marcarla como hecha (lo mismo que ✓: con lo que hayas escrito o, si no, con lo que te propone).{teclado?.app ? ' Mantenla pulsada para abrir el teclado en los kilos.' : ''}</Pista>}
-          <div class="series-cab" aria-hidden="true"><span>Serie</span><span>Kg</span><span>Reps</span><span>Esfuerzo</span><span /></div>
+          <div class="series-cab" aria-hidden="true"><span>Serie</span><span>{enLibras() ? 'Lb' : 'Kg'}</span><span>Reps</span><span>Esfuerzo</span><span /></div>
           {Array.from({ length: filas }, (_, i) => i + 1).map((k) => {
-            const prop = propuesta(k, hechas);
+            const prop = enV(propuesta(k, hechas));
             return (
               <Fragment key={k}>
-                <FilaSerie numero={k} hecha={hechas[k]} propuesta={prop} activa={k === activa} siguiente={k === siguiente} barra={barra} record={hechas[k] ? records[`${e.id}-${k}`] : null}
-                  anterior={conAnterior ? pesoAnterior(ultimas, k) : null}
+                <FilaSerie numero={k} hecha={enV(hechas[k])} propuesta={prop} activa={k === activa} siguiente={k === siguiente} barra={barra} record={hechas[k] ? records[`${e.id}-${k}`] : null}
+                  anterior={conAnterior ? (enLibras() ? vista(pesoAnterior(ultimas, k)) : pesoAnterior(ultimas, k)) : null}
                   pendiente={enCola[`${e.id}-${k}`]} nombre={ej.nombre} tipo={tipoDe(k)}
                   guardar={(v) => guardar(k, v)} quitar={() => quitar(k)}
                   valores={borr[k] || VACIA} cambiar={(c, t) => cambiarBorr(k, c, t)} alComprometer={comprometer}
                   teclado={teclado} conRpe={conRpe || prop?.rpe != null} objetivoEsfuerzo={pa.esfuerzo} conDiscos={conDiscos}
-                  paso={pasoKg({ nombre: ej.nombre, kg: aNum((borr[k] || VACIA).kg) ?? prop?.kg ?? null, discoMinimo: teclado?.discoMinimo })} />
+                  paso={pasoPeso({ nombre: ej.nombre, valor: aNum((borr[k] || VACIA).kg) ?? prop?.kg ?? null, discoMinimo: teclado?.discoMinimo })} />
                 {k === 1 && top && n < e.series && (
                   <p class="backoff-nota">
                     <Icono n="abajo" />
                     {hechas[1]
-                      ? <span>Back-off: un {num(e.backoff_pct)} % menos que tu top, <strong class="num">{num(kgBackoff, 2)} kg</strong>.</span>
+                      ? <span>Back-off: un {num(e.backoff_pct)} % menos que tu top, <strong class="num">{pesoTxt(kgBackoff, 2)}</strong>.</span>
                       : <span>Las back-off se calculan con lo que hagas en la top ({num(e.backoff_pct)} % menos).</span>}
                   </p>
                 )}

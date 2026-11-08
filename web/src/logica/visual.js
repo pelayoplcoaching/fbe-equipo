@@ -2,6 +2,7 @@
 // terminado, la comparación con la última vez que se hizo la sesión, la escala y los récords de las gráficas, el
 // calendario de constancia, el estado de cada atleta en el panel y sus minigráficas.
 import { num } from './calculos.js';
+import { pesoTxt } from './unidades.js';
 import { lunesDe, sumarDias, desdeISO } from './fechas.js';
 import { normal as sinTildes } from './busqueda.js';
 
@@ -25,8 +26,8 @@ export function resumenSeries(series = []) {
   const conKg = kgs.length === ss.length;
   const mismoKg = conKg && kgs.every((k) => k === kgs[0]);
   if (!kgs.length) return mismasReps ? `${ss.length} × ${reps[0]}` : `${reps.join('-')} reps`;
-  if (mismoKg) return mismasReps ? `${ss.length} × ${reps[0]} @ ${num(kgs[0], 2)} kg` : `${reps.join('-')} @ ${num(kgs[0], 2)} kg`;
-  return `${ss.length} series, hasta ${num(Math.max(...kgs), 2)} kg`;
+  if (mismoKg) return mismasReps ? `${ss.length} × ${reps[0]} @ ${pesoTxt(kgs[0], 2)}` : `${reps.join('-')} @ ${pesoTxt(kgs[0], 2)}`;
+  return `${ss.length} series, hasta ${pesoTxt(Math.max(...kgs), 2)}`;
 }
 
 // La última vez que se hizo esta sesión (la de nombre igual más reciente, sin contar esta) y qué ha cambiado.
@@ -52,7 +53,7 @@ export function textoComparacion(c) {
   if (!c) return null;
   const t = c.tonelaje;
   if (Math.abs(t) < 1) return 'El mismo tonelaje que la última vez';
-  return t > 0 ? `+${num(t, 0)} kg de tonelaje que la última vez` : `${num(-t, 0)} kg menos de tonelaje que la última vez`;
+  return t > 0 ? `+${pesoTxt(t, 0)} de tonelaje que la última vez` : `${pesoTxt(-t, 0)} menos de tonelaje que la última vez`;
 }
 
 // ---------- gráficas ----------

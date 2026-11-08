@@ -24,6 +24,7 @@ import { ponerInsignia } from '../insignia-app.js';
 import { repartirPestanas, PREFERIDAS_COACH } from '../../logica/pestanas.js';
 import { useEstrecha, BotonMas, HojaMas } from '../BarraMas.jsx';
 import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
+import { fijarUnidadPeso } from '../../logica/unidades.js';
 
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
 // Modo atleta (v0.37): el coach entrena con la app de atleta, con su propia ficha (solo entrenamiento)
@@ -41,6 +42,8 @@ const chatDeRuta = (h) => (RUTA_CHAT.exec(h) || [])[1] || null;
 
 export function CoachApp() {
   const { api, propioCoach, entrarModoAtleta, pedidoCoach, consumirPedidoCoach } = useApp();
+  // v0.112: la app del coach, siempre en kilos (las libras son un ajuste del atleta en su móvil)
+  useState(() => fijarUnidadPeso('kg'));
   // (v0.65) «Novedades» tras actualizar la app: al coach, solo lo que es para él
   useState(() => prepararVersionVista(api.uid()));
   // v0.68: la bienvenida del día, para ti: «Valar morghulis, coach supremo» (una vez al día, en este dispositivo)

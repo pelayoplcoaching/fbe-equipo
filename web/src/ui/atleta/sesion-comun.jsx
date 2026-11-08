@@ -14,6 +14,7 @@ import { ajustarDescanso, reanudarDescanso, fraseTrasPista, avisoTrasCambio } fr
 import { Placas } from '../Herramientas.jsx';
 import { num } from '../../logica/calculos.js';
 import { discosCon } from '../../logica/teclado.js';
+import { pesoNum, etiquetaPeso, vista, redondearCarga, enLibras } from '../../logica/unidades.js';
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
 
@@ -424,7 +425,7 @@ export function AhoraToca({ ahora, alTocar, discoMinimo = undefined }) {
       <span class="ahora-cab"><span class="ahora-etq">{a.otroEjercicio ? 'Siguiente ejercicio' : 'Ahora toca'}</span><span class="ahora-serie">{a.serie}</span></span>
       <span class="ahora-nombre">{a.etiqueta && <span class="ss-etq">{a.etiqueta}</span>}{a.nombre}</span>
       {a.kg != null ? (
-        <span class="ahora-carga num">{num(a.kg, 2)}<small> kg</small>{a.reps != null && <><span class="ahora-por"> × </span>{a.reps}</>}</span>
+        <span class="ahora-carga num">{pesoNum(a.kg, 2)}<small> {etiquetaPeso()}</small>{a.reps != null && <><span class="ahora-por"> × </span>{a.reps}</>}</span>
       ) : a.reps != null && <span class="ahora-carga num">{a.reps}<small> reps</small></span>}
       {(a.esfuerzo || a.anterior) && (
         <span class="ahora-meta">
@@ -432,7 +433,7 @@ export function AhoraToca({ ahora, alTocar, discoMinimo = undefined }) {
           {a.anterior && <span><small>ant.</small> <span class="num">{a.anterior}</span></span>}
         </span>
       )}
-      {a.discos && <span class="ahora-discos"><Placas kg={a.kg} discos={discosCon(discoMinimo)} /></span>}
+      {a.discos && <span class="ahora-discos"><Placas kg={vista(a.kg)} discos={discosCon(discoMinimo)} /></span>}
       {a.nota && <span class="ahora-nota"><Icono n={a.notaRecuerda ? 'chincheta' : 'mensaje'} /><span>{a.notaRecuerda ? 'Recuerda: ' : ''}{a.nota}</span></span>}
     </button>
   );
@@ -450,7 +451,14 @@ export function prepararEjercicio(e, actual, ultimas, foco, progresionAuto) {
   const barra = esBarra(ej.nombre);
   const top = esTopBackoff(prescripcion);
   const deLaTop = propuestaSerie(prescripcion, ultimas?.series, 1, { sugerencia, pautaAnterior: ultimas?.pauta });
+  // v0.112: con las libras puestas, lo que propone la app (no lo que ya hizo hoy) se redondea a lo que se carga en libras
+  // (80 kg → 175 lb); en kilos, igual
   const propuesta = (k, hechas = {}) => {
+    const p = propuestaKg(k, hechas);
+    if (!enLibras()) return p;
+    return p && p.kg != null && !(hechas[k - 1] && Number(hechas[k - 1].kg) === Number(p.kg)) ? { ...p, kg: redondearCarga(Number(p.kg)) } : p;
+  };
+  const propuestaKg = (k, hechas = {}) => {
     // Top + back-off: la back-off sale de lo que hizo de verdad en la top (o de lo propuesto, si aún no la ha hecho)
     const bo = top ? propuestaBackoff(prescripcion, k, hechas, deLaTop, ej.nombre) : null;
     if (bo) return bo;

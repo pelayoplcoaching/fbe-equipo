@@ -1,6 +1,7 @@
 import { useApp, useCarga, Icono, Hoja, Siluetas, Vacio, ErrorCaja, useAncho } from '../comunes.jsx';
 import { NOMBRE_FOCO, num } from '../../logica/calculos.js';
 import { rangoSemana } from '../../logica/fechas.js';
+import { pesoTxt } from '../../logica/unidades.js';
 
 const ESTADO = { hecha: 'Hecha', pasada: 'Pasada', actual: 'Esta semana', siguiente: 'Publicada', por_publicar: 'Por publicar' };
 
@@ -75,10 +76,10 @@ function GraficaCarga({ ejercicio }) {
     return d.trim();
   };
   const ult = [...pts].reverse().find((p) => p.hecho != null);
-  const texto = pts.map((p) => `S${p.numero}: ${p.pautado != null ? `${num(p.pautado, 2)} kg pautados` : 'sin carga pautada'}${p.hecho != null ? `, ${num(p.hecho, 2)} kg hechos` : ''}`).join('; ');
+  const texto = pts.map((p) => `S${p.numero}: ${p.pautado != null ? `${pesoTxt(p.pautado, 2)} pautados` : 'sin carga pautada'}${p.hecho != null ? `, ${pesoTxt(p.hecho, 2)} hechos` : ''}`).join('; ');
   return (
     <div class="panel panel-pad pila-xs grafica-bloque">
-      <div class="separa"><strong class="peq">{ejercicio.nombre}</strong>{ult && <span class="mini num secundario">S{ult.numero}: {num(ult.hecho, 2)} kg</span>}</div>
+      <div class="separa"><strong class="peq">{ejercicio.nombre}</strong>{ult && <span class="mini num secundario">S{ult.numero}: {pesoTxt(ult.hecho, 2)}</span>}</div>
       <svg class="grafica" ref={ref} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${ejercicio.nombre}. ${texto}`}>
         {[lo + (hi - lo) * 0.2, lo + (hi - lo) * 0.8].map((t) => (
           <g key={t}><line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" /><text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(Math.round(t * 2) / 2, 1)}</text></g>
