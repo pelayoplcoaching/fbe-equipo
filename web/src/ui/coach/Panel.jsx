@@ -11,6 +11,7 @@ import { estadoAtleta, NOMBRE_ESTADO, chispaSuave } from '../../logica/visual.js
 import { equipoHoy, arcoDial } from '../../logica/tablero.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { AvisoAlmacenamientoPanel } from '../tecnica/Limpieza.jsx';
+import { CumplesHoy } from './PersonalCoach.jsx';
 
 // v0.49: minigráficas del panel (solo las ve el coach): el peso de las últimas semanas y las sesiones hechas de las
 // programadas en las 6 últimas, con su texto para los lectores de pantalla
@@ -117,6 +118,8 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
       </CabeceraGrande>
       <BandaDemo />
       <AvisoAlmacenamientoPanel abrirCuenta={abrirCuenta} />
+      {/* (v0.104) quién cumple años hoy */}
+      {!cargando && <CumplesHoy lista={lista} abrir={abrir} />}
       <ErrorCaja error={res.error} reintentar={res.recargar} />
       {/* (pulido 2.3) el resumen del equipo guarda su sitio mientras llega la lista: los filtros no bajan */}
       <Reserva id="panel-equipo-hoy" cargando={cargando}>{eq && eq.activos > 0 && <EquipoHoy eq={eq} porRevisar={porRevisar} irARevisar={irARevisar} filtro={filtro} alFiltrar={setFiltro} />}</Reserva>

@@ -25,6 +25,8 @@ import { Hilo } from '../Hilo.jsx';
 import { num, signo, GRUPOS, MEDIDAS, e1rm, rangoVolumen, estadoVolumen, tendenciaPeso, ritmoPeso } from '../../logica/calculos.js';
 import { historiaRecords } from '../../logica/diseno.js';
 import { fmtCorta, hoyISO, diasEntre, fmtConDia, fechaMadrid, lunesDe, sumarDias } from '../../logica/fechas.js';
+import { CifraObjetivo, TusEjercicios } from './Personal.jsx';
+import { FilaTuAnio } from './TuAnio.jsx';
 
 
 // La explicación de una gráfica, plegada bajo «Cómo se calcula» (antes, un párrafo fijo debajo de cada una)
@@ -600,10 +602,14 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
         <Grupo g="resumen">
           {/* (pulido 2.3) cada bloque del resumen guarda, mientras llega, el sitio que ocupó la última vez: ya no se van
               empujando unos a otros según cargan */}
+          {/* (v0.104) lo de su objetivo del cuestionario (la cifra que le importa) y sus tres ejercicios */}
+          {entrena && <CifraObjetivo progreso={progreso.datos} constancia={constancia.datos} salud={salud} />}
+          {entrena && <TusEjercicios progreso={progreso.datos} />}
           {entrena && <Reserva id="prog-destacados" cargando={llegando}><Destacados progreso={progreso.datos} constancia={constancia.datos} programa={programa.datos} /></Reserva>}
           {entrena && <Reserva id="prog-anillos" cargando={llegando}><AnillosSemana programa={programa} salud={salud} checkinSemana={checkinSemana} constancia={constancia} /></Reserva>}
           {entrena && <Reserva id="prog-cifras" cargando={llegando}><Cifras constancia={constancia} semanas={semanas} /></Reserva>}
           {entrena && <Reserva id="prog-semanas" cargando={llegando}><TusSemanas salud={salud} lista={semanas} /></Reserva>}
+          {entrena && <FilaTuAnio />}
           <Reserva id="prog-meses"><TusMeses salud={salud} /></Reserva>
           {entrena && <Reserva id="prog-bloques"><TusBloques salud={salud} /></Reserva>}
         </Grupo>

@@ -5,6 +5,7 @@ import { HojaCompartir } from './Compartir.jsx';
 import { rangoLargo } from './atleta/TuSemana.jsx';
 import { num, signo, NOMBRE_FOCO } from '../logica/calculos.js';
 import { imagenMes, imagenCelebracion } from '../logica/imagenes.js';
+import { MensajeCoach } from './atleta/Personal.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 
 // Informe de un bloque: lo que se hizo de lo pautado, cómo subió la fuerza estimada de los ejercicios
@@ -78,6 +79,8 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
           </div>
         ) : <p class="secundario">{r.semanasTotal} semanas, {rangoLargo(r.inicio, r.fin)}. <span class={`chip ${r.terminado ? 'ok' : 'morado'}`}>{r.terminado ? 'Terminado' : 'En curso'}</span></p>}
         {r.bloque.objetivo && <p class="peq">{r.bloque.objetivo}</p>}
+        {/* (v0.104) bloque terminado: lo que tu coach dejó escrito (solo el atleta) */}
+        {r.terminado && !coach && <MensajeCoach momento="bloque" />}
 
         <div class="informe-cifras">
           <div class="informe-cifra"><Anillo hechas={r.sesiones.hechas} total={r.sesiones.total || 1} tam={56} /><span class="pila-xs"><b class="num">{r.sesiones.hechas} de {r.sesiones.total}</b><span class="mini secundario">sesiones</span></span></div>

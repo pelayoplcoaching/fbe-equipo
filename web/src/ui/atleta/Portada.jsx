@@ -12,6 +12,7 @@ import { pauta, NOMBRE_GRUPO, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_TIPO_SE
 import { cardioValido } from '../../logica/cardio.js';
 import { familiaPortada } from '../../logica/imagenes.js';
 import { Imagen } from '../Imagen.jsx';
+import { RecordAlAlcance, BotonMusica } from './Personal.jsx';
 
 // El dibujo: solo geometría (logica/arte.js); los colores, del tema (el acento, claro y tenue sobre la tarjeta oscura)
 export function ArteSesion({ nombre, tipo, patron, clase = 'portada-arte' }) {
@@ -73,6 +74,8 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
         </figure>
       )}
       {cardio && <TarjetaCardio pauta={cardio} hecho={sesion.cardio_hecho} completada={sesion.completada} />}
+      {/* (v0.104) la carga que batiría su récord, si lo reciente dice que la tiene a mano */}
+      {!sesion.completada && !propio && ejercicios.length > 0 && <RecordAlAlcance ejercicios={ejercicios} />}
       {ejercicios.length > 0 && (
         <section class="seccion">
           <h2>Lo que vas a hacer</h2>
@@ -96,6 +99,8 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
           <p class="mini terciario">El disco de color marca la prioridad: rojo obligatorio, azul muy importante, amarillo accesorio, verde prescindible.</p>
         </section>
       )}
+      {/* (v0.104) su lista de música, si la eligió en «Lo tuyo» */}
+      {!propio && !sesion.completada && <BotonMusica />}
       <div class="portada-empezar">
         <button class="btn btn-primario btn-grande btn-ancho" onClick={alEmpezar}><Icono n="play" /> Empezar</button>
       </div>

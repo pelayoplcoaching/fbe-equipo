@@ -1,7 +1,8 @@
 // Plan de la semana: qué día piensa hacer el atleta cada sesión (como en TrainingPeaks o Future) y
 // «Añadir a mi calendario», que crea los eventos con aviso en el móvil sin necesitar notificaciones.
 import { useState } from 'preact/hooks';
-import { useApp, Icono, Hoja, Segmentos, usePreferencia, descargar as descargarArchivo } from '../comunes.jsx';
+import { useApp, useCarga, Icono, Hoja, Segmentos, usePreferencia, descargar as descargarArchivo } from '../comunes.jsx';
+import { semanaTipo, repartirComoSiempre, textoDias } from '../../logica/personal.js';
 import { diaPrevistoValido, cuandoDia, repartir, calendarioICS, LETRAS_DIA } from '../../logica/plan.js';
 import { sumarDias, hoyISO, desdeISO, fmtConDia, rangoSemana } from '../../logica/fechas.js';
 import { NOMBRE_TIPO_SESION, NOMBRE_INTENCION } from '../../logica/calculos.js';
@@ -61,6 +62,12 @@ export function PlanSemana({ semana, sesiones, alCambiar, compacto = false, solo
   const conDia = pendientes.filter((s) => diaPrevistoValido(s, semana));
   const propuesta = repartir(sesiones, semana, hoy);
   const fin = semana?.fecha_inicio ? sumarDias(semana.fecha_inicio, 6) : null;
+  // (v0.104) su semana tipo: los días que suele entrenar (de su historial), para dejar el plan relleno de un toque
+  const { api, atleta, propio } = useApp();
+  const historial = useCarga(() => (sinDia.length && !propio && atleta?.id ? api.historial(atleta.id).catch(() => []) : Promise.resolve([])), [atleta?.id, sinDia.length > 0]);
+  const diasTipo = historial.datos?.length ? semanaTipo(historial.datos.map((x) => x.fecha), hoy) : [];
+  const ocupados = sesiones.flatMap((x) => (x.completada ? [x.fecha_realizada] : [diaPrevistoValido(x, semana)])).filter(Boolean);
+  const comoSiempre = diasTipo.length && semana?.fecha_inicio ? repartirComoSiempre({ sinDia, ocupados, lunes: semana.fecha_inicio, desde: semana.fecha_inicio, hasta: fin, hoy, dias: diasTipo }) : {};
   if (!semana?.fecha_inicio || (fin && fin < hoy)) return null;
   return (
     <div class="panel panel-pad pila plan-semana">
@@ -93,6 +100,12 @@ export function PlanSemana({ semana, sesiones, alCambiar, compacto = false, solo
       </ul>
       )}
       <div class="fila-envolver">
+        {sinDia.length > 0 && Object.keys(comoSiempre).length > 0 && (
+          <button class="btn btn-peq btn-primario como-siempre" onClick={async () => { for (const s2 of sinDia) if (comoSiempre[s2.id]) await planificar(s2, comoSiempre[s2.id]); }}
+            aria-label={`Como siempre: ${textoDias(diasTipo)}`}>
+            <Icono n="calendario" /> Como siempre: {textoDias(diasTipo)}
+          </button>
+        )}
         {sinDia.length > 0 && Object.keys(propuesta).length > 0 && (
           <button class="btn btn-peq" onClick={async () => { for (const s of sinDia) if (propuesta[s.id]) await planificar(s, propuesta[s.id]); }}>
             <Icono n="rayo" /> Repartir por mí
