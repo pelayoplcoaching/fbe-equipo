@@ -828,7 +828,7 @@ function SiguienteSesion({ sesion, ejercicios, cargando }) {
                       <div class="nombre">{etiquetas[e.id] && <span class="ss-etq">{etiquetas[e.id]}</span>}{e.ejercicio.nombre}</div>
                       <div class="pauta"><span class="num">{pa.series}</span>{pa.esfuerzo && <span>{pa.esfuerzo}</span>}{pa.carga && <span class="num">{pa.carga}</span>}{e.variante && <span>{e.variante}</span>}</div>
                     </div>
-                    {e.hechas.length > 0 && <span class={`estado-series ${e.hechas.length >= e.series ? 'hecho' : ''}`}>{e.hechas.length}/{e.series}</span>}
+                    {e.hechas.length > 0 && <span class={`estado-series ${e.hechas.length >= e.series ? 'hecho' : ''}`} style={{ '--f': Math.min(1, e.hechas.length / (e.series || 1)) }}>{e.hechas.length}/{e.series}</span>}
                   </li>
                 );
               })}
