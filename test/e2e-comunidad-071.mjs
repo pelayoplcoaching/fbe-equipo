@@ -102,7 +102,7 @@ export async function probarComunidad071({ navegador, check, base = 'http://loca
     await post('Mi truco para la sentadilla').waitFor();
     check(await tema.inputValue() === 'charla', 'publicada (y el tema vuelve a «Charla»)');
     await filtro('Técnica').click();
-    await p.locator('article.post', { hasText: 'press banca' }).waitFor();
+    await p.locator('article.post', { hasText: 'juntar las escápulas' }).waitFor();   // (el truco de Rubén: algunos días el entreno de Carlos también lleva press banca)
     // (en una máquina lenta, la lista filtrada sustituye a la de antes un poco después: se espera a que quede solo lo filtrado)
     await p.waitForFunction(() => { const xs = [...document.querySelectorAll('article.post .post-quien .mini')].map((x) => x.textContent); return xs.length === 2 && xs.every((t) => t.startsWith('Técnica · ')); }, null, { timeout: 10000 }).catch(() => {});
     const metas = await p.locator('article.post .post-quien .mini').allTextContents();
