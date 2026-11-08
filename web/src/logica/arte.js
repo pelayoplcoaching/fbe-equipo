@@ -92,6 +92,8 @@ export const PLANTILLAS_TARJETA = [
   ['cifras', 'Cifras', 'Las cifras en grande'],
   ['minima', 'Mínima', 'El nombre y una cifra'],
   ['foto', 'Con tu foto', 'Elige una foto del móvil'],
+  // (compartir) fondo claro, con las cifras en grande
+  ['clara', 'Clara', 'Fondo claro'],
 ];
 // d: lo de datosTarjeta (nombre, series, tonelaje en kg, minutos, records). Solo lo del entreno.
 export function cifrasTarjeta(d = {}) {

@@ -152,7 +152,7 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
           <button class="btn btn-grande" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir {tu} cifras</button>
         )}
       </div>
-      {compartir && <HojaCompartir datos={datosTarjeta} titulo="Compartir el bloque" alCerrar={() => setCompartir(false)}
+      {compartir && <HojaCompartir tipo="sesion" equipo={{ tema: 'logros' }} datos={datosTarjeta} titulo="Compartir el bloque" alCerrar={() => setCompartir(false)}
         alt={`Tarjeta del ${tituloBloque(r.bloque)}: ${r.sesiones.hechas} sesiones, ${toneladas(r.tonelaje)} toneladas, ${r.records.length} récords`}
         nota="Solo lleva el nombre del bloque, las sesiones, las toneladas, los récords y cuánto ha subido tu fuerza estimada: nada de peso corporal ni datos de salud." />}
     </Hoja>

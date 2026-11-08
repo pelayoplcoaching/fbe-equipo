@@ -45,6 +45,8 @@ import { PlegableEquipo } from './PlegableEquipo.jsx';
 import { Imagen } from './Imagen.jsx';
 import { ListaEquipo } from './atleta/Musica.jsx';
 import { pesoTxt } from '../logica/unidades.js';
+import { HojaCompartir } from './Compartir.jsx';
+import { datosDePost, datosEquipoSemana } from '../logica/compartir.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
 // v0.71: con la 043, también las preguntas del equipo
@@ -616,6 +618,8 @@ function InsigniasPerfil({ lista = [], yo = false }) {
 function ResumenSemana({ cambios = 0 }) {
   const { api } = useApp();
   const r = useCarga(() => api.resumenSemanaComunidad(), [cambios]);
+  // (compartir) la semana del equipo como tarjeta (solo recuentos, sin nombres): para el Instagram del coach o del equipo
+  const [compartir, setCompartir] = useState(false);
   const x = r.datos;
   if (!x) return null;
   const datos = [
@@ -630,6 +634,8 @@ function ResumenSemana({ cambios = 0 }) {
       <dl class="resumen-equipo-num">
         {datos.map(([v, k], i) => <div key={i}><dt>{k}</dt><dd class="num">{v}</dd></div>)}
       </dl>
+      {x.sesiones > 0 && <button type="button" class="btn btn-peq resumen-equipo-compartir" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir la semana del equipo</button>}
+      {compartir && <HojaCompartir logro tipo="equipo" titulo="Compartir la semana del equipo" datos={datosEquipoSemana(x)} nota="Solo lleva los recuentos del equipo: ningún nombre." alCerrar={() => setCompartir(false)} />}
     </section>
   );
 }
@@ -928,7 +934,10 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
       {hoja === 'comentarios' && <HojaComentarios post={post} coach={coach} personas={personas} alCerrar={() => setHoja(null)} alCambiar={alCambiar} />}
       {hoja === 'quien' && <HojaQuien post={post} alCerrar={() => setHoja(null)} />}
       {hoja === 'votos' && <HojaVotantes post={post} alCerrar={() => setHoja(null)} />}
-      {hoja === 'opciones' && <HojaOpcionesPost post={post} coach={coach} alCerrar={() => setHoja(null)} alCambiar={alCambiar} alAvisar={() => setHoja('avisar')} alSilenciar={() => setHoja('silenciar')} />}
+      {hoja === 'opciones' && <HojaOpcionesPost post={post} coach={coach} alCerrar={() => setHoja(null)} alCambiar={alCambiar} alAvisar={() => setHoja('avisar')} alSilenciar={() => setHoja('silenciar')} alFuera={() => setHoja('fuera')} />}
+      {hoja === 'fuera' && (post.tipo === 'entreno'
+        ? <HojaCompartir plantillas datos={datosDePost(post)} titulo="Compartir fuera del equipo" alCerrar={() => setHoja(null)} />
+        : <HojaCompartir logro tipo="logro" datos={datosDePost(post)} titulo="Compartir fuera del equipo" alCerrar={() => setHoja(null)} />)}
       {hoja === 'avisar' && <HojaAvisar postId={post.id} alCerrar={() => setHoja(null)} />}
       {hoja === 'silenciar' && <HojaSilenciarDe perfilId={post.autor_id} nombre={post.autor.nombre} alCerrar={() => setHoja(null)} />}
     </article>
@@ -1196,7 +1205,7 @@ function HojaSilenciarDe({ perfilId, nombre, alCerrar, alCambiar = null }) {
   return <HojaSilenciar perfilId={perfilId} nombre={nombre} hasta={silenciadoHasta(p.datos)} alCerrar={alCerrar} alCambiar={alCambiar} />;
 }
 
-function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar, alSilenciar = null }) {
+function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar, alSilenciar = null, alFuera = null }) {
   const { api, aviso } = useApp();
   const [borrar, setBorrar] = useState(false);
   const [ocupado, una] = useUnaVez();
@@ -1219,6 +1228,8 @@ function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar, alSilenc
           {coach && !post.mio && <button class="btn" disabled={ocupado} onClick={() => hacer(() => api.ocultarEnComunidad(post.id, !post.oculta), post.oculta ? 'Vuelve a verse' : 'Oculta para los atletas')}><Icono n="ojo" /> {post.oculta ? 'Volver a mostrarla' : 'Ocultarla'}</button>}
           {coach && post.con044 && !post.mio && !post.autor.coach && alSilenciar && <button class="btn" onClick={alSilenciar}><Icono n="silencio" /> Silenciar a {post.autor.nombre}</button>}
           {!coach && !post.mio && !post.autor.coach && <button class="btn" onClick={alAvisar}><Icono n="bandera" /> Avisar al coach</button>}
+          {/* (compartir) lo mío (un entreno, un logro o un aniversario), como imagen para fuera del equipo */}
+          {post.mio && ['entreno', 'logro', 'aniversario'].includes(post.tipo) && alFuera && <button class="btn" onClick={alFuera}><Icono n="compartir" /> Compartir fuera del equipo</button>}
           {(coach || post.mio) && <button class="btn btn-peligro" onClick={() => setBorrar(true)}><Icono n="basura" /> Borrar</button>}
           {!coach && post.mio && <p class="mini terciario">Lo ven los del equipo y tu coach mientras sigas en la comunidad.</p>}
         </div>

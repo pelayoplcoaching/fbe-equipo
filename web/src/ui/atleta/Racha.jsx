@@ -2,7 +2,7 @@
 // titila (solo transform; quieta con «reducir movimiento»), la cifra en grande y condensada, las últimas 12 semanas
 // (completas, sin completar, sin nada programado y la de ahora) y la próxima meta con su barra. Y al llegar a 4, 8, 12,
 // 26 y 52 semanas, un momento a pantalla completa con confeti, una vez por hito en este móvil.
-import { useEffect, useId, useRef } from 'preact/hooks';
+import { useEffect, useId, useRef, useState } from 'preact/hooks';
 import { Capa, Icono, useAtraparFoco, usePreferencia } from '../comunes.jsx';
 import { calendarioRacha, proximoHito, hitoPorCelebrar, marcarHitos, NOMBRE_ESTADO_SEMANA, textoSemanas } from '../../logica/racha.js';
 import { fmtCorta, hoyISO } from '../../logica/fechas.js';
@@ -10,6 +10,8 @@ import { lanzarConfeti } from '../confeti.js';
 import { Imagen } from '../Imagen.jsx';
 import { MensajeCoach } from './Personal.jsx';
 import { imagenCelebracion } from '../../logica/imagenes.js';
+import { HojaCompartir } from '../Compartir.jsx';
+import { datosRacha } from '../../logica/compartir.js';
 
 // La llama: tres capas que titilan a destiempo (transform desde la base). Sus colores son el fuego, no el tema.
 export function Llama({ clase = '' }) {
@@ -62,6 +64,8 @@ function PantallaRachaDentro({ racha = 0, semanas = [], alCerrar, hoy = hoyISO()
   const ref = usePantalla(alCerrar);
   const cal = calendarioRacha(semanas, hoy, 12);
   const meta = proximoHito(racha);
+  // (compartir) la racha como tarjeta (con 2 semanas o más)
+  const [compartir, setCompartir] = useState(false);
   return (
     <div class="racha-pantalla" role="dialog" aria-modal="true" aria-labelledby="racha-titulo" ref={ref} tabIndex={-1}>
       <button class="btn btn-icono plano racha-cerrar" onClick={alCerrar} aria-label="Cerrar la racha"><Icono n="cerrar" /></button>
@@ -93,8 +97,10 @@ function PantallaRachaDentro({ racha = 0, semanas = [], alCerrar, hoy = hoyISO()
           </div>
           <p class="racha-sub num">{meta.faltan === 1 ? 'Te falta 1 semana completa.' : `Te faltan ${meta.faltan} semanas completas.`}</p>
         </section>
+        {racha >= 2 && <button class="btn btn-grande racha-compartir" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir la racha</button>}
         <button class="btn btn-grande racha-seguir" onClick={alCerrar}>Seguir</button>
       </div>
+      {compartir && <HojaCompartir logro tipo="racha" titulo="Compartir tu racha" datos={datosRacha(racha, { hoy })} equipo={{ tema: 'logros' }} alCerrar={() => setCompartir(false)} />}
     </div>
   );
 }
@@ -110,6 +116,7 @@ const TEXTO_HITO = {
 export function HitoRacha(props) { return <Capa><HitoRachaDentro {...props} /></Capa>; }
 function HitoRachaDentro({ hito, alCerrar }) {
   const ref = usePantalla(alCerrar);
+  const [compartir, setCompartir] = useState(false);
   useEffect(() => { const t = setTimeout(() => lanzarConfeti({ vibracion: 'record' }), 250); return () => clearTimeout(t); }, []);
   return (
     <div class="hito-pantalla" role="dialog" aria-modal="true" aria-labelledby="hito-titulo" aria-describedby="hito-texto" ref={ref} tabIndex={-1}>
@@ -122,8 +129,10 @@ function HitoRachaDentro({ hito, alCerrar }) {
         <p id="hito-texto" class="hito-texto">{TEXTO_HITO[hito] || 'Semanas completas una detrás de otra.'}</p>
         {/* (v0.104) lo que tu coach dejó escrito para los hitos de la racha */}
         <MensajeCoach momento="racha" semanas={hito} clase="mensaje-oscuro" />
+        <button class="btn btn-grande hito-compartir" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir el hito</button>
         <button class="btn btn-grande hito-seguir" onClick={alCerrar}>Seguir</button>
       </div>
+      {compartir && <HojaCompartir logro tipo="racha" titulo="Compartir tu racha" datos={{ ...datosRacha(hito), etiqueta: 'Nuevo hito' }} equipo={{ tema: 'logros' }} alCerrar={() => setCompartir(false)} />}
     </div>
   );
 }
