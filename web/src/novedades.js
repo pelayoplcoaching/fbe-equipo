@@ -8,9 +8,12 @@
 export const NOVEDADES = {
   '0.108': {
     atleta: [
-      'Entrenar fluye: el foco pasa de una serie a otra con suavidad, la insignia gira a verde al marcarla y el aro se cierra con un salto.',
-      'El descanso llega con muelle, el esfuerzo de cada serie sale con su color, el teclado es de vidrio y la superserie lleva su hilo.',
-      'El modo enfoque estrena cara y se desliza entre ejercicios; al terminar, los músculos de hoy se encienden.',
+      'Entrenar fluye: el foco pasa de serie a serie con suavidad, la insignia gira a verde al marcarla y el aro se cierra con un salto.',
+      'El descanso llega con muelle, el teclado es de vidrio, la superserie lleva su hilo y el modo enfoque estrena cara.',
+      'Tu nota va como un pósit, el historial en hojas de calendario, los récords en una vitrina de oro y la calculadora con tu 1RM grande.',
+    ],
+    coach: [
+      'El historial de cada ejercicio, con hojas de calendario.',
     ],
   },
   '0.107': {

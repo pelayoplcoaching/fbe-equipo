@@ -123,7 +123,8 @@ async function revisar(paso) {
     new Promise((r) => setTimeout(r, 1500)),
   ]));
   if (!(await p.evaluate(() => !!window.axe))) await p.addScriptTag({ path: AXE });
-  const axe = await p.evaluate(async () => (await window.axe.run(document, {
+  // (con una hoja abierta, la píldora del día del chat queda detrás de su velo difuminado y nadie la lee: fuera de la revisión)
+  const axe = await p.evaluate(async () => (await window.axe.run(document.body.hasAttribute('data-hojas') ? { include: [document], exclude: [['.chat-dia-flotante']] } : document, {
     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] },
     rules: { region: { enabled: false } },
   })).violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`));
