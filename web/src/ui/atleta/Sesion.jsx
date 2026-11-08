@@ -56,6 +56,7 @@ import { Portada, ArteSesion } from './Portada.jsx';
 import { LOBO } from '../marca-lobo.js';
 import { familiaPortada, selloSesion, imagenCelebracion } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
+import { MensajeCoach, RecuerdoProgreso } from './Personal.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
 import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
@@ -1380,8 +1381,12 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
             </ul>
           </div>
           <p class="peq secundario">1RM estimado con la fórmula de Epley, contando las repeticiones que te quedaban en recámara.</p>
+          {/* (v0.104) lo que tu coach dejó escrito para un récord */}
+          <MensajeCoach momento="record" ejercicio={resumen.records[0]?.nombre || ''} />
         </section>
       )}
+      {/* (v0.104) «Hace seis meses…»: el ejercicio de hoy que más ha subido desde entonces */}
+      {!cardio && resumen.series > 0 && !resumen.enCola && <div style={{ '--i': 6 }} class="resumen-recuerdo"><RecuerdoProgreso sesionId={sesion.id} /></div>}
       {Object.keys(resumen.musculos || {}).length > 0 && (
         <section class="seccion" style={{ '--i': 7 }}>
           <h2>Músculos de hoy</h2>

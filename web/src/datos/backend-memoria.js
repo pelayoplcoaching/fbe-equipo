@@ -13,6 +13,7 @@ import { fechaMadrid as fMadrid, instanteMadrid, partesMadrid } from '../logica/
 import { emojiValido } from '../logica/emojis.js';
 import { leerDatos as leerDatosRendimiento, leerEntorno as leerEntornoRendimiento } from '../logica/rendimiento.js';
 import { opcionesEncuesta } from '../logica/encuestas.js';
+import { limpiarPersonal, MOMENTO_VALIDO, LIMITES as LIMITES_PERSONAL } from '../logica/personal.js';
 import { checklistValido, tempoValido, plantillaValida, videosViejos } from '../logica/tecnica.js';
 import { analisisValido } from '../logica/analisis.js';
 import { recordatorioValido, fraseValida, autoevaluacionValida, MAX_RECORDATORIOS } from '../logica/correccion.js';
@@ -272,6 +273,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     comunidad_moderacion: () => esCoach(),
     // (045) los aniversarios ya puestos, solo la base
     comunidad_aniversarios: () => false,
+    // (050) la personalización, solo por sus funciones
+    personal_atleta: () => false,
+    mensajes_coach: () => false,
     // Como la 030: los mensajes y avisos programados no los ve el atleta hasta su hora; las tareas, el coach y su atleta
     // (y, como en la base, cada atleta solo ve sus mensajes y los avisos para todos o para él)
     comentarios: (x) => esCoach() || (x.atleta_id === miAtletaId() && (!x.enviar_en || Date.parse(x.enviar_en) <= Date.now())),
@@ -1416,7 +1420,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   }
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
-    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos'].includes(t)) throw sinPermisoTabla(t);
+    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas',
       'comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw sinPermiso();
@@ -2886,6 +2890,45 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const veo048 = (t) => (esCoach() && sesion?.aal !== 'aal2' && (miPerfil()?.exige_2fa || (usuario()?.mfa || []).some((x) => x.estado === 'verified')) ? [] : tabla(t).filter((x) => !VISIBLE[t] || VISIBLE[t](x)));
       // (049) cómo va la app en cada dispositivo: cada uno apunta lo suyo (una fila por dispositivo y día, que se
       // sustituye entera); el coach lo lee sin nombres (un código por dispositivo) y lo puede borrar
+      // (050) la personalización: lo de cada atleta, por sus funciones (nadie toca la tabla); los mensajes del coach
+      const personalJson = (x) => (x ? { apodo: x.apodo ?? null, porque: x.porque ?? null, favoritos: [...(x.favoritos || [])], musica_url: x.musica_url ?? null, cumple_mes: x.cumple_mes ?? null, cumple_dia: x.cumple_dia ?? null, actualizado_en: x.actualizado_en } : null);
+      if (nombre === 'personal_mio') {
+        const a = miAtletaId();
+        return a ? personalJson(tabla('personal_atleta').find((x) => x.atleta_id === a)) : null;
+      }
+      if (nombre === 'personal_guardar') {
+        const a = miAtletaId();
+        if (!a) throw new Error('Solo el atleta guarda lo suyo');
+        if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        const d = args?.p_datos;
+        if (!d || typeof d !== 'object' || Array.isArray(d)) throw new Error('Faltan los datos');
+        if (Array.isArray(d.favoritos) && d.favoritos.length > LIMITES_PERSONAL.favoritos) throw new Error('Como mucho 3 ejercicios');
+        if (String(d.apodo ?? '').trim().length > LIMITES_PERSONAL.apodo || String(d.porque ?? '').trim().length > LIMITES_PERSONAL.porque) throw new Error('new row for relation "personal_atleta" violates check constraint "personal_atleta_valido"');
+        const limpio = limpiarPersonal(d);
+        db.personal_atleta = tabla('personal_atleta').filter((x) => x.atleta_id !== a);
+        const fila = { atleta_id: a, ...limpio, actualizado_en: ahora() };
+        tabla('personal_atleta').push(fila);
+        persistirYa();
+        return personalJson(fila);
+      }
+      if (nombre === 'personal_atletas') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        return tabla('personal_atleta').filter((x) => buscar('atletas', x.atleta_id)).map((x) => ({ ...personalJson(x), atleta_id: x.atleta_id }));
+      }
+      if (nombre === 'mensajes_coach') {
+        if (!esCoach() && !miAtletaId()) return [];
+        return tabla('mensajes_coach').map((m) => ({ momento: m.momento, texto: m.texto, actualizado_en: m.actualizado_en })).sort((x, y) => x.momento.localeCompare(y.momento));
+      }
+      if (nombre === 'mensaje_coach_guardar') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        const mo = args?.p_momento, t = String(args?.p_texto ?? '').trim();
+        if (!MOMENTO_VALIDO.has(mo)) throw new Error('Momento no válido');
+        if (t.length > LIMITES_PERSONAL.mensaje) throw new Error('Como mucho 400 caracteres');
+        db.mensajes_coach = tabla('mensajes_coach').filter((m) => m.momento !== mo);
+        if (t) tabla('mensajes_coach').push({ momento: mo, texto: t, actualizado_en: ahora() });
+        persistirYa();
+        return null;
+      }
       if (nombre === 'rendimiento_apuntar') {
         if (!uid) return null;
         const dia = String(args?.p_dia || ''), disp = String(args?.p_dispositivo || '');

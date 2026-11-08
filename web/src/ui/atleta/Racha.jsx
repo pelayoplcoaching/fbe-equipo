@@ -8,6 +8,7 @@ import { calendarioRacha, proximoHito, hitoPorCelebrar, marcarHitos, NOMBRE_ESTA
 import { fmtCorta, hoyISO } from '../../logica/fechas.js';
 import { lanzarConfeti } from '../confeti.js';
 import { Imagen } from '../Imagen.jsx';
+import { MensajeCoach } from './Personal.jsx';
 import { imagenCelebracion } from '../../logica/imagenes.js';
 
 // La llama: tres capas que titilan a destiempo (transform desde la base). Sus colores son el fuego, no el tema.
@@ -119,6 +120,8 @@ function HitoRachaDentro({ hito, alCerrar }) {
         <p class="t-sobre hito-sobre">Nuevo hito</p>
         <h2 id="hito-titulo" class="t-display">¡{hito} semanas seguidas!</h2>
         <p id="hito-texto" class="hito-texto">{TEXTO_HITO[hito] || 'Semanas completas una detrás de otra.'}</p>
+        {/* (v0.104) lo que tu coach dejó escrito para los hitos de la racha */}
+        <MensajeCoach momento="racha" semanas={hito} clase="mensaje-oscuro" />
         <button class="btn btn-grande hito-seguir" onClick={alCerrar}>Seguir</button>
       </div>
     </div>

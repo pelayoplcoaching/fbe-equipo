@@ -13,6 +13,7 @@ import { FilaCuestionario } from './Cuestionario.jsx';
 import { FilaCobro } from './Cobro.jsx';
 import { FilaFoto } from '../FotoPerfil.jsx';
 import { Carnet } from './Carnet.jsx';
+import { LoTuyo } from './LoTuyo.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -52,6 +53,9 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         <FilaIos icono="mensaje" titulo="Mensajes con tu coach" detalle="Para lo que no es de una sesión concreta" alTocar={() => irA?.('mensajes')} />
         {urlSegura(atleta.notion_url) && <FilaIos icono="enlace" titulo="Tu página de Notion" detalle="Lo de antes de la app" href={urlSegura(atleta.notion_url)} etiqueta="Tu página de Notion (se abre aparte)" />}
       </GrupoIos>
+
+      {/* v0.104: lo que elige para su app (cómo le llamamos, su porqué, sus ejercicios, su música y su cumpleaños) */}
+      <LoTuyo />
 
       <AjustesDispositivo antes={<SeccionNotificaciones fila />} />
       <AjustesMensajes />

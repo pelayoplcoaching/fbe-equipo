@@ -6,6 +6,24 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.105': {
+    atleta: [
+      'Tu coach te habla con su lobo en Hoy y en la sesión, la fecha va en una pastilla y la cabecera brilla al bajar.',
+      'En «¿Cómo llegas hoy?» cada respuesta tiene su color; los botones + y − son redondos y las casillas, como en Recordatorios.',
+      'El ejercicio terminado se enmarca en verde, las barras de progreso brillan y los músculos más trabajados resaltan en el mapa.',
+    ],
+  },
+  '0.104': {
+    atleta: [
+      'Nuevo en tu perfil, «Lo tuyo»: cómo quieres que te llamemos, tu porqué, tus tres ejercicios, tu música y tu cumpleaños.',
+      'Progreso abre con la cifra de tu objetivo, la portada te dice qué récord tienes al alcance y el plan coloca tus días de siempre.',
+      'Tu coach puede dejarte mensajes para tus récords, tu racha o tu cumpleaños; y en diciembre llega «Tu año en FBE».',
+    ],
+    coach: [
+      'En Cuenta, tus mensajes automáticos (récord, bloque, racha, vuelta y cumpleaños); en Atletas, quién cumple años hoy.',
+      'En la ficha, pestaña Objetivos, «Lo suyo»: el apodo, el porqué, el cumpleaños y la música de cada atleta. Necesita la migración 050.',
+    ],
+  },
   '0.103': {
     atleta: [
       'Tus medallas son ilustraciones propias, cada una en su metal; el cuarto nivel pasa a llamarse Diamante.',

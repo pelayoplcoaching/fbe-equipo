@@ -33,8 +33,9 @@ export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) &&
 // compañeros de racha, los retos por equipos, los minutos de cardio en los retos y las insignias) y la 2026-12.10 (v0.71: los temas,
 // las preguntas al coach y las del equipo, varias fotos, lo guardado, la búsqueda y la mejor respuesta) y la 2026-12.11 (v0.72: los
 // eventos, el atleta de la semana, el panel del coach y la moderación) y la 2026-12.12 (v0.73: los aniversarios, el mes en el equipo,
-// los hitos, las reacciones y pegatinas y los momentos de 24 horas) y la 2026-12.13 (v0.95: cómo va la app, los fallos y los tiempos)
+// los hitos, las reacciones y pegatinas y los momentos de 24 horas) y la 2026-12.13 (v0.95: cómo va la app, los fallos y los tiempos) y la 2026-12.14 (v0.104: lo que eliges para tu app)
 export const NOVEDADES_PRIVACIDAD = [
+  ['perfil', 'Lo que eliges para tu app', 'Si quieres, en «Lo tuyo» puedes poner tu apodo, tu porqué, tus tres ejercicios, tu música y tu cumpleaños (sin el año). Lo ven solo tú y tu coach, nunca el equipo, y lo borras cuando quieras.', '2026-12.14'],
   ['reloj', 'Cómo va la app', 'Para ver si la app va lenta, cada móvil manda al día cuánto tarda en abrir, en cada pantalla y en guardar, con el tipo de móvil. Tu coach lo ve sin tu nombre y se borra a los 60 días. Si algo falla, se apunta el error técnico, nunca lo que escribes.', '2026-12.13'],
   ['equipo', 'Aniversarios, tu mes y momentos de 24 h', 'Tu aniversario en FBE sale en el muro (salvo con «No salir en el ranking»). Del 1 al 7, los recuentos del mes del equipo y, solo para ti, los tuyos. Los momentos se ven 24 horas y después se borran con su foto.', '2026-12.12'],
   ['equipo', 'Eventos, atleta de la semana y moderación', 'Si te apuntas a un evento del equipo, los de dentro ven que vas y te llega un recordatorio dos horas antes. Tu coach puede elegirte atleta de la semana (si sales en el ranking) y ve un panel con recuentos, sin contenido. Puede pausar tus publicaciones un tiempo, y lo que lleve una palabra filtrada queda pendiente de revisión: solo lo veis tú y él.', '2026-12.11'],

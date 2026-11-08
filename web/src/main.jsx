@@ -3,6 +3,7 @@ import './estilos.css';
 import './diseno.css';
 import './pulido.css';
 import './imagenes.css';
+import './personal.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';
 import { instalarPulido } from './ui/pulido.js';
