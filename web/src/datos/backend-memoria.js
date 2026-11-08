@@ -122,7 +122,7 @@ const CASCADA = {
     ['comunidad_companeros', 'de_atleta_id'], ['comunidad_companeros', 'para_atleta_id'], ['comunidad_reto_equipos', 'atleta_id'], ['comunidad_evento_asistentes', 'atleta_id'], ['comunidad_destacados', 'atleta_id'], ['tareas', 'atleta_id'], ['conversacion_estado', 'atleta_id'],
     ['conversacion_fijado', 'atleta_id'], ['chat_silencios', 'atleta_id'], ['listas_difusion_miembros', 'atleta_id'], ['encuestas_chat', 'atleta_id'], ['encuesta_votos', 'atleta_id'], ['video_revisiones', 'atleta_id'],
     ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id'], ['revisiones_semanales', 'atleta_id'],
-    ['integraciones', 'atleta_id'], ['salud_diaria', 'atleta_id'], ['contacto_atleta', 'atleta_id']],
+    ['integraciones', 'atleta_id'], ['salud_diaria', 'atleta_id'], ['contacto_atleta', 'atleta_id'], ['salud_copias', 'atleta_id']],
   // Como la 035: la corrección se va con su vídeo; la lista de puntos clave, con su ejercicio
   archivos: [['video_revisiones', 'archivo_id'], ['video_autoevaluacion', 'archivo_id']],
   ejercicios: [['tecnica_plantillas', 'ejercicio_id'], ['recordatorios_tecnica', 'ejercicio_id'], ['frases_correccion', 'ejercicio_id'], ['videos_modelo', 'ejercicio_id'], ['umbrales_velocidad', 'ejercicio_id']],
@@ -297,6 +297,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // (051) las integraciones, solo por sus funciones
     integraciones: () => false,
     salud_diaria: () => false,
+    salud_copias: () => false,
     atajos_coach: () => false,
     contacto_atleta: () => false,
     // Como la 030: los mensajes y avisos programados no los ve el atleta hasta su hora; las tareas, el coach y su atleta
