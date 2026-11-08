@@ -3147,6 +3147,10 @@ try {
   }
 
   // Chat: un mensaje programado (y un enlace de YouTube con su miniatura)
+  // (la pestaña se queda muy arriba tras bajar por el editor: primero al centro y un momento, como «Tu plan»; si no, la
+  // cabecera que se recoge al desplazarse la va moviendo mientras se intenta pulsar)
+  await p.getByRole('tab', { name: 'Mensajes' }).evaluate((b) => b.scrollIntoView({ block: 'center' }));
+  await p.waitForTimeout(400);
   await p.getByRole('tab', { name: 'Mensajes' }).click();
   await p.locator('.burbuja.programada').first().waitFor();
   check((await p.locator('.burbuja.programada').first().textContent()).includes('Programado para el'), 'el coach ve el mensaje de mañana como «Programado para el …»');
