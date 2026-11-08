@@ -8,6 +8,7 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { URL_ATAJO, ATAJO_SALUD, ATAJO_ENTRENO, enlaceWhatsApp, resumenSalud, textoSueno, haceDias, telefonoWa } from '../../logica/integraciones.js';
 import { TablaSalud } from '../atleta/Conexiones.jsx';
+import { ATAJO_RELOJ } from '../../logica/reloj.js';
 import { num } from '../../logica/calculos.js';
 
 // Los teléfonos de todos ({ atleta_id: teléfono }; sin la 051, null). Se piden una vez por pantalla.
@@ -113,19 +114,24 @@ export function SaludDelMovil({ atleta }) {
 const ATAJOS = [
   ['salud', `«${ATAJO_SALUD}»: de Salud a la app`, 'Cada mañana manda los pasos de ayer y el sueño, el pulso, la HRV y el peso de hoy.'],
   ['entreno', `«${ATAJO_ENTRENO}»: el entreno, a Salud`, 'Apunta en Salud la sesión que acaban de terminar (botón «Apuntar en Salud»).'],
+  // (052) el modo reloj
+  ['reloj', `«${ATAJO_RELOJ}»: entrenar desde el Apple Watch`, 'La serie que toca, marcarla y el descanso, desde la muñeca.'],
 ];
 export function AtajosCoach() {
   const { api } = useApp();
   const lista = useCarga(() => api.atajos().catch(() => null), []);
+  // (052) el del reloj, solo si la base ya tiene el modo reloj (sin la 052, api.reloj() da undefined)
+  const con052 = useCarga(() => api.reloj().then((r) => r !== undefined).catch(() => false), []);
   const [editar, setEditar] = useState(null);
   if (lista.datos === null && !lista.cargando) return null;
   const m = lista.datos || {};
+  const atajos = ATAJOS.filter(([k]) => k !== 'reloj' || con052.datos === true);
   return (
     <section class="seccion atajos-coach">
       <h2>Atajos del iPhone</h2>
       <div class="panel">
         <ul class="lista">
-          {ATAJOS.map(([k, titulo, detalle]) => (
+          {atajos.map(([k, titulo, detalle]) => (
             <li key={k}>
               <button class="fila-ios fila-boton" onClick={() => setEditar(k)} aria-label={`${titulo}: ${m[k] ? 'cambiar el enlace' : 'poner el enlace'}`}>
                 <span class="fila-ios-texto"><span class="fila-ios-titulo">{titulo}</span><span class="peq terciario">{m[k] ? 'Enlace puesto' : detalle}</span></span>

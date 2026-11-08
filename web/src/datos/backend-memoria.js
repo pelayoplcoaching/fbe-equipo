@@ -122,7 +122,7 @@ const CASCADA = {
     ['comunidad_companeros', 'de_atleta_id'], ['comunidad_companeros', 'para_atleta_id'], ['comunidad_reto_equipos', 'atleta_id'], ['comunidad_evento_asistentes', 'atleta_id'], ['comunidad_destacados', 'atleta_id'], ['tareas', 'atleta_id'], ['conversacion_estado', 'atleta_id'],
     ['conversacion_fijado', 'atleta_id'], ['chat_silencios', 'atleta_id'], ['listas_difusion_miembros', 'atleta_id'], ['encuestas_chat', 'atleta_id'], ['encuesta_votos', 'atleta_id'], ['video_revisiones', 'atleta_id'],
     ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id'], ['revisiones_semanales', 'atleta_id'],
-    ['integraciones', 'atleta_id'], ['salud_diaria', 'atleta_id'], ['contacto_atleta', 'atleta_id'], ['salud_copias', 'atleta_id']],
+    ['integraciones', 'atleta_id'], ['salud_diaria', 'atleta_id'], ['contacto_atleta', 'atleta_id'], ['salud_copias', 'atleta_id'], ['reloj', 'atleta_id']],
   // Como la 035: la corrección se va con su vídeo; la lista de puntos clave, con su ejercicio
   archivos: [['video_revisiones', 'archivo_id'], ['video_autoevaluacion', 'archivo_id']],
   ejercicios: [['tecnica_plantillas', 'ejercicio_id'], ['recordatorios_tecnica', 'ejercicio_id'], ['frases_correccion', 'ejercicio_id'], ['videos_modelo', 'ejercicio_id'], ['umbrales_velocidad', 'ejercicio_id']],
@@ -296,6 +296,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     musica_coach: () => false,
     // (051) las integraciones, solo por sus funciones
     integraciones: () => false,
+    reloj: () => false,
     salud_diaria: () => false,
     salud_copias: () => false,
     atajos_coach: () => false,
@@ -1444,7 +1445,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   }
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
-    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta'].includes(t)) throw sinPermisoTabla(t);
+    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas',
       'comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw sinPermiso();
@@ -3057,13 +3058,47 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'atajo_guardar') {
         if (!esCoach()) throw new Error('Solo el coach');
         const k = args?.p_clave, u = String(args?.p_url ?? '').trim();
-        if (!['salud', 'entreno'].includes(k)) throw new Error('Atajo no válido');
+        if (!['salud', 'entreno', 'reloj'].includes(k)) throw new Error('Atajo no válido');
         if (u && !URL_ATAJO.test(u)) throw new Error('new row for relation "atajos_coach" violates check constraint "atajos_coach_valido"');
         db.atajos_coach = tabla('atajos_coach').filter((x) => x.clave !== k);
         if (u) tabla('atajos_coach').push({ clave: k, url: u, actualizado_en: ahora() });
         persistirYa();
         return null;
       }
+      // (052) el modo reloj (en la demo, la clave no lleva a ninguna parte: no hay función «reloj»)
+      if (nombre === 'reloj_mio') {
+        const a = miAtletaId();
+        if (!a) return null;
+        const r = tabla('reloj').find((x) => x.atleta_id === a);
+        return { activo: !!r, desde: r?.desde || null, ultimo: r?.ultimo || null, unidad: r?.unidad || 'kg', atajo: tabla('atajos_coach').find((x) => x.clave === 'reloj')?.url || null };
+      }
+      if (nombre === 'reloj_crear') {
+        const a = miAtletaId();
+        if (!a) throw new Error('Solo el atleta conecta lo suyo');
+        if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        const u = args?.p_unidad ?? 'kg';
+        if (!['kg', 'lb'].includes(u)) throw new Error('Unidad no válida');
+        db.reloj = tabla('reloj').filter((x) => x.atleta_id !== a);
+        tabla('reloj').push({ atleta_id: a, unidad: u, desde: ahora(), ultimo: null });
+        persistirYa();
+        return Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+      }
+      if (nombre === 'reloj_unidad') {
+        const a = miAtletaId();
+        if (!a) throw new Error('Solo el atleta cambia lo suyo');
+        if (!['kg', 'lb'].includes(args?.p_unidad)) throw new Error('Unidad no válida');
+        const r = tabla('reloj').find((x) => x.atleta_id === a);
+        if (r) { r.unidad = args.p_unidad; persistirYa(); }
+        return null;
+      }
+      if (nombre === 'reloj_quitar') {
+        const a = miAtletaId();
+        if (!a) throw new Error('Solo el atleta desconecta lo suyo');
+        db.reloj = tabla('reloj').filter((x) => x.atleta_id !== a);
+        persistirYa();
+        return null;
+      }
+      if (/^reloj_(estado|serie|saltar|elegir|terminar)$/.test(nombre)) throw new Error(`permission denied for function ${nombre}`);
       if (nombre === 'contacto_mio') return tabla('contacto_atleta').find((x) => x.atleta_id === miAtletaId())?.telefono || null;
       if (nombre === 'copia_privada') {
         if (!esCoach()) throw new Error('Solo el coach');

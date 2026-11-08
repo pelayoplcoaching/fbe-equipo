@@ -136,6 +136,12 @@ const falta051 = (e) => {
   return /integraciones_mias|integracion_(crear|quitar)|calendario_opciones|salud_diaria_de|atajos?_(lista|guardar)|contactos|contacto_guardar|contacto_mio|copia_privada/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
 };
 const AVISO_051 = 'Esto aún no está disponible: falta poner al día la base (migración 051)';
+// (052) sin la migración del modo reloj, la app no lo ofrece
+const falta052 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
+  return /reloj_(mio|crear|unidad|quitar)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
+};
+const AVISO_052 = 'Esto aún no está disponible: falta poner al día la base (migración 052)';
 const falta049 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
   return /rendimiento_(apuntar|resumen|borrar)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
@@ -390,7 +396,7 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
   'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella', 'rendimiento_apuntar', 'rendimiento_resumen', 'personal_mio', 'personal_atletas', 'mensajes_coach', 'musica_coach_lista', 'musica_para',
-  'integraciones_mias', 'salud_diaria_de', 'atajos_lista', 'contactos']);
+  'integraciones_mias', 'salud_diaria_de', 'atajos_lista', 'contactos', 'reloj_mio']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -886,6 +892,21 @@ export function crearApi(backend) {
       contactosMemo = { k, t: Date.now(), p };
       p.catch(() => { if (contactosMemo?.p === p) contactosMemo = null; });
       return p;
+    },
+    // ------------------------------------------------------------ modo reloj (migración 052)
+    // El modo reloj del atleta ({ activo, desde, ultimo, unidad, atajo }); sin la 052, undefined
+    async reloj() {
+      try { return (await b.rpc('reloj_mio', {})) || null; } catch (e) { if (falta052(e)) return undefined; throw e; }
+    },
+    // Crea su clave (la anterior deja de valer) y la devuelve una sola vez
+    async crearReloj(unidad = 'kg') {
+      try { return await b.rpc('reloj_crear', { p_unidad: unidad === 'lb' ? 'lb' : 'kg' }); } catch (e) { if (falta052(e)) throw new Error(AVISO_052); throw e; }
+    },
+    async unidadReloj(unidad) {
+      try { await b.rpc('reloj_unidad', { p_unidad: unidad === 'lb' ? 'lb' : 'kg' }); } catch (e) { if (falta052(e)) throw new Error(AVISO_052); throw e; }
+    },
+    async quitarReloj() {
+      try { await b.rpc('reloj_quitar', {}); } catch (e) { if (falta052(e)) throw new Error(AVISO_052); throw e; }
     },
     async guardarContacto(atletaId, telefono) {
       const t = limpiarTelefono(telefono);
@@ -4486,6 +4507,11 @@ export function crearApi(backend) {
         : ((await api.personalAtletas().catch(() => [])).find((x) => x.atleta_id === atletaId) || null);
       // (v0.105, 051) lo que llegó de Salud del iPhone (los 400 últimos días)
       out.salud_diaria = (await api.saludDiaria(atletaId, '2020-01-01', sumarDias(hoyISO(), 1)).catch(() => null))?.dias || [];
+      // (052) el modo reloj: si lo tiene, desde cuándo, la última vez y su unidad (la clave, nunca)
+      if (perfilId && perfilId === uid()) {
+        const rl = await api.reloj().catch(() => null);
+        out.reloj = rl ? { activo: rl.activo, desde: rl.desde, ultimo: rl.ultimo, unidad: rl.unidad } : null;
+      }
       // (revisión) lo suyo de las integraciones: desde cuándo tiene conectado cada cosa, su calendario y su teléfono
       if (perfilId && perfilId === uid()) {
         out.integraciones = (await b.rpc('integraciones_mias', {}).catch(() => null)) || null;

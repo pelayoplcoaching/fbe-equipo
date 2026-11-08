@@ -15,6 +15,7 @@ import { FilaFoto } from '../FotoPerfil.jsx';
 import { Carnet } from './Carnet.jsx';
 import { LoTuyo } from './LoTuyo.jsx';
 import { Conexiones } from './Conexiones.jsx';
+import { GrupoReloj } from './Reloj.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -59,6 +60,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       <LoTuyo />
       {/* v0.105: Salud del iPhone y el calendario que se actualiza solo */}
       <Conexiones salud={salud} />
+      {/* (052) el modo reloj: el entreno desde el Apple Watch */}
+      <GrupoReloj />
 
       <AjustesDispositivo antes={<SeccionNotificaciones fila />} />
       <AjustesMensajes />
