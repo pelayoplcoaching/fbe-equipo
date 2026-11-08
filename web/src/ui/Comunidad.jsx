@@ -764,7 +764,7 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPu
   const esPregunta = con043 && !coach && tema === 'pregunta';
   const plegado = !coach && !abierto && vacio;
   return (
-    <form class={`panel panel-pad pila-s compositor${plegado ? ' compositor-plegado' : ''}`} onSubmit={publicar} onFocusCapture={() => { if (!abierto) setAbierto(true); }} onClick={() => { if (!abierto) setAbierto(true); }}>
+    <form class={`panel panel-pad pila-s compositor${plegado ? ' compositor-plegado' : ''}`} data-tema={tema || undefined} onSubmit={publicar} onFocusCapture={() => { if (!abierto) setAbierto(true); }} onClick={() => { if (!abierto) setAbierto(true); }}>
       {coach && (
         <div class="segmentos compositor-modo" role="group" aria-label="Qué publicas">
           {[['aviso', 'Aviso'], ['encuesta', 'Encuesta']].map(([k, t]) => <button key={k} type="button" aria-pressed={modo === k ? 'true' : 'false'} onClick={() => setModo(k)}>{t}</button>)}
