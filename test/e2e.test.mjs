@@ -2635,7 +2635,9 @@ try {
   await Promise.race([codigo2fa5.waitFor(), p.getByRole('heading', { name: 'Atletas' }).waitFor()]);
   if (await codigo2fa5.isVisible().catch(() => false)) { await codigo2fa5.fill('123456'); await p.getByRole('button', { name: 'Entrar' }).click(); }
   await p.getByRole('heading', { name: 'Atletas' }).waitFor();
-  const nAtletas = await p.locator('.tarjeta-atleta').count();
+  // (cuántas fichas hay, cuando la lista se ha quedado quieta: en GitHub, justo al salir el título aún se está pintando)
+  const contarAtletas = async () => { let antes = -1; for (let i = 0; i < 60; i++) { const n = await p.locator('.tarjeta-atleta').count(); if (n > 0 && n === antes) return n; antes = n; await p.waitForTimeout(250); } return antes; };
+  const nAtletas = await contarAtletas();
   await revisar('coach-con-modo-atleta');
   await irASeccion(p, 'Modo atleta');
   await p.getByRole('heading', { name: 'Modo atleta' }).waitFor();
@@ -2652,7 +2654,8 @@ try {
   check(await p.locator('.banda-modo-atleta').count() === 0, '«Programarlo» vuelve a la vista de coach y abre su ficha en Programa');
   await p.getByRole('button', { name: 'Volver a atletas' }).click();
   await p.getByRole('heading', { name: 'Atletas' }).waitFor();
-  check(await hay(p.locator('.tarjeta-atleta'), nAtletas, 15000), 'su ficha no sale en la lista de atletas');   // (en GitHub, 6 s se quedaban cortos)
+  const nDespues = await contarAtletas();
+  check(nDespues === nAtletas, `su ficha no sale en la lista de atletas (${nAtletas} → ${nDespues})`);
   await irASeccion(p, 'Modo atleta');
   await banda.waitFor();
   check(true, 'con la ficha ya creada, la pestaña entra directamente');

@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.102': {
+    atleta: [
+      'Los récords brillan en dorado, tus entrenamientos parecen hojas de calendario y cada comida del menú lleva su dibujo.',
+      'Hoy estrena detalles: el aviso de tu coach como un mensaje, la llama de tu racha encendida y una celebración al terminar el día.',
+      'En Progreso, las semanas y los meses tienen portada y los hábitos se ponen en verde; en la sesión, el cronómetro brilla.',
+    ],
+  },
   '0.101': {
     atleta: [
       'Cada hábito tiene su ilustración al abrirlo y tu recetario, una para cada comida.',
