@@ -102,7 +102,7 @@ export function HoyEntrenan({ cambios = 0 }) {
   const deHoy = otros.filter((x) => x.fecha === hoy), deManana = otros.filter((x) => x.fecha !== hoy);
   const quitar = () => una(async () => { try { await api.decirIntencion(null); aviso('Quitado'); setVuelta((v) => v + 1); } catch (e) { aviso(e.message, 'error'); } });
   const linea = (ys, etq) => ys.length > 0 && (
-    <p class="peq he-linea"><strong>{etq}</strong> {ys.map((x, i) => <span key={x.perfil_id}>{i > 0 && ', '}{x.nombre}{x.hora ? ` a las ${x.hora.replace(/^0/, '')}` : ''}{x.nota ? ` (${x.nota})` : ''}</span>)}</p>
+    <p class="peq he-linea"><strong>{etq}</strong> {ys.map((x, i) => <span key={x.perfil_id}>{i > 0 && ', '}{x.nombre}{x.hora ? <> a las <b class="he-hora">{x.hora.replace(/^0/, '')}</b></> : ''}{x.nota ? ` (${x.nota})` : ''}</span>)}</p>
   );
   return (
     <section class="panel panel-pad hoy-entrenan pila-s" aria-labelledby="he-t">
@@ -184,13 +184,18 @@ export function Duelos({ cambios = 0 }) {
                 </span>
               )}
               {d.estado === 'pendiente' && d.soy_retador && <button type="button" class="btn btn-peq plano" disabled={ocupado} onClick={() => retirar(d)}>Retirar</button>}
-              {d.estado === 'aceptado' && !d.acabado && d.suyas != null && <span class="duelo-marcador num" aria-hidden="true">{d.mias}<i>–</i>{d.suyas}</span>}
+              {d.estado === 'aceptado' && !d.acabado && d.suyas != null && (
+                <span class="duelo-marcador num" aria-hidden="true">
+                  <b class="dm-yo">{d.mias}<small>Tú</small></b><i>–</i><b>{d.suyas}<small>{String(d.rival_nombre || '').split(' ')[0]}</small></b>
+                  <span class="duelo-barra" style={{ '--a': d.mias + 0.5, '--b': d.suyas + 0.5 }}><span /><span /></span>
+                </span>
+              )}
               {r && <span class={`chip duelo-resultado ${r}`}>{r === 'ganado' ? '🏆 Ganado' : r === 'perdido' ? 'Perdido' : 'Empate'}</span>}
             </li>
           );
         })}
       </ul>
-      <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => setRetar(true)}><span aria-hidden="true">⚔️</span> Retar a alguien</button>
+      <button type="button" class="btn btn-peq duelo-retar" style="justify-self:start" onClick={() => setRetar(true)}><span aria-hidden="true">⚔️</span> Retar a alguien</button>
       {retar && <HojaRetar duelos={xs} yo={yo} alCerrar={() => setRetar(false)} alHecho={() => { setRetar(false); recargar(); }} />}
     </div>
   );
@@ -350,7 +355,7 @@ export function NecesitanAnimo({ cambios = 0 }) {
         {xs.map((x) => (
           <li key={x.perfil_id} class="sc-fila">
             <Avatar nombre={x.nombre} foto={x.foto} clase="peq" />
-            <span class="sc-texto">{x.nombre} <span class="mini terciario">· lleva {x.dias} días sin entrenar</span></span>
+            <span class="sc-texto">{x.nombre} <span class="mini na-dias">{x.dias} días sin entrenar</span></span>
             <button type="button" class={`btn btn-peq ${ya(x.perfil_id) ? '' : 'btn-primario'}`} disabled={ya(x.perfil_id)} onClick={() => setAnimar(x)}>{ya(x.perfil_id) ? <><Icono n="hecho" /> Animado</> : 'Mandarle ánimo'}</button>
           </li>
         ))}
@@ -427,7 +432,7 @@ export function AlbumEquipo({ Foto, cambios = 0 }) {
   const [abierto, setAbierto] = useState(null);
   const meses = albumPorMeses(fotos.datos || []);
   if (fotos.cargando && !fotos.datos) return <Cargando texto="Cargando el álbum" />;
-  if (!meses.length) return <p class="peq secundario">Aún no hay fotos en el muro. Las que publique el equipo irán saliendo aquí, por meses.</p>;
+  if (!meses.length) return <div class="album-vacio"><Icono n="imagen" /><p class="peq secundario">Aún no hay fotos en el muro. Las que publique el equipo irán saliendo aquí, por meses.</p></div>;
   const mes = meses.find((m) => m.mes === abierto) || meses[0];
   return (
     <div class="pila-s album">

@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.122': {
+    atleta: [
+      'El Equipo, más bonito: cada pastilla con su color, los duelos como un marcador y la hora de quien entrena hoy a la vista.',
+      'Retos con la barra que brilla y se vuelve oro al llegar; tu fila resaltada en el ranking y en cada reto.',
+      'El muro con el color de cada publicación, encuestas con la ganadora en oro y la respuesta del coach como un bocadillo.',
+    ],
+  },
   '0.121': {
     coach: [
       'En la ficha, la nutrición con color: el de su fase y el de cada macro, ajuste y gasto más claros y las versiones en línea del tiempo.',

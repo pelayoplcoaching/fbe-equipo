@@ -1582,10 +1582,10 @@ function TarjetaReto({ ilu = false, r, hoy, coach, miembro, alEditar, alComparti
   });
   const modoTexto = equipos ? 'Por equipos · ' : equipo ? 'De equipo · ' : '';
   return (
-    <article class={`panel panel-pad pila-s reto ${equipo || equipos ? 'reto-de-equipo' : ''} ${equipos ? 'reto-equipos' : ''}`} aria-label={`Reto: ${r.titulo}`}>
+    <article class={`panel panel-pad pila-s reto ${equipo || equipos ? 'reto-de-equipo' : ''} ${equipos ? 'reto-equipos' : ''}`} data-estado={estado} aria-label={`Reto: ${r.titulo}`}>
       {/* (imágenes) el primero de la lista (el que está en marcha), con la montaña y su camino */}
       {ilu && <Imagen id="equipo-reto" clase="franja-ilu franja-pegada franja-reto" tamanos="(min-width: 720px) 640px, 100vw" />}
-      <div class="separa">
+      <div class="separa reto-cab">
         <div class="pila-xs">
           <h2 class="reto-titulo">{r.titulo}</h2>
           <span class="mini terciario">{modoTexto}{fmtCorta(r.desde)} – {fmtCorta(r.hasta)} · {r.objetivo} {u(r.objetivo)}{equipo ? ' entre todos' : equipos ? ' por equipo' : ''}</span>
@@ -1634,9 +1634,9 @@ function TarjetaReto({ ilu = false, r, hoy, coach, miembro, alEditar, alComparti
         </div>
       )}
       {!coach && r.conseguido && !r.compartido && alCompartirLogro && (
-        <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => alCompartirLogro(r)}><Icono n="trofeo" /> Compartir el logro</button>
+        <button type="button" class="btn btn-peq btn-logro" style="justify-self:start" onClick={() => alCompartirLogro(r)}><Icono n="trofeo" /> Compartir el logro</button>
       )}
-      <div class="separa">
+      <div class="separa reto-pie">
         <span class="mini terciario">{equipos ? 'Cada equipo suma lo de los suyos (menos de quien no sale en el ranking).'
           : equipo ? (miembro || coach ? `Suman ${medida === 'cardio' ? 'los minutos de cardio' : medida === 'semanas' ? 'las semanas completas' : 'las sesiones terminadas'} de todos (menos de quien no sale en el ranking).` : '')
           : conseguido ? `${conseguido} ${conseguido === 1 ? 'lo ha conseguido' : 'lo han conseguido'}`
@@ -1951,7 +1951,7 @@ export function HojaPerfilEquipo({ perfilId, alCerrar }) {
           {/* (sin racha ni retos no sale nada: igual que de quien no sale en el ranking, así no se deduce) */}
           {!x.coach && (
             <dl class="perfil-equipo-num">
-              {x.racha > 0 && <div><dt>Racha</dt><dd><span aria-hidden="true">🔥 </span>{textoRacha(x.racha)}</dd></div>}
+              {x.racha > 0 && <div><dt>Racha</dt><dd class="pe-racha"><span aria-hidden="true">🔥 </span><span class="num">{x.racha}</span> <small>{textoRacha(x.racha).replace(/^\d+ /, '')}</small></dd></div>}
               {x.retos > 0 && <div><dt>Retos conseguidos</dt><dd class="num">{x.retos}</dd></div>}
               <div><dt>Entrenos compartidos</dt><dd class="num">{x.entrenos}</dd></div>
             </dl>
