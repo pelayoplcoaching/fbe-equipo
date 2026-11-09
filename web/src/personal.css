@@ -207,3 +207,55 @@
 .lo-compartido .ico-fila { width: 34px; height: 34px; border-radius: 10px; background: var(--morado-suave); color: var(--morado); display: grid; place-items: center; }
 .lo-compartido .ico-fila svg { width: 18px; height: 18px; }
 .lo-compartido .fila-ios-texto { display: grid; gap: 2px; min-width: 0; }
+
+/* ---- (social, 053) la parte social del equipo: cumpleaños, hoy entrenan, duelos, padrinos, compañero de la semana, un empujón,
+   lo mejor de la semana, misma sesión, el álbum, la cita y la huella ---- */
+.sc-lista { display: grid; gap: 4px; }
+.sc-fila { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 0; }
+.sc-texto { min-width: 0; font-size: .9375rem; }
+.cumples-equipo { background: linear-gradient(120deg, color-mix(in srgb, #F59E0B 14%, var(--hoja)), var(--hoja) 65%); border: 1px solid color-mix(in srgb, #F59E0B 30%, transparent); }
+.cumple-tarta { font-size: 1.35rem; vertical-align: -3px; }
+.cumple-texto, .cumple-mio { margin: 0; }
+.cumple-otros { display: grid; gap: 8px; }
+.hoy-entrenan .he-t, .padrinos .pd-t, .companero-semana .cs-t, .necesitan-animo .na-t, .lo-mejor .lm-t { display: flex; align-items: center; gap: 6px; font-size: 1rem; margin: 0; }
+.hoy-entrenan .he-t svg { width: 18px; height: 18px; color: var(--morado); }
+.he-linea { margin: 0; }
+.padrinos .pd-mio { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; margin: 0; }
+.duelos-lista { display: grid; gap: 6px; }
+.duelo-fila { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--fondo-suave, rgba(0, 0, 0, .03)); }
+.duelo-fila.aceptado { background: linear-gradient(110deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), var(--hoja) 70%); }
+.duelo-fila.ganado { background: linear-gradient(110deg, color-mix(in srgb, #F59E0B 16%, var(--hoja)), var(--hoja) 70%); }
+.duelo-texto { min-width: 0; }
+.duelo-linea { font-size: .9375rem; font-weight: 600; }
+.duelo-acciones { gap: 6px; }
+.duelo-marcador { font-size: 1.25rem; font-weight: 800; letter-spacing: .5px; color: var(--morado); }
+.duelo-marcador i { font-style: normal; opacity: .5; margin: 0 2px; }
+.duelo-resultado { font-weight: 700; }
+.duelo-resultado.ganado { background: color-mix(in srgb, #F59E0B 22%, var(--hoja)); }
+.companero-semana { background: linear-gradient(140deg, color-mix(in srgb, var(--morado) 12%, var(--hoja)), var(--hoja) 70%); }
+.cs-elegidos { display: grid; gap: 10px; }
+.cs-elegido { display: grid; justify-items: center; text-align: center; gap: 4px; padding: 6px 0; }
+.cs-elegido .avatar { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 6px var(--morado); margin-bottom: 6px; }
+.lo-mejor { border: 1px solid color-mix(in srgb, var(--morado) 25%, transparent); }
+.lm-lista { display: grid; gap: 6px; }
+.lm-fila { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: .9375rem; }
+.lm-etq { font-size: .6875rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--morado); }
+.lm-que { font-weight: 600; }
+.misma-sesion .ms-fila { gap: 10px; }
+.misma-sesion .ms-fila p { margin: 0; }
+.album-t { margin: 0; font-size: 1rem; }
+.album-rejilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.album-foto { aspect-ratio: 1; overflow: hidden; border-radius: 8px; background: var(--fondo-suave, rgba(0, 0, 0, .05)); }
+.album-foto .post-foto-boton, .album-foto .post-foto { width: 100%; height: 100%; display: block; }
+.album-foto .post-foto { object-fit: cover; border-radius: 0; aspect-ratio: 1; }
+.album-foto .post-foto-cargando { width: 100%; height: 100%; }
+.post-cita { margin: 4px 0 0; padding: 8px 10px 8px 12px; border-left: 3px solid var(--morado); border-radius: 0 10px 10px 0; background: color-mix(in srgb, var(--morado) 6%, var(--hoja)); display: grid; gap: 6px; }
+.post-cita-cab { display: flex; align-items: center; gap: 6px; }
+.post-cita-cab .btn-persona-nombre { font-weight: 700; font-size: .875rem; }
+.post-cita-texto { margin: 0; }
+.post-cita-foto { max-width: 160px; }
+.post-cita-foto .post-foto { border-radius: 8px; }
+.post-cita-borrada { margin: 4px 0 0; padding: 6px 10px; border-left: 3px solid var(--borde); }
+.huella-t { margin: 0; font-size: .9375rem; }
+.huella-lista { margin: 0; padding: 0 0 0 18px; display: grid; gap: 2px; font-size: .875rem; }
+.evento-equipo.quedada-atleta .le-k { color: #0E8A5F; }

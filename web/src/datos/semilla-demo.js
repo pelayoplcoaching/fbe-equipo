@@ -628,6 +628,9 @@ export function semillaDemo(hoy = hoyISO()) {
   });
   db.atajos_coach = [];
   db.contacto_atleta = [];
+  // (social, 053) lo que los atletas hacen entre ellos: hoy es el cumple de Carlos, dice que entrena a las 19:00, reta a Rubén,
+  // acompaña a Lucía y pide ánimo si para; la semana pasada el equipo eligió a Rubén compañero de la semana
+  sembrarSocial(db, { hoy, hace, lunesHoy, ruben, carlos });
   return db;
 
   // v0.53 (al final: no cambia lo aleatorio de lo anterior): Iván va por microciclos de 4 sesiones (torso-pierna A y B)
@@ -909,4 +912,28 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   db.comunidad_eventos.push(quedada);
   db.comunidad_evento_asistentes.push({ evento_id: quedada.id, perfil_id: ruben.perfil_id, atleta_id: ruben.id, va: true, creado_en: hace(60 * 18) },
     { evento_id: quedada.id, perfil_id: carlos.perfil_id, atleta_id: carlos.id, va: false, creado_en: hace(60 * 15) });
+}
+
+// (social, 053) La parte social de la demo (al final: no cambia lo aleatorio de lo anterior)
+function sembrarSocial(db, { hoy, hace, lunesHoy, ruben, carlos }) {
+  const lucia = db.atletas.find((a) => a.nombre === 'Lucía Ferrer');
+  Object.assign(db, { comunidad_duelos: [], comunidad_intenciones: [], comunidad_padrinos: [], comunidad_votos_semana: [] });
+  for (const m of db.comunidad_miembros) Object.assign(m, { cumple_equipo: false, ver_ausencia: false });
+  const mCarlos = db.comunidad_miembros.find((m) => m.atleta_id === carlos.id);
+  if (mCarlos) {
+    // Carlos lleva 10 semanas en el equipo (así puede acompañar a quien entra), hoy es su cumple y pide ánimo si para
+    mCarlos.creado_en = hace(60 * 24 * 70);
+    mCarlos.cumple_equipo = true;
+    mCarlos.ver_ausencia = true;
+    db.personal_atleta.push({ atleta_id: carlos.id, apodo: null, porque: null, favoritos: [], musica_url: null, cancion_url: null, musica_aperturas: {},
+      cumple_mes: Number(hoy.slice(5, 7)), cumple_dia: Number(hoy.slice(8, 10)), actualizado_en: hace(60 * 24 * 30) });
+    db.comunidad_intenciones.push({ perfil_id: carlos.perfil_id, atleta_id: carlos.id, fecha: hoy, hora: '19:00:00', nota: 'Gimnasio del barrio', creado_en: hace(60 * 2) });
+    db.comunidad_duelos.push({ id: crypto.randomUUID(), de: carlos.perfil_id, para: ruben.perfil_id, de_atleta: carlos.id, para_atleta: ruben.id, semana: lunesHoy, estado: 'pendiente', creado_en: hace(60 * 5), respondido_en: null });
+    if (lucia) db.comunidad_padrinos.push({ nuevo: lucia.perfil_id, padrino: carlos.perfil_id, nuevo_atleta: lucia.id, padrino_atleta: carlos.id, desde: hoy, hasta: sumarDias(hoy, 30), terminado_en: null, creado_en: hace(60 * 3) });
+  }
+  // La semana pasada: Carlos y Lucía votaron a Rubén; Rubén, a Carlos
+  const pasada = sumarDias(lunesHoy, -7);
+  db.comunidad_votos_semana.push({ semana: pasada, de: carlos.perfil_id, para: ruben.perfil_id, de_atleta: carlos.id, para_atleta: ruben.id, creado_en: hace(60 * 24 * 4) });
+  if (lucia) db.comunidad_votos_semana.push({ semana: pasada, de: lucia.perfil_id, para: ruben.perfil_id, de_atleta: lucia.id, para_atleta: ruben.id, creado_en: hace(60 * 24 * 3) });
+  db.comunidad_votos_semana.push({ semana: pasada, de: ruben.perfil_id, para: carlos.perfil_id, de_atleta: ruben.id, para_atleta: carlos.id, creado_en: hace(60 * 24 * 3) });
 }

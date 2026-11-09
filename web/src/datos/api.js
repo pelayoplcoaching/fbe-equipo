@@ -136,6 +136,16 @@ const falta051 = (e) => {
   return /integraciones_mias|integracion_(crear|quitar)|calendario_opciones|salud_diaria_de|atajos?_(lista|guardar)|contactos|contacto_guardar|contacto_mio|copia_privada/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
 };
 const AVISO_051 = 'Esto aún no está disponible: falta poner al día la base (migración 051)';
+// (053) sin la migración social, la app no ofrece nada de eso: el error de la base se traduce; cualquier otro, tal cual
+export const AVISO_053 = 'Esto aún no está disponible: falta poner al día la base (migración 053)';
+const falta053 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
+  if (/comunidad_(social_ajustes|cumples|duelo[a-z_]*|intencion[a-z_]*|apadrinar|padrino[a-z_]*|votar_companero|companero_semana|huella|sin_entrenar)|cita_post_id|creado_por|cumple_equipo|ver_ausencia/.test(m)
+    && /schema cache|does not exist|no existe|function|funci\u00f3n|column|columna|no disponible|PGRST20/i.test(m)) {
+    throw new Error(`${AVISO_053} (supabase/migraciones/053_social.sql).`);
+  }
+  throw e;
+};
 const falta049 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
   return /rendimiento_(apuntar|resumen|borrar)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
@@ -345,7 +355,9 @@ const CAMPOS_SE = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'series',
 const TABLAS_COMUNIDAD = ['comunidad_ajustes', 'comunidad_miembros', 'comunidad_posts', 'comunidad_comentarios', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_retos',
   'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_preguntas',
   // v0.72 (044): eventos, plantillas, atleta de la semana y moderación
-  'comunidad_eventos', 'comunidad_evento_asistentes', 'comunidad_plantillas', 'comunidad_destacados', 'comunidad_moderacion'];
+  'comunidad_eventos', 'comunidad_evento_asistentes', 'comunidad_plantillas', 'comunidad_destacados', 'comunidad_moderacion',
+  // (social, 053): duelos, intenciones, padrinos y los votos al compañero de la semana (el coach las lee enteras)
+  'comunidad_duelos', 'comunidad_intenciones', 'comunidad_padrinos', 'comunidad_votos_semana'];
 // Lo que la app lee de una publicación del muro (sin la ficha ni la sesión de su autor)
 const COLS_POST = 'id,autor_id,tipo,texto,foto_ruta,resumen,fijada,oculta,creado_en,menciones,encuesta,reto_id';
 // Los filtros del muro (v0.47), en la propia consulta: así «Ver más» sigue funcionando
@@ -354,6 +366,8 @@ const FILTRO_MURO = { entrenos: { in: { tipo: ['entreno'] } }, logros: { in: { t
 const COLS_POST_043 = `${COLS_POST},tema,fotos,mejor_comentario`;
 // (v0.72, 044) Y si está programada (publicar_en) o retenida por las palabras filtradas
 const COLS_POST_044 = `${COLS_POST_043},publicar_en,retenida`;
+// (053) la publicación que cita
+const COLS_POST_053 = `${COLS_POST_044},cita_post_id`;
 const FILTRO_MURO_043 = { entrenos: { in: { tipo: ['entreno'] } }, logros: { in: { tema: ['logros'] } }, avisos: { in: { tema: ['avisos'] } },
   tecnica: { in: { tema: ['tecnica'] } }, charla: { in: { tema: ['charla'] } }, preguntas: { in: { tema: ['pregunta'] } } };
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
@@ -841,6 +855,76 @@ export function crearApi(backend) {
       try { await b.rpc('musica_coach_guardar', { p_clave: clave, p_url: u ? urlMusica(u) : '' }); } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e; }
       musicaMemo = new Map();
     },
+    // ------------------------------------------------------------ la parte social del equipo (tanda «social», migración 053)
+    // ¿Está la 053? true / false / null (no se sabe: un corte). Como comunidad041
+    async comunidad053() {
+      if (!api._v053) {
+        const pr = (async () => {
+          try { await b.rpc('comunidad_companero_semana', {}); return true; } catch (e) {
+            const m = `${e?.message || ''} ${e?.code || ''}`;
+            if (/comunidad_companero_semana|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v053 = pr;
+        pr.then((x) => { if (x == null && api._v053 === pr) api._v053 = null; });
+      }
+      return api._v053;
+    },
+    // Mis ajustes sociales: { cumple, ausencia } → { cumple_equipo, ver_ausencia }
+    async ajustesSociales({ cumple = null, ausencia = null } = {}) {
+      return b.rpc('comunidad_social_ajustes', { p_cumple: cumple, p_ausencia: ausencia }).catch(falta053);
+    },
+    // Los cumpleaños de hoy en el equipo (de quien lo enciende). [] sin la 053
+    async cumplesComunidad() {
+      return (await b.rpc('comunidad_cumples', {}).catch(() => [])) || [];
+    },
+    // Quién ha dicho cuándo entrena (hoy y mañana); [] sin la 053
+    async intencionesComunidad() {
+      return ((await b.rpc('comunidad_intenciones', {}).catch(() => [])) || []).map((x) => ({ ...x, hora: x.hora ? String(x.hora).slice(0, 5) : null }));
+    },
+    // «Hoy entreno a las…»: { fecha, hora, nota } (null: quitarlo)
+    async decirIntencion(i) {
+      if (!i) { await b.rpc('comunidad_intencion', { p_fecha: null, p_hora: null, p_nota: null }).catch(falta053); return null; }
+      const r = await b.rpc('comunidad_intencion', { p_fecha: i.fecha, p_hora: i.hora || null, p_nota: String(i.nota || '').trim() || null }).catch(falta053);
+      return r ? { ...r, hora: r.hora ? String(r.hora).slice(0, 5) : null } : null;
+    },
+    // Los duelos: míos (o todos, el coach)
+    async duelosMios(todos = false) {
+      return (await b.rpc('comunidad_duelos_mios', { p_todos: !!todos }).catch(() => [])) || [];
+    },
+    async proponerDuelo(perfilId, proxima = false) { return b.rpc('comunidad_duelo_proponer', { p_para: perfilId, p_proxima: !!proxima }).catch(falta053); },
+    async responderDuelo(id, acepta) { return b.rpc('comunidad_duelo_responder', { p_id: id, p_acepta: !!acepta }).catch(falta053); },
+    async retirarDuelo(id) { return b.rpc('comunidad_duelo_retirar', { p_id: id }).catch(falta053); },
+    // Los padrinos: { puedo, vigentes: [...], sin_padrino: [...] } (null sin la 053)
+    async padrinosComunidad() {
+      return (await b.rpc('comunidad_padrinos_lista', {}).catch(() => null)) || null;
+    },
+    async apadrinar(perfilId) { return b.rpc('comunidad_apadrinar', { p_nuevo: perfilId }).catch(falta053); },
+    async quitarPadrino(perfilId = null) { return b.rpc('comunidad_padrino_quitar', { p_nuevo: perfilId }).catch(falta053); },
+    // El compañero de la semana: { semana, elegidos, mi_voto, votos, mis_veces } (null sin la 053)
+    async companeroSemana() {
+      return (await b.rpc('comunidad_companero_semana', {}).catch(() => null)) || null;
+    },
+    async votarCompanero(perfilId) { return b.rpc('comunidad_votar_companero', { p_para: perfilId }).catch(falta053); },
+    // La huella en el equipo (la mía o la de alguien de dentro); null sin la 053
+    async huellaComunidad(perfilId = null) {
+      return (await b.rpc('comunidad_huella', perfilId ? { p_perfil: perfilId } : {}).catch(() => null)) || null;
+    },
+    // Quién lleva 5 días o más sin entrenar (de quien lo enciende); [] sin la 053
+    async sinEntrenarComunidad() {
+      return (await b.rpc('comunidad_sin_entrenar', {}).catch(() => [])) || [];
+    },
+    // Las fotos del muro para el álbum (hasta 300 publicaciones con foto, las más recientes); [] si no se ve
+    async fotosAlbum() {
+      const con043 = (await api.comunidad043()) === true;
+      const filas = await b.select('comunidad_posts', { neq: { tipo: 'momento' }, order: [['creado_en', 'desc']], limit: 300, cols: con043 ? 'id,autor_id,tipo,creado_en,foto_ruta,fotos' : 'id,autor_id,tipo,creado_en,foto_ruta' }).catch(() => []);
+      const conFoto = filas.filter((x) => x.foto_ruta || (Array.isArray(x.fotos) && x.fotos.length));
+      if (!conFoto.length) return [];
+      const personas = await api.personasComunidad();
+      return conFoto.map((x) => ({ ...x, autor: personas[x.autor_id] || { nombre: 'Alguien del equipo' }, fotos: fotosDe(x) }));
+    },
+
     // ------------------------------------------------------------ integraciones (v0.105, migración 051)
     // La dirección de la función «integraciones» (la de Supabase, o integracionesUrl en config.js); en la demo, null
     urlIntegraciones() {
@@ -3724,7 +3808,9 @@ export function crearApi(backend) {
       const con044 = con043 && (await api.comunidad044()) === true;
       // (v0.73, 045) las reacciones nuevas y las pegatinas
       const con045 = con044 && (await api.comunidad045()) === true;
-      const cols = con044 ? COLS_POST_044 : con043 ? COLS_POST_043 : COLS_POST;
+      // (social, 053) la cita de otra publicación
+      const con053 = con045 && (await api.comunidad053()) === true;
+      const cols = con053 ? COLS_POST_053 : con044 ? COLS_POST_044 : con043 ? COLS_POST_043 : COLS_POST;
       const tope = con044 ? new Date(Date.now() + 20000).toISOString() : null;
       let f = filtro === 'mio' ? { eq: { autor_id: yo } } : (con043 ? FILTRO_MURO_043 : FILTRO_MURO)[filtro] || {};
       if (con043 && filtro === 'guardados') {
@@ -3771,12 +3857,20 @@ export function crearApi(backend) {
       const V = agrupar(votos, 'post_id');
       const G = new Set(guardados.map((x) => x.post_id));
       const autorDe = (id) => personas[id] || { nombre: 'Alguien del equipo', foto: null, coach: false };
+      // (053) las publicaciones citadas (si ya no se ven, la cita sale como «ya no está»)
+      const citadas = {};
+      const idsCita = [...new Set(posts.map((x) => x.cita_post_id).filter(Boolean))];
+      if (idsCita.length) {
+        const filas = await b.select('comunidad_posts', { in: { id: idsCita }, cols: COLS_POST_044 }).catch(() => []);
+        for (const c of filas) citadas[c.id] = { ...c, autor: autorDe(c.autor_id), fotos: fotosDe(c) };
+      }
       return {
         personas,
         hayMas,
         con043,
         con044,
         con045,
+        con053,
         posts: posts.filter((x) => !(x.publicar_en && Date.parse(x.publicar_en) > Date.now() + 20000) && x.tipo !== 'momento').map((x) => {
           const rs = R[x.id] || [];
           const porTipo = {};
@@ -3784,10 +3878,11 @@ export function crearApi(backend) {
           const mejor = x.mejor_comentario ? (C[x.id] || []).find((c) => c.id === x.mejor_comentario) : null;
           return {
             ...x, autor: autorDe(x.autor_id), mio: x.autor_id === yo, reacciones: porTipo, miReaccion: rs.find((r) => r.autor_id === yo)?.tipo || null, comentarios: (C[x.id] || []).length,
-            mencionados: mencionadosDe(x.menciones, personas), con043, con044, con045, fotos: fotosDe(x), guardado: G.has(x.id), retenida: !!x.retenida,
+            mencionados: mencionadosDe(x.menciones, personas), con043, con044, con045, con053, fotos: fotosDe(x), guardado: G.has(x.id), retenida: !!x.retenida,
             // (la mejor respuesta, si se ve; en una pregunta, si es del coach: «Respondida por el coach»)
             mejor_comentario: mejor ? mejor.id : null, respondidaCoach: !!mejor && x.tema === 'pregunta' && !!personas[mejor.autor_id]?.coach,
             ...(x.tipo === 'encuesta' ? { resultados: resultadosEncuesta(x.encuesta, V[x.id] || [], yo, (id) => autorDe(id).nombre) } : {}),
+            ...(x.cita_post_id ? { cita: citadas[x.cita_post_id] || { id: x.cita_post_id, borrada: true } } : {}),
           };
         }),
       };
@@ -3806,7 +3901,7 @@ export function crearApi(backend) {
     // v0.71 (043): con su tema (sin él, el de entrada que pone la base) y hasta 4 fotos (fotos: varios JPEG ya reducidos; foto
     // sigue valiendo para una). Sin la 043, sin tema y con una foto como mucho.
     // v0.72 (044): el coach puede programarlo (publicarEn: ISO; hasta entonces solo lo ve él)
-    async publicarEnComunidad({ texto = '', foto = null, fotos = [], tema = null, fijada = false, menciones = [], encuesta = null, publicarEn = null } = {}) {
+    async publicarEnComunidad({ texto = '', foto = null, fotos = [], tema = null, fijada = false, menciones = [], encuesta = null, publicarEn = null, citaPostId = null } = {}) {
       const yo = await api.perfil();
       const coach = yo?.rol === 'coach';
       const m = { menciones: [...new Set(menciones || [])].slice(0, MAX_MENCIONES) };
@@ -3818,11 +3913,15 @@ export function crearApi(backend) {
         prog.publicar_en = publicarEn;
       }
       if (encuesta) {
-        if (!coach) throw new Error('Las encuestas son del coach.');
+        // (053) también los atletas, una al día (lo comprueba la base)
+        if (!coach && (await api.comunidad053()) !== true) throw new Error(`Las encuestas de los atletas: ${AVISO_053.toLowerCase()}.`);
         const e = limpiarEncuesta(encuesta);
         if (e.error) throw new Error(e.error);
-        return (await b.insert('comunidad_posts', [{ tipo: 'encuesta', texto: e.pregunta, encuesta: e.encuesta, ...(fijada ? { fijada: true } : {}), ...m, ...prog }]).catch(prog.publicar_en ? falta044 : falta029))[0];
+        return (await b.insert('comunidad_posts', [{ tipo: 'encuesta', texto: e.pregunta, encuesta: e.encuesta, ...(coach && fijada ? { fijada: true } : {}), ...m, ...prog }]).catch(prog.publicar_en ? falta044 : coach ? falta029 : falta053))[0];
       }
+      // (053) citar otra publicación: con texto, sin fotos
+      const cita = citaPostId && !coach ? { cita_post_id: citaPostId } : {};
+      if (citaPostId && !String(texto || '').trim()) throw new Error('Al citar, escribe algo.');
       const blobs = [...(foto ? [foto] : []), ...(fotos || [])].filter(Boolean);
       if (blobs.length > MAX_FOTOS) throw new Error(`Hasta ${MAX_FOTOS} fotos por publicación.`);
       const con043 = (await api.comunidad043()) === true;
@@ -3836,8 +3935,8 @@ export function crearApi(backend) {
         rutas = blobs.map(() => (coach ? `coach/${aleatorio()}.jpg` : `${atleta.id}/${aleatorio()}.jpg`));
       }
       const fila = { tipo: coach ? 'aviso' : 'post', texto: t || null, foto_ruta: rutas[0] || null, ...(coach && fijada ? { fijada: true } : {}), ...(m.menciones.length ? m : {}),
-        ...(con043 && tema ? { tema } : {}), ...(rutas.length > 1 ? { fotos: rutas } : {}), ...prog };
-      const [post] = await b.insert('comunidad_posts', [fila]).catch(prog.publicar_en ? falta044 : con043 ? falta043 : falta027);
+        ...(con043 && tema ? { tema } : {}), ...(rutas.length > 1 ? { fotos: rutas } : {}), ...prog, ...cita };
+      const [post] = await b.insert('comunidad_posts', [fila]).catch(cita.cita_post_id ? falta053 : prog.publicar_en ? falta044 : con043 ? falta043 : falta027);
       if (blobs.length) {
         const subidas = [];
         try {
@@ -4100,19 +4199,23 @@ export function crearApi(backend) {
         silenciado_hasta: silencio?.silenciado_hasta || null, sin_ranking: !!silencio?.sin_ranking, fotos };
     },
     // Mandar ánimo 🙌 a alguien del equipo (v0.47): uno por persona y semana
-    async animar(perfilId) {
+    async animar(perfilId, texto = '') {
+      const t = String(texto || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+      // (053) con unas palabras; sin la 053 (o sin texto), como siempre
+      if (t && (await api.comunidad053()) === true) return b.rpc('comunidad_animar', { p_perfil: perfilId, p_texto: t }).catch(falta053);
       return b.rpc('comunidad_animar', { p_perfil: perfilId }).catch(falta029);
     },
+    animarComunidad(perfilId, texto = '') { return api.animar(perfilId, texto); },
     // Los ánimos de esta semana: quién me ha animado (nombres) y a quién he animado yo (perfil_id)
     async animosComunidad() {
       const yo = uid();
       const lunesM = lunesDe(hoyISO());
       const [filas, personas] = await Promise.all([
-        b.select('comunidad_animos', { eq: { semana: lunesM }, cols: 'de,para,creado_en', order: [['creado_en', 'asc']] }).catch(() => []),
+        b.select('comunidad_animos', { eq: { semana: lunesM }, cols: 'de,para,creado_en,texto', order: [['creado_en', 'asc']] }).catch(() => b.select('comunidad_animos', { eq: { semana: lunesM }, cols: 'de,para,creado_en', order: [['creado_en', 'asc']] }).catch(() => [])),
         api.personasComunidad(),
       ]);
       return {
-        recibidos: filas.filter((x) => x.para === yo && personas[x.de]).map((x) => ({ perfil_id: x.de, nombre: personas[x.de].nombre })),
+        recibidos: filas.filter((x) => x.para === yo && personas[x.de]).map((x) => ({ perfil_id: x.de, nombre: personas[x.de].nombre, texto: x.texto || null })),
         mandados: new Set(filas.filter((x) => x.de === yo).map((x) => x.para)),
       };
     },
@@ -4289,23 +4392,28 @@ export function crearApi(backend) {
         const r = A[e.id] || [];
         const van = r.filter((x) => x.va);
         const mia = r.find((x) => x.perfil_id === yo);
-        return { ...e, van: van.map((x) => personas[x.perfil_id].nombre), vanIds: van.map((x) => x.perfil_id), noVan: r.filter((x) => !x.va).map((x) => personas[x.perfil_id].nombre), miRespuesta: mia ? !!mia.va : null };
+        // (053) propuestaPor: quién la propuso (si es de un atleta y sigue dentro); mia: la propuse yo
+        return { ...e, van: van.map((x) => personas[x.perfil_id].nombre), vanIds: van.map((x) => x.perfil_id), noVan: r.filter((x) => !x.va).map((x) => personas[x.perfil_id].nombre), miRespuesta: mia ? !!mia.va : null,
+          propuestaPor: e.creado_por ? personas[e.creado_por]?.nombre || 'Alguien del equipo' : null, mia: !!e.creado_por && e.creado_por === yo };
       });
     },
     // «Me apunto» (true), «No voy» (false) o quitar mi respuesta (null)
     async responderEvento(eventoId, va) {
       return b.rpc('comunidad_evento_responder', { p_evento: eventoId, p_va: va == null ? null : !!va }).catch(falta044);
     },
-    // El coach crea o cambia un evento: { titulo, fecha, hora (de Madrid), lugar, descripcion, plazas }
+    // El coach crea o cambia un evento: { titulo, fecha, hora (de Madrid), lugar, descripcion, plazas }. (053) Un atleta propone
+    // una quedada igual (la base la firma con creado_por; hasta 30 plazas y 3 abiertas)
     async guardarEvento({ titulo, fecha, hora, lugar, descripcion = '', plazas = null }, id = null) {
       const problema = eventoValido({ titulo, lugar, descripcion, plazas });
       if (problema) throw new Error(`${problema}.`);
       const empieza = instanteMadrid(fecha, hora);
       if (!empieza) throw new Error('Elige el día y la hora.');
       if (Date.parse(empieza) <= Date.now() && !id) throw new Error('El evento, más adelante (esa hora ya ha pasado).');
+      const coach = (await api.perfil())?.rol === 'coach';
+      if (!coach && plazas !== '' && plazas != null && Number(plazas) > 30) throw new Error('Una quedada, hasta 30 plazas.');
       const fila = { titulo: String(titulo).trim(), empieza_en: empieza, lugar: String(lugar).trim(), descripcion: String(descripcion || '').trim() || null,
-        plazas: plazas === '' || plazas == null ? null : Number(plazas) };
-      const r = id ? await b.update('comunidad_eventos', fila, { eq: { id } }).catch(falta044) : await b.insert('comunidad_eventos', [fila]).catch(falta044);
+        plazas: plazas === '' || plazas == null ? null : Number(plazas), ...(coach || id ? {} : { creado_por: uid() }) };
+      const r = id ? await b.update('comunidad_eventos', fila, { eq: { id } }).catch(coach ? falta044 : falta053) : await b.insert('comunidad_eventos', [fila]).catch(coach ? falta044 : falta053);
       if (!r?.length) throw new Error('No se ha podido guardar el evento.');
       return r[0];
     },

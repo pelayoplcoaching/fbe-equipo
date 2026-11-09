@@ -4252,7 +4252,7 @@ console.log('\nv0.70: compañeros de racha, retos por equipos, de cardio y de se
     '«Tú y Rubén M. · 🔥 4 semanas»');
   // Insignias
   const ins = C.insigniasDe([{ clave: 'primera_publicacion', valor: 1, meta: 1 }, { clave: 'animos_10', valor: 7, meta: 10 }, { clave: 'reacciones_25', valor: 40, meta: 25 }, { clave: 'racha_4', valor: 1, meta: 4 }]);
-  check(ins.length === 6 && ins.map((x) => x.clave).join() === C.INSIGNIAS.map((x) => x[0]).join() && ins[0].conseguida && !ins[1].conseguida && ins[2].conseguida && ins[2].valor === 25
+  check(ins.length === 10 && ins.map((x) => x.clave).join() === C.INSIGNIAS.map((x) => x[0]).join() && ins[0].conseguida && !ins[1].conseguida && ins[2].conseguida && ins[2].valor === 25
     && ins.find((x) => x.clave === 'retos_5').valor === 0 && !ins.find((x) => x.clave === 'pareja_4').conseguida,
     'las insignias, en su orden: conseguidas las que llegan a la meta (el progreso, como mucho la meta; las que no vienen, sin progreso)');
   check(C.siguienteInsignia(ins).clave === 'animos_10' && C.siguienteInsignia(C.insigniasDe(C.INSIGNIAS.map(([clave, , , , meta]) => ({ clave, valor: meta, meta })))) === null
