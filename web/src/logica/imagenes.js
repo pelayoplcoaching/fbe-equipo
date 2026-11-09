@@ -36,6 +36,16 @@ export function familiaPortada({ tipo = 'fuerza', pautas = [], cardio = false } 
   return ['empuje', 'tiron', 'pierna', 'core'].reduce((a, b) => (series[b] > series[a] ? b : a));
 }
 
+// (imágenes, bloque Q) Una sesión de cardio con su modalidad lleva la portada de esa modalidad (la pista, el camino, la
+// bici, la elíptica, el remo, la piscina o la comba); «Otro» o sin modalidad, la de cardio de siempre
+const CARDIO_IMG = { carrera: 'carrera', andar: 'andar', bici: 'bici', eliptica: 'eliptica', remo: 'remo', nadar: 'nadar', cuerda: 'comba' };
+export const MODALIDADES_IMG = Object.keys(CARDIO_IMG);
+export function imagenPortada(familia, modalidad = null) {
+  if (!familia) return null;
+  if (familia === 'cardio' && CARDIO_IMG[modalidad]) return `cardio-${CARDIO_IMG[modalidad]}`;
+  return `sesion-${familia}`;
+}
+
 // ---------- Los hábitos ----------
 // Una por icono de hábito (logica/habitos.js: ICONOS_HABITO); «Otro» (libre) y lo que no se conozca, la de las piedras
 const HABITOS = ['pasos', 'proteina', 'agua', 'sueno', 'movilidad', 'verdura'];
@@ -60,8 +70,14 @@ export function imagenComida(toma) { return COMIDAS[toma] ? `comida-${COMIDAS[to
 export const FONDOS_TARJETA = ['sesion', 'record', 'mes', 'bloque', 'racha'];
 export function fondoTarjeta(d = {}) {
   if (FONDOS_TARJETA.includes(d.fondo)) return `compartir-${d.fondo}`;
-  return d.records?.length ? 'compartir-record' : 'compartir-sesion';
+  if (d.records?.length) return 'compartir-record';
+  // (bloque Q) una sesión de cardio, con la portada de su modalidad
+  if (d.cardio && CARDIO_IMG[d.cardio.modalidad]) return `cardio-${CARDIO_IMG[d.cardio.modalidad]}`;
+  return 'compartir-sesion';
 }
+// Dónde va el motivo de un fondo apaisado al recortarlo para una tarjeta vertical (0 izquierda, 1 derecha): las de
+// cardio lo llevan a la derecha
+export function focoFondo(id) { return String(id || '').startsWith('cardio-') ? 0.8 : 0.5; }
 
 // ---------- Las medallas ----------
 // Una por logro (logica/logros.js) y nivel: bronce, plata, oro y diamante (el cuarto nivel)
@@ -125,6 +141,32 @@ const PRIMEROS = { programa: 'programa', serie: 'sesion', coach: 'checkin' };
 export function imagenPrimerosPasos(dibujo) { return PRIMEROS[dibujo] ? `primeros-${PRIMEROS[dibujo]}` : null; }
 export const HERRAMIENTAS = ['camara', 'metronomo', 'intervalos', 'comparar'];
 export function imagenHerramienta(que) { return HERRAMIENTAS.includes(que) ? `herr-${que}` : null; }
+
+// ---------- Los hitos de la racha y el aniversario (bloque R) ----------
+// El fuego crece de un hito a otro: 4 semanas, una vela; 52, la gran hoguera. Más allá de 52 (104, 156…), la de 52.
+// Entre hitos (no debería pasar), la del hito alcanzado más alto; por debajo de 4, ninguna
+export const HITOS_IMG = [4, 8, 12, 26, 52];
+export function imagenHito(semanas) {
+  const n = Number(semanas) || 0;
+  const h = HITOS_IMG.filter((x) => x <= n).pop();
+  return h ? `hito-${h}` : null;
+}
+export const IMAGEN_ANIVERSARIO = 'aniversario';
+
+// ---------- El foco de la semana ----------
+// Una cabecera por foco (logica/calculos.js: FOCOS), con lo que significa esa semana en una frase; sin foco, nada
+export const FOCOS_IMG = ['adaptacion', 'tecnica', 'volumen', 'intensidad', 'descarga', 'mixto', 'evaluacion', 'peaking'];
+export function imagenFoco(foco) { return FOCOS_IMG.includes(foco) ? `foco-${foco}` : null; }
+export const FRASE_FOCO = {
+  adaptacion: 'Para coger el ritmo: cargas cómodas y la técnica en su sitio.',
+  tecnica: 'Cada repetición, limpia: algo menos de kilos y mucha precisión.',
+  volumen: 'Más series que de costumbre: el trabajo que te hace crecer.',
+  intensidad: 'Menos repeticiones y más kilos: aprieta en lo importante.',
+  descarga: 'Algo menos de carga para recuperar y llegar fresco a lo siguiente.',
+  mixto: 'Un poco de todo: fuerza, volumen y trabajo general.',
+  evaluacion: 'Semana de medir: vemos dónde estás para ajustar lo que viene.',
+  peaking: 'Afinando para tu mejor marca: poco volumen y mucha intensidad.',
+};
 
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un

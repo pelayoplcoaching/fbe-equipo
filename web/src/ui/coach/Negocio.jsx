@@ -1,4 +1,6 @@
 import { useState } from 'preact/hooks';
+import { CabCoach } from './CabCoach.jsx';
+import { hayImagen } from '../Imagen.jsx';
 import { useApp, useCarga, Icono, Hoja, Siluetas, ErrorCaja, useAncho, usePreferencia } from '../comunes.jsx';
 import { Interruptor } from '../Ajustes.jsx';
 import { euros, OCULTO } from '../../logica/negocio.js';
@@ -16,6 +18,13 @@ export function SeccionNegocio({ abrirAtleta }) {
   return (
     <section class="seccion" aria-labelledby="negocio">
       <h2 id="negocio">Negocio</h2>
+      {/* (imágenes, bloque S) con la ilustración, la línea y el botón van sobre la planta que crece */}
+      {x && !x.error && hayImagen('coach-negocio') ? (
+        <CabCoach id="coach-negocio" titulo={`${x.activos} ${x.activos === 1 ? 'atleta activo' : 'atletas activos'} · ${(oculto ? OCULTO : euros(x.mrr)).replace(/ /g, '\u00a0')} al mes`}>
+          <span class="peq">{x.renovaciones.length} {x.renovaciones.length === 1 ? 'renovación' : 'renovaciones'} en los próximos 30 días</span>
+          <button class="btn btn-peq" onClick={() => setAbierto(true)} aria-label="Abrir el panel de negocio"><Icono n="progreso" /> Panel de negocio</button>
+        </CabCoach>
+      ) : (
       <div class="panel panel-pad pila-s">
         {!x ? <Siluetas forma="filas" n={1} texto="Cargando tu negocio" /> : x.error ? <p class="peq secundario">{x.error.message}</p> : (
           <>
@@ -24,6 +33,7 @@ export function SeccionNegocio({ abrirAtleta }) {
           </>
         )}
       </div>
+      )}
       {abierto && x && !x.error && <PanelNegocio datos={x} alCerrar={() => setAbierto(false)} abrirAtleta={(id) => { setAbierto(false); abrirAtleta?.(id, 'cobros'); }} recargar={() => d.recargar(true)} />}
     </section>
   );

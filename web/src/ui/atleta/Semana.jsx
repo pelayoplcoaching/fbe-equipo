@@ -8,6 +8,8 @@ import { NOMBRE_FOCO, NOMBRE_GRUPO, NOMBRE_TIPO_SESION, num } from '../../logica
 import { rangoSemana, desdeISO, fmtConDia, hoyISO, sumarDias } from '../../logica/fechas.js';
 import { useDeslizar } from '../deslizar.js';
 import { LOBO } from '../marca-lobo.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenFoco, FRASE_FOCO } from '../../logica/imagenes.js';
 
 // (diseño, tanda 26) El día de la semana en la hoja de calendario de «Tus entrenamientos»
 const DIA_CORTO = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
@@ -88,7 +90,13 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
               )}
               {(semana.foco || semana.nota_coach) && (
                 <div class="pila-s">
-                  {semana.foco && <span class="chip morado" style="justify-self:start">Foco: {NOMBRE_FOCO[semana.foco]?.toLowerCase()}</span>}
+                  {semana.foco && (hayImagen(imagenFoco(semana.foco)) ? (
+                    // (imágenes, bloque P) el foco de la semana, ilustrado: qué toca y qué significa
+                    <div class="cab-ilu foco-cab">
+                      <div class="cab-ilu-texto pila-xs"><span class="mini foco-cab-k">Foco de la semana</span><strong class="foco-cab-t">{NOMBRE_FOCO[semana.foco]}</strong>{FRASE_FOCO[semana.foco] && <span class="peq foco-cab-f">{FRASE_FOCO[semana.foco]}</span>}</div>
+                      <Imagen key={imagenFoco(semana.foco)} id={imagenFoco(semana.foco)} clase="cab-ilu-img" tamanos="(min-width: 720px) 400px, 70vw" />
+                    </div>
+                  ) : <span class="chip morado" style="justify-self:start">Foco: {NOMBRE_FOCO[semana.foco]?.toLowerCase()}</span>)}
                   {semana.nota_coach && <div class="nota-coach con-lobo"><img class="nota-lobo" src={LOBO} alt="" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>}
                 </div>
               )}

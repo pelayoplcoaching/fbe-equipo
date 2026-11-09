@@ -1,4 +1,37 @@
 {
+  "acceso-fondo": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "480": "imagenes/acceso/acceso-fondo-480.7c082a00.webp",
+      "720": "imagenes/acceso/acceso-fondo-720.72c66739.webp",
+      "1024": "imagenes/acceso/acceso-fondo-1024.54e47a4b.webp"
+    }
+  },
+  "activar-fondo": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "480": "imagenes/acceso/activar-fondo-480.ea3eb519.webp",
+      "720": "imagenes/acceso/activar-fondo-720.936d0fb8.webp",
+      "1024": "imagenes/acceso/activar-fondo-1024.d515bec2.webp"
+    }
+  },
+  "aniversario": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/celebra/aniversario-720.59b3dfaa.webp",
+      "1080": "imagenes/celebra/aniversario-1080.5bf71668.webp",
+      "1440": "imagenes/celebra/aniversario-1440.b5a66247.webp"
+    }
+  },
   "bienvenida-manana": {
     "proporcion": [
       16,
@@ -30,6 +63,83 @@
       "720": "imagenes/bienvenida/bienvenida-tarde-720.e90c4efc.webp",
       "1080": "imagenes/bienvenida/bienvenida-tarde-1080.38dcc8e1.webp",
       "1440": "imagenes/bienvenida/bienvenida-tarde-1440.82d3ea82.webp"
+    }
+  },
+  "cardio-andar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-andar-720.3e7589b1.webp",
+      "1080": "imagenes/cardio/cardio-andar-1080.ac6c962d.webp",
+      "1440": "imagenes/cardio/cardio-andar-1440.ffccd822.webp"
+    }
+  },
+  "cardio-bici": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-bici-720.9a6e51f7.webp",
+      "1080": "imagenes/cardio/cardio-bici-1080.e830c98f.webp",
+      "1440": "imagenes/cardio/cardio-bici-1440.5607ec2f.webp"
+    }
+  },
+  "cardio-carrera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-carrera-720.f5897466.webp",
+      "1080": "imagenes/cardio/cardio-carrera-1080.564a73cd.webp",
+      "1440": "imagenes/cardio/cardio-carrera-1440.596ddb97.webp"
+    }
+  },
+  "cardio-comba": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-comba-720.78a2d008.webp",
+      "1080": "imagenes/cardio/cardio-comba-1080.5d0bc0b1.webp",
+      "1440": "imagenes/cardio/cardio-comba-1440.fb0bbe04.webp"
+    }
+  },
+  "cardio-eliptica": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-eliptica-720.3d058666.webp",
+      "1080": "imagenes/cardio/cardio-eliptica-1080.776a2d99.webp",
+      "1440": "imagenes/cardio/cardio-eliptica-1440.5eb61571.webp"
+    }
+  },
+  "cardio-nadar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-nadar-720.cd6e9c3b.webp",
+      "1080": "imagenes/cardio/cardio-nadar-1080.b4b24612.webp",
+      "1440": "imagenes/cardio/cardio-nadar-1440.7c27226d.webp"
+    }
+  },
+  "cardio-remo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-remo-720.62fc7704.webp",
+      "1080": "imagenes/cardio/cardio-remo-1080.b7940012.webp",
+      "1440": "imagenes/cardio/cardio-remo-1440.35cd9231.webp"
     }
   },
   "carne-fondo": {
@@ -173,6 +283,72 @@
       "480": "imagenes/checkin/checkin-molestias-480.02b745e2.webp",
       "720": "imagenes/checkin/checkin-molestias-720.557db827.webp",
       "1080": "imagenes/checkin/checkin-molestias-1080.3922d01c.webp"
+    }
+  },
+  "coach-negocio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-negocio-480.6a359d23.webp",
+      "720": "imagenes/coach/coach-negocio-720.55f1664a.webp",
+      "1080": "imagenes/coach/coach-negocio-1080.8102f9ba.webp"
+    }
+  },
+  "coach-panel": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-panel-480.56ed1366.webp",
+      "720": "imagenes/coach/coach-panel-720.2850d199.webp",
+      "1080": "imagenes/coach/coach-panel-1080.b7c4a074.webp"
+    }
+  },
+  "coach-programar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-programar-480.0b809038.webp",
+      "720": "imagenes/coach/coach-programar-720.61f4fe2a.webp",
+      "1080": "imagenes/coach/coach-programar-1080.db53f349.webp"
+    }
+  },
+  "coach-radar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-radar-480.83a20ef1.webp",
+      "720": "imagenes/coach/coach-radar-720.542db799.webp",
+      "1080": "imagenes/coach/coach-radar-1080.781ec118.webp"
+    }
+  },
+  "coach-revisar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-revisar-480.4fb728b9.webp",
+      "720": "imagenes/coach/coach-revisar-720.1a6507ae.webp",
+      "1080": "imagenes/coach/coach-revisar-1080.5b0a53e3.webp"
+    }
+  },
+  "coach-revision-semanal": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-revision-semanal-480.964afc83.webp",
+      "720": "imagenes/coach/coach-revision-semanal-720.b3507465.webp",
+      "1080": "imagenes/coach/coach-revision-semanal-1080.820cc102.webp"
     }
   },
   "comida-cena": {
@@ -323,6 +499,94 @@
       "480": "imagenes/equipo/equipo-reto-480.39ae977a.webp",
       "720": "imagenes/equipo/equipo-reto-720.b7cbb71c.webp",
       "1080": "imagenes/equipo/equipo-reto-1080.41c9369e.webp"
+    }
+  },
+  "foco-adaptacion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-adaptacion-480.490f134a.webp",
+      "720": "imagenes/foco/foco-adaptacion-720.854a974b.webp",
+      "1080": "imagenes/foco/foco-adaptacion-1080.c31e06ba.webp"
+    }
+  },
+  "foco-descarga": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-descarga-480.5ee75aa4.webp",
+      "720": "imagenes/foco/foco-descarga-720.033f9ef6.webp",
+      "1080": "imagenes/foco/foco-descarga-1080.90ff123c.webp"
+    }
+  },
+  "foco-evaluacion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-evaluacion-480.b4f31d35.webp",
+      "720": "imagenes/foco/foco-evaluacion-720.03ff5776.webp",
+      "1080": "imagenes/foco/foco-evaluacion-1080.8eb8e853.webp"
+    }
+  },
+  "foco-intensidad": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-intensidad-480.9828aeb4.webp",
+      "720": "imagenes/foco/foco-intensidad-720.abae5887.webp",
+      "1080": "imagenes/foco/foco-intensidad-1080.34a18826.webp"
+    }
+  },
+  "foco-mixto": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-mixto-480.53674444.webp",
+      "720": "imagenes/foco/foco-mixto-720.584785f6.webp",
+      "1080": "imagenes/foco/foco-mixto-1080.055e1333.webp"
+    }
+  },
+  "foco-peaking": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-peaking-480.67b9715d.webp",
+      "720": "imagenes/foco/foco-peaking-720.a3aaa816.webp",
+      "1080": "imagenes/foco/foco-peaking-1080.41e079be.webp"
+    }
+  },
+  "foco-tecnica": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-tecnica-480.858905bc.webp",
+      "720": "imagenes/foco/foco-tecnica-720.bb22011c.webp",
+      "1080": "imagenes/foco/foco-tecnica-1080.a68c995e.webp"
+    }
+  },
+  "foco-volumen": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-volumen-480.b37169ff.webp",
+      "720": "imagenes/foco/foco-volumen-720.40e29618.webp",
+      "1080": "imagenes/foco/foco-volumen-1080.c1a79f9f.webp"
     }
   },
   "grupo-abdominales": {
@@ -537,6 +801,56 @@
       "480": "imagenes/herr/herr-metronomo-480.5080d5a6.webp",
       "720": "imagenes/herr/herr-metronomo-720.11149cba.webp",
       "1080": "imagenes/herr/herr-metronomo-1080.78181f85.webp"
+    }
+  },
+  "hito-12": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "512": "imagenes/hito/hito-12-512.fbc86a9c.webp",
+      "1080": "imagenes/hito/hito-12-1080.a7b2a1a8.webp"
+    }
+  },
+  "hito-26": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "512": "imagenes/hito/hito-26-512.97c1d0ae.webp",
+      "1080": "imagenes/hito/hito-26-1080.398f992e.webp"
+    }
+  },
+  "hito-4": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "512": "imagenes/hito/hito-4-512.838af4e1.webp",
+      "1080": "imagenes/hito/hito-4-1080.15c85532.webp"
+    }
+  },
+  "hito-52": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "512": "imagenes/hito/hito-52-512.ae5cf79e.webp",
+      "1080": "imagenes/hito/hito-52-1080.52799fd7.webp"
+    }
+  },
+  "hito-8": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "512": "imagenes/hito/hito-8-512.7eadc0cf.webp",
+      "1080": "imagenes/hito/hito-8-1080.a0106953.webp"
     }
   },
   "medalla-bascula-bronce": {
@@ -1071,6 +1385,17 @@
       "720": "imagenes/sesion/sesion-tiron-720.c06eff48.webp",
       "1080": "imagenes/sesion/sesion-tiron-1080.b54824e9.webp",
       "1440": "imagenes/sesion/sesion-tiron-1440.692c0ab7.webp"
+    }
+  },
+  "sin-conexion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/acceso/sin-conexion-480.82cdc6d5.webp",
+      "720": "imagenes/acceso/sin-conexion-720.70ca581f.webp",
+      "1080": "imagenes/acceso/sin-conexion-1080.e67eac86.webp"
     }
   }
 }

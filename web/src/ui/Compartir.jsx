@@ -3,7 +3,7 @@ import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { useApp, useCarga, Hoja, Icono, Cargando, descargar, copiar, usePreferencia, Segmentos, P } from './comunes.jsx';
 import { num } from '../logica/calculos.js';
 import { arteSesion, cifrasTarjeta, cifraHeroe, encajarFoto, PLANTILLAS_TARJETA } from '../logica/arte.js';
-import { fondoTarjeta, fuenteImagen } from '../logica/imagenes.js';
+import { fondoTarjeta, focoFondo, fuenteImagen } from '../logica/imagenes.js';
 import { fmtCorta } from '../logica/fechas.js';
 import { hayImagen } from './Imagen.jsx';
 import { FORMATOS, tamanoFormato, PEGATINAS_TARJETA, pegatinaTarjeta, limpiarHandle, conArroba, handleEquipo, PREF_HANDLE, pieDeFoto, resumenTexto, nombreArchivo as nombreArchivoDe, cifrasCardio, PREF_RECORDATORIO, recordatorioCompartir,
@@ -110,7 +110,7 @@ function fondoIlustrado(x, img) {
   fondoNoche(x);
   const e = Math.max(W / img.naturalWidth, H / img.naturalHeight);
   const w = img.naturalWidth * e, h = img.naturalHeight * e;
-  x.drawImage(img, (W - w) / 2, H - h, w, h);
+  x.drawImage(img, (W - w) * (img.fbeFoco ?? 0.5), H - h, w, h);
   const g = x.createLinearGradient(0, oy, 0, H);
   g.addColorStop(0, 'rgba(21, 15, 54, 0.15)'); g.addColorStop(0.45, 'rgba(21, 15, 54, 0.25)'); g.addColorStop(0.86, 'rgba(21, 15, 54, 0.6)'); g.addColorStop(1, 'rgba(21, 15, 54, 0.74)');
   x.fillStyle = g; x.fillRect(0, 0, W, H);
@@ -222,6 +222,7 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null, fo
   // (imágenes) la ilustración de fondo, salvo con la foto del atleta (y no en la clara)
   // (la ilustración, solo en la noche de la marca: con otra paleta no pega)
   const ilu = (plantilla === 'foto' && foto) || paleta !== 'noche' ? null : await cargarFondo(fondoTarjeta(d));
+  if (ilu) ilu.fbeFoco = focoFondo(fondoTarjeta(d));
   if (plantilla !== 'clasica') {
     dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono, ilu });
     x.translate(0, oy); pegatina(x, letra, pegatinaTarjeta(peg)); x.translate(0, -oy);

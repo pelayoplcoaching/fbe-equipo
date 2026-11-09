@@ -154,7 +154,8 @@ ${marcadoPortada}
   // (pulido 3.7) ni el código que solo usa la demo (sus datos de ejemplo y su «base» en memoria): el service worker
   // lo guarda la primera vez que se abre la demo, no en cada instalación y actualización de todo el mundo
   const deLaDemo = (f) => /^chunks\/(semilla-demo|backend-memoria|fotos-demo|poster-demo)-[A-Z0-9]+\.js$/.test(f);
-  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && !f.startsWith('imagenes/') && !soloDemo(f) && !deLaDemo(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
+  // (imágenes, bloque T) la de «Sin conexión» sí se precarga (unos pocos KB): es la pantalla que sale justo cuando no hay red
+  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && (!f.startsWith('imagenes/') || f.startsWith('imagenes/acceso/sin-conexion-')) && !soloDemo(f) && !deLaDemo(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
   // (pulido 3.7) y la huella de cada archivo, para que al actualizar no se vuelva a descargar lo que no ha cambiado
   const huellas = Object.fromEntries(precache.filter((u) => u !== 'config.js').map((u) => [u, createHash('sha256').update(readFileSync(join(salida, u === './' ? 'index.html' : u.split('?')[0]))).digest('hex')]));
   writeFileSync(join(salida, 'sw.js'), aAscii(readFileSync(join(raiz, 'web/sw.js'), 'utf8').replace('__VERSION__', version).replace('__ARCHIVOS__', JSON.stringify(precache))

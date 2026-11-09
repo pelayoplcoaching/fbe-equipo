@@ -60,7 +60,7 @@ import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js
 import { resumenPautas } from '../../logica/diseno.js';
 import { Portada, ArteSesion } from './Portada.jsx';
 import { LOBO } from '../marca-lobo.js';
-import { familiaPortada, selloSesion, imagenCelebracion } from '../../logica/imagenes.js';
+import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso } from './Personal.jsx';
 import { Cadencia, CancionRecord } from './Musica.jsx';
@@ -1395,7 +1395,7 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
       <section class={`resumen-hero ${nRecords ? 'con-record' : ''}`} aria-labelledby="resumen-titulo" style={{ '--i': 0 }}>
         {/* (diseño, tanda 17) el dibujo de la sesión, de fondo, como en la tarjeta de Hoy */}
         {/* (imágenes) la ilustración de la sesión, la misma de su portada; si no se puede, el dibujo */}
-        {sesion?.nombre && <Imagen key={familia} id={familia ? `sesion-${familia}` : null} clase="hero-arte hero-foto" tamanos="(min-width: 600px) 420px, 70vw"
+        {sesion?.nombre && <Imagen key={imagenPortada(familia, resumen.cardio?.modalidad || sesion?.cardio?.modalidad)} id={imagenPortada(familia, resumen.cardio?.modalidad || sesion?.cardio?.modalidad)} clase="hero-arte hero-foto" tamanos="(min-width: 600px) 420px, 70vw"
           alternativa={<ArteSesion nombre={sesion.nombre} tipo={sesion.tipo || (cardio ? 'cardio' : 'fuerza')} patron={null} clase="hero-arte" />} />}
         <span class={`resumen-medalla ${hayImagen(sello) ? 'con-ilu' : ''}`} aria-hidden="true">
           <Imagen key={sello} id={sello} clase="resumen-medalla-img" tamanos="72px" alternativa={<Icono n={nRecords ? 'trofeo' : 'hecho'} />} />

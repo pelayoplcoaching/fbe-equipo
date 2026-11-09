@@ -17,6 +17,8 @@ import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 import { hoyISO } from '../logica/fechas.js';
 import { nombreMes } from '../logica/mes.js';
 import { REACCIONES } from '../logica/comunidad.js';
+import { IMAGEN_ANIVERSARIO } from '../logica/imagenes.js';
+import { Imagen, hayImagen } from './Imagen.jsx';
 import {
   aniversarioDe, tituloAniversario, textoAniversario, textoAniversarioMuro, mesEquipoDe, tituloMesEquipo, cifrasMesEquipo, cifrasMiMes, datosImagenMes,
   hitoPorCelebrar, textoHito, miles, REACCIONES_TODAS, PEGATINAS, textoPegatina, MAX_MOMENTO, NORMA_MOMENTO, textoQueda, limpiarMomento,
@@ -38,8 +40,10 @@ export function TarjetaAniversario() {
   }, [an?.meses, oculta]);
   if (!an || oculta) return null;
   return (
-    <section class="panel panel-pad aniversario" aria-labelledby="aniversario-t">
-      <span class="aniversario-ico" aria-hidden="true">🎉</span>
+    <section class={`panel panel-pad aniversario ${hayImagen(IMAGEN_ANIVERSARIO) ? 'con-ilu' : ''}`} aria-labelledby="aniversario-t">
+      {/* (imágenes, bloque R) la tarta con su vela, en una franja arriba; con ella, sin el 🎉 */}
+      <Imagen id={IMAGEN_ANIVERSARIO} clase="franja-ilu franja-pegada aniversario-ilu" tamanos="(min-width: 720px) 640px, 100vw" />
+      {!hayImagen(IMAGEN_ANIVERSARIO) && <span class="aniversario-ico" aria-hidden="true">🎉</span>}
       <div class="pila-xs">
         <h2 id="aniversario-t" class="aniversario-t">{tituloAniversario(an.meses)}</h2>
         <p class="peq secundario">{an.meses >= 12 ? 'Gracias por la constancia: un año más entrenando con cabeza.' : 'Gracias por la constancia: lo difícil es empezar, y ya llevas ' + textoAniversario(an.meses) + '.'}</p>

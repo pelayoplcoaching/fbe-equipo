@@ -13,6 +13,7 @@ import { RevisionSeguida } from '../tecnica/RevisionSeguida.jsx';
 import { RevisionSesion } from '../tecnica/RevisionSesion.jsx';
 import { agruparPorSesion, tituloSesion } from '../../logica/sesionVideos.js';
 import { videosQueEsperan } from '../../logica/cierre.js';
+import { CabCoach } from './CabCoach.jsx';
 import { ESCALAS, NOMBRE_ZONA, num } from '../../logica/calculos.js';
 import { fmtConDia, rangoSemana } from '../../logica/fechas.js';
 import { NOMBRE_TOMA } from '../../logica/comidas.js';
@@ -145,6 +146,10 @@ export function Revisar({ bandeja, abrirAtleta }) {
         <div class="titulo"><h1>Revisar</h1><div class="sub">{d?.total ? (d.total === 1 ? '1 cosa espera tu respuesta' : `${d.total} cosas esperan tu respuesta`) : 'Al día'}</div></div>
       </CabeceraGrande>
       <BandaDemo />
+      {/* (imágenes, bloque S) la mesa de revisar: lo que espera y cómo ir más rápido */}
+      {d && <CabCoach id="coach-revisar" titulo={d.total ? (d.total === 1 ? 'Una cosa espera tu respuesta' : `${d.total} cosas esperan tu respuesta`) : 'Todo revisado'}>
+        <span class="peq">{d.total ? 'Sesiones, check-ins, vídeos y mensajes, agrupados por atleta.' : 'Lo nuevo que te manden tus atletas aparecerá aquí.'}</span>
+      </CabCoach>}
       <ErrorCaja error={bandeja.error} reintentar={recargar} />
       <div class="selector-chips" role="group" aria-label="Qué revisar">
         {FILTROS.map(([k, t]) => (k === 'todo' || cuentas[k] > 0) && (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { CabCoach } from './CabCoach.jsx';
 import { useApp, useCarga, useUnaVez, Siluetas, Vacio, Avatar, Icono, CabeceraGrande, ErrorCaja } from '../comunes.jsx';
 import { fechaMadrid } from '../../logica/fechas.js';
 import { leerBorrador, guardarBorrador } from '../../logica/mensajes.js';
@@ -62,6 +63,8 @@ export function RadarContacto({ abrirAtleta }) {
       <CabeceraGrande>
         <div class="titulo"><h1>A quién escribir</h1>{x && <div class="sub">Objetivo: {x.objetivo} días de contacto por semana con cada atleta</div>}</div>
       </CabeceraGrande>
+      {/* (imágenes, bloque S) el faro: que nadie se quede sin noticias tuyas */}
+      <CabCoach id="coach-radar" titulo="Que nadie se quede a oscuras"><span class="peq">Primero, quien lleva más días sin saber de ti. Un mensaje corto basta.</span></CabCoach>
       {res.cargando && !datos ? <Siluetas forma="lista" n={6} texto="Cargando el contacto con tus atletas" /> : res.error ? (
         <ErrorCaja error={res.error} reintentar={() => res.recargar()} />
       ) : !filas.length ? (

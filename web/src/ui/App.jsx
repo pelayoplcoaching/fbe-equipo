@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { Ilustracion } from './Ilustraciones.jsx';
+import { Imagen } from './Imagen.jsx';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { borrarTodoEnCurso } from './en-curso.js';
 import { borrarBorradores } from '../logica/mensajes.js';
@@ -315,7 +316,11 @@ export function App({ backend, api, cola }) {
   else vista = (
     <div class="acceso"><div class="acceso-caja acceso-paso">
       {/* (diseño, tanda 18) una pantalla de paso también es de la casa: su escena y un título, además del aviso */}
-      <Ilustracion n={estado.error?.sinConexion ? 'sinred' : 'fallo'} clase="paso-ilu" />
+      {/* (imágenes, bloque T) sin conexión, la antena apagada en su colina; si no se puede cargar (sin red, lo normal aquí
+          salvo que el móvil la guarde), el dibujo de siempre */}
+      {estado.error?.sinConexion
+        ? <Imagen id="sin-conexion" clase="paso-foto" tamanos="(min-width: 700px) 440px, 90vw" prioridad alternativa={<Ilustracion n="sinred" clase="paso-ilu" />} />
+        : <Ilustracion n="fallo" clase="paso-ilu" />}
       <h1 class="peq">{estado.error?.sinConexion ? 'Sin conexión' : 'No hemos podido abrir tu cuenta'}</h1>
       {estado.error?.sinConexion
         ? <div class="nota nota-sin-red" role="status"><Icono n="sinred" /> Sin conexión. Tu cuenta se abrirá en cuanto vuelva la cobertura.</div>
