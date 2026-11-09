@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.119': {
+    atleta: [
+      'Al terminar, el esfuerzo en un toque y la duración ya puesta; y si se te olvida cerrar la sesión, la cerramos por ti.',
+      'Dicta la nota de la sesión con la voz. El check-in se guarda mientras lo rellenas y puedes copiar el de la semana pasada.',
+      'El objetivo de tu bloque, a la vista en Hoy, y hábitos sugeridos según tu cuestionario que activas de un toque.',
+    ],
+    coach: [
+      'En el chat, las cifras del atleta de un vistazo, y «Guardar como…» un mensaje en nota, tarea o recordatorio técnico.',
+      'La revisión semanal y «Necesitan atención» te dejan el mensaje escrito; alertas de sesiones sin cerrar y de días sin pesarse.',
+      'Vídeos que esperan 3 días o más, arriba en Revisar y en un aviso por la mañana. Necesita la migración 054 (comprobación 31).',
+    ],
+  },
   '0.118': {
     atleta: [
       'Tus vídeos de técnica, renovados: el vídeo en modo cine, con la rueda y la tira de fotogramas más claras.',

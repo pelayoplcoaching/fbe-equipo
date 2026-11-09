@@ -37,7 +37,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -1096,7 +1096,9 @@ export function crearApi(backend) {
       // (v0.110) la 2026-12.16 solo con la 051 (Salud del iPhone, calendario y WhatsApp); sin ella, la 2026-12.15
       if ((await api.integraciones051().catch(() => null)) !== true) return VERSION_LEGAL_SIN_051;
       // (v0.117) la 2026-12.17 solo con la 053 (lo social del equipo); con la 051 pero sin la 053, la 2026-12.16
-      return (await api.comunidad053().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_053;
+      if ((await api.comunidad053().catch(() => null)) !== true) return VERSION_LEGAL_SIN_053;
+      // (054) el cierre de las sesiones
+      return (await api.cierre054().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_054;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
