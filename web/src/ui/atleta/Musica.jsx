@@ -52,7 +52,7 @@ export function TarjetaMusica({ url, etiqueta, alAbrir = null, extra = null }) {
   const ficha = useFicha(url);
   const titulo = ficha.datos?.titulo || nombreMusica(url);
   return (
-    <div class="tarjeta-musica">
+    <div class="tarjeta-musica" data-servicio={spotify(url) ? 'spotify' : 'otro'}>
       <div class="tarjeta-musica-cab">
         {ficha.datos?.thumb ? <img class="tarjeta-musica-portada" src={ficha.datos.thumb} alt="" width="56" height="56" loading="lazy" referrerpolicy="no-referrer" />
           : <span class="tarjeta-musica-portada sin" aria-hidden="true"><Icono n="altavoz" /></span>}
@@ -124,7 +124,7 @@ export function Cadencia({ modalidad }) {
   if (!c) return null;
   const cambiar = (d) => { const v = ajustarCadencia(modalidad, valor + d * c.paso); setValor(v); try { localStorage.setItem(`fbe-cadencia-${modalidad}`, String(v)); } catch { /* */ } };
   return (
-    <div class="cadencia" role="group" aria-label="Metrónomo de cadencia">
+    <div class="cadencia" role="group" aria-label="Metrónomo de cadencia" data-en={en ? '1' : undefined} style={{ '--pulso': `${Math.round(60000 / valor)}ms` }}>
       <span class="mini terciario">Cadencia</span>
       <div class="cadencia-fila">
         <button type="button" class="btn btn-icono" onClick={() => cambiar(-1)} aria-label="Menos" disabled={valor <= c.min}><Icono n="menos" /></button>
