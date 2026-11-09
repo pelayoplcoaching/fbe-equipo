@@ -3834,3 +3834,116 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .correccion:has(> .lista-puntos.ver), .correccion:has(> .correccion-nota-ver) { background: linear-gradient(180deg, color-mix(in srgb, var(--morado) 7%, var(--hoja)), var(--hoja) 120px); border-color: color-mix(in srgb, var(--morado) 18%, var(--linea)); }
 .correccion:has(> .lista-puntos.ver) .btn-primario, .correccion:has(> .correccion-nota-ver) .btn-primario { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 85%, transparent); }
 @media (forced-colors: active) { .estado-video li:not(:last-child)::after { background: CanvasText; } }
+
+
+/* ══ Tanda 41 (9/11, tarde): los datos del atleta que mira el coach ═══════════════════════════════════════════════════
+   Tras recorrer otra vez la app entera, lo más soso que quedaba: la pestaña Nutrición de la ficha (el plan, el ajuste,
+   el gasto, sus semanas y las versiones, que además se salían de su tarjeta), «Desde su iPhone» en Seguimiento y
+   «Comparar check-ins». La tarjeta del plan es la misma que ve el atleta en «Tu plan». Atributos nuevos: data-fase y
+   data-m (NutricionComun.jsx), vigente y proximo en las versiones (NutricionCoach.jsx), data-k y data-tend en las cifras
+   de Salud (Integraciones.jsx). Iconos nuevos: --ico-pasos, --ico-luna, --ico-onda, --ico-bascula. */
+:root { --ico-pasos: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.5 3.5c1.7 0 2.5 1.9 2.5 4.2S9.9 12 8.5 12 6 10 6 7.7 6.8 3.5 8.5 3.5zM6.3 15h4.4v2.2a2.2 2.2 0 0 1-4.4 0zM15.5 7.5c1.7 0 2.5 1.9 2.5 4.2S16.9 16 15.5 16 13 14 13 11.7s.8-4.2 2.5-4.2zM13.3 19h4.4v.3a2.2 2.2 0 0 1-4.4 0z'/%3E%3C/svg%3E"); --ico-luna: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z'/%3E%3C/svg%3E"); --ico-onda: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12h3.5l2-5 3.5 10 2.5-7 1.5 2H21'/%3E%3C/svg%3E"); --ico-bascula: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='4' width='17' height='16' rx='4'/%3E%3Cpath d='M8.5 9.5a5 5 0 0 1 7 0M12 9.5l1.5-1.5'/%3E%3C/svg%3E"); --kcal: #D4602A; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --kcal: #FF9A66; } }
+:root[data-theme="dark"] { --kcal: #FF9A66; }
+
+/* ── 310 · La tarjeta del plan con el color de su fase (tanda 41) ─────────────────────────────────────────────────────
+   Una raya arriba y una luz en la esquina del color de la fase: perder grasa en naranja, mantener en el acento, ganar
+   músculo en verde, recomposición en azul; el nombre de la fase lleva su punto. La ve el coach y el atleta. */
+.tarjeta-plan[data-fase] { position: relative; overflow: hidden; --fase: var(--morado); background: radial-gradient(280px 130px at 100% 0%, color-mix(in srgb, var(--fase) 11%, transparent), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta), inset 0 4px 0 var(--fase); }
+.tarjeta-plan[data-fase="perder"] { --fase: var(--kcal); } .tarjeta-plan[data-fase="ganar"] { --fase: var(--ok); } .tarjeta-plan[data-fase="recomposicion"] { --fase: var(--macro-grasa); }
+.tarjeta-plan[data-fase] > .separa strong { display: inline-flex; align-items: baseline; gap: 8px; font-size: 1.0625rem; }
+.tarjeta-plan[data-fase] > .separa strong::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--fase); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fase) 22%, transparent); transform: translateY(-1px); }
+@media (forced-colors: active) { .tarjeta-plan[data-fase] > .separa strong::before { content: none; } }
+
+/* ── 311 · Las cifras del plan, cada una con su color (tanda 41) ──────────────────────────────────────────────────────
+   Las kcal en naranja, las de descanso en lavanda, y proteína, hidratos y grasa en los colores de sus anillos
+   (--macro-*), la fibra en verde: un baño suave, una raya a la izquierda y la etiqueta con su punto. */
+.cifras-plan > div[data-m] { position: relative; --c: var(--morado); background: color-mix(in srgb, var(--c) 9%, var(--hoja)); box-shadow: inset 3px 0 0 color-mix(in srgb, var(--c) 70%, transparent); padding: 9px 10px 9px 13px; border-radius: 12px; }
+.cifras-plan > div[data-m="kcal"] { --c: var(--kcal); } .cifras-plan > div[data-m="descanso"] { --c: color-mix(in srgb, var(--morado) 55%, var(--hoja)); }
+.cifras-plan > div[data-m="proteina"] { --c: var(--macro-proteina); } .cifras-plan > div[data-m="carbos"] { --c: var(--macro-carbos); }
+.cifras-plan > div[data-m="grasa"] { --c: var(--macro-grasa); } .cifras-plan > div[data-m="fibra"] { --c: var(--ok); }
+.cifras-plan > div[data-m] dt { color: var(--tinta-2); }
+.cifras-plan > div[data-m] dt::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--c); vertical-align: 1px; }
+
+/* ── 312 · El motivo del plan y el plan que viene (tanda 41) ──────────────────────────────────────────────────────────
+   El motivo del ajuste, como un mensaje del coach (globo con el acento); el plan que empieza otro día, en una franja
+   lavanda con su calendario. */
+.tarjeta-plan .nota { border-radius: 4px 14px 14px 14px; background: var(--morado-suave); color: var(--tinta); }
+.tarjeta-plan .nota svg { color: var(--morado); }
+.tarjeta-plan .aviso-plan { padding: 9px 12px; border-radius: 12px; background: color-mix(in srgb, var(--morado) 7%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 22%, transparent); }
+.tarjeta-plan .aviso-plan svg { color: var(--morado); }
+
+/* ── 313 · El ajuste que propone la app (tanda 41) ────────────────────────────────────────────────────────────────────
+   Sin el filo grueso de la izquierda: una tarjeta con luz de su color (acento si baja, verde si va bien) y un borde
+   fino, y «Revisar y aplicar» con luz. */
+.ajuste-nutricion { border-left: 0; border: 1px solid color-mix(in srgb, var(--morado) 28%, var(--linea)); background: radial-gradient(300px 140px at 0% 0%, color-mix(in srgb, var(--morado) 10%, transparent), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta); }
+.ajuste-nutricion.ok { border-color: color-mix(in srgb, var(--ok) 30%, var(--linea)); background: radial-gradient(300px 140px at 0% 0%, color-mix(in srgb, var(--ok) 10%, transparent), transparent 70%), var(--hoja); }
+.ajuste-nutricion > .separa strong, .ajuste-nutricion > .separa b { font-size: 1.0625rem; }
+.ajuste-nutricion .btn-primario:not(:disabled) { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 85%, transparent); }
+
+/* ── 314 · El gasto energético (tanda 41) ─────────────────────────────────────────────────────────────────────────────
+   La cifra grande en el naranja de las kcal, con su llama en un disco; el margen (±) en una pastilla. */
+.gasto-cifra { position: relative; padding-left: 48px; min-height: 40px; align-items: center; }
+.gasto-cifra::before { content: ""; position: absolute; left: 0; top: 50%; width: 38px; height: 38px; margin-top: -19px; border-radius: 50%; background: linear-gradient(150deg, color-mix(in srgb, var(--kcal) 70%, #fff), var(--kcal)); box-shadow: 0 6px 14px -6px var(--kcal); }
+.gasto-cifra::after { content: ""; position: absolute; left: 10px; top: 50%; width: 18px; height: 18px; margin-top: -9px; background: #FFFFFF; -webkit-mask: var(--ico-llama) center / contain no-repeat; mask: var(--ico-llama) center / contain no-repeat; }
+.gasto-cifra b { color: var(--tinta); }
+.gasto-cifra .terciario { padding: 2px 9px; border-radius: 999px; background: var(--hoja-2); color: var(--tinta-2); font-size: .8125rem; }
+@media (forced-colors: active) { .gasto-cifra::before, .gasto-cifra::after { content: none; } .gasto-cifra { padding-left: 0; } }
+
+/* ── 315 · Sus semanas: la tabla y la tira de días (tanda 41) ─────────────────────────────────────────────────────────
+   La tabla a franjas, con la semana en negrita y lo que tocaba más pequeño; la columna «Bien» en una pastilla verde. La
+   tira de días (planes sin contar) con esquinas suaves y luz en los cumplidos. */
+.tabla-nutricion tbody tr:nth-child(odd) { background: color-mix(in srgb, var(--tinta) 3%, transparent); }
+.tabla-nutricion th, .tabla-nutricion td { padding: 9px 5px; }
+.tabla-nutricion tbody tr > :first-child { border-radius: 8px 0 0 8px; } .tabla-nutricion tbody tr > :last-child { border-radius: 0 8px 8px 0; }
+.tabla-nutricion td .terciario { font-size: .75rem; }
+.tabla-nutricion tbody td:last-child { font-weight: 750; color: var(--ok); }
+.tira-cumplido i { border-radius: 6px; }
+.tira-cumplido i.si { box-shadow: 0 3px 8px -4px var(--ok); }
+
+/* ── 316 · Las versiones del plan como línea del tiempo (tanda 41) ────────────────────────────────────────────────────
+   Arreglo: las filas no tenían relleno y el texto tocaba el borde de la tarjeta. Ahora cada versión lleva su punto en
+   una raya: la vigente en el acento con halo, la que viene punteada, las de antes en gris. */
+.version-plan { position: relative; padding: 12px 14px 12px 38px; }
+.version-plan::before { content: ""; position: absolute; left: 18px; top: 0; bottom: 0; width: 2px; background: var(--linea); }
+.version-plan:first-child::before { top: 20px; } .version-plan:last-child::before { bottom: calc(100% - 20px); }
+.version-plan:only-child::before { content: none; }
+.version-plan::after { content: ""; position: absolute; left: 13px; top: 14px; width: 12px; height: 12px; border-radius: 50%; background: var(--hoja); box-shadow: inset 0 0 0 2px var(--tinta-3); }
+.version-plan.vigente::after { background: var(--morado); box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 20%, transparent); }
+.version-plan.proximo::after { background: var(--hoja); box-shadow: none; outline: 2px dashed var(--morado); outline-offset: -2px; }
+.version-plan.vigente { background: color-mix(in srgb, var(--morado) 5%, transparent); }
+@media (forced-colors: active) { .version-plan::before, .version-plan::after { content: none; } .version-plan { padding-left: 14px; } }
+
+/* ── 317 · «Desde su iPhone» en baldosas con su icono (tanda 41) ──────────────────────────────────────────────────────
+   Pasos, sueño, pulso, HRV y peso, cada uno en una baldosa con su icono en un disco de su color (data-k). */
+.salud-movil .salud-cifras { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
+.salud-movil .salud-cifra[data-k] { position: relative; padding: 10px 10px 10px 50px; border-radius: 12px; background: color-mix(in srgb, var(--c) 7%, var(--hoja)); min-height: 58px; --c: var(--morado); --i: var(--ico-pasos); }
+.salud-movil .salud-cifra[data-k="sueno_min"] { --c: #5B5BD6; --i: var(--ico-luna); } .salud-movil .salud-cifra[data-k="fc_reposo"] { --c: #D93A63; --i: var(--ico-corazon); }
+.salud-movil .salud-cifra[data-k="hrv"] { --c: #0E8FA8; --i: var(--ico-onda); } .salud-movil .salud-cifra[data-k="peso_kg"] { --c: var(--ok); --i: var(--ico-bascula); }
+.salud-movil .salud-cifra[data-k="pasos"] { --c: #E07B1F; }
+.salud-movil .salud-cifra[data-k]::before { content: ""; position: absolute; left: 10px; top: 12px; width: 30px; height: 30px; border-radius: 50%; background: var(--c); box-shadow: 0 5px 12px -6px var(--c); }
+.salud-movil .salud-cifra[data-k]::after { content: ""; position: absolute; left: 17px; top: 19px; width: 16px; height: 16px; background: #FFFFFF; -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
+.salud-movil .salud-cifra dt { color: var(--tinta-2); }
+@media (forced-colors: active) { .salud-movil .salud-cifra[data-k]::before, .salud-movil .salud-cifra[data-k]::after { content: none; } .salud-movil .salud-cifra[data-k] { padding-left: 10px; } }
+
+/* ── 318 · El cambio de cada cifra, con su sentido (tanda 41) ─────────────────────────────────────────────────────────
+   El cambio frente a la semana anterior en una pastilla: verde si es a mejor (más pasos, más sueño, más HRV, menos
+   pulso), ámbar si es a peor; el peso, neutro (depende del objetivo). */
+.salud-movil .salud-dif { padding: 1px 7px; border-radius: 999px; background: var(--hoja-2); color: var(--tinta-2); font-size: .75rem; font-weight: 750; }
+.salud-movil .salud-cifra[data-tend="mejor"] .salud-dif { background: var(--ok-suave); color: var(--ok); }
+.salud-movil .salud-cifra[data-tend="peor"] .salud-dif { background: var(--aviso-suave); color: var(--aviso); }
+
+/* ── 319 · Comparar check-ins como una tabla de verdad (tanda 41) ─────────────────────────────────────────────────────
+   Las columnas no se aprietan (las cifras con su unidad no se parten), a franjas, el dato en gris y cada semana con su
+   cabecera en pastilla (la de antes en gris, la de después en el acento); el cambio, en una pastilla. */
+.tabla-comparar td { font-weight: 700; }
+.tabla-comparar td.num { white-space: nowrap; }
+.tabla-comparar tbody tr:nth-child(odd) { background: color-mix(in srgb, var(--tinta) 3%, transparent); }
+.tabla-comparar thead th { padding-block: 10px; }
+.tabla-comparar thead th:nth-child(2), .tabla-comparar thead th:nth-child(3) { color: var(--tinta-2); }
+.tabla-comparar thead th:nth-child(3) { color: var(--morado); }
+.tabla-comparar .dif { display: block; width: fit-content; margin-top: 3px; padding: 1px 7px; border-radius: 999px; background: var(--hoja-2); font-weight: 750; }
+.tabla-comparar .dif.cambia { background: var(--morado-suave); color: var(--tinta); }
+.comparar-elegir label { font-weight: 750; }
+.comparar-lado figure { padding: 6px; border-radius: 14px; background: var(--hoja-2); }
+.comparar-lado img { border-radius: 10px; }

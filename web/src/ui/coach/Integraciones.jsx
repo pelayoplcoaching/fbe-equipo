@@ -82,7 +82,7 @@ export function SaludDelMovil({ atleta }) {
   const r = resumenSalud(d.dias || []);
   const u = r.ultimos, a = r.anteriores;
   const cifra = (k, texto, unidad, dec = 0) => (u[k] == null ? null : (
-    <div class="salud-cifra" key={k}>
+    <div class="salud-cifra" key={k} data-k={k} data-tend={a[k] == null || k === 'peso_kg' || Math.abs(u[k] - a[k]) < (dec ? 0.05 : 0.5) ? undefined : ((u[k] > a[k]) === (k !== 'fc_reposo') ? 'mejor' : 'peor')}>
       <dt>{texto}</dt>
       <dd><span class="num">{k === 'sueno_min' ? textoSueno(u[k]) : num(u[k], dec)}</span>{unidad && <span class="u"> {unidad}</span>}
         {a[k] != null && Math.abs(u[k] - a[k]) >= (dec ? 0.05 : 0.5) && <span class="salud-dif peq">{k === 'sueno_min' ? `${u[k] >= a[k] ? '+' : '−'}${Math.abs(Math.round(u[k] - a[k]))} min` : `${u[k] >= a[k] ? '+' : '−'}${num(Math.abs(u[k] - a[k]), dec)}`}</span>}
