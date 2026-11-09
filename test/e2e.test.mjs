@@ -825,9 +825,9 @@ try {
   await p.getByRole('button', { name: 'Compartir la sesión' }).click();
   await p.locator('.tarjeta-img').waitFor();
   check((await p.locator('.tarjeta-img').evaluate((i) => i.complete && i.naturalWidth)) === 1080, 'crea la tarjeta para compartir (1080 × 1350)');
-  // v0.51: tres plantillas: «Cifras» (de entrada), «Mínima» y «Con tu foto» (una foto del móvil, que no se sube)
+  // v0.51: plantillas «Cifras» (de entrada), «Mínima» y «Con tu foto» (una foto del móvil, que no se sube); v0.115: y «Clara»
   const plantillas = p.getByRole('group', { name: 'Plantilla' });
-  check((await plantillas.getByRole('radio').count()) === 3 && await plantillas.getByRole('radio', { name: 'Cifras' }).isChecked() && (await p.locator('.tarjeta-img').getAttribute('alt')).includes('(Cifras)'), 'elige entre tres plantillas; de entrada, «Cifras»');
+  check((await plantillas.getByRole('radio').count()) === 4 && await plantillas.getByRole('radio', { name: 'Clara' }).count() === 1 && await plantillas.getByRole('radio', { name: 'Cifras' }).isChecked() && (await p.locator('.tarjeta-img').getAttribute('alt')).includes('(Cifras)'), 'elige entre cuatro plantillas (con «Clara»); de entrada, «Cifras»');
   await revisar('compartir');
   const srcAntes = await p.locator('.tarjeta-img').getAttribute('src');
   await plantillas.getByRole('radio', { name: 'Mínima' }).click();

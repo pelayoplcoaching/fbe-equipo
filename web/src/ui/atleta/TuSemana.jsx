@@ -7,6 +7,8 @@ import { ajuste } from '../ajustes.js';
 import { Imagen } from '../Imagen.jsx';
 import { imagenCelebracion } from '../../logica/imagenes.js';
 import { pesoTxt } from '../../logica/unidades.js';
+import { HojaCompartir } from '../Compartir.jsx';
+import { datosSemanaCompleta } from '../../logica/compartir.js';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 export function rangoLargo(lunes, domingo) {
@@ -42,6 +44,9 @@ export function TarjetaSemana({ resumen, alAbrir, alQuitar }) {
 export function HistoriaSemana(props) { return <Capa><HistoriaSemanaPantalla {...props} /></Capa>; }
 function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
   const r = resumen;
+  // (compartir) la semana completa, como tarjeta para redes o para el equipo
+  const [compartir, setCompartir] = useState(false);
+  const datosSemana = () => datosSemanaCompleta({ lunes: r.lunes, domingo: r.domingo, hechas: r.sesiones.hechas, previstas: r.sesiones.total, minutos: r.minutos, tonelaje: r.tonelaje, records: r.records.length, racha: r.racha });
   const pantallas = [
     { id: 'portada', render: () => (
       <>
@@ -122,7 +127,9 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
       <div class="historia-pantalla" key={pantallas[i].id} aria-live="polite">
         {pantallas[i].render()}
         {ultima && <button class="btn btn-grande historia-fin" onClick={alCerrar}>A por la siguiente</button>}
+        {ultima && r.sesiones.completa && <button class="btn btn-grande historia-compartir" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir la semana</button>}
       </div>
+      {compartir && <HojaCompartir logro tipo="semana" titulo="Compartir tu semana" datos={datosSemana()} equipo={{ tema: 'logros' }} alCerrar={() => setCompartir(false)} />}
       <button class="historia-zona anterior" onClick={() => ir(-1)} disabled={i === 0} aria-label="Pantalla anterior" />
       <button class="historia-zona siguiente" onClick={() => (ultima ? alCerrar() : ir(1))} aria-label={ultima ? 'Cerrar el resumen' : 'Pantalla siguiente'} />
     </div>

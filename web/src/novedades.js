@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.115': {
+    atleta: [
+      'Compartir, a lo grande: formato historia, plantilla clara, pegatinas, tu @ y el texto listo para Instagram, WhatsApp o Facebook.',
+      'Tarjetas nuevas para tus récords, tu racha y tu semana completa, y publícalas en el equipo con un toque.',
+      'Más vida en el Equipo: retos de rojos contra azules, el ranking en discos, insignias como medallas y quien entrenó hoy, con aro verde.',
+    ],
+    coach: [
+      'Tus atletas comparten más fácil: historia, plantilla clara, pegatinas, texto listo y tarjetas de récord, racha y semana completa.',
+      'En Equipo, «Compartir la semana del equipo»: una tarjeta solo con recuentos para tu Instagram. Pon tu @ en web/config.js (instagram).',
+      'Más vida en el Equipo: retos de rojos contra azules, el ranking en discos, insignias como medallas y quien entrenó hoy, con aro verde.',
+    ],
+  },
   '0.114': {
     atleta: [
       'Tu perfil estrena portada, el aro de tu racha y tu porqué, con tus cifras, 12 semanas, vitrina, medallas, hitos y últimos entrenos.',

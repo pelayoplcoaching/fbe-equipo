@@ -102,7 +102,7 @@ export function MesEnEquipo({ cambios = 0 }) {
         </section>
       )}
       {compartir && (
-        <HojaCompartir datos={datosImagenMes(x, { mio: compartir === 'mio' })} titulo={compartir === 'mio' ? `Compartir ${tuMes.toLowerCase()}` : `Compartir «${titulo}»`}
+        <HojaCompartir tipo="mes" datos={datosImagenMes(x, { mio: compartir === 'mio' })} titulo={compartir === 'mio' ? `Compartir ${tuMes.toLowerCase()}` : `Compartir «${titulo}»`}
           nombreArchivo={`fbe-${mes}-${compartir === 'mio' ? 'mi-mes' : 'equipo'}.png`} alCerrar={() => setCompartir(null)}
           alt={`${compartir === 'mio' ? tuMes : titulo}: ${(compartir === 'mio' ? mias : cifras).map(([, v, t]) => `${v} ${t}`).join(', ')}`}
           nota="Solo lleva recuentos (sesiones, semanas completas, récords, retos, rachas y ánimos): nada de peso, cuerpo ni salud, ni nombres." />
