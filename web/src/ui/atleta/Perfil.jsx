@@ -15,6 +15,9 @@ import { FilaFoto } from '../FotoPerfil.jsx';
 import { Carnet } from './Carnet.jsx';
 import { LoTuyo } from './LoTuyo.jsx';
 import { Conexiones } from './Conexiones.jsx';
+import { PortadaPerfil, FotoConAnillo } from '../PerfilVisual.jsx';
+import { PerfilSecciones, EnElEquipo } from './PerfilSocial.jsx';
+import { usePersonal } from './Personal.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -44,6 +47,9 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       <CabezaPerfil p={p} correo={backend.auth.sesion()?.user.email} />
       {/* v0.52: el carné de atleta (como una tarjeta de Apple Wallet) */}
       <Carnet bloque={p?.bloque || null} />
+      {/* v0.114: tu actividad (cifras, 12 semanas, constancia, vitrina, medallas, hitos y entrenos) y tu sitio en el equipo */}
+      {conEntrenamiento(atleta) && <PerfilSecciones salud={salud} irA={irA} />}
+      <EnElEquipo />
 
       <GrupoIos titulo="Tu asesoría" id="grupo-asesoria">
         <FilaFoto nombre={atleta.nombre} />
@@ -117,11 +123,18 @@ function CabezaPerfil({ p, correo }) {
     ['records', 'Récords', records.datos],
   ] : [];
   const bloque = p?.bloque ? `Bloque ${p.bloque.numero}: ${p.bloque.nombre}${p.actual ? ` · Semana ${p.actual.numero}` : ''}` : null;
+  // v0.114: la portada (un dibujo que sale de tu nombre), el aro de tu racha alrededor de la foto y tu porqué
+  const personal = usePersonal();
+  const porque = personal.datos?.porque?.trim();
+  const apodo = personal.datos?.apodo?.trim();
   return (
-    <section class="perfil-cabeza" aria-label={`${atleta.nombre}${bloque ? `, ${bloque}` : ''}`}>
-      <Avatar nombre={atleta.nombre} foto={perfil?.foto_grande || perfil?.foto} clase="enorme" lleno ampliable />
+    <section class="perfil-cabeza con-portada" aria-label={`${atleta.nombre}${bloque ? `, ${bloque}` : ''}`}>
+      <PortadaPerfil texto={atleta.nombre} />
+      <FotoConAnillo nombre={atleta.nombre} foto={perfil?.foto_grande || perfil?.foto} racha={constancia.datos?.racha || 0} clase="enorme" lleno ampliable />
       <div class="perfil-quien">
         <p class="perfil-nombre">{atleta.nombre}</p>
+        {apodo && apodo !== atleta.nombre && <p class="peq secundario perfil-apodo">Te llamamos {apodo}</p>}
+        {porque && <p class="perfil-frase">«{porque}»</p>}
         {correo && <p class="peq secundario perfil-correo">{correo}</p>}
         {bloque && <p class="perfil-bloque"><Icono n="semana" />{bloque}</p>}
       </div>

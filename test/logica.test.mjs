@@ -4535,5 +4535,41 @@ console.log('Libras para las cargas (v0.112)');
     'la sesión guarda en kilos; la app del coach (y su modo atleta) van en kilos');
 }
 
+console.log('El perfil, más bonito y más social (v0.114)');
+{
+  const PF = await import('../web/src/logica/perfil.js');
+  const hoy = '2026-11-11'; // miércoles
+  const e = [
+    { id: 'a', nombre: 'Pierna A', fecha: '2026-11-09', duracion_min: 70, tonelaje: 4700, series: 19, records: 2 },
+    { id: 'b', nombre: 'Torso A', fecha: '2026-11-02', duracion_min: 65, tonelaje: 3800, series: 17, records: 0 },
+    { id: 'c', nombre: 'Torso B', fecha: '2026-01-05', duracion_min: 60, tonelaje: 2000, series: 15, records: 1 },
+    { id: 'd', nombre: 'Full body', fecha: '2025-12-20', duracion_min: 50, tonelaje: 1500, series: 12, records: 0 },
+    { id: 'z', nombre: 'Futura', fecha: '2026-11-20', duracion_min: 50, tonelaje: 999, series: 9, records: 9 },
+  ];
+  const c = PF.cifrasPeriodo(e, hoy);
+  check(c.semana.sesiones === 1 && c.semana.minutos === 70 && c.anio.sesiones === 3 && c.anio.records === 3 && c.siempre.sesiones === 4 && c.siempre.tonelaje === 12000,
+    'cifras por periodo: esta semana (desde el lunes), este año (desde el 1 de enero) y siempre; lo futuro no cuenta');
+  const w = PF.semanasPerfil(e, hoy, 12);
+  check(w.length === 12 && w[11].lunes === '2026-11-09' && w[11].sesiones === 1 && w[10].sesiones === 1 && w[10].tonelaje === 3800 && w.slice(0, 10).every((x) => x.sesiones === 0),
+    'las 12 semanas: de lunes a lunes, la actual al final');
+  check(PF.textoHoras(45) === '45 min' && PF.textoHoras(60) === '1 h' && PF.textoHoras(136) === '2 h 16 min' && PF.textoHoras(null) === '0 min', 'las horas en texto');
+  const muchos = Array.from({ length: 12 }, (_, i) => ({ id: `s${i}`, nombre: `S${i}`, fecha: `2026-0${1 + Math.floor(i / 4)}-1${i % 4}`, records: i === 5 ? 1 : 0 }));
+  const h = PF.hitosDe({ fechaAlta: '2024-06-01', entrenos: muchos }, hoy);
+  const ids = h.map((x) => x.id);
+  check(ids.includes('alta') && ids.includes('anio-1') && ids.includes('anio-2') && !ids.includes('anio-3') && ids.includes('sesiones-1') && ids.includes('sesiones-10') && !ids.includes('sesiones-25')
+    && ids.includes('record') && h.every((x, i) => i === 0 || h[i - 1].fecha >= x.fecha) && /primera sesión: S0/.test(h.find((x) => x.id === 'sesiones-1').texto),
+    `los hitos: el alta, los años en FBE, la primera sesión, la décima y el primer récord, del más reciente al más antiguo (${ids.join(', ')})`);
+  check(PF.hitosDe({}, hoy).length === 0, 'sin alta ni entrenos, sin hitos');
+  const a0 = PF.anilloRacha(0), a2 = PF.anilloRacha(2), a6 = PF.anilloRacha(6), a60 = PF.anilloRacha(60);
+  check(a0.fraccion === 0 && a0.tono === 'apagado' && a2.fraccion === 0.5 && a2.meta === 4 && a2.tono === 'templado' && a6.fraccion === 0.5 && a6.meta === 8 && a6.tono === 'caliente'
+    && a60.fraccion === 1 && a60.meta === null && a60.tono === 'fuego',
+    'el aro de la racha: se cierra hacia el siguiente hito (4, 8, 12, 26, 52 semanas) y cambia de tono');
+  const top = PF.mejoresRecords({ ejercicios: [{ id: 1, e1rm: { valor: 50 } }, { id: 2, e1rm: { valor: 90 } }, { id: 3, e1rm: null, repsSinCarga: 12 }, { id: 4, e1rm: { valor: 70 } }, { id: 5, e1rm: { valor: 60 } }] });
+  check(top.map((x) => x.id).join() === '2,4,5' && PF.mejoresRecords(null).length === 0, 'la vitrina del perfil: los tres mejores 1RM estimados');
+  const ui = readFileSync(new URL('../web/src/ui/atleta/PerfilSocial.jsx', import.meta.url), 'utf8') + readFileSync(new URL('../web/src/ui/PerfilVisual.jsx', import.meta.url), 'utf8');
+  check(!/preact\/compat/.test(ui) && /perezoso\(\(\) => import\('\.\.\/Comunidad\.jsx'\)/.test(ui) && !/[^\x00-\x7F]/.test(readFileSync(new URL('../web/src/perfil.css', import.meta.url), 'utf8')),
+    'sin preact/compat; la comunidad se carga solo al abrir tu perfil del equipo; el CSS, solo ASCII');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);
