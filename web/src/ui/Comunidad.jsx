@@ -46,7 +46,7 @@ import { Imagen } from './Imagen.jsx';
 import { ListaEquipo } from './atleta/Musica.jsx';
 import { pesoTxt } from '../logica/unidades.js';
 import { HojaCompartir } from './Compartir.jsx';
-import { datosDePost, datosEquipoSemana } from '../logica/compartir.js';
+import { datosDePost, datosEquipoSemana, datosReto } from '../logica/compartir.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
 // v0.71: con la 043, también las preguntas del equipo
@@ -1497,6 +1497,8 @@ export function Retos({ coach = false, miembro = null, cambios = 0, alCompartirL
 function TarjetaReto({ ilu = false, r, hoy, coach, miembro, alEditar, alCompartirLogro, cardioYa = false, alContarCardio }) {
   const { api, aviso } = useApp();
   const [ocupado, una] = useUnaVez();
+  // (compartir, tanda 2) el reto en marcha como tarjeta (solo recuentos), para animar a la gente
+  const [compartirReto, setCompartirReto] = useState(false);
   const medida = r.medida || 'sesiones';
   const u = (n) => unidadReto(medida, n);
   const equipo = r.modo === 'equipo';
@@ -1574,8 +1576,12 @@ function TarjetaReto({ ilu = false, r, hoy, coach, miembro, alEditar, alComparti
           : equipo ? (miembro || coach ? `Suman ${medida === 'cardio' ? 'los minutos de cardio' : medida === 'semanas' ? 'las semanas completas' : 'las sesiones terminadas'} de todos (menos de quien no sale en el ranking).` : '')
           : conseguido ? `${conseguido} ${conseguido === 1 ? 'lo ha conseguido' : 'lo han conseguido'}`
             : medida === 'cardio' ? 'Cuentan los minutos de cardio de las sesiones terminadas entre esas fechas.' : medida === 'semanas' ? 'Cuentan las semanas con todas tus sesiones hechas.' : 'Cuentan las sesiones terminadas entre esas fechas.'}</span>
-        {coach && <button class="btn btn-peq" onClick={alEditar}><Icono n="editar" /> Cambiar</button>}
+        <span class="fila">
+          {r.hasta >= hoy && <button class="btn btn-peq" onClick={() => setCompartirReto(true)}><Icono n="compartir" /> Compartir el reto</button>}
+          {coach && <button class="btn btn-peq" onClick={alEditar}><Icono n="editar" /> Cambiar</button>}
+        </span>
       </div>
+      {compartirReto && <HojaCompartir logro tipo="reto" titulo="Compartir el reto" datos={datosReto(r, hoy)} nota="Solo lleva el reto y los recuentos: ningún nombre." alCerrar={() => setCompartirReto(false)} />}
     </article>
   );
 }

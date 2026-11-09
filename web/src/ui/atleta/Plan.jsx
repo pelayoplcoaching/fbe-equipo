@@ -4,6 +4,8 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Segmentos, usePreferencia, descargar as descargarArchivo } from '../comunes.jsx';
 import { semanaTipo, repartirComoSiempre, textoDias } from '../../logica/personal.js';
 import { HojaSuscripcion, useIntegraciones } from './Conexiones.jsx';
+import { HojaCompartir } from '../Compartir.jsx';
+import { datosPlanSemana } from '../../logica/compartir.js';
 import { diaPrevistoValido, cuandoDia, repartir, calendarioICS, LETRAS_DIA } from '../../logica/plan.js';
 import { sumarDias, hoyISO, desdeISO, fmtConDia, rangoSemana } from '../../logica/fechas.js';
 import { NOMBRE_TIPO_SESION, NOMBRE_INTENCION } from '../../logica/calculos.js';
@@ -55,6 +57,8 @@ export function TiraSemana({ semana, sesiones, hoy = hoyISO(), alTocar }) {
 // soloTira: la tira, las sesiones sin día y las acciones (en Semana, donde debajo ya está la lista de sesiones)
 export function PlanSemana({ semana, sesiones, alCambiar, compacto = false, soloTira = false }) {
   const [eligiendo, setEligiendo] = useState(null);
+  // (compartir, tanda 2) la semana como tarjeta, para el grupo o para el equipo
+  const [compartirSemana, setCompartirSemana] = useState(false);
   const [calendario, setCalendario] = useState(false);
   const planificar = usePlanificar(alCambiar);
   const hoy = hoyISO();
@@ -113,7 +117,9 @@ export function PlanSemana({ semana, sesiones, alCambiar, compacto = false, solo
           </button>
         )}
         {conDia.length > 0 && <button class="btn btn-peq" onClick={() => setCalendario(true)}><Icono n="calendario" /> Añadir a mi calendario</button>}
+        {conDia.length > 0 && <button class="btn btn-peq" onClick={() => setCompartirSemana(true)}><Icono n="compartir" /> Compartir mi semana</button>}
       </div>
+      {compartirSemana && <HojaCompartir logro tipo="plan" titulo="Compartir mi semana" datos={datosPlanSemana(semana, sesiones, hoy)} equipo={{ tema: 'general' }} alCerrar={() => setCompartirSemana(false)} />}
       {!compacto && (conDia.length > 0
         ? <p class="mini terciario">Toca una sesión de la tira para cambiarle el día.</p>
         : sinDia.length > 0 && <p class="peq secundario">Elige qué día harás cada sesión: Hoy te dirá qué toca y cuándo descansas.</p>)}
