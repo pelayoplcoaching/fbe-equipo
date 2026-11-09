@@ -303,3 +303,7 @@
 .pedir-aviso { display: flex; align-items: center; gap: 6px; margin: 0; }
 .pedir-aviso svg { width: 16px; height: 16px; flex: 0 0 auto; color: var(--aviso); }
 .convertir-opcion svg { width: 20px; height: 20px; flex: 0 0 auto; }
+/* (v0.119) los botones a todo lo ancho, con su relleno dentro (y el texto que se parte: si no, Revisar se salia 30 px por la derecha) */
+.revisar-esperan, .convertir-opcion, .fila-boton { box-sizing: border-box; max-width: 100%; }
+.revisar-esperan, .convertir-opcion, .pedir-fila { white-space: normal; }
+.revisar-esperan > span, .convertir-opcion > span, .pedir-fila > span { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
