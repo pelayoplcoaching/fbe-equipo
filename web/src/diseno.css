@@ -3936,8 +3936,6 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 319 · Comparar check-ins como una tabla de verdad (tanda 41) ─────────────────────────────────────────────────────
    Las columnas no se aprietan (las cifras con su unidad no se parten), a franjas, el dato en gris y cada semana con su
    cabecera en pastilla (la de antes en gris, la de después en el acento); el cambio, en una pastilla. */
-.tabla-comparar { table-layout: fixed; }
-.tabla-comparar th[scope="row"] { width: 36%; }
 .tabla-comparar td { font-weight: 700; }
 .tabla-comparar td.num { white-space: nowrap; }
 .tabla-comparar tbody tr:nth-child(odd) { background: color-mix(in srgb, var(--tinta) 3%, transparent); }
