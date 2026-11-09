@@ -404,7 +404,9 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
   'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella', 'rendimiento_apuntar', 'rendimiento_resumen', 'personal_mio', 'personal_atletas', 'mensajes_coach', 'musica_coach_lista', 'musica_para',
-  'integraciones_mias', 'salud_diaria_de', 'atajos_lista', 'contactos']);
+  'integraciones_mias', 'salud_diaria_de', 'atajos_lista', 'contactos',
+  // (053) lo social que solo se lee
+  'comunidad_cumples', 'comunidad_duelos_mios', 'comunidad_intenciones', 'comunidad_padrinos_lista', 'comunidad_companero_semana', 'comunidad_huella', 'comunidad_sin_entrenar']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);

@@ -15,7 +15,8 @@ const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de
 
 export function CumplesHoy({ lista = [], abrir }) {
   const { api } = useApp();
-  const personal = useCarga(() => api.personalAtletas().catch(() => []), []);
+  // (v0.117) recordado: al volver a Atletas, el aviso del cumpleaños sale con la lista y no la empuja al llegar
+  const personal = useCarga(() => api.personalAtletas().catch(() => []), [], { recuerdo: `personal-atletas:${api.uid()}` });
   const hoy = hoyISO();
   const activos = new Map(lista.filter((r) => r.estado !== 'baja').map((r) => [r.atleta_id, r]));
   const cumplen = (personal.datos || []).filter((p) => activos.has(p.atleta_id) && esCumple(p, hoy)).map((p) => activos.get(p.atleta_id));

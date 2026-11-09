@@ -114,6 +114,8 @@ export async function probarComunidad070({ navegador, check, base = 'http://loca
     check(parejas.some((t) => t.startsWith('Tú y Ana L.')) && parejas.some((t) => t.startsWith('Tú y Carlos V.')) && /Esta semana: tú .+ · Ana L\./.test(textoCp),
       'Rubén acepta: «Tú y Ana L.» junto a «Tú y Carlos V.», con cómo va la semana de cada uno');
     // ---------------- Su perfil: insignias (la siguiente, con su progreso) y sus compañeros
+    // (v0.117) con lo social encima, la lista de compañeros queda más abajo y la cabecera se recoge: se sube arriba para ver «Estás como…»
+    await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(400);
     await p.getByRole('button', { name: /Ver tu perfil en el equipo/ }).click();
     const hojaPerfil = p.getByRole('dialog', { name: 'Perfil en el equipo' });
     await hojaPerfil.locator('.insignias-perfil').waitFor();
