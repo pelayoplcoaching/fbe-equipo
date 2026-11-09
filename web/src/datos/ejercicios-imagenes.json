@@ -1,0 +1,32 @@
+{
+  "porId": {
+    "08a03552-1fb8-488f-bfab-b931ebf917b9": "abd-russian-twists",
+    "2bd14257-e80c-413e-89eb-e2446cb38224": "abd-hanging-leg-raises",
+    "2c92137e-f5fc-4cc5-97a8-a3f8cc4b5cf8": "abd-v-ups",
+    "3297810f-7027-4bd3-9804-c77472810169": "abd-rodillas-pecho-suelo",
+    "4864d25b-1661-4ff0-ba86-f95c6d522506": "abd-crunch-polea-alta",
+    "8064bb35-236a-4161-883f-cc0bb9b06219": "abd-crunch-banco-inclinado",
+    "8e0f4423-2803-4ec6-8863-5b8c46781c00": "abd-crunch-tumbado",
+    "8ed4ac65-b95a-4a58-ae3b-e39a1bc95aea": "abd-leg-raises-declinado",
+    "986e0405-8995-4a21-baec-e821f5eba68e": "abd-press-pallof",
+    "b5bd480c-5617-4d6b-9811-d850e3614db9": "abd-ab-wheel",
+    "ba413754-9f5d-4537-9130-8c48b6ce6089": "abd-plancha",
+    "c819e3f9-d429-4916-b019-00607cd124a6": "abd-crunch-maquina",
+    "c9be2d6d-da9e-4ccd-8873-c0a926fe1ae9": "abd-tuck-ups"
+  },
+  "porNombre": {
+    "ab wheel": "abd-ab-wheel",
+    "crunch desde polea alta": "abd-crunch-polea-alta",
+    "crunch en banco inclinado": "abd-crunch-banco-inclinado",
+    "crunch en maquina": "abd-crunch-maquina",
+    "crunch tumbado": "abd-crunch-tumbado",
+    "hanging leg raises": "abd-hanging-leg-raises",
+    "leg raises en banco declinado": "abd-leg-raises-declinado",
+    "plancha abdominal": "abd-plancha",
+    "press pallof": "abd-press-pallof",
+    "rodillas al pecho (tuck ups)": "abd-tuck-ups",
+    "rodillas al pecho en el suelo": "abd-rodillas-pecho-suelo",
+    "russian twists": "abd-russian-twists",
+    "v-ups": "abd-v-ups"
+  }
+}

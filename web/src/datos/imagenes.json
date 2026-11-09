@@ -1,4 +1,134 @@
 {
+  "abd-ab-wheel": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-ab-wheel-192.93c96f4c.webp",
+      "512": "imagenes/ejercicio/abd-ab-wheel-512.2b97278e.webp"
+    }
+  },
+  "abd-crunch-banco-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-banco-inclinado-192.a32139b0.webp",
+      "512": "imagenes/ejercicio/abd-crunch-banco-inclinado-512.f9b3c7f6.webp"
+    }
+  },
+  "abd-crunch-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-maquina-192.b19ae0a0.webp",
+      "512": "imagenes/ejercicio/abd-crunch-maquina-512.21225b6e.webp"
+    }
+  },
+  "abd-crunch-polea-alta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-polea-alta-192.93c226dd.webp",
+      "512": "imagenes/ejercicio/abd-crunch-polea-alta-512.12054659.webp"
+    }
+  },
+  "abd-crunch-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-tumbado-192.4a130acb.webp",
+      "512": "imagenes/ejercicio/abd-crunch-tumbado-512.18071f56.webp"
+    }
+  },
+  "abd-hanging-leg-raises": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-hanging-leg-raises-192.c3f052ab.webp",
+      "512": "imagenes/ejercicio/abd-hanging-leg-raises-512.94d1b4c1.webp"
+    }
+  },
+  "abd-leg-raises-declinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-leg-raises-declinado-192.acf829c0.webp",
+      "512": "imagenes/ejercicio/abd-leg-raises-declinado-512.d9106eb2.webp"
+    }
+  },
+  "abd-plancha": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-plancha-192.7e04b5e6.webp",
+      "512": "imagenes/ejercicio/abd-plancha-512.08985428.webp"
+    }
+  },
+  "abd-press-pallof": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-press-pallof-192.e7a0e54f.webp",
+      "512": "imagenes/ejercicio/abd-press-pallof-512.71aac088.webp"
+    }
+  },
+  "abd-rodillas-pecho-suelo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-rodillas-pecho-suelo-192.f55d8ccf.webp",
+      "512": "imagenes/ejercicio/abd-rodillas-pecho-suelo-512.12848e21.webp"
+    }
+  },
+  "abd-russian-twists": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-russian-twists-192.b0786185.webp",
+      "512": "imagenes/ejercicio/abd-russian-twists-512.d1152e38.webp"
+    }
+  },
+  "abd-tuck-ups": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-tuck-ups-192.9178b95f.webp",
+      "512": "imagenes/ejercicio/abd-tuck-ups-512.2a07941c.webp"
+    }
+  },
+  "abd-v-ups": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-v-ups-192.d6179083.webp",
+      "512": "imagenes/ejercicio/abd-v-ups-512.419fb408.webp"
+    }
+  },
   "acceso-fondo": {
     "proporcion": [
       2,

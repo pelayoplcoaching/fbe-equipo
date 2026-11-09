@@ -2,6 +2,7 @@
 // La lista de archivos está en datos/imagenes.json (la escribe la herramienta de conversión: id → proporción y un
 // archivo WebP por ancho, con su huella en el nombre). Aquí no hay nada del navegador: se prueba en test/imagenes.test.mjs.
 import LISTA from '../datos/imagenes.json' with { type: 'json' };
+import EJERCICIOS_IMG from '../datos/ejercicios-imagenes.json' with { type: 'json' };
 import { patronEjercicio } from './diseno.js';
 
 // ---------- La portada de la sesión ----------
@@ -57,6 +58,16 @@ const GRUPOS_IMG = ['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 
 export function imagenGrupo(grupo) {
   const g = Array.isArray(grupo) ? grupo[0] : grupo;
   return GRUPOS_IMG.includes(g) ? `grupo-${g}` : null;
+}
+
+// ---------- Cada ejercicio de la biblioteca ----------
+// La figura maniquí en el momento clave del ejercicio (claude/imagenes-ejercicios.md). Por el id del ejercicio de la
+// biblioteca de FBE; si no está (otra biblioteca, la genérica, la demo, un ejercicio renombrado en otra copia), por el
+// nombre sin tildes ni mayúsculas. Sin imagen, nada: la ficha sigue con la estatua del grupo.
+const normalNombre = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+export function imagenEjercicio(ej) {
+  if (!ej) return null;
+  return EJERCICIOS_IMG.porId[ej.id] || EJERCICIOS_IMG.porNombre[normalNombre(ej.nombre)] || null;
 }
 
 // ---------- Las comidas ----------
