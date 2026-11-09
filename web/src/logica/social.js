@@ -83,6 +83,8 @@ export function textoDuelo(d, hoy = fechaMadrid()) {
   const cuando = d.semana > lunesDe(hoy) ? 'la semana que viene' : d.semana < lunesDe(hoy) ? 'la semana pasada' : 'esta semana';
   if (d.estado === 'pendiente') return d.soy_retador ? `Has retado a ${d.rival_nombre} para ${cuando}` : `${d.rival_nombre} te reta ${cuando}`;
   if (d.estado === 'rechazado') return `${d.rival_nombre} no ha aceptado`;
+  // (053) si el rival ya no está en el equipo o en el ranking, sus sesiones no se enseñan
+  if (d.estado === 'aceptado' && d.suyas == null) return d.acabado ? `Duelo con ${d.rival_nombre}: hiciste ${d.mias}` : `Llevas ${d.mias} en el duelo con ${d.rival_nombre}`;
   if (d.acabado) {
     const r = resultadoDuelo(d);
     return r === 'ganado' ? `Ganaste ${d.mias} a ${d.suyas} a ${d.rival_nombre}` : r === 'perdido' ? `${d.rival_nombre} ganó ${d.suyas} a ${d.mias}` : `Empate a ${d.mias} con ${d.rival_nombre}`;
@@ -91,7 +93,7 @@ export function textoDuelo(d, hoy = fechaMadrid()) {
 }
 // 'ganado' | 'perdido' | 'empate' cuando la semana acabó; si no, null
 export function resultadoDuelo(d) {
-  if (!d?.acabado || d.estado !== 'aceptado') return null;
+  if (!d?.acabado || d.estado !== 'aceptado' || d.suyas == null) return null;
   return d.mias > d.suyas ? 'ganado' : d.mias < d.suyas ? 'perdido' : 'empate';
 }
 // A quién puedo retar: los del equipo menos yo y menos con quien ya tengo duelo esa semana

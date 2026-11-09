@@ -184,7 +184,7 @@ export function Duelos({ cambios = 0 }) {
                 </span>
               )}
               {d.estado === 'pendiente' && d.soy_retador && <button type="button" class="btn btn-peq plano" disabled={ocupado} onClick={() => retirar(d)}>Retirar</button>}
-              {d.estado === 'aceptado' && !d.acabado && <span class="duelo-marcador num" aria-hidden="true">{d.mias}<i>–</i>{d.suyas}</span>}
+              {d.estado === 'aceptado' && !d.acabado && d.suyas != null && <span class="duelo-marcador num" aria-hidden="true">{d.mias}<i>–</i>{d.suyas}</span>}
               {r && <span class={`chip duelo-resultado ${r}`}>{r === 'ganado' ? '🏆 Ganado' : r === 'perdido' ? 'Perdido' : 'Empate'}</span>}
             </li>
           );

@@ -293,7 +293,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // (053) los duelos, los dos y el coach; la intención y el voto al compañero, cada uno el suyo; los padrinos, los de dentro
     comunidad_duelos: (x) => esCoach() || (soyMiembro() && (x.de === sesion?.user.id || x.para === sesion?.user.id)),
     comunidad_intenciones: (x) => esCoach() || x.perfil_id === sesion?.user.id,
-    comunidad_padrinos: () => esCoach() || soyMiembro(),
+    comunidad_padrinos: (x) => esCoach() || (soyMiembro() && (x.nuevo === sesion?.user.id || x.padrino === sesion?.user.id)),
     comunidad_votos_semana: (x) => esCoach() || x.de === sesion?.user.id,
     // (050) la personalización, solo por sus funciones
     personal_atleta: () => false,
@@ -1701,7 +1701,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     const dentro = (pid) => dentroTodos().find((x) => x.perfil_id === pid);
     const limpio = (t, max) => { const v = String(t || '').replace(/\s+/g, ' ').trim(); if (v.length > max) throw new Error(`Hasta ${max} letras`); return v || null; };
     const mejoresDe = (semana) => {
-      const votos = tabla('comunidad_votos_semana').filter((v) => v.semana === semana && dentro(v.para));
+      const votos = tabla('comunidad_votos_semana').filter((v) => v.semana === semana && dentro(v.para) && dentro(v.de));
       const por = {}; for (const v of votos) por[v.para] = (por[v.para] || 0) + 1;
       const tope = Math.max(0, ...Object.values(por));
       return tope >= 2 ? Object.entries(por).filter(([, n]) => n === tope).map(([pid, n]) => ({ pid, n })) : [];
@@ -1747,6 +1747,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (!el) throw new Error('Esa persona ya no está en el equipo');
       if (mio?.sin_ranking || el.sin_ranking) throw new Error('Los duelos cuentan sesiones: los dos tenéis que salir en el ranking');
       if (tabla('comunidad_duelos').filter((d) => (d.de === uid || d.para === uid) && d.estado !== 'rechazado' && sumar(d.semana, 6) >= hoy).length >= 3) throw new Error('Como mucho tres duelos a la vez');
+      if (tabla('comunidad_duelos').filter((d) => (d.de === args.p_para || d.para === args.p_para) && d.estado !== 'rechazado' && sumar(d.semana, 6) >= hoy).length >= 3) throw new Error('Esa persona ya tiene tres duelos: rétale más adelante');
       if (tabla('comunidad_duelos').some((d) => d.semana === semana && [d.de, d.para].includes(uid) && [d.de, d.para].includes(args.p_para))) throw new Error('Ya tenéis un duelo esa semana');
       gastarCupo('animo');
       const d = { id: uuid(), de: uid, para: args.p_para, de_atleta: yo?.id || null, para_atleta: el.atleta_id, semana, estado: 'pendiente', creado_en: ahora(), respondido_en: null };
@@ -1758,6 +1759,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const d = tabla('comunidad_duelos').find((x) => x.id === args.p_id && x.para === uid && x.estado === 'pendiente');
       if (!d) throw new Error('Ese duelo ya no está pendiente');
       if (sumar(d.semana, 6) < hoy) throw new Error('Esa semana ya pasó');
+      if (args.p_acepta) {
+        const el = dentro(d.de), mio = dentro(uid);
+        if (!el || el.sin_ranking || !mio || mio.sin_ranking) throw new Error('Los duelos cuentan sesiones: los dos tenéis que salir en el ranking');
+        if (tabla('comunidad_duelos').filter((x) => (x.de === uid || x.para === uid) && x.estado !== 'rechazado' && x.id !== d.id && sumar(x.semana, 6) >= hoy).length >= 3) throw new Error('Como mucho tres duelos a la vez');
+      }
       d.estado = args.p_acepta ? 'aceptado' : 'rechazado'; d.respondido_en = ahora();
       return d.estado;
     }
@@ -1776,8 +1782,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           const soyRetador = d.de === uid;
           const rival = soyRetador ? d.para : d.de, yoP = soyRetador ? d.de : d.para;
           const [miA, suA] = soyRetador ? [d.de_atleta, d.para_atleta] : [d.para_atleta, d.de_atleta];
-          return { id: d.id, semana: d.semana, estado: d.estado, soy_retador: soyRetador, rival, rival_nombre: dentro(rival)?.nombre || 'Alguien del equipo', rival_foto: perfilDe(rival)?.foto || null,
-            yo: yoP, yo_nombre: dentro(yoP)?.nombre || 'Alguien del equipo', mias: miA ? hechasEntre(miA, d.semana, sumar(d.semana, 6)) : 0, suyas: suA ? hechasEntre(suA, d.semana, sumar(d.semana, 6)) : 0,
+          // (053) la foto y las sesiones del rival, solo si sigue dentro (y, las sesiones, en el ranking); el coach lo ve todo
+          const dr = dentro(rival), veSuyas = todos || (dr && !dr.sin_ranking);
+          return { id: d.id, semana: d.semana, estado: d.estado, soy_retador: soyRetador, rival, rival_nombre: dr?.nombre || 'Alguien del equipo', rival_foto: todos || dr ? perfilDe(rival)?.foto || null : null,
+            yo: yoP, yo_nombre: dentro(yoP)?.nombre || 'Alguien del equipo', mias: miA ? hechasEntre(miA, d.semana, sumar(d.semana, 6)) : 0, suyas: !veSuyas ? null : suA ? hechasEntre(suA, d.semana, sumar(d.semana, 6)) : 0,
             acabado: sumar(d.semana, 6) < hoy, creado_en: d.creado_en };
         });
     }

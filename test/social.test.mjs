@@ -31,6 +31,7 @@ check(textoIntencion({ fecha: hoy, hora: '18:00:00', nota: 'Gimnasio del barrio'
 check(limpiarNotaIntencion('  en el   Retiro ') === 'en el Retiro' && limpiarNotaIntencion('a'.repeat(50)).length === 40 && limpiarNotaIntencion(null) === '', 'la nota de la intención, limpia y corta');
 const d1 = { semana: '2026-11-09', estado: 'aceptado', soy_retador: true, rival_nombre: 'Carlos V.', mias: 2, suyas: 1, acabado: false };
 check(textoDuelo(d1, hoy) === 'Vas 2 a 1 con Carlos V.' && resultadoDuelo({ ...d1, acabado: true }) === 'ganado' && resultadoDuelo({ ...d1, acabado: true, mias: 1 }) === 'empate' && resultadoDuelo({ ...d1, acabado: true, mias: 0 }) === 'perdido' && resultadoDuelo(d1) === null, 'el duelo: cómo va y, al acabar, ganado, perdido o empate');
+check(textoDuelo({ ...d1, suyas: null }, hoy) === 'Llevas 2 en el duelo con Carlos V.' && resultadoDuelo({ ...d1, suyas: null, acabado: true }) === null, 'si el rival ya no está, sus sesiones no salen ni hay resultado');
 check(textoDuelo({ ...d1, estado: 'pendiente', soy_retador: false }, hoy) === 'Carlos V. te reta esta semana' && textoDuelo({ ...d1, estado: 'pendiente', semana: '2026-11-16' }, hoy) === 'Has retado a Carlos V. para la semana que viene', 'pendiente: quién reta a quién, y para cuándo');
 check(candidatosDuelo([{ perfil_id: 'a', nombre: 'A' }, { perfil_id: 'b', nombre: 'B' }, { perfil_id: 'yo', nombre: 'Yo' }], 'yo', [{ rival: 'a', semana: '2026-11-09', estado: 'aceptado' }], '2026-11-09').map((x) => x.perfil_id).join() === 'b', 'a quién puedo retar: ni a mí ni a quien ya tengo esa semana');
 const fr = huellaFrases({ animos_dados: 12, animos_recibidos: 3, bienvenidas: 2, comentarios: 7, reacciones: 30, quedadas: 1, ahijados: 0, elegido: 1, semanas_animando: 3, duelos_ganados: 2 });
@@ -78,9 +79,9 @@ const normas = (await q(`select public.comunidad_normas_version() v`))[0].v;
 for (const k of ['a', 'b', 'c', 'd']) { await como(ids[k]); await q(`select public.comunidad_unirme($1, $2, $3)`, [`${k.toUpperCase()}. Equipo`, version, normas]); }
 await su();
 // Ana y Bea llevan 70 días dentro; Cris 3; Dani 20
-await q(`update public.comunidad_miembros set creado_en = now() - interval '70 days' where atleta_id in ($1, $2)`, [atletas.a, atletas.b]);
-await q(`update public.comunidad_miembros set creado_en = now() - interval '3 days' where atleta_id = $1`, [atletas.c]);
-await q(`update public.comunidad_miembros set creado_en = now() - interval '20 days' where atleta_id = $1`, [atletas.d]);
+await q(`update public.comunidad_miembros set creado_en = now() - interval '70 days', entrado_en = now() - interval '70 days' where atleta_id in ($1, $2)`, [atletas.a, atletas.b]);
+await q(`update public.comunidad_miembros set creado_en = now() - interval '3 days', entrado_en = now() - interval '3 days' where atleta_id = $1`, [atletas.c]);
+await q(`update public.comunidad_miembros set creado_en = now() - interval '20 days', entrado_en = now() - interval '20 days' where atleta_id = $1`, [atletas.d]);
 
 await como(ids.a);
 check(await falla(`select * from public.comunidad_duelos where false`) === false && (await q(`select * from public.comunidad_votos_semana`)).length === 0, 'las tablas nuevas se leen por sus políticas (vacías para quien no tiene nada)');
@@ -116,6 +117,9 @@ check((await q(`select texto from public.comunidad_animos where de = $1`, [ids.c
 await como(ids.a);
 const [enc] = await q(`insert into public.comunidad_posts (tipo, texto, encuesta) values ('encuesta', '¿Sábado o domingo?', '{"opciones":["Sábado","Domingo"]}') returning id, encuesta, atleta_id`);
 check(enc.encuesta.opciones.length === 2 && enc.atleta_id === atletas.a, 'Ana publica una encuesta');
+await su();
+check((await q(`select count(*)::int n from public.notificaciones where clave = $1`, ['comunidad_aviso:' + enc.id]))[0].n === 0, 'la encuesta de un atleta no hace sonar todos los móviles (la del coach, sí)');
+await como(ids.a);
 check(await falla(`insert into public.comunidad_posts (tipo, texto, encuesta) values ('encuesta', '¿Otra?', '{"opciones":["Sí","No"]}')`), 'una al día');
 check(await falla(`insert into public.comunidad_posts (tipo, texto, encuesta) values ('encuesta', '¿Una?', '{"opciones":["Sola"]}')`) && await falla(`insert into public.comunidad_posts (tipo, texto) values ('aviso', 'No')`), 'con sus reglas (2 a 4 opciones); los avisos siguen siendo del coach');
 await como(ids.b);
@@ -195,6 +199,7 @@ await q(`select public.comunidad_apadrinar($1)`, [ids.c]);
 pl = await uno(`select public.comunidad_padrinos_lista() as r`);
 check(pl.vigentes.length === 1 && pl.vigentes[0].padrino_nombre === 'B. Equipo' && pl.vigentes[0].nuevo_nombre === 'C. Equipo' && pl.sin_padrino.length === 0, 'Bea acompaña a Cris 30 días');
 await como(ids.a);
+check((await q(`select * from public.comunidad_padrinos`)).length === 0, 'la tabla de padrinos, cada uno solo las suyas (Ana no ve la de Bea y Cris)');
 check(await falla(`select public.comunidad_apadrinar($1)`, [ids.c]), 'Cris ya tiene quien le acompañe');
 await como(ids.c);
 check((await uno(`select public.comunidad_padrinos_lista() as r`)).puedo === false && await falla(`select public.comunidad_apadrinar($1)`, [ids.d]), 'Cris, recién llegada, no apadrina');
@@ -250,6 +255,30 @@ await como(ids.a);
 const md = await uno(`select public.comunidad_mis_datos() as r`);
 check(Array.isArray(md.duelos) && md.intencion?.nota === 'en el gym' && Array.isArray(md.votos_companero) && md.quedadas_propuestas.length === 3 && 'veces_elegido' in md, 'mis datos incluye lo nuevo');
 check(await falla(`select public.comunidad_huella()`) === false && (await q(`select proname from pg_proc where proname in ('reloj_estado') limit 1`)).length === 0, 'y la 053 vale sin la 052 (del reloj)');
+
+// 12. Lo que pidió la revisión de la 053
+await su();
+await q(`update public.comunidad_moderacion set palabras = '{palabrota}'`);
+await como(ids.c);
+check(await falla(`select public.comunidad_animar($1, $2)`, [ids.d, 'Vamos palabrota']), 'el filtro de palabras vale también para las palabras del ánimo');
+check(await falla(`select public.comunidad_intencion($1::date, null, $2)`, [hoyM, 'palabrota']), 'y para la nota de «hoy entreno»');
+check(await falla(`insert into public.comunidad_eventos (titulo, lugar, empieza_en) values ('Quedada palabrota', 'Parque', now() + interval '2 days')`), 'y para las quedadas');
+await su();
+await q(`update public.comunidad_moderacion set palabras = '{}'`);
+await q(`update public.comunidad_miembros set sin_ranking = false where atleta_id = $1`, [atletas.d]);
+await como(ids.c);
+const dCD = await uno(`select public.comunidad_duelo_proponer($1, true) as r`, [ids.d]);
+await como(ids.d);
+await q(`select public.comunidad_duelo_responder($1, true)`, [dCD]);
+await q(`select public.comunidad_intencion($1::date, null, null)`, [hoyM]);
+const [qdR] = await q(`insert into public.comunidad_eventos (titulo, lugar, empieza_en) values ('Rodaje', 'Parque', now() + interval '3 days') returning id, plazas`);
+check(qdR.plazas === 30, 'una quedada de atleta sin plazas se queda en 30');
+await q(`select public.comunidad_ajustar(null, true)`);
+await su();
+check((await q(`select count(*)::int n from public.comunidad_duelos where id = $1`, [dCD]))[0].n === 0, 'al salir del ranking, sus duelos vivos se van');
+await q(`update public.comunidad_miembros set bloqueado = true, salido_en = now() where atleta_id = $1`, [atletas.d]);
+check((await q(`select count(*)::int n from public.comunidad_intenciones where perfil_id = $1`, [ids.d]))[0].n === 0
+  && (await q(`select cancelado_en from public.comunidad_eventos where id = $1`, [qdR.id]))[0].cancelado_en !== null, 'si el coach le saca, su «hoy entreno» se va y sus quedadas abiertas se cancelan');
 
 console.log('\nLa api con el modo demo');
 const { crearBackendMemoria } = await import('../web/src/datos/backend-memoria.js');

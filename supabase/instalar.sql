@@ -18214,7 +18214,7 @@ insert into public.fbe_migraciones (numero) values (51)  -- (3) número de esta 
 -- enseña nada de esto y todo lo demás sigue igual.
 --
 -- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 052 (o con instalar.sql en una
--- base nueva). Necesita la 051 (la 052, del reloj, puede ir antes o después). Se puede repetir sin romper nada.
+-- base nueva). Necesita la 051. La migración del reloj, si llega después, va como 054. Se puede repetir sin romper nada.
 -- =====================================================================
 
 do $$
@@ -18284,6 +18284,9 @@ begin
   end if;
   if p_perfil is null or p_perfil = v_uid then raise exception 'A ti no te puedes mandar ánimo (¡pero vas bien!)' using errcode = '22023'; end if;
   if v_texto is not null and char_length(v_texto) > 80 then raise exception 'Las palabras del ánimo, hasta 80 letras' using errcode = '22023'; end if;
+  if v_texto is not null and fbe_privado.comunidad_moderar_entrada(v_uid, false, v_texto) then
+    raise exception 'Esas palabras no pueden ir en un ánimo' using errcode = '22023';
+  end if;
   select d.atleta_id into v_para_atleta from fbe_privado.comunidad_dentro d where d.perfil_id = p_perfil;
   if v_para_atleta is null then raise exception 'Esa persona ya no está en el equipo' using errcode = '42501'; end if;
   if exists (select 1 from public.comunidad_animos a where a.de = v_uid and a.para = p_perfil and a.semana = v_semana) then
@@ -18408,6 +18411,41 @@ drop trigger if exists comunidad_posts_zz_citar on public.comunidad_posts;
 create trigger comunidad_posts_zz_citar after insert on public.comunidad_posts
   for each row execute function fbe_privado.comunidad_al_citar();
 
+-- Moderar (045) también las encuestas de los atletas: el texto y las opciones pasan el mismo filtro que una publicación
+-- (al coach no se le retiene nada).
+create or replace function fbe_privado.comunidad_post_moderar() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  new.retenida := new.tipo not in ('aviso', 'aniversario')
+    and fbe_privado.comunidad_moderar_entrada(new.autor_id, new.tipo in ('post', 'momento', 'encuesta'),
+          concat_ws(' ', new.texto, (select string_agg(o #>> '{}', ' ')
+                                     from jsonb_array_elements(case when jsonb_typeof(new.encuesta -> 'opciones') = 'array'
+                                                                    then new.encuesta -> 'opciones' else '[]'::jsonb end) o)));
+  return new;
+end $$;
+
+-- El aviso a todo el equipo (044) sigue siendo para los avisos y las encuestas del coach: las de los atletas se ven en
+-- el muro sin hacer sonar todos los móviles (una al día por persona sería mucho ruido).
+create or replace function fbe_privado.comunidad_al_avisar() returns trigger
+language plpgsql security definer set search_path = '' set lock_timeout = '1s' as $$
+begin
+  if new.tipo not in ('aviso', 'encuesta') or new.oculta or new.retenida or new.atleta_id is not null or not public.comunidad_activa() then
+    return null;
+  end if;
+  if new.publicar_en is not null and new.publicar_en > now() then return null; end if;
+  perform fbe_privado.notificar_seguro(d.perfil_id, 'comunidad',
+            fbe_privado.comunidad_nombre(new.autor_id)
+              || case when new.tipo = 'encuesta' then ' ha publicado una encuesta en el equipo' else ' ha publicado un aviso en el equipo' end,
+            case when new.tipo = 'encuesta' then 'Tócalo para votar en Equipo.' else 'Tócalo para leerlo en Equipo.' end,
+            '#equipo', 'comunidad_aviso:' || new.id)
+  from fbe_privado.comunidad_dentro d
+  where d.perfil_id <> new.autor_id;
+  return null;
+exception when others then
+  raise warning 'FBE: notificación del aviso % no creada: %', new.id, sqlerrm;
+  return null;
+end $$;
+
 -- ---------------------------------------------------------------------
 -- 4. Quedadas propuestas por atletas
 -- ---------------------------------------------------------------------
@@ -18431,11 +18469,20 @@ begin
     new.cancelado_en := null;
     if current_user in ('authenticated', 'anon') and not public.es_coach() then
       new.creado_por := auth.uid();
+      new.plazas := coalesce(new.plazas, 30);
       if (select count(*) from public.comunidad_eventos e where e.creado_por = auth.uid() and e.cancelado_en is null and e.empieza_en > now()) >= 3 then
         raise exception 'Como mucho tres quedadas abiertas a la vez' using errcode = '54000';
       end if;
+    elsif public.es_coach() then
+      new.creado_por := null;   -- lo del coach es del coach: no firma a nombre de nadie
     end if;
   else
+    if current_user in ('authenticated', 'anon') and not public.es_coach() then
+      if new.empieza_en is distinct from old.empieza_en and old.empieza_en <= now() then
+        raise exception 'Esa quedada ya pasó: propón otra' using errcode = '22023';
+      end if;
+      new.plazas := coalesce(new.plazas, 30);
+    end if;
     new.creado_en := old.creado_en;
     new.creado_por := old.creado_por;
     new.cancelado_en := case when old.cancelado_en is not null then old.cancelado_en when new.cancelado_en is not null then now() end;
@@ -18450,6 +18497,21 @@ begin
   end if;
   return new;
 end $$;
+
+-- Las quedadas de los atletas pasan el mismo filtro de palabras que el muro (el título, el lugar y la descripción).
+-- Va aparte porque comunidad_evento_preparar es del invocador y no llega a fbe_privado.
+create or replace function fbe_privado.comunidad_evento_moderar() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if coalesce(nullif(current_setting('role', true), ''), 'none') in ('authenticated', 'anon') and not public.es_coach()
+     and fbe_privado.comunidad_moderar_entrada(auth.uid(), false, concat_ws(' ', new.titulo, new.lugar, new.descripcion)) then
+    raise exception 'Hay palabras que no van en el equipo' using errcode = '22023';
+  end if;
+  return new;
+end $$;
+drop trigger if exists comunidad_eventos_ab_moderar on public.comunidad_eventos;
+create trigger comunidad_eventos_ab_moderar before insert or update of titulo, lugar, descripcion on public.comunidad_eventos
+  for each row execute function fbe_privado.comunidad_evento_moderar();
 
 -- Quien propone una quedada, va
 create or replace function fbe_privado.comunidad_quedada_creada() returns trigger
@@ -18533,6 +18595,9 @@ begin
   if (select count(*) from public.comunidad_duelos x where v_uid in (x.de, x.para) and x.estado <> 'rechazado' and x.semana + 6 >= fbe_privado.comunidad_hoy()) >= 3 then
     raise exception 'Como mucho tres duelos a la vez' using errcode = '54000';
   end if;
+  if (select count(*) from public.comunidad_duelos x where p_para in (x.de, x.para) and x.estado <> 'rechazado' and x.semana + 6 >= fbe_privado.comunidad_hoy()) >= 3 then
+    raise exception 'Esa persona ya tiene tres duelos: rétale más adelante' using errcode = '54000';
+  end if;
   if exists (select 1 from public.comunidad_duelos x where least(x.de, x.para) = least(v_uid, p_para) and greatest(x.de, x.para) = greatest(v_uid, p_para) and x.semana = v_semana) then
     raise exception 'Ya tenéis un duelo esa semana' using errcode = '23505';
   end if;
@@ -18555,6 +18620,16 @@ begin
   select * into x from public.comunidad_duelos d where d.id = p_id and d.para = v_uid and d.estado = 'pendiente';
   if not found then raise exception 'Ese duelo ya no está pendiente' using errcode = '22023'; end if;
   if x.semana + 6 < fbe_privado.comunidad_hoy() then raise exception 'Esa semana ya pasó' using errcode = '22023'; end if;
+  if p_acepta then
+    if not exists (select 1 from fbe_privado.comunidad_dentro d where d.perfil_id = x.de and not d.sin_ranking)
+       or not exists (select 1 from fbe_privado.comunidad_dentro d where d.perfil_id = v_uid and not d.sin_ranking) then
+      raise exception 'Los duelos cuentan sesiones: los dos tenéis que salir en el ranking' using errcode = '22023';
+    end if;
+    if (select count(*) from public.comunidad_duelos k where v_uid in (k.de, k.para) and k.estado <> 'rechazado' and k.id <> p_id
+          and k.semana + 6 >= fbe_privado.comunidad_hoy()) >= 3 then
+      raise exception 'Como mucho tres duelos a la vez' using errcode = '54000';
+    end if;
+  end if;
   update public.comunidad_duelos set estado = case when p_acepta then 'aceptado' else 'rechazado' end, respondido_en = now() where id = p_id;
   if p_acepta then
     perform fbe_privado.notificar_seguro(x.de, 'comunidad', fbe_privado.comunidad_nombre(v_uid) || ' acepta el duelo ⚔️', 'Que gane quien más entrene. Míralo en Equipo.',
@@ -18584,9 +18659,12 @@ language sql stable security definer set search_path = '' as $$
     select v.atleta_id, v.fecha from fbe_privado.comunidad_sesiones_validas(array(select m.de_atleta from mios m union select m.para_atleta from mios m)) v
   )
   select m.id, m.semana, m.estado, m.de = auth.uid(),
-    m.r, coalesce(dr.nombre, 'Alguien del equipo'), pr.foto, m.y, coalesce(dy.nombre, 'Alguien del equipo'),
+    m.r, coalesce(dr.nombre, 'Alguien del equipo'), case when public.es_coach() or dr.perfil_id is not null then pr.foto end,
+    m.y, coalesce(dy.nombre, 'Alguien del equipo'),
     (select count(*)::integer from hechas h where h.atleta_id = case when m.de = auth.uid() then m.de_atleta else m.para_atleta end and h.fecha between m.semana and m.semana + 6),
-    (select count(*)::integer from hechas h where h.atleta_id = case when m.de = auth.uid() then m.para_atleta else m.de_atleta end and h.fecha between m.semana and m.semana + 6),
+    -- las del rival, solo si sigue dentro y en el ranking (o lo mira el coach)
+    case when public.es_coach() or (dr.perfil_id is not null and not dr.sin_ranking) then
+      (select count(*)::integer from hechas h where h.atleta_id = case when m.de = auth.uid() then m.para_atleta else m.de_atleta end and h.fecha between m.semana and m.semana + 6) end,
     m.semana + 6 < fbe_privado.comunidad_hoy(), m.creado_en
   from mios m
   left join fbe_privado.comunidad_dentro dr on dr.perfil_id = m.r
@@ -18627,6 +18705,9 @@ begin
   end if;
   if p_fecha not between fbe_privado.comunidad_hoy() and fbe_privado.comunidad_hoy() + 1 then raise exception 'Hoy o mañana' using errcode = '22023'; end if;
   if v_nota is not null and char_length(v_nota) > 40 then raise exception 'La nota, hasta 40 letras' using errcode = '22023'; end if;
+  if v_nota is not null and fbe_privado.comunidad_moderar_entrada(v_uid, false, v_nota) then
+    raise exception 'Esas palabras no pueden ir en la nota' using errcode = '22023';
+  end if;
   insert into public.comunidad_intenciones (perfil_id, atleta_id, fecha, hora, nota) values (v_uid, public.mi_atleta_id(), p_fecha, p_hora, v_nota)
   on conflict (perfil_id) do update set fecha = excluded.fecha, hora = excluded.hora, nota = excluded.nota, creado_en = now();
   return jsonb_build_object('fecha', p_fecha, 'hora', p_hora, 'nota', v_nota);
@@ -18664,7 +18745,7 @@ alter table public.comunidad_padrinos enable row level security;
 drop policy if exists coach_ver on public.comunidad_padrinos;
 create policy coach_ver on public.comunidad_padrinos for select to authenticated using (public.es_coach());
 drop policy if exists miembro_ver on public.comunidad_padrinos;
-create policy miembro_ver on public.comunidad_padrinos for select to authenticated using (public.comunidad_soy_miembro());
+create policy miembro_ver on public.comunidad_padrinos for select to authenticated using (auth.uid() in (nuevo, padrino) and public.comunidad_soy_miembro());
 
 -- Acompañar a alguien que acaba de entrar (menos de 14 días dentro), llevando yo 8 semanas o más; 30 días
 create or replace function public.comunidad_apadrinar(p_nuevo uuid) returns date
@@ -18678,11 +18759,11 @@ declare
 begin
   if v_uid is null or not public.comunidad_activa() or not public.comunidad_soy_miembro() then raise exception 'No estás en la comunidad' using errcode = '42501'; end if;
   if p_nuevo is null or p_nuevo = v_uid then raise exception 'A ti mismo no te puedes apadrinar' using errcode = '22023'; end if;
-  select m.creado_en into v_mi_alta from public.comunidad_miembros m where m.perfil_id = v_uid;
+  select m.entrado_en into v_mi_alta from public.comunidad_miembros m where m.perfil_id = v_uid;
   if v_mi_alta > now() - interval '56 days' then raise exception 'Para acompañar a alguien hay que llevar 8 semanas en el equipo' using errcode = '22023'; end if;
   select * into v_nuevo from fbe_privado.comunidad_dentro d where d.perfil_id = p_nuevo;
   if v_nuevo.perfil_id is null then raise exception 'Esa persona ya no está en el equipo' using errcode = '42501'; end if;
-  select m.creado_en into v_su_alta from public.comunidad_miembros m where m.perfil_id = p_nuevo;
+  select m.entrado_en into v_su_alta from public.comunidad_miembros m where m.perfil_id = p_nuevo;
   if v_su_alta <= now() - interval '14 days' then raise exception 'Se acompaña a quien lleva menos de dos semanas en el equipo' using errcode = '22023'; end if;
   if exists (select 1 from public.comunidad_padrinos x where x.nuevo = p_nuevo and x.hasta >= fbe_privado.comunidad_hoy() and x.terminado_en is null) then
     raise exception 'Ya tiene quien le acompañe' using errcode = '23505';
@@ -18708,7 +18789,7 @@ $$;
 create or replace function public.comunidad_padrinos_lista() returns jsonb
 language sql stable security definer set search_path = '' as $$
   select case when auth.uid() is null or not (public.es_coach() or public.comunidad_soy_miembro()) then null else jsonb_build_object(
-    'puedo', exists (select 1 from public.comunidad_miembros m where m.perfil_id = auth.uid() and m.creado_en <= now() - interval '56 days'),
+    'puedo', exists (select 1 from public.comunidad_miembros m where m.perfil_id = auth.uid() and m.entrado_en <= now() - interval '56 days'),
     'vigentes', coalesce((select jsonb_agg(jsonb_build_object('nuevo', x.nuevo, 'nuevo_nombre', dn.nombre, 'nuevo_foto', pn.foto,
                                                              'padrino', x.padrino, 'padrino_nombre', dp.nombre, 'padrino_foto', pp.foto,
                                                              'desde', x.desde, 'hasta', x.hasta) order by x.creado_en desc)
@@ -18718,9 +18799,9 @@ language sql stable security definer set search_path = '' as $$
                           join public.perfiles pn on pn.id = x.nuevo
                           join public.perfiles pp on pp.id = x.padrino
                           where x.hasta >= fbe_privado.comunidad_hoy() and x.terminado_en is null), '[]'::jsonb),
-    'sin_padrino', coalesce((select jsonb_agg(jsonb_build_object('perfil_id', d.perfil_id, 'nombre', d.nombre, 'foto', p.foto, 'desde', m.creado_en) order by m.creado_en desc)
+    'sin_padrino', coalesce((select jsonb_agg(jsonb_build_object('perfil_id', d.perfil_id, 'nombre', d.nombre, 'foto', p.foto, 'desde', m.entrado_en) order by m.entrado_en desc)
                              from fbe_privado.comunidad_dentro d
-                             join public.comunidad_miembros m on m.atleta_id = d.atleta_id and m.creado_en > now() - interval '14 days'
+                             join public.comunidad_miembros m on m.atleta_id = d.atleta_id and m.entrado_en > now() - interval '14 days'
                              join public.perfiles p on p.id = d.perfil_id
                              where d.perfil_id <> auth.uid()
                                and not exists (select 1 from public.comunidad_padrinos x where x.nuevo = d.perfil_id and x.hasta >= fbe_privado.comunidad_hoy() and x.terminado_en is null)), '[]'::jsonb)
@@ -18777,6 +18858,7 @@ language sql stable security definer set search_path = '' as $$
   with pasada as (
     select v.para, count(*) as n from public.comunidad_votos_semana v
     join fbe_privado.comunidad_dentro d on d.perfil_id = v.para
+    join fbe_privado.comunidad_dentro dv on dv.perfil_id = v.de
     where v.semana = fbe_privado.comunidad_lunes() - 7 group by v.para
   ), tope as (select max(n) as n from pasada)
   select case when auth.uid() is null or not (public.es_coach() or public.comunidad_soy_miembro()) then null else jsonb_build_object(
@@ -18882,7 +18964,7 @@ create or replace function public.comunidad_sin_entrenar()
 returns table (perfil_id uuid, nombre text, foto text, dias integer)
 language sql stable security definer set search_path = '' as $$
   with gente as (
-    select d.atleta_id, d.perfil_id, d.nombre, m.creado_en
+    select d.atleta_id, d.perfil_id, d.nombre, m.entrado_en as creado_en
     from fbe_privado.comunidad_dentro d
     join public.comunidad_miembros m on m.atleta_id = d.atleta_id and m.ver_ausencia
     where d.perfil_id <> auth.uid()
@@ -18900,6 +18982,45 @@ language sql stable security definer set search_path = '' as $$
   order by 4 desc, g.nombre
   limit 10
 $$;
+
+-- ---------------------------------------------------------------------
+-- 10b. Al dejar el equipo (salir, que el coach le saque, la baja o la ficha que cambia de dueño) o el ranking, lo social
+-- vivo se va: la intención, los duelos y el padrinazgo, y sus quedadas abiertas se cancelan (como las parejas, 042).
+-- ---------------------------------------------------------------------
+create or replace function fbe_privado.comunidad_social_al_dejar() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare
+  v uuid;
+  v_fuera boolean;
+begin
+  if tg_table_name = 'comunidad_miembros' then
+    v := new.perfil_id;
+    if new.sin_ranking and not old.sin_ranking then
+      delete from public.comunidad_duelos where v in (de, para) and semana + 6 >= fbe_privado.comunidad_hoy();
+    end if;
+    v_fuera := (new.salido_en is not null and old.salido_en is null) or (new.bloqueado and not old.bloqueado);
+    if not v_fuera and not (new.version is distinct from old.version and new.version is distinct from public.comunidad_version()) then
+      return null;
+    end if;
+  else
+    v := old.perfil_id;
+    v_fuera := true;
+    if v is null or not ((new.estado = 'baja' and old.estado <> 'baja') or new.perfil_id is distinct from old.perfil_id) then return null; end if;
+  end if;
+  delete from public.comunidad_intenciones where perfil_id = v;
+  delete from public.comunidad_duelos where v in (de, para) and semana + 6 >= fbe_privado.comunidad_hoy();
+  update public.comunidad_padrinos set terminado_en = coalesce(terminado_en, now()) where v in (nuevo, padrino) and hasta >= fbe_privado.comunidad_hoy();
+  if v_fuera then
+    update public.comunidad_eventos set cancelado_en = now() where creado_por = v and cancelado_en is null and empieza_en > now();
+  end if;
+  return null;
+end $$;
+drop trigger if exists comunidad_miembros_zzz_social on public.comunidad_miembros;
+create trigger comunidad_miembros_zzz_social after update of salido_en, bloqueado, version, sin_ranking on public.comunidad_miembros
+  for each row execute function fbe_privado.comunidad_social_al_dejar();
+drop trigger if exists atletas_zzz_social on public.atletas;
+create trigger atletas_zzz_social after update of estado, perfil_id on public.atletas
+  for each row execute function fbe_privado.comunidad_social_al_dejar();
 
 -- ---------------------------------------------------------------------
 -- 11. Salir borrando lo suyo (044) y mis datos (044), con lo de aquí
@@ -18934,6 +19055,7 @@ begin
     delete from public.comunidad_padrinos where nuevo = v_uid or padrino = v_uid;
     delete from public.comunidad_votos_semana where de = v_uid or para = v_uid;
     update public.comunidad_eventos set cancelado_en = coalesce(cancelado_en, now()) where creado_por = v_uid and empieza_en > now();
+    delete from public.comunidad_eventos where creado_por = v_uid;   -- el aviso de que se cancela ya ha salido
     delete from public.comunidad_comentarios where autor_id = v_uid;
     delete from public.comunidad_posts where autor_id = v_uid;
   end if;
