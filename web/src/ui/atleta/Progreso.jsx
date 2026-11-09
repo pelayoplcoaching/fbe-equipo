@@ -7,6 +7,7 @@ import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
 import { usePestanasDeslizables } from '../deslizar.js';
 import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas, PortadaHistoria } from '../comunes.jsx';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
+import { Conexiones } from './Conexiones.jsx';
 import { RANGOS_GRAFICA, filtrarRango, rangoConDatos } from '../../logica/rangos.js';
 import { destacados as calcularDestacados, tonelajePorSemana } from '../../logica/destacados.js';
 import { calendarioRacha } from '../../logica/racha.js';
@@ -580,7 +581,7 @@ function Cifras({ constancia, semanas }) {
 }
 
 export function Progreso({ programa, salud, irA, checkinSemana }) {
-  const { api, atleta } = useApp();
+  const { api, atleta, propio } = useApp();
   const entrena = conEntrenamiento(atleta);
   // (pulido 4) al volver a Progreso se enseña al momento lo último cargado y se pone al día por detrás
   const rec = (que) => ({ recuerdo: `progreso:${api.uid()}:${atleta.id}:${que}:${entrena ? 1 : 0}` });
@@ -626,6 +627,8 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
         <Grupo g="cuerpo">
           {salud && <HabitosMes />}
           {salud && conNutricion(atleta) && <NutricionProgreso />}
+          {/* (conexiones del coach) el coach no tiene Perfil en su modo atleta: su Salud del iPhone y su calendario, aquí */}
+          {propio && <div id="prog-conexiones"><Conexiones salud={salud} /></div>}
         </Grupo>
         <Grupo g="fuerza">{entrena && <MiTecnica atletaId={atleta.id} nombreAtleta={atleta.nombre} />}</Grupo>
         {/* El diario lleva los vídeos de técnica y las fotos de progreso: se ve en Fuerza y en Cuerpo */}

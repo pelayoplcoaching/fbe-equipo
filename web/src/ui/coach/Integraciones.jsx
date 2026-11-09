@@ -8,6 +8,7 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { URL_ATAJO, ATAJO_SALUD, ATAJO_ENTRENO, enlaceWhatsApp, resumenSalud, textoSueno, haceDias, telefonoWa } from '../../logica/integraciones.js';
 import { TablaSalud } from '../atleta/Conexiones.jsx';
+import { pedirSubProgreso } from '../atleta/sub-progreso.js';
 import { num } from '../../logica/calculos.js';
 
 // Los teléfonos de todos ({ atleta_id: teléfono }; sin la 051, null). Se piden una vez por pantalla.
@@ -136,8 +137,36 @@ export function AtajosCoach() {
         </ul>
       </div>
       <p class="mini terciario">Créalos una vez en tu iPhone (los pasos están en la guía «Atajos del iPhone» del proyecto), compártelos con «Copiar enlace de iCloud» y pega aquí los enlaces. Tus atletas los instalan desde su perfil, en Conexiones. Lo de Salud solo llega con su consentimiento de datos de salud.</p>
+      {/* (conexiones del coach) su propia clave, para usarlo él y probar el atajo antes de compartirlo */}
+      <MiSalud />
       {editar && <HojaAtajo clave={editar} actual={m[editar] || ''} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); lista.recargar(true); }} />}
     </section>
+  );
+}
+
+// Tu propia Salud del iPhone: en tu modo atleta (Progreso → Cuerpo → Conexiones) creas tu clave y conectas tu calendario
+function MiSalud() {
+  const { api, aviso, propioCoach, entrarModoAtleta } = useApp();
+  const [ocupado, setOcupado] = useState(false);
+  const ir = async () => {
+    setOcupado(true);
+    try {
+      // Sin ficha de atleta, se crea (con sus consentimientos de privacidad y de datos de salud: son sus propios datos)
+      const propio = propioCoach || await api.crearAtletaPropio();
+      try { history.replaceState(null, '', '#progreso'); } catch { /* */ }
+      pedirSubProgreso('cuerpo');
+      entrarModoAtleta(propioCoach ? null : propio);
+      setTimeout(() => document.getElementById('prog-conexiones')?.scrollIntoView({ block: 'start' }), 700);
+    } catch (e) { aviso(e.message, 'error'); setOcupado(false); }
+  };
+  return (
+    <div class="panel panel-pad pila-s mi-salud">
+      <strong>Tu Salud del iPhone y tu calendario</strong>
+      <span class="peq secundario">{propioCoach
+        ? 'En tu modo atleta, Progreso → Cuerpo → Conexiones: ahí creas tu clave personal (la que pegas en el atajo para probarlo) y conectas tu calendario.'
+        : 'Para tener tu propia clave (usarlo tú y probar el atajo) hace falta tu ficha de atleta: se crea con tus consentimientos de privacidad y de datos de salud, que son tus propios datos.'}</span>
+      <button type="button" class="btn btn-peq" style="justify-self:start" disabled={ocupado} onClick={ir}><Icono n="pasos" /> {propioCoach ? 'Ir a mis conexiones' : 'Crear mi ficha y conectar'}</button>
+    </div>
   );
 }
 

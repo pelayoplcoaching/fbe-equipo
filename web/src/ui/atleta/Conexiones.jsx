@@ -5,6 +5,8 @@
 //   * App → Salud: el atajo «FBE a Salud» apunta en Salud el entreno al terminarlo (un botón en el resumen de la sesión).
 //   * Calendario: una dirección personal a la que se suscribe su calendario; si el plan cambia, el calendario cambia solo.
 // Sin la 051, no sale nada.
+// (conexiones del coach) El coach, en su modo atleta, también conecta su Salud y su calendario (Progreso → Cuerpo): es
+// su propia ficha de atleta (mi_atleta_id), con sus consentimientos; sirve para usarlo y para probar sus atajos.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, GrupoIos, FilaIos, Segmentos, copiar, usePreferencia } from '../comunes.jsx';
 import { urlSalud, urlsCalendario, urlAtajoEntreno, tipoSalud, ATAJO_SALUD, ATAJO_ENTRENO, haceDias, textoSueno } from '../../logica/integraciones.js';
@@ -18,11 +20,11 @@ export const PREF_ATAJO_ENTRENO = 'fbe-atajo-entreno';
 // (api.integraciones: undefined sin la 051)
 export function useIntegraciones(deps = []) {
   const { api, atleta, propio } = useApp();
-  return useCarga(() => (propio || !atleta?.id ? Promise.resolve({ sin: true }) : api.integraciones().then((i) => (i === undefined || i === null ? { sin: true } : i)).catch(() => ({ sin: true }))), [atleta?.id, ...deps]);
+  return useCarga(() => (!atleta?.id ? Promise.resolve({ sin: true }) : api.integraciones().then((i) => (i === undefined || i === null ? { sin: true } : i)).catch(() => ({ sin: true }))), [atleta?.id, ...deps]);
 }
 
 export function Conexiones({ salud }) {
-  const { atleta } = useApp();
+  const { atleta, propio } = useApp();
   const datos = useIntegraciones();
   const [abrir, setAbrir] = useState(null);
   if (!datos.datos || datos.datos.sin) return null;
@@ -30,7 +32,7 @@ export function Conexiones({ salud }) {
   const entrena = conEntrenamiento(atleta);
   const cerrar = () => { setAbrir(null); datos.recargar(true); };
   return (
-    <GrupoIos titulo="Conexiones" id="grupo-conexiones" pie="Tus datos solo van de tu móvil a la app y los ve tu coach. Lo puedes quitar cuando quieras.">
+    <GrupoIos titulo="Conexiones" id="grupo-conexiones" pie={propio ? 'Tu ficha de atleta: lo que llegue de tu iPhone va a tus hábitos, tus pesos y tu progreso. Sirve también para probar tus atajos antes de compartirlos.' : 'Tus datos solo van de tu móvil a la app y los ve tu coach. Lo puedes quitar cuando quieras.'}>
       <FilaIos icono="pasos" tono={i.salud?.activa ? 'ok' : ''} titulo="Salud del iPhone"
         detalle={i.salud?.activa ? (i.salud.ultimo ? `Conectada · último envío ${haceDias(i.salud.ultimo)}` : 'Conectada · aún no ha llegado nada') : 'Pasos, sueño, pulso y peso, sin apuntarlos'}
         alTocar={() => setAbrir('salud')} etiqueta="Salud del iPhone: conectar o ver" />
@@ -65,7 +67,7 @@ function EnlaceNuevo({ url, etiqueta }) {
 }
 
 export function HojaSalud({ estado, salud, alCerrar }) {
-  const { api, atleta, aviso, modo } = useApp();
+  const { api, atleta, aviso, modo, propio } = useApp();
   const [enlace, setEnlace] = useState(null);
   const [ocupado, setOcupado] = useState(false);
   const [confirmar, setConfirmar] = useState(null);   // 'nuevo' | 'quitar'
@@ -89,7 +91,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
   return (
     <Hoja titulo="Salud del iPhone" alCerrar={alCerrar}>
       <div class="pila conexiones">
-        <p class="peq secundario">Tu iPhone le pasa a la app, una vez al día, tus <strong>pasos</strong>, cuánto has <strong>dormido</strong>, tu <strong>pulso en reposo</strong>, tu <strong>variabilidad (HRV)</strong> y tu <strong>peso</strong>. Así el check-in viene relleno, tus pasos se apuntan solos en tus hábitos y tu coach ve cómo descansas sin preguntarte. Se hace con la app Atajos, que ya viene en el iPhone.</p>
+        <p class="peq secundario">Tu iPhone le pasa a la app, una vez al día, tus <strong>pasos</strong>, cuánto has <strong>dormido</strong>, tu <strong>pulso en reposo</strong>, tu <strong>variabilidad (HRV)</strong> y tu <strong>peso</strong>. {propio ? 'Así tus pasos, tu sueño y tu peso se apuntan solos en tu ficha.' : 'Así el check-in viene relleno, tus pasos se apuntan solos en tus hábitos y tu coach ve cómo descansas sin preguntarte.'} Se hace con la app Atajos, que ya viene en el iPhone.</p>
         {!ios && <p class="nota peq">Esto es para iPhone: Apple lo deja hacer con Atajos. En Android, una web no puede leer los datos de salud del móvil.</p>}
         {!salud ? (
           <p class="nota peq">Para traer datos de Salud hace falta tu consentimiento de datos de salud (en tu perfil, en Cuenta → Datos de salud).</p>
@@ -97,7 +99,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
           <ol class="conexion-pasos">
             <Paso n={1} titulo={`Instala el atajo «${ATAJO_SALUD}»`}>
               {atajoSalud ? <a class="btn" href={atajoSalud} target="_blank" rel="noopener"><Icono n="descargar" /> Instalar el atajo</a>
-                : <span class="peq secundario">Tu coach aún no lo ha preparado. Pídeselo y vuelve aquí.</span>}
+                : <span class="peq secundario">{propio ? 'Mientras lo montas, sáltate este paso: crea tu clave (paso 2) y pégala en el atajo de tu iPhone para probarlo. Cuando lo compartas, pon el enlace en Cuenta → Atajos del iPhone.' : 'Tu coach aún no lo ha preparado. Pídeselo y vuelve aquí.'}</span>}
               <span class="mini terciario">Al instalarlo te pedirá tu clave personal (la del paso 2) y permiso para leer Salud: deja marcados los datos que quieras compartir.</span>
             </Paso>
             <Paso n={2} titulo="Copia tu clave personal" hecho={activa && !enlace}>
@@ -133,7 +135,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
             <h3 class="peq">Tus entrenos, en Salud</h3>
             <p class="peq secundario">Con el atajo «{ATAJO_ENTRENO}», al terminar una sesión tocas «Apuntar en Salud» y queda como entreno de fuerza (o de cardio) en Salud, con su duración. Cuenta para los anillos del Apple Watch.</p>
             {atajoEnt ? <a class="btn" href={atajoEnt} target="_blank" rel="noopener"><Icono n="descargar" /> Instalar «{ATAJO_ENTRENO}»</a>
-              : <span class="peq secundario">Tu coach aún no lo ha preparado.</span>}
+              : <span class="peq secundario">{propio ? 'Cuando lo compartas, pon el enlace en Cuenta → Atajos del iPhone.' : 'Tu coach aún no lo ha preparado.'}</span>}
             <label class="fila conexion-check">
               <input type="checkbox" checked={!!atajoEntreno} onChange={(e) => setAtajoEntreno(e.currentTarget.checked)} />
               <span class="peq">Ya lo tengo: enséñame «Apuntar en Salud» al terminar cada sesión (en este móvil)</span>
@@ -257,9 +259,8 @@ export function HojaSuscripcion({ estado, alCerrar }) {
 
 // ---------------------------------------------------------------- «Apuntar en Salud», al terminar la sesión
 export function AnadirASalud({ sesion, resumen }) {
-  const { propio } = useApp();
   const [tiene] = usePreferencia(PREF_ATAJO_ENTRENO, false);
-  if (propio || !tiene || !esIOS() || !sesion) return null;
+  if (!tiene || !esIOS() || !sesion) return null;
   const minutos = resumen?.cardio?.minutos || resumen?.minutos || sesion.duracion_min || 60;
   const href = urlAtajoEntreno({ nombre: sesion.nombre, minutos, tipo: tipoSalud({ tipo: sesion.tipo, modalidad: resumen?.cardio?.modalidad }) });
   return (
