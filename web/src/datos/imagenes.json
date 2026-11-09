@@ -263,6 +263,72 @@
       "1080": "imagenes/checkin/checkin-molestias-1080.3922d01c.webp"
     }
   },
+  "coach-negocio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-negocio-480.6a359d23.webp",
+      "720": "imagenes/coach/coach-negocio-720.55f1664a.webp",
+      "1080": "imagenes/coach/coach-negocio-1080.8102f9ba.webp"
+    }
+  },
+  "coach-panel": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-panel-480.56ed1366.webp",
+      "720": "imagenes/coach/coach-panel-720.2850d199.webp",
+      "1080": "imagenes/coach/coach-panel-1080.b7c4a074.webp"
+    }
+  },
+  "coach-programar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-programar-480.0b809038.webp",
+      "720": "imagenes/coach/coach-programar-720.61f4fe2a.webp",
+      "1080": "imagenes/coach/coach-programar-1080.db53f349.webp"
+    }
+  },
+  "coach-radar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-radar-480.83a20ef1.webp",
+      "720": "imagenes/coach/coach-radar-720.542db799.webp",
+      "1080": "imagenes/coach/coach-radar-1080.781ec118.webp"
+    }
+  },
+  "coach-revisar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-revisar-480.4fb728b9.webp",
+      "720": "imagenes/coach/coach-revisar-720.1a6507ae.webp",
+      "1080": "imagenes/coach/coach-revisar-1080.5b0a53e3.webp"
+    }
+  },
+  "coach-revision-semanal": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/coach/coach-revision-semanal-480.964afc83.webp",
+      "720": "imagenes/coach/coach-revision-semanal-720.b3507465.webp",
+      "1080": "imagenes/coach/coach-revision-semanal-1080.820cc102.webp"
+    }
+  },
   "comida-cena": {
     "proporcion": [
       4,

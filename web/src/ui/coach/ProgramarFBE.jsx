@@ -7,6 +7,7 @@
 // Al aplicar se guarda también la nota de la semana, si se ha cambiado (con un borrador de lo que cambia), y queda
 // apuntado en la semana qué propuso el motor y qué se aplicó (`semanas.propuesta_motor`), para medir el acuerdo real.
 import { useMemo, useState } from 'preact/hooks';
+import { CabCoach } from './CabCoach.jsx';
 import { useApp, useCarga, Hoja, Icono, Cargando } from '../comunes.jsx';
 import { sumarDias, fmtCorta } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
@@ -140,6 +141,8 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
 
   return (
     <Hoja titulo={`Programar la semana ${destino.numero} según FBE`} alCerrar={alCerrar} ancho={760}>
+      {/* (imágenes, bloque S) la mesa de dibujo: la propuesta, en limpio */}
+      <CabCoach id="coach-programar" titulo={`La semana ${destino.numero}, en limpio`}><span class="peq">Una propuesta con tus reglas FBE. Tú decides qué se aplica.</span></CabCoach>
       <p class="peq secundario">A partir de lo que registró en la semana {base.numero}. Marca lo que quieras aplicar; lo demás se queda como está en la semana {destino.numero}.
         {publicada ? ' ' : ' La semana sigue en borrador: el atleta no ve nada hasta que la publiques.'}</p>
       {registro && <p class="mini secundario">Ya aplicaste una propuesta en esta semana el {fmtCorta(registro.en.slice(0, 10))}. {textoAcuerdo(acuerdoDeRegistro(registro, Object.fromEntries(dest.pautas.map((p) => [p.id, p]))))}</p>}

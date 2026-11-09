@@ -9,7 +9,9 @@ import { hace, fmtCorta } from '../../logica/fechas.js';
 import { fmtEuros } from '../../logica/cobros.js';
 import { estadoAtleta, NOMBRE_ESTADO, chispaSuave } from '../../logica/visual.js';
 import { equipoHoy, arcoDial } from '../../logica/tablero.js';
-import { hoyISO } from '../../logica/fechas.js';
+import { hoyISO, fmtConDia } from '../../logica/fechas.js';
+import { horaMadrid } from '../../logica/perfil.js';
+import { CabCoach } from './CabCoach.jsx';
 import { AvisoAlmacenamientoPanel } from '../tecnica/Limpieza.jsx';
 import { CumplesHoy } from './PersonalCoach.jsx';
 import { useContactos } from './Integraciones.jsx';
@@ -119,6 +121,10 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
         </div>
       </CabeceraGrande>
       <BandaDemo />
+      {/* (imágenes, bloque S) el saludo del día, en tu mesa */}
+      <CabCoach id="coach-panel" titulo={`${saludoCoach(horaMadrid(Date.now()))}${perfil?.nombre ? `, ${perfil.nombre.split(' ')[0]}` : ''}`}>
+        <span class="peq">{fmtConDia(hoyISO()).replace(/^./, (c) => c.toUpperCase())}{atencion.length ? ` · ${atencion.length} ${atencion.length === 1 ? 'necesita' : 'necesitan'} atención` : ' · Todo en orden'}</span>
+      </CabCoach>
       <AvisoAlmacenamientoPanel abrirCuenta={abrirCuenta} />
       {/* (v0.104) quién cumple años hoy */}
       {!cargando && <CumplesHoy lista={lista} abrir={abrir} />}
@@ -203,6 +209,9 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
 
 // v0.51: «Hoy en tu equipo», como un resumen de WHOOP: cuántos de los activos han entrenado hoy (un dial), lo que
 // tienes por revisar (lleva a Revisar) y cuántos llevan 7 días o más sin actividad (filtra la lista)
+// El saludo según la hora de Madrid: de 6 a 13:59, días; de 14 a 20:59, tardes; si no, noches
+export const saludoCoach = (h) => (h >= 6 && h < 14 ? 'Buenos días' : h >= 14 && h < 21 ? 'Buenas tardes' : 'Buenas noches');
+
 function EquipoHoy({ eq, porRevisar, irARevisar, filtro, alFiltrar }) {
   const a = arcoDial(eq.activos ? eq.entrenaron / eq.activos : 0, 64, 7);
   const n = eq.inactivos.length;

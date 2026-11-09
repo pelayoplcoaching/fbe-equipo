@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { CabCoach } from './CabCoach.jsx';
 import { useApp, useCarga, Siluetas, Vacio, Avatar, Icono, CabeceraGrande, ErrorCaja } from '../comunes.jsx';
 import { fechaMadrid, sumarDias, desdeISO } from '../../logica/fechas.js';
 import { ordenRevision, avisosRevision } from '../../logica/revision.js';
@@ -39,6 +40,8 @@ export function RevisionSemanal({ abrirAtleta }) {
       <CabeceraGrande>
         <div class="titulo"><h1>Revisión semanal</h1>{datos && <div class="sub">Semana del {rango(datos.lunes)}</div>}</div>
       </CabeceraGrande>
+      {/* (imágenes, bloque S) las carpetas de la semana */}
+      <CabCoach id="coach-revision-semanal" titulo="El repaso de la semana"><span class="peq">Uno a uno: sesiones, check-in, molestias y vídeos. Escríbele y márcalo como revisado.</span></CabCoach>
       {res.cargando && !datos ? <Siluetas forma="lista" n={6} texto="Cargando la revisión" /> : res.error ? (
         <ErrorCaja error={res.error} reintentar={() => res.recargar()} />
       ) : !filas.length ? (

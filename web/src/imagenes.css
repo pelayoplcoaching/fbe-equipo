@@ -33,6 +33,15 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .foco-cab-t { font-size: 1.375rem; line-height: 1.15; font-weight: 800; }
 .foco-cab-f { opacity: .85; line-height: 1.35; }
 
+/* Las cabeceras del lado del coach (bloque S): apaisadas y algo más bajas */
+.cab-coach { --proporcion: 16 / 9; min-height: 7rem; }
+.cab-coach .cab-ilu-img { -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 30%); mask-image: linear-gradient(to right, transparent 0%, #000 30%); }
+.cab-coach .cab-ilu-texto { max-width: 62%; font-size: inherit; font-weight: inherit; }
+.cab-coach-t { font-size: 1.125rem; line-height: 1.2; font-weight: 800; }
+.cab-coach .peq { opacity: .85; line-height: 1.35; margin: 0; }
+.cab-coach .btn { justify-self: start; margin-top: 4px; }
+.contenido.coach > .cab-coach { margin-bottom: 4px; }
+
 /* La hoja de cada hábito: ilustraciones cuadradas */
 .habito-cab { --proporcion: 1; }
 
