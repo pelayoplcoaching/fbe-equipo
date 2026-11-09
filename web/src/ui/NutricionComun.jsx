@@ -97,7 +97,7 @@ export function TarjetaPlan({ plan, siguiente = null, diasEntreno = 4, acciones 
   const p = plan || siguiente;
   const cifras = p.modo !== 'sin_contar';
   return (
-    <div class="panel panel-pad pila tarjeta-plan">
+    <div class="panel panel-pad pila tarjeta-plan" data-fase={p.fase || undefined}>
       <div class="separa">
         <span class="pila-xs">
           <strong>{NOMBRE_FASE[p.fase] || 'Plan'}{p.ritmo_pct != null ? `: ${textoRitmoCorto(p.ritmo_pct)}` : ''}</strong>
@@ -107,12 +107,12 @@ export function TarjetaPlan({ plan, siguiente = null, diasEntreno = 4, acciones 
       </div>
       {cifras && (
         <dl class="cifras-plan num">
-          <div><dt>Kcal{p.kcal_descanso != null ? ', entreno' : ''}</dt><dd>{fmtKcal(p.kcal)}</dd></div>
-          {p.kcal_descanso != null && <div><dt>Kcal, descanso</dt><dd>{fmtKcal(p.kcal_descanso)}</dd></div>}
-          <div><dt>Proteína</dt><dd>{p.proteina_g} g</dd></div>
-          {p.modo === 'macros' && <div><dt>Hidratos</dt><dd>{p.carbos_g}{p.carbos_descanso_g != null && p.carbos_descanso_g !== p.carbos_g ? ` / ${p.carbos_descanso_g}` : ''} g</dd></div>}
-          {p.modo === 'macros' && <div><dt>Grasa</dt><dd>{p.grasa_g}{p.grasa_descanso_g != null && p.grasa_descanso_g !== p.grasa_g ? ` / ${p.grasa_descanso_g}` : ''} g</dd></div>}
-          {p.fibra_g != null && <div><dt>Fibra</dt><dd>{p.fibra_g} g</dd></div>}
+          <div data-m="kcal"><dt>Kcal{p.kcal_descanso != null ? ', entreno' : ''}</dt><dd>{fmtKcal(p.kcal)}</dd></div>
+          {p.kcal_descanso != null && <div data-m="descanso"><dt>Kcal, descanso</dt><dd>{fmtKcal(p.kcal_descanso)}</dd></div>}
+          <div data-m="proteina"><dt>Proteína</dt><dd>{p.proteina_g} g</dd></div>
+          {p.modo === 'macros' && <div data-m="carbos"><dt>Hidratos</dt><dd>{p.carbos_g}{p.carbos_descanso_g != null && p.carbos_descanso_g !== p.carbos_g ? ` / ${p.carbos_descanso_g}` : ''} g</dd></div>}
+          {p.modo === 'macros' && <div data-m="grasa"><dt>Grasa</dt><dd>{p.grasa_g}{p.grasa_descanso_g != null && p.grasa_descanso_g !== p.grasa_g ? ` / ${p.grasa_descanso_g}` : ''} g</dd></div>}
+          {p.fibra_g != null && <div data-m="fibra"><dt>Fibra</dt><dd>{p.fibra_g} g</dd></div>}
         </dl>
       )}
       {cifras && p.kcal_descanso != null && <p class="mini terciario">De media, unas {fmtKcal(kcalMediaPlan(p, diasEntreno))} kcal al día con {diasEntreno} {diasEntreno === 1 ? 'día' : 'días'} de entreno a la semana.</p>}

@@ -116,7 +116,7 @@ export function NutricionCoach({ atleta }) {
           <div class="panel">
             <ul class="lista">
               {[...r.planes].reverse().map((p) => (
-                <li key={p.id} class="version-plan">
+                <li key={p.id} class={`version-plan ${p.id === plan?.id ? 'vigente' : p.desde > hoyISO() ? 'proximo' : ''}`}>
                   <div class="pila-xs" style="min-width:0">
                     <strong>{p.desde > hoyISO() ? 'Desde' : 'Desde el'} {fmtConDia(p.desde)}{p.id === plan?.id ? ' (vigente)' : p.desde > hoyISO() ? ' (próximo)' : ''}</strong>
                     <span class="mini terciario">{textoPlan(p)}{p.ritmo_pct != null ? `. ${textoRitmoCorto(p.ritmo_pct)}` : ''}</span>
