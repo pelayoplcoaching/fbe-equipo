@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.120': {
+    atleta: [
+      'Más ilustraciones: el foco de tu semana en Semana y tu cardio con su dibujo según lo que hagas, también al compartirlo.',
+      'Cada hito de tu racha con su propio fuego y tu aniversario en FBE con su franja; y la entrada a la app, con fondo nuevo.',
+    ],
+    coach: [
+      'Tus pantallas con cabecera ilustrada: Atletas, Revisar, Revisión semanal, A quién escribir, Programar según FBE y Negocio.',
+    ],
+  },
   '0.119': {
     atleta: [
       'Al terminar, el esfuerzo en un toque y la duración ya puesta; y si se te olvida cerrar la sesión, la cerramos por ti.',
