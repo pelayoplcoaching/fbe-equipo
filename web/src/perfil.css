@@ -13,7 +13,8 @@
 
 /* En el perfil del equipo (una hoja): el dibujo, sobre la franja de la noche que pone diseno.css (bloque 261, 64 px) */
 .perfil-equipo-portada { height: 64px; }
-.perfil-equipo-cab > .foto-anillo { flex: none; }
+.perfil-equipo-cab > .foto-anillo { flex: none; align-self: flex-start; margin-top: -30px; }
+/* (las insignias del perfil del equipo, como medallas y en su sitio: diseno.css, bloque 274) */
 
 /* -- La foto con el aro de la racha -- */
 .foto-anillo { position: relative; display: inline-grid; place-items: center; padding: 6px; border-radius: 50%; }
@@ -115,8 +116,3 @@
 .pe-galeria p { margin: 0; padding: 6px; font-size: 0.6875rem; }
 
 
-/* Las insignias del perfil del equipo, como fichas en su sitio (la clase .insignia es tambien la del globo de las
-   pestanas, que va en absoluto: aqui no) */
-.pe-insignias .chip.insignia { position: static; top: auto; right: auto; min-width: 0; height: auto; display: inline-flex; align-items: center;
-  padding: 5px 11px; border: 0; border-radius: 999px; background: var(--aviso-suave); color: var(--tinta); font-size: 0.8125rem; font-weight: 650;
-  letter-spacing: 0; line-height: 1.2; box-shadow: none; animation: none; }

@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.115': {
+    atleta: [
+      'Más vida en el Equipo: en Retos, rojos contra azules, la meta con su bandera y un sello dorado en los que conseguiste.',
+      'En el Ranking, el puesto en un disco de plata o bronce y los hitos del equipo con su aro de avance.',
+      'Las insignias como medallas, tus compañeros de racha con su llama, las preguntas al coach como tarjetas y quien entrenó hoy, con aro verde.',
+    ],
+    coach: [
+      'Más vida en el Equipo: en Retos, rojos contra azules, la meta con su bandera y un sello dorado en los que conseguiste.',
+      'En el Ranking, el puesto en un disco de plata o bronce y los hitos del equipo con su aro de avance.',
+      'Las insignias como medallas, tus compañeros de racha con su llama, las preguntas al coach como tarjetas y quien entrenó hoy, con aro verde.',
+    ],
+  },
   '0.114': {
     atleta: [
       'Tu perfil estrena portada, el aro de tu racha y tu porqué, con tus cifras, 12 semanas, vitrina, medallas, hitos y últimos entrenos.',
