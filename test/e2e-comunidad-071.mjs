@@ -198,7 +198,7 @@ export async function probarComunidad071({ navegador, check, base = 'http://loca
     await toast('Guardada en «Preguntas del equipo»');
     await hojaC.locator('.comentario-equipo.mejor .insignia-mejor', { hasText: 'Respuesta del coach' }).waitFor();
     check(true, 'su comentario queda marcado como «Respuesta del coach»');
-    await hojaC.getByRole('button', { name: 'Cerrar' }).click();
+    await hojaC.getByRole('button', { name: 'Cerrar', exact: true }).click();
     await pregCoach.locator('.chip', { hasText: 'Respondida por el coach' }).waitFor();
     await p.getByRole('tab', { name: 'Preguntas' }).click();
     await p.locator('.pregunta-equipo', { hasText: 'series de aproximación' }).waitFor();
@@ -230,7 +230,7 @@ export async function probarComunidad071({ navegador, check, base = 'http://loca
     await p.waitForFunction(() => /Carlos V\./.test(document.querySelector('[role=dialog] ul.comentarios-equipo > li')?.textContent || ''));
     check(await hojaL.locator('.insignia-mejor').count() === 1, 'Lucía elige la de Carlos: ahora sale primero (y solo hay una)');
     await revisar('mejor-respuesta-071-360-oscuro');
-    await hojaL.getByRole('button', { name: 'Cerrar' }).click();
+    await hojaL.getByRole('button', { name: 'Cerrar', exact: true }).click();
     await hojaL.waitFor({ state: 'detached' });
     await revisar('muro-071-360-oscuro');
     const cabe = await p.evaluate(() => document.documentElement.scrollWidth <= 360

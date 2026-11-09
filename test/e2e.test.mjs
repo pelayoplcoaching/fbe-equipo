@@ -197,7 +197,7 @@ try {
   const codigo = (await p.locator('.codigo-grande').textContent()).trim();
   check(/^FBE-[A-Z2-9]{5}-[A-Z2-9]{5}$/.test(codigo), `genera el código de invitación (${codigo})`);
   check((await p.locator('.hoja-dialogo .nota').textContent()).includes(codigo), 'el mensaje para enviar incluye el código');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.getByRole('tab', { name: 'Programa' }).waitFor();
   await p.getByRole('heading', { name: 'Lucía Prueba' }).waitFor();
   check(true, 'abre su ficha');
@@ -605,16 +605,16 @@ try {
   await revisar('metronomo');
   await metro.getByRole('button', { name: 'Parar' }).click();
   await metro.getByRole('button', { name: 'Empezar' }).waitFor();
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await herramienta(primero, 'Aproximación');
   await p.getByRole('heading', { name: 'Series de aproximación' }).waitFor();
   check(await p.locator('.aproximaciones li').count() >= 2, 'series de aproximación hasta la carga de trabajo');
   await revisar('aproximacion');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await herramienta(primero, 'Historial');
   await p.locator('.historial-fila').first().waitFor();
   check(true, 'historial del ejercicio con lo de hoy');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.getByRole('button', { name: 'Calculadora' }).click();
   await p.locator('.tabla-rpe').waitFor();
   check((await p.locator('.cifra .v').first().textContent()) !== '—', 'calculadora de 1RM y tabla de RPE');
@@ -846,7 +846,7 @@ try {
   check(pixel[0] > 150 && pixel[1] > 100 && red.length === 0 && (await p.locator('.tarjeta-foto-elegir').textContent()).includes('no se sube'),
     `«Con tu foto»: la foto del móvil de fondo, con las cifras encima, sin salir del móvil (${pixel.slice(0, 3).join(',')}; peticiones fuera: ${red.length})`);
   await revisar('compartir-foto');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.getByRole('button', { name: 'Volver a hoy' }).click();
   // v0.50: con la sesión de hoy hecha, Hoy lo celebra: sus cifras, «Ver resumen» y lo siguiente (Pierna A)
   const heroHecha = p.locator('.hero-dia.hero-hecha');
@@ -896,7 +896,7 @@ try {
   await revisar('superserie');
   const alSonarLista = await temporizadorAlSonar(p);
   check(alSonarLista.ok, `al acabar el descanso, el temporizador (con sus ±15 s y ±1 min) cabe entero en la pantalla ${JSON.stringify(alSonarLista)}`);
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await a2.getByRole('button', { name: 'Quitar la serie 1' }).click();
   await a1.getByRole('button', { name: 'Quitar la serie 1' }).click();
 
@@ -917,7 +917,7 @@ try {
     const alSonarEnf = await temporizadorAlSonar(p);
     check(alSonarEnf.ok, `en el modo enfoque, al sonar, el temporizador no se va a un lado ${JSON.stringify(alSonarEnf)}`);
     await revisar('enfoque-descanso-terminado');
-    await enf.getByRole('button', { name: 'Cerrar' }).click();
+    await enf.getByRole('button', { name: 'Cerrar', exact: true }).click();
   }
   await enf.getByRole('button', { name: 'Ejercicio siguiente' }).click();
   check((await enf.locator('.enfoque-donde').textContent()).startsWith('Ejercicio 2 de'), 'pasa al ejercicio siguiente');
@@ -1180,7 +1180,7 @@ try {
   await hojaVar.getByRole('button', { name: 'Cambiar a Press inclinado en máquina' }).click();
   await p.locator('.toast', { hasText: 'cambiado a Press inclinado en máquina' }).waitFor();
   await hojaVar.getByText('Ya no queda ninguno').waitFor();
-  await hojaVar.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaVar.getByRole('button', { name: 'Cerrar', exact: true }).click();
   check(await p.locator('.aviso-variante').count() === 0, 'con un toque lo cambia en todo su bloque y el aviso se va');
   await msg.getByRole('button', { name: 'Responder' }).click();
   await msg.getByRole('button', { name: 'Respuestas guardadas' }).click();
@@ -1330,7 +1330,7 @@ try {
   const filaAviso = p.locator('.aviso-fila', { hasText: 'el jueves no hay sala' });
   await filaAviso.waitFor();
   check((await filaAviso.textContent()).includes('Para Lucía Prueba'), 'publica un aviso solo para Lucía');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await irASeccion(p, 'Plantillas');
   await p.getByRole('button', { name: 'Asignar Full body 2 días a atletas' }).click();
   for (const n of ['Rubén Martín', 'Carlos Vera']) await p.getByRole('checkbox', { name: n }).check();
@@ -1392,7 +1392,7 @@ try {
   await comparar.getByRole('radiogroup', { name: 'Antes' }).getByRole('radio').nth(1).click();
   check((await comparar.textContent()).includes('28 días entre una y otra'), 'se elige qué fotos comparar');
   await revisar('antes-despues');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   // v0.15: dos vídeos lado a lado (Rubén tiene dos) y «lo que le pide la app»
   await p.getByRole('button', { name: 'Volver a atletas' }).click();
   await p.locator('.tarjeta-atleta', { hasText: 'Rubén Martín' }).first().click();
@@ -1408,7 +1408,7 @@ try {
   check(await compVid.locator('video.medio').evaluateAll((vs) => vs.length === 2 && vs.every((v) => !v.paused || v.currentTime > 0)), 'sus dos vídeos de sentadilla, lado a lado y reproducidos a la vez');
   await revisar('comparar-videos');
   await compVid.getByRole('button', { name: 'Pausar los dos' }).click();
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.getByRole('button', { name: 'Volver a atletas' }).click();
 
   console.log('\nCoach: búsqueda rápida');
@@ -1489,7 +1489,7 @@ try {
   await p.locator('.mensaje.suyo', { hasText: 'Perfecto, apúntalo siempre así' }).waitFor();
   check(true, 'y la lee en su conversación');
   await revisar('respuesta');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.locator('.respuesta', { hasText: 'vídeo' }).click();
   await p.locator('.mensaje.suyo', { hasText: 'toca el pecho' }).waitFor();
   await p.locator('.hoja-dialogo video.medio').waitFor({ timeout: 8000 }).catch(() => {});
@@ -1500,7 +1500,7 @@ try {
   await p.locator('.hoja-dialogo .rep-lienzo .forma').first().waitFor();
   check(await p.locator('.hoja-dialogo .rep-lienzo .forma').count() === 2, 'y «Ver el dibujo» le enseña la línea y el ángulo del coach sobre su vídeo');
   await revisar('dibujo-atleta');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.getByText('Tu coach te ha respondido').waitFor({ state: 'detached' });
   check(true, 'una vez leída, el aviso desaparece');
 
@@ -1584,7 +1584,7 @@ try {
   await p.locator('.informe').waitFor();
   check((await p.locator('.informe-fuerza li').count()) >= 3, 'el informe de su bloque trae la fuerza estimada de sus ejercicios principales');
   await revisar('informe');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   // v0.50: la vitrina de récords en trofeos («Nuevo» si es de los últimos 30 días); al tocar uno, cómo ha ido subiendo
   const trofeos = p.locator('.trofeo-tarjeta');
   await subProgreso(p, 'fuerza');
@@ -1603,7 +1603,7 @@ try {
   await revisar('record-evolucion-360-oscuro');
   await p.emulateMedia({ colorScheme: null });
   await p.setViewportSize({ width: 390, height: 844 });
-  await hojaRecord.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaRecord.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await hojaRecord.waitFor({ state: 'detached' });
   await p.getByRole('button', { name: /^Ver los \d+ ejercicios$/ }).click();
   check(await trofeos.count() > 6, '«Ver los N ejercicios» los enseña todos');
@@ -1615,7 +1615,7 @@ try {
   await p.getByRole('tab', { name: 'Récords' }).click();
   check(await p.locator('.tabla-records tbody tr').count() >= 6, 'y la tabla de récords de 1 a 12 repeticiones');
   await revisar('ficha-ejercicio');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.locator('.tab', { hasText: 'Semana' }).click();
   check(await hay(p.locator('.semanas-tabs button'), 4), 'Ana ve sus 4 semanas publicadas, no los borradores');
   // v0.50: Semana: la semana con sus botones (y deslizando los días), y cada sesión con sus músculos, sus minutos y sus pictogramas
@@ -2133,12 +2133,12 @@ try {
   await detalle.getByRole('button', { name: 'Destacar' }).click();
   await detalle.getByRole('button', { name: 'Destacado' }).waitFor();
   await revisar('diario-detalle');
-  await detalle.getByRole('button', { name: 'Cerrar' }).click();
+  await detalle.getByRole('button', { name: 'Cerrar', exact: true }).click();
   check(await hay(p.locator('.diario-item.destacado'), 2), 'destaca otro desde su ficha');
   await p.getByRole('button', { name: 'Subir vídeo' }).click();
   await p.getByRole('dialog', { name: 'Subir un vídeo' }).waitFor();
   await revisar('diario-subir');
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
   await p.getByRole('button', { name: /Pelayo/ }).click();
@@ -2161,7 +2161,7 @@ try {
   await p.getByRole('button', { name: 'Adjuntar', exact: true }).click();
   await p.getByRole('dialog', { name: 'Adjuntar' }).getByRole('button', { name: /Respuestas guardadas/ }).click();
   await p.getByRole('dialog', { name: 'Respuestas guardadas' }).waitFor();
-  await p.getByRole('button', { name: 'Cerrar' }).click();
+  await p.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.locator('.chat-area').fill('Vista. Tiene buena pinta; si molesta al bajar, me dices.');
   await p.getByRole('button', { name: 'Enviar' }).click();
   await p.locator('.burbuja.mia', { hasText: 'Tiene buena pinta' }).waitFor();
@@ -2591,7 +2591,7 @@ try {
   await p.evaluate(() => { document.documentElement.style.fontSize = ''; });
   await p.emulateMedia({ colorScheme: null });
   await p.setViewportSize({ width: 390, height: 844 });
-  await hojaCompra.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaCompra.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await hojaCompra.waitFor({ state: 'detached' });
   // (el curry se quita: lo que sigue cuenta con la cena de antes)
   await cenaHoy.locator('.entrada-menu', { hasText: 'Pollo al curry' }).last().locator('.entrada-texto').click();
@@ -2617,7 +2617,7 @@ try {
   check((await hojaSin.textContent()).includes('Día sin merienda') && curris.length === 1 && /656|656,3|656 kcal|kcal/.test(curris[0]),
     `al añadir la comida, las opciones de los días sin merienda (el curry, una vez y en grande: «${(curris[0] || '').slice(0, 60)}»)`);
   await revisar('sin-merienda-anadir');
-  await hojaSin.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaSin.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await interruptor.click();
   await p.locator('.mini', { hasText: 'te enseñamos las recetas para los días sin merienda' }).waitFor({ state: 'detached' });
   check(!(await interruptor.isChecked()), 'y lo desmarca');
@@ -2769,7 +2769,7 @@ try {
   await hojaPerfil.getByRole('button', { name: 'Animar a Rubén M.' }).click();
   await p.locator('.toast', { hasText: 'Le has mandado ánimo a Rubén M.' }).waitFor();
   check(await hojaPerfil.getByRole('button', { name: /Ya has animado a Rubén M\./ }).isDisabled(), 'le manda ánimo 🙌 (una vez por semana)');
-  await hojaPerfil.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaPerfil.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await hojaPerfil.waitFor({ state: 'detached' });
   // Doble toque en una publicación: 💪
   const deCarlos = p.getByRole('article', { name: 'Publicación de Carlos V.' }).filter({ hasText: 'Vuelvo después de dos semanas' });
@@ -2787,7 +2787,7 @@ try {
   await hojaVotos.waitFor();
   check((await hojaVotos.textContent()).includes('Ana L.') && (await hojaVotos.textContent()).includes('Carlos V.'), '«Ver quién ha votado»: los nombres de cada opción');
   await revisar('equipo-encuesta');
-  await hojaVotos.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaVotos.getByRole('button', { name: 'Cerrar', exact: true }).click();
   // Los filtros del muro
   await p.getByRole('button', { name: 'Logros', exact: true }).click();
   await p.waitForFunction(() => { const x = document.querySelectorAll('.post'); return x.length > 0 && [...x].every((e) => e.classList.contains('post-logro')); });
@@ -2815,7 +2815,7 @@ try {
   await hojaCom.locator('.comentario-equipo', { hasText: 'Enhorabuena, Rubén' }).waitFor();
   check(await hojaCom.locator('.comentario-equipo').count() === 3, 'comenta en el entreno de Rubén (con los dos que había)');
   await revisar('equipo-comentarios');
-  await hojaCom.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaCom.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.getByRole('article', { name: 'Publicación de Carlos V.' }).filter({ hasText: 'Vuelvo después de dos semanas' }).getByRole('button', { name: 'Opciones de la publicación' }).click();
   await p.getByRole('dialog', { name: 'Publicación' }).getByRole('button', { name: 'Avisar al coach' }).click();
   const hojaAvisar = p.getByRole('dialog', { name: 'Avisar al coach' });
@@ -2919,11 +2919,11 @@ try {
   const normasAj = p.getByRole('dialog', { name: 'Normas del equipo' });
   await normasAj.locator('.lista-normas').waitFor();
   check(await normasAj.getByRole('button', { name: 'He leído las normas' }).count() === 0, 'dentro, las normas se pueden leer cuando quiera desde los ajustes');
-  await normasAj.getByRole('button', { name: 'Cerrar' }).click();
+  await normasAj.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await normasAj.waitFor({ state: 'detached' });
   await hojaAj.getByRole('switch', { name: /No salir en el ranking/ }).check();
   await p.locator('.toast', { hasText: 'Ya no sales en el ranking' }).waitFor();
-  await hojaAj.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaAj.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.getByRole('tab', { name: 'Ranking' }).click();
   await p.locator('.ranking .nota', { hasText: 'No sales en el ranking' }).waitFor();
   await p.locator('.ranking .podio-sitio, .ranking .fila-ranking').first().waitFor(); // en una máquina lenta, la lista llega un momento después que la nota
@@ -3671,7 +3671,7 @@ try {
   const altC = await hojaC.locator('.tarjeta-img').getAttribute('alt');
   check(!/Bloque|Fuerza base/.test(altC) && /ni el bloque/.test(await hojaC.textContent()) && /FBE·\d{6}/.test(textoCarne), `la imagen no lleva el bloque (lo escribe el coach y podría decir algo de salud): «${altC}»; el número de socio, de 6 cifras`);
   await revisar('carne-compartir');
-  await hojaC.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaC.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.setViewportSize({ width: 360, height: 780 });
   await p.emulateMedia({ colorScheme: 'dark' });
   await carne.scrollIntoViewIfNeeded();
@@ -3917,7 +3917,7 @@ try {
   check(/microciclos/.test(await hojaC.textContent()) && /3 días por semana/.test(await hojaC.textContent()) && (await hojaC.locator('.dial-hoja-cifras dt').allTextContents()).join('|') === 'Hechas|Tu objetivo'
     && await hojaC.locator('.dial-hoja-lista li').count() === 3, 'su hoja: de lunes a domingo con su objetivo de 3, y las 3 de esta semana (las hechas y las que le tocan)');
   await revisar('hoja-constancia-microciclos');
-  await hojaC.getByRole('button', { name: 'Cerrar' }).first().click();
+  await hojaC.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
   await hojaC.waitFor({ state: 'detached' });
   await botonRI.click();
   const pantallaRI = p.locator('.racha-pantalla');
@@ -4070,7 +4070,7 @@ try {
   const txtInfo = await hojaInfo.textContent();
   check(/Enviado\s*hoy \d/.test(txtInfo) && /Leído\s*todavía no/.test(txtInfo) && /Editado\s*hoy \d/.test(txtInfo), 'Info: «Enviado: hoy …», «Leído: todavía no» y «Editado: hoy …»');
   await revisar('chat-info');
-  await hojaInfo.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaInfo.getByRole('button', { name: 'Cerrar', exact: true }).click();
   menu = await menuDe(p.locator('.burbuja.mia', { hasText: '(la tercera)' }).last());
   await menu.getByRole('button', { name: 'Editar' }).click();
   await p.locator('.chat-area').fill('Demasiado tarde');
@@ -5251,7 +5251,7 @@ try {
   check(await comp.locator('.superpuestos-marco video').evaluateAll((vs) => vs.length === 2 && vs.every((v) => !v.paused)), 'y se reproducen los dos a la vez');
   await revisar('superpuestos');
   await comp.getByRole('button', { name: 'Pausar' }).click();
-  await comp.getByRole('button', { name: 'Cerrar' }).click();
+  await comp.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await comp.waitFor({ state: 'detached' });
 
   // 15, 4, 16: Ana: el aviso lleva al momento corregido; ve la corrección, la voz al ritmo del vídeo y graba de nuevo
@@ -5303,7 +5303,7 @@ try {
   await enDemo((d) => d.archivos.some((a) => a.repite_de === idAna));
   const repe = (await demo()).archivos.find((a) => a.repite_de === idAna);
   check(!!repe && repe.tipo === 'video_tecnica', 'se envía como repetición del vídeo corregido');
-  await det.getByRole('button', { name: 'Cerrar' }).click();
+  await det.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await det.waitFor({ state: 'detached' });
   // «Mi técnica» en Progreso: por ejercicio, su nota en el tiempo y comparar dos
   await p.locator('.tab', { hasText: 'Progreso' }).first().click();
@@ -5321,7 +5321,7 @@ try {
   const comp2 = p.getByRole('dialog', { name: 'Comparar dos vídeos' });
   await comp2.locator('video.medio').nth(1).waitFor();
   check(true, 'y compara dos cualesquiera');
-  await comp2.getByRole('button', { name: 'Cerrar' }).click();
+  await comp2.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await revisar('mi-tecnica');
 
   // 3. La subida sigue por donde iba si se corta la conexión (la demo imita la subida por trozos) y se puede cancelar
@@ -5343,7 +5343,7 @@ try {
   await p.locator('.toast', { hasText: 'Vídeo pendiente enviado a tu coach' }).waitFor({ timeout: 15000 });
   check(true, 'y llega');
   await p.evaluate(() => localStorage.removeItem('fbe-demo-subida-lenta'));
-  if (await hojaSub.isVisible().catch(() => false)) { await hojaSub.getByRole('button', { name: 'Cerrar' }).click(); await hojaSub.waitFor({ state: 'detached' }); }
+  if (await hojaSub.isVisible().catch(() => false)) { await hojaSub.getByRole('button', { name: 'Cerrar', exact: true }).click(); await hojaSub.waitFor({ state: 'detached' }); }
 
   // A 360 px, en oscuro y al 125 %
   await p.setViewportSize({ width: 360, height: 740 });
@@ -5354,7 +5354,7 @@ try {
   await det2.locator('.correccion').waitFor();
   await revisar('video-v057-360-oscuro-125');
   check(await p.evaluate(() => document.documentElement.scrollWidth <= 360), 'a 360 px en oscuro y al 125 %, la corrección y el reproductor caben');
-  await det2.getByRole('button', { name: 'Cerrar' }).click();
+  await det2.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await mt.scrollIntoViewIfNeeded();
   await revisar('mi-tecnica-360-oscuro-125');
   await p.evaluate(() => document.documentElement.removeAttribute('data-letra'));
@@ -5370,7 +5370,7 @@ try {
   const comp3 = p.getByRole('dialog', { name: 'Comparar dos vídeos' });
   await comp3.locator('video.medio').nth(1).waitFor();
   check(true, 'el coach ve la repetición lado a lado con el original');
-  await comp3.getByRole('button', { name: 'Cerrar' }).click();
+  await comp3.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await comp3.waitFor({ state: 'detached' });
   let visto = false;
   for (let i = 0; i < 30 && !visto; i++) { visto = (await demo()).video_revisiones.some((r) => r.archivo_id === repe.id && r.visto_el); if (!visto) await p.waitForTimeout(100); }
@@ -5411,7 +5411,7 @@ try {
   await hojaL.getByRole('button', { name: /^Sí, borrar/ }).click();
   await p.locator('.toast', { hasText: '1 vídeo borrado (900 MB)' }).waitFor();
   check(await enDemo((d) => !d.archivos.some((a) => a.id === idViejo)), 'se confirma en la app y se borra (sus archivos, a la cola de Storage)');
-  await hojaL.getByRole('button', { name: 'Cerrar' }).click();
+  await hojaL.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await p.evaluate(() => localStorage.removeItem('fbe-plan-gb'));
 
   }

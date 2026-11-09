@@ -99,8 +99,8 @@ export async function probarRevision067({ navegador, check, base = 'http://local
     const fila = vista.locator('.revision-fila').first();
     const nombre = (await fila.locator('.revision-quien strong').textContent()).trim();
     check(await fila.locator('.avatar').count() === 1 && /sesiones esta semana|Solo nutrición/.test(await fila.locator('.revision-quien').textContent())
-      && (await fila.locator('.revision-acciones .btn').allTextContents()).map((t) => t.trim()).join() === 'Chat,Programar,Seguimiento' && await fila.locator('.revision-avisos li').count() >= 1,
-      `cada atleta con su foto o iniciales, sus sesiones de la semana, lo que pide atención y Chat, Programar y Seguimiento (${nombre})`);
+      && (await fila.locator('.revision-acciones .btn').allTextContents()).map((t) => t.trim()).join() === 'Chat,Programar,Seguimiento,Redactar mensaje,Mandar una tarea' && await fila.locator('.revision-avisos li').count() >= 1,
+      `cada atleta con su foto o iniciales, sus sesiones de la semana, lo que pide atención y Chat, Programar, Seguimiento, Redactar mensaje y Mandar una tarea (${nombre})`);
     await revisar('revision');
     check(await estrecho('revision'), '«Revisión semanal» cabe a 360 px en oscuro');
     // Marcar al primero y dejarle una nota

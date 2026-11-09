@@ -125,7 +125,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     check(await enDemo((d) => d.video_autoevaluacion?.some((x) => Number(x.rpe) === 8.5 && x.molestia === true && x.zona === 'rodilla' && /rodillas hacia dentro/.test(x.nota || ''))),
       '(12) se envía con su valoración: RPE 8,5, lo que nota y una molestia en la rodilla (con su consentimiento de salud)');
     const idVid = (await demo()).video_autoevaluacion.find((x) => x.zona === 'rodilla').archivo_id;
-    if (await hojaSub.isVisible().catch(() => false)) { await hojaSub.getByRole('button', { name: 'Cerrar' }).click(); await hojaSub.waitFor({ state: 'detached' }); }
+    if (await hojaSub.isVisible().catch(() => false)) { await hojaSub.getByRole('button', { name: 'Cerrar', exact: true }).click(); await hojaSub.waitFor({ state: 'detached' }); }
 
     // ---------------------------------------------------------------- 18: la cola, con sus tiempos
     // (que lleve 30 horas esperando: con el objetivo de 24 h, pasado; con el de 48, cerca). Sin recargar: en la demo, lo
@@ -217,7 +217,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     const compM = p.getByRole('dialog', { name: 'Comparar dos vídeos' });
     await compM.locator('video.medio').nth(1).waitFor();
     check((await compM.getByLabel('Vídeo de la derecha').locator('option:checked').textContent()).startsWith('Su mejor'), '(7) «Comparar con su mejor»: lado a lado con el de mejor nota de ese ejercicio');
-    await compM.getByRole('button', { name: 'Cerrar' }).click();
+    await compM.getByRole('button', { name: 'Cerrar', exact: true }).click();
     await compM.waitFor({ state: 'detached' });
     // 6. Subir un vídeo modelo y compararse con él, superpuestos
     await tarj.getByRole('button', { name: 'Frases y vídeo modelo' }).click();
@@ -231,7 +231,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     await p.locator('.toast', { hasText: 'Vídeo modelo guardado' }).waitFor({ timeout: 30000 });
     check(await hay(tec.locator('.modelo-fila'), antes + 1) && await enDemo((d) => d.videos_modelo?.some((m) => m.angulo === 'De frente' && /^modelos\//.test(m.ruta))), '(6) el coach sube su vídeo modelo de la sentadilla (de frente)');
     await revisar('videos-modelo');
-    await tec.getByRole('button', { name: 'Cerrar' }).first().click();
+    await tec.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     await tec.waitFor({ state: 'detached' });
     await tarj.getByRole('button', { name: 'Comparar con el vídeo modelo' }).click();
     const compMod = p.getByRole('dialog', { name: 'Comparar dos vídeos' });
@@ -244,7 +244,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     await p.waitForTimeout(400);
     check(await compMod.locator('.superpuestos-marco video').evaluateAll((vs) => vs.every((v) => !v.paused)), 'y se reproducen a la vez');
     await compMod.getByRole('button', { name: 'Pausar' }).click();
-    await compMod.getByRole('button', { name: 'Cerrar' }).click();
+    await compMod.getByRole('button', { name: 'Cerrar', exact: true }).click();
     await compMod.waitFor({ state: 'detached' });
     // A 360 px, en oscuro: la revisión con todo
     await p.setViewportSize({ width: 360, height: 740 });
@@ -284,13 +284,13 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     await p.waitForFunction(() => { const v = document.querySelector('.hoja-dialogo video.medio'); return v && Math.abs(v.currentTime - 3.1) < 0.15; }, null, { timeout: 10000 });
     check(true, 'y abre su vídeo en el momento corregido');
     check((await det.textContent()).includes('Tu valoración') && (await det.textContent()).includes('RPE 8,5'), 'donde ve también su valoración');
-    await det.getByRole('button', { name: 'Cerrar' }).first().click();
+    await det.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     await det.waitFor({ state: 'detached' });
     await sent.getByRole('button', { name: 'Ver el vídeo modelo' }).click();
     const hm = p.getByRole('dialog', { name: 'Modelo: Sentadilla barra alta' });
     await hm.locator('video.medio').waitFor();
     check(await hm.getByRole('group', { name: 'Ángulo' }).getByRole('button').count() === 2, 'el vídeo modelo, con sus dos ángulos (de lado y de frente)');
-    await hm.getByRole('button', { name: 'Cerrar' }).first().click();
+    await hm.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     await hm.waitFor({ state: 'detached' });
     await rec.getByRole('button', { name: 'Entendido' }).click();
     await sent.getByRole('button', { name: 'Recordatorio de tu coach' }).waitFor();
@@ -313,7 +313,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     const fuera = p.getByRole('dialog', { name: 'Tu vídeo' });
     await fuera.getByText('Ese vídeo ya no está en tu diario.').waitFor();
     check(true, 'Ana ya no lo tiene (el enlace dice que ya no está en su diario)');
-    await fuera.getByRole('button', { name: 'Cerrar' }).first().click();
+    await fuera.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     await p.locator('.tab', { hasText: 'Semana' }).click();
     await p.locator('.dia', { hasText: 'Pierna A' }).first().click();
     const sent2 = p.locator('.ejercicio', { hasText: 'Sentadilla barra alta' }).first();
@@ -327,7 +327,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     const detR = p.getByRole('dialog', { name: /^Sentadilla barra alta,/ });
     await detR.locator('.mensaje', { hasText: 'Rodillas hacia fuera' }).waitFor();
     check(!(await detR.textContent()).includes('Tu valoración') || !(await detR.textContent()).includes('RPE 8,5'), 'Rubén lo ve con lo que dijo el coach (y sin la valoración de Ana)');
-    await detR.getByRole('button', { name: 'Cerrar' }).first().click();
+    await detR.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
 
     // ---------------------------------------------------------------- «Entendido», solo de hoy (y nada al salir)
     const hoyE = await p.evaluate(() => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date()));

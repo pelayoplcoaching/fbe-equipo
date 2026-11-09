@@ -113,7 +113,7 @@ export async function probarComunidad069({ navegador, check, base = 'http://loca
     await auto.check();
     await toast('Tus entrenos se compartirán solos');
     check(await entrenando.isChecked() && await auto.isChecked(), 'Ana enciende los dos');
-    await hojaAj.getByRole('button', { name: 'Cerrar' }).click();
+    await hojaAj.getByRole('button', { name: 'Cerrar', exact: true }).click();
     await hojaAj.waitFor({ state: 'detached' });
     // ---------------- Ana empieza su sesión y apunta una serie (está entrenando)
     await p.locator('.tab', { hasText: 'Hoy' }).click();
@@ -184,7 +184,7 @@ export async function probarComunidad069({ navegador, check, base = 'http://loca
     await p.waitForFunction(() => [...document.querySelectorAll('.fuerza-comentario')].some((b) => b.getAttribute('aria-pressed') === 'true' && /^Fuerza: 1 \(Rubén M\.\)$/.test(b.getAttribute('aria-label'))));
     check(true, '💪 al comentario de Carlos: cuenta 1 y dice quién');
     await revisar('comentarios-069-360-oscuro');
-    await hojaCom.getByRole('button', { name: 'Cerrar' }).click();
+    await hojaCom.getByRole('button', { name: 'Cerrar', exact: true }).click();
     await p.setViewportSize({ width: 390, height: 844 });
     await p.emulateMedia({ colorScheme: null, reducedMotion: null });
     // ---------------- Ana termina la sesión: se comparte sola, con «Deshacer»

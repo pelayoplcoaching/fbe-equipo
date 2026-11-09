@@ -162,7 +162,7 @@ export async function probarPerfil114({ navegador, check, base = 'http://localho
     const hr = p.getByRole('dialog', { name: 'Compartir el récord' });
     await hr.locator('.tarjeta-img').waitFor({ timeout: 15000 });
     check(true, 'v0.116: cada récord de tu vitrina, con su tarjeta para compartir');
-    await hr.getByRole('button', { name: 'Cerrar' }).click();
+    await hr.getByRole('button', { name: 'Cerrar', exact: true }).click();
     await hr.waitFor({ state: 'detached' }).catch(() => {});
     await revisar('perfil-logros');
     // Actividad
@@ -176,7 +176,7 @@ export async function probarPerfil114({ navegador, check, base = 'http://localho
     await hp.locator('.tarjeta-img').waitFor({ timeout: 15000 });
     check(/Mi \d{4} en FBE/.test(await hp.locator('.tarjeta-img').getAttribute('alt') || '') || true, 'v0.116: «Compartir tu perfil», con la tarjeta de tu año');
     await revisar('perfil-compartir');
-    await hp.getByRole('button', { name: 'Cerrar' }).click();
+    await hp.getByRole('button', { name: 'Cerrar', exact: true }).click();
     await hp.waitFor({ state: 'detached' }).catch(() => {});
     check(await estrecho('perfil-actividad'), 'la actividad cabe a 360 px en oscuro');
     // En el equipo
@@ -197,7 +197,7 @@ export async function probarPerfil114({ navegador, check, base = 'http://localho
     }
     await revisar('perfil-hoja-equipo');
     check(await estrecho('perfil-hoja-equipo'), 'tu perfil en el equipo cabe a 360 px en oscuro');
-    await hoja.getByRole('button', { name: 'Cerrar' }).click();
+    await hoja.getByRole('button', { name: 'Cerrar', exact: true }).click();
   } catch (e) {
     check(false, `v0.114: ${e.message.split('\n').slice(0, 6).join(' ')} | en: ${(e.stack || '').split('\n').find((l) => l.includes('e2e-perfil-114')) || '?'}`);
     await p.screenshot({ path: new URL('./e2e-fallo-114.png', import.meta.url).pathname }).catch(() => {});

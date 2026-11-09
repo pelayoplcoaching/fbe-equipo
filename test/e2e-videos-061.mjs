@@ -271,7 +271,7 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     await hecho.waitFor({ timeout: 40000 });
     const sinE = Number(await hecho.getAttribute('data-estela'));
     check(conE > 10 && sinE === 0, `(8) el vídeo exportado lleva la estela (en ${conE} fotogramas) y, sin ella, no (${sinE})`);
-    await exp.getByRole('button', { name: 'Cerrar' }).first().click();
+    await exp.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     await estela.click();
     check(await estela.getAttribute('aria-pressed') === 'false' && await hay(det.locator('.capa-estela'), 0), 'y se apaga');
     await cerrarDialogos();

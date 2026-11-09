@@ -125,7 +125,7 @@ export async function probarComunidad070({ navegador, check, base = 'http://loca
       'en su perfil, sus insignias («Primera publicación») y la siguiente con su progreso');
     check(/Tú y Ana L\./.test(await hojaPerfil.locator('.pe-parejas').textContent()) && /Tú y Carlos V\./.test(await hojaPerfil.locator('.pe-parejas').textContent()), 'y sus compañeros de racha');
     await revisar('perfil-insignias');
-    await hojaPerfil.getByRole('button', { name: 'Cerrar' }).click();
+    await hojaPerfil.getByRole('button', { name: 'Cerrar', exact: true }).click();
     await hojaPerfil.waitFor({ state: 'detached' });
     // ---------------- Retos: por equipos y de cardio
     await p.getByRole('tab', { name: 'Retos' }).click();

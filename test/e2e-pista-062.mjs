@@ -263,7 +263,7 @@ export async function probarPista062({ navegador, check, base = 'http://localhos
     check(!t5.src && t5.tipo === 'ambient' && t5.titulo === null, 'cuando acaba la pista, se suelta sola: vuelve «ambient» y se limpia la pantalla de bloqueo');
 
     // ---------- «Saltar» la para y lo suelta todo
-    await p.getByRole('button', { name: 'Cerrar' }).click().catch(() => {});
+    await p.getByRole('button', { name: 'Cerrar', exact: true }).click().catch(() => {});
     const n1 = (await rpcs()).length;
     await ej.getByRole('button', { name: 'Marcar la serie 2 como hecha' }).click();
     await esperar(p, () => !!document.getElementById('fbe-pista')?.getAttribute('src'));
@@ -369,7 +369,7 @@ export async function probarPista062({ navegador, check, base = 'http://localhos
     check(ps && pfs >= tS - 500 && pfs <= tS2 + 1000 && finViejoS - pfs > 2000,
       '(revisión M1) con la sesión abierta y el móvil bloqueado, ⏪ que acaba el descanso también manda el aviso al móvil ya (no al final de antes)');
     await p.waitForTimeout(6500);
-    await p.getByRole('button', { name: 'Cerrar' }).click().catch(() => {});
+    await p.getByRole('button', { name: 'Cerrar', exact: true }).click().catch(() => {});
     await marcarLibre();
     await p.evaluate(() => document.getElementById('fbe-pista').pause());
     await esperar(p, () => navigator.audioSession.type === 'ambient' && !navigator.mediaSession.metadata);

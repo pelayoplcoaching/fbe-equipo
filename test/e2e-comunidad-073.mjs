@@ -154,7 +154,7 @@ export async function probarComunidad073({ navegador, check, base = 'http://loca
     const alt = await hojaComp.locator('img.tarjeta-img').getAttribute('alt');
     check(alt.startsWith(`${tituloMesEquipo(MES.mes)}:`) && /sesion/.test(alt) && !/kg|peso/i.test(alt), '«Compartir» prepara la imagen de siempre (solo recuentos)');
     await revisar('mes-compartir-073');
-    await hojaComp.getByRole('button', { name: 'Cerrar' }).first().click();
+    await hojaComp.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     await hojaComp.waitFor({ state: 'detached' });
     // ---------------- Una reacción nueva y una pegatina
     const deRuben = post('Rubén M.').filter({ has: p.locator('.reacciones') }).first();
@@ -169,7 +169,7 @@ export async function probarComunidad073({ navegador, check, base = 'http://loca
     await hojaCom.getByRole('button', { name: 'Mandar la pegatina «Día de pierna»' }).click();
     await hojaCom.locator('svg.pegatina-comentario[aria-label="Pegatina: Día de pierna"]').waitFor();
     check(true, 'manda la pegatina «Día de pierna» como comentario');
-    await hojaCom.getByRole('button', { name: 'Cerrar' }).first().click();
+    await hojaCom.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     await hojaCom.waitFor({ state: 'detached' });
     // ---------------- Un momento de 24 horas
     await p.locator('.tira-momentos').getByRole('button', { name: 'Tu momento' }).click();
@@ -189,7 +189,7 @@ export async function probarComunidad073({ navegador, check, base = 'http://loca
     check(/Quedan (23|24) h/.test(await verMom.textContent()) && await post('Atardecer después de la sesión').count() === 0,
       'publica un momento: sale en la tira (no en el muro) y le quedan 24 horas');
     await revisar('momento-ver-073');
-    await verMom.getByRole('button', { name: 'Cerrar' }).first().click();
+    await verMom.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     await verMom.waitFor({ state: 'detached' });
     // (pasan 24 horas: se simula atrasando su hora en la demo)
     await enLaDemo(() => {

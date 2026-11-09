@@ -130,7 +130,7 @@ export async function probarRecetario({ navegador, check, base = 'http://localho
     const factoresDespues = await leerFactores();
     const f = Number(f1[1].replace(',', '.'));
     check(Object.keys(factoresAntes).length === Number(f1[2]) && Object.entries(factoresAntes).every(([id, antes]) => Math.abs(factoresDespues[id] / antes - f) < 0.02), 'en la base, el factor de cada una de sus recetas se ha multiplicado por ese factor');
-    await hoja().getByRole('button', { name: 'Cerrar' }).first().click();
+    await hoja().getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     check(await hay(hoja(), 0), 'la hoja se cierra');
 
     // Todo el equipo, desde Biblioteca → Recetas
@@ -146,7 +146,7 @@ export async function probarRecetario({ navegador, check, base = 'http://localho
     await equipo().locator('ul[aria-label="Recetarios"] li button', { hasText: 'Ana López' }).click();
     await p.getByRole('dialog', { name: 'El recetario de Ana y su plan' }).locator('table').waitFor();
     check(await p.getByRole('dialog', { name: 'El recetario de Ana y su plan' }).locator('section', { hasText: 'Reescalar con un factor' }).count() === 1, 'al tocar a una atleta se abre su comprobación');
-    await p.getByRole('dialog', { name: 'El recetario de Ana y su plan' }).getByRole('button', { name: 'Cerrar' }).first().click();
+    await p.getByRole('dialog', { name: 'El recetario de Ana y su plan' }).getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     check(await hay(equipo().locator('ul[aria-label="Recetarios"] li'), 2), 'y al cerrarla vuelve a la lista del equipo');
 
     // A 360 px y en oscuro

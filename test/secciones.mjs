@@ -21,7 +21,7 @@ export async function haySeccion(p, nombre) {
   const hoja = p.locator('.hoja-mas');
   await hoja.waitFor();
   const n = await hoja.locator('.mas-fila button', { hasText: nombre }).count();
-  await hoja.getByRole('button', { name: 'Cerrar' }).first().click();
+  await hoja.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
   await hoja.waitFor({ state: 'detached' });
   return n > 0;
 }

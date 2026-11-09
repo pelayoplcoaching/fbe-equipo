@@ -196,7 +196,7 @@ export async function probarVideos060({ navegador, check, base = 'http://localho
     await p.locator('.toast', { hasText: 'Vídeo enviado a tu coach' }).last().waitFor({ timeout: 20000 });
     let idOtro = null;
     check(await enDemo((d) => { const a = d.archivos.find((x) => x.angulo_de === idDif); if (a) idOtro = a.id; return !!a; }), '(9) y el otro ángulo, enlazado al primero');
-    if (await hojaSub.isVisible().catch(() => false)) { await hojaSub.getByRole('button', { name: 'Cerrar' }).first().click(); }
+    if (await hojaSub.isVisible().catch(() => false)) { await hojaSub.getByRole('button', { name: 'Cerrar', exact: true }).first().click(); }
     await cerrarDialogos();
 
     // ---------------------------------------------------------------- 1 y 2. El coach graba su revisión
@@ -279,7 +279,7 @@ export async function probarVideos060({ navegador, check, base = 'http://localho
     const [descarga] = await Promise.all([p.waitForEvent('download', { timeout: 10000 }), ex.getByRole('button', { name: 'Guardar en el móvil' }).click()]);
     check(/-corregido\.(mp4|webm)$/.test(descarga.suggestedFilename()) && (await demo()).archivos.length === subidosAntes, `«Guardar en el móvil» lo descarga (${descarga.suggestedFilename()}) y no se sube nada`);
     await revisar('exportar-hecho');
-    await ex.getByRole('button', { name: 'Cerrar' }).first().click();
+    await ex.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
 
     // ---------------------------------------------------------------- 9. Dos ángulos
     await det.getByRole('button', { name: 'Dos ángulos' }).click();
@@ -305,7 +305,7 @@ export async function probarVideos060({ navegador, check, base = 'http://localho
     check(dosA, 'en un móvil, uno encima del otro');
     check(await estrecho('dos-angulos'), 'a 360 px en oscuro, «Dos ángulos» cabe');
     await revisar('dos-angulos');
-    await da.getByRole('button', { name: 'Cerrar' }).first().click();
+    await da.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
     check(await estrecho('revision-coach-v060'), 'a 360 px en oscuro, la revisión (grabar, exportar, dos ángulos y las respuestas en vídeo) cabe');
     await cerrarDialogos();
 

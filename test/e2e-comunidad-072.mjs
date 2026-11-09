@@ -171,7 +171,7 @@ export async function probarComunidad072({ navegador, check, base = 'http://loca
     const ics = readFileSync(await descarga.path(), 'utf8');
     check(/\.ics$/.test(descarga.suggestedFilename()) && /SUMMARY:Movilidad en el Retiro/.test(ics) && /T183000/.test(ics) && /LOCATION:Parque del Retiro/.test(ics) && /TRIGGER:-PT120M/.test(ics),
       '«Añadir al calendario» descarga su .ics (a las 18:30, con el sitio y un aviso 2 h antes)');
-    await hojaVer.getByRole('button', { name: 'Cerrar' }).click();
+    await hojaVer.getByRole('button', { name: 'Cerrar', exact: true }).click();
     await hojaVer.waitFor({ state: 'detached' });
     // (llega su hora: se simula adelantándola en la demo, que se guarda en este navegador)
     await p.waitForTimeout(500);
