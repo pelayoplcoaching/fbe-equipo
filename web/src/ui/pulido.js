@@ -145,7 +145,12 @@ export function instalarPulido(d = typeof document !== 'undefined' ? document : 
     const modo = el.getAttribute('inputmode');
     if (!(el.type === 'number' || modo === 'decimal' || modo === 'numeric') || el.getAttribute('autocomplete') === 'one-time-code') return;
     // (tras el toque: en el iPhone, el propio toque deja el cursor donde cayó y desharía la selección)
-    setTimeout(() => { if (d.activeElement === el) { try { el.select(); } catch { /* */ } } }, 0);
+    // (diseño, tanda 41) También al momento, y la de después solo si no se ha tecleado nada: con el teclado, lo que se
+    // escribe justo después de Intro llegaba antes que la selección aplazada, y la segunda tecla borraba la primera
+    // («50» quedaba en «0»; la e2e del editor lo cazó cuando la página iba un poco más cargada).
+    const antes = el.value;
+    try { el.select(); } catch { /* */ }
+    setTimeout(() => { if (d.activeElement === el && el.value === antes) { try { el.select(); } catch { /* */ } } }, 0);
   });
   // Un toque háptico al tocar los controles de cada día (hapticos.js; con su ajuste)
   d.addEventListener('click', (e) => {
