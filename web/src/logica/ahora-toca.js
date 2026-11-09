@@ -26,10 +26,12 @@ export function objetivoEsfuerzo(se, propuesta = null) {
 }
 
 // Cómo se llama la serie: «Serie 3 de 4», «Serie top», «Back-off 2», «Serie 5 (de más)»
+// (series añadidas: con `pautadas`, las de la pauta; `series` puede llevar sumadas las añadidas, logica/series-extra.js)
 export function nombreSerie(se, numero) {
-  if (numero > se.series) return `Serie ${numero} (de más)`;
-  if (esTopBackoff(se)) return numero === 1 ? 'Serie top' : `Back-off ${numero - 1} de ${se.series - 1}`;
-  return `Serie ${numero} de ${se.series}`;
+  const pautadas = se.pautadas ?? se.series;
+  if (numero > pautadas) return `Serie ${numero} (de más)`;
+  if (esTopBackoff(se)) return numero === 1 ? 'Serie top' : `Back-off ${numero - 1} de ${pautadas - 1}`;
+  return `Serie ${numero} de ${pautadas}`;
 }
 
 // Lo que enseña la tarjeta (null si ya no queda nada). ejercicios y hechas, como en la sesión; proxima, la que dijo la

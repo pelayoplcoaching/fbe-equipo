@@ -18,7 +18,7 @@ const RPE_ENFOQUE = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 // v0.50: en su capa (en <body>), como las hojas
 export function Enfoque(props) { return <Capa><EnfoquePantalla {...props} /></Capa>; }
 function EnfoquePantalla({
-  ejercicios, hechas, records, etiquetas, actualDe, ultimasDe, foco, progresionAuto, notas, guardarNota,
+  ejercicios, extras = {}, hechas, records, etiquetas, actualDe, ultimasDe, foco, progresionAuto, notas, guardarNota,
   guardar, quitar, descanso, setDescanso, seId, setSeId, inicio, alSalir, alTerminar, ahora = null, teclado = null,
 }) {
   const { aviso } = useApp();
@@ -39,7 +39,8 @@ function EnfoquePantalla({
   const ultimas = ultimasDe(e);
   const info = prepararEjercicio(e, cambiado ? actual : null, ultimas, foco, progresionAuto && !cambiado);
   const h = hechas[e.id] || {};
-  const filas = Math.max(e.series, ...Object.keys(h).map(Number), 0);
+  // (con las series añadidas desde la tarjeta, que la sesión guarda en el móvil)
+  const filas = Math.max(e.series + (extras[e.id] || 0), ...Object.keys(h).map(Number), 0);
   const pendiente = Array.from({ length: filas }, (_, i) => i + 1).find((k) => !h[k]);
   const [sel, setSel] = useState(null);           // serie elegida para corregir (o una de más)
   const numero = sel ?? pendiente ?? null;          // null = ejercicio completo
@@ -137,14 +138,14 @@ function EnfoquePantalla({
     setSel(null);
     guardar(e, numero, v);
     if (!nueva) return;
-    // Lo que toca después (en una superserie, el siguiente de la ronda)
+    // Lo que toca después (en una superserie, el siguiente de la ronda); una serie añadida sin hacer aún toca aquí
     cuenta[e.id] += 1;
-    const r = trasSerie(ejercicios, cuenta, e.id);
+    const r = trasSerie(ejercicios.map((x) => (extras[x.id] ? { ...x, series: x.series + extras[x.id] } : x)), cuenta, e.id);
     if (r.siguiente && r.siguiente.id !== e.id) setSeId(r.siguiente.id);
   }
 
   // Lo que falta: series pendientes por ejercicio y minutos aproximados
-  const pendientes = Object.fromEntries(ejercicios.map((x) => [x.id, Math.max(0, x.series - Object.keys(hechas[x.id] || {}).length)]));
+  const pendientes = Object.fromEntries(ejercicios.map((x) => [x.id, Math.max(0, x.series + (extras[x.id] || 0) - Object.keys(hechas[x.id] || {}).length)]));
   const quedanSeries = Object.values(pendientes).reduce((t, n) => t + n, 0);
   const minutos = duracionEstimada(ejercicios, pendientes);
   const siguienteEj = ejercicios.slice(idx + 1).find((x) => pendientes[x.id] > 0) || ejercicios.slice(0, idx).find((x) => pendientes[x.id] > 0);

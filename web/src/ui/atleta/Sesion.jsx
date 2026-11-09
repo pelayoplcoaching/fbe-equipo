@@ -23,6 +23,7 @@ import { pasoPeso, tipoCarga, pideRpe, discoMinimoValido, DISCO_MINIMO_DEFECTO, 
 import { enLibras, vista, deVista, pesoTxt } from '../../logica/unidades.js';
 import { propagarCambio, aplicarPropagacion, deshacerPropagacion, textoPropagacion } from '../../logica/propagar.js';
 import { ahoraToca, serieQueToca } from '../../logica/ahora-toca.js';
+import { leerExtras, guardarExtras, borrarExtras, conExtras, filasHechas } from '../../logica/series-extra.js';
 import { aplicarOrden, moverAlFinal, moverBloque, reordenarPendientes, puedeDejarLuego, bloquesPendientes, proximaTrasReordenar } from '../../logica/orden-sesion.js';
 import { OrdenarSesion } from './OrdenarSesion.jsx';
 import { Enfoque } from './Enfoque.jsx';
@@ -135,6 +136,10 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [ordenando, setOrdenando] = useState(false);
   // Ejercicios elegidos fuera de las alternativas (de la biblioteca) y su «última vez»
   const [extra, setExtra] = useState({ ejercicios: {}, ultimas: {} });
+  // Las series añadidas («Añadir serie») de cada ejercicio, guardadas en el móvil mientras dura la sesión (antes vivían en
+  // la tarjeta y se perdían al plegarse o al recargar; y el descanso no las contaba)
+  const [extras, setExtras] = useState(() => leerExtras(id));
+  const cambiarExtra = (seId, n) => setExtras((x) => guardarExtras(id, { ...x, [seId]: n }));
   // Notas fijadas del atleta por ejercicio (se cargan con la sesión y se guardan al momento)
   const [notas, setNotas] = useState({});
   // v0.52.2: el descanso que eligió para cada ejercicio (ejercicio_id → segundos), en este móvil
@@ -308,7 +313,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const etiquetas = etiquetasSuperserie(ejercicios);
   // La serie que toca ahora: la que dijo la última serie marcada (si sigue sin hacer) o la primera sin hacer
   // (v0.63: la misma regla en logica/ahora-toca.js, para la tarjeta «Ahora toca» del descanso)
-  const prox = serieQueToca(ejercicios, hechas, proxima, { completada: sesion.completada });
+  // (con las series añadidas sumadas: una añadida sin hacer también «toca»)
+  const ejerciciosConExtras = conExtras(ejercicios, extras);
+  const prox = serieQueToca(ejerciciosConExtras, hechas, proxima, { completada: sesion.completada });
   const grupos = gruposSuperserie(ejercicios);
   // v0.51: antes de empezar, la portada (no en las hechas, ni con series, ni de baja)
   if (!sesion.completada && !empezada && todas.length === 0 && atleta.estado !== 'baja') {
@@ -380,7 +387,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // v0.63 (8): «Ahora toca» en el descanso: la serie que toca (la de la píldora), con su propuesta, la última vez, el
   // recordatorio o la nota de tu coach y los discos por lado
   const ahora = descanso && !sesion.completada ? ahoraToca({
-    ejercicios, hechas, proxima, completada: sesion.completada, tras: descanso.tras, etiquetas,
+    ejercicios: ejerciciosConExtras, hechas, proxima, completada: sesion.completada, tras: descanso.tras, etiquetas,
     propuestaDe: (pe, k) => propuestaDe(pe, k), nombreDe: (x) => actualDe(x).nombre, ultimasDe,
     recordatoriosDe: (x) => tecnica037.datos?.recs?.[actualDe(x).id] || [], barraDe: (x) => esBarra(actualDe(x).nombre),
   }) : null;
@@ -441,7 +448,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     if (!previa) quitarPrepAntigua();
     // v0.49: al completar las series pautadas (las de «Añadir serie» no cuentan), la tarjeta se pliega en una línea
     // un momento después, para ver el check
-    if (!previa && numero <= e.series && !pautadasHechas(e, hechas[e.id]) && pautadasHechas(e, { ...hechas[e.id], [numero]: local })) {
+    // (y con una serie añadida sin hacer, tampoco: se pliega cuando están todas las filas)
+    if (!previa && !filasHechas(e, extras[e.id], hechas[e.id]) && filasHechas(e, extras[e.id], { ...hechas[e.id], [numero]: local })) {
       cancelarPlegado(e.id);
       plegar.current[e.id] = setTimeout(() => { delete plegar.current[e.id]; plegarTarjeta(e); }, 700);
     }
@@ -454,15 +462,17 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       const cuenta = Object.fromEntries(ejercicios.map((x) => [x.id, Object.keys(hechas[x.id] || {}).length]));
       cuenta[e.id] += 1;
       const r = trasSerie(ejercicios, cuenta, e.id, descansoDe);
-      // La serie que toca, contando solo las pautadas (una de más no adelanta al ejercicio siguiente)
-      const cuentaP = Object.fromEntries(ejercicios.map((x) => [x.id, seriesPautadasHechas(x, x.id === e.id ? { ...hechas[e.id], [numero]: local } : hechas[x.id])]));
-      const rP = trasSerie(ejercicios, cuentaP, e.id, descansoDe);
+      // La serie que toca, contando las pautadas y las añadidas (una serie guardada más allá no adelanta al ejercicio
+      // siguiente; una añadida sin hacer, tampoco: «Después: serie 5 de press militar»)
+      const lista = ejerciciosConExtras;
+      const cuentaP = Object.fromEntries(lista.map((x) => [x.id, seriesPautadasHechas(x, x.id === e.id ? { ...hechas[e.id], [numero]: local } : hechas[x.id])]));
+      const rP = trasSerie(lista, cuentaP, e.id, descansoDe);
       setProxima(rP.siguiente ? { id: rP.siguiente.id, numero: rP.siguiente.numero } : null);
       // (revisión L1) la siguiente, con la misma regla que la sesión, la píldora y «Ahora toca» (serieQueToca, con lo hecho ya
       // contando esta): así la pantalla de bloqueo, el aviso al móvil y la voz dicen la misma serie que la tarjeta (antes, al
       // saltarse una, contaban las hechas y decían otra). El descanso y la ronda, como siempre (trasSerie)
       const hechasTras = { ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } };
-      const { sig, texto, voz, aviso: avisoMovil } = textosSiguiente(ejercicios, hechasTras, rP.siguiente, e.id);
+      const { sig, texto, voz, aviso: avisoMovil } = textosSiguiente(lista, hechasTras, rP.siguiente, e.id);
       // v0.50: el temporizador sale en la página, debajo de este ejercicio (o de su superserie)
       if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, aviso: avisoMovil, tras: e.id, inicio: Date.now() });
       else if (r.enRonda) { cambiarDescanso(null); avisoConCambio(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); }
@@ -497,7 +507,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       try {
         const a = actualDe(sig);
         const prop = propuestaDe(sig, nx.numero, hechasTras[sig.id] || {});
-        voz = fraseSerie({ numero: nx.numero, series: sig.series, nombre: a.nombre, kg: prop?.kg, reps: prop?.reps });
+        voz = fraseSerie({ numero: nx.numero, series: sig.pautadas ?? sig.series, nombre: a.nombre, kg: prop?.kg, reps: prop?.reps });
         avisoMovil = textoAviso({ texto, kg: prop?.kg, reps: prop?.reps }) || texto;
       } catch { voz = `Ahora, ${texto}.`; }
     }
@@ -517,7 +527,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       const t = textosSiguiente(lista, hechas, prox2, descanso.tras);
       cambiarDescanso({ ...descanso, texto: t.texto, voz: t.voz, aviso: t.aviso });
     }
-    const nx = serieQueToca(lista, hechas, prox2);
+    const nx = serieQueToca(conExtras(lista, extras), hechas, prox2);
     if (foco && nx) {
       // Se abre lo que toca ahora y se lleva la vista a él
       setAbiertos((a) => new Set([...(a || []), nx.id]));
@@ -548,7 +558,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     const o = moverAlFinal(ejercicios, hechas, e.id);
     if (!o) return;
     const lista = aplicarOrden(det.datos.ejercicios, o);
-    const nx = serieQueToca(lista, hechas, proximaTrasReordenar(lista, hechas, proxima));
+    const nx = serieQueToca(conExtras(lista, extras), hechas, proximaTrasReordenar(lista, hechas, proxima));
     const sig = nx && lista.find((x) => x.id === nx.id);
     // La tarjeta que se deja para luego se cierra (si no tiene series): así lo siguiente queda a la vista
     if (!Object.keys(hechas[e.id] || {}).length) setAbiertos((a) => { const n = new Set(a || []); n.delete(e.id); return n; });
@@ -572,7 +582,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // se pierda; y si la tarjeta empieza por encima de la pantalla (ya se ha bajado al siguiente), se compensa lo que
   // encoge para que lo que se está viendo no salte
   function plegarTarjeta(e) {
-    if (!pautadasHechas(e, hechasRef.current[e.id])) return;
+    if (!filasHechas(e, extras[e.id], hechasRef.current[e.id])) return;
     const art = document.querySelector(`[data-se="${e.id}"]`);
     const cab = art?.querySelector('.ejercicio-cab');
     if (art && cab && art.contains(document.activeElement) && document.activeElement !== cab) cab.focus({ preventScroll: true });
@@ -697,6 +707,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
               sinMaterial={lugar !== 'gimnasio' && sinAlternativa.includes(e.id) && !cambiado ? lugar : null}
               videos={videos.enviados[e.id] || 0} videosPendientes={videos.pendientes[e.id] || 0} alSubirVideo={() => setRecontarVideos((n) => n + 1)}
               hechas={hechas[e.id] || {}} enCola={enCola} abierto={abiertos?.has(e.id)} siguiente={prox?.id === e.id ? prox.numero : null} teclado={teclado} avisarCambio={avisarCambio}
+              extra={extras[e.id] || 0} setExtra={(n) => cambiarExtra(e.id, n)}
               luego={!sesion.completada && atleta.estado !== 'baja' && puedeDejarLuego(ejercicios, hechas, e.id) ? () => dejarLuego(e) : null}
               ordenar={!sesion.completada && atleta.estado !== 'baja' && bloquesPendientes(ejercicios, hechas).length > 1 ? () => setOrdenando(true) : null}
               alternar={() => alternar(e.id)} guardar={(n, v) => guardar(e, n, v)} quitar={(n) => quitar(e, n)}
@@ -763,6 +774,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
             const r = await cola.enviar({ tipo: 'sesion', datos: { id: sesion.id, cambios }, atletaId: atleta.id });
             setTerminando(false);
             cambiarDescanso(null);
+            borrarExtras(sesion.id);
             // La sesión ya está guardada: si el resumen falla por lo que sea, se enseña uno mínimo (nunca se queda colgada)
             let res;
             try { res = await calcularResumen(api, atleta.id, ejercicios, hechas, cambios, r.enCola, ejerciciosPorId, records, sesion); }
@@ -776,7 +788,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       )}
     </div>
     {verEnfoque && (
-        <Enfoque ejercicios={ejercicios} hechas={hechas} records={records} etiquetas={etiquetas} actualDe={actualDe}
+        <Enfoque ejercicios={ejercicios} extras={extras} hechas={hechas} records={records} etiquetas={etiquetas} actualDe={actualDe}
           ultimasDe={(x) => { const a = actualDe(x); return a.id !== x.ejercicio.id ? ultimas[a.id] || null : x.ultimas; }}
           foco={semana?.foco} progresionAuto={progresionAuto && !frenar} notas={notas} guardarNota={guardarNota}
           guardar={guardar} quitar={quitar} descanso={descanso} setDescanso={cambiarDescanso} ahora={ahora} teclado={teclado}
@@ -799,13 +811,13 @@ function Cronometro({ inicio, minutos, hechas, total }) {
 
 function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
   descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null, avisarCambio = null,
-  luego = null, ordenar = null }) {
+  luego = null, ordenar = null, extra = 0, setExtra = () => {} }) {
   const { atleta, propio, aviso } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
   const [editandoNota, setEditandoNota] = useState(false);
   const pa = pauta(e);
   const n = Object.keys(hechas).length;
-  const [extra, setExtra] = useState(0);
+  // (las series añadidas las lleva la sesión, guardadas en el móvil: no se pierden al plegar la tarjeta ni al recargar)
   // Las series añadidas suman a las pautadas; marcar una añadida no abre otra fila vacía detrás
   const filas = Math.max(e.series + extra, ...Object.keys(hechas).map(Number), 0);
   // La última fila se puede quitar si es una añadida sin hacer (si está hecha, primero se desmarca)
@@ -866,7 +878,8 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   const kgBackoff = top ? propuesta(2, hechas)?.kg : null;
   const tempo = tempoDe(e);
   // v0.49: hecho del todo y cerrado, el ejercicio es una sola línea (nombre, lo hecho y el check); se abre al tocarlo
-  const completo = pautadasHechas(e, hechas);
+  // (con una serie añadida sin hacer, no está completo: ni se pliega ni se da por terminado)
+  const completo = pautadasHechas(e, hechas) && filasHechas(e, extra, hechas);
   const nPautadas = seriesPautadasHechas(e, hechas);
   const plegado = !abierto && completo;
   // Las herramientas del ejercicio, en la hoja «Más» (fuera de la tarjeta, para que no estorben entre serie y serie)

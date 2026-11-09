@@ -4571,5 +4571,26 @@ console.log('El perfil, más bonito y más social (v0.114)');
     'sin preact/compat; la comunidad se carga solo al abrir tu perfil del equipo; el CSS, solo ASCII');
 }
 
+console.log('\nLas series añadidas («Añadir serie»), guardadas en la sesión (logica/series-extra.js)');
+{
+  const SX = await import('../web/src/logica/series-extra.js');
+  const AT = await import('../web/src/logica/ahora-toca.js');
+  const ejs = [{ id: 'a', series: 4 }, { id: 'b', series: 3 }];
+  check(JSON.stringify(SX.limpiarExtras({ a: 1, b: '2', c: 0, d: 'x', e: 25 })) === '{"a":1,"b":2}', 'se limpian: enteros de 1 a 20');
+  const con = SX.conExtras(ejs, { a: 1 });
+  check(con[0].series === 5 && con[0].pautadas === 4 && con[1].series === 3 && !('pautadas' in con[1]), 'con una añadida, el ejercicio tiene 5 series (y 4 pautadas); el otro, igual');
+  const h4 = { 1: {}, 2: {}, 3: {}, 4: {} };
+  check(AT.serieQueToca(ejs, { a: h4 }).id === 'b' && AT.serieQueToca(con, { a: h4 }).id === 'a' && AT.serieQueToca(con, { a: h4 }).numero === 5, 'con las 4 pautadas hechas y una añadida sin hacer, toca la 5 del mismo ejercicio (antes, el siguiente)');
+  check(AT.nombreSerie(con[0], 5) === 'Serie 5 (de más)' && AT.nombreSerie(con[0], 4) === 'Serie 4 de 4' && AT.nombreSerie({ series: 5, pautadas: 4, backoff_pct: 10 }, 3) === 'Back-off 2 de 3', 'la serie se nombra por las pautadas: «Serie 5 (de más)», «Serie 4 de 4»');
+  const r = C.trasSerie(con, { a: 4, b: 0 }, 'a', () => 90);
+  check(r.siguiente.id === 'a' && r.siguiente.numero === 5 && r.descanso === 90, 'el descanso: «Después: serie 5 de …», no el siguiente ejercicio');
+  check(C.trasSerie(con, { a: 5, b: 0 }, 'a', () => 90).siguiente.id === 'b', 'hecha la añadida, al siguiente');
+  check(SX.filasDe(ejs[0], 1, {}) === 5 && SX.filasDe(ejs[0], 0, { 6: {} }) === 6 && !SX.filasHechas(ejs[0], 1, h4) && SX.filasHechas(ejs[0], 1, { ...h4, 5: {} }) && SX.filasHechas(ejs[0], 0, h4), 'las filas: pautadas más añadidas (o hasta la última guardada); hechas todas o no');
+  const alm = {}; globalThis.localStorage = { getItem: (k) => alm[k] ?? null, setItem: (k, v) => { alm[k] = v; }, removeItem: (k) => { delete alm[k]; } };
+  SX.guardarExtras('s1', { a: 1, b: 0 });
+  check(JSON.stringify(SX.leerExtras('s1')) === '{"a":1}' && (SX.borrarExtras('s1'), Object.keys(alm).length === 0) && JSON.stringify(SX.leerExtras('s1')) === '{}', 'se guardan por sesión en el móvil y se borran al terminar');
+  delete globalThis.localStorage;
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);
