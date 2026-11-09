@@ -90,7 +90,7 @@ export function AutoevaluacionCoach({ auto, nombreAtleta, puntuacion = null, rpe
       <span class="etq">{x.titulo}</span>
       {x.nota && <p class="cita">«{x.nota}»</p>}
       <div class="fila-envolver">
-        {x.rpe && <span class="chip num">{x.rpe}</span>}
+        {x.rpe && <span class="chip num auto-rpe" data-rpe={Math.min(10, Math.max(5, Math.floor(auto.rpe ?? rpeSerie ?? 0)))}>{x.rpe}</span>}
         {x.molestia && <span class={`chip ${auto.molestia ? 'alerta' : 'ok'}`}>{auto.molestia && <Icono n="alerta" />}{x.molestia}</span>}
       </div>
       {comp && <p class="mini secundario autoevaluacion-comparar">Para leerlos juntos: {comp.texto}.{comp.lectura ? ` ${comp.lectura}` : ''}</p>}

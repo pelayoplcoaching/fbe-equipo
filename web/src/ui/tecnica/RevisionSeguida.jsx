@@ -82,7 +82,7 @@ function Pantalla({ videos, alCerrar, abrirAtleta }) {
   const nombre = actual?.atleta?.nombre || 'Atleta';
   return (
     <div ref={raiz} class="seguida" role="dialog" aria-modal="true" aria-label="Revisar los vídeos seguidos">
-      <div class="seguida-cab" onPointerDown={bajar} onPointerUp={soltar} onPointerCancel={() => { gesto.current = null; }}>
+      <div class="seguida-cab" style={{ '--f': cola.length ? (actual ? i + 1 : hechos.size) / cola.length : 0 }} onPointerDown={bajar} onPointerUp={soltar} onPointerCancel={() => { gesto.current = null; }}>
         <button type="button" class="btn btn-icono plano seguida-cerrar" aria-label="Cerrar" onClick={alCerrar}><Icono n="cerrar" /></button>
         <span class="seguida-contador num" role="status">{actual ? `${i + 1} de ${cola.length}` : `${hechos.size} de ${cola.length} revisados`}</span>
         <select class="selector seguida-orden" aria-label="Orden" value={orden} onChange={(e) => setOrden(e.currentTarget.value)}>
