@@ -103,7 +103,7 @@ const DEFECTOS = {
   comunidad_posts: () => ({ tipo: 'post', texto: null, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, atleta_id: null, creado_en: ahora(), menciones: [], encuesta: null, reto_id: null, tema: null, fotos: null, mejor_comentario: null, publicar_en: null, retenida: false }),
   comunidad_comentarios: () => ({ oculto: false, atleta_id: null, creado_en: ahora(), menciones: [], responde_a: null, retenido: false, pegatina: null }),
   // (044) eventos, plantillas y el atleta de la semana
-  comunidad_eventos: () => ({ descripcion: null, plazas: null, cancelado_en: null, creado_en: ahora(), actualizado_en: ahora() }),
+  comunidad_eventos: () => ({ descripcion: null, plazas: null, cancelado_en: null, creado_en: ahora(), actualizado_en: ahora(), creado_por: null }),
   comunidad_plantillas: () => ({ creado_en: ahora() }),
   comunidad_retos: () => ({ descripcion: null, modo: 'individual', medida: 'sesiones', equipos: null, creado_en: ahora() }),
 };
@@ -290,6 +290,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     comunidad_moderacion: () => esCoach(),
     // (045) los aniversarios ya puestos, solo la base
     comunidad_aniversarios: () => false,
+    // (053) los duelos, los dos y el coach; la intención y el voto al compañero, cada uno el suyo; los padrinos, los de dentro
+    comunidad_duelos: (x) => esCoach() || (soyMiembro() && (x.de === sesion?.user.id || x.para === sesion?.user.id)),
+    comunidad_intenciones: (x) => esCoach() || x.perfil_id === sesion?.user.id,
+    comunidad_padrinos: () => esCoach() || soyMiembro(),
+    comunidad_votos_semana: (x) => esCoach() || x.de === sesion?.user.id,
     // (050) la personalización, solo por sus funciones
     personal_atleta: () => false,
     mensajes_coach: () => false,
@@ -437,25 +442,38 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function prepararPost(f) {
     const uid = sesion?.user.id;
     Object.assign(f, { autor_id: uid, creado_en: ahora(), oculta: false, sesion_id: null, resumen: null, reto_id: null });
+    const encuestaLimpia = (e) => {
+      if (!e || typeof e !== 'object' || !Array.isArray(e.opciones)) throw new Error('Una encuesta lleva de 2 a 4 opciones');
+      const cierre = e.cierre ? Date.parse(e.cierre) : null;
+      if (e.cierre && !Number.isFinite(cierre)) throw new Error('El cierre de la encuesta no es una fecha válida');
+      if (cierre != null && cierre <= Date.now() + 5 * 60000) throw new Error('El cierre de la encuesta, más adelante (o sin cierre)');
+      return { opciones: e.opciones.map((o) => String(o ?? '').trim()), cierre: cierre != null ? new Date(cierre).toISOString() : null };
+    };
     if (esCoach()) {
       f.atleta_id = null;
+      f.cita_post_id = null;
       if (f.tipo !== 'aviso' && f.tipo !== 'encuesta' && f.tipo !== 'momento') throw new Error('Como coach, en el muro publicas avisos, encuestas y momentos');
       if (f.foto_ruta && (!['aviso', 'momento'].includes(f.tipo) || !String(f.foto_ruta).startsWith('coach/'))) throw new Error('La foto no va en su sitio');
-      if (f.tipo === 'encuesta') {
-        const e = f.encuesta;
-        if (!e || typeof e !== 'object' || !Array.isArray(e.opciones)) throw new Error('Una encuesta lleva de 2 a 4 opciones');
-        const cierre = e.cierre ? Date.parse(e.cierre) : null;
-        if (e.cierre && !Number.isFinite(cierre)) throw new Error('El cierre de la encuesta no es una fecha válida');
-        if (cierre != null && cierre <= Date.now() + 5 * 60000) throw new Error('El cierre de la encuesta, más adelante (o sin cierre)');
-        f.encuesta = { opciones: e.opciones.map((o) => String(o ?? '').trim()), cierre: cierre != null ? new Date(cierre).toISOString() : null };
-      } else f.encuesta = null;
+      f.encuesta = f.tipo === 'encuesta' ? encuestaLimpia(f.encuesta) : null;
     } else {
       if (!soyMiembro()) throw sinPermiso();
       f.atleta_id = miAtletaId();
       f.fijada = false;
-      f.encuesta = null;
-      if (f.tipo !== 'post' && f.tipo !== 'momento') throw new Error('Los avisos y las encuestas son del coach, y los entrenos y los logros se comparten desde su sitio');
+      if (f.tipo !== 'post' && f.tipo !== 'momento' && f.tipo !== 'encuesta') throw new Error('Los avisos son del coach, y los entrenos y los logros se comparten desde su sitio');
+      // (053) una encuesta al día por atleta, sin programar ni fotos
+      if (f.tipo === 'encuesta') {
+        if (tabla('comunidad_posts').some((x) => x.autor_id === uid && x.tipo === 'encuesta' && Date.parse(x.creado_en) > Date.now() - 864e5)) throw new Error('Una encuesta al día: mañana, otra');
+        f.encuesta = encuestaLimpia(f.encuesta);
+        f.publicar_en = null; f.foto_ruta = null; f.fotos = null;
+      } else f.encuesta = null;
       if (f.foto_ruta && !String(f.foto_ruta).startsWith(`${f.atleta_id}/`)) throw new Error('La foto no va en su sitio');
+      // (053) citar: una publicación que se ve, que no sea un momento ni la propia, y con texto
+      if (f.cita_post_id) {
+        if (f.tipo !== 'post') throw new Error('Solo una publicación normal cita a otra');
+        const c = buscar('comunidad_posts', f.cita_post_id);
+        if (!c || c.tipo === 'momento' || c.autor_id === uid || !postVisible(c.id)) throw new Error('Esa publicación ya no está (o es tuya)');
+        if (!String(f.texto || '').trim()) throw new Error('Al citar, escribe algo');
+      } else f.cita_post_id = null;
     }
     f.menciones = limpiarMenciones(f.menciones, uid);
     // Como la 043 (comunidad_post_tema): el tema que toca, las fotos en la carpeta de la primera y sin mejor respuesta
@@ -512,8 +530,17 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   // Como comunidad_evento_preparar (044): las fechas las pone la base; nuevo (o con otra hora), más adelante y como mucho a un
   // año; cancelado, no se descancela
   function prepararEvento(f, antes = null) {
-    if (!antes) { f.creado_en = ahora(); f.cancelado_en = null; } else {
+    if (!antes) {
+      f.creado_en = ahora(); f.cancelado_en = null;
+      // (053) un atleta propone una quedada como él mismo, con hasta 3 abiertas y 30 plazas
+      if (!esCoach()) {
+        f.creado_por = sesion?.user.id;
+        if (tabla('comunidad_eventos').filter((e) => e.creado_por === f.creado_por && !e.cancelado_en && Date.parse(e.empieza_en) > Date.now()).length >= 3) throw new Error('Como mucho tres quedadas abiertas a la vez');
+        if (f.plazas != null && f.plazas !== '' && Number(f.plazas) > 30) throw new Error('Una quedada, hasta 30 plazas');
+      }
+    } else {
       f.creado_en = antes.creado_en;
+      f.creado_por = antes.creado_por ?? null;
       f.cancelado_en = antes.cancelado_en || (f.cancelado_en ? ahora() : null);
     }
     f.actualizado_en = ahora();
@@ -761,6 +788,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
   }
   function despuesDeInsertar(t, f) {
+    // (053) quien propone una quedada, va
+    if (t === 'comunidad_eventos' && f.creado_por) {
+      const m = tabla('comunidad_miembros').find((x) => x.perfil_id === f.creado_por);
+      tabla('comunidad_evento_asistentes').push({ evento_id: f.id, perfil_id: f.creado_por, atleta_id: m?.atleta_id || null, va: true, creado_en: ahora() });
+    }
     // Como la 032: un mensaje nuevo del atleta saca su conversación de archivadas
     if (t === 'comentarios' && f.autor === 'atleta') for (const e of tabla('conversacion_estado')) if (e.atleta_id === f.atleta_id) e.archivada_en = null;
     if (t === 'comentarios' && f.autor === 'coach') {
@@ -1448,7 +1480,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas',
       'comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw sinPermiso();
-    if (['comunidad_retos', 'comunidad_eventos', 'comunidad_plantillas'].includes(t) && !esCoach()) throw sinPermiso();
+    if (['comunidad_retos', 'comunidad_plantillas'].includes(t) && !esCoach()) throw sinPermiso();
+    // (053) una quedada la propone también un atleta de dentro (como él mismo); lo demás de la tanda social va por funciones
+    if (t === 'comunidad_eventos' && !esCoach() && !(soyMiembro() && comunidadActiva() && fila.creado_por === sesion?.user.id)) throw sinPermiso();
+    if (['comunidad_duelos', 'comunidad_intenciones', 'comunidad_padrinos', 'comunidad_votos_semana'].includes(t)) throw sinPermiso();
     if (t === 'recetas_atleta' && !esCoach()) throw new Error('new row violates row-level security policy');
     const nueva = { ...(SIN_ID.includes(t) ? {} : { id: uuid() }), ...(DEFECTOS[t]?.() || {}), ...copia(fila) };
     if (t === 'comentario_reacciones' || t === 'comentario_destacados') prepararReaccionODestacado(t, nueva);
@@ -1627,6 +1662,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       ['retos_5', tabla('comunidad_retos').filter((r) => retoConseguido(r, m.atleta_id)).length, 5],
       ['racha_4', rachasPareja(m.atleta_id, m.atleta_id).mejor, 4],
       ['pareja_4', Math.max(0, ...parejas), 4],
+      // (053) las sociales
+      ['animador_25', tabla('comunidad_animos').filter((x) => x.de === pid).length, 25],
+      ['anfitrion_3', tabla('comunidad_bienvenidas').filter((x) => x.de === pid).length, 3],
+      ['padrino_1', tabla('comunidad_padrinos').filter((x) => x.padrino === pid).length, 1],
+      ['puntual_3', tabla('comunidad_evento_asistentes').filter((a) => a.perfil_id === pid && a.va && (() => { const e = buscar('comunidad_eventos', a.evento_id); return e && !e.cancelado_en && Date.parse(e.empieza_en) < Date.now(); })()).length, 3],
     ];
   };
   // Como crear_recordatorios() de la 045 (en la demo no hay servidor: se hace al leer el muro): el aniversario del día en el muro
@@ -1652,6 +1692,175 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       cambio = true;
     }
     if (cambio) persistirYa();
+  }
+  // (053) Como la migración 053 (social.sql), con lo que ve quien llama
+  function rpcSocial(nombre, args, uid, coach, yo) {
+    const hoy = fechaMadrid();
+    const miembroMio = () => tabla('comunidad_miembros').find((x) => x.perfil_id === uid);
+    const conFoto = (m) => ({ perfil_id: m.perfil_id, nombre: m.nombre, foto: perfilDe(m.perfil_id)?.foto || null });
+    const dentro = (pid) => dentroTodos().find((x) => x.perfil_id === pid);
+    const limpio = (t, max) => { const v = String(t || '').replace(/\s+/g, ' ').trim(); if (v.length > max) throw new Error(`Hasta ${max} letras`); return v || null; };
+    const mejoresDe = (semana) => {
+      const votos = tabla('comunidad_votos_semana').filter((v) => v.semana === semana && dentro(v.para));
+      const por = {}; for (const v of votos) por[v.para] = (por[v.para] || 0) + 1;
+      const tope = Math.max(0, ...Object.values(por));
+      return tope >= 2 ? Object.entries(por).filter(([, n]) => n === tope).map(([pid, n]) => ({ pid, n })) : [];
+    };
+    const vecesElegido = (pid) => [...new Set(tabla('comunidad_votos_semana').filter((v) => v.para === pid && v.semana < lunesHoy()).map((v) => v.semana))].filter((w) => mejoresDe(w).some((x) => x.pid === pid)).length;
+    const semanasAnimando = (pid) => { let l = lunesHoy(), n = 0; const hay = (w) => tabla('comunidad_animos').some((a) => a.de === pid && a.semana === w); if (!hay(l)) l = sumar(l, -7); while (hay(l) && n < 520) { n++; l = sumar(l, -7); } return n; };
+    if (nombre === 'comunidad_social_ajustes') {
+      if (!soyMiembro()) throw new Error('No estás en la comunidad');
+      const m = miembroMio();
+      if (args.p_cumple != null) m.cumple_equipo = !!args.p_cumple;
+      if (args.p_ausencia != null) m.ver_ausencia = !!args.p_ausencia;
+      return { cumple_equipo: !!m.cumple_equipo, ver_ausencia: !!m.ver_ausencia };
+    }
+    if (nombre === 'comunidad_cumples') {
+      if (!uid || !veComunidad()) return [];
+      const [mes, dia] = [Number(hoy.slice(5, 7)), Number(hoy.slice(8, 10))];
+      return dentroTodos().filter((m) => m.cumple_equipo && tabla('personal_atleta').some((p) => p.atleta_id === m.atleta_id && p.cumple_mes === mes && p.cumple_dia === dia))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre)).map((m) => ({ ...conFoto(m), soy_yo: m.perfil_id === uid }));
+    }
+    if (nombre === 'comunidad_intencion') {
+      if (!uid || !comunidadActiva() || !soyMiembro()) throw new Error('No estás en la comunidad');
+      db.comunidad_intenciones = tabla('comunidad_intenciones').filter((i) => i.fecha >= hoy);
+      if (!args.p_fecha) { db.comunidad_intenciones = tabla('comunidad_intenciones').filter((i) => i.perfil_id !== uid); return null; }
+      if (args.p_fecha !== hoy && args.p_fecha !== sumar(hoy, 1)) throw new Error('Hoy o mañana');
+      const nota = limpio(args.p_nota, 40);
+      const hora = args.p_hora ? String(args.p_hora).slice(0, 5) + ':00' : null;
+      db.comunidad_intenciones = tabla('comunidad_intenciones').filter((i) => i.perfil_id !== uid);
+      tabla('comunidad_intenciones').push({ perfil_id: uid, atleta_id: yo?.id || null, fecha: args.p_fecha, hora, nota, creado_en: ahora() });
+      return { fecha: args.p_fecha, hora, nota };
+    }
+    if (nombre === 'comunidad_intenciones') {
+      if (!uid || !veComunidad()) return [];
+      return tabla('comunidad_intenciones').filter((i) => i.fecha >= hoy && dentro(i.perfil_id))
+        .map((i) => ({ ...conFoto(dentro(i.perfil_id)), fecha: i.fecha, hora: i.hora, nota: i.nota, soy_yo: i.perfil_id === uid }))
+        .sort((a, b) => a.fecha.localeCompare(b.fecha) || String(a.hora || '~').localeCompare(String(b.hora || '~')) || a.nombre.localeCompare(b.nombre));
+    }
+    if (nombre === 'comunidad_duelo_proponer') {
+      if (!uid || !comunidadActiva() || !soyMiembro()) throw new Error('Para retar tienes que estar en la comunidad (y abierta)');
+      if (!args.p_para || args.p_para === uid) throw new Error('A ti mismo ya te retas cada semana');
+      const dow = new Date(`${hoy}T12:00:00Z`).getUTCDay();
+      const semana = sumar(lunesHoy(), args.p_proxima || dow === 0 ? 7 : 0);
+      const el = dentro(args.p_para), mio = dentro(uid);
+      if (!el) throw new Error('Esa persona ya no está en el equipo');
+      if (mio?.sin_ranking || el.sin_ranking) throw new Error('Los duelos cuentan sesiones: los dos tenéis que salir en el ranking');
+      if (tabla('comunidad_duelos').filter((d) => (d.de === uid || d.para === uid) && d.estado !== 'rechazado' && sumar(d.semana, 6) >= hoy).length >= 3) throw new Error('Como mucho tres duelos a la vez');
+      if (tabla('comunidad_duelos').some((d) => d.semana === semana && [d.de, d.para].includes(uid) && [d.de, d.para].includes(args.p_para))) throw new Error('Ya tenéis un duelo esa semana');
+      gastarCupo('animo');
+      const d = { id: uuid(), de: uid, para: args.p_para, de_atleta: yo?.id || null, para_atleta: el.atleta_id, semana, estado: 'pendiente', creado_en: ahora(), respondido_en: null };
+      tabla('comunidad_duelos').push(d);
+      return d.id;
+    }
+    if (nombre === 'comunidad_duelo_responder') {
+      if (!uid || !soyMiembro()) throw new Error('No estás en la comunidad');
+      const d = tabla('comunidad_duelos').find((x) => x.id === args.p_id && x.para === uid && x.estado === 'pendiente');
+      if (!d) throw new Error('Ese duelo ya no está pendiente');
+      if (sumar(d.semana, 6) < hoy) throw new Error('Esa semana ya pasó');
+      d.estado = args.p_acepta ? 'aceptado' : 'rechazado'; d.respondido_en = ahora();
+      return d.estado;
+    }
+    if (nombre === 'comunidad_duelo_retirar') {
+      db.comunidad_duelos = tabla('comunidad_duelos').filter((d) => !(d.id === args.p_id && d.de === uid && d.estado === 'pendiente'));
+      return null;
+    }
+    if (nombre === 'comunidad_duelos_mios') {
+      if (!uid) return [];
+      const todos = args.p_todos && coach;
+      if (!todos && !soyMiembro()) return [];
+      const l = lunesHoy();
+      return tabla('comunidad_duelos').filter((d) => (todos || d.de === uid || d.para === uid) && d.semana >= sumar(l, -7) && d.semana <= sumar(l, 7))
+        .sort((a, b) => b.semana.localeCompare(a.semana) || String(b.creado_en).localeCompare(String(a.creado_en)))
+        .map((d) => {
+          const soyRetador = d.de === uid;
+          const rival = soyRetador ? d.para : d.de, yoP = soyRetador ? d.de : d.para;
+          const [miA, suA] = soyRetador ? [d.de_atleta, d.para_atleta] : [d.para_atleta, d.de_atleta];
+          return { id: d.id, semana: d.semana, estado: d.estado, soy_retador: soyRetador, rival, rival_nombre: dentro(rival)?.nombre || 'Alguien del equipo', rival_foto: perfilDe(rival)?.foto || null,
+            yo: yoP, yo_nombre: dentro(yoP)?.nombre || 'Alguien del equipo', mias: miA ? hechasEntre(miA, d.semana, sumar(d.semana, 6)) : 0, suyas: suA ? hechasEntre(suA, d.semana, sumar(d.semana, 6)) : 0,
+            acabado: sumar(d.semana, 6) < hoy, creado_en: d.creado_en };
+        });
+    }
+    if (nombre === 'comunidad_apadrinar') {
+      if (!uid || !comunidadActiva() || !soyMiembro()) throw new Error('No estás en la comunidad');
+      if (!args.p_nuevo || args.p_nuevo === uid) throw new Error('A ti mismo no te puedes apadrinar');
+      if (Date.parse(miembroMio().creado_en) > Date.now() - 56 * 864e5) throw new Error('Para acompañar a alguien hay que llevar 8 semanas en el equipo');
+      const nuevo = dentro(args.p_nuevo);
+      if (!nuevo) throw new Error('Esa persona ya no está en el equipo');
+      if (Date.parse(nuevo.creado_en) <= Date.now() - 14 * 864e5) throw new Error('Se acompaña a quien lleva menos de dos semanas en el equipo');
+      const vigente = (x) => x.hasta >= hoy && !x.terminado_en;
+      if (tabla('comunidad_padrinos').some((x) => x.nuevo === args.p_nuevo && vigente(x))) throw new Error('Ya tiene quien le acompañe');
+      if (tabla('comunidad_padrinos').filter((x) => x.padrino === uid && vigente(x)).length >= 2) throw new Error('Como mucho dos personas a la vez');
+      db.comunidad_padrinos = tabla('comunidad_padrinos').filter((x) => x.nuevo !== args.p_nuevo);
+      const hasta = sumar(hoy, 30);
+      tabla('comunidad_padrinos').push({ nuevo: args.p_nuevo, padrino: uid, nuevo_atleta: nuevo.atleta_id, padrino_atleta: yo?.id || null, desde: hoy, hasta, terminado_en: null, creado_en: ahora() });
+      return hasta;
+    }
+    if (nombre === 'comunidad_padrino_quitar') {
+      for (const x of tabla('comunidad_padrinos')) if (!x.terminado_en && ((x.nuevo === (args.p_nuevo || uid) && x.padrino === uid) || (!args.p_nuevo && x.nuevo === uid))) x.terminado_en = ahora();
+      return null;
+    }
+    if (nombre === 'comunidad_padrinos_lista') {
+      if (!uid || !veComunidad()) return null;
+      const m = miembroMio();
+      return {
+        puedo: !!m && Date.parse(m.creado_en) <= Date.now() - 56 * 864e5,
+        vigentes: tabla('comunidad_padrinos').filter((x) => x.hasta >= hoy && !x.terminado_en && dentro(x.nuevo) && dentro(x.padrino)).sort((a, b) => String(b.creado_en).localeCompare(String(a.creado_en)))
+          .map((x) => ({ nuevo: x.nuevo, nuevo_nombre: dentro(x.nuevo).nombre, nuevo_foto: perfilDe(x.nuevo)?.foto || null, padrino: x.padrino, padrino_nombre: dentro(x.padrino).nombre, padrino_foto: perfilDe(x.padrino)?.foto || null, desde: x.desde, hasta: x.hasta })),
+        sin_padrino: dentroTodos().filter((x) => x.perfil_id !== uid && Date.parse(x.creado_en) > Date.now() - 14 * 864e5 && !tabla('comunidad_padrinos').some((p) => p.nuevo === x.perfil_id && p.hasta >= hoy && !p.terminado_en))
+          .sort((a, b) => String(b.creado_en).localeCompare(String(a.creado_en))).map((x) => ({ ...conFoto(x), desde: x.creado_en })),
+      };
+    }
+    if (nombre === 'comunidad_votar_companero') {
+      if (!uid || !comunidadActiva() || !soyMiembro()) throw new Error('Para votar tienes que estar en la comunidad (y abierta)');
+      const semana = lunesHoy();
+      if (!args.p_para) { db.comunidad_votos_semana = tabla('comunidad_votos_semana').filter((v) => !(v.de === uid && v.semana === semana)); return semana; }
+      if (args.p_para === uid) throw new Error('A ti no te puedes votar');
+      const el = dentro(args.p_para);
+      if (!el) throw new Error('Esa persona ya no está en el equipo');
+      const ya = tabla('comunidad_votos_semana').find((v) => v.de === uid && v.semana === semana);
+      if (!(ya && ya.para === args.p_para)) gastarCupo('voto');
+      if (ya) Object.assign(ya, { para: args.p_para, para_atleta: el.atleta_id, creado_en: ahora() });
+      else tabla('comunidad_votos_semana').push({ semana, de: uid, para: args.p_para, de_atleta: yo?.id || null, para_atleta: el.atleta_id, creado_en: ahora() });
+      return semana;
+    }
+    if (nombre === 'comunidad_companero_semana') {
+      if (!uid || !veComunidad()) return null;
+      const pasada = sumar(lunesHoy(), -7);
+      return {
+        semana: pasada,
+        elegidos: mejoresDe(pasada).map(({ pid, n }) => ({ ...conFoto(dentro(pid)), votos: n })).sort((a, b) => a.nombre.localeCompare(b.nombre)),
+        mi_voto: tabla('comunidad_votos_semana').find((v) => v.de === uid && v.semana === lunesHoy())?.para || null,
+        votos: tabla('comunidad_votos_semana').filter((v) => v.semana === lunesHoy()).length,
+        mis_veces: vecesElegido(uid),
+      };
+    }
+    if (nombre === 'comunidad_huella') {
+      if (!uid || !veComunidad()) return null;
+      const pid = args.p_perfil || uid;
+      const m = dentro(pid);
+      if (!m) return null;
+      const cuenta = (t, f) => tabla(t).filter(f).length;
+      const sesionesSemana = (atletaId, semana) => (atletaId ? hechasEntre(atletaId, semana, sumar(semana, 6)) : 0);
+      return {
+        desde: m.creado_en,
+        animos_dados: cuenta('comunidad_animos', (a) => a.de === pid), animos_recibidos: cuenta('comunidad_animos', (a) => a.para === pid),
+        bienvenidas: cuenta('comunidad_bienvenidas', (b) => b.de === pid), comentarios: cuenta('comunidad_comentarios', (c) => c.autor_id === pid && !c.oculto),
+        reacciones: cuenta('comunidad_reacciones', (r) => r.autor_id === pid),
+        quedadas: cuenta('comunidad_evento_asistentes', (a) => a.perfil_id === pid && a.va && (() => { const e = buscar('comunidad_eventos', a.evento_id); return e && !e.cancelado_en && Date.parse(e.empieza_en) < Date.now(); })()),
+        ahijados: cuenta('comunidad_padrinos', (x) => x.padrino === pid), elegido: vecesElegido(pid), semanas_animando: semanasAnimando(pid),
+        duelos_ganados: cuenta('comunidad_duelos', (d) => [d.de, d.para].includes(pid) && d.estado === 'aceptado' && sumar(d.semana, 6) < hoy
+          && sesionesSemana(d.de === pid ? d.de_atleta : d.para_atleta, d.semana) > sesionesSemana(d.de === pid ? d.para_atleta : d.de_atleta, d.semana)),
+      };
+    }
+    if (nombre === 'comunidad_sin_entrenar') {
+      if (!uid || !veComunidad()) return [];
+      return dentroTodos().filter((m) => m.ver_ausencia && m.perfil_id !== uid && buscar('atletas', m.atleta_id)?.entrenamiento !== false).map((m) => {
+        const ultima = sesionesValidas(m.atleta_id).map((x) => x.fecha_realizada).sort().pop() || fechaMadrid(new Date(m.creado_en));
+        return { ...conFoto(m), dias: Math.round((Date.parse(hoy) - Date.parse(ultima)) / 864e5) };
+      }).filter((x) => x.dias >= 5).sort((a, b) => b.dias - a.dias || a.nombre.localeCompare(b.nombre)).slice(0, 10);
+    }
+    return undefined;
   }
   function rpcComunidad(nombre, args, uid, perfil) {
     const yo = tabla('atletas').find((a) => a.perfil_id === uid);
@@ -1680,8 +1889,17 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (!uid) throw new Error('Necesitas iniciar sesión');
       // (como la 041, revisión: al salir se apaga «Entrenando ahora»)
       for (const m of tabla('comunidad_miembros')) if (m.perfil_id === uid && !m.salido_en) { m.salido_en = ahora(); m.ver_entrenando = false; }
+      // (053) lo que solo tiene sentido estando dentro se va siempre
+      const hoy053 = fechaMadrid();
+      db.comunidad_intenciones = tabla('comunidad_intenciones').filter((x) => x.perfil_id !== uid);
+      db.comunidad_duelos = tabla('comunidad_duelos').filter((x) => !((x.de === uid || x.para === uid) && sumar(x.semana, 6) >= hoy053));
+      for (const x of tabla('comunidad_padrinos')) if ((x.nuevo === uid || x.padrino === uid) && x.hasta >= hoy053 && !x.terminado_en) x.terminado_en = ahora();
       let fotos = [];
       if (args.p_borrar && !coach) {
+        db.comunidad_duelos = tabla('comunidad_duelos').filter((x) => x.de !== uid && x.para !== uid);
+        db.comunidad_padrinos = tabla('comunidad_padrinos').filter((x) => x.nuevo !== uid && x.padrino !== uid);
+        db.comunidad_votos_semana = tabla('comunidad_votos_semana').filter((x) => x.de !== uid && x.para !== uid);
+        for (const e of tabla('comunidad_eventos')) if (e.creado_por === uid && Date.parse(e.empieza_en) > Date.now() && !e.cancelado_en) e.cancelado_en = ahora();
         // (043: también las de varias fotos, y lo que ha guardado)
         fotos = [...new Set(tabla('comunidad_posts').filter((x) => x.autor_id === uid).flatMap((x) => (Array.isArray(x.fotos) && x.fotos.length ? x.fotos : [x.foto_ruta]))
           .filter((r) => r && !tabla('comunidad_reportes').some((k) => usaCopia(k, r) && !k.resuelto_en)))];
@@ -2141,10 +2359,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (!m) throw new Error('Esa persona ya no está en el equipo');
       const semana = lunesHoy();
       if (tabla('comunidad_animos').some((a) => a.de === uid && a.para === args.p_perfil && a.semana === semana)) throw new Error('Ya le has mandado ánimo esta semana');
+      // (053) con unas palabras (hasta 80)
+      const texto = String(args.p_texto || '').replace(/\s+/g, ' ').trim() || null;
+      if (texto && texto.length > 80) throw new Error('Las palabras del ánimo, hasta 80 letras');
       gastarCupo('animo');
-      tabla('comunidad_animos').push({ de: uid, para: args.p_perfil, atleta_id: coach ? null : yo?.id || null, para_atleta_id: m.atleta_id, semana, creado_en: ahora() });
+      tabla('comunidad_animos').push({ de: uid, para: args.p_perfil, atleta_id: coach ? null : yo?.id || null, para_atleta_id: m.atleta_id, semana, creado_en: ahora(), texto });
       return semana;
     }
+    // (053) la parte social: ajustes, cumpleaños, intenciones, duelos, padrinos, compañero de la semana, huella y quién necesita un ánimo
+    const r053 = rpcSocial(nombre, args, uid, coach, yo);
+    if (r053 !== undefined) return r053;
     // Como la 041: 💪 a comentarios, bienvenida a los nuevos y «entrenando ahora»
     if (nombre === 'comunidad_reaccionar_comentario') {
       if (!uid || !veComunidad()) throw new Error('Para reaccionar tienes que estar en la comunidad');
@@ -2631,11 +2855,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // avisos y cambia sus retos. Publicaciones y comentarios no se cambian (fijar y ocultar van por funciones).
       if (t.startsWith('comunidad_')) {
         if (['comunidad_posts', 'comunidad_comentarios', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_companeros', 'comunidad_reto_equipos'].includes(t)) throw new Error('permission denied for table ' + t);
-        if (!esCoach()) return [];
+        // (053) un atleta cambia o cancela la quedada que propuso
+        if (!esCoach() && !(t === 'comunidad_eventos' && soyMiembro())) return [];
         if (['comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion', 'comunidad_plantillas'].includes(t)) throw new Error('permission denied for table ' + t);
         // (044) un evento: como comunidad_evento_preparar (y al cancelarlo se queda cancelado)
         if (t === 'comunidad_eventos') {
-          const filas = tabla(t).filter((fila) => cumple(fila, f));
+          const filas = tabla(t).filter((fila) => cumple(fila, f) && (esCoach() || fila.creado_por === sesion?.user.id));
           const nuevas = filas.map((fila) => { const m = { ...fila, ...copia(cambios) }; prepararEvento(m, fila); comprobarChecks(t, m); return [fila, m]; });
           for (const [fila, m] of nuevas) Object.assign(fila, m);
           persistirYa();

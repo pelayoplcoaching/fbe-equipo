@@ -326,6 +326,11 @@ export const INSIGNIAS = [
   ['retos_5', '🏆', '5 retos', 'Consigue 5 retos', 5],
   ['racha_4', '🔥', 'Racha de 4', 'Completa 4 semanas seguidas', 4],
   ['pareja_4', '🤝', 'Pareja de 4', 'Llega a 4 semanas seguidas con un compañero de racha', 4],
+  // (social, 053) las sociales
+  ['animador_25', '📣', 'Animador', 'Manda 25 ánimos', 25],
+  ['anfitrion_3', '👋', 'Anfitrión', 'Da la bienvenida a 3 personas', 3],
+  ['padrino_1', '🤲', 'Padrino', 'Acompaña a alguien en su primer mes', 1],
+  ['puntual_3', '📍', 'Puntual', 'Ve a 3 quedadas del equipo', 3],
 ];
 // Las de alguien, en el orden de INSIGNIAS: [{ clave, emoji, nombre, como, meta, valor, conseguida }]. filas: lo que da la base
 // ([{ clave, valor, meta }]); las que no vienen, sin progreso.

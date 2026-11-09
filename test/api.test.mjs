@@ -1397,7 +1397,10 @@ console.log('\nLas mejoras de la comunidad (v0.47, migración 029)');
   const enc = await api.publicarEnComunidad({ encuesta: { pregunta: '¿Sábado o domingo?', opciones: ['Sábado', 'Domingo', ''], cierre: new Date(Date.now() + 864e5).toISOString() }, fijada: true });
   check(enc.tipo === 'encuesta' && enc.texto === '¿Sábado o domingo?' && enc.encuesta.opciones.join() === 'Sábado,Domingo' && enc.fijada, 'el coach publica una encuesta (las opciones vacías no van) y la fija arriba');
   await b.auth.entrar('ana@test', 'contraseña-ana-1');
-  check(await lanza(() => api.publicarEnComunidad({ encuesta: { pregunta: '¿Y yo?', opciones: ['Sí', 'No'] } })), 'un atleta no publica encuestas');
+  // (053) un atleta también publica encuestas, una al día (sin fijar)
+  const encAna = await api.publicarEnComunidad({ encuesta: { pregunta: '¿Y yo?', opciones: ['Sí', 'No'] }, fijada: true });
+  check(encAna.tipo === 'encuesta' && !encAna.fijada && await lanza(() => api.publicarEnComunidad({ encuesta: { pregunta: '¿Otra?', opciones: ['Sí', 'No'] } })), 'un atleta publica una encuesta (053), sin fijarla, y solo una al día');
+  await api.borrarDeComunidad(encAna);
   check((await api.votarEncuesta(enc.id, 1)) === 1 && (await api.votarEncuesta(enc.id, 0)) === 0 && await lanza(() => api.votarEncuesta(enc.id, 5)), 'Ana vota, cambia su voto y no vota una opción que no existe');
   await b.auth.entrar('luis@test', 'contraseña-luis-1');
   await api.votarEncuesta(enc.id, 0);

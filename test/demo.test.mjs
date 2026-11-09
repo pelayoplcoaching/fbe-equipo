@@ -1765,7 +1765,7 @@ console.log('\nv0.70: la comunidad, segunda tanda (las mismas reglas de la 042 e
   check(rq?.equiposReto.length === 2 && rq.equiposReto[1].mio && rq.equiposReto.map((e) => e.nombre).join() === 'Rojos,Azules' && rc?.total > 0 && rc.progreso.every((x) => x.yo || x.nombre === 'Carlos V.'),
     'un reto por equipos (Lucía en Azules) y uno de cardio que solo cuenta a quien cuenta sus minutos (Carlos)');
   const ins = await a4.insigniasComunidad(a4.uid());
-  check(ins[a4.uid()]?.length === 6 && ins[a4.uid()].find((x) => x.clave === 'primera_publicacion').conseguida, 'sus insignias (con la de la primera publicación)');
+  check(ins[a4.uid()]?.length === 10 && ins[a4.uid()].find((x) => x.clave === 'primera_publicacion').conseguida, 'sus insignias (diez con las sociales de la 053; con la de la primera publicación)');
   await a4.ajustesComunidad({ sinRanking: true });
   await b4.auth.entrar('carlos@fbe.demo', 'demo');
   check(!Object.keys(await a4.insigniasComunidad(lucia)).length && !(await a4.companerosComunidad(lucia)).length && (await a4.companerosComunidad()).length === 1,
