@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.118': {
+    atleta: [
+      'Tus vídeos de técnica, renovados: el vídeo en modo cine, con la rueda y la tira de fotogramas más claras.',
+      'La nota de tu coach en su color, de rojo a verde, y cada punto clave con su ✓ o su ✗.',
+      'Mi técnica, como una línea del tiempo, y el informe del mes con sus cifras en color.',
+    ],
+    coach: [
+      'Corregir un vídeo es más claro: la nota y los puntos clave con color, cada herramienta en su recuadro y avance en la revisión seguida.',
+      'Lo que nota el atleta de su vídeo sale como una cita, con su RPE en color.',
+    ],
+  },
   '0.117': {
     atleta: [
       'El Equipo, más social: duelos 1 a 1, «Hoy entreno a las…», el compañero de la semana elegido entre todos y encuestas vuestras.',
