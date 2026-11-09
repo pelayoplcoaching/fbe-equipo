@@ -1046,10 +1046,10 @@ function HojaVotantes({ post, alCerrar }) {
   const r = post.resultados;
   return (
     <Hoja titulo="Quién ha votado" alCerrar={alCerrar}>
-      <ul class="lista">
+      <ul class="lista lista-quien">
         {(post.encuesta?.opciones || []).map((o, i) => (
           <li key={i} class="panel-pad pila-xs">
-            <span>{o} ({r.conteos[i] || 0})</span>
+            <span class="lq-cab">{o} <span class="lq-n"><span class="sr">(</span>{r.conteos[i] || 0}<span class="sr">)</span></span></span>
             <span class="peq secundario">{r.quien[i]?.length ? r.quien[i].join(', ') : 'Nadie todavía'}</span>
           </li>
         ))}
@@ -1184,9 +1184,9 @@ function FotoGrandeDentro({ src, alt, alCerrar }) {
 function HojaQuien({ post, alCerrar }) {
   return (
     <Hoja titulo="Reacciones" alCerrar={alCerrar}>
-      <ul class="lista">
+      <ul class="lista lista-quien">
         {REACCIONES_TODAS.filter(([k]) => post.reacciones[k]?.length).map(([k, emoji, nombre]) => (
-          <li key={k} class="panel-pad pila-xs"><span><span aria-hidden="true">{emoji}</span> {nombre} ({post.reacciones[k].length})</span><span class="peq secundario">{post.reacciones[k].join(', ')}</span></li>
+          <li key={k} class="panel-pad pila-xs"><span class="lq-cab"><span aria-hidden="true" class="lq-emoji">{emoji}</span> {nombre} <span class="lq-n"><span class="sr">(</span>{post.reacciones[k].length}<span class="sr">)</span></span></span><span class="peq secundario">{post.reacciones[k].join(', ')}</span></li>
         ))}
       </ul>
     </Hoja>

@@ -3479,3 +3479,149 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    brillo, para que se lea de un vistazo como «hoy ha entrenado». */
 .aro-hoy::before { background: conic-gradient(from 200deg, #22A04B, #7BD88F, #22A04B, #0E9384, #22A04B); box-shadow: 0 0 8px rgba(34, 160, 75, .45); }
 @media (forced-colors: active) { .aro-hoy::before { background: CanvasText; box-shadow: none; } }
+
+/* ══ Tanda 39 (9/11, mañana): Comunidad, para rematar ════════════════════════════════════════════════════════════════
+   Lo que aún no tenía mimo en el Equipo: la entrada para quien no está, «Tu momento», el buscador, «Entrenando ahora»,
+   las menciones, los ajustes, las hojas de opciones, votos y reacciones, y lo del coach (publicar, Panel y Moderar). */
+:root {
+  --ico-lupa: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11%2018a7%207%200%201%200%200-14%207%207%200%200%200%200%2014zM20%2020l-4-4'/%3E%3C/svg%3E");
+  --ico-compartir: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%203v12M7.5%207.5%2012%203l4.5%204.5M5%2013v6.5A1.5%201.5%200%200%200%206.5%2021h11a1.5%201.5%200%200%200%201.5-1.5V13'/%3E%3C/svg%3E");
+  --ico-corazon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%2020s-7.5-4.6-7.5-10.1A4.4%204.4%200%200%201%2012%207.4a4.4%204.4%200%200%201%207.5%202.5C19.5%2015.4%2012%2020%2012%2020z'/%3E%3C/svg%3E");
+  --ico-personas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9%2011a3.5%203.5%200%201%200%200-7%203.5%203.5%200%200%200%200%207zM2.5%2020a6.5%206.5%200%200%201%2013%200M16%204.5a3.5%203.5%200%200%201%200%206.5M18%2014c2.2.7%203.5%203%203.5%206'/%3E%3C/svg%3E");
+  --ico-camara: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4%208.5A1.5%201.5%200%200%201%205.5%207h2l1.5-2h6l1.5%202h2A1.5%201.5%200%200%201%2020%208.5v9a1.5%201.5%200%200%201-1.5%201.5h-13A1.5%201.5%200%200%201%204%2017.5zM12%2016a3%203%200%201%200%200-6%203%203%200%200%200%200%206z'/%3E%3C/svg%3E");
+}
+
+/* ── 280 · «Antes de entrar» con iconos en vez de puntos (tanda 37 de la entrada) ─────────────────────────────────────
+   Cada línea de «Qué ven los demás» con un ✓ del acento delante, como una lista de ajustes. */
+.qsc-ven ul.puntos { list-style: none; padding-left: 0; display: grid; gap: 6px; }
+.qsc-ven ul.puntos > li { position: relative; padding-left: 28px; }
+.qsc-ven ul.puntos > li::before { content: ""; position: absolute; left: 4px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--morado-suave); }
+.qsc-ven ul.puntos > li::after { content: ""; position: absolute; left: 7px; top: 6px; width: 10px; height: 10px; background: var(--morado); -webkit-mask: var(--ico-hecho) center / contain no-repeat; mask: var(--ico-hecho) center / contain no-repeat; }
+.qsc-nunca > p { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--ok) 8%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 20%, transparent); }
+@media (forced-colors: active) { .qsc-ven ul.puntos > li::before { border: 1px solid CanvasText; } .qsc-ven ul.puntos > li::after { background: CanvasText; } }
+
+/* ── 281 · Las normas al entrar (tanda 39) ────────────────────────────────────────────────────────────────────────────
+   «Sin leer» en una pastilla ámbar con su reloj, «Normas leídas» en una pastilla verde, y «Sí, quiero entrar» con luz en
+   cuanto se puede (con las normas leídas y el nombre puesto). */
+.normas-entrada .separa > span.terciario { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--aviso) 14%, var(--hoja)); color: color-mix(in srgb, var(--aviso) 70%, var(--tinta)); font-weight: 650; }
+.normas-entrada .separa > span.terciario::before { content: ""; width: 12px; height: 12px; background: currentColor; -webkit-mask: var(--ico-reloj) center / contain no-repeat; mask: var(--ico-reloj) center / contain no-repeat; }
+.normas-leidas { padding: 3px 10px; border-radius: 999px; background: var(--ok-suave); color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); }
+.entrar-equipo form .btn-primario.btn-grande:not(:disabled) { box-shadow: 0 12px 26px -12px color-mix(in srgb, var(--morado) 90%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+@media (prefers-reduced-motion: no-preference) { .entrar-equipo form .btn-primario.btn-grande:not(:disabled) { animation: entrar-listo .6s var(--curva-rebote) 1; } }
+@keyframes entrar-listo { 50% { transform: scale(1.02); } }
+
+/* ── 282 · «Tu momento»: elegir la foto en un recuadro (tanda 39) ─────────────────────────────────────────────────────
+   «Elegir una foto» pasa a un recuadro grande y punteado del acento, con la cámara blanca en un disco, como al subir una
+   foto en las apps de fotos. */
+.nuevo-momento > .btn.btn-grande:not(.btn-primario) { flex-direction: column; gap: 10px; min-height: 150px; border: 2px dashed color-mix(in srgb, var(--morado) 40%, var(--linea)); border-radius: 18px; background: color-mix(in srgb, var(--morado) 5%, var(--hoja)); color: var(--tinta); }
+.nuevo-momento > .btn.btn-grande:not(.btn-primario) > svg { width: 48px; height: 48px; padding: 12px; border-radius: 50%; background: var(--morado); color: var(--sobre-morado); box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 90%, transparent); }
+@media (hover: hover) { .nuevo-momento > .btn.btn-grande:not(.btn-primario):hover { background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); } }
+@media (forced-colors: active) { .nuevo-momento > .btn.btn-grande:not(.btn-primario) > svg { background: Canvas; color: CanvasText; border: 1px solid CanvasText; } }
+
+/* ── 283 · El buscador del muro como el del iPhone (tanda 39) ─────────────────────────────────────────────────────────
+   El campo en gris con la lupa dentro y el botón de buscar metido en su extremo: una sola pieza. */
+.buscar-muro { position: relative; gap: 0; }
+.buscar-muro .entrada { padding-left: 38px; padding-right: 48px; border-color: transparent; border-radius: 12px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237C7C86' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11%2018a7%207%200%201%200%200-14%207%207%200%200%200%200%2014zM20%2020l-4-4'/%3E%3C/svg%3E") no-repeat 12px center / 17px 17px, var(--hoja-2); }
+.buscar-muro .entrada:focus { background-color: var(--hoja); border-color: var(--morado); }
+.buscar-muro > .btn-icono { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; min-height: 0; border: 0; border-radius: 9px; background: var(--morado); color: var(--sobre-morado); }
+@media (forced-colors: active) { .buscar-muro .entrada { background: Canvas; border-color: CanvasText; } .buscar-muro > .btn-icono { border: 1px solid CanvasText; } }
+
+/* ── 284 · «Entrenando ahora» en directo (tanda 39) ───────────────────────────────────────────────────────────────────
+   Una franja con un baño verde, el punto que late con onda y los avatares de quien entrena con aro verde. */
+.entrenando-ahora { background: linear-gradient(110deg, color-mix(in srgb, var(--ok) 10%, var(--hoja)), var(--hoja) 70%); box-shadow: var(--sombra), inset 0 0 0 1px color-mix(in srgb, var(--ok) 22%, transparent); }
+.ea-punto { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); }
+@media (prefers-reduced-motion: no-preference) { .ea-punto { animation: ea-latido 1.6s ease-in-out infinite, ea-onda 1.6s ease-out infinite; } }
+@keyframes ea-onda { to { box-shadow: 0 0 0 8px color-mix(in srgb, var(--ok) 0%, transparent); } }
+.ea-persona .avatar { box-shadow: 0 0 0 2px var(--hoja), 0 0 0 4px var(--ok); }
+
+/* ── 285 · Las menciones como tarjeta flotante (tanda 39) ─────────────────────────────────────────────────────────────
+   La lista de «@» con una sombra flotante, un filo del acento y la persona elegida rellena del acento con su nombre en negrita. */
+.menciones-sugeridas { background: var(--hoja); box-shadow: var(--sombra-flotante, var(--sombra-alta)), inset 0 0 0 1px color-mix(in srgb, var(--morado) 18%, transparent); }
+.menciones-sugeridas button.activa { background: color-mix(in srgb, var(--morado) 14%, var(--hoja)); font-weight: 700; }
+.menciones-sugeridas button.activa .avatar { box-shadow: 0 0 0 2px var(--morado); }
+
+/* ── 286 · Ajustes de la comunidad con iconos de colores (tanda 39) ───────────────────────────────────────────────────
+   Como los Ajustes del iPhone (y el perfil, bloque 124): cada interruptor con su icono blanco en un cuadrado de color,
+   por el id de su casilla: el ranking en dorado, «entrenando ahora» en verde, compartir en azul y el cardio en rojo. */
+.interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos)) { position: relative; padding-left: 58px; }
+.interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos))::before { content: ""; position: absolute; left: 16px; top: 16px; width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(180deg, color-mix(in srgb, var(--ai) 80%, #fff), var(--ai)); }
+.interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos))::after { content: ""; position: absolute; left: 23px; top: 23px; width: 16px; height: 16px; background: #fff; -webkit-mask: var(--aj) center / contain no-repeat; mask: var(--aj) center / contain no-repeat; pointer-events: none; }
+.interruptor-fila:has(#eq-sin-ranking) { --ai: #C98A00; --aj: var(--ico-trofeo); }
+.interruptor-fila:has(#eq-entrenando) { --ai: #22A04B; --aj: var(--ico-rayo); }
+.interruptor-fila:has(#eq-autocompartir) { --ai: #2E7CF6; --aj: var(--ico-compartir); }
+.interruptor-fila:has(#eq-cardio-retos) { --ai: #E5484D; --aj: var(--ico-corazon); }
+@media (forced-colors: active) { .interruptor-fila:has(#eq-sin-ranking, #eq-entrenando, #eq-autocompartir, #eq-cardio-retos)::before { background: Canvas; border: 1px solid CanvasText; } .interruptor-fila:has(#eq-sin-ranking, #eq-entrenando, #eq-autocompartir, #eq-cardio-retos)::after { background: CanvasText; } }
+
+/* ── 287 · Las opciones de una publicación como lista (tanda 39) ──────────────────────────────────────────────────────
+   Cada opción (fijar, ocultar, silenciar, avisar al coach, borrar) con su icono en un disco del acento suave; «Borrar»,
+   con el disco y el texto en rojo. */
+.opciones-post .btn { min-height: 52px; gap: 12px; }
+.opciones-post .btn > svg { width: 32px; height: 32px; padding: 7px; flex: none; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+.opciones-post .btn.btn-peligro > svg { background: color-mix(in srgb, var(--alerta) 13%, var(--hoja)); color: var(--alerta); }
+
+/* ── 288 · «Quién ha votado» y «Reacciones» en tarjetas (tanda 39) ────────────────────────────────────────────────────
+   Comunidad.jsx: lista-quien, lq-cab y lq-n. Cada opción o reacción en su tarjeta, con el número en una pastilla del
+   acento (los paréntesis siguen ahí para el lector de pantalla) y el emoji algo más grande. */
+.lista-quien { display: grid; gap: 8px; }
+.lista-quien > li { border: 0; border-radius: 14px; background: var(--hoja-2); }
+.lista-quien .lq-cab { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+.lista-quien .lq-n { margin-left: auto; min-width: 26px; padding: 1px 8px; border-radius: 999px; background: var(--morado); color: var(--sobre-morado); font-size: 0.8125rem; font-weight: 750; text-align: center; font-variant-numeric: tabular-nums; }
+.lista-quien .lq-emoji { font-size: 1.25rem; }
+@media (forced-colors: active) { .lista-quien > li { border: 1px solid CanvasText; } .lista-quien .lq-n { border: 1px solid CanvasText; } }
+
+/* ── 289 · El cuadro de publicar del coach (tanda 39) ─────────────────────────────────────────────────────────────────
+   En la encuesta, cada opción con su número en un disco del acento delante; «Fijar arriba», como un chip con su
+   chincheta que se rellena al marcarlo. */
+.compositor .encuesta-campo { counter-increment: opcion-encuesta; }
+.compositor .pila-s:has(> .encuesta-campo) { counter-reset: opcion-encuesta; }
+.compositor .encuesta-campo-fila::before { content: counter(opcion-encuesta); flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--morado-suave); color: var(--tinta); font-size: 0.8125rem; font-weight: 750; }
+.compositor-pie .casilla.casilla-peq { padding: 4px 12px 4px 8px; border-radius: 999px; background: var(--hoja-2); box-shadow: inset 0 0 0 1px var(--borde); }
+.compositor-pie .casilla.casilla-peq:has(input:checked) { background: var(--morado-suave); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 40%, transparent); }
+
+/* ── 290 · Las cifras del Panel del coach (tanda 39) ──────────────────────────────────────────────────────────────────
+   «Dentro», «Avisos sin resolver» y «Pendiente de revisión» en tarjetas con su icono y su color (dentro en el acento,
+   los avisos en rojo y lo pendiente en ámbar); en la tabla de las 4 semanas, la columna de «Esta» resaltada. */
+.pc-cifras > div { position: relative; border: 0; background: linear-gradient(150deg, color-mix(in srgb, var(--pcc) 10%, var(--hoja)), var(--hoja) 70%); box-shadow: var(--sombra); }
+.pc-cifras > div::after { content: ""; position: absolute; top: 10px; right: 10px; width: 16px; height: 16px; background: var(--pcc); -webkit-mask: var(--pci) center / contain no-repeat; mask: var(--pci) center / contain no-repeat; }
+.pc-cifras > div:nth-child(1) { --pcc: var(--morado); --pci: var(--ico-personas); }
+.pc-cifras > div:nth-child(2) { --pcc: var(--alerta); --pci: var(--ico-bandera); }
+.pc-cifras > div:nth-child(3) { --pcc: var(--aviso); --pci: var(--ico-reloj); }
+.pc-tabla :is(th, td):last-child { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); font-weight: 750; }
+.pc-tabla thead th:last-child { border-radius: 8px 8px 0 0; }
+@media (forced-colors: active) { .pc-cifras > div { background: Canvas; border: 1px solid CanvasText; } .pc-cifras > div::after { background: CanvasText; } }
+
+/* ── 291 · «Los más activos» con medallas y «Quién falta» con su aviso (tanda 39) ─────────────────────────────────────
+   Los tres primeros de «Los más activos» con oro, plata y bronce delante; «Quién falta», con un filo ámbar. */
+.pc-activos { counter-reset: activo; }
+.pc-activos > li { counter-increment: activo; position: relative; padding-left: 36px; }
+.pc-activos > li::before { content: counter(activo); position: absolute; left: 0; top: 50%; width: 26px; height: 26px; margin-top: -13px; display: grid; place-items: center; border-radius: 50%; background: var(--hoja-2); color: var(--tinta-2); font-size: 0.75rem; font-weight: 800; }
+.pc-activos > li:nth-child(1)::before { background: linear-gradient(180deg, #F2CF63, #C98A00); color: #1D1933; }
+.pc-activos > li:nth-child(2)::before { background: linear-gradient(180deg, #E4E7EC, #A3AAB6); color: #1D1933; }
+.pc-activos > li:nth-child(3)::before { background: linear-gradient(180deg, #EBB98C, #B26A33); color: #1D1933; }
+.panel-comunidad > section.panel:last-child { box-shadow: var(--sombra), inset 3px 0 0 var(--aviso); }
+
+/* ── 292 · Moderar con calma (tanda 39) ───────────────────────────────────────────────────────────────────────────────
+   «Nada pendiente» en una tarjeta verde con su escudo; las palabras filtradas y el modo lento, en su tarjeta con el
+   título acompañado de un escudo del acento. */
+.moderar > section:first-child:not(:has(li)) > p { position: relative; padding: 12px 14px 12px 46px; border-radius: 14px; background: color-mix(in srgb, var(--ok) 9%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 22%, transparent); color: var(--tinta); }
+.moderar > section:first-child:not(:has(li)) > p::before { content: ""; position: absolute; left: 14px; top: 13px; width: 20px; height: 20px; background: var(--ok); -webkit-mask: var(--ico-escudo) center / contain no-repeat; mask: var(--ico-escudo) center / contain no-repeat; }
+.moderar > form.panel > h2 { display: flex; align-items: center; gap: 8px; }
+.moderar > form.panel > h2::before { content: ""; width: 18px; height: 18px; flex: none; background: var(--morado); -webkit-mask: var(--ico-escudo) center / contain no-repeat; mask: var(--ico-escudo) center / contain no-repeat; }
+@media (forced-colors: active) { .moderar > section:first-child > p::before, .moderar > form.panel > h2::before { background: CanvasText; } }
+
+/* ── 293 · El atleta de la semana con foco dorado (tanda 39) ──────────────────────────────────────────────────────────
+   En el muro (destacado-semana): un resplandor dorado, la medalla en un disco de oro con relieve y el nombre más
+   grande; en el Panel del coach, el título con su medalla y «Nadie esta semana» como invitación en dorado suave. */
+.destacado-semana { position: relative; display: flex; align-items: center; gap: 14px; overflow: hidden; background: radial-gradient(300px 120px at 0% 0%, color-mix(in srgb, var(--oro) 22%, transparent), transparent 70%), linear-gradient(135deg, var(--oro-suave), var(--hoja) 75%); box-shadow: var(--sombra), inset 0 0 0 1px color-mix(in srgb, var(--oro) 30%, transparent); }
+.ds-ico { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #FFF4C8, #F2CF63 55%, #C98A00); box-shadow: 0 8px 18px -8px rgba(201, 138, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .6); font-size: 1.625rem; }
+.destacado-semana .ds-nombre { font-size: 1.125rem; font-weight: 800; }
+.destacado-semana .le-k { color: var(--oro-texto); }
+.panel-comunidad > section:first-child:not(.panel) > p { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--oro-suave) 60%, var(--hoja)); color: var(--tinta-2); }
+@media (forced-colors: active) { .destacado-semana { background: Canvas; border: 1px solid CanvasText; } }
+
+/* ── 294 · Compañeros de racha: la llama solo en el Equipo (arreglo de la tanda 38) ───────────────────────────────────
+   El bloque 273 alcanzaba también las filas de la hoja «Invitar a un compañero de racha» (que usan cp-fila): allí no hay
+   racha todavía. Se quitan llama y baño en esa hoja, y su «Invitar» lleva brillo. */
+.cp-invitar .cp-fila { background: none; margin-inline: 0; padding-inline: 0; }
+.cp-invitar .cp-fila::before, .cp-invitar .cp-fila::after { content: none; }
+.cp-invitar .cp-fila .btn-primario { box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 90%, transparent); }
