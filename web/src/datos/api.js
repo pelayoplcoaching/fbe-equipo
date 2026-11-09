@@ -1881,6 +1881,9 @@ export function crearApi(backend) {
           records: recordsPorSesion[x.id] || 0,
           musculos: Object.entries(musc).sort((a, c) => c[1] - a[1]).slice(0, 3).map(([g]) => g),
           bloque: bl ? { numero: bl.numero, nombre: bl.nombre } : null, semana: w?.numero ?? null,
+          // v0.116 (el perfil): las series por grupo, la hora de la primera serie y los ejercicios que hizo
+          grupos: musc, inicio: ss.reduce((m, s) => (s.registrada_en && (!m || s.registrada_en < m) ? s.registrada_en : m), null),
+          ejercicios: [...new Map(ss.filter((s) => s.ejercicio_id).map((s) => [s.ejercicio_id, { id: s.ejercicio_id, nombre: s.ejercicio }])).values()],
         };
       }).sort((a, c) => ((a.fecha || '') < (c.fecha || '') ? 1 : -1));
     },
