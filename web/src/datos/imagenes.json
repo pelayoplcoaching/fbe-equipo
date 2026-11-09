@@ -325,6 +325,94 @@
       "1080": "imagenes/equipo/equipo-reto-1080.41c9369e.webp"
     }
   },
+  "foco-adaptacion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-adaptacion-480.490f134a.webp",
+      "720": "imagenes/foco/foco-adaptacion-720.854a974b.webp",
+      "1080": "imagenes/foco/foco-adaptacion-1080.c31e06ba.webp"
+    }
+  },
+  "foco-descarga": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-descarga-480.5ee75aa4.webp",
+      "720": "imagenes/foco/foco-descarga-720.033f9ef6.webp",
+      "1080": "imagenes/foco/foco-descarga-1080.90ff123c.webp"
+    }
+  },
+  "foco-evaluacion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-evaluacion-480.b4f31d35.webp",
+      "720": "imagenes/foco/foco-evaluacion-720.03ff5776.webp",
+      "1080": "imagenes/foco/foco-evaluacion-1080.8eb8e853.webp"
+    }
+  },
+  "foco-intensidad": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-intensidad-480.9828aeb4.webp",
+      "720": "imagenes/foco/foco-intensidad-720.abae5887.webp",
+      "1080": "imagenes/foco/foco-intensidad-1080.34a18826.webp"
+    }
+  },
+  "foco-mixto": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-mixto-480.53674444.webp",
+      "720": "imagenes/foco/foco-mixto-720.584785f6.webp",
+      "1080": "imagenes/foco/foco-mixto-1080.055e1333.webp"
+    }
+  },
+  "foco-peaking": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-peaking-480.67b9715d.webp",
+      "720": "imagenes/foco/foco-peaking-720.a3aaa816.webp",
+      "1080": "imagenes/foco/foco-peaking-1080.41e079be.webp"
+    }
+  },
+  "foco-tecnica": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-tecnica-480.858905bc.webp",
+      "720": "imagenes/foco/foco-tecnica-720.bb22011c.webp",
+      "1080": "imagenes/foco/foco-tecnica-1080.a68c995e.webp"
+    }
+  },
+  "foco-volumen": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/foco/foco-volumen-480.b37169ff.webp",
+      "720": "imagenes/foco/foco-volumen-720.40e29618.webp",
+      "1080": "imagenes/foco/foco-volumen-1080.c1a79f9f.webp"
+    }
+  },
   "grupo-abdominales": {
     "proporcion": [
       4,

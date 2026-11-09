@@ -126,6 +126,21 @@ export function imagenPrimerosPasos(dibujo) { return PRIMEROS[dibujo] ? `primero
 export const HERRAMIENTAS = ['camara', 'metronomo', 'intervalos', 'comparar'];
 export function imagenHerramienta(que) { return HERRAMIENTAS.includes(que) ? `herr-${que}` : null; }
 
+// ---------- El foco de la semana ----------
+// Una cabecera por foco (logica/calculos.js: FOCOS), con lo que significa esa semana en una frase; sin foco, nada
+export const FOCOS_IMG = ['adaptacion', 'tecnica', 'volumen', 'intensidad', 'descarga', 'mixto', 'evaluacion', 'peaking'];
+export function imagenFoco(foco) { return FOCOS_IMG.includes(foco) ? `foco-${foco}` : null; }
+export const FRASE_FOCO = {
+  adaptacion: 'Para coger el ritmo: cargas cómodas y la técnica en su sitio.',
+  tecnica: 'Cada repetición, limpia: algo menos de kilos y mucha precisión.',
+  volumen: 'Más series que de costumbre: el trabajo que te hace crecer.',
+  intensidad: 'Menos repeticiones y más kilos: aprieta en lo importante.',
+  descarga: 'Algo menos de carga para recuperar y llegar fresco a lo siguiente.',
+  mixto: 'Un poco de todo: fuerza, volumen y trabajo general.',
+  evaluacion: 'Semana de medir: vemos dónde estás para ajustar lo que viene.',
+  peaking: 'Afinando para tu mejor marca: poco volumen y mucha intensidad.',
+};
+
 // ---------- Los archivos ----------
 // { src, srcset, ancho, alto } de una imagen, o null si no está (o si esta construcción no lleva imágenes: la demo de un
 // solo archivo). `lista` se puede cambiar en las pruebas.
