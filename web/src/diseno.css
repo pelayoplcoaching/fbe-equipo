@@ -4018,10 +4018,11 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .tabla-salud-caja .tabla-salud thead th { color: var(--tinta-2); }
 .tabla-salud-caja .tabla-salud tbody tr:nth-child(even) { background: color-mix(in srgb, var(--tinta) 3%, transparent); }
 .tabla-salud-caja .tabla-salud tbody tr:first-child { background: color-mix(in srgb, var(--morado) 7%, transparent); }
-.tabla-salud-caja .tabla-salud tbody tr:first-child > * { font-weight: 750; color: var(--tinta); }
+.tabla-salud-caja .tabla-salud tbody tr:first-child > * { color: var(--tinta); }
 .tabla-salud-caja { border-radius: 12px; }
-/* A 360 px el punto de color hacía que la tabla tuviera que deslizarse: ahí, el color va en una raya bajo el nombre */
-@media (max-width: 380px) { .tabla-salud-caja .tabla-salud thead th:not(:first-child)::before { content: none; } .tabla-salud-caja .tabla-salud thead th:not(:first-child) { box-shadow: inset 0 -2px 0 var(--c, transparent); } }
+/* En el móvil el punto de color hacía que la tabla tuviera que deslizarse (a 360 y, según los datos del día, a 390 px):
+   ahí, el color va en una raya bajo el nombre y las celdas se aprietan un poco */
+@media (max-width: 440px) { .tabla-salud-caja .tabla-salud thead th:not(:first-child)::before { content: none; } .tabla-salud-caja .tabla-salud thead th:not(:first-child) { box-shadow: inset 0 -2px 0 var(--c, transparent); } .tabla-salud-caja .tabla-salud th, .tabla-salud-caja .tabla-salud td { padding-inline: 4px; } }
 
 /* ── 325 · Tus entrenos en Salud, con sus anillos (tanda 42) ──────────────────────────────────────────────────────────
    La sección del atajo «FBE a Salud» como una tarjeta con tres anillos de colores en la esquina (moverse, ejercicio,
