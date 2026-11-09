@@ -1863,7 +1863,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(!JSON.stringify(A.cifrasTarjeta({ ...d, peso: 80, kcal: 2000, rpe: 9 })).match(/80|2000|peso|kcal|rpe/), 'ninguna lleva peso corporal, nutrición ni esfuerzo');
   const f1 = A.encajarFoto(3000, 4000, 1080, 1350), f2 = A.encajarFoto(4000, 3000, 1080, 1350);
   check(f1.sw === 3000 && f1.sh === 3750 && f1.sy === 88 && f2.sh === 3000 && f2.sw === 2400 && f2.sx === 800 && A.encajarFoto(0, 10) === null, 'la foto se encaja sin deformarse (las verticales, algo por encima del centro)');
-  check(A.PLANTILLAS_TARJETA.map(([k]) => k).join() === 'cifras,minima,foto,clara', 'cuatro plantillas: Cifras, Mínima, Con tu foto y Clara');
+  check(A.PLANTILLAS_TARJETA.map(([k]) => k).join() === 'cifras,minima,foto,poster', 'cuatro plantillas: Cifras, Mínima, Con tu foto y Póster');
   const legal = await import('../web/src/legal.js');
   const fila = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
   check(/foto que eliges para una tarjeta/.test(fila[1]) && /^\d{4}-\d{2}(\.[1-9]\d?)?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que la foto de la tarjeta no se sube (sin cambiar la versión de la política)');
@@ -4569,6 +4569,44 @@ console.log('El perfil, más bonito y más social (v0.114)');
   const ui = readFileSync(new URL('../web/src/ui/atleta/PerfilSocial.jsx', import.meta.url), 'utf8') + readFileSync(new URL('../web/src/ui/PerfilVisual.jsx', import.meta.url), 'utf8');
   check(!/preact\/compat/.test(ui) && /perezoso\(\(\) => import\('\.\.\/Comunidad\.jsx'\)/.test(ui) && !/[^\x00-\x7F]/.test(readFileSync(new URL('../web/src/perfil.css', import.meta.url), 'utf8')),
     'sin preact/compat; la comunidad se carga solo al abrir tu perfil del equipo; el CSS, solo ASCII');
+}
+
+console.log('El perfil, otras 15 (v0.116)');
+{
+  const PF = await import('../web/src/logica/perfil.js');
+  const hoy = '2026-11-11'; // miércoles
+  const e = [
+    { id: 'a', nombre: 'Pierna A', tipo: 'fuerza', fecha: '2026-11-09', inicio: '2026-11-09T17:30:00Z', duracion_min: 70, tonelaje: 4700, series: 19, records: 2, grupos: { cuadriceps: 8, gluteo: 4 }, ejercicios: [{ id: 'sq', nombre: 'Sentadilla' }, { id: 'rdl', nombre: 'RDL' }] },
+    { id: 'b', nombre: 'Torso A', tipo: 'fuerza', fecha: '2026-11-02', inicio: '2026-11-02T17:10:00Z', duracion_min: 65, tonelaje: 3800, series: 17, records: 0, grupos: { pectoral: 6, triceps: 3 }, ejercicios: [{ id: 'pb', nombre: 'Press banca' }] },
+    { id: 'c', nombre: 'Pierna B', tipo: 'fuerza', fecha: '2026-11-04', inicio: '2026-11-04T18:00:00Z', duracion_min: 60, tonelaje: 3000, series: 15, records: 1, grupos: { cuadriceps: 6 }, ejercicios: [{ id: 'sq', nombre: 'Sentadilla' }] },
+    { id: 'd', nombre: 'Rodaje', tipo: 'cardio', fecha: '2025-11-05', inicio: '2025-11-05T07:00:00Z', duracion_min: 40, tonelaje: 0, series: 0, records: 0, cardio_hecho: { modalidad: 'carrera', minutos: 40 } },
+  ];
+  const cmp = PF.comparacionPeriodo(e, hoy);
+  check(cmp.semana.sesiones === 2 && cmp.anio.sesiones === 1 && cmp.siempre === null && PF.textoDiferencia(1, 2) === '−1' && PF.textoDiferencia(3, 1) === '+2' && PF.textoDiferencia(2, 2) === '=',
+    'cifras frente a la semana pasada (de lunes al mismo día) y al año pasado (hasta el mismo día)');
+  const an = PF.anioDias(e, hoy);
+  check(an.semanas.length === 53 && an.diasEntrenados === 3 && an.semanas.at(-1).dias[2].iso === hoy && an.semanas.at(-1).dias[3].nivel === -1 && an.semanas.at(-1).dias[0].nivel === 2,
+    'tu año: 53 semanas, los días entrenados y lo futuro sin pintar');
+  const c = PF.costumbres(e, hoy);
+  check(c.dias[0] === 2 && c.dias[2] === 2 && c.favoritos.join() === '0,2' && c.franja === 'tarde' && c.media === 59 && c.larga.id === 'a' && PF.textoFavoritos([0, 2]) === 'los lunes y los miércoles' && PF.horaMadrid('2026-11-09T17:30:00Z') === 18,
+    'tus costumbres: los lunes y los miércoles, por la tarde (en hora de Madrid), y lo que duran');
+  const m = PF.mejoresConstancia(e, hoy);
+  check(m.semana.sesiones === 2 && m.semana.lunes === '2026-11-02' && m.mes.mes === '2026-11' && m.mes.sesiones === 3, 'tus mejores marcas: la semana y el mes con más sesiones');
+  const g = PF.gruposRecientes(e, hoy, 28);
+  check(g[0].grupo === 'cuadriceps' && g[0].series === 14 && g.length === 4 && !g.some((x) => x.grupo === 'abdominales'), 'lo que más entrenas: las series por grupo de las últimas 4 semanas');
+  const mh = PF.ejerciciosMasHechos(e, 5);
+  check(mh[0].id === 'sq' && mh[0].sesiones === 2 && mh[0].ultima === '2026-11-09' && mh.length === 3, 'tus ejercicios de siempre, con la última vez');
+  const muchos = Array.from({ length: 30 }, (_, i) => ({ id: `x${i}`, fecha: `2026-0${1 + Math.floor(i / 10)}-1${i % 10}`, series: 40, tonelaje: 2000 }));
+  const ids = PF.hitosDe({ entrenos: muchos }, hoy).map((x) => x.id);
+  check(ids.includes('series-1000') && ids.includes('toneladas-50') && !ids.includes('toneladas-100') && ids.includes('sesiones-25'), 'más hitos: 1.000 series y 50 toneladas');
+  const px = PF.proximosHitos(muchos, hoy);
+  check(px.find((x) => x.id === 'sesiones').meta === 50 && px.find((x) => x.id === 'sesiones').falta === 'te faltan 20' && px.find((x) => x.id === 'toneladas').meta === 100, 'tus próximos hitos: lo que falta para el siguiente');
+  const pm = PF.actividadPorMes(e.slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1)), 'todo');
+  check(pm.length === 2 && pm[0].titulo === 'noviembre de 2026' && pm[0].entrenos.length === 3 && PF.actividadPorMes(e, 'cardio').length === 1 && PF.actividadPorMes(e, 'fuerza')[0].entrenos.length === 3,
+    'la actividad por meses, con el filtro de fuerza y cardio');
+  const d = PF.datosPerfilCompartir({ nombre: 'Rubén', entrenos: e, racha: 3, mejor: 'Sentadilla, 140 kg', hoy });
+  check(d.nombre === 'Mi 2026 en FBE' && d.etiqueta === 'Rubén' && d.cifra.v === '3' && d.lineas.length === 4 && d.llama, 'la tarjeta de tu perfil: tu año en FBE');
+  check(PF.portadaValida('bosque') === 'bosque' && PF.portadaValida('rosa') === 'noche', 'la portada: cinco colores; cualquier otra cosa, la noche');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

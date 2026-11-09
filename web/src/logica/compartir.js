@@ -3,7 +3,7 @@
 // semana del equipo y las publicaciones del muro). Ninguna lleva peso corporal, salud ni nutrición.
 import { num } from './calculos.js';
 import { pesoTxt, pesoNum, etiquetaPeso } from './unidades.js';
-import { fmtCorta, diasEntre, hoyISO } from './fechas.js';
+import { fmtCorta, diasEntre, hoyISO, sumarDias, desdeISO } from './fechas.js';
 import { textoCardioHecho, cardioHechoValido, NOMBRE_MODALIDAD, ritmo } from './cardio.js';
 import { PEGATINAS, textoPegatina, textoAniversario } from './celebracion.js';
 import { textoRacha, unidadReto } from './comunidad.js';
@@ -17,6 +17,26 @@ export const FORMATOS = [
 ];
 export const formatoValido = (f) => FORMATOS.some(([k]) => k === f);
 export const tamanoFormato = (f) => { const x = FORMATOS.find(([k]) => k === f) || FORMATOS[0]; return { W: x[3], H: x[4] }; };
+
+// ---------- las paletas (tanda 2) ----------
+// [clave, nombre, colores]. «Noche» es la de la marca; «Clara», fondo claro; las demás, variaciones de la noche con otro acento.
+// Cada una: fondo (abajo), noche (arriba), tinta, tinta2, tinta3, morado (el acento), linea, oro (los récords), clara (sí/no),
+// resplandor (el rgb del acento para los brillos).
+export const PALETAS = [
+  ['noche', 'Noche', { fondo: '#150F36', noche: '#221957', tinta: '#FFFFFF', tinta2: '#CFC8F4', tinta3: '#A79FD8', morado: '#B9ADFF', linea: 'rgba(255, 255, 255, .14)', oro: '#E9D49A', clara: false, resplandor: '104, 78, 236' }],
+  ['clara', 'Clara', { fondo: '#F4F1FF', noche: '#FFFFFF', tinta: '#150F36', tinta2: '#4A4180', tinta3: '#7A72AE', morado: '#684EEC', linea: 'rgba(21, 15, 54, .12)', oro: '#9A7A1C', clara: true, resplandor: '104, 78, 236' }],
+  ['bosque', 'Bosque', { fondo: '#0C1F18', noche: '#16342A', tinta: '#FFFFFF', tinta2: '#C9E6D6', tinta3: '#8FBFA6', morado: '#7FE0B0', linea: 'rgba(255, 255, 255, .14)', oro: '#E9D49A', clara: false, resplandor: '46, 160, 110' }],
+  ['brasa', 'Brasa', { fondo: '#2A0F12', noche: '#4A1A1E', tinta: '#FFFFFF', tinta2: '#F5D0C8', tinta3: '#D99C8F', morado: '#FF9D6E', linea: 'rgba(255, 255, 255, .14)', oro: '#FFD98A', clara: false, resplandor: '236, 96, 60' }],
+  ['hielo', 'Hielo', { fondo: '#0B1A2B', noche: '#13314F', tinta: '#FFFFFF', tinta2: '#CFE4F7', tinta3: '#8FB8DA', morado: '#7FD0FF', linea: 'rgba(255, 255, 255, .14)', oro: '#E9D49A', clara: false, resplandor: '60, 150, 236' }],
+  ['grafito', 'Grafito', { fondo: '#0E0E12', noche: '#1E1E26', tinta: '#FFFFFF', tinta2: '#D6D6E0', tinta3: '#9A9AAB', morado: '#E6E6F0', linea: 'rgba(255, 255, 255, .14)', oro: '#E9D49A', clara: false, resplandor: '120, 120, 140' }],
+];
+export const paletaValida = (k) => PALETAS.some(([c]) => c === k);
+export const paletaDe = (k) => (PALETAS.find(([c]) => c === k) || PALETAS[0])[2];
+export const PREF_PALETA = 'fbe-compartir-paleta';
+
+// La frase propia del atleta en la tarjeta (tanda 2): hasta 70 caracteres, una línea
+export const limpiarFrase = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 70);
+export const PREF_FRASE = 'fbe-compartir-frase';
 
 // ---------- la pegatina ----------
 export const PEGATINAS_TARJETA = [['', 'Ninguna'], ...PEGATINAS];
@@ -53,9 +73,47 @@ export function cifrasTexto(d = {}) {
   return out.join(' · ');
 }
 
+// Los hashtags: los del equipo si el coach los puso en config.js (hashtags: ['#x', '#y']); si no, los de FBE
+export function hashtagsEquipo(cfg = globalThis.FBE_CONFIG) {
+  const h = Array.isArray(cfg?.hashtags) ? cfg.hashtags.map((x) => `#${String(x || '').replace(/^#+/, '').replace(/[^\p{L}\p{N}_]/gu, '')}`).filter((x) => x.length > 1).slice(0, 8) : [];
+  return h.length ? h : HASHTAGS;
+}
+// El tono del pie de foto (tanda 2): sobrio (las cifras), chispa (con ánimo) o humor
+export const TONOS = [['sobrio', 'Sobrio'], ['chispa', 'Con chispa'], ['humor', 'Con humor']];
+export const PREF_TONO = 'fbe-compartir-tono';
+const REMATES = {
+  chispa: {
+    sesion: ['Un día más que suma. 💪', 'Hecho. Mañana, otra vez. 🔥', 'Sin excusas, con cabeza. 🧠'],
+    cardio: ['Piernas que no paran. 🏃', 'Aire, ritmo y a casa. 🌬️'],
+    record: ['Lo que ayer era imposible, hoy es el calentamiento. 🚀', 'Paciencia y constancia: así se mueve una marca. 📈'],
+    racha: ['La constancia no se compra. Se entrena. 🔥', 'Semana a semana, sin ruido. 🧱'],
+    semana: ['Todo lo previsto, hecho. Así se construye. 🧱', 'Semana cerrada. A por la siguiente. ✅'],
+    equipo: ['Este equipo no para. 🐺', 'Juntos se entrena mejor. 💜'],
+    mes: ['Un mes más en el saco. 📆', 'Lo que se repite, se convierte en quien eres. 🔁'],
+    anio: ['Un año de trabajo que se ve. 🗓️', 'Esto no es suerte: son 365 días. 💪'],
+    logro: ['Conseguido. Y lo que viene. 🏅', 'Marcado el objetivo, cumplido el objetivo. ✅'],
+    plan: ['La semana, planeada. Ahora toca cumplirla. 📋', 'Lo que no se planifica, no se hace. 🗓️'],
+    reto: ['¿Te apuntas o miras? 😏', 'Un reto se gana en los días que no apetece. 🔥'],
+  },
+  humor: {
+    sesion: ['Los músculos opinan que ha sido demasiado. Los músculos no deciden. 💪', 'He venido a entrenar y a dar pena en la última serie, y ya he dado pena. 😅', 'El sofá llamó. No cogí. 📵'],
+    cardio: ['He corrido más que mis excusas. Por poco. 🏃', 'Cardio hecho. Mi cara, en modo tomate. 🍅'],
+    record: ['La barra ha pedido explicaciones. 🏋️', 'Nuevo récord. Mi ego, también. 🏆', 'Hoy la gravedad ha perdido. Mañana ya veremos. 🌍'],
+    racha: ['Sigo. No sé muy bien cómo, pero sigo. 🔥', 'Más constante que el wifi de mi gimnasio. 📶'],
+    semana: ['Semana completa. Mi sofá me ha denunciado por abandono. 🛋️', 'Todo hecho. Procedo a no moverme hasta el lunes. 😴'],
+    equipo: ['Aquí nadie se escaquea (casi nadie). 👀', 'Este equipo levanta más que un lunes a las 7. 🐺'],
+    mes: ['Un mes entero. Mi cama no sabe qué ha pasado. 🛏️', 'Resumen del mes: dolor, sudor y una cara muy roja. 🍅'],
+    anio: ['Un año entrenando. Los calcetines rotos, incontables. 🧦', '365 días. Mi fisio ya me manda christmas. 🎄'],
+    logro: ['Conseguido. Ahora, a presumir con moderación. 😎', 'Reto cumplido. La medalla me la pongo yo. 🏅'],
+    plan: ['Esto es el plan. Lo de cumplirlo ya es otra historia. 📋', 'Semana planificada. El lunes, siempre optimista. 🗓️'],
+    reto: ['Un reto. Porque sufrir solo es de aficionados. 😏', 'Apúntate: mal de muchos, entreno de todos. 🐺'],
+  },
+};
+const remate = (tono, t) => { const xs = REMATES[tono]?.[t] || REMATES[tono]?.sesion || []; if (!xs.length) return ''; let n = 0; for (const c of t) n += c.charCodeAt(0); return xs[n % xs.length]; };
+
 // El pie de foto para Instagram, Facebook o WhatsApp: una frase, las cifras, los @ y las etiquetas. tipo: sesion |
-// record | racha | semana | equipo | mes | anio | logro
-export function pieDeFoto(d = {}, { tipo = 'sesion', handle = '', equipo = handleEquipo() } = {}) {
+// record | racha | semana | equipo | mes | anio | logro | plan | reto. tono: sobrio | chispa | humor (tanda 2)
+export function pieDeFoto(d = {}, { tipo = 'sesion', handle = '', equipo = handleEquipo(), tono = 'sobrio', hashtags = hashtagsEquipo() } = {}) {
   const t = tipo === 'sesion' && d.cardio ? 'cardio' : tipo;
   const frases = {
     sesion: `${d.nombre || 'Sesión'} ✅ ${cifrasTexto(d)}`,
@@ -67,10 +125,22 @@ export function pieDeFoto(d = {}, { tipo = 'sesion', handle = '', equipo = handl
     mes: `📆 ${d.nombre || 'Mi mes'}: ${cifrasTexto(d)}`,
     anio: `🗓️ ${d.nombre || 'Mi año'}: ${cifrasTexto(d)}`,
     logro: `🏅 ${d.nombre || 'Logro'}${d.lineas?.[0] ? `: ${d.lineas[0]}` : ''}`,
+    plan: `📋 Mi semana: ${(d.lista || []).map((x) => `${x.dia} ${x.texto}`).join(' · ') || 'planificada'}`,
+    reto: `🏁 ${d.nombre || 'Reto'}: ${junta(d.lineas || [], ' · ')}`,
+    comparativa: `📈 ${d.nombre}: de ${d.comparar?.antes?.v || ''} a ${d.comparar?.ahora?.v || ''} ${d.comparar?.unidad || ''}${d.lineas?.[0] ? ` · ${d.lineas[0]}` : ''}`,
   };
   const records = tipo === 'sesion' ? (d.records || []).slice(0, 3).map((r) => `🏆 ${r.nombre}: ${r.texto}`) : [];
+  const propia = d.frase ? `«${d.frase}»` : '';
   const firma = junta([handle ? conArroba(handle) : '', equipo ? `Entreno con ${conArroba(equipo)}` : 'Entrenado con FBE Coaching'], ' · ');
-  return [frases[t] || frases.sesion, ...records, firma, HASHTAGS.join(' ')].filter(Boolean).join('\n');
+  return [frases[t] || frases.sesion, ...records, propia, tono !== 'sobrio' ? remate(tono, t) : '', firma, hashtags.join(' ')].filter(Boolean).join('\n');
+}
+
+// El texto alternativo de la imagen (tanda 2), para el campo de accesibilidad de Instagram o Facebook
+export function textoAlternativo(d = {}, tipo = 'sesion') {
+  if (tipo === 'sesion') return `Tarjeta de entrenamiento de FBE Equipo: ${d.nombre || 'sesión'}${d.fecha ? `, ${fmtCorta(d.fecha)}` : ''}. ${cifrasTexto(d)}${(d.records || []).length ? `. Récords: ${d.records.map((r) => r.nombre).join(', ')}` : ''}.`;
+  if (tipo === 'plan') return `Plan de la semana de FBE Equipo: ${(d.lista || []).map((x) => `${x.dia}, ${x.texto}`).join('; ')}.`;
+  if (tipo === 'comparativa') return `Antes y ahora en ${d.nombre}: ${d.comparar?.antes?.v} ${d.comparar?.unidad} (${d.comparar?.antes?.fecha}) frente a ${d.comparar?.ahora?.v} ${d.comparar?.unidad} (${d.comparar?.ahora?.fecha}).`;
+  return `Tarjeta de FBE Equipo: ${d.etiqueta || ''}${d.nombre ? `, ${d.nombre}` : ''}${d.cifra ? `: ${d.cifra.v} ${d.cifra.u || ''} ${d.cifra.t || ''}` : ''}${(d.lineas || []).length ? `. ${d.lineas.join('. ')}` : ''}.`.replace(/\s+/g, ' ');
 }
 
 // El resumen en texto plano (para el grupo de WhatsApp, sin imagen): el nombre, las cifras, la mejor serie de cada
@@ -120,7 +190,55 @@ export function datosRecord(x = {}, h = null, hoy = hoyISO()) {
     tipo: 'record', etiqueta: 'Nuevo récord', nombre: x.nombre || 'Ejercicio', fecha,
     cifra: conKg ? { v: pesoNum(valor, 1), u: etiquetaPeso(), t: '1RM estimado' } : { v: String(valor), u: '', t: 'repeticiones' },
     lineas, subtitulo: null,
+    // (tanda 2) la gráfica: los últimos puntos de la historia (hasta 14), para la línea bajo la cifra
+    puntos: puntos.length >= 3 ? puntos.slice(-14).map((p) => ({ x: p.x, y: pesoNum(Number(p.y), 2) })) : null,
   };
+}
+// (tanda 2) Antes y ahora en un ejercicio: el primer y el último valor de la gráfica de la ficha (puntos semanales de
+// 1RM estimado, en la unidad del atleta). x: { nombre }, puntos: [{ semana, valor }]
+export function datosComparativa(x = {}, puntos = [], { unidad = etiquetaPeso(), metrica = '1RM estimado', hoy = hoyISO() } = {}) {
+  const ps = (puntos || []).filter((p) => p && p.valor > 0);
+  if (ps.length < 2) return null;
+  const a = ps[0], b = ps[ps.length - 1];
+  const pct = Math.round(((b.valor - a.valor) / a.valor) * 100);
+  const meses = Math.max(1, Math.round(diasEntre(a.semana, b.semana) / 30));
+  return {
+    tipo: 'comparativa', etiqueta: 'Antes y ahora', nombre: x.nombre || 'Ejercicio', fecha: hoy,
+    comparar: { antes: { v: num(a.valor, a.valor % 1 ? 1 : 0), fecha: fmtCorta(a.semana) }, ahora: { v: num(b.valor, b.valor % 1 ? 1 : 0), fecha: fmtCorta(b.semana) }, unidad, metrica },
+    lineas: [`${pct >= 0 ? '+' : ''}${pct} % en ${meses} ${meses === 1 ? 'mes' : 'meses'}`], subtitulo: null, cifra: null,
+    puntos: ps.length >= 3 ? ps.slice(-14).map((p) => ({ x: p.semana, y: p.valor })) : null,
+  };
+}
+// (tanda 2) El plan de la semana: los días con su sesión (y los libres), para el grupo. semana: { fecha_inicio },
+// sesiones: [{ nombre, tipo, dia_previsto, completada, fecha_realizada }]
+export function datosPlanSemana(semana = {}, sesiones = [], hoy = hoyISO()) {
+  const lunes = semana.fecha_inicio || hoy;
+  const LETRAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  const lista = [];
+  for (let i = 0; i < 7; i++) {
+    const d = sumarDias(lunes, i);
+    const delDia = sesiones.filter((s) => (s.completada ? s.fecha_realizada === d : s.dia_previsto === d));
+    lista.push({ dia: LETRAS[i], fecha: d, texto: delDia.length ? delDia.map((s) => s.nombre).join(' + ') : 'Descanso', hecha: delDia.length > 0 && delDia.every((s) => s.completada), hoy: d === hoy });
+  }
+  const sinDia = sesiones.filter((s) => !s.completada && !s.dia_previsto).map((s) => s.nombre);
+  const n = sesiones.length;
+  return { tipo: 'plan', etiqueta: 'Mi semana', nombre: `Del ${fmtCorta(lunes)} al ${fmtCorta(sumarDias(lunes, 6))}`, fecha: hoy, lista,
+    lineas: sinDia.length ? [`Sin día aún: ${sinDia.join(', ')}`] : [], cifra: { v: String(n), u: '', t: n === 1 ? 'sesión prevista' : 'sesiones previstas' }, subtitulo: null };
+}
+// (tanda 2) Un reto del equipo en marcha (TarjetaReto): r = { titulo, objetivo, medida, modo, desde, hasta, total, progreso: [{ hechas }] }
+export function datosReto(r = {}, hoy = hoyISO()) {
+  const u = (n) => unidadReto(r.medida || 'sesiones', n);
+  const equipo = r.modo === 'equipo', equipos = r.modo === 'equipos';
+  const dias = r.hasta ? diasEntre(hoy, r.hasta) : null;
+  const participan = (r.progreso || []).length, conseguido = (r.progreso || []).filter((p) => p.hechas >= r.objetivo).length;
+  const lineas = [];
+  if (equipo) lineas.push(`${r.total || 0} de ${r.objetivo} ${u(r.objetivo)} entre todo el equipo`);
+  else if (equipos) lineas.push(`${r.objetivo} ${u(r.objetivo)} por equipo`);
+  else lineas.push(`${r.objetivo} ${u(r.objetivo)} cada uno${conseguido ? ` · ${conseguido} ya lo ${conseguido === 1 ? 'tiene' : 'tienen'}` : ''}`);
+  if (participan) lineas.push(`${participan} ${participan === 1 ? 'persona participa' : 'personas participan'}`);
+  if (dias != null) lineas.push(dias > 1 ? `Quedan ${dias} días (hasta el ${fmtCorta(r.hasta)})` : dias === 1 ? 'Queda 1 día' : dias === 0 ? 'Último día' : `Terminó el ${fmtCorta(r.hasta)}`);
+  return { tipo: 'reto', etiqueta: equipos ? 'Reto por equipos' : equipo ? 'Reto de equipo' : 'Reto del equipo', nombre: r.titulo || 'Reto', fecha: hoy,
+    cifra: { v: String(r.objetivo || 0), u: '', t: u(r.objetivo) }, lineas, subtitulo: null };
 }
 // Un récord del resumen de la sesión: x = { nombre, s (la serie), r: { tipo, valor, antes, reps, kg, texto } }
 export function datosRecordDeSesion(x = {}, fecha = hoyISO()) {
@@ -204,6 +322,20 @@ export function cifrasCardio(c = {}) {
 export const nombreArchivo = (d = {}, formato = 'publicacion') =>
   `fbe-${d.fecha || hoyISO()}-${String(d.nombre || d.tipo || 'tarjeta').toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)}${formato === 'historia' ? '-historia' : ''}.png`;
 
+// ---------- (tanda 2) lo que has compartido ----------
+// Las últimas 12 tarjetas (qué se compartió y con qué opciones, nunca la imagen ni la foto), en este móvil
+export const PREF_COMPARTIDOS = 'fbe-compartidos';
+export const MAX_COMPARTIDOS = 12;
+export function anotarCompartido(lista, { datos, tipo = 'sesion', logro = false, plantillas = false, opciones = {}, titulo = '' }, ahora = new Date().toISOString()) {
+  if (!datos) return lista || [];
+  const { foto, ...resto } = opciones || {};
+  const entrada = { cuando: ahora, tipo, logro, plantillas, titulo: titulo || datos.nombre || '', datos, opciones: { ...resto, plantilla: resto.plantilla === 'foto' ? 'minima' : resto.plantilla } };
+  const clave = JSON.stringify([tipo, datos.nombre, datos.fecha, datos.cifra?.v, datos.series]);
+  const sin = (lista || []).filter((x) => JSON.stringify([x.tipo, x.datos?.nombre, x.datos?.fecha, x.datos?.cifra?.v, x.datos?.series]) !== clave);
+  return [entrada, ...sin].slice(0, MAX_COMPARTIDOS);
+}
+export const textoCompartido = (x) => x?.tipo === 'sesion' ? `${x.datos?.nombre || 'Sesión'}${x.datos?.fecha ? ` · ${fmtCorta(x.datos.fecha)}` : ''}` : `${x?.datos?.etiqueta || ''}${x?.datos?.nombre ? ` · ${x.datos.nombre}` : ''}`;
+
 // ---------- el recordatorio de Hoy ----------
 export const PREF_RECORDATORIO = 'fbe-compartir-recordatorio';
 // Lo último que merece compartirse y aún no se compartió: un récord o un hito de racha de los 3 últimos días. estado:
@@ -217,4 +349,4 @@ export function recordatorioCompartir(estado, hoy = hoyISO()) {
   return { sesionId: estado.sesionId, titulo: records.length === 1 ? `Tu récord ${cuando} en ${records[0]}` : `Tus ${records.length} récords ${cuando}`, texto: 'Merece una historia. ¿Lo compartes?' };
 }
 
-export { textoCardioHecho, PEGATINAS, red1 };
+export { textoCardioHecho, PEGATINAS, red1, desdeISO };

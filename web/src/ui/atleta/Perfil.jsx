@@ -2,7 +2,7 @@ import { hoyISO } from '../../logica/fechas.js';
 import { useState } from 'preact/hooks';
 import { AjustesDispositivo, AjustesMensajes, VERSION_APP } from '../Ajustes.jsx';
 import { SeccionNotificaciones } from '../Notificaciones.jsx';
-import { CabeceraGrande, useApp, useCarga, Icono, Hoja, HojaExportar, Avatar, GrupoIos, FilaIos, IcoIos } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, Icono, Hoja, HojaExportar, Avatar, GrupoIos, FilaIos, IcoIos, usePreferencia } from '../comunes.jsx';
 import { conEntrenamiento } from '../../logica/nivel.js';
 import { urlSegura } from '../../logica/diseno.js';
 import { BandaDemo } from '../App.jsx';
@@ -18,6 +18,8 @@ import { Conexiones } from './Conexiones.jsx';
 import { PortadaPerfil, FotoConAnillo } from '../PerfilVisual.jsx';
 import { PerfilSecciones, EnElEquipo } from './PerfilSocial.jsx';
 import { usePersonal } from './Personal.jsx';
+import { PORTADAS, portadaValida } from '../../logica/perfil.js';
+import { LoCompartido } from '../Compartir.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -65,6 +67,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       <LoTuyo />
       {/* v0.105: Salud del iPhone y el calendario que se actualiza solo */}
       <Conexiones salud={salud} />
+      {/* (compartir, tanda 2) lo que has compartido desde este móvil */}
+      <LoCompartido />
 
       <AjustesDispositivo antes={<SeccionNotificaciones fila />} />
       <AjustesMensajes />
@@ -127,9 +131,22 @@ function CabezaPerfil({ p, correo }) {
   const personal = usePersonal();
   const porque = personal.datos?.porque?.trim();
   const apodo = personal.datos?.apodo?.trim();
+  // v0.116: la portada que eliges (cinco colores; solo en este móvil)
+  const [portada, setPortada] = usePreferencia('fbe-portada-perfil', 'noche');
+  const [elegir, setElegir] = useState(false);
   return (
-    <section class="perfil-cabeza con-portada" aria-label={`${atleta.nombre}${bloque ? `, ${bloque}` : ''}`}>
+    <section class="perfil-cabeza con-portada" data-portada={portadaValida(portada)} aria-label={`${atleta.nombre}${bloque ? `, ${bloque}` : ''}`}>
       <PortadaPerfil texto={atleta.nombre} />
+      <button type="button" class="btn-icono perfil-portada-btn" aria-label="Cambiar el color de la portada" aria-expanded={elegir ? 'true' : 'false'} onClick={() => setElegir(!elegir)}><Icono n="paleta" /></button>
+      {elegir && (
+        <div class="perfil-portadas" role="radiogroup" aria-label="Color de la portada">
+          {PORTADAS.map(([k, t]) => (
+            <button key={k} type="button" role="radio" aria-checked={portadaValida(portada) === k ? 'true' : 'false'} data-portada={k} class="pp-muestra" onClick={() => { setPortada(k); setElegir(false); }}>
+              <span class="pp-color" aria-hidden="true" /><span class="pp-nombre">{t}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <FotoConAnillo nombre={atleta.nombre} foto={perfil?.foto_grande || perfil?.foto} racha={constancia.datos?.racha || 0} clase="enorme" lleno ampliable />
       <div class="perfil-quien">
         <p class="perfil-nombre">{atleta.nombre}</p>

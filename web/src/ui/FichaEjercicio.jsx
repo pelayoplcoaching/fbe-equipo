@@ -8,10 +8,12 @@ import { pesoNum, pesoTxt, etiquetaPeso, difVista } from '../logica/unidades.js'
 import { BotonModelo } from './tecnica/Modelos.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenGrupo } from '../logica/imagenes.js';
+import { HojaCompartir } from './Compartir.jsx';
+import { datosComparativa } from '../logica/compartir.js';
 
 // Ficha de un ejercicio (como en Strong o Hevy): gráficas por semana con rango, récords de 1 a 12
 // repeticiones (real frente a estimado), historial completo y la técnica si la hay.
-export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'graficas' }) {
+export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'graficas', compartir = false }) {
   const { api } = useApp();
   const h = useCarga(() => api.historialEjercicio(atletaId, ejercicio.id), [atletaId, ejercicio.id]);
   const d = h.datos;
@@ -38,7 +40,7 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
         {vista === 'tecnica' ? <Tecnica ejercicio={ejercicio} modelos={modelos.datos || []} />
           : h.cargando && !d ? <Siluetas forma="grafica" texto="Cargando el ejercicio" />
             : !d?.sesiones.length ? <Vacio icono="historial" titulo="Aún no hay series de este ejercicio" />
-              : vista === 'graficas' ? <Graficas d={d} nombre={ejercicio.nombre} />
+              : vista === 'graficas' ? <Graficas d={d} nombre={ejercicio.nombre} compartir={compartir} />
                 : vista === 'records' ? <Records d={d} />
                   : <Historial d={d} />}
       </div>
@@ -46,7 +48,9 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
   );
 }
 
-function Graficas({ d, nombre }) {
+function Graficas({ d, nombre, compartir = false }) {
+  // (compartir, tanda 2) «antes y ahora»: el primer y el último punto de la gráfica, como tarjeta
+  const [comparar, setComparar] = useState(false);
   const metricas = metricasDe(d.series);
   const [metrica, setMetrica] = useState(metricas[0].id);
   const [rango, setRango] = useState('6m');
@@ -71,6 +75,10 @@ function Graficas({ d, nombre }) {
         <Segmentos opciones={RANGOS.map(([id, t]) => [id, t])} valor={rango} etiqueta="Rango" alCambiar={(v) => v && setRango(v)} clase="seg-compacto" />
         {cambio != null && <span class={`chip num ${cambio > 0 ? 'ok' : ''}`}>{cambio > 0 ? '+' : ''}{num(cambio, 1)} % en el rango</span>}
       </div>
+      {compartir && puntos.length > 1 && m.id !== 'volumen' && cambio > 0 && <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => setComparar(true)}><Icono n="compartir" /> Compartir antes y ahora</button>}
+      {comparar && <HojaCompartir logro tipo="comparativa" titulo="Compartir antes y ahora" equipo={{ tema: 'logros' }}
+        datos={datosComparativa({ nombre }, puntos.map((p) => ({ semana: p.semana, valor: m.unidad === 'kg' ? difVista(p.valor) : p.valor })), { unidad: m.unidad === 'kg' ? etiquetaPeso() : m.unidad, metrica: m.nombre })}
+        alCerrar={() => setComparar(false)} />}
       <p class="mini terciario">{m.id === 'e1rm' ? 'Mejor 1RM estimado de cada semana (Epley con las repeticiones en recámara).' : m.id === 'carga' ? 'La carga más alta de cada semana, a cualquier número de repeticiones.' : m.id === 'volumen' ? 'Kilos totales de cada semana: carga × repeticiones de todas las series.' : 'Las repeticiones de la mejor serie de cada semana.'}</p>
     </div>
   );

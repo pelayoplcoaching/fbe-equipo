@@ -4,6 +4,7 @@ import { FORMATOS, formatoValido, tamanoFormato, PEGATINAS_TARJETA, pegatinaTarj
   resumenTexto, datosRecord, datosRecordDeSesion, datosRacha, datosSemanaCompleta, datosEquipoSemana, datosDePost, cifrasCardio, nombreArchivo,
   recordatorioCompartir, HASHTAGS } from '../web/src/logica/compartir.js';
 import { PLANTILLAS_TARJETA } from '../web/src/logica/arte.js';
+import { PALETAS, paletaValida, paletaDe, limpiarFrase, hashtagsEquipo, TONOS, textoAlternativo, datosComparativa, datosPlanSemana, datosReto, anotarCompartido, textoCompartido, MAX_COMPARTIDOS } from '../web/src/logica/compartir.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -11,7 +12,7 @@ const lanza = (f) => { try { f(); return false; } catch { return true; } };
 
 console.log('Formatos, plantillas y pegatinas');
 check(FORMATOS.length === 2 && formatoValido('historia') && !formatoValido('cuadrado') && tamanoFormato('historia').H === 1920 && tamanoFormato('nada').H === 1350, 'publicación (4:5) e historia (9:16); lo raro, publicación');
-check(PLANTILLAS_TARJETA.some(([k]) => k === 'clara'), 'la plantilla «Clara»');
+check(PLANTILLAS_TARJETA.some(([k]) => k === 'poster') && PALETAS.length === 6 && paletaValida('clara') && !paletaValida('rosa') && paletaDe('bosque').clara === false && paletaDe('clara').clara, 'la plantilla «Póster» y las seis paletas');
 check(PEGATINAS_TARJETA[0][0] === '' && PEGATINAS_TARJETA.length === 7 && pegatinaTarjeta('pr') === 'PR' && pegatinaTarjeta('') === null && pegatinaTarjeta('x') === null, 'las pegatinas del equipo, y ninguna');
 
 console.log('\nLos @');
@@ -55,6 +56,29 @@ const pa = datosDePost({ tipo: 'aniversario', creado_en: '2026-11-07T18:00:00Z',
 check(pa.etiqueta === 'Aniversario' && pa.nombre === '1 año en FBE' && pa.cifra.v === '1' && pa.cifra.t === 'año entrenando', 'un aniversario');
 check(cifrasCardio({ modalidad: 'carrera', minutos: 30, km: 5 }).map((c) => `${c.v} ${c.u}`).join('|') === '30 min|5 km|6:00 min/km' && cifrasCardio({ modalidad: 'bici', minutos: 60 }).length === 1 && cifrasCardio(null).length === 0, 'las cifras del cardio');
 check(nombreArchivo(d) === 'fbe-2026-11-08-pierna-a.png' && nombreArchivo(d, 'historia') === 'fbe-2026-11-08-pierna-a-historia.png' && nombreArchivo({ tipo: 'record' }).includes('-record'), 'el nombre del archivo');
+
+console.log('\n(Tanda 2) paletas, frase, tonos y texto alternativo');
+check(limpiarFrase('  Hoy   no apetecía  ') === 'Hoy no apetecía' && limpiarFrase('a'.repeat(90)).length === 70 && limpiarFrase(null) === '', 'la frase propia, limpia y hasta 70');
+check(hashtagsEquipo({ hashtags: ['fbe', '#TeamFBE', 'mal nombre!'] }).join(' ') === '#fbe #TeamFBE #malnombre' && hashtagsEquipo({}).join(' ') === '#FBE #FuerzaBasadaEnEvidencia #Entreno', 'los hashtags del equipo (de config.js) o los de FBE');
+check(TONOS.length === 3 && pieDeFoto(d, { tono: 'chispa', equipo: '' }).split('\n').length === 5 && pieDeFoto(d, { tono: 'sobrio', equipo: '' }).split('\n').length === 4, 'con chispa o con humor, una línea más; sobrio, no');
+check(pieDeFoto(d, { tono: 'humor', equipo: '' }) === pieDeFoto(d, { tono: 'humor', equipo: '' }) && pieDeFoto({ ...d, frase: 'Sin excusas' }, { equipo: '' }).includes('«Sin excusas»'), 'el remate no cambia entre dos llamadas; la frase propia va en el texto');
+check(textoAlternativo(d).startsWith('Tarjeta de entrenamiento de FBE Equipo: Pierna A, 8 nov. 52 min') && textoAlternativo(ra, 'racha').includes('8') && textoAlternativo(ra, 'racha').includes('semanas seguidas'), 'el texto alternativo');
+
+console.log('\n(Tanda 2) antes y ahora, el plan de la semana, el reto y lo compartido');
+const cmp = datosComparativa({ nombre: 'Sentadilla' }, [{ semana: '2026-05-04', valor: 100 }, { semana: '2026-08-03', valor: 110 }, { semana: '2026-11-02', valor: 120 }], { unidad: 'kg', metrica: '1RM estimado' });
+check(cmp.tipo === 'comparativa' && cmp.comparar.antes.v === '100' && cmp.comparar.ahora.v === '120' && cmp.comparar.antes.fecha === '4 may' && cmp.lineas[0] === '+20 % en 6 meses' && cmp.puntos.length === 3, 'antes y ahora, con la gráfica');
+check(datosComparativa({ nombre: 'X' }, [{ semana: '2026-05-04', valor: 100 }]) === null, 'con un solo punto, nada');
+const plan = datosPlanSemana({ fecha_inicio: '2026-11-09' }, [{ nombre: 'Pierna A', dia_previsto: '2026-11-10', completada: true, fecha_realizada: '2026-11-09' }, { nombre: 'Torso', dia_previsto: '2026-11-12' }, { nombre: 'Full', dia_previsto: null }], '2026-11-10');
+check(plan.lista.length === 7 && plan.lista[0].texto === 'Pierna A' && plan.lista[0].hecha && plan.lista[1].texto === 'Descanso' && plan.lista[1].hoy && plan.lista[3].texto === 'Torso' && plan.lineas[0] === 'Sin día aún: Full' && plan.cifra.v === '3', 'el plan: un día por fila (la hecha, en su día real), los libres y lo sin día');
+const reto = datosReto({ titulo: 'Noviembre a tope', objetivo: 12, medida: 'sesiones', modo: 'individual', desde: '2026-11-01', hasta: '2026-11-30', progreso: [{ hechas: 12 }, { hechas: 5 }, { hechas: 8 }] }, '2026-11-10');
+check(reto.tipo === 'reto' && reto.cifra.v === '12' && reto.lineas[0] === '12 sesiones cada uno · 1 ya lo tiene' && reto.lineas[1] === '3 personas participan' && reto.lineas[2] === 'Quedan 20 días (hasta el 30 nov)', 'el reto en marcha, solo recuentos');
+check(datosReto({ titulo: 'E', objetivo: 100, medida: 'cardio', modo: 'equipo', total: 40, hasta: '2026-11-10' }, '2026-11-10').lineas.join('|') === '40 de 100 minutos de cardio entre todo el equipo|Último día', 'de equipo, el último día');
+let lista = anotarCompartido([], { datos: d, tipo: 'sesion', plantillas: true, opciones: { plantilla: 'foto', foto: {}, formato: 'historia', paleta: 'brasa' } }, '2026-11-08T20:00:00Z');
+check(lista.length === 1 && lista[0].opciones.plantilla === 'minima' && !('foto' in lista[0].opciones) && lista[0].opciones.paleta === 'brasa' && textoCompartido(lista[0]) === 'Pierna A · 8 nov', 'lo compartido: qué y cómo, sin la foto (con tu foto pasa a mínima)');
+lista = anotarCompartido(lista, { datos: d, tipo: 'sesion', plantillas: true, opciones: { plantilla: 'cifras' } });
+check(lista.length === 1 && lista[0].opciones.plantilla === 'cifras', 'la misma tarjeta otra vez la sustituye');
+for (let i = 0; i < 15; i++) lista = anotarCompartido(lista, { datos: { ...rs, nombre: `E${i}` }, tipo: 'record', logro: true });
+check(lista.length === MAX_COMPARTIDOS && lista[0].logro && textoCompartido(lista[0]) === 'Nuevo récord · E14', 'como mucho 12, la última primero');
 
 console.log('\nEl recordatorio de Hoy');
 const est = { sesionId: 's1', fecha: '2026-11-07', records: ['Sentadilla'], tarjetas: [rs] };

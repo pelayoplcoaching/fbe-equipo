@@ -116,3 +116,102 @@
 .pe-galeria p { margin: 0; padding: 6px; font-size: 0.6875rem; }
 
 
+
+/* ================= v0.116: otras 15 para el perfil ================= */
+
+/* -- Tus cifras frente al periodo de antes -- */
+.perfil-tile { flex-direction: column; justify-content: flex-start; }
+.perfil-tile dd { order: 0; }
+.perfil-tile dt { order: 1; }
+.perfil-tile .perfil-dif { order: 2; font-size: 0.75rem; font-weight: 700; color: var(--tinta-2); font-stretch: normal; }
+
+/* -- Las 12 semanas: la semana elegida -- */
+.perfil-barras-sel { margin: 0; font-size: 0.9375rem; }
+.perfil-barras { cursor: pointer; border-radius: 8px; }
+.perfil-barras:focus-visible { outline: 2px solid var(--morado); outline-offset: 4px; }
+.pb-col.sel .pb-barra { background: color-mix(in srgb, var(--morado) 70%, var(--hoja-2)); box-shadow: 0 0 0 2px var(--hoja), 0 0 0 4px var(--morado); }
+.pb-col.actual.sel .pb-barra { background: var(--morado); }
+
+/* -- Tu ano: 53 semanas x 7 dias -- */
+.perfil-anio-marco { overflow-x: auto; scrollbar-width: thin; padding-bottom: 4px; }
+.perfil-anio { display: grid; grid-auto-flow: column; grid-auto-columns: 11px; gap: 3px; width: max-content; }
+.pa-semana { display: grid; grid-template-rows: repeat(7, 11px); gap: 3px; }
+.pa-dia { display: inline-block; width: 11px; height: 11px; border-radius: 3px; background: var(--hoja-2); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tinta-3) 18%, transparent); }
+.pa-dia.n-1 { visibility: hidden; }
+.pa-dia.n2 { background: color-mix(in srgb, var(--morado) 55%, var(--hoja-2)); box-shadow: none; }
+.pa-dia.n3 { background: var(--morado); box-shadow: none; }
+.perfil-anio-ley { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.perfil-anio-ley .pa-dia { vertical-align: -1px; }
+.perfil-anio-ley .pa-dia:not(:first-child) { margin-left: 8px; }
+
+/* -- Tus costumbres: los dias de la semana -- */
+.perfil-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; height: 112px; align-items: end; }
+.pd-col { display: grid; grid-template-rows: auto 1fr auto; height: 100%; gap: 3px; text-align: center; min-width: 0; }
+.pd-n { font-size: 0.75rem; color: var(--tinta-2); min-height: 1em; }
+.pd-barra { align-self: end; justify-self: center; width: min(100%, 28px); height: var(--h); border-radius: 7px 7px 3px 3px; background: color-mix(in srgb, var(--morado) 30%, var(--hoja-2)); }
+.pd-col.fav .pd-barra { background: var(--morado); }
+.pd-dia { font-size: 0.75rem; font-weight: 650; color: var(--tinta-2); }
+
+/* -- Lo que mas entrenas: con el color de cada grupo (los del editor y la biblioteca) -- */
+.perfil-grupos { list-style: none; margin: 0; display: grid; gap: 10px; }
+.perfil-grupos li { display: grid; grid-template-columns: minmax(5.5em, 7.5em) minmax(0, 1fr) auto; gap: 10px; align-items: center; --g: var(--morado); }
+.perfil-grupos [data-g="pectoral"] { --g: #E5484D; } .perfil-grupos [data-g="espalda"] { --g: #2E7CF6; }
+.perfil-grupos [data-g="deltoides"] { --g: #E8730C; } .perfil-grupos [data-g="cuadriceps"] { --g: #22A04B; }
+.perfil-grupos [data-g="gluteo"] { --g: #E5407F; } .perfil-grupos [data-g="isquiotibiales"] { --g: #0E9384; }
+.perfil-grupos [data-g="biceps"] { --g: #7A5AF8; } .perfil-grupos [data-g="triceps"] { --g: #5856D6; }
+.perfil-grupos [data-g="abdominales"] { --g: #C98A00; } .perfil-grupos [data-g="gemelo"] { --g: #8E6E53; }
+.pg-nombre { font-weight: 650; font-size: 0.875rem; overflow-wrap: anywhere; }
+.pg-barra { height: 10px; border-radius: 999px; background: var(--hoja-2); overflow: hidden; }
+.pg-barra span { display: block; height: 100%; width: var(--w); border-radius: inherit; background: var(--g); }
+.pg-n { font-weight: 750; font-size: 0.875rem; white-space: nowrap; }
+.pg-n small { font-weight: 600; color: var(--tinta-2); font-size: 0.75rem; }
+@media (forced-colors: active) { .pg-barra span { background: CanvasText; } }
+
+/* -- Tus ejercicios de siempre -- */
+.perfil-mashechos { list-style: none; margin: 0; padding: 4px 14px; display: grid; }
+.perfil-mashechos li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; }
+.perfil-mashechos li + li { border-top: 1px solid var(--linea); }
+.pm-puesto { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); font-weight: 800; font-size: 0.875rem; }
+.pm-nombre { font-weight: 650; overflow-wrap: anywhere; }
+.pm-n { font-weight: 800; white-space: nowrap; }
+.pm-n small { font-weight: 600; color: var(--tinta-2); font-size: 0.75rem; }
+
+/* -- Tus proximos hitos -- */
+.perfil-proximos { list-style: none; margin: 0; display: grid; gap: 14px; }
+.perfil-proximos li { display: grid; gap: 6px; }
+.perfil-proximos progress { width: 100%; height: 10px; appearance: none; border: 0; border-radius: 999px; background: var(--hoja-2); overflow: hidden; }
+.perfil-proximos progress::-webkit-progress-bar { background: var(--hoja-2); border-radius: 999px; }
+.perfil-proximos progress::-webkit-progress-value { background: var(--morado); border-radius: 999px; }
+.perfil-proximos progress::-moz-progress-bar { background: var(--morado); border-radius: 999px; }
+
+/* -- La actividad por meses -- */
+.perfil-mes { display: grid; gap: 8px; }
+.perfil-mes-t { margin: 6px 0 0; font-size: 0.9375rem; font-weight: 750; text-transform: none; }
+.perfil-mes-t::first-letter { text-transform: uppercase; }
+
+/* -- La vitrina: compartir un record -- */
+.perfil-trofeo { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "ico nombre valor comp" "ico detalle detalle comp"; }
+.pt-compartir { grid-area: comp; align-self: center; width: 40px; height: 40px; }
+
+/* -- Compartir tu perfil -- */
+.perfil-compartir { justify-self: start; }
+
+/* -- Elegir la portada (en este movil) -- */
+.perfil-portada-btn { position: absolute; top: 10px; right: 10px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .25); backdrop-filter: blur(6px); }
+.perfil-portada-btn:hover { background: rgba(255, 255, 255, .26); }
+.perfil-portadas { position: absolute; top: 56px; right: 10px; z-index: 3; display: flex; gap: 6px; padding: 8px; border-radius: 16px; background: var(--hoja); box-shadow: var(--sombra-alta, var(--sombra)); flex-wrap: wrap; max-width: calc(100% - 20px); }
+.pp-muestra { display: grid; justify-items: center; gap: 4px; padding: 4px 6px; border: 0; border-radius: 10px; background: none; color: var(--tinta); font-size: 0.6875rem; font-weight: 650; cursor: pointer; }
+.pp-muestra[aria-checked="true"] { background: var(--morado-suave); }
+.pp-color { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
+[data-portada="noche"] .pp-color, .pp-muestra[data-portada="noche"] .pp-color { background: linear-gradient(165deg, #2A2068, #1E1548); }
+.pp-muestra[data-portada="aurora"] .pp-color { background: linear-gradient(165deg, #0F766E, #1E1548); }
+.pp-muestra[data-portada="atardecer"] .pp-color { background: linear-gradient(165deg, #C2410C, #6D1A4F); }
+.pp-muestra[data-portada="bosque"] .pp-color { background: linear-gradient(165deg, #2F6B3A, #14352A); }
+.pp-muestra[data-portada="oceano"] .pp-color { background: linear-gradient(165deg, #1D4ED8, #0B2147); }
+.perfil-cabeza[data-portada="aurora"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(94, 234, 212, .45), transparent 70%), linear-gradient(165deg, #0F766E, #1E1548); }
+.perfil-cabeza[data-portada="atardecer"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(253, 186, 116, .5), transparent 70%), linear-gradient(165deg, #C2410C, #6D1A4F); }
+.perfil-cabeza[data-portada="bosque"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(187, 247, 208, .35), transparent 70%), linear-gradient(165deg, #2F6B3A, #14352A); }
+.perfil-cabeza[data-portada="oceano"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(147, 197, 253, .45), transparent 70%), linear-gradient(165deg, #1D4ED8, #0B2147); }
+@media (forced-colors: active) { .perfil-portada-btn { border-color: ButtonText; } }
+.pt-compartir svg { width: 20px; height: 20px; }
+.perfil-anio-marco:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; border-radius: 6px; }

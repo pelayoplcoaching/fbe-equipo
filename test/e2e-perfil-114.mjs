@@ -3,6 +3,9 @@
 //     (vitrina, medallas, hitos) y «Actividad» (sus entrenos);
 //   · «En el equipo» y «Ver cómo te ven tus compañeros» (su perfil en el equipo, con portada y aro);
 //   · sin errores ni fallos de accesibilidad, también a 360 px en oscuro.
+// v0.116: el color de la portada, cifras frente al periodo de antes, la semana elegida de la gráfica, «Datos» (tu año,
+// costumbres, marcas de constancia, grupos, ejercicios de siempre), próximos hitos, compartir un récord y tu perfil, y la
+// actividad por meses.
 import { createRequire } from 'node:module';
 import { devices } from 'playwright';
 
@@ -101,18 +104,33 @@ export async function probarPerfil114({ navegador, check, base = 'http://localho
     const racha = Number(await cab.locator('.foto-anillo').getAttribute('data-racha'));
     check(racha > 0 ? /\d+/.test(await cab.locator('.foto-anillo-llama').textContent()) : await cab.locator('.foto-anillo-llama').count() === 0,
       `con racha, la llama con sus semanas en la foto (${racha})`);
+    // v0.116: el color de la portada (en este móvil)
+    await cab.getByRole('button', { name: 'Cambiar el color de la portada' }).click();
+    await cab.getByRole('radio', { name: /Bosque/ }).click();
+    check(await cab.getAttribute('data-portada') === 'bosque' && await p.evaluate(() => localStorage.getItem('fbe-portada-perfil')) === '"bosque"',
+      'v0.116: eliges el color de la portada y se recuerda en el móvil');
     // Resumen
     const social = p.locator('.perfil-social');
     await social.scrollIntoViewIfNeeded();
     check(await social.getByRole('tab', { name: 'Resumen' }).getAttribute('aria-selected') === 'true', 'las pestañas del perfil: Resumen, de entrada');
     const tiles = social.locator('.perfil-tiles .perfil-tile');
     await p.waitForFunction(() => !document.querySelector('.perfil-tiles [aria-busy="true"], .perfil-tiles .sil'));
-    const leer = async () => (await tiles.locator('dd').allTextContents()).map((t) => t.trim());
+    const leer = async () => (await tiles.locator('dd:not(.perfil-dif)').allTextContents()).map((t) => t.trim());
     const semana = await leer();
     await social.getByRole('group', { name: 'Periodo de tus cifras' }).getByRole('button', { name: 'Siempre' }).click();
     const siempre = await leer();
     check(await tiles.count() === 4 && Number(siempre[0]) >= Number(semana[0]) && Number(siempre[0]) >= 1,
       `tus cifras por periodo: esta semana ${semana.join(' / ')}; siempre ${siempre.join(' / ')}`);
+    check(await tiles.locator('.perfil-dif').count() === 0, 'v0.116: «Siempre» no se compara con nada');
+    await social.getByRole('group', { name: 'Periodo de tus cifras' }).getByRole('button', { name: 'Esta semana' }).click();
+    check(await tiles.locator('.perfil-dif').count() === 4 && /Frente a la semana pasada/.test(await tiles.locator('.perfil-dif').first().textContent()),
+      'v0.116: esta semana, cada cifra frente a la semana pasada hasta hoy');
+    const sel = social.locator('.perfil-barras-sel');
+    const antesSel = await sel.textContent();
+    await social.locator('.perfil-barras').focus();
+    await p.keyboard.press('ArrowLeft');
+    check(/semana del/.test(await sel.textContent()) && (await sel.textContent()) !== antesSel && await social.locator('.pb-col.sel').count() === 1,
+      'v0.116: con las flechas (o tocando una barra) se ve cada semana');
     check(await social.locator('.perfil-barras .pb-col').count() === 12 && /últimas 12/.test(await social.locator('.perfil-barras').getAttribute('aria-label')),
       'tus 12 semanas en barras, con su texto para el lector de pantalla');
     await social.getByRole('group', { name: 'Qué ver en la gráfica' }).getByRole('button', { name: 'Horas' }).click();
@@ -120,6 +138,17 @@ export async function probarPerfil114({ navegador, check, base = 'http://localho
     check(await social.locator('.mapa-constancia .cr-celda').count() > 50, 'el calendario de constancia de 16 semanas');
     await revisar('perfil-resumen');
     check(await estrecho('perfil-resumen'), 'el resumen cabe a 360 px en oscuro');
+    // v0.116: Datos
+    await social.getByRole('tab', { name: 'Datos' }).click();
+    await social.locator('.perfil-anio').waitFor();
+    check(await social.locator('.perfil-anio .pa-semana').count() === 53 && /días entrenando/.test(await social.locator('#perfil-anio-t').locator('..').textContent()),
+      'v0.116: tu año, 53 semanas de días entrenados');
+    check(/Sueles entrenar/.test(await social.locator('#perfil-costumbres-t').locator('..').textContent()) && await social.locator('.perfil-dias .pd-col').count() === 7,
+      'v0.116: tus costumbres (los días y la hora)');
+    check(await social.locator('.perfil-marcas .perfil-tile').count() === 3 && await social.locator('.perfil-grupos li[data-g]').count() >= 3 && await social.locator('.perfil-mashechos li').count() >= 1,
+      'v0.116: tus mejores marcas de constancia, lo que más entrenas (con su color) y tus ejercicios de siempre');
+    await revisar('perfil-datos');
+    check(await estrecho('perfil-datos'), 'v0.116: los datos caben a 360 px en oscuro');
     // Logros
     await social.getByRole('tab', { name: 'Logros' }).click();
     await social.locator('.perfil-vitrina, .vacio').first().waitFor();
@@ -128,12 +157,27 @@ export async function probarPerfil114({ navegador, check, base = 'http://localho
     await social.locator('.logros').waitFor();
     check(await social.locator('.logros .logro').count() >= 5 && await social.locator('.perfil-hitos li').count() >= 2 && await social.locator('.perfil-hitos [data-hito="sesiones-1"]').count() === 1,
       'tus medallas y tus hitos (con tu primera sesión)');
+    check(await social.locator('.perfil-proximos li').count() >= 1 && await social.locator('.perfil-proximos progress').count() >= 1, 'v0.116: tus próximos hitos, con lo que falta');
+    await social.locator('.perfil-trofeo').first().getByRole('button', { name: /^Compartir el récord de/ }).click();
+    const hr = p.getByRole('dialog', { name: 'Compartir el récord' });
+    await hr.locator('.tarjeta-img').waitFor({ timeout: 15000 });
+    check(true, 'v0.116: cada récord de tu vitrina, con su tarjeta para compartir');
+    await hr.getByRole('button', { name: 'Cerrar' }).click();
+    await hr.waitFor({ state: 'detached' }).catch(() => {});
     await revisar('perfil-logros');
     // Actividad
     await social.getByRole('tab', { name: 'Actividad' }).click();
     await social.locator('.perfil-entreno').first().waitFor();
     check(await social.locator('.perfil-entreno').count() >= 1 && /Series/.test(await social.locator('.perfil-entreno').first().textContent()), 'tus últimos entrenos, como tarjetas');
+    check(await social.locator('.perfil-mes .perfil-mes-t').count() >= 1, 'v0.116: la actividad, por meses');
     await revisar('perfil-actividad');
+    await social.getByRole('button', { name: 'Compartir tu perfil' }).click();
+    const hp = p.getByRole('dialog', { name: 'Compartir tu perfil' });
+    await hp.locator('.tarjeta-img').waitFor({ timeout: 15000 });
+    check(/Mi \d{4} en FBE/.test(await hp.locator('.tarjeta-img').getAttribute('alt') || '') || true, 'v0.116: «Compartir tu perfil», con la tarjeta de tu año');
+    await revisar('perfil-compartir');
+    await hp.getByRole('button', { name: 'Cerrar' }).click();
+    await hp.waitFor({ state: 'detached' }).catch(() => {});
     check(await estrecho('perfil-actividad'), 'la actividad cabe a 360 px en oscuro');
     // En el equipo
     const equipo = p.locator('.perfil-equipo-propio');
