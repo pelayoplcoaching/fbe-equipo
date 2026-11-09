@@ -4083,18 +4083,21 @@ export function crearApi(backend) {
     // (5) y si ya le he mandado ánimo esta semana
     async perfilComunidad(perfilId) {
       const lunesM = lunesDe(hoyISO());
-      const [filas, posts, animo, personas] = await Promise.all([
+      const [filas, posts, animo, personas, conFoto] = await Promise.all([
         b.rpc('comunidad_perfil', { p_perfil: perfilId }).catch(falta029),
         b.select('comunidad_posts', { eq: { autor_id: perfilId }, neq: { tipo: 'momento' }, order: [['creado_en', 'desc']], limit: 5, cols: COLS_POST }).catch(() => []),
         b.select('comunidad_animos', { eq: { de: uid(), para: perfilId, semana: lunesM }, cols: 'semana' }).catch(() => []),
         api.personasComunidad(),
+        // v0.114: la galería de su perfil (las fotos de sus últimas publicaciones que se ven, hasta 9)
+        b.select('comunidad_posts', { eq: { autor_id: perfilId }, neq: { tipo: 'momento' }, order: [['creado_en', 'desc']], limit: 40, cols: 'id,foto_ruta,creado_en' }).catch(() => []),
       ]);
       const p = (Array.isArray(filas) ? filas[0] : filas) || null;
       if (!p) return null;
+      const fotos = conFoto.filter((x) => x.foto_ruta && Date.parse(x.creado_en) <= Date.now() + 20000).slice(0, 9).map((x) => ({ id: x.id, ruta: x.foto_ruta }));
       // (v0.72, 044) el coach ve si está silenciado (la fila del miembro solo la ven él y el coach)
       const silencio = p.coach || p.yo ? null : (await b.select('comunidad_miembros', { eq: { perfil_id: perfilId }, cols: 'silenciado_hasta,sin_ranking' }).catch(() => []))[0] || null;
       return { ...p, posts: posts.filter((x) => Date.parse(x.creado_en) <= Date.now() + 20000 && x.tipo !== 'momento').map((x) => ({ ...x, mencionados: mencionadosDe(x.menciones, personas) })), animado: animo.length > 0,
-        silenciado_hasta: silencio?.silenciado_hasta || null, sin_ranking: !!silencio?.sin_ranking };
+        silenciado_hasta: silencio?.silenciado_hasta || null, sin_ranking: !!silencio?.sin_ranking, fotos };
     },
     // Mandar ánimo 🙌 a alguien del equipo (v0.47): uno por persona y semana
     async animar(perfilId) {

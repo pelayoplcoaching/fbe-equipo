@@ -825,9 +825,9 @@ try {
   await p.getByRole('button', { name: 'Compartir la sesión' }).click();
   await p.locator('.tarjeta-img').waitFor();
   check((await p.locator('.tarjeta-img').evaluate((i) => i.complete && i.naturalWidth)) === 1080, 'crea la tarjeta para compartir (1080 × 1350)');
-  // v0.51: tres plantillas: «Cifras» (de entrada), «Mínima» y «Con tu foto» (una foto del móvil, que no se sube)
+  // v0.51: plantillas «Cifras» (de entrada), «Mínima» y «Con tu foto» (una foto del móvil, que no se sube); v0.115: y «Clara»
   const plantillas = p.getByRole('group', { name: 'Plantilla' });
-  check((await plantillas.getByRole('radio').count()) === 3 && await plantillas.getByRole('radio', { name: 'Cifras' }).isChecked() && (await p.locator('.tarjeta-img').getAttribute('alt')).includes('(Cifras)'), 'elige entre tres plantillas; de entrada, «Cifras»');
+  check((await plantillas.getByRole('radio').count()) === 4 && await plantillas.getByRole('radio', { name: 'Clara' }).count() === 1 && await plantillas.getByRole('radio', { name: 'Cifras' }).isChecked() && (await p.locator('.tarjeta-img').getAttribute('alt')).includes('(Cifras)'), 'elige entre cuatro plantillas (con «Clara»); de entrada, «Cifras»');
   await revisar('compartir');
   const srcAntes = await p.locator('.tarjeta-img').getAttribute('src');
   await plantillas.getByRole('radio', { name: 'Mínima' }).click();
@@ -5862,6 +5862,16 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ «Programar según FBE» de la v0.74:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.114: el perfil del atleta, más bonito y más social (test/e2e-perfil-114.mjs)
+console.log('\nv0.114: el perfil, más bonito y más social');
+try {
+  const { probarPerfil114 } = await import('./e2e-perfil-114.mjs');
+  await probarPerfil114({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el perfil de la v0.114:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.112: kilos o libras para las cargas (Perfil → Este móvil): la sesión en libras se guarda en kilos (test/e2e-libras-112.mjs)

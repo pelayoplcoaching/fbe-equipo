@@ -2128,7 +2128,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    El día elegido va en una píldora llena del acento (era un borde) y los números de los días son más grandes. */
 .dias-menu .punto-dia { font-size: 0.8125rem; width: 26px; height: 26px; }
 .dias-menu button[aria-pressed="true"] { background: var(--morado); border-color: var(--morado); color: var(--sobre-morado); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
-.dias-menu button[aria-pressed="true"] .punto-dia:not(.cumple .punto-dia) { background: color-mix(in srgb, #fff 22%, transparent); border-color: transparent; color: var(--sobre-morado); }
+.dias-menu button[aria-pressed="true"] .punto-dia:not(.cumple .punto-dia) { background: color-mix(in srgb, #fff 14%, transparent); border-color: transparent; color: var(--sobre-morado); }
 
 /* ── 137 · Cada comida con su dibujo (tanda 28) ───────────────────────────────────────────────────────────────────────
    En el menú del día, «Desayuno», «Comida», «Merienda»… llevan su escena pequeña delante (Ilustraciones.jsx: las de
@@ -3209,3 +3209,273 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .lista-elegir > button[data-g] > span:first-child::before { margin-right: 7px; vertical-align: 1px; }
 .chip[data-g] { gap: 5px; }
 @media (forced-colors: active) { .vol-chip[data-g]::before, .lista-elegir > button[data-g] > span:first-child::before, .chip[data-g]::before { background: CanvasText; } }
+
+/* ══ Tanda 37 (8/11, noche): Comunidad ═══════════════════════════════════════════════════════════════════════════════
+   Quince mejoras de belleza y de gusto de uso en el Equipo, para que apetezca entrar: los momentos, los ánimos, las
+   bienvenidas, publicar, cada tipo de publicación, reaccionar, comentar, el perfil, los retos y el podio. */
+
+/* ── 250 · Los momentos como historias (tanda 37) ─────────────────────────────────────────────────────────────────────
+   El aro de los momentos por ver, en el degradado de la marca (acento, rosa y naranja, como las historias) en vez del
+   arcoíris; «Tu momento», con el + blanco en un disco del acento con brillo. */
+.tm-item:not(.tm-nuevo):not(.retenido) .tm-circulo { background: conic-gradient(from 200deg, #7A5AF8, #E5407F, #F59E0B, #E5407F, #7A5AF8); box-shadow: 0 6px 14px -8px rgba(229, 64, 127, .6); }
+.tm-nuevo .tm-circulo { border: 0; padding: 3px; background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 72%, #fff), var(--morado)); box-shadow: 0 8px 18px -9px color-mix(in srgb, var(--morado) 85%, transparent), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.tm-nuevo .tm-circulo > svg { color: var(--sobre-morado); width: 26px; height: 26px; }
+@media (forced-colors: active) { .tm-circulo { background: CanvasText !important; } .tm-nuevo .tm-circulo > svg { color: Canvas; } }
+
+/* ── 251 · «Te han animado esta semana» como una tarjeta cálida (tanda 37) ────────────────────────────────────────────
+   Un degradado del dorado suave al lavanda y el 🙌 que da dos saltitos al llegar. */
+.animos-recibidos { background: linear-gradient(110deg, var(--oro-suave), var(--morado-suave) 70%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oro) 20%, transparent); }
+.animos-ico { display: inline-block; }
+@media (prefers-reduced-motion: no-preference) { .animos-ico { animation: animos-salta .9s var(--curva-rebote) .35s 2 both; } }
+@keyframes animos-salta { 30% { transform: translateY(-5px) scale(1.15) rotate(-6deg); } 60% { transform: translateY(0) scale(.96); } }
+@media (forced-colors: active) { .animos-recibidos { background: Canvas; border: 1px solid CanvasText; } }
+
+/* ── 252 · La bienvenida a un compañero nuevo como celebración (tanda 37) ─────────────────────────────────────────────
+   Un fondo de fiesta suave (puntitos de confeti de colores sobre el lavanda) y la mano 👋 que saluda al llegar. */
+.bienvenida-nuevo { background: radial-gradient(circle at 8% 22%, rgba(229, 64, 127, .45) 0 2.5px, transparent 3px), radial-gradient(circle at 92% 18%, rgba(245, 158, 11, .5) 0 2.5px, transparent 3px), radial-gradient(circle at 80% 82%, rgba(34, 160, 75, .45) 0 2px, transparent 2.5px), radial-gradient(circle at 72% 90%, rgba(46, 124, 246, .45) 0 2px, transparent 2.5px), radial-gradient(circle at 96% 60%, rgba(122, 90, 248, .5) 0 3px, transparent 3.5px), linear-gradient(135deg, var(--morado-suave), color-mix(in srgb, #E5407F 9%, var(--hoja))); }
+.bn-ico { display: inline-block; transform-origin: 70% 80%; }
+@media (prefers-reduced-motion: no-preference) { .bn-ico { animation: bn-saluda 1.2s ease-in-out .3s 2; } }
+@keyframes bn-saluda { 15%, 45% { transform: rotate(16deg); } 30%, 60% { transform: rotate(-8deg); } 75% { transform: rotate(0); } }
+@media (forced-colors: active) { .bienvenida-nuevo { background: Canvas; } }
+
+/* ── 253 · «¿Qué tal tu semana?» como invitación (tanda 37) ───────────────────────────────────────────────────────────
+   Plegado, el lápiz va blanco en un disco del acento; abierto, el cuadro de publicar se ilumina con un filo y una luz
+   del acento. */
+.compositor.compositor-plegado .area { padding-left: 52px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%2020h9M16.5%203.5a2.1%202.1%200%200%201%203%203L7%2019l-4%201%201-4z'/%3E%3C/svg%3E") no-repeat 17px center / 15px 15px, radial-gradient(circle at 24px 50%, var(--morado) 0 14px, transparent 14.5px), var(--hoja); }
+.compositor:not(.compositor-plegado) { box-shadow: var(--sombra), 0 0 0 1.5px color-mix(in srgb, var(--morado) 35%, transparent), 0 14px 30px -18px color-mix(in srgb, var(--morado) 70%, transparent); }
+@media (forced-colors: active) { .compositor.compositor-plegado .area { background: Canvas; padding-left: 14px; } }
+
+/* ── 254 · Cada publicación con el color de su tipo (tanda 37) ────────────────────────────────────────────────────────
+   Por su tipo (post-<tipo>) o su tema (Comunidad.jsx: data-tema): entrenos en verde, técnica en azul, charla en verde
+   azulado, logros en dorado, encuestas en violeta, preguntas en añil, avisos del coach en el acento y aniversarios en
+   rosa. Un baño muy suave de su color arriba de la tarjeta y un punto de su color antes de «Charla · hoy…». */
+.post { --pt: var(--morado); }
+.post-entreno { --pt: #22A04B; }
+.post[data-tema="tecnica"] { --pt: var(--t-tarea); }
+.post[data-tema="charla"] { --pt: var(--t-peso); }
+.post-logro, .post[data-tema="logros"] { --pt: #C98A00; }
+.post-encuesta { --pt: #7A5AF8; }
+.post[data-tema="pregunta"] { --pt: var(--t-cuestionario); }
+.post-aniversario { --pt: #E5407F; }
+.muro .post:not(.oculta) { background: linear-gradient(180deg, color-mix(in srgb, var(--pt) 7%, var(--hoja)), var(--hoja) 96px); }
+.post-quien > .mini.terciario::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; vertical-align: 1px; border-radius: 50%; background: var(--pt); }
+.post.fijada { box-shadow: var(--sombra), inset 3px 0 0 var(--pt); }
+@media (forced-colors: active) { .muro .post:not(.oculta) { background: Canvas; } .post-quien > .mini.terciario::before { background: CanvasText; } }
+
+/* ── 255 · Reacciones que se llenan de luz (tanda 37) ─────────────────────────────────────────────────────────────────
+   La tuya, con degradado del acento suave, filo del acento y un brillo debajo (el salto del emoji ya estaba, bloque
+   59); al pasar el ratón o el dedo, la pastilla se levanta un poco. */
+.reaccion[aria-pressed="true"] { background: linear-gradient(180deg, color-mix(in srgb, var(--morado) 9%, var(--hoja)), var(--morado-suave)); border-color: color-mix(in srgb, var(--morado) 70%, transparent); box-shadow: 0 4px 12px -6px color-mix(in srgb, var(--morado) 80%, transparent); }
+.reaccion[aria-pressed="true"] .num { color: var(--tinta); }
+@media (hover: hover) { .reaccion:not(:disabled):hover { border-color: color-mix(in srgb, var(--morado) 45%, var(--linea)); } }
+
+/* ── 256 · El entreno compartido como tarjeta de la sesión (tanda 37) ─────────────────────────────────────────────────
+   Una franja con la luz de la marca arriba del nombre de la sesión, las cifras en baldosas blancas y «Récord en…» en
+   el dorado de los récords (antes, lavanda). */
+.entreno-equipo { position: relative; overflow: hidden; background: radial-gradient(260px 90px at 100% 0%, color-mix(in srgb, var(--morado) 16%, transparent), transparent 70%), var(--hoja-2); }
+.entreno-equipo .ee-num > div { padding: 8px 10px; border-left: 0; border-radius: 10px; background: var(--hoja); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 6%, transparent); }
+.entreno-equipo .ee-record { background: linear-gradient(110deg, var(--oro-suave), color-mix(in srgb, var(--oro-suave) 55%, var(--hoja))); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oro) 28%, transparent); color: var(--oro-texto); }
+.entreno-equipo .ee-record svg { color: var(--oro); }
+
+/* ── 257 · Encuestas con barras de degradado (tanda 37) ───────────────────────────────────────────────────────────────
+   La barra de cada opción, en degradado del acento suave; la que va ganando (Comunidad.jsx: gana), algo más intensa
+   y con su porcentaje en negrita; tu voto, con el ✓ blanco en un disco del acento. */
+.encuesta-opcion .eo-barra { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), var(--morado-suave)); }
+.encuesta-opcion.gana .eo-barra { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 16%, var(--hoja)), color-mix(in srgb, var(--morado) 26%, var(--hoja))); }
+.encuesta-opcion.gana .eo-pct { font-weight: 760; }
+.encuesta-opcion.mia .eo-texto svg { width: 18px; height: 18px; padding: 3px; border-radius: 50%; background: var(--morado); color: var(--sobre-morado); }
+.encuesta-opcion.mia { box-shadow: inset 0 0 0 1px var(--morado), 0 6px 14px -10px color-mix(in srgb, var(--morado) 80%, transparent); }
+
+/* ── 258 · Los eventos con su hoja de calendario (tanda 37) ───────────────────────────────────────────────────────────
+   La fecha como la del calendario del iPhone: el mes en una franja roja y el día grande en la hoja blanca. Al
+   apuntarte, «Me apunto» se rellena de verde. */
+.ev-dia { padding: 0 0 4px; min-width: 48px; overflow: hidden; gap: 2px; background: var(--hoja); color: var(--tinta); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 10%, transparent), 0 6px 14px -10px color-mix(in srgb, var(--tinta) 40%, transparent), inset 0 0 0 1px var(--borde); }
+.ev-dia-mes { width: 100%; padding: 2px 0 1px; background: #D92D20; color: #fff; text-align: center; }
+.ev-acciones .btn:first-child[aria-pressed="true"] { background: var(--ok); border-color: transparent; color: var(--sobre-morado); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--ok) 85%, transparent); }
+@media (forced-colors: active) { .ev-dia-mes { background: CanvasText; color: Canvas; } }
+
+/* ── 259 · Los logros en oro de verdad (tanda 37) ─────────────────────────────────────────────────────────────────────
+   «Reto conseguido» con un degradado dorado, el trofeo en un disco de oro con relieve y un brillo que lo cruza una vez
+   al llegar. */
+.logro-equipo { position: relative; overflow: hidden; background: linear-gradient(135deg, var(--oro-suave), color-mix(in srgb, var(--oro-suave) 50%, var(--hoja))); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oro) 30%, transparent); }
+.le-ico { background: radial-gradient(circle at 35% 30%, #F7D774, #C98A00 62%, #8F6100); color: #fff; box-shadow: 0 6px 14px -6px rgba(201, 138, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .45); }
+.logro-equipo .le-k { color: var(--oro-texto); }
+.logro-equipo::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .55) 50%, transparent 65%); transform: translateX(-120%); }
+@media (prefers-reduced-motion: no-preference) { .logro-equipo::after { animation: logro-brilla 1.4s ease-out .5s 1 both; } }
+@keyframes logro-brilla { to { transform: translateX(120%); } }
+@media (forced-colors: active) { .logro-equipo { background: Canvas; border: 1px solid CanvasText; } .logro-equipo::after { content: none; } }
+
+/* ── 260 · Los comentarios como una conversación (tanda 37) ───────────────────────────────────────────────────────────
+   Cada comentario en su burbuja (como un mensaje), los del coach con un baño del acento y la mejor respuesta con filo
+   y baño verdes. */
+.comentario-equipo > .pila-xs { padding: 8px 12px 6px; border-radius: 4px 16px 16px 16px; background: var(--hoja-2); }
+.comentario-equipo:has(.chip.morado) > .pila-xs { background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); }
+.comentario-equipo.mejor > .pila-xs { background: color-mix(in srgb, var(--ok) 9%, var(--hoja)); box-shadow: inset 0 0 0 1.5px var(--ok); }
+@media (forced-colors: active) { .comentario-equipo > .pila-xs { border: 1px solid CanvasText; } }
+
+/* ── 261 · El perfil en el equipo con su portada (tanda 37) ───────────────────────────────────────────────────────────
+   Como el perfil del atleta (bloque 89): una franja con la noche de la marca arriba y el avatar apoyado en su borde. */
+.perfil-equipo-cab { position: relative; isolation: isolate; padding: 72px 14px 12px; margin-inline: -4px; border-radius: var(--r); background: var(--hoja-2); overflow: hidden; align-items: center; }
+.perfil-equipo-cab > .avatar { align-self: flex-start; margin-top: -30px; }
+.perfil-equipo-cab::before { content: ""; position: absolute; inset: 0 0 auto; height: 64px; z-index: -1; background: var(--grano), radial-gradient(260px 90px at 88% 0%, rgba(160, 140, 255, .55), transparent 70%), radial-gradient(220px 80px at 4% 110%, rgba(104, 78, 236, .5), transparent 70%), linear-gradient(165deg, #2A2068, #1E1548); }
+.perfil-equipo-cab > .avatar { box-shadow: 0 0 0 3px var(--hoja-2), 0 6px 14px -6px rgba(30, 21, 72, .5); }
+@media (forced-colors: active) { .perfil-equipo-cab::before { content: none; } }
+
+/* ── 262 · Los retos con más vida (tanda 37) ──────────────────────────────────────────────────────────────────────────
+   Las barras, con degradado y brillo (las completas, en verde); tu fila, con un baño del acento, y quien ya ha llegado,
+   con su cifra en verde. */
+.barra-equipo span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 60%, #fff), var(--morado)); box-shadow: 0 0 8px color-mix(in srgb, var(--morado) 45%, transparent); }
+.barra-equipo span.lleno { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, #fff), var(--ok)); box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 45%, transparent); }
+.fila-progreso.yo { margin-inline: -10px; padding-inline: 10px; border-radius: 12px; background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
+.fila-progreso:has(.barra-equipo span.lleno) > .num { color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); font-weight: 750; }
+@media (forced-colors: active) { .barra-equipo span, .barra-equipo span.lleno { background: CanvasText; } .fila-progreso.yo { border: 1px solid CanvasText; } }
+
+/* ── 263 · El podio de oro, plata y bronce (tanda 37) ─────────────────────────────────────────────────────────────────
+   Las peanas, metálicas (oro, plata y bronce) con su número blanco en relieve; las medallas con sombra y el primero
+   con un resplandor dorado alrededor del avatar. */
+.podio-sitio .podio-peana { color: #fff; text-shadow: 0 1px 1px rgba(0, 0, 0, .3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 8px 16px -10px rgba(0, 0, 0, .45); }
+.podio-sitio.p1 .podio-peana { background: linear-gradient(180deg, #F2CF63, #C98A00 70%, #A87200); }
+.podio-sitio.p2 .podio-peana { background: linear-gradient(180deg, #D5D9E0, #9AA1AD 70%, #808894); }
+.podio-sitio.p3 .podio-peana { background: linear-gradient(180deg, #E3A774, #B26A33 70%, #93552A); }
+.podio-medalla { filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .25)); }
+.podio-sitio.m1 .podio-persona .avatar { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 5px var(--disco-amarillo), 0 0 22px 4px rgba(242, 207, 99, .55); }
+@media (forced-colors: active) { .podio-sitio .podio-peana { background: CanvasText; color: Canvas; } }
+
+/* ── 264 · El aviso fijado y el coach (tanda 37) ──────────────────────────────────────────────────────────────────────
+   «Fijado» con la chincheta en el acento lleno (texto en --sobre-morado: en oscuro el acento es claro), y el chip «Coach» de cada publicación, comentario y perfil con el lobo
+   de la marca (Comunidad.jsx: Muro pone --lobo en la raíz, porque las hojas de comentarios van fuera del muro). */
+.post-fijado { background: var(--morado); border-color: transparent; color: var(--sobre-morado); }
+.post-quien .chip.morado, .comentario-equipo .chip.morado, .perfil-equipo-cab .chip.morado { display: inline-flex; align-items: center; gap: 4px; padding-left: 4px; }
+.post-quien .chip.morado::before, .comentario-equipo .chip.morado::before, .perfil-equipo-cab .chip.morado::before { content: ""; width: 16px; height: 16px; flex: none; border-radius: 50%; background: var(--lobo) center / cover no-repeat, var(--morado); }
+
+/* ══ Tanda 38 (9/11, madrugada): más Comunidad ═══════════════════════════════════════════════════════════════════════
+   Quince mejoras más en el Equipo: retos, ranking, hitos, el resumen de la semana, las pastillas de arriba, los
+   compañeros de racha, el perfil, las preguntas, las fotos, el cuadro de publicar, las pegatinas y el aro de «hoy». */
+:root {
+  --ico-pregunta: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%2021a9%209%200%201%200%200-18%209%209%200%200%200%200%2018zM9.5%209.5a2.5%202.5%200%201%201%203.5%202.3c-.6.3-1%20.9-1%201.6v.6M12%2017h.01'/%3E%3C/svg%3E");
+}
+
+/* ── 265 · Rojos contra azules en sus colores (tanda 38) ──────────────────────────────────────────────────────────────
+   El marcador de los retos por equipos pintaba el segundo equipo en ámbar (estilos.css 4697): ahora el primero va en
+   rojo y el segundo en azul, con degradado y brillo; tu equipo, con el filo de su color, y un «VS» entre los dos. */
+.marcador-equipos .me-0 { --me: #E5484D; }
+.marcador-equipos .me-1 { --me: #2E7CF6; }
+.marcador-equipos .me-equipo { position: relative; background: linear-gradient(135deg, color-mix(in srgb, var(--me) 10%, var(--hoja-2)), var(--hoja-2) 60%); }
+.marcador-equipos .me-equipo .barra-equipo span, .marcador-equipos .me-1 .barra-equipo span:not(.lleno) { background: linear-gradient(90deg, color-mix(in srgb, var(--me) 62%, #fff), var(--me)); box-shadow: 0 0 10px color-mix(in srgb, var(--me) 50%, transparent); }
+.marcador-equipos .me-equipo.mio { box-shadow: inset 0 0 0 2px var(--me); }
+.marcador-equipos .me-equipo + .me-equipo::before { content: "VS"; position: absolute; top: -17px; left: 50%; z-index: 1; width: 30px; height: 30px; margin-left: -15px; display: grid; place-items: center; border-radius: 50%; background: var(--tinta); color: var(--hoja); font-size: 0.6875rem; font-weight: 850; letter-spacing: .02em; box-shadow: 0 0 0 3px var(--hoja); }
+@media (forced-colors: active) { .marcador-equipos .me-equipo { background: Canvas; } .marcador-equipos .me-equipo .barra-equipo span { background: CanvasText; } .marcador-equipos .me-equipo + .me-equipo::before { border: 1px solid CanvasText; } }
+
+/* ── 266 · Los retos de todo el equipo con más empaque (tanda 38) ─────────────────────────────────────────────────────
+   La cifra de lo sumado, grande y con tinta de degradado; la barra, más gruesa y con su bandera de meta al final. */
+.reto-equipo .re-total { font-size: 2.25rem; background: linear-gradient(135deg, var(--morado), color-mix(in srgb, var(--morado) 55%, #E5407F)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.reto-equipo > .barra-equipo.barra-grande { position: relative; height: 16px; overflow: visible; margin-right: 22px; }
+.reto-equipo > .barra-equipo.barra-grande::after { content: ""; position: absolute; right: -22px; top: 50%; width: 18px; height: 18px; margin-top: -11px; background: var(--tinta-2); -webkit-mask: var(--ico-bandera) center / contain no-repeat; mask: var(--ico-bandera) center / contain no-repeat; }
+@media (forced-colors: active) { .reto-equipo .re-total { color: CanvasText; background: none; } .reto-equipo > .barra-equipo.barra-grande::after { background: CanvasText; } }
+
+/* ── 267 · Los retos terminados con su sello (tanda 38) ───────────────────────────────────────────────────────────────
+   Si lo conseguiste (el trofeo de «¡Conseguido!»), «Terminado» pasa a un chip dorado con trofeo y la tarjeta lleva un
+   resplandor dorado; si no, la tarjeta queda más apagada, sin sombra (el texto, igual de legible). */
+.reto:has(> .separa:first-child > .chip:not(.morado)):not(:has(.reto-yo svg)) { background: var(--hoja-2); box-shadow: inset 0 0 0 1px var(--borde); }
+.reto:has(> .separa:first-child > .chip:not(.morado)):has(.reto-yo svg) { background: radial-gradient(320px 110px at 100% 0%, color-mix(in srgb, var(--oro) 14%, transparent), transparent 70%), var(--hoja); }
+.reto:has(.reto-yo svg) > .separa:first-child > .chip:not(.morado) { display: inline-flex; align-items: center; gap: 4px; background: var(--oro-suave); border-color: transparent; color: var(--oro-texto); }
+.reto:has(.reto-yo svg) > .separa:first-child > .chip:not(.morado)::before { content: ""; width: 13px; height: 13px; background: currentColor; -webkit-mask: var(--ico-trofeo) center / contain no-repeat; mask: var(--ico-trofeo) center / contain no-repeat; }
+.reto-yo svg { color: var(--oro); }
+
+/* ── 268 · «Quedan N días» con su reloj (tanda 38) ────────────────────────────────────────────────────────────────────
+   El chip del tiempo que le queda a cada reto, con un reloj delante. */
+.reto > .separa:first-child > .chip.morado { display: inline-flex; align-items: center; gap: 4px; flex: none; max-width: 48%; }
+.reto > .separa:first-child > .chip.morado::before { content: ""; width: 13px; height: 13px; flex: none; background: currentColor; -webkit-mask: var(--ico-reloj) center / contain no-repeat; mask: var(--ico-reloj) center / contain no-repeat; }
+
+/* ── 269 · Los hitos del equipo con aro de avance (tanda 38) ──────────────────────────────────────────────────────────
+   Celebracion.jsx: --f en cada hito (lo que lleva sobre la meta). El círculo vacío se convierte en un aro del acento que
+   se llena hasta donde va; los conseguidos, con su medalla y el texto en verde. */
+.hitos-lista li:not(.hecho) .he-ico { width: 18px; height: 18px; flex: none; color: transparent; overflow: hidden; border-radius: 50%; background: conic-gradient(var(--morado) calc(var(--f, 0) * 1turn), color-mix(in srgb, var(--morado) 16%, var(--linea)) 0); -webkit-mask: radial-gradient(circle, transparent 5.5px, #000 6px); mask: radial-gradient(circle, transparent 5.5px, #000 6px); }
+.hitos-lista li.hecho .he-texto { color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); font-weight: 650; }
+@media (forced-colors: active) { .hitos-lista li:not(.hecho) .he-ico { background: CanvasText; } }
+
+/* ── 270 · Las filas del ranking (tanda 38) ───────────────────────────────────────────────────────────────────────────
+   El puesto en un disco (plata y bronce para el segundo y el tercero cuando no están en el podio, según cuántos haya en
+   él), tu fila con un baño del acento y «animar 🙌» como un botón con relieve que se queda en verde cuando ya animaste. */
+.fila-ranking .pos { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--hoja-2); color: var(--tinta-2); font-size: 0.8125rem; justify-self: end; }
+.ranking:has(.podio-1) .ranking-lista > li:nth-child(1) .pos { background: linear-gradient(180deg, #E4E7EC, #A3AAB6); color: #1D1933; }
+.ranking:has(.podio-1) .ranking-lista > li:nth-child(2) .pos, .ranking:has(.podio-2) .ranking-lista > li:nth-child(1) .pos { background: linear-gradient(180deg, #EBB98C, #B26A33); color: #1D1933; }
+.fila-ranking.yo { background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
+.btn-animar:not(.hecho) { background: linear-gradient(180deg, var(--hoja), var(--morado-suave)); border-color: color-mix(in srgb, var(--morado) 30%, var(--linea)); box-shadow: 0 3px 8px -5px color-mix(in srgb, var(--morado) 80%, transparent); }
+.btn-animar.hecho { background: var(--ok-suave); border-color: transparent; }
+@media (forced-colors: active) { .fila-ranking .pos { border: 1px solid CanvasText; } }
+
+/* ── 271 · El resumen de la semana del equipo con sus iconos (tanda 38) ───────────────────────────────────────────────
+   Cada cifra con su icono y su color en la esquina: las sesiones en verde, la semana completa en el acento, los récords
+   en dorado y los retos en naranja (en el orden de «Esta semana en el equipo»). */
+.resumen-equipo-num > div { position: relative; }
+.resumen-equipo-num > div::after { content: ""; position: absolute; top: 8px; right: 8px; width: 14px; height: 14px; background: var(--rc); -webkit-mask: var(--ri) center / contain no-repeat; mask: var(--ri) center / contain no-repeat; }
+.resumen-equipo-num > div:nth-child(1) { --rc: #22A04B; --ri: var(--ico-hecho); }
+.resumen-equipo-num > div:nth-child(2) { --rc: var(--morado); --ri: var(--ico-semana); }
+.resumen-equipo-num > div:nth-child(3) { --rc: #C98A00; --ri: var(--ico-trofeo); }
+.resumen-equipo-num > div:nth-child(4) { --rc: #E8730C; --ri: var(--ico-diana); }
+@media (forced-colors: active) { .resumen-equipo-num > div::after { background: CanvasText; } }
+
+/* ── 272 · Las pastillas de arriba del Equipo (tanda 38) ──────────────────────────────────────────────────────────────
+   El contador de «Próximos» y «Compañeros de racha», relleno del acento; al abrir una, lo de dentro baja desplegándose
+   (solo transform: el texto no entra por opacidad). */
+.plegable-eq-n { background: var(--morado); color: var(--sobre-morado); box-shadow: 0 3px 8px -4px color-mix(in srgb, var(--morado) 80%, transparent); }
+@media (prefers-reduced-motion: no-preference) { .plegable-eq[open] > .plegable-eq-cuerpo { animation: plegable-baja var(--mov-medio) var(--curva-llega) both; } }
+@keyframes plegable-baja { from { transform: translateY(-8px); } }
+
+/* ── 273 · Los compañeros de racha con su llama (tanda 38) ────────────────────────────────────────────────────────────
+   El avatar del compañero lleva una llama en un disco naranja en su esquina de abajo, y la fila, un baño cálido. */
+.cp-fila { position: relative; margin-inline: -8px; padding-inline: 8px; border-radius: 12px; background: linear-gradient(110deg, color-mix(in srgb, #E8730C 9%, var(--hoja)), var(--hoja) 70%); }
+.cp-fila > .avatar { position: relative; }
+.cp-fila::after { content: ""; position: absolute; left: 21px; top: calc(50% + 1px); width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(160deg, #F59E0B, #E8730C); box-shadow: 0 0 0 2px var(--hoja); pointer-events: none; }
+.cp-fila::before { content: ""; position: absolute; left: 24px; top: calc(50% + 4px); z-index: 1; width: 10px; height: 10px; background: #fff; -webkit-mask: var(--ico-llama) center / contain no-repeat; mask: var(--ico-llama) center / contain no-repeat; pointer-events: none; }
+@media (forced-colors: active) { .cp-fila { background: Canvas; } .cp-fila::after, .cp-fila::before { content: none; } }
+
+/* ── 274 · Las insignias del perfil del equipo como medallas (tanda 38) ───────────────────────────────────────────────
+   Las insignias y los retos conseguidos del perfil, en pastillas doradas con el emoji en un disco con relieve. **Y un
+   fallo de antes**: la insignia del perfil heredaba la posición absoluta del globo de la barra (`.insignia`, estilos.css
+   600 y 2516) y salía flotando arriba a la derecha de la hoja, fuera de su lista; ahora va en su sitio. */
+.chip.insignia { display: inline-flex; flex-direction: row; align-items: center; place-items: center; position: static; top: auto; right: auto; height: auto; min-width: 0; min-height: 30px; padding: 0 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 650; }
+.chip.insignia, .pe-retos .chip.aviso { background: linear-gradient(180deg, color-mix(in srgb, var(--oro-suave) 60%, var(--hoja)), var(--oro-suave)); border-color: color-mix(in srgb, var(--oro) 30%, transparent); color: var(--oro-texto); box-shadow: 0 3px 8px -5px rgba(201, 138, 0, .6); }
+.chip.insignia > span:first-child { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, color-mix(in srgb, var(--oro-suave) 80%, var(--oro)) 75%); box-shadow: inset 0 -1px 2px rgba(143, 97, 0, .35); font-size: 0.8125rem; }
+.pe-retos .chip.aviso svg { color: var(--oro); }
+
+/* ── 275 · Las preguntas del equipo como tarjetas (tanda 38) ──────────────────────────────────────────────────────────
+   Cada pregunta con un «?» blanco en un disco añil delante, y «Respuesta del coach» en verde con su ✓. */
+.pregunta-equipo .pe-pregunta { position: relative; display: inline-flex; align-items: flex-start; gap: 10px; }
+.pregunta-equipo .pe-pregunta::before { content: ""; flex: none; width: 26px; height: 26px; margin-top: -2px; border-radius: 50%; background: var(--t-cuestionario); box-shadow: 0 4px 10px -5px var(--t-cuestionario); }
+.pregunta-equipo .pe-pregunta::after { content: ""; position: absolute; left: 5px; top: 3px; width: 16px; height: 16px; background: #fff; -webkit-mask: var(--ico-pregunta) center / contain no-repeat; mask: var(--ico-pregunta) center / contain no-repeat; }
+.pe-respuesta .le-k { display: inline-flex; align-items: center; gap: 4px; color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); }
+.pe-respuesta .le-k::before { content: ""; width: 12px; height: 12px; background: currentColor; -webkit-mask: var(--ico-hecho) center / contain no-repeat; mask: var(--ico-hecho) center / contain no-repeat; }
+@media (forced-colors: active) { .pregunta-equipo .pe-pregunta::before { background: Canvas; border: 1px solid CanvasText; } .pregunta-equipo .pe-pregunta::after { background: CanvasText; } }
+
+/* ── 276 · Las fotos de las publicaciones (tanda 38) ──────────────────────────────────────────────────────────────────
+   Con una sombra suave debajo y, con ratón, un pequeño zoom al pasar por encima (recortado en su esquina); los puntos de
+   la galería, en el acento con brillo. */
+.post .post-foto-boton { overflow: hidden; box-shadow: 0 10px 22px -16px rgba(30, 21, 72, .55); }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) { .post .post-foto-boton .post-foto { transition: transform var(--mov-lento) var(--curva-casa); } .post .post-foto-boton:hover .post-foto { transform: scale(1.025); } }
+.galeria-puntos span.activo { box-shadow: 0 0 6px color-mix(in srgb, var(--morado) 60%, transparent); }
+
+/* ── 277 · El cuadro de publicar abierto (tanda 38) ───────────────────────────────────────────────────────────────────
+   Comunidad.jsx: data-tema en el cuadro. El tema elegido, como pastilla de su color (los de la tanda 37); «Fotos» con su
+   icono en verde y «Publicar», con brillo cuando ya se puede. */
+.compositor { --ct: var(--morado); }
+.compositor[data-tema="charla"] { --ct: var(--t-peso); }
+.compositor[data-tema="tecnica"] { --ct: var(--t-tarea); }
+.compositor[data-tema="logros"] { --ct: #C98A00; }
+.compositor[data-tema="pregunta"] { --ct: var(--t-cuestionario); }
+.compositor-tema select { border-color: color-mix(in srgb, var(--ct) 45%, var(--linea)); background-color: color-mix(in srgb, var(--ct) 8%, var(--hoja)); color: var(--tinta); font-weight: 650; }
+.compositor-pie > .fila-envolver .btn.plano svg { color: #22A04B; }
+.compositor-enviar .btn-primario:not(:disabled) { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 90%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+
+/* ── 278 · Las pegatinas con un saltito (tanda 38) ────────────────────────────────────────────────────────────────────
+   En los comentarios, algo más grandes (96 px) y entran con un salto y un giro pequeño. */
+.pegatina-comentario { width: 96px; height: 96px; filter: drop-shadow(0 6px 8px rgba(30, 21, 72, .18)); }
+@media (prefers-reduced-motion: no-preference) { .pegatina-comentario { animation: pegatina-salta .55s var(--curva-rebote) both; } }
+@keyframes pegatina-salta { from { transform: scale(.5) rotate(-12deg); } 70% { transform: scale(1.08) rotate(3deg); } }
+
+/* ── 279 · «Ha entrenado hoy» en verde (tanda 38) ─────────────────────────────────────────────────────────────────────
+   El aro del avatar de quien ha entrenado hoy (estilos.css 3255, del acento al verde) pasa a un degradado verde con
+   brillo, para que se lea de un vistazo como «hoy ha entrenado». */
+.aro-hoy::before { background: conic-gradient(from 200deg, #22A04B, #7BD88F, #22A04B, #0E9384, #22A04B); box-shadow: 0 0 8px rgba(34, 160, 75, .45); }
+@media (forced-colors: active) { .aro-hoy::before { background: CanvasText; box-shadow: none; } }
