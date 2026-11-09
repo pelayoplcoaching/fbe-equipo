@@ -142,6 +142,17 @@ export function imagenPrimerosPasos(dibujo) { return PRIMEROS[dibujo] ? `primero
 export const HERRAMIENTAS = ['camara', 'metronomo', 'intervalos', 'comparar'];
 export function imagenHerramienta(que) { return HERRAMIENTAS.includes(que) ? `herr-${que}` : null; }
 
+// ---------- Los hitos de la racha y el aniversario (bloque R) ----------
+// El fuego crece de un hito a otro: 4 semanas, una vela; 52, la gran hoguera. Más allá de 52 (104, 156…), la de 52.
+// Entre hitos (no debería pasar), la del hito alcanzado más alto; por debajo de 4, ninguna
+export const HITOS_IMG = [4, 8, 12, 26, 52];
+export function imagenHito(semanas) {
+  const n = Number(semanas) || 0;
+  const h = HITOS_IMG.filter((x) => x <= n).pop();
+  return h ? `hito-${h}` : null;
+}
+export const IMAGEN_ANIVERSARIO = 'aniversario';
+
 // ---------- El foco de la semana ----------
 // Una cabecera por foco (logica/calculos.js: FOCOS), con lo que significa esa semana en una frase; sin foco, nada
 export const FOCOS_IMG = ['adaptacion', 'tecnica', 'volumen', 'intensidad', 'descarga', 'mixto', 'evaluacion', 'peaking'];

@@ -7,9 +7,9 @@ import { Capa, Icono, useAtraparFoco, usePreferencia } from '../comunes.jsx';
 import { calendarioRacha, proximoHito, hitoPorCelebrar, marcarHitos, NOMBRE_ESTADO_SEMANA, textoSemanas } from '../../logica/racha.js';
 import { fmtCorta, hoyISO } from '../../logica/fechas.js';
 import { lanzarConfeti } from '../confeti.js';
-import { Imagen } from '../Imagen.jsx';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach } from './Personal.jsx';
-import { imagenCelebracion } from '../../logica/imagenes.js';
+import { imagenCelebracion, imagenHito } from '../../logica/imagenes.js';
 import { HojaCompartir } from '../Compartir.jsx';
 import { datosRacha } from '../../logica/compartir.js';
 
@@ -121,7 +121,8 @@ function HitoRachaDentro({ hito, alCerrar }) {
   return (
     <div class="hito-pantalla" role="dialog" aria-modal="true" aria-labelledby="hito-titulo" aria-describedby="hito-texto" ref={ref} tabIndex={-1}>
       {/* (imágenes) la hoguera, abajo, fundida con el fondo */}
-      <Imagen id={imagenCelebracion('racha')} clase="hito-fondo" tamanos="100vw" prioridad />
+      {/* (imágenes, bloque R) el fuego de su hito: de la vela (4 semanas) a la gran hoguera (52); sin ella, la de la racha */}
+      <Imagen id={hayImagen(imagenHito(hito)) ? imagenHito(hito) : imagenCelebracion('racha')} clase="hito-fondo" tamanos="100vw" prioridad />
       <div class="hito-cuerpo">
         <div class="hito-fuego"><Llama /><span class="hito-num marcador" aria-hidden="true">{hito}</span></div>
         <p class="t-sobre hito-sobre">Nuevo hito</p>

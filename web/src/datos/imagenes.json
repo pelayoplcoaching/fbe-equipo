@@ -1,4 +1,15 @@
 {
+  "aniversario": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/celebra/aniversario-720.59b3dfaa.webp",
+      "1080": "imagenes/celebra/aniversario-1080.5bf71668.webp",
+      "1440": "imagenes/celebra/aniversario-1440.b5a66247.webp"
+    }
+  },
   "bienvenida-manana": {
     "proporcion": [
       16,
@@ -702,6 +713,56 @@
       "480": "imagenes/herr/herr-metronomo-480.5080d5a6.webp",
       "720": "imagenes/herr/herr-metronomo-720.11149cba.webp",
       "1080": "imagenes/herr/herr-metronomo-1080.78181f85.webp"
+    }
+  },
+  "hito-12": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "512": "imagenes/hito/hito-12-512.fbc86a9c.webp",
+      "1080": "imagenes/hito/hito-12-1080.a7b2a1a8.webp"
+    }
+  },
+  "hito-26": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "512": "imagenes/hito/hito-26-512.97c1d0ae.webp",
+      "1080": "imagenes/hito/hito-26-1080.398f992e.webp"
+    }
+  },
+  "hito-4": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "512": "imagenes/hito/hito-4-512.838af4e1.webp",
+      "1080": "imagenes/hito/hito-4-1080.15c85532.webp"
+    }
+  },
+  "hito-52": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "512": "imagenes/hito/hito-52-512.ae5cf79e.webp",
+      "1080": "imagenes/hito/hito-52-1080.52799fd7.webp"
+    }
+  },
+  "hito-8": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "512": "imagenes/hito/hito-8-512.7eadc0cf.webp",
+      "1080": "imagenes/hito/hito-8-1080.a0106953.webp"
     }
   },
   "medalla-bascula-bronce": {
