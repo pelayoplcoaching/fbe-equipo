@@ -10,6 +10,7 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Segmentos, Pestanas, Vacio } from '../comunes.jsx';
 import { perezoso } from '../perezoso.jsx';
 import { Logros } from '../Logros.jsx';
+import { Huella } from '../Social.jsx';
 import { MapaConstancia } from './Progreso.jsx';
 import { TusEjercicios } from './Personal.jsx';
 import { num, NOMBRE_GRUPO } from '../../logica/calculos.js';
@@ -261,6 +262,8 @@ export function EnElEquipo() {
         </dl>
         {recibidos.length > 0 && <p class="peq"><span aria-hidden="true">🙌 </span>Esta semana te han animado: <strong>{recibidos.map((r) => r.nombre).join(', ')}</strong>.</p>}
         {conmigo.length > 0 && <p class="peq"><span aria-hidden="true">🤝 </span>Compañeros de racha: <strong>{conmigo.map((c) => `${c.nombre}${c.racha > 0 ? ` (${c.racha} ${c.racha === 1 ? 'semana' : 'semanas'})` : ''}`).join(', ')}</strong>.</p>}
+        {/* (social, 053) tu huella en el equipo */}
+        <Huella />
         <button type="button" class="btn" onClick={() => setVer(true)}><Icono n="ojo" /> Ver cómo te ven tus compañeros</button>
       </div>
       {ver && <HojaPerfilEquipo perfilId={yo} alCerrar={() => setVer(false)} />}

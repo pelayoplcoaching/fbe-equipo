@@ -13,7 +13,7 @@ import { num } from '../../logica/calculos.js';
 // Los teléfonos de todos ({ atleta_id: teléfono }; sin la 051, null). Se piden una vez por pantalla.
 export function useContactos(deps = []) {
   const { api } = useApp();
-  return useCarga(() => api.contactos().catch(() => null), deps);
+  return useCarga(() => api.contactos().catch(() => null), deps, { recuerdo: `contactos:${api.uid()}:${deps.join(',')}` });
 }
 
 export function BotonWhatsApp({ telefono, texto = '', clase = 'btn btn-peq', etiqueta = 'WhatsApp' }) {

@@ -5648,8 +5648,8 @@ console.log('\nLa comunidad, segunda tanda: compañeros de racha, retos por equi
   await como(ana);
   await q(`insert into comunidad_posts (texto) values ('Primera de Ana')`);
   const propias = await q(`select clave, valor, meta from comunidad_insignias($1)`, [ana]);
-  check(propias.length === 6 && propias.map((x) => x.clave).sort().join() === C.INSIGNIAS.map((x) => x[0]).sort().join() && propias.every((x) => x.valor <= x.meta)
-    && propias.find((x) => x.clave === 'primera_publicacion').valor === 1, 'Ana ve sus seis insignias con su progreso (como mucho, la meta)');
+  check(propias.length === 10 && propias.map((x) => x.clave).sort().join() === C.INSIGNIAS.map((x) => x[0]).sort().join() && propias.every((x) => x.valor <= x.meta)
+    && propias.find((x) => x.clave === 'primera_publicacion').valor === 1, 'Ana ve sus diez insignias (seis de la 042 y cuatro sociales de la 053) con su progreso (como mucho, la meta)');
   await como(eva);
   const deAna = await q(`select clave, valor, meta from comunidad_insignias($1)`, [ana]);
   check(deAna.length >= 1 && deAna.every((x) => x.valor >= x.meta) && deAna.some((x) => x.clave === 'primera_publicacion'), 'Eva ve de Ana solo las conseguidas');
@@ -5661,7 +5661,7 @@ console.log('\nLa comunidad, segunda tanda: compañeros de racha, retos por equi
   const propiasSin = (await q(`select * from comunidad_insignias($1)`, [ana])).length;
   await como(pelayo, 'aal2');
   const coachSinI = (await q(`select * from comunidad_insignias($1)`, [ana])).length;
-  check(todas.some((x) => x.perfil_id === ana) && deAnaSin === 0 && propiasSin === 6 && coachSinI === 6, 'de quien no sale en el ranking, ninguna para los demás (él y el coach, todas)');
+  check(todas.some((x) => x.perfil_id === ana) && deAnaSin === 0 && propiasSin === 10 && coachSinI === 10, 'de quien no sale en el ranking, ninguna para los demás (él y el coach, todas)');
   await su(); await q(`update comunidad_miembros set sin_ranking = false where perfil_id = $1`, [ana]);
   await como(intruso);
   check(!(await q(`select * from comunidad_insignias()`)).length, 'una cuenta de fuera no ve ninguna');
@@ -6027,7 +6027,13 @@ console.log('\nLa comunidad, cuarta tanda: eventos, programados y plantillas, el
 
   console.log('  · Eventos y quién va');
   await como(ana);
-  check(await falla(`insert into comunidad_eventos (titulo, empieza_en, lugar) values ('Mío', now() + interval '1 day', 'Casa')`), 'un atleta no crea eventos');
+  // (053) un atleta propone una quedada: la base la firma con él (creado_por) y le apunta; aquí se quita para seguir con los eventos del coach
+  const [qAna] = await q(`insert into comunidad_eventos (titulo, empieza_en, lugar) values ('Mía', now() + interval '1 day', 'Casa') returning id, creado_por`);
+  check(qAna.creado_por === ana && (await q(`select va from comunidad_evento_asistentes where evento_id = $1 and perfil_id = $2`, [qAna.id, ana]))[0]?.va === true, 'un atleta propone una quedada (053): la base la firma con él y le apunta');
+  await como(intruso);
+  check(await falla(`insert into comunidad_eventos (titulo, empieza_en, lugar) values ('Intrusa', now() + interval '1 day', 'Casa')`), 'una cuenta de fuera no propone nada');
+  await su();
+  await q(`delete from comunidad_eventos where id = $1`, [qAna.id]);
   await como(pelayo, 'aal2');
   check(await falla(`insert into comunidad_eventos (titulo, empieza_en, lugar) values ('Ayer', now() - interval '1 hour', 'Retiro')`)
     && await falla(`insert into comunidad_eventos (titulo, empieza_en, lugar) values ('Lejos', now() + interval '400 days', 'Retiro')`)

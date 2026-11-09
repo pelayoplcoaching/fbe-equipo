@@ -39,6 +39,9 @@ function Lugar({ lugar }) {
 // El coach: «Cambiar» y «Cancelar».
 export function TarjetaEvento({ e, coach = false, alCambiar, alEditar = null }) {
   const { api, aviso } = useApp();
+  // (social, 053) la quedada que propuso un atleta: la cambia o la cancela él (y el coach)
+  const mia = !!e.mia;
+  const gestiona = coach || mia;
   const [ocupado, una] = useUnaVez();
   const [cancelar, setCancelar] = useState(false);
   const [verQuien, setVerQuien] = useState(false);
@@ -56,14 +59,14 @@ export function TarjetaEvento({ e, coach = false, alCambiar, alEditar = null }) 
     descargar(`evento-${partesMadrid(e.empieza_en).fecha}.ics`, calendarioICS([datosICSEvento(e, partesMadrid)], { url }), 'text/calendar;charset=utf-8');
   };
   const anular = () => una(async () => {
-    try { await api.cancelarEvento(e.id); aviso('Evento cancelado: a quien iba le llega un aviso'); setCancelar(false); await alCambiar?.(); } catch (err) { aviso(err.message, 'error'); }
+    try { await api.cancelarEvento(e.id); aviso(mia ? 'Quedada cancelada: a quien iba le llega un aviso' : 'Evento cancelado: a quien iba le llega un aviso'); setCancelar(false); await alCambiar?.(); } catch (err) { aviso(err.message, 'error'); }
   });
   return (
-    <article class={`panel panel-pad pila-s evento-equipo ${estado}`} aria-label={`Evento: ${e.titulo}`}>
+    <article class={`panel panel-pad pila-s evento-equipo ${estado} ${e.propuestaPor ? 'quedada-atleta' : ''}`} aria-label={`${e.propuestaPor ? 'Quedada' : 'Evento'}: ${e.titulo}`}>
       <div class="ev-cab">
         <DiaEvento e={e} />
         <div class="pila-xs ev-texto">
-          <span class="mini le-k">{estado === 'cancelado' ? 'Evento cancelado' : estado === 'pasado' ? 'Evento pasado' : 'Evento del equipo'}</span>
+          <span class="mini le-k">{estado === 'cancelado' ? (e.propuestaPor ? 'Quedada cancelada' : 'Evento cancelado') : estado === 'pasado' ? (e.propuestaPor ? 'Quedada pasada' : 'Evento pasado') : e.propuestaPor ? `Quedada de ${mia ? 'ti' : e.propuestaPor}` : 'Evento del equipo'}</span>
           <strong class="ev-titulo">{e.titulo}</strong>
           <span class="peq secundario"><Icono n="calendario" /> {cuandoEvento(e)}</span>
           <span class="peq secundario ev-donde"><Icono n="enlace" /> <Lugar lugar={e.lugar} /></span>
@@ -86,8 +89,8 @@ export function TarjetaEvento({ e, coach = false, alCambiar, alEditar = null }) 
             </>
           )}
           <button type="button" class="btn btn-peq plano" onClick={calendario}><Icono n="calendario" /> Añadir al calendario</button>
-          {coach && alEditar && <button type="button" class="btn btn-peq" onClick={() => alEditar(e)}><Icono n="editar" /> Cambiar</button>}
-          {coach && !cancelar && <button type="button" class="btn btn-peq btn-peligro" onClick={() => setCancelar(true)}>Cancelar</button>}
+          {gestiona && alEditar && <button type="button" class="btn btn-peq" onClick={() => alEditar(e)}><Icono n="editar" /> Cambiar</button>}
+          {gestiona && !cancelar && <button type="button" class="btn btn-peq btn-peligro" onClick={() => setCancelar(true)}>Cancelar</button>}
         </div>
       )}
       {cancelar && (
@@ -114,8 +117,11 @@ export function TarjetaEvento({ e, coach = false, alCambiar, alEditar = null }) 
 
 // Arriba de Equipo: los próximos eventos en pequeño (tocar uno abre su tarjeta); el coach, con «Nuevo evento». Sin la 044, al
 // atleta no le sale nada.
-export function Proximos({ coach = false, cambios = 0, alCambiar = null }) {
+export function Proximos({ coach = false, cambios = 0, alCambiar = null, proponer = false }) {
   const { api } = useApp();
+  // (social, 053) los atletas proponen quedadas (si la base lo tiene)
+  const con053 = useCarga(() => (proponer && !coach ? api.comunidad053().catch(() => false) : Promise.resolve(false)), []);
+  const puedoProponer = coach || con053.datos === true;
   const [vuelta, setVuelta] = useState(0);
   const lista = useCarga(() => api.eventosComunidad(), [vuelta, cambios]);
   const [abierto, setAbierto] = useState(null);
@@ -123,15 +129,16 @@ export function Proximos({ coach = false, cambios = 0, alCambiar = null }) {
   const recargar = async () => { setVuelta((v) => v + 1); alCambiar?.(); };
   if (lista.datos === null && !lista.cargando) return coach ? <p class="mini terciario">Eventos y quedadas: {AVISO_044}.</p> : null;
   const proximos = eventosProximos(lista.datos || []);
-  if (!coach && !proximos.length) return null;
+  if (!coach && !proximos.length && !puedoProponer) return null;
   const actual = abierto && (lista.datos || []).find((x) => x.id === abierto);
   return (
     <section class="panel panel-pad pila-s proximos" aria-labelledby="eq-proximos-t">
       <div class="separa">
         <h2 id="eq-proximos-t" class="pr-t"><Icono n="calendario" /> Próximos</h2>
         {coach && <button type="button" class="btn btn-peq" onClick={() => setEditar({})}><Icono n="mas" /> Nuevo evento</button>}
+        {!coach && puedoProponer && <button type="button" class="btn btn-peq" onClick={() => setEditar({})}><Icono n="mas" /> Proponer una quedada</button>}
       </div>
-      {!proximos.length ? <p class="peq secundario">Crea una quedada o un evento: tus atletas lo verán aquí y en el muro, y podrán apuntarse.</p> : (
+      {!proximos.length ? <p class="peq secundario">{coach ? 'Crea una quedada o un evento: tus atletas lo verán aquí y en el muro, y podrán apuntarse.' : 'Propón una quedada («Sábado 10:00 en el parque») y los demás se apuntan. Tu coach también crea eventos aquí.'}</p> : (
         <ul class="lista pr-lista">
           {proximos.slice(0, 3).map((e) => (
             <li key={e.id}>
@@ -152,13 +159,13 @@ export function Proximos({ coach = false, cambios = 0, alCambiar = null }) {
           <TarjetaEvento e={actual} coach={coach} alCambiar={recargar} alEditar={(e) => { setAbierto(null); setEditar(e); }} />
         </Hoja>
       )}
-      {editar && <HojaEvento evento={editar.id ? editar : null} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); recargar(); }} />}
+      {editar && <HojaEvento evento={editar.id ? editar : null} quedada={!coach} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); recargar(); }} />}
     </section>
   );
 }
 
 // Crear o cambiar un evento (el coach): título, día y hora (de Madrid), sitio o enlace, descripción y plazas (opcionales)
-export function HojaEvento({ evento = null, alCerrar, alGuardar }) {
+export function HojaEvento({ evento = null, alCerrar, alGuardar, quedada = false }) {
   const { api, aviso } = useApp();
   const p0 = evento ? partesMadrid(evento.empieza_en) : { fecha: sumarDias(fechaMadrid(), 3), hora: '10:00' };
   const [f, setF] = useState({ titulo: evento?.titulo || '', fecha: p0.fecha, hora: p0.hora, lugar: evento?.lugar || '', descripcion: evento?.descripcion || '', plazas: evento?.plazas ?? '' });
@@ -168,11 +175,11 @@ export function HojaEvento({ evento = null, alCerrar, alGuardar }) {
   const guardar = (ev) => {
     ev.preventDefault();
     una(async () => {
-      try { await api.guardarEvento(f, evento?.id || null); aviso(evento ? 'Evento guardado' : 'Evento creado: ya lo ven en el muro'); alGuardar(); } catch (err) { aviso(err.message, 'error'); }
+      try { await api.guardarEvento(f, evento?.id || null); aviso(evento ? (quedada ? 'Quedada guardada' : 'Evento guardado') : quedada ? 'Quedada propuesta: ya la ven en el muro (y tú vas)' : 'Evento creado: ya lo ven en el muro'); alGuardar(); } catch (err) { aviso(err.message, 'error'); }
     });
   };
   return (
-    <Hoja titulo={evento ? 'Cambiar el evento' : 'Nuevo evento'} alCerrar={alCerrar}>
+    <Hoja titulo={evento ? (quedada ? 'Cambiar la quedada' : 'Cambiar el evento') : quedada ? 'Proponer una quedada' : 'Nuevo evento'} alCerrar={alCerrar}>
       <form class="pila" onSubmit={guardar}>
         <div class="campo"><label for="ev-titulo">Título</label>
           <input id="ev-titulo" class="entrada" maxLength={MAX_TITULO_EVENTO} required value={f.titulo} onInput={c('titulo')} placeholder="Quedada en el parque" /></div>
@@ -185,9 +192,9 @@ export function HojaEvento({ evento = null, alCerrar, alGuardar }) {
         <div class="campo"><label for="ev-desc">Descripción (opcional)</label>
           <textarea id="ev-desc" class="area" rows={3} maxLength={MAX_DESCRIPCION_EVENTO} value={f.descripcion} onInput={c('descripcion')} /></div>
         <div class="campo"><label for="ev-plazas">Plazas (opcional)</label>
-          <input id="ev-plazas" type="number" inputMode="numeric" min="1" max={MAX_PLAZAS_EVENTO} class="entrada entrada-num" value={f.plazas} onInput={c('plazas')} placeholder="Sin límite" /></div>
-        <p class="mini terciario">Hora de Madrid. Lo ven los del equipo en el muro y en «Próximos»; a quien se apunta le llega un recordatorio 2 horas antes.</p>
-        <button class="btn btn-primario" disabled={ocupado || !!problema}>{evento ? 'Guardar' : 'Crear el evento'}</button>
+          <input id="ev-plazas" type="number" inputMode="numeric" min="1" max={quedada ? 30 : MAX_PLAZAS_EVENTO} class="entrada entrada-num" value={f.plazas} onInput={c('plazas')} placeholder="Sin límite" /></div>
+        <p class="mini terciario">Hora de Madrid. Lo ven los del equipo en el muro y en «Próximos»; a quien se apunta le llega un recordatorio 2 horas antes.{quedada ? ' Como mucho tres quedadas abiertas y 30 plazas; tú vas de entrada.' : ''}</p>
+        <button class="btn btn-primario" disabled={ocupado || !!problema}>{evento ? 'Guardar' : quedada ? 'Proponer la quedada' : 'Crear el evento'}</button>
       </form>
     </Hoja>
   );

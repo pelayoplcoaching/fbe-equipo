@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.117': {
+    atleta: [
+      'El Equipo, más social: duelos 1 a 1, «Hoy entreno a las…», el compañero de la semana elegido entre todos y encuestas vuestras.',
+      'Felicita cumpleaños, anima con palabras, propón quedadas, acompaña a quien entra, cita publicaciones y mira tu huella en el perfil.',
+      'Y el Equipo, rematado: entrar es más claro, la foto del momento se elige mejor y quién ha votado o reaccionado se lee de un vistazo.',
+    ],
+    coach: [
+      'El Equipo, más social: duelos, «Hoy entreno a las…», compañero de la semana, encuestas y quedadas de los atletas, álbum y más.',
+      'En el Equipo, el Panel con cifras en color y medallas para los más activos, Moderar con su escudo y encuestas con opciones numeradas.',
+      'Necesita la migración 053 (comprobación 30 del README). Sin ella, la app sigue como antes.',
+    ],
+  },
   '0.116': {
     atleta: [
       'Tu perfil suma «Datos» (tu año, costumbres, lo que más entrenas), tus próximos hitos, el color de tu portada y tu tarjeta del año.',

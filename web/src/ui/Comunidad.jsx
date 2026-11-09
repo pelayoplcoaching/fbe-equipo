@@ -48,6 +48,8 @@ import { pesoTxt } from '../logica/unidades.js';
 import { PortadaPerfil, FotoConAnillo } from './PerfilVisual.jsx';
 import { LOBO } from './marca-lobo.js';
 import { HojaCompartir } from './Compartir.jsx';
+// (social, 053) lo que los atletas hacen entre ellos
+import { CumplesEquipo, HoyEntrenan, Duelos, Padrinos, CompaneroSemana, NecesitanAnimo, LoMejorSemana, MismaSesionHoy, AlbumEquipo, AjustesSociales, HojaAnimo } from './Social.jsx';
 import { datosDePost, datosEquipoSemana, datosReto } from '../logica/compartir.js';
 
 const VISTAS = [['muro', 'Muro'], ['retos', 'Retos'], ['ranking', 'Ranking']];
@@ -93,7 +95,7 @@ export function NotaHoy({ perfilId }) {
   return useCompartioHoy(perfilId) ? <span class="sr"> (ha compartido un entreno hoy)</span> : null;
 }
 // Un nombre (con su foto, si se quiere) que abre el perfil
-function BotonPersona({ perfilId, nombre, foto = null, clase = '', avatar = true, claseAvatar = 'peq', children }) {
+export function BotonPersona({ perfilId, nombre, foto = null, clase = '', avatar = true, claseAvatar = 'peq', children }) {
   const abrir = usePerfil();
   return (
     <button type="button" class={`btn-persona ${clase}`} onClick={() => abrir(perfilId)}>
@@ -169,6 +171,8 @@ function DentroDelEquipo({ m, alCambiar }) {
       </CabeceraGrande>
       <TarjetaAniversario />
       <TiraMomentos silencio={silenciadoHasta(m)} cambios={cambios} />
+      {/* (social, 053) los cumpleaños de hoy */}
+      <CumplesEquipo cambios={cambios} />
       {deBienvenida.length > 0 && (
         <p class="animos-recibidos peq"><span class="animos-ico" aria-hidden="true">👋</span><span>Te han dado la bienvenida: <strong>{quienes(deBienvenida.map((x) => x.nombre), 3)}</strong></span></p>
       )}
@@ -176,12 +180,18 @@ function DentroDelEquipo({ m, alCambiar }) {
         <p class="animos-recibidos peq"><span class="animos-ico" aria-hidden="true">🙌</span><span>Te han animado esta semana: <strong>{quienes(recibidos.map((x) => x.nombre), 3)}</strong></span></p>
       )}
       <EntrenandoAhora />
+      {/* (social, 053) quién entrena hoy, quién acompaña a quién y quién necesita un empujón */}
+      <HoyEntrenan cambios={cambios} />
+      <Padrinos cambios={cambios} />
+      <NecesitanAnimo cambios={cambios} />
       {/* (v0.104) la lista colaborativa del equipo, si el coach la ha enlazado */}
       <ListaEquipo />
       {/* (diseño) plegados en pastillas, para que el muro empiece por las publicaciones */}
       <div class="equipo-filas">
-        <PlegableEquipo id="proximos" titulo="Próximos" icono="calendario" cuenta=".pr-item"><Proximos cambios={eventos} alCambiar={() => setEventos((v) => v + 1)} /></PlegableEquipo>
+        <PlegableEquipo id="proximos" titulo="Próximos" icono="calendario" cuenta=".pr-item"><Proximos cambios={eventos} alCambiar={() => setEventos((v) => v + 1)} proponer /></PlegableEquipo>
         <PlegableEquipo id="companeros" titulo="Compañeros de racha" icono="equipo" cuenta=".cp-fila"><CompanerosRacha cambios={cambios} /></PlegableEquipo>
+        <PlegableEquipo id="duelos" titulo="Duelos" icono="trofeo" cuenta=".duelo-fila"><Duelos cambios={cambios} /></PlegableEquipo>
+        <PlegableEquipo id="album" titulo="Álbum" icono="imagen"><AlbumEquipo Foto={FotoPost} cambios={cambios} /></PlegableEquipo>
       </div>
       <Pestanas opciones={con043.datos ? VISTAS_043 : VISTAS} valor={vista} alCambiar={desliz.cambiar} etiqueta="Equipo" idBase="eq" clase={con043.datos ? 'pestanas-justas' : ''} />
       <div class="pestana-panel deslizable" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista} ref={desliz.panel} {...desliz.gesto}>
@@ -364,7 +374,10 @@ export function Muro({ coach = false, cambios = 0, miembro = null, eventos = 0, 
         <PlegableEquipo id="semana" titulo="Resumen de la semana" icono="progreso"><ResumenSemana cambios={cambios} /></PlegableEquipo>
       </div>
       {filtro === 'todo' && !buscar && <BienvenidaNuevos />}
-      {silencio ? <LineaSilencio hasta={silencio} /> : <Compositor coach={coach} personas={d?.personas || {}} con043={con043} con044={!!d?.con044} alPublicar={recargar} />}
+      {/* (social, 053) lo mejor de la semana pasada (lunes y martes) y quienes han hecho hoy la misma sesión */}
+      {enTodo && d?.con053 && <LoMejorSemana posts={d.posts} />}
+      {enTodo && d?.con053 && <MismaSesionHoy posts={d.posts} alCambiar={recargar} />}
+      {silencio ? <LineaSilencio hasta={silencio} /> : <Compositor coach={coach} personas={d?.personas || {}} con043={con043} con044={!!d?.con044} con053={!!d?.con053} alPublicar={recargar} />}
       {coach && d?.con044 && <Programados cambios={cambios + vProg} alCambiar={() => muro.recargar(true)} />}
       {con043 && (
         <form class="buscar-muro" role="search" aria-label="Buscar en el muro" onSubmit={lanzarBusqueda}>
@@ -708,7 +721,7 @@ function TextoConMenciones({ texto, mencionados = [], clase = 'post-texto', como
 // v0.71 (043): con un tema (el de entrada, charla; el del coach, avisos) y hasta 4 fotos, reducidas en el móvil. Sin la 043,
 // sin tema y con una foto.
 // v0.72 (044): el coach, «Publicar ahora» o «Programar» (día y hora de Madrid) y sus plantillas de avisos
-function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPublicar }) {
+function Compositor({ coach, personas = {}, con043 = false, con044 = false, con053 = false, alPublicar }) {
   const { api, aviso } = useApp();
   const [programar, setProgramar] = useState(false);
   const [plantillas, setPlantillas] = useState(false);
@@ -727,7 +740,8 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPu
   useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
   // (diseño) El del atleta empieza plegado en una línea; al tocarlo se abre y ya se queda abierto mientras siga en el muro
   const [abierto, setAbierto] = useState(coach);
-  const encuesta = coach && modo === 'encuesta';
+  // (053) los atletas también publican encuestas (una al día)
+  const encuesta = (coach || con053) && modo === 'encuesta';
   const maxFotos = con043 ? MAX_FOTOS : 1;
   const elegir = async (e) => {
     const lista = [...(e.currentTarget.files || [])];
@@ -750,7 +764,8 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPu
         if (encuesta) {
           await api.publicarEnComunidad({ encuesta: { pregunta, opciones, cierre: cierre ? new Date(cierre).toISOString() : null }, fijada, publicarEn });
           setPregunta(''); setOpciones(['', '']); setCierre(''); setFijada(false);
-          aviso(publicarEn ? `Encuesta programada${cuando}` : 'Encuesta publicada en el muro');
+          aviso(publicarEn ? `Encuesta programada${cuando}` : coach ? 'Encuesta publicada en el muro' : 'Encuesta publicada: el equipo ya puede votar');
+          setModo('aviso');
         } else {
           const post = await api.publicarEnComunidad({ texto, fotos: fotos.map((f) => f.blob), tema: con043 ? tema : null, fijada, menciones: mencionesDeTexto(texto, elegidas), publicarEn });
           setTexto(''); setFotos([]); setFijada(false); setElegidas([]);
@@ -772,9 +787,9 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPu
   const plegado = !coach && !abierto && vacio;
   return (
     <form class={`panel panel-pad pila-s compositor${plegado ? ' compositor-plegado' : ''}`} data-tema={tema || undefined} onSubmit={publicar} onFocusCapture={() => { if (!abierto) setAbierto(true); }} onClick={() => { if (!abierto) setAbierto(true); }}>
-      {coach && (
+      {(coach || (con053 && !plegado)) && (
         <div class="segmentos compositor-modo" role="group" aria-label="Qué publicas">
-          {[['aviso', 'Aviso'], ['encuesta', 'Encuesta']].map(([k, t]) => <button key={k} type="button" aria-pressed={modo === k ? 'true' : 'false'} onClick={() => setModo(k)}>{t}</button>)}
+          {[['aviso', coach ? 'Aviso' : 'Publicación'], ['encuesta', 'Encuesta']].map(([k, t]) => <button key={k} type="button" aria-pressed={modo === k ? 'true' : 'false'} onClick={() => setModo(k)}>{t}</button>)}
         </div>
       )}
       {encuesta ? (
@@ -844,7 +859,7 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, alPu
             <button type="button" class="btn btn-peq" disabled={ocupado || (encuesta ? !encuestaLista : !texto.trim())} onClick={() => setProgramar(true)}><Icono n="reloj" /> Programar</button>
           )}
           <button class="btn btn-peq btn-primario" disabled={ocupado || (encuesta ? !encuestaLista : coach ? !texto.trim() : vacio)}>
-            {ocupado ? 'Publicando…' : encuesta ? (con044 ? 'Publicar ahora' : 'Publicar encuesta') : coach ? (con044 ? 'Publicar ahora' : 'Publicar aviso') : esPregunta ? 'Preguntar' : 'Publicar'}
+            {ocupado ? 'Publicando…' : encuesta ? (coach && con044 ? 'Publicar ahora' : 'Publicar encuesta') : coach ? (con044 ? 'Publicar ahora' : 'Publicar aviso') : esPregunta ? 'Preguntar' : 'Publicar'}
           </button>
         </span>
       </div>
@@ -918,6 +933,8 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
           {post.tipo === 'logro' && <TarjetaLogro r={post.resumen} />}
           {post.tipo === 'aniversario' && <TarjetaAniversarioPost post={post} />}
           {post.texto && <TextoConMenciones texto={post.texto} mencionados={post.mencionados} />}
+          {/* (social, 053) la publicación citada */}
+          {post.cita && <PostCitado cita={post.cita} />}
           {(post.fotos || []).length > 0 ? <GaleriaPost rutas={post.fotos} autor={post.autor.nombre} /> : post.foto_ruta && <FotoPost ruta={post.foto_ruta} autor={post.autor.nombre} />}
           {pop > 0 && <span class="pop-fuerza" key={pop} aria-hidden="true">💪</span>}
         </div>
@@ -938,7 +955,8 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
       {hoja === 'comentarios' && <HojaComentarios post={post} coach={coach} personas={personas} alCerrar={() => setHoja(null)} alCambiar={alCambiar} />}
       {hoja === 'quien' && <HojaQuien post={post} alCerrar={() => setHoja(null)} />}
       {hoja === 'votos' && <HojaVotantes post={post} alCerrar={() => setHoja(null)} />}
-      {hoja === 'opciones' && <HojaOpcionesPost post={post} coach={coach} alCerrar={() => setHoja(null)} alCambiar={alCambiar} alAvisar={() => setHoja('avisar')} alSilenciar={() => setHoja('silenciar')} alFuera={() => setHoja('fuera')} />}
+      {hoja === 'opciones' && <HojaOpcionesPost post={post} coach={coach} alCerrar={() => setHoja(null)} alCambiar={alCambiar} alAvisar={() => setHoja('avisar')} alSilenciar={() => setHoja('silenciar')} alFuera={() => setHoja('fuera')} alCitar={() => setHoja('citar')} />}
+      {hoja === 'citar' && <HojaCitar post={post} personas={personas} alCerrar={() => setHoja(null)} alPublicado={() => { setHoja(null); alCambiar(); }} />}
       {hoja === 'fuera' && (post.tipo === 'entreno'
         ? <HojaCompartir plantillas datos={datosDePost(post)} titulo="Compartir fuera del equipo" alCerrar={() => setHoja(null)} />
         : <HojaCompartir logro tipo="logro" datos={datosDePost(post)} titulo="Compartir fuera del equipo" alCerrar={() => setHoja(null)} />)}
@@ -1105,7 +1123,7 @@ function GaleriaPost({ rutas = [], autor }) {
   );
 }
 
-function FotoPost({ ruta, autor, n = 0, total = 0 }) {
+export function FotoPost({ ruta, autor, n = 0, total = 0 }) {
   const { api } = useApp();
   const [url, setUrl] = useState(null);
   const [error, setError] = useState(false);
@@ -1190,6 +1208,46 @@ function FotoGrandeDentro({ src, alt, alCerrar }) {
   );
 }
 
+// (social, 053) La publicación citada, en pequeño dentro de otra: quién, qué (texto, el nombre de la sesión o del logro) y su primera foto
+function PostCitado({ cita }) {
+  if (cita.borrada) return <p class="post-cita post-cita-borrada mini terciario">La publicación citada ya no está.</p>;
+  const texto = cita.texto || (cita.tipo === 'entreno' ? cita.resumen?.nombre : cita.tipo === 'logro' ? cita.resumen?.titulo : cita.tipo === 'encuesta' ? 'Una encuesta' : '') || (cita.fotos?.length ? 'Una foto' : '');
+  return (
+    <blockquote class={`post-cita post-cita-${cita.tipo}`} data-tema={cita.tema || undefined}>
+      <span class="post-cita-cab"><BotonPersona perfilId={cita.autor_id} nombre={cita.autor?.nombre || 'Alguien del equipo'} foto={cita.autor?.foto} claseAvatar="mini" /><span class="mini terciario">· {cuando(cita.creado_en)}</span></span>
+      {texto && <p class="post-cita-texto peq">{String(texto).slice(0, 220)}{String(texto).length > 220 ? '…' : ''}</p>}
+      {cita.fotos?.length > 0 && <div class="post-cita-foto"><FotoPost ruta={cita.fotos[0]} autor={cita.autor?.nombre || 'Alguien del equipo'} /></div>}
+    </blockquote>
+  );
+}
+// (social, 053) Citar la publicación de otro en una mía: tu comentario y la citada debajo
+function HojaCitar({ post, personas = {}, alCerrar, alPublicado }) {
+  const { api, aviso } = useApp();
+  const [texto, setTexto] = useState('');
+  const [elegidas, setElegidas] = useState([]);
+  const [ocupado, una] = useUnaVez();
+  const publicar = (e) => {
+    e.preventDefault();
+    una(async () => {
+      try {
+        await api.publicarEnComunidad({ texto, tema: 'charla', menciones: mencionesDeTexto(texto, elegidas), citaPostId: post.id });
+        aviso('Publicado en el muro con la cita'); alPublicado();
+      } catch (err) { aviso(err.message, 'error'); }
+    });
+  };
+  return (
+    <Hoja titulo="Citar en el muro" alCerrar={alCerrar}>
+      <form class="pila" onSubmit={publicar}>
+        <AreaConMenciones id="eq-cita-texto" etiqueta="Tu comentario" valor={texto} alCambiar={setTexto} personas={personas} alMencionar={(p) => setElegidas((l) => [...l.filter((x) => x.perfil_id !== p.perfil_id), p])}
+          maxLength={MAX_POST} rows={3} placeholder="¿Qué quieres decir sobre esto?" />
+        <PostCitado cita={{ ...post, autor: post.autor }} />
+        <p class="mini terciario">A {post.autor.nombre} le llega un aviso de que has compartido su publicación.</p>
+        <button class="btn btn-primario" disabled={ocupado || !texto.trim()}>Publicar</button>
+      </form>
+    </Hoja>
+  );
+}
+
 function HojaQuien({ post, alCerrar }) {
   return (
     <Hoja titulo="Reacciones" alCerrar={alCerrar}>
@@ -1210,7 +1268,7 @@ function HojaSilenciarDe({ perfilId, nombre, alCerrar, alCambiar = null }) {
   return <HojaSilenciar perfilId={perfilId} nombre={nombre} hasta={silenciadoHasta(p.datos)} alCerrar={alCerrar} alCambiar={alCambiar} />;
 }
 
-function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar, alSilenciar = null, alFuera = null }) {
+function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar, alSilenciar = null, alFuera = null, alCitar = null }) {
   const { api, aviso } = useApp();
   const [borrar, setBorrar] = useState(false);
   const [ocupado, una] = useUnaVez();
@@ -1235,6 +1293,8 @@ function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar, alSilenc
           {!coach && !post.mio && !post.autor.coach && <button class="btn" onClick={alAvisar}><Icono n="bandera" /> Avisar al coach</button>}
           {/* (compartir) lo mío (un entreno, un logro o un aniversario), como imagen para fuera del equipo */}
           {post.mio && ['entreno', 'logro', 'aniversario'].includes(post.tipo) && alFuera && <button class="btn" onClick={alFuera}><Icono n="compartir" /> Compartir fuera del equipo</button>}
+          {/* (social, 053) citar la de otro en una publicación mía */}
+          {!coach && !post.mio && post.con053 && post.tipo !== 'momento' && alCitar && <button class="btn" onClick={alCitar}><Icono n="mensaje" /> Citar en el muro</button>}
           {(coach || post.mio) && <button class="btn btn-peligro" onClick={() => setBorrar(true)}><Icono n="basura" /> Borrar</button>}
           {!coach && post.mio && <p class="mini terciario">Lo ven los del equipo y tu coach mientras sigas en la comunidad.</p>}
         </div>
@@ -1803,6 +1863,8 @@ export function Ranking({ miembro = null }) {
             )}
           </>
         )}
+      {/* (social, 053) el compañero de la semana, elegido por el equipo */}
+      <CompaneroSemana />
       <HitosEquipo />
     </div>
   );
@@ -1911,6 +1973,9 @@ export function HojaPerfilEquipo({ perfilId, alCerrar }) {
             </div>
           )}
           {!x.yo && !x.coach && <BotonAnimar grande nombre={x.nombre} animado={x.animado || animadoAhora} ocupado={ocupado} alAnimar={animar} />}
+          {/* (social, 053) el ánimo con unas palabras */}
+          {!x.yo && !x.coach && !(x.animado || animadoAhora) && <button type="button" class="btn-texto peq" style="justify-self:center" onClick={() => setHojaCoach('animo')}>Con unas palabras…</button>}
+          {hojaCoach === 'animo' && <HojaAnimo perfilId={perfilId} nombre={x.nombre} alCerrar={() => setHojaCoach(null)} alHecho={() => setAnimadoAhora(true)} />}
           {/* v0.72 (044): el coach, el atleta de la semana y silenciar */}
           {perfil?.rol === 'coach' && !x.coach && !x.yo && (
             <div class="pila-s pe-coach">
@@ -2027,6 +2092,8 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
             ayuda={con041 ? 'Sales en «Entrenando ahora» mientras apuntas una sesión (hasta 20 minutos después de tu última serie) y te pueden mandar ánimo. Solo tu nombre y tu foto: ni la hora ni lo que haces.' : AVISO_041}
             valor={!!miembro.ver_entrenando} desactivado={ocupado || !con041}
             alCambiar={(v) => hacer(() => api.verEntrenandoComunidad(v), v ? 'El equipo verá cuándo estás entrenando' : 'Ya no se ve cuándo estás entrenando')} />
+          {/* (social, 053) el cumpleaños en el equipo y «que me manden ánimo si paro» */}
+          <AjustesSociales miembro={miembro} ocupado={ocupado} alCambiar={alCambiar} />
           <Interruptor id="eq-autocompartir" texto="Compartir mis entrenos sin preguntar"
             ayuda="Al terminar una sesión, se comparte sola con el equipo, sin los kilos (con «Deshacer» por si acaso). Se guarda en este móvil."
             valor={auto} alCambiar={(v) => { guardarAutoCompartir(api.uid(), v); setAuto(v); aviso(v ? 'Tus entrenos se compartirán solos al terminarlos' : 'Te volveremos a preguntar al terminar'); }} />
