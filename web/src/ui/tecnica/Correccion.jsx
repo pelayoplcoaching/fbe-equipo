@@ -331,7 +331,7 @@ function VerCorreccion({ video, revision }) {
       {r?.corregido_el && (
         <>
           <h3>La corrección de tu coach</h3>
-          {r.puntuacion != null && <p class="correccion-nota-ver"><span class="num nota-grande">{r.puntuacion}<span class="terciario">/5</span></span> <span class="peq">Técnica: {NOMBRE_PUNTUACION[r.puntuacion].toLowerCase()}</span></p>}
+          {r.puntuacion != null && <p class="correccion-nota-ver" data-nota={r.puntuacion}><span class="num nota-grande">{r.puntuacion}<span class="terciario">/5</span></span> <span class="peq">Técnica: {NOMBRE_PUNTUACION[r.puntuacion].toLowerCase()}</span></p>}
           {ps.length > 0 && (
             <>
               <p class="mini secundario">{res.bien} bien{res.mal ? `, ${res.mal} a corregir` : ''}{res.na ? `, ${res.na} no se ven` : ''}</p>

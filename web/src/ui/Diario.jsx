@@ -164,7 +164,7 @@ export function DetalleArchivo({ a, lista = [], atletaId, nombreAtleta, esCoach,
         {!esCoach && <button class="btn btn-peq" onClick={() => setEditar(!editar)}><Icono n="editar" /> {a.nota_atleta ? 'Cambiar el pie' : 'Poner un pie'}</button>}
         {a.revisado_en ? <span class="chip ok"><Icono n="hecho" />{esCoach ? 'Revisado' : 'Revisado por tu coach'}</span> : !esFoto && <span class="chip">{esCoach ? 'Por revisar' : 'Pendiente de tu coach'}</span>}
         {a.duracion_seg ? <span class="chip num">{mmssCorto(a.duracion_seg)}</span> : null}
-        {a.revision?.puntuacion != null && <span class="chip morado num">Técnica {a.revision.puntuacion}/5</span>}
+        {a.revision?.puntuacion != null && <span class="chip morado num tecnica-ultima" data-nota={a.revision.puntuacion}>Técnica {a.revision.puntuacion}/5</span>}
       </div>
       {!esFoto && a.estado && <EstadoVideo estado={a.estado} />}
       {(original || repeticiones.length > 0) && (

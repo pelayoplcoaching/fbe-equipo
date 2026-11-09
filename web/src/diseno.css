@@ -3625,3 +3625,212 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .cp-invitar .cp-fila { background: none; margin-inline: 0; padding-inline: 0; }
 .cp-invitar .cp-fila::before, .cp-invitar .cp-fila::after { content: none; }
 .cp-invitar .cp-fila .btn-primario { box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 90%, transparent); }
+
+
+/* ══ Tanda 40 (9/11): la técnica en vídeo ═════════════════════════════════════════════════════════════════════════════
+   La parte que menos mimo tenía: el reproductor de técnica (Revisar, el diario, Mi técnica), la corrección del coach,
+   lo que ve el atleta de esa corrección, la revisión seguida y el informe del mes. Atributos nuevos: data-nota
+   (MiTecnica.jsx, Correccion.jsx, Diario.jsx), data-estado (MiTecnica.jsx), data-rpe en lo que nota el atleta
+   (Autoevaluacion.jsx) y --f en la cabecera de la revisión seguida (RevisionSeguida.jsx). Icono nuevo --ico-micro. */
+:root {
+  --ico-micro: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='3' width='6' height='11' rx='3'/%3E%3Cpath d='M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7'/%3E%3C/svg%3E");
+  /* La escala de la nota de técnica, de «hay que trabajarla» a «muy buena» (la misma idea que --esf-*) */
+  --nota-1: var(--alerta); --nota-2: color-mix(in srgb, var(--alerta) 45%, var(--aviso)); --nota-3: var(--aviso);
+  --nota-4: color-mix(in srgb, var(--aviso) 30%, var(--ok)); --nota-5: var(--ok);
+}
+[data-nota="1"] { --nota: var(--nota-1); } [data-nota="2"] { --nota: var(--nota-2); } [data-nota="3"] { --nota: var(--nota-3); }
+[data-nota="4"] { --nota: var(--nota-4); } [data-nota="5"] { --nota: var(--nota-5); }
+
+/* ── 295 · El reproductor en «modo cine» (tanda 40) ───────────────────────────────────────────────────────────────────
+   El cuadro del vídeo sobre la noche de la marca (se ve en las franjas de los lados), con una sombra honda; la serie en
+   una pastilla de vidrio con su punto; los botones de debajo (velocidad aparte) en discos. Sobre el bloque 70. */
+.rep-marco { background: radial-gradient(120% 80% at 85% 0%, rgba(104, 78, 236, .35), transparent 60%), linear-gradient(170deg, #1B1640, #0C0A18); box-shadow: 0 18px 34px -22px rgba(24, 14, 70, .75), inset 0 0 0 1px rgba(255, 255, 255, .07); }
+.rep-zoom video.medio, .reproductor video.medio { background: transparent; }
+.rep-serie { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 9px; background: rgba(14, 11, 30, .74); -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
+.rep-serie::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: #B9A8FF; box-shadow: 0 0 8px #8F78FF; }
+.rep-zoom-nivel { background: rgba(14, 11, 30, .74); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
+.rep-controles > .btn-icono, .rep-zoom-botones > .btn-icono { width: 42px; height: 42px; border-radius: 50%; border-color: transparent; background: var(--hoja-2); }
+.rep-controles > .btn-icono[aria-pressed="true"] { background: var(--morado-suave); color: var(--morado); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 45%, transparent); }
+@media (forced-colors: active) { .rep-serie::before { content: none; } }
+
+/* ── 296 · La rueda de fotogramas (tanda 40) ──────────────────────────────────────────────────────────────────────────
+   Era una regla gris: ahora es una rueda hundida, con las rayas que se desvanecen hacia los bordes (como si girara) y la
+   marca del centro en el acento con su halo. El texto, en una pastilla. */
+.rep-jog { height: 40px; border: 0; border-radius: 12px; background: linear-gradient(180deg, color-mix(in srgb, var(--tinta) 7%, var(--hoja-2)), var(--hoja-2) 45%, color-mix(in srgb, var(--tinta) 5%, var(--hoja-2))); box-shadow: inset 0 1px 3px rgba(20, 12, 60, .14), inset 0 0 0 1px var(--linea); }
+.rep-jog-rayas { inset: 8px 0; background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--tinta) 26%, transparent) 0 1.5px, transparent 1.5px 7px); opacity: 1;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 24%, #000 76%, transparent); mask-image: linear-gradient(90deg, transparent, #000 24%, #000 76%, transparent); }
+.rep-jog-centro { width: 4px; margin-left: -2px; top: 3px; bottom: 3px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--morado) 16%, transparent), 0 0 12px color-mix(in srgb, var(--morado) 55%, transparent); }
+.rep-jog-texto { padding: 2px 10px; border-radius: 999px; background: var(--hoja); color: var(--tinta-2); box-shadow: 0 1px 3px rgba(20, 12, 60, .12); }
+@media (forced-colors: active) { .rep-jog-rayas { -webkit-mask-image: none; mask-image: none; } }
+
+/* ── 297 · La tira de fotogramas (tanda 40) ───────────────────────────────────────────────────────────────────────────
+   Un carrete: fondo de noche, fotogramas con esquinas suaves y separados, y el cursor como una barra del acento con su
+   brillo y un tirador arriba. */
+.rep-tira { height: 52px; padding: 4px; gap: 2px; border: 0; border-radius: 12px; background: #120E24; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 8px 18px -14px rgba(24, 14, 70, .8); }
+.tira-celda { border-right: 0; border-radius: 5px; overflow: hidden; }
+.tira-cursor { width: 3px; margin-left: -1.5px; border-radius: 2px; background: #B9A8FF; box-shadow: 0 0 10px #8F78FF, 0 0 0 1px rgba(14, 11, 30, .6); }
+.tira-cursor::before { content: ""; position: absolute; left: 50%; top: -1px; width: 11px; height: 11px; margin-left: -5.5px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 2.5px #8F78FF, 0 2px 6px rgba(0, 0, 0, .5); }
+@media (forced-colors: active) { .rep-tira { background: Canvas; border: 1px solid CanvasText; } .tira-cursor { background: Highlight; } .tira-cursor::before { content: none; } }
+
+/* ── 298 · Las marcas sobre la barra (tanda 40) ───────────────────────────────────────────────────────────────────────
+   Las correcciones del coach (dibujo, voz, punto clave) en puntos más grandes con aro y brillo de su color; las
+   repeticiones, en fichas redondas (la actual, en el acento con luz; la peor, con su aro rojo). «Marcar rep», con su
+   chincheta en un disco. */
+.rep-marca span { width: 10px; height: 10px; box-shadow: 0 0 0 2px var(--hoja), 0 0 8px color-mix(in srgb, var(--morado) 60%, transparent); }
+.rep-marca-dibujo span { box-shadow: 0 0 0 2px var(--hoja), 0 0 8px rgba(184, 138, 0, .6); }
+.rep-marca-voz span { box-shadow: 0 0 0 2px var(--hoja), 0 0 8px color-mix(in srgb, var(--ok) 60%, transparent); }
+.rep-marca-punto span { box-shadow: 0 0 0 2px var(--hoja), 0 0 8px color-mix(in srgb, var(--alerta) 60%, transparent); }
+.rep-rep span { border-radius: 999px; font-weight: 800; }
+.rep-rep.actual span { box-shadow: 0 3px 8px -2px color-mix(in srgb, var(--morado) 70%, transparent); }
+.rep-reps-mando > .btn.plano:first-child { padding-left: 6px; }
+.rep-reps-mando > .btn.plano:first-child svg { width: 28px; height: 28px; padding: 6px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+.rep-reps-cual { padding: 2px 9px; border-radius: 999px; background: var(--morado-suave); color: var(--tinta); }
+
+/* ── 299 · La nota de técnica con su escala (tanda 40) ────────────────────────────────────────────────────────────────
+   Del 1 al 5, cada número en el color de su escala (rojo a verde, --nota-*) con una raya de ese color debajo; la elegida,
+   rellena de su color. Lo mismo donde se ve la nota: la nota grande de la corrección y los chips de Mi técnica y del
+   diario (data-nota). */
+.correccion-nota { max-width: 340px; }
+.correccion-nota > button:nth-child(1) { --nota: var(--nota-1); } .correccion-nota > button:nth-child(2) { --nota: var(--nota-2); }
+.correccion-nota > button:nth-child(3) { --nota: var(--nota-3); } .correccion-nota > button:nth-child(4) { --nota: var(--nota-4); }
+.correccion-nota > button:nth-child(5) { --nota: var(--nota-5); }
+.correccion-nota > button { color: var(--nota); font-weight: 800; font-size: 1rem; box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--nota) 45%, transparent); }
+.segmentos.correccion-nota > button[aria-pressed="true"] { background: var(--nota); color: var(--hoja); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--nota) 85%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22); }
+/* Con la pastilla que se desliza (bloque 39), la pastilla toma el color de la nota elegida */
+.segmentos.correccion-nota[data-pastilla] > button[aria-pressed="true"] { background: transparent; box-shadow: none; }
+.correccion-nota:has(> :nth-child(1)[aria-pressed="true"]) { --seg-activo: var(--nota-1); --seg-sombra: 0 6px 14px -6px color-mix(in srgb, var(--nota-1) 85%, transparent); }
+.correccion-nota:has(> :nth-child(2)[aria-pressed="true"]) { --seg-activo: var(--nota-2); --seg-sombra: 0 6px 14px -6px color-mix(in srgb, var(--nota-2) 85%, transparent); }
+.correccion-nota:has(> :nth-child(3)[aria-pressed="true"]) { --seg-activo: var(--nota-3); --seg-sombra: 0 6px 14px -6px color-mix(in srgb, var(--nota-3) 85%, transparent); }
+.correccion-nota:has(> :nth-child(4)[aria-pressed="true"]) { --seg-activo: var(--nota-4); --seg-sombra: 0 6px 14px -6px color-mix(in srgb, var(--nota-4) 85%, transparent); }
+.correccion-nota:has(> :nth-child(5)[aria-pressed="true"]) { --seg-activo: var(--nota-5); --seg-sombra: 0 6px 14px -6px color-mix(in srgb, var(--nota-5) 85%, transparent); }
+.correccion-nota-ver[data-nota] .nota-grande { padding: 2px 12px; border-radius: 14px; color: var(--nota); background: color-mix(in srgb, var(--nota) 13%, var(--hoja)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--nota) 35%, transparent); }
+.correccion-nota-ver[data-nota] .nota-grande .terciario { color: inherit; }
+.chip.tecnica-nota[data-nota], .chip.tecnica-ultima[data-nota] { background: color-mix(in srgb, var(--nota) 14%, var(--hoja)); color: color-mix(in srgb, var(--nota) 72%, var(--tinta)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nota) 30%, transparent); font-weight: 750; }
+@media (prefers-reduced-motion: no-preference) {
+  .correccion-nota > button[aria-pressed="true"] { animation: nota-elegida var(--mov-medio) var(--curva-rebote); }
+}
+@keyframes nota-elegida { 40% { transform: scale(1.12); } }
+@media (forced-colors: active) { .segmentos.correccion-nota > button[aria-pressed="true"] { background: Highlight; color: HighlightText; } }
+
+/* ── 300 · Los puntos clave (tanda 40) ────────────────────────────────────────────────────────────────────────────────
+   ✓, ✗ y – en discos con el color de lo que dicen (verde, rojo, gris) desde el principio; el elegido, relleno y con luz,
+   y la fila entera con un baño de ese color. El reloj, en un disco. Lo que ve el atleta: el ✓ o el ✗ en un disco lleno. */
+.punto-clave { padding: 8px 8px 8px 12px; border-radius: 12px; transition: background-color var(--mov-rapido) var(--curva-casa); }
+.punto-clave.bien { background: color-mix(in srgb, var(--ok) 10%, var(--hoja)); }
+.punto-clave.mal { background: color-mix(in srgb, var(--alerta) 8%, var(--hoja)); }
+.punto-botones > button:not(.punto-momento) { width: 38px; min-width: 38px; height: 38px; border-radius: 50%; border-color: transparent; background: var(--hoja); box-shadow: inset 0 0 0 1px var(--linea); font-size: 1rem; }
+.punto-botones .punto-bien { color: var(--ok); } .punto-botones .punto-mal { color: var(--alerta); } .punto-botones .punto-na { color: var(--tinta-2); }
+.punto-botones .punto-bien[aria-pressed="true"] { background: var(--ok); color: var(--hoja); border-color: transparent; box-shadow: 0 5px 12px -5px color-mix(in srgb, var(--ok) 80%, transparent); }
+.punto-botones .punto-mal[aria-pressed="true"] { background: var(--alerta); color: var(--hoja); border-color: transparent; box-shadow: 0 5px 12px -5px color-mix(in srgb, var(--alerta) 80%, transparent); }
+.punto-botones .punto-na[aria-pressed="true"] { background: var(--tinta-2); color: var(--hoja); border-color: transparent; box-shadow: none; }
+.punto-botones .punto-momento { width: 38px; height: 38px; border-radius: 50%; background: var(--hoja-2); }
+.punto-icono { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: .875rem; }
+.punto-icono.punto-bien { background: var(--ok); color: var(--hoja); } .punto-icono.punto-mal { background: var(--alerta); color: var(--hoja); }
+.punto-icono.punto-na { background: var(--hoja); color: var(--tinta-2); box-shadow: inset 0 0 0 1px var(--linea); }
+@media (prefers-reduced-motion: no-preference) {
+  .punto-botones > button[aria-pressed="true"]:not(.punto-momento) { animation: nota-elegida var(--mov-medio) var(--curva-rebote); }
+}
+@media (forced-colors: active) { .punto-botones > button[aria-pressed="true"] { background: Highlight; color: HighlightText; } }
+
+/* ── 301 · Frases rápidas y lo que se puede añadir al comentario (tanda 40) ───────────────────────────────────────────
+   Las frases del coach, como chips lavanda con su «+»; debajo del cuadro de comentar, cada opción (dibujar, comentar
+   el momento, respuestas guardadas, responder con vídeo) con su icono en un disco. */
+.chip-frase { background: color-mix(in srgb, var(--morado) 7%, var(--hoja)); border-color: color-mix(in srgb, var(--morado) 22%, transparent); transition: transform var(--mov-rapido) var(--curva-rebote), border-color var(--mov-rapido) var(--curva-casa); }
+.chip-frase::before { content: "+"; flex: none; font-weight: 800; color: var(--morado); }
+.chip-frase:active { transform: scale(.96); }
+.hilo-extras { gap: 6px 10px; }
+.hilo-extras .btn-texto { gap: 7px; }
+.hilo-extras .btn-texto svg { flex: none; width: 28px; height: 28px; padding: 6px; border-radius: 50%; background: var(--morado-suave); }
+
+/* ── 302 · Las herramientas de la corrección con su color (tanda 40) ──────────────────────────────────────────────────
+   Tempo, grabar la revisión, tu voz y los recordatorios eran cuatro botones blancos iguales: cada uno va en su recuadro
+   con el icono en un disco de su color (cian, rojo, verde, ámbar). Iconos en pseudoelementos absolutos. «Guardar la
+   corrección» con luz cuando hay algo que guardar. */
+.correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) { padding: 12px; border-radius: 14px; background: var(--hoja-2); }
+.correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq { position: relative; display: flex; align-items: center; min-height: 28px; padding-left: 38px; font-weight: 750; }
+.correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq::before { content: ""; position: absolute; left: 0; top: 50%; width: 28px; height: 28px; margin-top: -14px; border-radius: 50%; background: var(--c); box-shadow: 0 4px 10px -4px var(--c); }
+.correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq::after { content: ""; position: absolute; left: 6px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: #FFFFFF; -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
+.correccion > .tempo-marcar { --c: #0E8FA8; --i: var(--ico-reloj); }
+.correccion > .grabar-la-revision { --c: #D93A4A; --i: var(--ico-video); }
+.correccion > .voz-video { --c: #1E8A52; --i: var(--ico-micro); }
+.correccion > .recordatorios-coach { --c: #C27A00; --i: var(--ico-chincheta); }
+.correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) .btn:not(.btn-primario):not(.plano) { background: var(--hoja); }
+.correccion .btn-primario:not(:disabled) { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 85%, transparent); }
+.correccion > .comparar-con { padding-top: 10px; border-top: 1px solid var(--linea); }
+@media (forced-colors: active) { .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq::before, .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq::after { content: none; } .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq { padding-left: 0; } }
+
+/* ── 303 · El análisis automático como tarjeta propia (tanda 40) ──────────────────────────────────────────────────────
+   Luz lavanda en la esquina, filo del acento y la diana en un disco con el degradado de la marca junto al título. */
+.analisis { border-color: color-mix(in srgb, var(--morado) 22%, var(--linea)); background: radial-gradient(260px 140px at 100% 0%, color-mix(in srgb, var(--morado) 12%, transparent), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta); }
+.analisis-cab h3 { position: relative; padding-left: 40px; min-height: 30px; display: flex; align-items: center; }
+.analisis-cab h3::before { content: ""; position: absolute; left: 0; top: 50%; width: 30px; height: 30px; margin-top: -15px; border-radius: 50%; background: linear-gradient(150deg, color-mix(in srgb, var(--morado) 70%, #fff), var(--morado)); box-shadow: 0 5px 12px -5px color-mix(in srgb, var(--morado) 80%, transparent); }
+.analisis-cab h3::after { content: ""; position: absolute; left: 7px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: var(--sobre-morado); -webkit-mask: var(--ico-diana) center / contain no-repeat; mask: var(--ico-diana) center / contain no-repeat; }
+@media (forced-colors: active) { .analisis-cab h3::before, .analisis-cab h3::after { content: none; } .analisis-cab h3 { padding-left: 0; } }
+
+/* ── 304 · Lo que nota el atleta, como una cita (tanda 40) ────────────────────────────────────────────────────────────
+   En la corrección del coach: baño lavanda con filo del acento a la izquierda, unas comillas grandes de fondo, y su RPE
+   en un chip con el color de la escala de esfuerzo (data-rpe, --esf-*). */
+.autoevaluacion-coach { position: relative; overflow: hidden; border: 0; border-radius: 4px 14px 14px 4px; background: color-mix(in srgb, var(--morado) 6%, var(--hoja)); box-shadow: inset 3px 0 0 color-mix(in srgb, var(--morado) 55%, transparent); }
+.autoevaluacion-coach::after { content: "”" / ""; position: absolute; right: 10px; top: -14px; font-size: 5.5rem; line-height: 1; font-weight: 800; color: color-mix(in srgb, var(--morado) 12%, transparent); pointer-events: none; }
+.autoevaluacion-coach .cita { font-size: 1rem; color: var(--tinta); }
+.chip.auto-rpe[data-rpe="5"] { --esf: var(--esf-5); } .chip.auto-rpe[data-rpe="6"] { --esf: var(--esf-6); } .chip.auto-rpe[data-rpe="7"] { --esf: var(--esf-7); }
+.chip.auto-rpe[data-rpe="8"] { --esf: var(--esf-8); } .chip.auto-rpe[data-rpe="9"] { --esf: var(--esf-9); } .chip.auto-rpe[data-rpe="10"] { --esf: var(--esf-10); }
+.chip.auto-rpe { background: color-mix(in srgb, var(--esf, var(--morado)) 14%, var(--hoja)); color: var(--tinta); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--esf, var(--morado)) 40%, transparent); font-weight: 750; }
+.chip.auto-rpe::before { content: ""; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--esf, var(--morado)); }
+
+/* ── 305 · La revisión seguida con su avance (tanda 40) ───────────────────────────────────────────────────────────────
+   Una barra del acento al rasante de la cabecera que se llena con cada vídeo (--f), el contador en una pastilla y el pie
+   que flota con «Revisado y siguiente» con luz. */
+.seguida-cab { position: relative; }
+.seguida-cab::after { content: ""; position: absolute; left: 0; bottom: -1px; height: 3px; width: calc(var(--f, 0) * 100%); border-radius: 0 3px 3px 0; background: linear-gradient(90deg, var(--morado), color-mix(in srgb, var(--morado) 55%, #E65AA8)); box-shadow: 0 0 8px color-mix(in srgb, var(--morado) 55%, transparent); transition: width var(--mov-lento) var(--curva-casa); }
+.seguida-contador { justify-self: center; padding: 4px 12px; border-radius: 999px; background: var(--hoja-2); }
+.seguida-pie { box-shadow: 0 -10px 24px -18px rgba(20, 12, 60, .45); }
+.seguida-pie .btn-primario:not(:disabled) { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 85%, transparent); }
+@media (prefers-reduced-motion: reduce) { .seguida-cab::after { transition: none; } }
+@media (forced-colors: active) { .seguida-cab::after { background: Highlight; } }
+
+/* ── 306 · Mi técnica como línea del tiempo (tanda 40) ────────────────────────────────────────────────────────────────
+   Una raya une los vídeos y cada uno lleva su punto: ámbar si está enviado, azul si tu coach lo ha visto, verde si está
+   corregido (data-estado); el destacado, dorado y con su fila en oro suave. */
+.tecnica-linea { position: relative; padding-left: 24px; gap: 8px; }
+.tecnica-linea::before { content: ""; position: absolute; left: 7px; top: 18px; bottom: 18px; width: 2px; border-radius: 2px; background: linear-gradient(var(--linea), color-mix(in srgb, var(--morado) 30%, var(--linea))); }
+.tecnica-item { position: relative; --c: var(--aviso); }
+.tecnica-item[data-estado="visto"] { --c: #2E7CF6; } .tecnica-item[data-estado="corregido"] { --c: var(--ok); }
+.tecnica-item::before { content: ""; position: absolute; left: -22px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px var(--hoja), 0 0 0 4.5px color-mix(in srgb, var(--c) 35%, transparent); }
+.tecnica-item.destacado::before { background: radial-gradient(circle at 35% 30%, #FFF4C8, #F2CF63 55%, #C98A00); box-shadow: 0 0 0 3px var(--hoja), 0 0 10px rgba(201, 138, 0, .6); }
+.tecnica-ver { border-color: transparent; background: var(--hoja-2); border-radius: 12px; padding: 10px 12px; transition: transform var(--mov-rapido) var(--curva-rebote); }
+.tecnica-ver:active { transform: scale(.985); }
+.tecnica-item.destacado .tecnica-ver { border-color: color-mix(in srgb, var(--oro) 45%, transparent); background: color-mix(in srgb, var(--oro-suave) 60%, var(--hoja)); }
+.tecnica-estrella { color: var(--oro-texto); }
+@media (forced-colors: active) { .tecnica-item::before, .tecnica-linea::before { content: none; } .tecnica-linea { padding-left: 0; } }
+
+/* ── 307 · Elegir dos para comparar (tanda 40) ────────────────────────────────────────────────────────────────────────
+   El botón de elegir, un disco; elegido, lleno del acento. «Comparar los dos», con luz cuando ya hay dos. */
+.tecnica-elegir { width: 42px; height: 42px; min-width: 42px; padding: 0; border-radius: 50%; display: grid; place-items: center; }
+.tecnica-elegir[aria-pressed="true"] { background: var(--morado); color: var(--sobre-morado); box-shadow: 0 5px 12px -5px color-mix(in srgb, var(--morado) 85%, transparent); }
+.mi-tecnica .btn-primario:not(:disabled) { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 85%, transparent); }
+
+/* ── 308 · El informe del mes (tanda 40) ──────────────────────────────────────────────────────────────────────────────
+   Cada mes con su hoja de calendario; dentro, las cuatro cifras en baldosas con una raya de color (enviados, revisados,
+   lo que se tarda, recordatorios), lo que más sale «a corregir» con su número en un disco y el mejor vídeo, en oro. */
+.informes-mes .selector-chips button { display: inline-flex; align-items: center; gap: 7px; }
+.informes-mes .selector-chips button::before { content: ""; flex: none; width: 15px; height: 15px; background: currentColor; -webkit-mask: var(--ico-semana) center / contain no-repeat; mask: var(--ico-semana) center / contain no-repeat; }
+.informe-tecnica .informe-cifras > div { position: relative; overflow: hidden; padding: 12px 12px 10px; border-radius: 12px; background: color-mix(in srgb, var(--c, var(--morado)) 7%, var(--hoja)); box-shadow: inset 0 3px 0 var(--c, var(--morado)); }
+.informe-tecnica .informe-cifras > div:nth-child(2) { --c: var(--ok); } .informe-tecnica .informe-cifras > div:nth-child(3) { --c: #2E7CF6; } .informe-tecnica .informe-cifras > div:nth-child(4) { --c: #C27A00; }
+.informe-tecnica .informe-cifras dt { color: var(--tinta-2); }
+.informe-lista-num { list-style: none; padding-left: 0; counter-reset: inf; gap: 6px; }
+.informe-lista-num > li { position: relative; padding-left: 32px; min-height: 24px; counter-increment: inf; }
+.informe-lista-num > li::before { content: counter(inf); position: absolute; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: .75rem; font-weight: 800; background: var(--alerta-suave); color: var(--alerta); }
+.informe-mejor { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--oro-suave) 65%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oro) 35%, transparent); }
+.informe-mejor svg { width: 18px; height: 18px; vertical-align: -3px; color: var(--oro-texto); }
+
+/* ── 309 · La corrección que ve el atleta (tanda 40) ──────────────────────────────────────────────────────────────────
+   Enviado → Visto → Corregido como pasos unidos por una raya que se pinta del acento; el paso actual, con su halo. La
+   tarjeta «La corrección de tu coach», con un baño lavanda arriba, y «Grabar de nuevo con la corrección» con luz. */
+.estado-video { gap: 4px 0; }
+.estado-video li:not(:last-child)::after { content: ""; width: 22px; height: 2px; margin: 0 8px 0 2px; border-radius: 2px; background: var(--linea); }
+.estado-video li.hecho:not(:last-child)::after { background: var(--morado); }
+.estado-video li.actual .estado-video-punto { box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 20%, transparent); }
+.correccion:has(> .lista-puntos.ver), .correccion:has(> .correccion-nota-ver) { background: linear-gradient(180deg, color-mix(in srgb, var(--morado) 7%, var(--hoja)), var(--hoja) 120px); border-color: color-mix(in srgb, var(--morado) 18%, var(--linea)); }
+.correccion:has(> .lista-puntos.ver) .btn-primario, .correccion:has(> .correccion-nota-ver) .btn-primario { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 85%, transparent); }
+@media (forced-colors: active) { .estado-video li:not(:last-child)::after { background: CanvasText; } }

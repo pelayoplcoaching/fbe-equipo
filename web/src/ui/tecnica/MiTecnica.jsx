@@ -42,7 +42,7 @@ export function MiTecnica({ atletaId, nombreAtleta, esCoach = false }) {
         </div>
       )}
       <div class="panel panel-pad pila-s">
-        <div class="separa"><strong>{g.nombre}</strong>{g.ultima != null && <span class="chip morado num">Última nota: {g.ultima}/5</span>}</div>
+        <div class="separa"><strong>{g.nombre}</strong>{g.ultima != null && <span class="chip morado num tecnica-ultima" data-nota={g.ultima}>Última nota: {g.ultima}/5</span>}</div>
         {g.puntos.length > 1
           ? <Grafica puntos={g.puntos} dec={0} rangoMin={4} clave={`tecnica-${g.id}`} etiqueta={`${esCoach ? 'Su' : 'Tu'} nota de técnica en ${g.nombre}`} />
           : <p class="peq secundario">{g.puntos.length === 1
@@ -54,12 +54,12 @@ export function MiTecnica({ atletaId, nombreAtleta, esCoach = false }) {
         <PerfilVelocidad key={g.id} g={g} atletaId={atletaId} esCoach={esCoach} />
         <ol class="tecnica-linea">
           {g.videos.map((v) => (
-            <li key={v.id} class={`tecnica-item ${v.destacado ? 'destacado' : ''}`}>
+            <li key={v.id} class={`tecnica-item ${v.destacado ? 'destacado' : ''}`} data-estado={v.estado?.estado || 'enviado'}>
               <button type="button" class="tecnica-ver" onClick={() => setAbierto(v)}
                 aria-label={`${g.nombre}, ${fmtConDia(v.fecha)}: ${v.estado?.texto || 'Enviado'}${v.revision?.puntuacion != null ? `, nota ${v.revision.puntuacion} de 5` : ''}${v.destacado ? ', destacado' : ''}`}>
                 <span class="tecnica-fecha num">{fmtCorta(v.fecha)}</span>
                 <span class="mini secundario">{v.estado?.texto || 'Enviado'}{v.serie?.texto ? ` · ${v.serie.texto}` : ''}{v.repite_de ? ' · repetición' : ''}</span>
-                {v.revision?.puntuacion != null && <span class="chip num tecnica-nota" aria-hidden="true">{v.revision.puntuacion}/5</span>}
+                {v.revision?.puntuacion != null && <span class="chip num tecnica-nota" data-nota={v.revision.puntuacion} aria-hidden="true">{v.revision.puntuacion}/5</span>}
                 {v.destacado && <span class="tecnica-estrella" aria-hidden="true"><Icono n="libre" /></span>}
               </button>
               <button type="button" class="btn btn-peq tecnica-elegir" aria-pressed={elegidos.includes(v.id) ? 'true' : 'false'} onClick={() => elegir(v.id)}
