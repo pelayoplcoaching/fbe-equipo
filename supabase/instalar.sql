@@ -19199,6 +19199,28 @@ alter table public.bloques add column if not exists objetivo_logrado boolean;
 alter table public.habitos add column if not exists origen text not null default 'coach';
 alter table public.habitos drop constraint if exists habitos_origen_valido;
 alter table public.habitos add constraint habitos_origen_valido check (origen in ('coach', 'sugerido'));
+-- Índices para lo que mira crear_recordatorios cada minuto: las series recientes y los vídeos de técnica sin revisar
+create index if not exists series_registrada_idx on public.series (registrada_en);
+create index if not exists archivos_tecnica_sin_revisar_idx on public.archivos (creado_en) where tipo = 'video_tecnica' and revisado_en is null;
+
+-- cerrada_sola_en solo la pone la base: el atleta no la pone ni la quita; si él mismo la termina, deja de estar «cerrada sola»
+create or replace function public.sesion_proteger_cierre() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if current_user in ('authenticated', 'anon') and not public.es_coach() then
+    if tg_op = 'INSERT' then
+      new.cerrada_sola_en := null;
+    elsif new.completada and not old.completada then
+      new.cerrada_sola_en := null;
+    else
+      new.cerrada_sola_en := old.cerrada_sola_en;
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists sesiones_r_proteger_cierre on public.sesiones;
+create trigger sesiones_r_proteger_cierre before insert or update on public.sesiones
+  for each row execute function public.sesion_proteger_cierre();
 
 -- ---------------------------------------------------------------------
 -- 2. Las sesiones que se quedaron sin cerrar
@@ -19219,18 +19241,23 @@ begin
              min(x.registrada_en) as primera, max(x.registrada_en) as ultima,
              round(avg(x.rpe) filter (where x.rpe is not null and x.rpe > 0)) as rpe_medio
       from public.sesiones s
-      join public.semanas w on w.id = s.semana_id
+      join public.semanas w on w.id = s.semana_id and w.programacion = 'programada'
       join public.sesion_ejercicios se on se.sesion_id = s.id
       join public.series x on x.sesion_ejercicio_id = se.id
-      where not s.completada
+      where not s.completada and s.cerrada_sola_en is null
+        and s.id in (select se4.sesion_id from public.series x4 join public.sesion_ejercicios se4 on se4.id = x4.sesion_ejercicio_id
+                     where x4.registrada_en > p_ahora - interval '7 days')
       group by s.id, s.nombre, w.bloque_id
       having max(x.registrada_en) <= p_ahora - interval '3 hours' and max(x.registrada_en) > p_ahora - interval '7 days'
     )
-    select c.*, b.atleta_id, p.id as perfil_id
+    select c.*, b.atleta_id, p.id as perfil_id,
+           case when pn.usuario_id is null then fbe_privado.fuera_de_silencio(p_ahora, time '22:30', time '08:00')
+                else fbe_privado.fuera_de_silencio(p_ahora, pn.silencio_desde, pn.silencio_hasta) end as avisar_desde
     from con_series c
-    join public.bloques b on b.id = c.bloque_id
+    join public.bloques b on b.id = c.bloque_id and not b.es_plantilla and b.estado <> 'cancelado'
     join public.atletas a on a.id = b.atleta_id and a.estado <> 'baja'
     left join public.perfiles p on p.id = a.perfil_id
+    left join public.preferencias_notificaciones pn on pn.usuario_id = a.perfil_id
     where not exists (
       -- alguna pautada sin todas sus series
       select 1 from public.sesion_ejercicios se2
@@ -19249,7 +19276,7 @@ begin
       if r.perfil_id is not null then
         perform fbe_privado.notificar_seguro(r.perfil_id, 'sesion_hoy', 'Hemos cerrado ' || coalesce(r.nombre, 'tu sesión') || ' por ti',
           'Tenías todas las series hechas. Si quieres, añade cómo fue (esfuerzo y nota) en Hoy.', '#hoy',
-          'sesion_cerrada:' || r.id, p_ahora, p_ahora + interval '2 days');
+          'sesion_cerrada:' || r.id, r.avisar_desde, r.avisar_desde + interval '2 days');
       end if;
     end if;
   end loop;
@@ -19290,7 +19317,7 @@ declare
   v_abiertas integer;
   v_sin_leer integer;
 begin
-  if auth.uid() is null or not (public.es_coach() or p_atleta = public.mi_atleta_id()) then return null; end if;
+  if auth.uid() is null or p_atleta is null or not coalesce(public.es_coach() or p_atleta = public.mi_atleta_id(), false) then return null; end if;
   v_domingo := v_lunes + 6;
   -- Las sesiones de esa semana (de lunes a domingo, por la fecha en que se hicieron) y las previstas en la semana publicada
   with hechas as (
@@ -19338,6 +19365,11 @@ declare
   v_id uuid;
 begin
   if v_atleta is null then raise exception 'Solo un atleta activa sus hábitos' using errcode = '42501'; end if;
+  -- de uno en uno por atleta (el tope de 5 no se salta con dos peticiones a la vez) y nunca de baja
+  if exists (select 1 from public.atletas a where a.id = v_atleta and a.estado = 'baja' for update) then
+    raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada' using errcode = '42501';
+  end if;
+  perform 1 from public.atletas a where a.id = v_atleta for update;
   if nullif(btrim(coalesce(p_nombre, '')), '') is null or char_length(p_nombre) > 60 then raise exception 'El hábito necesita un nombre (hasta 60 letras)' using errcode = '22023'; end if;
   if p_tipo not in ('numero', 'si_no') then raise exception 'Tipo de hábito no válido' using errcode = '22023'; end if;
   if p_sentido not in ('al_menos', 'como_mucho') then raise exception 'Sentido no válido' using errcode = '22023'; end if;
@@ -19348,7 +19380,7 @@ begin
   end if;
   insert into public.habitos (atleta_id, nombre, tipo, objetivo, unidad, sentido, dias_semana, icono, orden, activo, origen)
   values (v_atleta, btrim(p_nombre), p_tipo, p_objetivo, nullif(btrim(coalesce(p_unidad, '')), ''), p_sentido, p_dias, coalesce(nullif(p_icono, ''), 'libre'),
-          (select coalesce(max(orden), 0) + 1 from public.habitos h where h.atleta_id = v_atleta), true, 'sugerido')
+          (select least(99, coalesce(max(orden), 0) + 1) from public.habitos h where h.atleta_id = v_atleta), true, 'sugerido')
   returning id into v_id;
   return v_id;
 end $$;

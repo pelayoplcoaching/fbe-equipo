@@ -1740,6 +1740,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
     if (nombre === 'habito_sugerido_activar') {
       if (!yo) throw new Error('Solo un atleta activa sus hábitos');
+      if (yo.estado === 'baja') throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
       const nombreH = String(args.p_nombre || '').trim();
       if (!nombreH || nombreH.length > 60) throw new Error('El hábito necesita un nombre (hasta 60 letras)');
       if (!['numero', 'si_no'].includes(args.p_tipo)) throw new Error('Tipo de hábito no válido');
@@ -1747,7 +1748,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (mios.filter((h) => h.activo).length >= 5) throw new Error('Como mucho cinco hábitos activos');
       if (mios.some((h) => h.activo && h.nombre.toLowerCase() === nombreH.toLowerCase())) throw new Error('Ya tienes ese hábito');
       const h = { id: uuid(), atleta_id: yo.id, nombre: nombreH, tipo: args.p_tipo, objetivo: args.p_objetivo ?? null, unidad: args.p_unidad || null, sentido: args.p_sentido || 'al_menos', dias_semana: args.p_dias || 7,
-        icono: args.p_icono || 'libre', orden: Math.max(0, ...mios.map((x) => x.orden || 0)) + 1, activo: true, creado_en: ahora(), origen: 'sugerido' };
+        icono: args.p_icono || 'libre', orden: Math.min(99, Math.max(0, ...mios.map((x) => x.orden || 0)) + 1), activo: true, creado_en: ahora(), origen: 'sugerido' };
       tabla('habitos').push(h);
       return h.id;
     }
