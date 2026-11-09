@@ -33,6 +33,7 @@ import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '
 import { HojaTarea } from '../Tareas.jsx';
 import { TarjetaMes } from './TuMes.jsx';
 import { TarjetaAnio } from './TuAnio.jsx';
+import { RecordatorioCompartir } from '../Compartir.jsx';
 import { TarjetaAniversario } from '../Celebracion.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { PantallaRacha, HitoRacha, useHitoRacha } from './Racha.jsx';
@@ -491,6 +492,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {!propio && <Reserva id="hoy-mes"><TarjetaMes salud={salud} /></Reserva>}
       {/* (v0.104) en diciembre y enero, tu año en FBE */}
       {!propio && <TarjetaAnio />}
+      {/* (compartir) «tu récord de ayer merece una historia», una vez y se puede quitar */}
+      {!propio && <RecordatorioCompartir />}
       <Reserva id="hoy-informes"><BloqueTerminado salud={salud} /><SemanaPasada salud={salud} /></Reserva>
       {/* (diseño 9) Lo de debajo es detalle: va plegado en filas que se abren al tocarlas (y «Tu día» las abre al ir a ellas) */}
       {e.tipo === 'entreno' && siguiente && (

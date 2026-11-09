@@ -184,7 +184,7 @@ function HistoriaAnioPantalla({ resumen: r, alCerrar }) {
       </div>
       <button class="historia-zona anterior" onClick={() => ir(-1)} disabled={i === 0} aria-label="Pantalla anterior" />
       <button class="historia-zona siguiente" onClick={() => (ultima ? alCerrar() : ir(1))} aria-label={ultima ? 'Cerrar tu año' : 'Pantalla siguiente'} />
-      {compartir && <HojaCompartir datos={datosCompartirAnio(r)} titulo={`Compartir tu ${r.anio}`} alCerrar={() => setCompartir(false)}
+      {compartir && <HojaCompartir tipo="anio" equipo={{ tema: 'logros' }} datos={datosCompartirAnio(r)} titulo={`Compartir tu ${r.anio}`} alCerrar={() => setCompartir(false)}
         alt={`Mi ${r.anio} en FBE: ${r.sesiones} sesiones, ${r.dias} días entrenando, ${toneladas(r.tonelaje)} toneladas`}
         nota="Solo lleva tus sesiones, los días entrenados, las series, el tonelaje, los récords, tu racha y el cardio: nada de peso, medidas, nutrición, hábitos ni datos de salud." />}
     </div>

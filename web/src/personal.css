@@ -147,3 +147,29 @@
 .atajos-coach .fila-boton > svg { width: 18px; height: 18px; color: var(--tinta-3); }
 .atajos-coach .fila-ios-texto { display: grid; gap: 2px; }
 .contacto-atleta .fila-entre { gap: 12px; flex-wrap: wrap; }
+
+/* ---------- (compartir) la hoja de compartir: formato, pegatina, @, destinos y texto ---------- */
+.compartir-opciones { display: grid; gap: 12px; margin-bottom: 4px; }
+.chips-fila { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-boton { cursor: pointer; border: 1px solid var(--linea); background: var(--fondo-2, transparent); color: var(--tinta-2); font: inherit; font-size: .8125rem; padding: 5px 11px; border-radius: 999px; }
+.chip-boton.activo { background: var(--morado); color: #fff; border-color: var(--morado); }
+.compartir-handle .fila { gap: 8px; flex-wrap: wrap; }
+.compartir-handle .entrada { flex: 1 1 160px; }
+.tarjeta-previa.historia .tarjeta-img { aspect-ratio: 9 / 16; max-width: 300px; }
+.compartir-botones { margin-top: 2px; }
+.compartir-destinos { gap: 8px; align-items: center; }
+.destino-whatsapp { border-color: rgba(37, 211, 102, .6); }
+.destino-instagram { border-color: rgba(225, 48, 108, .6); }
+.destino-facebook { border-color: rgba(24, 119, 242, .6); }
+.compartir-texto { white-space: pre-wrap; word-break: break-word; font: inherit; font-size: .8125rem; line-height: 1.45; background: var(--fondo-2, rgba(127, 127, 127, .08)); border-radius: 12px; padding: 12px 14px; margin: 0; user-select: all; }
+.plantilla-mini.clara { background: #F4F1FF; color: #150F36; box-shadow: inset 0 0 0 1px rgba(21, 15, 54, .14); }
+.recordatorio-compartir { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.recordatorio-compartir .ico { width: 38px; height: 38px; border-radius: 50%; background: var(--ok-suave); color: var(--ok); display: grid; place-items: center; }
+.recordatorio-compartir .ico svg { width: 20px; height: 20px; }
+.resumen-record-compartir { margin-left: auto; }
+.lista .record { align-items: center; }
+.racha-compartir, .hito-compartir { width: 100%; margin-top: 12px; min-height: 54px; background: rgba(255, 255, 255, .12); color: #F6F2FF; border-color: rgba(255, 255, 255, .25); font-weight: 700; }
+.racha-compartir:hover, .hito-compartir:hover { background: rgba(255, 255, 255, .2); }
+.historia-pantalla .historia-compartir { pointer-events: auto; align-self: stretch; margin-top: 10px; background: rgba(255, 255, 255, .12); color: #F6F2FF; border-color: rgba(255, 255, 255, .25); }
+.recordatorio-texto { text-align: left; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; min-width: 0; }
+.resumen-equipo-compartir { margin-top: 10px; justify-self: start; }

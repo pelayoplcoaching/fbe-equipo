@@ -11,6 +11,8 @@ import { textoSerieVideo } from '../../logica/tecnica.js';
 import { EVENTO_PENDIENTES, listarPendientes } from '../../datos/pendientes.js';
 import { Calculadora, Aproximacion, HistorialEjercicio, Placas } from '../Herramientas.jsx';
 import { HojaCompartir, dibujarTarjeta } from '../Compartir.jsx';
+import { datosRecordDeSesion, PREF_RECORDATORIO } from '../../logica/compartir.js';
+import { guardarPreferencia } from '../preferencias.js';
 import { leerAutoCompartir } from '../comunidad-local.js';
 import { perezoso } from '../perezoso.jsx';
 import { PictoEjercicio } from '../Pictograma.jsx';
@@ -1247,7 +1249,8 @@ async function calcularResumen(api, atletaId, ejercicios, hechas, cambios, enCol
   }
   return {
     series: series.length, tonelaje, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cambios.cardio_hecho || null, records: Object.values(porEjercicio), enCola, musculos,
-    tarjeta: datosTarjeta({ ...sesion, ...cambios }, ejercicios, hechas, records, ejerciciosPorId, cambios.duracion_min),
+    // (compartir) la tarjeta de una sesión de cardio lleva lo hecho (minutos, km y ritmo)
+    tarjeta: { ...datosTarjeta({ ...sesion, ...cambios }, ejercicios, hechas, records, ejerciciosPorId, cambios.duracion_min), cardio: cardioHechoValido(cambios.cardio_hecho) ? cambios.cardio_hecho : null },
   };
 }
 
@@ -1301,6 +1304,14 @@ function MiniTarjeta({ datos }) {
 function Resumen({ resumen, sesion, familia, alCerrar }) {
   const { api, atleta, propio, aviso } = useApp();
   const [compartir, setCompartir] = useState(false);
+  // (compartir) un récord suelto, como tarjeta de logro; y el recordatorio de Hoy («tu récord de ayer merece una historia»)
+  const [compartirRecord, setCompartirRecord] = useState(null);
+  useEffect(() => {
+    if (propio || !sesion?.id || !resumen?.records?.length || resumen.enCola) return;
+    const fecha = resumen.tarjeta?.fecha || hoyISO();
+    guardarPreferencia(PREF_RECORDATORIO, { sesionId: sesion.id, fecha, records: resumen.records.map((x) => x.nombre), tarjetas: resumen.records.slice(0, 3).map((x) => datosRecordDeSesion(x, fecha)), compartida: false });
+  }, [sesion?.id]);
+  const marcarCompartida = () => guardarPreferencia(PREF_RECORDATORIO, null);
   // v0.43: «Compartir con el equipo», si la comunidad está abierta y está dentro (y la sesión no está ya compartida)
   const [equipo, setEquipo] = useState(false);
   const [compartida, setCompartida] = useState(false);
@@ -1385,6 +1396,7 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
                   <span class="ico"><Icono n="trofeo" /></span>
                   <span><strong>{x.nombre}</strong><br /><span class="peq secundario">{x.r.texto}</span></span>
                   <span class="num peq">{textoSerie(x.s)}</span>
+                  {!propio && <button type="button" class="btn btn-icono plano resumen-record-compartir" aria-label={`Compartir el récord en ${x.nombre}`} onClick={() => setCompartirRecord(x)}><Icono n="compartir" /></button>}
                 </li>
               ))}
             </ul>
@@ -1408,12 +1420,13 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
       )}
       {resumen.enCola && <div class="banda-conexion"><Icono n="sinred" />Guardado en el móvil. Se enviará a tu coach cuando vuelva la conexión.</div>}
       <div class="resumen-acciones pila" style={{ '--i': 8 }}>
-        {resumen.series > 0 && resumen.tarjeta && <button class="btn btn-grande btn-compartir-sesion" onClick={() => setCompartir(true)}><MiniTarjeta datos={resumen.tarjeta} /><Icono n="compartir" /> Compartir la sesión</button>}
+        {(resumen.series > 0 || cardio) && resumen.tarjeta && <button class="btn btn-grande btn-compartir-sesion" onClick={() => setCompartir(true)}><MiniTarjeta datos={resumen.tarjeta} /><Icono n="compartir" /> Compartir la sesión</button>}
         {compartida ? <p class="nota peq compartida-equipo"><Icono n="hecho" /> Compartida con el equipo</p>
           : estadoEquipo.datos === true && <button class="btn btn-grande" onClick={() => setEquipo(true)}><Icono n="equipo" /> Compartir con el equipo</button>}
         <button class="btn btn-primario btn-grande" onClick={alCerrar}>Volver a hoy</button>
       </div>
-      {compartir && <HojaCompartir plantillas datos={resumen.tarjeta} alCerrar={() => setCompartir(false)} />}
+      {compartir && <HojaCompartir plantillas datos={resumen.tarjeta} alCerrar={() => { setCompartir(false); marcarCompartida(); }} />}
+      {compartirRecord && <HojaCompartir logro tipo="record" titulo="Compartir el récord" datos={datosRecordDeSesion(compartirRecord, resumen.tarjeta?.fecha || hoyISO())} equipo={estadoEquipo.datos === true || compartida ? { tema: 'logros' } : null} alCerrar={() => { setCompartirRecord(null); marcarCompartida(); }} />}
       {equipo && (
         <HojaCompartirEquipo alCerrar={() => setEquipo(false)} alCompartir={() => { setEquipo(false); setCompartida(true); }}
           datos={{ sesionId: sesion.id, nombre: resumen.tarjeta.nombre, fecha: resumen.tarjeta.fecha, minutos: resumen.minutos ?? resumen.tarjeta.minutos, series: resumen.series,

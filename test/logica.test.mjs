@@ -1863,7 +1863,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(!JSON.stringify(A.cifrasTarjeta({ ...d, peso: 80, kcal: 2000, rpe: 9 })).match(/80|2000|peso|kcal|rpe/), 'ninguna lleva peso corporal, nutrición ni esfuerzo');
   const f1 = A.encajarFoto(3000, 4000, 1080, 1350), f2 = A.encajarFoto(4000, 3000, 1080, 1350);
   check(f1.sw === 3000 && f1.sh === 3750 && f1.sy === 88 && f2.sh === 3000 && f2.sw === 2400 && f2.sx === 800 && A.encajarFoto(0, 10) === null, 'la foto se encaja sin deformarse (las verticales, algo por encima del centro)');
-  check(A.PLANTILLAS_TARJETA.map(([k]) => k).join() === 'cifras,minima,foto', 'tres plantillas: Cifras, Mínima y Con tu foto');
+  check(A.PLANTILLAS_TARJETA.map(([k]) => k).join() === 'cifras,minima,foto,clara', 'cuatro plantillas: Cifras, Mínima, Con tu foto y Clara');
   const legal = await import('../web/src/legal.js');
   const fila = legal.PRIVACIDAD.find(([t]) => t === 'Lo que se queda en tu móvil');
   check(/foto que eliges para una tarjeta/.test(fila[1]) && /^\d{4}-\d{2}(\.[1-9]\d?)?$/.test(legal.VERSION_LEGAL), '«Lo que se queda en tu móvil» dice que la foto de la tarjeta no se sube (sin cambiar la versión de la política)');

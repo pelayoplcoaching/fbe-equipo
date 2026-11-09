@@ -8,14 +8,14 @@
 export const NOVEDADES = {
   '0.115': {
     atleta: [
-      'Más vida en el Equipo: en Retos, rojos contra azules, la meta con su bandera y un sello dorado en los que conseguiste.',
-      'En el Ranking, el puesto en un disco de plata o bronce y los hitos del equipo con su aro de avance.',
-      'Las insignias como medallas, tus compañeros de racha con su llama, las preguntas al coach como tarjetas y quien entrenó hoy, con aro verde.',
+      'Compartir, a lo grande: formato historia, plantilla clara, pegatinas, tu @ y el texto listo para Instagram, WhatsApp o Facebook.',
+      'Tarjetas nuevas para tus récords, tu racha y tu semana completa, y publícalas en el equipo con un toque.',
+      'Más vida en el Equipo: retos de rojos contra azules, el ranking en discos, insignias como medallas y quien entrenó hoy, con aro verde.',
     ],
     coach: [
-      'Más vida en el Equipo: en Retos, rojos contra azules, la meta con su bandera y un sello dorado en los que conseguiste.',
-      'En el Ranking, el puesto en un disco de plata o bronce y los hitos del equipo con su aro de avance.',
-      'Las insignias como medallas, tus compañeros de racha con su llama, las preguntas al coach como tarjetas y quien entrenó hoy, con aro verde.',
+      'Tus atletas comparten más fácil: historia, plantilla clara, pegatinas, texto listo y tarjetas de récord, racha y semana completa.',
+      'En Equipo, «Compartir la semana del equipo»: una tarjeta solo con recuentos para tu Instagram. Pon tu @ en web/config.js (instagram).',
+      'Más vida en el Equipo: retos de rojos contra azules, el ranking en discos, insignias como medallas y quien entrenó hoy, con aro verde.',
     ],
   },
   '0.114': {

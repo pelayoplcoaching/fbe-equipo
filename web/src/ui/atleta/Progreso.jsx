@@ -24,6 +24,8 @@ import { HabitosMes } from './Habitos.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { num, signo, GRUPOS, MEDIDAS, e1rm, rangoVolumen, estadoVolumen, tendenciaPeso, ritmoPeso } from '../../logica/calculos.js';
 import { historiaRecords } from '../../logica/diseno.js';
+import { HojaCompartir } from '../Compartir.jsx';
+import { datosRecord } from '../../logica/compartir.js';
 import { fmtCorta, hoyISO, diasEntre, fmtConDia, fechaMadrid, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { CifraObjetivo, TusEjercicios } from './Personal.jsx';
 import { FilaTuAnio } from './TuAnio.jsx';
@@ -397,17 +399,19 @@ function Vitrina({ datos, esCoach, atletaId, abrirHistorial, irA }) {
       </ul>
       {!todas && datos.ejercicios.length > 6 && <button class="btn-texto" style="justify-self:start" onClick={() => setTodas(true)}>Ver los {datos.ejercicios.length} ejercicios</button>}
       <p class="mini terciario">{esCoach ? 'Mejor serie de cada ejercicio' : 'Tu mejor serie de cada ejercicio'} (1RM estimado). «Nuevo»: batido en los últimos 30 días. Toca uno para ver cómo ha ido.</p>
-      {abierta && <HojaRecord atletaId={atletaId} x={abierta} reciente={hace30.has(abierta.id)} alCerrar={() => setAbierta(null)}
+      {abierta && <HojaRecord atletaId={atletaId} x={abierta} esCoach={esCoach} reciente={hace30.has(abierta.id)} alCerrar={() => setAbierta(null)}
         abrirHistorial={() => { const x = abierta; setAbierta(null); abrirHistorial(x); }} />}
     </section>
   );
 }
 
 // La evolución de un récord: su mejor marca hasta cada día en que subió y la lista de cada vez que lo batió
-function HojaRecord({ atletaId, x, reciente, alCerrar, abrirHistorial }) {
+function HojaRecord({ atletaId, x, reciente, alCerrar, abrirHistorial, esCoach = false }) {
   const { api } = useApp();
   const h = useCarga(() => api.historial(atletaId).then((series) => historiaRecords(series, x.id)), [atletaId, x.id]);
   const d = h.datos;
+  // (compartir) el récord como tarjeta: para redes o para el equipo (el atleta, no el coach)
+  const [compartir, setCompartir] = useState(false);
   return (
     <Hoja titulo={x.nombre} alCerrar={alCerrar} medio>
       <div class={`record-cab ${reciente ? 'reciente' : ''}`}>
@@ -437,7 +441,11 @@ function HojaRecord({ atletaId, x, reciente, alCerrar, abrirHistorial }) {
           </section>
         </>
       )}
-      <button class="btn" onClick={abrirHistorial}><Icono n="historial" /> Gráficas, récords e historial</button>
+      <div class="fila-envolver">
+        <button class="btn" onClick={abrirHistorial}><Icono n="historial" /> Gráficas, récords e historial</button>
+        {!esCoach && d && (x.e1rm || x.repsSinCarga > 0) && <button class="btn btn-primario" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir el récord</button>}
+      </div>
+      {compartir && <HojaCompartir logro tipo="record" titulo="Compartir el récord" datos={datosRecord(x, d)} equipo={{ tema: 'logros' }} alCerrar={() => setCompartir(false)} />}
     </Hoja>
   );
 }

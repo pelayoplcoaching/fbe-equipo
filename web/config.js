@@ -10,4 +10,7 @@ window.FBE_CONFIG = {
   vapidPublica: 'BJZBCsC0FTqAW-Z71Xw43sd-3GpHa5ig9D-5k5vCDOZoLRVMM3FvBke8cLZK0n8w0uhdC8cxKitYyzCRTQswLlY',
   // true si configuras el email (RESEND_API_KEY y AVISOS_REMITENTE en la función): la app ofrece recibirlas por email
   notificacionesEmail: false,
+  // (compartir) El Instagram del equipo, sin la arroba (por ejemplo 'fbecoaching'): sale en el pie de las tarjetas que
+  // comparten los atletas («Entreno con @fbecoaching») y en el texto para pegar. Vacío, sale «Entrenado con FBE Coaching».
+  instagram: '',
 };
