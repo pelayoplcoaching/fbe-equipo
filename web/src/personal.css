@@ -173,3 +173,37 @@
 .historia-pantalla .historia-compartir { pointer-events: auto; align-self: stretch; margin-top: 10px; background: rgba(255, 255, 255, .12); color: #F6F2FF; border-color: rgba(255, 255, 255, .25); }
 .recordatorio-texto { text-align: left; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; min-width: 0; }
 .resumen-equipo-compartir { margin-top: 10px; justify-self: start; }
+
+/* ---------- (compartir, tanda 2) paletas, frase, marco de Instagram, puntos, vídeo y lo compartido ---------- */
+.paletas { gap: 8px; }
+.paleta-op { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; border: 1px solid var(--linea); background: var(--fondo-2, transparent); color: var(--tinta-2); font: inherit; font-size: .8125rem; padding: 4px 10px 4px 5px; border-radius: 999px; }
+.paleta-op.activo { border-color: var(--morado); color: var(--tinta); box-shadow: 0 0 0 2px var(--morado-suave); }
+.paleta-muestra { width: 22px; height: 22px; border-radius: 50%; background: var(--pf); display: grid; place-items: center; box-shadow: inset 0 0 0 1px rgba(127, 127, 127, .25); }
+.paleta-muestra i { width: 9px; height: 9px; border-radius: 50%; background: var(--pa); display: block; }
+.compartir-frase .fila { gap: 8px; }
+.compartir-frase .entrada { flex: 1 1 180px; }
+.plantilla-mini.mini-poster { font-weight: 800; font-stretch: condensed; letter-spacing: -.02em; }
+.tarjeta-previa { position: relative; }
+.previa-puntos { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+.previa-puntos i { width: 6px; height: 6px; border-radius: 50%; background: var(--linea); display: block; }
+.previa-puntos i.activo { background: var(--morado); width: 16px; border-radius: 3px; }
+.previa-herramientas { justify-content: space-between; align-items: center; margin-top: -6px; }
+.tarjeta-previa.marco-ig { background: #fff; color: #111; border-radius: 14px; padding: 0 0 8px; box-shadow: 0 2px 14px rgba(0, 0, 0, .12); }
+.tarjeta-previa.marco-ig .tarjeta-img { border-radius: 0; max-width: 100%; }
+.marco-ig-cab { display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: .8125rem; font-weight: 600; color: #111; }
+.marco-ig-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #F58529, #DD2A7B 55%, #8134AF); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: .8rem; }
+.marco-ig-nombre { flex: 1; }
+.marco-ig-puntos { letter-spacing: 2px; color: #333; }
+.marco-ig-pie { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 12px 2px; font-size: 1.05rem; color: #111; }
+.marco-ig-pie .marco-ig-guardar { margin-left: auto; }
+.marco-ig-pie .marco-ig-texto { flex: 0 0 100%; margin: 4px 0 0; font-size: .8125rem; color: #222; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tarjeta-previa.marco-ig.historia { background: #000; padding: 0; }
+.tarjeta-previa.marco-ig.historia .marco-ig-cab { position: absolute; top: 0; left: 0; right: 0; color: #fff; z-index: 1; }
+.tarjeta-previa.marco-ig.historia .marco-ig-cab .marco-ig-puntos { color: #fff; }
+.compartir-texto-caja .seg-compacto { align-self: start; }
+.compartir-video .video-previa { width: 110px; border-radius: 10px; aspect-ratio: 4 / 5; object-fit: cover; background: #000; }
+.compartir-video .fila-envolver { align-items: center; }
+.lo-compartido .fila-boton { grid-template-columns: auto minmax(0, 1fr) auto; }
+.lo-compartido .ico-fila { width: 34px; height: 34px; border-radius: 10px; background: var(--morado-suave); color: var(--morado); display: grid; place-items: center; }
+.lo-compartido .ico-fila svg { width: 18px; height: 18px; }
+.lo-compartido .fila-ios-texto { display: grid; gap: 2px; min-width: 0; }

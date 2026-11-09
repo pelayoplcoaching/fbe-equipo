@@ -259,7 +259,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
         </section>
       )}
       </>)}
-      {historial && <HistorialEjercicio atletaId={atletaId} ejercicio={historial} alCerrar={() => setHistorial(null)} />}
+      {historial && <HistorialEjercicio atletaId={atletaId} ejercicio={historial} compartir={!esCoach} alCerrar={() => setHistorial(null)} />}
     </>
   );
 }

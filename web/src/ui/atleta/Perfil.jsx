@@ -19,6 +19,7 @@ import { PortadaPerfil, FotoConAnillo } from '../PerfilVisual.jsx';
 import { PerfilSecciones, EnElEquipo } from './PerfilSocial.jsx';
 import { usePersonal } from './Personal.jsx';
 import { PORTADAS, portadaValida } from '../../logica/perfil.js';
+import { LoCompartido } from '../Compartir.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -66,6 +67,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       <LoTuyo />
       {/* v0.105: Salud del iPhone y el calendario que se actualiza solo */}
       <Conexiones salud={salud} />
+      {/* (compartir, tanda 2) lo que has compartido desde este móvil */}
+      <LoCompartido />
 
       <AjustesDispositivo antes={<SeccionNotificaciones fila />} />
       <AjustesMensajes />

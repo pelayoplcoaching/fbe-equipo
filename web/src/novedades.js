@@ -8,12 +8,13 @@
 export const NOVEDADES = {
   '0.116': {
     atleta: [
-      'Tu perfil suma «Datos»: tu año día a día, tus costumbres, lo que más entrenas, tus ejercicios de siempre y tus mejores marcas.',
-      'Tus cifras frente a la semana pasada, tus próximos hitos, compartir cada récord de tu vitrina y la actividad por meses.',
-      'Elige el color de tu portada y comparte tu perfil con la tarjeta de tu año en FBE.',
+      'Tu perfil suma «Datos» (tu año, costumbres, lo que más entrenas), tus próximos hitos, el color de tu portada y tu tarjeta del año.',
+      'Tus cifras frente a la semana pasada, compartir cada récord de tu vitrina y la actividad por meses.',
+      'Compartir, aún más: paletas, póster, antes y ahora, carrusel, versión animada, tu frase y la lista de lo que has compartido.',
     ],
     coach: [
       'El perfil de tus atletas suma «Datos» (su año, costumbres, grupos y ejercicios), próximos hitos y su tarjeta para compartir.',
+      'Compartir, aún más: paletas, póster, antes y ahora, carrusel y versión animada.',
     ],
   },
   '0.115': {
