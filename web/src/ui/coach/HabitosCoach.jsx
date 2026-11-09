@@ -36,7 +36,7 @@ export function HabitosCoach({ atleta }) {
                 <li key={h.id} class="habito-coach">
                   <AnilloHabito h={h} fraccion={r.pct7.pct / 100} cumple={r.pct7.pct >= 100} tam={44} />
                   <div class="pila-xs" style="min-width:0">
-                    <strong>{h.nombre}</strong>
+                    <strong>{h.nombre}</strong>{h.origen === 'sugerido' && <span class="chip morado mini" title="Lo activó el atleta desde los hábitos sugeridos">Lo eligió él</span>}
                     <span class="mini terciario">{textoObjetivo(h)}</span>
                     <span class="semana-mini" role="img" style={{ '--c': COLOR_HABITO[h.icono] }}
                       aria-label={`Esta semana: ${r.semana.cumplidos} de ${r.semana.pedidos} días`}>

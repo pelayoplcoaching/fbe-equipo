@@ -41,7 +41,7 @@ const DEFECTOS = {
   invitaciones: () => ({ creada_en: ahora(), usada_en: null }),
   consentimientos: () => ({ aceptado_en: ahora(), revocado_en: null }),
   ejercicios: () => ({ grupos_musculares: [], activo: true, variante: null, video_url: null, instrucciones: null, errores: null, alternativas: [], tipo: [], rango_reps: null, creado_en: ahora() }),
-  bloques: () => ({ es_plantilla: false, estado: 'planificado', atleta_id: null, numero: null, foco: null, objetivo: null, descripcion: null, fecha_inicio: null, fecha_fin: null, creado_en: ahora() }),
+  bloques: () => ({ es_plantilla: false, estado: 'planificado', atleta_id: null, numero: null, foco: null, objetivo: null, objetivo_logrado: null, descripcion: null, fecha_inicio: null, fecha_fin: null, creado_en: ahora() }),
   semanas: () => ({ programacion: 'no_iniciada', foco: null, fecha_inicio: null, nota_coach: null, propuesta_motor: null }),
   sesiones: () => ({ tipo: 'fuerza', completada: false, intencion: null, dinamica: null, fecha_realizada: null, nota_atleta: null, duracion_min: null, rpe_sesion: null, revisada_en: null, preparacion: null, dia_previsto: null, cardio: null, cardio_hecho: null }),
   sesion_ejercicios: () => ({ prioridad: 'media', superserie: null, reps_min: null, reps_max: null, rir_objetivo: null, rpe_objetivo: null, carga_sugerida_kg: null, descanso_seg: null, tempo: null, notas_coach: null, variante: null, backoff_pct: null, series_detalle: null }),
@@ -80,7 +80,7 @@ const DEFECTOS = {
   // Migración 030: tareas puntuales y sus plantillas
   tareas: () => ({ detalle: null, ejercicio_id: null, fecha: fMadrid(), hecha_en: null, respuesta: null, archivo_id: null, revisada_en: null, creada_en: ahora() }),
   tareas_plantillas: () => ({ detalle: null, ejercicio_id: null, orden: 0, creada_en: ahora() }),
-  habitos: () => ({ tipo: 'numero', objetivo: null, unidad: null, sentido: 'al_menos', dias_semana: 7, icono: 'libre', orden: 0, activo: true, creado_en: ahora() }),
+  habitos: () => ({ tipo: 'numero', objetivo: null, unidad: null, sentido: 'al_menos', dias_semana: 7, icono: 'libre', orden: 0, activo: true, creado_en: ahora(), origen: 'coach' }),
   registros_habito: () => ({ actualizado_en: ahora() }),
   planes_nutricion: () => ({ modo: 'macros', fase: 'mantener', ritmo_pct: null, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, fibra_g: null, kcal_descanso: null, carbos_descanso_g: null, grasa_descanso_g: null, pautas: null, motivo: null, creado_en: ahora() }),
   registros_nutricion: () => ({ kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, fibra_g: null, completo: true, cumplido: null, nota: null, actualizado_en: ahora() }),
@@ -1692,6 +1692,66 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       cambio = true;
     }
     if (cambio) persistirYa();
+  }
+  // (054) Como la migración 054 (cierre.sql)
+  function rpcCierre(nombre, args, uid, coach, yo) {
+    const atletaDeSesion = (s) => { const w = buscar('semanas', s.semana_id); const b = w && buscar('bloques', w.bloque_id); return b?.atleta_id || null; };
+    const seriesDe = (sesionId) => { const ses = tabla('sesion_ejercicios').filter((x) => x.sesion_id === sesionId); const ids = new Set(ses.map((x) => x.id)); return { pautas: ses, series: tabla('series').filter((x) => ids.has(x.sesion_ejercicio_id)) }; };
+    if (nombre === 'sesiones_abiertas') {
+      if (!uid) return [];
+      const mio = yo?.id || null;
+      return tabla('sesiones').filter((s) => !s.completada).map((s) => {
+        const atletaId = atletaDeSesion(s);
+        if (!atletaId || (args.p_atleta && atletaId !== args.p_atleta) || !(coach || atletaId === mio)) return null;
+        const { pautas, series } = seriesDe(s.id);
+        if (!series.length) return null;
+        const ultima = series.map((x) => x.registrada_en).sort().pop();
+        if (Date.parse(ultima) <= Date.now() - 14 * 864e5) return null;
+        const w = buscar('semanas', s.semana_id);
+        return { sesion_id: s.id, atleta_id: atletaId, nombre: s.nombre, ultima_serie: ultima, series_hechas: series.length, series_pautadas: pautas.reduce((t, x) => t + (x.series || 0), 0), semana_inicio: w?.fecha_inicio || null };
+      }).filter(Boolean).sort((a, b) => String(b.ultima_serie).localeCompare(String(a.ultima_serie)));
+    }
+    if (nombre === 'atleta_resumen_semana') {
+      if (!uid || !(coach || args.p_atleta === yo?.id)) return null;
+      const hoy = fechaMadrid();
+      const lunes = args.p_lunes || lunesDe(hoy), domingo = sumar(lunes, 6);
+      const hechas = tabla('sesiones').filter((s) => s.completada && s.fecha_realizada >= lunes && s.fecha_realizada <= domingo && atletaDeSesion(s) === args.p_atleta);
+      const previstas = tabla('sesiones').filter((s) => { const w = buscar('semanas', s.semana_id); return w && w.fecha_inicio === lunes && w.programacion === 'programada' && atletaDeSesion(s) === args.p_atleta; }).length;
+      const series = hechas.flatMap((s) => seriesDe(s.id).series);
+      const conRpe = series.filter((x) => Number(x.rpe) > 0);
+      const rpes = hechas.map((s) => s.rpe_sesion).filter((x) => x != null);
+      const r1 = (v) => Math.round(v * 10) / 10;
+      const pesos = tabla('pesos').filter((p) => p.atleta_id === args.p_atleta).sort((a, b) => b.fecha.localeCompare(a.fecha));
+      const p0 = pesos[0] || null;
+      const p4 = p0 ? pesos.find((p) => p.fecha <= sumar(p0.fecha, -28)) : null;
+      const ck = tabla('checkins').filter((c) => c.atleta_id === args.p_atleta && (c.semana_inicio === lunes || c.semana_inicio === sumar(lunes, -7))).sort((a, b) => b.semana_inicio.localeCompare(a.semana_inicio))[0] || null;
+      return {
+        lunes,
+        sesiones: { hechas: hechas.length, previstas, rpe_sesion: rpes.length ? r1(rpes.reduce((a, b) => a + Number(b), 0) / rpes.length) : null,
+          rpe_series: conRpe.length ? r1(conRpe.reduce((a, b) => a + Number(b.rpe), 0) / conRpe.length) : null,
+          minutos: hechas.reduce((t, s) => t + (s.duracion_min || 0), 0), series: series.length, toneladas: r1(series.reduce((t, x) => t + (Number(x.kg) || 0) * (Number(x.reps) || 0), 0) / 1000),
+          ultima: hechas.map((s) => s.fecha_realizada).sort().pop() || null },
+        peso: p0 ? { kg: Number(p0.kg), fecha: p0.fecha, cambio_4s: p4 ? r1(Number(p0.kg) - Number(p4.kg)) : null } : null,
+        checkin: ck ? { semana: ck.semana_inicio, creado_en: ck.creado_en, energia: ck.energia, motivacion: ck.motivacion, horas_sueno: ck.horas_sueno } : null,
+        videos_sin_revisar: tabla('archivos').filter((a) => a.atleta_id === args.p_atleta && a.tipo === 'video_tecnica' && !a.revisado_en).length,
+        sesiones_abiertas: rpcCierre('sesiones_abiertas', { p_atleta: args.p_atleta }, uid, coach, yo).length,
+        sin_leer: coach ? tabla('comentarios').filter((m) => m.atleta_id === args.p_atleta && m.autor === 'atleta' && !m.leido_en && !m.eliminado_en).length : null,
+      };
+    }
+    if (nombre === 'habito_sugerido_activar') {
+      if (!yo) throw new Error('Solo un atleta activa sus hábitos');
+      const nombreH = String(args.p_nombre || '').trim();
+      if (!nombreH || nombreH.length > 60) throw new Error('El hábito necesita un nombre (hasta 60 letras)');
+      if (!['numero', 'si_no'].includes(args.p_tipo)) throw new Error('Tipo de hábito no válido');
+      const mios = tabla('habitos').filter((h) => h.atleta_id === yo.id);
+      if (mios.filter((h) => h.activo).length >= 5) throw new Error('Como mucho cinco hábitos activos');
+      if (mios.some((h) => h.activo && h.nombre.toLowerCase() === nombreH.toLowerCase())) throw new Error('Ya tienes ese hábito');
+      const h = { id: uuid(), atleta_id: yo.id, nombre: nombreH, tipo: args.p_tipo, objetivo: args.p_objetivo ?? null, unidad: args.p_unidad || null, sentido: args.p_sentido || 'al_menos', dias_semana: args.p_dias || 7,
+        icono: args.p_icono || 'libre', orden: Math.max(0, ...mios.map((x) => x.orden || 0)) + 1, activo: true, creado_en: ahora(), origen: 'sugerido' };
+      tabla('habitos').push(h);
+      return h.id;
+    }
+    return undefined;
   }
   // (053) Como la migración 053 (social.sql), con lo que ve quien llama
   function rpcSocial(nombre, args, uid, coach, yo) {
@@ -3739,6 +3799,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // Migración 027: la comunidad del equipo
       if (nombre.startsWith('comunidad_')) {
         const r = rpcComunidad(nombre, args || {}, uid, perfil);
+        persistirYa();
+        return copia(r ?? null);
+      }
+      // (054) el cierre: sesiones abiertas, la semana de un vistazo y los hábitos sugeridos
+      if (['sesiones_abiertas', 'atleta_resumen_semana', 'habito_sugerido_activar'].includes(nombre)) {
+        const r = rpcCierre(nombre, args || {}, uid, perfil?.rol === 'coach', tabla('atletas').find((a) => a.perfil_id === uid));
         persistirYa();
         return copia(r ?? null);
       }

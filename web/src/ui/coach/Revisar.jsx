@@ -12,6 +12,7 @@ import { PanelCorreccion } from '../tecnica/Correccion.jsx';
 import { RevisionSeguida } from '../tecnica/RevisionSeguida.jsx';
 import { RevisionSesion } from '../tecnica/RevisionSesion.jsx';
 import { agruparPorSesion, tituloSesion } from '../../logica/sesionVideos.js';
+import { videosQueEsperan } from '../../logica/cierre.js';
 import { ESCALAS, NOMBRE_ZONA, num } from '../../logica/calculos.js';
 import { fmtConDia, rangoSemana } from '../../logica/fechas.js';
 import { NOMBRE_TOMA } from '../../logica/comidas.js';
@@ -123,6 +124,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
     ...(d.comunidad || []).map((r) => ({ tipo: 'comunidad', clave: `e-${r.id}`, atleta: null, r })),
   ].filter((x) => ver(x.tipo)) : [];
   const conVideos = (d?.archivos || []).some((a) => a.tipo === 'video_tecnica');
+  const esperan = videosQueEsperan((d?.archivos || []).filter((a) => a.tipo === 'video_tecnica'));   // (054) los que llevan 3 días o más
   const claveEspera = (x) => (x.tipo === 'videos' && x.g ? x.g.videos.map((v) => v.creado_en).filter(Boolean).sort()[0] || null : x.tipo === 'videos' && x.a?.tipo === 'video_tecnica' ? x.a.creado_en : null);
   const grupos = orden === 'espera' ? ordenarGruposPorEspera(agruparPorAtleta(items), claveEspera) : agruparPorAtleta(items);
   const alternar = (id) => setPlegados((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -149,6 +151,12 @@ export function Revisar({ bandeja, abrirAtleta }) {
           <button key={k} aria-pressed={filtro === k ? 'true' : 'false'} onClick={() => setFiltro(k)}>{t}{k !== 'todo' ? ` (${cuentas[k]})` : ''}</button>
         ))}
       </div>
+      {/* (054) arriba, lo que más espera: vídeos de técnica de hace 3 días o más */}
+      {esperan && (filtro === 'todo' || filtro === 'videos') && (
+        <button type="button" class="revisar-esperan" onClick={() => { setFiltro('videos'); setOrden('espera'); }}>
+          <Icono n="reloj" /><span class="peq"><strong>{esperan.texto}</strong>. Tocar para verlos primero.</span>
+        </button>
+      )}
       {filtro === 'todo' && <Reserva id="revisar-variantes"><VariantesPorRevisar abrirAtleta={abrirAtleta} /></Reserva>}
       {/* v0.57: los vídeos por revisar, uno detrás de otro */}
       {(d?.archivos || []).some((a) => a.tipo === 'video_tecnica') && (filtro === 'todo' || filtro === 'videos') && (

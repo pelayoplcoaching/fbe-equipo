@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Siluetas, Vacio, Avatar, Icono, CabeceraGrande, ErrorCaja } from '../comunes.jsx';
+import { useApp, useCarga, Siluetas, Vacio, Avatar, Icono, CabeceraGrande, ErrorCaja, Hoja, useUnaVez } from '../comunes.jsx';
+import { HojaNuevaTarea } from '../Tareas.jsx';
+import { borradorRevision } from '../../logica/cierre.js';
 import { fechaMadrid, sumarDias, desdeISO } from '../../logica/fechas.js';
 import { ordenRevision, avisosRevision } from '../../logica/revision.js';
 
@@ -77,6 +79,7 @@ function FilaRevision({ f, con040, guardar, abrirAtleta }) {
   const { completadas, total } = f.sesiones;
   const idCasilla = `rev-${f.atleta_id}`;
   const soltarNota = () => { if ((nota || '').trim() !== (f.nota || '').trim()) guardar({ nota }); };
+  const [hoja, setHoja] = useState(null);   // (054) 'mensaje' | 'tarea'
   return (
     <li class={`panel revision-fila ${f.hecha ? 'hecha' : ''}`}>
       <div class="revision-cab">
@@ -109,7 +112,49 @@ function FilaRevision({ f, con040, guardar, abrirAtleta }) {
         <button class="btn btn-peq" onClick={() => abrirAtleta(f.atleta_id, 'mensajes', null)}><Icono n="mensaje" /> Chat</button>
         <button class="btn btn-peq" onClick={() => abrirAtleta(f.atleta_id, 'programa', null)}><Icono n="semana" /> Programar</button>
         <button class="btn btn-peq" onClick={() => abrirAtleta(f.atleta_id, 'seguimiento', null)}><Icono n="progreso" /> Seguimiento</button>
+        {/* (054) el mensaje de repaso, ya redactado con sus datos; y una tarea, sin salir de aquí */}
+        <button class="btn btn-peq" onClick={() => setHoja('mensaje')}><Icono n="editar" /> Redactar mensaje</button>
+        <button class="btn btn-peq" onClick={() => setHoja('tarea')}><Icono n="hecho" /> Mandar una tarea</button>
       </div>
+      {hoja === 'mensaje' && <HojaBorrador f={f} alCerrar={() => setHoja(null)} />}
+      {hoja === 'tarea' && <HojaNuevaTarea atleta={{ id: f.atleta_id, nombre: f.nombre }} alCerrar={() => setHoja(null)} />}
     </li>
+  );
+}
+
+// (054) El mensaje de repaso de la semana: redactado con lo que hay (sesiones, esfuerzo, peso, check-in, molestias,
+// vídeos, la nota de la semana pasada), para que el coach lo retoque y lo mande en un toque
+function HojaBorrador({ f, alCerrar }) {
+  const { api, aviso } = useApp();
+  const resumen = useCarga(() => api.resumenSemanaAtleta(f.atleta_id).catch(() => null), [f.atleta_id]);
+  const [texto, setTexto] = useState(() => borradorRevision(f, null));
+  const [tocado, setTocado] = useState(false);
+  const [ocupado, una] = useUnaVez();
+  const area = useRef(null);
+  // Cuando llega el resumen, el borrador se rehace (salvo que ya lo esté editando)
+  useEffect(() => { if (!tocado && resumen.datos !== undefined) setTexto(borradorRevision(f, resumen.datos)); }, [resumen.datos]);
+  const primer = f.nombre.split(' ')[0];
+  const enviar = () => una(async () => {
+    const limpio = texto.trim();
+    if (!limpio) return;
+    try {
+      await api.enviarMensaje(f.atleta_id, { texto: limpio, autor: 'coach', clienteId: globalThis.crypto?.randomUUID?.() || `rev-${Date.now()}` });
+      aviso(`Mensaje enviado a ${primer}`, 'ok');
+      alCerrar();
+    } catch (e) { aviso(e?.message || 'No se ha podido enviar', 'error'); }
+  });
+  return (
+    <Hoja titulo={`Repaso de la semana para ${primer}`} alCerrar={alCerrar} ancho={620}>
+      <div class="pila">
+        <div class="pila-xs revision-nota">
+          <label class="peq secundario" for={`rev-msg-${f.atleta_id}`}>Redactado con sus datos de la semana{resumen.cargando ? ' (completándolo…)' : ''}. Edítalo a tu gusto.</label>
+          <textarea id={`rev-msg-${f.atleta_id}`} ref={area} rows="9" maxLength={2000} value={texto} onInput={(e) => { setTocado(true); setTexto(e.currentTarget.value); }} />
+        </div>
+        <div class="fila-envolver">
+          <button type="button" class="btn" onClick={() => { setTocado(false); setTexto(borradorRevision(f, resumen.datos || null)); area.current?.focus(); }}><Icono n="reiniciar" /> Volver al redactado</button>
+          <button type="button" class="btn btn-primario" disabled={ocupado || !texto.trim()} onClick={enviar}><Icono n="enviar" /> Enviar</button>
+        </div>
+      </div>
+    </Hoja>
   );
 }

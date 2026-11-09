@@ -2,6 +2,7 @@
 import { diasEntre, lunesDe, sumarDias, hoyISO } from './fechas.js';
 import { cardioHechoDe } from './cardio.js';
 import { pesoTxt, pesoNum, redondearCarga } from './unidades.js';
+import { alertasCierre } from './cierre.js';
 
 // ---------- Formato numérico (es-ES) ----------
 
@@ -931,6 +932,8 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     if (d.cuestionario) alertas.push({ tipo: d.cuestionario.tipo, nivel: d.cuestionario.nivel, texto: d.cuestionario.texto });
     // Recetas que pide cambiar (v0.26)
     if (d.cambiosReceta) alertas.push({ tipo: 'receta', nivel: 'aviso', texto: d.cambiosReceta === 1 ? 'Pide cambiar una receta' : `Pide cambiar ${d.cambiosReceta} recetas` });
+    // (054) una sesión empezada sin terminar (desde ayer) y el peso sin apuntar 10 días
+    if (entrena) for (const al of alertasCierre({ abiertas: d.abiertas || [], pesos, salud: pesos.length > 0 }, hoy)) alertas.push(al);
     // Bloque en marcha sin ninguna semana publicada: el atleta abre la app y no ve nada
     if (entrena && bloque && empezado && !semana) {
       const borrador = semanas.filter((s) => s.programacion !== 'programada').sort((a, b) => a.numero - b.numero)[0];

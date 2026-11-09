@@ -24,6 +24,8 @@ import { enLibras, vista, deVista, pesoTxt } from '../../logica/unidades.js';
 import { propagarCambio, aplicarPropagacion, deshacerPropagacion, textoPropagacion } from '../../logica/propagar.js';
 import { ahoraToca, serieQueToca } from '../../logica/ahora-toca.js';
 import { leerExtras, guardarExtras, borrarExtras, conExtras, filasHechas } from '../../logica/series-extra.js';
+import { duracionDesdeSeries, fraseRpe, textoCierreAuto } from '../../logica/cierre.js';
+import { Dictar } from '../Dictar.jsx';
 import { aplicarOrden, moverAlFinal, moverBloque, reordenarPendientes, puedeDejarLuego, bloquesPendientes, proximaTrasReordenar } from '../../logica/orden-sesion.js';
 import { OrdenarSesion } from './OrdenarSesion.jsx';
 import { Enfoque } from './Enfoque.jsx';
@@ -139,6 +141,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // Las series añadidas («Añadir serie») de cada ejercicio, guardadas en el móvil mientras dura la sesión (antes vivían en
   // la tarjeta y se perdían al plegarse o al recargar; y el descanso no las contaba)
   const [extras, setExtras] = useState(() => leerExtras(id));
+  // (054) el esfuerzo de la sesión dicho en un toque al acabar la última serie (antes de «Terminar»): se guarda ya
+  const [rpeRapido, setRpeRapido] = useState(null);
   const cambiarExtra = (seId, n) => setExtras((x) => guardarExtras(id, { ...x, [seId]: n }));
   // Notas fijadas del atleta por ejercicio (se cargan con la sesión y se guardan al momento)
   const [notas, setNotas] = useState({});
@@ -656,6 +660,13 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           </div>
         )}
       </header>
+      {/* (054) la sesión que se cerró sola: pedir cómo fue */}
+      {(() => { const c = textoCierreAuto(sesion); return c && (
+        <section class="panel panel-pad cierre-auto pila-xs" aria-label="Sesión cerrada por la app">
+          <p class="peq"><strong>{c.titulo}</strong> · {c.texto}</p>
+          <button type="button" class="btn btn-peq btn-primario" style="justify-self:start" onClick={() => setTerminando(true)}><Icono n="editar" /> {sesion.rpe_sesion == null ? 'Decir cómo fue' : 'Corregir o añadir una nota'}</button>
+        </section>
+      ); })()}
       {!sesion.completada && ejercicios.length > 0 && <Pista id="sesion" icono="hoy">Cada ejercicio trae lo que te toca (series, repeticiones y esfuerzo). Apunta los kilos y las repeticiones de cada serie y márcala como hecha: el descanso arranca solo. El esfuerzo (RPE) va del 6 al 10: 10 es que no podías hacer ni una más; 8, que te quedaban dos.</Pista>}
       <BandaConexion />
 
@@ -737,6 +748,14 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       {/* (un descanso sin su ejercicio en la lista, por si acaso: antes de terminar) */}
       {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} />}
 
+      {/* (054) con todas las pautadas hechas, el esfuerzo de la sesión en un toque (y la duración sale sola de las series) */}
+      {!sesion.completada && totalPautadas > 0 && todas.length >= totalPautadas && atleta.estado !== 'baja' && (
+        <section class="panel panel-pad rpe-rapido pila-xs" aria-labelledby="rpe-rapido-t">
+          <p id="rpe-rapido-t" class="peq"><strong>¿Cuánto te ha costado la sesión entera?</strong> {rpeRapido == null && sesion.rpe_sesion == null ? 'Un toque y listo; lo demás, en «Terminar».' : <>{fraseRpe(rpeRapido ?? sesion.rpe_sesion)} · guardado</>}</p>
+          <Segmentos etiqueta="Esfuerzo de la sesión" valor={rpeRapido ?? sesion.rpe_sesion ?? null} alCambiar={(v) => { if (v == null) return; setRpeRapido(v); vibrar('serie'); cola.enviar({ tipo: 'sesion', datos: { id: sesion.id, cambios: { rpe_sesion: v } }, atletaId: atleta.id }).catch(() => {}); }}
+            opciones={[5, 6, 7, 8, 9, 10].map((x) => [x, String(x)])} />
+        </section>
+      )}
       <button class={`btn btn-primario btn-grande btn-ancho btn-terminar${!sesion.completada && totalPautadas > 0 && todas.length >= totalPautadas ? ' lista' : ''}`} onClick={() => setTerminando(true)}>
         <Icono n="hecho" /> {sesion.completada ? 'Cambiar la valoración' : 'Terminar sesión'}
       </button>
@@ -769,7 +788,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           alCerrar={() => setOrdenando(false)} />
       )}
       {terminando && (
-        <Terminar sesion={sesion} semana={semana} inicio={inicio} minutosSugeridos={minutosHechos} conEjercicios={ejercicios.length > 0} alCerrar={() => { setTerminando(false); setMinutosHechos(null); }}
+        <Terminar sesion={rpeRapido != null && sesion.rpe_sesion == null ? { ...sesion, rpe_sesion: rpeRapido } : sesion} semana={semana} inicio={inicio} minutosSugeridos={minutosHechos} duracionSeries={duracionDesdeSeries(hechas)} conEjercicios={ejercicios.length > 0} alCerrar={() => { setTerminando(false); setMinutosHechos(null); }}
           alGuardar={async (cambios) => {
             const r = await cola.enviar({ tipo: 'sesion', datos: { id: sesion.id, cambios }, atletaId: atleta.id });
             setTerminando(false);
@@ -1161,9 +1180,11 @@ export function TarjetaCardio({ pauta, hecho, completada }) {
 }
 
 // ---------- terminar ----------
-function Terminar({ sesion, semana, inicio, minutosSugeridos = null, conEjercicios = false, alCerrar, alGuardar }) {
+function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSeries = null, conEjercicios = false, alCerrar, alGuardar }) {
   const { propio } = useApp();
-  const estimado = minutosSugeridos || (inicio ? Math.max(5, Math.round((Date.now() - inicio) / 60000) + 5) : sesion.cardio?.minutos || (sesion.tipo !== 'fuerza' ? 40 : null));
+  // (054) la duración sale de las series guardadas (de la primera a la última): vale aunque la app se haya recargado o
+  // se termine otro día; si no hay series, del cronómetro de la sesión; si no, lo de siempre
+  const estimado = minutosSugeridos || duracionSeries || (inicio ? Math.max(5, Math.round((Date.now() - inicio) / 60000) + 5) : sesion.cardio?.minutos || (sesion.tipo !== 'fuerza' ? 40 : null));
   const hoy = hoyISO();
   // Si la sesión es de otra semana (se apunta una que se hizo otro día), se pregunta el día
   const deOtraSemana = !!semana?.fecha_inicio && semana.fecha_inicio !== lunesDe(hoy);
@@ -1226,8 +1247,9 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, conEjercici
         <Paso id="t-min" valor={min} paso={conCardio && !cardioAparte ? 1 : 5} max={conCardio && !cardioAparte ? 600 : 300} dec={0} etiqueta={conCardio && !cardioAparte ? 'minutos de cardio' : 'minutos de sesión'} alCambiar={setMin} />
       </div>
       <div class="campo">
-        <label for="t-nota">{propio ? 'Nota' : 'Nota para tu coach'}</label>
+        <div class="separa"><label for="t-nota">{propio ? 'Nota' : 'Nota para tu coach'}</label><Dictar alTexto={(t) => setNota((n) => (n ? `${n.trimEnd()} ${t}` : t))} etiqueta="Dictar la nota" /></div>
         <textarea id="t-nota" class="area" placeholder="Cómo te has sentido, molestias, cambios que hayas hecho…" value={nota} onInput={(e) => setNota(e.currentTarget.value)} />
+        {duracionSeries && !sesion.completada && <span class="ayuda">La duración la hemos sacado de tus series (de la primera a la última). Cámbiala si no cuadra.</span>}
       </div>
       {error && <div class="error" role="alert">{error}</div>}
       <button class="btn btn-primario btn-grande" disabled={ocupado} onClick={async () => {

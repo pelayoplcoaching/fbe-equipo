@@ -10,6 +10,7 @@ import { vibrar } from '../hapticos.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenPasoCheckin } from '../../logica/imagenes.js';
 import { semanaSalud } from '../../logica/integraciones.js';
+import { leerBorradorCheckin, guardarBorradorCheckin, borrarBorradorCheckin, respuestasSemanaPasada, lineasSemanaCheckin } from '../../logica/cierre.js';
 
 // v0.49: las respuestas de una sola opción, en filas grandes (número y frase), fáciles de tocar con el pulgar
 function OpcionesGrandes({ etiqueta, opciones, valor, alCambiar }) {
@@ -82,6 +83,9 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
   const enfocar = useRef(false);
   const temporizador = useRef(null);
   const [anuncioRespuesta, setAnuncioRespuesta] = useState('');
+  const [borrador, setBorrador] = useState(null);      // (054) lo que dejó a medias en este móvil
+  const [resumen, setResumen] = useState(null);        // (054) su semana de un vistazo (sesiones, esfuerzo, peso)
+  const [copiado, setCopiado] = useState(false);       // (054) «igual que la semana pasada» ya aplicado
   useEffect(() => () => clearTimeout(temporizador.current), []);
   // Otra semana (o los datos de otra semana): nada de lo de antes sigue en marcha
   useEffect(() => { setEnviado(null); clearTimeout(temporizador.current); setAnuncioRespuesta(''); }, [lunes]);
@@ -101,15 +105,23 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
   useEffect(() => {
     if (!datos.datos) return;
     const c = datos.datos.checkin || {};
-    setF({ ...c });
+    // (054) sin enviar aún y con un borrador en este móvil: se recupera (las respuestas, las molestias, el peso)
+    const bor = !datos.datos.checkin ? leerBorradorCheckin(atleta.id, lunes) : null;
+    setBorrador(bor);
+    setCopiado(false);
+    setF({ ...c, ...(bor?.f || {}) });
     // Ya enviado, se abre en el repaso (cada respuesta se cambia tocándola); si no, en la primera pregunta
     clearTimeout(temporizador.current);
     setPaso(datos.datos.checkin ? 999 : 0);
     setDesdeRepaso(false);
     // Las respuestas, como se escriben (los números con coma)
     setResp(Object.fromEntries(Object.entries(c.respuestas || {}).map(([k, v]) => [k, typeof v === 'number' && datos.datos.preguntas?.find((q) => q.id === k)?.tipo === 'numero' ? num(v, 2) : v])));
-    setMolestias(Object.fromEntries(ZONAS.map(([z]) => [z, datos.datos.molestias.find((m) => m.zona === z)?.intensidad ?? 0])));
-    setPeso(null);
+    setMolestias(Object.fromEntries(ZONAS.map(([z]) => [z, bor?.molestias?.[z] ?? datos.datos.molestias.find((m) => m.zona === z)?.intensidad ?? 0])));
+    if (bor?.resp && Object.keys(bor.resp).length) setResp((r) => ({ ...r, ...bor.resp }));
+    setPeso(bor?.peso ?? null);
+    // (054) su semana de un vistazo, si la base ya tiene la 054
+    setResumen(null);
+    { const pedido = lunes; api.resumenSemanaAtleta?.(atleta.id, lunes).then((r) => { if (pedido === lunesActual.current) setResumen(r); }).catch(() => {}); }
     setMedidas({});
     // Las medidas se piden cada 4 semanas: se abren solas si toca
     const ultima = datos.datos.medidas?.[0];
@@ -176,6 +188,12 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
     }
   }, [datos.datos]);
 
+  // (054) cada cambio se queda en este móvil hasta que se envía (si cierra la app a medias, no se pierde)
+  useEffect(() => {
+    if (!f || !datos.datos || datos.datos.checkin) return;
+    guardarBorradorCheckin(atleta.id, lunes, { f, molestias, resp, peso });
+  }, [f, molestias, resp, peso]);
+
   if (!salud) {
     return (
       <div class="contenido">
@@ -221,6 +239,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         enviar = { ...f, respuestas: { ...otras, ...(limpiarRespuestas(preguntas, resp) || {}) } };
       }
       await api.guardarCheckin(atleta.id, lunes, enviar, ver('molestias') ? molestias : {}, null);
+      borrarBorradorCheckin(atleta.id, lunes); setBorrador(null);
       if (peso && ver('peso')) await api.guardarPeso(atleta.id, fechaDato, peso);
       if (ver('medidas') && Object.values(medidas).some((v) => v != null)) await api.guardarMedidas(atleta.id, fechaDato, medidas);
       aviso(yaEnviado ? 'Check-in actualizado' : 'Check-in enviado a tu coach');
@@ -400,6 +419,19 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         </button>
       </CabeceraGrande>
       <Pista id="checkin" icono="checkin">Una vez a la semana, un minuto: una pregunta por pantalla. Las de una sola respuesta pasan solas a la siguiente; al final repasas todo y lo envías. No hace falta rellenarlo todo.</Pista>
+      {/* (054) su semana de un vistazo, para que conteste con los datos delante */}
+      {!yaEnviado && lineasSemanaCheckin(resumen).length > 0 && (
+        <section class="panel panel-pad ck-vistazo" aria-label="Tu semana de un vistazo">
+          <span class="mini terciario">Tu semana de un vistazo</span>
+          <ul class="ck-vistazo-lista">{lineasSemanaCheckin(resumen).map((t) => <li key={t} class="peq">{t}</li>)}</ul>
+        </section>
+      )}
+      {/* (054) lo que dejó a medias en este móvil */}
+      {borrador && !yaEnviado && <p class="peq secundario ck-borrador" role="status"><Icono n="guardar" /> Hemos recuperado lo que dejaste a medias. {' '}<button type="button" class="btn-texto mini" onClick={() => { borrarBorradorCheckin(atleta.id, lunes); setBorrador(null); datos.recargar(true); }}>Empezar de cero</button></p>}
+      {/* (054) una semana igual que la anterior: las escalas y los números, copiados de un toque (el peso y las notas, no) */}
+      {!yaEnviado && !copiado && paso === 0 && respuestasSemanaPasada(datos.datos.anterior) && (
+        <p class="peq secundario ck-borrador"><button type="button" class="btn btn-peq" onClick={() => { const a = respuestasSemanaPasada(datos.datos.anterior); setF((x) => ({ ...a, ...Object.fromEntries(Object.entries(x || {}).filter(([, v]) => v != null && v !== '')) })); setCopiado(true); aviso('Copiadas las respuestas de la semana pasada; cambia lo que sea distinto'); ir(total); }}><Icono n="duplicar" /> Igual que la semana pasada</button></p>
+      )}
 
       <div class="ck-progreso">
         <div class="separa">

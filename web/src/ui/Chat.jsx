@@ -28,6 +28,7 @@ import { salidaDe } from '../datos/salida.js';
 import { PanelEmojis, BotonEmojis } from './chat/Emojis.jsx';
 import { Visor } from './chat/Visor.jsx';
 import { HojaReenviar } from './chat/Reenviar.jsx';
+import { HojaConvertir } from './chat/Convertir.jsx';
 import { InfoContacto, HojaSilenciar } from './chat/InfoContacto.jsx';
 import { DocumentoChat } from './chat/Documento.jsx';
 import { useGrabadora, BotonMicro, PanelGrabando, PanelRevisar, NotaVozChat } from './chat/NotaVoz.jsx';
@@ -106,6 +107,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const [emojis, setEmojis] = useState(false);       // v0.55: el panel de emojis
   const [seleccion, setSeleccion] = useState(null);  // v0.55: null | Set de ids (modo seleccionar)
   const [reenviar, setReenviar] = useState(null);    // v0.55: [mensajes] a reenviar (el coach)
+  const [convertir, setConvertir] = useState(null);  // (054) [mensajes] a guardar como nota, tarea o recordatorio (el coach)
   const [fijar, setFijar] = useState(null);          // v0.55: el mensaje a fijar (elegir cuánto)
   const [fallido, setFallido] = useState(null);      // v0.55: el mensaje que no salió («Reintentar» / «Eliminar»)
   const [subidas, setSubidas] = useState([]);
@@ -956,6 +958,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         aria-disabled={acciones.eliminar.ok ? undefined : 'true'} title={acciones.eliminar.motivo || 'Eliminar para todos'}
         onClick={() => (acciones.eliminar.ok ? setEliminar(elegidos) : aviso(acciones.eliminar.motivo))}><Icono n="basura" /></button>
       {yo === 'coach' && <button type="button" class="btn btn-icono plano" aria-label="Reenviar" disabled={!acciones.reenviar} onClick={() => setReenviar(elegidos)}><Icono n="reenviar" /></button>}
+      {yo === 'coach' && <button type="button" class="btn btn-icono plano" aria-label="Guardar como nota, tarea o recordatorio" disabled={!acciones.copiar} onClick={() => setConvertir(elegidos)}><Icono n="guardar" /></button>}
     </div>
   );
   const abrirContacto = () => { setHoja('contacto'); };
@@ -987,6 +990,12 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         </div>
       )}
       {filtrosBusqueda}
+      {/* (054) el coach, con los datos del atleta delante mientras escribe: la semana, el esfuerzo, el peso, el check-in */}
+      {cabecera?.resumen?.length > 0 && !seleccion && !buscando && (
+        <div class="chat-resumen" role="group" aria-label={`Resumen de ${cabecera.titulo}`}>
+          {cabecera.resumen.map((ch) => <button type="button" key={ch.k} class={`chip ${ch.nivel || ''}`} onClick={() => cabecera.verResumen?.(ch.k)}>{ch.texto}</button>)}
+        </div>
+      )}
       {desdeCache && conv.error && <p class="chat-sin-red mini" role="status"><Icono n="sinred" /> Sin conexión: esto es lo guardado en este móvil</p>}
       {vigente && (
         <div class="chat-fijado">
@@ -1226,6 +1235,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
       {hoja === 'archivos' && <HojaArchivosChat mensajes={mensajes} hayMas={hayMas} pestana={pestArchivos} yo={yo} alCerrar={() => setHoja(null)} alAbrir={(c) => { setHoja(null); abrirMedio(c); }}
         alIr={(id) => { setHoja(null); setTimeout(() => irA(id), 60); }} alMas={() => setLimite((l) => l + 400)} />}
       {reenviar && <HojaReenviar mensajes={reenviar} alCerrar={() => setReenviar(null)} alHecho={() => { setReenviar(null); setSeleccion(null); alCambiar?.(); }} />}
+      {convertir && <HojaConvertir mensajes={convertir} atleta={{ id: atletaId, nombre: nombreAtleta }} alCerrar={() => setConvertir(null)} alHecho={() => { setConvertir(null); setSeleccion(null); }} />}
       {editarFoto && (
         <EditorFoto archivo={editarFoto.archivo} hd={hd} alCerrar={() => setEditarFoto(null)}
           alListo={(f) => {

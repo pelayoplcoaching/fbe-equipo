@@ -79,7 +79,7 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
             <Imagen key={ilu} id={ilu} clase={`cab-ilu-img ${r.terminado ? 'informe-cumbre' : ''}`} tamanos="16rem" />
           </div>
         ) : <p class="secundario">{r.semanasTotal} semanas, {rangoLargo(r.inicio, r.fin)}. <span class={`chip ${r.terminado ? 'ok' : 'morado'}`}>{r.terminado ? 'Terminado' : 'En curso'}</span></p>}
-        {r.bloque.objetivo && <p class="peq">{r.bloque.objetivo}</p>}
+        {r.bloque.objetivo && <p class="peq">{r.bloque.objetivo}{r.bloque.objetivo_logrado != null && <> <span class={`chip ${r.bloque.objetivo_logrado ? 'ok' : ''}`}>{r.bloque.objetivo_logrado ? 'Logrado' : 'No logrado'}</span></>}</p>}
         {/* (v0.104) bloque terminado: lo que tu coach dejó escrito (solo el atleta) */}
         {r.terminado && !coach && <MensajeCoach momento="bloque" />}
 

@@ -6,6 +6,7 @@ import { imagenHabito } from '../../logica/imagenes.js';
 import { textoObjetivo, textoValor, pasoHabito, cumpleHabito, fraccionHabito, decimalesHabito } from '../../logica/habitos.js';
 import { hoyISO, fmtConDia } from '../../logica/fechas.js';
 import { LETRAS_DIA } from '../../logica/plan.js';
+import { habitosSugeridos } from '../../logica/cierre.js';
 
 export const COLOR_HABITO = {
   pasos: 'var(--disco-verde)', proteina: 'var(--disco-rojo)', agua: 'var(--disco-azul)', sueno: 'var(--morado)',
@@ -31,17 +32,25 @@ export function HabitosHoy() {
   const { api, atleta } = useApp();
   const res = useCarga(() => api.resumenHabitos(atleta.id).catch(() => []), [atleta.id], { recuerdo: `habitos-hoy:${atleta.id}` });
   const [abierto, setAbierto] = useState(null);
+  // (054) hábitos sugeridos según su cuestionario (si la base tiene la 054 y no llega a cinco)
+  const sug = useCarga(async () => {
+    if (!(await api.cierre054?.())) return [];
+    const c = await api.cuestionario(atleta.id).catch(() => null);
+    return habitosSugeridos(c, (await api.habitos(atleta.id, { todos: true }).catch(() => [])) || []);
+  }, [atleta.id, res.datos?.length]);
   const lista = res.datos || [];
-  if (!lista.length) return null;
+  const sugeridos = (sug.datos || []).slice(0, 2);
+  if (!lista.length && !sugeridos.length) return null;
   const hechos = lista.filter((r) => r.cumpleHoy).length;
   const abiertoAhora = abierto && lista.find((r) => r.habito.id === abierto);
   return (
     <section class="seccion seccion-habitos">
       <div class="seccion-cab">
         <h2>Tus hábitos</h2>
-        <span class="peq secundario num">{hechos === lista.length ? 'Todos hechos hoy' : `${hechos} de ${lista.length} hoy`}</span>
+        {lista.length > 0 && <span class="peq secundario num">{hechos === lista.length ? 'Todos hechos hoy' : `${hechos} de ${lista.length} hoy`}</span>}
       </div>
-      <div class="panel panel-pad habitos-hoy">
+      {sugeridos.length > 0 && lista.length < 5 && <Sugeridos lista={sugeridos} alActivar={() => { res.recargar(true); sug.recargar(true); }} />}
+      {lista.length > 0 && <div class="panel panel-pad habitos-hoy">
         {lista.map((r) => {
           const h = r.habito;
           return (
@@ -55,9 +64,32 @@ export function HabitosHoy() {
             </button>
           );
         })}
-      </div>
+      </div>}
       {abiertoAhora && <HojaHabito r={abiertoAhora} alCerrar={() => setAbierto(null)} alMomento={res.alMomento} />}
     </section>
+  );
+}
+
+// (054) «Sugeridos para ti»: hasta dos hábitos según lo que contó en el cuestionario; se activan de un toque y el coach
+// los ve con la marca «lo eligió él»
+function Sugeridos({ lista, alActivar }) {
+  const { api, aviso } = useApp();
+  const [ocupado, setOcupado] = useState(null);
+  const activar = async (h) => {
+    setOcupado(h.clave);
+    try { await api.activarHabitoSugerido(h); aviso(`Hábito activado: ${h.nombre}`); alActivar?.(); } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(null); }
+  };
+  return (
+    <div class="panel panel-pad pila-s habitos-sugeridos" aria-label="Sugeridos para ti">
+      <span class="mini terciario">Sugeridos para ti</span>
+      {lista.map((h) => (
+        <div key={h.clave} class="habito-sugerido">
+          <span class="habito-sugerido-ico" aria-hidden="true"><Icono n={h.icono} /></span>
+          <span class="pila-xs"><strong class="peq">{h.nombre}</strong><span class="mini secundario">{h.porque}. {textoObjetivo({ ...h, dias_semana: h.dias })}</span></span>
+          <button type="button" class="btn btn-peq" disabled={!!ocupado} onClick={() => activar(h)}>{ocupado === h.clave ? '…' : 'Activar'}</button>
+        </div>
+      ))}
+    </div>
   );
 }
 

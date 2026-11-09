@@ -631,6 +631,15 @@ export function semillaDemo(hoy = hoyISO()) {
   // (social, 053) lo que los atletas hacen entre ellos: hoy es el cumple de Carlos, dice que entrena a las 19:00, reta a Rubén,
   // acompaña a Lucía y pide ánimo si para; la semana pasada el equipo eligió a Rubén compañero de la semana
   sembrarSocial(db, { hoy, hace, lunesHoy, ruben, carlos });
+  // (cierre, 054) la última sesión hecha de Rubén la cerró la app sola (todas las series, tres horas sin tocar): en Hoy
+  // se le pide cómo fue; y su bloque tiene objetivo_logrado sin decidir (lo pone el coach al terminarlo)
+  {
+    const bloqueR = db.bloques.find((b) => b.atleta_id === ruben.id && b.estado === 'activo');
+    const semanasR = new Set(db.semanas.filter((w) => w.bloque_id === bloqueR?.id).map((w) => w.id));
+    const ultima = db.sesiones.filter((x) => semanasR.has(x.semana_id) && x.completada && x.fecha_realizada).sort((x, y) => String(y.fecha_realizada).localeCompare(String(x.fecha_realizada)))[0];
+    if (ultima) Object.assign(ultima, { cerrada_sola_en: hace(60 * 20), rpe_sesion: null, nota_atleta: null });
+    for (const b of db.bloques) if (!('objetivo_logrado' in b)) b.objetivo_logrado = null;
+  }
   return db;
 
   // v0.53 (al final: no cambia lo aleatorio de lo anterior): Iván va por microciclos de 4 sesiones (torso-pierna A y B)

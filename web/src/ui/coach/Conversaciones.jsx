@@ -5,6 +5,7 @@ import { Chat } from '../Chat.jsx';
 import { BandaDemo } from '../App.jsx';
 import { ordenarConversaciones, filtrarConversaciones, vistaPrevia, leerBorrador, resaltar, normalLetras } from '../../logica/mensajes.js';
 import { silenciado, textoSilencio } from '../../logica/chat.js';
+import { chipsResumenChat } from '../../logica/cierre.js';
 import { conTransicion } from '../transiciones.js';
 import { useAtras } from '../atras.js';
 import { HojaDifusion } from './Difusion.jsx';
@@ -94,6 +95,8 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
     catch (err) { aviso(err.message, 'error'); }
   }
 
+  // (054) el resumen de la semana del atleta abierto (si la base ya tiene la 054; si no, sin chips)
+  const resumenAbierta = useCarga(() => (abierta ? api.resumenSemanaAtleta(abierta.atleta.id).catch(() => null) : Promise.resolve(null)), [abierta?.atleta.id]);
   let chat = null;
   if (abierta) {
     const a = abierta.atleta;
@@ -107,6 +110,9 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
           izquierda: <>{!dos && <button class="btn btn-icono plano" onClick={volver} aria-label="Volver a mensajes"><Icono n="atras" /></button>}<Avatar nombre={a.nombre} foto={a.foto} ampliable perfilId={a.perfil_id || null} /></>,
           titulo: a.nombre, sub: a.objetivo || '', verFicha: () => abrirAtleta(a.id, 'programa'),
           derecha: <button class="btn btn-peq" onClick={() => abrirAtleta(a.id, 'programa')}>Ficha</button>,
+          // (054) los chips de su semana; cada uno lleva a la parte de la ficha que toca
+          resumen: resumenAbierta.datos ? chipsResumenChat(resumenAbierta.datos) : [],
+          verResumen: (k) => abrirAtleta(a.id, k === 'videos' ? 'videos' : k === 'abiertas' || k === 'sesiones' || k === 'rpe' ? 'registro' : 'seguimiento'),
         }} />
     );
     if (!dos) return <div class="contenido coach chat-pagina">{chat}</div>;
