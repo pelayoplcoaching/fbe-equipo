@@ -10,7 +10,7 @@ import { arteSesion } from '../../logica/arte.js';
 import { resumenPautas } from '../../logica/diseno.js';
 import { pauta, NOMBRE_GRUPO, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_TIPO_SESION } from '../../logica/calculos.js';
 import { cardioValido } from '../../logica/cardio.js';
-import { familiaPortada } from '../../logica/imagenes.js';
+import { familiaPortada, imagenPortada } from '../../logica/imagenes.js';
 import { Imagen } from '../Imagen.jsx';
 import { RecordAlAlcance } from './Personal.jsx';
 import { MusicaSesion } from './Musica.jsx';
@@ -52,7 +52,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
       <header class="portada-sesion">
         {/* (imágenes) la ilustración de su familia (empuje, tirón, pierna, core, full body, cardio o movilidad); si no
             se puede cargar, el dibujo de líneas de siempre */}
-        <Imagen key={familia} id={`sesion-${familia}`} clase="portada-arte portada-foto" tamanos="(min-width: 600px) 600px, 150vw" prioridad
+        <Imagen key={imagenPortada(familia, cardio?.modalidad)} id={imagenPortada(familia, cardio?.modalidad)} clase="portada-arte portada-foto" tamanos="(min-width: 600px) 600px, 150vw" prioridad
           alternativa={<ArteSesion nombre={sesion.nombre} tipo={tipo} patron={r.patrones[0] || null} />} />
         <span />
         <div class="portada-texto">

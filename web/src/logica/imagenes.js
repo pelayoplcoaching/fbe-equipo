@@ -36,6 +36,16 @@ export function familiaPortada({ tipo = 'fuerza', pautas = [], cardio = false } 
   return ['empuje', 'tiron', 'pierna', 'core'].reduce((a, b) => (series[b] > series[a] ? b : a));
 }
 
+// (imágenes, bloque Q) Una sesión de cardio con su modalidad lleva la portada de esa modalidad (la pista, el camino, la
+// bici, la elíptica, el remo, la piscina o la comba); «Otro» o sin modalidad, la de cardio de siempre
+const CARDIO_IMG = { carrera: 'carrera', andar: 'andar', bici: 'bici', eliptica: 'eliptica', remo: 'remo', nadar: 'nadar', cuerda: 'comba' };
+export const MODALIDADES_IMG = Object.keys(CARDIO_IMG);
+export function imagenPortada(familia, modalidad = null) {
+  if (!familia) return null;
+  if (familia === 'cardio' && CARDIO_IMG[modalidad]) return `cardio-${CARDIO_IMG[modalidad]}`;
+  return `sesion-${familia}`;
+}
+
 // ---------- Los hábitos ----------
 // Una por icono de hábito (logica/habitos.js: ICONOS_HABITO); «Otro» (libre) y lo que no se conozca, la de las piedras
 const HABITOS = ['pasos', 'proteina', 'agua', 'sueno', 'movilidad', 'verdura'];
@@ -60,8 +70,14 @@ export function imagenComida(toma) { return COMIDAS[toma] ? `comida-${COMIDAS[to
 export const FONDOS_TARJETA = ['sesion', 'record', 'mes', 'bloque', 'racha'];
 export function fondoTarjeta(d = {}) {
   if (FONDOS_TARJETA.includes(d.fondo)) return `compartir-${d.fondo}`;
-  return d.records?.length ? 'compartir-record' : 'compartir-sesion';
+  if (d.records?.length) return 'compartir-record';
+  // (bloque Q) una sesión de cardio, con la portada de su modalidad
+  if (d.cardio && CARDIO_IMG[d.cardio.modalidad]) return `cardio-${CARDIO_IMG[d.cardio.modalidad]}`;
+  return 'compartir-sesion';
 }
+// Dónde va el motivo de un fondo apaisado al recortarlo para una tarjeta vertical (0 izquierda, 1 derecha): las de
+// cardio lo llevan a la derecha
+export function focoFondo(id) { return String(id || '').startsWith('cardio-') ? 0.8 : 0.5; }
 
 // ---------- Las medallas ----------
 // Una por logro (logica/logros.js) y nivel: bronce, plata, oro y diamante (el cuarto nivel)

@@ -32,6 +32,83 @@
       "1440": "imagenes/bienvenida/bienvenida-tarde-1440.82d3ea82.webp"
     }
   },
+  "cardio-andar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-andar-720.3e7589b1.webp",
+      "1080": "imagenes/cardio/cardio-andar-1080.ac6c962d.webp",
+      "1440": "imagenes/cardio/cardio-andar-1440.ffccd822.webp"
+    }
+  },
+  "cardio-bici": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-bici-720.9a6e51f7.webp",
+      "1080": "imagenes/cardio/cardio-bici-1080.e830c98f.webp",
+      "1440": "imagenes/cardio/cardio-bici-1440.5607ec2f.webp"
+    }
+  },
+  "cardio-carrera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-carrera-720.f5897466.webp",
+      "1080": "imagenes/cardio/cardio-carrera-1080.564a73cd.webp",
+      "1440": "imagenes/cardio/cardio-carrera-1440.596ddb97.webp"
+    }
+  },
+  "cardio-comba": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-comba-720.78a2d008.webp",
+      "1080": "imagenes/cardio/cardio-comba-1080.5d0bc0b1.webp",
+      "1440": "imagenes/cardio/cardio-comba-1440.fb0bbe04.webp"
+    }
+  },
+  "cardio-eliptica": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-eliptica-720.3d058666.webp",
+      "1080": "imagenes/cardio/cardio-eliptica-1080.776a2d99.webp",
+      "1440": "imagenes/cardio/cardio-eliptica-1440.5eb61571.webp"
+    }
+  },
+  "cardio-nadar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-nadar-720.cd6e9c3b.webp",
+      "1080": "imagenes/cardio/cardio-nadar-1080.b4b24612.webp",
+      "1440": "imagenes/cardio/cardio-nadar-1440.7c27226d.webp"
+    }
+  },
+  "cardio-remo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/cardio/cardio-remo-720.62fc7704.webp",
+      "1080": "imagenes/cardio/cardio-remo-1080.b7940012.webp",
+      "1440": "imagenes/cardio/cardio-remo-1440.35cd9231.webp"
+    }
+  },
   "carne-fondo": {
     "proporcion": [
       16,
