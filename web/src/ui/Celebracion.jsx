@@ -123,7 +123,7 @@ export function HitosEquipo() {
       <h2 id="hitos-t" class="hitos-t">Hitos del equipo</h2>
       <ul class="hitos-lista">
         {h.datos.map((x) => (
-          <li key={x.clave} class={x.alcanzado ? 'hecho' : ''}>
+          <li key={x.clave} class={x.alcanzado ? 'hecho' : ''} style={{ '--f': x.meta ? Math.min(1, x.valor / x.meta) : 0 }}>
             <span class="he-ico" aria-hidden="true">{x.alcanzado ? '🏅' : '○'}</span>
             <span class="he-texto">{x.titulo}</span>
             <span class="mini terciario num">{x.alcanzado ? 'Conseguido' : `${miles(Math.min(x.valor, x.meta))} de ${miles(x.meta)}`}</span>
