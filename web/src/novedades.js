@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.121': {
+    coach: [
+      'En la ficha, la nutrición con color: el plan con el de su fase y el de cada macro, ajuste y gasto más claros y las versiones en línea del tiempo.',
+      '«Desde su iPhone» en baldosas que dicen si cada cambio es a mejor o a peor, y comparar dos check-ins se lee de un vistazo.',
+    ],
+  },
   '0.120': {
     atleta: [
       'Más ilustraciones: el foco de tu semana en Semana y tu cardio con su dibujo según lo que hagas, también al compartirlo.',
