@@ -140,6 +140,11 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         </div>
         <div class="campo"><label for={`b-obj-${bloque.id}`}>Objetivo del bloque</label>
           <input id={`b-obj-${bloque.id}`} class="entrada" defaultValue={bloque.objetivo || ''} placeholder="Lo verá el atleta en su programa" onChange={(e) => guardar('bloques', bloque.id, { objetivo: nulo(e.currentTarget.value.trim()) })} /></div>
+        {/* (054) bloque terminado con objetivo escrito: ¿se logró? Queda en el informe del bloque */}
+        {bloque.objetivo && ['finalizado', 'cancelado'].includes(bloque.estado) && !bloque.es_plantilla && (
+          <div class="campo"><span class="etiqueta">¿Se logró el objetivo?</span>
+            <Segmentos valor={bloque.objetivo_logrado == null ? '' : bloque.objetivo_logrado ? 'si' : 'no'} opciones={[['si', 'Sí'], ['no', 'No'], ['', 'Sin decidir']]} alCambiar={(v) => guardar('bloques', bloque.id, { objetivo_logrado: v == null || v === '' ? null : v === 'si' })} etiqueta="¿Se logró el objetivo del bloque?" /></div>
+        )}
         {/* (v0.104) la música de todo el bloque (en las plantillas, no: se enlaza al bloque de cada atleta) */}
         {!bloque.es_plantilla && <CampoMusica clave={`bloque:${bloque.id}`} etiqueta="Música del bloque" />}
         <div class="fila-envolver">

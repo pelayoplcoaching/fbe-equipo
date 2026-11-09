@@ -120,7 +120,7 @@ export function informeBloque(d, hoy) {
   const total = cumplimiento({ sesiones, pautas, series: hechas, soloHechas: !!d.soloHechas }, hoy);
   const sesHechas = sesiones.filter((x) => x.completada);
   return {
-    bloque: { id: d.bloque.id, nombre: d.bloque.nombre, numero: d.bloque.numero, foco: d.bloque.foco || null, objetivo: d.bloque.objetivo || null },
+    bloque: { id: d.bloque.id, nombre: d.bloque.nombre, numero: d.bloque.numero, foco: d.bloque.foco || null, objetivo: d.bloque.objetivo || null, objetivo_logrado: d.bloque.objetivo_logrado ?? null },
     inicio, fin, terminado: fin < hoy, semanasTotal: semanas.length,
     sesiones: { hechas: sesHechas.length, total: sesiones.length },
     cumplimiento: total,

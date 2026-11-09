@@ -3,6 +3,7 @@ import { HojaAvisos } from '../Avisos.jsx';
 import { useEstrecha } from '../BarraMas.jsx';
 import { CabeceraGrande, useUnaVez, Siluetas, Reserva, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos, DegradadoAro } from '../comunes.jsx';
 import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO } from '../../logica/nivel.js';
+import { mensajeParaAlerta } from '../../logica/cierre.js';
 import { BandaDemo } from '../App.jsx';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
 import { hace, fmtCorta } from '../../logica/fechas.js';
@@ -68,6 +69,7 @@ const MOLESTIA = ['Sin dolor', 'Leve', 'Moderada', 'Grave'];
 
 export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = null, peticion = null, alBuscar, abrirCuenta, alCargar }) {
   const { api, perfil } = useApp();
+  const [pedir, setPedir] = useState(null);   // (054) { r, alerta } al que pedirle algo desde un aviso
   // (pulido 4) al volver a la lista se enseña al momento la última cargada y se pone al día por detrás
   const res = useCarga(() => api.resumenes(), [], { recuerdo: `resumenes:${api.uid()}` });
   // (pulido 3.10) Al poner el dedo sobre un atleta (unas décimas antes de que se abra su ficha) se empieza a pedir:
@@ -132,6 +134,22 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
         {deBaja.length > 0 && <button aria-pressed={filtro === 'baja' ? 'true' : 'false'} onClick={() => setFiltro('baja')}>De baja ({deBaja.length})</button>}
         {inactivos.length > 0 && <button aria-pressed={filtro === 'inactivos' ? 'true' : 'false'} onClick={() => setFiltro('inactivos')}>Sin actividad ({inactivos.length})</button>}
       </div>
+
+      {/* (054) en «Necesitan atención»: lo que pide cada aviso, para pedírselo con un mensaje hecho (editable) */}
+      {filtro === 'atencion' && !cargando && atencion.length > 0 && (
+        <section class="panel panel-pad pila-s pedir-lista" aria-label="Pedírselo en un toque">
+          <span class="mini terciario">Pedírselo en un toque</span>
+          <ul class="lista">
+            {atencion.flatMap((r) => r.alertas.filter((a) => a.nivel !== 'info' && mensajeParaAlerta(a, r.nombre)).slice(0, 1).map((a) => (
+              <li key={`${r.atleta_id}-${a.tipo}`} class="pedir-fila">
+                <span class="pila-xs"><strong class="peq">{r.nombre}</strong><span class="mini secundario">{a.texto}</span></span>
+                <button type="button" class="btn btn-peq" onClick={() => setPedir({ r, alerta: a })}><Icono n="mensaje" /> Pedírselo</button>
+              </li>
+            )))}
+          </ul>
+        </section>
+      )}
+      {pedir && <HojaPedir r={pedir.r} alerta={pedir.alerta} alCerrar={() => setPedir(null)} />}
 
       {cargando ? <Siluetas forma="lista" n={4} texto="Cargando tus atletas" /> : !vista.length ? (
         <div class="panel"><Vacio ilustracion="filtro" titulo={lista.length ? 'Nadie en esta lista' : 'Aún no hay atletas'}
@@ -313,4 +331,33 @@ function Cumple({ c, corto = false }) {
   const clase = c.series.pct >= 90 ? 'ok' : c.series.pct >= 75 ? '' : 'aviso';
   const detalle = `Series pautadas hechas en las 4 últimas semanas: ${c.series.hechas} de ${c.series.pautadas}`;
   return <div class={`mini cumple num ${clase}`} title={detalle}>{c.series.pct} % {corto ? 'hecho' : 'cumplido'}<span class="sr">. {detalle}</span></div>;
+}
+
+// (054) El mensaje que pide lo que falta (según el aviso), para retocarlo y mandarlo sin entrar en el chat
+function HojaPedir({ r, alerta, alCerrar }) {
+  const { api, aviso } = useApp();
+  const [texto, setTexto] = useState(() => mensajeParaAlerta(alerta, r.nombre) || '');
+  const [ocupado, una] = useUnaVez();
+  const primer = r.nombre.split(' ')[0];
+  const enviar = () => una(async () => {
+    const limpio = texto.trim();
+    if (!limpio) return;
+    try {
+      await api.enviarMensaje(r.atleta_id, { texto: limpio, autor: 'coach', clienteId: globalThis.crypto?.randomUUID?.() || `pedir-${Date.now()}` });
+      aviso(`Mensaje enviado a ${primer}`, 'ok');
+      alCerrar();
+    } catch (e) { aviso(e?.message || 'No se ha podido enviar', 'error'); }
+  });
+  return (
+    <Hoja titulo={`Pedírselo a ${primer}`} alCerrar={alCerrar} ancho={560}>
+      <div class="pila">
+        <p class="peq secundario pedir-aviso"><Icono n="alerta" width="16" height="16" /> {alerta.texto}</p>
+        <div class="pila-xs revision-nota">
+          <label class="peq secundario" for="pedir-texto">Mensaje (edítalo a tu gusto)</label>
+          <textarea id="pedir-texto" rows="4" maxLength={1000} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} />
+        </div>
+        <button type="button" class="btn btn-primario" style="justify-self:start" disabled={ocupado || !texto.trim()} onClick={enviar}><Icono n="enviar" /> Enviar</button>
+      </div>
+    </Hoja>
+  );
 }

@@ -34,6 +34,7 @@ import { HojaTarea } from '../Tareas.jsx';
 import { TarjetaMes } from './TuMes.jsx';
 import { TarjetaAnio } from './TuAnio.jsx';
 import { RecordatorioCompartir } from '../Compartir.jsx';
+import { textoCierreAuto } from '../../logica/cierre.js';
 import { TarjetaAniversario } from '../Celebracion.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { PantallaRacha, HitoRacha, useHitoRacha } from './Racha.jsx';
@@ -437,6 +438,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
             <span>Semana {semana.numero}</span>
             {semana.foco && <span>Foco: {NOMBRE_FOCO[semana.foco]?.toLowerCase()}</span>}
           </div>
+          {/* (054) el objetivo del bloque, a la vista cada día */}
+          {p.bloque.objetivo && <p class="hero-objetivo"><Icono n="bandera" /> {p.bloque.objetivo}</p>}
           {e.tipo === 'entreno' && enSemana && toca.hoy && <span class="chip toca-hoy"><Icono n="calendario" />Hoy toca</span>}
           {e.tipo === 'descanso' && <span class="chip toca-hoy descanso"><Icono n="sueno" />Día de descanso</span>}
           {e.tipo === 'hecha' && <span class="chip toca-hoy hecha"><Icono n="hecho" />Hecha hoy</span>}
@@ -494,6 +497,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {!propio && <TarjetaAnio />}
       {/* (compartir) «tu récord de ayer merece una historia», una vez y se puede quitar */}
       {!propio && <RecordatorioCompartir />}
+      {/* (054) una sesión que la app cerró sola (todas las series hechas, 3 horas sin tocar): pedir cómo fue */}
+      <CerradasPorTi sesiones={Object.values(p.sesiones || {}).flat()} hoy={hoy} abrirSesion={abrirSesion} />
       <Reserva id="hoy-informes"><BloqueTerminado salud={salud} /><SemanaPasada salud={salud} /></Reserva>
       {/* (diseño 9) Lo de debajo es detalle: va plegado en filas que se abren al tocarlas (y «Tu día» las abre al ir a ellas) */}
       {e.tipo === 'entreno' && siguiente && (
@@ -846,3 +851,28 @@ function SiguienteSesion({ sesion, ejercicios, cargando }) {
 
 export const diaSemana = (iso) => desdeISO(iso).getDay();
 export { rangoSemana };
+
+
+// (054) Las sesiones que la app cerró sola en los últimos 3 días: una tarjeta por sesión (hasta 2) para decir cómo fue;
+// se quita al tocarla, al escribir la nota o al descartarla (y queda descartada en este móvil)
+const VISTO_CIERRE = (id) => `fbe-cierre-visto-${id}`;
+const vistoCierre = (id) => { try { return !!localStorage.getItem(VISTO_CIERRE(id)); } catch { return false; } };
+function CerradasPorTi({ sesiones = [], hoy, abrirSesion }) {
+  const [, setV] = useState(0);
+  const xs = sesiones.filter((s) => s.completada && s.cerrada_sola_en && !s.nota_atleta && !vistoCierre(s.id)).map((s) => ({ s, c: textoCierreAuto(s, hoy) })).filter((x) => x.c).slice(0, 2);
+  if (!xs.length) return null;
+  const quitar = (id) => { try { localStorage.setItem(VISTO_CIERRE(id), '1'); } catch { /* nada */ } setV((v) => v + 1); };
+  return (
+    <>
+      {xs.map(({ s, c }) => (
+        <section key={s.id} class="panel panel-pad cierre-auto pila-xs" aria-label={c.titulo}>
+          <div class="separa">
+            <p class="peq"><strong>{c.titulo}</strong> · {c.texto}</p>
+            <button type="button" class="btn btn-icono plano" aria-label="Descartar" onClick={() => quitar(s.id)}><Icono n="cerrar" /></button>
+          </div>
+          <button type="button" class="btn btn-peq btn-primario" style="justify-self:start" onClick={() => { quitar(s.id); abrirSesion(s.id); }}><Icono n="editar" /> Decir cómo fue</button>
+        </section>
+      ))}
+    </>
+  );
+}

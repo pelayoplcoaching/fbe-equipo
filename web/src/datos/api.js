@@ -406,7 +406,9 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'comunidad_retos_progreso', 'comunidad_retos_equipos', 'comunidad_sesiones_recientes', 'comunidad_entrenando_ahora', 'comunidad_personas', 'foto_grande_de', 'conversaciones_resumen', 'ultimas_series', 'biblioteca_huella', 'historial_huella', 'rendimiento_apuntar', 'rendimiento_resumen', 'personal_mio', 'personal_atletas', 'mensajes_coach', 'musica_coach_lista', 'musica_para',
   'integraciones_mias', 'salud_diaria_de', 'atajos_lista', 'contactos',
   // (053) lo social que solo se lee
-  'comunidad_cumples', 'comunidad_duelos_mios', 'comunidad_intenciones', 'comunidad_padrinos_lista', 'comunidad_companero_semana', 'comunidad_huella', 'comunidad_sin_entrenar']);
+  'comunidad_cumples', 'comunidad_duelos_mios', 'comunidad_intenciones', 'comunidad_padrinos_lista', 'comunidad_companero_semana', 'comunidad_huella', 'comunidad_sin_entrenar',
+  // (054) las sesiones abiertas y la semana de un vistazo solo se leen
+  'sesiones_abiertas', 'atleta_resumen_semana']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -925,6 +927,46 @@ export function crearApi(backend) {
       if (!conFoto.length) return [];
       const personas = await api.personasComunidad();
       return conFoto.map((x) => ({ ...x, autor: personas[x.autor_id] || { nombre: 'Alguien del equipo' }, fotos: fotosDe(x) }));
+    },
+
+    // ------------------------------------------------------------ el cierre de la sesión y lo que el coach necesita (tanda «cierre», migración 054)
+    // ¿Está la 054? true / false / null (no se sabe). Sonda: sesiones_abiertas (devuelve una lista, vacía si no hay)
+    async cierre054() {
+      if (!api._v054) {
+        const pr = (async () => {
+          try { await b.rpc('sesiones_abiertas', {}); return true; } catch (e) {
+            const m = `${e?.message || ''} ${e?.code || ''}`;
+            if (/sesiones_abiertas|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v054 = pr;
+        pr.then((x) => { if (x == null && api._v054 === pr) api._v054 = null; });
+      }
+      return api._v054;
+    },
+    // Las sesiones con series y sin terminar (últimos 14 días): el coach, de todos o de uno; el atleta, las suyas. [] sin la 054
+    async sesionesAbiertas(atletaId = null) {
+      return (await b.rpc('sesiones_abiertas', atletaId ? { p_atleta: atletaId } : {}).catch(() => [])) || [];
+    },
+    // La semana de un atleta de un vistazo (atleta_resumen_semana); null sin la 054 o sin permiso
+    async resumenSemanaAtleta(atletaId, lunes = null) {
+      if (!atletaId) return null;
+      return (await b.rpc('atleta_resumen_semana', { p_atleta: atletaId, ...(lunes ? { p_lunes: lunes } : {}) }).catch(() => null)) || null;
+    },
+    // El atleta activa un hábito sugerido (de logica/cierre.js: HABITOS_SUGERIDOS)
+    async activarHabitoSugerido(h) {
+      const r = await b.rpc('habito_sugerido_activar', { p_nombre: h.nombre, p_tipo: h.tipo, p_objetivo: h.objetivo ?? null, p_unidad: h.unidad ?? null, p_sentido: h.sentido || 'al_menos', p_dias: h.dias || 7, p_icono: h.icono || 'libre' })
+        .catch((e) => { if (/habito_sugerido_activar|schema cache|does not exist|could not find/i.test(`${e?.message || ''}`)) throw new Error('Para activar hábitos sugeridos falta poner al día la base (migración 054).'); throw e; });
+      return r;
+    },
+    // El coach marca si el objetivo del bloque se consiguió (null: sin decidir)
+    async objetivoLogrado(bloqueId, valor) {
+      return (await b.update('bloques', { objetivo_logrado: valor }, { eq: { id: bloqueId } }).catch((e) => { if (/objetivo_logrado/.test(`${e?.message || ''}`)) throw new Error('Falta poner al día la base (migración 054).'); throw e; }))[0];
+    },
+    // El esfuerzo de la sesión en un toque (sin terminarla): como marcarSesion, por la cola
+    async esfuerzoSesion(sesionId, rpe) {
+      return api.marcarSesion(sesionId, { rpe_sesion: rpe == null ? null : Number(rpe) });
     },
 
     // ------------------------------------------------------------ integraciones (v0.105, migración 051)
@@ -1627,15 +1669,17 @@ export function crearApi(backend) {
     // Con lo que le pregunta su coach: los apartados (null = todos) y sus preguntas
     async checkin(atletaId, lunes) {
       const [checkin] = await b.select('checkins', { eq: { atleta_id: atletaId, semana_inicio: lunes } });
-      const [molestias, pesos, medidas, atleta, preguntas] = await Promise.all([
+      const [molestias, pesos, medidas, atleta, preguntas, anterior] = await Promise.all([
         b.select('molestias', { eq: { atleta_id: atletaId, semana_inicio: lunes } }),
         b.select('pesos', { eq: { atleta_id: atletaId }, order: [['fecha', 'desc']], limit: 2 }),
         b.select('medidas', { eq: { atleta_id: atletaId }, order: [['fecha', 'desc']], limit: 2 }),
         // Toda la fila (sin nombrar columnas: así funciona también sin la migración 018)
         b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null).catch(() => null),
         api.preguntasCheckin(atletaId).catch(() => []),
+        // (054) el de la semana anterior, para «igual que la semana pasada»
+        b.select('checkins', { eq: { atleta_id: atletaId, semana_inicio: sumarDias(lunes, -7) } }).then((x) => x[0] || null).catch(() => null),
       ]);
-      return { checkin: checkin || null, molestias, pesos, medidas, apartados: atleta?.checkin_apartados ?? null, nutricion: atleta?.nutricion !== false, preguntas };
+      return { checkin: checkin || null, molestias, pesos, medidas, apartados: atleta?.checkin_apartados ?? null, nutricion: atleta?.nutricion !== false, preguntas, anterior };
     },
     async guardarCheckin(atletaId, lunes, datos, molestias = {}, pesoKg = null) {
       const campos = ['horas_sueno', 'energia', 'recuperacion', 'motivacion', 'fc_reposo', 'hrv', 'adherencia_desayuno',
@@ -3466,7 +3510,8 @@ export function crearApi(backend) {
       const [resumenes, sinLeer, videos, con040] = await Promise.all([
         api.resumenes(hoy),
         b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'atleta_id,eliminado_en' }).then((xs) => xs.filter((c) => !c.eliminado_en)).catch(() => []),
-        b.select('archivos', { eq: { tipo: 'video' }, nulo: ['revisado_en'], cols: 'atleta_id' }).catch(() => []),
+        // (054: antes buscaba el tipo «video», que no existe: los vídeos sin revisar nunca salían en la revisión)
+        b.select('archivos', { eq: { tipo: 'video_tecnica' }, nulo: ['revisado_en'], cols: 'atleta_id' }).catch(() => []),
         api.revision040().catch(() => null),
       ]);
       const contar = (xs) => xs.reduce((m, x) => { m[x.atleta_id] = (m[x.atleta_id] || 0) + 1; return m; }, {});
@@ -3484,6 +3529,7 @@ export function crearApi(backend) {
           molestia: r.maxMolestia || 0,
           videos: V[r.atleta_id] || 0,
           mensajes: L[r.atleta_id] || 0,
+          peso: r.peso || null, ultimaSesion: r.ultimaSesion || null, alertas: r.alertas || [],
           hecha: !!esta?.hecha, nota: esta?.nota || '', notaAnterior: pasada?.nota || '',
         };
       });
@@ -4754,7 +4800,7 @@ export function crearApi(backend) {
         [pesos, checkins, molestias, ultimas],
         { todosBloques, todasSemanas, sem6, sem4, recientes, ses6, ses4, pau4, ser4, NAT },
         { habitosTodos, regsHab },
-        planesN, regsN, cambiosR, cuestionarios, pagosTodos,
+        planesN, regsN, cambiosR, cuestionarios, pagosTodos, abiertas054,
       ] = await Promise.all([
         delPrograma, delSeguimiento, delHistorial, delosHabitos,
         // Nutrición: sus planes y qué días ha apuntado en la última semana
@@ -4766,6 +4812,8 @@ export function crearApi(backend) {
         b.select('cuestionarios', { in: { atleta_id: ids }, cols: 'atleta_id,resultado,otras,completado_en,revisado_en' }).catch(() => []),
         // Cobros (v0.25, solo el coach; sin la migración 020, sin columna): cómo va cada uno, para verlo en el panel
         b.select('pagos', { in: { atleta_id: ids } }).catch(() => null),
+        // (054) Las sesiones empezadas y sin terminar (sin la migración, ninguna)
+        api.sesionesAbiertas().catch(() => []),
       ]);
       const lunesSem4 = Object.fromEntries(sem4.map((w) => [w.id, lunesDe(w.fecha_inicio)]));
       const bloqueDeSemana = Object.fromEntries(todasSemanas.map((w) => [w.id, w.bloque_id]));
@@ -4810,6 +4858,7 @@ export function crearApi(backend) {
           habitos: cumplimientoHabitos(habitosPorAtleta[a.id] || [], regsPorHabito, hoy),
           nutricion: a.nutricion === false ? [] : avisosNutricion({ planes: PN[a.id] || [], registros: RN[a.id] || [], ritmoReal: ritmoPeso(tendenciaPeso(P[a.id] || [])) }, hoy),
           cuestionario: avisoCuestionario(Q[a.id]),
+          abiertas: (abiertas054 || []).filter((x) => x.atleta_id === a.id),
           cambiosReceta: (CR[a.id] || []).length,
           diasNutricion: a.nutricion === false ? null : unicos((RN[a.id] || []).filter((x) => x.fecha > sumarDias(hoy, -7) && x.fecha <= hoy).map((x) => x.fecha)).length,
           diasSemana: nat ? nat.diasSemana : null, semanaNatural: nat ? nat.actual : null,
