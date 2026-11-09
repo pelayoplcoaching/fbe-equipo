@@ -16,6 +16,7 @@ export const NOVEDADES = {
       'En el chat, las cifras del atleta de un vistazo, y «Guardar como…» un mensaje en nota, tarea o recordatorio técnico.',
       'La revisión semanal y «Necesitan atención» te dejan el mensaje escrito; alertas de sesiones sin cerrar y de días sin pesarse.',
       'Vídeos que esperan 3 días o más, arriba en Revisar y en un aviso por la mañana. Necesita la migración 054 (comprobación 31).',
+      'En tu modo atleta, Conexiones en Progreso → Cuerpo; y en Atajos del iPhone, «Ir a mis conexiones» para crear tu clave y probar.',
     ],
   },
   '0.118': {
