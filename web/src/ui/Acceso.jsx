@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { useApp, Marca, Icono, Hoja } from './comunes.jsx';
 import { guardarActivacionPendiente } from './App.jsx';
 import { PRIVACIDAD, TEXTO_CONSENTIMIENTO_SALUD } from '../legal.js';
+import { Imagen } from './Imagen.jsx';
 
 const PERSONAS_DEMO = [
   ['pelayo@fbe.demo', 'Pelayo', 'Coach: panel de atletas y programación', 'P'],
@@ -39,7 +40,10 @@ export function Acceso() {
   }
 
   return (
-    <div class="app"><div class="acceso"><div class="acceso-caja">
+    <div class="app">
+      {/* (imágenes, bloque T) la noche de arriba: el lobo bajo la luna al entrar; la puerta del gimnasio al activar la cuenta */}
+      <Imagen key={vista === 'activar' ? 'activar' : 'acceso'} id={vista === 'activar' ? 'activar-fondo' : 'acceso-fondo'} clase="acceso-fondo" tamanos="(min-width: 700px) 480px, 85vw" prioridad />
+      <div class="acceso"><div class="acceso-caja">
       <Marca />
       {vista === 'entrar' && (
         <>

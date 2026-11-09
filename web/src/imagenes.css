@@ -119,3 +119,20 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .diario-comparar { --proporcion: 4 / 3; min-height: 7rem; }
 .diario-comparar > p { font-size: .9375rem; font-weight: 600; }
 @media (forced-colors: active) { .franja-ilu, .bdia-fondo, .carnet-foto { display: none; } }
+
+/* ── Bloque T · la entrada a la app ─────────────────────────────────────────────────────────────────────────────────────
+   Entrar y activar la cuenta: la ilustración vertical, centrada, en la franja de noche de arriba (diseno.css, bloque 17:
+   --noche); se funde hacia los lados y hacia abajo, antes de la tarjeta. Sin conexión al abrir: la antena apagada,
+   apaisada, arriba de la tarjeta de paso. */
+.app:has(> .acceso > .acceso-caja) { position: relative; overflow-x: clip; }
+/* (algo a la derecha del centro: la marca va arriba a la izquierda de la tarjeta y no se pisan) */
+.app > .acceso-fondo { position: absolute; z-index: 0; top: 0; left: 50%; transform: translateX(-35%); width: auto; max-width: none;
+  height: calc(var(--noche, 12rem) * 1.9); aspect-ratio: 2 / 3; object-fit: cover; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(var(--noche, 12rem) * .62), transparent calc(var(--noche, 12rem) * .98)), linear-gradient(to right, transparent, #000 20%, #000 80%, transparent);
+  -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, #000 0, #000 calc(var(--noche, 12rem) * .62), transparent calc(var(--noche, 12rem) * .98)), linear-gradient(to right, transparent, #000 20%, #000 80%, transparent);
+  mask-composite: intersect; }
+.app > .acceso-fondo ~ .acceso { position: relative; z-index: 1; }
+.acceso-paso .paso-foto { display: block; width: calc(100% + 40px); max-width: none; height: auto; aspect-ratio: 16 / 9; object-fit: cover; object-position: 70% 50%;
+  margin: -26px -20px 4px; border-top-left-radius: inherit; border-top-right-radius: inherit; background: #1A1143; }
+@media (min-width: 700px) { .acceso-paso .paso-foto { width: calc(100% + 60px); margin: -32px -30px 4px; } }
+@media (forced-colors: active) { .acceso-fondo, .paso-foto { display: none; } }

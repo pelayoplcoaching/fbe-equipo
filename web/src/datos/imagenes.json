@@ -1,4 +1,26 @@
 {
+  "acceso-fondo": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "480": "imagenes/acceso/acceso-fondo-480.7c082a00.webp",
+      "720": "imagenes/acceso/acceso-fondo-720.72c66739.webp",
+      "1024": "imagenes/acceso/acceso-fondo-1024.54e47a4b.webp"
+    }
+  },
+  "activar-fondo": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "480": "imagenes/acceso/activar-fondo-480.ea3eb519.webp",
+      "720": "imagenes/acceso/activar-fondo-720.936d0fb8.webp",
+      "1024": "imagenes/acceso/activar-fondo-1024.d515bec2.webp"
+    }
+  },
   "aniversario": {
     "proporcion": [
       3,
@@ -1363,6 +1385,17 @@
       "720": "imagenes/sesion/sesion-tiron-720.c06eff48.webp",
       "1080": "imagenes/sesion/sesion-tiron-1080.b54824e9.webp",
       "1440": "imagenes/sesion/sesion-tiron-1440.692c0ab7.webp"
+    }
+  },
+  "sin-conexion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/acceso/sin-conexion-480.82cdc6d5.webp",
+      "720": "imagenes/acceso/sin-conexion-720.70ca581f.webp",
+      "1080": "imagenes/acceso/sin-conexion-1080.e67eac86.webp"
     }
   }
 }

@@ -134,6 +134,7 @@ console.log('\nLa lista y la carpeta');
   check([3, 15, 22].every((h) => IMAGENES.includes(imagenBienvenida(h))) && ['programa', 'serie', 'coach'].every((d) => IMAGENES.includes(imagenPrimerosPasos(d))), 'las tres de bienvenida y las tres de la primera vez');
   check(HERRAMIENTAS.every((h) => IMAGENES.includes(imagenHerramienta(h))) && ['equipo-manada', 'equipo-reto', 'carne-fondo'].every((id) => IMAGENES.includes(id)), 'las cuatro herramientas, el equipo y el carné');
   check(FAMILIAS_PORTADA.every((fa) => IMAGENES.includes(`sesion-${fa}`)), 'están las siete portadas de sesión');
+  check(['acceso-fondo', 'activar-fondo'].every((id) => lista[id]?.proporcion.join(':') === '2:3') && lista['sin-conexion']?.proporcion.join(':') === '16:9', 'están las tres de la entrada a la app (dos verticales y la de sin conexión)');
   check(HITOS_IMG.every((h) => IMAGENES.includes(imagenHito(h))) && lista[IMAGEN_ANIVERSARIO]?.proporcion.join(':') === '3:1', 'están los cinco hitos y la franja del aniversario');
   check(MODALIDADES_IMG.every((m) => IMAGENES.includes(imagenPortada('cardio', m)) && lista[imagenPortada('cardio', m)].proporcion.join(':') === '16:9'), 'están las siete portadas de cardio, apaisadas');
   check(FOCOS_IMG.every((f) => IMAGENES.includes(imagenFoco(f)) && lista[imagenFoco(f)].proporcion.join(':') === '16:9'), 'están los ocho focos de la semana, apaisados');
