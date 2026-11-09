@@ -8,7 +8,7 @@
 export const NOVEDADES = {
   '0.121': {
     coach: [
-      'En la ficha, la nutrición con color: el plan con el de su fase y el de cada macro, ajuste y gasto más claros y las versiones en línea del tiempo.',
+      'En la ficha, la nutrición con color: el de su fase y el de cada macro, ajuste y gasto más claros y las versiones en línea del tiempo.',
       '«Desde su iPhone» en baldosas que dicen si cada cambio es a mejor o a peor, y comparar dos check-ins se lee de un vistazo.',
     ],
   },
