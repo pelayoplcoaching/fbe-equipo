@@ -39,7 +39,7 @@ const MENSAJES = {
   enlace: 'Esta clave ya no vale: copia la nueva en la app (Perfil → Conexiones → Salud del iPhone) y pégala en el atajo.',
   baja: 'Tu cuenta está de baja: ya no se guardan datos nuevos.',
   consentimiento: 'Falta tu consentimiento de datos de salud: dalo en la app (Perfil → Privacidad) y vuelve a probar.',
-  datos: 'No ha llegado nada que se pueda guardar (revisa el atajo: fecha, pasos, sueño, FC en reposo, HRV o peso).',
+  datos: 'No ha llegado nada que se pueda guardar (revisa el atajo: fecha, pasos, sueño, FC en reposo o HRV).',
   demasiados: 'Demasiados días de una vez: como mucho 31.',
 };
 

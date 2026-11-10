@@ -23,10 +23,10 @@ check(fechaDe('2026-02-30') === null && fechaDe('mañana') === null && fechaDe(5
 console.log('\nLo que manda el atajo, limpio');
 const hoy = '2026-11-08';
 const l1 = limpiarSalud({ fecha: hoy, pasos_ayer: '9.120', sueno_min: '7 h 10 min', fc_reposo: '58', hrv: '47,3', peso: '72,40 kg' }, hoy);
-check(l1.length === 2 && l1[0].fecha === hoy && l1[0].sueno_min === 430 && l1[0].fc_reposo === 58 && l1[0].hrv === 47.3 && l1[0].peso_kg === 72.4 && !('pasos' in l1[0]), 'un día: el sueño, el pulso, la HRV y el peso de hoy');
+check(l1.length === 2 && l1[0].fecha === hoy && l1[0].sueno_min === 430 && l1[0].fc_reposo === 58 && l1[0].hrv === 47.3 && !('peso_kg' in l1[0]) && !('pasos' in l1[0]), 'un día: el sueño, el pulso y la HRV de hoy (el peso, no: lo apuntan a mano)');
 check(l1[1].fecha === '2026-11-07' && l1[1].pasos === 9120, 'y los pasos de ayer, en ayer');
 const l2 = limpiarSalud({ dias: [{ fecha: '2026-11-06', steps: 100, sleep: 6.5 }, { fecha: '2026-11-06', pasos: 8000 }, { date: '2026-11-05', weight: 70 }] }, hoy);
-check(l2.length === 2 && l2[0].pasos === 8000 && l2[0].sueno_min === 390 && l2[1].peso_kg === 70, 'varios días, nombres en inglés y el mismo día dos veces (los pasos, el mayor)');
+check(l2.length === 1 && l2[0].pasos === 8000 && l2[0].sueno_min === 390, 'varios días, nombres en inglés y el mismo día dos veces (los pasos, el mayor)');
 check(limpiarSalud({ fc_reposo: 300, peso: 10, pasos: -5, hrv: 0 }, hoy).length === 0, 'fuera de rango, nada (y sin nada, no hay día)');
 check(limpiarSalud({ fecha: '2026-08-01', pasos: 5000 }, hoy).length === 0 && limpiarSalud({ fecha: '2026-11-10', pasos: 5000 }, hoy).length === 0, 'ni de hace más de 60 días ni del futuro');
 check(limpiarSalud({ pasos: 5000 }, hoy)[0]?.fecha === hoy && limpiarSalud('basura', hoy).length === 0 && limpiarSalud(null, hoy).length === 0, 'sin fecha, hoy; lo que no es un objeto, nada');
@@ -139,7 +139,8 @@ const huellas = (await q(`select salud_huella, calendario_huella from public.int
 check(huellas.salud_huella !== enlaceS && huellas.salud_huella.length === 64, 'la base guarda la huella, no el enlace');
 
 await servicio();
-const dSalud = limpiarSalud({ fecha: hoyM, pasos_ayer: 9100, sueno_min: 425, fc_reposo: 57, hrv: 51, peso: 63.2 }, hoyM);
+// (el atajo ya no manda el peso, pero la base lo sigue sabiendo guardar: se le añade a mano para probarla)
+const dSalud = limpiarSalud({ fecha: hoyM, pasos_ayer: 9100, sueno_min: 425, fc_reposo: 57, hrv: 51 }, hoyM).map((d) => (d.fecha === hoyM ? { ...d, peso_kg: 63.2 } : d));
 const r1 = await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [enlaceS, JSON.stringify(dSalud)]);
 check(r1?.ok && r1.dias === 2 && r1.pesos === 1 && r1.habitos === 2, 'la función guarda los días, los pasos y el sueño en sus hábitos y el peso');
 const r2 = await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [enlaceS, JSON.stringify([{ fecha: sumarDias(hoyM, -1), pasos: 5000 }, { fecha: hoyM, peso_kg: 99, fc_reposo: 400 }])]);

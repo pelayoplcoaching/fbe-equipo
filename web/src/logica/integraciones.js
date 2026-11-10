@@ -127,7 +127,8 @@ export function suenoPorOrigen(valores, duraciones, origenes) {
   return suma.size ? Math.round(Math.max(...suma.values()) / 60) : null;
 }
 
-// Lo que manda el atajo, limpio: [{ fecha, pasos, sueno_min, fc_reposo, hrv, peso_kg }] (de los 60 últimos días, hasta
+// (peso: fuera; los atletas se pesan y lo apuntan a mano, y la báscula no siempre está en Salud)
+// Lo que manda el atajo, limpio: [{ fecha, pasos, sueno_min, fc_reposo, hrv }] (de los 60 últimos días, hasta
 // 31, uno por fecha). Vale un día ({ … }), varios ([…] o { dias: […] }) y nombres en inglés (steps, sleep, weight…).
 // «pasos_ayer» va al día anterior a «fecha» (el atajo de la mañana manda los pasos de ayer y el sueño de esta noche).
 // «pasos_ayer_origen» + «pasos_ayer_valor» (y «pasos_origen» + «pasos_valor»): los pasos por aparato (pasosPorOrigen).
@@ -155,13 +156,11 @@ export function limpiarSalud(cuerpo, hoy = hoyISO()) {
       : minutosSueno(x.sueno_min ?? x.sueno ?? x.sleep_min ?? x.sleep));
     const fc = enRango('fc_reposo', red(numero(x.fc_reposo ?? x.resting_hr ?? x.fc), 0));
     const hrv = enRango('hrv', red(numero(x.hrv), 1));
-    const peso = enRango('peso_kg', red(numero(x.peso_kg ?? x.peso ?? x.weight), 2));
     poner(fecha, 'pasos', pasos);
     poner(sumarDias(fecha, -1), 'pasos', ayer);
     poner(fecha, 'sueno_min', sueno);
     poner(fecha, 'fc_reposo', fc);
     poner(fecha, 'hrv', hrv);
-    poner(fecha, 'peso_kg', peso);
   }
   return [...porFecha.values()].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 31);
 }

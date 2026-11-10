@@ -1,5 +1,5 @@
 // «Conexiones» (v0.105, migración 051): Salud del iPhone (por la app Atajos) y el calendario que se actualiza solo.
-//   * Salud → app: el atajo «FBE Salud» del coach lee de Salud los pasos, el sueño, la FC en reposo, la HRV y el peso y
+//   * Salud → app: el atajo «FBE Salud» del coach lee de Salud los pasos, el sueño, la FC en reposo y la HRV y
 //     los manda con el enlace personal del atleta. El check-in viene relleno, los pasos se apuntan solos y su coach ve
 //     cómo descansa. Hace falta su consentimiento de datos de salud.
 //   * App → Salud: el atajo «FBE a Salud» apunta en Salud el entreno al terminarlo (un botón en el resumen de la sesión).
@@ -14,6 +14,7 @@ import { conEntrenamiento } from '../../logica/nivel.js';
 import { esIOS } from '../pulido.js';
 import { fmtCorta } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
+import { miles } from '../../logica/celebracion.js';
 
 export const PREF_ATAJO_ENTRENO = 'fbe-atajo-entreno';
 
@@ -32,9 +33,9 @@ export function Conexiones({ salud }) {
   const entrena = conEntrenamiento(atleta);
   const cerrar = () => { setAbrir(null); datos.recargar(true); };
   return (
-    <GrupoIos titulo="Conexiones" id="grupo-conexiones" pie={propio ? 'Tu ficha de atleta: lo que llegue de tu iPhone va a tus hábitos, tus pesos y tu progreso. Sirve también para probar tus atajos antes de compartirlos.' : 'Tus datos solo van de tu móvil a la app y los ve tu coach. Lo puedes quitar cuando quieras.'}>
+    <GrupoIos titulo="Conexiones" id="grupo-conexiones" pie={propio ? 'Tu ficha de atleta: lo que llegue de tu iPhone va a tus hábitos y tu progreso. Sirve también para probar tus atajos antes de compartirlos.' : 'Tus datos solo van de tu móvil a la app y los ve tu coach. Lo puedes quitar cuando quieras.'}>
       <FilaIos icono="pasos" tono={i.salud?.activa ? 'ok' : ''} clase={`conexion-salud ${i.salud?.activa ? 'conectada' : ''}`} titulo="Salud del iPhone"
-        detalle={i.salud?.activa ? (i.salud.ultimo ? `Conectada · último envío ${haceDias(i.salud.ultimo)}` : 'Conectada · aún no ha llegado nada') : 'Pasos, sueño, pulso y peso, sin apuntarlos'}
+        detalle={i.salud?.activa ? (i.salud.ultimo ? `Conectada · último envío ${haceDias(i.salud.ultimo)}` : 'Conectada · aún no ha llegado nada') : 'Pasos, sueño, pulso y HRV, sin apuntarlos'}
         alTocar={() => setAbrir('salud')} etiqueta="Salud del iPhone: conectar o ver" />
       {entrena && <FilaIos icono="calendario" tono={i.calendario?.activo ? 'ok' : ''} clase={`conexion-calendario ${i.calendario?.activo ? 'conectada' : ''}`} titulo="Tus entrenos en tu calendario"
         detalle={i.calendario?.activo ? `Suscrito · ${i.calendario.hora}` : 'Se actualiza solo cuando cambia el plan'}
@@ -91,7 +92,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
   return (
     <Hoja titulo="Salud del iPhone" alCerrar={alCerrar}>
       <div class="pila conexiones">
-        <p class="peq secundario salud-intro">Tu iPhone le pasa a la app, una vez al día, tus <strong>pasos</strong>, cuánto has <strong>dormido</strong>, tu <strong>pulso en reposo</strong>, tu <strong>variabilidad (HRV)</strong> y tu <strong>peso</strong>. {propio ? 'Así tus pasos, tu sueño y tu peso se apuntan solos en tu ficha.' : 'Así el check-in viene relleno, tus pasos se apuntan solos en tus hábitos y tu coach ve cómo descansas sin preguntarte.'} Se hace con la app Atajos, que ya viene en el iPhone.</p>
+        <p class="peq secundario salud-intro">Tu iPhone le pasa a la app, una vez al día, tus <strong>pasos</strong>, cuánto has <strong>dormido</strong>, tu <strong>pulso en reposo</strong> y tu <strong>variabilidad (HRV)</strong>. {propio ? 'Así tus pasos y tu sueño se apuntan solos en tu ficha.' : 'Así el check-in viene relleno, tus pasos se apuntan solos en tus hábitos y tu coach ve cómo descansas sin preguntarte.'} Se hace con la app Atajos, que ya viene en el iPhone.</p>
         {!ios && <p class="nota peq">Esto es para iPhone: Apple lo deja hacer con Atajos. En Android, una web no puede leer los datos de salud del móvil.</p>}
         {!salud ? (
           <p class="nota peq">Para traer datos de Salud hace falta tu consentimiento de datos de salud (en tu perfil, en Cuenta → Datos de salud).</p>
@@ -118,7 +119,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
               )}
             </Paso>
             <Paso n={3} titulo="Que vaya solo cada mañana">
-              <span class="peq secundario">En Atajos: <strong>Automatización</strong> → <strong>+</strong> → <strong>Hora del día</strong> (por ejemplo, las 9:00, cada día) → <strong>Ejecutar inmediatamente</strong> → elige «{ATAJO_SALUD}». Manda los pasos de ayer y el sueño, el pulso y el peso de hoy.</span>
+              <span class="peq secundario">En Atajos: <strong>Automatización</strong> → <strong>+</strong> → <strong>Hora del día</strong> (por ejemplo, las 9:00, cada día) → <strong>Ejecutar inmediatamente</strong> → elige «{ATAJO_SALUD}». Manda los pasos de ayer y el sueño, el pulso y la HRV de hoy.</span>
             </Paso>
           </ol>
         )}
@@ -146,7 +147,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
         {activa && (confirmar === 'quitar' ? (
           <div class="nota pila-s">
             <span class="peq">El atajo dejará de poder mandar nada. Bórralo también de Atajos si ya no lo quieres.</span>
-            <label class="fila conexion-check"><input type="checkbox" checked={borrar} onChange={(e) => setBorrar(e.currentTarget.checked)} /><span class="peq">Borrar también lo que ha llegado de Salud (y lo que puso en tus hábitos y pesos, si no lo has cambiado tú)</span></label>
+            <label class="fila conexion-check"><input type="checkbox" checked={borrar} onChange={(e) => setBorrar(e.currentTarget.checked)} /><span class="peq">Borrar también lo que ha llegado de Salud (y lo que puso en tus hábitos, si no lo has cambiado tú)</span></label>
             <span class="fila"><button type="button" class="btn btn-peq" onClick={() => setConfirmar(null)}>Cancelar</button><button type="button" class="btn btn-peq btn-peligro" disabled={ocupado} onClick={quitar}>Desconectar</button></span>
           </div>
         ) : <button type="button" class="btn btn-plano peligro" onClick={() => setConfirmar('quitar')}>Desconectar Salud</button>)}
@@ -160,16 +161,15 @@ export function TablaSalud({ dias }) {
   return (
     <div class="tabla-salud-caja">
       <table class="tabla-salud num">
-        <thead><tr><th scope="col">Día</th><th scope="col">Pasos</th><th scope="col">Sueño</th><th scope="col">Pulso</th><th scope="col">HRV</th><th scope="col">Peso</th></tr></thead>
+        <thead><tr><th scope="col">Día</th><th scope="col">Pasos</th><th scope="col">Sueño</th><th scope="col">Pulso</th><th scope="col">HRV</th></tr></thead>
         <tbody>
           {dias.map((d) => (
             <tr key={d.fecha}>
               <th scope="row">{fmtCorta(d.fecha)}</th>
-              <td>{d.pasos != null ? num(d.pasos, 0) : '—'}</td>
+              <td>{d.pasos != null ? miles(d.pasos) : '—'}</td>
               <td>{d.sueno_min != null ? textoSueno(d.sueno_min) : '—'}</td>
               <td>{d.fc_reposo ?? '—'}</td>
               <td>{d.hrv != null ? num(d.hrv, 0) : '—'}</td>
-              <td>{d.peso_kg != null ? num(d.peso_kg, 1) : '—'}</td>
             </tr>
           ))}
         </tbody>

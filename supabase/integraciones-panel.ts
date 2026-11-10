@@ -234,13 +234,11 @@ function limpiarSalud(cuerpo, hoy = hoyISO()) {
     const sueno = enRango("sueno_min", suenoPorOrigen(x.sueno_valor, x.sueno_duracion, x.sueno_origen)) ?? enRango("sueno_min", x.sueno_h != null || x.sleep_h != null ? minutosSueno(x.sueno_h ?? x.sleep_h, { horas: true }) : minutosSueno(x.sueno_min ?? x.sueno ?? x.sleep_min ?? x.sleep));
     const fc = enRango("fc_reposo", red(numero(x.fc_reposo ?? x.resting_hr ?? x.fc), 0));
     const hrv = enRango("hrv", red(numero(x.hrv), 1));
-    const peso = enRango("peso_kg", red(numero(x.peso_kg ?? x.peso ?? x.weight), 2));
     poner(fecha, "pasos", pasos);
     poner(sumarDias(fecha, -1), "pasos", ayer);
     poner(fecha, "sueno_min", sueno);
     poner(fecha, "fc_reposo", fc);
     poner(fecha, "hrv", hrv);
-    poner(fecha, "peso_kg", peso);
   }
   return [...porFecha.values()].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 31);
 }
@@ -268,7 +266,7 @@ var MENSAJES = {
   enlace: "Esta clave ya no vale: copia la nueva en la app (Perfil → Conexiones → Salud del iPhone) y pégala en el atajo.",
   baja: "Tu cuenta está de baja: ya no se guardan datos nuevos.",
   consentimiento: "Falta tu consentimiento de datos de salud: dalo en la app (Perfil → Privacidad) y vuelve a probar.",
-  datos: "No ha llegado nada que se pueda guardar (revisa el atajo: fecha, pasos, sueño, FC en reposo, HRV o peso).",
+  datos: "No ha llegado nada que se pueda guardar (revisa el atajo: fecha, pasos, sueño, FC en reposo o HRV).",
   demasiados: "Demasiados días de una vez: como mucho 31."
 };
 function fraseGuardado(r) {
