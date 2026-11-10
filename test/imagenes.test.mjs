@@ -3,7 +3,7 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, imagenLugar, imagenBienvenida, imagenPrimerosPasos, imagenHerramienta, HERRAMIENTAS, FAMILIAS_PORTADA, IMAGENES, imagenFoco, FOCOS_IMG, FRASE_FOCO, imagenPortada, MODALIDADES_IMG, focoFondo, imagenHito, HITOS_IMG, IMAGEN_ANIVERSARIO } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, imagenLugar, imagenBienvenida, imagenPrimerosPasos, imagenHerramienta, HERRAMIENTAS, FAMILIAS_PORTADA, IMAGENES, imagenFoco, FOCOS_IMG, FRASE_FOCO, imagenPortada, MODALIDADES_IMG, focoFondo, imagenHito, HITOS_IMG, IMAGEN_ANIVERSARIO, imagenEjercicio } from '../web/src/logica/imagenes.js';
 import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 import { GRUPOS } from '../web/src/logica/calculos.js';
 import { TOMAS } from '../web/src/logica/comidas.js';
@@ -94,6 +94,7 @@ check(imagenBienvenida(6) === 'bienvenida-manana' && imagenBienvenida(13) === 'b
 check(imagenBienvenida(21) === 'bienvenida-noche' && imagenBienvenida(0) === 'bienvenida-noche' && imagenBienvenida(5) === 'bienvenida-noche' && imagenBienvenida('x') === null, 'y la noche el resto');
 check(imagenPrimerosPasos('programa') === 'primeros-programa' && imagenPrimerosPasos('serie') === 'primeros-sesion' && imagenPrimerosPasos('coach') === 'primeros-checkin' && imagenPrimerosPasos('instalar') === null, 'primera vez: programa, sesión y check-in; instalar, con su dibujo');
 check(HERRAMIENTAS.every((h) => imagenHerramienta(h) === `herr-${h}`) && imagenHerramienta('otra') === null, 'cada herramienta, su imagen');
+check(imagenEjercicio({ id: 'b5bd480c-5617-4d6b-9811-d850e3614db9', nombre: 'Otro nombre' }) === 'abd-ab-wheel' && imagenEjercicio({ id: 'x', nombre: 'Crunch en Maquina ' }) === 'abd-crunch-maquina' && imagenEjercicio({ id: 'x', nombre: 'Sin imagen' }) === null && imagenEjercicio(null) === null, 'la figura de cada ejercicio, por id y, si no, por nombre');
 check(imagenHito(4) === 'hito-4' && imagenHito(26) === 'hito-26' && imagenHito(52) === 'hito-52' && imagenHito(104) === 'hito-52' && imagenHito(10) === 'hito-8' && imagenHito(3) === null, 'el fuego de cada hito de la racha (más allá de 52, la de 52)');
 check(imagenPortada('cardio', 'cuerda') === 'cardio-comba' && imagenPortada('cardio', 'carrera') === 'cardio-carrera' && imagenPortada('cardio', 'otro') === 'sesion-cardio' && imagenPortada('cardio') === 'sesion-cardio' && imagenPortada('pierna', 'bici') === 'sesion-pierna' && imagenPortada(null) === null, 'la portada del cardio, por modalidad («Otro», la de siempre)');
 check(fondoTarjeta({ cardio: { modalidad: 'remo' } }) === 'cardio-remo' && fondoTarjeta({ cardio: { modalidad: 'remo' }, records: [1] }) === 'compartir-record' && fondoTarjeta({ cardio: { modalidad: 'otro' } }) === 'compartir-sesion' && focoFondo('cardio-remo') === 0.8 && focoFondo('compartir-sesion') === 0.5, 'la tarjeta de una sesión de cardio, con su modalidad y el motivo a la derecha');
@@ -135,6 +136,9 @@ console.log('\nLa lista y la carpeta');
   check(HERRAMIENTAS.every((h) => IMAGENES.includes(imagenHerramienta(h))) && ['equipo-manada', 'equipo-reto', 'carne-fondo'].every((id) => IMAGENES.includes(id)), 'las cuatro herramientas, el equipo y el carné');
   check(FAMILIAS_PORTADA.every((fa) => IMAGENES.includes(`sesion-${fa}`)), 'están las siete portadas de sesión');
   check(['acceso-fondo', 'activar-fondo'].every((id) => lista[id]?.proporcion.join(':') === '2:3') && lista['sin-conexion']?.proporcion.join(':') === '16:9', 'están las tres de la entrada a la app (dos verticales y la de sin conexión)');
+  { const EJ = JSON.parse(readFileSync(new URL('../web/src/datos/ejercicios-imagenes.json', import.meta.url), 'utf8'));
+    const ids = [...new Set([...Object.values(EJ.porId), ...Object.values(EJ.porNombre)])];
+    check(ids.length >= 13 && ids.every((id) => lista[id]?.proporcion.join(':') === '1:1' && lista[id].archivos['192'] && lista[id].archivos['512']), `están las ${ids.length} figuras de ejercicio, cuadradas, a 192 y 512`); }
   check(HITOS_IMG.every((h) => IMAGENES.includes(imagenHito(h))) && lista[IMAGEN_ANIVERSARIO]?.proporcion.join(':') === '3:1', 'están los cinco hitos y la franja del aniversario');
   check(MODALIDADES_IMG.every((m) => IMAGENES.includes(imagenPortada('cardio', m)) && lista[imagenPortada('cardio', m)].proporcion.join(':') === '16:9'), 'están las siete portadas de cardio, apaisadas');
   check(FOCOS_IMG.every((f) => IMAGENES.includes(imagenFoco(f)) && lista[imagenFoco(f)].proporcion.join(':') === '16:9'), 'están los ocho focos de la semana, apaisados');

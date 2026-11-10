@@ -7,7 +7,7 @@ import { fmtCorta, hoyISO } from '../logica/fechas.js';
 import { pesoNum, pesoTxt, etiquetaPeso, difVista } from '../logica/unidades.js';
 import { BotonModelo } from './tecnica/Modelos.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
-import { imagenGrupo } from '../logica/imagenes.js';
+import { imagenGrupo, imagenEjercicio } from '../logica/imagenes.js';
 import { HojaCompartir } from './Compartir.jsx';
 import { datosComparativa } from '../logica/compartir.js';
 
@@ -25,16 +25,32 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
   // (imágenes) si el ejercicio llega sin sus grupos (desde la vitrina de récords), los de sus series
   const gruposEj = ejercicio.grupos_musculares?.length ? ejercicio.grupos_musculares : (d?.series?.find((s) => s.grupos?.length)?.grupos || []);
   const grupos = gruposEj.map((g) => NOMBRE_GRUPO[g]).filter(Boolean).join(', ');
+  // (imágenes, ejercicios) la figura en el momento clave del ejercicio; tocarla la abre en grande
+  const imgEj = hayImagen(imagenEjercicio(ejercicio)) ? imagenEjercicio(ejercicio) : null;
+  const [grande, setGrande] = useState(false);
   return (
     <Hoja titulo={ejercicio.nombre} alCerrar={alCerrar} ancho={680} medio clase="ficha-ejercicio">
       {/* v0.50: su pictograma (el patrón de movimiento) junto a los músculos */}
       {/* (imágenes) con grupo principal conocido, la cabecera oscura con la estatua de ese grupo a la derecha */}
-      {hayImagen(imagenGrupo(gruposEj)) ? (
+      {imgEj ? (
+        <div class="cab-ilu ficha-ej-cab ficha-ej-ilu ficha-ej-foto">
+          <p><PictoEjercicio ejercicio={ejercicio} clase="picto-grande" /><span>{grupos}</span></p>
+          <button type="button" class="ficha-ej-foto-btn" onClick={() => setGrande(true)} aria-label={`Ver la imagen de ${ejercicio.nombre} en grande`}>
+            <Imagen key={imgEj} id={imgEj} clase="cab-ilu-img" tamanos="11rem" />
+          </button>
+        </div>
+      ) : hayImagen(imagenGrupo(gruposEj)) ? (
         <div class="cab-ilu ficha-ej-cab ficha-ej-ilu">
           <p><PictoEjercicio ejercicio={ejercicio} clase="picto-grande" /><span>{grupos}</span></p>
           <Imagen key={imagenGrupo(gruposEj)} id={imagenGrupo(gruposEj)} clase="cab-ilu-img" tamanos="10rem" />
         </div>
       ) : <p class="ficha-ej-cab peq secundario"><PictoEjercicio ejercicio={ejercicio} clase="picto-grande" /><span>{grupos || 'Sin grupo muscular'}</span></p>}
+      {grande && imgEj && (
+        <Hoja titulo={ejercicio.nombre} alCerrar={() => setGrande(false)} ancho={560}>
+          <Imagen id={imgEj} clase="ficha-ej-grande" tamanos="(min-width: 600px) 512px, 92vw" prioridad />
+          <p class="mini secundario">La posición clave del ejercicio. Para la técnica completa, el vídeo{ejercicio.video_url ? ' de la pestaña Técnica' : ' de tu coach'}.</p>
+        </Hoja>
+      )}
       <Pestanas opciones={pestanas} valor={vista} alCambiar={setVista} etiqueta="Ficha del ejercicio" clase="pestanas-ficha" idBase="fej" />
       <div class="pestana-panel" role="tabpanel" id="fej-panel" aria-labelledby={`fej-${vista}`} key={vista}>
         {vista === 'tecnica' ? <Tecnica ejercicio={ejercicio} modelos={modelos.datos || []} />

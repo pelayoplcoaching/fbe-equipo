@@ -10,7 +10,7 @@ import { arteSesion } from '../../logica/arte.js';
 import { resumenPautas } from '../../logica/diseno.js';
 import { pauta, NOMBRE_GRUPO, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_TIPO_SESION } from '../../logica/calculos.js';
 import { cardioValido } from '../../logica/cardio.js';
-import { familiaPortada, imagenPortada } from '../../logica/imagenes.js';
+import { familiaPortada, imagenPortada, imagenEjercicio } from '../../logica/imagenes.js';
 import { Imagen } from '../Imagen.jsx';
 import { RecordAlAlcance } from './Personal.jsx';
 import { MusicaSesion } from './Musica.jsx';
@@ -86,7 +86,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
                 const pa = pauta(e);
                 return (
                   <li class="ej-fila" key={e.id}>
-                    <span class="ej-marca"><PictoEjercicio ejercicio={e.ejercicio} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
+                    <span class="ej-marca"><Imagen id={imagenEjercicio(e.ejercicio)} clase="miniatura-ej ej-mini" tamanos="40px" alternativa={<PictoEjercicio ejercicio={e.ejercicio} />} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
                     <div>
                       <div class="nombre">{etiquetas[e.id] && <span class="ss-etq">{etiquetas[e.id]}</span>}{e.ejercicio.nombre}</div>
                       <div class="pauta"><span class="num">{pa.series}</span>{pa.esfuerzo && <span>{pa.esfuerzo}</span>}{pa.carga && <span class="num">{pa.carga}</span>}{e.variante && <span>{e.variante}</span>}</div>

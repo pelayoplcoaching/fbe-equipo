@@ -81,6 +81,7 @@ await su();
 // Ana y Bea llevan 70 días dentro; Cris 3; Dani 20
 await q(`update public.comunidad_miembros set creado_en = now() - interval '70 days', entrado_en = now() - interval '70 days' where atleta_id in ($1, $2)`, [atletas.a, atletas.b]);
 await q(`update public.comunidad_miembros set creado_en = now() - interval '3 days', entrado_en = now() - interval '3 days' where atleta_id = $1`, [atletas.c]);
+// (a mediodía de Madrid de hace 20 días: con «now() - 20 días» a última hora y un cambio de hora por medio, salían 19)
 await q(`update public.comunidad_miembros set creado_en = (((now() at time zone 'Europe/Madrid')::date - 20) + time '12:00') at time zone 'Europe/Madrid', entrado_en = (((now() at time zone 'Europe/Madrid')::date - 20) + time '12:00') at time zone 'Europe/Madrid' where atleta_id = $1`, [atletas.d]);
 
 await como(ids.a);
