@@ -380,6 +380,9 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   // (diseño, tanda 20) La semana completa se celebra una vez: confeti la primera vez que Hoy la enseña (y la tarjeta
   // lo recuerda, por atleta y semana), no cada vez que se vuelve. Con «reducir movimiento», el confeti no sale.
   const [semanaCelebrada, setSemanaCelebrada] = usePreferencia('fbe-semana-celebrada', null);
+  // (diseño, tanda 47) se vuelve del resumen de la sesión recién terminada («Volver a hoy»): la tarjeta lo celebra una vez
+  const recienHecha = useRef(null);
+  if (recienHecha.current === null) { try { recienHecha.current = sessionStorage.getItem('fbe-recien-hecha') === '1'; sessionStorage.removeItem('fbe-recien-hecha'); } catch { recienHecha.current = false; } }
   // (con objetivo de días por semana, se espera a la constancia: la clave lleva el lunes de la semana natural)
   const claveSemana = e.tipo === 'semana' && semana && (!dias || constancia.datos) ? `${atleta.id}:${semana.id}:${natural?.lunes || semana.fecha_inicio || ''}` : null;
   useEffect(() => {
@@ -429,7 +432,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   return (
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} panel={panelDia} alCerrar={cerrarDia} />}
-      <section class={`hero-dia hero-${e.tipo}`} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
+      <section class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
         {e.tipo !== 'entreno' && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
         {/* (diseño, tanda 15) el dibujo de la sesión (el mismo de su portada), al fondo de la tarjeta: cada día, el suyo.
             Sale cuando ya se sabe qué ejercicios lleva (su patrón principal decide el dibujo): así es el mismo que verá al abrirla */}

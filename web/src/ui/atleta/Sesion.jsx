@@ -118,6 +118,20 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // (diseño, tanda 43) la escena del final (la luna y el lobo): null | { records, semana, saliendo }. El resumen se monta
   // cuando la escena empieza a irse (o al momento, si no hay escena)
   const [escena, setEscena] = useState(null);
+  // (diseño, tanda 47) el ejercicio (o la superserie) que se acaba de completar: su tramo de la barra y su tarjeta lo
+  // celebran un momento. Los tramos se calculan más abajo (tras los retornos tempranos): aquí llegan por una referencia.
+  const tramosRef = useRef(null);
+  const completosAntes = useRef(null);
+  const [recienTramo, setRecienTramo] = useState(null);
+  useEffect(() => {
+    const ahora = (tramosRef.current || []).filter((t) => t.completo).map((t) => t.id);
+    const antes = completosAntes.current;
+    completosAntes.current = ahora;
+    if (!antes || !tramosRef.current) return;
+    const nuevo = ahora.find((x) => !antes.includes(x));
+    if (nuevo != null) setRecienTramo(nuevo);
+  });
+  useEffect(() => { if (recienTramo == null) return undefined; const t = setTimeout(() => setRecienTramo(null), 1600); return () => clearTimeout(t); }, [recienTramo]);
   const [verDinamica, setVerDinamica] = useState(true);
   const [calculadora, setCalculadora] = useState(false); // false | true | { kg } (desde el teclado: los discos de esa carga)
   const [intervalos, setIntervalos] = useState(null);       // null | { inicial }
@@ -340,6 +354,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   }
   // v0.51: un tramo por ejercicio (o superserie) arriba; tocarlo lleva a ese ejercicio
   const tramos = !sesion.completada && ejercicios.length > 0 ? tramosSesion(ejercicios, hechas, prox?.id || null) : [];
+  tramosRef.current = tramos;
   function irAEjercicio(seId) {
     const art = document.querySelector(`[data-se="${seId}"]`);
     if (!art) return;
@@ -652,7 +667,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
                 const nombre = t.letra ? `Superserie ${t.letra}: ${t.ids.map((x) => actualDe(pautaDe[x]).nombre).join(' y ')}` : actualDe(pautaDe[t.id]).nombre;
                 return (
                   <li key={t.id}>
-                    <a href={`#ej-${t.id}`} class={t.completo ? 'completo' : ''} aria-current={t.actual ? 'step' : undefined}
+                    <a href={`#ej-${t.id}`} class={`${t.completo ? 'completo' : ''}${t.id === recienTramo ? ' recien' : ''}`} aria-current={t.actual ? 'step' : undefined}
                       aria-label={`${nombre}: ${t.hechas} de ${t.series} series${t.actual ? ', ahora' : ''}`} onClick={(ev) => { ev.preventDefault(); irAEjercicio(t.id); }}>
                       <span class="tramo-barra" aria-hidden="true"><span class="tramo-lleno" style={{ width: `${t.frac * 100}%` }} /></span>
                     </a>
@@ -715,7 +730,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           const actual = actualDe(e);
           const cambiado = actual.id !== e.ejercicio.id;
           return (
-            <Ejercicio key={e.id} e={e} actual={cambiado ? actual : null} ultimas={cambiado ? ultimas[actual.id] || null : e.ultimas}
+            <Ejercicio key={e.id} recienHecho={!!recienTramo && tramos.some((t) => t.id === recienTramo && t.ids.includes(e.id))} e={e} actual={cambiado ? actual : null} ultimas={cambiado ? ultimas[actual.id] || null : e.ultimas}
               foco={semana?.foco} progresionAuto={progresionAuto && !cambiado && !frenar} etiqueta={etiquetas[e.id]} records={records}
               nota={notas[actual.id]} guardarNota={(t) => guardarNota(actual.id, t)}
               coach={det.datos.coach?.[actual.id] || null}
@@ -845,7 +860,17 @@ function Cronometro({ inicio, minutos, hechas, total }) {
   );
 }
 
-function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
+// (diseño, tanda 47) La misma serie de la última vez (kilos en la unidad que se ve y repeticiones), para la pastilla
+// «+2,5 kg que la última vez» de FilaSerie; null si ese día no hizo esa serie
+function serieDeAntes(ultimas, numero) {
+  const x = (ultimas?.series || []).find((q) => Number(q.numero) === numero);
+  if (!x || x.reps == null) return null;
+  // (sin kilos, con el peso del cuerpo: cuentan las repeticiones)
+  const kg = Number(x.kg) > 0 ? Number(x.kg) : 0;
+  return { kg: kg && enLibras() ? vista(kg) : kg, reps: Number(x.reps) };
+}
+
+function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
   descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null, avisarCambio = null,
   luego = null, ordenar = null, extra = 0, setExtra = () => {} }) {
   const { atleta, propio, aviso } = useApp();
@@ -962,7 +987,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
   };
 
   return (
-    <article id={`ej-${e.id}`} class={`ejercicio ${plegado ? 'plegado' : ''} ${siguiente ? 'en-curso' : ''}`} data-se={e.id} aria-label={etiqueta ? `${etiqueta}: ${ej.nombre}` : ej.nombre}>
+    <article id={`ej-${e.id}`} class={`ejercicio ${plegado ? 'plegado' : ''} ${siguiente ? 'en-curso' : ''} ${recienHecho ? 'recien-hecho' : ''}`} data-se={e.id} aria-label={etiqueta ? `${etiqueta}: ${ej.nombre}` : ej.nombre}>
       <button class="ejercicio-cab" onClick={alternar} aria-expanded={abierto ? 'true' : 'false'}>
         {/* v0.50: el pictograma de su patrón de movimiento, con el disco de la prioridad en la esquina */}
         <span class="ej-marca"><Imagen id={imagenEjercicio(ej)} clase="miniatura-ej ej-mini" tamanos="40px" alternativa={<PictoEjercicio ejercicio={ej} />} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
@@ -1016,6 +1041,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
               <Fragment key={k}>
                 <FilaSerie numero={k} hecha={enV(hechas[k])} propuesta={prop} activa={k === activa} siguiente={k === siguiente} barra={barra} record={hechas[k] ? records[`${e.id}-${k}`] : null}
                   anterior={conAnterior ? (enLibras() ? vista(pesoAnterior(ultimas, k)) : pesoAnterior(ultimas, k)) : null}
+                  ultima={serieDeAntes(ultimas, k)}
                   pendiente={enCola[`${e.id}-${k}`]} nombre={ej.nombre} tipo={tipoDe(k)}
                   guardar={(v) => guardar(k, v)} quitar={() => quitar(k)}
                   valores={borr[k] || VACIA} cambiar={(c, t) => cambiarBorr(k, c, t)} alComprometer={comprometer}
@@ -1478,7 +1504,7 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
         {(resumen.series > 0 || cardio) && resumen.tarjeta && <button class="btn btn-grande btn-compartir-sesion" onClick={() => setCompartir(true)}><MiniTarjeta datos={resumen.tarjeta} /><Icono n="compartir" /> Compartir la sesión</button>}
         {compartida ? <p class="nota peq compartida-equipo"><Icono n="hecho" /> Compartida con el equipo</p>
           : estadoEquipo.datos === true && <button class="btn btn-grande" onClick={() => setEquipo(true)}><Icono n="equipo" /> Compartir con el equipo</button>}
-        <button class="btn btn-primario btn-grande" onClick={alCerrar}>Volver a hoy</button>
+        <button class="btn btn-primario btn-grande" onClick={() => { try { sessionStorage.setItem('fbe-recien-hecha', '1'); } catch { /* */ } alCerrar(); }}>Volver a hoy</button>
       </div>
       {compartir && <HojaCompartir plantillas datos={resumen.tarjeta} alCerrar={() => { setCompartir(false); marcarCompartida(); }} />}
       {compartirRecord && <HojaCompartir logro tipo="record" titulo="Compartir el récord" datos={datosRecordDeSesion(compartirRecord, resumen.tarjeta?.fecha || hoyISO())} equipo={estadoEquipo.datos === true || compartida ? { tema: 'logros' } : null} alCerrar={() => { setCompartirRecord(null); marcarCompartida(); }} />}
