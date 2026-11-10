@@ -676,6 +676,166 @@
       "1024": "imagenes/compartir/compartir-sesion-1024.53249527.webp"
     }
   },
+  "cua-bulgara-hatfield": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-bulgara-hatfield-192.1b9e9b1e.webp",
+      "512": "imagenes/ejercicio/cua-bulgara-hatfield-512.3a5ffeff.webp"
+    }
+  },
+  "cua-bulgara-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-bulgara-multipower-192.672499a4.webp",
+      "512": "imagenes/ejercicio/cua-bulgara-multipower-512.9b7fe576.webp"
+    }
+  },
+  "cua-hack-squat": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-hack-squat-192.e3872d23.webp",
+      "512": "imagenes/ejercicio/cua-hack-squat-512.7166131d.webp"
+    }
+  },
+  "cua-hatfield-squat": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-hatfield-squat-192.e8cde808.webp",
+      "512": "imagenes/ejercicio/cua-hatfield-squat-512.61adc187.webp"
+    }
+  },
+  "cua-high-step-up": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-high-step-up-192.5932a9c2.webp",
+      "512": "imagenes/ejercicio/cua-high-step-up-512.7481cb48.webp"
+    }
+  },
+  "cua-leg-extensions": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-leg-extensions-192.aca61dee.webp",
+      "512": "imagenes/ejercicio/cua-leg-extensions-512.b1b15bed.webp"
+    }
+  },
+  "cua-platz-squat": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-platz-squat-192.322a76be.webp",
+      "512": "imagenes/ejercicio/cua-platz-squat-512.611da702.webp"
+    }
+  },
+  "cua-prensa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-prensa-192.a1311f9c.webp",
+      "512": "imagenes/ejercicio/cua-prensa-512.fce3f4ed.webp"
+    }
+  },
+  "cua-sentadilla-barra-alta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-barra-alta-192.c1c03c56.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-barra-alta-512.d511e66e.webp"
+    }
+  },
+  "cua-sentadilla-barra-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-barra-baja-192.c1014553.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-barra-baja-512.f048a305.webp"
+    }
+  },
+  "cua-sentadilla-frontal": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-frontal-192.e9cd32e8.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-frontal-512.67de5cb1.webp"
+    }
+  },
+  "cua-sentadilla-goblet": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-goblet-192.245c0443.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-goblet-512.e1d195fe.webp"
+    }
+  },
+  "cua-sentadilla-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-multipower-192.d53fa0a1.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-multipower-512.2af1eea9.webp"
+    }
+  },
+  "cua-sentadilla-safety-bar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-safety-bar-192.2abb1c11.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-safety-bar-512.9f7e917c.webp"
+    }
+  },
+  "cua-split-squat": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-split-squat-192.a6a4f644.webp",
+      "512": "imagenes/ejercicio/cua-split-squat-512.cf190927.webp"
+    }
+  },
+  "cua-zancadas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-zancadas-192.c66dda7a.webp",
+      "512": "imagenes/ejercicio/cua-zancadas-512.db022790.webp"
+    }
+  },
   "donde-casa": {
     "proporcion": [
       16,
