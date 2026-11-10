@@ -1141,6 +1141,206 @@
       "1080": "imagenes/equipo/equipo-reto-1080.41c9369e.webp"
     }
   },
+  "esp-dominadas-neutras": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-neutras-192.f6086a87.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-neutras-512.44e26738.webp"
+    }
+  },
+  "esp-dominadas-pronas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-pronas-192.d1c8e498.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-pronas-512.12797abc.webp"
+    }
+  },
+  "esp-dominadas-supinas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-supinas-192.113f48bb.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-supinas-512.d00cc58d.webp"
+    }
+  },
+  "esp-encogimientos-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-encogimientos-barra-192.e3788e34.webp",
+      "512": "imagenes/ejercicio/esp-encogimientos-barra-512.3a5e46e2.webp"
+    }
+  },
+  "esp-encogimientos-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-encogimientos-inclinado-192.c370c5b5.webp",
+      "512": "imagenes/ejercicio/esp-encogimientos-inclinado-512.5da2d876.webp"
+    }
+  },
+  "esp-encogimientos-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-encogimientos-mancuernas-192.069209d2.webp",
+      "512": "imagenes/ejercicio/esp-encogimientos-mancuernas-512.8034b994.webp"
+    }
+  },
+  "esp-encogimientos-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-encogimientos-multipower-192.9f734faa.webp",
+      "512": "imagenes/ejercicio/esp-encogimientos-multipower-512.69d5582e.webp"
+    }
+  },
+  "esp-farmer-walk": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-farmer-walk-192.9adca0d9.webp",
+      "512": "imagenes/ejercicio/esp-farmer-walk-512.41719507.webp"
+    }
+  },
+  "esp-jalon-neutro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-neutro-192.7f57ea5b.webp",
+      "512": "imagenes/ejercicio/esp-jalon-neutro-512.80e48f0d.webp"
+    }
+  },
+  "esp-jalon-prono": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-prono-192.b4973166.webp",
+      "512": "imagenes/ejercicio/esp-jalon-prono-512.76133ab6.webp"
+    }
+  },
+  "esp-jalon-supino": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-supino-192.7ea7de13.webp",
+      "512": "imagenes/ejercicio/esp-jalon-supino-512.11095e2b.webp"
+    }
+  },
+  "esp-jalon-unilateral-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-unilateral-inclinado-192.6a1ed923.webp",
+      "512": "imagenes/ejercicio/esp-jalon-unilateral-inclinado-512.eea48183.webp"
+    }
+  },
+  "esp-meadows-row": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-meadows-row-192.a6e67538.webp",
+      "512": "imagenes/ejercicio/esp-meadows-row-512.f162e3b4.webp"
+    }
+  },
+  "esp-pullover-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-pullover-unilateral-192.5f546e48.webp",
+      "512": "imagenes/ejercicio/esp-pullover-unilateral-512.937abdc9.webp"
+    }
+  },
+  "esp-remo-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-barra-192.feba8015.webp",
+      "512": "imagenes/ejercicio/esp-remo-barra-512.98dcf968.webp"
+    }
+  },
+  "esp-remo-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-mancuerna-192.b4e198f5.webp",
+      "512": "imagenes/ejercicio/esp-remo-mancuerna-512.ef312881.webp"
+    }
+  },
+  "esp-remo-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-maquina-192.61c9c665.webp",
+      "512": "imagenes/ejercicio/esp-remo-maquina-512.81a8fefe.webp"
+    }
+  },
+  "esp-remo-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-multipower-192.4caabde9.webp",
+      "512": "imagenes/ejercicio/esp-remo-multipower-512.b0777b8b.webp"
+    }
+  },
+  "esp-remo-polea-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-polea-unilateral-192.8b44fde3.webp",
+      "512": "imagenes/ejercicio/esp-remo-polea-unilateral-512.7911c0e8.webp"
+    }
+  },
+  "esp-remo-t": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-t-192.ebb0cbec.webp",
+      "512": "imagenes/ejercicio/esp-remo-t-512.a804cf00.webp"
+    }
+  },
   "foco-adaptacion": {
     "proporcion": [
       16,
