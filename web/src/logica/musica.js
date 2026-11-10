@@ -7,6 +7,7 @@
 //   · musicaDeLaSesion: qué música ofrecer en la portada y en qué orden
 //   · CADENCIAS: el ritmo de cada cardio (pasos, pedaladas, saltos…) para el metrónomo de cadencia
 //   · aperturasDe: cuántas veces abrió su música en un mes o en un año
+//   · (v0.129) tipoMusica, tieneLista, esEnlaceCorto, busquedaRitmo, fichaVigente
 import { urlMusica } from './personal.js';
 
 const TIPOS = ['playlist', 'album', 'track', 'episode', 'show', 'artist'];
@@ -16,11 +17,28 @@ export function spotify(url) {
   return m && TIPOS.includes(m[1]) ? { tipo: m[1], id: m[2] } : null;
 }
 // El reproductor incrustado de Spotify (solo de enlaces de Spotify; de los demás sitios, no hay)
-export function urlIncrustar(url) {
+// (v0.129) oscuro: con la app en oscuro, el reproductor en negro (theme=0) en vez del color de la portada
+export function urlIncrustar(url, { oscuro = false } = {}) {
   const s = spotify(url);
-  return s ? `https://open.spotify.com/embed/${s.tipo}/${s.id}?utm_source=fbe-equipo` : null;
+  return s ? `https://open.spotify.com/embed/${s.tipo}/${s.id}?utm_source=fbe-equipo${oscuro ? '&theme=0' : ''}` : null;
 }
-export const altoIncrustado = (url) => { const t = spotify(url)?.tipo; return t === 'track' || t === 'episode' ? 152 : 352; };
+// (v0.129) compacto (152 px, una fila con el play) para todo; entero (352 px, con la lista de canciones) para listas,
+// álbumes, podcasts y artistas cuando se pide
+export const altoIncrustado = (url, entero = true) => { const t = spotify(url)?.tipo; return !entero || t === 'track' || t === 'episode' ? 152 : 352; };
+export const tieneLista = (url) => ['playlist', 'album', 'show', 'artist'].includes(spotify(url)?.tipo);
+// (v0.129) qué es cada enlace, para decirlo en su tarjeta
+const TIPO_NOMBRE = { playlist: 'Lista', album: 'Álbum', track: 'Canción', episode: 'Episodio de podcast', show: 'Podcast', artist: 'Artista' };
+export const tipoMusica = (url) => TIPO_NOMBRE[spotify(url)?.tipo] || null;
+// (v0.129) los enlaces cortos de Spotify (spotify.link/…) valen para abrirlos, pero sin su nombre, su portada ni su
+// reproductor (la app no puede seguir la redirección): se avisa de cómo copiar el enlace largo
+export const esEnlaceCorto = (url) => /^https:\/\/spotify\.link\//i.test(String(url || '').trim());
+// (v0.129) buscar en Spotify música a un ritmo (para la cadencia del cardio): en bici, el doble (un golpe por pedalada de
+// cada pierna); en remo no hay música a 24 golpes
+export function busquedaRitmo(modalidad, valor) {
+  if (!CADENCIAS[modalidad] || modalidad === 'remo') return null;
+  const bpm = modalidad === 'bici' ? valor * 2 : valor;
+  return { bpm, url: `https://open.spotify.com/search/${encodeURIComponent(`${bpm} bpm`)}` };
+}
 export const esCancion = (url) => !!urlMusica(url) && (spotify(url) ? spotify(url).tipo === 'track' : true);
 
 // ---------- Lo que enlaza el coach ----------
@@ -70,4 +88,13 @@ export function aperturasDe(aperturas, periodo) {
   const p = String(periodo || '');
   return Object.entries(aperturas && typeof aperturas === 'object' ? aperturas : {})
     .filter(([k]) => /^\d{4}-\d{2}$/.test(k) && k.startsWith(p)).reduce((t, [, n]) => t + (Number.isFinite(Number(n)) ? Math.max(0, Math.floor(Number(n))) : 0), 0);
+}
+
+// ---------- (v0.129) La ficha guardada de un enlace ----------
+// Se pide otra vez a la semana; sin cobertura (o si Spotify no contesta), vale la que haya aunque sea más vieja: sin
+// cobertura en el gimnasio, la tarjeta sigue con el nombre de la lista
+export const FICHA_DIAS = 7;
+export function fichaVigente(guardada, ahora = Date.now()) {
+  if (!guardada || typeof guardada !== 'object' || !Number.isFinite(guardada.t)) return { usar: null, pedir: true };
+  return { usar: guardada, pedir: ahora - guardada.t >= FICHA_DIAS * 864e5 };
 }

@@ -4,10 +4,11 @@
 // la app le felicita y su coach lo sabe). Todo opcional; lo ve su coach. Sin la 050, no sale.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, GrupoIos, FilaIos } from '../comunes.jsx';
-import { LIMITES, limpiarPersonal, urlMusica, nombreMusica, cumpleValido } from '../../logica/personal.js';
+import { LIMITES, limpiarPersonal, urlMusica, cumpleValido } from '../../logica/personal.js';
 import { MESES_LARGOS } from '../../logica/mes.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
 import { esCancion } from '../../logica/musica.js';
+import { FichaPrevia, useNombreLista } from './Musica.jsx';
 
 export const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de ${MESES_LARGOS[p.cumple_mes - 1]}` : null);
 
@@ -16,6 +17,9 @@ export function LoTuyo() {
   // (api.personal: undefined sin la 050; null sin nada guardado)
   const datos = useCarga(() => api.personal().then((p) => (p === undefined ? { sin: true } : { p: p || {} })).catch(() => ({ sin: true })), [atleta.id]);
   const [editar, setEditar] = useState(null);
+  // (v0.129) el nombre de su lista y de su canción (su ficha de Spotify), no solo «Spotify»
+  const nombreLista = useNombreLista(datos.datos?.p?.musica_url || null);
+  const nombreCancion = useNombreLista(datos.datos?.p?.cancion_url || null);
   if (!datos.datos || datos.datos.sin) return null;
   const p = datos.datos.p;
   const entrena = conEntrenamiento(atleta);
@@ -25,8 +29,8 @@ export function LoTuyo() {
       <FilaIos icono="perfil" titulo="Cómo quieres que te llamemos" valor={p.apodo || 'Tu nombre'} alTocar={() => setEditar('apodo')} etiqueta="Cambiar cómo quieres que te llamemos" />
       <FilaIos icono="diana" titulo="Tu porqué" detalle={p.porque ? `«${p.porque}»` : 'Una frase tuya para los días que cuestan'} alTocar={() => setEditar('porque')} etiqueta="Escribir tu porqué" />
       {entrena && <FilaIos icono="estrella" titulo="Tus tres ejercicios" valor={nFav ? `${nFav} de 3` : 'Elegir'} alTocar={() => setEditar('favoritos')} etiqueta="Elegir tus tres ejercicios" />}
-      {entrena && <FilaIos icono="altavoz" titulo="Tu música" valor={p.musica_url ? nombreMusica(p.musica_url) : 'Añadir'} alTocar={() => setEditar('musica')} etiqueta="Poner el enlace a tu música" />}
-      {entrena && <FilaIos icono="trofeo" titulo="Tu canción de récord" valor={p.cancion_url ? nombreMusica(p.cancion_url) : 'Elegir'} alTocar={() => setEditar('cancion')} etiqueta="Elegir tu canción de récord" />}
+      {entrena && <FilaIos icono="altavoz" titulo="Tu música" valor={p.musica_url ? nombreLista : 'Añadir'} alTocar={() => setEditar('musica')} etiqueta="Poner el enlace a tu música" />}
+      {entrena && <FilaIos icono="trofeo" titulo="Tu canción de récord" valor={p.cancion_url ? nombreCancion : 'Elegir'} alTocar={() => setEditar('cancion')} etiqueta="Elegir tu canción de récord" />}
       <FilaIos icono="calendario" titulo="Tu cumpleaños" valor={textoCumple(p) || 'Añadir'} alTocar={() => setEditar('cumple')} etiqueta="Poner tu cumpleaños" />
       {editar && <HojaLoTuyo campo={editar} actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
     </GrupoIos>
@@ -96,6 +100,7 @@ function HojaLoTuyo({ campo, actual, alCerrar, alGuardar }) {
             <label for="lt-musica">Enlace a tu lista</label>
             <input id="lt-musica" class="entrada" type="url" inputMode="url" maxLength={LIMITES.musica} value={f.musica_url} onInput={(e) => cambiar({ musica_url: e.currentTarget.value })} placeholder="https://open.spotify.com/playlist/…" autoFocus aria-invalid={musicaMal ? 'true' : undefined} />
             <span class={musicaMal ? 'error-campo' : 'ayuda'}>{musicaMal ? 'Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal.' : 'En tu app de música: Compartir → Copiar enlace. Saldrá un botón para abrirla al empezar cada sesión.'}</span>
+            {!musicaMal && <FichaPrevia url={f.musica_url} />}
           </div>
         )}
         {campo === 'cancion' && (
@@ -103,6 +108,7 @@ function HojaLoTuyo({ campo, actual, alCerrar, alGuardar }) {
             <label for="lt-cancion">Enlace a la canción</label>
             <input id="lt-cancion" class="entrada" type="url" inputMode="url" maxLength={LIMITES.musica} value={f.cancion_url} onInput={(e) => cambiar({ cancion_url: e.currentTarget.value })} placeholder="https://open.spotify.com/track/…" autoFocus aria-invalid={cancionMal ? 'true' : undefined} />
             <span class={cancionMal ? 'error-campo' : 'ayuda'}>{cancionMal ? 'Tiene que ser una canción (no una lista) de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal.' : 'La que te pondrías al batir un récord: en tu app de música, Compartir → Copiar enlace. Sale en el resumen cuando batas uno.'}</span>
+            {!cancionMal && <FichaPrevia url={f.cancion_url} cancion />}
           </div>
         )}
         {campo === 'cumple' && (

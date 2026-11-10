@@ -65,7 +65,7 @@ import { LOBO } from '../marca-lobo.js';
 import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion, imagenEjercicio } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso } from './Personal.jsx';
-import { Cadencia, CancionRecord } from './Musica.jsx';
+import { Cadencia, CancionRecord, BotonMusica } from './Musica.jsx';
 import { AnadirASalud } from './Conexiones.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
@@ -690,6 +690,11 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       {preguntarPrep ? <Preparacion inicial={prep} alGuardar={guardarPrep} alSaltar={editandoPrep ? () => setEditandoPrep(false) : () => { setPrepSaltada(true); quitarPrepAntigua(); }} />
         : consejo && !sesion.completada && <ConsejoDia consejo={consejo} eleccion={eleccionCarga} alElegir={(v) => { setEleccionCarga(v); aviso(v === 'subir' ? 'Hoy vas con la carga que toca' : 'Hoy vas con los pesos de la última vez'); }} alCambiar={() => setEditandoPrep(true)} alQuitar={async () => { await guardarPrep(null); setPrepSaltada(true); }} />}
 
+      {/* (v0.129) la música de la portada, a mano durante la sesión */}
+      {!sesion.completada && (
+        <BotonMusica sesion={sesion} semana={semana} cardio={cardioValido(sesion.cardio) ? sesion.cardio : null}
+          familia={familiaPortada({ tipo: sesion.tipo || 'fuerza', pautas: ejercicios, cardio: cardioValido(sesion.cardio) })} />
+      )}
       {delCoach && !sesion.completada && (
         <button class="tarjeta-intervalos" onClick={() => setIntervalos({ inicial: delCoach })}>
           <Icono n="intervalos" />

@@ -3,10 +3,12 @@
 //   · LoSuyo: en la ficha, cómo quiere que le llamemos, su porqué, su cumpleaños y su música
 //   · MensajesAutomaticos: en su cuenta, lo que les sale a sus atletas en los momentos importantes
 //   · MusicaCoach y CampoMusica: las listas que enlaza (en su cuenta) y la de una sesión o un bloque (en el editor)
+//     (v0.129: con el nombre y la portada de cada lista, y su ficha al pegar el enlace)
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica, urlMusica } from '../../logica/personal.js';
-import { FAMILIAS_MUSICA } from '../../logica/musica.js';
+import { FAMILIAS_MUSICA, tipoMusica } from '../../logica/musica.js';
+import { NombreLista, FichaPrevia, useFicha } from '../atleta/Musica.jsx';
 import { MESES_LARGOS } from '../../logica/mes.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { useContactos, BotonWhatsApp } from './Integraciones.jsx';
@@ -47,7 +49,7 @@ export function LoSuyo({ atletaId }) {
   const { api } = useApp();
   const personal = useCarga(() => api.personalAtletas().catch(() => []), [atletaId]);
   const p = (personal.datos || []).find((x) => x.atleta_id === atletaId);
-  if (!p || (!p.apodo && !p.porque && !p.cumple_mes && !p.musica_url)) return null;
+  if (!p || (!p.apodo && !p.porque && !p.cumple_mes && !p.musica_url && !p.cancion_url)) return null;
   return (
     <section class="seccion lo-suyo">
       <h2>Lo suyo</h2>
@@ -56,7 +58,9 @@ export function LoSuyo({ atletaId }) {
         <dl class="lo-suyo-datos">
           {p.apodo && <><dt>Quiere que le llamen</dt><dd>{p.apodo}</dd></>}
           {p.cumple_mes && <><dt>Cumpleaños</dt><dd>{textoCumple(p)}{esCumple(p, hoyISO()) ? ' (¡hoy!)' : ''}</dd></>}
-          {p.musica_url && <><dt>Entrena con</dt><dd>{nombreMusica(p.musica_url)}</dd></>}
+          {/* (v0.129) el nombre de su lista (y su canción de récord), y se abre con un toque */}
+          {p.musica_url && <><dt>Entrena con</dt><dd><a href={p.musica_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.musica_url} /></a></dd></>}
+          {p.cancion_url && <><dt>Su canción de récord</dt><dd><a href={p.cancion_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.cancion_url} /></a></dd></>}
         </dl>
       </div>
     </section>
@@ -146,7 +150,8 @@ export function MusicaCoach() {
             {claves.map(([k, t]) => (
               <li key={k}>
                 <button class="fila-ios fila-boton" data-m={k.split(':')[0]} onClick={() => setEditar([k, t])} aria-label={`${t}: ${m[k] ? 'cambiar la lista' : 'enlazar una lista'}`}>
-                  <span class="fila-ios-texto"><span class="fila-ios-titulo">{t}</span><span class="peq terciario">{m[k] ? nombreMusica(m[k]) : 'Sin lista'}</span></span>
+                  {m[k] && <MiniPortada url={m[k]} />}
+                  <span class="fila-ios-texto"><span class="fila-ios-titulo">{t}</span><span class="peq terciario musica-coach-nombre">{m[k] ? <NombreLista url={m[k]} /> : 'Sin lista'}</span></span>
                   <Icono n={m[k] ? 'editar' : 'mas'} />
                 </button>
               </li>
@@ -176,6 +181,7 @@ export function HojaEnlaceMusica({ clave, titulo, actual, alCerrar, alGuardar })
           <label for="musica-enlace">Enlace</label>
           <input id="musica-enlace" class="entrada" type="url" inputMode="url" value={u} onInput={(e) => setU(e.currentTarget.value)} placeholder="https://open.spotify.com/playlist/…" autoFocus aria-invalid={mal ? 'true' : undefined} />
           <span class={mal ? 'error-campo' : 'ayuda'}>{mal ? 'Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal.' : 'Una lista, un álbum o un episodio de podcast (para el cardio largo).'}</span>
+          {!mal && <FichaPrevia url={u} />}
         </div>
         <button class="btn btn-primario btn-grande" disabled={guardando || mal}><Icono n="hecho" /> Guardar</button>
         {actual && <button type="button" class="btn plano" disabled={guardando} onClick={() => guardar('')}>Quitar la lista</button>}
@@ -194,9 +200,16 @@ export function CampoMusica({ clave, etiqueta = 'Música' }) {
   return (
     <>
       <button type="button" class="btn-texto campo-musica" style="justify-self:start" onClick={() => setEditar(true)}>
-        <Icono n="altavoz" /> {url ? `${etiqueta}: ${nombreMusica(url)}` : `Añadir ${etiqueta.toLowerCase()}`}
+        <Icono n="altavoz" /> {url ? <>{etiqueta}: <NombreLista url={url} /></> : `Añadir ${etiqueta.toLowerCase()}`}
       </button>
       {editar && <HojaEnlaceMusica clave={clave} titulo={etiqueta} actual={url || ''} alCerrar={() => setEditar(false)} alGuardar={() => { setEditar(false); lista.recargar(true); }} />}
     </>
   );
+}
+
+// (v0.129) La portada pequeña de una lista enlazada (si Spotify la da)
+function MiniPortada({ url }) {
+  const f = useFicha(url);
+  return f.datos?.thumb ? <img class="musica-coach-portada" src={f.datos.thumb} alt="" width="36" height="36" loading="lazy" referrerpolicy="no-referrer" />
+    : <span class="musica-coach-portada sin" aria-hidden="true" title={tipoMusica(url) || nombreMusica(url)}><Icono n="altavoz" /></span>;
 }
