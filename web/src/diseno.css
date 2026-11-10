@@ -4129,3 +4129,65 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
   .cadencia[data-en] .cadencia-v::after { animation: cadencia-pulso var(--pulso, 600ms) ease-out infinite; }
 }
 @keyframes cadencia-pulso { 0% { transform: scale(1.6); box-shadow: 0 0 0 0 color-mix(in srgb, var(--morado) 45%, transparent); } 100% { transform: scale(1); box-shadow: 0 0 0 8px transparent; } }
+
+/* ===== Tanda 43 (10/11): la escena del final de la sesión ===== */
+/* 335. Al guardar y terminar, la noche de la portada llena la pantalla, sale la luna y el lobo de la marca se dibuja
+   delante y aúlla; después se levanta como un telón sobre el resumen (ui/atleta/EscenaFinal.jsx, que no se monta con
+   «reducir movimiento»). Con récord, luna dorada y chispas de oro; con la semana completa, la manada. El texto sube
+   desde detrás de su línea (nunca por opacidad); la opacidad, solo para los dibujos. */
+.escena-final { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px calc(env(safe-area-inset-bottom, 0px) + 56px); overflow: hidden; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; color: #fff;
+  background: radial-gradient(34rem 20rem at 50% 108%, color-mix(in srgb, var(--morado) 58%, #1E1548) 0%, transparent 66%),
+    radial-gradient(26rem 22rem at 50% 30%, #33277A 0%, transparent 70%), #1E1548;
+  animation: escena-abre .5s var(--curva-casa) both; transition: transform .5s var(--curva-casa); will-change: transform; }
+.escena-final.con-record { background: radial-gradient(34rem 20rem at 50% 108%, color-mix(in srgb, var(--morado) 58%, #1E1548) 0%, transparent 66%),
+    radial-gradient(26rem 22rem at 50% 30%, #4A3A5E 0%, transparent 70%), #1E1548; }
+.escena-final.fuera { transform: translateY(-102%); pointer-events: none; }
+@keyframes escena-abre { from { clip-path: circle(0 at 50% 100%); } to { clip-path: circle(150% at 50% 100%); } }
+.escena-cielo { width: min(100%, 430px); height: auto; max-height: 58vh; flex: 0 1 auto; overflow: visible; }
+/* Las estrellas: llegan una a una y titilan */
+.escena-estrellas circle { fill: #fff; opacity: 0; animation: escena-estrella 1.6s ease-in-out calc(.15s + var(--i) * 70ms) infinite alternate; }
+@keyframes escena-estrella { from { opacity: .15; } to { opacity: .95; } }
+/* La luna sube con su halo */
+.escena-sube { animation: escena-sube .9s var(--curva-llega) .15s both; }
+@keyframes escena-sube { from { transform: translateY(150px); opacity: 0; } }
+.escena-luna { transform-box: fill-box; transform-origin: center; animation: escena-aulla .7s var(--curva-casa) 1.75s both; }
+@keyframes escena-aulla { 35% { transform: scale(1.045); } }
+.escena-halo { animation: escena-late 2.4s ease-in-out 1s infinite alternate; }
+@keyframes escena-late { to { opacity: .6; } }
+/* El lobo: primero su trazo, de un tirón; luego se llena */
+.escena-lobo .escena-lobo-trazo { stroke: #1E1548; stroke-width: 9; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: escena-traza 1.15s cubic-bezier(.5, 0, .3, 1) .7s both; }
+.escena-lobo .escena-lobo-lleno { fill: #1E1548; opacity: 0; animation: escena-llena .4s ease-out 1.55s both; }
+.con-record .escena-lobo .escena-lobo-trazo { stroke: #2A1B0A; } .con-record .escena-lobo .escena-lobo-lleno { fill: #2A1B0A; }
+@keyframes escena-traza { to { stroke-dashoffset: 0; } }
+@keyframes escena-llena { to { opacity: 1; } }
+/* El aullido: tres ondas que salen de la luna */
+.escena-onda { fill: none; stroke: #CFC4FF; stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: escena-onda 1.3s ease-out calc(1.8s + var(--i) * .22s) both; }
+.con-record .escena-onda { stroke: #F3CC63; }
+@keyframes escena-onda { from { opacity: .7; transform: scale(1); } to { opacity: 0; transform: scale(1.75); } }
+/* La manada (semana completa): un lobo por sesión hecha, que asoman de uno en uno */
+.escena-cachorro .escena-lobo-trazo { display: none; } .escena-cachorro .escena-lobo-lleno { fill: #EDE9FF; }
+.escena-manada > g { transform-box: fill-box; transform-origin: 50% 100%; animation: escena-asoma .5s var(--curva-rebote) calc(2s + var(--i) * 90ms) both; }
+@keyframes escena-asoma { from { transform: translateY(14px) scale(0); opacity: 0; } }
+/* Las chispas de oro (récord) */
+.escena-chispas path { fill: #F6D77A; opacity: 0; animation: escena-chispa calc(1.5s / var(--t)) linear calc(1.2s + var(--espera)) infinite; }
+@keyframes escena-chispa { 0% { opacity: 0; transform: translate(0, -20px) rotate(0) scale(calc(var(--t) * 1.5)); } 12% { opacity: 1; } 80% { opacity: .9; }
+  100% { opacity: 0; transform: translate(var(--lado), 430px) rotate(200deg) scale(calc(var(--t) * 1.5)); } }
+/* El texto: cada línea sube desde detrás de su caja */
+.escena-texto { display: grid; justify-items: center; gap: 6px; text-align: center; max-width: 100%; }
+.escena-linea { margin: 0; overflow: hidden; max-width: 100%; }
+.escena-linea > span { display: block; transform: translateY(110%); animation: escena-linea .6s var(--curva-llega) both; }
+@keyframes escena-linea { to { transform: none; } }
+.escena-titulo { font-size: 1.875rem; line-height: 1.15; font-weight: 800; letter-spacing: -.02em; padding-bottom: 2px; }
+.escena-titulo > span { animation-delay: 1.3s; }
+.escena-sub { font-size: 1rem; color: #DCD5FF; }
+.escena-sub > span { animation-delay: 1.42s; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.escena-chips { padding: 6px 0 2px; }
+.escena-chips > span { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; animation-delay: 1.75s; transform: translateY(190%); }
+.escena-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: 999px; font-size: .875rem; font-weight: 700; color: #fff; background: #4A3F8F; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
+.escena-chip.oro { color: #33240A; background: linear-gradient(180deg, #FBE39A, #EDBE4E); box-shadow: 0 4px 16px rgba(237, 190, 78, .35); }
+.escena-saltar { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); text-align: center; font-size: .8125rem; color: #C9C1F2; }
+.escena-saltar > span { animation-delay: 2.1s; }
+@media (max-height: 560px) { .escena-cielo { max-height: 50vh; } .escena-titulo { font-size: 1.5rem; } }
+@media (forced-colors: active) { .escena-final { background: Canvas; color: CanvasText; } .escena-chip, .escena-chip.oro { background: Canvas; color: CanvasText; border: 1px solid CanvasText; } }

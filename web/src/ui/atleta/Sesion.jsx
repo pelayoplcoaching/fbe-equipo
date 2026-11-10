@@ -58,6 +58,7 @@ import { textoAviso, pausaVigente } from '../../logica/pista.js';
 import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, seriesPautadasHechas } from '../../logica/visual.js';
 import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
 import { resumenPautas } from '../../logica/diseno.js';
+import { EscenaFinal, hayEscenaFinal } from './EscenaFinal.jsx';
 import { Portada, ArteSesion } from './Portada.jsx';
 import { LOBO } from '../marca-lobo.js';
 import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion } from '../../logica/imagenes.js';
@@ -113,6 +114,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   });
   const [terminando, setTerminando] = useState(false);
   const [resumen, setResumen] = useState(null);
+  // (diseño, tanda 43) la escena del final (la luna y el lobo): null | { records, semana, saliendo }. El resumen se monta
+  // cuando la escena empieza a irse (o al momento, si no hay escena)
+  const [escena, setEscena] = useState(null);
   const [verDinamica, setVerDinamica] = useState(true);
   const [calculadora, setCalculadora] = useState(false); // false | true | { kg } (desde el teclado: los discos de esa carga)
   const [intervalos, setIntervalos] = useState(null);       // null | { inicial }
@@ -295,7 +299,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const ejercicios = aplicarOrden(det.datos.ejercicios, ordenSes);
   const ejerciciosPorId = { ...det.datos.ejerciciosPorId, ...extra.ejercicios };
   const ultimas = { ...det.datos.ultimas, ...extra.ultimas };
-  if (resumen) return <Resumen resumen={resumen} sesion={sesion} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} />;
+  if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} />}</>;
 
 
   const todas = Object.values(hechas).flatMap((m) => Object.values(m));
@@ -796,11 +800,16 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
             borrarExtras(sesion.id);
             // La sesión ya está guardada: si el resumen falla por lo que sea, se enseña uno mínimo (nunca se queda colgada)
             let res;
+            // (diseño, tanda 43) la escena del final solo la primera vez que se termina (no al cambiar la valoración); y,
+            // con conexión, se mira a la vez si con esta sesión se completa la semana (para que llegue la manada)
+            const conEscena = !sesion.completada && hayEscenaFinal();
+            const semanaHecha = conEscena && !r.enCola ? api.constancia(atleta.id).then((c) => (c?.actual?.completa && c.actual.hechas === c.actual.objetivo ? { hechas: c.actual.hechas } : null)).catch(() => null) : null;
             try { res = await calcularResumen(api, atleta.id, ejercicios, hechas, cambios, r.enCola, ejerciciosPorId, records, sesion); }
             catch (e) {
               console.error('No se pudo preparar el resumen', e);
               res = { series: Object.values(hechas).reduce((n, h) => n + Object.keys(h || {}).length, 0), tonelaje: 0, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cambios.cardio_hecho || null, records: [], enCola: r.enCola, musculos: {}, tarjeta: null };
             }
+            if (conEscena) setEscena({ records: res.records?.length || 0, semana: await semanaHecha });
             setResumen(res);
             sonarFinSesion();   // (pulido 7)
           }} />
