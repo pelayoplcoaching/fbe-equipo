@@ -4426,3 +4426,28 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 }
 @keyframes enf-serie { from { transform: translateY(14px); } }
 @keyframes enf-chip { 0% { transform: scale(.8); } 55% { transform: scale(1.1); } }
+
+/* ===== Tanda 48 (10/11): lo de cada día que aún no se movía ===== */
+/* 350. Los discos que se cargan en la barra (Herramientas.jsx: Placas; en la fila de la serie, el teclado, el
+   descanso, el enfoque y la calculadora). Cada disco entra deslizándose desde fuera y encaja con un tope, uno detrás
+   de otro (--i); al cambiar los kilos, entran solo los discos que cambian (su key lleva el disco). */
+@media (prefers-reduced-motion: no-preference) {
+  .discos-ayuda .placa { animation: placa-entra .42s var(--curva-rebote) calc(var(--i, 0) * 55ms) backwards; transform-origin: 0 50%; }
+}
+@keyframes placa-entra { 0% { transform: translateX(22px) scaleY(.7); } 60% { transform: translateX(-2px) scaleY(1.06); } }
+
+/* 351. Los diales de Hoy (Diales.jsx: constancia, carga y cómo llegas): al entrar, cada arco se llena desde cero
+   (uno detrás de otro), la aguja de la carga llega con un salto y la cifra del centro se asienta. Antes aparecían ya
+   llenos (su transición solo se veía al cambiar el valor). */
+@media (prefers-reduced-motion: no-preference) {
+  .diales .dial-arco { animation: dial-llena .95s var(--curva-casa) .15s backwards; }
+  .diales .dial:nth-child(2) .dial-arco { animation-delay: .27s; } .diales .dial:nth-child(3) .dial-arco { animation-delay: .39s; }
+  .diales .dial-aguja { transform-box: fill-box; transform-origin: center; animation: dial-aguja .5s var(--curva-rebote) .55s backwards; }
+  .diales .dial-centro { animation: dial-centro .5s var(--curva-rebote) .2s backwards; }
+  .diales .dial:nth-child(2) .dial-centro { animation-delay: .32s; } .diales .dial:nth-child(3) .dial-centro { animation-delay: .44s; }
+  .diales .dial-esfera.completo svg { animation: dial-completo .9s var(--curva-casa) 1.05s backwards; }
+}
+@keyframes dial-llena { from { stroke-dasharray: 0 400; } }
+@keyframes dial-aguja { from { transform: scale(0); } }
+@keyframes dial-centro { from { transform: scale(.72); } }
+@keyframes dial-completo { 0% { filter: drop-shadow(0 0 0 transparent); } 50% { filter: drop-shadow(0 0 12px color-mix(in srgb, var(--dial, var(--morado)) 80%, transparent)); transform: scale(1.05); } }

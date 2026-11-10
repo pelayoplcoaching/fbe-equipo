@@ -21,7 +21,7 @@ export function Placas({ kg, barra = undefined, etiqueta = 'Por lado', discos = 
     <span class="discos-ayuda" role="img" aria-label={lado.length ? `Por lado: ${lado.map((d) => num(d, 2)).join(' más ')} ${nombrePeso()}, con barra de ${b}` : `Solo la barra de ${b} ${nombrePeso()}`}>
       {etiqueta && <span class="terciario">{etiqueta}</span>}
       {lado.length ? lado.map((d, i) => (
-        <span class="placa" key={i} style={{ '--c': colores[d] || 'var(--tinta-3)', '--t': claro(d) ? 'var(--sobre-disco-claro)' : 'var(--sobre-disco)', '--h': `${12 + Math.min(lb ? d * 0.55 : d, 25) * 0.6}px` }}>{num(d, 2)}</span>
+        <span class="placa" key={`${i}-${d}`} style={{ '--i': i, '--c': colores[d] || 'var(--tinta-3)', '--t': claro(d) ? 'var(--sobre-disco-claro)' : 'var(--sobre-disco)', '--h': `${12 + Math.min(lb ? d * 0.55 : d, 25) * 0.6}px` }}>{num(d, 2)}</span>
       )) : <span class="secundario">solo la barra</span>}
     </span>
   );
