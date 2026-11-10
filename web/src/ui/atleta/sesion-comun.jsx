@@ -7,6 +7,7 @@ import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, prop
 import { hablar, prepararVoz } from '../voz.js';
 import { fraseCuenta } from '../../logica/voz.js';
 import { vibrar } from '../hapticos.js';
+import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { descansoEnCurso } from '../en-curso.js';
 import { lanzarConfeti } from '../confeti.js';
 import { pistaManda, pistaSono, pistaFinal, prepararPista, pistaActiva } from '../pista-descanso.js';
@@ -376,8 +377,21 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
           <DegradadoAro id="aro-descanso" gira />
           <circle class="carril" cx="100" cy="100" r={R} />
           <circle class="arco" style={{ stroke: 'url(#aro-descanso)' }} cx="100" cy="100" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - frac)} transform="rotate(-90 100 100)" />
+          {/* (diseño, tanda 44) la punta del arco, con luz, mientras corre; una onda en cada uno de los tres últimos segundos;
+              y, al terminar, el aro se cierra de un trazo, salen los rayos y dos ondas (el lobo llama) */}
+          {quedan > 0 && frac > 0 && frac < 1 && <g class="arco-punta" style={{ transform: `rotate(${360 * frac}deg)` }}><circle cx="100" cy={100 - R} r="5" /></g>}
+          {quedan > 0 && segundo <= 3 && !pausado && <circle key={segundo} class="onda-segundo" cx="100" cy="100" r={R} />}
+          {quedan <= 0 && (
+            <g class="descanso-cierre">
+              <circle class="cierre-arco" style={{ stroke: 'url(#aro-descanso)' }} cx="100" cy="100" r={R} pathLength="1" transform="rotate(-90 100 100)" />
+              <circle class="cierre-luna" cx="100" cy="100" r={R - 8} />
+              {[0, 1].map((i) => <circle key={i} class="cierre-onda" cx="100" cy="100" r={R} style={{ '--i': i }} />)}
+              <g class="cierre-rayos">{Array.from({ length: 12 }, (_, i) => <line key={i} x1="100" y1="-2" x2="100" y2="-13" transform={`rotate(${i * 30} 100 100)`} />)}</g>
+            </g>
+          )}
         </svg>
         <div class="reloj-centro">
+          {quedan <= 0 && <svg class="vamos-lobo" viewBox={LOBO_CAJA} aria-hidden="true"><path fill-rule="evenodd" d={LOBO_D} /></svg>}
           <div class="cuenta num" role="timer" aria-label={quedan > 0 ? `Descanso${pausado ? ' en pausa' : ''}: quedan ${Math.ceil(quedan)} segundos` : 'Descanso terminado'}>{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</div>
           {quedan > 0 && total > 0 && !fase && <div class="de num">de {mmss(total)}</div>}
           {fase && <div class={`respira-texto ${fase.fase}`} aria-hidden="true">{fase.texto}</div>}
