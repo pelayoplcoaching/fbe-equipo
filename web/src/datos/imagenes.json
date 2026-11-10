@@ -846,6 +846,206 @@
       "512": "imagenes/ejercicio/cua-zancadas-512.db022790.webp"
     }
   },
+  "del-cruce-poleas-reverso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-cruce-poleas-reverso-192.1abf3939.webp",
+      "512": "imagenes/ejercicio/del-cruce-poleas-reverso-512.8e171d2b.webp"
+    }
+  },
+  "del-cruce-reverso-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-cruce-reverso-inclinado-192.5966342e.webp",
+      "512": "imagenes/ejercicio/del-cruce-reverso-inclinado-512.8e2f76c5.webp"
+    }
+  },
+  "del-empuje-vertical-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-empuje-vertical-maquina-192.b577c7d2.webp",
+      "512": "imagenes/ejercicio/del-empuje-vertical-maquina-512.875e6398.webp"
+    }
+  },
+  "del-face-pull": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-face-pull-192.bc03342a.webp",
+      "512": "imagenes/ejercicio/del-face-pull-512.3e5b9145.webp"
+    }
+  },
+  "del-frontales-inclinado-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-frontales-inclinado-polea-192.038aa8dc.webp",
+      "512": "imagenes/ejercicio/del-frontales-inclinado-polea-512.3bd1d9f8.webp"
+    }
+  },
+  "del-frontales-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-frontales-polea-baja-192.7b23f3c6.webp",
+      "512": "imagenes/ejercicio/del-frontales-polea-baja-512.98542e7b.webp"
+    }
+  },
+  "del-landmine-press": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-landmine-press-192.8032f899.webp",
+      "512": "imagenes/ejercicio/del-landmine-press-512.9c1c472b.webp"
+    }
+  },
+  "del-laterales-butterfly": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-butterfly-192.91b7f046.webp",
+      "512": "imagenes/ejercicio/del-laterales-butterfly-512.b6c2e85f.webp"
+    }
+  },
+  "del-laterales-mancuernas-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-mancuernas-pie-192.ef94a220.webp",
+      "512": "imagenes/ejercicio/del-laterales-mancuernas-pie-512.05a6a5c2.webp"
+    }
+  },
+  "del-laterales-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-maquina-192.eb3e085c.webp",
+      "512": "imagenes/ejercicio/del-laterales-maquina-512.0c596eb0.webp"
+    }
+  },
+  "del-laterales-polea-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-polea-tumbado-192.b837a5f2.webp",
+      "512": "imagenes/ejercicio/del-laterales-polea-tumbado-512.e85fa05d.webp"
+    }
+  },
+  "del-laterales-polea-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-polea-unilateral-192.0cb4a018.webp",
+      "512": "imagenes/ejercicio/del-laterales-polea-unilateral-512.2f28c99a.webp"
+    }
+  },
+  "del-laterales-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-sentado-192.7f5025c2.webp",
+      "512": "imagenes/ejercicio/del-laterales-sentado-512.d89fc27c.webp"
+    }
+  },
+  "del-laterales-tumbado-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-tumbado-inclinado-192.b18337d5.webp",
+      "512": "imagenes/ejercicio/del-laterales-tumbado-inclinado-512.34c3836c.webp"
+    }
+  },
+  "del-pajaros-apoyado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-pajaros-apoyado-192.bbc49834.webp",
+      "512": "imagenes/ejercicio/del-pajaros-apoyado-512.c61d3aca.webp"
+    }
+  },
+  "del-pajaros-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-pajaros-inclinado-192.62bfa4c2.webp",
+      "512": "imagenes/ejercicio/del-pajaros-inclinado-512.b8d42264.webp"
+    }
+  },
+  "del-press-militar-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-barra-192.ace29656.webp",
+      "512": "imagenes/ejercicio/del-press-militar-barra-512.6cc5ce54.webp"
+    }
+  },
+  "del-press-militar-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-mancuernas-192.d7c59199.webp",
+      "512": "imagenes/ejercicio/del-press-militar-mancuernas-512.7c47b38b.webp"
+    }
+  },
+  "del-press-militar-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-maquina-192.9a2a1573.webp",
+      "512": "imagenes/ejercicio/del-press-militar-maquina-512.5a1effe1.webp"
+    }
+  },
+  "del-press-militar-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-multipower-192.f820e535.webp",
+      "512": "imagenes/ejercicio/del-press-militar-multipower-512.1fec54b0.webp"
+    }
+  },
   "donde-casa": {
     "proporcion": [
       16,
