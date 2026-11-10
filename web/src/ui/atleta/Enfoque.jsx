@@ -211,7 +211,7 @@ function EnfoquePantalla({
           </div>
         ) : (
           <>
-            <div class="enfoque-serie-n">{previa ? `Corrigiendo la serie ${numero}` : numero > e.series ? `Serie ${numero} (de más)`
+            <div class="enfoque-serie-n" key={`${e.id}-${numero}`}>{previa ? `Corrigiendo la serie ${numero}` : numero > e.series ? `Serie ${numero} (de más)`
               : info.top && numero === 1 ? 'Serie top: las back-off saldrán de lo que hagas aquí'
               : info.top ? `Back-off ${numero - 1} de ${e.series - 1}: ${num(e.backoff_pct)} % menos que tu top` : `Serie ${numero} de ${e.series}`}
               {!previa && prop?.objetivo && textoObjetivo(prop.objetivo) && <span class="enfoque-objetivo">: {textoObjetivo(prop.objetivo)}</span>}</div>

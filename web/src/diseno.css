@@ -4360,3 +4360,69 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 @keyframes bdia-punto { from { background: rgba(255, 255, 255, .18); transform: scaleY(.4); } }
 @keyframes bdia-barra { from { transform: scaleX(0); } }
 @keyframes bdia-semana { from { transform: scaleY(.25); } }
+
+/* ===== Tanda 47 (10/11): cinco animaciones más del entrenamiento ===== */
+/* 345. Más que la última vez (FilaSerie.jsx: .serie-mejora): al marcar una serie con más kilos (o, con los mismos, más
+   repeticiones) que esa misma serie la última vez, una pastilla verde sube desde la fila con la diferencia y se va a
+   los dos segundos. Va sobre el borde de abajo de su fila (absoluta dentro de .serie-desliza): no empuja lo de debajo. */
+.serie-mejora { position: absolute; z-index: 3; left: 44px; bottom: -14px; display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 0 11px 0 7px; border-radius: 999px; pointer-events: none;
+  font-size: .8125rem; font-weight: 600; line-height: 1; white-space: nowrap; color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 88%, #fff), var(--ok)); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--ok) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.serie-mejora .num { font-weight: 800; }
+.serie-mejora svg { width: 16px; height: 16px; flex: none; padding: 2px; border-radius: 50%; background: rgba(255, 255, 255, .22); stroke-width: 3; }
+@media (prefers-reduced-motion: no-preference) {
+  .serie-mejora { animation: mejora-sube .5s var(--curva-rebote) .12s backwards, mejora-se-va .3s var(--curva-casa) 1.9s forwards; }
+  .serie-mejora svg { animation: mejora-flecha .9s var(--curva-casa) .4s 2; }
+}
+@keyframes mejora-sube { from { transform: translateY(16px) scale(.6); } }
+@keyframes mejora-se-va { to { transform: translateY(-10px) scale(.9); } }
+@keyframes mejora-flecha { 40% { transform: translateY(-3px); } }
+@media (forced-colors: active) { .serie-mejora { background: Canvas; color: CanvasText; border: 1px solid CanvasText; } }
+
+/* 346. Terminar un ejercicio (Sesion.jsx: .ejercicio.recien-hecho, 1,6 s): la tarjeta late una vez con luz verde, su
+   ✓ da un salto con una onda, y el ejercicio que toca ahora sube y se enciende. */
+@media (prefers-reduced-motion: no-preference) {
+  .ejercicio.recien-hecho { animation: ej-hecho .9s var(--curva-casa); }
+  .ejercicio.recien-hecho .progreso-series.hecho { animation: ej-sello .7s var(--curva-rebote) .1s, ej-onda .9s ease-out .25s; }
+  .ejercicio.recien-hecho ~ .ejercicio.en-curso { animation: ej-toca .7s var(--curva-llega) .35s backwards; }
+}
+@keyframes ej-hecho { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); } 35% { transform: scale(1.012); box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) 22%, transparent), 0 10px 30px -10px color-mix(in srgb, var(--ok) 55%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
+@keyframes ej-sello { 0% { transform: scale(1.9) rotate(-18deg); } 55% { transform: scale(.9) rotate(4deg); } }
+@keyframes ej-onda { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); } to { box-shadow: 0 0 0 18px transparent; } }
+@keyframes ej-toca { from { transform: translateY(14px); box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 30%, transparent); } }
+
+/* 347. La barra de progreso de la sesión (los tramos de la cabecera): el tramo del ejercicio recién terminado da un
+   salto con luz verde (a.recien) y, al llegar al último ejercicio, su tramo late dos veces para avisar. */
+@media (prefers-reduced-motion: no-preference) {
+  .tramos a.recien .tramo-barra { animation: tramo-hecho .8s var(--curva-rebote); }
+  .tramos a.recien .tramo-lleno { animation: tramo-verde 1.4s var(--curva-casa); }
+  .tramos li:last-child:not(:first-child) a[aria-current="step"]:not(.completo) .tramo-barra { animation: tramo-ultimo .7s var(--curva-casa) .5s 2; }
+}
+@keyframes tramo-hecho { 0% { transform: scaleY(1); } 35% { transform: scaleY(2.6); box-shadow: 0 0 12px color-mix(in srgb, var(--ok) 70%, transparent); } }
+@keyframes tramo-verde { 0%, 55% { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, #fff), var(--ok)); } }
+@keyframes tramo-ultimo { 50% { transform: scaleY(2.2); box-shadow: 0 0 10px color-mix(in srgb, var(--morado) 70%, transparent); } }
+
+/* 348. Volver a Hoy después de entrenar (Hoy.jsx: .hero-dia.recien-hecha, solo al venir de «Volver a hoy»): el lobo
+   con su medalla llega con un salto, «Hecha hoy» cae como un sello, la tarjeta late con luz y los ✓ de las sesiones
+   hechas de la semana caen de uno en uno. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-dia.recien-hecha { animation: hoy-hecha 1.2s var(--curva-casa) .15s; }
+  .hero-dia.recien-hecha .hero-ilu { animation: hoy-lobo .8s var(--curva-rebote) .2s backwards; transform-origin: 60% 90%; }
+  @supports (animation-timeline: scroll()) { .hero-dia.recien-hecha .hero-ilu { animation: hoy-lobo .8s var(--curva-rebote) .2s backwards, hero-paralaje-ilu linear both; animation-timeline: auto, scroll(root); animation-range: normal, 0 520px; } }
+  .hero-dia.recien-hecha .toca-hoy.hecha { animation: hoy-sello .55s var(--curva-rebote) .55s backwards; }
+  :is(.contenido, main):has(.hero-dia.recien-hecha) .dia.hecha .marca-dia { animation: hoy-sello .5s var(--curva-rebote) calc(.8s + var(--nd, 0) * 110ms) backwards; }
+  :is(.contenido, main):has(.hero-dia.recien-hecha) .dia.hecha:nth-of-type(2) .marca-dia { --nd: 1; } :is(.contenido, main):has(.hero-dia.recien-hecha) .dia.hecha:nth-of-type(3) .marca-dia { --nd: 2; }
+  :is(.contenido, main):has(.hero-dia.recien-hecha) .dia.hecha:nth-of-type(4) .marca-dia { --nd: 3; } :is(.contenido, main):has(.hero-dia.recien-hecha) .dia.hecha:nth-of-type(n+5) .marca-dia { --nd: 4; }
+}
+@keyframes hoy-hecha { 30% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--ok) 30%, transparent), 0 16px 40px -14px color-mix(in srgb, var(--ok) 60%, transparent); } }
+@keyframes hoy-lobo { 0% { transform: translateY(18px) scale(.5) rotate(-10deg); } 60% { transform: translateY(-4px) scale(1.08) rotate(3deg); } }
+@keyframes hoy-sello { 0% { transform: scale(2) rotate(-14deg); } 60% { transform: scale(.92) rotate(2deg); } }
+
+/* 349. El modo enfoque, de serie en serie (Enfoque.jsx): «Serie 2 de 3» sube al cambiar (lleva key por serie), y la
+   pastilla de la serie recién hecha da un salto y su ✓ se dibuja. */
+@media (prefers-reduced-motion: no-preference) {
+  .enfoque-serie-n { animation: enf-serie .45s var(--curva-llega); }
+  .enfoque-series .chip-serie.hecha:not(.actual) { animation: enf-chip .45s var(--curva-rebote); }
+  .enfoque-series .chip-serie.hecha:not(.actual) svg path { stroke-dasharray: 20; animation: serie-trazo .34s var(--curva-casa) .1s backwards; }
+}
+@keyframes enf-serie { from { transform: translateY(14px); } }
+@keyframes enf-chip { 0% { transform: scale(.8); } 55% { transform: scale(1.1); } }

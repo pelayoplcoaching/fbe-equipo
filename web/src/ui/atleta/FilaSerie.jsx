@@ -26,7 +26,7 @@ import { ejeGesto, estadoDeslizar, cruceUmbral, sigueLarga, LARGA_MS } from '../
 const fmt = (v, d) => (v == null ? '' : num(v, d));
 const mismoNum = (a, b) => (a == null && b == null) || (a != null && b != null && Math.abs(Number(a) - Number(b)) < 1e-9);
 
-export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false, pendiente, guardar, quitar, nombre, barra, record, tipo = null, anterior = null,
+export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false, pendiente, guardar, quitar, nombre, barra, record, tipo = null, anterior = null, ultima = null,
   valores = { kg: '', reps: '', rpe: '' }, cambiar, alComprometer = null, teclado = null, conRpe = false, paso = 2.5, objetivoEsfuerzo = null, conDiscos = false }) {
   const { aviso } = useApp();
   const { kg, reps, rpe } = valores;
@@ -49,6 +49,8 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
     guardar(v);
   };
   const [recien, setRecien] = useState(false);
+  const [mejora, setMejora] = useState(null);
+  useEffect(() => { if (!mejora) return undefined; const t = setTimeout(() => setMejora(null), 2200); return () => clearTimeout(t); }, [mejora]);
   useEffect(() => { if (!recien) return undefined; const t = setTimeout(() => setRecien(false), 600); return () => clearTimeout(t); }, [recien]);
   const marcar = () => {
     if (hecha) { quitar(); return; }
@@ -61,6 +63,13 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
     for (const c of Object.keys(inicio.current)) comprometer(c);
     cambiar('kg', fmt(v.kg, 2)); cambiar('reps', fmt(v.reps, 0));
     setRecien(true);
+    // (diseño, tanda 47) más que la última vez en esta misma serie: una pastilla verde con la diferencia (más kilos; o,
+    // con los mismos kilos, más repeticiones). No es un récord: es la mejora pequeña de cada día.
+    const ant = ultima && ultima.reps != null ? { kg: Number(ultima.kg) || 0, reps: Number(ultima.reps) } : null;
+    if (ant && v.reps != null) {
+      const dk = Math.round(((Number(v.kg) || 0) - ant.kg) * 100) / 100, dr = Number(v.reps) - ant.reps;
+      setMejora(dk > 0 ? `+${num(dk, 2)} ${etiquetaPeso()}` : dk === 0 && dr > 0 ? `+${dr} ${dr === 1 ? 'rep' : 'reps'}` : null);
+    }
     guardar(v);
   };
 
@@ -247,6 +256,8 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
             <Icono n="hecho" />
           </button>
         </div>
+        {/* (diseño, tanda 47) dentro de la fila que se desliza, que es su caja: sobre su borde de abajo, sin empujar nada */}
+        {mejora && hecha && !record && <div class="serie-mejora" aria-hidden="true"><Icono n="arriba" /><span class="num">{mejora}</span><span>que la última vez</span></div>}
       </div>
       {record && <div class="record-serie"><Icono n="trofeo" /><span><strong>Récord</strong>: {record.texto}</span></div>}
       {activa && barra && !hecha && <div class="serie-discos"><Placas kg={aNumero(kg) ?? propuesta.kg} discos={teclado ? discosCon(teclado.discoMinimo) : undefined} /></div>}
