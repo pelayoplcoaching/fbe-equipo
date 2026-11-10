@@ -846,6 +846,16 @@
       "512": "imagenes/ejercicio/cua-zancadas-512.db022790.webp"
     }
   },
+  "del-contractora-invertida": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-contractora-invertida-192.ffb8419a.webp",
+      "512": "imagenes/ejercicio/del-contractora-invertida-512.10cfc955.webp"
+    }
+  },
   "del-cruce-poleas-reverso": {
     "proporcion": [
       1,
@@ -922,8 +932,18 @@
       1
     ],
     "archivos": {
-      "192": "imagenes/ejercicio/del-laterales-butterfly-192.91b7f046.webp",
-      "512": "imagenes/ejercicio/del-laterales-butterfly-512.b6c2e85f.webp"
+      "192": "imagenes/ejercicio/del-laterales-butterfly-192.0acf65ba.webp",
+      "512": "imagenes/ejercicio/del-laterales-butterfly-512.96e2f429.webp"
+    }
+  },
+  "del-laterales-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-inclinado-192.d3392161.webp",
+      "512": "imagenes/ejercicio/del-laterales-inclinado-512.b47ef618.webp"
     }
   },
   "del-laterales-mancuernas-pie": {
@@ -992,8 +1012,8 @@
       1
     ],
     "archivos": {
-      "192": "imagenes/ejercicio/del-pajaros-apoyado-192.bbc49834.webp",
-      "512": "imagenes/ejercicio/del-pajaros-apoyado-512.c61d3aca.webp"
+      "192": "imagenes/ejercicio/del-pajaros-apoyado-192.2c197ca8.webp",
+      "512": "imagenes/ejercicio/del-pajaros-apoyado-512.897eef8f.webp"
     }
   },
   "del-pajaros-inclinado": {
