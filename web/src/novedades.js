@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.124': {
+    atleta: [
+      'Al terminar la sesión, una escena nueva: se hace de noche, sale la luna y el lobo de FBE se dibuja y aúlla.',
+      'Si has hecho un récord, la luna es dorada y caen chispas de oro; si con esa sesión completas la semana, llega la manada.',
+      'Un lobo por cada sesión de la semana. Dura tres segundos y se salta tocando.',
+    ],
+  },
   '0.123': {
     atleta: [
       'Salud del iPhone, más bonita: Conexiones con su corazón, los datos que manda Salud en colores y los pasos para conectarlo unidos.',
