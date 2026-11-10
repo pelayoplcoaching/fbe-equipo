@@ -42,7 +42,10 @@ const hay = async (loc, n, ms = 6000) => { const fin = Date.now() + ms; while (D
 const errores = [];
 p.on('pageerror', (e) => errores.push(e.message));
 // (con el recurso que falla, si lo hay: así se sabe cuál)
-p.on('console', (m) => { if (m.type() === 'error') { const u = m.location()?.url; errores.push(u && !m.text().includes(u) ? `${m.text()} [${u}]` : m.text()); } });
+// (v0.126) un vídeo que aún pide su blob: ya liberado (al cerrar un análisis o un reproductor a media carga) deja en consola
+// «ERR_FILE_NOT_FOUND [blob:…]»; no se ve nada en la pantalla y sale de tarde en tarde según la carga: se avisa (⚠) y no cuenta
+const avisosBlob = [];
+p.on('console', (m) => { if (m.type() === 'error') { const u = m.location()?.url; if (/ERR_FILE_NOT_FOUND/.test(m.text()) && /^blob:/.test(u || '')) { avisosBlob.push(u); return; } errores.push(u && !m.text().includes(u) ? `${m.text()} [${u}]` : m.text()); } });
 // (con DEPURAR=1, cada petición que falla, en su sitio entre las comprobaciones)
 if (process.env.DEPURAR) p.on('requestfailed', (r) => console.log('      · falla', r.url().slice(0, 70), r.failure()?.errorText));
 
@@ -5623,6 +5626,7 @@ try {
   await p.screenshot({ path: new URL('../test/e2e-fallo.png', import.meta.url).pathname, fullPage: true });
 }
 
+if (avisosBlob.length) console.log(`  ⚠ ${avisosBlob.length} avisos de un blob: ya liberado (${[...new Set(avisosBlob)].length} distintos); no cuentan`);
 check(errores.length === 0, errores.length ? `sin errores: ${errores.join(' || ')}` : 'sin errores de consola, desbordes ni controles sin nombre');
 
 // v0.58.1: el chat de la atleta en el iPhone (táctil), con más de dos páginas de historial: sin y con la copia del móvil,
