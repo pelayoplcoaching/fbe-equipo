@@ -6,6 +6,24 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.129': {
+    atleta: [
+      'Tu música, mejor: al pegar el enlace ves la portada y el nombre, y cada tarjeta dice si es lista, álbum, canción o podcast.',
+      'El reproductor sale compacto (y en negro con la app en oscuro), se quita al acabar y, durante la sesión, «Tu música» la tienes a mano.',
+      'En el cardio, «Buscar música a 170 bpm en Spotify» a tu cadencia; y en Equipo, «Añadir mi canción» a la lista del equipo.',
+    ],
+    coach: [
+      'En Música, cada lista con su portada y su nombre (también en el editor), y al pegar un enlace ves qué es antes de guardarlo.',
+      'En la ficha de cada atleta, el nombre de su lista y de su canción de récord, y se abren con un toque.',
+    ],
+  },
+  '0.128': {
+    atleta: [
+      'La app, con más vida: la bienvenida del día llega pieza a pieza y, al empezar la sesión, el lobo enciende los ojos: «A por ello».',
+      'Cada serie que marcas da un salto y suelta chispas (doradas en la última del ejercicio).',
+      'Los iconos de abajo tienen cada uno su gesto, tirar para recargar llena una luna y tu check-in vuela hasta tu coach.',
+    ],
+  },
   '0.127': {
     atleta: [
       'Cada ejercicio con su imagen: en miniatura en la tarjeta de la sesión y, en su ficha, grande al tocarla.',

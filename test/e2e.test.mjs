@@ -3678,7 +3678,8 @@ try {
   const cajaC = await carne.boundingBox();
   await p.mouse.move(cajaC.x + 10, cajaC.y + 10);
   await p.mouse.move(cajaC.x + cajaC.width - 10, cajaC.y + 12, { steps: 4 });
-  await p.waitForTimeout(150);
+  // (v0.128) la inclinación se escribe en el siguiente cuadro: con la máquina cargada no siempre llegaba en 150 ms
+  await carne.evaluate((c) => new Promise((ok) => { const t0 = performance.now(); const mira = () => (parseFloat(c.style.getPropertyValue('--rx')) > 0 || performance.now() - t0 > 2000 ? ok() : requestAnimationFrame(mira)); mira(); }));
   const inclina = await carne.evaluate((c) => [c.style.getPropertyValue('--rx'), c.style.getPropertyValue('--ry')]);
   check(parseFloat(inclina[0]) > 0 && parseFloat(inclina[1]) > 0, `se inclina siguiendo al dedo (${inclina.join(', ')})`);
   await p.mouse.move(cajaC.x + cajaC.width / 2, cajaC.y + cajaC.height + 120);

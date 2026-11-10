@@ -7,7 +7,7 @@ import {
   repartirComoSiempre, textoDias, personalVacio,
 } from '../web/src/logica/personal.js';
 import { anioParaResumen, resumenAnio, datosCompartirAnio } from '../web/src/logica/anio.js';
-import { spotify, urlIncrustar, claveValida, musicaDeLaSesion, etiquetaOrigen, CADENCIAS, ajustarCadencia, aperturasDe, esCancion } from '../web/src/logica/musica.js';
+import { spotify, urlIncrustar, claveValida, musicaDeLaSesion, etiquetaOrigen, CADENCIAS, ajustarCadencia, aperturasDe, esCancion, altoIncrustado, tieneLista, tipoMusica, esEnlaceCorto, busquedaRitmo, fichaVigente, FICHA_DIAS } from '../web/src/logica/musica.js';
 import { sumarDias, lunesDe } from '../web/src/logica/fechas.js';
 
 let ok = 0, fallos = 0;
@@ -111,6 +111,22 @@ check(dc.fondo === 'bloque' && dc.cifras.length === 3 && dc.mejores.length <= 3 
 console.log('\nLa música');
 check(igual(spotify('https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP?si=abc'), { tipo: 'playlist', id: '37i9dQZF1DX76Wlfdnj7AP' }) && spotify('https://open.spotify.com/intl-es/track/4uLU6hMCjMI75M1A2tKUQC')?.tipo === 'track' && spotify('https://music.apple.com/x') === null, 'reconoce listas, canciones (también con intl-es) y lo que no es Spotify');
 check(urlIncrustar('https://open.spotify.com/episode/0Q86acNRm6V9GYx55SXKwf') === 'https://open.spotify.com/embed/episode/0Q86acNRm6V9GYx55SXKwf?utm_source=fbe-equipo' && urlIncrustar('https://youtu.be/x') === null, 'el reproductor incrustado, solo de Spotify');
+// (v0.129) Spotify, 15 mejoras
+{
+  const lista = 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP', cancion = 'https://open.spotify.com/intl-es/track/4uLU6hMCjMI75M1A2tKUQC';
+  check(urlIncrustar(lista, { oscuro: true }).endsWith('&theme=0') && !urlIncrustar(lista).includes('theme'), 'el reproductor, en negro con la app en oscuro (theme=0) y como siempre en claro');
+  check(altoIncrustado(lista, false) === 152 && altoIncrustado(lista, true) === 352 && altoIncrustado(cancion, true) === 152, 'compacto de entrada (152 px); la lista entera (352) solo en listas, álbumes y podcasts');
+  check(tieneLista(lista) && tieneLista('https://open.spotify.com/album/1A2GTWGtFfWp7KSQTwWOyo') && !tieneLista(cancion) && !tieneLista('https://youtu.be/x'), '«Ver la lista entera» solo donde hay lista');
+  check(tipoMusica(lista) === 'Lista' && tipoMusica(cancion) === 'Canción' && tipoMusica('https://open.spotify.com/show/2MAi0BvDc6GTFvKFPXnkCL') === 'Podcast' && tipoMusica('https://music.apple.com/es/x') === null, 'qué es cada enlace (Lista, Canción, Podcast…), solo de Spotify');
+  check(esEnlaceCorto('https://spotify.link/AbC123') && !esEnlaceCorto(lista), 'los enlaces cortos de Spotify se reconocen (para avisar de cómo copiar el largo)');
+  const b = busquedaRitmo('carrera', 170), bb = busquedaRitmo('bici', 85);
+  check(b.bpm === 170 && b.url === 'https://open.spotify.com/search/170%20bpm' && bb.bpm === 170 && busquedaRitmo('remo', 24) === null && busquedaRitmo('nada', 3) === null,
+    'buscar música al ritmo de la cadencia: el mismo número en carrera, el doble en bici y nada en remo');
+  const ahora = Date.parse('2026-11-10T12:00:00Z');
+  const vieja = { titulo: 'X', t: ahora - (FICHA_DIAS + 1) * 864e5 }, nueva = { titulo: 'Y', t: ahora - 864e5 };
+  check(fichaVigente(nueva, ahora).usar === nueva && !fichaVigente(nueva, ahora).pedir && fichaVigente(vieja, ahora).usar === vieja && fichaVigente(vieja, ahora).pedir && fichaVigente(null, ahora).usar === null,
+    'la ficha guardada: la de esta semana vale; la vieja se pide otra vez, pero se queda por si no hay cobertura');
+}
 check(esCancion('https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC') && !esCancion('https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP') && esCancion('https://music.apple.com/es/song/x/1'), 'una canción (de Spotify, solo track)');
 const dice = (fn, re) => { try { fn(); return false; } catch (e) { return re.test(e.message); } };
 // (revisión de la música) el enlace se guarda sin quién lo compartió; la canción de récord no se cuela con /track/ en otro sitio
