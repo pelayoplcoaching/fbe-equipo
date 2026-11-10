@@ -1006,6 +1006,16 @@
       "512": "imagenes/ejercicio/del-pajaros-inclinado-512.b8d42264.webp"
     }
   },
+  "del-pajaros-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-pajaros-polea-baja-192.c0e3f192.webp",
+      "512": "imagenes/ejercicio/del-pajaros-polea-baja-512.d10ef475.webp"
+    }
+  },
   "del-press-militar-barra": {
     "proporcion": [
       1,
@@ -1044,6 +1054,16 @@
     "archivos": {
       "192": "imagenes/ejercicio/del-press-militar-multipower-192.f820e535.webp",
       "512": "imagenes/ejercicio/del-press-militar-multipower-512.1fec54b0.webp"
+    }
+  },
+  "del-remo-menton": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-remo-menton-192.5c8dc2af.webp",
+      "512": "imagenes/ejercicio/del-remo-menton-512.76a9de75.webp"
     }
   },
   "donde-casa": {
