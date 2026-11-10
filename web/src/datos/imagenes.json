@@ -162,6 +162,106 @@
       "1440": "imagenes/celebra/aniversario-1440.b5a66247.webp"
     }
   },
+  "bic-curl-arana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-arana-192.168820bb.webp",
+      "512": "imagenes/ejercicio/bic-curl-arana-512.59db3f01.webp"
+    }
+  },
+  "bic-curl-barra-recta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-barra-recta-192.c0a85d99.webp",
+      "512": "imagenes/ejercicio/bic-curl-barra-recta-512.cae50092.webp"
+    }
+  },
+  "bic-curl-bayesian": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-bayesian-192.efb16725.webp",
+      "512": "imagenes/ejercicio/bic-curl-bayesian-512.77ea1c73.webp"
+    }
+  },
+  "bic-curl-concentrado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-concentrado-192.310f4f7c.webp",
+      "512": "imagenes/ejercicio/bic-curl-concentrado-512.b845bdc2.webp"
+    }
+  },
+  "bic-curl-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-inclinado-192.0e09dbcb.webp",
+      "512": "imagenes/ejercicio/bic-curl-inclinado-512.6ae9ce3a.webp"
+    }
+  },
+  "bic-curl-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-mancuernas-192.11c8f21d.webp",
+      "512": "imagenes/ejercicio/bic-curl-mancuernas-512.6466a730.webp"
+    }
+  },
+  "bic-curl-martillo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-martillo-192.c027f0ee.webp",
+      "512": "imagenes/ejercicio/bic-curl-martillo-512.d14d4cd5.webp"
+    }
+  },
+  "bic-curl-polea-baja-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-polea-baja-barra-192.48fc22d9.webp",
+      "512": "imagenes/ejercicio/bic-curl-polea-baja-barra-512.f8015d8e.webp"
+    }
+  },
+  "bic-curl-predicador": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-predicador-192.b22cba5c.webp",
+      "512": "imagenes/ejercicio/bic-curl-predicador-512.1e0c2ced.webp"
+    }
+  },
+  "bic-doble-biceps-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-doble-biceps-polea-192.1985b048.webp",
+      "512": "imagenes/ejercicio/bic-doble-biceps-polea-512.43af3f70.webp"
+    }
+  },
   "bienvenida-manana": {
     "proporcion": [
       16,
