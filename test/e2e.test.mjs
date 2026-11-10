@@ -466,11 +466,11 @@ try {
     // (imágenes) la ilustración de su familia; sin ella (no carga, ahorro de datos), el dibujo de líneas
     const foto = document.querySelector('.portada-sesion img.portada-foto');
     return { nombre: h.textContent, ancho: getComputedStyle(h).fontStretch, arte: document.querySelectorAll('svg.portada-arte > *').length, foto: foto?.dataset.imagen || null, deBordeABorde: r.left <= 0.5 && Math.abs(r.right - innerWidth) < 1,
-      meta: document.querySelector('.portada-meta').textContent, pictos: document.querySelectorAll('.portada-lista .picto').length, filas: document.querySelectorAll('.portada-lista .ej-fila').length,
+      meta: document.querySelector('.portada-meta').textContent, pictos: document.querySelectorAll('.portada-lista .picto, .portada-lista img.miniatura-ej').length, filas: document.querySelectorAll('.portada-lista .ej-fila').length,
       empezar: !!document.querySelector('.portada-empezar .btn-primario'), sinSeries: !document.querySelector('.ejercicio') };
   });
   check(datosPortada.nombre === 'Torso A' && parseFloat(datosPortada.ancho) >= 115 && (/^sesion-[a-z]+$/.test(datosPortada.foto || '') || datosPortada.arte > 10) && datosPortada.deBordeABorde && /unos \d+ min/.test(datosPortada.meta) && datosPortada.pictos === datosPortada.filas && datosPortada.filas > 0 && datosPortada.empezar && datosPortada.sinSeries,
-    `antes de empezar, la portada de la sesión: su ilustración (o el dibujo) de borde a borde, el nombre en ancho (${datosPortada.ancho}), minutos y músculos, los ejercicios con su pictograma y «Empezar» ${JSON.stringify(datosPortada)}`);
+    `antes de empezar, la portada de la sesión: su ilustración (o el dibujo) de borde a borde, el nombre en ancho (${datosPortada.ancho}), minutos y músculos, los ejercicios con su imagen o su pictograma y «Empezar» ${JSON.stringify(datosPortada)}`);
   check(await p.locator('.portada-arte').getAttribute('aria-hidden') === 'true', 'el dibujo es decorativo');
   await revisar('portada');
   await p.setViewportSize({ width: 360, height: 780 });
@@ -519,8 +519,9 @@ try {
   check(await p.evaluate(() => document.querySelector('.ejercicio').nextElementSibling?.classList.contains('temporizador')) && await p.locator('.temporizador .reloj-descanso svg .arco').count() === 1
     && await p.locator('.temporizador').evaluate((t) => getComputedStyle(t).position) !== 'fixed' && /^\d:\d\d$/.test(await p.locator('.temporizador .cuenta').textContent()),
   'el descanso sale en la página, debajo del ejercicio: un anillo grande con la cuenta');
-  check(await p.locator('.ejercicio-cab .picto').count() === await p.locator('.ejercicio').count() && await p.locator('.ejercicio-cab .picto').evaluateAll((xs) => xs.every((x) => x.getAttribute('aria-hidden') === 'true')),
-    'cada ejercicio con el pictograma de su patrón de movimiento (decorativo: el nombre es lo que se lee)');
+  // (v0.127) con la imagen del ejercicio si la tiene (los de la biblioteca de FBE); si no, el pictograma de su patrón
+  check(await p.locator('.ejercicio-cab :is(.picto, img.miniatura-ej)').count() === await p.locator('.ejercicio').count() && await p.locator('.ejercicio-cab :is(.picto, img.miniatura-ej)').evaluateAll((xs) => xs.every((x) => x.getAttribute('aria-hidden') === 'true')),
+    'cada ejercicio con su imagen o el pictograma de su patrón de movimiento (decorativos: el nombre es lo que se lee)');
   // v0.51: arriba, un tramo por ejercicio (como las historias): se llena con las series y el que toca va resaltado
   const tramos = p.locator('nav.tramos a');
   const datosTramos = await p.evaluate(() => {
@@ -1312,7 +1313,7 @@ try {
   await revisar('biblioteca-vacia');
   await vacioBib.getByRole('button', { name: 'Ver todos' }).click();
   await p.locator('.fila-biblioteca').first().waitFor();
-  check(await p.locator('.fila-biblioteca .picto').count() === await p.locator('.fila-biblioteca').count() && await p.locator('.fila-biblioteca .picto').count() > 10, 'la biblioteca, con el pictograma de cada ejercicio');
+  check(await p.locator('.fila-biblioteca :is(.picto, img.miniatura-ej)').count() === await p.locator('.fila-biblioteca').count() && await p.locator('.fila-biblioteca').count() > 10, 'la biblioteca, con la imagen o el pictograma de cada ejercicio');
   // …y la ficha de quien aún no ha empezado: sin check-ins, sin tareas y con el diario vacío
   await p.locator('.tab', { hasText: 'Atletas' }).click();
   await p.getByRole('heading', { name: 'Atletas' }).waitFor();
@@ -3769,7 +3770,7 @@ try {
     await p.getByRole('dialog').last().getByRole('button', { name: /^Historial/ }).click();
     await p.locator('.ficha-ejercicio .ficha-ej-cab').waitFor();
     const vtEj = await nombresVT();
-    check(!hayVT || (vtEj.includes('vt-ej-nombre:H2') && vtEj.filter((x) => x.startsWith('vt-ej-picto:')).length === 1 && vtEj.length === 2), `el nombre y el pictograma del ejercicio pasan a la cabecera de su ficha (${vtEj.join(', ') || 'sin View Transitions'})`);
+    check(!hayVT || (vtEj.includes('vt-ej-nombre:H2') && vtEj.filter((x) => x.startsWith('vt-ej-picto:')).length === 1 && vtEj.length === 2), `el nombre y la imagen (o el pictograma) del ejercicio pasan a la cabecera de su ficha (${vtEj.join(', ') || 'sin View Transitions'})`);
     check(await quedanNombresVT() === 0, 'y ningún nombre se queda puesto (ni en la tarjeta, que sigue debajo de la hoja)');
     await p.keyboard.press('Escape');
     await p.locator('.ficha-ejercicio').waitFor({ state: 'detached' });

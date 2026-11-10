@@ -948,7 +948,10 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
       const tituloMas = [...document.querySelectorAll('.hoja-dialogo .hoja-cab h2')].pop();
       conTransicion(() => setHoja('historial'), 'morph', [
         { nombre: 'vt-ej-nombre', desde: aLaVista(nombre) ? nombre : tituloMas, hasta: '.ficha-ejercicio .hoja-cab h2' },
-        { nombre: 'vt-ej-picto', desde: cab?.querySelector('.picto'), hasta: '.ficha-ejercicio .ficha-ej-cab .picto' },
+        // (v0.127) con la imagen del ejercicio, la miniatura de la tarjeta crece hasta la figura de la ficha; sin ella, el pictograma
+        cab?.querySelector('img.miniatura-ej')
+          ? { nombre: 'vt-ej-picto', desde: cab.querySelector('img.miniatura-ej'), hasta: '.ficha-ejercicio .ficha-ej-foto-btn img' }
+          : { nombre: 'vt-ej-picto', desde: cab?.querySelector('.picto'), hasta: '.ficha-ejercicio .ficha-ej-cab .picto' },
       ]);
       return;
     }
