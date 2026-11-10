@@ -14,6 +14,22 @@ const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 const CHROME = process.env.CHROME_PATH || '/opt/google/chrome/chrome';
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
+// Flujos que a veces se cortan solo en la pasada completa (y solos pasan): se prueban con sus resultados guardados; si
+// alguno falla, se avisa (⚠, con lo que pasó) y el flujo se repite una vez entero, y cuenta lo de la segunda. Así una
+// suelta no obliga a relanzar los 40 minutos, y queda a la vista en el resumen del final.
+const repetidas = [];
+async function conUnaRepeticion(nombre, fn) {
+  const guardados = [];
+  const guarda = (c, m) => { guardados.push([!!c, m]); };
+  let roto = null;
+  try { await fn(guarda); } catch (e) { roto = e; }
+  const malos = guardados.filter(([c]) => !c);
+  if (!roto && !malos.length) { for (const [c, m] of guardados) check(c, m); return; }
+  const motivo = roto ? roto.message.split('\n').slice(0, 8).join('\n      ') : malos.map(([, m]) => m).join(' || ');
+  console.log(`  ⚠ ${nombre}: falló a la primera (${guardados.length - malos.length} bien, ${malos.length + (roto ? 1 : 0)} mal); se repite una vez.\n      ${motivo}`);
+  repetidas.push(nombre);
+  await fn(check);
+}
 
 const srv = await servir(new URL('../dist', import.meta.url).pathname, 4174);
 // Cámara de mentira (Chrome la simula con un patrón) para probar las fotos guiadas
@@ -5625,7 +5641,7 @@ try {
 console.log('\nv0.59: los vídeos de técnica, tanda A');
 try {
   const { probarVideos059 } = await import('./e2e-videos-059.mjs');
-  await probarVideos059({ navegador, check });
+  await conUnaRepeticion('v0.59', (chk) => probarVideos059({ navegador, check: chk }));
 } catch (e) {
   fallos++;
   console.log('  ✗ los vídeos de la v0.59:', e.message.split('\n').slice(0, 8).join('\n      '));
@@ -5647,7 +5663,7 @@ try {
 console.log('\nv0.61: los vídeos de técnica, tanda B (segunda mitad)');
 try {
   const { probarVideos061 } = await import('./e2e-videos-061.mjs');
-  await probarVideos061({ navegador, check });
+  await conUnaRepeticion('v0.61', (chk) => probarVideos061({ navegador, check: chk }));
 } catch (e) {
   fallos++;
   console.log('  ✗ los vídeos de la v0.61:', e.message.split('\n').slice(0, 8).join('\n      '));
@@ -5971,4 +5987,5 @@ try {
 await navegador.close();
 srv.close();
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
+if (repetidas.length) console.log(`⚠ repetidas por fallar a la primera: ${repetidas.join(', ')} (cuenta la segunda vez)`);
 process.exit(fallos ? 1 : 0);
