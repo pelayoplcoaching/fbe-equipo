@@ -1559,6 +1559,156 @@
       "512": "imagenes/ejercicio/gem-unilateral-multipower-512.0fe135ca.webp"
     }
   },
+  "glu-abducciones-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-abducciones-maquina-192.b4354b33.webp",
+      "512": "imagenes/ejercicio/glu-abducciones-maquina-512.c77857c8.webp"
+    }
+  },
+  "glu-bulgara-gluteo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-bulgara-gluteo-192.510523b9.webp",
+      "512": "imagenes/ejercicio/glu-bulgara-gluteo-512.be72bb37.webp"
+    }
+  },
+  "glu-cable-pull-through": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-cable-pull-through-192.94e210d8.webp",
+      "512": "imagenes/ejercicio/glu-cable-pull-through-512.e3b9341b.webp"
+    }
+  },
+  "glu-extensiones-45-gluteo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-extensiones-45-gluteo-192.9e2c4b25.webp",
+      "512": "imagenes/ejercicio/glu-extensiones-45-gluteo-512.f4d58bf6.webp"
+    }
+  },
+  "glu-hip-thrust": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-192.586652f0.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-512.e6b7d26e.webp"
+    }
+  },
+  "glu-hip-thrust-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-maquina-192.cd006d0b.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-maquina-512.d0291f97.webp"
+    }
+  },
+  "glu-hip-thrust-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-multipower-192.a4a32ae3.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-multipower-512.20e64c77.webp"
+    }
+  },
+  "glu-hip-thrust-unilateral-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-unilateral-barra-192.655e58d5.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-unilateral-barra-512.039bf859.webp"
+    }
+  },
+  "glu-hip-thrust-unilateral-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-unilateral-mancuerna-192.6bac3e3c.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-unilateral-mancuerna-512.c8d68622.webp"
+    }
+  },
+  "glu-leg-swing-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-leg-swing-polea-192.95440a7c.webp",
+      "512": "imagenes/ejercicio/glu-leg-swing-polea-512.5e8dee70.webp"
+    }
+  },
+  "glu-patada-cuadrupedia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-patada-cuadrupedia-192.1680b2ba.webp",
+      "512": "imagenes/ejercicio/glu-patada-cuadrupedia-512.2fa4ecc7.webp"
+    }
+  },
+  "glu-patada-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-patada-polea-baja-192.6161f8ea.webp",
+      "512": "imagenes/ejercicio/glu-patada-polea-baja-512.2deb40fd.webp"
+    }
+  },
+  "glu-prensa-gluteo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-prensa-gluteo-192.eda89e1c.webp",
+      "512": "imagenes/ejercicio/glu-prensa-gluteo-512.a68b52d8.webp"
+    }
+  },
+  "glu-puente": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-puente-192.3c8f76b2.webp",
+      "512": "imagenes/ejercicio/glu-puente-512.33237071.webp"
+    }
+  },
+  "glu-reverse-hyper-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-reverse-hyper-multipower-192.479df6e6.webp",
+      "512": "imagenes/ejercicio/glu-reverse-hyper-multipower-512.b167a8d6.webp"
+    }
+  },
   "grupo-abdominales": {
     "proporcion": [
       4,
