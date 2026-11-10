@@ -40,6 +40,8 @@ import { PantallaRacha, HitoRacha, useHitoRacha } from './Racha.jsx';
 import { lanzarConfeti } from '../confeti.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { Ilustracion } from '../Ilustraciones.jsx';
+import { imagenEjercicio } from '../../logica/imagenes.js';
+import { Imagen } from '../Imagen.jsx';
 import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
 import { estadoHoy, sugerenciaDescanso, urlSegura, resumenPautas } from '../../logica/diseno.js';
 import { panelBienvenida, panelNutricion } from '../../logica/bienvenida.js';
@@ -826,7 +828,7 @@ function SiguienteSesion({ sesion, ejercicios, cargando }) {
                 const pa = pauta(e);
                 return (
                   <li class="ej-fila" key={e.id}>
-                    <span class="ej-marca"><PictoEjercicio ejercicio={e.ejercicio} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
+                    <span class="ej-marca"><Imagen id={imagenEjercicio(e.ejercicio)} clase="miniatura-ej ej-mini" tamanos="40px" alternativa={<PictoEjercicio ejercicio={e.ejercicio} />} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
                     <div>
                       <div class="nombre">{etiquetas[e.id] && <span class="ss-etq">{etiquetas[e.id]}</span>}{e.ejercicio.nombre}</div>
                       <div class="pauta"><span class="num">{pa.series}</span>{pa.esfuerzo && <span>{pa.esfuerzo}</span>}{pa.carga && <span class="num">{pa.carga}</span>}{e.variante && <span>{e.variante}</span>}</div>

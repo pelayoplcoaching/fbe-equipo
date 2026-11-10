@@ -58,7 +58,7 @@ import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js
 import { resumenPautas } from '../../logica/diseno.js';
 import { Portada, ArteSesion } from './Portada.jsx';
 import { LOBO } from '../marca-lobo.js';
-import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion } from '../../logica/imagenes.js';
+import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion, imagenEjercicio } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso } from './Personal.jsx';
 import { Cadencia, CancionRecord } from './Musica.jsx';
@@ -926,7 +926,7 @@ function Ejercicio({ e, actual, ultimas, foco, progresionAuto, etiqueta, records
     <article id={`ej-${e.id}`} class={`ejercicio ${plegado ? 'plegado' : ''} ${siguiente ? 'en-curso' : ''}`} data-se={e.id} aria-label={etiqueta ? `${etiqueta}: ${ej.nombre}` : ej.nombre}>
       <button class="ejercicio-cab" onClick={alternar} aria-expanded={abierto ? 'true' : 'false'}>
         {/* v0.50: el pictograma de su patrón de movimiento, con el disco de la prioridad en la esquina */}
-        <span class="ej-marca"><PictoEjercicio ejercicio={ej} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
+        <span class="ej-marca"><Imagen id={imagenEjercicio(ej)} clase="miniatura-ej ej-mini" tamanos="40px" alternativa={<PictoEjercicio ejercicio={ej} />} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
         <span>
           <span class="nombre">{etiqueta && <span class="ss-etq">{etiqueta}</span>}{ej.nombre}</span>
           {plegado && <span class="resumen-ej num">{resumenSeries(Object.keys(hechas).map(Number).sort((a, b) => a - b).map((k) => hechas[k]))}</span>}
