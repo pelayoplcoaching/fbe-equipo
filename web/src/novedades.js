@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.123': {
+    atleta: [
+      'Salud del iPhone, más bonita: Conexiones con su corazón, los datos que manda Salud en colores y los pasos para conectarlo unidos.',
+      'Lo que ha llegado de Salud, más fácil de leer, y «Apuntar en Salud» al terminar, con su corazón.',
+      'Tu música de hoy con su portada y un vinilo, el reproductor con sombra y «Empezar con esta música» con un ecualizador que baila.',
+    ],
+    coach: [
+      'Atajos del iPhone en Cuenta, con su icono y un ✓ verde cuando el enlace está puesto.',
+    ],
+  },
   '0.122': {
     atleta: [
       'El Equipo, más bonito: cada pastilla con su color, los duelos como un marcador y la hora de quien entrena hoy a la vista.',
