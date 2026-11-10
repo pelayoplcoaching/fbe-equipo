@@ -2487,6 +2487,166 @@
       "1440": "imagenes/mes/mes-12-1440.fe0b454b.webp"
     }
   },
+  "pec-aperturas-planas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-aperturas-planas-192.92f43493.webp",
+      "512": "imagenes/ejercicio/pec-aperturas-planas-512.27569a34.webp"
+    }
+  },
+  "pec-cruce-inclinado-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-cruce-inclinado-polea-baja-192.eec4592a.webp",
+      "512": "imagenes/ejercicio/pec-cruce-inclinado-polea-baja-512.1f3d8184.webp"
+    }
+  },
+  "pec-cruces-polea-alta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-cruces-polea-alta-192.448fa980.webp",
+      "512": "imagenes/ejercicio/pec-cruces-polea-alta-512.d13ea117.webp"
+    }
+  },
+  "pec-deck": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-deck-192.6448208e.webp",
+      "512": "imagenes/ejercicio/pec-deck-512.0eced922.webp"
+    }
+  },
+  "pec-fondos-ancho": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-fondos-ancho-192.ac4f8693.webp",
+      "512": "imagenes/ejercicio/pec-fondos-ancho-512.3d3c83c0.webp"
+    }
+  },
+  "pec-hex-press": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-hex-press-192.0f3c6a74.webp",
+      "512": "imagenes/ejercicio/pec-hex-press-512.f60deb52.webp"
+    }
+  },
+  "pec-press-banca": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-banca-192.e001eee8.webp",
+      "512": "imagenes/ejercicio/pec-press-banca-512.96c5a8a8.webp"
+    }
+  },
+  "pec-press-declinado-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-declinado-barra-192.9fd9f905.webp",
+      "512": "imagenes/ejercicio/pec-press-declinado-barra-512.43ce7191.webp"
+    }
+  },
+  "pec-press-declinado-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-declinado-mancuernas-192.2156da7c.webp",
+      "512": "imagenes/ejercicio/pec-press-declinado-mancuernas-512.f7220b74.webp"
+    }
+  },
+  "pec-press-inclinado-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-inclinado-barra-192.f30d7b98.webp",
+      "512": "imagenes/ejercicio/pec-press-inclinado-barra-512.ee08f782.webp"
+    }
+  },
+  "pec-press-inclinado-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-inclinado-mancuernas-192.30a1b623.webp",
+      "512": "imagenes/ejercicio/pec-press-inclinado-mancuernas-512.3eb3c034.webp"
+    }
+  },
+  "pec-press-inclinado-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-inclinado-maquina-192.b7d4fa0f.webp",
+      "512": "imagenes/ejercicio/pec-press-inclinado-maquina-512.4986c93b.webp"
+    }
+  },
+  "pec-press-inclinado-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-inclinado-multipower-192.8cbaed72.webp",
+      "512": "imagenes/ejercicio/pec-press-inclinado-multipower-512.50584a26.webp"
+    }
+  },
+  "pec-press-plano-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-plano-mancuernas-192.63b63049.webp",
+      "512": "imagenes/ejercicio/pec-press-plano-mancuernas-512.23865564.webp"
+    }
+  },
+  "pec-press-plano-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-plano-maquina-192.d59469cd.webp",
+      "512": "imagenes/ejercicio/pec-press-plano-maquina-512.7676c398.webp"
+    }
+  },
+  "pec-press-plano-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-plano-multipower-192.dfa23b3a.webp",
+      "512": "imagenes/ejercicio/pec-press-plano-multipower-512.8f0f8fd6.webp"
+    }
+  },
   "primeros-checkin": {
     "proporcion": [
       16,
