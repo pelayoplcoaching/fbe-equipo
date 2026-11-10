@@ -2767,5 +2767,105 @@
       "720": "imagenes/acceso/sin-conexion-720.70ca581f.webp",
       "1080": "imagenes/acceso/sin-conexion-1080.e67eac86.webp"
     }
+  },
+  "tri-extensiones-polea-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extensiones-polea-barra-192.886ef624.webp",
+      "512": "imagenes/ejercicio/tri-extensiones-polea-barra-512.cb31638b.webp"
+    }
+  },
+  "tri-extensiones-polea-cuerda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extensiones-polea-cuerda-192.04cc9ec4.webp",
+      "512": "imagenes/ejercicio/tri-extensiones-polea-cuerda-512.e51e6513.webp"
+    }
+  },
+  "tri-fondos-estrecho": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-fondos-estrecho-192.7e7cfb7b.webp",
+      "512": "imagenes/ejercicio/tri-fondos-estrecho-512.0b56034a.webp"
+    }
+  },
+  "tri-katana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-katana-192.e6a6b056.webp",
+      "512": "imagenes/ejercicio/tri-katana-512.ba45b897.webp"
+    }
+  },
+  "tri-kaz-press": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-kaz-press-192.21af9465.webp",
+      "512": "imagenes/ejercicio/tri-kaz-press-512.452a4cf4.webp"
+    }
+  },
+  "tri-press-frances-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-press-frances-barra-192.4a3969d1.webp",
+      "512": "imagenes/ejercicio/tri-press-frances-barra-512.ab074e44.webp"
+    }
+  },
+  "tri-press-frances-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-press-frances-mancuernas-192.62546660.webp",
+      "512": "imagenes/ejercicio/tri-press-frances-mancuernas-512.0298c123.webp"
+    }
+  },
+  "tri-press-frances-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-press-frances-polea-baja-192.ee528f95.webp",
+      "512": "imagenes/ejercicio/tri-press-frances-polea-baja-512.2ad361bd.webp"
+    }
+  },
+  "tri-rompecraneos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-rompecraneos-192.f072834c.webp",
+      "512": "imagenes/ejercicio/tri-rompecraneos-512.06571005.webp"
+    }
+  },
+  "tri-trasnuca-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-trasnuca-polea-baja-192.641e838b.webp",
+      "512": "imagenes/ejercicio/tri-trasnuca-polea-baja-512.4c5b8597.webp"
+    }
   }
 }
