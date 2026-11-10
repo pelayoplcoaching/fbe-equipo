@@ -686,6 +686,16 @@
       "512": "imagenes/ejercicio/cua-bulgara-hatfield-512.3a5ffeff.webp"
     }
   },
+  "cua-bulgara-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-bulgara-mancuernas-192.9063cea3.webp",
+      "512": "imagenes/ejercicio/cua-bulgara-mancuernas-512.b9f3b213.webp"
+    }
+  },
   "cua-bulgara-multipower": {
     "proporcion": [
       1,

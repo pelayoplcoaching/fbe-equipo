@@ -14,6 +14,7 @@
     "4c72eda3-da68-469a-95c9-2cf13cf9f651": "cua-bulgara-multipower",
     "55e490fc-dad6-4aa7-bab8-aeeb78078162": "cua-sentadilla-barra-alta",
     "6108d297-2314-4d68-b68f-374cf656cb8f": "bic-curl-concentrado",
+    "634117d3-6f5e-433d-85eb-2543ead3a18d": "cua-bulgara-mancuernas",
     "6fb76b04-f847-4439-b94a-482b022ea04c": "bic-curl-inclinado",
     "701175fc-3112-4f00-ad27-a3fcd69781f8": "bic-curl-arana",
     "71708649-6100-459e-a62a-687ff83d1e52": "cua-split-squat",
@@ -42,6 +43,7 @@
   },
   "porNombre": {
     "ab wheel": "abd-ab-wheel",
+    "bulgara con mancuernas+apoyo": "cua-bulgara-mancuernas",
     "bulgara en multipower": "cua-bulgara-multipower",
     "bulgara hatfield con safety": "cua-bulgara-hatfield",
     "crunch desde polea alta": "abd-crunch-polea-alta",
