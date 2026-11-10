@@ -44,6 +44,8 @@ export function instalarTirar(d = typeof document !== 'undefined' ? document : n
     r.classList.toggle('soltando', soltando);
     r.style.setProperty('--tirar', `${Math.round(px)}px`);
     r.style.setProperty('--giro', `${Math.round(px * 3)}deg`);
+    // (diseño, tanda 45) cuánto falta para el umbral, de 0 a 1: la luna de la rueda se llena con el dedo
+    r.style.setProperty('--lleno', String(Math.min(1, Math.round((px / UMBRAL) * 100) / 100)));
     r.classList.toggle('lista', px >= UMBRAL);
   };
   const puede = (objetivo) => !ocupado && window.scrollY <= 0 && !d.body.dataset.hojas && !d.querySelector('[aria-modal="true"]')

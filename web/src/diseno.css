@@ -4237,3 +4237,54 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 @keyframes cierre-rayos { 0% { opacity: 0; transform: scale(.86); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.12); } }
 @keyframes vamos-lobo { from { transform: translateY(8px) scale(0); } }
 @media (forced-colors: active) { .cierre-luna { display: none; } .arco-punta circle { fill: CanvasText; filter: none; } }
+
+/* ===== Tanda 45 (10/11): empezar la sesión, tirar para recargar y el check-in enviado ===== */
+/* 338. Empezar la sesión (ui/atleta/EscenaInicio.js): la noche se abre desde el botón, el lobo aparece con los ojos
+   encendidos, «A por ello» sube y, al segundo, todo se levanta como un telón. No tapa los toques. */
+.escena-inicio { position: fixed; inset: 0; z-index: 90; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 18px; overflow: hidden; color: #fff;
+  background: radial-gradient(30rem 24rem at 50% 44%, #3A2C8C 0%, transparent 70%), #1E1548;
+  animation: escena-inicio-abre .42s var(--curva-casa) both; transition: transform .45s var(--curva-casa); will-change: transform; }
+.escena-inicio.fuera { transform: translateY(-102%); }
+@keyframes escena-inicio-abre { from { clip-path: circle(0 at var(--ox) var(--oy)); } to { clip-path: circle(150% at var(--ox) var(--oy)); } }
+.escena-inicio-lobo { width: min(184px, 46vw); height: auto; fill: #fff; overflow: visible; filter: drop-shadow(0 14px 34px rgba(10, 6, 40, .6)); animation: escena-inicio-lobo .5s var(--curva-rebote) .1s both; }
+@keyframes escena-inicio-lobo { from { opacity: 0; transform: scale(.6); } }
+.escena-inicio-ojo { fill: #F6D77A; opacity: 0; filter: drop-shadow(0 0 22px #F6D77A) drop-shadow(0 0 60px #EDBE4E); animation: escena-inicio-ojo .6s ease-out .38s both; }
+@keyframes escena-inicio-ojo { 0% { opacity: 0; } 35% { opacity: 1; } 55% { opacity: .45; } 100% { opacity: 1; } }
+.escena-inicio-texto { margin: 0; overflow: hidden; font-size: 1.75rem; line-height: 1.2; font-weight: 800; letter-spacing: -.02em; padding-bottom: 2px; }
+.escena-inicio-texto > span { display: block; transform: translateY(110%); animation: escena-linea .5s var(--curva-llega) .3s both; }
+@media (forced-colors: active) { .escena-inicio { background: Canvas; color: CanvasText; } .escena-inicio-lobo { fill: CanvasText; } }
+
+/* 339. Tirar para recargar (ui/tirar.js, de la línea de fluidez; sus estilos, en pulido.css, que carga después: aquí
+   con «body >» delante). La rueda es una luna en su noche: se llena con el dedo (--lleno, de 0 a 1), al pasar el
+   umbral está llena y se enciende, y mientras recarga, se llena y se vacía como el indicador de carga. */
+body > .tirar { background: #1E1548; box-shadow: var(--sombra-flotante), inset 0 0 0 1px rgba(255, 255, 255, .14); }
+body > .tirar .tirar-rueda { position: relative; width: 22px; height: 22px; border: 0; border-radius: 50%; overflow: hidden; transform: none; background: rgba(255, 255, 255, .17); }
+body > .tirar .tirar-rueda::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 36% 30%, #fff, #D6CCFF); transform: translateX(calc((var(--lleno, 0) - 1) * 102%)); }
+body > .tirar.lista { box-shadow: var(--sombra-flotante), 0 0 0 1px rgba(255, 255, 255, .2), 0 0 18px rgba(185, 168, 255, .75); }
+body > .tirar.girando .tirar-rueda { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  body > .tirar.lista:not(.girando) .tirar-rueda { animation: tirar-llena .32s var(--curva-rebote); }
+  body > .tirar.girando .tirar-rueda::before { animation: luna-fase 1.2s cubic-bezier(.45, 0, .55, 1) infinite; }
+}
+@media (prefers-reduced-motion: reduce) { body > .tirar.girando .tirar-rueda::before { transform: none; } }
+@keyframes tirar-llena { from { transform: scale(.8); } }
+@media (forced-colors: active) { body > .tirar { background: Canvas; border: 1px solid CanvasText; } body > .tirar .tirar-rueda::before { background: CanvasText; } }
+
+/* 340. El check-in enviado (Checkin.jsx): el check-in sale volando hasta el lobo de tu coach, que asoma a la derecha
+   y lo recibe con una onda. Con «reducir movimiento», el lobo quieto y sin vuelo. */
+.ck-enviado { grid-template-columns: 48px minmax(0, 1fr) 40px; position: relative; }
+.ck-enviado-lobo { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--morado); box-shadow: 0 4px 12px color-mix(in srgb, var(--morado) 35%, transparent); }
+.ck-enviado-lobo svg { width: 21px; height: 24px; fill: var(--sobre-morado); }
+.ck-enviado-lobo::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--morado); opacity: 0; pointer-events: none; }
+.ck-enviado-vuelo { display: none; position: absolute; top: 50%; left: 30px; width: 20px; height: 20px; margin-top: -10px; pointer-events: none; }
+.ck-enviado-vuelo svg { display: block; width: 20px; height: 20px; fill: none; stroke: var(--ok); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (prefers-reduced-motion: no-preference) {
+  .ck-enviado-vuelo { display: block; animation: ck-vuelo .75s cubic-bezier(.5, 0, .3, 1) .2s both; }
+  .ck-enviado-vuelo svg { animation: ck-vuelo-arco .75s ease-in-out .2s both; }
+  .ck-enviado-lobo { animation: ck-lobo .5s var(--curva-rebote) .8s both; }
+  .ck-enviado-lobo::after { animation: ck-lobo-onda .8s ease-out .95s both; }
+}
+@keyframes ck-vuelo { 0% { left: 30px; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: calc(100% - 46px); opacity: 0; } }
+@keyframes ck-vuelo-arco { 0% { transform: translateY(6px) rotate(8deg); } 50% { transform: translateY(-16px) rotate(-6deg); } 100% { transform: translateY(0) rotate(14deg) scale(.6); } }
+@keyframes ck-lobo { from { transform: scale(0); } }
+@keyframes ck-lobo-onda { from { opacity: .7; transform: scale(1); } to { opacity: 0; transform: scale(1.7); } }
