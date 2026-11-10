@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.131': {
+    atleta: [
+      'En móviles pequeños o con la letra grande, Perfil y Ajustes se leen mejor: cada explicación ocupa todo el ancho.',
+    ],
+  },
   '0.130': {
     atleta: [
       'Más vida en el entrenamiento: si mejoras lo de la última vez, te lo dice al momento («+2,5 kg que la última vez»).',

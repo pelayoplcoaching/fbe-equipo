@@ -1,0 +1,36 @@
+/* =====================================================================================================================
+   Pantallas estrechas y letra grande (v0.131). Solo ASCII. Va lo ultimo.
+   En un movil de 320 px (los iPhone SE primeros, o un iPhone con la pantalla en "Zoom") y con la letra de la app en
+   Grande o Muy grande, las filas de Perfil y Ajustes dejaban el texto en una columna muy estrecha: el icono a un lado,
+   el interruptor al otro y la explicacion partida en ocho lineas. Aqui la explicacion baja a su propia linea, a todo lo
+   ancho, y el valor de la derecha puede partirse. En un movil normal con la letra normal no cambia nada.
+   ===================================================================================================================== */
+@media (max-width: 359px) {
+  .fila-ios { gap: 10px; padding-left: 12px; padding-right: 12px; }
+  :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto, .fila-ios.interruptor-fila > label) { display: contents; }
+  :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .fila-ios-titulo, .fila-ios.interruptor-fila > label > span:first-child) { min-width: 0; overflow-wrap: break-word; }
+  :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .peq, .fila-ios.interruptor-fila > label > .peq) { order: 9; grid-column: 1 / -1; }
+  .fila-ios .fila-ios-valor { white-space: normal; text-align: right; max-width: 7rem; overflow-wrap: break-word; }
+  :is(.duelos .duelo-retar, .resumen-equipo-compartir, .perfil-ver-como) { white-space: normal; text-wrap: balance; }
+}
+@media (max-width: 400px) {
+  :root[data-letra="grande"] .fila-ios { gap: 10px; padding-left: 12px; padding-right: 12px; }
+  :root[data-letra="grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto, .fila-ios.interruptor-fila > label) { display: contents; }
+  :root[data-letra="grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .fila-ios-titulo, .fila-ios.interruptor-fila > label > span:first-child) { min-width: 0; overflow-wrap: break-word; }
+  :root[data-letra="grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .peq, .fila-ios.interruptor-fila > label > .peq) { order: 9; grid-column: 1 / -1; }
+  :root[data-letra="grande"] .fila-ios .fila-ios-valor { white-space: normal; text-align: right; max-width: 7rem; overflow-wrap: break-word; }
+  :root[data-letra="grande"] :is(.duelos .duelo-retar, .resumen-equipo-compartir, .perfil-ver-como) { white-space: normal; text-wrap: balance; }
+}
+@media (max-width: 440px) {
+  :root[data-letra="muy-grande"] .fila-ios { gap: 10px; padding-left: 12px; padding-right: 12px; }
+  :root[data-letra="muy-grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto, .fila-ios.interruptor-fila > label) { display: contents; }
+  :root[data-letra="muy-grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .fila-ios-titulo, .fila-ios.interruptor-fila > label > span:first-child) { min-width: 0; overflow-wrap: break-word; }
+  :root[data-letra="muy-grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .peq, .fila-ios.interruptor-fila > label > .peq) { order: 9; grid-column: 1 / -1; }
+  :root[data-letra="muy-grande"] .fila-ios .fila-ios-valor { white-space: normal; text-align: right; max-width: 7rem; overflow-wrap: break-word; }
+  :root[data-letra="muy-grande"] :is(.duelos .duelo-retar, .resumen-equipo-compartir, .perfil-ver-como) { white-space: normal; text-wrap: balance; }
+}
+
+/* La fila de "Tus pagos" (y las que llevan un chip a la derecha): el chip no se corta ("Retrasad"); el texto cede el sitio */
+li.panel-pad.separa > .fila-ios-izq { flex: 1 1 0; min-width: 0; }
+li.panel-pad.separa > .fila-ios-izq > div { overflow-wrap: break-word; }
+li.panel-pad.separa > .chip { flex: none; }
