@@ -1,4 +1,134 @@
 {
+  "abd-ab-wheel": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-ab-wheel-192.93c96f4c.webp",
+      "512": "imagenes/ejercicio/abd-ab-wheel-512.2b97278e.webp"
+    }
+  },
+  "abd-crunch-banco-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-banco-inclinado-192.ab541d87.webp",
+      "512": "imagenes/ejercicio/abd-crunch-banco-inclinado-512.4d0dfb66.webp"
+    }
+  },
+  "abd-crunch-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-maquina-192.b19ae0a0.webp",
+      "512": "imagenes/ejercicio/abd-crunch-maquina-512.21225b6e.webp"
+    }
+  },
+  "abd-crunch-polea-alta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-polea-alta-192.fdb062b8.webp",
+      "512": "imagenes/ejercicio/abd-crunch-polea-alta-512.b534936e.webp"
+    }
+  },
+  "abd-crunch-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-tumbado-192.4a130acb.webp",
+      "512": "imagenes/ejercicio/abd-crunch-tumbado-512.18071f56.webp"
+    }
+  },
+  "abd-hanging-leg-raises": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-hanging-leg-raises-192.c3f052ab.webp",
+      "512": "imagenes/ejercicio/abd-hanging-leg-raises-512.94d1b4c1.webp"
+    }
+  },
+  "abd-leg-raises-declinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-leg-raises-declinado-192.2c4220ef.webp",
+      "512": "imagenes/ejercicio/abd-leg-raises-declinado-512.96a8ea57.webp"
+    }
+  },
+  "abd-plancha": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-plancha-192.7e04b5e6.webp",
+      "512": "imagenes/ejercicio/abd-plancha-512.08985428.webp"
+    }
+  },
+  "abd-press-pallof": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-press-pallof-192.e7a0e54f.webp",
+      "512": "imagenes/ejercicio/abd-press-pallof-512.71aac088.webp"
+    }
+  },
+  "abd-rodillas-pecho-suelo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-rodillas-pecho-suelo-192.f55d8ccf.webp",
+      "512": "imagenes/ejercicio/abd-rodillas-pecho-suelo-512.12848e21.webp"
+    }
+  },
+  "abd-russian-twists": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-russian-twists-192.b0786185.webp",
+      "512": "imagenes/ejercicio/abd-russian-twists-512.d1152e38.webp"
+    }
+  },
+  "abd-tuck-ups": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-tuck-ups-192.9178b95f.webp",
+      "512": "imagenes/ejercicio/abd-tuck-ups-512.2a07941c.webp"
+    }
+  },
+  "abd-v-ups": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-v-ups-192.d6179083.webp",
+      "512": "imagenes/ejercicio/abd-v-ups-512.419fb408.webp"
+    }
+  },
   "acceso-fondo": {
     "proporcion": [
       2,
@@ -21,6 +151,36 @@
       "1024": "imagenes/acceso/activar-fondo-1024.d515bec2.webp"
     }
   },
+  "adu-copenhague": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-copenhague-192.e21d0322.webp",
+      "512": "imagenes/ejercicio/adu-copenhague-512.c22b2c40.webp"
+    }
+  },
+  "adu-maquina-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-maquina-sentado-192.7864010e.webp",
+      "512": "imagenes/ejercicio/adu-maquina-sentado-512.c3a65775.webp"
+    }
+  },
+  "adu-polea-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-polea-de-pie-192.fd151b6e.webp",
+      "512": "imagenes/ejercicio/adu-polea-de-pie-512.cb9e00f6.webp"
+    }
+  },
   "aniversario": {
     "proporcion": [
       3,
@@ -30,6 +190,156 @@
       "720": "imagenes/celebra/aniversario-720.59b3dfaa.webp",
       "1080": "imagenes/celebra/aniversario-1080.5bf71668.webp",
       "1440": "imagenes/celebra/aniversario-1440.b5a66247.webp"
+    }
+  },
+  "ant-curl-muneca-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-curl-muneca-banco-192.d27deea2.webp",
+      "512": "imagenes/ejercicio/ant-curl-muneca-banco-512.c7de52dd.webp"
+    }
+  },
+  "ant-curl-muneca-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-curl-muneca-polea-192.3b992a36.webp",
+      "512": "imagenes/ejercicio/ant-curl-muneca-polea-512.a78825d3.webp"
+    }
+  },
+  "ant-extensiones-muneca-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-extensiones-muneca-banco-192.dba8baa6.webp",
+      "512": "imagenes/ejercicio/ant-extensiones-muneca-banco-512.f0419ff2.webp"
+    }
+  },
+  "ant-extensiones-muneca-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-extensiones-muneca-polea-192.c5e2a53d.webp",
+      "512": "imagenes/ejercicio/ant-extensiones-muneca-polea-512.381ae1ad.webp"
+    }
+  },
+  "ant-kettlebell-wrist-turns": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-kettlebell-wrist-turns-192.cc116610.webp",
+      "512": "imagenes/ejercicio/ant-kettlebell-wrist-turns-512.42fc2796.webp"
+    }
+  },
+  "bic-curl-arana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-arana-192.6bd209f5.webp",
+      "512": "imagenes/ejercicio/bic-curl-arana-512.11294c9e.webp"
+    }
+  },
+  "bic-curl-barra-recta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-barra-recta-192.c0a85d99.webp",
+      "512": "imagenes/ejercicio/bic-curl-barra-recta-512.cae50092.webp"
+    }
+  },
+  "bic-curl-bayesian": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-bayesian-192.e9e3a74d.webp",
+      "512": "imagenes/ejercicio/bic-curl-bayesian-512.71f960c3.webp"
+    }
+  },
+  "bic-curl-concentrado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-concentrado-192.310f4f7c.webp",
+      "512": "imagenes/ejercicio/bic-curl-concentrado-512.b845bdc2.webp"
+    }
+  },
+  "bic-curl-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-inclinado-192.17e6443f.webp",
+      "512": "imagenes/ejercicio/bic-curl-inclinado-512.200938cd.webp"
+    }
+  },
+  "bic-curl-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-mancuernas-192.11c8f21d.webp",
+      "512": "imagenes/ejercicio/bic-curl-mancuernas-512.6466a730.webp"
+    }
+  },
+  "bic-curl-martillo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-martillo-192.c027f0ee.webp",
+      "512": "imagenes/ejercicio/bic-curl-martillo-512.d14d4cd5.webp"
+    }
+  },
+  "bic-curl-polea-baja-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-polea-baja-barra-192.48fc22d9.webp",
+      "512": "imagenes/ejercicio/bic-curl-polea-baja-barra-512.f8015d8e.webp"
+    }
+  },
+  "bic-curl-predicador": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-predicador-192.b22cba5c.webp",
+      "512": "imagenes/ejercicio/bic-curl-predicador-512.1e0c2ced.webp"
+    }
+  },
+  "bic-doble-biceps-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-doble-biceps-polea-192.1985b048.webp",
+      "512": "imagenes/ejercicio/bic-doble-biceps-polea-512.43af3f70.webp"
     }
   },
   "bienvenida-manana": {
@@ -446,6 +756,416 @@
       "1024": "imagenes/compartir/compartir-sesion-1024.53249527.webp"
     }
   },
+  "cua-bulgara-hatfield": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-bulgara-hatfield-192.1b9e9b1e.webp",
+      "512": "imagenes/ejercicio/cua-bulgara-hatfield-512.3a5ffeff.webp"
+    }
+  },
+  "cua-bulgara-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-bulgara-mancuernas-192.9063cea3.webp",
+      "512": "imagenes/ejercicio/cua-bulgara-mancuernas-512.b9f3b213.webp"
+    }
+  },
+  "cua-bulgara-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-bulgara-multipower-192.672499a4.webp",
+      "512": "imagenes/ejercicio/cua-bulgara-multipower-512.9b7fe576.webp"
+    }
+  },
+  "cua-hack-squat": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-hack-squat-192.e3872d23.webp",
+      "512": "imagenes/ejercicio/cua-hack-squat-512.7166131d.webp"
+    }
+  },
+  "cua-hatfield-squat": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-hatfield-squat-192.e8cde808.webp",
+      "512": "imagenes/ejercicio/cua-hatfield-squat-512.61adc187.webp"
+    }
+  },
+  "cua-high-step-up": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-high-step-up-192.5932a9c2.webp",
+      "512": "imagenes/ejercicio/cua-high-step-up-512.7481cb48.webp"
+    }
+  },
+  "cua-leg-extensions": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-leg-extensions-192.aca61dee.webp",
+      "512": "imagenes/ejercicio/cua-leg-extensions-512.b1b15bed.webp"
+    }
+  },
+  "cua-platz-squat": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-platz-squat-192.322a76be.webp",
+      "512": "imagenes/ejercicio/cua-platz-squat-512.611da702.webp"
+    }
+  },
+  "cua-prensa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-prensa-192.a1311f9c.webp",
+      "512": "imagenes/ejercicio/cua-prensa-512.fce3f4ed.webp"
+    }
+  },
+  "cua-sentadilla-barra-alta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-barra-alta-192.c1c03c56.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-barra-alta-512.d511e66e.webp"
+    }
+  },
+  "cua-sentadilla-barra-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-barra-baja-192.c1014553.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-barra-baja-512.f048a305.webp"
+    }
+  },
+  "cua-sentadilla-frontal": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-frontal-192.e9cd32e8.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-frontal-512.67de5cb1.webp"
+    }
+  },
+  "cua-sentadilla-goblet": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-goblet-192.245c0443.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-goblet-512.e1d195fe.webp"
+    }
+  },
+  "cua-sentadilla-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-multipower-192.d53fa0a1.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-multipower-512.2af1eea9.webp"
+    }
+  },
+  "cua-sentadilla-safety-bar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-safety-bar-192.2abb1c11.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-safety-bar-512.9f7e917c.webp"
+    }
+  },
+  "cua-split-squat": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-split-squat-192.a6a4f644.webp",
+      "512": "imagenes/ejercicio/cua-split-squat-512.cf190927.webp"
+    }
+  },
+  "cua-zancadas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-zancadas-192.c66dda7a.webp",
+      "512": "imagenes/ejercicio/cua-zancadas-512.db022790.webp"
+    }
+  },
+  "del-contractora-invertida": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-contractora-invertida-192.ffb8419a.webp",
+      "512": "imagenes/ejercicio/del-contractora-invertida-512.10cfc955.webp"
+    }
+  },
+  "del-cruce-poleas-reverso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-cruce-poleas-reverso-192.1abf3939.webp",
+      "512": "imagenes/ejercicio/del-cruce-poleas-reverso-512.8e171d2b.webp"
+    }
+  },
+  "del-cruce-reverso-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-cruce-reverso-inclinado-192.5966342e.webp",
+      "512": "imagenes/ejercicio/del-cruce-reverso-inclinado-512.8e2f76c5.webp"
+    }
+  },
+  "del-empuje-vertical-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-empuje-vertical-maquina-192.b577c7d2.webp",
+      "512": "imagenes/ejercicio/del-empuje-vertical-maquina-512.875e6398.webp"
+    }
+  },
+  "del-face-pull": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-face-pull-192.bc03342a.webp",
+      "512": "imagenes/ejercicio/del-face-pull-512.3e5b9145.webp"
+    }
+  },
+  "del-frontales-inclinado-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-frontales-inclinado-polea-192.038aa8dc.webp",
+      "512": "imagenes/ejercicio/del-frontales-inclinado-polea-512.3bd1d9f8.webp"
+    }
+  },
+  "del-frontales-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-frontales-polea-baja-192.7b23f3c6.webp",
+      "512": "imagenes/ejercicio/del-frontales-polea-baja-512.98542e7b.webp"
+    }
+  },
+  "del-landmine-press": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-landmine-press-192.8032f899.webp",
+      "512": "imagenes/ejercicio/del-landmine-press-512.9c1c472b.webp"
+    }
+  },
+  "del-laterales-butterfly": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-butterfly-192.0acf65ba.webp",
+      "512": "imagenes/ejercicio/del-laterales-butterfly-512.96e2f429.webp"
+    }
+  },
+  "del-laterales-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-inclinado-192.d3392161.webp",
+      "512": "imagenes/ejercicio/del-laterales-inclinado-512.b47ef618.webp"
+    }
+  },
+  "del-laterales-mancuernas-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-mancuernas-pie-192.ef94a220.webp",
+      "512": "imagenes/ejercicio/del-laterales-mancuernas-pie-512.05a6a5c2.webp"
+    }
+  },
+  "del-laterales-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-maquina-192.eb3e085c.webp",
+      "512": "imagenes/ejercicio/del-laterales-maquina-512.0c596eb0.webp"
+    }
+  },
+  "del-laterales-polea-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-polea-tumbado-192.b837a5f2.webp",
+      "512": "imagenes/ejercicio/del-laterales-polea-tumbado-512.e85fa05d.webp"
+    }
+  },
+  "del-laterales-polea-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-polea-unilateral-192.0cb4a018.webp",
+      "512": "imagenes/ejercicio/del-laterales-polea-unilateral-512.2f28c99a.webp"
+    }
+  },
+  "del-laterales-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-sentado-192.7f5025c2.webp",
+      "512": "imagenes/ejercicio/del-laterales-sentado-512.d89fc27c.webp"
+    }
+  },
+  "del-laterales-tumbado-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-tumbado-inclinado-192.b18337d5.webp",
+      "512": "imagenes/ejercicio/del-laterales-tumbado-inclinado-512.34c3836c.webp"
+    }
+  },
+  "del-pajaros-apoyado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-pajaros-apoyado-192.2c197ca8.webp",
+      "512": "imagenes/ejercicio/del-pajaros-apoyado-512.897eef8f.webp"
+    }
+  },
+  "del-pajaros-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-pajaros-inclinado-192.62bfa4c2.webp",
+      "512": "imagenes/ejercicio/del-pajaros-inclinado-512.b8d42264.webp"
+    }
+  },
+  "del-pajaros-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-pajaros-polea-baja-192.c0e3f192.webp",
+      "512": "imagenes/ejercicio/del-pajaros-polea-baja-512.d10ef475.webp"
+    }
+  },
+  "del-press-militar-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-barra-192.ace29656.webp",
+      "512": "imagenes/ejercicio/del-press-militar-barra-512.6cc5ce54.webp"
+    }
+  },
+  "del-press-militar-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-mancuernas-192.d7c59199.webp",
+      "512": "imagenes/ejercicio/del-press-militar-mancuernas-512.7c47b38b.webp"
+    }
+  },
+  "del-press-militar-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-maquina-192.9a2a1573.webp",
+      "512": "imagenes/ejercicio/del-press-militar-maquina-512.5a1effe1.webp"
+    }
+  },
+  "del-press-militar-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-multipower-192.f820e535.webp",
+      "512": "imagenes/ejercicio/del-press-militar-multipower-512.1fec54b0.webp"
+    }
+  },
+  "del-remo-menton": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-remo-menton-192.5c8dc2af.webp",
+      "512": "imagenes/ejercicio/del-remo-menton-512.76a9de75.webp"
+    }
+  },
   "donde-casa": {
     "proporcion": [
       16,
@@ -499,6 +1219,266 @@
       "480": "imagenes/equipo/equipo-reto-480.39ae977a.webp",
       "720": "imagenes/equipo/equipo-reto-720.b7cbb71c.webp",
       "1080": "imagenes/equipo/equipo-reto-1080.41c9369e.webp"
+    }
+  },
+  "esp-dominadas-neutras": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-neutras-192.f6086a87.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-neutras-512.44e26738.webp"
+    }
+  },
+  "esp-dominadas-pronas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-pronas-192.d1c8e498.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-pronas-512.12797abc.webp"
+    }
+  },
+  "esp-dominadas-supinas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-supinas-192.25ee57d5.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-supinas-512.49aae5f4.webp"
+    }
+  },
+  "esp-encogimientos-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-encogimientos-barra-192.e3788e34.webp",
+      "512": "imagenes/ejercicio/esp-encogimientos-barra-512.3a5e46e2.webp"
+    }
+  },
+  "esp-encogimientos-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-encogimientos-inclinado-192.c370c5b5.webp",
+      "512": "imagenes/ejercicio/esp-encogimientos-inclinado-512.5da2d876.webp"
+    }
+  },
+  "esp-encogimientos-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-encogimientos-mancuernas-192.069209d2.webp",
+      "512": "imagenes/ejercicio/esp-encogimientos-mancuernas-512.8034b994.webp"
+    }
+  },
+  "esp-encogimientos-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-encogimientos-multipower-192.9f734faa.webp",
+      "512": "imagenes/ejercicio/esp-encogimientos-multipower-512.69d5582e.webp"
+    }
+  },
+  "esp-farmer-walk": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-farmer-walk-192.9adca0d9.webp",
+      "512": "imagenes/ejercicio/esp-farmer-walk-512.41719507.webp"
+    }
+  },
+  "esp-jalon-neutro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-neutro-192.7f57ea5b.webp",
+      "512": "imagenes/ejercicio/esp-jalon-neutro-512.80e48f0d.webp"
+    }
+  },
+  "esp-jalon-prono": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-prono-192.f3460e62.webp",
+      "512": "imagenes/ejercicio/esp-jalon-prono-512.68b60c47.webp"
+    }
+  },
+  "esp-jalon-supino": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-supino-192.7ea7de13.webp",
+      "512": "imagenes/ejercicio/esp-jalon-supino-512.11095e2b.webp"
+    }
+  },
+  "esp-jalon-unilateral-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-unilateral-inclinado-192.6a1ed923.webp",
+      "512": "imagenes/ejercicio/esp-jalon-unilateral-inclinado-512.eea48183.webp"
+    }
+  },
+  "esp-landmine-row-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-landmine-row-unilateral-192.c5d93203.webp",
+      "512": "imagenes/ejercicio/esp-landmine-row-unilateral-512.8077d48b.webp"
+    }
+  },
+  "esp-meadows-row": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-meadows-row-192.a6e67538.webp",
+      "512": "imagenes/ejercicio/esp-meadows-row-512.f162e3b4.webp"
+    }
+  },
+  "esp-pullover-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-pullover-unilateral-192.5f546e48.webp",
+      "512": "imagenes/ejercicio/esp-pullover-unilateral-512.937abdc9.webp"
+    }
+  },
+  "esp-remo-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-barra-192.feba8015.webp",
+      "512": "imagenes/ejercicio/esp-remo-barra-512.98dcf968.webp"
+    }
+  },
+  "esp-remo-gironda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-gironda-192.b957baf2.webp",
+      "512": "imagenes/ejercicio/esp-remo-gironda-512.f82be347.webp"
+    }
+  },
+  "esp-remo-gironda-alto": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-gironda-alto-192.cb597e45.webp",
+      "512": "imagenes/ejercicio/esp-remo-gironda-alto-512.3e0aa962.webp"
+    }
+  },
+  "esp-remo-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-mancuerna-192.b4e198f5.webp",
+      "512": "imagenes/ejercicio/esp-remo-mancuerna-512.ef312881.webp"
+    }
+  },
+  "esp-remo-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-maquina-192.61c9c665.webp",
+      "512": "imagenes/ejercicio/esp-remo-maquina-512.81a8fefe.webp"
+    }
+  },
+  "esp-remo-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-multipower-192.d02e92eb.webp",
+      "512": "imagenes/ejercicio/esp-remo-multipower-512.d450b69d.webp"
+    }
+  },
+  "esp-remo-pendlay": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-pendlay-192.299876a2.webp",
+      "512": "imagenes/ejercicio/esp-remo-pendlay-512.f2a3f972.webp"
+    }
+  },
+  "esp-remo-polea-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-polea-unilateral-192.8b44fde3.webp",
+      "512": "imagenes/ejercicio/esp-remo-polea-unilateral-512.7911c0e8.webp"
+    }
+  },
+  "esp-remo-punta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-punta-192.8e1b2676.webp",
+      "512": "imagenes/ejercicio/esp-remo-punta-512.60d4bff1.webp"
+    }
+  },
+  "esp-remo-t": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-t-192.ebb0cbec.webp",
+      "512": "imagenes/ejercicio/esp-remo-t-512.a804cf00.webp"
+    }
+  },
+  "esp-seal-row": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-seal-row-192.6f6d7d71.webp",
+      "512": "imagenes/ejercicio/esp-seal-row-512.75802a25.webp"
     }
   },
   "foco-adaptacion": {
@@ -587,6 +1567,226 @@
       "480": "imagenes/foco/foco-volumen-480.b37169ff.webp",
       "720": "imagenes/foco/foco-volumen-720.40e29618.webp",
       "1080": "imagenes/foco/foco-volumen-1080.c1a79f9f.webp"
+    }
+  },
+  "gem-maquina-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-maquina-de-pie-192.fbcea8c3.webp",
+      "512": "imagenes/ejercicio/gem-maquina-de-pie-512.7138429c.webp"
+    }
+  },
+  "gem-prensa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-prensa-192.d54219ae.webp",
+      "512": "imagenes/ejercicio/gem-prensa-512.6db352f2.webp"
+    }
+  },
+  "gem-sentado-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-sentado-maquina-192.3f95b19d.webp",
+      "512": "imagenes/ejercicio/gem-sentado-maquina-512.105e85af.webp"
+    }
+  },
+  "gem-soleo-sentado-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-soleo-sentado-mancuernas-192.26b87772.webp",
+      "512": "imagenes/ejercicio/gem-soleo-sentado-mancuernas-512.dcfcf2b1.webp"
+    }
+  },
+  "gem-soleo-sentado-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-soleo-sentado-maquina-192.dd5b2215.webp",
+      "512": "imagenes/ejercicio/gem-soleo-sentado-maquina-512.74742c5a.webp"
+    }
+  },
+  "gem-talones-step-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-talones-step-multipower-192.9e758217.webp",
+      "512": "imagenes/ejercicio/gem-talones-step-multipower-512.5b2a8508.webp"
+    }
+  },
+  "gem-unilateral-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-unilateral-multipower-192.8bcdcf96.webp",
+      "512": "imagenes/ejercicio/gem-unilateral-multipower-512.0fe135ca.webp"
+    }
+  },
+  "glu-abducciones-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-abducciones-maquina-192.b4354b33.webp",
+      "512": "imagenes/ejercicio/glu-abducciones-maquina-512.c77857c8.webp"
+    }
+  },
+  "glu-bulgara-gluteo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-bulgara-gluteo-192.510523b9.webp",
+      "512": "imagenes/ejercicio/glu-bulgara-gluteo-512.be72bb37.webp"
+    }
+  },
+  "glu-cable-pull-through": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-cable-pull-through-192.94e210d8.webp",
+      "512": "imagenes/ejercicio/glu-cable-pull-through-512.e3b9341b.webp"
+    }
+  },
+  "glu-extensiones-45-gluteo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-extensiones-45-gluteo-192.9e2c4b25.webp",
+      "512": "imagenes/ejercicio/glu-extensiones-45-gluteo-512.f4d58bf6.webp"
+    }
+  },
+  "glu-hip-thrust": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-192.586652f0.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-512.e6b7d26e.webp"
+    }
+  },
+  "glu-hip-thrust-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-maquina-192.cd006d0b.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-maquina-512.d0291f97.webp"
+    }
+  },
+  "glu-hip-thrust-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-multipower-192.a4a32ae3.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-multipower-512.20e64c77.webp"
+    }
+  },
+  "glu-hip-thrust-unilateral-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-unilateral-barra-192.655e58d5.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-unilateral-barra-512.039bf859.webp"
+    }
+  },
+  "glu-hip-thrust-unilateral-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-unilateral-mancuerna-192.6bac3e3c.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-unilateral-mancuerna-512.c8d68622.webp"
+    }
+  },
+  "glu-leg-swing-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-leg-swing-polea-192.95440a7c.webp",
+      "512": "imagenes/ejercicio/glu-leg-swing-polea-512.5e8dee70.webp"
+    }
+  },
+  "glu-patada-cuadrupedia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-patada-cuadrupedia-192.1680b2ba.webp",
+      "512": "imagenes/ejercicio/glu-patada-cuadrupedia-512.2fa4ecc7.webp"
+    }
+  },
+  "glu-patada-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-patada-polea-baja-192.6161f8ea.webp",
+      "512": "imagenes/ejercicio/glu-patada-polea-baja-512.2deb40fd.webp"
+    }
+  },
+  "glu-prensa-gluteo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-prensa-gluteo-192.eda89e1c.webp",
+      "512": "imagenes/ejercicio/glu-prensa-gluteo-512.a68b52d8.webp"
+    }
+  },
+  "glu-puente": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-puente-192.3c8f76b2.webp",
+      "512": "imagenes/ejercicio/glu-puente-512.33237071.webp"
+    }
+  },
+  "glu-reverse-hyper-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-reverse-hyper-multipower-192.479df6e6.webp",
+      "512": "imagenes/ejercicio/glu-reverse-hyper-multipower-512.b167a8d6.webp"
     }
   },
   "grupo-abdominales": {
@@ -851,6 +2051,96 @@
     "archivos": {
       "512": "imagenes/hito/hito-8-512.7eadc0cf.webp",
       "1080": "imagenes/hito/hito-8-1080.a0106953.webp"
+    }
+  },
+  "isq-buenos-dias": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-buenos-dias-192.cc5f259c.webp",
+      "512": "imagenes/ejercicio/isq-buenos-dias-512.8a152676.webp"
+    }
+  },
+  "isq-extensiones-45-isquio": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-extensiones-45-isquio-192.7bb85f54.webp",
+      "512": "imagenes/ejercicio/isq-extensiones-45-isquio-512.76d9f65c.webp"
+    }
+  },
+  "isq-leg-curl-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-leg-curl-de-pie-192.9bf49d3e.webp",
+      "512": "imagenes/ejercicio/isq-leg-curl-de-pie-512.efdb405d.webp"
+    }
+  },
+  "isq-leg-curl-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-leg-curl-sentado-192.e60aaa7b.webp",
+      "512": "imagenes/ejercicio/isq-leg-curl-sentado-512.1e69b76b.webp"
+    }
+  },
+  "isq-leg-curl-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-leg-curl-tumbado-192.d91a76f9.webp",
+      "512": "imagenes/ejercicio/isq-leg-curl-tumbado-512.34bb3f9e.webp"
+    }
+  },
+  "isq-peso-muerto-convencional": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-convencional-192.f1e0d0da.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-convencional-512.e3f4bf79.webp"
+    }
+  },
+  "isq-peso-muerto-rumano": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-rumano-192.d52f7025.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-rumano-512.e720b939.webp"
+    }
+  },
+  "isq-peso-muerto-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-unilateral-192.1881e431.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-unilateral-512.9747f15f.webp"
+    }
+  },
+  "isq-rumano-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-rumano-mancuernas-192.12283104.webp",
+      "512": "imagenes/ejercicio/isq-rumano-mancuernas-512.c5ae1b1f.webp"
     }
   },
   "medalla-bascula-bronce": {
@@ -1277,6 +2567,166 @@
       "1440": "imagenes/mes/mes-12-1440.fe0b454b.webp"
     }
   },
+  "pec-aperturas-planas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-aperturas-planas-192.92f43493.webp",
+      "512": "imagenes/ejercicio/pec-aperturas-planas-512.27569a34.webp"
+    }
+  },
+  "pec-cruce-inclinado-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-cruce-inclinado-polea-baja-192.eec4592a.webp",
+      "512": "imagenes/ejercicio/pec-cruce-inclinado-polea-baja-512.1f3d8184.webp"
+    }
+  },
+  "pec-cruces-polea-alta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-cruces-polea-alta-192.448fa980.webp",
+      "512": "imagenes/ejercicio/pec-cruces-polea-alta-512.d13ea117.webp"
+    }
+  },
+  "pec-deck": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-deck-192.6448208e.webp",
+      "512": "imagenes/ejercicio/pec-deck-512.0eced922.webp"
+    }
+  },
+  "pec-fondos-ancho": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-fondos-ancho-192.ac4f8693.webp",
+      "512": "imagenes/ejercicio/pec-fondos-ancho-512.3d3c83c0.webp"
+    }
+  },
+  "pec-hex-press": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-hex-press-192.0f3c6a74.webp",
+      "512": "imagenes/ejercicio/pec-hex-press-512.f60deb52.webp"
+    }
+  },
+  "pec-press-banca": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-banca-192.e001eee8.webp",
+      "512": "imagenes/ejercicio/pec-press-banca-512.96c5a8a8.webp"
+    }
+  },
+  "pec-press-declinado-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-declinado-barra-192.9fd9f905.webp",
+      "512": "imagenes/ejercicio/pec-press-declinado-barra-512.43ce7191.webp"
+    }
+  },
+  "pec-press-declinado-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-declinado-mancuernas-192.2156da7c.webp",
+      "512": "imagenes/ejercicio/pec-press-declinado-mancuernas-512.f7220b74.webp"
+    }
+  },
+  "pec-press-inclinado-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-inclinado-barra-192.f30d7b98.webp",
+      "512": "imagenes/ejercicio/pec-press-inclinado-barra-512.ee08f782.webp"
+    }
+  },
+  "pec-press-inclinado-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-inclinado-mancuernas-192.30a1b623.webp",
+      "512": "imagenes/ejercicio/pec-press-inclinado-mancuernas-512.3eb3c034.webp"
+    }
+  },
+  "pec-press-inclinado-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-inclinado-maquina-192.b7d4fa0f.webp",
+      "512": "imagenes/ejercicio/pec-press-inclinado-maquina-512.4986c93b.webp"
+    }
+  },
+  "pec-press-inclinado-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-inclinado-multipower-192.8cbaed72.webp",
+      "512": "imagenes/ejercicio/pec-press-inclinado-multipower-512.50584a26.webp"
+    }
+  },
+  "pec-press-plano-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-plano-mancuernas-192.63b63049.webp",
+      "512": "imagenes/ejercicio/pec-press-plano-mancuernas-512.23865564.webp"
+    }
+  },
+  "pec-press-plano-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-plano-maquina-192.d59469cd.webp",
+      "512": "imagenes/ejercicio/pec-press-plano-maquina-512.7676c398.webp"
+    }
+  },
+  "pec-press-plano-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-plano-multipower-192.dfa23b3a.webp",
+      "512": "imagenes/ejercicio/pec-press-plano-multipower-512.8f0f8fd6.webp"
+    }
+  },
   "primeros-checkin": {
     "proporcion": [
       16,
@@ -1396,6 +2846,106 @@
       "480": "imagenes/acceso/sin-conexion-480.82cdc6d5.webp",
       "720": "imagenes/acceso/sin-conexion-720.70ca581f.webp",
       "1080": "imagenes/acceso/sin-conexion-1080.e67eac86.webp"
+    }
+  },
+  "tri-extensiones-polea-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extensiones-polea-barra-192.886ef624.webp",
+      "512": "imagenes/ejercicio/tri-extensiones-polea-barra-512.cb31638b.webp"
+    }
+  },
+  "tri-extensiones-polea-cuerda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extensiones-polea-cuerda-192.04cc9ec4.webp",
+      "512": "imagenes/ejercicio/tri-extensiones-polea-cuerda-512.e51e6513.webp"
+    }
+  },
+  "tri-fondos-estrecho": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-fondos-estrecho-192.7e7cfb7b.webp",
+      "512": "imagenes/ejercicio/tri-fondos-estrecho-512.0b56034a.webp"
+    }
+  },
+  "tri-katana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-katana-192.e6a6b056.webp",
+      "512": "imagenes/ejercicio/tri-katana-512.ba45b897.webp"
+    }
+  },
+  "tri-kaz-press": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-kaz-press-192.053d60f8.webp",
+      "512": "imagenes/ejercicio/tri-kaz-press-512.af01b260.webp"
+    }
+  },
+  "tri-press-frances-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-press-frances-barra-192.4a3969d1.webp",
+      "512": "imagenes/ejercicio/tri-press-frances-barra-512.ab074e44.webp"
+    }
+  },
+  "tri-press-frances-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-press-frances-mancuernas-192.62546660.webp",
+      "512": "imagenes/ejercicio/tri-press-frances-mancuernas-512.0298c123.webp"
+    }
+  },
+  "tri-press-frances-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-press-frances-polea-baja-192.ee528f95.webp",
+      "512": "imagenes/ejercicio/tri-press-frances-polea-baja-512.2ad361bd.webp"
+    }
+  },
+  "tri-rompecraneos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-rompecraneos-192.f072834c.webp",
+      "512": "imagenes/ejercicio/tri-rompecraneos-512.06571005.webp"
+    }
+  },
+  "tri-trasnuca-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-trasnuca-polea-baja-192.641e838b.webp",
+      "512": "imagenes/ejercicio/tri-trasnuca-polea-baja-512.4c5b8597.webp"
     }
   }
 }

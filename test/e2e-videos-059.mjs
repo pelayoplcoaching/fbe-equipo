@@ -228,7 +228,15 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     const { VIDEO_EJEMPLO } = await import('../web/src/datos/video-demo.js');
     await tec.getByLabel('Ángulo del vídeo nuevo').selectOption('De frente');
     await tec.locator('input[aria-label="Elegir el vídeo modelo"]').setInputFiles({ name: 'modelo.mp4', mimeType: 'video/mp4', buffer: Buffer.from(VIDEO_EJEMPLO.split(',')[1], 'base64') });
-    await p.locator('.toast', { hasText: 'Vídeo modelo guardado' }).waitFor({ timeout: 30000 });
+    // (si no llega el aviso, se apunta qué avisos salieron mientras y cómo estaba la subida, para saber si fue un error o
+    // si se quedó parada)
+    const avisosVistos = []; let mirando = true;
+    (async () => { while (mirando) { const t = await p.locator('.toast').allTextContents().catch(() => []); for (const x of t) if (!avisosVistos.includes(x)) avisosVistos.push(x); await p.waitForTimeout(150); } })();
+    try { await p.locator('.toast', { hasText: 'Vídeo modelo guardado' }).waitFor({ timeout: 30000 }); }
+    catch (e) {
+      const estado = (await tec.locator('.gestion-modelos').innerText().catch(() => '?')).replace(/\s+/g, ' ').slice(0, 300);
+      throw new Error(`no llegó «Vídeo modelo guardado» en 30 s. Avisos vistos: ${JSON.stringify(avisosVistos)}; filas ${await tec.locator('.modelo-fila').count()} (antes ${antes}); errores de consola: ${JSON.stringify(errores.slice(-3))}; la pestaña: «${estado}»`);
+    } finally { mirando = false; }
     check(await hay(tec.locator('.modelo-fila'), antes + 1) && await enDemo((d) => d.videos_modelo?.some((m) => m.angulo === 'De frente' && /^modelos\//.test(m.ruta))), '(6) el coach sube su vídeo modelo de la sentadilla (de frente)');
     await revisar('videos-modelo');
     await tec.getByRole('button', { name: 'Cerrar', exact: true }).first().click();

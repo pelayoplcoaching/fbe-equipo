@@ -4476,7 +4476,7 @@ console.log('\nv0.73: la comunidad, quinta tanda (aniversarios, el mes en el equ
     // (v0.110) la 2026-12.16: Salud del iPhone, calendario y WhatsApp (la 051)
     const integ = legal.PRIVACIDAD.find((x) => x[0] === 'Salud del iPhone, calendario y WhatsApp')?.[1] || '';
     check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.16') > 0 && legal.VERSION_LEGAL_SIN_053 === '2026-12.16' && PV.NOVEDADES_PRIVACIDAD[2][3] === '2026-12.16' && PV.novedadesDesde('2026-12.15', '2026-12.16').length === 1
-      && /pasos, sueño, frecuencia cardiaca en reposo, variabilidad cardiaca \(HRV\) y peso/.test(integ) && /consentimiento de datos de salud/.test(integ) && /solo tú y tu coach/.test(integ)
+      && /pasos, sueño, frecuencia cardiaca en reposo y variabilidad cardiaca \(HRV\); el peso no, lo apuntas tú/.test(integ) && /consentimiento de datos de salud/.test(integ) && /solo tú y tu coach/.test(integ)
       && /huella de tu clave/.test(integ) && /retiras tu consentimiento/.test(integ) && /a diferencia de tus check-ins y pesos/.test(integ) && /Descargar mis datos/.test(integ)
       && /Nunca sale ningún dato de salud/.test(integ) && /solo si lo marcas/.test(integ) && /WhatsApp \(Meta\)/.test(integ) && /Supabase/.test(integ) && PV.NOVEDADES_PRIVACIDAD[2][2].length <= 260,
       'la política 2026-12.16 cuenta Salud del iPhone (qué llega, quién lo ve, el borrado al retirar el consentimiento), el calendario y WhatsApp; su novedad sale una vez');

@@ -48,6 +48,15 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* La ficha de un ejercicio y la biblioteca: las estatuas, en 4:3 y algo más bajas; el pictograma va en claro */
 .ficha-ej-ilu, .biblioteca-grupo-ilu { --proporcion: 4 / 3; min-height: 7rem; }
 .ficha-ej-ilu { margin-top: 0; }
+/* (ejercicios) la figura del ejercicio: cuadrada y algo más alta que la estatua; es un botón que la abre en grande */
+.ficha-ej-foto { --proporcion: 1 / 1; min-height: 10rem; }
+.ficha-ej-foto .cab-ilu-img { -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 24%); mask-image: linear-gradient(to right, transparent 0%, #000 24%); }
+.ficha-ej-foto-btn { position: absolute; inset: 0 0 0 auto; height: 100%; aspect-ratio: 1; padding: 0; border: 0; background: none; cursor: zoom-in; z-index: 1; }
+.ficha-ej-foto-btn .cab-ilu-img { position: absolute; inset: 0; height: 100%; width: 100%; }
+.ficha-ej-foto-btn:focus-visible { outline: 3px solid var(--sobre-hero, #fff); outline-offset: -3px; border-radius: var(--r); }
+.ficha-ej-grande { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: var(--r); background: #1E1548; }
+.ej-marca > .ej-mini { width: 2.5rem; height: 2.5rem; border-radius: 11px; }
+.miniatura-ej { width: 44px; height: 44px; flex: 0 0 auto; border-radius: 10px; object-fit: cover; background: #1E1548; }
 .ficha-ej-ilu > p { display: flex; align-items: center; gap: 10px; font-size: var(--tipo-pie, .875rem); }
 .ficha-ej-ilu .picto { color: var(--sobre-hero); background: rgba(255, 255, 255, .1); }
 .biblioteca-grupo-ilu > p, .toma-ilu > .cab-ilu-texto { display: grid; gap: 2px; }

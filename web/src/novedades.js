@@ -6,6 +6,31 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.127': {
+    atleta: [
+      'Cada ejercicio con su imagen: en miniatura en la tarjeta de la sesión y, en su ficha, grande al tocarla.',
+    ],
+    coach: [
+      'Las 155 imágenes de la biblioteca de ejercicios: en tu biblioteca, en la ficha de cada uno y en las sesiones de tus atletas.',
+    ],
+  },
+  '0.126': {
+    atleta: [
+      'Salud del iPhone cuenta bien tus pasos y tu sueño: sin sumar dos veces el reloj y el iPhone, y sin el rato en la cama despierto.',
+      'El peso ya no llega de Salud: lo apuntas tú, como siempre. Y los pasos, con su punto de miles (11.851).',
+    ],
+    coach: [
+      'En la ficha, «Desde su iPhone» con los pasos y el sueño sin duplicados, sin el peso (lo apuntan a mano) y con punto de miles.',
+      'Para que funcione: vuelve a desplegar la función «integraciones» en Supabase con el integraciones-panel.ts nuevo.',
+    ],
+  },
+  '0.125': {
+    atleta: [
+      'El descanso entre series tiene vida: una luz recorre el aro y los tres últimos segundos laten.',
+      'Al acabar el descanso, el aro se cierra con un destello y el lobo te llama.',
+      'Y al abrir la app, estrellas y la luna detrás del lobo; mientras algo carga, una luna que se llena.',
+    ],
+  },
   '0.124': {
     atleta: [
       'Al terminar la sesión, una escena nueva: se hace de noche, sale la luna y el lobo de FBE se dibuja y aúlla.',

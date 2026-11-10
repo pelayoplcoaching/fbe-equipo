@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useUnaVez, Pestanas, Siluetas, useApp, useCarga, Icono, Cargando, Hoja, Vacio, usePreferencia } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
 import { Imagen, hayImagen } from '../Imagen.jsx';
-import { imagenGrupo } from '../../logica/imagenes.js';
+import { imagenGrupo, imagenEjercicio } from '../../logica/imagenes.js';
 import { GRUPOS, NOMBRE_GRUPO, conPrincipal, TIPOS_EJERCICIO, CATEGORIAS_RECURSO, NOMBRE_CATEGORIA } from '../../logica/calculos.js';
 import { FAQ } from '../../datos/faq.js';
 import { RecetasBiblioteca } from './ComidasCoach.jsx';
@@ -67,7 +67,8 @@ function Ejercicios({ peticion = null }) {
           {vista.map((e) => (
             <li key={e.id}>
               <button class="dia fila-biblioteca" onClick={() => setEditar(e)}>
-                <PictoEjercicio ejercicio={e} />
+                {/* (imágenes, ejercicios) su figura en miniatura; sin ella, el pictograma del patrón */}
+                <Imagen id={imagenEjercicio(e)} clase="miniatura-ej" tamanos="48px" alternativa={<PictoEjercicio ejercicio={e} />} />
                 <span>
                   <span class="nombre" style={e.activo === false ? 'color:var(--tinta-3)' : ''}>{e.nombre}{e.activo === false ? ' (oculto)' : ''}</span><br />
                   <span class="detalle" data-g={(e.grupos_musculares || [])[0] || undefined}>{(e.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(', ') || 'Sin grupo'}{(e.alternativas || []).length ? `; ${e.alternativas.length} alternativa${e.alternativas.length > 1 ? 's' : ''}` : ''}</span>
