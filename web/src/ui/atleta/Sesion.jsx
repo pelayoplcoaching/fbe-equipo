@@ -803,7 +803,12 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
             // (diseño, tanda 43) la escena del final solo la primera vez que se termina (no al cambiar la valoración); y,
             // con conexión, se mira a la vez si con esta sesión se completa la semana (para que llegue la manada)
             const conEscena = !sesion.completada && hayEscenaFinal();
-            const semanaHecha = conEscena && !r.enCola ? api.constancia(atleta.id).then((c) => (c?.actual?.completa && c.actual.hechas === c.actual.objetivo ? { hechas: c.actual.hechas } : null)).catch(() => null) : null;
+            // (v0.124) con un tope de 2,5 s: si la red se queda colgada justo después de guardar, la escena sale sin manada
+            // y el resumen no espera
+            const semanaHecha = conEscena && !r.enCola ? Promise.race([
+              api.constancia(atleta.id).then((c) => (c?.actual?.completa && c.actual.hechas === c.actual.objetivo ? { hechas: c.actual.hechas } : null)),
+              new Promise((ok) => setTimeout(() => ok(null), 2500)),
+            ]).catch(() => null) : null;
             try { res = await calcularResumen(api, atleta.id, ejercicios, hechas, cambios, r.enCola, ejerciciosPorId, records, sesion); }
             catch (e) {
               console.error('No se pudo preparar el resumen', e);
