@@ -4237,3 +4237,126 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 @keyframes cierre-rayos { 0% { opacity: 0; transform: scale(.86); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.12); } }
 @keyframes vamos-lobo { from { transform: translateY(8px) scale(0); } }
 @media (forced-colors: active) { .cierre-luna { display: none; } .arco-punta circle { fill: CanvasText; filter: none; } }
+
+/* ===== Tanda 45 (10/11): empezar la sesión, tirar para recargar y el check-in enviado ===== */
+/* 338. Empezar la sesión (ui/atleta/EscenaInicio.js): la noche se abre desde el botón, el lobo aparece con los ojos
+   encendidos, «A por ello» sube y, al segundo, todo se levanta como un telón. No tapa los toques. */
+.escena-inicio { position: fixed; inset: 0; z-index: 90; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 18px; overflow: hidden; color: #fff;
+  background: radial-gradient(30rem 24rem at 50% 44%, #3A2C8C 0%, transparent 70%), #1E1548;
+  animation: escena-inicio-abre .42s var(--curva-casa) both; transition: transform .45s var(--curva-casa); will-change: transform; }
+.escena-inicio.fuera { transform: translateY(-102%); }
+@keyframes escena-inicio-abre { from { clip-path: circle(0 at var(--ox) var(--oy)); } to { clip-path: circle(150% at var(--ox) var(--oy)); } }
+.escena-inicio-lobo { width: min(184px, 46vw); height: auto; fill: #fff; overflow: visible; filter: drop-shadow(0 14px 34px rgba(10, 6, 40, .6)); animation: escena-inicio-lobo .5s var(--curva-rebote) .1s both; }
+@keyframes escena-inicio-lobo { from { opacity: 0; transform: scale(.6); } }
+.escena-inicio-ojo { fill: #F6D77A; opacity: 0; filter: drop-shadow(0 0 22px #F6D77A) drop-shadow(0 0 60px #EDBE4E); animation: escena-inicio-ojo .6s ease-out .38s both; }
+@keyframes escena-inicio-ojo { 0% { opacity: 0; } 35% { opacity: 1; } 55% { opacity: .45; } 100% { opacity: 1; } }
+.escena-inicio-texto { margin: 0; overflow: hidden; font-size: 1.75rem; line-height: 1.2; font-weight: 800; letter-spacing: -.02em; padding-bottom: 2px; }
+.escena-inicio-texto > span { display: block; transform: translateY(110%); animation: escena-linea .5s var(--curva-llega) .3s both; }
+@media (forced-colors: active) { .escena-inicio { background: Canvas; color: CanvasText; } .escena-inicio-lobo { fill: CanvasText; } }
+
+/* 339. Tirar para recargar (ui/tirar.js, de la línea de fluidez; sus estilos, en pulido.css, que carga después: aquí
+   con «body >» delante). La rueda es una luna en su noche: se llena con el dedo (--lleno, de 0 a 1), al pasar el
+   umbral está llena y se enciende, y mientras recarga, se llena y se vacía como el indicador de carga. */
+body > .tirar { background: #1E1548; box-shadow: var(--sombra-flotante), inset 0 0 0 1px rgba(255, 255, 255, .14); }
+body > .tirar .tirar-rueda { position: relative; width: 22px; height: 22px; border: 0; border-radius: 50%; overflow: hidden; transform: none; background: rgba(255, 255, 255, .17); }
+body > .tirar .tirar-rueda::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 36% 30%, #fff, #D6CCFF); transform: translateX(calc((var(--lleno, 0) - 1) * 102%)); }
+body > .tirar.lista { box-shadow: var(--sombra-flotante), 0 0 0 1px rgba(255, 255, 255, .2), 0 0 18px rgba(185, 168, 255, .75); }
+body > .tirar.girando .tirar-rueda { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  body > .tirar.lista:not(.girando) .tirar-rueda { animation: tirar-llena .32s var(--curva-rebote); }
+  body > .tirar.girando .tirar-rueda::before { animation: luna-fase 1.2s cubic-bezier(.45, 0, .55, 1) infinite; }
+}
+@media (prefers-reduced-motion: reduce) { body > .tirar.girando .tirar-rueda::before { transform: none; } }
+@keyframes tirar-llena { from { transform: scale(.8); } }
+@media (forced-colors: active) { body > .tirar { background: Canvas; border: 1px solid CanvasText; } body > .tirar .tirar-rueda::before { background: CanvasText; } }
+
+/* 340. El check-in enviado (Checkin.jsx): el check-in sale volando hasta el lobo de tu coach, que asoma a la derecha
+   y lo recibe con una onda. Con «reducir movimiento», el lobo quieto y sin vuelo. */
+.ck-enviado { grid-template-columns: 48px minmax(0, 1fr) 40px; position: relative; }
+.ck-enviado-lobo { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--morado); box-shadow: 0 4px 12px color-mix(in srgb, var(--morado) 35%, transparent); }
+.ck-enviado-lobo svg { width: 21px; height: 24px; fill: var(--sobre-morado); }
+.ck-enviado-lobo::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--morado); opacity: 0; pointer-events: none; }
+.ck-enviado-vuelo { display: none; position: absolute; top: 50%; left: 30px; width: 20px; height: 20px; margin-top: -10px; pointer-events: none; }
+.ck-enviado-vuelo svg { display: block; width: 20px; height: 20px; fill: none; stroke: var(--ok); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (prefers-reduced-motion: no-preference) {
+  .ck-enviado-vuelo { display: block; animation: ck-vuelo .75s cubic-bezier(.5, 0, .3, 1) .2s both; }
+  .ck-enviado-vuelo svg { animation: ck-vuelo-arco .75s ease-in-out .2s both; }
+  .ck-enviado-lobo { animation: ck-lobo .5s var(--curva-rebote) .8s both; }
+  .ck-enviado-lobo::after { animation: ck-lobo-onda .8s ease-out .95s both; }
+}
+@keyframes ck-vuelo { 0% { left: 30px; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: calc(100% - 46px); opacity: 0; } }
+@keyframes ck-vuelo-arco { 0% { transform: translateY(6px) rotate(8deg); } 50% { transform: translateY(-16px) rotate(-6deg); } 100% { transform: translateY(0) rotate(14deg) scale(.6); } }
+@keyframes ck-lobo { from { transform: scale(0); } }
+@keyframes ck-lobo-onda { from { opacity: .7; transform: scale(1); } to { opacity: 0; transform: scale(1.7); } }
+
+/* ===== Tanda 46 (10/11): los gestos de cada día, animados ===== */
+/* 341. Marcar una serie (FilaSerie.jsx). Ya tenía el barrido verde, el anillo y el ✓ que se dibuja; ahora el botón
+   da un salto y suelta ocho chispas alrededor. En la última serie del ejercicio, las chispas son doradas y más. */
+.serie .hecho-btn { position: relative; }
+@media (prefers-reduced-motion: no-preference) {
+  .serie.recien.hecha .hecho-btn { animation: serie-salto .46s var(--curva-rebote); }
+  .serie.recien.hecha .hecho-btn::before { content: ""; position: absolute; inset: -70%; border-radius: 50%; pointer-events: none; --ch: var(--ok);
+    background:
+      radial-gradient(circle at 50% 4%, var(--ch) 0 2.6px, transparent 3.2px), radial-gradient(circle at 82.5% 17.5%, var(--ch) 0 2px, transparent 2.6px),
+      radial-gradient(circle at 96% 50%, var(--ch) 0 2.6px, transparent 3.2px), radial-gradient(circle at 82.5% 82.5%, var(--ch) 0 2px, transparent 2.6px),
+      radial-gradient(circle at 50% 96%, var(--ch) 0 2.6px, transparent 3.2px), radial-gradient(circle at 17.5% 82.5%, var(--ch) 0 2px, transparent 2.6px),
+      radial-gradient(circle at 4% 50%, var(--ch) 0 2.6px, transparent 3.2px), radial-gradient(circle at 17.5% 17.5%, var(--ch) 0 2px, transparent 2.6px);
+    animation: serie-chispas .6s cubic-bezier(.2, .7, .3, 1) .06s both; }
+  .ejercicio:not(:has(.serie:not(.hecha))) .serie.recien.hecha .hecho-btn::before { --ch: var(--oro, #E0A92E); inset: -95%; animation-duration: .8s; }
+}
+@keyframes serie-salto { 0% { transform: scale(.8); } 55% { transform: scale(1.16); } }
+@keyframes serie-chispas { 0% { opacity: 0; transform: scale(.35) rotate(-18deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1) rotate(8deg); } }
+
+/* 342. Los iconos de la barra de abajo: cada uno con su gesto al elegirlo (antes, el mismo salto para todos, bloque
+   32). La mancuerna se levanta, el calendario pasa la hoja, la gráfica se dibuja, el plato gira, el bocadillo salta,
+   el equipo saluda y el check-in se sella. El resto conserva su salto. */
+@media (prefers-reduced-motion: no-preference) {
+  .tab[aria-current="page"] .tab-ico svg.ico-hoy { animation: tab-pesa .62s var(--curva-casa); }
+  .tab[aria-current="page"] .tab-ico svg.ico-semana { animation: tab-hoja .55s var(--curva-rebote); transform-origin: 50% 20%; }
+  .tab[aria-current="page"] .tab-ico svg.ico-progreso { animation: tab-traza .6s var(--curva-casa); }
+  .tab[aria-current="page"] .tab-ico svg.ico-receta { animation: tab-gira .6s var(--curva-rebote); }
+  .tab[aria-current="page"] .tab-ico svg.ico-mensaje { animation: tab-bocadillo .55s var(--curva-rebote); transform-origin: 30% 90%; }
+  .tab[aria-current="page"] .tab-ico svg.ico-equipo { animation: tab-saluda .6s var(--curva-casa); }
+  .tab[aria-current="page"] .tab-ico svg.ico-checkin { animation: tab-sello .5s var(--curva-rebote); }
+}
+@keyframes tab-pesa { 0% { transform: translateY(3px) rotate(0); } 38% { transform: translateY(-6px) rotate(-14deg); } 68% { transform: translateY(-4px) rotate(8deg); } }
+@keyframes tab-hoja { 0% { transform: translateY(-1px) perspective(60px) rotateX(-82deg); } 62% { transform: translateY(-1px) perspective(60px) rotateX(14deg); } }
+@keyframes tab-traza { 0% { clip-path: inset(0 100% 0 0); transform: translateY(2px); } 70% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 0 0 0); } }
+@keyframes tab-gira { 0% { transform: translateY(-1px) rotate(-110deg) scale(.8); } 62% { transform: translateY(-1px) rotate(12deg) scale(1.08); } }
+@keyframes tab-bocadillo { 0% { transform: scale(.6) rotate(-12deg); } 55% { transform: translateY(-3px) scale(1.14) rotate(6deg); } }
+@keyframes tab-saluda { 0% { transform: translateY(2px) scale(.9); } 30% { transform: translateY(-2px) rotate(-10deg); } 62% { transform: translateY(-2px) rotate(9deg); } }
+@keyframes tab-sello { 0% { transform: scale(1.55) rotate(-16deg); } 55% { transform: translateY(-1px) scale(.9) rotate(0); } }
+
+/* 343. La tarjeta de Hoy, con vida: al llegar, el dibujo de la sesión se asienta despacio (entra un 7 % más grande y
+   se posa en 2,6 s), sin tocar el paralaje del bloque 76 (que usa translate: esto, scale). Se probó que respirase sin
+   parar (18 s, ida y vuelta) y se retiró: una animación sin fin en la pantalla que más se ve no compensa. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both, hero-posa 2.6s var(--curva-llega) both; transform-origin: 70% 40%; }
+  @supports (animation-timeline: scroll()) {
+    .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both, hero-paralaje linear both, hero-posa 2.6s var(--curva-llega) both; animation-timeline: auto, scroll(root), auto; animation-range: normal, 0 520px, normal; }
+  }
+}
+@keyframes hero-posa { from { scale: 1.07; } }
+
+/* 344. La bienvenida del día (Bienvenida.jsx), pieza a pieza: el lobo de la marca se enciende un instante, el saludo
+   y el nombre suben, cada tarjeta del panel llega detrás de la anterior, los puntos de la semana se encienden de uno
+   en uno, las doce semanas se levantan y la barra se llena. Solo con transform (y fondos): el texto no se funde. */
+@media (prefers-reduced-motion: no-preference) {
+  .bdia-marca svg { animation: bdia-lobo 1.3s ease-out .25s both; }
+  .bdia h1 > span, .bdia-mensaje, .bdia-coach, .bdia-porque { animation: bdia-pieza .55s var(--curva-llega) backwards; }
+  .bdia h1 > .bdia-nombre { animation-delay: .07s; } .bdia-mensaje { animation-delay: .14s; } .bdia-coach, .bdia-porque { animation-delay: .2s; }
+  .bdia-tablero > *, .bdia-cifras > * { animation: bdia-pieza .55s var(--curva-llega) backwards; }
+  .bdia-tablero > :nth-child(1) { animation-delay: .22s; } .bdia-tablero > :nth-child(2) { animation-delay: .3s; } .bdia-tablero > :nth-child(3) { animation-delay: .38s; } .bdia-tablero > :nth-child(n+4) { animation-delay: .46s; }
+  .bdia-cifras > :nth-child(1) { animation-delay: .32s; } .bdia-cifras > :nth-child(2) { animation-delay: .39s; } .bdia-cifras > :nth-child(3) { animation-delay: .46s; } .bdia-cifras > :nth-child(n+4) { animation-delay: .53s; }
+  .bdia-puntos i.on { animation: bdia-punto .3s ease-out calc(.6s + var(--n, 0) * 90ms) backwards; }
+  .bdia-puntos i:nth-child(2) { --n: 1; } .bdia-puntos i:nth-child(3) { --n: 2; } .bdia-puntos i:nth-child(4) { --n: 3; } .bdia-puntos i:nth-child(5) { --n: 4; } .bdia-puntos i:nth-child(6) { --n: 5; } .bdia-puntos i:nth-child(7) { --n: 6; }
+  .bdia-barra i { transform-origin: 0 50%; animation: bdia-barra .7s var(--curva-casa) .6s backwards; }
+  .bdia-semanas i { transform-origin: 50% 100%; animation: bdia-semana .45s var(--curva-rebote) calc(.55s + var(--n, 0) * 35ms) backwards; }
+  .bdia-semanas i:nth-child(2) { --n: 1; } .bdia-semanas i:nth-child(3) { --n: 2; } .bdia-semanas i:nth-child(4) { --n: 3; } .bdia-semanas i:nth-child(5) { --n: 4; } .bdia-semanas i:nth-child(6) { --n: 5; }
+  .bdia-semanas i:nth-child(7) { --n: 6; } .bdia-semanas i:nth-child(8) { --n: 7; } .bdia-semanas i:nth-child(9) { --n: 8; } .bdia-semanas i:nth-child(10) { --n: 9; } .bdia-semanas i:nth-child(11) { --n: 10; } .bdia-semanas i:nth-child(12) { --n: 11; }
+}
+@keyframes bdia-lobo { 0% { filter: drop-shadow(0 0 0 transparent); transform: scale(.7); } 35% { filter: drop-shadow(0 0 7px #fff) drop-shadow(0 0 14px #B9A8FF); transform: scale(1.18); } 100% { filter: drop-shadow(0 0 0 transparent); transform: scale(1); } }
+@keyframes bdia-pieza { from { transform: translateY(16px); } }
+@keyframes bdia-punto { from { background: rgba(255, 255, 255, .18); transform: scaleY(.4); } }
+@keyframes bdia-barra { from { transform: scaleX(0); } }
+@keyframes bdia-semana { from { transform: scaleY(.25); } }

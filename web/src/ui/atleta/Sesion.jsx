@@ -59,6 +59,7 @@ import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, s
 import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
 import { resumenPautas } from '../../logica/diseno.js';
 import { EscenaFinal, hayEscenaFinal } from './EscenaFinal.jsx';
+import { lanzarEscenaInicio } from './EscenaInicio.js';
 import { Portada, ArteSesion } from './Portada.jsx';
 import { LOBO } from '../marca-lobo.js';
 import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion, imagenEjercicio } from '../../logica/imagenes.js';
@@ -330,6 +331,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     return (
       <Portada sesion={sesion} semana={semana} ejercicios={ejercicios} etiquetas={etiquetas} alCerrar={alCerrar}
         alEmpezar={() => {
+          // (diseño, tanda 45) la escena de empezar: la noche se abre desde el botón pulsado (si se empieza desde él)
+          lanzarEscenaInicio(document.activeElement?.closest?.('.portada-empezar .btn') || document.querySelector('.portada-empezar .btn'));
           prepararAudio(); setRecienEmpezada(true); setEmpezada(true); window.scrollTo(0, 0);
           requestAnimationFrame(() => document.querySelector('.sesion-vista .cabecera h1')?.focus({ preventScroll: true }));
         }} />

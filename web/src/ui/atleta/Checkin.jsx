@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Paso, Segmentos, Icono, Pista } from '../comunes.jsx';
+import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { Hilo } from '../Hilo.jsx';
 import { ESCALAS, HORAS_SUENO, ZONAS, MEDIDAS, num, signo } from '../../logica/calculos.js';
 import { semanaCheckin, hoyISO, lunesDe, sumarDias, rangoSemana, fmtCorta, diasEntre } from '../../logica/fechas.js';
@@ -450,6 +451,9 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         <div class="ck-enviado" role="status">
           <span class="ck-enviado-ico" aria-hidden="true"><Icono n="hecho" /></span>
           <span class="pila-xs"><strong>{enviado === 'actualizado' ? 'Check-in actualizado' : '¡Enviado a tu coach!'}</strong><span class="peq secundario">Lo revisa y te contesta aquí abajo si hace falta.</span></span>
+          {/* (diseño, tanda 45) el check-in vuela hasta el lobo de tu coach */}
+          <span class="ck-enviado-vuelo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z" /></svg></span>
+          <span class="ck-enviado-lobo" aria-hidden="true"><svg viewBox={LOBO_CAJA}><path fill-rule="evenodd" d={LOBO_D} /></svg></span>
         </div>
       )}
 
