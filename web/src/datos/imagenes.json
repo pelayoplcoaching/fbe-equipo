@@ -151,6 +151,36 @@
       "1024": "imagenes/acceso/activar-fondo-1024.d515bec2.webp"
     }
   },
+  "adu-copenhague": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-copenhague-192.e21d0322.webp",
+      "512": "imagenes/ejercicio/adu-copenhague-512.c22b2c40.webp"
+    }
+  },
+  "adu-maquina-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-maquina-sentado-192.7864010e.webp",
+      "512": "imagenes/ejercicio/adu-maquina-sentado-512.c3a65775.webp"
+    }
+  },
+  "adu-polea-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-polea-de-pie-192.fd151b6e.webp",
+      "512": "imagenes/ejercicio/adu-polea-de-pie-512.cb9e00f6.webp"
+    }
+  },
   "aniversario": {
     "proporcion": [
       3,
@@ -160,6 +190,56 @@
       "720": "imagenes/celebra/aniversario-720.59b3dfaa.webp",
       "1080": "imagenes/celebra/aniversario-1080.5bf71668.webp",
       "1440": "imagenes/celebra/aniversario-1440.b5a66247.webp"
+    }
+  },
+  "ant-curl-muneca-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-curl-muneca-banco-192.d27deea2.webp",
+      "512": "imagenes/ejercicio/ant-curl-muneca-banco-512.c7de52dd.webp"
+    }
+  },
+  "ant-curl-muneca-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-curl-muneca-polea-192.3b992a36.webp",
+      "512": "imagenes/ejercicio/ant-curl-muneca-polea-512.a78825d3.webp"
+    }
+  },
+  "ant-extensiones-muneca-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-extensiones-muneca-banco-192.dba8baa6.webp",
+      "512": "imagenes/ejercicio/ant-extensiones-muneca-banco-512.f0419ff2.webp"
+    }
+  },
+  "ant-extensiones-muneca-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-extensiones-muneca-polea-192.c5e2a53d.webp",
+      "512": "imagenes/ejercicio/ant-extensiones-muneca-polea-512.381ae1ad.webp"
+    }
+  },
+  "ant-kettlebell-wrist-turns": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-kettlebell-wrist-turns-192.cc116610.webp",
+      "512": "imagenes/ejercicio/ant-kettlebell-wrist-turns-512.42fc2796.webp"
     }
   },
   "bic-curl-arana": {
