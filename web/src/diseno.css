@@ -4191,3 +4191,49 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .escena-saltar > span { animation-delay: 2.1s; }
 @media (max-height: 560px) { .escena-cielo { max-height: 50vh; } .escena-titulo { font-size: 1.5rem; } }
 @media (forced-colors: active) { .escena-final { background: Canvas; color: CanvasText; } .escena-chip, .escena-chip.oro { background: Canvas; color: CanvasText; border: 1px solid CanvasText; } }
+
+/* ===== Tanda 44 (10/11): la carga de la app y el descanso entre series, animados ===== */
+/* 336. El indicador de carga (LoboCarga, en toda la app): en vez del aro que gira, una luna que se llena y se vacía
+   detrás del lobo (la luz cruza el disco de lado a lado). La portada de arranque, con sus estrellas y su luna, va en
+   scripts/portada.mjs. Con «reducir movimiento», la luna llena y quieta. */
+.lobo-carga { border-radius: 50%; overflow: hidden; isolation: isolate; background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 22%, transparent); }
+.lobo-carga::before { inset: 0; border: 0; border-radius: 50%; animation: none; background: radial-gradient(circle at 36% 30%, color-mix(in srgb, var(--morado) 30%, var(--hoja)), color-mix(in srgb, var(--morado) 46%, var(--hoja))); z-index: -1; }
+.lobo-carga svg { position: relative; }
+@media (prefers-reduced-motion: no-preference) {
+  .lobo-carga::before { animation: luna-fase 1.9s cubic-bezier(.45, 0, .55, 1) infinite; }
+}
+@keyframes luna-fase { from { transform: translateX(-102%); } 50% { transform: none; } to { transform: translateX(102%); } }
+@media (forced-colors: active) { .lobo-carga { box-shadow: none; border: 1px solid CanvasText; } .lobo-carga::before { content: none; } }
+
+/* 337. El descanso entre series (sesion-comun.jsx: Temporizador). Mientras corre, la punta del arco lleva una luz;
+   en los tres últimos segundos sale una onda del aro con cada segundo; al terminar, el aro se cierra de un trazo,
+   el centro se enciende como una luna, salen doce rayos y dos ondas, y el lobo asoma sobre «¡Vamos!». */
+.reloj-descanso svg { overflow: visible; }
+.arco-punta { transform-box: view-box; transform-origin: center; transition: transform .25s linear; }
+.arco-punta circle { fill: #fff; filter: drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 2px #fff); }
+.onda-segundo, .cierre-onda { fill: none; stroke: var(--c); transform-box: fill-box; transform-origin: center; opacity: 0; pointer-events: none; }
+.onda-segundo { stroke-width: 3; }
+.cierre-arco { fill: none; stroke-width: 12; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.cierre-luna { fill: var(--c); opacity: .17; transform-box: fill-box; transform-origin: center; }
+.cierre-onda { stroke-width: 2.5; }
+.cierre-rayos { transform-box: view-box; transform-origin: center; opacity: 0; }
+.cierre-rayos line { stroke: color-mix(in srgb, var(--c) 55%, #fff); stroke-width: 3.5; stroke-linecap: round; }
+/* (estilos.css 377 estira todo svg del reloj a su tamaño: este no) */
+.reloj-descanso .reloj-centro .vamos-lobo { position: static; inset: auto; width: 30px; height: 34px; fill: currentColor; margin-bottom: 2px; }
+.temporizador.en-enfoque .reloj-centro .vamos-lobo { width: 22px; height: 25px; }
+@media (prefers-reduced-motion: no-preference) {
+  .onda-segundo { animation: onda-segundo .9s ease-out both; }
+  .cierre-arco { animation: cierre-arco .55s var(--curva-casa) both; }
+  .cierre-luna { animation: cierre-luna .55s var(--curva-rebote) .1s both; }
+  .cierre-onda { animation: cierre-onda 1.15s ease-out calc(.3s + var(--i) * .22s) both; }
+  .cierre-rayos { animation: cierre-rayos .75s var(--curva-casa) .3s both; }
+  .vamos-lobo { animation: vamos-lobo .5s var(--curva-rebote) .12s both; }
+}
+@media (prefers-reduced-motion: reduce) { .arco-punta { transition: none; } }
+@keyframes onda-segundo { from { opacity: .75; transform: scale(1); } to { opacity: 0; transform: scale(1.2); } }
+@keyframes cierre-arco { from { stroke-dashoffset: 1; } }
+@keyframes cierre-luna { from { transform: scale(0); } }
+@keyframes cierre-onda { from { opacity: .65; transform: scale(1); } to { opacity: 0; transform: scale(1.42); } }
+@keyframes cierre-rayos { 0% { opacity: 0; transform: scale(.86); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.12); } }
+@keyframes vamos-lobo { from { transform: translateY(8px) scale(0); } }
+@media (forced-colors: active) { .cierre-luna { display: none; } .arco-punta circle { fill: CanvasText; filter: none; } }
