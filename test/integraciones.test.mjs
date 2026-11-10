@@ -2,7 +2,7 @@
 // la función «integraciones» de Supabase de punta a punta (con la base de PGlite detrás, como la clave de servicio) y
 // la api con el modo demo (backend-memoria).
 // Uso: node test/integraciones.test.mjs
-import { numero, minutosSueno, fechaDe, limpiarSalud, urlSalud, urlsCalendario, urlAtajoEntreno, tipoSalud, telefonoWa, limpiarTelefono,
+import { numero, minutosSueno, fechaDe, limpiarSalud, pasosPorOrigen, suenoPorOrigen, segundosDuracion, urlSalud, urlsCalendario, urlAtajoEntreno, tipoSalud, telefonoWa, limpiarTelefono,
   enlaceWhatsApp, semanaSalud, resumenSalud, horasSuenoTramo, textoSueno, haceDias, URL_ATAJO } from '../web/src/logica/integraciones.js';
 import { calendarioICS } from '../web/src/logica/plan.js';
 import { sumarDias, lunesDe } from '../web/src/logica/fechas.js';
@@ -23,14 +23,32 @@ check(fechaDe('2026-02-30') === null && fechaDe('mañana') === null && fechaDe(5
 console.log('\nLo que manda el atajo, limpio');
 const hoy = '2026-11-08';
 const l1 = limpiarSalud({ fecha: hoy, pasos_ayer: '9.120', sueno_min: '7 h 10 min', fc_reposo: '58', hrv: '47,3', peso: '72,40 kg' }, hoy);
-check(l1.length === 2 && l1[0].fecha === hoy && l1[0].sueno_min === 430 && l1[0].fc_reposo === 58 && l1[0].hrv === 47.3 && l1[0].peso_kg === 72.4 && !('pasos' in l1[0]), 'un día: el sueño, el pulso, la HRV y el peso de hoy');
+check(l1.length === 2 && l1[0].fecha === hoy && l1[0].sueno_min === 430 && l1[0].fc_reposo === 58 && l1[0].hrv === 47.3 && !('peso_kg' in l1[0]) && !('pasos' in l1[0]), 'un día: el sueño, el pulso y la HRV de hoy (el peso, no: lo apuntan a mano)');
 check(l1[1].fecha === '2026-11-07' && l1[1].pasos === 9120, 'y los pasos de ayer, en ayer');
 const l2 = limpiarSalud({ dias: [{ fecha: '2026-11-06', steps: 100, sleep: 6.5 }, { fecha: '2026-11-06', pasos: 8000 }, { date: '2026-11-05', weight: 70 }] }, hoy);
-check(l2.length === 2 && l2[0].pasos === 8000 && l2[0].sueno_min === 390 && l2[1].peso_kg === 70, 'varios días, nombres en inglés y el mismo día dos veces (los pasos, el mayor)');
+check(l2.length === 1 && l2[0].pasos === 8000 && l2[0].sueno_min === 390, 'varios días, nombres en inglés y el mismo día dos veces (los pasos, el mayor)');
 check(limpiarSalud({ fc_reposo: 300, peso: 10, pasos: -5, hrv: 0 }, hoy).length === 0, 'fuera de rango, nada (y sin nada, no hay día)');
 check(limpiarSalud({ fecha: '2026-08-01', pasos: 5000 }, hoy).length === 0 && limpiarSalud({ fecha: '2026-11-10', pasos: 5000 }, hoy).length === 0, 'ni de hace más de 60 días ni del futuro');
 check(limpiarSalud({ pasos: 5000 }, hoy)[0]?.fecha === hoy && limpiarSalud('basura', hoy).length === 0 && limpiarSalud(null, hoy).length === 0, 'sin fecha, hoy; lo que no es un objeto, nada');
 check(limpiarSalud(Array.from({ length: 50 }, (_, i) => ({ fecha: sumarDias(hoy, -i), pasos: 1000 + i })), hoy).length === 31, 'como mucho 31 días');
+
+console.log('\nLos pasos por aparato (el reloj y el iPhone apuntan los mismos: sumarlos los duplica)');
+check(pasosPorOrigen('iPhone\nZepp\niPhone\nZepp', '4.000\n5000\n6.890\n6851') === 11851, 'texto con una por línea (como Atajos mete una lista): cada aparato por su lado y el mayor');
+check(pasosPorOrigen(['Apple Watch', 'iPhone'], [8000, 7600]) === 8000 && pasosPorOrigen(['iPhone'], ['9.120']) === 9120, 'en listas; y con un solo aparato, sus pasos');
+check(pasosPorOrigen('iPhone\nZepp', '100') === null && pasosPorOrigen(null, '100') === null && pasosPorOrigen('', '') === null, 'si las listas no casan o no hay nada, nada');
+const lp = limpiarSalud({ fecha: hoy, pasos_ayer: 21894, pasos_ayer_origen: 'iPhone\nZepp\niPhone\nZepp', pasos_ayer_valor: '4000\n5000\n6890\n6851' }, hoy);
+check(lp[0]?.fecha === '2026-11-07' && lp[0].pasos === 11851, 'si llegan por aparato, mandan sobre la suma de todo (que sale duplicada)');
+check(limpiarSalud({ fecha: hoy, pasos_ayer: 9000, pasos_ayer_origen: 'a\nb', pasos_ayer_valor: '1' }, hoy)[0]?.pasos === 9000, 'y si no casan, la suma de siempre');
+
+console.log('\nEl sueño sin la cama ni los despertares (sumarlo todo lo duplica)');
+check(segundosDuracion('8:13:59') === 29639 && segundosDuracion('57:59') === 3479 && segundosDuracion('59') === 59 && segundosDuracion(3600) === 3600 && segundosDuracion('hola') === null, 'la duración como la pone Atajos: «8:13:59», «57:59», «59» o segundos');
+const vals = 'En la cama\nEsencial\nREM\nVigilia\nProfundo', durs = '8:13:59\n3:00:00\n1:30:00\n10:00\n2:53:00';
+check(suenoPorOrigen(vals, durs) === 443, 'fuera «En la cama» y «Vigilia»: 7 h 23 min (y no las 15 h de sumarlo todo)');
+check(suenoPorOrigen('In Bed\nCore\nAwake\nDeep', '28000\n18000\n600\n7200') === 420, 'con el iPhone en inglés, igual');
+check(suenoPorOrigen('Esencial\nEsencial\nDormido', '3:00:00\n4:00:00\n6:00:00', 'Zepp\nZepp\nOtra app') === 420, 'dos apps apuntando la misma noche: la que más cuenta, sin sumarlas');
+check(suenoPorOrigen('Esencial', '1:00:00\n2:00:00') === null && suenoPorOrigen(null, '1:00') === null, 'si las listas no casan, nada');
+const ls = limpiarSalud({ fecha: hoy, sueno_min: 938, sueno_valor: vals, sueno_duracion: durs, sueno_origen: 'Zepp\nZepp\nZepp\nZepp\nZepp' }, hoy);
+check(ls[0]?.sueno_min === 443, 'en lo que llega del atajo, manda sobre la suma de todo');
 
 console.log('\nLas direcciones');
 const E = 'a'.repeat(64);
@@ -121,7 +139,8 @@ const huellas = (await q(`select salud_huella, calendario_huella from public.int
 check(huellas.salud_huella !== enlaceS && huellas.salud_huella.length === 64, 'la base guarda la huella, no el enlace');
 
 await servicio();
-const dSalud = limpiarSalud({ fecha: hoyM, pasos_ayer: 9100, sueno_min: 425, fc_reposo: 57, hrv: 51, peso: 63.2 }, hoyM);
+// (el atajo ya no manda el peso, pero la base lo sigue sabiendo guardar: se le añade a mano para probarla)
+const dSalud = limpiarSalud({ fecha: hoyM, pasos_ayer: 9100, sueno_min: 425, fc_reposo: 57, hrv: 51 }, hoyM).map((d) => (d.fecha === hoyM ? { ...d, peso_kg: 63.2 } : d));
 const r1 = await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [enlaceS, JSON.stringify(dSalud)]);
 check(r1?.ok && r1.dias === 2 && r1.pesos === 1 && r1.habitos === 2, 'la función guarda los días, los pasos y el sueño en sus hábitos y el peso');
 const r2 = await uno(`select public.salud_recibir($1, $2::jsonb) as r`, [enlaceS, JSON.stringify([{ fecha: sumarDias(hoyM, -1), pasos: 5000 }, { fecha: hoyM, peso_kg: 99, fc_reposo: 400 }])]);
@@ -297,8 +316,8 @@ r = await pedir(`/salud?t=${'e'.repeat(64)}`, { method: 'POST', body: JSON.strin
 check(r.status === 401 && /ya no vale/.test((await r.json()).mensaje), 'con un enlace viejo, 401 y cómo arreglarlo');
 r = await pedir('/salud', { method: 'POST', headers: { 'x-fbe-enlace': eSalud }, body: JSON.stringify({ fecha: hoyM, fc_reposo: 54 }) });
 check(r.status === 200 && (await r.json()).ok, 'POST /salud con la clave en la cabecera x-fbe-enlace (la del atajo: así no queda en los registros)');
-r = await pedir('/salud', { method: 'POST', headers: { 'x-fbe-enlace': eSalud, 'content-length': String(20 * 1024) }, body: JSON.stringify({ fecha: hoyM }) });
-check(r.status === 413, 'un cuerpo de más de 16 KB, ni se lee (413)');
+r = await pedir('/salud', { method: 'POST', headers: { 'x-fbe-enlace': eSalud, 'content-length': String(300 * 1024) }, body: JSON.stringify({ fecha: hoyM }) });
+check(r.status === 413, 'un cuerpo de más de 256 KB, ni se lee (413)');
 // (revisión) el texto que dejaba la función 4 s pensando antes de mirar la clave: un «sueño» de miles de cifras y una letra
 const raro = '1'.repeat(15000) + 'x';
 let t0 = Date.now();

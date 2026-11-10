@@ -1,6 +1,6 @@
 // Las integraciones vistas por el coach (v0.105, migración 051):
 //   · AtajosCoach: en su cuenta, los enlaces de iCloud de sus dos atajos del iPhone («FBE Salud» y «FBE a Salud»)
-//   · SaludDelMovil: en la ficha (Seguimiento), lo que manda el iPhone de cada atleta: pasos, sueño, pulso, HRV y peso
+//   · SaludDelMovil: en la ficha (Seguimiento), lo que manda el iPhone de cada atleta: pasos, sueño, pulso y HRV
 //   · ContactoAtleta: en la ficha (Datos), su teléfono, para escribirle por WhatsApp con un toque
 //   · BotonWhatsApp / useContactos: el botón (con su número si lo tiene; si no, WhatsApp pregunta a quién)
 // Sin la 051, no sale nada.
@@ -10,6 +10,7 @@ import { URL_ATAJO, ATAJO_SALUD, ATAJO_ENTRENO, enlaceWhatsApp, resumenSalud, te
 import { TablaSalud } from '../atleta/Conexiones.jsx';
 import { pedirSubProgreso } from '../atleta/sub-progreso.js';
 import { num } from '../../logica/calculos.js';
+import { miles } from '../../logica/celebracion.js';
 
 // Los teléfonos de todos ({ atleta_id: teléfono }; sin la 051, null). Se piden una vez por pantalla.
 export function useContactos(deps = []) {
@@ -84,7 +85,7 @@ export function SaludDelMovil({ atleta }) {
   const cifra = (k, texto, unidad, dec = 0) => (u[k] == null ? null : (
     <div class="salud-cifra" key={k} data-k={k} data-tend={a[k] == null || k === 'peso_kg' || Math.abs(u[k] - a[k]) < (dec ? 0.05 : 0.5) ? undefined : ((u[k] > a[k]) === (k !== 'fc_reposo') ? 'mejor' : 'peor')}>
       <dt>{texto}</dt>
-      <dd><span class="num">{k === 'sueno_min' ? textoSueno(u[k]) : num(u[k], dec)}</span>{unidad && <span class="u"> {unidad}</span>}
+      <dd><span class="num">{k === 'sueno_min' ? textoSueno(u[k]) : k === 'pasos' ? miles(u[k]) : num(u[k], dec)}</span>{unidad && <span class="u"> {unidad}</span>}
         {a[k] != null && Math.abs(u[k] - a[k]) >= (dec ? 0.05 : 0.5) && <span class="salud-dif peq">{k === 'sueno_min' ? `${u[k] >= a[k] ? '+' : '−'}${Math.abs(Math.round(u[k] - a[k]))} min` : `${u[k] >= a[k] ? '+' : '−'}${num(Math.abs(u[k] - a[k]), dec)}`}</span>}
       </dd>
     </div>
@@ -100,7 +101,6 @@ export function SaludDelMovil({ atleta }) {
             {cifra('sueno_min', 'Sueño', '')}
             {cifra('fc_reposo', 'Pulso en reposo', 'lpm')}
             {cifra('hrv', 'HRV', 'ms')}
-            {cifra('peso_kg', 'Peso', 'kg', 1)}
           </dl>
         ) : <p class="peq">Esta semana no ha llegado nada.</p>}
         {d.dias?.length > 0 && <button class="btn-texto" aria-expanded={ver ? 'true' : 'false'} onClick={() => setVer(!ver)}><Icono n={ver ? 'arriba' : 'abajo'} /> {ver ? 'Ocultar' : 'Ver'} día a día</button>}
@@ -112,7 +112,7 @@ export function SaludDelMovil({ atleta }) {
 
 // ---------------------------------------------------------------- en su cuenta: los atajos del iPhone
 const ATAJOS = [
-  ['salud', `«${ATAJO_SALUD}»: de Salud a la app`, 'Cada mañana manda los pasos de ayer y el sueño, el pulso, la HRV y el peso de hoy.'],
+  ['salud', `«${ATAJO_SALUD}»: de Salud a la app`, 'Cada mañana manda los pasos de ayer y el sueño, el pulso y la HRV de hoy.'],
   ['entreno', `«${ATAJO_ENTRENO}»: el entreno, a Salud`, 'Apunta en Salud la sesión que acaban de terminar (botón «Apuntar en Salud»).'],
 ];
 export function AtajosCoach() {
