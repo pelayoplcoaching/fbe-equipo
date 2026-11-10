@@ -1261,6 +1261,16 @@
       "512": "imagenes/ejercicio/esp-jalon-unilateral-inclinado-512.eea48183.webp"
     }
   },
+  "esp-landmine-row-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-landmine-row-unilateral-192.c5d93203.webp",
+      "512": "imagenes/ejercicio/esp-landmine-row-unilateral-512.8077d48b.webp"
+    }
+  },
   "esp-meadows-row": {
     "proporcion": [
       1,
@@ -1289,6 +1299,26 @@
     "archivos": {
       "192": "imagenes/ejercicio/esp-remo-barra-192.feba8015.webp",
       "512": "imagenes/ejercicio/esp-remo-barra-512.98dcf968.webp"
+    }
+  },
+  "esp-remo-gironda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-gironda-192.b957baf2.webp",
+      "512": "imagenes/ejercicio/esp-remo-gironda-512.f82be347.webp"
+    }
+  },
+  "esp-remo-gironda-alto": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-gironda-alto-192.cb597e45.webp",
+      "512": "imagenes/ejercicio/esp-remo-gironda-alto-512.3e0aa962.webp"
     }
   },
   "esp-remo-mancuerna": {
@@ -1321,6 +1351,16 @@
       "512": "imagenes/ejercicio/esp-remo-multipower-512.b0777b8b.webp"
     }
   },
+  "esp-remo-pendlay": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-pendlay-192.299876a2.webp",
+      "512": "imagenes/ejercicio/esp-remo-pendlay-512.f2a3f972.webp"
+    }
+  },
   "esp-remo-polea-unilateral": {
     "proporcion": [
       1,
@@ -1331,6 +1371,16 @@
       "512": "imagenes/ejercicio/esp-remo-polea-unilateral-512.7911c0e8.webp"
     }
   },
+  "esp-remo-punta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-punta-192.8e1b2676.webp",
+      "512": "imagenes/ejercicio/esp-remo-punta-512.60d4bff1.webp"
+    }
+  },
   "esp-remo-t": {
     "proporcion": [
       1,
@@ -1339,6 +1389,16 @@
     "archivos": {
       "192": "imagenes/ejercicio/esp-remo-t-192.ebb0cbec.webp",
       "512": "imagenes/ejercicio/esp-remo-t-512.a804cf00.webp"
+    }
+  },
+  "esp-seal-row": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-seal-row-192.6f6d7d71.webp",
+      "512": "imagenes/ejercicio/esp-seal-row-512.75802a25.webp"
     }
   },
   "foco-adaptacion": {
