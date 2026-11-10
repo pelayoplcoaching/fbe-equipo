@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.126': {
+    atleta: [
+      'Salud del iPhone cuenta bien tus pasos y tu sueño: sin sumar dos veces el reloj y el iPhone, y sin el rato en la cama despierto.',
+      'El peso ya no llega de Salud: lo apuntas tú, como siempre. Y los pasos, con su punto de miles (11.851).',
+    ],
+    coach: [
+      'En la ficha, «Desde su iPhone» con los pasos y el sueño sin duplicados, sin el peso (lo apuntan a mano) y con punto de miles.',
+      'Para que funcione: vuelve a desplegar la función «integraciones» en Supabase con el integraciones-panel.ts nuevo.',
+    ],
+  },
   '0.125': {
     atleta: [
       'El descanso entre series tiene vida: una luz recorre el aro y los tres últimos segundos laten.',
