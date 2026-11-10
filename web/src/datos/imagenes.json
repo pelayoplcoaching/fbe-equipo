@@ -1489,6 +1489,76 @@
       "1080": "imagenes/foco/foco-volumen-1080.c1a79f9f.webp"
     }
   },
+  "gem-maquina-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-maquina-de-pie-192.fbcea8c3.webp",
+      "512": "imagenes/ejercicio/gem-maquina-de-pie-512.7138429c.webp"
+    }
+  },
+  "gem-prensa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-prensa-192.d54219ae.webp",
+      "512": "imagenes/ejercicio/gem-prensa-512.6db352f2.webp"
+    }
+  },
+  "gem-sentado-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-sentado-maquina-192.3f95b19d.webp",
+      "512": "imagenes/ejercicio/gem-sentado-maquina-512.105e85af.webp"
+    }
+  },
+  "gem-soleo-sentado-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-soleo-sentado-mancuernas-192.26b87772.webp",
+      "512": "imagenes/ejercicio/gem-soleo-sentado-mancuernas-512.dcfcf2b1.webp"
+    }
+  },
+  "gem-soleo-sentado-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-soleo-sentado-maquina-192.dd5b2215.webp",
+      "512": "imagenes/ejercicio/gem-soleo-sentado-maquina-512.74742c5a.webp"
+    }
+  },
+  "gem-talones-step-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-talones-step-multipower-192.9e758217.webp",
+      "512": "imagenes/ejercicio/gem-talones-step-multipower-512.5b2a8508.webp"
+    }
+  },
+  "gem-unilateral-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-unilateral-multipower-192.8bcdcf96.webp",
+      "512": "imagenes/ejercicio/gem-unilateral-multipower-512.0fe135ca.webp"
+    }
+  },
   "grupo-abdominales": {
     "proporcion": [
       4,
