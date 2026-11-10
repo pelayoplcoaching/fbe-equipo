@@ -1973,6 +1973,96 @@
       "1080": "imagenes/hito/hito-8-1080.a0106953.webp"
     }
   },
+  "isq-buenos-dias": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-buenos-dias-192.cc5f259c.webp",
+      "512": "imagenes/ejercicio/isq-buenos-dias-512.8a152676.webp"
+    }
+  },
+  "isq-extensiones-45-isquio": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-extensiones-45-isquio-192.7bb85f54.webp",
+      "512": "imagenes/ejercicio/isq-extensiones-45-isquio-512.76d9f65c.webp"
+    }
+  },
+  "isq-leg-curl-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-leg-curl-de-pie-192.9bf49d3e.webp",
+      "512": "imagenes/ejercicio/isq-leg-curl-de-pie-512.efdb405d.webp"
+    }
+  },
+  "isq-leg-curl-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-leg-curl-sentado-192.e60aaa7b.webp",
+      "512": "imagenes/ejercicio/isq-leg-curl-sentado-512.1e69b76b.webp"
+    }
+  },
+  "isq-leg-curl-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-leg-curl-tumbado-192.d91a76f9.webp",
+      "512": "imagenes/ejercicio/isq-leg-curl-tumbado-512.34bb3f9e.webp"
+    }
+  },
+  "isq-peso-muerto-convencional": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-convencional-192.f1e0d0da.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-convencional-512.e3f4bf79.webp"
+    }
+  },
+  "isq-peso-muerto-rumano": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-rumano-192.d52f7025.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-rumano-512.e720b939.webp"
+    }
+  },
+  "isq-peso-muerto-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-unilateral-192.1881e431.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-unilateral-512.9747f15f.webp"
+    }
+  },
+  "isq-rumano-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-rumano-mancuernas-192.12283104.webp",
+      "512": "imagenes/ejercicio/isq-rumano-mancuernas-512.c5ae1b1f.webp"
+    }
+  },
   "medalla-bascula-bronce": {
     "proporcion": [
       1,
