@@ -14,6 +14,7 @@
 //    Mantenerla pulsada (medio segundo quieta) abre el teclado en los kilos. Sin gestos, lo mismo con ✓ y tocando los campos.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, useApp } from '../comunes.jsx';
+import { sinMovimiento } from '../transiciones.js';
 import { Placas } from '../Herramientas.jsx';
 import { num } from '../../logica/calculos.js';
 import { nombrePeso, etiquetaPeso } from '../../logica/unidades.js';
@@ -48,6 +49,16 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
     if (mismoNum(v.kg, guardada.kg) && mismoNum(v.reps, guardada.reps) && (v.rpe === '' ? guardada.rpe === '' : mismoNum(v.rpe, guardada.rpe))) return;
     guardar(v);
   };
+  // (diseño, tanda 49) la cifra que se está escribiendo da un salto con cada tecla (solo el campo que se edita)
+  const cifraAntes = useRef({ kg, reps });
+  useEffect(() => {
+    const antes = cifraAntes.current;
+    cifraAntes.current = { kg, reps };
+    const c = campoRef.current;
+    if ((c !== 'kg' && c !== 'reps') || antes[c] === (c === 'kg' ? kg : reps) || sinMovimiento()) return;
+    const el = refs[c].current;
+    try { el?.animate?.([{ transform: 'scale(1.16)' }, { transform: 'scale(1)' }], { duration: 190, easing: 'cubic-bezier(.2, .8, .2, 1)' }); } catch { /* */ }
+  }, [kg, reps]);
   const [recien, setRecien] = useState(false);
   const [mejora, setMejora] = useState(null);
   useEffect(() => { if (!mejora) return undefined; const t = setTimeout(() => setMejora(null), 2200); return () => clearTimeout(t); }, [mejora]);
