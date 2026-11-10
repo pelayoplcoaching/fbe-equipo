@@ -2,7 +2,7 @@
 // la función «integraciones» de Supabase de punta a punta (con la base de PGlite detrás, como la clave de servicio) y
 // la api con el modo demo (backend-memoria).
 // Uso: node test/integraciones.test.mjs
-import { numero, minutosSueno, fechaDe, limpiarSalud, urlSalud, urlsCalendario, urlAtajoEntreno, tipoSalud, telefonoWa, limpiarTelefono,
+import { numero, minutosSueno, fechaDe, limpiarSalud, pasosPorOrigen, suenoPorOrigen, segundosDuracion, urlSalud, urlsCalendario, urlAtajoEntreno, tipoSalud, telefonoWa, limpiarTelefono,
   enlaceWhatsApp, semanaSalud, resumenSalud, horasSuenoTramo, textoSueno, haceDias, URL_ATAJO } from '../web/src/logica/integraciones.js';
 import { calendarioICS } from '../web/src/logica/plan.js';
 import { sumarDias, lunesDe } from '../web/src/logica/fechas.js';
@@ -31,6 +31,24 @@ check(limpiarSalud({ fc_reposo: 300, peso: 10, pasos: -5, hrv: 0 }, hoy).length 
 check(limpiarSalud({ fecha: '2026-08-01', pasos: 5000 }, hoy).length === 0 && limpiarSalud({ fecha: '2026-11-10', pasos: 5000 }, hoy).length === 0, 'ni de hace más de 60 días ni del futuro');
 check(limpiarSalud({ pasos: 5000 }, hoy)[0]?.fecha === hoy && limpiarSalud('basura', hoy).length === 0 && limpiarSalud(null, hoy).length === 0, 'sin fecha, hoy; lo que no es un objeto, nada');
 check(limpiarSalud(Array.from({ length: 50 }, (_, i) => ({ fecha: sumarDias(hoy, -i), pasos: 1000 + i })), hoy).length === 31, 'como mucho 31 días');
+
+console.log('\nLos pasos por aparato (el reloj y el iPhone apuntan los mismos: sumarlos los duplica)');
+check(pasosPorOrigen('iPhone\nZepp\niPhone\nZepp', '4.000\n5000\n6.890\n6851') === 11851, 'texto con una por línea (como Atajos mete una lista): cada aparato por su lado y el mayor');
+check(pasosPorOrigen(['Apple Watch', 'iPhone'], [8000, 7600]) === 8000 && pasosPorOrigen(['iPhone'], ['9.120']) === 9120, 'en listas; y con un solo aparato, sus pasos');
+check(pasosPorOrigen('iPhone\nZepp', '100') === null && pasosPorOrigen(null, '100') === null && pasosPorOrigen('', '') === null, 'si las listas no casan o no hay nada, nada');
+const lp = limpiarSalud({ fecha: hoy, pasos_ayer: 21894, pasos_ayer_origen: 'iPhone\nZepp\niPhone\nZepp', pasos_ayer_valor: '4000\n5000\n6890\n6851' }, hoy);
+check(lp[0]?.fecha === '2026-11-07' && lp[0].pasos === 11851, 'si llegan por aparato, mandan sobre la suma de todo (que sale duplicada)');
+check(limpiarSalud({ fecha: hoy, pasos_ayer: 9000, pasos_ayer_origen: 'a\nb', pasos_ayer_valor: '1' }, hoy)[0]?.pasos === 9000, 'y si no casan, la suma de siempre');
+
+console.log('\nEl sueño sin la cama ni los despertares (sumarlo todo lo duplica)');
+check(segundosDuracion('8:13:59') === 29639 && segundosDuracion('57:59') === 3479 && segundosDuracion('59') === 59 && segundosDuracion(3600) === 3600 && segundosDuracion('hola') === null, 'la duración como la pone Atajos: «8:13:59», «57:59», «59» o segundos');
+const vals = 'En la cama\nEsencial\nREM\nVigilia\nProfundo', durs = '8:13:59\n3:00:00\n1:30:00\n10:00\n2:53:00';
+check(suenoPorOrigen(vals, durs) === 443, 'fuera «En la cama» y «Vigilia»: 7 h 23 min (y no las 15 h de sumarlo todo)');
+check(suenoPorOrigen('In Bed\nCore\nAwake\nDeep', '28000\n18000\n600\n7200') === 420, 'con el iPhone en inglés, igual');
+check(suenoPorOrigen('Esencial\nEsencial\nDormido', '3:00:00\n4:00:00\n6:00:00', 'Zepp\nZepp\nOtra app') === 420, 'dos apps apuntando la misma noche: la que más cuenta, sin sumarlas');
+check(suenoPorOrigen('Esencial', '1:00:00\n2:00:00') === null && suenoPorOrigen(null, '1:00') === null, 'si las listas no casan, nada');
+const ls = limpiarSalud({ fecha: hoy, sueno_min: 938, sueno_valor: vals, sueno_duracion: durs, sueno_origen: 'Zepp\nZepp\nZepp\nZepp\nZepp' }, hoy);
+check(ls[0]?.sueno_min === 443, 'en lo que llega del atajo, manda sobre la suma de todo');
 
 console.log('\nLas direcciones');
 const E = 'a'.repeat(64);
@@ -297,8 +315,8 @@ r = await pedir(`/salud?t=${'e'.repeat(64)}`, { method: 'POST', body: JSON.strin
 check(r.status === 401 && /ya no vale/.test((await r.json()).mensaje), 'con un enlace viejo, 401 y cómo arreglarlo');
 r = await pedir('/salud', { method: 'POST', headers: { 'x-fbe-enlace': eSalud }, body: JSON.stringify({ fecha: hoyM, fc_reposo: 54 }) });
 check(r.status === 200 && (await r.json()).ok, 'POST /salud con la clave en la cabecera x-fbe-enlace (la del atajo: así no queda en los registros)');
-r = await pedir('/salud', { method: 'POST', headers: { 'x-fbe-enlace': eSalud, 'content-length': String(20 * 1024) }, body: JSON.stringify({ fecha: hoyM }) });
-check(r.status === 413, 'un cuerpo de más de 16 KB, ni se lee (413)');
+r = await pedir('/salud', { method: 'POST', headers: { 'x-fbe-enlace': eSalud, 'content-length': String(300 * 1024) }, body: JSON.stringify({ fecha: hoyM }) });
+check(r.status === 413, 'un cuerpo de más de 256 KB, ni se lee (413)');
 // (revisión) el texto que dejaba la función 4 s pensando antes de mirar la clave: un «sueño» de miles de cifras y una letra
 const raro = '1'.repeat(15000) + 'x';
 let t0 = Date.now();

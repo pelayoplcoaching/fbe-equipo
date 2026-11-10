@@ -92,14 +92,14 @@ function plegar(linea) {
 function calendarioICS(eventos, { hora = "18:00", minutos = 60, avisoMin = 30, url = "", nombre = "", refrescoMin = 0 } = {}) {
   const hhmm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}${String(m % 60).padStart(2, "0")}00`;
   const sello = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
-  const lineas = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//FBE Coaching//FBE Equipo//ES", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
-  if (nombre) lineas.push(`X-WR-CALNAME:${escapar(nombre)}`, `NAME:${escapar(nombre)}`);
-  if (refrescoMin > 0) lineas.push(`REFRESH-INTERVAL;VALUE=DURATION:PT${Math.round(refrescoMin)}M`, `X-PUBLISHED-TTL:PT${Math.round(refrescoMin)}M`);
+  const lineas2 = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//FBE Coaching//FBE Equipo//ES", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+  if (nombre) lineas2.push(`X-WR-CALNAME:${escapar(nombre)}`, `NAME:${escapar(nombre)}`);
+  if (refrescoMin > 0) lineas2.push(`REFRESH-INTERVAL;VALUE=DURATION:PT${Math.round(refrescoMin)}M`, `X-PUBLISHED-TTL:PT${Math.round(refrescoMin)}M`);
   for (const e of eventos) {
     const [hh, mm] = String(e.hora || hora).split(":").map((x) => Number(x) || 0);
     const ini = hh * 60 + mm, fin = ini + (e.minutos || minutos);
     const diaFin = fin >= 24 * 60 ? sumarDias(e.dia, 1) : e.dia;
-    lineas.push(
+    lineas2.push(
       "BEGIN:VEVENT",
       `UID:fbe-${e.id}@fbe-atletas`,
       `DTSTAMP:${sello}`,
@@ -113,8 +113,8 @@ function calendarioICS(eventos, { hora = "18:00", minutos = 60, avisoMin = 30, u
       "END:VEVENT"
     );
   }
-  lineas.push("END:VCALENDAR");
-  return lineas.map(plegar).join("\r\n") + "\r\n";
+  lineas2.push("END:VCALENDAR");
+  return lineas2.map(plegar).join("\r\n") + "\r\n";
 }
 
 // web/src/logica/integraciones.js
@@ -169,6 +169,52 @@ function fechaDe(v) {
 var RANGOS = { pasos: [0, 1e5], sueno_min: [1, 1080], fc_reposo: [25, 150], hrv: [1, 300], peso_kg: [25, 350] };
 var enRango = (k, n) => n != null && n >= RANGOS[k][0] && n <= RANGOS[k][1] ? n : null;
 var red = (n, dec) => n == null ? null : Math.round(n * 10 ** dec) / 10 ** dec;
+var MAX_MUESTRAS = 5e3;
+function lineas(v) {
+  if (Array.isArray(v)) return v.slice(0, MAX_MUESTRAS).map((x) => String(x ?? ""));
+  if (typeof v === "string") return v.split(/\r?\n/).slice(0, MAX_MUESTRAS);
+  if (typeof v === "number") return [String(v)];
+  return null;
+}
+function pasosPorOrigen(origenes, valores) {
+  const o = lineas(origenes), v = lineas(valores);
+  if (!o || !v || !v.length || o.length !== v.length) return null;
+  const suma = /* @__PURE__ */ new Map();
+  v.forEach((t, i) => {
+    const n = numero(t.trim(), { entero: true });
+    if (n == null || n < 0) return;
+    const k = o[i].trim().slice(0, 80) || "?";
+    suma.set(k, (suma.get(k) || 0) + n);
+  });
+  return suma.size ? Math.round(Math.max(...suma.values())) : null;
+}
+var NO_DORMIDO = /* @__PURE__ */ new Set(["en la cama", "en cama", "in bed", "inbed", "vigilia", "despierto", "awake"]);
+var sinTildes = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+function segundosDuracion(t) {
+  const s = String(t ?? "").trim();
+  if (!s || s.length > LARGO_VALOR) return null;
+  if (/^\d{1,3}(:\d{1,2}){1,2}$/.test(s)) {
+    const p = s.split(":").map(Number);
+    return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1];
+  }
+  const n = numero(s);
+  return n != null && n >= 0 ? n : null;
+}
+function suenoPorOrigen(valores, duraciones, origenes) {
+  const v = lineas(valores), d = lineas(duraciones);
+  if (!v || !d || !d.length || v.length !== d.length) return null;
+  let o = lineas(origenes);
+  if (!o || o.length !== d.length) o = d.map(() => "");
+  const suma = /* @__PURE__ */ new Map();
+  d.forEach((t, i) => {
+    if (NO_DORMIDO.has(sinTildes(v[i]))) return;
+    const seg = segundosDuracion(t);
+    if (seg == null) return;
+    const k = o[i].trim().slice(0, 80) || "?";
+    suma.set(k, (suma.get(k) || 0) + seg);
+  });
+  return suma.size ? Math.round(Math.max(...suma.values()) / 60) : null;
+}
 function limpiarSalud(cuerpo, hoy = hoyISO()) {
   let lista = Array.isArray(cuerpo) ? cuerpo : cuerpo && typeof cuerpo === "object" ? Array.isArray(cuerpo.dias) ? cuerpo.dias : [cuerpo] : [];
   lista = lista.slice(0, 62);
@@ -183,9 +229,9 @@ function limpiarSalud(cuerpo, hoy = hoyISO()) {
     if (!x || typeof x !== "object" || Array.isArray(x)) continue;
     const fecha = x.fecha != null || x.date != null ? fechaDe(String(x.fecha ?? x.date)) : hoy;
     if (!fecha) continue;
-    const pasos = enRango("pasos", red(numero(x.pasos ?? x.steps, { entero: true }), 0));
-    const ayer = enRango("pasos", red(numero(x.pasos_ayer ?? x.steps_yesterday, { entero: true }), 0));
-    const sueno = enRango("sueno_min", x.sueno_h != null || x.sleep_h != null ? minutosSueno(x.sueno_h ?? x.sleep_h, { horas: true }) : minutosSueno(x.sueno_min ?? x.sueno ?? x.sleep_min ?? x.sleep));
+    const pasos = enRango("pasos", pasosPorOrigen(x.pasos_origen, x.pasos_valor)) ?? enRango("pasos", red(numero(x.pasos ?? x.steps, { entero: true }), 0));
+    const ayer = enRango("pasos", pasosPorOrigen(x.pasos_ayer_origen, x.pasos_ayer_valor)) ?? enRango("pasos", red(numero(x.pasos_ayer ?? x.steps_yesterday, { entero: true }), 0));
+    const sueno = enRango("sueno_min", suenoPorOrigen(x.sueno_valor, x.sueno_duracion, x.sueno_origen)) ?? enRango("sueno_min", x.sueno_h != null || x.sleep_h != null ? minutosSueno(x.sueno_h ?? x.sleep_h, { horas: true }) : minutosSueno(x.sueno_min ?? x.sueno ?? x.sleep_min ?? x.sleep));
     const fc = enRango("fc_reposo", red(numero(x.fc_reposo ?? x.resting_hr ?? x.fc), 0));
     const hrv = enRango("hrv", red(numero(x.hrv), 1));
     const peso = enRango("peso_kg", red(numero(x.peso_kg ?? x.peso ?? x.weight), 2));
@@ -200,7 +246,7 @@ function limpiarSalud(cuerpo, hoy = hoyISO()) {
 }
 
 // supabase/functions/integraciones/integraciones.js
-var MAX_CUERPO = 16 * 1024;
+var MAX_CUERPO = 256 * 1024;
 var texto = (t, estado = 200, extra = {}) => new Response(t, { status: estado, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...extra } });
 var json = (d, estado = 200) => new Response(JSON.stringify(d), { status: estado, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
 function enlaceDe(req, url) {

@@ -12,7 +12,8 @@ import { limpiarSalud, ENLACE } from '../../../web/src/logica/integraciones.js';
 import { fechaMadrid } from '../../../web/src/logica/fechas.js';
 
 // (revisión) lo que manda el atajo son unos cientos de bytes: con 16 KB sobra
-const MAX_CUERPO = 16 * 1024;
+// (holgado: con los pasos por aparato el atajo manda el origen y el valor de cada muestra del día)
+const MAX_CUERPO = 256 * 1024;
 const texto = (t, estado = 200, extra = {}) => new Response(t, { status: estado, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', ...extra } });
 const json = (d, estado = 200) => new Response(JSON.stringify(d), { status: estado, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 

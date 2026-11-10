@@ -70,9 +70,68 @@ const RANGOS = { pasos: [0, 100000], sueno_min: [1, 1080], fc_reposo: [25, 150],
 const enRango = (k, n) => (n != null && n >= RANGOS[k][0] && n <= RANGOS[k][1] ? n : null);
 const red = (n, dec) => (n == null ? null : Math.round(n * 10 ** dec) / 10 ** dec);
 
+// Pasos por aparato. El reloj y el iPhone apuntan los mismos pasos en Salud y el atajo, al sumar las muestras, los
+// cuenta dos veces (Salud los junta, pero Atajos no). Por eso el atajo puede mandar, de cada muestra de pasos, su origen
+// y su valor (dos listas en el mismo orden, o dos textos con una por línea, que es como Atajos mete una lista en un
+// texto): se suma cada aparato por su lado y se queda el que más cuenta (el reloj, si lo lleva; si no, el iPhone).
+const MAX_MUESTRAS = 5000;
+function lineas(v) {
+  if (Array.isArray(v)) return v.slice(0, MAX_MUESTRAS).map((x) => String(x ?? ''));
+  if (typeof v === 'string') return v.split(/\r?\n/).slice(0, MAX_MUESTRAS);
+  if (typeof v === 'number') return [String(v)];
+  return null;
+}
+export function pasosPorOrigen(origenes, valores) {
+  const o = lineas(origenes), v = lineas(valores);
+  if (!o || !v || !v.length || o.length !== v.length) return null;
+  const suma = new Map();
+  v.forEach((t, i) => {
+    const n = numero(t.trim(), { entero: true });
+    if (n == null || n < 0) return;
+    const k = o[i].trim().slice(0, 80) || '?';
+    suma.set(k, (suma.get(k) || 0) + n);
+  });
+  return suma.size ? Math.round(Math.max(...suma.values())) : null;
+}
+
+// El sueño, igual: el atajo manda de cada anotación de sueño su tipo, su duración y su origen (listas, o una por línea).
+// Fuera «en la cama» y «despierto» (el iPhone y los relojes apuntan la noche entera en la cama además de las fases, y
+// sumarlo todo la duplica); el resto se suma por aparato y se queda el que más cuenta. Los filtros de tipo del atajo no
+// sirven aquí: en Atajos el tipo se escribe a mano y no casa con el de Salud. Devuelve minutos.
+const NO_DORMIDO = new Set(['en la cama', 'en cama', 'in bed', 'inbed', 'vigilia', 'despierto', 'awake']);
+const sinTildes = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+export function segundosDuracion(t) {
+  const s = String(t ?? '').trim();
+  if (!s || s.length > LARGO_VALOR) return null;
+  // Atajos la pone como «8:13:59», «57:59» (minutos:segundos) o «59»; o en segundos, como número
+  if (/^\d{1,3}(:\d{1,2}){1,2}$/.test(s)) {
+    const p = s.split(':').map(Number);
+    return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1];
+  }
+  const n = numero(s);
+  return n != null && n >= 0 ? n : null;
+}
+export function suenoPorOrigen(valores, duraciones, origenes) {
+  const v = lineas(valores), d = lineas(duraciones);
+  if (!v || !d || !d.length || v.length !== d.length) return null;
+  let o = lineas(origenes);
+  if (!o || o.length !== d.length) o = d.map(() => '');
+  const suma = new Map();
+  d.forEach((t, i) => {
+    if (NO_DORMIDO.has(sinTildes(v[i]))) return;
+    const seg = segundosDuracion(t);
+    if (seg == null) return;
+    const k = o[i].trim().slice(0, 80) || '?';
+    suma.set(k, (suma.get(k) || 0) + seg);
+  });
+  return suma.size ? Math.round(Math.max(...suma.values()) / 60) : null;
+}
+
 // Lo que manda el atajo, limpio: [{ fecha, pasos, sueno_min, fc_reposo, hrv, peso_kg }] (de los 60 últimos días, hasta
 // 31, uno por fecha). Vale un día ({ … }), varios ([…] o { dias: […] }) y nombres en inglés (steps, sleep, weight…).
 // «pasos_ayer» va al día anterior a «fecha» (el atajo de la mañana manda los pasos de ayer y el sueño de esta noche).
+// «pasos_ayer_origen» + «pasos_ayer_valor» (y «pasos_origen» + «pasos_valor»): los pasos por aparato (pasosPorOrigen).
+// «sueno_valor» + «sueno_duracion» (+ «sueno_origen»): el sueño de esta noche sin la cama ni los despertares (suenoPorOrigen).
 export function limpiarSalud(cuerpo, hoy = hoyISO()) {
   let lista = Array.isArray(cuerpo) ? cuerpo : cuerpo && typeof cuerpo === 'object' ? (Array.isArray(cuerpo.dias) ? cuerpo.dias : [cuerpo]) : [];
   lista = lista.slice(0, 62);
@@ -87,9 +146,12 @@ export function limpiarSalud(cuerpo, hoy = hoyISO()) {
     if (!x || typeof x !== 'object' || Array.isArray(x)) continue;
     const fecha = x.fecha != null || x.date != null ? fechaDe(String(x.fecha ?? x.date)) : hoy;
     if (!fecha) continue;
-    const pasos = enRango('pasos', red(numero(x.pasos ?? x.steps, { entero: true }), 0));
-    const ayer = enRango('pasos', red(numero(x.pasos_ayer ?? x.steps_yesterday, { entero: true }), 0));
-    const sueno = enRango('sueno_min', x.sueno_h != null || x.sleep_h != null ? minutosSueno(x.sueno_h ?? x.sleep_h, { horas: true })
+    // si llegan por aparato, mandan esos (la suma de todas las muestras duplica los del reloj y el iPhone)
+    const pasos = enRango('pasos', pasosPorOrigen(x.pasos_origen, x.pasos_valor))
+      ?? enRango('pasos', red(numero(x.pasos ?? x.steps, { entero: true }), 0));
+    const ayer = enRango('pasos', pasosPorOrigen(x.pasos_ayer_origen, x.pasos_ayer_valor))
+      ?? enRango('pasos', red(numero(x.pasos_ayer ?? x.steps_yesterday, { entero: true }), 0));
+    const sueno = enRango('sueno_min', suenoPorOrigen(x.sueno_valor, x.sueno_duracion, x.sueno_origen)) ?? enRango('sueno_min', x.sueno_h != null || x.sleep_h != null ? minutosSueno(x.sueno_h ?? x.sleep_h, { horas: true })
       : minutosSueno(x.sueno_min ?? x.sueno ?? x.sleep_min ?? x.sleep));
     const fc = enRango('fc_reposo', red(numero(x.fc_reposo ?? x.resting_hr ?? x.fc), 0));
     const hrv = enRango('hrv', red(numero(x.hrv), 1));
