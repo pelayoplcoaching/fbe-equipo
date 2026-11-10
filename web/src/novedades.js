@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.130': {
+    atleta: [
+      'Más vida en el entrenamiento: si mejoras lo de la última vez, te lo dice al momento («+2,5 kg que la última vez»).',
+      'Al terminar un ejercicio, su tarjeta y su tramo de la barra lo celebran y el siguiente se enciende.',
+      'En el modo enfoque, cada serie llega con su salto; y al volver a Hoy después de entrenar, tu sesión queda sellada.',
+    ],
+  },
   '0.129': {
     atleta: [
       'Tu música, mejor: al pegar el enlace ves la portada y el nombre, y cada tarjeta dice si es lista, álbum, canción o podcast.',
