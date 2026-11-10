@@ -127,7 +127,7 @@ export function AtajosCoach() {
       <div class="panel">
         <ul class="lista">
           {ATAJOS.map(([k, titulo, detalle]) => (
-            <li key={k}>
+            <li key={k} class="atajo-fila" data-k={k} data-puesto={m[k] ? '1' : undefined}>
               <button class="fila-ios fila-boton" onClick={() => setEditar(k)} aria-label={`${titulo}: ${m[k] ? 'cambiar el enlace' : 'poner el enlace'}`}>
                 <span class="fila-ios-texto"><span class="fila-ios-titulo">{titulo}</span><span class="peq terciario">{m[k] ? 'Enlace puesto' : detalle}</span></span>
                 <Icono n={m[k] ? 'editar' : 'mas'} />

@@ -33,10 +33,10 @@ export function Conexiones({ salud }) {
   const cerrar = () => { setAbrir(null); datos.recargar(true); };
   return (
     <GrupoIos titulo="Conexiones" id="grupo-conexiones" pie={propio ? 'Tu ficha de atleta: lo que llegue de tu iPhone va a tus hábitos, tus pesos y tu progreso. Sirve también para probar tus atajos antes de compartirlos.' : 'Tus datos solo van de tu móvil a la app y los ve tu coach. Lo puedes quitar cuando quieras.'}>
-      <FilaIos icono="pasos" tono={i.salud?.activa ? 'ok' : ''} titulo="Salud del iPhone"
+      <FilaIos icono="pasos" tono={i.salud?.activa ? 'ok' : ''} clase={`conexion-salud ${i.salud?.activa ? 'conectada' : ''}`} titulo="Salud del iPhone"
         detalle={i.salud?.activa ? (i.salud.ultimo ? `Conectada · último envío ${haceDias(i.salud.ultimo)}` : 'Conectada · aún no ha llegado nada') : 'Pasos, sueño, pulso y peso, sin apuntarlos'}
         alTocar={() => setAbrir('salud')} etiqueta="Salud del iPhone: conectar o ver" />
-      {entrena && <FilaIos icono="calendario" tono={i.calendario?.activo ? 'ok' : ''} titulo="Tus entrenos en tu calendario"
+      {entrena && <FilaIos icono="calendario" tono={i.calendario?.activo ? 'ok' : ''} clase={`conexion-calendario ${i.calendario?.activo ? 'conectada' : ''}`} titulo="Tus entrenos en tu calendario"
         detalle={i.calendario?.activo ? `Suscrito · ${i.calendario.hora}` : 'Se actualiza solo cuando cambia el plan'}
         alTocar={() => setAbrir('calendario')} etiqueta="Tus entrenos en tu calendario: suscribirte o ver" />}
       {abrir === 'salud' && <HojaSalud estado={i} salud={salud} alCerrar={cerrar} />}
@@ -91,7 +91,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
   return (
     <Hoja titulo="Salud del iPhone" alCerrar={alCerrar}>
       <div class="pila conexiones">
-        <p class="peq secundario">Tu iPhone le pasa a la app, una vez al día, tus <strong>pasos</strong>, cuánto has <strong>dormido</strong>, tu <strong>pulso en reposo</strong>, tu <strong>variabilidad (HRV)</strong> y tu <strong>peso</strong>. {propio ? 'Así tus pasos, tu sueño y tu peso se apuntan solos en tu ficha.' : 'Así el check-in viene relleno, tus pasos se apuntan solos en tus hábitos y tu coach ve cómo descansas sin preguntarte.'} Se hace con la app Atajos, que ya viene en el iPhone.</p>
+        <p class="peq secundario salud-intro">Tu iPhone le pasa a la app, una vez al día, tus <strong>pasos</strong>, cuánto has <strong>dormido</strong>, tu <strong>pulso en reposo</strong>, tu <strong>variabilidad (HRV)</strong> y tu <strong>peso</strong>. {propio ? 'Así tus pasos, tu sueño y tu peso se apuntan solos en tu ficha.' : 'Así el check-in viene relleno, tus pasos se apuntan solos en tus hábitos y tu coach ve cómo descansas sin preguntarte.'} Se hace con la app Atajos, que ya viene en el iPhone.</p>
         {!ios && <p class="nota peq">Esto es para iPhone: Apple lo deja hacer con Atajos. En Android, una web no puede leer los datos de salud del móvil.</p>}
         {!salud ? (
           <p class="nota peq">Para traer datos de Salud hace falta tu consentimiento de datos de salud (en tu perfil, en Cuenta → Datos de salud).</p>
