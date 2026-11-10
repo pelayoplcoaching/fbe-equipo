@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.127': {
+    atleta: [
+      'Cada ejercicio con su imagen: en miniatura en la tarjeta de la sesión y, en su ficha, grande al tocarla.',
+    ],
+    coach: [
+      'Las 155 imágenes de la biblioteca de ejercicios: en tu biblioteca, en la ficha de cada uno y en las sesiones de tus atletas.',
+    ],
+  },
   '0.126': {
     atleta: [
       'Salud del iPhone cuenta bien tus pasos y tu sueño: sin sumar dos veces el reloj y el iPhone, y sin el rato en la cama despierto.',
