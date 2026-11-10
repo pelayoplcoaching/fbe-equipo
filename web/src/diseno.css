@@ -4327,15 +4327,16 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 @keyframes tab-saluda { 0% { transform: translateY(2px) scale(.9); } 30% { transform: translateY(-2px) rotate(-10deg); } 62% { transform: translateY(-2px) rotate(9deg); } }
 @keyframes tab-sello { 0% { transform: scale(1.55) rotate(-16deg); } 55% { transform: translateY(-1px) scale(.9) rotate(0); } }
 
-/* 343. La tarjeta de Hoy, con vida: el dibujo de la sesión respira despacio (crece un 6 % y vuelve, en 18 s), sin
-   tocar su entrada ni el paralaje del bloque 76 (que usan transform y translate: esto, scale). */
+/* 343. La tarjeta de Hoy, con vida: al llegar, el dibujo de la sesión se asienta despacio (entra un 7 % más grande y
+   se posa en 2,6 s), sin tocar el paralaje del bloque 76 (que usa translate: esto, scale). Se probó que respirase sin
+   parar (18 s, ida y vuelta) y se retiró: una animación sin fin en la pantalla que más se ve no compensa. */
 @media (prefers-reduced-motion: no-preference) {
-  .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both, hero-respira 18s ease-in-out .7s infinite alternate; transform-origin: 70% 40%; }
+  .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both, hero-posa 2.6s var(--curva-llega) both; transform-origin: 70% 40%; }
   @supports (animation-timeline: scroll()) {
-    .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both, hero-paralaje linear both, hero-respira 18s ease-in-out .7s infinite alternate; animation-timeline: auto, scroll(root), auto; animation-range: normal, 0 520px, normal; }
+    .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both, hero-paralaje linear both, hero-posa 2.6s var(--curva-llega) both; animation-timeline: auto, scroll(root), auto; animation-range: normal, 0 520px, normal; }
   }
 }
-@keyframes hero-respira { to { scale: 1.065; } }
+@keyframes hero-posa { from { scale: 1.07; } }
 
 /* 344. La bienvenida del día (Bienvenida.jsx), pieza a pieza: el lobo de la marca se enciende un instante, el saludo
    y el nombre suben, cada tarjeta del panel llega detrás de la anterior, los puntos de la semana se encienden de uno
