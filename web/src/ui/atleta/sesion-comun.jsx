@@ -330,7 +330,11 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   const R = 88, C = 2 * Math.PI * R;
   const frac = total ? Math.min(1, quedan / total) : 0;
   const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, ...(pausado ? { pausa, pausadoEn } : {}) });
-  const ajustar = (s) => alCambiar(ajustarDescanso(este(), s));
+  const ajustar = (s) => {
+    alCambiar(ajustarDescanso(este(), s));
+    // (diseño, tanda 49) la cuenta da un golpe hacia arriba (más tiempo) o hacia abajo (menos)
+    if (!sinMovimiento()) { try { caja.current?.querySelector('.cuenta')?.animate?.([{ transform: `translateY(${s > 0 ? -9 : 9}px) scale(1.1)` }, { transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.2, 1.3, .35, 1)' }); } catch { /* */ } }
+  };
   // (diseño, tanda 22) Deslizar el dedo de lado sobre el reloj suma tiempo (a la derecha) o lo quita (a la izquierda):
   // 15 s cada 28 px, con un toque en cada salto. De arriba abajo la página sigue desplazándose como siempre. Lo que se
   // va ajustando se encadena aquí mismo (entre dos pintados, este() aún no lo sabe). «−15 s» y «+15 s» siguen ahí.

@@ -4451,3 +4451,53 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 @keyframes dial-aguja { from { transform: scale(0); } }
 @keyframes dial-centro { from { transform: scale(.72); } }
 @keyframes dial-completo { 0% { filter: drop-shadow(0 0 0 transparent); } 50% { filter: drop-shadow(0 0 12px color-mix(in srgb, var(--dial, var(--morado)) 80%, transparent)); transform: scale(1.05); } }
+
+/* ===== Tanda 49 (11/11): ocho gestos de la sesión que aún no se movían ===== */
+/* (Tras recorrer un día normal midiendo qué se mueve después de cada gesto: los huecos estaban en la sesión.) */
+/* 352. Las teclas del teclado de la serie: al pulsar se hunden al momento y, al soltar, rebotan y su color se apaga
+   despacio (antes solo se encogían un 3 %). El pulsado general (la opacidad) sigue siendo el de pulido.css. */
+@media (prefers-reduced-motion: no-preference) {
+  .teclado-serie .tecla { transition: transform .3s var(--curva-rebote); }
+  /* (el color solo se apaga despacio en las teclas de números: en las del RPE, la elegida cambia de fondo y de letra a la vez, y a medio fundido no cumplía el contraste) */
+  .teclado-teclas .tecla { transition: transform .3s var(--curva-rebote), background-color .45s ease-out; }
+  .teclado-serie .tecla:active { transition-duration: 0s; transform: scale(.9); }
+  .teclado-serie .tecla:not(.tecla-siguiente, .tecla-paso, [aria-pressed="true"]):active { background: color-mix(in srgb, var(--morado) 26%, var(--hoja)); }
+}
+/* 353. La cifra que se escribe salta con cada tecla: en FilaSerie.jsx (animate(), 190 ms), no aquí. */
+
+/* 354. Elegir el RPE de la serie: el número elegido salta en el teclado y el botón de la fila lo recibe con otro salto. */
+@media (prefers-reduced-motion: no-preference) {
+  .teclado-rpe .tecla[aria-pressed="true"] { animation: rpe-elige .42s var(--curva-rebote); }
+  .serie:not(.hecha) .rpe-boton[data-rpe] { animation: rpe-llega .45s var(--curva-rebote); }
+}
+@keyframes rpe-elige { 0% { transform: scale(.82); } 55% { transform: scale(1.12); } }
+@keyframes rpe-llega { 0% { transform: scale(.8); } 55% { transform: scale(1.14); } }
+
+/* 355. Las series llegan una a una: al abrir un ejercicio y al pulsar «Añadir serie» (que aparecía de golpe). */
+@media (prefers-reduced-motion: no-preference) {
+  .ejercicio-cuerpo .serie-desliza { animation: serie-llega .34s var(--curva-llega) backwards; }
+  .ejercicio-cuerpo .serie-desliza:nth-of-type(2) { animation-delay: 40ms; } .ejercicio-cuerpo .serie-desliza:nth-of-type(3) { animation-delay: 80ms; } .ejercicio-cuerpo .serie-desliza:nth-of-type(4) { animation-delay: 120ms; }
+  .ejercicio-cuerpo .serie-desliza:nth-of-type(5) { animation-delay: 160ms; } .ejercicio-cuerpo .serie-desliza:nth-of-type(n+6) { animation-delay: 200ms; }
+}
+@keyframes serie-llega { from { transform: translateY(12px) scale(.97); } }
+
+/* 356. Plegar un ejercicio: el resumen de lo hecho («16×10, 14×10…») entra deslizándose bajo el nombre. */
+@media (prefers-reduced-motion: no-preference) { .ejercicio.plegado .resumen-ej { animation: resumen-ej-entra .42s var(--curva-llega); } }
+@keyframes resumen-ej-entra { from { transform: translateY(9px); } }
+
+/* 357. «Ahora toca» en el descanso: la tarjeta con la siguiente serie llega detrás del reloj y sus kilos se asientan. */
+@media (prefers-reduced-motion: no-preference) {
+  .temporizador .ahora-toca { animation: ahora-llega .5s var(--curva-llega) .2s backwards; }
+  .temporizador .ahora-toca .ahora-carga { animation: ahora-carga .5s var(--curva-rebote) .46s backwards; transform-origin: 0 60%; }
+}
+@keyframes ahora-llega { from { transform: translateY(18px) scale(.96); } }
+@keyframes ahora-carga { 0% { transform: scale(.7); } 60% { transform: scale(1.08); } }
+/* 358. «+15 s» y «−15 s»: la cuenta da un golpe arriba o abajo: en sesion-comun.jsx (animate(), 300 ms), no aquí. */
+
+/* 359. Las hojas de opciones (.hoja-acciones: «Más» de cada ejercicio y las demás): sus filas entran una detrás de otra. */
+@media (prefers-reduced-motion: no-preference) {
+  .hoja-acciones > li { animation: accion-llega .36s var(--curva-llega) 60ms backwards; }
+  .hoja-acciones > li:nth-child(2) { animation-delay: 92ms; } .hoja-acciones > li:nth-child(3) { animation-delay: 124ms; } .hoja-acciones > li:nth-child(4) { animation-delay: 156ms; }
+  .hoja-acciones > li:nth-child(5) { animation-delay: 188ms; } .hoja-acciones > li:nth-child(6) { animation-delay: 220ms; } .hoja-acciones > li:nth-child(n+7) { animation-delay: 252ms; }
+}
+@keyframes accion-llega { from { transform: translateY(14px); } }
