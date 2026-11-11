@@ -100,8 +100,9 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
           <p class="mini terciario">El disco de color marca la prioridad: rojo obligatorio, azul muy importante, amarillo accesorio, verde prescindible.</p>
         </section>
       )}
-      {/* (v0.104) la música de hoy: la del coach, la suya, la de descarga, la de su tipo de sesión o la del ritmo del cardio */}
-      {!propio && !sesion.completada && <MusicaSesion sesion={sesion} semana={semana} familia={familia} cardio={cardio} alEmpezar={alEmpezar} />}
+      {/* (v0.104) la música de hoy: la del coach, la suya, la de descarga, la de su tipo de sesión o la del ritmo del cardio
+          (en el modo atleta del coach, sus propias listas de Cuenta › Música) */}
+      {!sesion.completada && <MusicaSesion sesion={sesion} semana={semana} familia={familia} cardio={cardio} alEmpezar={alEmpezar} />}
       <div class="portada-empezar">
         <button class="btn btn-primario btn-grande btn-ancho" onClick={alEmpezar}><Icono n="play" /> Empezar</button>
       </div>
