@@ -114,8 +114,8 @@
 .semaforo-ambar { background: var(--aviso-suave); color: var(--aviso); }
 .semaforo-rojo { background: var(--alerta-suave); color: var(--alerta); }
 .aviso-texto { color: var(--alerta); }
-.lista-semaforo li, .revision-fila { display: flex; align-items: flex-start; gap: 10px; }
-.lista-semaforo .semaforo-punto, .revision-fila .semaforo-punto { margin-top: 4px; }
+.lista-semaforo li, .revision-carrera { display: flex; align-items: flex-start; gap: 10px; }
+.lista-semaforo .semaforo-punto, .revision-carrera .semaforo-punto { margin-top: 4px; }
 .lista-hecho-carrera li { padding: 8px 10px; border-radius: 12px; background: var(--hoja-2); }
 .lista-hecho-carrera .chip { margin-left: 6px; }
 .lista-recetas-carrera > li { padding: 10px; border-radius: 12px; background: var(--hoja-2); }

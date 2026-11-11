@@ -188,7 +188,7 @@ function ContenidoCarrera({ d }) {
           <h3 id="tc-rev" class="h-panel">Revisiones</h3>
           <ul class="lista-revisiones">
             {d.revisiones.map((r) => (
-              <li key={r.id} class="revision-fila">
+              <li key={r.id} class="revision-carrera">
                 <span class="semaforo-punto" data-estado={r.estado} aria-hidden="true" />
                 <span class="pila-xs" style="min-width:0">
                   <span class="peq"><strong>{fmtCorta(r.fecha)}</strong> · {r.titulo} <span class="mini terciario">({NOMBRE_ESTADO_REVISION[r.estado].toLowerCase()})</span></span>
