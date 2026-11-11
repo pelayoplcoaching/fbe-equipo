@@ -5927,6 +5927,16 @@ try {
   console.log('  ✗ el recetario del equipo:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// «Aprende» (migración 057): las guías del coach y la ficha de técnica de cada ejercicio (test/e2e-guias.mjs)
+console.log('\n«Aprende»: las guías y la ficha de cada ejercicio');
+try {
+  const { probarGuias } = await import('./e2e-guias.mjs');
+  await probarGuias({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
 console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');

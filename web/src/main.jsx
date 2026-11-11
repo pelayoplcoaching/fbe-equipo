@@ -8,6 +8,7 @@ import './perfil.css';
 import './equipo-belleza.css';
 import './estrecho.css';
 import './recetario-equipo.css';
+import './guias.css';
 import './carrera.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

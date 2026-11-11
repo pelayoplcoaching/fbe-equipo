@@ -94,6 +94,10 @@ const DEFECTOS = {
   pagos: () => ({ estado: 'pendiente', fecha_pago: null, metodo: null, nota: null, creado_en: ahora() }),
   // Migración 022: recetas, recetario de cada atleta, sus comidas del día y su menú
   recetas: () => ({ tomas: [], raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, ingredientes: [], preparacion: null, minutos: null, etiquetas: [], foto: null, foto_mini: null, para_todos: false, libro: null, creada_en: ahora(), actualizada_en: ahora() }),
+  // Migración 057: las guías del coach, sus fichas de ejercicio y qué ficha lleva cada ejercicio
+  guias: () => ({ subtitulo: null, grupo: null, orden: 0, contenido: {}, publicada: true, creada_en: ahora(), actualizada_en: ahora() }),
+  fichas_ejercicio: () => ({ orden: 0, ficha: {}, actualizada_en: ahora() }),
+  ejercicios_fichas: () => ({ creado_en: ahora() }),
   // Migración 055: las recetas del equipo que cada atleta se guarda
   recetas_favoritas: () => ({ creada_en: ahora() }),
   recetas_atleta: () => ({ factor: 1, orden: 0, nota: null, favorita: false, cambio_pedido_en: null, cambio_nota: null, creada_en: ahora() }),
@@ -135,7 +139,9 @@ const CASCADA = {
     ['carrera_atleta', 'atleta_id'], ['carrera_eventos', 'atleta_id'], ['carrera_semanas', 'atleta_id'], ['carrera_revisiones', 'atleta_id']],
   // Como la 035: la corrección se va con su vídeo; la lista de puntos clave, con su ejercicio
   archivos: [['video_revisiones', 'archivo_id'], ['video_autoevaluacion', 'archivo_id']],
-  ejercicios: [['tecnica_plantillas', 'ejercicio_id'], ['recordatorios_tecnica', 'ejercicio_id'], ['frases_correccion', 'ejercicio_id'], ['videos_modelo', 'ejercicio_id'], ['umbrales_velocidad', 'ejercicio_id']],
+  guias: [['fichas_ejercicio', 'guia_id']],
+  fichas_ejercicio: [['ejercicios_fichas', 'ficha_id']],
+  ejercicios: [['ejercicios_fichas', 'ejercicio_id'], ['tecnica_plantillas', 'ejercicio_id'], ['recordatorios_tecnica', 'ejercicio_id'], ['frases_correccion', 'ejercicio_id'], ['videos_modelo', 'ejercicio_id'], ['umbrales_velocidad', 'ejercicio_id']],
   // Como la 032: las reacciones y los destacados se van con su mensaje; (033) y lo fijado
   comentarios: [['comentario_reacciones', 'comentario_id'], ['comentario_destacados', 'comentario_id'], ['conversacion_fijado', 'comentario_id'], ['encuestas_chat', 'comentario_id']],
   // Como la 034: el voto se va con su encuesta
@@ -171,7 +177,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
+const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
   'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_semanas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
@@ -361,6 +367,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     carrera_revisiones: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_recetas: () => esCoach(),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // Como la 057: las guías publicadas, sus fichas y sus enlaces los ven los atletas; el coach, todo
+    guias: (x) => esCoach() || (!!miAtletaId() && x.publicada),
+    fichas_ejercicio: (x) => esCoach() || (!!miAtletaId() && tabla('guias').some((g) => g.id === x.guia_id && g.publicada)),
+    ejercicios_fichas: (x) => esCoach() || (!!miAtletaId() && tabla('fichas_ejercicio').some((f) => f.id === x.ficha_id && tabla('guias').some((g) => g.id === f.guia_id && g.publicada))),
     // Como la 055: las recetas del equipo que se guarda cada atleta (él las suyas; el coach, todas)
     recetas_favoritas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
   };
@@ -735,6 +745,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (!consentimientoDe(f.atleta_id)) throw new Error('Para organizar el menú hace falta el consentimiento de datos de salud del atleta');
       if (tabla('menu_dias').some((x) => x.atleta_id === f.atleta_id && x.fecha === f.fecha)) throw new Error('duplicate key value violates unique constraint "menu_dias_pkey"');
     }
+    // Como la 057: una guía por clave, una ficha por orden en su guía y una ficha por ejercicio
+    if (t === 'guias' && tabla('guias').some((x) => x.clave === f.clave)) throw new Error('duplicate key value violates unique constraint "guias_clave_key"');
+    if (t === 'fichas_ejercicio') {
+      if (!buscar('guias', f.guia_id)) throw new Error('insert or update on table "fichas_ejercicio" violates foreign key constraint');
+      if (tabla('fichas_ejercicio').some((x) => x.guia_id === f.guia_id && Number(x.orden) === Number(f.orden))) throw new Error('duplicate key value violates unique constraint "fichas_ejercicio_guia_id_orden_key"');
+    }
+    if (t === 'ejercicios_fichas') {
+      if (!buscar('ejercicios', f.ejercicio_id) || !buscar('fichas_ejercicio', f.ficha_id)) throw new Error('insert or update on table "ejercicios_fichas" violates foreign key constraint');
+      if (tabla('ejercicios_fichas').some((x) => x.ejercicio_id === f.ejercicio_id)) throw new Error('duplicate key value violates unique constraint "ejercicios_fichas_pkey"');
+    }
     // Como la 055: el atleta se guarda recetas del equipo (solo él, solo las del equipo y una vez cada una)
     if (t === 'recetas_favoritas') {
       if (esCoach() || !miAtletaId() || f.atleta_id !== miAtletaId() || !tabla('recetas').some((r) => r.id === f.receta_id && r.para_todos)) throw sinPermiso();
@@ -831,6 +851,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'archivos' && 'derivado_de' in c) throw new Error('No se cambia de qué vídeo sale un fotograma');
     if (t === 'notas_ejercicio') c.actualizado_en = ahora();
     if (t === 'recetas') { c.actualizada_en = ahora(); delete c.creada_en; }
+    if (t === 'guias') { c.actualizada_en = ahora(); delete c.creada_en; }
+    if (t === 'fichas_ejercicio') c.actualizada_en = ahora();
     if (t === 'comidas_atleta' && !esCoach()) delete c.opcional;
     // Como la 022: de su recetario, el atleta solo cambia la favorita y la petición de cambio (la fecha la pone la base)
     if (t === 'recetas_atleta' && !esCoach()) {
@@ -1047,6 +1069,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && Number.isInteger(n(f.objetivo)) && entre(n(f.objetivo), 1, retoMaximo(f.modo ?? 'individual', f.medida ?? 'sesiones'))
       // (042: por equipos, con los nombres de los dos)
       && ((f.modo === 'equipos') === (f.equipos != null)) && (f.equipos == null || equiposValidos(f.equipos)),
+    // Migración 057: guías y fichas
+    guias: (f) => /^[a-z0-9][a-z0-9-]{0,39}$/.test(String(f.clave || '')) && textoCorto(f.titulo, 80) && f.titulo != null && textoCorto(f.subtitulo, 160)
+      && (f.grupo == null || ['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'isquiotibiales', 'biceps', 'triceps', 'abdominales', 'gemelo'].includes(f.grupo))
+      && entre(n(f.orden), 0, 999) && f.contenido && typeof f.contenido === 'object' && !Array.isArray(f.contenido) && JSON.stringify(f.contenido).length <= 200000 && typeof f.publicada === 'boolean',
+    fichas_ejercicio: (f) => textoCorto(f.nombre, 120) && f.nombre != null && entre(n(f.orden), 0, 999) && f.ficha && typeof f.ficha === 'object' && !Array.isArray(f.ficha) && JSON.stringify(f.ficha).length <= 40000,
     // Migración 022: recetas, recetario, comidas del día y menú
     recetas: (f) => textoCorto(f.nombre, 80) && f.nombre != null && Array.isArray(f.tomas) && f.tomas.length <= 6 && f.tomas.every((t) => TOMAS.includes(t))
       && Number.isInteger(n(f.raciones)) && entre(n(f.raciones), 1, 20) && entre(n(f.kcal), 0, 5000) && entre(n(f.proteina_g), 0, 500) && entre(n(f.carbos_g), 0, 800) && entre(n(f.grasa_g), 0, 400)
@@ -1086,7 +1113,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && entre(n(f.rpe), 1, 10) && entre(n(f.rir), 0, 10),
     // Como la migración 013: la pauta de cardio y lo hecho, con su forma exacta
     sesiones: (f) => (f.cardio == null || cardioValido(f.cardio)) && (f.cardio_hecho == null || cardioHechoValido(f.cardio_hecho)),
-    // Como la 056
+    // Como la 057
     carrera_atleta: (f) => entre(n(f.lthr), 100, 230) && entre(n(f.fc_max), 100, 240) && entre(n(f.fc_reposo), 30, 120) && entre(n(f.ventanas), 1, 7)
       && (f.zonas == null || (Array.isArray(f.zonas) && f.zonas.length === 4 && f.zonas.every((x, i) => !i || x > f.zonas[i - 1]) && f.zonas[0] >= 60 && f.zonas[3] <= 240))
       && (f.umbral == null || (Array.isArray(f.umbral) && f.umbral.length >= 1 && f.umbral.length <= 2 && f.umbral.every((x) => x >= 120 && x <= 900)))
@@ -1239,7 +1266,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
     && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
       : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
-  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -2891,7 +2918,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           }
         }
       }
-      if (['cobros_atletas', 'pagos', 'recetas', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) return [];
+      if (['cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) return [];
       // Como la 037: recordatorios, frases y vídeos modelo (el coach, con sus triggers); la valoración, el atleta de la suya
       if (['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'umbrales_velocidad'].includes(t)) {
         const filas = tabla(t).filter((x) => cumple(x, f) && VISIBLE[t](x));
@@ -3204,7 +3231,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async delete(t, f) {
       sinRedDemo();
-      if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) return [];
+      if (['cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'recetas_atleta', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) return [];
       // Como la 055: la receta guardada la quita su atleta (el coach solo las ve)
       if (t === 'recetas_favoritas') {
         if (esCoach() || !miAtletaId()) return [];

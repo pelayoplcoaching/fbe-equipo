@@ -385,11 +385,11 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
   'archivos', 'comentarios', 'recursos', 'notas_ejercicio', 'respuestas_guardadas', 'avisos', 'habitos', 'registros_habito',
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
-  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
+  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
   'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA];
 // Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los vídeos, 035; la revisión semanal, 040): sin ellas, la copia sale igual
-const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
+const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
   'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)

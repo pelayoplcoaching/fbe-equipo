@@ -1,0 +1,55 @@
+/* «Aprende» (migración 057): las guías y la ficha de técnica de cada ejercicio */
+.rejilla-guias { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 10px; }
+.tarjeta-guia { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px; text-align: left; background: var(--hoja); border: 0; border-radius: var(--r-s); box-shadow: var(--sombra); color: inherit; }
+.tarjeta-guia:hover { background: var(--hoja-2); }
+.tarjeta-guia-img { display: block; width: 72px; height: 72px; border-radius: var(--r-xs); object-fit: cover; background: var(--hoja-2); overflow: hidden; }
+.tarjeta-guia-img.vacia { display: grid; place-items: center; color: var(--morado); background: var(--morado-suave); }
+.tarjeta-guia-img.vacia svg { width: 28px; height: 28px; }
+.tarjeta-guia-texto { min-width: 0; }
+.tarjeta-guia-texto strong { font-weight: 700; line-height: 1.25; }
+.volver-guias { display: inline-flex; align-items: center; gap: 4px; justify-self: start; min-height: 36px; padding: 0; }
+.volver-guias svg { width: 16px; height: 16px; }
+
+.lector-guia p { margin: 0; line-height: 1.55; }
+.guia-cita { margin: 0; padding: 12px 14px; border-left: 3px solid var(--morado); background: var(--morado-suave); border-radius: 0 var(--r-xs) var(--r-xs) 0; font-style: italic; line-height: 1.5; }
+.guia-seccion { display: grid; gap: 12px; scroll-margin-top: 12px; }
+.guia-seccion .guia-titulo { margin: 0; font-size: 1.25rem; line-height: 1.2; }
+.guia-seccion h3.guia-h { font-family: inherit; }
+.guia-h { margin: 6px 0 0; font-size: 1rem; font-weight: 720; }
+.guia-lista { margin: 0; padding-left: 20px; display: grid; gap: 8px; line-height: 1.5; }
+.guia-lista li::marker { color: var(--morado); font-weight: 700; }
+.guia-caja { display: grid; gap: 8px; padding: 12px 14px; border-radius: var(--r-s); background: var(--hoja-2); border-left: 3px solid var(--morado); font-size: 0.9375rem; }
+.guia-caja p { margin: 0; line-height: 1.5; }
+.guia-caja-titulo { display: flex; align-items: center; gap: 8px; font-weight: 720; }
+.guia-caja-titulo svg { flex: none; width: 18px; height: 18px; color: var(--morado); }
+.guia-caja.tono-clave { border-left-color: var(--ok); background: var(--ok-suave); }
+.guia-caja.tono-clave .guia-caja-titulo svg { color: var(--ok); }
+.guia-caja.tono-aviso { border-left-color: var(--aviso); background: var(--aviso-suave); }
+.guia-caja.tono-aviso .guia-caja-titulo svg { color: var(--aviso); }
+.guia-caja.tono-ojo { border-left-color: var(--alerta); background: var(--alerta-suave); }
+.guia-caja.tono-ojo .guia-caja-titulo svg { color: var(--alerta); }
+.fila-ficha { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; text-align: left; }
+.fila-ficha-n { color: var(--morado); font-weight: 720; font-size: 0.875rem; }
+.ideas-guia { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 10px; }
+.ideas-guia li { display: grid; gap: 4px; align-content: start; padding: 14px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra); }
+.ideas-guia-n { color: var(--morado); font-weight: 760; font-size: 1.25rem; }
+
+.ficha-fbe p { margin: 0; line-height: 1.5; }
+.ficha-fbe-cab { margin: 0; letter-spacing: .04em; }
+.ficha-fbe-entrada { color: var(--tinta-2); font-style: italic; }
+.ficha-fbe-datos { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; padding: 12px 14px; border-radius: var(--r-s); background: var(--hoja-2); font-size: 0.9062rem; }
+.ficha-fbe-datos dt { color: var(--tinta-2); }
+.ficha-fbe-datos dd { margin: 0; font-weight: 600; }
+.pasos-guia { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: paso; }
+.pasos-guia li { counter-increment: paso; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; border-radius: 10px; background: var(--hoja-2); font-size: 0.9375rem; line-height: 1.45; }
+.pasos-guia li::before { content: counter(paso); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); font-weight: 720; font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+.errores-guia { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.errores-guia li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; border-radius: 10px; background: var(--alerta-suave); font-size: 0.9375rem; line-height: 1.45; }
+.errores-guia svg { width: 18px; height: 18px; margin-top: 2px; color: var(--alerta); }
+.niveles-guia { margin: 0; display: grid; gap: 8px; }
+.niveles-guia > div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: var(--hoja-2); font-size: 0.9375rem; line-height: 1.45; }
+.niveles-guia dt { font-weight: 720; color: var(--morado); font-size: 0.8125rem; letter-spacing: .04em; text-transform: uppercase; }
+.niveles-guia dd { margin: 0; }
+.tabla-guia th[scope="row"] { text-align: left; font-weight: 650; }
+.tabla-guia td { white-space: normal; }
+@media (forced-colors: active) { .pasos-guia li::before { border: 1px solid CanvasText; } .guia-caja { border: 1px solid CanvasText; } }

@@ -5,6 +5,7 @@ import { BIBLIOTECA_BASE } from './biblioteca-base.js';
 import { FAQ } from './faq.js';
 import { RESPUESTAS_EJEMPLO } from './respuestas.js';
 import { sembrarComidas } from './semilla-comidas.js';
+import { sembrarGuias } from './semilla-guias.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
 import { VERSION_LEGAL } from '../legal.js';
 import { MOMENTOS_COACH } from '../logica/personal.js';
@@ -609,6 +610,8 @@ export function semillaDemo(hoy = hoyISO()) {
   db.recursos.push({ id: uuid(), atleta_id: null, categoria: 'entrenamiento', titulo: 'Calentamiento general (5 minutos)', descripcion: '2 min de bici o remo suave, 10 sentadillas sin peso, 10 puentes de glúteo, 10 rotaciones de hombro con banda y 5 zancadas por pierna.', url: null, orden: 1, creado_en: ahoraISO });
   // v0.26: recetas, Lucía (solo nutrición) y el menú de la semana (al final: no cambia lo aleatorio de lo anterior)
   sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana });
+  // (057) dos guías de ejemplo con sus fichas de ejercicio
+  sembrarGuias(db, { uuid, ahoraISO });
   sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos });
   sembrarV048(db, { hoy, hace, ana, ruben, carlos, ej, ahoraISO, mesDe, inicioMes });
   sembrarMicrociclos();
