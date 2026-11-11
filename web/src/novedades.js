@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.139': {
+    atleta: [
+      'Si llevas la nutrición conmigo, las recetas del recetario del equipo vienen ajustadas a las kcal de cada comida tuya.',
+    ],
+  },
   '0.138': {
     atleta: [
       'En «Aprende», cada guía estrena portada y cada estantería su ilustración; también el mito de la semana y el cuestionario inicial.',
