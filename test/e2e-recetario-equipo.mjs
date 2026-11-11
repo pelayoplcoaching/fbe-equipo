@@ -100,10 +100,13 @@ export async function probarRecetarioEquipo({ navegador, check, base = 'http://l
     await ficha(p).waitFor({ state: 'detached' });
     await p.getByRole('button', { name: /^Favoritas/ }).click();
     check(await hay(p, p.locator('.recetario-equipo .tarjeta-equipo'), 1) && /Favoritas \(1\)/.test(await p.getByRole('button', { name: /^Favoritas/ }).textContent()), 'y sale en sus favoritas');
+    // (la demo guarda en el navegador con un pequeño retraso: se espera a que la guardada esté escrita)
+    await p.waitForFunction(() => Object.keys(localStorage).some((k) => /"recetas_favoritas":\[\{/.test(localStorage.getItem(k) || '')), null, { timeout: 5000 }).catch(() => {});
     await p.reload();
     await p.locator('nav.tabs').waitFor(); await cerrarDialogos(p);
     await irASeccion(p, 'Recetas');
-    check(await hay(p, p.locator('.recetario-equipo .tarjeta-equipo'), 1), 'al volver a abrir la app, sigue guardada (y el filtro, donde lo dejó)');
+    const vuelve = await hay(p, p.locator('.recetario-equipo .tarjeta-equipo'), 1);
+    check(vuelve, `al volver a abrir la app, sigue guardada (y el filtro, donde lo dejó)${vuelve ? '' : ` [tarjetas: ${await p.locator('.recetario-equipo .tarjeta-equipo').count()}; filtros: ${(await p.locator('.recetario-equipo .selector-chips button[aria-pressed=true]').allTextContents()).join('/')}; h1: ${await p.locator('h1').first().textContent()}; guardadas: ${await p.evaluate(async () => (await globalThis.__fbeDemo.select('recetas_favoritas', {})).length)}]`}`);
   } catch (e) {
     check(false, `Recetas de quien solo entrena: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); }

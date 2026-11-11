@@ -1,3 +1,6 @@
+import { AyudaFicha } from '../Guias.jsx';
+import { enlacesFichas, todasLasFichas } from '../../datos/guias.js';
+import { lunesDe as lunesDeGuias, sumarDias as sumarDiasGuias, hoyISO as hoyGuias } from '../../logica/fechas.js';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos } from '../comunes.jsx';
 import { FOCOS, INTENCIONES, PRIORIDADES, NOMBRE_GRUPO, GRUPOS, TIPOS_SESION, LETRAS_SUPERSERIE, etiquetasSuperserie, seriesPautadasPorGrupo, desglosePautadoPorGrupo, rangoVolumen, estadoVolumen, num, mmss, tieneDetalle, detalleDesdePauta } from '../../logica/calculos.js';
@@ -60,6 +63,14 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   const idsSemana = [...new Set(sesionesSemana.flatMap((x) => (d.pautas[x.id] || []).map((p) => p.ejercicio_id)))].filter(Boolean).sort();
   const ultimas = useCarga(() => (atletaId && idsSemana.length ? api.ultimasPorEjercicio(atletaId, idsSemana, sesionesSemana.map((x) => x.id), finSemana).catch(() => ({})) : Promise.resolve({})),
     [atletaId, semanaId, idsSemana.join(',')]);
+  // (057) al programar: las fichas de las guías (repeticiones por objetivo) y las molestias de sus dos últimas semanas
+  const { backend } = useApp();
+  const fichasFbe = useCarga(async () => {
+    const [enlaces, todas] = await Promise.all([enlacesFichas({ backend }).catch(() => null), todasLasFichas({ backend }, { conFicha: true }).catch(() => [])]);
+    if (!enlaces || !todas.length) return null;
+    const molestias = atletaId ? await backend.select('molestias', { eq: { atleta_id: atletaId }, gte: { semana_inicio: sumarDiasGuias(lunesDeGuias(hoyGuias()), -7) } }).catch(() => []) : [];
+    return { enlaces, fichas: Object.fromEntries(todas.map((f) => [f.id, f])), molestias };
+  }, [atletaId]);
   // v0.48: las notas fijadas del atleta en cada ejercicio («asiento en el 4»), para verlas junto a su pauta
   const notasAtleta = useCarga(() => (atletaId ? api.notasEjercicio(atletaId).catch(() => ({})) : Promise.resolve({})), [atletaId]);
 
@@ -239,7 +250,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       )}
 
       {semana && sesiones.map((s) => (
-        <EditorSesion key={`${s.id}-${version}`} sesion={s} conCarrera={!!carreraDe && !bloque.es_plantilla} zonasCarrera={zonasCarrera} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} notasAtleta={notasAtleta.datos || {}}
+        <EditorSesion key={`${s.id}-${version}`} sesion={s} conCarrera={!!carreraDe && !bloque.es_plantilla} zonasCarrera={zonasCarrera} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} notasAtleta={notasAtleta.datos || {}} fbe={fichasFbe.datos || null}
           guardar={guardar} guardarDetalle={guardarDetalle} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
           corregirVariante={['finalizado', 'cancelado'].includes(bloque.estado) ? null : async (p, nuevo) => {
             await estructura(() => api.corregirVariante({ bloqueId: bloque.id, ejercicioId: p.ejercicio_id, variante: p.variante, nuevoEjercicioId: nuevo?.id || null }),
@@ -537,7 +548,7 @@ function DetalleSeries({ pauta, hechas = [], alGuardar }) {
 // «25×10 @8», «12 reps @7» (sin kilos) o «25×10» (sin RPE)
 const textoSerieHecha = (x) => `${x.kg != null ? `${num(x.kg, 2)}×${x.reps ?? '–'}` : `${x.reps ?? '–'} reps`}${x.rpe != null ? ` @${num(x.rpe, 1)}` : ''}`;
 
-function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, notasAtleta = {}, conCarrera = false, zonasCarrera = null }) {
+function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, notasAtleta = {}, fbe = null, conCarrera = false, zonasCarrera = null }) {
   const { api } = useApp();
   const lista = useMemo(() => Object.values(ejercicios), [ejercicios]);
   const numero = (pautaId, campo, dec = false) => (e) => {
@@ -613,6 +624,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                         {BACKOFFS.map((x) => <option key={x} value={String(x)}>Top + back-off −{num(x)} %</option>)}
                       </select>
                     </div>
+                    {fbe && <AyudaFicha ejercicioId={p.ejercicio_id} fichas={fbe.fichas} enlaces={fbe.enlaces} molestias={fbe.molestias} />}
                     <AvisoVariante pauta={p} ejercicio={ejercicios[p.ejercicio_id]} lista={lista} corregir={corregirVariante} />
                     <NotaPauta valor={p.notas_coach} alGuardar={(v) => guardar('sesion_ejercicios', p.id, { notas_coach: v })} />
                     {tieneDetalle(p) && <DetalleSeries pauta={p} hechas={series[p.id] || []} alGuardar={(d) => guardarDetalle(p.id, d)} />}

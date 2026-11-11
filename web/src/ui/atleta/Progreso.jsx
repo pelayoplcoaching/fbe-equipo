@@ -14,6 +14,7 @@ import { calendarioRacha } from '../../logica/racha.js';
 import { PantallaRacha } from './Racha.jsx';
 import { HistorialEjercicio } from '../Herramientas.jsx';
 import { MapaMuscular } from '../MapaMuscular.jsx';
+import { GuiasDeGrupos } from '../Guias.jsx';
 import { HistoriaSemana, rangoLargo } from './TuSemana.jsx';
 import { TusMeses } from './TuMes.jsx';
 import { VerArchivo, CompararVideos } from '../Archivos.jsx';
@@ -200,6 +201,8 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
         <h2>Series por músculo esta semana</h2>
         <div class="panel panel-pad pila">
           {grupos.length > 0 && <MapaMuscular series={volumen.estaSemana} etiqueta="Series por músculo esta semana" />}
+          {/* (057) las guías de los músculos que ha entrenado */}
+          {grupos.length > 0 && <GuiasDeGrupos grupos={grupos.map(([g]) => g)} />}
           {!grupos.length ? <p class="secundario">Sin series registradas estas dos semanas.</p> : (
             <div class="barras">
               {grupos.map(([g, nombre, a, b]) => {

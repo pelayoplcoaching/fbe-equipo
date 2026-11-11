@@ -61,7 +61,8 @@ export async function probarGuias({ navegador, check, base = 'http://localhost:4
   const leer = async (p, anchoMin) => {
     await irASeccion(p, 'Aprende');
     await p.locator('.tarjeta-guia').first().waitFor();
-    check(await p.locator('.tarjeta-guia').count() === 2 && /2 ejercicios/.test(await p.locator('.tarjeta-guia', { hasText: 'Pectoral' }).textContent()), `«Aprende»: las dos guías, con cuántos ejercicios tiene cada una (${anchoMin} px)`);
+    check(await p.locator('.tarjeta-guia').count() === 3 && /2 ejercicios/.test(await p.locator('.tarjeta-guia', { hasText: 'Pectoral' }).textContent()) && !/ejercicio/.test(await p.locator('.tarjeta-guia', { hasText: 'Tipos de rutina' }).textContent()),
+      `«Aprende»: las tres guías, con cuántos ejercicios tiene cada una (${anchoMin} px)`);
     await revisar(p, `lista-${anchoMin}`);
     await p.locator('.tarjeta-guia', { hasText: 'Pectoral' }).click();
     await p.locator('.lector-guia .guia-seccion').first().waitFor();
@@ -120,11 +121,39 @@ export async function probarGuias({ navegador, check, base = 'http://localhost:4
     check(false, `Aprende, del atleta: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); }
 
-  // 2. A 360 px en oscuro
+  // 2. A 360 px en oscuro: lo mismo, y «por qué entrenas así» y las guías de sus músculos
   ({ ctx, p } = await abrir({ ancho: 360, alto: 760, oscuro: true }));
   try {
-    await entrar(p, 'Carlos');
+    await entrar(p, 'Iván');
     await leer(p, 360);
+    await p.locator('.tarjeta-guia', { hasText: 'Tipos de rutina' }).click();
+    await p.locator('.lector-guia .tabla-guia-ancha').waitFor();
+    check(await p.locator('.lector-guia .tabla-guia-ancha tbody tr').count() === 4 && await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'la guía de rutinas, con su tabla (que se desliza sin ensanchar la página)');
+    await revisar(p, 'rutinas-360');
+    await irASeccion(p, 'Semana');
+    const porQue = p.locator('.por-que');
+    await porQue.waitFor();
+    check(/Upper \/ Lower en 4 días/.test(await porQue.textContent()), 'en su semana (torso y pierna, cuatro días): «Cómo está montada tu semana»');
+    await porQue.click();
+    const hojaR = p.getByRole('dialog', { name: 'Upper / Lower en 4 días' });
+    await hojaR.locator('.tabla-guia-ancha').waitFor();
+    check(await hojaR.locator('.guia-seccion').count() === 1 && await hojaR.getByRole('button', { name: 'Ver la guía entera' }).count() === 1, 'al tocarlo, solo la parte de su rutina (y un botón para la guía entera)');
+    await revisar(p, 'porque-360');
+    await hojaR.getByRole('button', { name: 'Ver la guía entera' }).click();
+    check(await hay(p, hojaR.locator('.guia-seccion'), 4), 'y de ahí, la guía entera');
+    await p.keyboard.press('Escape');
+    await hojaR.waitFor({ state: 'detached' });
+    await irASeccion(p, 'Progreso');
+    await p.locator('main button', { hasText: /^Fuerza$/ }).first().click();
+    const chips = p.locator('.guias-de-grupos button');
+    await chips.first().waitFor();
+    check((await chips.allTextContents()).join() === 'Pectoral,Cuádriceps', 'debajo del mapa muscular, las guías de esos músculos');
+    await chips.first().click();
+    const hojaG = p.getByRole('dialog', { name: 'Pectoral', exact: true });
+    await hojaG.locator('.guia-seccion').first().waitFor();
+    check(true, 'que se abren al tocarlas');
+    await p.keyboard.press('Escape');
+    await hojaG.waitFor({ state: 'detached' });
   } catch (e) {
     check(false, `Aprende a 360 px en oscuro: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); }
@@ -140,7 +169,7 @@ export async function probarGuias({ navegador, check, base = 'http://localhost:4
     await irASeccion(p, 'Biblioteca');
     await p.getByRole('tab', { name: 'Guías' }).click();
     await p.locator('.tarjeta-guia').first().waitFor();
-    check(await p.locator('.tarjeta-guia').count() === 2 && /3 ejercicios enlazados/.test(await p.locator('#bib-panel').textContent()), 'el coach ve sus guías en Biblioteca y cuántos ejercicios llevan ficha');
+    check(await p.locator('.tarjeta-guia').count() === 3 && /3 ejercicios enlazados/.test(await p.locator('#bib-panel').textContent()), 'el coach ve sus guías en Biblioteca y cuántos ejercicios llevan ficha');
     await revisar(p, 'coach');
     await p.locator('.tarjeta-guia', { hasText: 'Cuádriceps' }).click();
     const hoja = p.getByRole('dialog', { name: 'Cuádriceps' });
@@ -162,6 +191,21 @@ export async function probarGuias({ navegador, check, base = 'http://localhost:4
     await p.getByText('Ficha enlazada: sus atletas la ven en «Técnica»').waitFor();
     check(await hay(p, editar.getByRole('button', { name: 'Ver la ficha' }), 1), 'le pone una ficha de sus guías (y la puede ver)');
     await revisar(p, 'coach-enlazar');
+    await editar.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
+    await editar.waitFor({ state: 'detached' });
+    // Al programar: lo que dice la ficha y el aviso por una molestia
+    await irASeccion(p, 'Atletas');
+    await p.locator('tr:visible, button.tarjeta-atleta:visible', { hasText: 'Ana López' }).first().click();
+    await p.getByRole('tab', { name: 'Programa' }).click();
+    const ayuda = p.locator('.ayuda-ficha').first();
+    await ayuda.waitFor();
+    check(/Fuerza 3-6 · Hipertrofia 6-12/.test(await ayuda.textContent()) && await p.locator('.ayuda-ficha .chip.aviso', { hasText: 'Molestia en hombros' }).count() >= 1,
+      'en el editor del programa, cada ejercicio con ficha dice sus repeticiones por objetivo y avisa de una molestia que la ficha nombra');
+    await revisar(p, 'coach-editor');
+    await ayuda.locator('.btn-texto').click();
+    const hojaF = p.getByRole('dialog', { name: 'Press de banca con barra' });
+    await hojaF.locator('.ficha-fbe').waitFor();
+    check(await hojaF.getByText('No, cuando').count() === 1, 'y abre la ficha entera');
   } catch (e) {
     check(false, `Las guías, del coach: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); }

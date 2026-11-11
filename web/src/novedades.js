@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.134': {
+    atleta: [
+      'Al grabar un vídeo de técnica, antes de enviarlo ves los 3 errores típicos de ese ejercicio.',
+      'En tu semana, «Cómo está montada tu semana»: por qué entrenas así, de la guía de tipos de rutina.',
+      'En Progreso → Fuerza, debajo del mapa muscular, las guías de los músculos que has entrenado.',
+    ],
+    coach: [
+      'Al corregir un vídeo, los errores típicos de su ficha salen como frases de un toque.',
+      'En el editor, cada ejercicio con ficha enseña sus repeticiones por objetivo y avisa si una molestia del atleta lo desaconseja.',
+    ],
+  },
   '0.133': {
     atleta: [
       'El recetario del equipo: las recetas de tu coach para todos, con buscador y favoritas, en Recetas (o en Comidas).',

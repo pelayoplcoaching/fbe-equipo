@@ -8,6 +8,26 @@ const ficha = (cabecera, descripcion, patron, principales, secundarios, pasos, e
 const TABLA_BASE = [['Fuerza', '3-6', '7-9', '2-3 min'], ['Hipertrofia', '6-12', '7-8', '1,5-2 min'], ['Resistencia muscular', '12-20', '6-7', '1-1,5 min']];
 
 export const GUIAS_DEMO = [
+  { clave: 'rutinas', titulo: 'Tipos de rutina', subtitulo: 'Cómo se reparte la semana', grupo: null, orden: 0,
+    contenido: {
+      entrada: 'Las distribuciones de la semana más habituales, con su porqué.',
+      cita: 'La mejor rutina es la que puedes mantener.',
+      secciones: [
+        { titulo: 'Antes de elegir', subtitulo: 'Lo primero, los días', bloques: [{ t: 'p', x: 'Cuenta los días que **de verdad** puedes entrenar. La rutina se monta sobre ese número.' }] },
+        { clave: 'upper-lower-4', titulo: 'Torso y pierna en 4 días', subtitulo: 'Dos días de torso y dos de pierna', bloques: [
+          { t: 'p', x: 'Cada grupo muscular se trabaja **dos veces por semana**, con un día pesado y otro de más repeticiones.' },
+          { t: 'h', x: 'Estructura semanal' },
+          { t: 'tabla', cab: ['Día', 'Sesión', 'Qué lleva'], filas: [['Lunes', 'Torso A', 'Press y remo pesados'], ['Martes', 'Pierna A', 'Sentadilla y bisagra'], ['Jueves', 'Torso B', 'Más repeticiones'], ['Viernes', 'Pierna B', 'Unilateral y accesorios']] },
+          { t: 'caja', tono: 'aviso', titulo: 'Cuándo cambiar', bloques: [{ t: 'p', x: 'Si no llegas a los cuatro días varias semanas seguidas, mejor tres días de cuerpo entero.' }] },
+        ] },
+        { clave: 'con-cardio', titulo: 'Fuerza con cardio', subtitulo: 'Dos o tres días de fuerza y uno o dos de cardio', bloques: [
+          { t: 'p', x: 'El cardio suave **suma salud** y casi no resta a la fuerza si va en días distintos.' },
+          { t: 'ul', xs: ['Fuerza de cuerpo entero dos o tres días.', 'Cardio suave, a ritmo de conversación, uno o dos días.'] },
+        ] },
+      ],
+      ideas: [{ titulo: 'Los días mandan', x: 'Primero cuántos días; después, qué rutina.' }],
+    },
+    fichas: [] },
   { clave: 'pectoral', titulo: 'Pectoral', subtitulo: 'Tren superior · empuje', grupo: 'pectoral', orden: 1,
     contenido: {
       entrada: 'Una guía corta para entender y ejecutar bien los ejercicios de pecho.',

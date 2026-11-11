@@ -1,7 +1,8 @@
 // «Aprende» (migración 057): las guías del coach y la ficha de técnica de cada ejercicio. La lógica pura (logica/guias.js),
 // la migración en un Postgres local (PGlite): quién ve y escribe qué, y lo mismo en la demo (backend en memoria).
 // Uso: node test/guias.test.mjs
-import { trozos, sinMarcas, bloquesDe, guiaParaLeer, fichaParaLeer, fichaConContenido, ordenarGuias, buscarFichas, guiaDeGrupo, cuantosEjercicios, fichasParecidas } from '../web/src/logica/guias.js';
+import { trozos, sinMarcas, bloquesDe, guiaParaLeer, fichaParaLeer, fichaConContenido, ordenarGuias, buscarFichas, guiaDeGrupo, cuantosEjercicios, fichasParecidas,
+  erroresDeFicha, frasesDeFicha, resumenTabla, avisosMolestia, tipoDeRutina } from '../web/src/logica/guias.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -30,6 +31,27 @@ const gs = [{ clave: 'b', titulo: 'B', orden: 2, grupo: 'pectoral' }, { clave: '
 check(ordenarGuias(gs).map((x) => x.clave).join('') === 'abc' && guiaDeGrupo(gs, 'pectoral').clave === 'b' && guiaDeGrupo(gs, 'gemelo') === null && cuantosEjercicios(1) === '1 ejercicio' && cuantosEjercicios(9) === '9 ejercicios',
   'las guías en su orden y la de cada grupo muscular');
 check(fichasParecidas(fichas, 'Press banca')[0].id === 'f1' && fichasParecidas(fichas, 'Press inclinado con mancuernas')[0].id === 'f2' && fichasParecidas(fichas, '').length === 3, 'para enlazar un ejercicio, las fichas que más se parecen a su nombre van primero');
+
+// Las tablas, los errores típicos, la ayuda al programar y el tipo de rutina
+const tb = bloquesDe([{ t: 'tabla', cab: ['Día', 'Sesión'], filas: [['Lunes', 'Torso', 'sobra'], ['Martes'], [], 'x'] }, { t: 'tabla', cab: ['Sola'], filas: [['a']] }, { t: 'tabla', cab: ['A', 'B'], filas: [] }]);
+check(igual(tb, [{ t: 'tabla', cab: ['Día', 'Sesión'], filas: [['Lunes', 'Torso'], ['Martes', '']] }]), 'una tabla: todas las filas con las columnas de la cabecera; sin filas o con una sola columna, no se pinta');
+check(guiaParaLeer({ contenido: { secciones: [{ clave: 'ppl-6', titulo: 'PPL', bloques: [] }] } }).secciones[0].clave === 'ppl-6', 'cada sección conserva su clave (para abrirla sola)');
+const fe = { ficha: { errores: ['**Codos abiertos a 90º del torso**: el error más frecuente.', '**Rebotar** la barra en el pecho.', 'Sin negrita: algo más', ''], no: 'Patología activa de hombro (impingement) o dolor lumbar agudo.',
+  tabla: [{ objetivo: 'Fuerza', reps: '3-6' }, { objetivo: 'Hipertrofia', reps: '6-12' }, { objetivo: 'Sin reps' }] } };
+const ee = erroresDeFicha(fe);
+check(ee.length === 3 && ee[0].titulo === 'Codos abiertos a 90º del torso' && ee[0].x === 'el error más frecuente.' && !ee[0].seguido && ee[1].titulo === 'Rebotar' && ee[1].x === 'la barra en el pecho.' && ee[1].seguido && ee[2].titulo === 'Sin negrita' && erroresDeFicha(null).length === 0, 'los errores típicos: su título (lo que va en negrita) y el resto');
+check(igual(frasesDeFicha(fe, ['CODOS abiertos a 90º del torso']), ['Rebotar', 'Sin negrita']) && frasesDeFicha({ ficha: { errores: [`**${'x'.repeat(200)}**: y`] } })[0].length === 140, 'como frases de corrección: sin las que el coach ya tiene y de 140 letras como mucho');
+check(resumenTabla(fe) === 'Fuerza 3-6 · Hipertrofia 6-12' && resumenTabla({}) === '', 'la tabla de la ficha, en una línea');
+const av = avisosMolestia(fe, [{ zona: 'hombros', intensidad: 1 }, { zona: 'hombros', intensidad: 2 }, { zona: 'cuadriceps', intensidad: 3 }, { zona: 'zona_lumbar', intensidad: 0 }, { zona: 'otra', intensidad: 3 }]);
+check(igual(av, [{ zona: 'hombros', intensidad: 2 }]) && avisosMolestia(fe, [{ zona: 'zona_lumbar', intensidad: 1 }])[0].zona === 'zona_lumbar' && avisosMolestia({ ficha: {} }, [{ zona: 'hombros', intensidad: 3 }]).length === 0 && avisosMolestia(fe, null).length === 0,
+  'el aviso al programar: solo las molestias (de intensidad 1 o más) que la ficha nombra en su «no lo prescribo cuando», con la peor intensidad');
+const ses = (...ns) => ns.map((n) => (n.endsWith('(c)') ? { nombre: n, tipo: 'cardio' } : { nombre: n }));
+check(tipoDeRutina(ses('Full body A', 'Full Body B'))?.clave === 'full-body-2' && tipoDeRutina(ses('Cuerpo entero 1', 'Cuerpo completo 2', 'FB C'))?.clave === 'full-body-3'
+  && tipoDeRutina(ses('Torso A', 'Pierna A', 'Torso B', 'Pierna B'))?.clave === 'upper-lower-4' && tipoDeRutina(ses('Upper', 'Lower', 'Push', 'Pull', 'Legs'))?.clave === 'hibrida-5'
+  && tipoDeRutina(ses('Push', 'Pull', 'Legs', 'Empuje 2', 'Tracción 2', 'Pierna 2'))?.clave === 'ppl-6' && tipoDeRutina(ses('Full body A', 'Full body B', 'Rodaje suave(c)'))?.clave === 'con-cardio',
+  'el tipo de rutina, por los nombres de las sesiones de la semana');
+check(tipoDeRutina(ses('Torso A', 'Pierna A', 'Torso B')) === null && tipoDeRutina(ses('Día 1', 'Día 2', 'Día 3')) === null && tipoDeRutina(ses('Full body')) === null && tipoDeRutina([]) === null && tipoDeRutina(null) === null,
+  'si no se reconoce, no se supone nada');
 
 console.log('\nLa migración 057 (PGlite)');
 const { PGlite } = await import('@electric-sql/pglite');
@@ -100,7 +122,7 @@ const api = crearApi(b);
 const lanza = async (fn) => { try { await fn(); return false; } catch { return true; } };
 await b.auth.entrar('ana@fbe.demo', 'demo');
 const lista = await G.listaGuias({ backend: b });
-check(await G.hayGuias({ backend: b }) && lista.map((x) => `${x.clave}:${x.fichas}`).join() === 'pectoral:2,cuadriceps:1' && !('contenido' in lista[0]), 'Ana ve las dos guías de la demo, con cuántos ejercicios tiene cada una (sin bajar su contenido)');
+check(await G.hayGuias({ backend: b }) && lista.map((x) => `${x.clave}:${x.fichas}`).join() === 'rutinas:0,pectoral:2,cuadriceps:1' && !('contenido' in lista[0]), 'Ana ve las tres guías de la demo, con cuántos ejercicios tiene cada una (sin bajar su contenido)');
 const entera = await G.guiaEntera({ backend: b }, 'pectoral');
 const leer = guiaParaLeer(entera.guia, entera.fichas);
 check(leer.secciones.length === 3 && leer.secciones[2].fichas.length === 2 && leer.ideas.length === 2 && leer.sueltas.length === 0 && await G.guiaEntera({ backend: b }, 'no-existe') === null, 'una guía entera, lista para leer');
@@ -110,9 +132,11 @@ const fb = await G.fichaDeEjercicio({ backend: b }, banca.id);
 const sinFicha = ejs.find((e) => e.nombre === 'Remo con barra');
 check(fb.ficha.nombre === 'Press de banca con barra' && fb.guia.clave === 'pectoral' && fichaConContenido(fb.ficha) && await G.fichaDeEjercicio({ backend: b }, sinFicha.id) === null && await G.fichaDeEjercicio({ backend: b }, null) === null,
   'el ejercicio enlazado trae su ficha y su guía; el que no, nada');
+const rut = await G.guiaEntera({ backend: b }, 'rutinas');
+check(guiaParaLeer(rut.guia, rut.fichas).secciones.find((x) => x.clave === 'upper-lower-4').bloques.some((x) => x.t === 'tabla'), 'la guía de rutinas trae cada distribución en su sección, con su tabla');
 check((await G.todasLasFichas({ backend: b })).length === 3 && (await G.todasLasFichas({ backend: b }, { conFicha: true }))[0].ficha.pasos.length === 5, 'todas las fichas, ligeras o con su contenido');
 check(await lanza(() => G.enlazarFicha({ backend: b }, sinFicha.id, fb.ficha.id)) || (await G.fichaDeEjercicio({ backend: b }, sinFicha.id)) === null, 'el atleta no enlaza fichas');
-check((await G.publicarGuia({ backend: b }, entera.guia.id, false)) === undefined && (await G.listaGuias({ backend: b })).length === 2, 'ni esconde guías');
+check((await G.publicarGuia({ backend: b }, entera.guia.id, false)) === undefined && (await G.listaGuias({ backend: b })).length === 3, 'ni esconde guías');
 await b.auth.salir();
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 const enl = await G.enlacesFichas({ backend: b });
@@ -124,11 +148,11 @@ check(enl2[sinFicha.id] === fb.ficha.id && !(banca.id in enl2), 'enlaza un ejerc
 await G.publicarGuia({ backend: b }, entera.guia.id, false);
 await b.auth.salir();
 await b.auth.entrar('ana@fbe.demo', 'demo');
-check((await G.listaGuias({ backend: b })).map((x) => x.clave).join() === 'cuadriceps' && await G.fichaDeEjercicio({ backend: b }, sinFicha.id) === null, 'con la guía escondida, Ana no la ve ni ve su ficha en el ejercicio');
+check((await G.listaGuias({ backend: b })).map((x) => x.clave).join() === 'rutinas,cuadriceps' && await G.fichaDeEjercicio({ backend: b }, sinFicha.id) === null, 'con la guía escondida, Ana no la ve ni ve su ficha en el ejercicio');
 await b.auth.salir();
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 const completa = await api.copiaCompleta();
-check(completa.guias.length === 2 && completa.fichas_ejercicio.length === 3 && Array.isArray(completa.ejercicios_fichas), 'las guías, las fichas y los enlaces van en la copia completa');
+check(completa.guias.length === 3 && completa.fichas_ejercicio.length === 3 && Array.isArray(completa.ejercicios_fichas), 'las guías, las fichas y los enlaces van en la copia completa');
 // Una base sin la 057: todo vacío y sin romper
 const sin = { select: async (t) => { throw new Error(`Could not find the table 'public.${t}' in the schema cache`); }, delete: async () => { throw new Error('relation "public.ejercicios_fichas" does not exist'); } };
 check(await G.hayGuias({ backend: sin }) === false && (await G.listaGuias({ backend: sin })).length === 0 && await G.guiaEntera({ backend: sin }, 'x') === null && await G.fichaDeEjercicio({ backend: sin }, 'x') === null

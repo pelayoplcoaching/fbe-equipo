@@ -1,3 +1,4 @@
+import { PorQueEntrenasAsi } from '../Guias.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, Vacio, ErrorCaja, Pista } from '../comunes.jsx';
 import { DiaSesion } from './Hoy.jsx';
@@ -100,6 +101,8 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
                   {semana.nota_coach && <div class="nota-coach con-lobo"><img class="nota-lobo" src={LOBO} alt="" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>}
                 </div>
               )}
+              {/* (057) cómo está montada la semana y por qué, de la guía de rutinas */}
+              {semana.id === p.actual?.id && <PorQueEntrenasAsi sesiones={sesiones} />}
               <div class="semana-dias">
                 {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} resumen={pautas.datos?.[s.id] || null} llegando={pautas.cargando && !pautas.datos} actual={semana.id === p.actual?.id && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
               </div>
