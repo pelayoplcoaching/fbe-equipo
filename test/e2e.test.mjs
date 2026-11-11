@@ -426,6 +426,25 @@ try {
   check((await hojaTuPlan.textContent()).includes('Proteína'), 'y ve su plan con sus cifras');
   await p.keyboard.press('Escape');
   await hojaTuPlan.waitFor({ state: 'detached' });
+  // (escáner) sumar un producto envasado por su código de barras (en la demo, productos de ejemplo, sin salir a la red)
+  await tarjetaNut.click();
+  await hojaNut.waitFor();
+  const kcalAntes = Number((await hojaNut.locator('#nut-kcal').inputValue()).replace(/\D/g, ''));
+  await hojaNut.getByRole('button', { name: 'Sumar un producto (código de barras)' }).click();
+  await hojaNut.locator('#prod-codigo').fill('2000000000039');
+  await hojaNut.getByRole('button', { name: 'Ver', exact: true }).click();
+  await hojaNut.getByText('Copos de avena (demo)').waitFor();
+  check((await hojaNut.textContent()).includes('Suma 40 g · 149 kcal'), 'por su código sale el producto con su ración (40 g de avena: 149 kcal)');
+  await revisar('nutricion-producto');
+  await hojaNut.getByRole('button', { name: 'Sumar a lo del día' }).click();
+  await hojaNut.locator('#nut-kcal').waitFor();
+  check(Number((await hojaNut.locator('#nut-kcal').inputValue()).replace(/\D/g, '')) === kcalAntes + 149 && (await hojaNut.getByRole('heading', { name: /Sumado con productos: 149 kcal/ }).count()) === 1, 'y se suma a las kcal del día, con la lista de lo sumado');
+  await hojaNut.getByRole('button', { name: 'Quitar Copos de avena (demo)' }).click();
+  // (el campo se repinta tras el cambio, en su efecto: se espera a que lo muestre)
+  await p.waitForFunction((v) => (document.querySelector('#nut-kcal')?.value || '').replace(/\D/g, '') === String(v), kcalAntes, { timeout: 4000 }).catch(() => {});
+  check(Number((await hojaNut.locator('#nut-kcal').inputValue()).replace(/\D/g, '')) === kcalAntes, 'al quitarlo vuelve lo que había');
+  await p.keyboard.press('Escape');
+  await hojaNut.waitFor({ state: 'detached' });
 
   console.log('\nAtleta: entrenar');
   // v0.51: los diales de Hoy (constancia, carga y cómo llegas), cada uno con su hoja

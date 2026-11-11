@@ -35,6 +35,9 @@ if (!demo) {
   mkdirSync(join(salida, POSE_DIR), { recursive: true });
   for (const f of POSE_ARCHIVOS) copyFileSync(join(POSE_PAQUETE, f), join(salida, POSE_DIR, f));
   copyFileSync(join(raiz, 'web/licencias/mediapipe-LICENSE.txt'), join(salida, POSE_DIR, 'LICENSE.txt'));
+  // (escáner de productos) el lector de códigos de barras usa piezas de ZXing (@zxing/library, Apache-2.0): su licencia va con la app
+  mkdirSync(join(salida, 'licencias'), { recursive: true });
+  copyFileSync(join(raiz, 'web/licencias/zxing-LICENSE.txt'), join(salida, 'licencias/zxing-LICENSE.txt'));
 }
 
 const comun = {

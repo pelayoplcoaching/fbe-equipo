@@ -8,6 +8,8 @@ import { fmtKcal, kcalDeMacros, objetivoDelDia, planVigente, NOMBRE_CUMPLIDO } f
 import { hoyISO, sumarDias, fmtConDia, lunesDe, diasEntre } from '../../logica/fechas.js';
 import { LETRAS_DIA } from '../../logica/plan.js';
 import { num, signo } from '../../logica/calculos.js';
+import { SumarProducto } from './Productos.jsx';
+import { sumarAlDia, totalSumado, textoSumado } from '../../logica/alimentos.js';
 
 // Anillo de las kcal del día (se llena hasta el objetivo; pasado el 110 %, en aviso)
 // En Hoy: la tarjeta del día. entrenaHoy: si hoy hay sesión (prevista o hecha), cuenta como día de entreno; con
@@ -90,7 +92,24 @@ function HojaNutricion({ r, alCerrar, alGuardar, diaInicial = null }) {
   const obj = objetivoDelDia(plan, r.entrenos.has(dia));
   const macros = plan?.modo === 'macros';
   const sinContar = !plan || plan.modo === 'sin_contar';
-  const elegirDia = (iso) => { setDia(iso); setF(vacio(delDia(iso))); setError(null); };
+  // (escáner) lo sumado con productos en esta hoja: se puede quitar; al quitar el último, vuelve lo que había antes
+  const [producto, setProducto] = useState(false);
+  const [sumados, setSumados] = useState([]);
+  const [antes, setAntes] = useState(null);
+  const camposVisibles = ['kcal', 'proteina_g', ...(macros ? ['carbos_g', 'grasa_g'] : []), ...(plan?.fibra_g != null ? ['fibra_g'] : [])];
+  const elegirDia = (iso) => { setDia(iso); setF(vacio(delDia(iso))); setError(null); setSumados([]); setAntes(null); setProducto(false); };
+  const alSumar = (x) => {
+    if (!sumados.length) setAntes(f);
+    setF((y) => sumarAlDia(y, x.m, camposVisibles, 1));
+    setSumados((l) => [...l, { ...x, id: `${Date.now()}-${l.length}` }]);
+    setProducto(false);
+    aviso(`Sumado: ${x.nombre} (${x.m.kcal ?? 0} kcal)`);
+  };
+  const quitarSumado = (x) => {
+    const resto = sumados.filter((y) => y.id !== x.id);
+    setSumados(resto);
+    if (!resto.length && antes) { setF(antes); setAntes(null); } else setF((y) => sumarAlDia(y, x.m, camposVisibles, -1));
+  };
   // Los 7 últimos días (el lunes se puede apuntar aún el domingo); sin plan ese día, nada que apuntar
   const dias = Array.from({ length: 7 }, (_, i) => sumarDias(hoy, i - 6));
   const ayer = delDia(sumarDias(dia, -1));
@@ -133,9 +152,11 @@ function HojaNutricion({ r, alCerrar, alGuardar, diaInicial = null }) {
         <>
           <SiCasiNo valor={f.cumplido} ocupado={ocupado} alElegir={(v) => guardar({ cumplido: v, nota: f.nota })} />
         </>
+      ) : producto ? (
+        <SumarProducto alSumar={alSumar} alVolver={() => setProducto(false)} />
       ) : (
         <>
-          {ayer && !delDia(dia) && ayer.kcal != null && (
+          {ayer && !delDia(dia) && ayer.kcal != null && !sumados.length && (
             <button class="btn btn-peq plano" onClick={() => setF(vacio({ ...ayer, nota: '' }))}><Icono n="copiar" /> Copiar lo del día anterior ({fmtKcal(ayer.kcal)} kcal)</button>
           )}
           <div class="rejilla-campos">
@@ -148,19 +169,38 @@ function HojaNutricion({ r, alCerrar, alGuardar, diaInicial = null }) {
             {macros && <div class="campo"><label for="nut-grasa">Grasa (g)</label><Paso id="nut-grasa" valor={f.grasa_g} paso={5} min={0} max={1000} dec={0} etiqueta="gramos de grasa" alCambiar={(v) => cambiar({ grasa_g: v })} /></div>}
             {plan?.fibra_g != null && <div class="campo"><label for="nut-fibra">Fibra (g)</label><Paso id="nut-fibra" valor={f.fibra_g} paso={1} min={0} max={300} dec={0} etiqueta="gramos de fibra" alCambiar={(v) => cambiar({ fibra_g: v })} /></div>}
           </div>
+          {/* (escáner) para quien no cuenta con otra app: el código de barras de lo que ha comido suma a los totales */}
+          <button type="button" class="btn btn-peq plano sumar-producto-btn" disabled={ocupado} onClick={() => setProducto(true)}><Icono n="camara" /> Sumar un producto (código de barras)</button>
+          {sumados.length > 0 && (
+            <section class="pila-xs" aria-labelledby="nut-sumados-t">
+              <h3 class="etq" id="nut-sumados-t">Sumado con productos: {totalSumado(sumados).kcal} kcal</h3>
+              <ul class="sumados">
+                {sumados.map((x) => (
+                  <li key={x.id}>
+                    <span class="peq">{x.nombre} <span class="terciario">· {textoSumado(x.m, x.gramos, x.unidad)}</span></span>
+                    <button type="button" class="btn btn-icono plano" aria-label={`Quitar ${x.nombre}`} onClick={() => quitarSumado(x)}><Icono n="cerrar" /></button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <label class="casilla">
             <input type="checkbox" checked={!f.completo} onChange={(e) => cambiar({ completo: !e.currentTarget.checked })} />
             <span>Me dejé algo sin apuntar <span class="mini terciario">(ese día no cuenta para calcular tu gasto)</span></span>
           </label>
         </>
       )}
-      <div class="campo"><label for="nut-nota">Nota <span class="terciario">(opcional)</span></label>
-        <input id="nut-nota" class="entrada" maxLength={280} value={f.nota} onInput={(e) => cambiar({ nota: e.currentTarget.value })} placeholder="Comida fuera, cumpleaños, mucha hambre…" />
-      </div>
-      {error && <div class="error" role="alert">{error}</div>}
-      {!sinContar && <button class="btn btn-primario btn-grande" disabled={ocupado} onClick={() => guardar(f)}>Guardar</button>}
-      {sinContar && f.cumplido != null && <button class="btn btn-grande" disabled={ocupado} onClick={() => guardar({ cumplido: f.cumplido, nota: f.nota })}>Guardar la nota</button>}
-      {delDia(dia) && <button class="btn plano" disabled={ocupado} onClick={borrar}>Borrar lo de este día</button>}
+      {!(producto && !sinContar) && (
+        <>
+          <div class="campo"><label for="nut-nota">Nota <span class="terciario">(opcional)</span></label>
+            <input id="nut-nota" class="entrada" maxLength={280} value={f.nota} onInput={(e) => cambiar({ nota: e.currentTarget.value })} placeholder="Comida fuera, cumpleaños, mucha hambre…" />
+          </div>
+          {error && <div class="error" role="alert">{error}</div>}
+          {!sinContar && <button class="btn btn-primario btn-grande" disabled={ocupado} onClick={() => guardar(f)}>Guardar</button>}
+          {sinContar && f.cumplido != null && <button class="btn btn-grande" disabled={ocupado} onClick={() => guardar({ cumplido: f.cumplido, nota: f.nota })}>Guardar la nota</button>}
+          {delDia(dia) && <button class="btn plano" disabled={ocupado} onClick={borrar}>Borrar lo de este día</button>}
+        </>
+      )}
     </Hoja>
   );
 }
@@ -177,7 +217,7 @@ function HojaTuPlan({ r, alCerrar }) {
           <div class="pautas">{plan.pautas.split('\n').filter((l) => l.trim()).map((l, i) => <p key={i}>{l}</p>)}</div>
         </section>
       )}
-      {plan && plan.modo !== 'sin_contar' && <p class="mini terciario">Apunta los totales del día de la app que uses (MyFitnessPal, Fitia, Yazio…). Si un día se te olvida algo, márcalo: así tu coach calcula bien tu gasto.</p>}
+      {plan && plan.modo !== 'sin_contar' && <p class="mini terciario">Apunta los totales del día de la app que uses (MyFitnessPal, Fitia, Yazio…) o suma lo que comas escaneando su código de barras. Si un día se te olvida algo, márcalo: así tu coach calcula bien tu gasto.</p>}
     </Hoja>
   );
 }
