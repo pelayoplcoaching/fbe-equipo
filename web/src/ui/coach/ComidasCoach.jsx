@@ -11,6 +11,8 @@ import { kcalDeMacros } from '../../logica/nutricion.js';
 import { conNutricion } from '../../logica/nivel.js';
 import { num } from '../../logica/calculos.js';
 import { HojaComprobarRecetario, HojaRecetariosEquipo } from './ComprobarRecetario.jsx';
+import { RecetarioEquipo } from '../RecetarioEquipo.jsx';
+import { idsRecetasEquipo, ponerParaTodos } from '../../datos/recetario-equipo.js';
 
 const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 // Fotos de las recetas: la grande (800 × 600) y la miniatura de las listas (240 × 180), como las admite la base
@@ -209,21 +211,27 @@ function MenuCoach({ atleta }) {
 
 // ------------------------------------------------------------ Biblioteca → Recetas
 export function RecetasBiblioteca() {
-  const { api } = useApp();
+  const { api, backend } = useApp();
   const lista = useCarga(() => api.recetas(), []);
+  // (055) cuáles ve todo el equipo (null: la base aún no tiene la migración y no se ofrece)
+  const deEquipo = useCarga(() => idsRecetasEquipo({ backend }).catch(() => null), []);
+  const paraTodos = new Set(deEquipo.datos || []);
+  const [soloEquipo, setSoloEquipo] = useState(false);
+  const [verEquipo, setVerEquipo] = useState(false);
   const [q, setQ] = useState('');
   const [toma, setToma] = useState(null);
   const [editar, setEditar] = useState(null);
   const [equipo, setEquipo] = useState(false);
   const todas = lista.datos || [];
-  const vistas = todas.filter((r) => (!toma || r.tomas.includes(toma)) && (!q || normal(r.nombre).includes(normal(q)) || (r.etiquetas || []).some((e) => normal(e).includes(normal(q)))
+  const vistas = todas.filter((r) => (!soloEquipo || paraTodos.has(r.id)) && (!toma || r.tomas.includes(toma)) && (!q || normal(r.nombre).includes(normal(q)) || (r.etiquetas || []).some((e) => normal(e).includes(normal(q)))
     || (r.ingredientes || []).some((i) => normal(i.nombre).includes(normal(q)))));
   // (pulido 3.6) por tramos: las primeras y, al bajar, las siguientes (al buscar o filtrar se vuelve al principio)
-  const tramos = usePorTramos(vistas.length, { tramo: 40, reinicio: `${toma || ''}|${q}`, clave: 'biblioteca-recetas', nombre: 'recetas más' });
+  const tramos = usePorTramos(vistas.length, { tramo: 40, reinicio: `${toma || ''}|${q}|${soloEquipo}`, clave: 'biblioteca-recetas', nombre: 'recetas más' });
   return (
     <>
       <div class="separa" style="flex-wrap:wrap">
         <p class="peq secundario" style="flex:1;min-width:220px">Escríbelas una vez y asígnalas a cada atleta desde su ficha (Nutrición → Recetario), con el factor que le toque. Sustituyen a las bases de datos de comidas de Notion.</p>
+        {paraTodos.size > 0 && <button class="btn" onClick={() => setVerEquipo(true)}><Icono n="receta" /> Recetario del equipo</button>}
         <button class="btn" onClick={() => setEquipo(true)}>Comprobar recetarios</button>
         <button class="btn btn-primario" onClick={() => setEditar({})}><Icono n="mas" /> Nueva receta</button>
       </div>
@@ -235,6 +243,7 @@ export function RecetasBiblioteca() {
           <div class="selector-chips" role="group" aria-label="Comida">
             <button aria-pressed={!toma ? 'true' : 'false'} onClick={() => setToma(null)}>Todas ({todas.length})</button>
             {TOMAS.map(([t, n]) => { const k = todas.filter((r) => r.tomas.includes(t)).length; return k > 0 && <button key={t} aria-pressed={toma === t ? 'true' : 'false'} onClick={() => setToma(toma === t ? null : t)}>{n} ({k})</button>; })}
+            {paraTodos.size > 0 && <button aria-pressed={soloEquipo ? 'true' : 'false'} onClick={() => setSoloEquipo(!soloEquipo)}>Para todo el equipo ({paraTodos.size})</button>}
           </div>
         </>
       )}
@@ -253,20 +262,32 @@ export function RecetasBiblioteca() {
                 <span class="fila-chips">
                   {r.tomas.map((t) => <span class="chip" key={t}>{NOMBRE_TOMA[t]}</span>)}
                   {r.atletas > 0 && <span class="chip morado">{r.atletas === 1 ? '1 atleta' : `${r.atletas} atletas`}</span>}
+                  {paraTodos.has(r.id) && <span class="chip ok">Todo el equipo</span>}
                 </span>
               </span>
             </button>
           ))}
         </div>{tramos.mas}</>
       )}
-      {editar && <EditarReceta receta={editar} alCerrar={(cambio) => { setEditar(null); if (cambio) lista.recargar(true); }} />}
+      {editar && <EditarReceta receta={editar} paraTodos={deEquipo.datos ? paraTodos.has(editar.id) : null}
+        alCerrar={(cambio) => { setEditar(null); deEquipo.recargar(true); if (cambio) lista.recargar(true); }} />}
+      {verEquipo && <Hoja titulo="Recetario del equipo" alCerrar={() => setVerEquipo(false)} ancho>
+        <p class="peq secundario">Así lo ven tus atletas: los de nutrición, dentro de Comidas; los demás, en la pestaña Recetas.</p>
+        <RecetarioEquipo esCoach />
+      </Hoja>}
     </>
   );
 }
 
 // Crear o editar una receta (con su foto) y, al editarla, asignarla a varios atletas a la vez
-export function EditarReceta({ receta, alCerrar }) {
-  const { api, aviso } = useApp();
+// paraTodos: si la ve todo el equipo (055); null = no se ofrece (receta nueva, o la base aún no tiene la migración)
+export function EditarReceta({ receta, alCerrar, paraTodos = null }) {
+  const { api, aviso, backend } = useApp();
+  const [todos, setTodos] = useState(paraTodos);
+  const cambiarTodos = async (si) => {
+    setTodos(si);
+    try { await ponerParaTodos({ backend }, receta.id, si); aviso(si ? 'La ve todo el equipo' : 'Ya solo la ve quien la tenga en su recetario'); } catch (e) { setTodos(!si); aviso(e.message, 'error'); }
+  };
   const nueva = !receta.id;
   const completa = useCarga(() => (nueva ? Promise.resolve(null) : api.receta(receta.id)), [receta.id]);
   const base = completa.datos || receta;
@@ -337,6 +358,11 @@ export function EditarReceta({ receta, alCerrar }) {
               <button type="button" class="btn btn-peq" disabled={!etiqueta.trim()} onClick={() => { cambiar({ etiquetas: [...new Set([...f.etiquetas, etiqueta.trim()])].slice(0, 8) }); setEtiqueta(''); }}>Añadir</button></span>
           </div>
           <button class="btn btn-primario btn-grande" disabled={ocupado}>Guardar</button>
+          {!nueva && todos != null && (
+            <label class="interruptor-fila panel panel-pad"><span class="pila-xs"><strong>Para todo el equipo</strong>
+              <span class="mini secundario">La ven todos tus atletas en el recetario del equipo, también quien solo entrena. Quien lleva la nutrición puede apuntarla en su menú.</span></span>
+              <input type="checkbox" role="switch" class="interruptor" checked={todos} onChange={(e) => cambiarTodos(e.currentTarget.checked)} /></label>
+          )}
           {!nueva && <AsignarVarios receta={base} />}
           {!nueva && (
             <div class="fila-envolver">

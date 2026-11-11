@@ -92,7 +92,9 @@ const DEFECTOS = {
   cobros_atletas: () => ({ servicio: null, precio_mes: null, ciclo: 'mensual', desde: null, nota: null, actualizado_en: ahora() }),
   pagos: () => ({ estado: 'pendiente', fecha_pago: null, metodo: null, nota: null, creado_en: ahora() }),
   // Migración 022: recetas, recetario de cada atleta, sus comidas del día y su menú
-  recetas: () => ({ tomas: [], raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, ingredientes: [], preparacion: null, minutos: null, etiquetas: [], foto: null, foto_mini: null, creada_en: ahora(), actualizada_en: ahora() }),
+  recetas: () => ({ tomas: [], raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, ingredientes: [], preparacion: null, minutos: null, etiquetas: [], foto: null, foto_mini: null, para_todos: false, libro: null, creada_en: ahora(), actualizada_en: ahora() }),
+  // Migración 055: las recetas del equipo que cada atleta se guarda
+  recetas_favoritas: () => ({ creada_en: ahora() }),
   recetas_atleta: () => ({ factor: 1, orden: 0, nota: null, favorita: false, cambio_pedido_en: null, cambio_nota: null, creada_en: ahora() }),
   comidas_atleta: () => ({ tomas: ['desayuno', 'comida', 'merienda', 'cena'], opcional: null, actualizado_en: ahora() }),
   // Migración 023: los días sin su comida opcional
@@ -115,7 +117,7 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'],
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
@@ -138,7 +140,7 @@ const CASCADA = {
   // Como la 042: el reparto de un reto por equipos se va con el reto
   comunidad_retos: [['comunidad_reto_equipos', 'reto_id']],
   comunidad_eventos: [['comunidad_evento_asistentes', 'evento_id']],
-  recetas: [['recetas_atleta', 'receta_id']],
+  recetas: [['recetas_atleta', 'receta_id'], ['recetas_favoritas', 'receta_id']],
   habitos: [['registros_habito', 'habito_id']],
   bloques: [['semanas', 'bloque_id']],
   semanas: [['sesiones', 'semana_id']],
@@ -161,7 +163,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
+const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
   'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
@@ -230,7 +232,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const buscar = (t, id) => tabla(t).find((x) => x.id === id);
   const miPerfil = () => tabla('perfiles').find((p) => p.id === sesion?.user.id);
   const deBaja = () => !esCoach() && tabla('atletas').some((a) => a.perfil_id === sesion?.user.id && a.estado === 'baja');
-  const ESCRIBE_ATLETA = ['series', 'pesos', 'checkins', 'molestias', 'medidas', 'marcas', 'comentarios', 'archivos', 'sesiones', 'notas_ejercicio', 'registros_habito', 'registros_nutricion', 'cuestionarios', 'menu_comidas', 'comidas_atleta', 'recetas_atleta', 'menu_dias', 'comunidad_posts', 'comunidad_comentarios'];
+  const ESCRIBE_ATLETA = ['series', 'pesos', 'checkins', 'molestias', 'medidas', 'marcas', 'comentarios', 'archivos', 'sesiones', 'notas_ejercicio', 'registros_habito', 'registros_nutricion', 'cuestionarios', 'menu_comidas', 'comidas_atleta', 'recetas_atleta', 'menu_dias', 'recetas_favoritas', 'comunidad_posts', 'comunidad_comentarios'];
   const comprobarAlta = (t) => {
     if (ESCRIBE_ATLETA.includes(t) && deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
   };
@@ -345,6 +347,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // Como la 040: la revisión semanal, solo el coach
     revisiones_semanales: () => esCoach(),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // Como la 055: las recetas del equipo que se guarda cada atleta (él las suyas; el coach, todas)
+    recetas_favoritas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
   const programadoAun = (c) => !!c?.enviar_en && Date.parse(c.enviar_en) > Date.now();
@@ -717,6 +721,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (!consentimientoDe(f.atleta_id)) throw new Error('Para organizar el menú hace falta el consentimiento de datos de salud del atleta');
       if (tabla('menu_dias').some((x) => x.atleta_id === f.atleta_id && x.fecha === f.fecha)) throw new Error('duplicate key value violates unique constraint "menu_dias_pkey"');
     }
+    // Como la 055: el atleta se guarda recetas del equipo (solo él, solo las del equipo y una vez cada una)
+    if (t === 'recetas_favoritas') {
+      if (esCoach() || !miAtletaId() || f.atleta_id !== miAtletaId() || !tabla('recetas').some((r) => r.id === f.receta_id && r.para_todos)) throw sinPermiso();
+      if (tabla('recetas_favoritas').some((x) => x.atleta_id === f.atleta_id && x.receta_id === f.receta_id)) throw new Error('duplicate key value violates unique constraint "recetas_favoritas_pkey"');
+    }
     // Como la 023: una receta, una vez por comida y tipo de día en cada recetario
     if (t === 'recetas_atleta' && tabla('recetas_atleta').some((x) => x.atleta_id === f.atleta_id && x.receta_id === f.receta_id && x.toma === f.toma && (x.variante || null) === (f.variante || null))) {
       throw new Error('duplicate key value violates unique constraint "recetas_atleta_unica"');
@@ -879,7 +888,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function comprobarMenu(nueva, antes) {
     if (!consentimientoDe(nueva.atleta_id)) throw new Error('Para organizar el menú hace falta el consentimiento de datos de salud del atleta');
     if (nueva.receta_id && !esCoach() && (!antes || nueva.receta_id !== antes.receta_id)
-      && !tabla('recetas_atleta').some((a) => a.atleta_id === nueva.atleta_id && a.receta_id === nueva.receta_id)) throw new Error('Esa receta no está en tu recetario');
+      && !tabla('recetas_atleta').some((a) => a.atleta_id === nueva.atleta_id && a.receta_id === nueva.receta_id)
+      // (055) o del recetario del equipo
+      && !tabla('recetas').some((r) => r.id === nueva.receta_id && r.para_todos)) throw new Error('Esa receta no está en tu recetario');
   }
   const consentimientoDe = (atletaId) => {
     const atleta = buscar('atletas', atletaId);
@@ -1028,7 +1039,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && Array.isArray(f.ingredientes) && f.ingredientes.length <= 40 && f.ingredientes.every((i) => i && typeof i === 'object' && Object.keys(i).every((k) => ['nombre', 'cantidad', 'unidad'].includes(k)) && textoCorto(i.nombre, 80) && i.nombre != null
         && (i.cantidad == null || (typeof i.cantidad === 'number' && i.cantidad > 0 && i.cantidad <= 100000)) && (i.unidad == null || textoCorto(i.unidad, 16)))
       && textoCorto(f.preparacion, 4000) && (f.minutos == null || entre(n(f.minutos), 0, 600)) && Array.isArray(f.etiquetas) && f.etiquetas.length <= 8 && f.etiquetas.every((e) => textoCorto(e, 24) && e != null)
-      && FOTO_OK(f.foto, 250000) && FOTO_OK(f.foto_mini, 40000),
+      && FOTO_OK(f.foto, 250000) && FOTO_OK(f.foto_mini, 40000)
+      // (055) para todo el equipo y lo que trae de un recetario escrito
+      && (f.para_todos == null || typeof f.para_todos === 'boolean') && libroValido(f.libro),
     recetas_atleta: (f) => (f.variante == null || ['con', 'sin'].includes(f.variante)) && TOMAS.includes(f.toma) && entre(Number(f.factor), 0.25, 5) && entre(n(f.orden), 0, 999) && textoCorto(f.nota, 300) && (f.cambio_nota == null || (f.cambio_pedido_en != null && textoCorto(f.cambio_nota, 300))),
     comidas_atleta: (f) => Array.isArray(f.tomas) && f.tomas.length >= 1 && f.tomas.length <= 6 && f.tomas.every((t) => TOMAS.includes(t)) && new Set(f.tomas).size === f.tomas.length,
     menu_comidas: (f) => fechaValida(f.fecha) && TOMAS.includes(f.toma) && textoCorto(f.texto, 120) && f.texto != null && entre(Number(f.raciones), 0.25, 10)
@@ -1195,6 +1208,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
   }
 
+  // Como receta_libro_valido (055): textos cortos con claves conocidas; «medidas», textos o nulos
+  const CLAVES_LIBRO = ['capitulo', 'bloque', 'codigo', 'descripcion', 'nota', 'encaje', 'dificultad', 'batch', 'objetivo', 'rendimiento', 'porcion', 'tiempo', 'medidas'];
+  const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
+    && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
+      : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
   const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
@@ -2835,6 +2853,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async update(t, cambios, f) {
       sinRedDemo();
+      if (t === 'recetas_favoritas') throw sinPermisoTabla(t);   // (055) se pone o se quita, no se cambia
       // (051, como su trigger) al retirar el consentimiento de datos de salud, Salud del iPhone se desconecta y lo que
       // llegó de ahí se borra (lo que escribió él se queda)
       if (t === 'consentimientos' && cambios?.revocado_en) {
@@ -3154,6 +3173,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     async delete(t, f) {
       sinRedDemo();
       if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad'].includes(t) && !esCoach()) return [];
+      // Como la 055: la receta guardada la quita su atleta (el coach solo las ve)
+      if (t === 'recetas_favoritas') {
+        if (esCoach() || !miAtletaId()) return [];
+        comprobarAlta(t);
+        db[t] = tabla(t).filter((x) => !(cumple(x, f) && x.atleta_id === miAtletaId()));
+        persistirYa();
+        return [];
+      }
       // Como la 037: la valoración la quita su atleta (el coach solo la lee)
       if (t === 'video_autoevaluacion') {
         if (esCoach() || !miAtletaId()) return [];

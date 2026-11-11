@@ -5907,6 +5907,16 @@ try {
   console.log('  ✗ las libras de la v0.112:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// El recetario del equipo (migración 055): recetas para todos los atletas (test/e2e-recetario-equipo.mjs)
+console.log('\nEl recetario del equipo');
+try {
+  const { probarRecetarioEquipo } = await import('./e2e-recetario-equipo.mjs');
+  await probarRecetarioEquipo({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el recetario del equipo:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
 console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');

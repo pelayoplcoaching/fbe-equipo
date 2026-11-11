@@ -95,7 +95,8 @@ export function textoIngrediente(i, escala = 1) {
   const c = escalarCantidad(i.cantidad, i.unidad, escala);
   const plural = c > 1 && /^(taza|vaso|pizca|rebanada|loncha|lata|pu\u00f1ado|cazo|diente|filete|pieza)$/.test(i.unidad || '') ? 's' : '';
   const u = i.unidad && UNIDAD_TEXTO[i.unidad] !== '' ? ` ${UNIDAD_TEXTO[i.unidad] || i.unidad + plural}` : '';
-  const nombre = i.nombre.charAt(0).toLowerCase() + i.nombre.slice(1);
+  // (las siglas se quedan como están: «1 cda. de AOVE», no «aOVE»)
+  const nombre = /^[A-Z\u00d1]{2}/.test(i.nombre) ? i.nombre : i.nombre.charAt(0).toLowerCase() + i.nombre.slice(1);
   return u ? `${num(c, 2)}${u} de ${nombre}` : `${num(c, 2)} ${nombre}`;
 }
 // Para volver a editar: una línea por ingrediente

@@ -7,6 +7,7 @@ import './personal.css';
 import './perfil.css';
 import './equipo-belleza.css';
 import './estrecho.css';
+import './recetario-equipo.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';
 import { instalarPulido } from './ui/pulido.js';

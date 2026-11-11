@@ -1,0 +1,13 @@
+/* El recetario del equipo (migración 055): lo poco que no estaba ya en las comidas */
+.recetario-equipo .buscador .entrada { width: 100%; }
+.capitulos-equipo button .num { margin-left: 2px; font-weight: 600; }
+.capitulos-equipo button[aria-pressed="true"] .num { color: inherit; opacity: .75; }
+.recetario-equipo h3.bloque-equipo { margin: 0; font-size: 0.8125rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-3); font-family: inherit; }
+.receta-equipo-donde { margin: 0; letter-spacing: .02em; }
+.receta-equipo-entrada { margin: 0; font-size: 1rem; line-height: 1.5; color: var(--tinta-2); font-style: italic; }
+.receta-equipo .ingredientes li { line-height: 1.4; }
+.receta-equipo .separa { align-items: center; gap: 12px; }
+.pasos-receta { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: paso; }
+.pasos-receta li { counter-increment: paso; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; border-radius: 10px; background: var(--hoja-2); font-size: 0.9375rem; line-height: 1.45; }
+.pasos-receta li::before { content: counter(paso); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); font-weight: 720; font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+@media (forced-colors: active) { .pasos-receta li::before { border: 1px solid CanvasText; } }
