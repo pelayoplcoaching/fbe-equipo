@@ -5,6 +5,7 @@
 // entra fundiéndose de borrosa a nítida (ui/llegada.js). El hueco lo pone quien la usa (la imagen lo llena).
 import { useState } from 'preact/hooks';
 import { fuenteImagen } from '../logica/imagenes.js';
+import './vivas.js';
 
 const CON_IMAGENES = typeof __IMAGENES__ === 'undefined' || __IMAGENES__;
 const ahorroDatos = () => typeof navigator !== 'undefined' && !!navigator.connection?.saveData;
@@ -12,13 +13,14 @@ const ahorroDatos = () => typeof navigator !== 'undefined' && !!navigator.connec
 // ¿Se pintará la imagen? (para elegir el diseño del sitio que la lleva; si luego no carga, sale `alternativa`)
 export const hayImagen = (id) => CON_IMAGENES && !ahorroDatos() && !!fuenteImagen(id);
 
-export function Imagen({ id, clase = '', tamanos = '100vw', prioridad = false, alternativa = null }) {
+// alCargar y alFallar: avisos opcionales (para quien funde una imagen sobre otra)
+export function Imagen({ id, clase = '', tamanos = '100vw', prioridad = false, alternativa = null, alCargar = null, alFallar = null }) {
   const [falla, setFalla] = useState(null);
   const f = CON_IMAGENES && falla !== id && !ahorroDatos() ? fuenteImagen(id) : null;
   if (!f) return alternativa;
   return (
     <img class={clase} src={f.src} srcset={f.srcset} sizes={tamanos} width={f.ancho} height={f.alto} alt="" aria-hidden="true"
       decoding="async" loading={prioridad ? 'eager' : 'lazy'} fetchpriority={prioridad ? 'high' : undefined} draggable={false}
-      data-imagen={id} onError={() => setFalla(id)} />
+      data-imagen={id} onLoad={alCargar || undefined} onError={() => { setFalla(id); alFallar?.(id); }} />
   );
 }

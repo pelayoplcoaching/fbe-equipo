@@ -4,7 +4,7 @@ import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { Icono, CifraSube, useApp, useCarga } from './comunes.jsx';
 import { esCumple, porqueParaHoy, momentoBienvenida, textoMensajeCoach, mensajeDe } from '../logica/personal.js';
 import { tocaBienvenida, mensajeBienvenida } from '../logica/bienvenida.js';
-import { Imagen } from './Imagen.jsx';
+import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenBienvenida } from '../logica/imagenes.js';
 const horaMadrid = () => { try { return Number(new Intl.DateTimeFormat('es-ES', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Europe/Madrid' }).format(new Date())); } catch { return new Date().getHours(); } };
 
@@ -97,6 +97,19 @@ const fechaCorta = () => { try { return new Intl.DateTimeFormat('es-ES', { weekd
 
 // datos: null mientras carga; luego lo de mensajeBienvenida (sin el nombre ni el rol, que van aparte)
 // panel: lo de panelBienvenida o panelCoach (o null: entonces, solo el saludo y el mensaje, como hasta la v0.87)
+// (ilustraciones vivas) La luz de la hora, dibujada encima del fondo: por la mañana, dos rayos suaves que entran por la
+// derecha; por la tarde, un resplandor cálido que respira; por la noche, estrellas que titilan. Solo adorno, y solo se
+// mueve con transform y opacity (imagenes.css, bloque V); con «reducir movimiento» se queda quieta y tenue.
+const ESTRELLAS_BDIA = [[8, 7, 2.2, 0], [22, 15, 1.6, 1.3], [37, 5, 1.4, .6], [52, 12, 2, 2.1], [66, 4, 1.5, .9], [79, 17, 1.8, 1.7], [91, 9, 2.4, .3], [14, 27, 1.4, 2.4], [45, 24, 1.6, 1.1], [72, 29, 1.3, .2], [88, 33, 1.7, 1.9], [30, 36, 1.2, .8], [58, 38, 1.5, 2.7], [96, 22, 1.3, 1.5]];
+function LuzDelDia({ momento }) {
+  return (
+    <span class={`bdia-luz bdia-luz-${momento}`} aria-hidden="true">
+      {momento === 'manana' && <><i class="bdia-rayo" /><i class="bdia-rayo" /><i class="bdia-rayo" /></>}
+      {momento === 'noche' && ESTRELLAS_BDIA.map(([x, y, r, espera], i) => <i key={i} class="bdia-estrella" style={{ left: `${x}%`, top: `${y}%`, width: `${r * 2}px`, height: `${r * 2}px`, '--espera': `${espera}s`, '--dura': `${2.6 + (i % 5) * 0.55}s` }} />)}
+    </span>
+  );
+}
+
 export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = null, panel = null, alCerrar }) {
   const boton = useRef(null);
   useEffect(() => { avisarAbierta(true); return () => avisarAbierta(false); }, []);
@@ -143,6 +156,7 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
     <div class={`bdia${conPanel ? ' bdia-con-panel' : ''}`} role="dialog" aria-modal="true" aria-labelledby="bdia-titulo" aria-describedby="bdia-mensaje">
       {/* (imágenes) de fondo, muy tenue, la mañana, la tarde o la noche según la hora */}
       <Imagen id={imagenBienvenida(horaMadrid())} clase="bdia-fondo" tamanos="100vw" />
+      {hayImagen(imagenBienvenida(horaMadrid())) && <LuzDelDia momento={imagenBienvenida(horaMadrid()).replace('bienvenida-', '')} />}
       <div class="bdia-cuerpo" ref={cuerpo} {...(desliza ? { tabIndex: 0, role: 'group', 'aria-label': 'Tu resumen de hoy' } : {})}>
         <div class="bdia-arriba">
           <span class="bdia-marca"><svg viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path fill-rule="evenodd" d={LOBO_D} /></svg>FBE Equipo</span>

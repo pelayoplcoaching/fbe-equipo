@@ -145,3 +145,57 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
   margin: -26px -20px 4px; border-top-left-radius: inherit; border-top-right-radius: inherit; background: #1A1143; }
 @media (min-width: 700px) { .acceso-paso .paso-foto { width: calc(100% + 60px); margin: -32px -30px 4px; } }
 @media (forced-colors: active) { .acceso-fondo, .paso-foto { display: none; } }
+
+/* ── Bloque V · las ilustraciones vivas ─────────────────────────────────────────────────────────────────────────────────
+   Las que se ven a diario se mueven un poco. Reglas: solo transform (y sus sueltas: scale, translate) y opacity, que van
+   en la gráfica sin repintar; nada con «reducir movimiento»; paradas con la app en segundo plano (html[data-oculta],
+   ui/vivas.js); las mismas imágenes y los mismos huecos (nada se descarga de más ni se mueve de sitio); todo es adorno. */
+.bdia-luz { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.bdia-luz-tarde { background: radial-gradient(90vmax 70vmax at 88% 18%, rgba(255, 176, 92, .3) 0%, rgba(255, 140, 80, .12) 38%, transparent 66%); }
+.bdia-rayo { position: absolute; top: -12%; right: 6%; width: 22vmin; height: 135%; transform-origin: 50% 0; transform: rotate(26deg); opacity: .5;
+  background: linear-gradient(90deg, transparent, rgba(255, 238, 200, .3) 40%, rgba(255, 238, 200, .3) 60%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 78%); mask-image: linear-gradient(to bottom, #000 0%, transparent 78%); }
+.bdia-rayo:nth-child(2) { right: 26%; width: 13vmin; transform: rotate(31deg); opacity: .34; }
+.bdia-rayo:nth-child(3) { right: -8%; width: 30vmin; transform: rotate(21deg); opacity: .28; }
+.bdia-estrella { position: absolute; border-radius: 50%; background: #fff; opacity: .5; box-shadow: 0 0 6px 1px rgba(214, 205, 255, .55); }
+.franja-cruce { position: relative; overflow: hidden; }
+.franja-cruce > .cruce-capa { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: inherit; opacity: 0; }
+.franja-cruce > .cruce-capa.lista { opacity: 1; }
+.resumen-hero .hero-brillo { position: absolute; z-index: -1; top: -20%; bottom: -20%; left: 0; width: 46%; pointer-events: none; opacity: 0;
+  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, .16) 45%, rgba(255, 255, 255, .26) 50%, rgba(255, 255, 255, .16) 55%, transparent 100%); }
+.resumen-medalla.con-ilu::before { content: ""; position: absolute; z-index: 1; top: -10%; bottom: -10%; left: 0; width: 60%; pointer-events: none; opacity: 0;
+  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, .7) 50%, transparent 100%); }
+@media (forced-colors: active) { .bdia-luz, .hero-brillo, .resumen-medalla.con-ilu::before { display: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  /* 1 · La portada de la sesión: en vez del gesto corto de entrada, un acercamiento muy lento, una vez (con la propiedad
+     scale, para que conviva con el paralaje, que usa translate, y con el viaje desde la tarjeta de Hoy) */
+  img.portada-foto { animation: portada-viva 10s cubic-bezier(.25, .4, .45, 1) both; }
+  @supports (animation-timeline: scroll()) {
+    img.portada-foto { animation: portada-viva 10s cubic-bezier(.25, .4, .45, 1) both, portada-paralaje linear both; animation-timeline: auto, scroll(root); animation-range: normal, 0 380px; }
+  }
+  /* 2 · La bienvenida del día: el fondo deriva despacio, una vez; la luz de la hora respira */
+  .bdia > .bdia-fondo { animation: bdia-deriva 18s cubic-bezier(.2, .6, .3, 1) both; transform-origin: 75% 45%; }
+  .bdia-rayo { animation: bdia-rayo 7s ease-in-out infinite alternate; }
+  .bdia-rayo:nth-child(2) { animation-duration: 9s; animation-delay: -3s; }
+  .bdia-rayo:nth-child(3) { animation-duration: 11s; animation-delay: -6s; }
+  .bdia-luz-tarde { animation: bdia-calida 8s ease-in-out infinite alternate; transform-origin: 88% 18%; }
+  .bdia-estrella { animation: bdia-titila var(--dura, 3s) ease-in-out var(--espera, 0s) infinite alternate; }
+  /* 3 · Dónde entrenas: la imagen nueva se funde sobre la anterior (la primera llega como siempre) */
+  .franja-cruce > .cruce-capa:not(.primera) { transition: opacity .42s ease-out; }
+  /* 4 · El resumen: al levantarse el telón, la ilustración aparece acercándose y la cruza una luz */
+  .resumen-hero img.hero-foto { animation: hero-amanece 1.5s cubic-bezier(.2, .7, .2, 1) .3s both; transform-origin: 85% 50%; }
+  .resumen-hero .hero-brillo { animation: hero-brillo 1.3s cubic-bezier(.3, 0, .2, 1) .75s both; }
+  /* 5 · El sello: cae como un tampón (grande y girado, golpea y se asienta) y lo cruza un destello */
+  .resumen-medalla.con-ilu { animation: sello-golpe .62s cubic-bezier(.2, .9, .3, 1) .5s both; }
+  .resumen-medalla.con-ilu::before { animation: sello-destello .8s ease-out 1.15s both; }
+  html[data-oculta] :is(img.portada-foto, .bdia-fondo, .bdia-rayo, .bdia-luz-tarde, .bdia-estrella, .hero-foto, .hero-brillo, .resumen-medalla) { animation-play-state: paused; }
+}
+@keyframes portada-viva { from { scale: 1; } to { scale: 1.06; } }
+@keyframes bdia-deriva { from { transform: scale(1.1) translate3d(-1.6%, 1.2%, 0); } to { transform: scale(1.02); } }
+@keyframes bdia-rayo { from { opacity: .22; } to { opacity: .6; translate: -3% 0; } }
+@keyframes bdia-calida { from { opacity: .65; transform: scale(1); } to { opacity: 1; transform: scale(1.08); } }
+@keyframes bdia-titila { from { opacity: .12; transform: scale(.7); } to { opacity: .95; transform: scale(1.15); } }
+@keyframes hero-amanece { from { opacity: 0; transform: scale(1.16); } }
+@keyframes hero-brillo { 0% { opacity: 0; transform: translateX(-110%) skewX(-12deg); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateX(330%) skewX(-12deg); } }
+@keyframes sello-golpe { 0% { opacity: 0; transform: scale(1.9) rotate(-16deg); } 55% { opacity: 1; transform: scale(.92) rotate(2deg); } 78% { transform: scale(1.04) rotate(0); } 100% { opacity: 1; transform: none; } }
+@keyframes sello-destello { 0% { opacity: 0; transform: translateX(-140%) skewX(-14deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateX(260%) skewX(-14deg); } }

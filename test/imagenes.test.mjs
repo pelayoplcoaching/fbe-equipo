@@ -145,5 +145,21 @@ console.log('\nLa lista y la carpeta');
   check(Object.entries(lista).every(([id, x]) => Object.values(x.archivos).every((f) => f.split('/').pop().startsWith(`${id}-`))), 'cada archivo lleva el nombre de su imagen');
 }
 
+// ------------------------------------------------------------ las ilustraciones vivas (imagenes.css, bloque V)
+console.log('\nLas ilustraciones vivas: solo transform y opacity, y nada con «reducir movimiento»');
+{
+  const css = readFileSync(new URL('../web/src/imagenes.css', import.meta.url), 'utf8');
+  const v = css.slice(css.indexOf('Bloque V'));
+  const claves = [...v.matchAll(/@keyframes ([\w-]+) \{((?:[^{}]|\{[^{}]*\})*)\}/g)];
+  const props = new Set(claves.flatMap(([, , cuerpo]) => [...cuerpo.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1])));
+  check(claves.length >= 9 && [...props].every((p) => ['opacity', 'transform', 'scale', 'translate'].includes(p)), `sus ${claves.length} animaciones solo mueven transform (o scale y translate) y opacity: ${[...props].join(', ')}`);
+  const fuera = v.replace(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}\n/, '').replace(/@keyframes[^\n]*\n/g, '');
+  check(v.includes('@media (prefers-reduced-motion: no-preference)') && !/animation(-name)?\s*:|transition\s*:/.test(fuera), 'todas van dentro de «sin reducir movimiento»: fuera de ahí no hay ni una animación ni una transición');
+  check(/html\[data-oculta\][^{]*\{ animation-play-state: paused; \}/.test(v) && readFileSync(new URL('../web/src/ui/vivas.js', import.meta.url), 'utf8').includes("visibilitychange"), 'con la app en segundo plano, se paran (html[data-oculta], ui/vivas.js)');
+  check(!/url\(/.test(v) && !/filter\s*:|backdrop-filter/.test(v), 'sin imágenes nuevas ni desenfoques: la luz se dibuja con degradados');
+  const jsx = (n) => readFileSync(new URL(`../web/src/ui/${n}`, import.meta.url), 'utf8');
+  check(/class=\{`bdia-luz bdia-luz-\$\{momento\}`\} aria-hidden="true"/.test(jsx('Bienvenida.jsx')) && /class="franja-ilu franja-pegada franja-cruce" aria-hidden="true"/.test(jsx('atleta/DondeEntrenas.jsx')) && /class="hero-brillo" aria-hidden="true"/.test(jsx('atleta/Sesion.jsx')), 'lo añadido es adorno: oculto a los lectores de pantalla');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

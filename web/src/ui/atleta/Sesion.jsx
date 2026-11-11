@@ -1490,6 +1490,8 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
         {/* (imágenes) la ilustración de la sesión, la misma de su portada; si no se puede, el dibujo */}
         {sesion?.nombre && <Imagen key={imagenPortada(familia, resumen.cardio?.modalidad || sesion?.cardio?.modalidad)} id={imagenPortada(familia, resumen.cardio?.modalidad || sesion?.cardio?.modalidad)} clase="hero-arte hero-foto" tamanos="(min-width: 600px) 420px, 70vw"
           alternativa={<ArteSesion nombre={sesion.nombre} tipo={sesion.tipo || (cardio ? 'cardio' : 'fuerza')} patron={null} clase="hero-arte" />} />}
+        {/* (ilustraciones vivas) al levantarse el telón, un barrido de luz cruza la portada del resumen */}
+        {sesion?.nombre && <span class="hero-brillo" aria-hidden="true" />}
         <span class={`resumen-medalla ${hayImagen(sello) ? 'con-ilu' : ''}`} aria-hidden="true">
           <Imagen key={sello} id={sello} clase="resumen-medalla-img" tamanos="72px" alternativa={<Icono n={nRecords ? 'trofeo' : 'hecho'} />} />
         </span>
