@@ -449,8 +449,9 @@ try {
   console.log('\nAtleta: entrenar');
   // v0.51: los diales de Hoy (constancia, carga y cómo llegas), cada uno con su hoja
   const diales = p.locator('.diales .dial');
-  check(await diales.count() === 3 && (await diales.allTextContents()).map((t) => t.replace(/\s+/g, ' ')).join('|').match(/Constancia.*\|.*Carga.*\|.*Cómo llegas.*Sin contestar/)
-    && (await diales.first().getAttribute('aria-label')).startsWith('Constancia: 0 de 3 sesiones'), `debajo de la tarjeta del día, tres diales: constancia (0 de 3), carga y cómo llegas (sin contestar) (${(await diales.allTextContents()).join(' / ')})`);
+  // (v0.140) y, como lleva la nutrición con kcal, el de Comida (aún sin apuntar)
+  check(await diales.count() === 4 && (await diales.allTextContents()).map((t) => t.replace(/\s+/g, ' ')).join('|').match(/Constancia.*\|.*Carga.*\|.*Cómo llegas.*Sin contestar.*\|.*Comida.*Sin apuntar/)
+    && (await diales.first().getAttribute('aria-label')).startsWith('Constancia: 0 de 3 sesiones'), `debajo de la tarjeta del día, cuatro diales: constancia (0 de 3), carga, cómo llegas (sin contestar) y comida (sin apuntar) (${(await diales.allTextContents()).join(' / ')})`);
   await diales.nth(1).click();
   const hojaCarga = p.getByRole('dialog', { name: 'Carga de la semana' });
   await hojaCarga.waitFor();
