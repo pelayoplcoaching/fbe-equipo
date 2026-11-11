@@ -119,6 +119,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .entrar-equipo > .franja-manada ~ svg.entrar-equipo-ico { display: none; } /* (la manada ya está arriba: los tres lobos sobran) */
 .mito-semana.con-ilu { overflow: hidden; }
 .panel-pad > .franja-mito { object-position: 78% 50%; }
+.portada-guia { aspect-ratio: 12 / 5; object-position: 50% 50%; border-radius: var(--r); }
 .cuestionario-ilu { aspect-ratio: 3 / 1; object-position: 78% 50%; border-radius: var(--r); }
 .franja-herr { aspect-ratio: 2 / 1; object-position: 50% 50%; border-radius: var(--r); }
 .bdia { isolation: isolate; }

@@ -65,7 +65,10 @@ export function imagenGrupo(grupo) {
 // rack para entrenar, el plato, la almohada, el corazón y los libros). Las de «Músculo a músculo» sin grupo, el rack.
 const ESTANTES_IMG = { empieza: 'guia-empieza', entrenar: 'guia-entrenar', musculos: 'guia-entrenar', comer: 'guia-comer', cabeza: 'guia-cabeza', salud: 'guia-salud', mas: 'guia-mas' };
 export const imagenEstante = (estante) => ESTANTES_IMG[estante] || 'guia-mas';
-export const imagenGuia = (g, estante) => imagenGrupo(g?.grupo) || imagenEstante(estante);
+// La portada de cada guía (la cabecera del lector, 12:5) y su recorte cuadrado (la tarjeta); sin portada, la de su estantería
+export const PORTADAS_GUIA = ['bienvenida', 'manual', 'introduccion', 'rutinas', 'deload', 'estancamiento', 'volver', 'cardio', 'dieta-flexible', 'composicion', 'suplementacion', 'sueno', 'motivacion', 'salud-cardiometabolica', 'dislipidemia', 'mujer', 'mitos'];
+export const imagenPortadaGuia = (clave) => (PORTADAS_GUIA.includes(clave) ? `portada-${clave}` : null);
+export const imagenGuia = (g, estante) => imagenGrupo(g?.grupo) || (imagenPortadaGuia(g?.clave) ? `${imagenPortadaGuia(g.clave)}-cuadrada` : null) || imagenEstante(estante);
 // El mito de la semana (la tarjeta de Hoy) y los cinco pasos del cuestionario inicial
 export const IMAGEN_MITO = 'mito-semana';
 const PASOS_CUESTIONARIO = ['objetivo', 'tiempo', 'lugar', 'salud', 'lesiones'];

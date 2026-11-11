@@ -5,7 +5,7 @@ import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Vacio, Siluetas, ErrorCaja, CabeceraGrande } from './comunes.jsx';
 import { hoyISO } from '../logica/fechas.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
-import { imagenGuia, IMAGEN_MITO } from '../logica/imagenes.js';
+import { imagenGuia, IMAGEN_MITO, imagenPortadaGuia } from '../logica/imagenes.js';
 import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido, porEstantes, estanteDe, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES } from '../logica/guias.js';
 import { listaGuias, guiaEntera, todasLasFichas, enlacesFichas, enlazarFicha, publicarGuia, fichaDeEjercicio, guiasConTexto, guiaPorClave, guiasLigeras } from '../datos/guias.js';
 
@@ -146,6 +146,7 @@ export function LectorGuia({ clave, soloSeccion = null, seccionInicial = null })
   const partes = [...g.secciones.map((s, i) => [i, s.titulo]), ...(g.sueltas.length ? [['sueltas', 'Más ejercicios']] : []), ...(g.ideas.length ? [['ideas', 'Ideas clave']] : [])];
   return (
     <div class="pila lector-guia" ref={raiz}>
+      {hayImagen(imagenPortadaGuia(clave)) && <Imagen id={imagenPortadaGuia(clave)} clase="franja-ilu portada-guia" tamanos="(min-width: 720px) 640px, 100vw" prioridad />}
       {g.entrada && <p class="secundario">{g.entrada}</p>}
       {g.cita && <blockquote class="guia-cita">{g.cita}</blockquote>}
       {partes.length > 1 && (
@@ -269,7 +270,7 @@ export function AyudaFicha({ ejercicioId, fichas, enlaces, molestias = [] }) {
 function TarjetaGuia({ g, alAbrir, esCoach, icono = 'biblioteca' }) {
   return (
     <button type="button" class="tarjeta-guia" onClick={() => alAbrir(g)}>
-      {/* (imágenes, tanda U) la estatua de su grupo o, si no tiene, la ilustración de su estantería; sin imagen, su icono */}
+      {/* la estatua de su grupo, su portada o, si no tiene, la ilustración de su estantería; sin imagen, su icono */}
       {hayImagen(imagenGuia(g, estanteDe(g))) ? <Imagen id={imagenGuia(g, estanteDe(g))} clase="tarjeta-guia-img" tamanos="72px" /> : <span class="tarjeta-guia-img vacia" aria-hidden="true"><Icono n={icono} /></span>}
       <span class="pila-xs tarjeta-guia-texto"><strong>{g.titulo}</strong>{g.subtitulo && <span class="mini terciario">{g.subtitulo}</span>}
         <span class="fila-chips">{g.fichas > 0 && <span class="chip">{cuantosEjercicios(g.fichas)}</span>}{esCoach && !g.publicada && <span class="chip aviso">Sin publicar</span>}</span></span>
