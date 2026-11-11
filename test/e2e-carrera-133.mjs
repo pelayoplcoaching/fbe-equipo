@@ -66,10 +66,11 @@ export async function probarCarrera133({ navegador, check, base = 'http://localh
   const entrarComo = async (quien) => {
     for (let intento = 0; intento < 3; intento++) {
       await cerrarDialogos();
+      // (en la lista de cuentas de la demo: en el panel del coach, «Carlos Vera» también es la tarjeta de un atleta)
       const cambiar = p.getByRole('button', { name: 'Cambiar de cuenta' });
       if (await cambiar.count()) await cambiar.first().click().catch(() => {});
-      else await p.goto(`${base}/?demo`);
-      const boton = p.getByRole('button', { name: quien }).first();
+      else if (!(await p.locator('button.persona').count())) await p.goto(`${base}/?demo`);
+      const boton = p.locator('button.persona', { hasText: quien }).first();
       if (await boton.waitFor({ timeout: 6000 }).then(() => true).catch(() => false)) { await boton.click(); break; }
     }
     await p.locator('nav.tabs').waitFor();

@@ -6,24 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
-  '0.134': {
-    atleta: [
-      'Nueva sección «Aprende» (en Más): las guías de tu coach por grupo muscular, con un buscador de ejercicios.',
-      'En cada ejercicio, la pestaña Técnica trae su ficha: cómo hacerlo, errores típicos y cuándo usarlo.',
-    ],
-    coach: [
-      'Biblioteca → Guías: léelas como tus atletas y publica o esconde cada una.',
-      'Al editar un ejercicio, «Ficha de técnica» lo enlaza con la ficha de sus guías.',
-    ],
-  },
   '0.133': {
     atleta: [
       'El recetario del equipo: las recetas de tu coach para todos, con buscador y favoritas, en Recetas (o en Comidas).',
-      'Si tu coach te lleva la carrera, en Hoy tienes «Tu carrera» y tus sesiones de carrera vienen por partes, con sus zonas.',
-      'Antes de salir a correr, el semáforo: si llegas regular, te dice cómo bajarla; al terminar apuntas la FC y si algo duele.',
+      '«Aprende» (en Más): las guías de tu coach y, en cada ejercicio, su ficha de técnica con los errores típicos.',
+      'Si tu coach te lleva la carrera: «Tu carrera» en Hoy y sesiones por partes, con sus zonas y el semáforo antes de salir.',
     ],
     coach: [
       'Recetario del equipo: en Biblioteca → Recetas, marca «Para todo el equipo» y la ven todos tus atletas.',
+      'Biblioteca → Guías: léelas como tus atletas y publica o esconde cada una; al editar un ejercicio, «Ficha de técnica».',
       'Carrera: enciéndela al crear la ficha o en Datos. En su pestaña Carrera, zonas desde la FC umbral, macrociclo y semanas.',
       'Carreras A, B y C con objetivo y decisión, revisiones del plan y tu biblioteca de sesiones de calidad (10 de partida).',
       'En el editor, las sesiones de carrera por partes y, con un toque, las del plan pasan a la semana de entreno.',
