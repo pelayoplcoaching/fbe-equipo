@@ -60,6 +60,13 @@ export function imagenGrupo(grupo) {
   return GRUPOS_IMG.includes(g) ? `grupo-${g}` : null;
 }
 
+// ---------- Las estanterías de «Aprende» ----------
+// La tarjeta de una guía: la estatua de su grupo si lo tiene; si no, la de su estantería (la brújula para empezar, el
+// rack para entrenar, el plato, la almohada, el corazón y los libros). Las de «Músculo a músculo» sin grupo, el rack.
+const ESTANTES_IMG = { empieza: 'guia-empieza', entrenar: 'guia-entrenar', musculos: 'guia-entrenar', comer: 'guia-comer', cabeza: 'guia-cabeza', salud: 'guia-salud', mas: 'guia-mas' };
+export const imagenEstante = (estante) => ESTANTES_IMG[estante] || 'guia-mas';
+export const imagenGuia = (g, estante) => imagenGrupo(g?.grupo) || imagenEstante(estante);
+
 // ---------- Cada ejercicio de la biblioteca ----------
 // La figura maniquí en el momento clave del ejercicio (claude/imagenes-ejercicios.md). Por el id del ejercicio de la
 // biblioteca de FBE; si no está (otra biblioteca, la genérica, la demo, un ejercicio renombrado en otra copia), por el

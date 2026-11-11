@@ -3,7 +3,7 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, imagenLugar, imagenBienvenida, imagenPrimerosPasos, imagenHerramienta, HERRAMIENTAS, FAMILIAS_PORTADA, IMAGENES, imagenFoco, FOCOS_IMG, FRASE_FOCO, imagenPortada, MODALIDADES_IMG, focoFondo, imagenHito, HITOS_IMG, IMAGEN_ANIVERSARIO, imagenEjercicio } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, imagenLugar, imagenBienvenida, imagenPrimerosPasos, imagenHerramienta, HERRAMIENTAS, FAMILIAS_PORTADA, IMAGENES, imagenFoco, FOCOS_IMG, FRASE_FOCO, imagenPortada, MODALIDADES_IMG, focoFondo, imagenHito, HITOS_IMG, IMAGEN_ANIVERSARIO, imagenEjercicio, imagenEstante, imagenGuia } from '../web/src/logica/imagenes.js';
 import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 import { GRUPOS } from '../web/src/logica/calculos.js';
 import { TOMAS } from '../web/src/logica/comidas.js';
@@ -143,6 +143,16 @@ console.log('\nLa lista y la carpeta');
   check(MODALIDADES_IMG.every((m) => IMAGENES.includes(imagenPortada('cardio', m)) && lista[imagenPortada('cardio', m)].proporcion.join(':') === '16:9'), 'están las siete portadas de cardio, apaisadas');
   check(FOCOS_IMG.every((f) => IMAGENES.includes(imagenFoco(f)) && lista[imagenFoco(f)].proporcion.join(':') === '16:9'), 'están los ocho focos de la semana, apaisados');
   check(Object.entries(lista).every(([id, x]) => Object.values(x.archivos).every((f) => f.split('/').pop().startsWith(`${id}-`))), 'cada archivo lleva el nombre de su imagen');
+}
+
+console.log('Tanda U: las estanterías de «Aprende»');
+{
+  const { ESTANTES, estanteDe } = await import('../web/src/logica/guias.js');
+  check(ESTANTES.every((e) => IMAGENES.includes(imagenEstante(e.id))), `hay ilustración para las ${ESTANTES.length} estanterías`);
+  check(imagenEstante('inventada') === 'guia-mas', 'una estantería desconocida, la de «Más guías»');
+  check(imagenGuia({ clave: 'sueno' }, estanteDe({ clave: 'sueno' })) === 'guia-cabeza' && imagenGuia({ clave: 'mitos' }, estanteDe({ clave: 'mitos' })) === 'guia-salud', 'cada guía, la de su estantería (sueño → la almohada; mitos → el corazón)');
+  check(imagenGuia({ clave: 'x', grupo: 'pectoral' }, 'musculos') === 'grupo-pectoral' && imagenGuia({ clave: 'x', fichas: 3 }, 'musculos') === 'guia-entrenar', 'con grupo, su estatua; músculo a músculo sin grupo, el rack');
+  check((() => { const L = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.json'), 'utf8')); return ['guia-empieza', 'guia-entrenar', 'guia-comer', 'guia-cabeza', 'guia-salud', 'guia-mas'].every((id) => L[id]?.proporcion?.join(':') === '1:1'); })(), 'las seis, cuadradas');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

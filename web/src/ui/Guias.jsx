@@ -5,8 +5,8 @@ import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Vacio, Siluetas, ErrorCaja, CabeceraGrande } from './comunes.jsx';
 import { hoyISO } from '../logica/fechas.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
-import { imagenGrupo } from '../logica/imagenes.js';
-import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido, porEstantes, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES } from '../logica/guias.js';
+import { imagenGuia } from '../logica/imagenes.js';
+import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido, porEstantes, estanteDe, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES } from '../logica/guias.js';
 import { listaGuias, guiaEntera, todasLasFichas, enlacesFichas, enlazarFicha, publicarGuia, fichaDeEjercicio, guiasConTexto, guiaPorClave, guiasLigeras } from '../datos/guias.js';
 
 // Un texto con su negrita
@@ -269,7 +269,8 @@ export function AyudaFicha({ ejercicioId, fichas, enlaces, molestias = [] }) {
 function TarjetaGuia({ g, alAbrir, esCoach, icono = 'biblioteca' }) {
   return (
     <button type="button" class="tarjeta-guia" onClick={() => alAbrir(g)}>
-      {hayImagen(imagenGrupo(g.grupo)) ? <Imagen id={imagenGrupo(g.grupo)} clase="tarjeta-guia-img" tamanos="9rem" /> : <span class="tarjeta-guia-img vacia" aria-hidden="true"><Icono n={icono} /></span>}
+      {/* (imágenes, tanda U) la estatua de su grupo o, si no tiene, la ilustración de su estantería; sin imagen, su icono */}
+      {hayImagen(imagenGuia(g, estanteDe(g))) ? <Imagen id={imagenGuia(g, estanteDe(g))} clase="tarjeta-guia-img" tamanos="72px" /> : <span class="tarjeta-guia-img vacia" aria-hidden="true"><Icono n={icono} /></span>}
       <span class="pila-xs tarjeta-guia-texto"><strong>{g.titulo}</strong>{g.subtitulo && <span class="mini terciario">{g.subtitulo}</span>}
         <span class="fila-chips">{g.fichas > 0 && <span class="chip">{cuantosEjercicios(g.fichas)}</span>}{esCoach && !g.publicada && <span class="chip aviso">Sin publicar</span>}</span></span>
     </button>

@@ -1889,6 +1889,66 @@
       "640": "imagenes/grupo/grupo-triceps-640.41a3fa8f.webp"
     }
   },
+  "guia-cabeza": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-cabeza-160.2115414b.webp",
+      "320": "imagenes/aprende/guia-cabeza-320.ddb8c507.webp"
+    }
+  },
+  "guia-comer": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-comer-160.4d191af7.webp",
+      "320": "imagenes/aprende/guia-comer-320.e60e5e90.webp"
+    }
+  },
+  "guia-empieza": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-empieza-160.9253f911.webp",
+      "320": "imagenes/aprende/guia-empieza-320.8b7f3060.webp"
+    }
+  },
+  "guia-entrenar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-entrenar-160.e659d7f8.webp",
+      "320": "imagenes/aprende/guia-entrenar-320.c06192ce.webp"
+    }
+  },
+  "guia-mas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-mas-160.2a2f9bf8.webp",
+      "320": "imagenes/aprende/guia-mas-320.807d3851.webp"
+    }
+  },
+  "guia-salud": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-salud-160.7a7e0afa.webp",
+      "320": "imagenes/aprende/guia-salud-320.47433c76.webp"
+    }
+  },
   "habito-agua": {
     "proporcion": [
       1,
