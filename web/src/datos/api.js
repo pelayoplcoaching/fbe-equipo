@@ -38,7 +38,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_056 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -939,6 +939,19 @@ export function crearApi(backend) {
       return conFoto.map((x) => ({ ...x, autor: personas[x.autor_id] || { nombre: 'Alguien del equipo' }, fotos: fotosDe(x) }));
     },
 
+    // (v0.133) ¿Está la 055 (el recetario del equipo)? Sonda: recetas_favoritas (cada uno lee las suyas; el coach, todas)
+    async recetario055() {
+      if (!api._v055) {
+        const pr = b.select('recetas_favoritas', { cols: 'receta_id', limit: 1 }).then(() => true).catch((e) => {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          if (/permission|permiso|42501/i.test(m)) return null;
+          return /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01/i.test(m) ? false : null;
+        });
+        api._v055 = pr;
+        pr.then((x) => { if (x == null && api._v055 === pr) api._v055 = null; });
+      }
+      return api._v055;
+    },
     // ------------------------------------------------------------ la carrera (v0.133, migración 056)
     // ¿Está la 056? true / false / null (no se sabe). Sonda: carrera_recetas (el atleta la lee vacía, sin error)
     async carrera056() {
@@ -1211,7 +1224,8 @@ export function crearApi(backend) {
       if ((await api.comunidad053().catch(() => null)) !== true) return VERSION_LEGAL_SIN_053;
       // (054) el cierre de las sesiones
       if ((await api.cierre054().catch(() => null)) !== true) return VERSION_LEGAL_SIN_054;
-      // (v0.133) la carrera
+      // (v0.133) el recetario del equipo (055) y la carrera (056)
+      if ((await api.recetario055().catch(() => null)) !== true) return VERSION_LEGAL_SIN_055;
       return (await api.carrera056().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_056;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)

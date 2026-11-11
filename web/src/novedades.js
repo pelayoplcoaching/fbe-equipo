@@ -8,11 +8,12 @@
 export const NOVEDADES = {
   '0.133': {
     atleta: [
-      'Si tu coach te lleva también la carrera, en Hoy tienes «Tu carrera»: la cuenta atrás, tus zonas, tu plan y tus carreras.',
-      'Tus sesiones de carrera vienen por partes (calentar, series, enfriar) con la zona, las pulsaciones y el ritmo de cada una.',
-      'Antes de salir, el semáforo: si llegas regular, te dice cómo bajarla; al terminar apuntas la FC y si algo te duele.',
+      'El recetario del equipo: las recetas de tu coach para todos, con buscador y favoritas, en Recetas (o en Comidas).',
+      'Si tu coach te lleva la carrera, en Hoy tienes «Tu carrera» y tus sesiones de carrera vienen por partes, con sus zonas.',
+      'Antes de salir a correr, el semáforo: si llegas regular, te dice cómo bajarla; al terminar apuntas la FC y si algo duele.',
     ],
     coach: [
+      'Recetario del equipo: en Biblioteca → Recetas, marca «Para todo el equipo» y la ven todos tus atletas.',
       'Carrera: enciéndela al crear la ficha o en Datos. En su pestaña Carrera, zonas desde la FC umbral, macrociclo y semanas.',
       'Carreras A, B y C con objetivo y decisión, revisiones del plan y tu biblioteca de sesiones de calidad (10 de partida).',
       'En el editor, las sesiones de carrera por partes y, con un toque, las del plan pasan a la semana de entreno.',
