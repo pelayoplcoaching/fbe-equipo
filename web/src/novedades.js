@@ -10,6 +10,7 @@ export const NOVEDADES = {
     atleta: [
       'Las ilustraciones de cada día cobran vida: la portada de tu sesión se acerca despacio y la bienvenida tiene la luz de la hora.',
       'Al cambiar dónde entrenas, la imagen se funde con la nueva; y al terminar, el sello cae como un tampón con un destello.',
+      'Tu comida de ahora destaca en el menú, los hábitos hechos se encienden y los hitos de tu racha sueltan chispas.',
     ],
   },
   '0.136': {
