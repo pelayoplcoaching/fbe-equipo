@@ -5,6 +5,7 @@
 //   Suelta:  npm run build && node test/e2e-vivas.mjs   (CHROME_PATH si Chrome no está en /opt/google/chrome/chrome)
 //   Dentro de e2e.test.mjs:  const { probarVivas } = await import('./e2e-vivas.mjs'); await probarVivas({ navegador, check });
 import { pathToFileURL } from 'node:url';
+import { irASeccion, abrirEnHoy } from './secciones.mjs';
 
 export async function probarVivas({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
@@ -34,7 +35,7 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
     }
   };
   const animadas = (p, sel) => p.evaluate((s) => [...document.querySelectorAll(s)].flatMap((el) => el.getAnimations().map((a) => `${a.animationName || 'transicion'}:${a.playState}`)), sel);
-  const VIVAS = 'img.portada-foto, .bdia-fondo, .bdia-luz, .bdia-luz *, .franja-cruce img, .resumen-hero img.hero-foto, .hero-brillo';
+  const VIVAS = 'img.portada-foto, .bdia-fondo, .bdia-luz, .bdia-luz *, .franja-cruce img, .resumen-hero img.hero-foto, .hero-brillo, .habito-cab .cab-ilu-img, .toma-ilu .cab-ilu-img, .ck-ilu-img, .foco-cab .cab-ilu-img, .hito-fondo, .hito-chispas i';
 
   // 1. La bienvenida del día: la luz de la hora y el fondo que deriva; en segundo plano, paradas
   let { ctx, p } = await abrir({ bienvenida: true });
@@ -93,11 +94,80 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
     await p.waitForFunction(() => { const el = document.querySelector('.resumen-hero img.hero-foto'); return el && !el.getAnimations().some((a) => a.animationName === 'hero-amanece' && a.playState === 'running'); }, null, { timeout: 5000 });
     const op1 = await heroe.evaluate((el) => Number(getComputedStyle(el).opacity));
     check(op0 < op1 && Math.abs(op1 - 0.62) < 0.01 && await p.locator('.resumen-hero .hero-brillo[aria-hidden="true"]').count() === 1, `en el resumen, la ilustración aparece al levantarse el telón (opacidad ${op0.toFixed(2)} → ${op1.toFixed(2)})`);
+    // El hito de la racha (si con esta sesión la racha llega a uno): el fuego parpadea y suelta chispas
+    await p.getByRole('button', { name: 'Volver a hoy' }).click();
+    const hito = p.locator('.hito-pantalla');
+    if (await hito.waitFor({ timeout: 5000 }).then(() => true).catch(() => false)) {
+      await hito.locator('.hito-fondo').waitFor();
+      const chispas = await hito.locator('.hito-chispas[aria-hidden="true"] i').count();
+      const a = await animadas(p, '.hito-fondo, .hito-chispas i');
+      check([3, 5, 7, 9, 12].includes(chispas) && a.filter((x) => x === 'hito-chispa:running').length === chispas && a.includes('hito-parpadea:running'), `en el hito de la racha, el fuego parpadea y suelta chispas (${chispas})`);
+      check(await p.evaluate(() => { const c = document.querySelector('.hito-chispas').getBoundingClientRect(); return c.left >= 0 && c.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth; }), 'sin salirse de la pantalla');
+    } else check(true, 'esta sesión no trae hito de racha: sin fuego que mirar');
   } catch (e) {
     check(false, `La portada, dónde entrenas y el resumen: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); }
 
-  // 3. Con «reducir movimiento», todo quieto (y el cambio de sitio, sin fundido)
+  // 3. Lo de cada día: el hábito que se enciende, el foco de la semana, la comida de ahora y el check-in
+  ({ ctx, p } = await abrir());
+  try {
+    await p.locator('nav.tabs').waitFor();
+    await cerrarDialogos(p);
+    await abrirEnHoy(p, 'habitos');
+    await p.locator('.habito-tile', { hasText: 'Pasos' }).click();
+    const hoja = p.getByRole('dialog', { name: 'Pasos' });
+    const cab = hoja.locator('.habito-cab');
+    await cab.waitFor();
+    const opacidad = () => cab.locator('.cab-ilu-img').evaluate((el) => Number(getComputedStyle(el).opacity));
+    await p.waitForFunction(() => { const el = document.querySelector('.habito-cab .cab-ilu-img'); return el && el.complete !== false && !el.getAnimations().length; }, null, { timeout: 4000 });
+    const apagada = await opacidad();
+    check(!/hecho/.test(await cab.getAttribute('class')) && Math.abs(apagada - 0.5) < 0.01, 'en la hoja de un hábito sin cumplir, su ilustración está apagada');
+    await hoja.getByRole('textbox').first().fill('8.000');
+    await p.waitForFunction(() => { const el = document.querySelector('.habito-cab.hecho .cab-ilu-img'); return el && getComputedStyle(el).opacity === '1' && !el.getAnimations().length; }, null, { timeout: 4000 });
+    check(await opacidad() === 1 && await cab.evaluate((el) => Number(getComputedStyle(el, '::after').opacity) > 0), 'al llegar al objetivo (antes de guardar) se enciende, con su color detrás');
+    await hoja.getByRole('textbox').first().fill('100');
+    await p.waitForFunction(() => !document.querySelector('.habito-cab.hecho'), null, { timeout: 4000 });
+    check(true, 'y si deja de cumplir, se apaga');
+    await p.keyboard.press('Escape');
+    await hoja.waitFor({ state: 'detached' });
+    await irASeccion(p, 'Semana');
+    const foco = p.locator('.foco-cab').first();
+    await foco.waitFor();
+    const cual = await foco.getAttribute('data-foco');
+    const delFoco = await animadas(p, '.foco-cab .cab-ilu-img');
+    const ritmo = { descarga: 'foco-respira', intensidad: 'foco-golpe', peaking: 'foco-golpe', volumen: 'foco-avanza', tecnica: 'foco-vaiven', adaptacion: 'foco-vaiven' }[cual];
+    check(!!cual && delFoco.some((x) => x.startsWith('foco-entra')) && (!ritmo || delFoco.some((x) => x.startsWith(ritmo))), `el foco de la semana (${cual}) entra y lleva su ritmo${ritmo ? ` (${ritmo})` : ''}`);
+    const alto = await foco.evaluate((el) => Math.round(el.getBoundingClientRect().height));
+    await p.waitForFunction(() => !document.querySelector('.foco-cab .cab-ilu-img').getAnimations().some((a) => a.playState === 'running' && a.effect.getTiming().iterations === Infinity), null, { timeout: 2000 });
+    check(await foco.evaluate((el) => Math.round(el.getBoundingClientRect().height)) === alto && await foco.evaluate((el) => getComputedStyle(el).overflow) === 'hidden', 'unas pocas veces y se para (ninguna animación sin fin), dentro de su hueco');
+    await irASeccion(p, 'Comidas');
+    await p.getByRole('tab', { name: 'Tus recetas' }).click();
+    await p.locator('.toma-ilu').first().waitFor();
+    const hora = await p.evaluate(() => new Date().getHours());
+    const ahora = p.locator('.toma-ilu.ahora');
+    const cuantas = await ahora.count();
+    check(cuantas <= 1 && (cuantas === 0 || (/^Ahora · /.test(await ahora.locator('.cab-ilu-texto span').textContent()) && (await animadas(p, '.toma-ilu.ahora .cab-ilu-img')).some((x) => x.startsWith('toma-ahora')) && !(await animadas(p, '.toma-ilu:not(.ahora) .cab-ilu-img')).some((x) => x.startsWith('toma-ahora')))),
+      cuantas ? `en «Tus recetas», la comida que toca a las ${hora} h lo dice («Ahora») y solo su ilustración se acerca` : `a las ${hora} h no toca ninguna de sus comidas: ninguna cabecera se mueve`);
+    await irASeccion(p, 'Check-in');
+    await p.locator('.ck-paso').waitFor();
+    await cerrarDialogos(p);
+    const marco = p.locator('.ck-paso .ck-ilu-marco');
+    await marco.waitFor();
+    const caja = () => marco.evaluate((el) => { const r = el.getBoundingClientRect(); return `${Math.round(r.width)}x${Math.round(r.height)}`; });
+    const caja0 = await caja();
+    const imagen0 = await marco.locator('img').getAttribute('data-imagen');
+    await p.getByRole('button', { name: 'Siguiente' }).click();
+    await p.waitForFunction((antes) => document.querySelector('.ck-ilu-marco img')?.dataset.imagen !== antes, imagen0, { timeout: 4000 });
+    check(await marco.getAttribute('data-sentido') === 'adelante' && await marco.getAttribute('aria-hidden') === 'true' && await caja() === caja0 && await marco.evaluate((el) => getComputedStyle(el).overflow) === 'hidden', 'en el check-in, al pasar al paso siguiente la franja entra desde delante, en su marco de siempre');
+    await p.waitForTimeout(650);
+    await p.getByRole('button', { name: 'Atrás' }).click();
+    await p.waitForFunction((antes) => document.querySelector('.ck-ilu-marco img')?.dataset.imagen === antes, imagen0, { timeout: 4000 });
+    check(await marco.getAttribute('data-sentido') === 'atras' && (await animadas(p, '.ck-ilu-img')).some((x) => x.startsWith('ck-ilu-atras')), 'y al volver atrás, desde el otro lado');
+  } catch (e) {
+    check(false, `Lo de cada día: ${e.message.split('\n')[0]}`);
+  } finally { await ctx.close(); }
+
+  // 4. Con «reducir movimiento», todo quieto (y el cambio de sitio, sin fundido)
   ({ ctx, p } = await abrir({ quieto: true, bienvenida: true }));
   try {
     await p.locator('.bdia .bdia-fondo').waitFor();
@@ -115,6 +185,17 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
     await p.locator('.donde-entrenas .segmentos button', { hasText: 'Viaje' }).click();
     await p.waitForFunction(() => { const i = document.querySelectorAll('.franja-cruce img'); return i.length === 1 && i[0].dataset.imagen === 'donde-viaje' && getComputedStyle(i[0]).opacity === '1'; }, null, { timeout: 5000 });
     check((await animadas(p, VIVAS)).length === 0, 'el cambio de sitio, sin fundido');
+    await p.getByRole('button', { name: 'Volver' }).first().click().catch(() => {});
+    await p.goto(`${base}/?demo#semana`);
+    await p.locator('.foco-cab').first().waitFor();
+    await cerrarDialogos(p);
+    const quietoFoco = (await animadas(p, VIVAS)).length;
+    await irASeccion(p, 'Check-in');
+    await p.locator('.ck-paso .ck-ilu-marco img').waitFor();
+    await cerrarDialogos(p);
+    await p.getByRole('button', { name: 'Siguiente' }).click();
+    await p.waitForTimeout(300);
+    check(quietoFoco === 0 && (await animadas(p, VIVAS)).length === 0, 'ni el foco de la semana ni la franja del check-in se mueven');
   } catch (e) {
     check(false, `Con «reducir movimiento»: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); }

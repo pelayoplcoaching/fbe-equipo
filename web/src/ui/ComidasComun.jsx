@@ -7,7 +7,7 @@ import { imagenComida } from '../logica/imagenes.js';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Reserva, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos, usePorTramos, useApuntar } from './comunes.jsx';
 import { COLOR_MACRO, MacrosDia } from './NutricionComun.jsx';
-import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, porSecciones, valeParaDia, textoVariante, tomasDelDia, paraElDia } from '../logica/comidas.js';
+import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, porSecciones, valeParaDia, textoVariante, tomasDelDia, paraElDia, tomaDeLaHora } from '../logica/comidas.js';
 import { planVigente, objetivoDelDia, fmtKcal } from '../logica/nutricion.js';
 import { hoyISO, lunesDe, sumarDias, fmtConDia, rangoSemana } from '../logica/fechas.js';
 import { LETRAS_DIA } from '../logica/plan.js';
@@ -57,6 +57,8 @@ export function VistaRecetario({ recetario, alAbrir, esCoach = false, vacio = nu
   const [tipo, setTipo] = usePreferencia(`fbe-recetario-dia-${esCoach ? 'coach' : 'atleta'}`, 'todos');
   const filtro = conVariantes && tipo !== 'todos' ? tipo : null;
   const tomas = tomasDelDia(ordenarTomas([...recetario.tomas, ...recetario.conRecetas]), op, filtro === 'sin');
+  // (ilustraciones vivas) la comida que toca por la hora: su cabecera lo dice y su ilustración se acerca despacio
+  const ahora = esCoach ? null : tomaDeLaHora(new Date().getHours(), tomas);
   if (!recetario.asignaciones.length) return vacio;
   return (
     <div class="pila">
@@ -71,8 +73,8 @@ export function VistaRecetario({ recetario, alAbrir, esCoach = false, vacio = nu
           <section class="seccion" key={t} aria-labelledby={`toma-${t}`}>
             {/* (imágenes) con ilustración de su comida, la cabecera ilustrada; si no, el título de siempre */}
             {hayImagen(imagenComida(t)) ? (
-              <div class="cab-ilu toma-ilu">
-                <div class="cab-ilu-texto"><h2 id={`toma-${t}`}>{NOMBRE_TOMA[t]}</h2><span>{xs.length === 1 ? '1 opción' : `${xs.length} opciones`}{!recetario.tomas.includes(t) ? ' · no está entre sus comidas' : ''}</span></div>
+              <div class={`cab-ilu toma-ilu${t === ahora ? ' ahora' : ''}`}>
+                <div class="cab-ilu-texto"><h2 id={`toma-${t}`}>{NOMBRE_TOMA[t]}</h2><span>{t === ahora ? 'Ahora · ' : ''}{xs.length === 1 ? '1 opción' : `${xs.length} opciones`}{!recetario.tomas.includes(t) ? ' · no está entre sus comidas' : ''}</span></div>
                 <Imagen key={t} id={imagenComida(t)} clase="cab-ilu-img" tamanos="10rem" />
               </div>
             ) : <div class="seccion-cab"><h2 id={`toma-${t}`}>{NOMBRE_TOMA[t]}</h2><span class="mini terciario">{xs.length === 1 ? '1 opción' : `${xs.length} opciones`}{!recetario.tomas.includes(t) ? ' · no está entre sus comidas' : ''}</span></div>}

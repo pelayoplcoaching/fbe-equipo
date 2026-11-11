@@ -129,7 +129,9 @@ function HojaHabito({ r, alCerrar, alMomento }) {
     <Hoja titulo={h.nombre} alCerrar={alCerrar}>
       {/* (imágenes) arriba, el objetivo sobre la ilustración del hábito; si no se puede, el objetivo como siempre */}
       {hayImagen(imagenHabito(h.icono)) ? (
-        <div class="cab-ilu habito-cab" style={{ '--c': COLOR_HABITO[h.icono] || 'var(--morado)' }}>
+        // (ilustraciones vivas) apagada hasta que lo que marca el día elegido cumple el objetivo; al llegar (con el «+»,
+        // antes de guardar), se enciende, como el anillo de abajo
+        <div class={`cab-ilu habito-cab${valor != null && cumpleHabito(h, valor) ? ' hecho' : ''}`} style={{ '--c': COLOR_HABITO[h.icono] || 'var(--morado)' }}>
           <p>{textoObjetivo(h)}.</p>
           <Imagen key={h.icono} id={imagenHabito(h.icono)} clase="cab-ilu-img" tamanos="9rem" alternativa={<span class="cab-ilu-img cab-ilu-icono" aria-hidden="true"><Icono n={h.icono || 'libre'} /></span>} />
         </div>

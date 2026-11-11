@@ -113,6 +113,9 @@ const TEXTO_HITO = {
   52: 'Un año entero de semanas completas. Enhorabuena.',
 };
 
+// Las chispas del hito: dónde nacen (% del ancho), cuánto esperan y tardan (s), cuánto se van de lado y su tamaño (px)
+const CHISPAS_HITO = [[50, 0, 3.4, -18, 4], [42, 1.1, 4, 22, 3], [58, 2, 3.7, 12, 3], [36, .6, 4.4, -26, 3], [64, 1.6, 4.2, 30, 4], [47, 2.7, 3.2, -8, 2], [54, .3, 4.8, 16, 2], [30, 2.2, 4.6, -34, 3], [70, 3.1, 4.1, 38, 3], [45, 3.6, 3.6, -14, 2], [56, 1.3, 5, 6, 3], [39, 2.9, 4.3, -22, 2]];
+
 export function HitoRacha(props) { return <Capa><HitoRachaDentro {...props} /></Capa>; }
 function HitoRachaDentro({ hito, alCerrar }) {
   const ref = usePantalla(alCerrar);
@@ -123,6 +126,14 @@ function HitoRachaDentro({ hito, alCerrar }) {
       {/* (imágenes) la hoguera, abajo, fundida con el fondo */}
       {/* (imágenes, bloque R) el fuego de su hito: de la vela (4 semanas) a la gran hoguera (52); sin ella, la de la racha */}
       <Imagen id={hayImagen(imagenHito(hito)) ? imagenHito(hito) : imagenCelebracion('racha')} clase="hito-fondo" tamanos="100vw" prioridad />
+      {/* (ilustraciones vivas) chispas que suben del fuego: más cuanto mayor el hito */}
+      {hayImagen(imagenHito(hito)) && (
+        <span class="hito-chispas" aria-hidden="true">
+          {CHISPAS_HITO.slice(0, hito >= 52 ? 12 : hito >= 26 ? 9 : hito >= 12 ? 7 : hito >= 8 ? 5 : 3).map(([x, espera, dura, lado, r], i) => (
+            <i key={i} style={{ left: `${x}%`, width: `${r}px`, height: `${r}px`, '--espera': `${espera}s`, '--dura': `${dura}s`, '--lado': `${lado}px` }} />
+          ))}
+        </span>
+      )}
       <div class="hito-cuerpo">
         <div class="hito-fuego"><Llama /><span class="hito-num marcador" aria-hidden="true">{hito}</span></div>
         <p class="t-sobre hito-sobre">Nuevo hito</p>
