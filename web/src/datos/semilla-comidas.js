@@ -10,6 +10,35 @@ const ing = (s) => s.split('\n').map((l) => {
   return { nombre: n.join('|'), ...(c ? { cantidad: Number(c) } : {}), ...(u ? { unidad: u } : {}) };
 });
 
+// (055) El recetario del equipo de la demo: las mismas recetas, a la vista de todos, con lo que trae un recetario
+// escrito (capítulo, bloque, la entrada, la nota y las medidas caseras). Textos inventados para la demo.
+export const LIBRO_DEMO = {
+  tostadas: { codigo: '01.01', capitulo: 'Desayunos', bloque: 'Rápidos', dificultad: 'Fácil', batch: 'No', objetivo: 'Todos',
+    descripcion: 'El desayuno de diario: diez minutos, proteína de verdad y energía para toda la mañana.',
+    nota: 'Si entrenas a primera hora, deja el aguacate para después: la grasa retrasa la digestión.', medidas: ['2 rebanadas', null, '½ aguacate', null, null] },
+  porridge: { codigo: '01.02', capitulo: 'Desayunos', bloque: 'Rápidos', dificultad: 'Fácil', batch: 'No', objetivo: 'Todos',
+    descripcion: 'Avena caliente con proteína: el desayuno para los días de frío o de pierna.',
+    nota: 'La proteína, siempre con el fuego apagado: hirviendo se apelmaza.' },
+  yogur: { codigo: '01.03', capitulo: 'Desayunos', bloque: 'Sin cocinar', dificultad: 'Fácil', batch: 'No', objetivo: 'Todos',
+    descripcion: 'Tres minutos de montaje y nada que fregar. También vale de merienda.' },
+  curry: { codigo: '02.01', capitulo: 'Comidas', bloque: 'De cuchara', dificultad: 'Media', batch: 'Sí', objetivo: 'Todos',
+    descripcion: 'Un curry suave que aguanta tres días en la nevera y mejora de un día para otro.',
+    nota: 'Haz el doble y congela la mitad en raciones: es de las recetas que mejor se congelan.', encaje: 'El arroz es lo que más mueve los hidratos del plato: súbelo los días de entreno y bájalo los de descanso.' },
+  lentejas: { codigo: '02.02', capitulo: 'Comidas', bloque: 'De cuchara', dificultad: 'Fácil', batch: 'Sí (4 raciones)', objetivo: 'Todos',
+    descripcion: 'Las lentejas de toda la vida, sin chorizo y con el doble de verdura. Una olla, cuatro comidas.' },
+  garbanzos: { codigo: '02.03', capitulo: 'Comidas', bloque: 'Ensaladas', dificultad: 'Fácil', batch: 'Parcial', objetivo: 'Todos',
+    descripcion: 'La ensalada que llena: legumbre, atún y huevo. Se monta en diez minutos con un bote de garbanzos.' },
+  salmon: { codigo: '03.01', capitulo: 'Cenas', bloque: 'Al horno', dificultad: 'Fácil', batch: 'No', objetivo: 'Todos',
+    descripcion: 'Todo a la misma bandeja y al horno: la cena que se hace sola mientras te duchas.' },
+  tortilla: { codigo: '03.02', capitulo: 'Cenas', bloque: '15 minutos', dificultad: 'Fácil', batch: 'No', objetivo: 'Todos',
+    descripcion: 'Cena ligera para los días que se ha comido fuerte: mucha proteína y poco más.' },
+  bocadillo: { codigo: '04.01', capitulo: 'Para entrenar', bloque: 'Antes de entrenar', dificultad: 'Fácil', batch: 'No', objetivo: 'Entreno',
+    descripcion: 'Hidratos y proteína en la mano, una hora u hora y media antes de entrenar.',
+    nota: 'Entrenar con algo en el cuerpo casi siempre rinde más que entrenar en ayunas.' },
+  batido: { codigo: '04.02', capitulo: 'Para entrenar', bloque: 'Después de entrenar', dificultad: 'Fácil', batch: 'No', objetivo: 'Entreno',
+    descripcion: 'Para salir del gimnasio con la proteína hecha: dos minutos de batidora.' },
+};
+
 export const RECETAS_DEMO = [
   { clave: 'tostadas', nombre: 'Tostadas con huevo y aguacate', tomas: ['desayuno'], raciones: 1, kcal: 465, proteina_g: 22, carbos_g: 38, grasa_g: 25, minutos: 10, etiquetas: ['Rápida', 'Vegetariana'],
     ingredientes: ing('60|g|Pan integral\n2|ud|Huevos\n70|g|Aguacate\n6|ud|Tomates cherry\n||Sal y pimienta'),
@@ -46,11 +75,11 @@ export const RECETAS_DEMO = [
 // db: la base de la demo; ctx: { hoy, uuid, usuario, ahoraISO, ana }
 export function sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana }) {
   const lunesHoy = lunesDe(hoy);
-  Object.assign(db, { recetas: [], recetas_atleta: [], comidas_atleta: [], menu_comidas: [], menu_dias: [] });
+  Object.assign(db, { recetas: [], recetas_atleta: [], comidas_atleta: [], menu_comidas: [], menu_dias: [], recetas_favoritas: [] });
   const R = {};
   for (const { clave, ...r } of RECETAS_DEMO) {
     const f = FOTOS_RECETAS[clave] || {};
-    const fila = { id: uuid(), ...r, foto: f.foto || null, foto_mini: f.mini || null, creada_en: ahoraISO, actualizada_en: ahoraISO };
+    const fila = { id: uuid(), ...r, foto: f.foto || null, foto_mini: f.mini || null, para_todos: !!LIBRO_DEMO[clave], libro: LIBRO_DEMO[clave] || null, creada_en: ahoraISO, actualizada_en: ahoraISO };
     db.recetas.push(fila);
     R[clave] = fila;
   }

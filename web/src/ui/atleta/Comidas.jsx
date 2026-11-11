@@ -9,38 +9,53 @@ import { planVigente, objetivoDelDia, fmtKcal } from '../../logica/nutricion.js'
 import { hoyISO } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
 import { BandaDemo } from '../App.jsx';
+import { RecetarioEquipo, useRecetarioEquipo } from '../RecetarioEquipo.jsx';
+import { comoAsignacion } from '../../logica/recetario-equipo.js';
 const VISTAS_COMIDAS = [['menu', 'Tu semana'], ['recetas', 'Tus recetas']];
+// (055) con recetas para todo el equipo, una vista más
+const VISTAS_CON_EQUIPO = [...VISTAS_COMIDAS, ['equipo', 'Recetario']];
+const SUB_COMIDAS = { menu: 'Organiza lo que vas a comer cada día', recetas: 'Las opciones de tu coach para cada comida', equipo: 'Las recetas del equipo, para todos' };
 
 export function Comidas({ salud, recargarConsentimientos, irA }) {
   const { api, atleta } = useApp();
-  const [vista, setVista] = usePreferencia('fbe-comidas-vista', 'menu');
-  const desliz = usePestanasDeslizables(VISTAS_COMIDAS, vista, setVista);
+  const [vistaGuardada, setVista] = usePreferencia('fbe-comidas-vista', 'menu');
+  // (055) el recetario del equipo, si lo hay: una vista más, y sus recetas cuentan para la lista de la compra
+  const equipo = useRecetarioEquipo(atleta.id);
+  const hayEquipo = (equipo.datos?.recetas.length || 0) > 0;
+  const VISTAS = hayEquipo ? VISTAS_CON_EQUIPO : VISTAS_COMIDAS;
+  const vista = VISTAS.some(([v]) => v === vistaGuardada) ? vistaGuardada : 'menu';
+  const desliz = usePestanasDeslizables(VISTAS, vista, setVista);
   const recetario = useCarga(() => api.recetario(atleta.id), [atleta.id], { recuerdo: `recetario:${api.uid()}:${atleta.id}` });
   const planes = useCarga(() => api.planesNutricion(atleta.id).catch(() => []), [atleta.id], { recuerdo: `planes-comidas:${atleta.id}` });
   const [receta, setReceta] = useState(null); // asignación abierta
   const [anadir, setAnadir] = useState(null); // { a, raciones }
   const [comidas, setComidas] = useState(false);
   const r = recetario.datos;
+  // Lo apuntado del recetario del equipo también sale, con sus ingredientes, en la lista de la compra
+  // y se pueden elegir al añadir una comida al menú
+  const rMenu = r && hayEquipo ? { ...r, equipo: equipo.datos.recetas, recetas: [...r.recetas, ...equipo.datos.recetas.filter((x) => !r.recetas.some((y) => y.id === x.id))] } : r;
   const darConsentimiento = async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); };
   return (
     <div class="contenido">
       <CabeceraGrande>
-        <div class="titulo"><h1>Comidas</h1><div class="sub">{vista === 'menu' ? 'Organiza lo que vas a comer cada día' : 'Las opciones de tu coach para cada comida'}</div></div>
+        <div class="titulo"><h1>Comidas</h1><div class="sub">{SUB_COMIDAS[vista]}</div></div>
         {r ? <button class="btn btn-peq plano" onClick={() => setComidas(true)} aria-label={`Tus comidas del día: ${r.tomas.length}`}><Icono n="ajustes" /> {r.tomas.length} al día</button>
           /* (pulido 2.3) mientras carga, su sitio ya está: la cabecera no cambia de alto al llegar */
           : !recetario.error && <span class="btn btn-peq plano" style="visibility:hidden" aria-hidden="true"><Icono n="ajustes" /> 4 al día</span>}
       </CabeceraGrande>
       <BandaDemo />
-      <Pestanas opciones={VISTAS_COMIDAS} valor={vista} alCambiar={desliz.cambiar} etiqueta="Comidas" idBase="comidas" />
+      <Pestanas opciones={VISTAS} valor={vista} alCambiar={desliz.cambiar} etiqueta="Comidas" idBase="comidas" />
       <div class="pestana-panel deslizable" role="tabpanel" id="comidas-panel" aria-labelledby={`comidas-${vista}`} key={vista} ref={desliz.panel} {...desliz.gesto}>
         <ErrorCaja error={recetario.error} reintentar={() => recetario.recargar(true)} />
         {!r ? (!recetario.error && <Siluetas forma="tarjetas" n={3} texto="Cargando tus comidas" />) : vista === 'menu' ? (
           !salud ? <SinConsentimiento darConsentimiento={darConsentimiento} /> : (
             <>
               <Pista id="menu-semana" icono="calendario">Elige qué vas a comer cada día de entre tus recetas (o escríbelo). Ves cómo cuadra con tu plan y, al final, la lista de la compra.</Pista>
-              <MenuSemana atletaId={atleta.id} recetario={r} planes={planes.datos || []} />
+              <MenuSemana atletaId={atleta.id} recetario={rMenu} planes={planes.datos || []} />
             </>
           )
+        ) : vista === 'equipo' ? (
+          <RecetarioEquipo atletaId={atleta.id} alAnadir={salud ? (receta, raciones) => setAnadir({ a: comoAsignacion(receta, r.tomas), raciones }) : null} />
         ) : (
           <VistaRecetario recetario={r} alAbrir={setReceta} vacio={(
             <div class="panel"><Vacio ilustracion="recetas" titulo="Aún no tienes recetas">Tu coach te pondrá aquí las opciones para cada comida, con sus cantidades y cómo se preparan.</Vacio></div>
@@ -118,6 +133,20 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
         </div>
       )}
     </section>
+  );
+}
+
+// (055) Recetas: el recetario del equipo para quien no lleva la nutrición con su coach (solo consulta y se las guarda)
+export function Recetas() {
+  const { atleta } = useApp();
+  return (
+    <div class="contenido">
+      <CabeceraGrande>
+        <div class="titulo"><h1>Recetas</h1><div class="sub">El recetario del equipo</div></div>
+      </CabeceraGrande>
+      <BandaDemo />
+      <RecetarioEquipo atletaId={atleta.id} />
+    </div>
   );
 }
 

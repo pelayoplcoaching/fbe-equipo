@@ -10,7 +10,8 @@ import { Sesion } from './Sesion.jsx';
 import { Semana } from './Semana.jsx';
 import { Progreso } from './Progreso.jsx';
 import { Perfil } from './Perfil.jsx';
-import { Comidas } from './Comidas.jsx';
+import { Comidas, Recetas } from './Comidas.jsx';
+import { hayRecetarioEquipo } from '../../datos/recetario-equipo.js';
 import { leerVistoEquipo } from '../comunidad-local.js';
 import { perezoso, precargarEnReposo } from '../perezoso.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
@@ -45,10 +46,12 @@ const Checkin = perezoso(() => import('./Checkin.jsx'), 'Checkin');
 // Pulido 9: las pestañas de consulta, donde tirar hacia abajo pone al día lo que se ve (ui/tirar.js)
 const TIRAR = ['hoy', 'semana', 'progreso', 'comidas', 'equipo'];
 const TODAS = [
-  ['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], ['comidas', 'Comidas', 'receta'], ['checkin', 'Check-in', 'checkin'],
+  ['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], ['comidas', 'Comidas', 'receta'], ['recetas', 'Recetas', 'receta'], ['checkin', 'Check-in', 'checkin'],
   ['progreso', 'Progreso', 'progreso'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['perfil', 'Perfil', 'perfil'],
 ];
-export const pestanasAtleta = (atleta, { equipo = false } = {}) => TODAS.filter(([t]) => (t !== 'semana' || conEntrenamiento(atleta)) && (t !== 'comidas' || conNutricion(atleta))
+// (055) «Recetas»: el recetario del equipo, para quien no tiene Comidas (ahí va dentro) y solo si hay recetas
+export const pestanasAtleta = (atleta, { equipo = false, recetas = false } = {}) => TODAS.filter(([t]) => (t !== 'semana' || conEntrenamiento(atleta)) && (t !== 'comidas' || conNutricion(atleta))
+  && (t !== 'recetas' || (recetas && !conNutricion(atleta)))
   && (t !== 'equipo' || (equipo && atleta?.estado !== 'baja')));
 // Modo atleta del coach (v0.37): solo el entrenamiento (sin check-in, mensajes, perfil ni nutrición, que son cosas
 // entre atleta y coach), y una pestaña para volver a la vista de coach
@@ -92,7 +95,10 @@ export function AtletaApp() {
   // v0.47: cuántas publicaciones nuevas de los demás hay desde su última visita al muro (lo recuerda este móvil),
   // solo con la comunidad abierta y estando dentro
   const [nuevasEquipo, setNuevasEquipo] = useState(0);
-  const TABS = propio ? PESTANAS_PROPIO : pestanasAtleta(atleta, { equipo });
+  // (055) ¿hay recetario del equipo? Solo hace falta saberlo para quien no lleva la nutrición (su pestaña «Recetas»)
+  const { backend } = useApp();
+  const hayRecetas = useCarga(() => (propio || conNutricion(atleta) ? Promise.resolve(false) : hayRecetarioEquipo({ backend }).catch(() => false)), [atleta.id], { recuerdo: `hay-recetario-equipo:${atleta.id}` });
+  const TABS = propio ? PESTANAS_PROPIO : pestanasAtleta(atleta, { equipo, recetas: !!hayRecetas.datos });
   const tabsRef = useRef(TABS);
   tabsRef.current = TABS;
   const inicial = useRef(typeof location !== 'undefined' ? location.hash.slice(1) : '');
@@ -272,6 +278,7 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
             {tab === 'hoy' && <Hoy {...compartido} />}
             {tab === 'semana' && <Semana {...compartido} />}
             {tab === 'comidas' && <Comidas {...compartido} />}
+            {tab === 'recetas' && <Recetas />}
             {tab === 'checkin' && <Checkin {...compartido} />}
             {tab === 'progreso' && <Progreso {...compartido} />}
             {tab === 'mensajes' && <Mensajes {...compartido} />}
@@ -303,7 +310,7 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
           </nav>
           {verMas && reparto.mas.length > 0 && (
             <HojaMas pestanas={reparto.mas} actual={tab} alCerrar={() => setVerMas(false)} alElegir={(id) => { setVerMas(false); irAPestana(id); }}
-              detalles={{ comidas: 'Tu menú de la semana y tus recetas', checkin: 'Tu repaso de la semana para tu coach', equipo: 'El muro de los atletas de FBE', perfil: 'Tu cuenta y los ajustes de este móvil' }}
+              detalles={{ comidas: 'Tu menú de la semana y tus recetas', recetas: 'Recetas para todos, con sus cantidades y sus pasos', checkin: 'Tu repaso de la semana para tu coach', equipo: 'El muro de los atletas de FBE', perfil: 'Tu cuenta y los ajustes de este móvil' }}
               valores={{
                 checkin: checkinPendiente ? <span class="chip aviso">Pendiente</span> : null,
                 equipo: nuevasEnMas ? <span class="chip morado num">{nuevasEnMas > 99 ? '99+' : nuevasEnMas} {nuevasEnMas === 1 ? 'nueva' : 'nuevas'}</span> : null,

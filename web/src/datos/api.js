@@ -385,11 +385,11 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
   'archivos', 'comentarios', 'recursos', 'notas_ejercicio', 'respuestas_guardadas', 'avisos', 'habitos', 'registros_habito',
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
-  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
+  'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
   'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA];
 // Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los vídeos, 035; la revisión semanal, 040): sin ellas, la copia sale igual
-const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
+const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
   'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
@@ -1656,7 +1656,8 @@ export function crearApi(backend) {
     async duplicarReceta(id) {
       const r = await api.receta(id);
       if (!r) throw new Error('No se encuentra la receta.');
-      const { id: _i, creada_en: _c, actualizada_en: _a, ...resto } = r;
+      // (055) la copia no hereda el «para todo el equipo» (es para cambiarle algo a alguien)
+      const { id: _i, creada_en: _c, actualizada_en: _a, para_todos: _p, ...resto } = r;
       return (await b.insert('recetas', [{ ...resto, nombre: `${r.nombre} (copia)`.slice(0, 80) }]))[0];
     },
     // El recetario de un atleta (lo ve él y su coach): sus comidas del día, sus asignaciones y las recetas, por toma
@@ -4796,7 +4797,7 @@ export function crearApi(backend) {
       out.suscripciones_push = perfilId ? (await b.select('suscripciones_push', { eq: { usuario_id: perfilId } }))
         .map(({ id, dispositivo, creada_en, usada_en }) => ({ id, dispositivo, creada_en, usada_en })) : [];
       // Comidas (v0.26): sus comidas del día, su recetario (con las recetas) y su menú
-      for (const t of ['comidas_atleta', 'recetas_atleta', 'menu_comidas', 'menu_dias']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      for (const t of ['comidas_atleta', 'recetas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // La comunidad (v0.43): si entró, con qué nombre y lo que ha publicado, comentado, reaccionado y avisado. El
       // propio atleta, con comunidad_mis_datos() (también lo oculto y aunque haya salido); el coach, de las tablas.
       if (perfilId && perfilId === uid()) out.comunidad = await b.rpc('comunidad_mis_datos', {}).catch(() => null);
