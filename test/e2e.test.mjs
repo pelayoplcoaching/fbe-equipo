@@ -5888,6 +5888,16 @@ try {
 }
 
 // v0.114: el perfil del atleta, más bonito y más social (test/e2e-perfil-114.mjs)
+// v0.133: la carrera (migración 055): el coach y el atleta, en la demo (test/e2e-carrera-133.mjs)
+console.log('\nv0.133: la carrera');
+try {
+  const { probarCarrera133 } = await import('./e2e-carrera-133.mjs');
+  await probarCarrera133({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la carrera de la v0.133:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 console.log('\nv0.114: el perfil, más bonito y más social');
 try {
   const { probarPerfil114 } = await import('./e2e-perfil-114.mjs');

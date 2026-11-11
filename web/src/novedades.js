@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.133': {
+    atleta: [
+      'Si tu coach te lleva también la carrera, en Hoy tienes «Tu carrera»: la cuenta atrás, tus zonas, tu plan y tus carreras.',
+      'Tus sesiones de carrera vienen por partes (calentar, series, enfriar) con la zona, las pulsaciones y el ritmo de cada una.',
+      'Antes de salir, el semáforo: si llegas regular, te dice cómo bajarla; al terminar apuntas la FC y si algo te duele.',
+    ],
+    coach: [
+      'Carrera: enciéndela al crear la ficha o en Datos. En su pestaña Carrera, zonas desde la FC umbral, macrociclo y semanas.',
+      'Carreras A, B y C con objetivo y decisión, revisiones del plan y tu biblioteca de sesiones de calidad (10 de partida).',
+      'En el editor, las sesiones de carrera por partes y, con un toque, las del plan pasan a la semana de entreno.',
+    ],
+  },
   '0.132': {
     atleta: [
       'La sesión responde a cada toque: las teclas rebotan, la cifra que escribes salta y el RPE que eliges se marca con un salto.',

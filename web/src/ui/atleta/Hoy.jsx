@@ -22,6 +22,8 @@ import { HabitosHoy } from './Habitos.jsx';
 import { TarjetaNotificaciones } from '../Notificaciones.jsx';
 import { NutricionHoy } from './Nutricion.jsx';
 import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
+import { conCarrera } from '../../logica/carrera.js';
+import { CarreraHoy, TuCarrera } from './Carrera.jsx';
 import { MenuHoy } from './Comidas.jsx';
 import { planVigente } from '../../logica/nutricion.js';
 import { ajuste } from '../ajustes.js';
@@ -355,6 +357,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const [verDia, cerrarDia] = useBienvenida(sinBienvenida ? null : api.uid(), { sesionEnCurso: !!leerEnCurso(atleta.id) });
   const [planAbierto, setPlanAbierto] = useState(false);
   const [bloqueAbierto, setBloqueAbierto] = useState(false);
+  const [carreraAbierta, setCarreraAbierta] = useState(false);  // (v0.133) «Tu carrera»
   // v0.52: la pantalla de la racha y, al llegar a un hito (4, 8, 12, 26 o 52 semanas), su momento, una vez en este móvil
   const [verRacha, setVerRacha] = useState(false);
   const [hito, hitoVisto] = useHitoRacha(atleta.id, constancia.datos ? constancia.datos.racha : null);
@@ -526,6 +529,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         </div>
       </section>
       </Plegable>
+      {conCarrera(atleta) && !propio && <CarreraHoy abrir={() => setCarreraAbierta(true)} />}
+      {carreraAbierta && <TuCarrera alCerrar={() => setCarreraAbierta(false)} />}
       {verRacha && <PantallaRacha racha={constancia.datos?.racha || 0} semanas={constancia.datos?.semanas || []} diasSemana={constancia.datos?.diasSemana || null} hoy={hoy} alCerrar={() => setVerRacha(false)} />}
       {hito && !verRacha && <HitoRacha hito={hito} alCerrar={hitoVisto} />}
       {bloqueAbierto && <HojaBloque alCerrar={() => setBloqueAbierto(false)} abrirSesion={(id) => { setBloqueAbierto(false); abrirSesion(id); }} />}
@@ -827,7 +832,7 @@ function SiguienteSesion({ sesion, ejercicios, cargando }) {
   return (
     <section class="seccion">
       <h2>Lo que vas a hacer</h2>
-      {cardio && <TarjetaCardio pauta={cardio} hecho={sesion.cardio_hecho} completada={sesion.completada} />}
+      {cardio && <TarjetaCardio pauta={cardio} hecho={sesion.cardio_hecho} completada={sesion.completada} sesionId={sesion.id} />}
       {cargando || ejercicios.length > 0 ? (
         <div class="panel lista-ejercicios-hoy">
           {cargando ? <Cargando /> : (

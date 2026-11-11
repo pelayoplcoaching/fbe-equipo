@@ -42,7 +42,9 @@ import { leerAjustes } from '../ajustes.js';
 import { leerDescansos, guardarDescanso } from '../descansos.js';
 import { fmtCorta, hoyISO, lunesDe, sumarDias, fechaMadrid } from '../../logica/fechas.js';
 import { pesoAnterior } from '../../logica/nivel.js';
-import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
+import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, textoSaludCardio, cardioHechoPublico, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
+import { DetalleCarreraSesion, pautaDeCarrera, leerSemaforo, olvidarSemaforo } from './Carrera.jsx';
+import { SEMAFORO } from '../../logica/carrera.js';
 import { DondeEntrenas } from './DondeEntrenas.jsx';
 import { adaptarSesion, textoAdaptacion } from '../../logica/material.js';
 import { fraseSerie } from '../../logica/voz.js';
@@ -717,7 +719,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           <span class="btn btn-peq btn-primario" aria-hidden="true">Abrir</span>
         </button>
       )}
-      {cardioValido(sesion.cardio) && <TarjetaCardio pauta={sesion.cardio} hecho={sesion.cardio_hecho} completada={sesion.completada} />}
+      {cardioValido(sesion.cardio) && <TarjetaCardio pauta={sesion.cardio} hecho={sesion.cardio_hecho} completada={sesion.completada} sesionId={sesion.id} />}
       {!sesion.completada && ejercicios.length > 0 && atleta.estado !== 'baja' && (
         <DondeEntrenas atletaId={atleta.id} lugar={lugar} alElegir={elegirLugar}
           cambios={Object.fromEntries(Object.entries(porLugar).filter(([k, v]) => sustitutos[k] === v))} sinAlternativa={sinAlternativa} />
@@ -815,7 +817,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           alCerrar={() => setOrdenando(false)} />
       )}
       {terminando && (
-        <Terminar sesion={rpeRapido != null && sesion.rpe_sesion == null ? { ...sesion, rpe_sesion: rpeRapido } : sesion} semana={semana} inicio={inicio} minutosSugeridos={minutosHechos} duracionSeries={duracionDesdeSeries(hechas)} conEjercicios={ejercicios.length > 0} alCerrar={() => { setTerminando(false); setMinutosHechos(null); }}
+        <Terminar sesion={rpeRapido != null && sesion.rpe_sesion == null ? { ...sesion, rpe_sesion: rpeRapido } : sesion} semana={semana} inicio={inicio} minutosSugeridos={minutosHechos} duracionSeries={duracionDesdeSeries(hechas)} conEjercicios={ejercicios.length > 0} salud={salud} alCerrar={() => { setTerminando(false); setMinutosHechos(null); }}
           alGuardar={async (cambios) => {
             const r = await cola.enviar({ tipo: 'sesion', datos: { id: sesion.id, cambios }, atletaId: atleta.id });
             setTerminando(false);
@@ -1205,8 +1207,9 @@ function Cambiar({ e, actual, alCerrar, alElegir }) {
 }
 
 // La pauta de cardio del coach, en una tarjeta: qué toca, cuánto y a qué esfuerzo; y, hecha, lo que se hizo
-export function TarjetaCardio({ pauta, hecho, completada }) {
+export function TarjetaCardio({ pauta, hecho, completada, sesionId = null }) {
   const h = cardioHechoValido(hecho) ? hecho : null;
+  const kmTxt = (k) => num(k, k % 1 ? 1 : 0);
   return (
     <div class="panel panel-pad tarjeta-cardio">
       <span class="ico" aria-hidden="true"><Icono n="intervalos" /></span>
@@ -1214,14 +1217,16 @@ export function TarjetaCardio({ pauta, hecho, completada }) {
         <div>
           <div class="peq secundario">{NOMBRE_MODALIDAD[pauta.modalidad]}</div>
           <div class="cifra-cardio">
-            {pauta.minutos ? <>{pauta.minutos}<small>min</small></> : null}
+            {pauta.minutos ? <>{pauta.minutos}{pauta.minutos_max ? `–${pauta.minutos_max}` : ''}<small>min</small></> : null}
             {pauta.minutos && pauta.km ? <small> y </small> : null}
-            {pauta.km ? <>{num(pauta.km, pauta.km % 1 ? 1 : 0)}<small>km</small></> : null}
+            {pauta.km ? <>{kmTxt(pauta.km)}{pauta.km_max ? `–${kmTxt(pauta.km_max)}` : ''}<small>km</small></> : null}
           </div>
         </div>
+        {/* (v0.133) la carrera: tipo, zona con sus pulsaciones, las partes y el semáforo antes de salir */}
+        {pautaDeCarrera(pauta) && sesionId && <DetalleCarreraSesion pauta={pauta} sesionId={sesionId} completada={completada} hecho={h} />}
         {pauta.esfuerzo && <p class="peq">Esfuerzo {num(pauta.esfuerzo)} de 10: {palabrasEsfuerzo(pauta.esfuerzo)}.</p>}
         {pauta.nota && <p class="peq secundario">{pauta.nota}</p>}
-        {h ? <span class="chip ok"><Icono n="hecho" />Hecho: {NOMBRE_MODALIDAD[h.modalidad].toLowerCase()}, {textoCardioHecho(h)}</span>
+        {h ? <span class="chip ok"><Icono n="hecho" />Hecho: {NOMBRE_MODALIDAD[h.modalidad].toLowerCase()}, {textoCardioHecho(h)}{textoSaludCardio(h) ? ` · ${textoSaludCardio(h)}` : ''}</span>
           : !completada && <p class="mini terciario">Al terminar, apunta los minutos, los kilómetros y cuánto te ha costado.</p>}
         {/* (v0.104) el metrónomo de cadencia: pasos, pedaladas, zancadas, paladas o saltos por minuto */}
         {!h && !completada && <Cadencia modalidad={pauta.modalidad} />}
@@ -1231,7 +1236,7 @@ export function TarjetaCardio({ pauta, hecho, completada }) {
 }
 
 // ---------- terminar ----------
-function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSeries = null, conEjercicios = false, alCerrar, alGuardar }) {
+function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSeries = null, conEjercicios = false, alCerrar, alGuardar, salud = false }) {
   const { propio } = useApp();
   // (054) la duración sale de las series guardadas (de la primera a la última): vale aunque la app se haya recargado o
   // se termine otro día; si no hay series, del cronómetro de la sesión; si no, lo de siempre
@@ -1257,16 +1262,29 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
   // Si ya lo registró sin kilómetros, no se le vuelven a proponer los de la pauta
   const [km, setKm] = useState(h0 ? (h0.km ?? null) : (sesion.cardio?.km ?? null));
   const [minCardio, setMinCardio] = useState(h0?.minutos ?? sesion.cardio?.minutos ?? null);
+  // (v0.133) Carrera: cómo llegó (el semáforo que eligió al empezar), los segundos (en una carrera o un test), el desnivel
+  // y, con su consentimiento de datos de salud, la FC media y máxima y el dolor
+  const [semaforo, setSemaforo] = useState(h0?.semaforo || leerSemaforo(sesion.id));
+  const [segExtra, setSegExtra] = useState(h0?.seg ?? null);
+  const [desnivel, setDesnivel] = useState(h0?.desnivel ?? null);
+  const [fcMedia, setFcMedia] = useState(h0?.fc_media ?? null);
+  const [fcMax, setFcMax] = useState(h0?.fc_max ?? null);
+  const [dolor, setDolor] = useState(h0?.dolor ?? null);
+  const esCarrera = conCardio && modalidad === 'carrera';
+  const conSegundos = esCarrera && ['carrera', 'test'].includes(sesion.cardio?.tipo);
   const guardarTodo = async () => {
     const cambios = { completada: true, fecha_realizada: fecha > hoy ? hoy : fecha, rpe_sesion: rpe, duracion_min: min, nota_atleta: nota.trim() || null };
     if (conCardio) {
       const minutos = cardioAparte ? minCardio : min;
       if (!minutos) throw new Error('Para el cardio hacen falta los minutos.');
-      const hecho = limpiarCardioHecho({ modalidad, minutos, km });
-      if (!hecho) throw new Error('Revisa los minutos y los kilómetros del cardio.');
+      const extra = esCarrera ? { semaforo, desnivel, ...(conSegundos ? { seg: segExtra } : {}), ...(salud ? { fc_media: fcMedia || null, fc_max: fcMax || null, dolor } : {}) } : {};
+      if (extra.fc_media && extra.fc_max && extra.fc_max < extra.fc_media) throw new Error('La FC máxima no puede ser menor que la media.');
+      const hecho = limpiarCardioHecho({ modalidad, minutos, km, ...extra });
+      if (!hecho) throw new Error(esCarrera ? 'Revisa lo de la carrera: minutos, kilómetros y, si las pones, pulsaciones de 40 a 240.' : 'Revisa los minutos y los kilómetros del cardio.');
       cambios.cardio_hecho = hecho;
     }
     await alGuardar(cambios);
+    olvidarSemaforo(sesion.id);
   };
   return (
     <Hoja titulo={sesion.completada ? 'Valoración de la sesión' : 'Terminar sesión'} alCerrar={alCerrar}>
@@ -1280,6 +1298,28 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
           </div>
           {cardioAparte && <div class="fila-campos"><span class="peq secundario" style="align-self:center">Kilómetros, si los sabes</span><Paso id="t-km" valor={km} paso={0.5} min={0} max={200} dec={1} etiqueta="kilómetros" alCambiar={setKm} /></div>}
           <span class="ayuda">{km && (cardioAparte ? minCardio : min) ? `Ritmo: ${ritmo(cardioAparte ? minCardio : min, km, modalidad)}` : cardioAparte ? 'Minutos de cardio aparte de la sesión; los kilómetros, si los sabes (si no, déjalos a 0).' : 'Kilómetros, si los sabes (si no, déjalo a 0).'}</span>
+        </div>
+      )}
+      {esCarrera && (
+        <div class="campo campos-carrera-hecho">
+          <span class="etq">¿Cómo llegaste?</span>
+          <Segmentos etiqueta="Cómo llegaste" valor={semaforo} alCambiar={(x) => setSemaforo(x === semaforo ? null : x)} opciones={['verde', 'ambar', 'rojo'].map((k) => [k, SEMAFORO[k].titulo])} />
+          {conSegundos && <div class="fila-campos"><span class="peq secundario" style="align-self:center">Y segundos (para tu tiempo exacto)</span><Paso id="t-seg" valor={segExtra} paso={1} min={0} max={59} dec={0} etiqueta="segundos" alCambiar={setSegExtra} /></div>}
+          <details class="mas-carrera" open={!!(h0?.fc_media || h0?.fc_max || h0?.dolor != null || h0?.desnivel)}>
+            <summary class="peq">{salud ? 'Pulsaciones, dolor y desnivel' : 'Desnivel'}</summary>
+            <div class="pila-s">
+              {salud ? <>
+                <div class="fila-campos"><span class="peq secundario" style="align-self:center">FC media</span><Paso id="t-fc-media" valor={fcMedia} paso={1} min={0} max={230} dec={0} etiqueta="pulsaciones medias" alCambiar={setFcMedia} /></div>
+                <div class="fila-campos"><span class="peq secundario" style="align-self:center">FC máxima</span><Paso id="t-fc-max" valor={fcMax} paso={1} min={0} max={240} dec={0} etiqueta="pulsaciones máximas" alCambiar={setFcMax} /></div>
+                <label class="fila-campos" for="t-dolor"><span class="peq secundario" style="align-self:center">Dolor (0 nada, 10 máximo)</span>
+                  <select id="t-dolor" class="selector" value={dolor == null ? '' : String(dolor)} onChange={(e) => setDolor(e.currentTarget.value === '' ? null : Number(e.currentTarget.value))}>
+                    <option value="">—</option>{Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+                  </select></label>
+                <span class="ayuda">Lo ve solo tu coach. Si el dolor pasa de 3, cuéntale dónde en la nota.</span>
+              </> : <span class="ayuda">Para apuntar pulsaciones y dolor hace falta tu consentimiento de datos de salud (en tu perfil).</span>}
+              <div class="fila-campos"><span class="peq secundario" style="align-self:center">Desnivel positivo (m)</span><Paso id="t-desnivel" valor={desnivel} paso={10} min={0} max={10000} dec={0} etiqueta="metros de desnivel" alCambiar={setDesnivel} /></div>
+            </div>
+          </details>
         </div>
       )}
       <div class="campo">
@@ -1334,9 +1374,9 @@ async function calcularResumen(api, atletaId, ejercicios, hechas, cambios, enCol
     grupos.forEach((g, i) => { musculos[g] = (musculos[g] || 0) + (i === 0 ? 1 : 0.5); });
   }
   return {
-    series: series.length, tonelaje, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cambios.cardio_hecho || null, records: Object.values(porEjercicio), enCola, musculos,
+    series: series.length, tonelaje, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cardioHechoPublico(cambios.cardio_hecho), records: Object.values(porEjercicio), enCola, musculos,
     // (compartir) la tarjeta de una sesión de cardio lleva lo hecho (minutos, km y ritmo)
-    tarjeta: { ...datosTarjeta({ ...sesion, ...cambios }, ejercicios, hechas, records, ejerciciosPorId, cambios.duracion_min), cardio: cardioHechoValido(cambios.cardio_hecho) ? cambios.cardio_hecho : null },
+    tarjeta: { ...datosTarjeta({ ...sesion, ...cambios }, ejercicios, hechas, records, ejerciciosPorId, cambios.duracion_min), cardio: cardioHechoPublico(cambios.cardio_hecho) },
   };
 }
 

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Pestanas, Hoja, Icono } from '../comunes.jsx';
 import { sinMovimiento } from '../transiciones.js';
 
-const ICONO = { programa: 'semana', mensajes: 'mensaje', actividad: 'historial', registro: 'hoy', seguimiento: 'progreso', nutricion: 'nutricion', videos: 'video', objetivos: 'diana', notas: 'editar', cobros: 'calculadora', datos: 'perfil' };
+const ICONO = { programa: 'semana', mensajes: 'mensaje', actividad: 'historial', registro: 'hoy', carrera: 'pasos', seguimiento: 'progreso', nutricion: 'nutricion', videos: 'video', objetivos: 'diana', notas: 'editar', cobros: 'calculadora', datos: 'perfil' };
 
 export function SeccionesFicha({ opciones, valor, alCambiar, etiqueta = 'Secciones de la ficha' }) {
   const caja = useRef(null);

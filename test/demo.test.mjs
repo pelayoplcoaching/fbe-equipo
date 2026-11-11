@@ -1532,7 +1532,7 @@ console.log('\nv0.59: los vídeos de técnica, tanda A, en la demo (las mismas r
   {
     const uid = bT.auth.sesion().user.id;
     const pv = async (v) => (await bT.upsert('privacidad_vista', [{ usuario_id: uid, version: v }], 'usuario_id'))[0].version;
-    check(VERSION_LEGAL_D === '2026-12.18' && await aT.versionLegal() === '2026-12.18' && await pv('2026-12.18') === '2026-12.18' && await pv('2026-12.11') === '2026-12.18' && await pv('2026-12.9') === '2026-12.18' && await pv('2026-12') === '2026-12.18' && await pv('2026-11') === '2026-12.18',
+    check(VERSION_LEGAL_D === '2026-12.19' && await aT.versionLegal() === '2026-12.19' && await pv('2026-12.19') === '2026-12.19' && await pv('2026-12.11') === '2026-12.19' && await pv('2026-12.9') === '2026-12.19' && await pv('2026-12') === '2026-12.19' && await pv('2026-11') === '2026-12.19',
       '(M2) en la demo (que tiene la 037, la 043, la 044, la 045 y la 050), la 2026-12.16 (v0.110); nunca hacia atrás, comparando por partes (.12 va después de .11 y de .9)');
     check(await lanza(() => pv('2026-12.0')) && await lanza(() => pv('2026-12.100')) && await lanza(() => pv('2026-12.01')) && await lanza(() => pv('2099-01.1')), '(M2) solo con su formato (revisión de 1 a 99) y de un mes que ya existe');
   }
@@ -1846,7 +1846,7 @@ console.log('\nv0.72: la comunidad, cuarta tanda (las mismas reglas de la 044 en
   await b6.auth.entrar('lucia@fbe.demo', 'demo');
   const lucia = a6.uid();
   const muro = await a6.muro();
-  check(await a6.comunidad044() === true && await a6.versionLegal() === '2026-12.18' && muro.posts.some((x) => x.texto === 'Ya salió zz044') && !muro.posts.some((x) => x.texto === 'Sale luego zz044')
+  check(await a6.comunidad044() === true && await a6.versionLegal() === '2026-12.19' && muro.posts.some((x) => x.texto === 'Ya salió zz044') && !muro.posts.some((x) => x.texto === 'Sale luego zz044')
     && !(await a6.muro({ buscar: 'luego zz044' })).posts.length, 'la demo tiene la 044: lo programado no se ve hasta su hora (ni buscándolo); lo que ya ha salido, sí');
   const [ev] = await a6.eventosComunidad();
   check(ev?.titulo === 'Quedada en el parque: circuito y café' && ev.van.join() === 'Rubén M.' && ev.noVan.join() === 'Carlos V.' && ev.miRespuesta === null && ev.plazas === 12,

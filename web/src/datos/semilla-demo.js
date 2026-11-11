@@ -640,6 +640,9 @@ export function semillaDemo(hoy = hoyISO()) {
     if (ultima) Object.assign(ultima, { cerrada_sola_en: hace(60 * 20), rpe_sesion: null, nota_atleta: null });
     for (const b of db.bloques) if (!('objetivo_logrado' in b)) b.objetivo_logrado = null;
   }
+  // (carrera, 055) Carlos prepara una media maratón: zonas, plan de 19 semanas, sus carreras, revisiones y una sesión de
+  // calidad por partes esta semana (al final: no cambia lo aleatorio de lo anterior)
+  sembrarCarrera(db, { hoy, lunesHoy, carlos, ahoraISO });
   return db;
 
   // v0.53 (al final: no cambia lo aleatorio de lo anterior): Iván va por microciclos de 4 sesiones (torso-pierna A y B)
@@ -946,3 +949,67 @@ function sembrarSocial(db, { hoy, hace, lunesHoy, ruben, carlos }) {
   if (lucia) db.comunidad_votos_semana.push({ semana: pasada, de: lucia.perfil_id, para: ruben.perfil_id, de_atleta: lucia.id, para_atleta: ruben.id, creado_en: hace(60 * 24 * 3) });
   db.comunidad_votos_semana.push({ semana: pasada, de: ruben.perfil_id, para: carlos.perfil_id, de_atleta: ruben.id, para_atleta: carlos.id, creado_en: hace(60 * 24 * 3) });
 }
+
+// (carrera, 055) Las sesiones de calidad de partida de la biblioteca del coach (las mismas que pone la migración 055)
+export const RECETAS_CARRERA = [
+  ['Rodaje fácil con strides', { modalidad: 'carrera', tipo: 'facil', minutos: 40, zona: 2, partes: [{ fase: 'bloque', seg: 2100, zona: 2, nota: 'Cómodo: puedes hablar con frases largas' }, { fase: 'strides', reps: 6, seg: 20, rec_seg: 60, rec: 'andando', nota: 'Rápidos y sueltos, sin apretar' }] }],
+  ['Cuestas cortas 6 × 15 s', { modalidad: 'carrera', tipo: 'calidad', minutos: 40, partes: [{ fase: 'calentar', seg: 900, zona: 1, zona_hasta: 2 }, { fase: 'bloque', reps: 6, seg: 15, zona: 5, rec_seg: 90, rec: 'bajando andando', nota: 'Cuesta del 6 al 8 %: fuerte y con buena técnica' }, { fase: 'enfriar', seg: 600, zona: 1 }] }],
+  ['Umbral 2 × 6 min', { modalidad: 'carrera', tipo: 'calidad', minutos: 45, zona: 4, partes: [{ fase: 'calentar', seg: 900, zona: 1, zona_hasta: 2 }, { fase: 'strides', reps: 4, seg: 20, rec_seg: 60, rec: 'andando' }, { fase: 'bloque', reps: 2, seg: 360, zona: 4, rec_seg: 120, rec: 'trote suave' }, { fase: 'enfriar', seg: 600, zona: 1 }] }],
+  ['Umbral 3 × 6 min', { modalidad: 'carrera', tipo: 'calidad', minutos: 50, zona: 4, partes: [{ fase: 'calentar', seg: 900, zona: 1, zona_hasta: 2 }, { fase: 'bloque', reps: 3, seg: 360, zona: 4, rec_seg: 120, rec: 'trote suave' }, { fase: 'enfriar', seg: 600, zona: 1 }] }],
+  ['Umbral 2 × 12 min', { modalidad: 'carrera', tipo: 'calidad', minutos: 55, zona: 4, partes: [{ fase: 'calentar', seg: 900, zona: 1, zona_hasta: 2 }, { fase: 'bloque', reps: 2, seg: 720, zona: 4, rec_seg: 180, rec: 'trote suave' }, { fase: 'enfriar', seg: 600, zona: 1 }] }],
+  ['Fartlek 6 × 2 min', { modalidad: 'carrera', tipo: 'calidad', minutos: 45, zona: 3, zona_hasta: 4, partes: [{ fase: 'calentar', seg: 900, zona: 1, zona_hasta: 2 }, { fase: 'bloque', reps: 6, seg: 120, zona: 3, zona_hasta: 4, rec_seg: 120, rec: 'trote en Z1' }, { fase: 'enfriar', seg: 600, zona: 1 }] }],
+  ['Tirada larga con final a ritmo', { modalidad: 'carrera', tipo: 'larga', minutos: 75, minutos_max: 90, zona: 2, partes: [{ fase: 'bloque', seg: 3900, zona: 2, nota: 'Suave y constante' }, { fase: 'bloque', seg: 600, zona: 3, nota: 'Los últimos 10 min, a ritmo de carrera' }] }],
+  ['2 × 2 km a ritmo objetivo', { modalidad: 'carrera', tipo: 'calidad', minutos: 45, zona: 3, partes: [{ fase: 'calentar', seg: 900, zona: 1, zona_hasta: 2 }, { fase: 'bloque', reps: 2, m: 2000, zona: 3, rec_seg: 180, rec: 'trote suave', nota: 'A tu ritmo de carrera objetivo' }, { fase: 'enfriar', seg: 600, zona: 1 }] }],
+  ['2 × 3 km a ritmo objetivo', { modalidad: 'carrera', tipo: 'calidad', minutos: 55, zona: 3, partes: [{ fase: 'calentar', seg: 900, zona: 1, zona_hasta: 2 }, { fase: 'bloque', reps: 2, m: 3000, zona: 3, rec_seg: 180, rec: 'trote suave', nota: 'A tu ritmo de carrera objetivo' }, { fase: 'enfriar', seg: 600, zona: 1 }] }],
+  ['Test de umbral de 30 min', { modalidad: 'carrera', tipo: 'test', minutos: 55, partes: [{ fase: 'calentar', seg: 900, zona: 1, zona_hasta: 2 }, { fase: 'bloque', seg: 1800, nota: 'Solo, en llano y lo más fuerte que puedas mantener 30 min. Pulsa vuelta a los 10 min: la FC media de los últimos 20 es tu umbral' }, { fase: 'enfriar', seg: 600, zona: 1 }] }],
+];
+
+function sembrarCarrera(db, { hoy, lunesHoy, carlos, ahoraISO }) {
+  const id = () => crypto.randomUUID();
+  Object.assign(db, { carrera_atleta: [], carrera_eventos: [], carrera_semanas: [], carrera_revisiones: [] });
+  db.carrera_recetas = RECETAS_CARRERA.map(([nombre, pauta], i) => ({ id: id(), nombre, pauta, orden: i + 1, creado_en: ahoraISO }));
+  for (const a of db.atletas) a.carrera ??= false;
+  if (!carlos) return;
+  carlos.carrera = true;
+  const inicio = sumarDias(lunesHoy, -7 * 5);   // hoy va por la semana 6 del plan
+  db.carrera_atleta.push({ atleta_id: carlos.id, lthr: 176, fc_max: 190, fc_reposo: 54, test_fecha: sumarDias(lunesHoy, -7 * 4 + 2), test_tipo: 'friel30', zonas: null, umbral: [320, 330],
+    plan_nombre: 'Media maratón de primavera', plan_inicio: inicio, ventanas: 2,
+    fases: [{ nombre: 'Base', semanas: 6, nota: 'Volumen suave y técnica' }, { nombre: 'Construir', semanas: 5 }, { nombre: 'Específico', semanas: 4 }, { nombre: 'Afinar', semanas: 2 }, { nombre: 'Taper', semanas: 2 }],
+    nota: 'La fuerza manda: dos días de fuerza y dos de carrera. Si un día hay que quitar algo, que sea la carrera fácil. Semana A, más pierna; semana B, más torso.', actualizado_en: ahoraISO });
+  const domingoFinal = sumarDias(inicio, 19 * 7 - 1);
+  db.carrera_eventos.push(
+    { id: id(), atleta_id: carlos.id, nombre: 'Media maratón de primavera', fecha: domingoFinal, distancia_km: 21.1, desnivel_m: null, prioridad: 'A', decision: 'va', objetivo_seg: 6900, objetivo_ritmo: null, nota: 'Salir a 5:30 y, si a mitad va bien, apretar en los últimos 5 km.', resultado_seg: null, resultado_nota: null, creado_en: ahoraISO },
+    { id: id(), atleta_id: carlos.id, nombre: '10K del barrio', fecha: sumarDias(lunesHoy, 7 * 3 + 6), distancia_km: 10, desnivel_m: null, prioridad: 'B', decision: 'va', objetivo_seg: 3120, objetivo_ritmo: null, nota: 'De test: ritmo controlado y a ver cómo responde.', resultado_seg: null, resultado_nota: null, creado_en: ahoraISO },
+    { id: id(), atleta_id: carlos.id, nombre: 'Trail de otoño', fecha: sumarDias(lunesHoy, -7 * 2 - 1), distancia_km: 14, desnivel_m: 450, prioridad: 'C', decision: 'no', objetivo_seg: null, objetivo_ritmo: null, nota: 'Coincidía con la semana de descarga: mejor no.', resultado_seg: null, resultado_nota: null, creado_en: ahoraISO });
+  const S = (n, etiqueta, kmin, kmax, ab, clave, sesiones) => db.carrera_semanas.push({ atleta_id: carlos.id, lunes: sumarDias(inicio, 7 * (n - 1)), etiqueta, km_min: kmin, km_max: kmax, ab, clave, nota: null, sesiones, actualizado_en: ahoraISO });
+  const facil = (dia, min, max) => ({ tipo: 'facil', titulo: 'Rodaje fácil', dia, minutos: min, minutos_max: max, zona: 2 });
+  const receta = (nombre, dia) => { const [n, p] = RECETAS_CARRERA.find(([x]) => x === nombre); const { modalidad, ...resto } = p; return { ...resto, titulo: n, dia }; };
+  S(1, 'Arranque', 10, 12, 'A', 'Solo rodar: que el cuerpo se acostumbre.', [facil(3, 25, 30), facil(6, 30, 35)]);
+  S(2, null, 11, 13, 'B', null, [facil(3, 30, 35), facil(6, 35, 40)]);
+  S(3, 'Test', 12, 14, 'A', 'El test de umbral el sábado, descansado.', [facil(3, 30, 35), receta('Test de umbral de 30 min', 6)]);
+  S(4, 'Descarga', 8, 10, 'B', 'Semana suave: menos km y nada de intensidad.', [facil(3, 25, 30), { tipo: 'descanso', titulo: 'Descanso', dia: 6 }]);
+  S(5, null, 13, 15, 'A', null, [receta('Rodaje fácil con strides', 3), facil(6, 40, 45)]);
+  S(6, '1.a calidad', 14, 16, 'B', 'Que la calidad salga controlada: mejor quedarse corto que pasarse.', [receta('Umbral 2 × 6 min', 3), receta('Tirada larga con final a ritmo', 6)]);
+  S(7, null, 15, 17, 'A', null, [receta('Fartlek 6 × 2 min', 3), facil(6, 50, 60)]);
+  S(8, '10K', 12, 14, 'B', 'El domingo, la 10K de test: el resto de la semana, suave.', [facil(2, 30, 35), { tipo: 'carrera', titulo: '10K del barrio', dia: 7, km: 10, nota: 'Ritmo controlado' }]);
+  db.carrera_revisiones.push(
+    { id: id(), atleta_id: carlos.id, fecha: sumarDias(lunesHoy, -7 * 2 + 1), titulo: 'Tolerancia al volumen', criterio: 'Sin dolor al día siguiente y la fuerza estable', decision: 'Seguimos: se sube un 10 % la semana que viene.', estado: 'verde', creado_en: ahoraISO },
+    { id: id(), atleta_id: carlos.id, fecha: sumarDias(lunesHoy, 7 + 1), titulo: 'Primera calidad a umbral', criterio: 'Las dos series en Z4 sin pasarse de 180', decision: null, estado: 'pendiente', creado_en: ahoraISO });
+  // Sus rodajes hechos: con el semáforo y la FC (tiene el consentimiento de datos de salud)
+  const bloques = new Set(db.bloques.filter((x) => x.atleta_id === carlos.id).map((x) => x.id));
+  const semanas = db.semanas.filter((w) => bloques.has(w.bloque_id));
+  const ids = new Set(semanas.map((w) => w.id));
+  db.sesiones.filter((x) => ids.has(x.semana_id) && x.completada && x.cardio_hecho?.modalidad === 'carrera').forEach((x, i) => {
+    Object.assign(x.cardio_hecho, { semaforo: i % 3 === 2 ? 'ambar' : 'verde', fc_media: 150 + (i % 4) * 2, fc_max: 168 + (i % 3) * 3, dolor: i % 3 === 2 ? 2 : 0 });
+  });
+  // Y esta semana, la sesión de calidad del plan (por partes), pasada a su semana de entreno
+  const actual = semanas.find((w) => w.fecha_inicio === lunesHoy);
+  if (actual) {
+    const orden = Math.max(0, ...db.sesiones.filter((x) => x.semana_id === actual.id).map((x) => x.orden)) + 1;
+    const [, pauta] = RECETAS_CARRERA.find(([x]) => x === 'Umbral 2 × 6 min');
+    db.sesiones.push({ id: id(), semana_id: actual.id, orden, nombre: 'Umbral 2 × 6 min', tipo: 'cardio', intencion: null, dinamica: null, cardio: JSON.parse(JSON.stringify(pauta)), cardio_hecho: null,
+      fecha_realizada: null, completada: false, nota_atleta: null, duracion_min: null, rpe_sesion: null, revisada_en: null, dia_previsto: sumarDias(lunesHoy, 2) });
+  }
+  void hoy;
+}
+

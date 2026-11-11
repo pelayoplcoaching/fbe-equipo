@@ -11,6 +11,8 @@ import { MODALIDADES, limpiarCardio, textoCardio, palabrasEsfuerzo } from '../..
 import { teclaEnRejilla } from '../rejilla.js';
 import { ProgramarFBE, semanasParaProgramar } from './ProgramarFBE.jsx';
 import { CampoMusica } from './PersonalCoach.jsx';
+import { PlanCarreraSemana, CamposCarreraPauta } from './CarreraCoach.jsx';
+import { zonasFC } from '../../logica/carrera.js';
 
 const DESCANSOS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
 const ESTADOS_BLOQUE = [['planificado', 'Planificado'], ['activo', 'Activo'], ['ajustado', 'Ajustado'], ['finalizado', 'Finalizado'], ['cancelado', 'Cancelado']];
@@ -19,9 +21,12 @@ const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/
 const nulo = (v) => (v === '' || v === undefined ? null : v);
 
 // Editor de un bloque (de un atleta o plantilla): semanas, sesiones y prescripción, con guardado al salir de cada campo.
-export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBloque, volumenObjetivo = null, nivel = null }) {
+export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBloque, volumenObjetivo = null, nivel = null, carreraDe = null }) {
   const { api, aviso } = useApp();
   const carga = useCarga(() => api.bloqueCompleto(bloqueId), [bloqueId]);
+  // (v0.133) Con la carrera encendida: sus zonas (para las partes) y el plan de la semana que se edita
+  const carrera = useCarga(() => (carreraDe ? api.carrera(carreraDe).catch(() => null) : Promise.resolve(null)), [carreraDe]);
+  const zonasCarrera = useMemo(() => (carrera.datos?.perfil ? zonasFC(carrera.datos.perfil) : null), [carrera.datos]);
   const biblioteca = useCarga(() => api.biblioteca(), []);
   const [d, setD] = useState(null);
   const [semanaId, setSemanaId] = useState(null);
@@ -226,6 +231,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         </div>
       )}
 
+      {semana && carreraDe && !bloque.es_plantilla && <PlanCarreraSemana carrera={carrera.datos} semana={semana} sesiones={sesiones} estructura={estructura} />}
       {semana && <VolumenSemana pautas={sesiones.flatMap((s) => d.pautas[s.id] || [])} ejercicios={ejercicios} objetivo={bloque.es_plantilla ? null : volumenObjetivo} />}
       {semana && nivel && !bloque.es_plantilla && (
         <p class="peq secundario aviso-nivel"><Icono n="diana" /><span><strong>Nivel {NOMBRE_NIVEL[nivel].toLowerCase()}:</strong> {AYUDA_NIVEL[nivel].charAt(0).toLowerCase() + AYUDA_NIVEL[nivel].slice(1)}.
@@ -233,7 +239,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       )}
 
       {semana && sesiones.map((s) => (
-        <EditorSesion key={`${s.id}-${version}`} sesion={s} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} notasAtleta={notasAtleta.datos || {}}
+        <EditorSesion key={`${s.id}-${version}`} sesion={s} conCarrera={!!carreraDe && !bloque.es_plantilla} zonasCarrera={zonasCarrera} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} notasAtleta={notasAtleta.datos || {}}
           guardar={guardar} guardarDetalle={guardarDetalle} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
           corregirVariante={['finalizado', 'cancelado'].includes(bloque.estado) ? null : async (p, nuevo) => {
             await estructura(() => api.corregirVariante({ bloqueId: bloque.id, ejercicioId: p.ejercicio_id, variante: p.variante, nuevoEjercicioId: nuevo?.id || null }),
@@ -428,11 +434,17 @@ function VolumenSemana({ pautas, ejercicios, objetivo }) {
 }
 
 // La pauta de cardio de una sesión: modalidad, minutos u objetivo de km, esfuerzo objetivo y una nota. Se guarda al salir de cada campo.
-function PautaCardio({ sesion, guardar }) {
+// (v0.133) Con la carrera: el tipo, los rangos, la zona, si es opcional y sus partes (calentar, bloque, enfriar…)
+const carreraDePauta = (x = {}) => ({ tipo: x.tipo || null, minutos_max: x.minutos_max ?? '', km_max: x.km_max ?? '', zona: x.zona ?? null, zona_hasta: x.zona_hasta ?? null, opcional: !!x.opcional, partes: x.partes || [] });
+const tieneCarrera = (x) => !!x && ['tipo', 'minutos_max', 'km_max', 'zona', 'partes', 'opcional'].some((k) => k in x);
+function PautaCardio({ sesion, guardar, conCarrera = false, zonas = null }) {
+  const { api, aviso } = useApp();
   const c = sesion.cardio || {};
-  const [f, setF] = useState({ modalidad: c.modalidad || 'carrera', minutos: c.minutos ?? '', km: c.km ?? '', esfuerzo: c.esfuerzo ?? '', nota: c.nota || '' });
+  const [f, setF] = useState({ modalidad: c.modalidad || 'carrera', minutos: c.minutos ?? '', km: c.km ?? '', esfuerzo: c.esfuerzo ?? '', nota: c.nota || '', carrera: carreraDePauta(c) });
   const [error, setError] = useState(null);
-  useEffect(() => { const x = sesion.cardio || {}; setF({ modalidad: x.modalidad || 'carrera', minutos: x.minutos ?? '', km: x.km ?? '', esfuerzo: x.esfuerzo ?? '', nota: x.nota || '' }); }, [sesion.id]);
+  const [aBiblioteca, setABiblioteca] = useState(null);  // el nombre con que se guarda en la biblioteca de carrera
+  useEffect(() => { const x = sesion.cardio || {}; setF({ modalidad: x.modalidad || 'carrera', minutos: x.minutos ?? '', km: x.km ?? '', esfuerzo: x.esfuerzo ?? '', nota: x.nota || '', carrera: carreraDePauta(x) }); }, [sesion.id]);
+  const verCarrera = f.modalidad === 'carrera' && (conCarrera || tieneCarrera(sesion.cardio));
   const fijar = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
   const enviar = (nuevo = f) => {
     const { pauta, error: err } = limpiarCardio(nuevo);
@@ -455,6 +467,19 @@ function PautaCardio({ sesion, guardar }) {
       </div>
       <label class="campo"><span class="etq">Nota del cardio</span>
         <input class="entrada" placeholder="Llano, sin cuestas; si puedes, al aire libre" maxLength={300} value={f.nota} onInput={fijar('nota')} onBlur={() => enviar()} /></label>
+      {verCarrera && <CamposCarreraPauta f={f} setF={setF} enviar={enviar} zonas={zonas} alGuardarReceta={sesion.cardio?.partes?.length ? () => setABiblioteca(sesion.nombre.slice(0, 80)) : null} />}
+      {aBiblioteca != null && (
+        <Hoja titulo="Guardar en tu biblioteca" alCerrar={() => setABiblioteca(null)}>
+          <form class="pila" onSubmit={async (e) => {
+            e.preventDefault();
+            try { await api.guardarCarreraReceta({ nombre: aBiblioteca, pauta: sesion.cardio }); aviso('Guardada en tu biblioteca de carrera'); setABiblioteca(null); } catch (err) { aviso(err.message, 'error'); }
+          }}>
+            <label class="campo"><span class="etq">Nombre</span><input class="entrada" required maxLength={80} value={aBiblioteca} onInput={(e) => setABiblioteca(e.currentTarget.value)} /></label>
+            <p class="mini terciario">Se guarda la pauta tal cual (tipo, minutos, zona y partes), para usarla en otras sesiones con «Desde la biblioteca».</p>
+            <button class="btn btn-primario">Guardar</button>
+          </form>
+        </Hoja>
+      )}
       {error ? <span class="error-campo">{error}</span>
         : sesion.cardio ? <span class="mini terciario">El atleta verá: «{textoCardio(sesion.cardio)}»{sesion.cardio.esfuerzo ? ` (${palabrasEsfuerzo(sesion.cardio.esfuerzo)})` : ''}. Al terminar apuntará minutos, kilómetros y esfuerzo.</span>
         : <span class="mini terciario">Pon los minutos o los kilómetros: el atleta lo verá en su sesión y apuntará lo que haga.</span>}
@@ -512,7 +537,7 @@ function DetalleSeries({ pauta, hechas = [], alGuardar }) {
 // «25×10 @8», «12 reps @7» (sin kilos) o «25×10» (sin RPE)
 const textoSerieHecha = (x) => `${x.kg != null ? `${num(x.kg, 2)}×${x.reps ?? '–'}` : `${x.reps ?? '–'} reps`}${x.rpe != null ? ` @${num(x.rpe, 1)}` : ''}`;
 
-function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, notasAtleta = {} }) {
+function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, notasAtleta = {}, conCarrera = false, zonasCarrera = null }) {
   const { api } = useApp();
   const lista = useMemo(() => Object.values(ejercicios), [ejercicios]);
   const numero = (pautaId, campo, dec = false) => (e) => {
@@ -550,7 +575,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
         onChange={(e) => guardar('sesiones', sesion.id, { dinamica: nulo(e.currentTarget.value.trim()) })} />
       {/* (v0.104) la música de esta sesión (una lista, un álbum o un episodio para el cardio largo) */}
       <CampoMusica clave={`sesion:${sesion.id}`} etiqueta="Música de la sesión" />
-      {(sesion.tipo === 'cardio' || sesion.cardio || conCardio) ? <PautaCardio sesion={sesion} guardar={guardar} />
+      {(sesion.tipo === 'cardio' || sesion.cardio || conCardio) ? <PautaCardio sesion={sesion} guardar={guardar} conCarrera={conCarrera} zonas={zonasCarrera} />
         : <button class="btn-texto" style="justify-self:start" onClick={() => setConCardio(true)}><Icono n="intervalos" /> Añadir cardio al final</button>}
       {pautas.length > 0 && (
         <div class="tabla-pauta-env">

@@ -273,7 +273,7 @@ function CobroPanel({ c, enLinea = false }) {
 
 function NuevoAtleta({ alCerrar }) {
   const { api } = useApp();
-  const [f, setF] = useState({ nombre: '', email: '', objetivo: '', notion_url: '', servicio: 'completo', nivel: null });
+  const [f, setF] = useState({ nombre: '', email: '', objetivo: '', notion_url: '', servicio: 'completo', nivel: null, carrera: false });
   const [error, setError] = useState(null);
   const [creado, setCreado] = useState(null);
   const [ocupado, una] = useUnaVez();
@@ -285,7 +285,7 @@ function NuevoAtleta({ alCerrar }) {
         e.preventDefault();
         una(async () => {
           try {
-            const a = await api.crearAtleta({ nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null, ...CAMPOS_SERVICIO[f.servicio], nivel: f.servicio === 'nutricion' ? null : f.nivel });
+            const a = await api.crearAtleta({ nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null, ...CAMPOS_SERVICIO[f.servicio], nivel: f.servicio === 'nutricion' ? null : f.nivel, carrera: f.servicio !== 'nutricion' && f.carrera });
             setCreado(a);
           } catch (err) { setError(err.message); }
         });
@@ -299,6 +299,10 @@ function NuevoAtleta({ alCerrar }) {
         {f.servicio !== 'nutricion' && <div class="campo"><span class="etq">Nivel</span>
           <Segmentos etiqueta="Nivel" clase="segmentos-nivel" valor={f.nivel} opciones={NIVELES} alCambiar={(v) => setF({ ...f, nivel: v })} />
           <span class="ayuda">{f.nivel ? AYUDA_NIVEL[f.nivel] : 'Decide cómo pautas la carga en el editor. Puedes elegirlo después, en Datos.'}</span></div>}
+        {f.servicio !== 'nutricion' && <label class="campo campo-check-largo" for="na-carrera">
+          <input id="na-carrera" type="checkbox" role="switch" class="interruptor" checked={f.carrera} onChange={(e) => setF({ ...f, carrera: e.currentTarget.checked })} />
+          <span class="pila-xs"><span>También le llevas la carrera</span><span class="ayuda">Zonas, plan por semanas, sesiones por partes y revisiones. Lo puedes cambiar después, en Datos.</span></span>
+        </label>}
         <div class="campo"><label for="na-obj">Objetivo</label><input id="na-obj" class="entrada" value={f.objetivo} onInput={cambiar('objetivo')} placeholder="Ganar fuerza y bajar 3 kg" /></div>
         <div class="campo"><label for="na-notion">Su página de Notion</label><input id="na-notion" class="entrada" type="url" value={f.notion_url} onInput={cambiar('notion_url')} placeholder="https://notion.so/…" /><span class="ayuda">La verá en su perfil para la alimentación y los recursos hasta que pasen a la app.</span></div>
         <button class="btn btn-primario btn-grande" disabled={ocupado}>{ocupado ? 'Creando…' : 'Crear y generar código'}</button>

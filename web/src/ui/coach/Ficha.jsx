@@ -37,11 +37,14 @@ import { estadoAtleta, NOMBRE_ESTADO } from '../../logica/visual.js';
 import { ordenReal } from '../../logica/orden-sesion.js';
 import { LoSuyo } from './PersonalCoach.jsx';
 import { SaludDelMovil, ContactoAtleta } from './Integraciones.jsx';
+import { CarreraFicha } from './CarreraCoach.jsx';
+import { conCarrera } from '../../logica/carrera.js';
 
 // Las de entrenamiento, fuera a quien solo le llevas la nutrición (v0.26); Nutrición, a quien solo el entrenamiento
 const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
-const PESTANAS = [['programa', 'Programa'], ['mensajes', 'Mensajes'], ['actividad', 'Actividad'], ['registro', 'Registro'], ['seguimiento', 'Seguimiento'], ['nutricion', 'Nutrición'], ['videos', 'Vídeos y fotos'], ['objetivos', 'Objetivos'], ['notas', 'Notas'], ['cobros', 'Cobros'], ['datos', 'Datos']];
-export const pestanasFicha = (a) => PESTANAS.filter(([k]) => (conNutricion(a) || k !== 'nutricion') && (conEntrenamiento(a) || !DE_ENTRENAMIENTO.includes(k)));
+const PESTANAS = [['programa', 'Programa'], ['mensajes', 'Mensajes'], ['actividad', 'Actividad'], ['registro', 'Registro'], ['carrera', 'Carrera'], ['seguimiento', 'Seguimiento'], ['nutricion', 'Nutrición'], ['videos', 'Vídeos y fotos'], ['objetivos', 'Objetivos'], ['notas', 'Notas'], ['cobros', 'Cobros'], ['datos', 'Datos']];
+// (v0.133) Carrera, solo a quien se la llevas
+export const pestanasFicha = (a) => PESTANAS.filter(([k]) => (conNutricion(a) || k !== 'nutricion') && (conEntrenamiento(a) || !DE_ENTRENAMIENTO.includes(k)) && (k !== 'carrera' || conCarrera(a)));
 
 export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambiar, resumenInicial = null }) {
   const { api } = useApp();
@@ -60,7 +63,8 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
     if (!a) return;
     if (!conNutricion(a) && pest === 'nutricion') setPest('datos');
     else if (!conEntrenamiento(a) && DE_ENTRENAMIENTO.includes(pest)) setPest('nutricion');
-  }, [a?.nutricion, a?.entrenamiento, pest]);
+    else if (!conCarrera(a) && pest === 'carrera') setPest('datos');
+  }, [a?.nutricion, a?.entrenamiento, a?.carrera, pest]);
 
   return (
     <div class="contenido coach">
@@ -93,6 +97,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           )}
           {pest === 'actividad' && <Actividad atleta={a} irA={setPest} />}
           {pest === 'registro' && <Registro atleta={a} alCambiar={alCambiar} />}
+          {pest === 'carrera' && conCarrera(a) && <CarreraFicha atleta={a} />}
           {pest === 'seguimiento' && <><SaludDelMovil atleta={a} /><Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} /></>}
           {pest === 'nutricion' && (conNutricion(a) ? <NutricionFicha atleta={a} /> : <SinNutricion irADatos={() => setPest('datos')} />)}
           {pest === 'videos' && <><MiTecnica atletaId={a.id} nombreAtleta={a.nombre} esCoach /><Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} /></>}
@@ -153,7 +158,7 @@ function Programa({ atleta }) {
         <div class="panel"><Vacio ilustracion="plantillas" titulo="Sin bloques todavía" accion={<button class="btn btn-primario" onClick={() => setNuevo(true)}>Crear su primer bloque</button>}>
           Crea un bloque desde una plantilla o desde cero. El atleta verá las semanas que publiques.
         </Vacio></div>
-      ) : bloqueId && <EditorBloque key={bloqueId} bloqueId={bloqueId} volumenObjetivo={atleta.volumen_objetivo} nivel={atleta.nivel || null} alBorrar={() => { setBloqueId(null); bloques.recargar(true); }} alCambiarBloque={() => bloques.recargar(true)} />}
+      ) : bloqueId && <EditorBloque key={bloqueId} bloqueId={bloqueId} volumenObjetivo={atleta.volumen_objetivo} nivel={atleta.nivel || null} carreraDe={conCarrera(atleta) ? atleta.id : null} alBorrar={() => { setBloqueId(null); bloques.recargar(true); }} alCambiarBloque={() => bloques.recargar(true)} />}
       {nuevo && <NuevoBloque atleta={atleta} bloques={lista} alCerrar={(id) => { setNuevo(false); if (id) { setBloqueId(id); bloques.recargar(true); } }} />}
     </div>
   );
@@ -635,6 +640,14 @@ function ServicioYNivel({ atleta, recargar }) {
           }} />
         <span class="mini terciario">{AYUDA[servicio]}</span>
       </div>
+      {conEntrenamiento(atleta) && <div class="pila-s campo-carrera-servicio">
+        <label class="fila-envolver interruptor-linea" for="d-carrera">
+          <span class="pila-xs" style="flex:1;min-width:0"><span class="peq">También le llevas la carrera</span>
+            <span class="mini terciario">{atleta.carrera ? 'Ve «Tu carrera» (zonas, carreras, plan y revisiones) y sus sesiones de carrera por partes. En la ficha tienes la pestaña Carrera.' : 'Para quien prepara una carrera a la vez que la fuerza: zonas, plan por semanas, sesiones por partes, semáforo y revisiones.'}</span></span>
+          <input id="d-carrera" type="checkbox" role="switch" class="interruptor" checked={!!atleta.carrera} disabled={ocupado}
+            onChange={(e) => guardar({ carrera: e.currentTarget.checked }, e.currentTarget.checked ? 'Carrera encendida: ya ve «Tu carrera»' : 'Carrera apagada: lo que tenía se guarda')} />
+        </label>
+      </div>}
       {conEntrenamiento(atleta) && <div class="pila-s">
         <span class="peq">Nivel</span>
         <Segmentos etiqueta="Nivel" clase="segmentos-nivel" valor={atleta.nivel || null} opciones={NIVELES}

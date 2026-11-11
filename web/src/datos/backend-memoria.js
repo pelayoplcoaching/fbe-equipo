@@ -7,7 +7,8 @@ import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
-import { cardioValido, cardioHechoValido } from '../logica/cardio.js';
+import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
+import { fasesValidas, semanaPlanValida } from '../logica/carrera.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
 import { fechaMadrid as fMadrid, instanteMadrid, partesMadrid } from '../logica/fechas.js';
 import { emojiValido } from '../logica/emojis.js';
@@ -106,6 +107,12 @@ const DEFECTOS = {
   comunidad_eventos: () => ({ descripcion: null, plazas: null, cancelado_en: null, creado_en: ahora(), actualizado_en: ahora(), creado_por: null }),
   comunidad_plantillas: () => ({ creado_en: ahora() }),
   comunidad_retos: () => ({ descripcion: null, modo: 'individual', medida: 'sesiones', equipos: null, creado_en: ahora() }),
+  // Como la 055: la carrera de cada atleta, sus carreras, las semanas del plan, las revisiones y la biblioteca del coach
+  carrera_atleta: () => ({ lthr: null, fc_max: null, fc_reposo: null, test_fecha: null, test_tipo: null, zonas: null, umbral: null, plan_nombre: null, plan_inicio: null, fases: null, ventanas: null, nota: null, actualizado_en: ahora() }),
+  carrera_eventos: () => ({ distancia_km: null, desnivel_m: null, prioridad: 'B', decision: 'va', objetivo_seg: null, objetivo_ritmo: null, nota: null, resultado_seg: null, resultado_nota: null, creado_en: ahora() }),
+  carrera_semanas: () => ({ etiqueta: null, km_min: null, km_max: null, ab: null, clave: null, nota: null, sesiones: [], actualizado_en: ahora() }),
+  carrera_revisiones: () => ({ criterio: null, decision: null, estado: 'pendiente', creado_en: ahora() }),
+  carrera_recetas: () => ({ orden: 0, creado_en: ahora() }),
 };
 
 // Borrados en cascada, como en el esquema SQL.
@@ -122,7 +129,8 @@ const CASCADA = {
     ['comunidad_companeros', 'de_atleta_id'], ['comunidad_companeros', 'para_atleta_id'], ['comunidad_reto_equipos', 'atleta_id'], ['comunidad_evento_asistentes', 'atleta_id'], ['comunidad_destacados', 'atleta_id'], ['tareas', 'atleta_id'], ['conversacion_estado', 'atleta_id'],
     ['conversacion_fijado', 'atleta_id'], ['chat_silencios', 'atleta_id'], ['listas_difusion_miembros', 'atleta_id'], ['encuestas_chat', 'atleta_id'], ['encuesta_votos', 'atleta_id'], ['video_revisiones', 'atleta_id'],
     ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id'], ['revisiones_semanales', 'atleta_id'],
-    ['integraciones', 'atleta_id'], ['salud_diaria', 'atleta_id'], ['contacto_atleta', 'atleta_id'], ['salud_copias', 'atleta_id']],
+    ['integraciones', 'atleta_id'], ['salud_diaria', 'atleta_id'], ['contacto_atleta', 'atleta_id'], ['salud_copias', 'atleta_id'],
+    ['carrera_atleta', 'atleta_id'], ['carrera_eventos', 'atleta_id'], ['carrera_semanas', 'atleta_id'], ['carrera_revisiones', 'atleta_id']],
   // Como la 035: la corrección se va con su vídeo; la lista de puntos clave, con su ejercicio
   archivos: [['video_revisiones', 'archivo_id'], ['video_autoevaluacion', 'archivo_id']],
   ejercicios: [['tecnica_plantillas', 'ejercicio_id'], ['recordatorios_tecnica', 'ejercicio_id'], ['frases_correccion', 'ejercicio_id'], ['videos_modelo', 'ejercicio_id'], ['umbrales_velocidad', 'ejercicio_id']],
@@ -163,7 +171,7 @@ const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
 const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
-  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales'];
+  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_semanas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
 const EMOJIS_CHAT = ['❤️', '👍', '💪', '😂', '😮', '🙏'];
 const CUPO_CHAT = { reaccion: 120, destacar: 120, edicion: 30, eliminar: 30, presencia: 30, silenciar: 30, voto: 120, autoevaluacion: 30 };
@@ -344,6 +352,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     umbrales_velocidad: () => esCoach(),
     // Como la 040: la revisión semanal, solo el coach
     revisiones_semanales: () => esCoach(),
+    // Como la 055: lo de carrera, el coach y su atleta (la biblioteca de recetas, solo el coach)
+    carrera_atleta: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    carrera_eventos: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    carrera_semanas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    carrera_revisiones: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    carrera_recetas: () => esCoach(),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
@@ -822,6 +836,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'sesiones' && !esCoach() && c.fecha_realizada && c.fecha_realizada > sumar(fechaMadrid(), 1)) {
       throw new Error('La fecha de la sesión no puede ser posterior a hoy: elige el día en que la hiciste');
     }
+    // Como la 055: la FC y el dolor que apunta el atleta, solo con su consentimiento de datos de salud
+    if (t === 'sesiones' && !esCoach() && c.cardio_hecho && typeof c.cardio_hecho === 'object' && ['fc_media', 'fc_max', 'dolor'].some((k) => k in c.cardio_hecho)
+      && !consentimientoDe(miAtletaId())) {
+      c.cardio_hecho = { ...c.cardio_hecho };
+      for (const k of ['fc_media', 'fc_max', 'dolor']) delete c.cardio_hecho[k];
+    }
     if (!esCoach()) {
       // Como la migración 008: planificar el día no deja la sesión pendiente de revisar
       if (t === 'sesiones') { if (Object.keys(c).some((k) => k !== 'dia_previsto' && k !== 'revisada_en')) c.revisada_en = null; else delete c.revisada_en; }
@@ -1059,6 +1079,18 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && entre(n(f.rpe), 1, 10) && entre(n(f.rir), 0, 10),
     // Como la migración 013: la pauta de cardio y lo hecho, con su forma exacta
     sesiones: (f) => (f.cardio == null || cardioValido(f.cardio)) && (f.cardio_hecho == null || cardioHechoValido(f.cardio_hecho)),
+    // Como la 055
+    carrera_atleta: (f) => entre(n(f.lthr), 100, 230) && entre(n(f.fc_max), 100, 240) && entre(n(f.fc_reposo), 30, 120) && entre(n(f.ventanas), 1, 7)
+      && (f.zonas == null || (Array.isArray(f.zonas) && f.zonas.length === 4 && f.zonas.every((x, i) => !i || x > f.zonas[i - 1]) && f.zonas[0] >= 60 && f.zonas[3] <= 240))
+      && (f.umbral == null || (Array.isArray(f.umbral) && f.umbral.length >= 1 && f.umbral.length <= 2 && f.umbral.every((x) => x >= 120 && x <= 900)))
+      && (f.fases == null || fasesValidas(f.fases)) && (f.plan_inicio == null || new Date(`${f.plan_inicio}T12:00:00Z`).getUTCDay() === 1)
+      && (f.test_tipo == null || ['friel30', 'campo', 'laboratorio', 'estimado'].includes(f.test_tipo)),
+    carrera_eventos: (f) => !!String(f.nombre || '').trim() && String(f.nombre).length <= 80 && !!f.fecha && ['A', 'B', 'C'].includes(f.prioridad) && ['va', 'entreno', 'no', 'pendiente'].includes(f.decision)
+      && (f.distancia_km == null || (n(f.distancia_km) > 0 && n(f.distancia_km) <= 400)),
+    carrera_semanas: (f) => new Date(`${f.lunes}T12:00:00Z`).getUTCDay() === 1 && semanaPlanValida(f) && (f.ab == null || ['A', 'B'].includes(f.ab))
+      && (f.km_min == null || f.km_max == null || n(f.km_max) >= n(f.km_min)),
+    carrera_revisiones: (f) => !!f.fecha && !!String(f.titulo || '').trim() && ['pendiente', 'verde', 'ambar', 'rojo'].includes(f.estado),
+    carrera_recetas: (f) => !!String(f.nombre || '').trim() && pautaValida(f.pauta, true) && Array.isArray(f.pauta?.partes),
     // Como la migración 014: tipos, miniatura en su carpeta y duración
     archivos: (f) => (f.pose == null || (f.tipo === 'foto_progreso' && ['frente', 'perfil', 'espalda'].includes(f.pose)))
       && ['video_tecnica', 'foto_progreso', 'adjunto', 'documento', 'audio'].includes(f.tipo)
@@ -1195,7 +1227,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     }
   }
 
-  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -2846,7 +2878,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           }
         }
       }
-      if (['cobros_atletas', 'pagos', 'recetas', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad'].includes(t) && !esCoach()) return [];
+      if (['cobros_atletas', 'pagos', 'recetas', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) return [];
       // Como la 037: recordatorios, frases y vídeos modelo (el coach, con sus triggers); la valoración, el atleta de la suya
       if (['recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'umbrales_velocidad'].includes(t)) {
         const filas = tabla(t).filter((x) => cumple(x, f) && VISIBLE[t](x));

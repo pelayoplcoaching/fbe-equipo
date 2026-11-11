@@ -74,7 +74,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
           </div>
         </figure>
       )}
-      {cardio && <TarjetaCardio pauta={cardio} hecho={sesion.cardio_hecho} completada={sesion.completada} />}
+      {cardio && <TarjetaCardio pauta={cardio} hecho={sesion.cardio_hecho} completada={sesion.completada} sesionId={sesion.id} />}
       {/* (v0.104) la carga que batiría su récord, si lo reciente dice que la tiene a mano */}
       {!sesion.completada && !propio && ejercicios.length > 0 && <RecordAlAlcance ejercicios={ejercicios} />}
       {ejercicios.length > 0 && (

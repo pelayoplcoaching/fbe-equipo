@@ -1,0 +1,211 @@
+/* =====================================================================================================================
+   La carrera (v0.133, migracion 055): zonas, macrociclo, semanas del plan, partes de una sesion, semaforo y carreras.
+   Va lo ultimo (main.jsx). Solo ASCII. Colores con tokens y su version oscura; el texto sobre el acento, --sobre-morado;
+   sombras con los niveles de la casa; lo que se mueve se apaga con "reducir movimiento" (al final).
+   ===================================================================================================================== */
+
+:root {
+  /* Las cinco zonas: de frio (suave) a caliente (muy duro). Fondo suave y texto que pasa de 4,5:1 sobre el */
+  --z1: #5B7CA6; --z2: #1F8A55; --z3: #B07A00; --z4: #D2620F; --z5: #C02536;
+  --z1-t: #3D5A80; --z2-t: #146B40; --z3-t: #7A5400; --z4-t: #9A4508; --z5-t: #A51F2F;
+  --z-suave: 14%;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --z1: #8FB0DC; --z2: #4FCB89; --z3: #E8C25A; --z4: #FFA45C; --z5: #F35D6E;
+    --z1-t: #B4CCEC; --z2-t: #7FE0AC; --z3-t: #F2D88E; --z4-t: #FFC08F; --z5-t: #FF9AA6;
+    --z-suave: 22%;
+  }
+}
+:root[data-theme="dark"] {
+  --z1: #8FB0DC; --z2: #4FCB89; --z3: #E8C25A; --z4: #FFA45C; --z5: #F35D6E;
+  --z1-t: #B4CCEC; --z2-t: #7FE0AC; --z3-t: #F2D88E; --z4-t: #FFC08F; --z5-t: #FF9AA6;
+  --z-suave: 22%;
+}
+
+[data-zona="1"] { --zc: var(--z1); --zt: var(--z1-t); }
+[data-zona="2"] { --zc: var(--z2); --zt: var(--z2-t); }
+[data-zona="3"] { --zc: var(--z3); --zt: var(--z3-t); }
+[data-zona="4"] { --zc: var(--z4); --zt: var(--z4-t); }
+[data-zona="5"] { --zc: var(--z5); --zt: var(--z5-t); }
+
+/* ---------- la tabla de zonas ---------- */
+.tabla-zonas-env { margin: 0 -2px; }
+.tabla-zonas { width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: .92rem; }
+.tabla-zonas th, .tabla-zonas td { text-align: left; padding: 6px 8px; vertical-align: middle; }
+.tabla-zonas thead th { font-size: .78rem; font-weight: 650; color: var(--tinta-3); padding-block: 0 2px; }
+.tabla-zonas tbody tr { background: color-mix(in srgb, var(--zc) var(--z-suave), var(--hoja)); }
+.tabla-zonas tbody th { border-radius: 10px 0 0 10px; font-weight: 650; color: var(--tinta); }
+.tabla-zonas td.num { white-space: nowrap; text-align: right; }
+.zona-siente, .zona-umbral { display: block; font-weight: 450; margin-top: 2px; }
+.tabla-zonas thead th:last-child { text-align: right; }
+.tabla-zonas tbody td:last-child { border-radius: 0 10px 10px 0; }
+.zona-pastilla { display: inline-grid; place-items: center; min-width: 30px; height: 22px; padding: 0 6px; border-radius: 999px;
+  background: var(--zt); color: var(--hoja); font-size: .78rem; font-weight: 800; letter-spacing: .02em; margin-right: 4px; }
+.zona-chip { color: var(--zt); background: color-mix(in srgb, var(--zc) var(--z-suave), var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--zc) 35%, transparent); }
+
+/* ---------- el macrociclo ---------- */
+.macrociclo { display: grid; gap: 4px; }
+.macro-barra { position: relative; display: flex; gap: 3px; min-height: 46px; }
+.macro-fase { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  padding: 6px 7px; border-radius: 10px; overflow: hidden;
+  background: color-mix(in srgb, var(--morado) calc(10% + var(--paso, 0%)), var(--hoja)); color: var(--tinta); }
+.macro-fase[data-i="1"] { --paso: 6%; }
+.macro-fase[data-i="2"] { --paso: 12%; }
+.macro-fase[data-i="3"] { --paso: 18%; }
+.macro-fase[data-i="4"] { --paso: 24%; }
+.macro-fase[data-i="5"] { --paso: 30%; }
+.macro-fase.actual { background: var(--morado); color: var(--sobre-morado); box-shadow: var(--sombra-flotante); }
+.macro-nombre { font-size: .8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.macro-sem { font-size: .72rem; font-weight: 600; white-space: nowrap; }
+.macro-hoy { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--tinta);
+  box-shadow: 0 0 0 2px var(--hoja); pointer-events: none; }
+.macro-fechas { display: flex; justify-content: space-between; }
+
+/* ---------- la ficha del coach ---------- */
+.carrera-resumen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), var(--hoja) 70%); }
+.carrera-resumen-nombre { font-size: 1.15rem; line-height: 1.2; text-wrap: balance; }
+.carrera-fase-fila { display: grid; grid-template-columns: minmax(0, 1.2fr) 64px minmax(0, 2fr) auto; gap: 6px; align-items: center; }
+.carrera-fases { border: 0; padding: 0; margin: 0; min-width: 0; }
+.carrera-fases > legend { padding: 0; margin-bottom: 6px; }
+.rejilla-carrera { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+.rejilla-carrera .campo { margin: 0; min-width: 0; }
+.carrera-zonas-mano summary { cursor: pointer; }
+.interruptor-linea { align-items: center; gap: 12px; cursor: pointer; }
+.campo-check-largo { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+.campo-check { display: flex; align-items: center; gap: 6px; align-self: end; min-height: 40px; }
+.campo-en-linea { display: inline-flex; margin: 0; }
+
+.lista-semanas-carrera, .lista-eventos, .lista-revisiones, .lista-hecho-carrera, .lista-recetas-carrera, .plan-carrera-items, .sesiones-plan-at,
+.lista-semaforo, .km-semanas { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.semana-carrera-btn, .evento-btn, .revision-btn { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 8px 10px;
+  border: 0; border-radius: 12px; background: var(--hoja-2); color: inherit; font: inherit; cursor: pointer; }
+.semana-carrera-btn:hover, .evento-btn:hover, .revision-btn:hover { background: color-mix(in srgb, var(--morado) 8%, var(--hoja-2)); }
+.semana-carrera-btn > .pila-xs, .evento-btn > .pila-xs, .revision-btn > .pila-xs { flex: 1; }
+.semana-carrera-n { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; font-weight: 750; font-size: .82rem;
+  background: var(--hoja); color: var(--tinta-2); box-shadow: inset 0 0 0 1px var(--linea); }
+.semana-carrera.actual .semana-carrera-n { background: var(--morado); color: var(--sobre-morado); box-shadow: none; }
+.semana-carrera.pasada .semana-carrera-btn { background: transparent; box-shadow: inset 0 0 0 1px var(--linea); }
+.etiqueta-carrera { margin-left: 6px; font-size: .7rem; font-weight: 750; letter-spacing: .03em; background: var(--morado-suave); color: var(--morado); }
+.semana-carrera-btn .chip, .evento-btn .chip, .revision-btn .chip { flex: none; }
+.km-bien { background: var(--ok-suave); color: var(--ok); }
+.km-corta, .km-larga { background: var(--aviso-suave); color: var(--aviso); }
+
+.evento-prio { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-weight: 800; font-size: .85rem;
+  background: var(--hoja); color: var(--tinta-2); box-shadow: inset 0 0 0 1.5px var(--linea); }
+.evento-prio[data-prio="A"] { background: var(--morado); color: var(--sobre-morado); box-shadow: none; }
+.evento-prio[data-prio="B"] { color: var(--morado); box-shadow: inset 0 0 0 1.5px var(--morado); }
+.evento-carrera.pasada .evento-prio { background: var(--hoja-2); color: var(--tinta-3); box-shadow: none; }
+.evento-carrera[data-decision="no"] strong { text-decoration: line-through; text-decoration-color: var(--tinta-3); }
+.decision-va { background: var(--ok-suave); color: var(--ok); }
+.decision-entreno { background: var(--morado-suave); color: var(--morado); }
+.decision-pendiente { background: var(--aviso-suave); color: var(--aviso); }
+.decision-no { background: var(--hoja-2); color: var(--tinta-2); }
+.tu-carrera .lista-eventos > li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--hoja-2); }
+.tu-carrera .lista-eventos > li > .pila-xs { flex: 1; min-width: 0; }
+
+.semaforo-punto { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--tinta-3); box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 0%, transparent); }
+.semaforo-punto[data-estado="verde"] { background: var(--ok); }
+.semaforo-punto[data-estado="ambar"] { background: var(--aviso); }
+.semaforo-punto[data-estado="rojo"] { background: var(--alerta); }
+.semaforo-punto[data-estado="pendiente"] { background: transparent; box-shadow: inset 0 0 0 2px var(--tinta-3); }
+.semaforo-verde { background: var(--ok-suave); color: var(--ok); }
+.semaforo-ambar { background: var(--aviso-suave); color: var(--aviso); }
+.semaforo-rojo { background: var(--alerta-suave); color: var(--alerta); }
+.aviso-texto { color: var(--alerta); }
+.lista-semaforo li, .revision-fila { display: flex; align-items: flex-start; gap: 10px; }
+.lista-semaforo .semaforo-punto, .revision-fila .semaforo-punto { margin-top: 4px; }
+.lista-hecho-carrera li { padding: 8px 10px; border-radius: 12px; background: var(--hoja-2); }
+.lista-hecho-carrera .chip { margin-left: 6px; }
+.lista-recetas-carrera > li { padding: 10px; border-radius: 12px; background: var(--hoja-2); }
+.partes-lista { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; color: var(--tinta-2); }
+.fase-nombre { font-weight: 700; color: var(--tinta); }
+
+/* ---------- editor: las partes y las sesiones del plan ---------- */
+.sesion-plan { padding: 10px; border-radius: 12px; background: var(--hoja-2); box-shadow: inset 0 0 0 1px var(--linea); }
+.sesion-plan[data-tipo="descanso"] { background: transparent; }
+.sesion-plan-cab { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.sesion-plan-vol, .parte-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+.sesion-plan-vol .campo, .parte-campos .campo { margin: 0; min-width: 0; }
+.parte-campos .campo:last-child { grid-column: span 2; }
+.partes-editor { padding: 8px; border-radius: 12px; background: color-mix(in srgb, var(--morado) 5%, var(--hoja)); }
+.parte-fila { display: grid; gap: 6px; padding: 8px; border-radius: 10px; background: var(--hoja); box-shadow: inset 3px 0 0 var(--fase-c, var(--linea)), 0 0 0 1px var(--borde); }
+.parte-fila-cab { display: flex; align-items: center; gap: 6px; }
+.parte-fila-cab .selector { flex: none; width: auto; }
+.parte-resumen { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-fase="calentar"] { --fase-c: var(--z1); }
+[data-fase="bloque"] { --fase-c: var(--z4); }
+[data-fase="strides"] { --fase-c: var(--z5); }
+[data-fase="enfriar"] { --fase-c: var(--z2); }
+[data-fase="libre"] { --fase-c: var(--tinta-3); }
+.partes-cerradas { align-items: baseline; gap: 6px; }
+.campos-carrera { padding-top: 6px; border-top: 1px dashed var(--linea); }
+.plan-carrera-semana { background: color-mix(in srgb, var(--morado) 6%, var(--hoja)); box-shadow: var(--sombra-tarjeta), inset 3px 0 0 var(--morado); }
+.plan-carrera-semana .chip { margin-left: 6px; }
+.plan-carrera-items { gap: 2px; }
+
+/* ---------- la sesion de carrera del atleta ---------- */
+.detalle-carrera { margin-top: 2px; }
+.tipo-carrera { background: var(--morado-suave); color: var(--morado); font-weight: 700; }
+.lista-partes { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: parte; }
+.lista-partes .parte { position: relative; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0 8px 14px; }
+.lista-partes .parte::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 4px; border-radius: 4px; background: var(--fase-c); }
+.lista-partes .parte + .parte { border-top: 1px solid var(--linea); }
+.parte-fase { font-size: .78rem; font-weight: 750; letter-spacing: .02em; color: var(--tinta-2); padding-top: 1px; }
+.parte-que { font-weight: 600; }
+.lista-partes.en-ambar .parte[data-fase="bloque"], .lista-partes.en-ambar .parte[data-fase="strides"] { background: repeating-linear-gradient(-45deg, transparent 0 8px, color-mix(in srgb, var(--aviso) 7%, transparent) 8px 16px); }
+.lista-partes.en-ambar .parte[data-fase="bloque"] .parte-que, .lista-partes.en-ambar .parte[data-fase="strides"] .parte-que { text-decoration: line-through; text-decoration-color: var(--aviso); }
+
+.semaforo-carrera { padding: 10px; border-radius: 14px; background: var(--hoja-2); }
+.semaforo-botones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.semaforo-btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; padding: 6px 4px; font-size: .95rem; border: 0; border-radius: 12px;
+  background: var(--hoja); color: var(--tinta); font: inherit; font-weight: 650; cursor: pointer; box-shadow: inset 0 0 0 1px var(--linea);
+  transition: background-color var(--mov-rapido, .14s) ease, box-shadow var(--mov-rapido, .14s) ease, transform var(--mov-rapido, .14s) ease; }
+.semaforo-btn:active { transform: scale(.97); }
+.semaforo-btn.elegido[data-estado="verde"] { background: var(--ok-suave); box-shadow: inset 0 0 0 2px var(--ok); }
+.semaforo-btn.elegido[data-estado="ambar"] { background: var(--aviso-suave); box-shadow: inset 0 0 0 2px var(--aviso); }
+.semaforo-btn.elegido[data-estado="rojo"] { background: var(--alerta-suave); box-shadow: inset 0 0 0 2px var(--alerta); }
+.semaforo-texto { margin: 0; }
+.mas-carrera summary { cursor: pointer; padding: 4px 0; }
+.campos-carrera-hecho { gap: 8px; }
+
+/* ---------- en Hoy y en "Tu carrera" ---------- */
+.tarjeta-carrera-hoy { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; border: 0; color: inherit; font: inherit; cursor: pointer;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--z2) 12%, var(--hoja)), var(--hoja) 65%); box-shadow: var(--sombra-tarjeta); }
+.tarjeta-carrera-hoy .ios-ico { background: var(--z2); color: var(--hoja); }
+.tarjeta-carrera-hoy strong { text-wrap: balance; }
+.carrera-objetivo { display: grid; gap: 2px; padding: 18px 16px; border-radius: 18px; color: var(--sobre-morado);
+  background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--z4) 55%, var(--morado)), var(--morado) 60%); box-shadow: var(--sombra-flotante); }
+.carrera-objetivo .peq { color: inherit; opacity: 1; }
+.carrera-objetivo-nombre { font-size: 1.3rem; line-height: 1.15; text-wrap: balance; }
+.carrera-cuenta { font-size: 1.55rem; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; margin: 4px 0 2px; }
+.semana-carrera-at { padding: 10px; border-radius: 12px; background: var(--hoja-2); }
+.semana-carrera-at + .semana-carrera-at { margin-top: 6px; }
+.semana-carrera-at .chip { margin-left: 6px; }
+.sesiones-plan-at { margin-top: 6px; gap: 8px; }
+.sesiones-plan-at > li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 8px; align-items: start; }
+.dia-plan { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; background: var(--hoja); font-size: .75rem; font-weight: 800; color: var(--tinta-2);
+  box-shadow: inset 0 0 0 1px var(--linea); }
+.sesiones-plan-at > li[data-tipo="calidad"] .dia-plan, .sesiones-plan-at > li[data-tipo="carrera"] .dia-plan { background: var(--z4-t); color: var(--hoja); box-shadow: none; }
+.sesiones-plan-at > li[data-tipo="larga"] .dia-plan { background: var(--z2-t); color: var(--hoja); box-shadow: none; }
+.sesiones-plan-at > li[data-tipo="descanso"] .dia-plan { color: var(--tinta-3); }
+
+.km-semana { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.km-pista { position: relative; height: 12px; border-radius: 6px; background: var(--hoja-2); overflow: hidden; }
+.km-previsto { position: absolute; top: 0; bottom: 0; border-radius: 6px; background: color-mix(in srgb, var(--morado) 22%, transparent); }
+.km-hecho { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: 4px; background: var(--z2); }
+.km-sem-valor { white-space: nowrap; color: var(--tinta-2); }
+
+@media (max-width: 420px) {
+  .carrera-fase-fila { grid-template-columns: minmax(0, 1fr) 56px auto; }
+  .carrera-fase-fila input:nth-child(3) { grid-column: 1 / -1; grid-row: 2; }
+  .sesion-plan-cab { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .sesion-plan-cab input { grid-column: 1 / -1; grid-row: 2; }
+  .lista-partes .parte { grid-template-columns: 1fr; gap: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .semaforo-btn { transition: none; }
+  .semaforo-btn:active { transform: none; }
+}
