@@ -106,9 +106,9 @@ export function leerTiempo(t) {
   const x = String(t ?? '').trim().toLowerCase().replace(/\s+/g, '');
   if (!x) return null;
   let m = x.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
-  if (m) return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]);
+  if (m) return Number(m[2]) < 60 && Number(m[3]) < 60 ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) : null;
   m = x.match(/^(\d{1,3}):(\d{2})$/);
-  if (m) return Number(m[1]) * 60 + Number(m[2]);
+  if (m) return Number(m[2]) < 60 ? Number(m[1]) * 60 + Number(m[2]) : null;
   m = x.match(/^(\d{1,2})h(\d{1,2})?(?:m(?:in)?)?$/);
   if (m) return Number(m[1]) * 3600 + Number(m[2] || 0) * 60;
   return null;
@@ -266,7 +266,7 @@ export function sesionDesdePlan(item) {
   if (!sesionPlanValida(item) || item.tipo === 'descanso') return null;
   const { titulo, dia, ...pauta } = item;
   const cardio = { modalidad: 'carrera', ...pauta };
-  if (!pautaValida(cardio, true)) delete cardio.partes;  // (por si acaso: sin volumen, no vale como sesión)
+  // Sin volumen (solo título y nota), no vale como pauta: va como sesión de cardio con la nota en su dinámica
   const nombre = titulo || `Carrera ${NOMBRE_TIPO[item.tipo].toLowerCase()}`;
   return pautaValida(cardio, true) ? { nombre: nombre.slice(0, 60), tipo: 'cardio', cardio, dia: dia || null } : { nombre: nombre.slice(0, 60), tipo: 'cardio', cardio: null, dinamica: item.nota || null, dia: dia || null };
 }
@@ -277,7 +277,7 @@ export function pautaDeReceta(r) {
 }
 
 // ---------- carreras y cuenta atrás ----------
-// La próxima carrera que cuenta (no las que no va): la A si hay, si no la primera
+// La próxima carrera que cuenta (no las que no va), sea A, B o C; la A que viene, con carreraObjetivo
 export function proximaCarrera(eventos = [], hoy) {
   const vienen = eventos.filter((e) => e.fecha >= hoy && e.decision !== 'no').sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
   return vienen[0] || null;
@@ -393,6 +393,7 @@ export function limpiarSemana(x = {}) {
     ab: ['A', 'B'].includes(x.ab) ? x.ab : null, clave: String(x.clave ?? '').trim().slice(0, 300) || null, nota: String(x.nota ?? '').trim().slice(0, 500) || null,
     sesiones: Array.isArray(x.sesiones) ? x.sesiones : [],
   };
+  if ([s.km_min, s.km_max].some((k) => k != null && (k < 0 || k > 400))) return { semana: null, error: 'Los km de la semana, de 0 a 400.' };
   if (s.km_min != null && s.km_max != null && s.km_max < s.km_min) return { semana: null, error: 'Los km: el mínimo, antes que el máximo.' };
   if (s.km_max === 0) s.km_max = null;
   if (!semanaPlanValida(s)) return { semana: null, error: 'Revisa las sesiones de la semana (7 como mucho).' };

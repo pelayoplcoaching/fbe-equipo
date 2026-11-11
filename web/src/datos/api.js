@@ -309,7 +309,7 @@ const sinNormas = (e) => /comunidad_unirme/.test(`${e?.message || ''}`) && /p_no
 const AVISO_055 = 'Para la carrera falta ejecutar la migración 055 en Supabase (supabase/migraciones/055_carrera.sql).';
 const falta055 = (e) => {
   const m = `${e?.message || ''} ${e?.code || ''}`;
-  if (/carrera/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42703|column|columna/i.test(m)) throw new Error(`${AVISO_055} Detalle: ${e?.message || e}`);
+  if (/carrera/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42703/i.test(m)) throw new Error(`${AVISO_055} Detalle: ${e?.message || e}`);
   throw e;
 };
 const falta018 = (e) => {
@@ -945,7 +945,8 @@ export function crearApi(backend) {
       if (!api._v055) {
         const pr = b.select('carrera_recetas', { cols: 'id', limit: 1 }).then(() => true).catch((e) => {
           const m = `${e?.message || ''} ${e?.code || ''}`;
-          return /carrera_recetas|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01/i.test(m) ? false : null;
+          if (/permission|permiso|42501/i.test(m)) return null;
+          return /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01/i.test(m) ? false : null;
         });
         api._v055 = pr;
         pr.then((x) => { if (x == null && api._v055 === pr) api._v055 = null; });
@@ -1023,7 +1024,9 @@ export function crearApi(backend) {
       if (!semana) throw new Error('No encuentro esa semana.');
       const ya = await b.select('sesiones', { eq: { semana_id: semanaId }, order: [['orden', 'desc']] });
       let orden = ya[0]?.orden || 0;
+      // El día previsto, del lunes de esa semana; solo si cae dentro de la semana (como la 008: de su inicio a 6 días después)
       const lunes = semana.fecha_inicio ? lunesDe(semana.fecha_inicio) : null;
+      const diaDe = (d) => { if (!lunes || !d) return null; const x = sumarDias(lunes, d - 1); return x >= semana.fecha_inicio && x <= sumarDias(semana.fecha_inicio, 6) ? x : null; };
       const nombres = new Set(ya.filter((x) => x.tipo === 'cardio').map((x) => x.nombre));
       const filas = [];
       for (const it of items) {
@@ -1032,7 +1035,7 @@ export function crearApi(backend) {
         nombres.add(s.nombre);
         orden++;
         filas.push({ semana_id: semanaId, orden, nombre: s.nombre, tipo: 'cardio', cardio: s.cardio, ...(s.dinamica ? { dinamica: s.dinamica } : {}),
-          ...(lunes && s.dia ? { dia_previsto: sumarDias(lunes, s.dia - 1) } : {}) });
+          ...(diaDe(s.dia) ? { dia_previsto: diaDe(s.dia) } : {}) });
       }
       if (filas.length) await b.insert('sesiones', filas).catch(falta055);
       return filas.length;

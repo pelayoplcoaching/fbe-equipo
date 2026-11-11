@@ -836,12 +836,6 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'sesiones' && !esCoach() && c.fecha_realizada && c.fecha_realizada > sumar(fechaMadrid(), 1)) {
       throw new Error('La fecha de la sesión no puede ser posterior a hoy: elige el día en que la hiciste');
     }
-    // Como la 055: la FC y el dolor que apunta el atleta, solo con su consentimiento de datos de salud
-    if (t === 'sesiones' && !esCoach() && c.cardio_hecho && typeof c.cardio_hecho === 'object' && ['fc_media', 'fc_max', 'dolor'].some((k) => k in c.cardio_hecho)
-      && !consentimientoDe(miAtletaId())) {
-      c.cardio_hecho = { ...c.cardio_hecho };
-      for (const k of ['fc_media', 'fc_max', 'dolor']) delete c.cardio_hecho[k];
-    }
     if (!esCoach()) {
       // Como la migración 008: planificar el día no deja la sesión pendiente de revisar
       if (t === 'sesiones') { if (Object.keys(c).some((k) => k !== 'dia_previsto' && k !== 'revisada_en')) c.revisada_en = null; else delete c.revisada_en; }
@@ -2990,6 +2984,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const filas = tabla(t).filter((fila) => cumple(fila, f) && (esCoach() || !VISIBLE[t] || VISIBLE[t](fila)));
       const porFilaFecha = new Map();
       if (t === 'sesiones' && 'preparacion' in c) for (const fila of filas) comprobarPreparacion(fila, c.preparacion);
+      // Como la 055: la FC, el dolor y el semáforo, solo con el consentimiento de datos de salud del atleta (escriba quien escriba)
+      if (t === 'sesiones' && c.cardio_hecho && typeof c.cardio_hecho === 'object' && ['fc_media', 'fc_max', 'dolor', 'semaforo'].some((k) => k in c.cardio_hecho)
+        && filas.some((fila) => !consentimientoDe(atletaDeSesion(fila.id)))) {
+        c.cardio_hecho = { ...c.cardio_hecho };
+        for (const k of ['fc_media', 'fc_max', 'dolor', 'semaforo']) delete c.cardio_hecho[k];
+      }
       if (t === 'sesiones' && 'dia_previsto' in c) for (const fila of filas) comprobarDiaPrevisto({ ...fila, ...c });
       // Como la migración 008: si el coach mueve una semana, el plan del atleta se mueve con ella
       if (t === 'semanas' && 'fecha_inicio' in c) {
@@ -3185,7 +3185,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async delete(t, f) {
       sinRedDemo();
-      if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad'].includes(t) && !esCoach()) return [];
+      if (['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) return [];
       // Como la 037: la valoración la quita su atleta (el coach solo la lee)
       if (t === 'video_autoevaluacion') {
         if (esCoach() || !miAtletaId()) return [];

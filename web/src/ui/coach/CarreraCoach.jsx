@@ -17,6 +17,8 @@ import {
 const DIAS = [[1, 'Lunes'], [2, 'Martes'], [3, 'Miércoles'], [4, 'Jueves'], [5, 'Viernes'], [6, 'Sábado'], [7, 'Domingo']];
 const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
 const v = (x) => (x == null ? '' : String(x));
+let claves = 0;
+const claveNueva = () => `s${++claves}`;
 
 // ---------------------------------------------------------------- la pestaña Carrera de la ficha
 export function CarreraFicha({ atleta }) {
@@ -211,7 +213,9 @@ function SemanasCoach({ atleta, d, alGuardar }) {
 function HojaSemana({ atleta, semana, perfil, alCerrar }) {
   const { api, aviso } = useApp();
   const [f, setF] = useState({ lunes: semana.lunes, etiqueta: semana.etiqueta || '', km_min: v(semana.km_min), km_max: v(semana.km_max), ab: semana.ab || null, clave: semana.clave || '', nota: semana.nota || '' });
-  const [sesiones, setSesiones] = useState(() => (semana.sesiones || []).map((x) => ({ ...x })));
+  // Cada sesión con una clave fija (para que al quitar una, las demás no hereden sus campos)
+  const [filas, setFilas] = useState(() => (semana.sesiones || []).map((x) => ({ k: claveNueva(), s: { ...x } })));
+  const sesiones = filas.map((x) => x.s);
   const [error, setError] = useState(null);
   const [ocupado, una] = useUnaVez();
   const zonas = zonasFC(perfil);
@@ -239,10 +243,10 @@ function HojaSemana({ atleta, semana, perfil, alCerrar }) {
         <label class="campo"><span class="etq">Nota</span><input class="entrada" maxLength={500} value={f.nota} onInput={cambiar('nota')} /></label>
         <fieldset class="carrera-fases pila-s">
           <legend class="peq">Sesiones de carrera ({sesiones.length} de 7)</legend>
-          {sesiones.map((s, i) => <SesionPlan key={i} s={s} i={i} zonas={zonas} alCambiar={(n) => setSesiones(sesiones.map((x, j) => (j === i ? n : x)))} alQuitar={() => setSesiones(sesiones.filter((_, j) => j !== i))} />)}
+          {filas.map(({ k, s }, i) => <SesionPlan key={k} s={s} i={i} zonas={zonas} alCambiar={(n) => setFilas((fs) => fs.map((x) => (x.k === k ? { k, s: n } : x)))} alQuitar={() => setFilas((fs) => fs.filter((x) => x.k !== k))} />)}
           {sesiones.length < 7 && <div class="fila-envolver">
-            <button type="button" class="btn btn-peq" onClick={() => setSesiones([...sesiones, { tipo: 'facil', titulo: 'Fácil' }])}><Icono n="mas" /> Sesión</button>
-            <button type="button" class="btn btn-peq plano" onClick={() => setSesiones([...sesiones, { tipo: 'descanso', titulo: 'Descanso' }])}>Descanso</button>
+            <button type="button" class="btn btn-peq" onClick={() => setFilas([...filas, { k: claveNueva(), s: { tipo: 'facil', titulo: 'Fácil' } }])}><Icono n="mas" /> Sesión</button>
+            <button type="button" class="btn btn-peq plano" onClick={() => setFilas([...filas, { k: claveNueva(), s: { tipo: 'descanso', titulo: 'Descanso' } }])}>Descanso</button>
           </div>}
         </fieldset>
         <div class="fila-envolver">
@@ -260,6 +264,15 @@ function HojaSemana({ atleta, semana, perfil, alCerrar }) {
 function SesionPlan({ s, i, zonas, alCambiar, alQuitar }) {
   const descanso = s.tipo === 'descanso';
   const [txt, setTxt] = useState({ minutos: v(s.minutos), minutos_max: v(s.minutos_max), km: v(s.km), km_max: v(s.km_max) });
+  // Si cambian desde fuera (una receta, pasar a descanso), los campos se ponen al día; lo que se está escribiendo, no
+  useEffect(() => {
+    const num = (t) => { const x = Number(String(t).replace(',', '.')); return String(t).trim() === '' || !Number.isFinite(x) || x <= 0 ? undefined : x; };
+    setTxt((t) => {
+      const n = { ...t };
+      for (const k of ['minutos', 'minutos_max', 'km', 'km_max']) if (num(t[k]) !== s[k] && !(num(t[k]) != null && s[k] != null && Math.abs(num(t[k]) - s[k]) < 0.01)) n[k] = v(s[k]);
+      return n;
+    });
+  }, [s.minutos, s.minutos_max, s.km, s.km_max]);
   const fijar = (cambios) => {
     const n = { ...s, ...cambios };
     for (const k of Object.keys(n)) if (n[k] === '' || n[k] == null || (Array.isArray(n[k]) && !n[k].length)) delete n[k];
@@ -312,11 +325,12 @@ export function PartesEditor({ partes = [], zonas = null, alCambiar, alReceta = 
   const clave = JSON.stringify(partes);
   useEffect(() => { setFilas(partes.map(parteAEditor)); setErrores({}); }, [clave]);
   const enviar = (nuevas) => {
-    const res = nuevas.map(limpiarParte);
+    const vacia = (p) => !['reps', 'min', 'seg', 'm', 'zona', 'zona_hasta', 'ritmo', 'rec_min', 'rec_seg', 'rec', 'nota'].some((k) => String(p[k] ?? '').trim());
+    const res = nuevas.map((p) => (vacia(p) ? { parte: null, error: null, vacia: true } : limpiarParte(p)));
     const err = Object.fromEntries(res.map((r, i) => [i, r.error]).filter(([, e]) => e));
     setErrores(err);
     if (Object.keys(err).length) return;
-    alCambiar(res.map((r) => r.parte));
+    alCambiar(res.filter((r) => !r.vacia).map((r) => r.parte));
   };
   const cambiar = (i, k) => (e) => { const n = filas.map((x, j) => (j === i ? { ...x, [k]: e.currentTarget.value } : x)); setFilas(n); };
   const cambiarYEnviar = (i, k) => (e) => { const n = filas.map((x, j) => (j === i ? { ...x, [k]: e.currentTarget.value } : x)); setFilas(n); enviar(n); };

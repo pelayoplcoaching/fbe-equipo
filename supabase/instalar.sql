@@ -19692,9 +19692,9 @@ insert into public.fbe_migraciones (numero) values (54)  -- (3) número de esta 
 --   * carrera_recetas: la biblioteca de sesiones de calidad del coach (solo la ve el coach), con unas de partida.
 --   * La pauta de cardio de una sesión (sesiones.cardio) admite ahora el tipo de sesión, rangos (35–45 min, 8–10 km),
 --     la zona, el ritmo, las partes (calentar, bloque con repeticiones y recuperación, strides, enfriar) y si es opcional.
---   * Lo que apunta el atleta (sesiones.cardio_hecho) admite los segundos, el desnivel, cómo llegó (el semáforo: verde,
---     ámbar o rojo) y, solo con su consentimiento de datos de salud, la FC media y máxima y el dolor (0 a 10): sin él,
---     la base los quita al guardar.
+--   * Lo que apunta el atleta (sesiones.cardio_hecho) admite los segundos, el desnivel y, solo con su consentimiento de
+--     datos de salud, cómo llegó (el semáforo: verde, ámbar o rojo), la FC media y máxima y el dolor (0 a 10): sin él, la
+--     base los quita al guardar, los escriba quien los escriba (también el coach), como la preparación de la 005.
 --   Todo lo de carrera lo escribe el coach; el atleta ve lo suyo (no la biblioteca de recetas). Va en «Descargar mis
 --   datos» y se borra con la ficha.
 --
@@ -19848,14 +19848,15 @@ alter table public.sesiones add constraint sesiones_cardio_valido check (cardio 
 alter table public.sesiones drop constraint if exists sesiones_cardio_hecho_valido;
 alter table public.sesiones add constraint sesiones_cardio_hecho_valido check (cardio_hecho is null or public.cardio_hecho_valido(cardio_hecho) is true);
 
--- La FC y el dolor que apunta el atleta son datos de salud: sin su consentimiento, la base no los guarda (los quita)
+-- La FC, el dolor y cómo llegó (el semáforo) son datos de salud: sin el consentimiento del atleta de esa semana, la base
+-- no los guarda (los quita), los escriba quien los escriba, también el coach (como la preparación, 005)
 create or replace function public.sesion_carrera_salud() returns trigger
 language plpgsql set search_path = '' as $$
 begin
   if new.cardio_hecho is not null and jsonb_typeof(new.cardio_hecho) = 'object'
-     and current_user in ('authenticated', 'anon') and not public.es_coach()
-     and new.cardio_hecho ?| array['fc_media', 'fc_max', 'dolor'] and not public.tiene_consentimiento_salud() then
-    new.cardio_hecho := new.cardio_hecho - 'fc_media' - 'fc_max' - 'dolor';
+     and current_user in ('authenticated', 'anon')
+     and new.cardio_hecho ?| array['fc_media', 'fc_max', 'dolor', 'semaforo'] and not public.consentimiento_salud_de_semana(new.semana_id) then
+    new.cardio_hecho := new.cardio_hecho - 'fc_media' - 'fc_max' - 'dolor' - 'semaforo';
   end if;
   return new;
 end $$;

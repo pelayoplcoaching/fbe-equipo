@@ -17,7 +17,7 @@ check(C.zonasFC({ lthr: 181, zonas: [150, 160, 170, 180] })[1].min === 150 && C.
 check(C.textoZona(1, 2, z) === 'Z1–Z2 (≤162 ppm)' && C.textoZona(4, null, z) === 'Z4 (172–180 ppm)' && C.textoZona(3) === 'Z3', 'el texto de una zona (o dos), con sus pulsaciones');
 check(C.fmtRitmo(310) === '5:10' && C.textoRitmo([320, 310]) === '5:10–5:20 min/km' && C.leerRitmo('5.41') === 341 && C.leerRitmo('5:61') === null
   && JSON.stringify(C.leerRangoRitmo('5:10-5:20')) === '[310,320]' && C.leerRangoRitmo('rápido') === undefined && C.leerRangoRitmo('') === null, 'ritmos: escribir y leer (5:10, 5.41, 5:10-5:20)');
-check(C.leerTiempo('1:59:00') === 7140 && C.leerTiempo('58:30') === 3510 && C.leerTiempo('1h58') === 7080 && C.fmtTiempo(7140) === '1:59:00' && C.fmtTiempo(3510) === '58:30', 'tiempos: 1:59:00, 58:30, 1h58');
+check(C.leerTiempo('58:75') === null && C.leerTiempo('1:61:00') === null && C.leerTiempo('1:59:00') === 7140 && C.leerTiempo('58:30') === 3510 && C.leerTiempo('1h58') === 7080 && C.fmtTiempo(7140) === '1:59:00' && C.fmtTiempo(3510) === '58:30', 'tiempos: 1:59:00, 58:30, 1h58');
 check(C.fmtDuracion(20) === '20 s' && C.fmtDuracion(360) === '6 min' && C.fmtDuracion(90) === '1:30 min' && C.fmtDuracion(3900) === '1 h 5 min' && C.fmtDistancia(2000) === '2 km' && C.fmtDistancia(400) === '400 m', 'duraciones y distancias legibles');
 const parte = { fase: 'bloque', reps: 2, seg: 360, zona: 4, ritmo: [310, 320], rec_seg: 120, rec: 'trote suave' };
 check(C.textoParte(parte, z) === '2 × 6 min · Z4 (172–180 ppm) · 5:10–5:20 min/km · rec. 2 min trote suave' && C.segundosParte(parte) === 840, 'una parte en palabras y lo que dura (2 × 6 min con 2 de recuperación: 14 min)');
@@ -120,7 +120,13 @@ check(await falla(`update public.sesiones set cardio = '{"modalidad":"carrera","
 await como(bea);
 await q(`update public.sesiones set completada = true, fecha_realizada = '2026-11-10', cardio_hecho = $2 where id = $1`, [sB, JSON.stringify(h)]);
 const hB = (await q(`select cardio_hecho from public.sesiones where id = $1`, [sB]))[0].cardio_hecho;
-check(!('fc_media' in hB) && !('fc_max' in hB) && !('dolor' in hB) && hB.semaforo === 'ambar' && hB.km === 10.2, 'sin consentimiento, la base quita la FC y el dolor (y guarda lo demás)');
+check(!('fc_media' in hB) && !('fc_max' in hB) && !('dolor' in hB) && !('semaforo' in hB) && hB.km === 10.2 && hB.desnivel === 80, 'sin consentimiento, la base quita la FC, el dolor y el semáforo (y guarda lo demás)');
+await como(coach);
+await q(`update public.sesiones set cardio_hecho = $2 where id = $1`, [sB, JSON.stringify(h)]);
+const hB2 = (await q(`select cardio_hecho from public.sesiones where id = $1`, [sB]))[0].cardio_hecho;
+await q(`update public.sesiones set cardio_hecho = $2 where id = $1`, [sA, JSON.stringify({ ...h, fc_media: 160 })]);
+const hA2 = (await q(`select cardio_hecho from public.sesiones where id = $1`, [sA]))[0].cardio_hecho;
+check(!('fc_media' in hB2) && !('dolor' in hB2) && hA2.fc_media === 160, 'tampoco el coach los guarda sin el consentimiento del atleta (con él, sí)');
 
 // Lo de carrera: el coach escribe; el atleta lee lo suyo; la biblioteca, solo el coach
 await como(coach);
@@ -178,6 +184,11 @@ console.log('\nLa api (PGlite)');
   check(await api.anadirCarreraASemana(w.id, d.semanas[0].sesiones) === 2 && await api.anadirCarreraASemana(w.id, d.semanas[0].sesiones) === 0, 'pasa las 2 sesiones de carrera del plan a la semana de entreno (el descanso no) y no las repite');
   const ses = await b.sql(`select nombre, tipo, cardio, dia_previsto::text d from public.sesiones where semana_id = $1 order by orden`, [w.id]);
   check(ses.length === 2 && ses[0].tipo === 'cardio' && ses[0].cardio.partes.length === 1 && ses[0].d === sumarDias(lunes, 2) && ses[1].cardio.minutos === 40, 'con su pauta por partes y el día previsto del plan');
+  // Una semana que no empieza en lunes: el día previsto, solo si cae dentro (como la 008); las sesiones entran igual
+  const w2 = await api.crear('semanas', { bloque_id: bl.id, numero: 2, fecha_inicio: sumarDias(lunes, 11), programacion: 'en_programacion' });
+  check(await api.anadirCarreraASemana(w2.id, d.semanas[0].sesiones) === 2, 'en una semana que empieza en viernes, las sesiones entran igual');
+  const ses2 = await b.sql(`select dia_previsto::text d from public.sesiones where semana_id = $1 order by orden`, [w2.id]);
+  check(ses2[0].d === null && ses2[1].d === sumarDias(lunes, 12), 'y el día previsto, solo el que cae dentro de esa semana');
   // Biblioteca
   const recetas = await api.carreraRecetas();
   await api.guardarCarreraReceta({ nombre: 'Mi umbral', pauta: ses[0].cardio });

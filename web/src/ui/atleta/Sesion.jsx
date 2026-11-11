@@ -837,7 +837,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
             try { res = await calcularResumen(api, atleta.id, ejercicios, hechas, cambios, r.enCola, ejerciciosPorId, records, sesion); }
             catch (e) {
               console.error('No se pudo preparar el resumen', e);
-              res = { series: Object.values(hechas).reduce((n, h) => n + Object.keys(h || {}).length, 0), tonelaje: 0, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cambios.cardio_hecho || null, records: [], enCola: r.enCola, musculos: {}, tarjeta: null };
+              res = { series: Object.values(hechas).reduce((n, h) => n + Object.keys(h || {}).length, 0), tonelaje: 0, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cardioHechoPublico(cambios.cardio_hecho), records: [], enCola: r.enCola, musculos: {}, tarjeta: null };
             }
             if (conEscena) setEscena({ records: res.records?.length || 0, semana: await semanaHecha });
             setResumen(res);
@@ -1277,7 +1277,7 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
     if (conCardio) {
       const minutos = cardioAparte ? minCardio : min;
       if (!minutos) throw new Error('Para el cardio hacen falta los minutos.');
-      const extra = esCarrera ? { semaforo, desnivel, ...(conSegundos ? { seg: segExtra } : {}), ...(salud ? { fc_media: fcMedia || null, fc_max: fcMax || null, dolor } : {}) } : {};
+      const extra = esCarrera ? { desnivel, ...(conSegundos ? { seg: segExtra } : {}), ...(salud ? { semaforo, fc_media: fcMedia || null, fc_max: fcMax || null, dolor } : {}) } : {};
       if (extra.fc_media && extra.fc_max && extra.fc_max < extra.fc_media) throw new Error('La FC máxima no puede ser menor que la media.');
       const hecho = limpiarCardioHecho({ modalidad, minutos, km, ...extra });
       if (!hecho) throw new Error(esCarrera ? 'Revisa lo de la carrera: minutos, kilómetros y, si las pones, pulsaciones de 40 a 240.' : 'Revisa los minutos y los kilómetros del cardio.');
@@ -1302,8 +1302,10 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
       )}
       {esCarrera && (
         <div class="campo campos-carrera-hecho">
-          <span class="etq">¿Cómo llegaste?</span>
-          <Segmentos etiqueta="Cómo llegaste" valor={semaforo} alCambiar={(x) => setSemaforo(x === semaforo ? null : x)} opciones={['verde', 'ambar', 'rojo'].map((k) => [k, SEMAFORO[k].titulo])} />
+          {salud && <>
+            <span class="etq">¿Cómo llegaste?</span>
+            <Segmentos etiqueta="Cómo llegaste" valor={semaforo} alCambiar={(x) => setSemaforo(x === semaforo ? null : x)} opciones={['verde', 'ambar', 'rojo'].map((k) => [k, SEMAFORO[k].titulo])} />
+          </>}
           {conSegundos && <div class="fila-campos"><span class="peq secundario" style="align-self:center">Y segundos (para tu tiempo exacto)</span><Paso id="t-seg" valor={segExtra} paso={1} min={0} max={59} dec={0} etiqueta="segundos" alCambiar={setSegExtra} /></div>}
           <details class="mas-carrera" open={!!(h0?.fc_media || h0?.fc_max || h0?.dolor != null || h0?.desnivel)}>
             <summary class="peq">{salud ? 'Pulsaciones, dolor y desnivel' : 'Desnivel'}</summary>
@@ -1316,7 +1318,7 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
                     <option value="">—</option>{Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
                   </select></label>
                 <span class="ayuda">Lo ve solo tu coach. Si el dolor pasa de 3, cuéntale dónde en la nota.</span>
-              </> : <span class="ayuda">Para apuntar pulsaciones y dolor hace falta tu consentimiento de datos de salud (en tu perfil).</span>}
+              </> : <span class="ayuda">Para apuntar cómo llegaste, las pulsaciones y el dolor hace falta tu consentimiento de datos de salud (en tu perfil).</span>}
               <div class="fila-campos"><span class="peq secundario" style="align-self:center">Desnivel positivo (m)</span><Paso id="t-desnivel" valor={desnivel} paso={10} min={0} max={10000} dec={0} etiqueta="metros de desnivel" alCambiar={setDesnivel} /></div>
             </div>
           </details>

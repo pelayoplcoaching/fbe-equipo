@@ -21,8 +21,8 @@ const CLAVES_PAUTA = ['modalidad', 'minutos', 'km', 'esfuerzo', 'nota', 'tipo', 
 export const CLAVES_PAUTA_013 = ['modalidad', 'minutos', 'km', 'esfuerzo', 'nota'];
 const CLAVES_HECHO = ['modalidad', 'minutos', 'km', 'seg', 'desnivel', 'semaforo', 'fc_media', 'fc_max', 'dolor'];
 export const CLAVES_HECHO_013 = ['modalidad', 'minutos', 'km'];
-// Lo de salud de lo hecho: no sale de entre el atleta y su coach (ni en lo que se comparte)
-export const CLAVES_HECHO_SALUD = ['fc_media', 'fc_max', 'dolor'];
+// Lo de salud de lo hecho (la FC, el dolor y cómo llegó): solo con su consentimiento; no sale de entre el atleta y su coach
+export const CLAVES_HECHO_SALUD = ['fc_media', 'fc_max', 'dolor', 'semaforo'];
 export const TIPOS_SESION_CARRERA = ['facil', 'calidad', 'larga', 'carrera', 'recuperacion', 'cross', 'test', 'tecnica'];
 export const FASES_PARTE = ['calentar', 'bloque', 'strides', 'enfriar', 'libre'];
 const CLAVES_PARTE = ['fase', 'reps', 'seg', 'm', 'zona', 'zona_hasta', 'ritmo', 'rec_seg', 'rec', 'nota'];

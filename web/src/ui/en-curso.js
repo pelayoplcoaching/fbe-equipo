@@ -59,6 +59,7 @@ export function descansoEnCurso(atletaId, fin) {
 export function borrarTodoEnCurso() {
   memoria.clear();
   pararPista();
-  try { for (const k of Object.keys(localStorage)) if (k.startsWith('fbe-en-curso-')) localStorage.removeItem(k); } catch { /* */ }
+  // (v0.133) y el semáforo de carrera que se eligió antes de salir
+  try { for (const k of Object.keys(localStorage)) if (k.startsWith('fbe-en-curso-') || k.startsWith('fbe-semaforo-')) localStorage.removeItem(k); } catch { /* */ }
   avisar();
 }

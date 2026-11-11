@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Siluetas, ErrorCaja } from '../comunes.jsx';
 import { TablaZonas, Macrociclo, ListaPartes } from '../CarreraComun.jsx';
-import { fmtConDia, fmtCorta, hoyISO, lunesDe } from '../../logica/fechas.js';
+import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
 import { textoCardio } from '../../logica/cardio.js';
 import {
@@ -17,12 +17,17 @@ const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
 export const pautaDeCarrera = (p) => !!p && p.modalidad === 'carrera' && !!(p.tipo || p.zona || (Array.isArray(p.partes) && p.partes.length));
 
 // ---------- el semáforo, en este móvil hasta que termina la sesión (y entonces va con lo que apunta) ----------
+// Se guarda con el día: vale ese día y el siguiente; después (o al cerrar la sesión de la app) se olvida
 const CLAVE_SEMAFORO = (id) => `fbe-semaforo-${id}`;
 export function leerSemaforo(sesionId) {
-  try { const v = localStorage.getItem(CLAVE_SEMAFORO(sesionId)); return ['verde', 'ambar', 'rojo'].includes(v) ? v : null; } catch { return null; }
+  try {
+    const [v, dia] = String(localStorage.getItem(CLAVE_SEMAFORO(sesionId)) || '').split('|');
+    if (!['verde', 'ambar', 'rojo'].includes(v) || !dia || dia < sumarDias(hoyISO(), -1)) { localStorage.removeItem(CLAVE_SEMAFORO(sesionId)); return null; }
+    return v;
+  } catch { return null; }
 }
 function guardarSemaforo(sesionId, v) {
-  try { if (v) localStorage.setItem(CLAVE_SEMAFORO(sesionId), v); else localStorage.removeItem(CLAVE_SEMAFORO(sesionId)); } catch { /* sin almacenamiento: solo en pantalla */ }
+  try { if (v) localStorage.setItem(CLAVE_SEMAFORO(sesionId), `${v}|${hoyISO()}`); else localStorage.removeItem(CLAVE_SEMAFORO(sesionId)); } catch { /* sin almacenamiento: solo en pantalla */ }
 }
 export function olvidarSemaforo(sesionId) { guardarSemaforo(sesionId, null); }
 
