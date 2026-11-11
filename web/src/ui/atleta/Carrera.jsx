@@ -1,4 +1,4 @@
-// La carrera del atleta (v0.133, migración 055): la sesión de carrera por partes con sus zonas y el semáforo antes de
+// La carrera del atleta (v0.133, migración 056): la sesión de carrera por partes con sus zonas y el semáforo antes de
 // entrenar; en Hoy, su carrera con la cuenta atrás; y «Tu carrera»: zonas, carreras, plan por semanas y revisiones.
 import { useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Siluetas, ErrorCaja } from '../comunes.jsx';
@@ -80,7 +80,7 @@ export function CarreraHoy({ abrir }) {
   const carrera = useCarreraMia();
   const d = carrera.datos;
   const hoy = hoyISO();
-  if (!d || d.falta055) return null;
+  if (!d || d.falta056) return null;
   const obj = carreraObjetivo(d.eventos, hoy) || proximaCarrera(d.eventos, hoy);
   const n = semanaDelPlan(d.perfil, hoy);
   const fase = faseDe(d.perfil, hoy);

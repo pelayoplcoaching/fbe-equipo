@@ -38,7 +38,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_056 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -305,11 +305,11 @@ const sinCliente033 = (e) => /cliente_id/.test(e?.message || '') && /schema cach
 const duplicado = (e) => /duplicate|23505|Ya existe un registro igual/i.test(`${e?.codigo || e?.code || ''} ${e?.message || ''}`);
 // La función de entrar sin la migración 028 (sin el parámetro de las normas)
 const sinNormas = (e) => /comunidad_unirme/.test(`${e?.message || ''}`) && /p_normas|schema cache|does not exist|no existe|PGRST202/i.test(`${e?.message || ''} ${e?.code || ''}`);
-// (v0.133) Lo de carrera sin la migración 055
-const AVISO_055 = 'Para la carrera falta ejecutar la migración 055 en Supabase (supabase/migraciones/055_carrera.sql).';
-const falta055 = (e) => {
+// (v0.133) Lo de carrera sin la migración 056
+const AVISO_056 = 'Para la carrera falta ejecutar la migración 056 en Supabase (supabase/migraciones/056_carrera.sql).';
+const falta056 = (e) => {
   const m = `${e?.message || ''} ${e?.code || ''}`;
-  if (/carrera/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42703/i.test(m)) throw new Error(`${AVISO_055} Detalle: ${e?.message || e}`);
+  if (/carrera/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42703/i.test(m)) throw new Error(`${AVISO_056} Detalle: ${e?.message || e}`);
   throw e;
 };
 const falta018 = (e) => {
@@ -378,7 +378,7 @@ const COLS_POST_044 = `${COLS_POST_043},publicar_en,retenida`;
 const COLS_POST_053 = `${COLS_POST_044},cita_post_id`;
 const FILTRO_MURO_043 = { entrenos: { in: { tipo: ['entreno'] } }, logros: { in: { tema: ['logros'] } }, avisos: { in: { tema: ['avisos'] } },
   tecnica: { in: { tema: ['tecnica'] } }, charla: { in: { tema: ['charla'] } }, preguntas: { in: { tema: ['pregunta'] } } };
-// (v0.133, 055) lo de carrera
+// (v0.133, 056) lo de carrera
 const TABLAS_CARRERA = ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'];
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
@@ -939,29 +939,29 @@ export function crearApi(backend) {
       return conFoto.map((x) => ({ ...x, autor: personas[x.autor_id] || { nombre: 'Alguien del equipo' }, fotos: fotosDe(x) }));
     },
 
-    // ------------------------------------------------------------ la carrera (v0.133, migración 055)
-    // ¿Está la 055? true / false / null (no se sabe). Sonda: carrera_recetas (el atleta la lee vacía, sin error)
-    async carrera055() {
-      if (!api._v055) {
+    // ------------------------------------------------------------ la carrera (v0.133, migración 056)
+    // ¿Está la 056? true / false / null (no se sabe). Sonda: carrera_recetas (el atleta la lee vacía, sin error)
+    async carrera056() {
+      if (!api._v056) {
         const pr = b.select('carrera_recetas', { cols: 'id', limit: 1 }).then(() => true).catch((e) => {
           const m = `${e?.message || ''} ${e?.code || ''}`;
           if (/permission|permiso|42501/i.test(m)) return null;
           return /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01/i.test(m) ? false : null;
         });
-        api._v055 = pr;
-        pr.then((x) => { if (x == null && api._v055 === pr) api._v055 = null; });
+        api._v056 = pr;
+        pr.then((x) => { if (x == null && api._v056 === pr) api._v056 = null; });
       }
-      return api._v055;
+      return api._v056;
     },
     // Todo lo de carrera de un atleta: su perfil (zonas y plan), sus carreras, las semanas del plan y las revisiones
     async carrera(atletaId) {
-      if ((await api.carrera055().catch(() => null)) === false) return { falta055: true, perfil: null, eventos: [], semanas: [], revisiones: [] };
+      if ((await api.carrera056().catch(() => null)) === false) return { falta056: true, perfil: null, eventos: [], semanas: [], revisiones: [] };
       const [perfil, eventos, semanas, revisiones] = await Promise.all([
         b.select('carrera_atleta', { eq: { atleta_id: atletaId } }).then((x) => x[0] || null),
         b.select('carrera_eventos', { eq: { atleta_id: atletaId }, order: [['fecha', 'asc']] }),
         b.select('carrera_semanas', { eq: { atleta_id: atletaId }, order: [['lunes', 'asc']] }),
         b.select('carrera_revisiones', { eq: { atleta_id: atletaId }, order: [['fecha', 'asc']] }),
-      ]).catch(falta055);
+      ]).catch(falta056);
       // Lo hecho de carrera desde que empezó el plan (o las 12 últimas semanas): para los km de cada semana y su registro
       const hoy = hoyISO();
       const desde = [perfil?.plan_inicio, semanas[0]?.lunes, sumarDias(lunesDe(hoy), -7 * 11)].filter(Boolean).sort()[0];
@@ -979,30 +979,30 @@ export function crearApi(backend) {
     async guardarCarreraPerfil(atletaId, datos) {
       const { perfil, error } = limpiarPerfilCarrera(datos);
       if (error) throw new Error(error);
-      return (await b.upsert('carrera_atleta', [{ ...perfil, atleta_id: atletaId }], 'atleta_id').catch(falta055))[0];
+      return (await b.upsert('carrera_atleta', [{ ...perfil, atleta_id: atletaId }], 'atleta_id').catch(falta056))[0];
     },
     async guardarCarreraEvento(atletaId, datos, id = null) {
       const { evento, error } = limpiarEventoCarrera(datos);
       if (error) throw new Error(error);
-      if (id) return (await b.update('carrera_eventos', evento, { eq: { id } }).catch(falta055))[0];
-      return (await b.insert('carrera_eventos', [{ ...evento, atleta_id: atletaId }]).catch(falta055))[0];
+      if (id) return (await b.update('carrera_eventos', evento, { eq: { id } }).catch(falta056))[0];
+      return (await b.insert('carrera_eventos', [{ ...evento, atleta_id: atletaId }]).catch(falta056))[0];
     },
-    async borrarCarreraEvento(id) { return b.delete('carrera_eventos', { eq: { id } }).catch(falta055); },
+    async borrarCarreraEvento(id) { return b.delete('carrera_eventos', { eq: { id } }).catch(falta056); },
     async guardarCarreraSemana(atletaId, datos) {
       const { semana, error } = limpiarSemanaCarrera(datos);
       if (error) throw new Error(error);
-      return (await b.upsert('carrera_semanas', [{ ...semana, atleta_id: atletaId }], 'atleta_id,lunes').catch(falta055))[0];
+      return (await b.upsert('carrera_semanas', [{ ...semana, atleta_id: atletaId }], 'atleta_id,lunes').catch(falta056))[0];
     },
-    async borrarCarreraSemana(atletaId, lunes) { return b.delete('carrera_semanas', { eq: { atleta_id: atletaId, lunes } }).catch(falta055); },
+    async borrarCarreraSemana(atletaId, lunes) { return b.delete('carrera_semanas', { eq: { atleta_id: atletaId, lunes } }).catch(falta056); },
     async guardarCarreraRevision(atletaId, datos, id = null) {
       const { revision, error } = limpiarRevisionCarrera(datos);
       if (error) throw new Error(error);
-      if (id) return (await b.update('carrera_revisiones', revision, { eq: { id } }).catch(falta055))[0];
-      return (await b.insert('carrera_revisiones', [{ ...revision, atleta_id: atletaId }]).catch(falta055))[0];
+      if (id) return (await b.update('carrera_revisiones', revision, { eq: { id } }).catch(falta056))[0];
+      return (await b.insert('carrera_revisiones', [{ ...revision, atleta_id: atletaId }]).catch(falta056))[0];
     },
-    async borrarCarreraRevision(id) { return b.delete('carrera_revisiones', { eq: { id } }).catch(falta055); },
+    async borrarCarreraRevision(id) { return b.delete('carrera_revisiones', { eq: { id } }).catch(falta056); },
     // La biblioteca de sesiones de calidad del coach
-    async carreraRecetas() { return b.select('carrera_recetas', { order: [['orden', 'asc'], ['nombre', 'asc']] }).catch(falta055); },
+    async carreraRecetas() { return b.select('carrera_recetas', { order: [['orden', 'asc'], ['nombre', 'asc']] }).catch(falta056); },
     async guardarCarreraReceta({ nombre, pauta }, id = null) {
       const n = String(nombre ?? '').trim().slice(0, 80);
       if (!n) throw new Error('Ponle nombre a la sesión de la biblioteca.');
@@ -1013,10 +1013,10 @@ export function crearApi(backend) {
         return (await b.insert('carrera_recetas', [{ nombre: n, pauta, orden: (ult[0]?.orden || 0) + 1 }]))[0];
       } catch (e) {
         if (duplicado(e)) throw new Error(`Ya tienes en la biblioteca una sesión que se llama «${n}». Cámbiale el nombre.`);
-        return falta055(e);
+        return falta056(e);
       }
     },
-    async borrarCarreraReceta(id) { return b.delete('carrera_recetas', { eq: { id } }).catch(falta055); },
+    async borrarCarreraReceta(id) { return b.delete('carrera_recetas', { eq: { id } }).catch(falta056); },
     // Pasa a una semana de entreno las sesiones de carrera previstas en el plan para ese lunes (las de descanso, no).
     // Devuelve cuántas ha añadido. Las que ya estén (mismo nombre y de cardio) no se repiten.
     async anadirCarreraASemana(semanaId, items = []) {
@@ -1037,7 +1037,7 @@ export function crearApi(backend) {
         filas.push({ semana_id: semanaId, orden, nombre: s.nombre, tipo: 'cardio', cardio: s.cardio, ...(s.dinamica ? { dinamica: s.dinamica } : {}),
           ...(diaDe(s.dia) ? { dia_previsto: diaDe(s.dia) } : {}) });
       }
-      if (filas.length) await b.insert('sesiones', filas).catch(falta055);
+      if (filas.length) await b.insert('sesiones', filas).catch(falta056);
       return filas.length;
     },
 
@@ -1212,7 +1212,7 @@ export function crearApi(backend) {
       // (054) el cierre de las sesiones
       if ((await api.cierre054().catch(() => null)) !== true) return VERSION_LEGAL_SIN_054;
       // (v0.133) la carrera
-      return (await api.carrera055().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_055;
+      return (await api.carrera056().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_056;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -1487,8 +1487,8 @@ export function crearApi(backend) {
       const permitidos = ['completada', 'fecha_realizada', 'nota_atleta', 'rpe_sesion', 'duracion_min', 'dia_previsto', 'cardio_hecho'];
       if ('cardio_hecho' in cambios && cambios.cardio_hecho != null && !cardioHechoValido(cambios.cardio_hecho)) throw new Error('Revisa lo que has apuntado de cardio: modalidad y minutos enteros; los kilómetros, de 0,1 a 200');
       const limpio = Object.fromEntries(Object.entries(cambios).filter(([k]) => permitidos.includes(k)));
-      // (v0.133) Sin la 055, lo hecho de cardio solo con lo que entiende la 013 (modalidad, minutos y km)
-      if (limpio.cardio_hecho && Object.keys(limpio.cardio_hecho).some((k) => !CLAVES_HECHO_013.includes(k)) && (await api.carrera055().catch(() => null)) === false) {
+      // (v0.133) Sin la 056, lo hecho de cardio solo con lo que entiende la 013 (modalidad, minutos y km)
+      if (limpio.cardio_hecho && Object.keys(limpio.cardio_hecho).some((k) => !CLAVES_HECHO_013.includes(k)) && (await api.carrera056().catch(() => null)) === false) {
         limpio.cardio_hecho = solo013(limpio.cardio_hecho, CLAVES_HECHO_013);
       }
       return (await b.update('sesiones', limpio, { eq: { id: sesionId } }))[0];
@@ -4763,7 +4763,7 @@ export function crearApi(backend) {
       out.comentarios = out.comentarios.filter((c) => !programado(c));
       out.avisos = out.avisos.filter((a) => !programado(a));
       out.tareas = await b.select('tareas', { eq: { atleta_id: atletaId } }).catch(() => []);
-      // (v0.133, 055) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
+      // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
       for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)
       // (personal() es siempre lo de quien está dentro: solo vale si exporta lo suyo; el coach, con lo de cada atleta)
@@ -4996,7 +4996,7 @@ export function crearApi(backend) {
       // nivel y nutricion (v0.22) y entrenamiento (v0.26) solo si son distintos de lo de siempre (así una base sin
       // la migración 018 o la 022 sigue dando de alta)
       const fila = { nombre, email, objetivo, notion_url, ...(nivel ? { nivel } : {}), ...(nutricion === false ? { nutricion: false } : {}), ...(entrenamiento === false ? { entrenamiento: false } : {}), ...(carrera ? { carrera: true } : {}) };
-      return (await b.insert('atletas', [fila]).catch(falta018).catch(falta022).catch(falta055))[0];
+      return (await b.insert('atletas', [fila]).catch(falta018).catch(falta022).catch(falta056))[0];
     },
     async actualizarAtleta(id, cambios) {
       // Fecha de contratación del servicio (v0.73): un día válido y no futuro (cuenta para los aniversarios)
@@ -5010,7 +5010,7 @@ export function crearApi(backend) {
         if (v == null && cambios.dias_semana != null && cambios.dias_semana !== '') throw new Error('Los días de entreno por semana van de 1 a 7 (o «Automático»)');
         cambios = { ...cambios, dias_semana: v };
       }
-      return (await b.update('atletas', cambios, { eq: { id } }).catch(falta018).catch(falta022).catch(falta031).catch(falta055))[0];
+      return (await b.update('atletas', cambios, { eq: { id } }).catch(falta018).catch(falta022).catch(falta031).catch(falta056))[0];
     },
     // Borra al atleta con todo lo suyo, también sus vídeos y fotos de Storage
     // Borrado completo: todo lo que haya en su carpeta de Storage (registrado o no) y después su ficha,

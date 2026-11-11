@@ -15,7 +15,7 @@ export const MODALIDADES = [
 ];
 export const NOMBRE_MODALIDAD = Object.fromEntries(MODALIDADES.map(([v, t]) => [v, t]));
 const VERBO = Object.fromEntries(MODALIDADES.map(([v, , x]) => [v, x]));
-// (055, carrera) La pauta admite además el tipo de sesión, rangos, zona, ritmo, partes y si es opcional; lo hecho, los
+// (056, carrera) La pauta admite además el tipo de sesión, rangos, zona, ritmo, partes y si es opcional; lo hecho, los
 // segundos, el desnivel, el semáforo y (solo con el consentimiento de datos de salud) la FC y el dolor.
 const CLAVES_PAUTA = ['modalidad', 'minutos', 'km', 'esfuerzo', 'nota', 'tipo', 'minutos_max', 'km_max', 'zona', 'zona_hasta', 'ritmo', 'partes', 'opcional'];
 export const CLAVES_PAUTA_013 = ['modalidad', 'minutos', 'km', 'esfuerzo', 'nota'];
@@ -43,7 +43,7 @@ export function parteValida(p) {
     && entero(p.rec_seg, 0, 1800) && texto(p.rec, 40) && texto(p.nota, 200);
 }
 
-// Como cardio_pauta_valida (055): exigeVolumen = false para una sesión prevista en el plan
+// Como cardio_pauta_valida (056): exigeVolumen = false para una sesión prevista en el plan
 export function pautaValida(c, exigeVolumen = true) {
   if (!esObjeto(c) || Object.keys(c).some((k) => !CLAVES_PAUTA.includes(k))) return false;
   if (JSON.stringify(c).length > 6000) return false;
@@ -81,7 +81,7 @@ export function cardioHechoPublico(h) {
   for (const k of ['modalidad', 'minutos', 'km', 'seg', 'desnivel']) if (k in h) out[k] = h[k];
   return out;
 }
-// Para una base sin la 055: solo lo que entiende la 013
+// Para una base sin la 056: solo lo que entiende la 013
 export const solo013 = (o, claves) => (esObjeto(o) ? Object.fromEntries(Object.entries(o).filter(([k]) => claves.includes(k))) : o);
 
 // De lo que se escribe en el editor (textos) a la pauta que se guarda, o null si está vacía.
@@ -95,7 +95,7 @@ export function limpiarCardio({ modalidad = 'carrera', minutos = '', km = '', es
   if (esfuerzo != null && esfuerzo !== '') p.esfuerzo = Number(esfuerzo);
   const n = String(nota ?? '').trim();
   if (n) p.nota = n.slice(0, 300);
-  // (055) lo de carrera: tipo, rangos, zona, ritmo, partes y opcional (ya limpio, de logica/carrera.js)
+  // (056) lo de carrera: tipo, rangos, zona, ritmo, partes y opcional (ya limpio, de logica/carrera.js)
   const conPartes = !!(carrera && Array.isArray(carrera.partes) && carrera.partes.length);
   if (carrera && modalidad === 'carrera') {
     for (const c of ['tipo', 'zona', 'zona_hasta', 'ritmo', 'partes']) if (carrera[c] != null && !(Array.isArray(carrera[c]) && !carrera[c].length)) p[c] = carrera[c];
@@ -145,7 +145,7 @@ export function textoCardio(c) {
 }
 
 // «32 min, 5,2 km (6:09 min/km)»
-// (055) Sin lo de salud: la FC y el dolor van aparte (textoSaludCardio), solo para el atleta y su coach
+// (056) Sin lo de salud: la FC y el dolor van aparte (textoSaludCardio), solo para el atleta y su coach
 export function textoCardioHecho(h) {
   if (!cardioHechoValido(h)) return '';
   const partes = [h.seg ? `${h.minutos}:${String(h.seg).padStart(2, '0')} min` : `${h.minutos} min`];

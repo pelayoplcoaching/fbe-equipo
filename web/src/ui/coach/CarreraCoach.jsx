@@ -1,4 +1,4 @@
-// La carrera en la ficha del coach (v0.133, migración 055): zonas y test, el plan (macrociclo y semanas), las carreras,
+// La carrera en la ficha del coach (v0.133, migración 056): zonas y test, el plan (macrociclo y semanas), las carreras,
 // las revisiones y la biblioteca de sesiones de calidad. Y lo que usa el editor: las partes de una sesión de carrera y
 // las sesiones del plan de la semana que se edita.
 import { useEffect, useMemo, useState } from 'preact/hooks';
@@ -28,7 +28,7 @@ export function CarreraFicha({ atleta }) {
   const recargar = () => datos.recargar(true);
   if (datos.error) return <ErrorCaja error={datos.error} reintentar={datos.recargar} />;
   if (!d) return <Siluetas forma="tarjetas" n={3} texto="Cargando su carrera" />;
-  if (d.falta055) return <div class="panel"><Vacio icono="pasos" titulo="Falta la migración 055">Para llevarle la carrera, ejecuta en Supabase supabase/migraciones/055_carrera.sql.</Vacio></div>;
+  if (d.falta056) return <div class="panel"><Vacio icono="pasos" titulo="Falta la migración 056">Para llevarle la carrera, ejecuta en Supabase supabase/migraciones/056_carrera.sql.</Vacio></div>;
   return (
     <div class="pila carrera-ficha">
       <ResumenCarrera d={d} />
@@ -583,7 +583,7 @@ function BibliotecaCarrera() {
 // Lo que el plan de carrera prevé para la semana (por su lunes), con el botón que pasa sus sesiones a la semana de entreno
 export function PlanCarreraSemana({ carrera, semana, sesiones = [], estructura }) {
   const { api } = useApp();
-  if (!carrera || carrera.falta055 || !semana?.fecha_inicio) return null;
+  if (!carrera || carrera.falta056 || !semana?.fecha_inicio) return null;
   const lunes = lunesDe(semana.fecha_inicio);
   const s = (carrera.semanas || []).find((x) => x.lunes === lunes);
   const n = semanaDelPlan(carrera.perfil, lunes);

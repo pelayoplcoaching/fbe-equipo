@@ -1,4 +1,4 @@
-// La carrera (v0.133, migración 055): la lógica pura (logica/carrera.js y lo nuevo de logica/cardio.js) y la migración
+// La carrera (v0.133, migración 056): la lógica pura (logica/carrera.js y lo nuevo de logica/cardio.js) y la migración
 // en un Postgres local (PGlite): la forma de la pauta y de lo hecho, la FC y el dolor solo con consentimiento, quién ve y
 // quién cambia cada tabla, las semanas del plan y la biblioteca de partida (la misma en la demo).
 // Uso: node test/carrera.test.mjs
@@ -28,7 +28,7 @@ check(lp.error === null && JSON.stringify(lp.parte) === JSON.stringify({ fase: '
 check(JSON.stringify(C.limpiarParte(C.parteAEditor(parte)).parte) === JSON.stringify(parte), 'y de la parte al editor y vuelta, igual');
 check(C.minutosPauta({ partes: [{ fase: 'calentar', seg: 900 }, parte, { fase: 'enfriar', seg: 600 }] }) === 39 && C.minutosPauta({ minutos: 30 }) === 30, 'los minutos de una pauta: los suyos o la suma de sus partes');
 
-console.log('\nLa pauta y lo hecho (cardio.js, como la 055)');
+console.log('\nLa pauta y lo hecho (cardio.js, como la 056)');
 const pauta = { modalidad: 'carrera', tipo: 'facil', minutos: 35, minutos_max: 45, zona: 2 };
 check(cardioValido(pauta) && textoCardio(pauta) === '35–45 min de carrera fácil en Z2' && textoCardio({ modalidad: 'carrera', minutos: 30, esfuerzo: 6 }) === '30 min de correr a esfuerzo 6', 'la pauta con tipo, rango y zona (y la de antes, igual)');
 check(!cardioValido({ ...pauta, minutos_max: 30 }) && !cardioValido({ modalidad: 'carrera', km_max: 10 }) && cardioValido({ modalidad: 'carrera', partes: [parte] }) && !cardioValido({ modalidad: 'carrera', tipo: 'paseo', minutos: 30 }), 'rangos al derecho, el máximo con su mínimo; con partes vale sin minutos; tipos cerrados');
@@ -39,7 +39,7 @@ const h = limpiarCardioHecho({ modalidad: 'carrera', minutos: 58, seg: 12, km: '
 check(cardioHechoValido(h) && textoCardioHecho(h) === '58:12 min, 10,2 km, +80 m (5:42 min/km)' && textoSaludCardio(h) === 'FC media 158, máx. 176 · dolor 2/10', 'lo hecho: segundos, desnivel, FC, dolor y semáforo; la FC y el dolor, en su propio texto');
 check(!cardioHechoValido({ modalidad: 'carrera', minutos: 30, fc_media: 170, fc_max: 160 }) && !cardioHechoValido({ modalidad: 'carrera', minutos: 30, dolor: 11 }) && !cardioHechoValido({ modalidad: 'carrera', minutos: 30, semaforo: 'azul' }), 'FC máxima por debajo de la media, dolor de 11 o un semáforo raro: no');
 check(JSON.stringify(cardioHechoPublico(h)) === JSON.stringify({ modalidad: 'carrera', minutos: 58, km: 10.2, seg: 12, desnivel: 80 }) && JSON.stringify(solo013(h, CLAVES_HECHO_013)) === JSON.stringify({ modalidad: 'carrera', minutos: 58, km: 10.2 }),
-  'lo que se comparte va sin la FC, el dolor ni el semáforo; para una base sin la 055, solo lo de la 013');
+  'lo que se comparte va sin la FC, el dolor ni el semáforo; para una base sin la 056, solo lo de la 013');
 
 console.log('\nEl plan, las carreras y el semáforo');
 const perfil = { plan_inicio: '2026-10-12', fases: [{ nombre: 'Recuperar', semanas: 3 }, { nombre: 'Base', semanas: 5 }, { nombre: 'Construir', semanas: 4 }, { nombre: 'Específico', semanas: 4 }, { nombre: 'Afinar', semanas: 3 }, { nombre: 'Taper', semanas: 2 }] };
@@ -70,10 +70,10 @@ const demo = semillaDemo('2026-11-11');
 const carlos = demo.atletas.find((a) => a.nombre === 'Carlos Vera');
 check(carlos.carrera === true && demo.atletas.filter((a) => a.carrera).length === 1 && demo.carrera_semanas.every((s) => C.semanaPlanValida(s)) && C.fasesValidas(demo.carrera_atleta[0].fases), 'Carlos lleva la carrera, con su plan (semanas y fases válidas)');
 check(demo.carrera_recetas.length === 10 && demo.carrera_recetas.every((r) => cardioValido(r.pauta) && r.pauta.partes.length), 'la biblioteca de partida de la demo: 10 sesiones con sus partes');
-const sqlRecetas = [...readFileSync(new URL('../supabase/migraciones/055_carrera.sql', import.meta.url), 'utf8').matchAll(/\('([^']+)', (\d+), '(\{.*?\})'\)/g)].map((m) => [m[1], JSON.parse(m[3])]);
-check(sqlRecetas.length === 10 && JSON.stringify(sqlRecetas) === JSON.stringify(RECETAS_CARRERA), 'son las mismas, en el mismo orden, que pone la migración 055');
+const sqlRecetas = [...readFileSync(new URL('../supabase/migraciones/056_carrera.sql', import.meta.url), 'utf8').matchAll(/\('([^']+)', (\d+), '(\{.*?\})'\)/g)].map((m) => [m[1], JSON.parse(m[3])]);
+check(sqlRecetas.length === 10 && JSON.stringify(sqlRecetas) === JSON.stringify(RECETAS_CARRERA), 'son las mismas, en el mismo orden, que pone la migración 056');
 
-console.log('\nLa migración 055 (PGlite)');
+console.log('\nLa migración 056 (PGlite)');
 const { PGlite } = await import('@electric-sql/pglite');
 const { aplicarEsquema } = await import('./esquema.mjs');
 const db = new PGlite();
@@ -168,7 +168,7 @@ console.log('\nLa api (PGlite)');
   const lunes = lunesDe(hoyISO());
   await b.auth.registrar('coach@fbe.test', 'contraseña-coach', 'Coach');
   await b.sql(`update perfiles set rol = 'coach' where id = $1`, [b.auth.sesion().user.id]);
-  check(await api.carrera055() === true, 'la api ve la 055');
+  check(await api.carrera056() === true, 'la api ve la 056');
   const dani = await api.crearAtleta({ nombre: 'Atleta de carrera', carrera: true });
   check(dani.carrera === true, 'el coach crea la ficha con la carrera encendida');
   await api.guardarCarreraPerfil(dani.id, { lthr: '181', fc_max: '194', umbral: '5:10-5:20', plan_nombre: 'Media', plan_inicio: sumarDias(lunes, -14), fases: [{ nombre: 'Base', semanas: '5' }, { nombre: 'Taper', semanas: '2' }] });

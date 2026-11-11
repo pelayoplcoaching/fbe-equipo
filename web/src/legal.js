@@ -61,11 +61,11 @@
 // (v0.119) 2026-12.18: «El cierre de tus sesiones» (migración 054: cierre automático, objetivo del bloque logrado, hábitos
 // sugeridos, dictado y el resumen de tu semana para tu coach). Solo con la 054 (api.cierre054()); con la 053 pero sin la 054,
 // la 2026-12.17 (VERSION_LEGAL_SIN_054).
-// (v0.133) 2026-12.19: «La carrera» (migración 055: zonas, plan, carreras y revisiones; la FC y el dolor de lo que corres, solo
-// con tu consentimiento de salud). Solo con la 055 (api.carrera055()); con la 054 pero sin la 055, la 2026-12.18
-// (VERSION_LEGAL_SIN_055).
+// (v0.133) 2026-12.19: «La carrera» (migración 056: zonas, plan, carreras y revisiones; la FC y el dolor de lo que corres, solo
+// con tu consentimiento de salud). Solo con la 056 (api.carrera056()); con la 054 pero sin la 056, la 2026-12.18
+// (VERSION_LEGAL_SIN_056).
 export const VERSION_LEGAL = '2026-12.19';
-export const VERSION_LEGAL_SIN_055 = '2026-12.18';
+export const VERSION_LEGAL_SIN_056 = '2026-12.18';
 export const VERSION_LEGAL_SIN_054 = '2026-12.17';
 export const VERSION_LEGAL_SIN_053 = '2026-12.16';
 export const VERSION_LEGAL_SIN_051 = '2026-12.15';

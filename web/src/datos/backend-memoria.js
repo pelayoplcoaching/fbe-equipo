@@ -107,7 +107,7 @@ const DEFECTOS = {
   comunidad_eventos: () => ({ descripcion: null, plazas: null, cancelado_en: null, creado_en: ahora(), actualizado_en: ahora(), creado_por: null }),
   comunidad_plantillas: () => ({ creado_en: ahora() }),
   comunidad_retos: () => ({ descripcion: null, modo: 'individual', medida: 'sesiones', equipos: null, creado_en: ahora() }),
-  // Como la 055: la carrera de cada atleta, sus carreras, las semanas del plan, las revisiones y la biblioteca del coach
+  // Como la 056: la carrera de cada atleta, sus carreras, las semanas del plan, las revisiones y la biblioteca del coach
   carrera_atleta: () => ({ lthr: null, fc_max: null, fc_reposo: null, test_fecha: null, test_tipo: null, zonas: null, umbral: null, plan_nombre: null, plan_inicio: null, fases: null, ventanas: null, nota: null, actualizado_en: ahora() }),
   carrera_eventos: () => ({ distancia_km: null, desnivel_m: null, prioridad: 'B', decision: 'va', objetivo_seg: null, objetivo_ritmo: null, nota: null, resultado_seg: null, resultado_nota: null, creado_en: ahora() }),
   carrera_semanas: () => ({ etiqueta: null, km_min: null, km_max: null, ab: null, clave: null, nota: null, sesiones: [], actualizado_en: ahora() }),
@@ -352,7 +352,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     umbrales_velocidad: () => esCoach(),
     // Como la 040: la revisión semanal, solo el coach
     revisiones_semanales: () => esCoach(),
-    // Como la 055: lo de carrera, el coach y su atleta (la biblioteca de recetas, solo el coach)
+    // Como la 056: lo de carrera, el coach y su atleta (la biblioteca de recetas, solo el coach)
     carrera_atleta: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_eventos: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_semanas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
@@ -1073,7 +1073,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && entre(n(f.rpe), 1, 10) && entre(n(f.rir), 0, 10),
     // Como la migración 013: la pauta de cardio y lo hecho, con su forma exacta
     sesiones: (f) => (f.cardio == null || cardioValido(f.cardio)) && (f.cardio_hecho == null || cardioHechoValido(f.cardio_hecho)),
-    // Como la 055
+    // Como la 056
     carrera_atleta: (f) => entre(n(f.lthr), 100, 230) && entre(n(f.fc_max), 100, 240) && entre(n(f.fc_reposo), 30, 120) && entre(n(f.ventanas), 1, 7)
       && (f.zonas == null || (Array.isArray(f.zonas) && f.zonas.length === 4 && f.zonas.every((x, i) => !i || x > f.zonas[i - 1]) && f.zonas[0] >= 60 && f.zonas[3] <= 240))
       && (f.umbral == null || (Array.isArray(f.umbral) && f.umbral.length >= 1 && f.umbral.length <= 2 && f.umbral.every((x) => x >= 120 && x <= 900)))
@@ -2984,7 +2984,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const filas = tabla(t).filter((fila) => cumple(fila, f) && (esCoach() || !VISIBLE[t] || VISIBLE[t](fila)));
       const porFilaFecha = new Map();
       if (t === 'sesiones' && 'preparacion' in c) for (const fila of filas) comprobarPreparacion(fila, c.preparacion);
-      // Como la 055: la FC, el dolor y el semáforo, solo con el consentimiento de datos de salud del atleta (escriba quien escriba)
+      // Como la 056: la FC, el dolor y el semáforo, solo con el consentimiento de datos de salud del atleta (escriba quien escriba)
       if (t === 'sesiones' && c.cardio_hecho && typeof c.cardio_hecho === 'object' && ['fc_media', 'fc_max', 'dolor', 'semaforo'].some((k) => k in c.cardio_hecho)
         && filas.some((fila) => !consentimientoDe(atletaDeSesion(fila.id)))) {
         c.cardio_hecho = { ...c.cardio_hecho };

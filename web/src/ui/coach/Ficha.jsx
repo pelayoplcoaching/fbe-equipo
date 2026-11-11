@@ -619,8 +619,8 @@ function ServicioYNivel({ atleta, recargar }) {
     try { await api.actualizarAtleta(atleta.id, cambios); aviso(texto); recargar(); } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
   };
   const servicio = servicioDe(atleta);
-  // (v0.133) La carrera, solo con la migración 055
-  const con055 = useCarga(() => api.carrera055().catch(() => null), []);
+  // (v0.133) La carrera, solo con la migración 056
+  const con056 = useCarga(() => api.carrera056().catch(() => null), []);
   const TEXTO_CAMBIO = { entrenamiento: 'Solo entrenamiento: ya no ve nada de nutrición', completo: 'Ahora ve entrenamiento y nutrición', nutricion: 'Solo nutrición: ya no ve nada de entrenamiento' };
   const AYUDA = {
     entrenamiento: 'No ve nada de nutrición ni le llegan recordatorios de apuntarla. Lo que tuviera se guarda por si vuelves a llevársela.',
@@ -642,7 +642,7 @@ function ServicioYNivel({ atleta, recargar }) {
           }} />
         <span class="mini terciario">{AYUDA[servicio]}</span>
       </div>
-      {conEntrenamiento(atleta) && (con055.datos === true || atleta.carrera) && <div class="pila-s campo-carrera-servicio">
+      {conEntrenamiento(atleta) && (con056.datos === true || atleta.carrera) && <div class="pila-s campo-carrera-servicio">
         <label class="fila-envolver interruptor-linea" for="d-carrera">
           <span class="pila-xs" style="flex:1;min-width:0"><span class="peq">También le llevas la carrera</span>
             <span class="mini terciario">{atleta.carrera ? 'Ve «Tu carrera» (zonas, carreras, plan y revisiones) y sus sesiones de carrera por partes. En la ficha tienes la pestaña Carrera.' : 'Para quien prepara una carrera a la vez que la fuerza: zonas, plan por semanas, sesiones por partes, semáforo y revisiones.'}</span></span>

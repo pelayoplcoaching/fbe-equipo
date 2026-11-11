@@ -5888,7 +5888,7 @@ try {
 }
 
 // v0.114: el perfil del atleta, más bonito y más social (test/e2e-perfil-114.mjs)
-// v0.133: la carrera (migración 055): el coach y el atleta, en la demo (test/e2e-carrera-133.mjs)
+// v0.133: la carrera (migración 056): el coach y el atleta, en la demo (test/e2e-carrera-133.mjs)
 console.log('\nv0.133: la carrera');
 try {
   const { probarCarrera133 } = await import('./e2e-carrera-133.mjs');

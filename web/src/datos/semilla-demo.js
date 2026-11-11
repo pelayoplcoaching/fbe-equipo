@@ -640,7 +640,7 @@ export function semillaDemo(hoy = hoyISO()) {
     if (ultima) Object.assign(ultima, { cerrada_sola_en: hace(60 * 20), rpe_sesion: null, nota_atleta: null });
     for (const b of db.bloques) if (!('objetivo_logrado' in b)) b.objetivo_logrado = null;
   }
-  // (carrera, 055) Carlos prepara una media maratón: zonas, plan de 19 semanas, sus carreras, revisiones y una sesión de
+  // (carrera, 056) Carlos prepara una media maratón: zonas, plan de 19 semanas, sus carreras, revisiones y una sesión de
   // calidad por partes esta semana (al final: no cambia lo aleatorio de lo anterior)
   sembrarCarrera(db, { hoy, lunesHoy, carlos, ahoraISO });
   return db;
@@ -950,7 +950,7 @@ function sembrarSocial(db, { hoy, hace, lunesHoy, ruben, carlos }) {
   db.comunidad_votos_semana.push({ semana: pasada, de: ruben.perfil_id, para: carlos.perfil_id, de_atleta: ruben.id, para_atleta: carlos.id, creado_en: hace(60 * 24 * 3) });
 }
 
-// (carrera, 055) Las sesiones de calidad de partida de la biblioteca del coach (las mismas que pone la migración 055)
+// (carrera, 056) Las sesiones de calidad de partida de la biblioteca del coach (las mismas que pone la migración 056)
 export const RECETAS_CARRERA = [
   ['Rodaje fácil con strides', { modalidad: 'carrera', tipo: 'facil', minutos: 40, zona: 2, partes: [{ fase: 'bloque', seg: 2100, zona: 2, nota: 'Cómodo: puedes hablar con frases largas' }, { fase: 'strides', reps: 6, seg: 20, rec_seg: 60, rec: 'andando', nota: 'Rápidos y sueltos, sin apretar' }] }],
   ['Cuestas cortas 6 × 15 s', { modalidad: 'carrera', tipo: 'calidad', minutos: 40, partes: [{ fase: 'calentar', seg: 900, zona: 1, zona_hasta: 2 }, { fase: 'bloque', reps: 6, seg: 15, zona: 5, rec_seg: 90, rec: 'bajando andando', nota: 'Cuesta del 6 al 8 %: fuerte y con buena técnica' }, { fase: 'enfriar', seg: 600, zona: 1 }] }],

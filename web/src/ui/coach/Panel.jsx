@@ -274,7 +274,7 @@ function CobroPanel({ c, enLinea = false }) {
 function NuevoAtleta({ alCerrar }) {
   const { api } = useApp();
   const [f, setF] = useState({ nombre: '', email: '', objetivo: '', notion_url: '', servicio: 'completo', nivel: null, carrera: false });
-  const con055 = useCarga(() => api.carrera055().catch(() => null), []);   // (v0.133) la carrera, solo con la 055
+  const con056 = useCarga(() => api.carrera056().catch(() => null), []);   // (v0.133) la carrera, solo con la 056
   const [error, setError] = useState(null);
   const [creado, setCreado] = useState(null);
   const [ocupado, una] = useUnaVez();
@@ -286,7 +286,7 @@ function NuevoAtleta({ alCerrar }) {
         e.preventDefault();
         una(async () => {
           try {
-            const a = await api.crearAtleta({ nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null, ...CAMPOS_SERVICIO[f.servicio], nivel: f.servicio === 'nutricion' ? null : f.nivel, carrera: f.servicio !== 'nutricion' && con055.datos === true && f.carrera });
+            const a = await api.crearAtleta({ nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null, ...CAMPOS_SERVICIO[f.servicio], nivel: f.servicio === 'nutricion' ? null : f.nivel, carrera: f.servicio !== 'nutricion' && con056.datos === true && f.carrera });
             setCreado(a);
           } catch (err) { setError(err.message); }
         });
@@ -300,7 +300,7 @@ function NuevoAtleta({ alCerrar }) {
         {f.servicio !== 'nutricion' && <div class="campo"><span class="etq">Nivel</span>
           <Segmentos etiqueta="Nivel" clase="segmentos-nivel" valor={f.nivel} opciones={NIVELES} alCambiar={(v) => setF({ ...f, nivel: v })} />
           <span class="ayuda">{f.nivel ? AYUDA_NIVEL[f.nivel] : 'Decide cómo pautas la carga en el editor. Puedes elegirlo después, en Datos.'}</span></div>}
-        {f.servicio !== 'nutricion' && con055.datos === true && <label class="campo campo-check-largo" for="na-carrera">
+        {f.servicio !== 'nutricion' && con056.datos === true && <label class="campo campo-check-largo" for="na-carrera">
           <input id="na-carrera" type="checkbox" role="switch" class="interruptor" checked={f.carrera} onChange={(e) => setF({ ...f, carrera: e.currentTarget.checked })} />
           <span class="pila-xs"><span>También le llevas la carrera</span><span class="ayuda">Zonas, plan por semanas, sesiones por partes y revisiones. Lo puedes cambiar después, en Datos.</span></span>
         </label>}

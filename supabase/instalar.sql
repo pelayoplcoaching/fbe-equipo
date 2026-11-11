@@ -1,5 +1,5 @@
 -- =====================================================================
--- FBE Atletas: instalación completa en una base nueva (schema.sql y las migraciones 002 a 055)
+-- FBE Atletas: instalación completa en una base nueva (schema.sql y las migraciones 002 a 056)
 -- Generado con «npm run instalador»: no lo edites a mano (los cambios van en schema.sql o en una migración).
 --
 -- Cómo: en Supabase, SQL Editor → New query → pega TODO este archivo → Run. Después, en otra consulta,
@@ -19671,9 +19671,9 @@ revoke all on all functions in schema fbe_privado from public, anon, authenticat
 insert into public.fbe_migraciones (numero) values (54)  -- (3) número de esta migración
   on conflict (numero) do update set aplicada_en = excluded.aplicada_en;
 
--- ============================== migraciones/055_carrera.sql ==============================
+-- ============================== migraciones/056_carrera.sql ==============================
 -- =====================================================================
--- FBE Equipo, migración 055: la carrera, para quien quiere que le lleves también la parte de correr
+-- FBE Equipo, migración 056: la carrera, para quien quiere que le lleves también la parte de correr
 --
 -- Por qué: hay atletas que preparan una carrera (una media maratón, un trail) a la vez que entrenan fuerza, y su plan de
 -- carrera vivía en un PDF aparte. Con esto va en la app, en la misma semana que la fuerza: sus zonas, sus carreras, el
@@ -19698,20 +19698,20 @@ insert into public.fbe_migraciones (numero) values (54)  -- (3) número de esta 
 --   Todo lo de carrera lo escribe el coach; el atleta ve lo suyo (no la biblioteca de recetas). Va en «Descargar mis
 --   datos» y se borra con la ficha.
 --
--- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 054 (o con instalar.sql en una base nueva).
--- Se puede repetir sin romper nada. (La del reloj, cuando entre, pasa a ser la 056.)
+-- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 055 (o con instalar.sql en una base nueva).
+-- Se puede repetir sin romper nada. (La del reloj, cuando entre, pasa a ser la 057.)
 -- =====================================================================
 
 do $$
 declare v smallint;
 begin
   select max(numero) into v from public.fbe_migraciones;
-  if v > 55 then  -- (1) número de esta migración
-    raise exception 'Esta base ya tiene la migración %: repetir la 055 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
-      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 55;» y, después de ella, todas las siguientes en orden.';
+  if v > 56 then  -- (1) número de esta migración
+    raise exception 'Esta base ya tiene la migración %: repetir la 056 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 56;» y, después de ella, todas las siguientes en orden.';
   end if;
-  if not exists (select 1 from public.fbe_migraciones where numero = 54) then  -- (2) la anterior
-    raise exception 'Falta la migración 054 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
+  if not exists (select 1 from public.fbe_migraciones where numero = 55) then  -- (2) la anterior
+    raise exception 'Falta la migración 055 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
   end if;
 end $$;
 
@@ -19997,7 +19997,7 @@ insert into public.carrera_recetas (nombre, orden, pauta) values
 on conflict (nombre) do nothing;
 
 -- ---------------------------------------------------------------------
--- 6. Permisos (como al final de 003 a 054)
+-- 6. Permisos (como al final de 003 a 055)
 -- ---------------------------------------------------------------------
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
 revoke execute on all functions in schema public from public, anon;
@@ -20015,5 +20015,5 @@ begin
 end $$;
 revoke all on all functions in schema fbe_privado from public, anon, authenticated;
 
-insert into public.fbe_migraciones (numero) values (55)  -- (3) número de esta migración
+insert into public.fbe_migraciones (numero) values (56)  -- (3) número de esta migración
   on conflict (numero) do update set aplicada_en = excluded.aplicada_en;

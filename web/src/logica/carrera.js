@@ -1,4 +1,4 @@
-// La carrera (v0.133, migración 055): zonas, ritmos, partes de una sesión, el plan (macrociclo y semanas), las carreras,
+// La carrera (v0.133, migración 056): zonas, ritmos, partes de una sesión, el plan (macrociclo y semanas), las carreras,
 // el semáforo y las revisiones. Todo puro: lo usan el coach (Ficha → Carrera, el editor) y el atleta («Tu carrera»).
 import { num, leerNumero } from './calculos.js';
 import { sumarDias, lunesDe, diasEntre } from './fechas.js';

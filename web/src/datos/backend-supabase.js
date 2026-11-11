@@ -25,7 +25,7 @@ export const CLAVE_TABLA = { comunidad_intenciones: 'perfil_id', comunidad_padri
   comunidad_guardados: 'perfil_id,post_id',
   // v0.72 (migración 044): quién va a cada evento
   comunidad_evento_asistentes: 'evento_id,perfil_id',
-  // v0.133 (migración 055): lo de carrera de cada atleta y las semanas del plan
+  // v0.133 (migración 056): lo de carrera de cada atleta y las semanas del plan
   carrera_atleta: 'atleta_id', carrera_semanas: 'atleta_id,lunes' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';

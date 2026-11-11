@@ -4646,7 +4646,7 @@ console.log('La política 2026-12.18: el cierre de tus sesiones (v0.119)');
   const PV = await import('../web/src/logica/privacidad.js');
   const sec = legal.PRIVACIDAD.find((x) => x[0] === 'El cierre de tus sesiones')?.[1] || '';
   const movil = legal.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')?.[1] || '';
-  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.18') > 0 && legal.VERSION_LEGAL_SIN_055 === '2026-12.18' && legal.VERSION_LEGAL_SIN_054 === '2026-12.17' && PV.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.18' && PV.NOVEDADES_PRIVACIDAD[1][2].length <= 260
+  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.18') > 0 && legal.VERSION_LEGAL_SIN_056 === '2026-12.18' && legal.VERSION_LEGAL_SIN_054 === '2026-12.17' && PV.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.18' && PV.NOVEDADES_PRIVACIDAD[1][2].length <= 260
     && PV.novedadesDesde('2026-12.17', '2026-12.18').length === 1 && /3 horas/.test(sec) && /no guarda audio/.test(sec) && /objetivo/.test(sec) && /hábito/.test(sec)
     && /check-in que vas rellenando se guarda en tu móvil/.test(movil),
     'la política 2026-12.18 cuenta el cierre automático, el objetivo logrado, los hábitos sugeridos y el dictado; el borrador del check-in, en «Lo que se queda en tu móvil»');

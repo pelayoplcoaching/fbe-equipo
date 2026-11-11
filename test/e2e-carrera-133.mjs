@@ -1,4 +1,4 @@
-// v0.133: la carrera (migración 055) en la demo. Lo llama e2e.test.mjs.
+// v0.133: la carrera (migración 056) en la demo. Lo llama e2e.test.mjs.
 //   · El coach: la pestaña Carrera de Carlos (zonas de su FC umbral, macrociclo, semanas del plan, carreras, revisiones y
 //     biblioteca), añade una carrera, prepara una semana con una sesión de la biblioteca y, en el editor, pasa las
 //     sesiones de carrera del plan a la semana de entreno; el interruptor en Datos.
