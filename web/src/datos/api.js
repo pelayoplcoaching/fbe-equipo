@@ -1771,11 +1771,13 @@ export function crearApi(backend) {
     },
     // Copiar el menú de una semana a otra (lo que ya hubiera en la de destino se queda)
     async copiarMenuSemana(atletaId, lunesOrigen, lunesDestino) {
-      const [origen, destino, asignadas] = await Promise.all([api.menuSemana(atletaId, lunesOrigen), api.menuSemana(atletaId, lunesDestino),
-        b.select('recetas_atleta', { eq: { atleta_id: atletaId }, cols: 'receta_id' }).catch(falta022)]);
+      const [origen, destino, asignadas, delEquipo] = await Promise.all([api.menuSemana(atletaId, lunesOrigen), api.menuSemana(atletaId, lunesDestino),
+        b.select('recetas_atleta', { eq: { atleta_id: atletaId }, cols: 'receta_id' }).catch(falta022),
+        // (055) y las del recetario del equipo, que también se pueden poner en el menú
+        b.select('recetas', { eq: { para_todos: true }, cols: 'id' }).then((x) => x.map((r) => ({ receta_id: r.id }))).catch(() => [])]);
       // Una receta que ya no está en su recetario se copia como texto (la base no deja ponerla); lo que ya está
       // en la semana de destino no se duplica (al darle dos veces, por ejemplo)
-      const enRecetario = new Set(asignadas.map((x) => x.receta_id));
+      const enRecetario = new Set([...asignadas, ...delEquipo].map((x) => x.receta_id));
       const yaEsta = new Set(destino.map((e) => `${e.fecha}|${e.toma}|${e.texto}`));
       const filas = copiarMenu(origen, lunesOrigen, lunesDestino)
         .filter((f) => !yaEsta.has(`${f.fecha}|${f.toma}|${f.texto}`))

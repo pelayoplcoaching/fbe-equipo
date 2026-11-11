@@ -108,8 +108,10 @@ export function AtletaApp() {
   // se abrió la app en #equipo (una notificación), se va ahí en cuanto se sabe que está abierta
   useEffect(() => {
     if (equipo && inicial.current === 'equipo') { inicial.current = ''; setTab('equipo'); return; }
+    // (055) y en #recetas, en cuanto se sabe que hay recetario del equipo
+    if (hayRecetas.datos && inicial.current === 'recetas') { inicial.current = ''; setTab('recetas'); return; }
     if (!comunidad.cargando && !TABS.some(([t]) => t === tab)) setTab('hoy');
-  }, [atleta.entrenamiento, atleta.nutricion, equipo, comunidad.cargando]);
+  }, [atleta.entrenamiento, atleta.nutricion, equipo, comunidad.cargando, hayRecetas.datos]);
   useEffect(() => {
     if (!equipo || propio) { setNuevasEquipo(0); return undefined; }
     let vivo = true;

@@ -15,6 +15,7 @@ import { num } from '../logica/calculos.js';
 import { HojaRellenar } from './RellenarSemana.jsx';
 import { Ilustracion, iluDeToma } from './Ilustraciones.jsx';
 import { deslizarHecho } from './deslizar.js';
+import { HojaRecetaEquipo } from './RecetarioEquipo.jsx';
 
 const mayus = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -393,15 +394,18 @@ function HojaEntrada({ e, recetario, esCoach, alCerrar, alCambiar }) {
   const [ocupado, una] = useUnaVez();
   const asignacion = e.receta_id ? recetario.asignaciones.find((a) => a.receta_id === e.receta_id) : null;
   const a = asignacion ? { ...asignacion, receta: recetario.recetas.find((r) => r.id === e.receta_id) } : null;
+  // (055) una del recetario del equipo (que no está en el suyo): su ficha del recetario
+  const delEquipo = !a && e.receta_id ? (recetario.equipo || []).find((r) => r.id === e.receta_id) || null : null;
   const hacer = (fn, texto) => una(async () => { try { await fn(); aviso(texto); alCambiar(); alCerrar(); } catch (err) { aviso(err.message, 'error'); } });
   if (ver && a?.receta) return <HojaReceta a={a} esCoach={esCoach} opcional={recetario.opcional} alCerrar={() => setVer(false)} />;
+  if (ver && delEquipo) return <HojaRecetaEquipo r={delEquipo} esCoach={esCoach} alCerrar={() => setVer(false)} />;
   return (
     <Hoja titulo={e.texto} alCerrar={alCerrar}>
       <p class="peq secundario">{NOMBRE_TOMA[e.toma]}, {fmtConDia(e.fecha)}{e.kcal != null ? ` · ${textoMacros(cambiarMacros(e, raciones), true)}` : ''}</p>
       <div class="separa"><span class="peq">Raciones</span><div style="max-width:150px"><Paso valor={raciones} paso={0.5} min={0.25} max={10} dec={2} etiqueta="raciones" alCambiar={(v) => v && setRaciones(v)} /></div></div>
       {raciones !== Number(e.raciones) && <button class="btn btn-primario" disabled={ocupado} onClick={() => hacer(() => api.cambiarMenu(e, { raciones }), 'Raciones cambiadas')}>Guardar las raciones</button>}
       <button class="btn" disabled={ocupado} onClick={() => hacer(() => api.cambiarMenu(e, { hecho: !e.hecho }), e.hecho ? 'Marcada sin comer' : '¡Bien!')}><Icono n="hecho" /> {e.hecho ? 'Marcar como no comida' : 'Ya me la he comido'}</button>
-      {a?.receta && <button class="btn plano" onClick={() => setVer(true)}><Icono n="receta" /> Ver la receta</button>}
+      {(a?.receta || delEquipo) && <button class="btn plano" onClick={() => setVer(true)}><Icono n="receta" /> Ver la receta</button>}
       <button class="btn btn-peligro" disabled={ocupado} onClick={() => hacer(() => api.borrarMenu(e.id), 'Quitado del menú')}><Icono n="basura" /> Quitar del menú</button>
     </Hoja>
   );

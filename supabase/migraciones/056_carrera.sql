@@ -323,7 +323,7 @@ insert into public.carrera_recetas (nombre, orden, pauta) values
 on conflict (nombre) do nothing;
 
 -- ---------------------------------------------------------------------
--- 6. Permisos (como al final de 003 a 055)
+-- 6. Permisos (como al final de 003 a 054)
 -- ---------------------------------------------------------------------
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
 revoke execute on all functions in schema public from public, anon;
