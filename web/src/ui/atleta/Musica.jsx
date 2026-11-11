@@ -127,18 +127,26 @@ export function TarjetaMusica({ url, etiqueta, alAbrir = null, extra = null }) {
 }
 
 // ---------- La música de hoy, en la portada ----------
+// Lo que el coach enlazó para esta sesión ({ clave: url }). En su modo atleta (propio), sus propias listas de Cuenta ›
+// Música: musica_coach_lista las trae todas y musicaDeLaSesion escoge las que tocan (su sesión, su bloque, descarga,
+// la familia y el ritmo). (Las aperturas no se cuentan: son para «Tu mes» y «Tu año» de los atletas.)
+function musicaDeTuCoach(api, propio, sesionId, bloqueId) {
+  const p = propio ? api.musicaCoach().then((r) => r || {}) : api.musicaPara(sesionId, bloqueId);
+  return p.catch(() => ({}));
+}
+
 export function MusicaSesion({ sesion, semana = null, familia = null, cardio = null, alEmpezar }) {
   const { api, propio } = useApp();
   const personal = usePersonal();
-  const coach = useCarga(() => (propio ? Promise.resolve({}) : api.musicaPara(sesion.id, semana?.bloque_id || null).catch(() => ({}))), [sesion.id, semana?.bloque_id]);
+  const coach = useCarga(() => musicaDeTuCoach(api, propio, sesion.id, semana?.bloque_id || null), [sesion.id, semana?.bloque_id, propio]);
   const [mas, setMas] = useState(false);
   const [aviso, setAviso] = useState(() => !!leerAjustes().vozBloqueo && !!leerAjustes().sonido);
   const opciones = musicaDeLaSesion({ coach: coach.datos || {}, personal: personal.datos, familia, foco: semana?.foco || null, sesionId: sesion.id, bloqueId: semana?.bloque_id || null, modalidad: cardio?.modalidad || null });
-  if (propio) return null;
   // (v0.129) sin ninguna música (ni la del coach ni la suya), una invitación a poner la suya, que se puede cerrar
-  if (!opciones.length) return coach.cargando || personal.cargando ? null : <InvitacionMusica alGuardar={() => personal.recargar(true)} />;
+  // (en el modo atleta del coach no: «Lo tuyo» es de los atletas; sin listas suyas en Cuenta › Música, nada)
+  if (!opciones.length) return coach.cargando || personal.cargando || propio ? null : <InvitacionMusica alGuardar={() => personal.recargar(true)} />;
   const [primera, ...otras] = opciones;
-  const abrir = () => { api.musicaAbierta(); };
+  const abrir = () => { if (!propio) api.musicaAbierta(); };
   const empezarConMusica = () => {
     abrir();
     try { window.open(primera.url, '_blank', 'noopener,noreferrer'); } catch { /* bloqueado: queda el enlace */ }
@@ -288,11 +296,11 @@ function HojaMiLista({ api, alCerrar, alGuardar }) {
 export function BotonMusica({ sesion, semana = null, familia = null, cardio = null }) {
   const { api, propio } = useApp();
   const personal = usePersonal();
-  const coach = useCarga(() => (propio ? Promise.resolve({}) : api.musicaPara(sesion.id, semana?.bloque_id || null).catch(() => ({}))), [sesion.id, semana?.bloque_id]);
+  const coach = useCarga(() => musicaDeTuCoach(api, propio, sesion.id, semana?.bloque_id || null), [sesion.id, semana?.bloque_id, propio]);
   const [abierta, setAbierta] = useState(false);
   const opciones = musicaDeLaSesion({ coach: coach.datos || {}, personal: personal.datos, familia, foco: semana?.foco || null, sesionId: sesion.id, bloqueId: semana?.bloque_id || null, modalidad: cardio?.modalidad || null });
-  if (propio || !opciones.length) return null;
-  const abrir = () => { api.musicaAbierta(); };
+  if (!opciones.length) return null;
+  const abrir = () => { if (!propio) api.musicaAbierta(); };
   return (
     <>
       <button type="button" class="btn btn-peq boton-musica" onClick={() => setAbierta(true)}><Icono n="altavoz" /> Tu música</button>
