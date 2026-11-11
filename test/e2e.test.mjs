@@ -440,6 +440,8 @@ try {
   await hojaNut.locator('#nut-kcal').waitFor();
   check(Number((await hojaNut.locator('#nut-kcal').inputValue()).replace(/\D/g, '')) === kcalAntes + 149 && (await hojaNut.getByRole('heading', { name: /Sumado con productos: 149 kcal/ }).count()) === 1, 'y se suma a las kcal del día, con la lista de lo sumado');
   await hojaNut.getByRole('button', { name: 'Quitar Copos de avena (demo)' }).click();
+  // (el campo se repinta tras el cambio, en su efecto: se espera a que lo muestre)
+  await p.waitForFunction((v) => (document.querySelector('#nut-kcal')?.value || '').replace(/\D/g, '') === String(v), kcalAntes, { timeout: 4000 }).catch(() => {});
   check(Number((await hojaNut.locator('#nut-kcal').inputValue()).replace(/\D/g, '')) === kcalAntes, 'al quitarlo vuelve lo que había');
   await p.keyboard.press('Escape');
   await hojaNut.waitFor({ state: 'detached' });
