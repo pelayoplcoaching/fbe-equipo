@@ -1,0 +1,103 @@
+/* La comunidad viva: diez gestos en «Equipo». Las mismas reglas que las ilustraciones vivas (imagenes.css, bloque V):
+   solo transform (y scale, translate, rotate) y opacity; nada con «reducir movimiento»; paradas con la app en segundo
+   plano (html[data-oculta], ui/vivas.js); sin imágenes nuevas; nada cambia de tamaño ni de sitio. Lo que es estado
+   (la barra de una encuesta, las llamas juntas) se ve también con «reducir movimiento», quieto. */
+
+/* 1 · Animar: al mandar el ánimo, la mano sale hacia arriba */
+.btn-animar, .btn-animar-grande { position: relative; }
+.btn-animar.recien::after, .btn-animar-grande.recien::after { content: "\1F64C"; position: absolute; left: 50%; top: 0; margin-left: -.6em; font-size: 1.25rem; line-height: 1; pointer-events: none; opacity: 0; }
+/* 6 · Encuestas: la barra se mide con transform (el ancho no se mueve) */
+.encuesta-opcion .eo-barra { width: 100%; transform: scaleX(var(--pct, 0)); transform-origin: 0 50%; transition: none; }
+/* 7 · Compañeros de racha: los dos habéis completado la semana y las dos llamas son una */
+.cp-llamas { position: relative; display: inline-block; }
+.cp-llamas > i { font-style: normal; display: inline-block; }
+.cp-llamas > i + i { position: absolute; left: 0; top: 0; }
+/* 8 · Las franjas del equipo, con su luz encima: la luna y las estrellas de la manada, la cumbre del reto */
+.franja-viva { position: relative; overflow: hidden; }
+.franja-viva > .fv-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: inherit; }
+.fv-luna, .fv-cumbre { position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); }
+.fv-luna { left: 82%; top: 19%; width: 46%; aspect-ratio: 1; opacity: .5; background: radial-gradient(closest-side, rgba(226, 214, 255, .5) 0%, rgba(190, 170, 255, .16) 45%, transparent 100%); }
+.fv-cumbre { left: 77%; top: 13%; width: 34%; aspect-ratio: 1; opacity: .35; background: radial-gradient(closest-side, rgba(255, 255, 255, .6) 0%, rgba(205, 190, 255, .2) 45%, transparent 100%); }
+.franja-reto.cumbre .fv-cumbre { opacity: .8; background: radial-gradient(closest-side, rgba(255, 236, 170, .75) 0%, rgba(242, 207, 99, .28) 45%, transparent 100%); }
+.fv-estrella { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: .55; box-shadow: 0 0 5px 1px rgba(214, 205, 255, .5); }
+/* 10 · La celebración de un reto: un destello cruza el disco */
+.cm-disco { overflow: hidden; }
+.cm-disco::after { content: ""; position: absolute; top: -10%; bottom: -10%; left: 0; width: 60%; pointer-events: none; opacity: 0; background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, .75) 50%, transparent 100%); }
+@media (forced-colors: active) { .fv-luna, .fv-cumbre, .fv-estrella, .cm-disco::after, .btn-animar.recien::after, .btn-animar-grande.recien::after, .post.post-llega.mia::after { display: none; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 1 · Animar */
+  .btn-animar.recien > span:first-child, .btn-animar-grande.recien > span:first-child { display: inline-block; animation: cv-mano-salta .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+  .btn-animar.recien::after, .btn-animar-grande.recien::after { animation: cv-mano-vuela .9s cubic-bezier(.2, .7, .3, 1) both; }
+  /* 2 · Las barras de los retos y del ranking crecen desde cero, en cascada; la tuya, con un brillo al llegar */
+  .reto .barra-equipo > span, .fila-ranking .barra-equipo > span { transform-origin: 0 50%; animation: cv-barra-crece .7s cubic-bezier(.2, .8, .2, 1) calc(var(--cv-i, 0) * 70ms + .1s) both; }
+  .progreso-equipo > li:nth-child(2), .ranking-lista > li:nth-child(2), .marcador-equipos > .me-equipo:nth-child(2) { --cv-i: 1; }
+  .progreso-equipo > li:nth-child(3), .ranking-lista > li:nth-child(3) { --cv-i: 2; }
+  .progreso-equipo > li:nth-child(4), .ranking-lista > li:nth-child(4) { --cv-i: 3; }
+  .progreso-equipo > li:nth-child(5), .ranking-lista > li:nth-child(5) { --cv-i: 4; }
+  .progreso-equipo > li:nth-child(6), .ranking-lista > li:nth-child(6) { --cv-i: 5; }
+  .progreso-equipo > li:nth-child(7), .ranking-lista > li:nth-child(7) { --cv-i: 6; }
+  .progreso-equipo > li:nth-child(n + 8), .ranking-lista > li:nth-child(n + 8) { --cv-i: 7; }
+  .fila-progreso.yo .barra-equipo, .fila-ranking.yo .barra-equipo { position: relative; }
+  .fila-progreso.yo .barra-equipo::after, .fila-ranking.yo .barra-equipo::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; pointer-events: none; opacity: 0;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .8), transparent); animation: cv-brillo 1s ease-out calc(var(--cv-i, 0) * 70ms + .8s) both; }
+  /* 3 · El marcador por equipos: las cifras suben a su sitio y el equipo que va por delante da un empujón */
+  .marcador-equipos .me-equipo .separa > span > .num, .reto-equipo .re-total { display: inline-block; animation: cv-cifra-sube .55s cubic-bezier(.2, .8, .2, 1) calc(var(--cv-i, 0) * 120ms + .15s) both; }
+  .marcador-equipos .me-equipo.delante .separa > span > .num { animation: cv-cifra-sube .55s cubic-bezier(.2, .8, .2, 1) calc(var(--cv-i, 0) * 120ms + .15s) both, cv-empujon .5s cubic-bezier(.3, 1.6, .5, 1) 1s; }
+  /* 4 · El ranking: el podio sube (tercero, segundo, primero), los suyos caen encima y las filas entran en cascada */
+  .podio-sitio .podio-peana { transform-origin: 50% 100%; animation: cv-peana-sube .55s cubic-bezier(.2, .8, .2, 1) var(--cv-podio, 0s) both; }
+  .podio-sitio > :not(.podio-peana) { animation: cv-cae .5s cubic-bezier(.2, .9, .3, 1.2) calc(var(--cv-podio, 0s) + .3s) both; }
+  .podio-sitio.m3 { --cv-podio: 0s; } .podio-sitio.m2 { --cv-podio: .18s; } .podio-sitio.m1 { --cv-podio: .36s; }
+  .ranking-lista > .fila-ranking { animation: cv-fila-entra .4s cubic-bezier(.2, .8, .2, 1) calc(var(--cv-i, 0) * 60ms + .35s) both; }
+  /* 5 · El muro: la publicación que llega entra con un gesto; la tuya, además, con un destello */
+  .post.post-llega { animation: cv-post-llega .5s cubic-bezier(.2, .8, .2, 1) both; }
+  .post.post-llega.mia { position: relative; }
+  .post.post-llega.mia::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; background: color-mix(in srgb, var(--morado) 16%, transparent); animation: cv-destello 1.2s ease-out .15s both; }
+  /* 6 · Encuestas: al votar, las barras se llenan y tu opción da un golpe; si cambia el reparto, se recolocan */
+  .encuesta-opcion .eo-barra { transition: transform .45s cubic-bezier(.2, .8, .2, 1); animation: cv-barra-crece .6s cubic-bezier(.2, .8, .2, 1) both; }
+  .encuesta-opcion.mia .eo-texto > svg { animation: cv-golpe .45s cubic-bezier(.3, 1.6, .5, 1) .25s both; }
+  .encuesta-opcion .eo-pct { animation: cv-aparece .4s ease-out .3s both; }
+  /* 7 · Compañeros de racha: las dos llamas se acercan y prenden en una */
+  .cp-llamas > i:first-child { animation: cv-llama-izq .9s cubic-bezier(.3, 0, .2, 1) .3s both; }
+  .cp-llamas > i + i { animation: cv-llama-der .9s cubic-bezier(.3, 0, .2, 1) .3s both; }
+  .cp-llamas { animation: cv-prende .5s cubic-bezier(.3, 1.6, .5, 1) 1.15s both; }
+  /* 8 · Las franjas: la imagen se acerca despacio (una vez); la luna y la cumbre respiran unas veces; las estrellas titilan */
+  .franja-manada > .fv-img { transform-origin: 82% 30%; animation: cv-franja 12s cubic-bezier(.25, .4, .45, 1) both; }
+  .franja-reto > .fv-img { transform-origin: 77% 20%; animation: cv-franja 12s cubic-bezier(.25, .4, .45, 1) both; }
+  .fv-luna { animation: cv-respira 5s ease-in-out 6 alternate; }
+  .fv-cumbre { animation: cv-respira 4.5s ease-in-out 4 alternate; }
+  .franja-reto.cumbre .fv-cumbre { animation: cv-respira-cumbre 2.6s ease-in-out 8 alternate; }
+  .fv-estrella { animation: cv-titila 2.8s ease-in-out var(--espera, 0s) 8 alternate; }
+  /* 9 · Insignias: la que aún no habías visto llega girando y se asienta con un brillo */
+  .pe-insignias .insignia.nueva { animation: cv-insignia-llega .7s cubic-bezier(.2, .9, .3, 1.2) .25s both; }
+  .pe-insignias .insignia.nueva > span:first-child { animation: cv-insignia-gira .9s cubic-bezier(.2, .8, .2, 1) .25s both; }
+  /* 10 · La celebración de un reto: el destello del disco y el texto, que sube por partes */
+  .cm-disco::after { animation: cv-brillo-disco .9s ease-out .9s both; }
+  .celebracion > .celebracion-titulo { animation: cv-sube .5s cubic-bezier(.2, .8, .2, 1) .45s both; }
+  .celebracion > .celebracion-texto { animation: cv-sube .5s cubic-bezier(.2, .8, .2, 1) .6s both; }
+  html[data-oculta] :is(.fv-img, .fv-luna, .fv-cumbre, .fv-estrella, .cp-llamas, .cp-llamas > i, .podio-sitio *, .reto .barra-equipo > span) { animation-play-state: paused; }
+}
+@keyframes cv-mano-salta { 0% { transform: scale(1); } 45% { transform: scale(1.35) rotate(-8deg); } 100% { transform: scale(1); } }
+@keyframes cv-mano-vuela { 0% { opacity: 0; transform: translateY(0) scale(.7); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-34px) scale(1.25); } }
+@keyframes cv-barra-crece { from { transform: scaleX(0); } }
+@keyframes cv-brillo { 0% { opacity: 0; transform: translateX(-100%); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateX(250%); } }
+@keyframes cv-cifra-sube { from { opacity: 0; transform: translateY(70%); } }
+@keyframes cv-empujon { 0% { scale: 1; } 45% { scale: 1.22; } 100% { scale: 1; } }
+@keyframes cv-peana-sube { from { transform: scaleY(0); } }
+@keyframes cv-cae { from { opacity: 0; transform: translateY(-14px); } }
+@keyframes cv-fila-entra { from { opacity: 0; transform: translateX(-10px); } }
+@keyframes cv-post-llega { from { opacity: 0; transform: translateY(-14px) scale(.98); } }
+@keyframes cv-destello { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes cv-golpe { 0% { transform: scale(0); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
+@keyframes cv-aparece { from { opacity: 0; } }
+@keyframes cv-llama-izq { 0% { opacity: .7; transform: translateX(-9px) scale(.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+@keyframes cv-llama-der { 0% { opacity: .7; transform: translateX(9px) scale(.8); } 100% { opacity: 0; transform: translateX(0) scale(1); } }
+@keyframes cv-prende { 0% { scale: 1; } 50% { scale: 1.4; } 100% { scale: 1; } }
+@keyframes cv-franja { from { scale: 1; } to { scale: 1.06; } }
+@keyframes cv-respira { from { opacity: .3; transform: translate(-50%, -50%) scale(.94); } to { opacity: .62; transform: translate(-50%, -50%) scale(1.06); } }
+@keyframes cv-respira-cumbre { from { opacity: .55; transform: translate(-50%, -50%) scale(.92); } to { opacity: 1; transform: translate(-50%, -50%) scale(1.12); } }
+@keyframes cv-titila { from { opacity: .15; transform: scale(.7); } to { opacity: .9; transform: scale(1.15); } }
+@keyframes cv-insignia-llega { from { opacity: 0; transform: translateY(8px) scale(.7); } }
+@keyframes cv-insignia-gira { from { transform: rotate(-200deg) scale(.6); } }
+@keyframes cv-brillo-disco { 0% { opacity: 0; transform: translateX(-140%) skewX(-14deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateX(260%) skewX(-14deg); } }
+@keyframes cv-sube { from { opacity: 0; transform: translateY(10px); } }
