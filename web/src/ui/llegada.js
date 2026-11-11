@@ -26,7 +26,7 @@ const piezasDe = (nodos) => {
 // (diseño, tanda 17) Las fotos también llegan: una imagen que entra en la página sin haber cargado aún no aparece de golpe
 // al terminar de cargar, se funde de borrosa a nítida (clases «img-llega» mientras carga e «img-llegada» al llegar; el
 // fundido, en diseno.css, bloque 41). Si ya estaba cargada, o falla, se queda como siempre. El chat no se toca.
-const FUERA_FOTOS = '.chat, .burbuja, .tarjeta-previa, .portada';
+const FUERA_FOTOS = '.chat, .burbuja, .tarjeta-previa, .portada, .cruce-capa:not(.primera)';
 function fotos(nodo) {
   const imgs = nodo.tagName === 'IMG' ? [nodo] : nodo.querySelectorAll ? nodo.querySelectorAll('img') : [];
   for (const img of imgs) {

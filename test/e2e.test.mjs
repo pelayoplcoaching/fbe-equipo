@@ -5961,6 +5961,10 @@ console.log('\n«Aprende»: las guías y la ficha de cada ejercicio');
 try {
   const { probarGuias } = await import('./e2e-guias.mjs');
   await probarGuias({ navegador, check });
+  // Las ilustraciones vivas: la portada, la bienvenida, dónde entrenas y el resumen (y quietas con «reducir movimiento»)
+  console.log('\nLas ilustraciones vivas');
+  const { probarVivas } = await import('./e2e-vivas.mjs');
+  await probarVivas({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));
