@@ -8,7 +8,7 @@
 export const NOVEDADES = {
   '0.138': {
     atleta: [
-      'En «Aprende», cada estantería con su ilustración; y el mito de la semana y el cuestionario inicial, con la suya.',
+      'En «Aprende», cada guía estrena portada y cada estantería su ilustración; también el mito de la semana y el cuestionario inicial.',
     ],
   },
   '0.137': {
