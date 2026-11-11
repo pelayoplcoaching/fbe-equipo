@@ -5,7 +5,7 @@ import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Vacio, Siluetas, ErrorCaja, CabeceraGrande } from './comunes.jsx';
 import { hoyISO } from '../logica/fechas.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
-import { imagenGuia } from '../logica/imagenes.js';
+import { imagenGuia, IMAGEN_MITO } from '../logica/imagenes.js';
 import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido, porEstantes, estanteDe, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES } from '../logica/guias.js';
 import { listaGuias, guiaEntera, todasLasFichas, enlacesFichas, enlazarFicha, publicarGuia, fichaDeEjercicio, guiasConTexto, guiaPorClave, guiasLigeras } from '../datos/guias.js';
 
@@ -372,7 +372,8 @@ export function MitoDeLaSemana() {
   return (
     <>
       {visto !== semana && (
-        <button type="button" class="panel panel-pad mito-semana" onClick={() => setAbierto(true)} aria-haspopup="dialog">
+        <button type="button" class={`panel panel-pad mito-semana${hayImagen(IMAGEN_MITO) ? ' con-ilu' : ''}`} onClick={() => setAbierto(true)} aria-haspopup="dialog">
+          {hayImagen(IMAGEN_MITO) && <Imagen id={IMAGEN_MITO} clase="franja-ilu franja-pegada franja-mito" tamanos="(min-width: 720px) 640px, 100vw" />}
           <span class="mini mito-semana-k"><Icono n="pregunta" /> El mito de la semana</span>
           <strong class="mito-frase">«{mito.mito}»</strong>
           <span class="peq secundario mito-semana-pie">Qué dice la evidencia <Icono n="derecha" /></span>

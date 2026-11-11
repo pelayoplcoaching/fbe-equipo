@@ -66,6 +66,10 @@ export function imagenGrupo(grupo) {
 const ESTANTES_IMG = { empieza: 'guia-empieza', entrenar: 'guia-entrenar', musculos: 'guia-entrenar', comer: 'guia-comer', cabeza: 'guia-cabeza', salud: 'guia-salud', mas: 'guia-mas' };
 export const imagenEstante = (estante) => ESTANTES_IMG[estante] || 'guia-mas';
 export const imagenGuia = (g, estante) => imagenGrupo(g?.grupo) || imagenEstante(estante);
+// El mito de la semana (la tarjeta de Hoy) y los cinco pasos del cuestionario inicial
+export const IMAGEN_MITO = 'mito-semana';
+const PASOS_CUESTIONARIO = ['objetivo', 'tiempo', 'lugar', 'salud', 'lesiones'];
+export const imagenPasoCuestionario = (clave) => (PASOS_CUESTIONARIO.includes(clave) ? `cuestionario-${clave}` : null);
 
 // ---------- Cada ejercicio de la biblioteca ----------
 // La figura maniquí en el momento clave del ejercicio (claude/imagenes-ejercicios.md). Por el id del ejercicio de la
