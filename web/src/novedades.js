@@ -9,6 +9,11 @@ export const NOVEDADES = {
   '0.135': {
     atleta: [
       'Escanea el código de barras de lo que comes y se suma a tu día.',
+      '«Aprende», por estanterías: busca dentro de las guías y te proponemos la que viene a cuento según tu semana.',
+      'En Hoy, el mito de la semana: uno nuevo cada lunes, desmontado en un minuto.',
+    ],
+    coach: [
+      '«Aprende» también para quien solo lleva la nutrición, y la guía que viene a cuento sale sola (descarga, check-in, parón, fase de la dieta).',
     ],
   },
   '0.134': {
