@@ -32,7 +32,8 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
   const [comidas, setComidas] = useState(false);
   const r = recetario.datos;
   // Lo apuntado del recetario del equipo también sale, con sus ingredientes, en la lista de la compra
-  const rMenu = r && hayEquipo ? { ...r, recetas: [...r.recetas, ...equipo.datos.recetas.filter((x) => !r.recetas.some((y) => y.id === x.id))] } : r;
+  // y se pueden elegir al añadir una comida al menú
+  const rMenu = r && hayEquipo ? { ...r, equipo: equipo.datos.recetas, recetas: [...r.recetas, ...equipo.datos.recetas.filter((x) => !r.recetas.some((y) => y.id === x.id))] } : r;
   const darConsentimiento = async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); };
   return (
     <div class="contenido">

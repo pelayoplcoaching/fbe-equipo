@@ -334,6 +334,10 @@ function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, a
   const vistas = new Set(propias.map((a) => a.receta_id));
   const otras = [];
   for (const t of CLAVES_TOMA) for (const a of delDia(recetario.porToma[t] || [])) if (!vistas.has(a.receta_id)) { vistas.add(a.receta_id); otras.push(a); }
+  // (055) las del recetario del equipo que encajan en esta comida y no están ya en el suyo (plegadas: pueden ser muchas)
+  const delEquipo = (recetario.equipo || []).filter((r) => (r.tomas || []).includes(toma) && !vistas.has(r.id))
+    .map((r) => ({ id: `equipo-${r.id}`, receta_id: r.id, receta: r, toma, factor: 1, favorita: false }));
+  const [verEquipo, setVerEquipo] = useState(false);
   const [elegida, setElegida] = useState(null);
   const [raciones, setRaciones] = useState(1);
   const [texto, setTexto] = useState('');
@@ -356,6 +360,9 @@ function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, a
       {recetario.opcional && recetario.asignaciones.some((a) => a.variante) && <p class="mini terciario">{sin ? `Día sin ${NOMBRE_TOMA[recetario.opcional].toLowerCase()}: las opciones un poco más grandes.` : `Día con ${NOMBRE_TOMA[recetario.opcional].toLowerCase()}.`}</p>}
       {propias.length > 0 && <><h3 class="etq">De tu recetario para {NOMBRE_TOMA[toma].toLowerCase()}</h3><div class="panel"><ul class="lista">{propias.map(fila)}</ul></div></>}
       {otras.length > 0 && <><h3 class="etq">{propias.length ? 'Otras de tu recetario' : 'De tu recetario'}</h3><div class="panel"><ul class="lista">{otras.map(fila)}</ul></div></>}
+      {delEquipo.length > 0 && (verEquipo
+        ? <><h3 class="etq">Del recetario del equipo</h3><div class="panel"><ul class="lista">{delEquipo.map(fila)}</ul></div></>
+        : <button type="button" class="btn plano" onClick={() => setVerEquipo(true)}><Icono n="receta" /> Del recetario del equipo ({delEquipo.length})</button>)}
       {elegida && (
         <div class="panel panel-pad pila-s sticky-abajo">
           <div class="separa"><span class="peq"><strong>{elegida.receta.nombre}</strong></span>
@@ -373,7 +380,7 @@ function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, a
         </div>
         <button class="btn" disabled={ocupado || !texto.trim()}>Añadir lo escrito</button>
       </form>
-      {!propias.length && !otras.length && <p class="mini terciario">Cuando tu coach te ponga recetas, las elegirás de aquí.</p>}
+      {!propias.length && !otras.length && !delEquipo.length && <p class="mini terciario">Cuando tu coach te ponga recetas, las elegirás de aquí.</p>}
     </Hoja>
   );
 }
