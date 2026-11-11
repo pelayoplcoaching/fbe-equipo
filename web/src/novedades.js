@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.137': {
+    atleta: [
+      'Las ilustraciones de cada día cobran vida: la portada de tu sesión se acerca despacio y la bienvenida tiene la luz de la hora.',
+      'Al cambiar dónde entrenas, la imagen se funde con la nueva; y al terminar, el sello cae como un tampón con un destello.',
+    ],
+  },
   '0.136': {
     atleta: [
       'Si una serie te sale más dura o más fácil de lo pautado, la siguiente te propone otra carga y te dice por qué.',
