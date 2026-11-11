@@ -4457,9 +4457,11 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 /* 352. Las teclas del teclado de la serie: al pulsar se hunden al momento y, al soltar, rebotan y su color se apaga
    despacio (antes solo se encogían un 3 %). El pulsado general (la opacidad) sigue siendo el de pulido.css. */
 @media (prefers-reduced-motion: no-preference) {
-  .teclado-serie .tecla { transition: transform .3s var(--curva-rebote), background-color .45s ease-out; }
+  .teclado-serie .tecla { transition: transform .3s var(--curva-rebote); }
+  /* (el color solo se apaga despacio en las teclas de números: en las del RPE, la elegida cambia de fondo y de letra a la vez, y a medio fundido no cumplía el contraste) */
+  .teclado-teclas .tecla { transition: transform .3s var(--curva-rebote), background-color .45s ease-out; }
   .teclado-serie .tecla:active { transition-duration: 0s; transform: scale(.9); }
-  .teclado-serie .tecla:not(.tecla-siguiente, [aria-pressed="true"]):active { background: color-mix(in srgb, var(--morado) 26%, var(--hoja)); }
+  .teclado-serie .tecla:not(.tecla-siguiente, .tecla-paso, [aria-pressed="true"]):active { background: color-mix(in srgb, var(--morado) 26%, var(--hoja)); }
 }
 /* 353. La cifra que se escribe salta con cada tecla: en FilaSerie.jsx (animate(), 190 ms), no aquí. */
 
