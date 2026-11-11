@@ -8,7 +8,9 @@
 export const NOVEDADES = {
   '0.132': {
     atleta: [
-      'Los discos entran en la barra uno a uno cuando cambias los kilos, y tus tres anillos de Hoy se llenan al entrar.',
+      'La sesión responde a cada toque: las teclas rebotan, la cifra que escribes salta y el RPE que eliges se marca con un salto.',
+      'Las series llegan una a una, los discos entran en la barra al cambiar los kilos y tus tres anillos de Hoy se llenan al entrar.',
+      'En el descanso, «Ahora toca» llega con la siguiente serie y la cuenta se mueve al sumar o quitar 15 segundos.',
     ],
   },
   '0.131': {
