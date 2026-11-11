@@ -5898,6 +5898,16 @@ try {
   console.log('  ✗ la carrera de la v0.133:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.134: la música también en el modo atleta del coach (test/e2e-musica-propio.mjs)
+console.log('\nv0.134: la música en el modo atleta del coach');
+try {
+  const { probarMusicaPropio } = await import('./e2e-musica-propio.mjs');
+  await probarMusicaPropio({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la música en el modo atleta (v0.134):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 console.log('\nv0.114: el perfil, más bonito y más social');
 try {
   const { probarPerfil114 } = await import('./e2e-perfil-114.mjs');

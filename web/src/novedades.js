@@ -15,6 +15,7 @@ export const NOVEDADES = {
     coach: [
       'Al corregir un vídeo, los errores típicos de su ficha salen como frases de un toque.',
       'En el editor, cada ejercicio con ficha enseña sus repeticiones por objetivo y avisa si una molestia del atleta lo desaconseja.',
+      'Tu música también en tu modo atleta: tus listas de Cuenta › Música salen en la portada de tus sesiones.',
     ],
   },
   '0.133': {
