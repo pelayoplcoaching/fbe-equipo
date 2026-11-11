@@ -1224,7 +1224,7 @@ export function crearApi(backend) {
       if ((await api.comunidad053().catch(() => null)) !== true) return VERSION_LEGAL_SIN_053;
       // (054) el cierre de las sesiones
       if ((await api.cierre054().catch(() => null)) !== true) return VERSION_LEGAL_SIN_054;
-      // (v0.133) el recetario del equipo (055) y la carrera (056)
+      // (v0.133) el recetario del equipo (055) y la carrera (056); (v0.135) con la 056, la 2026-12.21 (el escáner de productos, sin migración)
       if ((await api.recetario055().catch(() => null)) !== true) return VERSION_LEGAL_SIN_055;
       return (await api.carrera056().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_056;
     },

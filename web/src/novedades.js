@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.135': {
+    atleta: [
+      'Escanea el código de barras de lo que comes y se suma a tu día.',
+    ],
+  },
   '0.134': {
     atleta: [
       'Al grabar un vídeo de técnica, antes de enviarlo ves los 3 errores típicos de ese ejercicio.',
