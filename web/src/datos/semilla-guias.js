@@ -79,6 +79,112 @@ export const GUIAS_DEMO = [
         ['Sentadilla goblet con una mancuerna.', 'Barra alta, de 5 a 8 repeticiones.', 'Pausa de dos segundos abajo.'],
         'En casi todos los programas de pierna.', 'Con dolor lumbar activo: mejor prensa o sentadilla hack.', TABLA_BASE) },
     ] },
+  // (filosofía) Guías de leer, sin fichas: para ver las estanterías, el buscador, las guías «a cuento» y el mito de la
+  // semana. Textos inventados para la demo.
+  { clave: 'manual', titulo: 'Cómo funciona esto', subtitulo: 'Tu semana con tu coach, paso a paso', grupo: null, orden: 100,
+    contenido: {
+      entrada: 'Lo que haces tú, lo que hace tu coach y cuándo.',
+      secciones: [
+        { clave: 'ritmo', titulo: 'El ritmo de la semana', subtitulo: 'Entrenar, apuntar y contar cómo ha ido', bloques: [
+          { t: 'p', x: 'Entrenas tus sesiones y **apuntas cada serie** en el momento. El domingo envías tu check-in y tu coach te contesta con los ajustes.' },
+          { t: 'tabla', cab: ['Cuándo', 'Qué toca'], filas: [['Cada sesión', 'Kilos, repeticiones y esfuerzo de cada serie'], ['Domingo', 'El check-in de la semana'], ['Fin de semana', 'La revisión de tu coach']] },
+          { t: 'cita', x: 'Un dato apuntado a tiempo vale más que diez recordados a medias.' },
+        ] },
+        { clave: 'rpe', titulo: 'El esfuerzo, del 1 al 10', subtitulo: 'Cuántas repeticiones te quedaban', bloques: [
+          { t: 'p', x: 'El esfuerzo de una serie se mide por las repeticiones que **te quedaban en la recámara**: con dos, un 8; con una, un 9.' },
+        ] },
+      ],
+      ideas: [{ titulo: 'Apunta en el momento', x: 'Lo que no se apunta, no se puede ajustar.' }],
+    },
+    fichas: [] },
+  { clave: 'deload', titulo: 'La semana de descarga', subtitulo: 'Bajar para seguir subiendo', grupo: null, orden: 110,
+    contenido: {
+      entrada: 'Por qué una semana más suave es parte del plan.',
+      secciones: [
+        { titulo: 'Para qué sirve', bloques: [{ t: 'p', x: 'Las semanas duras dejan **cansancio acumulado**. La descarga lo baja para que se vea lo que has ganado.' }] },
+        { clave: 'como-hacerla', titulo: 'Cómo se hace', subtitulo: 'Menos series y más margen', bloques: [
+          { t: 'ul', xs: ['**Menos series**: en torno a la mitad de las habituales.', '**Más margen**: deja tres o cuatro repeticiones en la recámara.', '**Mismos ejercicios**: no es semana de probar cosas nuevas.'] },
+          { t: 'caja', tono: 'aviso', titulo: 'Lo que no es', bloques: [{ t: 'p', x: 'No es una semana de vacaciones ni una semana para compensar con cardio intenso.' }] },
+        ] },
+      ],
+      ideas: [{ titulo: 'Descargar es entrenar', x: 'La semana suave es la que deja que las duras sirvan.' }],
+    },
+    fichas: [] },
+  { clave: 'volver', titulo: 'Volver tras un parón', subtitulo: 'Sin prisa y sin culpa', grupo: null, orden: 112,
+    contenido: {
+      entrada: 'Cómo retomar después de unas semanas sin entrenar.',
+      secciones: [
+        { clave: 'reglas-de-oro', titulo: 'Dos reglas para la vuelta', subtitulo: 'Quedarse corto y tener paciencia', bloques: [
+          { t: 'ol', xs: ['**Empieza por debajo** de donde lo dejaste: menos peso y menos series.', '**Sube poco a poco**: en dos o tres semanas estarás donde estabas.'] },
+        ] },
+      ],
+      ideas: [],
+    },
+    fichas: [] },
+  { clave: 'cardio', titulo: 'Cardio y fuerza', subtitulo: 'Cómo se llevan bien', grupo: null, orden: 113,
+    contenido: {
+      entrada: 'El cardio suma salud y, bien puesto, no resta fuerza.',
+      secciones: [
+        { clave: 'combinar', titulo: 'Cómo combinarlos', subtitulo: 'Días, orden e intensidad', bloques: [
+          { t: 'p', x: 'Si puedes, **en días distintos**. Si van el mismo día, primero la fuerza y después el cardio suave.' },
+        ] },
+      ],
+      ideas: [],
+    },
+    fichas: [] },
+  { clave: 'composicion', titulo: 'Las fases de la dieta', subtitulo: 'Ganar, mantener y perder', grupo: null, orden: 121,
+    contenido: {
+      entrada: 'Cada fase tiene su objetivo y su ritmo.',
+      secciones: [
+        { clave: 'volumen', titulo: 'Ganar músculo', subtitulo: 'Un poco por encima, mucho tiempo', bloques: [{ t: 'p', x: 'Un **pequeño superávit** sostenido durante meses da más músculo y menos grasa que comer de más unas semanas.' }] },
+        { clave: 'definicion', titulo: 'Perder grasa', subtitulo: 'Un poco por debajo, sin pasar hambre', bloques: [{ t: 'p', x: 'Un **déficit pequeño** se sostiene; uno grande se abandona. La proteína alta y la fuerza protegen el músculo.' }] },
+        { clave: 'mantenimiento', titulo: 'Mantener', subtitulo: 'La fase que da descanso', bloques: [{ t: 'p', x: 'Entre fase y fase, unas semanas **comiendo lo que gastas** asientan lo conseguido.' }] },
+      ],
+      ideas: [{ titulo: 'La prisa sale cara', x: 'Fases largas y cambios pequeños.' }],
+    },
+    fichas: [] },
+  { clave: 'sueno', titulo: 'Dormir mejor', subtitulo: 'El descanso también se entrena', grupo: null, orden: 130,
+    contenido: {
+      entrada: 'Dormir bien es lo que más ayuda a recuperar.',
+      secciones: [
+        { clave: 'higiene', titulo: 'Hábitos que ayudan', subtitulo: 'Lo sencillo, primero', bloques: [
+          { t: 'ul', xs: ['**Horario regular**, también el fin de semana.', '**Habitación fresca y a oscuras**.', '**La cafeína, por la mañana**: después de comer ya estorba.'] },
+        ] },
+      ],
+      ideas: [],
+    },
+    fichas: [] },
+  { clave: 'motivacion', titulo: 'Los días sin ganas', subtitulo: 'El hábito pesa más que las ganas', grupo: null, orden: 131,
+    contenido: {
+      entrada: 'Qué hacer cuando no apetece.',
+      secciones: [
+        { clave: 'que-hacer', titulo: 'Qué hacer cuando no apetece', subtitulo: 'Empezar pequeño', bloques: [
+          { t: 'p', x: 'Pacta contigo **diez minutos**. Si a los diez minutos sigues sin ganas, recoges; casi nunca pasa.' },
+          { t: 'cita', x: 'Una sesión corta también cuenta.' },
+        ] },
+      ],
+      ideas: [],
+    },
+    fichas: [] },
+  { clave: 'mitos', titulo: 'Mitos del gimnasio', subtitulo: 'Lo que se repite y lo que se sabe', grupo: null, orden: 143,
+    contenido: {
+      entrada: 'Frases que se oyen en cualquier vestuario, miradas con calma.',
+      secciones: [
+        { titulo: 'Sobre entrenar', bloques: [
+          { t: 'caja', tono: 'nota', titulo: 'MITO 1 · "Sin agujetas no has entrenado bien"', bloques: [
+            { t: 'p', x: '**Lo que se sabe**: las agujetas dicen que el estímulo era nuevo, no que fuera bueno. Con las semanas desaparecen aunque sigas progresando.' },
+            { t: 'p', x: '**Lo que sí cuenta**: que con el tiempo muevas más peso o hagas más repeticiones.' }] },
+          { t: 'caja', tono: 'nota', titulo: 'MITO 2 · "Hay que cambiar de ejercicios cada semana"', bloques: [
+            { t: 'p', x: '**Lo que se sabe**: para mejorar en un ejercicio hay que repetirlo. Cambiarlo todo cada semana impide ver si avanzas.' }] },
+        ] },
+        { titulo: 'Sobre comer', bloques: [
+          { t: 'caja', tono: 'nota', titulo: 'MITO 3 · "Cenar tarde engorda"', bloques: [
+            { t: 'p', x: '**Lo que se sabe**: lo que cuenta es lo que comes en el conjunto del día y de la semana, no la hora.' }] },
+        ] },
+      ],
+      ideas: [{ titulo: 'Pregunta siempre', x: 'Quién lo dice, con qué datos y qué gana.' }],
+    },
+    fichas: [] },
 ];
 
 // db: la base de la demo; ctx: { uuid, ahoraISO }

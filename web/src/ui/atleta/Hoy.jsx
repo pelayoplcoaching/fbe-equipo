@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { GuiaSugerida, MitoDeLaSemana } from '../Guias.jsx';
 import { pedirSubProgreso } from './sub-progreso.js';
 import { FinDePagina, Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar, useApuntar } from '../comunes.jsx';
 import { resumenDia } from '../../logica/dia.js';
@@ -505,6 +506,9 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {!propio && <TarjetaAnio />}
       {/* (compartir) «tu récord de ayer merece una historia», una vez y se puede quitar */}
       {!propio && <RecordatorioCompartir />}
+      {/* (filosofía) de vuelta tras un parón, las dos reglas de oro; y el mito de la semana, hasta que se lee */}
+      {!propio && constancia.datos?.algunaVez && !constancia.datos?.ultimoDia && <GuiaSugerida ocasion="vuelta" />}
+      {!propio && <Reserva id="hoy-mito"><MitoDeLaSemana /></Reserva>}
       {/* (054) una sesión que la app cerró sola (todas las series hechas, 3 horas sin tocar): pedir cómo fue */}
       <CerradasPorTi sesiones={Object.values(p.sesiones || {}).flat()} hoy={hoy} abrirSesion={abrirSesion} />
       <Reserva id="hoy-informes"><BloqueTerminado salud={salud} /><SemanaPasada salud={salud} /></Reserva>

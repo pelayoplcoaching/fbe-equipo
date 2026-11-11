@@ -1,12 +1,13 @@
 // «Aprende» (migración 057): las guías del coach por grupo muscular y la ficha de técnica de cada ejercicio. Aquí, lo
 // que se pinta: el texto con su negrita, los bloques de una sección, la ficha (pasos, errores, niveles, cuándo sí y
 // cuándo no, y la tabla por objetivo), el lector de una guía y la pantalla con todas. Todo es texto: nunca HTML.
-import { useState, useMemo, useRef } from 'preact/hooks';
+import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Vacio, Siluetas, ErrorCaja, CabeceraGrande } from './comunes.jsx';
+import { hoyISO } from '../logica/fechas.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenGrupo } from '../logica/imagenes.js';
-import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido } from '../logica/guias.js';
-import { listaGuias, guiaEntera, todasLasFichas, enlacesFichas, enlazarFicha, publicarGuia, fichaDeEjercicio } from '../datos/guias.js';
+import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido, porEstantes, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES } from '../logica/guias.js';
+import { listaGuias, guiaEntera, todasLasFichas, enlacesFichas, enlazarFicha, publicarGuia, fichaDeEjercicio, guiasConTexto, guiaPorClave, guiasLigeras } from '../datos/guias.js';
 
 // Un texto con su negrita
 export function Rico({ x }) {
@@ -20,6 +21,7 @@ export function Bloques({ bloques }) {
       {bloques.map((b, i) => (
         b.t === 'p' ? <p key={i}><Rico x={b.x} /></p>
           : b.t === 'h' ? <h3 key={i} class="guia-h">{b.x}</h3>
+            : b.t === 'cita' ? <blockquote key={i} class="guia-cita"><Rico x={b.x} /></blockquote>
             : b.t === 'ul' ? <ul key={i} class="guia-lista">{b.xs.map((x, k) => <li key={k}><Rico x={x} /></li>)}</ul>
               : b.t === 'ol' ? <ol key={i} class="guia-lista guia-num">{b.xs.map((x, k) => <li key={k}><Rico x={x} /></li>)}</ol>
                 : b.t === 'tabla' ? (
@@ -115,13 +117,18 @@ function FilaFicha({ f, alAbrir, guia = false }) {
 
 // Una guía entera para leer: la entrada, un índice de un toque, las secciones con sus fichas y las ideas clave
 // soloSeccion: la clave de una sección; con ella se enseña solo esa (y un botón para ver la guía entera)
-export function LectorGuia({ clave, soloSeccion = null }) {
+// seccionInicial: el número de la sección a la que se baja al abrir (-1: las ideas clave), desde el buscador
+export function LectorGuia({ clave, soloSeccion = null, seccionInicial = null }) {
   const { backend, api } = useApp();
   const d = useCarga(() => guiaEntera({ backend }, clave), [clave], { recuerdo: `guia:${api.uid()}:${clave}` });
   const [ficha, setFicha] = useState(null);
   const [entera, setEntera] = useState(false);
   const raiz = useRef(null);
   const g = useMemo(() => (d.datos ? guiaParaLeer(d.datos.guia, d.datos.fichas) : null), [d.datos]);
+  useEffect(() => {
+    if (seccionInicial == null || !g) return;
+    raiz.current?.querySelector(`[data-seccion="${seccionInicial < 0 ? 'ideas' : seccionInicial}"]`)?.scrollIntoView({ block: 'start' });
+  }, [seccionInicial, !!g]);
   if (!d.datos) return d.error ? <ErrorCaja error={d.error} reintentar={() => d.recargar(true)} /> : d.cargando ? <Siluetas forma="tarjetas" n={3} texto="Cargando la guía" /> : <div class="panel"><Vacio icono="biblioteca" titulo="Esa guía ya no está" /></div>;
   const una = soloSeccion && !entera ? g.secciones.find((x) => x.clave === soloSeccion) : null;
   if (una) {
@@ -259,36 +266,129 @@ export function AyudaFicha({ ejercicioId, fichas, enlaces, molestias = [] }) {
   );
 }
 
-// Todas las guías: sus tarjetas y un buscador de ejercicios. alAbrir(guia) abre una
+function TarjetaGuia({ g, alAbrir, esCoach, icono = 'biblioteca' }) {
+  return (
+    <button type="button" class="tarjeta-guia" onClick={() => alAbrir(g)}>
+      {hayImagen(imagenGrupo(g.grupo)) ? <Imagen id={imagenGrupo(g.grupo)} clase="tarjeta-guia-img" tamanos="9rem" /> : <span class="tarjeta-guia-img vacia" aria-hidden="true"><Icono n={icono} /></span>}
+      <span class="pila-xs tarjeta-guia-texto"><strong>{g.titulo}</strong>{g.subtitulo && <span class="mini terciario">{g.subtitulo}</span>}
+        <span class="fila-chips">{g.fichas > 0 && <span class="chip">{cuantosEjercicios(g.fichas)}</span>}{esCoach && !g.publicada && <span class="chip aviso">Sin publicar</span>}</span></span>
+    </button>
+  );
+}
+
+// Todas las guías, por estanterías, y un buscador: de ejercicios (sus fichas) y dentro del texto de las guías.
+// alAbrir(guia, seccion?) abre una (en esa sección, si viene del buscador)
 export function ListaGuias({ alAbrir, esCoach = false }) {
   const { backend, api } = useApp();
   const guias = useCarga(() => listaGuias({ backend }), [], { recuerdo: `guias:${api.uid()}` });
   const fichas = useCarga(() => todasLasFichas({ backend }, { conFicha: true }).catch(() => []), [], { recuerdo: `fichas-guias:${api.uid()}` });
   const [q, setQ] = useState('');
+  const buscando = q.trim().length >= 2;
+  // el texto de las guías solo se pide al empezar a buscar
+  const textos = useCarga(() => (buscando ? guiasConTexto({ backend }).catch(() => []) : Promise.resolve(null)), [buscando], { recuerdo: buscando ? `guias-texto:${api.uid()}` : null });
   const [ficha, setFicha] = useState(null);
   const gs = ordenarGuias(guias.datos || []).filter((g) => esCoach || g.publicada);
-  const halladas = q.trim() ? buscarFichas(fichas.datos || [], q) : [];
+  const estantes = useMemo(() => porEstantes(gs), [guias.datos, esCoach]);
+  const halladas = buscando ? buscarFichas(fichas.datos || [], q) : [];
+  const enTexto = useMemo(() => (buscando && textos.datos ? buscarEnGuias(textos.datos.filter((g) => esCoach || g.publicada), q) : []), [buscando, q, textos.datos, esCoach]);
   if (!guias.datos) return guias.error ? <ErrorCaja error={guias.error} reintentar={() => guias.recargar(true)} /> : <Siluetas forma="tarjetas" n={4} texto="Cargando las guías" />;
   if (!gs.length) return <div class="panel"><Vacio icono="biblioteca" titulo="Aún no hay guías">{esCoach ? 'Cuando cargues tus guías, tus atletas las leerán en «Aprende» y cada ejercicio enlazado enseñará su ficha de técnica.' : 'Cuando tu coach publique sus guías, las leerás aquí.'}</Vacio></div>;
+  const abrirHallazgo = (h) => alAbrir(gs.find((g) => g.id === h.guia.id) || h.guia, h.seccion);
   return (
     <div class="pila aprende">
-      <div class="buscador"><Icono n="buscar" /><input class="entrada" type="search" maxLength={60} value={q} onInput={(e) => setQ(e.currentTarget.value)} placeholder="Buscar un ejercicio" aria-label="Buscar un ejercicio en las guías" /></div>
-      {q.trim() ? (
-        halladas.length ? <div class="panel"><ul class="lista">{halladas.slice(0, 30).map((f) => <FilaFicha key={f.id} f={f} guia alAbrir={setFicha} />)}</ul></div>
-          : <div class="panel"><Vacio icono="buscar" titulo="Ningún ejercicio con eso">Prueba con otra palabra.</Vacio></div>
-      ) : (
-        <div class="rejilla-guias">
-          {gs.map((g) => (
-            <button type="button" class="tarjeta-guia" key={g.id} onClick={() => alAbrir(g)}>
-              {hayImagen(imagenGrupo(g.grupo)) ? <Imagen id={imagenGrupo(g.grupo)} clase="tarjeta-guia-img" tamanos="9rem" /> : <span class="tarjeta-guia-img vacia" aria-hidden="true"><Icono n="biblioteca" /></span>}
-              <span class="pila-xs tarjeta-guia-texto"><strong>{g.titulo}</strong>{g.subtitulo && <span class="mini terciario">{g.subtitulo}</span>}
-                <span class="fila-chips">{g.fichas > 0 && <span class="chip">{cuantosEjercicios(g.fichas)}</span>}{esCoach && !g.publicada && <span class="chip aviso">Sin publicar</span>}</span></span>
-            </button>
-          ))}
+      <div class="buscador"><Icono n="buscar" /><input class="entrada" type="search" maxLength={60} value={q} onInput={(e) => setQ(e.currentTarget.value)} placeholder="Buscar en las guías" aria-label="Buscar un ejercicio o un tema en las guías" /></div>
+      {buscando ? (
+        <div class="pila hallazgos-guias" aria-live="polite">
+          {halladas.length > 0 && (
+            <section class="pila-s"><h2 class="etq">Ejercicios</h2>
+              <div class="panel"><ul class="lista">{halladas.slice(0, 12).map((f) => <FilaFicha key={f.id} f={f} guia alAbrir={setFicha} />)}</ul></div></section>
+          )}
+          {enTexto.length > 0 && (
+            <section class="pila-s"><h2 class="etq">En las guías</h2>
+              <div class="panel"><ul class="lista">{enTexto.map((h, i) => (
+                <li key={i}>
+                  <button type="button" class="accion-fila hallazgo-guia" onClick={() => abrirHallazgo(h)}>
+                    <span class="pila-xs"><span class="mini terciario">{h.guia.titulo}</span><strong>{h.titulo || h.guia.titulo}</strong>
+                      {h.hallado && <span class="peq secundario">{h.antes}<mark>{h.hallado}</mark>{h.despues}</span>}</span>
+                    <Icono n="derecha" />
+                  </button>
+                </li>
+              ))}</ul></div></section>
+          )}
+          {!halladas.length && !enTexto.length && (textos.datos ? <div class="panel"><Vacio icono="buscar" titulo="Nada con eso">Prueba con otra palabra.</Vacio></div> : <Siluetas forma="tarjetas" n={2} texto="Buscando en las guías" />)}
         </div>
-      )}
+      ) : estantes.length > 1 ? (
+        estantes.map((e) => (
+          <section class="pila-s estante" key={e.id} data-estante={e.id}>
+            <div class="estante-cab"><h2>{e.nombre}</h2>{e.detalle && <span class="mini terciario">{e.detalle}</span>}</div>
+            <div class="rejilla-guias">{e.guias.map((g) => <TarjetaGuia key={g.id} g={g} alAbrir={alAbrir} esCoach={esCoach} icono={e.icono} />)}</div>
+          </section>
+        ))
+      ) : <div class="rejilla-guias">{gs.map((g) => <TarjetaGuia key={g.id} g={g} alAbrir={alAbrir} esCoach={esCoach} />)}</div>}
       {ficha && <HojaFichaGuia ficha={ficha} alCerrar={() => setFicha(null)} />}
     </div>
+  );
+}
+
+// La guía que viene a cuento (logica/guias.js, OCASIONES): una fila que abre esa sección en su hoja. Solo sale si la
+// guía está y está publicada. Es una propuesta de lectura: no guarda nada ni cuenta nada a nadie.
+export function GuiaSugerida({ ocasion }) {
+  const { backend, api, perfil } = useApp();
+  const o = OCASIONES[ocasion];
+  const guias = useCarga(() => (o && perfil?.rol !== 'coach' ? guiasLigeras({ backend }).catch(() => []) : Promise.resolve([])), [!!o], { recuerdo: o ? `guias-ligeras:${api.uid()}` : null });
+  const [abierta, setAbierta] = useState(false);
+  const guia = o && (guias.datos || []).find((g) => g.clave === o.clave && g.publicada);
+  if (!guia) return null;
+  return (
+    <>
+      <button type="button" class="panel panel-pad por-que guia-sugerida" data-ocasion={ocasion} onClick={() => setAbierta(true)} aria-haspopup="dialog">
+        <Icono n="biblioteca" />
+        <span class="pila-xs"><span class="mini terciario">{o.cuando}</span><strong>{o.titulo}</strong><span class="peq secundario">{o.detalle}</span></span>
+        <Icono n="derecha" />
+      </button>
+      {abierta && <HojaGuia guia={guia} soloSeccion={o.seccion} titulo={o.titulo} alCerrar={() => setAbierta(false)} />}
+    </>
+  );
+}
+
+// El mito de la semana (de la guía «mitos»): el mismo para todo el equipo, va rotando cada lunes. En Hoy, una tarjeta
+// con el mito; al tocarla, lo que dice la evidencia. Una vez leído, se recoge hasta la semana siguiente (se apunta en
+// este móvil, no en la base).
+const claveMito = (uid) => `fbe-mito-visto:${uid}`;
+const mitoVisto = (uid) => { try { return Number(localStorage.getItem(claveMito(uid))) || 0; } catch { return 0; } };
+export function MitoDeLaSemana() {
+  const { backend, api, perfil } = useApp();
+  const hoy = hoyISO();
+  const semana = numeroDeSemana(hoy);
+  const [visto, setVisto] = useState(() => mitoVisto(api.uid()));
+  const pedir = perfil?.rol !== 'coach' && visto !== semana;
+  const guia = useCarga(() => (pedir ? guiaPorClave({ backend }, 'mitos').catch(() => null) : Promise.resolve(null)), [pedir], { recuerdo: pedir ? `guia-mitos:${api.uid()}` : null });
+  const [abierto, setAbierto] = useState(false);
+  const [entera, setEntera] = useState(false);
+  const mito = useMemo(() => (guia.datos?.publicada ? mitoDeLaSemana(mitosDeGuia(guia.datos), hoy) : null), [guia.datos, hoy]);
+  if (!mito || (visto === semana && !abierto && !entera)) return null;
+  const cerrar = () => { setAbierto(false); try { localStorage.setItem(claveMito(api.uid()), String(semana)); } catch { /* sin sitio: saldrá otra vez */ } setVisto(semana); };
+  return (
+    <>
+      {visto !== semana && (
+        <button type="button" class="panel panel-pad mito-semana" onClick={() => setAbierto(true)} aria-haspopup="dialog">
+          <span class="mini mito-semana-k"><Icono n="pregunta" /> El mito de la semana</span>
+          <strong class="mito-frase">«{mito.mito}»</strong>
+          <span class="peq secundario mito-semana-pie">Qué dice la evidencia <Icono n="derecha" /></span>
+        </button>
+      )}
+      {abierto && (
+        <Hoja titulo="El mito de la semana" alCerrar={cerrar} ancho>
+          <div class="pila lector-guia mito-hoja">
+            <p class="mito-frase">«{mito.mito}»</p>
+            {mito.tema && <p class="mini terciario">{mito.tema}</p>}
+            <Bloques bloques={mito.bloques} />
+            <button type="button" class="btn" style="justify-self:start" onClick={() => { cerrar(); setEntera(true); }}><Icono n="biblioteca" /> Ver todos los mitos</button>
+          </div>
+        </Hoja>
+      )}
+      {entera && <HojaGuia guia={guia.datos} alCerrar={() => setEntera(false)} />}
+    </>
   );
 }
 
@@ -304,13 +404,13 @@ export function GuiasCoach() {
   const cambiar = async (g, si) => { try { await publicarGuia({ backend }, g.id, si); aviso(si ? 'Publicada: ya la ven tus atletas' : 'Escondida: tus atletas ya no la ven'); setN(n + 1); } catch (e) { aviso(e.message, 'error'); } };
   return (
     <div class="pila">
-      <p class="peq secundario">Tus guías por grupo muscular. Tus atletas las leen en «Aprende», y cada ejercicio de la biblioteca enlazado a una ficha la enseña en su pestaña «Técnica»{enlaces.datos ? ` (ahora, ${cuantos === 1 ? '1 ejercicio enlazado' : `${cuantos} ejercicios enlazados`}; se enlazan al editar cada ejercicio)` : ''}.</p>
-      <ListaGuias key={n} alAbrir={setAbierta} esCoach />
+      <p class="peq secundario">Tus guías. Tus atletas las leen en «Aprende», y cada ejercicio de la biblioteca enlazado a una ficha la enseña en su pestaña «Técnica»{enlaces.datos ? ` (ahora, ${cuantos === 1 ? '1 ejercicio enlazado' : `${cuantos} ejercicios enlazados`}; se enlazan al editar cada ejercicio)` : ''}.</p>
+      <ListaGuias key={n} alAbrir={(g, seccion = null) => setAbierta({ ...g, seccion })} esCoach />
       {abierta && (
         <Hoja titulo={abierta.titulo} alCerrar={() => setAbierta(null)} ancho>
           <label class="interruptor-fila panel panel-pad"><span class="pila-xs"><strong>Publicada</strong><span class="mini secundario">Sin publicar, tus atletas no la ven ni ven sus fichas en los ejercicios.</span></span>
             <input type="checkbox" role="switch" class="interruptor" checked={(guias.datos || []).find((g) => g.id === abierta.id)?.publicada ?? abierta.publicada} onChange={(e) => cambiar(abierta, e.currentTarget.checked)} /></label>
-          <LectorGuia clave={abierta.clave} />
+          <LectorGuia clave={abierta.clave} seccionInicial={abierta.seccion ?? null} />
         </Hoja>
       )}
     </div>
@@ -354,16 +454,16 @@ export function Aprende() {
       <CabeceraGrande>
         {abierta ? (
           <div class="titulo"><h1>{abierta.titulo}</h1>{abierta.subtitulo && <div class="sub">{abierta.subtitulo}</div>}</div>
-        ) : <div class="titulo"><h1>Aprende</h1><div class="sub">Las guías de tu coach, ejercicio a ejercicio</div></div>}
+        ) : <div class="titulo"><h1>Aprende</h1><div class="sub">Las guías de tu coach, para leer y para buscar</div></div>}
       </CabeceraGrande>
       {/* «volver», arriba y al final de la guía (la cabecera se encoge al bajar y una guía es larga) */}
       {abierta ? (
         <div class="pila">
           <button type="button" class="btn-texto volver-guias" onClick={volver}><Icono n="atras" /> Todas las guías</button>
-          <LectorGuia key={abierta.clave} clave={abierta.clave} />
+          <LectorGuia key={abierta.clave} clave={abierta.clave} seccionInicial={abierta.seccion ?? null} />
           <button type="button" class="btn" style="justify-self:start" onClick={volver}><Icono n="atras" /> Volver a las guías</button>
         </div>
-      ) : <ListaGuias alAbrir={(g) => { setAbierta(g); window.scrollTo?.(0, 0); }} />}
+      ) : <ListaGuias alAbrir={(g, seccion = null) => { setAbierta({ ...g, seccion }); if (seccion == null) window.scrollTo?.(0, 0); }} />}
     </div>
   );
 }

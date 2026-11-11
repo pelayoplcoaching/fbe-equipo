@@ -1,4 +1,4 @@
-import { PorQueEntrenasAsi } from '../Guias.jsx';
+import { PorQueEntrenasAsi, GuiaSugerida } from '../Guias.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, Vacio, ErrorCaja, Pista } from '../comunes.jsx';
 import { DiaSesion } from './Hoy.jsx';
@@ -103,6 +103,8 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
               )}
               {/* (057) cómo está montada la semana y por qué, de la guía de rutinas */}
               {semana.id === p.actual?.id && <PorQueEntrenasAsi sesiones={sesiones} />}
+              {/* (filosofía) en la semana de descarga, cómo se hace y por qué */}
+              {semana.id === p.actual?.id && semana.foco === 'descarga' && <GuiaSugerida ocasion="descarga" />}
               <div class="semana-dias">
                 {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} resumen={pautas.datos?.[s.id] || null} llegando={pautas.cargando && !pautas.datos} actual={semana.id === p.actual?.id && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
               </div>

@@ -1,4 +1,5 @@
 import { Fragment } from 'preact';
+import { GuiaSugerida } from '../Guias.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos, usePreferencia, Pista, CifraSube, Odometro } from '../comunes.jsx';
 import { BandaConexion } from '../App.jsx';
@@ -728,6 +729,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         <div class="panel panel-pad pila-s">
           <strong>{sesion.tipo === 'cardio' ? 'Sesión de cardio' : sesion.tipo === 'movilidad' ? 'Sesión de movilidad' : 'Sesión sin ejercicios'}</strong>
           <p class="secundario peq">Haz lo que indica tu coach arriba. Al terminar, apunta cuánto ha durado y cuánto te ha costado.</p>
+          {/* (filosofía) en una sesión de cardio, cómo se combina con la fuerza */}
+          {sesion.tipo === 'cardio' && !delCoach && <GuiaSugerida ocasion="cardio" />}
           {!delCoach && !sesion.completada && <button class="btn btn-peq" style="justify-self:start" onClick={() => setIntervalos({ inicial: null })}><Icono n="intervalos" /> Temporizador de intervalos</button>}
         </div>
       )}
