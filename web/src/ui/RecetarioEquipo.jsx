@@ -1,11 +1,12 @@
 // El recetario del equipo (migración 055): las recetas que el coach deja a la vista de todos sus atletas, por
 // capítulos, con buscador, filtros de un toque y las que cada uno se guarda. Quien solo entrena las consulta; quien
-// lleva la nutrición puede además apuntarlas en su menú (alAnadir). El coach lo ve igual, sin guardar ni apuntar.
+// lleva la nutrición puede además apuntarlas en su menú (alAnadir) y, si su plan tiene kcal, las ve ajustadas a él
+// (ajuste: receta → { factor, toma, kcalToma } | null). El coach lo ve igual, sin guardar ni apuntar.
 import { useState, useMemo } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, usePorTramos } from './comunes.jsx';
 import { FotoReceta } from './ComidasComun.jsx';
 import { COLOR_MACRO } from './NutricionComun.jsx';
-import { textoMacros, macrosDe, ordenarTomas } from '../logica/comidas.js';
+import { textoMacros, macrosDe, ordenarTomas, NOMBRE_TOMA } from '../logica/comidas.js';
 import { porCapitulos, capitulos, filtrarRecetas, FILTROS, textoTiempo, textoBatch, lineasIngredientes, pasosDe, resumenRecetario, capituloDe, bloqueDe } from '../logica/recetario-equipo.js';
 import { recetarioEquipo, fotosRecetarioEquipo, guardarFavoritaEquipo } from '../datos/recetario-equipo.js';
 import { num } from '../logica/calculos.js';
@@ -16,14 +17,15 @@ export function useRecetarioEquipo(atletaId = null) {
   return useCarga(() => recetarioEquipo({ backend }, atletaId), [atletaId], { recuerdo: `recetario-equipo:${api.uid()}:${atletaId || 'coach'}` });
 }
 
-function TarjetaEquipo({ r, favorita, alAbrir }) {
+function TarjetaEquipo({ r, favorita, alAbrir, ajuste = null }) {
   const tiempo = textoTiempo(r);
+  const aj = ajuste ? ajuste(r) : null;
   return (
     <button type="button" class="tarjeta-receta tarjeta-equipo" onClick={() => alAbrir(r)}>
       <FotoReceta receta={r} toma={ordenarTomas(r.tomas || [])[0] || null} />
       <span class="pila-xs tarjeta-receta-texto">
         <span class="nombre">{favorita && <Icono n="estrella" class="favorita" titulo="Guardada" />}{r.nombre}</span>
-        <span class="mini secundario num">{textoMacros(macrosDe(r, 1), true) || 'Sin macros'}</span>
+        <span class="mini secundario num">{textoMacros(macrosDe(r, aj?.factor || 1), true) || 'Sin macros'}{aj && aj.factor !== 1 && <span class="terciario"> · para ti</span>}</span>
         <span class="fila-chips">
           {tiempo && <span class="chip"><Icono n="reloj" />{tiempo}</span>}
           {r.libro?.dificultad && <span class="chip">{r.libro.dificultad}</span>}
@@ -33,18 +35,18 @@ function TarjetaEquipo({ r, favorita, alAbrir }) {
   );
 }
 
-function Bloque({ capitulo, bloque, recetas, favoritas, alAbrir, reinicio }) {
+function Bloque({ capitulo, bloque, recetas, favoritas, alAbrir, reinicio, ajuste }) {
   const tramos = usePorTramos(recetas.length, { tramo: 12, reinicio, clave: `recetario-equipo-${capitulo}-${bloque}`, nombre: 'recetas más' });
   return (
     <div class="pila-s">
       {bloque && <h3 class="bloque-equipo">{bloque}</h3>}
-      <div class="rejilla-recetas">{recetas.slice(0, tramos.hasta).map((r) => <TarjetaEquipo key={r.id} r={r} favorita={favoritas.has(r.id)} alAbrir={alAbrir} />)}</div>
+      <div class="rejilla-recetas">{recetas.slice(0, tramos.hasta).map((r) => <TarjetaEquipo key={r.id} r={r} favorita={favoritas.has(r.id)} alAbrir={alAbrir} ajuste={ajuste} />)}</div>
       {tramos.mas}
     </div>
   );
 }
 
-export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = false }) {
+export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = false, ajuste = null }) {
   const { backend, api } = useApp();
   const datos = useRecetarioEquipo(atletaId);
   // Las miniaturas, aparte y solo aquí (al abrir el recetario); mientras llegan, cada receta sale con su dibujo
@@ -95,20 +97,22 @@ export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = fa
         <section class="seccion" key={c.capitulo} aria-labelledby={`cap-${c.capitulo}`}>
           <div class="seccion-cab"><h2 id={`cap-${c.capitulo}`}>{c.capitulo}</h2><span class="mini terciario">{c.n === 1 ? '1 receta' : `${c.n} recetas`}</span></div>
           <div class="pila">
-            {c.bloques.map((b) => <Bloque key={b.bloque} capitulo={c.capitulo} bloque={b.bloque} recetas={b.recetas} favoritas={favoritas} alAbrir={setAbierta} reinicio={reinicio} />)}
+            {c.bloques.map((b) => <Bloque key={b.bloque} capitulo={c.capitulo} bloque={b.bloque} recetas={b.recetas} favoritas={favoritas} alAbrir={setAbierta} reinicio={reinicio} ajuste={ajuste} />)}
           </div>
         </section>
       ))}
-      {abierta && <HojaRecetaEquipo r={abierta} favorita={favoritas.has(abierta.id)} esCoach={esCoach} alCerrar={() => setAbierta(null)}
+      {abierta && <HojaRecetaEquipo r={abierta} favorita={favoritas.has(abierta.id)} esCoach={esCoach} alCerrar={() => setAbierta(null)} ajuste={ajuste ? ajuste(abierta) : null}
         alMarcar={atletaId && !esCoach ? (si) => marcar(abierta, si) : null}
-        alAnadir={alAnadir ? (raciones) => { const r = abierta; setAbierta(null); alAnadir(r, raciones); } : null} />}
+        alAnadir={alAnadir ? (raciones, factor) => { const r = abierta; setAbierta(null); alAnadir(r, raciones, factor); } : null} />}
     </div>
   );
 }
 
 // Una receta del recetario, entera: la entrada, sus etiquetas, los macros por ración, los ingredientes para las
 // raciones que se cocinen (con sus medidas caseras), los pasos numerados y las notas.
-export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, alCerrar, alMarcar = null, alAnadir = null }) {
+// ajuste ({ factor, toma, kcalToma } o, desde el menú, { factor, desdeMenu }): la ración a la medida del atleta, que
+// puede ver también la original. alAnadir(raciones, factor).
+export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, alCerrar, alMarcar = null, alAnadir = null, ajuste = null }) {
   const { api, aviso } = useApp();
   // La foto grande (si la tiene) llega aparte; lo demás ya está
   const completa = useCarga(() => (breve.foto_mini ? api.receta(breve.id).catch(() => null) : Promise.resolve(null)), [breve.id]);
@@ -117,9 +121,12 @@ export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, 
   const base = Number(r.raciones || 1);
   const [raciones, setRaciones] = useState(base);
   const [ocupado, una] = useUnaVez();
-  const m = macrosDe(r, 1, 1);
+  const hayAjuste = !!ajuste && ajuste.factor !== 1;
+  const [ajustada, setAjustada] = useState(true);
+  const f = hayAjuste && ajustada ? ajuste.factor : 1;
+  const m = macrosDe(r, f, 1);
   const tiempo = textoTiempo(r);
-  const lineas = lineasIngredientes(r, raciones);
+  const lineas = lineasIngredientes(r, raciones, f);
   const pasos = pasosDe(r);
   const marcar = () => una(async () => { try { await alMarcar(!favorita); aviso(favorita ? 'Ya no está guardada' : 'Guardada en tus favoritas'); } catch (e) { aviso(e.message, 'error'); } });
   return (
@@ -143,10 +150,15 @@ export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, 
             <span style={{ '--c': COLOR_MACRO.grasa }}><b>{m.grasa_g == null ? '—' : num(m.grasa_g, 1)}</b><span class="mini terciario">g grasa</span></span>
           </div>
           <p class="mini terciario">{l.porcion || (base > 1 ? `Por ración: la receta da para ${base} raciones.` : 'Por ración.')}</p>
+          {hayAjuste && ajustada && (
+            <p class="mini secundario ajuste-receta"><Icono n="nutricion" /> {ajuste.desdeMenu ? `Ajustada a tu plan, como la apuntaste: ×${num(ajuste.factor, 2)} de la receta.`
+              : `Ajustada a tu plan: tu ${NOMBRE_TOMA[ajuste.toma].toLowerCase()} ronda las ${num(ajuste.kcalToma, 0)} kcal, así que la ración va ×${num(ajuste.factor, 2)}.`}</p>
+          )}
+          {hayAjuste && <button type="button" class="btn btn-peq plano" aria-pressed={ajustada ? 'false' : 'true'} onClick={() => setAjustada(!ajustada)}>{ajustada ? 'Ver la receta original' : 'Ajustarla a tu plan'}</button>}
         </div>
         {lineas.length > 0 && (
           <section class="pila-s">
-            <h3 class="etq">Ingredientes</h3>
+            <h3 class="etq">Ingredientes{f !== 1 ? ', a tu medida' : ''}</h3>
             <div class="separa">
               <span class="peq">{raciones === 1 ? 'Para una ración' : `Para ${num(raciones, 0)} raciones`}</span>
               <div style="max-width:150px"><Paso valor={raciones} paso={1} min={1} max={20} dec={0} etiqueta="raciones que cocinas" alCambiar={(v) => v && setRaciones(v)} /></div>
@@ -164,7 +176,7 @@ export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, 
         {l.nota && <div class="nota-coach"><Icono n="mensaje" /><div><strong>{esCoach ? 'Tu nota: ' : 'Nota de tu coach: '}</strong>{l.nota}</div></div>}
         {!esCoach && (alAnadir || alMarcar) && (
           <div class="pila-s">
-            {alAnadir && <button class="btn btn-primario btn-grande" onClick={() => alAnadir(1)}><Icono n="calendario" /> Añadir a tu menú</button>}
+            {alAnadir && <button class="btn btn-primario btn-grande" onClick={() => alAnadir(1, f)}><Icono n="calendario" /> Añadir a tu menú{f !== 1 ? ' (a tu medida)' : ''}</button>}
             {alMarcar && (
               <button class="btn" aria-pressed={favorita ? 'true' : 'false'} disabled={ocupado} onClick={marcar}>
                 <Icono n="estrella" class={favorita ? 'favorita' : ''} /> {favorita ? 'Guardada' : 'Guardar'}

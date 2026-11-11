@@ -3,8 +3,8 @@
 // mismo en la demo (backend en memoria).
 // Uso: node test/recetario-equipo.test.mjs
 import { capituloDe, bloqueDe, ordenarRecetas, porCapitulos, capitulos, buscarRecetas, filtrarRecetas, esRapida, esParaVariosDias, textoTiempo, textoBatch,
-  lineasIngredientes, pasosDe, comoAsignacion, resumenRecetario, limpiarLibro, SIN_CAPITULO } from '../web/src/logica/recetario-equipo.js';
-import { entradaMenu } from '../web/src/logica/comidas.js';
+  lineasIngredientes, pasosDe, comoAsignacion, resumenRecetario, limpiarLibro, SIN_CAPITULO, PESO_TOMA, kcalDeLaToma, sinAjuste, factorParaTi, ajusteParaTi } from '../web/src/logica/recetario-equipo.js';
+import { entradaMenu, factorDeEntrada, listaCompra } from '../web/src/logica/comidas.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -22,6 +22,34 @@ const R = [
   { id: 'e', nombre: 'Bocadillo suelto', tomas: ['merienda'], raciones: 1, minutos: 90, etiquetas: [], ingredientes: [], libro: null },
   { id: 'f', nombre: 'Aliño', tomas: [], raciones: 1, etiquetas: [], ingredientes: [] },
 ];
+
+console.log('Ajustadas a ti (recetas del equipo a las kcal de cada comida)');
+{
+  const cuatro = ['desayuno', 'comida', 'merienda', 'cena'];
+  check(kcalDeLaToma(2400, 'comida', cuatro) === Math.round(2400 * 35 / 102) && kcalDeLaToma(2400, 'merienda', cuatro) === Math.round(2400 * 12 / 102), 'reparto fijo: con cuatro comidas, la comida un 34 % y la merienda un 12 %');
+  const tres = ['desayuno', 'comida', 'cena'];
+  check(Math.abs(['desayuno', 'comida', 'cena'].reduce((s, t) => s + kcalDeLaToma(2000, t, tres), 0) - 2000) <= 1, 'entre las comidas que hace él suman las kcal del día');
+  check(kcalDeLaToma(2400, 'recena', cuatro) === null && kcalDeLaToma(null, 'comida', cuatro) === null && kcalDeLaToma(0, 'comida', cuatro) === null, 'sin kcal o en una comida que no hace, nada');
+  check(Object.keys(PESO_TOMA).length === 6, 'un peso para cada una de las seis comidas');
+  // Yogur con avena (495 kcal, desayuno): 2400 kcal y cuatro comidas → 588 kcal → ×1,2
+  const aj = ajusteParaTi(R[1], { tomas: cuatro, kcalDia: 2400 });
+  check(aj && aj.toma === 'desayuno' && aj.kcalToma === 588 && aj.factor === 1.2, 'el yogur con avena, para 2.400 kcal: su desayuno ronda las 588 kcal → ×1,2');
+  check(ajusteParaTi(R[1], { tomas: cuatro, kcalDia: 1500 }).factor === 0.75, 'para 1.500 kcal, ×0,75');
+  check(factorParaTi(R[1], 5000) === 2.5 && factorParaTi(R[1], 100) === 0.5, 'nunca más de ×2,5 ni menos de ×0,5');
+  check(sinAjuste(R[3]) && ajusteParaTi(R[3], { tomas: cuatro, kcalDia: 2400 }) === null && sinAjuste({ libro: { capitulo: 'Salsas y básicos' } }) && !sinAjuste(R[0]), 'el «20 %» y las salsas y básicos no se ajustan');
+  check(ajusteParaTi(R[2], { tomas: cuatro, kcalDia: 2400 }) === null && ajusteParaTi(R[1], { tomas: cuatro, kcalDia: null }) === null, 'sin kcal en la receta o en su plan, la receta tal cual');
+  check(ajusteParaTi(R[0], { tomas: cuatro, kcalDia: 2400, toma: 'comida' }).toma === 'comida', 'si la pone en otra comida, se ajusta a esa');
+  // Ingredientes a su medida: la crema (4 raciones, 800 g) ×1,5 para una ración → 300 g; las medidas caseras solo tal cual
+  const l = lineasIngredientes(R[0], 1, 1.5);
+  check(l[0].texto.includes('300') && l[0].medida === null && lineasIngredientes(R[0])[0].medida === '1 calabaza pequeña', 'los ingredientes van a su medida (y sin la medida casera, que ya no vale)');
+  // En el menú: las kcal se apuntan ajustadas y la lista de la compra lo sabe, aunque no haya asignación
+  const e = entradaMenu({ fecha: '2026-11-12', toma: 'desayuno', asignacion: { ...comoAsignacion(R[1], cuatro), factor: 1.2 }, raciones: 1 });
+  check(e.kcal === 594 && factorDeEntrada(e, R[1]) === 1.2, 'apuntada en el menú: 594 kcal, y de ahí se sabe su factor');
+  const compra = listaCompra([e], [R[1]], []);
+  check(compra.items.find((i) => /yogur/i.test(i.nombre))?.cantidad === 240, 'la lista de la compra pide 240 g de yogur (200 × 1,2)');
+  check(factorDeEntrada({ kcal: null, raciones: 1 }, R[1]) === null && factorDeEntrada({ kcal: 495, raciones: 1 }, R[1]) === 1, 'sin kcal apuntadas, no se sabe; tal cual, ×1');
+}
+
 check(capituloDe(R[0]) === 'Cenas' && bloqueDe(R[0]) === 'Reconfortantes' && capituloDe(R[4]) === 'Entre horas' && capituloDe(R[5]) === SIN_CAPITULO && bloqueDe(R[4]) === '', 'capítulo y bloque: los del recetario; sin ellos, el de su comida del día (o «Otras recetas»)');
 check(ordenarRecetas(R).map((r) => r.id).join('') === 'abcdef', 'en el orden del recetario (por su código); las sueltas, detrás');
 const caps = porCapitulos(R);

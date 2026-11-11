@@ -390,6 +390,14 @@ const masVeces = (m) => { let mejor = null; for (const [n, k] of m) if (!mejor |
 //  - cantidad y unidad: el total si va en una sola unidad (g, ml o la de sus piezas), si no, null;
 //  - detalle: lo de cada receta [{ receta, texto }]; suma: lo sumado sin redondear.
 // Nada se pierde: lo que no se entiende va con su nombre, y lo que no lleva cantidad sale una vez.
+// El factor con el que se apuntó algo del menú, sacado de sus kcal (las del equipo ajustadas al atleta no tienen
+// asignación): kcal apuntadas / (kcal por ración × raciones), de 0,05 en 0,05. null si no se puede saber.
+export function factorDeEntrada(e, r) {
+  const k = Number(r?.kcal), ek = Number(e?.kcal), rac = Number(e?.raciones || 1);
+  if (!(k > 0) || !(ek > 0) || !(rac > 0)) return null;
+  const f = Math.round((ek / (k * rac)) * 20) / 20;
+  return f >= 0.3 && f <= 4 ? f : null;
+}
 export function listaCompra(entradas = [], recetas = [], asignaciones = []) {
   const R = Object.fromEntries(recetas.map((r) => [r.id, r]));
   const factor = {};
@@ -399,7 +407,7 @@ export function listaCompra(entradas = [], recetas = [], asignaciones = []) {
   for (const e of entradas) {
     const r = e.receta_id ? R[e.receta_id] : null;
     if (!r) { if (!libres.includes(e.texto)) libres.push(e.texto); continue; }
-    const escala = (factor[r.id] ?? 1) * Number(e.raciones || 1) / Number(r.raciones || 1);
+    const escala = (factor[r.id] ?? factorDeEntrada(e, r) ?? 1) * Number(e.raciones || 1) / Number(r.raciones || 1);
     for (const x of (r.ingredientes || []).flatMap((i) => paraComprar(i, escala))) {
       const g = grupos.get(x.clave) || { clave: x.clave, con: new Map(), sinC: new Map(), suma: sumaVacia(), porReceta: new Map() };
       const nombres = x.sin ? g.sinC : g.con;

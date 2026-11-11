@@ -83,10 +83,11 @@ export function textoBatch(r) {
 
 // Las líneas de ingredientes para «raciones» raciones. Cocinando justo lo que dice la receta, cada una lleva además su
 // medida casera («200 g de yogur griego (1 envase)»); con otras cantidades no, porque ya no valdría.
-export function lineasIngredientes(r, raciones = null) {
+// factor: el de la receta ajustada al atleta (ajusteParaTi); con él, las cantidades van ya a su medida.
+export function lineasIngredientes(r, raciones = null, factor = 1) {
   const base = Number(r?.raciones || 1);
   const n = raciones == null ? base : Number(raciones);
-  const escala = n / base;
+  const escala = Number(factor || 1) * n / base;
   // (si alguien cambió los ingredientes después, las medidas ya no casan una a una y no se enseñan)
   const medidas = Array.isArray(libroDe(r).medidas) && libroDe(r).medidas.length === (r?.ingredientes || []).length ? libroDe(r).medidas : [];
   return (r?.ingredientes || []).map((i, k) => {
@@ -105,6 +106,35 @@ export function comoAsignacion(r, tomasAtleta = []) {
   const suyas = ordenarTomas(tomasAtleta || []);
   const toma = ordenarTomas(r?.tomas || []).find((t) => suyas.includes(t)) || suyas[0] || ordenarTomas(r?.tomas || [])[0] || 'comida';
   return { id: null, receta_id: r.id, receta: r, toma, factor: 1, favorita: false, variante: null, nota: null };
+}
+
+// ------------------------------------------------------------ ajustada a ti (Pelayo, 11/11)
+// Para quien lleva la nutrición con su coach y tiene kcal en su plan: cada receta del equipo se escala hasta las kcal
+// que le tocan en esa comida. Las kcal del día se reparten con un peso fijo por comida entre las que hace él
+// (con desayuno, comida, merienda y cena: 25 %, 34 %, 12 % y 29 %). Se ajusta por kcal; la proteína sale la que salga.
+export const PESO_TOMA = { desayuno: 25, media_manana: 10, comida: 35, merienda: 12, cena: 30, recena: 8 };
+export const FACTOR_MIN = 0.5;
+export const FACTOR_MAX = 2.5;
+export function kcalDeLaToma(kcalDia, toma, tomas = []) {
+  const suyas = ordenarTomas(tomas || []);
+  if (!(Number(kcalDia) > 0) || !suyas.includes(toma)) return null;
+  const total = suyas.reduce((s, t) => s + PESO_TOMA[t], 0);
+  return Math.round(Number(kcalDia) * PESO_TOMA[toma] / total);
+}
+// Las salsas y básicos (acompañan) y el «20 %» (caprichos: su ración es la que es) no se ajustan
+export const sinAjuste = (r) => /salsa|b[a\u00e1]sico|20\s*%/i.test(capituloDe(r));
+// El factor de la ración (de 0,05 en 0,05, entre ×0,5 y ×2,5); null si no hay con qué o no toca
+export function factorParaTi(r, kcalToma) {
+  const k = Number(r?.kcal);
+  if (!(Number(kcalToma) > 0) || !(k > 0) || sinAjuste(r)) return null;
+  return Math.min(FACTOR_MAX, Math.max(FACTOR_MIN, Math.round((Number(kcalToma) / k) * 20) / 20));
+}
+// { factor, toma, kcalToma } o null. toma: la comida en la que la va a poner (si no, la suya por defecto)
+export function ajusteParaTi(r, { tomas = [], kcalDia = null, toma = null } = {}) {
+  const t = toma || comoAsignacion(r, tomas).toma;
+  const kcalToma = kcalDeLaToma(kcalDia, t, tomas);
+  const factor = factorParaTi(r, kcalToma);
+  return factor == null ? null : { factor, toma: t, kcalToma };
 }
 
 // Lo que se dice arriba: «75 recetas en 6 capítulos»
