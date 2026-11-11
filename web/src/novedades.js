@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.140': {
+    atleta: [
+      'Ordena Hoy a tu gusto: sube, baja u oculta sus secciones y elige qué diales ves arriba (abajo del todo, «Ordenar Hoy»).',
+      'Dos diales nuevos arriba: las kcal que te quedan hoy, si llevas la nutrición, y tus pasos, si los traes de Salud.',
+    ],
+  },
   '0.139': {
     atleta: [
       'Si llevas la nutrición conmigo, las recetas del recetario del equipo vienen ajustadas a las kcal de cada comida tuya.',

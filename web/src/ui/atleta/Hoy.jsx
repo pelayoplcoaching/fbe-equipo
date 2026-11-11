@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { Fragment } from 'preact';
 import { GuiaSugerida, MitoDeLaSemana } from '../Guias.jsx';
 import { pedirSubProgreso } from './sub-progreso.js';
 import { FinDePagina, Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar, useApuntar } from '../comunes.jsx';
@@ -50,6 +51,8 @@ import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
 import { estadoHoy, sugerenciaDescanso, urlSegura, resumenPautas } from '../../logica/diseno.js';
 import { panelBienvenida, panelNutricion } from '../../logica/bienvenida.js';
 import { Diales } from './Diales.jsx';
+import { OrdenarHoy } from './OrdenarHoy.jsx';
+import { leerPanel, seccionesHoy } from '../../logica/hoy-panel.js';
 import { semanasObjetivo, semanaEnCurso } from '../../logica/semana-natural.js';
 import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 
@@ -359,6 +362,10 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const [planAbierto, setPlanAbierto] = useState(false);
   const [bloqueAbierto, setBloqueAbierto] = useState(false);
   const [carreraAbierta, setCarreraAbierta] = useState(false);  // (v0.133) «Tu carrera»
+  // (v0.140) Hoy a tu gusto: el orden y lo oculto, en este móvil (por cuenta: el coach en su modo atleta tiene el suyo)
+  const [panel, fijarPanel] = usePreferencia(`fbe-hoy-panel:${api.uid()}`, null);
+  const P = leerPanel(panel);
+  const [ordenando, setOrdenando] = useState(false);
   // v0.52: la pantalla de la racha y, al llegar a un hito (4, 8, 12, 26 o 52 semanas), su momento, una vez en este móvil
   const [verRacha, setVerRacha] = useState(false);
   const [hito, hitoVisto] = useHitoRacha(atleta.id, constancia.datos ? constancia.datos.racha : null);
@@ -433,6 +440,44 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
     semana: natural ? { hechas: natural.hechas, objetivo: natural.objetivo } : { hechas, objetivo: sesiones.length },
     bloque: semana?.numero ? { semana: semana.numero, de: semanasBloque } : null,
   }) : null;
+  // (v0.140) Las secciones de debajo, cada una con su condición de siempre; el orden y lo oculto, los del atleta
+  const tarjetaMes = <Reserva id="hoy-mes"><TarjetaMes salud={salud} /></Reserva>;
+  const tarjetaMito = <Reserva id="hoy-mito"><MitoDeLaSemana /></Reserva>;
+  const bloquesHoy = {
+    sesion: e.tipo === 'entreno' && siguiente ? (
+      <Plegable id="sesion" titulo="Lo que vas a hacer" icono="hoy" detalle={ejercicios.length ? `${ejercicios.length} ${ejercicios.length === 1 ? 'ejercicio' : 'ejercicios'}, uno a uno` : 'La sesión que te toca'}>
+        <SiguienteSesion sesion={siguiente} ejercicios={ejercicios} cargando={det.cargando && !det.datos} />
+      </Plegable>
+    ) : null,
+    semana: (
+      <Plegable id="semana" titulo="Esta semana" icono="semana" detalle={`${dias && natural ? natural.hechas : hechas} de ${dias && natural ? natural.objetivo : sesiones.length} sesiones hechas`}>
+      <section class="seccion">
+        <div class="seccion-cab">
+          <h2>Esta semana</h2>
+          <span class="fila-envolver">
+            <button class="btn-texto" onClick={() => setBloqueAbierto(true)}><Icono n="semana" /> Tu bloque</button>
+            {enSemana && sesiones.some((s) => !s.completada) && <button class="btn-texto" onClick={() => setPlanAbierto(true)}><Icono n="calendario" /> {sesiones.some((s) => diaPrevistoValido(s, semana)) ? 'Tu plan' : 'Planificar'}</button>}
+          </span>
+        </div>
+        <div class="semana-dias">
+          {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} actual={e.tipo === 'entreno' && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
+        </div>
+      </section>
+      </Plegable>
+    ),
+    carrera: conCarrera(atleta) && !propio ? <CarreraHoy abrir={() => setCarreraAbierta(true)} /> : null,
+    menu: salud && conNutricion(atleta) ? <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Lo que tienes para comer hoy"><MenuHoy irA={irA} salud={salud} compacto /></Plegable> : null,
+    nutricion: salud && conNutricion(atleta) ? (
+      <Plegable id="nutricion" titulo="Nutrición de hoy" icono="nutricion" detalle="Apunta lo que has comido">
+        <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />
+      </Plegable>
+    ) : null,
+    habitos: salud ? <Plegable id="habitos" titulo="Tus hábitos" icono="llama" detalle="Márcalos según los vas haciendo"><HabitosHoy /></Plegable> : null,
+    peso: salud ? <Plegable id="peso" titulo="Tu peso" icono="bascula" detalle="Apúntalo y mira cómo va tu tendencia"><PesoHoy irA={irA} /></Plegable> : null,
+  };
+  const disponibles = Object.keys(bloquesHoy).filter((id) => bloquesHoy[id]);
+  const { visibles, ocultas: ocultasAbajo } = seccionesHoy(panel, disponibles);
+  const ocultasHoy = [...(propio ? [] : ['mes', 'mito'].filter((id) => P.ocultas.has(id))), ...ocultasAbajo];
   return (
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} panel={panelDia} alCerrar={cerrarDia} />}
@@ -498,42 +543,24 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         {(dias ? !!natural : sesiones.length > 0) && <ResumenSemana hechas={dias ? natural.hechas : hechas} total={dias ? natural.objetivo : sesiones.length} objetivo={dias} racha={constancia.datos?.racha ?? null} cargando={constancia.cargando && !constancia.datos} abrirRacha={constancia.datos ? () => setVerRacha(true) : null} />}
       </section>
       <Diales sesiones={sesiones} semana={semana} siguiente={siguiente} previstaHoy={enSemana ? toca.hoy : null} ejerciciosSiguiente={ejercicios} bloques={p.bloques || []} salud={salud} hoy={hoy} alContestar={recargar}
+        ocultos={P.dialesOcultos} entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))}
         natural={dias ? { semana: natural, dias, semanas: p.semanas || [], sesionesPorSemana: p.sesiones || {} } : null} />
 
       {entre}
-      {!propio && <Reserva id="hoy-mes"><TarjetaMes salud={salud} /></Reserva>}
+      {!propio && !P.ocultas.has('mes') && tarjetaMes}
       {/* (v0.104) en diciembre y enero, tu año en FBE */}
       {!propio && <TarjetaAnio />}
       {/* (compartir) «tu récord de ayer merece una historia», una vez y se puede quitar */}
       {!propio && <RecordatorioCompartir />}
       {/* (filosofía) de vuelta tras un parón, las dos reglas de oro; y el mito de la semana, hasta que se lee */}
       {!propio && constancia.datos?.algunaVez && !constancia.datos?.ultimoDia && <GuiaSugerida ocasion="vuelta" />}
-      {!propio && <Reserva id="hoy-mito"><MitoDeLaSemana /></Reserva>}
+      {!propio && !P.ocultas.has('mito') && tarjetaMito}
       {/* (054) una sesión que la app cerró sola (todas las series hechas, 3 horas sin tocar): pedir cómo fue */}
       <CerradasPorTi sesiones={Object.values(p.sesiones || {}).flat()} hoy={hoy} abrirSesion={abrirSesion} />
       <Reserva id="hoy-informes"><BloqueTerminado salud={salud} /><SemanaPasada salud={salud} /></Reserva>
-      {/* (diseño 9) Lo de debajo es detalle: va plegado en filas que se abren al tocarlas (y «Tu día» las abre al ir a ellas) */}
-      {e.tipo === 'entreno' && siguiente && (
-        <Plegable id="sesion" titulo="Lo que vas a hacer" icono="hoy" detalle={ejercicios.length ? `${ejercicios.length} ${ejercicios.length === 1 ? 'ejercicio' : 'ejercicios'}, uno a uno` : 'La sesión que te toca'}>
-          <SiguienteSesion sesion={siguiente} ejercicios={ejercicios} cargando={det.cargando && !det.datos} />
-        </Plegable>
-      )}
-
-      <Plegable id="semana" titulo="Esta semana" icono="semana" detalle={`${dias && natural ? natural.hechas : hechas} de ${dias && natural ? natural.objetivo : sesiones.length} sesiones hechas`}>
-      <section class="seccion">
-        <div class="seccion-cab">
-          <h2>Esta semana</h2>
-          <span class="fila-envolver">
-            <button class="btn-texto" onClick={() => setBloqueAbierto(true)}><Icono n="semana" /> Tu bloque</button>
-            {enSemana && sesiones.some((s) => !s.completada) && <button class="btn-texto" onClick={() => setPlanAbierto(true)}><Icono n="calendario" /> {sesiones.some((s) => diaPrevistoValido(s, semana)) ? 'Tu plan' : 'Planificar'}</button>}
-          </span>
-        </div>
-        <div class="semana-dias">
-          {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} actual={e.tipo === 'entreno' && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
-        </div>
-      </section>
-      </Plegable>
-      {conCarrera(atleta) && !propio && <CarreraHoy abrir={() => setCarreraAbierta(true)} />}
+      {/* (diseño 9) Lo de debajo es detalle: va plegado en filas que se abren al tocarlas (y «Tu día» las abre al ir a ellas).
+          (v0.140) en el orden que haya elegido el atleta («Ordenar Hoy»); lo que oculta, plegado al final */}
+      {visibles.map((id) => <Fragment key={id}>{bloquesHoy[id]}</Fragment>)}
       {carreraAbierta && <TuCarrera alCerrar={() => setCarreraAbierta(false)} />}
       {verRacha && <PantallaRacha racha={constancia.datos?.racha || 0} semanas={constancia.datos?.semanas || []} diasSemana={constancia.datos?.diasSemana || null} hoy={hoy} alCerrar={() => setVerRacha(false)} />}
       {hito && !verRacha && <HitoRacha hito={hito} alCerrar={hitoVisto} />}
@@ -544,22 +571,22 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         </Hoja>
       )}
 
-      {salud && conNutricion(atleta) && <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Lo que tienes para comer hoy"><MenuHoy irA={irA} salud={salud} compacto /></Plegable>}
-      {salud && conNutricion(atleta) && (
-        <Plegable id="nutricion" titulo="Nutrición de hoy" icono="nutricion" detalle="Apunta lo que has comido">
-          <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />
-        </Plegable>
-      )}
-
-      {salud && <Plegable id="habitos" titulo="Tus hábitos" icono="llama" detalle="Márcalos según los vas haciendo"><HabitosHoy /></Plegable>}
-
-      {salud && <Plegable id="peso" titulo="Tu peso" icono="bascula" detalle="Apúntalo y mira cómo va tu tendencia"><PesoHoy irA={irA} /></Plegable>}
-
       {salud && !propio && !checkinHecho && siguiente && diaDeCheckin() && (
         <button class="nota-coach" style="border:0;text-align:left;cursor:pointer" onClick={() => irA('checkin')}>
           <Icono n="checkin" /><div><strong>Check-in semanal pendiente.</strong> Un minuto: peso, sueño, energía y molestias.</div>
         </button>
       )}
+      {ocultasHoy.length > 0 && (
+        <details class="ocultas-hoy" data-ocultas-hoy="">
+          <summary><Icono n="ojo" /> Lo que has ocultado ({ocultasHoy.length})<Icono n="abajo" class="plegable-flecha" /></summary>
+          <div class="pila-s">{ocultasHoy.map((id) => <Fragment key={id}>{id === 'mes' ? tarjetaMes : id === 'mito' ? tarjetaMito : bloquesHoy[id]}</Fragment>)}</div>
+        </details>
+      )}
+      <div class="ordenar-hoy-pie">
+        <button type="button" class="btn-texto" onClick={() => setOrdenando(true)}><Icono n="ordenar" /> Ordenar Hoy</button>
+      </div>
+      {ordenando && <OrdenarHoy pref={panel} fijar={fijarPanel} disponibles={disponibles} arriba={propio ? [] : ['mes', 'mito']}
+        diales={['constancia', 'carga', ...(salud ? ['llegas'] : []), ...(salud && conNutricion(atleta) ? ['comida'] : []), ...(salud ? ['pasos'] : [])]} alCerrar={() => setOrdenando(false)} />}
     </>
   );
 }
@@ -598,6 +625,9 @@ function Plegable({ id, titulo, icono, detalle = null, children }) {
 function abrirPlegableHoy(id) {
   const d = typeof document !== 'undefined' ? document.querySelector(`details[data-plegable="${id}"]`) : null;
   if (d && !d.open) d.open = true;
+  // (v0.140) si el atleta la ocultó, está dentro de «Lo que has ocultado»: se abre también
+  const fuera = d?.parentElement?.closest('details');
+  if (fuera && !fuera.open) fuera.open = true;
   return d;
 }
 

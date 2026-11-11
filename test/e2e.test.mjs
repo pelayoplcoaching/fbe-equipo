@@ -5917,6 +5917,16 @@ try {
   console.log('  ✗ la carrera de la v0.133:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.140: Hoy a tu gusto (test/e2e-panel-hoy.mjs)
+console.log('\nv0.140: Hoy a tu gusto');
+try {
+  const { probarPanelHoy } = await import('./e2e-panel-hoy.mjs');
+  await probarPanelHoy({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ Hoy a tu gusto (v0.140):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.134: la música también en el modo atleta del coach (test/e2e-musica-propio.mjs)
 console.log('\nv0.134: la música en el modo atleta del coach');
 try {

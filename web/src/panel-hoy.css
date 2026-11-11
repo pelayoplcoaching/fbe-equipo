@@ -1,0 +1,26 @@
+/* (v0.140) Hoy a tu gusto: los diales nuevos (Comida, Pasos), "Lo que has ocultado" y "Ordenar Hoy". Solo ASCII. */
+
+/* Con cinco diales, en dos filas de tres (las rayas de separacion, solo entre los de la misma fila) */
+.diales.diales-dos-filas { row-gap: 4px; }
+.diales.diales-dos-filas .dial:nth-child(3n + 1)::before { display: none; }
+
+/* Los estados de los diales nuevos (los colores, de los tokens de siempre) */
+.dial[data-estado="en_objetivo"], .dial[data-estado="en_media"] { --dial: var(--ok); }
+.dial[data-estado="pasado"] { --dial: var(--aviso); }
+.dial[data-estado="sin_apuntar"] .dial-estado { color: var(--morado); font-weight: 680; }
+
+/* Lo que has ocultado: plegado al final, como una fila mas */
+.ocultas-hoy { margin-top: 4px; }
+.ocultas-hoy > summary { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 14px; border-radius: var(--r); color: var(--tinta-2); font-size: var(--tipo-pie); font-weight: 650; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; }
+.ocultas-hoy > summary::-webkit-details-marker { display: none; }
+.ocultas-hoy > summary svg { width: 18px; height: 18px; flex: none; }
+.ocultas-hoy > summary .plegable-flecha { margin-left: auto; }
+.ocultas-hoy[open] > summary .plegable-flecha { transform: rotate(180deg); }
+.ocultas-hoy > summary:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; }
+
+/* El enlace de abajo y la hoja */
+.ordenar-hoy-pie { display: flex; justify-content: center; margin-top: 4px; }
+.ordenar-hoy-tit { font-size: var(--tipo-pie); font-weight: 720; color: var(--tinta-2); margin: 6px 2px 0; }
+.ordenar-hoy-lista .ord-fila.oculta .ord-nombre > span:first-child { color: var(--tinta-2); }
+.ordenar-hoy-lista .ord-fila.oculta .ord-pos { color: var(--tinta-3); }
+.ordenar-hoy-ver[aria-pressed="false"] { color: var(--tinta-3); }

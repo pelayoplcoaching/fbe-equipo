@@ -6,7 +6,10 @@ import { useId, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, DegradadoAro } from '../comunes.jsx';
 import { prepMarcadas, marcarPrepHoy } from './prep-hoy.js';
 import { Preparacion } from './Preparacion.jsx';
-import { dialConstancia, dialCarga, dialComoLlegas, preparacionDeHoy, sesionParaContestar, conSeriesDeHoy, arcoDial, BANDA_CARGA } from '../../logica/tablero.js';
+import { dialConstancia, dialCarga, dialComoLlegas, dialComida, dialPasos, pasosCortos, preparacionDeHoy, sesionParaContestar, conSeriesDeHoy, arcoDial, BANDA_CARGA } from '../../logica/tablero.js';
+import { objetivoDelDia, planVigente } from '../../logica/nutricion.js';
+import { conNutricion } from '../../logica/nivel.js';
+import { leerPreferencia } from '../preferencias.js';
 import { consejoPreparacion } from '../../logica/preparacion.js';
 import { num, cargaSemanal } from '../../logica/calculos.js';
 import { fmtConDia, fmtCorta, lunesDe, sumarDias } from '../../logica/fechas.js';
@@ -32,9 +35,22 @@ function Esfera({ frac, banda = null, aguja = false, children }) {
 }
 
 // natural (v0.53, con objetivo de días por semana): { semana (la de hoy, de semanasObjetivo), dias, semanas, sesionesPorSemana }
-export function Diales({ sesiones = [], semana = null, siguiente = null, previstaHoy = null, ejerciciosSiguiente = [], bloques = [], salud = false, hoy, alContestar, natural = null }) {
+// (v0.140) ocultos: los diales que el atleta ha quitado («Ordenar Hoy»); entrenaHoy: para el objetivo de kcal de hoy.
+// Comida (si lleva la nutrición con kcal) y Pasos (si llegan de Salud) solo piden lo suyo si se ven.
+export function Diales({ sesiones = [], semana = null, siguiente = null, previstaHoy = null, ejerciciosSiguiente = [], bloques = [], salud = false, hoy, alContestar, natural = null, ocultos = new Set(), entrenaHoy = false }) {
   const { api, atleta, aviso } = useApp();
   const [abierto, setAbierto] = useState(null);
+  const verComida = salud && conNutricion(atleta) && !ocultos.has('comida');
+  const verPasos = salud && !ocultos.has('pasos');
+  const comida = useCarga(() => (verComida ? Promise.all([api.planesNutricion(atleta.id), api.registrosNutricion(atleta.id, hoy, hoy)]).catch(() => null) : Promise.resolve(null)),
+    [atleta.id, hoy, verComida], { recuerdo: verComida ? `dial-comida:${atleta.id}:${hoy}` : null });
+  const pasosDatos = useCarga(() => (verPasos ? api.saludDiaria(atleta.id, sumarDias(hoy, -14), hoy).catch(() => null) : Promise.resolve(null)),
+    [atleta.id, hoy, verPasos], { recuerdo: verPasos ? `dial-pasos:${atleta.id}:${hoy}` : null });
+  // (como «Nutrición de hoy»: si ha dicho a mano si hoy entrena o descansa, eso manda)
+  const elegidoDia = leerPreferencia(`fbe-nut-dia-${hoy}`, null);
+  const objetivo = comida.datos ? objetivoDelDia(planVigente(comida.datos[0] || [], hoy), elegidoDia ? elegidoDia === 'entreno' : entrenaHoy) : null;
+  const m = objetivo ? dialComida(objetivo, (comida.datos[1] || []).find((r) => r.fecha === hoy) || null) : null;
+  const ps = pasosDatos.datos?.conectada ? dialPasos(pasosDatos.datos.dias || [], hoy) : null;
   const carga = useCarga(() => api.cargaHoy(atleta.id, { bloques, hoy }).catch(() => null), [atleta.id, hoy, sesiones.filter((s) => s.completada).length], { recuerdo: `carga-hoy:${atleta.id}:${hoy}` });
   const c = natural ? dialConstancia(sesiones, natural.semana) : dialConstancia(sesiones);
   const k = carga.datos ? dialCarga(carga.datos, hoy, 4) : null;
@@ -45,24 +61,27 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
   // Solo se contesta desde aquí para la sesión prevista para hoy (o la que ya tiene series de hoy), y nunca de baja
   const pendiente = sesionParaContestar({ previstaHoy, siguiente, seriesHoy, baja: atleta.estado === 'baja' });
   const pct = k && k.ratio != null ? Math.round(k.ratio * 100) : null;
-  const n = salud ? 3 : 2;
+  const ver = { constancia: !ocultos.has('constancia'), carga: !ocultos.has('carga'), llegas: salud && !ocultos.has('llegas'), comida: !!m, pasos: !!ps };
+  const n = Object.values(ver).filter(Boolean).length;
+  if (!n) return null;
+  const pc = ps ? pasosCortos(ps.pasos) : null;
   return (
-    <section class="panel diales" style={{ '--n': n }} aria-label="Tu semana de un vistazo">
-      <button type="button" class="dial" data-estado={c.estado} onClick={() => setAbierto('constancia')}
+    <section class={`panel diales${n > 4 ? ' diales-dos-filas' : ''}`} style={{ '--n': n > 4 ? 3 : n }} aria-label="Tu día de un vistazo">
+      {ver.constancia && <button type="button" class="dial" data-estado={c.estado} onClick={() => setAbierto('constancia')}
         aria-label={`Constancia: ${c.hechas} de ${c.total} sesiones ${natural ? 'de tu objetivo de esta semana' : 'de esta semana'}. ${c.etiqueta}. Ver de dónde sale`}>
         <Esfera frac={c.valor}><span>{c.hechas}<span class="u">/{c.total}</span></span></Esfera>
         <span class="dial-nombre">Constancia</span>
         <span class="dial-estado">{c.etiqueta}</span>
-      </button>
-      <button type="button" class="dial" data-estado={k ? k.estado : 'cargando'} onClick={() => setAbierto('carga')}
+      </button>}
+      {ver.carga && <button type="button" class="dial" data-estado={k ? k.estado : 'cargando'} onClick={() => setAbierto('carga')}
         aria-label={`Carga: ${!k ? 'cargando' : k.estado === 'sin_media' ? 'aún sin media para comparar' : `${pct} % de lo que sueles llevar a estas alturas, ${k.etiqueta.toLowerCase()}`}. Ver de dónde sale`}>
         <Esfera frac={k?.valor || 0} banda={k && k.estado !== 'sin_media' ? [BANDA_CARGA[0] / 2, BANDA_CARGA[1] / 2] : null} aguja={!!k && k.estado !== 'sin_media'}>
           {!k || k.estado === 'sin_media' ? <span>—</span> : <span>{pct}<span class="u">%</span></span>}
         </Esfera>
         <span class="dial-nombre">Carga</span>
         <span class="dial-estado">{k ? k.etiqueta : '…'}</span>
-      </button>
-      {salud && (
+      </button>}
+      {ver.llegas && (
         <button type="button" class="dial" data-estado={l.estado} onClick={() => setAbierto('llegas')}
           aria-label={l.estado === 'sin_respuesta' ? `Cómo llegas: sin contestar hoy. ${pendiente ? 'Contestar' : 'Ver qué es'}` : `Cómo llegas: ${l.etiqueta}. Ver tus respuestas`}>
           <Esfera frac={l.valor}>{l.estado === 'sin_respuesta' ? <Icono n="pregunta" /> : <span>{l.total}<span class="u">/9</span></span>}</Esfera>
@@ -70,6 +89,24 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
           <span class="dial-estado">{l.estado === 'sin_respuesta' ? (pendiente ? 'Contestar' : 'Sin contestar') : l.etiqueta}</span>
         </button>
       )}
+      {ver.comida && (
+        <button type="button" class="dial" data-estado={m.estado} onClick={() => setAbierto('comida')}
+          aria-label={`Comida: ${m.estado === 'sin_apuntar' ? `aún sin apuntar nada hoy, tu objetivo son ${m.objetivo} kcal` : m.quedan >= 0 ? `te quedan ${m.quedan} kcal de ${m.objetivo}` : `${-m.quedan} kcal por encima de ${m.objetivo}`}. Ver el detalle`}>
+          <Esfera frac={m.valor}><span>{m.quedan < 0 ? `+${-m.quedan}` : m.quedan}<span class="u">kcal</span></span></Esfera>
+          <span class="dial-nombre">Comida</span>
+          <span class="dial-estado">{m.etiqueta}</span>
+        </button>
+      )}
+      {ver.pasos && (
+        <button type="button" class="dial" data-estado={ps.estado} onClick={() => setAbierto('pasos')}
+          aria-label={`Pasos: ${ps.pasos} hoy${ps.media ? `, tu media es de ${ps.media}` : ''}. Ver el detalle`}>
+          <Esfera frac={ps.valor}><span>{pc.cifra}{pc.unidad && <span class="u">{pc.unidad}</span>}</span></Esfera>
+          <span class="dial-nombre">Pasos</span>
+          <span class="dial-estado">{ps.etiqueta}</span>
+        </button>
+      )}
+      {abierto === 'comida' && m && <HojaComida m={m} objetivo={objetivo} alCerrar={() => setAbierto(null)} />}
+      {abierto === 'pasos' && ps && <HojaPasos ps={ps} ultimo={pasosDatos.datos?.ultimo || null} alCerrar={() => setAbierto(null)} />}
       {abierto === 'constancia' && (natural
         ? <HojaConstancia c={c} natural={natural} sesiones={sesionesDeLaSemana(natural.semanas, natural.sesionesPorSemana, c.total, hoy)} semana={{ fecha_inicio: lunesDe(hoy) }} alCerrar={() => setAbierto(null)} />
         : <HojaConstancia c={c} sesiones={sesiones} semana={semana} alCerrar={() => setAbierto(null)} />)}
@@ -83,6 +120,34 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
           }} />
       )}
     </section>
+  );
+}
+
+// (v0.140) El detalle de los dos diales nuevos
+function HojaComida({ m, objetivo, alCerrar }) {
+  return (
+    <Hoja titulo="Comida de hoy" alCerrar={alCerrar}>
+      <p class="secundario">Lo que llevas apuntado hoy frente a las kcal de tu plan para hoy{objetivo?.descanso ? ' (día de descanso)' : ''}. Se apunta en «Nutrición de hoy».</p>
+      <dl class="dial-hoja-cifras">
+        <div><dt>Apuntado</dt><dd class="marcador">{num(m.comido, 0)}<span class="peq"> kcal</span></dd></div>
+        <div><dt>Tu objetivo</dt><dd class="marcador">{num(m.objetivo, 0)}<span class="peq"> kcal</span></dd></div>
+        <div><dt>{m.quedan >= 0 ? 'Te quedan' : 'Por encima'}</dt><dd class="marcador">{num(Math.abs(m.quedan), 0)}<span class="peq"> kcal</span></dd></div>
+      </dl>
+      {m.proteina != null && <p class="peq">{m.proteina > 0 ? <>Proteína: te quedan <strong class="num">{num(m.proteina, 0)} g</strong> para llegar a la de tu plan.</> : <>Proteína: ya has llegado a la de tu plan.</>}</p>}
+      <p class="peq terciario">«En tu objetivo» va desde un 10 % antes de llegar hasta pasarte un 5 %.</p>
+    </Hoja>
+  );
+}
+function HojaPasos({ ps, ultimo, alCerrar }) {
+  return (
+    <Hoja titulo="Pasos de hoy" alCerrar={alCerrar}>
+      <p class="secundario">Los que llegan de Salud del iPhone (Perfil → Conexiones){ultimo ? `; lo último, ${fmtConDia(String(ultimo).slice(0, 10))}` : ''}. No es un objetivo: el dial se llena al llegar a tu media de los últimos 14 días.</p>
+      <dl class="dial-hoja-cifras">
+        <div><dt>Hoy</dt><dd class="marcador">{num(ps.pasos, 0)}</dd></div>
+        <div><dt>Tu media</dt><dd class="marcador">{ps.media ? num(ps.media, 0) : '—'}</dd></div>
+      </dl>
+      {!ps.media && <p class="peq secundario">Aún no hay media: hacen falta al menos 3 días con pasos en las dos últimas semanas.</p>}
+    </Hoja>
   );
 }
 

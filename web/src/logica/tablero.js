@@ -90,6 +90,39 @@ export function dialComoLlegas(prep) {
   };
 }
 
+// (v0.140) Comida: lo que lleva apuntado hoy frente a las kcal de su plan para hoy (objetivoDelDia). null sin plan con kcal.
+// Se pasa un 5 % y sigue «en tu objetivo»; a menos de un 10 % de llegar, también.
+export function dialComida(objetivo, registro = null) {
+  const meta = Number(objetivo?.kcal);
+  if (!(meta > 0)) return null;
+  const comido = Math.max(0, Number(registro?.kcal) || 0);
+  const quedan = Math.round(meta - comido);
+  const proteina = Number(objetivo?.proteina) > 0 ? Math.max(0, Math.round(Number(objetivo.proteina) - (Number(registro?.proteina_g) || 0))) : null;
+  const estado = comido === 0 ? 'sin_apuntar' : quedan > meta * 0.1 ? 'queda' : quedan >= -meta * 0.05 ? 'en_objetivo' : 'pasado';
+  const etiqueta = { sin_apuntar: 'Sin apuntar', queda: 'Te quedan', en_objetivo: 'En tu objetivo', pasado: 'Por encima' }[estado];
+  return { id: 'comida', estado, valor: lim(comido / meta), etiqueta, objetivo: Math.round(meta), comido: Math.round(comido), quedan, proteina };
+}
+// (v0.140) Pasos: los de hoy (de Salud, por Conexiones) frente a su media de los 14 días anteriores (con 3 días al menos).
+// No es un objetivo: el dial se llena al llegar a su media. null si hoy no ha llegado nada.
+export function dialPasos(dias = [], hoy) {
+  const d = (dias || []).find((x) => x?.fecha === hoy);
+  const pasos = d && d.pasos != null ? Math.max(0, Math.round(Number(d.pasos))) : null;
+  if (pasos == null || !Number.isFinite(pasos)) return null;
+  const desde = sumarDias(hoy, -14);
+  const previos = (dias || []).filter((x) => x?.fecha >= desde && x.fecha < hoy && Number(x.pasos) > 0).map((x) => Number(x.pasos));
+  const media = previos.length >= 3 ? Math.round(previos.reduce((a, b) => a + b, 0) / previos.length) : null;
+  const estado = media == null ? 'sin_media' : pasos >= media ? 'en_media' : 'por_debajo';
+  const etiqueta = media == null ? 'Hoy' : pasos >= media ? 'Ya en tu media' : 'Hacia tu media';
+  return { id: 'pasos', estado, valor: media ? lim(pasos / media) : 0, etiqueta, pasos, media, dias: previos.length };
+}
+// Cuántos pasos caben en el centro de un dial: 8432 → «8,4» (mil); por debajo de mil, tal cual
+export function pasosCortos(n) {
+  const x = Math.max(0, Math.round(Number(n) || 0));
+  if (x < 1000) return { cifra: String(x), unidad: '' };
+  const mil = x / 1000;
+  return { cifra: (mil >= 10 ? String(Math.round(mil)) : mil.toFixed(1).replace('.', ',')), unidad: 'mil' };
+}
+
 // La forma de un dial de 270° (abierto por abajo), en un cuadrado de `tam`: el trazo de la pista y la longitud del
 // arco para una fracción (stroke-dasharray), y dónde va un punto en esa fracción (la aguja de la carga)
 export function arcoDial(frac, tam = 64, grosor = 7) {
