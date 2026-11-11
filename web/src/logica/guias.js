@@ -17,7 +17,7 @@ export const sinMarcas = (s) => trozos(s).map((x) => x.t).join('');
 
 // Los tonos de una caja (lo que no se conozca, «nota»)
 export const TONOS = ['nota', 'clave', 'aviso', 'ojo'];
-const TIPOS = ['p', 'h', 'ul', 'ol', 'caja'];
+const TIPOS = ['p', 'h', 'ul', 'ol', 'caja', 'tabla'];
 // Los bloques de una sección, limpios: solo tipos conocidos y con algo dentro
 export function bloquesDe(bs, dentro = false) {
   const out = [];
@@ -26,6 +26,12 @@ export function bloquesDe(bs, dentro = false) {
     if (!TIPOS.includes(o.t)) continue;
     if (o.t === 'p' || o.t === 'h') { if (texto(o.x)) out.push({ t: o.t, x: texto(o.x) }); continue; }
     if (o.t === 'ul' || o.t === 'ol') { const xs = lista(o.xs).map(texto).filter(Boolean); if (xs.length) out.push({ t: o.t, xs }); continue; }
+    if (o.t === 'tabla') {   // { cab: [..], filas: [[..]] }: todas las filas con las columnas de la cabecera
+      const cab = lista(o.cab).map(texto);
+      const filas = lista(o.filas).map((f) => cab.map((_, i) => texto(lista(f)[i]))).filter((f) => f.some(Boolean));
+      if (cab.length >= 2 && cab.length <= 8 && filas.length) out.push({ t: 'tabla', cab, filas });
+      continue;
+    }
     if (dentro) continue;   // una caja dentro de otra no se pinta
     const dentroDe = bloquesDe(o.bloques, true);
     if (dentroDe.length || texto(o.titulo)) out.push({ t: 'caja', tono: TONOS.includes(o.tono) ? o.tono : 'nota', titulo: texto(o.titulo), bloques: dentroDe });
@@ -43,7 +49,7 @@ export function guiaParaLeer(guia, fichas = []) {
     const o = objeto(s);
     const suyas = lista(o.fichas).map((n) => porOrden.get(Number(n))).filter(Boolean);
     suyas.forEach((f) => usadas.add(f));
-    return { titulo: texto(o.titulo), subtitulo: texto(o.subtitulo), bloques: bloquesDe(o.bloques), fichas: suyas };
+    return { clave: texto(o.clave), titulo: texto(o.titulo), subtitulo: texto(o.subtitulo), bloques: bloquesDe(o.bloques), fichas: suyas };
   }).filter((s) => s.titulo || s.bloques.length || s.fichas.length);
   const sueltas = ordenarFichas(lista(fichas).filter((f) => !usadas.has(f)));
   const ideas = lista(c.ideas).map((i) => ({ titulo: texto(objeto(i).titulo), x: texto(objeto(i).x) })).filter((i) => i.titulo || i.x);
@@ -94,4 +100,59 @@ export function fichasParecidas(fichas = [], nombre = '') {
   const a = pal(nombre);
   return fichas.map((f) => { const b = pal(f.nombre); const comunes = [...a].filter((p) => b.has(p)).length; return { f, p: a.size && b.size ? comunes / new Set([...a, ...b]).size : 0 }; })
     .sort((x, y) => y.p - x.p || normal(x.f.nombre).localeCompare(normal(y.f.nombre))).map((x) => x.f);
+}
+
+// ------------------------------------------------------------ los errores típicos, para repasarse y para corregir
+// De cada error típico de la ficha, su título (lo que va en negrita al principio) y el resto: [{ titulo, x }]
+export function erroresDeFicha(f) {
+  return fichaParaLeer(f).errores.map((e) => {
+    const m = e.match(/^\*\*(.+?)\*\*([:.,;]?)\s*(.*)$/);
+    if (!m) { const t = e.split(/[:.]/)[0]; return { titulo: sinMarcas(t).trim(), x: sinMarcas(e.slice(t.length + 1)).trim(), seguido: false }; }
+    // «**Chocar las mancuernas** arriba: …»: sin signo tras la negrita, el resto sigue la frase
+    return { titulo: sinMarcas(m[1]).trim(), x: sinMarcas(m[3]).trim(), seguido: !m[2] && !!m[3] };
+  }).filter((e) => e.titulo);
+}
+// Como frases de corrección de un toque (hasta 140 letras, como las del coach), sin las que ya tenga
+export function frasesDeFicha(f, yaTiene = []) {
+  const ya = new Set(yaTiene.map((t) => normal(t)));
+  return erroresDeFicha(f).map((e) => [...e.titulo].slice(0, 140).join('')).filter((t) => t && !ya.has(normal(t)));
+}
+
+// ------------------------------------------------------------ al programar
+// La tabla de la ficha en una línea: «Fuerza 3-6 · Hipertrofia 6-12 · Resistencia muscular 12-20»
+export const resumenTabla = (f) => fichaParaLeer(f).tabla.filter((r) => r.reps).map((r) => `${r.objetivo} ${r.reps}`).join(' · ');
+// Las zonas de molestia del check-in y las palabras que las nombran en «no lo prescribo cuando»
+const PALABRAS_ZONA = {
+  hombros: ['hombro', 'manguito', 'subacromial', 'labrum'], pectoral: ['pectoral'], triceps: ['triceps', 'codo'], espalda_alta: ['cervical', 'dorsal', 'espalda alta', 'trapecio'],
+  zona_lumbar: ['lumbar', 'hernia', 'discal', 'espalda baja'], femoral_gluteo: ['isquio', 'femoral', 'gluteo'], cuadriceps: ['cuadriceps', 'rodilla', 'rotuli', 'patelar'], aductor: ['aductor', 'ingle', 'pubalgia'],
+};
+export const NOMBRE_ZONA = { hombros: 'hombros', pectoral: 'pectoral', triceps: 'tríceps', espalda_alta: 'espalda alta', zona_lumbar: 'zona lumbar', femoral_gluteo: 'femoral y glúteo', cuadriceps: 'cuádriceps', aductor: 'aductor' };
+// Las molestias recientes del atleta (intensidad 1 o más) que la ficha nombra en su «no lo prescribo cuando»: [{ zona, intensidad }]
+export function avisosMolestia(f, molestias = []) {
+  const no = normal(fichaParaLeer(f).no);
+  if (!no) return [];
+  const peor = new Map();
+  for (const m of lista(molestias)) if (Number(m.intensidad) >= 1 && PALABRAS_ZONA[m.zona]) peor.set(m.zona, Math.max(peor.get(m.zona) || 0, Number(m.intensidad)));
+  return [...peor].filter(([z]) => PALABRAS_ZONA[z].some((p) => no.includes(p))).map(([zona, intensidad]) => ({ zona, intensidad }));
+}
+
+// ------------------------------------------------------------ por qué entrenas así
+// La distribución de la semana, por los nombres de sus sesiones y cuántas son: { clave, nombre } (clave = la de su
+// sección en la guía de rutinas) o null si no se reconoce. Es una suposición: el coach no la apunta en ningún sitio.
+export function tipoDeRutina(sesiones = []) {
+  const ss = lista(sesiones).filter((s) => s && s.tipo !== 'cardio');
+  const n = ss.length;
+  if (n < 2 || n > 6) return null;
+  const nombres = ss.map((s) => normal(s.nombre));
+  const cuantas = (re) => nombres.filter((x) => re.test(x)).length;
+  const full = cuantas(/full ?body|cuerpo (entero|completo)|\bfb\b/), torso = cuantas(/upper|torso|tren superior/), pierna = cuantas(/lower|pierna|tren inferior|\blegs?\b/);
+  const push = cuantas(/push|empuje/), pull = cuantas(/pull|traccion|tiron/);
+  const cardio = lista(sesiones).length - n;
+  if (cardio >= 1 && n <= 4 && (full >= 2 || (torso >= 1 && pierna >= 1))) return { clave: 'con-cardio', nombre: 'Fuerza con cardio integrado' };
+  if (full === n && n === 2) return { clave: 'full-body-2', nombre: 'Full Body en 2 días' };
+  if (full === n && n === 3) return { clave: 'full-body-3', nombre: 'Full Body en 3 días' };
+  if (n === 4 && torso === 2 && pierna === 2) return { clave: 'upper-lower-4', nombre: 'Upper / Lower en 4 días' };
+  if (n === 5 && push >= 1 && pull >= 1 && torso >= 1 && pierna >= 1) return { clave: 'hibrida-5', nombre: 'Híbrida en 5 días (PPL + Upper / Lower)' };
+  if (n === 6 && push === 2 && pull === 2 && pierna >= 2) return { clave: 'ppl-6', nombre: 'Push Pull Legs en 6 días' };
+  return null;
 }

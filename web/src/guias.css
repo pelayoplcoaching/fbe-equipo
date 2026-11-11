@@ -53,3 +53,21 @@
 .tabla-guia th[scope="row"] { text-align: left; font-weight: 650; }
 .tabla-guia td { white-space: normal; }
 @media (forced-colors: active) { .pasos-guia li::before { border: 1px solid CanvasText; } .guia-caja { border: 1px solid CanvasText; } }
+
+/* Las tablas de una guía (distribuciones, volúmenes): anchas, se deslizan a los lados en el móvil */
+.tabla-guia-ancha { min-width: 460px; }
+.tabla-guia-ancha td, .tabla-guia-ancha th[scope="row"] { vertical-align: top; line-height: 1.4; }
+.tabla-guia-ancha th[scope="row"] { color: var(--morado); }
+/* Antes de enviar un vídeo: los errores típicos */
+.repaso-errores { display: grid; gap: 8px; border-radius: var(--r-s); background: var(--hoja-2); }
+.repaso-errores > .btn-texto { justify-self: start; display: inline-flex; align-items: center; gap: 4px; }
+.repaso-errores > .btn-texto svg { width: 16px; height: 16px; }
+/* Por qué entrenas así */
+.por-que { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; color: inherit; }
+.por-que > svg { width: 22px; height: 22px; color: var(--morado); }
+.por-que > svg:last-child { width: 18px; height: 18px; color: var(--tinta-3); }
+/* Al programar */
+.ayuda-ficha { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-top: 3px; }
+.ayuda-ficha .btn-texto { display: inline-flex; align-items: center; gap: 4px; text-align: left; }
+.ayuda-ficha svg { width: 14px; height: 14px; flex: none; }
+.ayuda-ficha .chip { cursor: pointer; white-space: normal; text-align: left; }

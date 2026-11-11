@@ -5,8 +5,8 @@ import { useState, useMemo, useRef } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Vacio, Siluetas, ErrorCaja, CabeceraGrande } from './comunes.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenGrupo } from '../logica/imagenes.js';
-import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas } from '../logica/guias.js';
-import { listaGuias, guiaEntera, todasLasFichas, enlacesFichas, enlazarFicha, publicarGuia } from '../datos/guias.js';
+import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido } from '../logica/guias.js';
+import { listaGuias, guiaEntera, todasLasFichas, enlacesFichas, enlazarFicha, publicarGuia, fichaDeEjercicio } from '../datos/guias.js';
 
 // Un texto con su negrita
 export function Rico({ x }) {
@@ -22,6 +22,12 @@ export function Bloques({ bloques }) {
           : b.t === 'h' ? <h3 key={i} class="guia-h">{b.x}</h3>
             : b.t === 'ul' ? <ul key={i} class="guia-lista">{b.xs.map((x, k) => <li key={k}><Rico x={x} /></li>)}</ul>
               : b.t === 'ol' ? <ol key={i} class="guia-lista guia-num">{b.xs.map((x, k) => <li key={k}><Rico x={x} /></li>)}</ol>
+                : b.t === 'tabla' ? (
+                  <div key={i} class="tabla-desliza" tabIndex={0} role="group" aria-label="Tabla (se desliza a los lados)"><table class="tabla-simple tabla-guia tabla-guia-ancha">
+                    <thead><tr>{b.cab.map((c, k) => <th key={k} scope="col">{c}</th>)}</tr></thead>
+                    <tbody>{b.filas.map((f, k) => <tr key={k}>{f.map((c, j) => (j === 0 ? <th key={j} scope="row">{c}</th> : <td key={j}>{c}</td>))}</tr>)}</tbody>
+                  </table></div>
+                )
                 : (
                   <div key={i} class={`guia-caja tono-${b.tono}`}>
                     {b.titulo && <p class="guia-caja-titulo"><Icono n={ICONO_TONO[b.tono]} />{b.titulo}</p>}
@@ -108,13 +114,27 @@ function FilaFicha({ f, alAbrir, guia = false }) {
 }
 
 // Una guía entera para leer: la entrada, un índice de un toque, las secciones con sus fichas y las ideas clave
-export function LectorGuia({ clave }) {
+// soloSeccion: la clave de una sección; con ella se enseña solo esa (y un botón para ver la guía entera)
+export function LectorGuia({ clave, soloSeccion = null }) {
   const { backend, api } = useApp();
   const d = useCarga(() => guiaEntera({ backend }, clave), [clave], { recuerdo: `guia:${api.uid()}:${clave}` });
   const [ficha, setFicha] = useState(null);
+  const [entera, setEntera] = useState(false);
   const raiz = useRef(null);
   const g = useMemo(() => (d.datos ? guiaParaLeer(d.datos.guia, d.datos.fichas) : null), [d.datos]);
   if (!d.datos) return d.error ? <ErrorCaja error={d.error} reintentar={() => d.recargar(true)} /> : d.cargando ? <Siluetas forma="tarjetas" n={3} texto="Cargando la guía" /> : <div class="panel"><Vacio icono="biblioteca" titulo="Esa guía ya no está" /></div>;
+  const una = soloSeccion && !entera ? g.secciones.find((x) => x.clave === soloSeccion) : null;
+  if (una) {
+    return (
+      <div class="pila lector-guia">
+        <section class="seccion guia-seccion">
+          {una.subtitulo && <p class="peq terciario">{una.subtitulo}</p>}
+          <Bloques bloques={una.bloques} />
+        </section>
+        <button type="button" class="btn" style="justify-self:start" onClick={() => setEntera(true)}><Icono n="biblioteca" /> Ver la guía entera</button>
+      </div>
+    );
+  }
   const ir = (i) => raiz.current?.querySelector(`[data-seccion="${i}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const partes = [...g.secciones.map((s, i) => [i, s.titulo]), ...(g.sueltas.length ? [['sueltas', 'Más ejercicios']] : []), ...(g.ideas.length ? [['ideas', 'Ideas clave']] : [])];
   return (
@@ -151,8 +171,92 @@ export function LectorGuia({ clave }) {
 }
 
 // Una guía en su hoja (desde la ficha de un ejercicio)
-export function HojaGuia({ guia, alCerrar }) {
-  return <Hoja titulo={guia.titulo} alCerrar={alCerrar} ancho><LectorGuia clave={guia.clave} /></Hoja>;
+export function HojaGuia({ guia, alCerrar, soloSeccion = null, titulo = null }) {
+  return <Hoja titulo={titulo || guia.titulo} alCerrar={alCerrar} ancho><LectorGuia clave={guia.clave} soloSeccion={soloSeccion} /></Hoja>;
+}
+
+// (2) Antes de enviar un vídeo de técnica: los errores típicos de ese ejercicio, para repasarse. Plegado; sin ficha, nada.
+export function RepasoErrores({ ejercicioId }) {
+  const { backend, perfil } = useApp();
+  const fbe = useCarga(() => (perfil?.rol === 'coach' ? Promise.resolve(null) : fichaDeEjercicio({ backend }, ejercicioId).catch(() => null)), [ejercicioId], { recuerdo: `ficha-fbe:${ejercicioId}` });
+  const [abierto, setAbierto] = useState(false);
+  const errores = fbe.datos ? erroresDeFicha(fbe.datos.ficha) : [];
+  if (!errores.length) return null;
+  return (
+    <div class="repaso-errores panel-pad">
+      <button type="button" class="btn-texto" aria-expanded={abierto ? 'true' : 'false'} onClick={() => setAbierto(!abierto)}>
+        <Icono n={abierto ? 'abajo' : 'derecha'} /> Antes de enviarlo: {errores.length === 1 ? 'el error típico' : `los ${errores.length} errores típicos`}
+      </button>
+      {abierto && (
+        <>
+          <ul class="errores-guia">{errores.map((e, i) => <li key={i}><Icono n="alerta" /><span><strong>{e.titulo}</strong>{e.x ? `${e.seguido ? ' ' : ': '}${e.x}` : ''}</span></li>)}</ul>
+          <p class="mini terciario">Míralos en tu vídeo. Si ves alguno, cuéntaselo a tu coach en la nota o graba otra.</p>
+        </>
+      )}
+    </div>
+  );
+}
+
+// (4) En la semana del atleta: cómo está montada (por los nombres de sus sesiones) y por qué, de la guía de rutinas.
+// Sin guía de rutinas, o si la distribución no se reconoce, no sale.
+export function PorQueEntrenasAsi({ sesiones }) {
+  const { backend, api } = useApp();
+  const tipo = tipoDeRutina(sesiones);
+  const guias = useCarga(() => (tipo ? listaGuias({ backend }).catch(() => []) : Promise.resolve([])), [!!tipo], { recuerdo: tipo ? `guias:${api.uid()}` : null });
+  const [abierta, setAbierta] = useState(false);
+  const guia = (guias.datos || []).find((g) => g.clave === 'rutinas' && g.publicada);
+  if (!tipo || !guia) return null;
+  return (
+    <>
+      <button type="button" class="panel panel-pad por-que" onClick={() => setAbierta(true)} aria-haspopup="dialog">
+        <Icono n="biblioteca" />
+        <span class="pila-xs"><span class="mini terciario">Cómo está montada tu semana</span><strong>{tipo.nombre}</strong><span class="peq secundario">Por qué entrenas así y cómo progresa</span></span>
+        <Icono n="derecha" />
+      </button>
+      {abierta && <HojaGuia guia={guia} soloSeccion={tipo.clave} titulo={tipo.nombre} alCerrar={() => setAbierta(false)} />}
+    </>
+  );
+}
+
+// (3) Las guías de unos grupos musculares, en botones (debajo del mapa muscular): tocar uno abre su guía
+export function GuiasDeGrupos({ grupos = [] }) {
+  const { backend, api, perfil } = useApp();
+  const guias = useCarga(() => listaGuias({ backend }).catch(() => []), [], { recuerdo: `guias:${api.uid()}` });
+  const [abierta, setAbierta] = useState(null);
+  const suyas = ordenarGuias(guias.datos || []).filter((g) => g.grupo && grupos.includes(g.grupo) && (g.publicada || perfil?.rol === 'coach'));
+  if (!suyas.length) return null;
+  return (
+    <div class="pila-xs guias-de-grupos">
+      <span class="mini terciario">Las guías de estos músculos</span>
+      <div class="selector-chips" role="group" aria-label="Guías por grupo muscular">
+        {suyas.map((g) => <button type="button" key={g.id} onClick={() => setAbierta(g)} aria-haspopup="dialog">{g.titulo}</button>)}
+      </div>
+      {abierta && <HojaGuia guia={abierta} alCerrar={() => setAbierta(null)} />}
+    </div>
+  );
+}
+
+// (5) Al programar: lo que dice la ficha del ejercicio (repeticiones por objetivo) y, si el atleta apuntó una molestia
+// que la ficha nombra en su «no lo prescribo cuando», un aviso. fichas: { [ficha_id]: fila }; enlaces: { [ejercicio_id]: ficha_id }
+export function AyudaFicha({ ejercicioId, fichas, enlaces, molestias = [] }) {
+  const [ver, setVer] = useState(false);
+  const fila = ejercicioId && enlaces && fichas ? fichas[enlaces[ejercicioId]] : null;
+  if (!fila || !fichaConContenido(fila)) return null;
+  const avisos = avisosMolestia(fila, molestias);
+  const resumen = resumenTabla(fila);
+  return (
+    <div class="mini ayuda-ficha">
+      <button type="button" class="btn-texto mini" onClick={() => setVer(true)} aria-haspopup="dialog" title="Tu ficha de este ejercicio">
+        <Icono n="biblioteca" /> {resumen || 'Tu ficha'}
+      </button>
+      {avisos.map((a) => (
+        <button type="button" key={a.zona} class="chip aviso" onClick={() => setVer(true)} title="Míralo en «No, cuando» de tu ficha">
+          <Icono n="alerta" /> Molestia en {NOMBRE_ZONA[a.zona]}{a.intensidad >= 2 ? (a.intensidad >= 3 ? ' (grave)' : ' (moderada)') : ''}: revisa cuándo no lo prescribes
+        </button>
+      ))}
+      {ver && <HojaFichaGuia ficha={fila} alCerrar={() => setVer(false)} />}
+    </div>
+  );
 }
 
 // Todas las guías: sus tarjetas y un buscador de ejercicios. alAbrir(guia) abre una
@@ -178,7 +282,7 @@ export function ListaGuias({ alAbrir, esCoach = false }) {
             <button type="button" class="tarjeta-guia" key={g.id} onClick={() => alAbrir(g)}>
               {hayImagen(imagenGrupo(g.grupo)) ? <Imagen id={imagenGrupo(g.grupo)} clase="tarjeta-guia-img" tamanos="9rem" /> : <span class="tarjeta-guia-img vacia" aria-hidden="true"><Icono n="biblioteca" /></span>}
               <span class="pila-xs tarjeta-guia-texto"><strong>{g.titulo}</strong>{g.subtitulo && <span class="mini terciario">{g.subtitulo}</span>}
-                <span class="fila-chips"><span class="chip">{cuantosEjercicios(g.fichas)}</span>{esCoach && !g.publicada && <span class="chip aviso">Sin publicar</span>}</span></span>
+                <span class="fila-chips">{g.fichas > 0 && <span class="chip">{cuantosEjercicios(g.fichas)}</span>}{esCoach && !g.publicada && <span class="chip aviso">Sin publicar</span>}</span></span>
             </button>
           ))}
         </div>

@@ -6,6 +6,7 @@ import { LIMITE_ARCHIVO_MB } from '../datos/api.js';
 import { sePuedeRecortar, recortarVideo, prepararVideo, megasEstimados, buscarMovimiento } from './recorte.js';
 import { recorteUtil, MIN_SEG_RECORTE } from '../logica/movimiento.js';
 import { AutoevaluacionEnvio } from './tecnica/Autoevaluacion.jsx';
+import { RepasoErrores } from './Guias.jsx';
 import { rpeAutoValido } from '../logica/correccion.js';
 const rpeDeSerie = (x) => (x != null && rpeAutoValido(Number(x)) ? Number(x) : null);
 import { marcasRepeticiones } from '../logica/repeticiones.js';
@@ -313,6 +314,8 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
                 </div>
               )}
               {esVideo && repiteDe && <p class="mini secundario"><Icono n="reiniciar" /> Va como repetición de tu vídeo corregido: tu coach verá los dos lado a lado.</p>}
+              {/* (056) los errores típicos de ese ejercicio, de la ficha de sus guías */}
+              {esVideo && tipo === 'video_tecnica' && (ejercicioId || ejercicio?.id) && <RepasoErrores ejercicioId={ejercicioId || ejercicio.id} />}
               {esVideo && <AutoevaluacionEnvio rpeSerie={rpeDeSerie(serie && series?.find((x) => Number(x.numero) === Number(serie))?.rpe)} alCambiar={setAuto} />}
               <div class="campo">
                 <label for="arch-nota">{esVideo ? '¿Qué quieres que mire?' : 'Nota (opcional)'}</label>
