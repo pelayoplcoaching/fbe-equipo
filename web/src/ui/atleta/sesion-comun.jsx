@@ -16,6 +16,7 @@ import { Placas } from '../Herramientas.jsx';
 import { num } from '../../logica/calculos.js';
 import { discosCon } from '../../logica/teclado.js';
 import { pesoNum, etiquetaPeso, vista, redondearCarga, enLibras } from '../../logica/unidades.js';
+import { ajusteEnVivo, repsSiguiente } from '../../logica/ajuste-vivo.js';
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
 
@@ -485,9 +486,17 @@ export function prepararEjercicio(e, actual, ultimas, foco, progresionAuto) {
     if (o) {
       // Lo de esa serie; lo que el coach no puso, como siempre (la anterior de hoy o su última vez)
       const base = previa ? { kg: previa.kg, reps: previa.reps } : propuestaSerie(prescripcion, ultimas?.series, k, { pautaAnterior: ultimas?.pauta });
-      return { kg: o.kg ?? base.kg, reps: o.reps ?? base.reps, rpe: o.rpe ?? null, objetivo: o };
+      // (ajuste en vivo) sin kilos del coach en esa serie, con su RPE objetivo: según cómo fue la anterior
+      const aj = previa && o.kg == null ? ajusteEnVivo({ previa, objetivo: { rpe: o.rpe ?? prescripcion.rpe_objetivo, rir: prescripcion.rir_objetivo }, reps: o.reps ?? previa.reps, nombre: ej.nombre, subir: !!progresionAuto }) : null;
+      return { kg: aj ? aj.kg : o.kg ?? base.kg, reps: o.reps ?? base.reps, rpe: o.rpe ?? null, objetivo: o, ...(aj ? { ajuste: aj } : {}) };
     }
-    return previa ? { kg: previa.kg, reps: previa.reps } : propuestaSerie(prescripcion, ultimas?.series, k, { sugerencia, pautaAnterior: ultimas?.pauta });
+    if (previa) {
+      // (ajuste en vivo) a RPE o RIR y sin carga pautada: si la anterior se fue del esfuerzo, la carga se corrige
+      const reps = repsSiguiente(previa.reps, prescripcion);
+      const aj = ajusteEnVivo({ previa, objetivo: { rpe: prescripcion.rpe_objetivo, rir: prescripcion.rir_objetivo }, reps, nombre: ej.nombre, kgFijado: prescripcion.carga_sugerida_kg != null, subir: !!progresionAuto });
+      return aj ? { kg: aj.kg, reps: aj.reps, ajuste: aj } : { kg: previa.kg, reps: previa.reps };
+    }
+    return propuestaSerie(prescripcion, ultimas?.series, k, { sugerencia, pautaAnterior: ultimas?.pauta });
   };
   return {
     ej, prescripcion, sugerencia, barra, top, detalle,

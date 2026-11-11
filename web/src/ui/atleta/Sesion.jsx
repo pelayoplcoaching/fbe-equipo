@@ -21,6 +21,7 @@ import { FilaSerie } from './FilaSerie.jsx';
 import { useTecladoApp } from './Teclado.jsx';
 import { pasoPeso, tipoCarga, pideRpe, discoMinimoValido, DISCO_MINIMO_DEFECTO, discosCon } from '../../logica/teclado.js';
 import { enLibras, vista, deVista, pesoTxt } from '../../logica/unidades.js';
+import { textoAjuste } from '../../logica/ajuste-vivo.js';
 import { propagarCambio, aplicarPropagacion, deshacerPropagacion, textoPropagacion } from '../../logica/propagar.js';
 import { ahoraToca, serieQueToca } from '../../logica/ahora-toca.js';
 import { leerExtras, guardarExtras, borrarExtras, conExtras, filasHechas } from '../../logica/series-extra.js';
@@ -1054,6 +1055,19 @@ function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAu
                   valores={borr[k] || VACIA} cambiar={(c, t) => cambiarBorr(k, c, t)} alComprometer={comprometer}
                   teclado={teclado} conRpe={conRpe || prop?.rpe != null} objetivoEsfuerzo={pa.esfuerzo} conDiscos={conDiscos}
                   paso={pasoPeso({ nombre: ej.nombre, valor: aNum((borr[k] || VACIA).kg) ?? prop?.kg ?? null, discoMinimo: teclado?.discoMinimo })} />
+                {/* (ajuste en vivo) la serie que toca, corregida porque la anterior se fue del RPE pautado */}
+                {prop?.ajuste && k === activa && !hechas[k] && (() => {
+                  // (si ya hay kilos escritos en esa serie, p. ej. pasados desde la primera, se ofrece usar los ajustados)
+                  const escrito = aNum((borr[k] || VACIA).kg);
+                  const otro = escrito != null && Math.abs(escrito - Number(prop.kg)) > 1e-9;
+                  return (
+                    <p class="backoff-nota ajuste-nota" role="status">
+                      <Icono n={prop.ajuste.sentido === 'bajar' ? 'abajo' : 'arriba'} />
+                      <span>{textoAjuste(prop.ajuste, pesoTxt(propuesta(k, hechas)?.kg ?? prop.ajuste.kg, 2))}.</span>
+                      {otro && <button type="button" class="btn btn-peq" onClick={() => cambiarBorr(k, 'kg', fmtV(prop.kg, 2))}>Usar {fmtV(prop.kg, 2)}</button>}
+                    </p>
+                  );
+                })()}
                 {k === 1 && top && n < e.series && (
                   <p class="backoff-nota">
                     <Icono n="abajo" />
