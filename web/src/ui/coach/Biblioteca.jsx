@@ -1,5 +1,6 @@
 import { PictoEjercicio } from '../Pictograma.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { GuiasCoach, ElegirFicha } from '../Guias.jsx';
 import { CabeceraGrande, useUnaVez, Pestanas, Siluetas, useApp, useCarga, Icono, Cargando, Hoja, Vacio, usePreferencia } from '../comunes.jsx';
 import { BandaDemo } from '../App.jsx';
 import { Imagen, hayImagen } from '../Imagen.jsx';
@@ -17,12 +18,12 @@ export function Biblioteca({ peticion = null } = {}) {
   return (
     <div class="contenido coach">
       <CabeceraGrande>
-        <div class="titulo"><h1>Biblioteca</h1><div class="sub">{vista === 'ejercicios' ? 'Ejercicios, técnica y alternativas' : vista === 'recetas' ? 'Tus recetas, con su foto, macros e ingredientes' : 'Guías, enlaces y preguntas frecuentes para tus atletas'}</div></div>
+        <div class="titulo"><h1>Biblioteca</h1><div class="sub">{vista === 'ejercicios' ? 'Ejercicios, técnica y alternativas' : vista === 'recetas' ? 'Tus recetas, con su foto, macros e ingredientes' : vista === 'guias' ? 'Tus guías por grupo muscular y la ficha de cada ejercicio' : 'Guías, enlaces y preguntas frecuentes para tus atletas'}</div></div>
       </CabeceraGrande>
       <BandaDemo />
-      <Pestanas opciones={[['ejercicios', 'Ejercicios'], ['recetas', 'Recetas'], ['recursos', 'Recursos']]} valor={vista} alCambiar={setVista} etiqueta="Biblioteca" idBase="bib" />
+      <Pestanas opciones={[['ejercicios', 'Ejercicios'], ['recetas', 'Recetas'], ['guias', 'Guías'], ['recursos', 'Recursos']]} valor={vista} alCambiar={setVista} etiqueta="Biblioteca" idBase="bib" />
       <div class="pestana-panel" role="tabpanel" id="bib-panel" aria-labelledby={`bib-${vista}`} key={vista}>
-        {vista === 'ejercicios' ? <Ejercicios peticion={peticion} /> : vista === 'recetas' ? <RecetasBiblioteca /> : <Recursos />}
+        {vista === 'ejercicios' ? <Ejercicios peticion={peticion} /> : vista === 'recetas' ? <RecetasBiblioteca /> : vista === 'guias' ? <GuiasCoach /> : <Recursos />}
       </div>
     </div>
   );
@@ -168,6 +169,8 @@ function EditarEjercicio({ ejercicio, todos, porId, alCerrar }) {
         {!nuevo && <label class="casilla"><input type="checkbox" checked={!f.activo} onChange={(e) => setF({ ...f, activo: !e.currentTarget.checked })} /><span>Ocultar al elegir ejercicios (se mantiene en los programas que ya lo usan)</span></label>}
         <button class="btn btn-primario btn-grande" disabled={ocupado}>Guardar</button>
       </form>
+      {/* (056) su ficha de técnica, de las guías: aparte del formulario, se guarda al elegirla */}
+      {!nuevo && ejercicio.id && <ElegirFicha ejercicio={ejercicio} />}
       {/* v0.59: la técnica del ejercicio (puntos clave, frases y vídeo modelo), aparte del formulario: se guarda al momento */}
       {!nuevo && ejercicio.id && <button type="button" class="btn" style="justify-self:start" onClick={() => setTecnica(true)} aria-haspopup="dialog"><Icono n="video" /> Puntos clave, frases y vídeo modelo</button>}
       {tecnica && <HojaTecnica ejercicio={ejercicio} inicial="modelo" alCerrar={() => setTecnica(false)} />}

@@ -10,16 +10,22 @@ import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenGrupo, imagenEjercicio } from '../logica/imagenes.js';
 import { HojaCompartir } from './Compartir.jsx';
 import { datosComparativa } from '../logica/compartir.js';
+import { FichaFBE, HojaGuia } from './Guias.jsx';
+import { fichaDeEjercicio } from '../datos/guias.js';
+import { fichaConContenido } from '../logica/guias.js';
 
 // Ficha de un ejercicio (como en Strong o Hevy): gráficas por semana con rango, récords de 1 a 12
 // repeticiones (real frente a estimado), historial completo y la técnica si la hay.
 export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'graficas', compartir = false }) {
-  const { api } = useApp();
+  const { api, backend } = useApp();
   const h = useCarga(() => api.historialEjercicio(atletaId, ejercicio.id), [atletaId, ejercicio.id]);
+  // (056) su ficha de técnica, si el coach se la ha puesto (de sus guías)
+  const fbe = useCarga(() => fichaDeEjercicio({ backend }, ejercicio.id).catch(() => null), [ejercicio.id], { recuerdo: `ficha-fbe:${ejercicio.id}` });
+  const conFicha = !!fbe.datos && fichaConContenido(fbe.datos.ficha);
   const d = h.datos;
   // (v0.59) y los vídeos modelo de tu coach (037)
   const modelos = useCarga(() => api.videosModelo([ejercicio.id]).catch(() => []), [ejercicio.id]);
-  const tecnica = !!(ejercicio.instrucciones || ejercicio.errores || ejercicio.video_url || modelos.datos?.length);
+  const tecnica = !!(ejercicio.instrucciones || ejercicio.errores || ejercicio.video_url || modelos.datos?.length || conFicha);
   const [vista, setVista] = useState(inicial);
   const pestanas = [['graficas', 'Gráficas'], ['records', 'Récords'], ['historial', 'Historial'], ...(tecnica ? [['tecnica', 'Técnica']] : [])];
   // (imágenes) si el ejercicio llega sin sus grupos (desde la vitrina de récords), los de sus series
@@ -53,7 +59,7 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
       )}
       <Pestanas opciones={pestanas} valor={vista} alCambiar={setVista} etiqueta="Ficha del ejercicio" clase="pestanas-ficha" idBase="fej" />
       <div class="pestana-panel" role="tabpanel" id="fej-panel" aria-labelledby={`fej-${vista}`} key={vista}>
-        {vista === 'tecnica' ? <Tecnica ejercicio={ejercicio} modelos={modelos.datos || []} />
+        {vista === 'tecnica' ? <Tecnica ejercicio={ejercicio} modelos={modelos.datos || []} fbe={conFicha ? fbe.datos : null} />
           : h.cargando && !d ? <Siluetas forma="grafica" texto="Cargando el ejercicio" />
             : !d?.sesiones.length ? <Vacio icono="historial" titulo="Aún no hay series de este ejercicio" />
               : vista === 'graficas' ? <Graficas d={d} nombre={ejercicio.nombre} compartir={compartir} />
@@ -143,15 +149,25 @@ function Historial({ d }) {
   );
 }
 
-function Tecnica({ ejercicio: e, modelos = [] }) {
+function Tecnica({ ejercicio: e, modelos = [], fbe = null }) {
+  const [guia, setGuia] = useState(null);
   const parrafos = (t) => t.split(/\n{2,}/).map((p, i) => <p key={i} class="secundario" style="white-space:pre-line">{p}</p>);
   return (
     <div class="pila">
-      {e.rango_reps && <p class="peq"><span class="terciario">Rango recomendado: </span>{e.rango_reps}</p>}
-      {e.instrucciones && <section class="pila-s"><h3 class="peq">Claves</h3>{parrafos(e.instrucciones)}</section>}
+      {/* (056) el vídeo, arriba cuando hay ficha (la ficha es larga); después, la ficha de sus guías */}
+      {fbe && (modelos.length > 0 || e.video_url) && (
+        <div class="fila-envolver">
+          {modelos.length > 0 && <BotonModelo ejercicio={e} modelos={modelos} clase="btn" />}
+          {e.video_url && <a class="btn" href={e.video_url} target="_blank" rel="noopener"><Icono n="video" /> Ver el vídeo de técnica</a>}
+        </div>
+      )}
+      {fbe && <FichaFBE ficha={fbe.ficha} guia={fbe.guia} alAbrirGuia={setGuia} />}
+      {guia && <HojaGuia guia={guia} alCerrar={() => setGuia(null)} />}
+      {e.rango_reps && !fbe && <p class="peq"><span class="terciario">Rango recomendado: </span>{e.rango_reps}</p>}
+      {e.instrucciones && <section class="pila-s"><h3 class="peq">{fbe ? 'Notas de tu coach' : 'Claves'}</h3>{parrafos(e.instrucciones)}</section>}
       {e.errores && <section class="pila-s"><h3 class="peq">Errores comunes</h3>{parrafos(e.errores)}</section>}
-      {modelos.length > 0 && <div><BotonModelo ejercicio={e} modelos={modelos} clase="btn" /></div>}
-      {e.video_url && <a class="btn" href={e.video_url} target="_blank" rel="noopener" style="justify-self:start"><Icono n="video" /> Ver el vídeo de técnica</a>}
+      {!fbe && modelos.length > 0 && <div><BotonModelo ejercicio={e} modelos={modelos} clase="btn" /></div>}
+      {!fbe && e.video_url && <a class="btn" href={e.video_url} target="_blank" rel="noopener" style="justify-self:start"><Icono n="video" /> Ver el vídeo de técnica</a>}
     </div>
   );
 }
