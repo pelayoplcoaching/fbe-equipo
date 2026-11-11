@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.134': {
+    atleta: [
+      'Nueva sección «Aprende» (en Más): las guías de tu coach por grupo muscular, con un buscador de ejercicios.',
+      'En cada ejercicio, la pestaña Técnica trae su ficha: cómo hacerlo, errores típicos y cuándo usarlo.',
+    ],
+    coach: [
+      'Biblioteca → Guías: léelas como tus atletas y publica o esconde cada una.',
+      'Al editar un ejercicio, «Ficha de técnica» lo enlaza con la ficha de sus guías.',
+    ],
+  },
   '0.133': {
     atleta: [
       'El recetario del equipo: las recetas de tu coach para todos, con buscador y favoritas, en Recetas (o en Comidas).',
