@@ -66,3 +66,18 @@ export async function enlazarFicha({ backend }, ejercicioId, fichaId) {
 export async function publicarGuia({ backend }, guiaId, publicada) {
   return (await backend.update('guias', { publicada: !!publicada }, { eq: { id: guiaId } }))[0];
 }
+
+// Las guías con su texto, para buscar dentro (se pide al empezar a buscar, no al abrir «Aprende»)
+export async function guiasConTexto({ backend }) {
+  return (await backend.select('guias', { cols: 'id,clave,titulo,subtitulo,grupo,orden,publicada,contenido', order: [['orden', 'asc']] }).catch(vacioSiFalta([])));
+}
+
+// Una guía por su clave, sin sus fichas (una sola consulta): la fila o null
+export async function guiaPorClave({ backend }, clave) {
+  return (await backend.select('guias', { eq: { clave }, cols: 'id,clave,titulo,subtitulo,publicada,contenido' }).catch(vacioSiFalta([])))[0] || null;
+}
+
+// Qué guías hay, lo mínimo (una consulta): [{ id, clave, titulo, publicada }]
+export async function guiasLigeras({ backend }) {
+  return backend.select('guias', { cols: 'id,clave,titulo,publicada', order: [['orden', 'asc']] }).catch(vacioSiFalta([]));
+}

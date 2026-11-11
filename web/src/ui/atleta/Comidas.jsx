@@ -11,6 +11,8 @@ import { num } from '../../logica/calculos.js';
 import { BandaDemo } from '../App.jsx';
 import { RecetarioEquipo, useRecetarioEquipo } from '../RecetarioEquipo.jsx';
 import { comoAsignacion } from '../../logica/recetario-equipo.js';
+import { GuiaSugerida } from '../Guias.jsx';
+import { OCASIONES } from '../../logica/guias.js';
 const VISTAS_COMIDAS = [['menu', 'Tu semana'], ['recetas', 'Tus recetas']];
 // (055) con recetas para todo el equipo, una vista más
 const VISTAS_CON_EQUIPO = [...VISTAS_COMIDAS, ['equipo', 'Recetario']];
@@ -62,6 +64,8 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
           )} />
         )}
       </div>
+      {/* (filosofía) la guía de la fase en la que está su dieta, para quien quiera leer por qué */}
+      {vista === 'menu' && r && OCASIONES[planVigente(planes.datos || [], hoyISO())?.fase] && <GuiaSugerida ocasion={planVigente(planes.datos || [], hoyISO()).fase} />}
       {receta && <HojaReceta a={receta} opcional={r?.opcional} alCerrar={() => setReceta(null)} alCambiar={() => { recetario.recargar(true); setReceta(null); }}
         alAnadir={salud ? (a, raciones) => { setReceta(null); setAnadir({ a, raciones }); } : null} />}
       {anadir && r && <HojaElegirDia a={anadir.a} raciones={anadir.raciones} tomas={r.tomas} alCerrar={() => setAnadir(null)} alGuardado={() => setVista('menu')} />}

@@ -17,14 +17,14 @@ export const sinMarcas = (s) => trozos(s).map((x) => x.t).join('');
 
 // Los tonos de una caja (lo que no se conozca, «nota»)
 export const TONOS = ['nota', 'clave', 'aviso', 'ojo'];
-const TIPOS = ['p', 'h', 'ul', 'ol', 'caja', 'tabla'];
+const TIPOS = ['p', 'h', 'ul', 'ol', 'caja', 'tabla', 'cita'];
 // Los bloques de una sección, limpios: solo tipos conocidos y con algo dentro
 export function bloquesDe(bs, dentro = false) {
   const out = [];
   for (const b of lista(bs)) {
     const o = objeto(b);
     if (!TIPOS.includes(o.t)) continue;
-    if (o.t === 'p' || o.t === 'h') { if (texto(o.x)) out.push({ t: o.t, x: texto(o.x) }); continue; }
+    if (o.t === 'p' || o.t === 'h' || o.t === 'cita') { if (texto(o.x)) out.push({ t: o.t, x: texto(o.x) }); continue; }
     if (o.t === 'ul' || o.t === 'ol') { const xs = lista(o.xs).map(texto).filter(Boolean); if (xs.length) out.push({ t: o.t, xs }); continue; }
     if (o.t === 'tabla') {   // { cab: [..], filas: [[..]] }: todas las filas con las columnas de la cabecera
       const cab = lista(o.cab).map(texto);
@@ -155,4 +155,118 @@ export function tipoDeRutina(sesiones = []) {
   if (n === 5 && push >= 1 && pull >= 1 && torso >= 1 && pierna >= 1) return { clave: 'hibrida-5', nombre: 'Híbrida en 5 días (PPL + Upper / Lower)' };
   if (n === 6 && push === 2 && pull === 2 && pierna >= 2) return { clave: 'ppl-6', nombre: 'Push Pull Legs en 6 días' };
   return null;
+}
+
+// ------------------------------------------------------------ las estanterías de «Aprende»
+// Cada guía, en su estantería: por su clave (las de la filosofía del coach), por llevar fichas o grupo muscular
+// («Músculo a músculo») o, si no se conoce, en «Más guías». Con una sola estantería no hace falta rotularla.
+export const ESTANTES = [
+  { id: 'empieza', icono: 'bandera', nombre: 'Empieza aquí', detalle: 'Cómo funciona tu asesoría', claves: ['bienvenida', 'manual', 'introduccion'] },
+  { id: 'entrenar', icono: 'disco', nombre: 'Entrenar', detalle: 'Cómo se monta, se descarga y se retoma', claves: ['rutinas', 'deload', 'estancamiento', 'volver', 'cardio'] },
+  { id: 'musculos', icono: 'biblioteca', nombre: 'Músculo a músculo', detalle: 'Cada grupo, ejercicio a ejercicio', claves: [] },
+  { id: 'comer', icono: 'nutricion', nombre: 'Comer', detalle: 'Fases, flexibilidad y suplementos', claves: ['dieta-flexible', 'composicion', 'suplementacion'] },
+  { id: 'cabeza', icono: 'sueno', nombre: 'Descanso y cabeza', detalle: 'Dormir, recuperar y los días sin ganas', claves: ['sueno', 'motivacion'] },
+  { id: 'salud', icono: 'escudo', nombre: 'Salud', detalle: 'Lo que dice la evidencia', claves: ['salud-cardiometabolica', 'dislipidemia', 'mujer', 'mitos'] },
+  { id: 'mas', icono: 'biblioteca', nombre: 'Más guías', detalle: '', claves: [] },
+];
+export function estanteDe(g) {
+  const suyo = ESTANTES.find((e) => e.claves.includes(g?.clave));
+  return suyo ? suyo.id : (g?.grupo || Number(g?.fichas) > 0) ? 'musculos' : 'mas';
+}
+// [{ id, nombre, detalle, guias }] (solo las estanterías con algo, en su orden; dentro, las guías por su orden)
+export function porEstantes(guias = []) {
+  const gs = ordenarGuias(guias);
+  return ESTANTES.map((e) => ({ id: e.id, icono: e.icono, nombre: e.nombre, detalle: e.detalle, guias: gs.filter((g) => estanteDe(g) === e.id) })).filter((e) => e.guias.length);
+}
+
+// ------------------------------------------------------------ buscar dentro del texto de las guías
+// Una letra sin tilde y en minúscula, sin cambiar el largo del texto (para sacar el trozo de alrededor)
+const plana = (s) => [...String(s || '')].map((c) => (c.normalize('NFD')[0] || c).toLowerCase()).join('');
+function textoDeBloques(bs) {
+  const out = [];
+  for (const b of bloquesDe(bs)) {
+    if (b.t === 'p' || b.t === 'h' || b.t === 'cita') out.push(sinMarcas(b.x));
+    else if (b.t === 'ul' || b.t === 'ol') out.push(...b.xs.map(sinMarcas));
+    else if (b.t === 'tabla') out.push(b.cab.filter(Boolean).join(' · '), ...b.filas.map((f) => f.filter(Boolean).join(' · ')));
+    else if (b.t === 'caja') out.push(...(b.titulo ? [b.titulo] : []), ...textoDeBloques(b.bloques));
+  }
+  return out;
+}
+// De una guía con su contenido, lo que se busca: [{ i, titulo, parrafos: [texto] }] (i = -1: las ideas clave)
+export function indiceDeGuia(guia) {
+  const c = objeto(guia?.contenido);
+  const secciones = lista(c.secciones).map((s, i) => ({ i, titulo: texto(objeto(s).titulo), parrafos: [texto(objeto(s).subtitulo), ...textoDeBloques(objeto(s).bloques)].filter(Boolean) }));
+  const ideas = lista(c.ideas).map((x) => [texto(objeto(x).titulo), texto(objeto(x).x)].filter(Boolean).join('. ')).filter(Boolean);
+  return ideas.length ? [...secciones, { i: -1, titulo: 'Ideas clave', parrafos: ideas }] : secciones;
+}
+// Las secciones que llevan todas las palabras (sin tildes), con el trozo de alrededor de la primera:
+// [{ guia: { id, clave, titulo, subtitulo }, seccion, titulo, antes, hallado, despues }], las del título primero
+export function buscarEnGuias(guias = [], q = '', max = 20) {
+  const palabras = normal(q).split(' ').filter((p) => p.length >= 2);
+  if (!palabras.length) return [];
+  const out = [];
+  for (const g of ordenarGuias(guias)) {
+    for (const s of indiceDeGuia(g)) {
+      const titulo = plana(`${g.titulo} ${s.titulo}`);
+      const planos = s.parrafos.map(plana);
+      const todo = `${titulo} ${planos.join(' ')}`;
+      if (!palabras.every((p) => todo.includes(p))) continue;
+      // el párrafo que más palabras lleva; de él, lo de alrededor de la primera
+      let mejor = -1, cuantas = 0;
+      planos.forEach((p, k) => { const n = palabras.filter((w) => p.includes(w)).length; if (n > cuantas) { cuantas = n; mejor = k; } });
+      let antes = '', hallado = '', despues = '';
+      if (mejor >= 0) {
+        const crudo = [...s.parrafos[mejor]], pl = planos[mejor];
+        const w = palabras.find((x) => pl.includes(x)), en = [...pl.slice(0, pl.indexOf(w))].length, largo = [...w].length;
+        const ini = Math.max(0, en - 60), fin = Math.min(crudo.length, en + largo + 90);
+        antes = (ini > 0 ? '…' : '') + crudo.slice(ini, en).join(''); hallado = crudo.slice(en, en + largo).join(''); despues = crudo.slice(en + largo, fin).join('') + (fin < crudo.length ? '…' : '');
+      }
+      out.push({ guia: { id: g.id, clave: g.clave, titulo: g.titulo, subtitulo: g.subtitulo }, seccion: s.i, titulo: s.titulo, antes, hallado, despues, enTitulo: palabras.every((p) => titulo.includes(p)) });
+    }
+  }
+  return out.sort((a, b) => Number(b.enTitulo) - Number(a.enTitulo)).slice(0, max);
+}
+
+// ------------------------------------------------------------ el mito de la semana
+// Los mitos de la guía «mitos»: sus cajas tituladas «MITO 7 · "Solo se absorben 30 g…"» -> [{ n, mito, tema, bloques }]
+export function mitosDeGuia(guia) {
+  const out = [];
+  for (const s of lista(objeto(guia?.contenido).secciones)) {
+    for (const b of lista(objeto(s).bloques)) {
+      const m = objeto(b).t === 'caja' && texto(b.titulo).match(/^MITO\s+(\d+)\s*[\u00b7.:-]\s*(.+)$/i);
+      if (m) out.push({ n: Number(m[1]), mito: m[2].replace(/^["\u201c\u201d\u00ab]+|["\u201c\u201d\u00bb]+$/g, '').trim(), tema: texto(objeto(s).titulo), bloques: bloquesDe(b.bloques, true) });
+    }
+  }
+  return out.filter((x) => x.mito && x.bloques.length).sort((a, b) => a.n - b.n);
+}
+// El número de la semana (de lunes a domingo) de una fecha AAAA-MM-DD, contando desde 1970: el mismo para todos
+export function numeroDeSemana(fechaISO) {
+  const [a, m, d] = String(fechaISO || '').split('-').map(Number);
+  if (!a || !m || !d) return 0;
+  return Math.floor((Date.UTC(a, m - 1, d) / 86400000 + 3) / 7);
+}
+// El mito que toca esa semana (van rotando en su orden) o null si no hay
+export function mitoDeLaSemana(mitos = [], fechaISO) {
+  return mitos.length ? mitos[((numeroDeSemana(fechaISO) % mitos.length) + mitos.length) % mitos.length] : null;
+}
+
+// ------------------------------------------------------------ la guía que viene a cuento
+// Cada ocasión, con la guía (y su sección) que la app propone. Son propuestas de lectura, no avisos: no dicen nada del
+// atleta que él no acabe de contar o que no esté en su plan.
+export const OCASIONES = {
+  descarga: { clave: 'deload', seccion: 'como-hacerla', cuando: 'Semana de descarga', titulo: 'Cómo hacer una descarga que funcione', detalle: 'Por qué bajar esta semana es parte del plan' },
+  sueno: { clave: 'sueno', seccion: 'higiene', cuando: 'Si quieres dormir mejor', titulo: 'Higiene del sueño que sí funciona', detalle: 'Lo que mueve la aguja y lo que es marketing' },
+  motivacion: { clave: 'motivacion', seccion: 'que-hacer', cuando: 'Para las semanas con pocas ganas', titulo: 'Qué hacer cuando no apetece', detalle: 'Estrategias según lo que te pase' },
+  vuelta: { clave: 'volver', seccion: 'reglas-de-oro', cuando: 'De vuelta tras un parón', titulo: 'Antes de volver: las dos reglas de oro', detalle: 'Ante la duda, quédate corto' },
+  perder: { clave: 'composicion', seccion: 'definicion', cuando: 'Tu fase: perder grasa', titulo: 'Definición: pequeño y sostenido', detalle: 'Cómo la plantea tu coach' },
+  mantener: { clave: 'composicion', seccion: 'mantenimiento', cuando: 'Tu fase: mantenimiento', titulo: 'Mantenimiento: la fase olvidada', detalle: 'Cómo la plantea tu coach' },
+  ganar: { clave: 'composicion', seccion: 'volumen', cuando: 'Tu fase: ganar músculo', titulo: 'Volumen: el largo plazo', detalle: 'Cómo lo plantea tu coach' },
+  cardio: { clave: 'cardio', seccion: 'combinar', cuando: 'Cardio y fuerza', titulo: 'Cómo combinarlos sin que se estorben', detalle: 'Prioridades, separación y orden' },
+};
+// Tras enviar el check-in: lo que el atleta acaba de contestar -> las ocasiones que vienen a cuento
+export function ocasionesDeCheckin(f) {
+  const o = objeto(f), out = [];
+  if (['<5', '5-6'].includes(o.horas_sueno)) out.push('sueno');
+  if (Number(o.motivacion) >= 1 && Number(o.motivacion) <= 2) out.push('motivacion');
+  return out;
 }

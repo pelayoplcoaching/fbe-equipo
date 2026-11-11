@@ -52,9 +52,9 @@ const TODAS = [
   ['progreso', 'Progreso', 'progreso'], ['mensajes', 'Mensajes', 'mensaje'], ['equipo', 'Equipo', 'equipo'], ['aprende', 'Aprende', 'biblioteca'], ['perfil', 'Perfil', 'perfil'],
 ];
 // (055) «Recetas»: el recetario del equipo, para quien no tiene Comidas (ahí va dentro) y solo si hay recetas
-// (057) «Aprende»: las guías del coach, para quien entrena y solo si hay alguna
+// (057) «Aprende»: las guías del coach, solo si hay alguna (también para quien solo lleva la nutrición: hay guías de comer)
 export const pestanasAtleta = (atleta, { equipo = false, recetas = false, aprende = false } = {}) => TODAS.filter(([t]) => (t !== 'semana' || conEntrenamiento(atleta)) && (t !== 'comidas' || conNutricion(atleta))
-  && (t !== 'recetas' || (recetas && !conNutricion(atleta))) && (t !== 'aprende' || (aprende && conEntrenamiento(atleta)))
+  && (t !== 'recetas' || (recetas && !conNutricion(atleta))) && (t !== 'aprende' || aprende)
   && (t !== 'equipo' || (equipo && atleta?.estado !== 'baja')));
 // Modo atleta del coach (v0.37): solo el entrenamiento (sin check-in, mensajes, perfil ni nutrición, que son cosas
 // entre atleta y coach), y una pestaña para volver a la vista de coach
@@ -101,7 +101,7 @@ export function AtletaApp() {
   // (055) ¿hay recetario del equipo? Solo hace falta saberlo para quien no lleva la nutrición (su pestaña «Recetas»)
   const { backend } = useApp();
   const hayRecetas = useCarga(() => (propio || conNutricion(atleta) ? Promise.resolve(false) : hayRecetarioEquipo({ backend }).catch(() => false)), [atleta.id], { recuerdo: `hay-recetario-equipo:${atleta.id}` });
-  const hayAprende = useCarga(() => (propio || !conEntrenamiento(atleta) ? Promise.resolve(false) : hayGuias({ backend }).catch(() => false)), [atleta.id], { recuerdo: `hay-guias:${atleta.id}` });
+  const hayAprende = useCarga(() => (propio ? Promise.resolve(false) : hayGuias({ backend }).catch(() => false)), [atleta.id], { recuerdo: `hay-guias:${atleta.id}` });
   const TABS = propio ? PESTANAS_PROPIO : pestanasAtleta(atleta, { equipo, recetas: !!hayRecetas.datos, aprende: !!hayAprende.datos });
   const tabsRef = useRef(TABS);
   tabsRef.current = TABS;

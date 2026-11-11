@@ -61,8 +61,8 @@ export async function probarGuias({ navegador, check, base = 'http://localhost:4
   const leer = async (p, anchoMin) => {
     await irASeccion(p, 'Aprende');
     await p.locator('.tarjeta-guia').first().waitFor();
-    check(await p.locator('.tarjeta-guia').count() === 3 && /2 ejercicios/.test(await p.locator('.tarjeta-guia', { hasText: 'Pectoral' }).textContent()) && !/ejercicio/.test(await p.locator('.tarjeta-guia', { hasText: 'Tipos de rutina' }).textContent()),
-      `«Aprende»: las tres guías, con cuántos ejercicios tiene cada una (${anchoMin} px)`);
+    check(await p.locator('.tarjeta-guia').count() === 11 && await p.locator('.estante').count() === 6 && /2 ejercicios/.test(await p.locator('.tarjeta-guia', { hasText: 'Pectoral' }).textContent()) && !/ejercicio/.test(await p.locator('.tarjeta-guia', { hasText: 'Tipos de rutina' }).textContent()),
+      `«Aprende»: las guías en sus estanterías, con cuántos ejercicios tiene cada una (${anchoMin} px)`);
     await revisar(p, `lista-${anchoMin}`);
     await p.locator('.tarjeta-guia', { hasText: 'Pectoral' }).click();
     await p.locator('.lector-guia .guia-seccion').first().waitFor();
@@ -88,10 +88,10 @@ export async function probarGuias({ navegador, check, base = 'http://localhost:4
     await entrar(p, 'Ana López');
     check(await haySeccion(p, 'Aprende'), 'quien entrena tiene «Aprende»');
     await leer(p, 390);
-    await p.getByRole('searchbox', { name: 'Buscar un ejercicio en las guías' }).fill('sentadilla');
+    await p.getByRole('searchbox', { name: 'Buscar un ejercicio o un tema en las guías' }).fill('sentadilla');
     check(await hay(p, p.locator('.aprende .fila-ficha'), 1) && /Cuádriceps/.test(await p.locator('.aprende .fila-ficha').textContent()), 'el buscador encuentra un ejercicio de cualquier guía y dice de cuál es');
-    await p.getByRole('searchbox', { name: 'Buscar un ejercicio en las guías' }).fill('zzz');
-    check(await hay(p, p.getByText('Ningún ejercicio con eso'), 1), 'sin resultados, lo dice');
+    await p.getByRole('searchbox', { name: 'Buscar un ejercicio o un tema en las guías' }).fill('zzz');
+    check(await hay(p, p.getByText('Nada con eso'), 1), 'sin resultados, lo dice');
     // La misma ficha, dentro del ejercicio
     await irASeccion(p, 'Progreso');
     const abierta = await p.evaluate(async () => {
@@ -158,18 +158,18 @@ export async function probarGuias({ navegador, check, base = 'http://localhost:4
     check(false, `Aprende a 360 px en oscuro: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); }
 
-  // 3. Quien solo lleva la nutrición no tiene «Aprende»; el coach: sus guías, esconder una y enlazar un ejercicio
+  // 3. Quien solo lleva la nutrición también tiene «Aprende»; el coach: sus guías, esconder una y enlazar un ejercicio
   ({ ctx, p } = await abrir({ ancho: 1280, alto: 900 }));
   try {
     await entrar(p, 'Lucía');
-    check(!(await p.locator('nav.tabs .tab', { hasText: 'Aprende' }).count()), 'quien solo lleva la nutrición no tiene «Aprende»');
+    check(await haySeccion(p, 'Aprende'), 'quien solo lleva la nutrición también tiene «Aprende» (hay guías de comer)');
     await p.evaluate(() => { localStorage.removeItem('fbe-demo-v2-sesion'); });
     await p.goto(`${base}/?demo`);
     await entrar(p, 'Pelayo');
     await irASeccion(p, 'Biblioteca');
     await p.getByRole('tab', { name: 'Guías' }).click();
     await p.locator('.tarjeta-guia').first().waitFor();
-    check(await p.locator('.tarjeta-guia').count() === 3 && /3 ejercicios enlazados/.test(await p.locator('#bib-panel').textContent()), 'el coach ve sus guías en Biblioteca y cuántos ejercicios llevan ficha');
+    check(await p.locator('.tarjeta-guia').count() === 11 && /3 ejercicios enlazados/.test(await p.locator('#bib-panel').textContent()), 'el coach ve sus guías en Biblioteca y cuántos ejercicios llevan ficha');
     await revisar(p, 'coach');
     await p.locator('.tarjeta-guia', { hasText: 'Cuádriceps' }).click();
     const hoja = p.getByRole('dialog', { name: 'Cuádriceps' });
@@ -208,6 +208,75 @@ export async function probarGuias({ navegador, check, base = 'http://localhost:4
     check(await hojaF.getByText('No, cuando').count() === 1, 'y abre la ficha entera');
   } catch (e) {
     check(false, `Las guías, del coach: ${e.message.split('\n')[0]}`);
+  } finally { await ctx.close(); }
+
+  // 4. La filosofía: el mito de la semana en Hoy, buscar dentro de las guías y la guía que viene a cuento
+  ({ ctx, p } = await abrir());
+  try {
+    // (el coach pone la semana en descarga, para ver su guía en la semana de Ana)
+    await entrar(p, 'Pelayo');
+    const puesta = await p.evaluate(async () => { const b = globalThis.__fbeDemo; if (!b) return -1; return (await b.update('semanas', { foco: 'descarga' }, { eq: { foco: 'intensidad' } })).length; });
+    await p.waitForTimeout(500);
+    await p.evaluate(() => { localStorage.removeItem('fbe-demo-v2-sesion'); });
+    await p.goto(`${base}/?demo`);
+    await entrar(p, 'Ana López');
+    const mito = p.locator('.mito-semana');
+    await mito.waitFor();
+    check(/El mito de la semana/.test(await mito.textContent()) && /«.+»/.test(await mito.locator('.mito-frase').textContent()), 'en Hoy, el mito de la semana');
+    await mito.scrollIntoViewIfNeeded();
+    await revisar(p, 'mito-hoy');
+    await mito.click();
+    const hojaM = p.getByRole('dialog', { name: 'El mito de la semana' });
+    await hojaM.locator('.mito-frase').waitFor();
+    check(/Lo que se sabe/.test(await hojaM.textContent()) && await hojaM.getByRole('button', { name: 'Ver todos los mitos' }).count() === 1, 'al tocarlo, lo que se sabe de ese mito (y un botón para verlos todos)');
+    await revisar(p, 'mito-hoja');
+    await hojaM.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
+    await hojaM.waitFor({ state: 'detached' });
+    check(await hay(p, p.locator('.mito-semana'), 0), 'una vez leído, se recoge hasta la semana siguiente');
+    await p.reload();
+    await p.locator('nav.tabs').waitFor();
+    await cerrarDialogos(p);
+    await p.waitForTimeout(1500);
+    check(await p.locator('.mito-semana').count() === 0, 'y al volver a abrir la app sigue recogido');
+    // Buscar dentro de las guías
+    await irASeccion(p, 'Aprende');
+    const buscador = p.getByRole('searchbox', { name: 'Buscar un ejercicio o un tema en las guías' });
+    await buscador.fill('cafeina');
+    const hallazgo = p.locator('.hallazgo-guia');
+    check(await hay(p, hallazgo, 1) && /Dormir mejor/.test(await hallazgo.textContent()) && await hallazgo.locator('mark').textContent() === 'cafeína', 'el buscador también mira dentro del texto de las guías (sin tildes) y enseña el trozo, con lo hallado marcado');
+    await revisar(p, 'buscar-texto');
+    await buscador.fill('descarga');
+    await p.locator('.hallazgo-guia', { hasText: 'La semana de descarga' }).first().waitFor();
+    check(await p.locator('.hallazgo-guia').count() >= 2 && /La semana de descarga/.test(await p.locator('.hallazgo-guia').first().textContent()), 'lo hallado en el título va primero');
+    await buscador.fill('cafeina');
+    await hallazgo.waitFor();
+    await hallazgo.click();
+    await p.locator('.lector-guia [data-seccion="0"]').waitFor();
+    check(/Dormir mejor/.test(await p.locator('h1').first().textContent()) && await p.locator('.lector-guia .guia-lista li').count() === 3, 'al tocar un resultado se abre esa guía');
+    await p.getByRole('button', { name: 'Volver a las guías' }).click();
+    await p.locator('.tarjeta-guia', { hasText: 'Cómo funciona esto' }).click();
+    await p.locator('.lector-guia blockquote.guia-cita').first().waitFor();
+    check(await p.locator('.lector-guia .guia-seccion blockquote.guia-cita').count() === 1 && await p.locator('.lector-guia .tabla-guia-ancha').count() === 1, 'una guía de leer, con su tabla y su cita');
+    await revisar(p, 'guia-de-leer');
+    // La guía que viene a cuento: en la semana de descarga y con la fase de la dieta
+    await irASeccion(p, 'Semana');
+    const deDescarga = p.locator('.guia-sugerida[data-ocasion="descarga"]');
+    check(puesta > 0 && await hay(p, deDescarga, 1) && /Semana de descarga/.test(await deDescarga.textContent()), 'en la semana de descarga, su guía: cómo se hace');
+    await deDescarga.click();
+    const hojaD = p.getByRole('dialog', { name: 'Cómo hacer una descarga que funcione' });
+    await hojaD.locator('.guia-seccion').waitFor();
+    check(await hojaD.locator('.guia-seccion').count() === 1 && await hojaD.locator('.guia-caja.tono-aviso').count() === 1 && await hojaD.getByRole('button', { name: 'Ver la guía entera' }).count() === 1, 'se abre solo esa parte de la guía (y un botón para verla entera)');
+    await revisar(p, 'a-cuento-descarga');
+    await p.keyboard.press('Escape');
+    await hojaD.waitFor({ state: 'detached' });
+    await irASeccion(p, 'Comidas');
+    const deFase = p.locator('.guia-sugerida');
+    await deFase.waitFor();
+    check(/Tu fase: /.test(await deFase.textContent()), 'en Comidas, la guía de la fase de su dieta');
+    await deFase.scrollIntoViewIfNeeded();
+    await revisar(p, 'a-cuento-fase');
+  } catch (e) {
+    check(false, `La filosofía: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); }
 
   check(errores.length === 0, `sin errores de consola, desbordes ni fallos de accesibilidad${errores.length ? `: ${errores.slice(0, 5).join(' ## ')}` : ''}`);

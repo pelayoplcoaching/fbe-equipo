@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { GuiaSugerida } from '../Guias.jsx';
+import { ocasionesDeCheckin } from '../../logica/guias.js';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Paso, Segmentos, Icono, Pista } from '../comunes.jsx';
 import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { Hilo } from '../Hilo.jsx';
@@ -456,6 +458,8 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
           <span class="ck-enviado-lobo" aria-hidden="true"><svg viewBox={LOBO_CAJA}><path fill-rule="evenodd" d={LOBO_D} /></svg></span>
         </div>
       )}
+      {/* (filosofía) recién enviado: si ha contado poco sueño o pocas ganas, la guía que viene a cuento */}
+      {enviado && ocasionesDeCheckin(f).map((o) => <GuiaSugerida key={o} ocasion={o} />)}
 
       {!enRevision ? (
         <section class="ck-paso panel panel-pad pila" key={actual.id} aria-labelledby="ck-titulo">

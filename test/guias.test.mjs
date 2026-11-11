@@ -1,6 +1,7 @@
 // «Aprende» (migración 057): las guías del coach y la ficha de técnica de cada ejercicio. La lógica pura (logica/guias.js),
 // la migración en un Postgres local (PGlite): quién ve y escribe qué, y lo mismo en la demo (backend en memoria).
 // Uso: node test/guias.test.mjs
+import { porEstantes, estanteDe, indiceDeGuia, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES, ocasionesDeCheckin } from '../web/src/logica/guias.js';
 import { trozos, sinMarcas, bloquesDe, guiaParaLeer, fichaParaLeer, fichaConContenido, ordenarGuias, buscarFichas, guiaDeGrupo, cuantosEjercicios, fichasParecidas,
   erroresDeFicha, frasesDeFicha, resumenTabla, avisosMolestia, tipoDeRutina } from '../web/src/logica/guias.js';
 
@@ -112,6 +113,45 @@ check((await q(`select count(*)::int n from fichas_ejercicio where guia_id = $1`
   'al borrar una guía se van sus fichas y sus enlaces; el ejercicio se queda');
 await db.close();
 
+// ------------------------------------------------------------ la filosofía: estanterías, buscar en el texto, mitos y guías a cuento
+console.log('\nEstanterías, buscar dentro de las guías, el mito de la semana y la guía que viene a cuento');
+check(bloquesDe([{ t: 'cita', x: ' Una **cita** ' }, { t: 'cita', x: '' }, { t: 'caja', bloques: [{ t: 'cita', x: 'dentro' }] }]).map((x) => x.t === 'caja' ? `caja:${x.bloques[0].t}` : `${x.t}:${x.x}`).join('|') === 'cita:Una **cita**|caja:cita',
+  'una cita es un bloque más (también dentro de una caja); vacía, no sale');
+const varias = [{ clave: 'manual', orden: 101 }, { clave: 'bienvenida', orden: 100 }, { clave: 'pectoral', grupo: 'pectoral', orden: 5, fichas: 9 }, { clave: 'antebrazo', grupo: null, orden: 11, fichas: 3 },
+  { clave: 'rutinas', orden: 0 }, { clave: 'mitos', orden: 143 }, { clave: 'una-nueva', orden: 7 }, { clave: 'sueno', orden: 130 }, { clave: 'composicion', orden: 121 }];
+check(porEstantes(varias).map((e) => `${e.id}:${e.guias.map((x) => x.clave).join('+')}`).join(' ') === 'empieza:bienvenida+manual entrenar:rutinas musculos:pectoral+antebrazo comer:composicion cabeza:sueno salud:mitos mas:una-nueva'
+  && estanteDe({ clave: 'x', grupo: 'gluteo' }) === 'musculos' && estanteDe({ clave: 'x' }) === 'mas' && estanteDe(null) === 'mas' && porEstantes([]).length === 0,
+  'cada guía va a su estantería (por su clave, por llevar fichas o grupo, o a «Más guías»), en orden y sin estanterías vacías');
+const conTexto = [
+  { id: 'a', clave: 'sueno', titulo: 'Dormir mejor', subtitulo: 's', orden: 2, contenido: { secciones: [
+    { titulo: 'Hábitos', subtitulo: 'Lo sencillo', bloques: [{ t: 'ul', xs: ['**Horario regular**.', 'La **cafeína**, por la mañana: después de comer ya estorba y además tarda horas en irse del cuerpo, así que conviene no tomarla por la tarde.'] }] },
+    { titulo: 'Cuándo consultar', bloques: [{ t: 'caja', titulo: 'Ronquidos', bloques: [{ t: 'p', x: 'Si roncas mucho, consulta.' }] }, { t: 'tabla', cab: ['Edad', 'Horas'], filas: [['Adultos', '7 a 9']] }] }],
+    ideas: [{ titulo: 'Regularidad', x: 'El horario manda.' }] } },
+  { id: 'b', clave: 'cafe', titulo: 'La cafeína', orden: 1, contenido: { secciones: [{ titulo: 'Dosis', bloques: [{ t: 'p', x: 'Con poco basta.' }] }] } },
+];
+const idx = indiceDeGuia(conTexto[0]);
+check(idx.length === 3 && idx[0].parrafos[0] === 'Lo sencillo' && idx[0].parrafos[1] === 'Horario regular.' && idx[1].parrafos.join('|') === 'Ronquidos|Si roncas mucho, consulta.|Edad · Horas|Adultos · 7 a 9' && idx[2].i === -1 && idx[2].parrafos[0] === 'Regularidad. El horario manda.',
+  'de una guía se busca en sus secciones (subtítulo, párrafos, listas, cajas y tablas, sin las marcas de negrita) y en sus ideas clave');
+const h = buscarEnGuias(conTexto, 'CAFEINA');
+check(h.length === 2 && h[0].guia.clave === 'cafe' && h[0].enTitulo && h[0].seccion === 0 && h[1].guia.clave === 'sueno' && h[1].titulo === 'Hábitos' && h[1].hallado === 'cafeína' && h[1].antes === 'La ' && h[1].despues.endsWith('…') && h[1].despues.length < 100,
+  'buscar no mira tildes ni mayúsculas; lo hallado en el título va primero y cada resultado trae el trozo de alrededor');
+check(buscarEnGuias(conTexto, 'horario ronc').length === 0 && buscarEnGuias(conTexto, 'roncas consulta')[0].seccion === 1 && buscarEnGuias(conTexto, 'adultos')[0].hallado === 'Adultos' && buscarEnGuias(conTexto, 'regularidad')[0].seccion === -1
+  && buscarEnGuias(conTexto, ' ').length === 0 && buscarEnGuias(conTexto, 'a').length === 0 && buscarEnGuias([], 'x y').length === 0 && buscarEnGuias(conTexto, 'cafeína', 1).length === 1,
+  'todas las palabras tienen que estar en la misma sección; sin palabras (o de una letra) no se busca; hay un tope de resultados');
+const guiaMitos = { contenido: { secciones: [
+  { titulo: 'Comer', bloques: [{ t: 'p', x: 'Antes' }, { t: 'caja', titulo: 'MITO 2 · "Cenar tarde engorda"', bloques: [{ t: 'p', x: 'No.' }] }, { t: 'caja', titulo: 'Una caja cualquiera', bloques: [{ t: 'p', x: 'x' }] }] },
+  { titulo: 'Entrenar', bloques: [{ t: 'caja', titulo: 'MITO 1 · “Sin agujetas no vale”', bloques: [{ t: 'p', x: 'Tampoco.' }, { t: 'ul', xs: ['a'] }] }, { t: 'caja', titulo: 'MITO 3 · "Vacío"', bloques: [] }] }] } };
+const ms = mitosDeGuia(guiaMitos);
+check(ms.map((x) => `${x.n}:${x.mito}:${x.tema}:${x.bloques.length}`).join('|') === '1:Sin agujetas no vale:Entrenar:2|2:Cenar tarde engorda:Comer:1' && mitosDeGuia(null).length === 0 && mitosDeGuia({ contenido: {} }).length === 0,
+  'los mitos salen de las cajas «MITO n · "…"» de la guía, en su orden, con su tema y sin comillas; los vacíos no cuentan');
+check(numeroDeSemana('2026-11-09') === numeroDeSemana('2026-11-15') && numeroDeSemana('2026-11-16') === numeroDeSemana('2026-11-09') + 1 && numeroDeSemana('2026-11-08') === numeroDeSemana('2026-11-09') - 1 && numeroDeSemana('') === 0
+  && mitoDeLaSemana(ms, '2026-11-11') === mitoDeLaSemana(ms, '2026-11-15') && mitoDeLaSemana(ms, '2026-11-11') !== mitoDeLaSemana(ms, '2026-11-18') && mitoDeLaSemana(ms, '2026-11-11') === mitoDeLaSemana(ms, '2026-11-25') && mitoDeLaSemana([], '2026-11-11') === null,
+  'el mito es el mismo de lunes a domingo, cambia cada lunes y va rotando');
+check(ocasionesDeCheckin({ horas_sueno: '<5', motivacion: 1 }).join() === 'sueno,motivacion' && ocasionesDeCheckin({ horas_sueno: '5-6', motivacion: 3 }).join() === 'sueno' && ocasionesDeCheckin({ horas_sueno: '6-7', motivacion: 2 }).join() === 'motivacion'
+  && ocasionesDeCheckin({ horas_sueno: '7-8', motivacion: 5 }).length === 0 && ocasionesDeCheckin({}).length === 0 && ocasionesDeCheckin(null).length === 0,
+  'tras el check-in, con poco sueño o pocas ganas, viene a cuento su guía; sin contestar, ninguna');
+check(Object.values(OCASIONES).every((o) => o.clave && o.seccion && o.cuando && o.titulo && o.detalle) && ['descarga', 'sueno', 'motivacion', 'vuelta', 'perder', 'mantener', 'ganar', 'cardio'].every((k) => OCASIONES[k]), 'cada ocasión lleva su guía, su sección y sus textos');
+
 console.log('\nEn la demo (backend en memoria)');
 const { crearBackendMemoria } = await import('../web/src/datos/backend-memoria.js');
 const { semillaDemo } = await import('../web/src/datos/semilla-demo.js');
@@ -122,7 +162,7 @@ const api = crearApi(b);
 const lanza = async (fn) => { try { await fn(); return false; } catch { return true; } };
 await b.auth.entrar('ana@fbe.demo', 'demo');
 const lista = await G.listaGuias({ backend: b });
-check(await G.hayGuias({ backend: b }) && lista.map((x) => `${x.clave}:${x.fichas}`).join() === 'rutinas:0,pectoral:2,cuadriceps:1' && !('contenido' in lista[0]), 'Ana ve las tres guías de la demo, con cuántos ejercicios tiene cada una (sin bajar su contenido)');
+check(await G.hayGuias({ backend: b }) && lista.map((x) => `${x.clave}:${x.fichas}`).join() === 'rutinas:0,pectoral:2,cuadriceps:1,manual:0,deload:0,volver:0,cardio:0,composicion:0,sueno:0,motivacion:0,mitos:0' && !('contenido' in lista[0]), 'Ana ve las guías de la demo, con cuántos ejercicios tiene cada una (sin bajar su contenido)');
 const entera = await G.guiaEntera({ backend: b }, 'pectoral');
 const leer = guiaParaLeer(entera.guia, entera.fichas);
 check(leer.secciones.length === 3 && leer.secciones[2].fichas.length === 2 && leer.ideas.length === 2 && leer.sueltas.length === 0 && await G.guiaEntera({ backend: b }, 'no-existe') === null, 'una guía entera, lista para leer');
@@ -136,7 +176,7 @@ const rut = await G.guiaEntera({ backend: b }, 'rutinas');
 check(guiaParaLeer(rut.guia, rut.fichas).secciones.find((x) => x.clave === 'upper-lower-4').bloques.some((x) => x.t === 'tabla'), 'la guía de rutinas trae cada distribución en su sección, con su tabla');
 check((await G.todasLasFichas({ backend: b })).length === 3 && (await G.todasLasFichas({ backend: b }, { conFicha: true }))[0].ficha.pasos.length === 5, 'todas las fichas, ligeras o con su contenido');
 check(await lanza(() => G.enlazarFicha({ backend: b }, sinFicha.id, fb.ficha.id)) || (await G.fichaDeEjercicio({ backend: b }, sinFicha.id)) === null, 'el atleta no enlaza fichas');
-check((await G.publicarGuia({ backend: b }, entera.guia.id, false)) === undefined && (await G.listaGuias({ backend: b })).length === 3, 'ni esconde guías');
+check((await G.publicarGuia({ backend: b }, entera.guia.id, false)) === undefined && (await G.listaGuias({ backend: b })).length === 11, 'ni esconde guías');
 await b.auth.salir();
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 const enl = await G.enlacesFichas({ backend: b });
@@ -148,11 +188,25 @@ check(enl2[sinFicha.id] === fb.ficha.id && !(banca.id in enl2), 'enlaza un ejerc
 await G.publicarGuia({ backend: b }, entera.guia.id, false);
 await b.auth.salir();
 await b.auth.entrar('ana@fbe.demo', 'demo');
-check((await G.listaGuias({ backend: b })).map((x) => x.clave).join() === 'rutinas,cuadriceps' && await G.fichaDeEjercicio({ backend: b }, sinFicha.id) === null, 'con la guía escondida, Ana no la ve ni ve su ficha en el ejercicio');
+check((await G.listaGuias({ backend: b })).map((x) => x.clave).join() === 'rutinas,cuadriceps,manual,deload,volver,cardio,composicion,sueno,motivacion,mitos' && await G.fichaDeEjercicio({ backend: b }, sinFicha.id) === null, 'con la guía escondida, Ana no la ve ni ve su ficha en el ejercicio');
 await b.auth.salir();
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
+// (filosofía) las guías con su texto, una por su clave y la lista mínima; las de la demo llevan las secciones de cada ocasión
+await b.auth.salir();
+await b.auth.entrar('ana@fbe.demo', 'demo');
+const conSuTexto = await G.guiasConTexto({ backend: b });
+check(conSuTexto.length === 10 && conSuTexto.every((x) => x.contenido && x.publicada) && buscarEnGuias(conSuTexto, 'cafeina')[0].guia.clave === 'sueno', 'para buscar se piden las guías con su texto (Ana, solo las publicadas)');
+const laDeMitos = await G.guiaPorClave({ backend: b }, 'mitos');
+check(mitosDeGuia(laDeMitos).length === 3 && await G.guiaPorClave({ backend: b }, 'no-existe') === null, 'la guía de los mitos se pide sola, por su clave');
+const ligeras = await G.guiasLigeras({ backend: b });
+check(ligeras.length === 10 && !('contenido' in ligeras[0]) && Object.values(OCASIONES).every((o) => conSuTexto.find((x) => x.clave === o.clave)?.contenido.secciones.some((x) => x.clave === o.seccion)),
+  'la lista mínima de guías no trae su contenido; en la demo, cada ocasión tiene su guía y su sección');
+await b.auth.salir();
+await b.auth.entrar('pelayo@fbe.demo', 'demo');
+const sin0 = { select: async (t) => { throw new Error(`Could not find the table 'public.${t}' in the schema cache`); } };
+check((await G.guiasConTexto({ backend: sin0 })).length === 0 && await G.guiaPorClave({ backend: sin0 }, 'mitos') === null && (await G.guiasLigeras({ backend: sin0 })).length === 0, 'sin la migración 057, tampoco esto se rompe');
 const completa = await api.copiaCompleta();
-check(completa.guias.length === 3 && completa.fichas_ejercicio.length === 3 && Array.isArray(completa.ejercicios_fichas), 'las guías, las fichas y los enlaces van en la copia completa');
+check(completa.guias.length === 11 && completa.fichas_ejercicio.length === 3 && Array.isArray(completa.ejercicios_fichas), 'las guías, las fichas y los enlaces van en la copia completa');
 // Una base sin la 057: todo vacío y sin romper
 const sin = { select: async (t) => { throw new Error(`Could not find the table 'public.${t}' in the schema cache`); }, delete: async () => { throw new Error('relation "public.ejercicios_fichas" does not exist'); } };
 check(await G.hayGuias({ backend: sin }) === false && (await G.listaGuias({ backend: sin })).length === 0 && await G.guiaEntera({ backend: sin }, 'x') === null && await G.fichaDeEjercicio({ backend: sin }, 'x') === null
