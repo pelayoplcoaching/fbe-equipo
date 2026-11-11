@@ -11,3 +11,6 @@
 .pasos-receta li { counter-increment: paso; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; border-radius: 10px; background: var(--hoja-2); font-size: 0.9375rem; line-height: 1.45; }
 .pasos-receta li::before { content: counter(paso); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); font-weight: 720; font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
 @media (forced-colors: active) { .pasos-receta li::before { border: 1px solid CanvasText; } }
+/* (recetas ajustadas) la línea que dice a qué medida va la receta */
+.ajuste-receta { display: flex; margin: 0; gap: 6px; align-items: flex-start; }
+.ajuste-receta svg { flex: none; width: 16px; height: 16px; color: var(--morado); margin-top: 1px; }

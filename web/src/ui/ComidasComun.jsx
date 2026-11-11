@@ -7,7 +7,7 @@ import { imagenComida } from '../logica/imagenes.js';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Reserva, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos, usePorTramos, useApuntar } from './comunes.jsx';
 import { COLOR_MACRO, MacrosDia } from './NutricionComun.jsx';
-import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, porSecciones, valeParaDia, textoVariante, tomasDelDia, paraElDia, tomaDeLaHora } from '../logica/comidas.js';
+import { NOMBRE_TOMA, TOMAS, CLAVES_TOMA, ordenarTomas, macrosDe, textoMacros, textoIngrediente, menuPorDia, totalesDia, diasDeSemana, listaCompra, textoListaCompra, porSecciones, valeParaDia, textoVariante, tomasDelDia, paraElDia, tomaDeLaHora, factorDeEntrada } from '../logica/comidas.js';
 import { planVigente, objetivoDelDia, fmtKcal } from '../logica/nutricion.js';
 import { hoyISO, lunesDe, sumarDias, fmtConDia, rangoSemana } from '../logica/fechas.js';
 import { LETRAS_DIA } from '../logica/plan.js';
@@ -175,7 +175,8 @@ export function HojaReceta({ a, esCoach = false, opcional = null, alCerrar, alCa
 }
 
 // Elegir un día de una semana y una toma (para añadir una receta al menú desde el recetario)
-export function HojaElegirDia({ a, raciones = 1, tomas, alCerrar, alGuardado }) {
+// ajustar(toma): el factor a su medida para otra comida (las del equipo ajustadas al atleta)
+export function HojaElegirDia({ a, raciones = 1, tomas, ajustar = null, alCerrar, alGuardado }) {
   const { api, atleta, aviso } = useApp();
   const hoy = hoyISO();
   const [lunes, setLunes] = useState(lunesDe(hoy));
@@ -184,7 +185,7 @@ export function HojaElegirDia({ a, raciones = 1, tomas, alCerrar, alGuardado }) 
   const [ocupado, una] = useUnaVez();
   const guardar = () => una(async () => {
     try {
-      await api.apuntarMenu(atleta.id, { fecha: dia, toma, asignacion: a, raciones });
+      await api.apuntarMenu(atleta.id, { fecha: dia, toma, asignacion: ajustar ? { ...a, factor: ajustar(toma) ?? a.factor } : a, raciones });
       aviso(`Añadida al ${fmtConDia(dia)}`); alGuardado?.(); alCerrar();
     } catch (e) { aviso(e.message, 'error'); }
   });
@@ -339,7 +340,7 @@ function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, a
   for (const t of CLAVES_TOMA) for (const a of delDia(recetario.porToma[t] || [])) if (!vistas.has(a.receta_id)) { vistas.add(a.receta_id); otras.push(a); }
   // (055) las del recetario del equipo que encajan en esta comida y no están ya en el suyo (plegadas: pueden ser muchas)
   const delEquipo = (recetario.equipo || []).filter((r) => (r.tomas || []).includes(toma) && !vistas.has(r.id))
-    .map((r) => ({ id: `equipo-${r.id}`, receta_id: r.id, receta: r, toma, factor: 1, favorita: false }));
+    .map((r) => ({ id: `equipo-${r.id}`, receta_id: r.id, receta: r, toma, factor: recetario.ajusteEquipo?.(r, toma)?.factor || 1, favorita: false }));
   const [verEquipo, setVerEquipo] = useState(false);
   const [elegida, setElegida] = useState(null);
   const [raciones, setRaciones] = useState(1);
@@ -400,7 +401,7 @@ function HojaEntrada({ e, recetario, esCoach, alCerrar, alCambiar }) {
   const delEquipo = !a && e.receta_id ? (recetario.equipo || []).find((r) => r.id === e.receta_id) || null : null;
   const hacer = (fn, texto) => una(async () => { try { await fn(); aviso(texto); alCambiar(); alCerrar(); } catch (err) { aviso(err.message, 'error'); } });
   if (ver && a?.receta) return <HojaReceta a={a} esCoach={esCoach} opcional={recetario.opcional} alCerrar={() => setVer(false)} />;
-  if (ver && delEquipo) return <HojaRecetaEquipo r={delEquipo} esCoach={esCoach} alCerrar={() => setVer(false)} />;
+  if (ver && delEquipo) { const f = factorDeEntrada(e, delEquipo); return <HojaRecetaEquipo r={delEquipo} esCoach={esCoach} ajuste={f && f !== 1 ? { factor: f, desdeMenu: true } : null} alCerrar={() => setVer(false)} />; }
   return (
     <Hoja titulo={e.texto} alCerrar={alCerrar}>
       <p class="peq secundario">{NOMBRE_TOMA[e.toma]}, {fmtConDia(e.fecha)}{e.kcal != null ? ` · ${textoMacros(cambiarMacros(e, raciones), true)}` : ''}</p>

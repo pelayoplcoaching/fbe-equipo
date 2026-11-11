@@ -10,7 +10,7 @@ import { hoyISO } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
 import { BandaDemo } from '../App.jsx';
 import { RecetarioEquipo, useRecetarioEquipo } from '../RecetarioEquipo.jsx';
-import { comoAsignacion } from '../../logica/recetario-equipo.js';
+import { comoAsignacion, ajusteParaTi } from '../../logica/recetario-equipo.js';
 import { GuiaSugerida } from '../Guias.jsx';
 import { OCASIONES } from '../../logica/guias.js';
 const VISTAS_COMIDAS = [['menu', 'Tu semana'], ['recetas', 'Tus recetas']];
@@ -35,7 +35,10 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
   const r = recetario.datos;
   // Lo apuntado del recetario del equipo también sale, con sus ingredientes, en la lista de la compra
   // y se pueden elegir al añadir una comida al menú
-  const rMenu = r && hayEquipo ? { ...r, equipo: equipo.datos.recetas, recetas: [...r.recetas, ...equipo.datos.recetas.filter((x) => !r.recetas.some((y) => y.id === x.id))] } : r;
+  // (recetas ajustadas) con kcal en su plan, las del equipo se escalan a las kcal de cada comida (las de un día de entreno)
+  const kcalDia = objetivoDelDia(planVigente(planes.datos || [], hoyISO()), true)?.kcal || null;
+  const ajusteEquipo = r && kcalDia ? (receta, toma = null) => ajusteParaTi(receta, { tomas: r.tomas, kcalDia, toma }) : null;
+  const rMenu = r && hayEquipo ? { ...r, ajusteEquipo, equipo: equipo.datos.recetas, recetas: [...r.recetas, ...equipo.datos.recetas.filter((x) => !r.recetas.some((y) => y.id === x.id))] } : r;
   const darConsentimiento = async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); };
   return (
     <div class="contenido">
@@ -57,7 +60,7 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
             </>
           )
         ) : vista === 'equipo' ? (
-          <RecetarioEquipo atletaId={atleta.id} alAnadir={salud ? (receta, raciones) => setAnadir({ a: comoAsignacion(receta, r.tomas), raciones }) : null} />
+          <RecetarioEquipo atletaId={atleta.id} ajuste={salud ? ajusteEquipo : null} alAnadir={salud ? (receta, raciones, factor = 1) => setAnadir({ a: { ...comoAsignacion(receta, r.tomas), factor }, raciones }) : null} />
         ) : (
           <VistaRecetario recetario={r} alAbrir={setReceta} vacio={(
             <div class="panel"><Vacio ilustracion="recetas" titulo="Aún no tienes recetas">Tu coach te pondrá aquí las opciones para cada comida, con sus cantidades y cómo se preparan.</Vacio></div>
@@ -68,7 +71,7 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
       {vista === 'menu' && r && OCASIONES[planVigente(planes.datos || [], hoyISO())?.fase] && <GuiaSugerida ocasion={planVigente(planes.datos || [], hoyISO()).fase} />}
       {receta && <HojaReceta a={receta} opcional={r?.opcional} alCerrar={() => setReceta(null)} alCambiar={() => { recetario.recargar(true); setReceta(null); }}
         alAnadir={salud ? (a, raciones) => { setReceta(null); setAnadir({ a, raciones }); } : null} />}
-      {anadir && r && <HojaElegirDia a={anadir.a} raciones={anadir.raciones} tomas={r.tomas} alCerrar={() => setAnadir(null)} alGuardado={() => setVista('menu')} />}
+      {anadir && r && <HojaElegirDia a={anadir.a} raciones={anadir.raciones} tomas={r.tomas} ajustar={anadir.a.factor !== 1 && ajusteEquipo ? (t) => ajusteEquipo(anadir.a.receta, t)?.factor : null} alCerrar={() => setAnadir(null)} alGuardado={() => setVista('menu')} />}
       {comidas && r && <HojaTusComidas atletaId={atleta.id} tomas={r.tomas} alCerrar={() => setComidas(false)} alGuardado={() => recetario.recargar(true)} />}
     </div>
   );
