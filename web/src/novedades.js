@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.138': {
+    atleta: [
+      'En «Aprende», cada estantería con su ilustración; y el mito de la semana y el cuestionario inicial, con la suya.',
+    ],
+  },
   '0.137': {
     atleta: [
       'Las ilustraciones de cada día cobran vida: la portada de tu sesión se acerca despacio y la bienvenida tiene la luz de la hora.',

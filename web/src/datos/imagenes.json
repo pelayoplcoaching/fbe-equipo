@@ -926,6 +926,61 @@
       "512": "imagenes/ejercicio/cua-zancadas-512.db022790.webp"
     }
   },
+  "cuestionario-lesiones": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/cuestionario/cuestionario-lesiones-480.49a355c7.webp",
+      "720": "imagenes/cuestionario/cuestionario-lesiones-720.5a50a4e8.webp",
+      "1080": "imagenes/cuestionario/cuestionario-lesiones-1080.c0940a6c.webp"
+    }
+  },
+  "cuestionario-lugar": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/cuestionario/cuestionario-lugar-480.fd7934e1.webp",
+      "720": "imagenes/cuestionario/cuestionario-lugar-720.163ace18.webp",
+      "1080": "imagenes/cuestionario/cuestionario-lugar-1080.4f08210f.webp"
+    }
+  },
+  "cuestionario-objetivo": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/cuestionario/cuestionario-objetivo-480.3ff1518f.webp",
+      "720": "imagenes/cuestionario/cuestionario-objetivo-720.c0e86f8b.webp",
+      "1080": "imagenes/cuestionario/cuestionario-objetivo-1080.76d5488e.webp"
+    }
+  },
+  "cuestionario-salud": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/cuestionario/cuestionario-salud-480.9a25646e.webp",
+      "720": "imagenes/cuestionario/cuestionario-salud-720.9180a27b.webp",
+      "1080": "imagenes/cuestionario/cuestionario-salud-1080.2c76d92f.webp"
+    }
+  },
+  "cuestionario-tiempo": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/cuestionario/cuestionario-tiempo-480.14fe1235.webp",
+      "720": "imagenes/cuestionario/cuestionario-tiempo-720.4edbc7fd.webp",
+      "1080": "imagenes/cuestionario/cuestionario-tiempo-1080.03ccc042.webp"
+    }
+  },
   "del-contractora-invertida": {
     "proporcion": [
       1,
@@ -1889,6 +1944,66 @@
       "640": "imagenes/grupo/grupo-triceps-640.41a3fa8f.webp"
     }
   },
+  "guia-cabeza": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-cabeza-160.2115414b.webp",
+      "320": "imagenes/aprende/guia-cabeza-320.ddb8c507.webp"
+    }
+  },
+  "guia-comer": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-comer-160.4d191af7.webp",
+      "320": "imagenes/aprende/guia-comer-320.e60e5e90.webp"
+    }
+  },
+  "guia-empieza": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-empieza-160.9253f911.webp",
+      "320": "imagenes/aprende/guia-empieza-320.8b7f3060.webp"
+    }
+  },
+  "guia-entrenar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-entrenar-160.e659d7f8.webp",
+      "320": "imagenes/aprende/guia-entrenar-320.c06192ce.webp"
+    }
+  },
+  "guia-mas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-mas-160.2a2f9bf8.webp",
+      "320": "imagenes/aprende/guia-mas-320.807d3851.webp"
+    }
+  },
+  "guia-salud": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/aprende/guia-salud-160.7a7e0afa.webp",
+      "320": "imagenes/aprende/guia-salud-320.47433c76.webp"
+    }
+  },
   "habito-agua": {
     "proporcion": [
       1,
@@ -2565,6 +2680,17 @@
       "720": "imagenes/mes/mes-12-720.ff740776.webp",
       "1080": "imagenes/mes/mes-12-1080.f398fb1b.webp",
       "1440": "imagenes/mes/mes-12-1440.fe0b454b.webp"
+    }
+  },
+  "mito-semana": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/aprende/mito-semana-480.e9182444.webp",
+      "720": "imagenes/aprende/mito-semana-720.f4a0275f.webp",
+      "1080": "imagenes/aprende/mito-semana-1080.4d98144a.webp"
     }
   },
   "pec-aperturas-planas": {

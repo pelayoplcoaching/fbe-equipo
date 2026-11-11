@@ -4,6 +4,8 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, Segmentos, cuando, IcoIos } from '../comunes.jsx';
 import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, MINUTOS, MENSAJE_ATLETA, conSalud, pendiente, objetivosDe } from '../../logica/cuestionario.js';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenPasoCuestionario } from '../../logica/imagenes.js';
 
 const PASOS = [
   ['objetivo', 'Tus objetivos', ['objetivos', 'objetivo_detalle']],
@@ -112,6 +114,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
   return (
     <Hoja titulo="Tu cuestionario inicial" alCerrar={alCerrar}>
       <form class="pila cuestionario" onSubmit={siguiente} noValidate>
+        {hayImagen(imagenPasoCuestionario(clave)) && <Imagen id={imagenPasoCuestionario(clave)} clase="franja-ilu cuestionario-ilu" tamanos="(min-width: 720px) 640px, 100vw" />}
         <div class="pila-s">
           <div class="separa"><strong>{titulo}</strong><span class="peq secundario num">Paso {paso + 1} de {PASOS.length}</span></div>
           <div class="progreso-barra" role="img" aria-label={`Paso ${paso + 1} de ${PASOS.length}`}><span style={{ width: `${((paso + 1) / PASOS.length) * 100}%` }} /></div>
