@@ -165,7 +165,20 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
   background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, .16) 45%, rgba(255, 255, 255, .26) 50%, rgba(255, 255, 255, .16) 55%, transparent 100%); }
 .resumen-medalla.con-ilu::before { content: ""; position: absolute; z-index: 1; top: -10%; bottom: -10%; left: 0; width: 60%; pointer-events: none; opacity: 0;
   background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, .7) 50%, transparent 100%); }
-@media (forced-colors: active) { .bdia-luz, .hero-brillo, .resumen-medalla.con-ilu::before { display: none; } }
+/* 6 · La hoja de un hábito: apagada hasta que el día elegido está cumplido; cumplido, encendida y con su color detrás */
+.habito-cab:not(.hecho) .cab-ilu-img { opacity: .5; transform: scale(.96); }
+.habito-cab::after { content: ""; position: absolute; z-index: 0; top: -30%; right: -12%; width: 62%; height: 160%; pointer-events: none; opacity: 0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--c, var(--morado)) 55%, transparent), transparent); }
+.habito-cab.hecho::after { opacity: .5; }
+/* 7 · La comida que toca por la hora: su cabecera, con un filo */
+.toma-ilu.ahora { box-shadow: var(--sombra-tarjeta, var(--sombra)), inset 0 0 0 2px color-mix(in srgb, var(--morado) 60%, #fff); }
+/* 8 · La franja de cada paso del check-in: un marco que recorta la imagen que entra */
+.ck-paso .ck-ilu-marco { position: relative; overflow: hidden; }
+.ck-ilu-marco > .ck-ilu-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 70% 55%; }
+/* 10 · El hito de la racha: las chispas que suben del fuego */
+.hito-chispas { position: absolute; z-index: 0; left: 0; right: 0; bottom: 0; height: 62%; overflow: hidden; pointer-events: none; }
+.hito-chispas i { position: absolute; bottom: 14%; border-radius: 50%; background: #FFD27A; box-shadow: 0 0 6px 1px rgba(255, 150, 60, .7); opacity: 0; }
+@media (forced-colors: active) { .bdia-luz, .hero-brillo, .resumen-medalla.con-ilu::before, .habito-cab::after, .hito-chispas { display: none; } }
 @media (prefers-reduced-motion: no-preference) {
   /* 1 · La portada de la sesión: en vez del gesto corto de entrada, un acercamiento muy lento, una vez (con la propiedad
      scale, para que conviva con el paralaje, que usa translate, y con el viaje desde la tarjeta de Hoy) */
@@ -188,7 +201,25 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
   /* 5 · El sello: cae como un tampón (grande y girado, golpea y se asienta) y lo cruza un destello */
   .resumen-medalla.con-ilu { animation: sello-golpe .62s cubic-bezier(.2, .9, .3, 1) .5s both; }
   .resumen-medalla.con-ilu::before { animation: sello-destello .8s ease-out 1.15s both; }
-  html[data-oculta] :is(img.portada-foto, .bdia-fondo, .bdia-rayo, .bdia-luz-tarde, .bdia-estrella, .hero-foto, .hero-brillo, .resumen-medalla) { animation-play-state: paused; }
+  /* 6 · El hábito: al cumplirlo se enciende con un pequeño rebote (y al quitarlo, se apaga) */
+  .habito-cab .cab-ilu-img { transition: opacity .45s ease-out, transform .6s cubic-bezier(.2, 1.6, .4, 1); }
+  .habito-cab::after { transition: opacity .6s ease-out; }
+  /* 7 · La comida de ahora: su ilustración se acerca despacio, una vez */
+  .toma-ilu.ahora .cab-ilu-img { animation: toma-ahora 9s cubic-bezier(.25, .4, .45, 1) .3s both; transform-origin: 70% 50%; }
+  /* 8 · El check-in: la imagen del paso entra desde el lado hacia el que se va */
+  .ck-ilu-marco > .ck-ilu-img { animation: ck-ilu-adelante .5s cubic-bezier(.2, .8, .2, 1) both; }
+  .ck-ilu-marco[data-sentido="atras"] > .ck-ilu-img { animation-name: ck-ilu-atras; }
+  /* 9 · El foco de la semana: la ilustración entra y después lleva el ritmo del foco (unas pocas veces, y se para):
+     lento en descarga, dos golpes secos en intensidad, un avance constante en volumen, un vaivén fino en técnica */
+  .foco-cab .cab-ilu-img { animation: foco-entra .7s cubic-bezier(.2, .8, .2, 1) both; transform-origin: 70% 60%; }
+  .foco-cab[data-foco="descarga"] .cab-ilu-img { animation: foco-entra .7s cubic-bezier(.2, .8, .2, 1) both, foco-respira 7s ease-in-out .7s 4 alternate; }
+  .foco-cab[data-foco="intensidad"] .cab-ilu-img, .foco-cab[data-foco="peaking"] .cab-ilu-img { animation: foco-entra .7s cubic-bezier(.2, .8, .2, 1) both, foco-golpe .55s cubic-bezier(.3, 0, .2, 1) .9s 2; }
+  .foco-cab[data-foco="volumen"] .cab-ilu-img { animation: foco-entra .7s cubic-bezier(.2, .8, .2, 1) both, foco-avanza 9s linear .7s both; }
+  .foco-cab[data-foco="tecnica"] .cab-ilu-img, .foco-cab[data-foco="adaptacion"] .cab-ilu-img { animation: foco-entra .7s cubic-bezier(.2, .8, .2, 1) both, foco-vaiven 3.2s ease-in-out .7s 2; }
+  /* 10 · El hito de la racha: el fuego parpadea y suelta chispas mientras la pantalla está abierta */
+  .hito-pantalla .hito-fondo { animation: hito-parpadea 2.3s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+  .hito-chispas i { animation: hito-chispa var(--dura, 4s) ease-out var(--espera, 0s) infinite; }
+  html[data-oculta] :is(img.portada-foto, .bdia-fondo, .bdia-rayo, .bdia-luz-tarde, .bdia-estrella, .hero-foto, .hero-brillo, .resumen-medalla, .toma-ilu .cab-ilu-img, .foco-cab .cab-ilu-img, .ck-ilu-img, .hito-fondo, .hito-chispas i) { animation-play-state: paused; }
 }
 @keyframes portada-viva { from { scale: 1; } to { scale: 1.06; } }
 @keyframes bdia-deriva { from { transform: scale(1.1) translate3d(-1.6%, 1.2%, 0); } to { transform: scale(1.02); } }
@@ -199,3 +230,13 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 @keyframes hero-brillo { 0% { opacity: 0; transform: translateX(-110%) skewX(-12deg); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateX(330%) skewX(-12deg); } }
 @keyframes sello-golpe { 0% { opacity: 0; transform: scale(1.9) rotate(-16deg); } 55% { opacity: 1; transform: scale(.92) rotate(2deg); } 78% { transform: scale(1.04) rotate(0); } 100% { opacity: 1; transform: none; } }
 @keyframes sello-destello { 0% { opacity: 0; transform: translateX(-140%) skewX(-14deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateX(260%) skewX(-14deg); } }
+@keyframes toma-ahora { from { scale: 1; } to { scale: 1.07; } }
+@keyframes ck-ilu-adelante { from { opacity: 0; transform: translateX(7%) scale(1.05); } }
+@keyframes ck-ilu-atras { from { opacity: 0; transform: translateX(-7%) scale(1.05); } }
+@keyframes foco-entra { from { opacity: 0; transform: translateX(6%); } }
+@keyframes foco-respira { from { scale: 1; } to { scale: 1.045; } }
+@keyframes foco-golpe { 0% { scale: 1; } 35% { scale: 1.075; } 100% { scale: 1; } }
+@keyframes foco-avanza { from { translate: 0 0; } to { translate: -3.5% 0; } }
+@keyframes foco-vaiven { 0%, 100% { translate: 0 0; } 30% { translate: -1.6% 0; } 70% { translate: 1.6% 0; } }
+@keyframes hito-parpadea { 0% { opacity: .52; transform: scale(1); } 40% { opacity: .66; transform: scale(1.012); } 70% { opacity: .56; transform: scale(1.004); } 100% { opacity: .72; transform: scale(1.022); } }
+@keyframes hito-chispa { 0% { opacity: 0; transform: translate3d(0, 0, 0) scale(1); } 12% { opacity: 1; } 100% { opacity: 0; transform: translate3d(var(--lado, 0), -34vh, 0) scale(.3); } }

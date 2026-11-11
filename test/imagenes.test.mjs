@@ -152,12 +152,17 @@ console.log('\nLas ilustraciones vivas: solo transform y opacity, y nada con «r
   const v = css.slice(css.indexOf('Bloque V'));
   const claves = [...v.matchAll(/@keyframes ([\w-]+) \{((?:[^{}]|\{[^{}]*\})*)\}/g)];
   const props = new Set(claves.flatMap(([, , cuerpo]) => [...cuerpo.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1])));
-  check(claves.length >= 9 && [...props].every((p) => ['opacity', 'transform', 'scale', 'translate'].includes(p)), `sus ${claves.length} animaciones solo mueven transform (o scale y translate) y opacity: ${[...props].join(', ')}`);
+  check(claves.length >= 19 && [...props].every((p) => ['opacity', 'transform', 'scale', 'translate'].includes(p)), `sus ${claves.length} animaciones solo mueven transform (o scale y translate) y opacity: ${[...props].join(', ')}`);
   const fuera = v.replace(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}\n/, '').replace(/@keyframes[^\n]*\n/g, '');
   check(v.includes('@media (prefers-reduced-motion: no-preference)') && !/animation(-name)?\s*:|transition\s*:/.test(fuera), 'todas van dentro de «sin reducir movimiento»: fuera de ahí no hay ni una animación ni una transición');
   check(/html\[data-oculta\][^{]*\{ animation-play-state: paused; \}/.test(v) && readFileSync(new URL('../web/src/ui/vivas.js', import.meta.url), 'utf8').includes("visibilitychange"), 'con la app en segundo plano, se paran (html[data-oculta], ui/vivas.js)');
   check(!/url\(/.test(v) && !/filter\s*:|backdrop-filter/.test(v), 'sin imágenes nuevas ni desenfoques: la luz se dibuja con degradados');
   const jsx = (n) => readFileSync(new URL(`../web/src/ui/${n}`, import.meta.url), 'utf8');
+  const { tomaDeLaHora } = await import('../web/src/logica/comidas.js');
+  const suyas = ['desayuno', 'comida', 'merienda', 'cena'];
+  check([5, 10, 11, 12, 13, 15, 16, 19, 20, 22, 23, 3].map((h) => tomaDeLaHora(h, suyas) || '-').join() === 'desayuno,desayuno,-,-,comida,comida,merienda,merienda,cena,cena,-,-'
+    && tomaDeLaHora(12, [...suyas, 'media_manana']) === 'media_manana' && tomaDeLaHora(0, ['recena']) === 'recena' && tomaDeLaHora(24, suyas) === null && tomaDeLaHora('x', suyas) === null && tomaDeLaHora(9) === null,
+    'la comida que toca por la hora, solo si está entre las suyas');
   check(/class=\{`bdia-luz bdia-luz-\$\{momento\}`\} aria-hidden="true"/.test(jsx('Bienvenida.jsx')) && /class="franja-ilu franja-pegada franja-cruce" aria-hidden="true"/.test(jsx('atleta/DondeEntrenas.jsx')) && /class="hero-brillo" aria-hidden="true"/.test(jsx('atleta/Sesion.jsx')), 'lo añadido es adorno: oculto a los lectores de pantalla');
 }
 

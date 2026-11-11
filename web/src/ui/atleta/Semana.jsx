@@ -93,7 +93,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
                 <div class="pila-s">
                   {semana.foco && (hayImagen(imagenFoco(semana.foco)) ? (
                     // (imágenes, bloque P) el foco de la semana, ilustrado: qué toca y qué significa
-                    <div class="cab-ilu foco-cab">
+                    <div class="cab-ilu foco-cab" data-foco={semana.foco}>
                       <div class="cab-ilu-texto pila-xs"><span class="mini foco-cab-k">Foco de la semana</span><strong class="foco-cab-t">{NOMBRE_FOCO[semana.foco]}</strong>{FRASE_FOCO[semana.foco] && <span class="peq foco-cab-f">{FRASE_FOCO[semana.foco]}</span>}</div>
                       <Imagen key={imagenFoco(semana.foco)} id={imagenFoco(semana.foco)} clase="cab-ilu-img" tamanos="(min-width: 720px) 400px, 70vw" />
                     </div>

@@ -13,6 +13,15 @@ export const TOMAS = [
 export const NOMBRE_TOMA = Object.fromEntries(TOMAS);
 export const CLAVES_TOMA = TOMAS.map(([t]) => t);
 export const TOMAS_DEFECTO = ['desayuno', 'comida', 'merienda', 'cena'];
+// La comida que toca por la hora (0-23) de entre las del día: desayuno hasta las 11, media mañana hasta la 1, comida
+// hasta las 4, merienda hasta las 8, cena hasta las 11 y, después, antes de dormir. Si esa no está entre las suyas, ninguna.
+const FRANJAS_TOMA = [['desayuno', 5, 11], ['media_manana', 11, 13], ['comida', 13, 16], ['merienda', 16, 20], ['cena', 20, 23]];
+export function tomaDeLaHora(hora, tomas = []) {
+  const h = Number(hora);
+  if (!Number.isInteger(h) || h < 0 || h > 23) return null;
+  const t = (FRANJAS_TOMA.find(([, a, b]) => h >= a && h < b) || ['recena'])[0];
+  return tomas.includes(t) ? t : null;
+}
 export const ordenarTomas = (xs = []) => CLAVES_TOMA.filter((t) => xs.includes(t));
 // Las comidas que hace el atleta (lo que eligió, o las cuatro de siempre)
 export const tomasDe = (fila) => (fila?.tomas?.length ? ordenarTomas(fila.tomas) : TOMAS_DEFECTO);

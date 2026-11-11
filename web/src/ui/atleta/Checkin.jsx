@@ -55,6 +55,14 @@ function RespuestaPregunta({ p, valor, alCambiar }) {
   );
 }
 
+// (ilustraciones vivas) La franja ilustrada de un paso, en su marco de siempre (3:1, pegado arriba del panel): la imagen
+// entra desde el lado hacia el que se avanza y el marco la recorta. Si no carga, no hay franja (como antes).
+function FranjaPaso({ id, sentido }) {
+  const [rota, setRota] = useState(null);
+  if (rota === id) return null;
+  return <span class="ck-ilu ck-ilu-marco" data-sentido={sentido} aria-hidden="true"><Imagen id={id} clase="ck-ilu-img" tamanos="(min-width: 720px) 640px, 100vw" alFallar={setRota} /></span>;
+}
+
 export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer }) {
   const { api, atleta, aviso } = useApp();
   const estaSemana = lunesDe(hoyISO());
@@ -78,6 +86,10 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
   const [error, setError] = useState(null);
   // v0.49: el paso que se ve (999 = el repaso), si se llegó desde el repaso, y el aviso de «enviado»
   const [paso, setPaso] = useState(0);
+  // (ilustraciones vivas) hacia dónde se va: la franja del paso entra desde ese lado
+  const pasoAntes = useRef(0);
+  const sentido = paso < pasoAntes.current ? 'atras' : 'adelante';
+  useEffect(() => { pasoAntes.current = paso; }, [paso]);
   const [desdeRepaso, setDesdeRepaso] = useState(false);
   const [enviado, setEnviado] = useState(null);
   const tituloRef = useRef(null);
@@ -459,7 +471,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
 
       {!enRevision ? (
         <section class="ck-paso panel panel-pad pila" key={actual.id} aria-labelledby="ck-titulo">
-          {hayImagen(imagenPasoCheckin(actual.id)) && <Imagen id={imagenPasoCheckin(actual.id)} clase="ck-ilu" tamanos="(min-width: 720px) 640px, 100vw" />}
+          {hayImagen(imagenPasoCheckin(actual.id)) && <FranjaPaso id={imagenPasoCheckin(actual.id)} sentido={sentido} />}
           {actual.deCoach && <span class="mini terciario ck-de-coach"><Icono n="mensaje" /> Pregunta de tu coach</span>}
           <h2 id="ck-titulo" tabIndex={-1} ref={tituloRef}>{actual.titulo}</h2>
           {actual.cuerpo(avanzarSolo)}
