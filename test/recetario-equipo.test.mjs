@@ -152,7 +152,7 @@ console.log('\nEn la demo (backend en memoria)');
 const { crearBackendMemoria } = await import('../web/src/datos/backend-memoria.js');
 const { semillaDemo } = await import('../web/src/datos/semilla-demo.js');
 const { crearApi } = await import('../web/src/datos/api.js');
-const { hayRecetarioEquipo, recetarioEquipo, guardarFavoritaEquipo, idsRecetasEquipo, ponerParaTodos } = await import('../web/src/datos/recetario-equipo.js');
+const { hayRecetarioEquipo, recetarioEquipo, fotosRecetarioEquipo, guardarFavoritaEquipo, idsRecetasEquipo, ponerParaTodos } = await import('../web/src/datos/recetario-equipo.js');
 const { hoyISO } = await import('../web/src/logica/fechas.js');
 const b = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
 const api = crearApi(b);
@@ -161,8 +161,11 @@ await b.auth.entrar('carlos@fbe.demo', 'demo');
 const carlos = (await b.select('atletas', {})).find((a) => a.nombre.startsWith('Carlos'));
 check(carlos.nutricion === false && await hayRecetarioEquipo({ backend: b }), 'Carlos solo entrena, y hay recetario del equipo');
 const rc = await recetarioEquipo({ backend: b }, carlos.id);
-check(rc.recetas.length === 10 && rc.favoritas.length === 0 && rc.recetas.every((r) => r.para_todos && r.libro?.capitulo && r.ingredientes.length && !('foto' in r)) && capitulos(rc.recetas).length === 4,
-  'lo ve entero: 10 recetas en 4 capítulos, con sus ingredientes y sin la foto grande');
+check(rc.recetas.length === 10 && rc.favoritas.length === 0 && rc.recetas.every((r) => r.para_todos && r.libro?.capitulo && r.ingredientes.length && !('foto' in r) && !('foto_mini' in r)) && capitulos(rc.recetas).length === 4,
+  'lo ve entero: 10 recetas en 4 capítulos, con sus ingredientes y sin fotos');
+const fotosEq = await fotosRecetarioEquipo({ backend: b });
+check(Object.keys(fotosEq).length > 0 && Object.keys(fotosEq).every((id) => rc.recetas.some((r) => r.id === id)) && Object.values(fotosEq).every((f) => f.startsWith('data:image/')),
+  'las miniaturas van aparte, solo las de las recetas del equipo que tienen foto');
 await guardarFavoritaEquipo({ backend: b }, carlos.id, rc.recetas[0].id, true);
 await guardarFavoritaEquipo({ backend: b }, carlos.id, rc.recetas[0].id, true);
 check((await recetarioEquipo({ backend: b }, carlos.id)).favoritas.join() === rc.recetas[0].id, 'se guarda una (y guardarla dos veces no rompe nada)');
@@ -191,6 +194,7 @@ check(Array.isArray(completa.recetas_favoritas), 'las guardadas van en la copia 
 // Una base sin la 055: todo vacío y sin romper
 const sin = { select: async () => { throw new Error('column recetas.para_todos does not exist'); }, update: async () => { throw new Error('Could not find the \'para_todos\' column of \'recetas\' in the schema cache'); } };
 check(await hayRecetarioEquipo({ backend: sin }) === false && (await recetarioEquipo({ backend: sin }, 'x')).recetas.length === 0 && await idsRecetasEquipo({ backend: sin }) === null
+  && Object.keys(await fotosRecetarioEquipo({ backend: sin })).length === 0
   && /migración 055/.test(await ponerParaTodos({ backend: sin }, 'x', true).catch((e) => e.message)), 'sin la migración 055 en la base, no hay recetario y nada se rompe');
 const roto = { select: async () => { throw new Error('Failed to fetch'); } };
 check(await lanza(() => recetarioEquipo({ backend: roto }, 'x')) && await lanza(() => hayRecetarioEquipo({ backend: roto })), 'un fallo de red no se confunde con «no hay recetario»');

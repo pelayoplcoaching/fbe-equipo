@@ -7,7 +7,7 @@ import { FotoReceta } from './ComidasComun.jsx';
 import { COLOR_MACRO } from './NutricionComun.jsx';
 import { textoMacros, macrosDe, ordenarTomas } from '../logica/comidas.js';
 import { porCapitulos, capitulos, filtrarRecetas, FILTROS, textoTiempo, textoBatch, lineasIngredientes, pasosDe, resumenRecetario, capituloDe, bloqueDe } from '../logica/recetario-equipo.js';
-import { recetarioEquipo, guardarFavoritaEquipo } from '../datos/recetario-equipo.js';
+import { recetarioEquipo, fotosRecetarioEquipo, guardarFavoritaEquipo } from '../datos/recetario-equipo.js';
 import { num } from '../logica/calculos.js';
 
 // Los datos del recetario, recordados entre visitas (y compartidos por Comidas y la pestaña Recetas)
@@ -45,13 +45,16 @@ function Bloque({ capitulo, bloque, recetas, favoritas, alAbrir, reinicio }) {
 }
 
 export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = false }) {
-  const { backend } = useApp();
+  const { backend, api } = useApp();
   const datos = useRecetarioEquipo(atletaId);
+  // Las miniaturas, aparte y solo aquí (al abrir el recetario); mientras llegan, cada receta sale con su dibujo
+  const fotos = useCarga(() => fotosRecetarioEquipo({ backend }), [], { recuerdo: `fotos-recetario-equipo:${api.uid()}` });
   const [texto, setTexto] = useState('');
   const [filtro, setFiltro] = usePreferencia('fbe-recetario-equipo-filtro', 'todas');
   const [capitulo, setCapitulo] = useState(null);
   const [abierta, setAbierta] = useState(null);
-  const recetas = datos.datos?.recetas || [];
+  const F = fotos.datos || null;
+  const recetas = useMemo(() => { const xs = datos.datos?.recetas || []; return F ? xs.map((r) => (F[r.id] ? { ...r, foto_mini: F[r.id] } : r)) : xs; }, [datos.datos, F]);
   const favoritas = useMemo(() => new Set(datos.datos?.favoritas || []), [datos.datos]);
   const caps = useMemo(() => capitulos(recetas), [recetas]);
   const filtros = esCoach ? FILTROS.filter(([f]) => f !== 'favoritas') : FILTROS;

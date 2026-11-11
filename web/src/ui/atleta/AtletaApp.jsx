@@ -310,7 +310,7 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
           </nav>
           {verMas && reparto.mas.length > 0 && (
             <HojaMas pestanas={reparto.mas} actual={tab} alCerrar={() => setVerMas(false)} alElegir={(id) => { setVerMas(false); irAPestana(id); }}
-              detalles={{ comidas: 'Tu menú de la semana y tus recetas', recetas: 'El recetario del equipo', checkin: 'Tu repaso de la semana para tu coach', equipo: 'El muro de los atletas de FBE', perfil: 'Tu cuenta y los ajustes de este móvil' }}
+              detalles={{ comidas: 'Tu menú de la semana y tus recetas', recetas: 'Recetas para todos, con sus cantidades y sus pasos', checkin: 'Tu repaso de la semana para tu coach', equipo: 'El muro de los atletas de FBE', perfil: 'Tu cuenta y los ajustes de este móvil' }}
               valores={{
                 checkin: checkinPendiente ? <span class="chip aviso">Pendiente</span> : null,
                 equipo: nuevasEnMas ? <span class="chip morado num">{nuevasEnMas > 99 ? '99+' : nuevasEnMas} {nuevasEnMas === 1 ? 'nueva' : 'nuevas'}</span> : null,

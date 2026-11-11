@@ -1,7 +1,7 @@
 // El recetario del equipo (migración 055): lo que lee y lo que guarda. Aparte de la API para no tocarla.
 // Sin la 055 en la base no hay recetario: todo devuelve vacío y la app sigue como antes.
 
-// Lo que hace falta para la lista y para la ficha (sin las fotos: la miniatura se pide aparte, solo si alguna la tiene)
+// Lo que hace falta para la lista y para la ficha (sin las fotos: las miniaturas se piden aparte, al abrir el recetario)
 const COLS = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,libro,para_todos,actualizada_en';
 const sin055 = (e) => /para_todos|libro|recetas_favoritas/.test(e?.message || '') && /schema cache|does not exist|no existe|column|columna|could not find/i.test(e?.message || '');
 const sinTabla = (e) => /recetas/.test(e?.message || '') && /schema cache|does not exist|no existe|could not find/i.test(e?.message || '');
@@ -21,14 +21,18 @@ export async function recetarioEquipo({ backend }, atletaId = null) {
     if (sin055(e) || sinTabla(e)) return { recetas: [], favoritas: [] };
     throw e;
   }
-  const [favs, fotos] = await Promise.all([
-    atletaId ? backend.select('recetas_favoritas', { eq: { atleta_id: atletaId }, cols: 'receta_id' }).catch(() => []) : [],
-    // Las miniaturas pesan (unos 14 kB cada una): en una consulta aparte, y si falla, las recetas salen igual
-    recetas.length ? backend.select('recetas', { eq: { para_todos: true }, cols: 'id,foto_mini' }).catch(() => []) : [],
-  ]);
-  const F = Object.fromEntries(fotos.map((x) => [x.id, x.foto_mini || null]));
+  const favs = atletaId ? await backend.select('recetas_favoritas', { eq: { atleta_id: atletaId }, cols: 'receta_id' }).catch(() => []) : [];
   const ids = new Set(recetas.map((r) => r.id));
-  return { recetas: recetas.map((r) => ({ ...r, foto_mini: F[r.id] || null })), favoritas: favs.map((f) => f.receta_id).filter((id) => ids.has(id)) };
+  return { recetas, favoritas: favs.map((f) => f.receta_id).filter((id) => ids.has(id)) };
+}
+
+// Las miniaturas de las recetas del equipo: { id: foto_mini }. Aparte, porque pesan (unos 14 kB cada una) y solo hacen
+// falta al abrir el recetario (Comidas ya pide las de su recetario una vez). Si falla, las recetas salen sin foto.
+export async function fotosRecetarioEquipo({ backend }) {
+  try {
+    const fotos = await backend.select('recetas', { eq: { para_todos: true }, cols: 'id,foto_mini' });
+    return Object.fromEntries(fotos.filter((x) => x.foto_mini).map((x) => [x.id, x.foto_mini]));
+  } catch { return {}; }
 }
 
 // El atleta se guarda (o deja de guardar) una receta del equipo
