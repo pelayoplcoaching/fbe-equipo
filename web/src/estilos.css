@@ -1314,6 +1314,9 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .serie-top .n { color: var(--morado); font-weight: 800; }
 .serie-backoff .n { color: var(--tinta-2); }
 .backoff-nota { display: flex; gap: 8px; align-items: center; margin: 2px 0 4px; padding: 8px 10px; border-radius: 10px; background: var(--hoja-2); color: var(--tinta-2); font-size: 0.8438rem; }
+/* (ajuste en vivo) la serie siguiente corregida por el RPE de la anterior; con kilos ya escritos, «Usar …» */
+.ajuste-nota { flex-wrap: wrap; }
+.ajuste-nota > span { flex: 1 1 12rem; }
 .backoff-nota svg { width: 16px; height: 16px; flex: none; color: var(--morado); }
 .variante-tempo .backoff { grid-column: 1 / -1; min-height: 34px; border-radius: 9px; border: 1px solid var(--linea); background: var(--hoja); color: var(--tinta-2); font-size: 0.8125rem; padding: 0 8px; }
 .variante-tempo .backoff.activo { border-color: var(--morado); color: var(--morado); font-weight: 650; }
