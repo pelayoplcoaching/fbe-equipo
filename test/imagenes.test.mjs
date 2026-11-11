@@ -3,7 +3,7 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, imagenLugar, imagenBienvenida, imagenPrimerosPasos, imagenHerramienta, HERRAMIENTAS, FAMILIAS_PORTADA, IMAGENES, imagenFoco, FOCOS_IMG, FRASE_FOCO, imagenPortada, MODALIDADES_IMG, focoFondo, imagenHito, HITOS_IMG, IMAGEN_ANIVERSARIO, imagenEjercicio, imagenEstante, imagenGuia, IMAGEN_MITO, imagenPasoCuestionario } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, imagenLugar, imagenBienvenida, imagenPrimerosPasos, imagenHerramienta, HERRAMIENTAS, FAMILIAS_PORTADA, IMAGENES, imagenFoco, FOCOS_IMG, FRASE_FOCO, imagenPortada, MODALIDADES_IMG, focoFondo, imagenHito, HITOS_IMG, IMAGEN_ANIVERSARIO, imagenEjercicio, imagenEstante, imagenGuia, IMAGEN_MITO, imagenPasoCuestionario, PORTADAS_GUIA, imagenPortadaGuia } from '../web/src/logica/imagenes.js';
 import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 import { GRUPOS } from '../web/src/logica/calculos.js';
 import { TOMAS } from '../web/src/logica/comidas.js';
@@ -150,7 +150,7 @@ console.log('Tanda U: las estanterías de «Aprende»');
   const { ESTANTES, estanteDe } = await import('../web/src/logica/guias.js');
   check(ESTANTES.every((e) => IMAGENES.includes(imagenEstante(e.id))), `hay ilustración para las ${ESTANTES.length} estanterías`);
   check(imagenEstante('inventada') === 'guia-mas', 'una estantería desconocida, la de «Más guías»');
-  check(imagenGuia({ clave: 'sueno' }, estanteDe({ clave: 'sueno' })) === 'guia-cabeza' && imagenGuia({ clave: 'mitos' }, estanteDe({ clave: 'mitos' })) === 'guia-salud', 'cada guía, la de su estantería (sueño → la almohada; mitos → el corazón)');
+  check(imagenGuia({ clave: 'nueva' }, 'cabeza') === 'guia-cabeza' && imagenGuia({ clave: 'otra' }, 'salud') === 'guia-salud', 'una guía sin portada, la de su estantería (cabeza → la almohada; salud → el corazón)');
   check(imagenGuia({ clave: 'x', grupo: 'pectoral' }, 'musculos') === 'grupo-pectoral' && imagenGuia({ clave: 'x', fichas: 3 }, 'musculos') === 'guia-entrenar', 'con grupo, su estatua; músculo a músculo sin grupo, el rack');
   check((() => { const L = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.json'), 'utf8')); return ['guia-empieza', 'guia-entrenar', 'guia-comer', 'guia-cabeza', 'guia-salud', 'guia-mas'].every((id) => L[id]?.proporcion?.join(':') === '1:1'); })(), 'las seis, cuadradas');
 }
@@ -164,6 +164,17 @@ console.log('Tandas V y W: el mito de la semana y el cuestionario inicial');
   check(imagenPasoCuestionario('otro') === null && imagenPasoCuestionario(undefined) === null, 'un paso desconocido, sin dibujo');
   const cu = readFileSync(join(raiz, 'web/src/ui/atleta/Cuestionario.jsx'), 'utf8');
   check(pasos.every((c) => cu.includes(`['${c}',`)), 'las claves coinciden con los pasos del cuestionario');
+}
+
+console.log('Portadas de las guías');
+{
+  const L = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.json'), 'utf8'));
+  const { ESTANTES } = await import('../web/src/logica/guias.js');
+  const conEstante = ESTANTES.flatMap((e) => e.claves);
+  check(PORTADAS_GUIA.length === 17 && conEstante.every((c) => PORTADAS_GUIA.includes(c)), 'hay portada para las 17 guías de las estanterías');
+  check(PORTADAS_GUIA.every((c) => L[imagenPortadaGuia(c)]?.proporcion?.join(':') === '12:5' && L[`${imagenPortadaGuia(c)}-cuadrada`]?.proporcion?.join(':') === '1:1'), 'cada una, su cabecera 12:5 y su recorte cuadrado');
+  check(imagenGuia({ clave: 'sueno' }, 'cabeza') === 'portada-sueno-cuadrada' && imagenGuia({ clave: 'x', grupo: 'pectoral' }, 'musculos') === 'grupo-pectoral', 'la tarjeta lleva su portada; las de músculo, su estatua');
+  check(imagenPortadaGuia('inventada') === null, 'una guía sin portada, sin cabecera');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
