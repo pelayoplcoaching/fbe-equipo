@@ -270,7 +270,8 @@ export async function probarGuias({ navegador, check, base = 'http://localhost:4
     await p.keyboard.press('Escape');
     await hojaD.waitFor({ state: 'detached' });
     await irASeccion(p, 'Comidas');
-    const deFase = p.locator('.guia-sugerida');
+    // (la de la fase, no la de la descarga: con la máquina lenta, Semana aún se ve un momento al cambiar de sección)
+    const deFase = p.locator('.guia-sugerida:is([data-ocasion="perder"], [data-ocasion="mantener"], [data-ocasion="ganar"])');
     await deFase.waitFor();
     check(/Tu fase: /.test(await deFase.textContent()), 'en Comidas, la guía de la fase de su dieta');
     await deFase.scrollIntoViewIfNeeded();
