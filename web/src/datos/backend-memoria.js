@@ -74,7 +74,8 @@ const DEFECTOS = {
   listas_difusion: () => ({ creada_en: ahora() }),
   // Migración 032: el chat como WhatsApp
   conversacion_estado: () => ({ fijada_en: null, archivada_en: null, no_leida: false, actualizado_en: ahora() }),
-  recursos: () => ({ atleta_id: null, categoria: 'general', descripcion: null, url: null, orden: 0, creado_en: ahora() }),
+  recursos: () => ({ atleta_id: null, categoria: 'general', descripcion: null, url: null, orden: 0, destacado: false, directo_en: null, creado_en: ahora() }),
+  youtube_canal: () => ({ id: true, titulo: null, activo: true, actualizado_en: ahora() }),
   notas_ejercicio: () => ({ actualizado_en: ahora() }),
   respuestas_guardadas: () => ({ orden: 0, creado_en: ahora() }),
   avisos: () => ({ atleta_id: null, desde: hoyISO(), hasta: null, creado_en: ahora(), enviar_en: null }),
@@ -128,7 +129,7 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'],
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
@@ -177,7 +178,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
+const SIN_ID = ['videos_vistos', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
   'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_semanas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
@@ -373,6 +374,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     ejercicios_fichas: (x) => esCoach() || (!!miAtletaId() && tabla('fichas_ejercicio').some((f) => f.id === x.ficha_id && tabla('guias').some((g) => g.id === f.guia_id && g.publicada))),
     // Como la 055: las recetas del equipo que se guarda cada atleta (él las suyas; el coach, todas)
     recetas_favoritas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // Como la 059: el canal, los atletas si está activo; lo visto, cada atleta lo suyo y el coach todo
+    youtube_canal: (x) => esCoach() || (!!miAtletaId() && x.activo !== false),
+    videos_vistos: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
   const programadoAun = (c) => !!c?.enviar_en && Date.parse(c.enviar_en) > Date.now();
@@ -1266,7 +1270,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
     && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
       : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
-  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -3286,6 +3290,20 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       borrarCascada(t, ids);
       persistirYa();
     },
+    // (059) Las funciones de Supabase: en la demo, solo «youtube-canal», con unos vídeos inventados (ids que no existen:
+    // salen sin miniatura) para enseñar cómo queda «Aprende» con el canal puesto
+    async funcion(nombre) {
+      sinRedDemo();
+      if (nombre !== 'youtube-canal') throw new Error('Esta función no está en la demo');
+      const c = tabla('youtube_canal')[0];
+      if (!c || (!esCoach() && c.activo === false)) return { canal: null, videos: [] };
+      const hace = (d) => new Date(Date.now() - d * 86400000).toISOString();
+      return { canal: { id: 'UCdemoFBEdemoFBEdemoFBE0', nombre: c.canal, titulo: 'FBE Coaching (demo)' }, videos: [
+        { id: 'FBEdemo0001', titulo: 'Sentadilla: los 3 errores que más veo', publicado: hace(2), descripcion: 'La técnica, paso a paso.' },
+        { id: 'FBEdemo0002', titulo: 'Cómo programar una semana de descarga', publicado: hace(9), descripcion: null },
+        { id: 'FBEdemo0003', titulo: 'Proteína: cuánta y cuándo (lo que dice la evidencia)', publicado: hace(16), descripcion: null },
+      ] };
+    },
     async rpc(nombre, args) {
       sinRedDemo();
       const uid = sesion?.user.id;
@@ -3377,6 +3395,19 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (o.aviso != null && o.aviso !== '') { const v = Number(o.aviso); if (!(v >= 0 && v <= 1440)) throw new Error('El aviso va de 0 a 1440 minutos'); i.cal_aviso = v; }
         if ('detalle' in o) { if (typeof o.detalle !== 'boolean') throw new Error('Detalle no válido'); i.cal_detalle = o.detalle; }
       };
+      // (059) lo que ve cada atleta: como apuntar_video_visto() (otra vez = pasada media hora; el coach no apunta)
+      if (nombre === 'apuntar_video_visto') {
+        const a = miAtletaId();
+        if (!a) return null;
+        if (!/^[A-Za-z0-9_-]{11}$/.test(String(args.p_video || ''))) throw new Error('Ese no es un vídeo de YouTube');
+        const seg = Math.min(Math.max(Number(args.p_segundos) || 0, 0), 21600);
+        const titulo = String(args.p_titulo || '').replace(/\s+/g, ' ').trim().slice(0, 120) || null;
+        const x = tabla('videos_vistos').find((v) => v.atleta_id === a && v.video === args.p_video);
+        if (!x) { tabla('videos_vistos').push({ atleta_id: a, video: args.p_video, titulo, veces: 1, segundos: seg, completo: !!args.p_completo, primera_vez: ahora(), ultima_vez: ahora() }); return null; }
+        if (Date.parse(x.ultima_vez) < Date.now() - 30 * 60000) x.veces += 1;
+        Object.assign(x, { titulo: titulo || x.titulo, segundos: x.segundos + seg, completo: x.completo || !!args.p_completo, ultima_vez: ahora() });
+        return null;
+      }
       if (nombre === 'integraciones_mias') {
         const a = miAtletaId();
         if (!a) return null;

@@ -10,6 +10,7 @@ import './estrecho.css';
 import './recetario-equipo.css';
 import './guias.css';
 import './productos.css';
+import './youtube.css';
 import './carrera.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

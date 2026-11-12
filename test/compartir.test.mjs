@@ -25,7 +25,7 @@ const d = { nombre: 'Pierna A', fecha: '2026-11-08', minutos: 52, series: 18, to
   mejores: [{ nombre: 'Sentadilla', serie: '100 kg × 5' }, { nombre: 'Prensa', serie: '180 kg × 10' }, { nombre: 'Zancadas', serie: '20 kg × 12' }] };
 check(cifrasTexto(d) === '52 min · 18 series · 4,2 t · 1 récord' && cifrasTexto({ series: 1 }) === '1 serie' && cifrasTexto({}) === '', 'las cifras en una línea');
 const pie = pieDeFoto(d, { handle: 'ana_fit', equipo: 'fbecoaching' });
-check(pie.startsWith('Pierna A ✅ 52 min · 18 series · 4,2 t · 1 récord\n🏆 Sentadilla: 1RM estimado 120 kg (antes 117,5)\n@ana_fit · Entreno con @fbecoaching\n') && pie.endsWith(HASHTAGS.join(' ')), 'el pie de foto: la frase, los récords, los @ y las etiquetas');
+check(pie.startsWith('Pierna A ✅ 52 min · 18 series · 4,2 t · 1 récord\n🏆 Sentadilla: 1RM estimado 120 kg (antes 117,5)\n@ana_fit · Entreno con @canal-demo\n') && pie.endsWith(HASHTAGS.join(' ')), 'el pie de foto: la frase, los récords, los @ y las etiquetas');
 check(pieDeFoto(d, { equipo: '' }).includes('Entrenado con FBE Coaching') && !pieDeFoto(d, { equipo: '' }).includes('@'), 'sin @, la firma de siempre');
 check(pieDeFoto({ nombre: 'Rodillo', cardio: { modalidad: 'bici', minutos: 40, km: 20 } }, { equipo: '' }).startsWith('Rodillo 🏃 40 min, 20 km (30 km/h)'), 'una sesión de cardio');
 check(pieDeFoto({ nombre: 'Sentadilla', cifra: { v: '120', u: 'kg' }, lineas: ['100 kg × 5'] }, { tipo: 'record', equipo: '' }).startsWith('🏆 Nuevo récord en Sentadilla: 120 kg · 100 kg × 5'), 'un récord');

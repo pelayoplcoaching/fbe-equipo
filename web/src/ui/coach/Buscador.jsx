@@ -9,8 +9,8 @@ import { construirResultados } from '../../logica/busqueda.js';
 export function Buscador(props) { return <Capa><BuscadorPantalla {...props} /></Capa>; }
 function BuscadorPantalla({ alCerrar, ir }) {
   const { api } = useApp();
-  const datos = useCarga(() => Promise.all([api.atletas(), api.plantillas(), api.biblioteca()])
-    .then(([atletas, plantillas, ejercicios]) => ({ atletas, plantillas, ejercicios })), []);
+  const datos = useCarga(() => Promise.all([api.atletas(), api.plantillas(), api.biblioteca(), api.recursos().catch(() => [])])
+    .then(([atletas, plantillas, ejercicios, recursos]) => ({ atletas, plantillas, ejercicios, recursos })), []);
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(0);
   const entrada = useRef(null);

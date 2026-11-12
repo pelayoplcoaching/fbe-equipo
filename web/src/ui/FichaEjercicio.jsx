@@ -13,6 +13,8 @@ import { datosComparativa } from '../logica/compartir.js';
 import { FichaFBE, HojaGuia } from './Guias.jsx';
 import { fichaDeEjercicio } from '../datos/guias.js';
 import { fichaConContenido } from '../logica/guias.js';
+import { VideoYoutube } from './YouTube.jsx';
+import { esYoutube } from '../logica/youtube.js';
 
 // Ficha de un ejercicio (como en Strong o Hevy): gráficas por semana con rango, récords de 1 a 12
 // repeticiones (real frente a estimado), historial completo y la técnica si la hay.
@@ -151,14 +153,17 @@ function Historial({ d }) {
 
 function Tecnica({ ejercicio: e, modelos = [], fbe = null }) {
   const [guia, setGuia] = useState(null);
+  const yt = !!e.video_url && esYoutube(e.video_url);
   const parrafos = (t) => t.split(/\n{2,}/).map((p, i) => <p key={i} class="secundario" style="white-space:pre-line">{p}</p>);
   return (
     <div class="pila">
       {/* (057) el vídeo, arriba cuando hay ficha (la ficha es larga); después, la ficha de sus guías */}
-      {fbe && (modelos.length > 0 || e.video_url) && (
+      {/* (YouTube) el vídeo de técnica se ve aquí, con su tramo, cámara lenta y las marcas de tiempo de las notas */}
+      {yt && <VideoYoutube url={e.video_url} titulo={`Técnica: ${e.nombre}`} notas={[e.instrucciones, e.errores].filter(Boolean).join('\n')} />}
+      {fbe && (modelos.length > 0 || (e.video_url && !yt)) && (
         <div class="fila-envolver">
           {modelos.length > 0 && <BotonModelo ejercicio={e} modelos={modelos} clase="btn" />}
-          {e.video_url && <a class="btn" href={e.video_url} target="_blank" rel="noopener"><Icono n="video" /> Ver el vídeo de técnica</a>}
+          {e.video_url && !yt && <a class="btn" href={e.video_url} target="_blank" rel="noopener"><Icono n="video" /> Ver el vídeo de técnica</a>}
         </div>
       )}
       {fbe && <FichaFBE ficha={fbe.ficha} guia={fbe.guia} alAbrirGuia={setGuia} />}
@@ -167,7 +172,7 @@ function Tecnica({ ejercicio: e, modelos = [], fbe = null }) {
       {e.instrucciones && <section class="pila-s"><h3 class="peq">{fbe ? 'Notas de tu coach' : 'Claves'}</h3>{parrafos(e.instrucciones)}</section>}
       {e.errores && <section class="pila-s"><h3 class="peq">Errores comunes</h3>{parrafos(e.errores)}</section>}
       {!fbe && modelos.length > 0 && <div><BotonModelo ejercicio={e} modelos={modelos} clase="btn" /></div>}
-      {!fbe && e.video_url && <a class="btn" href={e.video_url} target="_blank" rel="noopener" style="justify-self:start"><Icono n="video" /> Ver el vídeo de técnica</a>}
+      {!fbe && e.video_url && !yt && <a class="btn" href={e.video_url} target="_blank" rel="noopener" style="justify-self:start"><Icono n="video" /> Ver el vídeo de técnica</a>}
     </div>
   );
 }

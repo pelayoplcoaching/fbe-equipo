@@ -1,4 +1,6 @@
 import { hoyISO } from '../../logica/fechas.js';
+import { HojaVideo } from '../Videos.jsx';
+import { esYoutube } from '../../logica/youtube.js';
 import { useState } from 'preact/hooks';
 import { AjustesDispositivo, AjustesMensajes, VERSION_APP } from '../Ajustes.jsx';
 import { SeccionNotificaciones } from '../Notificaciones.jsx';
@@ -192,6 +194,7 @@ function CambiarPassword({ alCerrar }) {
 // categorías)
 function Recursos({ titulo, id, lista }) {
   const { atleta } = useApp();
+  const [video, setVideo] = useState(null);  // (YouTube) un recurso de vídeo se ve aquí, en su hoja
   const orden = CATEGORIAS_RECURSO.map(([c]) => c);
   const grupos = CATEGORIAS_RECURSO.map(([c, t]) => [c, t, lista.filter((x) => x.categoria === c)]).filter(([, , xs]) => xs.length)
     .sort(([a], [b]) => orden.indexOf(a) - orden.indexOf(b));
@@ -207,7 +210,13 @@ function Recursos({ titulo, id, lista }) {
           <ul class="lista">
             {xs.map((x) => (
               <li key={x.id} class="recurso">
-                {x.url ? (
+                {x.url && esYoutube(x.url) ? (
+                  <button type="button" class="recurso-enlace" onClick={() => setVideo(x)}>
+                    <IcoIos n="video" />
+                    <span><span class="nombre">{x.titulo}</span>{x.atleta_id === atleta.id && <span class="chip morado">Para ti</span>}{x.descripcion && <><br /><span class="detalle">{x.descripcion}</span></>}</span>
+                    <Icono n="play" class="fila-ios-chevron" />
+                  </button>
+                ) : x.url ? (
                   <a class="recurso-enlace" href={x.url} target="_blank" rel="noopener">
                     <IcoIos n={c === 'faq' ? 'pregunta' : 'enlace'} />
                     <span><span class="nombre">{x.titulo}</span>{x.atleta_id === atleta.id && <span class="chip morado">Para ti</span>}{x.descripcion && <><br /><span class="detalle">{x.descripcion}</span></>}</span>
@@ -224,6 +233,7 @@ function Recursos({ titulo, id, lista }) {
           </ul>
         </div>
       ))}
+      {video && <HojaVideo titulo={video.titulo} url={video.url} descripcion={video.descripcion || ''} alCerrar={() => setVideo(null)} />}
     </section>
   );
 }

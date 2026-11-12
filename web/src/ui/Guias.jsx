@@ -1,7 +1,11 @@
 // «Aprende» (migración 057): las guías del coach por grupo muscular y la ficha de técnica de cada ejercicio. Aquí, lo
 // que se pinta: el texto con su negrita, los bloques de una sección, la ficha (pasos, errores, niveles, cuándo sí y
 // cuándo no, y la tabla por objetivo), el lector de una guía y la pantalla con todas. Todo es texto: nunca HTML.
+import { Fragment } from 'preact';
 import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
+import { VideoYoutube } from './YouTube.jsx';
+import { videosDeTexto } from '../logica/youtube.js';
+import { VideotecaAprende } from './Videos.jsx';
 import { useApp, useCarga, Icono, Hoja, Vacio, Siluetas, ErrorCaja, CabeceraGrande } from './comunes.jsx';
 import { hoyISO } from '../logica/fechas.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
@@ -19,7 +23,8 @@ export function Bloques({ bloques }) {
   return (
     <>
       {bloques.map((b, i) => (
-        b.t === 'p' ? <p key={i}><Rico x={b.x} /></p>
+        b.t === 'p' ? (videosDeTexto(b.x).length ? <Fragment key={i}><p><Rico x={b.x} /></p>{videosDeTexto(b.x).map((v) => <VideoYoutube key={v.id} url={v.url} titulo="Vídeo de la guía" />)}</Fragment> : <p key={i}><Rico x={b.x} /></p>)
+          : b.t === 'video' ? <figure key={i} class="guia-video">{b.titulo && <figcaption class="peq"><strong>{b.titulo}</strong></figcaption>}<VideoYoutube url={b.url} titulo={b.titulo || 'Vídeo de la guía'} notas={b.x || ''} /></figure>
           : b.t === 'h' ? <h3 key={i} class="guia-h">{b.x}</h3>
             : b.t === 'cita' ? <blockquote key={i} class="guia-cita"><Rico x={b.x} /></blockquote>
             : b.t === 'ul' ? <ul key={i} class="guia-lista">{b.xs.map((x, k) => <li key={k}><Rico x={x} /></li>)}</ul>
@@ -466,7 +471,13 @@ export function Aprende() {
           <LectorGuia key={abierta.clave} clave={abierta.clave} seccionInicial={abierta.seccion ?? null} />
           <button type="button" class="btn" style="justify-self:start" onClick={volver}><Icono n="atras" /> Volver a las guías</button>
         </div>
-      ) : <ListaGuias alAbrir={(g, seccion = null) => { setAbierta({ ...g, seccion }); if (seccion == null) window.scrollTo?.(0, 0); }} />}
+      ) : (
+        <div class="pila">
+          <ListaGuias alAbrir={(g, seccion = null) => { setAbierta({ ...g, seccion }); if (seccion == null) window.scrollTo?.(0, 0); }} />
+          {/* (YouTube) los vídeos de tu coach: lo último de su canal y sus vídeos por tema */}
+          <VideotecaAprende />
+        </div>
+      )}
     </div>
   );
 }

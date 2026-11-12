@@ -3209,7 +3209,7 @@ try {
   await p.locator('.toast', { hasText: 'Programado para el' }).waitFor();
   const nuevaP = p.locator('.burbuja.programada', { hasText: 'Mira este vídeo' });
   await nuevaP.waitFor();
-  check(await hay(nuevaP.locator('.vista-youtube img'), 1) && (await nuevaP.locator('.vista-youtube img').getAttribute('src')).startsWith('https://i.ytimg.com/vi/gMgvBspQ9lk/'), 'programa un mensaje con un enlace de YouTube: sale con su miniatura');
+  check(await hay(nuevaP.locator('.yt-fachada img'), 1) && (await nuevaP.locator('.yt-fachada img').getAttribute('src')).startsWith('https://i.ytimg.com/vi/gMgvBspQ9lk/'), 'programa un mensaje con un enlace de YouTube: sale con su miniatura');
   await revisar('chat-programado');
 
   // Revisar → Tareas
@@ -4025,7 +4025,7 @@ try {
   const bForm = p.locator('.burbuja.mia', { hasText: 'Hoy toca' }).last();
   check(await bForm.locator('strong', { hasText: 'pierna' }).count() === 1 && await bForm.locator('em', { hasText: 'movilidad' }).count() === 1 && await bForm.locator('s', { hasText: 'nada de carrera' }).count() === 1
     && await bForm.locator('code.chat-mono', { hasText: 'RIR 2' }).count() === 1 && !(await bForm.textContent()).includes('*pierna*')
-    && await hay(bForm.locator('.vista-youtube img'), 1) && await bForm.locator('a.enlace-texto').count() === 1, '*negrita*, _cursiva_, ~tachado~ y `mono` (con su enlace y la miniatura de YouTube)');
+    && await hay(bForm.locator('.yt-fachada img'), 1) && await bForm.locator('a.enlace-texto').count() === 1, '*negrita*, _cursiva_, ~tachado~ y `mono` (con su enlace y la miniatura de YouTube)');
   await revisar('chat-formato');
   // «/» respuestas rápidas
   await p.locator('.chat-area').fill('/');

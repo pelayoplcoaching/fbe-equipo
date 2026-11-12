@@ -1,5 +1,6 @@
 import { NOMBRE_GRUPO } from './calculos.js';
 import { conEntrenamiento, conNutricion } from './nivel.js';
+import { buscarVideos, textoSegundos } from './youtube.js';
 
 // Búsqueda rápida del coach: qué proponer para lo que escribe. Sin tildes ni mayúsculas, por principio
 // de palabra (todas las escritas tienen que empezar alguna palabra: «ana» encuentra a Ana López, no «semana»). Si una palabra nombra una pestaña de la ficha («ana seguimiento»),
@@ -63,6 +64,14 @@ export function construirResultados(datos, q) {
     poner('Ejercicios', ejercicios.filter((e) => e.activo !== false && casa(`${e.nombre} ${(e.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(' ')}`))
       .sort((x, y) => primero(x.nombre) - primero(y.nombre))
       .map((e) => ({ id: `e-${e.id}`, titulo: e.nombre, detalle: (e.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(', '), icono: 'biblioteca', destino: { tab: 'biblioteca', ejercicioId: e.id } })), 6);
+    // (YouTube) los vídeos: los de los ejercicios (y sus marcas de tiempo: «bajada» → «Sentadilla · 0:50 la bajada») y los de
+    // tus recursos
+    const vids = [
+      ...ejercicios.filter((e) => e.activo !== false && e.video_url).map((e) => ({ titulo: e.nombre, url: e.video_url, notas: [e.instrucciones, e.errores].filter(Boolean).join('\n'), destino: { tab: 'biblioteca', ejercicioId: e.id }, id: `ve-${e.id}` })),
+      ...(datos?.recursos || []).filter((r) => r.url).map((r) => ({ titulo: r.titulo, url: r.url, notas: r.descripcion || '', destino: { tab: 'biblioteca', vista: 'recursos' }, id: `vr-${r.id}` })),
+    ];
+    poner('Vídeos', buscarVideos(vids, q, 6).map(({ item, marca }) => ({ id: marca ? `${item.id}-${marca.seg}` : item.id, titulo: marca ? `${item.titulo} · ${textoSegundos(marca.seg)} ${marca.texto}` : `Vídeo: ${item.titulo}`,
+      detalle: marca ? 'Un momento del vídeo' : 'De YouTube', icono: 'video', destino: item.destino })), 6);
   }
   return out;
 }

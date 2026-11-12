@@ -608,6 +608,26 @@ export function semillaDemo(hoy = hoyISO()) {
   db.preferencias_notificaciones.push({ usuario_id: ana.perfil_id, desactivados: [], hora_manana: '08:30:00', hora_tarde: '21:00:00', dia_checkin: 7, silencio_desde: '22:30:00', silencio_hasta: '08:00:00', email: false, actualizado_en: ahoraISO });
   FAQ.forEach(([titulo, descripcion], i) => db.recursos.push({ id: uuid(), atleta_id: null, categoria: 'faq', titulo, descripcion, url: null, orden: i + 1, creado_en: ahoraISO }));
   db.recursos.push({ id: uuid(), atleta_id: null, categoria: 'entrenamiento', titulo: 'Calentamiento general (5 minutos)', descripcion: '2 min de bici o remo suave, 10 sentadillas sin peso, 10 puentes de glúteo, 10 rotaciones de hombro con banda y 5 zancadas por pierna.', url: null, orden: 1, creado_en: ahoraISO });
+  // (059) YouTube: el vídeo de la semana, una lista de vídeos por tema, un directo dentro de unas horas, el canal y lo que
+  // ha visto Ana (ids inventados: en la demo salen sin miniatura)
+  const yt = (id, extra = '') => `https://www.youtube.com/watch?v=${id}${extra}`;
+  db.recursos.push(
+    { id: uuid(), atleta_id: null, categoria: 'tecnica', titulo: 'La sentadilla, en 16 segundos', descripcion: '0:42 la colocación de los pies\n0:50 la bajada\n0:55 la subida', url: yt('FBEdemo0001', '&t=42s&end=58'), orden: 1, destacado: true, directo_en: null, creado_en: ahoraISO },
+    { id: uuid(), atleta_id: null, categoria: 'entrenamiento', titulo: 'Movilidad de cadera (10 min)', descripcion: 'Para antes de pierna.', url: yt('FBEdemo0004'), orden: 2, destacado: false, directo_en: null, creado_en: ahoraISO },
+    { id: uuid(), atleta_id: null, categoria: 'alimentacion', titulo: 'Proteína: cuánta y cuándo', descripcion: null, url: yt('FBEdemo0003'), orden: 1, destacado: false, directo_en: null, creado_en: ahoraISO },
+    { id: uuid(), atleta_id: null, categoria: 'general', titulo: 'Directo de dudas', descripcion: 'Trae tus preguntas sobre la descarga.', url: 'https://www.youtube.com/live/FBEdemo0005', orden: 9, destacado: false, directo_en: new Date(Date.now() + 3 * 3600000).toISOString(), creado_en: ahoraISO },
+  );
+  // el vídeo de técnica de la sentadilla (con su tramo) y «sigue este vídeo» en la próxima sesión de Ana
+  const sentadilla = db.ejercicios.find((e) => /^Sentadilla/.test(e.nombre) && !e.video_url);
+  if (sentadilla) sentadilla.video_url = yt('FBEdemo0001', '&t=42s&end=58');
+  const semanasDeAna = new Set(db.semanas.filter((w) => db.bloques.some((b) => b.id === w.bloque_id && b.atleta_id === ana.id)).map((w) => w.id));
+  const proxima = db.sesiones.filter((x) => semanasDeAna.has(x.semana_id) && !x.completada && x.tipo !== 'cardio').sort((x, y) => (x.semana_id === y.semana_id ? x.orden - y.orden : 0))[0];
+  if (proxima) Object.assign(proxima, { video_url: yt('FBEdemo0004'), video_titulo: 'Movilidad de cadera antes de empezar' });
+  (db.youtube_canal ||= []).push({ id: true, canal: '@canal-demo', titulo: null, activo: true, actualizado_en: ahoraISO });
+  (db.videos_vistos ||= []).push(
+    { atleta_id: ana.id, video: 'FBEdemo0001', titulo: 'La sentadilla, en 16 segundos', veces: 3, segundos: 61, completo: true, primera_vez: ahoraISO, ultima_vez: ahoraISO },
+    { atleta_id: ana.id, video: 'FBEdemo0004', titulo: 'Movilidad de cadera (10 min)', veces: 1, segundos: 140, completo: false, primera_vez: ahoraISO, ultima_vez: ahoraISO },
+  );
   // v0.26: recetas, Lucía (solo nutrición) y el menú de la semana (al final: no cambia lo aleatorio de lo anterior)
   sembrarComidas(db, { hoy, uuid, usuario, ahoraISO, ana });
   // (057) dos guías de ejemplo con sus fichas de ejercicio

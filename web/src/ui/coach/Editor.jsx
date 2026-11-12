@@ -13,6 +13,7 @@ import { revisarVariante, equivalentes } from '../../logica/variantes.js';
 import { MODALIDADES, limpiarCardio, textoCardio, palabrasEsfuerzo } from '../../logica/cardio.js';
 import { teclaEnRejilla } from '../rejilla.js';
 import { ProgramarFBE, semanasParaProgramar } from './ProgramarFBE.jsx';
+import { VideoDeSesionCoach } from '../YouTube.jsx';
 import { CampoMusica } from './PersonalCoach.jsx';
 import { PlanCarreraSemana, CamposCarreraPauta } from './CarreraCoach.jsx';
 import { zonasFC } from '../../logica/carrera.js';
@@ -586,6 +587,8 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
         onChange={(e) => guardar('sesiones', sesion.id, { dinamica: nulo(e.currentTarget.value.trim()) })} />
       {/* (v0.104) la música de esta sesión (una lista, un álbum o un episodio para el cardio largo) */}
       <CampoMusica clave={`sesion:${sesion.id}`} etiqueta="Música de la sesión" />
+      {/* (YouTube, 059) «sigue este vídeo»: un vídeo de YouTube para esta sesión (calentamiento, movilidad, un cardio) */}
+      <VideoDeSesionCoach sesion={sesion} guardar={guardar} />
       {(sesion.tipo === 'cardio' || sesion.cardio || conCardio) ? <PautaCardio sesion={sesion} guardar={guardar} conCarrera={conCarrera} zonas={zonasCarrera} />
         : <button class="btn-texto" style="justify-self:start" onClick={() => setConCardio(true)}><Icono n="intervalos" /> Añadir cardio al final</button>}
       {pautas.length > 0 && (

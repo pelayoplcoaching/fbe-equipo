@@ -2,6 +2,7 @@
 // Functions → Deploy a new function → Via Editor) sin instalar nada en el ordenador:
 //   supabase/enviar-notificaciones-panel.ts  (supabase/functions/enviar-notificaciones: index.ts, envio.js y webpush.js)
 //   supabase/integraciones-panel.ts          (v0.105, supabase/functions/integraciones: el calendario y Salud del iPhone)
+//   supabase/youtube-canal-panel.ts          (059, supabase/functions/youtube-canal: los últimos vídeos del canal del coach)
 // Es exactamente el mismo código empaquetado; las pruebas comprueban que están al día: npm run funcion-panel
 import { build } from 'esbuild';
 import { writeFileSync, readFileSync } from 'node:fs';
@@ -18,6 +19,12 @@ const CABECERAS = {
     '// Supabase → Edge Functions → Deploy a new function → Via Editor → nombre: integraciones → pega TODO este',
     '// archivo → Deploy. Después, en sus ajustes, desactiva «Verify JWT» (la llaman un calendario o un atajo, con el',
     '// enlace personal de cada atleta). No necesita secretos. El código fuente está en supabase/functions/integraciones.',
+  ],
+  'youtube-canal': [
+    '// FBE Equipo · función «youtube-canal» en un solo archivo (generado; no lo edites a mano).',
+    '// Supabase → Edge Functions → Deploy a new function → Via Editor → nombre: youtube-canal → pega TODO este',
+    '// archivo → Deploy. Deja «Verify JWT» PUESTO (la llaman la app del coach y la de sus atletas, con su sesión).',
+    '// No necesita secretos. El código fuente está en supabase/functions/youtube-canal.',
   ],
 };
 
