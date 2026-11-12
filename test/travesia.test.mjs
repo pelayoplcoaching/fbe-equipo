@@ -149,7 +149,12 @@ console.log('(tanda 1) Las ramas: agacharse');
   a.obstaculos = [{ x: 20, tipo: 'rama', ...OBSTACULOS.rama, pasado: false }]; a.estrellas = []; a.hasta = 1e9;
   while (a.x < 26) { if (a.x > 18.2 && a.agachado === 0 && a.x < 19) agachar(a); avanzar(a, 1 / 60); }
   check(a.tropiezos === 0 && a.saltados === 1, 'agachado, pasa por debajo');
-  const j = nuevaEtapa(3); saltar(j); check(!agachar(j) && j.agachado === 0, 'en el aire no se agacha; y al saltar se levanta');
+  const j = nuevaEtapa(3); saltar(j); for (let i = 0; i < 20; i++) avanzar(j, 1 / 60);
+  check(!agachar(j) && j.agachado === 0 && j.saltos === 1, 'en pleno salto no se agacha');
+  const k2 = nuevaEtapa(3); saltar(k2); avanzar(k2, 1 / 60);
+  check(agachar(k2) && k2.saltos === 0 && k2.y === 0 && k2.agachado > 0, 'si el dedo toca y baja enseguida, el salto recién empezado se deshace y se agacha');
+  agachar(k2); saltar(k2);
+  check(k2.agachado === 0 && k2.saltos === 1, 'y al saltar se levanta');
 }
 
 console.log('(tanda 1) El entreno empuja: ritmo de salida y escudos');
