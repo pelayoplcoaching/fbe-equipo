@@ -14,7 +14,7 @@ import { Huella } from '../Social.jsx';
 import { MapaConstancia } from './Progreso.jsx';
 import { TusEjercicios } from './Personal.jsx';
 import { num, NOMBRE_GRUPO } from '../../logica/calculos.js';
-import { fechaMadrid, fmtCorta, fmtConDia } from '../../logica/fechas.js';
+import { hoyISO, fmtCorta, fmtConDia } from '../../logica/fechas.js';
 import { cifrasPeriodo, semanasPerfil, textoHoras, hitosDe, mejoresRecords, comparacionPeriodo, textoDiferencia, anioDias, costumbres, textoFavoritos,
   DIAS_CORTOS, FRANJAS, mejoresConstancia, gruposRecientes, ejerciciosMasHechos, proximosHitos, actividadPorMes, esCardio, datosPerfilCompartir } from '../../logica/perfil.js';
 import { datosRecord } from '../../logica/compartir.js';
@@ -28,7 +28,7 @@ const toneladas = (kg) => num(Math.round((Number(kg) || 0) / 100) / 10, 1);
 const PESTANAS = [['resumen', 'Resumen'], ['estadisticas', 'Datos'], ['logros', 'Logros'], ['actividad', 'Actividad']];
 export function PerfilSecciones({ salud, irA }) {
   const { api, atleta } = useApp();
-  const hoy = fechaMadrid();
+  const hoy = hoyISO();  // (v0.143) el día del móvil, como la fecha de sus entrenos
   const entrenos = useCarga(() => api.entrenamientos(atleta.id).catch(() => []), [atleta.id]);
   const progreso = useCarga(() => api.progreso(atleta.id).catch(() => null), [atleta.id]);
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id]);

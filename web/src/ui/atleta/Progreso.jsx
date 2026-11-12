@@ -28,7 +28,7 @@ import { num, signo, GRUPOS, MEDIDAS, e1rm, rangoVolumen, estadoVolumen, tendenc
 import { historiaRecords } from '../../logica/diseno.js';
 import { HojaCompartir } from '../Compartir.jsx';
 import { datosRecord } from '../../logica/compartir.js';
-import { fmtCorta, hoyISO, diasEntre, fmtConDia, fechaMadrid, lunesDe, sumarDias } from '../../logica/fechas.js';
+import { fmtCorta, hoyISO, diasEntre, fmtConDia, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { CifraObjetivo, TusEjercicios } from './Personal.jsx';
 import { FilaTuAnio } from './TuAnio.jsx';
 import { enLibras, pesoNum, pesoTxt, etiquetaPeso, difVista, deVista, vista, nombrePeso } from '../../logica/unidades.js';
@@ -314,7 +314,7 @@ function TotalesCardio({ semanas }) {
 const DIAS_SEMANA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 export function MapaConstancia({ atletaId, esCoach = false }) {
   const { api } = useApp();
-  const hoy = fechaMadrid();
+  const hoy = hoyISO();  // (v0.143) el día del móvil, como la fecha de las sesiones hechas
   // Solo las sesiones de estas 16 semanas (no el historial entero)
   const datos = useCarga(() => api.sesionesHechas(atletaId, { desde: sumarDias(lunesDe(hoy), -7 * 15) }).catch(() => []), [atletaId]);
   const [elegido, setElegido] = useState(null);

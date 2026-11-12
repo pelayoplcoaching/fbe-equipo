@@ -55,6 +55,7 @@ import { OrdenarHoy } from './OrdenarHoy.jsx';
 import { leerPanel, seccionesHoy, alternarSeccion } from '../../logica/hoy-panel.js';
 import { deFuera } from '../../logica/tiempo.js';
 import { useTiempo, TiempoHoy, resumenParaHoy } from './Tiempo.jsx';
+import { AvisoViaje } from './Viaje.jsx';
 import { semanasObjetivo, semanaEnCurso } from '../../logica/semana-natural.js';
 import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 
@@ -552,6 +553,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         ocultos={P.dialesOcultos} entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))}
         natural={dias ? { semana: natural, dias, semanas: p.semanas || [], sesionesPorSemana: p.sesiones || {} } : null} />
 
+      {/* (v0.143) de viaje, en otra zona horaria: qué hora es en cada sitio y las notificaciones de noche */}
+      <AvisoViaje />
       {entre}
       {!propio && !P.ocultas.has('mes') && tarjetaMes}
       {/* (v0.104) en diciembre y enero, tu año en FBE */}

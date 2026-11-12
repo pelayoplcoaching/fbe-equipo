@@ -5926,6 +5926,9 @@ try {
   // (v0.142) el tiempo para salir (Open-Meteo de mentira)
   const { probarTiempo } = await import('./e2e-tiempo.mjs');
   await probarTiempo({ navegador, check });
+  // (v0.143) de viaje por zona horaria (el móvil en Ciudad de México y de vuelta)
+  const { probarViaje } = await import('./e2e-viaje.mjs');
+  await probarViaje({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ Hoy a tu gusto (v0.140):', e.message.split('\n').slice(0, 8).join('\n      '));

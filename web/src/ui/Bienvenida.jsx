@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { fechaMadrid } from '../logica/fechas.js';
+import { hoyISO } from '../logica/fechas.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { Icono, CifraSube, useApp, useCarga } from './comunes.jsx';
 import { esCumple, porqueParaHoy, momentoBienvenida, textoMensajeCoach, mensajeDe } from '../logica/personal.js';
 import { tocaBienvenida, mensajeBienvenida } from '../logica/bienvenida.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenBienvenida } from '../logica/imagenes.js';
-const horaMadrid = () => { try { return Number(new Intl.DateTimeFormat('es-ES', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Europe/Madrid' }).format(new Date())); } catch { return new Date().getHours(); } };
+// (v0.143) la hora y el día del móvil (de viaje, «buenos días» cuando allí es por la mañana)
+const horaDelMovil = () => new Date().getHours();
 
 // v0.68: la bienvenida personalizada, una vez al día (la primera vez que se abre la app ese día, en este móvil y con esta
 // cuenta). Sigue a la portada de arranque (el mismo fondo) y dice algo según cómo va: la primera vez, un récord reciente,
@@ -18,7 +19,7 @@ const guardar = (k, v) => { try { localStorage.setItem(k, v); } catch { /* sin a
 
 // El último récord (para la bienvenida de los dos días siguientes): solo en este móvil
 export function apuntarRecord(atletaId, ejercicio) {
-  if (atletaId && ejercicio) guardar(claveRecord(atletaId), JSON.stringify({ fecha: fechaMadrid(), ejercicio: String(ejercicio).slice(0, 80) }));
+  if (atletaId && ejercicio) guardar(claveRecord(atletaId), JSON.stringify({ fecha: hoyISO(), ejercicio: String(ejercicio).slice(0, 80) }));
 }
 const leerRecord = (atletaId) => { try { const x = JSON.parse(leer(claveRecord(atletaId)) || 'null'); return x && typeof x.ejercicio === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.fecha) ? x : null; } catch { return null; } };
 
@@ -28,8 +29,8 @@ export function useBienvenida(uid, { sesionEnCurso = false } = {}) {
   const [cerrada, setCerrada] = useState(false);
   // (en un navegador automático, las pruebas, solo si la prueba la pide: si no, taparía todas las demás)
   const automatico = typeof navigator !== 'undefined' && navigator.webdriver && !leer('fbe-probar-bienvenida');
-  if (uid && decidida.current === null) decidida.current = !automatico && tocaBienvenida({ vista: leer(claveVista(uid)), hoy: fechaMadrid(), sesionEnCurso });
-  const cerrar = () => { if (uid) guardar(claveVista(uid), fechaMadrid()); setCerrada(true); };
+  if (uid && decidida.current === null) decidida.current = !automatico && tocaBienvenida({ vista: leer(claveVista(uid)), hoy: hoyISO(), sesionEnCurso });
+  const cerrar = () => { if (uid) guardar(claveVista(uid), hoyISO()); setCerrada(true); };
   return [!!uid && decidida.current === true && !cerrada, cerrar];
 }
 
@@ -93,7 +94,7 @@ function Tablero({ panel }) {
     </div>
   );
 }
-const fechaCorta = () => { try { return new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Madrid' }).format(new Date()).replace(/[.,]/g, ''); } catch { return ''; } };
+const fechaCorta = () => { try { return new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date()).replace(/[.,]/g, ''); } catch { return ''; } };
 
 // datos: null mientras carga; luego lo de mensajeBienvenida (sin el nombre ni el rol, que van aparte)
 // panel: lo de panelBienvenida o panelCoach (o null: entonces, solo el saludo y el mensaje, como hasta la v0.87)
@@ -117,14 +118,14 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
   // (si tarda más de 4 s en cargar, «Empezar» igual: la bienvenida nunca te deja esperando)
   useEffect(() => { const t = setTimeout(() => setEsperaLarga(true), 4000); return () => clearTimeout(t); }, []);
   const listo = rol === 'coach' || !!datos || esperaLarga;
-  const m = mensajeBienvenida({ rol, nombre, hoy: fechaMadrid(), record: atletaId ? leerRecord(atletaId) : null, ...(datos || {}) });
+  const m = mensajeBienvenida({ rol, nombre, hoy: hoyISO(), record: atletaId ? leerRecord(atletaId) : null, ...(datos || {}) });
   // (v0.104) lo suyo: cómo quiere que le llamemos, su cumpleaños, su porqué (al volver tras unos días) y lo que su coach
   // dejó escrito para la vuelta o el cumpleaños. Sin nada de eso (o sin la 050), la de siempre.
   const { api } = useApp() || {};
   const conPersonal = rol === 'atleta' && !!atletaId && !!api;
   const extra = useCarga(() => (conPersonal ? Promise.all([api.personal().catch(() => null), api.mensajesCoach().catch(() => [])]) : Promise.resolve([null, []])), [atletaId, conPersonal]);
   const [personal, mensajesCoach] = extra.datos || [null, []];
-  const hoyM = fechaMadrid();
+  const hoyM = hoyISO();
   const cumple = esCumple(personal, hoyM);
   const nombreVisible = personal?.apodo || m.nombre;
   const saludo = cumple ? '¡Feliz cumpleaños,' : m.saludo;
@@ -155,8 +156,8 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
   return (
     <div class={`bdia${conPanel ? ' bdia-con-panel' : ''}`} role="dialog" aria-modal="true" aria-labelledby="bdia-titulo" aria-describedby="bdia-mensaje">
       {/* (imágenes) de fondo, muy tenue, la mañana, la tarde o la noche según la hora */}
-      <Imagen id={imagenBienvenida(horaMadrid())} clase="bdia-fondo" tamanos="100vw" />
-      {hayImagen(imagenBienvenida(horaMadrid())) && <LuzDelDia momento={imagenBienvenida(horaMadrid()).replace('bienvenida-', '')} />}
+      <Imagen id={imagenBienvenida(horaDelMovil())} clase="bdia-fondo" tamanos="100vw" />
+      {hayImagen(imagenBienvenida(horaDelMovil())) && <LuzDelDia momento={imagenBienvenida(horaDelMovil()).replace('bienvenida-', '')} />}
       <div class="bdia-cuerpo" ref={cuerpo} {...(desliza ? { tabIndex: 0, role: 'group', 'aria-label': 'Tu resumen de hoy' } : {})}>
         <div class="bdia-arriba">
           <span class="bdia-marca"><svg viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path fill-rule="evenodd" d={LOBO_D} /></svg>FBE Equipo</span>

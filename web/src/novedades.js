@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.143': {
+    atleta: [
+      'De viaje en otra zona horaria: Hoy te dice la hora de cada sitio y ajusta tus notificaciones para que no te lleguen de noche.',
+      'Tu día en la app va con la hora de tu móvil (antes, algunas cosas cambiaban de día con la hora de España).',
+    ],
+  },
   '0.142': {
     atleta: [
       'Si corres, andas o vas en bici fuera: el tiempo para salir en Hoy, con la mejor hora del día (eliges tu zona).',

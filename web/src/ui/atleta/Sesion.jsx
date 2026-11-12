@@ -42,7 +42,7 @@ import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuper
   descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA } from '../../logica/calculos.js';
 import { leerAjustes } from '../ajustes.js';
 import { leerDescansos, guardarDescanso } from '../descansos.js';
-import { fmtCorta, hoyISO, lunesDe, sumarDias, fechaMadrid } from '../../logica/fechas.js';
+import { fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { pesoAnterior } from '../../logica/nivel.js';
 import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, textoSaludCardio, cardioHechoPublico, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
 import { DetalleCarreraSesion, pautaDeCarrera, leerSemaforo, olvidarSemaforo } from './Carrera.jsx';
@@ -223,8 +223,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [prep, setPrep] = useState(undefined);
   // v0.51: «Ahora no» vale para ese día (se guarda la fecha de Madrid; lo de antes, «true», ya no cuenta)
   const [prepSaltadaDia, setPrepSaltadaDia] = usePreferencia(`fbe-prep-saltada-${id}`, false);
-  const prepSaltada = prepSaltadaDia === fechaMadrid();
-  const setPrepSaltada = (v) => setPrepSaltadaDia(v ? fechaMadrid() : false);
+  const prepSaltada = prepSaltadaDia === hoyISO();  // (v0.143) el día del móvil, como la sesión
+  const setPrepSaltada = (v) => setPrepSaltadaDia(v ? hoyISO() : false);
   // v0.51: lo guardado de otro día (sin series): no cuenta como de hoy; se vuelve a preguntar y, si no contesta, se
   // borra al saltar la pregunta o al marcar la primera serie (el coach no lo verá como de esta sesión)
   const [prepAntigua, setPrepAntigua] = useState(false);

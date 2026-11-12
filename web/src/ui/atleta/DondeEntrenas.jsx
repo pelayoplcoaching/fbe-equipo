@@ -3,6 +3,7 @@ import { Hoja, Icono, Segmentos, usePreferencia } from '../comunes.jsx';
 import { LUGARES_ENTRENO, MATERIAL_PERFIL, PERFILES_DEFECTO, textoAdaptacion } from '../../logica/material.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenLugar } from '../../logica/imagenes.js';
+import { useDeViaje } from './Viaje.jsx';
 
 // (ilustraciones vivas) La franja del sitio elegido. Al cambiar de sitio, la imagen nueva se funde encima de la anterior
 // cuando ha cargado (no se precarga nada: se pide al elegirla, como siempre); la anterior se quita al acabar el fundido.
@@ -37,6 +38,7 @@ export function DondeEntrenas({ atletaId, lugar, cambios = {}, sinAlternativa = 
   const [perfiles, setPerfiles] = usePreferencia(`fbe-material-${atletaId}`, PERFILES_DEFECTO);
   const [editar, setEditar] = useState(null);
   const nombre = Object.fromEntries(LUGARES_ENTRENO);
+  const viaje = useDeViaje();
   return (
     <section class="panel panel-pad donde-entrenas pila-s" aria-labelledby="donde-entrenas">
       {/* (imágenes) arriba, el sitio elegido: la sala de racks, el salón con las mancuernas o el gimnasio del hotel */}
@@ -46,6 +48,10 @@ export function DondeEntrenas({ atletaId, lugar, cambios = {}, sinAlternativa = 
         {lugar !== 'gimnasio' && <button class="btn-texto" onClick={() => setEditar(lugar)}><Icono n="ajustes" /> Tu material</button>}
       </div>
       <Segmentos opciones={LUGARES_ENTRENO} valor={lugar} etiqueta="Dónde entrenas hoy" alCambiar={(v) => alElegir(v || 'gimnasio', perfiles)} />
+      {/* (v0.143) de viaje (en otra zona horaria), a un toque el material de viaje */}
+      {lugar === 'gimnasio' && viaje.deViaje && (
+        <button type="button" class="btn-texto viaje-material" onClick={() => alElegir('viaje', perfiles)}><Icono n="ubicacion" /> Estás de viaje: entrenar con tu material de viaje</button>
+      )}
       {lugar === 'gimnasio'
         ? <span class="mini terciario">Fuera del gimnasio, la app cambia lo que no puedas hacer con tu material por las alternativas que ha marcado tu coach.</span>
         : <span class="mini terciario">{textoAdaptacion({ cambios, sinAlternativa }, lugar)}. Solo por las alternativas de tu coach; él verá el cambio en tu registro.</span>}
