@@ -13,6 +13,7 @@ export const NOVEDADES = {
     ],
     coach: [
       'YouTube en la app: tu canal en «Aprende», vídeo de la semana, directos, vídeo por sesión y quién ha visto qué (059).',
+      'En tu modo atleta, Progreso → Fuerza → Apple Watch: crea tu clave y prueba «FBE Reloj» antes de compartirlo.',
     ],
   },
   '0.144': {

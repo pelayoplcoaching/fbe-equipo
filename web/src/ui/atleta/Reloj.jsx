@@ -10,12 +10,13 @@ import { unidadPeso } from '../../logica/unidades.js';
 
 export function GrupoReloj() {
   const { api, atleta, propio } = useApp();
-  const datos = useCarga(() => (propio || !atleta?.id ? Promise.resolve(null) : api.reloj().catch(() => null)), [atleta?.id]);
+  // (también en el modo atleta del coach: su propia ficha, para probar el atajo antes de compartirlo)
+  const datos = useCarga(() => (!atleta?.id ? Promise.resolve(null) : api.reloj().catch(() => null)), [atleta?.id]);
   const [abrir, setAbrir] = useState(false);
   const r = datos.datos;
   if (!r || !conEntrenamiento(atleta)) return null;
   return (
-    <GrupoIos titulo="Apple Watch" id="grupo-reloj" pie="Desde la muñeca: la serie que toca, marcarla y el descanso, sin sacar el móvil.">
+    <GrupoIos titulo="Apple Watch" id="grupo-reloj" pie={propio ? 'Tu ficha de atleta: crea aquí tu clave para probar el atajo «FBE Reloj» (también en el iPhone, sin reloj) antes de compartirlo.' : 'Desde la muñeca: la serie que toca, marcarla y el descanso, sin sacar el móvil.'}>
       <FilaIos icono="reloj" tono={r.activo ? 'ok' : ''} titulo="Entrenar desde el reloj"
         detalle={r.activo ? (r.ultimo ? `Conectado · usado ${haceDias(r.ultimo)}` : 'Conectado · aún sin usar') : 'Con la app Atajos del iPhone y del reloj'}
         alTocar={() => setAbrir(true)} etiqueta="Entrenar desde el Apple Watch: conectar o ver" />
