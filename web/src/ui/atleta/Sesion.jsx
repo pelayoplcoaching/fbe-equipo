@@ -491,9 +491,12 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       cancelarPlegado(e.id);
       plegar.current[e.id] = setTimeout(() => { delete plegar.current[e.id]; plegarTarjeta(e); }, 700);
     }
+    // (juego) el entreno empuja al lobo en el descanso que viene: tras un récord sale con ritmo; con la serie cumplida
+    // como estaba pautada (las repeticiones mínimas), lleva un escudo
+    const empuje = { ritmo: false, escudo: Number(valores.reps) >= Number(e.reps_min ?? e.reps_max ?? 1) && Number(valores.reps) > 0 };
     if (!previa && previas.datos) {
       const r = recordsDeSesion(enOrden({ ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } }), previas.datos, claveSerie)[`${e.id}-${numero}`];
-      if (r) { celebrar(); avisoConCambio(`¡Récord en ${actualDe(e).nombre}!`, 'record'); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
+      if (r) { empuje.ritmo = true; celebrar(); avisoConCambio(`¡Récord en ${actualDe(e).nombre}!`, 'record'); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
     }
     if (!previa) {
       // Qué toca ahora: en una superserie se pasa al siguiente ejercicio de la ronda sin descanso
@@ -512,7 +515,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       const hechasTras = { ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } };
       const { sig, texto, voz, aviso: avisoMovil } = textosSiguiente(lista, hechasTras, rP.siguiente, e.id);
       // v0.50: el temporizador sale en la página, debajo de este ejercicio (o de su superserie)
-      if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, aviso: avisoMovil, tras: e.id, inicio: Date.now() });
+      if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, aviso: avisoMovil, tras: e.id, inicio: Date.now(), empuje });
       else if (r.enRonda) { cambiarDescanso(null); avisoConCambio(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); }
       else hablar(voz);
       if (sig && sig.id !== e.id) {

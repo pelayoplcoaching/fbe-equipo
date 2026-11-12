@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { useApp } from '../comunes.jsx';
 import { perezoso } from '../perezoso.jsx';
 import { leerTravesia, sincronizarTravesia } from '../travesia.js';
-import { textoDistancia, metrosDeLaSemana } from '../../logica/travesia.js';
+import { textoDistancia, metrosDeLaSemana, retoDelDia, progresoReto, hoyDe } from '../../logica/travesia.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 
 // «La travesía», el juego del descanso: su trozo (el juego y cómo se pinta) solo se pide al abrirlo
@@ -24,6 +24,8 @@ export function TarjetaTravesia({ compacta = false }) {
   }, [atleta?.id]);
   if (!atleta?.id || !t) return null;
   const cerrar = () => { setAbierta(false); setT(leerTravesia(atleta.id)); };
+  // (tanda 1) el reto del día, con lo jugado hoy en los descansos
+  const reto = retoDelDia(hoyISO()), pr = progresoReto(reto, hoyDe(t, hoyISO()));
   return (
     <section class={`travesia-tarjeta${compacta ? ' compacta' : ''}`} aria-label="La travesía, el juego de tus descansos">
       <span class="travesia-tarjeta-luna" aria-hidden="true" />
@@ -31,6 +33,7 @@ export function TarjetaTravesia({ compacta = false }) {
         <strong>La travesía</strong>
         <span>{t.total > 0 ? <>Tu lobo lleva <b class="num">{textoDistancia(t.total)}</b>{t.estrellas > 0 ? <> y <b class="num">{t.estrellas}</b> {t.estrellas === 1 ? 'estrella' : 'estrellas'}</> : null}</>
           : 'El juego de tus descansos: avanza solo cuando entrenas'}</span>
+        {!compacta && <span class={`travesia-tarjeta-reto${pr.hecho ? ' hecho' : ''}`}>{pr.hecho ? 'Reto de hoy, cumplido' : `Reto de hoy: ${reto.texto.toLowerCase()}`}{!pr.hecho && pr.valor > 0 ? ` (${pr.valor}/${pr.meta})` : ''}{t.retos > 0 ? ` · ${t.retos} ${t.retos === 1 ? 'cumplido' : 'cumplidos'}` : ''}</span>}
         {!compacta && (t.mejor > 0 || t.practica > 0 || semana > 0) && (
           <span class="travesia-tarjeta-marcas">
             {semana > 0 && <span>Esta semana: <b class="num">{textoDistancia(semana)}</b></span>}

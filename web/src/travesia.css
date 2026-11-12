@@ -63,3 +63,18 @@
 .travesia-tarjeta-boton { background: var(--tv-tiza); color: var(--tv-noche-2); border-color: transparent; font-weight: 700; }
 .travesia-tarjeta-boton:focus-visible { outline: 2px solid var(--tv-tiza); outline-offset: 2px; }
 .resumen-travesia svg { background: var(--tv-noche-2); color: var(--tv-tiza); }
+
+/* (tanda 1) los modos del juego (calma y sonido), el escudo y el reto del día */
+.travesia-modos { position: absolute; left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(74px + env(safe-area-inset-top, 0px)); display: flex; align-items: center; gap: 8px; }
+.travesia-modo { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; min-width: 40px; justify-content: center; padding: 0 12px; border: 0; border-radius: 999px; color: inherit; font-size: .8125rem; font-weight: 650;
+  background: rgb(241 240 246 / .12); }
+.travesia-modo svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.travesia-modo[aria-pressed="true"] { background: #F1F0F6; color: #1E1548; }
+.travesia-modo:focus-visible { outline: 2px solid #F1F0F6; outline-offset: 2px; }
+.travesia-escudo { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border-radius: 999px; font-weight: 800; font-size: .875rem; color: #1E1548; background: #F2C230; }
+.travesia-escudo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+.travesia-reto { position: absolute; left: 16px; right: 16px; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); margin: 0; text-align: center; font-size: .875rem; font-weight: 650; pointer-events: none; }
+.travesia-reto.hecho { color: #F2C230; }
+.travesia-pista.calma { top: 30%; }
+.travesia-tarjeta-reto { font-size: .8125rem; color: rgb(241 240 246 / .82); }
+.travesia-tarjeta-reto.hecho { color: #F2C230; font-weight: 700; }

@@ -25,13 +25,15 @@ export async function probarTravesia({ navegador, check, base = 'http://localhos
   const guardado = () => p.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('fbe-travesia-')); return k ? JSON.parse(localStorage.getItem(k)) : null; });
   const ajuste = () => p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes') || '{}').juegoDescanso === true);
   const metros = async () => parseInt((await p.locator('.travesia-dato b').first().textContent()).replace(/\D/g, ''), 10);
-  // (el lienzo tiene dibujo: el cielo arriba es oscuro y la luna, clara)
+  // (el lienzo tiene dibujo: el cielo, pintado, y la línea clara del suelo a dos tercios; el cielo y la luna cambian con la
+  // hora y la fase de verdad, así que no se mira su color)
   const pintado = () => p.evaluate(() => {
     const c = document.querySelector('.travesia-lienzo'); const x = c.getContext('2d');
-    const cielo = x.getImageData(4, 4, 1, 1).data; let claro = 0;
-    const d = x.getImageData(0, 0, c.width, Math.round(c.height * 0.5)).data;
-    for (let i = 0; i < d.length; i += 4 * 97) if (d[i] > 225 && d[i + 1] > 225) claro++;
-    return { ancho: c.width, cielo: [...cielo].slice(0, 3), claro };
+    const cielo = x.getImageData(4, 4, 1, 1).data;
+    const fila = Math.round(c.height * 0.66) + 1;
+    const d = x.getImageData(0, fila - 3, c.width, 6).data; let claro = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 2] > 200 && d[i] > 120) claro++;
+    return { ancho: c.width, cielo: [...cielo], claro };
   });
 
   try {
@@ -52,7 +54,7 @@ export async function probarTravesia({ navegador, check, base = 'http://localhos
     await p.waitForTimeout(700);
     check(trozos.length === 1, 'al abrirlo, se pide su trozo (una vez)');
     const pin = await pintado();
-    check(pin.ancho >= 390 && pin.cielo[0] < 40 && pin.cielo[2] < 90 && pin.claro > 5, `a pantalla completa: de noche y con su luna (lienzo de ${pin.ancho} px)`);
+    check(pin.ancho >= 390 && pin.cielo[3] === 255 && pin.claro > 200, `a pantalla completa: el cielo y la línea del suelo, pintados (lienzo de ${pin.ancho} px)`);
     check(await juego.getAttribute('role') === 'dialog' && await juego.evaluate((e) => e === document.activeElement) && /^(1:00|0:5\d)$/.test(await p.locator('.travesia-cuenta b').textContent()) && /práctica/i.test(await p.locator('.travesia-cuenta').textContent()),
       'la práctica dura un minuto y el foco entra en el juego');
     check(await p.locator('.travesia-pista').count() === 1, 'la primera vez, la pista: «Toca para saltar»');
@@ -64,6 +66,20 @@ export async function probarTravesia({ navegador, check, base = 'http://localhos
     const m1 = await metros();
     check(m1 > m0 + 4, `el lobo corre solo (de ${m0} a ${m1} m)`);
     await p.keyboard.press(' ');
+    // (tanda 1) el sonido y el modo calma, que se recuerdan en el móvil
+    const modos = juego.locator('.travesia-modo');
+    check(await modos.count() === 2 && await modos.nth(0).getAttribute('aria-pressed') === 'false' && await modos.nth(1).getAttribute('aria-pressed') === 'false', 'en el juego: «Calma» y el sonido, apagados de entrada');
+    await modos.nth(1).click();
+    await modos.nth(0).click();
+    await p.waitForTimeout(1300);
+    const mc0 = await metros();
+    await p.keyboard.press('ArrowDown');
+    await p.touchscreen.tap(200, 520);
+    await p.waitForTimeout(1500);
+    const mc1 = await metros();
+    const ajustesJ = await p.evaluate(() => { const a = JSON.parse(localStorage.getItem('fbe-ajustes') || '{}'); return [a.calmaJuego, a.sonidoJuego]; });
+    check(await juego.evaluate((e) => e.classList.contains('en-calma')) && mc1 - mc0 >= 2 && mc1 - mc0 <= 5 && ajustesJ[0] === true && ajustesJ[1] === true, `en calma, el lobo va al paso (${mc1 - mc0} m en segundo y medio) y la etapa vuelve a empezar; se recuerda`);
+    await modos.nth(0).click(); await modos.nth(1).click();
     await p.keyboard.press('Escape');
     await juego.waitFor({ state: 'detached' });
     check(!((await guardado())?.total > 0), 'cerrada a medias, la práctica no apunta nada');
@@ -100,6 +116,7 @@ export async function probarTravesia({ navegador, check, base = 'http://localhos
     const seg = (t) => { const [a, b] = t.split(':').map(Number); return a * 60 + b; };
     check(Math.abs(seg(cuentaJ) - seg(cuentaR)) <= 1 && /descanso/i.test(await p.locator('.travesia-cuenta').textContent()), `el juego lleva la cuenta del descanso (${cuentaJ}, como el reloj)`);
     check(/^Después: /.test(await p.locator('.travesia-despues').textContent()) && await ajuste(), 'abajo, lo que toca después; y queda apuntado que juega en los descansos');
+    check(/^Reto de hoy/.test(await p.locator('.travesia-reto').textContent()), `y el reto del día («${(await p.locator('.travesia-reto').textContent()).slice(0, 60)}»)`);
     await juego.getByRole('button', { name: 'Cerrar el juego' }).click();
     await juego.waitFor({ state: 'detached' });
     check(!(await ajuste()) && await reloj.count() === 1 && !((await guardado())?.total > 0), 'cerrado a mano nada más abrirlo: vuelve al reloj, no apunta nada (menos de 20 m) y ya no se abre solo');
@@ -143,6 +160,7 @@ export async function probarTravesia({ navegador, check, base = 'http://localhos
     await enSemana.waitFor({ timeout: 8000 });
     await enSemana.scrollIntoViewIfNeeded();
     const ts = (await enSemana.textContent()).replace(/\s+/g, ' ');
+    check(/Reto de hoy/.test(ts), 'en Semana, también el reto del día');
     check(/Tu lobo lleva \d+ m/.test(ts) && /Mejor etapa: \d+ m/.test(ts), `en Semana, lo que lleva su lobo y su mejor etapa («${ts.trim().slice(0, 70)}»)`);
     const desborda = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     check(!desborda, 'la tarjeta cabe a 390 px');
