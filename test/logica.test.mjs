@@ -2771,7 +2771,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   // (v0.56) El aviso de privacidad, una vez por versión
   const PV = await import('../web/src/logica/privacidad.js');
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
-  check(VERSION_LEGAL === '2026-12.21' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
+  check(VERSION_LEGAL === '2026-12.22' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
   check(PV.versionMayor('2026-10', '2026-11') === '2026-11' && PV.versionMayor(null, '2026-10') === '2026-10' && PV.versionMayor('x', null) === null && PV.formatoVersion('2026-01') && !PV.formatoVersion('2026-13') && !PV.formatoVersion('26-1'),
     'la versión más nueva de las dos (la base y este móvil); solo con su formato');
@@ -4283,7 +4283,7 @@ console.log('\nv0.70: compañeros de racha, retos por equipos, de cardio y de se
   const PV = await import('../web/src/logica/privacidad.js');
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
-  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.9') > 0 && PV.NOVEDADES_PRIVACIDAD[12][3] === '2026-12.9' && PV.novedadesDesde('2026-12.8', '2026-12.9').length === 1 && PV.formatoVersion('2026-12.9')
+  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.9') > 0 && PV.NOVEDADES_PRIVACIDAD[13][3] === '2026-12.9' && PV.novedadesDesde('2026-12.8', '2026-12.9').length === 1 && PV.formatoVersion('2026-12.9')
     && /compañeros de racha/.test(com) && /No salir en el ranking/.test(com) && /retos por equipos/.test(com) && /Contar mis minutos de cardio en los retos/.test(com) && /apagado de entrada/.test(com) && /insignias/i.test(com),
     'la política 2026-12.9: compañeros de racha y su racha, retos por equipos, minutos de cardio (si lo enciendes) e insignias');
   const v = NOVEDADES['0.70'];
@@ -4325,7 +4325,7 @@ console.log('\nv0.71: la comunidad, tercera tanda (temas, preguntas, varias foto
     && PV.versionMayor('2026-12.9', '2026-12.10') === '2026-12.10' && PV.versionSinRevision('2026-12.10') === '2026-12' && PV.debeAvisarPrivacidad('2026-12.9', '2026-12.10'),
     '(v0.71) revisiones de una o dos cifras (2026-12.10 sí; .100, .0 y .01 no), comparadas como números: 2026-12.9 < 2026-12.10 < 2027-01');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
-  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.10') > 0 && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && legal.VERSION_LEGAL_SIN_043 === '2026-12.9' && PV.NOVEDADES_PRIVACIDAD[11][3] === '2026-12.10' && PV.novedadesDesde('2026-12.9', '2026-12.10').length === 1
+  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.10') > 0 && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && legal.VERSION_LEGAL_SIN_043 === '2026-12.9' && PV.NOVEDADES_PRIVACIDAD[12][3] === '2026-12.10' && PV.novedadesDesde('2026-12.9', '2026-12.10').length === 1
     && PV.novedadesDesde('2026-12.9', '2026-12.9').length === 0 && /tema/.test(com) && /hasta 4 fotos/.test(com) && /Pregunta para el coach/.test(com) && /sin tu nombre/.test(com)
     && /solo lo ves tú/.test(com) && /búsqueda/.test(com) && /Mejor respuesta/.test(com),
     'la política 2026-12.10 cuenta los temas, las preguntas y su copia sin nombre, las fotos, lo guardado (solo para ti), la búsqueda y la mejor respuesta; su novedad sale una vez');
@@ -4375,7 +4375,7 @@ console.log('\nv0.72: la comunidad, cuarta tanda (eventos, programados, atleta d
   const PV = await import('../web/src/logica/privacidad.js');
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
-  check(legal.VERSION_LEGAL_SIN_045 === '2026-12.11' && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && PV.NOVEDADES_PRIVACIDAD[10][3] === '2026-12.11' && PV.novedadesDesde('2026-12.10', '2026-12.11').length === 1
+  check(legal.VERSION_LEGAL_SIN_045 === '2026-12.11' && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && PV.NOVEDADES_PRIVACIDAD[11][3] === '2026-12.11' && PV.novedadesDesde('2026-12.10', '2026-12.11').length === 1
     && PV.novedadesDesde('2026-12.10', '2026-12.10').length === 0 && /eventos y quedadas/.test(com) && /recordatorio/.test(com) && /programar/.test(com) && /panel con recuentos/.test(com) && /atleta de la semana/.test(com)
     && /24 horas o 7 días/.test(com) && /pendiente de revisión/.test(com) && /modo lento/.test(com) && /tus respuestas a los eventos/.test(com),
     'la política 2026-12.11 cuenta los eventos (quién va y el recordatorio), lo programado, el panel, el atleta de la semana y la moderación; su novedad sale una vez');
@@ -4449,36 +4449,36 @@ console.log('\nv0.73: la comunidad, quinta tanda (aniversarios, el mes en el equ
   const PV = await import('../web/src/logica/privacidad.js');
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
-  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.12') > 0 && legal.VERSION_LEGAL_SIN_045 === '2026-12.11' && PV.NOVEDADES_PRIVACIDAD[9][3] === '2026-12.12' && PV.novedadesDesde('2026-12.11', '2026-12.12').length === 1
+  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.12') > 0 && legal.VERSION_LEGAL_SIN_045 === '2026-12.11' && PV.NOVEDADES_PRIVACIDAD[10][3] === '2026-12.12' && PV.novedadesDesde('2026-12.11', '2026-12.12').length === 1
     && PV.novedadesDesde('2026-12.12', '2026-12.12').length === 0 && /desde tu alta en FBE/.test(com) && /el día antes/.test(com) && /en el equipo» enseña los recuentos/.test(com)
     && /solo a ti/.test(com) && /hitos del equipo/.test(com) && /❤️, 😂 y 🏆/.test(com) && /pegatina/.test(com) && /durante 24 horas/.test(com) && /lo borra con su foto/.test(com) && /tus momentos/.test(com),
     'la política 2026-12.12 cuenta los aniversarios (y el aviso al coach), el mes en el equipo (lo tuyo, solo para ti), los hitos, las reacciones y pegatinas y los momentos (24 horas y su borrado); su novedad sale una vez');
   {
     // (v0.95) la 2026-12.13: cómo va la app (los fallos y los tiempos de cada móvil, de la 049)
     const va = legal.PRIVACIDAD.find((x) => x[0] === 'Cómo va la app')?.[1] || '';
-    check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.13') > 0 && legal.VERSION_LEGAL_SIN_050 === '2026-12.13' && legal.VERSION_LEGAL_SIN_045 === '2026-12.11' && PV.NOVEDADES_PRIVACIDAD[8][3] === '2026-12.13' && PV.NOVEDADES_PRIVACIDAD[8][0] === 'reloj'
+    check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.13') > 0 && legal.VERSION_LEGAL_SIN_050 === '2026-12.13' && legal.VERSION_LEGAL_SIN_045 === '2026-12.11' && PV.NOVEDADES_PRIVACIDAD[9][3] === '2026-12.13' && PV.NOVEDADES_PRIVACIDAD[9][0] === 'reloj'
       && PV.novedadesDesde('2026-12.12', '2026-12.13').length === 1 && PV.novedadesDesde('2026-12.13', '2026-12.13').length === 0
       && /el mensaje técnico/.test(va) && /nunca lo que estabas escribiendo/.test(va) && /sin tu nombre/.test(va) && /60 días/.test(va) && /al darte de baja/.test(va)
-      && PV.NOVEDADES_PRIVACIDAD[8][2].length <= 260,
+      && PV.NOVEDADES_PRIVACIDAD[9][2].length <= 260,
       'la política 2026-12.13 cuenta cómo va la app (el registro de fallos y los tiempos de cada móvil, sin nombres, 60 días); su novedad sale una vez');
     // (v0.104) la 2026-12.14: lo que eliges para tu app (la 050)
     const tuyo = legal.PRIVACIDAD.find((x) => x[0] === 'Lo que eliges para tu app')?.[1] || '';
-    check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.14') > 0 && legal.VERSION_LEGAL_SIN_MUSICA === '2026-12.14' && PV.NOVEDADES_PRIVACIDAD[7][3] === '2026-12.14' && PV.novedadesDesde('2026-12.13', '2026-12.14').length === 1
+    check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.14') > 0 && legal.VERSION_LEGAL_SIN_MUSICA === '2026-12.14' && PV.NOVEDADES_PRIVACIDAD[8][3] === '2026-12.14' && PV.novedadesDesde('2026-12.13', '2026-12.14').length === 1
       && /apodo|cómo quieres que te llamemos/.test(tuyo) && /porqué/.test(tuyo) && /cumpleaños \(día y mes, sin el año\)/.test(tuyo) && /solo tú y tu coach/.test(tuyo) && /el equipo no ve/.test(tuyo)
-      && /Descargar mis datos/.test(tuyo) && /se borra con tu ficha/.test(tuyo) && PV.NOVEDADES_PRIVACIDAD[7][2].length <= 260,
+      && /Descargar mis datos/.test(tuyo) && /se borra con tu ficha/.test(tuyo) && PV.NOVEDADES_PRIVACIDAD[8][2].length <= 260,
       'la política 2026-12.14 cuenta lo que eliges para tu app (opcional, solo tú y tu coach, en la descarga y borrado con la ficha); su novedad sale una vez');
     // (v0.107) la 2026-12.15: tu música (la 050 ampliada)
     const mus = legal.PRIVACIDAD.find((x) => x[0] === 'Tu música')?.[1] || '';
-    check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.15') > 0 && legal.VERSION_LEGAL_SIN_051 === '2026-12.15' && PV.NOVEDADES_PRIVACIDAD[6][3] === '2026-12.15' && PV.novedadesDesde('2026-12.14', '2026-12.15').length === 1
+    check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.15') > 0 && legal.VERSION_LEGAL_SIN_051 === '2026-12.15' && PV.NOVEDADES_PRIVACIDAD[7][3] === '2026-12.15' && PV.novedadesDesde('2026-12.14', '2026-12.15').length === 1
       && /canción de récord/.test(mus) && /cuántas veces abres tu música/.test(mus) && /Spotify/.test(mus) && /solo se carga cuando lo tocas/.test(mus) && /no inicia sesión en Spotify/.test(mus)
-      && /solo tú y tu coach/.test(mus) && PV.NOVEDADES_PRIVACIDAD[6][2].length <= 260,
+      && /solo tú y tu coach/.test(mus) && PV.NOVEDADES_PRIVACIDAD[7][2].length <= 260,
       'la política 2026-12.15 cuenta tu música (canción de récord, cuenta de aperturas, lo que se pide a Spotify y su reproductor al tocarlo); su novedad sale una vez');
     // (v0.110) la 2026-12.16: Salud del iPhone, calendario y WhatsApp (la 051)
     const integ = legal.PRIVACIDAD.find((x) => x[0] === 'Salud del iPhone, calendario y WhatsApp')?.[1] || '';
-    check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.16') > 0 && legal.VERSION_LEGAL_SIN_053 === '2026-12.16' && PV.NOVEDADES_PRIVACIDAD[5][3] === '2026-12.16' && PV.novedadesDesde('2026-12.15', '2026-12.16').length === 1
+    check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.16') > 0 && legal.VERSION_LEGAL_SIN_053 === '2026-12.16' && PV.NOVEDADES_PRIVACIDAD[6][3] === '2026-12.16' && PV.novedadesDesde('2026-12.15', '2026-12.16').length === 1
       && /pasos, sueño, frecuencia cardiaca en reposo y variabilidad cardiaca \(HRV\); el peso no, lo apuntas tú/.test(integ) && /consentimiento de datos de salud/.test(integ) && /solo tú y tu coach/.test(integ)
       && /huella de tu clave/.test(integ) && /retiras tu consentimiento/.test(integ) && /a diferencia de tus check-ins y pesos/.test(integ) && /Descargar mis datos/.test(integ)
-      && /Nunca sale ningún dato de salud/.test(integ) && /solo si lo marcas/.test(integ) && /WhatsApp \(Meta\)/.test(integ) && /Supabase/.test(integ) && PV.NOVEDADES_PRIVACIDAD[5][2].length <= 260,
+      && /Nunca sale ningún dato de salud/.test(integ) && /solo si lo marcas/.test(integ) && /WhatsApp \(Meta\)/.test(integ) && /Supabase/.test(integ) && PV.NOVEDADES_PRIVACIDAD[6][2].length <= 260,
       'la política 2026-12.16 cuenta Salud del iPhone (qué llega, quién lo ve, el borrado al retirar el consentimiento), el calendario y WhatsApp; su novedad sale una vez');
   }
   const v = NOVEDADES['0.73'];
@@ -4614,7 +4614,7 @@ console.log('La política 2026-12.17: lo social del equipo (v0.117)');
   const legal = await import('../web/src/legal.js');
   const PV = await import('../web/src/logica/privacidad.js');
   const sec = legal.PRIVACIDAD.find((x) => x[0] === 'Lo social del equipo')?.[1] || '';
-  check(legal.VERSION_LEGAL_SIN_054 === '2026-12.17' && legal.VERSION_LEGAL_SIN_053 === '2026-12.16' && PV.NOVEDADES_PRIVACIDAD[4][3] === '2026-12.17' && PV.NOVEDADES_PRIVACIDAD[4][2].length <= 260
+  check(legal.VERSION_LEGAL_SIN_054 === '2026-12.17' && legal.VERSION_LEGAL_SIN_053 === '2026-12.16' && PV.NOVEDADES_PRIVACIDAD[5][3] === '2026-12.17' && PV.NOVEDADES_PRIVACIDAD[5][2].length <= 260
     && PV.novedadesDesde('2026-12.16', '2026-12.17').length === 1 && /nunca el año/.test(sec) && /5 días o más/.test(sec) && /hasta 80/.test(sec) && /Descargar mis datos/.test(sec),
     'la política 2026-12.17 cuenta lo social del equipo (cumpleaños sin el año, el empujón, las palabras de un ánimo, los duelos, el voto); su novedad sale una vez');
 }
@@ -4646,23 +4646,28 @@ console.log('La política 2026-12.18: el cierre de tus sesiones (v0.119)');
   const PV = await import('../web/src/logica/privacidad.js');
   const sec = legal.PRIVACIDAD.find((x) => x[0] === 'El cierre de tus sesiones')?.[1] || '';
   const movil = legal.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')?.[1] || '';
-  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.18') > 0 && legal.VERSION_LEGAL_SIN_055 === '2026-12.18' && legal.VERSION_LEGAL_SIN_054 === '2026-12.17' && PV.NOVEDADES_PRIVACIDAD[3][3] === '2026-12.18' && PV.NOVEDADES_PRIVACIDAD[3][2].length <= 260
+  check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.18') > 0 && legal.VERSION_LEGAL_SIN_055 === '2026-12.18' && legal.VERSION_LEGAL_SIN_054 === '2026-12.17' && PV.NOVEDADES_PRIVACIDAD[4][3] === '2026-12.18' && PV.NOVEDADES_PRIVACIDAD[4][2].length <= 260
     && PV.novedadesDesde('2026-12.17', '2026-12.18').length === 1 && /3 horas/.test(sec) && /no guarda audio/.test(sec) && /objetivo/.test(sec) && /hábito/.test(sec)
     && /check-in que vas rellenando se guarda en tu móvil/.test(movil),
     'la política 2026-12.18 cuenta el cierre automático, el objetivo logrado, los hábitos sugeridos y el dictado; el borrador del check-in, en «Lo que se queda en tu móvil»');
   // (v0.133) 2026-12.19: la carrera
   const car = legal.PRIVACIDAD.find((x) => x[0] === 'La carrera')?.[1] || '';
   const rec = legal.PRIVACIDAD.find((x) => x[0] === 'El recetario del equipo')?.[1] || '';
-  check(legal.VERSION_LEGAL_SIN_056 === '2026-12.19' && PV.NOVEDADES_PRIVACIDAD[2][3] === '2026-12.19' && PV.NOVEDADES_PRIVACIDAD[2][2].length <= 260 && /favorita/.test(rec) && /Descargar mis datos/.test(rec) && /se borra con tu ficha/.test(rec),
+  check(legal.VERSION_LEGAL_SIN_056 === '2026-12.19' && PV.NOVEDADES_PRIVACIDAD[3][3] === '2026-12.19' && PV.NOVEDADES_PRIVACIDAD[3][2].length <= 260 && /favorita/.test(rec) && /Descargar mis datos/.test(rec) && /se borra con tu ficha/.test(rec),
     'la política 2026-12.19 cuenta el recetario del equipo: las favoritas, la descarga y el borrado');
-  check(PV.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.20' && PV.NOVEDADES_PRIVACIDAD[1][2].length <= 260 && PV.novedadesDesde('2026-12.19', '2026-12.20').length === 1
+  check(PV.NOVEDADES_PRIVACIDAD[2][3] === '2026-12.20' && PV.NOVEDADES_PRIVACIDAD[2][2].length <= 260 && PV.novedadesDesde('2026-12.19', '2026-12.20').length === 1
     && /FC umbral/.test(car) && /consentimiento de datos de salud/.test(car) && /nunca el equipo/.test(car) && /semáforo/.test(car) && /Descargar mis datos/.test(car) && /se borra con tu ficha/.test(car),
     'la política 2026-12.20 cuenta la carrera: zonas, plan y carreras; la FC y el dolor solo con consentimiento; nunca al equipo; en la descarga y se borra con la ficha');
   // (v0.135) 2026-12.21: el escáner de productos (sin migración: con la 056, la vigente)
   const esc = legal.PRIVACIDAD.find((x) => x[0] === 'Los productos que escaneas')?.[1] || '';
-  check(legal.VERSION_LEGAL === '2026-12.21' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.21' && PV.NOVEDADES_PRIVACIDAD[0][2].length <= 260 && PV.novedadesDesde('2026-12.20', '2026-12.21').length === 1
+  check(legal.VERSION_LEGAL_SIN_058 === '2026-12.21' && PV.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.21' && PV.NOVEDADES_PRIVACIDAD[1][2].length <= 260 && PV.novedadesDesde('2026-12.20', '2026-12.21').length === 1
     && /Open Food Facts/.test(esc) && /solo se manda el código o el texto/.test(esc) && /no se guarda ni se sube/.test(esc) && /solo se guardan los totales del día/.test(esc) && /dirección IP/.test(esc),
     'la política 2026-12.21 cuenta el escáner: a Open Food Facts solo el código o el texto, la cámara en el móvil, solo los totales del día');
+  // (v0.141) 2026-12.22: el modo reloj (058)
+  const rel = legal.PRIVACIDAD.find((x) => x[0] === 'El modo reloj (Apple Watch)')?.[1] || '';
+  check(legal.VERSION_LEGAL === '2026-12.22' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.22' && PV.NOVEDADES_PRIVACIDAD[0][2].length <= 260 && PV.novedadesDesde('2026-12.21', '2026-12.22').length === 1
+    && /huella de tu clave/.test(rel) && /la clave, nunca/.test(rel) && /ningún dato de salud/.test(rel) && /cabecera, no en la dirección/.test(rel) && /no borra las series/.test(rel),
+    'la política 2026-12.22 cuenta el modo reloj: la huella (nunca la clave), solo lo del entreno hacia el reloj, nada de salud, y quitarlo no borra lo apuntado');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

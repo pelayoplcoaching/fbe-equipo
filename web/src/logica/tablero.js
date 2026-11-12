@@ -115,6 +115,30 @@ export function dialPasos(dias = [], hoy) {
   const etiqueta = media == null ? 'Hoy' : pasos >= media ? 'Ya en tu media' : 'Hacia tu media';
   return { id: 'pasos', estado, valor: media ? lim(pasos / media) : 0, etiqueta, pasos, media, dias: previos.length };
 }
+// (v0.141) Sueño: el de anoche (de Salud, la fila de hoy) frente a su media de los 14 días anteriores (3 días al menos).
+// Tampoco es un objetivo: «como siempre» entre el 90 y el 110 % de su media.
+export function dialSueno(dias = [], hoy) {
+  const d = (dias || []).find((x) => x?.fecha === hoy);
+  const min = d && Number(d.sueno_min) > 0 ? Math.round(Number(d.sueno_min)) : null;
+  if (min == null) return null;
+  const desde = sumarDias(hoy, -14);
+  const previos = (dias || []).filter((x) => x?.fecha >= desde && x.fecha < hoy && Number(x.sueno_min) > 0).map((x) => Number(x.sueno_min));
+  const media = previos.length >= 3 ? Math.round(previos.reduce((a, b) => a + b, 0) / previos.length) : null;
+  const r = media ? min / media : null;
+  const estado = r == null ? 'sin_media' : r < 0.9 ? 'menos' : r > 1.1 ? 'mas' : 'como_siempre';
+  const etiqueta = { sin_media: 'Anoche', menos: 'Menos que otras', mas: 'Más que otras', como_siempre: 'Como siempre' }[estado];
+  return { id: 'sueno', estado, valor: media ? lim(min / media) : 0, etiqueta, min, media };
+}
+// 395 min → «6:35»
+export const horasMin = (m) => { const x = Math.max(0, Math.round(Number(m) || 0)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
+// (v0.141) Tu reloj de un vistazo: hoy (o anoche) frente a la media de 14 días de pasos, sueño, pulso en reposo y HRV
+export function relojDeUnVistazo(dias = [], hoy) {
+  const desde = sumarDias(hoy, -14);
+  const d = (dias || []).find((x) => x?.fecha === hoy) || {};
+  const media = (k) => { const v = (dias || []).filter((x) => x?.fecha >= desde && x.fecha < hoy && Number(x[k]) > 0).map((x) => Number(x[k])); return v.length >= 3 ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null; };
+  return ['pasos', 'sueno_min', 'fc_reposo', 'hrv'].map((k) => ({ clave: k, hoy: Number(d[k]) > 0 ? Math.round(Number(d[k])) : null, media: media(k) }))
+    .filter((x) => x.hoy != null || x.media != null);
+}
 // Cuántos pasos caben en el centro de un dial: 8432 → «8,4» (mil); por debajo de mil, tal cual
 export function pasosCortos(n) {
   const x = Math.max(0, Math.round(Number(n) || 0));

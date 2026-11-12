@@ -586,7 +586,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         <button type="button" class="btn-texto" onClick={() => setOrdenando(true)}><Icono n="ordenar" /> Ordenar Hoy</button>
       </div>
       {ordenando && <OrdenarHoy pref={panel} fijar={fijarPanel} disponibles={disponibles} arriba={propio ? [] : ['mes', 'mito']}
-        diales={['constancia', 'carga', ...(salud ? ['llegas'] : []), ...(salud && conNutricion(atleta) ? ['comida'] : []), ...(salud ? ['pasos'] : [])]} alCerrar={() => setOrdenando(false)} />}
+        diales={['constancia', 'carga', ...(salud ? ['llegas'] : []), ...(salud && conNutricion(atleta) ? ['comida'] : []), ...(salud ? ['pasos', 'sueno'] : [])]} alCerrar={() => setOrdenando(false)} />}
     </>
   );
 }

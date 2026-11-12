@@ -23,6 +23,7 @@ export const DIALES_HOY = [
   { id: 'llegas', nombre: 'Cómo llegas' },
   { id: 'comida', nombre: 'Comida' },
   { id: 'pasos', nombre: 'Pasos' },
+  { id: 'sueno', nombre: 'Sueño' },
 ];
 const IDS = SECCIONES_HOY.map((s) => s.id);
 const OCULTABLES = new Set([...IDS, ...ARRIBA_HOY.map((s) => s.id)]);

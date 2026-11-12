@@ -5,7 +5,7 @@
 .diales.diales-dos-filas .dial:nth-child(3n + 1)::before { display: none; }
 
 /* Los estados de los diales nuevos (los colores, de los tokens de siempre) */
-.dial[data-estado="en_objetivo"], .dial[data-estado="en_media"] { --dial: var(--ok); }
+.dial[data-estado="en_objetivo"], .dial[data-estado="en_media"], .dial[data-estado="como_siempre"] { --dial: var(--ok); }
 .dial[data-estado="pasado"] { --dial: var(--aviso); }
 .dial[data-estado="sin_apuntar"] .dial-estado { color: var(--morado); font-weight: 680; }
 
@@ -24,3 +24,10 @@
 .ordenar-hoy-lista .ord-fila.oculta .ord-nombre > span:first-child { color: var(--tinta-2); }
 .ordenar-hoy-lista .ord-fila.oculta .ord-pos { color: var(--tinta-3); }
 .ordenar-hoy-ver[aria-pressed="false"] { color: var(--tinta-3); }
+
+/* (v0.141) Tu reloj, de un vistazo: hoy frente a tu media */
+.tabla-reloj { width: 100%; border-collapse: collapse; font-size: var(--tipo-pie); }
+.tabla-reloj th, .tabla-reloj td { padding: 9px 6px; border-bottom: 1px solid var(--linea); text-align: right; }
+.tabla-reloj th[scope="row"], .tabla-reloj thead th:first-child { text-align: left; font-weight: 650; }
+.tabla-reloj thead th { font-size: .75rem; color: var(--tinta-2); font-weight: 700; }
+.tabla-reloj tbody tr:last-child > * { border-bottom: 0; }

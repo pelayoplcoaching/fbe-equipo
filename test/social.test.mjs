@@ -255,7 +255,7 @@ check((await q(`select count(*)::int n from public.comunidad_duelos where $1 in 
 await como(ids.a);
 const md = await uno(`select public.comunidad_mis_datos() as r`);
 check(Array.isArray(md.duelos) && md.intencion?.nota === 'en el gym' && Array.isArray(md.votos_companero) && md.quedadas_propuestas.length === 3 && 'veces_elegido' in md, 'mis datos incluye lo nuevo');
-check(await falla(`select public.comunidad_huella()`) === false && (await q(`select proname from pg_proc where proname in ('reloj_estado') limit 1`)).length === 0, 'y la 053 vale sin la 052 (del reloj)');
+check(await falla(`select public.comunidad_huella()`) === false, 'y la 053 no depende del reloj (que llegó después, como la 058)');
 
 // 12. Lo que pidió la revisión de la 053
 await su();

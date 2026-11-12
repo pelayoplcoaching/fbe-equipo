@@ -337,3 +337,5 @@
 .musica-coach .fila-ios-texto { min-width: 0; }
 .lo-suyo-musica { overflow-wrap: anywhere; }
 .campo-musica { max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+/* ---------- (migración 058) Modo reloj ---------- */
+.reloj-uso { margin: 0; padding-left: 18px; display: grid; gap: 6px; }

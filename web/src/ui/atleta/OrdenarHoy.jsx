@@ -36,7 +36,7 @@ export function OrdenarHoy({ pref, fijar, disponibles, arriba = [], diales = [],
           <div class="panel"><ul class="lista">
             {verDiales.map((d) => (
               <Interruptor key={d.id} id={`oh-dial-${d.id}`} texto={d.nombre} valor={!p.dialesOcultos.has(d.id)} alCambiar={() => fijar(alternarDial(pref, d.id))}
-                ayuda={{ constancia: 'Las sesiones hechas de tu semana', carga: 'Tu carga frente a lo habitual', llegas: 'Lo que contestas en «¿Cómo llegas hoy?»', comida: 'Las kcal que te quedan hoy', pasos: 'Tus pasos de hoy, de Salud' }[d.id]} />
+                ayuda={{ constancia: 'Las sesiones hechas de tu semana', carga: 'Tu carga frente a lo habitual', llegas: 'Lo que contestas en «¿Cómo llegas hoy?»', comida: 'Las kcal que te quedan hoy', pasos: 'Tus pasos de hoy, de Salud', sueno: 'Lo que dormiste anoche, de Salud' }[d.id]} />
             ))}
           </ul></div>
         </section>

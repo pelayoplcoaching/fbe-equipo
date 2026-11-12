@@ -38,7 +38,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -147,6 +147,12 @@ const falta053 = (e) => {
   }
   throw e;
 };
+// (058) sin la migración del modo reloj, la app no lo ofrece
+const falta058 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
+  return /reloj_(mio|crear|unidad|quitar)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
+};
+const AVISO_058 = 'Esto aún no está disponible: falta poner al día la base (migración 058)';
 const falta049 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
   return /rendimiento_(apuntar|resumen|borrar)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
@@ -418,7 +424,9 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   // (053) lo social que solo se lee
   'comunidad_cumples', 'comunidad_duelos_mios', 'comunidad_intenciones', 'comunidad_padrinos_lista', 'comunidad_companero_semana', 'comunidad_huella', 'comunidad_sin_entrenar',
   // (054) las sesiones abiertas y la semana de un vistazo solo se leen
-  'sesiones_abiertas', 'atleta_resumen_semana']);
+  'sesiones_abiertas', 'atleta_resumen_semana',
+  // (058) el modo reloj
+  'reloj_mio']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -954,6 +962,15 @@ export function crearApi(backend) {
     },
     // ------------------------------------------------------------ la carrera (v0.133, migración 056)
     // ¿Está la 056? true / false / null (no se sabe). Sonda: carrera_recetas (el atleta la lee vacía, sin error)
+    // (v0.141) ¿Tiene la base el modo reloj (058)? reloj_mio existe (aunque sea coach: entonces da null)
+    async reloj058() {
+      if (!api._v058) {
+        const pr = api.reloj().then((r) => r !== undefined).catch(() => null);
+        api._v058 = pr;
+        pr.then((x) => { if (x == null && api._v058 === pr) api._v058 = null; });
+      }
+      return api._v058;
+    },
     async carrera056() {
       if (!api._v056) {
         const pr = b.select('carrera_recetas', { cols: 'id', limit: 1 }).then(() => true).catch((e) => {
@@ -1140,6 +1157,21 @@ export function crearApi(backend) {
       p.catch(() => { if (contactosMemo?.p === p) contactosMemo = null; });
       return p;
     },
+    // ------------------------------------------------------------ modo reloj (migración 058)
+    // El modo reloj del atleta ({ activo, desde, ultimo, unidad, atajo }); sin la 058, undefined
+    async reloj() {
+      try { return (await b.rpc('reloj_mio', {})) || null; } catch (e) { if (falta058(e)) return undefined; throw e; }
+    },
+    // Crea su clave (la anterior deja de valer) y la devuelve una sola vez
+    async crearReloj(unidad = 'kg') {
+      try { return await b.rpc('reloj_crear', { p_unidad: unidad === 'lb' ? 'lb' : 'kg' }); } catch (e) { if (falta058(e)) throw new Error(AVISO_058); throw e; }
+    },
+    async unidadReloj(unidad) {
+      try { await b.rpc('reloj_unidad', { p_unidad: unidad === 'lb' ? 'lb' : 'kg' }); } catch (e) { if (falta058(e)) throw new Error(AVISO_058); throw e; }
+    },
+    async quitarReloj() {
+      try { await b.rpc('reloj_quitar', {}); } catch (e) { if (falta058(e)) throw new Error(AVISO_058); throw e; }
+    },
     async guardarContacto(atletaId, telefono) {
       const t = limpiarTelefono(telefono);
       try { await b.rpc('contacto_guardar', { p_atleta: atletaId, p_telefono: t }); } catch (e) { if (falta051(e)) throw new Error(AVISO_051); throw e; }
@@ -1226,7 +1258,9 @@ export function crearApi(backend) {
       if ((await api.cierre054().catch(() => null)) !== true) return VERSION_LEGAL_SIN_054;
       // (v0.133) el recetario del equipo (055) y la carrera (056); (v0.135) con la 056, la 2026-12.21 (el escáner de productos, sin migración)
       if ((await api.recetario055().catch(() => null)) !== true) return VERSION_LEGAL_SIN_055;
-      return (await api.carrera056().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_056;
+      if ((await api.carrera056().catch(() => null)) !== true) return VERSION_LEGAL_SIN_056;
+      // (v0.141) el modo reloj (058): con la 056 pero sin la 058, la 2026-12.21
+      return (await api.reloj058().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_058;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -4789,6 +4823,11 @@ export function crearApi(backend) {
         : ((await api.personalAtletas().catch(() => [])).find((x) => x.atleta_id === atletaId) || null);
       // (v0.105, 051) lo que llegó de Salud del iPhone (los 400 últimos días)
       out.salud_diaria = (await api.saludDiaria(atletaId, '2020-01-01', sumarDias(hoyISO(), 1)).catch(() => null))?.dias || [];
+      // (058) el modo reloj: si lo tiene, desde cuándo, la última vez y su unidad (la clave, nunca)
+      if (perfilId && perfilId === uid()) {
+        const rl = await api.reloj().catch(() => null);
+        out.reloj = rl ? { activo: rl.activo, desde: rl.desde, ultimo: rl.ultimo, unidad: rl.unidad } : null;
+      }
       // (revisión) lo suyo de las integraciones: desde cuándo tiene conectado cada cosa, su calendario y su teléfono
       if (perfilId && perfilId === uid()) {
         out.integraciones = (await b.rpc('integraciones_mias', {}).catch(() => null)) || null;

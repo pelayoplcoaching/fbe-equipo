@@ -6,7 +6,7 @@ import { useId, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, DegradadoAro } from '../comunes.jsx';
 import { prepMarcadas, marcarPrepHoy } from './prep-hoy.js';
 import { Preparacion } from './Preparacion.jsx';
-import { dialConstancia, dialCarga, dialComoLlegas, dialComida, dialPasos, pasosCortos, preparacionDeHoy, sesionParaContestar, conSeriesDeHoy, arcoDial, BANDA_CARGA } from '../../logica/tablero.js';
+import { dialConstancia, dialCarga, dialComoLlegas, dialComida, dialPasos, dialSueno, horasMin, relojDeUnVistazo, pasosCortos, preparacionDeHoy, sesionParaContestar, conSeriesDeHoy, arcoDial, BANDA_CARGA } from '../../logica/tablero.js';
 import { objetivoDelDia, planVigente } from '../../logica/nutricion.js';
 import { conNutricion } from '../../logica/nivel.js';
 import { leerPreferencia } from '../preferencias.js';
@@ -42,15 +42,19 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
   const [abierto, setAbierto] = useState(null);
   const verComida = salud && conNutricion(atleta) && !ocultos.has('comida');
   const verPasos = salud && !ocultos.has('pasos');
+  const verSueno = salud && !ocultos.has('sueno');
+  const conSalud = verPasos || verSueno;
   const comida = useCarga(() => (verComida ? Promise.all([api.planesNutricion(atleta.id), api.registrosNutricion(atleta.id, hoy, hoy)]).catch(() => null) : Promise.resolve(null)),
     [atleta.id, hoy, verComida], { recuerdo: verComida ? `dial-comida:${atleta.id}:${hoy}` : null });
-  const pasosDatos = useCarga(() => (verPasos ? api.saludDiaria(atleta.id, sumarDias(hoy, -14), hoy).catch(() => null) : Promise.resolve(null)),
-    [atleta.id, hoy, verPasos], { recuerdo: verPasos ? `dial-pasos:${atleta.id}:${hoy}` : null });
+  const pasosDatos = useCarga(() => (conSalud ? api.saludDiaria(atleta.id, sumarDias(hoy, -14), hoy).catch(() => null) : Promise.resolve(null)),
+    [atleta.id, hoy, conSalud], { recuerdo: conSalud ? `dial-salud:${atleta.id}:${hoy}` : null });
   // (como «Nutrición de hoy»: si ha dicho a mano si hoy entrena o descansa, eso manda)
   const elegidoDia = leerPreferencia(`fbe-nut-dia-${hoy}`, null);
   const objetivo = comida.datos ? objetivoDelDia(planVigente(comida.datos[0] || [], hoy), elegidoDia ? elegidoDia === 'entreno' : entrenaHoy) : null;
   const m = objetivo ? dialComida(objetivo, (comida.datos[1] || []).find((r) => r.fecha === hoy) || null) : null;
-  const ps = pasosDatos.datos?.conectada ? dialPasos(pasosDatos.datos.dias || [], hoy) : null;
+  const diasSalud = pasosDatos.datos?.conectada ? pasosDatos.datos.dias || [] : [];
+  const ps = verPasos ? dialPasos(diasSalud, hoy) : null;
+  const su = verSueno ? dialSueno(diasSalud, hoy) : null;
   const carga = useCarga(() => api.cargaHoy(atleta.id, { bloques, hoy }).catch(() => null), [atleta.id, hoy, sesiones.filter((s) => s.completada).length], { recuerdo: `carga-hoy:${atleta.id}:${hoy}` });
   const c = natural ? dialConstancia(sesiones, natural.semana) : dialConstancia(sesiones);
   const k = carga.datos ? dialCarga(carga.datos, hoy, 4) : null;
@@ -61,7 +65,7 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
   // Solo se contesta desde aquí para la sesión prevista para hoy (o la que ya tiene series de hoy), y nunca de baja
   const pendiente = sesionParaContestar({ previstaHoy, siguiente, seriesHoy, baja: atleta.estado === 'baja' });
   const pct = k && k.ratio != null ? Math.round(k.ratio * 100) : null;
-  const ver = { constancia: !ocultos.has('constancia'), carga: !ocultos.has('carga'), llegas: salud && !ocultos.has('llegas'), comida: !!m, pasos: !!ps };
+  const ver = { constancia: !ocultos.has('constancia'), carga: !ocultos.has('carga'), llegas: salud && !ocultos.has('llegas'), comida: !!m, pasos: !!ps, sueno: !!su };
   const n = Object.values(ver).filter(Boolean).length;
   if (!n) return null;
   const pc = ps ? pasosCortos(ps.pasos) : null;
@@ -105,8 +109,16 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
           <span class="dial-estado">{ps.etiqueta}</span>
         </button>
       )}
+      {ver.sueno && (
+        <button type="button" class="dial" data-estado={su.estado} onClick={() => setAbierto('pasos')}
+          aria-label={`Sueño: ${horasMin(su.min)} horas anoche${su.media ? `, tu media es de ${horasMin(su.media)}` : ''}. Ver tu reloj de un vistazo`}>
+          <Esfera frac={su.valor}><span>{horasMin(su.min)}<span class="u">h</span></span></Esfera>
+          <span class="dial-nombre">Sueño</span>
+          <span class="dial-estado">{su.etiqueta}</span>
+        </button>
+      )}
       {abierto === 'comida' && m && <HojaComida m={m} objetivo={objetivo} alCerrar={() => setAbierto(null)} />}
-      {abierto === 'pasos' && ps && <HojaPasos ps={ps} ultimo={pasosDatos.datos?.ultimo || null} alCerrar={() => setAbierto(null)} />}
+      {abierto === 'pasos' && (ps || su) && <HojaReloj filas={relojDeUnVistazo(diasSalud, hoy)} ultimo={pasosDatos.datos?.ultimo || null} alCerrar={() => setAbierto(null)} />}
       {abierto === 'constancia' && (natural
         ? <HojaConstancia c={c} natural={natural} sesiones={sesionesDeLaSemana(natural.semanas, natural.sesionesPorSemana, c.total, hoy)} semana={{ fecha_inicio: lunesDe(hoy) }} alCerrar={() => setAbierto(null)} />
         : <HojaConstancia c={c} sesiones={sesiones} semana={semana} alCerrar={() => setAbierto(null)} />)}
@@ -138,15 +150,21 @@ function HojaComida({ m, objetivo, alCerrar }) {
     </Hoja>
   );
 }
-function HojaPasos({ ps, ultimo, alCerrar }) {
+// (v0.141) Tu reloj de un vistazo: lo de hoy (o anoche) frente a tu media de 14 días; solo lo que llega de Salud
+const FILAS_RELOJ = { pasos: ['Pasos hoy', (v) => num(v, 0)], sueno_min: ['Sueño anoche', (v) => `${horasMin(v)} h`], fc_reposo: ['Pulso en reposo', (v) => `${num(v, 0)} lpm`], hrv: ['HRV', (v) => `${num(v, 0)} ms`] };
+function HojaReloj({ filas, ultimo, alCerrar }) {
   return (
-    <Hoja titulo="Pasos de hoy" alCerrar={alCerrar}>
-      <p class="secundario">Los que llegan de Salud del iPhone (Perfil → Conexiones){ultimo ? `; lo último, ${fmtConDia(String(ultimo).slice(0, 10))}` : ''}. No es un objetivo: el dial se llena al llegar a tu media de los últimos 14 días.</p>
-      <dl class="dial-hoja-cifras">
-        <div><dt>Hoy</dt><dd class="marcador">{num(ps.pasos, 0)}</dd></div>
-        <div><dt>Tu media</dt><dd class="marcador">{ps.media ? num(ps.media, 0) : '—'}</dd></div>
-      </dl>
-      {!ps.media && <p class="peq secundario">Aún no hay media: hacen falta al menos 3 días con pasos en las dos últimas semanas.</p>}
+    <Hoja titulo="Tu reloj, de un vistazo" alCerrar={alCerrar}>
+      <p class="secundario">Lo que llega de Salud del iPhone (Perfil → Conexiones){ultimo ? `; lo último, ${fmtConDia(String(ultimo).slice(0, 10))}` : ''}, frente a tu media de los últimos 14 días. No son objetivos: sirven para ver si hoy es un día normal para ti.</p>
+      <table class="tabla-reloj">
+        <thead><tr><th scope="col"><span class="sr">Dato</span></th><th scope="col">Hoy</th><th scope="col">Tu media</th></tr></thead>
+        <tbody>
+          {filas.map((f) => (
+            <tr key={f.clave}><th scope="row">{FILAS_RELOJ[f.clave][0]}</th><td class="num">{f.hoy != null ? FILAS_RELOJ[f.clave][1](f.hoy) : '—'}</td><td class="num secundario">{f.media != null ? FILAS_RELOJ[f.clave][1](f.media) : '—'}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="peq terciario">La media sale con 3 días al menos de las dos últimas semanas. Solo lo ves tú (y tu coach, como el resto de lo que llega de Salud).</p>
     </Hoja>
   );
 }

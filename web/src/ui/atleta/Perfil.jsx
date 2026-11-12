@@ -20,6 +20,7 @@ import { PerfilSecciones, EnElEquipo } from './PerfilSocial.jsx';
 import { usePersonal } from './Personal.jsx';
 import { PORTADAS, portadaValida } from '../../logica/perfil.js';
 import { LoCompartido } from '../Compartir.jsx';
+import { GrupoReloj } from './Reloj.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -69,6 +70,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       <Conexiones salud={salud} />
       {/* (compartir, tanda 2) lo que has compartido desde este móvil */}
       <LoCompartido />
+      {/* (058) el modo reloj: el entreno desde el Apple Watch */}
+      <GrupoReloj />
 
       <AjustesDispositivo antes={<SeccionNotificaciones fila />} />
       <AjustesMensajes />
