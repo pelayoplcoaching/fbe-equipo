@@ -160,6 +160,9 @@ export function limpiarTravesia(g) {
   t.total = entero(g.total, 1e8); t.estrellas = entero(g.estrellas, 1e7); t.mejor = entero(g.mejor, 1e5); t.practica = entero(g.practica, 1e5);
   const p = g.pend && typeof g.pend === 'object' ? g.pend : {};
   t.pend = { metros: entero(p.metros, 1e7), estrellas: entero(p.estrellas, 1e6), etapas: entero(p.etapas, 1e4), mejor: entero(p.mejor, 1e5) };
+  // (v0.148) el envío preparado y aún sin confirmar (con su identificador: si se repite, la base no lo suma dos veces)
+  const e = g.envio && typeof g.envio === 'object' ? g.envio : null;
+  if (e && ID_ENVIO.test(String(e.id)) && entero(e.metros, 60000) > 0) t.envio = { id: e.id, metros: entero(e.metros, 60000), estrellas: entero(e.estrellas, 24000), etapas: Math.max(1, entero(e.etapas, 60)), mejor: entero(e.mejor, 5000) };
   const ses = g.sesiones && typeof g.sesiones === 'object' ? Object.entries(g.sesiones) : [];
   for (const [id, s] of ses.slice(-12)) {
     if (!s || typeof s !== 'object' || id.length > 60) continue;
@@ -184,6 +187,7 @@ export function sumarEtapa(guardado, { sesion = null, metros = 0, estrellas = 0 
 }
 
 // ---------- Con la base (migración 060) ----------
+export const ID_ENVIO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Lo que toca subir ahora: lo pendiente, en un envío que la base admite (60 km y 60 etapas como mucho), o null
 export function porSubir(guardado) {
   const p = limpiarTravesia(guardado).pend;
@@ -191,10 +195,21 @@ export function porSubir(guardado) {
   const etapas = Math.min(60, Math.max(1, p.etapas)), metros = Math.min(p.metros, 60000, 5000 * etapas);
   return { metros, estrellas: Math.min(p.estrellas, 400 * etapas), etapas, mejor: Math.min(p.mejor, 5000, metros) };
 }
-// Tras subir un envío: se descuenta de lo pendiente (puede haber entrado otra etapa mientras subía)
+// (v0.148) Prepara el envío con su identificador y lo deja fijado (se guarda antes de mandarlo): si la respuesta no llega,
+// se manda otra vez el mismo y la base no lo suma dos veces. Si ya hay uno fijado, se queda ese.
+export function prepararEnvio(guardado, id) {
+  const t = limpiarTravesia(guardado);
+  if (t.envio || !ID_ENVIO.test(String(id))) return t;
+  const e = porSubir(t);
+  if (e) t.envio = { id, ...e };
+  return t;
+}
+// Tras subir un envío: se descuenta de lo pendiente (puede haber entrado otra etapa mientras subía). Con identificador,
+// solo si es el que sigue fijado (otra pestaña puede haberlo descontado ya).
 export function trasSubir(guardado, envio) {
   const t = limpiarTravesia(guardado);
   if (!envio) return t;
+  if (envio.id) { if (t.envio?.id !== envio.id) return t; delete t.envio; }
   const queda = Math.max(0, t.pend.metros - envio.metros);
   t.pend = queda > 0 ? { metros: queda, estrellas: Math.max(0, t.pend.estrellas - envio.estrellas), etapas: Math.max(1, t.pend.etapas - envio.etapas), mejor: t.pend.mejor }
     : { metros: 0, estrellas: 0, etapas: 0, mejor: 0 };

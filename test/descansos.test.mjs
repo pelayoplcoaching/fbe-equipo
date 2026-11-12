@@ -5,7 +5,8 @@ const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallo
 
 // ------------------------------------------------------------ la lógica: novedades y lo que va y viene de la base
 import { apuntesDeNovedades, novedadPendiente, elegirApunte, apunteDelDia, apuntarVisto, limpiarVistos, pendienteDeSubir, conServidor } from '../web/src/logica/apuntes.js';
-import { sumarEtapa, porSubir, trasSubir, conBase, metrosDeLaSemana, limpiarTravesia } from '../web/src/logica/travesia.js';
+import { sumarEtapa, porSubir, trasSubir, conBase, metrosDeLaSemana, limpiarTravesia, prepararEnvio } from '../web/src/logica/travesia.js';
+import { ENLACE_NOVEDAD } from '../web/src/logica/apuntes.js';
 
 console.log('La novedad de la semana, como apunte');
 {
@@ -64,6 +65,46 @@ console.log('La travesía, con la base');
   check(conBase(trasSubir(t, envio), [{ semana: '2026-11-09', metros: 1750, estrellas: 12, mejor: 950 }]).total === 1750 && conBase(t, []).total === 1750, 'en el mismo móvil, con todo subido, no cambia (ni cuenta doble)');
   check(metrosDeLaSemana(conPend, base, '2026-11-09') === 5700 && metrosDeLaSemana(null, base, '2026-11-16') === 0, 'lo de esta semana: su fila más lo pendiente');
   check(limpiarTravesia({ total: 5, pend: { metros: 'x', etapas: -3 } }).pend.metros === 0, 'lo pendiente ilegible se sanea');
+  // (v0.148, revisión) el envío con identificador, fijado hasta que la base lo confirma
+  const ID1 = '11111111-1111-4111-8111-111111111111', ID2 = '22222222-2222-4222-8222-222222222222';
+  const f1 = prepararEnvio(t, ID1);
+  check(f1.envio?.id === ID1 && f1.envio.metros === 1750 && prepararEnvio(f1, ID2).envio.id === ID1 && limpiarTravesia(JSON.parse(JSON.stringify(f1))).envio.id === ID1, 'el envío se prepara con su identificador y se queda fijado (aunque se pida otro, y al guardarse)');
+  check(!prepararEnvio(null, ID1).envio && !prepararEnvio(t, 'no-es-un-id').envio && !limpiarTravesia({ envio: { id: 'x', metros: 5 } }).envio, 'sin nada pendiente o sin un identificador válido, no hay envío');
+  const f2 = sumarEtapa(f1, { sesion: 's3', metros: 300, estrellas: 1 });
+  const f3 = trasSubir(f2, f1.envio);
+  check(!f3.envio && f3.pend.metros === 300 && trasSubir(f3, f1.envio).pend.metros === 300, 'confirmado, se descuenta una sola vez (si otra pestaña ya lo descontó, no se vuelve a descontar)');
+  check(ENLACE_NOVEDAD.test('https://x.co?y=1') && ENLACE_NOVEDAD.test('https://doi.org/10.1/a#b') && !ENLACE_NOVEDAD.test('https://x.co/a b') && !ENLACE_NOVEDAD.test('https://x.co/\u00a0') && !ENLACE_NOVEDAD.test('https://user@x.co'), 'el enlace de una novedad, como lo admite la base');
+}
+
+console.log('Lo que va y viene, sin contar dos veces (revisión)');
+{
+  const { sincronizarTravesia, leerTravesia, apuntarEtapa } = await import('../web/src/ui/travesia.js');
+  const { guardarVisto, sincronizarApuntes, leerApuntes } = await import('../web/src/ui/apuntes.js');
+  const sumado = new Map(); let perder = 1; const llegados = [];
+  const apiFalsa = {
+    async sumarTravesia(e) { llegados.push(e.id); if (!sumado.has(e.id)) sumado.set(e.id, e.metros); if (perder-- > 0) return false; return true; },   // la primera respuesta se pierde
+    async travesiaDe() { return [{ semana: '2026-11-09', metros: [...sumado.values()].reduce((a, b) => a + b, 0), estrellas: 0, mejor: 0 }]; },
+  };
+  apuntarEtapa('atl-x', { sesion: 's1', metros: 900, estrellas: 2 });
+  await sincronizarTravesia(apiFalsa, 'atl-x', { traer: true });
+  check(leerTravesia('atl-x').envio && leerTravesia('atl-x').total === 900, 'se perdió la respuesta: el envío sigue fijado y no se junta con la base (no cuenta doble)');
+  await sincronizarTravesia(apiFalsa, 'atl-x');
+  const fin = leerTravesia('atl-x');
+  check(llegados.length === 2 && llegados[0] === llegados[1] && [...sumado.values()].reduce((a, b) => a + b, 0) === 900 && !fin.envio && fin.pend.metros === 0 && fin.total === 900, 'se repite el mismo envío (mismo identificador): la base lo suma una vez');
+  // apuntes: uno que la base no admite sale de la cola y no la atasca; lo nuevo en cola no se pierde al confirmar lo de antes
+  const subidos = [];
+  let soltar; const espera = new Promise((r) => { soltar = r; });
+  const apiA = { async apuntarApunte(id, sabia) { if (id === 'm:9') { await espera; } subidos.push([id, sabia]); return id === 'i:raro' ? 'rechazado' : true; }, async apuntesVistos() { return []; } };
+  guardarVisto('atl-y', 'm:9', '2026-11-12', true, apiA);
+  guardarVisto('atl-y', 'm:9', '2026-11-12', false, { apuntarApunte: () => new Promise(() => {}) });
+  soltar(); await new Promise((r) => setTimeout(r, 10));
+  check(leerApuntes('atl-y').porSubir?.['m:9'] === false, 'se confirma lo de antes (lo sabía) y lo nuevo (no lo sabía) sigue en cola para subirse');
+  const apiB = { async apuntarApunte(id, sabia) { subidos.push([id, sabia]); return id === 'i:raro' ? 'rechazado' : true; }, async apuntesVistos() { return []; } };
+  guardarVisto('atl-z', 'i:raro', '2026-11-12', null, { apuntarApunte: () => Promise.resolve(false) });
+  guardarVisto('atl-z', 'm:1', '2026-11-12', null, { apuntarApunte: () => Promise.resolve(false) });
+  await new Promise((r) => setTimeout(r, 5));
+  await sincronizarApuntes(apiB, 'atl-z');
+  check(!leerApuntes('atl-z').porSubir && subidos.some(([id]) => id === 'm:1'), 'uno que la base rechaza sale de la cola y los demás se suben igual');
 }
 
 // ------------------------------------------------------------ la demo (backend en memoria): lo mismo que la base
@@ -95,13 +136,21 @@ console.log('En la demo');
   check(await api.apuntarApunte('m:3', false) === true && await api.apuntarApunte('m:3') === true && await api.apuntarApunte(`n:${n1.id}`) === true && await api.apuntarApunte('') === false, 'apunta lo que ve');
   const av = await api.apuntesVistos(ana.id);
   check(av.length === 2 && av.find((x) => x.apunte === 'm:3').veces === 1 && av.find((x) => x.apunte === 'm:3').sabia === false, 'el mismo día cuenta una vez; lo que no sabía, apuntado');
-  check(await api.apuntarApunte('no vale') === false, 'lo que no es un apunte no se apunta (y no rompe nada)');
+  check(await api.apuntarApunte('no vale') === 'rechazado' && await api.apuntarApunte('x:1') === 'rechazado', 'lo que no es un apunte no se apunta (y no rompe nada: «rechazado», para sacarlo de la cola)');
+  // (v0.148) un envío repetido no suma dos veces
+  const idEnv = '33333333-3333-4333-8333-333333333333';
+  check(await api.sumarTravesia({ id: idEnv, metros: 100 }) === true && await api.sumarTravesia({ id: idEnv, metros: 100 }) === true && (await api.travesiaDe(ana.id))[0].metros === 1850, 'el mismo envío dos veces suma una vez');
   const datos = await api.exportar(ana.id);
   check((Array.isArray(datos.travesia_semanas) && datos.travesia_semanas.length === 1 && Array.isArray(datos.apuntes_vistos) && datos.apuntes_vistos.length === 2), 'y va en la descarga de sus datos');
   await b.auth.salir();
   await b.auth.entrar('carlos@fbe.demo', 'demo');
   const carlos = await api.miAtleta();
   check((await api.travesiaDe(ana.id)).length === 0 && (await api.apuntesVistos(ana.id)).length === 0 && (await api.travesiaDe(carlos.id)).length === 0, 'otro atleta no ve lo de Ana');
+  // (revisión) como en la base: nadie escribe estas tablas a mano, y el atleta solo borra lo suyo
+  check(await lanza(() => b.insert('travesia_semanas', [{ atleta_id: ana.id, semana: '2026-11-09', metros: 5 }])) && await lanza(() => b.insert('apuntes_vistos', [{ atleta_id: carlos.id, apunte: 'zzz' }]))
+    && await lanza(() => b.update('travesia_semanas', { metros: 9 }, { eq: { atleta_id: carlos.id } })) && await lanza(() => b.select('travesia_envios', {}).then((f) => { if (f.length) throw new Error('se ve'); }).then(() => b.insert('travesia_envios', [{ atleta_id: carlos.id, envio: idEnv }]))),
+  'en la demo tampoco se escriben a mano (ni los envíos)');
+  await b.delete('travesia_semanas', { eq: { atleta_id: ana.id } }); await b.delete('apuntes_vistos', { eq: { atleta_id: ana.id } });
   await b.auth.salir();
   await b.auth.entrar('pelayo@fbe.demo', 'demo');
   check((await api.travesiaDe(ana.id)).length === 1 && (await api.apuntesVistos(ana.id)).length === 2 && (await api.novedades()).length === 2, 'el coach, sí (y sus dos novedades, con el borrador)');
@@ -150,6 +199,20 @@ check((await q('select id from novedades')).length === 0, 'una cuenta sin ficha 
 await como(coach, 'aal2');
 check(await falla(`insert into novedades (titulo, texto) values ('', 'x')`) && await falla(`insert into novedades (titulo, texto) values ($1, 'x')`, ['t'.repeat(91)]) && await falla(`insert into novedades (titulo, texto) values ('t', $1)`, ['x'.repeat(501)]), 'título de 1 a 90 letras y texto de 1 a 500');
 check(await falla(`insert into novedades (titulo, texto, enlace) values ('t', 'x', 'http://sin-s.test/a')`) && await falla(`insert into novedades (titulo, texto, enlace) values ('t', 'x', 'javascript:alert(1)')`) && await falla(`insert into novedades (titulo, texto, enlace) values ('t', 'x', 'https://con espacio.test')`), 'el enlace, solo https y sin espacios');
+{
+  // (revisión) ni espacios invisibles ni caracteres de control; sí ?consulta, #ancla y puerto
+  const malos = ['https://x.co/\u00a0a', 'https://x.co/\u200ba', 'https://x.co/\u0001', 'https://user@x.co/', 'https://x.co\\@evil.test'];
+  const buenos = ['https://x.co?y=1', 'https://x.co#a', 'https://x.co:443/a', 'https://doi.org/10.1000/xyz(1)'];
+  let bien = true;
+  for (const e of malos) bien = bien && await falla(`insert into novedades (titulo, texto, enlace) values ('t', 'x', $1)`, [e]);
+  for (const e of buenos) bien = bien && !(await falla(`insert into novedades (titulo, texto, enlace) values ('t', 'x', $1)`, [e]));
+  check(bien, 'el enlace: ni espacios invisibles ni caracteres de control ni usuario@; sí ?consulta, #ancla y puerto');
+  await q(`delete from novedades where titulo = 't'`);
+  const [f] = await q(`insert into novedades (titulo, texto, publicada, publicada_en, creada_en) values ('fecha', 'x', true, '2100-01-01', '1990-01-01') returning id, publicada_en, creada_en`);
+  const [g] = await q(`update novedades set publicada_en = '1999-01-01', creada_en = '1990-01-01', id = gen_random_uuid() where id = $1 returning id, publicada_en, creada_en`, [f.id]);
+  check(new Date(f.publicada_en).getFullYear() < 2100 && new Date(f.creada_en).getFullYear() > 2000 && g.id === f.id && String(g.publicada_en) === String(f.publicada_en) && String(g.creada_en) === String(f.creada_en), 'las fechas las pone la base (ni adelantarlas ni atrasarlas) y el id no cambia');
+  await q('delete from novedades where id = $1', [f.id]);
+}
 const [n1d] = await q('update novedades set publicada = false where id = $1 returning publicada_en', [n1.id]);
 check(n1d.publicada_en === null, 'al despublicarla se le quita la fecha');
 await q('update novedades set publicada = true where id = $1', [n1.id]);
@@ -171,6 +234,13 @@ check(t3.metros === 36750 && t3.etapas === 13 && t3.mejor === 5000, 'varias etap
 await q('select sumar_travesia(0, 3)'); await q('select sumar_travesia(-50, 3)'); await q('select sumar_travesia(null, 3)');
 check((await q('select metros, estrellas from travesia_semanas'))[0].metros === 36750, 'cero, negativo o nada: no suma');
 check(await falla(`insert into travesia_semanas (atleta_id, semana, metros) values ($1, '2026-11-09', 5)`, [atletaA]) && await falla('update travesia_semanas set metros = 9'), 'el atleta no escribe la tabla a mano: solo con sumar_travesia()');
+{
+  // (revisión) un envío repetido no suma dos veces
+  const e = '44444444-4444-4444-8444-444444444444';
+  await q('select sumar_travesia(100, 0, 1, 100, $1)', [e]); await q('select sumar_travesia(100, 0, 1, 100, $1)', [e]);
+  check((await q('select metros from travesia_semanas'))[0].metros === 36850, 'el mismo envío (mismo identificador) dos veces suma una vez');
+  check(await falla('select * from travesia_envios') && await falla(`insert into travesia_envios values ($1, gen_random_uuid())`, [atletaA]), 'los envíos ya sumados no los lee ni los escribe nadie');
+}
 await como(bea);
 check((await q('select * from travesia_semanas')).length === 0, 'otra atleta no ve lo de Ana');
 await q('select sumar_travesia(300, 1)');
@@ -180,6 +250,7 @@ await como(suelto);
 await q('select sumar_travesia(300, 1)');
 await como(coach, 'aal2');
 await q('select sumar_travesia(300, 1)');
+check(await falla('select * from travesia_envios'), 'ni el coach');
 const todas = await q('select atleta_id, metros from travesia_semanas order by metros desc');
 check(todas.length === 2 && todas[0].atleta_id === atletaA && todas[1].atleta_id === atletaB && todas[1].metros === 300, 'el coach ve las de todas; de baja, sin ficha o el propio coach no apuntan nada');
 

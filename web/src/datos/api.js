@@ -8,6 +8,8 @@ import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { progresoObjetivo, mejorReciente } from '../logica/objetivos.js';
 import { limpiarPersonal, MOMENTO_VALIDO, LIMITES, urlMusica } from '../logica/personal.js';
 import { claveValida } from '../logica/musica.js';
+import { ID_APUNTE, ENLACE_NOVEDAD } from '../logica/apuntes.js';
+import { ID_ENVIO } from '../logica/travesia.js';
 import { URL_ATAJO, limpiarTelefono } from '../logica/integraciones.js';
 import { resumenHabito, cumplimientoHabitos } from '../logica/habitos.js';
 import { progresarPauta, opcionesDe } from '../logica/progresion.js';
@@ -3976,19 +3978,21 @@ export function crearApi(backend) {
     // (coach) guardar una novedad: { id?, titulo, texto, fuente, enlace, publicada }
     async guardarNovedad(n) {
       const limpio = (v, max) => { const t = String(v ?? '').replace(/\s+/g, ' ').trim(); return t ? [...t].slice(0, max).join('') : null; };
-      const fila = { titulo: limpio(n.titulo, 90), texto: limpio(n.texto, 500), fuente: limpio(n.fuente, 200), enlace: limpio(n.enlace, 300), publicada: !!n.publicada };
+      const fila = { titulo: limpio(n.titulo, 90), texto: limpio(n.texto, 500), fuente: limpio(n.fuente, 200), enlace: limpio(n.enlace, 300)?.replace(/^https:\/\//i, 'https://') ?? null, publicada: !!n.publicada };
       if (!fila.titulo || !fila.texto) throw new Error('La novedad necesita un título y un texto');
-      if (fila.enlace && !/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(fila.enlace)) throw new Error('El enlace tiene que empezar por https://');
+      // (como la base, 060: https, un dominio y, si acaso, ruta, ?consulta o #ancla; sin espacios)
+      if (fila.enlace && !ENLACE_NOVEDAD.test(fila.enlace)) throw new Error('El enlace tiene que empezar por https:// y no llevar espacios');
       const [r] = n.id ? await b.update('novedades', fila, { eq: { id: n.id } }).catch(falta060) : await b.insert('novedades', [fila]).catch(falta060);
       return r;
     },
     async borrarNovedad(id) { await b.delete('novedades', { eq: { id } }).catch(falta060); },
     // (atleta) suma lo jugado en La travesía: { metros, estrellas, etapas, mejor }. true si se subió; false si no se pudo
     // (sin red o sin la 060: se queda en el móvil y se reintenta)
+    // Con x.id (uuid), un envío repetido no se suma dos veces
     async sumarTravesia(x) {
       if (!(x?.metros > 0) || api._sin060 || !uid()) return false;
       try {
-        await b.rpc('sumar_travesia', { p_metros: Math.round(x.metros), p_estrellas: Math.round(x.estrellas || 0), p_etapas: Math.max(1, Math.round(x.etapas || 1)), p_mejor: x.mejor != null ? Math.round(x.mejor) : null });
+        await b.rpc('sumar_travesia', { p_metros: Math.round(x.metros), p_estrellas: Math.round(x.estrellas || 0), p_etapas: Math.max(1, Math.round(x.etapas || 1)), p_mejor: x.mejor != null ? Math.round(x.mejor) : null, p_envio: ID_ENVIO.test(String(x.id || '')) ? x.id : null });
         return true;
       } catch (e) {
         if (/sumar_travesia|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin060 = true;
@@ -3999,11 +4003,15 @@ export function crearApi(backend) {
     async travesiaDe(atletaId) {
       return b.select('travesia_semanas', { eq: { atleta_id: atletaId }, order: [['semana', 'desc']], limit: 520 }).catch(() => []);
     },
-    // (atleta) apunta un apunte visto (sabia: true, false o null). true si se subió
+    // (atleta) apunta un apunte visto (sabia: true, false o null). true si se subió; 'rechazado' si la base no lo admite
+    // (no se reintenta); false si no se pudo (sin red o sin la 060)
     async apuntarApunte(id, sabia = null) {
       if (!id || api._sin060 || !uid()) return false;
+      if (!ID_APUNTE.test(String(id))) return 'rechazado';
       try { await b.rpc('apuntar_apunte', { p_apunte: id, p_sabia: typeof sabia === 'boolean' ? sabia : null }); return true; } catch (e) {
-        if (/apuntar_apunte|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin060 = true;
+        const m = `${e?.message || ''} ${e?.code || ''}`;
+        if (/22023|Ese no es un apunte/.test(m)) return 'rechazado';
+        if (/apuntar_apunte|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(m)) api._sin060 = true;
         return false;
       }
     },

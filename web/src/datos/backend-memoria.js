@@ -10,6 +10,7 @@ import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
 import { fasesValidas, semanaPlanValida } from '../logica/carrera.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
+import { ENLACE_NOVEDAD } from '../logica/apuntes.js';
 import { fechaMadrid as fMadrid, instanteMadrid, partesMadrid } from '../logica/fechas.js';
 import { emojiValido } from '../logica/emojis.js';
 import { leerDatos as leerDatosRendimiento, leerEntorno as leerEntornoRendimiento } from '../logica/rendimiento.js';
@@ -131,7 +132,7 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'],
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
@@ -180,7 +181,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
+const SIN_ID = ['videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
   'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_semanas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
@@ -384,6 +385,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     novedades: (x) => esCoach() || (!!miAtletaId() && x.publicada === true),
     travesia_semanas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     apuntes_vistos: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    travesia_envios: () => false,   // (solo para sumar_travesia())
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
   const programadoAun = (c) => !!c?.enviar_en && Date.parse(c.enviar_en) > Date.now();
@@ -761,7 +763,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // Como la 060: la novedad, con su título y su texto; al publicarla, la base apunta cuándo
     if (t === 'novedades') {
       if (!String(f.titulo || '').trim() || [...String(f.titulo)].length > 90 || !String(f.texto || '').trim() || [...String(f.texto)].length > 500) throw new Error('new row for relation "novedades" violates check constraint "novedades_validas"');
-      if (f.enlace && !/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(f.enlace)) throw new Error('new row for relation "novedades" violates check constraint "novedades_validas"');
+      if (f.enlace && !ENLACE_NOVEDAD.test(f.enlace)) throw new Error('new row for relation "novedades" violates check constraint "novedades_validas"');
       f.publicada_en = f.publicada ? (f.publicada_en || ahora()) : null;
     }
     if (t === 'fichas_ejercicio') {
@@ -1566,7 +1568,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   }
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
-    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj'].includes(t)) throw sinPermisoTabla(t);
+    // (060) la travesía y los apuntes vistos, solo con sumar_travesia() y apuntar_apunte(); los envíos, nadie
+    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas',
       'comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw sinPermiso();
@@ -2977,7 +2980,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // Como la 032: de una reacción, solo el emoji de la propia (en un mensaje en que aún se puede reaccionar); el estado
       // de las conversaciones, el coach; la presencia (solo con su función), los destacados y los cupos no se cambian
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios'].includes(t)) throw sinPermisoTabla(t);
       if (t === 'comentario_reacciones') {
         if (Object.keys(cambios).some((k) => k !== 'emoji')) throw new Error('De una reacción solo se cambia el emoji');
         if (!emojiValido(cambios.emoji)) throw new Error('Algún valor está fuera de rango.');
@@ -3184,7 +3187,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return copia(res);
       }
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios'].includes(t)) throw sinPermisoTabla(t);
       // Como la 034: la versión vista (con el usuario que sea, la base la pone a tu nombre: es la tuya la que cambia)
       if (t === 'privacidad_vista') {
         const res = (Array.isArray(filas) ? filas : [filas]).map((f) => {
@@ -3297,6 +3300,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return [];
       }
+      // (060) lo de la travesía y los apuntes vistos: el coach cualquiera; el atleta, lo suyo
+      if (t === 'travesia_semanas' || t === 'apuntes_vistos') {
+        db[t] = tabla(t).filter((x) => !(cumple(x, f) && (esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()))));
+        persistirYa();
+        return [];
+      }
+      if (t === 'travesia_envios') throw sinPermisoTabla(t);
       if (SIN_ID.includes(t)) { db[t] = tabla(t).filter((x) => !cumple(x, f)); persistirYa(); return; }
       // Como la 032 (revisión): el atleta borra sus archivos, pero no un adjunto del chat que lleva mensajes
       // (035) ni la voz del coach de una corrección
@@ -3419,6 +3429,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const etapas = Math.min(Math.max(Math.round(Number(args.p_etapas ?? 1)) || 1, 1), 60);
         const metros = Math.min(Math.max(Math.round(Number(args.p_metros) || 0), 0), 5000 * etapas, 60000);
         if (metros <= 0) return null;
+        // (v0.148) un envío repetido (el mismo p_envio) no suma, como en la base
+        if (args.p_envio != null) {
+          const env = tabla('travesia_envios');
+          if (env.some((x) => x.atleta_id === a && x.envio === args.p_envio)) return null;
+          env.push({ atleta_id: a, envio: String(args.p_envio), creado_en: ahora() });
+          if (env.length > 500) db.travesia_envios = env.slice(-500);
+        }
         const estrellas = Math.min(Math.max(Math.round(Number(args.p_estrellas) || 0), 0), 400 * etapas);
         const mejor = Math.min(Math.max(Math.round(Number(args.p_mejor ?? (etapas === 1 ? metros : 0)) || 0), 0), 5000, metros);
         const hoy = new Date(); const lunes = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - ((hoy.getDay() + 6) % 7))).toISOString().slice(0, 10);
@@ -3432,7 +3449,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'apuntar_apunte') {
         const a = miAtletaId();
         if (!a || deBaja()) return null;
-        if (!/^[peimn]:[A-Za-z0-9:_-]{1,78}$/.test(String(args.p_apunte || ''))) throw new Error('Ese no es un apunte');
+        if (!/^[peimn]:[A-Za-z0-9:_-]{1,78}$/.test(String(args.p_apunte || ''))) throw Object.assign(new Error('Ese no es un apunte'), { code: '22023' });
         const hoy = new Date(); const dia = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())).toISOString().slice(0, 10);
         const sabia = typeof args.p_sabia === 'boolean' ? args.p_sabia : null;
         const x = tabla('apuntes_vistos').find((v) => v.atleta_id === a && v.apunte === args.p_apunte);

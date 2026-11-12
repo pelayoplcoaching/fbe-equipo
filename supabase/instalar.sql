@@ -20841,6 +20841,7 @@ insert into public.fbe_migraciones (numero) values (59)  -- (3) número de esta 
 --     de dónde sale y, si quiere, un enlace). Las publicadas las ven todos sus atletas, como un apunte más.
 --   * travesia_semanas: lo que ha recorrido el lobo de cada atleta en sus descansos, por semanas (metros, estrellas,
 --     etapas y su mejor etapa). Solo lo apunta el propio atleta, con sumar_travesia(); lo ven él y su coach.
+--     (travesia_envios: los envíos ya sumados, para que uno repetido no cuente dos veces; nadie la lee.)
 --   * apuntes_vistos: qué apuntes ha visto cada atleta (cuántas veces, el último día y, en los que tienen vuelta, si lo
 --     sabía). Solo lo apunta el propio atleta, con apuntar_apunte(); lo ven él y su coach (para saber qué se falla más).
 --
@@ -20881,16 +20882,21 @@ alter table public.novedades add constraint novedades_validas check (
   char_length(titulo) between 1 and 90 and public.texto_visible(titulo)
   and char_length(texto) between 1 and 500 and public.texto_visible(texto)
   and (fuente is null or (char_length(fuente) between 1 and 200 and public.texto_visible(fuente)))
-  and (enlace is null or (char_length(enlace) <= 300 and enlace !~ '\s' and enlace ~* '^https://[a-z0-9.-]+\.[a-z]{2,}(/|$)'))
+  -- (el enlace: https, un dominio y, si acaso, ruta, ?consulta o #ancla; sin espacios ni caracteres de control o invisibles)
+  and (enlace is null or (char_length(enlace) <= 300 and enlace ~ '^https://[A-Za-z0-9.-]+\.[A-Za-z]{2,}(:[0-9]{1,5})?([/?#][\x21-\x7e]*)?$'))
 );
 create index if not exists novedades_publicadas_idx on public.novedades (publicada_en desc) where publicada;
 
--- Al publicarla se apunta cuándo (y al despublicarla se quita): el atleta ve las últimas primero
+-- Al publicarla se apunta cuándo (y al despublicarla se quita): el atleta ve las últimas primero. La fecha la pone
+-- siempre la base (no se puede adelantar ni atrasar), y el id y cuándo se creó no cambian.
 create or replace function public.novedad_tocar() returns trigger
 language plpgsql set search_path = public as $$
 begin
-  if new.publicada and (tg_op = 'INSERT' or not old.publicada or new.publicada_en is null) then new.publicada_en := coalesce(new.publicada_en, now()); end if;
-  if not new.publicada then new.publicada_en := null; end if;
+  if not new.publicada then new.publicada_en := null;
+  elsif tg_op = 'INSERT' or not old.publicada then new.publicada_en := now();
+  else new.publicada_en := old.publicada_en; end if;
+  if tg_op = 'INSERT' then new.creada_en := now();
+  else new.id := old.id; new.creada_en := old.creada_en; end if;
   return new;
 end $$;
 drop trigger if exists novedades_tocar on public.novedades;
@@ -20917,9 +20923,20 @@ alter table public.travesia_semanas add constraint travesia_semanas_validas chec
 );
 create index if not exists travesia_semanas_semana_idx on public.travesia_semanas (semana);
 
+-- Cada envío lleva un identificador que pone el móvil: si llega dos veces (se cortó la red justo al contestar, o dos
+-- pestañas mandan lo mismo), la segunda no suma. Se recuerdan 30 días; nadie los lee ni los escribe salvo sumar_travesia().
+create table if not exists public.travesia_envios (
+  atleta_id uuid not null references public.atletas(id) on delete cascade,
+  envio     uuid not null,
+  creado_en timestamptz not null default now(),
+  primary key (atleta_id, envio)
+);
+alter table public.travesia_envios enable row level security;
+
 -- El atleta suma lo jugado (una etapa, o varias si su móvil llevaba un rato sin poder subirlas). Con topes: una etapa no
--- pasa de 5 km ni una subida de 60 km, y una semana no pasa de 2000 km.
-create or replace function public.sumar_travesia(p_metros integer, p_estrellas integer default 0, p_etapas integer default 1, p_mejor integer default null)
+-- pasa de 5 km ni una subida de 60 km, y una semana no pasa de 2000 km. Un envío repetido (el mismo p_envio) no suma.
+drop function if exists public.sumar_travesia(integer, integer, integer, integer);
+create or replace function public.sumar_travesia(p_metros integer, p_estrellas integer default 0, p_etapas integer default 1, p_mejor integer default null, p_envio uuid default null)
 returns void
 language plpgsql security definer set search_path = public as $$
 declare
@@ -20934,6 +20951,11 @@ begin
   if v_atleta is null then return; end if;  -- el coach sin ficha de atleta (o una cuenta sin ficha): no se apunta nada
   if exists (select 1 from public.atletas where id = v_atleta and estado = 'baja') then return; end if;  -- de baja, nada nuevo (como en la 059)
   if v_metros <= 0 then return; end if;
+  if p_envio is not null then
+    insert into public.travesia_envios (atleta_id, envio) values (v_atleta, p_envio) on conflict do nothing;
+    if not found then return; end if;  -- ya había llegado: no se suma dos veces
+    delete from public.travesia_envios where atleta_id = v_atleta and creado_en < now() - interval '30 days';
+  end if;
   insert into public.travesia_semanas as t (atleta_id, semana, metros, estrellas, etapas, mejor)
     values (v_atleta, v_lunes, v_metros, v_estrellas, v_etapas, v_mejor)
   on conflict (atleta_id, semana) do update set
@@ -20975,6 +20997,7 @@ begin
   if p_apunte is null or p_apunte !~ '^[peimn]:[A-Za-z0-9:_-]{1,78}$' then
     raise exception 'Ese no es un apunte' using errcode = '22023';
   end if;
+  perform pg_advisory_xact_lock(hashtext('apuntes_vistos:' || v_atleta::text));  -- (dos a la vez no se saltan el tope)
   if (select count(*) from public.apuntes_vistos where atleta_id = v_atleta) >= 3000
      and not exists (select 1 from public.apuntes_vistos where atleta_id = v_atleta and apunte = p_apunte) then return; end if;
   insert into public.apuntes_vistos as x (atleta_id, apunte, ultimo, sabia)
@@ -21018,7 +21041,7 @@ drop policy if exists atleta_borrar on public.apuntes_vistos;
 create policy atleta_borrar on public.apuntes_vistos for delete to authenticated using (atleta_id = public.mi_atleta_id());
 
 -- Desde la 019, cada tabla nueva lleva sus permisos a mano
-revoke all on public.novedades, public.travesia_semanas, public.apuntes_vistos from public, anon, authenticated;
+revoke all on public.novedades, public.travesia_semanas, public.apuntes_vistos, public.travesia_envios from public, anon, authenticated;
 grant select, insert, update, delete on public.novedades to authenticated;
 grant select, delete on public.travesia_semanas, public.apuntes_vistos to authenticated;
 

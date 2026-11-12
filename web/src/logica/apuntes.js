@@ -70,6 +70,11 @@ export function novedadPendiente(apuntes = [], estado = null, hoy, dias = 14) {
 }
 
 // ---------- Lo visto (en el móvil) ----------
+// (v0.148) Lo que la base admite como apunte (como apuntar_apunte() en la 060): lo demás no se pone en cola
+export const ID_APUNTE = /^[peimn]:[A-Za-z0-9:_-]{1,78}$/;
+// (v0.148) El enlace de una novedad, como lo admite la base (060): https, un dominio y, si acaso, puerto, ruta, ?consulta o
+// #ancla, sin espacios ni caracteres de control o invisibles
+export const ENLACE_NOVEDAD = /^https:\/\/[A-Za-z0-9.-]+\.[A-Za-z]{2,}(:[0-9]{1,5})?([/?#][\x21-\x7e]*)?$/;
 // { vistos: { <id>: { n: veces, t: día (AAAA-MM-DD) de la última, s: lo sabía (true/false; solo las de dar la vuelta) } } }
 // Como mucho 600 apuntes recordados (los más antiguos, fuera).
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
@@ -81,7 +86,7 @@ export function limpiarVistos(g) {
   }
   // (060) lo que no se pudo subir a la base (sin red): { <id>: true | false | null (si lo sabía) }, como mucho 300
   const porSubir = {};
-  for (const [id, sabia] of Object.entries(objeto(objeto(g).porSubir)).slice(-300)) if (id.length <= 80) porSubir[id] = typeof sabia === 'boolean' ? sabia : null;
+  for (const [id, sabia] of Object.entries(objeto(objeto(g).porSubir)).slice(-300)) if (ID_APUNTE.test(id)) porSubir[id] = typeof sabia === 'boolean' ? sabia : null;
   return Object.keys(porSubir).length ? { vistos, porSubir } : { vistos };
 }
 // Queda por subir (o ya se subió)
