@@ -1,7 +1,7 @@
 // La carrera del atleta (v0.133, migración 056): la sesión de carrera por partes con sus zonas y el semáforo antes de
 // entrenar; en Hoy, su carrera con la cuenta atrás; y «Tu carrera»: zonas, carreras, plan por semanas y revisiones.
 import { useMemo, useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Hoja, Siluetas, ErrorCaja } from '../comunes.jsx';
+import { useApp, useCarga, Icono, Hoja, Siluetas, ErrorCaja, IcoIos } from '../comunes.jsx';
 import { TablaZonas, Macrociclo, ListaPartes } from '../CarreraComun.jsx';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
@@ -90,7 +90,7 @@ export function CarreraHoy({ abrir }) {
   if (!obj && !fase && !semana && !d.perfil) return null;
   return (
     <button type="button" class="panel tarjeta-carrera-hoy" onClick={abrir}>
-      <span class="ios-ico" aria-hidden="true"><Icono n="pasos" /></span>
+      <IcoIos n="pasos" />
       <span class="pila-xs" style="min-width:0;flex:1">
         <span class="peq secundario">Tu carrera{fase && n >= 1 && n <= total ? ` · semana ${n} de ${total}, ${fase.nombre.toLowerCase()}` : ''}</span>
         {obj ? <strong>{obj.nombre}: {textoCuentaAtras(obj.fecha, hoy).replace(/^F/, 'f')}</strong> : <strong>Tus zonas y tu plan</strong>}

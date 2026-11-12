@@ -2168,6 +2168,456 @@
       "1080": "imagenes/hito/hito-8-1080.a0106953.webp"
     }
   },
+  "ico-agua": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-agua-96.ad2a83c2.webp",
+      "192": "imagenes/icono/ico-agua-192.e3fcadf1.webp"
+    }
+  },
+  "ico-altavoz": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-altavoz-96.cd759e17.webp",
+      "192": "imagenes/icono/ico-altavoz-192.6c924b02.webp"
+    }
+  },
+  "ico-atletas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-atletas-96.1a2a717f.webp",
+      "192": "imagenes/icono/ico-atletas-192.0e8602aa.webp"
+    }
+  },
+  "ico-bandeja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-bandeja-96.365dad0b.webp",
+      "192": "imagenes/icono/ico-bandeja-192.afc7fb5e.webp"
+    }
+  },
+  "ico-bandera": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-bandera-96.2c61486a.webp",
+      "192": "imagenes/icono/ico-bandera-192.5744545b.webp"
+    }
+  },
+  "ico-bascula": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-bascula-96.e845a1b0.webp",
+      "192": "imagenes/icono/ico-bascula-192.87ef119a.webp"
+    }
+  },
+  "ico-biblioteca": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-biblioteca-96.a91bb10f.webp",
+      "192": "imagenes/icono/ico-biblioteca-192.c45e433f.webp"
+    }
+  },
+  "ico-calendario": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-calendario-96.e43a707a.webp",
+      "192": "imagenes/icono/ico-calendario-192.140c713b.webp"
+    }
+  },
+  "ico-campana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-campana-96.2bd4fda2.webp",
+      "192": "imagenes/icono/ico-campana-192.dd553469.webp"
+    }
+  },
+  "ico-candado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-candado-96.db58af62.webp",
+      "192": "imagenes/icono/ico-candado-192.e80bea2f.webp"
+    }
+  },
+  "ico-checkin": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-checkin-96.ec38db80.webp",
+      "192": "imagenes/icono/ico-checkin-192.72b6f419.webp"
+    }
+  },
+  "ico-diana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-diana-96.1fa9345b.webp",
+      "192": "imagenes/icono/ico-diana-192.e59a1bb4.webp"
+    }
+  },
+  "ico-disco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-disco-96.65517091.webp",
+      "192": "imagenes/icono/ico-disco-192.69f46e6d.webp"
+    }
+  },
+  "ico-equipo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-equipo-96.9cc2cae1.webp",
+      "192": "imagenes/icono/ico-equipo-192.fdc7adb1.webp"
+    }
+  },
+  "ico-escudo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-escudo-96.720c6a25.webp",
+      "192": "imagenes/icono/ico-escudo-192.f76c1af9.webp"
+    }
+  },
+  "ico-estrella": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-estrella-96.1578e8a9.webp",
+      "192": "imagenes/icono/ico-estrella-192.56c5831c.webp"
+    }
+  },
+  "ico-historial": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-historial-96.735addd6.webp",
+      "192": "imagenes/icono/ico-historial-192.19c68b82.webp"
+    }
+  },
+  "ico-hoy": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-hoy-96.94bd3ec0.webp",
+      "192": "imagenes/icono/ico-hoy-192.4939a234.webp"
+    }
+  },
+  "ico-imagen": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-imagen-96.8ac32b3d.webp",
+      "192": "imagenes/icono/ico-imagen-192.28d1995e.webp"
+    }
+  },
+  "ico-llama": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-llama-96.96c269f2.webp",
+      "192": "imagenes/icono/ico-llama-192.ff829eb2.webp"
+    }
+  },
+  "ico-lluvia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-lluvia-96.c62bf4b8.webp",
+      "192": "imagenes/icono/ico-lluvia-192.4245158b.webp"
+    }
+  },
+  "ico-mensaje": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-mensaje-96.1393b1c7.webp",
+      "192": "imagenes/icono/ico-mensaje-192.95bd2655.webp"
+    }
+  },
+  "ico-micro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-micro-96.a2c6ea93.webp",
+      "192": "imagenes/icono/ico-micro-192.6ce9240e.webp"
+    }
+  },
+  "ico-movilidad": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-movilidad-96.47b1d0ea.webp",
+      "192": "imagenes/icono/ico-movilidad-192.1dac709d.webp"
+    }
+  },
+  "ico-niebla": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-niebla-96.712fb907.webp",
+      "192": "imagenes/icono/ico-niebla-192.de7ec31e.webp"
+    }
+  },
+  "ico-nieve": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-nieve-96.978f324b.webp",
+      "192": "imagenes/icono/ico-nieve-192.bdd49863.webp"
+    }
+  },
+  "ico-nube": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-nube-96.e4f38b35.webp",
+      "192": "imagenes/icono/ico-nube-192.21223c94.webp"
+    }
+  },
+  "ico-nutricion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-nutricion-96.bd5efacd.webp",
+      "192": "imagenes/icono/ico-nutricion-192.704703df.webp"
+    }
+  },
+  "ico-paleta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-paleta-96.a91b61e3.webp",
+      "192": "imagenes/icono/ico-paleta-192.15b29c58.webp"
+    }
+  },
+  "ico-pasos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-pasos-96.a6012257.webp",
+      "192": "imagenes/icono/ico-pasos-192.403e2694.webp"
+    }
+  },
+  "ico-perfil": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-perfil-96.efaf3a31.webp",
+      "192": "imagenes/icono/ico-perfil-192.8ade02d6.webp"
+    }
+  },
+  "ico-plantillas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-plantillas-96.da1d485f.webp",
+      "192": "imagenes/icono/ico-plantillas-192.a2c7580b.webp"
+    }
+  },
+  "ico-privacidad": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-privacidad-96.38f35bb1.webp",
+      "192": "imagenes/icono/ico-privacidad-192.2f18e812.webp"
+    }
+  },
+  "ico-progreso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-progreso-96.4ad7c900.webp",
+      "192": "imagenes/icono/ico-progreso-192.18b245a3.webp"
+    }
+  },
+  "ico-proteina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-proteina-96.7229d4d5.webp",
+      "192": "imagenes/icono/ico-proteina-192.2cc6aa93.webp"
+    }
+  },
+  "ico-receta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-receta-96.a52f92e4.webp",
+      "192": "imagenes/icono/ico-receta-192.14fefb99.webp"
+    }
+  },
+  "ico-reloj": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-reloj-96.3375e9cb.webp",
+      "192": "imagenes/icono/ico-reloj-192.842e98bb.webp"
+    }
+  },
+  "ico-semana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-semana-96.0959bd91.webp",
+      "192": "imagenes/icono/ico-semana-192.94c3a46b.webp"
+    }
+  },
+  "ico-sol": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-sol-96.0d8fe2eb.webp",
+      "192": "imagenes/icono/ico-sol-192.f901f1bc.webp"
+    }
+  },
+  "ico-sueno": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-sueno-96.224a72de.webp",
+      "192": "imagenes/icono/ico-sueno-192.0f208689.webp"
+    }
+  },
+  "ico-tema": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-tema-96.d927d875.webp",
+      "192": "imagenes/icono/ico-tema-192.4c9812fc.webp"
+    }
+  },
+  "ico-tormenta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-tormenta-96.4061a7f9.webp",
+      "192": "imagenes/icono/ico-tormenta-192.058dc22c.webp"
+    }
+  },
+  "ico-trofeo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-trofeo-96.faf539d4.webp",
+      "192": "imagenes/icono/ico-trofeo-192.c4545bfe.webp"
+    }
+  },
+  "ico-verdura": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-verdura-96.6f2736a1.webp",
+      "192": "imagenes/icono/ico-verdura-192.56547bc7.webp"
+    }
+  },
+  "ico-video": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/icono/ico-video-96.f9ae1036.webp",
+      "192": "imagenes/icono/ico-video-192.1ea169ab.webp"
+    }
+  },
   "isq-buenos-dias": {
     "proporcion": [
       1,

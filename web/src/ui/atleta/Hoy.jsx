@@ -3,7 +3,7 @@ import { Fragment } from 'preact';
 import { VideoSemanaHoy, DirectoHoy } from '../Videos.jsx';
 import { GuiaSugerida, MitoDeLaSemana } from '../Guias.jsx';
 import { pedirSubProgreso } from './sub-progreso.js';
-import { FinDePagina, Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar, useApuntar } from '../comunes.jsx';
+import { FinDePagina, Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar, useApuntar, IcoIos, CapaIcono } from '../comunes.jsx';
 import { resumenDia } from '../../logica/dia.js';
 import { BandaConexion, BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
@@ -46,8 +46,8 @@ import { PantallaRacha, HitoRacha, useHitoRacha } from './Racha.jsx';
 import { lanzarConfeti } from '../confeti.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { Ilustracion } from '../Ilustraciones.jsx';
-import { imagenEjercicio } from '../../logica/imagenes.js';
-import { Imagen } from '../Imagen.jsx';
+import { imagenEjercicio, imagenIcono } from '../../logica/imagenes.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
 import { estadoHoy, sugerenciaDescanso, urlSegura, resumenPautas } from '../../logica/diseno.js';
 import { panelBienvenida, panelNutricion } from '../../logica/bienvenida.js';
@@ -219,7 +219,7 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
         {items.map((x) => (
           <li key={x.id}>
             <button class={`fila-dia ${x.estado}${Date.now() - (recien.current[x.id] || 0) < 1500 ? ' recien' : ''}`} data-tipo={x.accion === 'tarea' ? 'tarea' : x.id} onClick={() => ir(x)}>
-              <span class="dia-marca" aria-hidden="true">{x.estado === 'hecho' ? <Icono n="hecho" /> : <Icono n={x.icono || ICONO_DIA[x.id] || 'hoy'} />}</span>
+              <span class={`dia-marca${x.estado !== 'hecho' && hayImagen(imagenIcono(x.icono || ICONO_DIA[x.id] || 'hoy')) ? ' con-img' : ''}`} aria-hidden="true">{x.estado === 'hecho' ? <Icono n="hecho" /> : <><Icono n={x.icono || ICONO_DIA[x.id] || 'hoy'} /><CapaIcono n={x.icono || ICONO_DIA[x.id] || 'hoy'} /></>}</span>
               <span class="pila-xs"><span class={x.estado === 'hecho' ? 'tachado' : ''}>{x.texto}</span><span class="mini terciario">{x.detalle}</span></span>
               <span class="sr">{x.estado === 'hecho' ? 'hecho' : x.estado === 'toca' ? 'pendiente' : ''}</span>
               {x.estado === 'toca' && <span class="punto-dia" aria-hidden="true" />}
@@ -636,7 +636,7 @@ function Plegable({ id, titulo, icono, detalle = null, children }) {
     <Reserva id={`hoy-plegable-${id}`} clase="reserva-plegable">
     <details class="plegable-hoy" data-plegable={id} open={abierta} hidden={vacia} onToggle={(ev) => { const o = ev.currentTarget.open; if (o !== abierta) setAbierta(o); }}>
       <summary>
-        <span class="ios-ico" aria-hidden="true"><Icono n={icono} /></span>
+        <IcoIos n={icono} />
         <span class="plegable-texto"><h2>{titulo}</h2>{detalle && <span class="mini terciario">{detalle}</span>}</span>
         <Icono n="abajo" class="plegable-flecha" />
       </summary>

@@ -3,7 +3,7 @@
 //   node test/imagenes.test.mjs
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, imagenLugar, imagenBienvenida, imagenPrimerosPasos, imagenHerramienta, HERRAMIENTAS, FAMILIAS_PORTADA, IMAGENES, imagenFoco, FOCOS_IMG, FRASE_FOCO, imagenPortada, MODALIDADES_IMG, focoFondo, imagenHito, HITOS_IMG, IMAGEN_ANIVERSARIO, imagenEjercicio, imagenEstante, imagenGuia, IMAGEN_MITO, imagenPasoCuestionario, PORTADAS_GUIA, imagenPortadaGuia } from '../web/src/logica/imagenes.js';
+import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, fondoTarjeta, FONDOS_TARJETA, imagenMedalla, archivoPara, imagenMes, imagenPasoCheckin, imagenCelebracion, selloSesion, CELEBRACIONES, imagenLugar, imagenBienvenida, imagenPrimerosPasos, imagenHerramienta, HERRAMIENTAS, FAMILIAS_PORTADA, IMAGENES, imagenFoco, FOCOS_IMG, FRASE_FOCO, imagenPortada, MODALIDADES_IMG, focoFondo, imagenHito, HITOS_IMG, IMAGEN_ANIVERSARIO, imagenEjercicio, imagenEstante, imagenGuia, IMAGEN_MITO, imagenPasoCuestionario, PORTADAS_GUIA, imagenPortadaGuia, ICONOS_IMG, imagenIcono } from '../web/src/logica/imagenes.js';
 import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 import { GRUPOS } from '../web/src/logica/calculos.js';
 import { TOMAS } from '../web/src/logica/comidas.js';
@@ -213,6 +213,26 @@ console.log('\nLa comunidad viva: solo transform y opacity, y nada con «reducir
   check(claves.every(([, n]) => usadas.has(n)), `ninguna animación sobra: ${claves.map(([, n]) => n).filter((n) => !usadas.has(n)).join(', ') || 'todas se usan'}`);
   const com = readFileSync(new URL('../web/src/ui/Comunidad.jsx', import.meta.url), 'utf8');
   check(/class=\{`franja-ilu franja-pegada franja-viva \$\{clase\}`\} aria-hidden="true"/.test(com) && /class="cp-llamas" aria-hidden="true"/.test(com) && /'--pct': pct \/ 100/.test(com), 'las franjas y las llamas son adorno, y la barra de la encuesta se mide con una variable (no con el ancho)');
+}
+
+console.log('\nLos iconos ilustrados');
+const LISTA_IMG = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.json'), 'utf8'));
+{
+  const com = readFileSync(new URL('../web/src/ui/comunes.jsx', import.meta.url), 'utf8');
+  const trazos = new Set([...com.slice(com.indexOf('export const P = {'), com.indexOf('\n};', com.indexOf('export const P = {'))).matchAll(/^\s+'?([a-z0-9_-]+)'?:/gm)].map((m) => m[1]));
+  check(ICONOS_IMG.length === 45 && new Set(ICONOS_IMG).size === 45, 'son 45 y no se repiten');
+  check(ICONOS_IMG.every((n) => trazos.has(n)), `cada uno es un icono de la app (tiene su dibujo de líneas debajo): ${ICONOS_IMG.filter((n) => !trazos.has(n)).join(', ') || 'todos'}`);
+  check(ICONOS_IMG.every((n) => IMAGENES.includes(imagenIcono(n))), `y su imagen está en la lista: ${ICONOS_IMG.filter((n) => !IMAGENES.includes(imagenIcono(n))).join(', ') || 'todas'}`);
+  check(imagenIcono('derecha') === null && imagenIcono('cerrar') === null && imagenIcono(undefined) === null, 'los de función (flechas, cerrar) no llevan imagen');
+  const archivos = ICONOS_IMG.flatMap((n) => Object.values(LISTA_IMG[imagenIcono(n)]?.archivos || {}));
+  const pesos = archivos.map((f) => statSync(join(raiz, 'web', f)).size);
+  check(archivos.length === 90 && Math.max(...pesos) < 8192, `cada uno en dos tamaños (96 y 192 px), el mayor de ${(Math.max(...pesos) / 1024).toFixed(1)} KB (menos de 8)`);
+  check(pesos.reduce((a, b) => a + b, 0) < 200 * 1024, `todos juntos, ${(pesos.reduce((a, b) => a + b, 0) / 1024).toFixed(0)} KB (menos de 200)`);
+  check(ICONOS_IMG.every((n) => LISTA_IMG[imagenIcono(n)].proporcion.join(':') === '1:1'), 'todos cuadrados');
+  check(archivoPara(imagenIcono('bascula'), 32) === LISTA_IMG['ico-bascula'].archivos['96'] && archivoPara(imagenIcono('bascula'), 60) === LISTA_IMG['ico-bascula'].archivos['192'], 'el cuadradito (32 px) usa el de 96 y el vacío (60 px) el de 192');
+  check(/export function IcoIos\(\{ n, tono = '', clase = '' \}\) \{\n  const img = !tono && hayImagen\(imagenIcono\(n\)\)/.test(com) && /<Icono n=\{n\} class=\{`ico-\$\{n\}`\} \/>\{img && <Imagen id=\{img\} clase="ico-img"/.test(com), 'el cuadradito pinta la imagen encima del dibujo de líneas, y nunca con tono de estado');
+  const css = readFileSync(new URL('../web/src/imagenes.css', import.meta.url), 'utf8');
+  check(/\.ico-img \{ position: absolute; inset: 0; width: 100%; height: 100%;/.test(css) && /\.conexion-salud \.ico-img, \.conexion-calendario \.ico-img \{ display: none; \}/.test(css), 'la imagen cubre el cuadradito entero (sin saltos), y Salud y el calendario conservan su color');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

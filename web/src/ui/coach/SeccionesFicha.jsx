@@ -3,7 +3,7 @@
 // lleva «todas» porque una prueba pulsa el primer botón que diga «todas») que abre una hoja con todas a la vez,
 // y la elegida se queda siempre a la vista en la tira. Estilos en diseno.css, bloque 12.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Pestanas, Hoja, Icono } from '../comunes.jsx';
+import { Pestanas, Hoja, Icono, IcoIos } from '../comunes.jsx';
 import { sinMovimiento } from '../transiciones.js';
 
 const ICONO = { programa: 'semana', mensajes: 'mensaje', actividad: 'historial', registro: 'hoy', carrera: 'pasos', seguimiento: 'progreso', nutricion: 'nutricion', videos: 'video', objetivos: 'diana', notas: 'editar', cobros: 'calculadora', datos: 'perfil' };
@@ -52,7 +52,7 @@ export function SeccionesFicha({ opciones, valor, alCambiar, etiqueta = 'Seccion
             {opciones.map(([id, texto]) => (
               <li key={id}>
                 <button type="button" class={id === valor ? 'actual' : undefined} aria-current={id === valor ? 'true' : undefined} onClick={() => { setTodas(false); alCambiar(id); }}>
-                  <span class="ios-ico"><Icono n={ICONO[id] || 'derecha'} /></span>
+                  <IcoIos n={ICONO[id] || 'derecha'} />
                   <span>{texto}</span>
                 </button>
               </li>
