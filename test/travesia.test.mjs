@@ -232,6 +232,63 @@ console.log('(tanda 1) El cielo de verdad');
   check(ambiente({ total: 12000, hora: 13 }).clima === 'nieve' && ambiente({ total: 16000, hora: 23 }).fase === 'alba' && ambiente({ codigo: 63, hora: 13 }).clima === 'lluvia', 'en la nieve, nieva; en el amanecer, amanece; y si fuera llueve, llueve');
 }
 
+console.log('(tanda 3) El mapa y las postales');
+{
+  const R = await import('../web/src/logica/travesia-ruta.js');
+  const p0 = R.posicionEnRuta(0);
+  check(p0.ruta.id === 'mieres-madrid' && p0.km === 0 && p0.anterior[0] === 'Mieres' && p0.siguiente[0] === 'Pola de Lena' && p0.faltan === 12 && p0.pasados === 1, 'la travesía sale de Mieres; lo siguiente, Pola de Lena, a 12 km');
+  const p1 = R.posicionEnRuta(40500);
+  check(p1.km === 40.5 && p1.anterior[0] === 'Puerto de Pajares' && p1.siguiente[0] === 'La Robla' && p1.faltan === 44.5 && Math.abs(p1.pct - 0.09) < 0.001, 'con 40,5 km: pasado Pajares, camino de La Robla');
+  const p2 = R.posicionEnRuta(450000), p3 = R.posicionEnRuta(460000);
+  check(p2.ruta.id === 'madrid-valencia' && p2.km === 0 && p3.km === 10 && p3.n === 1 && p3.siguiente[0] === 'Arganda', 'al llegar a Madrid empieza la ruta a Valencia');
+  const fin = R.posicionEnRuta((450 + 355 + 350) * 1000 + 5000);
+  check(fin.ruta.id === 'mieres-madrid' && fin.n === 3 && fin.km === 5, 'y tras Barcelona, vuelta a empezar');
+  check(R.RUTAS.every((r) => r.hitos[0][1] === 0 && r.hitos.every(([, k], i) => i === 0 || k > r.hitos[i - 1][1])), 'los hitos de cada ruta van en orden');
+  const post = R.postales(40500);
+  check(post.length === 3 && post[0].lugar === 'Puerto de Pajares' && post[2].lugar === 'Mieres' && post.every((x) => /^mes-(0[1-9]|1[0-2])$/.test(x.imagen)), 'una postal por hito alcanzado, la última primero, con su ilustración');
+  check(R.postales(460000).length === 10 && R.postales(460000)[0].lugar === 'Madrid' && R.postales(480000)[0].lugar === 'Arganda' && R.postales(480000).length === 11 && new Set(R.postales(480000).map((x) => x.id)).size === 11, 'la llegada de una ruta es la salida de la siguiente (una sola postal)');
+  check(R.textoRuta(p0) === 'Tu lobo sale de Mieres. Lo primero, Pola de Lena, a 12 km.' && R.textoRuta(p1) === 'Va por el km 40,5 de 450: pasado Puerto de Pajares, a 44,5 km de La Robla.', 'dónde va, en una frase');
+  check(R.textoParaCompartir({ total: 40500, estrellas: 47 }) === 'Mi lobo lleva 40,5 km en La travesía (de Mieres a Madrid): ha pasado Puerto de Pajares y va camino de La Robla. 47 estrellas por el camino. Avanza solo cuando entreno.' && R.textoParaCompartir(null) === '', 'y para contarlo fuera');
+  const nuevas = R.postalesNuevas(11000, 39000);
+  check(nuevas.map((x) => x.lugar).join() === 'Puerto de Pajares,Pola de Lena' && R.postalesNuevas(39000, 39500).length === 0, 'las postales nuevas de una etapa');
+}
+
+console.log('(tanda 3) Los lobos, las constelaciones y la manada');
+{
+  const R = await import('../web/src/logica/travesia-ruta.js');
+  const l0 = R.lobosDe(null), l1 = R.lobosDe({ total: 26000, estrellas: 120, retos: 5, rios: 2 });
+  check(l0.filter((x) => x.tiene).map((x) => x.id).join() === 'tiza' && l1.filter((x) => x.tiene).map((x) => x.id).join() === 'tiza,lavanda,oro,nieve', 'los lobos se van ganando: con 26 km y 5 retos, el lavanda, el dorado y el de nieve');
+  check(R.loboElegido(l1 && { total: 26000, retos: 5 }, 'oro').id === 'oro' && R.loboElegido({ total: 100 }, 'oro').id === 'tiza' && R.loboElegido(null, 'no-existe').id === 'tiza', 'el elegido, si lo tiene; si no, el de tiza');
+  check(R.LOBOS.every((l) => /^#[0-9A-F]{6}$/i.test(l.claro) && /^#[0-9A-F]{6}$/i.test(l.sombra)) && new Set(R.LOBOS.map((l) => l.id)).size === R.LOBOS.length, 'cada lobo, con sus dos colores');
+  const c0 = R.constelaciones(0), c1 = R.constelaciones(47);
+  check(c0.every((c) => !c.completa && c.cogidas === 0) && c1[0].completa && c1[0].total === 40 && c1[1].estrellas === 7 && c1[1].cogidas === 1 && !c1[1].completa && R.constelacionesCompletas(47) === 1, 'las estrellas completan constelaciones en orden: la primera con 40; con 47, una estrella de la segunda');
+  check(R.constelaciones(1e6).every((c) => c.completa) && R.CONSTELACIONES.every((c) => c.lineas.every(([a, b]) => a < c.puntos.length && b < c.puntos.length) && c.puntos.every(([x, y]) => x >= 0 && x <= 1 && y >= 0 && y <= 1)), 'todas se pueden completar y sus líneas unen puntos que existen');
+  check(R.manadaPropia(0) === 0 && R.manadaPropia(3) === 3 && R.manadaPropia(9) === 4 && R.manadaPropia(null) === 0, 'tu manada: un lobo por semana completa seguida, hasta cuatro');
+  const filas = [{ nombre: 'Fer M.', metros: 3000, hoy: true }, { nombre: 'Ana L.', metros: 1200, yo: true, hoy: true }, { nombre: 'Gus R.', metros: 800, hoy: false }];
+  check(R.miPuesto(filas) === 2 && R.miPuesto([]) === null && R.correnHoy(filas).join() === 'Fer M.', 'mi puesto en la semana y quién más ha corrido hoy');
+  check(R.duelo(filas, 'Gus R.', 2000).yo === 2000 && R.duelo(filas, 'Gus R.', 100).yo === 1200, 'en el duelo, lo mío es lo que más lleve: el móvil o la base');
+  const d = R.duelo(filas, 'Fer M.');
+  check(d.yo === 1200 && d.el === 3000 && d.diferencia === -1800 && !d.gano && R.duelo(filas, 'Gus R.').gano && R.duelo(filas, 'Nadie') === null && R.duelo(filas, 'Ana L.') === null, 'el duelo de la semana con un compañero');
+  const eq = R.equipoDelMes({ metros: 30000, miembros: 5 });
+  check(eq.meta === 75000 && Math.abs(eq.pct - 0.4) < 1e-9 && !eq.hecho && R.equipoDelMes({ metros: 60000, miembros: 2 }).hecho && R.equipoDelMes(null).meta === 50000, 'la travesía en equipo: 15 km por cabeza al mes (50 como poco)');
+}
+
+console.log('(tanda 3) Las semanas seguidas');
+{
+  const T = await import('../web/src/logica/travesia.js');
+  let g = T.sumarEtapa(null, { sesion: 's1', metros: 300, dia: '2026-11-04' });
+  g = T.sumarEtapa(g, { sesion: 's2', metros: 200, dia: '2026-11-06' });
+  check(g.semanas['2026-11-02'] === 500 && T.rachaSemanas(g, '2026-11-08') === 1 && T.rachaSemanas(g, '2026-11-10') === 1 && T.rachaSemanas(g, '2026-11-17') === 0, 'los metros de la semana se guardan por su lunes; la racha aguanta la semana siguiente mientras no pase entera');
+  g = T.sumarEtapa(g, { sesion: 's3', metros: 100, dia: '2026-11-11' });
+  check(T.rachaSemanas(g, '2026-11-13') === 2, 'dos semanas seguidas');
+  const b = T.conBase(g, [{ semana: '2026-10-26', metros: 900 }, { semana: '2026-10-12', metros: 400 }, { semana: '2026-11-02', metros: 100 }]);
+  check(b.semanas['2026-10-26'] === 900 && b.semanas['2026-11-02'] === 500 && T.rachaSemanas(b, '2026-11-13') === 3, 'con las semanas de la base (la que más tenga), tres seguidas: la del 12 de octubre no enlaza');
+  check(T.rachaSemanas(T.sumarEtapa(null, { metros: 300, dia: '2026-11-04' }), '2026-11-04') === 0 && T.rachaSemanas(null, '2026-11-04') === 0 && T.rachaSemanas(g, 'ayer') === 0, 'la práctica no cuenta, y sin nada no hay racha');
+  let muchas = null;
+  for (let i = 0; i < 14; i++) muchas = T.sumarEtapa(muchas, { sesion: `s${i}`, metros: 50, dia: T.limpiarTravesia && `2026-0${1 + Math.floor(i / 4)}-${String(5 + (i % 4) * 7).padStart(2, '0')}` });
+  check(Object.keys(muchas.semanas).length === 10 && Object.keys(T.limpiarTravesia({ semanas: { mal: 5, '2026-11-02': -3, '2026-11-09': 7 } }).semanas).join() === '2026-11-09', 'solo se guardan las diez últimas, y lo ilegible se descarta');
+}
+
 console.log('La distancia, en palabras');
 check(textoDistancia(0) === '0 m' && textoDistancia(870.4) === '870 m' && textoDistancia(999) === '999 m', '«870 m»');
 check(textoDistancia(1000) === '1 km' && textoDistancia(2340) === '2,3 km' && textoDistancia(9960) === '10 km' && textoDistancia(12400) === '12 km', '«2,3 km», «12 km»');

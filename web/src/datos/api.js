@@ -3993,6 +3993,15 @@ export function crearApi(backend) {
         return false;
       }
     },
+    // (061) La manada en la travesía: { semana, filas: [{ nombre, metros, estrellas, mejor, yo, hoy }], equipo: { mes, metros,
+    // miembros } }, o null (fuera de la comunidad, sin red o sin la 061)
+    async travesiaManada() {
+      if (api._sin061 || !uid()) return null;
+      try { return (await b.rpc('travesia_manada', {})) || null; } catch (e) {
+        if (/travesia_manada|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin061 = true;
+        return null;
+      }
+    },
     // Lo recorrido por un atleta, por semanas (la última primero)
     async travesiaDe(atletaId) {
       return b.select('travesia_semanas', { eq: { atleta_id: atletaId }, order: [['semana', 'desc']], limit: 520 }).catch(() => []);

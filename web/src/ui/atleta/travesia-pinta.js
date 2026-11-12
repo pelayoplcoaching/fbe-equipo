@@ -53,7 +53,8 @@ function pata(c, x, y, a, doblez, largo, color, grosor) {
   c.lineWidth = grosor * 0.72; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
 }
 
-function lobo(c, e, fase) {
+// (tanda 3) tinta: los dos colores del lobo elegido ({ claro, sombra }); sin ella, el de tiza
+function lobo(c, e, fase, tinta = null) {
   const aire = e.saltos > 0;
   const cae = e.tropiezo > 0;
   // En carrera, las patas de delante y las de atrás van a contratiempo; en el aire, estiradas; al tropezar, recogidas
@@ -63,7 +64,7 @@ function lobo(c, e, fase) {
   const bote = aire || cae ? 0 : Math.abs(Math.sin(fase)) * 0.05;
   const inclina = cae ? -0.42 : aire ? Math.max(-0.35, Math.min(0.4, e.vy * 0.028)) : 0;
   const bajo = e.agachado > 0 && !aire;   // (tanda 1) agachado: el cuerpo pegado al suelo
-  const sombra = '#B4A8EA', claro = TIZA;
+  const sombra = tinta?.sombra || '#B4A8EA', claro = tinta?.claro || TIZA;
   c.save();
   if (bajo) { c.translate(0, -0.02); c.scale(1.08, 0.58); }
   c.translate(0, 0.52 + bote);
@@ -116,7 +117,9 @@ const CIELOS = {
 
 // amb (tanda 1): { fase, luna: { ilum, creciente }, clima, paisaje } (logica/travesia.js, ambiente); fantasma: los metros
 // que llevaría a estas alturas su mejor ritmo (o null)
-export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null }) {
+// (tanda 3) skin: los colores de su lobo; seguidores: cuántos lobos de su manada le siguen (0 a 4); corren: cuántos
+// compañeros han corrido hoy (sus siluetas, a lo lejos); cielo: las constelaciones que lleva ({ puntos, lineas, cogidas, completa })
+export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null }) {
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = amb?.clima || null;
   const deDia = fase === 'dia', nevado = paisaje === 2;
   const u = Math.max(22, Math.min(38, w / 13));          // px por metro
@@ -138,6 +141,25 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     c.fillRect(((s.x * w - e.x * 0.6) % w + w) % w, s.y * suelo, s.t, s.t);
   }
   c.globalAlpha = 1;
+  // (tanda 3) sus constelaciones: la última completa y la que está formando, a la izquierda de la luna
+  if (constel?.length && veEstrellas) {
+    const lado = Math.min(w * 0.3, suelo * 0.34, 150);
+    constel.slice(0, 2).forEach((k, i) => {
+      const ox = w * 0.07 + i * (lado + w * 0.05), oy = Math.max(96, h * 0.15) + i * lado * 0.25;
+      const px = (q) => ox + q[0] * lado, py = (q) => oy + q[1] * lado * 0.8;
+      c.strokeStyle = LAVANDA; c.lineWidth = 1; c.globalAlpha = 0.5 * veEstrellas;
+      for (const [a, b] of k.lineas) {
+        if (!k.completa && (a >= k.cogidas || b >= k.cogidas)) continue;
+        c.beginPath(); c.moveTo(px(k.puntos[a]), py(k.puntos[a])); c.lineTo(px(k.puntos[b]), py(k.puntos[b])); c.stroke();
+      }
+      k.puntos.forEach((q, n) => {
+        const mia = k.completa || n < k.cogidas;
+        c.globalAlpha = (mia ? 0.95 : 0.22) * veEstrellas; c.fillStyle = mia && k.completa ? ORO : TIZA;
+        estrella4(c, px(q), py(q), mia ? 3.4 : 2, 0); c.fill();
+      });
+    });
+    c.globalAlpha = 1;
+  }
   const lx = w * 0.74, ly = Math.max(110, h * 0.23), lr = Math.max(30, Math.min(56, w * 0.11));
   const halo = c.createRadialGradient(lx, ly, lr * 0.6, lx, ly, lr * 3.4);
   halo.addColorStop(0, 'rgba(160, 140, 255, .38)'); halo.addColorStop(1, 'rgba(160, 140, 255, 0)');
@@ -179,6 +201,16 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     }
   }
 
+  // (tanda 3) la manada, a lo lejos: una silueta por cada compañero que ha corrido hoy, al trote por la loma
+  if (corren > 0) {
+    const uu = u * 0.36, n = Math.min(5, corren);
+    for (let i = 0; i < n; i++) {
+      const bx = ((w * (0.5 + i * 0.13) + (quieto ? 0 : t * 5) - e.x * u * 0.05) % (w + 120) + (w + 120)) % (w + 120) - 60;
+      c.save(); c.globalAlpha = deDia ? 0.5 : 0.62; c.translate(bx, suelo - 1); c.scale(uu, -uu);
+      lobo(c, { saltos: 0, tropiezo: 0, vy: 0, agachado: 0 }, quieto ? i : t * 7 + i * 1.7, { claro: '#4A3FA6', sombra: '#3A3090' });
+      c.restore();
+    }
+  }
   // (tanda 1) el bosque: una fila de pinos delante de las cordilleras
   if (paisaje === 1) {
     const corre = (e.x * u * 0.32) % 800;
@@ -293,13 +325,22 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
 
   // El lobo y su sombra
   p.zancada += dt * e.v * (e.calma ? 3.2 : 1.9);
+  // (tanda 3) su manada: detrás de él y un poco más al fondo, un lobo más pequeño por cada semana seguida (corren con él, sin saltar)
+  const TONOS = [['#D9D3F7', '#9C8FE0'], ['#C6BEEF', '#8E81D6'], ['#B3A9E6', '#8073CC'], ['#A095DD', '#7266C2']];
+  for (let i = Math.min(4, seguidores); i >= 1; i--) {
+    const fx = x0 - u * (0.8 * i + 0.3), k = 0.64 - i * 0.04, fy = suelo - u * 0.09 * i;
+    c.fillStyle = 'rgba(6, 4, 24, .3)'; c.beginPath(); c.ellipse(fx - 1, fy + 3, u * 0.7 * k, 2.6, 0, 0, 6.3); c.fill();
+    c.save(); c.translate(fx, fy); c.scale(u * k, -u * k);
+    lobo(c, { saltos: 0, tropiezo: 0, vy: 0, agachado: 0 }, p.zancada + i * 1.9, { claro: TONOS[i - 1][0], sombra: TONOS[i - 1][1] });
+    c.restore();
+  }
   c.fillStyle = 'rgba(6, 4, 24, .45)';
   const encoge = 1 / (1 + e.y * 0.5);
   c.beginPath(); c.ellipse(x0 - 2, suelo + 4, u * 0.95 * encoge, 4.5 * encoge, 0, 0, 6.3); c.fill();
   c.save();
   c.translate(x0, sy(e.y)); c.scale(u, -u);
   if (e.inmune > 0 && e.tropiezo === 0 && !quieto) c.globalAlpha = 0.55 + 0.45 * Math.sin(t * 24);
-  lobo(c, e, p.zancada);
+  lobo(c, e, p.zancada, skin);
   c.restore();
   // (tanda 1) el escudo: un aro dorado alrededor mientras le quede alguno
   if (e.escudos > 0) {
@@ -309,4 +350,13 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   }
   c.globalAlpha = 1;
   return { u, suelo, x0 };
+}
+
+// (tanda 3) Un lobo suelto, parado en mitad de la zancada, para elegirlo en «Tu travesía»
+export function pintarLobo(c, { w, h, skin = null, fase = 0.9 }) {
+  c.clearRect(0, 0, w, h);
+  const u = Math.min(w / 3.2, h / 1.75);
+  c.save(); c.translate(w * 0.53, h * 0.94); c.scale(u, -u);
+  lobo(c, { saltos: 0, tropiezo: 0, vy: 0, agachado: 0 }, fase, skin);
+  c.restore();
 }

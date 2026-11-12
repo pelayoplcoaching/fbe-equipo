@@ -2168,11 +2168,11 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
 }
 
 // ---------------------------------------------------------------- compartir un entreno (Resumen de la sesión)
-// datos: { sesionId, nombre, fecha, minutos, series, mejores: [{ ejercicio_id, nombre, kg, reps }] }. Los récords
+// datos: { sesionId, nombre, fecha, minutos, series, mejores: [{ ejercicio_id, nombre, kg, reps }], textoInicial }. Los récords
 // de la vista previa, con la misma regla que la base (recordsParaEquipo): así la tarjeta sale igual.
 export function HojaCompartirEquipo({ datos, alCerrar, alCompartir }) {
   const { api, aviso, atleta } = useApp();
-  const [texto, setTexto] = useState('');
+  const [texto, setTexto] = useState(() => String(datos.textoInicial || '').slice(0, MAX_POST));   // (descansos, tanda 3) la etapa de La travesía, ya escrita
   const [kilos, setKilos] = useState(false);
   const [ocupado, una] = useUnaVez();
   const records = useCarga(() => api.recordsParaEquipo(atleta.id, datos.sesionId).catch(() => new Set()), [datos.sesionId]);

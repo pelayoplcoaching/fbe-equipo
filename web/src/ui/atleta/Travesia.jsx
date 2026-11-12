@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Capa, useApp } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
-import { nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, textoDistancia, ambiente, retoDelDia, progresoReto, hoyDe } from '../../logica/travesia.js';
-import { hoyISO } from '../../logica/fechas.js';
+import { nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, textoDistancia, ambiente, retoDelDia, progresoReto, hoyDe, rachaSemanas } from '../../logica/travesia.js';
+import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo } from '../../logica/travesia-ruta.js';
+import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { tono, prepararAudio } from './sesion-comun.jsx';
-import { apuntarEtapa, leerTravesia, sincronizarTravesia } from '../travesia.js';
+import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo } from '../travesia.js';
 import { nuevoPaisaje, pintar } from './travesia-pinta.js';
 
 // «La travesía»: el juego del descanso, a pantalla completa. Un toque en cualquier sitio, salta; otro en el aire, doble
@@ -63,6 +64,16 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   if (!guardado0.current) guardado0.current = leerTravesia(atletaId);
   const conMovimientos = guardado0.current.total >= 1000;   // las ramas, cuando ya lleva un kilómetro (primero se aprende a saltar)
   const reto = !practica && sesion ? retoDelDia(hoyISO()) : null;
+  // (tanda 3) la manada: quién más ha corrido hoy (sus siluetas van a lo lejos) y, si hay duelo esta semana, cómo va
+  const [manada, setManada] = useState(() => (practica ? null : manadaGuardada(atletaId)));
+  const corren = useRef(0);
+  corren.current = manada ? correnHoy(manada.filas).length : 0;
+  useEffect(() => {
+    if (practica || !sesion) return undefined;
+    let vivo = true;
+    manadaDe(api, atletaId).then((m) => { if (vivo) setManada(m); });
+    return () => { vivo = false; };
+  }, []);
   // Cerrada a mano en mitad de un descanso: lo corrido hasta ahí cuenta (si ha llegado a algo); la práctica a medias, no
   const apuntada = useRef(false);
   const apuntar = (e) => {
@@ -96,6 +107,11 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     const amb = ambiente({ ...tiempoGuardado(), total: antesG.total });
     const ritmo = !calma && antesG.ritmo > 0 ? antesG.ritmo / 100 : 0;   // su fantasma
     const hoy0 = hoyDe(antesG, hoyISO());
+    // (tanda 3) su lobo, los que le siguen (uno por semana seguida) y las constelaciones que lleva: la última completa y la que forma
+    const skin = loboElegido(antesG, leerAjustes().loboJuego);
+    const seguidores = practica ? 0 : manadaPropia(rachaSemanas(antesG, hoyISO()));
+    const todas = constelaciones(antesG.estrellas), completas = todas.filter((k) => k.completa);
+    const cielo = [completas[completas.length - 1], todas.find((k) => !k.completa && k.cogidas > 0)].filter(Boolean);
     const c = lienzo.current, ctx = c.getContext('2d');
     const quieto = sinMovimiento();
     let w = 0, h = 0, id = 0, antes = performance.now(), acabada = false, visto = { m: -1, s: -1, e: -1, r: '', esc: e.escudos };
@@ -120,7 +136,12 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       if (suena.current) aullar();
       setFinal({ ...r, hoy: !practica && sesion ? g.sesiones[sesion]?.metros ?? r.metros : null, etapas: !practica && sesion ? g.sesiones[sesion]?.etapas ?? 1 : null,
         marca: practica ? r.metros > antesG.practica && antesG.practica > 0 : !r.calma && r.metros > antesG.mejor && antesG.mejor > 0, mejor: practica ? g.practica : g.mejor,
-        reto: !practica && sesion && g.hoy.retoHecho && !hoy0.retoHecho });
+        reto: !practica && sesion && g.hoy.retoHecho && !hoy0.retoHecho,
+        // (tanda 3) lo que trae esta etapa: un hito del mapa (su postal), un lobo nuevo o una constelación completa
+        postal: !practica && sesion ? postalesNuevas(antesG.total, g.total)[0] || null : null,
+        lobo: !practica && sesion ? lobosDe(g).find((l) => l.tiene && !lobosDe(antesG).find((x) => x.id === l.id)?.tiene) || null : null,
+        constelacion: !practica && sesion ? constelaciones(g.estrellas).find((k, i) => k.completa && !todas[i].completa) || null : null,
+        semana: g.semanas?.[lunesDe(hoyISO())] || 0 });
     };
     const cuadro = (ahora) => {
       id = requestAnimationFrame(cuadro);
@@ -131,7 +152,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       if (!parado && q <= 0) acabar();
       else if (!parado) avanzar(e, dt);
       if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) tono(...SONIDOS[s]);
-      pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null });
+      pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo });
       // (los números de arriba, solo cuando cambian)
       const m = Math.round(e.x), s = Math.max(0, Math.ceil(q));
       if (m !== visto.m && metros.current) { visto.m = m; metros.current.textContent = textoDistancia(m); }
@@ -153,7 +174,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   // Al acabar el descanso se cierra sola al poco (da tiempo a ver la etapa); en práctica espera a que elija
   useEffect(() => {
     if (!final || practica) return undefined;
-    const t = setTimeout(() => cerrar.current?.('fin'), 3200);
+    const t = setTimeout(() => cerrar.current?.('fin'), final.postal || final.lobo || final.constelacion ? 4800 : 3200);   // (con algo nuevo que leer, un poco más)
     return () => clearTimeout(t);
   }, [final]);
 
@@ -192,6 +213,14 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   };
   const cambiarSonido = () => { const v = !sonido; setSonido(v); guardarAjustes({ ...leerAjustes(), sonidoJuego: v }); if (v) { prepararAudio(); tono(...SONIDOS.estrella); } };
 
+  // (tanda 3) el duelo de la semana, con lo mío al día
+  const elDuelo = (misMetros) => {
+    const rival = manada ? leerDuelo(atletaId, lunesDe(hoyISO())) : '';
+    const d = rival ? duelo(manada.filas, rival, misMetros) : null;
+    if (!d) return '';
+    return d.diferencia === 0 ? `Duelo con ${d.rival}: vais igualados` : `Duelo con ${d.rival}: vas ${textoDistancia(Math.abs(d.diferencia))} por ${d.gano ? 'delante' : 'detrás'}`;
+  };
+  const companeros = manada ? correnHoy(manada.filas) : [];
   return (
     <div ref={caja} class={`travesia${calma ? ' en-calma' : ''}`} role="dialog" aria-modal="true" aria-label={practica ? 'La travesía: práctica de un minuto' : 'La travesía: el juego del descanso'} tabIndex={-1}
       onPointerDown={toque} onPointerMove={mueve} onPointerUp={suelta} onPointerCancel={suelta} onKeyDown={tecla}>
@@ -212,6 +241,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       {!final && !tocado && !calma && <p class="travesia-pista" aria-hidden="true">Toca para saltar · otra vez en el aire, doble salto{conMovimientos && !practica ? ' · desliza abajo para agacharte' : ''}</p>}
       {!final && calma && <p class="travesia-pista calma" aria-hidden="true">Respira: el lobo va al paso</p>}
       {!final && reto && <p ref={retoTxt} class="travesia-reto" role="status" />}
+      {!final && !tocado && companeros.length > 0 && <p class="travesia-manada" role="status">Hoy también {companeros.length === 1 ? 'ha corrido' : 'han corrido'}: {companeros.join(', ')}</p>}
       {!final && despues && !practica && <p class="travesia-despues">Después: {despues}</p>}
       {final && (
         <div class="travesia-final" role="status">
@@ -222,6 +252,10 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
             {final.rios > 0 && <span>{final.rios === 1 ? 'Un río cruzado' : `${final.rios} ríos cruzados`}</span>}
             {final.marca && <span class="oro">Tu mejor {practica ? 'marca' : 'etapa'}</span>}
             {final.reto && <span class="oro">Reto del día, cumplido</span>}
+            {final.postal && <span class="oro travesia-final-postal">Has llegado a {final.postal.lugar}</span>}
+            {final.lobo && <span class="oro">Nuevo lobo: {final.lobo.nombre}</span>}
+            {final.constelacion && <span class="oro">Constelación completa: {final.constelacion.nombre}</span>}
+            {elDuelo(final.semana) && <span class="travesia-final-duelo">{elDuelo(final.semana)}</span>}
             {final.hoy != null && final.etapas > 1 && <span>Hoy llevas {textoDistancia(final.hoy)}</span>}
             {practica && !final.marca && final.mejor > final.metros && <span>Tu marca: {textoDistancia(final.mejor)}</span>}
           </span>

@@ -101,12 +101,29 @@ console.log('En la demo');
   await b.auth.salir();
   await b.auth.entrar('carlos@fbe.demo', 'demo');
   const carlos = await api.miAtleta();
-  check((await api.travesiaDe(ana.id)).length === 0 && (await api.apuntesVistos(ana.id)).length === 0 && (await api.travesiaDe(carlos.id)).length === 0, 'otro atleta no ve lo de Ana');
+  check((await api.travesiaDe(ana.id)).length === 0 && (await api.apuntesVistos(ana.id)).length === 0 && (await api.travesiaDe(carlos.id)).every((x) => x.atleta_id === carlos.id), 'otro atleta no ve lo de Ana (solo lo suyo)');
   await b.auth.salir();
   await b.auth.entrar('pelayo@fbe.demo', 'demo');
   check((await api.travesiaDe(ana.id)).length === 1 && (await api.apuntesVistos(ana.id)).length === 2 && (await api.novedades()).length === 2, 'el coach, sí (y sus dos novedades, con el borrador)');
   await api.borrarNovedad(borrador.id);
   check((await api.novedades()).length === 1, 'y puede borrarlas');
+  // (061) la manada en la travesía
+  await b.auth.salir();
+  await b.auth.entrar('ana@fbe.demo', 'demo');
+  check(await api.travesiaManada() === null, '(061) fuera de la comunidad no hay clasificación');
+  await api.entrarComunidad('Ana L.');
+  const m1 = await api.travesiaManada();
+  check(m1.filas.length === 4 && m1.filas[0].nombre === 'Rubén M.' && m1.filas[0].metros === 4200 && m1.filas[0].hoy === true && !m1.filas[0].yo && m1.filas.every((f, i) => i === 0 || f.metros <= m1.filas[i - 1].metros), 'dentro, la clasificación de la semana, de más a menos');
+  const yo = m1.filas.find((f) => f.yo);
+  check(yo && yo.nombre === 'Ana L.' && yo.metros === 1750 && m1.filas.filter((f) => f.yo).length === 1 && m1.filas.every((f) => Object.keys(f).sort().join() === 'estrellas,hoy,mejor,metros,nombre,yo'), 'con mi fila marcada y solo el nombre del equipo y los metros de cada uno');
+  check(m1.equipo.miembros === 4 && m1.equipo.metros >= 4200 + 2600 + 900 + 1750 && /^\d{4}-\d{2}-01$/.test(m1.equipo.mes) && new Date(`${m1.semana}T12:00:00Z`).getUTCDay() === 1, 'y lo que suma el equipo en el mes');
+  await api.ajustesComunidad({ sinRanking: true });
+  check((await api.travesiaManada()).filas.some((f) => f.yo), 'quien no quiere salir en el ranking se sigue viendo a sí mismo');
+  await b.auth.salir();
+  await b.auth.entrar('carlos@fbe.demo', 'demo');
+  const m2 = await api.travesiaManada();
+  check(m2.filas.length === 3 && !m2.filas.some((f) => f.nombre === 'Ana L.') && m2.filas.find((f) => f.yo).nombre === 'Carlos V.' && m2.equipo.miembros === 4, 'pero los demás no le ven (y sus metros siguen sumando en el equipo)');
+  await b.auth.salir();
 }
 
 console.log('La migración 060 (PGlite)');
@@ -200,7 +217,7 @@ await q(`select apuntar_apunte('m:3', true)`);
 check((await q(`select sabia from apuntes_vistos where apunte = 'm:3'`))[0].sabia === true, 'hasta que dice que ya lo sabe');
 await q(`select apuntar_apunte($1)`, [`p:${atletaA}:0`]); await q(`select apuntar_apunte($1)`, [`n:${n1.id}`]);
 check((await q('select count(*)::int as n from apuntes_vistos'))[0].n === 4, 'valen los de ficha (p:, e:), guía (i:), mito (m:) y novedad (n:)');
-check(await falla(`select apuntar_apunte('x:1')`) && await falla(`select apuntar_apunte('i:con espacio')`) && await falla(`select apuntar_apunte(null)`) && await falla(`select apuntar_apunte($1)`, [`i:${'a'.repeat(80)}`]), 'lo que no es un apunte, no');
+check(await falla(`select apuntar_apunte('X:1')`) && await falla(`select apuntar_apunte('i:con espacio')`) && await falla(`select apuntar_apunte(null)`) && await falla(`select apuntar_apunte($1)`, [`i:${'a'.repeat(80)}`]), 'lo que no es un apunte, no');
 check(await falla(`insert into apuntes_vistos (atleta_id, apunte) values ($1, 'i:x:1')`, [atletaA]) && await falla('update apuntes_vistos set veces = 50'), 'tampoco se escribe a mano');
 await como(bea);
 check((await q('select * from apuntes_vistos')).length === 0, 'otra atleta no ve lo de Ana');
@@ -217,6 +234,56 @@ const anon = async (sql) => { await db.exec(`reset role; ${claims('', '')} set r
 check(await anon('select * from novedades') && await anon('select * from travesia_semanas') && await anon('select * from apuntes_vistos') && await anon('select sumar_travesia(10)') && await anon(`select apuntar_apunte('m:1')`), 'sin sesión, nada');
 await su();
 check((await q(`select count(*)::int as n from fbe_migraciones where numero = 60`))[0].n === 1, 'la 060 queda apuntada');
+console.log('La migración 061: la manada en la travesía');
+{
+  // Ana y dos más, dentro de la comunidad; Eva, fuera
+  const eva = await usuario('e@x.test'); const atletaE = (await q(`insert into public.atletas (nombre, perfil_id, estado) values ('Eva', $1, 'activo') returning id`, [eva]))[0].id;
+  const fer = await usuario('f@x.test'); await q(`insert into public.atletas (nombre, perfil_id, estado) values ('Fer', $1, 'activo')`, [fer]);
+  const gus = await usuario('g@x.test'); await q(`insert into public.atletas (nombre, perfil_id, estado) values ('Gus', $1, 'activo')`, [gus]);
+  await su();
+  const [{ v: version }] = await q('select public.comunidad_version() as v'); const [{ v: normas }] = await q('select public.comunidad_normas_version() as v');
+  await como(coach, 'aal2'); await q('update comunidad_ajustes set activa = true');
+  for (const [u, nombre] of [[ana, 'Ana L.'], [fer, 'Fer M.'], [gus, 'Gus R.']]) { await como(u); await q('select comunidad_unirme($1, $2, $3)', [nombre, version, normas]); }
+  await como(ana); await q('select sumar_travesia(1200, 9)');
+  await como(fer); await q('select sumar_travesia(3000, 20)');
+  await como(gus); await q('select sumar_travesia(800, 2)');
+  await como(eva); await q('select sumar_travesia(5000, 30)');
+  await su(); await q('update comunidad_miembros set sin_ranking = true where perfil_id = $1', [gus]);
+  await q(`update travesia_semanas set actualizada_en = now() - interval '3 days' where atleta_id = (select id from atletas where perfil_id = $1)`, [fer]);
+  await como(ana);
+  const [{ m }] = await q('select travesia_manada() as m');
+  check(m.filas.length === 2 && m.filas[0].nombre === 'Fer M.' && m.filas[0].metros === 3000 && m.filas[1].nombre === 'Ana L.' && m.filas[1].yo === true && m.filas[0].yo === false, 'la clasificación de la semana, con el nombre de la comunidad, de más a menos; quien está fuera de la comunidad no sale');
+  check(m.filas[1].hoy === true && m.filas[0].hoy === false, 'dice quién ha corrido hoy');
+  check(!m.filas.some((f) => f.nombre === 'Gus R.') && m.equipo.metros === 5000 && m.equipo.miembros === 3, 'quien no quiere salir en el ranking no sale, pero lo suyo suma en el total del equipo (5 km entre los tres)');
+  check(new Date(`${m.semana}T12:00:00Z`).getUTCDay() === 1 && /^\d{4}-\d\d-01/.test(m.equipo.mes), 'con el lunes de la semana y el mes del equipo');
+  await como(gus);
+  const [{ m: mg }] = await q('select travesia_manada() as m');
+  check(mg.filas.some((f) => f.nombre === 'Gus R.' && f.yo) && mg.filas.length === 3, 'él sí se ve a sí mismo');
+  await como(eva);
+  check((await q('select travesia_manada() as m'))[0].m === null, 'quien no está en la comunidad no ve nada');
+  await como(coach, 'aal2');
+  check((await q('select travesia_manada() as m'))[0].m.filas.length === 2, 'el coach ve la clasificación (sin los que no quieren salir)');
+  check(await anon('select travesia_manada()'), 'sin sesión, nada');
+}
+
+console.log('La migración 061: los apuntes sueltos del coach y las claves nuevas');
+{
+  await como(coach, 'aal2');
+  const [ej] = await q(`insert into ejercicios (nombre, grupos_musculares) values ('Press banca v061', '{pectoral}') returning id`);
+  const [ap] = await q(`insert into novedades (titulo, texto, tipo, ejercicio_id, publicada) values ('Codos a 45 grados', 'Ni pegados ni en cruz.', 'apunte', $1, true) returning id, tipo, publicada_en`, [ej.id]);
+  check(ap.tipo === 'apunte' && ap.publicada_en !== null, 'el coach escribe un apunte suelto, ligado a un ejercicio');
+  check(await falla(`insert into novedades (titulo, texto, tipo) values ('x', 'y', 'otra')`) && await falla(`insert into novedades (titulo, texto, ejercicio_id) values ('x', 'y', $1)`, [ej.id]), 'solo «novedad» o «apunte»; una novedad no va ligada a un ejercicio');
+  check((await q(`select tipo from novedades where id = $1`, [n1.id]))[0].tipo === 'novedad', 'las que ya había siguen siendo novedades');
+  await q('delete from ejercicios where id = $1', [ej.id]);
+  check((await q('select ejercicio_id from novedades where id = $1', [ap.id]))[0].ejercicio_id === null, 'si se borra el ejercicio, el apunte se queda (sin ejercicio)');
+  await como(ana);
+  await q(`select apuntar_apunte('d:3')`); await q(`select apuntar_apunte('g:rir')`); await q(`select apuntar_apunte($1, true)`, [`a:${ap.id}`]); await q(`select apuntar_apunte('x:bloque-12:q3', false)`);
+  check((await q(`select count(*)::int as n from apuntes_vistos where apunte ~ '^[adgx]:'`))[0].n === 4, 'se apuntan también las dudas, el glosario, los apuntes del coach y los exámenes');
+  check(await falla(`select apuntar_apunte('A:1')`) && await falla(`select apuntar_apunte('1:x')`) && await falla(`select apuntar_apunte('dd:x')`), 'lo que no es una clave de apunte sigue sin valer');
+  await su();
+  check((await q(`select count(*)::int as n from fbe_migraciones where numero = 61`))[0].n === 1, 'la 061 queda apuntada');
+}
+
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

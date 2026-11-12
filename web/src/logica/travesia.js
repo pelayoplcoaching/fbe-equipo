@@ -6,6 +6,8 @@
 // Las medidas van en metros y segundos. El lobo no muere: si tropieza, pierde el ritmo (vuelve a la velocidad de salida)
 // y sigue. Así la etapa siempre dura el descanso entero y lo que cambia es lo lejos que llega.
 
+import { lunesDe, sumarDias } from './fechas.js';
+
 export const GRAVEDAD = 46;      // m/s²
 export const V_SALTO = 13.6;     // sube 2 m y está 0,59 s en el aire
 export const V_DOBLE = 11.5;     // el segundo salto, en el aire
@@ -223,7 +225,7 @@ const entero = (v, max) => (Number.isFinite(Number(v)) ? Math.min(max, Math.max(
 // (tanda 1) ritmo: su mejor ritmo en una etapa de medio minuto o más (cm/s), para el fantasma; hoy: lo de hoy, para el
 // reto del día ({ dia, metros, estrellas, etapas, limpias, mejor, rios, retoHecho }); retos: cuántos lleva cumplidos
 const HOY_VACIO = () => ({ dia: '', metros: 0, estrellas: 0, etapas: 0, limpias: 0, mejor: 0, rios: 0, retoHecho: false });
-export const TRAVESIA_VACIA = () => ({ total: 0, estrellas: 0, mejor: 0, practica: 0, sesiones: {}, pend: { metros: 0, estrellas: 0, etapas: 0, mejor: 0 }, ritmo: 0, retos: 0, rios: 0, hoy: HOY_VACIO() });
+export const TRAVESIA_VACIA = () => ({ total: 0, estrellas: 0, mejor: 0, practica: 0, sesiones: {}, pend: { metros: 0, estrellas: 0, etapas: 0, mejor: 0 }, ritmo: 0, retos: 0, rios: 0, hoy: HOY_VACIO(), semanas: {} });
 
 export function limpiarTravesia(g) {
   const t = TRAVESIA_VACIA();
@@ -232,6 +234,9 @@ export function limpiarTravesia(g) {
   t.ritmo = entero(g.ritmo, 1500); t.retos = entero(g.retos, 1e5); t.rios = entero(g.rios, 1e6);
   const h = g.hoy && typeof g.hoy === 'object' ? g.hoy : {};
   if (/^\d{4}-\d{2}-\d{2}$/.test(h.dia || '')) t.hoy = { dia: h.dia, metros: entero(h.metros, 1e6), estrellas: entero(h.estrellas, 1e5), etapas: entero(h.etapas, 1e3), limpias: entero(h.limpias, 1e3), mejor: entero(h.mejor, 1e5), rios: entero(h.rios, 1e3), retoHecho: h.retoHecho === true };
+  // (tanda 3) semanas: los metros de cada semana (por su lunes), las diez últimas: de ahí sale su manada
+  const sem = g.semanas && typeof g.semanas === 'object' ? Object.entries(g.semanas).filter(([k]) => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().slice(-10) : [];
+  for (const [k, v] of sem) if (entero(v, 2e6) > 0) t.semanas[k] = entero(v, 2e6);
   const p = g.pend && typeof g.pend === 'object' ? g.pend : {};
   t.pend = { metros: entero(p.metros, 1e7), estrellas: entero(p.estrellas, 1e6), etapas: entero(p.etapas, 1e4), mejor: entero(p.mejor, 1e5) };
   const ses = g.sesiones && typeof g.sesiones === 'object' ? Object.entries(g.sesiones) : [];
@@ -257,6 +262,11 @@ export function sumarEtapa(guardado, { sesion = null, metros = 0, estrellas = 0,
     if (r.hecho && !t.hoy.retoHecho) { t.hoy.retoHecho = true; t.retos += 1; }
   }
   t.total += m; t.estrellas += s; t.mejor = Math.max(t.mejor, m);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dia || '') && m > 0) {
+    const l = lunesDe(dia);
+    t.semanas[l] = (t.semanas[l] || 0) + m;
+    for (const k of Object.keys(t.semanas).sort().slice(0, -10)) delete t.semanas[k];
+  }
   t.pend = { metros: t.pend.metros + m, estrellas: t.pend.estrellas + s, etapas: t.pend.etapas + 1, mejor: Math.max(t.pend.mejor, m) };
   const de = t.sesiones[sesion] || { metros: 0, estrellas: 0, etapas: 0 };
   delete t.sesiones[sesion];   // (al final: la más reciente)
@@ -292,7 +302,22 @@ export function conBase(guardado, semanas = []) {
   t.total = Math.max(t.total, m + t.pend.metros);
   t.estrellas = Math.max(t.estrellas, e + t.pend.estrellas);
   t.mejor = Math.max(t.mejor, ...filas.map((f) => entero(f?.mejor, 2e4)));
+  // (tanda 3) las semanas de la base, a las del móvil (la que más tenga)
+  for (const f of filas) {
+    const k = String(f?.semana || '').slice(0, 10), v = entero(f?.metros, 2e6);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(k) && v > 0) t.semanas[k] = Math.max(t.semanas[k] || 0, v);
+  }
+  for (const k of Object.keys(t.semanas).sort().slice(0, -10)) delete t.semanas[k];
   return t;
+}
+// (tanda 3) Cuántas semanas seguidas lleva corriendo en sus descansos, hasta esta (si esta aún no tiene nada, hasta la pasada)
+export function rachaSemanas(guardado, hoy) {
+  const sem = limpiarTravesia(guardado).semanas;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(hoy || '')) return 0;
+  let l = lunesDe(hoy), n = 0;
+  if (!sem[l]) l = sumarDias(l, -7);
+  while (sem[l] > 0 && n < 60) { n += 1; l = sumarDias(l, -7); }
+  return n;
 }
 // Lo de esta semana en la base (la fila cuyo lunes es `lunes`), más lo pendiente
 export function metrosDeLaSemana(guardado, semanas = [], lunes) {

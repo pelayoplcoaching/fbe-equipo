@@ -6006,6 +6006,10 @@ try {
   console.log('\nApuntes, tanda 2');
   const { probarApuntes2 } = await import('./e2e-apuntes2.mjs');
   await probarApuntes2({ navegador, check });
+  // La travesía, tanda 3: «Tu travesía» (el mapa, las postales, la manada con su duelo, los lobos, las constelaciones)
+  console.log('\nLa travesía, tanda 3');
+  const { probarTravesia3 } = await import('./e2e-travesia3.mjs');
+  await probarTravesia3({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

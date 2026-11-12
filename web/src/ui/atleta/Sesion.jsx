@@ -1650,7 +1650,8 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
       {equipo && (
         <HojaCompartirEquipo alCerrar={() => setEquipo(false)} alCompartir={() => { setEquipo(false); setCompartida(true); }}
           datos={{ sesionId: sesion.id, nombre: resumen.tarjeta.nombre, fecha: resumen.tarjeta.fecha, minutos: resumen.minutos ?? resumen.tarjeta.minutos, series: resumen.series,
-            mejores: resumen.tarjeta.mejores }} />
+            mejores: resumen.tarjeta.mejores,
+            textoInicial: travesia?.metros > 0 ? `En los descansos, mi lobo ha recorrido ${textoDistancia(travesia.metros)}.` : '' }} />
       )}
     </div>
   );
