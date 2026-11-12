@@ -1,4 +1,4 @@
-// (v0.140) Hoy a tu gusto: el orden y lo oculto de las secciones de Hoy, y los diales nuevos (Comida y Pasos).
+// (v0.140) Hoy a tu gusto (v0.142, con «El tiempo para salir»): el orden y lo oculto de las secciones de Hoy, y los diales nuevos (Comida y Pasos).
 import { SECCIONES_HOY, leerPanel, seccionesHoy, moverSeccion, alternarSeccion, alternarDial, panelPorDefecto, nombreSeccion } from '../web/src/logica/hoy-panel.js';
 import { dialComida, dialPasos, dialSueno, horasMin, relojDeUnVistazo, pasosCortos } from '../web/src/logica/tablero.js';
 import { readFileSync } from 'node:fs';
@@ -12,10 +12,10 @@ const IDS = SECCIONES_HOY.map((s) => s.id);
 
 console.log('El orden de las secciones');
 check(leerPanel(null).orden.join() === IDS.join() && panelPorDefecto(null) && panelPorDefecto({}), 'sin nada guardado, el orden de siempre');
-check(leerPanel({ orden: ['peso', 'inventada', 'peso', 'sesion'] }).orden.join() === 'peso,sesion,semana,carrera,menu,nutricion,habitos', 'lo guardado, limpio (sin repetidas ni desconocidas) y lo que falte en su sitio');
-check(leerPanel({ orden: ['habitos', 'peso'] }).orden.join() === 'sesion,semana,carrera,menu,nutricion,habitos,peso', 'si solo había unas, las demás vuelven por delante de ellas, como venían');
+check(leerPanel({ orden: ['peso', 'inventada', 'peso', 'sesion'] }).orden.join() === 'peso,sesion,tiempo,semana,carrera,menu,nutricion,habitos', 'lo guardado, limpio (sin repetidas ni desconocidas) y lo que falte en su sitio');
+check(leerPanel({ orden: ['habitos', 'peso'] }).orden.join() === 'sesion,tiempo,semana,carrera,menu,nutricion,habitos,peso', 'si solo había unas, las demás vuelven por delante de ellas, como venían');
 const sub = moverSeccion(null, 'peso', -1);
-check(sub.orden.join() === 'sesion,semana,carrera,menu,nutricion,peso,habitos' && !panelPorDefecto(sub), 'subir una la cambia por la de encima');
+check(sub.orden.join() === 'sesion,tiempo,semana,carrera,menu,nutricion,peso,habitos' && !panelPorDefecto(sub), 'subir una la cambia por la de encima');
 check(moverSeccion(null, 'sesion', -1).orden.join() === IDS.join() && moverSeccion(null, 'peso', 1).orden.join() === IDS.join(), 'arriba del todo no sube; abajo del todo no baja');
 // sin carrera ni menú (no los tiene): «subir» Nutrición la pone delante de Esta semana, saltándose las que no salen
 const disp = ['sesion', 'semana', 'nutricion', 'habitos', 'peso'];
@@ -32,6 +32,7 @@ check(leerPanel(alternarSeccion(null, 'hero')).ocultas.size === 0 && leerPanel(a
 check(seccionesHoy(oc, ['sesion', 'peso']).ocultas.length === 0, 'una oculta que hoy no tiene nada no sale en «Lo que has ocultado»');
 const dd = alternarDial(null, 'carga');
 check(leerPanel(dd).dialesOcultos.has('carga') && !leerPanel(alternarDial(dd, 'carga')).dialesOcultos.size && !leerPanel(alternarDial(null, 'inventado')).dialesOcultos.size, 'los diales, uno a uno (y solo los que existen)');
+check(nombreSeccion('tiempo') === 'El tiempo para salir' && leerPanel({ orden: ['sesion', 'semana', 'carrera', 'menu', 'nutricion', 'habitos', 'peso'] }).orden.join() === 'sesion,tiempo,semana,carrera,menu,nutricion,habitos,peso', '(v0.142) lo guardado antes del tiempo: «El tiempo para salir» entra detrás de la sesión');
 check(nombreSeccion('peso') === 'Tu peso' && nombreSeccion('mito') === 'El mito de la semana', 'los nombres, para la hoja y lo que se anuncia');
 
 console.log('El dial de la comida');

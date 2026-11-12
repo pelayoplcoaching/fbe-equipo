@@ -5923,6 +5923,9 @@ console.log('\nv0.140: Hoy a tu gusto');
 try {
   const { probarPanelHoy } = await import('./e2e-panel-hoy.mjs');
   await probarPanelHoy({ navegador, check });
+  // (v0.142) el tiempo para salir (Open-Meteo de mentira)
+  const { probarTiempo } = await import('./e2e-tiempo.mjs');
+  await probarTiempo({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ Hoy a tu gusto (v0.140):', e.message.split('\n').slice(0, 8).join('\n      '));

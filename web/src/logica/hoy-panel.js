@@ -1,4 +1,4 @@
-// (v0.140) Hoy a tu gusto: qué secciones de Hoy se ven y en qué orden, y qué diales salen arriba. Se guarda en cada
+// (v0.140) Hoy a tu gusto (v0.142: con «El tiempo para salir» detrás de la sesión): qué secciones de Hoy se ven y en qué orden, y qué diales salen arriba. Se guarda en cada
 // móvil ({ orden, ocultas, dialesOcultos }); aquí solo la lógica, sin tocar nada del navegador.
 //  - Las de debajo (SECCIONES_HOY) se ordenan y se ocultan; las de arriba (ARRIBA_HOY), solo se ocultan.
 //  - La tarjeta del día, los avisos del coach, «Tu día» y los informes no están aquí: no se pueden quitar.
@@ -6,6 +6,7 @@
 
 export const SECCIONES_HOY = [
   { id: 'sesion', nombre: 'Lo que vas a hacer' },
+  { id: 'tiempo', nombre: 'El tiempo para salir' },
   { id: 'semana', nombre: 'Esta semana' },
   { id: 'carrera', nombre: 'Tu carrera' },
   { id: 'menu', nombre: 'Tu menú de hoy' },

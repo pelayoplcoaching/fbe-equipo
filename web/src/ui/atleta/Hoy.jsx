@@ -52,7 +52,9 @@ import { estadoHoy, sugerenciaDescanso, urlSegura, resumenPautas } from '../../l
 import { panelBienvenida, panelNutricion } from '../../logica/bienvenida.js';
 import { Diales } from './Diales.jsx';
 import { OrdenarHoy } from './OrdenarHoy.jsx';
-import { leerPanel, seccionesHoy } from '../../logica/hoy-panel.js';
+import { leerPanel, seccionesHoy, alternarSeccion } from '../../logica/hoy-panel.js';
+import { deFuera } from '../../logica/tiempo.js';
+import { useTiempo, TiempoHoy, resumenParaHoy } from './Tiempo.jsx';
 import { semanasObjetivo, semanaEnCurso } from '../../logica/semana-natural.js';
 import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 
@@ -465,6 +467,10 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       </section>
       </Plegable>
     ),
+    // (v0.142) el tiempo para salir: si lo que toca es cardio de fuera, o si corre (carrera)
+    tiempo: (e.tipo === 'entreno' && deFuera(siguiente?.cardio)) || (conCarrera(atleta) && !propio)
+      ? <SeccionTiempo modalidad={e.tipo === 'entreno' && deFuera(siguiente?.cardio) ? siguiente.cardio.modalidad : 'carrera'} ocultar={() => fijarPanel(alternarSeccion(panel, 'tiempo'))} />
+      : null,
     carrera: conCarrera(atleta) && !propio ? <CarreraHoy abrir={() => setCarreraAbierta(true)} /> : null,
     menu: salud && conNutricion(atleta) ? <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Lo que tienes para comer hoy"><MenuHoy irA={irA} salud={salud} compacto /></Plegable> : null,
     nutricion: salud && conNutricion(atleta) ? (
@@ -594,6 +600,13 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
 // (diseño 9) Una sección secundaria de Hoy, plegada en una fila: se abre al tocarla y este móvil recuerda las que dejas
 // abiertas. Si lo de dentro no pinta nada (sin hábitos, sin menú), la fila no sale. El título de dentro se esconde
 // (diseno.css): manda el de la fila, que es el que se ve abierta y cerrada.
+// (v0.142) El tiempo para salir, en su plegable: el resumen (grados y mejor hora) se ve aunque esté cerrado
+function SeccionTiempo({ modalidad, ocultar }) {
+  const t = useTiempo();
+  const { detalle, icono } = resumenParaHoy(t);
+  return <Plegable id="tiempo" titulo="El tiempo para salir" icono={icono} detalle={detalle}><TiempoHoy t={t} modalidad={modalidad} ocultar={ocultar} /></Plegable>;
+}
+
 function Plegable({ id, titulo, icono, detalle = null, children }) {
   const [abierta, setAbierta] = usePreferencia(`fbe-hoy-abierta-${id}`, false);
   const cuerpo = useRef(null);

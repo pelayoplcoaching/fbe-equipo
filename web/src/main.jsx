@@ -12,6 +12,7 @@ import './guias.css';
 import './productos.css';
 import './carrera.css';
 import './panel-hoy.css';
+import './tiempo.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';
 import { instalarPulido } from './ui/pulido.js';

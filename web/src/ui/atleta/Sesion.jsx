@@ -46,6 +46,8 @@ import { fmtCorta, hoyISO, lunesDe, sumarDias, fechaMadrid } from '../../logica/
 import { pesoAnterior } from '../../logica/nivel.js';
 import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, textoSaludCardio, cardioHechoPublico, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
 import { DetalleCarreraSesion, pautaDeCarrera, leerSemaforo, olvidarSemaforo } from './Carrera.jsx';
+import { TiempoSesion } from './Tiempo.jsx';
+import { deFuera } from '../../logica/tiempo.js';
 import { SEMAFORO } from '../../logica/carrera.js';
 import { DondeEntrenas } from './DondeEntrenas.jsx';
 import { adaptarSesion, textoAdaptacion } from '../../logica/material.js';
@@ -1242,6 +1244,8 @@ export function TarjetaCardio({ pauta, hecho, completada, sesionId = null }) {
         {/* (v0.133) la carrera: tipo, zona con sus pulsaciones, las partes y el semáforo antes de salir */}
         {pautaDeCarrera(pauta) && sesionId && <DetalleCarreraSesion pauta={pauta} sesionId={sesionId} completada={completada} hecho={h} />}
         {pauta.esfuerzo && <p class="peq">Esfuerzo {num(pauta.esfuerzo)} de 10: {palabrasEsfuerzo(pauta.esfuerzo)}.</p>}
+        {/* (v0.142) si sale fuera y eligió su zona en Hoy: el tiempo de ahora y sus avisos (calor, frío, lluvia, viento, aire) */}
+        {!h && !completada && deFuera(pauta) && <TiempoSesion modalidad={pauta.modalidad} />}
         {pauta.nota && <p class="peq secundario">{pauta.nota}</p>}
         {h ? <span class="chip ok"><Icono n="hecho" />Hecho: {NOMBRE_MODALIDAD[h.modalidad].toLowerCase()}, {textoCardioHecho(h)}{textoSaludCardio(h) ? ` · ${textoSaludCardio(h)}` : ''}</span>
           : !completada && <p class="mini terciario">Al terminar, apunta los minutos, los kilómetros y cuánto te ha costado.</p>}

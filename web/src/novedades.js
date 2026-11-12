@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.142': {
+    atleta: [
+      'Si corres, andas o vas en bici fuera: el tiempo para salir en Hoy, con la mejor hora del día (eliges tu zona).',
+      'Avisos de calor, frío, tormenta, viento y aire en la sesión de cardio de fuera, con qué hacer en cada caso.',
+    ],
+    coach: [
+      'Tus atletas de carrera o con cardio de fuera ven el tiempo en Hoy (Open-Meteo); su zona se queda en su móvil.',
+    ],
+  },
   '0.141': {
     atleta: [
       'Si entrenas con Apple Watch: la serie que toca, marcarla y el descanso, desde la muñeca (Perfil → Apple Watch).',
