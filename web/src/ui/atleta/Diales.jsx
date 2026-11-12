@@ -66,15 +66,18 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
   const pendiente = sesionParaContestar({ previstaHoy, siguiente, seriesHoy, baja: atleta.estado === 'baja' });
   const pct = k && k.ratio != null ? Math.round(k.ratio * 100) : null;
   // (v0.141) Los diales que llegan tarde (comida, pasos y sueño): si en este móvil salieron la última vez, mientras cargan
-  // se guarda su sitio (así un quinto dial no añade una fila de golpe y no se mueve nada al abrir la app)
+  // se guarda su sitio (así un quinto dial no añade una fila de golpe y no se mueve nada al abrir la app). Solo hasta la
+  // primera vez que llegan en esta visita: después, al volver a Hoy, se ven como antes (lo recordado o nada)
   const claveVistos = `fbe-diales-vistos:${atleta.id}`;
   const vistos = leerPreferencia(claveVistos, []);
-  const esperando = (id, cargaX) => !cargaX.datos && cargaX.cargando && Array.isArray(vistos) && vistos.includes(id);
+  const esperando = (id, cargaX) => !llegaronYa.has(atleta.id) && !cargaX.datos && cargaX.cargando && Array.isArray(vistos) && vistos.includes(id);
   const espera = { comida: !m && verComida && esperando('comida', comida), pasos: !ps && verPasos && esperando('pasos', pasosDatos), sueno: !su && verSueno && esperando('sueno', pasosDatos) };
   const llegados = !comida.cargando && !pasosDatos.cargando;
   const reales = [m && 'comida', ps && 'pasos', su && 'sueno'].filter(Boolean).join();
   useEffect(() => {
-    if (llegados && reales !== (Array.isArray(vistos) ? vistos.join() : '')) guardarPreferencia(claveVistos, reales ? reales.split(',') : []);
+    if (!llegados) return;
+    llegaronYa.add(atleta.id);
+    if (reales !== (Array.isArray(vistos) ? vistos.join() : '')) guardarPreferencia(claveVistos, reales ? reales.split(',') : []);
   }, [llegados, reales]);
   const ver = { constancia: !ocultos.has('constancia'), carga: !ocultos.has('carga'), llegas: salud && !ocultos.has('llegas'), comida: !!m || espera.comida, pasos: !!ps || espera.pasos, sueno: !!su || espera.sueno };
   const n = Object.values(ver).filter(Boolean).length;
@@ -275,6 +278,8 @@ function HojaLlegas({ l, prep, pendiente, baja = false, alGuardar, alCerrar }) {
   );
 }
 
+// (v0.141) Los atletas cuyos diales ya llegaron una vez en esta visita (desde entonces, sin huecos de espera)
+const llegaronYa = new Set();
 // (v0.141) El sitio de un dial que aún no ha llegado (la misma forma, sin cifra ni acción)
 function DialEsperando({ nombre }) {
   return (
