@@ -1,3 +1,4 @@
+import { guiasACuento } from '../../logica/apuntes.js';
 import { leerTravesia } from '../travesia.js';
 import { textoDistancia } from '../../logica/travesia.js';
 import { Fragment } from 'preact';
@@ -423,12 +424,21 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // v0.63 (8): «Ahora toca» en el descanso: la serie que toca (la de la píldora), con su propuesta, la última vez, el
   // recordatorio o la nota de tu coach y los discos por lado
   // (apuntes) el ejercicio del que se está descansando (el que hace de verdad, si lo cambió por una variante)
-  const ejDescanso = (() => { const e = descanso ? ejerciciosConExtras.find((x) => x.id === descanso.tras) : null; const a = e ? actualDe(e) : null; return a ? { id: a.id, nombre: a.nombre } : null; })();
   const ahora = descanso && !sesion.completada ? ahoraToca({
     ejercicios: ejerciciosConExtras, hechas, proxima, completada: sesion.completada, tras: descanso.tras, etiquetas,
     propuestaDe: (pe, k) => propuestaDe(pe, k), nombreDe: (x) => actualDe(x).nombre, ultimasDe,
     recordatoriosDe: (x) => tecnica037.datos?.recs?.[actualDe(x).id] || [], barraDe: (x) => esBarra(actualDe(x).nombre),
   }) : null;
+  // (apuntes) el ejercicio del que se está descansando (el que hace de verdad, si lo cambió por una variante), con lo suyo
+  // de ahora: lo que le toca y lo que hizo la última vez (si la serie que viene es del mismo ejercicio), su vídeo, sus
+  // grupos y las guías que vienen a cuento (semana de descarga, ha dormido mal, va sin energía)
+  const ejDescanso = (() => {
+    const e = descanso ? ejerciciosConExtras.find((x) => x.id === descanso.tras) : null; const a = e ? actualDe(e) : null;
+    if (!a) return null;
+    const mismo = ahora && ahora.id === e.id;
+    return { id: a.id, nombre: a.nombre, toca: mismo ? ahora.carga : null, ultima: mismo ? ahora.anterior : null, video: a.video_url || null, grupo: a.grupos_musculares || null,
+      guias: guiasACuento({ foco: semana?.foco, sueno: prep?.sueno, energia: prep?.energia }), principiante: atleta?.nivel === 'principiante' };
+  })();
   // v0.63: el disco más pequeño de donde entrena hoy y lo que el teclado necesita de la sesión
   const discoMinimo = discoMinimoValido(discosLugar?.[lugar]) ? Number(discosLugar[lugar]) : DISCO_MINIMO_DEFECTO;
   const teclado = { app: tecladoApp, discoMinimo, lugar,

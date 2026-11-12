@@ -12,7 +12,7 @@ export const Apuntes = perezoso(() => import('./Apuntes.jsx'), 'Apuntes', { mien
 // y «Repasar» (los que no sabía y los de esta semana). Lo que enseña sale de lo guardado en el móvil.
 export function TarjetaApuntes({ repaso = false }) {
   const { atleta, api } = useApp() || {};
-  const [abierta, setAbierta] = useState(false);
+  const [abierta, setAbierta] = useState(false);   // false | true | 'guardados'
   const [r, setR] = useState(() => (atleta?.id ? resumenApuntes(leerApuntes(atleta.id), hoyISO()) : null));
   // (060) lo visto en otros móviles y, en Hoy, si hay una novedad de la semana que aún no ha leído
   const [vez, setVez] = useState(0);
@@ -27,6 +27,7 @@ export function TarjetaApuntes({ repaso = false }) {
   if (!atleta?.id || !r) return null;
   const cerrar = () => { setAbierta(false); setR(resumenApuntes(leerApuntes(atleta.id), hoyISO())); setVez((n) => n + 1); };
   const nada = repaso && !r.vistos;
+  const guardados = vez >= 0 ? (leerApuntes(atleta.id).guardados || []).length : 0;   // (tanda 2) los que guardó para luego
   return (
     <section class={`apuntes-tarjeta panel${repaso ? ' repaso' : ''}${novedad ? ' con-novedad' : ''}`} aria-label={repaso ? 'Tus apuntes' : 'El apunte de hoy'}>
       <IcoIos n="biblioteca" />
@@ -36,8 +37,11 @@ export function TarjetaApuntes({ repaso = false }) {
           ? (nada ? 'Lo que aprendes en los descansos, para repasarlo' : `${textoApuntes(r.semana)} esta semana · ${r.vistos} en total${r.repasar ? ` · ${r.repasar} por repasar` : ''}`)
           : novedad ? novedad.titulo : 'Medio minuto para aprender algo'}</span>
       </div>
-      <button type="button" class="btn btn-peq" disabled={nada} onClick={() => setAbierta(true)}>{repaso ? 'Repasar' : 'Leer'}</button>
-      {abierta && <Apuntes atletaId={atleta.id} modo={repaso ? 'repaso' : 'dia'} alCerrar={cerrar} />}
+      <span class="apuntes-tarjeta-botones">
+        {repaso && guardados > 0 && <button type="button" class="btn btn-peq" onClick={() => setAbierta('guardados')}>Guardados ({guardados})</button>}
+        <button type="button" class="btn btn-peq" disabled={nada} onClick={() => setAbierta(true)}>{repaso ? 'Repasar' : 'Leer'}</button>
+      </span>
+      {abierta && <Apuntes atletaId={atleta.id} modo={abierta === 'guardados' ? 'guardados' : repaso ? 'repaso' : 'dia'} alCerrar={cerrar} />}
     </section>
   );
 }

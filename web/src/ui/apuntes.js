@@ -12,13 +12,15 @@ export function leerApuntes(atletaId) {
   return limpiarVistos(guardado);
 }
 
+const SUBIBLE = /^[peimn]:[A-Za-z0-9:_-]{1,78}$/;
 const guardar = (atletaId, e) => { enMemoria.set(atletaId, e); try { localStorage.setItem(clave(atletaId), JSON.stringify(e)); } catch { /* queda en memoria */ } return e; };
 
 // Apunta uno como visto (sabia: true o false si le dio la vuelta y contestó) y devuelve lo que queda guardado. Con `api`
 // (060) lo sube también a la base; si no se puede (sin red), queda pendiente y se reintenta al sincronizar.
 export function guardarVisto(atletaId, id, hoy, sabia = null, api = null) {
   let e = apuntarVisto(leerApuntes(atletaId), id, hoy, sabia);
-  if (api?.apuntarApunte) {
+  // (a la base, los que su función admite: claves, errores, ideas, mitos y novedades; los demás, solo en el móvil)
+  if (api?.apuntarApunte && SUBIBLE.test(id)) {
     e = pendienteDeSubir(e, id, sabia);
     api.apuntarApunte(id, sabia).then((ok) => { if (ok) guardar(atletaId, pendienteDeSubir(leerApuntes(atletaId), id, null, true)); }).catch(() => {});
   }
@@ -43,3 +45,6 @@ export async function sincronizarApuntes(api, atletaId) {
   } catch { /* otra vez será */ }
   return leerApuntes(atletaId);
 }
+
+// (tanda 2) Guarda lo que ha cambiado sin ver nada (un apunte guardado para luego, el reto de la siguiente serie)
+export const guardarEstado = (atletaId, e) => guardar(atletaId, limpiarVistos(e));

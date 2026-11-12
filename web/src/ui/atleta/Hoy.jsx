@@ -1,3 +1,4 @@
+import { ApunteAlPaso } from './ApunteAlPaso.jsx';
 import { TarjetaApuntes } from './ApuntesTarjeta.jsx';
 import { TarjetaTravesia } from './TravesiaTarjeta.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
@@ -509,14 +510,14 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       ? <SeccionTiempo modalidad={e.tipo === 'entreno' && deFuera(siguiente?.cardio) ? siguiente.cardio.modalidad : 'carrera'} ocultar={() => fijarPanel(alternarSeccion(panel, 'tiempo'))} />
       : null,
     carrera: conCarrera(atleta) && !propio ? <CarreraHoy abrir={() => setCarreraAbierta(true)} /> : null,
-    menu: salud && conNutricion(atleta) ? <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Lo que tienes para comer hoy"><MenuHoy irA={irA} salud={salud} compacto /></Plegable> : null,
+    menu: salud && conNutricion(atleta) ? <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Lo que tienes para comer hoy"><MenuHoy irA={irA} salud={salud} compacto /><ApunteAlPaso guia="dieta-flexible" /></Plegable> : null,
     nutricion: salud && conNutricion(atleta) ? (
       <Plegable id="nutricion" titulo="Nutrición de hoy" icono="nutricion" detalle="Apunta lo que has comido">
         <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />
       </Plegable>
     ) : null,
-    habitos: salud ? <Plegable id="habitos" titulo="Tus hábitos" icono="llama" detalle="Márcalos según los vas haciendo"><HabitosHoy /></Plegable> : null,
-    peso: salud ? <Plegable id="peso" titulo="Tu peso" icono="bascula" detalle="Apúntalo y mira cómo va tu tendencia"><PesoHoy irA={irA} /></Plegable> : null,
+    habitos: salud ? <Plegable id="habitos" titulo="Tus hábitos" icono="llama" detalle="Márcalos según los vas haciendo"><HabitosHoy /><ApunteAlPaso guia="sueno" /></Plegable> : null,
+    peso: salud ? <Plegable id="peso" titulo="Tu peso" icono="bascula" detalle="Apúntalo y mira cómo va tu tendencia"><PesoHoy irA={irA} /><ApunteAlPaso guia="composicion" /></Plegable> : null,
   };
   const disponibles = Object.keys(bloquesHoy).filter((id) => bloquesHoy[id]);
   const { visibles, ocultas: ocultasAbajo } = seccionesHoy(panel, disponibles);

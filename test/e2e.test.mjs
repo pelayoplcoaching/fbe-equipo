@@ -6002,6 +6002,10 @@ try {
   console.log('\nLos descansos con la base (060)');
   const { probarDescansosBase } = await import('./e2e-descansos-base.mjs');
   await probarDescansosBase({ navegador, check });
+  // Apuntes, tanda 2: lo tuyo primero, preguntas de tres opciones, guardar, leer la guía, el reto de la siguiente serie…
+  console.log('\nApuntes, tanda 2');
+  const { probarApuntes2 } = await import('./e2e-apuntes2.mjs');
+  await probarApuntes2({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));
