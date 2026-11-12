@@ -95,6 +95,8 @@ export async function probarTiempo({ navegador, check, base = 'http://localhost:
     await sec.getByRole('button', { name: 'Buscar' }).click();
     await sec.locator('.zona-opcion', { hasText: 'Valencia' }).click();
     await sec.locator('.tiempo-pie', { hasText: 'Valencia' }).waitFor();
+    // (la previsión de la zona nueva se pide justo después: se espera a que salga, no basta con el nombre en el pie)
+    for (let i = 0; i < 50 && !pedidas.some((x) => /latitude=39\.5&longitude=-0\.4&/.test(x.url)); i++) await p.waitForTimeout(100);
     check(pedidas.some((x) => /geocoding-api\.open-meteo\.com\/v1\/search\?name=Valencia&/.test(x.url)) && pedidas.some((x) => /latitude=39\.5&longitude=-0\.4&/.test(x.url)) && (await zonaGuardada())?.nombre === 'Valencia',
       'cambiar la zona escribiendo su ciudad: busca «Valencia» y pide su previsión (39.5, -0.4)');
     // En la sesión de carrera: los avisos de ahora encima de la pauta
