@@ -82,9 +82,10 @@ begin
   if v_atleta is null then return null; end if;
   select * into r from public.reloj where atleta_id = v_atleta;
   return jsonb_build_object('activo', r.atleta_id is not null, 'desde', r.desde, 'ultimo', r.ultimo, 'unidad', coalesce(r.unidad, 'kg'),
+    'sesion_id', r.sesion_id, 'saltados', coalesce(to_jsonb(r.saltados), '[]'::jsonb),
     'atajo', (select a.url from public.atajos_coach a where a.clave = 'reloj'));
 end $$;
-comment on function public.reloj_mio() is 'El modo reloj del atleta (sin la clave): si lo tiene, desde cuándo, la última vez, su unidad y el atajo de su coach.';
+comment on function public.reloj_mio() is 'El modo reloj del atleta (sin la clave): si lo tiene, desde cuándo, la última vez, su unidad, la sesión elegida y lo saltado en ella, y el atajo de su coach.';
 
 create or replace function public.reloj_crear(p_unidad text default 'kg') returns text
 language plpgsql security definer set search_path = '' as $$
@@ -130,12 +131,14 @@ create or replace function fbe_privado.reloj_de(p_clave text, out r public.reloj
 language plpgsql security definer set search_path = '' as $$
 begin
   baja := false;
+  -- (v0.141, revisión) p_clave es ya la HUELLA de la clave: la calcula la función «reloj» (sha-256), así que la base
+  -- nunca ve la clave (ni queda en los registros de las llamadas)
   if coalesce(p_clave, '') !~ '^[0-9a-f]{64}$' then return; end if;
-  select * into r from public.reloj where huella = fbe_privado.huella(p_clave);
+  select * into r from public.reloj where huella = p_clave;
   if r.atleta_id is null then return; end if;
   baja := exists (select 1 from public.atletas where id = r.atleta_id and estado = 'baja');
-  -- no más de una escritura por minuto solo para apuntar la última vez
-  if r.ultimo is null or r.ultimo < now() - interval '1 minute' then
+  -- no más de una escritura por minuto solo para apuntar la última vez (y de baja, nada)
+  if not baja and (r.ultimo is null or r.ultimo < now() - interval '1 minute') then
     update public.reloj set ultimo = now() where atleta_id = r.atleta_id;
   end if;
 end $$;
@@ -174,6 +177,7 @@ language plpgsql security definer set search_path = '' as $$
 declare
   x record; r public.reloj; v_sesion uuid; s public.sesiones; v_salud boolean; v_foco text; v_semana uuid;
 begin
+  perform fbe_privado.solo_servidor();  -- (revisión) aunque una migración futura se olvide de quitarle el permiso
   select * into x from fbe_privado.reloj_de(p_clave);
   r := x.r;
   if r.atleta_id is null then return jsonb_build_object('ok', false, 'error', 'clave'); end if;
@@ -190,14 +194,16 @@ begin
   select * into s from public.sesiones where id = v_sesion;
   v_semana := s.semana_id;
   select foco into v_foco from public.semanas where id = v_semana;
-  v_salud := public.consentimiento_salud_de_atleta(r.atleta_id);
+  -- (revisión) con la clave de servicio no hay usuario: consentimiento_salud_de_atleta() daría siempre falso
+  v_salud := exists (select 1 from public.atletas a join public.consentimientos c on c.perfil_id = a.perfil_id
+                     where a.id = r.atleta_id and c.tipo = 'datos_salud' and c.revocado_en is null);
   return jsonb_build_object(
     'ok', true, 'unidad', r.unidad, 'saltados', to_jsonb(r.saltados),
     'progresion_auto', coalesce((select a.progresion_auto from public.atletas a where a.id = r.atleta_id), true),
     'foco', v_foco,
     -- «¿Cómo llegas hoy?» es un dato de salud: sin su consentimiento, no se usa
     'preparacion', case when v_salud then s.preparacion else null end,
-    'sesion', jsonb_build_object('id', s.id, 'nombre', s.nombre, 'tipo', s.tipo, 'completada', s.completada, 'dia_previsto', s.dia_previsto),
+    'sesion', jsonb_build_object('id', s.id, 'nombre', s.nombre, 'tipo', s.tipo, 'completada', s.completada, 'dia_previsto', s.dia_previsto, 'con_cardio', s.cardio is not null),
     'ejercicios', coalesce((select jsonb_agg(jsonb_build_object(
         'id', se.id, 'ejercicio_id', se.ejercicio_id, 'orden', se.orden, 'superserie', se.superserie, 'series', se.series,
         'reps_min', se.reps_min, 'reps_max', se.reps_max, 'rir_objetivo', se.rir_objetivo, 'rpe_objetivo', se.rpe_objetivo,
@@ -232,6 +238,7 @@ create or replace function public.reloj_serie(p_clave text, p_pauta uuid, p_nume
 language plpgsql security definer set search_path = '' as $$
 declare x record; r public.reloj; v_sesion uuid; v_series int;
 begin
+  perform fbe_privado.solo_servidor();  -- (revisión) aunque una migración futura se olvide de quitarle el permiso
   select * into x from fbe_privado.reloj_de(p_clave);
   r := x.r;
   if r.atleta_id is null then return jsonb_build_object('ok', false, 'error', 'clave'); end if;
@@ -248,7 +255,7 @@ begin
   insert into public.series as z (sesion_ejercicio_id, atleta_id, numero, kg, reps, rir, sustituto_id, nota)
     values (p_pauta, r.atleta_id, p_numero, round(p_kg, 2), p_reps, p_rir, p_sustituto, null)
   on conflict (sesion_ejercicio_id, numero) do update set kg = excluded.kg, reps = excluded.reps, rir = excluded.rir,
-    sustituto_id = coalesce(excluded.sustituto_id, z.sustituto_id), registrada_en = now();
+    sustituto_id = coalesce(excluded.sustituto_id, z.sustituto_id);  -- (revisión) la hora, la de la primera vez (como en el móvil)
   update public.reloj set sesion_id = v_sesion, actualizado_en = now() where atleta_id = r.atleta_id and sesion_id is distinct from v_sesion;
   return jsonb_build_object('ok', true, 'sesion_id', v_sesion);
 end $$;
@@ -258,12 +265,14 @@ create or replace function public.reloj_saltar(p_clave text, p_pauta uuid) retur
 language plpgsql security definer set search_path = '' as $$
 declare x record; r public.reloj; v_sesion uuid;
 begin
+  perform fbe_privado.solo_servidor();  -- (revisión) aunque una migración futura se olvide de quitarle el permiso
   select * into x from fbe_privado.reloj_de(p_clave);
   r := x.r;
   if r.atleta_id is null then return jsonb_build_object('ok', false, 'error', 'clave'); end if;
   if x.baja then return jsonb_build_object('ok', false, 'error', 'baja'); end if;
   select se.sesion_id into v_sesion from public.sesion_ejercicios se where se.id = p_pauta;
   if v_sesion is null or not fbe_privado.reloj_sesion_valida(r.atleta_id, v_sesion) then return jsonb_build_object('ok', false, 'error', 'sesion'); end if;
+  if (select completada from public.sesiones where id = v_sesion) then return jsonb_build_object('ok', false, 'error', 'terminada'); end if;
   update public.reloj set
     saltados = case when sesion_id is distinct from v_sesion then array[p_pauta] when p_pauta = any(saltados) then saltados else (saltados || p_pauta)[1:100] end,
     sesion_id = v_sesion, actualizado_en = now()
@@ -276,6 +285,7 @@ create or replace function public.reloj_elegir(p_clave text, p_sesion uuid) retu
 language plpgsql security definer set search_path = '' as $$
 declare x record; r public.reloj;
 begin
+  perform fbe_privado.solo_servidor();  -- (revisión) aunque una migración futura se olvide de quitarle el permiso
   select * into x from fbe_privado.reloj_de(p_clave);
   r := x.r;
   if r.atleta_id is null then return jsonb_build_object('ok', false, 'error', 'clave'); end if;
@@ -292,12 +302,15 @@ create or replace function public.reloj_terminar(p_clave text, p_sesion uuid, p_
 language plpgsql security definer set search_path = '' as $$
 declare x record; r public.reloj; v_min int; v_primera timestamptz;
 begin
+  perform fbe_privado.solo_servidor();  -- (revisión) aunque una migración futura se olvide de quitarle el permiso
   select * into x from fbe_privado.reloj_de(p_clave);
   r := x.r;
   if r.atleta_id is null then return jsonb_build_object('ok', false, 'error', 'clave'); end if;
   if x.baja then return jsonb_build_object('ok', false, 'error', 'baja'); end if;
   if not fbe_privado.reloj_sesion_valida(r.atleta_id, p_sesion) then return jsonb_build_object('ok', false, 'error', 'sesion'); end if;
   if (select completada from public.sesiones where id = p_sesion) then return jsonb_build_object('ok', false, 'error', 'terminada'); end if;
+  -- (revisión) una sesión con cardio pide sus minutos al terminarla: eso, en la app
+  if exists (select 1 from public.sesiones where id = p_sesion and (tipo = 'cardio' or cardio is not null)) then return jsonb_build_object('ok', false, 'error', 'cardio'); end if;
   if p_rpe is not null and (p_rpe < 1 or p_rpe > 10) then return jsonb_build_object('ok', false, 'error', 'datos'); end if;
   select min(h.registrada_en) into v_primera from public.series h join public.sesion_ejercicios se on se.id = h.sesion_ejercicio_id where se.sesion_id = p_sesion;
   v_min := coalesce(p_minutos, case when v_primera is not null then ceil(extract(epoch from now() - v_primera) / 60)::int end);
@@ -321,7 +334,7 @@ grant execute on all functions in schema public to authenticated, service_role;
 revoke execute on function public.crear_recordatorios(timestamptz), public.notificaciones_por_enviar(integer, boolean),
   public.notificaciones_resultado(jsonb), public.salud_recibir(text, jsonb), public.calendario_de(text),
   public.reloj_estado(text, uuid), public.reloj_serie(text, uuid, int, numeric, int, numeric, uuid), public.reloj_saltar(text, uuid),
-  public.reloj_elegir(text, uuid), public.reloj_terminar(text, uuid, numeric, int) from public, anon, authenticated;
+  public.reloj_elegir(text, uuid), public.reloj_terminar(text, uuid, numeric, int), public.guia_tocar() from public, anon, authenticated;
 revoke all on all functions in schema fbe_privado from public, anon, authenticated;
 
 insert into public.fbe_migraciones (numero) values (58)  -- (3) número de esta migración

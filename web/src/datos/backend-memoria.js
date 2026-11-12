@@ -3450,7 +3450,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const a = miAtletaId();
         if (!a) return null;
         const r = tabla('reloj').find((x) => x.atleta_id === a);
-        return { activo: !!r, desde: r?.desde || null, ultimo: r?.ultimo || null, unidad: r?.unidad || 'kg', atajo: tabla('atajos_coach').find((x) => x.clave === 'reloj')?.url || null };
+        return { activo: !!r, desde: r?.desde || null, ultimo: r?.ultimo || null, unidad: r?.unidad || 'kg', sesion_id: r?.sesion_id || null, saltados: r?.saltados || [], atajo: tabla('atajos_coach').find((x) => x.clave === 'reloj')?.url || null };
       }
       if (nombre === 'reloj_crear') {
         const a = miAtletaId();

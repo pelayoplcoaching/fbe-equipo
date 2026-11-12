@@ -440,22 +440,24 @@ function vistaReloj(estado) {
   const s = estado.sesion;
   const base = { ok: true, sesion_id: s.id, sesion: s.nombre, unidad: u, ...extraOtras };
   if (s.completada) return { ...base, estado: "nada", titulo: s.nombre, texto: `${s.nombre}: ya está hecha.`, opciones: [], acciones: {} };
+  const conCardio = s.tipo === "cardio" || !!s.con_cardio;
   if (s.tipo === "cardio" || !(estado.ejercicios || []).length) {
-    const opciones2 = [OPCION.terminar, ...otras.length ? [OPCION.otra] : []];
+    const opciones2 = [...conCardio ? [] : [OPCION.terminar], ...otras.length ? [OPCION.otra] : []];
     return {
       ...base,
       estado: "cardio",
       titulo: s.nombre,
       texto: `${s.nombre}
-${s.tipo === "cardio" ? "Es de cardio: llévala con el Entreno del reloj y, al acabar, termínala aquí o en la app." : "No tiene ejercicios que apuntar desde el reloj."}`,
+${s.tipo === "cardio" ? "Es de cardio: llévala con el Entreno del reloj y, al acabar, termínala en la app (te pide los minutos)." : "No tiene ejercicios que apuntar desde el reloj."}`,
       opciones: opciones2,
       acciones: accionesDe(opciones2)
     };
   }
   const sig = serieSiguiente(estado);
   if (!sig) {
-    const opciones2 = [OPCION.terminar, ...otras.length ? [OPCION.otra] : []];
-    return { ...base, estado: "terminar", titulo: s.nombre, texto: `${s.nombre}
+    const opciones2 = [...conCardio ? [] : [OPCION.terminar], ...otras.length ? [OPCION.otra] : []];
+    return { ...base, estado: "terminar", titulo: s.nombre, texto: conCardio ? `${s.nombre}
+No queda ninguna serie. Termínala en la app: te pide lo del cardio.` : `${s.nombre}
 No queda ninguna serie. ¿La terminas?`, opciones: opciones2, acciones: accionesDe(opciones2) };
   }
   const { se, numero: numero2, hechasSe } = sig;
@@ -554,6 +556,7 @@ var MENSAJES_RELOJ = {
   baja: "Tu cuenta está de baja: desde el reloj ya no se apunta nada.",
   sesion: "Esa sesión ya no está disponible: vuelve a abrir el atajo.",
   terminada: "Esa sesión ya está terminada.",
+  cardio: "Esta sesión lleva cardio: termínala en la app (te pide los minutos).",
   datos: "Faltan los kilos o las repeticiones (o no valen)."
 };
 
@@ -561,7 +564,7 @@ var MENSAJES_RELOJ = {
 var MAX_CUERPO = 8 * 1024;
 var json = (d, estado = 200) => new Response(JSON.stringify(d), { status: estado, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
 var fallo = (error, estado = 422) => json({ ok: false, error, mensaje: MENSAJES_RELOJ[error] || "No se ha podido hacer" }, estado);
-var estadoHttp = (e) => e === "clave" ? 401 : e === "baja" ? 403 : e === "sesion" || e === "terminada" ? 409 : 422;
+var estadoHttp = (e) => e === "clave" ? 401 : e === "baja" ? 403 : e === "sesion" || e === "terminada" || e === "cardio" ? 409 : 422;
 async function atender(req, { env = {}, f = globalThis.fetch } = {}) {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: { Allow: "POST, OPTIONS" } });
   if (req.method !== "POST") return json({ ok: false, mensaje: "Usa POST" }, 405);
@@ -570,7 +573,7 @@ async function atender(req, { env = {}, f = globalThis.fetch } = {}) {
   if (!CLAVE.test(clave)) return fallo("clave", 401);
   if (Number(req.headers.get("content-length") || 0) > MAX_CUERPO) return json({ ok: false, mensaje: "Demasiados datos" }, 413);
   const crudo = await req.text();
-  if (crudo.length > MAX_CUERPO) return json({ ok: false, mensaje: "Demasiados datos" }, 413);
+  if (new TextEncoder().encode(crudo).length > MAX_CUERPO) return json({ ok: false, mensaje: "Demasiados datos" }, 413);
   let cuerpo = {};
   if (crudo.trim()) {
     try {
@@ -580,9 +583,14 @@ async function atender(req, { env = {}, f = globalThis.fetch } = {}) {
     }
   }
   const base = clienteBase(env, f);
-  const rpc = async (nombre, args) => base.rpc(nombre, args);
+  let ultima = "";
+  const rpc = async (nombre, args) => {
+    ultima = nombre;
+    return base.rpc(nombre, args);
+  };
+  const huella = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(clave)))].map((b) => b.toString(16).padStart(2, "0")).join("");
   try {
-    let estado = await rpc("reloj_estado", { p_clave: clave, p_sesion: null });
+    let estado = await rpc("reloj_estado", { p_clave: huella, p_sesion: null });
     if (!estado?.ok) return fallo(estado?.error || "clave", estadoHttp(estado?.error));
     const p = limpiarPeticion(cuerpo, estado.unidad);
     if (p.accion === "otra" && p.sesion) p.accion = "elegir";
@@ -597,10 +605,10 @@ async function atender(req, { env = {}, f = globalThis.fetch } = {}) {
         reps = vista2.reps;
       }
       const sustituto = (estado.hechas || []).find((s) => s.sesion_ejercicio_id === ref.pauta && s.sustituto_id)?.sustituto_id || null;
-      const r = await rpc("reloj_serie", { p_clave: clave, p_pauta: ref.pauta, p_numero: ref.numero, p_kg: kg, p_reps: reps, p_rir: p.rir, p_sustituto: sustituto });
+      const r = await rpc("reloj_serie", { p_clave: huella, p_pauta: ref.pauta, p_numero: ref.numero, p_kg: kg, p_reps: reps, p_rir: p.rir, p_sustituto: sustituto });
       if (!r?.ok) return fallo(r?.error || "datos", estadoHttp(r?.error));
       const tras = trasGuardar(estado, ref, kg, reps, estado.unidad);
-      const despues = vistaReloj(await rpc("reloj_estado", { p_clave: clave, p_sesion: r.sesion_id || null }));
+      const despues = vistaReloj(await rpc("reloj_estado", { p_clave: huella, p_sesion: r.sesion_id || null }));
       return json({
         ...despues,
         ok: true,
@@ -612,22 +620,22 @@ async function atender(req, { env = {}, f = globalThis.fetch } = {}) {
     if (p.accion === "saltar") {
       const pauta = p.ref?.pauta || (vista2.ref ? vista2.ref.split(":")[0] : null);
       if (!pauta) return json({ ...vista2, ok: false, error: "datos", mensaje: "No hay ningún ejercicio que saltar." }, 409);
-      const r = await rpc("reloj_saltar", { p_clave: clave, p_pauta: pauta });
+      const r = await rpc("reloj_saltar", { p_clave: huella, p_pauta: pauta });
       if (!r?.ok) return fallo(r?.error || "datos", estadoHttp(r?.error));
-      const despues = vistaReloj(await rpc("reloj_estado", { p_clave: clave, p_sesion: null }));
+      const despues = vistaReloj(await rpc("reloj_estado", { p_clave: huella, p_sesion: null }));
       return json({ ...despues, ok: true, descanso_seg: 0, mensaje: `Saltado.${despues.estado === "serie" ? ` Ahora: ${despues.titulo}` : ""}` });
     }
     if (p.accion === "elegir") {
       if (!p.sesion) return json({ ...vista2, ok: false, error: "datos", mensaje: "Elige una sesión." }, 422);
-      const r = await rpc("reloj_elegir", { p_clave: clave, p_sesion: p.sesion });
+      const r = await rpc("reloj_elegir", { p_clave: huella, p_sesion: p.sesion });
       if (!r?.ok) return fallo(r?.error || "sesion", estadoHttp(r?.error));
-      const despues = vistaReloj(await rpc("reloj_estado", { p_clave: clave, p_sesion: p.sesion }));
+      const despues = vistaReloj(await rpc("reloj_estado", { p_clave: huella, p_sesion: p.sesion }));
       return json({ ...despues, ok: true, mensaje: despues.texto });
     }
     if (p.accion === "terminar") {
       const sesion = p.sesion || vista2.sesion_id;
       if (!sesion) return json({ ...vista2, ok: false, error: "datos", mensaje: "No hay ninguna sesión que terminar." }, 409);
-      const r = await rpc("reloj_terminar", { p_clave: clave, p_sesion: sesion, p_rpe: p.rpe, p_minutos: null });
+      const r = await rpc("reloj_terminar", { p_clave: huella, p_sesion: sesion, p_rpe: p.rpe, p_minutos: null });
       if (!r?.ok) return fallo(r?.error || "datos", estadoHttp(r?.error));
       return json({
         ok: true,
@@ -639,7 +647,8 @@ async function atender(req, { env = {}, f = globalThis.fetch } = {}) {
       });
     }
     return json({ ...vista2, mensaje: vista2.texto });
-  } catch {
+  } catch (e) {
+    console.error(`reloj: falló ${ultima || "la llamada"}${e?.status ? ` (${e.status})` : ""}`);
     return json({ ok: false, mensaje: "No se ha podido conectar con la app: prueba otra vez en un momento." }, 503);
   }
 }

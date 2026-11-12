@@ -4823,10 +4823,10 @@ export function crearApi(backend) {
         : ((await api.personalAtletas().catch(() => [])).find((x) => x.atleta_id === atletaId) || null);
       // (v0.105, 051) lo que llegó de Salud del iPhone (los 400 últimos días)
       out.salud_diaria = (await api.saludDiaria(atletaId, '2020-01-01', sumarDias(hoyISO(), 1)).catch(() => null))?.dias || [];
-      // (058) el modo reloj: si lo tiene, desde cuándo, la última vez y su unidad (la clave, nunca)
+      // (058) el modo reloj: si lo tiene, desde cuándo, la última vez, su unidad, la sesión elegida y lo saltado (la clave, nunca)
       if (perfilId && perfilId === uid()) {
         const rl = await api.reloj().catch(() => null);
-        out.reloj = rl ? { activo: rl.activo, desde: rl.desde, ultimo: rl.ultimo, unidad: rl.unidad } : null;
+        out.reloj = rl ? { activo: rl.activo, desde: rl.desde, ultimo: rl.ultimo, unidad: rl.unidad, sesion_id: rl.sesion_id ?? null, saltados: rl.saltados ?? [] } : null;
       }
       // (revisión) lo suyo de las integraciones: desde cuándo tiene conectado cada cosa, su calendario y su teléfono
       if (perfilId && perfilId === uid()) {

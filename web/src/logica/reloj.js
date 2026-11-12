@@ -92,16 +92,18 @@ export function vistaReloj(estado) {
   const s = estado.sesion;
   const base = { ok: true, sesion_id: s.id, sesion: s.nombre, unidad: u, ...extraOtras };
   if (s.completada) return { ...base, estado: 'nada', titulo: s.nombre, texto: `${s.nombre}: ya está hecha.`, opciones: [], acciones: {} };
+  // (revisión) una sesión con cardio pide sus minutos al terminarla: eso se hace en la app, no desde el reloj
+  const conCardio = s.tipo === 'cardio' || !!s.con_cardio;
   if (s.tipo === 'cardio' || !(estado.ejercicios || []).length) {
-    const opciones = [OPCION.terminar, ...(otras.length ? [OPCION.otra] : [])];
+    const opciones = [...(conCardio ? [] : [OPCION.terminar]), ...(otras.length ? [OPCION.otra] : [])];
     return { ...base, estado: 'cardio', titulo: s.nombre,
-      texto: `${s.nombre}\n${s.tipo === 'cardio' ? 'Es de cardio: llévala con el Entreno del reloj y, al acabar, termínala aquí o en la app.' : 'No tiene ejercicios que apuntar desde el reloj.'}`,
+      texto: `${s.nombre}\n${s.tipo === 'cardio' ? 'Es de cardio: llévala con el Entreno del reloj y, al acabar, termínala en la app (te pide los minutos).' : 'No tiene ejercicios que apuntar desde el reloj.'}`,
       opciones, acciones: accionesDe(opciones) };
   }
   const sig = serieSiguiente(estado);
   if (!sig) {
-    const opciones = [OPCION.terminar, ...(otras.length ? [OPCION.otra] : [])];
-    return { ...base, estado: 'terminar', titulo: s.nombre, texto: `${s.nombre}\nNo queda ninguna serie. ¿La terminas?`, opciones, acciones: accionesDe(opciones) };
+    const opciones = [...(conCardio ? [] : [OPCION.terminar]), ...(otras.length ? [OPCION.otra] : [])];
+    return { ...base, estado: 'terminar', titulo: s.nombre, texto: conCardio ? `${s.nombre}\nNo queda ninguna serie. Termínala en la app: te pide lo del cardio.` : `${s.nombre}\nNo queda ninguna serie. ¿La terminas?`, opciones, acciones: accionesDe(opciones) };
   }
   const { se, numero, hechasSe } = sig;
   const sustituto = Object.values(hechasSe).find((x) => x.sustituto_id)?.sustituto_id || null;
@@ -192,6 +194,7 @@ export const MENSAJES_RELOJ = {
   baja: 'Tu cuenta está de baja: desde el reloj ya no se apunta nada.',
   sesion: 'Esa sesión ya no está disponible: vuelve a abrir el atajo.',
   terminada: 'Esa sesión ya está terminada.',
+  cardio: 'Esta sesión lleva cardio: termínala en la app (te pide los minutos).',
   datos: 'Faltan los kilos o las repeticiones (o no valen).',
 };
 
