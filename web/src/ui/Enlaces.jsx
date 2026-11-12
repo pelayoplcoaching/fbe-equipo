@@ -1,6 +1,7 @@
 import { Fragment } from 'preact';
-import { trozosConEnlaces, miniaturaYoutube, tarjetaEnlace } from '../logica/enlaces.js';
+import { trozosConEnlaces, tarjetaEnlace } from '../logica/enlaces.js';
 import { Icono } from './comunes.jsx';
+import { VideoYoutube } from './YouTube.jsx';
 import { tokensDeMensaje } from '../logica/formato.js';
 import { resaltar } from '../logica/mensajes.js';
 
@@ -17,13 +18,8 @@ export function TextoConEnlaces({ texto, como = 'p', clase = '', conVista = true
         {trozos.map((x, i) => (x.tipo === 'texto' ? <Fragment key={i}>{x.valor}</Fragment>
           : <a key={i} href={x.valor} target="_blank" rel="noopener noreferrer" class="enlace-texto">{x.valor.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60)}{x.valor.length > 70 ? '…' : ''}</a>))}
       </Etiqueta>
-      {videos.map((v) => (
-        <a key={v.youtube} class="vista-youtube" href={v.valor} target="_blank" rel="noopener noreferrer" aria-label="Ver el vídeo en YouTube">
-          <img src={miniaturaYoutube(v.youtube)} alt="" loading="lazy" width="320" height="180" referrerpolicy="no-referrer" />
-          <span class="vista-youtube-play" aria-hidden="true"><Icono n="play" /></span>
-          <span class="vista-youtube-pie mini"><Icono n="video" />YouTube</span>
-        </a>
-      ))}
+      {/* (YouTube) el vídeo se ve aquí mismo, con sus marcas de tiempo si el texto las lleva */}
+      {videos.map((v) => <VideoYoutube key={v.youtube} url={v.valor} notas={videos.length === 1 ? texto : ''} compacto clase="vista-youtube-yt" />)}
     </>
   );
 }
@@ -55,13 +51,8 @@ export function TextoChat({ id = null, texto, clase = '', resaltar: consulta = '
   return (
     <>
       <p class={clase}>{pintar(tokens)}{fin}</p>
-      {videos.map((v) => (
-        <a key={v.youtube} class="vista-youtube" href={v.v} target="_blank" rel="noopener noreferrer" aria-label="Ver el vídeo en YouTube">
-          <img src={miniaturaYoutube(v.youtube)} alt="" loading="lazy" width="320" height="180" referrerpolicy="no-referrer" />
-          <span class="vista-youtube-play" aria-hidden="true"><Icono n="play" /></span>
-          <span class="vista-youtube-pie mini"><Icono n="video" />YouTube</span>
-        </a>
-      ))}
+      {/* (YouTube) en el chat, el vídeo se ve dentro de la burbuja */}
+      {videos.map((v) => <VideoYoutube key={v.youtube} url={v.v} notas={videos.length === 1 ? texto : ''} compacto clase="vista-youtube-yt" />)}
       {tarjeta && (
         <a class="vista-enlace" href={otro.v} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${otro.youtube ? 'el vídeo de YouTube' : tarjeta.dominio} (en otra pestaña)`}>
           <span class="vista-enlace-ico" aria-hidden="true"><Icono n={otro.youtube ? 'video' : 'enlace'} /></span>

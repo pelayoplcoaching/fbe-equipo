@@ -11,6 +11,7 @@ import './estrecho.css';
 import './recetario-equipo.css';
 import './guias.css';
 import './productos.css';
+import './youtube.css';
 import './carrera.css';
 import './panel-hoy.css';
 import './tiempo.css';

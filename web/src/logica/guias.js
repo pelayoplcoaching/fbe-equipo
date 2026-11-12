@@ -17,7 +17,7 @@ export const sinMarcas = (s) => trozos(s).map((x) => x.t).join('');
 
 // Los tonos de una caja (lo que no se conozca, «nota»)
 export const TONOS = ['nota', 'clave', 'aviso', 'ojo'];
-const TIPOS = ['p', 'h', 'ul', 'ol', 'caja', 'tabla', 'cita'];
+const TIPOS = ['p', 'h', 'ul', 'ol', 'caja', 'tabla', 'cita', 'video'];
 // Los bloques de una sección, limpios: solo tipos conocidos y con algo dentro
 export function bloquesDe(bs, dentro = false) {
   const out = [];
@@ -25,6 +25,8 @@ export function bloquesDe(bs, dentro = false) {
     const o = objeto(b);
     if (!TIPOS.includes(o.t)) continue;
     if (o.t === 'p' || o.t === 'h' || o.t === 'cita') { if (texto(o.x)) out.push({ t: o.t, x: texto(o.x) }); continue; }
+    // (YouTube) { t: 'video', url, titulo?, x? (notas con marcas de tiempo) }: solo enlaces de YouTube
+    if (o.t === 'video') { const url = texto(o.url); if (/^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be)\//i.test(url) && url.length <= 300) out.push({ t: 'video', url, titulo: texto(o.titulo) || null, x: texto(o.x) || null }); continue; }
     if (o.t === 'ul' || o.t === 'ol') { const xs = lista(o.xs).map(texto).filter(Boolean); if (xs.length) out.push({ t: o.t, xs }); continue; }
     if (o.t === 'tabla') {   // { cab: [..], filas: [[..]] }: todas las filas con las columnas de la cabecera
       const cab = lista(o.cab).map(texto);
@@ -189,6 +191,7 @@ function textoDeBloques(bs) {
     else if (b.t === 'ul' || b.t === 'ol') out.push(...b.xs.map(sinMarcas));
     else if (b.t === 'tabla') out.push(b.cab.filter(Boolean).join(' · '), ...b.filas.map((f) => f.filter(Boolean).join(' · ')));
     else if (b.t === 'caja') out.push(...(b.titulo ? [b.titulo] : []), ...textoDeBloques(b.bloques));
+    else if (b.t === 'video') out.push(...[b.titulo, b.x].filter(Boolean));
   }
   return out;
 }

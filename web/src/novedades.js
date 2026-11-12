@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.145': {
+    atleta: [
+      'Los vídeos de tu coach, dentro de la app: solo el tramo que importa, a cámara lenta o en pequeño mientras entrenas.',
+      'En Hoy, el vídeo de la semana y los directos de tu coach; si tu sesión lleva un vídeo para seguir, lo tienes arriba.',
+    ],
+    coach: [
+      'YouTube en la app: tu canal en «Aprende», vídeo de la semana, directos, vídeo por sesión y quién ha visto qué (059).',
+    ],
+  },
   '0.144': {
     atleta: [
       'Un equipo más vivo: el ánimo sale volando, el podio sube, las encuestas se llenan al votar y las insignias nuevas llegan girando.',

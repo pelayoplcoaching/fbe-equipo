@@ -7,7 +7,9 @@
 // el atleta ve el guardado y puede analizar su barra en su móvil.
 // v0.60: «Grabar la revisión» (el coach: lo que hace en el reproductor y su voz, al hilo del vídeo), «Exportar con
 // correcciones» (el coach y el atleta, en su móvil) y los dos ángulos de la serie.
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { VideoYoutube } from '../YouTube.jsx';
+import { esYoutube } from '../../logica/youtube.js';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { reproductorDe, textoMomento } from '../Video.jsx';
 import { ponerCorrecciones, useCorrecciones } from './correcciones.js';
@@ -373,6 +375,33 @@ function RepetirVideo({ video, puntos }) {
   );
 }
 
+// (YouTube) Su vídeo encima y el de técnica de YouTube debajo, cada uno con su velocidad (los dos a cámara lenta)
+function CompararConReferencia({ video, url, nombre, esCoach = false, alCerrar }) {
+  const { api } = useApp();
+  const [src, setSrc] = useState(null);
+  const [vel, setVel] = useState(0.5);
+  const ref = useRef(null);
+  useEffect(() => { let vivo = true; api.urlArchivo(video.ruta).then((u) => vivo && setSrc(u)).catch(() => {}); return () => { vivo = false; }; }, [video.id]);
+  useEffect(() => { if (ref.current) ref.current.playbackRate = vel; }, [vel, src]);
+  return (
+    <Hoja titulo={`${nombre}: ${esCoach ? 'su vídeo' : 'tu vídeo'} y la referencia`} alCerrar={alCerrar} ancho>
+      <div class="pila comparar-referencia">
+        <section class="pila-s" aria-label={esCoach ? 'Su vídeo' : 'Tu vídeo'}>
+          <h3 class="mini terciario">{esCoach ? 'Su vídeo' : 'Tu vídeo'}</h3>
+          {src ? <video ref={ref} class="comparar-referencia-video" src={src} controls playsInline muted loop preload="metadata" /> : <div class="yt-marco yt-sin"><span class="peq">Cargando el vídeo…</span></div>}
+          <div class="selector-chips" role="group" aria-label={`Velocidad de ${esCoach ? 'su' : 'tu'} vídeo`}>
+            {[1, 0.5, 0.25].map((x) => <button type="button" key={x} aria-pressed={vel === x ? 'true' : 'false'} onClick={() => setVel(x)}>{String(x).replace('.', ',')}×</button>)}
+          </div>
+        </section>
+        <section class="pila-s" aria-label="La técnica de referencia">
+          <h3 class="mini terciario">La técnica de referencia</h3>
+          <VideoYoutube url={url} titulo={`Técnica: ${nombre}`} />
+        </section>
+      </div>
+    </Hoja>
+  );
+}
+
 // v0.59 (6 y 7): «Comparar con su mejor» (el de mejor nota de ese ejercicio entre sus vídeos corregidos; después, la mejor
 // velocidad guardada; después, el más reciente) y «Comparar con el vídeo modelo» del coach. El atleta, con los suyos.
 function CompararCon({ video, esCoach = false }) {
@@ -383,14 +412,18 @@ function CompararCon({ video, esCoach = false }) {
   const [comparar, setComparar] = useState(null); // 'mejor' | 'modelo'
   const m = mejor.datos;
   const hayModelo = (modelos.datos || []).length > 0;
-  if (!m && !hayModelo) return null;
+  // (YouTube) el vídeo de técnica del ejercicio (el de la biblioteca), al lado del suyo
+  const refYt = ej?.video_url && esYoutube(ej.video_url) ? ej.video_url : null;
+  if (!m && !hayModelo && !refYt) return null;
   const nombre = (v) => (v.id === video.id ? 'Este vídeo' : v.id === m?.id ? (esCoach ? 'Su mejor' : 'Tu mejor') : v.ejercicio?.nombre || 'Vídeo');
   return (
     <div class="fila-envolver comparar-con">
       {m && <button type="button" class="btn btn-peq" onClick={() => setComparar('mejor')} aria-haspopup="dialog"><Icono n="duplicar" /> {esCoach ? 'Comparar con su mejor' : 'Comparar con tu mejor'} <span class="terciario num">({fmtCorta(m.fecha)}{porQueMejor(m) ? ` · ${porQueMejor(m)}` : ''})</span></button>}
       {hayModelo && <button type="button" class="btn btn-peq" onClick={() => setComparar('modelo')} aria-haspopup="dialog"><Icono n="video" /> Comparar con el vídeo modelo</button>}
       {comparar === 'mejor' && m && <CompararVideos videos={[m, video]} nombreDe={nombre} inicialA={video.id} inicialB={m.id} alCerrar={() => setComparar(null)} />}
+      {refYt && <button type="button" class="btn btn-peq" onClick={() => setComparar('referencia')} aria-haspopup="dialog"><Icono n="video" /> Comparar con la técnica de referencia</button>}
       {comparar === 'modelo' && <CompararVideos videos={[video]} nombreDe={nombre} inicialA={video.id} inicialB="modelo" alCerrar={() => setComparar(null)} />}
+      {comparar === 'referencia' && refYt && <CompararConReferencia video={video} url={refYt} nombre={ej?.nombre || 'Ejercicio'} esCoach={esCoach} alCerrar={() => setComparar(null)} />}
     </div>
   );
 }

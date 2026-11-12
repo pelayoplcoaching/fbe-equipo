@@ -1,4 +1,5 @@
 import { Fragment } from 'preact';
+import { VideosVistosAtleta } from '../Videos.jsx';
 import { cacheChat } from '../../datos/cacheChat.js';
 import { VERSION_LEGAL } from '../../legal.js';
 import { textoPrivacidadVista } from '../../logica/privacidad.js';
@@ -100,7 +101,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           {pest === 'carrera' && conCarrera(a) && <CarreraFicha atleta={a} />}
           {pest === 'seguimiento' && <><SaludDelMovil atleta={a} /><Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} /></>}
           {pest === 'nutricion' && (conNutricion(a) ? <NutricionFicha atleta={a} /> : <SinNutricion irADatos={() => setPest('datos')} />)}
-          {pest === 'videos' && <><MiTecnica atletaId={a.id} nombreAtleta={a.nombre} esCoach /><Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} /></>}
+          {pest === 'videos' && <><MiTecnica atletaId={a.id} nombreAtleta={a.nombre} esCoach /><Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} />{/* (YouTube) los vídeos de YouTube que ha visto en la app */}<VideosVistosAtleta atletaId={a.id} /></>}
           {pest === 'objetivos' && <><LoSuyo atletaId={a.id} /><Objetivos atleta={a} /></>}
           {pest === 'cobros' && <CobrosAtleta atleta={a} />}
           {pest === 'notas' && <Notas atleta={a} notas={ficha.datos.notas} recargar={() => ficha.recargar(true)} />}

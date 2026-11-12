@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Fragment } from 'preact';
+import { VideoSemanaHoy, DirectoHoy } from '../Videos.jsx';
 import { GuiaSugerida, MitoDeLaSemana } from '../Guias.jsx';
 import { pedirSubProgreso } from './sub-progreso.js';
 import { FinDePagina, Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar, useApuntar } from '../comunes.jsx';
@@ -328,7 +329,7 @@ function AvisoInstalar() {
 
 // Hoy de quien solo lleva la nutrición (v0.26): su menú de hoy, su nutrición, hábitos y peso
 function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos, entre = null, sinBienvenida = false }) {
-  const { api, atleta } = useApp();
+  const { api, atleta, propio } = useApp();
   const checkinHecho = !!checkinSemana.datos?.checkin;
   // (diseño, tanda 14) la bienvenida del día también para quien solo lleva nutrición: su menú de hoy, las comidas hechas
   // y la semana. Pide lo mismo que piden «Tu menú de hoy» y «Nutrición de hoy» (solo el día que sale la bienvenida).
@@ -343,6 +344,8 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={{ estado: 'nutricion' }} panel={panelDia} alCerrar={cerrarDia} />}
       <Reserva id="hoy-menu"><MenuHoy irA={irA} salud={salud} darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }} /></Reserva>
+      {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí */}
+      {!propio && <DirectoHoy />}
       {entre}
       {salud && <Reserva id="hoy-nutricion"><NutricionHoy /></Reserva>}
       {salud && <Reserva id="hoy-habitos"><HabitosHoy /></Reserva>}
@@ -409,6 +412,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
     return (
       <>
         <HeroEspera bloque={p.bloque} notion={urlSegura(atleta.notion_url)} irA={irA} propio={propio} />
+        {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí */}
+        {!propio && <DirectoHoy />}
         {entre}
         {salud && conNutricion(atleta) && <MenuHoy irA={irA} salud={salud} compacto />}
         {salud && conNutricion(atleta) && <NutricionHoy />}
@@ -555,6 +560,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
 
       {/* (v0.143) de viaje, en otra zona horaria: qué hora es en cada sitio y las notificaciones de noche */}
       <AvisoViaje />
+      {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí */}
+      {!propio && <DirectoHoy />}
       {entre}
       {!propio && !P.ocultas.has('mes') && tarjetaMes}
       {/* (v0.104) en diciembre y enero, tu año en FBE */}
@@ -564,6 +571,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {/* (filosofía) de vuelta tras un parón, las dos reglas de oro; y el mito de la semana, hasta que se lee */}
       {!propio && constancia.datos?.algunaVez && !constancia.datos?.ultimoDia && <GuiaSugerida ocasion="vuelta" />}
       {!propio && !P.ocultas.has('mito') && tarjetaMito}
+      {/* (YouTube) el vídeo de la semana de tu coach */}
+      {!propio && <VideoSemanaHoy />}
       {/* (054) una sesión que la app cerró sola (todas las series hechas, 3 horas sin tocar): pedir cómo fue */}
       <CerradasPorTi sesiones={Object.values(p.sesiones || {}).flat()} hoy={hoy} abrirSesion={abrirSesion} />
       <Reserva id="hoy-informes"><BloqueTerminado salud={salud} /><SemanaPasada salud={salud} /></Reserva>

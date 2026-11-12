@@ -76,6 +76,8 @@ import { AnadirASalud } from './Conexiones.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
 import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
+import { VideoYoutube, MiniGlobal, abrirMini } from '../YouTube.jsx';
+import { esYoutube, videoDe } from '../../logica/youtube.js';
 
 // (pulido 2.10) «Compartir con el equipo», al terminar: es de la pantalla Equipo, que se carga cuando hace falta
 const HojaCompartirEquipo = perezoso(() => import('../Comunidad.jsx'), 'HojaCompartirEquipo', { mientras: null });
@@ -695,6 +697,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           <button type="button" class="btn btn-peq btn-primario" style="justify-self:start" onClick={() => setTerminando(true)}><Icono n="editar" /> {sesion.rpe_sesion == null ? 'Decir cómo fue' : 'Corregir o añadir una nota'}</button>
         </section>
       ); })()}
+      {/* (YouTube) «sigue este vídeo»: el que pone el coach a la sesión (un calentamiento, movilidad, un cardio) */}
+      {sesion.video_url && <VideoDeSesion sesion={sesion} />}
       {!sesion.completada && ejercicios.length > 0 && <Pista id="sesion" icono="hoy">Cada ejercicio trae lo que te toca (series, repeticiones y esfuerzo). Apunta los kilos y las repeticiones de cada serie y márcala como hecha: el descanso arranca solo. El esfuerzo (RPE) va del 6 al 10: 10 es que no podías hacer ni una más; 8, que te quedaban dos.</Pista>}
       <BandaConexion />
 
@@ -859,6 +863,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           seId={seActual} setSeId={setSeFoco} inicio={inicio} alTerminar={() => setTerminando(true)}
           alSalir={() => { setEnfoque(false); setAbiertos((a) => new Set([...(a || []), seActual])); llevarA(seActual); }} />
       )}
+      {/* (YouTube) el vídeo de un ejercicio, en pequeño encima de todo, mientras se sigue apuntando y descansando */}
+      <MiniGlobal />
     </>
   );
 }
@@ -973,10 +979,11 @@ function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAu
     !nota && !editandoNota && { id: 'nota', ico: 'chincheta', texto: 'Nota', detalle: 'Una nota fija para ti en este ejercicio (la silla en el 4, el agarre…)' },
     conAproximacion && kgTrabajo > 0 && { id: 'aproximacion', ico: 'llama', texto: 'Aproximación', detalle: `Series de calentamiento hasta ${pesoTxt(kgTrabajo, 2)}` },
     (ej.instrucciones || ej.errores) && { id: 'tecnica', ico: 'biblioteca', texto: 'Técnica', detalle: 'Las claves y los errores comunes' },
-    ej.video_url && { id: 'tutorial', ico: 'video', texto: 'Tutorial', detalle: 'El vídeo del ejercicio (se abre aparte)', href: ej.video_url },
+    ej.video_url && (esYoutube(ej.video_url) ? { id: 'tutorial', ico: 'video', texto: 'Tutorial', detalle: 'El vídeo del ejercicio, en pequeño mientras sigues entrenando' } : { id: 'tutorial', ico: 'video', texto: 'Tutorial', detalle: 'El vídeo del ejercicio (se abre aparte)', href: ej.video_url }),
   ].filter(Boolean);
   const usar = (h) => {
     if (h.id === 'tempo') prepararAudio();
+    if (h.id === 'tutorial' && !h.href) { setHoja(null); abrirMini({ url: ej.video_url, titulo: ej.nombre, notas: [ej.instrucciones, ej.errores].filter(Boolean).join('\n') }); return; }
     if (h.id === 'nota') { setHoja(null); setEditandoNota(true); return; }
     if (h.id === 'luego') { setHoja(null); luego?.(); return; }
     if (h.id === 'orden') { setHoja(null); ordenar?.(); return; }
@@ -1134,6 +1141,28 @@ const aNum = (t) => { const x = String(t ?? '').replace(',', '.').trim(); return
 
 // «Lo que te dijo tu coach» (v0.48): sus últimos comentarios de este ejercicio (en tus vídeos o en sesiones
 // anteriores en que lo nombró)
+// (YouTube) El vídeo de la sesión: plegado en una fila hasta que se toca; al acabarlo (o verlo casi entero), «Hecho».
+// Lo hecho sale de lo visto (videos_vistos), así se ve igual en otro móvil y lo ve el coach.
+function VideoDeSesion({ sesion }) {
+  const { api, atleta } = useApp();
+  const v = videoDe(sesion.video_url);
+  const vistos = useCarga(() => (atleta?.id ? api.videosVistos(atleta.id) : Promise.resolve([])), [atleta?.id, sesion.id]);
+  const [abierto, setAbierto] = useState(false);
+  const [hecho, setHecho] = useState(false);
+  if (!v) return null;
+  const visto = hecho || (vistos.datos || []).some((x) => x.video === v.id && x.completo);
+  const titulo = sesion.video_titulo || 'Sigue este vídeo';
+  return (
+    <section class={`panel panel-pad pila-s video-sesion ${visto ? 'hecho' : ''}`} aria-labelledby={`video-sesion-${sesion.id}`}>
+      <button type="button" class="separa video-sesion-cab" aria-expanded={abierto ? 'true' : 'false'} onClick={() => setAbierto(!abierto)}>
+        <span class="pila-xs"><span class="mini terciario">Tu coach te pone este vídeo</span><strong id={`video-sesion-${sesion.id}`}>{titulo}</strong></span>
+        {visto ? <span class="chip ok"><Icono n="hecho" />Hecho</span> : <Icono n={abierto ? 'arriba' : 'play'} />}
+      </button>
+      {abierto && <VideoYoutube url={sesion.video_url} titulo={`${sesion.nombre}: ${titulo}`} abierto alTerminar={() => setHecho(true)} />}
+    </section>
+  );
+}
+
 function LoQueTeDijo({ coach, nombre }) {
   const [abierto, setAbierto] = useState(false);
   const [x, ...resto] = coach.lista;
@@ -1162,7 +1191,12 @@ function Tecnica({ ej, alCerrar }) {
         {ej.rango_reps && <p class="peq"><span class="terciario">Rango recomendado: </span>{ej.rango_reps}</p>}
         {ej.instrucciones && <section class="pila-s"><h3 class="peq">Claves</h3>{ej.instrucciones.split(/\n{2,}/).map((p, i) => <p key={i} class="secundario" style="white-space:pre-line">{p}</p>)}</section>}
         {ej.errores && <section class="pila-s"><h3 class="peq">Errores comunes</h3>{ej.errores.split(/\n{2,}/).map((p, i) => <p key={i} class="secundario" style="white-space:pre-line">{p}</p>)}</section>}
-        {ej.video_url && <a class="btn btn-ancho" href={ej.video_url} target="_blank" rel="noopener"><Icono n="video" /> Ver el vídeo</a>}
+        {ej.video_url && (esYoutube(ej.video_url) ? (
+          <>
+            <VideoYoutube url={ej.video_url} titulo={`Técnica: ${ej.nombre}`} notas={[ej.instrucciones, ej.errores].filter(Boolean).join('\n')} />
+            <button class="btn btn-ancho" onClick={() => { alCerrar(); abrirMini({ url: ej.video_url, titulo: ej.nombre, notas: [ej.instrucciones, ej.errores].filter(Boolean).join('\n') }); }}><Icono n="video" /> Verlo en pequeño mientras entrenas</button>
+          </>
+        ) : <a class="btn btn-ancho" href={ej.video_url} target="_blank" rel="noopener"><Icono n="video" /> Ver el vídeo</a>)}
       </div>
     </Hoja>
   );
@@ -1199,11 +1233,16 @@ function Cambiar({ e, actual, alCerrar, alElegir }) {
   const biblioteca = useCarga(() => (otros ? api.biblioteca() : Promise.resolve([])), [otros]);
   const principal = e.ejercicio.grupos_musculares?.[0];
   const delGrupo = (biblioteca.datos || []).filter((x) => x.activo !== false && x.grupos_musculares?.[0] === principal && x.id !== e.ejercicio.id && !e.alternativas.some((a) => a.id === x.id));
+  // (YouTube) cada variante lleva su propio vídeo: se dice cuál lo tiene y se puede ver antes de elegirla
+  const [verVideo, setVerVideo] = useState(null);
   const Opcion = ({ x, nota }) => (
-    <button key={x.id} class={x.id === actual.id ? 'elegida' : ''} aria-pressed={x.id === actual.id ? 'true' : 'false'} onClick={() => alElegir(x)}>
-      <span style="font-weight:600">{x.nombre}</span>
-      <span class="mini terciario">{nota || (x.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(', ')}</span>
-    </button>
+    <div class="opcion-con-video">
+      <button key={x.id} class={x.id === actual.id ? 'elegida' : ''} aria-pressed={x.id === actual.id ? 'true' : 'false'} onClick={() => alElegir(x)}>
+        <span style="font-weight:600">{x.nombre}</span>
+        <span class="mini terciario">{nota || (x.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(', ')}</span>
+      </button>
+      {x.video_url && esYoutube(x.video_url) && <button type="button" class="btn btn-icono plano" aria-label={`Ver el vídeo de ${x.nombre}`} onClick={() => setVerVideo(x)}><Icono n="video" /></button>}
+    </div>
   );
   return (
     <Hoja titulo="Cambiar ejercicio" alCerrar={alCerrar}>
@@ -1220,6 +1259,12 @@ function Cambiar({ e, actual, alCerrar, alElegir }) {
           <span class="peq secundario">Otros ejercicios de {NOMBRE_GRUPO[principal]?.toLowerCase()} (coméntaselo a tu coach)</span>
           <div class="lista-elegir">{delGrupo.map((x) => <Opcion x={x} key={x.id} />)}</div>
         </div>
+      )}
+      {verVideo && (
+        <Hoja titulo={verVideo.nombre} alCerrar={() => setVerVideo(null)}>
+          <div class="pila"><VideoYoutube url={verVideo.video_url} titulo={`Técnica: ${verVideo.nombre}`} notas={[verVideo.instrucciones, verVideo.errores].filter(Boolean).join('\n')} abierto />
+            <button class="btn btn-primario btn-grande" onClick={() => { setVerVideo(null); alElegir(verVideo); }}>Hacer este</button></div>
+        </Hoja>
       )}
     </Hoja>
   );

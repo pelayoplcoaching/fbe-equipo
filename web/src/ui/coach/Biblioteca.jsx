@@ -9,6 +9,10 @@ import { GRUPOS, NOMBRE_GRUPO, conPrincipal, TIPOS_EJERCICIO, CATEGORIAS_RECURSO
 import { FAQ } from '../../datos/faq.js';
 import { RecetasBiblioteca } from './ComidasCoach.jsx';
 import { HojaTecnica } from '../tecnica/Frases.jsx';
+import { CampoVideo } from '../YouTube.jsx';
+import { CanalYoutubeCoach, MasVistosEquipo } from '../Videos.jsx';
+import { esYoutube, textoDirecto, enlaceParaGuardar } from '../../logica/youtube.js';
+import { fechaMadrid, sumarDias, instanteMadrid } from '../../logica/fechas.js';
 
 const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -163,7 +167,7 @@ function EditarEjercicio({ ejercicio, todos, porId, alCerrar }) {
             </div>
           )}
         </div>
-        <div class="campo"><label for="ej-video">Vídeo</label><input id="ej-video" class="entrada" type="url" value={f.video_url} onInput={(e) => setF({ ...f, video_url: e.currentTarget.value })} placeholder="https://youtube.com/…" /></div>
+        <CampoVideo id="ej-video" valor={f.video_url} alCambiar={(x) => setF((g) => ({ ...g, video_url: x }))} />
         <div class="campo"><label for="ej-inst">Claves de la técnica</label><textarea id="ej-inst" class="area" style="min-height:140px" value={f.instrucciones} onInput={(e) => setF({ ...f, instrucciones: e.currentTarget.value })} /></div>
         <div class="campo"><label for="ej-err">Errores comunes</label><textarea id="ej-err" class="area" style="min-height:100px" value={f.errores} onInput={(e) => setF({ ...f, errores: e.currentTarget.value })} /></div>
         {!nuevo && <label class="casilla"><input type="checkbox" checked={!f.activo} onChange={(e) => setF({ ...f, activo: !e.currentTarget.checked })} /><span>Ocultar al elegir ejercicios (se mantiene en los programas que ya lo usan)</span></label>}
@@ -197,6 +201,9 @@ function Recursos() {
         <p class="peq secundario" style="flex:1;min-width:220px">Tus atletas los ven en su Perfil, en «Guías y recursos». Sustituyen a las páginas de FAQ y recursos de Notion.</p>
         <button class="btn btn-primario" onClick={() => setEditar({})}><Icono n="mas" /> Nuevo recurso</button>
       </div>
+      {/* (YouTube) su canal (sus vídeos en «Aprende») y lo que más ven sus atletas */}
+      <CanalYoutubeCoach alCambiarRecursos={() => lista.recargar(true)} />
+      <MasVistosEquipo />
       {faltan.length > 0 && lista.datos && (
         <div class="panel panel-pad separa" style="flex-wrap:wrap">
           {!hayFaq
@@ -218,7 +225,7 @@ function Recursos() {
               {xs.map((r) => (
                 <li key={r.id}>
                   <button class="respuesta" onClick={() => setEditar(r)}>
-                    <span><span class="nombre">{r.titulo}</span>{r.atleta_id && <span class="chip morado">Solo {nombreAtleta(r.atleta_id)?.split(' ')[0] || 'un atleta'}</span>}<br /><span class="detalle">{r.url || (r.descripcion ? r.descripcion.slice(0, 110) + (r.descripcion.length > 110 ? '…' : '') : '')}</span></span>
+                    <span><span class="nombre">{r.titulo}</span>{r.destacado && <span class="chip ok"><Icono n="estrella" />Vídeo de la semana</span>}{r.directo_en && <span class="chip morado">Directo {textoDirecto(r.directo_en)}</span>}{r.atleta_id && <span class="chip morado">Solo {nombreAtleta(r.atleta_id)?.split(' ')[0] || 'un atleta'}</span>}<br /><span class="detalle">{r.url || (r.descripcion ? r.descripcion.slice(0, 110) + (r.descripcion.length > 110 ? '…' : '') : '')}</span></span>
                     <Icono n="editar" />
                   </button>
                 </li>
@@ -235,14 +242,36 @@ function Recursos() {
 function EditarRecurso({ recurso, atletas, alCerrar }) {
   const { api, aviso } = useApp();
   const nuevo = !recurso.id;
-  const [f, setF] = useState({ titulo: recurso.titulo || '', categoria: recurso.categoria || 'general', descripcion: recurso.descripcion || '', url: recurso.url || '', atleta_id: recurso.atleta_id || '', orden: recurso.orden ?? 0 });
+  const dirIni = recurso.directo_en ? new Date(recurso.directo_en) : null;
+  const local = (d) => (d ? new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(d).replace(' ', 'T') : '');
+  const [f, setF] = useState({ titulo: recurso.titulo || '', categoria: recurso.categoria || 'general', descripcion: recurso.descripcion || '', url: recurso.url || '', atleta_id: recurso.atleta_id || '', orden: recurso.orden ?? 0,
+    destacado: !!recurso.destacado, directo: !!recurso.directo_en, directo_en: local(dirIni) || `${sumarDias(fechaMadrid(), 1)}T19:00`, avisar: !recurso.directo_en });
   const cambiar = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
   const [ocupado, una] = useUnaVez();
   function guardar(e) { e.preventDefault(); una(guardarYa); }
   async function guardarYa() {
-    const fila = { titulo: f.titulo.trim(), categoria: f.categoria, descripcion: f.descripcion.trim() || null, url: f.url.trim() || null, atleta_id: f.atleta_id || null, orden: Number(f.orden) || 0 };
-    try { if (nuevo) await api.crear('recursos', fila); else await api.actualizar('recursos', recurso.id, fila); aviso('Recurso guardado'); alCerrar(true); }
-    catch (err) { aviso(err.message, 'error'); }
+    const fila = { titulo: f.titulo.trim(), categoria: f.categoria, descripcion: f.descripcion.trim() || null, url: (esYoutube(f.url.trim()) ? enlaceParaGuardar(f.url) : f.url.trim()) || null, atleta_id: f.atleta_id || null, orden: Number(f.orden) || 0 };
+    // (059) el vídeo de la semana (uno solo: se quita del anterior) y los directos; solo con un enlace de YouTube
+    const yt = esYoutube(fila.url);
+    const directoEn = yt && f.directo && f.directo_en ? instanteMadrid(f.directo_en.slice(0, 10), f.directo_en.slice(11, 16)) : null;
+    if (yt || recurso.destacado || recurso.directo_en) Object.assign(fila, { destacado: yt && f.destacado && !fila.atleta_id, directo_en: directoEn });
+    try {
+      // (al integrarla) el anterior se quita después de guardar este (si este falla, el vídeo de la semana sigue siendo el de antes);
+      // mientras, este se guarda sin marcar y se marca al final
+      const marcar = fila.destacado && !recurso.destacado;
+      const anteriores = marcar ? (await api.recursos()).filter((x) => x.destacado && x.id !== recurso.id) : [];
+      const guardada = nuevo ? await api.crear('recursos', { ...fila, ...(marcar ? { destacado: false } : {}) }) : await api.actualizar('recursos', recurso.id, marcar ? { ...fila, destacado: false } : fila);
+      if (marcar) {
+        for (const r of anteriores) await api.actualizar('recursos', r.id, { destacado: false });
+        const id = nuevo ? (Array.isArray(guardada) ? guardada[0]?.id : guardada?.id) : recurso.id;
+        if (id) await api.actualizar('recursos', id, { destacado: true });
+      }
+      // Un directo nuevo (o cambiado de hora), con aviso: un aviso del coach (llega como notificación) hasta ese día
+      if (directoEn && f.avisar && directoEn !== recurso.directo_en) {
+        await api.guardarAviso({ texto: `Directo ${textoDirecto(directoEn)}: «${fila.titulo}». Lo verás en Hoy.`.slice(0, 600), atleta_id: fila.atleta_id, desde: fechaMadrid(), hasta: fechaMadrid(new Date(directoEn)), enviarEn: null }).catch(() => null);
+      }
+      aviso('Recurso guardado'); alCerrar(true);
+    } catch (err) { aviso(err.message, 'error'); }
   }
   return (
     <Hoja titulo={nuevo ? 'Nuevo recurso' : 'Editar recurso'} alCerrar={() => alCerrar(false)}>
@@ -258,7 +287,20 @@ function EditarRecurso({ recurso, atletas, alCerrar }) {
             </select></div>
         </div>
         <div class="campo"><label for="rc-desc">{f.categoria === 'faq' ? 'Respuesta' : 'Descripción'}</label><textarea id="rc-desc" class="area" value={f.descripcion} onInput={cambiar('descripcion')} /></div>
-        <div class="campo"><label for="rc-url">Enlace (opcional)</label><input id="rc-url" class="entrada" type="url" value={f.url} onInput={cambiar('url')} placeholder="https://… (un PDF, un vídeo, tu página de Notion)" /></div>
+        <CampoVideo id="rc-url" etiqueta="Enlace (opcional)" valor={f.url} alCambiar={(x) => setF((g) => ({ ...g, url: x }))} ayuda="Un PDF, tu página de Notion o un vídeo de YouTube (se verá dentro de la app)." />
+        {esYoutube(f.url) && (
+          <div class="pila-s">
+            {!f.atleta_id && <label class="casilla"><input type="checkbox" checked={f.destacado} onChange={(e) => setF({ ...f, destacado: e.currentTarget.checked })} /><span>Vídeo de la semana: sale en Hoy de todos tus atletas (quita el anterior)</span></label>}
+            <label class="casilla"><input type="checkbox" checked={f.directo} onChange={(e) => setF({ ...f, directo: e.currentTarget.checked })} /><span>Es un directo</span></label>
+            {f.directo && (
+              <>
+                <div class="campo"><label for="rc-directo">Día y hora (hora de Madrid)</label><input id="rc-directo" class="entrada" type="datetime-local" value={f.directo_en} onInput={cambiar('directo_en')} /></div>
+                <label class="casilla"><input type="checkbox" checked={f.avisar} onChange={(e) => setF({ ...f, avisar: e.currentTarget.checked })} /><span>Avisar a {f.atleta_id ? 'este atleta' : 'tus atletas'} (un aviso con notificación, hasta ese día)</span></label>
+                <span class="ayuda">Sale en Hoy desde el día antes y, a su hora, se ve dentro de la app.</span>
+              </>
+            )}
+          </div>
+        )}
         <div class="campo"><label for="rc-orden">Orden dentro de su categoría</label><input id="rc-orden" class="entrada" inputMode="numeric" value={f.orden} onInput={cambiar('orden')} /></div>
         <button class="btn btn-primario btn-grande" disabled={ocupado}>Guardar</button>
         {!nuevo && <button type="button" class="btn btn-peligro" onClick={async () => { await api.borrar('recursos', recurso.id); aviso('Recurso borrado'); alCerrar(true); }}><Icono n="basura" /> Borrar</button>}
