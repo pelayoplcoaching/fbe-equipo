@@ -10,6 +10,7 @@ export const NOVEDADES = {
     atleta: [
       '«Tu día» pone arriba lo que te queda y debajo lo hecho; y al bajar por Hoy, el botón de empezar te sigue.',
       '«¿Cómo llegas hoy?», de una en una: tres toques rápidos antes de entrenar.',
+      'Los iconos de la app, ahora ilustrados: los cuadraditos de Hoy, de tu día y de las secciones, con su dibujo.',
     ],
   },
   '0.145': {

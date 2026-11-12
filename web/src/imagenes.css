@@ -150,6 +150,23 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 @media (min-width: 700px) { .acceso-paso .paso-foto { width: calc(100% + 60px); margin: -32px -30px 4px; } }
 @media (forced-colors: active) { .acceso-fondo, .paso-foto { display: none; } }
 
+/* ── Bloque X · los iconos ilustrados ──────────────────────────────────────────────────────────────────────────────────
+   45 iconos de los cuadraditos (logica/imagenes.js, ICONOS_IMG) llevan su ilustración encima del dibujo de líneas: hasta
+   que carga (o si no carga) se ve el de siempre. Fondo morado noche, el mismo de la lámina, para que no haya parpadeo de
+   color; un filo claro muy fino para que el cuadradito no se pierda sobre el fondo oscuro. */
+.ios-ico.con-img, .dia-marca.con-img { position: relative; overflow: hidden; }
+.ico-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit;
+  outline: 1px solid rgb(255 255 255 / .09); outline-offset: -1px; pointer-events: none; }
+/* Elegido (la sección actual, la pestaña del «Más»): un aro del color de la marca alrededor */
+.hoja-mas .mas-actual .ios-ico.con-img, .rejilla-secciones button.actual .ios-ico.con-img { box-shadow: 0 0 0 2px var(--hoja), 0 0 0 4px var(--morado); overflow: visible; }
+.hoja-mas .mas-actual .ios-ico.con-img .ico-img, .rejilla-secciones button.actual .ios-ico.con-img .ico-img { clip-path: inset(0 round 9px); }
+/* Salud del iPhone y el calendario conservan su color de marca */
+.conexion-salud .ico-img, .conexion-calendario .ico-img { display: none; }
+/* Los estados vacíos: la ilustración grande en su escenario de dos aros */
+.vacio-ico-img { width: 60px; height: 60px; border-radius: 16px; margin: 14px 0 12px;
+  box-shadow: 0 0 0 9px color-mix(in srgb, var(--morado) 7%, transparent), 0 0 0 19px color-mix(in srgb, var(--morado) 3.5%, transparent); }
+@media (prefers-reduced-motion: no-preference) { .vacio-ico-img { animation: ilu-entra var(--mov-lento) var(--curva-casa) both; } }
+
 /* ── Bloque V · las ilustraciones vivas ─────────────────────────────────────────────────────────────────────────────────
    Las que se ven a diario se mueven un poco. Reglas: solo transform (y sus sueltas: scale, translate) y opacity, que van
    en la gráfica sin repintar; nada con «reducir movimiento»; paradas con la app en segundo plano (html[data-oculta],
@@ -244,3 +261,4 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 @keyframes foco-vaiven { 0%, 100% { translate: 0 0; } 30% { translate: -1.6% 0; } 70% { translate: 1.6% 0; } }
 @keyframes hito-parpadea { 0% { opacity: .52; transform: scale(1); } 40% { opacity: .66; transform: scale(1.012); } 70% { opacity: .56; transform: scale(1.004); } 100% { opacity: .72; transform: scale(1.022); } }
 @keyframes hito-chispa { 0% { opacity: 0; transform: translate3d(0, 0, 0) scale(1); } 12% { opacity: 1; } 100% { opacity: 0; transform: translate3d(var(--lado, 0), -34vh, 0) scale(.3); } }
+

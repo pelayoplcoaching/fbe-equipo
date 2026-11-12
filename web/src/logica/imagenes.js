@@ -213,3 +213,16 @@ export function fuenteImagen(id, lista = LISTA) {
 }
 
 export const IMAGENES = Object.keys(LISTA);
+
+// ---------- Los iconos ilustrados ----------
+// 45 iconos de los cuadraditos (ios-ico) llevan su ilustración (cinco láminas de 3×3, claude/iconos-prompts.md). Se
+// pinta encima del dibujo de líneas, que queda debajo si no carga. Los demás iconos, y los cuadraditos con tono de estado
+// (ok, aviso, alerta), siguen con su dibujo de líneas.
+export const ICONOS_IMG = [
+  'hoy', 'disco', 'semana', 'calendario', 'progreso', 'diana', 'trofeo', 'llama', 'estrella',
+  'bandera', 'movilidad', 'pasos', 'reloj', 'bascula', 'sueno', 'agua', 'proteina', 'verdura',
+  'nutricion', 'receta', 'atletas', 'equipo', 'perfil', 'mensaje', 'video', 'imagen', 'micro',
+  'altavoz', 'campana', 'checkin', 'plantillas', 'biblioteca', 'historial', 'bandeja', 'escudo', 'candado',
+  'privacidad', 'tema', 'paleta', 'sol', 'nube', 'lluvia', 'nieve', 'niebla', 'tormenta',
+];
+export const imagenIcono = (n) => (ICONOS_IMG.includes(n) ? `ico-${n}` : null);

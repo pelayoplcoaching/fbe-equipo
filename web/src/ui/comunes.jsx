@@ -6,6 +6,8 @@ import { num, leerNumero } from '../logica/calculos.js';
 import { LOBO } from './marca-lobo.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { Ilustracion } from './Ilustraciones.jsx';
+import { Imagen, hayImagen } from './Imagen.jsx';
+import { imagenIcono } from '../logica/imagenes.js';
 import { fmtCorta, aISO, diasEntre, hoyISO } from '../logica/fechas.js';
 import { FRACCION_MEDIA, fotogramasMuelle, MUELLE, arrastreVisible, velocidadDe, destinoHoja } from '../logica/muelle.js';
 import { remuestrear, mezclarPuntos, trazo as trazoDe, area as areaDe, salidaSuave, columnasCifra, seleccionValida } from '../logica/rangos.js';
@@ -320,7 +322,9 @@ export function Siluetas({ forma = 'lista', n = 5, texto = 'Cargando' }) {
 export function Vacio({ icono = 'semana', ilustracion = null, titulo, children, accion }) {
   return (
     <div class={`vacio${ilustracion ? ' con-ilustracion' : ''}`}>
-      {ilustracion ? <Ilustracion n={ilustracion} /> : <Icono n={icono} />}
+      {ilustracion ? <Ilustracion n={ilustracion} /> : hayImagen(imagenIcono(icono))
+        ? <Imagen id={imagenIcono(icono)} clase="vacio-ico-img" tamanos="60px" alternativa={<Icono n={icono} />} />
+        : <Icono n={icono} />}
       <p class="vacio-titulo">{titulo}</p>
       {children && <p>{children}</p>}
       {accion}
@@ -1468,8 +1472,18 @@ export function GrupoIos({ titulo, pie = null, children, clase = '', id }) {
 }
 // tono: '' (el acento), 'ok', 'aviso' o 'alerta'. Con alTocar o href, la fila entera es el botón (o el enlace) y
 // lleva el chevrón; si no, children va a la derecha. bloque: el control debajo, a todo el ancho (unos segmentos).
-export function IcoIos({ n, tono = '' }) {
-  return <span class={`ios-ico${tono ? ` ${tono}` : ''}`} aria-hidden="true"><Icono n={n} class={`ico-${n}`} /></span>;
+export function IcoIos({ n, tono = '', clase = '' }) {
+  const img = !tono && hayImagen(imagenIcono(n)) ? imagenIcono(n) : null;
+  return (
+    <span class={`ios-ico${tono ? ` ${tono}` : ''}${img ? ' con-img' : ''}${clase ? ` ${clase}` : ''}`} aria-hidden="true">
+      <Icono n={n} class={`ico-${n}`} />{img && <Imagen id={img} clase="ico-img" tamanos="2rem" />}
+    </span>
+  );
+}
+// La ilustración de un icono para otro cuadradito (la marca de «Tu día»), encima de su dibujo de líneas; null si no tiene
+export function CapaIcono({ n, tamanos = '2rem' }) {
+  const id = imagenIcono(n);
+  return id && hayImagen(id) ? <Imagen id={id} clase="ico-img" tamanos={tamanos} /> : null;
 }
 // dentro: lo que va en la fila pero no se ve en ella (la hoja que abre), para que la lista solo tenga filas
 export function FilaIos({ icono, tono = '', titulo, detalle = null, valor = null, alTocar = null, href = null, etiqueta, children, bloque = null, clase = '', dentro = null }) {
