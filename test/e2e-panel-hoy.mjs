@@ -49,7 +49,7 @@ export async function probarPanelHoy({ navegador, check, base = 'http://localhos
     const comida = p.locator('.diales .dial', { hasText: 'Comida' });
     await comida.waitFor({ timeout: 8000 }).catch(() => {});
     const nombres = await p.locator('.diales .dial-nombre').allTextContents();
-    check(nombres.join() === 'Constancia,Carga,Cómo llegas,Comida', `Ana (con nutrición) ve el dial de Comida junto a los de siempre (${nombres.join(', ')})`);
+    check(nombres.join() === 'Constancia,Carga,Cómo llegas,Comida,Sueño' && await p.locator('.diales.diales-dos-filas').count() === 1, `Ana (con nutrición y Salud) ve Comida y Sueño junto a los de siempre, en dos filas (${nombres.join(', ')})`);
     check(await p.locator('.diales .dial', { hasText: 'Pasos' }).count() === 0, 'sin pasos de hoy en Salud, el de Pasos no sale');
     await comida.click();
     const hojaC = p.getByRole('dialog', { name: 'Comida de hoy' });
@@ -57,6 +57,15 @@ export async function probarPanelHoy({ navegador, check, base = 'http://localhos
     check(await hojaC.locator('.dial-hoja-cifras > div').count() === 3 && /Tu objetivo/.test(await hojaC.textContent()), 'tocarlo abre lo apuntado, su objetivo y lo que le queda');
     await p.keyboard.press('Escape');
     await hojaC.waitFor({ state: 'detached' });
+    // (v0.141) el de Sueño abre «Tu reloj, de un vistazo»
+    await p.locator('.diales .dial', { hasText: 'Sueño' }).click();
+    const hojaR = p.getByRole('dialog', { name: 'Tu reloj, de un vistazo' });
+    await hojaR.waitFor();
+    const filasR = await hojaR.locator('tbody th').allTextContents();
+    check(filasR.join() === 'Pasos hoy,Sueño anoche,Pulso en reposo,HRV', `el de Sueño abre «Tu reloj, de un vistazo»: hoy y su media de pasos, sueño, pulso y HRV (${filasR.join(', ')})`);
+    await axe('tu-reloj');
+    await p.keyboard.press('Escape');
+    await hojaR.waitFor({ state: 'detached' });
     const antes = await ordenDeHoy();
     check(antes[0] === 'sesion' || antes[0] === 'semana', `las secciones, en el orden de siempre (${antes.join(', ')})`);
     // Ordenar Hoy
@@ -65,7 +74,7 @@ export async function probarPanelHoy({ navegador, check, base = 'http://localhos
     await hoja.waitFor();
     await axe('ordenar-hoy');
     await hoja.getByRole('switch', { name: /Carga/ }).click();
-    await p.waitForFunction(() => document.querySelectorAll('.diales .dial').length === 3);
+    await p.waitForFunction(() => document.querySelectorAll('.diales .dial').length === 4);
     check(await p.locator('.diales .dial', { hasText: 'Carga' }).count() === 0, 'quitar el dial de Carga: se va al momento (detrás de la hoja)');
     const subirPeso = hoja.getByRole('button', { name: 'Subir Tu peso' });
     for (let i = 0; i < 8 && (await subirPeso.getAttribute('aria-disabled')) !== 'true'; i++) { await subirPeso.click(); await p.waitForTimeout(80); }
@@ -94,7 +103,7 @@ export async function probarPanelHoy({ navegador, check, base = 'http://localhos
     check(await hoja.getByRole('button', { name: 'Dejarlo como venía' }).count() === 0, '«Dejarlo como venía» deshace todo (y desaparece)');
     await hoja.getByRole('button', { name: 'Listo' }).click();
     await hoja.waitFor({ state: 'detached' });
-    check((await ordenDeHoy()).join() === antes.join() && await p.locator('details.ocultas-hoy').count() === 0 && await p.locator('.diales .dial').count() === 4, 'y Hoy vuelve a ser el de siempre');
+    check((await ordenDeHoy()).join() === antes.join() && await p.locator('details.ocultas-hoy').count() === 0 && await p.locator('.diales .dial').count() === 5, 'y Hoy vuelve a ser el de siempre');
     check(!errores.length, `Hoy a tu gusto, sin errores, desbordes ni fallos de accesibilidad${errores.length ? `: ${errores.slice(0, 4).join(' | ')}` : ''}`);
   } finally {
     await ctx.close();

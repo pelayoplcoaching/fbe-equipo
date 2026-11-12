@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.141': {
+    atleta: [
+      'Si entrenas con Apple Watch: la serie que toca, marcarla y el descanso, desde la muñeca (Perfil → Apple Watch).',
+      'Nuevo dial de Sueño y «Tu reloj, de un vistazo»: pasos, sueño, pulso en reposo y HRV frente a tu media.',
+    ],
+    coach: [
+      'El modo reloj: pon el enlace del atajo «FBE Reloj» en Cuenta → Atajos del iPhone (necesita la migración 058 y la función «reloj»).',
+    ],
+  },
   '0.140': {
     atleta: [
       'Ordena Hoy a tu gusto: sube, baja u oculta sus secciones y elige qué diales ves arriba (abajo del todo, «Ordenar Hoy»).',

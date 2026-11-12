@@ -1,6 +1,6 @@
 // (v0.140) Hoy a tu gusto: el orden y lo oculto de las secciones de Hoy, y los diales nuevos (Comida y Pasos).
 import { SECCIONES_HOY, leerPanel, seccionesHoy, moverSeccion, alternarSeccion, alternarDial, panelPorDefecto, nombreSeccion } from '../web/src/logica/hoy-panel.js';
-import { dialComida, dialPasos, pasosCortos } from '../web/src/logica/tablero.js';
+import { dialComida, dialPasos, dialSueno, horasMin, relojDeUnVistazo, pasosCortos } from '../web/src/logica/tablero.js';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -56,6 +56,17 @@ const p2 = dialPasos([{ fecha: '2026-11-10', pasos: 9000 }, { fecha: hoy, pasos:
 check(p2.media === null && p2.estado === 'sin_media' && p2.valor === 0, 'con menos de 3 días, sin media (no se inventa un objetivo)');
 check(dialPasos([{ fecha: '2026-10-01', pasos: 20000 }, { fecha: '2026-10-02', pasos: 20000 }, { fecha: '2026-10-03', pasos: 20000 }, { fecha: hoy, pasos: 5000 }], hoy).media === null, 'lo de hace más de 14 días no cuenta');
 check(pasosCortos(842).cifra === '842' && pasosCortos(8432).cifra === '8,4' && pasosCortos(8432).unidad === 'mil' && pasosCortos(12600).cifra === '13', 'en el centro del dial, en miles con una cifra');
+
+console.log('(v0.141) El sueño y tu reloj de un vistazo');
+const ds = [{ fecha: '2026-11-08', sueno_min: 420, fc_reposo: 56, hrv: 50, pasos: 8000 }, { fecha: '2026-11-09', sueno_min: 440, fc_reposo: 58, hrv: 52, pasos: 10000 }, { fecha: '2026-11-10', sueno_min: 400, fc_reposo: 57, hrv: 48, pasos: 9000 }, { fecha: hoy, sueno_min: 330, fc_reposo: 60, hrv: 41, pasos: null }];
+const s1 = dialSueno(ds, hoy);
+check(s1.min === 330 && s1.media === 420 && s1.estado === 'menos' && s1.etiqueta === 'Menos que otras', 'el sueño de anoche frente a su media: menos que otras noches');
+check(dialSueno([...ds.slice(0, 3), { fecha: hoy, sueno_min: 410 }], hoy).estado === 'como_siempre' && dialSueno([...ds.slice(0, 3), { fecha: hoy, sueno_min: 500 }], hoy).estado === 'mas', 'entre el 90 y el 110 %, como siempre; por encima, más');
+check(dialSueno(ds.slice(0, 3), hoy) === null && dialSueno([{ fecha: hoy, sueno_min: 400 }], hoy).estado === 'sin_media', 'sin la fila de hoy, no hay dial; sin 3 días, sin media');
+check(horasMin(395) === '6:35' && horasMin(60) === '1:00', 'las horas, como en un reloj (6:35)');
+const rv = relojDeUnVistazo(ds, hoy);
+check(rv.map((x) => x.clave).join() === 'pasos,sueno_min,fc_reposo,hrv' && rv[0].hoy === null && rv[0].media === 9000 && rv[3].hoy === 41 && rv[3].media === 50, 'tu reloj de un vistazo: hoy y tu media de pasos, sueño, pulso en reposo y HRV');
+check(relojDeUnVistazo([], hoy).length === 0, 'sin nada de Salud, nada');
 
 console.log('En la pantalla');
 const hoyJsx = readFileSync(join(raiz, 'web/src/ui/atleta/Hoy.jsx'), 'utf8');
