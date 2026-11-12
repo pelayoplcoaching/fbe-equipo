@@ -25,6 +25,8 @@ export function guardarVisto(atletaId, id, hoy, sabia = null, api = null) {
   return guardar(atletaId, e);
 }
 
+const traido = new Map();   // atletaId → cuándo se trajo lo de la base
+const CADA = 5 * 60000;
 // (060) Reintenta lo pendiente y junta lo del móvil con lo que hay en la base (otro móvil). Nunca falla.
 export async function sincronizarApuntes(api, atletaId) {
   if (!api || !atletaId) return leerApuntes(atletaId);
@@ -33,7 +35,10 @@ export async function sincronizarApuntes(api, atletaId) {
       if (!(await api.apuntarApunte?.(id, sabia))) break;
       guardar(atletaId, pendienteDeSubir(leerApuntes(atletaId), id, null, true));
     }
+    // (lo de la base se trae como mucho cada 5 minutos: volver a Hoy no pide nada)
+    if (Date.now() - (traido.get(atletaId) || 0) < CADA) return leerApuntes(atletaId);
     const filas = await api.apuntesVistos?.(atletaId);
+    traido.set(atletaId, Date.now());
     if (Array.isArray(filas) && filas.length) { const antes = leerApuntes(atletaId), junto = conServidor(antes, filas); if (JSON.stringify(junto) !== JSON.stringify(antes)) guardar(atletaId, junto); }
   } catch { /* otra vez será */ }
   return leerApuntes(atletaId);
