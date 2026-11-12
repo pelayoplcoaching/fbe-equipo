@@ -66,7 +66,7 @@ export async function probarTravesia({ navegador, check, base = 'http://localhos
     await p.keyboard.press(' ');
     await p.keyboard.press('Escape');
     await juego.waitFor({ state: 'detached' });
-    check((await guardado()) === null, 'cerrada a medias, la práctica no apunta nada');
+    check(!((await guardado())?.total > 0), 'cerrada a medias, la práctica no apunta nada');
 
     // --- En la sesión: «Jugar» en el descanso ---
     await p.evaluate(() => window.scrollTo(0, 0));
@@ -102,7 +102,7 @@ export async function probarTravesia({ navegador, check, base = 'http://localhos
     check(/^Después: /.test(await p.locator('.travesia-despues').textContent()) && await ajuste(), 'abajo, lo que toca después; y queda apuntado que juega en los descansos');
     await juego.getByRole('button', { name: 'Cerrar el juego' }).click();
     await juego.waitFor({ state: 'detached' });
-    check(!(await ajuste()) && await reloj.count() === 1 && (await guardado()) === null, 'cerrado a mano nada más abrirlo: vuelve al reloj, no apunta nada (menos de 20 m) y ya no se abre solo');
+    check(!(await ajuste()) && await reloj.count() === 1 && !((await guardado())?.total > 0), 'cerrado a mano nada más abrirlo: vuelve al reloj, no apunta nada (menos de 20 m) y ya no se abre solo');
 
     // El descanso se acorta y se juega hasta el final: la etapa acaba con él y se cierra sola
     await reloj.getByRole('button', { name: 'Quitar 1 minuto' }).click();

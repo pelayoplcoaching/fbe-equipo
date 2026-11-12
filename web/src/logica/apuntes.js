@@ -4,6 +4,7 @@
 //   · error   un error típico de esa ficha: delante, el error; detrás, por qué y cómo se corrige
 //   · idea    una idea clave de una guía
 //   · mito    un mito de la guía de mitos: delante, el mito; detrás, lo que se sabe
+//   · novedad «la novedad de la semana»: un estudio o una idea en tres líneas que escribe el coach (migración 060)
 // Las de «delante y detrás» (error, mito) se dan la vuelta y el atleta dice si lo sabía: las que no sabía vuelven otro
 // día. Lo visto se recuerda en el móvil (ui/apuntes.js). Aquí solo hay funciones puras.
 import { fichaParaLeer, erroresDeFicha, mitosDeGuia, sinMarcas } from './guias.js';
@@ -52,6 +53,22 @@ export function apuntesDeGuias(guias = []) {
   return out;
 }
 
+// Las novedades publicadas, la última primero: [{ id, titulo, texto, fuente, enlace, publicada, publicada_en }]
+export function apuntesDeNovedades(novedades = []) {
+  return lista(novedades).filter((n) => n?.id && n.publicada && n.publicada_en)
+    .sort((a, b) => String(b.publicada_en).localeCompare(String(a.publicada_en)))
+    .map((n) => {
+      const enlace = /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(String(n.enlace || '')) && !/\s/.test(n.enlace) ? n.enlace : null;
+      return { id: `n:${n.id}`, tipo: 'novedad', etiqueta: 'Novedad de la semana', de: '', titulo: sinMarcas(n.titulo || '').trim(), texto: corta(sinMarcas(n.texto || ''), 520),
+        fuente: String(n.fuente || '').trim() || null, enlace, dia: String(n.publicada_en).slice(0, 10) };
+    }).filter((a) => a.titulo && a.texto);
+}
+// La novedad reciente (publicada en los últimos `dias`) que aún no ha visto, o null
+export function novedadPendiente(apuntes = [], estado = null, hoy, dias = 14) {
+  const v = limpiarVistos(estado).vistos;
+  return apuntes.find((a) => a.tipo === 'novedad' && !v[a.id] && DIA.test(a.dia || '') && diasEntre(a.dia, hoy) >= 0 && diasEntre(a.dia, hoy) < dias) || null;
+}
+
 // ---------- Lo visto (en el móvil) ----------
 // { vistos: { <id>: { n: veces, t: día (AAAA-MM-DD) de la última, s: lo sabía (true/false; solo las de dar la vuelta) } } }
 // Como mucho 600 apuntes recordados (los más antiguos, fuera).
@@ -62,7 +79,29 @@ export function limpiarVistos(g) {
   for (const [id, v] of pares.sort((a, b) => (a[1].t < b[1].t ? -1 : 1)).slice(-600)) {
     vistos[id] = { n: Math.min(999, Math.max(1, Math.round(Number(v.n) || 1))), t: v.t, ...(typeof v.s === 'boolean' ? { s: v.s } : {}) };
   }
-  return { vistos };
+  // (060) lo que no se pudo subir a la base (sin red): { <id>: true | false | null (si lo sabía) }, como mucho 300
+  const porSubir = {};
+  for (const [id, sabia] of Object.entries(objeto(objeto(g).porSubir)).slice(-300)) if (id.length <= 80) porSubir[id] = typeof sabia === 'boolean' ? sabia : null;
+  return Object.keys(porSubir).length ? { vistos, porSubir } : { vistos };
+}
+// Queda por subir (o ya se subió)
+export function pendienteDeSubir(g, id, sabia = null, subido = false) {
+  const e = limpiarVistos(g), cola = { ...(e.porSubir || {}) };
+  if (subido) delete cola[id]; else cola[id] = typeof sabia === 'boolean' ? sabia : cola[id] ?? null;
+  return limpiarVistos({ vistos: e.vistos, porSubir: cola });
+}
+// Junta lo del móvil con lo que hay en la base (otro móvil, o este antes de borrar sus datos): de cada apunte, lo más
+// reciente; con el mismo día, lo del móvil. filas: [{ apunte, veces, ultimo, sabia }]
+export function conServidor(g, filas = []) {
+  const e = limpiarVistos(g);
+  for (const f of lista(filas)) {
+    const id = String(f?.apunte || ''), t = String(f?.ultimo || '').slice(0, 10);
+    if (!id || id.length > 80 || !DIA.test(t)) continue;
+    const mio = e.vistos[id];
+    if (mio && mio.t >= t) { if (typeof mio.s !== 'boolean' && typeof f.sabia === 'boolean') mio.s = f.sabia; mio.n = Math.max(mio.n, Number(f.veces) || 1); continue; }
+    e.vistos[id] = { n: Math.max(mio?.n || 0, Number(f.veces) || 1), t, ...(typeof f.sabia === 'boolean' ? { s: f.sabia } : {}) };
+  }
+  return limpiarVistos(e);
 }
 // Apunta que se ha visto (y, si se dio la vuelta, si lo sabía). Devuelve otro.
 export function apuntarVisto(g, id, hoy, sabia = null) {
@@ -83,12 +122,17 @@ export function elegirApunte(apuntes = [], estado = null, { hoy, salto = 0, excl
   const v = limpiarVistos(estado).vistos, fuera = new Set(excluir);
   const cand = apuntes.filter((a) => a && a.id && !fuera.has(a.id));
   if (!cand.length) return null;
+  // (060) la novedad de la semana que aún no ha visto, lo primero
+  const nueva = novedadPendiente(cand, estado, hoy);
+  if (nueva) return nueva;
   const repasar = cand.filter((a) => v[a.id]?.s === false && v[a.id].t !== hoy);
   if (repasar.length) return repasar.sort((a, b) => (v[a.id].t < v[b.id].t ? -1 : 1))[0];
   const nuevos = cand.filter((a) => !v[a.id]);
   if (nuevos.length) {
     // (alterna los del ejercicio con los generales; dentro de cada grupo, en su orden)
-    const suyos = nuevos.filter((a) => a.tipo === 'clave' || a.tipo === 'error'), resto = nuevos.filter((a) => a.tipo !== 'clave' && a.tipo !== 'error');
+    // (las novedades antiguas que no vio no salen solas: se quedan para el repaso de «Tus apuntes» si las abre)
+    const suyos = nuevos.filter((a) => a.tipo === 'clave' || a.tipo === 'error'), resto = nuevos.filter((a) => a.tipo === 'idea' || a.tipo === 'mito');
+    if (!suyos.length && !resto.length) return nuevos[0];
     if (suyos.length && (salto % 2 === 0 || !resto.length)) return suyos[0];
     return resto[(numeroDe(hoy) + salto) % resto.length] || suyos[0];
   }
@@ -99,7 +143,11 @@ export function elegirApunte(apuntes = [], estado = null, { hoy, salto = 0, excl
 const numeroDe = (dia) => (DIA.test(dia || '') ? Math.floor(Date.parse(`${dia}T00:00:00Z`) / 86400000) : 0);
 
 // El apunte del día (en Hoy): el mismo todo el día, distinto cada día, de entre los generales
-export function apunteDelDia(apuntes = [], hoy) {
+export function apunteDelDia(apuntes = [], hoy, estado = null) {
+  // (060) si hay una novedad de esta semana, es el apunte del día hasta que la vea (y ese día, también)
+  const v = limpiarVistos(estado).vistos;
+  const novedad = apuntes.find((a) => a.tipo === 'novedad' && DIA.test(a.dia || '') && diasEntre(a.dia, hoy) >= 0 && diasEntre(a.dia, hoy) < 7 && (!v[a.id] || v[a.id].t === hoy));
+  if (novedad) return novedad;
   const generales = apuntes.filter((a) => a.tipo === 'idea' || a.tipo === 'mito');
   return generales.length ? generales[numeroDe(hoy) % generales.length] : null;
 }

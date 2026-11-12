@@ -319,6 +319,13 @@ const falta056 = (e) => {
   throw e;
 };
 // (059) Lo de YouTube sin la migración 059
+// (060) Lo de los descansos sin la migración 060
+const AVISO_060 = 'Para esto falta ejecutar la migración 060 en Supabase (supabase/migraciones/060_descansos.sql).';
+const falta060 = (e) => {
+  const m = `${e?.message || ''} ${e?.code || ''}`;
+  if (/novedades|travesia|apuntes_vistos|apuntar_apunte/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42703|42883/i.test(m)) throw new Error(`${AVISO_060} Detalle: ${e?.message || e}`);
+  throw e;
+};
 const AVISO_059 = 'Para esto falta ejecutar la migración 059 en Supabase (supabase/migraciones/059_youtube.sql).';
 const falta059 = (e) => {
   const m = `${e?.message || ''} ${e?.code || ''}`;
@@ -395,6 +402,8 @@ const FILTRO_MURO_043 = { entrenos: { in: { tipo: ['entreno'] } }, logros: { in:
 const TABLAS_CARRERA = ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'];
 // (059) lo de YouTube: el canal del coach y lo que ve cada atleta
 const TABLAS_YOUTUBE = ['youtube_canal', 'videos_vistos'];
+// (060) los descansos: la novedad de la semana, la travesía y los apuntes vistos
+const TABLAS_DESCANSOS = ['novedades', 'travesia_semanas', 'apuntes_vistos'];
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
@@ -402,11 +411,11 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
   'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
-  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA, ...TABLAS_YOUTUBE];
+  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA, ...TABLAS_YOUTUBE, ...TABLAS_DESCANSOS];
 // Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los vídeos, 035; la revisión semanal, 040): sin ellas, la copia sale igual
 const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
-  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA, ...TABLAS_YOUTUBE];
+  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA, ...TABLAS_YOUTUBE, ...TABLAS_DESCANSOS];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
 // (pulido 2.4) y sin la miniatura (unos 14 kB por receta: el 85 % de lo que pesa un recetario): las miniaturas se piden
@@ -3955,6 +3964,52 @@ export function crearApi(backend) {
       return b.select('recursos', { order: [['orden', 'asc'], ['creado_en', 'asc']] });
     },
 
+    // ------------------------------------------------------------ Los descansos (migración 060)
+    // Sin la 060 todo esto no falla: lo del atleta se queda en su móvil (como antes) y las novedades salen vacías.
+    // Las novedades publicadas (el atleta) o todas (el coach), la última primero
+    async novedades() {
+      const filas = await b.select('novedades', { order: [['creada_en', 'desc']], limit: 60 }).catch(() => []);
+      return filas.sort((x, y) => String(y.publicada_en || y.creada_en).localeCompare(String(x.publicada_en || x.creada_en)));
+    },
+    // (coach) guardar una novedad: { id?, titulo, texto, fuente, enlace, publicada }
+    async guardarNovedad(n) {
+      const limpio = (v, max) => { const t = String(v ?? '').replace(/\s+/g, ' ').trim(); return t ? [...t].slice(0, max).join('') : null; };
+      const fila = { titulo: limpio(n.titulo, 90), texto: limpio(n.texto, 500), fuente: limpio(n.fuente, 200), enlace: limpio(n.enlace, 300), publicada: !!n.publicada };
+      if (!fila.titulo || !fila.texto) throw new Error('La novedad necesita un título y un texto');
+      if (fila.enlace && !/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(fila.enlace)) throw new Error('El enlace tiene que empezar por https://');
+      const [r] = n.id ? await b.update('novedades', fila, { eq: { id: n.id } }).catch(falta060) : await b.insert('novedades', [fila]).catch(falta060);
+      return r;
+    },
+    async borrarNovedad(id) { await b.delete('novedades', { eq: { id } }).catch(falta060); },
+    // (atleta) suma lo jugado en La travesía: { metros, estrellas, etapas, mejor }. true si se subió; false si no se pudo
+    // (sin red o sin la 060: se queda en el móvil y se reintenta)
+    async sumarTravesia(x) {
+      if (!(x?.metros > 0) || api._sin060 || !uid()) return false;
+      try {
+        await b.rpc('sumar_travesia', { p_metros: Math.round(x.metros), p_estrellas: Math.round(x.estrellas || 0), p_etapas: Math.max(1, Math.round(x.etapas || 1)), p_mejor: x.mejor != null ? Math.round(x.mejor) : null });
+        return true;
+      } catch (e) {
+        if (/sumar_travesia|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin060 = true;
+        return false;
+      }
+    },
+    // Lo recorrido por un atleta, por semanas (la última primero)
+    async travesiaDe(atletaId) {
+      return b.select('travesia_semanas', { eq: { atleta_id: atletaId }, order: [['semana', 'desc']], limit: 520 }).catch(() => []);
+    },
+    // (atleta) apunta un apunte visto (sabia: true, false o null). true si se subió
+    async apuntarApunte(id, sabia = null) {
+      if (!id || api._sin060 || !uid()) return false;
+      try { await b.rpc('apuntar_apunte', { p_apunte: id, p_sabia: typeof sabia === 'boolean' ? sabia : null }); return true; } catch (e) {
+        if (/apuntar_apunte|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin060 = true;
+        return false;
+      }
+    },
+    // Los apuntes que ha visto un atleta
+    async apuntesVistos(atletaId) {
+      return b.select('apuntes_vistos', { eq: { atleta_id: atletaId }, limit: 3000 }).catch(() => []);
+    },
+
     // ------------------------------------------------------------ YouTube (migración 059)
     // ¿Está la 059? true / false / null (no se sabe). Sonda: youtube_canal (cualquiera con sesión la lee, quizá vacía)
     async youtube059() {
@@ -4882,6 +4937,8 @@ export function crearApi(backend) {
       out.tareas = await b.select('tareas', { eq: { atleta_id: atletaId } }).catch(() => []);
       // (059) los vídeos de YouTube que ha visto en la app
       out.videos_vistos = await b.select('videos_vistos', { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (060) lo que ha recorrido en La travesía y los apuntes que ha visto
+      for (const t of ['travesia_semanas', 'apuntes_vistos']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
       for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)

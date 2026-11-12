@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Icono, Capa } from '../comunes.jsx';
+import { Icono, Capa, useApp } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
 import { nuevaEtapa, avanzar, saltar, resultado, textoDistancia } from '../../logica/travesia.js';
-import { apuntarEtapa, leerTravesia } from '../travesia.js';
+import { apuntarEtapa, leerTravesia, sincronizarTravesia } from '../travesia.js';
 import { nuevoPaisaje, pintar } from './travesia-pinta.js';
 
 // «La travesía»: el juego del descanso, a pantalla completa. Un toque en cualquier sitio, salta; otro en el aire, doble
@@ -18,6 +18,7 @@ const mmss = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math
 // (dentro de su capa, en <body>: cuando corren sus efectos el lienzo ya existe, y ningún antepasado con transform la encierra)
 export function Travesia(props) { return <Capa><TravesiaDentro {...props} /></Capa>; }
 function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, despues = '', practica = false, alCerrar }) {
+  const { api } = useApp() || {};
   const lienzo = useRef(null);
   const caja = useRef(null);
   const etapa = useRef(null);
@@ -35,7 +36,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, des
   const apuntada = useRef(false);
   const salir = () => {
     const e = etapa.current;
-    if (!practica && sesion && e && !apuntada.current && e.x >= 20) { apuntada.current = true; const r = resultado(e); apuntarEtapa(atletaId, { sesion, metros: r.metros, estrellas: r.estrellas }); }
+    if (!practica && sesion && e && !apuntada.current && e.x >= 20) { apuntada.current = true; const r = resultado(e); apuntarEtapa(atletaId, { sesion, metros: r.metros, estrellas: r.estrellas }); sincronizarTravesia(api, atletaId); }
     alCerrar?.('salir');
   };
 
@@ -68,6 +69,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, des
       const r = resultado(e);
       const antesG = leerTravesia(atletaId);
       const g = apuntarEtapa(atletaId, { sesion: practica ? null : sesion, metros: r.metros, estrellas: r.estrellas });
+      if (!practica && sesion) sincronizarTravesia(api, atletaId);   // (060) a la base; si no se puede, se queda pendiente
       vibrar('hecho');
       setFinal({ ...r, hoy: !practica && sesion ? g.sesiones[sesion]?.metros ?? r.metros : null, etapas: !practica && sesion ? g.sesiones[sesion]?.etapas ?? 1 : null,
         marca: practica ? r.metros > antesG.practica && antesG.practica > 0 : r.metros > antesG.mejor && antesG.mejor > 0, mejor: practica ? g.practica : g.mejor });
@@ -118,7 +120,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, des
       <canvas ref={lienzo} class="travesia-lienzo" role="img" aria-label="Un lobo corre de noche por la montaña. Toca la pantalla o pulsa la barra espaciadora para saltar." />
       <div class="travesia-arriba">
         <span class="travesia-dato" aria-label="Distancia de esta etapa"><Icono n="pasos" /><b ref={metros} class="num">0 m</b></span>
-        <span class="travesia-cuenta" role="timer" aria-live="off" aria-label={practica ? 'Tiempo de práctica' : 'Descanso'}><b ref={cuenta} class="num">{mmss(practica ? PRACTICA : 0)}</b><small>{practica ? 'práctica' : 'descanso'}</small></span>
+        <span class="travesia-cuenta" role="timer" aria-live="off" aria-label={practica ? 'Tiempo de práctica' : 'Descanso'}><b ref={cuenta} class="num">{mmss(practica ? PRACTICA : Math.ceil(Number.isFinite(pausa) ? pausa / 1000 : (fin - Date.now()) / 1000))}</b><small>{practica ? 'práctica' : 'descanso'}</small></span>
         <span class="travesia-dato oro" aria-label="Estrellas"><Icono n="estrella" /><b ref={estrellas} class="num">0</b></span>
         <button type="button" class="travesia-cerrar" onClick={salir} aria-label="Cerrar el juego"><Icono n="cerrar" /></button>
       </div>

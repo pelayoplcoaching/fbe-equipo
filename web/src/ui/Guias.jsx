@@ -6,6 +6,7 @@ import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
 import { VideoYoutube } from './YouTube.jsx';
 import { videosDeTexto } from '../logica/youtube.js';
 import { VideotecaAprende } from './Videos.jsx';
+import { fmtCorta } from '../logica/fechas.js';
 import { useApp, useCarga, Icono, Hoja, Vacio, Siluetas, ErrorCaja, CabeceraGrande } from './comunes.jsx';
 import { hoyISO } from '../logica/fechas.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
@@ -402,6 +403,70 @@ export function MitoDeLaSemana() {
 
 // (coach) Biblioteca → Guías: las mismas guías que leen sus atletas, con cuántos ejercicios de la biblioteca llevan ficha
 // y un interruptor para publicar o esconder cada una
+// (coach, 060) «La novedad de la semana»: un estudio o una idea en tres líneas, que sale a los atletas como un apunte más
+// (en el descanso, la primera; en Hoy, como «Novedad de la semana» hasta que la leen). El coach la escribe, la publica y
+// la puede corregir o borrar. Sin la 060, la lista sale vacía y al guardar se avisa de que falta.
+const NOVEDAD_VACIA = { id: null, titulo: '', texto: '', fuente: '', enlace: '', publicada: true };
+export function NovedadesCoach() {
+  const { api, aviso } = useApp();
+  const [n, setN] = useState(0);
+  const lista = useCarga(() => api.novedades().catch(() => []), [n]);
+  const [f, setF] = useState(null);          // la que se está escribiendo
+  const [guardando, setGuardando] = useState(false);
+  const [borrar, setBorrar] = useState(false);
+  const abrir = (x) => { setBorrar(false); setF(x ? { id: x.id, titulo: x.titulo || '', texto: x.texto || '', fuente: x.fuente || '', enlace: x.enlace || '', publicada: !!x.publicada } : { ...NOVEDAD_VACIA }); };
+  const guardar = async (ev) => {
+    ev.preventDefault();
+    setGuardando(true);
+    try { await api.guardarNovedad(f); aviso(f.publicada ? 'Publicada: tus atletas la verán en sus apuntes' : 'Guardada sin publicar'); setF(null); setN(n + 1); }
+    catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }
+  };
+  const quitar = async () => {
+    if (!borrar) { setBorrar(true); return; }
+    try { await api.borrarNovedad(f.id); aviso('Novedad borrada'); setF(null); setN(n + 1); } catch (e) { aviso(e.message, 'error'); }
+  };
+  const filas = lista.datos || [];
+  return (
+    <section class="novedades-coach pila-s" aria-label="La novedad de la semana">
+      <div class="novedades-cab">
+        <h2>La novedad de la semana</h2>
+        <button type="button" class="btn btn-peq" onClick={() => abrir(null)}><Icono n="mas" /> Nueva</button>
+      </div>
+      <p class="peq secundario">Un estudio o una idea en tres líneas. Tus atletas la ven la primera en sus apuntes del descanso y en Hoy, hasta que la leen.</p>
+      {filas.length > 0 && (
+        <div class="panel">
+          {filas.map((x) => (
+            <button type="button" class="novedad-fila" key={x.id} onClick={() => abrir(x)}>
+              <strong>{x.titulo}</strong>
+              {x.publicada ? <span class="chip">Publicada</span> : <span class="chip aviso">Sin publicar</span>}
+              <span class="peq secundario">{x.publicada_en ? fmtCorta(String(x.publicada_en).slice(0, 10)) : 'Borrador'}{x.fuente ? ` · ${x.fuente}` : ''}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {f && (
+        <Hoja titulo={f.id ? 'Novedad' : 'Nueva novedad'} alCerrar={() => setF(null)}>
+          <form class="novedad-form" onSubmit={guardar}>
+            <div class="campo"><label for="nov-titulo">Título</label>
+              <input id="nov-titulo" class="entrada" required maxLength={90} value={f.titulo} placeholder="La idea, en una frase" onInput={(e) => setF({ ...f, titulo: e.currentTarget.value })} /></div>
+            <div class="campo"><label for="nov-texto">Texto</label>
+              <textarea id="nov-texto" class="entrada" required maxLength={500} value={f.texto} placeholder="Qué se hizo, qué salió y qué hacer con ello. Tres líneas." onInput={(e) => setF({ ...f, texto: e.currentTarget.value })} />
+              <span class="cuenta-letras num">{[...f.texto].length}/500</span></div>
+            <div class="campo"><label for="nov-fuente">De dónde sale <span class="secundario">(opcional)</span></label>
+              <input id="nov-fuente" class="entrada" maxLength={200} value={f.fuente} placeholder="Apellido et al., Revista, 2026" onInput={(e) => setF({ ...f, fuente: e.currentTarget.value })} /></div>
+            <div class="campo"><label for="nov-enlace">Enlace <span class="secundario">(opcional)</span></label>
+              <input id="nov-enlace" class="entrada" type="url" inputMode="url" maxLength={300} value={f.enlace} placeholder="https://pubmed.ncbi.nlm.nih.gov/…" onInput={(e) => setF({ ...f, enlace: e.currentTarget.value })} /></div>
+            <label class="interruptor-fila panel panel-pad"><span class="pila-xs"><strong>Publicada</strong><span class="mini secundario">Sin publicar se queda como borrador: tus atletas no la ven.</span></span>
+              <input type="checkbox" role="switch" class="interruptor" checked={f.publicada} onChange={(e) => setF({ ...f, publicada: e.currentTarget.checked })} /></label>
+            <button type="submit" class="btn btn-primario" disabled={guardando}>{f.publicada ? 'Guardar y publicar' : 'Guardar borrador'}</button>
+            {f.id && <button type="button" class="btn-texto peligro" onClick={quitar}>{borrar ? '¿Seguro? Toca otra vez para borrarla' : 'Borrar esta novedad'}</button>}
+          </form>
+        </Hoja>
+      )}
+    </section>
+  );
+}
+
 export function GuiasCoach() {
   const { backend, aviso } = useApp();
   const [abierta, setAbierta] = useState(null);
@@ -412,6 +477,7 @@ export function GuiasCoach() {
   const cambiar = async (g, si) => { try { await publicarGuia({ backend }, g.id, si); aviso(si ? 'Publicada: ya la ven tus atletas' : 'Escondida: tus atletas ya no la ven'); setN(n + 1); } catch (e) { aviso(e.message, 'error'); } };
   return (
     <div class="pila">
+      <NovedadesCoach />
       <p class="peq secundario">Tus guías. Tus atletas las leen en «Aprende», y cada ejercicio de la biblioteca enlazado a una ficha la enseña en su pestaña «Técnica»{enlaces.datos ? ` (ahora, ${cuantos === 1 ? '1 ejercicio enlazado' : `${cuantos} ejercicios enlazados`}; se enlazan al editar cada ejercicio)` : ''}.</p>
       <ListaGuias key={n} alAbrir={(g, seccion = null) => setAbierta({ ...g, seccion })} esCoach />
       {abierta && (
