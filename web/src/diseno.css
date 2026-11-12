@@ -4501,3 +4501,39 @@ body > .tirar.girando .tirar-rueda { animation: none; }
   .hoja-acciones > li:nth-child(5) { animation-delay: 188ms; } .hoja-acciones > li:nth-child(6) { animation-delay: 220ms; } .hoja-acciones > li:nth-child(n+7) { animation-delay: 252ms; }
 }
 @keyframes accion-llega { from { transform: translateY(14px); } }
+
+/* ── Belleza de la sesión · «¿Cómo llegas hoy?», de una en una ─────────────────────────────────────────────────────────
+   Las ya contestadas, en una línea (se tocan para cambiarlas); la que toca entra desde la derecha. */
+.prep-hechas { display: flex; flex-wrap: wrap; gap: 6px; }
+.prep-hecha { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; border: 0; cursor: pointer; font: inherit; font-size: .8125rem; font-weight: 650; }
+.prep-hecha svg { width: 14px; height: 14px; color: var(--exito, var(--morado)); }
+.prep-paso { font-weight: 500; }
+.prep-de { font-weight: 500; opacity: .7; }
+@media (prefers-reduced-motion: no-preference) {
+  .preparacion.por-pasos .prep-fila { animation: prep-entra .32s cubic-bezier(.2, .8, .2, 1) both; }
+  .preparacion.por-pasos .prep-hecha { animation: prep-hecha .3s cubic-bezier(.3, 1.5, .5, 1) both; }
+}
+@keyframes prep-entra { from { opacity: 0; transform: translateX(18px); } }
+@keyframes prep-hecha { from { opacity: 0; transform: scale(.7); } }
+
+/* ── Belleza de hoy · el botón de empezar, a mano al bajar ─────────────────────────────────────────────────────────────
+   Una barra fina sobre las pestañas (no tapa nada: flota en el hueco de abajo) mientras el botón grande no se ve. */
+.hoy-a-mano {
+  position: fixed; z-index: 19; left: 50%; translate: -50% 0; bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  width: min(26rem, calc(100vw - 24px)); min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 8px 8px 18px; border: 0; border-radius: 999px; cursor: pointer; font: inherit; text-align: left;
+  background: color-mix(in srgb, var(--flota) 90%, transparent); color: var(--sobre-flota);
+  backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6); box-shadow: var(--sombra-alta);
+}
+.hoy-a-mano-texto { display: grid; min-width: 0; line-height: 1.2; }
+.hoy-a-mano-texto .mini { opacity: .7; }
+.hoy-a-mano-texto strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hoy-a-mano-ir { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: 999px; background: var(--morado); color: var(--sobre-morado); font-weight: 700; font-size: .9375rem; }
+.hoy-a-mano-ir svg { width: 16px; height: 16px; }
+.hoy-a-mano:active .hoy-a-mano-ir { scale: .96; }
+@media (min-width: 900px) { .hoy-a-mano { bottom: 20px; } }
+@media (prefers-reduced-motion: no-preference) {
+  .hoy-a-mano { animation: hoy-a-mano-sube .28s cubic-bezier(.2, .8, .2, 1) both; }
+  .hoy-a-mano-ir { transition: scale .12s ease-out; }
+}
+@keyframes hoy-a-mano-sube { from { opacity: 0; transform: translateY(18px); } }
