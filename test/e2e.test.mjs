@@ -5990,6 +5990,10 @@ try {
   console.log('\nHoy y la sesión, bonitos');
   const { probarHoyBello } = await import('./e2e-hoy-bello.mjs');
   await probarHoyBello({ navegador, check });
+  // «La travesía», el juego del descanso: la tarjeta, «Jugar» en el descanso, la etapa que acaba con él y lo que se guarda
+  console.log('\nLa travesía, el juego del descanso');
+  const { probarTravesia } = await import('./e2e-travesia.mjs');
+  await probarTravesia({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

@@ -1,0 +1,61 @@
+/* «La travesía»: el juego del descanso (ui/atleta/Travesia.jsx). Pantalla completa, siempre de noche (no cambia con el
+   tema): el lienzo debajo y, encima, los números, la pista y la tarjeta del final. */
+.temporizador .descanso-extras { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: -4px; }
+.temporizador .descanso-extras .respira-boton { margin-top: 0; }
+
+.travesia { position: fixed; inset: 0; z-index: 70; background: #0B0726; color: #F1F0F6; outline: none; overflow: hidden;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.travesia-lienzo { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.travesia-arriba { position: absolute; left: 0; right: 0; top: 0; display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: start; gap: 8px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-right, 0px)) 0 calc(14px + env(safe-area-inset-left, 0px)); pointer-events: none; }
+.travesia-dato { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 1.0625rem; font-weight: 700; }
+.travesia-dato svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+.travesia-dato.oro { justify-self: end; color: #F2C230; }
+.travesia-dato.oro svg, .travesia-final .oro svg { fill: currentColor; stroke: none; opacity: 1; }
+.travesia-cuenta { display: grid; justify-items: center; line-height: 1; }
+.travesia-cuenta b { font-size: 2.5rem; font-weight: 800; font-stretch: var(--ancho-marcador, 78%); letter-spacing: -.01em; }
+.travesia-cuenta b.ultimos { color: #F2C230; }
+.travesia-cuenta small { margin-top: 4px; font-size: .6875rem; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+.travesia-cerrar { pointer-events: auto; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; color: inherit;
+  background: rgb(241 240 246 / .12); }
+.travesia-cerrar svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.travesia-cerrar:focus-visible, .travesia-final .btn:focus-visible { outline: 2px solid #F1F0F6; outline-offset: 2px; }
+.travesia-pista, .travesia-despues { position: absolute; left: 16px; right: 16px; margin: 0; text-align: center; pointer-events: none; }
+.travesia-pista { top: 36%; font-size: 1rem; font-weight: 600; opacity: .92; }
+.travesia-despues { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); font-size: .875rem; opacity: .75;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.travesia-final { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); width: min(320px, calc(100% - 40px)); display: grid; justify-items: center; gap: 8px;
+  padding: 22px 20px 20px; border-radius: 24px; text-align: center; background: rgb(30 21 72 / .92); border: 1px solid rgb(160 140 255 / .35);
+  box-shadow: 0 24px 60px -20px rgb(0 0 0 / .7); }
+.travesia-final-etq { font-size: .75rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #A08CFF; }
+.travesia-final strong { font-size: 3rem; font-weight: 800; line-height: 1; font-stretch: var(--ancho-marcador, 78%); }
+.travesia-final-det { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: .9375rem; opacity: .95; min-height: 1.4em; }
+.travesia-final-det span { display: inline-flex; align-items: center; gap: 5px; }
+.travesia-final-det svg { width: 16px; height: 16px; }
+.travesia-final .oro { color: #F2C230; font-weight: 700; }
+.travesia-final .btn { margin-top: 8px; min-height: 48px; padding: 0 22px; }
+.travesia-final .btn:not(.btn-primario) { background: rgb(241 240 246 / .12); color: inherit; border-color: transparent; }
+.travesia-final-botones { display: flex; gap: 10px; }
+@media (prefers-reduced-motion: no-preference) {
+  .travesia-final { animation: travesia-llega .32s cubic-bezier(.2, 1.2, .35, 1) both; }
+  .travesia-pista { animation: travesia-late 1.6s ease-in-out infinite alternate; }
+}
+@keyframes travesia-llega { from { opacity: 0; transform: translate(-50%, -44%) scale(.94); } }
+@keyframes travesia-late { from { opacity: .55; } to { opacity: 1; } }
+
+/* La tarjeta del juego fuera de la sesión (Hoy, en una línea; Semana, con sus marcas): siempre de noche, con su luna */
+.travesia-tarjeta { position: relative; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 14px 14px 14px 16px; border-radius: var(--r, 18px); color: #F1F0F6;
+  background: linear-gradient(180deg, #0B0726 0%, #1E1548 62%, #3B2A8F 100%); }
+.travesia-tarjeta.compacta { padding: 10px 12px 10px 14px; }
+.travesia-tarjeta-luna { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 36% 34%, #F1F0F6 0 58%, #D9D3F7 100%);
+  box-shadow: 0 0 0 6px rgb(160 140 255 / .14), 0 0 22px 6px rgb(160 140 255 / .3); }
+.travesia-tarjeta.compacta .travesia-tarjeta-luna { width: 26px; height: 26px; }
+.travesia-tarjeta-texto { display: grid; gap: 2px; min-width: 0; font-size: .875rem; line-height: 1.3; }
+.travesia-tarjeta-texto strong { font-size: 1rem; }
+.travesia-tarjeta-texto > span { color: rgb(241 240 246 / .82); }
+.travesia-tarjeta-texto b { color: #F1F0F6; }
+.travesia-tarjeta-marcas { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: .8125rem; }
+.travesia-tarjeta-boton { background: #F1F0F6; color: #1E1548; border-color: transparent; font-weight: 700; }
+.travesia-tarjeta-boton:focus-visible { outline: 2px solid #F1F0F6; outline-offset: 2px; }
+.resumen-travesia svg { background: #1E1548; color: #F1F0F6; }
