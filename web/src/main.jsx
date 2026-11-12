@@ -6,6 +6,7 @@ import './imagenes.css';
 import './personal.css';
 import './perfil.css';
 import './equipo-belleza.css';
+import './comunidad-viva.css';
 import './estrecho.css';
 import './recetario-equipo.css';
 import './guias.css';

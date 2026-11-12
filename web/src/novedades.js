@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.144': {
+    atleta: [
+      'Un equipo más vivo: el ánimo sale volando, el podio sube, las encuestas se llenan al votar y las insignias nuevas llegan girando.',
+    ],
+  },
   '0.143': {
     atleta: [
       'De viaje en otra zona horaria: Hoy te dice la hora de cada sitio y ajusta tus notificaciones para que no te lleguen de noche.',

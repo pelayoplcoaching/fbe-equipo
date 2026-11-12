@@ -42,7 +42,7 @@ import { VERSION_COMUNIDAD, AVISO_041, AVISO_042, AVISO_043 } from '../datos/api
 import { leerVistoEquipo, guardarVistoEquipo, leerCelebrados, marcarCelebrado, leerAutoCompartir, guardarAutoCompartir } from './comunidad-local.js';
 import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 import { PlegableEquipo } from './PlegableEquipo.jsx';
-import { Imagen } from './Imagen.jsx';
+import { Imagen, hayImagen } from './Imagen.jsx';
 import { ListaEquipo } from './atleta/Musica.jsx';
 import { pesoTxt } from '../logica/unidades.js';
 import { PortadaPerfil, FotoConAnillo } from './PerfilVisual.jsx';
@@ -283,7 +283,9 @@ function EntrarComunidad({ antes, cambio = null, alEntrar }) {
       <CabeceraGrande><div class="titulo"><h1>Equipo</h1><div class="sub">Para animaros entre los atletas de FBE</div></div></CabeceraGrande>
       <section class="panel panel-pad pila entrar-equipo">
         {/* (imágenes) la manada en fila bajo la luna */}
-        <Imagen id="equipo-manada" clase="franja-ilu franja-pegada franja-manada" tamanos="(min-width: 720px) 640px, 100vw" prioridad />
+        <FranjaViva id="equipo-manada" clase="franja-manada" prioridad>
+          <span class="fv-luna" />{[[12, 14], [31, 9], [44, 22], [58, 7], [66, 27], [24, 34], [97, 30], [5, 30]].map(([x, y], i) => <i key={i} class="fv-estrella" style={{ left: `${x}%`, top: `${y}%`, '--espera': `${(i * 0.7) % 3}s` }} />)}
+        </FranjaViva>
         <Ilustracion n="equipo" clase="entrar-equipo-ilu" />
         <h2>{cambio === 'texto' ? 'Hemos cambiado lo que se comparte' : cambio === 'normas' ? 'Hemos actualizado las normas' : antes ? '¿Vuelves al equipo?' : 'Antes de entrar'}</h2>
         {cambio === 'texto' && <p class="nota peq">Para seguir en el equipo, lee lo que se comparte ahora (tu racha, tu perfil del equipo, tus votos, los ánimos y las menciones) y acéptalo. Mientras tanto, lo tuyo no se ve.</p>}
@@ -352,6 +354,21 @@ export function Muro({ coach = false, cambios = 0, miembro = null, eventos = 0, 
   const enTodo = filtro === 'todo' && !buscar;
   const posts = d ? (enTodo && listaEventos.datos?.length ? mezclarEventos(d.posts, listaEventos.datos, { hayMas: d.hayMas }) : d.posts) : [];
   const esNueva = (p) => !!visto.current && !p.mio && !p.fijada && p.creado_en > visto.current;
+  // (comunidad viva) Las que llegan con el muro ya abierto (la tuya al publicarla, las de los demás al refrescar): entran
+  // con un gesto. «hasta» es la más reciente que ya estaba; se pone al día al acabar el gesto.
+  const claveLista = `${filtro}|${buscar}`;
+  const cuando = (x) => new Date(x.creado_en).getTime() || 0;
+  const reciente = d ? Math.max(0, ...d.posts.map(cuando)) : 0;
+  const yaVistas = useRef({ clave: null, hasta: 0 });
+  const [, repintar] = useState(0);
+  // (otra lista, o muchas de golpe: eso es una carga, no una llegada)
+  if (d && (yaVistas.current.clave !== claveLista || d.posts.filter((x) => cuando(x) > yaVistas.current.hasta).length > 3)) yaVistas.current = { clave: claveLista, hasta: reciente };
+  const llega = (p) => !p.esEvento && cuando(p) > yaVistas.current.hasta;
+  useEffect(() => {
+    if (!d || reciente <= yaVistas.current.hasta) return undefined;
+    const t = setTimeout(() => { yaVistas.current.hasta = reciente; repintar((n) => n + 1); }, 1600);
+    return () => clearTimeout(t);
+  }, [reciente]);
   const primera = posts.findIndex(esNueva);
   const ultima = posts.map(esNueva).lastIndexOf(true);
   const cambiarFiltro = (f) => { setFiltro(f); setPaginas(1); };
@@ -406,7 +423,7 @@ export function Muro({ coach = false, cambios = 0, miembro = null, eventos = 0, 
         ) : posts.map((p, i) => (
           <Fragment key={p.id}>
             {i === primera && <div class="muro-separa nuevo"><span>Nuevo<span class="sr"> desde tu última visita</span></span></div>}
-            {p.esEvento ? <TarjetaEvento e={p} coach={coach} alCambiar={recargarEventos} /> : <TarjetaPost post={p} coach={coach} personas={d.personas} alCambiar={recargar} />}
+            {p.esEvento ? <TarjetaEvento e={p} coach={coach} alCambiar={recargarEventos} /> : <TarjetaPost post={p} coach={coach} personas={d.personas} alCambiar={recargar} llega={llega(p)} />}
             {i === ultima && i < posts.length - 1 && <div class="muro-separa"><span>Ya lo habías visto</span></div>}
           </Fragment>
         ))}
@@ -479,7 +496,7 @@ export function EntrenandoAhora() {
             <BotonPersona perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} clase="ea-quien" claseAvatar="">
               <span class="btn-persona-nombre ea-nombre">{x.nombre}</span>
             </BotonPersona>
-            <BotonAnimar nombre={x.nombre} animado={animado(x.perfil_id)} ocupado={ocupado} alAnimar={() => animar(x)} />
+            <BotonAnimar nombre={x.nombre} animado={animado(x.perfil_id)} recien={nuevos.includes(x.perfil_id)} ocupado={ocupado} alAnimar={() => animar(x)} />
           </li>
         ))}
       </ul>
@@ -535,11 +552,13 @@ function CompanerosRacha({ cambios = 0 }) {
       {(aceptadas.length > 0 || enviadas.length > 0) && (
         <ul class="lista cp-lista">
           {aceptadas.map((x) => (
-            <li key={x.id} class="cp-fila">
+            <li key={x.id} class={`cp-fila${x.mi_semana === true && x.su_semana === true ? ' juntos' : ''}`}>
               <AvatarEquipo perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} clase="peq" />
               <span class="pila-xs cp-texto">
                 <span class="cp-pareja">Tú y <BotonPersona perfilId={x.perfil_id} nombre={x.nombre} foto={x.foto} avatar={false}><strong class="btn-persona-nombre">{x.nombre}</strong></BotonPersona>
-                  {x.racha > 0 && <> · <span aria-hidden="true">🔥</span> {x.racha} {x.racha === 1 ? 'semana' : 'semanas'}<span class="sr"> seguidas los dos</span></>}</span>
+                  {x.racha > 0 && <> · {x.mi_semana === true && x.su_semana === true
+                    ? <span class="cp-llamas" aria-hidden="true"><i>🔥</i><i>🔥</i></span>
+                    : <span aria-hidden="true">🔥</span>} {x.racha} {x.racha === 1 ? 'semana' : 'semanas'}<span class="sr"> seguidas los dos</span></>}</span>
                 <span class="mini terciario">Esta semana: tú {estadoSemana(x.mi_semana)} · {x.nombre} {estadoSemana(x.su_semana)}</span>
                 {confirmar(x, `¿Dejar de ser compañeros con ${x.nombre}?`, () => hacer(() => api.dejarCompanero(x.id), 'Ya no sois compañeros de racha'))}
               </span>
@@ -606,8 +625,19 @@ function InsigniasMini({ lista = [] }) {
 }
 
 // En el perfil: las conseguidas y, en el tuyo, la siguiente con su progreso
+const claveInsignias = (uid) => `fbe-insignias-vistas:${uid}`;
 function InsigniasPerfil({ lista = [], yo = false }) {
+  const { api } = useApp();
   const ok = lista.filter((x) => x.conseguida);
+  // (comunidad viva) en tu perfil, la insignia que aún no habías visto llega girando; se apunta en este móvil cuáles has
+  // visto (la primera vez no se mueve ninguna: no se sabe cuál es nueva)
+  const vistas = useRef(undefined);
+  if (vistas.current === undefined) { try { vistas.current = JSON.parse(localStorage.getItem(claveInsignias(api.uid())) || 'null'); } catch { vistas.current = null; } }
+  const nueva = (x) => yo && Array.isArray(vistas.current) && !vistas.current.includes(x.clave);
+  useEffect(() => {
+    if (!yo || !lista.length) return;
+    try { localStorage.setItem(claveInsignias(api.uid()), JSON.stringify(ok.map((x) => x.clave))); } catch { /* sin sitio: se moverán otra vez */ }
+  }, [yo, ok.length, lista.length]);
   const sig = yo ? siguienteInsignia(lista) : null;
   if (!ok.length && !sig) return null;
   return (
@@ -615,7 +645,7 @@ function InsigniasPerfil({ lista = [], yo = false }) {
       <h3 id="pe-insignias-t" class="pe-sub">Insignias</h3>
       {ok.length > 0 ? (
         <ul class="pe-insignias">
-          {ok.map((x) => <li key={x.clave} class="chip insignia"><span aria-hidden="true">{x.emoji}</span>{x.nombre}</li>)}
+          {ok.map((x) => <li key={x.clave} class={`chip insignia${nueva(x) ? ' nueva' : ''}`}><span aria-hidden="true">{x.emoji}</span>{x.nombre}</li>)}
         </ul>
       ) : <p class="peq terciario">{yo ? 'Aún ninguna: la primera está cerca.' : 'Aún ninguna.'}</p>}
       {sig && (
@@ -873,7 +903,7 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, con0
 
 const TIPOS_POST = { aviso: 'Aviso del coach', entreno: 'Entreno compartido', logro: 'Logro', encuesta: 'Encuesta', aniversario: 'Aniversario en FBE' };
 
-function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
+function TarjetaPost({ post, coach, personas = {}, alCambiar, llega = false }) {
   const { api, aviso } = useApp();
   const [hoja, setHoja] = useState(null); // 'comentarios' | 'opciones' | 'quien' | 'avisar' | 'votos'
   const [ocupado, una] = useUnaVez();
@@ -910,7 +940,7 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar }) {
   const tema = post.tipo === 'post' || (post.tipo === 'aviso' && post.tema && post.tema !== 'avisos') ? nombreTema(post.tema) : null;
   const meta = [tipo, tema].filter(Boolean).join(' · ');
   return (
-    <article class={`panel panel-pad pila-s post post-${post.tipo} ${post.fijada ? 'fijada' : ''} ${post.oculta ? 'oculta' : ''}`} data-tema={post.tema || undefined} aria-label={`${tipo || 'Publicación'} de ${post.autor.nombre}`}>
+    <article class={`panel panel-pad pila-s post post-${post.tipo} ${post.fijada ? 'fijada' : ''} ${post.oculta ? 'oculta' : ''}${llega ? ` post-llega${post.mio ? ' mia' : ''}` : ''}`} data-tema={post.tema || undefined} aria-label={`${tipo || 'Publicación'} de ${post.autor.nombre}`}>
       <header class="post-cab">
         <BotonPersona perfilId={post.autor_id} nombre={post.autor.nombre} foto={post.autor.foto} clase="post-autor" claseAvatar="">
           <span class="post-quien">
@@ -1051,7 +1081,7 @@ function EncuestaPost({ post, coach, alCambiar, alVerVotos }) {
           const etiqueta = verResultados ? `${o}: ${r.conteos[i] || 0} ${r.conteos[i] === 1 ? 'voto' : 'votos'} (${pct} %)${r.miVoto === i ? ', tu voto' : ''}` : o;
           const dentro = (
             <>
-              {verResultados && <span class="eo-barra" style={{ width: `${pct}%` }} aria-hidden="true" />}
+              {verResultados && <span class="eo-barra" style={{ '--pct': pct / 100 }} aria-hidden="true" />}
               <span class="eo-texto">{r.miVoto === i && <Icono n="hecho" />}{o}</span>
               {verResultados && <span class="eo-pct num" aria-hidden="true">{pct} %</span>}
             </>
@@ -1559,6 +1589,19 @@ export function Retos({ coach = false, miembro = null, cambios = 0, alCompartirL
   );
 }
 
+// (comunidad viva) Una franja ilustrada con algo dibujado encima (la luz de la luna, la de la cumbre): el marco de siempre
+// con la imagen dentro y, sobre ella, el adorno. Si la imagen no está o no carga, nada (como antes).
+function FranjaViva({ id, clase = '', prioridad = false, children }) {
+  const [rota, setRota] = useState(false);
+  if (!hayImagen(id) || rota) return null;
+  return (
+    <div class={`franja-ilu franja-pegada franja-viva ${clase}`} aria-hidden="true">
+      <Imagen id={id} clase="fv-img" tamanos="(min-width: 720px) 640px, 100vw" prioridad={prioridad} alFallar={() => setRota(true)} />
+      {children}
+    </div>
+  );
+}
+
 function TarjetaReto({ ilu = false, r, hoy, coach, miembro, alEditar, alCompartirLogro, cardioYa = false, alContarCardio }) {
   const { api, aviso } = useApp();
   const [ocupado, una] = useUnaVez();
@@ -1584,7 +1627,7 @@ function TarjetaReto({ ilu = false, r, hoy, coach, miembro, alEditar, alComparti
   return (
     <article class={`panel panel-pad pila-s reto ${equipo || equipos ? 'reto-de-equipo' : ''} ${equipos ? 'reto-equipos' : ''}`} data-estado={estado} aria-label={`Reto: ${r.titulo}`}>
       {/* (imágenes) el primero de la lista (el que está en marcha), con la montaña y su camino */}
-      {ilu && <Imagen id="equipo-reto" clase="franja-ilu franja-pegada franja-reto" tamanos="(min-width: 720px) 640px, 100vw" />}
+      {ilu && <FranjaViva id="equipo-reto" clase={`franja-reto${r.conseguido || (r.modo === 'equipo' && r.total >= r.objetivo) ? ' cumbre' : ''}`}><span class="fv-cumbre" /></FranjaViva>}
       <div class="separa reto-cab">
         <div class="pila-xs">
           <h2 class="reto-titulo">{r.titulo}</h2>
@@ -1665,7 +1708,7 @@ function MarcadorEquipos({ r, u }) {
         const quien = e.personas.map((id) => hechas[id]).filter((x) => x && x.hechas > 0).sort((a, b) => b.hechas - a.hechas)[0];
         const pct = Math.min(100, Math.round((e.total / max) * 100));
         return (
-          <div key={e.equipo} class={`me-equipo me-${e.equipo} ${e.mio ? 'mio' : ''} pila-xs`}>
+          <div key={e.equipo} class={`me-equipo me-${e.equipo} ${e.mio ? 'mio' : ''}${gana === e ? ' delante' : ''} pila-xs`}>
             <div class="separa">
               <strong class="me-nombre">{e.nombre}{e.mio ? ' (el tuyo)' : ''}</strong>
               <span><strong class="num">{e.total}</strong> <span class="mini secundario">{u(e.total)}</span>{e.total >= r.objetivo && <span class="sr"> (objetivo conseguido)</span>}</span>
@@ -1831,7 +1874,7 @@ export function Ranking({ miembro = null }) {
   const animar = (x) => una(async () => {
     try { await api.animar(x.perfil_id); setNuevos((l) => [...l, x.perfil_id]); aviso(`Le has mandado ánimo a ${x.nombre} 🙌`); } catch (e) { aviso(e.message, 'error'); }
   });
-  const boton = (x) => (x.yo || !animos.datos ? null : <BotonAnimar nombre={x.nombre} animado={animado(x.perfil_id)} ocupado={ocupado} alAnimar={() => animar(x)} />);
+  const boton = (x) => (x.yo || !animos.datos ? null : <BotonAnimar nombre={x.nombre} animado={animado(x.perfil_id)} recien={nuevos.includes(x.perfil_id)} ocupado={ocupado} alAnimar={() => animar(x)} />);
   return (
     <div class="pila ranking">
       <p class="peq secundario">Sesiones hechas de las que tenéis esta semana. Solo cuenta la constancia: ni kilos ni peso.</p>
@@ -1894,16 +1937,17 @@ function FilaRanking({ x, pos, boton }) {
     </li>
   );
 }
-function BotonAnimar({ nombre, animado, ocupado, alAnimar, grande = false }) {
+// recien: el ánimo se acaba de mandar aquí mismo (la mano sale volando; comunidad viva)
+function BotonAnimar({ nombre, animado, ocupado, alAnimar, grande = false, recien = false }) {
   if (grande) {
     return (
-      <button type="button" class="btn btn-primario btn-animar-grande" disabled={ocupado || animado} onClick={alAnimar}>
+      <button type="button" class={`btn btn-primario btn-animar-grande${recien ? ' recien' : ''}`} disabled={ocupado || animado} onClick={alAnimar}>
         <span aria-hidden="true">🙌</span> {animado ? `Ya has animado a ${nombre} esta semana` : `Animar a ${nombre}`}
       </button>
     );
   }
   return (
-    <button type="button" class={`btn btn-peq btn-animar ${animado ? 'hecho' : ''}`} disabled={ocupado || animado} onClick={alAnimar}
+    <button type="button" class={`btn btn-peq btn-animar ${animado ? 'hecho' : ''}${recien ? ' recien' : ''}`} disabled={ocupado || animado} onClick={alAnimar}
       aria-label={animado ? `Ya has animado a ${nombre} esta semana` : `Animar a ${nombre}`} title={animado ? 'Ya le has animado esta semana' : 'Animar'}>
       <span aria-hidden="true">🙌</span>{animado && <Icono n="hecho" />}
     </button>
@@ -1972,7 +2016,7 @@ export function HojaPerfilEquipo({ perfilId, alCerrar }) {
               </ul>
             </div>
           )}
-          {!x.yo && !x.coach && <BotonAnimar grande nombre={x.nombre} animado={x.animado || animadoAhora} ocupado={ocupado} alAnimar={animar} />}
+          {!x.yo && !x.coach && <BotonAnimar grande nombre={x.nombre} animado={x.animado || animadoAhora} recien={animadoAhora} ocupado={ocupado} alAnimar={animar} />}
           {/* (social, 053) el ánimo con unas palabras */}
           {!x.yo && !x.coach && !(x.animado || animadoAhora) && <button type="button" class="btn-texto peq" style="justify-self:center" onClick={() => setHojaCoach('animo')}>Con unas palabras…</button>}
           {hojaCoach === 'animo' && <HojaAnimo perfilId={perfilId} nombre={x.nombre} alCerrar={() => setHojaCoach(null)} alHecho={() => setAnimadoAhora(true)} />}

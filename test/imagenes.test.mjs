@@ -198,5 +198,22 @@ console.log('Portadas de las guías');
   check(imagenPortadaGuia('inventada') === null, 'una guía sin portada, sin cabecera');
 }
 
+// ------------------------------------------------------------ la comunidad viva (comunidad-viva.css): las mismas reglas
+console.log('\nLa comunidad viva: solo transform y opacity, y nada con «reducir movimiento»');
+{
+  const v = readFileSync(new URL('../web/src/comunidad-viva.css', import.meta.url), 'utf8');
+  const claves = [...v.matchAll(/@keyframes ([\w-]+) \{((?:[^{}]|\{[^{}]*\})*)\}/g)];
+  const props = new Set(claves.flatMap(([, , cuerpo]) => [...cuerpo.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1])));
+  check(claves.length >= 24 && claves.every(([, n]) => n.startsWith('cv-')) && [...props].every((p) => ['opacity', 'transform', 'scale', 'translate', 'rotate'].includes(p)), `sus ${claves.length} animaciones (cv-…) solo mueven transform y opacity: ${[...props].join(', ')}`);
+  const ini = v.indexOf('@media (prefers-reduced-motion: no-preference) {'), fin = v.indexOf('\n}\n', ini);
+  const fuera = (v.slice(0, ini) + v.slice(fin)).replace(/@keyframes[^\n]*\n/g, '').replace(/transition: none;/g, '');
+  check(ini > 0 && fin > ini && !/animation(-name)?\s*:|transition\s*:/.test(fuera), 'todas van dentro de «sin reducir movimiento»');
+  check(/html\[data-oculta\][^{]*\{ animation-play-state: paused; \}/.test(v) && !/url\(/.test(v) && !/[^-]filter\s*:|backdrop-filter/.test(v) && !/infinite/.test(v), 'se paran en segundo plano, sin imágenes nuevas ni desenfoques, y ninguna es sin fin');
+  const usadas = new Set([...v.matchAll(/animation(?:-name)?:[^;]*?(cv-[\w-]+)/g)].map((m) => m[1]).concat([...v.matchAll(/, (cv-[\w-]+) /g)].map((m) => m[1])));
+  check(claves.every(([, n]) => usadas.has(n)), `ninguna animación sobra: ${claves.map(([, n]) => n).filter((n) => !usadas.has(n)).join(', ') || 'todas se usan'}`);
+  const com = readFileSync(new URL('../web/src/ui/Comunidad.jsx', import.meta.url), 'utf8');
+  check(/class=\{`franja-ilu franja-pegada franja-viva \$\{clase\}`\} aria-hidden="true"/.test(com) && /class="cp-llamas" aria-hidden="true"/.test(com) && /'--pct': pct \/ 100/.test(com), 'las franjas y las llamas son adorno, y la barra de la encuesta se mide con una variable (no con el ancho)');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

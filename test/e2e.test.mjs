@@ -5982,6 +5982,10 @@ try {
   console.log('\nLas ilustraciones vivas');
   const { probarVivas } = await import('./e2e-vivas.mjs');
   await probarVivas({ navegador, check });
+  // La comunidad viva: la manada, el muro, la encuesta, los retos, el ranking, el ánimo y las insignias
+  console.log('\nLa comunidad viva');
+  const { probarComunidadViva } = await import('./e2e-comunidad-viva.mjs');
+  await probarComunidadViva({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));
