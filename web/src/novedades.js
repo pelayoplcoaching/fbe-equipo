@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.147': {
+    atleta: [
+      'En los descansos: juega a La travesía o aprende algo con Apuntes.',
+    ],
+  },
   '0.146': {
     atleta: [
       '«Tu día» pone arriba lo que te queda y debajo lo hecho; y al bajar por Hoy, el botón de empezar te sigue.',

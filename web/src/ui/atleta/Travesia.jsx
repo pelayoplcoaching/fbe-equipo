@@ -17,6 +17,9 @@ const mmss = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math
 
 // (dentro de su capa, en <body>: cuando corren sus efectos el lienzo ya existe, y ningún antepasado con transform la encierra)
 export function Travesia(props) { return <Capa><TravesiaDentro {...props} /></Capa>; }
+// (al integrarla) lo que queda de descanso ya en el primer pintado (antes, 0:00 hasta el primer cuadro de la animación)
+const cuentaInicial = (fin, pausa) => Math.max(0, Math.ceil(Number.isFinite(pausa) ? pausa / 1000 : Number.isFinite(fin) ? (fin - Date.now()) / 1000 : 0));
+
 function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, despues = '', practica = false, alCerrar }) {
   const { api } = useApp() || {};
   const lienzo = useRef(null);
@@ -120,7 +123,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, des
       <canvas ref={lienzo} class="travesia-lienzo" role="img" aria-label="Un lobo corre de noche por la montaña. Toca la pantalla o pulsa la barra espaciadora para saltar." />
       <div class="travesia-arriba">
         <span class="travesia-dato" aria-label="Distancia de esta etapa"><Icono n="pasos" /><b ref={metros} class="num">0 m</b></span>
-        <span class="travesia-cuenta" role="timer" aria-live="off" aria-label={practica ? 'Tiempo de práctica' : 'Descanso'}><b ref={cuenta} class="num">{mmss(practica ? PRACTICA : Math.ceil(Number.isFinite(pausa) ? pausa / 1000 : (fin - Date.now()) / 1000))}</b><small>{practica ? 'práctica' : 'descanso'}</small></span>
+        <span class="travesia-cuenta" role="timer" aria-live="off" aria-label={practica ? 'Tiempo de práctica' : 'Descanso'}><b ref={cuenta} class="num">{mmss(practica ? PRACTICA : cuentaInicial(fin, pausa))}</b><small>{practica ? 'práctica' : 'descanso'}</small></span>
         <span class="travesia-dato oro" aria-label="Estrellas"><Icono n="estrella" /><b ref={estrellas} class="num">0</b></span>
         <button type="button" class="travesia-cerrar" onClick={salir} aria-label="Cerrar el juego"><Icono n="cerrar" /></button>
       </div>
