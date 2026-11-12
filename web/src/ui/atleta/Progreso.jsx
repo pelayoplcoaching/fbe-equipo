@@ -8,6 +8,7 @@ import { usePestanasDeslizables } from '../deslizar.js';
 import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas, PortadaHistoria } from '../comunes.jsx';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
 import { Conexiones } from './Conexiones.jsx';
+import { GrupoReloj } from './Reloj.jsx';
 import { RANGOS_GRAFICA, filtrarRango, rangoConDatos } from '../../logica/rangos.js';
 import { destacados as calcularDestacados, tonelajePorSemana } from '../../logica/destacados.js';
 import { calendarioRacha } from '../../logica/racha.js';
@@ -633,7 +634,10 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
           {/* (conexiones del coach) el coach no tiene Perfil en su modo atleta: su Salud del iPhone y su calendario, aquí */}
           {propio && <div id="prog-conexiones"><Conexiones salud={salud} /></div>}
         </Grupo>
-        <Grupo g="fuerza">{entrena && <MiTecnica atletaId={atleta.id} nombreAtleta={atleta.nombre} />}</Grupo>
+        <Grupo g="fuerza">{entrena && <MiTecnica atletaId={atleta.id} nombreAtleta={atleta.nombre} />}
+          {/* (058) y su Apple Watch: la clave del atajo «FBE Reloj», para probarlo antes de compartirlo */}
+          {propio && entrena && <div id="prog-reloj"><GrupoReloj /></div>}
+        </Grupo>
         {/* El diario lleva los vídeos de técnica y las fotos de progreso: se ve en Fuerza y en Cuerpo */}
         <Grupo g="fuerza cuerpo"><Diario atletaId={atleta.id} nombreAtleta={atleta.nombre} salud={salud} /></Grupo>
       </div>
