@@ -1,3 +1,4 @@
+import { TarjetaApuntes } from './ApuntesTarjeta.jsx';
 import { TarjetaTravesia } from './TravesiaTarjeta.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Fragment } from 'preact';
@@ -632,6 +633,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         </details>
       )}
       {/* «La travesía»: el juego de los descansos, en una línea (lo que lleva su lobo y un minuto de práctica) */}
+      {/* «Apuntes»: el apunte del día (medio minuto para aprender algo) */}
+      <TarjetaApuntes />
       <TarjetaTravesia compacta />
       <div class="ordenar-hoy-pie">
         <button type="button" class="btn-texto" onClick={() => setOrdenando(true)}><Icono n="ordenar" /> Ordenar Hoy</button>

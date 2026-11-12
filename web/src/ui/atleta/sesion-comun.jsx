@@ -16,6 +16,7 @@ import { Placas } from '../Herramientas.jsx';
 import { num } from '../../logica/calculos.js';
 import { discosCon } from '../../logica/teclado.js';
 import { Travesia } from './TravesiaTarjeta.jsx';
+import { Apuntes } from './ApuntesTarjeta.jsx';
 import { pesoNum, etiquetaPeso, vista, redondearCarga, enLibras } from '../../logica/unidades.js';
 import { ajusteEnVivo, repsSiguiente } from '../../logica/ajuste-vivo.js';
 
@@ -225,7 +226,7 @@ export function aNumero(t) {
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
 // v0.63: toca (logica/ahora-toca.js): con el descanso en marcha, la tarjeta «Ahora toca» con lo que viene; al tocarla,
 // alToca(id, numero) lleva a esa serie (con el teclado en los kilos)
-export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined, sesionId = null }) {
+export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined, sesionId = null, ejercicio = null }) {
   const { api, atleta } = useApp() || {};
   const ahora = useAhora(250);
   const finRef = useRef(fin);
@@ -328,9 +329,18 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   // el descanso anterior, se abre solo en este; si lo cerró a mano, ya no (hasta que vuelva a darle a «Jugar»). En
   // descansos muy cortos no se abre solo: no da tiempo a nada.
   const [juego, setJuego] = useState(false);
-  useEffect(() => { if (leerAjustes().juegoDescanso && !pausado && (fin - Date.now()) / 1000 > 20) setJuego(true); }, [inicioR]);
-  const jugar = () => { setJuego(true); guardarAjustes({ ...leerAjustes(), juegoDescanso: true }); };
+  // «Apuntes»: algo que aprender en el descanso (del ejercicio del que se descansa y de las guías). Como el juego: si
+  // estaba leyendo al acabar el descanso anterior, se abre solo en este. O el juego o los apuntes, no los dos.
+  const [apunte, setApunte] = useState(false);
+  useEffect(() => {
+    if (pausado || (fin - Date.now()) / 1000 <= 20) return;
+    const a = leerAjustes();
+    if (a.juegoDescanso) setJuego(true); else if (a.apunteDescanso) setApunte(true);
+  }, [inicioR]);
+  const jugar = () => { setApunte(false); setJuego(true); guardarAjustes({ ...leerAjustes(), juegoDescanso: true, apunteDescanso: false }); };
   const cerrarJuego = (motivo) => { setJuego(false); if (motivo === 'salir') guardarAjustes({ ...leerAjustes(), juegoDescanso: false }); };
+  const aprender = () => { setJuego(false); setApunte(true); guardarAjustes({ ...leerAjustes(), apunteDescanso: true, juegoDescanso: false }); };
+  const cerrarApunte = (motivo) => { setApunte(false); if (motivo === 'salir') guardarAjustes({ ...leerAjustes(), apunteDescanso: false }); };
   const fase = respira && quedan > 0 && !pausado ? faseRespira((ahora - inicioR) / 1000) : null;
   const quietoRespira = sinMovimiento();
   // (el retraso de la animación se fija cuando aparece el círculo, con lo que lleva el descanso en ese momento: cambiarlo
@@ -419,7 +429,12 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
           </button>
           {atleta?.id && (
             <button type="button" class="respira-boton jugar-boton" onClick={jugar} title="La travesía: un juego para el descanso. Se cierra solo cuando toca la siguiente serie">
-              <Icono n="luna" />Jugar
+              <Icono n="play" />Jugar
+            </button>
+          )}
+          {atleta?.id && (
+            <button type="button" class="respira-boton aprender-boton" onClick={aprender} title="Apuntes: algo que aprender mientras descansas. Se cierra solo cuando toca la siguiente serie">
+              <Icono n="biblioteca" />Aprender
             </button>
           )}
         </div>
@@ -434,6 +449,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
       {pausado && <button type="button" class="btn btn-primario seguir-descanso" onClick={() => alCambiar(reanudarDescanso(este()))}><Icono n="play" /> Seguir</button>}
       <button class="saltar" onClick={() => alCambiar(null)}>{quedan > 0 ? 'Saltar' : 'Cerrar'}</button>
     </div>
+      {apunte && atleta?.id && <Apuntes atletaId={atleta.id} ejercicio={ejercicio} fin={fin} pausa={pausado ? pausa : null} alCerrar={cerrarApunte} />}
       {juego && atleta?.id && <Travesia atletaId={atleta.id} sesion={sesionId} fin={fin} pausa={pausado ? pausa : null} despues={texto} alCerrar={cerrarJuego} />}
       {/* (fuera de la tarjeta: con su latido al sonar, una «fixed» dentro se movería con ella) */}
       {conPildora && fuera && (

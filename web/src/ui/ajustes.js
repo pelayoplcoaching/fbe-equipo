@@ -15,7 +15,7 @@ import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 const CLAVE = 'fbe-ajustes';
 // voz (v0.48): el entrenador por voz, apagado de entrada
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
-  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false, juegoDescanso: false, descansoDefecto: DESCANSO_DEFECTO, fondoChat: 'dibujos',
+  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false, juegoDescanso: false, apunteDescanso: false, descansoDefecto: DESCANSO_DEFECTO, fondoChat: 'dibujos',
   // v0.56: los sonidos del chat (al enviar y al recibir, con el chat abierto) y las fotos en HD (más grandes) de serie
   sonidosChat: true, fotosHd: false,
   // v0.60: «Difuminar la cara» al enviar un vídeo, encendido de serie en este móvil (apagado si no se elige)
@@ -61,6 +61,8 @@ export function normalizarAjustes(guardado = {}) {
   a.respira = a.respira === true;
   // «La travesía»: si jugó en el último descanso, el juego se abre solo en el siguiente (hasta que lo cierre a mano)
   a.juegoDescanso = a.juegoDescanso === true;
+  // «Apuntes»: lo mismo con la formación (o el juego o los apuntes, no los dos)
+  a.apunteDescanso = a.apunteDescanso === true && !a.juegoDescanso;
   if (!descansoValido(a.descansoDefecto)) a.descansoDefecto = DESCANSO_DEFECTO;
   // v0.54: el fondo del chat, con dibujos o liso
   if (!['dibujos', 'liso'].includes(a.fondoChat)) a.fondoChat = AJUSTES_DEFECTO.fondoChat;

@@ -17,6 +17,7 @@ import './panel-hoy.css';
 import './tiempo.css';
 import './viaje.css';
 import './travesia.css';
+import './apuntes.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';
 import { instalarPulido } from './ui/pulido.js';

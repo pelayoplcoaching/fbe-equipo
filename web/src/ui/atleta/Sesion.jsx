@@ -422,6 +422,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   }
   // v0.63 (8): «Ahora toca» en el descanso: la serie que toca (la de la píldora), con su propuesta, la última vez, el
   // recordatorio o la nota de tu coach y los discos por lado
+  // (apuntes) el ejercicio del que se está descansando (el que hace de verdad, si lo cambió por una variante)
+  const ejDescanso = (() => { const e = descanso ? ejerciciosConExtras.find((x) => x.id === descanso.tras) : null; const a = e ? actualDe(e) : null; return a ? { id: a.id, nombre: a.nombre } : null; })();
   const ahora = descanso && !sesion.completada ? ahoraToca({
     ejercicios: ejerciciosConExtras, hechas, proxima, completada: sesion.completada, tras: descanso.tras, etiquetas,
     propuestaDe: (pe, k) => propuestaDe(pe, k), nombreDe: (x) => actualDe(x).nombre, ultimasDe,
@@ -770,7 +772,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           );
         });
         const conReloj = descanso && !verEnfoque && g.items.some((e) => e.id === descanso.tras);
-        const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} sesionId={id} />;
+        const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} sesionId={id} ejercicio={ejDescanso} />;
         if (!g.letra) return reloj ? [...tarjetas, reloj] : tarjetas;
         const d = descansoGrupo(g, descansoDe);
         // (tuyo): si el de la ronda no es uno que puso el coach
@@ -787,7 +789,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         ];
       })}
       {/* (un descanso sin su ejercicio en la lista, por si acaso: antes de terminar) */}
-      {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} sesionId={id} />}
+      {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} sesionId={id} ejercicio={ejDescanso} />}
 
       {/* (054) con todas las pautadas hechas, el esfuerzo de la sesión en un toque (y la duración sale sola de las series) */}
       {!sesion.completada && totalPautadas > 0 && todas.length >= totalPautadas && atleta.estado !== 'baja' && (
@@ -861,7 +863,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         <Enfoque ejercicios={ejercicios} extras={extras} hechas={hechas} records={records} etiquetas={etiquetas} actualDe={actualDe}
           ultimasDe={(x) => { const a = actualDe(x); return a.id !== x.ejercicio.id ? ultimas[a.id] || null : x.ultimas; }}
           foco={semana?.foco} progresionAuto={progresionAuto && !frenar} notas={notas} guardarNota={guardarNota}
-          guardar={guardar} quitar={quitar} descanso={descanso} setDescanso={cambiarDescanso} ahora={ahora} teclado={teclado} sesionId={id}
+          guardar={guardar} quitar={quitar} descanso={descanso} setDescanso={cambiarDescanso} ahora={ahora} teclado={teclado} sesionId={id} ejDescanso={ejDescanso}
           seId={seActual} setSeId={setSeFoco} inicio={inicio} alTerminar={() => setTerminando(true)}
           alSalir={() => { setEnfoque(false); setAbiertos((a) => new Set([...(a || []), seActual])); llevarA(seActual); }} />
       )}
