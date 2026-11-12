@@ -30,3 +30,20 @@
 .temporizador .descanso-extras { gap: 6px; flex-wrap: nowrap; max-width: 100%; }
 .temporizador .descanso-extras .respira-boton { padding: 0 11px; gap: 5px; min-width: 0; white-space: nowrap; }
 @media (max-width: 359px) { .temporizador .descanso-extras { flex-wrap: wrap; } }
+
+/* (060) la novedad de la semana: su fuente y el enlace al estudio; en la tarjeta de Hoy, un punto que avisa */
+.apunte.tipo-novedad .apunte-etq .chip { background: color-mix(in srgb, var(--ok) 14%, var(--hoja)); color: var(--ok); }
+.apunte-fuente { margin: 0; font-size: .875rem; color: var(--tinta-2); overflow-wrap: anywhere; }
+.apunte-fuente a { color: var(--morado); font-weight: 650; }
+.apuntes-tarjeta.con-novedad .apuntes-tarjeta-texto strong::after { content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 8px; border-radius: 50%; background: var(--morado); vertical-align: middle; }
+.apuntes-tarjeta-texto .peq { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* (coach) el editor de la novedad de la semana */
+.novedades-coach .novedad-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; width: 100%; text-align: left; padding: 12px 14px; background: none; border: 0; border-top: 1px solid var(--linea); color: inherit; }
+.novedades-coach .novedad-fila:first-of-type { border-top: 0; }
+.novedades-coach .novedad-fila span.peq { grid-column: 1 / -1; }
+.novedad-form { display: grid; gap: 12px; }
+.novedad-form textarea { min-height: 8.5em; resize: vertical; }
+.novedad-form .cuenta-letras { justify-self: end; font-size: .8125rem; color: var(--tinta-2); }
+.novedades-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.novedades-cab h2 { margin: 0; font-size: 1.125rem; }

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Icono, Capa, useApp, useCarga } from '../comunes.jsx';
 import { hoyISO } from '../../logica/fechas.js';
 import { guiasConTexto, fichaDeEjercicio } from '../../datos/guias.js';
-import { apuntesDeFicha, apuntesDeGuias, elegirApunte, apunteDelDia, paraRepasar } from '../../logica/apuntes.js';
-import { leerApuntes, guardarVisto } from '../apuntes.js';
+import { apuntesDeFicha, apuntesDeGuias, apuntesDeNovedades, elegirApunte, apunteDelDia, paraRepasar } from '../../logica/apuntes.js';
+import { leerApuntes, guardarVisto, sincronizarApuntes } from '../apuntes.js';
 
 // «Apuntes»: algo que aprender en el descanso (o cuando se quiera). Una tarjeta cada vez, de lo que el coach tiene escrito:
 // una clave o un error típico del ejercicio del que se descansa, una idea de sus guías o un mito. Las que tienen vuelta
@@ -15,13 +15,22 @@ const mmss = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math
 
 export function Apuntes(props) { return <Capa><ApuntesDentro {...props} /></Capa>; }
 function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, modo = 'descanso', alCerrar }) {
-  const { backend } = useApp();
+  const { backend, api } = useApp();
   const hoy = hoyISO();
   const guias = useCarga(() => guiasConTexto({ backend }).catch(() => []), [], { recuerdo: 'apuntes-guias' });
   const ficha = useCarga(() => (ejercicio?.id ? fichaDeEjercicio({ backend }, ejercicio.id).catch(() => null) : Promise.resolve(null)), [ejercicio?.id], { recuerdo: ejercicio?.id ? `ficha-fbe:${ejercicio.id}` : null });
-  const listo = !guias.cargando && !(ejercicio?.id && ficha.cargando);
-  const todos = useMemo(() => [...(ficha.datos?.ficha ? apuntesDeFicha(ficha.datos.ficha, ejercicio?.nombre) : []), ...apuntesDeGuias(guias.datos || [])], [guias.datos, ficha.datos]);
+  // (060) la novedad de la semana (si el coach ha publicado alguna) y lo visto en otros móviles; sin la 060, nada
+  const novedades = useCarga(() => (api.novedades ? api.novedades().catch(() => []) : Promise.resolve([])), [], { recuerdo: 'apuntes-novedades' });
   const [estado, setEstado] = useState(() => leerApuntes(atletaId));
+  const [alDia, setAlDia] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    // (como mucho 2,5 s: si la red va lenta, se empieza con lo del móvil)
+    Promise.race([sincronizarApuntes(api, atletaId), new Promise((ok) => setTimeout(() => ok(null), 2500))]).then((e) => { if (vivo) { if (e) setEstado(e); setAlDia(true); } });
+    return () => { vivo = false; };
+  }, []);
+  const listo = alDia && !guias.cargando && !novedades.cargando && !(ejercicio?.id && ficha.cargando);
+  const todos = useMemo(() => [...apuntesDeNovedades(novedades.datos || []), ...(ficha.datos?.ficha ? apuntesDeFicha(ficha.datos.ficha, ejercicio?.nombre) : []), ...apuntesDeGuias(guias.datos || [])], [guias.datos, ficha.datos, novedades.datos]);
   const [actual, setActual] = useState(null);
   const [vuelta, setVuelta] = useState(false);
   const pasados = useRef([]);        // los de esta tanda, para no repetir
@@ -32,16 +41,16 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     if (modo === 'repaso') {
       cola.current ||= paraRepasar(todos, est, hoy);
       a = cola.current.shift() || null;
-    } else if (modo === 'dia' && !pasados.current.length) a = apunteDelDia(todos, hoy);
+    } else if (modo === 'dia' && !pasados.current.length) a = apunteDelDia(todos, hoy, est);
     a ||= modo === 'repaso' ? null : elegirApunte(todos, est, { hoy, salto: pasados.current.length, excluir: pasados.current });
     if (a) pasados.current.push(a.id);
     setActual(a); setVuelta(false);
     // (los que no tienen vuelta quedan vistos al salir; los que la tienen, al contestar o al pasar de largo)
-    if (a && !a.vuelta) setEstado(guardarVisto(atletaId, a.id, hoy));
+    if (a && !a.vuelta) setEstado(guardarVisto(atletaId, a.id, hoy, null, api));
   };
   useEffect(() => { if (listo && !actual) siguiente(); }, [listo]);
-  const responder = (sabia) => { const e = guardarVisto(atletaId, actual.id, hoy, sabia); setEstado(e); siguiente(e); };
-  const otro = () => { let e = estado; if (actual?.vuelta) { e = guardarVisto(atletaId, actual.id, hoy); setEstado(e); } siguiente(e); };
+  const responder = (sabia) => { const e = guardarVisto(atletaId, actual.id, hoy, sabia, api); setEstado(e); siguiente(e); };
+  const otro = () => { let e = estado; if (actual?.vuelta) { e = guardarVisto(atletaId, actual.id, hoy, null, api); setEstado(e); } siguiente(e); };
 
   // La cuenta del descanso (si lo hay) y el cierre al acabar
   const [ahora, setAhora] = useState(Date.now());
@@ -81,6 +90,9 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
             {actual.vuelta && !vuelta
               ? <button type="button" class="btn apunte-destapar" onClick={() => setVuelta(true)}>{actual.tipo === 'mito' ? '¿Por qué es un mito?' : '¿Por qué, y cómo se corrige?'}</button>
               : actual.texto && <p class="apunte-texto">{actual.texto}</p>}
+            {actual.tipo === 'novedad' && (actual.fuente || actual.enlace) && (
+              <p class="apunte-fuente">{actual.fuente}{actual.fuente && actual.enlace ? ' · ' : ''}{actual.enlace && <a href={actual.enlace} target="_blank" rel="noopener noreferrer">Ver el estudio</a>}</p>
+            )}
           </article>
         )}
       </div>

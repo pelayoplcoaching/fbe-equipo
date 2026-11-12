@@ -5998,6 +5998,10 @@ try {
   console.log('\nApuntes, formación en los descansos');
   const { probarApuntes } = await import('./e2e-apuntes.mjs');
   await probarApuntes({ navegador, check });
+  // Los descansos con la base (060): la novedad de la semana del coach, y la travesía y los apuntes que suben y vuelven
+  console.log('\nLos descansos con la base (060)');
+  const { probarDescansosBase } = await import('./e2e-descansos-base.mjs');
+  await probarDescansosBase({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

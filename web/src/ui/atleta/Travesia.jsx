@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Icono, Capa } from '../comunes.jsx';
+import { Icono, Capa, useApp } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
 import { nuevaEtapa, avanzar, saltar, resultado, textoDistancia } from '../../logica/travesia.js';
-import { apuntarEtapa, leerTravesia } from '../travesia.js';
+import { apuntarEtapa, leerTravesia, sincronizarTravesia } from '../travesia.js';
 import { nuevoPaisaje, pintar } from './travesia-pinta.js';
 
 // «La travesía»: el juego del descanso, a pantalla completa. Un toque en cualquier sitio, salta; otro en el aire, doble
@@ -21,6 +21,7 @@ export function Travesia(props) { return <Capa><TravesiaDentro {...props} /></Ca
 const cuentaInicial = (fin, pausa) => Math.max(0, Math.ceil(Number.isFinite(pausa) ? pausa / 1000 : Number.isFinite(fin) ? (fin - Date.now()) / 1000 : 0));
 
 function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, despues = '', practica = false, alCerrar }) {
+  const { api } = useApp() || {};
   const lienzo = useRef(null);
   const caja = useRef(null);
   const etapa = useRef(null);
@@ -38,7 +39,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, des
   const apuntada = useRef(false);
   const salir = () => {
     const e = etapa.current;
-    if (!practica && sesion && e && !apuntada.current && e.x >= 20) { apuntada.current = true; const r = resultado(e); apuntarEtapa(atletaId, { sesion, metros: r.metros, estrellas: r.estrellas }); }
+    if (!practica && sesion && e && !apuntada.current && e.x >= 20) { apuntada.current = true; const r = resultado(e); apuntarEtapa(atletaId, { sesion, metros: r.metros, estrellas: r.estrellas }); sincronizarTravesia(api, atletaId); }
     alCerrar?.('salir');
   };
 
@@ -71,6 +72,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, des
       const r = resultado(e);
       const antesG = leerTravesia(atletaId);
       const g = apuntarEtapa(atletaId, { sesion: practica ? null : sesion, metros: r.metros, estrellas: r.estrellas });
+      if (!practica && sesion) sincronizarTravesia(api, atletaId);   // (060) a la base; si no se puede, se queda pendiente
       vibrar('hecho');
       setFinal({ ...r, hoy: !practica && sesion ? g.sesiones[sesion]?.metros ?? r.metros : null, etapas: !practica && sesion ? g.sesiones[sesion]?.etapas ?? 1 : null,
         marca: practica ? r.metros > antesG.practica && antesG.practica > 0 : r.metros > antesG.mejor && antesG.mejor > 0, mejor: practica ? g.practica : g.mejor });

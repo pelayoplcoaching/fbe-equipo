@@ -151,12 +151,15 @@ export function textoDistancia(m) {
 // { total, estrellas, mejor (la etapa más larga por minuto no: la más larga), practica (mejor marca del modo práctica),
 //   sesiones: { <id>: { metros, estrellas, etapas } } }; solo las 12 últimas sesiones. Lo ilegible se descarta.
 const entero = (v, max) => (Number.isFinite(Number(v)) ? Math.min(max, Math.max(0, Math.round(Number(v)))) : 0);
-export const TRAVESIA_VACIA = () => ({ total: 0, estrellas: 0, mejor: 0, practica: 0, sesiones: {} });
+// (060) pend: lo jugado que aún no se ha subido a la base ({ metros, estrellas, etapas, mejor })
+export const TRAVESIA_VACIA = () => ({ total: 0, estrellas: 0, mejor: 0, practica: 0, sesiones: {}, pend: { metros: 0, estrellas: 0, etapas: 0, mejor: 0 } });
 
 export function limpiarTravesia(g) {
   const t = TRAVESIA_VACIA();
   if (!g || typeof g !== 'object') return t;
   t.total = entero(g.total, 1e8); t.estrellas = entero(g.estrellas, 1e7); t.mejor = entero(g.mejor, 1e5); t.practica = entero(g.practica, 1e5);
+  const p = g.pend && typeof g.pend === 'object' ? g.pend : {};
+  t.pend = { metros: entero(p.metros, 1e7), estrellas: entero(p.estrellas, 1e6), etapas: entero(p.etapas, 1e4), mejor: entero(p.mejor, 1e5) };
   const ses = g.sesiones && typeof g.sesiones === 'object' ? Object.entries(g.sesiones) : [];
   for (const [id, s] of ses.slice(-12)) {
     if (!s || typeof s !== 'object' || id.length > 60) continue;
@@ -171,10 +174,45 @@ export function sumarEtapa(guardado, { sesion = null, metros = 0, estrellas = 0 
   const m = entero(metros, 1e5), s = entero(estrellas, 1e4);
   if (!sesion) { t.practica = Math.max(t.practica, m); return t; }
   t.total += m; t.estrellas += s; t.mejor = Math.max(t.mejor, m);
+  t.pend = { metros: t.pend.metros + m, estrellas: t.pend.estrellas + s, etapas: t.pend.etapas + 1, mejor: Math.max(t.pend.mejor, m) };
   const de = t.sesiones[sesion] || { metros: 0, estrellas: 0, etapas: 0 };
   delete t.sesiones[sesion];   // (al final: la más reciente)
   t.sesiones[sesion] = { metros: de.metros + m, estrellas: de.estrellas + s, etapas: de.etapas + 1 };
   const ids = Object.keys(t.sesiones);
   for (const id of ids.slice(0, Math.max(0, ids.length - 12))) delete t.sesiones[id];
   return t;
+}
+
+// ---------- Con la base (migración 060) ----------
+// Lo que toca subir ahora: lo pendiente, en un envío que la base admite (60 km y 60 etapas como mucho), o null
+export function porSubir(guardado) {
+  const p = limpiarTravesia(guardado).pend;
+  if (p.metros <= 0) return null;
+  const etapas = Math.min(60, Math.max(1, p.etapas)), metros = Math.min(p.metros, 60000, 5000 * etapas);
+  return { metros, estrellas: Math.min(p.estrellas, 400 * etapas), etapas, mejor: Math.min(p.mejor, 5000, metros) };
+}
+// Tras subir un envío: se descuenta de lo pendiente (puede haber entrado otra etapa mientras subía)
+export function trasSubir(guardado, envio) {
+  const t = limpiarTravesia(guardado);
+  if (!envio) return t;
+  const queda = Math.max(0, t.pend.metros - envio.metros);
+  t.pend = queda > 0 ? { metros: queda, estrellas: Math.max(0, t.pend.estrellas - envio.estrellas), etapas: Math.max(1, t.pend.etapas - envio.etapas), mejor: t.pend.mejor }
+    : { metros: 0, estrellas: 0, etapas: 0, mejor: 0 };
+  return t;
+}
+// Junta lo del móvil con lo que hay en la base (semanas: [{ metros, estrellas, mejor }]): si en la base hay más (otro
+// móvil, o este tras borrar sus datos), el total sube hasta ahí; lo que aún no se ha subido se suma encima
+export function conBase(guardado, semanas = []) {
+  const t = limpiarTravesia(guardado);
+  const filas = Array.isArray(semanas) ? semanas : [];
+  const m = filas.reduce((n, f) => n + entero(f?.metros, 2e6), 0), e = filas.reduce((n, f) => n + entero(f?.estrellas, 2e5), 0);
+  t.total = Math.max(t.total, m + t.pend.metros);
+  t.estrellas = Math.max(t.estrellas, e + t.pend.estrellas);
+  t.mejor = Math.max(t.mejor, ...filas.map((f) => entero(f?.mejor, 2e4)));
+  return t;
+}
+// Lo de esta semana en la base (la fila cuyo lunes es `lunes`), más lo pendiente
+export function metrosDeLaSemana(guardado, semanas = [], lunes) {
+  const f = (Array.isArray(semanas) ? semanas : []).find((x) => String(x?.semana).slice(0, 10) === lunes);
+  return entero(f?.metros, 2e6) + limpiarTravesia(guardado).pend.metros;
 }
