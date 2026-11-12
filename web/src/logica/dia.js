@@ -70,3 +70,15 @@ export function resumenDia(items) {
   if (!total) return null;
   return { hechas, total, todo: hechas >= total, pendientes: items.filter((x) => x.estado === 'toca').length };
 }
+
+// (belleza de hoy) El orden de la lista: lo que queda por hacer, arriba (en su orden de siempre); lo hecho, debajo.
+// ordenDia da los ids en ese orden; colocarDia pone una lista según un orden ya fijado (lo nuevo, donde le toque
+// entre lo pendiente: al final de lo que no se conocía).
+export function ordenDia(items) {
+  return [...items.filter((x) => x.estado !== 'hecho'), ...items.filter((x) => x.estado === 'hecho')].map((x) => x.id);
+}
+export function colocarDia(items, orden) {
+  if (!orden) return items;
+  const sitio = (x) => { const i = orden.indexOf(x.id); return i < 0 ? orden.length : i; };
+  return items.map((x, i) => [x, i]).sort((a, b) => sitio(a[0]) - sitio(b[0]) || a[1] - b[1]).map(([x]) => x);
+}

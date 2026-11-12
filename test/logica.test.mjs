@@ -8,7 +8,7 @@ import { conDefecto, preferenciasValidas, claveServidor, normalizarB64url, descr
 import { resultadoCribado, avisoCuestionario, resumenCuestionario, limpiarCuestionario, pasosHechos, MENSAJE_ATLETA, RESULTADO_COACH, SINTOMAS, OTRAS, objetivosDe, textoObjetivos } from '../web/src/logica/cuestionario.js';
 import { pregunta, preguntasDe, respuestaValida, limpiarRespuestas, respuestasNoValidas, textoRespuesta, serieRespuestas } from '../web/src/logica/preguntas.js';
 import { grados, dibujoValido, limpiarDibujo, rectImagen, describirDibujo } from '../web/src/logica/dibujo.js';
-import { tuDia, resumenDia } from '../web/src/logica/dia.js';
+import { tuDia, resumenDia, ordenDia, colocarDia } from '../web/src/logica/dia.js';
 import { progresarPauta, opcionesDe } from '../web/src/logica/progresion.js';
 import { sumarMeses, finPeriodo, importePeriodo, siguientePeriodo, resumenCobros, cobradoEnMes, fmtEuros, leerEuros } from '../web/src/logica/cobros.js';
 import { modoCarga, columnasEditor, pesoAnterior, conNutricion, textoServicio, NIVELES } from '../web/src/logica/nivel.js';
@@ -927,6 +927,12 @@ console.log('\nTu día');
   const d4 = tuDia({ semana, sesiones: ses, pesoHoy: null, habitos: null, nutricion: null, checkin: null, cuestionario: null }, '2026-10-24');
   check(d4[0].estado === 'toca' && /prevista/.test(d4[0].detalle), 'una sesión que se quedó atrás vuelve a tocar');
   check(resumenDia(d3) === null && resumenDia(d1).hechas === 0 && resumenDia(d1).pendientes >= 3, 'el resumen cuenta lo que hay que hacer (el descanso no cuenta)');
+  // (belleza de hoy) lo que queda, arriba; lo hecho, debajo; y un orden ya fijado no salta al marcar algo
+  const lista = [{ id: 'a', estado: 'hecho' }, { id: 'b', estado: 'toca' }, { id: 'c', estado: 'hecho' }, { id: 'd', estado: 'luego' }];
+  const fijado = ordenDia(lista);
+  check(fijado.join('') === 'bdac', '«Tu día»: lo pendiente arriba (en su orden) y lo hecho debajo');
+  const luego = [{ id: 'a', estado: 'hecho' }, { id: 'b', estado: 'hecho' }, { id: 'n', estado: 'toca' }, { id: 'c', estado: 'hecho' }, { id: 'd', estado: 'luego' }];
+  check(colocarDia(luego, fijado).map((x) => x.id).join('') === 'bdacn' && colocarDia(luego, null) === luego, 'lo que se marca con la lista abierta no cambia de sitio (y lo nuevo va al final)');
 }
 
 console.log('\nCardio (v0.17)');

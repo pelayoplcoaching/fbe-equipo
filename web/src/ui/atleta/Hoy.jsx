@@ -4,7 +4,7 @@ import { VideoSemanaHoy, DirectoHoy } from '../Videos.jsx';
 import { GuiaSugerida, MitoDeLaSemana } from '../Guias.jsx';
 import { pedirSubProgreso } from './sub-progreso.js';
 import { FinDePagina, Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargando, Vacio, ErrorCaja, Marca, Hoja, Paso, usePreferencia, cuando, Pista, Avatar, useApuntar } from '../comunes.jsx';
-import { resumenDia } from '../../logica/dia.js';
+import { resumenDia, ordenDia, colocarDia } from '../../logica/dia.js';
 import { BandaConexion, BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { VerArchivo } from '../Archivos.jsx';
@@ -181,7 +181,12 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
     estados.current = Object.fromEntries(dia.datos.map((x) => [x.id, x.estado]));
     for (const x of dia.datos) if (x.estado !== 'hecho') delete recien.current[x.id];
   });
-  const items = dia.datos;
+  // (belleza de hoy) Lo que queda, arriba; lo hecho, debajo. El orden se fija al llegar (con lo que diga la base): lo
+  // que se va marcando con la pantalla abierta se queda en su sitio con su ✓, sin que la lista salte bajo el dedo.
+  const orden = useRef(null);
+  const fecha = new Date().toDateString();   // (con la app abierta de un día para otro, la lista nueva se ordena de nuevo)
+  if (dia.datos && orden.current?.fecha !== fecha) orden.current = Object.assign(ordenDia(dia.datos), { fecha });
+  const items = dia.datos && colocarDia(dia.datos, orden.current);
   if (!items || !items.length) return null;
   const r = resumenDia(items);
   // (tanda 25) La sección se abre creciendo (bloque 53 de diseno.css): el desplazamiento empezaba con la página aún corta
@@ -232,6 +237,30 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
       {tarea && <HojaTarea tarea={tarea} salud={salud} alCerrar={() => setTarea(null)} alCambiar={() => dia.recargar(true)}
         darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }} />}
     </section>
+  );
+}
+
+// (belleza de hoy) Al bajar por la pantalla, el botón de empezar se queda a mano: una barra fina sobre las pestañas con
+// el nombre de la sesión, que sale cuando el botón grande ya no se ve y se va al volver arriba.
+function BarraEmpezar({ nombre, empezada, abrir }) {
+  const [fuera, setFuera] = useState(false);
+  useEffect(() => {
+    const boton = document.querySelector('.hero-dia .btn-hero');
+    if (!boton || typeof IntersectionObserver === 'undefined') return undefined;
+    // solo cuenta si se ha ido por arriba (al bajar): si aún no ha entrado en pantalla, no hace falta
+    const o = new IntersectionObserver(([x]) => setFuera(!x.isIntersecting && x.boundingClientRect.bottom < 0));
+    o.observe(boton);
+    return () => o.disconnect();
+  }, []);
+  return (
+    <>
+      {fuera && (
+        <button class="hoy-a-mano" onClick={abrir} aria-label={`${empezada ? 'Continuar' : 'Empezar'} ${nombre}`}>
+          <span class="hoy-a-mano-texto"><span class="mini">{empezada ? 'A medias' : 'Tu sesión'}</span><strong>{nombre}</strong></span>
+          <span class="hoy-a-mano-ir"><Icono n="play" />{empezada ? 'Continuar' : 'Empezar'}</span>
+        </button>
+      )}
+    </>
   );
 }
 
@@ -554,6 +583,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         ) : null}
         {(dias ? !!natural : sesiones.length > 0) && <ResumenSemana hechas={dias ? natural.hechas : hechas} total={dias ? natural.objetivo : sesiones.length} objetivo={dias} racha={constancia.datos?.racha ?? null} cargando={constancia.cargando && !constancia.datos} abrirRacha={constancia.datos ? () => setVerRacha(true) : null} />}
       </section>
+      {e.tipo === 'entreno' && siguiente && <BarraEmpezar key={siguiente.id} nombre={siguiente.nombre} empezada={empezada} abrir={() => abrirSesion(siguiente.id)} />}
       <Diales sesiones={sesiones} semana={semana} siguiente={siguiente} previstaHoy={enSemana ? toca.hoy : null} ejerciciosSiguiente={ejercicios} bloques={p.bloques || []} salud={salud} hoy={hoy} alContestar={recargar}
         ocultos={P.dialesOcultos} entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))}
         natural={dias ? { semana: natural, dias, semanas: p.semanas || [], sesionesPorSemana: p.sesiones || {} } : null} />

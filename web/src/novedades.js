@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.146': {
+    atleta: [
+      '«Tu día» pone arriba lo que te queda y debajo lo hecho; y al bajar por Hoy, el botón de empezar te sigue.',
+      '«¿Cómo llegas hoy?», de una en una: tres toques rápidos antes de entrenar.',
+    ],
+  },
   '0.145': {
     atleta: [
       'Los vídeos de tu coach, dentro de la app: solo el tramo que importa, a cámara lenta o en pequeño mientras entrenas.',

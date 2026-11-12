@@ -5986,6 +5986,10 @@ try {
   console.log('\nLa comunidad viva');
   const { probarComunidadViva } = await import('./e2e-comunidad-viva.mjs');
   await probarComunidadViva({ navegador, check });
+  // Hoy y la sesión, bonitos: «Tu día» ordenado, el botón de empezar a mano y «¿Cómo llegas hoy?» de una en una
+  console.log('\nHoy y la sesión, bonitos');
+  const { probarHoyBello } = await import('./e2e-hoy-bello.mjs');
+  await probarHoyBello({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));
