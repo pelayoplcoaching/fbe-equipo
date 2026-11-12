@@ -2,14 +2,14 @@
 // semana frente a lo que sueles llevar a estas alturas) y Cómo llegas (lo que contestaste hoy en «¿Cómo llegas hoy?»).
 // Tocar uno abre una hoja con lo que lo alimenta y una explicación corta. Solo los ve el atleta (en su Hoy): «Cómo
 // llegas» es dato de salud y solo sale con su consentimiento.
-import { useId, useState } from 'preact/hooks';
+import { useEffect, useId, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, DegradadoAro } from '../comunes.jsx';
 import { prepMarcadas, marcarPrepHoy } from './prep-hoy.js';
 import { Preparacion } from './Preparacion.jsx';
 import { dialConstancia, dialCarga, dialComoLlegas, dialComida, dialPasos, dialSueno, horasMin, relojDeUnVistazo, pasosCortos, preparacionDeHoy, sesionParaContestar, conSeriesDeHoy, arcoDial, BANDA_CARGA } from '../../logica/tablero.js';
 import { objetivoDelDia, planVigente } from '../../logica/nutricion.js';
 import { conNutricion } from '../../logica/nivel.js';
-import { leerPreferencia } from '../preferencias.js';
+import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { consejoPreparacion } from '../../logica/preparacion.js';
 import { num, cargaSemanal } from '../../logica/calculos.js';
 import { fmtConDia, fmtCorta, lunesDe, sumarDias } from '../../logica/fechas.js';
@@ -65,7 +65,18 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
   // Solo se contesta desde aquí para la sesión prevista para hoy (o la que ya tiene series de hoy), y nunca de baja
   const pendiente = sesionParaContestar({ previstaHoy, siguiente, seriesHoy, baja: atleta.estado === 'baja' });
   const pct = k && k.ratio != null ? Math.round(k.ratio * 100) : null;
-  const ver = { constancia: !ocultos.has('constancia'), carga: !ocultos.has('carga'), llegas: salud && !ocultos.has('llegas'), comida: !!m, pasos: !!ps, sueno: !!su };
+  // (v0.141) Los diales que llegan tarde (comida, pasos y sueño): si en este móvil salieron la última vez, mientras cargan
+  // se guarda su sitio (así un quinto dial no añade una fila de golpe y no se mueve nada al abrir la app)
+  const claveVistos = `fbe-diales-vistos:${atleta.id}`;
+  const vistos = leerPreferencia(claveVistos, []);
+  const esperando = (id, cargaX) => !cargaX.datos && cargaX.cargando && Array.isArray(vistos) && vistos.includes(id);
+  const espera = { comida: !m && verComida && esperando('comida', comida), pasos: !ps && verPasos && esperando('pasos', pasosDatos), sueno: !su && verSueno && esperando('sueno', pasosDatos) };
+  const llegados = !comida.cargando && !pasosDatos.cargando;
+  const reales = [m && 'comida', ps && 'pasos', su && 'sueno'].filter(Boolean).join();
+  useEffect(() => {
+    if (llegados && reales !== (Array.isArray(vistos) ? vistos.join() : '')) guardarPreferencia(claveVistos, reales ? reales.split(',') : []);
+  }, [llegados, reales]);
+  const ver = { constancia: !ocultos.has('constancia'), carga: !ocultos.has('carga'), llegas: salud && !ocultos.has('llegas'), comida: !!m || espera.comida, pasos: !!ps || espera.pasos, sueno: !!su || espera.sueno };
   const n = Object.values(ver).filter(Boolean).length;
   if (!n) return null;
   const pc = ps ? pasosCortos(ps.pasos) : null;
@@ -93,7 +104,8 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
           <span class="dial-estado">{l.estado === 'sin_respuesta' ? (pendiente ? 'Contestar' : 'Sin contestar') : l.etiqueta}</span>
         </button>
       )}
-      {ver.comida && (
+      {espera.comida && <DialEsperando nombre="Comida" />}
+      {ver.comida && m && (
         <button type="button" class="dial" data-estado={m.estado} onClick={() => setAbierto('comida')}
           aria-label={`Comida: ${m.estado === 'sin_apuntar' ? `aún sin apuntar nada hoy, tu objetivo son ${m.objetivo} kcal` : m.quedan >= 0 ? `te quedan ${m.quedan} kcal de ${m.objetivo}` : `${-m.quedan} kcal por encima de ${m.objetivo}`}. Ver el detalle`}>
           <Esfera frac={m.valor}><span>{m.quedan < 0 ? `+${-m.quedan}` : m.quedan}<span class="u">kcal</span></span></Esfera>
@@ -101,7 +113,8 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
           <span class="dial-estado">{m.etiqueta}</span>
         </button>
       )}
-      {ver.pasos && (
+      {espera.pasos && <DialEsperando nombre="Pasos" />}
+      {ver.pasos && ps && (
         <button type="button" class="dial" data-estado={ps.estado} onClick={() => setAbierto('pasos')}
           aria-label={`Pasos: ${ps.pasos} hoy${ps.media ? `, tu media es de ${ps.media}` : ''}. Ver el detalle`}>
           <Esfera frac={ps.valor}><span>{pc.cifra}{pc.unidad && <span class="u">{pc.unidad}</span>}</span></Esfera>
@@ -109,7 +122,8 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
           <span class="dial-estado">{ps.etiqueta}</span>
         </button>
       )}
-      {ver.sueno && (
+      {espera.sueno && <DialEsperando nombre="Sueño" />}
+      {ver.sueno && su && (
         <button type="button" class="dial" data-estado={su.estado} onClick={() => setAbierto('pasos')}
           aria-label={`Sueño: ${horasMin(su.min)} horas anoche${su.media ? `, tu media es de ${horasMin(su.media)}` : ''}. Ver tu reloj de un vistazo`}>
           <Esfera frac={su.valor}><span>{horasMin(su.min)}<span class="u">h</span></span></Esfera>
@@ -258,5 +272,16 @@ function HojaLlegas({ l, prep, pendiente, baja = false, alGuardar, alCerrar }) {
       )}
       <p class="mini terciario">Es una ayuda para regular el día, no un diagnóstico. Solo lo ves tú aquí; tu coach lo ve con la sesión.</p>
     </Hoja>
+  );
+}
+
+// (v0.141) El sitio de un dial que aún no ha llegado (la misma forma, sin cifra ni acción)
+function DialEsperando({ nombre }) {
+  return (
+    <div class="dial" data-estado="cargando" aria-hidden="true">
+      <Esfera frac={0}><span>&nbsp;</span></Esfera>
+      <span class="dial-nombre">{nombre}</span>
+      <span class="dial-estado">&nbsp;</span>
+    </div>
   );
 }
