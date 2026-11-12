@@ -1,3 +1,5 @@
+import { leerTravesia } from '../travesia.js';
+import { textoDistancia } from '../../logica/travesia.js';
 import { Fragment } from 'preact';
 import { GuiaSugerida } from '../Guias.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -768,7 +770,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           );
         });
         const conReloj = descanso && !verEnfoque && g.items.some((e) => e.id === descanso.tras);
-        const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} />;
+        const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} sesionId={id} />;
         if (!g.letra) return reloj ? [...tarjetas, reloj] : tarjetas;
         const d = descansoGrupo(g, descansoDe);
         // (tuyo): si el de la ronda no es uno que puso el coach
@@ -785,7 +787,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         ];
       })}
       {/* (un descanso sin su ejercicio en la lista, por si acaso: antes de terminar) */}
-      {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} />}
+      {descanso && !verEnfoque && !ejercicios.some((e) => e.id === descanso.tras) && <Temporizador {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} sesionId={id} />}
 
       {/* (054) con todas las pautadas hechas, el esfuerzo de la sesión en un toque (y la duración sale sola de las series) */}
       {!sesion.completada && totalPautadas > 0 && todas.length >= totalPautadas && atleta.estado !== 'baja' && (
@@ -859,7 +861,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         <Enfoque ejercicios={ejercicios} extras={extras} hechas={hechas} records={records} etiquetas={etiquetas} actualDe={actualDe}
           ultimasDe={(x) => { const a = actualDe(x); return a.id !== x.ejercicio.id ? ultimas[a.id] || null : x.ultimas; }}
           foco={semana?.foco} progresionAuto={progresionAuto && !frenar} notas={notas} guardarNota={guardarNota}
-          guardar={guardar} quitar={quitar} descanso={descanso} setDescanso={cambiarDescanso} ahora={ahora} teclado={teclado}
+          guardar={guardar} quitar={quitar} descanso={descanso} setDescanso={cambiarDescanso} ahora={ahora} teclado={teclado} sesionId={id}
           seId={seActual} setSeId={setSeFoco} inicio={inicio} alTerminar={() => setTerminando(true)}
           alSalir={() => { setEnfoque(false); setAbiertos((a) => new Set([...(a || []), seActual])); llevarA(seActual); }} />
       )}
@@ -1497,6 +1499,7 @@ function MiniTarjeta({ datos }) {
 
 function Resumen({ resumen, sesion, familia, alCerrar }) {
   const { api, atleta, propio, aviso } = useApp();
+  const travesia = leerTravesia(atleta.id).sesiones[sesion.id] || null;
   const [compartir, setCompartir] = useState(false);
   // (compartir) un récord suelto, como tarjeta de logro; y el recordatorio de Hoy («tu récord de ayer merece una historia»)
   const [compartirRecord, setCompartirRecord] = useState(null);
@@ -1580,6 +1583,12 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
           {anteriores.cargando && !anteriores.datos ? <span class="sil" style="width:70%;height:14px" />
             : comparacion ? <><Icono n={comparacion.tonelaje >= 0 ? 'arriba' : 'abajo'} /><span><strong class="num">{textoComparacion(comparacion)}</strong>{comparacion.fecha ? <span class="secundario"> ({fmtCorta(comparacion.fecha)}{comparacion.series ? `, ${comparacion.series > 0 ? '+' : ''}${comparacion.series} ${Math.abs(comparacion.series) === 1 ? 'serie' : 'series'}` : ''})</span> : null}</span></>
               : <><Icono n="estrella" /><span>La primera vez que haces esta sesión: la próxima te dirá cómo vas.</span></>}
+        </p>
+      )}
+      {/* «La travesía»: lo que ha corrido su lobo en los descansos de esta sesión (si ha jugado) */}
+      {travesia?.metros > 0 && (
+        <p class="resumen-compara resumen-travesia" style={{ '--i': 5 }}>
+          <Icono n="luna" /><span>En los descansos, tu lobo ha recorrido <strong class="num">{textoDistancia(travesia.metros)}</strong>{travesia.estrellas > 0 ? ` y ha cogido ${travesia.estrellas} ${travesia.estrellas === 1 ? 'estrella' : 'estrellas'}` : ''}.</span>
         </p>
       )}
       {nRecords > 0 && (

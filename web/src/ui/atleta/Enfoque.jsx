@@ -19,7 +19,7 @@ const RPE_ENFOQUE = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 export function Enfoque(props) { return <Capa><EnfoquePantalla {...props} /></Capa>; }
 function EnfoquePantalla({
   ejercicios, extras = {}, hechas, records, etiquetas, actualDe, ultimasDe, foco, progresionAuto, notas, guardarNota,
-  guardar, quitar, descanso, setDescanso, seId, setSeId, inicio, alSalir, alTerminar, ahora = null, teclado = null,
+  guardar, quitar, descanso, setDescanso, seId, setSeId, inicio, alSalir, alTerminar, ahora = null, teclado = null, sesionId = null,
 }) {
   const { aviso } = useApp();
   const e = ejercicios.find((x) => x.id === seId) || ejercicios[0];
@@ -176,7 +176,7 @@ function EnfoquePantalla({
       </div>
 
       <div ref={cuerpo} class="enfoque-cuerpo" onTouchStart={alTocar} onTouchEnd={alSoltar}>
-        {descanso && <Temporizador {...descanso} alCambiar={setDescanso} clase="en-enfoque" toca={ahora} alToca={irAhora} discoMinimo={teclado?.discoMinimo} />}
+        {descanso && <Temporizador {...descanso} alCambiar={setDescanso} clase="en-enfoque" toca={ahora} alToca={irAhora} discoMinimo={teclado?.discoMinimo} sesionId={sesionId} />}
 
         <div class="enfoque-titulo">
           <div class="fila" style="gap:8px">

@@ -15,6 +15,7 @@ import { ajustarDescanso, reanudarDescanso, fraseTrasPista, avisoTrasCambio } fr
 import { Placas } from '../Herramientas.jsx';
 import { num } from '../../logica/calculos.js';
 import { discosCon } from '../../logica/teclado.js';
+import { Travesia } from './TravesiaTarjeta.jsx';
 import { pesoNum, etiquetaPeso, vista, redondearCarga, enLibras } from '../../logica/unidades.js';
 import { ajusteEnVivo, repsSiguiente } from '../../logica/ajuste-vivo.js';
 
@@ -224,7 +225,7 @@ export function aNumero(t) {
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
 // v0.63: toca (logica/ahora-toca.js): con el descanso en marcha, la tarjeta «Ahora toca» con lo que viene; al tocarla,
 // alToca(id, numero) lleva a esa serie (con el teclado en los kilos)
-export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined }) {
+export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined, sesionId = null }) {
   const { api, atleta } = useApp() || {};
   const ahora = useAhora(250);
   const finRef = useRef(fin);
@@ -323,6 +324,13 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   // (sin él, de un descanso de antes de esta versión, el que sale de su final y su duración)
   const inicioR = inicio || fin - total * 1000;
   const cambiarRespira = () => { const v = !respira; setRespira(v); guardarAjustes({ ...leerAjustes(), respira: v }); };
+  // «La travesía»: el juego del descanso, a pantalla completa (su trozo se pide al abrirlo). Si estaba jugando cuando acabó
+  // el descanso anterior, se abre solo en este; si lo cerró a mano, ya no (hasta que vuelva a darle a «Jugar»). En
+  // descansos muy cortos no se abre solo: no da tiempo a nada.
+  const [juego, setJuego] = useState(false);
+  useEffect(() => { if (leerAjustes().juegoDescanso && !pausado && (fin - Date.now()) / 1000 > 20) setJuego(true); }, [inicioR]);
+  const jugar = () => { setJuego(true); guardarAjustes({ ...leerAjustes(), juegoDescanso: true }); };
+  const cerrarJuego = (motivo) => { setJuego(false); if (motivo === 'salir') guardarAjustes({ ...leerAjustes(), juegoDescanso: false }); };
   const fase = respira && quedan > 0 && !pausado ? faseRespira((ahora - inicioR) / 1000) : null;
   const quietoRespira = sinMovimiento();
   // (el retraso de la animación se fija cuando aparece el círculo, con lo que lleva el descanso en ese momento: cambiarlo
@@ -405,9 +413,16 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
       {quedan > 0 && toca && <AhoraToca ahora={toca} alTocar={alToca} discoMinimo={discoMinimo} />}
       {conPista && <p class="pista-activa peq"><Icono n="candado" />{pausado ? 'En pausa desde la pantalla de bloqueo' : 'Te avisa aunque bloquees el móvil'}</p>}
       {quedan > 0 && !pausado && (
-        <button type="button" class="respira-boton" aria-pressed={respira ? 'true' : 'false'} onClick={cambiarRespira} title="Un círculo para acompasar la respiración mientras descansas">
-          <Icono n="sueno" />Respira
-        </button>
+        <div class="descanso-extras">
+          <button type="button" class="respira-boton" aria-pressed={respira ? 'true' : 'false'} onClick={cambiarRespira} title="Un círculo para acompasar la respiración mientras descansas">
+            <Icono n="sueno" />Respira
+          </button>
+          {atleta?.id && (
+            <button type="button" class="respira-boton jugar-boton" onClick={jugar} title="La travesía: un juego para el descanso. Se cierra solo cuando toca la siguiente serie">
+              <Icono n="luna" />Jugar
+            </button>
+          )}
+        </div>
       )}
       {/* v0.42: también ±1 minuto, para alargar el descanso por un imprevisto o acortarlo si hay prisa */}
       <div class="ajustes">
@@ -419,6 +434,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
       {pausado && <button type="button" class="btn btn-primario seguir-descanso" onClick={() => alCambiar(reanudarDescanso(este()))}><Icono n="play" /> Seguir</button>}
       <button class="saltar" onClick={() => alCambiar(null)}>{quedan > 0 ? 'Saltar' : 'Cerrar'}</button>
     </div>
+      {juego && atleta?.id && <Travesia atletaId={atleta.id} sesion={sesionId} fin={fin} pausa={pausado ? pausa : null} despues={texto} alCerrar={cerrarJuego} />}
       {/* (fuera de la tarjeta: con su latido al sonar, una «fixed» dentro se movería con ella) */}
       {conPildora && fuera && (
         <button type="button" class={`pildora-descanso ${quedan <= 0 ? 'fin' : ''}`} onClick={volver} aria-live="off"

@@ -1,3 +1,4 @@
+import { TarjetaTravesia } from './TravesiaTarjeta.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Fragment } from 'preact';
 import { VideoSemanaHoy, DirectoHoy } from '../Videos.jsx';
@@ -630,6 +631,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           <div class="pila-s">{ocultasHoy.map((id) => <Fragment key={id}>{id === 'mes' ? tarjetaMes : id === 'mito' ? tarjetaMito : bloquesHoy[id]}</Fragment>)}</div>
         </details>
       )}
+      {/* «La travesía»: el juego de los descansos, en una línea (lo que lleva su lobo y un minuto de práctica) */}
+      <TarjetaTravesia compacta />
       <div class="ordenar-hoy-pie">
         <button type="button" class="btn-texto" onClick={() => setOrdenando(true)}><Icono n="ordenar" /> Ordenar Hoy</button>
       </div>
