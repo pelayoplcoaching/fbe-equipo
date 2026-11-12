@@ -1,3 +1,4 @@
+import { TarjetaApuntes } from './ApuntesTarjeta.jsx';
 import { TarjetaTravesia } from './TravesiaTarjeta.jsx';
 import { PorQueEntrenasAsi, GuiaSugerida } from '../Guias.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -116,6 +117,8 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
       )}
       <Entrenamientos abrirSesion={abrirSesion} />
       {/* «La travesía»: el juego de los descansos, con sus marcas y un minuto de práctica */}
+      {/* «Apuntes»: lo que lleva vistos y un repaso (los que no sabía y los de esta semana) */}
+      <TarjetaApuntes repaso />
       <TarjetaTravesia />
     </div>
   );

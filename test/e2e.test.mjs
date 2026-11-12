@@ -5994,6 +5994,10 @@ try {
   console.log('\nLa travesía, el juego del descanso');
   const { probarTravesia } = await import('./e2e-travesia.mjs');
   await probarTravesia({ navegador, check });
+  // «Apuntes», formación en los descansos: el apunte del día, «Aprender» en el descanso, las tarjetas con vuelta y el repaso
+  console.log('\nApuntes, formación en los descansos');
+  const { probarApuntes } = await import('./e2e-apuntes.mjs');
+  await probarApuntes({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));
