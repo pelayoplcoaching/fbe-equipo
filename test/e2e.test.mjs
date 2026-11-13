@@ -322,8 +322,8 @@ try {
   await bienvenida.waitFor({ state: 'detached' });
   await p.locator('.titular h2').waitFor();
   check((await p.locator('.titular h2').textContent()) === 'Torso A', 'entra directamente a su primera sesión');
-  check((await p.locator('.primeros-pasos .separa').textContent()).includes('1 de 7') && await p.locator('.primeros-pasos li', { hasText: 'Rellena tu cuestionario inicial' }).count() === 1,
-    'con sus primeros pasos (1 de 7 hecho; entre ellos, su cuestionario inicial)');
+  check((await p.locator('.primeros-pasos .separa').textContent()).includes('1 de 10') && await p.locator('.primeros-pasos li', { hasText: 'Rellena tu cuestionario inicial' }).count() === 1,
+    'con sus primeros pasos (1 de 10 hecho, con su porqué, cómo le hablamos y su meta; entre ellos, su cuestionario inicial)');
   await revisar('hoy');
   // v0.49: la píldora de la barra de abajo está bajo el icono de la pestaña elegida y se desliza a la nueva con una
   // transición (View Transitions API); con «reducir movimiento», sin transición
@@ -6078,6 +6078,10 @@ try {
   console.log('\nQue le acompañe más allá de la app');
   const { probarPersonalCompania } = await import('./e2e-personal-t8.mjs');
   await probarPersonalCompania({ navegador, check });
+  // Personalización 3, tanda 9: «Para hablarle» con lo que le hace volver y su alerta, los hitos para regalar y la bienvenida
+  console.log('\nQue el coach le conozca sin esfuerzo');
+  const { probarPersonalCoachSabe } = await import('./e2e-personal-t9.mjs');
+  await probarPersonalCoachSabe({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

@@ -4,6 +4,8 @@ import { TarjetaTravesia } from './TravesiaTarjeta.jsx';
 import { CuentaMeta } from './Trato.jsx';
 import { TarjetaVida, BotonSemanaDificil } from './Vida.jsx';
 import { RetoDelMes } from './Compania.jsx';
+import { useTrato } from '../trato.js';
+import { MensajeCoach } from './Personal.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Fragment } from 'preact';
 import { VideoSemanaHoy, DirectoHoy } from '../Videos.jsx';
@@ -86,6 +88,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
   const esApp = typeof window !== 'undefined' && (window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone);
   const siguienteId = p?.actual ? (p.sesiones[p.actual.id] || []).find((x) => !x.completada)?.id : null;
   const ios = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const { personal: persHoy } = useTrato();
   const pasos = hechos.datos ? [
     { id: 'cuenta', texto: 'Activa tu cuenta', hecho: true },
     { id: 'cuestionario', texto: 'Rellena tu cuestionario inicial', hecho: hechos.datos.cuestionario, etiqueta: 'Empezar', accion: () => setVerCuestionario(true) },
@@ -96,6 +99,10 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       { id: 'peso', texto: 'Apunta tu peso', hecho: hechos.datos.peso, etiqueta: 'Apuntar', accion: () => { abrirPlegableHoy('peso'); const el = document.querySelector('.peso-hoy button'); el?.scrollIntoView({ block: 'center' }); el?.click(); } },
       { id: 'checkin', texto: 'Envía tu primer check-in', hecho: hechos.datos.checkin, etiqueta: 'Ir', accion: () => irA('checkin') },
     ] : []),
+    // (personalización 3, tanda 9) su primer mes, guiado: lo suyo (porqué, cómo le hablamos, su meta)
+    { id: 'porque', texto: 'Escribe tu porqué', hecho: !!persHoy?.porque, etiqueta: 'Escribir', accion: () => irA('perfil') },
+    { id: 'trato', texto: 'Elige cómo te hablamos', hecho: !!(persHoy?.genero || persHoy?.tono), etiqueta: 'Elegir', accion: () => irA('perfil') },
+    { id: 'meta', texto: 'Ponte una meta (si quieres)', hecho: !!persHoy?.meta_nombre, etiqueta: 'Ponerla', accion: () => irA('perfil') },
     { id: 'faq', texto: 'Echa un vistazo a las preguntas frecuentes', hecho: faqVista, etiqueta: 'Ver', accion: () => { setFaqVista(true); irA('perfil'); } },
   ] : null;
   // Solo para quien acaba de llegar (su primer mes): a quien ya lleva tiempo no se le enseña
@@ -122,6 +129,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       {atleta.estado === 'baja' && (
         <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>
       )}
+      {verPasos && <MensajeCoach momento="bienvenida" clase="bienvenida-coach" />}
       {verPasos ? <PrimerosPasos pasos={pasos} alOcultar={() => setPasosOcultos(true)} /> : !propio && <AvisoInstalar />}
       {!propio && (verPasos || (!p && !cargando) || !entrena) && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
       {!entrena ? (

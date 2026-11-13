@@ -848,6 +848,12 @@ export function crearApi(backend) {
       } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app'); throw e; }
     },
     // (personalización 2, migración 065) cómo le hablamos (género y tono) y su meta con fecha: solo esas claves
+    // (personalización 3, tanda 9) las fechas en que le escribió el coach (los últimos 150 días), para «lo que le hace volver»
+    async fechasMensajesCoach(atletaId) {
+      const desde = sumarDias(hoyISO(), -150);
+      const r = await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, gte: { creado_en: `${desde}T00:00:00` }, order: [['creado_en', 'desc']], limit: 300, cols: 'creado_en,eliminado_en' }).catch(() => []);
+      return r.filter((c) => !c.eliminado_en).map((c) => String(c.creado_en).slice(0, 10));
+    },
     // (personalización 3, tanda 8; migración 068) la voz del coach en sus mensajes y el compañero afín
     async subirVozCoach(archivo, tipo = 'audio/webm') {
       const ext = /wav/.test(tipo) ? 'wav' : /ogg/.test(tipo) ? 'ogg' : /mp4|m4a/.test(tipo) ? 'm4a' : /mpeg|mp3/.test(tipo) ? 'mp3' : /aac/.test(tipo) ? 'aac' : 'webm';

@@ -961,6 +961,7 @@ export function resumenAtleta(d, hoy = hoyISO()) {
   return {
     atleta_id: atleta.id,
     nombre: atleta.nombre,
+    fecha_alta: atleta.fecha_alta ?? null,   // (personalización 3) para sus aniversarios en el panel
     foto: atleta.foto || null,
     estado: atleta.estado,
     servicio: !entrena ? 'nutricion' : atleta.nutricion === false ? 'entrenamiento' : 'completo',
