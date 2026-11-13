@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.150': {
+    atleta: [
+      'La travesía, más bonita: cielo con Vía Láctea y estrellas fugaces, ríos que reflejan la luna y un lobo que aúlla al acabar.',
+    ],
+    coach: [
+      'Solo pintura del juego: ni reglas ni dificultad cambian. Sin migración nueva (siguen la 060 y la 061).',
+    ],
+  },
   '0.149': {
     atleta: [
       'La travesía crece: un mapa de verdad, postales, lobos y constelaciones, y la clasificación de la semana con tu equipo.',
