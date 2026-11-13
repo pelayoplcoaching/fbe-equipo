@@ -1183,3 +1183,59 @@ export function pintarLobo(c, { w, h, skin = null, fase = 0.9 }) {
   lobo(c, { saltos: 0, tropiezo: 0, vy: 0, agachado: 0 }, fase, skin);
   c.restore();
 }
+
+// (remate, tanda 7) «La vuelta a casa»: al acabar la sesión, el lobo vuelve a su guarida bajo el cielo de esa hora.
+// k: de 0 (sale de la izquierda) a 1 (ya ha llegado y se sienta). Escena fija salvo el lobo; sin texto (lo pone la tarjeta)
+export function pintarVuelta(c, { w, h, k = 1, t = 0, fase = 'noche', paisaje = 0, skin = null }) {
+  const cielo = CIELOS[fase] || CIELOS.noche, deDia = fase === 'dia';
+  const g = c.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, cielo[0]); g.addColorStop(0.6, cielo[1]); g.addColorStop(1, cielo[2]);
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+  // estrellas y luna (de noche), o un sol bajo (al alba y al ocaso)
+  if (!deDia) {
+    for (let i = 0; i < 26; i++) {
+      const az = (k2) => { const v = Math.sin(i * 12.9898 + k2 * 78.233) * 43758.5453; return v - Math.floor(v); };
+      const sx = az(1) * w, sy = az(2) * h * 0.55;
+      c.globalAlpha = fase === 'noche' ? 0.35 + 0.5 * az(3) : 0.25; c.fillStyle = TIZA;
+      c.fillRect(Math.round(sx), Math.round(sy), 1.5, 1.5);
+    }
+    c.globalAlpha = 1;
+  }
+  const lx = w * 0.78, ly = h * 0.22, lr = Math.max(8, h * 0.08);
+  const halo = c.createRadialGradient(lx, ly, lr * 0.6, lx, ly, lr * 3);
+  halo.addColorStop(0, deDia ? 'rgba(255,255,255,0.35)' : 'rgba(241,240,246,0.28)'); halo.addColorStop(1, 'rgba(241,240,246,0)');
+  c.fillStyle = halo; c.fillRect(lx - lr * 3, ly - lr * 3, lr * 6, lr * 6);
+  c.fillStyle = fase === 'noche' ? TIZA : fase === 'dia' ? '#FFF6D6' : '#FFD7A8';
+  c.beginPath(); c.arc(lx, ly, lr, 0, Math.PI * 2); c.fill();
+  // dos cordilleras lejanas y la loma de la guarida
+  const suelo = h * 0.8;
+  const capa = (alto, color, fase0) => {
+    c.fillStyle = color; c.beginPath(); c.moveTo(0, h);
+    for (let x = 0; x <= w; x += 6) c.lineTo(x, suelo - alto * (0.55 + 0.25 * Math.sin(x / w * 5 + fase0) + 0.2 * Math.sin(x / w * 13 + fase0 * 2)));
+    c.lineTo(w, h); c.closePath(); c.fill();
+  };
+  capa(h * 0.32, deDia ? 'rgba(80,96,190,0.55)' : 'rgba(84,56,216,0.35)', 1.3);
+  capa(h * 0.2, deDia ? 'rgba(52,64,150,0.75)' : 'rgba(30,21,72,0.85)', 4.1);
+  const loma = DELANTE[paisaje] || DELANTE[0];
+  const gx = w * 0.7, gr = h * 0.17;   // la guarida: un hueco en la loma, con luz cálida dentro
+  c.fillStyle = loma; c.beginPath(); c.moveTo(0, suelo);
+  c.lineTo(w * 0.45, suelo); c.quadraticCurveTo(w * 0.62, suelo - h * 0.34, w * 0.86, suelo - h * 0.3); c.quadraticCurveTo(w * 0.97, suelo - h * 0.26, w, suelo - h * 0.18);
+  c.lineTo(w, h); c.lineTo(0, h); c.closePath(); c.fill();
+  const luz = c.createRadialGradient(gx, suelo, gr * 0.2, gx, suelo, gr * 1.9);
+  luz.addColorStop(0, 'rgba(242,194,48,0.45)'); luz.addColorStop(1, 'rgba(242,194,48,0)');
+  c.fillStyle = luz; c.fillRect(gx - gr * 2, suelo - gr * 2, gr * 4, gr * 2.4);
+  c.fillStyle = '#2A1606'; c.beginPath(); c.ellipse(gx, suelo, gr * 0.62, gr * 0.78, 0, Math.PI, 0); c.fill();
+  const dentro = c.createRadialGradient(gx, suelo, 1, gx, suelo, gr * 0.7);
+  dentro.addColorStop(0, 'rgba(255,214,120,0.9)'); dentro.addColorStop(1, 'rgba(242,150,48,0.15)');
+  c.fillStyle = dentro; c.beginPath(); c.ellipse(gx, suelo, gr * 0.5, gr * 0.64, 0, Math.PI, 0); c.fill();
+  // el suelo y el sendero hasta la guarida
+  c.fillStyle = loma; c.fillRect(0, suelo, w, h - suelo);
+  c.strokeStyle = 'rgba(241,240,246,0.16)'; c.lineWidth = 2; c.setLineDash([5, 7]);
+  c.beginPath(); c.moveTo(0, suelo + 3); c.lineTo(gx - gr * 0.6, suelo + 3); c.stroke(); c.setLineDash([]);
+  // el lobo: camina hasta la puerta y se para (las patas quietas cuando llega)
+  const u = h * 0.14, llega = Math.min(1, Math.max(0, k));
+  const px = -u * 1.5 + (gx - gr * 0.75 - u * 1.1 + u * 1.5) * (1 - (1 - llega) * (1 - llega));
+  c.save(); c.translate(px, suelo); c.scale(u, -u);
+  lobo(c, { saltos: 0, tropiezo: 0, vy: 0, agachado: 0 }, llega >= 1 ? 0.9 : t * 9, skin);
+  c.restore();
+}

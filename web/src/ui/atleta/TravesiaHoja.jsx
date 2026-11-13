@@ -4,7 +4,9 @@ import { Imagen } from '../Imagen.jsx';
 import { leerTravesia, manadaDe, leerDuelo, guardarDuelo, leerMeta, guardarMeta, sincronizarMeta, leerDia, aulladosHoy, apuntarAullado } from '../travesia.js';
 import { Travesia } from './TravesiaTarjeta.jsx';
 import { ETAPA_DIA } from '../../logica/travesia.js';
-import { nombreRango, progresoMisiones, adornosDe, adornosPuestos, LOGROS, elegirRuta } from '../../logica/travesia-meta.js';
+import { nombreRango, progresoMisiones, adornosDe, adornosPuestos, LOGROS, elegirRuta, metrosPorMes } from '../../logica/travesia-meta.js';
+import { diarioDe } from '../../logica/travesia-diario.js';
+import { NOMBRES_PAISAJE } from '../../logica/travesia-efectos.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { textoDistancia, rachaSemanas } from '../../logica/travesia.js';
 import { posicionEnRuta, rutaPorElegir, RUTAS_NUEVAS, textoRuta, postales, lobosDe, loboElegido, constelaciones, manadaPropia, miPuesto, duelo, equipoDelMes, textoParaCompartir } from '../../logica/travesia-ruta.js';
@@ -156,6 +158,72 @@ function ComoJuegas() {
   );
 }
 
+// (remate, tanda 7) «Tu lobo en números»: lo que ha hecho desde que juega (saltos, roces, mejor combo, estrellas por
+// paisaje), los kilómetros de cada mes y las diez últimas semanas en barras
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const fmt = (n) => Math.round(n).toLocaleString('es-ES');
+function Numeros({ t, meta }) {
+  const n = meta.numeros;
+  const semanas = Object.entries(t.semanas || {}).sort(([a], [b]) => (a < b ? -1 : 1)).slice(-10);
+  const tope = Math.max(1, ...semanas.map(([, m]) => m));
+  const meses = metrosPorMes(t.semanas).slice(-4);
+  const datos = [
+    ['Etapas', fmt(n.etapas)], ['Saltos', fmt(n.saltos)], ['Por los pelos', fmt(n.roces)], ['Mejor combo', `×${n.combo}`],
+    ['Estrellas doradas', fmt(meta.doradas)], ['Ventiscas esquivadas', fmt(n.escapadas)],
+  ];
+  if (!n.etapas && !semanas.length) return null;
+  return (
+    <section class="tv-numeros" aria-labelledby="tv-numeros-t">
+      <h3 id="tv-numeros-t">Tu lobo en números</h3>
+      <dl class="tv-numeros-lista">
+        {datos.map(([k, v]) => <div key={k}><dt>{k}</dt><dd class="num">{v}</dd></div>)}
+      </dl>
+      {n.porPaisaje.some((v) => v > 0) && (
+        <>
+          <h4 class="tv-numeros-sub">Estrellas por paisaje</h4>
+          <ul class="tv-numeros-paisajes">
+            {n.porPaisaje.map((v, i) => <li key={i}><span>{NOMBRES_PAISAJE[i]}</span><strong class="num">{fmt(v)}</strong></li>)}
+          </ul>
+        </>
+      )}
+      {meses.length > 0 && (
+        <>
+          <h4 class="tv-numeros-sub">Por meses</h4>
+          <ul class="tv-numeros-paisajes">
+            {meses.map(({ mes, metros }) => <li key={mes}><span>{MESES[Number(mes.slice(5)) - 1]} {mes.slice(0, 4)}</span><strong class="num">{textoDistancia(metros)}</strong></li>)}
+          </ul>
+        </>
+      )}
+      {semanas.length > 1 && (
+        <>
+          <h4 class="tv-numeros-sub">Las últimas semanas</h4>
+          <div class="tv-semanas" role="img" aria-label={`Metros de las últimas ${semanas.length} semanas: ${semanas.map(([, m]) => textoDistancia(m)).join(', ')}`}>
+            {semanas.map(([lunes, m]) => <span key={lunes} class="tv-semana" style={{ '--h': `${Math.max(4, (m / tope) * 100)}%` }} aria-hidden="true" />)}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+// (remate, tanda 7) «El diario del lobo»: una línea por cada sitio al que llega (la última, arriba)
+function Diario({ total, rutas }) {
+  const { abiertas, siguiente } = diarioDe(total, rutas);
+  const [todas, setTodas] = useState(false);
+  if (!abiertas.length) return null;
+  const vistas = todas ? abiertas : abiertas.slice(0, 3);
+  return (
+    <section class="tv-diario" aria-labelledby="tv-diario-t">
+      <h3 id="tv-diario-t">El diario del lobo <span class="tv-cuenta">{abiertas.length}</span></h3>
+      <ol class="tv-diario-lista">
+        {vistas.map((d) => <li key={d.id}><strong>{d.lugar}</strong><p>{d.texto}</p></li>)}
+      </ol>
+      {siguiente && <p class="mini terciario">La siguiente página, al llegar a {siguiente.lugar}.</p>}
+      {abiertas.length > 3 && <button type="button" class="btn-texto" onClick={() => setTodas(!todas)}>{todas ? 'Ver menos' : `Ver las ${abiertas.length}`}</button>}
+    </section>
+  );
+}
+
 export function HojaTravesia({ alCerrar }) {
   const { atleta, api, aviso } = useApp();
   const hoy = hoyISO(), lunes = lunesDe(hoy);
@@ -222,7 +290,11 @@ export function HojaTravesia({ alCerrar }) {
           </section>
         )}
 
+        <Diario total={t.total} rutas={meta.rutas} />
+
         <RangoYMisiones meta={meta} />
+
+        <Numeros t={t} meta={meta} />
 
         <EtapaDelDia atletaId={atleta.id} hoy={hoy} />
 

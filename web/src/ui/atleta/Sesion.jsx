@@ -1,6 +1,8 @@
 import { guiasACuento } from '../../logica/apuntes.js';
 import { leerTravesia } from '../travesia.js';
 import { textoDistancia } from '../../logica/travesia.js';
+// (remate, tanda 7) «La vuelta a casa»: se carga aparte (trae el pintor del juego)
+const VueltaACasa = perezoso(() => import('./TravesiaVuelta.jsx'), 'VueltaACasa', { mientras: null });
 import { Fragment } from 'preact';
 import { GuiaSugerida } from '../Guias.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -1602,9 +1604,9 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
       )}
       {/* «La travesía»: lo que ha corrido su lobo en los descansos de esta sesión (si ha jugado) */}
       {travesia?.metros > 0 && (
-        <p class="resumen-compara resumen-travesia" style={{ '--i': 5 }}>
-          <Icono n="luna" /><span>En los descansos, tu lobo ha recorrido <strong class="num">{textoDistancia(travesia.metros)}</strong>{travesia.estrellas > 0 ? ` y ha cogido ${travesia.estrellas} ${travesia.estrellas === 1 ? 'estrella' : 'estrellas'}` : ''}.</span>
-        </p>
+        <div class="resumen-travesia" style={{ '--i': 5 }}>
+          <VueltaACasa atletaId={atleta.id} metros={travesia.metros} estrellas={travesia.estrellas || 0} />
+        </div>
       )}
       {nRecords > 0 && (
         <section class="seccion resumen-records" style={{ '--i': 6 }}>

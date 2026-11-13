@@ -8,6 +8,7 @@ import { crearSonido } from './travesia-sonido.js';
 import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
+import { compartirArchivo, conFranja } from './travesia-compartir.js';
 import { tono, prepararAudio } from './sesion-comun.jsx';
 import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo, leerMeta, apuntarMeta, sincronizarMeta, empezarDia, cerrarDia, aullidosNuevos } from '../travesia.js';
 import { adornosPuestos } from '../../logica/travesia-meta.js';
@@ -61,21 +62,7 @@ const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1
 // (top, tanda 3) El modo foto: la escena del final, con una franja abajo (los metros y el nombre del juego; ningún nombre
 // de persona), como imagen para compartir o guardar
 async function fotoDeEtapa(lienzo, metros) {
-  const w = lienzo.width, h = lienzo.height, k = w / (lienzo.getBoundingClientRect().width || w), banda = Math.round(64 * k);
-  const c = document.createElement('canvas'); c.width = w; c.height = h + banda;
-  const x = c.getContext('2d');
-  x.drawImage(lienzo, 0, 0);
-  x.fillStyle = '#0B0726'; x.fillRect(0, h, w, banda);
-  x.fillStyle = '#F1F0F6'; x.textBaseline = 'middle';
-  x.font = `800 ${Math.round(22 * k)}px system-ui, sans-serif`; x.fillText(`La travesía · ${textoDistancia(metros)}`, Math.round(18 * k), h + banda / 2);
-  x.textAlign = 'right'; x.fillStyle = '#A08CFF'; x.font = `700 ${Math.round(15 * k)}px system-ui, sans-serif`; x.fillText('FBE Equipo', w - Math.round(18 * k), h + banda / 2);
-  const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
-  if (!blob) throw new Error('sin imagen');
-  const archivo = new File([blob], 'la-travesia.png', { type: 'image/png' });
-  if (navigator.canShare?.({ files: [archivo] })) { await navigator.share({ files: [archivo] }); return 'compartida'; }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'la-travesia.png'; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  return 'guardada';
+  return compartirArchivo(await conFranja(lienzo, `La travesía · ${textoDistancia(metros)}`), 'la-travesia.png');
 }
 // (remate, tanda 5) la vibración de cada cosa del juego (ui/hapticos.js)
 const VIBRA = { salto: 'tv-salto', doble: 'tv-doble', roce: 'tv-roce', estrella: 'tv-estrella', combo: 'tv-combo', tropiezo: 'tv-tropiezo' };

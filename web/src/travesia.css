@@ -251,3 +251,24 @@
 .tv-ruta-op span { color: var(--tv-tiza-2); }
 .tv-ruta-op[aria-pressed="true"] { border-color: var(--tv-oro); }
 .tv-ruta-op:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; }
+
+/* (remate, tanda 7) «La vuelta a casa» en el resumen de la sesión */
+.tv-vuelta { margin: 0; display: grid; gap: 8px; }
+.tv-vuelta-lienzo { display: block; width: 100%; aspect-ratio: 100 / 42; border-radius: 16px; background: var(--tv-noche, #0B0726); }
+.tv-vuelta-pie { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .9375rem; }
+
+/* (remate, tanda 7) «Tu lobo en números» y «El diario del lobo» */
+.tv-numeros-lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.tv-numeros-lista > div { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--morado) 9%, transparent); }
+.tv-numeros-lista dt { font-size: .8125rem; color: var(--tinta-2); }
+.tv-numeros-lista dd { margin: 2px 0 0; font-size: 1.25rem; font-weight: 800; }
+.tv-numeros-sub { margin: 14px 0 6px; font-size: .875rem; }
+.tv-numeros-paisajes { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: .875rem; }
+.tv-numeros-paisajes li { display: flex; justify-content: space-between; gap: 12px; }
+.tv-semanas { display: flex; align-items: flex-end; gap: 6px; height: 72px; }
+.tv-semana { flex: 1; height: var(--h); border-radius: 6px 6px 2px 2px; background: var(--morado); opacity: .85; }
+.tv-semana:last-child { background: var(--tv-oro); opacity: 1; }
+.tv-diario-lista { display: grid; gap: 10px; margin: 0 0 8px; padding: 0; list-style: none; }
+.tv-diario-lista li { padding: 10px 12px; border-left: 3px solid var(--tv-oro); border-radius: 0 12px 12px 0; background: color-mix(in srgb, var(--morado) 7%, transparent); }
+.tv-diario-lista strong { font-size: .875rem; }
+.tv-diario-lista p { margin: 2px 0 0; font-size: .9375rem; line-height: 1.4; }

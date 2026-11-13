@@ -107,7 +107,8 @@ export const LOGROS = [
 // ---------- Lo que se guarda ----------
 // { rango, activas: [{ id, valor }], hechas (misiones cumplidas en total), logros: { id: 'AAAA-MM-DD' }, potenciadores: [tipos ya cogidos alguna vez] }
 // (remate, tanda 6) rutas: las rutas nuevas elegidas, por orden; doradas: las estrellas doradas cogidas (cuántas)
-export const META_VACIA = () => ({ rango: 0, activas: misionesDeRango(0), hechas: 0, logros: {}, potenciadores: [], rutas: [], doradas: 0 });
+// (remate, tanda 7) numeros: lo que se cuenta para «Tu lobo en números» (saltos, roces, mejor combo, etapas, escapadas)
+export const META_VACIA = () => ({ rango: 0, activas: misionesDeRango(0), hechas: 0, logros: {}, potenciadores: [], rutas: [], doradas: 0, numeros: { saltos: 0, roces: 0, combo: 1, etapas: 0, escapadas: 0, porPaisaje: [0, 0, 0, 0] } });
 export function limpiarMeta(m) {
   const v = META_VACIA();
   if (!m || typeof m !== 'object') return v;
@@ -120,6 +121,9 @@ export function limpiarMeta(m) {
   if (Array.isArray(m.potenciadores)) v.potenciadores = [...new Set(m.potenciadores.filter((p) => ['iman', 'luna', 'aullido'].includes(p)))];
   if (Array.isArray(m.rutas)) v.rutas = m.rutas.filter((x) => ['picos', 'pirineos', 'camino'].includes(x)).slice(0, 50);
   v.doradas = Math.min(1e5, Math.max(0, Math.floor(Number(m.doradas) || 0)));
+  const n = m.numeros && typeof m.numeros === 'object' ? m.numeros : {};
+  const ent = (x, max) => Math.min(max, Math.max(0, Math.floor(Number(x) || 0)));
+  v.numeros = { saltos: ent(n.saltos, 1e8), roces: ent(n.roces, 1e7), combo: Math.max(1, ent(n.combo, 4)), etapas: ent(n.etapas, 1e7), escapadas: ent(n.escapadas, 1e6), porPaisaje: [0, 1, 2, 3].map((i) => ent(Array.isArray(n.porPaisaje) ? n.porPaisaje[i] : 0, 1e8)) };
   return v;
 }
 
@@ -143,6 +147,9 @@ export function sumarMeta(meta, r, total, { fase = null, paisaje = null, dia = n
   }
   m.potenciadores = [...new Set([...m.potenciadores, ...(r.potenciadores || [])])];
   m.doradas += Math.max(0, Math.round(Number(r.doradas) || 0));
+  // (remate, tanda 7) los números de «Tu lobo en números»
+  const nu = m.numeros;
+  m.numeros = { saltos: nu.saltos + Math.max(0, r.saltos | 0), roces: nu.roces + Math.max(0, r.roces | 0), combo: Math.max(nu.combo, r.combo | 0, 1), etapas: nu.etapas + 1, escapadas: nu.escapadas + Math.max(0, r.escapadas | 0), porPaisaje: nu.porPaisaje.map((v, i) => v + (i === paisaje ? Math.max(0, r.estrellas | 0) : 0)) };
   const ctx = { fase, paisaje, potenciadores: m.potenciadores, doradas: m.doradas, dorada, fecha };
   const logros = [];
   const hoy = /^\d{4}-\d{2}-\d{2}$/.test(dia || '') ? dia : new Date().toISOString().slice(0, 10);
@@ -168,4 +175,17 @@ export function elegirRuta(meta, n, id) {
   while (r.length < k) r.push(['picos', 'pirineos', 'camino'][r.length % 3]);
   m.rutas = [...r, id];
   return m;
+}
+
+// (remate, tanda 7) Los kilómetros de cada mes (de las semanas guardadas: cada semana cuenta en el mes de su jueves),
+// de más antiguo a más nuevo: [{ mes: 'AAAA-MM', metros }]
+export function metrosPorMes(semanas) {
+  const porMes = new Map();
+  for (const [lunes, m] of Object.entries(semanas || {})) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(lunes) || !(m > 0)) continue;
+    const j = new Date(`${lunes}T12:00:00Z`); j.setUTCDate(j.getUTCDate() + 3);
+    const mes = j.toISOString().slice(0, 7);
+    porMes.set(mes, (porMes.get(mes) || 0) + m);
+  }
+  return [...porMes.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([mes, metros]) => ({ mes, metros }));
 }

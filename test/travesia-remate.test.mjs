@@ -4,6 +4,7 @@ import { PATRONES } from '../web/src/ui/hapticos.js';
 import { nuevaEtapa, avanzar, saltar, pulsar, resultado, VENTISCA, SECRETO, MOMENTO_CADA } from '../web/src/logica/travesia.js';
 import * as R from '../web/src/logica/travesia-ruta.js';
 import * as M from '../web/src/logica/travesia-meta.js';
+import * as D from '../web/src/logica/travesia-diario.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -71,6 +72,24 @@ console.log('\nTanda 6 · fechas especiales, rutas nuevas y logros');
   check(R.RUTAS_NUEVAS.every((r) => r.hitos[0][1] === 0 && r.hitos.every(([, k], i) => i === 0 || k > r.hitos[i - 1][1])) && R.postales(tras + 30000).some((p) => p.lugar === 'Covadonga'), 'las rutas nuevas, con sus hitos en orden y sus postales');
   const x = M.sumarMeta(M.META_VACIA(), { metros: 100, estrellas: 12, segundos: 40, tropiezos: 1, calma: false, combo: 1, roces: 0, arriba: 0, potenciadores: [], rios: 0, doradas: 1, escapadas: 1 }, { total: 100, estrellas: 12 }, { dorada: true, fecha: 'navidad' });
   check(['dorada1', 'ventisca', 'dorado', 'fiestas'].every((k) => x.meta.logros[k]) && x.meta.doradas === 1, 'los logros nuevos: el primer secreto, la ventisca, el día dorado y las fiestas');
+}
+
+console.log('\nTanda 7 · los números y el diario');
+{
+  const e = nuevaEtapa(3, {}); for (let i = 0; i < 60; i++) avanzar(e, 1 / 60); saltar(e);
+  check(resultado(e).saltos === 1, 'cada salto cuenta para «Tu lobo en números»');
+  const r1 = { metros: 300, estrellas: 7, segundos: 40, tropiezos: 0, calma: false, combo: 3, roces: 2, saltos: 15, arriba: 0, potenciadores: [], rios: 0, escapadas: 1 };
+  const a = M.sumarMeta(M.META_VACIA(), r1, 300, { paisaje: 2 }).meta;
+  const b = M.sumarMeta(a, { ...r1, combo: 2, estrellas: 3 }, 600, { paisaje: 0 }).meta;
+  check(b.numeros.saltos === 30 && b.numeros.roces === 4 && b.numeros.combo === 3 && b.numeros.etapas === 2 && b.numeros.escapadas === 2 && b.numeros.porPaisaje.join() === '3,0,7,0', 'se suman saltos, roces, etapas y estrellas por paisaje; el combo se queda con el mejor');
+  check(M.limpiarMeta({ numeros: { saltos: -4, combo: 99, porPaisaje: 'x' } }).numeros.saltos === 0 && M.limpiarMeta({ numeros: { combo: 99 } }).numeros.combo === 4 && M.limpiarMeta({}).numeros.porPaisaje.length === 4, 'los números se limpian (nada negativo ni imposible)');
+  const meses = M.metrosPorMes({ '2026-09-28': 500, '2026-10-05': 300, '2026-10-26': 200, '2026-11-02': 100, mal: 9 });
+  check(meses.map((x) => `${x.mes}:${x.metros}`).join() === '2026-10:1000,2026-11:100', 'los kilómetros de cada mes (cada semana, en el mes de su jueves)');
+  check(D.diarioCompleto(), 'el diario tiene una línea por cada sitio de cada ruta');
+  const d0 = D.diarioDe(0), d1 = D.diarioDe(40500);
+  check(d0.abiertas.length === 1 && d0.abiertas[0].lugar === 'Mieres' && d1.abiertas[0].lugar === 'Puerto de Pajares' && d1.siguiente?.lugar === 'La Robla', 'las páginas se abren al llegar a cada sitio (la última, arriba) y se anuncia la siguiente');
+  const lejos = D.diarioDe(2.2e6, ['camino']);
+  check(lejos.abiertas.length > 30 && new Set(lejos.abiertas.map((x) => x.id)).size === lejos.abiertas.length && lejos.abiertas.some((x) => x.ruta === R.RUTAS_NUEVAS.find((r) => r.id === 'camino').nombre), 'en las rutas elegidas sigue el diario, sin páginas repetidas');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

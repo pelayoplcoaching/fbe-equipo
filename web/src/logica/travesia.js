@@ -274,8 +274,8 @@ export function saltar(e) {
   if (e.tropiezo > 0) { e.guardado = e.t; return false; }
   e.agachado = 0;
   const pisa = e.saltos === 0 && (e.y <= sueloBajo(e) || e.t - e.tSuelo <= COYOTE);
-  if (pisa) { e.vy = V_SALTO; e.saltos = 1; e.y = Math.max(e.y, sueloBajo(e)) + 0.0001; e.tSalto = e.t; e.guardado = null; e.usoDoble = false; e.sucesos.push('salto'); return true; }
-  if ((e.saltos === 1 || (e.saltos === 0 && e.y > sueloBajo(e) + 0.05)) && !e.unToque) { e.vy = V_DOBLE; e.saltos = 2; e.guardado = null; e.usoDoble = true; e.sucesos.push('doble'); return true; }
+  if (pisa) { e.vy = V_SALTO; e.saltos = 1; e.y = Math.max(e.y, sueloBajo(e)) + 0.0001; e.tSalto = e.t; e.guardado = null; e.usoDoble = false; e.nSaltos = (e.nSaltos || 0) + 1; e.sucesos.push('salto'); return true; }
+  if ((e.saltos === 1 || (e.saltos === 0 && e.y > sueloBajo(e) + 0.05)) && !e.unToque) { e.vy = V_DOBLE; e.saltos = 2; e.guardado = null; e.usoDoble = true; e.nSaltos = (e.nSaltos || 0) + 1; e.sucesos.push('doble'); return true; }
   e.guardado = e.t;
   return false;
 }
@@ -455,7 +455,7 @@ export function avanzar(e, dt) {
 export const resultado = (e) => ({ metros: Math.max(0, Math.round(e.x)), estrellas: e.estrellasCogidas, racha: e.mejorRacha, tropiezos: e.tropiezos, rios: e.rios, segundos: Math.round(e.t), calma: e.calma,
   roces: e.roces || 0, combo: e.comboMax || 1,
   // (top, tanda 2) lo de la variedad: metros corridos por arriba, potenciadores cogidos y momentos raros vividos
-  arriba: Math.round(e.arriba || 0), montesUno: e.montesUno || 0, doradas: e.doradas || 0, alcanzado: e.alcanzado || 0, escapadas: e.escapadas || 0, potenciadores: (e.potCogidos || []).slice(), momentos: (e.momentos || []).filter((m) => m.x < e.x).map((m) => m.tipo) });
+  arriba: Math.round(e.arriba || 0), montesUno: e.montesUno || 0, doradas: e.doradas || 0, saltos: e.nSaltos || 0, alcanzado: e.alcanzado || 0, escapadas: e.escapadas || 0, potenciadores: (e.potCogidos || []).slice(), momentos: (e.momentos || []).filter((m) => m.x < e.x).map((m) => m.tipo) });
 
 // «870 m», «2,3 km», «12 km»
 export function textoDistancia(m) {
