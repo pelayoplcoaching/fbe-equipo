@@ -4040,8 +4040,13 @@ export function crearApi(backend) {
     },
     // Los apuntes que ha visto un atleta
     // (tanda 4, coach) lo que sus atletas no sabían: [{ apunte, atleta_id, sabia: false }] (para contar; nunca se enseña quién)
+    // (061) «Lo que más se falla»: [{ apunte, atletas }], solo cuentas (nunca quién) y de dos atletas en adelante
     async apuntesFallados() {
-      return b.select('apuntes_vistos', { eq: { sabia: false }, cols: 'apunte,atleta_id,sabia', limit: 5000 }).catch(() => []);
+      if (api._sin061) return [];
+      try { const r = await b.rpc('apuntes_fallados', { p_limite: 300 }); return Array.isArray(r) ? r : []; } catch (e) {
+        if (/apuntes_fallados|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin061 = true;
+        return [];
+      }
     },
     async apuntesVistos(atletaId) {
       return b.select('apuntes_vistos', { eq: { atleta_id: atletaId }, limit: 3000 }).catch(() => []);

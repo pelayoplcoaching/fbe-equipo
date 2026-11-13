@@ -433,16 +433,15 @@ export function notaExamen(aciertos, total) {
 // filas: lo de apuntes_vistos con sabia = false ([{ apunte, atleta_id }]); apuntes: los que se saben nombrar (guías,
 // glosario, dudas, novedades y las fichas que se tengan). Devuelve los `n` que más atletas no sabían:
 // [{ id, etiqueta, de, titulo, texto, atletas }] (solo cuentas: ningún nombre)
+// (revisión) las filas son ya cuentas, { apunte, atletas } (apuntes_fallados(), 061: nunca quién); de dos atletas en adelante
 export function masFallados(filas = [], apuntes = [], n = 5) {
-  const quien = new Map();
+  const cuantos = new Map();
   for (const f of lista(filas)) {
-    const id = String(f?.apunte || '');
-    if (!id || f.sabia !== false) continue;
-    if (!quien.has(id)) quien.set(id, new Set());
-    quien.get(id).add(f.atleta_id);
+    const id = String(f?.apunte || ''), k = Math.round(Number(f?.atletas));
+    if (id && Number.isFinite(k) && k >= 2) cuantos.set(id, Math.max(cuantos.get(id) || 0, k));
   }
   const porId = new Map(apuntes.filter((a) => a?.id).map((a) => [a.id, a]));
-  return [...quien.entries()].filter(([id]) => porId.has(id)).map(([id, set]) => { const a = porId.get(id); return { id, etiqueta: a.etiqueta, de: a.de || '', titulo: a.titulo || '', texto: a.texto || '', atletas: set.size }; })
+  return [...cuantos.entries()].filter(([id]) => porId.has(id)).map(([id, k]) => { const a = porId.get(id); return { id, etiqueta: a.etiqueta, de: a.de || '', titulo: a.titulo || '', texto: a.texto || '', atletas: k }; })
     .sort((x, y) => y.atletas - x.atletas || x.id.localeCompare(y.id)).slice(0, n);
 }
 // El mensaje con el que el coach manda un apunte a un atleta

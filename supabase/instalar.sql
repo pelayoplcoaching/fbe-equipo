@@ -21116,17 +21116,21 @@ language sql stable security definer set search_path = '' as $$
     from public.travesia_semanas t join fbe_privado.comunidad_dentro d on d.atleta_id = t.atleta_id
     where t.semana = (select l from lunes) and t.metros > 0
   ),
+  -- (revisión) cada semana cuenta en el mes de su jueves (no en dos meses); y lo de quien no sale en el ranking solo suma
+  -- si son al menos tres (con uno o dos, restando lo que se ve se sabría lo suyo)
   mes as (
-    select coalesce(sum(t.metros), 0) as metros, count(distinct t.atleta_id) as miembros
+    select coalesce(sum(t.metros) filter (where not d.sin_ranking), 0) as m_vis, coalesce(sum(t.metros) filter (where d.sin_ranking), 0) as m_oc,
+           count(distinct t.atleta_id) filter (where not d.sin_ranking) as n_vis, count(distinct t.atleta_id) filter (where d.sin_ranking) as n_oc
     from public.travesia_semanas t join fbe_privado.comunidad_dentro d on d.atleta_id = t.atleta_id
-    where t.semana >= (select mes from lunes) - 6 and t.semana < ((select mes from lunes) + interval '1 month')::date
+    where date_trunc('month', t.semana + 3)::date = (select mes from lunes)
   )
   select case when auth.uid() is null or not (public.es_coach() or public.comunidad_soy_miembro()) then null else jsonb_build_object(
     'semana', (select l from lunes),
     'filas', coalesce((select jsonb_agg(jsonb_build_object('nombre', s.nombre, 'metros', s.metros, 'estrellas', s.estrellas, 'mejor', s.mejor, 'yo', s.perfil_id = auth.uid(), 'hoy', s.corre_hoy)
                         order by s.metros desc, s.nombre)
                        from semana s where not s.sin_ranking or s.perfil_id = auth.uid()), '[]'::jsonb),
-    'equipo', jsonb_build_object('mes', (select mes from lunes), 'metros', (select metros from mes), 'miembros', (select miembros from mes))
+    'equipo', jsonb_build_object('mes', (select mes from lunes), 'metros', (select m_vis + case when n_oc >= 3 then m_oc else 0 end from mes),
+                                'miembros', (select n_vis + case when n_oc >= 3 then n_oc else 0 end from mes))
   ) end
 $$;
 
@@ -21168,6 +21172,19 @@ begin
     ultimo = greatest(x.ultimo, excluded.ultimo),
     sabia = coalesce(excluded.sabia, x.sabia);
 end $$;
+
+-- «Lo que más se falla» (para el coach): cuántos atletas no sabían cada apunte, solo la cuenta (nunca quién) y solo si son
+-- al menos dos
+create or replace function public.apuntes_fallados(p_limite integer default 300)
+returns table (apunte text, atletas integer)
+language sql stable security definer set search_path = '' as $$
+  select v.apunte, count(distinct v.atleta_id)::integer
+  from public.apuntes_vistos v
+  where public.es_coach() and v.sabia = false
+  group by v.apunte having count(distinct v.atleta_id) >= 2
+  order by 2 desc, 1
+  limit least(greatest(coalesce(p_limite, 300), 1), 1000)
+$$;
 
 -- ---------------------------------------------------------------------
 -- 4. Permisos (como al final de 003 a 060)

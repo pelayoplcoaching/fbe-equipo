@@ -4692,7 +4692,7 @@ console.log('La política 2026-12.18: el cierre de tus sesiones (v0.119)');
     'la política 2026-12.25 cuenta los descansos: el juego y los apuntes leídos, no de salud, en la descarga y se borran con la ficha');
   // (v0.149) 2026-12.26: la clasificación de La travesía y los apuntes del coach (061)
   check(legal.VERSION_LEGAL === '2026-12.26' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.26' && PV.NOVEDADES_PRIVACIDAD[0][2].length <= 260 && PV.novedadesDesde('2026-12.25', '2026-12.26').length === 1
-    && /clasificación de la semana de La travesía/.test(dsc) && /No salir en el ranking/.test(dsc) && /total del equipo/.test(dsc) && /sin saber quiénes/.test(dsc) && /a él no le llega nada/.test(dsc),
+    && /clasificación de la semana de La travesía/.test(dsc) && /No salir en el ranking/.test(dsc) && /total del equipo/.test(dsc) && /sin nombres/.test(dsc) && /al menos tres sin salir/.test(dsc) && /a él no le llega nada/.test(dsc),
     'la política 2026-12.26 cuenta la clasificación (solo en la comunidad, sin salir con «No salir en el ranking»), el duelo y lo que más se falla, sin nombres');
 }
 

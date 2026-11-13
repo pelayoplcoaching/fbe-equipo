@@ -166,7 +166,7 @@ const CASCADA = {
   sesion_ejercicios: [['series', 'sesion_ejercicio_id']],
 };
 // Al borrar estas filas, los comentarios se quedan sin el enlace (on delete set null)
-const ANULAR = { comentarios: [['comentarios', 'responde_a']], comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id'], ['comunidad_comentarios', 'responde_a'], ['comunidad_posts', 'mejor_comentario'], ['comunidad_preguntas', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id'], ['archivos', 'repite_de'], ['video_revisiones', 'voz_archivo_id'], ['recordatorios_tecnica', 'archivo_id'], ['comentarios', 'video_respuesta_id'], ['archivos', 'angulo_de']], ejercicios: [['objetivos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id']] };
+const ANULAR = { comentarios: [['comentarios', 'responde_a']], comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id'], ['comunidad_comentarios', 'responde_a'], ['comunidad_posts', 'mejor_comentario'], ['comunidad_preguntas', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id'], ['archivos', 'repite_de'], ['video_revisiones', 'voz_archivo_id'], ['recordatorios_tecnica', 'archivo_id'], ['comentarios', 'video_respuesta_id'], ['archivos', 'angulo_de']], ejercicios: [['objetivos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id'], ['novedades', 'ejercicio_id']] };
 
 const cumple = (fila, f = {}) => {
   for (const [k, v] of Object.entries(f.eq || {})) if ((fila[k] ?? null) !== v) return false;
@@ -764,6 +764,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'novedades') {
       if (!String(f.titulo || '').trim() || [...String(f.titulo)].length > 90 || !String(f.texto || '').trim() || [...String(f.texto)].length > 500) throw new Error('new row for relation "novedades" violates check constraint "novedades_validas"');
       if (f.enlace && !ENLACE_NOVEDAD.test(f.enlace)) throw new Error('new row for relation "novedades" violates check constraint "novedades_validas"');
+      // (061) un apunte suelto del coach (tipo 'apunte'), el único que puede llevar ejercicio
+      f.tipo = f.tipo ?? 'novedad';
+      if (!['novedad', 'apunte'].includes(f.tipo) || (f.ejercicio_id && f.tipo !== 'apunte')) throw new Error('new row for relation "novedades" violates check constraint "novedades_tipo_valido"');
       f.publicada_en = f.publicada ? (f.publicada_en || ahora()) : null;
     }
     if (t === 'fichas_ejercicio') {
@@ -872,6 +875,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'recetas') { c.actualizada_en = ahora(); delete c.creada_en; }
     if (t === 'guias') { c.actualizada_en = ahora(); delete c.creada_en; }
     // (060) la fecha de publicación la pone la base (al publicar, si no la tenía; al despublicar, fuera)
+    if (t === 'novedades' && (('tipo' in c && !['novedad', 'apunte'].includes(c.tipo)) || (c.ejercicio_id && 'tipo' in c && c.tipo !== 'apunte'))) throw new Error('new row for relation "novedades" violates check constraint "novedades_tipo_valido"');
     if (t === 'novedades') { delete c.creada_en; delete c.publicada_en; if (c.publicada === false) c.publicada_en = null; else if (c.publicada === true) c.publicada_en = '__al_publicar__'; }
     if (t === 'fichas_ejercicio') c.actualizada_en = ahora();
     if (t === 'comidas_atleta' && !esCoach()) delete c.opcional;
@@ -1996,8 +2000,20 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const filas = tabla('travesia_semanas').filter((t) => t.semana === lunes && t.metros > 0 && de(t) && (!de(t).sin_ranking || de(t).perfil_id === uid))
         .map((t) => ({ nombre: de(t).nombre, metros: t.metros, estrellas: t.estrellas, mejor: t.mejor, yo: de(t).perfil_id === uid, hoy: fechaMadrid(new Date(t.actualizada_en)) === hoy }))
         .sort((x, y) => y.metros - x.metros || x.nombre.localeCompare(y.nombre));
-      const delMes = tabla('travesia_semanas').filter((t) => de(t) && t.semana >= sumar(mes, -6) && t.semana.slice(0, 7) <= hoy.slice(0, 7));
-      return { semana: lunes, filas, equipo: { mes, metros: delMes.reduce((n, t) => n + t.metros, 0), miembros: new Set(delMes.map((t) => t.atleta_id)).size } };
+      // (cada semana, en el mes de su jueves; lo de quien no sale en el ranking, solo si son al menos tres)
+      const delMes = tabla('travesia_semanas').filter((t) => de(t) && sumar(t.semana, 3).slice(0, 7) === hoy.slice(0, 7));
+      const vis = delMes.filter((t) => !de(t).sin_ranking), oc = delMes.filter((t) => de(t).sin_ranking);
+      const nOc = new Set(oc.map((t) => t.atleta_id)).size;
+      const cuenta = nOc >= 3 ? delMes : vis;
+      return { semana: lunes, filas, equipo: { mes, metros: cuenta.reduce((n, t) => n + t.metros, 0), miembros: new Set(cuenta.map((t) => t.atleta_id)).size } };
+    }
+    // (061) «Lo que más se falla»: solo cuentas, de dos atletas en adelante, y solo para el coach
+    if (nombre === 'apuntes_fallados') {
+      if (!esCoach()) return [];
+      const quien = new Map();
+      for (const v of tabla('apuntes_vistos')) if (v.sabia === false) { if (!quien.has(v.apunte)) quien.set(v.apunte, new Set()); quien.get(v.apunte).add(v.atleta_id); }
+      return [...quien.entries()].filter(([, s]) => s.size >= 2).map(([apunte, s]) => ({ apunte, atletas: s.size }))
+        .sort((x, y) => y.atletas - x.atletas || x.apunte.localeCompare(y.apunte)).slice(0, Math.min(1000, Math.max(1, Number(args.p_limite) || 300)));
     }
     if (nombre === 'comunidad_companero_semana') {
       if (!uid || !veComunidad()) return null;
@@ -4026,6 +4042,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // Migración 027: la comunidad del equipo
       if (nombre === 'travesia_manada') return copia(rpcComunidad(nombre, args || {}, uid, perfil) ?? null);   // (061) solo lee
+      if (nombre === 'apuntes_fallados') return copia(rpcComunidad(nombre, args || {}, uid, perfil) ?? []);   // (061) solo cuentas
       if (nombre.startsWith('comunidad_')) {
         const r = rpcComunidad(nombre, args || {}, uid, perfil);
         persistirYa();

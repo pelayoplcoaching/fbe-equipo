@@ -171,7 +171,7 @@ console.log('En la demo');
   await b.auth.salir();
   await b.auth.entrar('carlos@fbe.demo', 'demo');
   const m2 = await api.travesiaManada();
-  check(m2.filas.length === 3 && !m2.filas.some((f) => f.nombre === 'Ana L.') && m2.filas.find((f) => f.yo).nombre === 'Carlos V.' && m2.equipo.miembros === 4, 'pero los demás no le ven (y sus metros siguen sumando en el equipo)');
+  check(m2.filas.length === 3 && !m2.filas.some((f) => f.nombre === 'Ana L.') && m2.filas.find((f) => f.yo).nombre === 'Carlos V.' && m2.equipo.miembros === 3 && m2.equipo.metros === m1.equipo.metros - 1850, 'pero los demás no le ven (y, siendo la única sin salir, lo suyo no suma en el equipo: restando se sabría)');
   await b.auth.salir();
 }
 
@@ -325,7 +325,13 @@ console.log('La migración 061: la manada en la travesía');
   const [{ m }] = await q('select travesia_manada() as m');
   check(m.filas.length === 2 && m.filas[0].nombre === 'Fer M.' && m.filas[0].metros === 3000 && m.filas[1].nombre === 'Ana L.' && m.filas[1].yo === true && m.filas[0].yo === false, 'la clasificación de la semana, con el nombre de la comunidad, de más a menos; quien está fuera de la comunidad no sale');
   check(m.filas[1].hoy === true && m.filas[0].hoy === false, 'dice quién ha corrido hoy');
-  check(!m.filas.some((f) => f.nombre === 'Gus R.') && m.equipo.metros === 5000 && m.equipo.miembros === 3, 'quien no quiere salir en el ranking no sale, pero lo suyo suma en el total del equipo (5 km entre los tres)');
+  check(!m.filas.some((f) => f.nombre === 'Gus R.') && m.equipo.metros === m.filas[0].metros + m.filas[1].metros && m.equipo.miembros === 2, 'quien no quiere salir en el ranking no sale, y siendo uno solo lo suyo no suma en el equipo (restando se sabría)');
+  await su(); await q('update comunidad_miembros set sin_ranking = true where perfil_id in ($1, $2)', [ana, fer]);
+  await como(ana);
+  const [{ m: m3 }] = await q('select travesia_manada() as m');
+  check(m3.filas.length === 1 && m3.filas[0].yo && m3.equipo.metros === 5000 && m3.equipo.miembros === 3, 'con tres o más sin salir, lo suyo sí suma (5 km entre los tres), sin decir de quién');
+  await su(); await q('update comunidad_miembros set sin_ranking = false where perfil_id in ($1, $2)', [ana, fer]);
+  await como(ana);
   check(new Date(`${m.semana}T12:00:00Z`).getUTCDay() === 1 && /^\d{4}-\d\d-01/.test(m.equipo.mes), 'con el lunes de la semana y el mes del equipo');
   await como(gus);
   const [{ m: mg }] = await q('select travesia_manada() as m');
@@ -335,6 +341,13 @@ console.log('La migración 061: la manada en la travesía');
   await como(coach, 'aal2');
   check((await q('select travesia_manada() as m'))[0].m.filas.length === 2, 'el coach ve la clasificación (sin los que no quieren salir)');
   check(await anon('select travesia_manada()'), 'sin sesión, nada');
+  // (revisión) «Lo que más se falla»: solo cuentas, de dos atletas en adelante, y solo el coach
+  await como(coach, 'aal2');
+  const fall = await q('select * from apuntes_fallados()');
+  check(fall.every((x) => Object.keys(x).sort().join() === 'apunte,atletas' && x.atletas >= 2), 'lo que más se falla: el apunte y cuántos atletas (nunca quién), de dos en adelante');
+  await como(ana);
+  check((await q('select * from apuntes_fallados()')).length === 0, 'un atleta no ve nada');
+  check(await anon('select * from apuntes_fallados()'), 'sin sesión, nada');
 }
 
 console.log('La migración 061: los apuntes sueltos del coach y las claves nuevas');

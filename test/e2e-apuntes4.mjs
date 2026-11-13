@@ -184,12 +184,20 @@ export async function probarApuntes4({ navegador, check, base = 'http://localhos
     await hoja.getByRole('button', { name: 'Cerrar los apuntes' }).click();
 
     // --- El coach: lo que más se falla ---
+    // (solo sale de dos atletas en adelante: otro atleta de la demo tampoco lo sabía)
+    await p.waitForTimeout(600);
+    await p.evaluate((ap) => {
+      const db = JSON.parse(localStorage.getItem('fbe-demo-v2'));
+      const otro = db.atletas.find((x) => /Carlos/.test(x.nombre));
+      db.apuntes_vistos.push({ atleta_id: otro.id, apunte: ap, veces: 1, ultimo: new Date().toISOString().slice(0, 10), sabia: false });
+      localStorage.setItem('fbe-demo-v2', JSON.stringify(db));
+    }, `g:${slug}`);
     await cambiarA('Pelayo');
     await aGuias();
     const fallados = p.locator('.fallados-coach');
     await fallados.waitFor({ timeout: 8000 });
     const filaF = fallados.locator('.fallado-fila', { hasText: fallada });
-    check(await filaF.count() === 1 && /Glosario · 1 atleta no lo sabía/.test(await filaF.textContent()) && !/Ana/.test(await fallados.textContent()), `«Lo que más se falla»: «${fallada}», 1 atleta no lo sabía (sin decir quién)`);
+    check(await filaF.count() === 1 && /Glosario · 2 atletas no lo sabían/.test(await filaF.textContent()) && !/Ana|Carlos/.test(await fallados.textContent()), `«Lo que más se falla»: «${fallada}», 2 atletas no lo sabían (sin decir quiénes)`);
     const antes2 = (await tabla('comentarios')).length;
     await filaF.getByRole('button', { name: 'Mandar a…' }).click();
     await p.locator('.mandar-apunte').getByRole('button', { name: /Ana López/ }).click();

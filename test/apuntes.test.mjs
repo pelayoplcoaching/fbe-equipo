@@ -260,10 +260,10 @@ console.log('(tanda 4) Para el coach: lo que más se falla y mandar un apunte');
 {
   const A = await import('../web/src/logica/apuntes.js');
   const apuntes = [{ id: 'm:1', etiqueta: 'Mito', de: 'Nutrición', titulo: '«Cenar engorda»', texto: 'No.' }, { id: 'g:rir', etiqueta: 'Glosario', titulo: 'RIR', texto: 'Recámara.' }, { id: 'i:a:0', etiqueta: 'Idea clave', titulo: 'A', texto: 'a' }];
-  const filas = [{ apunte: 'm:1', atleta_id: 'a', sabia: false }, { apunte: 'm:1', atleta_id: 'b', sabia: false }, { apunte: 'm:1', atleta_id: 'b', sabia: false }, { apunte: 'g:rir', atleta_id: 'a', sabia: false },
-    { apunte: 'i:a:0', atleta_id: 'a', sabia: true }, { apunte: 'e:desconocido:0', atleta_id: 'c', sabia: false }];
+  // (revisión) llegan ya contadas (apuntes_fallados(), 061: nunca quién)
+  const filas = [{ apunte: 'm:1', atletas: 5 }, { apunte: 'g:rir', atletas: 2 }, { apunte: 'i:a:0', atletas: 1 }, { apunte: 'e:desconocido:0', atletas: 9 }, { apunte: 'm:1', atleta_id: 'a', sabia: false }];
   const f = A.masFallados(filas, apuntes);
-  check(f.length === 2 && f[0].id === 'm:1' && f[0].atletas === 2 && f[0].titulo === '«Cenar engorda»' && f[1].id === 'g:rir' && f[1].atletas === 1, 'los que más atletas no sabían, de más a menos (los que sí sabían no cuentan; lo que no se sabe nombrar, fuera)');
+  check(f.length === 2 && f[0].id === 'm:1' && f[0].atletas === 5 && f[0].titulo === '«Cenar engorda»' && f[1].id === 'g:rir' && f[1].atletas === 2, 'los que más atletas no sabían, de más a menos (con uno solo no sale: se sabría quién; lo que no se sabe nombrar, fuera)');
   check(Object.keys(f[0]).sort().join() === 'atletas,de,etiqueta,id,texto,titulo' && A.masFallados([], apuntes).length === 0 && A.masFallados(filas, apuntes, 1).length === 1, 'solo cuentas: ningún nombre de atleta');
   check(A.mensajeDeApunte(apuntes[0]) === 'Un apunte para ti (Nutrición): «Cenar engorda» No.' && A.mensajeDeApunte(apuntes[1]) === 'Un apunte para ti: RIR: Recámara.' && A.mensajeDeApunte(null) === '', 'el mensaje con el que se manda un apunte');
 }
