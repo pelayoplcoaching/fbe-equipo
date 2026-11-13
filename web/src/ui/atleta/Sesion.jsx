@@ -494,7 +494,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       registrada_en: previa?.registrada_en || new Date().toISOString() };
     const local = { ...datos, id: previa?.id || `local-${e.id}-${numero}` };
     setHechas((h) => ({ ...h, [e.id]: { ...h[e.id], [numero]: local } }));
-    if (!previa) { vibrar('serie'); sonarSerie(); }   // (pulido 7: y un tic suave)
+    // (pulido 7: y un tic suave; sonido, tanda 1: que sube de nota con cada serie del ejercicio y resuelve en la última)
+    if (!previa) { vibrar('serie'); sonarSerie({ n: Object.keys({ ...hechas[e.id], [numero]: local }).length, total: Number(e.series) || 0 }); }
     if (!previa) quitarPrepAntigua();
     // v0.49: al completar las series pautadas (las de «Añadir serie» no cuentan), la tarjeta se pliega en una línea
     // un momento después, para ver el check
@@ -508,7 +509,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     const empuje = { ritmo: false, escudo: Number(valores.reps) >= Number(e.reps_min ?? e.reps_max ?? 1) && Number(valores.reps) > 0 };
     if (!previa && previas.datos) {
       const r = recordsDeSesion(enOrden({ ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } }), previas.datos, claveSerie)[`${e.id}-${numero}`];
-      if (r) { empuje.ritmo = true; celebrar(); avisoConCambio(`¡Récord en ${actualDe(e).nombre}!`, 'record'); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
+      if (r) { empuje.ritmo = true; celebrar(r.tipo); avisoConCambio(`¡Récord en ${actualDe(e).nombre}!`, 'record'); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
     }
     if (!previa) {
       // Qué toca ahora: en una superserie se pasa al siguiente ejercicio de la ronda sin descanso
@@ -527,7 +528,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       const hechasTras = { ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } };
       const { sig, texto, voz, aviso: avisoMovil } = textosSiguiente(lista, hechasTras, rP.siguiente, e.id);
       // v0.50: el temporizador sale en la página, debajo de este ejercicio (o de su superserie)
-      if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, aviso: avisoMovil, tras: e.id, inicio: Date.now(), empuje });
+      // (sonido, tanda 1) cambia: tras este descanso toca otro ejercicio (suena su aviso propio)
+      if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, aviso: avisoMovil, tras: e.id, inicio: Date.now(), empuje, cambia: !!sig && sig.id !== e.id });
       else if (r.enRonda) { cambiarDescanso(null); avisoConCambio(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); }
       else hablar(voz);
       if (sig && sig.id !== e.id) {
@@ -870,7 +872,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
             }
             if (conEscena) setEscena({ records: res.records?.length || 0, semana: await semanaHecha });
             setResumen(res);
-            sonarFinSesion();   // (pulido 7)
+            sonarFinSesion((res.records?.length || 0) > 0 || !!(await semanaHecha));   // (pulido 7; sonido: con adorno si hay récord o semana completa)
           }} />
       )}
     </div>

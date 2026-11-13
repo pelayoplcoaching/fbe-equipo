@@ -12,6 +12,7 @@
 import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
 import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 
+import { limpiarVolumenes } from '../logica/sonido.js';
 const CLAVE = 'fbe-ajustes';
 // voz (v0.48): el entrenador por voz, apagado de entrada
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
@@ -33,7 +34,11 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   // puesto el sonido del descanso: quien lo tenía apagado no oye nada nuevo
   sonidoSerie: true,
   // v0.112: la unidad de las cargas del entreno, kilos o libras (logica/unidades.js); la base guarda siempre kilos
-  unidadPeso: 'kg' };
+  unidadPeso: 'kg',
+  // (sonido, tanda 1) la familia sonora de FBE (logica/sonido.js): el volumen de cada apartado, «Modo gimnasio con ruido»
+  // (sonidos más brillantes), los de logros y comunidad (sí), los de la interfaz (no), los avisos a mitad del descanso (no)
+  // y a falta de diez segundos (sí) y el soplo de «Respira» (sí, si «Respira» está puesto)
+  volumenes: { entreno: 1, juego: 1, chat: 1, avisos: 1 }, sonidoBrillante: false, sonidosAvisos: true, sonidosInterfaz: false, avisoMitad: false, avisoDiez: true, respiraSonido: true };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -78,6 +83,9 @@ export function normalizarAjustes(guardado = {}) {
   a.vozBloqueo = a.vozBloqueo === true;
   a.tecladoApp = a.tecladoApp !== false;
   a.unidadPeso = a.unidadPeso === 'lb' ? 'lb' : 'kg';
+  a.volumenes = limpiarVolumenes(a.volumenes);
+  a.sonidoBrillante = a.sonidoBrillante === true; a.sonidosAvisos = a.sonidosAvisos !== false; a.sonidosInterfaz = a.sonidosInterfaz === true;
+  a.avisoMitad = a.avisoMitad === true; a.avisoDiez = a.avisoDiez !== false; a.respiraSonido = a.respiraSonido !== false;
   return a;
 }
 export function leerAjustes() {

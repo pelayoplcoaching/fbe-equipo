@@ -190,6 +190,7 @@ function empezar(d, ctx, prueba = false) {
   const s = sonidos;
   const plan = planPista({
     restanteMs: d.fin - Date.now(), cuentaAtras: a.cuentaAtras !== false, sonido: a.sonidoDescanso, voz: !!a.voz, ultima: esUltima(d.voz),
+    total: d.total || 0, avisoMitad: a.avisoMitad === true, avisoDiez: a.avisoDiez !== false,   // (sonido, tanda 1)
     clips: largos(s.clips), voces: largos(s.voces),
   });
   if (!plan) { liberar(); return false; }

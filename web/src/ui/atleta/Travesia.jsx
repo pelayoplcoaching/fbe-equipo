@@ -9,7 +9,9 @@ import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, cor
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { compartirArchivo, conFranja, crearGrabadora, extensionDe } from './travesia-compartir.js';
-import { tono, prepararAudio } from './sesion-comun.jsx';
+import { tono as tonoApp, prepararAudio } from './sesion-comun.jsx';
+// (sonido, tanda 1) los tonos del juego, con el volumen de su apartado
+const tono = (f, d, v) => tonoApp(f, d, v, 'juego');
 import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo, leerMeta, apuntarMeta, sincronizarMeta, empezarDia, cerrarDia, aullidosNuevos, equipoDe } from '../travesia.js';
 import { adornosPuestos, mediaEtapa, selloDe } from '../../logica/travesia-meta.js';
 import { crearMusica } from './travesia-musica.js';
@@ -266,7 +268,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       // (top, tanda 4) la etapa del día no cuenta para la travesía ni para la práctica: sus intentos, en el móvil y en la base
       if (delDia) {
         const r = resultado(e), antes = leerDiaHoy.current, d = cerrarDia(atletaId, hoyISO(), r.metros);
-        vibrar('hecho'); if (suena.current) aullar();
+        vibrar('hecho', { sonido: false }); if (suena.current) aullar();
         setFinal({ ...r, delDia: true, mejorDia: d.mejor, quedan: Math.max(0, ETAPA_DIA.intentos - d.intentos), marca: antes > 0 && r.metros > antes });
         api?.etapaDelDia?.(r.metros, r.estrellas, rastro).catch?.(() => {});
         return;
@@ -275,7 +277,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       // (top, tanda 3) las misiones, el rango y los logros (solo las etapas de una sesión)
       const mt = !practica && sesion ? apuntarMeta(atletaId, r, g, { fase: amb.fase, paisaje: amb.paisaje, dia: hoyISO(), dorada, fecha: especial }) : null;
       if (mt) sincronizarMeta(api, atletaId).catch?.(() => {});   // (062: a la base; si no se puede, se queda en el móvil)
-      vibrar('hecho');
+      vibrar('hecho', { sonido: false });
       if (suena.current) aullar();
       setFinal({ ...r, hoy: !practica && sesion ? g.sesiones[sesion]?.metros ?? r.metros : null, etapas: !practica && sesion ? g.sesiones[sesion]?.etapas ?? 1 : null,
         marca: practica ? r.metros > antesG.practica && antesG.practica > 0 : !r.calma && r.metros > antesG.mejor && antesG.mejor > 0, mejor: practica ? g.practica : g.mejor,

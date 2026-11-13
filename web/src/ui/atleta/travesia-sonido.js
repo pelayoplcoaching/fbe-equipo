@@ -4,12 +4,14 @@
 // grave para la rama). Va por el mismo contexto de audio que el resto y respeta el ajuste general de sonido.
 import { contextoAudio, prepararAudio } from './sesion-comun.jsx';
 import { leerAjustes } from '../ajustes.js';
+import { volumenDe } from '../../logica/sonido.js';
 
 export function crearSonido() {
   prepararAudio();
   const ac = contextoAudio();
   if (!ac || !leerAjustes().sonido) return null;
-  const vol = Math.min(1, Math.max(0.1, Number(leerAjustes().volumen) || 1));
+  // (sonido, tanda 1) con el volumen del apartado «Juego del descanso»
+  const vol = Math.max(0.0001, volumenDe(leerAjustes(), 'juego'));
   const salida = ac.createGain(); salida.gain.value = 0.9 * vol; salida.connect(ac.destination);
   // (el eco de la montaña: un retardo con algo de vuelta, que solo se abre en la montaña)
   const eco = ac.createDelay(1); eco.delayTime.value = 0.28;

@@ -1,0 +1,10 @@
+/* (sonido, tanda 1) La hoja «Sonido y vibración»: los perfiles, «Escuchar todos» y el volumen de cada apartado */
+.aj-perfil-sonido { margin-bottom: 12px; }
+.aj-perfil-sonido .segmentos { width: 100%; }
+.aj-escuchar { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
+.aj-apartados { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; border: 0; min-width: 0; }
+.aj-apartados legend { padding: 0; margin-bottom: 2px; }
+.aj-apartado { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'etq probar' 'barra probar'; align-items: center; column-gap: 8px; }
+.aj-apartado label { grid-area: etq; display: flex; justify-content: space-between; gap: 8px; font-size: .875rem; }
+.aj-apartado input { grid-area: barra; width: 100%; }
+.aj-apartado .btn { grid-area: probar; }

@@ -16,6 +16,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SONIDOS } from '../web/src/datos/sonidos-descanso.js';
 import { tramasDe, FORMATO_PISTA } from '../web/src/logica/pista.js';
+import { SONIDOS as FAMILIA } from '../web/src/logica/sonido.js';
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const tmp = mkdtempSync(join(tmpdir(), 'fbe-pista-'));
@@ -47,6 +48,17 @@ try {
   // «Pitido suave» (el de pitidoSuave: dos notas de 880 Hz) y el pitido de la cuenta atrás (el de tono(660, 0.1))
   CLIPS.suave = ffmpeg(['-f', 'lavfi', '-i', 'aevalsrc=0.5*sin(2*PI*880*t)*(lt(mod(t\\,0.28)\\,0.22))*exp(-6*mod(t\\,0.28)):s=48000:d=0.52'], 'suave', 'afade=t=in:d=0.01');
   CLIPS.pitido = ffmpeg(['-f', 'lavfi', '-i', 'sine=frequency=660:sample_rate=48000:duration=0.12'], 'pitido', 'volume=2.8,afade=t=in:d=0.01,afade=t=out:st=0.06:d=0.06');
+  // (sonido, tanda 1) los de la familia sonora de FBE (logica/sonido.js): el aviso «FBE», los de la mitad y de los diez
+  // segundos, y la cuenta atrás que sube (c5 a c1): la misma campana (seno y su octava) con las mismas notas
+  const campana = (notas) => {
+    const largo = Math.max(...notas.map(([, d, dura]) => d + dura)) + 0.12;
+    const expr = notas.map(([fr, d, dura, v]) => `${(v * 0.42).toFixed(3)}*(sin(2*PI*${fr}*t)+0.25*sin(2*PI*${fr * 2}*t))*between(t\\,${d}\\,${(d + dura + 0.05).toFixed(3)})*exp(-(t-${d})*${(4.5 / dura).toFixed(2)})`).join('+');
+    return ['-f', 'lavfi', '-i', `aevalsrc=${expr}:s=48000:d=${largo.toFixed(2)}`];
+  };
+  CLIPS.fbe = ffmpeg(campana(FAMILIA['fin-descanso'].notas()), 'fbe', 'volume=1.8,afade=t=in:d=0.005');
+  CLIPS.mitad = ffmpeg(campana(FAMILIA.mitad.notas()), 'mitad', 'volume=1.6');
+  CLIPS.diez = ffmpeg(campana(FAMILIA.diez.notas()), 'diez', 'volume=1.6');
+  for (const sg of [5, 4, 3, 2, 1]) CLIPS[`c${sg}`] = ffmpeg(campana(FAMILIA.cuenta.notas({ segundo: sg })), `c${sg}`, 'volume=2.0');
 
   if (carpetaVoces) {
     for (const k of FRASES) {
