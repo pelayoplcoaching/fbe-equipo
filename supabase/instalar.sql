@@ -22708,9 +22708,11 @@ insert into public.fbe_migraciones (numero) values (67)  -- (3) número de esta 
 -- atletas: son audios del coach.
 --
 --   * voces_coach: una fila por frase (su clave, la ruta del audio y cuánto dura). Solo el coach la escribe, con
---     voces_coach_guardar() y voces_coach_quitar(); la leen él y los atletas (para descargar los audios).
---   * El bucket privado «voces-coach» (como mucho 2 MB por audio y solo audio): sube, cambia y borra el coach; descargan
---     el coach y los atletas con ficha.
+--     voces_coach_guardar() y voces_coach_quitar(); la leen él y sus atletas que no están de baja (para descargar los
+--     audios).
+--   * El bucket privado «voces-coach» (como mucho 2 MB por audio y solo audio): sube y borra el coach (con el nombre de
+--     una frase); descarga el coach y, sus atletas que no están de baja, solo los audios de las frases guardadas (uno
+--     cambiado o quitado que no se haya podido borrar ya no lo ve nadie más que él).
 --
 -- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 067 (o con instalar.sql en una base nueva).
 -- Se puede repetir sin romper nada.
@@ -22742,6 +22744,7 @@ alter table public.voces_coach drop constraint if exists voces_coach_valida;
 alter table public.voces_coach add constraint voces_coach_valida check (
   clave in ('vamos', 'ultima', 'record', 'fin_sesion', 'buen_trabajo', 'fin_descanso')
   and ruta ~ '^voces/[a-z_]{3,20}-[0-9a-f-]{8,40}\.(webm|ogg|m4a|mp4|mp3|aac)$'
+  and ruta like 'voces/' || clave || '-%'  -- (revisión) el audio, de su frase
   and duracion_ms between 0 and 8000
 );
 
@@ -22751,6 +22754,7 @@ language plpgsql security definer set search_path = '' as $$
 declare v_antes text;
 begin
   if not public.es_coach() then raise exception 'Solo el coach graba sus frases' using errcode = '42501'; end if;
+  perform pg_advisory_xact_lock(hashtext('fbe-voces-coach'));  -- (revisión) dos a la vez no dejan un audio suelto
   select ruta into v_antes from public.voces_coach where clave = p_clave;
   insert into public.voces_coach (clave, ruta, duracion_ms) values (p_clave, p_ruta, least(greatest(coalesce(p_duracion_ms, 0), 0), 8000))
   on conflict (clave) do update set ruta = excluded.ruta, duracion_ms = excluded.duracion_ms, actualizada_en = now();
@@ -22768,7 +22772,13 @@ end $$;
 
 alter table public.voces_coach enable row level security;
 drop policy if exists ver on public.voces_coach;
-create policy ver on public.voces_coach for select to authenticated using (public.es_coach() or public.mi_atleta_id() is not null);
+create policy ver on public.voces_coach for select to authenticated using (public.es_coach() or (public.mi_atleta_id() is not null and not public.esta_de_baja()));
+
+-- (revisión) ¿es el audio de una frase guardada? (los atletas solo descargan esos)
+create or replace function public.voz_coach_registrada(p_ruta text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.voces_coach where ruta = p_ruta);
+$$;
 revoke all on public.voces_coach from public, anon, authenticated;
 grant select on public.voces_coach to authenticated;
 
@@ -22782,13 +22792,12 @@ on conflict (id) do update
 
 drop policy if exists fbe_voces_coach_ver on storage.objects;
 create policy fbe_voces_coach_ver on storage.objects for select to authenticated
-  using (bucket_id = 'voces-coach' and (public.es_coach() or public.mi_atleta_id() is not null));
+  using (bucket_id = 'voces-coach' and (public.es_coach() or (public.mi_atleta_id() is not null and not public.esta_de_baja() and public.voz_coach_registrada(name))));
 drop policy if exists fbe_voces_coach_subir on storage.objects;
 create policy fbe_voces_coach_subir on storage.objects for insert to authenticated
-  with check (bucket_id = 'voces-coach' and public.es_coach());
+  with check (bucket_id = 'voces-coach' and public.es_coach() and name ~ '^voces/(vamos|ultima|record|fin_sesion|buen_trabajo|fin_descanso)-[0-9a-f-]{8,40}\.(webm|ogg|m4a|mp4|mp3|aac)$');
+-- (revisión) sin cambiar: cada audio nuevo va con su nombre (la app no sobrescribe)
 drop policy if exists fbe_voces_coach_cambiar on storage.objects;
-create policy fbe_voces_coach_cambiar on storage.objects for update to authenticated
-  using (bucket_id = 'voces-coach' and public.es_coach()) with check (bucket_id = 'voces-coach' and public.es_coach());
 drop policy if exists fbe_voces_coach_borrar on storage.objects;
 create policy fbe_voces_coach_borrar on storage.objects for delete to authenticated
   using (bucket_id = 'voces-coach' and public.es_coach());

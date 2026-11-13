@@ -398,7 +398,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     travesia_reto_equipo: () => esCoach(),
     travesia_fiesta: () => esCoach(),
     // (068) las frases del coach: las ve él y cualquier atleta con ficha (para descargar los audios)
-    voces_coach: () => esCoach() || !!miAtletaId(),
+    voces_coach: () => esCoach() || (!!miAtletaId() && !deBaja()),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
   const programadoAun = (c) => !!c?.enviar_en && Date.parse(c.enviar_en) > Date.now();
@@ -3095,7 +3095,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         }
         // (068) las frases del coach: solo él sube, 2 MB y solo audio
         if (bucket === 'voces-coach') {
-          if (!esCoach()) throw sinPermiso();
+          if (!esCoach() || !/^voces\/(vamos|ultima|record|fin_sesion|buen_trabajo|fin_descanso)-[0-9a-f-]{8,40}\.(webm|ogg|m4a|mp4|mp3|aac)$/.test(ruta)) throw sinPermiso();
           if (archivo?.size > 2097152) throw new Error('The object exceeded the maximum allowed size');
           if (!['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'].includes(String(tipo || '').split(';')[0])) throw new Error('mime type not supported');
           ficheros.set(`voces-coach:${ruta}`, archivo); alProgreso?.(1); return;
@@ -3146,7 +3146,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           return urls.get(clave);
         }
         if (bucket === 'voces-coach') {
-          if (!(esCoach() || miAtletaId())) throw new Error('No tienes permiso para ver ese archivo.');
+          // (revisión, 068) sus atletas que no están de baja, solo los audios de las frases guardadas
+          if (!(esCoach() || (miAtletaId() && !deBaja() && tabla('voces_coach').some((x) => x.ruta === ruta)))) throw new Error('No tienes permiso para ver ese archivo.');
           const fv = ficheros.get(`voces-coach:${ruta}`);
           if (!fv) { const e = new Error('En la demo, los audios solo se guardan hasta recargar la página.'); e.noDisponible = true; throw e; }
           if (!urls.has(`voces-coach:${ruta}`)) urls.set(`voces-coach:${ruta}`, URL.createObjectURL(fv));
@@ -4391,7 +4392,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!esCoach()) throw new Error(nombre === 'voces_coach_guardar' ? 'Solo el coach graba sus frases' : 'Solo el coach quita sus frases');
         const claveV = String((args || {}).p_clave || ''), antes = tabla('voces_coach').find((x) => x.clave === claveV);
         if (nombre === 'voces_coach_quitar') { db.voces_coach = tabla('voces_coach').filter((x) => x.clave !== claveV); persistirYa(); return antes?.ruta || null; }
-        if (!['vamos', 'ultima', 'record', 'fin_sesion', 'buen_trabajo', 'fin_descanso'].includes(claveV) || !/^voces\/[a-z_]{3,20}-[0-9a-f-]{8,40}\.(webm|ogg|m4a|mp4|mp3|aac)$/.test((args || {}).p_ruta || '')) throw new Error('new row violates check constraint "voces_coach_valida"');
+        if (!['vamos', 'ultima', 'record', 'fin_sesion', 'buen_trabajo', 'fin_descanso'].includes(claveV) || !/^voces\/[a-z_]{3,20}-[0-9a-f-]{8,40}\.(webm|ogg|m4a|mp4|mp3|aac)$/.test((args || {}).p_ruta || '') || !String((args || {}).p_ruta).startsWith(`voces/${claveV}-`)) throw new Error('new row violates check constraint "voces_coach_valida"');
         const fila = { clave: claveV, ruta: (args || {}).p_ruta, duracion_ms: Math.min(8000, Math.max(0, Math.round(Number((args || {}).p_duracion_ms) || 0))), actualizada_en: ahora() };
         const rutaAntes = antes?.ruta || null;
         if (antes) Object.assign(antes, fila); else tabla('voces_coach').push(fila);

@@ -17,7 +17,10 @@ export function VocesCoach() {
   const [nueva, setNueva] = useState(null);         // { clave, blob, url, ms } a punto de guardar
   const [ocupado, setOcupado] = useState(false);
   const rec = useRef(null);
-  useEffect(() => () => { try { rec.current?.stop(); } catch { /* */ } if (nueva?.url) URL.revokeObjectURL(nueva.url); }, []);
+  // (revisión) al salir se suelta la grabación pendiente (la de ese momento, no la del principio)
+  const nuevaRef = useRef(null);
+  nuevaRef.current = nueva;
+  useEffect(() => () => { try { rec.current?.stop(); } catch { /* */ } if (nuevaRef.current?.url) URL.revokeObjectURL(nuevaRef.current.url); }, []);
   const guardadas = Object.fromEntries((lista.datos || []).map((f) => [f.clave, f]));
 
   const grabar = async (clave) => {
@@ -59,7 +62,7 @@ export function VocesCoach() {
     <section class="seccion voces-coach" aria-labelledby="voces-coach-t">
       <h2 id="voces-coach-t">Tus frases, con tu voz</h2>
       <p class="secundario">Graba frases cortas y tus atletas las oirán en su sesión, en su momento, en lugar de la voz del móvil. Cada una, de 6 segundos como mucho.</p>
-      {lista.datos === null && <p class="peq terciario">Para grabarlas falta ejecutar la migración 068 en Supabase.</p>}
+      {!lista.cargando && lista.datos === null && <p class="peq terciario">Para grabarlas falta ejecutar la migración 068 en Supabase.</p>}
       {!puedeGrabarVoz() && <p class="peq terciario">Este navegador no puede grabar audio: prueba desde el móvil.</p>}
       <div class="panel">
         <ul class="lista">

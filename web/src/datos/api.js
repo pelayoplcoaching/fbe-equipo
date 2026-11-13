@@ -4189,10 +4189,12 @@ export function crearApi(backend) {
     },
     // (068, sonido) Las frases del coach, con su voz: [{ clave, ruta, duracion_ms }] (vacío sin la 068), su audio (una
     // dirección firmada) y, el coach, grabarlas o quitarlas (el audio va a su bucket privado «voces-coach»)
+    // (revisión) sin la 068 devuelve null (la Cuenta del coach lo avisa); sin red u otro error, []
     async vocesCoach() {
-      if (api._sin068 || !uid()) return [];
+      if (api._sin068) return null;
+      if (!uid()) return [];
       try { return await b.select('voces_coach', { order: [['clave', 'asc']] }); } catch (e) {
-        if (/voces_coach|schema cache|does not exist|could not find|PGRST20[0-9]|42P01/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin068 = true;
+        if (/schema cache|does not exist|could not find|PGRST20[0-9]|42P01/i.test(`${e?.message || ''} ${e?.code || ''}`)) { api._sin068 = true; return null; }
         return [];
       }
     },
@@ -4208,7 +4210,11 @@ export function crearApi(backend) {
       }
       let antes = null;
       try { antes = await b.rpc('voces_coach_guardar', { p_clave: clave, p_ruta: ruta, p_duracion_ms: Math.round(duracionMs) }); } catch (e) {
-        await b.storage.borrar([ruta], 'voces-coach').catch(() => {});
+        // (revisión) si la respuesta se perdió pero la base sí la guardó, el audio nuevo se queda: solo se borra si la frase
+        // no apunta a él (si no se puede comprobar, se deja: un audio de más no se oye; uno de menos deja la frase muda)
+        const fila = await b.select('voces_coach', { eq: { clave } }).then((r) => r?.[0] || null, () => undefined);
+        if (fila !== undefined && fila?.ruta !== ruta) await b.storage.borrar([ruta], 'voces-coach').catch(() => {});
+        else if (fila?.ruta === ruta) return ruta;
         if (/voces_coach_guardar|schema cache|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error('Para grabar tus frases falta ejecutar la migración 068 en Supabase (supabase/migraciones/068_voces_coach.sql).');
         throw e;
       }
