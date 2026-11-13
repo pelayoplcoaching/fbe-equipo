@@ -190,6 +190,8 @@ function HojaSonido({ a, cambiar, cambiarVarios, alCerrar }) {
             ayuda={hayVoz() ? 'Te dice la siguiente serie («Serie 3 de press banca: 80 kilos por 6»), los últimos segundos del descanso y la última serie. La música sigue sonando (baja un momento mientras habla).' : 'Este navegador no puede hablar: los avisos del descanso siguen con su sonido.'}
             valor={!!a.voz && hayVoz()} alCambiar={(v) => { cambiar('voz', v); if (v) hablar('Serie 1 de press banca: 60 kilos por 8.', { forzar: true }); }} />
           {a.voz && hayVoz() && <li class="panel-pad separa"><span class="peq secundario">¿Se oye bien?</span><button class="btn btn-peq" onClick={() => hablar('Serie 3 de sentadilla: 80 kilos por 6. Última serie.', { forzar: true })}><Icono n="altavoz" /> Probar la voz</button></li>}
+          {/* (sonido, tanda 3) las frases que grabe el coach, con su voz */}
+          <Interruptor id="aj-voz-coach" icono="micro" texto="Frases de tu coach, con su voz" ayuda="Si tu coach las ha grabado: «¡Vamos!», «Última serie», «¡Récord!»… en su momento de la sesión" valor={a.vozCoach !== false} alCambiar={(v) => cambiar('vozCoach', v)} />
           {/* v0.62: el aviso con el móvil bloqueado (la pista del descanso). Solo donde puede funcionar: iPhone con Safari 16.4 o
               más (la app de inicio o Safari) y Android; en el ordenador no sale. Apagado de serie: pausa la música de otras apps */}
           {a.sonido && plataforma && (

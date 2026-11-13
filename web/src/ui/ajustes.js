@@ -38,7 +38,9 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   // (sonido, tanda 1) la familia sonora de FBE (logica/sonido.js): el volumen de cada apartado, «Modo gimnasio con ruido»
   // (sonidos más brillantes), los de logros y comunidad (sí), los de la interfaz (no), los avisos a mitad del descanso (no)
   // y a falta de diez segundos (sí) y el soplo de «Respira» (sí, si «Respira» está puesto)
-  volumenes: { entreno: 1, juego: 1, chat: 1, avisos: 1 }, sonidoBrillante: false, sonidosAvisos: true, sonidosInterfaz: false, avisoMitad: false, avisoDiez: true, respiraSonido: true };
+  volumenes: { entreno: 1, juego: 1, chat: 1, avisos: 1 }, sonidoBrillante: false, sonidosAvisos: true, sonidosInterfaz: false, avisoMitad: false, avisoDiez: true, respiraSonido: true,
+  // (sonido, tanda 3) las frases grabadas por el coach, con su voz (si las hay)
+  vozCoach: true };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -85,7 +87,7 @@ export function normalizarAjustes(guardado = {}) {
   a.unidadPeso = a.unidadPeso === 'lb' ? 'lb' : 'kg';
   a.volumenes = limpiarVolumenes(a.volumenes);
   a.sonidoBrillante = a.sonidoBrillante === true; a.sonidosAvisos = a.sonidosAvisos !== false; a.sonidosInterfaz = a.sonidosInterfaz === true;
-  a.avisoMitad = a.avisoMitad === true; a.avisoDiez = a.avisoDiez !== false; a.respiraSonido = a.respiraSonido !== false;
+  a.avisoMitad = a.avisoMitad === true; a.avisoDiez = a.avisoDiez !== false; a.respiraSonido = a.respiraSonido !== false; a.vozCoach = a.vozCoach !== false;
   return a;
 }
 export function leerAjustes() {

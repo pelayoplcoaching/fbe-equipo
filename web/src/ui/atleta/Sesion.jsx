@@ -22,6 +22,7 @@ import { guardarPreferencia } from '../preferencias.js';
 import { leerAutoCompartir } from '../comunidad-local.js';
 import { perezoso } from '../perezoso.jsx';
 import { PictoEjercicio } from '../Pictograma.jsx';
+import { prepararVocesCoach, sonarVozCoach } from '../voces-coach.js';
 import { prepararAudio, celebrar, sonarSerie, sonarFinSesion, usePantallaEncendida, useAhora, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
 import { FilaSerie } from './FilaSerie.jsx';
 import { useTecladoApp } from './Teclado.jsx';
@@ -183,6 +184,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // (revisión L3) el último aviso del cambio que pasa a las siguientes series: { texto, fn, t }
   const cambioReciente = useRef(null);
   usePantallaEncendida();
+  // (sonido, tanda 3) las frases del coach, con su voz: se traen al entrar en la sesión (si las ha grabado)
+  useEffect(() => { prepararVocesCoach(api).catch?.(() => {}); }, []);
   // v0.49: al completar las series pautadas de un ejercicio, su tarjeta se pliega un momento después. El temporizador
   // de cada uno se guarda para cancelarlo (si se desmarca, si falla el guardado o al salir) y, al cumplirse, se
   // vuelve a mirar con lo que hay entonces.
@@ -509,7 +512,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     const empuje = { ritmo: false, escudo: Number(valores.reps) >= Number(e.reps_min ?? e.reps_max ?? 1) && Number(valores.reps) > 0 };
     if (!previa && previas.datos) {
       const r = recordsDeSesion(enOrden({ ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } }), previas.datos, claveSerie)[`${e.id}-${numero}`];
-      if (r) { empuje.ritmo = true; celebrar(r.tipo); avisoConCambio(`¡Récord en ${actualDe(e).nombre}!`, 'record'); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
+      if (r) { empuje.ritmo = true; celebrar(r.tipo); setTimeout(() => sonarVozCoach('record'), 900); avisoConCambio(`¡Récord en ${actualDe(e).nombre}!`, 'record'); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
     }
     if (!previa) {
       // Qué toca ahora: en una superserie se pasa al siguiente ejercicio de la ronda sin descanso
@@ -873,6 +876,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
             if (conEscena) setEscena({ records: res.records?.length || 0, semana: await semanaHecha });
             setResumen(res);
             sonarFinSesion((res.records?.length || 0) > 0 || !!(await semanaHecha));   // (pulido 7; sonido: con adorno si hay récord o semana completa)
+            setTimeout(() => sonarVozCoach('buen_trabajo', 'fin_sesion'), 1300);   // (sonido, tanda 3) y la frase del coach, si la ha grabado
           }} />
       )}
     </div>

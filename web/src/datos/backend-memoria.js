@@ -181,7 +181,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
+const SIN_ID = ['videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
   'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_semanas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
@@ -394,6 +394,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     travesia_liga: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     travesia_reto_equipo: () => esCoach(),
     travesia_fiesta: () => esCoach(),
+    // (064) las frases del coach: las ve él y cualquier atleta con ficha (para descargar los audios)
+    voces_coach: () => esCoach() || !!miAtletaId(),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
   const programadoAun = (c) => !!c?.enviar_en && Date.parse(c.enviar_en) > Date.now();
@@ -1581,7 +1583,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
     // (060) la travesía y los apuntes vistos, solo con sumar_travesia() y apuntar_apunte(); los envíos, nadie
-    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'].includes(t)) throw sinPermisoTabla(t);
+    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas',
       'comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw sinPermiso();
@@ -2964,6 +2966,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
             if (senal) senal.abortar = () => { clearInterval(t); trozos.delete(dir); const e = new Error('Cancelado'); e.cancelado = true; mal(e); };
           });
         }
+        // (064) las frases del coach: solo él sube, 2 MB y solo audio
+        if (bucket === 'voces-coach') {
+          if (!esCoach()) throw sinPermiso();
+          if (archivo?.size > 2097152) throw new Error('The object exceeded the maximum allowed size');
+          if (!['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'].includes(String(tipo || '').split(';')[0])) throw new Error('mime type not supported');
+          ficheros.set(`voces-coach:${ruta}`, archivo); alProgreso?.(1); return;
+        }
         if (bucket === 'comunidad') {
           if (!fotoRegistrada(ruta)) throw sinPermiso();
           if (archivo?.size > 614400) throw new Error('El archivo supera el tamaño máximo permitido.');
@@ -2991,6 +3000,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (ficheros.has(desde)) ficheros.set(hasta, ficheros.get(desde)); else alias.set(hasta, alias.get(desde) || desde);
       },
       async url(ruta, segundos = 3600, bucket = 'archivos') {
+        if (bucket === 'voces-coach') {
+          if (!(esCoach() || miAtletaId())) throw new Error('No tienes permiso para ver ese archivo.');
+          const fv = ficheros.get(`voces-coach:${ruta}`);
+          if (!fv) { const e = new Error('En la demo, los audios solo se guardan hasta recargar la página.'); e.noDisponible = true; throw e; }
+          if (!urls.has(`voces-coach:${ruta}`)) urls.set(`voces-coach:${ruta}`, URL.createObjectURL(fv));
+          return urls.get(`voces-coach:${ruta}`);
+        }
         if (bucket === 'comunidad') {
           if (!fotoVisible(ruta)) throw new Error('No tienes permiso para ver ese archivo.');
           ruta = `comunidad:${ruta}`;
@@ -3025,6 +3041,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const hechas = [];
         for (let r of rutas) {
           const nombre = r;
+          if (bucket === 'voces-coach') { if (!esCoach()) continue; r = `voces-coach:${r}`; ficheros.delete(r); hechas.push(nombre); continue; }
           if (bucket === 'comunidad') { if (!esCoach() && !fotoBorrable(r)) continue; r = `comunidad:${r}`; }
           // Como la 032 (revisión): un atleta solo borra lo suyo que puede borrar (con su fila; no un adjunto con mensajes);
           // (034) de «voz», solo el coach
@@ -3140,7 +3157,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // Como la 032: de una reacción, solo el emoji de la propia (en un mensaje en que aún se puede reaccionar); el estado
       // de las conversaciones, el coach; la presencia (solo con su función), los destacados y los cupos no se cambian
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach'].includes(t)) throw sinPermisoTabla(t);
       if (t === 'comentario_reacciones') {
         if (Object.keys(cambios).some((k) => k !== 'emoji')) throw new Error('De una reacción solo se cambia el emoji');
         if (!emojiValido(cambios.emoji)) throw new Error('Algún valor está fuera de rango.');
@@ -3347,7 +3364,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return copia(res);
       }
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach'].includes(t)) throw sinPermisoTabla(t);
       // Como la 034: la versión vista (con el usuario que sea, la base la pone a tu nombre: es la tuya la que cambia)
       if (t === 'privacidad_vista') {
         const res = (Array.isArray(filas) ? filas : [filas]).map((f) => {
@@ -3466,6 +3483,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return [];
       }
+      if (t === 'voces_coach') throw sinPermisoTabla(t);
       if (t === 'travesia_reto_equipo' || t === 'travesia_fiesta') {
         if (esCoach()) db[t] = tabla(t).filter((x) => !cumple(x, f));
         persistirYa();
@@ -4186,6 +4204,18 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'apuntes_fallados') return copia(rpcComunidad(nombre, args || {}, uid, perfil) ?? []);   // (061) solo cuentas
       // (062) el rango que se junta, la etapa del día y los aullidos
       // (063) el fantasma, las ligas, el reto del coach y la fiesta
+      // (064) las frases del coach: solo el coach las guarda o las quita (devuelven la ruta del audio que hay que borrar)
+      if (nombre === 'voces_coach_guardar' || nombre === 'voces_coach_quitar') {
+        if (!esCoach()) throw new Error(nombre === 'voces_coach_guardar' ? 'Solo el coach graba sus frases' : 'Solo el coach quita sus frases');
+        const claveV = String((args || {}).p_clave || ''), antes = tabla('voces_coach').find((x) => x.clave === claveV);
+        if (nombre === 'voces_coach_quitar') { db.voces_coach = tabla('voces_coach').filter((x) => x.clave !== claveV); persistirYa(); return antes?.ruta || null; }
+        if (!['vamos', 'ultima', 'record', 'fin_sesion', 'buen_trabajo', 'fin_descanso'].includes(claveV) || !/^voces\/[a-z_]{3,20}-[0-9a-f-]{8,40}\.(webm|ogg|m4a|mp4|mp3|aac)$/.test((args || {}).p_ruta || '')) throw new Error('new row violates check constraint "voces_coach_valida"');
+        const fila = { clave: claveV, ruta: (args || {}).p_ruta, duracion_ms: Math.min(8000, Math.max(0, Math.round(Number((args || {}).p_duracion_ms) || 0))), actualizada_en: ahora() };
+        const rutaAntes = antes?.ruta || null;
+        if (antes) Object.assign(antes, fila); else tabla('voces_coach').push(fila);
+        persistirYa();
+        return rutaAntes && rutaAntes !== fila.ruta ? rutaAntes : null;
+      }
       if (['guardar_travesia_perfil', 'sumar_etapa_del_dia', 'travesia_dia_clasif', 'travesia_aullar', 'travesia_aullidos_recibidos', 'travesia_dia_fantasma', 'travesia_liga', 'travesia_poner_reto', 'travesia_equipo'].includes(nombre)) {
         const r = rpcComunidad(nombre, args || {}, uid, perfil);
         persistirYa();

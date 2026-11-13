@@ -6038,6 +6038,10 @@ try {
   console.log('\nEl jugo de La travesía');
   const { probarTravesiaJugo } = await import('./e2e-travesia-jugo.mjs');
   await probarTravesiaJugo({ navegador, check });
+  // El sonido de la app (claude/sonido-mejoras.md): perfiles, apartados, «Escuchar todos», la sesión y las frases del coach
+  console.log('\nEl sonido de la app');
+  const { probarSonido } = await import('./e2e-sonido.mjs');
+  await probarSonido({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

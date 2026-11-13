@@ -8,3 +8,13 @@
 .aj-apartado label { grid-area: etq; display: flex; justify-content: space-between; gap: 8px; font-size: .875rem; }
 .aj-apartado input { grid-area: barra; width: 100%; }
 .aj-apartado .btn { grid-area: probar; }
+
+/* (sonido, tanda 3) Las frases del coach, con su voz */
+.voz-frase-cab { justify-content: space-between; align-items: center; gap: 8px; }
+.voz-frase-botones { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.voz-frase-nueva { gap: 8px; }
+.voz-frase .grabando svg { color: inherit; }
+@media (prefers-reduced-motion: no-preference) {
+  .voz-frase .grabando { animation: voz-grabando 1s ease-in-out infinite alternate; }
+}
+@keyframes voz-grabando { to { opacity: .7; } }

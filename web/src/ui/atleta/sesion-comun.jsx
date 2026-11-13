@@ -13,7 +13,8 @@ import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { descansoEnCurso } from '../en-curso.js';
 import { lanzarConfeti } from '../confeti.js';
 import { pistaManda, pistaSono, pistaFinal, prepararPista, pistaActiva } from '../pista-descanso.js';
-import { ajustarDescanso, reanudarDescanso, fraseTrasPista, avisoTrasCambio } from '../../logica/pista.js';
+import { ajustarDescanso, reanudarDescanso, fraseTrasPista, avisoTrasCambio, esUltima } from '../../logica/pista.js';
+import { sonarVozCoach, vocesListas } from '../voces-coach.js';
 import { Placas } from '../Herramientas.jsx';
 import { num } from '../../logica/calculos.js';
 import { discosCon } from '../../logica/teclado.js';
@@ -97,6 +98,7 @@ export function pitar(sonido = null) {
   // (sonido, tanda 1) el aviso propio de FBE, de la familia sonora
   if ((sonido || a.sonidoDescanso) === 'fbe') { sonarFBE('fin-descanso', {}, { forzar: true }); return; }
   const volumen = Math.min(1, Math.max(0.1, Number(a.volumen) || 1)) * Math.max(0.05, volumenDe({ volumen: 1, volumenes: a.volumenes }, 'entreno'));
+  const carga = cargar(sonido || a.sonidoDescanso);
   if (!carga) { pitidoSuave(volumen); return; }
   carga.then((buffer) => {
     try { sonando?.stop(); } catch { /* ya había acabado */ }
@@ -234,13 +236,16 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
       if ((document.visibilityState === 'visible' || pistaSono(fin)) && programado.current) { programado.current = false; api?.cancelarDescanso?.(); }
       if (!tarde) {
         if (manda) vibrarAviso(); else pitar();
-        // (sonido, tanda 1) y si toca otro ejercicio, su aviso propio, detrás
-        if (cambia && !manda) setTimeout(() => sonarFBE('ejercicio'), 1100);
+        // (sonido, tanda 3) la frase del coach, con su voz («Última serie» o «¡Vamos!»), si la ha grabado; si no, (tanda 1) si
+        // toca otro ejercicio, su aviso propio, detrás
+        const conCoach = !manda && vocesListas();
+        if (conCoach) setTimeout(() => sonarVozCoach(...(esUltima(voz) ? ['ultima', 'vamos'] : ['vamos', 'fin_descanso'])), 650);
+        else if (cambia && !manda) setTimeout(() => sonarFBE('ejercicio'), 1100);
         // v0.48: con el entrenador por voz, lo que toca ahora («Serie 3 de press banca: 80 kilos por 6»); v0.62: si ha avisado
-        // la pista, después de su aviso y sin repetir lo que haya dicho
+        // la pista, después de su aviso y sin repetir lo que haya dicho; (sonido) tras la frase del coach, si ha sonado
         if (leerAjustes().voz) {
-          const frase = manda ? fraseTrasPista(voz, pistaFinal(fin)) : (voz || '¡Vamos!');
-          if (frase) setTimeout(() => hablar(frase), manda ? 1800 : leerAjustes().sonido ? 900 : 0);
+          const frase = manda ? fraseTrasPista(voz, pistaFinal(fin)) : (voz || (conCoach ? '' : '¡Vamos!'));
+          if (frase) setTimeout(() => hablar(frase), manda ? 1800 : conCoach ? 2300 : leerAjustes().sonido ? 900 : 0);
         }
       }
     }
