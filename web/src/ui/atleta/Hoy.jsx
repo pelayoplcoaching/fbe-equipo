@@ -1,6 +1,7 @@
 import { ApunteAlPaso } from './ApunteAlPaso.jsx';
 import { TarjetaApuntes } from './ApuntesTarjeta.jsx';
 import { TarjetaTravesia } from './TravesiaTarjeta.jsx';
+import { CuentaMeta } from './Trato.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Fragment } from 'preact';
 import { VideoSemanaHoy, DirectoHoy } from '../Videos.jsx';
@@ -139,6 +140,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
           entre={(
             <>
               {!verPasos && !propio && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
+              {!verPasos && !propio && <CuentaMeta />}
               {!verPasos && atleta.estado !== 'baja' && <Reserva id="hoy-tu-dia"><TuDia p={p} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} /></Reserva>}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
               {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}

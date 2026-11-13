@@ -80,10 +80,12 @@ export function porqueParaHoy({ porque, ultimoDia = null, hoy, haceMucho = false
   return haceMucho || (dias != null && dias >= 4) ? porque : null;
 }
 // El momento de la bienvenida para el mensaje del coach: el cumpleaños manda; si no, la vuelta tras una semana o más
-export function momentoBienvenida({ cumple = false, ultimoDia = null, hoy, haceMucho = false } = {}) {
+export function momentoBienvenida({ cumple = false, ultimoDia = null, hoy, haceMucho = false, metaDias = null } = {}) {
   if (cumple) return 'cumple';
   const dias = ultimoDia && hoy ? diasEntre(ultimoDia, hoy) : null;
-  return haceMucho || (dias != null && dias >= 7) ? 'vuelta' : null;
+  if (haceMucho || (dias != null && dias >= 7)) return 'vuelta';
+  // (personalización 2, tanda 2) a una semana (o menos) de su meta
+  return metaDias != null && metaDias >= 0 && metaDias <= 7 ? 'meta' : null;
 }
 
 // ---------- Los mensajes del coach ----------

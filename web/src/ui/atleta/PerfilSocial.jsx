@@ -6,6 +6,7 @@
 //   · «En el equipo» (si estás en la comunidad): tu racha, retos, compañeros y los ánimos de esta semana, y «Ver cómo te
 //     ven tus compañeros» (tu perfil en el equipo). Solo lo que ya ven ellos: aquí no se comparte nada nuevo.
 // Todo sale de lo que ya hay (sus entrenos, su progreso, la comunidad).
+import { historiaEnUnaLinea } from '../../logica/rumbo.js';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Segmentos, Pestanas, Vacio } from '../comunes.jsx';
 import { perezoso } from '../perezoso.jsx';
@@ -26,6 +27,15 @@ const HojaPerfilEquipo = perezoso(() => import('../Comunidad.jsx'), 'HojaPerfilE
 const toneladas = (kg) => num(Math.round((Number(kg) || 0) / 100) / 10, 1);
 
 const PESTANAS = [['resumen', 'Resumen'], ['estadisticas', 'Datos'], ['logros', 'Logros'], ['actividad', 'Actividad']];
+// (personalización 2, tanda 2) «Tu historia en una línea»: cuánto lleva, con quién, cuántas sesiones y su mayor subida
+function HistoriaLinea({ sesiones, progreso, hoy }) {
+  const { api, atleta, propio } = useApp();
+  const coach = useCarga(() => (propio ? Promise.resolve(null) : api.nombreCoach().catch(() => null)), []);
+  const h = historiaEnUnaLinea({ fechaAlta: atleta.fecha_alta, sesiones, progreso, coach: coach.datos || '', hoy });
+  if (!h) return null;
+  return <p class="panel panel-pad historia-linea" aria-label="Tu historia en una línea"><Icono n="historial" /><span>{h.texto}</span></p>;
+}
+
 export function PerfilSecciones({ salud, irA }) {
   const { api, atleta } = useApp();
   const hoy = hoyISO();  // (v0.143) el día del móvil, como la fecha de sus entrenos
@@ -41,6 +51,7 @@ export function PerfilSecciones({ salud, irA }) {
       <div role="tabpanel" id="perfil-pest-panel" aria-labelledby={`perfil-pest-${pest}`} class="pila perfil-panel">
         {pest === 'resumen' && (
           <>
+            <HistoriaLinea sesiones={lista.length} progreso={progreso.datos} hoy={hoy} />
             <CifrasPerfil entrenos={lista} hoy={hoy} cargando={entrenos.cargando && !entrenos.datos} />
             <SemanasPerfil entrenos={lista} hoy={hoy} />
             <section class="seccion perfil-sec" aria-labelledby="perfil-constancia-t">
