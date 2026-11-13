@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp } from '../comunes.jsx';
 import { perezoso } from '../perezoso.jsx';
-import { leerTravesia, sincronizarTravesia } from '../travesia.js';
+import { leerTravesia, sincronizarTravesia, leerMeta } from '../travesia.js';
 import { textoDistancia, metrosDeLaSemana, retoDelDia, progresoReto, hoyDe, ambiente } from '../../logica/travesia.js';
 import { posicionEnRuta } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
@@ -56,7 +56,7 @@ export function TarjetaTravesia({ compacta = false }) {
   const cerrar = () => { setAbierta(false); setT(leerTravesia(atleta.id)); };
   // (tanda 1) el reto del día, con lo jugado hoy en los descansos
   const reto = retoDelDia(hoyISO()), pr = progresoReto(reto, hoyDe(t, hoyISO()));
-  const pos = posicionEnRuta(t.total);
+  const pos = posicionEnRuta(t.total, leerMeta(atleta.id).rutas);
   // (belleza) el cielo de la tarjeta, el de esta hora (como en el juego): de noche, al alba, de día o al atardecer
   const fase = ambiente({ total: t.total }).fase;
   return (

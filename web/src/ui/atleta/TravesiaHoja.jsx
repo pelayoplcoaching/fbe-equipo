@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, useApp } from '../comunes.jsx';
 import { Imagen } from '../Imagen.jsx';
-import { leerTravesia, manadaDe, leerDuelo, guardarDuelo, leerMeta, sincronizarMeta, leerDia, aulladosHoy, apuntarAullado } from '../travesia.js';
+import { leerTravesia, manadaDe, leerDuelo, guardarDuelo, leerMeta, guardarMeta, sincronizarMeta, leerDia, aulladosHoy, apuntarAullado } from '../travesia.js';
 import { Travesia } from './TravesiaTarjeta.jsx';
 import { ETAPA_DIA } from '../../logica/travesia.js';
-import { nombreRango, progresoMisiones, adornosDe, adornosPuestos, LOGROS } from '../../logica/travesia-meta.js';
+import { nombreRango, progresoMisiones, adornosDe, adornosPuestos, LOGROS, elegirRuta } from '../../logica/travesia-meta.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { textoDistancia, rachaSemanas } from '../../logica/travesia.js';
-import { posicionEnRuta, textoRuta, postales, lobosDe, loboElegido, constelaciones, manadaPropia, miPuesto, duelo, equipoDelMes, textoParaCompartir } from '../../logica/travesia-ruta.js';
+import { posicionEnRuta, rutaPorElegir, RUTAS_NUEVAS, textoRuta, postales, lobosDe, loboElegido, constelaciones, manadaPropia, miPuesto, duelo, equipoDelMes, textoParaCompartir } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { pintarLobo } from './travesia-pinta.js';
 
@@ -168,7 +168,10 @@ export function HojaTravesia({ alCerrar }) {
     try { await api.aullar(f.perfil); apuntarAullado(atleta.id, hoyISO(), f.perfil); setAullados(aulladosHoy(atleta.id, hoyISO())); aviso?.(`¡Auuu! A ${f.nombre} le saldrá en su próxima etapa`); }
     catch (e) { if (/ya le has aullado/i.test(e?.message || '')) { apuntarAullado(atleta.id, hoyISO(), f.perfil); setAullados(aulladosHoy(atleta.id, hoyISO())); } aviso?.(e?.message || 'No se ha podido aullar', 'error'); }
   };
-  const pos = posicionEnRuta(t.total), album = postales(t.total);
+  const pos = posicionEnRuta(t.total, meta.rutas), album = postales(t.total, meta.rutas);
+  // (remate, tanda 6) desde la última ruta de siempre, se elige la siguiente (Picos de Europa, Pirineos o el Camino)
+  const porElegir = rutaPorElegir(t.total, meta.rutas);
+  const elegirSiguiente = (id) => { const m = guardarMeta(atleta.id, elegirRuta(meta, porElegir.n, id)); setMeta(m); sincronizarMeta(api, atleta.id).catch(() => {}); };
   const [manada, setManada] = useState(null);
   const [rival, setRival] = useState(() => leerDuelo(atleta.id, lunes));
   const [lobo, setLobo] = useState(() => loboElegido(t, leerAjustes().loboJuego).id);
@@ -204,6 +207,20 @@ export function HojaTravesia({ alCerrar }) {
           <div class="tv-ruta-extremos"><span>{pos.ruta.hitos[0][0]}</span><span>{pos.ruta.hitos[pos.ruta.hitos.length - 1][0]} · {pos.largo} km</span></div>
           <p class="mini terciario">En total, {textoDistancia(t.total)}{t.estrellas > 0 ? ` y ${t.estrellas} ${t.estrellas === 1 ? 'estrella' : 'estrellas'}` : ''}. Solo avanza en los descansos de tus entrenos.</p>
         </section>
+
+        {porElegir && (
+          <section class="tv-rutas" aria-labelledby="tv-rutas-t">
+            <h3 id="tv-rutas-t">Tu siguiente ruta</h3>
+            <p class="tv-donde">Cuando acabes {pos.ruta.nombre.replace(/^De /, 'la de ').replace(/^El /, 'el ').replace(/^Por /, 'la de ')}, tu lobo sigue por la que elijas.</p>
+            <div class="tv-rutas-lista">
+              {RUTAS_NUEVAS.map((r) => (
+                <button key={r.id} type="button" class="tv-ruta-op" aria-pressed={(porElegir.elegida || RUTAS_NUEVAS[(porElegir.n - 3) % 3].id) === r.id ? 'true' : 'false'} onClick={() => elegirSiguiente(r.id)}>
+                  <strong>{r.nombre}</strong><span>{r.hitos[0][0]} – {r.hitos[r.hitos.length - 1][0]} · {r.hitos[r.hitos.length - 1][1]} km</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <RangoYMisiones meta={meta} />
 

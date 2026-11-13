@@ -3,7 +3,7 @@ import { Icono, Capa, useApp } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
 import { nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, textoDistancia, ambiente, retoDelDia, progresoReto, hoyDe, rachaSemanas, semillaDelDia, marcasDelCamino, ETAPA_DIA } from '../../logica/travesia.js';
-import { cartelDeHito, nombrePaisaje, suave, calidad, CALIDAD_INICIAL, cuentaVuelta, VUELTA, pitidos, PASO } from '../../logica/travesia-efectos.js';
+import { cartelDeHito, nombrePaisaje, suave, calidad, CALIDAD_INICIAL, cuentaVuelta, VUELTA, pitidos, PASO, fechaEspecial, NOMBRE_FECHA } from '../../logica/travesia-efectos.js';
 import { crearSonido } from './travesia-sonido.js';
 import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
@@ -57,7 +57,7 @@ function tiempoGuardado() {
   } catch { return {}; }
 }
 // (tanda 1) los sonidos del juego (apagados de entrada): un toque al saltar, uno agudo en cada estrella y el aullido al acabar
-const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14], roce: [988, 0.09, 0.13], combo: [1320, 0.1, 0.12], cabeza: [220, 0.08, 0.14], 'pot-iman': [1046, 0.14, 0.14], 'pot-luna': [698, 0.2, 0.14], 'pot-aullido': [440, 0.3, 0.16] };
+const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14], dorada: [1568, 0.25, 0.14], alcanzado: [196, 0.2, 0.16], escapado: [1046, 0.2, 0.14], roce: [988, 0.09, 0.13], combo: [1320, 0.1, 0.12], cabeza: [220, 0.08, 0.14], 'pot-iman': [1046, 0.14, 0.14], 'pot-luna': [698, 0.2, 0.14], 'pot-aullido': [440, 0.3, 0.16] };
 // (top, tanda 3) El modo foto: la escena del final, con una franja abajo (los metros y el nombre del juego; ningún nombre
 // de persona), como imagen para compartir o guardar
 async function fotoDeEtapa(lienzo, metros) {
@@ -80,7 +80,9 @@ async function fotoDeEtapa(lienzo, metros) {
 // (remate, tanda 5) la vibración de cada cosa del juego (ui/hapticos.js)
 const VIBRA = { salto: 'tv-salto', doble: 'tv-doble', roce: 'tv-roce', estrella: 'tv-estrella', combo: 'tv-combo', tropiezo: 'tv-tropiezo' };
 // (top, tanda 2) el cartel de cada momento raro, cuando asoma
-const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante' };
+const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante', ventisca: '¡Viene la ventisca!' };
+// (remate, tanda 6) lo que dice el cartel con cada cosa nueva
+const CARTEL = { ventisca: '¡La ventisca te persigue!', alcanzado: 'Te ha alcanzado: −3 estrellas', escapado: '¡Escapaste de la ventisca!', dorada: '¡Estrella dorada! +10' };
 const aullar = () => { [[392, 0], [523, 260], [494, 620]].forEach(([f, ms]) => setTimeout(() => tono(f, ms ? 0.5 : 0.28, 0.16), ms)); };
 
 // (top, tanda 4) delDia: «la etapa del día» (un minuto, el mismo terreno para todos, tres intentos; no cuenta para la travesía)
@@ -170,7 +172,11 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     const quedanIni = practica ? PRACTICA : cuentaInicial(marca.current.fin, marca.current.pausa);
     // (tanda 1) el entreno empuja: tras un récord sale con el ritmo cogido; con la serie cumplida, un escudo. En un descanso
     // corto (45 s o menos) sale ya lanzado: no da tiempo a coger ritmo
+    // (remate, tanda 6) la etapa dorada (tras un récord en la serie) y las fechas especiales (la luna llena: estrellas dobles)
+    const amb0 = ambiente({ ...tiempoGuardado(), total: antesG.total });
+    const especial = fechaEspecial(hoyISO(), amb0.luna, amb0.fase), dorada = !practica && !!empuje?.ritmo;
     const e = nuevaEtapa(semilla, {
+      estrellasPor: dorada || especial === 'lunallena' ? 2 : 1,
       calma, movimientos: conMovimientos && !practica, km0: practica ? 0 : antesG.total, unToque: accesible.current.unToque,
       variedad: true, tutorial: ensenando && !calma, fija: delDia,
       racha0: practica ? 0 : empuje?.ritmo ? 10 : quedanIni <= 45 ? 6 : 0,
@@ -208,7 +214,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
         : [{ visibility: 'visible', transform: 'translateY(14px) scale(.7)' }, { visibility: 'visible', transform: 'none', offset: 0.14 }, { visibility: 'visible', transform: 'none', offset: 0.78 }, { visibility: 'visible', transform: 'translateY(-10px) scale(.85)' }],
       { duration: 2200, easing: 'ease-out' });
     };
-    const alEmpezar = setTimeout(() => anunciar(nombrePaisaje(amb.paisaje)), 700);   // (el nombre del paisaje, al entrar)
+    const alEmpezar = setTimeout(() => anunciar(dorada ? 'Etapa dorada: tu récord vale doble' : especial ? NOMBRE_FECHA[especial] : nombrePaisaje(amb.paisaje), !!(dorada || especial)), 700);   // (el nombre del paisaje, al entrar; o lo especial de hoy)
     const medir = () => {
       const r = c.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
       w = Math.max(1, r.width); h = Math.max(1, r.height);
@@ -242,7 +248,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       }
       const { r, g } = apuntar(e);
       // (top, tanda 3) las misiones, el rango y los logros (solo las etapas de una sesión)
-      const mt = !practica && sesion ? apuntarMeta(atletaId, r, g, { fase: amb.fase, paisaje: amb.paisaje, dia: hoyISO() }) : null;
+      const mt = !practica && sesion ? apuntarMeta(atletaId, r, g, { fase: amb.fase, paisaje: amb.paisaje, dia: hoyISO(), dorada, fecha: especial }) : null;
       if (mt) sincronizarMeta(api, atletaId).catch?.(() => {});   // (062: a la base; si no se puede, se queda en el móvil)
       vibrar('hecho');
       if (suena.current) aullar();
@@ -250,7 +256,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
         marca: practica ? r.metros > antesG.practica && antesG.practica > 0 : !r.calma && r.metros > antesG.mejor && antesG.mejor > 0, mejor: practica ? g.practica : g.mejor,
         reto: !practica && sesion && g.hoy.retoHecho && !hoy0.retoHecho,
         // (tanda 3) lo que trae esta etapa: un hito del mapa (su postal), un lobo nuevo o una constelación completa
-        postal: !practica && sesion ? postalesNuevas(antesG.total, g.total)[0] || null : null,
+        postal: !practica && sesion ? postalesNuevas(antesG.total, g.total, leerMeta(atletaId).rutas)[0] || null : null,
         lobo: !practica && sesion ? lobosDe(g).find((l) => l.tiene && !lobosDe(antesG).find((x) => x.id === l.id)?.tiene) || null : null,
         constelacion: !practica && sesion ? constelaciones(g.estrellas).find((k, i) => k.completa && !todas[i].completa) || null : null,
         semana: g.semanas?.[lunesDe(hoyISO())] || 0,
@@ -284,15 +290,18 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
         sn.viento(e.saltos ? e.v + 1.5 : e.v);
         if (accesible.current.sonar) for (const pt of pitidos(e.obstaculos, e.x, e.v)) sn.aviso(pt.tipo, pt.cerca);
       } else if (sn) sn.viento(0);
+      const pasaron = e.sucesos.slice();   // (lo de este cuadro: pintar() lo vacía)
       // (las vibraciones: un patrón para cada cosa)
       for (const s of e.sucesos) { const v = VIBRA[s]; if (v) vibrar(v); }
       // (los cinco últimos segundos: «prepárate» con lo que toca después, y su vibración)
       if (!practica && !preparado && q <= 5 && q > 0 && !parado) { preparado = true; vibrar('tv-prepara'); if (preparaTxt.current) preparaTxt.current.hidden = false; }
       pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada,
-        ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo, adornos: adornos.current, marcas: marcasRef.current, reloj: relojE, quedan: q });
+        ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo, adornos: adornos.current, marcas: marcasRef.current, reloj: relojE, quedan: q, especial, dorada });
       banda.current?.actualizar({ serie: acabada ? 0 : e.serie, combo: acabada ? 1 : e.combo });
       // (top, tanda 4) al pasar la marca de un compañero (o la suya), su cartel
       if (!parado) for (const mk of marcasRef.current) if (!pasadas.has(mk.metros + mk.nombre) && e.x >= mk.metros) { pasadas.add(mk.metros + mk.nombre); anunciar(mk.mia ? '¡Más allá de tu mejor etapa!' : `Pasas a ${mk.nombre}`, mk.mia); }
+      // (remate, tanda 6) la ventisca, la estrella dorada: su cartel
+      if (!parado) for (const sc of pasaron) if (CARTEL[sc]) anunciar(CARTEL[sc], sc !== 'alcanzado');
       // (top, tanda 2) el momento raro, cuando asoma
       if (!parado) for (const mo of e.momentos) if (!mo.dicho && mo.x - e.x < 16) { mo.dicho = true; anunciar(MOMENTO[mo.tipo], true); }
       // (tanda 5) los carteles: cada 250 m y (top, tanda 1) cada vez que sube el combo
@@ -437,6 +446,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
             {final.momentos?.includes('estampida') && <span class="oro">Estampida superada</span>}
             {final.momentos?.includes('puente') && <span class="oro">Puente cruzado</span>}
             {final.arriba >= 10 && <span>{textoDistancia(final.arriba)} por arriba</span>}
+            {final.doradas > 0 && <span class="oro"><Icono n="estrella" />{final.doradas === 1 ? 'Una estrella dorada' : `${final.doradas} estrellas doradas`}</span>}
+            {final.escapadas > 0 && <span class="oro">Escapaste de la ventisca</span>}
             {final.roces > 0 && <span>{final.roces === 1 ? 'Una vez por los pelos' : `${final.roces} veces por los pelos`}</span>}
             {final.marca && <span class="oro">Tu mejor {practica ? 'marca' : 'etapa'}</span>}
             {final.reto && <span class="oro">Reto del día, cumplido</span>}

@@ -242,7 +242,8 @@ console.log('(tanda 3) El mapa y las postales');
   const p2 = R.posicionEnRuta(450000), p3 = R.posicionEnRuta(460000);
   check(p2.ruta.id === 'madrid-valencia' && p2.km === 0 && p3.km === 10 && p3.n === 1 && p3.siguiente[0] === 'Arganda', 'al llegar a Madrid empieza la ruta a Valencia');
   const fin = R.posicionEnRuta((450 + 355 + 350) * 1000 + 5000);
-  check(fin.ruta.id === 'mieres-madrid' && fin.n === 3 && fin.km === 5, 'y tras Barcelona, vuelta a empezar');
+  // (remate, tanda 6: tras Barcelona ya no se vuelve a empezar; siguen las rutas nuevas)
+  check(fin.ruta.id === 'picos' && fin.n === 3 && fin.km === 5 && R.posicionEnRuta((450 + 355 + 350) * 1000 + 5000, ['camino']).ruta.id === 'camino', 'y tras Barcelona, la ruta nueva que se elija (sin elegir, los Picos de Europa)');
   check(R.RUTAS.every((r) => r.hitos[0][1] === 0 && r.hitos.every(([, k], i) => i === 0 || k > r.hitos[i - 1][1])), 'los hitos de cada ruta van en orden');
   const post = R.postales(40500);
   check(post.length === 3 && post[0].lugar === 'Puerto de Pajares' && post[2].lugar === 'Mieres' && post.every((x) => /^mes-(0[1-9]|1[0-2])$/.test(x.imagen)), 'una postal por hito alcanzado, la última primero, con su ilustración');

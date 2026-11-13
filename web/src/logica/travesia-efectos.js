@@ -171,3 +171,18 @@ export function pitidos(obstaculos, x, v) {
 }
 // Cada cuántos metros suena una pisada (al trote, más seguidas)
 export const PASO = 1.7;
+
+// ---------- (remate, tanda 6) Las fechas especiales ----------
+// Navidad (del 20 de diciembre al 6 de enero), Halloween (del 28 de octubre al 2 de noviembre) y, de noche, la luna llena
+// de verdad (iluminada en un 97 % o más): sus estrellas valen doble. fecha: AAAA-MM-DD; luna: { ilum }; fase: la de la hora
+export function fechaEspecial(fecha, luna = null, fase = null) {
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(fecha || '');
+  if (m) {
+    const md = Number(m[1]) * 100 + Number(m[2]);
+    if (md >= 1220 || md <= 106) return 'navidad';
+    if ((md >= 1028 && md <= 1031) || (md >= 1101 && md <= 1102)) return 'halloween';
+  }
+  if (fase === 'noche' && (luna?.ilum ?? 0) >= 0.97) return 'lunallena';
+  return null;
+}
+export const NOMBRE_FECHA = { navidad: 'Travesía de Navidad', halloween: 'Noche de Halloween', lunallena: 'Luna llena: las estrellas valen doble' };

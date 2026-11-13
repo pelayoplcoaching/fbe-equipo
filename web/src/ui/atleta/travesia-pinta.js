@@ -1,6 +1,6 @@
 // «La travesía»: cómo se pinta el juego en su lienzo (el juego en sí, en logica/travesia.js). Todo a mano, con formas
 // planas en la paleta de la casa: sin imágenes que descargar. Va con el trozo del juego, que solo se pide al abrirlo.
-import { azar, perfil, altoTerreno } from '../../logica/travesia.js';
+import { azar, perfil, altoTerreno, VENTISCA } from '../../logica/travesia.js';
 import { fugaz, estirar, parpadea, colaAlViento, impetu, sacudida, entrada, hayAurora, alturaAstro, avisoDe, zoomDe, metaFinal } from '../../logica/travesia-efectos.js';
 
 const NOCHE = '#0B0726', MORADO_NOCHE = '#1E1548', VIOLETA = '#5438D8', LAVANDA = '#A08CFF', TIZA = '#F1F0F6', ORO = '#F2C230';
@@ -265,7 +265,7 @@ function pino(c, px, base, ph, oscuro, claro, nevado) {
 // (top, tanda 1) minimo: el móvil sigue yendo justo aun ligero, y se deja también lo de adorno (nubes, polvo, huellas, fauna,
 // brillos); contraste: los obstáculos con borde claro; temblor: false para que el tropiezo no sacuda la pantalla;
 // combo: el multiplicador de ahora (las estrellas cogidas dicen «+2»)
-export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [], reloj = null, quedan = null }) {
+export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [], reloj = null, quedan = null, especial = null, dorada = false }) {
   // (top, tanda 2) la tormenta del momento raro: mientras dura, llueve y relampaguea
   const enTormenta = !!e.tormenta && e.x >= e.tormenta.desde && e.x <= e.tormenta.hasta;
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = enTormenta ? 'tormenta' : amb?.clima || null;
@@ -497,6 +497,18 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
       c.fillStyle = '#33288A'; c.beginPath(); c.moveTo(px + q.s * 0.3, suelo - q.s * q.a); c.lineTo(px + q.s, suelo); c.lineTo(px + q.s * 0.35, suelo); c.closePath(); c.fill();
     }
   }
+  // (remate, tanda 6) la etapa dorada (tras un récord en la serie): el cielo se tiñe de oro; y las fechas especiales
+  if (dorada) { c.fillStyle = 'rgba(242, 194, 48, .13)'; c.fillRect(-12, -12, w + 24, suelo + 12); }
+  if (especial === 'halloween') {
+    // (la luna, naranja)
+    const halo2 = c.createRadialGradient(lx, ly, lr * 0.5, lx, ly, lr * 2.4); halo2.addColorStop(0, 'rgba(255, 140, 50, .55)'); halo2.addColorStop(1, 'rgba(255, 140, 50, 0)');
+    c.fillStyle = halo2; c.fillRect(lx - lr * 2.5, ly - lr * 2.5, lr * 5, lr * 5);
+    c.fillStyle = 'rgba(255, 140, 50, .55)'; c.beginPath(); c.arc(lx, ly, lr, 0, 6.3); c.fill();
+  }
+  if (especial === 'lunallena') {
+    const halo3 = c.createRadialGradient(lx, ly, lr, lx, ly, lr * 4.5); halo3.addColorStop(0, 'rgba(241, 240, 246, .3)'); halo3.addColorStop(1, 'rgba(241, 240, 246, 0)');
+    c.fillStyle = halo3; c.fillRect(lx - lr * 4.6, ly - lr * 4.6, lr * 9.2, lr * 9.2);
+  }
   // (la luz de la hora, por encima del paisaje)
   if (!noche) { c.fillStyle = deDia ? 'rgba(150, 175, 255, .2)' : 'rgba(255, 150, 110, .1)'; c.fillRect(-12, -12, w + 24, suelo + 12); }
 
@@ -575,6 +587,26 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
       c.globalAlpha = a * 0.9; estrella4(c, gx, suelo + b.y, 2.6, 0); c.fill();
     }
     c.globalAlpha = 1;
+  }
+
+  // (remate, tanda 6) en Navidad, una guirnalda de luces al borde del camino; en Halloween, calabazas
+  if (especial === 'navidad' || especial === 'halloween') {
+    const corre3 = (e.x * u) % 600;
+    for (let k = -1; k * 600 - corre3 < w + 40; k++) for (let i = 0; i < (especial === 'navidad' ? 12 : 2); i++) {
+      const gx = k * 600 - corre3 + (especial === 'navidad' ? i * 50 : 140 + i * 270);
+      if (gx < -20 || gx > w + 20) continue;
+      const gy = sueloEn(gx);
+      if (especial === 'navidad') {
+        const on = quieto || Math.sin(t * 3 + i * 1.9 + k) > -0.3;
+        c.fillStyle = ['#FF5A6E', '#F2C230', '#5FD38A', '#6EA8FF'][i % 4]; c.globalAlpha = on ? 1 : 0.35;
+        c.beginPath(); c.arc(gx, gy - 6 - Math.sin((i % 6) / 6 * Math.PI) * 3, 2.6, 0, 6.3); c.fill(); c.globalAlpha = 1;
+      } else {
+        c.fillStyle = '#E8792B'; c.beginPath(); c.ellipse(gx, gy - 6, 9, 7, 0, 0, 6.3); c.fill();
+        c.fillStyle = '#C45E1C'; c.beginPath(); c.ellipse(gx, gy - 6, 3, 7, 0, 0, 6.3); c.fill();
+        c.fillStyle = '#2FA36B'; c.fillRect(gx - 1, gy - 15, 2, 4);
+        c.fillStyle = quieto || Math.sin(t * 7 + i) > -0.6 ? '#FFD65A' : '#B88A20'; tri(c, gx - 5, gy - 7, gx - 2, gy - 10, gx - 1, gy - 7, c.fillStyle); tri(c, gx + 1, gy - 7, gx + 2, gy - 10, gx + 5, gy - 7, c.fillStyle);
+      }
+    }
   }
 
   // ---------- Lo que hay que saltar ----------
@@ -681,6 +713,14 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     const izq = sx(q.x - q.w / 2), der = sx(q.x + q.w / 2);
     if (der < -24 || izq > w + 24) continue;
     const arriba = sy(q.h), grueso = q.grosor * u, base0 = sy(0);
+    if (q.alta) {
+      // (remate, tanda 6) el secreto: un saliente de roca sobre una columna, muy alto
+      const base0 = sy(0), cx = (izq + der) / 2;
+      c.fillStyle = '#2E2470'; c.beginPath(); c.moveTo(cx - u * 0.45, base0); c.lineTo(cx - u * 0.3, arriba + grueso); c.lineTo(cx + u * 0.35, arriba + grueso); c.lineTo(cx + u * 0.5, base0); c.closePath(); c.fill();
+      c.fillStyle = '#4A3E9E'; c.beginPath(); c.moveTo(izq, arriba + grueso * 0.3); c.lineTo(izq + u * 0.3, arriba); c.lineTo(der - u * 0.2, arriba); c.lineTo(der, arriba + grueso * 0.5); c.lineTo(der - u * 0.5, arriba + grueso); c.lineTo(izq + u * 0.4, arriba + grueso); c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(241, 240, 246, .45)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(izq + u * 0.3, arriba + 0.5); c.lineTo(der - u * 0.2, arriba + 0.5); c.stroke();
+      continue;
+    }
     if (q.puente) {
       c.strokeStyle = '#8C7BD8'; c.lineWidth = 2; c.lineCap = 'round';
       for (const lado of [izq - u * 1.6, der + u * 1.6]) { c.beginPath(); c.moveTo(lado, base0); c.lineTo(lado, arriba - u * 0.9); c.stroke(); }
@@ -785,6 +825,17 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   for (const s of e.estrellas) {
     if (s.cogida) continue;
     const x = sx(s.x); if (x < -20 || x > w + 20) continue;
+    if (s.dorada) {
+      // (remate, tanda 6) la estrella dorada del secreto: más grande, con rayos que giran
+      const y = sy(s.y) + (quieto ? 0 : Math.sin(t * 2.4) * 4), g = quieto ? 0 : t * 0.7;
+      const luz = c.createRadialGradient(x, y, 2, x, y, 34); luz.addColorStop(0, 'rgba(255, 214, 90, .7)'); luz.addColorStop(1, 'rgba(255, 214, 90, 0)');
+      c.fillStyle = luz; c.fillRect(x - 34, y - 34, 68, 68);
+      c.strokeStyle = 'rgba(255, 226, 122, .7)'; c.lineWidth = 2;
+      for (let i = 0; i < 8; i++) { const a = g + (i * Math.PI) / 4; c.beginPath(); c.moveTo(x + Math.cos(a) * 15, y + Math.sin(a) * 15); c.lineTo(x + Math.cos(a) * 24, y + Math.sin(a) * 24); c.stroke(); }
+      c.fillStyle = '#FFD65A'; estrella4(c, x, y, 14, g); c.fill();
+      c.fillStyle = '#FFF6D6'; estrella4(c, x, y, 5, -g); c.fill();
+      continue;
+    }
     const y = sy(s.y) + (quieto ? 0 : Math.sin(t * 3 + s.x) * 3), late = quieto ? 1 : 1 + 0.12 * Math.sin(t * 5 + s.x * 2);
     const luz = c.createRadialGradient(x, y, 1, x, y, 20 * late);
     luz.addColorStop(0, 'rgba(242, 194, 48, .55)'); luz.addColorStop(1, 'rgba(242, 194, 48, 0)');
@@ -917,6 +968,23 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
       lobo(c, { saltos: 0, tropiezo: 0, vy: 0, agachado: 0 }, p.zancada + 1.3);
       c.restore();
     }
+  }
+
+  // (remate, tanda 6) la ventisca que persigue: una pared de nieve detrás del lobo, que se acerca si tropieza
+  const vt = e.ventisca;
+  if (vt?.empezada && !vt.fuera && e.x < vt.hasta + 10) {
+    // (el frente se ve siempre: pegado al borde con toda la ventaja; encima del lobo, si le alcanza)
+    const cercania = 1 - Math.max(0, Math.min(1, vt.distancia / VENTISCA.ventaja));
+    const vx = x0 * (0.22 + 0.78 * cercania) - u * 0.5, sale = Math.min(1, Math.max(0, (vt.hasta - e.x) / 10));
+    const muro = c.createLinearGradient(Math.min(0, vx - u * 3), 0, vx + u * 0.5, 0);
+    muro.addColorStop(0, `rgba(241, 240, 246, ${(0.6 + 0.3 * cercania) * sale})`); muro.addColorStop(1, 'rgba(241, 240, 246, 0)');
+    c.fillStyle = muro; c.fillRect(-12, -12, vx + u * 0.5 + 12, h + 24);
+    c.fillStyle = TIZA;
+    for (let i = 0; i < (minimo ? 8 : 22); i++) {
+      const k = ((t * (1.3 + (i % 5) * 0.3) + i * 0.137) % 1), fy = (i * 97 % 100) / 100 * (h * 0.9);
+      c.globalAlpha = (1 - k) * 0.8 * sale; c.beginPath(); c.arc(vx - u * 2 + k * u * 3.2, fy + Math.sin(t * 4 + i) * 6, 1.6 + (i % 3), 0, 6.3); c.fill();
+    }
+    c.globalAlpha = 1;
   }
 
   // ---------- El lobo ----------
