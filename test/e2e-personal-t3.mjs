@@ -39,6 +39,8 @@ export async function probarPersonalConocerte({ navegador, check, base = 'http:/
     await hoja.getByRole('button', { name: 'Guardar' }).click();
     await hoja.waitFor({ state: 'detached' });
     check(/rango cómodo y sin dolor/.test(await sec.textContent()), 'guardado');
+    // (CI) la demo guarda en el navegador un poco después: la otra pestaña lo lee al abrir
+    await p.waitForFunction(() => /molestia_hombro/.test(localStorage.getItem('fbe-demo-v2') || ''), null, { timeout: 10000 }).catch(() => {});
 
     // --- Ana: su aviso en la sesión ---
     const q = await ctx.newPage();

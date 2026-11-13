@@ -148,6 +148,7 @@ export async function probarApuntesCamino({ navegador, check, base = 'http://loc
     await hoja.waitFor({ state: 'detached' });
     await enSemana.getByRole('button', { name: 'Tu progreso' }).click();
     await prog.waitFor();
+    await prog.locator('.certificado').waitFor({ timeout: 6000 }).catch(() => {});   // (CI, más lento)
     check(await prog.locator('.certificado').count() === 1 && await prog.getByRole('button', { name: 'Hacer el examen final' }).count() === 0, 'en «Tu progreso», el certificado en su ruta');
     await p.keyboard.press('Escape');
     check(errores.length === 0, `sin errores en la página${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
