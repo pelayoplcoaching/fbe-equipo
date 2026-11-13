@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, useApp } from '../comunes.jsx';
 import { Imagen } from '../Imagen.jsx';
-import { leerTravesia, manadaDe, leerDuelo, guardarDuelo } from '../travesia.js';
+import { leerTravesia, manadaDe, leerDuelo, guardarDuelo, leerMeta } from '../travesia.js';
+import { nombreRango, progresoMisiones, adornosDe, adornosPuestos, LOGROS } from '../../logica/travesia-meta.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { textoDistancia, rachaSemanas } from '../../logica/travesia.js';
 import { posicionEnRuta, textoRuta, postales, lobosDe, loboElegido, constelaciones, manadaPropia, miPuesto, duelo, equipoDelMes, textoParaCompartir } from '../../logica/travesia-ruta.js';
@@ -41,6 +42,61 @@ function Constelacion({ k }) {
   );
 }
 
+// (top, tanda 3) Tu rango y sus tres misiones; los adornos que se ganan por rango; y los logros
+function RangoYMisiones({ meta }) {
+  const lista = progresoMisiones(meta);
+  return (
+    <section aria-labelledby="tv-rango-t">
+      <h3 id="tv-rango-t">{nombreRango(meta.rango)} <span class="tv-cuenta">rango {meta.rango + 1}</span></h3>
+      <ul class="tv-misiones">
+        {lista.map((m) => (
+          <li key={m.id} class={`tv-mision${m.hecha ? ' hecha' : ''}`}>
+            <span class="tv-mision-marca" aria-hidden="true">{m.hecha ? <Icono n="hecho" /> : null}</span>
+            <span class="tv-mision-texto"><span>{m.texto}</span>
+              <span class="tv-barra" role="img" aria-label={m.hecha ? 'Cumplida' : `${m.valor} de ${m.meta}`}><span style={{ width: `${(m.valor / m.meta) * 100}%` }} /></span></span>
+            <b class="num">{m.hecha ? '✓' : `${m.valor}/${m.meta}`}</b>
+          </li>
+        ))}
+      </ul>
+      <p class="mini terciario">Con las tres cumplidas, tu lobo sube de rango y salen tres nuevas. Solo cuentan las etapas de tus descansos.</p>
+    </section>
+  );
+}
+function Adornos({ meta }) {
+  const [puestos, setPuestos] = useState(() => adornosPuestos(meta.rango, leerAjustes().adornosJuego));
+  const cambiar = (id) => { const n = puestos.includes(id) ? puestos.filter((x) => x !== id) : [...puestos, id]; setPuestos(n); guardarAjustes({ ...leerAjustes(), adornosJuego: n }); };
+  return (
+    <section aria-labelledby="tv-adornos-t">
+      <h3 id="tv-adornos-t">Adornos <span class="tv-cuenta">{adornosDe(meta.rango).filter((a) => a.tiene).length} de {adornosDe(meta.rango).length}</span></h3>
+      <ul class="tv-adornos">
+        {adornosDe(meta.rango).map((a) => (
+          <li key={a.id}>
+            <button type="button" class="tv-adorno" disabled={!a.tiene} aria-pressed={a.tiene && puestos.includes(a.id) ? 'true' : 'false'} onClick={() => cambiar(a.id)}>
+              <strong>{a.nombre}</strong><span>{!a.tiene ? `Rango ${a.rango + 1}: ${nombreRango(a.rango)}` : puestos.includes(a.id) ? 'Puesto' : 'Ponérselo'}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+function Logros({ meta }) {
+  const conseguidos = LOGROS.filter((l) => meta.logros[l.id]).length;
+  return (
+    <section aria-labelledby="tv-logros-t">
+      <h3 id="tv-logros-t">Logros <span class="tv-cuenta">{conseguidos} de {LOGROS.length}</span></h3>
+      <ul class="tv-logros">
+        {LOGROS.map((l) => (
+          <li key={l.id} class={`tv-logro${meta.logros[l.id] ? ' hecho' : ''}`}>
+            <span class="tv-logro-ico" aria-hidden="true"><Icono n={meta.logros[l.id] ? 'trofeo' : 'candado'} /></span>
+            <strong>{l.nombre}</strong><span>{l.como}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // (top, tanda 1: accesibilidad) «Cómo juegas»: tres ajustes de este móvil, que el juego lee al abrirse
 const COMO_JUEGAS = [
   { clave: 'juegoUnToque', texto: 'Un solo toque', ayuda: 'Sin doble salto ni agacharse: nada lo pide, y los ríos son más estrechos' },
@@ -70,6 +126,7 @@ export function HojaTravesia({ alCerrar }) {
   const { atleta, api, aviso } = useApp();
   const hoy = hoyISO(), lunes = lunesDe(hoy);
   const t = leerTravesia(atleta.id);
+  const meta = leerMeta(atleta.id);
   const pos = posicionEnRuta(t.total), album = postales(t.total);
   const [manada, setManada] = useState(null);
   const [rival, setRival] = useState(() => leerDuelo(atleta.id, lunes));
@@ -105,6 +162,8 @@ export function HojaTravesia({ alCerrar }) {
           <div class="tv-ruta-extremos"><span>{pos.ruta.hitos[0][0]}</span><span>{pos.ruta.hitos[pos.ruta.hitos.length - 1][0]} · {pos.largo} km</span></div>
           <p class="mini terciario">En total, {textoDistancia(t.total)}{t.estrellas > 0 ? ` y ${t.estrellas} ${t.estrellas === 1 ? 'estrella' : 'estrellas'}` : ''}. Solo avanza en los descansos de tus entrenos.</p>
         </section>
+
+        <RangoYMisiones meta={meta} />
 
         <section aria-labelledby="tv-postales-t">
           <h3 id="tv-postales-t">Postales <span class="tv-cuenta">{album.length}</span></h3>
@@ -162,6 +221,10 @@ export function HojaTravesia({ alCerrar }) {
           <ul class="tv-constelaciones">{cielo.map((k) => <Constelacion key={k.id} k={k} />)}</ul>
           <p class="mini terciario">Cada cinco estrellas que coges, se enciende una del cielo.</p>
         </section>
+
+        <Adornos meta={meta} />
+
+        <Logros meta={meta} />
 
         <ComoJuegas />
 

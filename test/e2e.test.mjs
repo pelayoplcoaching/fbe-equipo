@@ -6018,6 +6018,10 @@ try {
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');
   await probarTravesia5({ navegador, check });
+  // La travesía al nivel de los mejores: «Cómo juegas», rango, misiones, adornos, logros, música y la foto
+  console.log('\nLa travesía, al nivel de los mejores');
+  const { probarTravesiaTop } = await import('./e2e-travesia-top.mjs');
+  await probarTravesiaTop({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

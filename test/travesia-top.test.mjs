@@ -4,6 +4,7 @@ import {
   altoTerreno, pendiente, CORNISA, MOMENTO_CADA, POTENCIADORES,
 } from '../web/src/logica/travesia.js';
 import * as E from '../web/src/logica/travesia-efectos.js';
+import * as M from '../web/src/logica/travesia-meta.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -252,6 +253,52 @@ console.log('\nTanda 2 · se puede jugar sin tropezar');
     jugarSolo(e, 120);
     check(e.tropiezos === 0 && e.x > 800, `semilla ${sem}: dos minutos con cuestas, cornisas y momentos raros, ${Math.round(e.x)} m sin tropezar`);
   }
+}
+
+// ---------- Tanda 3 ----------
+console.log('\nTanda 3 · misiones y rango');
+{
+  const tres = M.misionesDeRango(0), otra = M.misionesDeRango(0), r1 = M.misionesDeRango(1);
+  const tipos = tres.map((x) => M.misionPorId(x.id).tipo);
+  check(tres.length === 3 && new Set(tres.map((x) => x.id)).size === 3 && JSON.stringify(tres) === JSON.stringify(otra) && tipos.includes('etapa') && tipos.includes('suma') && JSON.stringify(r1) !== JSON.stringify(tres),
+    `tres misiones por rango, distintas, siempre las mismas para ese rango y de los dos tipos (${tres.map((x) => x.id).join(', ')})`);
+  const campos = Array.from({ length: 40 }, (_, k) => M.misionesDeRango(k).map((x) => M.misionPorId(x.id).campo));
+  check(campos.every((c) => new Set(c).size === 3), 'en ningún rango salen dos misiones de lo mismo (dos de rozar, dos de estrellas…)');
+  check(M.metaDe(M.misionPorId('lejos'), 0) === 350 && M.metaDe(M.misionPorId('lejos'), 4) > 350 && M.metaDe(M.misionPorId('combo'), 9) === 4 && M.metaDe(M.misionPorId('limpia'), 7) === 1, 'las metas suben con el rango (y las que no tienen número, no)');
+  check(M.nombreRango(0) === 'Cachorro' && M.nombreRango(7) === 'Leyenda' && M.nombreRango(9) === 'Leyenda 3', 'los nombres de los rangos (y, pasado el último, «Leyenda 2», «Leyenda 3»…)');
+  // Un atleta que cumple todo lo que se le pida: sube de rango y cambian las misiones
+  const todo = { metros: 99999, estrellas: 999, segundos: 200, tropiezos: 0, calma: false, combo: 4, roces: 9, arriba: 999, potenciadores: ['iman', 'luna', 'aullido'], rios: 9, momentos: [] };
+  let m = M.META_VACIA(), sube = null, cumplidas = 0;
+  for (let i = 0; i < 12 && !sube; i++) { const r = M.sumarMeta(m, todo, { total: 200000, estrellas: 800 }, { dia: '2026-11-13' }); m = r.meta; cumplidas += r.cumplidas.length; sube = r.subeRango; }
+  check(sube === 'Explorador' && m.rango === 1 && cumplidas === 3 && m.activas.every((a) => a.valor === 0) && m.hechas === 3, 'con las tres cumplidas, sube a «Explorador» y salen tres nuevas a cero');
+  // Una etapa cualquiera no las cumple de golpe; las de suma se van sumando
+  let n = M.META_VACIA();
+  const poco = { metros: 120, estrellas: 2, segundos: 40, tropiezos: 2, calma: false, combo: 1, roces: 0, arriba: 0, potenciadores: [], rios: 0 };
+  const suma = n.activas.find((a) => M.misionPorId(a.id).tipo === 'suma');
+  const campo = M.misionPorId(suma.id).campo, poco2 = campo === 'potenciadores' ? { ...poco, potenciadores: ['iman'] } : campo === 'limpia' ? { ...poco, tropiezos: 0 } : campo === 'etapa' ? poco : { ...poco, [campo]: Math.max(1, poco[campo] || 0) };
+  n = M.sumarMeta(n, poco2, { total: 120, estrellas: 2 }).meta; n = M.sumarMeta(n, poco2, { total: 240, estrellas: 4 }).meta;
+  const v = n.activas.find((a) => a.id === suma.id).valor;
+  check(v >= 2 && n.rango === 0, `las de suma se acumulan etapa a etapa (${suma.id}: ${v})`);
+  check(M.limpiarMeta({ rango: 2, activas: [{ id: 'nada', valor: 9 }], logros: { km1: '2026-11-01', inventado: '2026-11-01' } }).activas.every((a) => a.valor === 0)
+    && Object.keys(M.limpiarMeta({ logros: { km1: '2026-11-01', inventado: '2026-11-01' } }).logros).join() === 'km1' && M.limpiarMeta('basura').rango === 0, 'lo guardado ilegible o inventado se descarta');
+}
+
+console.log('\nTanda 3 · adornos y logros');
+{
+  check(M.adornosDe(0).every((a) => !a.tiene) && M.adornosDe(3).filter((a) => a.tiene).length === 3 && M.adornosPuestos(3, null).length === 3 && M.adornosPuestos(3, ['aura', 'huellas']).join() === 'huellas',
+    'los adornos se ganan por rango; sin elegir, lleva todos los que tiene; elegidos, solo los que tiene');
+  const r = { metros: 500, estrellas: 5, segundos: 130, tropiezos: 0, calma: false, combo: 4, roces: 3, arriba: 0, potenciadores: ['iman'], rios: 0, momentos: ['estampida'], montesUno: 1 };
+  const x = M.sumarMeta(M.META_VACIA(), r, { total: 1200, estrellas: 30 }, { fase: 'noche', paisaje: 0, dia: '2026-11-13' });
+  const ids = Object.keys(x.meta.logros);
+  check(['km1', 'rasguno', 'pelos', 'combo4', 'monte1', 'estampida', 'nocturno'].every((k) => ids.includes(k)) && !ids.includes('km10') && !ids.includes('trio') && x.logros.includes('Sin un rasguño'),
+    `los logros salen cuando toca (${x.logros.length}: ${x.logros.slice(0, 4).join(', ')}…) y no se repiten`);
+  const y = M.sumarMeta(x.meta, { ...r, potenciadores: ['luna', 'aullido'] }, { total: 1300, estrellas: 31 }, { fase: 'dia' });
+  check(y.logros.includes('Los tres poderes') && !y.logros.includes('Primer kilómetro'), '«Los tres poderes»: el imán, la luna y el aullido, aunque sea en etapas distintas');
+  // El monte de un salto: en la etapa, sin el doble
+  const e = llano(1); e.v = 8; e.obstaculos = [{ x: e.x + 4.5, tipo: 'monte', w: 2.4, h: 2.3, plano: 0.12, pasado: false }];
+  e.pulsado = true; let saltado = false;
+  for (let i = 0; i < 300; i++) { if (!saltado && e.x > e.obstaculos[0].x - 3.1) { saltar(e); saltado = true; } avanzar(e, 1 / 120); }
+  check(e.tropiezos === 0 && resultado(e).montesUno === 1, 'un monte saltado manteniendo el dedo (sin el doble) cuenta para su logro');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

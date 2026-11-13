@@ -48,7 +48,7 @@ export function nuevoPaisaje(semilla = 1) {
     t0: null, tCae: null, tTropiezo: null, tFin: null, tPolvo: 0, tVaho: 0, pisada: 0, rayo: -99,
     zancada: 0,
     // (top, tanda 1) los textos que suben («¡Por los pelos!», «+2») y las cordilleras ya pintadas (se pintan una vez y se desplazan)
-    textos: [], fondo: null,
+    textos: [], fondo: null, estela: [],
   };
 }
 
@@ -195,6 +195,19 @@ function lobo(c, e, fase, tinta = null, vida = null) {
     c.moveTo(-0.8, 0.84); c.bezierCurveTo(-0.7, 1.0, -0.3, 0.975, 0.18, 0.975); c.bezierCurveTo(0.4, 0.99, 0.48, 1.04, 0.58, 1.15); c.stroke();
     c.globalAlpha /= 0.6;
   }
+  // (top, tanda 3) los adornos que lleva puestos: el pañuelo al viento y el collar de luna, al cuello
+  const ad = vida?.adornos;
+  if (ad?.includes('panuelo')) {
+    const ond = Math.sin(fase * 1.3) * 0.06;
+    c.fillStyle = '#E2506F'; c.beginPath(); c.moveTo(0.36, 1.02); c.lineTo(0.72, 0.86); c.lineTo(0.62, 0.74); c.lineTo(0.3, 0.88); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(0.34, 0.98); c.quadraticCurveTo(0.05, 1.08 + ond, -0.24, 1.0 + ond * 2); c.lineTo(-0.18, 0.9 + ond * 1.5); c.quadraticCurveTo(0.06, 0.94 + ond, 0.32, 0.9); c.closePath(); c.fill();
+    c.fillStyle = '#F7849C'; c.beginPath(); c.moveTo(0.38, 1.0); c.lineTo(0.7, 0.86); c.lineTo(0.66, 0.82); c.lineTo(0.36, 0.95); c.closePath(); c.fill();
+  }
+  if (ad?.includes('collar')) {
+    c.strokeStyle = ORO; c.lineWidth = 0.06; c.beginPath(); c.moveTo(0.42, 1.0); c.lineTo(0.7, 0.8); c.stroke();
+    c.fillStyle = TIZA; c.beginPath(); c.arc(0.62, 0.78, 0.07, 0, 6.3); c.fill();
+    c.fillStyle = ORO; c.beginPath(); c.arc(0.6, 0.79, 0.05, 0, 6.3); c.fill();
+  }
   // La cabeza: oreja, frente, hocico y mandíbula
   conCabeza(() => {
     c.fillStyle = claro; c.beginPath();
@@ -251,7 +264,7 @@ function pino(c, px, base, ph, oscuro, claro, nevado) {
 // (top, tanda 1) minimo: el móvil sigue yendo justo aun ligero, y se deja también lo de adorno (nubes, polvo, huellas, fauna,
 // brillos); contraste: los obstáculos con borde claro; temblor: false para que el tropiezo no sacuda la pantalla;
 // combo: el multiplicador de ahora (las estrellas cogidas dicen «+2»)
-export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1 }) {
+export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [] }) {
   // (top, tanda 2) la tormenta del momento raro: mientras dura, llueve y relampaguea
   const enTormenta = !!e.tormenta && e.x >= e.tormenta.desde && e.x <= e.tormenta.hasta;
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = enTormenta ? 'tormenta' : amb?.clima || null;
@@ -512,7 +525,8 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   if (!quieto && !minimo) {
     const paso = Math.floor(p.zancada / Math.PI);
     if (paso !== p.pisada && !enAire && e.tropiezo === 0 && !e.calma) { p.pisada = paso; p.huellas.push(e.x - 0.55); if (p.huellas.length > 16) p.huellas.shift(); }
-    c.fillStyle = nevado ? 'rgba(110, 100, 190, .5)' : 'rgba(6, 4, 24, .38)';
+    // (top, tanda 3) con «Huellas de luz», las huellas brillan
+    c.fillStyle = adornos.includes('huellas') ? 'rgba(242, 194, 48, .55)' : nevado ? 'rgba(110, 100, 190, .5)' : 'rgba(6, 4, 24, .38)';
     p.huellas.forEach((hx, i) => { const px = sx(hx); if (px > -10) { c.beginPath(); c.ellipse(px, sy(altoT(hx)) + 7 + (i % 2) * 3, 4, 1.7, 0, 0, 6.3); c.fill(); } });
   }
   // (las matas de la línea del suelo, que se mecen, y alguna flor)
@@ -866,7 +880,21 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     ojos: !quieto && (e.tropiezo > 0 || parpadea(t - p.t0, e.semilla % 97)) ? 'cerrados' : null,
     luz: deDia ? null : bajo ? '#FFD2B0' : '#FFFFFF',
     aulla,
+    adornos,
   };
+  // (top, tanda 3) el aura plateada, detrás del lobo; y la estela de estrellas, que se queda atrás
+  if (adornos.includes('aura')) {
+    const ay = sy(yL + 0.75), aura = c.createRadialGradient(x0, ay, u * 0.3, x0, ay, u * 1.7);
+    aura.addColorStop(0, 'rgba(241, 240, 246, .22)'); aura.addColorStop(1, 'rgba(241, 240, 246, 0)');
+    c.fillStyle = aura; c.fillRect(x0 - u * 1.8, ay - u * 1.8, u * 3.6, u * 3.6);
+  }
+  if (adornos.includes('estela') && !quieto && !minimo) {
+    if (!fin && dt > 0 && (p.tEstela = (p.tEstela || 0) + dt) > 0.07) { p.tEstela = 0; p.estela.push({ x: x0 - u * 0.9, y: sy(yL + 0.75) + Math.sin(t * 9) * 5, t: 0.6 }); }
+    p.estela = p.estela.filter((q) => (q.t -= dt) > 0);
+    c.fillStyle = ORO;
+    for (const q of p.estela) { q.x -= e.v * u * dt * 0.8; c.globalAlpha = q.t / 0.6; estrella4(c, q.x, q.y, 2.2 + q.t * 3, t * 3); c.fill(); }
+    c.globalAlpha = 1;
+  }
   c.save();
   c.translate(x0, sy(yL)); c.scale(u * forma.sx, -u * forma.sy);
   if (e.inmune > 0 && e.tropiezo === 0 && !quieto && !fin) c.globalAlpha = 0.55 + 0.45 * Math.sin(t * 24);

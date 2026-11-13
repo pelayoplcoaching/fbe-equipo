@@ -2,6 +2,7 @@
 // las estrellas de cada sesión, el total y la mejor marca (logica/travesia.js). Si el navegador no deja guardar, se
 // recuerda mientras la app está abierta, como en descansos.js.
 import { limpiarTravesia, sumarEtapa, prepararEnvio, trasSubir, conBase } from '../logica/travesia.js';
+import { limpiarMeta, sumarMeta } from '../logica/travesia-meta.js';
 
 const enMemoria = new Map();
 const soloMemoria = new Set();   // (v0.148) los que no se han podido guardar en el navegador: ahí manda la memoria
@@ -102,4 +103,24 @@ export function guardarDuelo(atletaId, rival, lunes) {
   duelos.set(atletaId, d);
   try { if (d) localStorage.setItem(claveDuelo(atletaId), JSON.stringify(d)); else localStorage.removeItem(claveDuelo(atletaId)); } catch { /* queda en memoria */ }
   return d?.rival || '';
+}
+
+// ---------- (top, tanda 3) Misiones, rango y logros, en `fbe-travesia-meta-<atletaId>` ----------
+const memMeta = new Map();
+const claveMeta = (atletaId) => `fbe-travesia-meta-${atletaId}`;
+export function leerMeta(atletaId) {
+  try { const t = localStorage.getItem(claveMeta(atletaId)); if (t) return limpiarMeta(JSON.parse(t)); } catch { /* sin almacenamiento o ilegible */ }
+  return limpiarMeta(memMeta.get(atletaId) ?? null);
+}
+export function guardarMeta(atletaId, m) {
+  const v = limpiarMeta(m);
+  memMeta.set(atletaId, v);
+  try { localStorage.setItem(claveMeta(atletaId), JSON.stringify(v)); } catch { /* queda en memoria */ }
+  return v;
+}
+// Suma una etapa de una sesión a las misiones y los logros; devuelve lo que trae (cumplidas, rango nuevo, adorno, logros)
+export function apuntarMeta(atletaId, resultado, total, ctx) {
+  const r = sumarMeta(leerMeta(atletaId), resultado, total, ctx);
+  guardarMeta(atletaId, r.meta);
+  return r;
 }

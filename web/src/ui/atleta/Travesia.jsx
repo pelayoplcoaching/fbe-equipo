@@ -8,7 +8,9 @@ import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, cor
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { tono, prepararAudio } from './sesion-comun.jsx';
-import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo } from '../travesia.js';
+import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo, leerMeta, apuntarMeta } from '../travesia.js';
+import { adornosPuestos } from '../../logica/travesia-meta.js';
+import { crearMusica } from './travesia-musica.js';
 import { nuevoPaisaje, pintar } from './travesia-pinta.js';
 
 // «La travesía»: el juego del descanso, a pantalla completa. Un toque en cualquier sitio, salta; otro en el aire, doble
@@ -55,6 +57,25 @@ function tiempoGuardado() {
 }
 // (tanda 1) los sonidos del juego (apagados de entrada): un toque al saltar, uno agudo en cada estrella y el aullido al acabar
 const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14], roce: [988, 0.09, 0.13], combo: [1320, 0.1, 0.12], cabeza: [220, 0.08, 0.14], 'pot-iman': [1046, 0.14, 0.14], 'pot-luna': [698, 0.2, 0.14], 'pot-aullido': [440, 0.3, 0.16] };
+// (top, tanda 3) El modo foto: la escena del final, con una franja abajo (los metros y el nombre del juego; ningún nombre
+// de persona), como imagen para compartir o guardar
+async function fotoDeEtapa(lienzo, metros) {
+  const w = lienzo.width, h = lienzo.height, k = w / (lienzo.getBoundingClientRect().width || w), banda = Math.round(64 * k);
+  const c = document.createElement('canvas'); c.width = w; c.height = h + banda;
+  const x = c.getContext('2d');
+  x.drawImage(lienzo, 0, 0);
+  x.fillStyle = '#0B0726'; x.fillRect(0, h, w, banda);
+  x.fillStyle = '#F1F0F6'; x.textBaseline = 'middle';
+  x.font = `800 ${Math.round(22 * k)}px system-ui, sans-serif`; x.fillText(`La travesía · ${textoDistancia(metros)}`, Math.round(18 * k), h + banda / 2);
+  x.textAlign = 'right'; x.fillStyle = '#A08CFF'; x.font = `700 ${Math.round(15 * k)}px system-ui, sans-serif`; x.fillText('FBE Equipo', w - Math.round(18 * k), h + banda / 2);
+  const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
+  if (!blob) throw new Error('sin imagen');
+  const archivo = new File([blob], 'la-travesia.png', { type: 'image/png' });
+  if (navigator.canShare?.({ files: [archivo] })) { await navigator.share({ files: [archivo] }); return 'compartida'; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'la-travesia.png'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return 'guardada';
+}
 // (top, tanda 2) el cartel de cada momento raro, cuando asoma
 const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante' };
 const aullar = () => { [[392, 0], [523, 260], [494, 620]].forEach(([f, ms]) => setTimeout(() => tono(f, ms ? 0.5 : 0.28, 0.16), ms)); };
@@ -82,6 +103,12 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   const [sonido, setSonido] = useState(() => leerAjustes().sonidoJuego === true);
   const suena = useRef(sonido);
   suena.current = sonido;
+  // (top, tanda 3) la música (apagada de entrada, como el sonido) y los adornos que lleva su lobo según su rango
+  const [musica, setMusica] = useState(() => leerAjustes().musicaJuego === true);
+  const banda = useRef(null);
+  const adornos = useRef(null);
+  if (!adornos.current) adornos.current = adornosPuestos(leerMeta(atletaId).rango, leerAjustes().adornosJuego);
+  const [foto, setFoto] = useState('');
   const [escudos, setEscudos] = useState(0);
   const guardado0 = useRef(null);
   if (!guardado0.current) guardado0.current = leerTravesia(atletaId);
@@ -176,6 +203,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     const acabar = () => {
       acabada = true; apuntada.current = true;
       const { r, g } = apuntar(e);
+      // (top, tanda 3) las misiones, el rango y los logros (solo las etapas de una sesión)
+      const mt = !practica && sesion ? apuntarMeta(atletaId, r, g, { fase: amb.fase, paisaje: amb.paisaje, dia: hoyISO() }) : null;
       vibrar('hecho');
       if (suena.current) aullar();
       setFinal({ ...r, hoy: !practica && sesion ? g.sesiones[sesion]?.metros ?? r.metros : null, etapas: !practica && sesion ? g.sesiones[sesion]?.etapas ?? 1 : null,
@@ -185,7 +214,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
         postal: !practica && sesion ? postalesNuevas(antesG.total, g.total)[0] || null : null,
         lobo: !practica && sesion ? lobosDe(g).find((l) => l.tiene && !lobosDe(antesG).find((x) => x.id === l.id)?.tiene) || null : null,
         constelacion: !practica && sesion ? constelaciones(g.estrellas).find((k, i) => k.completa && !todas[i].completa) || null : null,
-        semana: g.semanas?.[lunesDe(hoyISO())] || 0 });
+        semana: g.semanas?.[lunesDe(hoyISO())] || 0,
+        cumplidas: mt?.cumplidas || [], rango: mt?.subeRango || null, adorno: mt?.adorno || null, logros: mt?.logros || [] });
     };
     const cuadro = (ahora) => {
       id = requestAnimationFrame(cuadro);
@@ -199,7 +229,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) tono(...SONIDOS[s]);
       if (e.sucesos.includes('roce')) vibrar('elegir');
       pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada,
-        ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo });
+        ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo, adornos: adornos.current });
+      banda.current?.actualizar({ serie: acabada ? 0 : e.serie, combo: acabada ? 1 : e.combo });
       // (top, tanda 2) el momento raro, cuando asoma
       if (!parado) for (const mo of e.momentos) if (!mo.dicho && mo.x - e.x < 16) { mo.dicho = true; anunciar(MOMENTO[mo.tipo], true); }
       // (tanda 5) los carteles: cada 250 m y (top, tanda 1) cada vez que sube el combo
@@ -236,11 +267,23 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   // Al acabar el descanso se cierra sola al poco (da tiempo a ver la etapa); en práctica espera a que elija
   useEffect(() => {
     if (!final || practica) return undefined;
-    const t = setTimeout(() => cerrar.current?.('fin'), final.postal || final.lobo || final.constelacion ? 4800 : 3200);   // (con algo nuevo que leer, un poco más)
+    const nuevo = final.postal || final.lobo || final.constelacion || final.rango || final.cumplidas?.length || final.logros?.length;
+    const t = setTimeout(() => cerrar.current?.('fin'), nuevo ? 4800 : 3200);   // (con algo nuevo que leer, un poco más)
     return () => clearTimeout(t);
   }, [final]);
 
   useEffect(() => { caja.current?.focus({ preventScroll: true }); }, []);
+  // (top, tanda 3) la música: suena mientras se juega; al acabar la etapa o al quitarla, se apaga despacio
+  useEffect(() => {
+    if (!musica || final) return undefined;
+    banda.current = crearMusica();
+    return () => { banda.current?.parar(); banda.current = null; };
+  }, [musica, !!final]);
+  const cambiarMusica = () => { const v = !musica; setMusica(v); guardarAjustes({ ...leerAjustes(), musicaJuego: v }); };
+  const hacerFoto = async () => {
+    try { const r = await fotoDeEtapa(lienzo.current, final?.metros || 0); setFoto(r === 'compartida' ? 'Compartida' : 'Guardada en tus descargas'); }
+    catch (err) { if (err?.name !== 'AbortError') setFoto('No se ha podido hacer la foto'); }
+  };
 
   // Un toque salta (mantenerlo alarga el salto); deslizar hacia abajo, agacharse
   const dedo = useRef(null);
@@ -299,6 +342,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       {!final && (
         <div class="travesia-modos">
           <button type="button" class="travesia-modo" aria-pressed={calma ? 'true' : 'false'} onClick={cambiarCalma} title="Sin obstáculos y al paso, para respirar tras una serie dura"><Icono n="sueno" />Calma</button>
+          <button type="button" class="travesia-modo" aria-pressed={musica ? 'true' : 'false'} onClick={cambiarMusica} aria-label={musica ? 'Quitar la música del juego' : 'Poner la música del juego'}><Icono n="musica" /></button>
           <button type="button" class="travesia-modo" aria-pressed={sonido ? 'true' : 'false'} onClick={cambiarSonido} aria-label={sonido ? 'Quitar el sonido del juego' : 'Poner el sonido del juego'}><Icono n={sonido ? 'altavoz' : 'silencio'} /></button>
           {escudos > 0 && <span class="travesia-escudo" role="status" aria-label={`${escudos === 1 ? 'Un escudo' : `${escudos} escudos`}: te perdona un tropiezo`}><Icono n="escudo" />{escudos}</span>}
         </div>
@@ -326,12 +370,18 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
             {final.lobo && <span class="oro">Nuevo lobo: {final.lobo.nombre}</span>}
             {final.constelacion && <span class="oro">Constelación completa: {final.constelacion.nombre}</span>}
             {elDuelo(final.semana) && <span class="travesia-final-duelo">{elDuelo(final.semana)}</span>}
+            {final.cumplidas?.map((m) => <span key={m} class="travesia-final-mision"><Icono n="hecho" />{m}</span>)}
+            {final.rango && <span class="oro travesia-final-rango">Nuevo rango: {final.rango}</span>}
+            {final.adorno && <span class="oro">Nuevo adorno: {final.adorno}</span>}
+            {final.logros?.map((l) => <span key={l} class="oro"><Icono n="trofeo" />{l}</span>)}
             {final.hoy != null && final.etapas > 1 && <span>Hoy llevas {textoDistancia(final.hoy)}</span>}
             {practica && !final.marca && final.mejor > final.metros && <span>Tu marca: {textoDistancia(final.mejor)}</span>}
           </span>
           {practica
             ? <div class="travesia-final-botones"><button type="button" class="btn btn-primario" onClick={() => setRonda((n) => n + 1)}>Otra</button><button type="button" class="btn" onClick={() => alCerrar?.('salir')}>Cerrar</button></div>
             : <button type="button" class="btn btn-primario" onClick={() => alCerrar?.('fin')}>A por la serie</button>}
+          {/* (top, tanda 3) el modo foto: la escena del final, para compartirla o guardarla */}
+          <button type="button" class="btn-texto travesia-foto" onClick={hacerFoto}><Icono n="camara" />{foto || 'Guardar la foto'}</button>
         </div>
       )}
     </div>
