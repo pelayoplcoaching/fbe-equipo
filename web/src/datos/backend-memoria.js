@@ -3669,7 +3669,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // (049) cómo va la app en cada dispositivo: cada uno apunta lo suyo (una fila por dispositivo y día, que se
       // sustituye entera); el coach lo lee sin nombres (un código por dispositivo) y lo puede borrar
       // (050) la personalización: lo de cada atleta, por sus funciones (nadie toca la tabla); los mensajes del coach
-      const personalJson = (x) => (x ? { apodo: x.apodo ?? null, porque: x.porque ?? null, favoritos: [...(x.favoritos || [])], musica_url: x.musica_url ?? null, cancion_url: x.cancion_url ?? null, musica_aperturas: { ...(x.musica_aperturas || {}) }, cumple_mes: x.cumple_mes ?? null, cumple_dia: x.cumple_dia ?? null, actualizado_en: x.actualizado_en } : null);
+      const personalJson = (x) => (x ? { apodo: x.apodo ?? null, porque: x.porque ?? null, favoritos: [...(x.favoritos || [])], musica_url: x.musica_url ?? null, cancion_url: x.cancion_url ?? null, genero: x.genero ?? null, tono: x.tono ?? null, meta_nombre: x.meta_nombre ?? null, meta_fecha: x.meta_fecha ?? null, meta_cifra: x.meta_cifra ?? null, meta_unidad: x.meta_unidad ?? null, musica_aperturas: { ...(x.musica_aperturas || {}) }, cumple_mes: x.cumple_mes ?? null, cumple_dia: x.cumple_dia ?? null, actualizado_en: x.actualizado_en } : null);
       if (nombre === 'personal_mio') {
         const a = miAtletaId();
         return a ? personalJson(tabla('personal_atleta').find((x) => x.atleta_id === a)) : null;
@@ -3685,8 +3685,35 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const limpio = limpiarPersonal(d);
         const antes = tabla('personal_atleta').find((x) => x.atleta_id === a);
         db.personal_atleta = tabla('personal_atleta').filter((x) => x.atleta_id !== a);
-        const fila = { atleta_id: a, ...limpio, musica_aperturas: { ...(antes?.musica_aperturas || {}) }, actualizado_en: ahora() };
+        const fila = { atleta_id: a, ...limpio, musica_aperturas: { ...(antes?.musica_aperturas || {}) }, actualizado_en: ahora(),
+          // (065) cómo le hablamos y su meta se quedan
+          genero: antes?.genero ?? null, tono: antes?.tono ?? null, meta_nombre: antes?.meta_nombre ?? null, meta_fecha: antes?.meta_fecha ?? null, meta_cifra: antes?.meta_cifra ?? null, meta_unidad: antes?.meta_unidad ?? null };
         tabla('personal_atleta').push(fila);
+        persistirYa();
+        return personalJson(fila);
+      }
+      // (065) cómo le hablamos y su meta: solo esas claves (como la base)
+      if (nombre === 'personal_ajustes_guardar') {
+        const a = miAtletaId();
+        if (!a) throw new Error('Solo el atleta guarda lo suyo');
+        if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        const d = args?.p_datos;
+        if (!d || typeof d !== 'object' || Array.isArray(d)) throw new Error('Faltan los datos');
+        let fila = tabla('personal_atleta').find((x) => x.atleta_id === a);
+        if (!fila) { fila = { atleta_id: a, apodo: null, porque: null, favoritos: [], musica_url: null, cancion_url: null, cumple_mes: null, cumple_dia: null, musica_aperturas: {}, actualizado_en: ahora() }; tabla('personal_atleta').push(fila); }
+        const nuevo = { genero: 'genero' in d ? d.genero || null : fila.genero ?? null, tono: 'tono' in d ? d.tono || null : fila.tono ?? null };
+        if (nuevo.genero && !['f', 'm', 'n'].includes(nuevo.genero)) throw new Error('Ese trato no existe');
+        if (nuevo.tono && !['cercano', 'directo', 'tope'].includes(nuevo.tono)) throw new Error('Ese tono no existe');
+        if ('meta_nombre' in d) {
+          const n = String(d.meta_nombre || '').replace(/\s+/g, ' ').trim();
+          const hoy = fMadrid();
+          let f = n ? d.meta_fecha || null : null, c = n && d.meta_cifra != null && d.meta_cifra !== '' ? Number(d.meta_cifra) : null, u = c != null ? d.meta_unidad || null : null;
+          if (n.length > 60) throw new Error('Tu meta: como mucho 60 caracteres');
+          if (f && (f < hoy || f > sumar(hoy, 730))) throw new Error('La fecha de tu meta tiene que estar entre hoy y dentro de dos años');
+          if (c != null && (!(c > 0 && c <= 100000) || !['kg', 'km', 'min', 'reps', 'cm', '%'].includes(u))) throw new Error('La cifra de tu meta necesita un número y su unidad');
+          Object.assign(nuevo, { meta_nombre: n || null, meta_fecha: f, meta_cifra: c, meta_unidad: u });
+        }
+        Object.assign(fila, nuevo, { actualizado_en: ahora() });
         persistirYa();
         return personalJson(fila);
       }

@@ -59,6 +59,8 @@ import { DondeEntrenas } from './DondeEntrenas.jsx';
 import { adaptarSesion, textoAdaptacion } from '../../logica/material.js';
 import { fraseSerie } from '../../logica/voz.js';
 import { hablar } from '../voz.js';
+import { useTrato } from '../trato.js';
+import { avisoRecord, vozRecord, vozUltima, vozFin, titularResumen } from '../../logica/trato.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { vibrar } from '../hapticos.js';
 import { conTransicion } from '../transiciones.js';
@@ -90,6 +92,8 @@ const HojaCompartirEquipo = perezoso(() => import('../Comunidad.jsx'), 'HojaComp
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { api, atleta, cola, aviso, propio } = useApp();
+  // (personalización 2) cómo le hablamos: su nombre en el récord, la última serie y el final (también por voz)
+  const trato = useTrato();
   // (v0.65) sin cobertura, de la copia del móvil; y en los dos casos, con lo que espera en la cola encima (lo apuntado sin
   // conexión sigue ahí al volver a abrir la sesión, aunque se haya cerrado la app)
   const det = useCarga(() => api.sesion(id, atleta.id).then((d) => sesionConCola(d, cola.operaciones())), [id]);
@@ -509,7 +513,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     const empuje = { ritmo: false, escudo: Number(valores.reps) >= Number(e.reps_min ?? e.reps_max ?? 1) && Number(valores.reps) > 0 };
     if (!previa && previas.datos) {
       const r = recordsDeSesion(enOrden({ ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } }), previas.datos, claveSerie)[`${e.id}-${numero}`];
-      if (r) { empuje.ritmo = true; celebrar(); avisoConCambio(`¡Récord en ${actualDe(e).nombre}!`, 'record'); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
+      if (r) { empuje.ritmo = true; celebrar('record'); avisoConCambio(avisoRecord(trato, actualDe(e).nombre), 'record'); hablar(vozRecord(trato)); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
     }
     if (!previa) {
       // Qué toca ahora: en una superserie se pasa al siguiente ejercicio de la ronda sin descanso
@@ -554,7 +558,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     const sig = nx && lista.find((x) => x.id === nx.id);
     const texto = !sig ? 'terminar la sesión' : sig.id === tras || nx.numero > 1 ? `serie ${nx.numero} de ${nombreCon(sig)}` : nombreCon(sig);
     // v0.48: lo que dirá el entrenador por voz al acabar el descanso («Serie 3 de press banca: 80 kilos por 6»)
-    let voz = '¡Sesión terminada! Buen trabajo.';
+    let voz = vozFin(trato);
     // v0.62: el aviso al móvil y la pantalla de bloqueo, con la carga que le propone («serie 3 de press banca · 80 kg × 6»)
     let avisoMovil = texto;
     if (sig) {
@@ -562,6 +566,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         const a = actualDe(sig);
         const prop = propuestaDe(sig, nx.numero, hechasTras[sig.id] || {});
         voz = fraseSerie({ numero: nx.numero, series: sig.pautadas ?? sig.series, nombre: a.nombre, kg: prop?.kg, reps: prop?.reps });
+        // (personalización 2) la última de la sesión, con su nombre
+        if (lista.reduce((n, x) => n + Math.max(0, (x.pautadas ?? x.series ?? 0) - seriesPautadasHechas(x, hechasTras[x.id] || {})), 0) === 1) voz = vozUltima(trato, voz);
         avisoMovil = textoAviso({ texto, kg: prop?.kg, reps: prop?.reps }) || texto;
       } catch { voz = `Ahora, ${texto}.`; }
     }
@@ -1517,6 +1523,7 @@ function MiniTarjeta({ datos }) {
 }
 
 function Resumen({ resumen, sesion, familia, alCerrar }) {
+  const trato = useTrato();
   const { api, atleta, propio, aviso } = useApp();
   const travesia = leerTravesia(atleta.id).sesiones[sesion.id] || null;
   const [compartir, setCompartir] = useState(false);
@@ -1585,6 +1592,7 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
         </span>
         <div class="pila-xs">
           <h1 id="resumen-titulo">Sesión terminada</h1>
+          {(() => { const tt = titularResumen(trato, { records: nRecords, completa: !resumen.enCola }); return <p class="resumen-para">{tt.titulo}{tt.sub ? <span> {tt.sub}</span> : null}</p>; })()}
           <p class="resumen-sub">{sesion.nombre}{resumen.tarjeta?.fecha ? ` · ${fmtCorta(resumen.tarjeta.fecha)}` : ''}</p>
         </div>
         {nRecords > 0 && <span class="resumen-pr num" style={{ '--i': 1 }}><Icono n="trofeo" />{nRecords === 1 ? '1 récord' : `${nRecords} récords`}</span>}

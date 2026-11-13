@@ -437,7 +437,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   useEffect(() => {
     if (!claveSemana || semanaCelebrada === claveSemana) return;
     setSemanaCelebrada(claveSemana);
-    const t = setTimeout(() => lanzarConfeti({ vibracion: 'anillo' }), 420);
+    const t = setTimeout(() => lanzarConfeti({ vibracion: 'anillo', momento: 'semana' }), 420);
     return () => clearTimeout(t);
   }, [claveSemana]);
   if (e.tipo === 'sin_semana') {
@@ -704,7 +704,7 @@ function BloqueTerminado({ salud }) {
   if (!r || (visto === r.bloque.id && !abierto)) return null;
   return (
     <>
-      <TarjetaBloque informe={r} alAbrir={() => { setAbierto(true); if (visto !== r.bloque.id) lanzarConfeti({ vibracion: 'anillo' }); }} alQuitar={() => setVisto(r.bloque.id)} />
+      <TarjetaBloque informe={r} alAbrir={() => { setAbierto(true); if (visto !== r.bloque.id) lanzarConfeti({ vibracion: 'anillo', momento: 'bloque' }); }} alQuitar={() => setVisto(r.bloque.id)} />
       {abierto && <InformeBloque informe={r} salud={salud} alCerrar={() => { setAbierto(false); setVisto(r.bloque.id); }} />}
     </>
   );

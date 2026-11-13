@@ -842,6 +842,19 @@ export function crearApi(backend) {
         return r || null;
       } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app'); throw e; }
     },
+    // (personalización 2, migración 065) cómo le hablamos (género y tono) y su meta con fecha: solo esas claves
+    async guardarTrato(datos) {
+      const permitidas = ['genero', 'tono', 'meta_nombre', 'meta_fecha', 'meta_cifra', 'meta_unidad'];
+      const limpio = Object.fromEntries(Object.entries(datos || {}).filter(([k]) => permitidas.includes(k)).map(([k, v]) => [k, v === '' || v === undefined ? null : v]));
+      try {
+        const r = await b.rpc('personal_ajustes_guardar', { p_datos: limpio });
+        personalMemo = { k: uid(), t: Date.now(), p: Promise.resolve(r || null) };
+        return r || null;
+      } catch (e) {
+        if (falta050(e) || /personal_ajustes_guardar|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app (migración 065)');
+        throw e;
+      }
+    },
     // Lo de cada atleta, para el coach ([{ atleta_id, apodo, porque, favoritos, musica_url, cumple_mes, cumple_dia }])
     async personalAtletas() {
       // (se recuerda un minuto, como los mensajes del coach: la lista de Atletas lo pide cada vez que se vuelve a ella)

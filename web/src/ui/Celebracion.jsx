@@ -35,7 +35,7 @@ export function TarjetaAniversario() {
   useEffect(() => {
     if (!an || oculta || leerPreferencia(clave, null)?.startsWith(hoy)) return undefined;
     guardarPreferencia(clave, `${hoy}:visto`);
-    const t = setTimeout(() => lanzarConfeti({ vibracion: null }), 400);
+    const t = setTimeout(() => lanzarConfeti({ vibracion: null, momento: 'otros' }), 400);
     return () => clearTimeout(t);
   }, [an?.meses, oculta]);
   if (!an || oculta) return null;

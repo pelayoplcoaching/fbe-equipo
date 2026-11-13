@@ -120,7 +120,7 @@ export function HitoRacha(props) { return <Capa><HitoRachaDentro {...props} /></
 function HitoRachaDentro({ hito, alCerrar }) {
   const ref = usePantalla(alCerrar);
   const [compartir, setCompartir] = useState(false);
-  useEffect(() => { const t = setTimeout(() => lanzarConfeti({ vibracion: 'record' }), 250); return () => clearTimeout(t); }, []);
+  useEffect(() => { const t = setTimeout(() => lanzarConfeti({ vibracion: 'record', momento: 'racha' }), 250); return () => clearTimeout(t); }, []);
   return (
     <div class="hito-pantalla" role="dialog" aria-modal="true" aria-labelledby="hito-titulo" aria-describedby="hito-texto" ref={ref} tabIndex={-1}>
       {/* (imágenes) la hoguera, abajo, fundida con el fondo */}
