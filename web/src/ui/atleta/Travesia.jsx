@@ -67,7 +67,7 @@ async function fotoDeEtapa(lienzo, metros) {
 // (remate, tanda 5) la vibración de cada cosa del juego (ui/hapticos.js)
 const VIBRA = { limpio: 'tv-salto', constelacion: 'tv-combo', salto: 'tv-salto', doble: 'tv-doble', roce: 'tv-roce', estrella: 'tv-estrella', combo: 'tv-combo', tropiezo: 'tv-tropiezo' };
 // (top, tanda 2) el cartel de cada momento raro, cuando asoma
-const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante', ventisca: '¡Viene la ventisca!' };
+const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante', ventisca: '¡Viene la ventisca!', lluvia: '¡Lluvia de estrellas!' };
 // (remate, tanda 6) lo que dice el cartel con cada cosa nueva
 const CARTEL = { ventisca: '¡La ventisca te persigue!', alcanzado: 'Te ha alcanzado: −3 estrellas', escapado: '¡Escapaste de la ventisca!', dorada: '¡Estrella dorada! +10' };
 const aullar = () => { [[392, 0], [523, 260], [494, 620]].forEach(([f, ms]) => setTimeout(() => tono(f, ms ? 0.5 : 0.28, 0.16), ms)); };
