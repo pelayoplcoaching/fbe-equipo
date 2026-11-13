@@ -33,7 +33,7 @@ export function VozCoach({ ruta, segundos }) {
 export function RetoDelMes() {
   const { api, atleta, propio } = useApp();
   const activa = !propio && atleta?.estado !== 'baja' && !!atleta?.id;
-  const entrenos = useCarga(() => (activa ? api.entrenamientos(atleta.id).catch(() => []) : Promise.resolve([])), [atleta?.id, activa]);
+  const entrenos = useCarga(() => (activa ? api.entrenamientos(atleta.id).catch(() => []) : Promise.resolve([])), [atleta?.id, activa], { recuerdo: activa ? `reto-entrenos:${atleta.id}` : null });
   const agenda = useAgenda(null, { activa });
   if (!activa || !entrenos.datos) return null;
   const r = retoDelMes({ entrenos: entrenos.datos, agenda: agenda.datos || [], hoy: hoyISO() });
