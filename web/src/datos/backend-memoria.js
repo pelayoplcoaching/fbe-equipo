@@ -3686,13 +3686,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const antes = tabla('personal_atleta').find((x) => x.atleta_id === a);
         db.personal_atleta = tabla('personal_atleta').filter((x) => x.atleta_id !== a);
         const fila = { atleta_id: a, ...limpio, musica_aperturas: { ...(antes?.musica_aperturas || {}) }, actualizado_en: ahora(),
-          // (065) cómo le hablamos y su meta se quedan
+          // (066) cómo le hablamos y su meta se quedan
           genero: antes?.genero ?? null, tono: antes?.tono ?? null, meta_nombre: antes?.meta_nombre ?? null, meta_fecha: antes?.meta_fecha ?? null, meta_cifra: antes?.meta_cifra ?? null, meta_unidad: antes?.meta_unidad ?? null };
         tabla('personal_atleta').push(fila);
         persistirYa();
         return personalJson(fila);
       }
-      // (065) cómo le hablamos y su meta: solo esas claves (como la base)
+      // (066) cómo le hablamos y su meta: solo esas claves (como la base)
       if (nombre === 'personal_ajustes_guardar') {
         const a = miAtletaId();
         if (!a) throw new Error('Solo el atleta guarda lo suyo');

@@ -158,7 +158,7 @@ export function MensajesAutomaticos() {
   );
 }
 
-// (personalización 2, tanda 3; migración 066) El aviso de cada zona: al atleta que dijo en el cuestionario que le molesta
+// (personalización 2, tanda 3; migración 067) El aviso de cada zona: al atleta que dijo en el cuestionario que le molesta
 // (y con su consentimiento de salud), en los ejercicios que la cargan. Hasta que lo escribas o apruebes, no sale nada.
 export function AvisosZona() {
   const { api } = useApp();

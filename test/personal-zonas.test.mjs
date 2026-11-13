@@ -1,9 +1,9 @@
-// Que la app le conozca, en la base: la migración 066 en un Postgres local (PGlite). Los momentos nuevos de los mensajes
+// Que la app le conozca, en la base: la migración 067 en un Postgres local (PGlite). Los momentos nuevos de los mensajes
 // del coach: los avisos por zona ('molestia_<zona>'), la primera vez y la vuelta de un viaje.
 //   node test/personal-zonas.test.mjs
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
-console.log('La migración 066 (PGlite)');
+console.log('La migración 067 (PGlite)');
 const { PGlite } = await import('@electric-sql/pglite');
 const { aplicarEsquema } = await import('./esquema.mjs');
 const { MOMENTO_VALIDO } = await import('../web/src/logica/personal.js');
@@ -29,7 +29,7 @@ await q(`select mensaje_coach_guardar('viaje', 'Bienvenida de vuelta, {nombre}')
 await q(`select mensaje_coach_guardar('meta', 'A por tu meta')`);
 const lista = (await q('select mensajes_coach() as m'))[0].m;
 check(ZONAS_AVISO.every((z) => lista.some((m) => m.momento === momentoZona(z))), `el coach guarda un aviso por zona (${ZONAS_AVISO.length} zonas)`);
-check(lista.some((m) => m.momento === 'primera_vez') && lista.some((m) => m.momento === 'viaje') && lista.some((m) => m.momento === 'meta'), 'y los de la primera vez y la vuelta de un viaje (los de la 065 siguen)');
+check(lista.some((m) => m.momento === 'primera_vez') && lista.some((m) => m.momento === 'viaje') && lista.some((m) => m.momento === 'meta'), 'y los de la primera vez y la vuelta de un viaje (los de la 066 siguen)');
 check(await falla(`select mensaje_coach_guardar('molestia_otra', 'x')`) && await falla(`select mensaje_coach_guardar('molestia_', 'x')`), 'una zona que no está, no');
 await q(`select mensaje_coach_guardar('molestia_hombro', '')`);
 check(!(await q('select mensajes_coach() as m'))[0].m.some((m) => m.momento === 'molestia_hombro'), 'vacío, el aviso se quita');
@@ -39,6 +39,6 @@ check((await q('select mensajes_coach() as m'))[0].m.some((m) => m.momento === '
 // la app y la base, de acuerdo en los momentos
 check(ZONAS_AVISO.every((z) => MOMENTO_VALIDO.has(momentoZona(z))), 'la app acepta los mismos avisos por zona');
 await su();
-check((await q('select count(*)::int as n from fbe_migraciones where numero = 66'))[0].n === 1, 'la 066 queda apuntada');
+check((await q('select count(*)::int as n from fbe_migraciones where numero = 67'))[0].n === 1, 'la 067 queda apuntada');
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

@@ -95,14 +95,14 @@ export const MOMENTOS_COACH = [
   ['racha', 'En un hito de la racha', '{semanas} semanas seguidas, {nombre}. Esto ya es tuyo.'],
   ['vuelta', 'Al volver tras un parón', 'Qué bien verte de vuelta, {nombre}. Sin prisa: lo importante es haber vuelto.'],
   ['cumple', 'En su cumpleaños', '¡Feliz cumpleaños, {nombre}! Que este año venga cargado de récords.'],
-  // (personalización 2, migración 065) su aniversario en el equipo y su meta, a una semana
+  // (personalización 2, migración 066) su aniversario en el equipo y su meta, a una semana
   ['aniversario', 'En su aniversario en el equipo', '{tiempo} entrenando juntos, {nombre}. Gracias por la constancia: lo mejor está por venir.'],
   ['meta', 'Cuando falta una semana para su meta', 'Una semana para {meta}, {nombre}. Lo has trabajado: ahora, a disfrutarlo.'],
-  // (personalización 2, tanda 4; migración 066)
+  // (personalización 2, tanda 4; migración 067)
   ['primera_vez', 'La primera vez que hace un ejercicio', 'Primera vez con {ejercicio}, {nombre}: sin prisa, la técnica primero. Luego me cuentas.'],
   ['viaje', 'Al volver al gimnasio tras un viaje', 'De vuelta en casa, {nombre}. Hoy, a coger el ritmo sin pasarte.'],
 ];
-// (personalización 2, tanda 3; migración 066) los avisos del coach por zona, para quien dijo que le molesta
+// (personalización 2, tanda 3; migración 067) los avisos del coach por zona, para quien dijo que le molesta
 export const ZONAS_MOLESTIA = ['cuello', 'hombro', 'codo', 'muneca_mano', 'espalda_alta', 'zona_lumbar', 'cadera', 'rodilla', 'tobillo_pie'];
 export const MOMENTO_VALIDO = new Set([...MOMENTOS_COACH.map(([k]) => k), ...ZONAS_MOLESTIA.map((z) => `molestia_${z}`)]);
 export function textoMensajeCoach(plantilla, { nombre = '', ejercicio = '', semanas = '', tiempo = '', meta = '' } = {}) {

@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.155': {
+    atleta: [
+      'La app te habla a ti: tu nombre, cómo quieres que te hablemos, tu meta con cuenta atrás y por qué cada sesión es para ti.',
+      'Y te conoce: «Hoy, por cómo estás», tu mejor momento, tu historia, tu aniversario y «Tu ADN FBE».',
+    ],
+    coach: [
+      'En la ficha, «Para hablarle» y «La carta del mes»; Cuenta → Avisos por zona. Migraciones 066 y 067.',
+    ],
+  },
   '0.154': {
     atleta: [
       'Apuntes que se quedan: repaso espaciado, piénsalo antes de leer, preguntas de tu coach y ejercicios para practicar.',

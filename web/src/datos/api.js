@@ -40,7 +40,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -842,7 +842,7 @@ export function crearApi(backend) {
         return r || null;
       } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app'); throw e; }
     },
-    // (personalización 2, migración 065) cómo le hablamos (género y tono) y su meta con fecha: solo esas claves
+    // (personalización 2, migración 066) cómo le hablamos (género y tono) y su meta con fecha: solo esas claves
     async guardarTrato(datos) {
       const permitidas = ['genero', 'tono', 'meta_nombre', 'meta_fecha', 'meta_cifra', 'meta_unidad'];
       const limpio = Object.fromEntries(Object.entries(datos || {}).filter(([k]) => permitidas.includes(k)).map(([k, v]) => [k, v === '' || v === undefined ? null : v]));
@@ -853,7 +853,7 @@ export function crearApi(backend) {
         try { globalThis.dispatchEvent?.(new Event('fbe-personal')); } catch { /* */ }
         return r || null;
       } catch (e) {
-        if (falta050(e) || /personal_ajustes_guardar|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app (migración 065)');
+        if (falta050(e) || /personal_ajustes_guardar|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app (migración 066)');
         throw e;
       }
     },
@@ -1309,7 +1309,9 @@ export function crearApi(backend) {
       // (v0.153) el rastro, la liga, el reto y la fiesta (063): con la 062 pero sin la 063, la 2026-12.27
       if ((await api.travesia063().catch(() => null)) !== true) return VERSION_LEGAL_SIN_063;
       // (v0.154) los apuntes con los demás (064 y 065): con la 063 pero sin la 065, la 2026-12.28
-      return (await api.apuntes065().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_065;
+      if ((await api.apuntes065().catch(() => null)) !== true) return VERSION_LEGAL_SIN_065;
+      // (v0.155) cómo le hablamos y su meta (066): con la 065 pero sin la 066, la 2026-12.29
+      return (await api.personal066().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_066;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -4245,6 +4247,20 @@ export function crearApi(backend) {
         pr.then((x) => { if (x == null && api._v060 === pr) api._v060 = null; });
       }
       return api._v060;
+    },
+    // (v0.155) ¿Está la 066? Sonda sin escribir nada: personal_ajustes_guardar con datos vacíos (con la 066, avisa de que
+    // faltan los datos, o de que solo el atleta guarda lo suyo; sin ella, la función no existe)
+    async personal066() {
+      if (!api._v066) {
+        const pr = b.rpc('personal_ajustes_guardar', { p_datos: null }).then(() => true).catch((e) => {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          if (/PGRST202|42883|could not find|schema cache|does not exist/i.test(m)) return false;
+          return /Faltan los datos|Solo el atleta|de baja|42501|P0001/i.test(m) ? true : null;
+        });
+        api._v066 = pr;
+        pr.then((x) => { if (x == null && api._v066 === pr) api._v066 = null; });
+      }
+      return api._v066;
     },
     // (v0.154) ¿Está la 065? Sonda: la tabla apuntes_semanas (sin la 065 no existe)
     async apuntes065() {

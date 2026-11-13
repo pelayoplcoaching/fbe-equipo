@@ -1,9 +1,9 @@
-// Que la app le hable a cada uno, en la base: la migración 065 en un Postgres local (PGlite). Cómo le hablamos (género y
+// Que la app le hable a cada uno, en la base: la migración 066 en un Postgres local (PGlite). Cómo le hablamos (género y
 // tono), su meta con fecha y los dos momentos nuevos de los mensajes del coach.
 //   node test/personal-trato.test.mjs
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
-console.log('La migración 065 (PGlite)');
+console.log('La migración 066 (PGlite)');
 const { PGlite } = await import('@electric-sql/pglite');
 const { aplicarEsquema } = await import('./esquema.mjs');
 const db = new PGlite();
@@ -55,6 +55,6 @@ await q('update atletas set estado = $2 where id = $1', [atletaA, 'baja']);
 await como(ana);
 check(await falla(`select personal_ajustes_guardar('{"tono": "directo"}'::jsonb)`), 'de baja, no cambia nada');
 await su();
-check((await q('select count(*)::int as n from fbe_migraciones where numero = 65'))[0].n === 1, 'la 065 queda apuntada');
+check((await q('select count(*)::int as n from fbe_migraciones where numero = 66'))[0].n === 1, 'la 066 queda apuntada');
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

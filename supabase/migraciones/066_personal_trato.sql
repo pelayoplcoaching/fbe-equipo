@@ -1,5 +1,5 @@
 -- =====================================================================
--- FBE Equipo, migración 065: Que la app le hable a cada uno (personalización, segunda ronda)
+-- FBE Equipo, migración 066: Que la app le hable a cada uno (personalización, segunda ronda)
 --
 -- Por qué: la 050 guardó lo que cada atleta elige para su app (apodo, porqué, música, cumpleaños…). Esta añade lo que
 -- hace falta para que la app le hable a él:
@@ -13,20 +13,20 @@
 --   * Los mensajes automáticos del coach ganan dos momentos: 'aniversario' (al mes, 3, 6 y 12 meses) y 'meta' (su meta,
 --     a una semana).
 --
--- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 064 (o con instalar.sql en una base nueva).
--- Se puede repetir sin romper nada. (Si otra rama ha usado ya el número 065, renumerar esta.)
+-- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 065 (o con instalar.sql en una base nueva).
+-- Se puede repetir sin romper nada.
 -- =====================================================================
 
 do $$
 declare v smallint;
 begin
   select max(numero) into v from public.fbe_migraciones;
-  if v > 65 then  -- (1) número de esta migración
-    raise exception 'Esta base ya tiene la migración %: repetir la 065 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
-      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 65;» y, después de ella, todas las siguientes en orden.';
+  if v > 66 then  -- (1) número de esta migración
+    raise exception 'Esta base ya tiene la migración %: repetir la 066 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 66;» y, después de ella, todas las siguientes en orden.';
   end if;
-  if not exists (select 1 from public.fbe_migraciones where numero = 64) then  -- (2) la anterior
-    raise exception 'Falta la migración 064 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
+  if not exists (select 1 from public.fbe_migraciones where numero = 65) then  -- (2) la anterior
+    raise exception 'Falta la migración 065 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
   end if;
 end $$;
 
@@ -122,7 +122,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 3. Permisos (como al final de 003 a 064)
+-- 3. Permisos (como al final de 003 a 065)
 -- ---------------------------------------------------------------------
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
 revoke execute on all functions in schema public from public, anon;
@@ -143,5 +143,5 @@ begin
 end $$;
 revoke all on all functions in schema fbe_privado from public, anon, authenticated;
 
-insert into public.fbe_migraciones (numero) values (65)  -- (3) número de esta migración
+insert into public.fbe_migraciones (numero) values (66)  -- (3) número de esta migración
   on conflict (numero) do update set aplicada_en = excluded.aplicada_en;

@@ -1,5 +1,5 @@
 -- =====================================================================
--- FBE Atletas: instalación completa en una base nueva (schema.sql y las migraciones 002 a 066)
+-- FBE Atletas: instalación completa en una base nueva (schema.sql y las migraciones 002 a 067)
 -- Generado con «npm run instalador»: no lo edites a mano (los cambios van en schema.sql o en una migración).
 --
 -- Cómo: en Supabase, SQL Editor → New query → pega TODO este archivo → Run. Después, en otra consulta,
@@ -22463,9 +22463,9 @@ revoke all on all functions in schema fbe_privado from public, anon, authenticat
 insert into public.fbe_migraciones (numero) values (65)  -- (3) número de esta migración
   on conflict (numero) do update set aplicada_en = excluded.aplicada_en;
 
--- ============================== migraciones/065_personal_trato.sql ==============================
+-- ============================== migraciones/066_personal_trato.sql ==============================
 -- =====================================================================
--- FBE Equipo, migración 065: Que la app le hable a cada uno (personalización, segunda ronda)
+-- FBE Equipo, migración 066: Que la app le hable a cada uno (personalización, segunda ronda)
 --
 -- Por qué: la 050 guardó lo que cada atleta elige para su app (apodo, porqué, música, cumpleaños…). Esta añade lo que
 -- hace falta para que la app le hable a él:
@@ -22479,20 +22479,20 @@ insert into public.fbe_migraciones (numero) values (65)  -- (3) número de esta 
 --   * Los mensajes automáticos del coach ganan dos momentos: 'aniversario' (al mes, 3, 6 y 12 meses) y 'meta' (su meta,
 --     a una semana).
 --
--- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 064 (o con instalar.sql en una base nueva).
--- Se puede repetir sin romper nada. (Si otra rama ha usado ya el número 065, renumerar esta.)
+-- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 065 (o con instalar.sql en una base nueva).
+-- Se puede repetir sin romper nada.
 -- =====================================================================
 
 do $$
 declare v smallint;
 begin
   select max(numero) into v from public.fbe_migraciones;
-  if v > 65 then  -- (1) número de esta migración
-    raise exception 'Esta base ya tiene la migración %: repetir la 065 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
-      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 65;» y, después de ella, todas las siguientes en orden.';
+  if v > 66 then  -- (1) número de esta migración
+    raise exception 'Esta base ya tiene la migración %: repetir la 066 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 66;» y, después de ella, todas las siguientes en orden.';
   end if;
-  if not exists (select 1 from public.fbe_migraciones where numero = 64) then  -- (2) la anterior
-    raise exception 'Falta la migración 064 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
+  if not exists (select 1 from public.fbe_migraciones where numero = 65) then  -- (2) la anterior
+    raise exception 'Falta la migración 065 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
   end if;
 end $$;
 
@@ -22588,7 +22588,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 3. Permisos (como al final de 003 a 064)
+-- 3. Permisos (como al final de 003 a 065)
 -- ---------------------------------------------------------------------
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
 revoke execute on all functions in schema public from public, anon;
@@ -22609,14 +22609,14 @@ begin
 end $$;
 revoke all on all functions in schema fbe_privado from public, anon, authenticated;
 
-insert into public.fbe_migraciones (numero) values (65)  -- (3) número de esta migración
+insert into public.fbe_migraciones (numero) values (66)  -- (3) número de esta migración
   on conflict (numero) do update set aplicada_en = excluded.aplicada_en;
 
--- ============================== migraciones/066_personal_zonas.sql ==============================
+-- ============================== migraciones/067_personal_zonas.sql ==============================
 -- =====================================================================
--- FBE Equipo, migración 066: Que la app le conozca (personalización, segunda ronda, tandas 3 y 4)
+-- FBE Equipo, migración 067: Que la app le conozca (personalización, segunda ronda, tandas 3 y 4)
 --
--- Por qué: los mensajes del coach (050, 065) ganan momentos nuevos, sin tablas nuevas:
+-- Por qué: los mensajes del coach (050, 066) ganan momentos nuevos, sin tablas nuevas:
 --
 --   * 'molestia_<zona>' (cuello, hombro, codo, muneca_mano, espalda_alta, zona_lumbar, cadera, rodilla, tobillo_pie):
 --     el aviso que el coach escribe (o aprueba) para cada zona. Al atleta que dijo en el cuestionario que le molesta esa
@@ -22625,20 +22625,20 @@ insert into public.fbe_migraciones (numero) values (65)  -- (3) número de esta 
 --   * 'primera_vez' (la primera vez que hace un ejercicio) y 'viaje' (la vuelta de un viaje), para los mensajes
 --     automáticos.
 --
--- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 065 (o con instalar.sql en una base nueva).
--- Se puede repetir sin romper nada. (Si otra rama ha usado ya el número 066, renumerar esta.)
+-- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 066 (o con instalar.sql en una base nueva).
+-- Se puede repetir sin romper nada.
 -- =====================================================================
 
 do $$
 declare v smallint;
 begin
   select max(numero) into v from public.fbe_migraciones;
-  if v > 66 then  -- (1) número de esta migración
-    raise exception 'Esta base ya tiene la migración %: repetir la 066 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
-      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 66;» y, después de ella, todas las siguientes en orden.';
+  if v > 67 then  -- (1) número de esta migración
+    raise exception 'Esta base ya tiene la migración %: repetir la 067 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 67;» y, después de ella, todas las siguientes en orden.';
   end if;
-  if not exists (select 1 from public.fbe_migraciones where numero = 65) then  -- (2) la anterior
-    raise exception 'Falta la migración 065 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
+  if not exists (select 1 from public.fbe_migraciones where numero = 66) then  -- (2) la anterior
+    raise exception 'Falta la migración 066 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
   end if;
 end $$;
 
@@ -22662,10 +22662,10 @@ begin
   insert into public.mensajes_coach (momento, texto, actualizado_en) values (p_momento, v, now())
     on conflict (momento) do update set texto = excluded.texto, actualizado_en = now();
 end $$;
-comment on function public.mensaje_coach_guardar(text, text) is 'El coach guarda (o quita, con texto vacío) su mensaje de un momento: los automáticos y los avisos por zona (066).';
+comment on function public.mensaje_coach_guardar(text, text) is 'El coach guarda (o quita, con texto vacío) su mensaje de un momento: los automáticos y los avisos por zona (067).';
 
 -- ---------------------------------------------------------------------
--- 2. Permisos (como al final de 003 a 065)
+-- 2. Permisos (como al final de 003 a 066)
 -- ---------------------------------------------------------------------
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
 revoke execute on all functions in schema public from public, anon;
@@ -22686,5 +22686,5 @@ begin
 end $$;
 revoke all on all functions in schema fbe_privado from public, anon, authenticated;
 
-insert into public.fbe_migraciones (numero) values (66)  -- (3) número de esta migración
+insert into public.fbe_migraciones (numero) values (67)  -- (3) número de esta migración
   on conflict (numero) do update set aplicada_en = excluded.aplicada_en;
