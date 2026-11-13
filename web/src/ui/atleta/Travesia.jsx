@@ -342,8 +342,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       {!final && (
         <div class="travesia-modos">
           <button type="button" class="travesia-modo" aria-pressed={calma ? 'true' : 'false'} onClick={cambiarCalma} title="Sin obstáculos y al paso, para respirar tras una serie dura"><Icono n="sueno" />Calma</button>
-          <button type="button" class="travesia-modo" aria-pressed={musica ? 'true' : 'false'} onClick={cambiarMusica} aria-label={musica ? 'Quitar la música del juego' : 'Poner la música del juego'}><Icono n="musica" /></button>
           <button type="button" class="travesia-modo" aria-pressed={sonido ? 'true' : 'false'} onClick={cambiarSonido} aria-label={sonido ? 'Quitar el sonido del juego' : 'Poner el sonido del juego'}><Icono n={sonido ? 'altavoz' : 'silencio'} /></button>
+          <button type="button" class="travesia-modo" aria-pressed={musica ? 'true' : 'false'} onClick={cambiarMusica} aria-label={musica ? 'Quitar la música del juego' : 'Poner la música del juego'}><Icono n="musica" /></button>
           {escudos > 0 && <span class="travesia-escudo" role="status" aria-label={`${escudos === 1 ? 'Un escudo' : `${escudos} escudos`}: te perdona un tropiezo`}><Icono n="escudo" />{escudos}</span>}
         </div>
       )}
