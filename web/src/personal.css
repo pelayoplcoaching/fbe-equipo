@@ -448,3 +448,20 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
   html[data-imprimir-informe] .informe-salud, html[data-imprimir-informe] .informe-salud * { visibility: visible !important; }
   html[data-imprimir-informe] .informe-salud { position: absolute; left: 0; top: 0; width: 100%; border: 0; background: #fff; color: #000; }
 }
+
+/* ---------- (personalizacion 3, tanda 8) Que le acompane ---------- */
+.voz-coach { display: block; margin-top: 8px; }
+.voz-coach audio { width: 100%; max-width: 320px; height: 36px; }
+.panel.reto-mes { display: grid; gap: 6px; }
+.reto-mes-t { font-size: 1.0625rem; }
+.reto-barra { display: block; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--morado) 14%, var(--hoja)); overflow: hidden; }
+.reto-barra > span { display: block; height: 100%; border-radius: inherit; background: var(--morado); }
+.afines { padding-bottom: 10px; border-bottom: 1px solid var(--linea, rgba(0, 0, 0, .08)); }
+.panel.album-hitos { display: grid; gap: 10px; justify-items: stretch; }
+.album-t { margin: 0; font-size: 1.125rem; }
+.album-lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.album-lista li { display: flex; gap: 10px; align-items: center; }
+.album-lista li .pila-xs { flex: 1; min-width: 0; }
+.album-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--morado) 12%, var(--hoja)); color: var(--morado); }
+.album-ico svg { width: 18px; height: 18px; }
+.album-hitos > .btn { justify-self: start; }

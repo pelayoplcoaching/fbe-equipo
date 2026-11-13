@@ -13,6 +13,7 @@
 // programados y plantillas, el atleta de la semana arriba del muro y la moderación (silenciar, lo retenido y el modo lento).
 // v0.73 (migración 045, lo nuevo en Celebracion.jsx): el aniversario en FBE (arriba y en el muro), «<Mes> en el equipo», los hitos del
 // equipo, las reacciones nuevas y las pegatinas, y los momentos de 24 horas en una tira arriba de Equipo.
+import { AfinesCompanero } from './atleta/Compania.jsx';
 import { createContext, Fragment } from 'preact';
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando, Capa, useAtraparFoco } from './comunes.jsx';
@@ -607,6 +608,8 @@ function HojaInvitarCompanero({ ya = [], alCerrar, alInvitar }) {
     <Hoja titulo="Invitar a un compañero de racha" alCerrar={alCerrar}>
       <div class="pila">
         <p class="peq secundario">Si acepta, cada semana que los dos completéis la vuestra sumáis racha juntos. La pareja la veis los dos, tu coach y el equipo (salvo si uno de los dos no sale en el ranking). Cualquiera la puede terminar.</p>
+        {/* (personalización 3, tanda 8) quien entrena como tú, primero (si buscáis los dos) */}
+        <AfinesCompanero ya={ya} invitar={invitar} ocupado={ocupado} />
         {personas.cargando && !personas.datos ? <Cargando texto="Cargando el equipo" /> : !lista.length ? <p class="secundario">No hay nadie más a quien invitar ahora mismo.</p> : (
           <ul class="lista cp-invitar">
             {lista.map((p) => (

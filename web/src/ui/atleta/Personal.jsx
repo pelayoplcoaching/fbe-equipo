@@ -3,6 +3,7 @@
 //   · RecordAlAlcance: en la portada de la sesión, la carga que batiría su récord si lo reciente dice que la tiene
 //   · RecuerdoProgreso: al terminar, «En mayo: 60 kg × 8. Hoy: 75 kg × 8»
 //   · CifraObjetivo y TusEjercicios: arriba en Progreso, lo de su objetivo y sus tres ejercicios
+import { VozCoach } from './Compania.jsx';
 import { useApp, useCarga, Icono, Avatar } from '../comunes.jsx';
 import { LOBO } from '../marca-lobo.js';
 import { textoMensajeCoach, mensajeDe, nombreSaludo, recordAlAlcance, recuerdoProgreso, textoSerieCorta, cifraObjetivo } from '../../logica/personal.js';
@@ -23,6 +24,7 @@ export function MensajeCoach({ momento, ejercicio = '', semanas = '', tiempo = '
   const personal = usePersonal();
   const foto = useCarga(() => (propio ? Promise.resolve(null) : api.fotoCoach().catch(() => null)), []);
   const texto = textoMensajeCoach(mensajeDe(mensajes.datos, momento), { nombre: nombreSaludo(personal.datos, atleta?.nombre), ejercicio, semanas, tiempo, meta });
+  const conAudio = (Array.isArray(mensajes.datos) ? mensajes.datos : []).find((m) => m?.momento === momento) || null;
   if (!texto) return null;
   return (
     <figure class={`cita-coach mensaje-coach ${clase}`} data-momento={momento}>
@@ -30,6 +32,8 @@ export function MensajeCoach({ momento, ejercicio = '', semanas = '', tiempo = '
       <div>
         <blockquote>{texto}</blockquote>
         <figcaption>Tu coach</figcaption>
+        {/* (personalización 3, tanda 8) su voz, si se lo ha grabado */}
+        {conAudio?.audio_ruta && <VozCoach ruta={conAudio.audio_ruta} segundos={conAudio.audio_segundos} />}
       </div>
     </figure>
   );

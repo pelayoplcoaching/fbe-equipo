@@ -1900,6 +1900,36 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     };
     const vecesElegido = (pid) => [...new Set(tabla('comunidad_votos_semana').filter((v) => v.para === pid && v.semana < lunesHoy()).map((v) => v.semana))].filter((w) => mejoresDe(w).some((x) => x.pid === pid)).length;
     const semanasAnimando = (pid) => { let l = lunesHoy(), n = 0; const hay = (w) => tabla('comunidad_animos').some((a) => a.de === pid && a.semana === w); if (!hay(l)) l = sumar(l, -7); while (hay(l) && n < 520) { n++; l = sumar(l, -7); } return n; };
+    // (068) compañero afín: quien busca (y sale en el ranking) ve a los demás que buscan, con su franja y sus días
+    if (nombre === 'comunidad_busco_companero') {
+      if (!soyMiembro()) throw new Error('Para buscar compañero tienes que estar en la comunidad');
+      const m = miembroMio();
+      if (args.p_si && m.sin_ranking) throw new Error('Para buscar compañero tienes que salir en el ranking');
+      m.busca_companero = !!args.p_si;
+      persistirYa();
+      return !!args.p_si;
+    }
+    if (nombre === 'comunidad_afines') {
+      if (!soyMiembro()) return null;
+      const m = miembroMio();
+      const busca = !!m.busca_companero;
+      if (!busca || m.sin_ranking) return { busca, sin_ranking: !!m.sin_ranking, afines: [] };
+      const desde = Date.now() - 56 * 864e5;
+      const franjaDe = (h) => (h < 12 ? 'manana' : h < 16 ? 'mediodia' : h < 21 ? 'tarde' : 'noche');
+      const habitos = (atletaId) => {
+        const ss = tabla('series').filter((s) => s.atleta_id === atletaId && Date.parse(s.registrada_en) > desde);
+        const horas = {}, dias = {}, fechas = new Set();
+        for (const s of ss) {
+          const p = partesMadrid(s.registrada_en), h = Number(String(p.hora).slice(0, 2));
+          if (h >= 5) horas[franjaDe(h)] = (horas[franjaDe(h)] || 0) + 1;
+          const f = p.fecha;
+          if (!fechas.has(f)) { fechas.add(f); const d = ((new Date(`${f}T12:00:00Z`).getUTCDay() + 6) % 7) + 1; dias[d] = (dias[d] || 0) + 1; }
+        }
+        return { franja: Object.entries(horas).sort((a, b) => b[1] - a[1])[0]?.[0] || null, dias: Object.entries(dias).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([d]) => Number(d)), por_semana: Math.round((fechas.size / 8) * 10) / 10 };
+      };
+      return { busca, sin_ranking: false, afines: dentroTodos().filter((x) => x.busca_companero && !x.sin_ranking).map((x) => ({ perfil_id: x.perfil_id, nombre: x.nombre, ...habitos(x.atleta_id), yo: x.perfil_id === uid }))
+        .sort((a, b) => String(a.nombre).localeCompare(String(b.nombre))) };
+    }
     if (nombre === 'comunidad_social_ajustes') {
       if (!soyMiembro()) throw new Error('No estás en la comunidad');
       const m = miembroMio();
@@ -3835,7 +3865,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       if (nombre === 'mensajes_coach') {
         if (!esCoach() && !miAtletaId()) return [];
-        return tabla('mensajes_coach').map((m) => ({ momento: m.momento, texto: m.texto, actualizado_en: m.actualizado_en })).sort((x, y) => x.momento.localeCompare(y.momento));
+        return tabla('mensajes_coach').map((m) => ({ momento: m.momento, texto: m.texto, audio_ruta: m.audio_ruta ?? null, audio_segundos: m.audio_segundos ?? null, actualizado_en: m.actualizado_en })).sort((x, y) => x.momento.localeCompare(y.momento));
       }
       // (051) las integraciones: Salud del iPhone y el calendario (en la demo, el enlace no lleva a ninguna parte)
       const hex64 = () => Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
@@ -4024,13 +4054,24 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return null;
       }
+      if (nombre === 'mensaje_coach_audio') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        const m = tabla('mensajes_coach').find((x) => x.momento === args?.p_momento);
+        if (!m) throw new Error('Escribe antes el mensaje');
+        const r = args?.p_ruta || null, sg = Number(args?.p_segundos);
+        if (r && (!/^voz\/[0-9a-f-]{36}\.(webm|ogg|m4a|mp4|mp3|aac|wav)$/.test(r) || !(sg >= 1 && sg <= 120))) throw new Error('Audio no válido (hasta 2 minutos)');
+        Object.assign(m, { audio_ruta: r, audio_segundos: r ? Math.round(sg) : null, actualizado_en: ahora() });
+        persistirYa();
+        return null;
+      }
       if (nombre === 'mensaje_coach_guardar') {
         if (!esCoach()) throw new Error('Solo el coach');
         const mo = args?.p_momento, t = String(args?.p_texto ?? '').trim();
         if (!MOMENTO_VALIDO.has(mo)) throw new Error('Momento no válido');
         if (t.length > LIMITES_PERSONAL.mensaje) throw new Error('Como mucho 400 caracteres');
+        const antes = tabla('mensajes_coach').find((m) => m.momento === mo);
         db.mensajes_coach = tabla('mensajes_coach').filter((m) => m.momento !== mo);
-        if (t) tabla('mensajes_coach').push({ momento: mo, texto: t, actualizado_en: ahora() });
+        if (t) tabla('mensajes_coach').push({ momento: mo, texto: t, audio_ruta: antes?.audio_ruta ?? null, audio_segundos: antes?.audio_segundos ?? null, actualizado_en: ahora() });
         persistirYa();
         return null;
       }

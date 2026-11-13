@@ -10,6 +10,8 @@ import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { ZONAS_AVISO, NOMBRE_ZONA_TU, EJEMPLO_ZONA, momentoZona } from '../../logica/conocerte.js';
 import { paraHablarle, cartaDelMes, mesDeLaCarta } from '../../logica/retrato.js';
 import { SuVida } from '../atleta/Vida.jsx';
+import { PonerReto } from '../atleta/Compania.jsx';
+import { GrabarAudio } from '../Guias.jsx';
 import { textoManual, ideaSegunManual } from '../../logica/respeto.js';
 import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica, urlMusica } from '../../logica/personal.js';
 import { FAMILIAS_MUSICA, tipoMusica } from '../../logica/musica.js';
@@ -95,6 +97,7 @@ export function ParaHablarle({ atleta }) {
       <div class="panel panel-pad pila-s">
         <dl class="lo-suyo-datos">{r.filas.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
         <SuVida atleta={atleta} />
+        <PonerReto atleta={atleta} />
         <p class="para-hablarle-idea"><Icono n="mensaje" /><span><strong>Idea: </strong>{r.idea}</span></p>
         <button type="button" class="btn btn-peq" onClick={() => setCarta(true)}><Icono n="editar" /> La carta de {nombreMesCarta(mes)}</button>
       </div>
@@ -159,7 +162,7 @@ export function MensajesAutomaticos() {
         </ul>
       </div>
       <p class="mini terciario">Salen solos, con tu foto, en ese momento: en el resumen de una sesión con récord, al abrir el informe de un bloque terminado, en el hito de la racha, en la bienvenida del día (si vuelve tras una semana o más, el día de su cumpleaños o a una semana de su meta), en la tarjeta de su aniversario, en un ejercicio que hace por primera vez y en la primera sesión en el gimnasio tras entrenar de viaje. Pon {'{nombre}'} y la app pone el suyo (o cómo quiere que le llamen); en el récord y la primera vez, {'{ejercicio}'}; en la racha, {'{semanas}'}; en el aniversario, {'{tiempo}'}; en la meta, {'{meta}'}.</p>
-      {editar && <HojaMensaje momento={editar} actual={mensajeDe(lista.datos, editar) || ''} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); lista.recargar(true); }} />}
+      {editar && <HojaMensaje momento={editar} actual={mensajeDe(lista.datos, editar) || ''} audio={(lista.datos || []).find((m) => m.momento === editar) || null} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); lista.recargar(true); }} alAudio={() => lista.recargar(true)} />}
     </section>
   );
 }
@@ -199,7 +202,7 @@ export function AvisosZona() {
   );
 }
 
-function HojaMensaje({ momento, actual, alCerrar, alGuardar, titulo: tituloDado = null, ejemplo: ejemploDado = null, prefijo = '' }) {
+function HojaMensaje({ momento, actual, alCerrar, alGuardar, titulo: tituloDado = null, ejemplo: ejemploDado = null, prefijo = '', audio = null, alAudio = null }) {
   const { api, aviso } = useApp();
   const [, tituloM, ejemploM] = MOMENTOS_COACH.find(([k]) => k === momento) || [];
   const titulo = tituloDado || tituloM, ejemplo = ejemploDado || ejemploM;
@@ -224,7 +227,31 @@ function HojaMensaje({ momento, actual, alCerrar, alGuardar, titulo: tituloDado 
         <button class="btn btn-primario btn-grande" disabled={guardando}><Icono n="hecho" /> Guardar</button>
         {actual && <button type="button" class="btn plano" disabled={guardando} onClick={() => guardar('')}>Quitar el mensaje</button>}
       </form>
+      {/* (personalización 3, tanda 8; 068) su voz: con el mensaje ya guardado, un audio suyo que sale con él */}
+      {actual && !prefijo && <VozMensaje momento={momento} audio={audio} alCambiar={alAudio} />}
     </Hoja>
+  );
+}
+
+// La voz del coach en un mensaje: grabar (o subir) hasta 2 minutos y guardarlo; o quitarlo
+function VozMensaje({ momento, audio, alCambiar }) {
+  const { api, aviso } = useApp();
+  const [nuevo, setNuevo] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const hay = audio?.audio_ruta ? { segundos: audio.audio_segundos } : null;
+  const guardar = async (v) => {
+    setGuardando(true);
+    try {
+      if (v?.blob) { const ruta = await api.subirVozCoach(v.blob, v.blob.type || 'audio/webm'); await api.guardarAudioMensaje(momento, ruta, v.segundos); aviso('Tu voz, guardada: sale con el mensaje'); }
+      else { await api.guardarAudioMensaje(momento, null, null); aviso('Audio quitado'); }
+      setNuevo(null); alCambiar?.();
+    } catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }
+  };
+  return (
+    <div class="pila-s voz-mensaje">
+      <GrabarAudio valor={nuevo || hay} max={120} maxBytes={3145728} etiqueta="Tu voz" ayuda="Tus atletas lo oyen con el mensaje, con tu foto. El audio pesa más que un texto." alCambiar={(v) => (v ? setNuevo(v) : hay && !nuevo ? guardar(null) : setNuevo(null))} />
+      {nuevo && <button type="button" class="btn btn-primario" disabled={guardando} onClick={() => guardar(nuevo)}>Guardar tu voz</button>}
+    </div>
   );
 }
 
