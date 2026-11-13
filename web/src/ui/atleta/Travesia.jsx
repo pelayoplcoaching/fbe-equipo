@@ -3,7 +3,8 @@ import { Icono, Capa, useApp } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
 import { nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, textoDistancia, ambiente, retoDelDia, progresoReto, hoyDe, rachaSemanas, semillaDelDia, marcasDelCamino, ETAPA_DIA } from '../../logica/travesia.js';
-import { cartelDeHito, nombrePaisaje, suave, calidad, CALIDAD_INICIAL } from '../../logica/travesia-efectos.js';
+import { cartelDeHito, nombrePaisaje, suave, calidad, CALIDAD_INICIAL, cuentaVuelta, VUELTA, pitidos, PASO } from '../../logica/travesia-efectos.js';
+import { crearSonido } from './travesia-sonido.js';
 import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
@@ -76,6 +77,8 @@ async function fotoDeEtapa(lienzo, metros) {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   return 'guardada';
 }
+// (remate, tanda 5) la vibración de cada cosa del juego (ui/hapticos.js)
+const VIBRA = { salto: 'tv-salto', doble: 'tv-doble', roce: 'tv-roce', estrella: 'tv-estrella', combo: 'tv-combo', tropiezo: 'tv-tropiezo' };
 // (top, tanda 2) el cartel de cada momento raro, cuando asoma
 const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante' };
 const aullar = () => { [[392, 0], [523, 260], [494, 620]].forEach(([f, ms]) => setTimeout(() => tono(f, ms ? 0.5 : 0.28, 0.16), ms)); };
@@ -95,9 +98,11 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   const [final, setFinal] = useState(null);         // { metros, estrellas, hoy, mejor, marca, reto } al acabar la etapa
   const [tocado, setTocado] = useState(false);      // ya ha saltado una vez: fuera la pista
   const metros = useRef(null), cuenta = useRef(null), estrellas = useRef(null), retoTxt = useRef(null), cartel = useRef(null), comboTxt = useRef(null);
+  // (remate, tanda 5) la cuenta de la vuelta, el «prepárate» y el sonido del juego
+  const vueltaTxt = useRef(null), preparaTxt = useRef(null), sonidoRef = useRef(null);
   // (top, tanda 1: accesibilidad) lo que el atleta ha elegido en «Tu travesía» → «Cómo juegas»
   const accesible = useRef(null);
-  if (!accesible.current) { const a = leerAjustes(); accesible.current = { unToque: a.juegoUnToque === true, contraste: a.juegoContraste === true, temblor: a.juegoSinTemblor !== true }; }
+  if (!accesible.current) { const a = leerAjustes(); accesible.current = { unToque: a.juegoUnToque === true, contraste: a.juegoContraste === true, temblor: a.juegoSinTemblor !== true, sonar: a.juegoSonar === true }; }
   // (travesia-bella) al cerrarse, la noche se va en un instante (y entonces avisa); con «reducir movimiento», al momento
   const yendose = useRef(false);
   const irse = (motivo) => {
@@ -225,6 +230,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     };
     const acabar = () => {
       acabada = true; apuntada.current = true;
+      if (preparaTxt.current) preparaTxt.current.hidden = true;
+      if (!practica) vibrar('tv-meta');
       // (top, tanda 4) la etapa del día no cuenta para la travesía ni para la práctica: sus intentos, en el móvil y en la base
       if (delDia) {
         const r = resultado(e), antes = leerDiaHoy.current, d = cerrarDia(atletaId, hoyISO(), r.metros);
@@ -249,17 +256,38 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
         semana: g.semanas?.[lunesDe(hoyISO())] || 0,
         cumplidas: mt?.cumplidas || [], rango: mt?.subeRango || null, adorno: mt?.adorno || null, logros: mt?.logros || [] });
     };
+    // (remate, tanda 5) la vuelta suave (al volver de una pausa o a la app, 3, 2, 1 antes de seguir), las pisadas, el
+    // «prepárate» de los cinco últimos segundos y el ahorro de batería (con la batería baja, la mitad de cuadros)
+    let enPausa = false, vuelta = null, pisada = 0, preparado = false, ahorro = false, saltaCuadro = false;
+    navigator.getBattery?.().then((b) => { const mira = () => { ahorro = !b.charging && b.level <= 0.2; }; mira(); b.addEventListener?.('levelchange', mira); b.addEventListener?.('chargingchange', mira); }).catch(() => {});
     const cuadro = (ahora) => {
       id = requestAnimationFrame(cuadro);
+      if (ahorro && (saltaCuadro = !saltaCuadro)) return;   // (la mitad de cuadros; el tiempo se acumula en el siguiente)
       const dt = Math.min(0.1, (ahora - antes) / 1000);
       cal = calidad(cal, ahora - antes, document.visibilityState !== 'hidden');
       antes = ahora;
       const q = quedan();
-      const parado = acabada || (!practica && Number.isFinite(marca.current.pausa)) || document.visibilityState === 'hidden';
-      if (!parado && q <= 0) acabar();
+      const pausado = (!practica && Number.isFinite(marca.current.pausa)) || document.visibilityState === 'hidden';
+      if (pausado) enPausa = true;
+      else if (enPausa) { enPausa = false; if (e.x > 5 && !quieto) vuelta = ahora; }
+      const n = vuelta == null ? 0 : cuentaVuelta((ahora - vuelta) / 1000);
+      if (n === 0) vuelta = null;
+      if (vueltaTxt.current && vueltaTxt.current.textContent !== (n ? String(n) : '')) { vueltaTxt.current.textContent = n ? String(n) : ''; vueltaTxt.current.hidden = !n; }
+      const parado = acabada || pausado || n > 0;
+      if (!acabada && !pausado && q <= 0) acabar();
       else if (!parado) avanzar(e, dt);
-      if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) tono(...SONIDOS[s]);
-      if (e.sucesos.includes('roce')) vibrar('elegir');
+      // (el sonido de verdad: cada cosa con su sonido, las pisadas según lo que pisa y el viento con la velocidad)
+      const sn = sonidoRef.current;
+      if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) { if (sn) sn.efecto(SONIDOS[s]); else tono(...SONIDOS[s]); }
+      if (sn && !parado) {
+        if (e.saltos === 0 && !e.calma && e.x - pisada >= PASO) { pisada = e.x; sn.paso(e.sobre ? 'madera' : amb.paisaje === 2 ? 'nieve' : 'hierba'); }
+        sn.viento(e.saltos ? e.v + 1.5 : e.v);
+        if (accesible.current.sonar) for (const pt of pitidos(e.obstaculos, e.x, e.v)) sn.aviso(pt.tipo, pt.cerca);
+      } else if (sn) sn.viento(0);
+      // (las vibraciones: un patrón para cada cosa)
+      for (const s of e.sucesos) { const v = VIBRA[s]; if (v) vibrar(v); }
+      // (los cinco últimos segundos: «prepárate» con lo que toca después, y su vibración)
+      if (!practica && !preparado && q <= 5 && q > 0 && !parado) { preparado = true; vibrar('tv-prepara'); if (preparaTxt.current) preparaTxt.current.hidden = false; }
       pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada,
         ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo, adornos: adornos.current, marcas: marcasRef.current, reloj: relojE, quedan: q });
       banda.current?.actualizar({ serie: acabada ? 0 : e.serie, combo: acabada ? 1 : e.combo });
@@ -307,6 +335,14 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   }, [final]);
 
   useEffect(() => { caja.current?.focus({ preventScroll: true }); }, []);
+  // (remate, tanda 5) el sonido de verdad: con el sonido del juego puesto, pisadas, viento y eco (y, con «jugar sin mirar», los pitidos)
+  useEffect(() => {
+    if (!sonido || final) return undefined;
+    const sn = crearSonido();
+    sonidoRef.current = sn;
+    sn?.lugar(ambiente({ total: guardado0.current.total }).paisaje);
+    return () => { sn?.parar(); if (sonidoRef.current === sn) sonidoRef.current = null; };
+  }, [sonido, !!final]);
   // (top, tanda 3) la música: suena mientras se juega; al acabar la etapa o al quitarla, se apaga despacio
   useEffect(() => {
     if (!musica || final) return undefined;
@@ -328,7 +364,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     dedo.current = { id: ev.pointerId, y: ev.clientY, bajo: false };
     pulsar(etapa.current, true);
     if (suena.current) prepararAudio();
-    if (saltar(etapa.current)) { if (!tocado) setTocado(true); vibrar('elegir'); }
+    if (saltar(etapa.current)) { if (!tocado) setTocado(true); }   // (su vibración, con la de cada cosa, en el cuadro)
   };
   const mueve = (ev) => {
     const d = dedo.current;
@@ -387,6 +423,9 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       {!final && aullidos.length > 0 && <p class="travesia-manada aullido" role="status">{aullidos.slice(0, 3).join(', ')} {aullidos.length === 1 ? 'te aúlla' : 'te aúllan'} desde la manada: ¡auuu!</p>}
       {!final && !tocado && !aullidos.length && companeros.length > 0 && <p class="travesia-manada" role="status">Hoy también {companeros.length === 1 ? 'ha corrido' : 'han corrido'}: {companeros.join(', ')}</p>}
       {!final && despues && !practica && <p class="travesia-despues">Después: {despues}</p>}
+      {/* (remate, tanda 5) la cuenta de la vuelta y el «prepárate» de los cinco últimos segundos */}
+      <p ref={vueltaTxt} class="travesia-vuelta num" aria-hidden="true" hidden />
+      {!practica && <p ref={preparaTxt} class="travesia-prepara" role="status" hidden><small>Prepárate</small>{despues || 'La siguiente serie'}</p>}
       {final && (
         <div class="travesia-final" role="status">
           <span class="travesia-final-etq">{final.delDia ? 'La etapa del día' : practica ? 'Práctica' : '¡Vamos!'}</span>

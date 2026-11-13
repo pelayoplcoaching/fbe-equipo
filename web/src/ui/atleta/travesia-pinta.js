@@ -1,7 +1,7 @@
 // «La travesía»: cómo se pinta el juego en su lienzo (el juego en sí, en logica/travesia.js). Todo a mano, con formas
 // planas en la paleta de la casa: sin imágenes que descargar. Va con el trozo del juego, que solo se pide al abrirlo.
 import { azar, perfil, altoTerreno } from '../../logica/travesia.js';
-import { fugaz, estirar, parpadea, colaAlViento, impetu, sacudida, entrada, hayAurora, alturaAstro, avisoDe } from '../../logica/travesia-efectos.js';
+import { fugaz, estirar, parpadea, colaAlViento, impetu, sacudida, entrada, hayAurora, alturaAstro, avisoDe, zoomDe, metaFinal } from '../../logica/travesia-efectos.js';
 
 const NOCHE = '#0B0726', MORADO_NOCHE = '#1E1548', VIOLETA = '#5438D8', LAVANDA = '#A08CFF', TIZA = '#F1F0F6', ORO = '#F2C230';
 
@@ -270,7 +270,10 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   const enTormenta = !!e.tormenta && e.x >= e.tormenta.desde && e.x <= e.tormenta.hasta;
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = enTormenta ? 'tormenta' : amb?.clima || null;
   const deDia = fase === 'dia', noche = fase === 'noche', nevado = paisaje === 2, bosque = paisaje === 1, valle = paisaje === 3;
-  const u = Math.max(22, Math.min(38, w / 13));          // px por metro
+  // (remate, tanda 5) en la estampida y el puente colgante, la cámara se aleja para verlos enteros (y vuelve despacio)
+  const zObj = zoomDe(e.momentos, e.x);
+  p.zoom = p.zoom == null || quieto ? zObj : p.zoom + (zObj - p.zoom) * Math.min(1, dt * 1.6);
+  const u = Math.max(22, Math.min(38, w / 13)) * p.zoom;          // px por metro
   const suelo = Math.round(h * 0.66);
   const x0 = w * 0.2;                                    // dónde va el lobo
   const sx = (x) => x0 + (x - e.x) * u;
@@ -706,6 +709,36 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     c.strokeStyle = TIZA; c.lineWidth = 2; c.beginPath(); c.arc(x, y, 13, 0, 6.3); c.stroke();
     simbolo(c, q.tipo, x, y);
   }
+  // (remate, tanda 5) el final con su clímax: en los diez últimos segundos, una meta donde estará el lobo cuando acabe el
+  // descanso (se cruza justo al acabar) y una ristra de banderines en la recta
+  const mf = fin ? (p.metaX ?? null) : metaFinal(e.x, e.v, quedan);
+  if (mf != null) {
+    p.metaX = fin ? p.metaX : p.metaX == null ? mf : p.metaX + (mf - p.metaX) * Math.min(1, dt * 3);
+    const mx = sx(p.metaX), pie = sueloEn(mx), alto = u * 3.1;
+    // (los banderines: de poste en poste, cada 8 m, hasta la meta)
+    c.lineWidth = 1.3; c.strokeStyle = 'rgba(241, 240, 246, .55)';
+    for (let k = 1; k <= 4; k++) {
+      const a = sx(p.metaX - k * 8), b = sx(p.metaX - (k - 1) * 8);
+      if (b < -10 || a > w + 10) continue;
+      const ya = sueloEn(a) - u * 2.5, yb = sueloEn(b) - u * 2.5;
+      c.strokeStyle = 'rgba(241, 240, 246, .6)'; c.beginPath(); c.moveTo(a, sueloEn(a)); c.lineTo(a, ya); c.stroke();
+      c.beginPath(); c.moveTo(a, ya); c.quadraticCurveTo((a + b) / 2, (ya + yb) / 2 + u * 0.5, b, yb); c.stroke();
+      for (let i = 1; i < 6; i++) {
+        const q = i / 6, fx = a + (b - a) * q, fy = ya + (yb - ya) * q + Math.sin(q * Math.PI) * u * 0.5;
+        c.fillStyle = [ORO, LAVANDA, TIZA][(i + k) % 3]; c.beginPath(); c.moveTo(fx - 5, fy); c.lineTo(fx + 5, fy); c.lineTo(fx, fy + 10 + (quieto ? 0 : Math.sin(t * 6 + i) * 1.5)); c.closePath(); c.fill();
+      }
+    }
+    if (mx > -40 && mx < w + 60) {
+      // (la meta: dos postes y una pancarta a cuadros)
+      c.fillStyle = '#2A1F4A'; c.fillRect(mx + u * 0.5, pie - alto, 4, alto);
+      c.fillStyle = TIZA; c.fillRect(mx, pie - alto, 5, alto);
+      const pw = u * 1.6, ph = u * 0.62, px = mx - pw * 0.1, py = pie - alto - ph * 0.2;
+      for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) { c.fillStyle = (i + j) % 2 ? '#0B0726' : TIZA; c.fillRect(px + (i * pw) / 8, py + (j * ph) / 2, pw / 8 + 0.5, ph / 2 + 0.5); }
+      c.font = '800 12px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+      c.strokeStyle = 'rgba(11, 7, 38, .8)'; c.lineWidth = 3; c.strokeText('META', px + pw / 2, py - 3); c.fillStyle = ORO; c.fillText('META', px + pw / 2, py - 3);
+    }
+  } else if (!fin) p.metaX = null;
+
   // (top, tanda 4) las marcas del camino: una banderita donde acabó la mejor etapa de la semana de cada compañero (y la suya)
   for (const m of marcas) {
     const x = sx(m.metros);

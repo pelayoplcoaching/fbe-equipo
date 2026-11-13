@@ -233,3 +233,13 @@
 .tv-aullar { min-height: 36px; padding: 0 10px; }
 .tv-aullar:disabled { opacity: .7; }
 .travesia-manada.aullido { color: var(--tv-oro); font-weight: 700; }
+
+/* (remate, tanda 5) la cuenta de la vuelta (3, 2, 1) y el «prepárate» de los cinco últimos segundos */
+.travesia-vuelta { position: absolute; left: 0; right: 0; top: 34%; margin: 0; text-align: center; font-size: 4.5rem; font-weight: 800; line-height: 1; pointer-events: none; color: var(--tv-tiza); text-shadow: 0 2px 16px rgb(11 7 38 / .6); }
+.travesia-vuelta[hidden], .travesia-prepara[hidden] { display: none; }
+.travesia-prepara { position: absolute; left: 16px; right: 16px; top: 22%; margin: 0; display: grid; justify-items: center; gap: 2px; text-align: center; font-size: 1.25rem; font-weight: 800; line-height: 1.2; pointer-events: none; color: var(--tv-tiza); text-shadow: 0 2px 12px rgb(11 7 38 / .7); }
+.travesia-prepara small { font-size: .75rem; letter-spacing: .16em; text-transform: uppercase; color: var(--tv-oro); }
+@media (prefers-reduced-motion: no-preference) {
+  .travesia-prepara:not([hidden]) { animation: tv-prepara .4s cubic-bezier(.2, 1.2, .35, 1) both; }
+}
+@keyframes tv-prepara { from { opacity: 0; transform: translateY(12px) scale(.9); } }

@@ -134,6 +134,8 @@ const COMO_JUEGAS = [
   { clave: 'juegoUnToque', texto: 'Un solo toque', ayuda: 'Sin doble salto ni agacharse: nada lo pide, y los ríos son más estrechos' },
   { clave: 'juegoContraste', texto: 'Alto contraste', ayuda: 'Cada obstáculo, con un borde claro' },
   { clave: 'juegoSinTemblor', texto: 'Sin temblor', ayuda: 'Al tropezar, la pantalla no se sacude' },
+  // (remate, tanda 5) para baja visión o con el móvil apoyado
+  { clave: 'juegoSonar', texto: 'Jugar sin mirar', ayuda: 'Pitidos que avisan de cada obstáculo, más agudos cuanto más cerca (dos para el monte, grave para la rama). Con el sonido del juego puesto' },
 ];
 function ComoJuegas() {
   const [a, setA] = useState(() => leerAjustes());

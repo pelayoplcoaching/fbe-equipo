@@ -140,3 +140,34 @@ export function avisoDe(obstaculos, bordeDerecho, delante = 9) {
   }
   return null;
 }
+
+// ---------- (remate, tanda 5) El final, la vuelta y la cámara ----------
+// La meta del final: dónde estará el lobo cuando acabe el descanso (con la velocidad de ahora). Solo en los diez últimos
+// segundos; si no, null
+export const metaFinal = (x, v, quedan) => (Number.isFinite(quedan) && quedan > 0 && quedan <= 10 ? x + Math.max(0, v) * quedan : null);
+// La vuelta suave: tras una pausa o al volver a la app, cuenta 3, 2, 1 (medio segundo cada uno) antes de seguir. Devuelve
+// el número que toca enseñar, o 0 si ya se juega
+export const VUELTA = 1.5;
+export const cuentaVuelta = (desde) => (desde == null || desde < 0 || desde >= VUELTA ? 0 : 3 - Math.floor(desde / (VUELTA / 3)));
+// La cámara se aleja en los momentos raros que se ven mejor enteros (la estampida y el puente): de 1 (normal) a 0,78
+export function zoomDe(momentos, x) {
+  const cerca = (momentos || []).some((m) => m.tipo !== 'tormenta' && m.x - x < 26 && m.x - x > -(m.tipo === 'estampida' ? 22 : 16));
+  return cerca ? 0.78 : 1;
+}
+// Jugar sin mirar: los pitidos que tocan ahora. Cada obstáculo que viene avisa tres veces, a 1,2, 0,75 y 0,4 s de
+// llegar (más agudo cuanto más cerca). Apunta en el obstáculo los que ya ha dado. Devuelve [{ tipo, cerca (0 a 1) }]
+const UMBRALES = [1.2, 0.75, 0.4];
+export function pitidos(obstaculos, x, v) {
+  const out = [];
+  if (!(v > 0)) return out;
+  for (const o of obstaculos || []) {
+    if (o.pasado || o.apartado) continue;
+    const t = (o.x - o.w / 2 - x) / v;
+    if (t > UMBRALES[0]) break;
+    const dados = o.pitidos || 0;
+    if (dados < UMBRALES.length && t <= UMBRALES[dados]) { o.pitidos = dados + 1; out.push({ tipo: o.tipo, cerca: dados / (UMBRALES.length - 1) }); }
+  }
+  return out;
+}
+// Cada cuántos metros suena una pisada (al trote, más seguidas)
+export const PASO = 1.7;
