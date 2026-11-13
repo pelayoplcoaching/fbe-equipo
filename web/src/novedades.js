@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.153': {
+    atleta: [
+      'La travesía, rematada: corre contra el lobo de un compañero, ligas de la semana, rutas nuevas, la ventisca, la etapa dorada y fiestas.',
+      'Y «La vuelta a casa» al acabar el entreno, «Tu lobo en números» y el diario del lobo.',
+    ],
+    coach: [
+      'Equipo → Retos: el reto de La travesía para la semana. Migración 063 (después de la 062).',
+    ],
+  },
   '0.152': {
     atleta: [
       'La travesía, a otro nivel: combo, cuestas, cornisas, potenciadores, misiones y rango, logros, música y la etapa del día con tu equipo.',

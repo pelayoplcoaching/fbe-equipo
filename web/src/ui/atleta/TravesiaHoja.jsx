@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, useApp } from '../comunes.jsx';
 import { Imagen } from '../Imagen.jsx';
-import { leerTravesia, manadaDe, leerDuelo, guardarDuelo, leerMeta, sincronizarMeta, leerDia, aulladosHoy, apuntarAullado } from '../travesia.js';
+import { leerTravesia, manadaDe, leerDuelo, guardarDuelo, leerMeta, guardarMeta, sincronizarMeta, leerDia, aulladosHoy, apuntarAullado, equipoDe } from '../travesia.js';
 import { Travesia } from './TravesiaTarjeta.jsx';
 import { ETAPA_DIA } from '../../logica/travesia.js';
-import { nombreRango, progresoMisiones, adornosDe, adornosPuestos, LOGROS } from '../../logica/travesia-meta.js';
+import { nombreRango, progresoMisiones, adornosDe, adornosPuestos, LOGROS, elegirRuta, metrosPorMes } from '../../logica/travesia-meta.js';
+import { diarioDe } from '../../logica/travesia-diario.js';
+import { NOMBRES_PAISAJE, LIGAS } from '../../logica/travesia-efectos.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { textoDistancia, rachaSemanas } from '../../logica/travesia.js';
-import { posicionEnRuta, textoRuta, postales, lobosDe, loboElegido, constelaciones, manadaPropia, miPuesto, duelo, equipoDelMes, textoParaCompartir } from '../../logica/travesia-ruta.js';
+import { posicionEnRuta, rutaPorElegir, RUTAS_NUEVAS, textoRuta, postales, lobosDe, loboElegido, constelaciones, manadaPropia, miPuesto, duelo, equipoDelMes, textoParaCompartir } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { pintarLobo } from './travesia-pinta.js';
 
@@ -134,6 +136,8 @@ const COMO_JUEGAS = [
   { clave: 'juegoUnToque', texto: 'Un solo toque', ayuda: 'Sin doble salto ni agacharse: nada lo pide, y los ríos son más estrechos' },
   { clave: 'juegoContraste', texto: 'Alto contraste', ayuda: 'Cada obstáculo, con un borde claro' },
   { clave: 'juegoSinTemblor', texto: 'Sin temblor', ayuda: 'Al tropezar, la pantalla no se sacude' },
+  // (remate, tanda 5) para baja visión o con el móvil apoyado
+  { clave: 'juegoSonar', texto: 'Jugar sin mirar', ayuda: 'Pitidos que avisan de cada obstáculo, más agudos cuanto más cerca (dos para el monte, grave para la rama). Con el sonido del juego puesto' },
 ];
 function ComoJuegas() {
   const [a, setA] = useState(() => leerAjustes());
@@ -154,6 +158,120 @@ function ComoJuegas() {
   );
 }
 
+// (remate, tanda 7) «Tu lobo en números»: lo que ha hecho desde que juega (saltos, roces, mejor combo, estrellas por
+// paisaje), los kilómetros de cada mes y las diez últimas semanas en barras
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const fmt = (n) => Math.round(n).toLocaleString('es-ES');
+function Numeros({ t, meta }) {
+  const n = meta.numeros;
+  const semanas = Object.entries(t.semanas || {}).sort(([a], [b]) => (a < b ? -1 : 1)).slice(-10);
+  const tope = Math.max(1, ...semanas.map(([, m]) => m));
+  const meses = metrosPorMes(t.semanas).slice(-4);
+  const datos = [
+    ['Etapas', fmt(n.etapas)], ['Saltos', fmt(n.saltos)], ['Por los pelos', fmt(n.roces)], ['Mejor combo', `×${n.combo}`],
+    ['Estrellas doradas', fmt(meta.doradas)], ['Ventiscas esquivadas', fmt(n.escapadas)],
+  ];
+  if (!n.etapas && !semanas.length) return null;
+  return (
+    <section class="tv-numeros" aria-labelledby="tv-numeros-t">
+      <h3 id="tv-numeros-t">Tu lobo en números</h3>
+      <dl class="tv-numeros-lista">
+        {datos.map(([k, v]) => <div key={k}><dt>{k}</dt><dd class="num">{v}</dd></div>)}
+      </dl>
+      {n.porPaisaje.some((v) => v > 0) && (
+        <>
+          <h4 class="tv-numeros-sub">Estrellas por paisaje</h4>
+          <ul class="tv-numeros-paisajes">
+            {n.porPaisaje.map((v, i) => <li key={i}><span>{NOMBRES_PAISAJE[i]}</span><strong class="num">{fmt(v)}</strong></li>)}
+          </ul>
+        </>
+      )}
+      {meses.length > 0 && (
+        <>
+          <h4 class="tv-numeros-sub">Por meses</h4>
+          <ul class="tv-numeros-paisajes">
+            {meses.map(({ mes, metros }) => <li key={mes}><span>{MESES[Number(mes.slice(5)) - 1]} {mes.slice(0, 4)}</span><strong class="num">{textoDistancia(metros)}</strong></li>)}
+          </ul>
+        </>
+      )}
+      {semanas.length > 1 && (
+        <>
+          <h4 class="tv-numeros-sub">Las últimas semanas</h4>
+          <div class="tv-semanas" role="img" aria-label={`Metros de las últimas ${semanas.length} semanas: ${semanas.map(([, m]) => textoDistancia(m)).join(', ')}`}>
+            {semanas.map(([lunes, m]) => <span key={lunes} class="tv-semana" style={{ '--h': `${Math.max(4, (m / tope) * 100)}%` }} aria-hidden="true" />)}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+// (remate, tanda 7) «El diario del lobo»: una línea por cada sitio al que llega (la última, arriba)
+function Diario({ total, rutas }) {
+  const { abiertas, siguiente } = diarioDe(total, rutas);
+  const [todas, setTodas] = useState(false);
+  if (!abiertas.length) return null;
+  const vistas = todas ? abiertas : abiertas.slice(0, 3);
+  return (
+    <section class="tv-diario" aria-labelledby="tv-diario-t">
+      <h3 id="tv-diario-t">El diario del lobo <span class="tv-cuenta">{abiertas.length}</span></h3>
+      <ol class="tv-diario-lista">
+        {vistas.map((d) => <li key={d.id}><strong>{d.lugar}</strong><p>{d.texto}</p></li>)}
+      </ol>
+      {siguiente && <p class="mini terciario">La siguiente página, al llegar a {siguiente.lugar}.</p>}
+      {abiertas.length > 3 && <button type="button" class="btn-texto" onClick={() => setTodas(!todas)}>{todas ? 'Ver menos' : `Ver las ${abiertas.length}`}</button>}
+    </section>
+  );
+}
+
+// (remate, tanda 8) «Tu liga»: su grupo de cinco de esta semana (bronce, plata u oro). El primero sube y el último baja
+function Liga({ liga }) {
+  if (!liga || liga.fuera || liga.nivel == null || !liga.grupo?.length) return null;
+  const tam = liga.grupo.length;
+  return (
+    <section class={`tv-liga tv-liga-${liga.nivel}`} aria-labelledby="tv-liga-t">
+      <h3 id="tv-liga-t"><span class="tv-liga-medalla" aria-hidden="true" />{LIGAS[liga.nivel]}</h3>
+      <ol class="tv-clasif tv-liga-lista">
+        {liga.grupo.map((f, i) => (
+          <li key={f.nombre} class={`tv-liga-fila${f.yo ? ' yo' : ''}`}>
+            <span class="tv-puesto num">{i + 1}</span>
+            <span class="tv-nombre">{f.yo ? 'Tú' : f.nombre}{i === 0 && tam >= 2 && liga.nivel < 2 && f.metros > 0 && <small> · sube</small>}{i === tam - 1 && tam >= 3 && liga.nivel > 0 && <small> · baja</small>}</span>
+            <b class="num">{textoDistancia(f.metros)}</b>
+          </li>
+        ))}
+      </ol>
+      <p class="mini terciario">{tam < 2 ? 'Tu grupo se llena según entran compañeros.' : `El lunes, el primero sube${liga.nivel === 2 ? ' (ya estáis en la de oro)' : ''} y${tam >= 3 ? ' el último baja' : ' nadie baja'}${liga.nivel === 0 ? ' (de bronce no se baja)' : ''}.`}</p>
+    </section>
+  );
+}
+
+// (remate, tanda 8) El reto de la semana que pone el coach, con lo que lleva el equipo; y la fiesta del mes
+function RetoYFiesta({ equipo, hoy }) {
+  if (!equipo) return null;
+  const { reto, fiesta } = equipo;
+  const esHoy = fiesta?.dia === hoy;
+  if (!reto && !fiesta) return null;
+  return (
+    <>
+      {reto && (
+        <section class="tv-reto" aria-labelledby="tv-reto-t">
+          <h3 id="tv-reto-t">El reto del coach</h3>
+          <p class="tv-donde">{reto.texto || `Entre todos, ${km(reto.metros)} km esta semana`}</p>
+          <div class="tv-barra" role="img" aria-label={`${km(reto.hecho)} de ${km(reto.metros)} kilómetros`}><span style={{ width: `${Math.min(1, reto.hecho / reto.metros) * 100}%` }} /></div>
+          <p class="mini terciario">{reto.hecho >= reto.metros ? `¡Conseguido! ${km(reto.hecho)} km entre todos.` : `${km(reto.hecho)} de ${km(reto.metros)} km · lo que corréis en los descansos, sumado.`}</p>
+        </section>
+      )}
+      {fiesta && (
+        <section class={`tv-fiesta${esHoy ? ' hoy' : ''}`} aria-labelledby="tv-fiesta-t">
+          <h3 id="tv-fiesta-t">La fiesta de la manada</h3>
+          <p>{esHoy ? 'El equipo ha cumplido hoy la meta del mes: aurora en el juego para todos durante el día.' : `El equipo cumplió la meta del mes el ${Number(fiesta.dia.slice(8))}.`} Tienes su postal.</p>
+        </section>
+      )}
+    </>
+  );
+}
+const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
 export function HojaTravesia({ alCerrar }) {
   const { atleta, api, aviso } = useApp();
   const hoy = hoyISO(), lunes = lunesDe(hoy);
@@ -166,11 +284,23 @@ export function HojaTravesia({ alCerrar }) {
     try { await api.aullar(f.perfil); apuntarAullado(atleta.id, hoyISO(), f.perfil); setAullados(aulladosHoy(atleta.id, hoyISO())); aviso?.(`¡Auuu! A ${f.nombre} le saldrá en su próxima etapa`); }
     catch (e) { if (/ya le has aullado/i.test(e?.message || '')) { apuntarAullado(atleta.id, hoyISO(), f.perfil); setAullados(aulladosHoy(atleta.id, hoyISO())); } aviso?.(e?.message || 'No se ha podido aullar', 'error'); }
   };
-  const pos = posicionEnRuta(t.total), album = postales(t.total);
+  const pos = posicionEnRuta(t.total, meta.rutas), album = postales(t.total, meta.rutas);
+  // (remate, tanda 6) desde la última ruta de siempre, se elige la siguiente (Picos de Europa, Pirineos o el Camino)
+  const porElegir = rutaPorElegir(t.total, meta.rutas);
+  const elegirSiguiente = (id) => { const m = guardarMeta(atleta.id, elegirRuta(meta, porElegir.n, id)); setMeta(m); sincronizarMeta(api, atleta.id).catch(() => {}); };
   const [manada, setManada] = useState(null);
   const [rival, setRival] = useState(() => leerDuelo(atleta.id, lunes));
   const [lobo, setLobo] = useState(() => loboElegido(t, leerAjustes().loboJuego).id);
   useEffect(() => { let vivo = true; manadaDe(api, atleta.id).then((m) => { if (vivo) setManada(m); }); return () => { vivo = false; }; }, []);
+  // (remate, tanda 8) la liga de la semana, el reto del coach y la fiesta (063; fuera de la comunidad o sin ella, nada)
+  const [liga, setLiga] = useState(null);
+  const [equipoQ, setEquipoQ] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    api?.ligaTravesia?.().then((l) => { if (vivo) setLiga(l); }).catch(() => {});
+    equipoDe(api, atleta.id).then((q) => { if (vivo) { setEquipoQ(q); if (q?.fiesta) setMeta(leerMeta(atleta.id)); } }).catch(() => {});
+    return () => { vivo = false; };
+  }, []);
   const misMetros = t.semanas?.[lunes] || 0;
   const elDuelo = manada && rival ? duelo(manada.filas, rival, misMetros) : null;
   const equipo = manada ? equipoDelMes(manada.equipo) : null;
@@ -203,13 +333,34 @@ export function HojaTravesia({ alCerrar }) {
           <p class="mini terciario">En total, {textoDistancia(t.total)}{t.estrellas > 0 ? ` y ${t.estrellas} ${t.estrellas === 1 ? 'estrella' : 'estrellas'}` : ''}. Solo avanza en los descansos de tus entrenos.</p>
         </section>
 
+        {porElegir && (
+          <section class="tv-rutas" aria-labelledby="tv-rutas-t">
+            <h3 id="tv-rutas-t">Tu siguiente ruta</h3>
+            <p class="tv-donde">Cuando acabes {pos.ruta.nombre.replace(/^De /, 'la de ').replace(/^El /, 'el ').replace(/^Por /, 'la de ')}, tu lobo sigue por la que elijas.</p>
+            <div class="tv-rutas-lista">
+              {RUTAS_NUEVAS.map((r) => (
+                <button key={r.id} type="button" class="tv-ruta-op" aria-pressed={(porElegir.elegida || RUTAS_NUEVAS[(porElegir.n - 3) % 3].id) === r.id ? 'true' : 'false'} onClick={() => elegirSiguiente(r.id)}>
+                  <strong>{r.nombre}</strong><span>{r.hitos[0][0]} – {r.hitos[r.hitos.length - 1][0]} · {r.hitos[r.hitos.length - 1][1]} km</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <Diario total={t.total} rutas={meta.rutas} />
+
         <RangoYMisiones meta={meta} />
+
+        <Numeros t={t} meta={meta} />
 
         <EtapaDelDia atletaId={atleta.id} hoy={hoy} />
 
         <section aria-labelledby="tv-postales-t">
-          <h3 id="tv-postales-t">Postales <span class="tv-cuenta">{album.length}</span></h3>
+          <h3 id="tv-postales-t">Postales <span class="tv-cuenta">{album.length + meta.fiestas.length}</span></h3>
           <ul class="tv-postales">
+            {meta.fiestas.slice().reverse().map((mes) => (
+              <li key={`fiesta-${mes}`} class="tv-postal tv-postal-fiesta"><span class="tv-postal-img fiesta" aria-hidden="true" /><strong>La fiesta de la manada</strong><span>{MESES_LARGOS[Number(mes.slice(5)) - 1]} de {mes.slice(0, 4)}</span></li>
+            ))}
             {album.slice(0, 12).map((p) => (
               <li key={p.id} class="tv-postal"><Imagen id={p.imagen} clase="tv-postal-img" tamanos="140px" alternativa={<span class="tv-postal-img vacia" aria-hidden="true" />} /><strong>{p.lugar}</strong><span>km {p.km}</span></li>
             ))}
@@ -242,6 +393,10 @@ export function HojaTravesia({ alCerrar }) {
             )}
           </section>
         )}
+
+        <RetoYFiesta equipo={equipoQ} hoy={hoy} />
+
+        <Liga liga={liga} />
 
         <section aria-labelledby="tv-lobos-t">
           <h3 id="tv-lobos-t">Tus lobos</h3>

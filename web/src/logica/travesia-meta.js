@@ -96,11 +96,19 @@ export const LOGROS = [
   { id: 'alba', nombre: 'Al alba', como: 'Juega una etapa al amanecer', prueba: (r, g, ctx) => ctx.fase === 'alba' },
   { id: 'nieve', nombre: 'Cumbres nevadas', como: 'Llega a las cumbres nevadas', prueba: (r, g, ctx) => ctx.paisaje === 2 },
   { id: 'estrellas500', nombre: 'Coleccionista', como: 'Coge 500 estrellas', prueba: (r, g) => g.estrellas >= 500 },
+  // (remate, tanda 6)
+  { id: 'dorada1', nombre: 'El primer secreto', como: 'Coge una estrella dorada (salto largo y doble salto)', prueba: (r, g, ctx) => (ctx.doradas || 0) >= 1 },
+  { id: 'dorada5', nombre: 'Buscador de secretos', como: 'Coge cinco estrellas doradas', prueba: (r, g, ctx) => (ctx.doradas || 0) >= 5 },
+  { id: 'ventisca', nombre: 'Más rápido que la ventisca', como: 'Escapa de la ventisca sin que te alcance', prueba: (r) => r.escapadas >= 1 },
+  { id: 'dorado', nombre: 'Día dorado', como: 'Juega una etapa dorada (tras un récord en la serie)', prueba: (r, g, ctx) => !!ctx.dorada },
+  { id: 'fiestas', nombre: 'Lobo de fiesta', como: 'Juega en Navidad, en Halloween o con luna llena', prueba: (r, g, ctx) => !!ctx.fecha },
 ];
 
 // ---------- Lo que se guarda ----------
 // { rango, activas: [{ id, valor }], hechas (misiones cumplidas en total), logros: { id: 'AAAA-MM-DD' }, potenciadores: [tipos ya cogidos alguna vez] }
-export const META_VACIA = () => ({ rango: 0, activas: misionesDeRango(0), hechas: 0, logros: {}, potenciadores: [] });
+// (remate, tanda 6) rutas: las rutas nuevas elegidas, por orden; doradas: las estrellas doradas cogidas (cuántas)
+// (remate, tanda 7) numeros: lo que se cuenta para «Tu lobo en números» (saltos, roces, mejor combo, etapas, escapadas)
+export const META_VACIA = () => ({ rango: 0, activas: misionesDeRango(0), hechas: 0, logros: {}, potenciadores: [], rutas: [], doradas: 0, fiestas: [], numeros: { saltos: 0, roces: 0, combo: 1, etapas: 0, escapadas: 0, porPaisaje: [0, 0, 0, 0] } });
 export function limpiarMeta(m) {
   const v = META_VACIA();
   if (!m || typeof m !== 'object') return v;
@@ -111,12 +119,19 @@ export function limpiarMeta(m) {
   v.activas = deRango.map((id) => { const a = act.find((x) => x.id === id); return { id, valor: Math.min(1e7, Math.max(0, Math.round(Number(a?.valor) || 0))) }; });
   if (m.logros && typeof m.logros === 'object') for (const [k, d] of Object.entries(m.logros)) if (LOGROS.some((l) => l.id === k) && /^\d{4}-\d{2}-\d{2}$/.test(d)) v.logros[k] = d;
   if (Array.isArray(m.potenciadores)) v.potenciadores = [...new Set(m.potenciadores.filter((p) => ['iman', 'luna', 'aullido'].includes(p)))];
+  if (Array.isArray(m.rutas)) v.rutas = m.rutas.filter((x) => ['picos', 'pirineos', 'camino'].includes(x)).slice(0, 50);
+  v.doradas = Math.min(1e5, Math.max(0, Math.floor(Number(m.doradas) || 0)));
+  // (remate, tanda 8) los meses en que el equipo hizo la fiesta (su postal especial): 'AAAA-MM'
+  v.fiestas = [...new Set((Array.isArray(m.fiestas) ? m.fiestas : []).filter((x) => /^\d{4}-\d{2}$/.test(x)))].sort().slice(-60);
+  const n = m.numeros && typeof m.numeros === 'object' ? m.numeros : {};
+  const ent = (x, max) => Math.min(max, Math.max(0, Math.floor(Number(x) || 0)));
+  v.numeros = { saltos: ent(n.saltos, 1e8), roces: ent(n.roces, 1e7), combo: Math.max(1, ent(n.combo, 4)), etapas: ent(n.etapas, 1e7), escapadas: ent(n.escapadas, 1e6), porPaisaje: [0, 1, 2, 3].map((i) => ent(Array.isArray(n.porPaisaje) ? n.porPaisaje[i] : 0, 1e8)) };
   return v;
 }
 
 // Suma una etapa (solo las de una sesión). Devuelve { meta, cumplidas: [textos], subeRango: nombre o null, adorno: nombre
 // o null, logros: [nombres] }. r: el resultado de la etapa; total: lo guardado de la travesía ya con ella; ctx: { fase, paisaje, dia }
-export function sumarMeta(meta, r, total, { fase = null, paisaje = null, dia = null } = {}) {
+export function sumarMeta(meta, r, total, { fase = null, paisaje = null, dia = null, dorada = false, fecha = null } = {}) {
   const m = limpiarMeta(meta);
   const cumplidas = [];
   for (const a of m.activas) {
@@ -133,7 +148,11 @@ export function sumarMeta(meta, r, total, { fase = null, paisaje = null, dia = n
     adorno = ADORNOS.find((x) => x.rango === m.rango)?.nombre || null;
   }
   m.potenciadores = [...new Set([...m.potenciadores, ...(r.potenciadores || [])])];
-  const ctx = { fase, paisaje, potenciadores: m.potenciadores };
+  m.doradas += Math.max(0, Math.round(Number(r.doradas) || 0));
+  // (remate, tanda 7) los números de «Tu lobo en números»
+  const nu = m.numeros;
+  m.numeros = { saltos: nu.saltos + Math.max(0, r.saltos | 0), roces: nu.roces + Math.max(0, r.roces | 0), combo: Math.max(nu.combo, r.combo | 0, 1), etapas: nu.etapas + 1, escapadas: nu.escapadas + Math.max(0, r.escapadas | 0), porPaisaje: nu.porPaisaje.map((v, i) => v + (i === paisaje ? Math.max(0, r.estrellas | 0) : 0)) };
+  const ctx = { fase, paisaje, potenciadores: m.potenciadores, doradas: m.doradas, dorada, fecha };
   const logros = [];
   const hoy = /^\d{4}-\d{2}-\d{2}$/.test(dia || '') ? dia : new Date().toISOString().slice(0, 10);
   for (const l of LOGROS) {
@@ -149,3 +168,33 @@ export const progresoMisiones = (meta) => {
   const m = limpiarMeta(meta);
   return m.activas.map((a) => { const def = misionPorId(a.id), objetivo = metaDe(def, m.rango); return { id: a.id, texto: def.texto(objetivo), valor: Math.min(a.valor, objetivo), meta: objetivo, hecha: a.valor >= objetivo }; });
 };
+
+// (remate, tanda 6) Elige la ruta número n del recorrido (de las nuevas): las de antes se quedan, las de después se quitan
+export function elegirRuta(meta, n, id) {
+  const m = limpiarMeta(meta), k = n - 3;
+  if (k < 0 || !['picos', 'pirineos', 'camino'].includes(id)) return m;
+  const r = m.rutas.slice(0, k);
+  while (r.length < k) r.push(['picos', 'pirineos', 'camino'][r.length % 3]);
+  m.rutas = [...r, id];
+  return m;
+}
+
+// (remate, tanda 7) Los kilómetros de cada mes (de las semanas guardadas: cada semana cuenta en el mes de su jueves),
+// de más antiguo a más nuevo: [{ mes: 'AAAA-MM', metros }]
+export function metrosPorMes(semanas) {
+  const porMes = new Map();
+  for (const [lunes, m] of Object.entries(semanas || {})) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(lunes) || !(m > 0)) continue;
+    const j = new Date(`${lunes}T12:00:00Z`); j.setUTCDate(j.getUTCDate() + 3);
+    const mes = j.toISOString().slice(0, 7);
+    porMes.set(mes, (porMes.get(mes) || 0) + m);
+  }
+  return [...porMes.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([mes, metros]) => ({ mes, metros }));
+}
+
+// (remate, tanda 8) La fiesta de la manada: apunta el mes (para su postal) y devuelve la meta nueva (o la misma)
+export function apuntarFiesta(meta, mes) {
+  const m = limpiarMeta(meta);
+  if (!/^\d{4}-\d{2}$/.test(mes || '') || m.fiestas.includes(mes)) return m;
+  return limpiarMeta({ ...m, fiestas: [...m.fiestas, mes] });
+}

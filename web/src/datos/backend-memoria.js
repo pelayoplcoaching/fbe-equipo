@@ -132,7 +132,7 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'], ['travesia_liga', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'],
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
@@ -181,7 +181,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
+const SIN_ID = ['videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
   'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_semanas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
@@ -390,6 +390,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     travesia_perfil: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     travesia_dia: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     travesia_aullidos: (x) => esCoach() || x.de === sesion?.user.id,
+    // (063) la liga, cada uno la suya; el reto del equipo y la fiesta, solo el coach (los demás, con travesia_equipo())
+    travesia_liga: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    travesia_reto_equipo: () => esCoach(),
+    travesia_fiesta: () => esCoach(),
   };
   const comentarioVisible = (id) => { const c = buscar('comentarios', id); return !!c && VISIBLE.comentarios(c); };
   const programadoAun = (c) => !!c?.enviar_en && Date.parse(c.enviar_en) > Date.now();
@@ -1577,7 +1581,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
     // (060) la travesía y los apuntes vistos, solo con sumar_travesia() y apuntar_apunte(); los envíos, nadie
-    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos'].includes(t)) throw sinPermisoTabla(t);
+    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas',
       'comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw sinPermiso();
@@ -2018,7 +2022,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const limpio = { rango: Math.min(999, Math.max(0, Math.round(Number(args.p_rango) || 0))), hechas: Math.min(1e6, Math.max(0, Math.round(Number(args.p_hechas) || 0))),
         activas: (Array.isArray(args.p_activas) ? args.p_activas : []).slice(0, 3).filter((x) => /^[a-z0-9]{1,20}$/.test(x?.id || '')).map((x) => ({ id: x.id, valor: Math.min(1e7, Math.max(0, Math.round(Number(x.valor) || 0))) })),
         logros: Object.fromEntries(Object.entries(args.p_logros && typeof args.p_logros === 'object' ? args.p_logros : {}).filter(([k, d]) => /^[a-z0-9]{1,20}$/.test(k) && /^20[2-9]\d-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(d)).slice(0, 60)),
-        potenciadores: [...new Set((args.p_potenciadores || []).filter((p) => ['iman', 'luna', 'aullido'].includes(p)))] };
+        potenciadores: [...new Set((args.p_potenciadores || []).filter((p) => ['iman', 'luna', 'aullido'].includes(p)))],
+        // (063) las rutas elegidas y las doradas
+        rutas: (Array.isArray(args.p_rutas) ? args.p_rutas : []).filter((u) => ['picos', 'pirineos', 'camino'].includes(u)).slice(0, 50), doradas: Math.min(1e5, Math.max(0, Math.round(Number(args.p_doradas) || 0))) };
       const r = tabla('travesia_perfil').find((x) => x.atleta_id === aid);
       if (r) {
         if (r.rango > limpio.rango) { limpio.rango = r.rango; limpio.activas = r.activas; }
@@ -2027,6 +2033,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (Object.keys(limpio.logros).length > 100) limpio.logros = { ...(r.logros || {}) };   // (como la base: con tope)
         limpio.hechas = Math.max(limpio.hechas, r.hechas);
         limpio.potenciadores = [...new Set([...limpio.potenciadores, ...(r.potenciadores || [])])];
+        if (args.p_rutas == null || (r.rutas || []).length > limpio.rutas.length) limpio.rutas = r.rutas || [];
+        limpio.doradas = Math.max(limpio.doradas, r.doradas || 0);
         Object.assign(r, limpio, { actualizada_en: ahora() });
       } else tabla('travesia_perfil').push({ atleta_id: aid, ...limpio, actualizada_en: ahora() });
       return copia(limpio);
@@ -2037,8 +2045,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       db.travesia_dia = tabla('travesia_dia').filter((x) => x.dia >= sumar(hoy, -7));   // (los últimos ocho días, los de todos)
       let r = tabla('travesia_dia').find((x) => x.atleta_id === aid && x.dia === hoy);
       const m = Math.min(800, Math.max(0, Math.round(Number(args.p_metros) || 0))), e = Math.min(1000, Math.max(0, Math.round(Number(args.p_estrellas) || 0)));
-      if (!r) { r = { atleta_id: aid, dia: hoy, metros: m, estrellas: e, intentos: 1, actualizada_en: ahora() }; tabla('travesia_dia').push(r); }
-      else if (r.intentos < 3) { if (m > r.metros) { r.metros = m; r.estrellas = e; } r.intentos += 1; r.actualizada_en = ahora(); }
+      // (063) el rastro del intento, si tiene sentido (parejas de x en dm y altura en cm; como mucho 240)
+      const ra = args.p_rastro, rastro = Array.isArray(ra) && ra.length >= 2 && ra.length <= 480 && ra.length % 2 === 0 && ra.every((v, i) => Number.isInteger(v) && (i % 2 === 0 ? v >= 0 && v <= 8000 : v >= -200 && v <= 1000)) ? ra.slice() : null;
+      if (!r) { r = { atleta_id: aid, dia: hoy, metros: m, estrellas: e, intentos: 1, rastro, actualizada_en: ahora() }; tabla('travesia_dia').push(r); }
+      else if (r.intentos < 3) { if (m > r.metros) { r.metros = m; r.estrellas = e; r.rastro = rastro; } r.intentos += 1; r.actualizada_en = ahora(); }
       return { dia: r.dia, metros: r.metros, estrellas: r.estrellas, intentos: r.intentos };
     }
     if (nombre === 'travesia_dia_clasif') {
@@ -2062,6 +2072,81 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       db.travesia_dia = tabla('travesia_dia').filter((x) => x.dia >= sumar(hoy, -7));
       tabla('travesia_aullidos').push({ de: uid, para: args.p_perfil, atleta_id: yo?.id || null, para_atleta_id: el.atleta_id, dia: hoy, creado_en: ahora() });
       return null;
+    }
+    // (063) el remate: el fantasma de un compañero, las ligas de la semana, el reto del coach y la fiesta (como la 063)
+    if (nombre === 'travesia_dia_fantasma') {
+      if (!uid || !soyMiembro()) return null;
+      const mio = tabla('travesia_dia').find((t) => t.atleta_id === yo?.id && t.dia === hoy)?.metros || 0;
+      const otros = tabla('travesia_dia').filter((t) => t.dia === hoy && t.metros > 0 && Array.isArray(t.rastro)).map((t) => ({ t, m: dentroTodos().find((x) => x.atleta_id === t.atleta_id) }))
+        .filter(({ m }) => m && !m.sin_ranking && m.perfil_id !== uid);
+      const delante = otros.filter(({ t }) => t.metros > mio).sort((a, b2) => a.t.metros - b2.t.metros || a.m.nombre.localeCompare(b2.m.nombre));
+      const e = delante[0] || otros.sort((a, b2) => b2.t.metros - a.t.metros || a.m.nombre.localeCompare(b2.m.nombre))[0];
+      return e ? { nombre: e.m.nombre, metros: e.t.metros, rastro: e.t.rastro.slice() } : null;
+    }
+    if (nombre === 'travesia_liga') {
+      if (!uid || !soyMiembro()) return null;
+      const yoM = dentroTodos().find((x) => x.perfil_id === uid);
+      if (!yoM) return null;
+      const lunes = lunesHoy();
+      if (yoM.sin_ranking) return { semana: lunes, fuera: true };
+      const orden = (aid, sem) => { let h = 0; for (const ch of `${aid}${sem}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+      // (como la base tras su revisión: el grupo se guarda; solo entran quienes han jugado en las últimas cuatro semanas)
+      const juega = (aid) => tabla('travesia_semanas').some((t) => t.atleta_id === aid && t.semana >= sumar(lunes, -28) && t.metros > 0);
+      const grupos = (sem) => tabla('travesia_liga').filter((l) => l.semana === sem && dentroTodos().some((x) => x.atleta_id === l.atleta_id && !x.sin_ranking))
+        .map((l) => ({ atleta_id: l.atleta_id, nivel: l.nivel, grupo: l.grupo || 0, metros: tabla('travesia_semanas').find((t) => t.atleta_id === l.atleta_id && t.semana === sem)?.metros || 0 }));
+      if (!tabla('travesia_liga').some((l) => l.atleta_id === yoM.atleta_id && l.semana === lunes)) {
+        if (!tabla('travesia_liga').some((l) => l.semana === lunes)) {
+          const previa = tabla('travesia_liga').map((l) => l.semana).filter((x) => x < lunes).sort().pop() || null;
+          const antes = previa ? grupos(previa) : [];
+          const nuevos = [];
+          for (const g of antes) {
+            if (!juega(g.atleta_id)) continue;
+            const del = antes.filter((x) => x.nivel === g.nivel && x.grupo === g.grupo).sort((a, b2) => b2.metros - a.metros || String(a.atleta_id).localeCompare(String(b2.atleta_id)));
+            const puesto = del.indexOf(g) + 1, seguida = previa === sumar(lunes, -7);
+            const baja = seguida && puesto === del.length && del.length >= 3 && g.metros < del[puesto - 2].metros;
+            nuevos.push({ atleta_id: g.atleta_id, nivel: Math.min(2, Math.max(0, g.nivel + (seguida && puesto === 1 && g.metros > 0 && del.length >= 2 ? 1 : 0) - (baja ? 1 : 0))) });
+          }
+          for (const nivel of [0, 1, 2]) {
+            const de = nuevos.filter((x) => x.nivel === nivel).sort((a, b2) => orden(a.atleta_id, lunes) - orden(b2.atleta_id, lunes));
+            const n = Math.max(1, Math.ceil(de.length / 5));
+            de.forEach((x, k) => tabla('travesia_liga').push({ atleta_id: x.atleta_id, semana: lunes, nivel, grupo: k % n }));
+          }
+          db.travesia_liga = tabla('travesia_liga').filter((l) => l.semana >= sumar(lunes, -21));
+        }
+        if (!tabla('travesia_liga').some((l) => l.atleta_id === yoM.atleta_id && l.semana === lunes)) {
+          if (!juega(yoM.atleta_id)) return { semana: lunes, sin_jugar: true };
+          const cuantos = new Map();
+          for (const l of tabla('travesia_liga')) if (l.semana === lunes && l.nivel === 0) cuantos.set(l.grupo || 0, (cuantos.get(l.grupo || 0) || 0) + 1);
+          const sitio = [...cuantos.entries()].filter(([, n]) => n < 5).sort((a, b2) => a[1] - b2[1] || a[0] - b2[0])[0];
+          const grupo = sitio ? sitio[0] : (cuantos.size ? Math.max(...cuantos.keys()) + 1 : 0);
+          tabla('travesia_liga').push({ atleta_id: yoM.atleta_id, semana: lunes, nivel: 0, grupo });
+        }
+      }
+      const g = grupos(lunes), mio = g.find((x) => x.atleta_id === yoM.atleta_id);
+      const grupo = g.filter((x) => x.nivel === mio.nivel && x.grupo === mio.grupo).map((x) => ({ nombre: dentroTodos().find((m) => m.atleta_id === x.atleta_id).nombre, metros: x.metros, yo: x.atleta_id === yoM.atleta_id }))
+        .sort((a, b2) => b2.metros - a.metros || a.nombre.localeCompare(b2.nombre));
+      return { semana: lunes, nivel: mio.nivel, grupo };
+    }
+    if (nombre === 'travesia_poner_reto') {
+      if (!esCoach()) throw new Error('Solo el coach pone el reto del equipo');
+      const lunes = lunesHoy(), m = Math.round(Number(args.p_metros) || 0);
+      if (m > 0 && (m < 1000 || m > 1e7)) throw new Error('El reto va de 1 a 10.000 km');   // (como la base: antes de tocar nada)
+      db.travesia_reto_equipo = tabla('travesia_reto_equipo').filter((r) => r.semana !== lunes && r.semana >= sumar(lunes, -56));
+      if (m <= 0) return null;
+      tabla('travesia_reto_equipo').push({ semana: lunes, metros: m, texto: String(args.p_texto || '').trim().slice(0, 80), actualizado_en: ahora() });
+      return null;
+    }
+    if (nombre === 'travesia_equipo') {
+      if (!uid || !veComunidad()) return null;
+      const lunes = lunesHoy(), mes = `${hoy.slice(0, 7)}-01`;
+      const de = (t) => dentroTodos().find((m) => m.atleta_id === t.atleta_id);
+      const suma = (filas) => { const oc = new Set(filas.filter((t) => de(t).sin_ranking).map((t) => t.atleta_id)).size; const c = filas.filter((t) => !de(t).sin_ranking || oc >= 3); return { metros: c.reduce((n, t) => n + t.metros, 0), miembros: new Set(c.map((t) => t.atleta_id)).size }; };
+      const semana = suma(tabla('travesia_semanas').filter((t) => de(t) && t.semana === lunes)).metros;
+      const delMes = suma(tabla('travesia_semanas').filter((t) => de(t) && sumar(t.semana, 3).slice(0, 7) === hoy.slice(0, 7)));
+      const reto = tabla('travesia_reto_equipo').find((r) => r.semana === lunes);
+      let fiesta = tabla('travesia_fiesta').find((x) => x.mes === mes);
+      if (!fiesta && delMes.miembros > 0 && delMes.metros >= Math.max(50000, delMes.miembros * 15000)) { fiesta = { mes, dia: hoy }; tabla('travesia_fiesta').push(fiesta); }
+      return { semana, reto: reto ? { metros: reto.metros, texto: reto.texto, hecho: semana } : null, fiesta: fiesta ? { mes: fiesta.mes, dia: fiesta.dia } : null };
     }
     if (nombre === 'travesia_aullidos_recibidos') {
       if (!uid || !veComunidad() || !dentro(uid)) return [];   // (y solo mientras quien los recibe sigue dentro)
@@ -3070,7 +3155,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // Como la 032: de una reacción, solo el emoji de la propia (en un mensaje en que aún se puede reaccionar); el estado
       // de las conversaciones, el coach; la presencia (solo con su función), los destacados y los cupos no se cambian
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'].includes(t)) throw sinPermisoTabla(t);
       if (t === 'comentario_reacciones') {
         if (Object.keys(cambios).some((k) => k !== 'emoji')) throw new Error('De una reacción solo se cambia el emoji');
         if (!emojiValido(cambios.emoji)) throw new Error('Algún valor está fuera de rango.');
@@ -3277,7 +3362,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return copia(res);
       }
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'].includes(t)) throw sinPermisoTabla(t);
       // Como la 034: la versión vista (con el usuario que sea, la base la pone a tu nombre: es la tuya la que cambia)
       if (t === 'privacidad_vista') {
         const res = (Array.isArray(filas) ? filas : [filas]).map((f) => {
@@ -3391,10 +3476,15 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return [];
       }
       // (060) lo de la travesía y los apuntes vistos: el coach cualquiera; el atleta, lo suyo
-      if (t === 'travesia_semanas' || t === 'apuntes_vistos' || t === 'travesia_perfil' || t === 'travesia_dia') {
+      if (t === 'travesia_semanas' || t === 'apuntes_vistos' || t === 'travesia_perfil' || t === 'travesia_dia' || t === 'travesia_liga') {
         // (062: lo de hoy de la etapa del día, el atleta no lo borra: le daría intentos de más)
         const hoyM = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
         db[t] = tabla(t).filter((x) => !(cumple(x, f) && (esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId() && !(t === 'travesia_dia' && x.dia >= hoyM)))));
+        persistirYa();
+        return [];
+      }
+      if (t === 'travesia_reto_equipo' || t === 'travesia_fiesta') {
+        if (esCoach()) db[t] = tabla(t).filter((x) => !cumple(x, f));
         persistirYa();
         return [];
       }
@@ -4112,7 +4202,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'travesia_manada') return copia(rpcComunidad(nombre, args || {}, uid, perfil) ?? null);   // (061) solo lee
       if (nombre === 'apuntes_fallados') return copia(rpcComunidad(nombre, args || {}, uid, perfil) ?? []);   // (061) solo cuentas
       // (062) el rango que se junta, la etapa del día y los aullidos
-      if (['guardar_travesia_perfil', 'sumar_etapa_del_dia', 'travesia_dia_clasif', 'travesia_aullar', 'travesia_aullidos_recibidos'].includes(nombre)) {
+      // (063) el fantasma, las ligas, el reto del coach y la fiesta
+      if (['guardar_travesia_perfil', 'sumar_etapa_del_dia', 'travesia_dia_clasif', 'travesia_aullar', 'travesia_aullidos_recibidos', 'travesia_dia_fantasma', 'travesia_liga', 'travesia_poner_reto', 'travesia_equipo'].includes(nombre)) {
         const r = rpcComunidad(nombre, args || {}, uid, perfil);
         persistirYa();
         return copia(r ?? (nombre === 'travesia_aullidos_recibidos' ? [] : null));

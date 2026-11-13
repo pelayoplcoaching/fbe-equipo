@@ -17,6 +17,8 @@ export const PATRONES = { toque: 8, serie: 14, record: [18, 50, 18, 50, 70], che
 Object.assign(PATRONES, { elegir: PATRONES.toque, hecho: PATRONES.serie, aviso: PATRONES.error, celebrar: PATRONES.record });
 // (tanda 22) y «no»: dos roces muy cortos, al tocar algo que aún no se puede usar
 PATRONES.no = [6, 50, 6];
+// (La travesía, remate) un patrón para cada cosa del juego: corto y suave lo de siempre; marcado lo que importa
+Object.assign(PATRONES, { 'tv-salto': 6, 'tv-doble': [6, 30, 6], 'tv-roce': [10, 40, 24], 'tv-estrella': 4, 'tv-combo': [12, 40, 12, 40, 30], 'tv-tropiezo': 38, 'tv-prepara': [30, 90, 30, 90, 70], 'tv-meta': [20, 50, 20, 50, 20, 50, 90] });
 export const puedeVibrar = () => typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
 
 // (pulido 6) En iPhone, Safari no deja vibrar a las webs (no hay navigator.vibrate). Desde iOS 17.4 hay un resquicio

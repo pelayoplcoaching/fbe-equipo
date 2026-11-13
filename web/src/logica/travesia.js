@@ -52,7 +52,13 @@ export const COMBO_CADA = 8, COMBO_MAX = 4;
 export const CUESTA = { desde: 220, prob: 0.11, largo: [16, 24], alto: [1.1, 2], hondo: [0.8, 1.3], empuje: 7 };
 export const CORNISA = { desde: 320, prob: 0.09, ancho: [5, 8], alto: 1.55, grosor: 0.35 };
 export const POTENCIADORES = { iman: { dura: 6, radio: 5 }, luna: { dura: 4, factor: 0.62 }, aullido: { alcance: 30 } };
-export const MOMENTO_CADA = 1500, MOMENTOS = ['estampida', 'tormenta', 'puente'];
+export const MOMENTO_CADA = 1500, MOMENTOS = ['estampida', 'tormenta', 'puente', 'ventisca'];
+// (remate, tanda 6) la ventisca: una pared de nieve que persigue al lobo; empieza a VENTISCA.ventaja m y cada tropiezo la
+// acerca; si le alcanza, se lleva unas estrellas (nunca la etapa). Dura VENTISCA.largo m
+export const VENTISCA = { largo: 170, ventaja: 9, porTropiezo: 3.2, recupera: 0.5, pierde: 3 };
+// (remate, tanda 6) los secretos: una cornisa altísima (solo con el salto largo más el doble) con una estrella dorada, cada
+// SECRETO.cada m de travesía
+export const SECRETO = { cada: 700, alto: 3.9, ancho: 3.2 };
 export const comboDe = (serie) => Math.min(COMBO_MAX, 1 + Math.floor(Math.max(0, serie) / COMBO_CADA));
 
 // Un generador de números con semilla (mulberry32): mismo número de entrada, misma etapa
@@ -77,7 +83,8 @@ export function azar(semilla) {
 //   variedad    (top, tanda 2) cuestas, cornisas, potenciadores y momentos raros
 //   tutorial    (top, tanda 2) el primer kilómetro de un atleta nuevo: los primeros obstáculos enseñan un movimiento cada uno
 //   fija        (top, tanda 4) la dificultad no se adapta: el mismo terreno para todos (la etapa del día)
-export function nuevaEtapa(semilla = 1, { racha0 = 0, escudos = 0, calma = false, movimientos = false, km0 = 0, unToque = false, variedad = false, tutorial = false, fija = false } = {}) {
+//   estrellasPor (remate, tanda 6) cuánto vale cada estrella además del combo (2 en la etapa dorada o con luna llena)
+export function nuevaEtapa(semilla = 1, { racha0 = 0, escudos = 0, calma = false, movimientos = false, km0 = 0, unToque = false, variedad = false, tutorial = false, fija = false, estrellasPor = 1 } = {}) {
   const r0 = calma ? 0 : Math.min(18, Math.max(0, Math.round(racha0) || 0));
   const e = {
     semilla, rnd: azar(semilla), t: 0,
@@ -94,6 +101,7 @@ export function nuevaEtapa(semilla = 1, { racha0 = 0, escudos = 0, calma = false
     // (top, tanda 2) el terreno y lo que se coge
     variedad: !!variedad && !calma, cuestas: [], cornisas: [], potenciadores: [], sobre: null, cabezazos: 0, arriba: 0,
     iman: 0, luna: 0, potCogidos: [], momentos: [], tutorial: !!tutorial && !calma ? [] : null, fija: !!fija,
+    estrellasPor: Math.min(3, Math.max(1, Math.round(estrellasPor) || 1)), ventisca: null, alcanzado: 0, escapadas: 0, doradas: 0,
     // la dificultad se adapta: `ayuda` sube si tropieza mucho (más hueco, más despacio, sin montes) y `reto` si va sobrado
     ayuda: 0, reto: 0, ultimos: [],
   };
@@ -203,11 +211,25 @@ function generarVariedad(e) {
       e.cornisas.push({ x, w: 3.2, h: 0.75, grosor: 0.2, puente: true });
       for (const d of [-0.8, 0, 0.8]) e.estrellas.push({ x: x + d, y: 1.55, cogida: false });
       e.hasta = x + 4;
+    } else if (tipo === 'ventisca') {
+      // la ventisca: empieza a perseguir al llegar; el terreno, el de siempre
+      e.ventisca = { desde: x0, hasta: x0 + VENTISCA.largo, distancia: VENTISCA.ventaja, empezada: false };
+      return false;
     } else {
       // la tormenta: solo se ve (relámpagos y lluvia) durante 150 m; el terreno, el de siempre
       e.tormenta = { desde: x0, hasta: x0 + 150 };
       return false;
     }
+    return true;
+  }
+  // (remate, tanda 6) el secreto: una cornisa altísima con su estrella dorada, cada SECRETO.cada m de travesía
+  const ns = Math.floor((ab + 8) / SECRETO.cada);
+  if (ns > 0 && e.secretoHecho !== ns && ab + 8 >= ns * SECRETO.cada && !e.unToque && e.hasta > 40) {
+    e.secretoHecho = ns;
+    const x = e.hasta + 10 + SECRETO.ancho / 2;
+    e.cornisas.push({ x, w: SECRETO.ancho, h: SECRETO.alto, grosor: 0.4, alta: true });
+    e.estrellas.push({ x, y: SECRETO.alto + 0.8, cogida: false, dorada: true });
+    e.hasta = x + SECRETO.ancho / 2 + 4;
     return true;
   }
   // El potenciador de la etapa, en el aire entre dos obstáculos
@@ -252,8 +274,8 @@ export function saltar(e) {
   if (e.tropiezo > 0) { e.guardado = e.t; return false; }
   e.agachado = 0;
   const pisa = e.saltos === 0 && (e.y <= sueloBajo(e) || e.t - e.tSuelo <= COYOTE);
-  if (pisa) { e.vy = V_SALTO; e.saltos = 1; e.y = Math.max(e.y, sueloBajo(e)) + 0.0001; e.tSalto = e.t; e.guardado = null; e.usoDoble = false; e.sucesos.push('salto'); return true; }
-  if ((e.saltos === 1 || (e.saltos === 0 && e.y > sueloBajo(e) + 0.05)) && !e.unToque) { e.vy = V_DOBLE; e.saltos = 2; e.guardado = null; e.usoDoble = true; e.sucesos.push('doble'); return true; }
+  if (pisa) { e.vy = V_SALTO; e.saltos = 1; e.y = Math.max(e.y, sueloBajo(e)) + 0.0001; e.tSalto = e.t; e.guardado = null; e.usoDoble = false; e.nSaltos = (e.nSaltos || 0) + 1; e.sucesos.push('salto'); return true; }
+  if ((e.saltos === 1 || (e.saltos === 0 && e.y > sueloBajo(e) + 0.05)) && !e.unToque) { e.vy = V_DOBLE; e.saltos = 2; e.guardado = null; e.usoDoble = true; e.nSaltos = (e.nSaltos || 0) + 1; e.sucesos.push('doble'); return true; }
   e.guardado = e.t;
   return false;
 }
@@ -285,6 +307,8 @@ function tropezar(e, o) {
   // (top, tanda 1) el combo vuelve a ×1
   if (e.combo > 1) e.sucesos.push('combo-fuera');
   e.serie = 0; e.combo = 1;
+  // (remate, tanda 6) con la ventisca detrás, tropezar la acerca
+  if (e.ventisca?.empezada && e.x < e.ventisca.hasta) e.ventisca.distancia -= VENTISCA.porTropiezo;
   e.sucesos.push('tropiezo');
   // la dificultad se adapta: tres tropiezos en medio minuto y afloja un punto
   e.ultimos = e.ultimos.filter((t) => t > e.t - 30); e.ultimos.push(e.t);
@@ -311,6 +335,16 @@ function paso(e, dt) {
   if (e.inmune > 0) e.inmune = Math.max(0, e.inmune - dt);
   if (e.agachado > 0) e.agachado = Math.max(0, e.agachado - dt);
   if (e.iman > 0) e.iman = Math.max(0, e.iman - dt);
+  // (remate, tanda 6) la ventisca: persigue mientras dura; si alcanza, se lleva unas estrellas y se aparta un poco
+  const vt = e.ventisca;
+  if (vt && e.x >= vt.desde && e.x < vt.hasta) {
+    if (!vt.empezada) { vt.empezada = true; e.sucesos.push('ventisca'); }
+    vt.distancia = Math.min(VENTISCA.ventaja, vt.distancia + VENTISCA.recupera * dt);
+    if (vt.distancia <= 0) {
+      const pierde = Math.min(VENTISCA.pierde, e.estrellasCogidas);
+      e.estrellasCogidas -= pierde; e.alcanzado += 1; vt.distancia = VENTISCA.ventaja * 0.6; e.sucesos.push('alcanzado');
+    }
+  } else if (vt?.empezada && !vt.fuera && e.x >= vt.hasta) { vt.fuera = true; if (!e.alcanzado) e.escapadas += 1; e.sucesos.push('escapado'); }
   // (top, tanda 2) lo vertical: en el aire (saltando, o cayendo de una cornisa), pisando el terreno o sobre una cornisa
   const terreno = altoTerreno(e, e.x), corn = cornisaEn(e, e.x);
   const cayendo = e.saltos === 0 && e.sobre && !corn;   // (se acaba la cornisa: cae, sin haber saltado)
@@ -389,10 +423,15 @@ function paso(e, dt) {
   for (const s of e.estrellas) {
     if (s.cogida) continue;
     // (con el imán, las de delante vienen solas)
-    if (e.iman > 0 && s.x > cx - 0.5 && s.x < cx + POTENCIADORES.iman.radio * 0.35) { s.cogida = true; s.vale = e.combo; s.iman = true; e.estrellasCogidas += e.combo; e.sucesos.push('estrella'); continue; }
+    if (e.iman > 0 && !s.dorada && s.x > cx - 0.5 && s.x < cx + POTENCIADORES.iman.radio * 0.35) { s.cogida = true; s.vale = e.combo * e.estrellasPor; s.iman = true; e.estrellasCogidas += s.vale; e.sucesos.push('estrella'); continue; }
     if (s.x > cx + 1.2) break;
     // (top, tanda 1) con el combo, cada estrella vale más
-    if (Math.abs(s.x - cx) < 0.95 && Math.abs(s.y - cy) < 0.95) { s.cogida = true; s.vale = e.combo; e.estrellasCogidas += e.combo; e.sucesos.push('estrella'); }
+    if (Math.abs(s.x - cx) < 0.95 && Math.abs(s.y - cy) < 0.95) {
+      s.cogida = true;
+      // (remate, tanda 6) la dorada del secreto vale diez y se cuenta aparte; las demás, con el combo y la etapa dorada
+      if (s.dorada) { s.vale = 10; e.doradas += 1; e.estrellasCogidas += 10; e.sucesos.push('dorada'); }
+      else { s.vale = e.combo * e.estrellasPor; e.estrellasCogidas += s.vale; e.sucesos.push('estrella'); }
+    }
   }
 }
 
@@ -416,7 +455,7 @@ export function avanzar(e, dt) {
 export const resultado = (e) => ({ metros: Math.max(0, Math.round(e.x)), estrellas: e.estrellasCogidas, racha: e.mejorRacha, tropiezos: e.tropiezos, rios: e.rios, segundos: Math.round(e.t), calma: e.calma,
   roces: e.roces || 0, combo: e.comboMax || 1,
   // (top, tanda 2) lo de la variedad: metros corridos por arriba, potenciadores cogidos y momentos raros vividos
-  arriba: Math.round(e.arriba || 0), montesUno: e.montesUno || 0, potenciadores: (e.potCogidos || []).slice(), momentos: (e.momentos || []).filter((m) => m.x < e.x).map((m) => m.tipo) });
+  arriba: Math.round(e.arriba || 0), montesUno: e.montesUno || 0, doradas: e.doradas || 0, saltos: e.nSaltos || 0, alcanzado: e.alcanzado || 0, escapadas: e.escapadas || 0, potenciadores: (e.potCogidos || []).slice(), momentos: (e.momentos || []).filter((m) => m.x < e.x).map((m) => m.tipo) });
 
 // «870 m», «2,3 km», «12 km»
 export function textoDistancia(m) {

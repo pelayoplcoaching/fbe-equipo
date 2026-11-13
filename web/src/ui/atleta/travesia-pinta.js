@@ -1,7 +1,7 @@
 // «La travesía»: cómo se pinta el juego en su lienzo (el juego en sí, en logica/travesia.js). Todo a mano, con formas
 // planas en la paleta de la casa: sin imágenes que descargar. Va con el trozo del juego, que solo se pide al abrirlo.
-import { azar, perfil, altoTerreno } from '../../logica/travesia.js';
-import { fugaz, estirar, parpadea, colaAlViento, impetu, sacudida, entrada, hayAurora, alturaAstro, avisoDe } from '../../logica/travesia-efectos.js';
+import { azar, perfil, altoTerreno, VENTISCA } from '../../logica/travesia.js';
+import { fugaz, estirar, parpadea, colaAlViento, impetu, sacudida, entrada, hayAurora, alturaAstro, avisoDe, zoomDe, metaFinal } from '../../logica/travesia-efectos.js';
 
 const NOCHE = '#0B0726', MORADO_NOCHE = '#1E1548', VIOLETA = '#5438D8', LAVANDA = '#A08CFF', TIZA = '#F1F0F6', ORO = '#F2C230';
 
@@ -265,12 +265,15 @@ function pino(c, px, base, ph, oscuro, claro, nevado) {
 // (top, tanda 1) minimo: el móvil sigue yendo justo aun ligero, y se deja también lo de adorno (nubes, polvo, huellas, fauna,
 // brillos); contraste: los obstáculos con borde claro; temblor: false para que el tropiezo no sacuda la pantalla;
 // combo: el multiplicador de ahora (las estrellas cogidas dicen «+2»)
-export function pintar(c, e, p, { reloj = null, quedan = null, w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [] }) {
+export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, amigo = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [], reloj = null, quedan = null, especial = null, dorada = false }) {
   // (top, tanda 2) la tormenta del momento raro: mientras dura, llueve y relampaguea
   const enTormenta = !!e.tormenta && e.x >= e.tormenta.desde && e.x <= e.tormenta.hasta;
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = enTormenta ? 'tormenta' : amb?.clima || null;
   const deDia = fase === 'dia', noche = fase === 'noche', nevado = paisaje === 2, bosque = paisaje === 1, valle = paisaje === 3;
-  const u = Math.max(22, Math.min(38, w / 13));          // px por metro
+  // (remate, tanda 5) en la estampida y el puente colgante, la cámara se aleja para verlos enteros (y vuelve despacio)
+  const zObj = zoomDe(e.momentos, e.x);
+  p.zoom = p.zoom == null || quieto ? zObj : p.zoom + (zObj - p.zoom) * Math.min(1, dt * 1.6);
+  const u = Math.max(22, Math.min(38, w / 13)) * p.zoom;          // px por metro
   const suelo = Math.round(h * 0.66);
   const x0 = w * 0.2;                                    // dónde va el lobo
   const sx = (x) => x0 + (x - e.x) * u;
@@ -494,6 +497,18 @@ export function pintar(c, e, p, { reloj = null, quedan = null, w, h, t, dt = 0, 
       c.fillStyle = '#33288A'; c.beginPath(); c.moveTo(px + q.s * 0.3, suelo - q.s * q.a); c.lineTo(px + q.s, suelo); c.lineTo(px + q.s * 0.35, suelo); c.closePath(); c.fill();
     }
   }
+  // (remate, tanda 6) la etapa dorada (tras un récord en la serie): el cielo se tiñe de oro; y las fechas especiales
+  if (dorada) { c.fillStyle = 'rgba(242, 194, 48, .13)'; c.fillRect(-12, -12, w + 24, suelo + 12); }
+  if (especial === 'halloween') {
+    // (la luna, naranja)
+    const halo2 = c.createRadialGradient(lx, ly, lr * 0.5, lx, ly, lr * 2.4); halo2.addColorStop(0, 'rgba(255, 140, 50, .55)'); halo2.addColorStop(1, 'rgba(255, 140, 50, 0)');
+    c.fillStyle = halo2; c.fillRect(lx - lr * 2.5, ly - lr * 2.5, lr * 5, lr * 5);
+    c.fillStyle = 'rgba(255, 140, 50, .55)'; c.beginPath(); c.arc(lx, ly, lr, 0, 6.3); c.fill();
+  }
+  if (especial === 'lunallena') {
+    const halo3 = c.createRadialGradient(lx, ly, lr, lx, ly, lr * 4.5); halo3.addColorStop(0, 'rgba(241, 240, 246, .3)'); halo3.addColorStop(1, 'rgba(241, 240, 246, 0)');
+    c.fillStyle = halo3; c.fillRect(lx - lr * 4.6, ly - lr * 4.6, lr * 9.2, lr * 9.2);
+  }
   // (la luz de la hora, por encima del paisaje)
   if (!noche) { c.fillStyle = deDia ? 'rgba(150, 175, 255, .2)' : 'rgba(255, 150, 110, .1)'; c.fillRect(-12, -12, w + 24, suelo + 12); }
 
@@ -572,6 +587,26 @@ export function pintar(c, e, p, { reloj = null, quedan = null, w, h, t, dt = 0, 
       c.globalAlpha = a * 0.9; estrella4(c, gx, suelo + b.y, 2.6, 0); c.fill();
     }
     c.globalAlpha = 1;
+  }
+
+  // (remate, tanda 6) en Navidad, una guirnalda de luces al borde del camino; en Halloween, calabazas
+  if (especial === 'navidad' || especial === 'halloween') {
+    const corre3 = (e.x * u) % 600;
+    for (let k = -1; k * 600 - corre3 < w + 40; k++) for (let i = 0; i < (especial === 'navidad' ? 12 : 2); i++) {
+      const gx = k * 600 - corre3 + (especial === 'navidad' ? i * 50 : 140 + i * 270);
+      if (gx < -20 || gx > w + 20) continue;
+      const gy = sueloEn(gx);
+      if (especial === 'navidad') {
+        const on = quieto || Math.sin(t * 3 + i * 1.9 + k) > -0.3;
+        c.fillStyle = ['#FF5A6E', '#F2C230', '#5FD38A', '#6EA8FF'][i % 4]; c.globalAlpha = on ? 1 : 0.35;
+        c.beginPath(); c.arc(gx, gy - 6 - Math.sin((i % 6) / 6 * Math.PI) * 3, 2.6, 0, 6.3); c.fill(); c.globalAlpha = 1;
+      } else {
+        c.fillStyle = '#E8792B'; c.beginPath(); c.ellipse(gx, gy - 6, 9, 7, 0, 0, 6.3); c.fill();
+        c.fillStyle = '#C45E1C'; c.beginPath(); c.ellipse(gx, gy - 6, 3, 7, 0, 0, 6.3); c.fill();
+        c.fillStyle = '#2FA36B'; c.fillRect(gx - 1, gy - 15, 2, 4);
+        c.fillStyle = quieto || Math.sin(t * 7 + i) > -0.6 ? '#FFD65A' : '#B88A20'; tri(c, gx - 5, gy - 7, gx - 2, gy - 10, gx - 1, gy - 7, c.fillStyle); tri(c, gx + 1, gy - 7, gx + 2, gy - 10, gx + 5, gy - 7, c.fillStyle);
+      }
+    }
   }
 
   // ---------- Lo que hay que saltar ----------
@@ -678,6 +713,14 @@ export function pintar(c, e, p, { reloj = null, quedan = null, w, h, t, dt = 0, 
     const izq = sx(q.x - q.w / 2), der = sx(q.x + q.w / 2);
     if (der < -24 || izq > w + 24) continue;
     const arriba = sy(q.h), grueso = q.grosor * u, base0 = sy(0);
+    if (q.alta) {
+      // (remate, tanda 6) el secreto: un saliente de roca sobre una columna, muy alto
+      const base0 = sy(0), cx = (izq + der) / 2;
+      c.fillStyle = '#2E2470'; c.beginPath(); c.moveTo(cx - u * 0.45, base0); c.lineTo(cx - u * 0.3, arriba + grueso); c.lineTo(cx + u * 0.35, arriba + grueso); c.lineTo(cx + u * 0.5, base0); c.closePath(); c.fill();
+      c.fillStyle = '#4A3E9E'; c.beginPath(); c.moveTo(izq, arriba + grueso * 0.3); c.lineTo(izq + u * 0.3, arriba); c.lineTo(der - u * 0.2, arriba); c.lineTo(der, arriba + grueso * 0.5); c.lineTo(der - u * 0.5, arriba + grueso); c.lineTo(izq + u * 0.4, arriba + grueso); c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(241, 240, 246, .45)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(izq + u * 0.3, arriba + 0.5); c.lineTo(der - u * 0.2, arriba + 0.5); c.stroke();
+      continue;
+    }
     if (q.puente) {
       c.strokeStyle = '#8C7BD8'; c.lineWidth = 2; c.lineCap = 'round';
       for (const lado of [izq - u * 1.6, der + u * 1.6]) { c.beginPath(); c.moveTo(lado, base0); c.lineTo(lado, arriba - u * 0.9); c.stroke(); }
@@ -706,6 +749,36 @@ export function pintar(c, e, p, { reloj = null, quedan = null, w, h, t, dt = 0, 
     c.strokeStyle = TIZA; c.lineWidth = 2; c.beginPath(); c.arc(x, y, 13, 0, 6.3); c.stroke();
     simbolo(c, q.tipo, x, y);
   }
+  // (remate, tanda 5) el final con su clímax: en los diez últimos segundos, una meta donde estará el lobo cuando acabe el
+  // descanso (se cruza justo al acabar) y una ristra de banderines en la recta
+  const mf = fin ? (p.metaX ?? null) : metaFinal(e.x, e.v, quedan);
+  if (mf != null) {
+    p.metaX = fin ? p.metaX : p.metaX == null ? mf : p.metaX + (mf - p.metaX) * Math.min(1, dt * 3);
+    const mx = sx(p.metaX), pie = sueloEn(mx), alto = u * 3.1;
+    // (los banderines: de poste en poste, cada 8 m, hasta la meta)
+    c.lineWidth = 1.3; c.strokeStyle = 'rgba(241, 240, 246, .55)';
+    for (let k = 1; k <= 4; k++) {
+      const a = sx(p.metaX - k * 8), b = sx(p.metaX - (k - 1) * 8);
+      if (b < -10 || a > w + 10) continue;
+      const ya = sueloEn(a) - u * 2.5, yb = sueloEn(b) - u * 2.5;
+      c.strokeStyle = 'rgba(241, 240, 246, .6)'; c.beginPath(); c.moveTo(a, sueloEn(a)); c.lineTo(a, ya); c.stroke();
+      c.beginPath(); c.moveTo(a, ya); c.quadraticCurveTo((a + b) / 2, (ya + yb) / 2 + u * 0.5, b, yb); c.stroke();
+      for (let i = 1; i < 6; i++) {
+        const q = i / 6, fx = a + (b - a) * q, fy = ya + (yb - ya) * q + Math.sin(q * Math.PI) * u * 0.5;
+        c.fillStyle = [ORO, LAVANDA, TIZA][(i + k) % 3]; c.beginPath(); c.moveTo(fx - 5, fy); c.lineTo(fx + 5, fy); c.lineTo(fx, fy + 10 + (quieto ? 0 : Math.sin(t * 6 + i) * 1.5)); c.closePath(); c.fill();
+      }
+    }
+    if (mx > -40 && mx < w + 60) {
+      // (la meta: dos postes y una pancarta a cuadros)
+      c.fillStyle = '#2A1F4A'; c.fillRect(mx + u * 0.5, pie - alto, 4, alto);
+      c.fillStyle = TIZA; c.fillRect(mx, pie - alto, 5, alto);
+      const pw = u * 1.6, ph = u * 0.62, px = mx - pw * 0.1, py = pie - alto - ph * 0.2;
+      for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) { c.fillStyle = (i + j) % 2 ? '#0B0726' : TIZA; c.fillRect(px + (i * pw) / 8, py + (j * ph) / 2, pw / 8 + 0.5, ph / 2 + 0.5); }
+      c.font = '800 12px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+      c.strokeStyle = 'rgba(11, 7, 38, .8)'; c.lineWidth = 3; c.strokeText('META', px + pw / 2, py - 3); c.fillStyle = ORO; c.fillText('META', px + pw / 2, py - 3);
+    }
+  } else if (!fin) p.metaX = null;
+
   // (top, tanda 4) las marcas del camino: una banderita donde acabó la mejor etapa de la semana de cada compañero (y la suya)
   for (const m of marcas) {
     const x = sx(m.metros);
@@ -752,6 +825,17 @@ export function pintar(c, e, p, { reloj = null, quedan = null, w, h, t, dt = 0, 
   for (const s of e.estrellas) {
     if (s.cogida) continue;
     const x = sx(s.x); if (x < -20 || x > w + 20) continue;
+    if (s.dorada) {
+      // (remate, tanda 6) la estrella dorada del secreto: más grande, con rayos que giran
+      const y = sy(s.y) + (quieto ? 0 : Math.sin(t * 2.4) * 4), g = quieto ? 0 : t * 0.7;
+      const luz = c.createRadialGradient(x, y, 2, x, y, 34); luz.addColorStop(0, 'rgba(255, 214, 90, .7)'); luz.addColorStop(1, 'rgba(255, 214, 90, 0)');
+      c.fillStyle = luz; c.fillRect(x - 34, y - 34, 68, 68);
+      c.strokeStyle = 'rgba(255, 226, 122, .7)'; c.lineWidth = 2;
+      for (let i = 0; i < 8; i++) { const a = g + (i * Math.PI) / 4; c.beginPath(); c.moveTo(x + Math.cos(a) * 15, y + Math.sin(a) * 15); c.lineTo(x + Math.cos(a) * 24, y + Math.sin(a) * 24); c.stroke(); }
+      c.fillStyle = '#FFD65A'; estrella4(c, x, y, 14, g); c.fill();
+      c.fillStyle = '#FFF6D6'; estrella4(c, x, y, 5, -g); c.fill();
+      continue;
+    }
     const y = sy(s.y) + (quieto ? 0 : Math.sin(t * 3 + s.x) * 3), late = quieto ? 1 : 1 + 0.12 * Math.sin(t * 5 + s.x * 2);
     const luz = c.createRadialGradient(x, y, 1, x, y, 20 * late);
     luz.addColorStop(0, 'rgba(242, 194, 48, .55)'); luz.addColorStop(1, 'rgba(242, 194, 48, 0)');
@@ -884,6 +968,40 @@ export function pintar(c, e, p, { reloj = null, quedan = null, w, h, t, dt = 0, 
       lobo(c, { saltos: 0, tropiezo: 0, vy: 0, agachado: 0 }, p.zancada + 1.3);
       c.restore();
     }
+  }
+
+  // (remate, tanda 8) el lobo de un compañero en la etapa del día: su mejor intento, traslúcido y lavanda, con su nombre
+  if (amigo && !fin) {
+    const ax = sx(amigo.x);
+    if (ax > -u * 2 && ax < w + u * 2) {
+      const ay = sy(amigo.y);
+      c.save(); c.globalAlpha = 0.42; c.translate(ax, ay); c.scale(u, -u);
+      lobo(c, { saltos: amigo.y > altoT(amigo.x) + 0.05 ? 1 : 0, tropiezo: 0, vy: 0, agachado: 0 }, p.zancada + 0.7, { claro: '#C9BCFF', sombra: '#8C78FF' });
+      c.restore();
+      if (amigo.nombre) {
+        c.save(); c.globalAlpha = 0.85; c.font = `700 ${Math.round(Math.max(11, u * 0.36))}px system-ui, sans-serif`; c.textAlign = 'center';
+        c.fillStyle = 'rgba(11, 7, 38, 0.55)'; const tw = c.measureText(amigo.nombre).width + 10;
+        c.fillRect(ax - tw / 2, ay - u * 1.55 - 13, tw, 18); c.fillStyle = '#C9BCFF'; c.fillText(amigo.nombre, ax, ay - u * 1.55);
+        c.restore();
+      }
+    }
+  }
+
+  // (remate, tanda 6) la ventisca que persigue: una pared de nieve detrás del lobo, que se acerca si tropieza
+  const vt = e.ventisca;
+  if (vt?.empezada && !vt.fuera && e.x < vt.hasta + 10) {
+    // (el frente se ve siempre: pegado al borde con toda la ventaja; encima del lobo, si le alcanza)
+    const cercania = 1 - Math.max(0, Math.min(1, vt.distancia / VENTISCA.ventaja));
+    const vx = x0 * (0.22 + 0.78 * cercania) - u * 0.5, sale = Math.min(1, Math.max(0, (vt.hasta - e.x) / 10));
+    const muro = c.createLinearGradient(Math.min(0, vx - u * 3), 0, vx + u * 0.5, 0);
+    muro.addColorStop(0, `rgba(241, 240, 246, ${(0.6 + 0.3 * cercania) * sale})`); muro.addColorStop(1, 'rgba(241, 240, 246, 0)');
+    c.fillStyle = muro; c.fillRect(-12, -12, vx + u * 0.5 + 12, h + 24);
+    c.fillStyle = TIZA;
+    for (let i = 0; i < (minimo ? 8 : 22); i++) {
+      const k = ((t * (1.3 + (i % 5) * 0.3) + i * 0.137) % 1), fy = (i * 97 % 100) / 100 * (h * 0.9);
+      c.globalAlpha = (1 - k) * 0.8 * sale; c.beginPath(); c.arc(vx - u * 2 + k * u * 3.2, fy + Math.sin(t * 4 + i) * 6, 1.6 + (i % 3), 0, 6.3); c.fill();
+    }
+    c.globalAlpha = 1;
   }
 
   // ---------- El lobo ----------
@@ -1080,5 +1198,61 @@ export function pintarLobo(c, { w, h, skin = null, fase = 0.9 }) {
   const u = Math.min(w / 3.2, h / 1.75);
   c.save(); c.translate(w * 0.53, h * 0.94); c.scale(u, -u);
   lobo(c, { saltos: 0, tropiezo: 0, vy: 0, agachado: 0 }, fase, skin);
+  c.restore();
+}
+
+// (remate, tanda 7) «La vuelta a casa»: al acabar la sesión, el lobo vuelve a su guarida bajo el cielo de esa hora.
+// k: de 0 (sale de la izquierda) a 1 (ya ha llegado y se sienta). Escena fija salvo el lobo; sin texto (lo pone la tarjeta)
+export function pintarVuelta(c, { w, h, k = 1, t = 0, fase = 'noche', paisaje = 0, skin = null }) {
+  const cielo = CIELOS[fase] || CIELOS.noche, deDia = fase === 'dia';
+  const g = c.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, cielo[0]); g.addColorStop(0.6, cielo[1]); g.addColorStop(1, cielo[2]);
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+  // estrellas y luna (de noche), o un sol bajo (al alba y al ocaso)
+  if (!deDia) {
+    for (let i = 0; i < 26; i++) {
+      const az = (k2) => { const v = Math.sin(i * 12.9898 + k2 * 78.233) * 43758.5453; return v - Math.floor(v); };
+      const sx = az(1) * w, sy = az(2) * h * 0.55;
+      c.globalAlpha = fase === 'noche' ? 0.35 + 0.5 * az(3) : 0.25; c.fillStyle = TIZA;
+      c.fillRect(Math.round(sx), Math.round(sy), 1.5, 1.5);
+    }
+    c.globalAlpha = 1;
+  }
+  const lx = w * 0.78, ly = h * 0.22, lr = Math.max(8, h * 0.08);
+  const halo = c.createRadialGradient(lx, ly, lr * 0.6, lx, ly, lr * 3);
+  halo.addColorStop(0, deDia ? 'rgba(255,255,255,0.35)' : 'rgba(241,240,246,0.28)'); halo.addColorStop(1, 'rgba(241,240,246,0)');
+  c.fillStyle = halo; c.fillRect(lx - lr * 3, ly - lr * 3, lr * 6, lr * 6);
+  c.fillStyle = fase === 'noche' ? TIZA : fase === 'dia' ? '#FFF6D6' : '#FFD7A8';
+  c.beginPath(); c.arc(lx, ly, lr, 0, Math.PI * 2); c.fill();
+  // dos cordilleras lejanas y la loma de la guarida
+  const suelo = h * 0.8;
+  const capa = (alto, color, fase0) => {
+    c.fillStyle = color; c.beginPath(); c.moveTo(0, h);
+    for (let x = 0; x <= w; x += 6) c.lineTo(x, suelo - alto * (0.55 + 0.25 * Math.sin(x / w * 5 + fase0) + 0.2 * Math.sin(x / w * 13 + fase0 * 2)));
+    c.lineTo(w, h); c.closePath(); c.fill();
+  };
+  capa(h * 0.32, deDia ? 'rgba(80,96,190,0.55)' : 'rgba(84,56,216,0.35)', 1.3);
+  capa(h * 0.2, deDia ? 'rgba(52,64,150,0.75)' : 'rgba(30,21,72,0.85)', 4.1);
+  const loma = DELANTE[paisaje] || DELANTE[0];
+  const gx = w * 0.7, gr = h * 0.17;   // la guarida: un hueco en la loma, con luz cálida dentro
+  c.fillStyle = loma; c.beginPath(); c.moveTo(0, suelo);
+  c.lineTo(w * 0.45, suelo); c.quadraticCurveTo(w * 0.62, suelo - h * 0.34, w * 0.86, suelo - h * 0.3); c.quadraticCurveTo(w * 0.97, suelo - h * 0.26, w, suelo - h * 0.18);
+  c.lineTo(w, h); c.lineTo(0, h); c.closePath(); c.fill();
+  const luz = c.createRadialGradient(gx, suelo, gr * 0.2, gx, suelo, gr * 1.9);
+  luz.addColorStop(0, 'rgba(242,194,48,0.45)'); luz.addColorStop(1, 'rgba(242,194,48,0)');
+  c.fillStyle = luz; c.fillRect(gx - gr * 2, suelo - gr * 2, gr * 4, gr * 2.4);
+  c.fillStyle = '#2A1606'; c.beginPath(); c.ellipse(gx, suelo, gr * 0.62, gr * 0.78, 0, Math.PI, 0); c.fill();
+  const dentro = c.createRadialGradient(gx, suelo, 1, gx, suelo, gr * 0.7);
+  dentro.addColorStop(0, 'rgba(255,214,120,0.9)'); dentro.addColorStop(1, 'rgba(242,150,48,0.15)');
+  c.fillStyle = dentro; c.beginPath(); c.ellipse(gx, suelo, gr * 0.5, gr * 0.64, 0, Math.PI, 0); c.fill();
+  // el suelo y el sendero hasta la guarida
+  c.fillStyle = loma; c.fillRect(0, suelo, w, h - suelo);
+  c.strokeStyle = 'rgba(241,240,246,0.16)'; c.lineWidth = 2; c.setLineDash([5, 7]);
+  c.beginPath(); c.moveTo(0, suelo + 3); c.lineTo(gx - gr * 0.6, suelo + 3); c.stroke(); c.setLineDash([]);
+  // el lobo: camina hasta la puerta y se para (las patas quietas cuando llega)
+  const u = h * 0.14, llega = Math.min(1, Math.max(0, k));
+  const px = -u * 1.5 + (gx - gr * 0.75 - u * 1.1 + u * 1.5) * (1 - (1 - llega) * (1 - llega));
+  c.save(); c.translate(px, suelo); c.scale(u, -u);
+  lobo(c, { saltos: 0, tropiezo: 0, vy: 0, agachado: 0 }, llega >= 1 ? 0.9 : t * 9, skin);
   c.restore();
 }

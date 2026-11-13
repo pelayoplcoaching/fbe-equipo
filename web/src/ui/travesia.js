@@ -2,7 +2,7 @@
 // las estrellas de cada sesión, el total y la mejor marca (logica/travesia.js). Si el navegador no deja guardar, se
 // recuerda mientras la app está abierta, como en descansos.js.
 import { limpiarTravesia, sumarEtapa, prepararEnvio, trasSubir, conBase } from '../logica/travesia.js';
-import { limpiarMeta, sumarMeta } from '../logica/travesia-meta.js';
+import { limpiarMeta, sumarMeta, apuntarFiesta } from '../logica/travesia-meta.js';
 import { ETAPA_DIA } from '../logica/travesia.js';
 
 const enMemoria = new Map();
@@ -134,7 +134,11 @@ export async function sincronizarMeta(api, atletaId) {
   if (!base) return local;
   // (si mientras subía se ha sumado otra etapa en este móvil, manda la que vaya más avanzada)
   const ahora = leerMeta(atletaId), b = limpiarMeta(base);
-  return guardarMeta(atletaId, ahora.rango > b.rango || (ahora.rango === b.rango && ahora.hechas > b.hechas) ? ahora : { ...b, logros: { ...ahora.logros, ...b.logros } });
+  const elegido = ahora.rango > b.rango || (ahora.rango === b.rango && ahora.hechas > b.hechas) ? ahora : { ...b, logros: { ...ahora.logros, ...b.logros } };
+  // (remate) lo que la base no guarda (los números) o puede no guardar (rutas y doradas, desde la 063) no se pierde: las
+  // rutas, la lista más larga; las doradas, las más; los números y las fiestas, los del móvil
+  const rutasBase = Array.isArray(base.rutas) ? b.rutas : [];
+  return guardarMeta(atletaId, { ...elegido, rutas: rutasBase.length > ahora.rutas.length ? rutasBase : ahora.rutas, doradas: Math.max(ahora.doradas, b.doradas), numeros: ahora.numeros, fiestas: ahora.fiestas });
 }
 
 // ---------- (top, tanda 4) La etapa del día, en el móvil: los intentos de hoy y el mejor ----------
@@ -169,4 +173,17 @@ export function aullidosNuevos(atletaId, recibidos) {
   const nuevos = (recibidos || []).filter((x) => !vistos.has(`${x.nombre}|${x.dia}`));
   if (nuevos.length) guardarAull(atletaId, { ...a, vistos: [...vistos, ...nuevos.map((x) => `${x.nombre}|${x.dia}`)].slice(-80) });
   return nuevos;
+}
+
+// ---------- (remate, tanda 8) El reto del coach y la fiesta de la manada (063) ----------
+// Se pide como mucho cada diez minutos (lo usan la hoja y cada etapa del juego). null fuera de la comunidad o sin la 063
+const memEquipo = new Map();
+export async function equipoDe(api, atletaId) {
+  const antes = memEquipo.get(atletaId);
+  if (antes && Date.now() - antes.t < 10 * 60 * 1000) return antes.datos;
+  const datos = await api?.equipoTravesia?.().catch?.(() => null) ?? null;
+  memEquipo.set(atletaId, { t: Date.now(), datos });
+  // (si hay fiesta este mes, su postal se queda en el móvil)
+  if (datos?.fiesta?.mes) guardarMeta(atletaId, apuntarFiesta(leerMeta(atletaId), String(datos.fiesta.mes).slice(0, 7)));
+  return datos;
 }

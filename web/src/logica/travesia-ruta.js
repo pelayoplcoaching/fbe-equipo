@@ -10,22 +10,40 @@ export const RUTAS = [
   { id: 'madrid-valencia', nombre: 'De Madrid a Valencia', hitos: [['Madrid', 0], ['Arganda', 28], ['Tarancón', 82], ['Honrubia', 165], ['Motilla del Palancar', 198], ['Utiel', 270], ['Requena', 285], ['Buñol', 320], ['Valencia', 355]] },
   { id: 'valencia-barcelona', nombre: 'De Valencia a Barcelona', hitos: [['Valencia', 0], ['Sagunto', 30], ['Castellón', 72], ['Peñíscola', 140], ['Tortosa', 190], ['Tarragona', 260], ['Sitges', 315], ['Barcelona', 350]] },
 ];
+// (remate, tanda 6) Las rutas nuevas, para después de Barcelona: cada una se elige en «Tu travesía» (sin elegir, van en
+// este orden y vuelven a empezar). Los kilómetros son aproximados, siguiendo carreteras y caminos.
+export const RUTAS_NUEVAS = [
+  { id: 'picos', nombre: 'Por los Picos de Europa', hitos: [['Cangas de Onís', 0], ['Covadonga', 11], ['Lagos de Covadonga', 24], ['Arenas de Cabrales', 52], ['Poncebos', 58], ['Bulnes', 63], ['Sotres', 75], ['Potes', 115], ['Fuente Dé', 138]] },
+  { id: 'pirineos', nombre: 'Por los Pirineos', hitos: [['Jaca', 0], ['Canfranc', 24], ['Somport', 32], ['Panticosa', 75], ['Torla', 110], ['Ordesa', 118], ['Benasque', 210], ['Vielha', 265], ['Puigcerdà', 380]] },
+  { id: 'camino', nombre: 'El Camino de Santiago', hitos: [['León', 0], ['Astorga', 50], ['Rabanal del Camino', 70], ['Ponferrada', 115], ['Villafranca del Bierzo', 140], ['O Cebreiro', 170], ['Sarria', 215], ['Portomarín', 237], ['Arzúa', 275], ['Santiago de Compostela', 310]] },
+];
 const largo = (r) => r.hitos[r.hitos.length - 1][1];
+// La ruta número n del recorrido (de 0 en adelante): las tres de siempre y luego las elegidas (o las nuevas, por orden)
+export function rutaN(n, elegidas = []) {
+  if (n < RUTAS.length) return RUTAS[n];
+  const k = n - RUTAS.length, id = Array.isArray(elegidas) ? elegidas[k] : null;
+  return RUTAS_NUEVAS.find((r) => r.id === id) || RUTAS_NUEVAS[k % RUTAS_NUEVAS.length];
+}
 const cuenta = (g) => ({ total: Number(g?.total) || 0, estrellas: Number(g?.estrellas) || 0, retos: Number(g?.retos) || 0, rios: Number(g?.rios) || 0 });
-const TOTAL_RUTAS = RUTAS.reduce((n, r) => n + largo(r), 0);
 
 // Dónde va con esos metros: { ruta, n (qué ruta, de 0 en adelante contando vueltas), km (en esta ruta), largo, pct,
 // anterior: [nombre, km], siguiente: [nombre, km] | null, faltan (km al siguiente), pasados (hitos alcanzados en esta ruta) }
-export function posicionEnRuta(metros) {
-  const kmTotal = Math.max(0, Number(metros) || 0) / 1000;
-  const vueltas = Math.floor(kmTotal / TOTAL_RUTAS);
-  let km = kmTotal - vueltas * TOTAL_RUTAS, i = 0;
-  while (i < RUTAS.length - 1 && km >= largo(RUTAS[i])) { km -= largo(RUTAS[i]); i += 1; }
-  const ruta = RUTAS[i];
+// (remate, tanda 6) tras Barcelona ya no vuelve a empezar: siguen las rutas nuevas (las elegidas, o por orden)
+export function posicionEnRuta(metros, elegidas = []) {
+  let km = Math.max(0, Number(metros) || 0) / 1000, i = 0;
+  while (km >= largo(rutaN(i, elegidas)) && i < 100000) { km -= largo(rutaN(i, elegidas)); i += 1; }
+  const ruta = rutaN(i, elegidas);
   const pasados = ruta.hitos.filter(([, k]) => k <= km).length;
   const siguiente = ruta.hitos[pasados] || null;
-  return { ruta, n: vueltas * RUTAS.length + i, km: Math.round(km * 10) / 10, largo: largo(ruta), pct: Math.min(1, km / largo(ruta)), anterior: ruta.hitos[pasados - 1], siguiente,
+  return { ruta, n: i, km: Math.round(km * 10) / 10, largo: largo(ruta), pct: Math.min(1, km / largo(ruta)), anterior: ruta.hitos[pasados - 1], siguiente,
     faltan: siguiente ? Math.max(0.1, Math.round((siguiente[1] - km) * 10) / 10) : 0, pasados };
+}
+// ¿Toca elegir la ruta siguiente? Desde la última de siempre en adelante: { n (la que se elige), elegida (su id o null) }
+export function rutaPorElegir(metros, elegidas = []) {
+  const p = posicionEnRuta(metros, elegidas);
+  if (p.n < RUTAS.length - 1) return null;
+  const n = p.n + 1, k = n - RUTAS.length;
+  return { n, elegida: Array.isArray(elegidas) && RUTAS_NUEVAS.some((r) => r.id === elegidas[k]) ? elegidas[k] : null };
 }
 // Dónde va, en una frase
 const km1 = (n) => String(Math.round(n * 10) / 10).replace('.', ',');
@@ -44,10 +62,10 @@ export function textoParaCompartir(guardado) {
 }
 // Las postales: una por hito alcanzado, de todas las rutas hechas y de la que lleva. La imagen, una de las doce
 // ilustraciones de los meses (la misma siempre para el mismo hito). [{ id, lugar, ruta, km, imagen }], la última primero
-export function postales(metros) {
-  const p = posicionEnRuta(metros), out = [];
-  for (let n = 0; n <= p.n; n++) {
-    const r = RUTAS[n % RUTAS.length];
+export function postales(metros, elegidas = []) {
+  const p = posicionEnRuta(metros, elegidas), out = [];
+  for (let n = Math.max(0, p.n - 30); n <= p.n; n++) {
+    const r = rutaN(n, elegidas);
     const hasta = n < p.n ? r.hitos.length : p.pasados;
     r.hitos.slice(0, hasta).forEach(([lugar, km], i) => {
       if (i === 0 && n > 0) return;   // (la salida de una ruta es la llegada de la anterior)
@@ -57,9 +75,9 @@ export function postales(metros) {
   return out.reverse();
 }
 // ¿Qué postales nuevas trae pasar de `antes` a `ahora` metros?
-export function postalesNuevas(antes, ahora) {
-  const ya = new Set(postales(antes).map((x) => x.id));
-  return postales(ahora).filter((x) => !ya.has(x.id));
+export function postalesNuevas(antes, ahora, elegidas = []) {
+  const ya = new Set(postales(antes, elegidas).map((x) => x.id));
+  return postales(ahora, elegidas).filter((x) => !ya.has(x.id));
 }
 
 // ---------- Los lobos ----------

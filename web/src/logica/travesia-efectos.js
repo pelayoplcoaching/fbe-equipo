@@ -102,7 +102,8 @@ export function vidaCartel(desde, dura = 2.2) {
 
 // ---------- El cielo ----------
 // ¿Hay aurora? De noche, en las cumbres nevadas (paisaje 2), o con la luna casi nueva en cualquier otro
-export const hayAurora = (amb) => !!amb && amb.fase === 'noche' && !/lluvia|niebla|tormenta/.test(amb.clima || '') && (amb.paisaje === 2 || (amb.luna?.ilum ?? 1) < 0.12);
+// (remate, tanda 8) el día de la fiesta de la manada, aurora siempre (amb.fiesta)
+export const hayAurora = (amb) => !!amb?.fiesta || !!amb && amb.fase === 'noche' && !/lluvia|niebla|tormenta/.test(amb.clima || '') && (amb.paisaje === 2 || (amb.luna?.ilum ?? 1) < 0.12);
 // A qué altura (de 0 a 1 del cielo) va el sol o la luna: alto de noche y de día; bajo, casi en el horizonte, al alba y al ocaso
 export const alturaAstro = (fase) => (fase === 'alba' || fase === 'ocaso' ? 0.8 : 0.35);
 
@@ -140,3 +141,67 @@ export function avisoDe(obstaculos, bordeDerecho, delante = 9) {
   }
   return null;
 }
+
+// ---------- (remate, tanda 5) El final, la vuelta y la cámara ----------
+// La meta del final: dónde estará el lobo cuando acabe el descanso (con la velocidad de ahora). Solo en los diez últimos
+// segundos; si no, null
+export const metaFinal = (x, v, quedan) => (Number.isFinite(quedan) && quedan > 0 && quedan <= 10 ? x + Math.max(0, v) * quedan : null);
+// La vuelta suave: tras una pausa o al volver a la app, cuenta 3, 2, 1 (medio segundo cada uno) antes de seguir. Devuelve
+// el número que toca enseñar, o 0 si ya se juega
+export const VUELTA = 1.5;
+export const cuentaVuelta = (desde) => (desde == null || desde < 0 || desde >= VUELTA ? 0 : 3 - Math.floor(desde / (VUELTA / 3)));
+// La cámara se aleja en los momentos raros que se ven mejor enteros (la estampida y el puente): de 1 (normal) a 0,78
+export function zoomDe(momentos, x) {
+  const cerca = (momentos || []).some((m) => m.tipo !== 'tormenta' && m.x - x < 26 && m.x - x > -(m.tipo === 'estampida' ? 22 : 16));
+  return cerca ? 0.78 : 1;
+}
+// Jugar sin mirar: los pitidos que tocan ahora. Cada obstáculo que viene avisa tres veces, a 1,2, 0,75 y 0,4 s de
+// llegar (más agudo cuanto más cerca). Apunta en el obstáculo los que ya ha dado. Devuelve [{ tipo, cerca (0 a 1) }]
+const UMBRALES = [1.2, 0.75, 0.4];
+export function pitidos(obstaculos, x, v) {
+  const out = [];
+  if (!(v > 0)) return out;
+  for (const o of obstaculos || []) {
+    if (o.pasado || o.apartado) continue;
+    const t = (o.x - o.w / 2 - x) / v;
+    if (t > UMBRALES[0]) break;
+    const dados = o.pitidos || 0;
+    if (dados < UMBRALES.length && t <= UMBRALES[dados]) { o.pitidos = dados + 1; out.push({ tipo: o.tipo, cerca: dados / (UMBRALES.length - 1) }); }
+  }
+  return out;
+}
+// Cada cuántos metros suena una pisada (al trote, más seguidas)
+export const PASO = 1.7;
+
+// ---------- (remate, tanda 6) Las fechas especiales ----------
+// Navidad (del 20 de diciembre al 6 de enero), Halloween (del 28 de octubre al 2 de noviembre) y, de noche, la luna llena
+// de verdad (iluminada en un 97 % o más): sus estrellas valen doble. fecha: AAAA-MM-DD; luna: { ilum }; fase: la de la hora
+export function fechaEspecial(fecha, luna = null, fase = null) {
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(fecha || '');
+  if (m) {
+    const md = Number(m[1]) * 100 + Number(m[2]);
+    if (md >= 1220 || md <= 106) return 'navidad';
+    if ((md >= 1028 && md <= 1031) || (md >= 1101 && md <= 1102)) return 'halloween';
+  }
+  if (fase === 'noche' && (luna?.ilum ?? 0) >= 0.97) return 'lunallena';
+  return null;
+}
+export const NOMBRE_FECHA = { navidad: 'Travesía de Navidad', halloween: 'Noche de Halloween', lunallena: 'Luna llena: las estrellas valen doble' };
+
+// ---------- (remate, tanda 8) El rastro de la etapa del día y el lobo del compañero ----------
+// Cada cuarto de segundo, dónde va (decímetros) y a qué altura (centímetros): [x, y, x, y, …]; como mucho 240 parejas
+export const RASTRO_CADA = 0.25;
+export function apuntarRastro(rastro, t, x, y) {
+  const toca = Math.floor(t / RASTRO_CADA + 1e-6);
+  while (rastro.length / 2 <= toca && rastro.length < 480) rastro.push(Math.max(0, Math.min(8000, Math.round(x * 10))), Math.max(-200, Math.min(1000, Math.round(y * 100))));
+  return rastro;
+}
+// Dónde iba en el segundo t (entre dos muestras, a medias): { x, y } en metros, o null sin rastro
+export function enRastro(rastro, t) {
+  // (revisión: un rastro raro, con algo que no sea un número, no se usa)
+  if (!Array.isArray(rastro) || rastro.length < 2 || !rastro.every(Number.isFinite)) return null;
+  const n = rastro.length / 2, k = Math.max(0, t / RASTRO_CADA), i = Math.min(n - 1, Math.floor(k)), j = Math.min(n - 1, i + 1), f = Math.min(1, k - i);
+  return { x: (rastro[2 * i] + (rastro[2 * j] - rastro[2 * i]) * f) / 10, y: (rastro[2 * i + 1] + (rastro[2 * j + 1] - rastro[2 * i + 1]) * f) / 100 };
+}
+// Las ligas: 0 bronce, 1 plata, 2 oro
+export const LIGAS = ['Liga de bronce', 'Liga de plata', 'Liga de oro'];

@@ -6030,6 +6030,10 @@ try {
   console.log('\nLa travesía, al nivel de los mejores');
   const { probarTravesiaTop } = await import('./e2e-travesia-top.mjs');
   await probarTravesiaTop({ navegador, check });
+  // El remate de La travesía (claude/descansos-mejoras-5.md): el reto del coach, el diario, los números, la liga y el lobo de un compañero
+  console.log('\nEl remate de La travesía');
+  const { probarTravesiaRemate } = await import('./e2e-travesia-remate.mjs');
+  await probarTravesiaRemate({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));
