@@ -6034,6 +6034,10 @@ try {
   console.log('\nApuntes, practicar');
   const { probarApuntesPractica } = await import('./e2e-apuntes-t2.mjs');
   await probarApuntesPractica({ navegador, check });
+  // Apuntes, camino y progreso (tanda C): prueba de nivel, objetivo diario, tu progreso (temas, ruta, mes), examen final y certificado
+  console.log('\nApuntes, camino y progreso');
+  const { probarApuntesCamino } = await import('./e2e-apuntes-t3.mjs');
+  await probarApuntesCamino({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

@@ -212,8 +212,21 @@ export function limpiarVistos(g) {
   const curso = typeof c.clave === 'string' && /^[a-z0-9-]{1,40}$/.test(c.clave) && DIA.test(c.desde || '') ? { clave: c.clave, desde: c.desde } : null;
   const examenes = lista(objeto(g).examenes).filter((x) => x && DIA.test(x.dia || '') && Number.isFinite(Number(x.aciertos)) && Number(x.total) > 0)
     .map((x) => ({ dia: x.dia, aciertos: Math.max(0, Math.min(Math.round(Number(x.total)), Math.round(Number(x.aciertos)))), total: Math.min(40, Math.round(Number(x.total))) })).slice(-12);
+  // (apuntes, tanda C) el objetivo diario (1, 3 o 5), lo hecho cada día con sus puntos (los 70 últimos), la prueba de
+  // nivel y el certificado de la ruta (logica/apuntes-camino.js)
+  const meta = [1, 3, 5].includes(objeto(g).meta) ? objeto(g).meta : null;
+  const diario = {};
+  for (const [d, x] of Object.entries(objeto(objeto(g).diario)).filter(([d]) => DIA.test(d)).sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-70)) {
+    const n = Math.max(0, Math.min(500, Math.round(Number(objeto(x).n) || 0))), xp = Math.max(0, Math.min(9999, Math.round(Number(objeto(x).xp) || 0)));
+    if (n || xp) diario[d] = { n, xp };
+  }
+  const pr = objeto(objeto(g).prueba);
+  const prueba = DIA.test(pr.dia || '') ? { dia: pr.dia, aciertos: Math.max(0, Math.round(Number(pr.aciertos) || 0)), total: Math.max(0, Math.round(Number(pr.total) || 0)), saltados: lista(pr.saltados).filter((t) => typeof t === 'string' && /^[a-z]{1,20}$/.test(t)).slice(0, 8) } : null;
+  const ce = objeto(objeto(g).certificado);
+  const certificado = DIA.test(ce.dia || '') && Number(ce.total) > 0 ? { dia: ce.dia, aciertos: Math.max(0, Math.min(Math.round(Number(ce.total)), Math.round(Number(ce.aciertos) || 0))), total: Math.min(40, Math.round(Number(ce.total))) } : null;
   return { vistos, ...(Object.keys(porSubir).length ? { porSubir } : {}), ...(guardados.length ? { guardados } : {}), ...(reto ? { reto } : {}),
-    ...(dias.length ? { dias } : {}), ...(curso ? { curso } : {}), ...(examenes.length ? { examenes } : {}) };
+    ...(dias.length ? { dias } : {}), ...(curso ? { curso } : {}), ...(examenes.length ? { examenes } : {}),
+    ...(meta ? { meta } : {}), ...(Object.keys(diario).length ? { diario } : {}), ...(prueba ? { prueba } : {}), ...(certificado ? { certificado } : {}) };
 }
 // (tanda 2) Guardar un apunte para luego, o quitarlo
 export function alternarGuardado(g, id) {
