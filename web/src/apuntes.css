@@ -431,3 +431,54 @@
 @keyframes antes-llenar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .antes-de-empezar .btn { justify-self: end; }
 @media (prefers-reduced-motion: reduce) { .antes-tiempo i { animation: none; transform: none; } }
+
+/* ---------- (apuntes, tanda C) Camino y progreso ---------- */
+.anillo-meta { position: relative; display: inline-grid; place-items: center; width: 56px; height: 56px; flex: none; }
+.anillo-meta svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.anillo-meta circle { fill: none; stroke-width: 3.4; }
+.anillo-meta .fondo { stroke: color-mix(in srgb, var(--morado) 16%, transparent); }
+.anillo-meta .lleno { stroke: var(--morado); stroke-linecap: round; transition: stroke-dasharray .5s cubic-bezier(.2, .8, .2, 1); }
+.anillo-meta.hecho .lleno { stroke: var(--exito, #2e9e5b); }
+.anillo-meta b { position: relative; font-size: .875rem; }
+.anillo-meta b svg { position: static; transform: none; width: 20px; height: 20px; color: var(--exito, #2e9e5b); }
+.anillo-meta.pequeno { width: 38px; height: 38px; }
+.anillo-meta.pequeno b { font-size: .6875rem; }
+.anillo-meta.pequeno b svg { width: 16px; height: 16px; }
+.apuntes-cab .anillo-meta { margin-left: auto; }
+.apuntes-diaria { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.apuntes-racha-dias { font-weight: 650; }
+/* la hoja «Tu progreso» */
+.progreso-apuntes h3 { margin: 0 0 8px; font-size: 1.0625rem; }
+.prog-prueba { display: grid; gap: 6px; }
+.prog-hoy { display: grid; gap: 10px; }
+.prog-hoy-fila { display: flex; gap: 14px; align-items: center; }
+.prog-temas { display: grid; gap: 12px; }
+.prog-tema { display: grid; gap: 5px; }
+.prog-tema-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.prog-tema.nivel-dominado .chip { background: color-mix(in srgb, var(--exito, #2e9e5b) 16%, transparent); }
+.prog-barra { position: relative; display: block; height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--morado) 10%, transparent); overflow: hidden; }
+.prog-barra i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+.prog-barra .v { background: color-mix(in srgb, var(--morado) 30%, transparent); }
+.prog-barra .p { background: color-mix(in srgb, var(--morado) 65%, transparent); }
+.prog-barra .d { background: var(--exito, #2e9e5b); }
+.prog-ruta { display: grid; gap: 10px; }
+.prog-ruta p { margin: 0; }
+.prog-modulos { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
+.prog-modulos li > span:first-child { margin-right: 8px; }
+.prog-modulos li { padding: 4px 0; }
+.prog-modulos li.hecho { color: var(--tinta-2); }
+.prog-modulos li.ahora { font-weight: 700; }
+.prog-modulos li .mini svg { width: 15px; height: 15px; vertical-align: -2px; color: var(--exito, #2e9e5b); }
+.prog-mes { display: grid; gap: 8px; }
+.prog-mes p { margin: 0; }
+.prog-mes-cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.prog-mes-cifras > span { display: grid; place-items: center; padding: 10px 4px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); font-size: .75rem; color: var(--tinta-2); }
+.prog-mes-cifras b { font-size: 1.375rem; color: var(--tinta); }
+/* el certificado */
+.certificado { display: grid; justify-items: center; gap: 4px; padding: 16px; border-radius: 18px; border: 2px solid color-mix(in srgb, var(--oro, #c8961e) 50%, transparent); background: color-mix(in srgb, var(--oro, #c8961e) 7%, var(--hoja)); text-align: center; }
+.certificado .apuntes-dibujo { width: 120px; height: auto; }
+.certificado-de { font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-2); }
+.certificado-curso { font-size: 1.375rem; }
+.certificado-nombre { font-size: 1.0625rem; font-weight: 650; }
+.certificado-pie { font-size: .8125rem; color: var(--tinta-2); margin-bottom: 6px; }
+@media (prefers-reduced-motion: reduce) { .anillo-meta .lleno { transition: none; } }

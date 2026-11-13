@@ -20,6 +20,8 @@ import { medallaApuntes } from '../../logica/apuntes.js';
 import { Sello, Medalla, AroNota, Confeti, DibujoCuaderno, DibujoDiploma } from './apuntes-arte.jsx';
 import { practicasDe, elegirPractica, nivelesDe } from '../../logica/apuntes-practica.js';
 import { Practica, PRACTICA, MICRO, GrabarYComparar } from './ApuntesPractica.jsx';
+import { sumarDiario, hoyEnApuntes, pruebaDeNivel, aplicarNivel, rutaFundamentos, examenFinal, apuntarFinal, aprobado, nombreTema } from '../../logica/apuntes-camino.js';
+import { AnilloMeta, Certificado } from './ApuntesCamino.jsx';
 
 // «Apuntes»: algo que aprender en el descanso (o cuando se quiera). Una tarjeta cada vez, de lo que el coach tiene escrito:
 // una clave o un error típico del ejercicio del que se descansa, una idea de sus guías o un mito. Las que tienen vuelta
@@ -84,11 +86,13 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   const pasados = useRef([]);        // los de esta tanda, para no repetir
   const cola = useRef(null);         // (repaso, guardados, curso, examen) los que quedan
   // (tanda 4) el curso que se sigue en esta tanda y la cuenta del examen
-  const enCola = modo === 'repaso' || modo === 'guardados' || modo === 'curso' || modo === 'examen';
+  // (tanda C) la prueba de nivel y el examen final de la ruta van como el examen: en cola y con nota
+  const conNota = modo === 'examen' || modo === 'nivel' || modo === 'final';
+  const enCola = modo === 'repaso' || modo === 'guardados' || modo === 'curso' || conNota;
   const cursos = useMemo(() => cursosDe(todos), [todos]);
   const [curso, setCurso] = useState(null);          // { clave, titulo, lecciones }
   const [cambiando, setCambiando] = useState(false);
-  const examen = useRef({ total: 0, aciertos: 0, apuntado: false });
+  const examen = useRef({ total: 0, aciertos: 0, apuntado: false, preguntas: [], respuestas: [] });
   const idDe = (a) => a.origen || a.id;
   // (apuntes bellos) la tarjeta que se va (con su sello: «¡Lo sabías!», «Vuelve en unos días»…), lo que pasó con cada
   // apunte de este rato (sus puntos de arriba), el giro al destapar, el arrastre con el dedo y la medalla recién ganada
@@ -112,7 +116,10 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
       setCurso(c);
       cola.current = c ? leccionesPendientes(c, todos, est) : [];
     }
-    if (modo === 'examen' && !cola.current) { cola.current = examenDe(todos, est, { hoy }) || []; examen.current = { total: cola.current.length, aciertos: 0, apuntado: false }; }
+    if (conNota && !cola.current) {
+      cola.current = (modo === 'nivel' ? pruebaDeNivel(todos, hoy) : modo === 'final' ? examenFinal(rutaFundamentos(todos), todos, est, hoy) : examenDe(todos, est, { hoy })) || [];
+      examen.current = { total: cola.current.length, aciertos: 0, apuntado: false, preguntas: [...cola.current], respuestas: [] };
+    }
     if (enCola) {
       cola.current ||= modo === 'repaso' ? paraRepasar(todos, est, hoy) : todos.filter((x) => (est.guardados || []).includes(x.id));
       a = cola.current.shift() || null;
@@ -133,28 +140,30 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   };
   useEffect(() => { if (listo && !actual) siguiente(); }, [listo]);
   useEffect(() => () => callar(), []);
+  // (tanda C) cada apunte del rato cuenta para el objetivo del día, con sus puntos
+  const apuntar = (r) => { resultados.current.push(r); setEstado(guardarEstado(atletaId, sumarDiario(leerApuntes(atletaId), hoy, r))); };
   const responder = (sabia, dir = null) => {
     despedir(sabia ? 'sabia' : 'no', dir || (sabia ? 'derecha' : 'izquierda'));
-    resultados.current.push(sabia ? 'sabia' : 'no');
+    apuntar(sabia ? 'sabia' : 'no');
     vibrar(sabia ? 'hecho' : 'elegir');
     const e = guardarVisto(atletaId, actual.id, hoy, sabia, api); setEstado(e); siguiente(e);
   };
   // (tanda A) tras recordarlo: «Otra vez» (vuelve mañana), «Bien» o «Fácil» (más adelante)
   const calificar = (nota, dir = null) => {
     despedir(nota === 'otra' ? 'otra' : nota === 'facil' ? 'facil' : 'bien', dir || (nota === 'otra' ? 'izquierda' : 'derecha'));
-    resultados.current.push(nota === 'otra' ? 'no' : 'sabia');
+    apuntar(nota === 'otra' ? 'no' : 'sabia');
     vibrar(nota === 'otra' ? 'elegir' : 'hecho');
     const e = guardarVisto(atletaId, actual.id, hoy, null, api, nota); setEstado(e); siguiente(e);
   };
   const responderReto = (si, dir = null) => {
     despedir(si ? 'hecho' : 'pasa', dir || (si ? 'derecha' : 'izquierda'));
-    resultados.current.push(si ? 'sabia' : 'no');
+    apuntar(si ? 'sabia' : 'no');
     if (si) vibrar('hecho');
     let e = guardarVisto(atletaId, actual.id, hoy, si, api); e = guardarEstado(atletaId, llevarReto(e, null)); setEstado(e); siguiente(e);
   };
-  const elegir = (i) => { if (elegida != null) return; setElegida(i); resultados.current.push(i === actual.correcta ? 'sabia' : 'no'); vibrar(i === actual.correcta ? 'hecho' : 'aviso'); if (modo === 'examen' && i === actual.correcta) examen.current.aciertos += 1; if (!actual.efimero) setEstado(guardarVisto(atletaId, idDe(actual), hoy, i === actual.correcta, api)); };
-  const acabarPractica = (r) => { setPracticado(r); resultados.current.push(r.bien ? 'sabia' : 'no'); };
-  const otro = (dir = 'izquierda') => { if (actual && !(actual.tipo === 'test' && elegida != null) && practicado == null) resultados.current.push('visto'); despedir('otro', typeof dir === 'string' ? dir : 'izquierda'); let e = estado; if (actual && !actual.efimero && (actual.vuelta || recordar || (actual.tipo === 'test' && elegida == null))) { e = guardarVisto(atletaId, idDe(actual), hoy, modo === 'examen' ? false : null, api); setEstado(e); } siguiente(e); };
+  const elegir = (i) => { if (elegida != null) return; setElegida(i); apuntar(i === actual.correcta ? 'sabia' : 'no'); vibrar(i === actual.correcta ? 'hecho' : 'aviso'); if (conNota && i === actual.correcta) examen.current.aciertos += 1; if (conNota) examen.current.respuestas.push(i === actual.correcta); if (!actual.efimero && modo !== 'nivel') setEstado(guardarVisto(atletaId, idDe(actual), hoy, i === actual.correcta, api)); };
+  const acabarPractica = (r) => { setPracticado(r); apuntar(r.bien ? 'sabia' : 'no'); };
+  const otro = (dir = 'izquierda') => { if (actual && !(actual.tipo === 'test' && elegida != null) && practicado == null) apuntar('visto'); despedir('otro', typeof dir === 'string' ? dir : 'izquierda'); let e = estado; if (actual && !actual.efimero && (actual.vuelta || recordar || (actual.tipo === 'test' && elegida == null))) { e = guardarVisto(atletaId, idDe(actual), hoy, modo === 'examen' ? false : null, api); setEstado(e); } siguiente(e); };
   const guardado = !!actual && (estado.guardados || []).includes(actual.id);
   const alternar = () => { const e = guardarEstado(atletaId, alternarGuardado(estado, actual.id)); setEstado(e); aviso?.(guardado ? 'Quitado de tus guardados' : 'Guardado: lo tienes en Semana, en «Tus apuntes»'); };
   const alaSerie = () => { const e = guardarEstado(atletaId, llevarReto(estado, actual, hoy)); setEstado(e); aviso?.('Hecho: en el siguiente descanso te pregunto'); alCerrar?.('fin'); };
@@ -171,12 +180,21 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     siguiente(e);
   };
   // El examen, acabado: se apunta una vez
-  const finExamen = modo === 'examen' && listo && !actual && examen.current.total > 0;
+  const finExamen = conNota && listo && !actual && examen.current.total > 0;
   useEffect(() => {
     if (!finExamen || examen.current.apuntado) return;
     examen.current.apuntado = true;
-    setEstado(guardarEstado(atletaId, apuntarExamen(leerApuntes(atletaId), { dia: hoy, aciertos: examen.current.aciertos, total: examen.current.total })));
+    const x = examen.current, nota = { dia: hoy, aciertos: x.aciertos, total: x.total };
+    setEstado(guardarEstado(atletaId, modo === 'nivel' ? aplicarNivel(leerApuntes(atletaId), x.preguntas, x.respuestas, todos, hoy)
+      : modo === 'final' ? apuntarFinal(leerApuntes(atletaId), nota) : apuntarExamen(leerApuntes(atletaId), nota)));
   }, [finExamen]);
+  // (tanda C) al cerrar el anillo del día, se celebra (una vez)
+  const metaAntes = useRef(hoyEnApuntes(estado, hoy).hecho);
+  useEffect(() => {
+    const ya = hoyEnApuntes(estado, hoy).hecho;
+    if (ya && !metaAntes.current) { vibrar('celebrar'); aviso?.('¡Objetivo de hoy cumplido!'); }
+    metaAntes.current = ya;
+  }, [estado]);
   const estadoAntes = useRef(estado);
   useEffect(() => {
     const n = medallaNueva(estadoAntes.current, estado);
@@ -252,13 +270,14 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     else otro(dir);
   };
   const tecla = (ev) => { if (ev.key === 'Escape' && !guiaAbierta) { ev.stopPropagation(); alCerrar?.('salir'); } };
-  const titulo = modo === 'repaso' ? 'Repaso' : modo === 'guardados' ? 'Guardados' : modo === 'dia' ? 'El apunte de hoy' : modo === 'curso' ? 'Curso de la semana' : modo === 'examen' ? 'Examen' : 'Apuntes';
+  const titulo = modo === 'repaso' ? 'Repaso' : modo === 'guardados' ? 'Guardados' : modo === 'dia' ? 'El apunte de hoy' : modo === 'curso' ? 'Curso de la semana' : modo === 'examen' ? 'Examen' : modo === 'nivel' ? 'Prueba de nivel' : modo === 'final' ? 'Examen final' : 'Apuntes';
   const imagen = actual?.tipo === 'musculo' && hayImagen(imagenGrupo(actual.grupo)) ? imagenGrupo(actual.grupo) : null;
 
   return (
     <div ref={caja} class={`apuntes${acabado ? ' acabado' : ''} fondo-${actual ? arteDe(actual.tipo).tono : finExamen ? aroDeNota(examen.current.aciertos, examen.current.total).tono : 'morado'}`} role="dialog" aria-modal="true" aria-label={`${titulo}: algo que aprender${conReloj ? ' en el descanso' : ''}`} tabIndex={-1} onKeyDown={tecla}>
       <header class="apuntes-cab">
         <span class="apuntes-titulo"><Icono n="biblioteca" />{titulo}</span>
+        {!conNota && modo !== 'guardados' && <AnilloMeta {...hoyEnApuntes(estado, hoy)} pequeno />}
         {sinRed && <span class="chip apuntes-sin-red" role="status"><Icono n="sinred" />Sin conexión: con lo guardado</span>}
         {conReloj && <span class="apuntes-cuenta num" role="timer" aria-live="off" aria-label={acabado ? 'Descanso terminado' : `Descanso: quedan ${Math.ceil(quedan)} segundos`}>{acabado ? '¡Vamos!' : mmss(Math.ceil(quedan))}</span>}
         <button type="button" class="btn btn-icono plano" onClick={() => alCerrar?.('salir')} aria-label="Cerrar los apuntes"><Icono n="cerrar" /></button>
@@ -285,10 +304,14 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
         {finExamen && (
           <div class={`apunte examen-nota tono-${aroDeNota(examen.current.aciertos, examen.current.total).tono}`} role="status">
             {aroDeNota(examen.current.aciertos, examen.current.total).confeti && !quieto && <Confeti n={34} semilla={examen.current.aciertos + 3} />}
-            <p class="apunte-etq"><Sello tipo="test" /><span class="chip">Examen</span></p>
+            <p class="apunte-etq"><Sello tipo="test" /><span class="chip">{modo === 'nivel' ? 'Prueba de nivel' : modo === 'final' ? 'Examen final' : 'Examen'}</span></p>
             <span class="examen-centro"><AroNota aciertos={examen.current.aciertos} total={examen.current.total} /><b class="num examen-pct" aria-hidden="true">{Math.round((examen.current.aciertos / examen.current.total) * 100)}%</b></span>
             <h2><span class="num">{examen.current.aciertos} de {examen.current.total}</span> <span class="examen-sello">{notaExamen(examen.current.aciertos, examen.current.total)}</span></h2>
-            <p class="apunte-texto">{examen.current.aciertos === examen.current.total ? 'Ni una: lo tienes.' : 'Lo que has fallado vuelve a salir en tus descansos y en «Repasar».'}</p>
+            {modo === 'examen' && <p class="apunte-texto">{examen.current.aciertos === examen.current.total ? 'Ni una: lo tienes.' : 'Lo que has fallado vuelve a salir en tus descansos y en «Repasar».'}</p>}
+            {modo === 'nivel' && (() => { const s = estado.prueba?.saltados || []; return <p class="apunte-texto">{s.length ? `Lo básico de ${s.map(nombreTema).join(' y ')} ya lo sabes: te lo salto (vuelve en una semana, para repasarlo).` : 'Empezamos por lo básico: en tus descansos irá saliendo poco a poco.'}</p>; })()}
+            {modo === 'final' && (aprobado(examen.current.aciertos, examen.current.total)
+              ? <Certificado nombre={atleta?.nombre || ''} certificado={estado.certificado || { dia: hoy, aciertos: examen.current.aciertos, total: examen.current.total }} />
+              : <p class="apunte-texto">Te ha faltado poco: con el 80 % tienes el certificado. Repasa los módulos y vuelve a intentarlo.</p>)}
           </div>
         )}
         {listo && !actual && !finExamen && (
@@ -319,7 +342,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
             {dedo?.activo && (
               <span class={`apunte-deslizar ${dedo.dx > 0 ? 'derecha' : 'izquierda'}${actual.vuelta || actual.tipo === 'reto' || recordar ? (dedo.dx > 0 ? ' si' : ' no') : ''}`} style={{ opacity: arrastre(dedo.dx, caja.current?.clientWidth).etiqueta }} aria-hidden="true">{queHara(dedo.dx > 0 ? 'derecha' : 'izquierda')}</span>
             )}
-            <p class="apunte-etq"><Sello tipo={actual.tipo} /><span class="chip">{actual.etiqueta}</span>{modo === 'examen' ? <span class="apunte-de">Pregunta {pasados.current.length} de {examen.current.total}</span> : actual.de && <span class="apunte-de">{actual.de}</span>}</p>
+            <p class="apunte-etq"><Sello tipo={actual.tipo} /><span class="chip">{actual.etiqueta}</span>{conNota ? <span class="apunte-de">Pregunta {pasados.current.length} de {examen.current.total}</span> : actual.de && <span class="apunte-de">{actual.de}</span>}</p>
             {imagen && <Imagen id={imagen} clase="apunte-img" tamanos="(min-width: 600px) 520px, 90vw" />}
             {tapado && <h2 class="apunte-pregunta-recordar">{recordar}</h2>}
             {tapado && actual.tipo === 'idea' && actual.titulo && <p class="apunte-recordar-de">{actual.titulo}</p>}
@@ -412,7 +435,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
               <button type="button" class="btn btn-primario" onClick={() => responder(true)}>Lo sabía</button>
             </>
           ) : tapado ? <button type="button" class="btn" onClick={() => otro('izquierda')}>Saltar por ahora</button>
-          : <button type="button" class="btn btn-primario" onClick={() => otro('izquierda')}>{modo === 'examen' ? (cola.current?.length ? 'Siguiente' : 'Ver la nota') : modo === 'curso' ? 'Siguiente lección' : enCola ? 'Siguiente' : 'Otro apunte'}</button>}
+          : <button type="button" class="btn btn-primario" onClick={() => otro('izquierda')}>{conNota ? (cola.current?.length ? 'Siguiente' : 'Ver la nota') : modo === 'curso' ? 'Siguiente lección' : enCola ? 'Siguiente' : 'Otro apunte'}</button>}
         </footer>
       )}
       {guiaAbierta && <HojaGuia guia={guiaAbierta} alCerrar={() => setGuiaAbierta(null)} />}
