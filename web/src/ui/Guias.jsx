@@ -13,6 +13,9 @@ import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenGuia, IMAGEN_MITO, imagenPortadaGuia } from '../logica/imagenes.js';
 import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido, porEstantes, estanteDe, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES } from '../logica/guias.js';
 import { apuntesDeGuias, apuntesDeGlosario, apuntesDeNovedades, apuntesDeFicha, preguntasDeFicha, masFallados, mensajeDeApunte } from '../logica/apuntes.js';
+import { dominioEquipo, nombreTema } from '../logica/apuntes-camino.js';
+import { FAQ } from '../datos/faq.js';
+import { apuntesDeDudas } from '../logica/apuntes.js';
 import { listaGuias, guiaEntera, todasLasFichas, enlacesFichas, enlazarFicha, publicarGuia, fichaDeEjercicio, guiasConTexto, guiaPorClave, guiasLigeras } from '../datos/guias.js';
 
 // Un texto con su negrita
@@ -482,7 +485,7 @@ export function NovedadesCoach() {
   const conEjercicio = suelto || pregunta;
   const ejercicios = useCarga(() => (conEjercicio ? api.biblioteca().catch(() => []) : Promise.resolve(null)), [conEjercicio]);
   const nombreDe = (id) => (id ? (ejercicios.datos || []).find((e) => e.id === id)?.nombre || '' : '');
-  const abrir = (x) => { setBorrar(false); setF(x ? { id: x.id, titulo: x.titulo || '', texto: x.texto || '', fuente: x.fuente || '', enlace: x.enlace || '', publicada: !!x.publicada, tipo: ['apunte', 'pregunta'].includes(x.tipo) ? x.tipo : 'novedad', ejercicio_id: x.ejercicio_id || null, ejercicio: null, opciones: x.opciones?.length ? [...x.opciones] : ['', '', ''], correcta: Number.isInteger(x.correcta) ? x.correcta : 0, explicaciones: x.explicaciones?.length ? [...x.explicaciones] : (x.opciones || ['', '', '']).map(() => '') } : { ...NOVEDAD_VACIA }); };
+  const abrir = (x) => { setBorrar(false); setF(x ? { id: x.id, titulo: x.titulo || '', texto: x.texto || '', fuente: x.fuente || '', enlace: x.enlace || '', publicada: !!x.publicada, tipo: ['apunte', 'pregunta'].includes(x.tipo) ? x.tipo : 'novedad', ejercicio_id: x.ejercicio_id || null, ejercicio: null, audio: x.audio_ruta ? { ruta: x.audio_ruta, segundos: x.audio_segundos } : null, audioCambiado: false, opciones: x.opciones?.length ? [...x.opciones] : ['', '', ''], correcta: Number.isInteger(x.correcta) ? x.correcta : 0, explicaciones: x.explicaciones?.length ? [...x.explicaciones] : (x.opciones || ['', '', '']).map(() => '') } : { ...NOVEDAD_VACIA }); };
   const guardar = async (ev) => {
     ev.preventDefault();
     setGuardando(true);
@@ -501,7 +504,10 @@ export function NovedadesCoach() {
         if (!filas.some((r) => r.buena)) throw new Error('Marca cuál es la buena (y que no esté vacía)');
         extra = { opciones: filas.map((r) => r.o), correcta: filas.findIndex((r) => r.buena), explicaciones: filas.map((r) => (r.buena ? '' : r.x)) };
       }
-      await api.guardarNovedad({ id: f.id, titulo: f.titulo, texto: f.texto, fuente: f.fuente, enlace: f.enlace, publicada: f.publicada, tipo: f.tipo, ejercicio_id, ...extra });
+      // (apuntes, tanda D, 063) su audio-píldora: si es nueva, se sube antes; si la ha quitado, fuera
+      let audio;
+      if (f.audioCambiado) audio = f.audio?.blob ? { ruta: await api.subirAudioApunte(f.audio.blob, f.audio.blob.type || 'audio/webm'), segundos: f.audio.segundos } : null;
+      await api.guardarNovedad({ id: f.id, titulo: f.titulo, texto: f.texto, fuente: f.fuente, enlace: f.enlace, publicada: f.publicada, tipo: f.tipo, ejercicio_id, ...extra, ...(audio !== undefined ? { audio } : {}) });
       aviso(f.publicada ? (pregunta ? 'Publicada: tus atletas la verán en sus apuntes, como un test' : suelto ? 'Publicado: tus atletas lo verán en sus apuntes' : 'Publicada: tus atletas la verán en sus apuntes') : 'Guardada sin publicar'); setF(null); setN(n + 1);
     }
     catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }
@@ -564,6 +570,7 @@ export function NovedadesCoach() {
             <div class="campo"><label for="nov-texto">{pregunta ? 'La explicación' : 'Texto'}</label>
               <textarea id="nov-texto" class="entrada" required maxLength={500} value={f.texto} placeholder={pregunta ? 'Lo que leen al responder: por qué es la buena.' : 'Qué se hizo, qué salió y qué hacer con ello. Tres líneas.'} onInput={(e) => setF({ ...f, texto: e.currentTarget.value })} />
               <span class="cuenta-letras num">{[...f.texto].length}/500</span></div>
+            <GrabarAudio valor={f.audio} alCambiar={(audio) => setF({ ...f, audio, audioCambiado: true })} />
             <div class="campo"><label for="nov-fuente">De dónde sale <span class="secundario">(opcional)</span></label>
               <input id="nov-fuente" class="entrada" maxLength={200} value={f.fuente} placeholder="Apellido et al., Revista, 2026" onInput={(e) => setF({ ...f, fuente: e.currentTarget.value })} /></div>
             <div class="campo"><label for="nov-enlace">Enlace <span class="secundario">(opcional)</span></label>
@@ -581,6 +588,100 @@ export function NovedadesCoach() {
   );
 }
 
+// (apuntes, tanda D) La audio-píldora de una novedad: grabarla (hasta 5 minutos) o subir un audio; se oye antes de guardar
+function GrabarAudio({ valor, alCambiar }) {
+  const { aviso } = useApp();
+  const [grabando, setGrabando] = useState(false);
+  const [seg, setSeg] = useState(0);
+  const rec = useRef(null);
+  const url = useMemo(() => (valor?.blob ? URL.createObjectURL(valor.blob) : null), [valor?.blob]);
+  useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+  useEffect(() => () => { try { rec.current?.r.stop(); rec.current?.s.getTracks().forEach((t) => t.stop()); } catch { /* nada */ } }, []);
+  const empezar = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const r = new MediaRecorder(s), trozos = [], t0 = Date.now();
+      r.ondataavailable = (e) => { if (e.data?.size) trozos.push(e.data); };
+      r.onstop = () => {
+        s.getTracks().forEach((t) => t.stop());
+        clearInterval(rec.current?.reloj);
+        const blob = new Blob(trozos, { type: r.mimeType || 'audio/webm' });
+        alCambiar({ blob, segundos: Math.max(1, Math.min(300, Math.round((Date.now() - t0) / 1000))) });
+        setGrabando(false);
+      };
+      const reloj = setInterval(() => { const n = Math.round((Date.now() - t0) / 1000); setSeg(n); if (n >= 300) r.stop(); }, 500);
+      rec.current = { r, s, reloj };
+      r.start(); setSeg(0); setGrabando(true);
+    } catch { aviso('No se puede usar el micro: revisa el permiso del navegador', 'error'); }
+  };
+  const subir = (ev) => {
+    const archivo = ev.currentTarget.files?.[0];
+    if (!archivo) return;
+    if (archivo.size > 5242880) { aviso('El audio no puede pasar de 5 MB', 'error'); return; }
+    const a = new Audio(URL.createObjectURL(archivo));
+    a.onloadedmetadata = () => { const d = Math.round(a.duration || 0); if (!(d >= 1 && d <= 300)) { aviso('El audio tiene que durar entre 1 segundo y 5 minutos', 'error'); return; } alCambiar({ blob: archivo, segundos: d }); };
+    a.onerror = () => aviso('Ese archivo no parece un audio', 'error');
+  };
+  const mmss = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+  return (
+    <div class="campo audio-coach">
+      <span class="etiqueta-campo">Audio-píldora <span class="secundario">(opcional, hasta 5 minutos)</span></span>
+      {grabando ? (
+        <div class="fila-s"><span class="audio-grabando num" role="status">● Grabando {mmss(seg)}</span><button type="button" class="btn btn-peq" onClick={() => rec.current?.r.stop()}>Parar</button></div>
+      ) : valor ? (
+        <div class="fila-s audio-coach-hay">
+          {url ? <audio src={url} controls preload="metadata" /> : <span class="peq">Audio guardado ({mmss(valor.segundos || 0)})</span>}
+          <button type="button" class="btn-texto peligro" onClick={() => alCambiar(null)}>Quitar</button>
+        </div>
+      ) : (
+        <div class="fila-s">
+          {typeof MediaRecorder !== 'undefined' && <button type="button" class="btn btn-peq" onClick={empezar}><Icono n="micro" />Grabar</button>}
+          <label class="btn btn-peq audio-subir"><Icono n="arriba" />Subir un audio<input type="file" accept="audio/*" onChange={subir} /></label>
+        </div>
+      )}
+      <span class="mini secundario">Tus atletas lo escuchan en el apunte, a 1× o 1,5×.</span>
+    </div>
+  );
+}
+
+// (apuntes, tanda D, coach) Cómo va el equipo en apuntes: quién participa cada semana y el dominio por tema. Solo cuentas.
+export function EquipoApuntesCoach() {
+  const { api, backend } = useApp();
+  const part = useCarga(() => (api.participacionApuntes ? api.participacionApuntes() : Promise.resolve(null)), []);
+  const dom = useCarga(() => (api.dominioEquipoApuntes ? api.dominioEquipoApuntes() : Promise.resolve(null)), []);
+  const guias = useCarga(() => guiasConTexto({ backend }).catch(() => []), [], { recuerdo: 'apuntes-guias' });
+  const nov = useCarga(() => api.novedades().catch(() => []), []);
+  const semanas = part.datos || [];
+  const todos = useMemo(() => [...apuntesDeGuias(guias.datos || []), ...apuntesDeGlosario(), ...apuntesDeDudas(FAQ), ...apuntesDeNovedades(nov.datos || [])], [guias.datos, nov.datos]);
+  const d = dom.datos ? dominioEquipo(dom.datos, todos) : null;
+  if (!semanas.some((x) => x.atletas > 0) && !d?.temas.length) return null;
+  const max = Math.max(1, ...semanas.map((x) => x.activos || x.atletas));
+  return (
+    <section class="equipo-apuntes pila-s" aria-label="El equipo en apuntes">
+      <div class="novedades-cab"><h2>El equipo en apuntes</h2></div>
+      <p class="peq secundario">Cuántos aprenden cada semana y cómo va cada tema. Solo cuentas: nunca quién.</p>
+      {semanas.length > 0 && (
+        <div class="panel panel-pad equipo-semanas" role="img" aria-label={`Esta semana, ${semanas[semanas.length - 1].atletas} de ${semanas[semanas.length - 1].activos} atletas`}>
+          {semanas.map((x) => (
+            <span key={x.semana} class="equipo-semana"><i style={{ height: `${Math.max(4, (x.atletas / max) * 100)}%` }} /><b class="num">{x.atletas}</b><small>{fmtCorta(x.semana)}</small></span>
+          ))}
+        </div>
+      )}
+      {d?.temas.length > 0 && (
+        <div class="panel panel-pad pila-s">
+          {d.temas.map((t) => (
+            <div key={t.tema} class="equipo-tema">
+              <span class="prog-tema-cab"><strong>{t.nombre}</strong><span class="mini secundario num">caja media {String(t.cajaMedia).replace('.', ',')} · {t.pctDominio} % dominado</span></span>
+              <span class="prog-barra"><i class="d" style={{ width: `${t.pctDominio}%` }} /></span>
+            </div>
+          ))}
+          {d.flojo && <p class="peq">Conviene publicar sobre <strong>{nombreTema(d.flojo.tema)}</strong>: es lo que menos se queda.</p>}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function GuiasCoach() {
   const { backend, aviso } = useApp();
   const [abierta, setAbierta] = useState(null);
@@ -593,6 +694,7 @@ export function GuiasCoach() {
     <div class="pila">
       <NovedadesCoach />
       <FalladosCoach />
+      <EquipoApuntesCoach />
       <p class="peq secundario">Tus guías. Tus atletas las leen en «Aprende», y cada ejercicio de la biblioteca enlazado a una ficha la enseña en su pestaña «Técnica»{enlaces.datos ? ` (ahora, ${cuantos === 1 ? '1 ejercicio enlazado' : `${cuantos} ejercicios enlazados`}; se enlazan al editar cada ejercicio)` : ''}.</p>
       <ListaGuias key={n} alAbrir={(g, seccion = null) => setAbierta({ ...g, seccion })} esCoach />
       {abierta && (

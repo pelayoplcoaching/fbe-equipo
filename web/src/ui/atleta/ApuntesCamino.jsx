@@ -12,6 +12,7 @@ import { DibujoDiploma } from './apuntes-arte.jsx';
 import { AnilloMeta } from './AnilloMeta.jsx';
 export { AnilloMeta };
 import { vibrar } from '../hapticos.js';
+import { LigaYDuelos } from './ApuntesSocial.jsx';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const nombreMes = (mes) => MESES[Number(mes.slice(5, 7)) - 1] || '';
@@ -114,6 +115,7 @@ export function HojaProgreso({ alCerrar, alAbrir }) {
           </section>
         )}
 
+        <LigaYDuelos alJugar={(d) => alAbrir('duelo', null, d)} />
         <section class="prog-mes" aria-labelledby="prog-mes-t">
           <h3 id="prog-mes-t">Tu {nombreMes(mes.mes)} en apuntes</h3>
           <div class="prog-mes-cifras">

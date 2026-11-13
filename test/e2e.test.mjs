@@ -6038,6 +6038,10 @@ try {
   console.log('\nApuntes, camino y progreso');
   const { probarApuntesCamino } = await import('./e2e-apuntes-t3.mjs');
   await probarApuntesCamino({ navegador, check });
+  // Apuntes con los demás (tanda D): audio del coach, historia, notas y subrayados, liga, duelo y el equipo en apuntes
+  console.log('\nApuntes con los demás');
+  const { probarApuntesSocial } = await import('./e2e-apuntes-t4.mjs');
+  await probarApuntesSocial({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

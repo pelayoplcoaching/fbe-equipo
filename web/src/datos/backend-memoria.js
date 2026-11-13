@@ -78,7 +78,7 @@ const DEFECTOS = {
   recursos: () => ({ atleta_id: null, categoria: 'general', descripcion: null, url: null, orden: 0, destacado: false, directo_en: null, creado_en: ahora() }),
   youtube_canal: () => ({ id: true, titulo: null, activo: true, actualizado_en: ahora() }),
   // (060) la novedad de la semana
-  novedades: () => ({ fuente: null, enlace: null, publicada: false, publicada_en: null, creada_en: ahora(), tipo: 'novedad', ejercicio_id: null, opciones: null, correcta: null, explicaciones: null }),
+  novedades: () => ({ fuente: null, enlace: null, publicada: false, publicada_en: null, creada_en: ahora(), tipo: 'novedad', ejercicio_id: null, opciones: null, correcta: null, explicaciones: null, audio_ruta: null, audio_segundos: null }),
   notas_ejercicio: () => ({ actualizado_en: ahora() }),
   respuestas_guardadas: () => ({ orden: 0, creado_en: ahora() }),
   avisos: () => ({ atleta_id: null, desde: hoyISO(), hasta: null, creado_en: ahora(), enviar_en: null }),
@@ -132,7 +132,7 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['apuntes_semanas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'],
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
@@ -181,7 +181,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
+const SIN_ID = ['videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'apuntes_semanas', 'travesia_envios', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
   'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_semanas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
@@ -774,6 +774,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!Array.isArray(ops) || ops.length < 2 || ops.length > 4 || !Number.isInteger(f.correcta) || f.correcta < 0 || f.correcta >= ops.length) malo();
         if (f.explicaciones != null && (!Array.isArray(f.explicaciones) || f.explicaciones.length !== ops.length)) malo();
       } else if (f.opciones != null || f.correcta != null || f.explicaciones != null) malo();
+      if ((f.audio_ruta == null) !== (f.audio_segundos == null) || (f.audio_ruta != null && (!/^audio\/[0-9a-f-]{36}\.(webm|ogg|m4a|mp4|mp3|aac|wav)$/.test(f.audio_ruta) || !(f.audio_segundos >= 1 && f.audio_segundos <= 300))))
+        throw new Error('new row for relation "novedades" violates check constraint "novedades_audio_valido"');
       f.publicada_en = f.publicada ? (f.publicada_en || ahora()) : null;
     }
     if (t === 'fichas_ejercicio') {
@@ -892,6 +894,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!Array.isArray(ops) || ops.length < 2 || ops.length > 4 || !Number.isInteger(c.correcta) || c.correcta < 0 || c.correcta >= ops.length) malo();
         if (c.explicaciones != null && (!Array.isArray(c.explicaciones) || c.explicaciones.length !== ops.length)) malo();
       } else if ('tipo' in c && (c.opciones != null || c.correcta != null || c.explicaciones != null)) malo();
+      if ('audio_ruta' in c && ((c.audio_ruta == null) !== (c.audio_segundos == null) || (c.audio_ruta != null && (!/^audio\/[0-9a-f-]{36}\.(webm|ogg|m4a|mp4|mp3|aac|wav)$/.test(c.audio_ruta) || !(c.audio_segundos >= 1 && c.audio_segundos <= 300)))))
+        throw new Error('new row for relation "novedades" violates check constraint "novedades_audio_valido"');
     }
     if (t === 'novedades') { delete c.creada_en; delete c.publicada_en; if (c.publicada === false) c.publicada_en = null; else if (c.publicada === true) c.publicada_en = '__al_publicar__'; }
     if (t === 'fichas_ejercicio') c.actualizada_en = ahora();
@@ -1172,7 +1176,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && ['video_tecnica', 'foto_progreso', 'adjunto', 'documento', 'audio'].includes(f.tipo)
       // Como la 034: una nota de voz, audio de 1 a 61 segundos y hasta 3 MB, con su ruta audio-…; su onda, de 8 a 64 barras
       && (f.tipo !== 'audio' || (['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'].includes(f.mime) && n(f.bytes) >= 1 && n(f.bytes) <= 3145728
-        && entero(n(f.duracion_seg)) && entre(n(f.duracion_seg), 1, 61) && /\/audio-[A-Za-z0-9._-]+\.(webm|ogg|m4a|mp4|mp3|aac)$/.test(String(f.ruta)) && f.nombre == null && f.poster_ruta == null && f.paginas == null))
+        && entero(n(f.duracion_seg)) && entre(n(f.duracion_seg), 1, 61) && /\/audio-[A-Za-z0-9._-]+\.(webm|ogg|m4a|mp4|mp3|aac|wav)$/.test(String(f.ruta)) && f.nombre == null && f.poster_ruta == null && f.paginas == null))
       && (f.onda == null || (f.tipo === 'audio' && Array.isArray(f.onda) && f.onda.length >= 8 && f.onda.length <= 64 && f.onda.every((x) => Number.isInteger(x) && x >= 0 && x <= 100)))
       // Como la 033: un documento es un PDF de hasta 20 MB, con su nombre (saneado) y una ruta .pdf
       && (f.tipo !== 'documento' || (f.mime === 'application/pdf' && n(f.bytes) >= 1 && n(f.bytes) <= 20971520 && /\.pdf$/.test(String(f.ruta)) && /\.pdf$/i.test(String(f.nombre ?? '')) && f.poster_ruta == null))
@@ -2024,6 +2028,80 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const cuenta = nOc >= 3 ? delMes : vis;
       return { semana: lunes, filas, equipo: { mes, metros: cuenta.reduce((n, t) => n + t.metros, 0), miembros: new Set(cuenta.map((t) => t.atleta_id)).size } };
     }
+    // (063) Apuntes con los demás: los puntos de la semana, la liga, los duelos y lo del equipo (solo cuentas)
+    if (nombre === 'apuntes_semana_sumar') {
+      if (!yo || coach) throw Object.assign(new Error('Solo un atleta'), { code: '42501' });
+      const l = lunesHoy();
+      if (![l, sumar(l, -7)].includes(args.p_semana)) throw Object.assign(new Error('Esa semana no vale'), { code: '22023' });
+      const pts = Math.round(Number(args.p_puntos)), aps = Math.round(Number(args.p_apuntes));
+      if (!(pts >= 0 && pts <= 20000 && aps >= 0 && aps <= 2000)) throw Object.assign(new Error('Esas cifras no valen'), { code: '22023' });
+      const x = tabla('apuntes_semanas').find((r) => r.atleta_id === yo.id && r.semana === args.p_semana);
+      if (x) { x.puntos = Math.max(x.puntos, pts); x.apuntes = Math.max(x.apuntes, aps); x.actualizada_en = new Date().toISOString(); }
+      else tabla('apuntes_semanas').push({ atleta_id: yo.id, semana: args.p_semana, puntos: pts, apuntes: aps, actualizada_en: new Date().toISOString() });
+      return true;
+    }
+    if (nombre === 'apuntes_liga') {
+      if (!uid || !veComunidad()) return null;
+      const l = lunesHoy(), miembros = dentroTodos();
+      const de = (t) => miembros.find((m) => m.atleta_id === t.atleta_id);
+      const semana = tabla('apuntes_semanas').filter((t) => t.semana === l && t.puntos > 0 && de(t));
+      const filas = semana.filter((t) => !de(t).sin_ranking || de(t).perfil_id === uid).map((t) => ({ nombre: de(t).nombre, puntos: t.puntos, apuntes: t.apuntes, yo: de(t).perfil_id === uid }))
+        .sort((x, y) => y.puntos - x.puntos || x.nombre.localeCompare(y.nombre));
+      const yoSin = miembros.find((m) => m.perfil_id === uid)?.sin_ranking;
+      const gente = coach || yoSin ? [] : miembros.filter((m) => !m.sin_ranking && m.perfil_id !== uid).map((m) => ({ id: m.perfil_id, nombre: m.nombre })).sort((x, y) => x.nombre.localeCompare(y.nombre));
+      const vis = semana.filter((t) => !de(t).sin_ranking), oc = semana.filter((t) => de(t).sin_ranking);
+      const cuenta = oc.length >= 3 ? semana : vis;
+      return { semana: l, filas, gente, equipo: { puntos: cuenta.reduce((n, t) => n + t.puntos, 0), miembros: cuenta.length } };
+    }
+    if (nombre === 'apuntes_duelo_retar') {
+      const yoM = dentroTodos().find((m) => m.perfil_id === uid), el = dentroTodos().find((m) => m.perfil_id === args.p_para);
+      if (!yoM) throw Object.assign(new Error('Para retar tienes que estar en la comunidad (y abierta)'), { code: '42501' });
+      if (!args.p_para || args.p_para === uid) throw Object.assign(new Error('Contra ti ya juegas cada día'), { code: '22023' });
+      if (!el) throw Object.assign(new Error('Esa persona ya no está en el equipo'), { code: '42501' });
+      if (yoM.sin_ranking || el.sin_ranking) throw Object.assign(new Error('Los duelos enseñan aciertos: los dos tenéis que salir en el ranking'), { code: '22023' });
+      const hoy = fechaMadrid(), vivo = (x) => x.caduca >= hoy && (x.aciertos_de == null || x.aciertos_para == null);
+      if (tabla('apuntes_duelos').filter((x) => [x.de, x.para].includes(uid) && vivo(x)).length >= 3) throw Object.assign(new Error('Como mucho tres duelos a la vez'), { code: '54000' });
+      if (tabla('apuntes_duelos').some((x) => [x.de, x.para].includes(uid) && [x.de, x.para].includes(args.p_para) && vivo(x))) throw Object.assign(new Error('Ya tenéis un duelo sin acabar'), { code: '23505' });
+      const id = crypto.randomUUID();
+      tabla('apuntes_duelos').push({ id, de: uid, para: args.p_para, semilla: Math.round(Number(args.p_semilla)) || 1, aciertos_de: null, aciertos_para: null, creado_en: new Date().toISOString(), caduca: sumar(hoy, 7) });
+      return id;
+    }
+    if (nombre === 'apuntes_duelo_contestar') {
+      const x = tabla('apuntes_duelos').find((d) => d.id === args.p_id && [d.de, d.para].includes(uid));
+      const n = Number(args.p_aciertos);
+      if (!Number.isInteger(n) || n < 0 || n > 5) throw Object.assign(new Error('De 0 a 5'), { code: '22023' });
+      if (!x) throw Object.assign(new Error('Ese duelo no es tuyo'), { code: '42501' });
+      if (x.caduca < fechaMadrid()) throw Object.assign(new Error('Ese duelo ya ha caducado'), { code: '22023' });
+      const campo = x.de === uid ? 'aciertos_de' : 'aciertos_para';
+      if (x[campo] != null) throw Object.assign(new Error('Ya lo has contestado'), { code: '23505' });
+      x[campo] = n;
+      return true;
+    }
+    if (nombre === 'apuntes_duelos_mios') {
+      if (!uid || !soyMiembro()) return [];
+      const hoy = fechaMadrid(), miembros = dentroTodos();
+      return tabla('apuntes_duelos').filter((d) => [d.de, d.para].includes(uid) && d.caduca >= sumar(hoy, -7)).sort((a, b) => b.creado_en.localeCompare(a.creado_en)).slice(0, 20).map((d) => {
+        const soy = d.de === uid, rival = miembros.find((m) => m.perfil_id === (soy ? d.para : d.de));
+        const mios = soy ? d.aciertos_de : d.aciertos_para, suyos = soy ? d.aciertos_para : d.aciertos_de;
+        return { id: d.id, soy_retador: soy, rival_nombre: rival?.nombre || 'Alguien del equipo', semilla: d.semilla, mios, suyos: mios != null && rival && !rival.sin_ranking ? suyos : null,
+          rival_contesto: suyos != null, caduca: d.caduca, acabado: (d.aciertos_de != null && d.aciertos_para != null) || d.caduca < hoy, creado_en: d.creado_en };
+      });
+    }
+    if (nombre === 'apuntes_dominio_equipo') {
+      if (!coach) throw Object.assign(new Error('Solo el coach'), { code: '42501' });
+      const por = new Map();
+      const activos = new Set(tabla('atletas').filter((a) => a.estado !== 'baja').map((a) => a.id));
+      for (const v of tabla('apuntes_vistos')) { if (!activos.has(v.atleta_id)) continue; const x = por.get(v.apunte) || { n: 0, suma: 0, dom: 0 }; x.n += 1; x.suma += v.caja || 0; if ((v.caja || 0) >= 3) x.dom += 1; por.set(v.apunte, x); }
+      return [...por].map(([apunte, x]) => ({ apunte, atletas: x.n, caja_media: Math.round((x.suma / x.n) * 100) / 100, dominan: x.dom })).sort((a, b) => b.atletas - a.atletas || a.apunte.localeCompare(b.apunte));
+    }
+    if (nombre === 'apuntes_participacion') {
+      if (!coach) throw Object.assign(new Error('Solo el coach'), { code: '42501' });
+      const l = lunesHoy(), activos = new Set(tabla('atletas').filter((a) => a.estado !== 'baja').map((a) => a.id));
+      return [35, 28, 21, 14, 7, 0].map((n) => {
+        const sem = sumar(l, -n), filas = tabla('apuntes_semanas').filter((s) => s.semana === sem && activos.has(s.atleta_id));
+        return { semana: sem, atletas: filas.filter((s) => s.puntos > 0 || s.apuntes > 0).length, puntos: filas.reduce((a, s) => a + s.puntos, 0), activos: tabla('atletas').filter((a) => a.estado === 'activo').length };
+      });
+    }
     // (061) «Lo que más se falla»: solo cuentas, de dos atletas en adelante, y solo para el coach
     if (nombre === 'apuntes_fallados') {
       if (!esCoach()) return [];
@@ -2850,6 +2928,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
             if (senal) senal.abortar = () => { clearInterval(t); trozos.delete(dir); const e = new Error('Cancelado'); e.cancelado = true; mal(e); };
           });
         }
+        // (063) las audio-píldoras del coach: las sube el coach, en audio/<uuid>.<ext>, hasta 5 MB y solo audio
+        if (bucket === 'apuntes') {
+          if (!esCoach() || !/^audio\/[0-9a-f-]{36}\.(webm|ogg|m4a|mp4|mp3|aac|wav)$/.test(ruta)) throw sinPermiso();
+          if (archivo?.size > 5242880) throw new Error('The object exceeded the maximum allowed size');
+          ficheros.set(`apuntes:${ruta}`, archivo); alProgreso?.(1); return;
+        }
         if (bucket === 'comunidad') {
           if (!fotoRegistrada(ruta)) throw sinPermiso();
           if (archivo?.size > 614400) throw new Error('El archivo supera el tamaño máximo permitido.');
@@ -2877,6 +2961,24 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (ficheros.has(desde)) ficheros.set(hasta, ficheros.get(desde)); else alias.set(hasta, alias.get(desde) || desde);
       },
       async url(ruta, segundos = 3600, bucket = 'archivos') {
+        if (bucket === 'apuntes') {
+          // (063) el coach, todos; sus atletas, el de una novedad publicada
+          if (!(esCoach() || (miAtletaId() && tabla('novedades').some((n) => n.audio_ruta === ruta && n.publicada)))) throw new Error('No tienes permiso para ver ese archivo.');
+          let f = ficheros.get(`apuntes:${ruta}`);
+          // (la demo no guarda los archivos al recargar: el de una novedad de antes se sirve como un silencio de su duración)
+          if (!f) {
+            const nov = tabla('novedades').find((n) => n.audio_ruta === ruta);
+            if (!nov) throw new Error('Object not found');
+            const tasa = 8000, n = tasa * Math.min(5, nov.audio_segundos || 1), buf = new Uint8Array(44 + n), dv = new DataView(buf.buffer);
+            [...'RIFF'].forEach((c, i) => { buf[i] = c.charCodeAt(0); }); dv.setUint32(4, 36 + n, true); [...'WAVEfmt '].forEach((c, i) => { buf[8 + i] = c.charCodeAt(0); });
+            dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, tasa, true); dv.setUint32(28, tasa, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
+            [...'data'].forEach((c, i) => { buf[36 + i] = c.charCodeAt(0); }); dv.setUint32(40, n, true); buf.fill(128, 44);
+            f = new Blob([buf], { type: 'audio/wav' });
+          }
+          const clave = `apuntes:${ruta}`;
+          if (!urls.has(clave)) urls.set(clave, URL.createObjectURL(f));
+          return urls.get(clave);
+        }
         if (bucket === 'comunidad') {
           if (!fotoVisible(ruta)) throw new Error('No tienes permiso para ver ese archivo.');
           ruta = `comunidad:${ruta}`;
@@ -4064,6 +4166,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // Migración 027: la comunidad del equipo
       if (nombre === 'travesia_manada') return copia(rpcComunidad(nombre, args || {}, uid, perfil) ?? null);   // (061) solo lee
       if (nombre === 'apuntes_fallados') return copia(rpcComunidad(nombre, args || {}, uid, perfil) ?? []);   // (061) solo cuentas
+      if (['apuntes_semana_sumar', 'apuntes_liga', 'apuntes_duelo_retar', 'apuntes_duelo_contestar', 'apuntes_duelos_mios', 'apuntes_dominio_equipo', 'apuntes_participacion'].includes(nombre)) {
+        const r = rpcComunidad(nombre, args || {}, uid, perfil);   // (063)
+        persistirYa();
+        return copia(r ?? null);
+      }
       if (nombre.startsWith('comunidad_')) {
         const r = rpcComunidad(nombre, args || {}, uid, perfil);
         persistirYa();
