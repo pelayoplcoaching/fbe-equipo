@@ -178,13 +178,14 @@
 .travesia-tarjeta { isolation: isolate; }
 .travesia-tarjeta-paso { z-index: -1; }
 @media (prefers-reduced-motion: no-preference) {
-  .travesia-tarjeta-paso { animation: tv-cruza 16s linear infinite; }
-  .travesia-tarjeta-lobo { animation: tv-trote .38s ease-in-out infinite alternate; }
+  /* (una sola vez, al verse la tarjeta: entra por la izquierda y se queda en su sitio; nada se mueve todo el rato) */
+  .travesia-tarjeta.tv-vista .travesia-tarjeta-paso { animation: tv-cruza 5.2s cubic-bezier(.3, .6, .4, 1) both; }
+  .travesia-tarjeta.tv-vista .travesia-tarjeta-lobo { animation: tv-trote .36s ease-in-out 14 alternate; }
   .tv-ruta-hecho { animation: tv-ruta-crece .9s cubic-bezier(.3, .7, .2, 1) .15s both; }
   .tv-ruta-carril { animation: tv-ruta-anda .9s cubic-bezier(.3, .7, .2, 1) .15s both; }
   html[data-oculta] .travesia-tarjeta-paso, html[data-oculta] .travesia-tarjeta-lobo { animation-play-state: paused; }
 }
-@keyframes tv-cruza { from { transform: translateX(-14%); } to { transform: translateX(104%); } }
+@keyframes tv-cruza { from { transform: translateX(-14%); } }
 @keyframes tv-trote { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-2.5px) rotate(2deg); } }
 @keyframes tv-ruta-crece { from { transform: scaleX(0); } }
 @keyframes tv-ruta-anda { from { transform: translateX(0%); } }

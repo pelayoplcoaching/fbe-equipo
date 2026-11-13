@@ -62,11 +62,12 @@ export async function probarTravesiaBella({ navegador, check, base = 'http://loc
     try {
       const tarjeta = p.locator('.travesia-tarjeta');
       await tarjeta.scrollIntoViewIfNeeded();
+      await p.locator('.travesia-tarjeta.tv-vista').waitFor();
       const fase = await tarjeta.getAttribute('data-fase');
       const lobo = await p.evaluate(() => { const l = document.querySelector('.travesia-tarjeta-paso'); return l ? { oculto: l.getAttribute('aria-hidden'), ancho: l.querySelector('svg').getBoundingClientRect().width } : null; });
       const trote = await nombres(p, '.travesia-tarjeta-paso, .travesia-tarjeta-lobo');
       check(/^(noche|alba|dia|ocaso)$/.test(fase) && lobo?.oculto === 'true' && lobo.ancho > 20 && trote.includes('tv-cruza') && trote.includes('tv-trote'),
-        `la tarjeta lleva el cielo de la hora (${fase}) y su lobo al trote, decorativo`);
+        `la tarjeta lleva el cielo de la hora (${fase}) y su lobo, que la cruza al trote una vez, decorativo`);
 
       // «Tu travesía»: la ruta se dibuja y el lobo llega a su punto
       await tarjeta.getByRole('button', { name: /Ver tu travesía/ }).click();

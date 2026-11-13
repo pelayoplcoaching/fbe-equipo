@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp } from '../comunes.jsx';
 import { perezoso } from '../perezoso.jsx';
 import { leerTravesia, sincronizarTravesia } from '../travesia.js';
@@ -42,6 +42,16 @@ export function TarjetaTravesia({ compacta = false }) {
     sincronizarTravesia(api, atleta.id, { traer: true }).then((r) => { if (!vivo) return; setT(r.travesia); if (r.semanas) setSemana(metrosDeLaSemana(r.travesia, r.semanas, lunesDe(hoyISO()))); });
     return () => { vivo = false; };
   }, [atleta?.id]);
+  // (belleza) el lobo de la tarjeta cruza una vez, cuando la tarjeta se ve (no se queda moviéndose todo el rato)
+  const tarjeta = useRef(null);
+  const [vista, setVista] = useState(false);
+  useEffect(() => {
+    const el = tarjeta.current;
+    if (!el || vista || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); setVista(true); } }, { threshold: 0.6 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [vista, !!t]);
   if (!atleta?.id || !t) return null;
   const cerrar = () => { setAbierta(false); setT(leerTravesia(atleta.id)); };
   // (tanda 1) el reto del día, con lo jugado hoy en los descansos
@@ -50,7 +60,7 @@ export function TarjetaTravesia({ compacta = false }) {
   // (belleza) el cielo de la tarjeta, el de esta hora (como en el juego): de noche, al alba, de día o al atardecer
   const fase = ambiente({ total: t.total }).fase;
   return (
-    <section class={`travesia-tarjeta${compacta ? ' compacta' : ''}`} data-fase={fase} aria-label="La travesía, el juego de tus descansos">
+    <section ref={tarjeta} class={`travesia-tarjeta${compacta ? ' compacta' : ''}${vista ? ' tv-vista' : ''}`} data-fase={fase} aria-label="La travesía, el juego de tus descansos">
       <LoboAlTrote />
       <span class="travesia-tarjeta-luna" aria-hidden="true" />
       <div class="travesia-tarjeta-texto">
