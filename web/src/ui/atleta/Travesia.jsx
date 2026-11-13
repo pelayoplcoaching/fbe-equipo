@@ -39,6 +39,26 @@ function tiempoGuardado() {
 const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14] };
 const aullar = () => { [[392, 0], [523, 260], [494, 620]].forEach(([f, ms]) => setTimeout(() => tono(f, ms ? 0.5 : 0.28, 0.16), ms)); };
 
+// (belleza) Los metros del final suben como un cuentakilómetros (con «reducir movimiento», salen ya puestos)
+function Sube({ metros }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || sinMovimiento() || metros < 10) return undefined;
+    let id = 0;
+    const t0 = performance.now();
+    const paso = (ahora) => {
+      const k = Math.min(1, (ahora - t0) / 900), suave = 1 - (1 - k) ** 3;
+      el.textContent = textoDistancia(Math.round(metros * suave));
+      if (k < 1) id = requestAnimationFrame(paso);
+    };
+    el.textContent = textoDistancia(0);
+    id = requestAnimationFrame(paso);
+    return () => cancelAnimationFrame(id);
+  }, [metros]);
+  return <strong ref={ref} class="num" aria-label={textoDistancia(metros)}>{textoDistancia(metros)}</strong>;
+}
+
 function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, total = null, despues = '', practica = false, empuje = null, alCerrar }) {
   const { api } = useApp() || {};
   const lienzo = useRef(null);
@@ -52,8 +72,17 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   const [final, setFinal] = useState(null);         // { metros, estrellas, hoy, mejor, marca, reto } al acabar la etapa
   const [tocado, setTocado] = useState(false);      // ya ha saltado una vez: fuera la pista
   const metros = useRef(null), cuenta = useRef(null), estrellas = useRef(null), retoTxt = useRef(null);
-  const cerrar = useRef(alCerrar);
-  cerrar.current = alCerrar;
+  // (belleza) al cerrarse, la noche se va en un instante (y entonces avisa); con «reducir movimiento», al momento
+  const yendose = useRef(false);
+  const irse = (motivo) => {
+    if (sinMovimiento() || !caja.current) { alCerrar?.(motivo); return; }
+    if (yendose.current) return;
+    yendose.current = true;
+    caja.current.classList.add('se-va');
+    setTimeout(() => alCerrar?.(motivo), 170);
+  };
+  const cerrar = useRef(irse);
+  cerrar.current = irse;
   // (tanda 1) el modo calma (sin obstáculos, al paso) y el sonido, que se recuerdan en el móvil
   const [calma, setCalma] = useState(() => leerAjustes().calmaJuego === true);
   const [sonido, setSonido] = useState(() => leerAjustes().sonidoJuego === true);
@@ -85,7 +114,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   const salir = () => {
     const e = etapa.current;
     if (!practica && sesion && e && !apuntada.current && e.x >= 20) { apuntada.current = true; apuntar(e); }
-    alCerrar?.('salir');
+    irse('salir');
   };
 
   useEffect(() => {
@@ -115,11 +144,15 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     const c = lienzo.current, ctx = c.getContext('2d');
     const quieto = sinMovimiento();
     let w = 0, h = 0, id = 0, antes = performance.now(), acabada = false, visto = { m: -1, s: -1, e: -1, r: '', esc: e.escudos };
+    let contador = null, reloj = null;   // (belleza) dónde caen el contador de estrellas y la cuenta, en el lienzo
     const medir = () => {
       const r = c.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
       w = Math.max(1, r.width); h = Math.max(1, r.height);
       c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // (por sus medidas de maqueta, no por su caja en pantalla: los números entran bajando y aún no están en su sitio)
+      const caja = (el) => { const pa = el?.offsetParent; return el && pa ? { x: pa.offsetLeft + el.offsetLeft + el.offsetWidth / 2, y: pa.offsetTop + el.offsetTop + el.offsetHeight / 2, w: el.offsetWidth, h: el.offsetHeight } : null; };
+      contador = caja(estrellas.current?.parentElement); reloj = caja(cuenta.current?.parentElement);
     };
     medir();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(medir) : null;
@@ -152,7 +185,13 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       if (!parado && q <= 0) acabar();
       else if (!parado) avanzar(e, dt);
       if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) tono(...SONIDOS[s]);
-      pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo });
+      pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo, contador, reloj, quedan: q, final: acabada });
+      // (belleza) la estrella que llega a su contador le da un latido
+      if (paisaje.current.llego) {
+        paisaje.current.llego = false;
+        const dato = estrellas.current?.parentElement;
+        if (dato) { dato.classList.remove('late'); void dato.offsetWidth; dato.classList.add('late'); }
+      }
       // (los números de arriba, solo cuando cambian)
       const m = Math.round(e.x), s = Math.max(0, Math.ceil(q));
       if (m !== visto.m && metros.current) { visto.m = m; metros.current.textContent = textoDistancia(m); }
@@ -246,7 +285,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       {final && (
         <div class="travesia-final" role="status">
           <span class="travesia-final-etq">{practica ? 'Práctica' : '¡Vamos!'}</span>
-          <strong class="num">{textoDistancia(final.metros)}</strong>
+          <Sube metros={final.metros} />
           <span class="travesia-final-det">
             {final.estrellas > 0 && <span class="oro"><Icono n="estrella" />{final.estrellas}</span>}
             {final.rios > 0 && <span>{final.rios === 1 ? 'Un río cruzado' : `${final.rios} ríos cruzados`}</span>}
@@ -260,8 +299,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
             {practica && !final.marca && final.mejor > final.metros && <span>Tu marca: {textoDistancia(final.mejor)}</span>}
           </span>
           {practica
-            ? <div class="travesia-final-botones"><button type="button" class="btn btn-primario" onClick={() => setRonda((n) => n + 1)}>Otra</button><button type="button" class="btn" onClick={() => alCerrar?.('salir')}>Cerrar</button></div>
-            : <button type="button" class="btn btn-primario" onClick={() => alCerrar?.('fin')}>A por la serie</button>}
+            ? <div class="travesia-final-botones"><button type="button" class="btn btn-primario" onClick={() => setRonda((n) => n + 1)}>Otra</button><button type="button" class="btn" onClick={() => irse('salir')}>Cerrar</button></div>
+            : <button type="button" class="btn btn-primario" onClick={() => irse('fin')}>A por la serie</button>}
         </div>
       )}
     </div>

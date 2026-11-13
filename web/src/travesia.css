@@ -44,6 +44,31 @@
   .travesia-final { animation: travesia-llega .32s cubic-bezier(.2, 1.2, .35, 1) both; }
   .travesia-pista { animation: travesia-late 1.6s ease-in-out infinite alternate; }
 }
+/* (belleza) La noche llega y se va: el juego entra fundiéndose y los números bajan a su sitio; al cerrarse, se va igual.
+   En la tarjeta del final, lo conseguido va cayendo de uno en uno y la postal se da la vuelta; la estrella que llega a su
+   contador le da un latido, y en los tres últimos segundos la cuenta late. Solo transform y opacity. */
+@media (prefers-reduced-motion: no-preference) {
+  .travesia { animation: tv-entra .26s ease-out both; }
+  .travesia.se-va { animation: tv-sale .17s ease-in both; }
+  .travesia-arriba { animation: tv-baja .38s .06s cubic-bezier(.2, .8, .2, 1) both; }
+  .travesia-final-det > span { animation: tv-cae .34s cubic-bezier(.2, 1.3, .4, 1) both; animation-delay: .55s; }
+  .travesia-final-det > span:nth-child(2) { animation-delay: .67s; }
+  .travesia-final-det > span:nth-child(3) { animation-delay: .79s; }
+  .travesia-final-det > span:nth-child(4) { animation-delay: .91s; }
+  .travesia-final-det > span:nth-child(5) { animation-delay: 1.03s; }
+  .travesia-final-det > span:nth-child(n + 6) { animation-delay: 1.15s; }
+  .travesia-final-det > .travesia-final-postal { animation-name: tv-voltea; animation-duration: .5s; }
+  .travesia-final .btn { animation: tv-cae .3s .3s both; }
+  .travesia-dato.late b, .travesia-dato.late svg { animation: tv-latido .32s cubic-bezier(.3, 1.6, .5, 1); }
+  .travesia-cuenta b.ultimos { animation: tv-pulso 1s ease-out infinite; }
+}
+@keyframes tv-entra { from { opacity: 0; } }
+@keyframes tv-sale { to { opacity: 0; } }
+@keyframes tv-baja { from { opacity: 0; transform: translateY(-14px); } }
+@keyframes tv-cae { from { opacity: 0; transform: translateY(-10px) scale(.9); } }
+@keyframes tv-voltea { from { opacity: 0; transform: rotateX(90deg); } }
+@keyframes tv-latido { 40% { transform: scale(1.35); } }
+@keyframes tv-pulso { 0% { transform: scale(1.14); } 40% { transform: scale(1); } }
 @keyframes travesia-llega { from { transform: translate(-50%, -44%) scale(.94); } }
 @keyframes travesia-late { from { opacity: .55; } to { opacity: 1; } }
 
@@ -95,6 +120,9 @@
 .tv-hito { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--hoja); border: 2px solid color-mix(in srgb, var(--morado) 45%, transparent); box-sizing: border-box; }
 .tv-hito.pasado { border-color: var(--morado); background: var(--morado); }
 .tv-ruta-lobo { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--tv-oro); border: 3px solid var(--hoja); box-sizing: border-box; box-shadow: 0 1px 4px rgb(0 0 0 / .25); }
+.tv-ruta-carril { position: absolute; inset: 0; transform: translateX(var(--tv-p, 0%)); pointer-events: none; }
+.tv-ruta-carril .tv-ruta-lobo { left: 0; }
+.tv-ruta-hecho { transform-origin: left center; }
 .tv-ruta-extremos { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 8px; font-size: .8125rem; color: var(--tinta-2); }
 .tv-postales { display: grid; grid-auto-flow: column; grid-auto-columns: 112px; gap: 10px; margin: 0 -16px; padding: 2px 16px 8px; list-style: none; overflow-x: auto; scrollbar-width: none; }
 .tv-postales::-webkit-scrollbar { display: none; }
@@ -135,3 +163,28 @@
 .tv-constelacion.completa circle { fill: var(--tv-oro); }
 .tv-constelacion span { color: var(--tv-tiza-2); }
 .tv-constelacion.completa span { color: var(--tv-oro); font-weight: 700; }
+
+/* (belleza) La tarjeta, con el cielo de la hora (como el juego) y su lobo al trote por el pie; y en «Tu travesía», la
+   ruta se dibuja y el lobo camina hasta su punto. Solo transform y opacity; quieto con «reducir movimiento» y en segundo plano. */
+.travesia-tarjeta[data-fase="alba"] { background: linear-gradient(180deg, #1E1548 0%, #6B46A8 60%, #F0A27A 135%); }
+.travesia-tarjeta[data-fase="ocaso"] { background: linear-gradient(180deg, #1A1245 0%, #5A3A9E 60%, #E0806B 140%); }
+.travesia-tarjeta[data-fase="dia"] { background: linear-gradient(180deg, #2A3A9A 0%, #4A5FC4 70%, #6E86E0 130%); }
+.travesia-tarjeta[data-fase="dia"] .travesia-tarjeta-luna { background: radial-gradient(circle at 40% 38%, #FFE27A 0 55%, var(--tv-oro) 100%);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--tv-oro) 16%, transparent), 0 0 22px 6px color-mix(in srgb, var(--tv-oro) 30%, transparent); }
+.travesia-tarjeta-paso { position: absolute; left: 0; right: 0; bottom: 1px; height: 24px; pointer-events: none; color: rgb(241 240 246 / .2); transform: translateX(62%); }
+.travesia-tarjeta.compacta .travesia-tarjeta-paso { height: 18px; }
+.travesia-tarjeta.compacta .travesia-tarjeta-lobo { width: 34px; height: 18px; }
+.travesia-tarjeta-lobo { display: block; }
+.travesia-tarjeta { isolation: isolate; }
+.travesia-tarjeta-paso { z-index: -1; }
+@media (prefers-reduced-motion: no-preference) {
+  .travesia-tarjeta-paso { animation: tv-cruza 16s linear infinite; }
+  .travesia-tarjeta-lobo { animation: tv-trote .38s ease-in-out infinite alternate; }
+  .tv-ruta-hecho { animation: tv-ruta-crece .9s cubic-bezier(.3, .7, .2, 1) .15s both; }
+  .tv-ruta-carril { animation: tv-ruta-anda .9s cubic-bezier(.3, .7, .2, 1) .15s both; }
+  html[data-oculta] .travesia-tarjeta-paso, html[data-oculta] .travesia-tarjeta-lobo { animation-play-state: paused; }
+}
+@keyframes tv-cruza { from { transform: translateX(-14%); } to { transform: translateX(104%); } }
+@keyframes tv-trote { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-2.5px) rotate(2deg); } }
+@keyframes tv-ruta-crece { from { transform: scaleX(0); } }
+@keyframes tv-ruta-anda { from { transform: translateX(0%); } }
