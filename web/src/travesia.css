@@ -135,3 +135,23 @@
 .tv-constelacion.completa circle { fill: var(--tv-oro); }
 .tv-constelacion span { color: var(--tv-tiza-2); }
 .tv-constelacion.completa span { color: var(--tv-oro); font-weight: 700; }
+
+/* (tanda 5) Lo visual: la viñeta (los bordes, un poco más oscuros: recoge la mirada en el lobo), el cartel de los hitos
+   y la tarjeta final, que entra con suavidad */
+.travesia-vineta { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 46%, transparent 52%, rgb(6 4 24 / .34) 100%), linear-gradient(180deg, rgb(6 4 24 / .42) 0, transparent 18%),
+    linear-gradient(0deg, rgb(6 4 24 / .62) 0, rgb(6 4 24 / .3) 12%, transparent 24%); }   /* (arriba y abajo, más: los números y los textos se leen también de día y sobre la nieve) */
+.travesia-cartel { position: absolute; left: 16px; right: 16px; top: 24%; margin: 0; text-align: center; pointer-events: none; opacity: 0;
+  font-size: 1.125rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--tv-tiza); text-shadow: 0 2px 12px rgb(6 4 24 / .7);
+  font-stretch: var(--ancho-marcador, 78%); }
+.travesia-cartel.grande { font-size: 2rem; letter-spacing: .06em; color: var(--tv-oro); }
+.travesia-dato.oro { transform-origin: 70% 50%; }
+@media (prefers-reduced-motion: no-preference) {
+  .travesia-final { animation: tv-final .42s cubic-bezier(.2, .9, .3, 1.15) both; }
+  .travesia-final-det > span { animation: tv-final-det .4s ease-out both; }
+  .travesia-final-det > span:nth-child(2) { animation-delay: .08s; }
+  .travesia-final-det > span:nth-child(3) { animation-delay: .16s; }
+  .travesia-final-det > span:nth-child(n + 4) { animation-delay: .24s; }
+}
+@keyframes tv-final { from { opacity: 0; transform: translate(-50%, -44%) scale(.94); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes tv-final-det { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

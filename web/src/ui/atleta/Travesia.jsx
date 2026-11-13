@@ -3,6 +3,7 @@ import { Icono, Capa, useApp } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
 import { nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, textoDistancia, ambiente, retoDelDia, progresoReto, hoyDe, rachaSemanas } from '../../logica/travesia.js';
+import { cartelDeHito, nombrePaisaje, suave, mediaCuadro, convieneAligerar } from '../../logica/travesia-efectos.js';
 import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
@@ -20,6 +21,23 @@ const PRACTICA = 60;
 const mmss = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 
 // (dentro de su capa, en <body>: cuando corren sus efectos el lienzo ya existe, y ningún antepasado con transform la encierra)
+// (tanda 5) La distancia de la tarjeta final sube rodando hasta su número (0,7 s; con «reducir movimiento», de golpe)
+function Rueda({ valor }) {
+  const [v, setV] = useState(() => (sinMovimiento() ? valor : Math.round(valor * 0.6)));
+  useEffect(() => {
+    if (sinMovimiento() || typeof requestAnimationFrame !== 'function') { setV(valor); return undefined; }
+    let id = 0; const t0 = performance.now(), desde = Math.round(valor * 0.6);
+    const paso = (ahora) => {
+      const k = suave((ahora - t0) / 700);
+      setV(Math.round(desde + (valor - desde) * k));
+      if (k < 1) id = requestAnimationFrame(paso);
+    };
+    id = requestAnimationFrame(paso);
+    return () => cancelAnimationFrame(id);
+  }, [valor]);
+  return textoDistancia(v);
+}
+
 export function Travesia(props) { return <Capa><TravesiaDentro {...props} /></Capa>; }
 // (al integrarla) lo que queda de descanso ya en el primer pintado (antes, 0:00 hasta el primer cuadro de la animación)
 const cuentaInicial = (fin, pausa) => Math.max(0, Math.ceil(Number.isFinite(pausa) ? pausa / 1000 : Number.isFinite(fin) ? (fin - Date.now()) / 1000 : 0));
@@ -51,7 +69,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   const finPractica = useRef(0);
   const [final, setFinal] = useState(null);         // { metros, estrellas, hoy, mejor, marca, reto } al acabar la etapa
   const [tocado, setTocado] = useState(false);      // ya ha saltado una vez: fuera la pista
-  const metros = useRef(null), cuenta = useRef(null), estrellas = useRef(null), retoTxt = useRef(null);
+  const metros = useRef(null), cuenta = useRef(null), estrellas = useRef(null), retoTxt = useRef(null), cartel = useRef(null);
   const cerrar = useRef(alCerrar);
   cerrar.current = alCerrar;
   // (tanda 1) el modo calma (sin obstáculos, al paso) y el sonido, que se recuerdan en el móvil
@@ -115,11 +133,27 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     const c = lienzo.current, ctx = c.getContext('2d');
     const quieto = sinMovimiento();
     let w = 0, h = 0, id = 0, antes = performance.now(), acabada = false, visto = { m: -1, s: -1, e: -1, r: '', esc: e.escudos };
+    // (tanda 5) dónde está el marcador de estrellas (allí vuelan las que coge) y los carteles de hito
+    let metaE = null, hito = { metros: 0, racha: e.racha };
+    let media = null, cuadros = 0, ligero = false;   // (si el móvil va justo, se pinta sin lo más caro)
+    const anunciar = (texto, grande = false) => {
+      const el = cartel.current;
+      if (!el || typeof el.animate !== 'function') return;
+      el.textContent = texto; el.classList.toggle('grande', !!grande);
+      el.getAnimations?.().forEach((a) => a.cancel());
+      el.animate(quieto
+        ? [{ opacity: 0 }, { opacity: 1, offset: 0.14 }, { opacity: 1, offset: 0.78 }, { opacity: 0 }]
+        : [{ opacity: 0, transform: 'translateY(10px) scale(.92)' }, { opacity: 1, transform: 'none', offset: 0.14 }, { opacity: 1, transform: 'none', offset: 0.78 }, { opacity: 0, transform: 'translateY(-8px)' }],
+      { duration: 2200, easing: 'ease-out' });
+    };
+    const alEmpezar = setTimeout(() => anunciar(nombrePaisaje(amb.paisaje)), 700);   // (el nombre del paisaje, al entrar)
     const medir = () => {
       const r = c.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
       w = Math.max(1, r.width); h = Math.max(1, r.height);
       c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const er = estrellas.current?.parentElement?.getBoundingClientRect();
+      metaE = er ? { x: er.left + er.width / 2 - r.left, y: er.top + er.height / 2 - r.top } : null;
     };
     medir();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(medir) : null;
@@ -146,18 +180,25 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     const cuadro = (ahora) => {
       id = requestAnimationFrame(cuadro);
       const dt = Math.min(0.1, (ahora - antes) / 1000);
+      if (document.visibilityState !== 'hidden') { media = mediaCuadro(media, ahora - antes); cuadros += 1; ligero = convieneAligerar(media, cuadros, ligero); }
       antes = ahora;
       const q = quedan();
       const parado = acabada || (!practica && Number.isFinite(marca.current.pausa)) || document.visibilityState === 'hidden';
       if (!parado && q <= 0) acabar();
       else if (!parado) avanzar(e, dt);
       if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) tono(...SONIDOS[s]);
-      pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo });
+      pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada, ligero });
+      // (tanda 5) los carteles: cada 250 m y cada diez de racha
+      if (!parado) { const ahoraH = { metros: e.x, racha: e.racha }, k = cartelDeHito(hito, ahoraH); hito = ahoraH; if (k) anunciar(k.texto, k.grande); }
       // (los números de arriba, solo cuando cambian)
       const m = Math.round(e.x), s = Math.max(0, Math.ceil(q));
       if (m !== visto.m && metros.current) { visto.m = m; metros.current.textContent = textoDistancia(m); }
       if (s !== visto.s && cuenta.current) { visto.s = s; cuenta.current.textContent = mmss(s); cuenta.current.classList.toggle('ultimos', s <= 3 && s > 0); }
-      if (e.estrellasCogidas !== visto.e && estrellas.current) { visto.e = e.estrellasCogidas; estrellas.current.textContent = String(e.estrellasCogidas); }
+      if (e.estrellasCogidas !== visto.e && estrellas.current) {
+        visto.e = e.estrellasCogidas; estrellas.current.textContent = String(e.estrellasCogidas);
+        // (el marcador late cuando llega la estrella que volaba hacia él)
+        if (e.estrellasCogidas > 0 && !quieto) estrellas.current.parentElement.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.32)' }, { transform: 'scale(1)' }], { duration: 340, delay: 460, easing: 'ease-out' });
+      }
       if (e.escudos !== visto.esc) { visto.esc = e.escudos; setEscudos(e.escudos); }
       if (reto && retoTxt.current) {
         // (el reto, con lo de hoy más lo de esta etapa)
@@ -168,7 +209,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       }
     };
     id = requestAnimationFrame(cuadro);
-    return () => { cancelAnimationFrame(id); ro?.disconnect(); };
+    return () => { cancelAnimationFrame(id); ro?.disconnect(); clearTimeout(alEmpezar); };
   }, [ronda, calma]);
 
   // Al acabar el descanso se cierra sola al poco (da tiempo a ver la etapa); en práctica espera a que elija
@@ -225,6 +266,9 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     <div ref={caja} class={`travesia${calma ? ' en-calma' : ''}`} role="dialog" aria-modal="true" aria-label={practica ? 'La travesía: práctica de un minuto' : 'La travesía: el juego del descanso'} tabIndex={-1}
       onPointerDown={toque} onPointerMove={mueve} onPointerUp={suelta} onPointerCancel={suelta} onKeyDown={tecla}>
       <canvas ref={lienzo} class="travesia-lienzo" role="img" aria-label="Un lobo corre por la montaña. Toca la pantalla o pulsa la barra espaciadora para saltar; desliza hacia abajo o pulsa la flecha abajo para agacharte." />
+      {/* (tanda 5) la viñeta: los bordes, un poco más oscuros; y el cartel de los hitos («500 m», «Racha ×10», el paisaje) */}
+      <span class="travesia-vineta" aria-hidden="true" />
+      <p ref={cartel} class="travesia-cartel" aria-hidden="true" />
       <div class="travesia-arriba">
         <span class="travesia-dato" aria-label="Distancia de esta etapa"><Icono n="pasos" /><b ref={metros} class="num">0 m</b></span>
         <span class="travesia-cuenta" role="timer" aria-live="off" aria-label={practica ? 'Tiempo de práctica' : 'Descanso'}><b ref={cuenta} class="num">{mmss(practica ? PRACTICA : cuentaInicial(fin, pausa))}</b><small>{practica ? 'práctica' : 'descanso'}</small></span>
@@ -246,7 +290,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       {final && (
         <div class="travesia-final" role="status">
           <span class="travesia-final-etq">{practica ? 'Práctica' : '¡Vamos!'}</span>
-          <strong class="num">{textoDistancia(final.metros)}</strong>
+          <strong class="num"><Rueda valor={final.metros} /></strong>
           <span class="travesia-final-det">
             {final.estrellas > 0 && <span class="oro"><Icono n="estrella" />{final.estrellas}</span>}
             {final.rios > 0 && <span>{final.rios === 1 ? 'Un río cruzado' : `${final.rios} ríos cruzados`}</span>}

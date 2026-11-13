@@ -289,6 +289,47 @@ console.log('(tanda 3) Las semanas seguidas');
   check(Object.keys(muchas.semanas).length === 10 && Object.keys(T.limpiarTravesia({ semanas: { mal: 5, '2026-11-02': -3, '2026-11-09': 7 } }).semanas).join() === '2026-11-09', 'solo se guardan las diez últimas, y lo ilegible se descarta');
 }
 
+console.log('(tanda 5) Los efectos, en números');
+{
+  const E = await import('../web/src/logica/travesia-efectos.js');
+  check(E.dado(3, 1) === E.dado(3, 1) && E.dado(3, 1) !== E.dado(4, 1) && [0, 1, 2, 50, 999].every((n) => E.dado(n, 7) >= 0 && E.dado(n, 7) < 1), 'el dado: el mismo número siempre para lo mismo, entre 0 y 1');
+  check(E.suave(0) === 0 && E.suave(1) === 1 && E.suave(0.5) === 0.5 && E.suave(-3) === 0 && E.suave(9) === 1 && E.suave(0.25) < 0.25, 'la curva suave sale despacio y llega despacio');
+  // estrellas fugaces: en diez minutos, unas cuantas, cada una de menos de un segundo, dentro del cielo y avanzando
+  let n = 0, antes = null, dentro = true, avanza = true, maxSeguidos = 0, seguidos = 0;
+  for (let t = 0; t < 600; t += 0.05) {
+    const f = E.fugaz(t, 5);
+    if (f) { seguidos += 1; maxSeguidos = Math.max(maxSeguidos, seguidos); if (!antes) n += 1; else if (f.k < antes.k) n += 1; else avanza = avanza && f.x >= antes.x && f.y >= antes.y;
+      dentro = dentro && f.x > 0 && f.x < 1.1 && f.y > 0 && f.y < 0.6 && f.k >= 0 && f.k <= 1; } else seguidos = 0;
+    antes = f;
+  }
+  check(n >= 20 && n <= 50 && dentro && avanza && maxSeguidos <= Math.ceil(E.DURA_FUGAZ / 0.05) + 1, `en diez minutos cruzan ${n} estrellas fugaces, cada una en menos de un segundo`);
+  check(E.fugaz(-1) === null && E.fugaz(NaN) === null && JSON.stringify(E.fugaz(37.2, 5)) === JSON.stringify(E.fugaz(37.2, 5)), 'y siempre las mismas para el mismo momento');
+  const sube = E.estirar({ vy: 14, enAire: true }), cae = E.estirar({ vy: 0, enAire: false, desdeCaer: 0.11 }), quieto = E.estirar({ vy: 0, enAire: false, desdeCaer: 0.5 });
+  check(sube.sx > 1 && sube.sx < 1.12 && cae.sx > 1.1 && cae.sy < 0.9 && cae.sy > 0.8 && quieto.sx === 1 && quieto.sy === 1 && E.estirar().sx === 1, 'el lobo se estira en el salto, se aplasta al caer (un 14 % como mucho) y vuelve');
+  let parpadeos = 0, cerrado = 0, a = false;
+  for (let t = 0; t < 60; t += 0.02) { const p = E.parpadea(t, 2); if (p && !a) parpadeos += 1; if (p) cerrado += 1; a = p; }
+  check(parpadeos >= 12 && parpadeos <= 16 && cerrado * 0.02 < 2.5 && !E.parpadea(-1), `parpadea cada cuatro segundos más o menos (${parpadeos} veces en un minuto)`);
+  check(E.colaAlViento({ fase: 0, vy: -14, enAire: true }) > 0.5 && E.colaAlViento({ fase: 0, vy: 14, enAire: true }) < -0.5 && Math.abs(E.colaAlViento({ fase: 1 })) <= 0.4 && E.colaAlViento({ fase: 2, racha: 99 }) <= 1, 'la cola va detrás del cuerpo: sube al caer y baja al subir');
+  check(E.impetu(0) === 0 && E.impetu(4) === 0 && E.impetu(18) === 1 && E.impetu(11) === 0.5 && E.impetu(40) === 1, 'el ímpetu de la racha: de 5 en adelante, a tope con 18');
+  const s0 = E.sacudida(0.02), s1 = E.sacudida(0.3), s2 = E.sacudida(0.4);
+  check(Math.hypot(s0.dx, s0.dy) > Math.hypot(s1.dx, s1.dy) && Math.hypot(s0.dx, s0.dy) <= 9 && s2.dx === 0 && s2.dy === 0 && E.sacudida(-1).dx === 0 && E.sacudida(null).dx === 0, 'la sacudida del tropiezo se apaga en un tercio de segundo');
+  check(E.entrada(0) === 0 && E.entrada(1.4) === 1 && E.entrada(0.7) === 0.5 && E.entrada(null) === 1, 'la entrada dura 1,4 s');
+  check(E.rodar(0, 100, 0.016) > 0 && E.rodar(0, 100, 0.016) < 100 && E.rodar(99.5, 100, 0.016) === 100 && E.rodar(100, 100, 0.016) === 100 && E.rodar(100, 40, 0.016) < 100 && E.rodar(5, 9, 0) === 9, 'las cifras ruedan hacia el número de verdad, sin pasarse');
+  let v = 0; for (let i = 0; i < 120; i++) v = E.rodar(v, 730, 1 / 60);
+  check(v === 730, 'y llegan en menos de dos segundos');
+  check(E.cartelDeHito({ metros: 249 }, { metros: 251 }).texto === '250 m' && E.cartelDeHito({ metros: 999 }, { metros: 1001 }).texto === '1 km' && E.cartelDeHito({ metros: 999 }, { metros: 1001 }).grande === true && E.cartelDeHito({ metros: 100 }, { metros: 140 }) === null, 'un cartel cada 250 m; el kilómetro, más grande');
+  check(E.cartelDeHito({ metros: 10, racha: 9 }, { metros: 12, racha: 10 }).texto === 'Racha ×10' && E.cartelDeHito({ metros: 10, racha: 10 }, { metros: 12, racha: 11 }) === null && E.cartelDeHito(null, null) === null, 'y al llegar a una racha de diez');
+  check(E.nombrePaisaje(0) === 'La montaña' && E.nombrePaisaje(2) === 'Las cumbres nevadas' && E.nombrePaisaje(5) === 'El bosque' && E.NOMBRES_PAISAJE.length === 4, 'cada paisaje, con su nombre');
+  check(E.vidaCartel(0) === 0 && E.vidaCartel(1) === 1 && E.vidaCartel(2.2) === 0 && E.vidaCartel(2) > 0 && E.vidaCartel(2) < 1 && E.vidaCartel(-1) === 0, 'el cartel entra, se queda y se va');
+  check(E.hayAurora({ fase: 'noche', paisaje: 2, luna: { ilum: 0.9 } }) && !E.hayAurora({ fase: 'dia', paisaje: 2 }) && !E.hayAurora({ fase: 'noche', paisaje: 0, luna: { ilum: 0.9 } }) && E.hayAurora({ fase: 'noche', paisaje: 0, luna: { ilum: 0.05 } }) && !E.hayAurora({ fase: 'noche', paisaje: 2, clima: 'lluvia' }) && !E.hayAurora(null),
+    'la aurora: de noche en las cumbres nevadas, o con luna nueva; con lluvia, no');
+  let media = null; for (let i = 0; i < 200; i++) media = E.mediaCuadro(media, 16.7);
+  let lenta = null; for (let i = 0; i < 200; i++) lenta = E.mediaCuadro(lenta, 40);
+  check(Math.abs(media - 16.7) < 0.01 && !E.convieneAligerar(media, 200) && E.convieneAligerar(lenta, 200) && !E.convieneAligerar(lenta, 30) && E.convieneAligerar(media, 200, true) && E.mediaCuadro(16, 5000) < 23,
+    'si el móvil va justo (más de 26 ms por cuadro tras los primeros 90), se pinta ligero; un tirón suelto no cuenta');
+  check(E.alturaAstro('alba') > E.alturaAstro('noche') && E.alturaAstro('ocaso') === E.alturaAstro('alba') && E.alturaAstro('dia') === E.alturaAstro('noche'), 'al alba y al ocaso, el sol va bajo');
+}
+
 console.log('La distancia, en palabras');
 check(textoDistancia(0) === '0 m' && textoDistancia(870.4) === '870 m' && textoDistancia(999) === '999 m', '«870 m»');
 check(textoDistancia(1000) === '1 km' && textoDistancia(2340) === '2,3 km' && textoDistancia(9960) === '10 km' && textoDistancia(12400) === '12 km', '«2,3 km», «12 km»');
