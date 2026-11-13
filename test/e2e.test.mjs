@@ -6034,6 +6034,10 @@ try {
   console.log('\nApuntes que se quedan');
   const { probarApuntesRepaso } = await import('./e2e-apuntes-t1.mjs');
   await probarApuntesRepaso({ navegador, check });
+  // Apuntes, practicar (tanda B): emparejar, hueco, verdadero o falso, microlecciones, tres explicaciones, ordenar, grábate y compáralo, antes de empezar
+  console.log('\nApuntes, practicar');
+  const { probarApuntesPractica } = await import('./e2e-apuntes-t2.mjs');
+  await probarApuntesPractica({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

@@ -104,7 +104,8 @@ export async function probarApuntesBellos({ navegador, check, base = 'http://loc
     check(rotulador && vuelta && terminos, 'en unos cuantos apuntes salen el rotulador, la vuelta y las palabras del glosario');
     // Deslizar con el dedo: a la izquierda, el siguiente
     await hoja.locator('.apunte-saliente').waitFor({ state: 'detached', timeout: 2000 }).catch(() => {});
-    if (await tarjeta.locator('.apunte-destapar').count()) { await hoja.getByRole('button', { name: /Otro apunte/ }).click(); await p.waitForTimeout(700); }
+    // (uno que se pueda deslizar ya: ni tapado, ni una pregunta o un ejercicio sin hacer)
+    for (let i = 0; i < 6 && await tarjeta.locator('.apunte-destapar, .apunte-recordar, .practica:not(.micro), .apunte-opcion:not([disabled])').count(); i++) { await hoja.getByRole('button', { name: /Otro apunte/ }).click(); await p.waitForTimeout(700); }
     await p.waitForTimeout(500);
     await hoja.locator('.apuntes-cuerpo').evaluate((el) => { el.scrollTop = 0; });
     await p.waitForTimeout(100);

@@ -90,10 +90,11 @@ export async function probarApuntes({ navegador, check, base = 'http://localhost
     let general = false;
     for (let i = 0; i < 8 && !general; i++) { await hoja.getByRole('button', { name: /Otro apunte/ }).click(); await p.waitForTimeout(220); general = ['Idea clave', 'Mito', 'Glosario', 'Duda frecuente', 'Novedad de la semana'].includes(await tarjeta.locator('.apunte-etq .chip').textContent()); }
     check(general, 'entre las del ejercicio van saliendo las generales (no todo es técnica)');
-    // hasta dar con uno que tenga vuelta (un error típico o un mito)
+    // hasta dar con uno que tenga vuelta (un mito)
     let conVuelta = false;
     for (let i = 0; i < 45 && !conVuelta; i++) {
-      conVuelta = await hoja.locator('.apunte-destapar').count() === 1;
+      // (un mito: el repaso de Semana no tiene las fichas del ejercicio, así que un error típico de la ficha no volvería allí)
+      conVuelta = await hoja.locator('.apunte-destapar').count() === 1 && await tarjeta.locator('.apunte-etq .chip').textContent() === 'Mito';
       if (!conVuelta) { await hoja.getByRole('button', { name: /Otro apunte/ }).click(); await p.waitForTimeout(200); }
     }
     const tituloVuelta = conVuelta ? await tarjeta.locator('h2').textContent() : '';
